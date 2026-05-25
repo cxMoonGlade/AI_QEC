@@ -1,6 +1,8 @@
 # SCOPE-Static DEM Fault-Logit MVP
 
 This MVP studies SCOPE-Static at the DEM parity-map level only.
+Stage 2 static discovery is specified separately in
+`docs/SCOPE_STATIC_DISC.md`.
 
 The learned object is a Bernoulli fault-logit field over a fixed canonicalized detector error model:
 

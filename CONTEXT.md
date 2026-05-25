@@ -5,12 +5,15 @@ This repository is currently centered on the SCOPE family of QEC noise-learning 
 ## Terms
 
 - **SCOPE-Twin**: the larger future model class that maps QEC circuit/control context into a physically constrained noise parameter field.
-- **SCOPE-Static**: the first fixed-context stage. In this repository's current MVP, it means a DEM/Bernoulli fault-logit model, not a CPTP/GKSL channel model.
+- **SCOPE-Static**: the fixed-context DEM/Bernoulli path. Stage 1 uses known orbit labels; Stage 2 static discovery learns hidden sharing assignments.
+- **SCOPE-Static Discovery**: the Stage 2 fixed-context prototype that replaces the known orbit map with a learned assignment matrix `S[j, k]` over DEM-fault prototypes.
 - **DEM parity map**: a binary matrix `A in F_2^{B x M}` mapping Bernoulli DEM fault bits to observed detector/logical bits via `y = A e mod 2`.
 - **Observation bits**: the concatenation of detector bits and logical observable bits. Their count is `B`.
 - **Fault mechanisms**: DEM error mechanisms. After duplicate-mask canonicalization, their effective count is `M`.
 - **Orbit**: a known grouping of effective fault mechanisms used for hard sharing or soft feature sharing. Its count is `O`.
-- **Soft feature orbit field**: a compressed fault-logit field `ell_j = alpha[o(j)] + dot(beta[o(j)], phi[j])`, where `phi[j]` is fixed.
+- **Soft feature orbit field**: a compressed fault-logit field `lambda_j = alpha[omega(j)] + dot(beta[omega(j)], phi[j])`, where `phi[j]` is a fixed centered residual feature.
+- **Discovery assignment**: a learned row-stochastic matrix `S` or `Pi`. Do not call it `A`; `A` is reserved for the DEM parity map.
+- **Prototype count**: `K` is the number of discovered Stage 2 DEM-fault prototypes. `K_t` is reserved for later template-specific SCOPE-Discovery.
 - **d_Q^DEM**: the Stage-1 quotient-aware logit distance over only DEM-preserving fault permutations.
 - **Window plan**: a reproducible set of observation-bit windows used by local exact likelihood training/evaluation, including builder config and audit metadata.
 - **Likelihood objective**: a prepared training objective over the DEM parity map, such as global exact, detector-only exact, or local-window exact likelihood.
@@ -20,4 +23,13 @@ This repository is currently centered on the SCOPE family of QEC noise-learning 
 
 ## Claim Boundary
 
-The current MVP only studies sample efficiency, compression, and quotient-aware recovery for a fixed DEM/Bernoulli setting. It does not claim CPTP/GKSL learning, Born-rule likelihood, context-conditioned amortization, latent quotient discovery, OOD transfer, or temporal drift tracking.
+The current implemented evidence package studies sample efficiency, compression,
+and quotient-aware recovery for a fixed DEM/Bernoulli Stage 1 setting. It does
+not claim CPTP/GKSL learning, Born-rule likelihood, context-conditioned
+amortization, OOD transfer, or temporal drift tracking.
+
+Stage 2 static discovery is specified in `docs/SCOPE_STATIC_DISC.md`. It may
+claim latent assignment recovery only after synthetic teacher runs report
+permutation-invariant discovery metrics such as ARI and NMI. Google hardware
+datasets are external empirical validation data, not oracle hidden-partition
+teachers.

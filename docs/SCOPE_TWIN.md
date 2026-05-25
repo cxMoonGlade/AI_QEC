@@ -935,6 +935,9 @@ windows.
 
 ##### Stage 2: Static SCOPE-Discovery
 
+The implementation-facing Stage 2 static discovery MVP is specified in
+`docs/SCOPE_STATIC_DISC.md`.
+
 **Goal**:
 
 > Can the model recover the quotient/orbit structure instead of receiving it by hand?
