@@ -58,6 +58,14 @@ def test_sparse_support_views_match_dense_masks():
     assert graph.faults_by_observation_bit == ((0, 2), (1, 2), (0,))
     assert graph.packed_masks64 == ((5,), (2,), (3,))
     assert torch.equal(graph.mask_states, mask_states_from_matrix(graph.A))
+    assert graph.dem_parity_map.num_observation_bits == graph.B
+    assert torch.equal(graph.dem_parity_map.to_dense(), graph.A)
+    fault_ids, local_masks = graph.project_window((0, 2))
+    assert fault_ids.tolist() == [0, 2]
+    assert local_masks.tolist() == [3, 1]
+    faults = torch.tensor([[1, 0, 0], [1, 1, 1]], dtype=torch.bool)
+    expected_observations = ((faults.to(torch.uint8) @ graph.A.T.to(torch.uint8)) % 2).to(dtype=torch.bool)
+    assert torch.equal(graph.dem_parity_map.apply_faults(faults), expected_observations)
 
 
 def test_stim_surface_code_graph_audit_uses_B_not_K():

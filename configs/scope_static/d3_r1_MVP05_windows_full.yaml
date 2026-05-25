@@ -1,7 +1,7 @@
 run:
   name: d3_r1_mvp05_windowed_local_full
-  output_dir: outputs/scope_static/MVP05_full
-  device: cpu
+  output_dir: outputs/scope_static/MVP05_full_02
+  device: cuda
   dtype: float64
   progress_every_records: 50
 
@@ -53,7 +53,7 @@ training:
   steps: 200
   lr: 0.05
   aggregate_unique: true
-  likelihood_backend: pytorch
+  likelihood_backend: cuda_extension
   likelihood_objective: local_exact
   exact_likelihood_trainable: true
   dem_fault_logit_claim: true

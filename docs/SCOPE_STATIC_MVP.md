@@ -98,42 +98,44 @@ This prevents rank-soft runs from being described as compressed when `O(1+r) >= 
 
 ## Running
 
-From a fresh checkout, either install the package in editable mode:
+From a fresh checkout, install the package in editable mode:
 
 ```bash
 conda run -n aiqec python -m pip install -e .
 ```
 
-or run commands with `PYTHONPATH=src`.
+Then run experiment modules without setting `PYTHONPATH`. In the current WSL/CUDA
+setup, exporting `PYTHONPATH` can make PyTorch fail CUDA/NVML discovery even
+though `nvidia-smi` sees the RTX 5090.
 
 Claim path:
 
 ```bash
-PYTHONPATH=src conda run -n aiqec python -m scope_static.experiments.run_static --config configs/scope_static/d3_r1_MVP01.yaml
+conda run -n aiqec python -m scope_static.experiments.run_static --config configs/scope_static/d3_r1_MVP01.yaml
 ```
 
 MVP03 rank-5 global exact rerun:
 
 ```bash
-PYTHONPATH=src conda run -n aiqec python -m scope_static.experiments.run_static --config configs/scope_static/d3_r1_MVP03.yaml
+conda run -n aiqec python -m scope_static.experiments.run_static --config configs/scope_static/d3_r1_MVP03.yaml
 ```
 
 MVP04 rank sweep:
 
 ```bash
-PYTHONPATH=src conda run -n aiqec python -m scope_static.experiments.run_static --config configs/scope_static/d3_r1_MVP04.yaml
+conda run -n aiqec python -m scope_static.experiments.run_static --config configs/scope_static/d3_r1_MVP04.yaml
 ```
 
 MVP05 local-window smoke objective:
 
 ```bash
-PYTHONPATH=src conda run -n aiqec python -m scope_static.experiments.run_static --config configs/scope_static/d3_r1_MVP05_windows.yaml
+conda run -n aiqec python -m scope_static.experiments.run_static --config configs/scope_static/d3_r1_MVP05_windows.yaml
 ```
 
 MVP05 full local-window sweep:
 
 ```bash
-PYTHONPATH=src conda run -n aiqec python -m scope_static.experiments.run_static --config configs/scope_static/d3_r1_MVP05_windows_full.yaml
+conda run -n aiqec python -m scope_static.experiments.run_static --config configs/scope_static/d3_r1_MVP05_windows_full.yaml
 ```
 
 For small local windows, CPU/PyTorch is usually faster than launching many tiny CUDA-extension kernels. The smoke config is intentionally small; use the full sweep as a long-running evidence job.
@@ -142,7 +144,7 @@ The full MVP05 config uses explicit `teacher_cases` to avoid duplicate exact-orb
 Diagnostic path:
 
 ```bash
-PYTHONPATH=src conda run -n aiqec python -m scope_static.experiments.run_static --config configs/scope_static/d3_r3_diagnostic.yaml
+conda run -n aiqec python -m scope_static.experiments.run_static --config configs/scope_static/d3_r3_diagnostic.yaml
 ```
 
 The default likelihood backend is `auto`. On CUDA tensors it tries the custom C++/CUDA extension first and falls back to the exact PyTorch dynamic program if the extension is unavailable. On CPU tensors it uses PyTorch. Runs record both the requested backend and the resolved backend in `metrics.json`.

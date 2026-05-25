@@ -5,6 +5,14 @@ from typing import Iterable
 
 import torch
 
+from .parity_map import (
+    DemParityMap,
+    mask_states_from_matrix,
+    mask_states_from_packed_masks64,
+    packed_masks64_from_supports,
+    sparse_supports_from_matrix,
+)
+
 
 def _as_bool_matrix(raw_masks: torch.Tensor | Iterable[Iterable[int]]) -> torch.Tensor:
     masks = torch.as_tensor(raw_masks, dtype=torch.bool)
@@ -58,61 +66,6 @@ def combine_duplicate_probabilities(probabilities: torch.Tensor) -> torch.Tensor
     if probs.numel() == 0:
         raise ValueError("cannot combine an empty duplicate group")
     return (1 - torch.prod(1 - 2 * probs)) / 2
-
-
-def _column_state(column: torch.Tensor) -> int:
-    state = 0
-    for bit, value in enumerate(column.to(dtype=torch.bool).cpu().tolist()):
-        if value:
-            state |= 1 << bit
-    return state
-
-
-def mask_states_from_matrix(matrix: torch.Tensor) -> torch.Tensor:
-    mat = torch.as_tensor(matrix, dtype=torch.bool).cpu()
-    return torch.tensor([_column_state(mat[:, col]) for col in range(mat.shape[1])], dtype=torch.long)
-
-
-def sparse_supports_from_matrix(
-    matrix: torch.Tensor,
-) -> tuple[tuple[tuple[int, ...], ...], tuple[tuple[int, ...], ...]]:
-    """Build sparse parity-map adjacency views from a dense compatibility matrix."""
-
-    mat = torch.as_tensor(matrix, dtype=torch.bool).cpu()
-    supports_by_fault = tuple(
-        tuple(int(bit) for bit in torch.nonzero(mat[:, fault], as_tuple=False).flatten().tolist())
-        for fault in range(mat.shape[1])
-    )
-    faults_by_bit: list[list[int]] = [[] for _ in range(mat.shape[0])]
-    for fault, support in enumerate(supports_by_fault):
-        for bit in support:
-            faults_by_bit[bit].append(fault)
-    return supports_by_fault, tuple(tuple(faults) for faults in faults_by_bit)
-
-
-def packed_masks64_from_supports(supports_by_fault: tuple[tuple[int, ...], ...], num_bits: int) -> tuple[tuple[int, ...], ...]:
-    """Pack each sparse support into little-endian 64-bit chunks.
-
-    This is independent of the exact-DP single-word state limit. Large graphs
-    can still use the sparse supports; small exact paths use chunk 0 as before.
-    """
-
-    num_chunks = max(1, (int(num_bits) + 63) // 64)
-    packed = []
-    for support in supports_by_fault:
-        chunks = [0] * num_chunks
-        for bit in support:
-            chunk = int(bit) // 64
-            offset = int(bit) % 64
-            chunks[chunk] |= 1 << offset
-        packed.append(tuple(chunks))
-    return tuple(packed)
-
-
-def mask_states_from_packed_masks64(packed_masks64: tuple[tuple[int, ...], ...], num_bits: int) -> torch.Tensor:
-    if num_bits >= 63:
-        raise ValueError("single-word exact state indexing currently requires B < 63")
-    return torch.tensor([chunks[0] if chunks else 0 for chunks in packed_masks64], dtype=torch.long)
 
 
 def _standardize_features(features: torch.Tensor) -> torch.Tensor:
@@ -317,7 +270,7 @@ def default_orbit_ids(
 class FaultGraph:
     """Canonicalized DEM parity-map graph for Stage-1 SCOPE-Static."""
 
-    A: torch.Tensor
+    dem_parity_map: DemParityMap
     num_detectors: int
     num_observables: int
     raw_to_effective: torch.Tensor
@@ -331,9 +284,6 @@ class FaultGraph:
     residual_features: torch.Tensor
     selected_feature_indices: torch.Tensor
     feature_rank_by_orbit: dict[int, int]
-    supports_by_fault: tuple[tuple[int, ...], ...]
-    faults_by_observation_bit: tuple[tuple[int, ...], ...]
-    packed_masks64: tuple[tuple[int, ...], ...]
     detector_coordinates: torch.Tensor | None = None
     effective_probabilities: torch.Tensor | None = None
 
@@ -413,10 +363,9 @@ class FaultGraph:
         num_orbits = int(orbits.max().item() + 1) if orbits.numel() else 0
         orbit_sizes = torch.bincount(orbits, minlength=num_orbits).to(dtype=torch.long)
         ranks = feature_rank_by_orbit(residual_features, orbits)
-        supports_by_fault, faults_by_observation_bit = sparse_supports_from_matrix(eff_masks)
-        packed_masks64 = packed_masks64_from_supports(supports_by_fault, eff_masks.shape[0])
+        dem_parity_map = DemParityMap.from_dense(eff_masks, keep_dense=True)
         return cls(
-            A=eff_masks.contiguous(),
+            dem_parity_map=dem_parity_map,
             num_detectors=int(num_detectors),
             num_observables=int(num_observables),
             raw_to_effective=raw_to_eff,
@@ -430,20 +379,23 @@ class FaultGraph:
             residual_features=residual_features.contiguous(),
             selected_feature_indices=selected_feature_indices.contiguous(),
             feature_rank_by_orbit=ranks,
-            supports_by_fault=supports_by_fault,
-            faults_by_observation_bit=faults_by_observation_bit,
-            packed_masks64=packed_masks64,
             detector_coordinates=coords,
             effective_probabilities=None if eff_probs is None else eff_probs.contiguous(),
         )
 
     @property
+    def A(self) -> torch.Tensor:
+        """Dense compatibility view of the DEM parity map."""
+
+        return self.dem_parity_map.to_dense()
+
+    @property
     def B(self) -> int:
-        return int(self.A.shape[0])
+        return int(self.dem_parity_map.num_observation_bits)
 
     @property
     def M(self) -> int:
-        return int(self.A.shape[1])
+        return int(self.dem_parity_map.num_faults)
 
     @property
     def O(self) -> int:
@@ -461,11 +413,26 @@ class FaultGraph:
 
     @property
     def mask_states(self) -> torch.Tensor:
-        return mask_states_from_packed_masks64(self.packed_masks64, self.B)
+        return self.dem_parity_map.mask_states
 
     @property
     def num_sparse_support_entries(self) -> int:
-        return sum(len(support) for support in self.supports_by_fault)
+        return self.dem_parity_map.num_sparse_support_entries
+
+    @property
+    def supports_by_fault(self) -> tuple[tuple[int, ...], ...]:
+        return self.dem_parity_map.supports_by_fault
+
+    @property
+    def faults_by_observation_bit(self) -> tuple[tuple[int, ...], ...]:
+        return self.dem_parity_map.faults_by_observation_bit
+
+    @property
+    def packed_masks64(self) -> tuple[tuple[int, ...], ...]:
+        return self.dem_parity_map.packed_masks64
+
+    def project_window(self, window_bits: tuple[int, ...]) -> tuple[torch.Tensor, torch.Tensor]:
+        return self.dem_parity_map.project_window(window_bits)
 
     def residual_feature_audit_dict(self) -> dict[str, object]:
         non_singleton_ranks = [
@@ -508,13 +475,8 @@ class FaultGraph:
             "cptp_gksl_claim": bool(cptp_gksl_claim),
             "canonicalize_duplicate_masks": True,
             "num_zero_mask_raw_indices": len(self.zero_mask_raw_indices),
-            "parity_storage": "sparse_supports_with_dense_A_compat",
-            "dense_A_compat": True,
-            "num_sparse_support_entries": self.num_sparse_support_entries,
-            "max_fault_support_size": max((len(support) for support in self.supports_by_fault), default=0),
-            "max_observation_fault_degree": max((len(faults) for faults in self.faults_by_observation_bit), default=0),
-            "packed_mask64_chunks": len(self.packed_masks64[0]) if self.packed_masks64 else max(1, (self.B + 63) // 64),
         }
+        audit.update(self.dem_parity_map.audit_dict())
         audit.update(self.residual_feature_audit_dict())
         return audit
 

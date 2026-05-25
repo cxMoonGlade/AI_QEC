@@ -1,0 +1,7 @@
+numpy
+PyYAML
+stim
+torch
+
+[cuda-extension]
+ninja

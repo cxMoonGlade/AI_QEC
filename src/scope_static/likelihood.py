@@ -8,7 +8,7 @@ import tempfile
 
 import torch
 
-from .fault_graph import FaultGraph, mask_states_from_matrix
+from .fault_graph import FaultGraph
 from .windows import ObservationWindow
 
 LikelihoodBackend = str
@@ -33,6 +33,87 @@ class WindowNLLCache:
             counts=None if self.counts is None else self.counts.to(device=target, dtype=torch.long),
             num_observations=self.num_observations,
         )
+
+
+@dataclass(frozen=True)
+class WindowBatchNLLCache:
+    flat_fault_ids: torch.Tensor
+    flat_masks: torch.Tensor
+    fault_offsets: torch.Tensor
+    flat_states: torch.Tensor
+    flat_counts: torch.Tensor
+    state_offsets: torch.Tensor
+    window_num_bits: torch.Tensor
+    max_faults_per_window: int
+    max_state_count: int
+    num_windows: int
+
+    @classmethod
+    def from_window_caches(cls, caches: list[WindowNLLCache] | tuple[WindowNLLCache, ...]) -> "WindowBatchNLLCache":
+        if not caches:
+            raise ValueError("WindowBatchNLLCache requires at least one window cache")
+        flat_fault_ids: list[torch.Tensor] = []
+        flat_masks: list[torch.Tensor] = []
+        fault_offsets = [0]
+        flat_states: list[torch.Tensor] = []
+        flat_counts: list[torch.Tensor] = []
+        state_offsets = [0]
+        window_num_bits = []
+        max_faults = 0
+        max_state_count = 1
+        for cache in caches:
+            fault_ids = cache.fault_ids.to(device="cpu", dtype=torch.long)
+            masks = cache.mask_states.to(device="cpu", dtype=torch.long)
+            states = cache.states.to(device="cpu", dtype=torch.long)
+            counts = (
+                torch.ones_like(states, dtype=torch.long)
+                if cache.counts is None
+                else cache.counts.to(device="cpu", dtype=torch.long)
+            )
+            flat_fault_ids.append(fault_ids)
+            flat_masks.append(masks)
+            flat_states.append(states)
+            flat_counts.append(counts)
+            fault_offsets.append(fault_offsets[-1] + int(fault_ids.numel()))
+            state_offsets.append(state_offsets[-1] + int(states.numel()))
+            window_num_bits.append(int(cache.window.size))
+            max_faults = max(max_faults, int(fault_ids.numel()))
+            max_state_count = max(max_state_count, 1 << int(cache.window.size))
+
+        return cls(
+            flat_fault_ids=_cat_or_empty(flat_fault_ids),
+            flat_masks=_cat_or_empty(flat_masks),
+            fault_offsets=torch.tensor(fault_offsets, dtype=torch.long),
+            flat_states=_cat_or_empty(flat_states),
+            flat_counts=_cat_or_empty(flat_counts),
+            state_offsets=torch.tensor(state_offsets, dtype=torch.long),
+            window_num_bits=torch.tensor(window_num_bits, dtype=torch.long),
+            max_faults_per_window=max_faults,
+            max_state_count=max_state_count,
+            num_windows=len(caches),
+        )
+
+    def to(self, device: torch.device | str) -> "WindowBatchNLLCache":
+        target = torch.device(device)
+        return WindowBatchNLLCache(
+            flat_fault_ids=self.flat_fault_ids.to(device=target, dtype=torch.long),
+            flat_masks=self.flat_masks.to(device=target, dtype=torch.long),
+            fault_offsets=self.fault_offsets.to(device=target, dtype=torch.long),
+            flat_states=self.flat_states.to(device=target, dtype=torch.long),
+            flat_counts=self.flat_counts.to(device=target, dtype=torch.long),
+            state_offsets=self.state_offsets.to(device=target, dtype=torch.long),
+            window_num_bits=self.window_num_bits.to(device=target, dtype=torch.long),
+            max_faults_per_window=self.max_faults_per_window,
+            max_state_count=self.max_state_count,
+            num_windows=self.num_windows,
+        )
+
+
+def _cat_or_empty(tensors: list[torch.Tensor]) -> torch.Tensor:
+    nonempty = [tensor for tensor in tensors if tensor.numel()]
+    if not nonempty:
+        return torch.empty((0,), dtype=torch.long)
+    return torch.cat(nonempty).to(dtype=torch.long)
 
 
 def observation_bits_to_states(observations: torch.Tensor, *, B: int) -> torch.Tensor:
@@ -146,9 +227,10 @@ def exact_detector_dem_nll(
     if logits.ndim != 1 or logits.numel() != graph.M:
         raise ValueError(f"logits must have shape [{graph.M}]")
     detector_observations = torch.as_tensor(observations, dtype=torch.bool)[:, : graph.num_detectors]
-    detector_mask_states = mask_states_from_matrix(graph.A[: graph.num_detectors])
+    fault_ids, detector_mask_states = graph.project_window(tuple(range(graph.num_detectors)))
+    detector_logits = logits[fault_ids.to(device=logits.device)] if fault_ids.numel() else logits.new_empty((0,))
     dist = parity_distribution_from_mask_states(
-        logits,
+        detector_logits,
         detector_mask_states,
         num_bits=graph.num_detectors,
         backend=backend,
@@ -168,25 +250,7 @@ def projected_window_mask_states(
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """Return fault indices and packed local masks for a window projection."""
 
-    if len(window_bits) >= 63:
-        raise ValueError("window exact state indexing currently requires |W| < 63")
-    local_bit_index = {int(bit): local for local, bit in enumerate(window_bits)}
-    candidate_faults: set[int] = set()
-    for bit in window_bits:
-        candidate_faults.update(graph.faults_by_observation_bit[int(bit)])
-
-    fault_ids: list[int] = []
-    mask_states: list[int] = []
-    for fault in sorted(candidate_faults):
-        state = 0
-        for bit in graph.supports_by_fault[fault]:
-            local = local_bit_index.get(bit)
-            if local is not None:
-                state |= 1 << local
-        if state:
-            fault_ids.append(fault)
-            mask_states.append(state)
-    return torch.tensor(fault_ids, dtype=torch.long), torch.tensor(mask_states, dtype=torch.long)
+    return graph.project_window(window_bits)
 
 
 def exact_window_nll(
@@ -247,6 +311,15 @@ def build_window_nll_caches(
     if device is None:
         return caches
     return [cache.to(device) for cache in caches]
+
+
+def build_window_batch_nll_cache(
+    caches: list[WindowNLLCache] | tuple[WindowNLLCache, ...],
+    *,
+    device: torch.device | str | None = None,
+) -> WindowBatchNLLCache:
+    batch = WindowBatchNLLCache.from_window_caches(caches)
+    return batch if device is None else batch.to(device)
 
 
 def exact_window_nll_from_cache(
@@ -342,6 +415,9 @@ def local_window_exact_nll(
         aggregate_unique=aggregate_unique,
         device=logits.device,
     )
+    if resolve_likelihood_backend(logits, backend) == "cuda_extension":
+        batch_cache = build_window_batch_nll_cache(caches, device=logits.device)
+        return local_window_exact_nll_batched_from_cache(logits, batch_cache)
     return local_window_exact_nll_from_caches(logits, caches, backend=backend)
 
 
@@ -355,6 +431,65 @@ def local_window_exact_nll_from_caches(
         raise ValueError("local_window_exact_nll_from_caches requires at least one cache")
     losses = [exact_window_nll_from_cache(logits, cache, backend=backend) for cache in caches]
     return torch.stack(losses).mean()
+
+
+def local_window_exact_nll_batched_from_cache(
+    logits: torch.Tensor,
+    cache: WindowBatchNLLCache,
+) -> torch.Tensor:
+    if not logits.is_cuda:
+        raise ValueError("batched CUDA local-window NLL requires CUDA logits")
+    if logits.ndim != 1:
+        raise ValueError("logits must be rank-1")
+    return _LocalWindowNLLCuda.apply(
+        logits,
+        cache.flat_fault_ids,
+        cache.flat_masks,
+        cache.fault_offsets,
+        cache.flat_states,
+        cache.flat_counts,
+        cache.state_offsets,
+        cache.window_num_bits,
+        cache.max_faults_per_window,
+        cache.max_state_count,
+    )
+
+
+class _LocalWindowNLLCuda(torch.autograd.Function):
+    @staticmethod
+    def forward(
+        ctx,
+        logits: torch.Tensor,
+        flat_fault_ids: torch.Tensor,
+        flat_masks: torch.Tensor,
+        fault_offsets: torch.Tensor,
+        flat_states: torch.Tensor,
+        flat_counts: torch.Tensor,
+        state_offsets: torch.Tensor,
+        window_num_bits: torch.Tensor,
+        max_faults_per_window: int,
+        max_state_count: int,
+    ) -> torch.Tensor:
+        extension = _load_cuda_extension()
+        loss, grad_logits = extension.local_window_nll_value_and_grad(
+            logits.contiguous(),
+            flat_fault_ids.contiguous(),
+            flat_masks.contiguous(),
+            fault_offsets.contiguous(),
+            flat_states.contiguous(),
+            flat_counts.contiguous(),
+            state_offsets.contiguous(),
+            window_num_bits.contiguous(),
+            int(max_faults_per_window),
+            int(max_state_count),
+        )
+        ctx.save_for_backward(grad_logits)
+        return loss
+
+    @staticmethod
+    def backward(ctx, grad_output: torch.Tensor) -> tuple[torch.Tensor, None, None, None, None, None, None, None, None, None]:
+        (grad_logits,) = ctx.saved_tensors
+        return grad_output * grad_logits, None, None, None, None, None, None, None, None, None
 
 
 def exact_observation_nll_from_states(

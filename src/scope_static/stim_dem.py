@@ -119,5 +119,4 @@ def sample_observations_from_logits(
         generator.manual_seed(int(seed))
     probs = torch.sigmoid(logits.detach().to(device="cpu", dtype=torch.float64))
     faults = torch.bernoulli(probs.expand(int(shots), graph.M), generator=generator).to(dtype=torch.bool)
-    observations = (faults.to(torch.uint8) @ graph.A.T.to(torch.uint8)) % 2
-    return observations.to(dtype=torch.bool)
+    return graph.dem_parity_map.apply_faults(faults)

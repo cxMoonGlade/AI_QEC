@@ -18,6 +18,41 @@ class ObservationWindow:
         return len(self.bits)
 
 
+@dataclass(frozen=True)
+class WindowPlan:
+    """Constructed observation windows plus their reproducibility audit."""
+
+    windows: tuple[ObservationWindow, ...]
+    config: dict[str, object]
+
+    @classmethod
+    def from_config(cls, graph: FaultGraph, config: dict[str, object] | None) -> "WindowPlan":
+        cfg = dict(config or {})
+        return cls(windows=tuple(_build_windows_from_config_dict(graph, cfg)), config=cfg)
+
+    def detector_only(self, graph: FaultGraph) -> "WindowPlan":
+        return WindowPlan(
+            windows=tuple(detector_only_windows(graph, list(self.windows))),
+            config=self.config,
+        )
+
+    def audit_dict(self) -> dict[str, object]:
+        audit = window_audit_dict(list(self.windows))
+        builders = self.config.get("builders", ["detector_geometry"]) if bool(self.config.get("enabled", False)) else []
+        audit["window_plan_enabled"] = bool(self.config.get("enabled", False))
+        audit["window_plan_builders"] = [str(builder) for builder in builders]
+        return audit
+
+    def __iter__(self):
+        return iter(self.windows)
+
+    def __len__(self) -> int:
+        return len(self.windows)
+
+    def __getitem__(self, index: int) -> ObservationWindow:
+        return self.windows[index]
+
+
 def make_window(name: str, bits: tuple[int, ...] | list[int], kind: str) -> ObservationWindow:
     return ObservationWindow(name=name, bits=tuple(sorted(set(int(bit) for bit in bits))), kind=kind)
 
@@ -105,7 +140,10 @@ def build_windows_from_orbits(
 
 
 def build_windows_from_config(graph: FaultGraph, config: dict[str, object] | None) -> list[ObservationWindow]:
-    cfg = dict(config or {})
+    return list(WindowPlan.from_config(graph, config).windows)
+
+
+def _build_windows_from_config_dict(graph: FaultGraph, cfg: dict[str, object]) -> list[ObservationWindow]:
     if not bool(cfg.get("enabled", False)):
         return []
     max_window_bits = int(cfg.get("max_window_bits", 8))

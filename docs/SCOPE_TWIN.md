@@ -937,8 +937,7 @@ windows.
 
 **Goal**:
 
-> Can the model recover the quotient/orbit structure instead of receiving it by
-> hand?
+> Can the model recover the quotient/orbit structure instead of receiving it by hand?
 
 Still keep
 

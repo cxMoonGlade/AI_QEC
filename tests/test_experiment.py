@@ -1,7 +1,9 @@
 import json
 
+import pytest
 import yaml
 
+from scope_static.experiments.plan import ExperimentPlan
 from scope_static.experiments.run_static import run_experiment
 
 
@@ -57,6 +59,26 @@ def test_smoke_experiment_writes_claim_boundary_metadata(tmp_path):
     assert metrics["records"][0]["baseline_family"] == "dmle_qec"
     assert metrics["records"][0]["baseline_source_repository"] == "https://github.com/cxMoonGlade/DMLE-QEC"
     assert metrics["records"][0]["train_observation_mode"] == "detectors"
+    assert metrics["records"][0]["evidence_record_schema"] == "scope_static_v1"
+    assert metrics["records"][0]["train_likelihood_adapter"] == "pytorch_detector_exact"
+    assert metrics["records"][0]["train_likelihood_gpu_batch_available"] is False
+    important = metrics["important_results"]
+    assert important["schema"] == "scope_static_important_results_v1"
+    assert important["run"]["num_records"] == len(metrics["records"])
+    assert important["run"]["num_model_fits_executed"] == metrics["num_model_fits_executed"]
+    assert important["run"]["num_model_fit_cache_hits"] == metrics["num_model_fit_cache_hits"]
+    assert important["run"]["num_model_fit_requests"] == (
+        metrics["num_model_fits_executed"] + metrics["num_model_fit_cache_hits"]
+    )
+    assert important["run"]["model_fit_cache_hit_rate"] > 0.0
+    assert {"value": "pytorch_detector_exact", "count": 2} in important["run"]["train_likelihood_adapter_counts"]
+    assert [row["residual_rank"] for row in important["compression_by_rank"]] == [0, 1]
+    assert important["best_by_teacher_case_at_max_shots"]
+    assert important["best_by_teacher_case_and_shots"]
+    assert important["model_rank_summary"]
+    assert important["threshold_summary"]["threshold_table"]
+    assert metrics["config_stem"] == "config"
+    assert metrics["output_dir_overridden"] is False
     assert {record["residual_rank"] for record in metrics["records"]} == {0, 1}
     assert {record["residual_rank"] for record in metrics["shots_to_threshold"]} == {0, 1}
     assert metrics["records"][0]["train_likelihood_objective"] == "global_exact"
@@ -120,3 +142,38 @@ def test_local_window_objective_records_window_and_compression_metadata(tmp_path
     assert record["P_hard"] == 9
     assert result["teacher_cases"] == [{"teacher_mode": "exact_orbit", "epsilon_break": 0.0}]
     assert result["window_audits"][0]["num_windows"] > 0
+    assert result["window_audits"][0]["window_plan_enabled"] is True
+
+
+def test_experiment_plan_rejects_known_mvp_output_mismatch(tmp_path):
+    config = {
+        "run": {"name": "bad", "output_dir": "outputs/scope_static/MVP03", "device": "cpu", "dtype": "float64"},
+        "circuit": {"family": "surface_code:rotated_memory_x", "distance": 3, "rounds": 1, "noise": {}},
+        "graph": {"canonicalize_duplicate_masks": True, "residual_rank": 0},
+        "experiment": {"seeds": [0], "shot_budgets": [8]},
+        "training": {"models": ["hard_orbit"], "steps": 1},
+    }
+    config_path = tmp_path / "d3_r1_MVP05_windows.yaml"
+    config_path.write_text(yaml.safe_dump(config))
+
+    with pytest.raises(ValueError, match="MVP05"):
+        ExperimentPlan.from_path(config_path)
+
+    override = ExperimentPlan.from_path(config_path, output_dir=tmp_path / "intentional")
+    assert override.output_dir_overridden is True
+
+
+def test_experiment_plan_cuda_request_requires_visible_cuda(monkeypatch, tmp_path):
+    monkeypatch.setattr("torch.cuda.is_available", lambda: False)
+    config = {
+        "run": {"name": "cuda", "output_dir": str(tmp_path / "out"), "device": "cuda", "dtype": "float64"},
+        "circuit": {"family": "surface_code:rotated_memory_x", "distance": 3, "rounds": 1, "noise": {}},
+        "graph": {"canonicalize_duplicate_masks": True, "residual_rank": 0},
+        "experiment": {"seeds": [0], "shot_budgets": [8]},
+        "training": {"models": ["hard_orbit"], "steps": 1},
+    }
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(yaml.safe_dump(config))
+
+    with pytest.raises(RuntimeError, match="requests CUDA"):
+        ExperimentPlan.from_path(config_path)

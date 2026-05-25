@@ -12,7 +12,8 @@ from scope_static.likelihood import (
     projected_window_mask_states,
     resolve_likelihood_backend,
 )
-from scope_static.windows import ObservationWindow, build_windows_from_config, build_windows_from_detector_geometry
+from scope_static.objectives import build_likelihood_objective
+from scope_static.windows import ObservationWindow, WindowPlan, build_windows_from_config, build_windows_from_detector_geometry
 
 
 def _tiny_graph():
@@ -121,6 +122,65 @@ def test_window_config_can_limit_count_for_fast_smoke_runs():
         },
     )
     assert len(windows) == 2
+
+
+def test_window_plan_carries_audit_metadata():
+    graph = _tiny_graph()
+    plan = WindowPlan.from_config(
+        graph,
+        {
+            "enabled": True,
+            "builders": ["detector_geometry"],
+            "include_radius1": False,
+            "max_window_bits": 2,
+        },
+    )
+    audit = plan.audit_dict()
+    assert len(plan) == audit["num_windows"]
+    assert audit["window_plan_enabled"] is True
+    assert audit["window_plan_builders"] == ["detector_geometry"]
+
+
+def test_likelihood_objective_plan_owns_local_window_cache():
+    graph = _tiny_graph()
+    logits = torch.tensor([-1.2, -2.0, -3.0], dtype=torch.float64, requires_grad=True)
+    observations = torch.tensor([[0, 0], [1, 0], [1, 1]], dtype=torch.bool)
+    window = ObservationWindow(name="full", bits=(0, 1), kind="test")
+    objective = build_likelihood_objective(
+        graph,
+        observations,
+        likelihood_objective="local_exact",
+        observation_mode="full",
+        windows=[window],
+    )
+
+    assert objective.audit_dict()["num_train_windows"] == 1
+    assert torch.allclose(objective.loss(logits), exact_dem_nll(graph, logits, observations))
+
+
+def test_cuda_batched_local_window_nll_matches_pytorch_when_available():
+    if not torch.cuda.is_available():
+        pytest.skip("CUDA is not available")
+    graph = _tiny_graph()
+    windows = [
+        ObservationWindow(name="left", bits=(0,), kind="test"),
+        ObservationWindow(name="full", bits=(0, 1), kind="test"),
+    ]
+    observations = torch.tensor([[0, 0], [1, 0], [1, 1]], dtype=torch.bool)
+    cpu_logits = torch.tensor([-1.2, -2.0, -3.0], dtype=torch.float64, requires_grad=True)
+    cuda_logits = cpu_logits.detach().clone().cuda().requires_grad_(True)
+
+    expected = local_window_exact_nll(graph, cpu_logits, observations, windows, backend="pytorch")
+    try:
+        actual = local_window_exact_nll(graph, cuda_logits, observations, windows, backend="cuda_extension")
+    except RuntimeError as exc:
+        pytest.skip(f"CUDA extension is not buildable in this environment: {exc}")
+
+    assert torch.allclose(actual.cpu(), expected, atol=1e-12, rtol=1e-12)
+    expected.backward()
+    actual.backward()
+    assert cuda_logits.grad is not None
+    assert torch.allclose(cuda_logits.grad.cpu(), cpu_logits.grad, atol=1e-12, rtol=1e-12)
 
 
 def test_detector_nll_ignores_logical_only_faults():
