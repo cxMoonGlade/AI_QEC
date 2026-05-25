@@ -2,7 +2,17 @@ import pytest
 import torch
 
 from scope_static.fault_graph import FaultGraph
-from scope_static.likelihood import exact_dem_nll, exact_detector_dem_nll, parity_distribution, resolve_likelihood_backend
+from scope_static.likelihood import (
+    build_window_nll_caches,
+    exact_dem_nll,
+    exact_detector_dem_nll,
+    local_window_exact_nll_from_caches,
+    local_window_exact_nll,
+    parity_distribution,
+    projected_window_mask_states,
+    resolve_likelihood_backend,
+)
+from scope_static.windows import ObservationWindow, build_windows_from_config, build_windows_from_detector_geometry
 
 
 def _tiny_graph():
@@ -60,6 +70,57 @@ def test_aggregated_nll_matches_unaggregated_and_has_gradients():
     nll_agg.backward()
     assert logits.grad is not None
     assert torch.isfinite(logits.grad).all()
+
+
+def test_window_projection_and_local_nll_match_full_window():
+    graph = _tiny_graph()
+    logits = torch.tensor([-1.2, -2.0, -3.0], dtype=torch.float64, requires_grad=True)
+    observations = torch.tensor(
+        [
+            [0, 0],
+            [1, 0],
+            [1, 1],
+        ],
+        dtype=torch.bool,
+    )
+    fault_ids, mask_states = projected_window_mask_states(graph, (0,))
+    assert fault_ids.tolist() == [0, 2]
+    assert mask_states.tolist() == [1, 1]
+
+    full_window = ObservationWindow(name="full", bits=(0, 1), kind="test")
+    local_nll = local_window_exact_nll(graph, logits, observations, [full_window])
+    cached_nll = local_window_exact_nll_from_caches(
+        logits,
+        build_window_nll_caches(graph, observations, [full_window]),
+    )
+    global_nll = exact_dem_nll(graph, logits, observations)
+    assert torch.allclose(local_nll, global_nll)
+    assert torch.allclose(cached_nll, global_nll)
+    local_nll.backward()
+    assert logits.grad is not None
+    assert torch.isfinite(logits.grad).all()
+
+
+def test_detector_geometry_window_builder_starts_with_local_windows():
+    graph = _tiny_graph()
+    windows = build_windows_from_detector_geometry(graph, include_radius1=False, max_window_bits=2)
+    assert {window.kind for window in windows} >= {"single_detector", "detector_pair"}
+    assert all(window.size <= 2 for window in windows)
+
+
+def test_window_config_can_limit_count_for_fast_smoke_runs():
+    graph = _tiny_graph()
+    windows = build_windows_from_config(
+        graph,
+        {
+            "enabled": True,
+            "builders": ["detector_geometry"],
+            "include_radius1": False,
+            "max_window_bits": 2,
+            "max_windows": 2,
+        },
+    )
+    assert len(windows) == 2
 
 
 def test_detector_nll_ignores_logical_only_faults():

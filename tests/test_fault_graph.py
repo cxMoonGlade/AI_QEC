@@ -1,6 +1,6 @@
 import torch
 
-from scope_static.fault_graph import FaultGraph, combine_duplicate_probabilities, gf2_rank
+from scope_static.fault_graph import FaultGraph, combine_duplicate_probabilities, gf2_rank, mask_states_from_matrix
 from scope_static.stim_dem import build_surface_code_graph
 
 
@@ -35,6 +35,29 @@ def test_duplicate_mask_canonicalization_combines_probabilities():
     assert audit["num_faults_effective_M"] == 2
     assert audit["num_duplicate_mask_groups"] == 1
     assert audit["gf2_rank_A"] == gf2_rank(graph.A)
+    assert audit["parity_storage"] == "sparse_supports_with_dense_A_compat"
+    assert audit["num_sparse_support_entries"] == sum(len(support) for support in graph.supports_by_fault)
+
+
+def test_sparse_support_views_match_dense_masks():
+    raw_masks = torch.tensor(
+        [
+            [1, 0, 1],
+            [0, 1, 1],
+            [1, 0, 0],
+        ],
+        dtype=torch.bool,
+    )
+    graph = FaultGraph.from_raw_masks(
+        raw_masks,
+        num_detectors=3,
+        num_observables=0,
+        canonicalize_duplicate_masks=False,
+    )
+    assert graph.supports_by_fault == ((0, 2), (1,), (0, 1))
+    assert graph.faults_by_observation_bit == ((0, 2), (1, 2), (0,))
+    assert graph.packed_masks64 == ((5,), (2,), (3,))
+    assert torch.equal(graph.mask_states, mask_states_from_matrix(graph.A))
 
 
 def test_stim_surface_code_graph_audit_uses_B_not_K():
@@ -58,6 +81,8 @@ def test_stim_surface_code_graph_audit_uses_B_not_K():
     assert "num_observation_bits_K" not in audit
     assert audit["num_faults_raw_M"] >= audit["num_faults_effective_M"]
     assert audit["state_count_2_pow_B"] == 1 << graph.B
+    assert audit["log2_state_count"] == graph.B
+    assert audit["global_exact_state_count_materialized"] is True
 
 
 def test_soft_features_not_orbit_constant():

@@ -9,7 +9,8 @@ from .fields import (
     SoftFeatureOrbitFaultLogitField,
     SoftFeatureOrbitField,
 )
-from .likelihood import exact_dem_nll, parity_distribution
+from .likelihood import exact_dem_nll, local_window_exact_nll, parity_distribution
+from .windows import ObservationWindow
 
 __all__ = [
     "FaultGraph",
@@ -20,5 +21,7 @@ __all__ = [
     "SoftFeatureOrbitFaultLogitField",
     "SoftFeatureOrbitField",
     "exact_dem_nll",
+    "local_window_exact_nll",
+    "ObservationWindow",
     "parity_distribution",
 ]

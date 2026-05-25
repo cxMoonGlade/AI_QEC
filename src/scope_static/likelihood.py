@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 import functools
 import os
 from pathlib import Path
@@ -8,8 +9,30 @@ import tempfile
 import torch
 
 from .fault_graph import FaultGraph, mask_states_from_matrix
+from .windows import ObservationWindow
 
 LikelihoodBackend = str
+
+
+@dataclass(frozen=True)
+class WindowNLLCache:
+    window: ObservationWindow
+    fault_ids: torch.Tensor
+    mask_states: torch.Tensor
+    states: torch.Tensor
+    counts: torch.Tensor | None
+    num_observations: int
+
+    def to(self, device: torch.device | str) -> "WindowNLLCache":
+        target = torch.device(device)
+        return WindowNLLCache(
+            window=self.window,
+            fault_ids=self.fault_ids.to(device=target, dtype=torch.long),
+            mask_states=self.mask_states.to(device=target, dtype=torch.long),
+            states=self.states.to(device=target, dtype=torch.long),
+            counts=None if self.counts is None else self.counts.to(device=target, dtype=torch.long),
+            num_observations=self.num_observations,
+        )
 
 
 def observation_bits_to_states(observations: torch.Tensor, *, B: int) -> torch.Tensor:
@@ -137,6 +160,201 @@ def exact_detector_dem_nll(
         return -(counts.to(dtype=dist.dtype) * torch.log(probs)).sum() / counts.sum()
     probs = dist[states].clamp_min(torch.finfo(dist.dtype).tiny)
     return -torch.log(probs).mean()
+
+
+def projected_window_mask_states(
+    graph: FaultGraph,
+    window_bits: tuple[int, ...],
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Return fault indices and packed local masks for a window projection."""
+
+    if len(window_bits) >= 63:
+        raise ValueError("window exact state indexing currently requires |W| < 63")
+    local_bit_index = {int(bit): local for local, bit in enumerate(window_bits)}
+    candidate_faults: set[int] = set()
+    for bit in window_bits:
+        candidate_faults.update(graph.faults_by_observation_bit[int(bit)])
+
+    fault_ids: list[int] = []
+    mask_states: list[int] = []
+    for fault in sorted(candidate_faults):
+        state = 0
+        for bit in graph.supports_by_fault[fault]:
+            local = local_bit_index.get(bit)
+            if local is not None:
+                state |= 1 << local
+        if state:
+            fault_ids.append(fault)
+            mask_states.append(state)
+    return torch.tensor(fault_ids, dtype=torch.long), torch.tensor(mask_states, dtype=torch.long)
+
+
+def exact_window_nll(
+    graph: FaultGraph,
+    logits: torch.Tensor,
+    observations: torch.Tensor,
+    window: ObservationWindow,
+    *,
+    aggregate_unique: bool = True,
+    backend: LikelihoodBackend = "auto",
+) -> torch.Tensor:
+    """Exact mean NLL after projecting the DEM parity map to one observation window."""
+
+    if logits.ndim != 1 or logits.numel() != graph.M:
+        raise ValueError(f"logits must have shape [{graph.M}]")
+    cache = build_window_nll_cache(graph, observations, window, aggregate_unique=aggregate_unique).to(logits.device)
+    return exact_window_nll_from_cache(logits, cache, backend=backend)
+
+
+def build_window_nll_cache(
+    graph: FaultGraph,
+    observations: torch.Tensor,
+    window: ObservationWindow,
+    *,
+    aggregate_unique: bool = True,
+) -> WindowNLLCache:
+    if not window.bits:
+        raise ValueError("window must contain at least one observation bit")
+    fault_ids, mask_states = projected_window_mask_states(graph, window.bits)
+    local_observations = torch.as_tensor(observations, dtype=torch.bool)[:, list(window.bits)]
+    states = observation_bits_to_states(local_observations, B=window.size)
+    if aggregate_unique:
+        states, counts = torch.unique(states, sorted=False, return_counts=True)
+    else:
+        counts = None
+    return WindowNLLCache(
+        window=window,
+        fault_ids=fault_ids,
+        mask_states=mask_states,
+        states=states,
+        counts=counts,
+        num_observations=int(local_observations.shape[0]),
+    )
+
+
+def build_window_nll_caches(
+    graph: FaultGraph,
+    observations: torch.Tensor,
+    windows: list[ObservationWindow] | tuple[ObservationWindow, ...],
+    *,
+    aggregate_unique: bool = True,
+    device: torch.device | str | None = None,
+) -> list[WindowNLLCache]:
+    caches = [
+        build_window_nll_cache(graph, observations, window, aggregate_unique=aggregate_unique)
+        for window in windows
+    ]
+    if device is None:
+        return caches
+    return [cache.to(device) for cache in caches]
+
+
+def exact_window_nll_from_cache(
+    logits: torch.Tensor,
+    cache: WindowNLLCache,
+    *,
+    backend: LikelihoodBackend = "auto",
+) -> torch.Tensor:
+    if cache.fault_ids.numel() == 0:
+        states = cache.states.to(device=logits.device)
+        zero = logits.new_tensor(0.0)
+        impossible = states != 0
+        if bool(impossible.any()):
+            return zero + torch.finfo(logits.dtype).max
+        return zero
+
+    local_logits = logits[cache.fault_ids.to(device=logits.device)]
+    if cache.window.size <= 2:
+        dist = _small_window_distribution_from_logits(
+            local_logits,
+            cache.mask_states.to(device=logits.device),
+            cache.window.size,
+        )
+        return _nll_from_cached_states(dist, cache)
+
+    dist = parity_distribution_from_mask_states(
+        local_logits,
+        cache.mask_states,
+        num_bits=cache.window.size,
+        backend=backend,
+    )
+    return _nll_from_cached_states(dist, cache)
+
+
+def _nll_from_cached_states(dist: torch.Tensor, cache: WindowNLLCache) -> torch.Tensor:
+    states = cache.states.to(device=dist.device)
+    if cache.counts is not None:
+        counts = cache.counts.to(device=dist.device)
+        probs = dist[states].clamp_min(torch.finfo(dist.dtype).tiny)
+        return -(counts.to(dtype=dist.dtype) * torch.log(probs)).sum() / counts.sum()
+    probs = dist[states].clamp_min(torch.finfo(dist.dtype).tiny)
+    return -torch.log(probs).mean()
+
+
+def _small_window_distribution_from_logits(
+    local_logits: torch.Tensor,
+    mask_states: torch.Tensor,
+    num_bits: int,
+) -> torch.Tensor:
+    if num_bits == 1:
+        mean0 = _parity_mean(local_logits, mask_states == 1)
+        p1 = (1 - mean0) / 2
+        return torch.stack([1 - p1, p1])
+    if num_bits == 2:
+        mean0 = _parity_mean(local_logits, (mask_states & 1) != 0)
+        mean1 = _parity_mean(local_logits, (mask_states & 2) != 0)
+        mean01 = _parity_mean(local_logits, (mask_states == 1) | (mask_states == 2))
+        return torch.stack(
+            [
+                (1 + mean0 + mean1 + mean01) / 4,
+                (1 - mean0 + mean1 - mean01) / 4,
+                (1 + mean0 - mean1 - mean01) / 4,
+                (1 - mean0 - mean1 + mean01) / 4,
+            ]
+        )
+    raise ValueError("small-window closed form only supports one or two bits")
+
+
+def _parity_mean(local_logits: torch.Tensor, selector: torch.Tensor) -> torch.Tensor:
+    if not bool(selector.any()):
+        return local_logits.new_tensor(1.0)
+    parity_factors = 1 - 2 * torch.sigmoid(local_logits)
+    return torch.prod(parity_factors[selector])
+
+
+def local_window_exact_nll(
+    graph: FaultGraph,
+    logits: torch.Tensor,
+    observations: torch.Tensor,
+    windows: list[ObservationWindow] | tuple[ObservationWindow, ...],
+    *,
+    aggregate_unique: bool = True,
+    backend: LikelihoodBackend = "auto",
+) -> torch.Tensor:
+    """Composite exact local likelihood averaged over observation windows."""
+
+    if not windows:
+        raise ValueError("local_window_exact_nll requires at least one window")
+    caches = build_window_nll_caches(
+        graph,
+        observations,
+        windows,
+        aggregate_unique=aggregate_unique,
+        device=logits.device,
+    )
+    return local_window_exact_nll_from_caches(logits, caches, backend=backend)
+
+
+def local_window_exact_nll_from_caches(
+    logits: torch.Tensor,
+    caches: list[WindowNLLCache] | tuple[WindowNLLCache, ...],
+    *,
+    backend: LikelihoodBackend = "auto",
+) -> torch.Tensor:
+    if not caches:
+        raise ValueError("local_window_exact_nll_from_caches requires at least one cache")
+    losses = [exact_window_nll_from_cache(logits, cache, backend=backend) for cache in caches]
+    return torch.stack(losses).mean()
 
 
 def exact_observation_nll_from_states(

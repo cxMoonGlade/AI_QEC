@@ -1,6 +1,6 @@
 run:
-  name: d3_r1_exact
-  output_dir: outputs/scope_static/MVP01
+  name: d3_r1_mvp03_rank5_global_exact
+  output_dir: outputs/scope_static/MVP03
   device: cuda
   dtype: float64
 
@@ -16,7 +16,7 @@ circuit:
 
 graph:
   canonicalize_duplicate_masks: true
-  residual_rank: 2
+  residual_rank: 5
 
 experiment:
   seeds: [0, 1, 2]

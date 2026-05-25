@@ -925,6 +925,14 @@ For the MVP04 rank sweep, the data-generating teacher is fixed at the selected
 teacher residual rank, while fitted models sweep \(r\in\{0,1,2,5\}\). This keeps
 the sampled observations and target logits comparable across ranks.
 
+MVP05 introduces the scalable likelihood path. The global DEM parity map is
+stored through sparse supports, and exact likelihood can be evaluated on local
+windows \(W\) by replacing each fault mask with \(a_{j,W}=a_j|_W\). This keeps
+the exact DP cost at \(2^{|W|}\) per window instead of \(2^B\). The first window
+builders are detector singles, detector pairs, radius-1 detector-coordinate
+neighborhoods, boundary/logical windows, template motifs, and known-orbit
+windows.
+
 ##### Stage 2: Static SCOPE-Discovery
 
 **Goal**:

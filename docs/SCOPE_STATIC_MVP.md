@@ -12,6 +12,16 @@ A in F_2^{B x M}
 
 `B` is the number of detector plus logical observable bits. `M` is the number of effective DEM fault mechanisms after duplicate-mask canonicalization. `O` is the number of known orbits. `r` is the fixed residual feature rank. `K_t` is reserved for later SCOPE-Discovery prototype counts.
 
+The graph now keeps sparse parity-map views as the primary scalable interface:
+
+```text
+supports_by_fault[j] = observation bits touched by fault j
+faults_by_observation_bit[b] = faults touching observation bit b
+packed_masks64[j] = 64-bit chunks for exact small-window paths
+```
+
+The dense `A` tensor remains as a compatibility artifact for small tests and toy exact-global runs.
+
 ## Claim Boundary
 
 This stage may claim evidence about orbit sharing, fixed residual features, exact DEM likelihood, and `d_Q^DEM` inside this fixed Bernoulli parity-map family.
@@ -40,6 +50,16 @@ q_j(s) =
 
 Repeated observations are aggregated before NLL evaluation by default.
 
+For scaling beyond toy `B`, the MVP05 path uses local exact windows:
+
+```text
+a_{j,W} = a_j restricted to W
+```
+
+Each window runs the same exact parity DP over `2^|W|`, not `2^B`. The initial window builders cover single detectors, detector pairs induced by DEM faults, radius-1 detector-coordinate neighborhoods, boundary/logical windows, template motifs, and known-orbit windows.
+
+Detector-rate MAE and local-correlation error use exact parity-moment formulas from sparse supports, so those metrics no longer require the global exact distribution.
+
 ## Sample Efficiency
 
 `shots_to_threshold` is seed-aware. The default policy is `threshold_seed_policy: mean`, which requires the mean `Delta_NLL_oracle` across seeds at a shot budget to pass:
@@ -62,6 +82,20 @@ p_eff(G) = (1 - prod_{j in G}(1 - 2 p_j)) / 2
 
 Every run writes graph audit metadata including `B`, raw and effective `M`, duplicate groups, `gf2_rank(A)`, and `2^B`.
 
+Every run also writes compression audit fields:
+
+```json
+{
+  "P_local": 0,
+  "P_hard": 0,
+  "P_soft": 0,
+  "soft_compressed": false,
+  "rank_condition_satisfied": false
+}
+```
+
+This prevents rank-soft runs from being described as compressed when `O(1+r) >= M`.
+
 ## Running
 
 From a fresh checkout, either install the package in editable mode:
@@ -78,11 +112,32 @@ Claim path:
 PYTHONPATH=src conda run -n aiqec python -m scope_static.experiments.run_static --config configs/scope_static/d3_r1_MVP01.yaml
 ```
 
+MVP03 rank-5 global exact rerun:
+
+```bash
+PYTHONPATH=src conda run -n aiqec python -m scope_static.experiments.run_static --config configs/scope_static/d3_r1_MVP03.yaml
+```
+
 MVP04 rank sweep:
 
 ```bash
 PYTHONPATH=src conda run -n aiqec python -m scope_static.experiments.run_static --config configs/scope_static/d3_r1_MVP04.yaml
 ```
+
+MVP05 local-window smoke objective:
+
+```bash
+PYTHONPATH=src conda run -n aiqec python -m scope_static.experiments.run_static --config configs/scope_static/d3_r1_MVP05_windows.yaml
+```
+
+MVP05 full local-window sweep:
+
+```bash
+PYTHONPATH=src conda run -n aiqec python -m scope_static.experiments.run_static --config configs/scope_static/d3_r1_MVP05_windows_full.yaml
+```
+
+For small local windows, CPU/PyTorch is usually faster than launching many tiny CUDA-extension kernels. The smoke config is intentionally small; use the full sweep as a long-running evidence job.
+The full MVP05 config uses explicit `teacher_cases` to avoid duplicate exact-orbit runs and caches rank-invariant fits for `local`, `dmle_qec`, and `hard_orbit`; only the soft residual is refit per residual rank.
 
 Diagnostic path:
 
