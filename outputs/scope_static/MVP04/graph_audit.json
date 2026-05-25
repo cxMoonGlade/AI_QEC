@@ -1,0 +1,106 @@
+{
+  "graph_audits": [
+    {
+      "canonicalize_duplicate_masks": true,
+      "cptp_gksl_claim": false,
+      "dem_fault_logit_claim": true,
+      "exact_likelihood_trainable": true,
+      "gf2_rank_A": 9,
+      "max_centered_feature_rank": 0,
+      "mean_centered_feature_rank": 0.0,
+      "num_duplicate_mask_groups": 6,
+      "num_faults_effective_M": 23,
+      "num_faults_raw_M": 29,
+      "num_non_singleton_orbits": 9,
+      "num_observation_bits_B": 9,
+      "num_orbits": 9,
+      "num_orbits_O": 9,
+      "num_orbits_with_nonzero_centered_feature_rank": 0,
+      "num_zero_mask_raw_indices": 0,
+      "residual_rank": 0,
+      "selected_feature_indices": [],
+      "state_count_2_pow_B": 512
+    },
+    {
+      "canonicalize_duplicate_masks": true,
+      "cptp_gksl_claim": false,
+      "dem_fault_logit_claim": true,
+      "exact_likelihood_trainable": true,
+      "gf2_rank_A": 9,
+      "max_centered_feature_rank": 1,
+      "mean_centered_feature_rank": 1.0,
+      "num_duplicate_mask_groups": 6,
+      "num_faults_effective_M": 23,
+      "num_faults_raw_M": 29,
+      "num_non_singleton_orbits": 9,
+      "num_observation_bits_B": 9,
+      "num_orbits": 9,
+      "num_orbits_O": 9,
+      "num_orbits_with_nonzero_centered_feature_rank": 9,
+      "num_zero_mask_raw_indices": 0,
+      "residual_rank": 1,
+      "selected_feature_indices": [
+        4
+      ],
+      "state_count_2_pow_B": 512
+    },
+    {
+      "canonicalize_duplicate_masks": true,
+      "cptp_gksl_claim": false,
+      "dem_fault_logit_claim": true,
+      "exact_likelihood_trainable": true,
+      "gf2_rank_A": 9,
+      "max_centered_feature_rank": 2,
+      "mean_centered_feature_rank": 1.4444444444444444,
+      "num_duplicate_mask_groups": 6,
+      "num_faults_effective_M": 23,
+      "num_faults_raw_M": 29,
+      "num_non_singleton_orbits": 9,
+      "num_observation_bits_B": 9,
+      "num_orbits": 9,
+      "num_orbits_O": 9,
+      "num_orbits_with_nonzero_centered_feature_rank": 9,
+      "num_zero_mask_raw_indices": 0,
+      "residual_rank": 2,
+      "selected_feature_indices": [
+        4,
+        7
+      ],
+      "state_count_2_pow_B": 512
+    },
+    {
+      "canonicalize_duplicate_masks": true,
+      "cptp_gksl_claim": false,
+      "dem_fault_logit_claim": true,
+      "exact_likelihood_trainable": true,
+      "gf2_rank_A": 9,
+      "max_centered_feature_rank": 3,
+      "mean_centered_feature_rank": 1.5555555555555556,
+      "num_duplicate_mask_groups": 6,
+      "num_faults_effective_M": 23,
+      "num_faults_raw_M": 29,
+      "num_non_singleton_orbits": 9,
+      "num_observation_bits_B": 9,
+      "num_orbits": 9,
+      "num_orbits_O": 9,
+      "num_orbits_with_nonzero_centered_feature_rank": 9,
+      "num_zero_mask_raw_indices": 0,
+      "residual_rank": 5,
+      "selected_feature_indices": [
+        4,
+        7,
+        3,
+        8,
+        6
+      ],
+      "state_count_2_pow_B": 512
+    }
+  ],
+  "residual_ranks": [
+    0,
+    1,
+    2,
+    5
+  ],
+  "teacher_residual_rank": 5
+}

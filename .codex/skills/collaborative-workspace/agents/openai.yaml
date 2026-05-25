@@ -1,0 +1,4 @@
+interface:
+  display_name: "Collaborative Workspace"
+  short_description: "Keep agent-human work smooth, humane, and reproducible."
+  default_prompt: "Use this skill to set up a clear working rhythm for our project collaboration."
