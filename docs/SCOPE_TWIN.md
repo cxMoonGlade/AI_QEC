@@ -994,3 +994,85 @@ d_Q,\quad
 \text{TVD},\quad
 \text{detector-rate MAE}.
 $$
+
+---
+
+
+### Stage 3: SCOPE-Amortized / SCOPE-Twin
+
+Only after Stage 1 and Stage 2 work, implement the amortized map:
+
+[
+f_\psi:c\mapsto\Theta_\psi(c).
+]
+
+This is what your document calls SCOPE-Amortized: it learns the map from context (c) to the parameter field (\Theta_\psi(c)), with contexts coming from code distance, noise regimes, injected defects, calibration windows, schedule variants, or synthetic teacher-generated circuits.
+
+At this stage, go back to **known orbit structure first**.
+
+So the model is:
+
+# [ \theta_{i,t}(c)
+
+\rho_t(g_{i\leftarrow o})
+\vartheta_{o,t,\psi}(c)
++
+U_{o,t,\psi}(c)z_{i,t,\psi}(c).
+]
+
+Your current document already defines this as the core SCOPE-Twin field construction, with orbit prototype (\vartheta_{o,t,\psi}), residual basis (U_{o,t,\psi}), residual coordinate (z_{i,t,\psi}), and a physical decoder producing CPTP/GKSL local channels.
+
+This stage answers:
+
+[
+\boxed{
+\text{Can known-quotient SCOPE transfer across contexts?}
+}
+]
+
+------
+
+### Stage 4: Amortized SCOPE-Discovery
+
+Now combine the two difficult parts:
+
+[
+\boxed{
+\text{context-conditioned parameter learning}
++
+\text{latent quotient discovery}.
+}
+]
+
+Use:
+
+[
+A^{(t)}_\psi(c)
+\in
+[0,1]^{|\mathcal I_t|\times K_t}.
+]
+
+Then:
+
+# [ \theta_{i,t}(c)
+
+\sum_{k=1}^{K_t}
+A^{(t)}*{ik,\psi}(c)
+\left[
+\vartheta*{k,t,\psi}(c)
++
+U_{k,t,\psi}(c)z_{i,t,\psi}(c)
+\right].
+]
+
+This is the full SCOPE-Discovery version.
+
+This stage answers:
+
+[
+\boxed{
+\text{Can the discovered quotient structure transfer across circuit/noise/code contexts?}
+}
+]
+
+This is where you test OOD transfer, e.g. train at (d=3,5), test at (d=7), or train on bulk-only circuits and test on boundary/defect-heavy circuits. Your document already lists this as an OOD axis with held-out NLL, TVD, detector-rate MAE, local correlation error, (d_Q), and logical observation statistics.
