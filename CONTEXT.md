@@ -17,6 +17,7 @@ This repository is currently centered on the SCOPE family of QEC noise-learning 
 - **d_Q^DEM**: the Stage-1 quotient-aware logit distance over only DEM-preserving fault permutations.
 - **Window plan**: a reproducible set of observation-bit windows used by local exact likelihood training/evaluation, including builder config and audit metadata.
 - **Likelihood objective**: a prepared training objective over the DEM parity map, such as global exact, detector-only exact, or local-window exact likelihood.
+- **Exact local-window parity likelihood**: the Stage-1 mathematical objective that evaluates the Bernoulli DEM parity model exactly on a prepared set of observation-bit windows. It consumes logits over effective DEM fault columns and is independent of orbit, discovery, Google schedule, or preprocessing choices. It does not choose the windows; detector/logical coverage belongs to the window plan and evidence audit.
 - **GPU batched local-window exact adapter**: the C++/CUDA implementation of local-window exact likelihood that evaluates all prepared windows in one extension call and returns a first-order gradient for SCOPE-Static training.
 - **Evidence record**: one metrics row for a trained SCOPE-Static model, including likelihood source, compression audit, baseline metadata, and threshold inputs.
 - **Experiment plan**: the normalized SCOPE-Static run matrix compiled from YAML, including residual ranks, teacher cases, shot budgets, model names, backend choice, and output identity.

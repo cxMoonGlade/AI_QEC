@@ -98,6 +98,119 @@ Every run also writes compression audit fields:
 
 This prevents rank-soft runs from being described as compressed when `O(1+r) >= M`.
 
+## S1.6 Google Set1 Preprocessing Ablation
+
+S1.6 adds a read-only adapter for
+`/home/cx/Document/google_72Q_surface_code_d3_d5_set1`. The adapter accepts
+either the outer dataset path or the nested
+`google_72Q_surface_code_d3_d5_set1/google_72Q_surface_code_d3_d5_set1` path,
+then validates that `sample_00` exists before enumerating leaves.
+
+The new runner is intentionally separate from `run_static`:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_google_static \
+  --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1
+```
+
+For a fast real-data smoke:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_google_static \
+  --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
+  --train-shots 256 --heldout-shots 256 --max-windows 8 --steps 2 \
+  --models hard_orbit \
+  --orbit-modes fault_graph_heuristic,schedule_geometric \
+  --skip-cross-sample-transfer
+```
+
+Cross-sample transfer from `sample_00` to `sample_01` through `sample_20` is
+available with `--cross-sample-transfer`.
+
+The Google runner is GPU-first. With CUDA visible, the default `--device auto`
+selects `cuda` and the C++/CUDA `cuda_extension` backend. Use `--native-gpu`
+when the run must fail instead of falling back. CPU execution is allowed only
+when requested explicitly with `--allow-cpu-fallback`.
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_google_static \
+  --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
+  --train-shots 5000 --heldout-shots 2000 --max-windows 32 --steps 50 \
+  --models hard_orbit,soft_feature_orbit \
+  --orbit-modes fault_graph_heuristic,schedule_geometric \
+  --output-dir outputs/google_static/S1_6_native_gpu
+```
+
+The CUDA path uses a batched exact local-window DP for training. Detached
+evaluation and transfer use a forward-only CUDA kernel, so they do not build
+gradient history or run the backward adjoint. The runner streams JSON progress
+events with fit/evaluation wall times. Prepared local-window state/count caches
+are persisted by default under `<output-dir>/prepared_cache`; use
+`--prepared-cache-dir` to share them across output directories or
+`--disable-prepared-cache` for one-off uncached runs.
+
+The training kernel can be audited with
+`--cuda-kernel-variant spectral_shadow`. This computes both the current DP
+kernel and the new active-fault Walsh/Fourier spectral kernel, returns the DP
+result, and fails on loss/gradient mismatch. Keep `dp` as the default until
+S1.6 and later S1.7/S2-style reproduction runs match.
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_google_static \
+  --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
+  --native-gpu \
+  --cuda-kernel-variant spectral_shadow \
+  --train-shots 512 --heldout-shots 256 --max-windows 8 --steps 2 \
+  --models hard_orbit \
+  --orbit-modes fault_graph_heuristic \
+  --skip-cross-sample-transfer \
+  --output-dir outputs/google_static/S1_6_spectral_shadow_smoke
+```
+
+Kernel benchmarks are available through
+`scope_static.experiments.benchmark_cuda_kernels`; records include CPU/PyTorch,
+CUDA DP, CUDA spectral, and active-window workload audits. A small
+metric-reproduction gate is available through
+`scope_static.experiments.compare_cuda_kernel_variants`.
+
+The default leaf is `sample_00/d3_at_q5_5/X/r13` with `decoder_si1000`.
+Observations are loaded as `torch.bool[N, B] = [detection_events |
+obs_flips_actual]`.
+
+S1.6 builds a minimal `GoogleScheduleContext` proxy for
+`c = (H_sched, u, kappa, tau)`. It records hardware layout, qubit roles and
+coordinates, TICK/layer schedule, gate instances, detector and observable
+definitions, `.b8` paths, metadata, sample/order proxies, code descriptor, and
+coverage checks. This object is a minimal `H_sched` proxy, not a full
+`Aut(H_sched)` solver.
+
+The preprocessing modes are:
+
+- `local`: singleton DEM-fault orbits.
+- `fault_graph_heuristic`: current DEM-mask geometry heuristic for `omega(j)`.
+- `schedule_geometric`: coordinate/schedule-derived candidate symmetries,
+  validated against effective DEM fault columns.
+
+Claim boundary: `schedule_geometric` is an audited schedule-derived
+preprocessing proxy. It is not a full hardware automorphism solver, not full
+SCOPE-Twin, and not CPTP/GKSL learning. It only tests whether schedule-derived
+coloring gives a better fixed quotient/orbit prior than the current DEM-mask
+geometry heuristic. S1.6 still induces orbits over effective DEM fault columns,
+not true hardware/schedule fault locations.
+
+The runner emits provenance, schedule-coverage, symmetry-validation, partition,
+window, model, residual, heldout, and optional cross-sample transfer audits.
+`schedule_symmetry_status` is one of `nontrivial`, `identity_only`, or
+`invalid`; `identity_only` is a valid empirical outcome, not a code failure. It
+also records a tiny synthetic audit comparing local-window NLL to global exact
+NLL in a `B=3` case where global exact is feasible.
+
+Decision rule: schedule preprocessing is useful only when it produces
+nontrivial accepted symmetries and matches or improves heldout/transfer metrics
+at equal or fewer parameters, or gives a clearer stable quotient with comparable
+metrics. If only identity survives, record that the DEM-mask `FaultGraph`
+heuristic is sufficient for Stage-1 Google validation.
+
 ## Running
 
 From a fresh checkout, install the package in editable mode:

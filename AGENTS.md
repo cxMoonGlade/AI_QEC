@@ -28,6 +28,41 @@ Keep notation aligned with `docs/SCOPE_TWIN.md`:
 - Do not use `o` for orbit or observable.
 - Do not use `ell_j` for logits.
 
+## GPU-First Execution
+
+Treat this repository as a GPU-heavy QEC research program. Assume the target
+workstation has a CUDA device, at least RTX 5090 class, even if the current
+agent sandbox/session cannot see it. For any serious training, likelihood,
+local-window, Google-data, or large ablation workflow, prefer native GPU
+execution and accelerate with CUDA/PyTorch/C++ extensions as much as the code
+path permits.
+
+Before long runs, verify CUDA visibility from the `aiqec` environment. Failure
+to see CUDA in one agent/session is an environment visibility problem to
+diagnose, not evidence that the project should fall back to CPU-first design:
+
+```bash
+conda run -n aiqec python -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0) if torch.cuda.is_available() else None)"
+```
+
+For S1.6 Google runs, use the native GPU path unless deliberately testing CPU
+behavior:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_google_static \
+  --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
+  --native-gpu
+```
+
+If GPU utilization is low, do not assume the GPU path is broken. First check
+whether the workload is launch-bound or CPU-preprocessing-bound: local exact
+windows with small `max_window_bits` can finish in short CUDA bursts, while
+window/cache construction, `.b8` loading, Stim/DEM parsing, and cross-sample
+bookkeeping may still dominate CPU time. When improving performance, prioritize
+moving repeated preprocessing and cache construction out of Python loops, reusing
+prepared GPU caches across models/samples, and adding native CUDA/C++ kernels for
+hot paths.
+
 ## Commands
 
 Install:

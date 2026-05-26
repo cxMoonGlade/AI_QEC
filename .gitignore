@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 
+# Experiment caches
+outputs/**/prepared_cache/
+
 # Packaging/build artifacts
 *.egg-info
 build/

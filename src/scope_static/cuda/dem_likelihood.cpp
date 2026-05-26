@@ -22,6 +22,36 @@ std::tuple<torch::Tensor, torch::Tensor> local_window_nll_value_and_grad_cuda(
     torch::Tensor window_num_bits,
     int64_t max_faults_per_window,
     int64_t max_state_count);
+std::tuple<torch::Tensor, torch::Tensor> local_window_nll_value_and_grad_spectral_cuda(
+    torch::Tensor logits,
+    torch::Tensor flat_fault_ids,
+    torch::Tensor flat_masks,
+    torch::Tensor fault_offsets,
+    torch::Tensor flat_states,
+    torch::Tensor flat_counts,
+    torch::Tensor state_offsets,
+    torch::Tensor window_num_bits,
+    int64_t max_faults_per_window,
+    int64_t max_state_count,
+    double spectral_min_abs_factor,
+    int64_t spectral_memory_cap_bytes);
+torch::Tensor local_window_nll_value_cuda(
+    torch::Tensor logits,
+    torch::Tensor flat_fault_ids,
+    torch::Tensor flat_masks,
+    torch::Tensor fault_offsets,
+    torch::Tensor flat_states,
+    torch::Tensor flat_counts,
+    torch::Tensor state_offsets,
+    torch::Tensor window_num_bits,
+    int64_t max_faults_per_window,
+    int64_t max_state_count);
+std::tuple<torch::Tensor, torch::Tensor, torch::Tensor> window_observation_state_counts(
+    torch::Tensor observations,
+    torch::Tensor flat_window_bits,
+    torch::Tensor window_offsets,
+    torch::Tensor window_num_bits,
+    int64_t max_state_count);
 
 void check_forward_inputs(const torch::Tensor& logits, const torch::Tensor& masks, int64_t num_bits) {
   TORCH_CHECK(logits.is_cuda(), "logits must be a CUDA tensor");
@@ -157,6 +187,83 @@ std::tuple<torch::Tensor, torch::Tensor> local_window_nll_value_and_grad(
       max_state_count);
 }
 
+std::tuple<torch::Tensor, torch::Tensor> local_window_nll_value_and_grad_spectral(
+    torch::Tensor logits,
+    torch::Tensor flat_fault_ids,
+    torch::Tensor flat_masks,
+    torch::Tensor fault_offsets,
+    torch::Tensor flat_states,
+    torch::Tensor flat_counts,
+    torch::Tensor state_offsets,
+    torch::Tensor window_num_bits,
+    int64_t max_faults_per_window,
+    int64_t max_state_count,
+    double spectral_min_abs_factor,
+    int64_t spectral_memory_cap_bytes) {
+  check_local_window_inputs(
+      logits,
+      flat_fault_ids,
+      flat_masks,
+      fault_offsets,
+      flat_states,
+      flat_counts,
+      state_offsets,
+      window_num_bits,
+      max_faults_per_window,
+      max_state_count);
+  TORCH_CHECK(max_state_count <= 4096, "spectral local-window kernel requires max_state_count <= 4096");
+  TORCH_CHECK(spectral_min_abs_factor >= 0.0, "spectral_min_abs_factor must be non-negative");
+  TORCH_CHECK(spectral_memory_cap_bytes > 0, "spectral_memory_cap_bytes must be positive");
+  return local_window_nll_value_and_grad_spectral_cuda(
+      logits.contiguous(),
+      flat_fault_ids.contiguous(),
+      flat_masks.contiguous(),
+      fault_offsets.contiguous(),
+      flat_states.contiguous(),
+      flat_counts.contiguous(),
+      state_offsets.contiguous(),
+      window_num_bits.contiguous(),
+      max_faults_per_window,
+      max_state_count,
+      spectral_min_abs_factor,
+      spectral_memory_cap_bytes);
+}
+
+torch::Tensor local_window_nll_value(
+    torch::Tensor logits,
+    torch::Tensor flat_fault_ids,
+    torch::Tensor flat_masks,
+    torch::Tensor fault_offsets,
+    torch::Tensor flat_states,
+    torch::Tensor flat_counts,
+    torch::Tensor state_offsets,
+    torch::Tensor window_num_bits,
+    int64_t max_faults_per_window,
+    int64_t max_state_count) {
+  check_local_window_inputs(
+      logits,
+      flat_fault_ids,
+      flat_masks,
+      fault_offsets,
+      flat_states,
+      flat_counts,
+      state_offsets,
+      window_num_bits,
+      max_faults_per_window,
+      max_state_count);
+  return local_window_nll_value_cuda(
+      logits.contiguous(),
+      flat_fault_ids.contiguous(),
+      flat_masks.contiguous(),
+      fault_offsets.contiguous(),
+      flat_states.contiguous(),
+      flat_counts.contiguous(),
+      state_offsets.contiguous(),
+      window_num_bits.contiguous(),
+      max_faults_per_window,
+      max_state_count);
+}
+
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def("dem_parity_distribution", &dem_parity_distribution, "Exact DEM parity distribution (CUDA)");
   m.def(
@@ -171,4 +278,16 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
       "local_window_nll_value_and_grad",
       &local_window_nll_value_and_grad,
       "Batched exact local-window NLL value and first-order gradient (CUDA)");
+  m.def(
+      "local_window_nll_value_and_grad_spectral",
+      &local_window_nll_value_and_grad_spectral,
+      "Batched exact local-window NLL value and gradient via Walsh spectral products (CUDA)");
+  m.def(
+      "local_window_nll_value",
+      &local_window_nll_value,
+      "Batched exact local-window NLL value without gradient history (CUDA)");
+  m.def(
+      "window_observation_state_counts",
+      &window_observation_state_counts,
+      "Build local-window observation state/count cache entries (CUDA)");
 }

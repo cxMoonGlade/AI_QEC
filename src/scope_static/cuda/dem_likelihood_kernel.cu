@@ -1,8 +1,13 @@
 #include <torch/extension.h>
 #include <ATen/cuda/CUDAContext.h>
 #include <c10/cuda/CUDAException.h>
+#include <cmath>
 #include <c10/cuda/CUDAGuard.h>
 #include <limits>
+
+__device__ inline bool parity_odd_i64(const int64_t value) {
+  return (__popcll(static_cast<unsigned long long>(value)) & 1ULL) != 0ULL;
+}
 
 template <typename scalar_t>
 __global__ void dem_step_kernel(
@@ -354,6 +359,310 @@ __global__ void local_window_backward_kernel(
   }
 }
 
+template <typename scalar_t>
+__global__ void local_window_forward_only_loss_kernel(
+    const scalar_t* __restrict__ probabilities,
+    const int64_t* __restrict__ flat_fault_ids,
+    const int64_t* __restrict__ flat_masks,
+    const int64_t* __restrict__ fault_offsets,
+    const int64_t* __restrict__ flat_states,
+    const int64_t* __restrict__ flat_counts,
+    const int64_t* __restrict__ state_offsets,
+    const int64_t* __restrict__ window_num_bits,
+    scalar_t* __restrict__ window_losses,
+    const int64_t window_count,
+    const int64_t max_state_count) {
+  extern __shared__ unsigned char shared_raw[];
+  scalar_t* current_base = reinterpret_cast<scalar_t*>(shared_raw);
+  scalar_t* next_base = current_base + max_state_count;
+  scalar_t* reduction = next_base + max_state_count;
+
+  const int64_t window = static_cast<int64_t>(blockIdx.x);
+  const int64_t fault_begin = fault_offsets[window];
+  const int64_t fault_end = fault_offsets[window + 1];
+  const int64_t num_bits = window_num_bits[window];
+  const int64_t state_count = int64_t{1} << num_bits;
+  scalar_t* current = current_base;
+  scalar_t* next = next_base;
+
+  for (int64_t state = threadIdx.x; state < state_count; state += blockDim.x) {
+    current[state] = state == 0 ? static_cast<scalar_t>(1) : static_cast<scalar_t>(0);
+    next[state] = static_cast<scalar_t>(0);
+  }
+  __syncthreads();
+
+  for (int64_t flat_index = fault_begin; flat_index < fault_end; ++flat_index) {
+    const int64_t global_fault = flat_fault_ids[flat_index];
+    const int64_t mask = flat_masks[flat_index];
+    const scalar_t prob = probabilities[global_fault];
+    for (int64_t state = threadIdx.x; state < state_count; state += blockDim.x) {
+      next[state] = (static_cast<scalar_t>(1) - prob) * current[state] + prob * current[state ^ mask];
+    }
+    __syncthreads();
+    scalar_t* tmp = current;
+    current = next;
+    next = tmp;
+    __syncthreads();
+  }
+
+  const int64_t state_begin = state_offsets[window];
+  const int64_t state_end = state_offsets[window + 1];
+  scalar_t total_count = static_cast<scalar_t>(0);
+  for (int64_t index = state_begin + threadIdx.x; index < state_end; index += blockDim.x) {
+    total_count += static_cast<scalar_t>(flat_counts[index]);
+  }
+  reduction[threadIdx.x] = total_count;
+  __syncthreads();
+  for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
+    if (threadIdx.x < stride) {
+      reduction[threadIdx.x] += reduction[threadIdx.x + stride];
+    }
+    __syncthreads();
+  }
+  total_count = reduction[0];
+  __syncthreads();
+
+  scalar_t loss_sum = static_cast<scalar_t>(0);
+  const scalar_t tiny = std::numeric_limits<scalar_t>::min();
+  for (int64_t index = state_begin + threadIdx.x; index < state_end; index += blockDim.x) {
+    const int64_t state = flat_states[index];
+    const scalar_t count = static_cast<scalar_t>(flat_counts[index]);
+    const scalar_t prob = current[state] > tiny ? current[state] : tiny;
+    loss_sum += -count * log(prob);
+  }
+  reduction[threadIdx.x] = loss_sum;
+  __syncthreads();
+  for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
+    if (threadIdx.x < stride) {
+      reduction[threadIdx.x] += reduction[threadIdx.x + stride];
+    }
+    __syncthreads();
+  }
+  if (threadIdx.x == 0) {
+    window_losses[window] = reduction[0] / total_count;
+  }
+}
+
+template <typename scalar_t>
+__global__ void spectral_prefix_kernel(
+    const scalar_t* __restrict__ probabilities,
+    const int64_t* __restrict__ flat_fault_ids,
+    const int64_t* __restrict__ flat_masks,
+    const int64_t* __restrict__ fault_offsets,
+    const int64_t* __restrict__ window_num_bits,
+    scalar_t* __restrict__ prefix,
+    const int64_t max_state_count) {
+  const int64_t window = static_cast<int64_t>(blockIdx.x);
+  const int64_t fault_begin = fault_offsets[window];
+  const int64_t fault_end = fault_offsets[window + 1];
+  const int64_t fault_count = fault_end - fault_begin;
+  const int64_t history_begin = fault_begin + window;
+  const int64_t state_count = int64_t{1} << window_num_bits[window];
+
+  for (int64_t state = threadIdx.x; state < state_count; state += blockDim.x) {
+    prefix[(history_begin * max_state_count) + state] = static_cast<scalar_t>(1);
+  }
+  __syncthreads();
+
+  for (int64_t local_fault = 0; local_fault < fault_count; ++local_fault) {
+    const int64_t flat_index = fault_begin + local_fault;
+    const int64_t global_fault = flat_fault_ids[flat_index];
+    const int64_t mask = flat_masks[flat_index];
+    const scalar_t factor = static_cast<scalar_t>(1) - static_cast<scalar_t>(2) * probabilities[global_fault];
+    const scalar_t* prev = prefix + (history_begin + local_fault) * max_state_count;
+    scalar_t* next = prefix + (history_begin + local_fault + 1) * max_state_count;
+    for (int64_t state = threadIdx.x; state < state_count; state += blockDim.x) {
+      next[state] = prev[state] * (parity_odd_i64(state & mask) ? factor : static_cast<scalar_t>(1));
+    }
+    __syncthreads();
+  }
+}
+
+template <typename scalar_t>
+__global__ void spectral_suffix_kernel(
+    const scalar_t* __restrict__ probabilities,
+    const int64_t* __restrict__ flat_fault_ids,
+    const int64_t* __restrict__ flat_masks,
+    const int64_t* __restrict__ fault_offsets,
+    const int64_t* __restrict__ window_num_bits,
+    scalar_t* __restrict__ suffix,
+    const int64_t max_state_count) {
+  const int64_t window = static_cast<int64_t>(blockIdx.x);
+  const int64_t fault_begin = fault_offsets[window];
+  const int64_t fault_end = fault_offsets[window + 1];
+  const int64_t fault_count = fault_end - fault_begin;
+  const int64_t history_begin = fault_begin + window;
+  const int64_t state_count = int64_t{1} << window_num_bits[window];
+
+  for (int64_t state = threadIdx.x; state < state_count; state += blockDim.x) {
+    suffix[((history_begin + fault_count) * max_state_count) + state] = static_cast<scalar_t>(1);
+  }
+  __syncthreads();
+
+  for (int64_t local_fault = fault_count - 1; local_fault >= 0; --local_fault) {
+    const int64_t flat_index = fault_begin + local_fault;
+    const int64_t global_fault = flat_fault_ids[flat_index];
+    const int64_t mask = flat_masks[flat_index];
+    const scalar_t factor = static_cast<scalar_t>(1) - static_cast<scalar_t>(2) * probabilities[global_fault];
+    const scalar_t* next = suffix + (history_begin + local_fault + 1) * max_state_count;
+    scalar_t* current = suffix + (history_begin + local_fault) * max_state_count;
+    for (int64_t state = threadIdx.x; state < state_count; state += blockDim.x) {
+      current[state] = next[state] * (parity_odd_i64(state & mask) ? factor : static_cast<scalar_t>(1));
+    }
+    __syncthreads();
+  }
+}
+
+template <typename scalar_t>
+__global__ void spectral_distribution_kernel(
+    const scalar_t* __restrict__ prefix,
+    const int64_t* __restrict__ fault_offsets,
+    const int64_t* __restrict__ window_num_bits,
+    scalar_t* __restrict__ distributions,
+    const int64_t max_state_count) {
+  const int64_t window = static_cast<int64_t>(blockIdx.x);
+  const int64_t y = static_cast<int64_t>(blockIdx.y) * blockDim.x + threadIdx.x;
+  const int64_t fault_begin = fault_offsets[window];
+  const int64_t fault_end = fault_offsets[window + 1];
+  const int64_t fault_count = fault_end - fault_begin;
+  const int64_t history_begin = fault_begin + window;
+  const int64_t state_count = int64_t{1} << window_num_bits[window];
+  if (y >= state_count) {
+    return;
+  }
+  const scalar_t* moments = prefix + (history_begin + fault_count) * max_state_count;
+  scalar_t total = static_cast<scalar_t>(0);
+  for (int64_t spectral_state = 0; spectral_state < state_count; ++spectral_state) {
+    const scalar_t sign = parity_odd_i64(spectral_state & y) ? static_cast<scalar_t>(-1) : static_cast<scalar_t>(1);
+    total += sign * moments[spectral_state];
+  }
+  distributions[window * max_state_count + y] = total / static_cast<scalar_t>(state_count);
+}
+
+template <typename scalar_t>
+__global__ void spectral_loss_and_moment_grad_kernel(
+    const scalar_t* __restrict__ distributions,
+    const int64_t* __restrict__ flat_states,
+    const int64_t* __restrict__ flat_counts,
+    const int64_t* __restrict__ state_offsets,
+    const int64_t* __restrict__ window_num_bits,
+    scalar_t* __restrict__ window_losses,
+    scalar_t* __restrict__ moment_grads,
+    const int64_t window_count,
+    const int64_t max_state_count) {
+  extern __shared__ unsigned char shared_raw[];
+  scalar_t* reduction = reinterpret_cast<scalar_t*>(shared_raw);
+  const int64_t window = static_cast<int64_t>(blockIdx.x);
+  const int64_t state_begin = state_offsets[window];
+  const int64_t state_end = state_offsets[window + 1];
+  const int64_t state_count = int64_t{1} << window_num_bits[window];
+
+  scalar_t total_count = static_cast<scalar_t>(0);
+  for (int64_t index = state_begin + threadIdx.x; index < state_end; index += blockDim.x) {
+    total_count += static_cast<scalar_t>(flat_counts[index]);
+  }
+  reduction[threadIdx.x] = total_count;
+  __syncthreads();
+  for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
+    if (threadIdx.x < stride) {
+      reduction[threadIdx.x] += reduction[threadIdx.x + stride];
+    }
+    __syncthreads();
+  }
+  total_count = reduction[0];
+  __syncthreads();
+
+  scalar_t loss_sum = static_cast<scalar_t>(0);
+  const scalar_t tiny = std::numeric_limits<scalar_t>::min();
+  for (int64_t index = state_begin + threadIdx.x; index < state_end; index += blockDim.x) {
+    const int64_t observed_state = flat_states[index];
+    const scalar_t count = static_cast<scalar_t>(flat_counts[index]);
+    const scalar_t raw_prob = distributions[window * max_state_count + observed_state];
+    const scalar_t prob = raw_prob > tiny ? raw_prob : tiny;
+    loss_sum += -count * log(prob);
+  }
+  reduction[threadIdx.x] = loss_sum;
+  __syncthreads();
+  for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
+    if (threadIdx.x < stride) {
+      reduction[threadIdx.x] += reduction[threadIdx.x + stride];
+    }
+    __syncthreads();
+  }
+  if (threadIdx.x == 0) {
+    window_losses[window] = reduction[0] / total_count;
+  }
+  __syncthreads();
+
+  for (int64_t spectral_state = threadIdx.x; spectral_state < state_count; spectral_state += blockDim.x) {
+    scalar_t grad = static_cast<scalar_t>(0);
+    for (int64_t index = state_begin; index < state_end; ++index) {
+      const int64_t observed_state = flat_states[index];
+      const scalar_t count = static_cast<scalar_t>(flat_counts[index]);
+      const scalar_t raw_prob = distributions[window * max_state_count + observed_state];
+      const scalar_t prob = raw_prob > tiny ? raw_prob : tiny;
+      const scalar_t sign =
+          parity_odd_i64(spectral_state & observed_state) ? static_cast<scalar_t>(-1) : static_cast<scalar_t>(1);
+      grad += -count * sign /
+          (total_count * static_cast<scalar_t>(window_count) * prob * static_cast<scalar_t>(state_count));
+    }
+    moment_grads[window * max_state_count + spectral_state] = grad;
+  }
+}
+
+template <typename scalar_t>
+__global__ void spectral_fault_grad_kernel(
+    const scalar_t* __restrict__ prefix,
+    const scalar_t* __restrict__ suffix,
+    const scalar_t* __restrict__ moment_grads,
+    const scalar_t* __restrict__ probabilities,
+    const int64_t* __restrict__ flat_fault_ids,
+    const int64_t* __restrict__ flat_masks,
+    const int64_t* __restrict__ fault_offsets,
+    const int64_t* __restrict__ window_num_bits,
+    scalar_t* __restrict__ grad_logits,
+    const int64_t max_state_count) {
+  extern __shared__ unsigned char shared_raw[];
+  scalar_t* reduction = reinterpret_cast<scalar_t*>(shared_raw);
+  const int64_t window = static_cast<int64_t>(blockIdx.x);
+  const int64_t local_fault = static_cast<int64_t>(blockIdx.y);
+  const int64_t fault_begin = fault_offsets[window];
+  const int64_t fault_end = fault_offsets[window + 1];
+  const int64_t fault_count = fault_end - fault_begin;
+  if (local_fault >= fault_count) {
+    return;
+  }
+  const int64_t flat_index = fault_begin + local_fault;
+  const int64_t global_fault = flat_fault_ids[flat_index];
+  const int64_t mask = flat_masks[flat_index];
+  const int64_t history_begin = fault_begin + window;
+  const int64_t state_count = int64_t{1} << window_num_bits[window];
+  const scalar_t prob = probabilities[global_fault];
+  const scalar_t d_factor = static_cast<scalar_t>(-2) * prob * (static_cast<scalar_t>(1) - prob);
+  const scalar_t* prefix_row = prefix + (history_begin + local_fault) * max_state_count;
+  const scalar_t* suffix_row = suffix + (history_begin + local_fault + 1) * max_state_count;
+  const scalar_t* window_moment_grads = moment_grads + window * max_state_count;
+
+  scalar_t partial = static_cast<scalar_t>(0);
+  for (int64_t spectral_state = threadIdx.x; spectral_state < state_count; spectral_state += blockDim.x) {
+    if (parity_odd_i64(spectral_state & mask)) {
+      partial += window_moment_grads[spectral_state] * prefix_row[spectral_state] * suffix_row[spectral_state] *
+          d_factor;
+    }
+  }
+  reduction[threadIdx.x] = partial;
+  __syncthreads();
+  for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
+    if (threadIdx.x < stride) {
+      reduction[threadIdx.x] += reduction[threadIdx.x + stride];
+    }
+    __syncthreads();
+  }
+  if (threadIdx.x == 0) {
+    atomicAdd(grad_logits + global_fault, reduction[0]);
+  }
+}
+
 std::tuple<torch::Tensor, torch::Tensor> local_window_nll_value_and_grad_cuda(
     torch::Tensor logits,
     torch::Tensor flat_fault_ids,
@@ -417,4 +726,151 @@ std::tuple<torch::Tensor, torch::Tensor> local_window_nll_value_and_grad_cuda(
   });
   C10_CUDA_KERNEL_LAUNCH_CHECK();
   return std::make_tuple(window_losses.mean(), grad_logits);
+}
+
+std::tuple<torch::Tensor, torch::Tensor> local_window_nll_value_and_grad_spectral_cuda(
+    torch::Tensor logits,
+    torch::Tensor flat_fault_ids,
+    torch::Tensor flat_masks,
+    torch::Tensor fault_offsets,
+    torch::Tensor flat_states,
+    torch::Tensor flat_counts,
+    torch::Tensor state_offsets,
+    torch::Tensor window_num_bits,
+    int64_t max_faults_per_window,
+    int64_t max_state_count,
+    double spectral_min_abs_factor,
+    int64_t spectral_memory_cap_bytes) {
+  const c10::cuda::CUDAGuard device_guard(logits.device());
+  const int64_t window_count = window_num_bits.size(0);
+  auto probabilities = torch::sigmoid(logits).contiguous();
+  auto window_losses = torch::empty({window_count}, logits.options());
+  auto grad_logits = torch::zeros_like(logits);
+
+  if (window_count == 0) {
+    return std::make_tuple(torch::zeros({}, logits.options()), grad_logits);
+  }
+  if (flat_fault_ids.numel() > 0) {
+    auto active_probabilities = probabilities.index_select(0, flat_fault_ids);
+    const double min_abs_factor =
+        (1 - 2 * active_probabilities).abs().min().item<double>();
+    TORCH_CHECK(
+        min_abs_factor >= spectral_min_abs_factor,
+        "spectral_min_abs_factor guard failed: min |1 - 2p_j|=",
+        min_abs_factor,
+        " threshold=",
+        spectral_min_abs_factor);
+  }
+
+  const int64_t history_rows = flat_fault_ids.size(0) + window_count;
+  const int64_t scalar_bytes = logits.element_size();
+  const int64_t history_bytes = 2 * history_rows * max_state_count * scalar_bytes;
+  const int64_t dense_bytes = 2 * window_count * max_state_count * scalar_bytes;
+  TORCH_CHECK(
+      history_bytes + dense_bytes <= spectral_memory_cap_bytes,
+      "spectral history memory cap exceeded: required_bytes=",
+      history_bytes + dense_bytes,
+      " cap_bytes=",
+      spectral_memory_cap_bytes);
+
+  auto prefix = torch::empty({history_rows, max_state_count}, logits.options());
+  auto suffix = torch::empty_like(prefix);
+  auto distributions = torch::empty({window_count, max_state_count}, logits.options());
+  auto moment_grads = torch::empty_like(distributions);
+
+  const int threads = 256;
+  cudaStream_t stream = at::cuda::getCurrentCUDAStream();
+  AT_DISPATCH_FLOATING_TYPES(logits.scalar_type(), "local_window_nll_value_and_grad_spectral_cuda", [&] {
+    const size_t shared_bytes = threads * sizeof(scalar_t);
+    spectral_prefix_kernel<scalar_t><<<window_count, threads, 0, stream>>>(
+        probabilities.data_ptr<scalar_t>(),
+        flat_fault_ids.data_ptr<int64_t>(),
+        flat_masks.data_ptr<int64_t>(),
+        fault_offsets.data_ptr<int64_t>(),
+        window_num_bits.data_ptr<int64_t>(),
+        prefix.data_ptr<scalar_t>(),
+        max_state_count);
+    spectral_suffix_kernel<scalar_t><<<window_count, threads, 0, stream>>>(
+        probabilities.data_ptr<scalar_t>(),
+        flat_fault_ids.data_ptr<int64_t>(),
+        flat_masks.data_ptr<int64_t>(),
+        fault_offsets.data_ptr<int64_t>(),
+        window_num_bits.data_ptr<int64_t>(),
+        suffix.data_ptr<scalar_t>(),
+        max_state_count);
+    const dim3 distribution_blocks(
+        static_cast<unsigned int>(window_count),
+        static_cast<unsigned int>((max_state_count + threads - 1) / threads));
+    spectral_distribution_kernel<scalar_t><<<distribution_blocks, threads, 0, stream>>>(
+        prefix.data_ptr<scalar_t>(),
+        fault_offsets.data_ptr<int64_t>(),
+        window_num_bits.data_ptr<int64_t>(),
+        distributions.data_ptr<scalar_t>(),
+        max_state_count);
+    spectral_loss_and_moment_grad_kernel<scalar_t><<<window_count, threads, shared_bytes, stream>>>(
+        distributions.data_ptr<scalar_t>(),
+        flat_states.data_ptr<int64_t>(),
+        flat_counts.data_ptr<int64_t>(),
+        state_offsets.data_ptr<int64_t>(),
+        window_num_bits.data_ptr<int64_t>(),
+        window_losses.data_ptr<scalar_t>(),
+        moment_grads.data_ptr<scalar_t>(),
+        window_count,
+        max_state_count);
+    const dim3 grad_blocks(static_cast<unsigned int>(window_count), static_cast<unsigned int>(max_faults_per_window));
+    spectral_fault_grad_kernel<scalar_t><<<grad_blocks, threads, shared_bytes, stream>>>(
+        prefix.data_ptr<scalar_t>(),
+        suffix.data_ptr<scalar_t>(),
+        moment_grads.data_ptr<scalar_t>(),
+        probabilities.data_ptr<scalar_t>(),
+        flat_fault_ids.data_ptr<int64_t>(),
+        flat_masks.data_ptr<int64_t>(),
+        fault_offsets.data_ptr<int64_t>(),
+        window_num_bits.data_ptr<int64_t>(),
+        grad_logits.data_ptr<scalar_t>(),
+        max_state_count);
+  });
+  C10_CUDA_KERNEL_LAUNCH_CHECK();
+  return std::make_tuple(window_losses.mean(), grad_logits);
+}
+
+torch::Tensor local_window_nll_value_cuda(
+    torch::Tensor logits,
+    torch::Tensor flat_fault_ids,
+    torch::Tensor flat_masks,
+    torch::Tensor fault_offsets,
+    torch::Tensor flat_states,
+    torch::Tensor flat_counts,
+    torch::Tensor state_offsets,
+    torch::Tensor window_num_bits,
+    int64_t max_faults_per_window,
+    int64_t max_state_count) {
+  const c10::cuda::CUDAGuard device_guard(logits.device());
+  const int64_t window_count = window_num_bits.size(0);
+  auto probabilities = torch::sigmoid(logits).contiguous();
+  auto window_losses = torch::empty({window_count}, logits.options());
+
+  if (window_count == 0) {
+    return torch::zeros({}, logits.options());
+  }
+
+  const int threads = 256;
+  cudaStream_t stream = at::cuda::getCurrentCUDAStream();
+  AT_DISPATCH_FLOATING_TYPES(logits.scalar_type(), "local_window_nll_value_cuda", [&] {
+    const size_t shared_bytes = (2 * max_state_count + threads) * sizeof(scalar_t);
+    local_window_forward_only_loss_kernel<scalar_t><<<window_count, threads, shared_bytes, stream>>>(
+        probabilities.data_ptr<scalar_t>(),
+        flat_fault_ids.data_ptr<int64_t>(),
+        flat_masks.data_ptr<int64_t>(),
+        fault_offsets.data_ptr<int64_t>(),
+        flat_states.data_ptr<int64_t>(),
+        flat_counts.data_ptr<int64_t>(),
+        state_offsets.data_ptr<int64_t>(),
+        window_num_bits.data_ptr<int64_t>(),
+        window_losses.data_ptr<scalar_t>(),
+        window_count,
+        max_state_count);
+  });
+  C10_CUDA_KERNEL_LAUNCH_CHECK();
+  return window_losses.mean();
 }

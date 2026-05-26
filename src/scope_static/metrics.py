@@ -2,11 +2,20 @@ from __future__ import annotations
 
 from collections import defaultdict
 from itertools import combinations
+import math
 
 import torch
 
 from .fault_graph import FaultGraph, _mask_key
-from .likelihood import exact_dem_nll, local_window_exact_nll, parity_distribution, resolve_likelihood_backend
+from .likelihood import (
+    WindowBatchNLLCache,
+    WindowNLLCache,
+    exact_dem_nll,
+    local_window_exact_nll,
+    parity_distribution,
+    resolve_likelihood_backend,
+)
+from .likelihoods.local_window_parity import ExactLocalWindowParityLikelihood
 from .windows import ObservationWindow
 
 
@@ -214,6 +223,137 @@ def compression_audit(graph: FaultGraph) -> dict[str, object]:
     }
 
 
+def partition_audit(labels: torch.Tensor | list[int] | tuple[int, ...]) -> dict[str, object]:
+    """Summarize an orbit/partition assignment over effective DEM faults."""
+
+    values = [int(value) for value in torch.as_tensor(labels, dtype=torch.long).flatten().tolist()]
+    counts: dict[int, int] = {}
+    for value in values:
+        counts[value] = counts.get(value, 0) + 1
+    orbit_sizes = sorted(counts.values(), reverse=True)
+    m = len(values)
+    num_orbits = len(orbit_sizes)
+    return {
+        "num_orbits": num_orbits,
+        "orbit_size_distribution": orbit_sizes,
+        "num_singleton_orbits": sum(1 for size in orbit_sizes if size == 1),
+        "compression_ratio": float(m / num_orbits) if num_orbits else float("inf"),
+    }
+
+
+def adjusted_rand_index(
+    labels_left: torch.Tensor | list[int] | tuple[int, ...],
+    labels_right: torch.Tensor | list[int] | tuple[int, ...],
+) -> float:
+    """Adjusted Rand index for two partitions, without an sklearn dependency."""
+
+    left, right = _coerce_partition_pair(labels_left, labels_right)
+    n = len(left)
+    if n < 2:
+        return 1.0
+    contingency: dict[tuple[int, int], int] = {}
+    left_counts: dict[int, int] = {}
+    right_counts: dict[int, int] = {}
+    for a, b in zip(left, right):
+        contingency[(a, b)] = contingency.get((a, b), 0) + 1
+        left_counts[a] = left_counts.get(a, 0) + 1
+        right_counts[b] = right_counts.get(b, 0) + 1
+    sum_pairs = sum(_comb2(value) for value in contingency.values())
+    left_pairs = sum(_comb2(value) for value in left_counts.values())
+    right_pairs = sum(_comb2(value) for value in right_counts.values())
+    total_pairs = _comb2(n)
+    expected = left_pairs * right_pairs / total_pairs if total_pairs else 0.0
+    max_index = 0.5 * (left_pairs + right_pairs)
+    denom = max_index - expected
+    if abs(denom) < 1e-12:
+        return 1.0 if sum_pairs == max_index else 0.0
+    return float((sum_pairs - expected) / denom)
+
+
+def normalized_mutual_info(
+    labels_left: torch.Tensor | list[int] | tuple[int, ...],
+    labels_right: torch.Tensor | list[int] | tuple[int, ...],
+) -> float:
+    """sqrt-normalized mutual information for two partitions."""
+
+    left, right = _coerce_partition_pair(labels_left, labels_right)
+    n = len(left)
+    if n == 0:
+        return 1.0
+    contingency: dict[tuple[int, int], int] = {}
+    left_counts: dict[int, int] = {}
+    right_counts: dict[int, int] = {}
+    for a, b in zip(left, right):
+        contingency[(a, b)] = contingency.get((a, b), 0) + 1
+        left_counts[a] = left_counts.get(a, 0) + 1
+        right_counts[b] = right_counts.get(b, 0) + 1
+    mutual_info = 0.0
+    for (a, b), count in contingency.items():
+        mutual_info += (count / n) * math.log((count * n) / (left_counts[a] * right_counts[b]))
+    h_left = _entropy_from_counts(left_counts.values(), n)
+    h_right = _entropy_from_counts(right_counts.values(), n)
+    denom = math.sqrt(h_left * h_right)
+    if denom < 1e-12:
+        return 1.0 if left == right else 0.0
+    return float(mutual_info / denom)
+
+
+def partition_refines(
+    finer_labels: torch.Tensor | list[int] | tuple[int, ...],
+    coarser_labels: torch.Tensor | list[int] | tuple[int, ...],
+) -> bool:
+    """Return true when every finer block is contained in one coarser block."""
+
+    finer, coarser = _coerce_partition_pair(finer_labels, coarser_labels)
+    mapping: dict[int, int] = {}
+    for fine, coarse in zip(finer, coarser):
+        if fine in mapping and mapping[fine] != coarse:
+            return False
+        mapping[fine] = coarse
+    return True
+
+
+def partition_comparison(
+    heuristic_labels: torch.Tensor | list[int] | tuple[int, ...],
+    schedule_labels: torch.Tensor | list[int] | tuple[int, ...],
+) -> dict[str, object]:
+    """Compare current FaultGraph heuristic orbits with schedule-derived orbits."""
+
+    heuristic, schedule = _coerce_partition_pair(heuristic_labels, schedule_labels)
+    return {
+        "fault_graph_heuristic": partition_audit(heuristic),
+        "schedule_geometric": partition_audit(schedule),
+        "ari_heuristic_schedule": adjusted_rand_index(heuristic, schedule),
+        "nmi_heuristic_schedule": normalized_mutual_info(heuristic, schedule),
+        "schedule_refines_heuristic": partition_refines(schedule, heuristic),
+        "heuristic_refines_schedule": partition_refines(heuristic, schedule),
+    }
+
+
+def _coerce_partition_pair(
+    labels_left: torch.Tensor | list[int] | tuple[int, ...],
+    labels_right: torch.Tensor | list[int] | tuple[int, ...],
+) -> tuple[list[int], list[int]]:
+    left = [int(value) for value in torch.as_tensor(labels_left, dtype=torch.long).flatten().tolist()]
+    right = [int(value) for value in torch.as_tensor(labels_right, dtype=torch.long).flatten().tolist()]
+    if len(left) != len(right):
+        raise ValueError("partition labels must have the same length")
+    return left, right
+
+
+def _comb2(value: int) -> int:
+    return int(value) * (int(value) - 1) // 2
+
+
+def _entropy_from_counts(counts: object, n: int) -> float:
+    entropy = 0.0
+    for count in counts:
+        prob = int(count) / n
+        if prob > 0:
+            entropy -= prob * math.log(prob)
+    return entropy
+
+
 def d_q_dem_distance(graph: FaultGraph, learned_logits: torch.Tensor, teacher_logits: torch.Tensor) -> float:
     """DEM quotient distance over only A-preserving fault permutations.
 
@@ -334,3 +474,166 @@ def evaluate_model(
         }
     )
     return result
+
+
+def evaluate_real_data_model(
+    graph: FaultGraph,
+    logits: torch.Tensor,
+    heldout_observations: torch.Tensor,
+    *,
+    aggregate_unique: bool = True,
+    backend: str = "auto",
+    windows: list[ObservationWindow] | tuple[ObservationWindow, ...] | None = None,
+    window_caches: list[WindowNLLCache] | tuple[WindowNLLCache, ...] | None = None,
+    window_batch_cache: WindowBatchNLLCache | None = None,
+    predicted_observables: torch.Tensor | None = None,
+) -> dict[str, object]:
+    """Evaluate a fitted DEM logit field against empirical Google observations."""
+
+    resolved_backend = resolve_likelihood_backend(logits, backend)
+    observations = torch.as_tensor(heldout_observations, dtype=torch.bool)
+    result: dict[str, object] = {
+        "requested_likelihood_backend": backend,
+        "resolved_likelihood_backend": resolved_backend,
+        "exact_global_evaluated": False,
+        "heldout_exact_nll": None,
+        "oracle_exact_nll": None,
+        "delta_nll_oracle": None,
+        "delta_nll_oracle_source": "real_data_no_teacher",
+    }
+    if window_batch_cache is not None or window_caches is not None or windows:
+        if window_batch_cache is not None or window_caches is not None:
+            local_likelihood = ExactLocalWindowParityLikelihood(
+                graph=graph,
+                observations=observations,
+                observation_mode="full",
+                aggregate_unique=aggregate_unique,
+                requested_backend=backend,
+                windows=tuple(windows or ()),
+                window_caches=tuple(window_caches or ()),
+                window_batch_cache=window_batch_cache,
+            )
+        else:
+            local_likelihood = ExactLocalWindowParityLikelihood.prepare(
+                graph,
+                observations,
+                windows=tuple(windows or ()),
+                observation_mode="full",
+                aggregate_unique=aggregate_unique,
+                backend=backend,
+                device=logits.device,
+            )
+        local_audit = local_likelihood.audit_dict()
+        model_local_nll = local_likelihood.loss(logits)
+        num_windows = int(local_audit["num_windows"])
+        max_window_bits = int(local_audit["max_window_bits"])
+    else:
+        model_local_nll = None
+        num_windows = 0
+        max_window_bits = 0
+    if model_local_nll is not None:
+        result.update(
+            {
+                "heldout_local_window_nll": float(model_local_nll.detach().cpu()),
+                "num_evaluation_windows": num_windows,
+                "max_evaluation_window_bits": max_window_bits,
+            }
+        )
+    else:
+        result.update(
+            {
+                "heldout_local_window_nll": None,
+                "num_evaluation_windows": 0,
+                "max_evaluation_window_bits": 0,
+            }
+        )
+
+    result.update(empirical_detector_rate_metrics(graph, logits, observations))
+    result.update(empirical_local_correlation_metrics(graph, logits, observations))
+    result.update(logical_flip_calibration_metrics(graph, logits, observations))
+    if predicted_observables is not None:
+        result.update(decoder_prediction_metrics(observations, predicted_observables, graph.num_detectors))
+    else:
+        result.update(
+            {
+                "decoder_logical_prediction_available": False,
+                "decoder_logical_prediction_error_rate": None,
+            }
+        )
+    return result
+
+
+def empirical_detector_rate_metrics(
+    graph: FaultGraph,
+    logits: torch.Tensor,
+    observations: torch.Tensor,
+) -> dict[str, object]:
+    detector_bits = tuple(range(graph.num_detectors))
+    if not detector_bits:
+        return {"detector_rate_mae": 0.0}
+    pred_rates = exact_observation_bit_rates(graph, logits, detector_bits).detach().cpu()
+    empirical = observations[:, : graph.num_detectors].to(dtype=pred_rates.dtype).mean(dim=0).cpu()
+    return {"detector_rate_mae": float(torch.mean(torch.abs(pred_rates - empirical)).item())}
+
+
+def empirical_local_correlation_metrics(
+    graph: FaultGraph,
+    logits: torch.Tensor,
+    observations: torch.Tensor,
+) -> dict[str, object]:
+    pairs = local_detector_pairs(graph)
+    if not pairs:
+        return {"local_correlation_error": 0.0, "num_local_correlation_pairs": 0}
+    pred_pairs = exact_observation_pair_joint_rates(graph, logits, pairs).detach().cpu()
+    obs = observations.to(dtype=pred_pairs.dtype, device="cpu")
+    empirical = torch.stack([obs[:, left] * obs[:, right] for left, right in pairs]).mean(dim=1)
+    return {
+        "local_correlation_error": float(torch.mean(torch.abs(pred_pairs - empirical)).item()),
+        "num_local_correlation_pairs": len(pairs),
+    }
+
+
+def logical_flip_calibration_metrics(
+    graph: FaultGraph,
+    logits: torch.Tensor,
+    observations: torch.Tensor,
+) -> dict[str, object]:
+    if graph.num_observables == 0:
+        return {
+            "logical_flip_rate_calibration": 0.0,
+            "logical_flip_rate_predicted": [],
+            "logical_flip_rate_empirical": [],
+        }
+    logical_bits = tuple(range(graph.num_detectors, graph.B))
+    pred_rates = exact_observation_bit_rates(graph, logits, logical_bits).detach().cpu()
+    empirical = observations[:, graph.num_detectors : graph.B].to(dtype=pred_rates.dtype).mean(dim=0).cpu()
+    return {
+        "logical_flip_rate_calibration": float(torch.mean(torch.abs(pred_rates - empirical)).item()),
+        "logical_flip_rate_predicted": [float(value) for value in pred_rates.tolist()],
+        "logical_flip_rate_empirical": [float(value) for value in empirical.tolist()],
+    }
+
+
+def decoder_prediction_metrics(
+    observations: torch.Tensor,
+    predicted_observables: torch.Tensor,
+    num_detectors: int,
+) -> dict[str, object]:
+    actual = torch.as_tensor(observations, dtype=torch.bool)[:, int(num_detectors) :]
+    predicted = torch.as_tensor(predicted_observables, dtype=torch.bool)
+    if predicted.shape[0] != actual.shape[0]:
+        limit = min(int(predicted.shape[0]), int(actual.shape[0]))
+        predicted = predicted[:limit]
+        actual = actual[:limit]
+    if predicted.ndim == 2 and actual.ndim == 2 and predicted.shape[1] != actual.shape[1]:
+        width = min(int(predicted.shape[1]), int(actual.shape[1]))
+        predicted = predicted[:, :width]
+        actual = actual[:, :width]
+    if actual.numel() == 0:
+        error_rate = 0.0
+    else:
+        error_rate = float(torch.logical_xor(predicted, actual).to(dtype=torch.float64).mean().item())
+    return {
+        "decoder_logical_prediction_available": True,
+        "decoder_logical_prediction_error_rate": error_rate,
+    }

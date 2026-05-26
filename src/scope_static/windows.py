@@ -183,6 +183,50 @@ def window_audit_dict(windows: list[ObservationWindow]) -> dict[str, object]:
     }
 
 
+def window_coverage_audit_dict(graph: FaultGraph, windows: list[ObservationWindow]) -> dict[str, object]:
+    """Audit observation-bit and effective-fault coverage for local windows."""
+
+    audit = window_audit_dict(windows)
+    covered_bits: set[int] = set()
+    covered_faults: set[int] = set()
+    kind_counts: dict[str, int] = {}
+    local_patterns: dict[tuple[object, ...], int] = {}
+    for window in windows:
+        covered_bits.update(window.bits)
+        kind_counts[window.kind] = kind_counts.get(window.kind, 0) + 1
+        fault_ids, mask_states = graph.project_window(window.bits)
+        covered_faults.update(int(fault) for fault in fault_ids.tolist())
+        pattern_key = (
+            window.kind,
+            window.size,
+            tuple(sorted(int(value) for value in mask_states.cpu().tolist())),
+        )
+        local_patterns[pattern_key] = local_patterns.get(pattern_key, 0) + 1
+    audit.update(
+        {
+            "detector_logical_bit_coverage": {
+                "num_bits_covered": len(covered_bits),
+                "num_bits_total": graph.B,
+                "fraction_bits_covered": float(len(covered_bits) / graph.B) if graph.B else 0.0,
+                "fraction_observation_bits_covered": float(len(covered_bits) / graph.B) if graph.B else 0.0,
+            },
+            "fraction_dem_faults_active": float(len(covered_faults) / graph.M) if graph.M else 0.0,
+            "num_dem_faults_active": len(covered_faults),
+            "num_dem_faults_total": graph.M,
+            "window_type_counts": {key: int(kind_counts[key]) for key in sorted(kind_counts)},
+            "num_single_detector_windows": int(kind_counts.get("single_detector", 0)),
+            "num_pair_windows": int(kind_counts.get("detector_pair", 0)),
+            "num_radius_or_local_motif_windows": sum(
+                int(count)
+                for kind, count in kind_counts.items()
+                if kind.startswith("radius") or "motif" in kind or kind.startswith("template")
+            ),
+            "repeated_local_pattern_count": sum(1 for count in local_patterns.values() if count > 1),
+        }
+    )
+    return audit
+
+
 def detector_only_windows(graph: FaultGraph, windows: list[ObservationWindow]) -> list[ObservationWindow]:
     return [window for window in windows if all(bit < graph.num_detectors for bit in window.bits)]
 
