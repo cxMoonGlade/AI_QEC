@@ -18,6 +18,7 @@ A in F_2^{B x M}
 - `CONTEXT.md`: short glossary and claim boundaries.
 - `docs/SCOPE_STATIC_MVP.md`: Stage 1 SCOPE-Static known-orbit MVP.
 - `docs/SCOPE_STATIC_DISC.md`: Stage 2 SCOPE-Static discovery plan.
+- `docs/STAGE2_ROADMAP.md`: Stage 2-only roadmap and decision gates.
 - `docs/SCOPE_TWIN.md`: larger SCOPE-Twin object contract and notation.
 - `docs/adr/0001-python-cuda-dem-mvp.md`: Python plus C++/CUDA architecture
   decision.

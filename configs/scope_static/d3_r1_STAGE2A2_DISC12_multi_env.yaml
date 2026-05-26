@@ -1,0 +1,99 @@
+run:
+  name: d3_r1_stage2a2_disc12_multi_env
+  output_dir: outputs/scope_static/STAGE2A2_DISC12_multi_env
+  device: cuda
+  dtype: float64
+
+circuit:
+  family: surface_code:rotated_memory_x
+  distance: 3
+  rounds: 1
+  noise:
+    after_clifford_depolarization: 0.001
+    after_reset_flip_probability: 0.001
+    before_measure_flip_probability: 0.001
+    before_round_data_depolarization: 0.001
+
+graph:
+  canonicalize_duplicate_masks: true
+  residual_rank: 0
+
+windows:
+  enabled: false
+
+experiment:
+  seeds: [0]
+  teacher_cases:
+    - {mode: exact_orbit_separated, epsilon_break: 0.0}
+  shot_budgets: [2048]
+  heldout_shots: 4096
+  threshold_epsilon: 0.01
+
+training:
+  models: [local, known_hard_orbit, disc_hard]
+  steps: 200
+  lr: 0.05
+  aggregate_unique: true
+  likelihood_backend: cuda_extension
+  likelihood_objective: global_exact
+  exact_likelihood_trainable: true
+  dem_fault_logit_claim: true
+  cptp_gksl_claim: false
+
+evaluation:
+  global_exact_max_bits: 20
+
+multi_env:
+  teacher_seed: 0
+  environment_design: default
+  contrast_strength: 1.0
+  train_env_ids: [0, 1, 2, 3]
+  heldout_env_ids: [4]
+  validation_shots: 2048
+  heldout_env_adaptation_shots: 2048
+  restarts: 4
+  active_mass_threshold: 1.0
+  stage2a1_ceiling:
+    ari: 0.2748
+    nmi: 0.7097
+  contrast_sweep:
+    enabled: true
+    environment_design: codebook
+    strengths: [1.0, 2.0, 4.0, 8.0, 16.0]
+    shot_budget: 1024
+    validation_shots: 1024
+    heldout_shots: 2048
+    heldout_env_adaptation_shots: 1024
+    restarts: 2
+  conditions:
+    - model: single_env_free_assignment
+      name: single_env_free_assignment
+      multi_env: false
+      initializer: random
+
+    - model: single_env_local_logit_init
+      name: single_env_local_logit_init
+      multi_env: false
+      initializer: DISC10_local_logit
+      initializer_confidence: 6.0
+
+    - model: multi_env_independent_S_per_env
+      name: multi_env_independent_S_per_env
+      multi_env: true
+      shared_assignment: false
+      initializer: random
+
+    - model: multi_env_shared_S_random_init
+      name: multi_env_shared_S_random_init
+      multi_env: true
+      initializer: random
+
+    - model: multi_env_shared_S_DISC10_init
+      name: multi_env_shared_S_DISC10_init
+      multi_env: true
+      initializer: DISC10_local_logit
+      initializer_confidence: 6.0
+
+    - model: known_orbit_oracle_shared_S
+      name: known_orbit_oracle_shared_S
+      oracle: true

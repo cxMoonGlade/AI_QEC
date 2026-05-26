@@ -1,0 +1,120 @@
+{
+  "calibration_warning": "high_contrast_rows_degrade_heldout_environment_transfer",
+  "decision": "high_observable_contrast_but_recovery_still_low",
+  "enabled": true,
+  "environment_design": "codebook",
+  "experiment": "DISC12b_multi_env_contrast_sweep",
+  "question": "Does quotient recovery improve monotonically when environment-induced observable contrast increases?",
+  "rows": [
+    {
+      "alpha_variation_norm": 5.000000000000002,
+      "ari": 0.30357845064884,
+      "assignment_movement_from_init": 0.2608695652173913,
+      "between_env_rate_contrast": 0.0052201050540753155,
+      "contrast_strength": 1.0,
+      "delta_nll_known_orbit": 0.00917438353252742,
+      "disc12b_result": "predictive_only",
+      "env_holdout_dNLL": 0.00799803788896658,
+      "environment_design": "codebook",
+      "experiment": "DISC12b_multi_env_contrast_sweep",
+      "mean_per_prototype_alpha_separation": 0.5555555555555558,
+      "nmi": 0.7376691751344352,
+      "num_active_prototypes": 9,
+      "rate_singular_values": [
+        0.08301972133368507,
+        1.0191938720345319e-17,
+        9.92098509287756e-19,
+        4.129143618248289e-34,
+        1.6422893720702634e-34
+      ]
+    },
+    {
+      "alpha_variation_norm": 10.000000000000004,
+      "ari": 0.08439740525776716,
+      "assignment_movement_from_init": 0.4782608695652174,
+      "between_env_rate_contrast": 0.012946953879207803,
+      "contrast_strength": 2.0,
+      "delta_nll_known_orbit": 0.004704802133003838,
+      "disc12b_result": "predictive_only",
+      "env_holdout_dNLL": 0.009573489931153034,
+      "environment_design": "codebook",
+      "experiment": "DISC12b_multi_env_contrast_sweep",
+      "mean_per_prototype_alpha_separation": 1.1111111111111116,
+      "nmi": 0.5650009296150676,
+      "num_active_prototypes": 8,
+      "rate_singular_values": [
+        0.20494478991091933,
+        2.061810797538846e-17,
+        2.601903489789284e-18,
+        2.0431383836735305e-18,
+        1.7611851780048014e-34
+      ]
+    },
+    {
+      "alpha_variation_norm": 20.000000000000004,
+      "ari": 0.15650127475975684,
+      "assignment_movement_from_init": 0.8260869565217391,
+      "between_env_rate_contrast": 0.054866294937234834,
+      "contrast_strength": 4.0,
+      "delta_nll_known_orbit": 0.0015155839014004968,
+      "disc12b_result": "predictive_only",
+      "env_holdout_dNLL": 0.1050472562133482,
+      "environment_design": "codebook",
+      "experiment": "DISC12b_multi_env_contrast_sweep",
+      "mean_per_prototype_alpha_separation": 2.222222222222223,
+      "nmi": 0.5736900046123099,
+      "num_active_prototypes": 5,
+      "rate_singular_values": [
+        0.8439451215129739,
+        1.0295582609446716e-16,
+        4.5279191272012544e-17,
+        1.7241444256783712e-32,
+        2.0223504750321315e-33
+      ]
+    },
+    {
+      "alpha_variation_norm": 40.00000000000001,
+      "ari": 0.04396111575850232,
+      "assignment_movement_from_init": 0.782608695652174,
+      "between_env_rate_contrast": 0.2489275334633166,
+      "contrast_strength": 8.0,
+      "delta_nll_known_orbit": -0.03539714432729735,
+      "disc12b_result": "predictive_only",
+      "env_holdout_dNLL": 0.13987172373315993,
+      "environment_design": "codebook",
+      "experiment": "DISC12b_multi_env_contrast_sweep",
+      "mean_per_prototype_alpha_separation": 4.444444444444446,
+      "nmi": 0.4444427934709607,
+      "num_active_prototypes": 6,
+      "rate_singular_values": [
+        3.4175998426359913,
+        8.085528000721365e-16,
+        1.4554952728194916e-16,
+        8.722780217365836e-32,
+        1.400519109260378e-32
+      ]
+    },
+    {
+      "alpha_variation_norm": 80.0,
+      "ari": 0.2197024673439768,
+      "assignment_movement_from_init": 0.08695652173913043,
+      "between_env_rate_contrast": 0.31290809133082403,
+      "contrast_strength": 16.0,
+      "delta_nll_known_orbit": -2.0006200591763283,
+      "disc12b_result": "predictive_only",
+      "env_holdout_dNLL": 0.4694004065896024,
+      "environment_design": "codebook",
+      "experiment": "DISC12b_multi_env_contrast_sweep",
+      "mean_per_prototype_alpha_separation": 8.888888888888893,
+      "nmi": 0.6920209388763439,
+      "num_active_prototypes": 9,
+      "rate_singular_values": [
+        4.24080607773074,
+        4.708768381795057e-16,
+        1.2121641623053713e-16,
+        1.0501233897271364e-31,
+        3.180438926796638e-33
+      ]
+    }
+  ]
+}

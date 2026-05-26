@@ -111,6 +111,11 @@ class DiscoveryHardFaultLogitField(FaultLogitField):
         alpha_init_scale: float = 0.01,
         assignment_init_scale: float = 0.01,
         assignment_entropy_weight: float = 0.0,
+        assignment_balance_weight: float = 0.0,
+        prototype_separation_weight: float = 0.0,
+        prototype_separation_margin: float = 0.5,
+        assignment_mode: str = "soft",
+        assignment_temperature: float = 1.0,
         dtype: torch.dtype = torch.float64,
         seed: int | None = None,
     ):
@@ -124,6 +129,13 @@ class DiscoveryHardFaultLogitField(FaultLogitField):
         self.num_faults = num_faults
         self.num_prototypes = num_prototypes
         self.assignment_entropy_weight = float(assignment_entropy_weight)
+        self.assignment_balance_weight = float(assignment_balance_weight)
+        self.prototype_separation_weight = float(prototype_separation_weight)
+        self.prototype_separation_margin = float(prototype_separation_margin)
+        self.assignment_mode = _normalize_assignment_mode(assignment_mode)
+        self.assignment_temperature = float(assignment_temperature)
+        if self.assignment_temperature <= 0.0:
+            raise ValueError("assignment_temperature must be positive")
         generator = _cpu_generator(seed)
         alpha = torch.full((num_prototypes,), float(init_logit), dtype=dtype)
         if alpha_init_scale:
@@ -157,23 +169,46 @@ class DiscoveryHardFaultLogitField(FaultLogitField):
             return self.alpha.new_ones((self.num_faults, 1))
         reference = self.assignment_logits.new_zeros((self.num_faults, 1))
         logits = torch.cat([reference, self.assignment_logits], dim=1)
+        logits = logits / max(1e-12, float(self.assignment_temperature))
         return torch.softmax(logits, dim=1)
 
     def hard_assignments(self) -> torch.Tensor:
         return torch.argmax(self.assignment_probabilities(), dim=1)
 
     def realized_logits(self, graph: FaultGraph | None = None) -> torch.Tensor:
-        return self.assignment_probabilities() @ self.alpha
+        return self._assignment_weights_for_forward() @ self.alpha
 
     def regularization_loss(self) -> torch.Tensor:
-        if self.assignment_entropy_weight == 0.0:
-            return self.alpha.new_tensor(0.0)
+        loss = self.alpha.new_tensor(0.0)
         S = self.assignment_probabilities()
-        positive = S > 0
-        entropy_terms = torch.zeros_like(S)
-        entropy_terms[positive] = -(S[positive] * torch.log(S[positive]))
-        entropy = entropy_terms.sum(dim=1).mean() if S.numel() else self.alpha.new_tensor(0.0)
-        return float(self.assignment_entropy_weight) * entropy
+        if self.assignment_entropy_weight:
+            positive = S > 0
+            entropy_terms = torch.zeros_like(S)
+            entropy_terms[positive] = -(S[positive] * torch.log(S[positive]))
+            entropy = entropy_terms.sum(dim=1).mean() if S.numel() else self.alpha.new_tensor(0.0)
+            loss = loss + float(self.assignment_entropy_weight) * entropy
+        if self.assignment_balance_weight and S.numel():
+            masses = S.mean(dim=0)
+            target = S.new_full((self.num_prototypes,), 1.0 / max(1, self.num_prototypes))
+            loss = loss + float(self.assignment_balance_weight) * torch.mean((masses - target) ** 2)
+        if self.prototype_separation_weight and self.alpha.numel() > 1:
+            diffs = torch.abs(self.alpha.unsqueeze(0) - self.alpha.unsqueeze(1))
+            mask = torch.triu(torch.ones_like(diffs, dtype=torch.bool), diagonal=1)
+            shortfall = torch.relu(float(self.prototype_separation_margin) - diffs[mask])
+            if shortfall.numel():
+                loss = loss + float(self.prototype_separation_weight) * torch.mean(shortfall**2)
+        return loss
+
+    def _assignment_weights_for_forward(self) -> torch.Tensor:
+        S = self.assignment_probabilities()
+        if self.assignment_mode == "soft":
+            return S
+        hard = torch.nn.functional.one_hot(torch.argmax(S, dim=1), num_classes=self.num_prototypes).to(dtype=S.dtype)
+        if self.assignment_mode == "straight_through":
+            return hard + S - S.detach()
+        if self.assignment_mode == "hard":
+            return hard
+        raise ValueError(f"unsupported assignment_mode {self.assignment_mode!r}")
 
 
 class DiscoverySoftFeatureFaultLogitField(DiscoveryHardFaultLogitField):
@@ -189,6 +224,11 @@ class DiscoverySoftFeatureFaultLogitField(DiscoveryHardFaultLogitField):
         alpha_init_scale: float = 0.01,
         assignment_init_scale: float = 0.01,
         assignment_entropy_weight: float = 0.0,
+        assignment_balance_weight: float = 0.0,
+        prototype_separation_weight: float = 0.0,
+        prototype_separation_margin: float = 0.5,
+        assignment_mode: str = "soft",
+        assignment_temperature: float = 1.0,
         beta_l2: float = 0.0,
         dtype: torch.dtype = torch.float64,
         seed: int | None = None,
@@ -200,6 +240,11 @@ class DiscoverySoftFeatureFaultLogitField(DiscoveryHardFaultLogitField):
             alpha_init_scale=alpha_init_scale,
             assignment_init_scale=assignment_init_scale,
             assignment_entropy_weight=assignment_entropy_weight,
+            assignment_balance_weight=assignment_balance_weight,
+            prototype_separation_weight=prototype_separation_weight,
+            prototype_separation_margin=prototype_separation_margin,
+            assignment_mode=assignment_mode,
+            assignment_temperature=assignment_temperature,
             dtype=dtype,
             seed=seed,
         )
@@ -233,7 +278,7 @@ class DiscoverySoftFeatureFaultLogitField(DiscoveryHardFaultLogitField):
 
     def realized_logits(self, graph: FaultGraph | None = None) -> torch.Tensor:
         prototype_logits = self.alpha.unsqueeze(0) + self.phi @ self.beta.T
-        return torch.sum(self.assignment_probabilities() * prototype_logits, dim=1)
+        return torch.sum(self._assignment_weights_for_forward() * prototype_logits, dim=1)
 
     def regularization_loss(self) -> torch.Tensor:
         loss = super().regularization_loss()
@@ -325,6 +370,11 @@ def make_field(
             alpha_init_scale=float(model_options.get("alpha_init_scale", 0.01)),
             assignment_init_scale=float(model_options.get("assignment_init_scale", 0.01)),
             assignment_entropy_weight=float(model_options.get("assignment_entropy_weight", 0.0)),
+            assignment_balance_weight=float(model_options.get("assignment_balance_weight", 0.0)),
+            prototype_separation_weight=float(model_options.get("prototype_separation_weight", 0.0)),
+            prototype_separation_margin=float(model_options.get("prototype_separation_margin", 0.5)),
+            assignment_mode=str(model_options.get("assignment_mode", "soft")),
+            assignment_temperature=float(model_options.get("assignment_temperature", 1.0)),
         )
     if model_name == "disc_soft":
         return DiscoverySoftFeatureFaultLogitField.from_graph(
@@ -337,6 +387,11 @@ def make_field(
             alpha_init_scale=float(model_options.get("alpha_init_scale", 0.01)),
             assignment_init_scale=float(model_options.get("assignment_init_scale", 0.01)),
             assignment_entropy_weight=float(model_options.get("assignment_entropy_weight", 0.0)),
+            assignment_balance_weight=float(model_options.get("assignment_balance_weight", 0.0)),
+            prototype_separation_weight=float(model_options.get("prototype_separation_weight", 0.0)),
+            prototype_separation_margin=float(model_options.get("prototype_separation_margin", 0.5)),
+            assignment_mode=str(model_options.get("assignment_mode", "soft")),
+            assignment_temperature=float(model_options.get("assignment_temperature", 1.0)),
             beta_l2=float(model_options.get("beta_l2", 0.0)),
         )
     if model_name == "dmle_qec":
@@ -359,3 +414,19 @@ def _option_int(model_options: dict[str, object], *keys: str) -> int | None:
     if len(ints) != 1:
         raise ValueError(f"model option aliases {keys!r} disagree")
     return ints.pop()
+
+
+def _normalize_assignment_mode(mode: str) -> str:
+    normalized = str(mode).strip().lower().replace("-", "_")
+    aliases = {
+        "soft": "soft",
+        "free": "soft",
+        "st": "straight_through",
+        "hard_st": "straight_through",
+        "straight_through": "straight_through",
+        "straightthrough": "straight_through",
+        "hard": "hard",
+    }
+    if normalized not in aliases:
+        raise ValueError("assignment_mode must be 'soft', 'straight_through', or 'hard'")
+    return aliases[normalized]

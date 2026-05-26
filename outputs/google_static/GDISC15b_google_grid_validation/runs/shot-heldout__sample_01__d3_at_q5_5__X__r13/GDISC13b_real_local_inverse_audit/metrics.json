@@ -1,0 +1,76 @@
+{
+  "GDISC13b_real_local_inverse_audit": {
+    "mean_pairwise_abs_logit_delta": 0.10601960441658283,
+    "mean_pairwise_cluster_nmi": 0.4292009153111564,
+    "mean_pairwise_logit_corr": 0.9001086837571496,
+    "min_pairwise_cluster_nmi": 0.37183936402818984,
+    "min_pairwise_logit_corr": 0.8471423410136263,
+    "nearby_sample_window_stability": "not_evaluated_in_smoke",
+    "no_oracle_logits_available": true,
+    "num_representations": 3,
+    "num_subsamples": 2,
+    "predictiveness": {
+      "decoder_logical_prediction_error_rate": 0.08203125,
+      "detector_rate_mae": 0.006761723778015314,
+      "heldout_detector_window_excess_nll": 0.0019955781225367564,
+      "heldout_local_window_excess_nll": 0.0077016030228449495,
+      "heldout_local_window_nll": 0.8015038651096266,
+      "heldout_logical_window_excess_nll": 0.011129728654651005,
+      "local_correlation_error": 0.005275360749061522,
+      "logical_flip_rate_calibration": 0.031186325619043553
+    },
+    "prior_agreement": {
+      "decoder_rl": {
+        "available": true,
+        "corr": 0.28725149331146727,
+        "mae": 1.4860709817130187,
+        "reference": "decoder_rl"
+      },
+      "decoder_si1000": {
+        "available": true,
+        "corr": 0.3497603011583457,
+        "mae": 1.901693133345306,
+        "reference": "decoder_si1000"
+      }
+    },
+    "question": "Do local inverse logits on Google data contain stable reusable structure or mostly window-specific noise?",
+    "subsample_names": [
+      "subsample_0",
+      "subsample_1"
+    ]
+  },
+  "run": {
+    "claim_boundary": {
+      "google_discovery": "Google Stage 2B has no ground-truth hidden omega. It may report predictive utility, stability, transfer, calibration, and explicitly labelled proxy ARI/NMI only.",
+      "orbit_target": "S1.6 still induces orbits over effective DEM fault columns, not true hardware/schedule fault locations.",
+      "schedule_geometric": "schedule_geometric is an audited schedule-derived preprocessing proxy. It is not a full hardware automorphism solver, not full SCOPE-Twin, and not CPTP/GKSL learning. It only tests whether schedule-derived coloring gives a better fixed quotient/orbit prior than the current DEM-mask geometry heuristic."
+    },
+    "created_at_utc": "2026-05-26T09:34:07.375275+00:00",
+    "cuda_kernel_variant": "dp",
+    "dataset_root": "/home/cx/Document/google_72Q_surface_code_d3_d5_set1/google_72Q_surface_code_d3_d5_set1",
+    "dem_source": "decoder_si1000",
+    "device": "cuda",
+    "leaf": {
+      "basis": "X",
+      "patch_id": "d3_at_q5_5",
+      "rounds_label": "r13",
+      "sample_id": "sample_01"
+    },
+    "likelihood_backend": "cuda_extension",
+    "name": "Google Stage 2B local inverse mechanism smoke",
+    "orbit_mode": "fault_graph_heuristic",
+    "output_root": "outputs/google_static/GDISC15b_google_grid_validation/runs/shot-heldout__sample_01__d3_at_q5_5__X__r13",
+    "wall_seconds": 13.569080181001482,
+    "window_plan_mode": "logical_aware"
+  },
+  "train_heldout_split": {
+    "disjoint": true,
+    "heldout_end": 50000,
+    "heldout_shots": 1024,
+    "heldout_start": 48976,
+    "num_shots": 50000,
+    "train_end": 4096,
+    "train_shots": 4096,
+    "train_start": 0
+  }
+}

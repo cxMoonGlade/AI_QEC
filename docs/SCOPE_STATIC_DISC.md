@@ -1,21 +1,19 @@
-# SCOPE-Static Discovery MVP
+# SCOPE-Static Discovery
 
 This document defines Stage 2 for the static SCOPE path.
 
-`docs/SCOPE_STATIC_MVP.md` is the Stage 1 document: it studies fixed-context
-DEM fault-logit learning when the orbit map is known. This document is Stage 2:
-it keeps the same fixed-context DEM likelihood, but asks whether the model can
-discover the sharing structure instead of receiving the orbit map by hand.
+Stage 1, defined in `docs/SCOPE_STATIC_MVP.md`, studies fixed-context
+DEM/Bernoulli fault-logit learning when the DEM-fault orbit map is known.
+Stage 2 keeps the same fixed-context DEM likelihood, but asks whether sharing
+structure can be discovered instead of supplied by hand.
 
-## Goal
-
-Stage 2 answers:
+The central question is:
 
 ```text
-Can observations identify hidden sharing structure?
+Can observations identify hidden DEM-fault sharing structure?
 ```
 
-Stage 1 used a known DEM-fault orbit map:
+Stage 1 used a known orbit map:
 
 ```text
 omega(j) = known orbit id for effective DEM fault j
@@ -28,31 +26,67 @@ assignment:
 S[j, k] = learned assignment weight of DEM fault j to prototype k
 ```
 
-Use `S` or `Pi` for learned assignments. Do not use `A`; `A` is reserved for
-the DEM parity map.
+Use `S` or `Pi` for learned assignments. Do not use `A` for assignments; `A`
+is reserved for the DEM parity map.
+
+## Roadmap
+
+Stage 2 is split into deliberately separate tracks:
+
+```text
+Stage 2A.0: Current free-assignment synthetic test
+  Question: Does free per-fault S recover hidden omega(j)?
+
+Stage 2A.0.5: Passive identifiability audit
+  Question: Do visible non-leaking fault signatures already separate omega(j)?
+
+Stage 2A.1: Proposed hardening study
+  Question: Can recovery-biased optimization fix free-S recovery failures?
+
+Stage 2A.2: Proposed identifiability-aware discovery
+  Question: Can probe design, OT constraints, or multi-environment invariance
+            make quotient recovery identifiable?
+
+Stage 2C: Local inverse representation discovery
+  Question: Can fitted local inverse logits or response fingerprints be
+            denoised, factorized, and clustered better than direct S/alpha
+            likelihood learning?
+
+Stage 2D: Active local-logit observability
+  Question: Which probes improve recoverability of local inverse logits and
+            their mechanism clusters?
+
+Stage 2B: Google external validation
+  Question: On real data without true omega(j), do discovery models improve
+            likelihood, calibration, transfer, or decoder-facing utility?
+```
+
+Do not merge these tracks in reports. A Stage 2A.1 or Stage 2A.2 result is not
+retroactive evidence that the Stage 2A.0 free-assignment test succeeded.
 
 ## Claim Boundary
 
-This stage may claim evidence about:
+Stage 2 may claim evidence about:
 
 - latent quotient/orbit recovery in the fixed DEM/Bernoulli family.
 - assignment recovery on synthetic teachers with known hidden partitions.
-- held-out likelihood and calibration after replacing known orbits with learned
+- heldout likelihood and calibration after replacing known orbits with learned
   prototypes.
-- robustness of discovery across seeds, shot budgets, and prototype counts.
+- robustness of discovery across seeds, shot budgets, prototype counts, and
+  synthetic identifiability stressors.
 
-This stage must not claim:
+Stage 2 must not claim:
 
 - CPTP/GKSL physical-channel learning.
 - full noisy-circuit Born-rule likelihood.
-- context-conditioned amortization.
-- temporal drift tracking.
+- context-conditioned amortization as part of Stage 2A.0.
+- temporal drift tracking as part of Stage 2A.0.
 - real-hardware ground-truth orbit recovery from Google data.
 
 Google repetition-code and surface-code datasets can be used as empirical
-external validation later, but they do not provide true hidden fault partitions.
-They cannot support ARI/NMI claims unless a proxy partition is explicitly
-defined.
+external validation, but they do not provide true hidden fault partitions. They
+cannot support true ARI/NMI recovery claims unless a proxy partition is
+explicitly defined and labelled as a proxy.
 
 ## Static DEM Contract
 
@@ -65,8 +99,8 @@ y = A e mod 2
 A in F_2^{B x M}
 ```
 
-`B` is the number of detector plus logical observable bits. `M` is the number of
-effective DEM fault mechanisms after duplicate-mask canonicalization.
+`B` is the number of detector plus logical observable bits. `M` is the number
+of effective DEM fault mechanisms after duplicate-mask canonicalization.
 
 The sparse parity-map views remain the scalable interface:
 
@@ -79,109 +113,91 @@ packed_masks64[j] = 64-bit chunks for exact small-window paths
 Dense `A` is only a compatibility artifact for small tests and toy global exact
 runs.
 
-## Discovery Model
+## Shared Discovery Model
 
-The first Stage 2 MVP is DEM-fault-level discovery:
+The Stage 2 DEM-fault discovery object is:
 
 ```text
-S in [0, 1]^{M x K}
+S in [0, 1]^(M x K)
 sum_k S[j, k] = 1
 ```
 
-where `K` is the number of discovered prototypes. The learned fault logit field
-is:
+where `K` is the number of discovered prototypes.
+
+The hard discovery field is:
 
 ```text
 lambda_j = sum_k S[j, k] alpha_k
 ```
 
-This is the discovery analogue of Stage 1 hard orbit sharing. A soft-residual
-extension may use:
+The soft-residual extension is:
 
 ```text
 lambda_j = sum_k S[j, k] (alpha_k + beta_k^T phi_j)
 ```
 
-where `phi_j` is a centered fault-level residual feature. The feature-centering
-audit from Stage 1 still applies when soft residuals are enabled.
+`disc_soft` is allowed only when `phi_j` is learner-visible. Features must not
+be selected, centered, target-encoded, or otherwise constructed using hidden
+`omega(j)`. Hidden `omega(j)` is available only to the synthetic teacher and
+the evaluator.
+
+The free per-fault assignment table is an identifiability probe, not a
+compression architecture. Compression claims require a compressed assignment
+parameterization, such as a feature-conditioned or template-conditioned
+assignment network, with audited parameter count.
 
 The full SCOPE-Twin object eventually learns location/template assignments:
 
 ```text
-S^{(t)} in [0, 1]^{|I_t| x K_t}
+S^(t) in [0, 1]^(|I_t| x K_t)
 ```
 
-That is the later physical-location version. The Stage 2 static MVP should start
-at DEM-fault level because it directly reuses the validated Stage 1 graph,
-likelihood, sparse supports, windows, and metrics.
+That is a later physical-location/context-conditioned object. Stage 2 static
+discovery stays at DEM-fault level.
 
 ## Parameter Accounting
 
-Every discovery run must report parameter counts separately for:
+Every discovery run must report:
 
 ```json
 {
   "P_local": 0,
   "P_known_hard_orbit": 0,
+  "P_known_soft_feature_orbit": 0,
   "P_discovery_prototypes": 0,
   "P_discovery_assignment": 0,
   "P_discovery_total": 0,
-  "assignment_parameterization": "free|feature_conditioned|template_conditioned",
+  "assignment_parameterization": "free",
   "compressed_claim_allowed": false
 }
 ```
 
-Free per-fault assignment logits cost approximately `M * (K - 1)` parameters.
-Therefore a free-assignment discovery model is usually an identifiability probe,
-not a compression claim. Compression claims are only allowed when the assignment
-parameterization itself is compressed, for example by a feature-conditioned or
-template-conditioned assignment network with audited parameter count.
-
-## Likelihood
-
-Use the same exact DEM likelihood family as Stage 1.
-
-For small `B`, the global exact parity dynamic program may be used. For larger
-systems, use the MVP05 local-window path:
+For a free assignment table, assignment logits cost approximately:
 
 ```text
-a_{j,W} = a_j restricted to W
+M * (K - 1)
 ```
 
-Each window runs exact parity DP over `2^|W|`, not `2^B`.
+Free assignments are therefore usually an identifiability probe, not evidence
+of compression.
 
-Detector-rate MAE and local-correlation error should use exact parity-moment
-formulas from sparse supports where possible, so they do not require materializing
-the global exact distribution.
+## Shared Metrics
 
-## Synthetic Teachers
-
-Stage 2 must be tested first on synthetic teachers where the hidden partition is
-known but withheld from the model.
-
-Required teacher cases:
-
-- `exact_orbit`: logits are constant inside the hidden partition.
-- `in_family_soft_residual`: logits are prototype plus in-family centered
-  residual features.
-- `out_of_family_residual`: logits include residual structure not represented by
-  the selected soft feature family.
-
-The learner must receive observations and DEM structure, but not the true
-`omega(j)` labels. The evaluator may use the hidden labels for ARI/NMI only.
-
-## Metrics
-
-Every Stage 2 synthetic run should report:
+Synthetic Stage 2 runs should report:
 
 ```json
 {
   "ari": 0.0,
   "nmi": 0.0,
   "assignment_entropy_mean": 0.0,
+  "assignment_entropy_normalized": 0.0,
+  "prototype_masses": [],
   "num_active_prototypes": 0,
+  "num_dead_prototypes": 0,
+  "assignment_collapse": false,
   "heldout_nll": 0.0,
-  "delta_nll_oracle": 0.0,
+  "known_orbit_oracle_model": "known_hard_orbit",
+  "delta_nll_known_orbit": 0.0,
   "d_q_dem": 0.0,
   "detector_rate_mae": 0.0,
   "local_correlation_error": 0.0,
@@ -189,42 +205,1320 @@ Every Stage 2 synthetic run should report:
 }
 ```
 
-`TVD` is only required when the global exact distribution is small enough to
+`TVD` is required only when the global exact distribution is small enough to
 materialize.
 
-Run summaries must aggregate these metrics across seeds by teacher case, shot
-budget, and `K`.
+ARI/NMI are computed from:
 
-## Guardrails
+```text
+hat_omega(j) = argmax_k S[j, k]
+```
 
-Discovery is more failure-prone than known-orbit fitting. Every run should audit:
+Hard labels are used only for evaluation. Label switching is expected, so
+partition metrics must be permutation-invariant.
 
-- assignment collapse: all faults assigned to one prototype.
-- dead prototypes: prototypes with near-zero mass.
-- label switching: compare partitions with permutation-invariant metrics only.
-- over-specified `K`: extra prototypes should be inactive or harmless.
-- under-specified `K`: likelihood should degrade and ARI/NMI should expose the
-  mismatch.
-- train/heldout gap: discovery should not only memorize low-shot samples.
-- compression honesty: free assignments are not automatically compressed.
+## Stage 2A.0 Current Free-Assignment Test
 
-## Stage 2A Exit Criteria
+Stage 2A.0 is the current implemented synthetic identifiability test.
 
-Stage 2A is ready when synthetic discovery shows:
+It asks:
 
-- high ARI/NMI on `exact_orbit` teachers when `K` matches the true number of
-  orbits.
-- held-out NLL close to the known-orbit hard baseline on `exact_orbit` teachers.
-- degraded but interpretable behavior when `K` is too small or too large.
-- seed-aware summaries over multiple seeds and shot budgets.
-- no assignment-collapse failures in the main claim runs.
-- parameter accounting that clearly separates prototype parameters from
-  assignment parameters.
+```text
+Can a free per-fault assignment matrix S[j,k] recover hidden omega(j) from
+DEM parity-map observations alone?
+```
 
-Only after these conditions pass should Google repetition-code and surface-code
-datasets be used as Stage 2B real-hardware empirical validation.
+The learner sees:
 
-## Stage 2B External Validation
+- the fixed DEM parity map `A`.
+- sampled observations `y`.
+- learner-visible DEM/fault features where applicable.
+
+The learner does not see:
+
+- hidden `omega(j)`.
+- hidden-orbit-centered `phi`.
+- teacher prototype labels.
+
+The evaluator may use hidden `omega(j)` for ARI/NMI only.
+
+### Implemented Models
+
+The Stage 2A.0 model set is:
+
+- `disc_hard`: free `S[j,k]` plus prototype logits `alpha_k`.
+- `disc_soft`: free `S[j,k]` plus learner-visible residual features.
+- `known_hard_orbit`: synthetic-only known-orbit oracle.
+- `known_soft_feature_orbit`: synthetic-only known soft-feature oracle.
+- `local`: unshared fault-logit baseline.
+- `dmle_qec`: detector-only baseline.
+
+Discovery runs use multiple restarts. The selected restart is the one with the
+lowest training NLL. All restart outcomes are recorded, including collapse,
+dead prototypes, entropy, ARI/NMI, and poor-recovery flags.
+
+### Synthetic Teachers
+
+Required teacher families:
+
+- `exact_orbit`: logits are constant inside hidden `omega(j)`.
+- `exact_orbit_separated`: exact-orbit teacher with stronger prototype logit
+  separation for controlled identifiability stress.
+- `in_family_soft_residual`: prototype plus in-family centered residual.
+- `in_family_soft_residual_separated`: separated prototype plus in-family
+  residual.
+- `out_of_family_residual`: residual structure not represented by the selected
+  soft feature family.
+- `out_of_family_residual_separated`: separated prototype plus out-of-family
+  residual.
+
+Separated teachers are controlled synthetic probes. They are not hardware
+claims.
+
+### Success Rule
+
+Stage 2A.0 success is two-dimensional:
+
+```text
+success = high partition recovery AND high predictive quality
+```
+
+Concretely:
+
+- high ARI/NMI against hidden `omega(j)`.
+- heldout NLL close to the matched known-orbit oracle.
+- no selected main-claim run collapses.
+- `K` sweep behavior is interpretable:
+  - `K < O`: recovery and NLL should degrade.
+  - `K = O`: recovery should be strongest.
+  - `K > O`: extra prototypes should become inactive or harmless.
+
+NLL-only success is not sufficient. ARI/NMI-only success is not sufficient.
+
+If heldout NLL is close to the known-orbit oracle but ARI/NMI are low, Stage
+2A.0 found a good DEM-fault logit representation but did not recover the hidden
+quotient. This should be reported as:
+
+```text
+likelihood-positive, recovery-negative
+```
+
+### Current Run
+
+Recommended Stage 2A.0 config:
+
+```text
+configs/scope_static/d3_r1_STAGE2A_full.yaml
+```
+
+Recommended output folder:
+
+```text
+outputs/scope_static/STAGE2A_full/
+```
+
+Run:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static_discovery \
+  --config configs/scope_static/d3_r1_STAGE2A_full.yaml
+```
+
+The terminal summary should stay compact. Do not print the full `metrics.json`
+to the terminal.
+
+Summarize the completed Stage 2A.0 run:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.stage2a0_summary \
+  --metrics outputs/scope_static/STAGE2A_full/metrics.json
+```
+
+This writes:
+
+```text
+outputs/scope_static/STAGE2A_full/stage2a0_summary.json
+outputs/scope_static/STAGE2A_full/stage2a0_summary.md
+```
+
+## Stage 2A.0.5 Passive Identifiability Audit
+
+Stage 2A.0.5 is a diagnostic audit, not a likelihood-recovery claim.
+
+It asks:
+
+```text
+Do visible, non-leaking fault signatures contain enough information to separate
+the synthetic hidden quotient before Stage 2A.1 hardening?
+```
+
+A positive DISC10 result means:
+
+```text
+Passive visible signatures contain enough information to separate the synthetic
+hidden quotient.
+```
+
+It does not mean physical mechanism discovery, and it does not prove the
+likelihood learner can recover `omega(j)`.
+
+### DISC10 Moment/Spectral Seed
+
+DISC10 constructs fault-level signatures using only:
+
+- the DEM parity map `A`.
+- visible detector/logical observations.
+- visible detector coordinates or geometry.
+- visible fault support structure.
+
+It must not use hidden fault activations, hidden `omega(j)`, hidden-orbit
+centered `phi`, or ARI/NMI for selecting signatures or hyperparameters.
+
+The first pass uses:
+
+```json
+{
+  "K_mode": "known_K_synthetic_audit",
+  "ari_nmi_used_for_selection": false,
+  "selection_rule": "observable_only"
+}
+```
+
+Signature families currently include:
+
+- `structural`.
+- `local_logit`.
+- `moment_spectral`.
+- `combined`.
+
+Run:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static_identifiability \
+  --config configs/scope_static/d3_r1_STAGE2A_DISC10_passive_audit.yaml
+```
+
+This writes:
+
+```text
+outputs/scope_static/STAGE2A_DISC10_passive_audit/disc10_metrics.json
+outputs/scope_static/STAGE2A_DISC10_passive_audit/disc10_summary.md
+outputs/scope_static/STAGE2A_DISC10_passive_audit/signatures/*.npy
+outputs/scope_static/STAGE2A_DISC10_passive_audit/clusters/*_clusters.json
+```
+
+DISC10 output is split into:
+
+```json
+{
+  "disc10_audit": {
+    "best_visible_signature_family": "...",
+    "ari": 0.0,
+    "nmi": 0.0,
+    "active_clusters": 0,
+    "passive_identifiability_result": "separates|weak|failed"
+  },
+  "disc10_seed_candidate": {
+    "recommended_for_stage2a1_init": true,
+    "signature_family": "...",
+    "selection_rule": "observable_only"
+  }
+}
+```
+
+Classification uses the predefined `separates|weak|failed` thresholds and
+requires scores to be meaningfully above random/shuffled controls.
+
+## Stage 2A.1 Proposed Hardening Study
+
+Stage 2A.1 is a proposed follow-on study, not part of the Stage 2A.0 claim.
+
+It asks:
+
+```text
+Can stronger recovery-biased optimization recover omega(j) when the free
+soft-assignment likelihood fit does not?
+```
+
+This stage is triggered when Stage 2A.0 is likelihood-positive but
+recovery-negative.
+
+Allowed Stage 2A.1 interventions include:
+
+- DISC10/local-logit warm starts that fit visible signatures from observations
+  and initialize prototypes without hidden `omega(j)`.
+- temperature annealing for `S[j,k]`.
+- straight-through or hard-assignment variants.
+- alternating hard-assignment updates.
+- row-entropy penalties.
+- light prototype-mass balancing.
+- prototype separation penalties.
+- stricter residual control for `disc_soft`, including beta norm or sparsity
+  audits.
+
+The first Stage 2A.1 ablation grid is:
+
+```text
+A. free random-init disc_hard
+B. free local-logit-init disc_hard
+C. hard/ST random-init disc_hard
+D. hard/ST local-logit-init disc_hard
+E. hard/ST local-logit-init + entropy annealing
+F. hard/ST local-logit-init + entropy annealing + balance
+G. hard/ST local-logit-init + entropy annealing + balance + prototype separation
+```
+
+Main comparisons:
+
+```text
+A -> B: Does audited initialization help?
+B -> D: Does hard assignment help?
+D -> E/F/G: Do recovery-biased regularizers help beyond initialization?
+```
+
+These interventions must be reported as a different training regime or
+assignment parameterization:
+
+```json
+{
+  "stage2a_variant": "hardening_study",
+  "assignment_parameterization": "free_hardened",
+  "assignment_initializer": "local_kmeans",
+  "uses_hidden_omega_for_initialization": false
+}
+```
+
+Stage 2A.1 must preserve the original claim boundary:
+
+- hidden `omega(j)` must not be used by the learner, initializer, feature
+  selection, or objective.
+- ARI/NMI may use hidden `omega(j)` only in the evaluator, and must not select
+  initializers, restarts, checkpoints, or hyperparameters.
+- selected runs must use validation NLL and observable health checks, not
+  recovery metrics.
+- NLL-only success still does not count as quotient recovery.
+- initializer and hardening schedules must be included in training audits and
+  restart records.
+
+Stage 2A.1 acceptance categories:
+
+```text
+strong_recovery:
+  ARI >= 0.80 and NMI >= 0.80
+  delta_nll_known_orbit <= threshold_epsilon
+  active clusters >= K - 1
+  selected by validation NLL / observable health, not ARI/NMI
+
+partial_recovery:
+  ARI or NMI improves substantially over Stage 2A.0 and DISC10
+  but does not reach strong recovery threshold
+
+failure:
+  NLL remains good but ARI stays low
+  or recovery would require ARI/NMI-based run selection
+```
+
+Before closing Stage 2A.1, report an assignment movement audit:
+
+```text
+init_final_assignment_nmi
+fraction_rows_changed
+mean_assignment_entropy_start
+mean_assignment_entropy_end
+assignment_logit_grad_norm
+prototype_param_delta_norm
+cluster_mass_start
+cluster_mass_end
+selection_score
+selected_by_ari_nmi = false
+```
+
+This distinguishes three cases:
+
+- the DISC10/local-logit partition is a stable passive ceiling.
+- assignments barely moved after initialization.
+- validation/health selection repeatedly selected the same initialized
+  partition.
+
+Run:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static_hardening \
+  --config configs/scope_static/d3_r1_STAGE2A1_hardening.yaml
+```
+
+`disc_soft` in Stage 2A.1 is primarily a predictive extension unless it also
+recovers the hidden partition. If `disc_soft` improves NLL while ARI/NMI remain
+poor, it is evidence for residual predictive modeling, not quotient recovery.
+
+## Stage 2A.2 Identifiability-Aware Quotient Discovery
+
+Stage 2A.2 is a proposed research extension based on `docs/S2A-newIdeas.md`.
+It is separate from both the current free-assignment test and the hardening
+study.
+
+It asks:
+
+```text
+Can the experiment or assignment structure be designed so the quotient becomes
+more identifiable from observations?
+```
+
+Stage 2A.2 should start only after Stage 2A.0 and DISC10 have been reported,
+and Stage 2A.1 has clarified whether hardening alone is enough.
+
+The first Stage 2A.2 experiment is:
+
+```text
+DISC12_multi_env_shared_assignment
+```
+
+Core hypothesis:
+
+```text
+Single-environment passive observations are weakly identifying.
+The hidden quotient may become identifiable when the same assignment S is
+observed across multiple environments with different prototype strengths.
+```
+
+Model:
+
+```text
+shared:
+  S[j, k]
+
+environment-specific:
+  alpha[e, k]
+
+fault rate:
+  lambda[e, j] = sum_k S[j, k] alpha[e, k]
+```
+
+The invariant is the shared quotient assignment. The environment-specific
+prototype rates vary.
+
+DISC12 must report:
+
+```json
+{
+  "stage": "stage2A.2",
+  "experiment": "DISC12_multi_env_shared_assignment",
+  "uses_hidden_omega_for_training": false,
+  "uses_hidden_omega_for_initialization": false,
+  "uses_hidden_omega_for_checkpoint_selection": false,
+  "uses_hidden_omega_for_final_evaluation": true,
+  "ari_nmi_used_for_selection": false
+}
+```
+
+Initial controlled environments:
+
+```text
+env_0: base alpha
+env_1: alpha scaled by group-specific factors
+env_2: sparse boosted subset of prototypes
+env_3: support-size-dependent perturbation
+env_4: mixed perturbation
+```
+
+Use `env_0` through `env_3` for shared-S training and `env_4` as the heldout
+environment. Heldout-environment evaluation freezes learned `S` and adapts only
+the new environment's `alpha`.
+
+Baselines:
+
+```text
+single_env_free_assignment
+single_env_local_logit_init
+multi_env_independent_S_per_env
+multi_env_shared_S_random_init
+multi_env_shared_S_DISC10_init
+known_orbit_oracle_shared_S
+local_full_per_fault_per_env
+```
+
+The key comparison is:
+
+```text
+multi_env_shared_S_DISC10_init
+vs
+single_env_local_logit_init
+```
+
+Acceptance categories:
+
+```text
+strong_recovery:
+  ARI >= 0.80
+  NMI >= 0.80
+  active clusters >= K - 1
+  delta_nll_known_orbit remains small
+  no ARI/NMI-based selection
+
+partial_recovery:
+  ARI/NMI clearly improve over the Stage 2A.1 ceiling
+  but fail strong threshold
+
+predictive_only:
+  NLL improves over baselines
+  ARI remains low
+
+failure:
+  no meaningful recovery or likelihood benefit
+```
+
+The current Stage 2A.1 ceiling is:
+
+```text
+ARI ~= 0.2748
+NMI ~= 0.7097
+```
+
+Critical diagnostic:
+
+```text
+alpha_variation_norm
+between_env_rate_contrast
+per_prototype_alpha_separation
+shared_assignment_entropy
+assignment_movement_from_init
+env_holdout_dNLL
+```
+
+Run:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static_multi_env_discovery \
+  --config configs/scope_static/d3_r1_STAGE2A2_DISC12_multi_env.yaml
+```
+
+Outputs:
+
+```text
+outputs/scope_static/STAGE2A2_DISC12_multi_env/metrics.json
+outputs/scope_static/STAGE2A2_DISC12_multi_env/disc12_summary.md
+outputs/scope_static/STAGE2A2_DISC12_multi_env/shared_assignment.json
+outputs/scope_static/STAGE2A2_DISC12_multi_env/env_alpha.json
+outputs/scope_static/STAGE2A2_DISC12_multi_env/run_selection_audit.json
+outputs/scope_static/STAGE2A2_DISC12_multi_env/contrast_sweep.json
+```
+
+The initial DISC12a result should be recorded as:
+
+```text
+DISC12a_multi_env_shared_assignment:
+  multi_env_predictive_only
+  weak_recovery_gain_over_stage2a1
+  observable_contrast_likely_insufficient
+```
+
+DISC12b adds a contrast-strength sweep:
+
+```text
+DISC12b_multi_env_contrast_sweep
+```
+
+Question:
+
+```text
+Does quotient recovery improve monotonically when environment-induced observable
+contrast increases?
+```
+
+Sweep either default perturbations or a codebook-style environment design:
+
+```text
+contrast_strength in {1x, 2x, 4x, 8x, 16x}
+alpha[e, k] = alpha_base[k] + gamma * code[e, k]
+```
+
+where `code[e,k]` is a normalized synthetic sign/codebook pattern. This remains
+synthetic-only and does not expose hidden `omega(j)` to the learner.
+
+DISC12b tracks:
+
+```text
+contrast_strength
+between_env_rate_contrast
+mean_per_prototype_alpha_separation
+singular values of the environment x fault-rate matrix
+ARI/NMI of shared S
+delta_nll_known_orbit
+env_holdout_dNLL
+active clusters
+assignment_movement_from_init
+```
+
+Decision rules:
+
+```text
+If ARI/NMI increase with observable contrast:
+  conclusion = quotient is identifiable under sufficient environment contrast.
+
+If NLL improves but ARI remains low even at high contrast:
+  conclusion = shared predictive structure differs from teacher omega.
+
+If contrast sweep fails to increase observable contrast:
+  conclusion = environment generator is too weak or perturbations are attenuated.
+
+If high observable contrast exists but recovery still fails:
+  conclusion = model/optimization or assignment parameterization remains insufficient.
+```
+
+### DISC13 Observational Quotient Audit
+
+DISC13 is the target-alignment gate after DISC12b.
+
+It asks:
+
+```text
+Is hidden teacher omega(j) actually the right recoverable target under the
+current DEM/Bernoulli observation map?
+```
+
+DISC13 is evaluator-only:
+
+```json
+{
+  "stage": "stage2A.2",
+  "experiment": "DISC13_observational_quotient_audit",
+  "uses_hidden_omega_for_training": false,
+  "uses_hidden_omega_for_initialization": false,
+  "uses_hidden_omega_for_checkpoint_selection": false,
+  "uses_hidden_omega_for_final_evaluation": true,
+  "ari_nmi_used_for_selection": false
+}
+```
+
+It constructs observational quotients from teacher response fingerprints, then
+compares:
+
+```text
+hidden omega
+learned partition
+observational quotient
+```
+
+Primary target-audit comparison:
+
+```text
+ARI(observational_quotient, omega)
+ARI(learned_partition, omega)
+ARI(learned_partition, observational_quotient)
+```
+
+If learned partitions align better with the observational quotient than hidden
+`omega`, target mismatch is confirmed. If the observational quotient itself is
+close to hidden `omega` but learned recovery remains low, the target is not the
+main problem and active probe design becomes the next credible step.
+
+Run:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static_observational_quotient \
+  --config configs/scope_static/d3_r1_STAGE2A2_DISC13_observational_quotient.yaml
+```
+
+Outputs:
+
+```text
+outputs/scope_static/STAGE2A2_DISC13_observational_quotient/metrics.json
+outputs/scope_static/STAGE2A2_DISC13_observational_quotient/disc13_summary.md
+outputs/scope_static/STAGE2A2_DISC13_observational_quotient/observational_quotient.json
+outputs/scope_static/STAGE2A2_DISC13_observational_quotient/target_alignment.json
+outputs/scope_static/STAGE2A2_DISC13_observational_quotient/fingerprints/*.npy
+```
+
+Current result:
+
+```text
+target_mismatch_not_confirmed
+oracle_parameter_space_contains_hidden_quotient
+passive_observation_training_signal_still_fails_to_isolate_target
+```
+
+Key evidence:
+
+```text
+oracle_logit:
+  ARI 1.0000
+  NMI 1.0000
+
+observation_side:
+  ARI 0.2538
+  NMI 0.7058
+
+combined:
+  ARI 0.3422
+  NMI 0.7594
+
+learned vs omega:
+  ARI 0.3574
+  NMI 0.7598
+
+learned vs observation_side:
+  ARI 0.1432
+  NMI 0.6363
+```
+
+Thus, the learned partition is not simply recovering a better
+observation-side quotient. The hidden quotient is valid in teacher parameter
+space, but the current passive likelihood route does not isolate it from
+detector/logical observations.
+
+### DISC13b Inverse-Logit Recovery Gap
+
+DISC13b is a short bridge audit before active probes.
+
+It asks:
+
+```text
+Is the bottleneck failure to estimate oracle-like per-fault logits, or does the
+assignment learner fail even when oracle-like logit structure is present?
+```
+
+DISC13b compares fitted local per-fault logits against oracle teacher logits:
+
+```text
+corr(local_logit_j, oracle_logit_j)
+R2(local_logit -> oracle_logit)
+rank / singular spectrum of oracle-logit matrix
+rank / singular spectrum of fitted-local-logit matrix
+ARI(cluster(local_logit), omega)
+ARI(cluster(oracle_logit), omega)
+ARI(cluster(local_logit), cluster(oracle_logit))
+```
+
+Run:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static_inverse_logit_audit \
+  --config configs/scope_static/d3_r1_STAGE2A2_DISC13b_inverse_logit.yaml
+```
+
+Outputs:
+
+```text
+outputs/scope_static/STAGE2A2_DISC13b_inverse_logit/metrics.json
+outputs/scope_static/STAGE2A2_DISC13b_inverse_logit/disc13b_summary.md
+outputs/scope_static/STAGE2A2_DISC13b_inverse_logit/logit_clusters.json
+outputs/scope_static/STAGE2A2_DISC13b_inverse_logit/oracle_logits.npy
+outputs/scope_static/STAGE2A2_DISC13b_inverse_logit/local_logits.npy
+```
+
+Current result:
+
+```text
+local_logits_contain_partial_target_signal
+```
+
+Key evidence:
+
+```text
+oracle logits:
+  ARI 1.0000
+  NMI 1.0000
+
+local logits:
+  ARI 0.5187
+  NMI 0.8287
+
+corr(local, oracle): 0.9277
+R2(local -> oracle): 0.9270
+ARI(local cluster, oracle cluster): 0.5187
+NMI(local cluster, oracle cluster): 0.8287
+```
+
+This narrows the failure mode. Per-fault local inversion contains substantial
+target signal, but it still does not recover the hidden quotient strongly, and
+the shared-assignment likelihood learner remains below this local-logit
+clustering level. The next credible change is active observability design, not
+more entropy, balance, separation, or passive contrast sweeps.
+
+### Stage 2A Closure
+
+Close the original direct quotient-recovery line as:
+
+```text
+Direct shared-assignment likelihood learning does not recover hidden omega,
+even though local inverse logits contain substantial target signal.
+```
+
+This is stronger than the earlier closure because DISC13b shows that the
+failure is not simply absence of quotient signal in all inverse quantities.
+The signal is present in fitted local per-fault logits, but direct `S`/`alpha`
+likelihood learning does not extract it.
+
+## Stage 2C: Local Inverse Representation Discovery
+
+Stage 2C promotes local inverse representations to first-class discovery
+objects.
+
+Question:
+
+```text
+Can we denoise, factorize, and cluster fitted local inverse representations
+better than direct S/alpha learning?
+```
+
+The first Stage 2C experiment is:
+
+```text
+DISC15_local_logit_to_mechanism_discovery
+```
+
+Inputs:
+
+```text
+local logits or local response fingerprints
+```
+
+Methods:
+
+```text
+PCA / spectral denoising
+graph smoothing over the visible DEM fault graph
+sparse dictionary or NMF-style factorization
+mixture clustering
+overlapping mechanism codes
+```
+
+Primary baseline:
+
+```text
+local-logit clustering:
+  ARI 0.5187
+  NMI 0.8287
+```
+
+Any new method must beat this baseline, not merely beat DISC12.
+
+Run:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static_local_mechanism_discovery \
+  --config configs/scope_static/d3_r1_STAGE2C_DISC15_local_logit_mechanism.yaml
+```
+
+Outputs:
+
+```text
+outputs/scope_static/STAGE2C_DISC15_local_logit_mechanism/metrics.json
+outputs/scope_static/STAGE2C_DISC15_local_logit_mechanism/disc15_summary.md
+outputs/scope_static/STAGE2C_DISC15_local_logit_mechanism/run_selection_audit.json
+outputs/scope_static/STAGE2C_DISC15_local_logit_mechanism/representations/*.npy
+outputs/scope_static/STAGE2C_DISC15_local_logit_mechanism/clusters/*_clusters.json
+```
+
+Evaluation:
+
+```text
+ARI/NMI vs omega, evaluator-only
+cluster masses
+split/merge audit
+stability across seeds
+no omega for training, initialization, checkpointing, or selection
+```
+
+Success criterion:
+
+```text
+beats local-logit baseline:
+  ARI > 0.5187
+  NMI > 0.8287
+
+strong:
+  ARI >= 0.80
+  NMI >= 0.80
+```
+
+If DISC15 beats the local-logit baseline under observable-only selection, the
+new path is:
+
+```text
+local inverse first, mechanism discovery second
+```
+
+If DISC15 cannot beat local logits, the next required change is active
+observability.
+
+Current result:
+
+```text
+evaluator_only_candidate_beats_baseline_no_observable_selection_claim
+```
+
+Key evidence:
+
+```text
+declared local-logit baseline:
+  ARI 0.5187
+  NMI 0.8287
+
+measured train-env local-logit baseline:
+  ARI 0.5739
+  NMI 0.8618
+
+observable-selected candidate:
+  single_env_local_logit_env0
+  ARI 0.3213
+  NMI 0.7125
+
+evaluator-best candidate:
+  local_logit_probability
+  ARI 0.7923
+  NMI 0.9245
+```
+
+Interpretation:
+
+```text
+Local inverse representations are now a promising route: a visible
+logit-plus-probability representation beats the local-logit baseline and nearly
+reaches the strong recovery ARI threshold. However, this is not yet a deployable
+Stage 2C success because the observable-only selection score did not choose it.
+```
+
+### DISC15c Confirmatory Local-Logit Probability
+
+DISC15c returns to the synthetic oracle-recovery question, but with the stronger
+Stage 2C representation.
+
+Question:
+
+```text
+If local_logit_probability is predeclared, does it recover synthetic omega
+without evaluator-based candidate selection?
+```
+
+Rules:
+
+```text
+predeclared representation: local_logit_probability
+candidate selection: disabled
+ARI/NMI: evaluator-only
+hidden omega used for training: false
+hidden omega used for selection: false
+hidden omega used for final evaluation: true
+```
+
+Run:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static_disc15c_confirmatory \
+  --config configs/scope_static/d3_r1_STAGE2C_DISC15c_confirmatory.yaml
+```
+
+Outputs:
+
+```text
+outputs/scope_static/STAGE2C_DISC15c_confirmatory_local_logit_probability/metrics.json
+outputs/scope_static/STAGE2C_DISC15c_confirmatory_local_logit_probability/disc15c_summary.md
+outputs/scope_static/STAGE2C_DISC15c_confirmatory_local_logit_probability/clusters.json
+outputs/scope_static/STAGE2C_DISC15c_confirmatory_local_logit_probability/local_logits.npy
+outputs/scope_static/STAGE2C_DISC15c_confirmatory_local_logit_probability/local_logit_probability.npy
+```
+
+Current result:
+
+```text
+near_strong_confirmed
+
+local_logit baseline:
+  ARI 0.5739
+  NMI 0.8618
+
+predeclared local_logit_probability:
+  ARI 0.7923
+  NMI 0.9245
+```
+
+Interpretation:
+
+```text
+The Stage 2C representation result survives confirmatory testing without
+candidate selection. It is near-strong but misses the strong ARI threshold by a
+small margin. The next synthetic step is DISC16 active local-inverse
+observability, not a return to direct S/alpha hardening.
+```
+
+## Stage 2D: Active Local-Logit Observability
+
+Active probing should target local-logit separability, not only detector-rate
+contrast.
+
+Old DISC12b mainly asked:
+
+```text
+Can increasing between-environment observable contrast recover omega?
+```
+
+The Stage 2D question is:
+
+```text
+Which probes improve recoverability of local inverse logits?
+```
+
+Metrics:
+
+```text
+corr(local logits, oracle logits)
+R2(local -> oracle)
+ARI/NMI of clustered local logits
+local-logit cluster margin
+eigen-gap / singular spectrum of L[j,e]
+heldout environment transfer
+```
+
+### DISC16a Shot-Budget Sweep
+
+DISC16a tests the simplest active-observability explanation first:
+
+```text
+Can more local inverse evidence turn DISC15c ARI 0.7923 into ARI >= 0.80?
+```
+
+Rules:
+
+```text
+predeclared representation: local_logit_probability
+candidate selection: disabled
+ARI/NMI: evaluator-only
+hidden omega used for training: false
+hidden omega used for selection: false
+hidden omega used for final evaluation: true
+```
+
+Run:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static_disc16_observability \
+  --config configs/scope_static/d3_r1_STAGE2C_DISC16a_shot_budget.yaml
+```
+
+Outputs:
+
+```text
+outputs/scope_static/STAGE2C_DISC16a_shot_budget/metrics.json
+outputs/scope_static/STAGE2C_DISC16a_shot_budget/disc16a_summary.md
+outputs/scope_static/STAGE2C_DISC16a_shot_budget/shot_sweep.json
+outputs/scope_static/STAGE2C_DISC16a_shot_budget/cluster_audit.json
+outputs/scope_static/STAGE2C_DISC16a_shot_budget/run_selection_audit.json
+```
+
+Current result:
+
+```text
+strong_recovery_by_predeclared_local_inverse_probability
+
+shots   ARI  NMI  active  bootstrap NMI  prob variance
+25k     1.0  1.0  9       1.0            0.003372
+50k     1.0  1.0  9       1.0            0.001334
+100k    1.0  1.0  9       1.0            0.0008979
+200k    1.0  1.0  9       1.0            0.0005264
+500k    1.0  1.0  9       1.0            0.0001955
+```
+
+Interpretation:
+
+```text
+DISC15c was just below strong recovery because the local inverse probability
+estimator was noisy at the smaller evidence level. With 25k or more shots,
+the predeclared local_logit_probability representation recovers the hidden
+synthetic quotient exactly in this d3/r1 setting. Direct S/alpha likelihood
+learning failed, but local inverse first plus probability representation
+succeeds.
+```
+
+Protocol difference from DISC15c:
+
+```text
+DISC15c:
+  local inverse source: DISC12 env_alpha artifact
+  train environments: 0, 1, 2, 3
+  shots per train environment: 2,048
+  local inverse steps: 200
+  representation: local_logit_probability
+  clustering: deterministic k-means, K=9
+
+DISC16a:
+  local inverse source: freshly refit from synthetic observations
+  train environments: 0, 1, 2, 3
+  shots per train environment: 25k, 50k, 100k, 200k, 500k
+  bootstrap replicates per budget: 2
+  local inverse steps: 200
+  representation: local_logit_probability
+  clustering: deterministic k-means, K=9
+```
+
+Thus the intended causal change is the local inverse evidence budget, with
+fresh sampling used to measure bootstrap stability.
+
+Leakage audit:
+
+```text
+Allowed oracle use:
+  synthetic teacher generation uses omega(j);
+  final ARI/NMI and split/merge evaluation use omega(j);
+  K=9 is used as known_K_synthetic_audit.
+
+Post-sampling learner-visible path:
+  observations + DEM parity map A
+  -> local_full_per_fault_per_env inverse fit
+  -> local_logit_probability = [lambda_hat, sigmoid(lambda_hat)]
+  -> deterministic k-means with K=9
+
+The post-sampling learner path does not read omega(j). A regression test
+replaces graph.orbit_ids after observation sampling and verifies that the
+local inverse logits, probability representation, and k-means labels are
+unchanged. Only final evaluator metrics change with evaluator labels.
+```
+
+### DISC16b Local-Inverse Recovery Robustness
+
+DISC16b checks whether the DISC16a recovery holds beyond one controlled
+d3/r1 synthetic instance.
+
+Grid:
+
+```text
+synthetic seeds: 0, 1, 2, 3, 4
+shot budgets: 10k, 25k, 50k
+regimes: easy, default, harder
+representation: local_logit_probability
+candidate selection: disabled
+ARI/NMI: evaluator-only
+K_mode: known_K_synthetic_audit
+```
+
+Run:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static_disc16b_robustness \
+  --config configs/scope_static/d3_r1_STAGE2C_DISC16b_robustness.yaml
+```
+
+Outputs:
+
+```text
+outputs/scope_static/STAGE2C_DISC16b_local_inverse_robustness/metrics.json
+outputs/scope_static/STAGE2C_DISC16b_local_inverse_robustness/disc16b_summary.md
+outputs/scope_static/STAGE2C_DISC16b_local_inverse_robustness/robustness_grid.json
+outputs/scope_static/STAGE2C_DISC16b_local_inverse_robustness/failure_cases.json
+outputs/scope_static/STAGE2C_DISC16b_local_inverse_robustness/run_selection_audit.json
+```
+
+Current result:
+
+```text
+robust_near_strong_some_hard_cases
+
+regime   shots  seeds  ARImean  ARImin  NMImean  NMImin  active  strong
+default  10000  5      0.8443   0.7426  0.9482   0.9136  9       3/5
+default  25000  5      0.9360   0.7828  0.9798   0.9269  9       4/5
+default  50000  5      1.0000   1.0000  1.0000   1.0000  9       5/5
+easy     10000  5      0.8567   0.6742  0.9525   0.8885  9       3/5
+easy     25000  5      0.9728   0.8611  0.9916   0.9581  9       5/5
+easy     50000  5      0.9783   0.7828  0.9944   0.9443  9       4/5
+harder   10000  5      0.8187   0.7320  0.9458   0.9123  9       2/5
+harder   25000  5      0.9564   0.8295  0.9870   0.9515  9       5/5
+harder   50000  5      0.9626   0.8673  0.9878   0.9581  9       5/5
+```
+
+Interpretation:
+
+```text
+DISC16a establishes strong recovery for one controlled d3/r1 instance.
+DISC16b shows that local-inverse probability recovery is robustly near-strong
+across seeds and regimes, with strong recovery in most 25k/50k conditions and
+all default 50k conditions. It is not yet a universal all-seed/all-regime
+perfect-recovery result because 10k conditions and a small number of 25k/50k
+seed-regime cells fall below ARI 0.80.
+```
+
+Failure-case audit:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.stage2c_failure_audit \
+  --metrics outputs/scope_static/STAGE2C_DISC16b_local_inverse_robustness/metrics.json
+```
+
+Outputs:
+
+```text
+outputs/scope_static/STAGE2C_DISC16b_local_inverse_robustness/failure_case_audit.json
+outputs/scope_static/STAGE2C_DISC16b_local_inverse_robustness/failure_case_audit.md
+```
+
+Failure audit result:
+
+```text
+near_miss_ari_failures_no_cluster_collapse_mostly_low_shot_split_merge
+
+strong conditions: 36/45
+failure conditions: 9/45
+
+failure reasons:
+  ari_below_0.80: 9
+
+failure counts by shots:
+  10k: 7
+  25k: 1
+  50k: 1
+
+failure counts by regime:
+  easy: 3
+  default: 3
+  harder: 3
+
+failure counts by seed:
+  seed 1: 1
+  seed 2: 1
+  seed 3: 4
+  seed 4: 3
+```
+
+Failure pattern:
+
+```text
+All failure cases keep active_clusters = 9.
+All failure cases keep NMI >= 0.8885.
+All failure cases fail only by ARI < 0.80.
+Mean failure ARI_min: 0.7557.
+Mean failure NMI_min: 0.9240.
+Mean failure cluster purity: 0.9450.
+Mean failure splits per omega: 1.148.
+```
+
+Interpretation:
+
+```text
+Stage 2C failures are near-miss split/merge errors, not model collapse.
+The local-inverse probability representation usually recovers the hidden
+synthetic quotient, but some seed/regime/evidence cells retain small split/merge
+ambiguities that depress ARI while preserving high NMI and full cluster
+activity.
+```
+
+Stage 2C freeze label:
+
+```text
+local_inverse_probability_robust_near_strong_with_near_miss_split_merge_failures
+```
+
+Frozen Stage 2C claim:
+
+```text
+Direct shared-assignment likelihood learning does not recover hidden omega.
+Local-inverse-first discovery with the predeclared local_logit_probability
+representation recovers the synthetic hidden quotient strongly in the controlled
+DISC16a instance and robustly near-strong across the DISC16b seed/regime grid.
+The remaining failures are near-miss ARI split/merge failures, concentrated
+mostly at low evidence, not hidden-label leakage, assignment collapse, dead
+prototypes, or NMI failure.
+```
+
+### DISC14 Active Probe Design
+
+Active quotient discovery changes the synthetic data-generation setting instead
+of only changing the optimizer.
+
+Goal:
+
+```text
+Choose synthetic probe contexts that make local inverse representations more
+separable and more oracle-like.
+```
+
+Possible probe axes:
+
+- synthetic noise regimes.
+- code family, basis, distance, or round count where global exact remains
+  feasible.
+- local-window families.
+- detector/logical support windows.
+- teacher prototype separation.
+- controlled residual perturbations.
+
+Possible selection criteria:
+
+- prototype separation in learned or teacher logits.
+- Fisher-information-like sensitivity.
+- pair-correlation contrast.
+- local-window likelihood curvature.
+- KL or TVD contrast between candidate prototype perturbations.
+
+This is a synthetic identifiability method. It does not imply the same probes
+exist on Google data.
+
+### DISC11 OT/Sinkhorn Assignment
+
+OT/Sinkhorn discovery replaces independent row-softmax assignments with a
+structured transport problem over the DEM fault graph.
+
+Conceptual objective:
+
+```text
+min_S <S, C> + tau H(S) + lambda_graph Tr(S^T L_fault S)
+subject to row and prototype-mass constraints
+```
+
+Where:
+
+- `C[j,k]` is the cost of assigning fault `j` to prototype `k`.
+- `H(S)` is entropy regularization.
+- `L_fault` is a visible fault-graph Laplacian.
+- prototype-mass constraints reduce collapse/dead prototypes.
+- graph smoothness encourages similar visible faults to share prototypes.
+
+This should be compared against:
+
+```text
+free_softmax
+free_softmax + entropy/balance
+hard or straight-through assignment
+OT/Sinkhorn
+OT/Sinkhorn + graph smoothness
+```
+
+Any OT assignment must still obey the no-hidden-`omega(j)` rule.
+
+### DISC12 Multi-Environment Invariant Quotient
+
+Multi-environment discovery assumes that quotient assignment is stable across
+environments while prototype strengths vary:
+
+```text
+S^(e) approximately S*
+alpha_k^(e) varies across environment e
+```
+
+Candidate environments:
+
+- synthetic noise regimes.
+- rounds.
+- basis.
+- patch location.
+- calibration windows.
+- sequential real experiments.
+
+This is a bridge toward SCOPE-Twin and SCOPE-Dynamic, but it is not Stage 2A.0.
+It should be used only after fixed-context synthetic recovery has been
+understood. Invariance alone must not be treated as proof of latent quotient
+recovery.
+
+### Later Ideas Not In Stage 2A
+
+The following ideas are useful but should not be the main Stage 2A path:
+
+- decoder-in-the-loop quotient value: useful external utility test, but not a
+  substitute for synthetic ARI/NMI recovery.
+- hybrid DEM plus coherent/physical residual teachers: promising for later
+  SCOPE-Twin work, but outside the fixed DEM/Bernoulli Stage 2A claim.
+- full context-conditioned assignment networks: future amortized discovery,
+  not evidence that fixed-context Stage 2A.0 recovered `omega(j)`.
+
+## Stage 2B Google External Validation
 
 Google datasets are useful for external validation, not oracle discovery.
 
@@ -242,13 +1536,22 @@ decoding_results/*/obs_flips_predicted.b8
 ```
 
 They do not provide the true hidden physical fault mechanism or true orbit
-partition. Use them to evaluate held-out detector/logical likelihood, detector
-rate matching, local correlation matching, logical prediction, calibration
-transfer, and robustness across samples or time. Do not use them to claim true
-latent partition recovery unless the partition is explicitly defined as a proxy.
+partition.
 
-The Google runner can include Stage 2 discovery models in the same S1.7
-logical-aware comparison:
+Use Google data to evaluate:
+
+- heldout detector/logical likelihood.
+- detector-rate matching.
+- local-correlation matching.
+- logical prediction.
+- calibration and transfer.
+- robustness across samples or time.
+- external utility of discovered priors.
+
+Do not use Google data to claim true latent partition recovery unless the
+partition is explicitly defined as a proxy.
+
+Run:
 
 ```bash
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_google_static \
@@ -263,40 +1566,276 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run
   --output-dir outputs/google_static/S2B_discovery_logical_aware
 ```
 
-Records for `disc_hard` and `disc_soft` report assignment entropy, active/dead
-prototype audits, free-assignment parameter accounting, and local-baseline
-excess-NLL deltas. They intentionally report that ground-truth partition
-recovery is unavailable on Google data.
+Google discovery records must report:
 
-## Planned Run Shape
+- no ground-truth hidden partition is available.
+- ARI/NMI are unavailable unless using an explicit proxy partition.
+- assignment entropy and active/dead prototype audits.
+- free-assignment parameter accounting.
+- heldout and transfer deltas against local and known-orbit-like baselines.
 
-Recommended first config:
+### Google DISC Tasks
 
-```text
-configs/scope_static/d3_r1_STAGE2A_full.yaml
-```
-
-Recommended first output folder:
+The Stage 2B Google path separates three real-data questions.
 
 ```text
-outputs/scope_static/STAGE2A_full/
+GDISC12_multi_context_shared_response:
+  Question: Does shared response structure improve transfer across real
+            contexts such as sample, patch, basis, cycles, time/window, or
+            decoder pathway?
+  Claim: predictive/context transfer only; no ARI.
+
+GDISC13b_real_local_inverse_audit:
+  Question: Do local inverse logits on Google data contain stable reusable
+            structure, or mostly window-specific noise?
+
+GDISC15_real_local_mechanism_discovery:
+  Question: Can local inverse representations be clustered or factorized into
+            useful real-data response modes?
 ```
 
-The first implementation should reuse:
+Google DISC13b replaces synthetic oracle-logit metrics:
 
-- Stage 1 `FaultGraph`.
-- sparse parity supports.
-- local-window likelihood.
-- seed-aware result aggregation.
-- Stage 1 baselines: `local`, `dmle_qec`, `hard_orbit`,
-  `soft_feature_orbit`.
+```text
+synthetic corr(local, oracle)      -> stability across shot subsamples/windows
+synthetic R2(local -> oracle)      -> predictiveness on heldout detector/logical data
+synthetic ARI/NMI against omega    -> no true label; proxy ARI/NMI only if labelled
+```
 
-The new Stage 2 baselines are:
+Google DISC15 may report proxy ARI/NMI only against explicitly labelled proxy
+partitions:
 
-- `disc_hard`: learned assignment plus prototype logits.
-- `disc_soft`: learned assignment plus prototype logits and centered residual
-  features.
-- `known_hard_orbit`: Stage 1 hard orbit using the hidden labels, used only as
-  an oracle baseline.
-- `known_soft_feature_orbit`: Stage 1 soft feature orbit using the hidden
-  labels, used only as an oracle baseline.
+```text
+proxy_boundary_bulk
+proxy_support_size
+proxy_detector_degree
+proxy_space_time_region
+proxy_basis_type
+proxy_round_layer
+proxy_decoder_prior_family
+proxy_fault_graph_community
+```
+
+These proxies answer:
+
+```text
+Do discovered real-data mechanisms align with interpretable geometry or
+schedule structure?
+```
+
+They do not answer:
+
+```text
+Did we recover true physical mechanisms?
+```
+
+Smoke run:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_google_local_mechanism \
+  --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
+  --native-gpu \
+  --sample-id sample_00 \
+  --patch-id d3_at_q5_5 \
+  --basis X \
+  --rounds-label r13 \
+  --dem-source decoder_si1000 \
+  --orbit-mode fault_graph_heuristic \
+  --train-shots 4096 \
+  --heldout-shots 1024 \
+  --steps 40 \
+  --subsample-count 2 \
+  --subsample-shots 2048 \
+  --subsample-steps 30 \
+  --max-windows 96 \
+  --detector-pair-window-budget 48 \
+  --logical-detector-pair-window-budget 48 \
+  --window-plan-mode logical_aware \
+  --output-root outputs/google_static
+```
+
+Outputs:
+
+```text
+outputs/google_static/GDISC13b_real_local_inverse_audit/metrics.json
+outputs/google_static/GDISC13b_real_local_inverse_audit/summary.md
+outputs/google_static/GDISC15_real_local_mechanism_discovery/metrics.json
+outputs/google_static/GDISC15_real_local_mechanism_discovery/summary.md
+outputs/google_static/STIM_vs_Google_comparison/summary.md
+```
+
+Current smoke result:
+
+```text
+GDISC15_smoke:
+  early_positive_predictive_utility_under_parameter_compression
+  continuous_local_inverse_stable
+  discrete_cluster_identity_unstable
+  proxy_labels_only_no_recovery_claim
+
+GDISC13b:
+  mean pairwise local-logit corr: 0.9177
+  mean pairwise cluster NMI: 0.4310
+
+GDISC15 selected:
+  model: GDISC15_pca_scores_rank3
+  parameters: 99
+  heldout local-window excess NLL: 0.006583
+  detector-rate MAE: 0.007060
+  local-correlation error: 0.005075
+  logical flip calibration: 0.002853
+
+local_full baseline:
+  parameters: 1341
+  heldout local-window excess NLL: 0.006611
+  detector-rate MAE: 0.007211
+  local-correlation error: 0.005092
+  logical flip calibration: 0.004470
+```
+
+Interpretation:
+
+```text
+The Google smoke suggests local inverse logits are stable at the logit level,
+but their hard clusterings are less stable. A compressed PCA local-inverse
+mechanism model slightly improves heldout excess NLL, detector-rate MAE,
+local-correlation error, and logical calibration versus local_full while using
+far fewer parameters. This is a predictive-utility result, not quotient or
+physical-mechanism recovery.
+```
+
+### GDISC15b Google Grid Validation
+
+GDISC15b scales the smoke to paired Google contexts and reports uncertainty:
+
+```text
+mean +/- std
+paired improvement over local_full
+number of contexts where the compressed model wins
+```
+
+Required baseline/model families:
+
+```text
+local_full
+global_shared_scalar
+SI1000 prior reference
+RL-optimized prior reference, where available
+GDISC15_pca_scores_rank{1,2,3,5,8}
+random low-rank controls
+```
+
+Small grid run:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_google_gdisc15b_grid \
+  --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
+  --native-gpu \
+  --samples sample_00,sample_01 \
+  --patches d3_at_q5_5 \
+  --bases X,Z \
+  --rounds-labels r13 \
+  --heldout-split-types shot-heldout \
+  --train-shots 4096 \
+  --heldout-shots 1024 \
+  --steps 40 \
+  --subsample-count 2 \
+  --subsample-shots 2048 \
+  --subsample-steps 30 \
+  --max-windows 96 \
+  --detector-pair-window-budget 48 \
+  --logical-detector-pair-window-budget 48 \
+  --window-plan-mode logical_aware \
+  --pca-ranks 1,2,3,5,8 \
+  --random-control-ranks 1,2,3,5,8 \
+  --random-control-seeds 0 \
+  --output-dir outputs/google_static/GDISC15b_google_grid_validation
+```
+
+Outputs:
+
+```text
+outputs/google_static/GDISC15b_google_grid_validation/metrics.json
+outputs/google_static/GDISC15b_google_grid_validation/flat_records.json
+outputs/google_static/GDISC15b_google_grid_validation/run_manifest.json
+outputs/google_static/GDISC15b_google_grid_validation/summary.md
+```
+
+Current small-grid result:
+
+```text
+contexts:
+  samples: sample_00, sample_01
+  patch: d3_at_q5_5
+  basis: X, Z
+  cycles: r13
+  split: shot-heldout
+  completed: 4
+
+local_full:
+  params: 1340.0 +/- 1.155
+  heldout NLL: 0.7715 +/- 0.02805
+  heldout excess NLL: 0.006607
+  detector MAE: 0.007337 +/- 0.000450
+  local corr err: 0.005122 +/- 0.000116
+  logical calib: 0.01414 +/- 0.01213
+
+GDISC15_local_logit:
+  params: 98.5 +/- 0.577
+  heldout NLL: 0.7715 +/- 0.02805
+  heldout excess NLL delta vs local_full: +0.00000165
+  wins/total: 0/4
+
+GDISC15_pca_scores_rank3/5/8:
+  params: 98.5 +/- 0.577
+  heldout excess NLL delta vs local_full: +0.0000381
+  detector MAE: 0.007285 +/- 0.000435
+  wins/total: 1/4
+
+random low-rank controls:
+  worse than local inverse models on NLL, detector MAE, correlation, and
+  logical calibration.
+
+global_shared_scalar:
+  worse than local inverse models and local_full.
+```
+
+Interpretation:
+
+```text
+The broader grid weakens the one-context smoke claim. Compressed local inverse
+models preserve local_full heldout NLL surprisingly well under strong parameter
+compression, but they do not yet win consistently. The current positive result
+is compression-with-near-parity plus occasional small metric gains, not robust
+predictive improvement.
+```
+
+## Decision Rules
+
+Use this decision tree:
+
+```text
+If Stage 2A.0 has high ARI/NMI and low delta_nll_known_orbit:
+  Record free-assignment synthetic recovery as successful.
+  Proceed to Stage 2B external validation and optionally 2A.2.
+
+If Stage 2A.0 has low delta_nll_known_orbit but poor ARI/NMI:
+  Record likelihood-positive, recovery-negative.
+  Run Stage 2A.1 hardening.
+
+If Stage 2A.1 succeeds:
+  Claim recovery only for the hardened regime, not for free-S 2A.0.
+  Then consider Stage 2A.2 for stronger identifiability.
+
+If Stage 2A.1 still fails:
+  Treat the hidden quotient as weakly identifiable under passive observations.
+  Prioritize Stage 2A.2 active/moment/OT/multi-environment tests.
+
+If only Google improves:
+  Claim external predictive value, not true hidden quotient recovery.
+```
+
+Negative results are scientifically meaningful. If discovery repeatedly matches
+oracle likelihood but fails ARI/NMI under clean synthetic teachers, the honest
+conclusion is that the fixed DEM/Bernoulli observations do not identify the
+chosen hidden quotient under the tested learner and data regime.

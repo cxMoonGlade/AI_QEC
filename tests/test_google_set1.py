@@ -314,6 +314,105 @@ def test_google_runner_can_evaluate_discovery_on_real_data_path(monkeypatch, tmp
     assert "disc_hard" in output
 
 
+def test_google_local_mechanism_smoke_uses_proxy_not_true_recovery(monkeypatch, tmp_path: Path):
+    from scope_static.experiments.run_google_local_mechanism import main
+
+    root = _write_tiny_dataset(tmp_path)
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
+
+    result = main(
+        [
+            "--dataset-root",
+            str(root),
+            "--allow-cpu-fallback",
+            "--train-shots",
+            "2",
+            "--heldout-shots",
+            "1",
+            "--max-windows",
+            "1",
+            "--steps",
+            "1",
+            "--subsample-count",
+            "1",
+            "--subsample-shots",
+            "1",
+            "--subsample-steps",
+            "1",
+            "--nmf-steps",
+            "2",
+            "--pca-ranks",
+            "1",
+            "--output-root",
+            str(tmp_path / "google_static"),
+        ]
+    )
+
+    g15 = result["GDISC15_real_local_mechanism_discovery"]
+    assert g15["true_hidden_omega_available"] is False
+    assert g15["ari_nmi_ground_truth_recovery_claim_allowed"] is False
+    assert "proxy_support_size" in g15["proxy_partitions"]
+    assert (tmp_path / "google_static" / "GDISC13b_real_local_inverse_audit" / "metrics.json").exists()
+    assert (tmp_path / "google_static" / "GDISC15_real_local_mechanism_discovery" / "metrics.json").exists()
+    assert (tmp_path / "google_static" / "STIM_vs_Google_comparison" / "summary.md").exists()
+
+
+def test_google_gdisc15b_grid_writes_paired_summary(monkeypatch, tmp_path: Path):
+    from scope_static.experiments.run_google_gdisc15b_grid import main
+
+    root = _write_tiny_dataset(tmp_path)
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
+
+    result = main(
+        [
+            "--dataset-root",
+            str(root),
+            "--allow-cpu-fallback",
+            "--samples",
+            "sample_00",
+            "--patches",
+            "d3_at_q5_5",
+            "--bases",
+            "X",
+            "--rounds-labels",
+            "r13",
+            "--heldout-split-types",
+            "shot-heldout",
+            "--train-shots",
+            "2",
+            "--heldout-shots",
+            "1",
+            "--max-windows",
+            "1",
+            "--steps",
+            "1",
+            "--subsample-count",
+            "1",
+            "--subsample-shots",
+            "1",
+            "--subsample-steps",
+            "1",
+            "--nmf-steps",
+            "2",
+            "--pca-ranks",
+            "1",
+            "--random-control-ranks",
+            "1",
+            "--output-dir",
+            str(tmp_path / "grid"),
+        ]
+    )
+
+    assert result["run"]["name"] == "GDISC15b_google_grid_validation"
+    assert len(result["grid"]["completed_contexts"]) == 1
+    models = {row["model"] for row in result["model_summary"]}
+    assert "local_full" in models
+    assert "global_shared_scalar" in models
+    assert any(model.startswith("GDISC15_random_low_rank1") for model in models)
+    assert (tmp_path / "grid" / "metrics.json").exists()
+    assert (tmp_path / "grid" / "summary.md").read_text().count("wins/total") == 1
+
+
 @pytest.mark.skipif(not os.environ.get("SCOPE_GOOGLE_SET1_ROOT"), reason="requires Google Set1 dataset")
 def test_google_set1_gated_default_leaf_and_tiny_smoke(tmp_path: Path):
     root = os.environ["SCOPE_GOOGLE_SET1_ROOT"]

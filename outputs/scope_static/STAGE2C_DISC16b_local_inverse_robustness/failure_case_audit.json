@@ -1,0 +1,654 @@
+{
+  "ari_nmi_used_for_selection": false,
+  "candidate_selection": "disabled_predeclared_representation",
+  "experiment": "DISC16b_failure_case_audit",
+  "failure_audit_conclusion": "near_miss_ari_failures_no_cluster_collapse_mostly_low_shot_split_merge",
+  "failure_counts_by_regime": {
+    "default": 3,
+    "easy": 3,
+    "harder": 3
+  },
+  "failure_counts_by_seed": {
+    "1": 1,
+    "2": 1,
+    "3": 4,
+    "4": 3
+  },
+  "failure_counts_by_shots": {
+    "10000": 7,
+    "25000": 1,
+    "50000": 1
+  },
+  "failure_metric_summary": {
+    "active_clusters_min": {
+      "max": 9.0,
+      "mean": 9.0,
+      "min": 9.0,
+      "std": 0.0
+    },
+    "ari_mean": {
+      "max": 0.8914163090128755,
+      "mean": 0.8101174305784813,
+      "min": 0.7602366371392012,
+      "std": 0.040056813716895574
+    },
+    "ari_min": {
+      "max": 0.7923250564334086,
+      "mean": 0.7556571595700721,
+      "min": 0.6742489270386267,
+      "std": 0.0370492348267481
+    },
+    "bootstrap_label_pairwise_nmi": {
+      "max": 0.9466732372725978,
+      "mean": 0.9125330232800736,
+      "min": 0.8611317391228783,
+      "std": 0.03208144361407175
+    },
+    "heldout_local_inverse_nll_mean": {
+      "max": 1.0106366262283544,
+      "mean": 0.885833518266552,
+      "min": 0.7993581354572493,
+      "std": 0.06777054335059818
+    },
+    "local_logit_probability_variance": {
+      "max": 0.015751445807676293,
+      "mean": 0.009961591681459304,
+      "min": 0.0017576805754760262,
+      "std": 0.004467528442479808
+    },
+    "mean_cluster_purity_mean": {
+      "max": 0.9722222222222222,
+      "mean": 0.944958848901737,
+      "min": 0.8981481492519379,
+      "std": 0.021201030345458838
+    },
+    "mean_splits_per_omega_mean": {
+      "max": 1.2222222222222223,
+      "mean": 1.148148148148148,
+      "min": 1.0555555555555556,
+      "std": 0.048112522432468836
+    },
+    "nmi_mean": {
+      "max": 0.9721360228738357,
+      "mean": 0.9421039406785662,
+      "min": 0.9234479596405486,
+      "std": 0.014450976587486057
+    },
+    "nmi_min": {
+      "max": 0.9442720457476714,
+      "mean": 0.9239996041339449,
+      "min": 0.8885440914953432,
+      "std": 0.018210096048255818
+    }
+  },
+  "failure_rate": 0.2,
+  "failure_reason_counts": {
+    "ari_below_0.80": 9
+  },
+  "failure_rows": [
+    {
+      "active_clusters_min": 9,
+      "ari_margin_to_threshold": 0.12575107296137333,
+      "ari_min": 0.6742489270386267,
+      "bootstrap_label_pairwise_nmi": 0.8645625487874636,
+      "failure_reasons": [
+        "ari_below_0.80"
+      ],
+      "heldout_local_inverse_nll_mean": 0.9281364962106678,
+      "higher_shot_outcomes": [
+        {
+          "ari_min": 0.8610958603272209,
+          "nmi_min": 0.958351827785754,
+          "shots": 25000,
+          "strong_all_replicates": true
+        },
+        {
+          "ari_min": 0.7828326180257511,
+          "nmi_min": 0.9442720457476714,
+          "shots": 50000,
+          "strong_all_replicates": false
+        }
+      ],
+      "local_logit_probability_variance": 0.015751445807676293,
+      "max_merged_omega_per_cluster_max": 2,
+      "max_splits_per_omega_max": 3,
+      "mean_cluster_purity_mean": 0.8981481492519379,
+      "mean_splits_per_omega_mean": 1.2222222222222223,
+      "nmi_margin_to_threshold": 0.08854409149534315,
+      "nmi_min": 0.8885440914953432,
+      "regime": "easy",
+      "resolved_by_any_higher_shot_budget": true,
+      "shots": 10000,
+      "synthetic_seed": 3,
+      "worst_replicate": {
+        "active_clusters": 9,
+        "ari": 0.6742489270386267,
+        "cluster_masses": [
+          2,
+          2,
+          2,
+          3,
+          2,
+          3,
+          4,
+          2,
+          3
+        ],
+        "max_merged_omega_per_cluster": 2,
+        "max_splits_per_omega": 3,
+        "mean_cluster_purity": 0.8333333333333334,
+        "mean_splits_per_omega": 1.3333333333333333,
+        "nmi": 0.8885440914953432,
+        "replicate": 1
+      }
+    },
+    {
+      "active_clusters_min": 9,
+      "ari_margin_to_threshold": 0.01716738197424894,
+      "ari_min": 0.7828326180257511,
+      "bootstrap_label_pairwise_nmi": 0.9442720457476714,
+      "failure_reasons": [
+        "ari_below_0.80"
+      ],
+      "heldout_local_inverse_nll_mean": 0.9268395824303343,
+      "higher_shot_outcomes": [],
+      "local_logit_probability_variance": 0.0017576805754760262,
+      "max_merged_omega_per_cluster_max": 2,
+      "max_splits_per_omega_max": 2,
+      "mean_cluster_purity_mean": 0.9722222222222222,
+      "mean_splits_per_omega_mean": 1.0555555555555556,
+      "nmi_margin_to_threshold": 0.14427204574767138,
+      "nmi_min": 0.9442720457476714,
+      "regime": "easy",
+      "resolved_by_any_higher_shot_budget": false,
+      "shots": 50000,
+      "synthetic_seed": 3,
+      "worst_replicate": {
+        "active_clusters": 9,
+        "ari": 0.7828326180257511,
+        "cluster_masses": [
+          2,
+          4,
+          2,
+          3,
+          2,
+          3,
+          2,
+          3,
+          2
+        ],
+        "max_merged_omega_per_cluster": 2,
+        "max_splits_per_omega": 2,
+        "mean_cluster_purity": 0.9444444444444444,
+        "mean_splits_per_omega": 1.1111111111111112,
+        "nmi": 0.9442720457476714,
+        "replicate": 1
+      }
+    },
+    {
+      "active_clusters_min": 9,
+      "ari_margin_to_threshold": 0.007674943566591486,
+      "ari_min": 0.7923250564334086,
+      "bootstrap_label_pairwise_nmi": 0.9100752211804015,
+      "failure_reasons": [
+        "ari_below_0.80"
+      ],
+      "heldout_local_inverse_nll_mean": 0.8439804091545725,
+      "higher_shot_outcomes": [
+        {
+          "ari_min": 0.8673030525542851,
+          "nmi_min": 0.9580664406487688,
+          "shots": 25000,
+          "strong_all_replicates": true
+        },
+        {
+          "ari_min": 1.0,
+          "nmi_min": 1.0,
+          "shots": 50000,
+          "strong_all_replicates": true
+        }
+      ],
+      "local_logit_probability_variance": 0.010573973359631141,
+      "max_merged_omega_per_cluster_max": 2,
+      "max_splits_per_omega_max": 2,
+      "mean_cluster_purity_mean": 0.9537037048074934,
+      "mean_splits_per_omega_mean": 1.1666666666666667,
+      "nmi_margin_to_threshold": 0.12446141318232751,
+      "nmi_min": 0.9244614131823276,
+      "regime": "easy",
+      "resolved_by_any_higher_shot_budget": true,
+      "shots": 10000,
+      "synthetic_seed": 4,
+      "worst_replicate": {
+        "active_clusters": 9,
+        "ari": 0.7923250564334086,
+        "cluster_masses": [
+          2,
+          4,
+          3,
+          2,
+          2,
+          4,
+          1,
+          2,
+          3
+        ],
+        "max_merged_omega_per_cluster": 2,
+        "max_splits_per_omega": 2,
+        "mean_cluster_purity": 0.9351851873927646,
+        "mean_splits_per_omega": 1.2222222222222223,
+        "nmi": 0.9244614131823276,
+        "replicate": 1
+      }
+    },
+    {
+      "active_clusters_min": 9,
+      "ari_margin_to_threshold": 0.05742299509758586,
+      "ari_min": 0.7425770049024142,
+      "bootstrap_label_pairwise_nmi": 0.9216582557163218,
+      "failure_reasons": [
+        "ari_below_0.80"
+      ],
+      "heldout_local_inverse_nll_mean": 0.909899641195351,
+      "higher_shot_outcomes": [
+        {
+          "ari_min": 1.0,
+          "nmi_min": 1.0,
+          "shots": 25000,
+          "strong_all_replicates": true
+        },
+        {
+          "ari_min": 1.0,
+          "nmi_min": 1.0,
+          "shots": 50000,
+          "strong_all_replicates": true
+        }
+      ],
+      "local_logit_probability_variance": 0.007970328569091361,
+      "max_merged_omega_per_cluster_max": 2,
+      "max_splits_per_omega_max": 2,
+      "mean_cluster_purity_mean": 0.9500000013245476,
+      "mean_splits_per_omega_mean": 1.1666666666666667,
+      "nmi_margin_to_threshold": 0.1136293305553926,
+      "nmi_min": 0.9136293305553926,
+      "regime": "default",
+      "resolved_by_any_higher_shot_budget": true,
+      "shots": 10000,
+      "synthetic_seed": 2,
+      "worst_replicate": {
+        "active_clusters": 9,
+        "ari": 0.7425770049024142,
+        "cluster_masses": [
+          2,
+          2,
+          5,
+          1,
+          3,
+          4,
+          1,
+          1,
+          4
+        ],
+        "max_merged_omega_per_cluster": 2,
+        "max_splits_per_omega": 2,
+        "mean_cluster_purity": 0.9277777804268731,
+        "mean_splits_per_omega": 1.2222222222222223,
+        "nmi": 0.9136293305553926,
+        "replicate": 1
+      }
+    },
+    {
+      "active_clusters_min": 9,
+      "ari_margin_to_threshold": 0.01716738197424894,
+      "ari_min": 0.7828326180257511,
+      "bootstrap_label_pairwise_nmi": 0.9466732372725978,
+      "failure_reasons": [
+        "ari_below_0.80"
+      ],
+      "heldout_local_inverse_nll_mean": 0.9015468632648954,
+      "higher_shot_outcomes": [
+        {
+          "ari_min": 1.0,
+          "nmi_min": 1.0,
+          "shots": 50000,
+          "strong_all_replicates": true
+        }
+      ],
+      "local_logit_probability_variance": 0.005462817120346017,
+      "max_merged_omega_per_cluster_max": 2,
+      "max_splits_per_omega_max": 2,
+      "mean_cluster_purity_mean": 0.9398148159186045,
+      "mean_splits_per_omega_mean": 1.1666666666666667,
+      "nmi_margin_to_threshold": 0.1269251526680626,
+      "nmi_min": 0.9269251526680626,
+      "regime": "default",
+      "resolved_by_any_higher_shot_budget": true,
+      "shots": 25000,
+      "synthetic_seed": 3,
+      "worst_replicate": {
+        "active_clusters": 9,
+        "ari": 0.7828326180257511,
+        "cluster_masses": [
+          2,
+          4,
+          2,
+          3,
+          2,
+          2,
+          3,
+          3,
+          2
+        ],
+        "max_merged_omega_per_cluster": 2,
+        "max_splits_per_omega": 2,
+        "mean_cluster_purity": 0.9166666666666666,
+        "mean_splits_per_omega": 1.2222222222222223,
+        "nmi": 0.9269251526680626,
+        "replicate": 1
+      }
+    },
+    {
+      "active_clusters_min": 9,
+      "ari_margin_to_threshold": 0.038724287601434315,
+      "ari_min": 0.7612757123985657,
+      "bootstrap_label_pairwise_nmi": 0.9023426741775492,
+      "failure_reasons": [
+        "ari_below_0.80"
+      ],
+      "heldout_local_inverse_nll_mean": 0.8103598433008548,
+      "higher_shot_outcomes": [
+        {
+          "ari_min": 1.0,
+          "nmi_min": 1.0,
+          "shots": 25000,
+          "strong_all_replicates": true
+        },
+        {
+          "ari_min": 1.0,
+          "nmi_min": 1.0,
+          "shots": 50000,
+          "strong_all_replicates": true
+        }
+      ],
+      "local_logit_probability_variance": 0.010793294658474313,
+      "max_merged_omega_per_cluster_max": 2,
+      "max_splits_per_omega_max": 2,
+      "mean_cluster_purity_mean": 0.9629629651705424,
+      "mean_splits_per_omega_mean": 1.1111111111111112,
+      "nmi_margin_to_threshold": 0.14148219226824132,
+      "nmi_min": 0.9414821922682414,
+      "regime": "default",
+      "resolved_by_any_higher_shot_budget": true,
+      "shots": 10000,
+      "synthetic_seed": 4,
+      "worst_replicate": {
+        "active_clusters": 9,
+        "ari": 0.7612757123985657,
+        "cluster_masses": [
+          2,
+          1,
+          2,
+          2,
+          3,
+          6,
+          2,
+          3,
+          2
+        ],
+        "max_merged_omega_per_cluster": 2,
+        "max_splits_per_omega": 2,
+        "mean_cluster_purity": 0.9629629651705424,
+        "mean_splits_per_omega": 1.1111111111111112,
+        "nmi": 0.9414821922682414,
+        "replicate": 0
+      }
+    },
+    {
+      "active_clusters_min": 9,
+      "ari_margin_to_threshold": 0.06798266730861813,
+      "ari_min": 0.7320173326913819,
+      "bootstrap_label_pairwise_nmi": 0.9419803208204653,
+      "failure_reasons": [
+        "ari_below_0.80"
+      ],
+      "heldout_local_inverse_nll_mean": 1.0106366262283544,
+      "higher_shot_outcomes": [
+        {
+          "ari_min": 1.0,
+          "nmi_min": 1.0,
+          "shots": 25000,
+          "strong_all_replicates": true
+        },
+        {
+          "ari_min": 0.8914163090128755,
+          "nmi_min": 0.9616189388272809,
+          "shots": 50000,
+          "strong_all_replicates": true
+        }
+      ],
+      "local_logit_probability_variance": 0.014516781997313379,
+      "max_merged_omega_per_cluster_max": 3,
+      "max_splits_per_omega_max": 3,
+      "mean_cluster_purity_mean": 0.9388888892200258,
+      "mean_splits_per_omega_mean": 1.1666666666666667,
+      "nmi_margin_to_threshold": 0.11230899884548218,
+      "nmi_min": 0.9123089988454822,
+      "regime": "harder",
+      "resolved_by_any_higher_shot_budget": true,
+      "shots": 10000,
+      "synthetic_seed": 1,
+      "worst_replicate": {
+        "active_clusters": 9,
+        "ari": 0.7320173326913819,
+        "cluster_masses": [
+          3,
+          2,
+          3,
+          2,
+          1,
+          4,
+          2,
+          5,
+          1
+        ],
+        "max_merged_omega_per_cluster": 3,
+        "max_splits_per_omega": 3,
+        "mean_cluster_purity": 0.9333333339956071,
+        "mean_splits_per_omega": 1.2222222222222223,
+        "nmi": 0.9123089988454822,
+        "replicate": 0
+      }
+    },
+    {
+      "active_clusters_min": 9,
+      "ari_margin_to_threshold": 0.01716738197424894,
+      "ari_min": 0.7828326180257511,
+      "bootstrap_label_pairwise_nmi": 0.9201011666953129,
+      "failure_reasons": [
+        "ari_below_0.80"
+      ],
+      "heldout_local_inverse_nll_mean": 0.8417440671566876,
+      "higher_shot_outcomes": [
+        {
+          "ari_min": 0.8610958603272209,
+          "nmi_min": 0.958351827785754,
+          "shots": 25000,
+          "strong_all_replicates": true
+        },
+        {
+          "ari_min": 1.0,
+          "nmi_min": 1.0,
+          "shots": 50000,
+          "strong_all_replicates": true
+        }
+      ],
+      "local_logit_probability_variance": 0.00933983604768731,
+      "max_merged_omega_per_cluster_max": 2,
+      "max_splits_per_omega_max": 2,
+      "mean_cluster_purity_mean": 0.9537037048074934,
+      "mean_splits_per_omega_mean": 1.1111111111111112,
+      "nmi_margin_to_threshold": 0.14427204574767138,
+      "nmi_min": 0.9442720457476714,
+      "regime": "harder",
+      "resolved_by_any_higher_shot_budget": true,
+      "shots": 10000,
+      "synthetic_seed": 3,
+      "worst_replicate": {
+        "active_clusters": 9,
+        "ari": 0.7828326180257511,
+        "cluster_masses": [
+          2,
+          4,
+          2,
+          2,
+          3,
+          3,
+          2,
+          3,
+          2
+        ],
+        "max_merged_omega_per_cluster": 2,
+        "max_splits_per_omega": 2,
+        "mean_cluster_purity": 0.9444444444444444,
+        "mean_splits_per_omega": 1.1111111111111112,
+        "nmi": 0.9442720457476714,
+        "replicate": 0
+      }
+    },
+    {
+      "active_clusters_min": 9,
+      "ari_margin_to_threshold": 0.05002745141100262,
+      "ari_min": 0.7499725485889974,
+      "bootstrap_label_pairwise_nmi": 0.8611317391228783,
+      "failure_reasons": [
+        "ari_below_0.80"
+      ],
+      "heldout_local_inverse_nll_mean": 0.7993581354572493,
+      "higher_shot_outcomes": [
+        {
+          "ari_min": 1.0,
+          "nmi_min": 1.0,
+          "shots": 25000,
+          "strong_all_replicates": true
+        },
+        {
+          "ari_min": 0.8673030525542851,
+          "nmi_min": 0.9580664406487688,
+          "shots": 50000,
+          "strong_all_replicates": true
+        }
+      ],
+      "local_logit_probability_variance": 0.013488166997437871,
+      "max_merged_omega_per_cluster_max": 2,
+      "max_splits_per_omega_max": 3,
+      "mean_cluster_purity_mean": 0.9351851873927646,
+      "mean_splits_per_omega_mean": 1.1666666666666667,
+      "nmi_margin_to_threshold": 0.12010116669531279,
+      "nmi_min": 0.9201011666953128,
+      "regime": "harder",
+      "resolved_by_any_higher_shot_budget": true,
+      "shots": 10000,
+      "synthetic_seed": 4,
+      "worst_replicate": {
+        "active_clusters": 9,
+        "ari": 0.7499725485889974,
+        "cluster_masses": [
+          2,
+          3,
+          2,
+          3,
+          2,
+          2,
+          3,
+          3,
+          3
+        ],
+        "max_merged_omega_per_cluster": 2,
+        "max_splits_per_omega": 3,
+        "mean_cluster_purity": 0.9259259303410848,
+        "mean_splits_per_omega": 1.2222222222222223,
+        "nmi": 0.9201011666953128,
+        "replicate": 1
+      }
+    }
+  ],
+  "num_failures": 9,
+  "num_strong_conditions": 36,
+  "predeclared_representation": "local_logit_probability",
+  "schema": "scope_static_stage2c_failure_audit_v1",
+  "source_metrics": "outputs/scope_static/STAGE2C_DISC16b_local_inverse_robustness/metrics.json",
+  "stage": "stage2C",
+  "stage2c_freeze_label": "local_inverse_probability_robust_near_strong_with_near_miss_split_merge_failures",
+  "strong_threshold": {
+    "active_clusters_min": 8,
+    "ari": 0.8,
+    "nmi": 0.8
+  },
+  "success_metric_summary": {
+    "active_clusters_min": {
+      "max": 9.0,
+      "mean": 9.0,
+      "min": 9.0,
+      "std": 0.0
+    },
+    "ari_mean": {
+      "max": 1.0,
+      "mean": 0.9538165593551577,
+      "min": 0.8406841279221848,
+      "std": 0.058952912691959826
+    },
+    "ari_min": {
+      "max": 1.0,
+      "mean": 0.9373879665681927,
+      "min": 0.8294655753490612,
+      "std": 0.07345959691116385
+    },
+    "bootstrap_label_pairwise_nmi": {
+      "max": 1.0,
+      "mean": 0.9775491959176748,
+      "min": 0.9123089988454823,
+      "std": 0.02733426337711987
+    },
+    "heldout_local_inverse_nll_mean": {
+      "max": 1.1129839912033126,
+      "mean": 0.9432242908710108,
+      "min": 0.7979185930499704,
+      "std": 0.08997189077476887
+    },
+    "local_logit_probability_variance": {
+      "max": 0.014394926714478605,
+      "mean": 0.004823733186038912,
+      "min": 0.001298128994212146,
+      "std": 0.003574805108660909
+    },
+    "mean_cluster_purity_mean": {
+      "max": 1.0,
+      "mean": 0.9862654325954706,
+      "min": 0.9120370381408267,
+      "std": 0.019596282420117527
+    },
+    "mean_splits_per_omega_mean": {
+      "max": 1.2222222222222223,
+      "mean": 1.041666666666667,
+      "min": 1.0,
+      "std": 0.0553567872776883
+    },
+    "nmi_mean": {
+      "max": 1.0,
+      "mean": 0.9849309692808146,
+      "min": 0.9344129412479933,
+      "std": 0.019405717870957587
+    },
+    "nmi_min": {
+      "max": 1.0,
+      "mean": 0.9802230952723838,
+      "min": 0.9337549617011165,
+      "std": 0.022965972514096697
+    }
+  },
+  "total_conditions": 45,
+  "uses_hidden_omega_for_checkpoint_selection": false,
+  "uses_hidden_omega_for_final_evaluation": true,
+  "uses_hidden_omega_for_initialization": false,
+  "uses_hidden_omega_for_training": false
+}

@@ -1,0 +1,8 @@
+{
+  "ari_nmi_used_for_selection": false,
+  "candidate_selection": "disabled_predeclared_representation",
+  "predeclared_representation": "local_logit_probability",
+  "uses_hidden_omega_for_checkpoint_selection": false,
+  "uses_hidden_omega_for_final_evaluation": true,
+  "uses_hidden_omega_for_training": false
+}

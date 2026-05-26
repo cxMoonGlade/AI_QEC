@@ -1,0 +1,54 @@
+{
+  "bases": [
+    "X",
+    "Z"
+  ],
+  "completed_contexts": [
+    {
+      "basis": "X",
+      "heldout_split_type": "shot-heldout",
+      "output_root": "outputs/google_static/GDISC15b_google_grid_validation/runs/shot-heldout__sample_00__d3_at_q5_5__X__r13",
+      "patch_id": "d3_at_q5_5",
+      "rounds_label": "r13",
+      "sample_id": "sample_00"
+    },
+    {
+      "basis": "Z",
+      "heldout_split_type": "shot-heldout",
+      "output_root": "outputs/google_static/GDISC15b_google_grid_validation/runs/shot-heldout__sample_00__d3_at_q5_5__Z__r13",
+      "patch_id": "d3_at_q5_5",
+      "rounds_label": "r13",
+      "sample_id": "sample_00"
+    },
+    {
+      "basis": "X",
+      "heldout_split_type": "shot-heldout",
+      "output_root": "outputs/google_static/GDISC15b_google_grid_validation/runs/shot-heldout__sample_01__d3_at_q5_5__X__r13",
+      "patch_id": "d3_at_q5_5",
+      "rounds_label": "r13",
+      "sample_id": "sample_01"
+    },
+    {
+      "basis": "Z",
+      "heldout_split_type": "shot-heldout",
+      "output_root": "outputs/google_static/GDISC15b_google_grid_validation/runs/shot-heldout__sample_01__d3_at_q5_5__Z__r13",
+      "patch_id": "d3_at_q5_5",
+      "rounds_label": "r13",
+      "sample_id": "sample_01"
+    }
+  ],
+  "heldout_split_types": [
+    "shot-heldout"
+  ],
+  "patches": [
+    "d3_at_q5_5"
+  ],
+  "rounds_labels": [
+    "r13"
+  ],
+  "samples": [
+    "sample_00",
+    "sample_01"
+  ],
+  "skipped_contexts": []
+}
