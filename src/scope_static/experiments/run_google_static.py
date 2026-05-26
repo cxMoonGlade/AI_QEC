@@ -16,6 +16,7 @@ from scope_static.google_set1 import (
     build_google_fault_graph,
     build_google_schedule_context,
     find_google_set1_leaf,
+    load_google_dem_data,
     load_google_observations,
     load_google_predicted_observables,
 )
@@ -29,8 +30,20 @@ from scope_static.likelihood import (
     local_window_exact_nll,
 )
 from scope_static.likelihoods.local_window_parity import ExactLocalWindowParityLikelihood
-from scope_static.metrics import compression_audit, compression_ratio, evaluate_real_data_model
+from scope_static.metrics import (
+    augment_model_comparison_metrics,
+    augment_transfer_comparison_metrics,
+    compression_audit,
+    compression_ratio,
+    evaluate_real_data_model,
+)
 from scope_static.objectives import LikelihoodObjective, build_likelihood_objective
+from scope_static.prepared_graph_store import (
+    load_prepared_fault_graph_cache,
+    prepared_fault_graph_cache_file,
+    prepared_fault_graph_cache_key,
+    save_prepared_fault_graph_cache,
+)
 from scope_static.training import fit_field
 from scope_static.window_cache_store import (
     load_window_batch_cache,
@@ -80,18 +93,20 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
     transfer_records: list[dict[str, object]] = []
     transfer_cache: dict[tuple[str, str], dict[str, object]] = {}
     prepared_cache_events: list[dict[str, object]] = []
+    dem_data_cache: dict[str, object] = {}
     dtype = torch.float64 if args.dtype == "float64" else torch.float32
     model_names = _csv(args.models)
     required_observation_modes = {"detectors" if model == "dmle_qec" else "full" for model in model_names}
 
     for orbit_mode in _csv(args.orbit_modes):
         prepare_start = time.perf_counter()
-        graph, preprocessing_audit = build_google_fault_graph(
+        graph, preprocessing_audit = _prepare_google_fault_graph(
+            args,
             leaf,
-            dem_source=args.dem_source,
             orbit_mode=orbit_mode,
-            residual_rank=args.residual_rank,
             schedule_context=schedule_context,
+            dem_data_cache=dem_data_cache,
+            cache_events=prepared_cache_events,
         )
         windows = WindowPlan.from_config(graph, _window_config(args))
         train_objectives = _prepare_train_objectives(
@@ -127,36 +142,31 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
         graph_audits.append(graph_audit)
 
         window_audit = window_coverage_audit_dict(graph, list(windows.windows))
+        window_audit.update(windows.audit_dict())
         window_audit["preprocessing_mode"] = orbit_mode
         window_audits.append(window_audit)
-        print(
-            json.dumps(
-                {
-                    "event": "prepared_preprocessing",
-                    "preprocessing_mode": orbit_mode,
-                    "num_windows": len(windows),
-                    "prepare_wall_seconds": time.perf_counter() - prepare_start,
-                },
-                sort_keys=True,
-            ),
-            flush=True,
+        _emit_progress_event(
+            args,
+            {
+                "event": "prepared_preprocessing",
+                "preprocessing_mode": orbit_mode,
+                "num_windows": len(windows),
+                "prepare_wall_seconds": time.perf_counter() - prepare_start,
+            },
         )
 
         for model_name in model_names:
             fit_start = time.perf_counter()
-            print(
-                json.dumps(
-                    {
-                        "event": "start_fit",
-                        "preprocessing_mode": orbit_mode,
-                        "model": model_name,
-                        "device": args.device,
-                        "likelihood_backend": args.likelihood_backend,
-                        "cuda_kernel_variant": args.cuda_kernel_variant,
-                    },
-                    sort_keys=True,
-                ),
-                flush=True,
+            _emit_progress_event(
+                args,
+                {
+                    "event": "start_fit",
+                    "preprocessing_mode": orbit_mode,
+                    "model": model_name,
+                    "device": args.device,
+                    "likelihood_backend": args.likelihood_backend,
+                    "cuda_kernel_variant": args.cuda_kernel_variant,
+                },
             )
             seed = int(args.seed)
             torch.manual_seed(seed)
@@ -210,20 +220,18 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
                 eval_wall_seconds=eval_seconds,
             )
             records.append(record)
-            print(
-                json.dumps(
-                    {
-                        "event": "finish_fit",
-                        "preprocessing_mode": orbit_mode,
-                        "model": model_name,
-                        "fit_wall_seconds": fit_seconds,
-                        "eval_wall_seconds": eval_seconds,
-                        "heldout_local_window_nll": metrics.get("heldout_local_window_nll"),
-                        "adapter": fit.get("likelihood_adapter"),
-                    },
-                    sort_keys=True,
-                ),
-                flush=True,
+            _emit_progress_event(
+                args,
+                {
+                    "event": "finish_fit",
+                    "preprocessing_mode": orbit_mode,
+                    "model": model_name,
+                    "fit_wall_seconds": fit_seconds,
+                    "eval_wall_seconds": eval_seconds,
+                    "heldout_local_window_nll": metrics.get("heldout_local_window_nll"),
+                    "heldout_local_window_excess_nll": metrics.get("heldout_local_window_excess_nll"),
+                    "adapter": fit.get("likelihood_adapter"),
+                },
             )
             if args.cross_sample_transfer:
                 transfer_start = time.perf_counter()
@@ -240,23 +248,23 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
                         cache_events=prepared_cache_events,
                     )
                 )
-                print(
-                    json.dumps(
-                        {
-                            "event": "finish_transfer",
-                            "preprocessing_mode": orbit_mode,
-                            "model": model_name,
-                            "transfer_wall_seconds": time.perf_counter() - transfer_start,
-                            "num_target_samples": int(args.cross_sample_stop) - int(args.cross_sample_start) + 1,
-                        },
-                        sort_keys=True,
-                    ),
-                    flush=True,
+                _emit_progress_event(
+                    args,
+                    {
+                        "event": "finish_transfer",
+                        "preprocessing_mode": orbit_mode,
+                        "model": model_name,
+                        "transfer_wall_seconds": time.perf_counter() - transfer_start,
+                        "num_target_samples": int(args.cross_sample_stop) - int(args.cross_sample_start) + 1,
+                    },
                 )
+
+    augment_model_comparison_metrics(records, baseline_model="local")
+    augment_transfer_comparison_metrics(transfer_records, baseline_model="local")
 
     result = {
         "run": {
-            "name": "S1.6 Google 72Q Set1 preprocessing ablation",
+            "name": "S1.7 Google 72Q Set1 logical-aware window ablation",
             "created_at_utc": datetime.now(timezone.utc).isoformat(),
             "dataset_root": str(leaf.root),
             "default_leaf": {
@@ -271,6 +279,7 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
             "cuda_kernel_variant": args.cuda_kernel_variant,
             "spectral_min_abs_factor": float(args.spectral_min_abs_factor),
             "spectral_memory_cap_bytes": _spectral_memory_cap_bytes(args),
+            "window_plan_mode": args.window_plan_mode,
             "native_gpu": bool(args.native_gpu),
             "gpu_policy": args.gpu_policy,
             "prepared_cache": {
@@ -294,7 +303,10 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
     with metrics_path.open("w", encoding="utf-8") as handle:
         json.dump(_jsonable(result), handle, indent=2, sort_keys=True)
         handle.write("\n")
-    print(json.dumps({"metrics_path": str(metrics_path), "num_records": len(records)}, sort_keys=True))
+    if args.progress_json:
+        print(json.dumps({"metrics_path": str(metrics_path), "num_records": len(records)}, sort_keys=True))
+    else:
+        _print_final_summary(result, metrics_path)
     return result
 
 
@@ -312,6 +324,13 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--heldout-shots", type=int, default=10000)
     parser.add_argument("--max-window-bits", type=int, default=8)
     parser.add_argument("--max-windows", type=int, default=128)
+    parser.add_argument(
+        "--window-plan-mode",
+        choices=["logical_aware", "detector_local"],
+        default="logical_aware",
+    )
+    parser.add_argument("--detector-pair-window-budget", type=int, default=64)
+    parser.add_argument("--logical-detector-pair-window-budget", type=int, default=64)
     parser.add_argument("--steps", type=int, default=200)
     parser.add_argument("--lr", type=float, default=0.05)
     parser.add_argument("--residual-rank", type=int, default=2)
@@ -336,14 +355,206 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         action="store_true",
         help="Explicitly allow CPU/PyTorch execution when CUDA is not visible.",
     )
-    parser.add_argument("--output-dir", default="outputs/google_static/S1_6")
+    parser.add_argument("--output-dir", default="outputs/google_static/S1_7_logical_aware")
     parser.add_argument("--prepared-cache-dir", default=None)
     parser.add_argument("--disable-prepared-cache", action="store_true")
     parser.add_argument("--cross-sample-transfer", dest="cross_sample_transfer", action="store_true", default=False)
     parser.add_argument("--skip-cross-sample-transfer", dest="cross_sample_transfer", action="store_false")
     parser.add_argument("--cross-sample-start", type=int, default=1)
     parser.add_argument("--cross-sample-stop", type=int, default=20)
+    parser.add_argument(
+        "--progress-json",
+        action="store_true",
+        help="Emit per-stage JSON progress events instead of only a concise final summary.",
+    )
     return parser.parse_args(argv)
+
+
+def _emit_progress_event(args: argparse.Namespace, event: dict[str, object]) -> None:
+    if bool(getattr(args, "progress_json", False)):
+        print(json.dumps(event, sort_keys=True), flush=True)
+
+
+def _print_final_summary(result: dict[str, object], metrics_path: Path) -> None:
+    run = result.get("run", {})
+    records = list(result.get("records", []))
+    transfers = list(result.get("cross_sample_transfer_records", []))
+    window_audits = list(result.get("window_audits", []))
+    print("S1.7 Google static complete")
+    print(f"metrics: {metrics_path}")
+    print(
+        "run: "
+        f"device={run.get('device')} backend={run.get('likelihood_backend')} "
+        f"kernel={run.get('cuda_kernel_variant')} window_plan={run.get('window_plan_mode')} "
+        f"wall={_fmt_seconds(run.get('wall_seconds'))}"
+    )
+    if window_audits:
+        print("")
+        print("Window Coverage")
+        for audit in window_audits:
+            coverage = audit.get("detector_logical_bit_coverage", {})
+            logical = audit.get("logical_bit_coverage", {})
+            family_counts = audit.get("window_family_counts", audit.get("window_type_counts", {}))
+            print(
+                "  "
+                f"{audit.get('preprocessing_mode')}: "
+                f"windows={audit.get('num_windows')} max_bits={audit.get('max_window_bits')} "
+                f"bits={coverage.get('num_bits_covered')}/{coverage.get('num_bits_total')} "
+                f"logical_bits={logical.get('num_logical_bits_covered')}/{logical.get('num_logical_bits_total')} "
+                f"logical_windows={audit.get('num_windows_containing_logical', 0)} "
+                f"logical_support={audit.get('logical_fault_support_selected', 0)}/"
+                f"{audit.get('logical_fault_support_unique', 0)} "
+                f"families={_compact_counts(family_counts)}"
+            )
+
+    print("")
+    print("Heldout Model Comparison")
+    _print_table(
+        [
+            "preprocess",
+            "model",
+            "params",
+            "comp",
+            "ex_mn",
+            "d_mn",
+            "d_bit/shot",
+            "log_d_mn",
+            "log_cal",
+            "det_mae",
+            "pareto",
+        ],
+        [
+            [
+                record.get("preprocessing_mode"),
+                record.get("model"),
+                record.get("parameter_count"),
+                _fmt_float(record.get("compression_ratio"), precision=2),
+                _fmt_float(record.get("excess_mnats_per_window")),
+                _fmt_signed_float(record.get("excess_delta_mnats_vs_baseline")),
+                _fmt_signed_float(record.get("pseudo_delta_bits_per_shot_vs_baseline")),
+                _fmt_signed_float(record.get("logical_excess_delta_mnats_vs_baseline")),
+                _fmt_float(record.get("logical_flip_rate_calibration")),
+                _fmt_float(record.get("detector_rate_mae")),
+                record.get("combined_excess_parameter_pareto_status"),
+            ]
+            for record in records
+        ],
+    )
+    print(
+        "  units: ex_mn=1000*excess nats/window; d_mn and d_bit/shot are deltas vs local baseline; "
+        "pareto uses combined excess and parameter count."
+    )
+
+    if transfers:
+        print("")
+        print("Cross-Sample Transfer Means")
+        transfer_rows = []
+        for mode, model, rows in _group_transfer_records(transfers):
+            transfer_rows.append(
+                [
+                    mode,
+                    model,
+                    len(rows),
+                    _fmt_float(_mean_metric(rows, "cross_sample_excess_mnats_per_window")),
+                    _fmt_signed_float(_mean_metric(rows, "cross_sample_excess_delta_mnats_vs_baseline")),
+                    _fmt_signed_float(_mean_metric(rows, "cross_sample_pseudo_delta_bits_per_shot_vs_baseline")),
+                    _fmt_signed_float(_mean_metric(rows, "cross_sample_logical_excess_delta_mnats_vs_baseline")),
+                    _fmt_float(_mean_metric(rows, "cross_sample_logical_flip_calibration")),
+                    _fmt_float(_mean_metric(rows, "cross_sample_detector_rate_MAE")),
+                ]
+            )
+        _print_table(
+            ["preprocess", "model", "n", "ex_mn", "d_mn", "d_bit/shot", "log_d_mn", "log_cal", "det_mae"],
+            transfer_rows,
+        )
+        print("  units: transfer means use the same local-baseline deltas per target sample.")
+
+    decision = result.get("decision", {})
+    per_model = decision.get("per_model", []) if isinstance(decision, dict) else []
+    if per_model:
+        statuses = sorted({str(item.get("schedule_symmetry_status")) for item in per_model})
+        useful = any(bool(item.get("schedule_geometric_useful")) for item in per_model)
+        print("")
+        print(
+            "Decision: "
+            f"schedule_geometric_useful={useful} "
+            f"schedule_symmetry_status={','.join(statuses)}"
+        )
+
+
+def _print_table(headers: list[str], rows: list[list[object]]) -> None:
+    if not rows:
+        print("  (none)")
+        return
+    string_rows = [[_cell(value) for value in row] for row in rows]
+    widths = [
+        max(len(headers[col]), *(len(row[col]) for row in string_rows))
+        for col in range(len(headers))
+    ]
+    header = "  " + "  ".join(headers[col].ljust(widths[col]) for col in range(len(headers)))
+    print(header)
+    print("  " + "  ".join("-" * width for width in widths))
+    for row in string_rows:
+        print("  " + "  ".join(row[col].ljust(widths[col]) for col in range(len(headers))))
+
+
+def _group_transfer_records(records: list[dict[str, object]]) -> list[tuple[str, str, list[dict[str, object]]]]:
+    groups: dict[tuple[str, str], list[dict[str, object]]] = {}
+    for record in records:
+        if not bool(record.get("transfer_evaluated", True)):
+            continue
+        key = (str(record.get("preprocessing_mode")), str(record.get("model")))
+        groups.setdefault(key, []).append(record)
+    return [(mode, model, groups[(mode, model)]) for mode, model in sorted(groups)]
+
+
+def _mean_metric(records: list[dict[str, object]], key: str) -> float | None:
+    values = [float(record[key]) for record in records if record.get(key) is not None]
+    return sum(values) / len(values) if values else None
+
+
+def _fmt_float(value: object, *, precision: int = 4) -> str:
+    if value is None:
+        return "-"
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+    if abs(number) >= 100:
+        return f"{number:.2f}"
+    if abs(number) >= 10:
+        return f"{number:.3f}"
+    return f"{number:.{precision}g}"
+
+
+def _fmt_signed_float(value: object, *, precision: int = 4) -> str:
+    if value is None:
+        return "-"
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+    if abs(number) < 10 ** (-(precision + 1)):
+        return "0"
+    return f"{number:+.{precision}g}"
+
+
+def _fmt_seconds(value: object) -> str:
+    if value is None:
+        return "-"
+    return f"{float(value):.2f}s"
+
+
+def _compact_counts(counts: object) -> str:
+    if not isinstance(counts, dict):
+        return "{}"
+    return ",".join(f"{key}:{counts[key]}" for key in sorted(counts))
+
+
+def _cell(value: object) -> str:
+    if value is None:
+        return "-"
+    return str(value)
 
 
 def _resolve_execution_mode(args: argparse.Namespace) -> None:
@@ -398,20 +609,95 @@ def _csv(value: str) -> list[str]:
 
 
 def _window_config(args: argparse.Namespace) -> dict[str, object]:
+    if args.window_plan_mode == "detector_local":
+        return {
+            "enabled": True,
+            "builders": ["detector_geometry", "orbits"],
+            "include_single_detectors": True,
+            "include_detector_pairs": True,
+            "include_radius1": True,
+            "include_boundary_logical": True,
+            "max_window_bits": int(args.max_window_bits),
+            "max_windows": int(args.max_windows),
+        }
     return {
         "enabled": True,
-        "builders": ["detector_geometry", "orbits"],
+        "builders": ["detector_geometry", "logical_observable"],
         "include_single_detectors": True,
         "include_detector_pairs": True,
-        "include_radius1": True,
-        "include_boundary_logical": True,
+        "include_radius1": False,
+        "include_boundary_logical": False,
+        "include_logical_single": True,
+        "include_logical_detector_pairs": True,
+        "include_logical_fault_support": True,
         "max_window_bits": int(args.max_window_bits),
         "max_windows": int(args.max_windows),
+        "window_family_budgets": {
+            "single_detector": "all",
+            "detector_pair": int(args.detector_pair_window_budget),
+            "logical_single": "all",
+            "logical_detector_pair": int(args.logical_detector_pair_window_budget),
+            "logical_fault_support": "all",
+        },
     }
 
 
 def _spectral_memory_cap_bytes(args: argparse.Namespace) -> int:
     return int(args.spectral_memory_cap_mib) * 1024 * 1024
+
+
+def _prepare_google_fault_graph(
+    args: argparse.Namespace,
+    leaf,
+    *,
+    orbit_mode: str,
+    schedule_context,
+    dem_data_cache: dict[str, object],
+    cache_events: list[dict[str, object]],
+) -> tuple[FaultGraph, dict[str, object]]:
+    identity = _fault_graph_cache_identity(args, leaf, orbit_mode)
+    key = prepared_fault_graph_cache_key(identity)
+    path = prepared_fault_graph_cache_file(args.prepared_cache_dir, key)
+    event = {
+        "cache_kind": "fault_graph",
+        "role": "fault_graph",
+        "sample_id": leaf.sample_id,
+        "preprocessing_mode": orbit_mode,
+        "residual_rank": int(args.residual_rank),
+        "cache_key_prefix": key[:16],
+        "cache_path": str(path),
+    }
+    if not bool(args.disable_prepared_cache):
+        load_result = load_prepared_fault_graph_cache(path, expected_key=key)
+        if load_result.graph is not None:
+            cache_events.append({**event, "cache_status": load_result.status, "cache_written": False})
+            return load_result.graph, load_result.audit
+
+    dem_data = dem_data_cache.get("dem_data")
+    if dem_data is None:
+        dem_data = load_google_dem_data(leaf, args.dem_source)
+        dem_data_cache["dem_data"] = dem_data
+    graph, preprocessing_audit = build_google_fault_graph(
+        leaf,
+        dem_source=args.dem_source,
+        orbit_mode=orbit_mode,
+        residual_rank=args.residual_rank,
+        schedule_context=schedule_context,
+        dem_data=dem_data,
+    )
+    if not bool(args.disable_prepared_cache):
+        save_prepared_fault_graph_cache(
+            path,
+            key=key,
+            graph=graph,
+            audit=preprocessing_audit,
+            metadata=identity,
+        )
+        status = load_result.status if "load_result" in locals() else "miss"
+        cache_events.append({**event, "cache_status": status, "cache_written": True})
+    else:
+        cache_events.append({**event, "cache_status": "disabled", "cache_written": False})
+    return graph, preprocessing_audit
 
 
 def _prepare_train_objectives(
@@ -647,17 +933,40 @@ def _window_cache_identity(
     }
 
 
+def _fault_graph_cache_identity(args: argparse.Namespace, leaf, orbit_mode: str) -> dict[str, object]:
+    graph_source_paths = [leaf.metadata_path, leaf.circuit_ideal_path]
+    if args.dem_source in {"noisy_si1000", "circuit_noisy_si1000"}:
+        graph_source_paths.append(leaf.circuit_noisy_si1000_path)
+    else:
+        graph_source_paths.append(leaf.decoder_dem_path(args.dem_source))
+    return {
+        "experiment": "S1_google_fault_graph",
+        "graph_contract": "stage1_dem_fault_logit_fault_graph",
+        "sample_id": leaf.sample_id,
+        "patch_id": leaf.patch_id,
+        "basis": leaf.basis,
+        "rounds_label": leaf.rounds_label,
+        "dem_source": args.dem_source,
+        "preprocessing_mode": orbit_mode,
+        "residual_rank": int(args.residual_rank),
+        "canonicalize_duplicate_masks": True,
+        "source_files": [_file_signature(path) for path in graph_source_paths],
+    }
+
+
 def _observation_file_signature(leaf) -> list[dict[str, object]]:
-    signatures = []
-    for path in (leaf.detection_events_path, leaf.obs_flips_actual_path):
-        item: dict[str, object] = {"path": str(path)}
-        if path.exists():
-            stat = path.stat()
-            item.update({"size": int(stat.st_size), "mtime_ns": int(stat.st_mtime_ns)})
-        else:
-            item["missing"] = True
-        signatures.append(item)
-    return signatures
+    return [_file_signature(path) for path in (leaf.detection_events_path, leaf.obs_flips_actual_path)]
+
+
+def _file_signature(path: Path) -> dict[str, object]:
+    item: dict[str, object] = {"path": str(path)}
+    if path.exists():
+        stat = path.stat()
+        item.update({"size": int(stat.st_size), "mtime_ns": int(stat.st_mtime_ns)})
+    else:
+        item["missing"] = True
+    return item
+
 
 
 def _train_heldout_split(num_shots: int, train_shots: int, heldout_shots: int) -> dict[str, object]:
@@ -805,8 +1114,13 @@ def _cross_sample_transfer(
                 "cross_sample_split": prepared["split"],
                 "transfer_cache_reused": bool(prepared["cache_reused"]),
                 "cross_sample_transfer_NLL": metrics["heldout_local_window_nll"],
+                "cross_sample_transfer_empirical_entropy": metrics.get("heldout_local_window_empirical_entropy"),
+                "cross_sample_transfer_excess_NLL": metrics.get("heldout_local_window_excess_nll"),
+                "cross_sample_detector_window_excess_NLL": metrics.get("heldout_detector_window_excess_nll"),
+                "cross_sample_logical_window_excess_NLL": metrics.get("heldout_logical_window_excess_nll"),
                 "cross_sample_detector_rate_MAE": metrics["detector_rate_mae"],
                 "cross_sample_logical_flip_calibration": metrics["logical_flip_rate_calibration"],
+                "cross_sample_local_correlation_error": metrics["local_correlation_error"],
             }
             record.update(metrics)
             records.append(record)

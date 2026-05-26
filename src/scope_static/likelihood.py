@@ -17,6 +17,18 @@ CudaKernelVariant = str
 CUDA_KERNEL_VARIANTS = {"dp", "spectral_shadow", "spectral", "auto"}
 
 
+def _likelihood_probability_floor(dtype: torch.dtype) -> float:
+    if dtype == torch.float32:
+        return 1e-7
+    if dtype == torch.float64:
+        return 1e-12
+    return torch.finfo(dtype).tiny
+
+
+def _clamp_likelihood_probabilities(probabilities: torch.Tensor) -> torch.Tensor:
+    return probabilities.clamp_min(_likelihood_probability_floor(probabilities.dtype))
+
+
 @dataclass(frozen=True)
 class WindowNLLCache:
     window: ObservationWindow
@@ -110,6 +122,65 @@ class WindowBatchNLLCache:
             max_state_count=self.max_state_count,
             num_windows=self.num_windows,
         )
+
+
+def subset_window_batch_nll_cache(
+    cache: WindowBatchNLLCache,
+    window_indices: list[int] | tuple[int, ...],
+) -> WindowBatchNLLCache:
+    """Return a view-like compact batch cache for a subset of prepared windows."""
+
+    indices = [int(index) for index in window_indices]
+    if not indices:
+        raise ValueError("subset_window_batch_nll_cache requires at least one window index")
+    if min(indices) < 0 or max(indices) >= int(cache.num_windows):
+        raise IndexError("window index out of range")
+
+    fault_offsets_cpu = cache.fault_offsets.detach().cpu().to(dtype=torch.long)
+    state_offsets_cpu = cache.state_offsets.detach().cpu().to(dtype=torch.long)
+    window_bits_cpu = cache.window_num_bits.detach().cpu().to(dtype=torch.long)
+    flat_fault_ids: list[torch.Tensor] = []
+    flat_masks: list[torch.Tensor] = []
+    flat_states: list[torch.Tensor] = []
+    flat_counts: list[torch.Tensor] = []
+    fault_offsets = [0]
+    state_offsets = [0]
+    window_num_bits: list[int] = []
+    max_faults = 0
+    max_state_count = 1
+
+    for index in indices:
+        fault_start = int(fault_offsets_cpu[index].item())
+        fault_end = int(fault_offsets_cpu[index + 1].item())
+        state_start = int(state_offsets_cpu[index].item())
+        state_end = int(state_offsets_cpu[index + 1].item())
+        fault_count = fault_end - fault_start
+        state_count = state_end - state_start
+        num_bits = int(window_bits_cpu[index].item())
+
+        flat_fault_ids.append(cache.flat_fault_ids[fault_start:fault_end])
+        flat_masks.append(cache.flat_masks[fault_start:fault_end])
+        flat_states.append(cache.flat_states[state_start:state_end])
+        flat_counts.append(cache.flat_counts[state_start:state_end])
+        fault_offsets.append(fault_offsets[-1] + fault_count)
+        state_offsets.append(state_offsets[-1] + state_count)
+        window_num_bits.append(num_bits)
+        max_faults = max(max_faults, fault_count)
+        max_state_count = max(max_state_count, 1 << num_bits)
+
+    device = cache.flat_fault_ids.device
+    return WindowBatchNLLCache(
+        flat_fault_ids=_cat_or_empty(flat_fault_ids).to(device=device),
+        flat_masks=_cat_or_empty(flat_masks).to(device=device),
+        fault_offsets=torch.tensor(fault_offsets, dtype=torch.long, device=device),
+        flat_states=_cat_or_empty(flat_states).to(device=device),
+        flat_counts=_cat_or_empty(flat_counts).to(device=device),
+        state_offsets=torch.tensor(state_offsets, dtype=torch.long, device=device),
+        window_num_bits=torch.tensor(window_num_bits, dtype=torch.long, device=device),
+        max_faults_per_window=max_faults,
+        max_state_count=max_state_count,
+        num_windows=len(indices),
+    )
 
 
 def _cat_or_empty(tensors: list[torch.Tensor]) -> torch.Tensor:
@@ -211,9 +282,9 @@ def exact_dem_nll(
     states = observation_bits_to_states(observations, B=graph.B).to(device=logits.device)
     if aggregate_unique:
         unique_states, counts = torch.unique(states, sorted=False, return_counts=True)
-        probs = dist[unique_states].clamp_min(torch.finfo(dist.dtype).tiny)
+        probs = _clamp_likelihood_probabilities(dist[unique_states])
         return -(counts.to(dtype=dist.dtype) * torch.log(probs)).sum() / counts.sum()
-    probs = dist[states].clamp_min(torch.finfo(dist.dtype).tiny)
+    probs = _clamp_likelihood_probabilities(dist[states])
     return -torch.log(probs).mean()
 
 
@@ -241,9 +312,9 @@ def exact_detector_dem_nll(
     states = observation_bits_to_states(detector_observations, B=graph.num_detectors).to(device=logits.device)
     if aggregate_unique:
         unique_states, counts = torch.unique(states, sorted=False, return_counts=True)
-        probs = dist[unique_states].clamp_min(torch.finfo(dist.dtype).tiny)
+        probs = _clamp_likelihood_probabilities(dist[unique_states])
         return -(counts.to(dtype=dist.dtype) * torch.log(probs)).sum() / counts.sum()
-    probs = dist[states].clamp_min(torch.finfo(dist.dtype).tiny)
+    probs = _clamp_likelihood_probabilities(dist[states])
     return -torch.log(probs).mean()
 
 
@@ -543,9 +614,9 @@ def _nll_from_cached_states(dist: torch.Tensor, cache: WindowNLLCache) -> torch.
     states = cache.states.to(device=dist.device)
     if cache.counts is not None:
         counts = cache.counts.to(device=dist.device)
-        probs = dist[states].clamp_min(torch.finfo(dist.dtype).tiny)
+        probs = _clamp_likelihood_probabilities(dist[states])
         return -(counts.to(dtype=dist.dtype) * torch.log(probs)).sum() / counts.sum()
-    probs = dist[states].clamp_min(torch.finfo(dist.dtype).tiny)
+    probs = _clamp_likelihood_probabilities(dist[states])
     return -torch.log(probs).mean()
 
 
@@ -797,7 +868,7 @@ def exact_observation_nll_from_states(
     dist = parity_distribution(graph, logits, backend=backend)
     states = states.to(device=logits.device, dtype=torch.long)
     counts = counts.to(device=logits.device, dtype=dist.dtype)
-    probs = dist[states].clamp_min(torch.finfo(dist.dtype).tiny)
+    probs = _clamp_likelihood_probabilities(dist[states])
     return -(counts * torch.log(probs)).sum() / counts.sum()
 
 

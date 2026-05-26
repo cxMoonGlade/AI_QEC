@@ -1,3 +1,5 @@
+import math
+
 import pytest
 import torch
 
@@ -15,12 +17,26 @@ from scope_static.likelihood import (
     parity_distribution,
     projected_window_mask_states,
     resolve_likelihood_backend,
+    subset_window_batch_nll_cache,
 )
 from scope_static.likelihoods.local_window_parity import ExactLocalWindowParityLikelihood
 from scope_static.objectives import build_likelihood_objective
 from scope_static.fields import HardOrbitFaultLogitField
+from scope_static.metrics import (
+    augment_model_comparison_metrics,
+    empirical_window_entropy,
+    empirical_window_entropy_from_batch_cache,
+    evaluate_real_data_model,
+)
 from scope_static.training import fit_field
-from scope_static.windows import ObservationWindow, WindowPlan, build_windows_from_config, build_windows_from_detector_geometry
+from scope_static.windows import (
+    ObservationWindow,
+    WindowPlan,
+    build_windows_from_config,
+    build_windows_from_detector_geometry,
+    build_windows_from_logical_observables,
+    window_coverage_audit_dict,
+)
 
 
 def _tiny_graph():
@@ -36,6 +52,36 @@ def _tiny_graph():
         num_detectors=2,
         num_observables=0,
         residual_rank=1,
+        canonicalize_duplicate_masks=False,
+    )
+
+
+def _tiny_logical_graph():
+    masks = torch.tensor(
+        [
+            [1, 0, 1, 1, 1, 0, 0],
+            [0, 1, 1, 0, 0, 1, 0],
+            [0, 0, 0, 0, 0, 1, 1],
+            [0, 0, 0, 1, 1, 1, 1],
+        ],
+        dtype=torch.bool,
+    )
+    return FaultGraph.from_raw_masks(
+        masks,
+        num_detectors=3,
+        num_observables=1,
+        residual_rank=1,
+        canonicalize_duplicate_masks=False,
+    )
+
+
+def _one_bit_graph():
+    masks = torch.tensor([[1]], dtype=torch.bool)
+    return FaultGraph.from_raw_masks(
+        masks,
+        num_detectors=1,
+        num_observables=0,
+        residual_rank=0,
         canonicalize_duplicate_masks=False,
     )
 
@@ -78,6 +124,22 @@ def test_aggregated_nll_matches_unaggregated_and_has_gradients():
     nll_agg.backward()
     assert logits.grad is not None
     assert torch.isfinite(logits.grad).all()
+
+
+def test_likelihood_probability_floor_caps_tiny_probabilities():
+    graph = _one_bit_graph()
+    observations = torch.tensor([[1]], dtype=torch.bool)
+
+    for dtype, floor, atol in ((torch.float64, 1e-12, 1e-12), (torch.float32, 1e-7, 1e-6)):
+        logits = torch.tensor([-1000.0], dtype=dtype, requires_grad=True)
+
+        loss = exact_dem_nll(graph, logits, observations)
+
+        expected = torch.tensor(-math.log(floor), dtype=dtype)
+        assert torch.allclose(loss, expected, atol=atol, rtol=0)
+        loss.backward()
+        assert logits.grad is not None
+        assert torch.isfinite(logits.grad).all()
 
 
 def test_window_projection_and_local_nll_match_full_window():
@@ -129,6 +191,54 @@ def test_window_config_can_limit_count_for_fast_smoke_runs():
         },
     )
     assert len(windows) == 2
+
+
+def test_logical_observable_windows_deduplicate_fault_supports():
+    graph = _tiny_logical_graph()
+
+    windows = build_windows_from_logical_observables(graph, max_window_bits=4)
+    audit = window_coverage_audit_dict(graph, windows)
+
+    assert audit["logical_fault_support_raw"] == 4
+    assert audit["logical_fault_support_unique"] == 3
+    assert audit["duplicate_logical_windows_removed"] == 1
+    assert audit["logical_window_type_counts"]["logical_single"] == 1
+    assert audit["logical_window_type_counts"]["logical_fault_support"] == 3
+    assert audit["logical_bit_coverage"]["fraction_logical_bits_covered"] == pytest.approx(1.0)
+    assert audit["fraction_logical_faults_with_support_window"] == pytest.approx(1.0)
+
+
+def test_window_family_budgets_do_not_silently_drop_logical_windows():
+    graph = _tiny_logical_graph()
+    plan = WindowPlan.from_config(
+        graph,
+        {
+            "enabled": True,
+            "builders": ["detector_geometry", "logical_observable"],
+            "include_radius1": False,
+            "include_boundary_logical": False,
+            "max_window_bits": 4,
+            "max_windows": 1,
+            "window_family_budgets": {
+                "single_detector": "all",
+                "detector_pair": 1,
+                "logical_single": "all",
+                "logical_detector_pair": 1,
+                "logical_fault_support": "all",
+            },
+        },
+    )
+
+    audit = plan.audit_dict()
+    coverage = window_coverage_audit_dict(graph, list(plan.windows))
+
+    assert audit["window_family_budget_mode"] == "family_aware"
+    assert audit["window_family_counts"]["single_detector"] == 3
+    assert audit["window_family_counts"]["detector_pair"] == 1
+    assert audit["window_family_counts"]["logical_single"] == 1
+    assert audit["window_family_counts"]["logical_fault_support"] == 3
+    assert coverage["num_windows_containing_logical"] >= 4
+    assert coverage["logical_fault_support_selected"] == 3
 
 
 def test_window_plan_carries_audit_metadata():
@@ -205,6 +315,132 @@ def test_likelihood_objective_audit_names_local_window_parity_contract():
     assert audit["train_likelihood_gpu_batch_available"] is False
 
 
+def test_real_data_metrics_report_logical_specific_window_nlls():
+    graph = _tiny_logical_graph()
+    windows = build_windows_from_logical_observables(graph, max_window_bits=4)
+    observations = torch.tensor(
+        [
+            [0, 0, 0, 0],
+            [1, 0, 0, 1],
+            [0, 1, 1, 1],
+            [1, 1, 0, 0],
+        ],
+        dtype=torch.bool,
+    )
+    logits = torch.full((graph.M,), -2.0, dtype=torch.float64)
+
+    metrics = evaluate_real_data_model(
+        graph,
+        logits,
+        observations,
+        backend="pytorch",
+        windows=windows,
+    )
+
+    assert metrics["heldout_combined_window_nll"] == metrics["heldout_local_window_nll"]
+    assert metrics["heldout_combined_window_empirical_entropy"] is not None
+    assert metrics["heldout_combined_window_excess_nll"] == pytest.approx(
+        metrics["heldout_combined_window_nll"] - metrics["heldout_combined_window_empirical_entropy"]
+    )
+    assert metrics["heldout_logical_window_nll"] is not None
+    assert metrics["heldout_logical_window_empirical_entropy"] is not None
+    assert metrics["heldout_logical_window_excess_nll"] == pytest.approx(
+        metrics["heldout_logical_window_nll"] - metrics["heldout_logical_window_empirical_entropy"]
+    )
+    assert metrics["logical_single_nll"] is not None
+    assert metrics["logical_single_empirical_entropy"] is not None
+    assert metrics["logical_single_excess_nll"] is not None
+    assert metrics["logical_fault_support_nll"] is not None
+    assert metrics["logical_fault_support_empirical_entropy"] is not None
+    assert metrics["logical_fault_support_excess_nll"] is not None
+    assert metrics["logical_detector_pair_nll"] is not None
+    assert metrics["logical_detector_pair_empirical_entropy"] is not None
+    assert metrics["logical_detector_pair_excess_nll"] is not None
+    assert metrics["window_nll_weighting"] == "equal_window"
+    assert metrics["window_evidence_groups"]["combined"]["num_windows"] == len(windows)
+
+
+def test_window_batch_cache_subsets_and_entropies_reuse_prepared_counts():
+    graph = _tiny_logical_graph()
+    windows = build_windows_from_logical_observables(graph, max_window_bits=4)
+    observations = torch.tensor(
+        [
+            [0, 0, 0, 0],
+            [1, 0, 0, 1],
+            [0, 1, 1, 1],
+            [1, 1, 0, 0],
+        ],
+        dtype=torch.bool,
+    )
+    caches = build_window_nll_caches(graph, observations, windows, aggregate_unique=True)
+    batch = build_window_batch_nll_cache(caches)
+    indices = [0, 2]
+
+    subset = subset_window_batch_nll_cache(batch, indices)
+
+    expected_fault_ids = torch.cat([caches[index].fault_ids for index in indices])
+    expected_states = torch.cat([caches[index].states for index in indices])
+    expected_counts = torch.cat([caches[index].counts for index in indices if caches[index].counts is not None])
+    assert torch.equal(subset.flat_fault_ids.cpu(), expected_fault_ids)
+    assert torch.equal(subset.flat_states.cpu(), expected_states)
+    assert torch.equal(subset.flat_counts.cpu(), expected_counts)
+    assert subset.num_windows == len(indices)
+    assert subset.max_state_count == max(1 << windows[index].size for index in indices)
+    assert empirical_window_entropy_from_batch_cache(batch, indices) == pytest.approx(
+        empirical_window_entropy(observations, [windows[index] for index in indices])
+    )
+
+
+def test_model_comparison_metrics_scale_small_excess_gaps():
+    records = [
+        {
+            "sample_id": "sample_00",
+            "patch_id": "d3",
+            "basis": "X",
+            "rounds_label": "r13",
+            "dem_source": "decoder",
+            "preprocessing_mode": "fault_graph_heuristic",
+            "seed": 0,
+            "model": "local",
+            "parameter_count": 100,
+            "heldout_combined_window_excess_nll": 0.001,
+            "heldout_detector_window_excess_nll": 0.0002,
+            "heldout_logical_window_excess_nll": 0.0015,
+            "num_combined_windows": 50,
+            "train_heldout_split": {"heldout_shots": 10},
+        },
+        {
+            "sample_id": "sample_00",
+            "patch_id": "d3",
+            "basis": "X",
+            "rounds_label": "r13",
+            "dem_source": "decoder",
+            "preprocessing_mode": "fault_graph_heuristic",
+            "seed": 0,
+            "model": "hard_orbit",
+            "parameter_count": 10,
+            "heldout_combined_window_excess_nll": 0.0014,
+            "heldout_detector_window_excess_nll": 0.0003,
+            "heldout_logical_window_excess_nll": 0.0018,
+            "num_combined_windows": 50,
+            "train_heldout_split": {"heldout_shots": 10},
+        },
+    ]
+
+    augment_model_comparison_metrics(records)
+
+    local, hard = records
+    assert local["excess_mnats_per_window"] == pytest.approx(1.0)
+    assert local["excess_delta_mnats_vs_baseline"] == pytest.approx(0.0)
+    assert hard["excess_delta_mnats_vs_baseline"] == pytest.approx(0.4)
+    assert hard["pseudo_delta_nats_per_shot_vs_baseline"] == pytest.approx(0.02)
+    assert hard["pseudo_delta_bits_per_shot_vs_baseline"] == pytest.approx(0.02 / math.log(2))
+    assert hard["logical_excess_delta_mnats_vs_baseline"] == pytest.approx(0.3)
+    assert hard["parameter_fraction_of_baseline"] == pytest.approx(0.1)
+    assert local["combined_excess_parameter_pareto_status"] == "pareto"
+    assert hard["combined_excess_parameter_pareto_status"] == "pareto"
+
+
 def test_fit_field_can_reuse_prepared_local_window_objective():
     graph = _tiny_graph()
     observations = torch.tensor([[0, 0], [1, 0], [1, 1]], dtype=torch.bool)
@@ -266,6 +502,39 @@ def test_cuda_batched_local_window_nll_matches_pytorch_when_available():
     actual.backward()
     assert cuda_logits.grad is not None
     assert torch.allclose(cuda_logits.grad.cpu(), cpu_logits.grad, atol=1e-12, rtol=1e-12)
+
+
+def test_cuda_batched_local_window_probability_floor_matches_pytorch_when_available():
+    if not torch.cuda.is_available():
+        pytest.skip("CUDA is not available")
+    graph = _one_bit_graph()
+    windows = [ObservationWindow(name="bit", bits=(0,), kind="test")]
+    observations = torch.tensor([[1]], dtype=torch.bool)
+
+    for dtype, atol in ((torch.float64, 1e-12), (torch.float32, 1e-5)):
+        cpu_logits = torch.tensor([-1000.0], dtype=dtype, requires_grad=True)
+        cuda_logits = cpu_logits.detach().clone().cuda().requires_grad_(True)
+        expected = local_window_exact_nll(graph, cpu_logits, observations, windows, backend="pytorch")
+        try:
+            actual = local_window_exact_nll(graph, cuda_logits, observations, windows, backend="cuda_extension")
+            with torch.no_grad():
+                inference_actual = local_window_exact_nll(
+                    graph,
+                    cuda_logits.detach(),
+                    observations,
+                    windows,
+                    backend="cuda_extension",
+                )
+        except RuntimeError as exc:
+            pytest.skip(f"CUDA extension is not buildable in this environment: {exc}")
+
+        assert torch.allclose(actual.cpu(), expected.detach(), atol=atol, rtol=0)
+        assert torch.allclose(inference_actual.cpu(), expected.detach(), atol=atol, rtol=0)
+        expected.backward()
+        actual.backward()
+        assert cuda_logits.grad is not None
+        assert torch.isfinite(cuda_logits.grad).all()
+        assert torch.allclose(cuda_logits.grad.cpu(), cpu_logits.grad, atol=atol, rtol=0)
 
 
 def test_cuda_window_batch_cache_builder_matches_cpu_when_available():

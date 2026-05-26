@@ -11,7 +11,7 @@ import numpy as np
 import stim
 import torch
 
-from .fault_graph import FaultGraph, _mask_key, default_orbit_ids
+from .fault_graph import FaultGraph, _mask_key
 from .metrics import partition_audit, partition_comparison
 
 
@@ -433,39 +433,69 @@ def build_google_fault_graph(
     orbit_mode: str = "fault_graph_heuristic",
     residual_rank: int = 0,
     schedule_context: GoogleScheduleContext | None = None,
+    dem_data: GoogleDemData | None = None,
 ) -> tuple[FaultGraph, dict[str, object]]:
     if orbit_mode not in {"fault_graph_heuristic", "schedule_geometric", "local"}:
         raise ValueError("orbit_mode must be fault_graph_heuristic, schedule_geometric, or local")
-    dem_data = load_google_dem_data(leaf, dem_source)
-    temp_graph = FaultGraph.from_raw_masks(
-        dem_data.raw_masks,
-        num_detectors=dem_data.num_detectors,
-        num_observables=dem_data.num_observables,
-        raw_probabilities=dem_data.raw_probabilities,
-        detector_coordinates=dem_data.detector_coordinates,
-        residual_rank=0,
-        canonicalize_duplicate_masks=True,
-    )
-    heuristic_orbits = default_orbit_ids(temp_graph.A, temp_graph.detector_coordinates, temp_graph.num_detectors)
+    dem_data = dem_data if dem_data is not None else load_google_dem_data(leaf, dem_source)
     schedule_audit: dict[str, object] | None = None
     if orbit_mode == "fault_graph_heuristic":
-        orbit_ids = heuristic_orbits
+        graph = FaultGraph.from_raw_masks(
+            dem_data.raw_masks,
+            num_detectors=dem_data.num_detectors,
+            num_observables=dem_data.num_observables,
+            raw_probabilities=dem_data.raw_probabilities,
+            detector_coordinates=dem_data.detector_coordinates,
+            residual_rank=int(residual_rank),
+            canonicalize_duplicate_masks=True,
+        )
+        heuristic_orbits = graph.orbit_ids
     elif orbit_mode == "local":
+        temp_graph = FaultGraph.from_raw_masks(
+            dem_data.raw_masks,
+            num_detectors=dem_data.num_detectors,
+            num_observables=dem_data.num_observables,
+            raw_probabilities=dem_data.raw_probabilities,
+            detector_coordinates=dem_data.detector_coordinates,
+            residual_rank=0,
+            canonicalize_duplicate_masks=True,
+        )
+        heuristic_orbits = temp_graph.orbit_ids
         orbit_ids = torch.arange(temp_graph.M, dtype=torch.long)
+        graph = FaultGraph.from_raw_masks(
+            dem_data.raw_masks,
+            num_detectors=dem_data.num_detectors,
+            num_observables=dem_data.num_observables,
+            raw_probabilities=dem_data.raw_probabilities,
+            detector_coordinates=dem_data.detector_coordinates,
+            residual_rank=int(residual_rank),
+            canonicalize_duplicate_masks=True,
+            orbit_ids=orbit_ids,
+        )
     else:
+        temp_graph = FaultGraph.from_raw_masks(
+            dem_data.raw_masks,
+            num_detectors=dem_data.num_detectors,
+            num_observables=dem_data.num_observables,
+            raw_probabilities=dem_data.raw_probabilities,
+            detector_coordinates=dem_data.detector_coordinates,
+            residual_rank=0,
+            canonicalize_duplicate_masks=True,
+        )
+        heuristic_orbits = temp_graph.orbit_ids
         if schedule_context is None:
             schedule_context = build_google_schedule_context(leaf, dem_source=dem_source)
         orbit_ids, schedule_audit = schedule_geometric_orbit_ids(temp_graph, schedule_context)
-    graph = FaultGraph.from_raw_masks(
-        dem_data.raw_masks,
-        num_detectors=dem_data.num_detectors,
-        num_observables=dem_data.num_observables,
-        raw_probabilities=dem_data.raw_probabilities,
-        detector_coordinates=dem_data.detector_coordinates,
-        residual_rank=int(residual_rank),
-        canonicalize_duplicate_masks=True,
-        orbit_ids=orbit_ids,
-    )
+        graph = FaultGraph.from_raw_masks(
+            dem_data.raw_masks,
+            num_detectors=dem_data.num_detectors,
+            num_observables=dem_data.num_observables,
+            raw_probabilities=dem_data.raw_probabilities,
+            detector_coordinates=dem_data.detector_coordinates,
+            residual_rank=int(residual_rank),
+            canonicalize_duplicate_masks=True,
+            orbit_ids=orbit_ids,
+        )
     if schedule_context is None:
         schedule_context = build_google_schedule_context(leaf, dem_source=dem_source)
     audit = {

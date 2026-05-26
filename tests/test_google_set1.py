@@ -23,6 +23,12 @@ from scope_static.google_set1 import (
 )
 from scope_static.metrics import adjusted_rand_index, normalized_mutual_info, partition_comparison
 from scope_static.fault_graph import FaultGraph
+from scope_static.prepared_graph_store import (
+    load_prepared_fault_graph_cache,
+    prepared_fault_graph_cache_file,
+    prepared_fault_graph_cache_key,
+    save_prepared_fault_graph_cache,
+)
 
 
 def test_root_normalization_accepts_outer_and_nested_and_requires_sample_00(tmp_path: Path):
@@ -65,6 +71,34 @@ def test_dem_to_fault_graph_construction(tmp_path: Path):
     assert audit["M_raw"] == 2
     assert audit["M_effective"] == 2
     assert audit["dem_fault_to_schedule_provenance"]["available"] in {"partial", "false"}
+
+
+def test_prepared_fault_graph_cache_round_trips_stage1_contract(tmp_path: Path):
+    graph = FaultGraph.from_raw_masks(
+        torch.tensor([[1, 0, 1], [0, 1, 1], [0, 0, 1]], dtype=torch.bool),
+        num_detectors=2,
+        num_observables=1,
+        residual_rank=1,
+        canonicalize_duplicate_masks=True,
+    )
+    audit = {"preprocessing_mode": "fault_graph_heuristic", "B": graph.B, "M_effective": graph.M}
+    key = prepared_fault_graph_cache_key({"case": "tiny", "residual_rank": graph.residual_rank})
+    path = prepared_fault_graph_cache_file(tmp_path, key)
+
+    save_prepared_fault_graph_cache(path, key=key, graph=graph, audit=audit, metadata={"case": "tiny"})
+    loaded = load_prepared_fault_graph_cache(path, expected_key=key)
+
+    assert loaded.status == "hit"
+    assert loaded.audit == audit
+    assert loaded.metadata == {"case": "tiny"}
+    assert loaded.graph is not None
+    assert torch.equal(loaded.graph.A, graph.A)
+    assert loaded.graph.supports_by_fault == graph.supports_by_fault
+    assert loaded.graph.faults_by_observation_bit == graph.faults_by_observation_bit
+    assert torch.equal(loaded.graph.orbit_ids, graph.orbit_ids)
+    assert torch.equal(loaded.graph.residual_features, graph.residual_features)
+    assert loaded.graph.residual_feature_audit_dict() == graph.residual_feature_audit_dict()
+    assert load_prepared_fault_graph_cache(path, expected_key="wrong").status == "key_mismatch"
 
 
 def test_google_schedule_context_coverage_audit_on_tiny_stim_fixture(tmp_path: Path):
@@ -185,7 +219,7 @@ def test_google_runner_native_gpu_requires_visible_cuda(monkeypatch, tmp_path: P
         )
 
 
-def test_google_runner_is_gpu_first_and_requires_explicit_cpu_fallback(monkeypatch, tmp_path: Path):
+def test_google_runner_is_gpu_first_and_requires_explicit_cpu_fallback(monkeypatch, tmp_path: Path, capsys):
     from scope_static.experiments.run_google_static import main
 
     root = _write_tiny_dataset(tmp_path)
@@ -213,6 +247,23 @@ def test_google_runner_is_gpu_first_and_requires_explicit_cpu_fallback(monkeypat
     result = main([*base_args, "--allow-cpu-fallback", "--output-dir", str(tmp_path / "cpu")])
     assert result["run"]["gpu_policy"] == "cpu_fallback_explicit"
     assert result["run"]["device"] == "cpu"
+    assert result["run"]["window_plan_mode"] == "logical_aware"
+    assert result["window_audits"][0]["logical_bit_coverage"]["num_logical_bits_covered"] == 1
+    assert result["window_audits"][0]["window_family_budget_mode"] == "family_aware"
+    graph_events = [event for event in result["prepared_cache_events"] if event.get("cache_kind") == "fault_graph"]
+    assert graph_events[0]["cache_status"] == "miss"
+    assert graph_events[0]["cache_written"] is True
+
+    second = main([*base_args, "--allow-cpu-fallback", "--output-dir", str(tmp_path / "cpu")])
+    second_graph_events = [
+        event for event in second["prepared_cache_events"] if event.get("cache_kind") == "fault_graph"
+    ]
+    assert second_graph_events[0]["cache_status"] == "hit"
+    assert second_graph_events[0]["cache_written"] is False
+
+    output = capsys.readouterr().out
+    assert "Heldout Model Comparison" in output
+    assert '"event"' not in output
 
 
 @pytest.mark.skipif(not os.environ.get("SCOPE_GOOGLE_SET1_ROOT"), reason="requires Google Set1 dataset")

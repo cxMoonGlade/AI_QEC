@@ -32,7 +32,7 @@ This stage must not claim CPTP/GKSL learning, full noisy-circuit Born-rule likel
 
 ## Baselines
 
-- `local`: fully independent DEM fault logits with neutral initialization.
+- `local`: fully independent DEM fault logits with neutral initialization. This is the uncompressed per-effective-fault baseline, not a spatially local model.
 - `dmle_qec`: DMLE-QEC-style independent DEM prior-logit MLE baseline. It follows the compatible Stage-1 interpretation of [cxMoonGlade/DMLE-QEC](https://github.com/cxMoonGlade/DMLE-QEC): initialize independent DEM priors from the DEM, then optimize those priors by differentiable detector-syndrome NLL. In this package the detector-syndrome NLL is computed by the exact parity-map backend, and learned logits are evaluated with the common Stage-1 metrics.
 - `hard_orbit`: one logit per known orbit.
 - `soft_feature_orbit`: one orbit logit plus centered fixed residual features per known orbit. MVP04 selects residual feature columns by within-orbit centered energy, so the soft model is only credited when its features actually vary inside known orbits. Optional `beta_l2` regularizes the soft residual coefficients.
@@ -131,6 +131,9 @@ The Google runner is GPU-first. With CUDA visible, the default `--device auto`
 selects `cuda` and the C++/CUDA `cuda_extension` backend. Use `--native-gpu`
 when the run must fail instead of falling back. CPU execution is allowed only
 when requested explicitly with `--allow-cpu-fallback`.
+Terminal output is concise by default and prints only the final coverage,
+heldout model comparison, transfer means, and decision summary. Use `--progress-json`
+when per-stage JSON progress events are needed for profiling or automation.
 
 ```bash
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_google_static \
@@ -210,6 +213,80 @@ nontrivial accepted symmetries and matches or improves heldout/transfer metrics
 at equal or fewer parameters, or gives a clearer stable quotient with comparable
 metrics. If only identity survives, record that the DEM-mask `FaultGraph`
 heuristic is sufficient for Stage-1 Google validation.
+
+## S1.7 Logical-Aware Window Plan
+
+S1.7 keeps the S1.6 Google data path but changes the default local-window plan
+from detector-local to logical-aware. The runner now defaults to
+`--window-plan-mode logical_aware`, which adds deduplicated logical observable
+windows before any family budget is applied:
+
+- `logical_single`: the logical observable bit alone.
+- `logical_fault_support`: the full DEM support of each effective fault that
+  touches a logical observable bit, deduplicated by sorted bit-set key.
+- `logical_detector_pair`: detector/logical two-bit marginals not already
+  represented by exact logical fault supports.
+
+Family budgets replace global truncation in this mode:
+
+```text
+single_detector: all
+detector_pair: 64
+logical_single: all
+logical_detector_pair: 64
+logical_fault_support: all
+```
+
+This prevents `--max-windows` from silently dropping the logical bit. The
+previous detector-local plan is still available with
+`--window-plan-mode detector_local`.
+
+Window audits now report logical coverage, raw/unique logical fault-support
+counts, duplicates removed, windows containing logical bits, logical family
+counts, and the fraction of logical fault supports represented by exact logical
+windows.
+
+Real-data metrics split local-window evidence into combined, detector, logical,
+logical-single, logical-fault-support, and logical-detector-pair groups. Each
+group reports:
+
+```text
+model_window_nll
+heldout_empirical_window_entropy
+excess_window_nll = model_window_nll - heldout_empirical_window_entropy
+num_windows
+mean_window_bits
+```
+
+Raw NLL values are cross-entropies in nats per local window and should not be
+compared across different window plans without their empirical entropy
+baselines. `excess_window_nll` is the preferred real-data evidence metric when
+no oracle teacher distribution exists.
+
+Because S1.7 excess values are often close to zero, Google records also include
+paired comparison fields against the uncompressed `local` baseline:
+
+```text
+excess_mnats_per_window = 1000 * excess_window_nll
+excess_delta_mnats_vs_baseline = 1000 * (model_excess - local_excess)
+pseudo_delta_bits_per_shot_vs_baseline
+combined_excess_parameter_pareto_status
+```
+
+The pseudo per-shot delta multiplies the mean window excess gap by the number
+of windows and converts nats to bits. It is a diagnostic scale for the
+local-window pseudo-likelihood, not a global exact likelihood. The Pareto
+status compares combined excess NLL against parameter count, so compressed
+models can be credited when they trade a tiny evidence gap for a large
+parameter reduction.
+
+Existing result files can be re-summarized without rerunning Google data:
+
+```bash
+conda run -n aiqec python -m scope_static.experiments.summarize_google_static \
+  outputs/google_static/S1_7_logical_aware_full_clean/google_static_metrics.json \
+  --preprocessing-mode fault_graph_heuristic
+```
 
 ## Running
 
