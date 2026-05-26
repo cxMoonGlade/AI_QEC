@@ -2,6 +2,10 @@
 
 from .fault_graph import FaultGraph
 from .fields import (
+    DiscoveryHardFaultLogitField,
+    DiscoveryHardField,
+    DiscoverySoftFeatureFaultLogitField,
+    DiscoverySoftFeatureField,
     HardOrbitFaultLogitField,
     HardOrbitField,
     LocalFaultLogitField,
@@ -17,6 +21,10 @@ from .windows import ObservationWindow, WindowPlan
 
 __all__ = [
     "DemParityMap",
+    "DiscoveryHardFaultLogitField",
+    "DiscoveryHardField",
+    "DiscoverySoftFeatureFaultLogitField",
+    "DiscoverySoftFeatureField",
     "FaultGraph",
     "HardOrbitFaultLogitField",
     "HardOrbitField",

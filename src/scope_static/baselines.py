@@ -73,4 +73,16 @@ def baseline_metadata(model_name: str) -> dict[str, object]:
             "baseline_source_commit": DMLE_QEC_SOURCE_COMMIT,
             "baseline_note": "Independent DEM prior-logit MLE baseline adapted from DMLE-QEC; trained on detector-syndrome NLL and evaluated with the common Stage-1 metrics.",
         }
+    if model_name in {"known_hard_orbit", "known_soft_feature_orbit"}:
+        return {
+            "baseline_family": "known_orbit_oracle",
+            "synthetic_oracle_baseline": True,
+            "baseline_note": "Synthetic-only oracle baseline using hidden omega(j); do not use for real-data recovery claims.",
+        }
+    if model_name in {"disc_hard", "disc_soft"}:
+        return {
+            "baseline_family": "scope_static_discovery",
+            "synthetic_oracle_baseline": False,
+            "baseline_note": "Stage 2A learned DEM-fault assignment model; free assignments are an identifiability probe, not a compression claim.",
+        }
     return {"baseline_family": model_name}

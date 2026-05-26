@@ -32,8 +32,8 @@ and quotient-aware recovery for a fixed DEM/Bernoulli Stage 1 setting. It does
 not claim CPTP/GKSL learning, Born-rule likelihood, context-conditioned
 amortization, OOD transfer, or temporal drift tracking.
 
-Stage 2 static discovery is specified in `docs/SCOPE_STATIC_DISC.md`. It may
-claim latent assignment recovery only after synthetic teacher runs report
-permutation-invariant discovery metrics such as ARI and NMI. Google hardware
-datasets are external empirical validation data, not oracle hidden-partition
-teachers.
+Stage 2A static discovery is implemented as a synthetic-first identifiability
+path. It may claim latent assignment recovery only when synthetic teacher runs
+report permutation-invariant discovery metrics such as ARI/NMI and heldout NLL
+close to matched known-orbit oracles. Google hardware datasets are external
+empirical validation data, not oracle hidden-partition teachers.

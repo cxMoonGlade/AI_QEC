@@ -266,6 +266,54 @@ def test_google_runner_is_gpu_first_and_requires_explicit_cpu_fallback(monkeypat
     assert '"event"' not in output
 
 
+def test_google_runner_can_evaluate_discovery_on_real_data_path(monkeypatch, tmp_path: Path, capsys):
+    from scope_static.experiments.run_google_static import main
+
+    root = _write_tiny_dataset(tmp_path)
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
+
+    result = main(
+        [
+            "--dataset-root",
+            str(root),
+            "--allow-cpu-fallback",
+            "--train-shots",
+            "2",
+            "--heldout-shots",
+            "1",
+            "--max-windows",
+            "1",
+            "--steps",
+            "1",
+            "--models",
+            "local,disc_hard",
+            "--orbit-modes",
+            "fault_graph_heuristic",
+            "--discovery-restarts",
+            "2",
+            "--discovery-prototype-counts",
+            "O",
+            "--output-dir",
+            str(tmp_path / "disc_google"),
+        ]
+    )
+    disc = next(record for record in result["records"] if record["base_model"] == "disc_hard")
+    assert result["run"]["stage2b_google_discovery_external_validation"] is True
+    assert disc["stage"] == "stage2B_google_external_validation"
+    assert disc["google_true_hidden_partition_available"] is False
+    assert disc["partition_recovery_claim_allowed"] is False
+    assert disc["partition_recovery_ground_truth_available"] is False
+    assert disc["prototype_count_K"] == disc["O"]
+    assert disc["P_discovery_assignment"] == disc["M_effective"] * (disc["O"] - 1)
+    assert disc["compressed_claim_allowed"] is False
+    assert disc["discovery_num_restarts"] == 2
+    assert len(disc["discovery_restart_outcomes"]) == 2
+
+    output = capsys.readouterr().out
+    assert "S2B Google static discovery validation complete" in output
+    assert "disc_hard" in output
+
+
 @pytest.mark.skipif(not os.environ.get("SCOPE_GOOGLE_SET1_ROOT"), reason="requires Google Set1 dataset")
 def test_google_set1_gated_default_leaf_and_tiny_smoke(tmp_path: Path):
     root = os.environ["SCOPE_GOOGLE_SET1_ROOT"]

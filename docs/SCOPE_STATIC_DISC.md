@@ -247,22 +247,39 @@ rate matching, local correlation matching, logical prediction, calibration
 transfer, and robustness across samples or time. Do not use them to claim true
 latent partition recovery unless the partition is explicitly defined as a proxy.
 
-## Planned Run Shape
+The Google runner can include Stage 2 discovery models in the same S1.7
+logical-aware comparison:
 
-Recommended first configs:
-
-```text
-configs/scope_static/d3_r1_DISC01_synthetic.yaml
-configs/scope_static/d3_r1_DISC02_k_sweep.yaml
-configs/scope_static/d3_r1_DISC03_soft_residual.yaml
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_google_static \
+  --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
+  --native-gpu \
+  --models local,dmle_qec,hard_orbit,soft_feature_orbit,disc_hard,disc_soft \
+  --orbit-modes fault_graph_heuristic,schedule_geometric \
+  --window-plan-mode logical_aware \
+  --discovery-restarts 4 \
+  --discovery-prototype-counts O \
+  --cross-sample-transfer \
+  --output-dir outputs/google_static/S2B_discovery_logical_aware
 ```
 
-Recommended first output folders:
+Records for `disc_hard` and `disc_soft` report assignment entropy, active/dead
+prototype audits, free-assignment parameter accounting, and local-baseline
+excess-NLL deltas. They intentionally report that ground-truth partition
+recovery is unavailable on Google data.
+
+## Planned Run Shape
+
+Recommended first config:
 
 ```text
-outputs/scope_static/DISC01_synthetic/
-outputs/scope_static/DISC02_k_sweep/
-outputs/scope_static/DISC03_soft_residual/
+configs/scope_static/d3_r1_STAGE2A_full.yaml
+```
+
+Recommended first output folder:
+
+```text
+outputs/scope_static/STAGE2A_full/
 ```
 
 The first implementation should reuse:

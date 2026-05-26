@@ -46,6 +46,17 @@ class ExperimentPlan:
     def from_path(cls, config_path: str | Path, *, output_dir: str | Path | None = None) -> "ExperimentPlan":
         path = Path(config_path)
         config = yaml.safe_load(path.read_text())
+        return cls.from_config(config, config_path=path, output_dir=output_dir)
+
+    @classmethod
+    def from_config(
+        cls,
+        config: dict[str, object],
+        *,
+        config_path: str | Path,
+        output_dir: str | Path | None = None,
+    ) -> "ExperimentPlan":
+        path = Path(config_path)
         if not isinstance(config, dict):
             raise ValueError("experiment config must be a mapping")
 
@@ -128,9 +139,11 @@ class ExperimentPlan:
         return dict(model_options_by_name.get(model_name, {}))
 
     def regularization_weight(self, model_name: str, model_options: dict[str, object]) -> float:
-        if model_name != "soft_feature_orbit":
-            return 0.0
-        return float(model_options.get("beta_l2", self.training_cfg.get("soft_beta_l2", 0.0)))
+        if model_name in {"disc_hard", "disc_soft"}:
+            return float(model_options.get("regularization_weight", 1.0))
+        if model_name in {"soft_feature_orbit", "known_soft_feature_orbit"}:
+            return float(model_options.get("beta_l2", self.training_cfg.get("soft_beta_l2", 0.0)))
+        return 0.0
 
     def observation_mode(self, model_name: str) -> str:
         return "detectors" if model_name == "dmle_qec" else "full"
@@ -167,7 +180,7 @@ class ExperimentPlan:
 
 
 def is_rank_invariant_model(model_name: str) -> bool:
-    return model_name in {"local", "dmle_qec", "hard_orbit"}
+    return model_name in {"local", "dmle_qec", "hard_orbit", "known_hard_orbit"}
 
 
 def _dtype_from_config(name: str) -> torch.dtype:

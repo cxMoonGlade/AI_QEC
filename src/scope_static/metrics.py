@@ -119,6 +119,14 @@ def observation_pair_rates_from_distribution(dist: torch.Tensor, B: int) -> torc
     return weighted.T @ bits
 
 
+def total_variation_distance(left: torch.Tensor, right: torch.Tensor) -> float:
+    left = torch.as_tensor(left, dtype=torch.float64)
+    right = torch.as_tensor(right, dtype=torch.float64)
+    if left.shape != right.shape:
+        raise ValueError("distributions must have matching shapes")
+    return float((0.5 * torch.sum(torch.abs(left - right))).detach().cpu())
+
+
 def exact_observation_bit_rates(
     graph: FaultGraph,
     logits: torch.Tensor,
@@ -689,6 +697,8 @@ def evaluate_model(
         )
 
     if compute_global:
+        model_dist = parity_distribution(graph, logits, backend=backend)
+        oracle_dist = parity_distribution(graph, teacher_logits, backend=backend)
         model_nll = exact_dem_nll(graph, logits, heldout_observations, aggregate_unique=aggregate_unique, backend=backend)
         oracle_nll = exact_dem_nll(
             graph,
@@ -705,6 +715,7 @@ def evaluate_model(
                 "oracle_exact_nll": float(oracle_nll.detach().cpu()),
                 "delta_nll_oracle": global_delta,
                 "delta_nll_oracle_source": "global_exact",
+                "tvd": total_variation_distance(model_dist, oracle_dist),
             }
         )
         return result
@@ -718,6 +729,7 @@ def evaluate_model(
             "oracle_exact_nll": None,
             "delta_nll_oracle": local_delta,
             "delta_nll_oracle_source": "local_window_exact",
+            "tvd": None,
         }
     )
     return result

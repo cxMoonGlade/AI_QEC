@@ -9,6 +9,7 @@ import time
 
 import torch
 
+from scope_static.discovery import discovery_parameter_audit, field_discovery_metrics, is_discovery_model
 from scope_static.fault_graph import FaultGraph
 from scope_static.fields import make_field
 from scope_static.google_set1 import (
@@ -156,115 +157,170 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
         )
 
         for model_name in model_names:
-            fit_start = time.perf_counter()
-            _emit_progress_event(
-                args,
-                {
-                    "event": "start_fit",
-                    "preprocessing_mode": orbit_mode,
-                    "model": model_name,
-                    "device": args.device,
-                    "likelihood_backend": args.likelihood_backend,
-                    "cuda_kernel_variant": args.cuda_kernel_variant,
-                },
-            )
-            seed = int(args.seed)
-            torch.manual_seed(seed)
-            field = make_field(model_name, graph, dtype=dtype, seed=seed)
-            observation_mode = "detectors" if model_name == "dmle_qec" else "full"
-            fit = fit_field(
-                graph,
-                field,
-                train_observations,
-                steps=args.steps,
-                lr=args.lr,
-                aggregate_unique=True,
-                device=args.device,
-                backend=args.likelihood_backend,
-                cuda_kernel_variant=args.cuda_kernel_variant,
-                spectral_min_abs_factor=args.spectral_min_abs_factor,
-                spectral_memory_cap_bytes=_spectral_memory_cap_bytes(args),
-                observation_mode=observation_mode,
-                likelihood_objective="local_exact",
-                windows=windows,
-                prepared_objective=train_objectives[observation_mode],
-            )
-            fit_seconds = time.perf_counter() - fit_start
-            trained_field = fit["field"]
-            logits = trained_field.realized_logits(graph).detach()
-            eval_start = time.perf_counter()
-            metrics = evaluate_real_data_model(
-                graph,
-                logits,
-                heldout_observations,
-                aggregate_unique=True,
-                backend=args.likelihood_backend,
-                windows=list(windows.windows),
-                window_caches=heldout_eval_cache[0],
-                window_batch_cache=heldout_eval_cache[1],
-                predicted_observables=heldout_predicted,
-            )
-            eval_seconds = time.perf_counter() - eval_start
-            record = _record(
-                args=args,
-                leaf=leaf,
-                graph=graph,
-                model_name=model_name,
-                orbit_mode=orbit_mode,
-                split=split,
-                fit=fit,
-                metrics=metrics,
-                preprocessing_audit=preprocessing_audit,
-                parameter_count=int(trained_field.parameter_count),
-                fit_wall_seconds=fit_seconds,
-                eval_wall_seconds=eval_seconds,
-            )
-            records.append(record)
-            _emit_progress_event(
-                args,
-                {
-                    "event": "finish_fit",
-                    "preprocessing_mode": orbit_mode,
-                    "model": model_name,
-                    "fit_wall_seconds": fit_seconds,
-                    "eval_wall_seconds": eval_seconds,
-                    "heldout_local_window_nll": metrics.get("heldout_local_window_nll"),
-                    "heldout_local_window_excess_nll": metrics.get("heldout_local_window_excess_nll"),
-                    "adapter": fit.get("likelihood_adapter"),
-                },
-            )
-            if args.cross_sample_transfer:
-                transfer_start = time.perf_counter()
-                transfer_records.extend(
-                    _cross_sample_transfer(
-                        args=args,
-                        source_leaf=leaf,
-                        source_graph=graph,
-                        logits=logits,
-                        windows=windows,
-                        model_name=model_name,
-                        orbit_mode=orbit_mode,
-                        transfer_cache=transfer_cache,
-                        cache_events=prepared_cache_events,
-                    )
-                )
+            prototype_counts = _google_prototype_counts(args, graph, model_name)
+            for prototype_count in prototype_counts:
+                model_options = _google_model_options(args, model_name, prototype_count)
+                model_label = _google_model_label(model_name, prototype_count, prototype_counts)
+                fit_start = time.perf_counter()
                 _emit_progress_event(
                     args,
                     {
-                        "event": "finish_transfer",
+                        "event": "start_fit",
                         "preprocessing_mode": orbit_mode,
-                        "model": model_name,
-                        "transfer_wall_seconds": time.perf_counter() - transfer_start,
-                        "num_target_samples": int(args.cross_sample_stop) - int(args.cross_sample_start) + 1,
+                        "model": model_label,
+                        "device": args.device,
+                        "likelihood_backend": args.likelihood_backend,
+                        "cuda_kernel_variant": args.cuda_kernel_variant,
                     },
                 )
-
+                observation_mode = "detectors" if model_name == "dmle_qec" else "full"
+                if is_discovery_model(model_name):
+                    selected = _fit_google_discovery_restarts(
+                        args,
+                        graph,
+                        model_name=model_name,
+                        model_options=model_options,
+                        train_observations=train_observations,
+                        train_objective=train_objectives[observation_mode],
+                        windows=windows,
+                        dtype=dtype,
+                        observation_mode=observation_mode,
+                    )
+                    fit = selected["fit"]
+                    restart_outcomes = selected["restart_outcomes"]
+                else:
+                    seed = int(args.seed)
+                    torch.manual_seed(seed)
+                    field = make_field(model_name, graph, dtype=dtype, seed=seed, model_options=model_options)
+                    fit = fit_field(
+                        graph,
+                        field,
+                        train_observations,
+                        steps=args.steps,
+                        lr=args.lr,
+                        aggregate_unique=True,
+                        device=args.device,
+                        backend=args.likelihood_backend,
+                        cuda_kernel_variant=args.cuda_kernel_variant,
+                        spectral_min_abs_factor=args.spectral_min_abs_factor,
+                        spectral_memory_cap_bytes=_spectral_memory_cap_bytes(args),
+                        observation_mode=observation_mode,
+                        likelihood_objective="local_exact",
+                        windows=windows,
+                        prepared_objective=train_objectives[observation_mode],
+                    )
+                    restart_outcomes = []
+                fit_seconds = time.perf_counter() - fit_start
+                trained_field = fit["field"]
+                logits = trained_field.realized_logits(graph).detach()
+                eval_start = time.perf_counter()
+                metrics = evaluate_real_data_model(
+                    graph,
+                    logits,
+                    heldout_observations,
+                    aggregate_unique=True,
+                    backend=args.likelihood_backend,
+                    windows=list(windows.windows),
+                    window_caches=heldout_eval_cache[0],
+                    window_batch_cache=heldout_eval_cache[1],
+                    predicted_observables=heldout_predicted,
+                )
+                if is_discovery_model(model_name):
+                    metrics.update(
+                        field_discovery_metrics(
+                            trained_field,
+                            None,
+                            active_mass_threshold=float(args.discovery_active_mass_threshold),
+                        )
+                    )
+                    metrics.update(
+                        {
+                            "stage": "stage2B_google_external_validation",
+                            "google_true_hidden_partition_available": False,
+                            "partition_recovery_claim_allowed": False,
+                            "discovery_num_restarts": int(args.discovery_restarts),
+                            "discovery_selected_restart_index": int(fit["selected_restart_index"]),
+                            "discovery_restart_selection_metric": "train_final_nll",
+                            "discovery_restart_outcomes": restart_outcomes,
+                        }
+                    )
+                eval_seconds = time.perf_counter() - eval_start
+                parameter_count = int(trained_field.parameter_count)
+                record = _record(
+                    args=args,
+                    leaf=leaf,
+                    graph=graph,
+                    model_name=model_label,
+                    orbit_mode=orbit_mode,
+                    split=split,
+                    fit=fit,
+                    metrics=metrics,
+                    preprocessing_audit=preprocessing_audit,
+                    parameter_count=parameter_count,
+                    fit_wall_seconds=fit_seconds,
+                    eval_wall_seconds=eval_seconds,
+                    base_model_name=model_name,
+                    prototype_count=prototype_count,
+                )
+                if is_discovery_model(model_name) and prototype_count is not None:
+                    record.update(
+                        discovery_parameter_audit(
+                            graph,
+                            model_name=model_name,
+                            prototype_count=int(prototype_count),
+                            residual_rank=int(graph.residual_rank),
+                        )
+                    )
+                records.append(record)
+                _emit_progress_event(
+                    args,
+                    {
+                        "event": "finish_fit",
+                        "preprocessing_mode": orbit_mode,
+                        "model": model_label,
+                        "fit_wall_seconds": fit_seconds,
+                        "eval_wall_seconds": eval_seconds,
+                        "heldout_local_window_nll": metrics.get("heldout_local_window_nll"),
+                        "heldout_local_window_excess_nll": metrics.get("heldout_local_window_excess_nll"),
+                        "adapter": fit.get("likelihood_adapter"),
+                    },
+                )
+                if args.cross_sample_transfer:
+                    transfer_start = time.perf_counter()
+                    transfer_records.extend(
+                        _cross_sample_transfer(
+                            args=args,
+                            source_leaf=leaf,
+                            source_graph=graph,
+                            logits=logits,
+                            windows=windows,
+                            model_name=model_label,
+                            orbit_mode=orbit_mode,
+                            transfer_cache=transfer_cache,
+                            cache_events=prepared_cache_events,
+                            base_model_name=model_name,
+                            prototype_count=prototype_count,
+                        )
+                    )
+                    _emit_progress_event(
+                        args,
+                        {
+                            "event": "finish_transfer",
+                            "preprocessing_mode": orbit_mode,
+                            "model": model_label,
+                            "transfer_wall_seconds": time.perf_counter() - transfer_start,
+                            "num_target_samples": int(args.cross_sample_stop) - int(args.cross_sample_start) + 1,
+                        },
+                    )
     augment_model_comparison_metrics(records, baseline_model="local")
     augment_transfer_comparison_metrics(transfer_records, baseline_model="local")
 
     result = {
         "run": {
-            "name": "S1.7 Google 72Q Set1 logical-aware window ablation",
+            "name": "Google 72Q Set1 logical-aware static/discovery validation"
+            if any(is_discovery_model(model) for model in model_names)
+            else "S1.7 Google 72Q Set1 logical-aware window ablation",
+            "stage2b_google_discovery_external_validation": any(is_discovery_model(model) for model in model_names),
             "created_at_utc": datetime.now(timezone.utc).isoformat(),
             "dataset_root": str(leaf.root),
             "default_leaf": {
@@ -334,6 +390,13 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--steps", type=int, default=200)
     parser.add_argument("--lr", type=float, default=0.05)
     parser.add_argument("--residual-rank", type=int, default=2)
+    parser.add_argument(
+        "--discovery-prototype-counts",
+        default="O",
+        help="Comma-separated K values for disc_hard/disc_soft on Google data; use O for graph.O.",
+    )
+    parser.add_argument("--discovery-restarts", type=int, default=4)
+    parser.add_argument("--discovery-active-mass-threshold", type=float, default=1.0)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--device", default="auto")
     parser.add_argument("--dtype", choices=["float64", "float32"], default="float64")
@@ -380,7 +443,10 @@ def _print_final_summary(result: dict[str, object], metrics_path: Path) -> None:
     records = list(result.get("records", []))
     transfers = list(result.get("cross_sample_transfer_records", []))
     window_audits = list(result.get("window_audits", []))
-    print("S1.7 Google static complete")
+    if run.get("stage2b_google_discovery_external_validation"):
+        print("S2B Google static discovery validation complete")
+    else:
+        print("S1.7 Google static complete")
     print(f"metrics: {metrics_path}")
     print(
         "run: "
@@ -413,6 +479,7 @@ def _print_final_summary(result: dict[str, object], metrics_path: Path) -> None:
         [
             "preprocess",
             "model",
+            "K",
             "params",
             "comp",
             "ex_mn",
@@ -421,12 +488,15 @@ def _print_final_summary(result: dict[str, object], metrics_path: Path) -> None:
             "log_d_mn",
             "log_cal",
             "det_mae",
+            "ent",
+            "active",
             "pareto",
         ],
         [
             [
                 record.get("preprocessing_mode"),
                 record.get("model"),
+                record.get("prototype_count_K"),
                 record.get("parameter_count"),
                 _fmt_float(record.get("compression_ratio"), precision=2),
                 _fmt_float(record.get("excess_mnats_per_window")),
@@ -435,6 +505,8 @@ def _print_final_summary(result: dict[str, object], metrics_path: Path) -> None:
                 _fmt_signed_float(record.get("logical_excess_delta_mnats_vs_baseline")),
                 _fmt_float(record.get("logical_flip_rate_calibration")),
                 _fmt_float(record.get("detector_rate_mae")),
+                _fmt_float(record.get("assignment_entropy_normalized")),
+                record.get("num_active_prototypes"),
                 record.get("combined_excess_parameter_pareto_status"),
             ]
             for record in records
@@ -442,7 +514,7 @@ def _print_final_summary(result: dict[str, object], metrics_path: Path) -> None:
     )
     print(
         "  units: ex_mn=1000*excess nats/window; d_mn and d_bit/shot are deltas vs local baseline; "
-        "pareto uses combined excess and parameter count."
+        "pareto uses combined excess and parameter count; discovery ARI/NMI unavailable on Google real data."
     )
 
     if transfers:
@@ -968,6 +1040,115 @@ def _file_signature(path: Path) -> dict[str, object]:
     return item
 
 
+def _google_prototype_counts(args: argparse.Namespace, graph: FaultGraph, model_name: str) -> tuple[int | None, ...]:
+    if not is_discovery_model(model_name):
+        return (None,)
+    return tuple(_resolve_google_prototype_count(value, graph.O) for value in _csv(args.discovery_prototype_counts))
+
+
+def _resolve_google_prototype_count(value: str, num_orbits: int) -> int:
+    text = str(value).strip().upper()
+    if text == "O":
+        return int(num_orbits)
+    if text.startswith("O+") or text.startswith("O-"):
+        return int(num_orbits + int(text[1:]))
+    return int(text)
+
+
+def _google_model_options(
+    args: argparse.Namespace,
+    model_name: str,
+    prototype_count: int | None,
+) -> dict[str, object]:
+    options: dict[str, object] = {}
+    if model_name == "dmle_qec":
+        options["perturb_scale"] = 0.5
+    if model_name in {"soft_feature_orbit", "disc_soft"}:
+        options["beta_l2"] = 0.001
+    if is_discovery_model(model_name):
+        if prototype_count is None:
+            raise ValueError("discovery model requires prototype_count")
+        options["prototype_count"] = int(prototype_count)
+    return options
+
+
+def _google_model_label(
+    model_name: str,
+    prototype_count: int | None,
+    prototype_counts: tuple[int | None, ...],
+) -> str:
+    if not is_discovery_model(model_name) or prototype_count is None or len(prototype_counts) == 1:
+        return model_name
+    return f"{model_name}_K{int(prototype_count)}"
+
+
+def _fit_google_discovery_restarts(
+    args: argparse.Namespace,
+    graph: FaultGraph,
+    *,
+    model_name: str,
+    model_options: dict[str, object],
+    train_observations: torch.Tensor,
+    train_objective: LikelihoodObjective,
+    windows: WindowPlan,
+    dtype: torch.dtype,
+    observation_mode: str,
+) -> dict[str, object]:
+    outcomes: list[dict[str, object]] = []
+    selected_fit: dict[str, object] | None = None
+    best_nll = float("inf")
+    restarts = max(1, int(args.discovery_restarts))
+    for restart_index in range(restarts):
+        restart_seed = int(args.seed) + 100_000 + restart_index
+        torch.manual_seed(restart_seed)
+        field = make_field(model_name, graph, dtype=dtype, seed=restart_seed, model_options=model_options)
+        fit = fit_field(
+            graph,
+            field,
+            train_observations,
+            steps=args.steps,
+            lr=args.lr,
+            aggregate_unique=True,
+            device=args.device,
+            backend=args.likelihood_backend,
+            cuda_kernel_variant=args.cuda_kernel_variant,
+            spectral_min_abs_factor=args.spectral_min_abs_factor,
+            spectral_memory_cap_bytes=_spectral_memory_cap_bytes(args),
+            observation_mode=observation_mode,
+            likelihood_objective="local_exact",
+            windows=windows,
+            prepared_objective=train_objective,
+        )
+        history = list(fit.get("history", []))
+        train_final = float(history[-1]) if history else float("inf")
+        assignment = field_discovery_metrics(
+            fit["field"],
+            None,
+            active_mass_threshold=float(args.discovery_active_mass_threshold),
+        )
+        outcome = {
+            "restart_index": int(restart_index),
+            "restart_seed": int(restart_seed),
+            "selected": False,
+            "train_initial_nll": history[0] if history else None,
+            "train_final_nll": train_final,
+            "assignment_entropy_normalized": assignment.get("assignment_entropy_normalized"),
+            "num_active_prototypes": assignment.get("num_active_prototypes"),
+            "assignment_collapse": assignment.get("assignment_collapse"),
+        }
+        outcomes.append(outcome)
+        if selected_fit is None or train_final < best_nll:
+            best_nll = train_final
+            selected_fit = fit
+            selected_index = restart_index
+
+    assert selected_fit is not None
+    for outcome in outcomes:
+        outcome["selected"] = outcome["restart_index"] == selected_index
+    selected_fit["selected_restart_index"] = int(selected_index)
+    selected_fit["restart_outcomes"] = outcomes
+    return {"fit": selected_fit, "restart_outcomes": outcomes}
+
 
 def _train_heldout_split(num_shots: int, train_shots: int, heldout_shots: int) -> dict[str, object]:
     if num_shots <= 0:
@@ -1009,8 +1190,11 @@ def _record(
     parameter_count: int,
     fit_wall_seconds: float,
     eval_wall_seconds: float,
+    base_model_name: str | None = None,
+    prototype_count: int | None = None,
 ) -> dict[str, object]:
     feature_audit = graph.residual_feature_audit_dict()
+    base_model = model_name if base_model_name is None else base_model_name
     local_parameter_count = graph.M
     hard_parameter_count = graph.O
     soft_parameter_count = graph.O * (1 + graph.residual_rank)
@@ -1022,6 +1206,8 @@ def _record(
         "dem_source": args.dem_source,
         "preprocessing_mode": orbit_mode,
         "model": model_name,
+        "base_model": base_model,
+        "prototype_count_K": None if prototype_count is None else int(prototype_count),
         "seed": int(args.seed),
         "M_raw": int(preprocessing_audit["M_raw"]),
         "M_effective": int(preprocessing_audit["M_effective"]),
@@ -1041,7 +1227,7 @@ def _record(
         "mean_centered_feature_rank": feature_audit["mean_centered_feature_rank"],
         "max_centered_feature_rank": feature_audit["max_centered_feature_rank"],
         "soft_residual_features_collapse_inside_orbits_warning": bool(
-            model_name == "soft_feature_orbit"
+            base_model == "soft_feature_orbit"
             and graph.residual_rank > 0
             and int(feature_audit["num_non_singleton_orbits"]) > 0
             and int(feature_audit["num_orbits_with_nonzero_centered_feature_rank"]) == 0
@@ -1067,6 +1253,8 @@ def _cross_sample_transfer(
     orbit_mode: str,
     transfer_cache: dict[tuple[str, str], dict[str, object]],
     cache_events: list[dict[str, object]],
+    base_model_name: str | None = None,
+    prototype_count: int | None = None,
 ) -> list[dict[str, object]]:
     records: list[dict[str, object]] = []
     for sample_index in range(int(args.cross_sample_start), int(args.cross_sample_stop) + 1):
@@ -1084,12 +1272,14 @@ def _cross_sample_transfer(
             )
             if not bool(prepared["transfer_evaluated"]):
                 records.append(
-                    {
-                        "sample_id": sample_id,
-                        "model": model_name,
-                        "preprocessing_mode": orbit_mode,
-                        "transfer_evaluated": False,
-                        "skip_reason": prepared["skip_reason"],
+                {
+                    "sample_id": sample_id,
+                    "model": model_name,
+                    "base_model": base_model_name or model_name,
+                    "prototype_count_K": None if prototype_count is None else int(prototype_count),
+                    "preprocessing_mode": orbit_mode,
+                    "transfer_evaluated": False,
+                    "skip_reason": prepared["skip_reason"],
                     }
                 )
                 continue
@@ -1108,6 +1298,8 @@ def _cross_sample_transfer(
             record = {
                 "sample_id": sample_id,
                 "model": model_name,
+                "base_model": base_model_name or model_name,
+                "prototype_count_K": None if prototype_count is None else int(prototype_count),
                 "preprocessing_mode": orbit_mode,
                 "transfer_evaluated": True,
                 "train_sample_id": source_leaf.sample_id,
@@ -1129,6 +1321,8 @@ def _cross_sample_transfer(
                 {
                     "sample_id": sample_id,
                     "model": model_name,
+                    "base_model": base_model_name or model_name,
+                    "prototype_count_K": None if prototype_count is None else int(prototype_count),
                     "preprocessing_mode": orbit_mode,
                     "transfer_evaluated": False,
                     "skip_reason": str(exc),
