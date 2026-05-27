@@ -1,110 +1,134 @@
 # AI QEC
 
-Research code for the SCOPE family of quantum-error-correction noise-learning
-experiments.
+Research code for SCOPE-style quantum-error-correction noise learning.
 
-The current implemented package is `scope_static`, a fixed-context
-DEM/Bernoulli fault-logit research stack. It learns effective detector error
-model fault probabilities through the parity-map likelihood:
+The implemented package is `scope_static`. Its main production object is a
+fixed-context DEM/Bernoulli learner:
 
 ```text
 e_j ~ Bernoulli(p_j)
 y = A e mod 2
-A in F_2^{B x M}
 ```
 
-## Documentation Map
+Stage 2 also contains synthetic physical-oracle diagnostics for local
+mechanism observability. Those diagnostics use learner-visible shot data and
+local reconstructed PTM/generator summaries, but they are not a hardware
+CPTP/GST learner.
 
-- `CONTEXT.md`: short glossary and claim boundaries.
-- `docs/SCOPE_STATIC_MVP.md`: Stage 1 SCOPE-Static known-orbit MVP.
-- `docs/SCOPE_STATIC_DISC.md`: Stage 2 SCOPE-Static discovery plan.
-- `docs/STAGE2_ROADMAP.md`: Stage 2-only roadmap and decision gates.
-- `docs/SCOPE_TWIN.md`: larger SCOPE-Twin object contract and notation.
-- `docs/adr/0001-python-cuda-dem-mvp.md`: Python plus C++/CUDA architecture
-  decision.
+## Docs
+
+- `CONTEXT.md`: glossary and claim boundaries.
+- `docs/SCOPE_STATIC_MVP.md`: Stage 1 known-orbit DEM MVP.
+- `docs/SCOPE_STATIC_DISC.md`: Stage 2 discovery and physical-oracle notes.
+- `docs/SCOPE_TWIN.md`: future SCOPE-Twin contract.
+- `AGENTS.md`: agent runbook and GPU-first execution rules.
 
 ## Setup
 
-From the repository root:
+Use the editable install from the repo root:
 
 ```bash
 conda run -n aiqec python -m pip install -e .
 ```
 
-Do not set `PYTHONPATH` for normal runs in the current WSL/CUDA setup. The
-package is installable, and exporting `PYTHONPATH` can interfere with
-PyTorch CUDA/NVML discovery on this machine.
+Do not set `PYTHONPATH` for normal WSL/CUDA runs; it can interfere with
+PyTorch CUDA/NVML discovery.
 
-## Tests
+Check GPU visibility before serious runs:
+
+```bash
+conda run -n aiqec python -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0) if torch.cuda.is_available() else None)"
+```
+
+## Test
 
 ```bash
 conda run -n aiqec python -m pytest -q
 ```
 
-## Stage 1 Runs
-
-MVP05 smoke:
+Focused Stage 2D slice:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static --config configs/scope_static/d3_r1_MVP05_windows.yaml
+conda run -n aiqec python -m pytest -q \
+  tests/test_s2d9_local_pauli_lindblad.py \
+  tests/test_s2d10_generator_space_calibration.py \
+  tests/test_s2d10b_generator_invariant_calibration.py \
+  tests/test_s2d11_typed_spam_gate_invariant.py
 ```
 
-MVP05 full local-window sweep:
+## Common Runs
+
+Stage 1 smoke:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static --config configs/scope_static/d3_r1_MVP05_windows_full.yaml
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static \
+  --config configs/scope_static/d3_r1_MVP05_windows.yaml
+```
+
+Stage 1 full local-window sweep:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static \
+  --config configs/scope_static/d3_r1_MVP05_windows_full.yaml
+```
+
+Stage 2A synthetic DEM discovery:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static_discovery \
+  --config configs/scope_static/d3_r1_STAGE2A_full.yaml
+```
+
+Stage 2D latest typed physical-oracle audit:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_s2d11_typed_spam_gate_invariant_learner \
+  --config configs/scope_static/s2d11_typed_spam_gate_invariant_learner.yaml
 ```
 
 Outputs are written under `outputs/scope_static/`.
 
-## Stage 2A Runs
+## Current Stage 2D State
 
-Stage 2A is the synthetic identifiability test for DEM-fault quotient discovery:
-it learns `S[j,k]` while hidden `omega(j)` is available only to the synthetic
-teacher and evaluator.
+S2D.9 showed local two-qubit Pauli-Lindblad generator coordinates are
+algebraically observable from `rzz_local_tomography`.
 
-Full Stage 2A run:
+S2D.10b showed scalar invariants make the M1/M7/M8/M10 gate-family signal much
+more usable.
 
-```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static_discovery --config configs/scope_static/d3_r1_STAGE2A_full.yaml
+S2D.11 promotes those invariants into a typed learner:
+
+```text
+measure -> readout_branch
+reset   -> prep_reset_branch
+other   -> gate_process_branch
 ```
 
-This one config runs the matched-`K` exact-orbit recovery, the exact-orbit
-prototype-count sweep, and the soft-residual discovery scenario.
+Latest set_D run is close but not a strict pass:
 
-## Stage 2B Google Validation
-
-Google real data can compare discovery models against the S1.7 logical-aware
-baselines on heldout excess NLL, calibration, transfer, and parameter/Pareto
-metrics. It cannot claim true latent quotient recovery because Google data does
-not provide ground-truth `omega(j)`.
-
-```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_google_static \
-  --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
-  --native-gpu \
-  --models local,dmle_qec,hard_orbit,soft_feature_orbit,disc_hard,disc_soft \
-  --orbit-modes fault_graph_heuristic,schedule_geometric \
-  --window-plan-mode logical_aware \
-  --discovery-restarts 4 \
-  --discovery-prototype-counts O \
-  --cross-sample-transfer \
-  --output-dir outputs/google_static/S2B_discovery_logical_aware
+```text
+balanced accuracy: 0.8689
+macro F1:          0.8614
+min recall:        0.3333
+M5 split count:    1
+M11 preflight:     pass
+main weakness:     M1 grouped-fold recall
 ```
 
 ## Claim Boundary
 
-Stage 1 may claim evidence about known-orbit sharing, fixed residual features,
-exact DEM likelihoods, local exact windows, compression audits, and
-`d_Q^DEM` inside the fixed DEM/Bernoulli family.
+Valid claims:
 
-It must not claim CPTP/GKSL channel learning, full noisy-circuit Born-rule
-likelihood, context-conditioned amortization, temporal drift tracking, or
-real-hardware ground-truth orbit recovery.
+- fixed-context DEM/Bernoulli likelihood experiments;
+- known-orbit and discovered-sharing comparisons;
+- synthetic teacher ARI/NMI and heldout likelihood audits;
+- local physical-oracle observability diagnostics when explicitly labeled as
+  synthetic S2D experiments.
 
-Stage 2A static discovery is implemented as a synthetic-first identifiability
-path. It may claim hidden DEM-fault quotient recovery only for synthetic
-teachers with evaluator-visible `omega(j)` and seed-aware ARI/NMI plus heldout
-likelihood comparisons to matched known-orbit oracles. Google data remains
-Stage 2B external validation and cannot support true latent quotient recovery
-claims without ground-truth `omega(j)` or an explicitly defined proxy partition.
+Invalid claims:
+
+- general CPTP/GKSL learning from hardware;
+- full noisy-circuit Born-rule likelihood;
+- real-hardware ground-truth latent mechanism recovery;
+- temporal drift or context-conditioned amortization as current implemented
+  evidence.
