@@ -1,0 +1,9 @@
+{
+  "margin": {
+    "available": true,
+    "top_feature": "branch_gate",
+    "z_margin": 1999999999.9999998
+  },
+  "prep_reset_primary_label": "M17",
+  "schema": "scope_static_s2d11_m11_vs_m4_preflight_margin_v1"
+}

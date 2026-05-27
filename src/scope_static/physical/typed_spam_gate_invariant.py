@@ -15,6 +15,9 @@ from .targeted_v3 import RZZ_FAMILY
 BRANCH_NAMES = ("gate_process_branch", "readout_branch", "prep_reset_branch")
 FORBIDDEN_FEATURE_TOKENS = ("oracle_label", "mechanism_id", "exact_ptm", "teacher_channel", "oracle_fingerprint")
 M5_TAU = 0.10
+READOUT_MECHANISM_IDS = ("M13", "M14", "M15", "M16")
+PREP_RESET_MECHANISM_IDS = ("M17", "M18")
+RZZ_FAMILY_IDS = ("M1", "M6", "M7", "M9")
 LOCATION_FEATURES = ("location_qubit_mean", "location_span", "chain_position", "neighbor_rzz_count", "branch_gate", "branch_readout", "branch_prep_reset")
 READOUT_FEATURES = (
     "readout_shape_norm",
@@ -224,6 +227,7 @@ def evaluate_typed_spam_gate_learner(
     seed: int = 0,
     m5_tau: float = M5_TAU,
     include_m13: bool = False,
+    include_m19: bool | None = None,
 ) -> dict[str, object]:
     labels = list(bundle.labels)
     groups = list(bundle.groups)
@@ -270,9 +274,13 @@ def evaluate_typed_spam_gate_learner(
         "overall": primary,
         "grouped_fold_predictions": predictions["typed_gate_readout_prep_invariant_learner"],
     }
+    run_m19_stress = bool(include_m13 if include_m19 is None else include_m19)
+    m19_audit = m19_confidence_audit(bundle, labels, primary_pred["predicted_labels"], class_names) if run_m19_stress else {}
     secondary_stress = {
-        "includes_M13": bool(include_m13),
-        "m13_confidence_audit": m13_confidence_audit(bundle, labels, primary_pred["predicted_labels"], class_names) if include_m13 else {},
+        "includes_M19_other_mechanism": run_m19_stress,
+        "m19_confidence_audit": m19_audit,
+        "includes_M13": False,
+        "m13_confidence_audit": m19_audit,
     }
     return {
         "schema": "scope_static_s2d11_typed_spam_gate_evaluation_v1",
@@ -289,6 +297,7 @@ def evaluate_typed_spam_gate_learner(
         "grouped_fold_predictions": predictions,
         "pairwise_margin_report": pairwise,
         "confusion_matrix_by_branch": confusion_matrix_by_branch(labels, primary_pred["predicted_labels"], bundle.branch_names, class_names),
+        "readout_mechanism_audit": m5_report,
         "m5_readout_audit": m5_report,
         "m5_overfragmentation_report": m5_report,
         "m11_prep_reset_audit": m11_report,
@@ -300,6 +309,7 @@ def evaluate_typed_spam_gate_learner(
         "controls": controls,
         "run_success": success,
         "m13_confidence_audit": secondary_stress["m13_confidence_audit"],
+        "m19_confidence_audit": secondary_stress["m19_confidence_audit"],
     }
 
 
@@ -329,16 +339,16 @@ def branch_assignment_audit(records: list[dict[str, object]], branches: list[str
 
 def branch_budget_audit(enabled_mechanisms: list[str], branches: list[str]) -> dict[str, object]:
     enabled = [str(item) for item in enabled_mechanisms]
-    readout_budget = 1 if "M5" in enabled else 0
-    prep_budget = 1 if "M11" in enabled else 0
+    readout_budget = sum(1 for item in enabled if item in READOUT_MECHANISM_IDS)
+    prep_budget = sum(1 for item in enabled if item in PREP_RESET_MECHANISM_IDS)
     total = len(enabled)
     gate_budget = max(1, total - readout_budget - prep_budget)
     return {
         "schema": "scope_static_s2d11_branch_budget_audit_v1",
         "total_K": int(total),
         "enabled_visible_branches": sorted(set(branches)),
-        "readout_budget_rule": "1 if M5 enabled else 0",
-        "prep_reset_budget_rule": "1 if M11 enabled else 0",
+        "readout_budget_rule": "number of enabled readout mechanisms in M13/M14/M15/M16",
+        "prep_reset_budget_rule": "number of enabled prep/reset mechanisms in M17/M18",
         "gate_budget_rule": "K - readout_budget - prep_reset_budget",
         "budget_source": "visible_run_config",
         "row_oracle_labels_used": False,
@@ -483,22 +493,30 @@ def classification_metrics(true: list[str], pred: list[str], class_names: list[s
 
 
 def m5_overfragmentation_report(true_labels: list[str], pred_labels: list[str], class_names: list[str], *, tau: float = M5_TAU) -> dict[str, object]:
-    m5_indices = [idx for idx, label in enumerate(true_labels) if label == "M5"]
+    m5_indices = [idx for idx, label in enumerate(true_labels) if label in READOUT_MECHANISM_IDS]
     counts = {}
     for idx in m5_indices:
         counts[pred_labels[idx]] = counts.get(pred_labels[idx], 0) + 1
     total = max(1, len(m5_indices))
     significant = {label: count for label, count in counts.items() if count / total >= float(tau)}
-    gate_confusion = sum(count for label, count in counts.items() if label != "M5")
+    readout_mass = sum(count for label, count in counts.items() if label in READOUT_MECHANISM_IDS)
+    gate_confusion = sum(count for label, count in counts.items() if label not in READOUT_MECHANISM_IDS)
     return {
-        "schema": "scope_static_s2d11_m5_overfragmentation_report_v1",
+        "schema": "scope_static_s2d11_readout_mechanism_report_v2",
         "tau": float(tau),
+        "readout_true_mechanisms": list(READOUT_MECHANISM_IDS),
+        "readout_split_count": int(len(significant)),
+        "readout_mass_by_predicted_class": counts,
+        "readout_cluster_purity": float(readout_mass / total),
+        "readout_overfragmentation_index": float(max(0, len(significant) - len(READOUT_MECHANISM_IDS))),
+        "readout_vs_gate_confusion_rate": float(gate_confusion / total),
+        "readout_split_fixed": len(significant) <= len(READOUT_MECHANISM_IDS),
         "M5_split_count": int(len(significant)),
         "M5_mass_by_predicted_class": counts,
-        "M5_cluster_purity": float(counts.get("M5", 0) / total),
-        "M5_overfragmentation_index": float(max(0, len(significant) - 1)),
+        "M5_cluster_purity": float(readout_mass / total),
+        "M5_overfragmentation_index": float(max(0, len(significant) - len(READOUT_MECHANISM_IDS))),
         "M5_vs_gate_confusion_rate": float(gate_confusion / total),
-        "M5_split_fixed": len(significant) <= 1,
+        "M5_split_fixed": len(significant) <= len(READOUT_MECHANISM_IDS),
     }
 
 
@@ -512,14 +530,18 @@ def m11_readout_confound_audit(bundle: TypedSpamGateBundle, labels: list[str], g
     residualized = residualize_by_design(raw, base)
     raw_result = grouped_linear_head(raw, labels, groups, class_names, seed=int(seed))
     resid_result = grouped_linear_head(residualized, labels, groups, class_names, seed=int(seed))
+    prep_label = _primary_prep_reset_label(labels)
+    readout_label = _primary_readout_label(labels)
     return {
         "schema": "scope_static_s2d11_m11_readout_confound_audit_v1",
         "raw_prep_reset_features": _compact_head_result(raw_result),
         "readout_residualized_prep_reset_features": _compact_head_result(resid_result),
-        "M11_recall_before_readout_residualization": raw_result["overall"]["per_class_recall"].get("M11"),
-        "M11_recall_after_readout_residualization": resid_result["overall"]["per_class_recall"].get("M11"),
-        "M11_M4_pairwise_margin": _pair_margin_from_result(resid_result, "M11/M4"),
-        "M11_M5_pairwise_margin": _pair_margin_from_result(resid_result, "M11/M5"),
+        "prep_reset_primary_label": prep_label,
+        "readout_primary_label": readout_label,
+        "M11_recall_before_readout_residualization": raw_result["overall"]["per_class_recall"].get(prep_label),
+        "M11_recall_after_readout_residualization": resid_result["overall"]["per_class_recall"].get(prep_label),
+        "M11_M4_pairwise_margin": _pair_margin_from_result(resid_result, f"{prep_label}/M4"),
+        "M11_M5_pairwise_margin": _pair_margin_from_result(resid_result, f"{prep_label}/{readout_label}"),
         "M11_vs_readout_branch_confusion": _m11_readout_confusion(resid_result),
     }
 
@@ -549,20 +571,27 @@ def single_qubit_invariant_reconstruction_audit(records: list[dict[str, object]]
 
 
 def m11_prep_observability_preflight(labels: list[str], features: np.ndarray, feature_names: list[str]) -> dict[str, object]:
-    margin_m4 = _feature_margin(labels, features, feature_names, "M11", "M4")
-    margin_m5 = _feature_margin(labels, features, feature_names, "M11", "M5")
+    prep_label = _primary_prep_reset_label(labels)
+    readout_label = _primary_readout_label(labels)
+    margin_m4 = _feature_margin(labels, features, feature_names, prep_label, "M4")
+    margin_m5 = _feature_margin(labels, features, feature_names, prep_label, readout_label)
     passed = bool(margin_m4.get("available")) and bool(margin_m5.get("available")) and float(margin_m4.get("z_margin", 0.0)) > 0.0 and float(margin_m5.get("z_margin", 0.0)) > 0.0
     return {
         "schema": "scope_static_s2d11a_m11_prep_observability_preflight_v1",
         "passed": passed,
         "M11_vs_M4_margin": margin_m4,
         "M11_vs_M5_margin": margin_m5,
-        "interpretation": "M11 prep/reset features separate M11 from M4/M5 above chance" if passed else "M11 prep/reset observability is weak under current no-new-probe data",
+        "interpretation": (
+            "Prep/reset features separate M17/M18 from gate and readout mechanisms above chance"
+            if passed
+            else "Prep/reset observability is weak under current no-new-probe data"
+        ),
     }
 
 
 def m11_prep_feature_snr(labels: list[str], features: np.ndarray, feature_names: list[str]) -> dict[str, object]:
-    mask = np.asarray([label == "M11" for label in labels], dtype=bool)
+    prep_label = _primary_prep_reset_label(labels)
+    mask = np.asarray([label == prep_label for label in labels], dtype=bool)
     return {
         "schema": "scope_static_s2d11_m11_prep_feature_snr_v1",
         "features": {
@@ -574,9 +603,11 @@ def m11_prep_feature_snr(labels: list[str], features: np.ndarray, feature_names:
 
 
 def m11_vs_m4_preflight_margin(labels: list[str], features: np.ndarray, feature_names: list[str]) -> dict[str, object]:
+    prep_label = _primary_prep_reset_label(labels)
     return {
         "schema": "scope_static_s2d11_m11_vs_m4_preflight_margin_v1",
-        "margin": _feature_margin(labels, features, feature_names, "M11", "M4"),
+        "prep_reset_primary_label": prep_label,
+        "margin": _feature_margin(labels, features, feature_names, prep_label, "M4"),
     }
 
 
@@ -591,7 +622,7 @@ def prep_reconstruction_assumption_audit(probe_names: list[str]) -> dict[str, ob
 
 
 def gate_family_audit(labels: list[str], pred: list[str], class_names: list[str]) -> dict[str, object]:
-    subset = [name for name in ("M1", "M7", "M8", "M10") if name in class_names]
+    subset = [name for name in RZZ_FAMILY_IDS if name in class_names]
     mask = [label in subset for label in labels]
     true = [label for label, keep in zip(labels, mask) if keep]
     got = [label for label, keep in zip(pred, mask) if keep]
@@ -627,25 +658,35 @@ def scrambled_branch_control_audit(branch_ablation: dict[str, object], controls:
     }
 
 
-def m13_confidence_audit(bundle: TypedSpamGateBundle, labels: list[str], pred: list[str], class_names: list[str]) -> dict[str, object]:
+def m19_confidence_audit(bundle: TypedSpamGateBundle, labels: list[str], pred: list[str], class_names: list[str]) -> dict[str, object]:
     features = bundle.feature_spaces["typed_gate_readout_prep_invariant_learner"]
     names = bundle.feature_names["typed_gate_readout_prep_invariant_learner"]
-    mask = np.asarray([label == "M13" for label in labels], dtype=bool)
+    mask = np.asarray([label == "M19" for label in labels], dtype=bool)
     indices = [names.index(name) for name in names if name in {"unitarity_loss_R_error", "gamma_isotropy_score", "generator_total"}]
     confidence = np.linalg.norm(features[:, indices], axis=1) if indices else np.zeros(features.shape[0])
     true_m13 = [label for label, keep in zip(labels, mask.tolist()) if keep]
     pred_m13 = [label for label, keep in zip(pred, mask.tolist()) if keep]
-    recall = classification_metrics(true_m13, pred_m13, ["M13"])["per_class_recall"].get("M13", 0.0) if true_m13 else None
+    recall = classification_metrics(true_m13, pred_m13, ["M19"])["per_class_recall"].get("M19", 0.0) if true_m13 else None
     return {
-        "schema": "scope_static_s2d11_m13_confidence_audit_v1",
+        "schema": "scope_static_s2d11_m19_confidence_audit_v1",
         "secondary_stress_only": True,
-        "M13_recall": recall,
-        "M13_confidence_histogram": np.histogram(confidence[mask], bins=5)[0].astype(int).tolist() if np.any(mask) else [],
-        "M13_invariant_SNR": {names[idx]: _snr(features[mask, idx]) for idx in indices} if np.any(mask) else {},
-        "M13_false_negative_examples": [int(idx) for idx, (label, got) in enumerate(zip(labels, pred)) if label == "M13" and got != "M13"],
+        "M19_recall": recall,
+        "M19_confidence_histogram": np.histogram(confidence[mask], bins=5)[0].astype(int).tolist() if np.any(mask) else [],
+        "M19_invariant_SNR": {names[idx]: _snr(features[mask, idx]) for idx in indices} if np.any(mask) else {},
+        "M19_false_negative_examples": [int(idx) for idx, (label, got) in enumerate(zip(labels, pred)) if label == "M19" and got != "M19"],
+        "M13_recall": None,
+        "M13_confidence_histogram": [],
+        "M13_invariant_SNR": {},
+        "M13_false_negative_examples": [],
         "unitarity_proxy_distribution": _distribution(features[mask, names.index("unitarity_loss_R_error")]) if np.any(mask) and "unitarity_loss_R_error" in names else {},
         "PTM_mixing_proxy_distribution": _distribution(confidence[mask]) if np.any(mask) else {},
     }
+
+
+def m13_confidence_audit(bundle: TypedSpamGateBundle, labels: list[str], pred: list[str], class_names: list[str]) -> dict[str, object]:
+    """Backward-compatible alias for historical artifact names; current other mechanism is M19."""
+
+    return m19_confidence_audit(bundle, labels, pred, class_names)
 
 
 def leakage_guardrail_audit(feature_schema: dict[str, object]) -> dict[str, object]:
@@ -703,7 +744,7 @@ def s2d11_success(
         "beats_without_readout_branch": float(primary["balanced_accuracy"]) > float(no_readout["balanced_accuracy"]),
         "beats_without_prep_branch": float(primary["balanced_accuracy"]) > float(no_prep["balanced_accuracy"]),
         "mahalanobis_not_under_linear": float(maha["balanced_accuracy"]) >= float(linear["balanced_accuracy"]),
-        "m5_split_fixed": bool(m5_report.get("M5_split_fixed", False)),
+        "readout_split_fixed": bool(m5_report.get("readout_split_fixed", False)),
         "gate_family_balanced_accuracy_ge_0_80": float(gate_audit.get("balanced_accuracy", 0.0)) >= 0.80,
         "grouped_fold_coverage_valid": bool(coverage.get("valid_grouped_generalization", False)),
     }
@@ -711,7 +752,7 @@ def s2d11_success(
 
 
 def pairwise_probability_margins(true: list[str], probabilities: np.ndarray, class_names: list[str]) -> dict[str, object]:
-    pairs = ("M1/M7", "M1/M8", "M7/M8", "M10/M1", "M10/M7", "M10/M8", "M11/M4", "M11/M5")
+    pairs = ("M1/M6", "M1/M7", "M6/M7", "M9/M1", "M9/M6", "M9/M7", "M17/M4", "M17/M13")
     out = {
         "definition": (
             "For classifier/prototype score heads, pairwise_margin(a,b) is the mean over true a rows of "
@@ -736,7 +777,7 @@ def pairwise_probability_margins(true: list[str], probabilities: np.ndarray, cla
 
 
 def distance_pairwise_margins(true: list[str], distances: np.ndarray, class_names: list[str]) -> dict[str, object]:
-    pairs = ("M1/M7", "M1/M8", "M7/M8", "M10/M1", "M10/M7", "M10/M8", "M11/M4", "M11/M5")
+    pairs = ("M1/M6", "M1/M7", "M6/M7", "M9/M1", "M9/M6", "M9/M7", "M17/M4", "M17/M13")
     out = {
         "definition": (
             "For distance heads, pairwise_margin(a,b) is the mean over true a rows of distance_to_b(x)-distance_to_a(x), "
@@ -1069,10 +1110,24 @@ def _m11_readout_confusion(result: dict[str, object]) -> float:
     all_rows = result.get("all", {})
     true = all_rows.get("true_labels", [])
     pred = all_rows.get("predicted_labels", [])
-    m11 = [got for label, got in zip(true, pred) if label == "M11"]
+    m11 = [got for label, got in zip(true, pred) if label in PREP_RESET_MECHANISM_IDS]
     if not m11:
         return 0.0
-    return float(sum(1 for got in m11 if got == "M5") / len(m11))
+    return float(sum(1 for got in m11 if got in READOUT_MECHANISM_IDS) / len(m11))
+
+
+def _primary_prep_reset_label(labels: list[str]) -> str:
+    for label in PREP_RESET_MECHANISM_IDS:
+        if label in labels:
+            return label
+    return PREP_RESET_MECHANISM_IDS[0]
+
+
+def _primary_readout_label(labels: list[str]) -> str:
+    for label in READOUT_MECHANISM_IDS:
+        if label in labels:
+            return label
+    return READOUT_MECHANISM_IDS[0]
 
 
 def _feature_margin(labels: list[str], features: np.ndarray, feature_names: list[str], left: str, right: str) -> dict[str, object]:

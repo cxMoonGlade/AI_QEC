@@ -1,0 +1,6 @@
+{
+  "primary_threshold_real_minus_within_branch_scrambled_ge_0_25": false,
+  "real_minus_cross_branch_scrambled_balanced_accuracy": 0.31666666666666665,
+  "real_minus_within_branch_scrambled_balanced_accuracy": 0.21666666666666667,
+  "schema": "scope_static_s2d11_controls_v1"
+}

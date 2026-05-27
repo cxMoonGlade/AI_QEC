@@ -7,7 +7,7 @@ from pathlib import Path
 import yaml
 
 from scope_static.experiments.s2d_config import load_s2d_physical_config, output_root_from_config
-from scope_static.physical.teacher import generate_physical_teacher_dataset
+from scope_static.physical_oracle import run_physical_oracle_stack
 
 
 DEFAULT_RUNS: list[dict[str, object]] = [
@@ -79,33 +79,20 @@ def _run_one(output: Path, physical_cfg: dict[str, object], cfg: dict[str, objec
     merged = dict(physical_cfg)
     merged.update({key: value for key, value in run_cfg.items() if key not in {"name", "purpose", "enabled"}})
     merged.update(dict(cfg.get("physical_overrides", {})))
-    teacher_dir = run_dir / "S2D_PHYS1_teacher"
-    sep_dir = run_dir / "S2D_PHYS2_oracle_separability"
-    local_dir = run_dir / "S2D_PHYS3_local_inverse"
-
-    teacher = generate_physical_teacher_dataset(merged, output_dir=teacher_dir, preflight_dir=run_dir / "S2D_PHYS0_preflight")
-    separability = _run_oracle_separability_audit(
-        teacher_dir=teacher_dir,
-        output_dir=sep_dir,
-        paper_informed=bool(merged.get("paper_informed_ptm_features", True)),
+    stack = run_physical_oracle_stack(
+        merged,
+        output_dir=run_dir,
+        bootstrap_replicates=int(cfg.get("bootstrap_replicates", 16)),
+        random_baseline_trials=int(cfg.get("random_baseline_trials", 64)),
+        run_local_inverse="auto",
     )
-    decision = "probe_limited"
-    local = None
-    if _phys2_passes(separability):
-        local = _run_physical_local_inverse_discovery(
-            teacher_dir=teacher_dir,
-            separability_dir=sep_dir,
-            output_dir=local_dir,
-            config={
-                **merged,
-                "num_clusters": len(separability["oracle_label_names"]),
-                "bootstrap_replicates": int(cfg.get("bootstrap_replicates", 16)),
-                "random_baseline_trials": int(cfg.get("random_baseline_trials", 64)),
-            },
-        )
-        decision = _phys4_decision(local)
+    paths = dict(stack["paths"])
+    teacher = dict(stack["teacher"])
+    separability = dict(stack["metrics"]["teacher_self"])  # type: ignore[index]
+    local = stack["metrics"].get("learner") if isinstance(stack.get("metrics"), dict) else None
+    decision = str(stack["verdicts"]["overall_diagnosis"])  # type: ignore[index]
 
-    noise_audit_path = teacher_dir / "noise_application_audit.json"
+    noise_audit_path = Path(str(paths["teacher_dir"])) / "noise_application_audit.json"
     if noise_audit_path.exists():
         (run_dir / "noise_application_audit.json").write_text(noise_audit_path.read_text())
 
@@ -119,27 +106,21 @@ def _run_one(output: Path, physical_cfg: dict[str, object], cfg: dict[str, objec
         "decision": decision,
         "teacher": {
             "mechanism_counts": teacher.get("mechanism_counts", {}),
-            "output_dir": str(teacher_dir),
+            "output_dir": str(paths["teacher_dir"]),
             "noise_application_audit": str(run_dir / "noise_application_audit.json"),
+            "aer_simulator": teacher.get("aer_simulator"),
         },
-        "PHYS2": _compact_phys2(separability),
-        "PHYS3": _compact_phys3(local) if local is not None else None,
+        "PHYS2": separability,
+        "PHYS3": local if isinstance(local, dict) else None,
+        "physical_oracle_stack": {
+            "output_dir": stack.get("output_dir"),
+            "verdicts": stack.get("verdicts"),
+            "timings_seconds": stack.get("timings_seconds"),
+        },
     }
     (run_dir / "metrics.json").write_text(json.dumps(record, indent=2, sort_keys=True) + "\n")
     (run_dir / "summary.md").write_text(format_run_summary(record))
     return record
-
-
-def _run_oracle_separability_audit(**kwargs):
-    from scope_static.physical.separability import run_oracle_separability_audit
-
-    return run_oracle_separability_audit(**kwargs)
-
-
-def _run_physical_local_inverse_discovery(**kwargs):
-    from scope_static.physical.local_inverse import run_physical_local_inverse_discovery
-
-    return run_physical_local_inverse_discovery(**kwargs)
 
 
 def _load_difficulty_config(config_path: str | Path | None) -> dict[str, object]:
@@ -163,51 +144,6 @@ def _enabled_runs(cfg: dict[str, object]) -> list[dict[str, object]]:
     if not isinstance(raw, list):
         raise ValueError("s2d_difficulty_expansion.runs must be a list")
     return [dict(item) for item in raw if isinstance(item, dict) and bool(item.get("enabled", True))]
-
-
-def _phys2_passes(metrics: dict[str, object]) -> bool:
-    return float(metrics.get("ari", 0.0)) >= 0.85 and float(metrics.get("nmi", 0.0)) >= 0.85
-
-
-def _phys4_decision(local: dict[str, object]) -> str:
-    main = local["main_result"]
-    ari = float(main["ari"])
-    nmi = float(main["nmi"])
-    active = int(main["active_clusters"])
-    k = int(local["num_clusters"])
-    boot = float(local["bootstrap_nmi"].get("min_vs_full", 0.0))
-    if ari >= 0.85 and nmi >= 0.85 and active >= max(1, k - 1) and boot >= 0.80:
-        return "strong_recovery"
-    if ari >= 0.75 and nmi >= 0.90:
-        return "near_strong"
-    return "learner_limited"
-
-
-def _compact_phys2(metrics: dict[str, object]) -> dict[str, object]:
-    return {
-        "ari": metrics.get("ari"),
-        "nmi": metrics.get("nmi"),
-        "active_clusters": metrics.get("active_clusters"),
-        "separability_gate": metrics.get("separability_gate"),
-        "oracle_label_names": metrics.get("oracle_label_names"),
-        "feature_shape": metrics.get("feature_shape"),
-    }
-
-
-def _compact_phys3(metrics: dict[str, object] | None) -> dict[str, object] | None:
-    if metrics is None:
-        return None
-    return {
-        "s2d3_result": metrics.get("s2d3_result"),
-        "main_result": metrics.get("main_result"),
-        "physical_local_inverse_probability_v2_result": metrics.get("physical_local_inverse_probability_v2_result"),
-        "direct_S_alpha_result": metrics.get("direct_S_alpha_result"),
-        "oracle_fingerprint_upper_bound": metrics.get("oracle_fingerprint_upper_bound"),
-        "prediction_metrics": metrics.get("prediction_metrics"),
-        "nll_difficulty_audit": metrics.get("nll_difficulty_audit"),
-        "bootstrap_nmi": {key: value for key, value in dict(metrics.get("bootstrap_nmi", {})).items() if key != "labels"},
-        "key_comparison": metrics.get("key_comparison"),
-    }
 
 
 def _comparison_summary(records: list[dict[str, object]]) -> dict[str, object]:

@@ -1,0 +1,5116 @@
+{
+  "baseline_s2d11": {
+    "balanced_accuracy": 0.8689458689458689,
+    "confusion_matrix": [
+      [
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1
+      ],
+      [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1
+      ],
+      [
+        0,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1
+      ],
+      [
+        0,
+        0,
+        0,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        26,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        3,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        3,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        3,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        3,
+        0
+      ],
+      [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2
+      ]
+    ],
+    "confusion_matrix_labels": [
+      "M0",
+      "M1",
+      "M2",
+      "M3",
+      "M4",
+      "M5",
+      "M6",
+      "M7",
+      "M8",
+      "M9",
+      "M10",
+      "M11",
+      "M12"
+    ],
+    "macro_F1": 0.8613691340106434,
+    "min_class_recall": 0.3333333333333333,
+    "pairwise_margins": {
+      "M1/M7": {
+        "available": true,
+        "margin": 0.09247947368855618
+      },
+      "M1/M8": {
+        "available": true,
+        "margin": 0.10393514449816559
+      },
+      "M10/M1": {
+        "available": true,
+        "margin": 0.09928214116240928
+      },
+      "M10/M7": {
+        "available": true,
+        "margin": 0.09931200086305435
+      },
+      "M10/M8": {
+        "available": true,
+        "margin": 0.10886880032562485
+      },
+      "M11/M4": {
+        "available": true,
+        "margin": 0.10682648619033118
+      },
+      "M11/M5": {
+        "available": true,
+        "margin": 0.1143290995032676
+      },
+      "M7/M8": {
+        "available": true,
+        "margin": 0.10727513892686931
+      },
+      "definition": "For classifier/prototype score heads, pairwise_margin(a,b) is the mean over true a rows of score_a(x)-score_b(x), plus true b rows of score_b(x)-score_a(x). Positive means the model prefers the correct class."
+    },
+    "per_class_recall": {
+      "M0": 0.6666666666666666,
+      "M1": 0.3333333333333333,
+      "M10": 1.0,
+      "M11": 1.0,
+      "M12": 0.6666666666666666,
+      "M2": 0.6666666666666666,
+      "M3": 1.0,
+      "M4": 1.0,
+      "M5": 0.9629629629629629,
+      "M6": 1.0,
+      "M7": 1.0,
+      "M8": 1.0,
+      "M9": 1.0
+    },
+    "support": {
+      "M0": 3,
+      "M1": 3,
+      "M10": 3,
+      "M11": 3,
+      "M12": 3,
+      "M2": 3,
+      "M3": 3,
+      "M4": 3,
+      "M5": 27,
+      "M6": 3,
+      "M7": 3,
+      "M8": 3,
+      "M9": 3
+    }
+  },
+  "best_variant": "typed_linear_plus_M1_logit_boost",
+  "calibration_variant_metrics": {
+    "baseline_typed_linear": {
+      "folds": [
+        {
+          "fold": 0,
+          "predicted_labels": [
+            "M12",
+            "M12",
+            "M2",
+            "M3",
+            "M4",
+            "M5",
+            "M5",
+            "M5",
+            "M5",
+            "M6",
+            "M5",
+            "M5",
+            "M5",
+            "M5",
+            "M6",
+            "M7",
+            "M8",
+            "M9",
+            "M10",
+            "M11",
+            "M2"
+          ],
+          "row_indices": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20
+          ],
+          "test_circuit_id": 0,
+          "true_labels": [
+            "M0",
+            "M1",
+            "M2",
+            "M3",
+            "M4",
+            "M5",
+            "M5",
+            "M5",
+            "M5",
+            "M5",
+            "M5",
+            "M5",
+            "M5",
+            "M5",
+            "M6",
+            "M7",
+            "M8",
+            "M9",
+            "M10",
+            "M11",
+            "M12"
+          ]
+        },
+        {
+          "fold": 1,
+          "predicted_labels": [
+            "M0",
+            "M1",
+            "M12",
+            "M3",
+            "M4",
+            "M5",
+            "M5",
+            "M5",
+            "M5",
+            "M5",
+            "M5",
+            "M5",
+            "M5",
+            "M5",
+            "M6",
+            "M7",
+            "M8",
+            "M9",
+            "M10",
+            "M11",
+            "M12"
+          ],
+          "row_indices": [
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41
+          ],
+          "test_circuit_id": 1,
+          "true_labels": [
+            "M0",
+            "M1",
+            "M2",
+            "M3",
+            "M4",
+            "M5",
+            "M5",
+            "M5",
+            "M5",
+            "M5",
+            "M5",
+            "M5",
+            "M5",
+            "M5",
+            "M6",
+            "M7",
+            "M8",
+            "M9",
+            "M10",
+            "M11",
+            "M12"
+          ]
+        },
+        {
+          "fold": 2,
+          "predicted_labels": [
+            "M0",
+            "M6",
+            "M2",
+            "M3",
+            "M4",
+            "M5",
+            "M5",
+            "M5",
+            "M5",
+            "M5",
+            "M5",
+            "M5",
+            "M5",
+            "M5",
+            "M6",
+            "M7",
+            "M8",
+            "M9",
+            "M10",
+            "M11",
+            "M12"
+          ],
+          "row_indices": [
+            42,
+            43,
+            44,
+            45,
+            46,
+            47,
+            48,
+            49,
+            50,
+            51,
+            52,
+            53,
+            54,
+            55,
+            56,
+            57,
+            58,
+            59,
+            60,
+            61,
+            62
+          ],
+          "test_circuit_id": 2,
+          "true_labels": [
+            "M0",
+            "M1",
+            "M2",
+            "M3",
+            "M4",
+            "M5",
+            "M5",
+            "M5",
+            "M5",
+            "M5",
+            "M5",
+            "M5",
+            "M5",
+            "M5",
+            "M6",
+            "M7",
+            "M8",
+            "M9",
+            "M10",
+            "M11",
+            "M12"
+          ]
+        }
+      ],
+      "model": "TorchStandardScaler+DualRidgeLinearClassifier(class_weight=balanced)",
+      "overall": {
+        "balanced_accuracy": 0.8689458689458689,
+        "confusion_matrix": [
+          [
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1
+          ],
+          [
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1
+          ],
+          [
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1
+          ],
+          [
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            26,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0
+          ],
+          [
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2
+          ]
+        ],
+        "confusion_matrix_labels": [
+          "M0",
+          "M1",
+          "M2",
+          "M3",
+          "M4",
+          "M5",
+          "M6",
+          "M7",
+          "M8",
+          "M9",
+          "M10",
+          "M11",
+          "M12"
+        ],
+        "macro_F1": 0.8613691340106434,
+        "min_class_recall": 0.3333333333333333,
+        "pairwise_margins": {
+          "M1/M7": {
+            "available": true,
+            "margin": 0.09247947368856387
+          },
+          "M1/M8": {
+            "available": true,
+            "margin": 0.10393514449816788
+          },
+          "M10/M1": {
+            "available": true,
+            "margin": 0.09928214116242386
+          },
+          "M10/M7": {
+            "available": true,
+            "margin": 0.09931200086305737
+          },
+          "M10/M8": {
+            "available": true,
+            "margin": 0.10886880032561981
+          },
+          "M11/M4": {
+            "available": true,
+            "margin": 0.10682648619034608
+          },
+          "M11/M5": {
+            "available": true,
+            "margin": 0.11432909950326683
+          },
+          "M7/M8": {
+            "available": true,
+            "margin": 0.10727513892686129
+          },
+          "definition": "For classifier/prototype score heads, pairwise_margin(a,b) is the mean over true a rows of score_a(x)-score_b(x), plus true b rows of score_b(x)-score_a(x). Positive means the model prefers the correct class."
+        },
+        "per_class_recall": {
+          "M0": 0.6666666666666666,
+          "M1": 0.3333333333333333,
+          "M10": 1.0,
+          "M11": 1.0,
+          "M12": 0.6666666666666666,
+          "M2": 0.6666666666666666,
+          "M3": 1.0,
+          "M4": 1.0,
+          "M5": 0.9629629629629629,
+          "M6": 1.0,
+          "M7": 1.0,
+          "M8": 1.0,
+          "M9": 1.0
+        },
+        "support": {
+          "M0": 3,
+          "M1": 3,
+          "M10": 3,
+          "M11": 3,
+          "M12": 3,
+          "M2": 3,
+          "M3": 3,
+          "M4": 3,
+          "M5": 27,
+          "M6": 3,
+          "M7": 3,
+          "M8": 3,
+          "M9": 3
+        }
+      },
+      "predicted_labels": [
+        "M12",
+        "M12",
+        "M2",
+        "M3",
+        "M4",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M6",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "M2",
+        "M0",
+        "M1",
+        "M12",
+        "M3",
+        "M4",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "M12",
+        "M0",
+        "M6",
+        "M2",
+        "M3",
+        "M4",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "M12"
+      ],
+      "schema": "scope_static_s2d11b_variant_v1",
+      "true_labels": [
+        "M0",
+        "M1",
+        "M2",
+        "M3",
+        "M4",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "M12",
+        "M0",
+        "M1",
+        "M2",
+        "M3",
+        "M4",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "M12",
+        "M0",
+        "M1",
+        "M2",
+        "M3",
+        "M4",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "M12"
+      ],
+      "variant": "baseline_typed_linear"
+    },
+    "compact_plus_selected_RZZ_dense_terms": {
+      "dense_feature_audit": {
+        "dense_block": "physical_local_inverse_probability_v2",
+        "folds": [
+          {
+            "fold": 0,
+            "selected_dense_columns": [
+              "local_inverse_v2_12709",
+              "local_inverse_v2_0492",
+              "local_inverse_v2_0888",
+              "local_inverse_v2_0899",
+              "local_inverse_v2_5112",
+              "local_inverse_v2_5123",
+              "local_inverse_v2_4892",
+              "local_inverse_v2_4903"
+            ],
+            "test_circuit_id": 0
+          },
+          {
+            "fold": 1,
+            "selected_dense_columns": [
+              "local_inverse_v2_6234",
+              "local_inverse_v2_3066",
+              "local_inverse_v2_12581",
+              "local_inverse_v2_12625",
+              "local_inverse_v2_6278",
+              "local_inverse_v2_3110",
+              "local_inverse_v2_2384",
+              "local_inverse_v2_2142"
+            ],
+            "test_circuit_id": 1
+          },
+          {
+            "fold": 2,
+            "selected_dense_columns": [
+              "local_inverse_v2_12708",
+              "local_inverse_v2_0041",
+              "local_inverse_v2_12636",
+              "local_inverse_v2_12669",
+              "local_inverse_v2_12680",
+              "local_inverse_v2_2956",
+              "local_inverse_v2_0085",
+              "local_inverse_v2_9963"
+            ],
+            "test_circuit_id": 2
+          }
+        ],
+        "schema": "scope_static_s2d11b_m1_dense_vs_compact_feature_audit_v1",
+        "selection": "top train-fold absolute M1-vs-rest mean difference columns",
+        "source": "existing S2D.11 observations.npz + oracle_mechanisms.json, no resampling"
+      },
+      "overall": {
+        "balanced_accuracy": 0.8689458689458689,
+        "confusion_matrix": [
+          [
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1
+          ],
+          [
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1
+          ],
+          [
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1
+          ],
+          [
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            26,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0
+          ],
+          [
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2
+          ]
+        ],
+        "confusion_matrix_labels": [
+          "M0",
+          "M1",
+          "M2",
+          "M3",
+          "M4",
+          "M5",
+          "M6",
+          "M7",
+          "M8",
+          "M9",
+          "M10",
+          "M11",
+          "M12"
+        ],
+        "macro_F1": 0.8586218812633907,
+        "min_class_recall": 0.3333333333333333,
+        "pairwise_margins": {
+          "M1/M7": {
+            "available": true,
+            "margin": 0.07169081395746689
+          },
+          "M1/M8": {
+            "available": true,
+            "margin": 0.10050325718589748
+          },
+          "M10/M1": {
+            "available": true,
+            "margin": 0.10395869357934164
+          },
+          "M10/M7": {
+            "available": true,
+            "margin": 0.09411730147924023
+          },
+          "M10/M8": {
+            "available": true,
+            "margin": 0.1153859114488391
+          },
+          "M11/M4": {
+            "available": true,
+            "margin": 0.10666023486063998
+          },
+          "M11/M5": {
+            "available": true,
+            "margin": 0.11414417388152594
+          },
+          "M7/M8": {
+            "available": true,
+            "margin": 0.09225896803952395
+          },
+          "definition": "For classifier/prototype score heads, pairwise_margin(a,b) is the mean over true a rows of score_a(x)-score_b(x), plus true b rows of score_b(x)-score_a(x). Positive means the model prefers the correct class."
+        },
+        "per_class_recall": {
+          "M0": 0.6666666666666666,
+          "M1": 0.3333333333333333,
+          "M10": 1.0,
+          "M11": 1.0,
+          "M12": 0.6666666666666666,
+          "M2": 0.6666666666666666,
+          "M3": 1.0,
+          "M4": 1.0,
+          "M5": 0.9629629629629629,
+          "M6": 1.0,
+          "M7": 1.0,
+          "M8": 1.0,
+          "M9": 1.0
+        },
+        "support": {
+          "M0": 3,
+          "M1": 3,
+          "M10": 3,
+          "M11": 3,
+          "M12": 3,
+          "M2": 3,
+          "M3": 3,
+          "M4": 3,
+          "M5": 27,
+          "M6": 3,
+          "M7": 3,
+          "M8": 3,
+          "M9": 3
+        }
+      },
+      "predicted_labels": [
+        "M12",
+        "M12",
+        "M2",
+        "M3",
+        "M4",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M6",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "M2",
+        "M0",
+        "M7",
+        "M12",
+        "M3",
+        "M4",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "M12",
+        "M0",
+        "M1",
+        "M2",
+        "M3",
+        "M4",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "M12"
+      ],
+      "schema": "scope_static_s2d11b_variant_v1",
+      "true_labels": [
+        "M0",
+        "M1",
+        "M2",
+        "M3",
+        "M4",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "M12",
+        "M0",
+        "M1",
+        "M2",
+        "M3",
+        "M4",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "M12",
+        "M0",
+        "M1",
+        "M2",
+        "M3",
+        "M4",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "M12"
+      ],
+      "variant": "compact_plus_selected_RZZ_dense_terms"
+    },
+    "two_stage_gate_classifier": {
+      "overall": {
+        "balanced_accuracy": 0.0,
+        "confusion_matrix": [
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        ],
+        "confusion_matrix_labels": [
+          "M0",
+          "M1",
+          "M2",
+          "M3",
+          "M4",
+          "M5",
+          "M6",
+          "M7",
+          "M8",
+          "M9",
+          "M10",
+          "M11",
+          "M12"
+        ],
+        "macro_F1": 0.0,
+        "min_class_recall": 0.0,
+        "pairwise_margins": {},
+        "per_class_recall": {
+          "M0": 0.0,
+          "M1": 0.0,
+          "M10": 0.0,
+          "M11": 0.0,
+          "M12": 0.0,
+          "M2": 0.0,
+          "M3": 0.0,
+          "M4": 0.0,
+          "M5": 0.0,
+          "M6": 0.0,
+          "M7": 0.0,
+          "M8": 0.0,
+          "M9": 0.0
+        },
+        "support": {
+          "M0": 0,
+          "M1": 0,
+          "M10": 0,
+          "M11": 0,
+          "M12": 0,
+          "M2": 0,
+          "M3": 0,
+          "M4": 0,
+          "M5": 0,
+          "M6": 0,
+          "M7": 0,
+          "M8": 0,
+          "M9": 0
+        }
+      },
+      "predicted_labels": [],
+      "schema": "scope_static_s2d11b_variant_v1",
+      "skip_reason": "soft calibration passed or secondary diagnostic disabled",
+      "skipped": true,
+      "true_labels": [],
+      "variant": "two_stage_gate_classifier"
+    },
+    "typed_linear_plus_M1_logit_boost": {
+      "calibration_by_fold": {
+        "folds": [
+          {
+            "fold": 0,
+            "inner_validation_M1_recall": 1.0,
+            "inner_validation_balanced_accuracy": 0.7606837606837608,
+            "outer_test_M1_recall": 0.0,
+            "selected_gain": 2.0,
+            "selected_reg": 0.0001,
+            "test_circuit_id": 0,
+            "training_fold_M1_recall": 1.0
+          },
+          {
+            "fold": 1,
+            "inner_validation_M1_recall": 1.0,
+            "inner_validation_balanced_accuracy": 0.6111111111111112,
+            "outer_test_M1_recall": 1.0,
+            "selected_gain": 0.25,
+            "selected_reg": 0.0001,
+            "test_circuit_id": 1,
+            "training_fold_M1_recall": 1.0
+          },
+          {
+            "fold": 2,
+            "inner_validation_M1_recall": 1.0,
+            "inner_validation_balanced_accuracy": 0.8376068376068376,
+            "outer_test_M1_recall": 1.0,
+            "selected_gain": 4.0,
+            "selected_reg": 0.0001,
+            "test_circuit_id": 2,
+            "training_fold_M1_recall": 1.0
+          }
+        ],
+        "schema": "scope_static_s2d11b_m1_calibration_thresholds_by_fold_v1"
+      },
+      "model": "baseline dual-ridge scores plus nested grouped raw-invariant M1 boost",
+      "overall": {
+        "balanced_accuracy": 0.8945868945868944,
+        "confusion_matrix": [
+          [
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1
+          ],
+          [
+            0,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1
+          ],
+          [
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1
+          ],
+          [
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            26,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0
+          ],
+          [
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2
+          ]
+        ],
+        "confusion_matrix_labels": [
+          "M0",
+          "M1",
+          "M2",
+          "M3",
+          "M4",
+          "M5",
+          "M6",
+          "M7",
+          "M8",
+          "M9",
+          "M10",
+          "M11",
+          "M12"
+        ],
+        "macro_F1": 0.8926878153293247,
+        "min_class_recall": 0.6666666666666666,
+        "pairwise_margins": {
+          "M1/M7": {
+            "available": true,
+            "margin": 0.23704341937793258
+          },
+          "M1/M8": {
+            "available": true,
+            "margin": 0.23231293721726362
+          },
+          "M10/M1": {
+            "available": true,
+            "margin": 0.24443160154746205
+          },
+          "M10/M7": {
+            "available": true,
+            "margin": 0.10389386131493654
+          },
+          "M10/M8": {
+            "available": true,
+            "margin": 0.1131137286466531
+          },
+          "M11/M4": {
+            "available": true,
+            "margin": 0.1121995961877692
+          },
+          "M11/M5": {
+            "available": true,
+            "margin": 0.11991573669189554
+          },
+          "M7/M8": {
+            "available": true,
+            "margin": 0.11070069871224895
+          },
+          "definition": "For classifier/prototype score heads, pairwise_margin(a,b) is the mean over true a rows of score_a(x)-score_b(x), plus true b rows of score_b(x)-score_a(x). Positive means the model prefers the correct class."
+        },
+        "per_class_recall": {
+          "M0": 0.6666666666666666,
+          "M1": 0.6666666666666666,
+          "M10": 1.0,
+          "M11": 1.0,
+          "M12": 0.6666666666666666,
+          "M2": 0.6666666666666666,
+          "M3": 1.0,
+          "M4": 1.0,
+          "M5": 0.9629629629629629,
+          "M6": 1.0,
+          "M7": 1.0,
+          "M8": 1.0,
+          "M9": 1.0
+        },
+        "support": {
+          "M0": 3,
+          "M1": 3,
+          "M10": 3,
+          "M11": 3,
+          "M12": 3,
+          "M2": 3,
+          "M3": 3,
+          "M4": 3,
+          "M5": 27,
+          "M6": 3,
+          "M7": 3,
+          "M8": 3,
+          "M9": 3
+        }
+      },
+      "predicted_labels": [
+        "M12",
+        "M12",
+        "M2",
+        "M3",
+        "M4",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M6",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "M2",
+        "M0",
+        "M1",
+        "M12",
+        "M3",
+        "M4",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "M12",
+        "M0",
+        "M1",
+        "M2",
+        "M3",
+        "M4",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "M12"
+      ],
+      "schema": "scope_static_s2d11b_variant_v1",
+      "true_labels": [
+        "M0",
+        "M1",
+        "M2",
+        "M3",
+        "M4",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "M12",
+        "M0",
+        "M1",
+        "M2",
+        "M3",
+        "M4",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "M12",
+        "M0",
+        "M1",
+        "M2",
+        "M3",
+        "M4",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "M12"
+      ],
+      "variant": "typed_linear_plus_M1_logit_boost"
+    },
+    "typed_linear_plus_axial_feature_reweighting": {
+      "folds": [
+        {
+          "fold": 0,
+          "inner_mean_M1_recall": 0.5,
+          "selected_gain": 1.0,
+          "test_circuit_id": 0
+        },
+        {
+          "fold": 1,
+          "inner_mean_M1_recall": 1.0,
+          "selected_gain": 1.0,
+          "test_circuit_id": 1
+        },
+        {
+          "fold": 2,
+          "inner_mean_M1_recall": 0.5,
+          "selected_gain": 1.0,
+          "test_circuit_id": 2
+        }
+      ],
+      "overall": {
+        "balanced_accuracy": 0.8689458689458689,
+        "confusion_matrix": [
+          [
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1
+          ],
+          [
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1
+          ],
+          [
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1
+          ],
+          [
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            26,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            3,
+            0
+          ],
+          [
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2
+          ]
+        ],
+        "confusion_matrix_labels": [
+          "M0",
+          "M1",
+          "M2",
+          "M3",
+          "M4",
+          "M5",
+          "M6",
+          "M7",
+          "M8",
+          "M9",
+          "M10",
+          "M11",
+          "M12"
+        ],
+        "macro_F1": 0.8613691340106434,
+        "min_class_recall": 0.3333333333333333,
+        "pairwise_margins": {
+          "M1/M7": {
+            "available": true,
+            "margin": 0.09247947368856387
+          },
+          "M1/M8": {
+            "available": true,
+            "margin": 0.10393514449816788
+          },
+          "M10/M1": {
+            "available": true,
+            "margin": 0.09928214116242386
+          },
+          "M10/M7": {
+            "available": true,
+            "margin": 0.09931200086305737
+          },
+          "M10/M8": {
+            "available": true,
+            "margin": 0.10886880032561981
+          },
+          "M11/M4": {
+            "available": true,
+            "margin": 0.10682648619034608
+          },
+          "M11/M5": {
+            "available": true,
+            "margin": 0.11432909950326683
+          },
+          "M7/M8": {
+            "available": true,
+            "margin": 0.10727513892686129
+          },
+          "definition": "For classifier/prototype score heads, pairwise_margin(a,b) is the mean over true a rows of score_a(x)-score_b(x), plus true b rows of score_b(x)-score_a(x). Positive means the model prefers the correct class."
+        },
+        "per_class_recall": {
+          "M0": 0.6666666666666666,
+          "M1": 0.3333333333333333,
+          "M10": 1.0,
+          "M11": 1.0,
+          "M12": 0.6666666666666666,
+          "M2": 0.6666666666666666,
+          "M3": 1.0,
+          "M4": 1.0,
+          "M5": 0.9629629629629629,
+          "M6": 1.0,
+          "M7": 1.0,
+          "M8": 1.0,
+          "M9": 1.0
+        },
+        "support": {
+          "M0": 3,
+          "M1": 3,
+          "M10": 3,
+          "M11": 3,
+          "M12": 3,
+          "M2": 3,
+          "M3": 3,
+          "M4": 3,
+          "M5": 27,
+          "M6": 3,
+          "M7": 3,
+          "M8": 3,
+          "M9": 3
+        }
+      },
+      "predicted_labels": [
+        "M12",
+        "M12",
+        "M2",
+        "M3",
+        "M4",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M6",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "M2",
+        "M0",
+        "M1",
+        "M12",
+        "M3",
+        "M4",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "M12",
+        "M0",
+        "M6",
+        "M2",
+        "M3",
+        "M4",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "M12"
+      ],
+      "schema": "scope_static_s2d11b_variant_v1",
+      "selected_features": [
+        "log_coherence_ratio",
+        "h_zz_axial_ratio",
+        "coherence_norm",
+        "h_ZZ"
+      ],
+      "true_labels": [
+        "M0",
+        "M1",
+        "M2",
+        "M3",
+        "M4",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "M12",
+        "M0",
+        "M1",
+        "M2",
+        "M3",
+        "M4",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "M12",
+        "M0",
+        "M1",
+        "M2",
+        "M3",
+        "M4",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "M12"
+      ],
+      "variant": "typed_linear_plus_axial_feature_reweighting"
+    }
+  },
+  "class_names": [
+    "M0",
+    "M1",
+    "M2",
+    "M3",
+    "M4",
+    "M5",
+    "M6",
+    "M7",
+    "M8",
+    "M9",
+    "M10",
+    "M11",
+    "M12"
+  ],
+  "error_type_metrics": {
+    "schema": "scope_static_s2d11b_error_type_metrics_v1",
+    "taxonomy": {
+      "error_type_to_mechanisms": {
+        "gate": [
+          "M0",
+          "M1",
+          "M2",
+          "M3",
+          "M4",
+          "M6",
+          "M7",
+          "M8",
+          "M9",
+          "M10",
+          "M12"
+        ],
+        "prep_reset": [
+          "M11"
+        ],
+        "readout": [
+          "M5"
+        ]
+      },
+      "error_types": [
+        "gate",
+        "readout",
+        "prep_reset"
+      ],
+      "mechanism_to_error_type": {
+        "M0": "gate",
+        "M1": "gate",
+        "M10": "gate",
+        "M11": "prep_reset",
+        "M12": "gate",
+        "M2": "gate",
+        "M3": "gate",
+        "M4": "gate",
+        "M5": "readout",
+        "M6": "gate",
+        "M7": "gate",
+        "M8": "gate",
+        "M9": "gate"
+      },
+      "oracle_labels_used_for_taxonomy_evaluation_only": true,
+      "row_level_branch_assignment_uses_oracle_labels": false,
+      "schema": "scope_static_s2d11b_error_type_taxonomy_v1",
+      "visible_branch_rule": "measure->readout_branch; reset->prep_reset_branch; otherwise->gate_process_branch",
+      "visible_branch_to_error_type": {
+        "gate_process_branch": "gate",
+        "prep_reset_branch": "prep_reset",
+        "readout_branch": "readout"
+      }
+    },
+    "variants": {
+      "baseline_typed_linear": {
+        "overall": {
+          "balanced_accuracy": 0.9876543209876543,
+          "confusion_matrix": [
+            [
+              33,
+              0,
+              0
+            ],
+            [
+              1,
+              26,
+              0
+            ],
+            [
+              0,
+              0,
+              3
+            ]
+          ],
+          "confusion_matrix_labels": [
+            "gate",
+            "readout",
+            "prep_reset"
+          ],
+          "macro_F1": 0.9887355674457899,
+          "min_class_recall": 0.9629629629629629,
+          "pairwise_margins": {},
+          "per_class_recall": {
+            "gate": 1.0,
+            "prep_reset": 1.0,
+            "readout": 0.9629629629629629
+          },
+          "support": {
+            "gate": 33,
+            "prep_reset": 3,
+            "readout": 27
+          }
+        },
+        "skipped": false,
+        "type_confusions": {
+          "gate": {
+            "gate": 33,
+            "prep_reset": 0,
+            "readout": 0
+          },
+          "prep_reset": {
+            "gate": 0,
+            "prep_reset": 3,
+            "readout": 0
+          },
+          "readout": {
+            "gate": 1,
+            "prep_reset": 0,
+            "readout": 26
+          }
+        }
+      },
+      "compact_plus_selected_RZZ_dense_terms": {
+        "overall": {
+          "balanced_accuracy": 0.9876543209876543,
+          "confusion_matrix": [
+            [
+              33,
+              0,
+              0
+            ],
+            [
+              1,
+              26,
+              0
+            ],
+            [
+              0,
+              0,
+              3
+            ]
+          ],
+          "confusion_matrix_labels": [
+            "gate",
+            "readout",
+            "prep_reset"
+          ],
+          "macro_F1": 0.9887355674457899,
+          "min_class_recall": 0.9629629629629629,
+          "pairwise_margins": {},
+          "per_class_recall": {
+            "gate": 1.0,
+            "prep_reset": 1.0,
+            "readout": 0.9629629629629629
+          },
+          "support": {
+            "gate": 33,
+            "prep_reset": 3,
+            "readout": 27
+          }
+        },
+        "skipped": false,
+        "type_confusions": {
+          "gate": {
+            "gate": 33,
+            "prep_reset": 0,
+            "readout": 0
+          },
+          "prep_reset": {
+            "gate": 0,
+            "prep_reset": 3,
+            "readout": 0
+          },
+          "readout": {
+            "gate": 1,
+            "prep_reset": 0,
+            "readout": 26
+          }
+        }
+      },
+      "two_stage_gate_classifier": {
+        "skip_reason": "soft calibration passed or secondary diagnostic disabled",
+        "skipped": true
+      },
+      "typed_linear_plus_M1_logit_boost": {
+        "overall": {
+          "balanced_accuracy": 0.9876543209876543,
+          "confusion_matrix": [
+            [
+              33,
+              0,
+              0
+            ],
+            [
+              1,
+              26,
+              0
+            ],
+            [
+              0,
+              0,
+              3
+            ]
+          ],
+          "confusion_matrix_labels": [
+            "gate",
+            "readout",
+            "prep_reset"
+          ],
+          "macro_F1": 0.9887355674457899,
+          "min_class_recall": 0.9629629629629629,
+          "pairwise_margins": {},
+          "per_class_recall": {
+            "gate": 1.0,
+            "prep_reset": 1.0,
+            "readout": 0.9629629629629629
+          },
+          "support": {
+            "gate": 33,
+            "prep_reset": 3,
+            "readout": 27
+          }
+        },
+        "skipped": false,
+        "type_confusions": {
+          "gate": {
+            "gate": 33,
+            "prep_reset": 0,
+            "readout": 0
+          },
+          "prep_reset": {
+            "gate": 0,
+            "prep_reset": 3,
+            "readout": 0
+          },
+          "readout": {
+            "gate": 1,
+            "prep_reset": 0,
+            "readout": 26
+          }
+        }
+      },
+      "typed_linear_plus_axial_feature_reweighting": {
+        "overall": {
+          "balanced_accuracy": 0.9876543209876543,
+          "confusion_matrix": [
+            [
+              33,
+              0,
+              0
+            ],
+            [
+              1,
+              26,
+              0
+            ],
+            [
+              0,
+              0,
+              3
+            ]
+          ],
+          "confusion_matrix_labels": [
+            "gate",
+            "readout",
+            "prep_reset"
+          ],
+          "macro_F1": 0.9887355674457899,
+          "min_class_recall": 0.9629629629629629,
+          "pairwise_margins": {},
+          "per_class_recall": {
+            "gate": 1.0,
+            "prep_reset": 1.0,
+            "readout": 0.9629629629629629
+          },
+          "support": {
+            "gate": 33,
+            "prep_reset": 3,
+            "readout": 27
+          }
+        },
+        "skipped": false,
+        "type_confusions": {
+          "gate": {
+            "gate": 33,
+            "prep_reset": 0,
+            "readout": 0
+          },
+          "prep_reset": {
+            "gate": 0,
+            "prep_reset": 3,
+            "readout": 0
+          },
+          "readout": {
+            "gate": 1,
+            "prep_reset": 0,
+            "readout": 26
+          }
+        }
+      }
+    }
+  },
+  "error_type_taxonomy": {
+    "error_type_to_mechanisms": {
+      "gate": [
+        "M0",
+        "M1",
+        "M2",
+        "M3",
+        "M4",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M12"
+      ],
+      "prep_reset": [
+        "M11"
+      ],
+      "readout": [
+        "M5"
+      ]
+    },
+    "error_types": [
+      "gate",
+      "readout",
+      "prep_reset"
+    ],
+    "mechanism_to_error_type": {
+      "M0": "gate",
+      "M1": "gate",
+      "M10": "gate",
+      "M11": "prep_reset",
+      "M12": "gate",
+      "M2": "gate",
+      "M3": "gate",
+      "M4": "gate",
+      "M5": "readout",
+      "M6": "gate",
+      "M7": "gate",
+      "M8": "gate",
+      "M9": "gate"
+    },
+    "oracle_labels_used_for_taxonomy_evaluation_only": true,
+    "row_level_branch_assignment_uses_oracle_labels": false,
+    "schema": "scope_static_s2d11b_error_type_taxonomy_v1",
+    "visible_branch_rule": "measure->readout_branch; reset->prep_reset_branch; otherwise->gate_process_branch",
+    "visible_branch_to_error_type": {
+      "gate_process_branch": "gate",
+      "prep_reset_branch": "prep_reset",
+      "readout_branch": "readout"
+    }
+  },
+  "gate_neighbor_recall_report": {
+    "schema": "scope_static_s2d11b_gate_neighbor_recall_report_v1",
+    "variants": {
+      "baseline_typed_linear": {
+        "M1": 0.3333333333333333,
+        "M10": 1.0,
+        "M12": 0.6666666666666666,
+        "M2": 0.6666666666666666,
+        "M3": 1.0,
+        "M7": 1.0,
+        "M8": 1.0
+      },
+      "compact_plus_selected_RZZ_dense_terms": {
+        "M1": 0.3333333333333333,
+        "M10": 1.0,
+        "M12": 0.6666666666666666,
+        "M2": 0.6666666666666666,
+        "M3": 1.0,
+        "M7": 1.0,
+        "M8": 1.0
+      },
+      "two_stage_gate_classifier": {
+        "M1": 0.0,
+        "M10": 0.0,
+        "M12": 0.0,
+        "M2": 0.0,
+        "M3": 0.0,
+        "M7": 0.0,
+        "M8": 0.0
+      },
+      "typed_linear_plus_M1_logit_boost": {
+        "M1": 0.6666666666666666,
+        "M10": 1.0,
+        "M12": 0.6666666666666666,
+        "M2": 0.6666666666666666,
+        "M3": 1.0,
+        "M7": 1.0,
+        "M8": 1.0
+      },
+      "typed_linear_plus_axial_feature_reweighting": {
+        "M1": 0.3333333333333333,
+        "M10": 1.0,
+        "M12": 0.6666666666666666,
+        "M2": 0.6666666666666666,
+        "M3": 1.0,
+        "M7": 1.0,
+        "M8": 1.0
+      }
+    }
+  },
+  "leakage_guardrail_audit": {
+    "checks": {
+      "does_not_resample_teacher": true,
+      "exact_ptm_columns_absent": true,
+      "mechanism_id_not_in_feature_columns": true,
+      "oracle_fingerprint_columns_absent": true,
+      "oracle_label_not_in_feature_columns": true,
+      "oracle_labels_used_only_as_calibration_targets": true,
+      "source_is_existing_s2d11_artifact": true,
+      "teacher_channel_columns_absent": true
+    },
+    "passed": true,
+    "schema": "scope_static_s2d11b_leakage_guardrail_audit_v1"
+  },
+  "m1_calibration_thresholds_by_fold": {
+    "folds": [
+      {
+        "fold": 0,
+        "inner_validation_M1_recall": 1.0,
+        "inner_validation_balanced_accuracy": 0.7606837606837608,
+        "outer_test_M1_recall": 0.0,
+        "selected_gain": 2.0,
+        "selected_reg": 0.0001,
+        "test_circuit_id": 0,
+        "training_fold_M1_recall": 1.0
+      },
+      {
+        "fold": 1,
+        "inner_validation_M1_recall": 1.0,
+        "inner_validation_balanced_accuracy": 0.6111111111111112,
+        "outer_test_M1_recall": 1.0,
+        "selected_gain": 0.25,
+        "selected_reg": 0.0001,
+        "test_circuit_id": 1,
+        "training_fold_M1_recall": 1.0
+      },
+      {
+        "fold": 2,
+        "inner_validation_M1_recall": 1.0,
+        "inner_validation_balanced_accuracy": 0.8376068376068376,
+        "outer_test_M1_recall": 1.0,
+        "selected_gain": 4.0,
+        "selected_reg": 0.0001,
+        "test_circuit_id": 2,
+        "training_fold_M1_recall": 1.0
+      }
+    ],
+    "schema": "scope_static_s2d11b_m1_calibration_thresholds_by_fold_v1"
+  },
+  "m1_dense_vs_compact_feature_audit": {
+    "dense_block": "physical_local_inverse_probability_v2",
+    "folds": [
+      {
+        "fold": 0,
+        "selected_dense_columns": [
+          "local_inverse_v2_12709",
+          "local_inverse_v2_0492",
+          "local_inverse_v2_0888",
+          "local_inverse_v2_0899",
+          "local_inverse_v2_5112",
+          "local_inverse_v2_5123",
+          "local_inverse_v2_4892",
+          "local_inverse_v2_4903"
+        ],
+        "test_circuit_id": 0
+      },
+      {
+        "fold": 1,
+        "selected_dense_columns": [
+          "local_inverse_v2_6234",
+          "local_inverse_v2_3066",
+          "local_inverse_v2_12581",
+          "local_inverse_v2_12625",
+          "local_inverse_v2_6278",
+          "local_inverse_v2_3110",
+          "local_inverse_v2_2384",
+          "local_inverse_v2_2142"
+        ],
+        "test_circuit_id": 1
+      },
+      {
+        "fold": 2,
+        "selected_dense_columns": [
+          "local_inverse_v2_12708",
+          "local_inverse_v2_0041",
+          "local_inverse_v2_12636",
+          "local_inverse_v2_12669",
+          "local_inverse_v2_12680",
+          "local_inverse_v2_2956",
+          "local_inverse_v2_0085",
+          "local_inverse_v2_9963"
+        ],
+        "test_circuit_id": 2
+      }
+    ],
+    "schema": "scope_static_s2d11b_m1_dense_vs_compact_feature_audit_v1",
+    "selection": "top train-fold absolute M1-vs-rest mean difference columns",
+    "source": "existing S2D.11 observations.npz + oracle_mechanisms.json, no resampling"
+  },
+  "m1_false_negative_audit": {
+    "M1_false_negative_target_classes": {
+      "M12": 1,
+      "M6": 1
+    },
+    "M1_recall": 0.3333333333333333,
+    "M1_to_M12_count": 1,
+    "M1_to_M7_count": 0,
+    "M1_to_M8_count": 0,
+    "M1_to_other_count": 1,
+    "M1_true_count": 3,
+    "per_circuit_M1_confusion": {
+      "0": {
+        "M12": 1
+      },
+      "1": {
+        "M1": 1
+      },
+      "2": {
+        "M6": 1
+      }
+    },
+    "per_edge_location_M1_confusion": [
+      {
+        "circuit_id": 0,
+        "location_id": 1,
+        "predicted": "M12",
+        "qubits": [
+          0,
+          1
+        ]
+      },
+      {
+        "circuit_id": 1,
+        "location_id": 22,
+        "predicted": "M1",
+        "qubits": [
+          1,
+          2
+        ]
+      },
+      {
+        "circuit_id": 2,
+        "location_id": 43,
+        "predicted": "M6",
+        "qubits": [
+          2,
+          3
+        ]
+      }
+    ],
+    "per_fold_M1_confusion": {
+      "0": {
+        "M12": 1
+      },
+      "1": {
+        "M1": 1
+      },
+      "2": {
+        "M6": 1
+      }
+    },
+    "schema": "scope_static_s2d11b_m1_false_negative_audit_v1"
+  },
+  "m1_grouped_fold_breakdown": {
+    "folds": [
+      {
+        "fold": 0,
+        "predicted_labels": [
+          "M12",
+          "M12",
+          "M2",
+          "M3",
+          "M4",
+          "M5",
+          "M5",
+          "M5",
+          "M5",
+          "M6",
+          "M5",
+          "M5",
+          "M5",
+          "M5",
+          "M6",
+          "M7",
+          "M8",
+          "M9",
+          "M10",
+          "M11",
+          "M2"
+        ],
+        "row_indices": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20
+        ],
+        "test_circuit_id": 0,
+        "true_labels": [
+          "M0",
+          "M1",
+          "M2",
+          "M3",
+          "M4",
+          "M5",
+          "M5",
+          "M5",
+          "M5",
+          "M5",
+          "M5",
+          "M5",
+          "M5",
+          "M5",
+          "M6",
+          "M7",
+          "M8",
+          "M9",
+          "M10",
+          "M11",
+          "M12"
+        ]
+      },
+      {
+        "fold": 1,
+        "predicted_labels": [
+          "M0",
+          "M1",
+          "M12",
+          "M3",
+          "M4",
+          "M5",
+          "M5",
+          "M5",
+          "M5",
+          "M5",
+          "M5",
+          "M5",
+          "M5",
+          "M5",
+          "M6",
+          "M7",
+          "M8",
+          "M9",
+          "M10",
+          "M11",
+          "M12"
+        ],
+        "row_indices": [
+          21,
+          22,
+          23,
+          24,
+          25,
+          26,
+          27,
+          28,
+          29,
+          30,
+          31,
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39,
+          40,
+          41
+        ],
+        "test_circuit_id": 1,
+        "true_labels": [
+          "M0",
+          "M1",
+          "M2",
+          "M3",
+          "M4",
+          "M5",
+          "M5",
+          "M5",
+          "M5",
+          "M5",
+          "M5",
+          "M5",
+          "M5",
+          "M5",
+          "M6",
+          "M7",
+          "M8",
+          "M9",
+          "M10",
+          "M11",
+          "M12"
+        ]
+      },
+      {
+        "fold": 2,
+        "predicted_labels": [
+          "M0",
+          "M6",
+          "M2",
+          "M3",
+          "M4",
+          "M5",
+          "M5",
+          "M5",
+          "M5",
+          "M5",
+          "M5",
+          "M5",
+          "M5",
+          "M5",
+          "M6",
+          "M7",
+          "M8",
+          "M9",
+          "M10",
+          "M11",
+          "M12"
+        ],
+        "row_indices": [
+          42,
+          43,
+          44,
+          45,
+          46,
+          47,
+          48,
+          49,
+          50,
+          51,
+          52,
+          53,
+          54,
+          55,
+          56,
+          57,
+          58,
+          59,
+          60,
+          61,
+          62
+        ],
+        "test_circuit_id": 2,
+        "true_labels": [
+          "M0",
+          "M1",
+          "M2",
+          "M3",
+          "M4",
+          "M5",
+          "M5",
+          "M5",
+          "M5",
+          "M5",
+          "M5",
+          "M5",
+          "M5",
+          "M5",
+          "M6",
+          "M7",
+          "M8",
+          "M9",
+          "M10",
+          "M11",
+          "M12"
+        ]
+      }
+    ],
+    "schema": "scope_static_s2d11b_m1_grouped_fold_breakdown_v1"
+  },
+  "m1_invariant_snr_audit": {
+    "features": [
+      "log_coherence_ratio",
+      "h_zz_axial_ratio_log",
+      "coherence_norm"
+    ],
+    "folds": [
+      {
+        "features": {
+          "coherence_norm": {
+            "test": {
+              "count": 21,
+              "mad": 0.0,
+              "max": 0.04351017790316058,
+              "mean": 0.0038397081466584127,
+              "median": 0.0,
+              "min": 0.0,
+              "std": 0.010618555054054374
+            },
+            "test_M1": {
+              "count": 1,
+              "mad": 0.0,
+              "max": 0.04351017790316058,
+              "mean": 0.04351017790316058,
+              "median": 0.04351017790316058,
+              "min": 0.04351017790316058,
+              "std": 0.0
+            },
+            "train": {
+              "count": 42,
+              "mad": 0.0,
+              "max": 0.04364135461916439,
+              "mean": 0.003652240516608881,
+              "median": 0.0,
+              "min": 0.0,
+              "std": 0.010371563223719009
+            },
+            "train_M1": {
+              "count": 2,
+              "mad": 0.0014774622926440363,
+              "max": 0.04364135461916439,
+              "mean": 0.04216389232652035,
+              "median": 0.04216389232652035,
+              "min": 0.040686430033876314,
+              "std": 0.0014774622926440363
+            }
+          },
+          "h_zz_axial_ratio_log": {
+            "test": {
+              "count": 21,
+              "mad": 0.0,
+              "max": 2.6621396919310287,
+              "mean": -11.07308670977385,
+              "median": -13.815510557964274,
+              "min": -13.815510557964274,
+              "std": 5.710831335405257
+            },
+            "test_M1": {
+              "count": 1,
+              "mad": 0.0,
+              "max": 2.6621396919310287,
+              "mean": 2.6621396919310287,
+              "median": 2.6621396919310287,
+              "min": 2.6621396919310287,
+              "std": 0.0
+            },
+            "train": {
+              "count": 42,
+              "mad": 0.0,
+              "max": 3.9331434347586707,
+              "mean": -11.102161344677803,
+              "median": -13.815510557964274,
+              "min": -13.815510557964274,
+              "std": 5.666894163230732
+            },
+            "train_M1": {
+              "count": 2,
+              "mad": 0.9820790589974328,
+              "max": 3.9331434347586707,
+              "mean": 2.951064375761238,
+              "median": 2.951064375761238,
+              "min": 1.9689853167638052,
+              "std": 0.9820790589974328
+            }
+          },
+          "log_coherence_ratio": {
+            "test": {
+              "count": 21,
+              "mad": 0.0,
+              "max": 0.0,
+              "mean": -0.27954594098833235,
+              "median": 0.0,
+              "min": -2.8069157976260457,
+              "std": 0.7606395300283656
+            },
+            "test_M1": {
+              "count": 1,
+              "mad": 0.0,
+              "max": -0.06487492478680101,
+              "mean": -0.06487492478680101,
+              "median": -0.06487492478680101,
+              "min": -0.06487492478680101,
+              "std": 0.0
+            },
+            "train": {
+              "count": 42,
+              "mad": 0.0,
+              "max": 0.0,
+              "mean": -0.3020615767380936,
+              "median": 0.0,
+              "min": -3.499613620579802,
+              "std": 0.8492450771252456
+            },
+            "train_M1": {
+              "count": 2,
+              "mad": 0.005423831678442292,
+              "max": -0.10673525281684348,
+              "mean": -0.11215908449528578,
+              "median": -0.11215908449528578,
+              "min": -0.11758291617372807,
+              "std": 0.005423831678442292
+            }
+          }
+        },
+        "test_circuit_id": 0
+      },
+      {
+        "features": {
+          "coherence_norm": {
+            "test": {
+              "count": 21,
+              "mad": 0.0,
+              "max": 0.040686430033876314,
+              "mean": 0.0036775695136375586,
+              "median": 0.0,
+              "min": 0.0,
+              "std": 0.010232567351614536
+            },
+            "test_M1": {
+              "count": 1,
+              "mad": 0.0,
+              "max": 0.040686430033876314,
+              "mean": 0.040686430033876314,
+              "median": 0.040686430033876314,
+              "min": 0.040686430033876314,
+              "std": 0.0
+            },
+            "train": {
+              "count": 42,
+              "mad": 0.0,
+              "max": 0.04364135461916439,
+              "mean": 0.0037333098331193072,
+              "median": 0.0,
+              "min": 0.0,
+              "std": 0.010564286117005828
+            },
+            "train_M1": {
+              "count": 2,
+              "mad": 6.558835800190427e-05,
+              "max": 0.04364135461916439,
+              "mean": 0.04357576626116248,
+              "median": 0.04357576626116248,
+              "min": 0.04351017790316058,
+              "std": 6.558835800190427e-05
+            }
+          },
+          "h_zz_axial_ratio_log": {
+            "test": {
+              "count": 21,
+              "mad": 0.0,
+              "max": 1.9689853167638052,
+              "mean": -11.162640680428778,
+              "median": -13.815510557964274,
+              "min": -13.815510557964274,
+              "std": 5.538694852875051
+            },
+            "test_M1": {
+              "count": 1,
+              "mad": 0.0,
+              "max": 1.9689853167638052,
+              "mean": 1.9689853167638052,
+              "median": 1.9689853167638052,
+              "min": 1.9689853167638052,
+              "std": 0.0
+            },
+            "train": {
+              "count": 42,
+              "mad": 0.0,
+              "max": 3.9331434347586707,
+              "mean": -11.057384359350339,
+              "median": -13.815510557964274,
+              "min": -13.815510557964274,
+              "std": 5.7513915885727585
+            },
+            "train_M1": {
+              "count": 2,
+              "mad": 0.635501871413821,
+              "max": 3.9331434347586707,
+              "mean": 3.2976415633448495,
+              "median": 3.2976415633448495,
+              "min": 2.6621396919310287,
+              "std": 0.635501871413821
+            }
+          },
+          "log_coherence_ratio": {
+            "test": {
+              "count": 21,
+              "mad": 0.0,
+              "max": 0.0,
+              "mean": -0.293476336655214,
+              "median": 0.0,
+              "min": -3.499613620579802,
+              "std": 0.8478820450523727
+            },
+            "test_M1": {
+              "count": 1,
+              "mad": 0.0,
+              "max": -0.10673525281684348,
+              "mean": -0.10673525281684348,
+              "median": -0.10673525281684348,
+              "min": -0.10673525281684348,
+              "std": 0.0
+            },
+            "train": {
+              "count": 42,
+              "mad": 0.0,
+              "max": 0.0,
+              "mean": -0.29509637890465273,
+              "median": 0.0,
+              "min": -2.942610581802077,
+              "std": 0.8069817699015032
+            },
+            "train_M1": {
+              "count": 2,
+              "mad": 0.026353995693463528,
+              "max": -0.06487492478680101,
+              "mean": -0.09122892048026454,
+              "median": -0.09122892048026454,
+              "min": -0.11758291617372807,
+              "std": 0.026353995693463528
+            }
+          }
+        },
+        "test_circuit_id": 1
+      },
+      {
+        "features": {
+          "coherence_norm": {
+            "test": {
+              "count": 21,
+              "mad": 0.0,
+              "max": 0.04364135461916439,
+              "mean": 0.0036269115195802014,
+              "median": 0.0,
+              "min": 0.0,
+              "std": 0.010508659747355632
+            },
+            "test_M1": {
+              "count": 1,
+              "mad": 0.0,
+              "max": 0.04364135461916439,
+              "mean": 0.04364135461916439,
+              "median": 0.04364135461916439,
+              "min": 0.04364135461916439,
+              "std": 0.0
+            },
+            "train": {
+              "count": 42,
+              "mad": 0.0,
+              "max": 0.04351017790316058,
+              "mean": 0.003758638830147986,
+              "median": 0.0,
+              "min": 0.0,
+              "std": 0.010427662501957723
+            },
+            "train_M1": {
+              "count": 2,
+              "mad": 0.001411873934642132,
+              "max": 0.04351017790316058,
+              "mean": 0.04209830396851845,
+              "median": 0.04209830396851845,
+              "min": 0.040686430033876314,
+              "std": 0.001411873934642132
+            }
+          },
+          "h_zz_axial_ratio_log": {
+            "test": {
+              "count": 21,
+              "mad": 0.0,
+              "max": 3.9331434347586707,
+              "mean": -11.041682008926825,
+              "median": -13.815510557964274,
+              "min": -13.815510557964274,
+              "std": 5.791625224507084
+            },
+            "test_M1": {
+              "count": 1,
+              "mad": 0.0,
+              "max": 3.9331434347586707,
+              "mean": 3.9331434347586707,
+              "median": 3.9331434347586707,
+              "min": 3.9331434347586707,
+              "std": 0.0
+            },
+            "train": {
+              "count": 42,
+              "mad": 0.0,
+              "max": 2.6621396919310287,
+              "mean": -11.117863695101315,
+              "median": -13.815510557964274,
+              "min": -13.815510557964274,
+              "std": 5.625599753428128
+            },
+            "train_M1": {
+              "count": 2,
+              "mad": 0.3465771875836118,
+              "max": 2.6621396919310287,
+              "mean": 2.315562504347417,
+              "median": 2.315562504347417,
+              "min": 1.9689853167638052,
+              "std": 0.3465771875836118
+            }
+          },
+          "log_coherence_ratio": {
+            "test": {
+              "count": 21,
+              "mad": 0.0,
+              "max": 0.0,
+              "mean": -0.3106468168209731,
+              "median": 0.0,
+              "min": -2.942610581802077,
+              "std": 0.8505192690504861
+            },
+            "test_M1": {
+              "count": 1,
+              "mad": 0.0,
+              "max": -0.11758291617372807,
+              "mean": -0.11758291617372807,
+              "median": -0.11758291617372807,
+              "min": -0.11758291617372807,
+              "std": 0.0
+            },
+            "train": {
+              "count": 42,
+              "mad": 0.0,
+              "max": 0.0,
+              "mean": -0.28651113882177315,
+              "median": 0.0,
+              "min": -3.499613620579802,
+              "std": 0.8054729930064957
+            },
+            "train_M1": {
+              "count": 2,
+              "mad": 0.020930164015021235,
+              "max": -0.06487492478680101,
+              "mean": -0.08580508880182225,
+              "median": -0.08580508880182225,
+              "min": -0.10673525281684348,
+              "std": 0.020930164015021235
+            }
+          }
+        },
+        "test_circuit_id": 2
+      }
+    ],
+    "schema": "scope_static_s2d11b_m1_invariant_snr_audit_v1"
+  },
+  "m1_pairwise_margin_report": {
+    "schema": "scope_static_s2d11b_m1_pairwise_margin_report_v1",
+    "variants": {
+      "baseline_typed_linear": {
+        "M1/M7": {
+          "available": true,
+          "margin": 0.09247947368856387
+        },
+        "M1/M8": {
+          "available": true,
+          "margin": 0.10393514449816788
+        },
+        "M10/M1": {
+          "available": true,
+          "margin": 0.09928214116242386
+        },
+        "M10/M7": {
+          "available": true,
+          "margin": 0.09931200086305737
+        },
+        "M10/M8": {
+          "available": true,
+          "margin": 0.10886880032561981
+        },
+        "M11/M4": {
+          "available": true,
+          "margin": 0.10682648619034608
+        },
+        "M11/M5": {
+          "available": true,
+          "margin": 0.11432909950326683
+        },
+        "M7/M8": {
+          "available": true,
+          "margin": 0.10727513892686129
+        },
+        "definition": "For classifier/prototype score heads, pairwise_margin(a,b) is the mean over true a rows of score_a(x)-score_b(x), plus true b rows of score_b(x)-score_a(x). Positive means the model prefers the correct class."
+      },
+      "compact_plus_selected_RZZ_dense_terms": {
+        "M1/M7": {
+          "available": true,
+          "margin": 0.07169081395746689
+        },
+        "M1/M8": {
+          "available": true,
+          "margin": 0.10050325718589748
+        },
+        "M10/M1": {
+          "available": true,
+          "margin": 0.10395869357934164
+        },
+        "M10/M7": {
+          "available": true,
+          "margin": 0.09411730147924023
+        },
+        "M10/M8": {
+          "available": true,
+          "margin": 0.1153859114488391
+        },
+        "M11/M4": {
+          "available": true,
+          "margin": 0.10666023486063998
+        },
+        "M11/M5": {
+          "available": true,
+          "margin": 0.11414417388152594
+        },
+        "M7/M8": {
+          "available": true,
+          "margin": 0.09225896803952395
+        },
+        "definition": "For classifier/prototype score heads, pairwise_margin(a,b) is the mean over true a rows of score_a(x)-score_b(x), plus true b rows of score_b(x)-score_a(x). Positive means the model prefers the correct class."
+      },
+      "two_stage_gate_classifier": {},
+      "typed_linear_plus_M1_logit_boost": {
+        "M1/M7": {
+          "available": true,
+          "margin": 0.23704341937793258
+        },
+        "M1/M8": {
+          "available": true,
+          "margin": 0.23231293721726362
+        },
+        "M10/M1": {
+          "available": true,
+          "margin": 0.24443160154746205
+        },
+        "M10/M7": {
+          "available": true,
+          "margin": 0.10389386131493654
+        },
+        "M10/M8": {
+          "available": true,
+          "margin": 0.1131137286466531
+        },
+        "M11/M4": {
+          "available": true,
+          "margin": 0.1121995961877692
+        },
+        "M11/M5": {
+          "available": true,
+          "margin": 0.11991573669189554
+        },
+        "M7/M8": {
+          "available": true,
+          "margin": 0.11070069871224895
+        },
+        "definition": "For classifier/prototype score heads, pairwise_margin(a,b) is the mean over true a rows of score_a(x)-score_b(x), plus true b rows of score_b(x)-score_a(x). Positive means the model prefers the correct class."
+      },
+      "typed_linear_plus_axial_feature_reweighting": {
+        "M1/M7": {
+          "available": true,
+          "margin": 0.09247947368856387
+        },
+        "M1/M8": {
+          "available": true,
+          "margin": 0.10393514449816788
+        },
+        "M10/M1": {
+          "available": true,
+          "margin": 0.09928214116242386
+        },
+        "M10/M7": {
+          "available": true,
+          "margin": 0.09931200086305737
+        },
+        "M10/M8": {
+          "available": true,
+          "margin": 0.10886880032561981
+        },
+        "M11/M4": {
+          "available": true,
+          "margin": 0.10682648619034608
+        },
+        "M11/M5": {
+          "available": true,
+          "margin": 0.11432909950326683
+        },
+        "M7/M8": {
+          "available": true,
+          "margin": 0.10727513892686129
+        },
+        "definition": "For classifier/prototype score heads, pairwise_margin(a,b) is the mean over true a rows of score_a(x)-score_b(x), plus true b rows of score_b(x)-score_a(x). Positive means the model prefers the correct class."
+      }
+    }
+  },
+  "m1_soft_rule_ablation": {
+    "baseline_typed_linear": {
+      "M10_recall": 1.0,
+      "M11_recall": 1.0,
+      "M1_recall": 0.3333333333333333,
+      "M8_recall": 1.0,
+      "balanced_accuracy": 0.8689458689458689,
+      "macro_F1": 0.8613691340106434,
+      "skipped": false,
+      "variant": "baseline_typed_linear"
+    },
+    "compact_plus_selected_RZZ_dense_terms": {
+      "M10_recall": 1.0,
+      "M11_recall": 1.0,
+      "M1_recall": 0.3333333333333333,
+      "M8_recall": 1.0,
+      "balanced_accuracy": 0.8689458689458689,
+      "macro_F1": 0.8586218812633907,
+      "skipped": false,
+      "variant": "compact_plus_selected_RZZ_dense_terms"
+    },
+    "two_stage_gate_classifier": {
+      "M10_recall": 0.0,
+      "M11_recall": 0.0,
+      "M1_recall": 0.0,
+      "M8_recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "macro_F1": 0.0,
+      "skipped": true,
+      "variant": "two_stage_gate_classifier"
+    },
+    "typed_linear_plus_M1_logit_boost": {
+      "M10_recall": 1.0,
+      "M11_recall": 1.0,
+      "M1_recall": 0.6666666666666666,
+      "M8_recall": 1.0,
+      "balanced_accuracy": 0.8945868945868944,
+      "macro_F1": 0.8926878153293247,
+      "skipped": false,
+      "variant": "typed_linear_plus_M1_logit_boost"
+    },
+    "typed_linear_plus_axial_feature_reweighting": {
+      "M10_recall": 1.0,
+      "M11_recall": 1.0,
+      "M1_recall": 0.3333333333333333,
+      "M8_recall": 1.0,
+      "balanced_accuracy": 0.8689458689458689,
+      "macro_F1": 0.8613691340106434,
+      "skipped": false,
+      "variant": "typed_linear_plus_axial_feature_reweighting"
+    }
+  },
+  "m1_vs_m7_m8_m12_tradeoff": {
+    "schema": "scope_static_s2d11b_m1_vs_m7_m8_m12_tradeoff_v1",
+    "variants": {
+      "baseline_typed_linear": {
+        "M10": {
+          "absolute_drop": 0.0,
+          "baseline_recall": 1.0,
+          "variant_recall": 1.0
+        },
+        "M12": {
+          "absolute_drop": 0.0,
+          "baseline_recall": 0.6666666666666666,
+          "variant_recall": 0.6666666666666666
+        },
+        "M2": {
+          "absolute_drop": 0.0,
+          "baseline_recall": 0.6666666666666666,
+          "variant_recall": 0.6666666666666666
+        },
+        "M3": {
+          "absolute_drop": 0.0,
+          "baseline_recall": 1.0,
+          "variant_recall": 1.0
+        },
+        "M7": {
+          "absolute_drop": 0.0,
+          "baseline_recall": 1.0,
+          "variant_recall": 1.0
+        },
+        "M8": {
+          "absolute_drop": 0.0,
+          "baseline_recall": 1.0,
+          "variant_recall": 1.0
+        }
+      },
+      "compact_plus_selected_RZZ_dense_terms": {
+        "M10": {
+          "absolute_drop": 0.0,
+          "baseline_recall": 1.0,
+          "variant_recall": 1.0
+        },
+        "M12": {
+          "absolute_drop": 0.0,
+          "baseline_recall": 0.6666666666666666,
+          "variant_recall": 0.6666666666666666
+        },
+        "M2": {
+          "absolute_drop": 0.0,
+          "baseline_recall": 0.6666666666666666,
+          "variant_recall": 0.6666666666666666
+        },
+        "M3": {
+          "absolute_drop": 0.0,
+          "baseline_recall": 1.0,
+          "variant_recall": 1.0
+        },
+        "M7": {
+          "absolute_drop": 0.0,
+          "baseline_recall": 1.0,
+          "variant_recall": 1.0
+        },
+        "M8": {
+          "absolute_drop": 0.0,
+          "baseline_recall": 1.0,
+          "variant_recall": 1.0
+        }
+      },
+      "two_stage_gate_classifier": {
+        "M10": {
+          "absolute_drop": 1.0,
+          "baseline_recall": 1.0,
+          "variant_recall": 0.0
+        },
+        "M12": {
+          "absolute_drop": 0.6666666666666666,
+          "baseline_recall": 0.6666666666666666,
+          "variant_recall": 0.0
+        },
+        "M2": {
+          "absolute_drop": 0.6666666666666666,
+          "baseline_recall": 0.6666666666666666,
+          "variant_recall": 0.0
+        },
+        "M3": {
+          "absolute_drop": 1.0,
+          "baseline_recall": 1.0,
+          "variant_recall": 0.0
+        },
+        "M7": {
+          "absolute_drop": 1.0,
+          "baseline_recall": 1.0,
+          "variant_recall": 0.0
+        },
+        "M8": {
+          "absolute_drop": 1.0,
+          "baseline_recall": 1.0,
+          "variant_recall": 0.0
+        }
+      },
+      "typed_linear_plus_M1_logit_boost": {
+        "M10": {
+          "absolute_drop": 0.0,
+          "baseline_recall": 1.0,
+          "variant_recall": 1.0
+        },
+        "M12": {
+          "absolute_drop": 0.0,
+          "baseline_recall": 0.6666666666666666,
+          "variant_recall": 0.6666666666666666
+        },
+        "M2": {
+          "absolute_drop": 0.0,
+          "baseline_recall": 0.6666666666666666,
+          "variant_recall": 0.6666666666666666
+        },
+        "M3": {
+          "absolute_drop": 0.0,
+          "baseline_recall": 1.0,
+          "variant_recall": 1.0
+        },
+        "M7": {
+          "absolute_drop": 0.0,
+          "baseline_recall": 1.0,
+          "variant_recall": 1.0
+        },
+        "M8": {
+          "absolute_drop": 0.0,
+          "baseline_recall": 1.0,
+          "variant_recall": 1.0
+        }
+      },
+      "typed_linear_plus_axial_feature_reweighting": {
+        "M10": {
+          "absolute_drop": 0.0,
+          "baseline_recall": 1.0,
+          "variant_recall": 1.0
+        },
+        "M12": {
+          "absolute_drop": 0.0,
+          "baseline_recall": 0.6666666666666666,
+          "variant_recall": 0.6666666666666666
+        },
+        "M2": {
+          "absolute_drop": 0.0,
+          "baseline_recall": 0.6666666666666666,
+          "variant_recall": 0.6666666666666666
+        },
+        "M3": {
+          "absolute_drop": 0.0,
+          "baseline_recall": 1.0,
+          "variant_recall": 1.0
+        },
+        "M7": {
+          "absolute_drop": 0.0,
+          "baseline_recall": 1.0,
+          "variant_recall": 1.0
+        },
+        "M8": {
+          "absolute_drop": 0.0,
+          "baseline_recall": 1.0,
+          "variant_recall": 1.0
+        }
+      }
+    }
+  },
+  "mechanism_metrics_by_error_type": {
+    "schema": "scope_static_s2d11b_mechanism_metrics_by_error_type_v1",
+    "taxonomy": {
+      "error_type_to_mechanisms": {
+        "gate": [
+          "M0",
+          "M1",
+          "M2",
+          "M3",
+          "M4",
+          "M6",
+          "M7",
+          "M8",
+          "M9",
+          "M10",
+          "M12"
+        ],
+        "prep_reset": [
+          "M11"
+        ],
+        "readout": [
+          "M5"
+        ]
+      },
+      "error_types": [
+        "gate",
+        "readout",
+        "prep_reset"
+      ],
+      "mechanism_to_error_type": {
+        "M0": "gate",
+        "M1": "gate",
+        "M10": "gate",
+        "M11": "prep_reset",
+        "M12": "gate",
+        "M2": "gate",
+        "M3": "gate",
+        "M4": "gate",
+        "M5": "readout",
+        "M6": "gate",
+        "M7": "gate",
+        "M8": "gate",
+        "M9": "gate"
+      },
+      "oracle_labels_used_for_taxonomy_evaluation_only": true,
+      "row_level_branch_assignment_uses_oracle_labels": false,
+      "schema": "scope_static_s2d11b_error_type_taxonomy_v1",
+      "visible_branch_rule": "measure->readout_branch; reset->prep_reset_branch; otherwise->gate_process_branch",
+      "visible_branch_to_error_type": {
+        "gate_process_branch": "gate",
+        "prep_reset_branch": "prep_reset",
+        "readout_branch": "readout"
+      }
+    },
+    "variants": {
+      "baseline_typed_linear": {
+        "by_error_type": {
+          "gate": {
+            "balanced_accuracy": 0.8484848484848484,
+            "confusion_matrix": [
+              [
+                2,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                1
+              ],
+              [
+                0,
+                1,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                0,
+                1
+              ],
+              [
+                0,
+                0,
+                2,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                1
+              ],
+              [
+                0,
+                0,
+                0,
+                3,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                3,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                0,
+                3,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                3,
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                3,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                3,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                3,
+                0
+              ],
+              [
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                2
+              ]
+            ],
+            "confusion_matrix_labels": [
+              "M0",
+              "M1",
+              "M2",
+              "M3",
+              "M4",
+              "M6",
+              "M7",
+              "M8",
+              "M9",
+              "M10",
+              "M12"
+            ],
+            "macro_F1": 0.8476190476190477,
+            "min_class_recall": 0.3333333333333333,
+            "pairwise_margins": {},
+            "per_class_recall": {
+              "M0": 0.6666666666666666,
+              "M1": 0.3333333333333333,
+              "M10": 1.0,
+              "M12": 0.6666666666666666,
+              "M2": 0.6666666666666666,
+              "M3": 1.0,
+              "M4": 1.0,
+              "M6": 1.0,
+              "M7": 1.0,
+              "M8": 1.0,
+              "M9": 1.0
+            },
+            "support": {
+              "M0": 3,
+              "M1": 3,
+              "M10": 3,
+              "M12": 3,
+              "M2": 3,
+              "M3": 3,
+              "M4": 3,
+              "M6": 3,
+              "M7": 3,
+              "M8": 3,
+              "M9": 3
+            }
+          },
+          "prep_reset": {
+            "balanced_accuracy": 1.0,
+            "confusion_matrix": [
+              [
+                3
+              ]
+            ],
+            "confusion_matrix_labels": [
+              "M11"
+            ],
+            "macro_F1": 1.0,
+            "min_class_recall": 1.0,
+            "pairwise_margins": {},
+            "per_class_recall": {
+              "M11": 1.0
+            },
+            "support": {
+              "M11": 3
+            }
+          },
+          "readout": {
+            "balanced_accuracy": 0.9629629629629629,
+            "confusion_matrix": [
+              [
+                26
+              ]
+            ],
+            "confusion_matrix_labels": [
+              "M5"
+            ],
+            "macro_F1": 0.9811320754716981,
+            "min_class_recall": 0.9629629629629629,
+            "pairwise_margins": {},
+            "per_class_recall": {
+              "M5": 0.9629629629629629
+            },
+            "support": {
+              "M5": 27
+            }
+          }
+        },
+        "skipped": false
+      },
+      "compact_plus_selected_RZZ_dense_terms": {
+        "by_error_type": {
+          "gate": {
+            "balanced_accuracy": 0.8484848484848484,
+            "confusion_matrix": [
+              [
+                2,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                1
+              ],
+              [
+                0,
+                1,
+                0,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                1
+              ],
+              [
+                0,
+                0,
+                2,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                1
+              ],
+              [
+                0,
+                0,
+                0,
+                3,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                3,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                0,
+                3,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                3,
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                3,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                3,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                3,
+                0
+              ],
+              [
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                2
+              ]
+            ],
+            "confusion_matrix_labels": [
+              "M0",
+              "M1",
+              "M2",
+              "M3",
+              "M4",
+              "M6",
+              "M7",
+              "M8",
+              "M9",
+              "M10",
+              "M12"
+            ],
+            "macro_F1": 0.8476190476190477,
+            "min_class_recall": 0.3333333333333333,
+            "pairwise_margins": {},
+            "per_class_recall": {
+              "M0": 0.6666666666666666,
+              "M1": 0.3333333333333333,
+              "M10": 1.0,
+              "M12": 0.6666666666666666,
+              "M2": 0.6666666666666666,
+              "M3": 1.0,
+              "M4": 1.0,
+              "M6": 1.0,
+              "M7": 1.0,
+              "M8": 1.0,
+              "M9": 1.0
+            },
+            "support": {
+              "M0": 3,
+              "M1": 3,
+              "M10": 3,
+              "M12": 3,
+              "M2": 3,
+              "M3": 3,
+              "M4": 3,
+              "M6": 3,
+              "M7": 3,
+              "M8": 3,
+              "M9": 3
+            }
+          },
+          "prep_reset": {
+            "balanced_accuracy": 1.0,
+            "confusion_matrix": [
+              [
+                3
+              ]
+            ],
+            "confusion_matrix_labels": [
+              "M11"
+            ],
+            "macro_F1": 1.0,
+            "min_class_recall": 1.0,
+            "pairwise_margins": {},
+            "per_class_recall": {
+              "M11": 1.0
+            },
+            "support": {
+              "M11": 3
+            }
+          },
+          "readout": {
+            "balanced_accuracy": 0.9629629629629629,
+            "confusion_matrix": [
+              [
+                26
+              ]
+            ],
+            "confusion_matrix_labels": [
+              "M5"
+            ],
+            "macro_F1": 0.9811320754716981,
+            "min_class_recall": 0.9629629629629629,
+            "pairwise_margins": {},
+            "per_class_recall": {
+              "M5": 0.9629629629629629
+            },
+            "support": {
+              "M5": 27
+            }
+          }
+        },
+        "skipped": false
+      },
+      "two_stage_gate_classifier": {
+        "skip_reason": "soft calibration passed or secondary diagnostic disabled",
+        "skipped": true
+      },
+      "typed_linear_plus_M1_logit_boost": {
+        "by_error_type": {
+          "gate": {
+            "balanced_accuracy": 0.8787878787878788,
+            "confusion_matrix": [
+              [
+                2,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                1
+              ],
+              [
+                0,
+                2,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                1
+              ],
+              [
+                0,
+                0,
+                2,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                1
+              ],
+              [
+                0,
+                0,
+                0,
+                3,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                3,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                0,
+                3,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                3,
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                3,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                3,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                3,
+                0
+              ],
+              [
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                2
+              ]
+            ],
+            "confusion_matrix_labels": [
+              "M0",
+              "M1",
+              "M2",
+              "M3",
+              "M4",
+              "M6",
+              "M7",
+              "M8",
+              "M9",
+              "M10",
+              "M12"
+            ],
+            "macro_F1": 0.8878787878787878,
+            "min_class_recall": 0.6666666666666666,
+            "pairwise_margins": {},
+            "per_class_recall": {
+              "M0": 0.6666666666666666,
+              "M1": 0.6666666666666666,
+              "M10": 1.0,
+              "M12": 0.6666666666666666,
+              "M2": 0.6666666666666666,
+              "M3": 1.0,
+              "M4": 1.0,
+              "M6": 1.0,
+              "M7": 1.0,
+              "M8": 1.0,
+              "M9": 1.0
+            },
+            "support": {
+              "M0": 3,
+              "M1": 3,
+              "M10": 3,
+              "M12": 3,
+              "M2": 3,
+              "M3": 3,
+              "M4": 3,
+              "M6": 3,
+              "M7": 3,
+              "M8": 3,
+              "M9": 3
+            }
+          },
+          "prep_reset": {
+            "balanced_accuracy": 1.0,
+            "confusion_matrix": [
+              [
+                3
+              ]
+            ],
+            "confusion_matrix_labels": [
+              "M11"
+            ],
+            "macro_F1": 1.0,
+            "min_class_recall": 1.0,
+            "pairwise_margins": {},
+            "per_class_recall": {
+              "M11": 1.0
+            },
+            "support": {
+              "M11": 3
+            }
+          },
+          "readout": {
+            "balanced_accuracy": 0.9629629629629629,
+            "confusion_matrix": [
+              [
+                26
+              ]
+            ],
+            "confusion_matrix_labels": [
+              "M5"
+            ],
+            "macro_F1": 0.9811320754716981,
+            "min_class_recall": 0.9629629629629629,
+            "pairwise_margins": {},
+            "per_class_recall": {
+              "M5": 0.9629629629629629
+            },
+            "support": {
+              "M5": 27
+            }
+          }
+        },
+        "skipped": false
+      },
+      "typed_linear_plus_axial_feature_reweighting": {
+        "by_error_type": {
+          "gate": {
+            "balanced_accuracy": 0.8484848484848484,
+            "confusion_matrix": [
+              [
+                2,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                1
+              ],
+              [
+                0,
+                1,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                0,
+                1
+              ],
+              [
+                0,
+                0,
+                2,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                1
+              ],
+              [
+                0,
+                0,
+                0,
+                3,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                3,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                0,
+                3,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                3,
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                3,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                3,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                3,
+                0
+              ],
+              [
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                2
+              ]
+            ],
+            "confusion_matrix_labels": [
+              "M0",
+              "M1",
+              "M2",
+              "M3",
+              "M4",
+              "M6",
+              "M7",
+              "M8",
+              "M9",
+              "M10",
+              "M12"
+            ],
+            "macro_F1": 0.8476190476190477,
+            "min_class_recall": 0.3333333333333333,
+            "pairwise_margins": {},
+            "per_class_recall": {
+              "M0": 0.6666666666666666,
+              "M1": 0.3333333333333333,
+              "M10": 1.0,
+              "M12": 0.6666666666666666,
+              "M2": 0.6666666666666666,
+              "M3": 1.0,
+              "M4": 1.0,
+              "M6": 1.0,
+              "M7": 1.0,
+              "M8": 1.0,
+              "M9": 1.0
+            },
+            "support": {
+              "M0": 3,
+              "M1": 3,
+              "M10": 3,
+              "M12": 3,
+              "M2": 3,
+              "M3": 3,
+              "M4": 3,
+              "M6": 3,
+              "M7": 3,
+              "M8": 3,
+              "M9": 3
+            }
+          },
+          "prep_reset": {
+            "balanced_accuracy": 1.0,
+            "confusion_matrix": [
+              [
+                3
+              ]
+            ],
+            "confusion_matrix_labels": [
+              "M11"
+            ],
+            "macro_F1": 1.0,
+            "min_class_recall": 1.0,
+            "pairwise_margins": {},
+            "per_class_recall": {
+              "M11": 1.0
+            },
+            "support": {
+              "M11": 3
+            }
+          },
+          "readout": {
+            "balanced_accuracy": 0.9629629629629629,
+            "confusion_matrix": [
+              [
+                26
+              ]
+            ],
+            "confusion_matrix_labels": [
+              "M5"
+            ],
+            "macro_F1": 0.9811320754716981,
+            "min_class_recall": 0.9629629629629629,
+            "pairwise_margins": {},
+            "per_class_recall": {
+              "M5": 0.9629629629629629
+            },
+            "support": {
+              "M5": 27
+            }
+          }
+        },
+        "skipped": false
+      }
+    }
+  },
+  "output_dir": "outputs/scope_static/S2D.11b_M1_gate_branch_grouped_calibration_audit",
+  "primary_verdict": {
+    "checks": {
+      "M10_recall_drop_le_0_15": true,
+      "M11_M4_margin_positive": true,
+      "M11_M5_margin_positive": true,
+      "M11_recall_drop_le_0_15": true,
+      "M1_recall_ge_0_65": true,
+      "M5_split_count_le_1": true,
+      "M8_recall_drop_le_0_15": true,
+      "balanced_accuracy_ge_0_80": true,
+      "macro_F1_ge_0_80": true,
+      "real_minus_scrambled_ge_0_25": true
+    },
+    "m5_overfragmentation_report": {
+      "M5_cluster_purity": 0.9629629629629629,
+      "M5_mass_by_predicted_class": {
+        "M5": 26,
+        "M6": 1
+      },
+      "M5_overfragmentation_index": 0.0,
+      "M5_split_count": 1,
+      "M5_split_fixed": true,
+      "M5_vs_gate_confusion_rate": 0.037037037037037035,
+      "schema": "scope_static_s2d11_m5_overfragmentation_report_v1",
+      "tau": 0.1
+    },
+    "passed": true,
+    "real_minus_scrambled_balanced_accuracy": 0.6894586894586894,
+    "schema": "scope_static_s2d11b_primary_verdict_v1"
+  },
+  "schema": "scope_static_s2d11b_m1_gate_branch_grouped_calibration_v1",
+  "source_root": "outputs/scope_static/S2D.11_typed_SPAM_gate_invariant_learner",
+  "source_run_dir": "outputs/scope_static/S2D.11_typed_SPAM_gate_invariant_learner/phys9_multicircuit_setD_balanced",
+  "source_stage": "S2D.11_typed_SPAM_gate_invariant_learner",
+  "stage": "S2D.11b_M1_gate_branch_grouped_calibration_audit",
+  "summary": {
+    "M10_recall": 1.0,
+    "M11_recall": 1.0,
+    "M1_recall": 0.6666666666666666,
+    "M8_recall": 1.0,
+    "balanced_accuracy": 0.8945868945868944,
+    "best_variant": "typed_linear_plus_M1_logit_boost",
+    "interpretation": "S2D.11b converts the S2D.11 strong partial into a pass; the remaining failure was gate-branch M1 calibration.",
+    "macro_F1": 0.8926878153293247,
+    "passed": true
+  }
+}

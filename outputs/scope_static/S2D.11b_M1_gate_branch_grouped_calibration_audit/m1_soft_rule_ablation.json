@@ -1,0 +1,52 @@
+{
+  "baseline_typed_linear": {
+    "M10_recall": 1.0,
+    "M11_recall": 1.0,
+    "M1_recall": 0.3333333333333333,
+    "M8_recall": 1.0,
+    "balanced_accuracy": 0.8689458689458689,
+    "macro_F1": 0.8613691340106434,
+    "skipped": false,
+    "variant": "baseline_typed_linear"
+  },
+  "compact_plus_selected_RZZ_dense_terms": {
+    "M10_recall": 1.0,
+    "M11_recall": 1.0,
+    "M1_recall": 0.3333333333333333,
+    "M8_recall": 1.0,
+    "balanced_accuracy": 0.8689458689458689,
+    "macro_F1": 0.8586218812633907,
+    "skipped": false,
+    "variant": "compact_plus_selected_RZZ_dense_terms"
+  },
+  "two_stage_gate_classifier": {
+    "M10_recall": 0.0,
+    "M11_recall": 0.0,
+    "M1_recall": 0.0,
+    "M8_recall": 0.0,
+    "balanced_accuracy": 0.0,
+    "macro_F1": 0.0,
+    "skipped": true,
+    "variant": "two_stage_gate_classifier"
+  },
+  "typed_linear_plus_M1_logit_boost": {
+    "M10_recall": 1.0,
+    "M11_recall": 1.0,
+    "M1_recall": 0.6666666666666666,
+    "M8_recall": 1.0,
+    "balanced_accuracy": 0.8945868945868944,
+    "macro_F1": 0.8926878153293247,
+    "skipped": false,
+    "variant": "typed_linear_plus_M1_logit_boost"
+  },
+  "typed_linear_plus_axial_feature_reweighting": {
+    "M10_recall": 1.0,
+    "M11_recall": 1.0,
+    "M1_recall": 0.3333333333333333,
+    "M8_recall": 1.0,
+    "balanced_accuracy": 0.8689458689458689,
+    "macro_F1": 0.8613691340106434,
+    "skipped": false,
+    "variant": "typed_linear_plus_axial_feature_reweighting"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "checks": {
+    "does_not_resample_teacher": true,
+    "exact_ptm_columns_absent": true,
+    "mechanism_id_not_in_feature_columns": true,
+    "oracle_fingerprint_columns_absent": true,
+    "oracle_label_not_in_feature_columns": true,
+    "oracle_labels_used_only_as_calibration_targets": true,
+    "source_is_existing_s2d11_artifact": true,
+    "teacher_channel_columns_absent": true
+  },
+  "passed": true,
+  "schema": "scope_static_s2d11b_leakage_guardrail_audit_v1"
+}

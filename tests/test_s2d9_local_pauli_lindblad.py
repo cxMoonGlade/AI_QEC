@@ -128,7 +128,7 @@ def test_s2d9_runner_writes_required_artifacts_with_fakes(tmp_path: Path, monkey
             {
                 "location_id": 0,
                 "mechanism_id": "M1",
-                "name": "coherent_rzz_over_rotation",
+                "name": "coherent_rzz_overrotation",
                 "num_qubits": 2,
                 "parameters": {"epsilon": 0.045},
                 "instruction": "rzz",

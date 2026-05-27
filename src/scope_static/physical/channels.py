@@ -9,6 +9,8 @@ import numpy as np
 
 Array = np.ndarray
 
+READOUT_MECHANISM_IDS = {"M13", "M14", "M15", "M16"}
+
 
 @dataclass(frozen=True)
 class MechanismSpec:
@@ -55,18 +57,10 @@ def mechanism_channel(spec: MechanismSpec) -> dict[str, object]:
     if mech == "M4":
         return {"kind": "kraus", "kraus": amplitude_damping_kraus(float(params.get("gamma", 0.015)))}
     if mech == "M5":
-        return {
-            "kind": "readout",
-            "matrix": readout_bias_matrix(
-                p0_to_1=float(params.get("p0_to_1", 0.02)),
-                p1_to_0=float(params.get("p1_to_0", 0.01)),
-            ),
-        }
-    if mech == "M6":
         return {"kind": "kraus", "kraus": custom_non_pauli_kraus(float(params.get("eta", 0.02)))}
-    if mech == "M7":
+    if mech == "M6":
         return {"kind": "kraus", "kraus": two_qubit_depolarizing_kraus(float(params.get("p", 0.006)))}
-    if mech == "M8":
+    if mech == "M7":
         return {
             "kind": "unitary",
             "unitary": rxx_ryy_unitary(
@@ -74,19 +68,40 @@ def mechanism_channel(spec: MechanismSpec) -> dict[str, object]:
                 theta_y=float(params.get("epsilon_y", float(params.get("epsilon", 0.025)) * 0.7)),
             ),
         }
-    if mech == "M9":
+    if mech == "M8":
         if int(spec.num_qubits) == 2:
             return {"kind": "unitary", "unitary": rzz_unitary(float(params.get("epsilon", 0.02)))}
         return {"kind": "unitary", "unitary": rz_unitary(float(params.get("epsilon", 0.02)))}
-    if mech == "M10":
+    if mech == "M9":
         return {"kind": "kraus", "kraus": correlated_relaxation_kraus(float(params.get("gamma", 0.01)))}
-    if mech == "M11":
-        return {"kind": "kraus", "kraus": pauli_stochastic_kraus({"X": float(params.get("p", 0.015))})}
-    if mech == "M12":
+    if mech == "M10":
         axis = str(params.get("axis", "rx")).lower()
         angle = float(params.get("epsilon", params.get("epsilon_mean", 0.03)))
         return {"kind": "unitary", "unitary": rx_unitary(angle) if axis == "rx" else rz_unitary(angle)}
-    if mech == "M13":
+    if mech == "M11":
+        return {"kind": "kraus", "kraus": pauli_stochastic_kraus({"Z": float(params.get("p_z", params.get("p", 0.0025)))})}
+    if mech == "M12":
+        axis = str(params.get("axis", "rx")).lower()
+        angle = float(params.get("epsilon", 0.028))
+        return {"kind": "unitary", "unitary": rx_unitary(angle) if axis == "rx" else rz_unitary(angle)}
+    if mech in READOUT_MECHANISM_IDS:
+        p = float(params.get("p", 0.02))
+        p0_to_1 = p if mech in {"M13", "M15", "M16"} else 0.0
+        p1_to_0 = p if mech in {"M14", "M15"} else 0.0
+        if mech == "M16":
+            p1_to_0 = 0.5 * p
+        return {
+            "kind": "readout",
+            "matrix": readout_bias_matrix(
+                p0_to_1=float(params.get("p0_to_1", p0_to_1)),
+                p1_to_0=float(params.get("p1_to_0", p1_to_0)),
+            ),
+        }
+    if mech == "M17":
+        return {"kind": "kraus", "kraus": pauli_stochastic_kraus({"X": float(params.get("p", 0.018))})}
+    if mech == "M18":
+        return {"kind": "unitary", "unitary": rx_unitary(float(params.get("epsilon", 0.025)))}
+    if mech == "M19":
         return {"kind": "kraus", "kraus": weak_type4_mixing_kraus(float(params.get("eta", 0.006)))}
     raise ValueError(f"unknown physical mechanism id {spec.mechanism_id!r}")
 

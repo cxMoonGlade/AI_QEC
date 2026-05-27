@@ -11,7 +11,7 @@ from scope_static.local_mechanism import split_merge_audit
 from scope_static.metrics import adjusted_rand_index, normalized_mutual_info
 
 from .local_inverse import build_visible_location_representations
-from .targeted_v3 import RZZ_FAMILY, READOUT_LABEL, build_targeted_v3_features, typed_cluster_labels
+from .targeted_v3 import RZZ_FAMILY, READOUT_LABELS, build_targeted_v3_features, typed_cluster_labels
 from .teacher import EDGE_ORIENTATION_RULE, MIXED_BASIS_ACTIVE_PROBES, build_probe_basis_manifest, probe_basis_by_qubit
 
 
@@ -250,7 +250,7 @@ def rzz_family_metrics(
     family_mask = torch.zeros_like(hidden, dtype=torch.bool)
     for idx in family_ids:
         family_mask |= hidden == int(idx)
-    m5_idx = label_names.index(READOUT_LABEL) if READOUT_LABEL in label_names else None
+    readout_labels = [name for name in READOUT_LABELS if name in label_names]
     out = {"family": [label_names[idx] for idx in family_ids], "methods": {}}
     for method, labels in labels_by_method.items():
         pred = torch.as_tensor(labels, dtype=torch.long)
@@ -259,11 +259,12 @@ def rzz_family_metrics(
         method_metrics = {
             "RZZ_family_ARI": float(adjusted_rand_index(pred_family, hidden_family)) if pred_family.numel() else 0.0,
             "RZZ_family_NMI": float(normalized_mutual_info(pred_family, hidden_family)) if pred_family.numel() else 0.0,
+            "M1_M6_merge_count": _pair_merge_count(pred, hidden, label_names, "M1", "M6"),
             "M1_M7_merge_count": _pair_merge_count(pred, hidden, label_names, "M1", "M7"),
-            "M1_M8_merge_count": _pair_merge_count(pred, hidden, label_names, "M1", "M8"),
-            "M1_M10_merge_count": _pair_merge_count(pred, hidden, label_names, "M1", "M10"),
+            "M1_M9_merge_count": _pair_merge_count(pred, hidden, label_names, "M1", "M9"),
             "M1_split_count": _label_split_count(pred, hidden, label_names, "M1"),
-            "M5_split_count": _label_split_count(pred, hidden, label_names, "M5") if m5_idx is not None else 0,
+            "readout_split_count": sum(_label_split_count(pred, hidden, label_names, label) for label in readout_labels),
+            "M5_split_count": sum(_label_split_count(pred, hidden, label_names, label) for label in readout_labels),
         }
         out["methods"][method] = method_metrics
     return out

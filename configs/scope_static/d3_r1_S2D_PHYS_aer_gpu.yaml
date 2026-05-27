@@ -21,12 +21,18 @@ s2d_physical:
     M1:
       epsilon: 0.045
     M2:
-      axis: rx
       epsilon: 0.035
     M3:
-      gamma: 0.018
+      epsilon: 0.04
     M4:
-      p0_to_1: 0.025
-      p1_to_0: 0.011
+      gamma: 0.018
     M5:
       eta: 0.02
+    M13:
+      p: 0.025
+    M14:
+      p: 0.011
+    M15:
+      p: 0.018
+    M16:
+      p: 0.02

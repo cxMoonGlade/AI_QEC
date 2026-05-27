@@ -36,9 +36,9 @@ def test_targeted_v3_typed_features_are_learner_visible_and_fix_readout_split() 
     assert "v3c_physical_local_inverse_probability_v3_typed" in result["labels_by_method"]
     readout = result["readout_split_audit"]["methods"]["v3c_physical_local_inverse_probability_v3_typed"]
     assert readout["M5_split_fixed"] is True
-    assert readout["M5_split_count"] == 1
-    assert result["type_budgets"]["readout"] == 1
-    assert result["type_budgets"]["rzz_edge"] == 3
+    assert readout["readout_split_count"] == 4
+    assert result["type_budgets"]["readout"] == 4
+    assert result["type_budgets"]["rzz_edge"] == 4
 
 
 def test_targeted_v3_manifest_names_expected_blocks() -> None:

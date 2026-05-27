@@ -7,6 +7,9 @@ s2d_physical:
   require_gpu: true
   allow_cpu_aer_fallback: false
   paper_informed_ptm_features: true
+  aer_simulation_method: auto
+  aer_tensor_network_qubit_threshold: 15
+  aer_large_qubit_method: matrix_product_state
   shots: 10000
   seed: 0
   theta: 0.18
@@ -24,26 +27,38 @@ s2d_physical:
     M4:
       gamma: 0.018
     M5:
-      p0_to_1: 0.025
-      p1_to_0: 0.011
-    M6:
       eta: 0.02
-    M7:
+    M6:
       p: 0.006
-    M8:
+    M7:
       epsilon_x: 0.024
       epsilon_y: 0.017
-    M9:
+    M8:
       epsilon: 0.025
-    M10:
+    M9:
       gamma: 0.012
-    M11:
-      p: 0.018
-    M12:
+    M10:
       axis: rx
       epsilon_mean: 0.032
       epsilon_span: 0.018
+    M11:
+      p_z: 0.0025
+    M12:
+      axis: rx
+      epsilon: 0.028
     M13:
+      p: 0.025
+    M14:
+      p: 0.011
+    M15:
+      p: 0.018
+    M16:
+      p: 0.02
+    M17:
+      p: 0.018
+    M18:
+      epsilon: 0.025
+    M19:
       eta: 0.006
 
 s2d_difficulty_expansion:

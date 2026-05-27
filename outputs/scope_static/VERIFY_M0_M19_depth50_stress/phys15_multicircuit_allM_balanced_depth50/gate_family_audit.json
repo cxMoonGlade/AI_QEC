@@ -1,0 +1,57 @@
+{
+  "balanced_accuracy": 0.3333333333333333,
+  "confusion_matrix": [
+    [
+      0,
+      1,
+      0,
+      0
+    ],
+    [
+      0,
+      1,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      1,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      2
+    ]
+  ],
+  "confusion_matrix_labels": [
+    "M1",
+    "M6",
+    "M7",
+    "M9"
+  ],
+  "macro_F1": 0.42500000000000004,
+  "min_class_recall": 0.0,
+  "pairwise_margins": {},
+  "per_class_recall": {
+    "M1": 0.0,
+    "M6": 0.3333333333333333,
+    "M7": 0.3333333333333333,
+    "M9": 0.6666666666666666
+  },
+  "rzz_family": [
+    "M1",
+    "M6",
+    "M7",
+    "M9"
+  ],
+  "schema": "scope_static_s2d11_gate_family_audit_v1",
+  "support": {
+    "M1": 3,
+    "M6": 3,
+    "M7": 3,
+    "M9": 3
+  }
+}

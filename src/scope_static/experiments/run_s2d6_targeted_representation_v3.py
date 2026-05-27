@@ -9,10 +9,8 @@ import torch
 import yaml
 
 from scope_static.experiments.s2d_config import load_s2d_physical_config, output_root_from_config
-from scope_static.physical.local_inverse import run_physical_local_inverse_discovery
-from scope_static.physical.separability import run_oracle_separability_audit
 from scope_static.physical.targeted_v3 import evaluate_targeted_v3_methods, typed_feature_manifest
-from scope_static.physical.teacher import generate_physical_teacher_dataset
+from scope_static.physical_oracle import run_physical_oracle_stack, stack_stage_results
 
 
 DEFAULT_RUNS: list[dict[str, object]] = [
@@ -77,27 +75,20 @@ def _run_one(output: Path, physical_cfg: dict[str, object], cfg: dict[str, objec
     merged = dict(physical_cfg)
     merged.update({key: value for key, value in run_cfg.items() if key not in {"name", "purpose", "enabled"}})
     merged.update(dict(cfg.get("physical_overrides", {})))
-    teacher_dir = run_dir / "S2D_PHYS1_teacher"
-    sep_dir = run_dir / "S2D_PHYS2_oracle_separability"
-    local_dir = run_dir / "S2D_PHYS3_local_inverse"
-
-    teacher = generate_physical_teacher_dataset(merged, output_dir=teacher_dir, preflight_dir=run_dir / "S2D_PHYS0_preflight")
-    separability = run_oracle_separability_audit(
-        teacher_dir=teacher_dir,
-        output_dir=sep_dir,
-        paper_informed=bool(merged.get("paper_informed_ptm_features", True)),
+    stack = run_physical_oracle_stack(
+        merged,
+        output_dir=run_dir,
+        bootstrap_replicates=int(cfg.get("bootstrap_replicates", 16)),
+        random_baseline_trials=int(cfg.get("random_baseline_trials", 64)),
+        run_local_inverse="always",
     )
-    local = run_physical_local_inverse_discovery(
-        teacher_dir=teacher_dir,
-        separability_dir=sep_dir,
-        output_dir=local_dir,
-        config={
-            **merged,
-            "num_clusters": len(separability["oracle_label_names"]),
-            "bootstrap_replicates": int(cfg.get("bootstrap_replicates", 16)),
-            "random_baseline_trials": int(cfg.get("random_baseline_trials", 64)),
-        },
-    )
+    stage = stack_stage_results(stack)
+    teacher_dir = stage["teacher_dir"]
+    teacher = stage["teacher"]
+    separability = stage["separability"]
+    local = stage["local"]
+    if local is None:
+        raise RuntimeError("S2D.6 requires PHYS3 learner output")
     records = _load_mechanism_records(teacher_dir / "oracle_mechanisms.json")
     observations, probe_names = _load_observations(teacher_dir / "observations.npz")
     hidden, label_names = _encode_labels([str(record["oracle_label"]) for record in records])

@@ -194,9 +194,20 @@ def test_s2d7_runner_writes_required_artifacts_with_fakes(tmp_path: Path, monkey
             ]
         }
 
-    monkeypatch.setattr(runner, "generate_physical_teacher_dataset", fake_teacher)
-    monkeypatch.setattr(runner, "run_oracle_separability_audit", fake_sep)
-    monkeypatch.setattr(runner, "run_physical_local_inverse_discovery", fake_local)
+    def fake_stack(cfg, *, output_dir, bootstrap_replicates, random_baseline_trials, run_local_inverse):
+        root = Path(output_dir)
+        teacher_dir = root / "S2D_PHYS1_teacher"
+        sep_dir = root / "S2D_PHYS2_oracle_separability"
+        local_dir = root / "S2D_PHYS3_local_inverse"
+        teacher = fake_teacher(cfg, output_dir=teacher_dir, preflight_dir=root / "S2D_PHYS0_preflight")
+        sep = fake_sep(teacher_dir=teacher_dir, output_dir=sep_dir, paper_informed=True)
+        local = fake_local(teacher_dir=teacher_dir, separability_dir=sep_dir, output_dir=local_dir, config=cfg)
+        return {
+            "paths": {"teacher_dir": str(teacher_dir), "separability_dir": str(sep_dir), "local_inverse_dir": str(local_dir)},
+            "stage_results": {"teacher": teacher, "teacher_self": sep, "learner": local},
+        }
+
+    monkeypatch.setattr(runner, "run_physical_oracle_stack", fake_stack)
 
     result = runner.run_s2d7_rzz_active_probe_design(config_path)
 

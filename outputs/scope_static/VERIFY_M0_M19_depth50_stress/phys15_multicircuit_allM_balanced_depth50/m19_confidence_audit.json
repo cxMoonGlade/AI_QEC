@@ -1,0 +1,39 @@
+{
+  "M13_confidence_histogram": [],
+  "M13_false_negative_examples": [],
+  "M13_invariant_SNR": {},
+  "M13_recall": null,
+  "M19_confidence_histogram": [
+    0,
+    0,
+    3,
+    0,
+    0
+  ],
+  "M19_false_negative_examples": [
+    39,
+    59
+  ],
+  "M19_invariant_SNR": {
+    "gamma_isotropy_score": 0.0,
+    "generator_total": 0.0,
+    "unitarity_loss_R_error": 0.0
+  },
+  "M19_recall": 0.3333333333333333,
+  "PTM_mixing_proxy_distribution": {
+    "count": 3,
+    "max": 0.0,
+    "mean": 0.0,
+    "min": 0.0,
+    "std": 0.0
+  },
+  "schema": "scope_static_s2d11_m19_confidence_audit_v1",
+  "secondary_stress_only": true,
+  "unitarity_proxy_distribution": {
+    "count": 3,
+    "max": 0.0,
+    "mean": 0.0,
+    "min": 0.0,
+    "std": 0.0
+  }
+}

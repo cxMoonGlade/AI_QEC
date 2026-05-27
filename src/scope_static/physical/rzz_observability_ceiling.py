@@ -13,7 +13,7 @@ from sklearn.svm import SVC
 from .targeted_v3 import RZZ_FAMILY
 
 
-PAIR_NAMES = ("M1/M7", "M1/M8", "M1/M10", "M7/M8", "M7/M10", "M8/M10")
+PAIR_NAMES = ("M1/M6", "M1/M7", "M1/M9", "M6/M7", "M6/M9", "M7/M9")
 FORBIDDEN_FEATURE_TOKENS = ("oracle_label", "mechanism_id", "exact_ptm", "teacher_channel", "oracle_fingerprint")
 
 

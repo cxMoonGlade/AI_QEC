@@ -1,0 +1,90 @@
+{
+  "aer_simulator_options": {},
+  "allow_cpu_aer_fallback": false,
+  "backend": "qiskit_aer_gpu",
+  "balanced_min_instances_per_mechanism": 3,
+  "include_m5": true,
+  "include_m6": false,
+  "mechanism_set": "set_D",
+  "mechanisms": {
+    "M0": {
+      "p_x": 0.0015,
+      "p_y": 0.0008,
+      "p_z": 0.0022
+    },
+    "M1": {
+      "epsilon": 0.045
+    },
+    "M10": {
+      "axis": "rx",
+      "epsilon_mean": 0.032,
+      "epsilon_span": 0.018
+    },
+    "M11": {
+      "p_z": 0.0025
+    },
+    "M12": {
+      "axis": "rx",
+      "epsilon": 0.028
+    },
+    "M13": {
+      "p": 0.025
+    },
+    "M14": {
+      "p": 0.011
+    },
+    "M15": {
+      "p": 0.018
+    },
+    "M16": {
+      "p": 0.02
+    },
+    "M17": {
+      "p": 0.018
+    },
+    "M18": {
+      "epsilon": 0.025
+    },
+    "M19": {
+      "eta": 0.004
+    },
+    "M2": {
+      "epsilon": 0.035
+    },
+    "M3": {
+      "epsilon": 0.04
+    },
+    "M4": {
+      "gamma": 0.018
+    },
+    "M5": {
+      "eta": 0.02
+    },
+    "M6": {
+      "p": 0.006
+    },
+    "M7": {
+      "epsilon_x": 0.024,
+      "epsilon_y": 0.017
+    },
+    "M8": {
+      "epsilon": 0.025
+    },
+    "M9": {
+      "gamma": 0.012
+    }
+  },
+  "multicircuit_teacher_batch": true,
+  "num_qubits": 9,
+  "paper_informed_ptm_features": true,
+  "probe_set": "rzz_local_tomography",
+  "profile": "phys9_multicircuit_setD_balanced",
+  "require_gpu": true,
+  "run": {
+    "name": "s2d11_typed_spam_gate_invariant_learner",
+    "output_root": "outputs/scope_static"
+  },
+  "seed": 0,
+  "shots": 64,
+  "theta": 0.18
+}

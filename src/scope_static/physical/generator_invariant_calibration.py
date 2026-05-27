@@ -313,15 +313,15 @@ def invariant_run_decision(ablation: dict[str, object], blockwise: dict[str, obj
         .get("circuit_residualized_generator_coordinates_plus_invariants", {})
         .get("stage2_hamiltonian_axis_accuracy", 0.0)
     )
-    m1_m7 = (
+    m1_m6 = (
         margins.get("variants", {})
         .get("circuit_residualized_generator_coordinates_plus_invariants", {})
-        .get("M1/M7", {})
+        .get("M1/M6", {})
     )
-    m1_m7_ok = bool(m1_m7.get("available", False)) and float(m1_m7.get("z_margin", 0.0)) > 0.0
+    m1_m6_ok = bool(m1_m6.get("available", False)) and float(m1_m6.get("z_margin", 0.0)) > 0.0
     if passed:
         return "success"
-    if balanced >= 0.80 or (stage2 >= 0.80 and m1_m7_ok):
+    if balanced >= 0.80 or (stage2 >= 0.80 and m1_m6_ok):
         return "partial_invariant_signal"
     return "failure"
 

@@ -188,14 +188,14 @@ def format_s2d10b_summary(result: dict[str, object]) -> str:
     lines = [
         "# S2D.10b Generator Invariant Calibration",
         "",
-        "| run | decision | primary bal acc | macro F1 | min recall | real-scr bal gap | M1/M7 acc | Mahalanobis bal acc |",
+        "| run | decision | primary bal acc | macro F1 | min recall | real-scr bal gap | M1/M6 acc | Mahalanobis bal acc |",
         "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     primary_block = "circuit_residualized_generator_coordinates_plus_invariants"
     for record in result["records"]:
         primary = record["feature_block_results"].get(primary_block, {}).get("overall", {})
         pairwise = primary.get("pairwise", {}) if isinstance(primary, dict) else {}
-        m1_m7 = pairwise.get("M1/M7", {}) if isinstance(pairwise, dict) else {}
+        m1_m7 = pairwise.get("M1/M6", {}) if isinstance(pairwise, dict) else {}
         controls = record["controls"]
         maha = record["mahalanobis_prototype_metrics"]["variants"].get(primary_block, {}).get("real", {})
         lines.append(

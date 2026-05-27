@@ -8,9 +8,6 @@ import numpy as np
 import torch
 import yaml
 
-from scope_static.experiments.run_s2d_local_inverse_discovery import run_physical_local_inverse_discovery
-from scope_static.experiments.run_s2d_oracle_separability import run_oracle_separability_audit
-from scope_static.experiments.run_s2d_physical_teacher import generate_physical_teacher_dataset
 from scope_static.experiments.s2d_config import load_s2d_physical_config, output_root_from_config
 from scope_static.physical.active_mixed_basis import rzz_family_metrics
 from scope_static.physical.rzz_minimal_intervention import (
@@ -26,6 +23,7 @@ from scope_static.physical.rzz_observability_ceiling import (
     leakage_guardrail_audit,
 )
 from scope_static.physical.targeted_v3 import RZZ_FAMILY, build_targeted_v3_features, evaluate_targeted_v3_methods
+from scope_static.physical_oracle import run_physical_oracle_stack, stack_stage_results
 
 
 DEFAULT_RUNS = [
@@ -178,34 +176,14 @@ def _run_one(output: Path, physical_cfg: dict[str, object], cfg: dict[str, objec
 
 
 def _run_phys_stack(run_dir: Path, cfg: dict[str, object], s2d8_cfg: dict[str, object]) -> dict[str, object]:
-    teacher_dir = run_dir / "S2D_PHYS1_teacher"
-    sep_dir = run_dir / "S2D_PHYS2_oracle_separability"
-    local_dir = run_dir / "S2D_PHYS3_local_inverse"
-    teacher = generate_physical_teacher_dataset(cfg, output_dir=teacher_dir, preflight_dir=run_dir / "S2D_PHYS0_preflight")
-    separability = run_oracle_separability_audit(
-        teacher_dir=teacher_dir,
-        output_dir=sep_dir,
-        paper_informed=bool(cfg.get("paper_informed_ptm_features", True)),
+    stack = run_physical_oracle_stack(
+        cfg,
+        output_dir=run_dir,
+        bootstrap_replicates=int(s2d8_cfg.get("bootstrap_replicates", 16)),
+        random_baseline_trials=int(s2d8_cfg.get("random_baseline_trials", 64)),
+        run_local_inverse="always",
     )
-    local = run_physical_local_inverse_discovery(
-        teacher_dir=teacher_dir,
-        separability_dir=sep_dir,
-        output_dir=local_dir,
-        config={
-            **cfg,
-            "num_clusters": len(separability["oracle_label_names"]),
-            "bootstrap_replicates": int(s2d8_cfg.get("bootstrap_replicates", 16)),
-            "random_baseline_trials": int(s2d8_cfg.get("random_baseline_trials", 64)),
-        },
-    )
-    return {
-        "teacher_dir": teacher_dir,
-        "separability_dir": sep_dir,
-        "local_dir": local_dir,
-        "teacher": teacher,
-        "separability": separability,
-        "local": local,
-    }
+    return stack_stage_results(stack)
 
 
 def _load_stack_data(stack: dict[str, object]) -> tuple[list[dict[str, object]], np.ndarray, list[str], torch.Tensor, list[str]]:
@@ -441,7 +419,7 @@ def _run_decision(method_rows: list[dict[str, object]], combined_rzz: dict[str, 
 
 def _rzz_error(combined_rzz: dict[str, object], method: str) -> int:
     metrics = combined_rzz.get("methods", {}).get(method, {}) if isinstance(combined_rzz.get("methods"), dict) else {}
-    keys = ["M1_M7_merge_count", "M1_M8_merge_count", "M1_M10_merge_count", "M1_split_count"]
+    keys = ["M1_M6_merge_count", "M1_M7_merge_count", "M1_M9_merge_count", "M1_split_count"]
     return int(sum(int(metrics.get(key, 0)) for key in keys))
 
 

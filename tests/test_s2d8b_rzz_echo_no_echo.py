@@ -104,7 +104,7 @@ def test_oracle_label_permutation_leaves_echo_features_unchanged() -> None:
 
 
 def test_echo_evaluation_reports_bootstrap_and_rzz_metrics() -> None:
-    records = [_record("M1", [0, 1]), _record("M7", [0, 1]), _record("M8", [0, 1]), _record("M10", [0, 1])]
+    records = [_record("M1", [0, 1]), _record("M6", [0, 1]), _record("M7", [0, 1]), _record("M9", [0, 1])]
     observations = np.concatenate([_known_echo_observations(), _known_echo_observations()], axis=1)
     label_names = sorted({str(record["oracle_label"]) for record in records})
     index = {name: idx for idx, name in enumerate(label_names)}
@@ -122,7 +122,7 @@ def test_echo_evaluation_reports_bootstrap_and_rzz_metrics() -> None:
     echo = next(row for row in result["methods"] if row["method"] == "rzz_echo_contrast_features")
     assert echo["bootstrap_nmi"]["replicates"] == 2
     assert "rzz_echo_contrast_features" in result["rzz_family_metrics"]["methods"]
-    assert "M1_M7_merge_count" in result["rzz_family_metrics"]["methods"]["rzz_echo_contrast_features"]
+    assert "M1_M6_merge_count" in result["rzz_family_metrics"]["methods"]["rzz_echo_contrast_features"]
 
 
 def test_s2d8b_runner_writes_required_artifacts_with_fakes(tmp_path: Path, monkeypatch) -> None:
@@ -196,9 +196,20 @@ def test_s2d8b_runner_writes_required_artifacts_with_fakes(tmp_path: Path, monke
             ]
         }
 
-    monkeypatch.setattr(runner, "generate_physical_teacher_dataset", fake_teacher)
-    monkeypatch.setattr(runner, "run_oracle_separability_audit", fake_sep)
-    monkeypatch.setattr(runner, "run_physical_local_inverse_discovery", fake_local)
+    def fake_stack(cfg, *, output_dir, bootstrap_replicates, random_baseline_trials, run_local_inverse):
+        root = Path(output_dir)
+        teacher_dir = root / "S2D_PHYS1_teacher"
+        sep_dir = root / "S2D_PHYS2_oracle_separability"
+        local_dir = root / "S2D_PHYS3_local_inverse"
+        teacher = fake_teacher(cfg, output_dir=teacher_dir, preflight_dir=root / "S2D_PHYS0_preflight")
+        sep = fake_sep(teacher_dir=teacher_dir, output_dir=sep_dir, paper_informed=True)
+        local = fake_local(teacher_dir=teacher_dir, separability_dir=sep_dir, output_dir=local_dir, config=cfg)
+        return {
+            "paths": {"teacher_dir": str(teacher_dir), "separability_dir": str(sep_dir), "local_inverse_dir": str(local_dir)},
+            "stage_results": {"teacher": teacher, "teacher_self": sep, "learner": local},
+        }
+
+    monkeypatch.setattr(runner, "run_physical_oracle_stack", fake_stack)
 
     result = runner.run_s2d8b_rzz_echo_no_echo(config_path)
 
@@ -258,7 +269,7 @@ def test_s2d8b_phase_summary_marks_mixed_control_limited() -> None:
             {
                 "name": "phys9_multicircuit_setC_balanced",
                 "profile": "phys9_multicircuit_setC_balanced",
-                "decision": "partial_m1_m7_m10_improved",
+                "decision": "partial_m1_m6_m9_improved",
                 "echo_contrast": {"scrambled_echo_control": {"real_beats_scrambled": False, "real_ari": 0.92, "scrambled_ari": 0.92, "real_nmi": 0.84, "scrambled_nmi": 0.84}},
             },
         ]

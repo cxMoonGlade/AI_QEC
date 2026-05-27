@@ -10,11 +10,9 @@ import yaml
 
 from scope_static.experiments.s2d_config import load_s2d_physical_config, output_root_from_config
 from scope_static.physical.active_mixed_basis import evaluate_active_mixed_basis_methods, rzz_family_metrics
-from scope_static.physical.local_inverse import run_physical_local_inverse_discovery
 from scope_static.physical.rzz_depth_sweep import evaluate_rzz_depth_sweep_methods
-from scope_static.physical.separability import run_oracle_separability_audit
 from scope_static.physical.targeted_v3 import evaluate_targeted_v3_methods
-from scope_static.physical.teacher import generate_physical_teacher_dataset
+from scope_static.physical_oracle import run_physical_oracle_stack, stack_stage_results
 
 
 DEFAULT_RUNS: list[dict[str, object]] = [
@@ -170,34 +168,14 @@ def _run_one(output: Path, physical_cfg: dict[str, object], cfg: dict[str, objec
 
 
 def _run_phys_stack(run_dir: Path, cfg: dict[str, object], s2d8_cfg: dict[str, object]) -> dict[str, object]:
-    teacher_dir = run_dir / "S2D_PHYS1_teacher"
-    sep_dir = run_dir / "S2D_PHYS2_oracle_separability"
-    local_dir = run_dir / "S2D_PHYS3_local_inverse"
-    teacher = generate_physical_teacher_dataset(cfg, output_dir=teacher_dir, preflight_dir=run_dir / "S2D_PHYS0_preflight")
-    separability = run_oracle_separability_audit(
-        teacher_dir=teacher_dir,
-        output_dir=sep_dir,
-        paper_informed=bool(cfg.get("paper_informed_ptm_features", True)),
+    stack = run_physical_oracle_stack(
+        cfg,
+        output_dir=run_dir,
+        bootstrap_replicates=int(s2d8_cfg.get("bootstrap_replicates", 16)),
+        random_baseline_trials=int(s2d8_cfg.get("random_baseline_trials", 64)),
+        run_local_inverse="always",
     )
-    local = run_physical_local_inverse_discovery(
-        teacher_dir=teacher_dir,
-        separability_dir=sep_dir,
-        output_dir=local_dir,
-        config={
-            **cfg,
-            "num_clusters": len(separability["oracle_label_names"]),
-            "bootstrap_replicates": int(s2d8_cfg.get("bootstrap_replicates", 16)),
-            "random_baseline_trials": int(s2d8_cfg.get("random_baseline_trials", 64)),
-        },
-    )
-    return {
-        "teacher_dir": teacher_dir,
-        "separability_dir": sep_dir,
-        "local_dir": local_dir,
-        "teacher": teacher,
-        "separability": separability,
-        "local": local,
-    }
+    return stack_stage_results(stack)
 
 
 def _load_stack_data(stack: dict[str, object]) -> tuple[list[dict[str, object]], np.ndarray, list[str], torch.Tensor, list[str]]:
@@ -301,11 +279,11 @@ def _run_decision(method_rows: list[dict[str, object]], combined_rzz: dict[str, 
     static = methods.get("S2D.7_active_mixed_basis_moments_plus_signed_contrasts", {})
     reference_rzz = min(_rzz_error(combined_rzz, "baseline_v3c"), _rzz_error(combined_rzz, "S2D.7_active_mixed_basis_moments_plus_signed_contrasts"))
     depth_rzz = _rzz_error(combined_rzz, "rzz_depth_features")
-    m1_m7_m10_ref = min(
-        _rzz_error(combined_rzz, "baseline_v3c", include_m8=False),
-        _rzz_error(combined_rzz, "S2D.7_active_mixed_basis_moments_plus_signed_contrasts", include_m8=False),
+    m1_m6_m9_ref = min(
+        _rzz_error(combined_rzz, "baseline_v3c", include_transverse=False),
+        _rzz_error(combined_rzz, "S2D.7_active_mixed_basis_moments_plus_signed_contrasts", include_transverse=False),
     )
-    m1_m7_m10_depth = _rzz_error(combined_rzz, "rzz_depth_features", include_m8=False)
+    m1_m6_m9_depth = _rzz_error(combined_rzz, "rzz_depth_features", include_transverse=False)
     regression_clean = (
         float(baseline.get("ari", 0.0)) >= 0.99
         and float(static.get("ari", 0.0)) >= 0.99
@@ -318,16 +296,16 @@ def _run_decision(method_rows: list[dict[str, object]], combined_rzz: dict[str, 
     global_ok = float(depth.get("ari", 0.0)) >= 0.80 and float(depth.get("nmi", 0.0)) >= 0.80
     if global_ok and depth_rzz < reference_rzz and _beats(depth, scrambled) and _beats(depth, direct):
         return "success"
-    if m1_m7_m10_depth < m1_m7_m10_ref:
-        return "partial_m1_m7_m10_improved"
+    if m1_m6_m9_depth < m1_m6_m9_ref:
+        return "partial_m1_m6_m9_improved"
     return "failure"
 
 
-def _rzz_error(combined_rzz: dict[str, object], method: str, *, include_m8: bool = True) -> int:
+def _rzz_error(combined_rzz: dict[str, object], method: str, *, include_transverse: bool = True) -> int:
     metrics = combined_rzz.get("methods", {}).get(method, {}) if isinstance(combined_rzz.get("methods"), dict) else {}
-    keys = ["M1_M7_merge_count", "M1_M10_merge_count", "M1_split_count"]
-    if include_m8:
-        keys.append("M1_M8_merge_count")
+    keys = ["M1_M6_merge_count", "M1_M9_merge_count", "M1_split_count"]
+    if include_transverse:
+        keys.append("M1_M7_merge_count")
     return int(sum(int(metrics.get(key, 0)) for key in keys))
 
 
@@ -342,7 +320,7 @@ def _summary(records: list[dict[str, object]]) -> dict[str, object]:
         "num_primary_balanced_runs": len(primary),
         "success": sum(1 for record in records if record["decision"] == "success"),
         "regression_pass": sum(1 for record in records if record["decision"] == "regression_pass"),
-        "partial_m1_m7_m10_improved": sum(1 for record in records if record["decision"] == "partial_m1_m7_m10_improved"),
+        "partial_m1_m6_m9_improved": sum(1 for record in records if record["decision"] == "partial_m1_m6_m9_improved"),
         "failure": sum(1 for record in records if record["decision"] == "failure"),
         "primary_balanced_success": all(record["decision"] == "success" for record in primary) if primary else False,
     }

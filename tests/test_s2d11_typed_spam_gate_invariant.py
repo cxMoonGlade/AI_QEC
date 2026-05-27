@@ -20,12 +20,12 @@ from scope_static.physical.typed_spam_gate_invariant import (
 
 def test_branch_assignment_uses_visible_instruction_only() -> None:
     assert visible_branch({"instruction": "measure", "oracle_label": "M1"}) == "readout_branch"
-    assert visible_branch({"instruction": "reset", "oracle_label": "M5"}) == "prep_reset_branch"
-    assert visible_branch({"instruction": "rzz", "oracle_label": "M5"}) == "gate_process_branch"
+    assert visible_branch({"instruction": "reset", "oracle_label": "M13"}) == "prep_reset_branch"
+    assert visible_branch({"instruction": "rzz", "oracle_label": "M13"}) == "gate_process_branch"
 
 
 def test_branch_budget_audit_declares_visible_run_config_source() -> None:
-    audit = branch_budget_audit(["M0", "M5", "M11"], ["gate_process_branch", "readout_branch", "prep_reset_branch"])
+    audit = branch_budget_audit(["M0", "M13", "M17"], ["gate_process_branch", "readout_branch", "prep_reset_branch"])
 
     assert audit["budget_source"] == "visible_run_config"
     assert audit["row_oracle_labels_used"] is False
@@ -36,23 +36,23 @@ def test_branch_budget_audit_declares_visible_run_config_source() -> None:
 
 
 def test_m5_split_count_uses_tau_threshold() -> None:
-    no_split = m5_overfragmentation_report(["M5"] * 10, ["M5"] * 10, ["M5", "M1"], tau=0.10)
-    split = m5_overfragmentation_report(["M5"] * 10, ["M5"] * 9 + ["M1"], ["M5", "M1"], tau=0.10)
+    no_split = m5_overfragmentation_report(["M13"] * 10, ["M13"] * 10, ["M13", "M1"], tau=0.10)
+    split = m5_overfragmentation_report(["M13"] * 10, ["M13"] * 9 + ["M1"], ["M13", "M1"], tau=0.10)
 
-    assert no_split["M5_split_count"] == 1
-    assert no_split["M5_split_fixed"] is True
-    assert split["M5_split_count"] == 2
-    assert split["M5_split_fixed"] is False
+    assert no_split["readout_split_count"] == 1
+    assert no_split["readout_split_fixed"] is True
+    assert split["readout_split_count"] == 2
+    assert split["readout_vs_gate_confusion_rate"] == 0.1
 
 
 def test_typed_features_are_oracle_label_permutation_invariant_and_include_confidence_fields() -> None:
-    records = _fake_records(["M1", "M5", "M11"])
+    records = _fake_records(["M1", "M13", "M17"])
     observations, probe_names = _fake_observations(num_qubits=9)
     local_record = _fake_local_record(records)
 
-    first = build_typed_spam_gate_features(records, observations, probe_names, local_record, enabled_mechanisms=["M1", "M5", "M11"])
+    first = build_typed_spam_gate_features(records, observations, probe_names, local_record, enabled_mechanisms=["M1", "M13", "M17"])
     permuted = [dict(record, oracle_label=f"X{idx}") for idx, record in enumerate(records)]
-    second = build_typed_spam_gate_features(permuted, observations, probe_names, local_record, enabled_mechanisms=["M1", "M5", "M11"])
+    second = build_typed_spam_gate_features(permuted, observations, probe_names, local_record, enabled_mechanisms=["M1", "M13", "M17"])
 
     np.testing.assert_allclose(first.feature_spaces["typed_gate_readout_prep_invariant_learner"], second.feature_spaces["typed_gate_readout_prep_invariant_learner"])
     assert first.leakage_guardrail_audit["passed"] is True
@@ -65,7 +65,7 @@ def test_typed_features_are_oracle_label_permutation_invariant_and_include_confi
 
 
 def test_runner_writes_full_audit_bundle_with_fake_setD(tmp_path: Path, monkeypatch) -> None:
-    records = _fake_records([f"M{idx}" for idx in range(13)])
+    records = _fake_records([f"M{idx}" for idx in range(19)])
     observations, probe_names = _fake_observations(num_qubits=9)
     local_record = _fake_local_record(records)
 
@@ -207,13 +207,18 @@ def _fake_observations(num_qubits: int) -> tuple[np.ndarray, list[str]]:
 def _instruction_for_label(label: str) -> str:
     return {
         "M1": "rzz",
+        "M6": "rzz",
         "M7": "rzz",
-        "M8": "rzz",
-        "M10": "rzz",
+        "M9": "rzz",
         "M2": "rx",
         "M3": "rz",
-        "M5": "measure",
-        "M11": "reset",
+        "M12": "rx",
+        "M13": "measure",
+        "M14": "measure",
+        "M15": "measure",
+        "M16": "measure",
+        "M17": "reset",
+        "M18": "reset",
     }.get(label, "id")
 
 
@@ -221,24 +226,24 @@ def _features_for_label(label: str) -> dict[str, float]:
     values = {name: 0.0 for name in [*GENERATOR_CORE, "nonunital_norm_proxy", "delta_norm", "logm_delta_norm", *INVARIANT_FEATURES]}
     if label == "M1":
         values["h_ZZ"] = 0.12
-    elif label == "M7":
+    elif label == "M6":
         values["gamma_XX"] = values["gamma_YY"] = values["gamma_ZZ"] = 0.05
-    elif label == "M8":
+    elif label == "M7":
         values["h_XX"] = 0.09
         values["h_YY"] = 0.06
-    elif label in {"M4", "M10"}:
+    elif label in {"M4", "M9"}:
         values["relaxation_pair"] = 0.08
         values["nonunital_norm_proxy"] = 0.08
     elif label == "M2":
         values["h_XX"] = 0.04
-    elif label in {"M3", "M12"}:
+    elif label in {"M3", "M10", "M12"}:
         values["h_ZZ"] = 0.04
-    elif label == "M6":
+    elif label == "M5":
         values["h_XX"] = 0.02
         values["gamma_ZZ"] = 0.04
-    elif label == "M9":
+    elif label == "M8":
         values["h_ZZ"] = 0.02
-    elif label == "M13":
+    elif label == "M19":
         values["gamma_XX"] = 0.006
     values["delta_norm"] = max(0.02, sum(abs(values.get(name, 0.0)) for name in GENERATOR_CORE))
     return values

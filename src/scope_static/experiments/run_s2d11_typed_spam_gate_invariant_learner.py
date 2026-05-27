@@ -29,8 +29,8 @@ DEFAULT_RUNS = [
 SECONDARY_ALLM_RUN = {
     "name": "phys9_multicircuit_allM_balanced",
     "profile": "phys9_multicircuit_allM_balanced",
-    "mechanism_set": ["M0", "M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", "M9", "M10", "M11", "M12", "M13"],
-    "purpose": "secondary M13 stress test only after primary set_D pass",
+    "mechanism_set": [f"M{idx}" for idx in range(20)],
+    "purpose": "secondary M19/other-mechanism stress test only after primary set_D pass",
     "secondary_stress": True,
 }
 PRIMARY_RUN = "phys9_multicircuit_setD_balanced"
@@ -48,9 +48,12 @@ ARTIFACT_NAMES = (
     "typed_metric_head_report",
     "pairwise_margin_report",
     "confusion_matrix_by_branch",
+    "readout_mechanism_audit",
     "m5_readout_audit",
     "m5_overfragmentation_report",
+    "prep_reset_audit",
     "m11_prep_reset_audit",
+    "prep_reset_readout_confound_audit",
     "m11_readout_confound_audit",
     "single_qubit_invariant_reconstruction_audit",
     "gate_family_audit",
@@ -64,6 +67,7 @@ ARTIFACT_NAMES = (
     "m11_vs_m4_preflight_margin",
     "prep_reconstruction_assumption_audit",
     "m13_confidence_audit",
+    "m19_confidence_audit",
 )
 
 
@@ -139,6 +143,7 @@ def _run_one(output: Path, physical_cfg: dict[str, object], cfg: dict[str, objec
         bundle,
         seed=int(cfg.get("seed", 0)),
         include_m13=bool(run_cfg.get("secondary_stress", False)),
+        include_m19=bool(run_cfg.get("secondary_stress", False)),
     )
     decision = _run_decision(evaluation, bundle, role=role, enabled_mechanisms=enabled)
     record = {
@@ -179,9 +184,12 @@ def _run_one(output: Path, physical_cfg: dict[str, object], cfg: dict[str, objec
         "typed_metric_head_report": evaluation["typed_metric_head_report"],
         "pairwise_margin_report": evaluation["pairwise_margin_report"],
         "confusion_matrix_by_branch": evaluation["confusion_matrix_by_branch"],
+        "readout_mechanism_audit": evaluation["readout_mechanism_audit"],
         "m5_readout_audit": evaluation["m5_readout_audit"],
         "m5_overfragmentation_report": evaluation["m5_overfragmentation_report"],
+        "prep_reset_audit": evaluation["m11_prep_reset_audit"],
         "m11_prep_reset_audit": evaluation["m11_prep_reset_audit"],
+        "prep_reset_readout_confound_audit": evaluation["m11_readout_confound_audit"],
         "m11_readout_confound_audit": evaluation["m11_readout_confound_audit"],
         "single_qubit_invariant_reconstruction_audit": evaluation["single_qubit_invariant_reconstruction_audit"],
         "gate_family_audit": evaluation["gate_family_audit"],
@@ -194,6 +202,7 @@ def _run_one(output: Path, physical_cfg: dict[str, object], cfg: dict[str, objec
         "m11_vs_m4_preflight_margin": bundle.m11_vs_m4_preflight_margin,
         "prep_reconstruction_assumption_audit": bundle.prep_reconstruction_assumption_audit,
         "m13_confidence_audit": evaluation["m13_confidence_audit"],
+        "m19_confidence_audit": evaluation["m19_confidence_audit"],
     }
     _write_run_artifacts(run_dir, record)
     return record
@@ -201,7 +210,7 @@ def _run_one(output: Path, physical_cfg: dict[str, object], cfg: dict[str, objec
 
 def _run_decision(evaluation: dict[str, object], bundle: TypedSpamGateBundle, *, role: str, enabled_mechanisms: list[str]) -> str:
     success = bool(evaluation.get("run_success", {}).get("passed", False))
-    preflight_relevant = "M11" in set(enabled_mechanisms)
+    preflight_relevant = bool({"M17", "M18"} & set(enabled_mechanisms))
     preflight_pass = bool(bundle.m11_prep_observability_preflight.get("passed", False)) if preflight_relevant else True
     if role == "secondary_stress":
         return "secondary_stress_pass" if success else "secondary_stress_diagnostic"
@@ -209,7 +218,7 @@ def _run_decision(evaluation: dict[str, object], bundle: TypedSpamGateBundle, *,
         return "success"
     checks = evaluation.get("run_success", {}).get("checks", {})
     gate_ok = bool(checks.get("gate_family_balanced_accuracy_ge_0_80", False))
-    m5_ok = bool(checks.get("m5_split_fixed", False))
+    m5_ok = bool(checks.get("readout_split_fixed", checks.get("m5_split_fixed", False)))
     coverage_ok = bool(checks.get("grouped_fold_coverage_valid", False))
     scrambled_ok = bool(checks.get("beats_within_branch_scrambled_by_0_25", False))
     if preflight_relevant and not preflight_pass and gate_ok and m5_ok and coverage_ok and scrambled_ok:
@@ -241,11 +250,11 @@ def _phase_summary(records: list[dict[str, object]]) -> dict[str, object]:
     elif primary["decision"] == "success":
         label = "typed_gate_readout_prep_invariant_learner_positive"
         conclusion = "Typed gate/readout/prep branches pass set_D grouped ceiling with leakage-clean invariant features."
-        next_step = "optionally run secondary M13 stress or freeze typed invariant learner"
+        next_step = "optionally run secondary M19 stress or freeze typed invariant learner"
     elif primary["decision"] == "partial_gate_readout_validated_m11_observability_limited":
         label = "typed_gate_readout_positive_m11_observability_limited"
-        conclusion = "Gate/process and M5 readout branches validate, but M11 prep/reset observability is weak under the no-new-probe constraint."
-        next_step = "defer M11 to future prep-specific observability or probe expansion"
+        conclusion = "Gate/process and readout branches validate, but prep/reset observability is weak under the no-new-probe constraint."
+        next_step = "defer prep/reset mechanisms to future prep-specific observability or probe expansion"
     else:
         label = "typed_gate_readout_prep_invariant_learner_negative"
         conclusion = "Typed branch structure did not beat required grouped controls or class-level criteria on set_D."

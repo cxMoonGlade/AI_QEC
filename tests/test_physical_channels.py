@@ -54,8 +54,9 @@ def test_readout_and_mechanism_fingerprints_are_finite() -> None:
         MechanismSpec("M2", "rx", 1, {"axis": "rx", "epsilon": 0.03}),
         MechanismSpec("M3", "rz", 1, {"epsilon": 0.04}),
         MechanismSpec("M4", "amp", 1, {"gamma": 0.02}),
-        MechanismSpec("M5", "readout", 1, {"p0_to_1": 0.02, "p1_to_0": 0.01}),
-        MechanismSpec("M6", "custom", 1, {"eta": 0.02}),
+        MechanismSpec("M5", "custom", 1, {"eta": 0.02}),
+        MechanismSpec("M6", "depolarizing", 2, {"p": 0.006}),
+        MechanismSpec("M13", "readout", 1, {"p": 0.02}),
     ]
     for spec in specs:
         channel = mechanism_channel(spec)

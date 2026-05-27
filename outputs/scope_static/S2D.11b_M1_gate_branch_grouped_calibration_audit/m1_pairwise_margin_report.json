@@ -1,0 +1,146 @@
+{
+  "schema": "scope_static_s2d11b_m1_pairwise_margin_report_v1",
+  "variants": {
+    "baseline_typed_linear": {
+      "M1/M7": {
+        "available": true,
+        "margin": 0.09247947368856387
+      },
+      "M1/M8": {
+        "available": true,
+        "margin": 0.10393514449816788
+      },
+      "M10/M1": {
+        "available": true,
+        "margin": 0.09928214116242386
+      },
+      "M10/M7": {
+        "available": true,
+        "margin": 0.09931200086305737
+      },
+      "M10/M8": {
+        "available": true,
+        "margin": 0.10886880032561981
+      },
+      "M11/M4": {
+        "available": true,
+        "margin": 0.10682648619034608
+      },
+      "M11/M5": {
+        "available": true,
+        "margin": 0.11432909950326683
+      },
+      "M7/M8": {
+        "available": true,
+        "margin": 0.10727513892686129
+      },
+      "definition": "For classifier/prototype score heads, pairwise_margin(a,b) is the mean over true a rows of score_a(x)-score_b(x), plus true b rows of score_b(x)-score_a(x). Positive means the model prefers the correct class."
+    },
+    "compact_plus_selected_RZZ_dense_terms": {
+      "M1/M7": {
+        "available": true,
+        "margin": 0.07169081395746689
+      },
+      "M1/M8": {
+        "available": true,
+        "margin": 0.10050325718589748
+      },
+      "M10/M1": {
+        "available": true,
+        "margin": 0.10395869357934164
+      },
+      "M10/M7": {
+        "available": true,
+        "margin": 0.09411730147924023
+      },
+      "M10/M8": {
+        "available": true,
+        "margin": 0.1153859114488391
+      },
+      "M11/M4": {
+        "available": true,
+        "margin": 0.10666023486063998
+      },
+      "M11/M5": {
+        "available": true,
+        "margin": 0.11414417388152594
+      },
+      "M7/M8": {
+        "available": true,
+        "margin": 0.09225896803952395
+      },
+      "definition": "For classifier/prototype score heads, pairwise_margin(a,b) is the mean over true a rows of score_a(x)-score_b(x), plus true b rows of score_b(x)-score_a(x). Positive means the model prefers the correct class."
+    },
+    "two_stage_gate_classifier": {},
+    "typed_linear_plus_M1_logit_boost": {
+      "M1/M7": {
+        "available": true,
+        "margin": 0.23704341937793258
+      },
+      "M1/M8": {
+        "available": true,
+        "margin": 0.23231293721726362
+      },
+      "M10/M1": {
+        "available": true,
+        "margin": 0.24443160154746205
+      },
+      "M10/M7": {
+        "available": true,
+        "margin": 0.10389386131493654
+      },
+      "M10/M8": {
+        "available": true,
+        "margin": 0.1131137286466531
+      },
+      "M11/M4": {
+        "available": true,
+        "margin": 0.1121995961877692
+      },
+      "M11/M5": {
+        "available": true,
+        "margin": 0.11991573669189554
+      },
+      "M7/M8": {
+        "available": true,
+        "margin": 0.11070069871224895
+      },
+      "definition": "For classifier/prototype score heads, pairwise_margin(a,b) is the mean over true a rows of score_a(x)-score_b(x), plus true b rows of score_b(x)-score_a(x). Positive means the model prefers the correct class."
+    },
+    "typed_linear_plus_axial_feature_reweighting": {
+      "M1/M7": {
+        "available": true,
+        "margin": 0.09247947368856387
+      },
+      "M1/M8": {
+        "available": true,
+        "margin": 0.10393514449816788
+      },
+      "M10/M1": {
+        "available": true,
+        "margin": 0.09928214116242386
+      },
+      "M10/M7": {
+        "available": true,
+        "margin": 0.09931200086305737
+      },
+      "M10/M8": {
+        "available": true,
+        "margin": 0.10886880032561981
+      },
+      "M11/M4": {
+        "available": true,
+        "margin": 0.10682648619034608
+      },
+      "M11/M5": {
+        "available": true,
+        "margin": 0.11432909950326683
+      },
+      "M7/M8": {
+        "available": true,
+        "margin": 0.10727513892686129
+      },
+      "definition": "For classifier/prototype score heads, pairwise_margin(a,b) is the mean over true a rows of score_a(x)-score_b(x), plus true b rows of score_b(x)-score_a(x). Positive means the model prefers the correct class."
+    }
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "folds": [
+    {
+      "fold": 0,
+      "inner_validation_M1_recall": 1.0,
+      "inner_validation_balanced_accuracy": 0.7606837606837608,
+      "outer_test_M1_recall": 0.0,
+      "selected_gain": 2.0,
+      "selected_reg": 0.0001,
+      "test_circuit_id": 0,
+      "training_fold_M1_recall": 1.0
+    },
+    {
+      "fold": 1,
+      "inner_validation_M1_recall": 1.0,
+      "inner_validation_balanced_accuracy": 0.6111111111111112,
+      "outer_test_M1_recall": 1.0,
+      "selected_gain": 0.25,
+      "selected_reg": 0.0001,
+      "test_circuit_id": 1,
+      "training_fold_M1_recall": 1.0
+    },
+    {
+      "fold": 2,
+      "inner_validation_M1_recall": 1.0,
+      "inner_validation_balanced_accuracy": 0.8376068376068376,
+      "outer_test_M1_recall": 1.0,
+      "selected_gain": 4.0,
+      "selected_reg": 0.0001,
+      "test_circuit_id": 2,
+      "training_fold_M1_recall": 1.0
+    }
+  ],
+  "schema": "scope_static_s2d11b_m1_calibration_thresholds_by_fold_v1"
+}

@@ -64,6 +64,11 @@ RZZ_LOCAL_TOMOGRAPHY_PROBES = tuple(
     for parity in RZZ_TOMO_EDGE_PARITIES
 )
 EDGE_ORIENTATION_RULE = "lower_qubit_to_higher_qubit"
+GATE_MECHANISM_IDS = {f"M{idx}" for idx in range(0, 13)}
+READOUT_MECHANISM_IDS = {"M13", "M14", "M15", "M16"}
+PREP_RESET_MECHANISM_IDS = {"M17", "M18"}
+OTHER_MECHANISM_IDS = {"M19"}
+RZZ_FAMILY_IDS = ("M1", "M6", "M7", "M9")
 
 
 def default_teacher_config() -> dict[str, object]:
@@ -77,10 +82,14 @@ def default_teacher_config() -> dict[str, object]:
         "shots": 10_000,
         "seed": 0,
         "theta": 0.18,
+        "circuit_depth": 1,
         "probe_set": "base",
         "include_m5": True,
         "include_m6": False,
         "paper_informed_ptm_features": True,
+        "aer_simulation_method": "auto",
+        "aer_tensor_network_qubit_threshold": 15,
+        "aer_large_qubit_method": "matrix_product_state",
         "aer_simulator_options": {},
         "mechanisms": {
             "M0": {"p_x": 0.0015, "p_y": 0.0008, "p_z": 0.0022},
@@ -88,15 +97,21 @@ def default_teacher_config() -> dict[str, object]:
             "M2": {"epsilon": 0.035},
             "M3": {"epsilon": 0.04},
             "M4": {"gamma": 0.018},
-            "M5": {"p0_to_1": 0.025, "p1_to_0": 0.011},
-            "M6": {"eta": 0.02},
-            "M7": {"p": 0.006},
-            "M8": {"epsilon_x": 0.024, "epsilon_y": 0.017},
-            "M9": {"epsilon": 0.025},
-            "M10": {"gamma": 0.012},
-            "M11": {"p": 0.018},
-            "M12": {"axis": "rx", "epsilon_mean": 0.032, "epsilon_span": 0.018},
-            "M13": {"eta": 0.006},
+            "M5": {"eta": 0.02},
+            "M6": {"p": 0.006},
+            "M7": {"epsilon_x": 0.024, "epsilon_y": 0.017},
+            "M8": {"epsilon": 0.025},
+            "M9": {"gamma": 0.012},
+            "M10": {"axis": "rx", "epsilon_mean": 0.032, "epsilon_span": 0.018},
+            "M11": {"p_z": 0.0025},
+            "M12": {"axis": "rx", "epsilon": 0.028},
+            "M13": {"p": 0.025},
+            "M14": {"p": 0.011},
+            "M15": {"p": 0.018},
+            "M16": {"p": 0.02},
+            "M17": {"p": 0.018},
+            "M18": {"epsilon": 0.025},
+            "M19": {"eta": 0.006},
         },
     }
 
@@ -111,21 +126,19 @@ def build_default_oracle_mechanisms(config: dict[str, object] | None = None) -> 
     specs: list[MechanismSpec] = []
     single_targets = _single_targets(n)
     if "M0" in enabled:
-        specs.append(MechanismSpec("M0", "stochastic_pauli_error", 1, dict(params.get("M0", {})), instruction="id", qubits=(single_targets["M0"],)))
+        specs.append(MechanismSpec("M0", "stochastic_pauli_gate_error", 1, dict(params.get("M0", {})), instruction="id", qubits=(single_targets["M0"],)))
     if "M2" in enabled:
-        specs.append(MechanismSpec("M2", "coherent_rx_over_rotation", 1, dict(params.get("M2", {})), instruction="rx", qubits=(single_targets["M2"],)))
+        specs.append(MechanismSpec("M2", "coherent_rx_overrotation", 1, dict(params.get("M2", {})), instruction="rx", qubits=(single_targets["M2"],)))
     if "M3" in enabled:
-        specs.append(MechanismSpec("M3", "coherent_rz_over_rotation", 1, dict(params.get("M3", {})), instruction="rz", qubits=(single_targets["M3"],)))
+        specs.append(MechanismSpec("M3", "coherent_rz_overrotation", 1, dict(params.get("M3", {})), instruction="rz", qubits=(single_targets["M3"],)))
     if "M4" in enabled:
-        specs.append(MechanismSpec("M4", "amplitude_damping", 1, dict(params.get("M4", {})), instruction="id", qubits=(single_targets["M4"],)))
-    if "M6" in enabled:
-        specs.append(MechanismSpec("M6", "custom_hard_non_pauli_channel", 1, dict(params.get("M6", {})), instruction="id", qubits=(single_targets["M6"],)))
-    if "M9" in enabled:
-        specs.append(MechanismSpec("M9", "spectator_rz_crosstalk", 1, dict(params.get("M9", {})), instruction="id", qubits=(single_targets["M9"],)))
-    if "M11" in enabled:
-        specs.append(MechanismSpec("M11", "reset_preparation_bias", 1, dict(params.get("M11", {})), instruction="reset", qubits=(single_targets["M11"],)))
-    if "M12" in enabled:
-        drift = dict(params.get("M12", {}))
+        specs.append(MechanismSpec("M4", "amplitude_damping_gate_error", 1, dict(params.get("M4", {})), instruction="id", qubits=(single_targets["M4"],)))
+    if "M5" in enabled:
+        specs.append(MechanismSpec("M5", "hard_non_pauli_kraus_gate_error", 1, dict(params.get("M5", {})), instruction="id", qubits=(single_targets["M5"],)))
+    if "M8" in enabled:
+        specs.append(MechanismSpec("M8", "spectator_crosstalk_rz_or_zz", 1, dict(params.get("M8", {})), instruction="id", qubits=(single_targets["M8"],)))
+    if "M10" in enabled:
+        drift = dict(params.get("M10", {}))
         axis = str(drift.get("axis", "rx")).lower()
         instruction = "rz" if axis == "rz" else "rx"
         for drift_idx, (target, epsilon) in enumerate(zip(_drift_targets(n), _drift_epsilons(drift, len(_drift_targets(n))))):
@@ -134,30 +147,44 @@ def build_default_oracle_mechanisms(config: dict[str, object] | None = None) -> 
             local_drift["drift_index"] = int(drift_idx)
             specs.append(
                 MechanismSpec(
-                    "M12",
-                    "drifted_coherent_over_rotation",
+                    "M10",
+                    "drifted_coherent_overrotation",
                     1,
                     local_drift,
                     instruction=instruction,
                     qubits=(target,),
                 )
             )
-    if "M13" in enabled:
-        specs.append(MechanismSpec("M13", "weak_type4_ptm_mixing", 1, dict(params.get("M13", {})), instruction="id", qubits=(single_targets["M13"],)))
+    if "M11" in enabled:
+        specs.append(MechanismSpec("M11", "idle_dephasing_or_relaxation_error", 1, dict(params.get("M11", {})), instruction="id", qubits=(single_targets["M11"],)))
+    if "M12" in enabled:
+        specs.append(MechanismSpec("M12", "operation_dependent_error", 1, dict(params.get("M12", {})), instruction=str(params.get("M12", {}).get("instruction", "rx")), qubits=(single_targets["M12"],)))
+    if "M17" in enabled:
+        specs.append(MechanismSpec("M17", "reset_to_1_bias", 1, dict(params.get("M17", {})), instruction="reset", qubits=(single_targets["M17"],)))
+    if "M18" in enabled:
+        specs.append(MechanismSpec("M18", "prep_axis_or_reset_asymmetry_bias", 1, dict(params.get("M18", {})), instruction="reset", qubits=(single_targets["M18"],)))
+    if "M19" in enabled:
+        specs.append(MechanismSpec("M19", "weak_type4_ptm_mixing", 1, dict(params.get("M19", {})), instruction="id", qubits=(single_targets["M19"],)))
 
     pair_plan = _pair_mechanism_plan(n, enabled)
     for mech, left in pair_plan:
         names = {
-            "M1": "coherent_rzz_over_rotation",
-            "M7": "two_qubit_depolarizing_after_rzz",
-            "M8": "coherent_rxx_ryy_perturbation",
-            "M10": "correlated_two_qubit_relaxation",
+            "M1": "coherent_rzz_overrotation",
+            "M6": "two_qubit_depolarizing_after_rzz",
+            "M7": "coherent_rxx_ryy_perturbation",
+            "M9": "correlated_two_qubit_relaxation",
         }
         specs.append(MechanismSpec(mech, names[mech], 2, dict(params.get(mech, {})), instruction="rzz", qubits=(left, left + 1)))
 
-    if "M5" in enabled:
-        for q in range(n):
-            specs.append(MechanismSpec("M5", "readout_bias", 1, dict(params.get("M5", {})), instruction="measure", qubits=(q,)))
+    for readout_idx, (mech, name) in enumerate((
+        ("M13", "readout_0_to_1_bias"),
+        ("M14", "readout_1_to_0_bias"),
+        ("M15", "readout_symmetric_assignment_noise"),
+        ("M16", "measurement_context_bias"),
+    )):
+        if mech in enabled:
+            q = (readout_idx + int(cfg.get("balanced_batch_index", 0) or 0)) % n
+            specs.append(MechanismSpec(mech, name, 1, dict(params.get(mech, {})), instruction="measure", qubits=(q,)))
     return sorted(specs, key=lambda spec: (_mechanism_sort_key(spec.mechanism_id), spec.qubits))
 
 
@@ -182,9 +209,14 @@ def generate_physical_teacher_dataset(
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
     circuits, probe_names = build_probe_circuits(cfg)
-    probe_manifest = build_probe_basis_manifest(probe_names, num_qubits=int(cfg.get("num_qubits", 5)))
+    probe_manifest = build_probe_basis_manifest(
+        probe_names,
+        num_qubits=int(cfg.get("num_qubits", 5)),
+        circuit_depth=_circuit_depth(cfg),
+    )
     noise_model, mechanisms = build_qiskit_noise_model(cfg)
     observations, sampling_warnings = _sample_circuits(circuits, cfg, noise_model)
+    aer_settings = resolve_aer_simulator_settings(cfg)
     np.savez_compressed(
         output / "observations.npz",
         observations=observations,
@@ -207,6 +239,7 @@ def generate_physical_teacher_dataset(
         "shots": int(cfg.get("shots", 10_000)),
         "mechanism_counts": _mechanism_counts(mechanism_records),
         "backend_audit_dir": str(preflight_dir),
+        "aer_simulator": _summary_aer_settings(aer_settings),
         "active_probe_manifest": str(output / "active_probe_manifest.json"),
         "noise_application_audit": str(output / "noise_application_audit.json"),
         "non_clifford_teacher": bool(non_clifford_audit["non_clifford_teacher"]),
@@ -259,7 +292,11 @@ def _generate_balanced_physical_teacher_dataset(
         local_probe_count += len(probe_names)
 
     observations = np.concatenate(all_observations, axis=0)
-    probe_manifest = build_probe_basis_manifest(all_probe_names, num_qubits=int(cfg.get("num_qubits", 9)))
+    probe_manifest = build_probe_basis_manifest(
+        all_probe_names,
+        num_qubits=int(cfg.get("num_qubits", 9)),
+        circuit_depth=_circuit_depth(cfg),
+    )
     np.savez_compressed(
         output / "observations.npz",
         observations=observations,
@@ -267,6 +304,7 @@ def _generate_balanced_physical_teacher_dataset(
         shots=np.asarray([int(cfg.get("shots", 10_000))], dtype=np.int64),
     )
     mechanism_records = [_mechanism_record(idx, spec) for idx, spec in enumerate(all_mechanisms)]
+    aer_settings = resolve_aer_simulator_settings(cfg)
     noise_application = build_noise_application_audit(all_mechanisms, probe_names=all_probe_names, config=cfg)
     non_clifford_audit = build_non_clifford_audit(all_mechanisms, probe_names=all_probe_names, config=cfg)
     (output / "oracle_mechanisms.json").write_text(json.dumps({"mechanisms": mechanism_records}, indent=2, sort_keys=True) + "\n")
@@ -285,6 +323,7 @@ def _generate_balanced_physical_teacher_dataset(
         "multicircuit_teacher_batch": True,
         "num_circuit_batches": _balanced_repetitions(cfg),
         "backend_audit_dir": str(preflight_dir),
+        "aer_simulator": _summary_aer_settings(aer_settings),
         "active_probe_manifest": str(output / "active_probe_manifest.json"),
         "noise_application_audit": str(output / "noise_application_audit.json"),
         "non_clifford_teacher": bool(non_clifford_audit["non_clifford_teacher"]),
@@ -314,11 +353,12 @@ def _build_single_probe_circuits(config: dict[str, object] | None = None):
     cfg = _merged_config(config)
     n = int(cfg.get("num_qubits", 5))
     theta = float(cfg.get("theta", 0.18))
+    circuit_depth = _circuit_depth(cfg)
     probe_names = _probe_names(str(cfg.get("probe_set", "base")))
     circuits = []
     for probe in probe_names:
         qc = QuantumCircuit(n, n)
-        if _mechanism_set_contains(cfg, "M11"):
+        if any(_mechanism_set_contains(cfg, mech) for mech in PREP_RESET_MECHANISM_IDS):
             for q in range(n):
                 qc.reset(q)
         if probe in {"x_basis", "full_x"}:
@@ -335,38 +375,52 @@ def _build_single_probe_circuits(config: dict[str, object] | None = None):
             for q in range(n):
                 qc.x(q)
         _apply_rzz_tomography_preparation(qc, probe, n)
-        for q in range(n):
-            qc.id(q)
         rx_qubits = set(_profile_rx_qubits(n))
         rz_qubits = set(_profile_rz_qubits(n))
-        if _mechanism_set_contains(cfg, "M12"):
+        if any(_mechanism_set_contains(cfg, mech) for mech in ("M10", "M12")):
             mechanism_params = cfg.get("mechanisms", {})
+            m10_params = (
+                dict(mechanism_params.get("M10", {}))
+                if isinstance(mechanism_params, dict) and isinstance(mechanism_params.get("M10", {}), dict)
+                else {}
+            )
+            if _mechanism_set_contains(cfg, "M10"):
+                axis = str(m10_params.get("axis", "rx")).lower()
+                if axis == "rz":
+                    rz_qubits.update(_drift_targets(n))
+                else:
+                    rx_qubits.update(_drift_targets(n))
             m12_params = (
                 dict(mechanism_params.get("M12", {}))
                 if isinstance(mechanism_params, dict) and isinstance(mechanism_params.get("M12", {}), dict)
                 else {}
             )
-            axis = str(m12_params.get("axis", "rx")).lower()
-            if axis == "rz":
-                rz_qubits.update(_drift_targets(n))
+            if _mechanism_set_contains(cfg, "M12"):
+                axis = str(m12_params.get("axis", "rx")).lower()
+                targets = [_single_targets(n)["M12"]]
+                if axis == "rz":
+                    rz_qubits.update(targets)
+                else:
+                    rx_qubits.update(targets)
+        for _layer_idx in range(circuit_depth):
+            for q in range(n):
+                qc.id(q)
+            for q in sorted(rx_qubits):
+                qc.rx(0.13 + 0.01 * (q % 3), q)
+            for q in sorted(rz_qubits):
+                qc.rz(0.09 + 0.01 * (q % 2), q)
+            if _is_rzz_tomography_probe(probe):
+                _apply_rzz_tomography_block(qc, probe, n, theta)
+            elif _is_rzz_echo_probe(probe):
+                _apply_rzz_echo_block(qc, probe, n, theta)
+            elif _is_rzz_minimal_sign_probe(probe):
+                _apply_rzz_minimal_sign_block(qc, probe, n, theta)
             else:
-                rx_qubits.update(_drift_targets(n))
-        for q in sorted(rx_qubits):
-            qc.rx(0.13 + 0.01 * (q % 3), q)
-        for q in sorted(rz_qubits):
-            qc.rz(0.09 + 0.01 * (q % 2), q)
-        if _is_rzz_tomography_probe(probe):
-            _apply_rzz_tomography_block(qc, probe, n, theta)
-        elif _is_rzz_echo_probe(probe):
-            _apply_rzz_echo_block(qc, probe, n, theta)
-        elif _is_rzz_minimal_sign_probe(probe):
-            _apply_rzz_minimal_sign_block(qc, probe, n, theta)
-        else:
-            _apply_rzz_pauli_frame(qc, probe, n)
-            for _depth_step in range(_probe_rzz_depth(probe)):
-                for left in range(n - 1):
-                    qc.rzz(theta, left, left + 1)
-            _apply_rzz_pauli_frame(qc, probe, n)
+                _apply_rzz_pauli_frame(qc, probe, n)
+                for _depth_step in range(_probe_rzz_depth(probe)):
+                    for left in range(n - 1):
+                        qc.rzz(theta, left, left + 1)
+                _apply_rzz_pauli_frame(qc, probe, n)
         if probe == "echo":
             for q in range(n):
                 qc.x(q)
@@ -376,7 +430,7 @@ def _build_single_probe_circuits(config: dict[str, object] | None = None):
     return circuits, probe_names
 
 
-def build_probe_basis_manifest(probe_names: Iterable[str], *, num_qubits: int) -> dict[str, object]:
+def build_probe_basis_manifest(probe_names: Iterable[str], *, num_qubits: int, circuit_depth: int = 1) -> dict[str, object]:
     """Visible probe-basis metadata, independent of oracle channels or labels."""
 
     n = int(num_qubits)
@@ -402,6 +456,7 @@ def build_probe_basis_manifest(probe_names: Iterable[str], *, num_qubits: int) -
                 "rzz_tomography_measurement": probe_rzz_tomography_measurement(str(name)),
                 "rzz_tomography_edge_parity": probe_rzz_tomography_edge_parity(str(name)),
                 "rzz_tomography_edge_pairs": _rzz_tomography_edge_pairs(str(name), n),
+                "circuit_depth": int(circuit_depth),
                 "edge_orientation_rule": EDGE_ORIENTATION_RULE,
                 "measurable_edge_pairs": [
                     {
@@ -421,6 +476,7 @@ def build_probe_basis_manifest(probe_names: Iterable[str], *, num_qubits: int) -
         "probe_set_role": "learner_visible_measurement_metadata",
         "edge_orientation_rule": EDGE_ORIENTATION_RULE,
         "num_qubits": n,
+        "circuit_depth": int(circuit_depth),
         "probe_records": records,
     }
 
@@ -872,11 +928,8 @@ def _build_qiskit_noise_model_for_mechanisms(config: dict[str, object], mechanis
 
     noise_model = NoiseModel()
     for spec in mechanisms:
-        if spec.mechanism_id == "M5":
-            matrix = readout_bias_matrix(
-                p0_to_1=float(spec.parameters.get("p0_to_1", 0.025)),
-                p1_to_0=float(spec.parameters.get("p1_to_0", 0.011)),
-            )
+        if spec.mechanism_id in READOUT_MECHANISM_IDS:
+            matrix = _readout_matrix_for_spec(spec)
             noise_model.add_readout_error(ReadoutError(matrix.tolist()), list(spec.qubits))
             continue
         error = _quantum_error_for_spec(
@@ -910,7 +963,7 @@ def build_noise_application_audit(
                 "probe_indices": [int(idx) for idx in spec.probe_indices],
                 "num_qubits": int(spec.num_qubits),
                 "noise_kind": _noise_kind(spec),
-                "qiskit_application_api": "add_readout_error" if spec.mechanism_id == "M5" else "add_quantum_error",
+                "qiskit_application_api": "add_readout_error" if spec.mechanism_id in READOUT_MECHANISM_IDS else "add_quantum_error",
                 "applies_to_all_qubits": False,
                 "parameters": {str(key): value for key, value in spec.audit_dict()["parameters"].items()},
                 "oracle_label_evaluator_only": True,
@@ -994,7 +1047,7 @@ def build_non_clifford_audit(
                     "reason": "coherent RZ over-rotation",
                 }
             )
-        elif spec.mechanism_id == "M8":
+        elif spec.mechanism_id == "M7":
             angle = float(spec.parameters.get("epsilon_x", spec.parameters.get("epsilon", 0.024)))
             mechanism_records.append(
                 {
@@ -1007,7 +1060,7 @@ def build_non_clifford_audit(
                     "reason": "coherent RXX/RYY perturbation",
                 }
             )
-        elif spec.mechanism_id in {"M9", "M12"}:
+        elif spec.mechanism_id in {"M8", "M10", "M12", "M18"}:
             angle = float(spec.parameters.get("epsilon", spec.parameters.get("epsilon_mean", 0.03)))
             mechanism_records.append(
                 {
@@ -1020,7 +1073,7 @@ def build_non_clifford_audit(
                     "reason": "drift/crosstalk coherent over-rotation",
                 }
             )
-        elif spec.mechanism_id in {"M4", "M6", "M10", "M13"}:
+        elif spec.mechanism_id in {"M4", "M5", "M9", "M11", "M19"}:
             mechanism_records.append(
                 {
                     "source": "oracle_noise",
@@ -1054,6 +1107,7 @@ def format_teacher_summary(summary: dict[str, object]) -> str:
         f"- Qubits: `{summary['num_qubits']}`",
         f"- Shots: `{summary['shots']}`",
         f"- Backend audit: `{summary['backend_audit_dir']}`",
+        f"- Aer simulator: `{_format_aer_settings(summary.get('aer_simulator'))}`",
         f"- Active probe manifest: `{summary.get('active_probe_manifest', '')}`",
         f"- Noise application audit: `{summary['noise_application_audit']}`",
         f"- Non-Clifford teacher: `{str(bool(summary['non_clifford_teacher'])).lower()}`",
@@ -1089,29 +1143,38 @@ def _quantum_error_for_spec(spec: MechanismSpec, **factories):
         return factories["coherent_unitary_error"](rz_unitary(float(spec.parameters.get("epsilon", 0.04))))
     if spec.mechanism_id == "M4":
         return factories["amplitude_damping_error"](float(spec.parameters.get("gamma", 0.018)))
-    if spec.mechanism_id == "M6":
+    if spec.mechanism_id == "M5":
         return factories["kraus_error"](custom_non_pauli_kraus(float(spec.parameters.get("eta", 0.02))))
-    if spec.mechanism_id == "M7":
+    if spec.mechanism_id == "M6":
         return factories["depolarizing_error"](float(spec.parameters.get("p", 0.006)), 2)
-    if spec.mechanism_id == "M8":
+    if spec.mechanism_id == "M7":
         return factories["coherent_unitary_error"](
             rxx_ryy_unitary(
                 theta_x=float(spec.parameters.get("epsilon_x", spec.parameters.get("epsilon", 0.024))),
                 theta_y=float(spec.parameters.get("epsilon_y", float(spec.parameters.get("epsilon", 0.024)) * 0.7)),
             )
         )
-    if spec.mechanism_id == "M9":
+    if spec.mechanism_id == "M8":
         return factories["coherent_unitary_error"](rz_unitary(float(spec.parameters.get("epsilon", 0.025))))
-    if spec.mechanism_id == "M10":
+    if spec.mechanism_id == "M9":
         return factories["kraus_error"](correlated_relaxation_kraus(float(spec.parameters.get("gamma", 0.012))))
-    if spec.mechanism_id == "M11":
-        p = float(spec.parameters.get("p", 0.018))
-        return factories["pauli_error"]([("I", max(0.0, 1.0 - p)), ("X", p)])
-    if spec.mechanism_id == "M12":
+    if spec.mechanism_id == "M10":
         angle = float(spec.parameters.get("epsilon", spec.parameters.get("epsilon_mean", 0.032)))
         axis = str(spec.parameters.get("axis", "rx")).lower()
         return factories["coherent_unitary_error"](rx_unitary(angle) if axis == "rx" else rz_unitary(angle))
-    if spec.mechanism_id == "M13":
+    if spec.mechanism_id == "M11":
+        p = float(spec.parameters.get("p_z", spec.parameters.get("p", 0.0025)))
+        return factories["pauli_error"]([("I", max(0.0, 1.0 - p)), ("Z", p)])
+    if spec.mechanism_id == "M12":
+        angle = float(spec.parameters.get("epsilon", 0.028))
+        axis = str(spec.parameters.get("axis", "rx")).lower()
+        return factories["coherent_unitary_error"](rx_unitary(angle) if axis == "rx" else rz_unitary(angle))
+    if spec.mechanism_id == "M17":
+        p = float(spec.parameters.get("p", 0.018))
+        return factories["pauli_error"]([("I", max(0.0, 1.0 - p)), ("X", p)])
+    if spec.mechanism_id == "M18":
+        return factories["coherent_unitary_error"](rx_unitary(float(spec.parameters.get("epsilon", 0.025))))
+    if spec.mechanism_id == "M19":
         return factories["kraus_error"](weak_type4_mixing_kraus(float(spec.parameters.get("eta", 0.006))))
     raise ValueError(f"unsupported quantum mechanism {spec.mechanism_id!r}")
 
@@ -1121,19 +1184,34 @@ def _noise_kind(spec: MechanismSpec) -> str:
         return "stochastic_pauli_quantum_error"
     if spec.mechanism_id in {"M1", "M2"}:
         return "coherent_unitary_quantum_error"
-    if spec.mechanism_id in {"M3", "M8", "M9", "M12"}:
+    if spec.mechanism_id in {"M3", "M7", "M8", "M10", "M12", "M18"}:
         return "coherent_unitary_quantum_error"
     if spec.mechanism_id == "M4":
         return "amplitude_damping_quantum_error"
-    if spec.mechanism_id == "M5":
+    if spec.mechanism_id in READOUT_MECHANISM_IDS:
         return "readout_error"
-    if spec.mechanism_id in {"M6", "M10", "M13"}:
+    if spec.mechanism_id in {"M5", "M9", "M19"}:
         return "custom_kraus_quantum_error"
-    if spec.mechanism_id == "M7":
-        return "two_qubit_depolarizing_quantum_error"
     if spec.mechanism_id == "M11":
+        return "idle_pauli_quantum_error"
+    if spec.mechanism_id == "M6":
+        return "two_qubit_depolarizing_quantum_error"
+    if spec.mechanism_id in PREP_RESET_MECHANISM_IDS:
         return "reset_preparation_bias_quantum_error"
     return "unknown"
+
+
+def _readout_matrix_for_spec(spec: MechanismSpec) -> np.ndarray:
+    params = dict(spec.parameters)
+    p = float(params.get("p", 0.02))
+    p0_to_1 = p if spec.mechanism_id in {"M13", "M15", "M16"} else 0.0
+    p1_to_0 = p if spec.mechanism_id in {"M14", "M15"} else 0.0
+    if spec.mechanism_id == "M16":
+        p1_to_0 = 0.5 * p
+    return readout_bias_matrix(
+        p0_to_1=float(params.get("p0_to_1", p0_to_1)),
+        p1_to_0=float(params.get("p1_to_0", p1_to_0)),
+    )
 
 
 def _is_clifford_angle(angle: float, *, atol: float = 1e-9) -> bool:
@@ -1150,7 +1228,13 @@ def _sample_circuits(circuits, config: dict[str, object], noise_model) -> tuple[
 
     shots = int(config.get("shots", 10_000))
     n = int(config.get("num_qubits", 5))
-    simulator = AerSimulator(method="density_matrix", device="GPU", noise_model=noise_model, **_aer_simulator_options(config))
+    aer_settings = resolve_aer_simulator_settings(config)
+    simulator = AerSimulator(
+        method=str(aer_settings["method"]),
+        device=str(aer_settings["device"]),
+        noise_model=noise_model,
+        **dict(aer_settings["options"]),
+    )
     results = []
     warning_records: list[dict[str, str]] = []
     for idx, circuit in enumerate(circuits):
@@ -1161,6 +1245,144 @@ def _sample_circuits(circuits, config: dict[str, object], noise_model) -> tuple[
         warning_records.extend(_warning_records(caught))
         results.append(_counts_to_bit_matrix(counts, shots=shots, num_bits=n))
     return np.stack(results, axis=0), _dedupe_warning_records(warning_records)
+
+
+def resolve_aer_simulator_settings(config: dict[str, object] | None = None) -> dict[str, object]:
+    """Resolve GPU Aer method/device/options for the physical teacher.
+
+    The default stays exact dense density-matrix for small teacher circuits, but
+    15+ qubit chain profiles use the GPU MPS tensor-network method instead of a
+    dense 2^n x 2^n density matrix.
+    """
+
+    cfg = _merged_config(config)
+    n = int(cfg.get("num_qubits", 5))
+    threshold = int(cfg.get("aer_tensor_network_qubit_threshold", 15))
+    explicit_method, explicit_source = _explicit_aer_method(cfg)
+    if explicit_method is None:
+        requested = "auto"
+    else:
+        requested = explicit_method
+    requested = _normalize_aer_method(requested)
+    if requested == "auto":
+        if n >= threshold:
+            method = _normalize_aer_method(str(cfg.get("aer_large_qubit_method", "matrix_product_state")))
+            reason = "auto_large_qubit_tensor_network"
+        else:
+            method = "density_matrix"
+            reason = "auto_small_qubit_density_matrix"
+    else:
+        method = requested
+        reason = f"explicit_{explicit_source}"
+    device = _resolve_aer_device(cfg)
+    options = _aer_simulator_options(cfg)
+    if method == "matrix_product_state":
+        options.setdefault("matrix_product_state_truncation_threshold", 0.0)
+    return {
+        "method": method,
+        "device": device,
+        "options": options,
+        "num_qubits": n,
+        "tensor_network_threshold": threshold,
+        "requested_method": requested,
+        "selection_reason": reason,
+    }
+
+
+def _explicit_aer_method(config: dict[str, object]) -> tuple[str | None, str]:
+    for key in ("aer_simulation_method", "aer_simulator_method", "aer_method"):
+        if key in config:
+            method = _normalize_aer_method(str(config[key]))
+            if method != "auto":
+                return method, key
+    raw_options = config.get("aer_simulator_options", {})
+    if isinstance(raw_options, dict) and "method" in raw_options:
+        method = _normalize_aer_method(str(raw_options["method"]))
+        if method != "auto":
+            return method, "aer_simulator_options.method"
+    return None, "default_auto"
+
+
+def _normalize_aer_method(value: str) -> str:
+    text = str(value).strip().lower().replace("-", "_")
+    aliases = {
+        "": "auto",
+        "auto": "auto",
+        "scope_auto": "auto",
+        "dense": "density_matrix",
+        "density": "density_matrix",
+        "dm": "density_matrix",
+        "density_matrix": "density_matrix",
+        "mps": "matrix_product_state",
+        "matrix_product_state": "matrix_product_state",
+        "matrix_product": "matrix_product_state",
+        "tn": "tensor_network",
+        "tensor": "tensor_network",
+        "tensor_network": "tensor_network",
+        "cutensornet": "tensor_network",
+        "cu_tensor_net": "tensor_network",
+        "cuquantum": "tensor_network",
+        "automatic": "automatic",
+        "statevector": "statevector",
+        "stabilizer": "stabilizer",
+        "extended_stabilizer": "extended_stabilizer",
+        "unitary": "unitary",
+        "superop": "superop",
+    }
+    if text not in aliases:
+        supported = ", ".join(sorted(set(aliases.values())))
+        raise ValueError(f"unsupported Aer simulation method {value!r}; expected one of {supported}")
+    return aliases[text]
+
+
+def _resolve_aer_device(config: dict[str, object]) -> str:
+    explicit: object | None = None
+    for key in ("aer_device", "aer_simulator_device"):
+        if key in config:
+            explicit = config[key]
+            break
+    raw_options = config.get("aer_simulator_options", {})
+    if explicit is None and isinstance(raw_options, dict) and "device" in raw_options:
+        explicit = raw_options["device"]
+    if explicit is None:
+        device = "GPU" if str(config.get("backend", "qiskit_aer_gpu")) == "qiskit_aer_gpu" or bool(config.get("require_gpu", True)) else "CPU"
+    else:
+        device = str(explicit).strip().upper()
+    if device not in {"CPU", "GPU"}:
+        raise ValueError(f"unsupported Aer simulator device {device!r}; expected 'CPU' or 'GPU'")
+    if device == "CPU" and bool(config.get("require_gpu", True)) and not bool(config.get("allow_cpu_aer_fallback", False)):
+        raise ValueError("Aer simulator device is CPU but require_gpu is true and allow_cpu_aer_fallback is false")
+    return device
+
+
+def _summary_aer_settings(settings: dict[str, object]) -> dict[str, object]:
+    return {
+        "method": str(settings.get("method", "")),
+        "device": str(settings.get("device", "")),
+        "selection_reason": str(settings.get("selection_reason", "")),
+        "requested_method": str(settings.get("requested_method", "")),
+        "num_qubits": int(settings.get("num_qubits", 0) or 0),
+        "tensor_network_threshold": int(settings.get("tensor_network_threshold", 0) or 0),
+        "options": dict(settings.get("options", {})) if isinstance(settings.get("options", {}), dict) else {},
+    }
+
+
+def _format_aer_settings(value: object) -> str:
+    if not isinstance(value, dict):
+        return "unavailable"
+    method = str(value.get("method", ""))
+    device = str(value.get("device", ""))
+    reason = str(value.get("selection_reason", ""))
+    n = value.get("num_qubits", "")
+    threshold = value.get("tensor_network_threshold", "")
+    parts = [f"method={method}", f"device={device}"]
+    if n != "":
+        parts.append(f"n={n}")
+    if threshold != "":
+        parts.append(f"threshold={threshold}")
+    if reason:
+        parts.append(f"reason={reason}")
+    return ", ".join(parts)
 
 
 def _counts_to_bit_matrix(counts: dict[str, int], *, shots: int, num_bits: int) -> np.ndarray:
@@ -1193,6 +1415,11 @@ def _merged_config(config: dict[str, object] | None) -> dict[str, object]:
             result[key] = {**dict(result.get(key, {})), **dict(value)}
         else:
             result[key] = value
+    if "circuit_depth" not in config:
+        if "depth" in config:
+            result["circuit_depth"] = config["depth"]
+        elif "num_layers" in config:
+            result["circuit_depth"] = config["num_layers"]
     return result
 
 
@@ -1243,6 +1470,7 @@ def _profile_defaults(profile: str) -> dict[str, object]:
         "phys7_chain": {"num_qubits": 7, "probe_set": "base"},
         "phys9_chain": {"num_qubits": 9, "probe_set": "base"},
         "phys15_chain": {"num_qubits": 15, "probe_set": "base_idle_echo"},
+        "phys20_chain": {"num_qubits": 20, "probe_set": "base_idle_echo"},
         "phys9_setB_balanced": {
             "num_qubits": 9,
             "probe_set": "base",
@@ -1281,7 +1509,14 @@ def _profile_defaults(profile: str) -> dict[str, object]:
         "phys9_multicircuit_allM_balanced": {
             "num_qubits": 9,
             "probe_set": "base",
-            "mechanism_set": ["M0", "M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", "M9", "M10", "M11", "M12", "M13"],
+            "mechanism_set": [f"M{idx}" for idx in range(20)],
+            "balanced_min_instances_per_mechanism": 3,
+            "multicircuit_teacher_batch": True,
+        },
+        "phys15_multicircuit_allM_balanced": {
+            "num_qubits": 15,
+            "probe_set": "base_idle_echo",
+            "mechanism_set": [f"M{idx}" for idx in range(20)],
             "balanced_min_instances_per_mechanism": 3,
             "multicircuit_teacher_batch": True,
         },
@@ -1307,10 +1542,11 @@ def _profile_defaults(profile: str) -> dict[str, object]:
 
 def _enabled_mechanism_ids(config: dict[str, object]) -> set[str]:
     named_sets = {
-        "set_A": {"M0", "M1", "M2", "M3", "M4", "M5"},
-        "set_B": {"M0", "M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8"},
-        "set_C": {"M0", "M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", "M9", "M10"},
-        "set_D": {"M0", "M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", "M9", "M10", "M11", "M12"},
+        "set_A": {"M0", "M1", "M2", "M3", "M4", "M13", "M14", "M15", "M16"},
+        "set_B": {"M0", "M1", "M2", "M3", "M4", "M5", "M6", "M7", "M13", "M14", "M15", "M16"},
+        "set_C": {"M0", "M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", "M9", "M13", "M14", "M15", "M16"},
+        "set_D": {f"M{idx}" for idx in range(19)},
+        "allM": {f"M{idx}" for idx in range(20)},
     }
     raw = config.get("mechanism_set", "set_A")
     if isinstance(raw, str):
@@ -1322,9 +1558,9 @@ def _enabled_mechanism_ids(config: dict[str, object]) -> set[str]:
     else:
         raise ValueError("mechanism_set must be a named set or list of mechanism ids")
     if bool(config.get("include_m6", False)):
-        enabled.add("M6")
+        enabled.add("M5")
     if not bool(config.get("include_m5", True)):
-        enabled.discard("M5")
+        enabled.difference_update(READOUT_MECHANISM_IDS)
     return enabled
 
 
@@ -1338,6 +1574,13 @@ def _balanced_profile_enabled(config: dict[str, object]) -> bool:
 
 def _balanced_repetitions(config: dict[str, object]) -> int:
     return max(1, int(config.get("balanced_min_instances_per_mechanism", 3)))
+
+
+def _circuit_depth(config: dict[str, object]) -> int:
+    for key in ("circuit_depth", "depth", "num_layers"):
+        if key in config:
+            return max(1, int(config.get(key, 1) or 1))
+    return 1
 
 
 def _build_balanced_oracle_mechanisms(config: dict[str, object]) -> list[MechanismSpec]:
@@ -1371,21 +1614,24 @@ def _build_balanced_oracle_mechanism_batch(config: dict[str, object], *, circuit
     pair_offset = int(circuit_id) % max(1, n - 1)
     specs: list[MechanismSpec] = []
     single_plan = {
-        "M0": ("stochastic_pauli_error", "id", 0),
-        "M2": ("coherent_rx_over_rotation", "rx", 2),
-        "M3": ("coherent_rz_over_rotation", "rz", 1),
-        "M4": ("amplitude_damping", "id", 3),
-        "M6": ("custom_hard_non_pauli_channel", "id", 4),
-        "M9": ("spectator_rz_crosstalk", "id", 5),
-        "M11": ("reset_preparation_bias", "reset", 6),
-        "M12": ("drifted_coherent_over_rotation", "rx", 7),
-        "M13": ("weak_type4_ptm_mixing", "id", 8),
+        "M0": ("stochastic_pauli_gate_error", "id", 0),
+        "M2": ("coherent_rx_overrotation", "rx", 2),
+        "M3": ("coherent_rz_overrotation", "rz", 1),
+        "M4": ("amplitude_damping_gate_error", "id", 3),
+        "M5": ("hard_non_pauli_kraus_gate_error", "id", 4),
+        "M8": ("spectator_crosstalk_rz_or_zz", "id", 5),
+        "M10": ("drifted_coherent_overrotation", "rx", 7),
+        "M11": ("idle_dephasing_or_relaxation_error", "id", 6),
+        "M12": ("operation_dependent_error", "rx", 8),
+        "M17": ("reset_to_1_bias", "reset", 6),
+        "M18": ("prep_axis_or_reset_asymmetry_bias", "reset", 8),
+        "M19": ("weak_type4_ptm_mixing", "id", 8),
     }
     for mech, (name, instruction, target) in single_plan.items():
         if mech not in enabled:
             continue
         local_params = dict(params.get(mech, {}))
-        if mech == "M12":
+        if mech == "M10":
             epsilons = _drift_epsilons(local_params, _balanced_repetitions(config))
             local_params["epsilon"] = epsilons[int(circuit_id) % len(epsilons)]
             instruction = "rz" if str(local_params.get("axis", "rx")).lower() == "rz" else "rx"
@@ -1402,10 +1648,10 @@ def _build_balanced_oracle_mechanism_batch(config: dict[str, object], *, circuit
         )
 
     pair_plan = [
-        ("M1", "coherent_rzz_over_rotation", 0),
-        ("M7", "two_qubit_depolarizing_after_rzz", 1),
-        ("M8", "coherent_rxx_ryy_perturbation", 2),
-        ("M10", "correlated_two_qubit_relaxation", 3),
+        ("M1", "coherent_rzz_overrotation", 0),
+        ("M6", "two_qubit_depolarizing_after_rzz", 1),
+        ("M7", "coherent_rxx_ryy_perturbation", 2),
+        ("M9", "correlated_two_qubit_relaxation", 3),
     ]
     for mech, name, base_left in pair_plan:
         if mech not in enabled:
@@ -1423,9 +1669,15 @@ def _build_balanced_oracle_mechanism_batch(config: dict[str, object], *, circuit
             )
         )
 
-    if "M5" in enabled:
-        for q in range(n):
-            specs.append(MechanismSpec("M5", "readout_bias", 1, dict(params.get("M5", {})), instruction="measure", qubits=(q,), circuit_id=circuit_id))
+    for readout_idx, (mech, name) in enumerate((
+        ("M13", "readout_0_to_1_bias"),
+        ("M14", "readout_1_to_0_bias"),
+        ("M15", "readout_symmetric_assignment_noise"),
+        ("M16", "measurement_context_bias"),
+    )):
+        if mech in enabled:
+            q = (readout_idx + offset) % n
+            specs.append(MechanismSpec(mech, name, 1, dict(params.get(mech, {})), instruction="measure", qubits=(q,), circuit_id=circuit_id))
     return sorted(specs, key=lambda spec: (_mechanism_sort_key(spec.mechanism_id), spec.qubits))
 
 
@@ -1436,11 +1688,14 @@ def _single_targets(num_qubits: int) -> dict[str, int]:
         "M3": 1,
         "M2": 2,
         "M4": 3,
-        "M6": 4,
-        "M9": 5,
+        "M5": 4,
+        "M8": 5,
         "M11": 6,
-        "M12": 7,
-        "M13": 8,
+        "M10": 7,
+        "M12": 8,
+        "M17": 6,
+        "M18": 8,
+        "M19": 8,
     }
     return {key: min(max(0, value), n - 1) for key, value in requested.items()}
 
@@ -1467,7 +1722,7 @@ def _drift_epsilons(parameters: dict[str, object], count: int) -> list[float]:
 
 
 def _pair_mechanism_plan(num_qubits: int, enabled: set[str]) -> list[tuple[str, int]]:
-    pair_mechanisms = [mech for mech in ("M1", "M7", "M8", "M10") if mech in enabled]
+    pair_mechanisms = [mech for mech in RZZ_FAMILY_IDS if mech in enabled]
     if not pair_mechanisms:
         return []
     num_pairs = max(1, int(num_qubits) - 1)
@@ -1513,7 +1768,17 @@ def _aer_simulator_options(config: dict[str, object]) -> dict[str, object]:
         "max_parallel_shots",
         "num_threads_per_device",
         "batched_shots_gpu",
+        "batched_shots_gpu_max_qubits",
         "cuStateVec_enable",
+        "matrix_product_state_max_bond_dimension",
+        "matrix_product_state_truncation_threshold",
+        "mps_lapack",
+        "mps_log_data",
+        "mps_omp_threads",
+        "mps_parallel_threshold",
+        "mps_sample_measure_algorithm",
+        "mps_swap_direction",
+        "tensor_network_num_sampling_qubits",
     }
     return {str(key): value for key, value in raw.items() if str(key) in allowed}
 

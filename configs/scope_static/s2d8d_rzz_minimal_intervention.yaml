@@ -24,19 +24,33 @@ s2d_physical:
     M4:
       gamma: 0.018
     M5:
-      p0_to_1: 0.025
-      p1_to_0: 0.011
-    M6:
       eta: 0.02
-    M7:
+    M6:
       p: 0.006
-    M8:
+    M7:
       epsilon_x: 0.024
       epsilon_y: 0.017
-    M9:
+    M8:
       epsilon: 0.025
-    M10:
+    M9:
       gamma: 0.012
+    M10:
+      axis: rx
+      epsilon_mean: 0.032
+      epsilon_span: 0.018
+    M11:
+      p_z: 0.0025
+    M12:
+      axis: rx
+      epsilon: 0.028
+    M13:
+      p: 0.025
+    M14:
+      p: 0.011
+    M15:
+      p: 0.018
+    M16:
+      p: 0.02
 
 s2d8d_rzz_minimal_intervention:
   output_dir: outputs/scope_static/S2D.8_RZZ_dynamical_probe_design/S2D.8d_RZZ_minimal_intervention_probe

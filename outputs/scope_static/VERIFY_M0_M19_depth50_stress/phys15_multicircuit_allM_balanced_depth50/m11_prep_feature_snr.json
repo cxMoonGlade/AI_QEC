@@ -1,0 +1,12 @@
+{
+  "features": {
+    "initial_state_affine_shift": 4.147597710455235,
+    "prep_axis_bias_x": 3.7778420207826207,
+    "prep_axis_bias_y": 2.238669233701204,
+    "prep_axis_bias_z": 2.8162116297363773,
+    "prep_confidence_proxy": 1.8267923417896437,
+    "prep_fidelity_proxy": 4.5573922542334,
+    "reset_prep_asymmetry": 1.3224943737144996
+  },
+  "schema": "scope_static_s2d11_m11_prep_feature_snr_v1"
+}

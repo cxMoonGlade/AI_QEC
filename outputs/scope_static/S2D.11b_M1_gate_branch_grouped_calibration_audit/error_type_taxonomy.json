@@ -1,0 +1,52 @@
+{
+  "error_type_to_mechanisms": {
+    "gate": [
+      "M0",
+      "M1",
+      "M2",
+      "M3",
+      "M4",
+      "M6",
+      "M7",
+      "M8",
+      "M9",
+      "M10",
+      "M12"
+    ],
+    "prep_reset": [
+      "M11"
+    ],
+    "readout": [
+      "M5"
+    ]
+  },
+  "error_types": [
+    "gate",
+    "readout",
+    "prep_reset"
+  ],
+  "mechanism_to_error_type": {
+    "M0": "gate",
+    "M1": "gate",
+    "M10": "gate",
+    "M11": "prep_reset",
+    "M12": "gate",
+    "M2": "gate",
+    "M3": "gate",
+    "M4": "gate",
+    "M5": "readout",
+    "M6": "gate",
+    "M7": "gate",
+    "M8": "gate",
+    "M9": "gate"
+  },
+  "oracle_labels_used_for_taxonomy_evaluation_only": true,
+  "row_level_branch_assignment_uses_oracle_labels": false,
+  "schema": "scope_static_s2d11b_error_type_taxonomy_v1",
+  "visible_branch_rule": "measure->readout_branch; reset->prep_reset_branch; otherwise->gate_process_branch",
+  "visible_branch_to_error_type": {
+    "gate_process_branch": "gate",
+    "prep_reset_branch": "prep_reset",
+    "readout_branch": "readout"
+  }
+}

@@ -12,8 +12,9 @@ from scope_static.local_mechanism import split_merge_audit
 from .local_inverse import build_visible_location_representations
 
 
-RZZ_FAMILY = ("M1", "M7", "M8", "M10")
-READOUT_LABEL = "M5"
+RZZ_FAMILY = ("M1", "M6", "M7", "M9")
+READOUT_LABELS = ("M13", "M14", "M15", "M16")
+READOUT_LABEL = READOUT_LABELS[0]
 
 
 @dataclass(frozen=True)
@@ -193,23 +194,30 @@ def readout_split_audit(
     before: np.ndarray,
     after: np.ndarray,
 ) -> dict[str, object]:
-    if READOUT_LABEL not in label_names:
+    readout_indices = [idx for idx, name in enumerate(label_names) if name in READOUT_LABELS]
+    if not readout_indices:
         return {"readout_label_present": False}
-    readout_idx = label_names.index(READOUT_LABEL)
     true = np.asarray(hidden_labels.tolist(), dtype=np.int64)
+    readout_mask = np.isin(true, np.asarray(readout_indices, dtype=np.int64))
     out = {
         "readout_label_present": True,
+        "readout_labels_present": [label_names[idx] for idx in readout_indices],
         "M5_within_class_variance_before_normalization": float(np.mean(np.var(before, axis=0))) if before.size else 0.0,
         "M5_within_class_variance_after_normalization": float(np.mean(np.var(after, axis=0))) if after.size else 0.0,
+        "readout_within_class_variance_before_normalization": float(np.mean(np.var(before, axis=0))) if before.size else 0.0,
+        "readout_within_class_variance_after_normalization": float(np.mean(np.var(after, axis=0))) if after.size else 0.0,
         "methods": {},
     }
     for method, labels in labels_by_method.items():
         pred = np.asarray(labels, dtype=np.int64)
-        clusters = sorted({int(value) for value in pred[true == readout_idx].tolist()})
+        clusters = sorted({int(value) for value in pred[readout_mask].tolist()})
         out["methods"][method] = {
             "M5_split_count": len(clusters),
             "M5_clusters": clusters,
-            "M5_split_fixed": len(clusters) <= 1,
+            "M5_split_fixed": len(clusters) <= len(readout_indices),
+            "readout_split_count": len(clusters),
+            "readout_clusters": clusters,
+            "readout_split_within_declared_taxonomy": len(clusters) <= len(readout_indices),
         }
     return out
 
@@ -400,7 +408,7 @@ def _readout_normalized_features(local_response: np.ndarray) -> np.ndarray:
 
 def _typed_cluster_budgets(visible_types: list[str], num_clusters: int) -> dict[str, int]:
     counts = _counts(visible_types)
-    readout = 1 if counts.get("readout", 0) else 0
+    readout = min(4, int(counts.get("readout", 0))) if counts.get("readout", 0) else 0
     if counts.get("rzz_edge", 0):
         if int(num_clusters) >= 11:
             rzz = min(4, int(counts["rzz_edge"]))

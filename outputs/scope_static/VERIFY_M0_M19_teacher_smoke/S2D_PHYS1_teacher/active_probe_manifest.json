@@ -1,0 +1,614 @@
+{
+  "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+  "num_qubits": 9,
+  "probe_records": [
+    {
+      "base_probe_name": "z_basis",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 0,
+      "probe_name": "c0:z_basis",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "none",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [],
+      "rzz_intervention_edge_parity": "none",
+      "rzz_intervention_family": "none",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "I"
+      },
+      "rzz_intervention_role": "none",
+      "rzz_tomography_edge_pairs": [],
+      "rzz_tomography_edge_parity": "none",
+      "rzz_tomography_measurement": {
+        "left": "none",
+        "right": "none"
+      },
+      "rzz_tomography_prep": {
+        "left": "none",
+        "right": "none"
+      },
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "x_measure",
+      "basis_by_qubit": [
+        "X",
+        "X",
+        "X",
+        "X",
+        "X",
+        "X",
+        "X",
+        "X",
+        "X"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "XX",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 1,
+      "probe_name": "c0:x_measure",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "none",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [],
+      "rzz_intervention_edge_parity": "none",
+      "rzz_intervention_family": "none",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "I"
+      },
+      "rzz_intervention_role": "none",
+      "rzz_tomography_edge_pairs": [],
+      "rzz_tomography_edge_parity": "none",
+      "rzz_tomography_measurement": {
+        "left": "none",
+        "right": "none"
+      },
+      "rzz_tomography_prep": {
+        "left": "none",
+        "right": "none"
+      },
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "y_measure",
+      "basis_by_qubit": [
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "YY",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 2,
+      "probe_name": "c0:y_measure",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "none",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [],
+      "rzz_intervention_edge_parity": "none",
+      "rzz_intervention_family": "none",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "I"
+      },
+      "rzz_intervention_role": "none",
+      "rzz_tomography_edge_pairs": [],
+      "rzz_tomography_edge_parity": "none",
+      "rzz_tomography_measurement": {
+        "left": "none",
+        "right": "none"
+      },
+      "rzz_tomography_prep": {
+        "left": "none",
+        "right": "none"
+      },
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "z_basis",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 3,
+      "probe_name": "c1:z_basis",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "none",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [],
+      "rzz_intervention_edge_parity": "none",
+      "rzz_intervention_family": "none",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "I"
+      },
+      "rzz_intervention_role": "none",
+      "rzz_tomography_edge_pairs": [],
+      "rzz_tomography_edge_parity": "none",
+      "rzz_tomography_measurement": {
+        "left": "none",
+        "right": "none"
+      },
+      "rzz_tomography_prep": {
+        "left": "none",
+        "right": "none"
+      },
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "x_measure",
+      "basis_by_qubit": [
+        "X",
+        "X",
+        "X",
+        "X",
+        "X",
+        "X",
+        "X",
+        "X",
+        "X"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "XX",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 4,
+      "probe_name": "c1:x_measure",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "none",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [],
+      "rzz_intervention_edge_parity": "none",
+      "rzz_intervention_family": "none",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "I"
+      },
+      "rzz_intervention_role": "none",
+      "rzz_tomography_edge_pairs": [],
+      "rzz_tomography_edge_parity": "none",
+      "rzz_tomography_measurement": {
+        "left": "none",
+        "right": "none"
+      },
+      "rzz_tomography_prep": {
+        "left": "none",
+        "right": "none"
+      },
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "y_measure",
+      "basis_by_qubit": [
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "YY",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 5,
+      "probe_name": "c1:y_measure",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "none",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [],
+      "rzz_intervention_edge_parity": "none",
+      "rzz_intervention_family": "none",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "I"
+      },
+      "rzz_intervention_role": "none",
+      "rzz_tomography_edge_pairs": [],
+      "rzz_tomography_edge_parity": "none",
+      "rzz_tomography_measurement": {
+        "left": "none",
+        "right": "none"
+      },
+      "rzz_tomography_prep": {
+        "left": "none",
+        "right": "none"
+      },
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    }
+  ],
+  "probe_set_role": "learner_visible_measurement_metadata",
+  "schema": "scope_static_s2d_active_probe_manifest_v1"
+}

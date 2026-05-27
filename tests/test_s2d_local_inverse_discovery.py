@@ -88,7 +88,7 @@ def test_s2d_local_inverse_discovery_writes_required_artifacts(tmp_path: Path) -
 
 
 def _mechanism_records() -> list[dict[str, object]]:
-    specs = build_default_oracle_mechanisms({"include_m5": True, "num_qubits": 5})
+    specs = build_default_oracle_mechanisms({"mechanism_set": ["M0", "M1", "M2", "M3", "M4", "M13"], "num_qubits": 5})
     return [{"location_id": idx, **spec.audit_dict(), "oracle_label": spec.mechanism_id} for idx, spec in enumerate(specs)]
 
 

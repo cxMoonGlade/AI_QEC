@@ -1,0 +1,23 @@
+{
+  "branch_assignment_source": "visible_instruction_type",
+  "budget_source": "visible_run_config",
+  "budgets": {
+    "gate_process_branch": 14,
+    "prep_reset_branch": 2,
+    "readout_branch": 4
+  },
+  "enabled_visible_branches": [
+    "gate_process_branch",
+    "prep_reset_branch",
+    "readout_branch"
+  ],
+  "gate_budget_rule": "K - readout_budget - prep_reset_budget",
+  "mechanism_id_used_per_row": false,
+  "prep_reset_budget_rule": "number of enabled prep/reset mechanisms in M17/M18",
+  "readout_budget_rule": "number of enabled readout mechanisms in M13/M14/M15/M16",
+  "row_level_oracle_labels_used_for_branch_assignment": false,
+  "row_level_oracle_labels_used_for_branch_budgeting": false,
+  "row_oracle_labels_used": false,
+  "schema": "scope_static_s2d11_branch_budget_audit_v1",
+  "total_K": 20
+}
