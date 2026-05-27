@@ -104,6 +104,17 @@ S2D_PHYS2_oracle_separability
 S2D_PHYS3_local_inverse
 ```
 
+The preferred orchestration layer is the Physical Oracle Stack facade:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_physical_oracle_stack \
+  --config configs/scope_static/d3_r1_S2D_PHYS_aer_gpu.yaml \
+  --run-local-inverse auto
+```
+
+The facade preserves the existing PHYS1/PHYS2/PHYS3 artifact folders and adds
+`physical_oracle_stack.json` plus `physical_oracle_stack.md`.
+
 Artifacts:
 
 ```text
@@ -116,29 +127,43 @@ outputs/scope_static/S2D_PHYS3_local_inverse/
 Current default teacher mechanisms:
 
 ```text
-M0 stochastic Pauli
+Gate/process:
+M0 stochastic Pauli gate error
 M1 coherent RZZ over-rotation
 M2 coherent RX over-rotation
 M3 coherent RZ over-rotation
-M4 amplitude damping / thermal relaxation proxy
-M5 readout bias
-M6 hard custom non-Pauli Kraus channel
-M7 two-qubit depolarizing after RZZ
-M8 coherent RXX/RYY perturbation
-M9 spectator crosstalk RZ
-M10 correlated two-qubit relaxation surrogate
-M11 reset / preparation bias
-M12 drifted coherent over-rotation with location-varying strength
-M13 weak Type-4-like PTM mixing
+M4 amplitude damping gate error
+M5 hard custom non-Pauli Kraus channel
+M6 two-qubit depolarizing after RZZ
+M7 coherent RXX/RYY perturbation
+M8 spectator crosstalk RZ/ZZ
+M9 correlated two-qubit relaxation surrogate
+M10 drifted coherent over-rotation with location-varying strength
+M11 idle dephasing / relaxation error
+M12 operation-dependent error
+
+Readout/measurement:
+M13 readout 0->1 bias
+M14 readout 1->0 bias
+M15 symmetric readout assignment noise
+M16 measurement-context bias
+
+Prep/reset:
+M17 reset-to-1 bias
+M18 prep-axis / reset-asymmetry bias
+
+Other:
+M19 weak Type-4-like PTM mixing
 ```
 
 Named mechanism sets:
 
 ```text
-set_A: M0-M5
-set_B: M0-M8
-set_C: M0-M10
-set_D: M0-M13
+set_A: M0-M4 plus M13-M16
+set_B: M0-M7 plus M13-M16
+set_C: M0-M9 plus M13-M16
+set_D: M0-M18
+allM:  M0-M19
 ```
 
 Decision rule:
@@ -182,6 +207,35 @@ Use Stage 2D for active probe design after the S2D_PHYS default teacher is
 separable. Keep it distinct from S2D_PHYS: Stage 2D designs probes, while
 S2D_PHYS tests oracle physical mechanism recovery.
 
+Current implementation state:
+
+```text
+S2D.7:  static mixed-basis final-shot moments were negative.
+S2D.8a: depth sweep was control-matched negative.
+S2D.8b: echo/no-echo was control-limited.
+S2D.8c: saved-feature ceiling failed on balanced setB/setC.
+S2D.8d: minimal deterministic interventions matched scrambled controls.
+S2D.9:  local Pauli-Lindblad generator coordinates are algebraically observable.
+S2D.10: generator-space calibration exposed nuisance geometry.
+S2D.10b: scalar generator invariants made setB/setC grouped recovery pass.
+S2D.11: typed gate/readout/prep learner was close on set_D but failed M1 recall.
+S2D.11b: M1 gate-branch calibration converted set_D into a pass.
+```
+
+Primary typed learner command:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_s2d11_typed_spam_gate_invariant_learner \
+  --config configs/scope_static/s2d11_typed_spam_gate_invariant_learner.yaml
+```
+
+Calibration-only S2D.11b command:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_s2d11b_m1_gate_branch_grouped_calibration_audit \
+  --config configs/scope_static/s2d11b_m1_gate_branch_grouped_calibration_audit.yaml
+```
+
 ### Stage 2B: Google External Validation
 
 Question:
@@ -207,5 +261,7 @@ metrics and explicitly labelled proxy ARI/NMI only.
 
 2. Keep PHYS0 -> PHYS1 -> PHYS2 -> PHYS3 artifacts refreshed together when
    changing the physical teacher or local-inverse representation.
-3. Next physical step: continue S2D.4 one rung at a time, using PHYS2 to
-   distinguish probe-limited settings from PHYS3 learner limits.
+3. Use `docs/ARCHITECTURE.md` for module routing and `docs/RUNBOOK.md` for
+   command recipes.
+4. After S2D.11b, do not treat readout/prep as the main blocker. The current
+   passed fix is gate-branch M1 calibration over existing S2D.11 artifacts.

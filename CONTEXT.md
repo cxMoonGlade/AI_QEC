@@ -24,6 +24,9 @@ This repository is currently centered on the SCOPE family of QEC noise-learning 
 - **GPU batched local-window exact adapter**: the C++/CUDA implementation of local-window exact likelihood that evaluates all prepared windows in one extension call and returns a first-order gradient for SCOPE-Static training.
 - **Evidence record**: one metrics row for a trained SCOPE-Static model, including likelihood source, compression audit, baseline metadata, and threshold inputs.
 - **Experiment plan**: the normalized SCOPE-Static run matrix compiled from YAML, including residual ranks, teacher cases, shot budgets, model names, backend choice, and output identity.
+- **Physical Oracle Stack**: the S2D physical-oracle validation stack that runs PHYS1 teacher generation, PHYS2 teacher self-distinguishability, and PHYS3 learner recovery as one artifact contract.
+- **Teacher self-distinguishability**: the oracle-only PHYS2 question of whether the physical teacher contains enough mechanism signal to separate oracle mechanism labels before judging a learner.
+- **Learner recovery verdict**: the PHYS3 learner-visible assessment of how well local-inverse features recover physical oracle mechanism labels after teacher self-distinguishability is established.
 
 ## Claim Boundary
 

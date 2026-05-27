@@ -1245,7 +1245,7 @@ probes. It asks whether the existing S2D.8b balanced artifacts already contain
 transferable RZZ-family signal in PHYS3-visible features. The primary audit
 reuses the existing S2D.8b artifact tree and performs no new teacher sampling.
 
-Primary rows are RZZ-family rows only: M1 / M7 / M8 / M10. Primary runs are
+Primary rows are RZZ-family rows only: M1 / M6 / M7 / M9. Primary runs are
 balanced setB and balanced setC; setA is regression/context only and is not
 included in the primary verdict.
 
@@ -1372,7 +1372,7 @@ interventions, not larger circuits, setD, or more final-shot feature dressing.
 Status: implemented, results pending.
 
 Purpose: S2D.8d adds minimal learner-visible interventions around RZZ-adjacent
-regions to test whether M1/M7/M8/M10 become observably different when the probe
+regions to test whether M1/M6/M7/M9 become observably different when the probe
 changes Pauli frame, basis response, or sign-flip/echo sensitivity. PHYS3
 features remain restricted to shot bits, probe metadata, visible edge schedule,
 and location metadata; exact PTM/RZZ-Type features, teacher channels, oracle
@@ -1534,7 +1534,7 @@ PHYS3-visible inputs remain the recovered S2D.9 generator coordinates computed
 from shot-derived local tomography. Oracle labels are evaluator-side targets
 only. No exact PTM, teacher channel, oracle fingerprint, or mechanism id is used
 as a feature. The audit keeps RZZ-family decision metrics restricted to
-M1/M7/M8/M10 while broad coordinate statistics may summarize all mechanisms.
+M1/M6/M7/M9 while broad coordinate statistics may summarize all mechanisms.
 
 S2D.10 result:
 
@@ -1549,7 +1549,7 @@ phys9_setA:
 phys9_multicircuit_setB_balanced:
   decision: failure
   circuit-residualized grouped ceiling: 0.7778 balanced accuracy
-  confusion: M1/M7 cross-confusion; M8 recall 1.0
+  confusion: M1/M6 cross-confusion; M7 recall 1.0
   real - scrambled balanced accuracy: 0.4444
   Mahalanobis prototype balanced accuracy: 0.7778
   stage1 block accuracy: 0.2222
@@ -1557,7 +1557,7 @@ phys9_multicircuit_setB_balanced:
 phys9_multicircuit_setC_balanced:
   decision: partial_blockwise_or_geometry
   circuit-residualized grouped ceiling: 0.9167 balanced accuracy
-  confusion: one M1 -> M7; M7/M8/M10 recall 1.0
+  confusion: one M1 -> M6; M6/M7/M9 recall 1.0
   real - scrambled balanced accuracy: 0.5000
   Mahalanobis prototype balanced accuracy: 1.0000
   stage1 block accuracy: 0.5000
@@ -1567,7 +1567,7 @@ Interpretation: calibration confirms the S2D.9 split rather than fixing it.
 SetC contains a transferable generator-space decision signal under grouped
 folds and Mahalanobis geometry. SetB is close but still below the flat recovery
 threshold. The weak point is not algebraic rank; it is nuisance geometry and
-mechanism block dominance. After circuit residualization, M7 and M8 remain
+mechanism block dominance. After circuit residualization, M6 and M7 remain
 affine/non-unital dominated in the simple block audit, so the current flat
 coordinate geometry is not yet a clean Hamiltonian/stochastic/relaxation
 separator for setB.
@@ -1610,7 +1610,7 @@ phys9_multicircuit_setB_balanced:
   macro F1: 0.8857
   min recall: 0.6667
   real - scrambled balanced accuracy: 0.5556
-  M1/M7 pairwise accuracy: 0.8333
+  M1/M6 pairwise accuracy: 0.8333
   Mahalanobis prototype balanced accuracy: 1.0000
 
 phys9_multicircuit_setC_balanced:
@@ -1619,7 +1619,7 @@ phys9_multicircuit_setC_balanced:
   macro F1: 1.0000
   min recall: 1.0000
   real - scrambled balanced accuracy: 0.5000
-  M1/M7 pairwise accuracy: 1.0000
+  M1/M6 pairwise accuracy: 1.0000
   Mahalanobis prototype balanced accuracy: 1.0000
 ```
 
@@ -1628,7 +1628,7 @@ The S2D.9 local channel estimate already contained the needed signal, but it
 was poorly exposed in the raw coordinate geometry. Scalar invariants make the
 coherent-vs-stochastic and ZZ-vs-XX/YY structure explicit enough for grouped
 recovery. In this run, `coherence_norm`, `log_coherence_ratio`, and
-`h_zz_axial_ratio` carry the clearest setB M1/M7 signal; unitarity is retained
+`h_zz_axial_ratio` carry the clearest setB M1/M6 signal; unitarity is retained
 as a physical audit feature but is not the main separator for this artifact.
 
 Next: promote the invariant block into the physical generator learner
@@ -1646,6 +1646,136 @@ forbidden:
   oracle mechanism label as a feature
   oracle fingerprints
 ```
+
+### S2D Physical Teacher GPU Simulation Policy
+
+Status: implemented.
+
+The physical teacher keeps the same Qiskit circuits, noise model, finite-shot
+sampling contract, and oracle mechanism taxonomy, but the Aer simulator method is
+now selected by circuit size:
+
+```yaml
+aer_simulation_method: auto
+aer_tensor_network_qubit_threshold: 15
+aer_large_qubit_method: matrix_product_state
+```
+
+For profiles below the threshold, `auto` uses GPU `density_matrix`, preserving
+the exact dense small-circuit path. For 15+ qubit chain profiles, `auto` uses
+GPU `matrix_product_state`, which is the tensor-network algorithm better matched
+to the shallow nearest-neighbor RZZ chain geometry than a dense
+`2^n x 2^n` density matrix. The default MPS path sets
+`matrix_product_state_truncation_threshold: 0.0` unless the config explicitly
+overrides it, so the change is an algorithmic route change rather than a hidden
+approximation knob. Explicit overrides remain available through
+`aer_simulation_method: density_matrix | matrix_product_state | tensor_network`;
+`tensor_network` routes to Aer's cuTensorNet-style method when that backend is
+desired for comparison.
+
+The policy is recorded in each PHYS1 teacher summary under `aer_simulator`.
+Named chain profiles currently include `phys5_chain`, `phys7_chain`,
+`phys9_chain`, `phys15_chain`, and `phys20_chain`.
+
+### S2D Physical Oracle Stack Contract
+
+Status: implemented.
+
+The PHYS1/PHYS2/PHYS3 path is now exposed through the Physical Oracle Stack
+facade:
+
+```text
+scope_static.physical_oracle.run_physical_oracle_stack
+scope_static.experiments.run_physical_oracle_stack
+```
+
+The stack keeps the existing stage artifacts and math unchanged, but centralizes
+the ordering and diagnosis contract:
+
+```text
+PHYS1: physical teacher generation
+PHYS2: teacher self-distinguishability from oracle-only mechanism fingerprints
+PHYS3: learner recovery from learner-visible local-inverse features
+```
+
+The stack writes `physical_oracle_stack.json` and
+`physical_oracle_stack.md` next to the canonical stage directories. Its verdicts
+are intentionally separated: `teacher_self_verdict` answers whether the teacher
+contains enough oracle mechanism signal, `learner_recovery_verdict` reports the
+PHYS3 local-inverse result, and `overall_diagnosis` distinguishes
+`probe_limited`, `strong_recovery`, `near_strong`, and `learner_limited`.
+
+Under `run_local_inverse: auto`, PHYS3 is skipped when PHYS2 has
+`ari < 0.85` or `nmi < 0.85`; diagnostic runners can request
+`run_local_inverse: always`. The facade runs PHYS1 before importing the
+Torch-heavy PHYS2/PHYS3 implementations, preserving Aer GPU visibility for
+large teacher sampling.
+
+### Canonical S2D Physical Mechanism Taxonomy
+
+Status: implemented for new S2D physical-oracle runs.
+
+The S2D physical teacher now uses grouped mechanism IDs so branch type is clear:
+
+```text
+Gate/process mechanisms:
+  M0  stochastic_pauli_gate_error
+  M1  coherent_rzz_overrotation
+  M2  coherent_rx_overrotation
+  M3  coherent_rz_overrotation
+  M4  amplitude_damping_gate_error
+  M5  hard_non_pauli_kraus_gate_error
+  M6  two_qubit_depolarizing_after_rzz
+  M7  coherent_rxx_ryy_perturbation
+  M8  spectator_crosstalk_rz_or_zz
+  M9  correlated_two_qubit_relaxation
+  M10 drifted_coherent_overrotation
+  M11 idle_dephasing_or_relaxation_error
+  M12 operation_dependent_error
+
+Readout/measurement mechanisms:
+  M13 readout_0_to_1_bias
+  M14 readout_1_to_0_bias
+  M15 readout_symmetric_assignment_noise
+  M16 measurement_context_bias
+
+Prep/reset mechanisms:
+  M17 reset_to_1_bias
+  M18 prep_axis_or_reset_asymmetry_bias
+
+Other mechanisms:
+  M19 weak_type4_ptm_mixing
+```
+
+Historical mapping:
+
+```text
+old M5 readout bias -> M13-M16
+old M6 hard Kraus -> M5
+old M7 depolarizing -> M6
+old M8 RXX/RYY -> M7
+old M9 spectator crosstalk -> M8
+old M10 correlated relaxation -> M9
+old M11 reset/prep bias -> M17-M18
+old M12 drifted coherent -> M10
+old M13 weak Type-4 -> M19
+new M11 idle error
+new M12 operation-dependent error
+new M16 measurement-context bias
+```
+
+Named mechanism sets:
+
+```text
+set_A: M0-M4 plus M13-M16
+set_B: M0-M7 plus M13-M16
+set_C: M0-M9 plus M13-M16
+set_D: M0-M18
+allM:  M0-M19
+```
+
+Historical artifacts produced before this migration retain their old labels and
+should be treated as pre-taxonomy-migration results.
 
 ### S2D.11_typed_gate_readout_prep_invariant_learner
 
@@ -1674,11 +1804,11 @@ Primary scope:
 
 ```text
 profile: phys9_multicircuit_setD_balanced
-mechanism set: set_D = M0-M12
+mechanism set: set_D = M0-M18
 probe set: existing rzz_local_tomography
 new probes: none
 primary validation: grouped folds by circuit_id
-secondary M13 stress: only after primary set_D pass
+secondary M19 stress: only after primary set_D pass
 ```
 
 Learner-visible inputs remain:
@@ -1758,8 +1888,10 @@ Branch budgets are audit-only and come from the visible suite configuration,
 not row-level labels. The artifacts write separate
 `typed_branch_feature_schema_physics_visible.json` and
 `audit_labels_schema_oracle_only.json`, plus branch-budget, grouped-coverage,
-M5 overfragmentation, M11 prep/readout-confound, typed-head, scrambled-control,
-and oracle-upper-bound audits.
+readout-mechanism, prep/reset readout-confound, typed-head, scrambled-control,
+and oracle-upper-bound audits. Historical artifact aliases with `m5_`, `m11_`,
+and `m13_` prefixes are retained for compatibility; current canonical labels
+are readout `M13-M16`, prep/reset `M17-M18`, and other `M19`.
 
 Current metric heads:
 
@@ -1793,12 +1925,12 @@ typed primary linear head:
   min recall: 0.3333
   real - within-branch scrambled balanced accuracy: 0.6638
 
-M5:
-  split count: 1
-  cluster purity: 0.9630
-  M5 vs gate confusion rate: 0.0370
+Readout mechanisms:
+  canonical labels: M13-M16
+  historical M5 split audit alias retained
 
-M11:
+Prep/reset mechanisms:
+  canonical labels: M17-M18
   prep/reset observability preflight: pass
   recall: 1.0000
 
@@ -1812,11 +1944,63 @@ typed_mahalanobis_prototype_head:
 
 Interpretation: the typed branch object is now close to the set_D threshold and
 clearly beats scrambled controls, but the strict S2D.11 primary pass is not
-met. The remaining issue is narrow: M5 and M11 branches are functioning, while
-the gate branch still has an M1-specific grouped-fold weakness and the
+met. The remaining issue is narrow: readout and prep/reset branches are
+functioning, while the gate branch still has an M1-specific grouped-fold weakness and the
 diagonal-shrinkage Mahalanobis head slightly underperforms the typed linear
 head. The next implementation work should inspect gate-branch feature
 observability/calibration before adding probes.
+
+### S2D.11b_M1_gate_branch_grouped_calibration_audit
+
+Status: implemented; calibration-only pass.
+
+S2D.11b reuses the existing S2D.11
+`phys9_multicircuit_setD_balanced` artifact tree and performs no new teacher
+sampling, no new probes, no transformer, no larger circuit, and no M19 stress.
+It freezes the validated typed branches and changes only gate-branch M1
+calibration.
+
+Result:
+
+```text
+best variant: typed_linear_plus_M1_logit_boost
+passed: true
+
+baseline typed linear:
+  balanced accuracy: 0.8689
+  macro F1: 0.8614
+  M1 recall: 0.3333
+
+M1 logit boost:
+  balanced accuracy: 0.8946
+  macro F1: 0.8927
+  M1 recall: 0.6667
+  M7 RXX/RYY recall: 1.0000
+  M9 correlated relaxation recall: 1.0000
+  M17 prep/reset recall: 1.0000
+
+top-level error type split:
+  gate recall: 1.0000
+  readout recall: 0.9630
+  prep/reset recall: 1.0000
+```
+
+All S2D.11b acceptance checks pass:
+
+```text
+M1 recall >= 0.65
+macro F1 >= 0.80
+balanced accuracy >= 0.80
+real - scrambled >= 0.25
+readout split count stays within declared M13-M16 taxonomy
+M7/M9/M17 recall drops <= 0.15 from S2D.11 baseline
+M17/M4 and M17/M13 margins remain positive
+leakage guardrails pass
+```
+
+Interpretation: S2D.11b converts the S2D.11 strong partial into a pass. The
+remaining S2D.11 failure was gate-branch M1 calibration, not a readout/prep
+branch failure and not a missing-probe result.
 
 Primary verdict rules:
 
@@ -1825,9 +2009,9 @@ typed learner must beat flat invariant/raw baselines and within-branch scrambled
 macro F1 >= 0.80
 balanced accuracy >= 0.80
 no primary class recall < 0.65
-M5_split_count <= 1 at tau = 0.10
+readout split count stays within the declared M13-M16 taxonomy
 typed_mahalanobis_prototype_head must not underperform typed_linear_head
-M11 is required only if the M11 prep-observability preflight is positive
+M17/M18 are required only if the prep-observability preflight is positive
 ```
 
 Metrics:

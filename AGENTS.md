@@ -5,6 +5,9 @@ stage-specific docs:
 
 - `docs/SCOPE_STATIC_MVP.md`: Stage 1 known-orbit DEM fault-logit MVP.
 - `docs/SCOPE_STATIC_DISC.md`: Stage 2 static discovery plan.
+- `docs/ARCHITECTURE.md`: current code architecture and module map.
+- `docs/RUNBOOK.md`: install, test, GPU, and experiment commands.
+- `docs/STAGE2_ROADMAP.md`: compact Stage 2 execution state.
 - `docs/SCOPE_TWIN.md`: full SCOPE-Twin notation and future object contract.
 
 ## Current Scope
@@ -44,6 +47,14 @@ diagnose, not evidence that the project should fall back to CPU-first design:
 ```bash
 conda run -n aiqec python -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0) if torch.cuda.is_available() else None)"
 ```
+
+When running GPU commands through Codex, make sure the exact command prefix is
+approved to run outside the sandbox. Wrappers such as `/usr/bin/time` or Conda's
+`--no-capture-output` can otherwise execute inside the sandbox and make Torch
+report no CUDA/NVML even though the workstation GPU is healthy. Prefer in-process
+`time.perf_counter()` wall-clock reporting for benchmark metrics, or request an
+approval for the wrapped command before treating CUDA invisibility as a real
+runtime failure.
 
 For S1.6 Google runs, use the native GPU path unless deliberately testing CPU
 behavior:
@@ -87,6 +98,24 @@ Run MVP05 full:
 
 ```bash
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static --config configs/scope_static/d3_r1_MVP05_windows_full.yaml
+```
+
+Run Physical Oracle Stack facade:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_physical_oracle_stack \
+  --config configs/scope_static/d3_r1_S2D_PHYS_aer_gpu.yaml \
+  --run-local-inverse auto
+```
+
+Run S2D.11 typed learner and S2D.11b calibration audit:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_s2d11_typed_spam_gate_invariant_learner \
+  --config configs/scope_static/s2d11_typed_spam_gate_invariant_learner.yaml
+
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_s2d11b_m1_gate_branch_grouped_calibration_audit \
+  --config configs/scope_static/s2d11b_m1_gate_branch_grouped_calibration_audit.yaml
 ```
 
 Do not use `PYTHONPATH="$PWD/src"` for normal runs on this WSL/CUDA setup. The

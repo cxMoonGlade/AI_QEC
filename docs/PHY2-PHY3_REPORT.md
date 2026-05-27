@@ -1,5 +1,10 @@
 # 缩小 S2D 中 PHYS2–PHYS3 间隙的研究报告
 
+> 术语注记：本文是机制重编号之前的历史分析报告。当前代码与
+> `docs/SCOPE_STATIC_DISC.md` 使用新的 M0-M19 分类：旧 M5 读出拆分为
+> M13-M16，旧 M11 prep/reset 拆分为 M17-M18，旧 M13 Type-4 变为 M19；
+> RZZ-family 旧 M1/M7/M8/M10 现在对应 M1/M6/M7/M9。
+
 ## 执行摘要
 
 你现在遇到的不是一个单纯的“聚类器不够强”问题，而是一个更基础的**可观测性错配**问题。PHYS2 之所以能把 set_A 到 set_C 全部分开，很可能是因为它使用了 exact PTM、RZZ 特有的 Type 1–4 块信息、以及 exact probe fingerprints；这些信息里包含了**有符号**、**相位敏感**、**off-diagonal PTM** 和 **mixed-basis Pauli** 结构。非-Clifford \(R_{ZZ}(\theta)\) 的论文明确把 noisy \(R_{ZZ}(\theta)\) 的 PTM 分成 Type 1–4，并且 Type 3/Type 2 的学习都依赖于 mixed-basis 可观测量与长序列拟合；IBM 的测量文档也明确说明，测一般 Pauli 字符串必须对**每个比特分别**做基变换。citeturn11view0turn16view1turn16view2turn18view0
