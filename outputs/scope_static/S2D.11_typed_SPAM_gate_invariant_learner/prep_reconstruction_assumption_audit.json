@@ -1,0 +1,12 @@
+{
+  "runs": {
+    "phys9_multicircuit_setD_balanced": {
+      "assumption": "prep/reset features are shot-derived response proxies, not full GST/SPAM tomography",
+      "no_new_probe_family": true,
+      "prep_metadata_present": true,
+      "schema": "scope_static_s2d11_prep_reconstruction_assumption_audit_v1",
+      "uses_existing_rzz_local_tomography": true
+    }
+  },
+  "schema": "scope_static_s2d11_prep_reconstruction_assumption_audit_aggregate_v1"
+}

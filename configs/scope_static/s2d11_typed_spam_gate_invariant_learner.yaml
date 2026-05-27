@@ -1,0 +1,65 @@
+run:
+  name: s2d11_typed_spam_gate_invariant_learner
+  output_root: outputs/scope_static
+
+s2d_physical:
+  backend: qiskit_aer_gpu
+  require_gpu: true
+  allow_cpu_aer_fallback: false
+  paper_informed_ptm_features: true
+  shots: 10000
+  seed: 0
+  theta: 0.18
+  mechanisms:
+    M0:
+      p_x: 0.0015
+      p_y: 0.0008
+      p_z: 0.0022
+    M1:
+      epsilon: 0.045
+    M2:
+      epsilon: 0.035
+    M3:
+      epsilon: 0.04
+    M4:
+      gamma: 0.018
+    M5:
+      p0_to_1: 0.025
+      p1_to_0: 0.011
+    M6:
+      eta: 0.02
+    M7:
+      p: 0.006
+    M8:
+      epsilon_x: 0.024
+      epsilon_y: 0.017
+    M9:
+      epsilon: 0.025
+    M10:
+      gamma: 0.012
+    M11:
+      p: 0.018
+    M12:
+      epsilon_mean: 0.032
+      epsilon_span: 0.018
+      axis: rx
+    M13:
+      eta: 0.004
+
+s2d11_typed_spam_gate_invariant_learner:
+  output_dir: outputs/scope_static/S2D.11_typed_SPAM_gate_invariant_learner
+  tomography_probe_set: rzz_local_tomography
+  ridge: 1.0e-8
+  seed: 0
+  run_secondary_allM_if_primary_passes: true
+  runs:
+    - name: phys9_multicircuit_setD_balanced
+      profile: phys9_multicircuit_setD_balanced
+      mechanism_set: set_D
+      purpose: primary typed gate/readout/prep invariant learner verdict
+  secondary_allM_run:
+    name: phys9_multicircuit_allM_balanced
+    profile: phys9_multicircuit_allM_balanced
+    mechanism_set: [M0, M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12, M13]
+    purpose: secondary M13 stress test only after primary set_D pass
+    secondary_stress: true

@@ -1445,6 +1445,391 @@ Do not move to larger circuits, setD, Google transfer, S3, or a robustness grid
 before deciding whether to implement stronger benchmarking/tomography-like
 local RZZ channel probes.
 
+### S2D.9_local_Pauli_Lindblad_observability
+
+Status: implemented.
+
+S2D.9 pivots the RXX/RZZ/RYY recovery issue from multiclass response-feature
+clustering to local generator-coordinate identifiability. The primary object is
+the learner-visible local response Jacobian, not classifier performance.
+
+The implemented probe set is `rzz_local_tomography`: local two-qubit process
+tomography on even/odd adjacent RZZ-edge batches using `Zp/Zm/Xp/Yp`
+preparations and `X/Y/Z` measurements. The PTM convention is explicit:
+
+```text
+R[row_out, col_in] = Tr(P_out E(P_in)) / d
+v_out = R v_in
+post-ideal error: R_error = R_est @ pinv(R_ideal)
+official v1 generator target: R_error - I
+```
+
+Hard sign tests lock the convention:
+
+```text
+ideal RZZ + small RXX -> recovered h_XX dominant with correct sign
+ideal RZZ + small RZZ -> recovered h_ZZ dominant with correct sign
+RXX/RYY mixture -> recovered h_XX and h_YY with correct relative magnitude
+```
+
+S2D.9 result:
+
+```text
+S2D.9 = local_generator_observability_partial
+
+phys9_setA:
+  regression pass
+  response Jacobian rank: 10 / 10
+
+phys9_multicircuit_setB_balanced:
+  decision: partial_identifiable
+  response Jacobian rank: 10 / 10
+  grouped generator-coordinate ceiling: FAIL
+
+phys9_multicircuit_setC_balanced:
+  decision: partial_identifiable
+  response Jacobian rank: 10 / 10
+  grouped generator-coordinate ceiling: PASS
+```
+
+Interpretation: the local Pauli-Lindblad generator dictionary is identifiable
+under the S2D.9 tomography design, so the previous RZZ-family failures were not
+an unavoidable rank/observability impossibility. However, recovery/signature
+evidence is incomplete: setC passes the grouped secondary ceiling, while setB
+does not, and the simple mechanism-signature rules are still dominated by
+normalization/non-unital nuisance for some classes. The next step should debug
+coordinate normalization, nuisance residualization, and generator-space decision
+geometry before adding larger circuits or more mechanisms.
+
+### S2D.10_generator_space_calibration_and_nuisance_geometry
+
+Status: implemented; result appended after run.
+
+Purpose: S2D.10 does not add probes. It reuses the full-rank S2D.9 generator
+coordinates and asks why balanced setB fails while balanced setC passes. The
+primary object is generator-space calibration: effective rank, per-generator
+signal-to-noise, nuisance residualization, and decision geometry.
+
+Diagnostics:
+
+```text
+effective rank:
+  singular values, condition number, stable rank, sigma_min, column angles
+
+per-generator statistics:
+  mechanism means/stds, between/within ratio, circuit/edge residual variance,
+  shot-noise proxy
+
+nuisance geometry:
+  raw, edge-residualized, circuit-residualized, edge+circuit residualized,
+  ideal-schedule residualized coordinates
+
+decision geometry:
+  blockwise Hamiltonian/stochastic/affine routing
+  Mahalanobis nearest generator prototype
+  z-score / whitening / circuit-residualized grouped ceiling
+```
+
+PHYS3-visible inputs remain the recovered S2D.9 generator coordinates computed
+from shot-derived local tomography. Oracle labels are evaluator-side targets
+only. No exact PTM, teacher channel, oracle fingerprint, or mechanism id is used
+as a feature. The audit keeps RZZ-family decision metrics restricted to
+M1/M7/M8/M10 while broad coordinate statistics may summarize all mechanisms.
+
+S2D.10 result:
+
+```text
+S2D.10 = generator_space_calibration_partial
+
+phys9_setA:
+  decision: failure as RZZ-family calibration context
+  response Jacobian rank: 10
+  condition number: 9.5824
+
+phys9_multicircuit_setB_balanced:
+  decision: failure
+  circuit-residualized grouped ceiling: 0.7778 balanced accuracy
+  confusion: M1/M7 cross-confusion; M8 recall 1.0
+  real - scrambled balanced accuracy: 0.4444
+  Mahalanobis prototype balanced accuracy: 0.7778
+  stage1 block accuracy: 0.2222
+
+phys9_multicircuit_setC_balanced:
+  decision: partial_blockwise_or_geometry
+  circuit-residualized grouped ceiling: 0.9167 balanced accuracy
+  confusion: one M1 -> M7; M7/M8/M10 recall 1.0
+  real - scrambled balanced accuracy: 0.5000
+  Mahalanobis prototype balanced accuracy: 1.0000
+  stage1 block accuracy: 0.5000
+```
+
+Interpretation: calibration confirms the S2D.9 split rather than fixing it.
+SetC contains a transferable generator-space decision signal under grouped
+folds and Mahalanobis geometry. SetB is close but still below the flat recovery
+threshold. The weak point is not algebraic rank; it is nuisance geometry and
+mechanism block dominance. After circuit residualization, M7 and M8 remain
+affine/non-unital dominated in the simple block audit, so the current flat
+coordinate geometry is not yet a clean Hamiltonian/stochastic/relaxation
+separator for setB.
+
+### S2D.10b_generator_invariant_calibration
+
+Status: implemented.
+
+S2D.10b tests the direct physics/math fix suggested by S2D.10: append
+learner-visible scalar invariants to the S2D.9 generator-coordinate table,
+without adding probes or resampling the teacher. The invariants are computed
+from shot-reconstructed generator coordinates and local PTM estimates only.
+
+Invariant block:
+
+```text
+coherence_norm
+stochastic_l1 / stochastic_l2
+generator_total
+log_coherence_ratio
+coherence_ratio_capped
+gamma_mean / gamma_variance / gamma_isotropy_score
+h_xxyy_norm
+h_zz_axial_ratio
+h_zz_fraction
+affine_nonunital_norm
+nonunital_to_total
+unitarity_R_error / unitarity_loss_R_error
+unitarity_R_est / unitarity_loss_R_est
+```
+
+S2D.10b result:
+
+```text
+S2D.10b = generator_invariant_calibration_positive
+
+phys9_multicircuit_setB_balanced:
+  decision: success
+  circuit-residualized generator+invariants balanced accuracy: 0.8889
+  macro F1: 0.8857
+  min recall: 0.6667
+  real - scrambled balanced accuracy: 0.5556
+  M1/M7 pairwise accuracy: 0.8333
+  Mahalanobis prototype balanced accuracy: 1.0000
+
+phys9_multicircuit_setC_balanced:
+  decision: success
+  circuit-residualized generator+invariants balanced accuracy: 1.0000
+  macro F1: 1.0000
+  min recall: 1.0000
+  real - scrambled balanced accuracy: 0.5000
+  M1/M7 pairwise accuracy: 1.0000
+  Mahalanobis prototype balanced accuracy: 1.0000
+```
+
+Interpretation: the setB/setC gap was not a missing-probe problem after S2D.9.
+The S2D.9 local channel estimate already contained the needed signal, but it
+was poorly exposed in the raw coordinate geometry. Scalar invariants make the
+coherent-vs-stochastic and ZZ-vs-XX/YY structure explicit enough for grouped
+recovery. In this run, `coherence_norm`, `log_coherence_ratio`, and
+`h_zz_axial_ratio` carry the clearest setB M1/M7 signal; unitarity is retained
+as a physical audit feature but is not the main separator for this artifact.
+
+Next: promote the invariant block into the physical generator learner
+representation and keep the leakage boundary:
+
+```text
+allowed:
+  shot-reconstructed local PTM
+  fitted generator coordinates
+  scalar invariants computed from those estimates
+
+forbidden:
+  exact teacher channel
+  exact teacher PTM
+  oracle mechanism label as a feature
+  oracle fingerprints
+```
+
+### S2D.11_typed_gate_readout_prep_invariant_learner
+
+Status: implemented; first efficiency-tuned set_D run complete.
+
+Primary object:
+
+```text
+typed_gate_readout_prep_invariant_learner
+```
+
+This is a learner-visible typed representation and grouped supervised ceiling,
+not a transformer and not a new probe experiment. It tests whether the existing
+`rzz_local_tomography` observations can support the full set_D taxonomy once
+gate/process, readout, and prep/reset rows are separated by visible instruction
+type.
+
+S2D.11 promotes the S2D.10b scalar invariant fix into the learner while
+splitting non-gate mechanisms into explicit typed branches. The historical
+short name `S2D.11_typed_SPAM_gate_invariant_learner` is retained for artifact
+compatibility, but SPAM is implemented as two concrete branches:
+`readout_branch` for visible `measure` rows and `prep_reset_branch` for visible
+`reset` rows.
+
+Primary scope:
+
+```text
+profile: phys9_multicircuit_setD_balanced
+mechanism set: set_D = M0-M12
+probe set: existing rzz_local_tomography
+new probes: none
+primary validation: grouped folds by circuit_id
+secondary M13 stress: only after primary set_D pass
+```
+
+Learner-visible inputs remain:
+
+```text
+shot bits
+probe prep/measurement metadata
+visible instruction type
+visible qubit ids / edge ids / chain position
+shot-reconstructed local PTM/generator estimates
+scalar invariants computed from those estimates
+readout/prep summaries computed from observed shots
+```
+
+Current branch feature object:
+
+```text
+gate_process_branch:
+  S2D.10b two-qubit generator invariants
+  raw generator coordinates as ablation
+  compact one-qubit/basis-response summaries
+  visible instruction metadata
+  visible location / chain-position metadata
+
+readout_branch:
+  readout response shape
+  readout strength
+  assignment-asymmetry proxy
+  readout entropy / variance
+  x-z and y-z readout contrasts
+
+prep_reset_branch:
+  prep_fidelity_proxy
+  prep_axis_bias_x/y/z
+  initial_state_affine_shift
+  reset_prep_asymmetry
+  prep confidence / SNR proxy
+```
+
+Feature confidence fields are attached to branch feature tables:
+
+```text
+feature_confidence
+feature_snr
+fit_residual_or_reconstruction_error
+low_confidence_flag
+```
+
+Efficiency rule:
+
+```text
+Do not feed the dense full local-inverse/probe stack into the primary typed
+learner. It is high-dimensional, slow, and can dilute the calibrated S2D.10b
+gate signal. Use compact learner-visible basis-response summaries instead.
+```
+
+Forbidden as PHYS3 features:
+
+```text
+oracle labels
+mechanism_id
+exact teacher channel
+exact teacher PTM
+oracle fingerprints
+final evaluator labels during feature construction
+```
+
+Branching:
+
+```text
+measure -> readout_branch
+reset -> prep_reset_branch
+otherwise -> gate_process_branch
+```
+
+Branch budgets are audit-only and come from the visible suite configuration,
+not row-level labels. The artifacts write separate
+`typed_branch_feature_schema_physics_visible.json` and
+`audit_labels_schema_oracle_only.json`, plus branch-budget, grouped-coverage,
+M5 overfragmentation, M11 prep/readout-confound, typed-head, scrambled-control,
+and oracle-upper-bound audits.
+
+Current metric heads:
+
+```text
+typed_linear_head:
+  TorchStandardScaler + DualRidgeLinearClassifier(class_weight=balanced)
+  GPU-friendly fold-local dual solve
+  replaces iterative sklearn logistic on high-dimensional tiny-fold data
+
+typed_prototype_head:
+  TorchNearestPrototype
+
+typed_mahalanobis_prototype_head:
+  TorchDiagonalShrinkageMahalanobisPrototype
+  no dense d x d covariance inversion
+```
+
+The primary PASS/FAIL remains determined by the typed linear grouped ceiling.
+Prototype and Mahalanobis heads remain required diagnostics, with the rule that
+the Mahalanobis prototype head should not underperform the typed linear head.
+
+Current set_D snapshot:
+
+```text
+run: phys9_multicircuit_setD_balanced
+decision: failure_typed_branch_or_prep_design
+
+typed primary linear head:
+  balanced accuracy: 0.8689
+  macro F1: 0.8614
+  min recall: 0.3333
+  real - within-branch scrambled balanced accuracy: 0.6638
+
+M5:
+  split count: 1
+  cluster purity: 0.9630
+  M5 vs gate confusion rate: 0.0370
+
+M11:
+  prep/reset observability preflight: pass
+  recall: 1.0000
+
+low-recall class:
+  M1 recall: 0.3333
+
+typed_mahalanobis_prototype_head:
+  balanced accuracy: 0.8462
+  under typed linear head, so strict criterion fails
+```
+
+Interpretation: the typed branch object is now close to the set_D threshold and
+clearly beats scrambled controls, but the strict S2D.11 primary pass is not
+met. The remaining issue is narrow: M5 and M11 branches are functioning, while
+the gate branch still has an M1-specific grouped-fold weakness and the
+diagonal-shrinkage Mahalanobis head slightly underperforms the typed linear
+head. The next implementation work should inspect gate-branch feature
+observability/calibration before adding probes.
+
+Primary verdict rules:
+
+```text
+typed learner must beat flat invariant/raw baselines and within-branch scrambled control
+macro F1 >= 0.80
+balanced accuracy >= 0.80
+no primary class recall < 0.65
+M5_split_count <= 1 at tau = 0.10
+typed_mahalanobis_prototype_head must not underperform typed_linear_head
+M11 is required only if the M11 prep-observability preflight is positive
+```
+
 Metrics:
 
 ```text

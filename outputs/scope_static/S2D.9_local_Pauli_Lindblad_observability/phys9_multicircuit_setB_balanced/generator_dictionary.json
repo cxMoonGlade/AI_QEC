@@ -1,0 +1,46 @@
+{
+  "coordinate_names": [
+    "h_XX",
+    "h_YY",
+    "h_ZZ",
+    "gamma_XX",
+    "gamma_YY",
+    "gamma_ZZ",
+    "relaxation_pair",
+    "affine_ZI",
+    "affine_IZ",
+    "affine_ZZ"
+  ],
+  "coordinate_roles": {
+    "affine_IZ": "direct affine/non-unital IZ coordinate",
+    "affine_ZI": "direct affine/non-unital ZI coordinate",
+    "affine_ZZ": "direct affine/non-unital ZZ coordinate",
+    "gamma_XX": "stochastic Pauli-like XX generator",
+    "gamma_YY": "stochastic Pauli-like YY generator",
+    "gamma_ZZ": "stochastic Pauli-like ZZ generator",
+    "h_XX": "Hamiltonian coherent XX generator",
+    "h_YY": "Hamiltonian coherent YY generator",
+    "h_ZZ": "Hamiltonian coherent ZZ generator",
+    "relaxation_pair": "correlated two-qubit relaxation surrogate generator"
+  },
+  "official_generator_target": "R_error_minus_I",
+  "pauli_labels": [
+    "II",
+    "IX",
+    "IY",
+    "IZ",
+    "XI",
+    "XX",
+    "XY",
+    "XZ",
+    "YI",
+    "YX",
+    "YY",
+    "YZ",
+    "ZI",
+    "ZX",
+    "ZY",
+    "ZZ"
+  ],
+  "schema": "scope_static_s2d9_generator_dictionary_v1"
+}

@@ -20,6 +20,7 @@ std::tuple<torch::Tensor, torch::Tensor> local_window_nll_value_and_grad_cuda(
     torch::Tensor flat_counts,
     torch::Tensor state_offsets,
     torch::Tensor window_num_bits,
+    torch::Tensor window_total_counts,
     int64_t max_faults_per_window,
     int64_t max_state_count);
 std::tuple<torch::Tensor, torch::Tensor> local_window_nll_value_and_grad_spectral_cuda(
@@ -31,6 +32,7 @@ std::tuple<torch::Tensor, torch::Tensor> local_window_nll_value_and_grad_spectra
     torch::Tensor flat_counts,
     torch::Tensor state_offsets,
     torch::Tensor window_num_bits,
+    torch::Tensor window_total_counts,
     int64_t max_faults_per_window,
     int64_t max_state_count,
     double spectral_min_abs_factor,
@@ -44,6 +46,7 @@ torch::Tensor local_window_nll_value_cuda(
     torch::Tensor flat_counts,
     torch::Tensor state_offsets,
     torch::Tensor window_num_bits,
+    torch::Tensor window_total_counts,
     int64_t max_faults_per_window,
     int64_t max_state_count);
 std::tuple<torch::Tensor, torch::Tensor, torch::Tensor> window_observation_state_counts(
@@ -118,6 +121,7 @@ void check_local_window_inputs(
     const torch::Tensor& flat_counts,
     const torch::Tensor& state_offsets,
     const torch::Tensor& window_num_bits,
+    const torch::Tensor& window_total_counts,
     int64_t max_faults_per_window,
     int64_t max_state_count) {
   TORCH_CHECK(logits.is_cuda(), "logits must be a CUDA tensor");
@@ -128,6 +132,7 @@ void check_local_window_inputs(
   TORCH_CHECK(flat_counts.is_cuda(), "flat_counts must be a CUDA tensor");
   TORCH_CHECK(state_offsets.is_cuda(), "state_offsets must be a CUDA tensor");
   TORCH_CHECK(window_num_bits.is_cuda(), "window_num_bits must be a CUDA tensor");
+  TORCH_CHECK(window_total_counts.is_cuda(), "window_total_counts must be a CUDA tensor");
   TORCH_CHECK(logits.dim() == 1, "logits must be rank-1");
   TORCH_CHECK(flat_fault_ids.dim() == 1, "flat_fault_ids must be rank-1");
   TORCH_CHECK(flat_masks.dim() == 1, "flat_masks must be rank-1");
@@ -136,10 +141,12 @@ void check_local_window_inputs(
   TORCH_CHECK(flat_counts.dim() == 1, "flat_counts must be rank-1");
   TORCH_CHECK(state_offsets.dim() == 1, "state_offsets must be rank-1");
   TORCH_CHECK(window_num_bits.dim() == 1, "window_num_bits must be rank-1");
+  TORCH_CHECK(window_total_counts.dim() == 1, "window_total_counts must be rank-1");
   TORCH_CHECK(flat_fault_ids.size(0) == flat_masks.size(0), "flat_fault_ids and flat_masks must agree");
   TORCH_CHECK(flat_states.size(0) == flat_counts.size(0), "flat_states and flat_counts must agree");
   TORCH_CHECK(fault_offsets.size(0) == window_num_bits.size(0) + 1, "fault_offsets must have W + 1 entries");
   TORCH_CHECK(state_offsets.size(0) == window_num_bits.size(0) + 1, "state_offsets must have W + 1 entries");
+  TORCH_CHECK(window_total_counts.size(0) == window_num_bits.size(0), "window_total_counts must have W entries");
   TORCH_CHECK(logits.is_floating_point(), "logits must be floating point");
   TORCH_CHECK(flat_fault_ids.scalar_type() == torch::kInt64, "flat_fault_ids must have dtype int64");
   TORCH_CHECK(flat_masks.scalar_type() == torch::kInt64, "flat_masks must have dtype int64");
@@ -148,6 +155,7 @@ void check_local_window_inputs(
   TORCH_CHECK(flat_counts.scalar_type() == torch::kInt64, "flat_counts must have dtype int64");
   TORCH_CHECK(state_offsets.scalar_type() == torch::kInt64, "state_offsets must have dtype int64");
   TORCH_CHECK(window_num_bits.scalar_type() == torch::kInt64, "window_num_bits must have dtype int64");
+  TORCH_CHECK(window_total_counts.scalar_type() == torch::kInt64, "window_total_counts must have dtype int64");
   TORCH_CHECK(max_faults_per_window >= 0, "max_faults_per_window must be non-negative");
   TORCH_CHECK(max_state_count > 0, "max_state_count must be positive");
 }
@@ -161,6 +169,7 @@ std::tuple<torch::Tensor, torch::Tensor> local_window_nll_value_and_grad(
     torch::Tensor flat_counts,
     torch::Tensor state_offsets,
     torch::Tensor window_num_bits,
+    torch::Tensor window_total_counts,
     int64_t max_faults_per_window,
     int64_t max_state_count) {
   check_local_window_inputs(
@@ -172,6 +181,7 @@ std::tuple<torch::Tensor, torch::Tensor> local_window_nll_value_and_grad(
       flat_counts,
       state_offsets,
       window_num_bits,
+      window_total_counts,
       max_faults_per_window,
       max_state_count);
   return local_window_nll_value_and_grad_cuda(
@@ -183,6 +193,7 @@ std::tuple<torch::Tensor, torch::Tensor> local_window_nll_value_and_grad(
       flat_counts.contiguous(),
       state_offsets.contiguous(),
       window_num_bits.contiguous(),
+      window_total_counts.contiguous(),
       max_faults_per_window,
       max_state_count);
 }
@@ -196,6 +207,7 @@ std::tuple<torch::Tensor, torch::Tensor> local_window_nll_value_and_grad_spectra
     torch::Tensor flat_counts,
     torch::Tensor state_offsets,
     torch::Tensor window_num_bits,
+    torch::Tensor window_total_counts,
     int64_t max_faults_per_window,
     int64_t max_state_count,
     double spectral_min_abs_factor,
@@ -209,6 +221,7 @@ std::tuple<torch::Tensor, torch::Tensor> local_window_nll_value_and_grad_spectra
       flat_counts,
       state_offsets,
       window_num_bits,
+      window_total_counts,
       max_faults_per_window,
       max_state_count);
   TORCH_CHECK(max_state_count <= 4096, "spectral local-window kernel requires max_state_count <= 4096");
@@ -223,6 +236,7 @@ std::tuple<torch::Tensor, torch::Tensor> local_window_nll_value_and_grad_spectra
       flat_counts.contiguous(),
       state_offsets.contiguous(),
       window_num_bits.contiguous(),
+      window_total_counts.contiguous(),
       max_faults_per_window,
       max_state_count,
       spectral_min_abs_factor,
@@ -238,6 +252,7 @@ torch::Tensor local_window_nll_value(
     torch::Tensor flat_counts,
     torch::Tensor state_offsets,
     torch::Tensor window_num_bits,
+    torch::Tensor window_total_counts,
     int64_t max_faults_per_window,
     int64_t max_state_count) {
   check_local_window_inputs(
@@ -249,6 +264,7 @@ torch::Tensor local_window_nll_value(
       flat_counts,
       state_offsets,
       window_num_bits,
+      window_total_counts,
       max_faults_per_window,
       max_state_count);
   return local_window_nll_value_cuda(
@@ -260,6 +276,7 @@ torch::Tensor local_window_nll_value(
       flat_counts.contiguous(),
       state_offsets.contiguous(),
       window_num_bits.contiguous(),
+      window_total_counts.contiguous(),
       max_faults_per_window,
       max_state_count);
 }

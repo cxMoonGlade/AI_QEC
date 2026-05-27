@@ -1,0 +1,92 @@
+{
+  "runs": {
+    "phys9_multicircuit_setB_balanced": {
+      "permutation_label_control": {
+        "balanced_accuracy_ci95": {
+          "high": 0.3153585102202311,
+          "low": 0.2419331564464355,
+          "mean": 0.2786458333333333,
+          "n": 128
+        },
+        "balanced_accuracy_max": 0.8888888888888888,
+        "balanced_accuracy_mean": 0.2786458333333333,
+        "grouped_folds_preserved": true,
+        "labels_permuted_within": "RZZ-family audit rows",
+        "macro_F1_ci95": {
+          "high": 0.30396219906051886,
+          "low": 0.2311320469712272,
+          "mean": 0.267547123015873,
+          "n": 128
+        },
+        "macro_F1_max": 0.8857142857142858,
+        "macro_F1_mean": 0.267547123015873,
+        "repeats": 128,
+        "schema": "scope_static_s2d8c_permutation_label_control_v1",
+        "seed": 0
+      },
+      "primary_block": "circuit_residualized_coordinates",
+      "real_minus_permutation_balanced_accuracy": 0.49913194444444436,
+      "real_minus_permutation_macro_F1": 0.5102306547619047,
+      "real_minus_scrambled_balanced_accuracy": 0.44444444444444436,
+      "real_minus_scrambled_macro_F1": 0.5555555555555555,
+      "run_success": {
+        "checks": {
+          "all_available_pairwise_margins_gt_0": true,
+          "balanced_accuracy_ge_0_80": false,
+          "macro_F1_ge_0_80": false,
+          "no_single_class_recall_lt_0_65": true,
+          "real_minus_permutation_balanced_accuracy_ge_0_25": true,
+          "real_minus_scrambled_balanced_accuracy_ge_0_25": true
+        },
+        "passed": false
+      },
+      "schema": "scope_static_s2d8c_controls_v1",
+      "scrambled_control_block": "scrambled_circuit_residualized_coordinates"
+    },
+    "phys9_multicircuit_setC_balanced": {
+      "permutation_label_control": {
+        "balanced_accuracy_ci95": {
+          "high": 0.23350162000504116,
+          "low": 0.18316504666162547,
+          "mean": 0.20833333333333331,
+          "n": 128
+        },
+        "balanced_accuracy_max": 0.5,
+        "balanced_accuracy_mean": 0.20833333333333331,
+        "grouped_folds_preserved": true,
+        "labels_permuted_within": "RZZ-family audit rows",
+        "macro_F1_ci95": {
+          "high": 0.22025691315358636,
+          "low": 0.17262193109244534,
+          "mean": 0.19643942212301585,
+          "n": 128
+        },
+        "macro_F1_max": 0.5142857142857143,
+        "macro_F1_mean": 0.19643942212301585,
+        "repeats": 128,
+        "schema": "scope_static_s2d8c_permutation_label_control_v1",
+        "seed": 0
+      },
+      "primary_block": "circuit_residualized_coordinates",
+      "real_minus_permutation_balanced_accuracy": 0.7083333333333333,
+      "real_minus_permutation_macro_F1": 0.7178462921626985,
+      "real_minus_scrambled_balanced_accuracy": 0.5,
+      "real_minus_scrambled_macro_F1": 0.5642857142857143,
+      "run_success": {
+        "checks": {
+          "all_available_pairwise_margins_gt_0": true,
+          "balanced_accuracy_ge_0_80": true,
+          "macro_F1_ge_0_80": true,
+          "no_single_class_recall_lt_0_65": true,
+          "real_minus_permutation_balanced_accuracy_ge_0_25": true,
+          "real_minus_scrambled_balanced_accuracy_ge_0_25": true
+        },
+        "passed": true
+      },
+      "schema": "scope_static_s2d8c_controls_v1",
+      "scrambled_control_block": "scrambled_circuit_residualized_coordinates"
+    },
+    "phys9_setA": {}
+  },
+  "schema": "scope_static_s2d10_controls_aggregate_v1"
+}

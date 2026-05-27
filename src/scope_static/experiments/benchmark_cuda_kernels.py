@@ -49,6 +49,7 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
         cpu_logits = logits.detach().cpu().requires_grad_(True)
         cuda_dp_logits = logits.detach().clone().cuda().requires_grad_(True)
         cuda_spectral_logits = logits.detach().clone().cuda().requires_grad_(True)
+        cuda_auto_logits = logits.detach().clone().cuda().requires_grad_(True)
 
         cpu_loss, cpu_grad, cpu_seconds = _time_loss_and_grad(
             lambda: local_window_exact_nll_from_caches(cpu_logits, caches, backend="pytorch"),
@@ -70,19 +71,28 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
             cuda_spectral_logits,
             synchronize_cuda=True,
         )
+        auto_loss, auto_grad, auto_seconds = _time_loss_and_grad(
+            lambda: local_window_exact_nll_batched_from_cache(cuda_auto_logits, batch, cuda_kernel_variant="auto"),
+            cuda_auto_logits,
+            synchronize_cuda=True,
+        )
         record.update(
             {
                 "cpu_pytorch_seconds": cpu_seconds,
                 "cuda_dp_seconds": dp_seconds,
                 "cuda_spectral_seconds": spectral_seconds,
+                "cuda_auto_seconds": auto_seconds,
                 "cpu_pytorch_loss": float(cpu_loss.detach().cpu()),
                 "cuda_dp_loss": float(dp_loss.detach().cpu()),
                 "cuda_spectral_loss": float(spectral_loss.detach().cpu()),
+                "cuda_auto_loss": float(auto_loss.detach().cpu()),
                 "dp_vs_cpu_loss_abs_diff": float((dp_loss.detach().cpu() - cpu_loss.detach()).abs()),
                 "spectral_vs_cpu_loss_abs_diff": float((spectral_loss.detach().cpu() - cpu_loss.detach()).abs()),
                 "spectral_vs_dp_loss_abs_diff": float((spectral_loss.detach() - dp_loss.detach()).abs().cpu()),
                 "spectral_vs_dp_grad_max_abs_diff": float((spectral_grad - dp_grad).abs().max().detach().cpu()),
                 "spectral_vs_cpu_grad_max_abs_diff": float((spectral_grad.cpu() - cpu_grad).abs().max().detach()),
+                "auto_vs_dp_loss_abs_diff": float((auto_loss.detach() - dp_loss.detach()).abs().cpu()),
+                "auto_vs_dp_grad_max_abs_diff": float((auto_grad - dp_grad).abs().max().detach().cpu()),
             }
         )
         print(json.dumps(record, sort_keys=True), flush=True)
@@ -125,6 +135,7 @@ def _make_synthetic_cache(
     flat_counts = []
     state_offsets = [0]
     window_num_bits = []
+    window_total_counts = []
     global_fault = 0
     for window_index in range(int(num_windows)):
         masks = torch.randint(1, state_count, (active_faults_per_window,), generator=generator, dtype=torch.long)
@@ -150,6 +161,7 @@ def _make_synthetic_cache(
         flat_counts.append(counts)
         state_offsets.append(state_offsets[-1] + state_count)
         window_num_bits.append(k)
+        window_total_counts.append(int(counts.sum().item()))
     batch = WindowBatchNLLCache(
         flat_fault_ids=torch.cat(flat_fault_ids).cuda(),
         flat_masks=torch.cat(flat_masks).cuda(),
@@ -158,6 +170,7 @@ def _make_synthetic_cache(
         flat_counts=torch.cat(flat_counts).cuda(),
         state_offsets=torch.tensor(state_offsets, dtype=torch.long, device="cuda"),
         window_num_bits=torch.tensor(window_num_bits, dtype=torch.long, device="cuda"),
+        window_total_counts=torch.tensor(window_total_counts, dtype=torch.long, device="cuda"),
         max_faults_per_window=int(active_faults_per_window),
         max_state_count=state_count,
         num_windows=int(num_windows),
@@ -217,6 +230,7 @@ def _benchmark_google_s1_6(args: argparse.Namespace, *, dtype: torch.dtype) -> d
     cpu_logits = logits.detach().clone().requires_grad_(True)
     cuda_dp_logits = logits.detach().clone().cuda().requires_grad_(True)
     cuda_spectral_logits = logits.detach().clone().cuda().requires_grad_(True)
+    cuda_auto_logits = logits.detach().clone().cuda().requires_grad_(True)
     cpu_loss, cpu_grad, cpu_seconds = _time_loss_and_grad(
         lambda: local_window_exact_nll_from_caches(cpu_logits, caches, backend="pytorch"),
         cpu_logits,
@@ -235,6 +249,11 @@ def _benchmark_google_s1_6(args: argparse.Namespace, *, dtype: torch.dtype) -> d
             spectral_memory_cap_bytes=int(args.spectral_memory_cap_mib) * 1024 * 1024,
         ),
         cuda_spectral_logits,
+        synchronize_cuda=True,
+    )
+    auto_loss, auto_grad, auto_seconds = _time_loss_and_grad(
+        lambda: local_window_exact_nll_batched_from_cache(cuda_auto_logits, batch, cuda_kernel_variant="auto"),
+        cuda_auto_logits,
         synchronize_cuda=True,
     )
     record = {
@@ -257,14 +276,18 @@ def _benchmark_google_s1_6(args: argparse.Namespace, *, dtype: torch.dtype) -> d
         "cpu_pytorch_seconds": cpu_seconds,
         "cuda_dp_seconds": dp_seconds,
         "cuda_spectral_seconds": spectral_seconds,
+        "cuda_auto_seconds": auto_seconds,
         "cpu_pytorch_loss": float(cpu_loss.detach().cpu()),
         "cuda_dp_loss": float(dp_loss.detach().cpu()),
         "cuda_spectral_loss": float(spectral_loss.detach().cpu()),
+        "cuda_auto_loss": float(auto_loss.detach().cpu()),
         "dp_vs_cpu_loss_abs_diff": float((dp_loss.detach().cpu() - cpu_loss.detach()).abs()),
         "spectral_vs_cpu_loss_abs_diff": float((spectral_loss.detach().cpu() - cpu_loss.detach()).abs()),
         "spectral_vs_dp_loss_abs_diff": float((spectral_loss.detach() - dp_loss.detach()).abs().cpu()),
         "spectral_vs_dp_grad_max_abs_diff": float((spectral_grad - dp_grad).abs().max().detach().cpu()),
         "spectral_vs_cpu_grad_max_abs_diff": float((spectral_grad.cpu() - cpu_grad).abs().max().detach()),
+        "auto_vs_dp_loss_abs_diff": float((auto_loss.detach() - dp_loss.detach()).abs().cpu()),
+        "auto_vs_dp_grad_max_abs_diff": float((auto_grad - dp_grad).abs().max().detach().cpu()),
     }
     return record
 

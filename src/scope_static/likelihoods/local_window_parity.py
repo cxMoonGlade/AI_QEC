@@ -141,7 +141,7 @@ class ExactLocalWindowParityLikelihood:
             return "cuda_extension_batched_window_exact"
         return "python_window_loop_exact"
 
-    def audit_dict(self) -> dict[str, object]:
+    def audit_dict(self, *, scalar_bytes: int = 8) -> dict[str, object]:
         result = {
             "likelihood_objective": EXACT_LOCAL_WINDOW_PARITY_OBJECTIVE,
             "requested_likelihood_backend": self.requested_backend,
@@ -162,6 +162,7 @@ class ExactLocalWindowParityLikelihood:
                     self.window_batch_cache,
                     requested_kernel_variant=self.cuda_kernel_variant,
                     spectral_memory_cap_bytes=self.spectral_memory_cap_bytes,
+                    scalar_bytes=int(scalar_bytes),
                 )
             )
         else:

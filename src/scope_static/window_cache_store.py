@@ -14,7 +14,7 @@ from .likelihood import WindowBatchNLLCache
 from .windows import ObservationWindow
 
 
-WINDOW_BATCH_CACHE_SCHEMA_VERSION = 1
+WINDOW_BATCH_CACHE_SCHEMA_VERSION = 2
 
 
 @dataclass(frozen=True)
@@ -117,6 +117,7 @@ def _cache_to_payload(cache: WindowBatchNLLCache) -> dict[str, object]:
         "flat_counts": cache.flat_counts.detach().cpu().to(dtype=torch.long),
         "state_offsets": cache.state_offsets.detach().cpu().to(dtype=torch.long),
         "window_num_bits": cache.window_num_bits.detach().cpu().to(dtype=torch.long),
+        "window_total_counts": cache.window_total_counts.detach().cpu().to(dtype=torch.long),
         "max_faults_per_window": int(cache.max_faults_per_window),
         "max_state_count": int(cache.max_state_count),
         "num_windows": int(cache.num_windows),
@@ -133,6 +134,7 @@ def _cache_from_payload(payload: dict[str, object], *, device: torch.device | st
         flat_counts=_payload_tensor(payload, "flat_counts", target),
         state_offsets=_payload_tensor(payload, "state_offsets", target),
         window_num_bits=_payload_tensor(payload, "window_num_bits", target),
+        window_total_counts=_payload_tensor(payload, "window_total_counts", target),
         max_faults_per_window=int(payload["max_faults_per_window"]),
         max_state_count=int(payload["max_state_count"]),
         num_windows=int(payload["num_windows"]),

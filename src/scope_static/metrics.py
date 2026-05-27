@@ -782,7 +782,7 @@ def evaluate_real_data_model(
                 backend=backend,
                 device=logits.device,
             )
-        local_audit = local_likelihood.audit_dict()
+        local_audit = local_likelihood.audit_dict(scalar_bytes=logits.element_size())
         model_local_nll = local_likelihood.loss(logits)
         num_windows = int(local_audit["num_windows"])
         max_window_bits = int(local_audit["max_window_bits"])

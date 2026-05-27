@@ -144,19 +144,22 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run
   --output-dir outputs/google_static/S1_6_native_gpu
 ```
 
-The CUDA path uses a batched exact local-window DP for training. Detached
-evaluation and transfer use a forward-only CUDA kernel, so they do not build
-gradient history or run the backward adjoint. The runner streams JSON progress
-events with fit/evaluation wall times. Prepared local-window state/count caches
-are persisted by default under `<output-dir>/prepared_cache`; use
+The CUDA path uses a batched exact local-window training kernel. By default the
+Google runner uses `--cuda-kernel-variant auto`, which keeps the DP kernel for
+larger windows and selects the active-fault Walsh/Fourier spectral kernel for
+small exact windows whose prepared workload fits the memory cap. Pass
+`--cuda-kernel-variant dp` for conservative DP-only reproduction runs.
+Detached evaluation and transfer use a forward-only CUDA kernel, so they do not
+build gradient history or run the backward adjoint. The runner streams JSON
+progress events with fit/evaluation wall times. Prepared local-window
+state/count caches are persisted by default under `<output-dir>/prepared_cache`; use
 `--prepared-cache-dir` to share them across output directories or
 `--disable-prepared-cache` for one-off uncached runs.
 
 The training kernel can be audited with
 `--cuda-kernel-variant spectral_shadow`. This computes both the current DP
 kernel and the new active-fault Walsh/Fourier spectral kernel, returns the DP
-result, and fails on loss/gradient mismatch. Keep `dp` as the default until
-S1.6 and later S1.7/S2-style reproduction runs match.
+result, and fails on loss/gradient mismatch.
 
 ```bash
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_google_static \

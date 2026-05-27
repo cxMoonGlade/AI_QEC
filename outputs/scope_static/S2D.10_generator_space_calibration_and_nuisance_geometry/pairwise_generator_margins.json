@@ -1,0 +1,1625 @@
+{
+  "runs": {
+    "phys9_multicircuit_setB_balanced": {
+      "schema": "scope_static_s2d10_pairwise_generator_margins_v1",
+      "variants": {
+        "circuit_residualized_coordinates": {
+          "M1/M10": {
+            "available": false
+          },
+          "M1/M7": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": 0.001986346661708228,
+              "affine_ZI": 0.0025085688789620846,
+              "affine_ZZ": -0.00019999999799998042,
+              "gamma_XX": -0.00026584885398970096,
+              "gamma_YY": 0.00011072859092526796,
+              "gamma_ZZ": 0.0018651833051060024,
+              "h_XX": 0.0009263261402542324,
+              "h_YY": 0.0004367491939868646,
+              "h_ZZ": 0.04283652461445739,
+              "nonunital_norm_proxy": -0.0023155566746061694,
+              "relaxation_pair": -0.004572693363519519
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": 1.5517660007489067,
+              "affine_ZI": 1.3370343133060298,
+              "affine_ZZ": -0.29583677997520574,
+              "gamma_XX": -0.33225338426672874,
+              "gamma_YY": 0.08797159007371715,
+              "gamma_ZZ": 1.278570936147844,
+              "h_XX": 0.4882999361108591,
+              "h_YY": 0.46238480257951275,
+              "h_ZZ": 14.304955669229738,
+              "nonunital_norm_proxy": -1.211552957236512,
+              "relaxation_pair": -1.2948491469982184
+            },
+            "euclidean_margin": 0.043314297113164694,
+            "top_coordinate": "h_ZZ",
+            "z_margin": 14.637777185787593
+          },
+          "M1/M8": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": -0.012937759514190638,
+              "affine_ZI": 0.004340018091285683,
+              "affine_ZZ": 0.00041666666250002484,
+              "gamma_XX": 0.0002665959742964054,
+              "gamma_YY": 0.0001942534713216728,
+              "gamma_ZZ": 0.002102425861662883,
+              "h_XX": -0.021013229014291715,
+              "h_YY": -0.015692455042156335,
+              "h_ZZ": 0.043012876402652764,
+              "nonunital_norm_proxy": -0.0004088271619332,
+              "relaxation_pair": -0.008580036269124965
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": -16.225505471719817,
+              "affine_ZI": 3.0250207671491216,
+              "affine_ZZ": 0.7911527288035962,
+              "gamma_XX": 0.304302768319016,
+              "gamma_YY": 0.12196065088218788,
+              "gamma_ZZ": 2.2327184827036928,
+              "h_XX": -11.670060413118824,
+              "h_YY": -10.464680071801363,
+              "h_ZZ": 20.886572999033152,
+              "nonunital_norm_proxy": -0.19214689942607655,
+              "relaxation_pair": -3.2338590219478065
+            },
+            "euclidean_margin": 0.05293982082544917,
+            "top_coordinate": "h_ZZ",
+            "z_margin": 31.154128824165447
+          },
+          "M7/M10": {
+            "available": false
+          },
+          "M7/M8": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": -0.014924106175898866,
+              "affine_ZI": 0.0018314492123235986,
+              "affine_ZZ": 0.0006166666605000053,
+              "gamma_XX": 0.0005324448282861063,
+              "gamma_YY": 8.352488039640484e-05,
+              "gamma_ZZ": 0.0002372425565568808,
+              "h_XX": -0.02193955515454595,
+              "h_YY": -0.0161292042361432,
+              "h_ZZ": 0.00017635178819537523,
+              "nonunital_norm_proxy": 0.0019067295126729694,
+              "relaxation_pair": -0.004007342905605445
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": -11.91355224680267,
+              "affine_ZI": 1.110221775148696,
+              "affine_ZZ": 1.1952344355773954,
+              "gamma_XX": 0.596569835875246,
+              "gamma_YY": 0.0688543790419934,
+              "gamma_ZZ": 0.14258842192219276,
+              "h_XX": -12.981959015772366,
+              "h_YY": -10.463121690383279,
+              "h_ZZ": 0.06161001088389678,
+              "nonunital_norm_proxy": 0.7596752802646094,
+              "relaxation_pair": -1.3130559971121645
+            },
+            "euclidean_margin": 0.03143296058741268,
+            "top_coordinate": "h_XX",
+            "z_margin": 20.62251358606312
+          },
+          "M8/M10": {
+            "available": false
+          }
+        },
+        "edge_circuit_residualized_coordinates": {
+          "M1/M10": {
+            "available": false
+          },
+          "M1/M7": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": 1.98647813938931e-09,
+              "affine_ZI": 2.508750414007e-09,
+              "affine_ZZ": -1.9999375998099627e-10,
+              "gamma_XX": -2.6602075808383317e-10,
+              "gamma_YY": 1.1058089802636538e-10,
+              "gamma_ZZ": 1.8649866633663197e-09,
+              "h_XX": 9.26223434610564e-10,
+              "h_YY": 4.366729234495095e-10,
+              "h_ZZ": 4.283654766043648e-08,
+              "nonunital_norm_proxy": -2.3158604085341903e-09,
+              "relaxation_pair": -4.572811810778464e-09
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": 1.4145053539303751,
+              "affine_ZI": 1.2519274325324303,
+              "affine_ZZ": -0.19999375998099625,
+              "gamma_XX": -0.26602075808383313,
+              "gamma_YY": 0.08505605834955955,
+              "gamma_ZZ": 1.1589338749540234,
+              "h_XX": 0.4779115595563222,
+              "h_YY": 0.42493006570325154,
+              "h_ZZ": 14.054947799323955,
+              "nonunital_norm_proxy": -1.227740248723716,
+              "relaxation_pair": -1.2015005327051136
+            },
+            "euclidean_margin": 4.331435440846038e-08,
+            "top_coordinate": "h_ZZ",
+            "z_margin": 14.350287342405723
+          },
+          "M1/M8": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": -1.2937380269659415e-08,
+              "affine_ZI": 4.340578293205813e-09,
+              "affine_ZZ": 4.166649845312978e-10,
+              "gamma_XX": 2.661217033776233e-10,
+              "gamma_YY": 1.9379203739418792e-10,
+              "gamma_ZZ": 2.1019031127879804e-09,
+              "h_XX": -2.1013504471779448e-08,
+              "h_YY": -1.5692645260549892e-08,
+              "h_ZZ": 4.3012492992669515e-08,
+              "nonunital_norm_proxy": -4.098206380735246e-10,
+              "relaxation_pair": -8.580368168146363e-09
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": -12.937380269659414,
+              "affine_ZI": 2.7216098923882326,
+              "affine_ZZ": 0.4166649845312978,
+              "gamma_XX": 0.2661217033776233,
+              "gamma_YY": 0.11331914634519398,
+              "gamma_ZZ": 2.0027189083560057,
+              "h_XX": -10.829924190453765,
+              "h_YY": -9.888909022110244,
+              "h_ZZ": 21.42254639320728,
+              "nonunital_norm_proxy": -0.18239421485454438,
+              "relaxation_pair": -2.8748508822749557
+            },
+            "euclidean_margin": 5.293966490676531e-08,
+            "top_coordinate": "h_ZZ",
+            "z_margin": 29.348806316541616
+          },
+          "M7/M10": {
+            "available": false
+          },
+          "M7/M8": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": -1.4923858409048724e-08,
+              "affine_ZI": 1.8318278791988139e-09,
+              "affine_ZZ": 6.16658744512294e-10,
+              "gamma_XX": 5.321424614614565e-10,
+              "gamma_YY": 8.321113936782254e-11,
+              "gamma_ZZ": 2.369164494216607e-10,
+              "h_XX": -2.193972790639001e-08,
+              "h_YY": -1.61293181839994e-08,
+              "h_ZZ": 1.7594533223303825e-10,
+              "nonunital_norm_proxy": 1.9060397704606657e-09,
+              "relaxation_pair": -4.007556357367899e-09
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": -10.587690357681868,
+              "affine_ZI": 1.0397276223030283,
+              "affine_ZZ": 0.616658744512294,
+              "gamma_XX": 0.5321424614614565,
+              "gamma_YY": 0.06564706598910196,
+              "gamma_ZZ": 0.12994430520554737,
+              "h_XX": -12.580783177397862,
+              "h_YY": -9.55969802017374,
+              "h_ZZ": 0.06034814048978667,
+              "nonunital_norm_proxy": 0.7546064465427318,
+              "relaxation_pair": -1.2059330730714368
+            },
+            "euclidean_margin": 3.143301859999536e-08,
+            "top_coordinate": "h_XX",
+            "z_margin": 19.119522438138834
+          },
+          "M8/M10": {
+            "available": false
+          }
+        },
+        "edge_residualized_coordinates": {
+          "M1/M10": {
+            "available": false
+          },
+          "M1/M7": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": 0.003955578665209335,
+              "affine_ZI": 0.0013305786915845767,
+              "affine_ZZ": -8.333333249990982e-06,
+              "gamma_XX": -0.0005692228293553102,
+              "gamma_YY": -0.0006338955056874914,
+              "gamma_ZZ": 0.0003388703508865898,
+              "h_XX": 0.005314836851615856,
+              "h_YY": 0.0028913306435488064,
+              "h_ZZ": 0.028735922952219002,
+              "nonunital_norm_proxy": -0.0005913608781705562,
+              "relaxation_pair": -0.0022556018541601925
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": 2.0264550912467074,
+              "affine_ZI": 0.9093969804676694,
+              "affine_ZZ": -0.050174520600371406,
+              "gamma_XX": -1.3447501855333555,
+              "gamma_YY": -1.3785584948394596,
+              "gamma_ZZ": 1.1569085228828762,
+              "h_XX": 1.2816538972082714,
+              "h_YY": 0.881359473314027,
+              "h_ZZ": 2.591691420284054,
+              "nonunital_norm_proxy": -0.7655514913440444,
+              "relaxation_pair": -0.7692100779893971
+            },
+            "euclidean_margin": 0.0297666891324868,
+            "top_coordinate": "h_ZZ",
+            "z_margin": 4.505252865747828
+          },
+          "M1/M8": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": -0.0053300223503941185,
+              "affine_ZI": 0.003511644228237458,
+              "affine_ZZ": 2.4999999750003485e-05,
+              "gamma_XX": -0.00025261586705344584,
+              "gamma_YY": -0.0006819017069458102,
+              "gamma_ZZ": -0.00028922321551523057,
+              "h_XX": -0.010821392055548634,
+              "h_YY": -0.007611362493625547,
+              "h_ZZ": 0.02188057001805789,
+              "nonunital_norm_proxy": 0.0003017970534550293,
+              "relaxation_pair": -0.006873288526510106
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": -1.8984004581522531,
+              "affine_ZI": 2.577005427484075,
+              "affine_ZZ": 0.13958941821347762,
+              "gamma_XX": -0.8130460059576902,
+              "gamma_YY": -1.6415664044389922,
+              "gamma_ZZ": -1.4721520187564352,
+              "h_XX": -2.17007113581978,
+              "h_YY": -2.109482283194135,
+              "h_ZZ": 2.24738007493108,
+              "nonunital_norm_proxy": 0.3535917989784911,
+              "relaxation_pair": -2.5771361729678297
+            },
+            "euclidean_margin": 0.027248518293634644,
+            "top_coordinate": "relaxation_pair",
+            "z_margin": 6.063322650654247
+          },
+          "M7/M10": {
+            "available": false
+          },
+          "M7/M8": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": -0.009285601015603454,
+              "affine_ZI": 0.0021810655366528812,
+              "affine_ZZ": 3.333333299999447e-05,
+              "gamma_XX": 0.0003166069623018643,
+              "gamma_YY": -4.800620125831878e-05,
+              "gamma_ZZ": -0.0006280935664018203,
+              "h_XX": -0.01613622890716449,
+              "h_YY": -0.010502693137174352,
+              "h_ZZ": -0.006855352934161114,
+              "nonunital_norm_proxy": 0.0008931579316255854,
+              "relaxation_pair": -0.004617686672349914
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": -3.1745764070432556,
+              "affine_ZI": 1.440001813371462,
+              "affine_ZZ": 0.14338647140768274,
+              "gamma_XX": 0.9889606452263197,
+              "gamma_YY": -0.0948088421721348,
+              "gamma_ZZ": -1.9901780332935022,
+              "h_XX": -2.808336909713566,
+              "h_YY": -2.6145330690523436,
+              "h_ZZ": -0.8458619467713167,
+              "nonunital_norm_proxy": 1.201844747718433,
+              "relaxation_pair": -1.527380559704876
+            },
+            "euclidean_margin": 0.0230494828992784,
+            "top_coordinate": "affine_IZ",
+            "z_margin": 6.027875638881605
+          },
+          "M8/M10": {
+            "available": false
+          }
+        },
+        "ideal_schedule_residualized_coordinates": {
+          "M1/M10": {
+            "available": false
+          },
+          "M1/M7": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": 0.004959894539391516,
+              "affine_ZI": 0.001040410570426095,
+              "affine_ZZ": -2.6209053328152562e-05,
+              "gamma_XX": -0.0008416583331388091,
+              "gamma_YY": -0.0008680533985697605,
+              "gamma_ZZ": 0.00040994470934251824,
+              "h_XX": 0.006360810621173331,
+              "h_YY": 0.004121386397051582,
+              "h_ZZ": 0.02998857175951274,
+              "nonunital_norm_proxy": -0.0004743980176305622,
+              "relaxation_pair": -0.0018947591758775423
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": 2.0547651286230453,
+              "affine_ZI": 0.6505712668449433,
+              "affine_ZZ": -0.164163892836888,
+              "gamma_XX": -1.3085609903934479,
+              "gamma_YY": -1.1961649430029953,
+              "gamma_ZZ": 0.3783783359027479,
+              "h_XX": 1.4034542200581088,
+              "h_YY": 1.163392747775407,
+              "h_ZZ": 3.413818587742153,
+              "nonunital_norm_proxy": -0.6248035128053436,
+              "relaxation_pair": -0.5759475798941666
+            },
+            "euclidean_margin": 0.0314307014654466,
+            "top_coordinate": "h_ZZ",
+            "z_margin": 4.86394735992067
+          },
+          "M1/M8": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": -0.004814252216714331,
+              "affine_ZI": 0.003171783467557014,
+              "affine_ZZ": 2.2582777058481466e-05,
+              "gamma_XX": -0.0002281493568133923,
+              "gamma_YY": -0.0006158916981025952,
+              "gamma_ZZ": -0.00026120822713276114,
+              "h_XX": -0.009774176860968226,
+              "h_YY": -0.006874792835872051,
+              "h_ZZ": 0.019763163017115254,
+              "nonunital_norm_proxy": 0.0002726393087106709,
+              "relaxation_pair": -0.006208119387749298
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": -1.8312766990175509,
+              "affine_ZI": 3.03352962443575,
+              "affine_ZZ": 0.08616795317237741,
+              "gamma_XX": -0.3424495978347085,
+              "gamma_YY": -0.5481473573210461,
+              "gamma_ZZ": -0.2904252082452262,
+              "h_XX": -2.4425620139317665,
+              "h_YY": -1.9406290765190721,
+              "h_ZZ": 2.5553810225097515,
+              "nonunital_norm_proxy": 0.3057949091177197,
+              "relaxation_pair": -3.2380579154595033
+            },
+            "euclidean_margin": 0.02461163038109572,
+            "top_coordinate": "relaxation_pair",
+            "z_margin": 6.317122562201579
+          },
+          "M7/M10": {
+            "available": false
+          },
+          "M7/M8": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": -0.009774146756105847,
+              "affine_ZI": 0.002131372897130919,
+              "affine_ZZ": 4.879183038663403e-05,
+              "gamma_XX": 0.0006135089763254168,
+              "gamma_YY": 0.0002521617004671654,
+              "gamma_ZZ": -0.0006711529364752794,
+              "h_XX": -0.01613498748214156,
+              "h_YY": -0.010996179232923634,
+              "h_ZZ": -0.010225408742397484,
+              "nonunital_norm_proxy": 0.0007470373263412331,
+              "relaxation_pair": -0.004313360211871755
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": -4.534702184972785,
+              "affine_ZI": 1.4669538520946162,
+              "affine_ZZ": 0.1963637235126399,
+              "gamma_XX": 1.1196226897366595,
+              "gamma_YY": 0.25148465703171813,
+              "gamma_ZZ": -0.605894469902343,
+              "h_XX": -3.2835661004924823,
+              "h_YY": -3.666662165290212,
+              "h_ZZ": -1.0043380891065845,
+              "nonunital_norm_proxy": 0.8123141839595998,
+              "relaxation_pair": -1.357128072369064
+            },
+            "euclidean_margin": 0.024615958334694894,
+            "top_coordinate": "affine_IZ",
+            "z_margin": 7.223192337008352
+          },
+          "M8/M10": {
+            "available": false
+          }
+        },
+        "raw_generator_coordinates": {
+          "M1/M10": {
+            "available": false
+          },
+          "M1/M7": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": 0.0019863466617082264,
+              "affine_ZI": 0.0025085688789620864,
+              "affine_ZZ": -0.00019999999799998042,
+              "gamma_XX": -0.0002658488539896992,
+              "gamma_YY": 0.00011072859092526796,
+              "gamma_ZZ": 0.001865183305105999,
+              "h_XX": 0.0009263261402542323,
+              "h_YY": 0.0004367491939868646,
+              "h_ZZ": 0.0428365246144574,
+              "nonunital_norm_proxy": -0.002315556674606166,
+              "relaxation_pair": -0.00457269336351952
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": 1.4140058542442555,
+              "affine_ZI": 1.2516153028225538,
+              "affine_ZZ": -0.2941742027072477,
+              "gamma_XX": -0.32792024374862005,
+              "gamma_YY": 0.0851703021996809,
+              "gamma_ZZ": 1.1586739500113237,
+              "h_XX": 0.47793064907809735,
+              "h_YY": 0.424994416892496,
+              "h_ZZ": 14.05620775728164,
+              "nonunital_norm_proxy": -1.2275156310186441,
+              "relaxation_pair": -1.2013873448884465
+            },
+            "euclidean_margin": 0.04331429711316471,
+            "top_coordinate": "h_ZZ",
+            "z_margin": 14.354300523715626
+          },
+          "M1/M8": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": -0.012937759514190638,
+              "affine_ZI": 0.004340018091285685,
+              "affine_ZZ": 0.0004166666625000249,
+              "gamma_XX": 0.00026659597429640886,
+              "gamma_YY": 0.0001942534713216728,
+              "gamma_ZZ": 0.0021024258616628815,
+              "h_XX": -0.021013229014291715,
+              "h_YY": -0.015692455042156335,
+              "h_ZZ": 0.04301287640265278,
+              "nonunital_norm_proxy": -0.0004088271619331965,
+              "relaxation_pair": -0.008580036269124965
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": -14.079524497289531,
+              "affine_ZI": 2.721936452725401,
+              "affine_ZZ": 0.7614311298415096,
+              "gamma_XX": 0.28964125916145494,
+              "gamma_YY": 0.11358574856959738,
+              "gamma_ZZ": 2.0023143097965472,
+              "h_XX": -10.830875735086156,
+              "h_YY": -9.889480785261116,
+              "h_ZZ": 21.4261310831751,
+              "nonunital_norm_proxy": -0.1820320273396315,
+              "relaxation_pair": -2.874970971994696
+            },
+            "euclidean_margin": 0.05293982082544919,
+            "top_coordinate": "h_ZZ",
+            "z_margin": 29.88001285470882
+          },
+          "M7/M10": {
+            "available": false
+          },
+          "M7/M8": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": -0.014924106175898864,
+              "affine_ZI": 0.0018314492123235986,
+              "affine_ZZ": 0.0006166666605000053,
+              "gamma_XX": 0.0005324448282861081,
+              "gamma_YY": 8.352488039640484e-05,
+              "gamma_ZZ": 0.00023724255655688253,
+              "h_XX": -0.02193955515454595,
+              "h_YY": -0.0161292042361432,
+              "h_ZZ": 0.00017635178819537457,
+              "nonunital_norm_proxy": 0.0019067295126729694,
+              "relaxation_pair": -0.004007342905605444
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": -10.585299908191974,
+              "affine_ZI": 1.0394779235387346,
+              "affine_ZZ": 1.1916897588415507,
+              "gamma_XX": 0.5640664968987389,
+              "gamma_YY": 0.06589076687740002,
+              "gamma_ZZ": 0.1300702120883962,
+              "h_XX": -12.581013043094886,
+              "h_YY": -9.560120969234037,
+              "h_ZZ": 0.060497797514372384,
+              "nonunital_norm_proxy": 0.7551181702735382,
+              "relaxation_pair": -1.2058287816318267
+            },
+            "euclidean_margin": 0.03143296058741268,
+            "top_coordinate": "h_XX",
+            "z_margin": 19.146653296842306
+          },
+          "M8/M10": {
+            "available": false
+          }
+        }
+      }
+    },
+    "phys9_multicircuit_setC_balanced": {
+      "schema": "scope_static_s2d10_pairwise_generator_margins_v1",
+      "variants": {
+        "circuit_residualized_coordinates": {
+          "M1/M10": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": -0.002125249878245788,
+              "affine_ZI": -0.00038636100417972427,
+              "affine_ZZ": 0.0004833333284999965,
+              "gamma_XX": -0.011879851607059583,
+              "gamma_YY": -0.011459477882398584,
+              "gamma_ZZ": -0.010140805673853647,
+              "h_XX": -0.00022652555509262024,
+              "h_YY": 0.0017965549157006103,
+              "h_ZZ": 0.04218434562982007,
+              "nonunital_norm_proxy": -0.0006712616528314931,
+              "relaxation_pair": -0.04622727798258413
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": -0.6139284767795443,
+              "affine_ZI": -0.12227325929013258,
+              "affine_ZZ": 0.7370236702057101,
+              "gamma_XX": -5.6238818187571065,
+              "gamma_YY": -4.1345510790417626,
+              "gamma_ZZ": -5.62253489176241,
+              "h_XX": -0.13664910439221764,
+              "h_YY": 2.3704016136645563,
+              "h_ZZ": 15.248613313025293,
+              "nonunital_norm_proxy": -0.5775843722337165,
+              "relaxation_pair": -6.67652340556889
+            },
+            "euclidean_margin": 0.06557740298097205,
+            "top_coordinate": "h_ZZ",
+            "z_margin": 19.087634060059525
+          },
+          "M1/M7": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": 0.0028103966424410255,
+              "affine_ZI": 0.002893729975244416,
+              "affine_ZZ": -0.00013333333199997836,
+              "gamma_XX": -0.00030839409248295015,
+              "gamma_YY": 4.770930088516569e-05,
+              "gamma_ZZ": 0.002005620787505196,
+              "h_XX": 0.0003783285662960773,
+              "h_YY": 0.0008051575866258266,
+              "h_ZZ": 0.04325062497876186,
+              "nonunital_norm_proxy": -0.0025604366026655972,
+              "relaxation_pair": -0.0054652377859840465
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": 1.2895430193933894,
+              "affine_ZI": 1.2959958203949655,
+              "affine_ZZ": -0.2155369315314718,
+              "gamma_XX": -0.40284287712184097,
+              "gamma_YY": 0.04614813410141392,
+              "gamma_ZZ": 1.4092694340770409,
+              "h_XX": 0.2307658507855126,
+              "h_YY": 1.1449725036191143,
+              "h_ZZ": 15.6244384656003,
+              "nonunital_norm_proxy": -1.4232300474534152,
+              "relaxation_pair": -1.2248179213447326
+            },
+            "euclidean_margin": 0.04391175594328163,
+            "top_coordinate": "h_ZZ",
+            "z_margin": 15.954701184655212
+          },
+          "M1/M8": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": -0.012937884054992712,
+              "affine_ZI": 0.004339893550483592,
+              "affine_ZZ": 0.000416666662500025,
+              "gamma_XX": 0.00013889811523318252,
+              "gamma_YY": 0.00016357108902305927,
+              "gamma_ZZ": 0.002130937130441329,
+              "h_XX": -0.020938662656694734,
+              "h_YY": -0.014945984208635152,
+              "h_ZZ": 0.04336007323270442,
+              "nonunital_norm_proxy": -0.0004088271619331965,
+              "relaxation_pair": -0.008579787187518303
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": -16.432470887973377,
+              "affine_ZI": 3.077317628293136,
+              "affine_ZZ": 0.7836864838048524,
+              "gamma_XX": 0.13187387864754654,
+              "gamma_YY": 0.10364181736900605,
+              "gamma_ZZ": 2.1934009593875765,
+              "h_XX": -11.699943091127905,
+              "h_YY": -10.11207079749049,
+              "h_ZZ": 26.932621887315428,
+              "nonunital_norm_proxy": -0.19138389813672163,
+              "relaxation_pair": -3.442129649253572
+            },
+            "euclidean_margin": 0.052978013822638136,
+            "top_coordinate": "h_ZZ",
+            "z_margin": 35.5153901581011
+          },
+          "M7/M10": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": -0.004935646520686813,
+              "affine_ZI": -0.00328009097942414,
+              "affine_ZZ": 0.0006166666604999748,
+              "gamma_XX": -0.011571457514576633,
+              "gamma_YY": -0.01150718718328375,
+              "gamma_ZZ": -0.012146426461358844,
+              "h_XX": -0.0006048541213886975,
+              "h_YY": 0.0009913973290747837,
+              "h_ZZ": -0.001066279348941789,
+              "nonunital_norm_proxy": 0.0018891749498341041,
+              "relaxation_pair": -0.04076204019660008
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": -1.215628707819392,
+              "affine_ZI": -0.9150422642979027,
+              "affine_ZZ": 1.077852006479491,
+              "gamma_XX": -5.611241475337765,
+              "gamma_YY": -4.434593420400973,
+              "gamma_ZZ": -5.500933408605524,
+              "h_XX": -0.42621120409041136,
+              "h_YY": 1.4730887636010266,
+              "h_ZZ": -0.29577023588404694,
+              "nonunital_norm_proxy": 1.1485162026237155,
+              "relaxation_pair": -5.183841607645404
+            },
+            "euclidean_margin": 0.046010304439844545,
+            "top_coordinate": "gamma_XX",
+            "z_margin": 10.74798438417847
+          },
+          "M7/M8": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": -0.015748280697433736,
+              "affine_ZI": 0.001446163575239176,
+              "affine_ZZ": 0.0005499999945000034,
+              "gamma_XX": 0.00044729220771613266,
+              "gamma_YY": 0.00011586178813789358,
+              "gamma_ZZ": 0.00012531634293613293,
+              "h_XX": -0.02131699122299081,
+              "h_YY": -0.01575114179526098,
+              "h_ZZ": 0.00010944825394256083,
+              "nonunital_norm_proxy": 0.0021516094407324007,
+              "relaxation_pair": -0.0031145494015342575
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": -6.958957237351389,
+              "affine_ZI": 0.6563942909567793,
+              "affine_ZZ": 1.296561979999521,
+              "gamma_XX": 0.471540747526593,
+              "gamma_YY": 0.09329773847708751,
+              "gamma_ZZ": 0.07822441205662499,
+              "h_XX": -13.567133304497796,
+              "h_YY": -10.966115623168877,
+              "h_ZZ": 0.038852875973812935,
+              "nonunital_norm_proxy": 0.8844441638055557,
+              "relaxation_pair": -0.6946221395959026
+            },
+            "euclidean_margin": 0.03110443433338927,
+            "top_coordinate": "h_XX",
+            "z_margin": 18.877638500937838
+          },
+          "M8/M10": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": 0.010812634176746924,
+              "affine_ZI": -0.004726254554663316,
+              "affine_ZZ": 6.666666599997147e-05,
+              "gamma_XX": -0.012018749722292766,
+              "gamma_YY": -0.011623048971421643,
+              "gamma_ZZ": -0.012271742804294977,
+              "h_XX": 0.02071213710160211,
+              "h_YY": 0.01674253912433576,
+              "h_ZZ": -0.0011757276028843498,
+              "nonunital_norm_proxy": -0.0002624344908982966,
+              "relaxation_pair": -0.037647490795065824
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": 3.076153288401545,
+              "affine_ZI": -1.5056808314128098,
+              "affine_ZZ": 0.1398242891068725,
+              "gamma_XX": -5.499581612364541,
+              "gamma_YY": -4.070037408421143,
+              "gamma_ZZ": -6.300232136839047,
+              "h_XX": 13.024238828611688,
+              "h_YY": 11.436909895636417,
+              "h_ZZ": -0.417617670717279,
+              "nonunital_norm_proxy": -0.13069039344321728,
+              "relaxation_pair": -5.426373324604021
+            },
+            "euclidean_margin": 0.05193733029529117,
+            "top_coordinate": "h_XX",
+            "z_margin": 20.69598002096415
+          }
+        },
+        "edge_circuit_residualized_coordinates": {
+          "M1/M10": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": -2.126049056712838e-09,
+              "affine_ZI": -3.874244784938623e-10,
+              "affine_ZZ": 4.833467102558079e-10,
+              "gamma_XX": -1.1878800491860186e-08,
+              "gamma_YY": -1.1458452334536795e-08,
+              "gamma_ZZ": -1.0139720023107552e-08,
+              "h_XX": -2.2615274847404258e-10,
+              "h_YY": 1.7968435621243221e-09,
+              "h_ZZ": 4.218502025831195e-08,
+              "nonunital_norm_proxy": -6.691255327595513e-10,
+              "relaxation_pair": -4.6226211771032325e-08
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": -0.6037493736452975,
+              "affine_ZI": -0.12107047988305067,
+              "affine_ZZ": 0.4833467102558079,
+              "gamma_XX": -5.453294732176982,
+              "gamma_YY": -4.001999061990417,
+              "gamma_ZZ": -5.628683411474741,
+              "h_XX": -0.12292922951518977,
+              "h_YY": 1.796843562124322,
+              "h_ZZ": 14.590009610998024,
+              "nonunital_norm_proxy": -0.5355153967648408,
+              "relaxation_pair": -6.604884917352428
+            },
+            "euclidean_margin": 6.557656493947496e-08,
+            "top_coordinate": "h_ZZ",
+            "z_margin": 18.386753727268907
+          },
+          "M1/M7": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": 2.809605697401407e-09,
+              "affine_ZI": 2.8926658435466748e-09,
+              "affine_ZZ": -1.3331858274725773e-10,
+              "gamma_XX": -3.073354273621284e-10,
+              "gamma_YY": 4.874054111703163e-11,
+              "gamma_ZZ": 2.0067165602821735e-09,
+              "h_XX": 3.786913680857082e-10,
+              "h_YY": 8.054429449878974e-10,
+              "h_ZZ": 4.3251335635670816e-08,
+              "nonunital_norm_proxy": -2.5583076791272728e-09,
+              "relaxation_pair": -5.464039041248406e-09
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": 1.2687465644623093,
+              "affine_ZI": 1.2254071616837887,
+              "affine_ZZ": -0.13331858274725772,
+              "gamma_XX": -0.3073354273621284,
+              "gamma_YY": 0.04874054111703163,
+              "gamma_ZZ": 1.3446900292179942,
+              "h_XX": 0.22151976137704796,
+              "h_YY": 0.8054429449878974,
+              "h_ZZ": 15.19612127129682,
+              "nonunital_norm_proxy": -1.436265282780936,
+              "relaxation_pair": -1.1807314742022048
+            },
+            "euclidean_margin": 4.391211400450994e-08,
+            "top_coordinate": "h_ZZ",
+            "z_margin": 15.495516519049941
+          },
+          "M1/M8": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": -1.293873174949602e-08,
+              "affine_ZI": 4.338827040128076e-09,
+              "affine_ZZ": 4.1668050666529555e-10,
+              "gamma_XX": 1.3996066921169903e-10,
+              "gamma_YY": 1.645951789216078e-10,
+              "gamma_ZZ": 2.132045367221151e-09,
+              "h_XX": -2.0938362813584303e-08,
+              "h_YY": -1.4945739387595427e-08,
+              "h_ZZ": 4.336076136371624e-08,
+              "nonunital_norm_proxy": -4.0669370417652664e-10,
+              "relaxation_pair": -8.578579716959448e-09
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": -12.938731749496018,
+              "affine_ZI": 3.057025085942907,
+              "affine_ZZ": 0.41668050666529555,
+              "gamma_XX": 0.13996066921169903,
+              "gamma_YY": 0.10200115528763529,
+              "gamma_ZZ": 2.132045367221151,
+              "h_XX": -10.481809937953537,
+              "h_YY": -9.45954337558022,
+              "h_ZZ": 27.40693365803774,
+              "nonunital_norm_proxy": -0.18113549612892135,
+              "relaxation_pair": -3.5071098273671906
+            },
+            "euclidean_margin": 5.297834783144469e-08,
+            "top_coordinate": "h_ZZ",
+            "z_margin": 33.82793752763759
+          },
+          "M7/M10": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": -4.935654754114245e-09,
+              "affine_ZI": -3.280090322040537e-09,
+              "affine_ZZ": 6.166652930030657e-10,
+              "gamma_XX": -1.1571465064498057e-08,
+              "gamma_YY": -1.1507192875653827e-08,
+              "gamma_ZZ": -1.2146436583389726e-08,
+              "h_XX": -6.048441165597508e-10,
+              "h_YY": 9.914006171364248e-10,
+              "h_ZZ": -1.0663153773588646e-09,
+              "nonunital_norm_proxy": 1.8891821463677215e-09,
+              "relaxation_pair": -4.076217272978392e-08
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": -1.1986713070910562,
+              "affine_ZI": -0.8934539486188111,
+              "affine_ZZ": 0.6166652930030656,
+              "gamma_XX": -5.329586796149416,
+              "gamma_YY": -4.221317743517605,
+              "gamma_ZZ": -5.457991096749456,
+              "h_XX": -0.42090482856021083,
+              "h_YY": 0.9914006171364247,
+              "h_ZZ": -0.28790840508174254,
+              "nonunital_norm_proxy": 1.1915806530687236,
+              "relaxation_pair": -5.086276434189135
+            },
+            "euclidean_margin": 4.601042973777507e-08,
+            "top_coordinate": "gamma_ZZ",
+            "z_margin": 10.351909697819021
+          },
+          "M7/M8": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": -1.5748337446897427e-08,
+              "affine_ZI": 1.446161196581401e-09,
+              "affine_ZZ": 5.499990894125532e-10,
+              "gamma_XX": 4.472960965738274e-10,
+              "gamma_YY": 1.1585463780457617e-10,
+              "gamma_ZZ": 1.2532880693897722e-10,
+              "h_XX": -2.131705418167001e-08,
+              "h_YY": -1.5751182332583323e-08,
+              "h_ZZ": 1.0942572804542588e-10,
+              "nonunital_norm_proxy": 2.151613974950746e-09,
+              "relaxation_pair": -3.1145406757110417e-09
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": -6.875734633358819,
+              "affine_ZI": 0.6310052805869772,
+              "affine_ZZ": 0.5499990894125532,
+              "gamma_XX": 0.4472960965738274,
+              "gamma_YY": 0.08547869244625877,
+              "gamma_ZZ": 0.07625508671954895,
+              "h_XX": -13.04369695143769,
+              "h_YY": -9.897344982472957,
+              "h_ZZ": 0.0390303727656078,
+              "nonunital_norm_proxy": 0.8788682202492304,
+              "relaxation_pair": -0.6760099458924778
+            },
+            "euclidean_margin": 3.110452605518245e-08,
+            "top_coordinate": "h_XX",
+            "z_margin": 17.818978048207804
+          },
+          "M8/M10": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": 1.0812682692783182e-08,
+              "affine_ZI": -4.726251518621938e-09,
+              "affine_ZZ": 6.666620359051243e-11,
+              "gamma_XX": -1.2018761161071884e-08,
+              "gamma_YY": -1.1623047513458402e-08,
+              "gamma_ZZ": -1.2271765390328704e-08,
+              "h_XX": 2.071221006511026e-08,
+              "h_YY": 1.674258294971975e-08,
+              "h_ZZ": -1.1757411054042905e-09,
+              "nonunital_norm_proxy": -2.624318285830247e-10,
+              "relaxation_pair": -3.764763205407288e-08
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": 3.029051397334526,
+              "affine_ZI": -1.500575394119217,
+              "affine_ZZ": 0.06666620359051242,
+              "gamma_XX": -5.3034587669085616,
+              "gamma_YY": -3.8586227929313086,
+              "gamma_ZZ": -6.3631407785624985,
+              "h_XX": 11.701774170847616,
+              "h_YY": 10.435662710805111,
+              "h_ZZ": -0.41262264968707707,
+              "nonunital_norm_proxy": -0.12536612329671598,
+              "relaxation_pair": -5.389552460135129
+            },
+            "euclidean_margin": 5.193749368670969e-08,
+            "top_coordinate": "h_XX",
+            "z_margin": 19.235497222003993
+          }
+        },
+        "edge_residualized_coordinates": {
+          "M1/M10": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": 0.0021870105186651088,
+              "affine_ZI": 1.2010541415646923e-05,
+              "affine_ZZ": -6.666666600000412e-05,
+              "gamma_XX": -0.005625303405454494,
+              "gamma_YY": -0.006036166572623812,
+              "gamma_ZZ": -0.004768680498411125,
+              "h_XX": 0.003863365215784926,
+              "h_YY": 0.0041051234625350715,
+              "h_ZZ": 0.01670241586410945,
+              "nonunital_norm_proxy": -4.7692011837662446e-05,
+              "relaxation_pair": -0.018024021082553215
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": 1.144488296229329,
+              "affine_ZI": 0.007448113492708539,
+              "affine_ZZ": -0.5183210553488322,
+              "gamma_XX": -2.071445048911748,
+              "gamma_YY": -2.112560344208729,
+              "gamma_ZZ": -1.9645938060572048,
+              "h_XX": 1.0461631318697748,
+              "h_YY": 1.2670860022160846,
+              "h_ZZ": 1.869132964556825,
+              "nonunital_norm_proxy": -0.05890093416426071,
+              "relaxation_pair": -2.2719509625526824
+            },
+            "euclidean_margin": 0.02704113899859216,
+            "top_coordinate": "relaxation_pair",
+            "z_margin": 5.054784173768357
+          },
+          "M1/M7": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": 0.005028022302958775,
+              "affine_ZI": 0.002815059362127973,
+              "affine_ZZ": 4.444444400001715e-05,
+              "gamma_XX": 0.0009480027590865741,
+              "gamma_YY": 0.0007291709074019096,
+              "gamma_ZZ": 0.0016453960733451636,
+              "h_XX": 0.0034220762680036744,
+              "h_YY": 0.0021109539117960393,
+              "h_ZZ": 0.029490011635892106,
+              "nonunital_norm_proxy": -0.0011350162701411876,
+              "relaxation_pair": -4.493359537059791e-05
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": 2.675213678931855,
+              "affine_ZI": 1.5801582047459946,
+              "affine_ZZ": 0.5788596842341971,
+              "gamma_XX": 0.7160190430180194,
+              "gamma_YY": 0.5579893338495542,
+              "gamma_ZZ": 1.3555990593136722,
+              "h_XX": 1.0367670988382982,
+              "h_YY": 0.9684657274026844,
+              "h_ZZ": 2.6411561562507817,
+              "nonunital_norm_proxy": -1.4152584004019289,
+              "relaxation_pair": -0.0055779927130805125
+            },
+            "euclidean_margin": 0.030404984297477698,
+            "top_coordinate": "affine_IZ",
+            "z_margin": 4.862297406398324
+          },
+          "M1/M8": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": -0.006131658482670968,
+              "affine_ZI": 0.005974822877682112,
+              "affine_ZZ": -2.2222221999988974e-05,
+              "gamma_XX": 0.0038287985274139576,
+              "gamma_YY": 0.0036006555030420914,
+              "gamma_ZZ": 0.003430006690354779,
+              "h_XX": -0.01512161197251155,
+              "h_YY": -0.011112023446068365,
+              "h_ZZ": 0.02265097830496667,
+              "nonunital_norm_proxy": 6.706835956844559e-05,
+              "relaxation_pair": 0.0011466504214027208
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": -2.718329310532216,
+              "affine_ZI": 5.135152538049411,
+              "affine_ZZ": -0.13430685557454677,
+              "gamma_XX": 1.5239613163516819,
+              "gamma_YY": 1.193127839819108,
+              "gamma_ZZ": 1.5039530061169286,
+              "h_XX": -4.599654819513355,
+              "h_YY": -4.868664462597783,
+              "h_ZZ": 2.2791144219436363,
+              "nonunital_norm_proxy": 0.06125000344609932,
+              "relaxation_pair": 0.17882838073546695
+            },
+            "euclidean_margin": 0.03129236231646526,
+            "top_coordinate": "affine_ZI",
+            "z_margin": 9.480287060554083
+          },
+          "M7/M10": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": -0.0028410117842936665,
+              "affine_ZI": -0.002803048820712326,
+              "affine_ZZ": -0.00011111111000002127,
+              "gamma_XX": -0.0065733061645410675,
+              "gamma_YY": -0.006765337480025722,
+              "gamma_ZZ": -0.0064140765717562885,
+              "h_XX": 0.00044128894778125167,
+              "h_YY": 0.0019941695507390317,
+              "h_ZZ": -0.01278759577178266,
+              "nonunital_norm_proxy": 0.001087324258303525,
+              "relaxation_pair": -0.01797908748718262
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": -2.026182187469789,
+              "affine_ZI": -1.5353572220435865,
+              "affine_ZZ": -0.9633661017183066,
+              "gamma_XX": -2.186063769660243,
+              "gamma_YY": -2.164544756461336,
+              "gamma_ZZ": -2.370541670436414,
+              "h_XX": 0.11707490588992693,
+              "h_YY": 0.6753484580034533,
+              "h_ZZ": -1.8862512997076784,
+              "nonunital_norm_proxy": 1.5851869237356349,
+              "relaxation_pair": -1.64980974216542
+            },
+            "euclidean_margin": 0.0252622883844249,
+            "top_coordinate": "gamma_ZZ",
+            "z_margin": 5.633546194765258
+          },
+          "M7/M8": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": -0.011159680785629743,
+              "affine_ZI": 0.003159763515554139,
+              "affine_ZZ": -6.666666600000612e-05,
+              "gamma_XX": 0.0028807957683273837,
+              "gamma_YY": 0.002871484595640182,
+              "gamma_ZZ": 0.0017846106170096153,
+              "h_XX": -0.018543688240515225,
+              "h_YY": -0.013222977357864405,
+              "h_ZZ": -0.0068390333309254385,
+              "nonunital_norm_proxy": 0.0012020846297096331,
+              "relaxation_pair": 0.0011915840167733187
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": -6.049949437799982,
+              "affine_ZI": 2.1875046994001828,
+              "affine_ZZ": -0.4291191239113205,
+              "gamma_XX": 1.0198565692634947,
+              "gamma_YY": 0.877339624893002,
+              "gamma_ZZ": 0.6930529544239864,
+              "h_XX": -5.497449509246716,
+              "h_YY": -7.137881728840876,
+              "h_ZZ": -0.8490419224807453,
+              "nonunital_norm_proxy": 1.193818461928315,
+              "relaxation_pair": 0.12102676387845673
+            },
+            "euclidean_margin": 0.026881388149562358,
+            "top_coordinate": "h_YY",
+            "z_margin": 11.278004776317339
+          },
+          "M8/M10": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": 0.008318669001336076,
+              "affine_ZI": -0.005962812336266466,
+              "affine_ZZ": -4.444444400001514e-05,
+              "gamma_XX": -0.009454101932868452,
+              "gamma_YY": -0.009636822075665904,
+              "gamma_ZZ": -0.008198687188765904,
+              "h_XX": 0.018984977188296476,
+              "h_YY": 0.015217146908603436,
+              "h_ZZ": -0.00594856244085722,
+              "nonunital_norm_proxy": -0.00011476037140610804,
+              "relaxation_pair": -0.01917067150395594
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": 4.43284647542766,
+              "affine_ZI": -4.847557208502075,
+              "affine_ZZ": -0.23830218749387114,
+              "gamma_XX": -2.5635346814131994,
+              "gamma_YY": -2.325774023181015,
+              "gamma_ZZ": -2.4664871179058427,
+              "h_XX": 5.052200009346021,
+              "h_YY": 5.023190259031215,
+              "h_ZZ": -1.3280256405155235,
+              "nonunital_norm_proxy": -0.11327885488376932,
+              "relaxation_pair": -1.9670564506181216
+            },
+            "euclidean_margin": 0.036730482501059446,
+            "top_coordinate": "h_XX",
+            "z_margin": 10.847726990623169
+          }
+        },
+        "ideal_schedule_residualized_coordinates": {
+          "M1/M10": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": 0.0020499838364156616,
+              "affine_ZI": -0.00024566578938829795,
+              "affine_ZZ": -5.362131477979088e-05,
+              "gamma_XX": -0.00504043140575713,
+              "gamma_YY": -0.005462780569473032,
+              "gamma_ZZ": -0.004177292960161093,
+              "h_XX": 0.0040819706950331516,
+              "h_YY": 0.003992368500866411,
+              "h_ZZ": 0.014653018379314145,
+              "nonunital_norm_proxy": -0.00014908569180191683,
+              "relaxation_pair": -0.01552225108436539
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": 0.5370766429117261,
+              "affine_ZI": -0.09076663757537472,
+              "affine_ZZ": -0.19471498290635894,
+              "gamma_XX": -2.0309060264337857,
+              "gamma_YY": -1.849383895671273,
+              "gamma_ZZ": -2.2456041018143265,
+              "h_XX": 1.8785673911654408,
+              "h_YY": 2.2828719424960586,
+              "h_ZZ": 3.847321685059628,
+              "nonunital_norm_proxy": -0.10427981347508695,
+              "relaxation_pair": -2.3912009923507758
+            },
+            "euclidean_margin": 0.023774740825765625,
+            "top_coordinate": "h_ZZ",
+            "z_margin": 6.495634076356103
+          },
+          "M1/M7": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": 0.0032261976190230434,
+              "affine_ZI": 0.0023668521093147487,
+              "affine_ZZ": -9.855036357896989e-05,
+              "gamma_XX": 0.0018238772690419504,
+              "gamma_YY": 0.0017156207487984034,
+              "gamma_ZZ": 0.003960906477162468,
+              "h_XX": 0.0012520105703918085,
+              "h_YY": 0.0009299706250235282,
+              "h_ZZ": 0.03365093027494831,
+              "nonunital_norm_proxy": -0.0017070933179741676,
+              "relaxation_pair": 0.006894598833924336
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": 1.1661328665106632,
+              "affine_ZI": 1.169225716302825,
+              "affine_ZZ": -0.49310741507592865,
+              "gamma_XX": 1.1595343093093324,
+              "gamma_YY": 1.222453538243534,
+              "gamma_ZZ": 1.5009273968664394,
+              "h_XX": 0.42232923943222234,
+              "h_YY": 0.5791078174297778,
+              "h_ZZ": 4.708540156186372,
+              "nonunital_norm_proxy": -2.2028249225026157,
+              "relaxation_pair": 0.6507576192663288
+            },
+            "euclidean_margin": 0.03497493187990246,
+            "top_coordinate": "h_ZZ",
+            "z_margin": 6.001816929102058
+          },
+          "M1/M8": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": -0.009178451316913284,
+              "affine_ZI": 0.005007466631204687,
+              "affine_ZZ": -0.0001550709492007704,
+              "gamma_XX": 0.004846046955010735,
+              "gamma_YY": 0.004492356954035373,
+              "gamma_ZZ": 0.0061391641544766085,
+              "h_XX": -0.017503848410664692,
+              "h_YY": -0.012874983661867052,
+              "h_ZZ": 0.025428440686012042,
+              "nonunital_norm_proxy": -0.0007399944855950557,
+              "relaxation_pair": 0.009765403090792059
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": -4.292863610965214,
+              "affine_ZI": 5.212357067620306,
+              "affine_ZZ": -0.5937841183636966,
+              "gamma_XX": 2.8174288608401183,
+              "gamma_YY": 1.8737329340158184,
+              "gamma_ZZ": 3.147180161958376,
+              "h_XX": -5.361172938467875,
+              "h_YY": -5.005908148849862,
+              "h_ZZ": 4.326298145293203,
+              "nonunital_norm_proxy": -0.5708990189738996,
+              "relaxation_pair": 1.1982559783723592
+            },
+            "euclidean_margin": 0.03748818100162208,
+            "top_coordinate": "h_XX",
+            "z_margin": 11.898879679200723
+          },
+          "M7/M10": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": -0.0011762137826073818,
+              "affine_ZI": -0.0026125178987030464,
+              "affine_ZZ": 4.4929048799179015e-05,
+              "gamma_XX": -0.00686430867479908,
+              "gamma_YY": -0.007178401318271435,
+              "gamma_ZZ": -0.008138199437323562,
+              "h_XX": 0.0028299601246413435,
+              "h_YY": 0.003062397875842883,
+              "h_ZZ": -0.018997911895634167,
+              "nonunital_norm_proxy": 0.001558007626172251,
+              "relaxation_pair": -0.022416849918289725
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": -0.2877558429157043,
+              "affine_ZI": -0.8384634803541621,
+              "affine_ZZ": 0.23163141150696204,
+              "gamma_XX": -2.403358794276738,
+              "gamma_YY": -2.4741947520960146,
+              "gamma_ZZ": -3.1382047298537734,
+              "h_XX": 1.3924386918557585,
+              "h_YY": 3.0684969742383554,
+              "h_ZZ": -2.774863647042376,
+              "nonunital_norm_proxy": 1.0264892046854344,
+              "relaxation_pair": -2.5058526934114655
+            },
+            "euclidean_margin": 0.03250137498441018,
+            "top_coordinate": "gamma_ZZ",
+            "z_margin": 6.998070083615718
+          },
+          "M7/M8": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": -0.012404648935936327,
+              "affine_ZI": 0.0026406145218899383,
+              "affine_ZZ": -5.652058562180052e-05,
+              "gamma_XX": 0.003022169685968785,
+              "gamma_YY": 0.002776736205236969,
+              "gamma_ZZ": 0.0021782576773141404,
+              "h_XX": -0.0187558589810565,
+              "h_YY": -0.01380495428689058,
+              "h_ZZ": -0.00822248958893627,
+              "nonunital_norm_proxy": 0.0009670988323791119,
+              "relaxation_pair": 0.0028708042568677235
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": -4.7886226359252415,
+              "affine_ZI": 1.4523143900588373,
+              "affine_ZZ": -0.3263737695722823,
+              "gamma_XX": 1.3574971801379652,
+              "gamma_YY": 1.1904451314715665,
+              "gamma_ZZ": 0.8192278831083817,
+              "h_XX": -5.910840067452593,
+              "h_YY": -6.470037134452998,
+              "h_ZZ": -1.0051773163682105,
+              "nonunital_norm_proxy": 0.6943578460204559,
+              "relaxation_pair": 0.28109195118673624
+            },
+            "euclidean_margin": 0.028312277834538543,
+            "top_coordinate": "h_YY",
+            "z_margin": 10.365745220138232
+          },
+          "M8/M10": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": 0.011228435153328945,
+              "affine_ZI": -0.005253132420592985,
+              "affine_ZZ": 0.00010144963442097953,
+              "gamma_XX": -0.009886478360767864,
+              "gamma_YY": -0.009955137523508404,
+              "gamma_ZZ": -0.010316457114637701,
+              "h_XX": 0.021585819105697842,
+              "h_YY": 0.016867352162733464,
+              "h_ZZ": -0.010775422306697898,
+              "nonunital_norm_proxy": 0.0005909087937931389,
+              "relaxation_pair": -0.02528765417515745
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": 3.0418990154226626,
+              "affine_ZI": -2.055137625724218,
+              "affine_ZZ": 0.3952389296861513,
+              "gamma_XX": -3.3630915082873636,
+              "gamma_YY": -2.8505908216664575,
+              "gamma_ZZ": -5.463085162909392,
+              "h_XX": 8.811024449899545,
+              "h_YY": 7.519149027438827,
+              "h_ZZ": -1.9561385069271637,
+              "nonunital_norm_proxy": 0.32125623250633534,
+              "relaxation_pair": -4.324328338965198
+            },
+            "euclidean_margin": 0.04430958656267715,
+            "top_coordinate": "h_XX",
+            "z_margin": 14.82281211771462
+          }
+        },
+        "raw_generator_coordinates": {
+          "M1/M10": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": -0.0021252498782457895,
+              "affine_ZI": -0.0003863610041797208,
+              "affine_ZZ": 0.0004833333284999964,
+              "gamma_XX": -0.011879851607059587,
+              "gamma_YY": -0.011459477882398586,
+              "gamma_ZZ": -0.010140805673853646,
+              "h_XX": -0.00022652555509262051,
+              "h_YY": 0.0017965549157006103,
+              "h_ZZ": 0.04218434562982007,
+              "nonunital_norm_proxy": -0.0006712616528314896,
+              "relaxation_pair": -0.04622727798258412
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": -0.6035476065574025,
+              "affine_ZI": -0.12074911436133054,
+              "affine_ZZ": 0.7109209898759103,
+              "gamma_XX": -5.4530313076957775,
+              "gamma_YY": -4.0024665048692345,
+              "gamma_ZZ": -5.629622118780467,
+              "h_XX": -0.12311668604426568,
+              "h_YY": 2.286474280659897,
+              "h_ZZ": 14.590604526988631,
+              "nonunital_norm_proxy": -0.5366838084919009,
+              "relaxation_pair": -6.605394497332493
+            },
+            "euclidean_margin": 0.06557740298097205,
+            "top_coordinate": "h_ZZ",
+            "z_margin": 18.449398940740313
+          },
+          "M1/M7": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": 0.0028103966424410237,
+              "affine_ZI": 0.002893729975244421,
+              "affine_ZZ": -0.00013333333199997836,
+              "gamma_XX": -0.00030839409248295535,
+              "gamma_YY": 4.770930088516569e-05,
+              "gamma_ZZ": 0.0020056207875051944,
+              "h_XX": 0.000378328566296077,
+              "h_YY": 0.0008051575866258266,
+              "h_ZZ": 0.04325062497876186,
+              "nonunital_norm_proxy": -0.002560436602665604,
+              "relaxation_pair": -0.005465237785984046
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": 1.2692314641486937,
+              "affine_ZI": 1.2260505947901783,
+              "affine_ZZ": -0.2109650650999201,
+              "gamma_XX": -0.40981911700199275,
+              "gamma_YY": 0.04868853982926339,
+              "gamma_ZZ": 1.3442251711680502,
+              "h_XX": 0.22127619168786244,
+              "h_YY": 1.0607718276590083,
+              "h_ZZ": 15.196685445804329,
+              "nonunital_norm_proxy": -1.4367693185520665,
+              "relaxation_pair": -1.1810690612995798
+            },
+            "euclidean_margin": 0.04391175594328163,
+            "top_coordinate": "h_ZZ",
+            "z_margin": 15.514786404814327
+          },
+          "M1/M8": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": -0.012937884054992714,
+              "affine_ZI": 0.004339893550483597,
+              "affine_ZZ": 0.000416666662500025,
+              "gamma_XX": 0.0001388981152331773,
+              "gamma_YY": 0.00016357108902305753,
+              "gamma_ZZ": 0.0021309371304413273,
+              "h_XX": -0.02093866265669473,
+              "h_YY": -0.014945984208635152,
+              "h_ZZ": 0.04336007323270442,
+              "nonunital_norm_proxy": -0.0004088271619331965,
+              "relaxation_pair": -0.008579787187518305
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": -15.563349975258522,
+              "affine_ZI": 3.0589992220286373,
+              "affine_ZZ": 0.7614311298415098,
+              "gamma_XX": 0.13973745641165405,
+              "gamma_YY": 0.10139082039982175,
+              "gamma_ZZ": 2.138301303362771,
+              "h_XX": -10.481134803717072,
+              "h_YY": -9.459974317179473,
+              "h_ZZ": 27.411305497512775,
+              "nonunital_norm_proxy": -0.18203202733963142,
+              "relaxation_pair": -3.5083731441491484
+            },
+            "euclidean_margin": 0.052978013822638136,
+            "top_coordinate": "h_ZZ",
+            "z_margin": 34.925979483592364
+          },
+          "M7/M10": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": -0.004935646520686813,
+              "affine_ZI": -0.003280090979424142,
+              "affine_ZZ": 0.0006166666604999748,
+              "gamma_XX": -0.011571457514576632,
+              "gamma_YY": -0.011507187183283751,
+              "gamma_ZZ": -0.01214642646135884,
+              "h_XX": -0.0006048541213886975,
+              "h_YY": 0.0009913973290747837,
+              "h_ZZ": -0.0010662793489417894,
+              "nonunital_norm_proxy": 0.0018891749498341145,
+              "relaxation_pair": -0.040762040196600076
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": -1.198698374679015,
+              "affine_ZI": -0.8934783200852983,
+              "affine_ZZ": 1.0168519633691777,
+              "gamma_XX": -5.329321727293664,
+              "gamma_YY": -4.221137802388433,
+              "gamma_ZZ": -5.457901436951211,
+              "h_XX": -0.42091303463631213,
+              "h_YY": 1.2259334129254238,
+              "h_ZZ": -0.2878997087763884,
+              "nonunital_norm_proxy": 1.1915625720627459,
+              "relaxation_pair": -5.086392560753584
+            },
+            "euclidean_margin": 0.04601030443984454,
+            "top_coordinate": "gamma_ZZ",
+            "z_margin": 10.408251973110414
+          },
+          "M7/M8": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": -0.01574828069743374,
+              "affine_ZI": 0.001446163575239176,
+              "affine_ZZ": 0.0005499999945000033,
+              "gamma_XX": 0.00044729220771613266,
+              "gamma_YY": 0.00011586178813789184,
+              "gamma_ZZ": 0.00012531634293613293,
+              "h_XX": -0.021316991222990807,
+              "h_YY": -0.01575114179526098,
+              "h_ZZ": 0.00010944825394256039,
+              "nonunital_norm_proxy": 0.0021516094407324077,
+              "relaxation_pair": -0.0031145494015342584
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": -6.875981298415471,
+              "affine_ZI": 0.6310351044095346,
+              "affine_ZZ": 1.2147467868233013,
+              "gamma_XX": 0.45740133461817606,
+              "gamma_YY": 0.08548802581898662,
+              "gamma_ZZ": 0.07624989378969392,
+              "h_XX": -13.044193115014375,
+              "h_YY": -9.89729437356783,
+              "h_ZZ": 0.0390384744103084,
+              "nonunital_norm_proxy": 0.878875124021601,
+              "relaxation_pair": -0.6760226216570712
+            },
+            "euclidean_margin": 0.03110443433338927,
+            "top_coordinate": "h_XX",
+            "z_margin": 17.852552593816156
+          },
+          "M8/M10": {
+            "available": true,
+            "coordinate_deltas": {
+              "affine_IZ": 0.010812634176746924,
+              "affine_ZI": -0.004726254554663318,
+              "affine_ZZ": 6.666666599997144e-05,
+              "gamma_XX": -0.012018749722292764,
+              "gamma_YY": -0.011623048971421643,
+              "gamma_ZZ": -0.012271742804294973,
+              "h_XX": 0.02071213710160211,
+              "h_YY": 0.01674253912433576,
+              "h_ZZ": -0.0011757276028843498,
+              "nonunital_norm_proxy": -0.0002624344908982931,
+              "relaxation_pair": -0.03764749079506582
+            },
+            "coordinate_z_margins": {
+              "affine_IZ": 3.0290927126747373,
+              "affine_ZI": -1.5006209045640369,
+              "affine_ZZ": 0.1288313252801105,
+              "gamma_XX": -5.303198353348297,
+              "gamma_YY": -3.8585153904504916,
+              "gamma_ZZ": -6.362841834759614,
+              "h_XX": 11.702128559776176,
+              "h_YY": 10.435610372502563,
+              "h_ZZ": -0.41262066577792544,
+              "nonunital_norm_proxy": -0.1253677172765205,
+              "relaxation_pair": -5.38970492909308
+            },
+            "euclidean_margin": 0.05193733029529116,
+            "top_coordinate": "h_XX",
+            "z_margin": 19.23586083481315
+          }
+        }
+      }
+    },
+    "phys9_setA": {
+      "schema": "scope_static_s2d10_pairwise_generator_margins_v1",
+      "variants": {
+        "circuit_residualized_coordinates": {
+          "M1/M10": {
+            "available": false
+          },
+          "M1/M7": {
+            "available": false
+          },
+          "M1/M8": {
+            "available": false
+          },
+          "M7/M10": {
+            "available": false
+          },
+          "M7/M8": {
+            "available": false
+          },
+          "M8/M10": {
+            "available": false
+          }
+        },
+        "edge_circuit_residualized_coordinates": {
+          "M1/M10": {
+            "available": false
+          },
+          "M1/M7": {
+            "available": false
+          },
+          "M1/M8": {
+            "available": false
+          },
+          "M7/M10": {
+            "available": false
+          },
+          "M7/M8": {
+            "available": false
+          },
+          "M8/M10": {
+            "available": false
+          }
+        },
+        "edge_residualized_coordinates": {
+          "M1/M10": {
+            "available": false
+          },
+          "M1/M7": {
+            "available": false
+          },
+          "M1/M8": {
+            "available": false
+          },
+          "M7/M10": {
+            "available": false
+          },
+          "M7/M8": {
+            "available": false
+          },
+          "M8/M10": {
+            "available": false
+          }
+        },
+        "ideal_schedule_residualized_coordinates": {
+          "M1/M10": {
+            "available": false
+          },
+          "M1/M7": {
+            "available": false
+          },
+          "M1/M8": {
+            "available": false
+          },
+          "M7/M10": {
+            "available": false
+          },
+          "M7/M8": {
+            "available": false
+          },
+          "M8/M10": {
+            "available": false
+          }
+        },
+        "raw_generator_coordinates": {
+          "M1/M10": {
+            "available": false
+          },
+          "M1/M7": {
+            "available": false
+          },
+          "M1/M8": {
+            "available": false
+          },
+          "M7/M10": {
+            "available": false
+          },
+          "M7/M8": {
+            "available": false
+          },
+          "M8/M10": {
+            "available": false
+          }
+        }
+      }
+    }
+  },
+  "schema": "scope_static_s2d10_pairwise_generator_margins_aggregate_v1"
+}

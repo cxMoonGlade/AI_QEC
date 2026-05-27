@@ -1,0 +1,99 @@
+{
+  "circuit_id_groups": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "forbidden_as_phys3_features": true,
+  "labels_role": "audit_only_supervised_targets",
+  "oracle_label_names": [
+    "M1",
+    "M1",
+    "M1",
+    "M1",
+    "M1",
+    "M1",
+    "M1",
+    "M1"
+  ],
+  "record_refs": [
+    {
+      "circuit_id": 0,
+      "location_id": 1,
+      "oracle_label": "M1",
+      "qubits": [
+        0,
+        1
+      ]
+    },
+    {
+      "circuit_id": 0,
+      "location_id": 2,
+      "oracle_label": "M1",
+      "qubits": [
+        1,
+        2
+      ]
+    },
+    {
+      "circuit_id": 0,
+      "location_id": 3,
+      "oracle_label": "M1",
+      "qubits": [
+        2,
+        3
+      ]
+    },
+    {
+      "circuit_id": 0,
+      "location_id": 4,
+      "oracle_label": "M1",
+      "qubits": [
+        3,
+        4
+      ]
+    },
+    {
+      "circuit_id": 0,
+      "location_id": 5,
+      "oracle_label": "M1",
+      "qubits": [
+        4,
+        5
+      ]
+    },
+    {
+      "circuit_id": 0,
+      "location_id": 6,
+      "oracle_label": "M1",
+      "qubits": [
+        5,
+        6
+      ]
+    },
+    {
+      "circuit_id": 0,
+      "location_id": 7,
+      "oracle_label": "M1",
+      "qubits": [
+        6,
+        7
+      ]
+    },
+    {
+      "circuit_id": 0,
+      "location_id": 8,
+      "oracle_label": "M1",
+      "qubits": [
+        7,
+        8
+      ]
+    }
+  ],
+  "schema": "scope_static_s2d8c_audit_labels_schema_oracle_only_v1"
+}

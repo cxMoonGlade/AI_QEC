@@ -52,6 +52,17 @@ RZZ_MINIMAL_INTERVENTION_PROBES = (
     "rzz_int_sign_flip_left_odd",
     "rzz_int_sign_flip_right_odd",
 )
+RZZ_TOMO_PREP_STATES = ("Zp", "Zm", "Xp", "Yp")
+RZZ_TOMO_MEAS_AXES = ("X", "Y", "Z")
+RZZ_TOMO_EDGE_PARITIES = ("even", "odd")
+RZZ_LOCAL_TOMOGRAPHY_PROBES = tuple(
+    f"rzz_tomo_p{prep_left}{prep_right}_m{meas_left}{meas_right}_{parity}"
+    for prep_left in RZZ_TOMO_PREP_STATES
+    for prep_right in RZZ_TOMO_PREP_STATES
+    for meas_left in RZZ_TOMO_MEAS_AXES
+    for meas_right in RZZ_TOMO_MEAS_AXES
+    for parity in RZZ_TOMO_EDGE_PARITIES
+)
 EDGE_ORIENTATION_RULE = "lower_qubit_to_higher_qubit"
 
 
@@ -323,6 +334,7 @@ def _build_single_probe_circuits(config: dict[str, object] | None = None):
         elif probe == "echo":
             for q in range(n):
                 qc.x(q)
+        _apply_rzz_tomography_preparation(qc, probe, n)
         for q in range(n):
             qc.id(q)
         rx_qubits = set(_profile_rx_qubits(n))
@@ -343,7 +355,9 @@ def _build_single_probe_circuits(config: dict[str, object] | None = None):
             qc.rx(0.13 + 0.01 * (q % 3), q)
         for q in sorted(rz_qubits):
             qc.rz(0.09 + 0.01 * (q % 2), q)
-        if _is_rzz_echo_probe(probe):
+        if _is_rzz_tomography_probe(probe):
+            _apply_rzz_tomography_block(qc, probe, n, theta)
+        elif _is_rzz_echo_probe(probe):
             _apply_rzz_echo_block(qc, probe, n, theta)
         elif _is_rzz_minimal_sign_probe(probe):
             _apply_rzz_minimal_sign_block(qc, probe, n, theta)
@@ -384,6 +398,10 @@ def build_probe_basis_manifest(probe_names: Iterable[str], *, num_qubits: int) -
                 "rzz_intervention_edge_parity": probe_rzz_intervention_edge_parity(str(name)),
                 "rzz_intervention_pauli_frame": probe_rzz_intervention_pauli_frame(str(name)),
                 "rzz_intervention_edge_pairs": _rzz_intervention_edge_pairs(str(name), n),
+                "rzz_tomography_prep": probe_rzz_tomography_prep(str(name)),
+                "rzz_tomography_measurement": probe_rzz_tomography_measurement(str(name)),
+                "rzz_tomography_edge_parity": probe_rzz_tomography_edge_parity(str(name)),
+                "rzz_tomography_edge_pairs": _rzz_tomography_edge_pairs(str(name), n),
                 "edge_orientation_rule": EDGE_ORIENTATION_RULE,
                 "measurable_edge_pairs": [
                     {
@@ -427,6 +445,15 @@ def probe_basis_by_qubit(probe_name: str, *, num_qubits: int) -> list[str]:
             left_axis = suffix[0].upper()
             right_axis = suffix[1].upper()
             return [left_axis if q % 2 == 0 else right_axis for q in range(n)]
+    tomo = _parse_rzz_tomography_probe(base)
+    if tomo is not None:
+        basis = ["Z" for _ in range(n)]
+        meas_left, meas_right = str(tomo["meas_left"]), str(tomo["meas_right"])
+        parity = str(tomo["parity"])
+        for left in _edge_left_indices_for_parity(parity, n):
+            basis[left] = meas_left
+            basis[left + 1] = meas_right
+        return basis
     return ["Z" for _ in range(n)]
 
 
@@ -458,6 +485,25 @@ def probe_rzz_intervention_pauli_frame(probe_name: str) -> dict[str, object]:
     return _probe_rzz_intervention_pauli_frame(str(probe_name))
 
 
+def probe_rzz_tomography_prep(probe_name: str) -> dict[str, str]:
+    parsed = _parse_rzz_tomography_probe(str(probe_name))
+    if parsed is None:
+        return {"left": "none", "right": "none"}
+    return {"left": str(parsed["prep_left"]), "right": str(parsed["prep_right"])}
+
+
+def probe_rzz_tomography_measurement(probe_name: str) -> dict[str, str]:
+    parsed = _parse_rzz_tomography_probe(str(probe_name))
+    if parsed is None:
+        return {"left": "none", "right": "none"}
+    return {"left": str(parsed["meas_left"]), "right": str(parsed["meas_right"])}
+
+
+def probe_rzz_tomography_edge_parity(probe_name: str) -> str:
+    parsed = _parse_rzz_tomography_probe(str(probe_name))
+    return "none" if parsed is None else str(parsed["parity"])
+
+
 def _probe_base_name(name: str) -> str:
     text = str(name)
     return text.split(":", 1)[1] if ":" in text else text
@@ -481,6 +527,10 @@ def _is_rzz_echo_probe(name: str) -> bool:
 
 def _is_rzz_minimal_intervention_probe(name: str) -> bool:
     return _probe_base_name(str(name)) in set(RZZ_MINIMAL_INTERVENTION_PROBES)
+
+
+def _is_rzz_tomography_probe(name: str) -> bool:
+    return _parse_rzz_tomography_probe(str(name)) is not None
 
 
 def _is_rzz_minimal_sign_probe(name: str) -> bool:
@@ -611,6 +661,57 @@ def _rzz_intervention_edge_pairs(name: str, num_qubits: int) -> list[dict[str, o
     return out
 
 
+def _parse_rzz_tomography_probe(name: str) -> dict[str, str] | None:
+    base = _probe_base_name(str(name))
+    prefix = "rzz_tomo_p"
+    if not base.startswith(prefix):
+        return None
+    try:
+        prep_part, rest = base[len(prefix) :].split("_m", 1)
+        meas_part, parity = rest.split("_", 1)
+    except ValueError:
+        return None
+    if len(prep_part) != 4 or len(meas_part) != 2:
+        return None
+    prep_left = prep_part[:2]
+    prep_right = prep_part[2:]
+    meas_left = meas_part[0]
+    meas_right = meas_part[1]
+    if prep_left not in RZZ_TOMO_PREP_STATES or prep_right not in RZZ_TOMO_PREP_STATES:
+        return None
+    if meas_left not in RZZ_TOMO_MEAS_AXES or meas_right not in RZZ_TOMO_MEAS_AXES:
+        return None
+    if parity not in RZZ_TOMO_EDGE_PARITIES:
+        return None
+    return {
+        "prep_left": prep_left,
+        "prep_right": prep_right,
+        "meas_left": meas_left,
+        "meas_right": meas_right,
+        "parity": parity,
+    }
+
+
+def _rzz_tomography_edge_pairs(name: str, num_qubits: int) -> list[dict[str, object]]:
+    parsed = _parse_rzz_tomography_probe(str(name))
+    if parsed is None:
+        return []
+    return [
+        {
+            "edge": [int(left), int(left + 1)],
+            "prep": {"left": parsed["prep_left"], "right": parsed["prep_right"]},
+            "measurement": {"left": parsed["meas_left"], "right": parsed["meas_right"]},
+            "edge_parity": parsed["parity"],
+        }
+        for left in _edge_left_indices_for_parity(str(parsed["parity"]), int(num_qubits))
+    ]
+
+
+def _edge_left_indices_for_parity(parity: str, num_qubits: int) -> list[int]:
+    start = 0 if str(parity) == "even" else 1
+    return list(range(start, max(0, int(num_qubits) - 1), 2))
+
+
 def _apply_rzz_echo_block(qc, probe: str, num_qubits: int, theta: float) -> None:
     role = _probe_rzz_echo_role(str(probe))
     parity = _probe_rzz_echo_edge_parity(str(probe))
@@ -639,6 +740,35 @@ def _echo_qubits_for_role(role: str, parity: str, num_qubits: int) -> list[int]:
         if role in {"echo_right", "echo_both"}:
             qubits.add(left + 1)
     return sorted(qubits)
+
+
+def _apply_rzz_tomography_preparation(qc, probe: str, num_qubits: int) -> None:
+    parsed = _parse_rzz_tomography_probe(str(probe))
+    if parsed is None:
+        return
+    for left in _edge_left_indices_for_parity(str(parsed["parity"]), int(num_qubits)):
+        _prepare_tomography_state(qc, left, str(parsed["prep_left"]))
+        _prepare_tomography_state(qc, left + 1, str(parsed["prep_right"]))
+
+
+def _prepare_tomography_state(qc, qubit: int, prep: str) -> None:
+    if prep == "Zp":
+        return
+    if prep == "Zm":
+        qc.x(qubit)
+    elif prep == "Xp":
+        qc.h(qubit)
+    elif prep == "Yp":
+        qc.h(qubit)
+        qc.s(qubit)
+
+
+def _apply_rzz_tomography_block(qc, probe: str, num_qubits: int, theta: float) -> None:
+    parsed = _parse_rzz_tomography_probe(str(probe))
+    if parsed is None:
+        return
+    for left in _edge_left_indices_for_parity(str(parsed["parity"]), int(num_qubits)):
+        qc.rzz(float(theta), left, left + 1)
 
 
 def _apply_rzz_minimal_sign_block(qc, probe: str, num_qubits: int, theta: float) -> None:
@@ -1077,6 +1207,8 @@ def _probe_names(probe_set: str) -> list[str]:
         return ["z_basis", "x_measure", "y_measure", *RZZ_ECHO_CONTRAST_PROBES]
     if probe_set == "rzz_minimal_intervention":
         return ["z_basis", "x_measure", "y_measure", *RZZ_MINIMAL_INTERVENTION_PROBES]
+    if probe_set == "rzz_local_tomography":
+        return list(RZZ_LOCAL_TOMOGRAPHY_PROBES)
     if probe_set == "basis":
         return ["z_basis", "x_basis", "y_basis", "x_measure", "y_measure"]
     if probe_set == "full":
@@ -1136,6 +1268,20 @@ def _profile_defaults(profile: str) -> dict[str, object]:
             "num_qubits": 9,
             "probe_set": "base",
             "mechanism_set": "set_C",
+            "balanced_min_instances_per_mechanism": 3,
+            "multicircuit_teacher_batch": True,
+        },
+        "phys9_multicircuit_setD_balanced": {
+            "num_qubits": 9,
+            "probe_set": "base",
+            "mechanism_set": "set_D",
+            "balanced_min_instances_per_mechanism": 3,
+            "multicircuit_teacher_batch": True,
+        },
+        "phys9_multicircuit_allM_balanced": {
+            "num_qubits": 9,
+            "probe_set": "base",
+            "mechanism_set": ["M0", "M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", "M9", "M10", "M11", "M12", "M13"],
             "balanced_min_instances_per_mechanism": 3,
             "multicircuit_teacher_batch": True,
         },

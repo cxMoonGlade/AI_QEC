@@ -1,0 +1,18 @@
+{
+  "runs": {
+    "phys9_multicircuit_setD_balanced": {
+      "checks": {
+        "exact_ptm_columns_absent": true,
+        "mechanism_id_not_in_feature_columns": true,
+        "no_new_probe_family": true,
+        "oracle_fingerprint_columns_absent": true,
+        "oracle_label_not_in_feature_columns": true,
+        "teacher_channel_columns_absent": true,
+        "visible_instruction_type_allowed": true
+      },
+      "passed": true,
+      "schema": "scope_static_s2d11_leakage_guardrail_audit_v1"
+    }
+  },
+  "schema": "scope_static_s2d11_leakage_guardrail_audit_aggregate_v1"
+}

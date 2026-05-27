@@ -1,0 +1,624 @@
+{
+  "generator_coordinates": [
+    {
+      "fold": 0,
+      "metrics": {
+        "balanced_accuracy": 1.0,
+        "confusion_matrix": [
+          [
+            1,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            1,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            1,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            1
+          ]
+        ],
+        "confusion_matrix_labels": [
+          "M1",
+          "M7",
+          "M8",
+          "M10"
+        ],
+        "macro_F1": 1.0,
+        "min_class_recall": 1.0,
+        "per_class_recall": {
+          "M1": 1.0,
+          "M10": 1.0,
+          "M7": 1.0,
+          "M8": 1.0
+        }
+      },
+      "predicted_labels": [
+        "M1",
+        "M7",
+        "M8",
+        "M10"
+      ],
+      "preprocessing": {
+        "residualizer_fit_on_train_only": false,
+        "scaler": "sklearn.preprocessing.StandardScaler",
+        "standard_scaler_fit_on_train_only": true,
+        "train_feature_mean_shape": [
+          13
+        ]
+      },
+      "probabilities": [
+        [
+          0.8435064154531021,
+          0.09867918353961704,
+          0.026676976491721023,
+          0.031137424515559724
+        ],
+        [
+          0.08433307627459953,
+          0.8048207716486777,
+          0.054523505234773464,
+          0.05632264684194922
+        ],
+        [
+          0.08954798025871172,
+          0.07485755356504786,
+          0.7665475539938743,
+          0.06904691218236617
+        ],
+        [
+          0.12357561760874392,
+          0.08598533640070868,
+          0.02120225603478023,
+          0.7692367899557672
+        ]
+      ],
+      "test_circuit_id": 0,
+      "test_indices": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "train_circuit_ids": [
+        1,
+        2
+      ],
+      "true_labels": [
+        "M1",
+        "M7",
+        "M8",
+        "M10"
+      ]
+    },
+    {
+      "fold": 1,
+      "metrics": {
+        "balanced_accuracy": 0.75,
+        "confusion_matrix": [
+          [
+            0,
+            1,
+            0,
+            0
+          ],
+          [
+            0,
+            1,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            1,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            1
+          ]
+        ],
+        "confusion_matrix_labels": [
+          "M1",
+          "M7",
+          "M8",
+          "M10"
+        ],
+        "macro_F1": 0.6666666666666666,
+        "min_class_recall": 0.0,
+        "per_class_recall": {
+          "M1": 0.0,
+          "M10": 1.0,
+          "M7": 1.0,
+          "M8": 1.0
+        }
+      },
+      "predicted_labels": [
+        "M7",
+        "M7",
+        "M8",
+        "M10"
+      ],
+      "preprocessing": {
+        "residualizer_fit_on_train_only": false,
+        "scaler": "sklearn.preprocessing.StandardScaler",
+        "standard_scaler_fit_on_train_only": true,
+        "train_feature_mean_shape": [
+          13
+        ]
+      },
+      "probabilities": [
+        [
+          0.3950125133538823,
+          0.5256650631540737,
+          0.0461380557269187,
+          0.03318436776512515
+        ],
+        [
+          0.28730700960713146,
+          0.511994036785682,
+          0.1322616558867903,
+          0.06843729772039622
+        ],
+        [
+          0.012230141173370766,
+          0.16285698790158173,
+          0.8189818799023459,
+          0.0059309910227015455
+        ],
+        [
+          0.010403935284620719,
+          0.0009648354741767323,
+          0.004525405645739333,
+          0.9841058235954632
+        ]
+      ],
+      "test_circuit_id": 1,
+      "test_indices": [
+        4,
+        5,
+        6,
+        7
+      ],
+      "train_circuit_ids": [
+        0,
+        2
+      ],
+      "true_labels": [
+        "M1",
+        "M7",
+        "M8",
+        "M10"
+      ]
+    },
+    {
+      "fold": 2,
+      "metrics": {
+        "balanced_accuracy": 1.0,
+        "confusion_matrix": [
+          [
+            1,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            1,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            1,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            1
+          ]
+        ],
+        "confusion_matrix_labels": [
+          "M1",
+          "M7",
+          "M8",
+          "M10"
+        ],
+        "macro_F1": 1.0,
+        "min_class_recall": 1.0,
+        "per_class_recall": {
+          "M1": 1.0,
+          "M10": 1.0,
+          "M7": 1.0,
+          "M8": 1.0
+        }
+      },
+      "predicted_labels": [
+        "M1",
+        "M7",
+        "M8",
+        "M10"
+      ],
+      "preprocessing": {
+        "residualizer_fit_on_train_only": false,
+        "scaler": "sklearn.preprocessing.StandardScaler",
+        "standard_scaler_fit_on_train_only": true,
+        "train_feature_mean_shape": [
+          13
+        ]
+      },
+      "probabilities": [
+        [
+          0.823026126302856,
+          0.1096356342537961,
+          0.03981868439175844,
+          0.027519555051589355
+        ],
+        [
+          0.2826230236906478,
+          0.6149188479747073,
+          0.0801236422802978,
+          0.02233448605434699
+        ],
+        [
+          0.039788517229513286,
+          0.04436521297509106,
+          0.9054861956099541,
+          0.010360074185441652
+        ],
+        [
+          0.017510316643550586,
+          0.16772016633465758,
+          0.028477371195701935,
+          0.78629214582609
+        ]
+      ],
+      "test_circuit_id": 2,
+      "test_indices": [
+        8,
+        9,
+        10,
+        11
+      ],
+      "train_circuit_ids": [
+        0,
+        1
+      ],
+      "true_labels": [
+        "M1",
+        "M7",
+        "M8",
+        "M10"
+      ]
+    }
+  ],
+  "scrambled_generator_coordinates": [
+    {
+      "fold": 0,
+      "metrics": {
+        "balanced_accuracy": 0.5,
+        "confusion_matrix": [
+          [
+            1,
+            0,
+            0,
+            0
+          ],
+          [
+            1,
+            0,
+            0,
+            0
+          ],
+          [
+            1,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            1
+          ]
+        ],
+        "confusion_matrix_labels": [
+          "M1",
+          "M7",
+          "M8",
+          "M10"
+        ],
+        "macro_F1": 0.375,
+        "min_class_recall": 0.0,
+        "per_class_recall": {
+          "M1": 1.0,
+          "M10": 1.0,
+          "M7": 0.0,
+          "M8": 0.0
+        }
+      },
+      "predicted_labels": [
+        "M1",
+        "M1",
+        "M1",
+        "M10"
+      ],
+      "preprocessing": {
+        "residualizer_fit_on_train_only": false,
+        "scaler": "sklearn.preprocessing.StandardScaler",
+        "standard_scaler_fit_on_train_only": true,
+        "train_feature_mean_shape": [
+          13
+        ]
+      },
+      "probabilities": [
+        [
+          0.9109032549987011,
+          0.08909674500129862,
+          1.81003587574467e-36,
+          3.5657037779003317e-16
+        ],
+        [
+          0.8578187055934062,
+          0.10917749927270688,
+          0.005245096621003417,
+          0.027758698512883515
+        ],
+        [
+          0.8259629932711469,
+          0.047702118187240065,
+          0.05582553859813568,
+          0.0705093499434773
+        ],
+        [
+          0.12332353268762337,
+          0.007221692247138775,
+          0.1133337162777703,
+          0.7561210587874675
+        ]
+      ],
+      "test_circuit_id": 0,
+      "test_indices": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "train_circuit_ids": [
+        1,
+        2
+      ],
+      "true_labels": [
+        "M1",
+        "M7",
+        "M8",
+        "M10"
+      ]
+    },
+    {
+      "fold": 1,
+      "metrics": {
+        "balanced_accuracy": 0.75,
+        "confusion_matrix": [
+          [
+            0,
+            1,
+            0,
+            0
+          ],
+          [
+            0,
+            1,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            1,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            1
+          ]
+        ],
+        "confusion_matrix_labels": [
+          "M1",
+          "M7",
+          "M8",
+          "M10"
+        ],
+        "macro_F1": 0.6666666666666666,
+        "min_class_recall": 0.0,
+        "per_class_recall": {
+          "M1": 0.0,
+          "M10": 1.0,
+          "M7": 1.0,
+          "M8": 1.0
+        }
+      },
+      "predicted_labels": [
+        "M7",
+        "M7",
+        "M8",
+        "M10"
+      ],
+      "preprocessing": {
+        "residualizer_fit_on_train_only": false,
+        "scaler": "sklearn.preprocessing.StandardScaler",
+        "standard_scaler_fit_on_train_only": true,
+        "train_feature_mean_shape": [
+          13
+        ]
+      },
+      "probabilities": [
+        [
+          0.14302045394653096,
+          0.5274480181561146,
+          0.1979446707296687,
+          0.13158685716768576
+        ],
+        [
+          0.2867348766467623,
+          0.45599707760456404,
+          0.21662161348154987,
+          0.04064643226712391
+        ],
+        [
+          0.15073398676958633,
+          0.23770331645606288,
+          0.4052343911358993,
+          0.20632830563845145
+        ],
+        [
+          0.04709178404137648,
+          0.05340348713280806,
+          0.26735632179033636,
+          0.632148407035479
+        ]
+      ],
+      "test_circuit_id": 1,
+      "test_indices": [
+        4,
+        5,
+        6,
+        7
+      ],
+      "train_circuit_ids": [
+        0,
+        2
+      ],
+      "true_labels": [
+        "M1",
+        "M7",
+        "M8",
+        "M10"
+      ]
+    },
+    {
+      "fold": 2,
+      "metrics": {
+        "balanced_accuracy": 0.75,
+        "confusion_matrix": [
+          [
+            0,
+            1,
+            0,
+            0
+          ],
+          [
+            0,
+            1,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            1,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            1
+          ]
+        ],
+        "confusion_matrix_labels": [
+          "M1",
+          "M7",
+          "M8",
+          "M10"
+        ],
+        "macro_F1": 0.6666666666666666,
+        "min_class_recall": 0.0,
+        "per_class_recall": {
+          "M1": 0.0,
+          "M10": 1.0,
+          "M7": 1.0,
+          "M8": 1.0
+        }
+      },
+      "predicted_labels": [
+        "M7",
+        "M7",
+        "M8",
+        "M10"
+      ],
+      "preprocessing": {
+        "residualizer_fit_on_train_only": false,
+        "scaler": "sklearn.preprocessing.StandardScaler",
+        "standard_scaler_fit_on_train_only": true,
+        "train_feature_mean_shape": [
+          13
+        ]
+      },
+      "probabilities": [
+        [
+          0.15164762532700987,
+          0.3955024037398362,
+          0.365788178853796,
+          0.08706179207935796
+        ],
+        [
+          0.11160051014011149,
+          0.500927837197568,
+          0.3109988650500668,
+          0.07647278761225391
+        ],
+        [
+          0.08339021958414762,
+          0.13819655924817023,
+          0.44755233822647555,
+          0.33086088294120664
+        ],
+        [
+          0.038065972264076764,
+          0.059680350666794,
+          0.1324511659327794,
+          0.7698025111363498
+        ]
+      ],
+      "test_circuit_id": 2,
+      "test_indices": [
+        8,
+        9,
+        10,
+        11
+      ],
+      "train_circuit_ids": [
+        0,
+        1
+      ],
+      "true_labels": [
+        "M1",
+        "M7",
+        "M8",
+        "M10"
+      ]
+    }
+  ]
+}

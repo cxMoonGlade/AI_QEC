@@ -1,0 +1,21 @@
+run:
+  name: s2d10_generator_space_calibration
+  output_root: outputs/scope_static
+
+s2d_physical:
+  backend: qiskit_aer_gpu
+  require_gpu: true
+  allow_cpu_aer_fallback: false
+
+s2d10_generator_space_calibration:
+  source_root: outputs/scope_static/S2D.9_local_Pauli_Lindblad_observability
+  output_dir: outputs/scope_static/S2D.10_generator_space_calibration_and_nuisance_geometry
+  permutation_repeats: 128
+  seed: 0
+  runs:
+    - name: phys9_setA
+      purpose: regression context for generator-space calibration
+    - name: phys9_multicircuit_setB_balanced
+      purpose: balanced set_B calibration target
+    - name: phys9_multicircuit_setC_balanced
+      purpose: balanced set_C calibration target

@@ -1,0 +1,10 @@
+{
+  "group_key": "circuit_id",
+  "group_mean_norm_after": 1.757791940685733e-18,
+  "group_mean_norm_before": 0.012513203802782388,
+  "num_groups": 3,
+  "raw_variance": 7.250443821875648e-05,
+  "residual_variance": 7.246723618564658e-05,
+  "schema": "scope_static_s2d10_residualization_audit_v1",
+  "variance_removed_fraction": 0.0005131000808206165
+}

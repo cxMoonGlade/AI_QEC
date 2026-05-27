@@ -328,6 +328,8 @@ __global__ void local_window_loss_and_dist_grad_kernel(
     const int64_t* __restrict__ flat_states,
     const int64_t* __restrict__ flat_counts,
     const int64_t* __restrict__ state_offsets,
+    const int64_t* __restrict__ window_num_bits,
+    const int64_t* __restrict__ window_total_counts,
     scalar_t* __restrict__ window_losses,
     scalar_t* __restrict__ grad_current,
     const int64_t window_count,
@@ -339,24 +341,23 @@ __global__ void local_window_loss_and_dist_grad_kernel(
   const int64_t fault_count = fault_offsets[window + 1] - fault_offsets[window];
   const int64_t state_begin = state_offsets[window];
   const int64_t state_end = state_offsets[window + 1];
+  const int64_t state_count = int64_t{1} << window_num_bits[window];
   const scalar_t* dist =
       history + (window * (max_faults_per_window + 1) + fault_count) * max_state_count;
   scalar_t* grad = grad_current + window * max_state_count;
 
-  int64_t total_count_i64 = 0;
-  for (int64_t index = state_begin + threadIdx.x; index < state_end; index += blockDim.x) {
-    total_count_i64 += flat_counts[index];
+  for (int64_t state = threadIdx.x; state < state_count; state += blockDim.x) {
+    grad[state] = static_cast<scalar_t>(0);
   }
-  shared_loss[threadIdx.x] = static_cast<scalar_t>(total_count_i64);
-  sync_reduction_threads();
-  for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
-    if (threadIdx.x < stride) {
-      shared_loss[threadIdx.x] += shared_loss[threadIdx.x + stride];
+  sync_active_state_threads(state_count);
+
+  const scalar_t total_count = static_cast<scalar_t>(window_total_counts[window]);
+  if (total_count <= static_cast<scalar_t>(0)) {
+    if (threadIdx.x == 0) {
+      window_losses[window] = static_cast<scalar_t>(0);
     }
-    sync_reduction_threads();
+    return;
   }
-  const scalar_t total_count = shared_loss[0];
-  sync_reduction_threads();
 
   scalar_t loss_sum = static_cast<scalar_t>(0);
   const scalar_t tiny = likelihood_probability_floor<scalar_t>();
@@ -521,6 +522,7 @@ __global__ void local_window_forward_only_loss_kernel(
     const int64_t* __restrict__ flat_counts,
     const int64_t* __restrict__ state_offsets,
     const int64_t* __restrict__ window_num_bits,
+    const int64_t* __restrict__ window_total_counts,
     scalar_t* __restrict__ window_losses,
     const int64_t window_count,
     const int64_t max_state_count) {
@@ -559,20 +561,13 @@ __global__ void local_window_forward_only_loss_kernel(
 
   const int64_t state_begin = state_offsets[window];
   const int64_t state_end = state_offsets[window + 1];
-  scalar_t total_count = static_cast<scalar_t>(0);
-  for (int64_t index = state_begin + threadIdx.x; index < state_end; index += blockDim.x) {
-    total_count += static_cast<scalar_t>(flat_counts[index]);
-  }
-  reduction[threadIdx.x] = total_count;
-  sync_reduction_threads();
-  for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
-    if (threadIdx.x < stride) {
-      reduction[threadIdx.x] += reduction[threadIdx.x + stride];
+  const scalar_t total_count = static_cast<scalar_t>(window_total_counts[window]);
+  if (total_count <= static_cast<scalar_t>(0)) {
+    if (threadIdx.x == 0) {
+      window_losses[window] = static_cast<scalar_t>(0);
     }
-    sync_reduction_threads();
+    return;
   }
-  total_count = reduction[0];
-  sync_reduction_threads();
 
   scalar_t loss_sum = static_cast<scalar_t>(0);
   const scalar_t tiny = likelihood_probability_floor<scalar_t>();
@@ -698,6 +693,7 @@ __global__ void spectral_loss_and_moment_grad_kernel(
     const int64_t* __restrict__ flat_counts,
     const int64_t* __restrict__ state_offsets,
     const int64_t* __restrict__ window_num_bits,
+    const int64_t* __restrict__ window_total_counts,
     scalar_t* __restrict__ window_losses,
     scalar_t* __restrict__ moment_grads,
     const int64_t window_count,
@@ -709,20 +705,16 @@ __global__ void spectral_loss_and_moment_grad_kernel(
   const int64_t state_end = state_offsets[window + 1];
   const int64_t state_count = int64_t{1} << window_num_bits[window];
 
-  scalar_t total_count = static_cast<scalar_t>(0);
-  for (int64_t index = state_begin + threadIdx.x; index < state_end; index += blockDim.x) {
-    total_count += static_cast<scalar_t>(flat_counts[index]);
-  }
-  reduction[threadIdx.x] = total_count;
-  sync_reduction_threads();
-  for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
-    if (threadIdx.x < stride) {
-      reduction[threadIdx.x] += reduction[threadIdx.x + stride];
+  const scalar_t total_count = static_cast<scalar_t>(window_total_counts[window]);
+  if (total_count <= static_cast<scalar_t>(0)) {
+    if (threadIdx.x == 0) {
+      window_losses[window] = static_cast<scalar_t>(0);
     }
-    sync_reduction_threads();
+    for (int64_t spectral_state = threadIdx.x; spectral_state < state_count; spectral_state += blockDim.x) {
+      moment_grads[window * max_state_count + spectral_state] = static_cast<scalar_t>(0);
+    }
+    return;
   }
-  total_count = reduction[0];
-  sync_reduction_threads();
 
   scalar_t loss_sum = static_cast<scalar_t>(0);
   const scalar_t tiny = likelihood_probability_floor<scalar_t>();
@@ -824,14 +816,15 @@ std::tuple<torch::Tensor, torch::Tensor> local_window_nll_value_and_grad_cuda(
     torch::Tensor flat_counts,
     torch::Tensor state_offsets,
     torch::Tensor window_num_bits,
+    torch::Tensor window_total_counts,
     int64_t max_faults_per_window,
     int64_t max_state_count) {
   const c10::cuda::CUDAGuard device_guard(logits.device());
   const int64_t window_count = window_num_bits.size(0);
   auto probabilities = torch::sigmoid(logits).contiguous();
-  auto history = torch::zeros({window_count, max_faults_per_window + 1, max_state_count}, logits.options());
+  auto history = torch::empty({window_count, max_faults_per_window + 1, max_state_count}, logits.options());
   auto window_losses = torch::empty({window_count}, logits.options());
-  auto grad_current = torch::zeros({window_count, max_state_count}, logits.options());
+  auto grad_current = torch::empty({window_count, max_state_count}, logits.options());
   auto grad_previous = torch::empty_like(grad_current);
   auto grad_logits = torch::zeros_like(logits);
 
@@ -873,6 +866,8 @@ std::tuple<torch::Tensor, torch::Tensor> local_window_nll_value_and_grad_cuda(
         flat_states.data_ptr<int64_t>(),
         flat_counts.data_ptr<int64_t>(),
         state_offsets.data_ptr<int64_t>(),
+        window_num_bits.data_ptr<int64_t>(),
+        window_total_counts.data_ptr<int64_t>(),
         window_losses.data_ptr<scalar_t>(),
         grad_current.data_ptr<scalar_t>(),
         window_count,
@@ -919,6 +914,7 @@ std::tuple<torch::Tensor, torch::Tensor> local_window_nll_value_and_grad_spectra
     torch::Tensor flat_counts,
     torch::Tensor state_offsets,
     torch::Tensor window_num_bits,
+    torch::Tensor window_total_counts,
     int64_t max_faults_per_window,
     int64_t max_state_count,
     double spectral_min_abs_factor,
@@ -995,6 +991,7 @@ std::tuple<torch::Tensor, torch::Tensor> local_window_nll_value_and_grad_spectra
         flat_counts.data_ptr<int64_t>(),
         state_offsets.data_ptr<int64_t>(),
         window_num_bits.data_ptr<int64_t>(),
+        window_total_counts.data_ptr<int64_t>(),
         window_losses.data_ptr<scalar_t>(),
         moment_grads.data_ptr<scalar_t>(),
         window_count,
@@ -1025,6 +1022,7 @@ torch::Tensor local_window_nll_value_cuda(
     torch::Tensor flat_counts,
     torch::Tensor state_offsets,
     torch::Tensor window_num_bits,
+    torch::Tensor window_total_counts,
     int64_t max_faults_per_window,
     int64_t max_state_count) {
   const c10::cuda::CUDAGuard device_guard(logits.device());
@@ -1049,6 +1047,7 @@ torch::Tensor local_window_nll_value_cuda(
         flat_counts.data_ptr<int64_t>(),
         state_offsets.data_ptr<int64_t>(),
         window_num_bits.data_ptr<int64_t>(),
+        window_total_counts.data_ptr<int64_t>(),
         window_losses.data_ptr<scalar_t>(),
         window_count,
         max_state_count);

@@ -1,0 +1,10 @@
+{
+  "group_key": "edge_id",
+  "group_mean_norm_after": 4.30403905686787e-16,
+  "group_mean_norm_before": 7.916367057398297,
+  "num_groups": 6,
+  "raw_variance": 1.8202282475176008,
+  "residual_variance": 1.0638690101213528,
+  "schema": "scope_static_s2d10_residualization_audit_v1",
+  "variance_removed_fraction": 0.41552988666545476
+}

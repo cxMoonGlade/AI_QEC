@@ -1,0 +1,21 @@
+{
+  "controls": {},
+  "feature_block_results": {},
+  "feature_blocks": [
+    "raw_generator_coordinates",
+    "generator_invariants_only",
+    "generator_coordinates_plus_invariants",
+    "circuit_residualized_generator_coordinates_plus_invariants",
+    "edge_residualized_generator_coordinates_plus_invariants",
+    "edge_circuit_residualized_generator_coordinates_plus_invariants",
+    "ideal_schedule_residualized_generator_coordinates_plus_invariants",
+    "scrambled_circuit_residualized_generator_coordinates_plus_invariants"
+  ],
+  "grouped_fold_predictions": {},
+  "run_success": {
+    "checks": {},
+    "passed": false
+  },
+  "schema": "scope_static_s2d10b_invariant_ablation_metrics_v1",
+  "skipped": true
+}

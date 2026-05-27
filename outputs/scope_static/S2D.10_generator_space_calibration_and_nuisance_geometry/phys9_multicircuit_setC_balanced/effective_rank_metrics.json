@@ -1,0 +1,2705 @@
+{
+  "feature_spaces": {
+    "circuit_residualized_coordinates": {
+      "column_angles": {
+        "affine_IZ/affine_ZZ": {
+          "abs_cosine": 0.4024109364036136,
+          "angle_degrees": 113.72898452650294,
+          "cosine": -0.4024109364036136
+        },
+        "affine_IZ/nonunital_norm_proxy": {
+          "abs_cosine": 0.886349495205448,
+          "angle_degrees": 152.41805085485638,
+          "cosine": -0.886349495205448
+        },
+        "affine_ZI/affine_IZ": {
+          "abs_cosine": 0.8700675074377944,
+          "angle_degrees": 29.53351475403201,
+          "cosine": 0.8700675074377944
+        },
+        "affine_ZI/affine_ZZ": {
+          "abs_cosine": 0.34740440291392605,
+          "angle_degrees": 110.32863874041517,
+          "cosine": -0.34740440291392605
+        },
+        "affine_ZI/nonunital_norm_proxy": {
+          "abs_cosine": 0.9804841276904366,
+          "angle_degrees": 168.6618954348996,
+          "cosine": -0.9804841276904366
+        },
+        "affine_ZZ/nonunital_norm_proxy": {
+          "abs_cosine": 0.34205082378929014,
+          "angle_degrees": 69.99812931219712,
+          "cosine": 0.34205082378929014
+        },
+        "gamma_XX/affine_IZ": {
+          "abs_cosine": 0.8422468454228627,
+          "angle_degrees": 147.37814705620286,
+          "cosine": -0.8422468454228627
+        },
+        "gamma_XX/affine_ZI": {
+          "abs_cosine": 0.8983527573234051,
+          "angle_degrees": 153.94238224494123,
+          "cosine": -0.8983527573234051
+        },
+        "gamma_XX/affine_ZZ": {
+          "abs_cosine": 0.19439824632118904,
+          "angle_degrees": 78.79042703133865,
+          "cosine": 0.19439824632118904
+        },
+        "gamma_XX/gamma_YY": {
+          "abs_cosine": 0.9980658678629951,
+          "angle_degrees": 3.5641069216534422,
+          "cosine": 0.9980658678629951
+        },
+        "gamma_XX/gamma_ZZ": {
+          "abs_cosine": 0.9936930610435983,
+          "angle_degrees": 6.43836307760295,
+          "cosine": 0.9936930610435983
+        },
+        "gamma_XX/nonunital_norm_proxy": {
+          "abs_cosine": 0.9451943792697678,
+          "angle_degrees": 19.056972103343295,
+          "cosine": 0.9451943792697678
+        },
+        "gamma_XX/relaxation_pair": {
+          "abs_cosine": 0.8563767835271867,
+          "angle_degrees": 31.08782964814446,
+          "cosine": 0.8563767835271867
+        },
+        "gamma_YY/affine_IZ": {
+          "abs_cosine": 0.8322645776060992,
+          "angle_degrees": 146.33207251740347,
+          "cosine": -0.8322645776060992
+        },
+        "gamma_YY/affine_ZI": {
+          "abs_cosine": 0.8913236347857353,
+          "angle_degrees": 153.04004835178569,
+          "cosine": -0.8913236347857353
+        },
+        "gamma_YY/affine_ZZ": {
+          "abs_cosine": 0.17551081141773298,
+          "angle_degrees": 79.89161446213345,
+          "cosine": 0.17551081141773298
+        },
+        "gamma_YY/gamma_ZZ": {
+          "abs_cosine": 0.9897185223103945,
+          "angle_degrees": 8.22314979273723,
+          "cosine": 0.9897185223103945
+        },
+        "gamma_YY/nonunital_norm_proxy": {
+          "abs_cosine": 0.9405198064198861,
+          "angle_degrees": 19.860964880148575,
+          "cosine": 0.9405198064198861
+        },
+        "gamma_YY/relaxation_pair": {
+          "abs_cosine": 0.8467275420468143,
+          "angle_degrees": 32.14249714510603,
+          "cosine": 0.8467275420468143
+        },
+        "gamma_ZZ/affine_IZ": {
+          "abs_cosine": 0.8662907092089078,
+          "angle_degrees": 150.03041574678466,
+          "cosine": -0.8662907092089078
+        },
+        "gamma_ZZ/affine_ZI": {
+          "abs_cosine": 0.9129132691102696,
+          "angle_degrees": 155.9111003532138,
+          "cosine": -0.9129132691102696
+        },
+        "gamma_ZZ/affine_ZZ": {
+          "abs_cosine": 0.2023575330541999,
+          "angle_degrees": 78.32514488811871,
+          "cosine": 0.2023575330541999
+        },
+        "gamma_ZZ/nonunital_norm_proxy": {
+          "abs_cosine": 0.9482788378066013,
+          "angle_degrees": 18.508090981468875,
+          "cosine": 0.9482788378066013
+        },
+        "gamma_ZZ/relaxation_pair": {
+          "abs_cosine": 0.8600896227509183,
+          "angle_degrees": 30.67335278282409,
+          "cosine": 0.8600896227509183
+        },
+        "h_XX/affine_IZ": {
+          "abs_cosine": 0.11156943603950305,
+          "angle_degrees": 96.40579459049447,
+          "cosine": -0.11156943603950305
+        },
+        "h_XX/affine_ZI": {
+          "abs_cosine": 0.5781831927674465,
+          "angle_degrees": 125.3228592949827,
+          "cosine": -0.5781831927674465
+        },
+        "h_XX/affine_ZZ": {
+          "abs_cosine": 0.024170671108122023,
+          "angle_degrees": 88.61498767621627,
+          "cosine": 0.024170671108122023
+        },
+        "h_XX/gamma_XX": {
+          "abs_cosine": 0.3953237327326369,
+          "angle_degrees": 66.71383403003007,
+          "cosine": 0.3953237327326369
+        },
+        "h_XX/gamma_YY": {
+          "abs_cosine": 0.39371411643462606,
+          "angle_degrees": 66.81419909879129,
+          "cosine": 0.39371411643462606
+        },
+        "h_XX/gamma_ZZ": {
+          "abs_cosine": 0.39148250609091884,
+          "angle_degrees": 66.95322324394115,
+          "cosine": 0.39148250609091884
+        },
+        "h_XX/h_YY": {
+          "abs_cosine": 0.9787529088101847,
+          "angle_degrees": 11.832032176170177,
+          "cosine": 0.9787529088101847
+        },
+        "h_XX/h_ZZ": {
+          "abs_cosine": 0.05338608516303191,
+          "angle_degrees": 93.06025219773193,
+          "cosine": -0.05338608516303191
+        },
+        "h_XX/nonunital_norm_proxy": {
+          "abs_cosine": 0.5024436604285292,
+          "angle_degrees": 59.83819660721983,
+          "cosine": 0.5024436604285292
+        },
+        "h_XX/relaxation_pair": {
+          "abs_cosine": 0.26099556975344984,
+          "angle_degrees": 74.87085607572874,
+          "cosine": 0.26099556975344984
+        },
+        "h_YY/affine_IZ": {
+          "abs_cosine": 0.14246270153663113,
+          "angle_degrees": 98.19037733359096,
+          "cosine": -0.14246270153663113
+        },
+        "h_YY/affine_ZI": {
+          "abs_cosine": 0.5993973663361164,
+          "angle_degrees": 126.82674937012908,
+          "cosine": -0.5993973663361164
+        },
+        "h_YY/affine_ZZ": {
+          "abs_cosine": 0.004687916949362035,
+          "angle_degrees": 90.26859883972574,
+          "cosine": -0.004687916949362035
+        },
+        "h_YY/gamma_XX": {
+          "abs_cosine": 0.38813777759028045,
+          "angle_degrees": 67.1613239911023,
+          "cosine": 0.38813777759028045
+        },
+        "h_YY/gamma_YY": {
+          "abs_cosine": 0.38934042058710544,
+          "angle_degrees": 67.08653532863647,
+          "cosine": 0.38934042058710544
+        },
+        "h_YY/gamma_ZZ": {
+          "abs_cosine": 0.38836591516587254,
+          "angle_degrees": 67.1471399822833,
+          "cosine": 0.38836591516587254
+        },
+        "h_YY/h_ZZ": {
+          "abs_cosine": 0.021823879907624178,
+          "angle_degrees": 88.74948450901275,
+          "cosine": 0.021823879907624178
+        },
+        "h_YY/nonunital_norm_proxy": {
+          "abs_cosine": 0.5242584484414706,
+          "angle_degrees": 58.381664227919515,
+          "cosine": 0.5242584484414706
+        },
+        "h_YY/relaxation_pair": {
+          "abs_cosine": 0.21810680958410086,
+          "angle_degrees": 77.40213889182546,
+          "cosine": 0.21810680958410086
+        },
+        "h_ZZ/affine_IZ": {
+          "abs_cosine": 0.47540667092667227,
+          "angle_degrees": 118.38583163229073,
+          "cosine": -0.47540667092667227
+        },
+        "h_ZZ/affine_ZI": {
+          "abs_cosine": 0.3569538697719068,
+          "angle_degrees": 110.91324015461682,
+          "cosine": -0.3569538697719068
+        },
+        "h_ZZ/affine_ZZ": {
+          "abs_cosine": 0.3264758868678329,
+          "angle_degrees": 70.94498485327462,
+          "cosine": 0.3264758868678329
+        },
+        "h_ZZ/gamma_XX": {
+          "abs_cosine": 0.3142332403873461,
+          "angle_degrees": 71.68546857008327,
+          "cosine": 0.3142332403873461
+        },
+        "h_ZZ/gamma_YY": {
+          "abs_cosine": 0.3199145677245974,
+          "angle_degrees": 71.34224161669084,
+          "cosine": 0.3199145677245974
+        },
+        "h_ZZ/gamma_ZZ": {
+          "abs_cosine": 0.35815718584725853,
+          "angle_degrees": 69.01293444777406,
+          "cosine": 0.35815718584725853
+        },
+        "h_ZZ/nonunital_norm_proxy": {
+          "abs_cosine": 0.4120944587365349,
+          "angle_degrees": 65.66352649844988,
+          "cosine": 0.4120944587365349
+        },
+        "h_ZZ/relaxation_pair": {
+          "abs_cosine": 0.01676787019117234,
+          "angle_degrees": 89.03922678096697,
+          "cosine": 0.01676787019117234
+        },
+        "relaxation_pair/affine_IZ": {
+          "abs_cosine": 0.6620436816409948,
+          "angle_degrees": 131.45592243947272,
+          "cosine": -0.6620436816409948
+        },
+        "relaxation_pair/affine_ZI": {
+          "abs_cosine": 0.6908882784780433,
+          "angle_degrees": 133.70046499848596,
+          "cosine": -0.6908882784780433
+        },
+        "relaxation_pair/affine_ZZ": {
+          "abs_cosine": 0.07538832858806119,
+          "angle_degrees": 85.67646493662735,
+          "cosine": 0.07538832858806119
+        },
+        "relaxation_pair/nonunital_norm_proxy": {
+          "abs_cosine": 0.7048175302266959,
+          "angle_degrees": 45.185195520807525,
+          "cosine": 0.7048175302266959
+        }
+      },
+      "condition_number": 63172.99972010574,
+      "minimum_singular_value": 9.827588512583877e-09,
+      "rank": 11,
+      "singular_values": [
+        0.0006208382463547756,
+        0.00010849549807829158,
+        5.334577072946522e-05,
+        1.9745067378969403e-05,
+        7.276299316429652e-06,
+        9.684634715010559e-07,
+        3.306035417708936e-07,
+        2.310052373955161e-07,
+        1.0739842756394033e-07,
+        2.6053596760030643e-08,
+        9.827588512583877e-09
+      ],
+      "stable_rank": 1.0390747313771702
+    },
+    "edge_circuit_residualized_coordinates": {
+      "column_angles": {
+        "affine_IZ/affine_ZZ": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "affine_IZ/nonunital_norm_proxy": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "affine_ZI/affine_IZ": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "affine_ZI/affine_ZZ": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "affine_ZI/nonunital_norm_proxy": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "affine_ZZ/nonunital_norm_proxy": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "gamma_XX/affine_IZ": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "gamma_XX/affine_ZI": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "gamma_XX/affine_ZZ": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "gamma_XX/gamma_YY": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "gamma_XX/gamma_ZZ": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "gamma_XX/nonunital_norm_proxy": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "gamma_XX/relaxation_pair": {
+          "abs_cosine": 0.7876703762852767,
+          "angle_degrees": 38.03166559937002,
+          "cosine": 0.7876703762852767
+        },
+        "gamma_YY/affine_IZ": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "gamma_YY/affine_ZI": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "gamma_YY/affine_ZZ": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "gamma_YY/gamma_ZZ": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "gamma_YY/nonunital_norm_proxy": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "gamma_YY/relaxation_pair": {
+          "abs_cosine": 0.7477168024382395,
+          "angle_degrees": 41.60701454711281,
+          "cosine": 0.7477168024382395
+        },
+        "gamma_ZZ/affine_IZ": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "gamma_ZZ/affine_ZI": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "gamma_ZZ/affine_ZZ": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "gamma_ZZ/nonunital_norm_proxy": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "gamma_ZZ/relaxation_pair": {
+          "abs_cosine": 0.8120906151433378,
+          "angle_degrees": 35.69930402459725,
+          "cosine": 0.8120906151433378
+        },
+        "h_XX/affine_IZ": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "h_XX/affine_ZI": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "h_XX/affine_ZZ": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "h_XX/gamma_XX": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "h_XX/gamma_YY": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "h_XX/gamma_ZZ": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "h_XX/h_YY": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "h_XX/h_ZZ": {
+          "abs_cosine": 0.32063349112229017,
+          "angle_degrees": 108.70124006100426,
+          "cosine": -0.32063349112229017
+        },
+        "h_XX/nonunital_norm_proxy": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "h_XX/relaxation_pair": {
+          "abs_cosine": 0.11748710793079659,
+          "angle_degrees": 96.74709851924185,
+          "cosine": -0.11748710793079659
+        },
+        "h_YY/affine_IZ": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "h_YY/affine_ZI": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "h_YY/affine_ZZ": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "h_YY/gamma_XX": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "h_YY/gamma_YY": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "h_YY/gamma_ZZ": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "h_YY/h_ZZ": {
+          "abs_cosine": 0.24217429480221173,
+          "angle_degrees": 104.01490460879076,
+          "cosine": -0.24217429480221173
+        },
+        "h_YY/nonunital_norm_proxy": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "h_YY/relaxation_pair": {
+          "abs_cosine": 0.2136583773575463,
+          "angle_degrees": 102.33682915475043,
+          "cosine": -0.2136583773575463
+        },
+        "h_ZZ/affine_IZ": {
+          "abs_cosine": 0.26322298853125015,
+          "angle_degrees": 105.26138918657166,
+          "cosine": -0.26322298853125015
+        },
+        "h_ZZ/affine_ZI": {
+          "abs_cosine": 0.11029635119356616,
+          "angle_degrees": 83.66760080710995,
+          "cosine": 0.11029635119356616
+        },
+        "h_ZZ/affine_ZZ": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "h_ZZ/gamma_XX": {
+          "abs_cosine": 0.17421866097043606,
+          "angle_degrees": 100.03319222134124,
+          "cosine": -0.17421866097043606
+        },
+        "h_ZZ/gamma_YY": {
+          "abs_cosine": 0.15171599103723135,
+          "angle_degrees": 98.7263838606971,
+          "cosine": -0.15171599103723135
+        },
+        "h_ZZ/gamma_ZZ": {
+          "abs_cosine": 0.058834189824800376,
+          "angle_degrees": 93.37289853979323,
+          "cosine": -0.058834189824800376
+        },
+        "h_ZZ/nonunital_norm_proxy": {
+          "abs_cosine": 0.06435006361756827,
+          "angle_degrees": 86.31046359697753,
+          "cosine": 0.06435006361756827
+        },
+        "h_ZZ/relaxation_pair": {
+          "abs_cosine": 0.3961289192440853,
+          "angle_degrees": 113.33640048025914,
+          "cosine": -0.3961289192440853
+        },
+        "relaxation_pair/affine_IZ": {
+          "abs_cosine": 0.2058514610831585,
+          "angle_degrees": 101.8793473052331,
+          "cosine": -0.2058514610831585
+        },
+        "relaxation_pair/affine_ZI": {
+          "abs_cosine": 0.1850570122455594,
+          "angle_degrees": 100.66445635297674,
+          "cosine": -0.1850570122455594
+        },
+        "relaxation_pair/affine_ZZ": {
+          "abs_cosine": 0.0,
+          "angle_degrees": 90.0,
+          "cosine": 0.0
+        },
+        "relaxation_pair/nonunital_norm_proxy": {
+          "abs_cosine": 0.2324353795106311,
+          "angle_degrees": 76.55950475864493,
+          "cosine": 0.2324353795106311
+        }
+      },
+      "condition_number": Infinity,
+      "minimum_singular_value": 1.1540914080619462e-20,
+      "rank": 0,
+      "singular_values": [
+        1.260854058656031e-16,
+        7.12922517596809e-17,
+        2.948775894181032e-17,
+        1.779580083921819e-17,
+        7.338286065063686e-18,
+        9.741282093243522e-19,
+        3.297193306559309e-19,
+        2.564228624812657e-19,
+        1.192528132364333e-19,
+        2.6642398799991514e-20,
+        1.1540914080619462e-20
+      ],
+      "stable_rank": 2.222132208808491e-14
+    },
+    "edge_residualized_coordinates": {
+      "column_angles": {
+        "affine_IZ/affine_ZZ": {
+          "abs_cosine": 0.18772454426142565,
+          "angle_degrees": 79.17997910727398,
+          "cosine": 0.18772454426142565
+        },
+        "affine_IZ/nonunital_norm_proxy": {
+          "abs_cosine": 0.4706530897775429,
+          "angle_degrees": 118.07669835834469,
+          "cosine": -0.4706530897775429
+        },
+        "affine_ZI/affine_IZ": {
+          "abs_cosine": 0.5305540131491804,
+          "angle_degrees": 122.04289490926732,
+          "cosine": -0.5305540131491804
+        },
+        "affine_ZI/affine_ZZ": {
+          "abs_cosine": 0.12410982666662375,
+          "angle_degrees": 82.87064768879802,
+          "cosine": 0.12410982666662375
+        },
+        "affine_ZI/nonunital_norm_proxy": {
+          "abs_cosine": 0.18271112317420624,
+          "angle_degrees": 100.52771505367832,
+          "cosine": -0.18271112317420624
+        },
+        "affine_ZZ/nonunital_norm_proxy": {
+          "abs_cosine": 0.8887553280021527,
+          "angle_degrees": 152.7172562903052,
+          "cosine": -0.8887553280021527
+        },
+        "gamma_XX/affine_IZ": {
+          "abs_cosine": 0.35871893475190003,
+          "angle_degrees": 111.02154224983468,
+          "cosine": -0.35871893475190003
+        },
+        "gamma_XX/affine_ZI": {
+          "abs_cosine": 0.6097461427961548,
+          "angle_degrees": 52.428850300652435,
+          "cosine": 0.6097461427961548
+        },
+        "gamma_XX/affine_ZZ": {
+          "abs_cosine": 0.20760441447166952,
+          "angle_degrees": 78.01799835761219,
+          "cosine": 0.20760441447166952
+        },
+        "gamma_XX/gamma_YY": {
+          "abs_cosine": 0.9949367584721618,
+          "angle_degrees": 5.768134355741505,
+          "cosine": 0.9949367584721618
+        },
+        "gamma_XX/gamma_ZZ": {
+          "abs_cosine": 0.9960078295056816,
+          "angle_degrees": 5.121377130716707,
+          "cosine": 0.9960078295056816
+        },
+        "gamma_XX/nonunital_norm_proxy": {
+          "abs_cosine": 0.10592026344055275,
+          "angle_degrees": 96.0801894537395,
+          "cosine": -0.10592026344055275
+        },
+        "gamma_XX/relaxation_pair": {
+          "abs_cosine": 0.898370624075695,
+          "angle_degrees": 26.055287249987014,
+          "cosine": 0.898370624075695
+        },
+        "gamma_YY/affine_IZ": {
+          "abs_cosine": 0.32344313975723876,
+          "angle_degrees": 108.87127973471067,
+          "cosine": -0.32344313975723876
+        },
+        "gamma_YY/affine_ZI": {
+          "abs_cosine": 0.5834996322146213,
+          "angle_degrees": 54.30293352275117,
+          "cosine": 0.5834996322146213
+        },
+        "gamma_YY/affine_ZZ": {
+          "abs_cosine": 0.17351679237063225,
+          "angle_degrees": 80.00764386188726,
+          "cosine": 0.17351679237063225
+        },
+        "gamma_YY/gamma_ZZ": {
+          "abs_cosine": 0.9906173887579649,
+          "angle_degrees": 7.85488163373993,
+          "cosine": 0.9906173887579649
+        },
+        "gamma_YY/nonunital_norm_proxy": {
+          "abs_cosine": 0.09393329631558844,
+          "angle_degrees": 95.38992764619266,
+          "cosine": -0.09393329631558844
+        },
+        "gamma_YY/relaxation_pair": {
+          "abs_cosine": 0.8851435527074266,
+          "angle_degrees": 27.730807878828795,
+          "cosine": 0.8851435527074266
+        },
+        "gamma_ZZ/affine_IZ": {
+          "abs_cosine": 0.2934937316430024,
+          "angle_degrees": 107.06723688851739,
+          "cosine": -0.2934937316430024
+        },
+        "gamma_ZZ/affine_ZI": {
+          "abs_cosine": 0.6100912209216147,
+          "angle_degrees": 52.403900876496884,
+          "cosine": 0.6100912209216147
+        },
+        "gamma_ZZ/affine_ZZ": {
+          "abs_cosine": 0.21062402199366365,
+          "angle_degrees": 77.84107597512399,
+          "cosine": 0.21062402199366365
+        },
+        "gamma_ZZ/nonunital_norm_proxy": {
+          "abs_cosine": 0.1386582242008191,
+          "angle_degrees": 97.97021090572719,
+          "cosine": -0.1386582242008191
+        },
+        "gamma_ZZ/relaxation_pair": {
+          "abs_cosine": 0.899745735460388,
+          "angle_degrees": 25.875334600331712,
+          "cosine": 0.899745735460388
+        },
+        "h_XX/affine_IZ": {
+          "abs_cosine": 0.9194472126271643,
+          "angle_degrees": 23.15459847505284,
+          "cosine": 0.9194472126271643
+        },
+        "h_XX/affine_ZI": {
+          "abs_cosine": 0.7966010632716226,
+          "angle_degrees": 142.8067427132165,
+          "cosine": -0.7966010632716226
+        },
+        "h_XX/affine_ZZ": {
+          "abs_cosine": 0.05858328110205266,
+          "angle_degrees": 93.35849768965905,
+          "cosine": -0.05858328110205266
+        },
+        "h_XX/gamma_XX": {
+          "abs_cosine": 0.5506317768224552,
+          "angle_degrees": 123.41036630056637,
+          "cosine": -0.5506317768224552
+        },
+        "h_XX/gamma_YY": {
+          "abs_cosine": 0.5089238034192872,
+          "angle_degrees": 120.59217138498201,
+          "cosine": -0.5089238034192872
+        },
+        "h_XX/gamma_ZZ": {
+          "abs_cosine": 0.5032695372822215,
+          "angle_degrees": 120.21654762250311,
+          "cosine": -0.5032695372822215
+        },
+        "h_XX/h_YY": {
+          "abs_cosine": 0.9811219018179393,
+          "angle_degrees": 11.150705570818426,
+          "cosine": 0.9811219018179393
+        },
+        "h_XX/h_ZZ": {
+          "abs_cosine": 0.21684301744542542,
+          "angle_degrees": 102.52367558366548,
+          "cosine": -0.21684301744542542
+        },
+        "h_XX/nonunital_norm_proxy": {
+          "abs_cosine": 0.1517235062579922,
+          "angle_degrees": 98.72681949421766,
+          "cosine": -0.1517235062579922
+        },
+        "h_XX/relaxation_pair": {
+          "abs_cosine": 0.27858839614007425,
+          "angle_degrees": 106.17597383676619,
+          "cosine": -0.27858839614007425
+        },
+        "h_YY/affine_IZ": {
+          "abs_cosine": 0.8691269240581944,
+          "angle_degrees": 29.642659579581117,
+          "cosine": 0.8691269240581944
+        },
+        "h_YY/affine_ZI": {
+          "abs_cosine": 0.8223119451694562,
+          "angle_degrees": 145.3169025021766,
+          "cosine": -0.8223119451694562
+        },
+        "h_YY/affine_ZZ": {
+          "abs_cosine": 0.08256446810409351,
+          "angle_degrees": 94.73598677399006,
+          "cosine": -0.08256446810409351
+        },
+        "h_YY/gamma_XX": {
+          "abs_cosine": 0.680005430235413,
+          "angle_degrees": 132.84406738279463,
+          "cosine": -0.680005430235413
+        },
+        "h_YY/gamma_YY": {
+          "abs_cosine": 0.6479826374898291,
+          "angle_degrees": 130.3896735065469,
+          "cosine": -0.6479826374898291
+        },
+        "h_YY/gamma_ZZ": {
+          "abs_cosine": 0.6369954779331658,
+          "angle_degrees": 129.56814295575083,
+          "cosine": -0.6369954779331658
+        },
+        "h_YY/h_ZZ": {
+          "abs_cosine": 0.18669054096151413,
+          "angle_degrees": 100.75971060179533,
+          "cosine": -0.18669054096151413
+        },
+        "h_YY/nonunital_norm_proxy": {
+          "abs_cosine": 0.11343172165063646,
+          "angle_degrees": 96.5131774152488,
+          "cosine": -0.11343172165063646
+        },
+        "h_YY/relaxation_pair": {
+          "abs_cosine": 0.40213059712038596,
+          "angle_degrees": 113.71144013115324,
+          "cosine": -0.40213059712038596
+        },
+        "h_ZZ/affine_IZ": {
+          "abs_cosine": 0.030255083941614618,
+          "angle_degrees": 88.26624680839204,
+          "cosine": 0.030255083941614618
+        },
+        "h_ZZ/affine_ZI": {
+          "abs_cosine": 0.6307539891135646,
+          "angle_degrees": 50.89422758254692,
+          "cosine": 0.6307539891135646
+        },
+        "h_ZZ/affine_ZZ": {
+          "abs_cosine": 0.002652108741441851,
+          "angle_degrees": 89.84804518417167,
+          "cosine": 0.002652108741441851
+        },
+        "h_ZZ/gamma_XX": {
+          "abs_cosine": 0.01371974406835542,
+          "angle_degrees": 90.78610809413334,
+          "cosine": -0.01371974406835542
+        },
+        "h_ZZ/gamma_YY": {
+          "abs_cosine": 0.052221064426949265,
+          "angle_degrees": 92.9934081697996,
+          "cosine": -0.052221064426949265
+        },
+        "h_ZZ/gamma_ZZ": {
+          "abs_cosine": 0.038856530645938116,
+          "angle_degrees": 87.77312418025386,
+          "cosine": 0.038856530645938116
+        },
+        "h_ZZ/nonunital_norm_proxy": {
+          "abs_cosine": 0.25812244407792495,
+          "angle_degrees": 104.95868373580845,
+          "cosine": -0.25812244407792495
+        },
+        "h_ZZ/relaxation_pair": {
+          "abs_cosine": 0.2582209935175153,
+          "angle_degrees": 104.96452834045591,
+          "cosine": -0.2582209935175153
+        },
+        "relaxation_pair/affine_IZ": {
+          "abs_cosine": 0.15297472852194638,
+          "angle_degrees": 98.79935599164531,
+          "cosine": -0.15297472852194638
+        },
+        "relaxation_pair/affine_ZI": {
+          "abs_cosine": 0.25266417791469364,
+          "angle_degrees": 75.36477930695946,
+          "cosine": 0.25266417791469364
+        },
+        "relaxation_pair/affine_ZZ": {
+          "abs_cosine": 0.30849287517182156,
+          "angle_degrees": 72.03157239471054,
+          "cosine": 0.30849287517182156
+        },
+        "relaxation_pair/nonunital_norm_proxy": {
+          "abs_cosine": 0.1324830263529229,
+          "angle_degrees": 97.61310057141185,
+          "cosine": -0.1324830263529229
+        }
+      },
+      "condition_number": Infinity,
+      "minimum_singular_value": 7.77994745180776e-25,
+      "rank": 6,
+      "singular_values": [
+        5.10604451769771e-05,
+        4.512834982167407e-05,
+        1.7132926793759587e-05,
+        1.0949469188163456e-06,
+        3.655710992762264e-07,
+        5.951238831171954e-08,
+        1.3508391127576317e-21,
+        6.187735009559066e-22,
+        4.8899200513688345e-22,
+        8.332820912276751e-24,
+        7.77994745180776e-25
+      ],
+      "stable_rank": 1.8942424429359312
+    },
+    "ideal_schedule_residualized_coordinates": {
+      "column_angles": {
+        "affine_IZ/affine_ZZ": {
+          "abs_cosine": 0.3780761284425681,
+          "angle_degrees": 67.78543556561802,
+          "cosine": 0.3780761284425681
+        },
+        "affine_IZ/nonunital_norm_proxy": {
+          "abs_cosine": 0.14368537895425956,
+          "angle_degrees": 81.73884019501726,
+          "cosine": 0.14368537895425956
+        },
+        "affine_ZI/affine_IZ": {
+          "abs_cosine": 0.12592946250927553,
+          "angle_degrees": 97.23443422524137,
+          "cosine": -0.12592946250927553
+        },
+        "affine_ZI/affine_ZZ": {
+          "abs_cosine": 0.2310606475042711,
+          "angle_degrees": 76.64047546678341,
+          "cosine": 0.2310606475042711
+        },
+        "affine_ZI/nonunital_norm_proxy": {
+          "abs_cosine": 0.11910952095816359,
+          "angle_degrees": 83.15928669731603,
+          "cosine": 0.11910952095816359
+        },
+        "affine_ZZ/nonunital_norm_proxy": {
+          "abs_cosine": 0.1354205834271766,
+          "angle_degrees": 82.21705911434896,
+          "cosine": 0.1354205834271766
+        },
+        "gamma_XX/affine_IZ": {
+          "abs_cosine": 0.3260680616922159,
+          "angle_degrees": 109.03029573871888,
+          "cosine": -0.3260680616922159
+        },
+        "gamma_XX/affine_ZI": {
+          "abs_cosine": 0.5761071385687422,
+          "angle_degrees": 54.82279729130195,
+          "cosine": 0.5761071385687422
+        },
+        "gamma_XX/affine_ZZ": {
+          "abs_cosine": 0.07762794739896019,
+          "angle_degrees": 85.5477669843473,
+          "cosine": 0.07762794739896019
+        },
+        "gamma_XX/gamma_YY": {
+          "abs_cosine": 0.9811547067876861,
+          "angle_degrees": 11.140982251456713,
+          "cosine": 0.9811547067876861
+        },
+        "gamma_XX/gamma_ZZ": {
+          "abs_cosine": 0.9149635167403782,
+          "angle_degrees": 23.799453524620457,
+          "cosine": 0.9149635167403782
+        },
+        "gamma_XX/nonunital_norm_proxy": {
+          "abs_cosine": 0.035107955277017884,
+          "angle_degrees": 92.01195112040884,
+          "cosine": -0.035107955277017884
+        },
+        "gamma_XX/relaxation_pair": {
+          "abs_cosine": 0.8023446074124753,
+          "angle_degrees": 36.64541722545999,
+          "cosine": 0.8023446074124753
+        },
+        "gamma_YY/affine_IZ": {
+          "abs_cosine": 0.254890674857747,
+          "angle_degrees": 104.76710722150499,
+          "cosine": -0.254890674857747
+        },
+        "gamma_YY/affine_ZI": {
+          "abs_cosine": 0.5815330565137082,
+          "angle_degrees": 54.4415579386867,
+          "cosine": 0.5815330565137082
+        },
+        "gamma_YY/affine_ZZ": {
+          "abs_cosine": 0.0018655851630555765,
+          "angle_degrees": 89.89310978183103,
+          "cosine": 0.0018655851630555765
+        },
+        "gamma_YY/gamma_ZZ": {
+          "abs_cosine": 0.8717347713842991,
+          "angle_degrees": 29.339138800320825,
+          "cosine": 0.8717347713842991
+        },
+        "gamma_YY/nonunital_norm_proxy": {
+          "abs_cosine": 0.05226658525220118,
+          "angle_degrees": 92.99601988763594,
+          "cosine": -0.05226658525220118
+        },
+        "gamma_YY/relaxation_pair": {
+          "abs_cosine": 0.7780187367059846,
+          "angle_degrees": 38.92047095645408,
+          "cosine": 0.7780187367059846
+        },
+        "gamma_ZZ/affine_IZ": {
+          "abs_cosine": 0.44291499592038286,
+          "angle_degrees": 116.29001778138267,
+          "cosine": -0.44291499592038286
+        },
+        "gamma_ZZ/affine_ZI": {
+          "abs_cosine": 0.3858043231938725,
+          "angle_degrees": 67.30631729199187,
+          "cosine": 0.3858043231938725
+        },
+        "gamma_ZZ/affine_ZZ": {
+          "abs_cosine": 0.13001158572364999,
+          "angle_degrees": 97.47026181133114,
+          "cosine": -0.13001158572364999
+        },
+        "gamma_ZZ/nonunital_norm_proxy": {
+          "abs_cosine": 0.20383877898448147,
+          "angle_degrees": 101.7615307210939,
+          "cosine": -0.20383877898448147
+        },
+        "gamma_ZZ/relaxation_pair": {
+          "abs_cosine": 0.8885554491854425,
+          "angle_degrees": 27.307717156156134,
+          "cosine": 0.8885554491854425
+        },
+        "h_XX/affine_IZ": {
+          "abs_cosine": 0.8333763627840144,
+          "angle_degrees": 33.552849413062056,
+          "cosine": 0.8333763627840144
+        },
+        "h_XX/affine_ZI": {
+          "abs_cosine": 0.6111104521919808,
+          "angle_degrees": 127.66983926864407,
+          "cosine": -0.6111104521919808
+        },
+        "h_XX/affine_ZZ": {
+          "abs_cosine": 0.1738124178904459,
+          "angle_degrees": 79.99044441921245,
+          "cosine": 0.1738124178904459
+        },
+        "h_XX/gamma_XX": {
+          "abs_cosine": 0.5702491142521771,
+          "angle_degrees": 124.76759907452721,
+          "cosine": -0.5702491142521771
+        },
+        "h_XX/gamma_YY": {
+          "abs_cosine": 0.5315597365520651,
+          "angle_degrees": 122.11090063748085,
+          "cosine": -0.5315597365520651
+        },
+        "h_XX/gamma_ZZ": {
+          "abs_cosine": 0.5550455506077866,
+          "angle_degrees": 123.71385225112434,
+          "cosine": -0.5550455506077866
+        },
+        "h_XX/h_YY": {
+          "abs_cosine": 0.972991156076948,
+          "angle_degrees": 13.3466719797262,
+          "cosine": 0.972991156076948
+        },
+        "h_XX/h_ZZ": {
+          "abs_cosine": 0.2754125277655636,
+          "angle_degrees": 105.98659962557609,
+          "cosine": -0.2754125277655636
+        },
+        "h_XX/nonunital_norm_proxy": {
+          "abs_cosine": 0.09303099003511282,
+          "angle_degrees": 84.66199808234983,
+          "cosine": 0.09303099003511282
+        },
+        "h_XX/relaxation_pair": {
+          "abs_cosine": 0.41464355288167276,
+          "angle_degrees": 114.49687131855367,
+          "cosine": -0.41464355288167276
+        },
+        "h_YY/affine_IZ": {
+          "abs_cosine": 0.8209572442386677,
+          "angle_degrees": 34.81926731541882,
+          "cosine": 0.8209572442386677
+        },
+        "h_YY/affine_ZI": {
+          "abs_cosine": 0.621862213305662,
+          "angle_degrees": 128.45225104471723,
+          "cosine": -0.621862213305662
+        },
+        "h_YY/affine_ZZ": {
+          "abs_cosine": 0.08533796764090597,
+          "angle_degrees": 85.10454039515417,
+          "cosine": 0.08533796764090597
+        },
+        "h_YY/gamma_XX": {
+          "abs_cosine": 0.6829526455970044,
+          "angle_degrees": 133.0748062856581,
+          "cosine": -0.6829526455970044
+        },
+        "h_YY/gamma_YY": {
+          "abs_cosine": 0.6326158596840401,
+          "angle_degrees": 129.24338068709278,
+          "cosine": -0.6326158596840401
+        },
+        "h_YY/gamma_ZZ": {
+          "abs_cosine": 0.65124811523347,
+          "angle_degrees": 130.6357706416201,
+          "cosine": -0.65124811523347
+        },
+        "h_YY/h_ZZ": {
+          "abs_cosine": 0.22223465949213753,
+          "angle_degrees": 102.84031928588139,
+          "cosine": -0.22223465949213753
+        },
+        "h_YY/nonunital_norm_proxy": {
+          "abs_cosine": 0.08397140956757267,
+          "angle_degrees": 85.1831204865848,
+          "cosine": 0.08397140956757267
+        },
+        "h_YY/relaxation_pair": {
+          "abs_cosine": 0.4877379518585613,
+          "angle_degrees": 119.19201183928368,
+          "cosine": -0.4877379518585613
+        },
+        "h_ZZ/affine_IZ": {
+          "abs_cosine": 0.056727713967575255,
+          "angle_degrees": 93.25200436121526,
+          "cosine": -0.056727713967575255
+        },
+        "h_ZZ/affine_ZI": {
+          "abs_cosine": 0.5107927072405694,
+          "angle_degrees": 59.28335399054442,
+          "cosine": 0.5107927072405694
+        },
+        "h_ZZ/affine_ZZ": {
+          "abs_cosine": 0.2202395675851397,
+          "angle_degrees": 102.72310433587727,
+          "cosine": -0.2202395675851397
+        },
+        "h_ZZ/gamma_XX": {
+          "abs_cosine": 0.08630189440433805,
+          "angle_degrees": 85.04910694503134,
+          "cosine": 0.08630189440433805
+        },
+        "h_ZZ/gamma_YY": {
+          "abs_cosine": 0.066382396177382,
+          "angle_degrees": 86.19376993039532,
+          "cosine": 0.066382396177382
+        },
+        "h_ZZ/gamma_ZZ": {
+          "abs_cosine": 0.22254215464218255,
+          "angle_degrees": 77.14161001602474,
+          "cosine": 0.22254215464218255
+        },
+        "h_ZZ/nonunital_norm_proxy": {
+          "abs_cosine": 0.3094711070468344,
+          "angle_degrees": 108.02735984528458,
+          "cosine": -0.3094711070468344
+        },
+        "h_ZZ/relaxation_pair": {
+          "abs_cosine": 0.0013166827274754943,
+          "angle_degrees": 90.07544038504004,
+          "cosine": -0.0013166827274754943
+        },
+        "relaxation_pair/affine_IZ": {
+          "abs_cosine": 0.41464380813576235,
+          "angle_degrees": 114.49688739024764,
+          "cosine": -0.41464380813576235
+        },
+        "relaxation_pair/affine_ZI": {
+          "abs_cosine": 0.0757887112574681,
+          "angle_degrees": 85.65345888119451,
+          "cosine": 0.0757887112574681
+        },
+        "relaxation_pair/affine_ZZ": {
+          "abs_cosine": 0.20203713694661501,
+          "angle_degrees": 101.65611059531753,
+          "cosine": -0.20203713694661501
+        },
+        "relaxation_pair/nonunital_norm_proxy": {
+          "abs_cosine": 0.3621859674061439,
+          "angle_degrees": 111.23450459631762,
+          "cosine": -0.3621859674061439
+        }
+      },
+      "condition_number": Infinity,
+      "minimum_singular_value": 1.2854499297158325e-20,
+      "rank": 9,
+      "singular_values": [
+        6.399073844177516e-05,
+        4.484042116543692e-05,
+        1.8174265745816566e-05,
+        5.069592368183378e-06,
+        7.527993615709719e-07,
+        3.026813928767809e-07,
+        1.5246889963855788e-07,
+        1.0479705856379959e-07,
+        4.7235330070416104e-08,
+        1.0667445456485694e-17,
+        1.2854499297158325e-20
+      ],
+      "stable_rank": 1.5781367615731705
+    },
+    "raw_generator_coordinates": {
+      "column_angles": {
+        "affine_IZ/affine_ZZ": {
+          "abs_cosine": 0.3969110747922729,
+          "angle_degrees": 113.38521631970076,
+          "cosine": -0.3969110747922729
+        },
+        "affine_IZ/nonunital_norm_proxy": {
+          "abs_cosine": 0.8857693453051854,
+          "angle_degrees": 152.34634637408467,
+          "cosine": -0.8857693453051854
+        },
+        "affine_ZI/affine_IZ": {
+          "abs_cosine": 0.8701074910238108,
+          "angle_degrees": 29.528866948582408,
+          "cosine": 0.8701074910238108
+        },
+        "affine_ZI/affine_ZZ": {
+          "abs_cosine": 0.34425582892034323,
+          "angle_degrees": 110.1363754243069,
+          "cosine": -0.34425582892034323
+        },
+        "affine_ZI/nonunital_norm_proxy": {
+          "abs_cosine": 0.9799895295687897,
+          "angle_degrees": 168.51864476713226,
+          "cosine": -0.9799895295687897
+        },
+        "affine_ZZ/nonunital_norm_proxy": {
+          "abs_cosine": 0.33590289279881663,
+          "angle_degrees": 70.37254826353741,
+          "cosine": 0.33590289279881663
+        },
+        "gamma_XX/affine_IZ": {
+          "abs_cosine": 0.8415590326249842,
+          "angle_degrees": 147.30511763474965,
+          "cosine": -0.8415590326249842
+        },
+        "gamma_XX/affine_ZI": {
+          "abs_cosine": 0.897867424197661,
+          "angle_degrees": 153.87915029452446,
+          "cosine": -0.897867424197661
+        },
+        "gamma_XX/affine_ZZ": {
+          "abs_cosine": 0.19299606188275653,
+          "angle_degrees": 78.87231717652502,
+          "cosine": 0.19299606188275653
+        },
+        "gamma_XX/gamma_YY": {
+          "abs_cosine": 0.9979885085646684,
+          "angle_degrees": 3.634708187566099,
+          "cosine": 0.9979885085646684
+        },
+        "gamma_XX/gamma_ZZ": {
+          "abs_cosine": 0.9936474596859369,
+          "angle_degrees": 6.461621567813905,
+          "cosine": 0.9936474596859369
+        },
+        "gamma_XX/nonunital_norm_proxy": {
+          "abs_cosine": 0.9451316484313621,
+          "angle_degrees": 19.067977075582004,
+          "cosine": 0.9451316484313621
+        },
+        "gamma_XX/relaxation_pair": {
+          "abs_cosine": 0.8557491547026077,
+          "angle_degrees": 31.157403033568638,
+          "cosine": 0.8557491547026077
+        },
+        "gamma_YY/affine_IZ": {
+          "abs_cosine": 0.8314791052645182,
+          "angle_degrees": 146.25097901863435,
+          "cosine": -0.8314791052645182
+        },
+        "gamma_YY/affine_ZI": {
+          "abs_cosine": 0.8908198042427189,
+          "angle_degrees": 152.9764445493098,
+          "cosine": -0.8908198042427189
+        },
+        "gamma_YY/affine_ZZ": {
+          "abs_cosine": 0.1767798909359279,
+          "angle_degrees": 79.81774657041029,
+          "cosine": 0.1767798909359279
+        },
+        "gamma_YY/gamma_ZZ": {
+          "abs_cosine": 0.9895629928084936,
+          "angle_degrees": 8.285220562214297,
+          "cosine": 0.9895629928084936
+        },
+        "gamma_YY/nonunital_norm_proxy": {
+          "abs_cosine": 0.9402506373576314,
+          "angle_degrees": 19.906309639362902,
+          "cosine": 0.9402506373576314
+        },
+        "gamma_YY/relaxation_pair": {
+          "abs_cosine": 0.8460794787658934,
+          "angle_degrees": 32.21222179203922,
+          "cosine": 0.8460794787658934
+        },
+        "gamma_ZZ/affine_IZ": {
+          "abs_cosine": 0.865904917535664,
+          "angle_degrees": 149.98619617287454,
+          "cosine": -0.865904917535664
+        },
+        "gamma_ZZ/affine_ZI": {
+          "abs_cosine": 0.9126605051942106,
+          "angle_degrees": 155.87564240253423,
+          "cosine": -0.9126605051942106
+        },
+        "gamma_ZZ/affine_ZZ": {
+          "abs_cosine": 0.20049219399468332,
+          "angle_degrees": 78.43425733391217,
+          "cosine": 0.20049219399468332
+        },
+        "gamma_ZZ/nonunital_norm_proxy": {
+          "abs_cosine": 0.9482329308314724,
+          "angle_degrees": 18.516375129246555,
+          "cosine": 0.9482329308314724
+        },
+        "gamma_ZZ/relaxation_pair": {
+          "abs_cosine": 0.8597441649992821,
+          "angle_degrees": 30.712130121731168,
+          "cosine": 0.8597441649992821
+        },
+        "h_XX/affine_IZ": {
+          "abs_cosine": 0.1102207144505476,
+          "angle_degrees": 96.32803894203074,
+          "cosine": -0.1102207144505476
+        },
+        "h_XX/affine_ZI": {
+          "abs_cosine": 0.5764978570726138,
+          "angle_degrees": 125.20459566396339,
+          "cosine": -0.5764978570726138
+        },
+        "h_XX/affine_ZZ": {
+          "abs_cosine": 0.022570045637633665,
+          "angle_degrees": 88.70672182487674,
+          "cosine": 0.022570045637633665
+        },
+        "h_XX/gamma_XX": {
+          "abs_cosine": 0.3954149079777475,
+          "angle_degrees": 66.70814668079477,
+          "cosine": 0.3954149079777475
+        },
+        "h_XX/gamma_YY": {
+          "abs_cosine": 0.3936978144029253,
+          "angle_degrees": 66.81521520039941,
+          "cosine": 0.3936978144029253
+        },
+        "h_XX/gamma_ZZ": {
+          "abs_cosine": 0.391204318134771,
+          "angle_degrees": 66.97054363236431,
+          "cosine": 0.391204318134771
+        },
+        "h_XX/h_YY": {
+          "abs_cosine": 0.9785381489524263,
+          "angle_degrees": 11.891893827647241,
+          "cosine": 0.9785381489524263
+        },
+        "h_XX/h_ZZ": {
+          "abs_cosine": 0.05418970342077089,
+          "angle_degrees": 93.10636288408763,
+          "cosine": -0.05418970342077089
+        },
+        "h_XX/nonunital_norm_proxy": {
+          "abs_cosine": 0.5022993241359475,
+          "angle_degrees": 59.84776098861995,
+          "cosine": 0.5022993241359475
+        },
+        "h_XX/relaxation_pair": {
+          "abs_cosine": 0.25948020972994273,
+          "angle_degrees": 74.96077812684383,
+          "cosine": 0.25948020972994273
+        },
+        "h_YY/affine_IZ": {
+          "abs_cosine": 0.1410424100160344,
+          "angle_degrees": 98.10817050189016,
+          "cosine": -0.1410424100160344
+        },
+        "h_YY/affine_ZI": {
+          "abs_cosine": 0.59743572222747,
+          "angle_degrees": 126.68646468832401,
+          "cosine": -0.59743572222747
+        },
+        "h_YY/affine_ZZ": {
+          "abs_cosine": 0.009790356461779734,
+          "angle_degrees": 90.56095506679013,
+          "cosine": -0.009790356461779734
+        },
+        "h_YY/gamma_XX": {
+          "abs_cosine": 0.38786997519257144,
+          "angle_degrees": 67.1779721963189,
+          "cosine": 0.38786997519257144
+        },
+        "h_YY/gamma_YY": {
+          "abs_cosine": 0.3886864885735763,
+          "angle_degrees": 67.12720645459157,
+          "cosine": 0.3886864885735763
+        },
+        "h_YY/gamma_ZZ": {
+          "abs_cosine": 0.3878364039826239,
+          "angle_degrees": 67.18005904071325,
+          "cosine": 0.3878364039826239
+        },
+        "h_YY/h_ZZ": {
+          "abs_cosine": 0.02088664741027966,
+          "angle_degrees": 88.80319622644025,
+          "cosine": 0.02088664741027966
+        },
+        "h_YY/nonunital_norm_proxy": {
+          "abs_cosine": 0.5239937213640183,
+          "angle_degrees": 58.39947425596878,
+          "cosine": 0.5239937213640183
+        },
+        "h_YY/relaxation_pair": {
+          "abs_cosine": 0.216472463181025,
+          "angle_degrees": 77.498072172798,
+          "cosine": 0.216472463181025
+        },
+        "h_ZZ/affine_IZ": {
+          "abs_cosine": 0.4756834984882297,
+          "angle_degrees": 118.40386187783221,
+          "cosine": -0.4756834984882297
+        },
+        "h_ZZ/affine_ZI": {
+          "abs_cosine": 0.3572493200897219,
+          "angle_degrees": 110.93136314007094,
+          "cosine": -0.3572493200897219
+        },
+        "h_ZZ/affine_ZZ": {
+          "abs_cosine": 0.32210519736616333,
+          "angle_degrees": 71.20971382466082,
+          "cosine": 0.32210519736616333
+        },
+        "h_ZZ/gamma_XX": {
+          "abs_cosine": 0.31396031116219064,
+          "angle_degrees": 71.70193985879317,
+          "cosine": 0.31396031116219064
+        },
+        "h_ZZ/gamma_YY": {
+          "abs_cosine": 0.31964630564385993,
+          "angle_degrees": 71.35846369601902,
+          "cosine": 0.31964630564385993
+        },
+        "h_ZZ/gamma_ZZ": {
+          "abs_cosine": 0.35806508266408577,
+          "angle_degrees": 69.01858641580456,
+          "cosine": 0.35806508266408577
+        },
+        "h_ZZ/nonunital_norm_proxy": {
+          "abs_cosine": 0.4118396917055174,
+          "angle_degrees": 65.67954613851607,
+          "cosine": 0.4118396917055174
+        },
+        "h_ZZ/relaxation_pair": {
+          "abs_cosine": 0.017326843406026877,
+          "angle_degrees": 89.0071953197698,
+          "cosine": 0.017326843406026877
+        },
+        "relaxation_pair/affine_IZ": {
+          "abs_cosine": 0.6622870084642365,
+          "angle_degrees": 131.47452717131313,
+          "cosine": -0.6622870084642365
+        },
+        "relaxation_pair/affine_ZI": {
+          "abs_cosine": 0.691098432422272,
+          "angle_degrees": 133.71712232596303,
+          "cosine": -0.691098432422272
+        },
+        "relaxation_pair/affine_ZZ": {
+          "abs_cosine": 0.07714737512721564,
+          "angle_degrees": 85.57538457052256,
+          "cosine": 0.07714737512721564
+        },
+        "relaxation_pair/nonunital_norm_proxy": {
+          "abs_cosine": 0.7043065998985573,
+          "angle_degrees": 45.22644750219272,
+          "cosine": 0.7043065998985573
+        }
+      },
+      "condition_number": 53780.71746532256,
+      "minimum_singular_value": 1.1545188939060265e-08,
+      "rank": 11,
+      "singular_values": [
+        0.0006209085444153673,
+        0.0001084973605825293,
+        5.35300080681849e-05,
+        1.9746500131409625e-05,
+        7.387483098311141e-06,
+        9.741686738828191e-07,
+        3.326213686738104e-07,
+        2.564283557608564e-07,
+        1.192520868864059e-07,
+        2.6851657917711412e-08,
+        1.1545188939060265e-08
+      ],
+      "stable_rank": 1.039122453710065
+    }
+  },
+  "pairwise_generator_margins": {
+    "schema": "scope_static_s2d10_pairwise_generator_margins_v1",
+    "variants": {
+      "circuit_residualized_coordinates": {
+        "M1/M10": {
+          "available": true,
+          "coordinate_deltas": {
+            "affine_IZ": -0.002125249878245788,
+            "affine_ZI": -0.00038636100417972427,
+            "affine_ZZ": 0.0004833333284999965,
+            "gamma_XX": -0.011879851607059583,
+            "gamma_YY": -0.011459477882398584,
+            "gamma_ZZ": -0.010140805673853647,
+            "h_XX": -0.00022652555509262024,
+            "h_YY": 0.0017965549157006103,
+            "h_ZZ": 0.04218434562982007,
+            "nonunital_norm_proxy": -0.0006712616528314931,
+            "relaxation_pair": -0.04622727798258413
+          },
+          "coordinate_z_margins": {
+            "affine_IZ": -0.6139284767795443,
+            "affine_ZI": -0.12227325929013258,
+            "affine_ZZ": 0.7370236702057101,
+            "gamma_XX": -5.6238818187571065,
+            "gamma_YY": -4.1345510790417626,
+            "gamma_ZZ": -5.62253489176241,
+            "h_XX": -0.13664910439221764,
+            "h_YY": 2.3704016136645563,
+            "h_ZZ": 15.248613313025293,
+            "nonunital_norm_proxy": -0.5775843722337165,
+            "relaxation_pair": -6.67652340556889
+          },
+          "euclidean_margin": 0.06557740298097205,
+          "top_coordinate": "h_ZZ",
+          "z_margin": 19.087634060059525
+        },
+        "M1/M7": {
+          "available": true,
+          "coordinate_deltas": {
+            "affine_IZ": 0.0028103966424410255,
+            "affine_ZI": 0.002893729975244416,
+            "affine_ZZ": -0.00013333333199997836,
+            "gamma_XX": -0.00030839409248295015,
+            "gamma_YY": 4.770930088516569e-05,
+            "gamma_ZZ": 0.002005620787505196,
+            "h_XX": 0.0003783285662960773,
+            "h_YY": 0.0008051575866258266,
+            "h_ZZ": 0.04325062497876186,
+            "nonunital_norm_proxy": -0.0025604366026655972,
+            "relaxation_pair": -0.0054652377859840465
+          },
+          "coordinate_z_margins": {
+            "affine_IZ": 1.2895430193933894,
+            "affine_ZI": 1.2959958203949655,
+            "affine_ZZ": -0.2155369315314718,
+            "gamma_XX": -0.40284287712184097,
+            "gamma_YY": 0.04614813410141392,
+            "gamma_ZZ": 1.4092694340770409,
+            "h_XX": 0.2307658507855126,
+            "h_YY": 1.1449725036191143,
+            "h_ZZ": 15.6244384656003,
+            "nonunital_norm_proxy": -1.4232300474534152,
+            "relaxation_pair": -1.2248179213447326
+          },
+          "euclidean_margin": 0.04391175594328163,
+          "top_coordinate": "h_ZZ",
+          "z_margin": 15.954701184655212
+        },
+        "M1/M8": {
+          "available": true,
+          "coordinate_deltas": {
+            "affine_IZ": -0.012937884054992712,
+            "affine_ZI": 0.004339893550483592,
+            "affine_ZZ": 0.000416666662500025,
+            "gamma_XX": 0.00013889811523318252,
+            "gamma_YY": 0.00016357108902305927,
+            "gamma_ZZ": 0.002130937130441329,
+            "h_XX": -0.020938662656694734,
+            "h_YY": -0.014945984208635152,
+            "h_ZZ": 0.04336007323270442,
+            "nonunital_norm_proxy": -0.0004088271619331965,
+            "relaxation_pair": -0.008579787187518303
+          },
+          "coordinate_z_margins": {
+            "affine_IZ": -16.432470887973377,
+            "affine_ZI": 3.077317628293136,
+            "affine_ZZ": 0.7836864838048524,
+            "gamma_XX": 0.13187387864754654,
+            "gamma_YY": 0.10364181736900605,
+            "gamma_ZZ": 2.1934009593875765,
+            "h_XX": -11.699943091127905,
+            "h_YY": -10.11207079749049,
+            "h_ZZ": 26.932621887315428,
+            "nonunital_norm_proxy": -0.19138389813672163,
+            "relaxation_pair": -3.442129649253572
+          },
+          "euclidean_margin": 0.052978013822638136,
+          "top_coordinate": "h_ZZ",
+          "z_margin": 35.5153901581011
+        },
+        "M7/M10": {
+          "available": true,
+          "coordinate_deltas": {
+            "affine_IZ": -0.004935646520686813,
+            "affine_ZI": -0.00328009097942414,
+            "affine_ZZ": 0.0006166666604999748,
+            "gamma_XX": -0.011571457514576633,
+            "gamma_YY": -0.01150718718328375,
+            "gamma_ZZ": -0.012146426461358844,
+            "h_XX": -0.0006048541213886975,
+            "h_YY": 0.0009913973290747837,
+            "h_ZZ": -0.001066279348941789,
+            "nonunital_norm_proxy": 0.0018891749498341041,
+            "relaxation_pair": -0.04076204019660008
+          },
+          "coordinate_z_margins": {
+            "affine_IZ": -1.215628707819392,
+            "affine_ZI": -0.9150422642979027,
+            "affine_ZZ": 1.077852006479491,
+            "gamma_XX": -5.611241475337765,
+            "gamma_YY": -4.434593420400973,
+            "gamma_ZZ": -5.500933408605524,
+            "h_XX": -0.42621120409041136,
+            "h_YY": 1.4730887636010266,
+            "h_ZZ": -0.29577023588404694,
+            "nonunital_norm_proxy": 1.1485162026237155,
+            "relaxation_pair": -5.183841607645404
+          },
+          "euclidean_margin": 0.046010304439844545,
+          "top_coordinate": "gamma_XX",
+          "z_margin": 10.74798438417847
+        },
+        "M7/M8": {
+          "available": true,
+          "coordinate_deltas": {
+            "affine_IZ": -0.015748280697433736,
+            "affine_ZI": 0.001446163575239176,
+            "affine_ZZ": 0.0005499999945000034,
+            "gamma_XX": 0.00044729220771613266,
+            "gamma_YY": 0.00011586178813789358,
+            "gamma_ZZ": 0.00012531634293613293,
+            "h_XX": -0.02131699122299081,
+            "h_YY": -0.01575114179526098,
+            "h_ZZ": 0.00010944825394256083,
+            "nonunital_norm_proxy": 0.0021516094407324007,
+            "relaxation_pair": -0.0031145494015342575
+          },
+          "coordinate_z_margins": {
+            "affine_IZ": -6.958957237351389,
+            "affine_ZI": 0.6563942909567793,
+            "affine_ZZ": 1.296561979999521,
+            "gamma_XX": 0.471540747526593,
+            "gamma_YY": 0.09329773847708751,
+            "gamma_ZZ": 0.07822441205662499,
+            "h_XX": -13.567133304497796,
+            "h_YY": -10.966115623168877,
+            "h_ZZ": 0.038852875973812935,
+            "nonunital_norm_proxy": 0.8844441638055557,
+            "relaxation_pair": -0.6946221395959026
+          },
+          "euclidean_margin": 0.03110443433338927,
+          "top_coordinate": "h_XX",
+          "z_margin": 18.877638500937838
+        },
+        "M8/M10": {
+          "available": true,
+          "coordinate_deltas": {
+            "affine_IZ": 0.010812634176746924,
+            "affine_ZI": -0.004726254554663316,
+            "affine_ZZ": 6.666666599997147e-05,
+            "gamma_XX": -0.012018749722292766,
+            "gamma_YY": -0.011623048971421643,
+            "gamma_ZZ": -0.012271742804294977,
+            "h_XX": 0.02071213710160211,
+            "h_YY": 0.01674253912433576,
+            "h_ZZ": -0.0011757276028843498,
+            "nonunital_norm_proxy": -0.0002624344908982966,
+            "relaxation_pair": -0.037647490795065824
+          },
+          "coordinate_z_margins": {
+            "affine_IZ": 3.076153288401545,
+            "affine_ZI": -1.5056808314128098,
+            "affine_ZZ": 0.1398242891068725,
+            "gamma_XX": -5.499581612364541,
+            "gamma_YY": -4.070037408421143,
+            "gamma_ZZ": -6.300232136839047,
+            "h_XX": 13.024238828611688,
+            "h_YY": 11.436909895636417,
+            "h_ZZ": -0.417617670717279,
+            "nonunital_norm_proxy": -0.13069039344321728,
+            "relaxation_pair": -5.426373324604021
+          },
+          "euclidean_margin": 0.05193733029529117,
+          "top_coordinate": "h_XX",
+          "z_margin": 20.69598002096415
+        }
+      },
+      "edge_circuit_residualized_coordinates": {
+        "M1/M10": {
+          "available": true,
+          "coordinate_deltas": {
+            "affine_IZ": -2.126049056712838e-09,
+            "affine_ZI": -3.874244784938623e-10,
+            "affine_ZZ": 4.833467102558079e-10,
+            "gamma_XX": -1.1878800491860186e-08,
+            "gamma_YY": -1.1458452334536795e-08,
+            "gamma_ZZ": -1.0139720023107552e-08,
+            "h_XX": -2.2615274847404258e-10,
+            "h_YY": 1.7968435621243221e-09,
+            "h_ZZ": 4.218502025831195e-08,
+            "nonunital_norm_proxy": -6.691255327595513e-10,
+            "relaxation_pair": -4.6226211771032325e-08
+          },
+          "coordinate_z_margins": {
+            "affine_IZ": -0.6037493736452975,
+            "affine_ZI": -0.12107047988305067,
+            "affine_ZZ": 0.4833467102558079,
+            "gamma_XX": -5.453294732176982,
+            "gamma_YY": -4.001999061990417,
+            "gamma_ZZ": -5.628683411474741,
+            "h_XX": -0.12292922951518977,
+            "h_YY": 1.796843562124322,
+            "h_ZZ": 14.590009610998024,
+            "nonunital_norm_proxy": -0.5355153967648408,
+            "relaxation_pair": -6.604884917352428
+          },
+          "euclidean_margin": 6.557656493947496e-08,
+          "top_coordinate": "h_ZZ",
+          "z_margin": 18.386753727268907
+        },
+        "M1/M7": {
+          "available": true,
+          "coordinate_deltas": {
+            "affine_IZ": 2.809605697401407e-09,
+            "affine_ZI": 2.8926658435466748e-09,
+            "affine_ZZ": -1.3331858274725773e-10,
+            "gamma_XX": -3.073354273621284e-10,
+            "gamma_YY": 4.874054111703163e-11,
+            "gamma_ZZ": 2.0067165602821735e-09,
+            "h_XX": 3.786913680857082e-10,
+            "h_YY": 8.054429449878974e-10,
+            "h_ZZ": 4.3251335635670816e-08,
+            "nonunital_norm_proxy": -2.5583076791272728e-09,
+            "relaxation_pair": -5.464039041248406e-09
+          },
+          "coordinate_z_margins": {
+            "affine_IZ": 1.2687465644623093,
+            "affine_ZI": 1.2254071616837887,
+            "affine_ZZ": -0.13331858274725772,
+            "gamma_XX": -0.3073354273621284,
+            "gamma_YY": 0.04874054111703163,
+            "gamma_ZZ": 1.3446900292179942,
+            "h_XX": 0.22151976137704796,
+            "h_YY": 0.8054429449878974,
+            "h_ZZ": 15.19612127129682,
+            "nonunital_norm_proxy": -1.436265282780936,
+            "relaxation_pair": -1.1807314742022048
+          },
+          "euclidean_margin": 4.391211400450994e-08,
+          "top_coordinate": "h_ZZ",
+          "z_margin": 15.495516519049941
+        },
+        "M1/M8": {
+          "available": true,
+          "coordinate_deltas": {
+            "affine_IZ": -1.293873174949602e-08,
+            "affine_ZI": 4.338827040128076e-09,
+            "affine_ZZ": 4.1668050666529555e-10,
+            "gamma_XX": 1.3996066921169903e-10,
+            "gamma_YY": 1.645951789216078e-10,
+            "gamma_ZZ": 2.132045367221151e-09,
+            "h_XX": -2.0938362813584303e-08,
+            "h_YY": -1.4945739387595427e-08,
+            "h_ZZ": 4.336076136371624e-08,
+            "nonunital_norm_proxy": -4.0669370417652664e-10,
+            "relaxation_pair": -8.578579716959448e-09
+          },
+          "coordinate_z_margins": {
+            "affine_IZ": -12.938731749496018,
+            "affine_ZI": 3.057025085942907,
+            "affine_ZZ": 0.41668050666529555,
+            "gamma_XX": 0.13996066921169903,
+            "gamma_YY": 0.10200115528763529,
+            "gamma_ZZ": 2.132045367221151,
+            "h_XX": -10.481809937953537,
+            "h_YY": -9.45954337558022,
+            "h_ZZ": 27.40693365803774,
+            "nonunital_norm_proxy": -0.18113549612892135,
+            "relaxation_pair": -3.5071098273671906
+          },
+          "euclidean_margin": 5.297834783144469e-08,
+          "top_coordinate": "h_ZZ",
+          "z_margin": 33.82793752763759
+        },
+        "M7/M10": {
+          "available": true,
+          "coordinate_deltas": {
+            "affine_IZ": -4.935654754114245e-09,
+            "affine_ZI": -3.280090322040537e-09,
+            "affine_ZZ": 6.166652930030657e-10,
+            "gamma_XX": -1.1571465064498057e-08,
+            "gamma_YY": -1.1507192875653827e-08,
+            "gamma_ZZ": -1.2146436583389726e-08,
+            "h_XX": -6.048441165597508e-10,
+            "h_YY": 9.914006171364248e-10,
+            "h_ZZ": -1.0663153773588646e-09,
+            "nonunital_norm_proxy": 1.8891821463677215e-09,
+            "relaxation_pair": -4.076217272978392e-08
+          },
+          "coordinate_z_margins": {
+            "affine_IZ": -1.1986713070910562,
+            "affine_ZI": -0.8934539486188111,
+            "affine_ZZ": 0.6166652930030656,
+            "gamma_XX": -5.329586796149416,
+            "gamma_YY": -4.221317743517605,
+            "gamma_ZZ": -5.457991096749456,
+            "h_XX": -0.42090482856021083,
+            "h_YY": 0.9914006171364247,
+            "h_ZZ": -0.28790840508174254,
+            "nonunital_norm_proxy": 1.1915806530687236,
+            "relaxation_pair": -5.086276434189135
+          },
+          "euclidean_margin": 4.601042973777507e-08,
+          "top_coordinate": "gamma_ZZ",
+          "z_margin": 10.351909697819021
+        },
+        "M7/M8": {
+          "available": true,
+          "coordinate_deltas": {
+            "affine_IZ": -1.5748337446897427e-08,
+            "affine_ZI": 1.446161196581401e-09,
+            "affine_ZZ": 5.499990894125532e-10,
+            "gamma_XX": 4.472960965738274e-10,
+            "gamma_YY": 1.1585463780457617e-10,
+            "gamma_ZZ": 1.2532880693897722e-10,
+            "h_XX": -2.131705418167001e-08,
+            "h_YY": -1.5751182332583323e-08,
+            "h_ZZ": 1.0942572804542588e-10,
+            "nonunital_norm_proxy": 2.151613974950746e-09,
+            "relaxation_pair": -3.1145406757110417e-09
+          },
+          "coordinate_z_margins": {
+            "affine_IZ": -6.875734633358819,
+            "affine_ZI": 0.6310052805869772,
+            "affine_ZZ": 0.5499990894125532,
+            "gamma_XX": 0.4472960965738274,
+            "gamma_YY": 0.08547869244625877,
+            "gamma_ZZ": 0.07625508671954895,
+            "h_XX": -13.04369695143769,
+            "h_YY": -9.897344982472957,
+            "h_ZZ": 0.0390303727656078,
+            "nonunital_norm_proxy": 0.8788682202492304,
+            "relaxation_pair": -0.6760099458924778
+          },
+          "euclidean_margin": 3.110452605518245e-08,
+          "top_coordinate": "h_XX",
+          "z_margin": 17.818978048207804
+        },
+        "M8/M10": {
+          "available": true,
+          "coordinate_deltas": {
+            "affine_IZ": 1.0812682692783182e-08,
+            "affine_ZI": -4.726251518621938e-09,
+            "affine_ZZ": 6.666620359051243e-11,
+            "gamma_XX": -1.2018761161071884e-08,
+            "gamma_YY": -1.1623047513458402e-08,
+            "gamma_ZZ": -1.2271765390328704e-08,
+            "h_XX": 2.071221006511026e-08,
+            "h_YY": 1.674258294971975e-08,
+            "h_ZZ": -1.1757411054042905e-09,
+            "nonunital_norm_proxy": -2.624318285830247e-10,
+            "relaxation_pair": -3.764763205407288e-08
+          },
+          "coordinate_z_margins": {
+            "affine_IZ": 3.029051397334526,
+            "affine_ZI": -1.500575394119217,
+            "affine_ZZ": 0.06666620359051242,
+            "gamma_XX": -5.3034587669085616,
+            "gamma_YY": -3.8586227929313086,
+            "gamma_ZZ": -6.3631407785624985,
+            "h_XX": 11.701774170847616,
+            "h_YY": 10.435662710805111,
+            "h_ZZ": -0.41262264968707707,
+            "nonunital_norm_proxy": -0.12536612329671598,
+            "relaxation_pair": -5.389552460135129
+          },
+          "euclidean_margin": 5.193749368670969e-08,
+          "top_coordinate": "h_XX",
+          "z_margin": 19.235497222003993
+        }
+      },
+      "edge_residualized_coordinates": {
+        "M1/M10": {
+          "available": true,
+          "coordinate_deltas": {
+            "affine_IZ": 0.0021870105186651088,
+            "affine_ZI": 1.2010541415646923e-05,
+            "affine_ZZ": -6.666666600000412e-05,
+            "gamma_XX": -0.005625303405454494,
+            "gamma_YY": -0.006036166572623812,
+            "gamma_ZZ": -0.004768680498411125,
+            "h_XX": 0.003863365215784926,
+            "h_YY": 0.0041051234625350715,
+            "h_ZZ": 0.01670241586410945,
+            "nonunital_norm_proxy": -4.7692011837662446e-05,
+            "relaxation_pair": -0.018024021082553215
+          },
+          "coordinate_z_margins": {
+            "affine_IZ": 1.144488296229329,
+            "affine_ZI": 0.007448113492708539,
+            "affine_ZZ": -0.5183210553488322,
+            "gamma_XX": -2.071445048911748,
+            "gamma_YY": -2.112560344208729,
+            "gamma_ZZ": -1.9645938060572048,
+            "h_XX": 1.0461631318697748,
+            "h_YY": 1.2670860022160846,
+            "h_ZZ": 1.869132964556825,
+            "nonunital_norm_proxy": -0.05890093416426071,
+            "relaxation_pair": -2.2719509625526824
+          },
+          "euclidean_margin": 0.02704113899859216,
+          "top_coordinate": "relaxation_pair",
+          "z_margin": 5.054784173768357
+        },
+        "M1/M7": {
+          "available": true,
+          "coordinate_deltas": {
+            "affine_IZ": 0.005028022302958775,
+            "affine_ZI": 0.002815059362127973,
+            "affine_ZZ": 4.444444400001715e-05,
+            "gamma_XX": 0.0009480027590865741,
+            "gamma_YY": 0.0007291709074019096,
+            "gamma_ZZ": 0.0016453960733451636,
+            "h_XX": 0.0034220762680036744,
+            "h_YY": 0.0021109539117960393,
+            "h_ZZ": 0.029490011635892106,
+            "nonunital_norm_proxy": -0.0011350162701411876,
+            "relaxation_pair": -4.493359537059791e-05
+          },
+          "coordinate_z_margins": {
+            "affine_IZ": 2.675213678931855,
+            "affine_ZI": 1.5801582047459946,
+            "affine_ZZ": 0.5788596842341971,
+            "gamma_XX": 0.7160190430180194,
+            "gamma_YY": 0.5579893338495542,
+            "gamma_ZZ": 1.3555990593136722,
+            "h_XX": 1.0367670988382982,
+            "h_YY": 0.9684657274026844,
+            "h_ZZ": 2.6411561562507817,
+            "nonunital_norm_proxy": -1.4152584004019289,
+            "relaxation_pair": -0.0055779927130805125
+          },
+          "euclidean_margin": 0.030404984297477698,
+          "top_coordinate": "affine_IZ",
+          "z_margin": 4.862297406398324
+        },
+        "M1/M8": {
+          "available": true,
+          "coordinate_deltas": {
+            "affine_IZ": -0.006131658482670968,
+            "affine_ZI": 0.005974822877682112,
+            "affine_ZZ": -2.2222221999988974e-05,
+            "gamma_XX": 0.0038287985274139576,
+            "gamma_YY": 0.0036006555030420914,
+            "gamma_ZZ": 0.003430006690354779,
+            "h_XX": -0.01512161197251155,
+            "h_YY": -0.011112023446068365,
+            "h_ZZ": 0.02265097830496667,
+            "nonunital_norm_proxy": 6.706835956844559e-05,
+            "relaxation_pair": 0.0011466504214027208
+          },
+          "coordinate_z_margins": {
+            "affine_IZ": -2.718329310532216,
+            "affine_ZI": 5.135152538049411,
+            "affine_ZZ": -0.13430685557454677,
+            "gamma_XX": 1.5239613163516819,
+            "gamma_YY": 1.193127839819108,
+            "gamma_ZZ": 1.5039530061169286,
+            "h_XX": -4.599654819513355,
+            "h_YY": -4.868664462597783,
+            "h_ZZ": 2.2791144219436363,
+            "nonunital_norm_proxy": 0.06125000344609932,
+            "relaxation_pair": 0.17882838073546695
+          },
+          "euclidean_margin": 0.03129236231646526,
+          "top_coordinate": "affine_ZI",
+          "z_margin": 9.480287060554083
+        },
+        "M7/M10": {
+          "available": true,
+          "coordinate_deltas": {
+            "affine_IZ": -0.0028410117842936665,
+            "affine_ZI": -0.002803048820712326,
+            "affine_ZZ": -0.00011111111000002127,
+            "gamma_XX": -0.0065733061645410675,
+            "gamma_YY": -0.006765337480025722,
+            "gamma_ZZ": -0.0064140765717562885,
+            "h_XX": 0.00044128894778125167,
+            "h_YY": 0.0019941695507390317,
+            "h_ZZ": -0.01278759577178266,
+            "nonunital_norm_proxy": 0.001087324258303525,
+            "relaxation_pair": -0.01797908748718262
+          },
+          "coordinate_z_margins": {
+            "affine_IZ": -2.026182187469789,
+            "affine_ZI": -1.5353572220435865,
+            "affine_ZZ": -0.9633661017183066,
+            "gamma_XX": -2.186063769660243,
+            "gamma_YY": -2.164544756461336,
+            "gamma_ZZ": -2.370541670436414,
+            "h_XX": 0.11707490588992693,
+            "h_YY": 0.6753484580034533,
+            "h_ZZ": -1.8862512997076784,
+            "nonunital_norm_proxy": 1.5851869237356349,
+            "relaxation_pair": -1.64980974216542
+          },
+          "euclidean_margin": 0.0252622883844249,
+          "top_coordinate": "gamma_ZZ",
+          "z_margin": 5.633546194765258
+        },
+        "M7/M8": {
+          "available": true,
+          "coordinate_deltas": {
+            "affine_IZ": -0.011159680785629743,
+            "affine_ZI": 0.003159763515554139,
+            "affine_ZZ": -6.666666600000612e-05,
+            "gamma_XX": 0.0028807957683273837,
+            "gamma_YY": 0.002871484595640182,
+            "gamma_ZZ": 0.0017846106170096153,
+            "h_XX": -0.018543688240515225,
+            "h_YY": -0.013222977357864405,
+            "h_ZZ": -0.0068390333309254385,
+            "nonunital_norm_proxy": 0.0012020846297096331,
+            "relaxation_pair": 0.0011915840167733187
+          },
+          "coordinate_z_margins": {
+            "affine_IZ": -6.049949437799982,
+            "affine_ZI": 2.1875046994001828,
+            "affine_ZZ": -0.4291191239113205,
+            "gamma_XX": 1.0198565692634947,
+            "gamma_YY": 0.877339624893002,
+            "gamma_ZZ": 0.6930529544239864,
+            "h_XX": -5.497449509246716,
+            "h_YY": -7.137881728840876,
+            "h_ZZ": -0.8490419224807453,
+            "nonunital_norm_proxy": 1.193818461928315,
+            "relaxation_pair": 0.12102676387845673
+          },
+          "euclidean_margin": 0.026881388149562358,
+          "top_coordinate": "h_YY",
+          "z_margin": 11.278004776317339
+        },
+        "M8/M10": {
+          "available": true,
+          "coordinate_deltas": {
+            "affine_IZ": 0.008318669001336076,
+            "affine_ZI": -0.005962812336266466,
+            "affine_ZZ": -4.444444400001514e-05,
+            "gamma_XX": -0.009454101932868452,
+            "gamma_YY": -0.009636822075665904,
+            "gamma_ZZ": -0.008198687188765904,
+            "h_XX": 0.018984977188296476,
+            "h_YY": 0.015217146908603436,
+            "h_ZZ": -0.00594856244085722,
+            "nonunital_norm_proxy": -0.00011476037140610804,
+            "relaxation_pair": -0.01917067150395594
+          },
+          "coordinate_z_margins": {
+            "affine_IZ": 4.43284647542766,
+            "affine_ZI": -4.847557208502075,
+            "affine_ZZ": -0.23830218749387114,
+            "gamma_XX": -2.5635346814131994,
+            "gamma_YY": -2.325774023181015,
+            "gamma_ZZ": -2.4664871179058427,
+            "h_XX": 5.052200009346021,
+            "h_YY": 5.023190259031215,
+            "h_ZZ": -1.3280256405155235,
+            "nonunital_norm_proxy": -0.11327885488376932,
+            "relaxation_pair": -1.9670564506181216
+          },
+          "euclidean_margin": 0.036730482501059446,
+          "top_coordinate": "h_XX",
+          "z_margin": 10.847726990623169
+        }
+      },
+      "ideal_schedule_residualized_coordinates": {
+        "M1/M10": {
+          "available": true,
+          "coordinate_deltas": {
+            "affine_IZ": 0.0020499838364156616,
+            "affine_ZI": -0.00024566578938829795,
+            "affine_ZZ": -5.362131477979088e-05,
+            "gamma_XX": -0.00504043140575713,
+            "gamma_YY": -0.005462780569473032,
+            "gamma_ZZ": -0.004177292960161093,
+            "h_XX": 0.0040819706950331516,
+            "h_YY": 0.003992368500866411,
+            "h_ZZ": 0.014653018379314145,
+            "nonunital_norm_proxy": -0.00014908569180191683,
+            "relaxation_pair": -0.01552225108436539
+          },
+          "coordinate_z_margins": {
+            "affine_IZ": 0.5370766429117261,
+            "affine_ZI": -0.09076663757537472,
+            "affine_ZZ": -0.19471498290635894,
+            "gamma_XX": -2.0309060264337857,
+            "gamma_YY": -1.849383895671273,
+            "gamma_ZZ": -2.2456041018143265,
+            "h_XX": 1.8785673911654408,
+            "h_YY": 2.2828719424960586,
+            "h_ZZ": 3.847321685059628,
+            "nonunital_norm_proxy": -0.10427981347508695,
+            "relaxation_pair": -2.3912009923507758
+          },
+          "euclidean_margin": 0.023774740825765625,
+          "top_coordinate": "h_ZZ",
+          "z_margin": 6.495634076356103
+        },
+        "M1/M7": {
+          "available": true,
+          "coordinate_deltas": {
+            "affine_IZ": 0.0032261976190230434,
+            "affine_ZI": 0.0023668521093147487,
+            "affine_ZZ": -9.855036357896989e-05,
+            "gamma_XX": 0.0018238772690419504,
+            "gamma_YY": 0.0017156207487984034,
+            "gamma_ZZ": 0.003960906477162468,
+            "h_XX": 0.0012520105703918085,
+            "h_YY": 0.0009299706250235282,
+            "h_ZZ": 0.03365093027494831,
+            "nonunital_norm_proxy": -0.0017070933179741676,
+            "relaxation_pair": 0.006894598833924336
+          },
+          "coordinate_z_margins": {
+            "affine_IZ": 1.1661328665106632,
+            "affine_ZI": 1.169225716302825,
+            "affine_ZZ": -0.49310741507592865,
+            "gamma_XX": 1.1595343093093324,
+            "gamma_YY": 1.222453538243534,
+            "gamma_ZZ": 1.5009273968664394,
+            "h_XX": 0.42232923943222234,
+            "h_YY": 0.5791078174297778,
+            "h_ZZ": 4.708540156186372,
+            "nonunital_norm_proxy": -2.2028249225026157,
+            "relaxation_pair": 0.6507576192663288
+          },
+          "euclidean_margin": 0.03497493187990246,
+          "top_coordinate": "h_ZZ",
+          "z_margin": 6.001816929102058
+        },
+        "M1/M8": {
+          "available": true,
+          "coordinate_deltas": {
+            "affine_IZ": -0.009178451316913284,
+            "affine_ZI": 0.005007466631204687,
+            "affine_ZZ": -0.0001550709492007704,
+            "gamma_XX": 0.004846046955010735,
+            "gamma_YY": 0.004492356954035373,
+            "gamma_ZZ": 0.0061391641544766085,
+            "h_XX": -0.017503848410664692,
+            "h_YY": -0.012874983661867052,
+            "h_ZZ": 0.025428440686012042,
+            "nonunital_norm_proxy": -0.0007399944855950557,
+            "relaxation_pair": 0.009765403090792059
+          },
+          "coordinate_z_margins": {
+            "affine_IZ": -4.292863610965214,
+            "affine_ZI": 5.212357067620306,
+            "affine_ZZ": -0.5937841183636966,
+            "gamma_XX": 2.8174288608401183,
+            "gamma_YY": 1.8737329340158184,
+            "gamma_ZZ": 3.147180161958376,
+            "h_XX": -5.361172938467875,
+            "h_YY": -5.005908148849862,
+            "h_ZZ": 4.326298145293203,
+            "nonunital_norm_proxy": -0.5708990189738996,
+            "relaxation_pair": 1.1982559783723592
+          },
+          "euclidean_margin": 0.03748818100162208,
+          "top_coordinate": "h_XX",
+          "z_margin": 11.898879679200723
+        },
+        "M7/M10": {
+          "available": true,
+          "coordinate_deltas": {
+            "affine_IZ": -0.0011762137826073818,
+            "affine_ZI": -0.0026125178987030464,
+            "affine_ZZ": 4.4929048799179015e-05,
+            "gamma_XX": -0.00686430867479908,
+            "gamma_YY": -0.007178401318271435,
+            "gamma_ZZ": -0.008138199437323562,
+            "h_XX": 0.0028299601246413435,
+            "h_YY": 0.003062397875842883,
+            "h_ZZ": -0.018997911895634167,
+            "nonunital_norm_proxy": 0.001558007626172251,
+            "relaxation_pair": -0.022416849918289725
+          },
+          "coordinate_z_margins": {
+            "affine_IZ": -0.2877558429157043,
+            "affine_ZI": -0.8384634803541621,
+            "affine_ZZ": 0.23163141150696204,
+            "gamma_XX": -2.403358794276738,
+            "gamma_YY": -2.4741947520960146,
+            "gamma_ZZ": -3.1382047298537734,
+            "h_XX": 1.3924386918557585,
+            "h_YY": 3.0684969742383554,
+            "h_ZZ": -2.774863647042376,
+            "nonunital_norm_proxy": 1.0264892046854344,
+            "relaxation_pair": -2.5058526934114655
+          },
+          "euclidean_margin": 0.03250137498441018,
+          "top_coordinate": "gamma_ZZ",
+          "z_margin": 6.998070083615718
+        },
+        "M7/M8": {
+          "available": true,
+          "coordinate_deltas": {
+            "affine_IZ": -0.012404648935936327,
+            "affine_ZI": 0.0026406145218899383,
+            "affine_ZZ": -5.652058562180052e-05,
+            "gamma_XX": 0.003022169685968785,
+            "gamma_YY": 0.002776736205236969,
+            "gamma_ZZ": 0.0021782576773141404,
+            "h_XX": -0.0187558589810565,
+            "h_YY": -0.01380495428689058,
+            "h_ZZ": -0.00822248958893627,
+            "nonunital_norm_proxy": 0.0009670988323791119,
+            "relaxation_pair": 0.0028708042568677235
+          },
+          "coordinate_z_margins": {
+            "affine_IZ": -4.7886226359252415,
+            "affine_ZI": 1.4523143900588373,
+            "affine_ZZ": -0.3263737695722823,
+            "gamma_XX": 1.3574971801379652,
+            "gamma_YY": 1.1904451314715665,
+            "gamma_ZZ": 0.8192278831083817,
+            "h_XX": -5.910840067452593,
+            "h_YY": -6.470037134452998,
+            "h_ZZ": -1.0051773163682105,
+            "nonunital_norm_proxy": 0.6943578460204559,
+            "relaxation_pair": 0.28109195118673624
+          },
+          "euclidean_margin": 0.028312277834538543,
+          "top_coordinate": "h_YY",
+          "z_margin": 10.365745220138232
+        },
+        "M8/M10": {
+          "available": true,
+          "coordinate_deltas": {
+            "affine_IZ": 0.011228435153328945,
+            "affine_ZI": -0.005253132420592985,
+            "affine_ZZ": 0.00010144963442097953,
+            "gamma_XX": -0.009886478360767864,
+            "gamma_YY": -0.009955137523508404,
+            "gamma_ZZ": -0.010316457114637701,
+            "h_XX": 0.021585819105697842,
+            "h_YY": 0.016867352162733464,
+            "h_ZZ": -0.010775422306697898,
+            "nonunital_norm_proxy": 0.0005909087937931389,
+            "relaxation_pair": -0.02528765417515745
+          },
+          "coordinate_z_margins": {
+            "affine_IZ": 3.0418990154226626,
+            "affine_ZI": -2.055137625724218,
+            "affine_ZZ": 0.3952389296861513,
+            "gamma_XX": -3.3630915082873636,
+            "gamma_YY": -2.8505908216664575,
+            "gamma_ZZ": -5.463085162909392,
+            "h_XX": 8.811024449899545,
+            "h_YY": 7.519149027438827,
+            "h_ZZ": -1.9561385069271637,
+            "nonunital_norm_proxy": 0.32125623250633534,
+            "relaxation_pair": -4.324328338965198
+          },
+          "euclidean_margin": 0.04430958656267715,
+          "top_coordinate": "h_XX",
+          "z_margin": 14.82281211771462
+        }
+      },
+      "raw_generator_coordinates": {
+        "M1/M10": {
+          "available": true,
+          "coordinate_deltas": {
+            "affine_IZ": -0.0021252498782457895,
+            "affine_ZI": -0.0003863610041797208,
+            "affine_ZZ": 0.0004833333284999964,
+            "gamma_XX": -0.011879851607059587,
+            "gamma_YY": -0.011459477882398586,
+            "gamma_ZZ": -0.010140805673853646,
+            "h_XX": -0.00022652555509262051,
+            "h_YY": 0.0017965549157006103,
+            "h_ZZ": 0.04218434562982007,
+            "nonunital_norm_proxy": -0.0006712616528314896,
+            "relaxation_pair": -0.04622727798258412
+          },
+          "coordinate_z_margins": {
+            "affine_IZ": -0.6035476065574025,
+            "affine_ZI": -0.12074911436133054,
+            "affine_ZZ": 0.7109209898759103,
+            "gamma_XX": -5.4530313076957775,
+            "gamma_YY": -4.0024665048692345,
+            "gamma_ZZ": -5.629622118780467,
+            "h_XX": -0.12311668604426568,
+            "h_YY": 2.286474280659897,
+            "h_ZZ": 14.590604526988631,
+            "nonunital_norm_proxy": -0.5366838084919009,
+            "relaxation_pair": -6.605394497332493
+          },
+          "euclidean_margin": 0.06557740298097205,
+          "top_coordinate": "h_ZZ",
+          "z_margin": 18.449398940740313
+        },
+        "M1/M7": {
+          "available": true,
+          "coordinate_deltas": {
+            "affine_IZ": 0.0028103966424410237,
+            "affine_ZI": 0.002893729975244421,
+            "affine_ZZ": -0.00013333333199997836,
+            "gamma_XX": -0.00030839409248295535,
+            "gamma_YY": 4.770930088516569e-05,
+            "gamma_ZZ": 0.0020056207875051944,
+            "h_XX": 0.000378328566296077,
+            "h_YY": 0.0008051575866258266,
+            "h_ZZ": 0.04325062497876186,
+            "nonunital_norm_proxy": -0.002560436602665604,
+            "relaxation_pair": -0.005465237785984046
+          },
+          "coordinate_z_margins": {
+            "affine_IZ": 1.2692314641486937,
+            "affine_ZI": 1.2260505947901783,
+            "affine_ZZ": -0.2109650650999201,
+            "gamma_XX": -0.40981911700199275,
+            "gamma_YY": 0.04868853982926339,
+            "gamma_ZZ": 1.3442251711680502,
+            "h_XX": 0.22127619168786244,
+            "h_YY": 1.0607718276590083,
+            "h_ZZ": 15.196685445804329,
+            "nonunital_norm_proxy": -1.4367693185520665,
+            "relaxation_pair": -1.1810690612995798
+          },
+          "euclidean_margin": 0.04391175594328163,
+          "top_coordinate": "h_ZZ",
+          "z_margin": 15.514786404814327
+        },
+        "M1/M8": {
+          "available": true,
+          "coordinate_deltas": {
+            "affine_IZ": -0.012937884054992714,
+            "affine_ZI": 0.004339893550483597,
+            "affine_ZZ": 0.000416666662500025,
+            "gamma_XX": 0.0001388981152331773,
+            "gamma_YY": 0.00016357108902305753,
+            "gamma_ZZ": 0.0021309371304413273,
+            "h_XX": -0.02093866265669473,
+            "h_YY": -0.014945984208635152,
+            "h_ZZ": 0.04336007323270442,
+            "nonunital_norm_proxy": -0.0004088271619331965,
+            "relaxation_pair": -0.008579787187518305
+          },
+          "coordinate_z_margins": {
+            "affine_IZ": -15.563349975258522,
+            "affine_ZI": 3.0589992220286373,
+            "affine_ZZ": 0.7614311298415098,
+            "gamma_XX": 0.13973745641165405,
+            "gamma_YY": 0.10139082039982175,
+            "gamma_ZZ": 2.138301303362771,
+            "h_XX": -10.481134803717072,
+            "h_YY": -9.459974317179473,
+            "h_ZZ": 27.411305497512775,
+            "nonunital_norm_proxy": -0.18203202733963142,
+            "relaxation_pair": -3.5083731441491484
+          },
+          "euclidean_margin": 0.052978013822638136,
+          "top_coordinate": "h_ZZ",
+          "z_margin": 34.925979483592364
+        },
+        "M7/M10": {
+          "available": true,
+          "coordinate_deltas": {
+            "affine_IZ": -0.004935646520686813,
+            "affine_ZI": -0.003280090979424142,
+            "affine_ZZ": 0.0006166666604999748,
+            "gamma_XX": -0.011571457514576632,
+            "gamma_YY": -0.011507187183283751,
+            "gamma_ZZ": -0.01214642646135884,
+            "h_XX": -0.0006048541213886975,
+            "h_YY": 0.0009913973290747837,
+            "h_ZZ": -0.0010662793489417894,
+            "nonunital_norm_proxy": 0.0018891749498341145,
+            "relaxation_pair": -0.040762040196600076
+          },
+          "coordinate_z_margins": {
+            "affine_IZ": -1.198698374679015,
+            "affine_ZI": -0.8934783200852983,
+            "affine_ZZ": 1.0168519633691777,
+            "gamma_XX": -5.329321727293664,
+            "gamma_YY": -4.221137802388433,
+            "gamma_ZZ": -5.457901436951211,
+            "h_XX": -0.42091303463631213,
+            "h_YY": 1.2259334129254238,
+            "h_ZZ": -0.2878997087763884,
+            "nonunital_norm_proxy": 1.1915625720627459,
+            "relaxation_pair": -5.086392560753584
+          },
+          "euclidean_margin": 0.04601030443984454,
+          "top_coordinate": "gamma_ZZ",
+          "z_margin": 10.408251973110414
+        },
+        "M7/M8": {
+          "available": true,
+          "coordinate_deltas": {
+            "affine_IZ": -0.01574828069743374,
+            "affine_ZI": 0.001446163575239176,
+            "affine_ZZ": 0.0005499999945000033,
+            "gamma_XX": 0.00044729220771613266,
+            "gamma_YY": 0.00011586178813789184,
+            "gamma_ZZ": 0.00012531634293613293,
+            "h_XX": -0.021316991222990807,
+            "h_YY": -0.01575114179526098,
+            "h_ZZ": 0.00010944825394256039,
+            "nonunital_norm_proxy": 0.0021516094407324077,
+            "relaxation_pair": -0.0031145494015342584
+          },
+          "coordinate_z_margins": {
+            "affine_IZ": -6.875981298415471,
+            "affine_ZI": 0.6310351044095346,
+            "affine_ZZ": 1.2147467868233013,
+            "gamma_XX": 0.45740133461817606,
+            "gamma_YY": 0.08548802581898662,
+            "gamma_ZZ": 0.07624989378969392,
+            "h_XX": -13.044193115014375,
+            "h_YY": -9.89729437356783,
+            "h_ZZ": 0.0390384744103084,
+            "nonunital_norm_proxy": 0.878875124021601,
+            "relaxation_pair": -0.6760226216570712
+          },
+          "euclidean_margin": 0.03110443433338927,
+          "top_coordinate": "h_XX",
+          "z_margin": 17.852552593816156
+        },
+        "M8/M10": {
+          "available": true,
+          "coordinate_deltas": {
+            "affine_IZ": 0.010812634176746924,
+            "affine_ZI": -0.004726254554663318,
+            "affine_ZZ": 6.666666599997144e-05,
+            "gamma_XX": -0.012018749722292764,
+            "gamma_YY": -0.011623048971421643,
+            "gamma_ZZ": -0.012271742804294973,
+            "h_XX": 0.02071213710160211,
+            "h_YY": 0.01674253912433576,
+            "h_ZZ": -0.0011757276028843498,
+            "nonunital_norm_proxy": -0.0002624344908982931,
+            "relaxation_pair": -0.03764749079506582
+          },
+          "coordinate_z_margins": {
+            "affine_IZ": 3.0290927126747373,
+            "affine_ZI": -1.5006209045640369,
+            "affine_ZZ": 0.1288313252801105,
+            "gamma_XX": -5.303198353348297,
+            "gamma_YY": -3.8585153904504916,
+            "gamma_ZZ": -6.362841834759614,
+            "h_XX": 11.702128559776176,
+            "h_YY": 10.435610372502563,
+            "h_ZZ": -0.41262066577792544,
+            "nonunital_norm_proxy": -0.1253677172765205,
+            "relaxation_pair": -5.38970492909308
+          },
+          "euclidean_margin": 0.05193733029529116,
+          "top_coordinate": "h_XX",
+          "z_margin": 19.23586083481315
+        }
+      }
+    }
+  },
+  "response_jacobian": {
+    "column_angles": {
+      "affine_IZ/affine_ZZ": {
+        "abs_cosine": 0.0,
+        "angle_degrees": 90.0,
+        "cosine": 0.0
+      },
+      "affine_ZI/affine_IZ": {
+        "abs_cosine": 0.0,
+        "angle_degrees": 90.0,
+        "cosine": 0.0
+      },
+      "affine_ZI/affine_ZZ": {
+        "abs_cosine": 0.0,
+        "angle_degrees": 90.0,
+        "cosine": 0.0
+      },
+      "gamma_XX/affine_IZ": {
+        "abs_cosine": 0.0,
+        "angle_degrees": 90.0,
+        "cosine": 0.0
+      },
+      "gamma_XX/affine_ZI": {
+        "abs_cosine": 0.0,
+        "angle_degrees": 90.0,
+        "cosine": 0.0
+      },
+      "gamma_XX/affine_ZZ": {
+        "abs_cosine": 0.0,
+        "angle_degrees": 90.0,
+        "cosine": 0.0
+      },
+      "gamma_XX/gamma_YY": {
+        "abs_cosine": 0.4999999999999999,
+        "angle_degrees": 60.00000000000001,
+        "cosine": 0.4999999999999999
+      },
+      "gamma_XX/gamma_ZZ": {
+        "abs_cosine": 0.4999999999999999,
+        "angle_degrees": 60.00000000000001,
+        "cosine": 0.4999999999999999
+      },
+      "gamma_XX/relaxation_pair": {
+        "abs_cosine": 0.47245561069970166,
+        "angle_degrees": 61.80618603558152,
+        "cosine": 0.47245561069970166
+      },
+      "gamma_YY/affine_IZ": {
+        "abs_cosine": 0.0,
+        "angle_degrees": 90.0,
+        "cosine": 0.0
+      },
+      "gamma_YY/affine_ZI": {
+        "abs_cosine": 0.0,
+        "angle_degrees": 90.0,
+        "cosine": 0.0
+      },
+      "gamma_YY/affine_ZZ": {
+        "abs_cosine": 0.0,
+        "angle_degrees": 90.0,
+        "cosine": 0.0
+      },
+      "gamma_YY/gamma_ZZ": {
+        "abs_cosine": 0.4999999999999999,
+        "angle_degrees": 60.00000000000001,
+        "cosine": 0.4999999999999999
+      },
+      "gamma_YY/relaxation_pair": {
+        "abs_cosine": 0.47245561069970166,
+        "angle_degrees": 61.80618603558152,
+        "cosine": 0.47245561069970166
+      },
+      "gamma_ZZ/affine_IZ": {
+        "abs_cosine": 0.0,
+        "angle_degrees": 90.0,
+        "cosine": 0.0
+      },
+      "gamma_ZZ/affine_ZI": {
+        "abs_cosine": 0.0,
+        "angle_degrees": 90.0,
+        "cosine": 0.0
+      },
+      "gamma_ZZ/affine_ZZ": {
+        "abs_cosine": 0.0,
+        "angle_degrees": 90.0,
+        "cosine": 0.0
+      },
+      "gamma_ZZ/relaxation_pair": {
+        "abs_cosine": 0.37796452484434695,
+        "angle_degrees": 67.79234249350856,
+        "cosine": 0.37796452484434695
+      },
+      "h_XX/affine_IZ": {
+        "abs_cosine": 0.0,
+        "angle_degrees": 90.0,
+        "cosine": 0.0
+      },
+      "h_XX/affine_ZI": {
+        "abs_cosine": 0.0,
+        "angle_degrees": 90.0,
+        "cosine": 0.0
+      },
+      "h_XX/affine_ZZ": {
+        "abs_cosine": 0.0,
+        "angle_degrees": 90.0,
+        "cosine": 0.0
+      },
+      "h_XX/gamma_XX": {
+        "abs_cosine": 4.999999999999375e-07,
+        "angle_degrees": 89.99997135211025,
+        "cosine": 4.999999999999375e-07
+      },
+      "h_XX/gamma_YY": {
+        "abs_cosine": 2.4999999999996875e-07,
+        "angle_degrees": 89.99998567605512,
+        "cosine": 2.4999999999996875e-07
+      },
+      "h_XX/gamma_ZZ": {
+        "abs_cosine": 2.4999999999996875e-07,
+        "angle_degrees": 89.99998567605512,
+        "cosine": 2.4999999999996875e-07
+      },
+      "h_XX/h_YY": {
+        "abs_cosine": 1.2499999999996875e-13,
+        "angle_degrees": 89.99999999999284,
+        "cosine": 1.2499999999996875e-13
+      },
+      "h_XX/h_ZZ": {
+        "abs_cosine": 1.2499999999996875e-13,
+        "angle_degrees": 89.99999999999284,
+        "cosine": 1.2499999999996875e-13
+      },
+      "h_XX/relaxation_pair": {
+        "abs_cosine": 2.362278053498213e-07,
+        "angle_degrees": 89.99998646514375,
+        "cosine": 2.362278053498213e-07
+      },
+      "h_YY/affine_IZ": {
+        "abs_cosine": 0.0,
+        "angle_degrees": 90.0,
+        "cosine": 0.0
+      },
+      "h_YY/affine_ZI": {
+        "abs_cosine": 0.0,
+        "angle_degrees": 90.0,
+        "cosine": 0.0
+      },
+      "h_YY/affine_ZZ": {
+        "abs_cosine": 0.0,
+        "angle_degrees": 90.0,
+        "cosine": 0.0
+      },
+      "h_YY/gamma_XX": {
+        "abs_cosine": 2.4999999999996875e-07,
+        "angle_degrees": 89.99998567605512,
+        "cosine": 2.4999999999996875e-07
+      },
+      "h_YY/gamma_YY": {
+        "abs_cosine": 4.999999999999375e-07,
+        "angle_degrees": 89.99997135211025,
+        "cosine": 4.999999999999375e-07
+      },
+      "h_YY/gamma_ZZ": {
+        "abs_cosine": 2.4999999999996875e-07,
+        "angle_degrees": 89.99998567605512,
+        "cosine": 2.4999999999996875e-07
+      },
+      "h_YY/h_ZZ": {
+        "abs_cosine": 1.2499999999996875e-13,
+        "angle_degrees": 89.99999999999284,
+        "cosine": 1.2499999999996875e-13
+      },
+      "h_YY/relaxation_pair": {
+        "abs_cosine": 2.3622780534982124e-07,
+        "angle_degrees": 89.99998646514375,
+        "cosine": 2.3622780534982124e-07
+      },
+      "h_ZZ/affine_IZ": {
+        "abs_cosine": 0.0,
+        "angle_degrees": 90.0,
+        "cosine": 0.0
+      },
+      "h_ZZ/affine_ZI": {
+        "abs_cosine": 0.0,
+        "angle_degrees": 90.0,
+        "cosine": 0.0
+      },
+      "h_ZZ/affine_ZZ": {
+        "abs_cosine": 0.0,
+        "angle_degrees": 90.0,
+        "cosine": 0.0
+      },
+      "h_ZZ/gamma_XX": {
+        "abs_cosine": 2.4999999999996875e-07,
+        "angle_degrees": 89.99998567605512,
+        "cosine": 2.4999999999996875e-07
+      },
+      "h_ZZ/gamma_YY": {
+        "abs_cosine": 2.4999999999996875e-07,
+        "angle_degrees": 89.99998567605512,
+        "cosine": 2.4999999999996875e-07
+      },
+      "h_ZZ/gamma_ZZ": {
+        "abs_cosine": 4.999999999999375e-07,
+        "angle_degrees": 89.99997135211025,
+        "cosine": 4.999999999999375e-07
+      },
+      "h_ZZ/relaxation_pair": {
+        "abs_cosine": 1.8898226242214985e-07,
+        "angle_degrees": 89.99998917211397,
+        "cosine": 1.8898226242214985e-07
+      },
+      "relaxation_pair/affine_IZ": {
+        "abs_cosine": 0.26726121442269757,
+        "angle_degrees": 74.49864206756479,
+        "cosine": 0.26726121442269757
+      },
+      "relaxation_pair/affine_ZI": {
+        "abs_cosine": 0.26726121442269757,
+        "angle_degrees": 74.49864206756479,
+        "cosine": 0.26726121442269757
+      },
+      "relaxation_pair/affine_ZZ": {
+        "abs_cosine": 0.0,
+        "angle_degrees": 90.0,
+        "cosine": 0.0
+      }
+    },
+    "condition_number": 9.58243429584126,
+    "minimum_singular_value": 0.8417568141059164,
+    "rank": 10,
+    "singular_values": [
+      8.06607936424661,
+      4.006000512271199,
+      4.00000000000025,
+      2.8284271247460913,
+      2.8284271247460144,
+      2.828427124746014,
+      1.637610995099492,
+      1.0000000000000002,
+      1.0,
+      0.8417568141059164
+    ],
+    "stable_rank": 1.9443101633140303
+  },
+  "schema": "scope_static_s2d10_effective_rank_metrics_v1"
+}

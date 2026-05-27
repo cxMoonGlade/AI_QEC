@@ -1,0 +1,874 @@
+{
+  "circuit_residualized_generator_coordinates_plus_invariants": {
+    "block": "circuit_residualized_generator_coordinates_plus_invariants",
+    "model": "sklearn.StandardScaler+sklearn.LogisticRegression(class_weight=balanced)",
+    "overall": {
+      "balanced_accuracy": 0.8888888888888888,
+      "balanced_accuracy_ci95": {
+        "high": 1.366961414434586,
+        "low": 0.41081636334319155,
+        "mean": 0.8888888888888888,
+        "n": 3
+      },
+      "ci_method": "leave_one_circuit_id_out_t_interval",
+      "confusion_matrix": [
+        [
+          2,
+          1,
+          0
+        ],
+        [
+          0,
+          3,
+          0
+        ],
+        [
+          0,
+          0,
+          3
+        ]
+      ],
+      "confusion_matrix_labels": [
+        "M1",
+        "M7",
+        "M8"
+      ],
+      "macro_F1": 0.8857142857142857,
+      "macro_F1_ci95": {
+        "high": 1.4892818859127817,
+        "low": 0.21442181779092184,
+        "mean": 0.8518518518518517,
+        "n": 3
+      },
+      "min_class_recall": 0.6666666666666666,
+      "num_folds": 3,
+      "pairwise": {
+        "M1/M10": {
+          "accuracy": null,
+          "auc": null,
+          "available": false
+        },
+        "M1/M7": {
+          "accuracy": 0.8333333333333334,
+          "auc": 1.0,
+          "available": true
+        },
+        "M1/M8": {
+          "accuracy": 1.0,
+          "auc": 1.0,
+          "available": true
+        },
+        "M7/M10": {
+          "accuracy": null,
+          "auc": null,
+          "available": false
+        },
+        "M7/M8": {
+          "accuracy": 1.0,
+          "auc": 1.0,
+          "available": true
+        },
+        "M8/M10": {
+          "accuracy": null,
+          "auc": null,
+          "available": false
+        }
+      },
+      "pairwise_margins": {
+        "M1/M10": {
+          "available": false,
+          "margin": null
+        },
+        "M1/M7": {
+          "available": true,
+          "margin": 0.5748378748960334
+        },
+        "M1/M8": {
+          "available": true,
+          "margin": 0.7219063269994376
+        },
+        "M7/M10": {
+          "available": false,
+          "margin": null
+        },
+        "M7/M8": {
+          "available": true,
+          "margin": 0.7684856719229397
+        },
+        "M8/M10": {
+          "available": false,
+          "margin": null
+        }
+      },
+      "per_class_recall": {
+        "M1": 0.6666666666666666,
+        "M7": 1.0,
+        "M8": 1.0
+      }
+    },
+    "validation": "LeaveOneGroupOut(circuit_id)"
+  },
+  "edge_circuit_residualized_generator_coordinates_plus_invariants": {
+    "block": "edge_circuit_residualized_generator_coordinates_plus_invariants",
+    "model": "sklearn.StandardScaler+sklearn.LogisticRegression(class_weight=balanced)",
+    "overall": {
+      "balanced_accuracy": 0.8888888888888888,
+      "balanced_accuracy_ci95": {
+        "high": 1.366961414434586,
+        "low": 0.41081636334319155,
+        "mean": 0.8888888888888888,
+        "n": 3
+      },
+      "ci_method": "leave_one_circuit_id_out_t_interval",
+      "confusion_matrix": [
+        [
+          2,
+          1,
+          0
+        ],
+        [
+          0,
+          3,
+          0
+        ],
+        [
+          0,
+          0,
+          3
+        ]
+      ],
+      "confusion_matrix_labels": [
+        "M1",
+        "M7",
+        "M8"
+      ],
+      "macro_F1": 0.8857142857142857,
+      "macro_F1_ci95": {
+        "high": 1.4892818859127817,
+        "low": 0.21442181779092184,
+        "mean": 0.8518518518518517,
+        "n": 3
+      },
+      "min_class_recall": 0.6666666666666666,
+      "num_folds": 3,
+      "pairwise": {
+        "M1/M10": {
+          "accuracy": null,
+          "auc": null,
+          "available": false
+        },
+        "M1/M7": {
+          "accuracy": 0.8333333333333334,
+          "auc": 1.0,
+          "available": true
+        },
+        "M1/M8": {
+          "accuracy": 1.0,
+          "auc": 1.0,
+          "available": true
+        },
+        "M7/M10": {
+          "accuracy": null,
+          "auc": null,
+          "available": false
+        },
+        "M7/M8": {
+          "accuracy": 1.0,
+          "auc": 1.0,
+          "available": true
+        },
+        "M8/M10": {
+          "accuracy": null,
+          "auc": null,
+          "available": false
+        }
+      },
+      "pairwise_margins": {
+        "M1/M10": {
+          "available": false,
+          "margin": null
+        },
+        "M1/M7": {
+          "available": true,
+          "margin": 0.5874170348093215
+        },
+        "M1/M8": {
+          "available": true,
+          "margin": 0.7118943762310979
+        },
+        "M7/M10": {
+          "available": false,
+          "margin": null
+        },
+        "M7/M8": {
+          "available": true,
+          "margin": 0.7712316412874198
+        },
+        "M8/M10": {
+          "available": false,
+          "margin": null
+        }
+      },
+      "per_class_recall": {
+        "M1": 0.6666666666666666,
+        "M7": 1.0,
+        "M8": 1.0
+      }
+    },
+    "validation": "LeaveOneGroupOut(circuit_id)"
+  },
+  "edge_residualized_generator_coordinates_plus_invariants": {
+    "block": "edge_residualized_generator_coordinates_plus_invariants",
+    "model": "sklearn.StandardScaler+sklearn.LogisticRegression(class_weight=balanced)",
+    "overall": {
+      "balanced_accuracy": 0.5555555555555555,
+      "balanced_accuracy_ci95": {
+        "high": 1.5117006066469498,
+        "low": -0.400589495535839,
+        "mean": 0.5555555555555555,
+        "n": 3
+      },
+      "ci_method": "leave_one_circuit_id_out_t_interval",
+      "confusion_matrix": [
+        [
+          2,
+          0,
+          1
+        ],
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          0,
+          2
+        ]
+      ],
+      "confusion_matrix_labels": [
+        "M1",
+        "M7",
+        "M8"
+      ],
+      "macro_F1": 0.5476190476190478,
+      "macro_F1_ci95": {
+        "high": 1.6396257583086875,
+        "low": -0.7507368694197987,
+        "mean": 0.4444444444444445,
+        "n": 3
+      },
+      "min_class_recall": 0.3333333333333333,
+      "num_folds": 3,
+      "pairwise": {
+        "M1/M10": {
+          "accuracy": null,
+          "auc": null,
+          "available": false
+        },
+        "M1/M7": {
+          "accuracy": 0.6666666666666666,
+          "auc": 0.6666666666666666,
+          "available": true
+        },
+        "M1/M8": {
+          "accuracy": 0.6666666666666666,
+          "auc": 0.6666666666666666,
+          "available": true
+        },
+        "M7/M10": {
+          "accuracy": null,
+          "auc": null,
+          "available": false
+        },
+        "M7/M8": {
+          "accuracy": 0.6666666666666666,
+          "auc": 0.7777777777777778,
+          "available": true
+        },
+        "M8/M10": {
+          "accuracy": null,
+          "auc": null,
+          "available": false
+        }
+      },
+      "pairwise_margins": {
+        "M1/M10": {
+          "available": false,
+          "margin": null
+        },
+        "M1/M7": {
+          "available": true,
+          "margin": 0.19268284395082888
+        },
+        "M1/M8": {
+          "available": true,
+          "margin": 0.21041182995601715
+        },
+        "M7/M10": {
+          "available": false,
+          "margin": null
+        },
+        "M7/M8": {
+          "available": true,
+          "margin": 0.1785479279881781
+        },
+        "M8/M10": {
+          "available": false,
+          "margin": null
+        }
+      },
+      "per_class_recall": {
+        "M1": 0.6666666666666666,
+        "M7": 0.3333333333333333,
+        "M8": 0.6666666666666666
+      }
+    },
+    "validation": "LeaveOneGroupOut(circuit_id)"
+  },
+  "generator_coordinates_plus_invariants": {
+    "block": "generator_coordinates_plus_invariants",
+    "model": "sklearn.StandardScaler+sklearn.LogisticRegression(class_weight=balanced)",
+    "overall": {
+      "balanced_accuracy": 0.8888888888888888,
+      "balanced_accuracy_ci95": {
+        "high": 1.366961414434586,
+        "low": 0.41081636334319155,
+        "mean": 0.8888888888888888,
+        "n": 3
+      },
+      "ci_method": "leave_one_circuit_id_out_t_interval",
+      "confusion_matrix": [
+        [
+          2,
+          1,
+          0
+        ],
+        [
+          0,
+          3,
+          0
+        ],
+        [
+          0,
+          0,
+          3
+        ]
+      ],
+      "confusion_matrix_labels": [
+        "M1",
+        "M7",
+        "M8"
+      ],
+      "macro_F1": 0.8857142857142857,
+      "macro_F1_ci95": {
+        "high": 1.4892818859127817,
+        "low": 0.21442181779092184,
+        "mean": 0.8518518518518517,
+        "n": 3
+      },
+      "min_class_recall": 0.6666666666666666,
+      "num_folds": 3,
+      "pairwise": {
+        "M1/M10": {
+          "accuracy": null,
+          "auc": null,
+          "available": false
+        },
+        "M1/M7": {
+          "accuracy": 0.8333333333333334,
+          "auc": 1.0,
+          "available": true
+        },
+        "M1/M8": {
+          "accuracy": 1.0,
+          "auc": 1.0,
+          "available": true
+        },
+        "M7/M10": {
+          "accuracy": null,
+          "auc": null,
+          "available": false
+        },
+        "M7/M8": {
+          "accuracy": 1.0,
+          "auc": 1.0,
+          "available": true
+        },
+        "M8/M10": {
+          "accuracy": null,
+          "auc": null,
+          "available": false
+        }
+      },
+      "pairwise_margins": {
+        "M1/M10": {
+          "available": false,
+          "margin": null
+        },
+        "M1/M7": {
+          "available": true,
+          "margin": 0.5884272328199005
+        },
+        "M1/M8": {
+          "available": true,
+          "margin": 0.7143176327012951
+        },
+        "M7/M10": {
+          "available": false,
+          "margin": null
+        },
+        "M7/M8": {
+          "available": true,
+          "margin": 0.7690344654819286
+        },
+        "M8/M10": {
+          "available": false,
+          "margin": null
+        }
+      },
+      "per_class_recall": {
+        "M1": 0.6666666666666666,
+        "M7": 1.0,
+        "M8": 1.0
+      }
+    },
+    "validation": "LeaveOneGroupOut(circuit_id)"
+  },
+  "generator_invariants_only": {
+    "block": "generator_invariants_only",
+    "model": "sklearn.StandardScaler+sklearn.LogisticRegression(class_weight=balanced)",
+    "overall": {
+      "balanced_accuracy": 0.8888888888888888,
+      "balanced_accuracy_ci95": {
+        "high": 1.366961414434586,
+        "low": 0.41081636334319155,
+        "mean": 0.8888888888888888,
+        "n": 3
+      },
+      "ci_method": "leave_one_circuit_id_out_t_interval",
+      "confusion_matrix": [
+        [
+          2,
+          0,
+          1
+        ],
+        [
+          0,
+          3,
+          0
+        ],
+        [
+          0,
+          0,
+          3
+        ]
+      ],
+      "confusion_matrix_labels": [
+        "M1",
+        "M7",
+        "M8"
+      ],
+      "macro_F1": 0.8857142857142857,
+      "macro_F1_ci95": {
+        "high": 1.4892818859127817,
+        "low": 0.21442181779092184,
+        "mean": 0.8518518518518517,
+        "n": 3
+      },
+      "min_class_recall": 0.6666666666666666,
+      "num_folds": 3,
+      "pairwise": {
+        "M1/M10": {
+          "accuracy": null,
+          "auc": null,
+          "available": false
+        },
+        "M1/M7": {
+          "accuracy": 1.0,
+          "auc": 1.0,
+          "available": true
+        },
+        "M1/M8": {
+          "accuracy": 0.8333333333333334,
+          "auc": 1.0,
+          "available": true
+        },
+        "M7/M10": {
+          "accuracy": null,
+          "auc": null,
+          "available": false
+        },
+        "M7/M8": {
+          "accuracy": 1.0,
+          "auc": 1.0,
+          "available": true
+        },
+        "M8/M10": {
+          "accuracy": null,
+          "auc": null,
+          "available": false
+        }
+      },
+      "pairwise_margins": {
+        "M1/M10": {
+          "available": false,
+          "margin": null
+        },
+        "M1/M7": {
+          "available": true,
+          "margin": 0.6590651674970783
+        },
+        "M1/M8": {
+          "available": true,
+          "margin": 0.5910968621514461
+        },
+        "M7/M10": {
+          "available": false,
+          "margin": null
+        },
+        "M7/M8": {
+          "available": true,
+          "margin": 0.7736589391568448
+        },
+        "M8/M10": {
+          "available": false,
+          "margin": null
+        }
+      },
+      "per_class_recall": {
+        "M1": 0.6666666666666666,
+        "M7": 1.0,
+        "M8": 1.0
+      }
+    },
+    "validation": "LeaveOneGroupOut(circuit_id)"
+  },
+  "ideal_schedule_residualized_generator_coordinates_plus_invariants": {
+    "block": "ideal_schedule_residualized_generator_coordinates_plus_invariants",
+    "model": "sklearn.StandardScaler+sklearn.LogisticRegression(class_weight=balanced)",
+    "overall": {
+      "balanced_accuracy": 0.3333333333333333,
+      "balanced_accuracy_ci95": {
+        "high": 0.3333333333333333,
+        "low": 0.3333333333333333,
+        "mean": 0.3333333333333333,
+        "n": 3
+      },
+      "ci_method": "leave_one_circuit_id_out_t_interval",
+      "confusion_matrix": [
+        [
+          1,
+          0,
+          2
+        ],
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          2,
+          0,
+          1
+        ]
+      ],
+      "confusion_matrix_labels": [
+        "M1",
+        "M7",
+        "M8"
+      ],
+      "macro_F1": 0.3571428571428572,
+      "macro_F1_ci95": {
+        "high": 0.4612584849950708,
+        "low": -0.016814040550626408,
+        "mean": 0.2222222222222222,
+        "n": 3
+      },
+      "min_class_recall": 0.3333333333333333,
+      "num_folds": 3,
+      "pairwise": {
+        "M1/M10": {
+          "accuracy": null,
+          "auc": null,
+          "available": false
+        },
+        "M1/M7": {
+          "accuracy": 0.6666666666666666,
+          "auc": 0.8888888888888888,
+          "available": true
+        },
+        "M1/M8": {
+          "accuracy": 0.3333333333333333,
+          "auc": 0.1111111111111111,
+          "available": true
+        },
+        "M7/M10": {
+          "accuracy": null,
+          "auc": null,
+          "available": false
+        },
+        "M7/M8": {
+          "accuracy": 0.6666666666666666,
+          "auc": 0.7777777777777778,
+          "available": true
+        },
+        "M8/M10": {
+          "accuracy": null,
+          "auc": null,
+          "available": false
+        }
+      },
+      "pairwise_margins": {
+        "M1/M10": {
+          "available": false,
+          "margin": null
+        },
+        "M1/M7": {
+          "available": true,
+          "margin": 0.28673042271005916
+        },
+        "M1/M8": {
+          "available": true,
+          "margin": -0.32449317444834463
+        },
+        "M7/M10": {
+          "available": false,
+          "margin": null
+        },
+        "M7/M8": {
+          "available": true,
+          "margin": 0.2842710282947238
+        },
+        "M8/M10": {
+          "available": false,
+          "margin": null
+        }
+      },
+      "per_class_recall": {
+        "M1": 0.3333333333333333,
+        "M7": 0.3333333333333333,
+        "M8": 0.3333333333333333
+      }
+    },
+    "validation": "LeaveOneGroupOut(circuit_id)"
+  },
+  "raw_generator_coordinates": {
+    "block": "raw_generator_coordinates",
+    "model": "sklearn.StandardScaler+sklearn.LogisticRegression(class_weight=balanced)",
+    "overall": {
+      "balanced_accuracy": 0.7777777777777777,
+      "balanced_accuracy_ci95": {
+        "high": 1.7339228288691722,
+        "low": -0.1783672733136168,
+        "mean": 0.7777777777777777,
+        "n": 3
+      },
+      "ci_method": "leave_one_circuit_id_out_t_interval",
+      "confusion_matrix": [
+        [
+          2,
+          1,
+          0
+        ],
+        [
+          1,
+          2,
+          0
+        ],
+        [
+          0,
+          0,
+          3
+        ]
+      ],
+      "confusion_matrix_labels": [
+        "M1",
+        "M7",
+        "M8"
+      ],
+      "macro_F1": 0.7777777777777777,
+      "macro_F1_ci95": {
+        "high": 1.7339228288691722,
+        "low": -0.1783672733136168,
+        "mean": 0.7777777777777777,
+        "n": 3
+      },
+      "min_class_recall": 0.6666666666666666,
+      "num_folds": 3,
+      "pairwise": {
+        "M1/M10": {
+          "accuracy": null,
+          "auc": null,
+          "available": false
+        },
+        "M1/M7": {
+          "accuracy": 0.6666666666666666,
+          "auc": 0.6666666666666666,
+          "available": true
+        },
+        "M1/M8": {
+          "accuracy": 1.0,
+          "auc": 1.0,
+          "available": true
+        },
+        "M7/M10": {
+          "accuracy": null,
+          "auc": null,
+          "available": false
+        },
+        "M7/M8": {
+          "accuracy": 1.0,
+          "auc": 1.0,
+          "available": true
+        },
+        "M8/M10": {
+          "accuracy": null,
+          "auc": null,
+          "available": false
+        }
+      },
+      "pairwise_margins": {
+        "M1/M10": {
+          "available": false,
+          "margin": null
+        },
+        "M1/M7": {
+          "available": true,
+          "margin": 0.16635740260393503
+        },
+        "M1/M8": {
+          "available": true,
+          "margin": 0.6279686710002795
+        },
+        "M7/M10": {
+          "available": false,
+          "margin": null
+        },
+        "M7/M8": {
+          "available": true,
+          "margin": 0.4828616001993215
+        },
+        "M8/M10": {
+          "available": false,
+          "margin": null
+        }
+      },
+      "per_class_recall": {
+        "M1": 0.6666666666666666,
+        "M7": 0.6666666666666666,
+        "M8": 1.0
+      }
+    },
+    "validation": "LeaveOneGroupOut(circuit_id)"
+  },
+  "scrambled_circuit_residualized_generator_coordinates_plus_invariants": {
+    "block": "scrambled_circuit_residualized_generator_coordinates_plus_invariants",
+    "model": "sklearn.StandardScaler+sklearn.LogisticRegression(class_weight=balanced)",
+    "overall": {
+      "balanced_accuracy": 0.3333333333333333,
+      "balanced_accuracy_ci95": {
+        "high": 1.1613792372812508,
+        "low": -0.49471257061458423,
+        "mean": 0.3333333333333333,
+        "n": 3
+      },
+      "ci_method": "leave_one_circuit_id_out_t_interval",
+      "confusion_matrix": [
+        [
+          2,
+          1,
+          0
+        ],
+        [
+          1,
+          0,
+          2
+        ],
+        [
+          2,
+          0,
+          1
+        ]
+      ],
+      "confusion_matrix_labels": [
+        "M1",
+        "M7",
+        "M8"
+      ],
+      "macro_F1": 0.27777777777777773,
+      "macro_F1_ci95": {
+        "high": 0.9538825347715796,
+        "low": -0.43536401625306115,
+        "mean": 0.25925925925925924,
+        "n": 3
+      },
+      "min_class_recall": 0.0,
+      "num_folds": 3,
+      "pairwise": {
+        "M1/M10": {
+          "accuracy": null,
+          "auc": null,
+          "available": false
+        },
+        "M1/M7": {
+          "accuracy": 0.6666666666666666,
+          "auc": 0.4444444444444444,
+          "available": true
+        },
+        "M1/M8": {
+          "accuracy": 0.6666666666666666,
+          "auc": 0.5555555555555556,
+          "available": true
+        },
+        "M7/M10": {
+          "accuracy": null,
+          "auc": null,
+          "available": false
+        },
+        "M7/M8": {
+          "accuracy": 0.3333333333333333,
+          "auc": 0.4444444444444444,
+          "available": true
+        },
+        "M8/M10": {
+          "accuracy": null,
+          "auc": null,
+          "available": false
+        }
+      },
+      "pairwise_margins": {
+        "M1/M10": {
+          "available": false,
+          "margin": null
+        },
+        "M1/M7": {
+          "available": true,
+          "margin": -0.06688703038737633
+        },
+        "M1/M8": {
+          "available": true,
+          "margin": 0.18736392047171524
+        },
+        "M7/M10": {
+          "available": false,
+          "margin": null
+        },
+        "M7/M8": {
+          "available": true,
+          "margin": 0.042299180696676146
+        },
+        "M8/M10": {
+          "available": false,
+          "margin": null
+        }
+      },
+      "per_class_recall": {
+        "M1": 0.6666666666666666,
+        "M7": 0.0,
+        "M8": 0.3333333333333333
+      }
+    },
+    "validation": "LeaveOneGroupOut(circuit_id)"
+  }
+}

@@ -59,6 +59,7 @@ class WindowBatchNLLCache:
     flat_counts: torch.Tensor
     state_offsets: torch.Tensor
     window_num_bits: torch.Tensor
+    window_total_counts: torch.Tensor
     max_faults_per_window: int
     max_state_count: int
     num_windows: int
@@ -74,6 +75,7 @@ class WindowBatchNLLCache:
         flat_counts: list[torch.Tensor] = []
         state_offsets = [0]
         window_num_bits = []
+        window_total_counts = []
         max_faults = 0
         max_state_count = 1
         for cache in caches:
@@ -92,6 +94,7 @@ class WindowBatchNLLCache:
             fault_offsets.append(fault_offsets[-1] + int(fault_ids.numel()))
             state_offsets.append(state_offsets[-1] + int(states.numel()))
             window_num_bits.append(int(cache.window.size))
+            window_total_counts.append(int(counts.sum().item()))
             max_faults = max(max_faults, int(fault_ids.numel()))
             max_state_count = max(max_state_count, 1 << int(cache.window.size))
 
@@ -103,6 +106,7 @@ class WindowBatchNLLCache:
             flat_counts=_cat_or_empty(flat_counts),
             state_offsets=torch.tensor(state_offsets, dtype=torch.long),
             window_num_bits=torch.tensor(window_num_bits, dtype=torch.long),
+            window_total_counts=torch.tensor(window_total_counts, dtype=torch.long),
             max_faults_per_window=max_faults,
             max_state_count=max_state_count,
             num_windows=len(caches),
@@ -118,6 +122,7 @@ class WindowBatchNLLCache:
             flat_counts=self.flat_counts.to(device=target, dtype=torch.long),
             state_offsets=self.state_offsets.to(device=target, dtype=torch.long),
             window_num_bits=self.window_num_bits.to(device=target, dtype=torch.long),
+            window_total_counts=self.window_total_counts.to(device=target, dtype=torch.long),
             max_faults_per_window=self.max_faults_per_window,
             max_state_count=self.max_state_count,
             num_windows=self.num_windows,
@@ -139,6 +144,7 @@ def subset_window_batch_nll_cache(
     fault_offsets_cpu = cache.fault_offsets.detach().cpu().to(dtype=torch.long)
     state_offsets_cpu = cache.state_offsets.detach().cpu().to(dtype=torch.long)
     window_bits_cpu = cache.window_num_bits.detach().cpu().to(dtype=torch.long)
+    total_counts_cpu = cache.window_total_counts.detach().cpu().to(dtype=torch.long)
     flat_fault_ids: list[torch.Tensor] = []
     flat_masks: list[torch.Tensor] = []
     flat_states: list[torch.Tensor] = []
@@ -146,6 +152,7 @@ def subset_window_batch_nll_cache(
     fault_offsets = [0]
     state_offsets = [0]
     window_num_bits: list[int] = []
+    window_total_counts: list[int] = []
     max_faults = 0
     max_state_count = 1
 
@@ -165,6 +172,7 @@ def subset_window_batch_nll_cache(
         fault_offsets.append(fault_offsets[-1] + fault_count)
         state_offsets.append(state_offsets[-1] + state_count)
         window_num_bits.append(num_bits)
+        window_total_counts.append(int(total_counts_cpu[index].item()))
         max_faults = max(max_faults, fault_count)
         max_state_count = max(max_state_count, 1 << num_bits)
 
@@ -177,6 +185,7 @@ def subset_window_batch_nll_cache(
         flat_counts=_cat_or_empty(flat_counts).to(device=device),
         state_offsets=torch.tensor(state_offsets, dtype=torch.long, device=device),
         window_num_bits=torch.tensor(window_num_bits, dtype=torch.long, device=device),
+        window_total_counts=torch.tensor(window_total_counts, dtype=torch.long, device=device),
         max_faults_per_window=max_faults,
         max_state_count=max_state_count,
         num_windows=len(indices),
@@ -423,6 +432,9 @@ def local_window_workload_audit(cache: WindowBatchNLLCache) -> dict[str, object]
         "max_active_faults_per_window": int(active_fault_counts.max().item()),
         "total_active_fault_window_pairs": int(active_fault_counts.sum().item()),
         "unique_local_observation_patterns": int(cache.flat_states.numel()),
+        "mean_cached_observations_per_window": float(
+            cache.window_total_counts.detach().cpu().to(dtype=torch.float64).mean().item()
+        ),
     }
 
 
@@ -443,8 +455,15 @@ def local_window_cuda_kernel_audit(
     fallback_reason = None
     selected = requested_kernel_variant
     if requested_kernel_variant == "auto":
-        selected = "dp"
-        fallback_reason = "auto_not_enabled_phase1"
+        if int(cache.max_state_count) <= 256 and required_bytes <= int(spectral_memory_cap_bytes):
+            selected = "spectral"
+        else:
+            selected = "dp"
+            fallback_reason = (
+                "auto_spectral_max_state_count_exceeded"
+                if int(cache.max_state_count) > 256
+                else "auto_spectral_memory_cap_exceeded"
+            )
     elif requested_kernel_variant in {"spectral", "spectral_shadow"}:
         if int(cache.max_state_count) > 4096:
             fallback_reason = "spectral_max_state_count_exceeded"
@@ -530,6 +549,7 @@ def _build_window_batch_nll_cache_cuda(
         flat_counts=flat_counts.to(device=device, dtype=torch.long),
         state_offsets=state_offsets.to(device=device, dtype=torch.long),
         window_num_bits=window_num_bits.to(device=device, dtype=torch.long),
+        window_total_counts=torch.full((len(windows),), int(obs.shape[0]), dtype=torch.long, device=device),
         max_faults_per_window=max_faults,
         max_state_count=max_state_count,
         num_windows=len(windows),
@@ -729,6 +749,12 @@ def local_window_exact_nll_batched_from_cache(
         raise ValueError("logits must be rank-1")
     if not (torch.is_grad_enabled() and logits.requires_grad):
         return _local_window_exact_nll_batched_forward_only(logits, cache)
+    selected_kernel_variant = _select_cuda_kernel_variant(
+        cache,
+        cuda_kernel_variant,
+        spectral_memory_cap_bytes=spectral_memory_cap_bytes,
+        scalar_bytes=logits.element_size(),
+    )
     return _LocalWindowNLLCuda.apply(
         logits,
         cache.flat_fault_ids,
@@ -738,12 +764,29 @@ def local_window_exact_nll_batched_from_cache(
         cache.flat_counts,
         cache.state_offsets,
         cache.window_num_bits,
+        cache.window_total_counts,
         cache.max_faults_per_window,
         cache.max_state_count,
-        str(cuda_kernel_variant),
+        selected_kernel_variant,
         float(spectral_min_abs_factor),
         int(spectral_memory_cap_bytes),
     )
+
+
+def _select_cuda_kernel_variant(
+    cache: WindowBatchNLLCache,
+    requested_kernel_variant: CudaKernelVariant,
+    *,
+    spectral_memory_cap_bytes: int,
+    scalar_bytes: int,
+) -> str:
+    audit = local_window_cuda_kernel_audit(
+        cache,
+        requested_kernel_variant=requested_kernel_variant,
+        spectral_memory_cap_bytes=spectral_memory_cap_bytes,
+        scalar_bytes=scalar_bytes,
+    )
+    return str(audit["selected_cuda_kernel_variant"])
 
 
 def _validate_cuda_kernel_variant(cuda_kernel_variant: CudaKernelVariant) -> None:
@@ -766,6 +809,7 @@ def _local_window_exact_nll_batched_forward_only(
             cache.flat_counts.contiguous(),
             cache.state_offsets.contiguous(),
             cache.window_num_bits.contiguous(),
+            cache.window_total_counts.contiguous(),
             int(cache.max_faults_per_window),
             int(cache.max_state_count),
         )
@@ -778,6 +822,7 @@ def _local_window_exact_nll_batched_forward_only(
         cache.flat_counts.contiguous(),
         cache.state_offsets.contiguous(),
         cache.window_num_bits.contiguous(),
+        cache.window_total_counts.contiguous(),
         int(cache.max_faults_per_window),
         int(cache.max_state_count),
     )
@@ -796,6 +841,7 @@ class _LocalWindowNLLCuda(torch.autograd.Function):
         flat_counts: torch.Tensor,
         state_offsets: torch.Tensor,
         window_num_bits: torch.Tensor,
+        window_total_counts: torch.Tensor,
         max_faults_per_window: int,
         max_state_count: int,
         cuda_kernel_variant: str,
@@ -812,6 +858,7 @@ class _LocalWindowNLLCuda(torch.autograd.Function):
             flat_counts.contiguous(),
             state_offsets.contiguous(),
             window_num_bits.contiguous(),
+            window_total_counts.contiguous(),
             int(max_faults_per_window),
             int(max_state_count),
         )
@@ -846,9 +893,9 @@ class _LocalWindowNLLCuda(torch.autograd.Function):
     def backward(
         ctx,
         grad_output: torch.Tensor,
-    ) -> tuple[torch.Tensor, None, None, None, None, None, None, None, None, None, None, None, None]:
+    ) -> tuple[torch.Tensor, None, None, None, None, None, None, None, None, None, None, None, None, None]:
         (grad_logits,) = ctx.saved_tensors
-        return grad_output * grad_logits, None, None, None, None, None, None, None, None, None, None, None, None
+        return grad_output * grad_logits, None, None, None, None, None, None, None, None, None, None, None, None, None
 
 
 def _spectral_shadow_tolerances(dtype: torch.dtype) -> tuple[float, float]:

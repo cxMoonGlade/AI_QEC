@@ -61,6 +61,7 @@ def test_window_batch_cache_round_trips_with_key(tmp_path: Path):
     assert torch.equal(loaded.cache.flat_states, batch.flat_states)
     assert torch.equal(loaded.cache.flat_counts, batch.flat_counts)
     assert torch.equal(loaded.cache.state_offsets, batch.state_offsets)
+    assert torch.equal(loaded.cache.window_total_counts, batch.window_total_counts)
     assert loaded.metadata["role"] == "heldout"
 
     mismatch = load_window_batch_cache(path, expected_key="not-the-key", device="cpu")

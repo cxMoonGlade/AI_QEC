@@ -13,6 +13,7 @@ from scope_static.likelihood import (
     local_window_exact_nll_batched_from_cache,
     local_window_exact_nll_from_caches,
     local_window_exact_nll,
+    local_window_cuda_kernel_audit,
     local_window_workload_audit,
     parity_distribution,
     projected_window_mask_states,
@@ -381,9 +382,14 @@ def test_window_batch_cache_subsets_and_entropies_reuse_prepared_counts():
     expected_fault_ids = torch.cat([caches[index].fault_ids for index in indices])
     expected_states = torch.cat([caches[index].states for index in indices])
     expected_counts = torch.cat([caches[index].counts for index in indices if caches[index].counts is not None])
+    expected_total_counts = torch.tensor(
+        [int(caches[index].counts.sum().item()) for index in indices if caches[index].counts is not None],
+        dtype=torch.long,
+    )
     assert torch.equal(subset.flat_fault_ids.cpu(), expected_fault_ids)
     assert torch.equal(subset.flat_states.cpu(), expected_states)
     assert torch.equal(subset.flat_counts.cpu(), expected_counts)
+    assert torch.equal(subset.window_total_counts.cpu(), expected_total_counts)
     assert subset.num_windows == len(indices)
     assert subset.max_state_count == max(1 << windows[index].size for index in indices)
     assert empirical_window_entropy_from_batch_cache(batch, indices) == pytest.approx(
@@ -678,6 +684,19 @@ def test_cuda_spectral_local_window_training_kernel_matches_dp_when_available():
             cuda_kernel_variant="spectral_shadow",
         )
         assert torch.allclose(shadow_loss, dp_loss.detach(), atol=loss_atol, rtol=loss_atol)
+
+        auto_logits = base.detach().clone().requires_grad_(True)
+        assert (
+            local_window_cuda_kernel_audit(cache, requested_kernel_variant="auto")[
+                "selected_cuda_kernel_variant"
+            ]
+            == "spectral"
+        )
+        auto_loss = local_window_exact_nll_batched_from_cache(auto_logits, cache, cuda_kernel_variant="auto")
+        assert torch.allclose(auto_loss, dp_loss.detach(), atol=loss_atol, rtol=loss_atol)
+        auto_loss.backward()
+        assert auto_logits.grad is not None
+        assert torch.allclose(auto_logits.grad, dp_logits.grad, atol=grad_atol, rtol=grad_atol)
 
 
 def test_cuda_spectral_kernel_rejects_unsafe_zero_factor_when_available():

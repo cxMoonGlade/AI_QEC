@@ -546,7 +546,9 @@ def _fit_field_hardening(plan: ExperimentPlan, graph, field, observations, *, co
         assignment_grad_norms=assignment_grad_norms,
         prototype_param_delta_norm=float((field.alpha.detach() - alpha_start).norm().cpu()),
     )
-    objective_audit = objective.audit_dict()
+    objective_audit = objective.audit_dict(
+        scalar_bytes=next(parameter.element_size() for parameter in field.parameters())
+    )
     return {
         "field": field,
         "history": history,

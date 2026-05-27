@@ -1,0 +1,515 @@
+{
+  "schema": "scope_static_s2d10_mahalanobis_prototype_metrics_v1",
+  "variants": {
+    "circuit_residualized_coordinates": {
+      "feature_names": [
+        "h_XX",
+        "h_YY",
+        "h_ZZ",
+        "gamma_XX",
+        "gamma_YY",
+        "gamma_ZZ",
+        "relaxation_pair",
+        "affine_ZI",
+        "affine_IZ",
+        "affine_ZZ",
+        "nonunital_norm_proxy"
+      ],
+      "real": {
+        "available": true,
+        "balanced_accuracy": 1.0,
+        "confusion_matrix": [
+          [
+            3,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            3,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            3,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            3
+          ]
+        ],
+        "confusion_matrix_labels": [
+          "M1",
+          "M7",
+          "M8",
+          "M10"
+        ],
+        "macro_F1": 1.0,
+        "per_class_recall": {
+          "M1": 1.0,
+          "M10": 1.0,
+          "M7": 1.0,
+          "M8": 1.0
+        }
+      },
+      "real_minus_scrambled_balanced_accuracy": 0.5833333333333334,
+      "scrambled": {
+        "available": true,
+        "balanced_accuracy": 0.41666666666666663,
+        "confusion_matrix": [
+          [
+            0,
+            2,
+            1,
+            0
+          ],
+          [
+            0,
+            0,
+            3,
+            0
+          ],
+          [
+            0,
+            0,
+            3,
+            0
+          ],
+          [
+            0,
+            0,
+            1,
+            2
+          ]
+        ],
+        "confusion_matrix_labels": [
+          "M1",
+          "M7",
+          "M8",
+          "M10"
+        ],
+        "macro_F1": 0.33636363636363636,
+        "per_class_recall": {
+          "M1": 0.0,
+          "M10": 0.6666666666666666,
+          "M7": 0.0,
+          "M8": 1.0
+        }
+      }
+    },
+    "edge_circuit_residualized_coordinates": {
+      "feature_names": [
+        "h_XX",
+        "h_YY",
+        "h_ZZ",
+        "gamma_XX",
+        "gamma_YY",
+        "gamma_ZZ",
+        "relaxation_pair",
+        "affine_ZI",
+        "affine_IZ",
+        "affine_ZZ",
+        "nonunital_norm_proxy"
+      ],
+      "real": {
+        "available": true,
+        "balanced_accuracy": 1.0,
+        "confusion_matrix": [
+          [
+            3,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            3,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            3,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            3
+          ]
+        ],
+        "confusion_matrix_labels": [
+          "M1",
+          "M7",
+          "M8",
+          "M10"
+        ],
+        "macro_F1": 1.0,
+        "per_class_recall": {
+          "M1": 1.0,
+          "M10": 1.0,
+          "M7": 1.0,
+          "M8": 1.0
+        }
+      },
+      "real_minus_scrambled_balanced_accuracy": 0.5833333333333334,
+      "scrambled": {
+        "available": true,
+        "balanced_accuracy": 0.41666666666666663,
+        "confusion_matrix": [
+          [
+            0,
+            2,
+            1,
+            0
+          ],
+          [
+            1,
+            0,
+            2,
+            0
+          ],
+          [
+            1,
+            0,
+            2,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            3
+          ]
+        ],
+        "confusion_matrix_labels": [
+          "M1",
+          "M7",
+          "M8",
+          "M10"
+        ],
+        "macro_F1": 0.375,
+        "per_class_recall": {
+          "M1": 0.0,
+          "M10": 1.0,
+          "M7": 0.0,
+          "M8": 0.6666666666666666
+        }
+      }
+    },
+    "edge_residualized_coordinates": {
+      "feature_names": [
+        "h_XX",
+        "h_YY",
+        "h_ZZ",
+        "gamma_XX",
+        "gamma_YY",
+        "gamma_ZZ",
+        "relaxation_pair",
+        "affine_ZI",
+        "affine_IZ",
+        "affine_ZZ",
+        "nonunital_norm_proxy"
+      ],
+      "real": {
+        "available": true,
+        "balanced_accuracy": 0.3333333333333333,
+        "confusion_matrix": [
+          [
+            2,
+            0,
+            0,
+            1
+          ],
+          [
+            1,
+            1,
+            0,
+            1
+          ],
+          [
+            2,
+            0,
+            0,
+            1
+          ],
+          [
+            2,
+            0,
+            0,
+            1
+          ]
+        ],
+        "confusion_matrix_labels": [
+          "M1",
+          "M7",
+          "M8",
+          "M10"
+        ],
+        "macro_F1": 0.29642857142857143,
+        "per_class_recall": {
+          "M1": 0.6666666666666666,
+          "M10": 0.3333333333333333,
+          "M7": 0.3333333333333333,
+          "M8": 0.0
+        }
+      },
+      "real_minus_scrambled_balanced_accuracy": -0.16666666666666669,
+      "scrambled": {
+        "available": true,
+        "balanced_accuracy": 0.5,
+        "confusion_matrix": [
+          [
+            2,
+            0,
+            0,
+            1
+          ],
+          [
+            0,
+            2,
+            0,
+            1
+          ],
+          [
+            2,
+            0,
+            0,
+            1
+          ],
+          [
+            1,
+            0,
+            0,
+            2
+          ]
+        ],
+        "confusion_matrix_labels": [
+          "M1",
+          "M7",
+          "M8",
+          "M10"
+        ],
+        "macro_F1": 0.45,
+        "per_class_recall": {
+          "M1": 0.6666666666666666,
+          "M10": 0.6666666666666666,
+          "M7": 0.6666666666666666,
+          "M8": 0.0
+        }
+      }
+    },
+    "ideal_schedule_residualized_coordinates": {
+      "feature_names": [
+        "h_XX",
+        "h_YY",
+        "h_ZZ",
+        "gamma_XX",
+        "gamma_YY",
+        "gamma_ZZ",
+        "relaxation_pair",
+        "affine_ZI",
+        "affine_IZ",
+        "affine_ZZ",
+        "nonunital_norm_proxy"
+      ],
+      "real": {
+        "available": true,
+        "balanced_accuracy": 0.5833333333333334,
+        "confusion_matrix": [
+          [
+            2,
+            0,
+            0,
+            1
+          ],
+          [
+            0,
+            2,
+            0,
+            1
+          ],
+          [
+            1,
+            0,
+            2,
+            0
+          ],
+          [
+            2,
+            0,
+            0,
+            1
+          ]
+        ],
+        "confusion_matrix_labels": [
+          "M1",
+          "M7",
+          "M8",
+          "M10"
+        ],
+        "macro_F1": 0.6083333333333334,
+        "per_class_recall": {
+          "M1": 0.6666666666666666,
+          "M10": 0.3333333333333333,
+          "M7": 0.6666666666666666,
+          "M8": 0.6666666666666666
+        }
+      },
+      "real_minus_scrambled_balanced_accuracy": 0.16666666666666674,
+      "scrambled": {
+        "available": true,
+        "balanced_accuracy": 0.41666666666666663,
+        "confusion_matrix": [
+          [
+            0,
+            0,
+            2,
+            1
+          ],
+          [
+            1,
+            1,
+            1,
+            0
+          ],
+          [
+            1,
+            0,
+            2,
+            0
+          ],
+          [
+            1,
+            0,
+            0,
+            2
+          ]
+        ],
+        "confusion_matrix_labels": [
+          "M1",
+          "M7",
+          "M8",
+          "M10"
+        ],
+        "macro_F1": 0.41666666666666663,
+        "per_class_recall": {
+          "M1": 0.0,
+          "M10": 0.6666666666666666,
+          "M7": 0.3333333333333333,
+          "M8": 0.6666666666666666
+        }
+      }
+    },
+    "raw_generator_coordinates": {
+      "feature_names": [
+        "h_XX",
+        "h_YY",
+        "h_ZZ",
+        "gamma_XX",
+        "gamma_YY",
+        "gamma_ZZ",
+        "relaxation_pair",
+        "affine_ZI",
+        "affine_IZ",
+        "affine_ZZ",
+        "nonunital_norm_proxy"
+      ],
+      "real": {
+        "available": true,
+        "balanced_accuracy": 1.0,
+        "confusion_matrix": [
+          [
+            3,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            3,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            3,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            3
+          ]
+        ],
+        "confusion_matrix_labels": [
+          "M1",
+          "M7",
+          "M8",
+          "M10"
+        ],
+        "macro_F1": 1.0,
+        "per_class_recall": {
+          "M1": 1.0,
+          "M10": 1.0,
+          "M7": 1.0,
+          "M8": 1.0
+        }
+      },
+      "real_minus_scrambled_balanced_accuracy": 0.5833333333333334,
+      "scrambled": {
+        "available": true,
+        "balanced_accuracy": 0.41666666666666663,
+        "confusion_matrix": [
+          [
+            0,
+            2,
+            1,
+            0
+          ],
+          [
+            1,
+            0,
+            2,
+            0
+          ],
+          [
+            1,
+            0,
+            2,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            3
+          ]
+        ],
+        "confusion_matrix_labels": [
+          "M1",
+          "M7",
+          "M8",
+          "M10"
+        ],
+        "macro_F1": 0.375,
+        "per_class_recall": {
+          "M1": 0.0,
+          "M10": 1.0,
+          "M7": 0.0,
+          "M8": 0.6666666666666666
+        }
+      }
+    }
+  }
+}

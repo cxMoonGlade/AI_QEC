@@ -1,0 +1,113 @@
+{
+  "runs": {
+    "phys9_multicircuit_setB_balanced": {
+      "grouped_recovery": {
+        "checks": {
+          "mechanism_id_not_in_feature_columns": true,
+          "mechanism_id_not_used_in_clustering": true,
+          "oracle_fingerprint_columns_absent": true,
+          "oracle_label_not_in_feature_columns": true,
+          "oracle_labels_schema_separate": true,
+          "ptm_columns_absent": true,
+          "teacher_channel_columns_absent": true,
+          "transfer_splits_grouped_by_circuit_id": true
+        },
+        "feature_column_count": 26,
+        "passed": true,
+        "schema": "scope_static_s2d8c_leakage_guardrail_audit_v1"
+      },
+      "tomography_features": {
+        "checks": {
+          "mechanism_id_not_in_feature_columns": true,
+          "oracle_fingerprint_columns_absent": true,
+          "oracle_label_not_in_feature_columns": true,
+          "phys3_features_learner_visible": true,
+          "ptm_columns_absent": true,
+          "teacher_channel_columns_absent": true
+        },
+        "forbidden_feature_tokens": [
+          "oracle_label",
+          "mechanism_id",
+          "exact_ptm",
+          "teacher_channel",
+          "oracle_fingerprint"
+        ],
+        "passed": true,
+        "schema": "scope_static_s2d9_leakage_guardrail_audit_v1"
+      }
+    },
+    "phys9_multicircuit_setC_balanced": {
+      "grouped_recovery": {
+        "checks": {
+          "mechanism_id_not_in_feature_columns": true,
+          "mechanism_id_not_used_in_clustering": true,
+          "oracle_fingerprint_columns_absent": true,
+          "oracle_label_not_in_feature_columns": true,
+          "oracle_labels_schema_separate": true,
+          "ptm_columns_absent": true,
+          "teacher_channel_columns_absent": true,
+          "transfer_splits_grouped_by_circuit_id": true
+        },
+        "feature_column_count": 26,
+        "passed": true,
+        "schema": "scope_static_s2d8c_leakage_guardrail_audit_v1"
+      },
+      "tomography_features": {
+        "checks": {
+          "mechanism_id_not_in_feature_columns": true,
+          "oracle_fingerprint_columns_absent": true,
+          "oracle_label_not_in_feature_columns": true,
+          "phys3_features_learner_visible": true,
+          "ptm_columns_absent": true,
+          "teacher_channel_columns_absent": true
+        },
+        "forbidden_feature_tokens": [
+          "oracle_label",
+          "mechanism_id",
+          "exact_ptm",
+          "teacher_channel",
+          "oracle_fingerprint"
+        ],
+        "passed": true,
+        "schema": "scope_static_s2d9_leakage_guardrail_audit_v1"
+      }
+    },
+    "phys9_setA": {
+      "grouped_recovery": {
+        "checks": {
+          "mechanism_id_not_in_feature_columns": true,
+          "mechanism_id_not_used_in_clustering": true,
+          "oracle_fingerprint_columns_absent": true,
+          "oracle_label_not_in_feature_columns": true,
+          "oracle_labels_schema_separate": true,
+          "ptm_columns_absent": true,
+          "teacher_channel_columns_absent": true,
+          "transfer_splits_grouped_by_circuit_id": true
+        },
+        "feature_column_count": 26,
+        "passed": true,
+        "schema": "scope_static_s2d8c_leakage_guardrail_audit_v1"
+      },
+      "tomography_features": {
+        "checks": {
+          "mechanism_id_not_in_feature_columns": true,
+          "oracle_fingerprint_columns_absent": true,
+          "oracle_label_not_in_feature_columns": true,
+          "phys3_features_learner_visible": true,
+          "ptm_columns_absent": true,
+          "teacher_channel_columns_absent": true
+        },
+        "forbidden_feature_tokens": [
+          "oracle_label",
+          "mechanism_id",
+          "exact_ptm",
+          "teacher_channel",
+          "oracle_fingerprint"
+        ],
+        "passed": true,
+        "schema": "scope_static_s2d9_leakage_guardrail_audit_v1"
+      }
+    }
+  },
+  "schema": "scope_static_s2d9_leakage_guardrail_audit_aggregate_v1"
+}

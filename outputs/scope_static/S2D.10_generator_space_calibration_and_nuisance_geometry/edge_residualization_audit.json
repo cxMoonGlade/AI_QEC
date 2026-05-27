@@ -1,0 +1,35 @@
+{
+  "runs": {
+    "phys9_multicircuit_setB_balanced": {
+      "group_key": "edge_id",
+      "group_mean_norm_after": 2.042974013183482e-18,
+      "group_mean_norm_before": 0.048917237668785696,
+      "num_groups": 6,
+      "raw_variance": 5.063487049556917e-05,
+      "residual_variance": 6.272576327872649e-06,
+      "schema": "scope_static_s2d10_residualization_audit_v1",
+      "variance_removed_fraction": 0.8761214106705075
+    },
+    "phys9_multicircuit_setC_balanced": {
+      "group_key": "edge_id",
+      "group_mean_norm_after": 2.399647557737245e-18,
+      "group_mean_norm_before": 0.05683067626606977,
+      "num_groups": 7,
+      "raw_variance": 7.250443821875648e-05,
+      "residual_variance": 1.0256998601489061e-05,
+      "schema": "scope_static_s2d10_residualization_audit_v1",
+      "variance_removed_fraction": 0.858532817390541
+    },
+    "phys9_setA": {
+      "group_key": "edge_id",
+      "group_mean_norm_after": 0.0,
+      "group_mean_norm_before": 0.05980626832015867,
+      "num_groups": 9,
+      "raw_variance": 9.917837761597226e-05,
+      "residual_variance": 0.0,
+      "schema": "scope_static_s2d10_residualization_audit_v1",
+      "variance_removed_fraction": 1.0
+    }
+  },
+  "schema": "scope_static_s2d10_edge_residualization_audit_aggregate_v1"
+}

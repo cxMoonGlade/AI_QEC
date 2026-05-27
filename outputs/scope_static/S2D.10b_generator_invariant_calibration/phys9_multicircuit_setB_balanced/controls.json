@@ -1,0 +1,43 @@
+{
+  "permutation_label_control": {
+    "balanced_accuracy_ci95": {
+      "high": 0.29119008477025804,
+      "low": 0.22443491522974196,
+      "mean": 0.2578125,
+      "n": 128
+    },
+    "balanced_accuracy_max": 0.8888888888888888,
+    "balanced_accuracy_mean": 0.2578125,
+    "grouped_folds_preserved": true,
+    "labels_permuted_within": "RZZ-family audit rows",
+    "macro_F1_ci95": {
+      "high": 0.28015114219397813,
+      "low": 0.21389647685364094,
+      "mean": 0.24702380952380953,
+      "n": 128
+    },
+    "macro_F1_max": 0.8857142857142857,
+    "macro_F1_mean": 0.24702380952380953,
+    "repeats": 128,
+    "schema": "scope_static_s2d8c_permutation_label_control_v1",
+    "seed": 0
+  },
+  "primary_block": "circuit_residualized_generator_coordinates_plus_invariants",
+  "real_minus_permutation_balanced_accuracy": 0.6310763888888888,
+  "real_minus_permutation_macro_F1": 0.6386904761904761,
+  "real_minus_scrambled_balanced_accuracy": 0.5555555555555556,
+  "real_minus_scrambled_macro_F1": 0.607936507936508,
+  "run_success": {
+    "checks": {
+      "all_available_pairwise_margins_gt_0": true,
+      "balanced_accuracy_ge_0_80": true,
+      "macro_F1_ge_0_80": true,
+      "no_single_class_recall_lt_0_65": true,
+      "real_minus_permutation_balanced_accuracy_ge_0_25": true,
+      "real_minus_scrambled_balanced_accuracy_ge_0_25": true
+    },
+    "passed": true
+  },
+  "schema": "scope_static_s2d8c_controls_v1",
+  "scrambled_control_block": "scrambled_circuit_residualized_generator_coordinates_plus_invariants"
+}

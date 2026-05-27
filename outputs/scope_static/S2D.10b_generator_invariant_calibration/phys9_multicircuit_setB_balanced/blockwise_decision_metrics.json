@@ -1,0 +1,798 @@
+{
+  "confusion_matrix_by_stage": {
+    "circuit_residualized_generator_coordinates_plus_invariants": {
+      "mechanism_proxy": {
+        "labels": [
+          "M1",
+          "M7",
+          "M8",
+          "M10"
+        ],
+        "matrix": [
+          [
+            2,
+            0,
+            0,
+            1
+          ],
+          [
+            0,
+            0,
+            0,
+            3
+          ],
+          [
+            0,
+            0,
+            0,
+            3
+          ],
+          [
+            0,
+            0,
+            0,
+            0
+          ]
+        ]
+      },
+      "stage1": {
+        "labels": [
+          "hamiltonian",
+          "stochastic",
+          "affine_nonunital"
+        ],
+        "matrix": [
+          [
+            2,
+            0,
+            4
+          ],
+          [
+            0,
+            0,
+            3
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ]
+      },
+      "stage2_hamiltonian": {
+        "labels": [
+          "XX_YY",
+          "ZZ"
+        ],
+        "matrix": [
+          [
+            3,
+            0
+          ],
+          [
+            0,
+            3
+          ]
+        ]
+      }
+    },
+    "edge_circuit_residualized_generator_coordinates_plus_invariants": {
+      "mechanism_proxy": {
+        "labels": [
+          "M1",
+          "M7",
+          "M8",
+          "M10"
+        ],
+        "matrix": [
+          [
+            3,
+            0,
+            0,
+            0
+          ],
+          [
+            1,
+            0,
+            0,
+            2
+          ],
+          [
+            0,
+            0,
+            3,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0
+          ]
+        ]
+      },
+      "stage1": {
+        "labels": [
+          "hamiltonian",
+          "stochastic",
+          "affine_nonunital"
+        ],
+        "matrix": [
+          [
+            6,
+            0,
+            0
+          ],
+          [
+            1,
+            0,
+            2
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ]
+      },
+      "stage2_hamiltonian": {
+        "labels": [
+          "XX_YY",
+          "ZZ"
+        ],
+        "matrix": [
+          [
+            3,
+            0
+          ],
+          [
+            0,
+            3
+          ]
+        ]
+      }
+    },
+    "edge_residualized_generator_coordinates_plus_invariants": {
+      "mechanism_proxy": {
+        "labels": [
+          "M1",
+          "M7",
+          "M8",
+          "M10"
+        ],
+        "matrix": [
+          [
+            2,
+            0,
+            1,
+            0
+          ],
+          [
+            2,
+            0,
+            1,
+            0
+          ],
+          [
+            0,
+            0,
+            3,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0
+          ]
+        ]
+      },
+      "stage1": {
+        "labels": [
+          "hamiltonian",
+          "stochastic",
+          "affine_nonunital"
+        ],
+        "matrix": [
+          [
+            6,
+            0,
+            0
+          ],
+          [
+            3,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ]
+      },
+      "stage2_hamiltonian": {
+        "labels": [
+          "XX_YY",
+          "ZZ"
+        ],
+        "matrix": [
+          [
+            3,
+            0
+          ],
+          [
+            1,
+            2
+          ]
+        ]
+      }
+    },
+    "generator_coordinates_plus_invariants": {
+      "mechanism_proxy": {
+        "labels": [
+          "M1",
+          "M7",
+          "M8",
+          "M10"
+        ],
+        "matrix": [
+          [
+            1,
+            0,
+            0,
+            2
+          ],
+          [
+            0,
+            0,
+            0,
+            3
+          ],
+          [
+            0,
+            0,
+            0,
+            3
+          ],
+          [
+            0,
+            0,
+            0,
+            0
+          ]
+        ]
+      },
+      "stage1": {
+        "labels": [
+          "hamiltonian",
+          "stochastic",
+          "affine_nonunital"
+        ],
+        "matrix": [
+          [
+            1,
+            0,
+            5
+          ],
+          [
+            0,
+            0,
+            3
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ]
+      },
+      "stage2_hamiltonian": {
+        "labels": [
+          "XX_YY",
+          "ZZ"
+        ],
+        "matrix": [
+          [
+            3,
+            0
+          ],
+          [
+            0,
+            3
+          ]
+        ]
+      }
+    },
+    "ideal_schedule_residualized_generator_coordinates_plus_invariants": {
+      "mechanism_proxy": {
+        "labels": [
+          "M1",
+          "M7",
+          "M8",
+          "M10"
+        ],
+        "matrix": [
+          [
+            3,
+            0,
+            0,
+            0
+          ],
+          [
+            2,
+            0,
+            1,
+            0
+          ],
+          [
+            2,
+            0,
+            1,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0
+          ]
+        ]
+      },
+      "stage1": {
+        "labels": [
+          "hamiltonian",
+          "stochastic",
+          "affine_nonunital"
+        ],
+        "matrix": [
+          [
+            6,
+            0,
+            0
+          ],
+          [
+            3,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ]
+      },
+      "stage2_hamiltonian": {
+        "labels": [
+          "XX_YY",
+          "ZZ"
+        ],
+        "matrix": [
+          [
+            1,
+            2
+          ],
+          [
+            0,
+            3
+          ]
+        ]
+      }
+    }
+  },
+  "schema": "scope_static_s2d10_blockwise_decision_metrics_v1",
+  "stage_definitions": {
+    "stage1": "Hamiltonian-like vs stochastic-like vs affine/non-unital-like",
+    "stage2": "inside Hamiltonian: XX/YY vs ZZ",
+    "stage3": "inside stochastic: Pauli-like subtype",
+    "stage4": "relaxation/correlated relaxation subtype"
+  },
+  "variants": {
+    "circuit_residualized_generator_coordinates_plus_invariants": {
+      "confusion_matrix_by_stage": {
+        "mechanism_proxy": {
+          "labels": [
+            "M1",
+            "M7",
+            "M8",
+            "M10"
+          ],
+          "matrix": [
+            [
+              2,
+              0,
+              0,
+              1
+            ],
+            [
+              0,
+              0,
+              0,
+              3
+            ],
+            [
+              0,
+              0,
+              0,
+              3
+            ],
+            [
+              0,
+              0,
+              0,
+              0
+            ]
+          ]
+        },
+        "stage1": {
+          "labels": [
+            "hamiltonian",
+            "stochastic",
+            "affine_nonunital"
+          ],
+          "matrix": [
+            [
+              2,
+              0,
+              4
+            ],
+            [
+              0,
+              0,
+              3
+            ],
+            [
+              0,
+              0,
+              0
+            ]
+          ]
+        },
+        "stage2_hamiltonian": {
+          "labels": [
+            "XX_YY",
+            "ZZ"
+          ],
+          "matrix": [
+            [
+              3,
+              0
+            ],
+            [
+              0,
+              3
+            ]
+          ]
+        }
+      },
+      "mechanism_proxy_accuracy": 0.2222222222222222,
+      "stage1_block_accuracy": 0.2222222222222222,
+      "stage2_hamiltonian_axis_accuracy": 1.0
+    },
+    "edge_circuit_residualized_generator_coordinates_plus_invariants": {
+      "confusion_matrix_by_stage": {
+        "mechanism_proxy": {
+          "labels": [
+            "M1",
+            "M7",
+            "M8",
+            "M10"
+          ],
+          "matrix": [
+            [
+              3,
+              0,
+              0,
+              0
+            ],
+            [
+              1,
+              0,
+              0,
+              2
+            ],
+            [
+              0,
+              0,
+              3,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0
+            ]
+          ]
+        },
+        "stage1": {
+          "labels": [
+            "hamiltonian",
+            "stochastic",
+            "affine_nonunital"
+          ],
+          "matrix": [
+            [
+              6,
+              0,
+              0
+            ],
+            [
+              1,
+              0,
+              2
+            ],
+            [
+              0,
+              0,
+              0
+            ]
+          ]
+        },
+        "stage2_hamiltonian": {
+          "labels": [
+            "XX_YY",
+            "ZZ"
+          ],
+          "matrix": [
+            [
+              3,
+              0
+            ],
+            [
+              0,
+              3
+            ]
+          ]
+        }
+      },
+      "mechanism_proxy_accuracy": 0.6666666666666666,
+      "stage1_block_accuracy": 0.6666666666666666,
+      "stage2_hamiltonian_axis_accuracy": 1.0
+    },
+    "edge_residualized_generator_coordinates_plus_invariants": {
+      "confusion_matrix_by_stage": {
+        "mechanism_proxy": {
+          "labels": [
+            "M1",
+            "M7",
+            "M8",
+            "M10"
+          ],
+          "matrix": [
+            [
+              2,
+              0,
+              1,
+              0
+            ],
+            [
+              2,
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              0,
+              3,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0
+            ]
+          ]
+        },
+        "stage1": {
+          "labels": [
+            "hamiltonian",
+            "stochastic",
+            "affine_nonunital"
+          ],
+          "matrix": [
+            [
+              6,
+              0,
+              0
+            ],
+            [
+              3,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0
+            ]
+          ]
+        },
+        "stage2_hamiltonian": {
+          "labels": [
+            "XX_YY",
+            "ZZ"
+          ],
+          "matrix": [
+            [
+              3,
+              0
+            ],
+            [
+              1,
+              2
+            ]
+          ]
+        }
+      },
+      "mechanism_proxy_accuracy": 0.5555555555555556,
+      "stage1_block_accuracy": 0.6666666666666666,
+      "stage2_hamiltonian_axis_accuracy": 0.8333333333333334
+    },
+    "generator_coordinates_plus_invariants": {
+      "confusion_matrix_by_stage": {
+        "mechanism_proxy": {
+          "labels": [
+            "M1",
+            "M7",
+            "M8",
+            "M10"
+          ],
+          "matrix": [
+            [
+              1,
+              0,
+              0,
+              2
+            ],
+            [
+              0,
+              0,
+              0,
+              3
+            ],
+            [
+              0,
+              0,
+              0,
+              3
+            ],
+            [
+              0,
+              0,
+              0,
+              0
+            ]
+          ]
+        },
+        "stage1": {
+          "labels": [
+            "hamiltonian",
+            "stochastic",
+            "affine_nonunital"
+          ],
+          "matrix": [
+            [
+              1,
+              0,
+              5
+            ],
+            [
+              0,
+              0,
+              3
+            ],
+            [
+              0,
+              0,
+              0
+            ]
+          ]
+        },
+        "stage2_hamiltonian": {
+          "labels": [
+            "XX_YY",
+            "ZZ"
+          ],
+          "matrix": [
+            [
+              3,
+              0
+            ],
+            [
+              0,
+              3
+            ]
+          ]
+        }
+      },
+      "mechanism_proxy_accuracy": 0.1111111111111111,
+      "stage1_block_accuracy": 0.1111111111111111,
+      "stage2_hamiltonian_axis_accuracy": 1.0
+    },
+    "ideal_schedule_residualized_generator_coordinates_plus_invariants": {
+      "confusion_matrix_by_stage": {
+        "mechanism_proxy": {
+          "labels": [
+            "M1",
+            "M7",
+            "M8",
+            "M10"
+          ],
+          "matrix": [
+            [
+              3,
+              0,
+              0,
+              0
+            ],
+            [
+              2,
+              0,
+              1,
+              0
+            ],
+            [
+              2,
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0
+            ]
+          ]
+        },
+        "stage1": {
+          "labels": [
+            "hamiltonian",
+            "stochastic",
+            "affine_nonunital"
+          ],
+          "matrix": [
+            [
+              6,
+              0,
+              0
+            ],
+            [
+              3,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0
+            ]
+          ]
+        },
+        "stage2_hamiltonian": {
+          "labels": [
+            "XX_YY",
+            "ZZ"
+          ],
+          "matrix": [
+            [
+              1,
+              2
+            ],
+            [
+              0,
+              3
+            ]
+          ]
+        }
+      },
+      "mechanism_proxy_accuracy": 0.4444444444444444,
+      "stage1_block_accuracy": 0.6666666666666666,
+      "stage2_hamiltonian_axis_accuracy": 0.6666666666666666
+    }
+  }
+}

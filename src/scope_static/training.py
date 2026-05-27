@@ -70,7 +70,7 @@ def fit_field(
         loss.backward()
         optimizer.step()
         history.append(float(nll.detach().cpu()))
-    objective_audit = objective.audit_dict()
+    objective_audit = objective.audit_dict(scalar_bytes=_field_scalar_bytes(field))
     adapter_name = objective.adapter_name(resolved_backend or backend)
     return {
         "field": field,
@@ -92,6 +92,12 @@ def fit_field(
         "likelihood_gpu_batch_available": objective_audit["train_likelihood_gpu_batch_available"],
         "train_window_workload_audit": objective_audit.get("train_window_workload_audit", {}),
     }
+
+
+def _field_scalar_bytes(field: FaultLogitField) -> int:
+    for parameter in field.parameters():
+        return int(parameter.element_size())
+    return torch.empty((), dtype=torch.float64).element_size()
 
 
 def _validate_prepared_objective(

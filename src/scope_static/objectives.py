@@ -56,8 +56,12 @@ class LikelihoodObjective:
     def resolved_backend_for(self, logits: torch.Tensor) -> str:
         return resolve_likelihood_backend(logits, self.requested_backend)
 
-    def audit_dict(self) -> dict[str, object]:
-        local_audit = self._prepared_local_window_likelihood().audit_dict() if self.name == "local_exact" else None
+    def audit_dict(self, *, scalar_bytes: int = 8) -> dict[str, object]:
+        local_audit = (
+            self._prepared_local_window_likelihood().audit_dict(scalar_bytes=scalar_bytes)
+            if self.name == "local_exact"
+            else None
+        )
         result = {
             "train_requested_likelihood_backend": self.requested_backend,
             "train_observation_mode": self.observation_mode,
@@ -97,6 +101,7 @@ class LikelihoodObjective:
                             "max_active_faults_per_window",
                             "total_active_fault_window_pairs",
                             "unique_local_observation_patterns",
+                            "mean_cached_observations_per_window",
                         )
                         if key in local_audit
                     },

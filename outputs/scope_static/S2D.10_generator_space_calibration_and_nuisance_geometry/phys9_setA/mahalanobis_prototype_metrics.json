@@ -1,0 +1,145 @@
+{
+  "schema": "scope_static_s2d10_mahalanobis_prototype_metrics_v1",
+  "variants": {
+    "circuit_residualized_coordinates": {
+      "feature_names": [
+        "h_XX",
+        "h_YY",
+        "h_ZZ",
+        "gamma_XX",
+        "gamma_YY",
+        "gamma_ZZ",
+        "relaxation_pair",
+        "affine_ZI",
+        "affine_IZ",
+        "affine_ZZ",
+        "nonunital_norm_proxy"
+      ],
+      "real": {
+        "available": false,
+        "balanced_accuracy": 0.0,
+        "confusion_matrix": [],
+        "macro_F1": 0.0
+      },
+      "real_minus_scrambled_balanced_accuracy": 0.0,
+      "scrambled": {
+        "available": false,
+        "balanced_accuracy": 0.0,
+        "confusion_matrix": [],
+        "macro_F1": 0.0
+      }
+    },
+    "edge_circuit_residualized_coordinates": {
+      "feature_names": [
+        "h_XX",
+        "h_YY",
+        "h_ZZ",
+        "gamma_XX",
+        "gamma_YY",
+        "gamma_ZZ",
+        "relaxation_pair",
+        "affine_ZI",
+        "affine_IZ",
+        "affine_ZZ",
+        "nonunital_norm_proxy"
+      ],
+      "real": {
+        "available": false,
+        "balanced_accuracy": 0.0,
+        "confusion_matrix": [],
+        "macro_F1": 0.0
+      },
+      "real_minus_scrambled_balanced_accuracy": 0.0,
+      "scrambled": {
+        "available": false,
+        "balanced_accuracy": 0.0,
+        "confusion_matrix": [],
+        "macro_F1": 0.0
+      }
+    },
+    "edge_residualized_coordinates": {
+      "feature_names": [
+        "h_XX",
+        "h_YY",
+        "h_ZZ",
+        "gamma_XX",
+        "gamma_YY",
+        "gamma_ZZ",
+        "relaxation_pair",
+        "affine_ZI",
+        "affine_IZ",
+        "affine_ZZ",
+        "nonunital_norm_proxy"
+      ],
+      "real": {
+        "available": false,
+        "balanced_accuracy": 0.0,
+        "confusion_matrix": [],
+        "macro_F1": 0.0
+      },
+      "real_minus_scrambled_balanced_accuracy": 0.0,
+      "scrambled": {
+        "available": false,
+        "balanced_accuracy": 0.0,
+        "confusion_matrix": [],
+        "macro_F1": 0.0
+      }
+    },
+    "ideal_schedule_residualized_coordinates": {
+      "feature_names": [
+        "h_XX",
+        "h_YY",
+        "h_ZZ",
+        "gamma_XX",
+        "gamma_YY",
+        "gamma_ZZ",
+        "relaxation_pair",
+        "affine_ZI",
+        "affine_IZ",
+        "affine_ZZ",
+        "nonunital_norm_proxy"
+      ],
+      "real": {
+        "available": false,
+        "balanced_accuracy": 0.0,
+        "confusion_matrix": [],
+        "macro_F1": 0.0
+      },
+      "real_minus_scrambled_balanced_accuracy": 0.0,
+      "scrambled": {
+        "available": false,
+        "balanced_accuracy": 0.0,
+        "confusion_matrix": [],
+        "macro_F1": 0.0
+      }
+    },
+    "raw_generator_coordinates": {
+      "feature_names": [
+        "h_XX",
+        "h_YY",
+        "h_ZZ",
+        "gamma_XX",
+        "gamma_YY",
+        "gamma_ZZ",
+        "relaxation_pair",
+        "affine_ZI",
+        "affine_IZ",
+        "affine_ZZ",
+        "nonunital_norm_proxy"
+      ],
+      "real": {
+        "available": false,
+        "balanced_accuracy": 0.0,
+        "confusion_matrix": [],
+        "macro_F1": 0.0
+      },
+      "real_minus_scrambled_balanced_accuracy": 0.0,
+      "scrambled": {
+        "available": false,
+        "balanced_accuracy": 0.0,
+        "confusion_matrix": [],
+        "macro_F1": 0.0
+      }
+    }
+  }
+}

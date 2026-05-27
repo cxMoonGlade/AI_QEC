@@ -1,0 +1,9 @@
+{
+  "error_order_assumption": "post_ideal",
+  "evolution_rule": "v_out = R v_in",
+  "phys3_uses_exact_teacher_ptm": false,
+  "post_ideal_extraction": "R_error = R_est @ pinv(R_ideal)",
+  "ptm_definition": "R[row_out, col_in] = Tr(P_out E(P_in)) / d",
+  "schema": "scope_static_s2d9_ptm_convention_audit_v1",
+  "vector_convention": "column_vector"
+}

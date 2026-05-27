@@ -1,0 +1,289 @@
+{
+  "fold_train_test_mechanism_coverage": [
+    {
+      "test_circuit_id": 0,
+      "test_mechanisms": [
+        "M0",
+        "M1",
+        "M2",
+        "M3",
+        "M4",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "M12"
+      ],
+      "train_mechanisms": [
+        "M0",
+        "M1",
+        "M2",
+        "M3",
+        "M4",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "M12"
+      ]
+    },
+    {
+      "test_circuit_id": 1,
+      "test_mechanisms": [
+        "M0",
+        "M1",
+        "M2",
+        "M3",
+        "M4",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "M12"
+      ],
+      "train_mechanisms": [
+        "M0",
+        "M1",
+        "M2",
+        "M3",
+        "M4",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "M12"
+      ]
+    },
+    {
+      "test_circuit_id": 2,
+      "test_mechanisms": [
+        "M0",
+        "M1",
+        "M2",
+        "M3",
+        "M4",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "M12"
+      ],
+      "train_mechanisms": [
+        "M0",
+        "M1",
+        "M2",
+        "M3",
+        "M4",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9",
+        "M10",
+        "M11",
+        "M12"
+      ]
+    }
+  ],
+  "hard_rule": "each primary mechanism must appear in at least 2 distinct circuit_id groups; prefer >=3",
+  "mechanism_count_by_branch": {
+    "M0": {
+      "gate_process_branch": 3
+    },
+    "M1": {
+      "gate_process_branch": 3
+    },
+    "M10": {
+      "gate_process_branch": 3
+    },
+    "M11": {
+      "prep_reset_branch": 3
+    },
+    "M12": {
+      "gate_process_branch": 3
+    },
+    "M2": {
+      "gate_process_branch": 3
+    },
+    "M3": {
+      "gate_process_branch": 3
+    },
+    "M4": {
+      "gate_process_branch": 3
+    },
+    "M5": {
+      "readout_branch": 27
+    },
+    "M6": {
+      "gate_process_branch": 3
+    },
+    "M7": {
+      "gate_process_branch": 3
+    },
+    "M8": {
+      "gate_process_branch": 3
+    },
+    "M9": {
+      "gate_process_branch": 3
+    }
+  },
+  "mechanism_count_by_circuit_id": {
+    "M0": {
+      "0": 1,
+      "1": 1,
+      "2": 1
+    },
+    "M1": {
+      "0": 1,
+      "1": 1,
+      "2": 1
+    },
+    "M10": {
+      "0": 1,
+      "1": 1,
+      "2": 1
+    },
+    "M11": {
+      "0": 1,
+      "1": 1,
+      "2": 1
+    },
+    "M12": {
+      "0": 1,
+      "1": 1,
+      "2": 1
+    },
+    "M2": {
+      "0": 1,
+      "1": 1,
+      "2": 1
+    },
+    "M3": {
+      "0": 1,
+      "1": 1,
+      "2": 1
+    },
+    "M4": {
+      "0": 1,
+      "1": 1,
+      "2": 1
+    },
+    "M5": {
+      "0": 9,
+      "1": 9,
+      "2": 9
+    },
+    "M6": {
+      "0": 1,
+      "1": 1,
+      "2": 1
+    },
+    "M7": {
+      "0": 1,
+      "1": 1,
+      "2": 1
+    },
+    "M8": {
+      "0": 1,
+      "1": 1,
+      "2": 1
+    },
+    "M9": {
+      "0": 1,
+      "1": 1,
+      "2": 1
+    }
+  },
+  "mechanism_count_by_qubit_pair": {
+    "M0": {
+      "0": 1,
+      "1": 1,
+      "2": 1
+    },
+    "M1": {
+      "0-1": 1,
+      "1-2": 1,
+      "2-3": 1
+    },
+    "M10": {
+      "3-4": 1,
+      "4-5": 1,
+      "5-6": 1
+    },
+    "M11": {
+      "6": 1,
+      "7": 1,
+      "8": 1
+    },
+    "M12": {
+      "0": 1,
+      "7": 1,
+      "8": 1
+    },
+    "M2": {
+      "2": 1,
+      "3": 1,
+      "4": 1
+    },
+    "M3": {
+      "1": 1,
+      "2": 1,
+      "3": 1
+    },
+    "M4": {
+      "3": 1,
+      "4": 1,
+      "5": 1
+    },
+    "M5": {
+      "0": 3,
+      "1": 3,
+      "2": 3,
+      "3": 3,
+      "4": 3,
+      "5": 3,
+      "6": 3,
+      "7": 3,
+      "8": 3
+    },
+    "M6": {
+      "4": 1,
+      "5": 1,
+      "6": 1
+    },
+    "M7": {
+      "1-2": 1,
+      "2-3": 1,
+      "3-4": 1
+    },
+    "M8": {
+      "2-3": 1,
+      "3-4": 1,
+      "4-5": 1
+    },
+    "M9": {
+      "5": 1,
+      "6": 1,
+      "7": 1
+    }
+  },
+  "min_distinct_circuits_per_mechanism": 3,
+  "min_distinct_locations_per_mechanism": 3,
+  "schema": "scope_static_s2d11_grouped_fold_coverage_audit_v1",
+  "valid_grouped_generalization": true
+}

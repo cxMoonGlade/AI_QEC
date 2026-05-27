@@ -1,0 +1,893 @@
+{
+  "runs": {
+    "phys9_multicircuit_setD_balanced": {
+      "distance_margin_definition": "For distance heads, pairwise_margin(a,b) = mean over true class a rows of distance_to_b(x)-distance_to_a(x), and true class b rows of distance_to_a(x)-distance_to_b(x). Positive means the nearest prototype is closer to the correct class.",
+      "head_summaries": {
+        "typed_linear_head": {
+          "balanced_accuracy": 0.8689458689458689,
+          "confusion_matrix": [
+            [
+              2,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              0,
+              1,
+              0,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              0,
+              0,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              0,
+              0,
+              0,
+              3,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              3,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              26,
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              3,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              3,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              3,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              3,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              3,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              3,
+              0
+            ],
+            [
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              2
+            ]
+          ],
+          "confusion_matrix_labels": [
+            "M0",
+            "M1",
+            "M2",
+            "M3",
+            "M4",
+            "M5",
+            "M6",
+            "M7",
+            "M8",
+            "M9",
+            "M10",
+            "M11",
+            "M12"
+          ],
+          "macro_F1": 0.8613691340106434,
+          "min_class_recall": 0.3333333333333333,
+          "pairwise_margins": {
+            "M1/M7": {
+              "available": true,
+              "margin": 0.09247947368855618
+            },
+            "M1/M8": {
+              "available": true,
+              "margin": 0.10393514449816559
+            },
+            "M10/M1": {
+              "available": true,
+              "margin": 0.09928214116240928
+            },
+            "M10/M7": {
+              "available": true,
+              "margin": 0.09931200086305435
+            },
+            "M10/M8": {
+              "available": true,
+              "margin": 0.10886880032562485
+            },
+            "M11/M4": {
+              "available": true,
+              "margin": 0.10682648619033118
+            },
+            "M11/M5": {
+              "available": true,
+              "margin": 0.1143290995032676
+            },
+            "M7/M8": {
+              "available": true,
+              "margin": 0.10727513892686931
+            },
+            "definition": "For classifier/prototype score heads, pairwise_margin(a,b) is the mean over true a rows of score_a(x)-score_b(x), plus true b rows of score_b(x)-score_a(x). Positive means the model prefers the correct class."
+          },
+          "per_class_recall": {
+            "M0": 0.6666666666666666,
+            "M1": 0.3333333333333333,
+            "M10": 1.0,
+            "M11": 1.0,
+            "M12": 0.6666666666666666,
+            "M2": 0.6666666666666666,
+            "M3": 1.0,
+            "M4": 1.0,
+            "M5": 0.9629629629629629,
+            "M6": 1.0,
+            "M7": 1.0,
+            "M8": 1.0,
+            "M9": 1.0
+          },
+          "support": {
+            "M0": 3,
+            "M1": 3,
+            "M10": 3,
+            "M11": 3,
+            "M12": 3,
+            "M2": 3,
+            "M3": 3,
+            "M4": 3,
+            "M5": 27,
+            "M6": 3,
+            "M7": 3,
+            "M8": 3,
+            "M9": 3
+          }
+        },
+        "typed_mahalanobis_prototype_head": {
+          "balanced_accuracy": 0.846153846153846,
+          "confusion_matrix": [
+            [
+              0,
+              0,
+              0,
+              0,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              0,
+              3,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              3,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              3,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              2,
+              0,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              27,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              3,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              3,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              3,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0,
+              2,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              3,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              3,
+              0
+            ],
+            [
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              2
+            ]
+          ],
+          "confusion_matrix_labels": [
+            "M0",
+            "M1",
+            "M2",
+            "M3",
+            "M4",
+            "M5",
+            "M6",
+            "M7",
+            "M8",
+            "M9",
+            "M10",
+            "M11",
+            "M12"
+          ],
+          "macro_F1": 0.8223443223443223,
+          "min_class_recall": 0.0,
+          "pairwise_margins": {
+            "M1/M7": {
+              "available": true,
+              "margin": 660.928688825209
+            },
+            "M1/M8": {
+              "available": true,
+              "margin": 1018.451896223785
+            },
+            "M10/M1": {
+              "available": true,
+              "margin": 1013.8556528136004
+            },
+            "M10/M7": {
+              "available": true,
+              "margin": 336.77740187657724
+            },
+            "M10/M8": {
+              "available": true,
+              "margin": 1061.9001642951587
+            },
+            "M11/M4": {
+              "available": true,
+              "margin": 561.6794162682519
+            },
+            "M11/M5": {
+              "available": true,
+              "margin": 546.2424719436525
+            },
+            "M7/M8": {
+              "available": true,
+              "margin": 812.2991899463476
+            },
+            "definition": "For distance heads, pairwise_margin(a,b) is the mean over true a rows of distance_to_b(x)-distance_to_a(x), plus true b rows of distance_to_a(x)-distance_to_b(x). Positive means the correct prototype is closer."
+          },
+          "per_class_recall": {
+            "M0": 0.0,
+            "M1": 1.0,
+            "M10": 1.0,
+            "M11": 1.0,
+            "M12": 0.6666666666666666,
+            "M2": 1.0,
+            "M3": 1.0,
+            "M4": 0.6666666666666666,
+            "M5": 1.0,
+            "M6": 1.0,
+            "M7": 1.0,
+            "M8": 1.0,
+            "M9": 0.6666666666666666
+          },
+          "support": {
+            "M0": 3,
+            "M1": 3,
+            "M10": 3,
+            "M11": 3,
+            "M12": 3,
+            "M2": 3,
+            "M3": 3,
+            "M4": 3,
+            "M5": 27,
+            "M6": 3,
+            "M7": 3,
+            "M8": 3,
+            "M9": 3
+          }
+        },
+        "typed_prototype_head": {
+          "balanced_accuracy": 0.7179487179487178,
+          "confusion_matrix": [
+            [
+              0,
+              0,
+              0,
+              0,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              0,
+              3,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              2,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              3,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0,
+              2,
+              0,
+              0,
+              0
+            ],
+            [
+              2,
+              0,
+              0,
+              0,
+              0,
+              18,
+              3,
+              0,
+              0,
+              0,
+              0,
+              0,
+              4
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              3,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              3,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              3,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0,
+              2,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              3,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              2,
+              1
+            ],
+            [
+              1,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "confusion_matrix_labels": [
+            "M0",
+            "M1",
+            "M2",
+            "M3",
+            "M4",
+            "M5",
+            "M6",
+            "M7",
+            "M8",
+            "M9",
+            "M10",
+            "M11",
+            "M12"
+          ],
+          "macro_F1": 0.6888278388278388,
+          "min_class_recall": 0.0,
+          "pairwise_margins": {
+            "M1/M7": {
+              "available": true,
+              "margin": 3.756817773677337
+            },
+            "M1/M8": {
+              "available": true,
+              "margin": 5.563516918113938
+            },
+            "M10/M1": {
+              "available": true,
+              "margin": 4.5846910962964555
+            },
+            "M10/M7": {
+              "available": true,
+              "margin": 3.154603966638209
+            },
+            "M10/M8": {
+              "available": true,
+              "margin": 6.201493597704286
+            },
+            "M11/M4": {
+              "available": true,
+              "margin": 4.389468371732978
+            },
+            "M11/M5": {
+              "available": true,
+              "margin": 4.440797701294295
+            },
+            "M7/M8": {
+              "available": true,
+              "margin": 5.6238589670286245
+            },
+            "definition": "For distance heads, pairwise_margin(a,b) is the mean over true a rows of distance_to_b(x)-distance_to_a(x), plus true b rows of distance_to_a(x)-distance_to_b(x). Positive means the correct prototype is closer."
+          },
+          "per_class_recall": {
+            "M0": 0.0,
+            "M1": 1.0,
+            "M10": 1.0,
+            "M11": 0.6666666666666666,
+            "M12": 0.3333333333333333,
+            "M2": 0.6666666666666666,
+            "M3": 1.0,
+            "M4": 0.3333333333333333,
+            "M5": 0.6666666666666666,
+            "M6": 1.0,
+            "M7": 1.0,
+            "M8": 1.0,
+            "M9": 0.6666666666666666
+          },
+          "support": {
+            "M0": 3,
+            "M1": 3,
+            "M10": 3,
+            "M11": 3,
+            "M12": 3,
+            "M2": 3,
+            "M3": 3,
+            "M4": 3,
+            "M5": 27,
+            "M6": 3,
+            "M7": 3,
+            "M8": 3,
+            "M9": 3
+          }
+        }
+      },
+      "primary_linear_pairwise_margins": {
+        "M1/M7": {
+          "available": true,
+          "margin": 0.09247947368855618
+        },
+        "M1/M8": {
+          "available": true,
+          "margin": 0.10393514449816559
+        },
+        "M10/M1": {
+          "available": true,
+          "margin": 0.09928214116240928
+        },
+        "M10/M7": {
+          "available": true,
+          "margin": 0.09931200086305435
+        },
+        "M10/M8": {
+          "available": true,
+          "margin": 0.10886880032562485
+        },
+        "M11/M4": {
+          "available": true,
+          "margin": 0.10682648619033118
+        },
+        "M11/M5": {
+          "available": true,
+          "margin": 0.1143290995032676
+        },
+        "M7/M8": {
+          "available": true,
+          "margin": 0.10727513892686931
+        },
+        "definition": "For classifier/prototype score heads, pairwise_margin(a,b) is the mean over true a rows of score_a(x)-score_b(x), plus true b rows of score_b(x)-score_a(x). Positive means the model prefers the correct class."
+      },
+      "schema": "scope_static_s2d11_pairwise_margin_report_v1",
+      "score_margin_definition": "pairwise_margin(a,b) = mean over true class a rows of score_a(x)-score_b(x), and true class b rows of score_b(x)-score_a(x). Positive means the head prefers the correct class."
+    }
+  },
+  "schema": "scope_static_s2d11_pairwise_margin_report_aggregate_v1"
+}

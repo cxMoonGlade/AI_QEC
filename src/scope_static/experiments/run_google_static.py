@@ -404,7 +404,7 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument(
         "--cuda-kernel-variant",
         choices=["dp", "spectral_shadow", "spectral", "auto"],
-        default="dp",
+        default="auto",
     )
     parser.add_argument("--spectral-min-abs-factor", type=float, default=1e-6)
     parser.add_argument("--spectral-memory-cap-mib", type=int, default=1024)
