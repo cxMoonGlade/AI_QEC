@@ -1,0 +1,2486 @@
+{
+  "echo_roles": [
+    "no_echo",
+    "echo_left",
+    "echo_right",
+    "echo_both"
+  ],
+  "edge_coloring_rule": "even_odd_left_edge_index_coloring",
+  "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+  "feature_names": [
+    "no_echo_zz_mean",
+    "no_echo_zz_connected",
+    "no_echo_zz_normalized_correlation",
+    "no_echo_zz_standard_error",
+    "no_echo_zz_z_score",
+    "echo_left_zz_mean",
+    "echo_left_zz_connected",
+    "echo_left_zz_normalized_correlation",
+    "echo_left_zz_standard_error",
+    "echo_left_zz_z_score",
+    "echo_right_zz_mean",
+    "echo_right_zz_connected",
+    "echo_right_zz_normalized_correlation",
+    "echo_right_zz_standard_error",
+    "echo_right_zz_z_score",
+    "echo_both_zz_mean",
+    "echo_both_zz_connected",
+    "echo_both_zz_normalized_correlation",
+    "echo_both_zz_standard_error",
+    "echo_both_zz_z_score",
+    "no_echo_minus_echo_left_mean",
+    "no_echo_minus_echo_left_connected",
+    "no_echo_minus_echo_left_normalized_correlation",
+    "no_echo_minus_echo_right_mean",
+    "no_echo_minus_echo_right_connected",
+    "no_echo_minus_echo_right_normalized_correlation",
+    "no_echo_minus_echo_both_mean",
+    "no_echo_minus_echo_both_connected",
+    "no_echo_minus_echo_both_normalized_correlation",
+    "echo_left_minus_echo_right_mean",
+    "echo_left_minus_echo_right_connected",
+    "echo_left_minus_echo_right_normalized_correlation",
+    "echo_both_minus_no_echo_mean",
+    "echo_both_minus_no_echo_connected",
+    "echo_both_minus_no_echo_normalized_correlation",
+    "echo_contrast_norm_connected",
+    "echo_contrast_norm_mean",
+    "echo_response_variance_connected",
+    "echo_response_variance_normalized_correlation",
+    "echo_signed_left_right_asymmetry_connected",
+    "no_echo_over_echo_both_connected"
+  ],
+  "real_echo_response_audit": {
+    "rzz_location_records": [
+      {
+        "contrast_features": {
+          "echo_both_minus_no_echo_connected": 3.1200000000009e-05,
+          "echo_both_minus_no_echo_mean": -0.00019999999999997797,
+          "echo_both_minus_no_echo_normalized_correlation": 0.0002518823312056143,
+          "echo_contrast_norm_connected": 0.002310083867568429,
+          "echo_contrast_norm_mean": 0.008378544026261396,
+          "echo_left_minus_echo_right_connected": -0.0020183999999999758,
+          "echo_left_minus_echo_right_mean": -0.0023999999999999577,
+          "echo_left_minus_echo_right_normalized_correlation": -0.017982793150030093,
+          "echo_response_variance_connected": 9.1172586239998e-07,
+          "echo_response_variance_normalized_correlation": 7.160057803888163e-05,
+          "echo_signed_left_right_asymmetry_connected": -0.0020183999999999758,
+          "no_echo_minus_echo_both_connected": -3.1200000000009e-05,
+          "no_echo_minus_echo_both_mean": 0.00019999999999997797,
+          "no_echo_minus_echo_both_normalized_correlation": -0.0002518823312056143,
+          "no_echo_minus_echo_left_connected": -0.00027504000000000417,
+          "no_echo_minus_echo_left_mean": -0.0046000000000000485,
+          "no_echo_minus_echo_left_normalized_correlation": -0.0023005718636493473,
+          "no_echo_minus_echo_right_connected": -0.00229343999999998,
+          "no_echo_minus_echo_right_mean": -0.007000000000000006,
+          "no_echo_minus_echo_right_normalized_correlation": -0.02028336501367944,
+          "no_echo_over_echo_both_connected": -1.0751318539158337
+        },
+        "edge_parity": "even",
+        "location_id": 1,
+        "qubits": [
+          0,
+          1
+        ],
+        "role_stats": {
+          "echo_both": {
+            "available": true,
+            "connected": -0.00040096000000000576,
+            "edge_parity": "even",
+            "mean": 0.8822,
+            "normalized_correlation": -0.003445129405085049,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 6,
+                "probe_name": "c0:rzz_echo_both_even"
+              }
+            ],
+            "role": "echo_both",
+            "standard_error": 0.004708748878417705,
+            "z_score": 187.35337618948333
+          },
+          "echo_left": {
+            "available": true,
+            "connected": -0.00015712000000001058,
+            "edge_parity": "even",
+            "mean": 0.887,
+            "normalized_correlation": -0.0013964398726413162,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 4,
+                "probe_name": "c0:rzz_echo_left_even"
+              }
+            ],
+            "role": "echo_left",
+            "standard_error": 0.004617694229807772,
+            "z_score": 192.08720973214471
+          },
+          "echo_right": {
+            "available": true,
+            "connected": 0.0018612799999999652,
+            "edge_parity": "even",
+            "mean": 0.8894,
+            "normalized_correlation": 0.016586353277388777,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 5,
+                "probe_name": "c0:rzz_echo_right_even"
+              }
+            ],
+            "role": "echo_right",
+            "standard_error": 0.004571297846345171,
+            "z_score": 194.5618137114146
+          },
+          "no_echo": {
+            "available": true,
+            "connected": -0.00043216000000001475,
+            "edge_parity": "even",
+            "mean": 0.8824,
+            "normalized_correlation": -0.0036970117362906635,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 3,
+                "probe_name": "c0:rzz_no_echo"
+              }
+            ],
+            "role": "no_echo",
+            "standard_error": 0.004704999893730074,
+            "z_score": 187.54516895439133
+          }
+        }
+      },
+      {
+        "contrast_features": {
+          "echo_both_minus_no_echo_connected": 0.001193439999999879,
+          "echo_both_minus_no_echo_mean": 0.0010000000000000009,
+          "echo_both_minus_no_echo_normalized_correlation": 0.00860288472949236,
+          "echo_contrast_norm_connected": 0.0029441781772166988,
+          "echo_contrast_norm_mean": 0.008385702117294681,
+          "echo_left_minus_echo_right_connected": -0.0015601599999998106,
+          "echo_left_minus_echo_right_mean": 0.0042000000000000925,
+          "echo_left_minus_echo_right_normalized_correlation": -0.008164993340805365,
+          "echo_response_variance_connected": 8.067439423998939e-07,
+          "echo_response_variance_normalized_correlation": 4.658982361669565e-05,
+          "echo_signed_left_right_asymmetry_connected": -0.0015601599999998106,
+          "no_echo_minus_echo_both_connected": -0.001193439999999879,
+          "no_echo_minus_echo_both_mean": -0.0010000000000000009,
+          "no_echo_minus_echo_both_normalized_correlation": -0.00860288472949236,
+          "no_echo_minus_echo_left_connected": -0.0009558400000000411,
+          "no_echo_minus_echo_left_mean": -0.007600000000000051,
+          "no_echo_minus_echo_left_normalized_correlation": -0.010990246614131144,
+          "no_echo_minus_echo_right_connected": -0.0025159999999998517,
+          "no_echo_minus_echo_right_mean": -0.0033999999999999586,
+          "no_echo_minus_echo_right_normalized_correlation": -0.01915523995493651,
+          "no_echo_over_echo_both_connected": 0.8813650900856275
+        },
+        "edge_parity": "odd",
+        "location_id": 15,
+        "qubits": [
+          1,
+          2
+        ],
+        "role_stats": {
+          "echo_both": {
+            "available": true,
+            "connected": 0.010067199999999943,
+            "edge_parity": "odd",
+            "mean": 0.871,
+            "normalized_correlation": 0.07288713092478,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 9,
+                "probe_name": "c0:rzz_echo_both_odd"
+              }
+            ],
+            "role": "echo_both",
+            "standard_error": 0.004912830141578273,
+            "z_score": 177.29088425601185
+          },
+          "echo_left": {
+            "available": true,
+            "connected": 0.009829600000000105,
+            "edge_parity": "odd",
+            "mean": 0.8776,
+            "normalized_correlation": 0.07527449280941878,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 7,
+                "probe_name": "c0:rzz_echo_left_odd"
+              }
+            ],
+            "role": "echo_left",
+            "standard_error": 0.004793936169787828,
+            "z_score": 183.06459846728438
+          },
+          "echo_right": {
+            "available": true,
+            "connected": 0.011389759999999916,
+            "edge_parity": "odd",
+            "mean": 0.8734,
+            "normalized_correlation": 0.08343948615022415,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 8,
+                "probe_name": "c0:rzz_echo_right_odd"
+              }
+            ],
+            "role": "echo_right",
+            "standard_error": 0.004870035318147088,
+            "z_score": 179.34161519229067
+          },
+          "no_echo": {
+            "available": true,
+            "connected": 0.008873760000000064,
+            "edge_parity": "odd",
+            "mean": 0.87,
+            "normalized_correlation": 0.06428424619528764,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 3,
+                "probe_name": "c0:rzz_no_echo"
+              }
+            ],
+            "role": "no_echo",
+            "standard_error": 0.00493051721424842,
+            "z_score": 176.45207636347698
+          }
+        }
+      },
+      {
+        "contrast_features": {
+          "echo_both_minus_no_echo_connected": -0.0014411199999999624,
+          "echo_both_minus_no_echo_mean": -0.022800000000000042,
+          "echo_both_minus_no_echo_normalized_correlation": -0.01036025369002156,
+          "echo_contrast_norm_connected": 0.0026196557086761523,
+          "echo_contrast_norm_mean": 0.023031283073246304,
+          "echo_left_minus_echo_right_connected": 0.0007073600000000457,
+          "echo_left_minus_echo_right_mean": 0.0026000000000000467,
+          "echo_left_minus_echo_right_normalized_correlation": 0.0064808538764195706,
+          "echo_response_variance_connected": 1.561451425599905e-06,
+          "echo_response_variance_normalized_correlation": 9.75834590766654e-05,
+          "echo_signed_left_right_asymmetry_connected": 0.0007073600000000457,
+          "no_echo_minus_echo_both_connected": 0.0014411199999999624,
+          "no_echo_minus_echo_both_mean": 0.022800000000000042,
+          "no_echo_minus_echo_both_normalized_correlation": 0.01036025369002156,
+          "no_echo_minus_echo_left_connected": -0.0018595999999999613,
+          "no_echo_minus_echo_left_mean": -0.0031999999999999806,
+          "no_echo_minus_echo_left_normalized_correlation": -0.015827282801641862,
+          "no_echo_minus_echo_right_connected": -0.0011522399999999156,
+          "no_echo_minus_echo_right_mean": -0.0005999999999999339,
+          "no_echo_minus_echo_right_normalized_correlation": -0.009346428925222293,
+          "no_echo_over_echo_both_connected": 0.3892720897075785
+        },
+        "edge_parity": "even",
+        "location_id": 16,
+        "qubits": [
+          2,
+          3
+        ],
+        "role_stats": {
+          "echo_both": {
+            "available": true,
+            "connected": -0.0010370399999999336,
+            "edge_parity": "even",
+            "mean": 0.8518,
+            "normalized_correlation": -0.007056801076888694,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 6,
+                "probe_name": "c0:rzz_echo_both_even"
+              }
+            ],
+            "role": "echo_both",
+            "standard_error": 0.005238671205563487,
+            "z_score": 162.5984847255513
+          },
+          "echo_left": {
+            "available": true,
+            "connected": 0.00226367999999999,
+            "edge_parity": "even",
+            "mean": 0.8778,
+            "normalized_correlation": 0.01913073541477473,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 4,
+                "probe_name": "c0:rzz_echo_left_even"
+              }
+            ],
+            "role": "echo_left",
+            "standard_error": 0.0047902730611104,
+            "z_score": 183.24633873721663
+          },
+          "echo_right": {
+            "available": true,
+            "connected": 0.0015563199999999444,
+            "edge_parity": "even",
+            "mean": 0.8752,
+            "normalized_correlation": 0.01264988153835516,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 5,
+                "probe_name": "c0:rzz_echo_right_even"
+              }
+            ],
+            "role": "echo_right",
+            "standard_error": 0.00483761263434765,
+            "z_score": 180.9156842749193
+          },
+          "no_echo": {
+            "available": true,
+            "connected": 0.00040408000000002886,
+            "edge_parity": "even",
+            "mean": 0.8746,
+            "normalized_correlation": 0.0033034526131328675,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 3,
+                "probe_name": "c0:rzz_no_echo"
+              }
+            ],
+            "role": "no_echo",
+            "standard_error": 0.004848451711629187,
+            "z_score": 180.38748285400888
+          }
+        }
+      },
+      {
+        "contrast_features": {
+          "echo_both_minus_no_echo_connected": 0.041324560000000066,
+          "echo_both_minus_no_echo_mean": -0.0036000000000000476,
+          "echo_both_minus_no_echo_normalized_correlation": 0.2362884795352621,
+          "echo_contrast_norm_connected": 0.041358460561312066,
+          "echo_contrast_norm_mean": 0.011601724009818567,
+          "echo_left_minus_echo_right_connected": 0.0016266799999999915,
+          "echo_left_minus_echo_right_mean": -0.010199999999999987,
+          "echo_left_minus_echo_right_normalized_correlation": 0.011867746271827358,
+          "echo_response_variance_connected": 0.00032960016993950067,
+          "echo_response_variance_normalized_correlation": 0.010878803302152788,
+          "echo_signed_left_right_asymmetry_connected": 0.0016266799999999915,
+          "no_echo_minus_echo_both_connected": -0.041324560000000066,
+          "no_echo_minus_echo_both_mean": 0.0036000000000000476,
+          "no_echo_minus_echo_both_normalized_correlation": -0.2362884795352621,
+          "no_echo_minus_echo_left_connected": 4.687999999997139e-05,
+          "no_echo_minus_echo_left_mean": -0.0008000000000000229,
+          "no_echo_minus_echo_left_normalized_correlation": 0.0005359662660335655,
+          "no_echo_minus_echo_right_connected": 0.0016735599999999629,
+          "no_echo_minus_echo_right_mean": -0.01100000000000001,
+          "no_echo_minus_echo_right_normalized_correlation": 0.012403712537860923,
+          "no_echo_over_echo_both_connected": 0.07153519378758097
+        },
+        "edge_parity": "odd",
+        "location_id": 18,
+        "qubits": [
+          3,
+          4
+        ],
+        "role_stats": {
+          "echo_both": {
+            "available": true,
+            "connected": 0.04450856000000003,
+            "edge_parity": "odd",
+            "mean": 0.8734,
+            "normalized_correlation": 0.2622560046077339,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 9,
+                "probe_name": "c0:rzz_echo_both_odd"
+              }
+            ],
+            "role": "echo_both",
+            "standard_error": 0.004870035318147088,
+            "z_score": 179.34161519229067
+          },
+          "echo_left": {
+            "available": true,
+            "connected": 0.0031371199999999932,
+            "edge_parity": "odd",
+            "mean": 0.8778,
+            "normalized_correlation": 0.025431558806438243,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 7,
+                "probe_name": "c0:rzz_echo_left_odd"
+              }
+            ],
+            "role": "echo_left",
+            "standard_error": 0.0047902730611104,
+            "z_score": 183.24633873721663
+          },
+          "echo_right": {
+            "available": true,
+            "connected": 0.0015104400000000018,
+            "edge_parity": "odd",
+            "mean": 0.888,
+            "normalized_correlation": 0.013563812534610885,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 8,
+                "probe_name": "c0:rzz_echo_right_odd"
+              }
+            ],
+            "role": "echo_right",
+            "standard_error": 0.004598434516223972,
+            "z_score": 193.10919767738386
+          },
+          "no_echo": {
+            "available": true,
+            "connected": 0.0031839999999999646,
+            "edge_parity": "odd",
+            "mean": 0.877,
+            "normalized_correlation": 0.025967525072471808,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 3,
+                "probe_name": "c0:rzz_no_echo"
+              }
+            ],
+            "role": "no_echo",
+            "standard_error": 0.004804903745133715,
+            "z_score": 182.52186651776393
+          }
+        }
+      },
+      {
+        "contrast_features": {
+          "echo_both_minus_no_echo_connected": -0.00048455999999996724,
+          "echo_both_minus_no_echo_mean": -0.0021999999999999797,
+          "echo_both_minus_no_echo_normalized_correlation": -0.0037089288637217645,
+          "echo_contrast_norm_connected": 0.0034916411765242754,
+          "echo_contrast_norm_mean": 0.00878862901708798,
+          "echo_left_minus_echo_right_connected": 0.001755759999999995,
+          "echo_left_minus_echo_right_mean": 0.0043999999999999595,
+          "echo_left_minus_echo_right_normalized_correlation": 0.01463479198828736,
+          "echo_response_variance_connected": 2.0077343119999545e-06,
+          "echo_response_variance_normalized_correlation": 0.0001319769462361931,
+          "echo_signed_left_right_asymmetry_connected": 0.001755759999999995,
+          "no_echo_minus_echo_both_connected": 0.00048455999999996724,
+          "no_echo_minus_echo_both_mean": 0.0021999999999999797,
+          "no_echo_minus_echo_both_normalized_correlation": 0.0037089288637217645,
+          "no_echo_minus_echo_left_connected": -0.0031599199999999827,
+          "no_echo_minus_echo_left_mean": -0.007800000000000029,
+          "no_echo_minus_echo_left_normalized_correlation": -0.02580847505505974,
+          "no_echo_minus_echo_right_connected": -0.0014041599999999876,
+          "no_echo_minus_echo_right_mean": -0.0034000000000000696,
+          "no_echo_minus_echo_right_normalized_correlation": -0.011173683066772378,
+          "no_echo_over_echo_both_connected": -0.7841686965489166
+        },
+        "edge_parity": "odd",
+        "location_id": 20,
+        "qubits": [
+          1,
+          2
+        ],
+        "role_stats": {
+          "echo_both": {
+            "available": true,
+            "connected": -0.002248719999999982,
+            "edge_parity": "odd",
+            "mean": 0.8702,
+            "normalized_correlation": -0.01783745391010306,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 19,
+                "probe_name": "c1:rzz_echo_both_odd"
+              }
+            ],
+            "role": "echo_both",
+            "standard_error": 0.004926986502924481,
+            "z_score": 176.61911585986297
+          },
+          "echo_left": {
+            "available": true,
+            "connected": 0.0013957599999999681,
+            "edge_parity": "odd",
+            "mean": 0.8802,
+            "normalized_correlation": 0.011679950008678443,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 17,
+                "probe_name": "c1:rzz_echo_left_odd"
+              }
+            ],
+            "role": "echo_left",
+            "standard_error": 0.004746029498433401,
+            "z_score": 185.46028849811023
+          },
+          "echo_right": {
+            "available": true,
+            "connected": -0.00036000000000002697,
+            "edge_parity": "odd",
+            "mean": 0.8758,
+            "normalized_correlation": -0.0029548419796089167,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 18,
+                "probe_name": "c1:rzz_echo_right_odd"
+              }
+            ],
+            "role": "echo_right",
+            "standard_error": 0.004826741758163574,
+            "z_score": 181.44745335064596
+          },
+          "no_echo": {
+            "available": true,
+            "connected": -0.0017641600000000146,
+            "edge_parity": "odd",
+            "mean": 0.8724,
+            "normalized_correlation": -0.014128525046381294,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 13,
+                "probe_name": "c1:rzz_no_echo"
+              }
+            ],
+            "role": "no_echo",
+            "standard_error": 0.004887926349690634,
+            "z_score": 178.48059434349207
+          }
+        }
+      },
+      {
+        "contrast_features": {
+          "echo_both_minus_no_echo_connected": 0.0020724000000000853,
+          "echo_both_minus_no_echo_mean": -0.0023999999999999577,
+          "echo_both_minus_no_echo_normalized_correlation": 0.01276736107651634,
+          "echo_contrast_norm_connected": 0.0046182806411045165,
+          "echo_contrast_norm_mean": 0.0056356011214421615,
+          "echo_left_minus_echo_right_connected": 0.00097920000000018,
+          "echo_left_minus_echo_right_mean": 0.0024000000000000687,
+          "echo_left_minus_echo_right_normalized_correlation": 0.00951126955101221,
+          "echo_response_variance_connected": 1.5038454600000657e-06,
+          "echo_response_variance_normalized_correlation": 9.966912683200471e-05,
+          "echo_signed_left_right_asymmetry_connected": 0.00097920000000018,
+          "no_echo_minus_echo_both_connected": -0.0020724000000000853,
+          "no_echo_minus_echo_both_mean": 0.0023999999999999577,
+          "no_echo_minus_echo_both_normalized_correlation": -0.01276736107651634,
+          "no_echo_minus_echo_left_connected": -0.0033666000000001084,
+          "no_echo_minus_echo_left_mean": -0.0046000000000000485,
+          "no_echo_minus_echo_left_normalized_correlation": -0.027629968080193523,
+          "no_echo_minus_echo_right_connected": -0.0023873999999999285,
+          "no_echo_minus_echo_right_mean": -0.0021999999999999797,
+          "no_echo_minus_echo_right_normalized_correlation": -0.018118698529181312,
+          "no_echo_over_echo_both_connected": 0.8312525433384812
+        },
+        "edge_parity": "even",
+        "location_id": 34,
+        "qubits": [
+          2,
+          3
+        ],
+        "role_stats": {
+          "echo_both": {
+            "available": true,
+            "connected": 0.012286000000000019,
+            "edge_parity": "even",
+            "mean": 0.8766,
+            "normalized_correlation": 0.09082486815976032,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 16,
+                "probe_name": "c1:rzz_echo_both_even"
+              }
+            ],
+            "role": "echo_both",
+            "standard_error": 0.004812197419059196,
+            "z_score": 182.1621026037163
+          },
+          "echo_left": {
+            "available": true,
+            "connected": 0.013580200000000042,
+            "edge_parity": "even",
+            "mean": 0.8836,
+            "normalized_correlation": 0.1056874751634375,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 14,
+                "probe_name": "c1:rzz_echo_left_even"
+              }
+            ],
+            "role": "echo_left",
+            "standard_error": 0.004682425012747134,
+            "z_score": 188.70563812437874
+          },
+          "echo_right": {
+            "available": true,
+            "connected": 0.012600999999999862,
+            "edge_parity": "even",
+            "mean": 0.8812,
+            "normalized_correlation": 0.09617620561242529,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 15,
+                "probe_name": "c1:rzz_echo_right_even"
+              }
+            ],
+            "role": "echo_right",
+            "standard_error": 0.004727436514645121,
+            "z_score": 186.40123400285364
+          },
+          "no_echo": {
+            "available": true,
+            "connected": 0.010213599999999934,
+            "edge_parity": "even",
+            "mean": 0.879,
+            "normalized_correlation": 0.07805750708324398,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 13,
+                "probe_name": "c1:rzz_no_echo"
+              }
+            ],
+            "role": "no_echo",
+            "standard_error": 0.004768217696372513,
+            "z_score": 184.34561003133544
+          }
+        }
+      },
+      {
+        "contrast_features": {
+          "echo_both_minus_no_echo_connected": -0.004415319999999889,
+          "echo_both_minus_no_echo_mean": -0.028000000000000025,
+          "echo_both_minus_no_echo_normalized_correlation": -0.0349145071373118,
+          "echo_contrast_norm_connected": 0.005582365412618467,
+          "echo_contrast_norm_mean": 0.029762392376957894,
+          "echo_left_minus_echo_right_connected": 0.0037128399999998285,
+          "echo_left_minus_echo_right_mean": -0.0014000000000000679,
+          "echo_left_minus_echo_right_normalized_correlation": 0.03371761725032753,
+          "echo_response_variance_connected": 7.680980962399785e-06,
+          "echo_response_variance_normalized_correlation": 0.0005566031425727585,
+          "echo_signed_left_right_asymmetry_connected": 0.0037128399999998285,
+          "no_echo_minus_echo_both_connected": 0.004415319999999889,
+          "no_echo_minus_echo_both_mean": 0.028000000000000025,
+          "no_echo_minus_echo_both_normalized_correlation": 0.0349145071373118,
+          "no_echo_minus_echo_left_connected": -0.0034016000000000046,
+          "no_echo_minus_echo_left_mean": -0.006399999999999961,
+          "no_echo_minus_echo_left_normalized_correlation": -0.03178152277499924,
+          "no_echo_minus_echo_right_connected": 0.0003112399999998239,
+          "no_echo_minus_echo_right_mean": -0.007800000000000029,
+          "no_echo_minus_echo_right_normalized_correlation": 0.00193609447532829,
+          "no_echo_over_echo_both_connected": 0.5072147215813272
+        },
+        "edge_parity": "odd",
+        "location_id": 35,
+        "qubits": [
+          3,
+          4
+        ],
+        "role_stats": {
+          "echo_both": {
+            "available": true,
+            "connected": -0.0029291200000000073,
+            "edge_parity": "odd",
+            "mean": 0.8612,
+            "normalized_correlation": -0.0216215465539688,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 19,
+                "probe_name": "c1:rzz_echo_both_odd"
+              }
+            ],
+            "role": "echo_both",
+            "standard_error": 0.00508266229450669,
+            "z_score": 169.4387606532072
+          },
+          "echo_left": {
+            "available": true,
+            "connected": 0.004887799999999887,
+            "edge_parity": "odd",
+            "mean": 0.8956,
+            "normalized_correlation": 0.045074483358342236,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 17,
+                "probe_name": "c1:rzz_echo_left_odd"
+              }
+            ],
+            "role": "echo_left",
+            "standard_error": 0.004448602477183144,
+            "z_score": 201.32165204545183
+          },
+          "echo_right": {
+            "available": true,
+            "connected": 0.0011749600000000582,
+            "edge_parity": "odd",
+            "mean": 0.897,
+            "normalized_correlation": 0.011356866108014705,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 18,
+                "probe_name": "c1:rzz_echo_right_odd"
+              }
+            ],
+            "role": "echo_right",
+            "standard_error": 0.004420305419312109,
+            "z_score": 202.9271543276283
+          },
+          "no_echo": {
+            "available": true,
+            "connected": 0.001486199999999882,
+            "edge_parity": "odd",
+            "mean": 0.8892,
+            "normalized_correlation": 0.013292960583342995,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 13,
+                "probe_name": "c1:rzz_no_echo"
+              }
+            ],
+            "role": "no_echo",
+            "standard_error": 0.004575186990714151,
+            "z_score": 194.352712097829
+          }
+        }
+      },
+      {
+        "contrast_features": {
+          "echo_both_minus_no_echo_connected": 0.03869884000000012,
+          "echo_both_minus_no_echo_mean": 0.007000000000000006,
+          "echo_both_minus_no_echo_normalized_correlation": 0.2513685682156835,
+          "echo_contrast_norm_connected": 0.038786632778688206,
+          "echo_contrast_norm_mean": 0.017326280616450897,
+          "echo_left_minus_echo_right_connected": -0.00031807999999999836,
+          "echo_left_minus_echo_right_mean": -0.018400000000000083,
+          "echo_left_minus_echo_right_normalized_correlation": -0.0033848140050327692,
+          "echo_response_variance_connected": 0.00026388038514910085,
+          "echo_response_variance_normalized_correlation": 0.010951719032669083,
+          "echo_signed_left_right_asymmetry_connected": -0.00031807999999999836,
+          "no_echo_minus_echo_both_connected": -0.03869884000000012,
+          "no_echo_minus_echo_both_mean": -0.007000000000000006,
+          "no_echo_minus_echo_both_normalized_correlation": -0.2513685682156835,
+          "no_echo_minus_echo_left_connected": -0.0016783600000001009,
+          "no_echo_minus_echo_left_mean": 0.0028000000000000247,
+          "no_echo_minus_echo_left_normalized_correlation": -0.013501745852119532,
+          "no_echo_minus_echo_right_connected": -0.0019964400000000992,
+          "no_echo_minus_echo_right_mean": -0.015600000000000058,
+          "no_echo_minus_echo_right_normalized_correlation": -0.016886559857152303,
+          "no_echo_over_echo_both_connected": -0.03338349847956053
+        },
+        "edge_parity": "even",
+        "location_id": 37,
+        "qubits": [
+          4,
+          5
+        ],
+        "role_stats": {
+          "echo_both": {
+            "available": true,
+            "connected": 0.03744864000000003,
+            "edge_parity": "even",
+            "mean": 0.8802,
+            "normalized_correlation": 0.24121721276395028,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 16,
+                "probe_name": "c1:rzz_echo_both_even"
+              }
+            ],
+            "role": "echo_both",
+            "standard_error": 0.004746029498433401,
+            "z_score": 185.46028849811023
+          },
+          "echo_left": {
+            "available": true,
+            "connected": 0.00042816000000001075,
+            "edge_parity": "even",
+            "mean": 0.8704,
+            "normalized_correlation": 0.003350390400386349,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 14,
+                "probe_name": "c1:rzz_echo_left_even"
+              }
+            ],
+            "role": "echo_left",
+            "standard_error": 0.004923452447216282,
+            "z_score": 176.7865150179573
+          },
+          "echo_right": {
+            "available": true,
+            "connected": 0.0007462400000000091,
+            "edge_parity": "even",
+            "mean": 0.8888,
+            "normalized_correlation": 0.006735204405419118,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 15,
+                "probe_name": "c1:rzz_echo_right_even"
+              }
+            ],
+            "role": "echo_right",
+            "standard_error": 0.004582952759957275,
+            "z_score": 193.93610332747267
+          },
+          "no_echo": {
+            "available": true,
+            "connected": -0.0012502000000000901,
+            "edge_parity": "even",
+            "mean": 0.8732,
+            "normalized_correlation": -0.010151355451733183,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 13,
+                "probe_name": "c1:rzz_no_echo"
+              }
+            ],
+            "role": "no_echo",
+            "standard_error": 0.004873620420180464,
+            "z_score": 179.16865178590714
+          }
+        }
+      },
+      {
+        "contrast_features": {
+          "echo_both_minus_no_echo_connected": -0.002331680000000169,
+          "echo_both_minus_no_echo_mean": -0.007000000000000006,
+          "echo_both_minus_no_echo_normalized_correlation": -0.01799763938886552,
+          "echo_contrast_norm_connected": 0.0024463117590365732,
+          "echo_contrast_norm_mean": 0.008084553172563106,
+          "echo_left_minus_echo_right_connected": 0.0009955999999998744,
+          "echo_left_minus_echo_right_mean": 0.0033999999999999586,
+          "echo_left_minus_echo_right_normalized_correlation": 0.008156403297033064,
+          "echo_response_variance_connected": 1.2438853772000722e-06,
+          "echo_response_variance_normalized_correlation": 7.55706516105244e-05,
+          "echo_signed_left_right_asymmetry_connected": 0.0009955999999998744,
+          "no_echo_minus_echo_both_connected": 0.002331680000000169,
+          "no_echo_minus_echo_both_mean": 0.007000000000000006,
+          "no_echo_minus_echo_both_normalized_correlation": 0.01799763938886552,
+          "no_echo_minus_echo_left_connected": -0.0006591999999998599,
+          "no_echo_minus_echo_left_mean": -0.0040000000000000036,
+          "no_echo_minus_echo_left_normalized_correlation": -0.005426441308525979,
+          "no_echo_minus_echo_right_connected": 0.00033640000000001447,
+          "no_echo_minus_echo_right_mean": -0.0006000000000000449,
+          "no_echo_minus_echo_right_normalized_correlation": 0.002729961988507086,
+          "no_echo_over_echo_both_connected": -0.05643556346571552
+        },
+        "edge_parity": "even",
+        "location_id": 39,
+        "qubits": [
+          2,
+          3
+        ],
+        "role_stats": {
+          "echo_both": {
+            "available": true,
+            "connected": -0.0024712000000001177,
+            "edge_parity": "even",
+            "mean": 0.8682,
+            "normalized_correlation": -0.019117970292659933,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 26,
+                "probe_name": "c2:rzz_echo_both_even"
+              }
+            ],
+            "role": "echo_both",
+            "standard_error": 0.004962144294556538,
+            "z_score": 174.96468229519516
+          },
+          "echo_left": {
+            "available": true,
+            "connected": 0.0005196799999999113,
+            "edge_parity": "even",
+            "mean": 0.8792,
+            "normalized_correlation": 0.0043061104047315635,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 24,
+                "probe_name": "c2:rzz_echo_left_even"
+              }
+            ],
+            "role": "echo_left",
+            "standard_error": 0.0047645289378909226,
+            "z_score": 184.53030959849488
+          },
+          "echo_right": {
+            "available": true,
+            "connected": -0.00047591999999996304,
+            "edge_parity": "even",
+            "mean": 0.8758,
+            "normalized_correlation": -0.0038502928923015013,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 25,
+                "probe_name": "c2:rzz_echo_right_even"
+              }
+            ],
+            "role": "echo_right",
+            "standard_error": 0.004826741758163574,
+            "z_score": 181.44745335064596
+          },
+          "no_echo": {
+            "available": true,
+            "connected": -0.00013951999999994857,
+            "edge_parity": "even",
+            "mean": 0.8752,
+            "normalized_correlation": -0.0011203309037944153,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 23,
+                "probe_name": "c2:rzz_no_echo"
+              }
+            ],
+            "role": "no_echo",
+            "standard_error": 0.00483761263434765,
+            "z_score": 180.9156842749193
+          }
+        }
+      },
+      {
+        "contrast_features": {
+          "echo_both_minus_no_echo_connected": -0.001601519999999912,
+          "echo_both_minus_no_echo_mean": -0.0016000000000000458,
+          "echo_both_minus_no_echo_normalized_correlation": -0.01300899588173407,
+          "echo_contrast_norm_connected": 0.0031731834889270243,
+          "echo_contrast_norm_mean": 0.007891767862779488,
+          "echo_left_minus_echo_right_connected": -0.001495079999999871,
+          "echo_left_minus_echo_right_mean": -0.006199999999999983,
+          "echo_left_minus_echo_right_normalized_correlation": -0.016596104745108295,
+          "echo_response_variance_connected": 8.431737866999078e-07,
+          "echo_response_variance_normalized_correlation": 5.766829215952489e-05,
+          "echo_signed_left_right_asymmetry_connected": -0.001495079999999871,
+          "no_echo_minus_echo_both_connected": 0.001601519999999912,
+          "no_echo_minus_echo_both_mean": 0.0016000000000000458,
+          "no_echo_minus_echo_both_normalized_correlation": 0.01300899588173407,
+          "no_echo_minus_echo_left_connected": 0.0025345199999998735,
+          "no_echo_minus_echo_left_mean": -0.0013999999999999568,
+          "no_echo_minus_echo_left_normalized_correlation": 0.01769060075572816,
+          "no_echo_minus_echo_right_connected": 0.0010394400000000026,
+          "no_echo_minus_echo_right_mean": -0.00759999999999994,
+          "no_echo_minus_echo_right_normalized_correlation": 0.0010944960106198665,
+          "no_echo_over_echo_both_connected": 1.1386187663473617
+        },
+        "edge_parity": "odd",
+        "location_id": 53,
+        "qubits": [
+          3,
+          4
+        ],
+        "role_stats": {
+          "echo_both": {
+            "available": true,
+            "connected": 0.011545200000000033,
+            "edge_parity": "odd",
+            "mean": 0.8882,
+            "normalized_correlation": 0.09363630416402766,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 29,
+                "probe_name": "c2:rzz_echo_both_odd"
+              }
+            ],
+            "role": "echo_both",
+            "standard_error": 0.004594570273703516,
+            "z_score": 193.3151409357059
+          },
+          "echo_left": {
+            "available": true,
+            "connected": 0.010612200000000072,
+            "edge_parity": "odd",
+            "mean": 0.8912,
+            "normalized_correlation": 0.08895469929003356,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 27,
+                "probe_name": "c2:rzz_echo_left_odd"
+              }
+            ],
+            "role": "echo_left",
+            "standard_error": 0.0045361058188715135,
+            "z_score": 196.46807979927408
+          },
+          "echo_right": {
+            "available": true,
+            "connected": 0.012107279999999943,
+            "edge_parity": "odd",
+            "mean": 0.8974,
+            "normalized_correlation": 0.10555080403514186,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 28,
+                "probe_name": "c2:rzz_echo_right_odd"
+              }
+            ],
+            "role": "echo_right",
+            "standard_error": 0.004412179053483665,
+            "z_score": 203.39156437711927
+          },
+          "no_echo": {
+            "available": true,
+            "connected": 0.013146719999999945,
+            "edge_parity": "odd",
+            "mean": 0.8898,
+            "normalized_correlation": 0.10664530004576173,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 23,
+                "probe_name": "c2:rzz_no_echo"
+              }
+            ],
+            "role": "no_echo",
+            "standard_error": 0.004563506984765115,
+            "z_score": 194.9816233371665
+          }
+        }
+      },
+      {
+        "contrast_features": {
+          "echo_both_minus_no_echo_connected": 0.0014411199999999624,
+          "echo_both_minus_no_echo_mean": -0.012400000000000078,
+          "echo_both_minus_no_echo_normalized_correlation": 0.012359730523620114,
+          "echo_contrast_norm_connected": 0.0043985198019332655,
+          "echo_contrast_norm_mean": 0.015714961024450604,
+          "echo_left_minus_echo_right_connected": 0.001573439999999926,
+          "echo_left_minus_echo_right_mean": -0.011600000000000055,
+          "echo_left_minus_echo_right_normalized_correlation": 0.01209512378362206,
+          "echo_response_variance_connected": 1.6828522655999098e-06,
+          "echo_response_variance_normalized_correlation": 0.00012744001226347535,
+          "echo_signed_left_right_asymmetry_connected": 0.001573439999999926,
+          "no_echo_minus_echo_both_connected": -0.0014411199999999624,
+          "no_echo_minus_echo_both_mean": 0.012400000000000078,
+          "no_echo_minus_echo_both_normalized_correlation": -0.012359730523620114,
+          "no_echo_minus_echo_left_connected": -0.003617999999999899,
+          "no_echo_minus_echo_left_mean": 0.0022000000000000908,
+          "no_echo_minus_echo_left_normalized_correlation": -0.03120722088472043,
+          "no_echo_minus_echo_right_connected": -0.002044559999999973,
+          "no_echo_minus_echo_right_mean": -0.009399999999999964,
+          "no_echo_minus_echo_right_normalized_correlation": -0.01911209710109837,
+          "no_echo_over_echo_both_connected": -1.6119684126637697
+        },
+        "edge_parity": "even",
+        "location_id": 54,
+        "qubits": [
+          4,
+          5
+        ],
+        "role_stats": {
+          "echo_both": {
+            "available": true,
+            "connected": 0.000551120000000016,
+            "edge_parity": "even",
+            "mean": 0.8742,
+            "normalized_correlation": 0.004370148448575698,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 26,
+                "probe_name": "c2:rzz_echo_both_even"
+              }
+            ],
+            "role": "echo_both",
+            "standard_error": 0.0048556602022793985,
+            "z_score": 180.03730977501746
+          },
+          "echo_left": {
+            "available": true,
+            "connected": 0.0027279999999999527,
+            "edge_parity": "even",
+            "mean": 0.8844,
+            "normalized_correlation": 0.023217638809676016,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 24,
+                "probe_name": "c2:rzz_echo_left_even"
+              }
+            ],
+            "role": "echo_left",
+            "standard_error": 0.004667297290724044,
+            "z_score": 189.48867940289313
+          },
+          "echo_right": {
+            "available": true,
+            "connected": 0.0011545600000000267,
+            "edge_parity": "even",
+            "mean": 0.896,
+            "normalized_correlation": 0.011122515026053955,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 25,
+                "probe_name": "c2:rzz_echo_right_even"
+              }
+            ],
+            "role": "echo_right",
+            "standard_error": 0.0044405405076409325,
+            "z_score": 201.77723825697205
+          },
+          "no_echo": {
+            "available": true,
+            "connected": -0.0008899999999999464,
+            "edge_parity": "even",
+            "mean": 0.8866,
+            "normalized_correlation": -0.007989582075044415,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 23,
+                "probe_name": "c2:rzz_no_echo"
+              }
+            ],
+            "role": "no_echo",
+            "standard_error": 0.0046253696068530555,
+            "z_score": 191.68197903285238
+          }
+        }
+      },
+      {
+        "contrast_features": {
+          "echo_both_minus_no_echo_connected": 0.04446128000000005,
+          "echo_both_minus_no_echo_mean": 0.006800000000000028,
+          "echo_both_minus_no_echo_normalized_correlation": 0.2715305337645989,
+          "echo_contrast_norm_connected": 0.04465554314563875,
+          "echo_contrast_norm_mean": 0.00992370898404425,
+          "echo_left_minus_echo_right_connected": 0.0031097600000000725,
+          "echo_left_minus_echo_right_mean": -0.00880000000000003,
+          "echo_left_minus_echo_right_normalized_correlation": 0.02552147675533712,
+          "echo_response_variance_connected": 0.0004011819558176002,
+          "echo_response_variance_normalized_correlation": 0.015468896521507161,
+          "echo_signed_left_right_asymmetry_connected": 0.0031097600000000725,
+          "no_echo_minus_echo_both_connected": -0.04446128000000005,
+          "no_echo_minus_echo_both_mean": -0.006800000000000028,
+          "no_echo_minus_echo_both_normalized_correlation": -0.2715305337645989,
+          "no_echo_minus_echo_left_connected": 0.0009427999999999104,
+          "no_echo_minus_echo_left_mean": 0.007000000000000006,
+          "no_echo_minus_echo_left_normalized_correlation": 0.00859018682378263,
+          "no_echo_minus_echo_right_connected": 0.004052559999999983,
+          "no_echo_minus_echo_right_mean": -0.0018000000000000238,
+          "no_echo_minus_echo_right_normalized_correlation": 0.03411166357911975,
+          "no_echo_over_echo_both_connected": 0.05323421264895885
+        },
+        "edge_parity": "odd",
+        "location_id": 56,
+        "qubits": [
+          5,
+          6
+        ],
+        "role_stats": {
+          "echo_both": {
+            "available": true,
+            "connected": 0.046961279999999994,
+            "edge_parity": "odd",
+            "mean": 0.8852,
+            "normalized_correlation": 0.2922087802492966,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 29,
+                "probe_name": "c2:rzz_echo_both_odd"
+              }
+            ],
+            "role": "echo_both",
+            "standard_error": 0.0046521066195864425,
+            "z_score": 190.2793878956049
+          },
+          "echo_left": {
+            "available": true,
+            "connected": 0.0015572000000000363,
+            "edge_parity": "odd",
+            "mean": 0.8714,
+            "normalized_correlation": 0.012088059660915028,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 27,
+                "probe_name": "c2:rzz_echo_left_odd"
+              }
+            ],
+            "role": "echo_left",
+            "standard_error": 0.004905731749698511,
+            "z_score": 177.6289541419694
+          },
+          "echo_right": {
+            "available": true,
+            "connected": -0.0015525600000000361,
+            "edge_parity": "odd",
+            "mean": 0.8802,
+            "normalized_correlation": -0.013433417094422091,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 28,
+                "probe_name": "c2:rzz_echo_right_odd"
+              }
+            ],
+            "role": "echo_right",
+            "standard_error": 0.004746029498433401,
+            "z_score": 185.46028849811023
+          },
+          "no_echo": {
+            "available": true,
+            "connected": 0.0024999999999999467,
+            "edge_parity": "odd",
+            "mean": 0.8784,
+            "normalized_correlation": 0.020678246484697658,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 23,
+                "probe_name": "c2:rzz_no_echo"
+              }
+            ],
+            "role": "no_echo",
+            "standard_error": 0.004779261867694635,
+            "z_score": 183.79407203809745
+          }
+        }
+      }
+    ]
+  },
+  "schema": "scope_static_s2d8b_echo_response_features_v1",
+  "scrambled_echo_response_audit": {
+    "rzz_location_records": [
+      {
+        "contrast_features": {
+          "echo_both_minus_no_echo_connected": -5.887999999998339e-05,
+          "echo_both_minus_no_echo_mean": 0.005400000000000071,
+          "echo_both_minus_no_echo_normalized_correlation": -0.0007094513722806632,
+          "echo_contrast_norm_connected": 0.001813766924828017,
+          "echo_contrast_norm_mean": 0.007947326594522275,
+          "echo_left_minus_echo_right_connected": 0.00037640000000005447,
+          "echo_left_minus_echo_right_mean": -0.006399999999999961,
+          "echo_left_minus_echo_right_normalized_correlation": 0.002837301663672856,
+          "echo_response_variance_connected": 4.3895466680000757e-07,
+          "echo_response_variance_normalized_correlation": 3.2594754144161995e-05,
+          "echo_signed_left_right_asymmetry_connected": 0.00037640000000005447,
+          "no_echo_minus_echo_both_connected": 5.887999999998339e-05,
+          "no_echo_minus_echo_both_mean": -0.005400000000000071,
+          "no_echo_minus_echo_both_normalized_correlation": 0.0007094513722806632,
+          "no_echo_minus_echo_left_connected": -0.0014561600000000396,
+          "no_echo_minus_echo_left_mean": 0.0005999999999999339,
+          "no_echo_minus_echo_left_normalized_correlation": -0.012293449427093423,
+          "no_echo_minus_echo_right_connected": -0.0010797599999999852,
+          "no_echo_minus_echo_right_mean": -0.005800000000000027,
+          "no_echo_minus_echo_right_normalized_correlation": -0.009456147763420566,
+          "no_echo_over_echo_both_connected": -0.8783025770262913
+        },
+        "edge_parity": "even",
+        "location_id": 1,
+        "qubits": [
+          0,
+          1
+        ],
+        "role_stats": {
+          "echo_both": {
+            "available": true,
+            "connected": -0.0004910399999999981,
+            "edge_parity": "even",
+            "mean": 0.8878,
+            "normalized_correlation": -0.004406463108571327,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 8,
+                "probe_name": "c0:rzz_echo_right_odd"
+              }
+            ],
+            "role": "echo_both",
+            "standard_error": 0.0046022946450656535,
+            "z_score": 192.90377267606152
+          },
+          "echo_left": {
+            "available": true,
+            "connected": 0.0010240000000000249,
+            "edge_parity": "even",
+            "mean": 0.8818,
+            "normalized_correlation": 0.008596437690802759,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 9,
+                "probe_name": "c0:rzz_echo_both_odd"
+              }
+            ],
+            "role": "echo_left",
+            "standard_error": 0.0047162353630835685,
+            "z_score": 186.9711607063354
+          },
+          "echo_right": {
+            "available": true,
+            "connected": 0.0006475999999999704,
+            "edge_parity": "even",
+            "mean": 0.8882,
+            "normalized_correlation": 0.005759136027129903,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 7,
+                "probe_name": "c0:rzz_echo_left_odd"
+              }
+            ],
+            "role": "echo_right",
+            "standard_error": 0.004594570273703516,
+            "z_score": 193.3151409357059
+          },
+          "no_echo": {
+            "available": true,
+            "connected": -0.00043216000000001475,
+            "edge_parity": "even",
+            "mean": 0.8824,
+            "normalized_correlation": -0.0036970117362906635,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 3,
+                "probe_name": "c0:rzz_no_echo"
+              }
+            ],
+            "role": "no_echo",
+            "standard_error": 0.004704999893730074,
+            "z_score": 187.54516895439133
+          }
+        }
+      },
+      {
+        "contrast_features": {
+          "echo_both_minus_no_echo_connected": 0.003422879999999906,
+          "echo_both_minus_no_echo_mean": 0.006000000000000005,
+          "echo_both_minus_no_echo_normalized_correlation": 0.026732649614181356,
+          "echo_contrast_norm_connected": 0.005635248404675648,
+          "echo_contrast_norm_mean": 0.006006662967072487,
+          "echo_left_minus_echo_right_connected": 0.0021208800000001027,
+          "echo_left_minus_echo_right_mean": -0.00039999999999995595,
+          "echo_left_minus_echo_right_normalized_correlation": 0.01292528310941135,
+          "echo_response_variance_connected": 2.4306910251999966e-06,
+          "echo_response_variance_normalized_correlation": 0.00012067597058772391,
+          "echo_signed_left_right_asymmetry_connected": 0.0021208800000001027,
+          "no_echo_minus_echo_both_connected": -0.003422879999999906,
+          "no_echo_minus_echo_both_mean": -0.006000000000000005,
+          "no_echo_minus_echo_both_normalized_correlation": -0.026732649614181356,
+          "no_echo_minus_echo_left_connected": -0.00404296000000004,
+          "no_echo_minus_echo_left_mean": 0.00019999999999997797,
+          "no_echo_minus_echo_left_normalized_correlation": -0.026298520668267794,
+          "no_echo_minus_echo_right_connected": -0.0019220799999999372,
+          "no_echo_minus_echo_right_mean": -0.00019999999999997797,
+          "no_echo_minus_echo_right_normalized_correlation": -0.013373237558856443,
+          "no_echo_over_echo_both_connected": 0.7215823523863185
+        },
+        "edge_parity": "odd",
+        "location_id": 15,
+        "qubits": [
+          1,
+          2
+        ],
+        "role_stats": {
+          "echo_both": {
+            "available": true,
+            "connected": 0.01229663999999997,
+            "edge_parity": "odd",
+            "mean": 0.876,
+            "normalized_correlation": 0.09101689580946899,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 5,
+                "probe_name": "c0:rzz_echo_right_even"
+              }
+            ],
+            "role": "echo_both",
+            "standard_error": 0.004823111029200967,
+            "z_score": 181.62550990353725
+          },
+          "echo_left": {
+            "available": true,
+            "connected": 0.012916720000000104,
+            "edge_parity": "odd",
+            "mean": 0.8698,
+            "normalized_correlation": 0.09058276686355543,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 6,
+                "probe_name": "c0:rzz_echo_both_even"
+              }
+            ],
+            "role": "echo_left",
+            "standard_error": 0.004934044588367641,
+            "z_score": 176.285395160517
+          },
+          "echo_right": {
+            "available": true,
+            "connected": 0.010795840000000001,
+            "edge_parity": "odd",
+            "mean": 0.8702,
+            "normalized_correlation": 0.07765748375414408,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 4,
+                "probe_name": "c0:rzz_echo_left_even"
+              }
+            ],
+            "role": "echo_right",
+            "standard_error": 0.004926986502924481,
+            "z_score": 176.61911585986297
+          },
+          "no_echo": {
+            "available": true,
+            "connected": 0.008873760000000064,
+            "edge_parity": "odd",
+            "mean": 0.87,
+            "normalized_correlation": 0.06428424619528764,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 3,
+                "probe_name": "c0:rzz_no_echo"
+              }
+            ],
+            "role": "no_echo",
+            "standard_error": 0.00493051721424842,
+            "z_score": 176.45207636347698
+          }
+        }
+      },
+      {
+        "contrast_features": {
+          "echo_both_minus_no_echo_connected": 0.0009280799999999978,
+          "echo_both_minus_no_echo_mean": 0.0015999999999999348,
+          "echo_both_minus_no_echo_normalized_correlation": 0.007763955211540172,
+          "echo_contrast_norm_connected": 0.00233372747852014,
+          "echo_contrast_norm_mean": 0.02867891211325848,
+          "echo_left_minus_echo_right_connected": -0.0028800399999999726,
+          "echo_left_minus_echo_right_mean": -0.027200000000000002,
+          "echo_left_minus_echo_right_normalized_correlation": -0.02081269122857209,
+          "echo_response_variance_connected": 1.3615674890999926e-06,
+          "echo_response_variance_normalized_correlation": 7.270437509334023e-05,
+          "echo_signed_left_right_asymmetry_connected": -0.0028800399999999726,
+          "no_echo_minus_echo_both_connected": -0.0009280799999999978,
+          "no_echo_minus_echo_both_mean": -0.0015999999999999348,
+          "no_echo_minus_echo_both_normalized_correlation": -0.007763955211540172,
+          "no_echo_minus_echo_left_connected": 0.001907800000000015,
+          "no_echo_minus_echo_left_mean": 0.02860000000000007,
+          "no_echo_minus_echo_left_normalized_correlation": 0.013164694959955866,
+          "no_echo_minus_echo_right_connected": -0.0009722399999999576,
+          "no_echo_minus_echo_right_mean": 0.0014000000000000679,
+          "no_echo_minus_echo_right_normalized_correlation": -0.007647996268616224,
+          "no_echo_over_echo_both_connected": 0.3030994029223955
+        },
+        "edge_parity": "even",
+        "location_id": 16,
+        "qubits": [
+          2,
+          3
+        ],
+        "role_stats": {
+          "echo_both": {
+            "available": true,
+            "connected": 0.0013321600000000267,
+            "edge_parity": "even",
+            "mean": 0.8762,
+            "normalized_correlation": 0.01106740782467304,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 8,
+                "probe_name": "c0:rzz_echo_right_odd"
+              }
+            ],
+            "role": "echo_both",
+            "standard_error": 0.004819476735082347,
+            "z_score": 181.80396921970595
+          },
+          "echo_left": {
+            "available": true,
+            "connected": -0.0015037199999999862,
+            "edge_parity": "even",
+            "mean": 0.846,
+            "normalized_correlation": -0.009861242346822998,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 9,
+                "probe_name": "c0:rzz_echo_both_odd"
+              }
+            ],
+            "role": "echo_left",
+            "standard_error": 0.005331828954495822,
+            "z_score": 158.66975614186742
+          },
+          "echo_right": {
+            "available": true,
+            "connected": 0.0013763199999999864,
+            "edge_parity": "even",
+            "mean": 0.8732,
+            "normalized_correlation": 0.010951448881749091,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 7,
+                "probe_name": "c0:rzz_echo_left_odd"
+              }
+            ],
+            "role": "echo_right",
+            "standard_error": 0.004873620420180464,
+            "z_score": 179.16865178590714
+          },
+          "no_echo": {
+            "available": true,
+            "connected": 0.00040408000000002886,
+            "edge_parity": "even",
+            "mean": 0.8746,
+            "normalized_correlation": 0.0033034526131328675,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 3,
+                "probe_name": "c0:rzz_no_echo"
+              }
+            ],
+            "role": "no_echo",
+            "standard_error": 0.004848451711629187,
+            "z_score": 180.38748285400888
+          }
+        }
+      },
+      {
+        "contrast_features": {
+          "echo_both_minus_no_echo_connected": -0.0047095199999999116,
+          "echo_both_minus_no_echo_mean": 0.0048000000000000265,
+          "echo_both_minus_no_echo_normalized_correlation": -0.03921191511511368,
+          "echo_contrast_norm_connected": 0.0335017143270968,
+          "echo_contrast_norm_mean": 0.004833218389437848,
+          "echo_left_minus_echo_right_connected": 0.03761552000000001,
+          "echo_left_minus_echo_right_mean": 0.0,
+          "echo_left_minus_echo_right_normalized_correlation": 0.24169354380749158,
+          "echo_response_variance_connected": 0.00024661327523000016,
+          "echo_response_variance_normalized_correlation": 0.010026624852743813,
+          "echo_signed_left_right_asymmetry_connected": 0.03761552000000001,
+          "no_echo_minus_echo_both_connected": 0.0047095199999999116,
+          "no_echo_minus_echo_both_mean": -0.0048000000000000265,
+          "no_echo_minus_echo_both_normalized_correlation": 0.03921191511511368,
+          "no_echo_minus_echo_left_connected": -0.03282064000000007,
+          "no_echo_minus_echo_left_mean": 0.00039999999999995595,
+          "no_echo_minus_echo_left_normalized_correlation": -0.20188785955053604,
+          "no_echo_minus_echo_right_connected": 0.004794879999999946,
+          "no_echo_minus_echo_right_mean": 0.00039999999999995595,
+          "no_echo_minus_echo_right_normalized_correlation": 0.039805684256955576,
+          "no_echo_over_echo_both_connected": 2.0857899012132664
+        },
+        "edge_parity": "odd",
+        "location_id": 18,
+        "qubits": [
+          3,
+          4
+        ],
+        "role_stats": {
+          "echo_both": {
+            "available": true,
+            "connected": -0.001525519999999947,
+            "edge_parity": "odd",
+            "mean": 0.8818,
+            "normalized_correlation": -0.013244390042641873,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 5,
+                "probe_name": "c0:rzz_echo_right_even"
+              }
+            ],
+            "role": "echo_both",
+            "standard_error": 0.0047162353630835685,
+            "z_score": 186.9711607063354
+          },
+          "echo_left": {
+            "available": true,
+            "connected": 0.03600464000000003,
+            "edge_parity": "odd",
+            "mean": 0.8766,
+            "normalized_correlation": 0.22785538462300783,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 6,
+                "probe_name": "c0:rzz_echo_both_even"
+              }
+            ],
+            "role": "echo_left",
+            "standard_error": 0.004812197419059196,
+            "z_score": 182.1621026037163
+          },
+          "echo_right": {
+            "available": true,
+            "connected": -0.0016108799999999812,
+            "edge_parity": "odd",
+            "mean": 0.8766,
+            "normalized_correlation": -0.013838159184483764,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 4,
+                "probe_name": "c0:rzz_echo_left_even"
+              }
+            ],
+            "role": "echo_right",
+            "standard_error": 0.004812197419059196,
+            "z_score": 182.1621026037163
+          },
+          "no_echo": {
+            "available": true,
+            "connected": 0.0031839999999999646,
+            "edge_parity": "odd",
+            "mean": 0.877,
+            "normalized_correlation": 0.025967525072471808,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 3,
+                "probe_name": "c0:rzz_no_echo"
+              }
+            ],
+            "role": "no_echo",
+            "standard_error": 0.004804903745133715,
+            "z_score": 182.52186651776393
+          }
+        }
+      },
+      {
+        "contrast_features": {
+          "echo_both_minus_no_echo_connected": 0.00022215999999997127,
+          "echo_both_minus_no_echo_mean": 0.0030000000000000027,
+          "echo_both_minus_no_echo_normalized_correlation": 0.0014457646312688432,
+          "echo_contrast_norm_connected": 0.0017764554695235048,
+          "echo_contrast_norm_mean": 0.005196152422706611,
+          "echo_left_minus_echo_right_connected": 0.0008074399999999926,
+          "echo_left_minus_echo_right_mean": -0.0036000000000000476,
+          "echo_left_minus_echo_right_normalized_correlation": 0.006511590542206757,
+          "echo_response_variance_connected": 3.7282030240000407e-07,
+          "echo_response_variance_normalized_correlation": 2.4758444115901843e-05,
+          "echo_signed_left_right_asymmetry_connected": 0.0008074399999999926,
+          "no_echo_minus_echo_both_connected": -0.00022215999999997127,
+          "no_echo_minus_echo_both_mean": -0.0030000000000000027,
+          "no_echo_minus_echo_both_normalized_correlation": -0.0014457646312688432,
+          "no_echo_minus_echo_left_connected": -0.0015827999999999953,
+          "no_echo_minus_echo_left_mean": 0.0041999999999999815,
+          "no_echo_minus_echo_left_normalized_correlation": -0.012741568267581375,
+          "no_echo_minus_echo_right_connected": -0.0007753600000000027,
+          "no_echo_minus_echo_right_mean": 0.0005999999999999339,
+          "no_echo_minus_echo_right_normalized_correlation": -0.006229977725374617,
+          "no_echo_over_echo_both_connected": -1.1433311730395108
+        },
+        "edge_parity": "odd",
+        "location_id": 20,
+        "qubits": [
+          1,
+          2
+        ],
+        "role_stats": {
+          "echo_both": {
+            "available": true,
+            "connected": -0.0015420000000000433,
+            "edge_parity": "odd",
+            "mean": 0.8754,
+            "normalized_correlation": -0.012682760415112451,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 15,
+                "probe_name": "c1:rzz_echo_right_even"
+              }
+            ],
+            "role": "echo_both",
+            "standard_error": 0.0048339925527456085,
+            "z_score": 181.09254212706446
+          },
+          "echo_left": {
+            "available": true,
+            "connected": -0.00018136000000001928,
+            "edge_parity": "odd",
+            "mean": 0.8682,
+            "normalized_correlation": -0.0013869567787999195,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 16,
+                "probe_name": "c1:rzz_echo_both_even"
+              }
+            ],
+            "role": "echo_left",
+            "standard_error": 0.004962144294556538,
+            "z_score": 174.96468229519516
+          },
+          "echo_right": {
+            "available": true,
+            "connected": -0.000988800000000012,
+            "edge_parity": "odd",
+            "mean": 0.8718,
+            "normalized_correlation": -0.007898547321006677,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 14,
+                "probe_name": "c1:rzz_echo_left_even"
+              }
+            ],
+            "role": "echo_right",
+            "standard_error": 0.004898619805618722,
+            "z_score": 177.96849614661758
+          },
+          "no_echo": {
+            "available": true,
+            "connected": -0.0017641600000000146,
+            "edge_parity": "odd",
+            "mean": 0.8724,
+            "normalized_correlation": -0.014128525046381294,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 13,
+                "probe_name": "c1:rzz_no_echo"
+              }
+            ],
+            "role": "no_echo",
+            "standard_error": 0.004887926349690634,
+            "z_score": 178.48059434349207
+          }
+        }
+      },
+      {
+        "contrast_features": {
+          "echo_both_minus_no_echo_connected": 0.0017164000000000623,
+          "echo_both_minus_no_echo_mean": 0.0028000000000000247,
+          "echo_both_minus_no_echo_normalized_correlation": 0.014268846225157228,
+          "echo_contrast_norm_connected": 0.004163886251856565,
+          "echo_contrast_norm_mean": 0.004857983120596488,
+          "echo_left_minus_echo_right_connected": 0.0052446800000000016,
+          "echo_left_minus_echo_right_mean": 0.00039999999999995595,
+          "echo_left_minus_echo_right_normalized_correlation": 0.03680963250615976,
+          "echo_response_variance_connected": 4.313004414700015e-06,
+          "echo_response_variance_normalized_correlation": 0.00023718707403059936,
+          "echo_signed_left_right_asymmetry_connected": 0.0052446800000000016,
+          "no_echo_minus_echo_both_connected": -0.0017164000000000623,
+          "no_echo_minus_echo_both_mean": -0.0028000000000000247,
+          "no_echo_minus_echo_both_normalized_correlation": -0.014268846225157228,
+          "no_echo_minus_echo_left_connected": -0.00205728000000005,
+          "no_echo_minus_echo_left_mean": 0.0026000000000000467,
+          "no_echo_minus_echo_left_normalized_correlation": -0.012521029534635686,
+          "no_echo_minus_echo_right_connected": 0.0031873999999999514,
+          "no_echo_minus_echo_right_mean": 0.0030000000000000027,
+          "no_echo_minus_echo_right_normalized_correlation": 0.024288602971524076,
+          "no_echo_over_echo_both_connected": 0.8560556533400333
+        },
+        "edge_parity": "even",
+        "location_id": 34,
+        "qubits": [
+          2,
+          3
+        ],
+        "role_stats": {
+          "echo_both": {
+            "available": true,
+            "connected": 0.011929999999999996,
+            "edge_parity": "even",
+            "mean": 0.8818,
+            "normalized_correlation": 0.09232635330840121,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 18,
+                "probe_name": "c1:rzz_echo_right_odd"
+              }
+            ],
+            "role": "echo_both",
+            "standard_error": 0.0047162353630835685,
+            "z_score": 186.9711607063354
+          },
+          "echo_left": {
+            "available": true,
+            "connected": 0.012270879999999984,
+            "edge_parity": "even",
+            "mean": 0.8764,
+            "normalized_correlation": 0.09057853661787967,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 19,
+                "probe_name": "c1:rzz_echo_both_odd"
+              }
+            ],
+            "role": "echo_left",
+            "standard_error": 0.004815838867736338,
+            "z_score": 181.98283291233696
+          },
+          "echo_right": {
+            "available": true,
+            "connected": 0.0070261999999999825,
+            "edge_parity": "even",
+            "mean": 0.876,
+            "normalized_correlation": 0.053768904111719903,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 17,
+                "probe_name": "c1:rzz_echo_left_odd"
+              }
+            ],
+            "role": "echo_right",
+            "standard_error": 0.004823111029200967,
+            "z_score": 181.62550990353725
+          },
+          "no_echo": {
+            "available": true,
+            "connected": 0.010213599999999934,
+            "edge_parity": "even",
+            "mean": 0.879,
+            "normalized_correlation": 0.07805750708324398,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 13,
+                "probe_name": "c1:rzz_no_echo"
+              }
+            ],
+            "role": "no_echo",
+            "standard_error": 0.004768217696372513,
+            "z_score": 184.34561003133544
+          }
+        }
+      },
+      {
+        "contrast_features": {
+          "echo_both_minus_no_echo_connected": -0.0010109999999999841,
+          "echo_both_minus_no_echo_mean": 0.0018000000000000238,
+          "echo_both_minus_no_echo_normalized_correlation": -0.008919364575110597,
+          "echo_contrast_norm_connected": 0.0018154841619798712,
+          "echo_contrast_norm_mean": 0.018143869488066774,
+          "echo_left_minus_echo_right_connected": 0.001057479999999944,
+          "echo_left_minus_echo_right_mean": -0.019399999999999973,
+          "echo_left_minus_echo_right_normalized_correlation": 0.008100804152663395,
+          "echo_response_variance_connected": 3.117405671999741e-07,
+          "echo_response_variance_normalized_correlation": 2.3198032301009012e-05,
+          "echo_signed_left_right_asymmetry_connected": 0.001057479999999944,
+          "no_echo_minus_echo_both_connected": 0.0010109999999999841,
+          "no_echo_minus_echo_both_mean": -0.0018000000000000238,
+          "no_echo_minus_echo_both_normalized_correlation": 0.008919364575110597,
+          "no_echo_minus_echo_left_connected": 0.00039719999999998645,
+          "no_echo_minus_echo_left_mean": 0.018000000000000016,
+          "no_echo_minus_echo_left_normalized_correlation": 0.0049040641918241,
+          "no_echo_minus_echo_right_connected": 0.0014546799999999305,
+          "no_echo_minus_echo_right_mean": -0.0013999999999999568,
+          "no_echo_minus_echo_right_normalized_correlation": 0.013004868344487495,
+          "no_echo_over_echo_both_connected": 3.1209575808488044
+        },
+        "edge_parity": "odd",
+        "location_id": 35,
+        "qubits": [
+          3,
+          4
+        ],
+        "role_stats": {
+          "echo_both": {
+            "available": true,
+            "connected": 0.0004751999999998979,
+            "edge_parity": "odd",
+            "mean": 0.891,
+            "normalized_correlation": 0.004373596008232397,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 15,
+                "probe_name": "c1:rzz_echo_right_even"
+              }
+            ],
+            "role": "echo_both",
+            "standard_error": 0.004540033039527355,
+            "z_score": 196.25407838282132
+          },
+          "echo_left": {
+            "available": true,
+            "connected": 0.0010889999999998956,
+            "edge_parity": "odd",
+            "mean": 0.8712,
+            "normalized_correlation": 0.008388896391518895,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 16,
+                "probe_name": "c1:rzz_echo_both_even"
+              }
+            ],
+            "role": "echo_left",
+            "standard_error": 0.004909282635986648,
+            "z_score": 177.4597358917205
+          },
+          "echo_right": {
+            "available": true,
+            "connected": 3.151999999995159e-05,
+            "edge_parity": "odd",
+            "mean": 0.8906,
+            "normalized_correlation": 0.0002880922388555001,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 14,
+                "probe_name": "c1:rzz_echo_left_even"
+              }
+            ],
+            "role": "echo_right",
+            "standard_error": 0.004547874668457785,
+            "z_score": 195.82773601410796
+          },
+          "no_echo": {
+            "available": true,
+            "connected": 0.001486199999999882,
+            "edge_parity": "odd",
+            "mean": 0.8892,
+            "normalized_correlation": 0.013292960583342995,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 13,
+                "probe_name": "c1:rzz_no_echo"
+              }
+            ],
+            "role": "no_echo",
+            "standard_error": 0.004575186990714151,
+            "z_score": 194.352712097829
+          }
+        }
+      },
+      {
+        "contrast_features": {
+          "echo_both_minus_no_echo_connected": 0.0003037600000000973,
+          "echo_both_minus_no_echo_mean": 0.011199999999999988,
+          "echo_both_minus_no_echo_normalized_correlation": 0.0017222053821623739,
+          "echo_contrast_norm_connected": 0.04623967949731494,
+          "echo_contrast_norm_mean": 0.01224418229201117,
+          "echo_left_minus_echo_right_connected": 0.043870439999999955,
+          "echo_left_minus_echo_right_mean": 0.006000000000000005,
+          "echo_left_minus_echo_right_normalized_correlation": 0.2632718586703535,
+          "echo_response_variance_connected": 0.0003857165125395001,
+          "echo_response_variance_normalized_correlation": 0.014248200032110045,
+          "echo_signed_left_right_asymmetry_connected": 0.043870439999999955,
+          "no_echo_minus_echo_both_connected": -0.0003037600000000973,
+          "no_echo_minus_echo_both_mean": -0.011199999999999988,
+          "no_echo_minus_echo_both_normalized_correlation": -0.0017222053821623739,
+          "no_echo_minus_echo_left_connected": -0.04618092000000007,
+          "no_echo_minus_echo_left_mean": -0.0048000000000000265,
+          "no_echo_minus_echo_left_normalized_correlation": -0.2819469612630418,
+          "no_echo_minus_echo_right_connected": -0.0023104800000001147,
+          "no_echo_minus_echo_right_mean": 0.0011999999999999789,
+          "no_echo_minus_echo_right_normalized_correlation": -0.018675102592688272,
+          "no_echo_over_echo_both_connected": -1.3195558557798905
+        },
+        "edge_parity": "even",
+        "location_id": 37,
+        "qubits": [
+          4,
+          5
+        ],
+        "role_stats": {
+          "echo_both": {
+            "available": true,
+            "connected": -0.0009464399999999928,
+            "edge_parity": "even",
+            "mean": 0.8844,
+            "normalized_correlation": -0.008429150069570809,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 18,
+                "probe_name": "c1:rzz_echo_right_odd"
+              }
+            ],
+            "role": "echo_both",
+            "standard_error": 0.004667297290724044,
+            "z_score": 189.48867940289313
+          },
+          "echo_left": {
+            "available": true,
+            "connected": 0.04493071999999998,
+            "edge_parity": "even",
+            "mean": 0.878,
+            "normalized_correlation": 0.2717956058113086,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 19,
+                "probe_name": "c1:rzz_echo_both_odd"
+              }
+            ],
+            "role": "echo_left",
+            "standard_error": 0.0047866063134542405,
+            "z_score": 183.4284966223583
+          },
+          "echo_right": {
+            "available": true,
+            "connected": 0.0010602800000000245,
+            "edge_parity": "even",
+            "mean": 0.872,
+            "normalized_correlation": 0.008523747140955091,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 17,
+                "probe_name": "c1:rzz_echo_left_odd"
+              }
+            ],
+            "role": "echo_right",
+            "standard_error": 0.004895058733049074,
+            "z_score": 178.13882275051716
+          },
+          "no_echo": {
+            "available": true,
+            "connected": -0.0012502000000000901,
+            "edge_parity": "even",
+            "mean": 0.8732,
+            "normalized_correlation": -0.010151355451733183,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 13,
+                "probe_name": "c1:rzz_no_echo"
+              }
+            ],
+            "role": "no_echo",
+            "standard_error": 0.004873620420180464,
+            "z_score": 179.16865178590714
+          }
+        }
+      },
+      {
+        "contrast_features": {
+          "echo_both_minus_no_echo_connected": -0.0006236000000000574,
+          "echo_both_minus_no_echo_mean": 0.0018000000000000238,
+          "echo_both_minus_no_echo_normalized_correlation": -0.005138137954447695,
+          "echo_contrast_norm_connected": 0.0016315978161299703,
+          "echo_contrast_norm_mean": 0.005188448708429176,
+          "echo_left_minus_echo_right_connected": -0.0021322400000000075,
+          "echo_left_minus_echo_right_mean": -0.0040000000000000036,
+          "echo_left_minus_echo_right_normalized_correlation": -0.016715986840263604,
+          "echo_response_variance_connected": 6.408600148000087e-07,
+          "echo_response_variance_normalized_correlation": 3.996768768601859e-05,
+          "echo_signed_left_right_asymmetry_connected": -0.0021322400000000075,
+          "no_echo_minus_echo_both_connected": 0.0006236000000000574,
+          "no_echo_minus_echo_both_mean": -0.0018000000000000238,
+          "no_echo_minus_echo_both_normalized_correlation": 0.005138137954447695,
+          "no_echo_minus_echo_left_connected": 0.0010684400000000593,
+          "no_echo_minus_echo_left_mean": 0.0048000000000000265,
+          "no_echo_minus_echo_left_normalized_correlation": 0.008289182206241318,
+          "no_echo_minus_echo_right_connected": -0.0010637999999999481,
+          "no_echo_minus_echo_right_mean": 0.0008000000000000229,
+          "no_echo_minus_echo_right_normalized_correlation": -0.008426804634022286,
+          "no_echo_over_echo_both_connected": -0.1825891221273458
+        },
+        "edge_parity": "even",
+        "location_id": 39,
+        "qubits": [
+          2,
+          3
+        ],
+        "role_stats": {
+          "echo_both": {
+            "available": true,
+            "connected": -0.000763120000000006,
+            "edge_parity": "even",
+            "mean": 0.877,
+            "normalized_correlation": -0.00625846885824211,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 28,
+                "probe_name": "c2:rzz_echo_right_odd"
+              }
+            ],
+            "role": "echo_both",
+            "standard_error": 0.004804903745133715,
+            "z_score": 182.52186651776393
+          },
+          "echo_left": {
+            "available": true,
+            "connected": -0.001207960000000008,
+            "edge_parity": "even",
+            "mean": 0.8704,
+            "normalized_correlation": -0.009409513110035734,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 29,
+                "probe_name": "c2:rzz_echo_both_odd"
+              }
+            ],
+            "role": "echo_left",
+            "standard_error": 0.004923452447216282,
+            "z_score": 176.7865150179573
+          },
+          "echo_right": {
+            "available": true,
+            "connected": 0.0009242799999999995,
+            "edge_parity": "even",
+            "mean": 0.8744,
+            "normalized_correlation": 0.00730647373022787,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 27,
+                "probe_name": "c2:rzz_echo_left_odd"
+              }
+            ],
+            "role": "echo_right",
+            "standard_error": 0.004852057707818406,
+            "z_score": 180.21220122568366
+          },
+          "no_echo": {
+            "available": true,
+            "connected": -0.00013951999999994857,
+            "edge_parity": "even",
+            "mean": 0.8752,
+            "normalized_correlation": -0.0011203309037944153,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 23,
+                "probe_name": "c2:rzz_no_echo"
+              }
+            ],
+            "role": "no_echo",
+            "standard_error": 0.00483761263434765,
+            "z_score": 180.9156842749193
+          }
+        }
+      },
+      {
+        "contrast_features": {
+          "echo_both_minus_no_echo_connected": -0.0005655999999998329,
+          "echo_both_minus_no_echo_mean": 0.0030000000000000027,
+          "echo_both_minus_no_echo_normalized_correlation": -0.001605779588620987,
+          "echo_contrast_norm_connected": 0.002262663351009132,
+          "echo_contrast_norm_mean": 0.0039698866482558185,
+          "echo_left_minus_echo_right_connected": 0.003056480000000028,
+          "echo_left_minus_echo_right_mean": 0.0013999999999999568,
+          "echo_left_minus_echo_right_normalized_correlation": 0.023336526503103874,
+          "echo_response_variance_connected": 1.2079586623999968e-06,
+          "echo_response_variance_normalized_correlation": 6.846625080876665e-05,
+          "echo_signed_left_right_asymmetry_connected": 0.003056480000000028,
+          "no_echo_minus_echo_both_connected": 0.0005655999999998329,
+          "no_echo_minus_echo_both_mean": -0.0030000000000000027,
+          "no_echo_minus_echo_both_normalized_correlation": 0.001605779588620987,
+          "no_echo_minus_echo_left_connected": -0.0012745600000000357,
+          "no_echo_minus_echo_left_mean": -0.0023999999999999577,
+          "no_echo_minus_echo_left_normalized_correlation": -0.011393582295122773,
+          "no_echo_minus_echo_right_connected": 0.0017819199999999924,
+          "no_echo_minus_echo_right_mean": -0.0010000000000000009,
+          "no_echo_minus_echo_right_normalized_correlation": 0.011942944207981102,
+          "no_echo_over_echo_both_connected": 1.0448732010185746
+        },
+        "edge_parity": "odd",
+        "location_id": 53,
+        "qubits": [
+          3,
+          4
+        ],
+        "role_stats": {
+          "echo_both": {
+            "available": true,
+            "connected": 0.012581120000000112,
+            "edge_parity": "odd",
+            "mean": 0.8928,
+            "normalized_correlation": 0.10503952045714074,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 25,
+                "probe_name": "c2:rzz_echo_right_even"
+              }
+            ],
+            "role": "echo_both",
+            "standard_error": 0.004504532828163203,
+            "z_score": 198.2003537454635
+          },
+          "echo_left": {
+            "available": true,
+            "connected": 0.01442127999999998,
+            "edge_parity": "odd",
+            "mean": 0.8922,
+            "normalized_correlation": 0.1180388823408845,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 26,
+                "probe_name": "c2:rzz_echo_both_even"
+              }
+            ],
+            "role": "echo_left",
+            "standard_error": 0.0045164052076845365,
+            "z_score": 197.54649084230678
+          },
+          "echo_right": {
+            "available": true,
+            "connected": 0.011364799999999953,
+            "edge_parity": "odd",
+            "mean": 0.8908,
+            "normalized_correlation": 0.09470235583778062,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 24,
+                "probe_name": "c2:rzz_echo_left_even"
+              }
+            ],
+            "role": "echo_right",
+            "standard_error": 0.004543955985702325,
+            "z_score": 196.04063129196788
+          },
+          "no_echo": {
+            "available": true,
+            "connected": 0.013146719999999945,
+            "edge_parity": "odd",
+            "mean": 0.8898,
+            "normalized_correlation": 0.10664530004576173,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 23,
+                "probe_name": "c2:rzz_no_echo"
+              }
+            ],
+            "role": "no_echo",
+            "standard_error": 0.004563506984765115,
+            "z_score": 194.9816233371665
+          }
+        }
+      },
+      {
+        "contrast_features": {
+          "echo_both_minus_no_echo_connected": 0.002015039999999968,
+          "echo_both_minus_no_echo_mean": 0.009599999999999942,
+          "echo_both_minus_no_echo_normalized_correlation": 0.01877131680016466,
+          "echo_contrast_norm_connected": 0.00391873601580911,
+          "echo_contrast_norm_mean": 0.02353975360958568,
+          "echo_left_minus_echo_right_connected": -0.0044403999999999,
+          "echo_left_minus_echo_right_mean": -0.023399999999999976,
+          "echo_left_minus_echo_right_normalized_correlation": -0.03633215866299936,
+          "echo_response_variance_connected": 2.9785699147998707e-06,
+          "echo_response_variance_normalized_correlation": 0.0002090855986565288,
+          "echo_signed_left_right_asymmetry_connected": -0.0044403999999999,
+          "no_echo_minus_echo_both_connected": -0.002015039999999968,
+          "no_echo_minus_echo_both_mean": -0.009599999999999942,
+          "no_echo_minus_echo_both_normalized_correlation": -0.01877131680016466,
+          "no_echo_minus_echo_left_connected": 0.0013723999999999403,
+          "no_echo_minus_echo_left_mean": 0.021400000000000086,
+          "no_echo_minus_echo_left_normalized_correlation": 0.009165584355645936,
+          "no_echo_minus_echo_right_connected": -0.0030679999999999596,
+          "no_echo_minus_echo_right_mean": -0.0019999999999998908,
+          "no_echo_minus_echo_right_normalized_correlation": -0.027166574307353426,
+          "no_echo_over_echo_both_connected": -0.790380448296623
+        },
+        "edge_parity": "even",
+        "location_id": 54,
+        "qubits": [
+          4,
+          5
+        ],
+        "role_stats": {
+          "echo_both": {
+            "available": true,
+            "connected": 0.0011250400000000216,
+            "edge_parity": "even",
+            "mean": 0.8962,
+            "normalized_correlation": 0.010781734725120243,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 28,
+                "probe_name": "c2:rzz_echo_right_odd"
+              }
+            ],
+            "role": "echo_both",
+            "standard_error": 0.004436502676658721,
+            "z_score": 202.00596400292454
+          },
+          "echo_left": {
+            "available": true,
+            "connected": -0.0022623999999998867,
+            "edge_parity": "even",
+            "mean": 0.8652,
+            "normalized_correlation": -0.01715516643069035,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 29,
+                "probe_name": "c2:rzz_echo_both_odd"
+              }
+            ],
+            "role": "echo_left",
+            "standard_error": 0.005014269238882173,
+            "z_score": 172.54757548537188
+          },
+          "echo_right": {
+            "available": true,
+            "connected": 0.0021780000000000133,
+            "edge_parity": "even",
+            "mean": 0.8886,
+            "normalized_correlation": 0.01917699223230901,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 27,
+                "probe_name": "c2:rzz_echo_left_odd"
+              }
+            ],
+            "role": "echo_right",
+            "standard_error": 0.004586829406027654,
+            "z_score": 193.7285914388425
+          },
+          "no_echo": {
+            "available": true,
+            "connected": -0.0008899999999999464,
+            "edge_parity": "even",
+            "mean": 0.8866,
+            "normalized_correlation": -0.007989582075044415,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 23,
+                "probe_name": "c2:rzz_no_echo"
+              }
+            ],
+            "role": "no_echo",
+            "standard_error": 0.0046253696068530555,
+            "z_score": 191.68197903285238
+          }
+        }
+      },
+      {
+        "contrast_features": {
+          "echo_both_minus_no_echo_connected": -0.001028800000000052,
+          "echo_both_minus_no_echo_mean": 0.007800000000000029,
+          "echo_both_minus_no_echo_normalized_correlation": -0.007538702878871942,
+          "echo_contrast_norm_connected": 0.03411859952567815,
+          "echo_contrast_norm_mean": 0.00882269800004511,
+          "echo_left_minus_echo_right_connected": 0.03757896000000005,
+          "echo_left_minus_echo_right_mean": 0.0006000000000000449,
+          "echo_left_minus_echo_right_normalized_correlation": 0.24008153782046457,
+          "echo_response_variance_connected": 0.00023772474428280116,
+          "echo_response_variance_normalized_correlation": 0.009398052049218291,
+          "echo_signed_left_right_asymmetry_connected": 0.03757896000000005,
+          "no_echo_minus_echo_both_connected": 0.001028800000000052,
+          "no_echo_minus_echo_both_mean": -0.007800000000000029,
+          "no_echo_minus_echo_both_normalized_correlation": 0.007538702878871942,
+          "no_echo_minus_echo_left_connected": -0.033904560000000084,
+          "no_echo_minus_echo_left_mean": 0.0025999999999999357,
+          "no_echo_minus_echo_left_normalized_correlation": -0.20978195043476583,
+          "no_echo_minus_echo_right_connected": 0.0036743999999999666,
+          "no_echo_minus_echo_right_mean": 0.0031999999999999806,
+          "no_echo_minus_echo_right_normalized_correlation": 0.030299587385698733,
+          "no_echo_over_echo_both_connected": 1.69813883983163
+        },
+        "edge_parity": "odd",
+        "location_id": 56,
+        "qubits": [
+          5,
+          6
+        ],
+        "role_stats": {
+          "echo_both": {
+            "available": true,
+            "connected": 0.0014711999999998948,
+            "edge_parity": "odd",
+            "mean": 0.8862,
+            "normalized_correlation": 0.013139543605825716,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 25,
+                "probe_name": "c2:rzz_echo_right_even"
+              }
+            ],
+            "role": "echo_both",
+            "standard_error": 0.004633028814933057,
+            "z_score": 191.2787585399045
+          },
+          "echo_left": {
+            "available": true,
+            "connected": 0.03640456000000003,
+            "edge_parity": "odd",
+            "mean": 0.8758,
+            "normalized_correlation": 0.23046019691946348,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 26,
+                "probe_name": "c2:rzz_echo_both_even"
+              }
+            ],
+            "role": "echo_left",
+            "standard_error": 0.004826741758163574,
+            "z_score": 181.44745335064596
+          },
+          "echo_right": {
+            "available": true,
+            "connected": -0.0011744000000000199,
+            "edge_parity": "odd",
+            "mean": 0.8752,
+            "normalized_correlation": -0.009621340901001073,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 24,
+                "probe_name": "c2:rzz_echo_left_even"
+              }
+            ],
+            "role": "echo_right",
+            "standard_error": 0.00483761263434765,
+            "z_score": 180.9156842749193
+          },
+          "no_echo": {
+            "available": true,
+            "connected": 0.0024999999999999467,
+            "edge_parity": "odd",
+            "mean": 0.8784,
+            "normalized_correlation": 0.020678246484697658,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 23,
+                "probe_name": "c2:rzz_no_echo"
+              }
+            ],
+            "role": "no_echo",
+            "standard_error": 0.004779261867694635,
+            "z_score": 183.79407203809745
+          }
+        }
+      }
+    ]
+  }
+}

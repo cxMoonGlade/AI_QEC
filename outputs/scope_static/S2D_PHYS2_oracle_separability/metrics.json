@@ -1,0 +1,149 @@
+{
+  "active_clusters": 6,
+  "ari": 1.0,
+  "ari_nmi_used_for_selection": false,
+  "cluster_masses": [
+    1,
+    4,
+    5,
+    1,
+    1,
+    1
+  ],
+  "confusion_matrix": [
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      1
+    ],
+    [
+      0,
+      4,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      5,
+      0
+    ],
+    [
+      0,
+      0,
+      1,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      1,
+      0,
+      0
+    ],
+    [
+      1,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  ],
+  "feature_shape": [
+    13,
+    53
+  ],
+  "fingerprint_families": {
+    "probe_response": {
+      "shape": [
+        13,
+        32
+      ],
+      "source": "oracle_channel_probe_responses"
+    },
+    "ptm": {
+      "shape": [
+        13,
+        17
+      ]
+    },
+    "rzz_type_features": {
+      "enabled_in_combined": true,
+      "feature_names": [
+        "rzz_type1_commuting_fixed_fraction",
+        "rzz_type2_two_entry_rotation_fraction",
+        "rzz_type3_nonclifford_rotation_strength",
+        "rzz_type4_hard_residual_leakage"
+      ],
+      "shape": [
+        13,
+        4
+      ]
+    }
+  },
+  "labels": [
+    5,
+    3,
+    4,
+    1,
+    1,
+    1,
+    1,
+    2,
+    2,
+    2,
+    2,
+    2,
+    0
+  ],
+  "max_merged_omega_per_cluster": 1,
+  "max_splits_per_omega": 1,
+  "mean_cluster_purity": 1.0,
+  "mean_merged_omega_per_cluster": 1.0,
+  "mean_splits_per_omega": 1.0,
+  "nearest_class_margin": 6.616005848993899,
+  "nmi": 1.0,
+  "num_locations": 13,
+  "oracle_label_names": [
+    "M0",
+    "M1",
+    "M2",
+    "M3",
+    "M4",
+    "M5"
+  ],
+  "output_dir": "outputs/scope_static/S2D_PHYS2_oracle_separability",
+  "pairwise_mechanism_distance": {
+    "M0__M1": 7.82758208541033,
+    "M0__M2": 1.5207470228521345,
+    "M0__M3": 5.05358368232018,
+    "M0__M4": 6.902464987549127,
+    "M0__M5": 13.870418545778945,
+    "M1__M2": 7.820970492523428,
+    "M1__M3": 9.560035086779573,
+    "M1__M4": 10.97554167461947,
+    "M1__M5": 16.095566769266306,
+    "M2__M3": 5.654638305894051,
+    "M2__M4": 7.51933275121541,
+    "M2__M5": 13.770723895161849,
+    "M3__M4": 6.952117546605847,
+    "M3__M5": 12.116791401056904,
+    "M4__M5": 13.703307100785427
+  },
+  "paper_informed_ptm_features": true,
+  "schema": "scope_static_s2d_oracle_separability_v1",
+  "separability_gate": "identifying",
+  "stage": "S2D_PHYS2_oracle_separability",
+  "teacher_dir": "outputs/scope_static/S2D_PHYS1_teacher"
+}

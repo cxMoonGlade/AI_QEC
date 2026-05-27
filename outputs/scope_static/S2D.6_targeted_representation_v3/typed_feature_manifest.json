@@ -1,0 +1,42 @@
+{
+  "feature_blocks": {
+    "RZZ locations": [
+      "signed probe differences x_measure-z_basis, y_measure-z_basis, x_measure-y_measure",
+      "basis response ratios x/z, y/z, x/y",
+      "Type2-like diagonal/equal-response preservation contrast",
+      "Type3-like off-diagonal/mixing contrast proxy",
+      "Type4-like small mixing proxy",
+      "signed asymmetry, response slope, response variance across probes",
+      "edge-local chain position and neighboring RZZ count"
+    ],
+    "readout locations": [
+      "normalized readout response shape",
+      "downweighted readout strength",
+      "shape entropy and variance"
+    ],
+    "single_qubit locations": [
+      "current local inverse probability features"
+    ]
+  },
+  "feature_roles": {
+    "oracle_fingerprint_upper_bound": "oracle_only_upper_bound",
+    "physical_local_inverse_probability_v3_typed": "learner_visible",
+    "v3a_rzz_signed_features_only": "learner_visible",
+    "v3b_readout_normalization_only": "learner_visible"
+  },
+  "method": "physical_local_inverse_probability_v3_typed",
+  "schema": "scope_static_s2d6_typed_feature_manifest_v1",
+  "type_budget_rule": {
+    "other": "fallback remaining visible-type budget",
+    "readout": "1 cluster when visible readout locations exist",
+    "rzz_edge": "1 cluster for K<9, 3 clusters for 9<=K<11, 4 clusters for K>=11",
+    "single_qubit": "remaining clusters after readout/rzz allocation"
+  },
+  "uses_oracle_labels": false,
+  "visible_types": [
+    "rzz_edge",
+    "single_qubit",
+    "readout",
+    "other"
+  ]
+}

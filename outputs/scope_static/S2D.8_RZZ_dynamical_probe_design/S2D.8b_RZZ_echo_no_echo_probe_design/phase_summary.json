@@ -1,0 +1,9 @@
+{
+  "main_conclusion": "RZZ echo/no-echo paired contrasts give a partial RZZ-family improvement on one balanced run, but fail on the other and do not beat the scrambled-echo control.",
+  "next_recommended_step": "S2D.8c_minimal_twirl_style_probes",
+  "not_ruled_out": "twirl-style dynamical probes or stronger local channel characterization",
+  "phase_label": "echo_no_echo_mixed_control_limited",
+  "ruled_out_hypothesis": "current paired echo/no-echo final-shot contrasts as a sufficient RZZ-family fix.",
+  "schema": "scope_static_s2d8b_phase_summary_v1",
+  "stage": "S2D.8b_RZZ_echo_no_echo_probe_design"
+}

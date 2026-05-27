@@ -1,0 +1,906 @@
+{
+  "PHYS2": {
+    "active_clusters": 6,
+    "ari": 1.0,
+    "nmi": 1.0,
+    "separability_gate": "identifying"
+  },
+  "PHYS3": {
+    "direct_Salpha": {
+      "active_clusters": 6,
+      "ari": 0.7955092221331195,
+      "cluster_margin": 2.6442942097606292,
+      "cluster_masses": [
+        1,
+        1,
+        4,
+        2,
+        9,
+        4
+      ],
+      "comparison": "direct_S_alpha_assignment",
+      "detector_probe_response_mae": 0.0540196390850302,
+      "heldout_response_cross_entropy_nats": 0.3873462507057213,
+      "heldout_response_nll": 0.3873462507057213,
+      "max_merged_omega_per_cluster": 2,
+      "max_splits_per_omega": 2,
+      "mean_cluster_purity": 0.9166666666666666,
+      "mean_merged_omega_per_cluster": 1.1666666666666667,
+      "mean_splits_per_omega": 1.1666666666666667,
+      "method": "deterministic_kmeans",
+      "nmi": 0.8851158600503576,
+      "response_reconstruction_mae": 0.0540196390850302,
+      "response_reconstruction_mse": 0.0290311393686543
+    },
+    "oracle": {
+      "active_clusters": 6,
+      "ari": 1.0,
+      "cluster_margin": 7.562853558695086,
+      "cluster_masses": [
+        1,
+        9,
+        8,
+        1,
+        1,
+        1
+      ],
+      "comparison": "oracle_fingerprint_upper_bound",
+      "detector_probe_response_mae": 0.05183952390625835,
+      "heldout_response_cross_entropy_nats": 0.38310992663607707,
+      "heldout_response_nll": 0.38310992663607707,
+      "max_merged_omega_per_cluster": 1,
+      "max_splits_per_omega": 1,
+      "mean_cluster_purity": 1.0,
+      "mean_merged_omega_per_cluster": 1.0,
+      "mean_splits_per_omega": 1.0,
+      "method": "oracle_ptm_probe_fingerprint_kmeans",
+      "nmi": 1.0,
+      "response_reconstruction_mae": 0.05183952390625835,
+      "response_reconstruction_mse": 0.02799441156261744
+    },
+    "v1": {
+      "active_clusters": 6,
+      "ari": 1.0,
+      "cluster_margin": 3.018032508356543,
+      "cluster_masses": [
+        9,
+        1,
+        1,
+        8,
+        1,
+        1
+      ],
+      "comparison": "physical_local_inverse_probability",
+      "detector_probe_response_mae": 0.05183952390625835,
+      "heldout_response_cross_entropy_nats": 0.38310992663607707,
+      "heldout_response_nll": 0.38310992663607707,
+      "max_merged_omega_per_cluster": 1,
+      "max_splits_per_omega": 1,
+      "mean_cluster_purity": 1.0,
+      "mean_merged_omega_per_cluster": 1.0,
+      "mean_splits_per_omega": 1.0,
+      "method": "visible_operation_aware_local_inverse_clustering",
+      "nmi": 1.0,
+      "response_reconstruction_mae": 0.05183952390625835,
+      "response_reconstruction_mse": 0.02799441156261744
+    },
+    "v2": {
+      "active_clusters": 6,
+      "ari": 1.0,
+      "cluster_margin": 4.417976175633693,
+      "cluster_masses": [
+        9,
+        1,
+        1,
+        8,
+        1,
+        1
+      ],
+      "comparison": "physical_local_inverse_probability_v2",
+      "detector_probe_response_mae": 0.05183952390625835,
+      "heldout_response_cross_entropy_nats": 0.38310992663607707,
+      "heldout_response_nll": 0.38310992663607707,
+      "max_merged_omega_per_cluster": 1,
+      "max_splits_per_omega": 1,
+      "mean_cluster_purity": 1.0,
+      "mean_merged_omega_per_cluster": 1.0,
+      "mean_splits_per_omega": 1.0,
+      "method": "visible_operation_aware_local_inverse_clustering_v2",
+      "nmi": 1.0,
+      "response_reconstruction_mae": 0.05183952390625835,
+      "response_reconstruction_mse": 0.02799441156261744
+    }
+  },
+  "decision": "success",
+  "mechanism_set": "set_A",
+  "name": "phys9_setA",
+  "num_qubits": 9,
+  "profile": "phys9_chain",
+  "purpose": "regression sanity profile",
+  "shots": 10000,
+  "targeted_audit_deltas": {
+    "baseline_best_M5_split_count": 1,
+    "baseline_best_rzz_merge_count": 0,
+    "baseline_best_rzz_split_count": 0,
+    "readout_split_nonworse": true,
+    "rzz_merge_nonworse": true,
+    "rzz_split_nonworse": true,
+    "v3c_M5_split_count": 1,
+    "v3c_rzz_merge_count": 0,
+    "v3c_rzz_split_count": 0
+  },
+  "targeted_v3": {
+    "best_method": {
+      "active_clusters": 6,
+      "ari": 1.0,
+      "cluster_masses": [
+        9,
+        1,
+        1,
+        8,
+        1,
+        1
+      ],
+      "feature_role": "learner_visible",
+      "feature_shape": [
+        21,
+        109
+      ],
+      "feature_space": "physical_local_inverse_probability",
+      "labels": [
+        5,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        1,
+        2,
+        4,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "max_merged_omega_per_cluster": 1,
+      "max_splits_per_omega": 1,
+      "mean_cluster_purity": 1.0,
+      "mean_merged_omega_per_cluster": 1.0,
+      "mean_splits_per_omega": 1.0,
+      "method": "v1_physical_local_inverse_probability",
+      "nmi": 1.0,
+      "uses_oracle_channel_parameters": false,
+      "uses_oracle_labels": false
+    },
+    "feature_manifest": {
+      "feature_blocks": {
+        "RZZ locations": [
+          "signed probe differences x_measure-z_basis, y_measure-z_basis, x_measure-y_measure",
+          "basis response ratios x/z, y/z, x/y",
+          "Type2-like diagonal/equal-response preservation contrast",
+          "Type3-like off-diagonal/mixing contrast proxy",
+          "Type4-like small mixing proxy",
+          "signed asymmetry, response slope, response variance across probes",
+          "edge-local chain position and neighboring RZZ count"
+        ],
+        "readout locations": [
+          "normalized readout response shape",
+          "downweighted readout strength",
+          "shape entropy and variance"
+        ],
+        "single_qubit locations": [
+          "current local inverse probability features"
+        ]
+      },
+      "feature_roles": {
+        "oracle_fingerprint_upper_bound": "oracle_only_upper_bound",
+        "physical_local_inverse_probability_v3_typed": "learner_visible",
+        "v3a_rzz_signed_features_only": "learner_visible",
+        "v3b_readout_normalization_only": "learner_visible"
+      },
+      "method": "physical_local_inverse_probability_v3_typed",
+      "schema": "scope_static_s2d6_typed_feature_manifest_v1",
+      "type_budget_rule": {
+        "other": "fallback remaining visible-type budget",
+        "readout": "1 cluster when visible readout locations exist",
+        "rzz_edge": "1 cluster for K<9, 3 clusters for 9<=K<11, 4 clusters for K>=11",
+        "single_qubit": "remaining clusters after readout/rzz allocation"
+      },
+      "uses_oracle_labels": false,
+      "visible_types": [
+        "rzz_edge",
+        "single_qubit",
+        "readout",
+        "other"
+      ]
+    },
+    "key_comparison": {
+      "best_v1_v2_ari": 1.0,
+      "best_v1_v2_method": "v1_physical_local_inverse_probability",
+      "best_v1_v2_nmi": 1.0,
+      "primary": "v3c_vs_v1_v2",
+      "v3c_ari": 1.0,
+      "v3c_delta_ari_vs_best_v1_v2": 0.0,
+      "v3c_delta_nmi_vs_best_v1_v2": 0.0,
+      "v3c_nmi": 1.0
+    },
+    "labels_by_method": {
+      "direct_Salpha": [
+        3,
+        5,
+        5,
+        5,
+        5,
+        2,
+        2,
+        2,
+        2,
+        1,
+        0,
+        3,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "oracle_fingerprint_upper_bound": [
+        5,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        0,
+        3,
+        4,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "v1_physical_local_inverse_probability": [
+        5,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        1,
+        2,
+        4,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "v2_physical_local_inverse_probability_v2": [
+        5,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        1,
+        2,
+        4,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "v3a_rzz_signed_features_only": [
+        4,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        2,
+        5,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "v3b_readout_normalization_only": [
+        5,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        2,
+        3,
+        4,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "v3c_physical_local_inverse_probability_v3_typed": [
+        4,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        2,
+        5,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "methods": [
+      {
+        "active_clusters": 6,
+        "ari": 1.0,
+        "cluster_masses": [
+          9,
+          1,
+          1,
+          8,
+          1,
+          1
+        ],
+        "feature_role": "learner_visible",
+        "feature_shape": [
+          21,
+          109
+        ],
+        "feature_space": "physical_local_inverse_probability",
+        "labels": [
+          5,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          1,
+          2,
+          4,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "max_merged_omega_per_cluster": 1,
+        "max_splits_per_omega": 1,
+        "mean_cluster_purity": 1.0,
+        "mean_merged_omega_per_cluster": 1.0,
+        "mean_splits_per_omega": 1.0,
+        "method": "v1_physical_local_inverse_probability",
+        "nmi": 1.0,
+        "uses_oracle_channel_parameters": false,
+        "uses_oracle_labels": false
+      },
+      {
+        "active_clusters": 6,
+        "ari": 1.0,
+        "cluster_masses": [
+          9,
+          1,
+          1,
+          8,
+          1,
+          1
+        ],
+        "feature_role": "learner_visible",
+        "feature_shape": [
+          21,
+          174
+        ],
+        "feature_space": "physical_local_inverse_probability_v2",
+        "labels": [
+          5,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          1,
+          2,
+          4,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "max_merged_omega_per_cluster": 1,
+        "max_splits_per_omega": 1,
+        "mean_cluster_purity": 1.0,
+        "mean_merged_omega_per_cluster": 1.0,
+        "mean_splits_per_omega": 1.0,
+        "method": "v2_physical_local_inverse_probability_v2",
+        "nmi": 1.0,
+        "uses_oracle_channel_parameters": false,
+        "uses_oracle_labels": false
+      },
+      {
+        "active_clusters": 6,
+        "ari": 1.0,
+        "cluster_masses": [
+          9,
+          8,
+          1,
+          1,
+          1,
+          1
+        ],
+        "feature_role": "learner_visible",
+        "feature_shape": [
+          21,
+          126
+        ],
+        "feature_space": "v3a_rzz_signed_only",
+        "labels": [
+          4,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          2,
+          5,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "max_merged_omega_per_cluster": 1,
+        "max_splits_per_omega": 1,
+        "mean_cluster_purity": 1.0,
+        "mean_merged_omega_per_cluster": 1.0,
+        "mean_splits_per_omega": 1.0,
+        "method": "v3a_rzz_signed_features_only",
+        "nmi": 1.0,
+        "uses_oracle_channel_parameters": false,
+        "uses_oracle_labels": false
+      },
+      {
+        "active_clusters": 6,
+        "ari": 1.0,
+        "cluster_masses": [
+          9,
+          8,
+          1,
+          1,
+          1,
+          1
+        ],
+        "feature_role": "learner_visible",
+        "feature_shape": [
+          21,
+          146
+        ],
+        "feature_space": "v3b_readout_normalization_only",
+        "labels": [
+          5,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          2,
+          3,
+          4,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "max_merged_omega_per_cluster": 1,
+        "max_splits_per_omega": 1,
+        "mean_cluster_purity": 1.0,
+        "mean_merged_omega_per_cluster": 1.0,
+        "mean_splits_per_omega": 1.0,
+        "method": "v3b_readout_normalization_only",
+        "nmi": 1.0,
+        "uses_oracle_channel_parameters": false,
+        "uses_oracle_labels": false
+      },
+      {
+        "active_clusters": 6,
+        "ari": 1.0,
+        "cluster_masses": [
+          9,
+          8,
+          1,
+          1,
+          1,
+          1
+        ],
+        "feature_role": "learner_visible",
+        "feature_shape": [
+          21,
+          354
+        ],
+        "feature_space": "physical_local_inverse_probability_v3_typed",
+        "labels": [
+          4,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          2,
+          5,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "max_merged_omega_per_cluster": 1,
+        "max_splits_per_omega": 1,
+        "mean_cluster_purity": 1.0,
+        "mean_merged_omega_per_cluster": 1.0,
+        "mean_splits_per_omega": 1.0,
+        "method": "v3c_physical_local_inverse_probability_v3_typed",
+        "nmi": 1.0,
+        "uses_oracle_channel_parameters": false,
+        "uses_oracle_labels": false
+      },
+      {
+        "active_clusters": 6,
+        "ari": 0.7955092221331195,
+        "cluster_masses": [
+          1,
+          1,
+          4,
+          2,
+          9,
+          4
+        ],
+        "feature_role": "learner_visible",
+        "feature_shape": [
+          21,
+          9
+        ],
+        "feature_space": "direct_Salpha",
+        "labels": [
+          3,
+          5,
+          5,
+          5,
+          5,
+          2,
+          2,
+          2,
+          2,
+          1,
+          0,
+          3,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        "max_merged_omega_per_cluster": 2,
+        "max_splits_per_omega": 2,
+        "mean_cluster_purity": 0.9166666666666666,
+        "mean_merged_omega_per_cluster": 1.1666666666666667,
+        "mean_splits_per_omega": 1.1666666666666667,
+        "method": "direct_Salpha",
+        "nmi": 0.8851158600503576,
+        "uses_oracle_channel_parameters": false,
+        "uses_oracle_labels": false
+      },
+      {
+        "active_clusters": 6,
+        "ari": 1.0,
+        "cluster_masses": [
+          1,
+          9,
+          8,
+          1,
+          1,
+          1
+        ],
+        "feature_role": "oracle_only_upper_bound",
+        "feature_space": "oracle_PTM_probe_fingerprint",
+        "labels": [
+          5,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          0,
+          3,
+          4,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "max_merged_omega_per_cluster": 1,
+        "max_splits_per_omega": 1,
+        "mean_cluster_purity": 1.0,
+        "mean_merged_omega_per_cluster": 1.0,
+        "mean_splits_per_omega": 1.0,
+        "method": "oracle_fingerprint_upper_bound",
+        "nmi": 1.0,
+        "uses_oracle_channel_parameters": true,
+        "uses_oracle_labels": false
+      }
+    ],
+    "readout_split_audit": {
+      "M5_within_class_variance_after_normalization": 0.003315254442052521,
+      "M5_within_class_variance_before_normalization": 0.020348425260007484,
+      "methods": {
+        "direct_Salpha": {
+          "M5_clusters": [
+            4
+          ],
+          "M5_split_count": 1,
+          "M5_split_fixed": true
+        },
+        "oracle_fingerprint_upper_bound": {
+          "M5_clusters": [
+            1
+          ],
+          "M5_split_count": 1,
+          "M5_split_fixed": true
+        },
+        "v1_physical_local_inverse_probability": {
+          "M5_clusters": [
+            0
+          ],
+          "M5_split_count": 1,
+          "M5_split_fixed": true
+        },
+        "v2_physical_local_inverse_probability_v2": {
+          "M5_clusters": [
+            0
+          ],
+          "M5_split_count": 1,
+          "M5_split_fixed": true
+        },
+        "v3a_rzz_signed_features_only": {
+          "M5_clusters": [
+            0
+          ],
+          "M5_split_count": 1,
+          "M5_split_fixed": true
+        },
+        "v3b_readout_normalization_only": {
+          "M5_clusters": [
+            0
+          ],
+          "M5_split_count": 1,
+          "M5_split_fixed": true
+        },
+        "v3c_physical_local_inverse_probability_v3_typed": {
+          "M5_clusters": [
+            0
+          ],
+          "M5_split_count": 1,
+          "M5_split_fixed": true
+        }
+      },
+      "readout_label_present": true
+    },
+    "rzz_family_confusion_audit": {
+      "direct_Salpha": {
+        "distinguishable": true,
+        "family": [
+          "M1"
+        ],
+        "merge_clusters": [],
+        "merge_count": 0,
+        "split_count": 1,
+        "split_mechanisms": [
+          {
+            "clusters": [
+              2,
+              5
+            ],
+            "mechanism": "M1"
+          }
+        ]
+      },
+      "oracle_fingerprint_upper_bound": {
+        "distinguishable": true,
+        "family": [
+          "M1"
+        ],
+        "merge_clusters": [],
+        "merge_count": 0,
+        "split_count": 0,
+        "split_mechanisms": []
+      },
+      "v1_physical_local_inverse_probability": {
+        "distinguishable": true,
+        "family": [
+          "M1"
+        ],
+        "merge_clusters": [],
+        "merge_count": 0,
+        "split_count": 0,
+        "split_mechanisms": []
+      },
+      "v2_physical_local_inverse_probability_v2": {
+        "distinguishable": true,
+        "family": [
+          "M1"
+        ],
+        "merge_clusters": [],
+        "merge_count": 0,
+        "split_count": 0,
+        "split_mechanisms": []
+      },
+      "v3a_rzz_signed_features_only": {
+        "distinguishable": true,
+        "family": [
+          "M1"
+        ],
+        "merge_clusters": [],
+        "merge_count": 0,
+        "split_count": 0,
+        "split_mechanisms": []
+      },
+      "v3b_readout_normalization_only": {
+        "distinguishable": true,
+        "family": [
+          "M1"
+        ],
+        "merge_clusters": [],
+        "merge_count": 0,
+        "split_count": 0,
+        "split_mechanisms": []
+      },
+      "v3c_physical_local_inverse_probability_v3_typed": {
+        "distinguishable": true,
+        "family": [
+          "M1"
+        ],
+        "merge_clusters": [],
+        "merge_count": 0,
+        "split_count": 0,
+        "split_mechanisms": []
+      }
+    },
+    "type_budgets": {
+      "other": 0,
+      "readout": 1,
+      "rzz_edge": 1,
+      "single_qubit": 4
+    },
+    "visible_type_counts": {
+      "readout": 9,
+      "rzz_edge": 8,
+      "single_qubit": 4
+    }
+  },
+  "teacher": {
+    "balanced_min_instances_per_mechanism": null,
+    "mechanism_counts": {
+      "M0": 1,
+      "M1": 8,
+      "M2": 1,
+      "M3": 1,
+      "M4": 1,
+      "M5": 9
+    },
+    "num_circuit_batches": 1
+  }
+}

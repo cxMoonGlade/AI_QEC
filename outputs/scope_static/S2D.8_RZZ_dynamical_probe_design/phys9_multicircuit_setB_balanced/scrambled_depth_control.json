@@ -1,0 +1,9 @@
+{
+  "real_ari": 0.9379081350304372,
+  "real_beats_scrambled": false,
+  "real_method": "rzz_depth_features",
+  "real_nmi": 0.8199313235250041,
+  "scrambled_ari": 0.9379081350304372,
+  "scrambled_method": "scrambled_depth_control",
+  "scrambled_nmi": 0.8199313235250041
+}

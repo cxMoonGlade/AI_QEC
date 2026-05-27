@@ -1,0 +1,218 @@
+{
+  "PHYS2": {
+    "active_clusters": 6,
+    "ari": 1.0,
+    "feature_shape": [
+      21,
+      53
+    ],
+    "nmi": 1.0,
+    "oracle_label_names": [
+      "M0",
+      "M1",
+      "M2",
+      "M3",
+      "M4",
+      "M5"
+    ],
+    "separability_gate": "identifying"
+  },
+  "PHYS3": {
+    "bootstrap_nmi": {
+      "mean_pairwise": 1.0,
+      "mean_vs_full": 1.0,
+      "min_pairwise": 1.0,
+      "min_vs_full": 1.0,
+      "replicates": 16
+    },
+    "direct_S_alpha_result": {
+      "active_clusters": 6,
+      "ari": 0.7955092221331195,
+      "cluster_margin": 2.6442942097606292,
+      "cluster_masses": [
+        1,
+        1,
+        4,
+        2,
+        9,
+        4
+      ],
+      "comparison": "direct_S_alpha_assignment",
+      "detector_probe_response_mae": 0.0540196390850302,
+      "heldout_response_cross_entropy_nats": 0.3873462507057213,
+      "heldout_response_nll": 0.3873462507057213,
+      "max_merged_omega_per_cluster": 2,
+      "max_splits_per_omega": 2,
+      "mean_cluster_purity": 0.9166666666666666,
+      "mean_merged_omega_per_cluster": 1.1666666666666667,
+      "mean_splits_per_omega": 1.1666666666666667,
+      "method": "deterministic_kmeans",
+      "nmi": 0.8851158600503576,
+      "response_reconstruction_mae": 0.0540196390850302,
+      "response_reconstruction_mse": 0.0290311393686543
+    },
+    "key_comparison": {
+      "direct_S_alpha": {
+        "active_clusters": 6,
+        "ari": 0.7955092221331195,
+        "cluster_margin": 2.6442942097606292,
+        "cluster_masses": [
+          1,
+          1,
+          4,
+          2,
+          9,
+          4
+        ],
+        "comparison": "direct_S_alpha_assignment",
+        "detector_probe_response_mae": 0.0540196390850302,
+        "heldout_response_cross_entropy_nats": 0.3873462507057213,
+        "heldout_response_nll": 0.3873462507057213,
+        "max_merged_omega_per_cluster": 2,
+        "max_splits_per_omega": 2,
+        "mean_cluster_purity": 0.9166666666666666,
+        "mean_merged_omega_per_cluster": 1.1666666666666667,
+        "mean_splits_per_omega": 1.1666666666666667,
+        "method": "deterministic_kmeans",
+        "nmi": 0.8851158600503576,
+        "response_reconstruction_mae": 0.0540196390850302,
+        "response_reconstruction_mse": 0.0290311393686543
+      },
+      "local_inverse_beats_direct": true,
+      "physical_local_inverse_probability": {
+        "active_clusters": 6,
+        "ari": 1.0,
+        "cluster_margin": 3.018032508356543,
+        "cluster_masses": [
+          9,
+          1,
+          1,
+          8,
+          1,
+          1
+        ],
+        "comparison": "physical_local_inverse_probability",
+        "detector_probe_response_mae": 0.05183952390625835,
+        "heldout_response_cross_entropy_nats": 0.38310992663607707,
+        "heldout_response_nll": 0.38310992663607707,
+        "max_merged_omega_per_cluster": 1,
+        "max_splits_per_omega": 1,
+        "mean_cluster_purity": 1.0,
+        "mean_merged_omega_per_cluster": 1.0,
+        "mean_splits_per_omega": 1.0,
+        "method": "visible_operation_aware_local_inverse_clustering",
+        "nmi": 1.0,
+        "response_reconstruction_mae": 0.05183952390625835,
+        "response_reconstruction_mse": 0.02799441156261744
+      }
+    },
+    "main_result": {
+      "active_clusters": 6,
+      "ari": 1.0,
+      "cluster_margin": 3.018032508356543,
+      "cluster_masses": [
+        9,
+        1,
+        1,
+        8,
+        1,
+        1
+      ],
+      "comparison": "physical_local_inverse_probability",
+      "detector_probe_response_mae": 0.05183952390625835,
+      "heldout_response_cross_entropy_nats": 0.38310992663607707,
+      "heldout_response_nll": 0.38310992663607707,
+      "max_merged_omega_per_cluster": 1,
+      "max_splits_per_omega": 1,
+      "mean_cluster_purity": 1.0,
+      "mean_merged_omega_per_cluster": 1.0,
+      "mean_splits_per_omega": 1.0,
+      "method": "visible_operation_aware_local_inverse_clustering",
+      "nmi": 1.0,
+      "response_reconstruction_mae": 0.05183952390625835,
+      "response_reconstruction_mse": 0.02799441156261744
+    },
+    "nll_difficulty_audit": {
+      "NLL_gap_to_oracle": 0.0,
+      "NLL_lift_over_null": 0.25582145269350093,
+      "base_rate_null_NLL": 0.638931379329578,
+      "direct_Salpha_NLL": 0.3873462507057213,
+      "direct_Salpha_NLL_lift_over_null": 0.2515851286238567,
+      "event_rate_max": 1.0,
+      "event_rate_mean": 0.33527280000000004,
+      "event_rate_min": 0.0,
+      "global_mean_NLL": 0.29217962833166855,
+      "local_inverse_NLL": 0.38310992663607707,
+      "oracle_NLL_lift_over_null": 0.25582145269350093,
+      "oracle_fingerprint_NLL": 0.38310992663607707,
+      "response_entropy": 0.2114642221971264,
+      "response_task_classification": "usable"
+    },
+    "oracle_fingerprint_upper_bound": {
+      "active_clusters": 6,
+      "ari": 1.0,
+      "cluster_margin": 7.562853558695086,
+      "cluster_masses": [
+        1,
+        9,
+        8,
+        1,
+        1,
+        1
+      ],
+      "comparison": "oracle_fingerprint_upper_bound",
+      "detector_probe_response_mae": 0.05183952390625835,
+      "heldout_response_cross_entropy_nats": 0.38310992663607707,
+      "heldout_response_nll": 0.38310992663607707,
+      "max_merged_omega_per_cluster": 1,
+      "max_splits_per_omega": 1,
+      "mean_cluster_purity": 1.0,
+      "mean_merged_omega_per_cluster": 1.0,
+      "mean_splits_per_omega": 1.0,
+      "method": "oracle_ptm_probe_fingerprint_kmeans",
+      "nmi": 1.0,
+      "response_reconstruction_mae": 0.05183952390625835,
+      "response_reconstruction_mse": 0.02799441156261744
+    },
+    "prediction_metrics": {
+      "direct_Salpha": {
+        "detector_probe_response_mae": 0.0540196390850302,
+        "heldout_response_nll": 0.3873462507057213,
+        "response_reconstruction_mae": 0.0540196390850302,
+        "response_reconstruction_mse": 0.0290311393686543
+      },
+      "local_inverse": {
+        "detector_probe_response_mae": 0.05183952390625835,
+        "heldout_response_nll": 0.38310992663607707,
+        "response_reconstruction_mae": 0.05183952390625835,
+        "response_reconstruction_mse": 0.02799441156261744
+      },
+      "oracle_fingerprint": {
+        "detector_probe_response_mae": 0.05183952390625835,
+        "heldout_response_nll": 0.38310992663607707,
+        "response_reconstruction_mae": 0.05183952390625835,
+        "response_reconstruction_mse": 0.02799441156261744
+      }
+    },
+    "s2d3_result": "physical_oracle_strong_recovery"
+  },
+  "decision": "strong_recovery",
+  "mechanism_set": "set_A",
+  "name": "phys9_setA",
+  "num_qubits": 9,
+  "profile": "phys9_chain",
+  "purpose": "bigger circuit, same mechanisms",
+  "shots": 10000,
+  "teacher": {
+    "mechanism_counts": {
+      "M0": 1,
+      "M1": 8,
+      "M2": 1,
+      "M3": 1,
+      "M4": 1,
+      "M5": 9
+    },
+    "noise_application_audit": "outputs/scope_static/S2D_PHYS4_difficulty_expansion/phys9_setA/noise_application_audit.json",
+    "output_dir": "outputs/scope_static/S2D_PHYS4_difficulty_expansion/phys9_setA/S2D_PHYS1_teacher"
+  }
+}

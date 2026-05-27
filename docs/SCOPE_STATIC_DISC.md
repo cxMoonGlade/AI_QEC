@@ -1159,6 +1159,292 @@ The Stage 2D question is:
 Which probes improve recoverability of local inverse logits?
 ```
 
+### S2D Physical-Oracle Current Note
+
+S2D_PHYS keeps repetition-style physical-oracle circuits and runs:
+
+```text
+PHYS0 preflight -> PHYS1 teacher -> PHYS2 oracle separability -> PHYS3 learner
+```
+
+S2D.4 showed balanced evidence is needed before overreading ARI on singleton
+mechanism classes. S2D.5 diagnosed the current learner-limited failures as
+RZZ-family mixing plus readout splitting; RX/RZ, readout/damping, and
+Pauli/depolarizing/custom-Kraus groups were distinguishable in the audited
+failed rungs. Response NLL is not yet trusted as a primary ranking signal when
+the oracle-fingerprint predictor is worse than the global-mean predictor.
+
+S2D.6 tested representation-only v3 on balanced setB/setC. It preserved the
+setA regression and improved setC ARI, but did not reduce RZZ-family
+merge/split counts. The next step is therefore active observability, not another
+clustering-only representation.
+
+Current physical-oracle step:
+
+```text
+S2D.7_RZZ_active_probe_design
+```
+
+S2D.7 exposed only learner-visible mixed-basis edge moments computed from shot
+bits, probe-basis metadata, and visible edge schedule. Exact PTM/RZZ-Type
+features remained PHYS2 audit-only upper bounds. Freeze label:
+
+```text
+S2D.7 = negative_static_mixed_basis_probe_result
+```
+
+It ruled out the hypothesis that the RZZ-family gap can be solved by static
+mixed-basis edge moments computed from final shot bits. On balanced setB/setC,
+real active edge moments matched the scrambled-basis control, so the intended
+edge-product physics did not carry the missing mechanism signal. This does not
+rule out active observability in general; it says the next probes must change
+RZZ dynamics.
+
+S2D.8a started with the cheapest dynamical probe, RZZ depth sweep:
+
+```text
+S2D.8a_RZZ_depth_sweep
+```
+
+It kept setA clean and improved some global balanced scores, but depth features
+matched the scrambled-depth control and did not close the RZZ-family merge/split
+gap. Phase label:
+
+```text
+S2D.8a = depth_sweep_control_matched_negative
+```
+
+Next physical-oracle step:
+
+```text
+S2D.8b_RZZ_echo_no_echo_probe_design
+```
+
+S2D.8b is implemented as paired learner-visible echo/no-echo contrasts, not
+raw echo moments. It uses colored even/odd RZZ-edge probes so left/right echo
+roles are reproducible on a chain, compares against a scrambled-echo control,
+and keeps exact PTM/RZZ-Type/oracle fingerprints PHYS2 audit-only. The full
+GPU run kept setA clean, failed balanced setB, and gave only a control-limited
+partial improvement on balanced setC: real echo did not beat scrambled echo.
+Phase label:
+
+```text
+S2D.8b = echo_no_echo_mixed_control_limited
+```
+
+Artifacts live under
+`outputs/scope_static/S2D.8_RZZ_dynamical_probe_design/S2D.8b_RZZ_echo_no_echo_probe_design/`;
+the next active-probe step, if continued, is minimal twirl-style RZZ probes.
+
+### S2D.8c_RZZ_observability_ceiling_audit
+
+Status: planned / implemented boundary, results pending.
+
+S2D.8c is an audit-only observability ceiling inserted before twirl-style
+probes. It asks whether the existing S2D.8b balanced artifacts already contain
+transferable RZZ-family signal in PHYS3-visible features. The primary audit
+reuses the existing S2D.8b artifact tree and performs no new teacher sampling.
+
+Primary rows are RZZ-family rows only: M1 / M7 / M8 / M10. Primary runs are
+balanced setB and balanced setC; setA is regression/context only and is not
+included in the primary verdict.
+
+Primary model:
+
+```text
+StandardScaler + LogisticRegression(class_weight="balanced")
+```
+
+Primary validation:
+
+```text
+Leave-one-circuit-id-out grouped validation
+```
+
+Primary PASS/FAIL feature block:
+
+```text
+v3c_plus_active_all
+```
+
+Key explanatory blocks:
+
+```text
+active_residualized_against_v3c
+scrambled_active_residualized_against_v3c
+```
+
+Oracle mechanism labels may be used only as supervised targets and diagnostic
+metadata in this audit. They are forbidden as PHYS3 learner features,
+clustering inputs, or oracle fingerprints. Store separate schemas for
+PHYS3-visible features and oracle-only audit labels.
+
+Controls:
+
+```text
+scrambled-active control
+permutation-label control
+```
+
+Full run-level success requires:
+
+```text
+macro F1 >= 0.80
+balanced accuracy >= 0.80
+real_minus_scrambled_balanced_accuracy >= 0.25
+real_minus_permutation_balanced_accuracy >= 0.25
+all major pairwise margins > 0
+no single class recall < 0.65
+```
+
+Global success requires both balanced setB and balanced setC to pass. If one
+passes and one fails, the verdict is mixed_condition_specific_signal.
+
+Interpretation:
+
+```text
+If the primary linear ceiling succeeds:
+  existing PHYS3-visible stack contains transferable RZZ-family signal;
+  the bottleneck is clustering / representation geometry.
+
+If the linear ceiling fails but nonlinear diagnostics succeed:
+  signal may exist but is not linearly/geometrically exposed.
+
+If both fail:
+  current feature blocks likely do not expose robust RZZ-family signal;
+  this motivates S2D.8d twirl/tomography-like probes.
+```
+
+Pre-run result placeholder:
+
+```text
+Pending S2D.8c run. Append:
+- setB verdict
+- setC verdict
+- conservative global verdict
+- primary metrics table
+- control table
+- residualized-active attribution summary
+- decision for S2D.8d
+```
+
+S2D.8c result:
+
+```text
+S2D.8c verdict:
+  setB: FAIL
+  setC: FAIL
+  global: GLOBAL_FAILURE
+```
+
+Primary linear ceiling, `v3c_plus_active_all`:
+
+```text
+phys9_multicircuit_setB_balanced:
+  macro F1 = 0.2500
+  balanced accuracy = 0.2222
+  real - scrambled balanced accuracy = -0.2222
+  real - permutation balanced accuracy = -0.0217
+  min class recall = 0.0000
+
+phys9_multicircuit_setC_balanced:
+  macro F1 = 0.5278
+  balanced accuracy = 0.5833
+  real - scrambled balanced accuracy = -0.0833
+  real - permutation balanced accuracy = 0.4017
+  min class recall = 0.0000
+```
+
+Leakage guardrails passed: oracle labels, mechanism ids, exact PTM columns,
+teacher-channel columns, and oracle-fingerprint columns were absent from feature
+columns; grouped validation used circuit_id transfer splits. Residualized active
+features did not beat scrambled residualized controls on balanced setB or setC.
+Secondary nonlinear diagnostics did not produce a strong rescue signal.
+
+S2D.8c therefore supports the probe-limited interpretation: the existing saved
+S2D.8b final-shot feature stack does not contain robust transferable
+learner-visible RZZ-family signal under the balanced regimes. The next
+scientific probe step is S2D.8d minimal twirl-style / tomography-like RZZ
+interventions, not larger circuits, setD, or more final-shot feature dressing.
+
+### S2D.8d_RZZ_minimal_intervention_probe
+
+Status: implemented, results pending.
+
+Purpose: S2D.8d adds minimal learner-visible interventions around RZZ-adjacent
+regions to test whether M1/M7/M8/M10 become observably different when the probe
+changes Pauli frame, basis response, or sign-flip/echo sensitivity. PHYS3
+features remain restricted to shot bits, probe metadata, visible edge schedule,
+and location metadata; exact PTM/RZZ-Type features, teacher channels, oracle
+fingerprints, and oracle labels remain audit-only.
+
+Probe families:
+
+```text
+baseline:
+  no intervention
+
+pauli_frame_twirl:
+  deterministic local Pauli-frame representatives on even/odd RZZ edges
+
+basis_rotation:
+  X/Y/XZ/YZ readout-basis interventions
+
+sign_flip_echo:
+  no-flip and left/right sign-flip echo representatives on even/odd RZZ edges
+```
+
+Primary runs remain `phys9_setA`, `phys9_multicircuit_setB_balanced`, and
+`phys9_multicircuit_setC_balanced`. The output bundle is:
+
+```text
+outputs/scope_static/S2D.8_RZZ_dynamical_probe_design/S2D.8d_RZZ_minimal_intervention_probe/
+```
+
+Required artifacts include `intervention_schema.json`,
+`mechanism_response_table.json`, `twirl_response_metrics.json`,
+`basis_response_metrics.json`, `echo_response_metrics.json`, grouped-fold
+ceiling outputs, controls, leakage guardrails, and residualized-active
+attribution. Full success requires global ARI/NMI recovery, improved
+RZZ-family merge/split metrics, real intervention features beating scrambled
+controls, and grouped transferable ceiling evidence.
+
+S2D.8d result:
+
+```text
+S2D.8d = minimal_intervention_negative
+
+phys9_setA:
+  regression pass
+
+phys9_multicircuit_setB_balanced:
+  baseline v3c:              0.9361 / 0.8284
+  minimal intervention all:  0.9136 / 0.7529
+  scrambled intervention:    0.9136 / 0.7529
+  grouped ceiling:           FAIL
+  RZZ error base/all:        3 / 4
+
+phys9_multicircuit_setC_balanced:
+  baseline v3c:              0.9177 / 0.7914
+  minimal intervention all:  0.9029 / 0.7739
+  scrambled intervention:    0.9029 / 0.7739
+  grouped ceiling:           FAIL
+  RZZ error base/all:        3 / 5
+```
+
+The decisive control is that real minimal-intervention features match the
+scrambled intervention control on both balanced primary runs. The grouped
+ceiling audit also fails because macro F1 / balanced accuracy remain below the
+success thresholds and real-minus-scrambled balanced accuracy is 0. S2D.8d
+therefore rules out this minimal deterministic intervention set as sufficient
+for RZZ-family mechanism recovery. The next justified probe step is stronger
+benchmarking/tomography-like local channel characterization, not larger circuits
+or more passive/static feature dressing.
+
+Do not move to larger circuits, setD, Google transfer, S3, or a robustness grid
+before deciding whether to implement stronger benchmarking/tomography-like
+local RZZ channel probes.
+
 Metrics:
 
 ```text

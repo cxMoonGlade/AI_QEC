@@ -1,0 +1,80 @@
+{
+  "direct_Salpha": {
+    "distinguishable": true,
+    "family": [
+      "M1"
+    ],
+    "merge_clusters": [],
+    "merge_count": 0,
+    "split_count": 1,
+    "split_mechanisms": [
+      {
+        "clusters": [
+          2,
+          5
+        ],
+        "mechanism": "M1"
+      }
+    ]
+  },
+  "oracle_fingerprint_upper_bound": {
+    "distinguishable": true,
+    "family": [
+      "M1"
+    ],
+    "merge_clusters": [],
+    "merge_count": 0,
+    "split_count": 0,
+    "split_mechanisms": []
+  },
+  "v1_physical_local_inverse_probability": {
+    "distinguishable": true,
+    "family": [
+      "M1"
+    ],
+    "merge_clusters": [],
+    "merge_count": 0,
+    "split_count": 0,
+    "split_mechanisms": []
+  },
+  "v2_physical_local_inverse_probability_v2": {
+    "distinguishable": true,
+    "family": [
+      "M1"
+    ],
+    "merge_clusters": [],
+    "merge_count": 0,
+    "split_count": 0,
+    "split_mechanisms": []
+  },
+  "v3a_rzz_signed_features_only": {
+    "distinguishable": true,
+    "family": [
+      "M1"
+    ],
+    "merge_clusters": [],
+    "merge_count": 0,
+    "split_count": 0,
+    "split_mechanisms": []
+  },
+  "v3b_readout_normalization_only": {
+    "distinguishable": true,
+    "family": [
+      "M1"
+    ],
+    "merge_clusters": [],
+    "merge_count": 0,
+    "split_count": 0,
+    "split_mechanisms": []
+  },
+  "v3c_physical_local_inverse_probability_v3_typed": {
+    "distinguishable": true,
+    "family": [
+      "M1"
+    ],
+    "merge_clusters": [],
+    "merge_count": 0,
+    "split_count": 0,
+    "split_mechanisms": []
+  }
+}

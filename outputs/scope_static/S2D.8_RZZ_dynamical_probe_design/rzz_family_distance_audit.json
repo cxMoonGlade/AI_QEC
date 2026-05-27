@@ -1,0 +1,197 @@
+{
+  "runs": {
+    "phys9_multicircuit_setB_balanced": {
+      "methods": {
+        "rzz_depth_features": {
+          "M1__M7": {
+            "center_distance": 24.85848298008453,
+            "margin": -9.55624889313562,
+            "median_radius_left": 16.113524903820174,
+            "median_radius_right": 18.301206969399978
+          },
+          "M1__M8": {
+            "center_distance": 22.43406287694507,
+            "margin": -20.003943136269214,
+            "median_radius_left": 16.113524903820174,
+            "median_radius_right": 26.32448110939411
+          },
+          "M7__M8": {
+            "center_distance": 31.263132861824374,
+            "margin": -13.362555216969714,
+            "median_radius_left": 18.301206969399978,
+            "median_radius_right": 26.32448110939411
+          }
+        },
+        "rzz_depth_probe_only_v3c": {
+          "M1__M7": {
+            "center_distance": 18.61659465754949,
+            "margin": -15.412103686758048,
+            "median_radius_left": 16.07714302135708,
+            "median_radius_right": 17.95155532295046
+          },
+          "M1__M8": {
+            "center_distance": 22.27143693020592,
+            "margin": -20.087896343921894,
+            "median_radius_left": 16.07714302135708,
+            "median_radius_right": 26.282190252770732
+          },
+          "M7__M8": {
+            "center_distance": 27.340173192068445,
+            "margin": -16.893572383652746,
+            "median_radius_left": 17.95155532295046,
+            "median_radius_right": 26.282190252770732
+          }
+        },
+        "scrambled_depth_control": {
+          "M1__M7": {
+            "center_distance": 24.858246798020918,
+            "margin": -9.689167754058037,
+            "median_radius_left": 16.159497559333623,
+            "median_radius_right": 18.387916992745332
+          },
+          "M1__M8": {
+            "center_distance": 22.537156387628375,
+            "margin": -19.938236615326648,
+            "median_radius_left": 16.159497559333623,
+            "median_radius_right": 26.3158954436214
+          },
+          "M7__M8": {
+            "center_distance": 31.142211933769463,
+            "margin": -13.561600502597269,
+            "median_radius_left": 18.387916992745332,
+            "median_radius_right": 26.3158954436214
+          }
+        }
+      },
+      "schema": "scope_static_s2d7_rzz_family_distance_audit_v1"
+    },
+    "phys9_multicircuit_setC_balanced": {
+      "methods": {
+        "rzz_depth_features": {
+          "M10__M7": {
+            "center_distance": 37.106738405383375,
+            "margin": 3.0280329900856717,
+            "median_radius_left": 18.314950111770035,
+            "median_radius_right": 15.763755303527669
+          },
+          "M10__M8": {
+            "center_distance": 32.37856541209777,
+            "margin": -5.696755579528265,
+            "median_radius_left": 18.314950111770035,
+            "median_radius_right": 19.760370879856
+          },
+          "M1__M10": {
+            "center_distance": 35.28223544267194,
+            "margin": 2.3822047325724363,
+            "median_radius_left": 14.58508059832947,
+            "median_radius_right": 18.314950111770035
+          },
+          "M1__M7": {
+            "center_distance": 24.599461627012282,
+            "margin": -5.749374274844856,
+            "median_radius_left": 14.58508059832947,
+            "median_radius_right": 15.763755303527669
+          },
+          "M1__M8": {
+            "center_distance": 19.05903626838658,
+            "margin": -15.28641520979889,
+            "median_radius_left": 14.58508059832947,
+            "median_radius_right": 19.760370879856
+          },
+          "M7__M8": {
+            "center_distance": 29.984343078345766,
+            "margin": -5.539783105037904,
+            "median_radius_left": 15.763755303527669,
+            "median_radius_right": 19.760370879856
+          }
+        },
+        "rzz_depth_probe_only_v3c": {
+          "M10__M7": {
+            "center_distance": 33.29434758143884,
+            "margin": -0.3427051201089615,
+            "median_radius_left": 18.23624307948399,
+            "median_radius_right": 15.400809622063813
+          },
+          "M10__M8": {
+            "center_distance": 32.182407646716285,
+            "margin": -5.762869163553592,
+            "median_radius_left": 18.23624307948399,
+            "median_radius_right": 19.709033730785887
+          },
+          "M1__M10": {
+            "center_distance": 35.013398738312176,
+            "margin": 2.2320007477755546,
+            "median_radius_left": 14.54515491105263,
+            "median_radius_right": 18.23624307948399
+          },
+          "M1__M7": {
+            "center_distance": 17.872714463307304,
+            "margin": -12.07325006980914,
+            "median_radius_left": 14.54515491105263,
+            "median_radius_right": 15.400809622063813
+          },
+          "M1__M8": {
+            "center_distance": 18.892312517932737,
+            "margin": -15.36187612390578,
+            "median_radius_left": 14.54515491105263,
+            "median_radius_right": 19.709033730785887
+          },
+          "M7__M8": {
+            "center_distance": 25.52917224419477,
+            "margin": -9.580671108654931,
+            "median_radius_left": 15.400809622063813,
+            "median_radius_right": 19.709033730785887
+          }
+        },
+        "scrambled_depth_control": {
+          "M10__M7": {
+            "center_distance": 36.90814258927743,
+            "margin": 2.6956295037808964,
+            "median_radius_left": 18.383440623109948,
+            "median_radius_right": 15.829072462386588
+          },
+          "M10__M8": {
+            "center_distance": 32.26598408992622,
+            "margin": -5.866261120269023,
+            "median_radius_left": 18.383440623109948,
+            "median_radius_right": 19.748804587085296
+          },
+          "M1__M10": {
+            "center_distance": 35.17202254578842,
+            "margin": 2.1682256298186076,
+            "median_radius_left": 14.620356292859865,
+            "median_radius_right": 18.383440623109948
+          },
+          "M1__M7": {
+            "center_distance": 24.576001347738377,
+            "margin": -5.873427407508077,
+            "median_radius_left": 14.620356292859865,
+            "median_radius_right": 15.829072462386588
+          },
+          "M1__M8": {
+            "center_distance": 19.135848031489704,
+            "margin": -15.233312848455457,
+            "median_radius_left": 14.620356292859865,
+            "median_radius_right": 19.748804587085296
+          },
+          "M7__M8": {
+            "center_distance": 29.862224868427333,
+            "margin": -5.71565218104455,
+            "median_radius_left": 15.829072462386588,
+            "median_radius_right": 19.748804587085296
+          }
+        }
+      },
+      "schema": "scope_static_s2d7_rzz_family_distance_audit_v1"
+    },
+    "phys9_setA": {
+      "methods": {
+        "rzz_depth_features": {},
+        "rzz_depth_probe_only_v3c": {},
+        "scrambled_depth_control": {}
+      },
+      "schema": "scope_static_s2d7_rzz_family_distance_audit_v1"
+    }
+  },
+  "schema": "scope_static_s2d8a_rzz_family_distance_audit_aggregate_v1"
+}

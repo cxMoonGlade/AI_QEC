@@ -1,0 +1,293 @@
+{
+  "runs": {
+    "phys9_multicircuit_setB_balanced": {
+      "S2D.7_active_mixed_basis_moments_plus_signed_contrasts": {
+        "active_clusters": 9,
+        "ari": 0.9117029506022765,
+        "nmi": 0.7358893200971172,
+        "rzz_family_metrics": {
+          "M1_M10_merge_count": 0,
+          "M1_M7_merge_count": 2,
+          "M1_M8_merge_count": 2,
+          "M1_split_count": 2,
+          "M5_split_count": 0,
+          "RZZ_family_ARI": -0.13333333333333333,
+          "RZZ_family_NMI": 0.1693982431924411
+        }
+      },
+      "baseline_v3c": {
+        "active_clusters": 9,
+        "ari": 0.9360760893607609,
+        "nmi": 0.8284361023254375,
+        "rzz_family_metrics": {
+          "M1_M10_merge_count": 0,
+          "M1_M7_merge_count": 1,
+          "M1_M8_merge_count": 1,
+          "M1_split_count": 1,
+          "M5_split_count": 0,
+          "RZZ_family_ARI": 0.07142857142857142,
+          "RZZ_family_NMI": 0.39306663193770597
+        }
+      },
+      "decision": "failure",
+      "depth_key_comparison": {
+        "beats_direct_Salpha": true,
+        "beats_scrambled": false,
+        "delta_ari_vs_depth_probe_only": 0.0,
+        "delta_nmi_vs_depth_probe_only": 0.0,
+        "depth_ari": 0.9379081350304372,
+        "depth_nmi": 0.8199313235250041,
+        "primary": "rzz_depth_features"
+      },
+      "direct_Salpha": {
+        "active_clusters": 9,
+        "ari": 0.39493804376483,
+        "nmi": 0.7340087202624308,
+        "rzz_family_metrics": {
+          "M1_M10_merge_count": 0,
+          "M1_M7_merge_count": 1,
+          "M1_M8_merge_count": 1,
+          "M1_split_count": 0,
+          "M5_split_count": 2,
+          "RZZ_family_ARI": 0.0,
+          "RZZ_family_NMI": 0.22075635588226644
+        }
+      },
+      "oracle_fingerprint_upper_bound": {
+        "active_clusters": 9,
+        "ari": 1.0,
+        "nmi": 1.0,
+        "rzz_family_metrics": {
+          "M1_M10_merge_count": 0,
+          "M1_M7_merge_count": 0,
+          "M1_M8_merge_count": 0,
+          "M1_split_count": 0,
+          "M5_split_count": 0,
+          "RZZ_family_ARI": 1.0,
+          "RZZ_family_NMI": 1.0
+        }
+      },
+      "rzz_depth_features": {
+        "active_clusters": 9,
+        "ari": 0.9379081350304372,
+        "nmi": 0.8199313235250041,
+        "rzz_family_metrics": {
+          "M1_M10_merge_count": 0,
+          "M1_M7_merge_count": 2,
+          "M1_M8_merge_count": 1,
+          "M1_split_count": 1,
+          "M5_split_count": 0,
+          "RZZ_family_ARI": 0.0,
+          "RZZ_family_NMI": 0.3189995570367375
+        }
+      },
+      "scrambled_depth_control": {
+        "active_clusters": 9,
+        "ari": 0.9379081350304372,
+        "nmi": 0.8199313235250041,
+        "rzz_family_metrics": {
+          "M1_M10_merge_count": 0,
+          "M1_M7_merge_count": 2,
+          "M1_M8_merge_count": 1,
+          "M1_split_count": 1,
+          "M5_split_count": 0,
+          "RZZ_family_ARI": 0.0,
+          "RZZ_family_NMI": 0.3189995570367375
+        }
+      }
+    },
+    "phys9_multicircuit_setC_balanced": {
+      "S2D.7_active_mixed_basis_moments_plus_signed_contrasts": {
+        "active_clusters": 11,
+        "ari": 0.8878418695577177,
+        "nmi": 0.7265392490993027,
+        "rzz_family_metrics": {
+          "M1_M10_merge_count": 1,
+          "M1_M7_merge_count": 2,
+          "M1_M8_merge_count": 2,
+          "M1_split_count": 1,
+          "M5_split_count": 0,
+          "RZZ_family_ARI": -0.06451612903225808,
+          "RZZ_family_NMI": 0.2999355897754498
+        }
+      },
+      "baseline_v3c": {
+        "active_clusters": 11,
+        "ari": 0.9176996113163034,
+        "nmi": 0.7914367085630644,
+        "rzz_family_metrics": {
+          "M1_M10_merge_count": 1,
+          "M1_M7_merge_count": 1,
+          "M1_M8_merge_count": 0,
+          "M1_split_count": 1,
+          "M5_split_count": 0,
+          "RZZ_family_ARI": 0.09836065573770492,
+          "RZZ_family_NMI": 0.47459506148477154
+        }
+      },
+      "decision": "failure",
+      "depth_key_comparison": {
+        "beats_direct_Salpha": true,
+        "beats_scrambled": false,
+        "delta_ari_vs_depth_probe_only": 0.0035450625768211896,
+        "delta_nmi_vs_depth_probe_only": 0.013699966625903781,
+        "depth_ari": 0.9300152726619352,
+        "depth_nmi": 0.8444343689123355,
+        "primary": "rzz_depth_features"
+      },
+      "direct_Salpha": {
+        "active_clusters": 11,
+        "ari": 0.31938107997199894,
+        "nmi": 0.7217529003724661,
+        "rzz_family_metrics": {
+          "M1_M10_merge_count": 1,
+          "M1_M7_merge_count": 1,
+          "M1_M8_merge_count": 1,
+          "M1_split_count": 0,
+          "M5_split_count": 3,
+          "RZZ_family_ARI": 0.015345268542199475,
+          "RZZ_family_NMI": 0.2876589110003161
+        }
+      },
+      "oracle_fingerprint_upper_bound": {
+        "active_clusters": 11,
+        "ari": 1.0,
+        "nmi": 1.0,
+        "rzz_family_metrics": {
+          "M1_M10_merge_count": 0,
+          "M1_M7_merge_count": 0,
+          "M1_M8_merge_count": 0,
+          "M1_split_count": 0,
+          "M5_split_count": 0,
+          "RZZ_family_ARI": 1.0,
+          "RZZ_family_NMI": 1.0
+        }
+      },
+      "rzz_depth_features": {
+        "active_clusters": 11,
+        "ari": 0.9300152726619352,
+        "nmi": 0.8444343689123355,
+        "rzz_family_metrics": {
+          "M1_M10_merge_count": 0,
+          "M1_M7_merge_count": 2,
+          "M1_M8_merge_count": 1,
+          "M1_split_count": 1,
+          "M5_split_count": 0,
+          "RZZ_family_ARI": 0.27868852459016397,
+          "RZZ_family_NMI": 0.5947591942959329
+        }
+      },
+      "scrambled_depth_control": {
+        "active_clusters": 11,
+        "ari": 0.9300152726619352,
+        "nmi": 0.8444343689123355,
+        "rzz_family_metrics": {
+          "M1_M10_merge_count": 0,
+          "M1_M7_merge_count": 2,
+          "M1_M8_merge_count": 1,
+          "M1_split_count": 1,
+          "M5_split_count": 0,
+          "RZZ_family_ARI": 0.27868852459016397,
+          "RZZ_family_NMI": 0.5947591942959329
+        }
+      }
+    },
+    "phys9_setA": {
+      "S2D.7_active_mixed_basis_moments_plus_signed_contrasts": {
+        "active_clusters": 6,
+        "ari": 1.0,
+        "nmi": 1.0,
+        "rzz_family_metrics": {
+          "M1_M10_merge_count": 0,
+          "M1_M7_merge_count": 0,
+          "M1_M8_merge_count": 0,
+          "M1_split_count": 0,
+          "M5_split_count": 0,
+          "RZZ_family_ARI": 1.0,
+          "RZZ_family_NMI": 1.0
+        }
+      },
+      "baseline_v3c": {
+        "active_clusters": 6,
+        "ari": 1.0,
+        "nmi": 1.0,
+        "rzz_family_metrics": {
+          "M1_M10_merge_count": 0,
+          "M1_M7_merge_count": 0,
+          "M1_M8_merge_count": 0,
+          "M1_split_count": 0,
+          "M5_split_count": 0,
+          "RZZ_family_ARI": 1.0,
+          "RZZ_family_NMI": 1.0
+        }
+      },
+      "decision": "regression_pass",
+      "depth_key_comparison": {
+        "beats_direct_Salpha": true,
+        "beats_scrambled": false,
+        "delta_ari_vs_depth_probe_only": 0.0,
+        "delta_nmi_vs_depth_probe_only": 0.0,
+        "depth_ari": 1.0,
+        "depth_nmi": 1.0,
+        "primary": "rzz_depth_features"
+      },
+      "direct_Salpha": {
+        "active_clusters": 6,
+        "ari": 0.7692841447901007,
+        "nmi": 0.8825644714326589,
+        "rzz_family_metrics": {
+          "M1_M10_merge_count": 0,
+          "M1_M7_merge_count": 0,
+          "M1_M8_merge_count": 0,
+          "M1_split_count": 0,
+          "M5_split_count": 1,
+          "RZZ_family_ARI": 1.0,
+          "RZZ_family_NMI": 0.0
+        }
+      },
+      "oracle_fingerprint_upper_bound": {
+        "active_clusters": 6,
+        "ari": 1.0,
+        "nmi": 1.0,
+        "rzz_family_metrics": {
+          "M1_M10_merge_count": 0,
+          "M1_M7_merge_count": 0,
+          "M1_M8_merge_count": 0,
+          "M1_split_count": 0,
+          "M5_split_count": 0,
+          "RZZ_family_ARI": 1.0,
+          "RZZ_family_NMI": 0.0
+        }
+      },
+      "rzz_depth_features": {
+        "active_clusters": 6,
+        "ari": 1.0,
+        "nmi": 1.0,
+        "rzz_family_metrics": {
+          "M1_M10_merge_count": 0,
+          "M1_M7_merge_count": 0,
+          "M1_M8_merge_count": 0,
+          "M1_split_count": 0,
+          "M5_split_count": 0,
+          "RZZ_family_ARI": 1.0,
+          "RZZ_family_NMI": 1.0
+        }
+      },
+      "scrambled_depth_control": {
+        "active_clusters": 6,
+        "ari": 1.0,
+        "nmi": 1.0,
+        "rzz_family_metrics": {
+          "M1_M10_merge_count": 0,
+          "M1_M7_merge_count": 0,
+          "M1_M8_merge_count": 0,
+          "M1_split_count": 0,
+          "M5_split_count": 0,
+          "RZZ_family_ARI": 1.0,
+          "RZZ_family_NMI": 1.0
+        }
+      }
+    }
+  },
+  "schema": "scope_static_s2d8a_baseline_comparison_v1"
+}

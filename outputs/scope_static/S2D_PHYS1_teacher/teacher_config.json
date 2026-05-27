@@ -1,0 +1,40 @@
+{
+  "allow_cpu_aer_fallback": false,
+  "backend": "qiskit_aer_gpu",
+  "include_m5": true,
+  "mechanisms": {
+    "M0": {
+      "p_x": 0.0015,
+      "p_y": 0.0008,
+      "p_z": 0.0022
+    },
+    "M1": {
+      "epsilon": 0.045
+    },
+    "M2": {
+      "axis": "rx",
+      "epsilon": 0.035
+    },
+    "M3": {
+      "gamma": 0.018
+    },
+    "M4": {
+      "p0_to_1": 0.025,
+      "p1_to_0": 0.011
+    },
+    "M5": {
+      "eta": 0.02
+    }
+  },
+  "num_qubits": 5,
+  "paper_informed_ptm_features": true,
+  "probe_set": "base",
+  "require_gpu": true,
+  "run": {
+    "name": "s2d_phys3_local_inverse",
+    "output_root": "outputs/scope_static"
+  },
+  "seed": 0,
+  "shots": 10000,
+  "theta": 0.18
+}

@@ -1,0 +1,24 @@
+{
+  "do_not_do_next": [
+    "more_static_mixed_basis_features",
+    "larger_circuits",
+    "setD",
+    "Google_transfer",
+    "S3",
+    "full_robustness_grid"
+  ],
+  "freeze_label": "negative_static_mixed_basis_probe_result",
+  "freeze_tags": [
+    "active_mixed_basis_edge_moments_negative",
+    "scrambled_control_matched_real_active_features",
+    "RZZ_family_gap_not_closed",
+    "next_requires_dynamical_RZZ_probes"
+  ],
+  "main_conclusion": "Mixed-basis edge moments are learner-visible and leakage-clean, but they do not expose the missing RZZ-family mechanism signal.",
+  "next_recommended_step": "S2D.8_RZZ_dynamical_probe_design",
+  "next_step_purpose": "Test whether RZZ-family mechanisms become learner-visible under depth, echo, or twirl-style interventions.",
+  "not_ruled_out": "active observability in general",
+  "ruled_out_hypothesis": "RZZ-family gap can be solved by static mixed-basis edge moments computed from final shot bits.",
+  "schema": "scope_static_s2d7_freeze_summary_v1",
+  "stage": "S2D.7_RZZ_active_probe_design"
+}

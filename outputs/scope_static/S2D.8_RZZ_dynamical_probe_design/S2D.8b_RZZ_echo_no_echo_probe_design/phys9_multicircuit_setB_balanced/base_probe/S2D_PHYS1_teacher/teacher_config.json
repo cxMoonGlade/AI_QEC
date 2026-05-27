@@ -1,0 +1,72 @@
+{
+  "aer_simulator_options": {},
+  "allow_cpu_aer_fallback": false,
+  "backend": "qiskit_aer_gpu",
+  "balanced_min_instances_per_mechanism": 3,
+  "include_m5": true,
+  "include_m6": false,
+  "mechanism_set": "set_B",
+  "mechanisms": {
+    "M0": {
+      "p_x": 0.0015,
+      "p_y": 0.0008,
+      "p_z": 0.0022
+    },
+    "M1": {
+      "epsilon": 0.045
+    },
+    "M10": {
+      "gamma": 0.012
+    },
+    "M11": {
+      "p": 0.018
+    },
+    "M12": {
+      "axis": "rx",
+      "epsilon_mean": 0.032,
+      "epsilon_span": 0.018
+    },
+    "M13": {
+      "eta": 0.006
+    },
+    "M2": {
+      "epsilon": 0.035
+    },
+    "M3": {
+      "epsilon": 0.04
+    },
+    "M4": {
+      "gamma": 0.018
+    },
+    "M5": {
+      "p0_to_1": 0.025,
+      "p1_to_0": 0.011
+    },
+    "M6": {
+      "eta": 0.02
+    },
+    "M7": {
+      "p": 0.006
+    },
+    "M8": {
+      "epsilon_x": 0.024,
+      "epsilon_y": 0.017
+    },
+    "M9": {
+      "epsilon": 0.025
+    }
+  },
+  "multicircuit_teacher_batch": true,
+  "num_qubits": 9,
+  "paper_informed_ptm_features": true,
+  "probe_set": "base",
+  "profile": "phys9_multicircuit_setB_balanced",
+  "require_gpu": true,
+  "run": {
+    "name": "s2d8b_rzz_echo_no_echo",
+    "output_root": "outputs/scope_static"
+  },
+  "seed": 0,
+  "shots": 10000,
+  "theta": 0.18
+}

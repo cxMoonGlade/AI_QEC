@@ -1,0 +1,48 @@
+{
+  "runs": {
+    "phys9_multicircuit_setC_balanced": {
+      "permutation_label_control": {
+        "balanced_accuracy_ci95": {
+          "high": 0.2118058744384556,
+          "low": 0.1631941255615444,
+          "mean": 0.1875,
+          "n": 128
+        },
+        "balanced_accuracy_max": 0.6666666666666666,
+        "balanced_accuracy_mean": 0.1875,
+        "grouped_folds_preserved": true,
+        "labels_permuted_within": "RZZ-family audit rows",
+        "macro_F1_ci95": {
+          "high": 0.19595831942429862,
+          "low": 0.1501850337503046,
+          "mean": 0.1730716765873016,
+          "n": 128
+        },
+        "macro_F1_max": 0.6571428571428573,
+        "macro_F1_mean": 0.1730716765873016,
+        "repeats": 128,
+        "schema": "scope_static_s2d8c_permutation_label_control_v1",
+        "seed": 0
+      },
+      "primary_block": "v3c_plus_active_all",
+      "real_minus_permutation_balanced_accuracy": 0.39583333333333326,
+      "real_minus_permutation_macro_F1": 0.4162140376984127,
+      "real_minus_scrambled_balanced_accuracy": 0.0,
+      "real_minus_scrambled_macro_F1": 0.0,
+      "run_success": {
+        "checks": {
+          "all_available_pairwise_margins_gt_0": true,
+          "balanced_accuracy_ge_0_80": false,
+          "macro_F1_ge_0_80": false,
+          "no_single_class_recall_lt_0_65": false,
+          "real_minus_permutation_balanced_accuracy_ge_0_25": true,
+          "real_minus_scrambled_balanced_accuracy_ge_0_25": false
+        },
+        "passed": false
+      },
+      "schema": "scope_static_s2d8c_controls_v1",
+      "scrambled_control_block": "v3c_plus_scrambled_active_all"
+    }
+  },
+  "schema": "scope_static_s2d8d_grouped_ceiling_ceiling_controls_aggregate_v1"
+}

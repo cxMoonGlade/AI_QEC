@@ -1,0 +1,325 @@
+{
+  "best_learner_visible": {
+    "active_clusters": 9,
+    "ari": 0.42120141342756184,
+    "cluster_masses": [
+      1,
+      2,
+      1,
+      2,
+      2,
+      1,
+      1,
+      3,
+      1
+    ],
+    "clustering_method": "phys3_direct_Salpha_labels",
+    "feature_role": "learner_visible",
+    "feature_space": "direct_Salpha_assignment",
+    "gap_to_oracle_ari": 0.5787985865724381,
+    "gap_to_oracle_nmi": 0.13146305134343983,
+    "max_merged_omega_per_cluster": 2,
+    "max_splits_per_omega": 2,
+    "mean_cluster_purity": 0.8888888888888888,
+    "mean_merged_omega_per_cluster": 1.2222222222222223,
+    "mean_splits_per_omega": 1.2222222222222223,
+    "nmi": 0.86853694865656,
+    "shape": [
+      14,
+      9
+    ],
+    "uses_oracle_channel_parameters": false,
+    "uses_oracle_labels": false
+  },
+  "feature_spaces": [
+    {
+      "active_clusters": 9,
+      "ari": 1.0,
+      "cluster_masses": [
+        1,
+        2,
+        5,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "clustering_method": "deterministic_kmeans",
+      "feature_role": "oracle_only",
+      "feature_space": "PHYS2_oracle_PTM_probe_fingerprint",
+      "gap_to_oracle_ari": 0.0,
+      "gap_to_oracle_nmi": 0.0,
+      "max_merged_omega_per_cluster": 1,
+      "max_splits_per_omega": 1,
+      "mean_cluster_purity": 1.0,
+      "mean_merged_omega_per_cluster": 1.0,
+      "mean_splits_per_omega": 1.0,
+      "nmi": 0.9999999999999998,
+      "shape": [
+        14,
+        53
+      ],
+      "uses_oracle_channel_parameters": true,
+      "uses_oracle_labels": false
+    },
+    {
+      "active_clusters": 9,
+      "ari": 0.3867924528301887,
+      "cluster_masses": [
+        2,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        3,
+        3
+      ],
+      "clustering_method": "phys3_predeclared_visible_operation_aware_labels",
+      "feature_role": "learner_visible",
+      "feature_space": "PHYS3_current_local_inverse_probability_v1",
+      "gap_to_oracle_ari": 0.6132075471698113,
+      "gap_to_oracle_nmi": 0.14218826797650364,
+      "max_merged_omega_per_cluster": 3,
+      "max_splits_per_omega": 2,
+      "mean_cluster_purity": 0.9259259270297157,
+      "mean_merged_omega_per_cluster": 1.2222222222222223,
+      "mean_splits_per_omega": 1.2222222222222223,
+      "nmi": 0.8578117320234961,
+      "shape": [
+        14,
+        109
+      ],
+      "uses_oracle_channel_parameters": false,
+      "uses_oracle_labels": false
+    },
+    {
+      "active_clusters": 9,
+      "ari": 0.42120141342756184,
+      "cluster_masses": [
+        1,
+        2,
+        1,
+        2,
+        2,
+        1,
+        1,
+        3,
+        1
+      ],
+      "clustering_method": "phys3_direct_Salpha_labels",
+      "feature_role": "learner_visible",
+      "feature_space": "direct_Salpha_assignment",
+      "gap_to_oracle_ari": 0.5787985865724381,
+      "gap_to_oracle_nmi": 0.13146305134343983,
+      "max_merged_omega_per_cluster": 2,
+      "max_splits_per_omega": 2,
+      "mean_cluster_purity": 0.8888888888888888,
+      "mean_merged_omega_per_cluster": 1.2222222222222223,
+      "mean_splits_per_omega": 1.2222222222222223,
+      "nmi": 0.86853694865656,
+      "shape": [
+        14,
+        9
+      ],
+      "uses_oracle_channel_parameters": false,
+      "uses_oracle_labels": false
+    },
+    {
+      "active_clusters": 9,
+      "ari": 0.0353356890459364,
+      "cluster_masses": [
+        1,
+        2,
+        1,
+        1,
+        3,
+        2,
+        2,
+        1,
+        1
+      ],
+      "clustering_method": "deterministic_kmeans",
+      "feature_role": "learner_visible",
+      "feature_space": "local_inverse_probability_plus_probe_stack",
+      "gap_to_oracle_ari": 0.9646643109540636,
+      "gap_to_oracle_nmi": 0.24716521932499547,
+      "max_merged_omega_per_cluster": 2,
+      "max_splits_per_omega": 4,
+      "mean_cluster_purity": 0.7962962985038757,
+      "mean_merged_omega_per_cluster": 1.4444444444444444,
+      "mean_splits_per_omega": 1.4444444444444444,
+      "nmi": 0.7528347806750043,
+      "shape": [
+        14,
+        142
+      ],
+      "uses_oracle_channel_parameters": false,
+      "uses_oracle_labels": false
+    },
+    {
+      "active_clusters": 9,
+      "ari": 0.23824855119124275,
+      "cluster_masses": [
+        1,
+        1,
+        2,
+        2,
+        1,
+        1,
+        4,
+        1,
+        1
+      ],
+      "clustering_method": "deterministic_kmeans",
+      "feature_role": "oracle_only",
+      "feature_space": "local_inverse_probability_plus_standard_PTM_lite",
+      "gap_to_oracle_ari": 0.7617514488087572,
+      "gap_to_oracle_nmi": 0.19861459364294065,
+      "max_merged_omega_per_cluster": 2,
+      "max_splits_per_omega": 3,
+      "mean_cluster_purity": 0.8611111111111112,
+      "mean_merged_omega_per_cluster": 1.3333333333333333,
+      "mean_splits_per_omega": 1.3333333333333333,
+      "nmi": 0.8013854063570591,
+      "shape": [
+        14,
+        123
+      ],
+      "uses_oracle_channel_parameters": true,
+      "uses_oracle_labels": false
+    },
+    {
+      "active_clusters": 9,
+      "ari": 0.0353356890459364,
+      "cluster_masses": [
+        1,
+        2,
+        1,
+        1,
+        3,
+        2,
+        2,
+        1,
+        1
+      ],
+      "clustering_method": "deterministic_kmeans",
+      "feature_role": "oracle_only",
+      "feature_space": "local_inverse_probability_plus_RZZ_type_features",
+      "gap_to_oracle_ari": 0.9646643109540636,
+      "gap_to_oracle_nmi": 0.24716521932499547,
+      "max_merged_omega_per_cluster": 2,
+      "max_splits_per_omega": 4,
+      "mean_cluster_purity": 0.7962962985038757,
+      "mean_merged_omega_per_cluster": 1.4444444444444444,
+      "mean_splits_per_omega": 1.4444444444444444,
+      "nmi": 0.7528347806750043,
+      "shape": [
+        14,
+        113
+      ],
+      "uses_oracle_channel_parameters": true,
+      "uses_oracle_labels": false
+    },
+    {
+      "active_clusters": 9,
+      "ari": -0.08172362555720653,
+      "cluster_masses": [
+        1,
+        2,
+        2,
+        1,
+        1,
+        2,
+        2,
+        2,
+        1
+      ],
+      "clustering_method": "deterministic_kmeans",
+      "feature_role": "learner_visible",
+      "feature_space": "structural_plus_local_inverse_combined",
+      "gap_to_oracle_ari": 1.0817236255572065,
+      "gap_to_oracle_nmi": 0.2837885057690963,
+      "max_merged_omega_per_cluster": 2,
+      "max_splits_per_omega": 5,
+      "mean_cluster_purity": 0.7222222222222222,
+      "mean_merged_omega_per_cluster": 1.5555555555555556,
+      "mean_splits_per_omega": 1.5555555555555556,
+      "nmi": 0.7162114942309035,
+      "shape": [
+        14,
+        122
+      ],
+      "uses_oracle_channel_parameters": false,
+      "uses_oracle_labels": false
+    },
+    {
+      "active_clusters": 9,
+      "ari": 0.3867924528301887,
+      "cluster_masses": [
+        2,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        3,
+        3
+      ],
+      "clustering_method": "visible_operation_aware_local_inverse_clustering_v2",
+      "feature_role": "learner_visible",
+      "feature_space": "physical_local_inverse_probability_v2",
+      "gap_to_oracle_ari": 0.6132075471698113,
+      "gap_to_oracle_nmi": 0.14218826797650364,
+      "max_merged_omega_per_cluster": 3,
+      "max_splits_per_omega": 2,
+      "mean_cluster_purity": 0.9259259270297157,
+      "mean_merged_omega_per_cluster": 1.2222222222222223,
+      "mean_splits_per_omega": 1.2222222222222223,
+      "nmi": 0.8578117320234961,
+      "shape": [
+        14,
+        170
+      ],
+      "uses_oracle_channel_parameters": false,
+      "uses_oracle_labels": false
+    }
+  ],
+  "oracle_upper_bound": {
+    "active_clusters": 9,
+    "ari": 1.0,
+    "cluster_masses": [
+      1,
+      2,
+      5,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "clustering_method": "deterministic_kmeans",
+    "feature_role": "oracle_only",
+    "feature_space": "PHYS2_oracle_PTM_probe_fingerprint",
+    "gap_to_oracle_ari": 0.0,
+    "gap_to_oracle_nmi": 0.0,
+    "max_merged_omega_per_cluster": 1,
+    "max_splits_per_omega": 1,
+    "mean_cluster_purity": 1.0,
+    "mean_merged_omega_per_cluster": 1.0,
+    "mean_splits_per_omega": 1.0,
+    "nmi": 0.9999999999999998,
+    "shape": [
+      14,
+      53
+    ],
+    "uses_oracle_channel_parameters": true,
+    "uses_oracle_labels": false
+  },
+  "question": "How much PHYS2 separability is missing from learner-visible PHYS3 representations?"
+}

@@ -1,0 +1,236 @@
+{
+  "active_clusters": 9,
+  "ari": 1.0,
+  "ari_nmi_used_for_selection": false,
+  "cluster_masses": [
+    1,
+    6,
+    9,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "confusion_matrix": [
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0
+    ],
+    [
+      0,
+      6,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      9,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1
+    ],
+    [
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  ],
+  "feature_shape": [
+    22,
+    53
+  ],
+  "fingerprint_families": {
+    "probe_response": {
+      "shape": [
+        22,
+        32
+      ],
+      "source": "oracle_channel_probe_responses"
+    },
+    "ptm": {
+      "shape": [
+        22,
+        17
+      ]
+    },
+    "rzz_type_features": {
+      "enabled_in_combined": true,
+      "feature_names": [
+        "rzz_type1_commuting_fixed_fraction",
+        "rzz_type2_two_entry_rotation_fraction",
+        "rzz_type3_nonclifford_rotation_strength",
+        "rzz_type4_hard_residual_leakage"
+      ],
+      "shape": [
+        22,
+        4
+      ]
+    }
+  },
+  "labels": [
+    7,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    3,
+    8,
+    4,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    0,
+    5,
+    6
+  ],
+  "max_merged_omega_per_cluster": 1,
+  "max_splits_per_omega": 1,
+  "mean_cluster_purity": 1.0,
+  "mean_merged_omega_per_cluster": 1.0,
+  "mean_splits_per_omega": 1.0,
+  "nearest_class_margin": 5.687219638298933,
+  "nmi": 1.0000000000000002,
+  "num_locations": 22,
+  "oracle_label_names": [
+    "M0",
+    "M1",
+    "M2",
+    "M3",
+    "M4",
+    "M5",
+    "M6",
+    "M7",
+    "M8"
+  ],
+  "output_dir": "outputs/scope_static/S2D_PHYS4_difficulty_expansion/phys9_setB/S2D_PHYS2_oracle_separability",
+  "pairwise_mechanism_distance": {
+    "M0__M1": 7.825252587771727,
+    "M0__M2": 1.7639506834589704,
+    "M0__M3": 1.4370594734956803,
+    "M0__M4": 5.627923543605977,
+    "M0__M5": 6.980246196673508,
+    "M0__M6": 16.99420863202135,
+    "M0__M7": 5.4304817551041475,
+    "M0__M8": 5.507429398703098,
+    "M1__M2": 7.836653264771346,
+    "M1__M3": 7.760662988706484,
+    "M1__M4": 9.904152730719453,
+    "M1__M5": 11.023274885957239,
+    "M1__M6": 18.836821982346624,
+    "M1__M7": 5.908547466455251,
+    "M1__M8": 5.513645147109494,
+    "M2__M3": 1.5150784879026384,
+    "M2__M4": 6.277139293541546,
+    "M2__M5": 7.688525935925523,
+    "M2__M6": 16.75085601018203,
+    "M2__M7": 5.854682429276463,
+    "M2__M8": 5.53911154125383,
+    "M3__M4": 6.237484749681849,
+    "M3__M5": 7.603864472647015,
+    "M3__M6": 17.02691576114713,
+    "M3__M7": 5.765982006415732,
+    "M3__M8": 5.435211635877756,
+    "M4__M5": 7.183918875971619,
+    "M4__M6": 15.148555243510202,
+    "M4__M7": 7.600083170816474,
+    "M4__M8": 8.206226021517281,
+    "M5__M6": 16.584814879091077,
+    "M5__M7": 8.79195219808444,
+    "M5__M8": 9.513318050449795,
+    "M6__M7": 17.760906731147703,
+    "M6__M8": 18.11420536997869,
+    "M7__M8": 2.0245345839239155
+  },
+  "paper_informed_ptm_features": true,
+  "schema": "scope_static_s2d_oracle_separability_v1",
+  "separability_gate": "identifying",
+  "stage": "S2D_PHYS2_oracle_separability",
+  "teacher_dir": "outputs/scope_static/S2D_PHYS4_difficulty_expansion/phys9_setB/S2D_PHYS1_teacher"
+}

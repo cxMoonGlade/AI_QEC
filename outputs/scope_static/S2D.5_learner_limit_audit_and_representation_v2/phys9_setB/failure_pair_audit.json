@@ -1,0 +1,270 @@
+{
+  "confusion_matrix": [
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      2,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      4,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      7,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      2,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1
+    ]
+  ],
+  "degradation_pattern": "specific_pair_or_singleton_failures",
+  "merge_clusters": [
+    {
+      "cluster": 8,
+      "mechanisms": {
+        "M1": 2,
+        "M7": 1,
+        "M8": 1
+      }
+    }
+  ],
+  "oracle_label_names": [
+    "M0",
+    "M1",
+    "M2",
+    "M3",
+    "M4",
+    "M5",
+    "M6",
+    "M7",
+    "M8"
+  ],
+  "pauli_depolarizing_custom_kraus_distinguishable": {
+    "distinguishable": true,
+    "mechanisms": [
+      "M0",
+      "M7",
+      "M6"
+    ],
+    "shared_clusters": []
+  },
+  "per_mechanism_recall_purity": [
+    {
+      "best_cluster": 6,
+      "dominant_cluster_purity": 1.0,
+      "failed_singleton": false,
+      "mechanism": "M0",
+      "recall": 1.0,
+      "singleton": true,
+      "support": 1
+    },
+    {
+      "best_cluster": 3,
+      "dominant_cluster_purity": 1.0,
+      "failed_singleton": false,
+      "mechanism": "M1",
+      "recall": 0.6666666666666666,
+      "singleton": false,
+      "support": 6
+    },
+    {
+      "best_cluster": 1,
+      "dominant_cluster_purity": 1.0,
+      "failed_singleton": false,
+      "mechanism": "M2",
+      "recall": 1.0,
+      "singleton": true,
+      "support": 1
+    },
+    {
+      "best_cluster": 2,
+      "dominant_cluster_purity": 1.0,
+      "failed_singleton": false,
+      "mechanism": "M3",
+      "recall": 1.0,
+      "singleton": true,
+      "support": 1
+    },
+    {
+      "best_cluster": 5,
+      "dominant_cluster_purity": 1.0,
+      "failed_singleton": false,
+      "mechanism": "M4",
+      "recall": 1.0,
+      "singleton": true,
+      "support": 1
+    },
+    {
+      "best_cluster": 7,
+      "dominant_cluster_purity": 1.0,
+      "failed_singleton": false,
+      "mechanism": "M5",
+      "recall": 0.7777777777777778,
+      "singleton": false,
+      "support": 9
+    },
+    {
+      "best_cluster": 4,
+      "dominant_cluster_purity": 1.0,
+      "failed_singleton": false,
+      "mechanism": "M6",
+      "recall": 1.0,
+      "singleton": true,
+      "support": 1
+    },
+    {
+      "best_cluster": 8,
+      "dominant_cluster_purity": 0.25,
+      "failed_singleton": true,
+      "mechanism": "M7",
+      "recall": 1.0,
+      "singleton": true,
+      "support": 1
+    },
+    {
+      "best_cluster": 8,
+      "dominant_cluster_purity": 0.25,
+      "failed_singleton": true,
+      "mechanism": "M8",
+      "recall": 1.0,
+      "singleton": true,
+      "support": 1
+    }
+  ],
+  "readout_amplitude_damping_distinguishable": {
+    "distinguishable": true,
+    "mechanisms": [
+      "M5",
+      "M4"
+    ],
+    "shared_clusters": []
+  },
+  "rx_rz_distinguishable": {
+    "distinguishable": true,
+    "mechanisms": [
+      "M2",
+      "M3"
+    ],
+    "shared_clusters": []
+  },
+  "singleton_failure_count": 2,
+  "singleton_failures": [
+    {
+      "best_cluster": 8,
+      "dominant_cluster_purity": 0.25,
+      "failed_singleton": true,
+      "mechanism": "M7",
+      "recall": 1.0,
+      "singleton": true,
+      "support": 1
+    },
+    {
+      "best_cluster": 8,
+      "dominant_cluster_purity": 0.25,
+      "failed_singleton": true,
+      "mechanism": "M8",
+      "recall": 1.0,
+      "singleton": true,
+      "support": 1
+    }
+  ],
+  "split_mechanisms": [
+    {
+      "clusters": {
+        "3": 4,
+        "8": 2
+      },
+      "mechanism": "M1"
+    },
+    {
+      "clusters": {
+        "0": 2,
+        "7": 7
+      },
+      "mechanism": "M5"
+    }
+  ]
+}

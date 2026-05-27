@@ -1,0 +1,96 @@
+{
+  "S2D.7_active_mixed_basis_moments_plus_signed_contrasts": {
+    "active_clusters": 6,
+    "ari": 1.0,
+    "nmi": 1.0,
+    "rzz_family_metrics": {
+      "M1_M10_merge_count": 0,
+      "M1_M7_merge_count": 0,
+      "M1_M8_merge_count": 0,
+      "M1_split_count": 0,
+      "M5_split_count": 0,
+      "RZZ_family_ARI": 1.0,
+      "RZZ_family_NMI": 1.0
+    }
+  },
+  "baseline_v3c": {
+    "active_clusters": 6,
+    "ari": 1.0,
+    "nmi": 1.0,
+    "rzz_family_metrics": {
+      "M1_M10_merge_count": 0,
+      "M1_M7_merge_count": 0,
+      "M1_M8_merge_count": 0,
+      "M1_split_count": 0,
+      "M5_split_count": 0,
+      "RZZ_family_ARI": 1.0,
+      "RZZ_family_NMI": 1.0
+    }
+  },
+  "decision": "regression_pass",
+  "depth_key_comparison": {
+    "beats_direct_Salpha": true,
+    "beats_scrambled": false,
+    "delta_ari_vs_depth_probe_only": 0.0,
+    "delta_nmi_vs_depth_probe_only": 0.0,
+    "depth_ari": 1.0,
+    "depth_nmi": 1.0,
+    "primary": "rzz_depth_features"
+  },
+  "direct_Salpha": {
+    "active_clusters": 6,
+    "ari": 0.7692841447901007,
+    "nmi": 0.8825644714326589,
+    "rzz_family_metrics": {
+      "M1_M10_merge_count": 0,
+      "M1_M7_merge_count": 0,
+      "M1_M8_merge_count": 0,
+      "M1_split_count": 0,
+      "M5_split_count": 1,
+      "RZZ_family_ARI": 1.0,
+      "RZZ_family_NMI": 0.0
+    }
+  },
+  "oracle_fingerprint_upper_bound": {
+    "active_clusters": 6,
+    "ari": 1.0,
+    "nmi": 1.0,
+    "rzz_family_metrics": {
+      "M1_M10_merge_count": 0,
+      "M1_M7_merge_count": 0,
+      "M1_M8_merge_count": 0,
+      "M1_split_count": 0,
+      "M5_split_count": 0,
+      "RZZ_family_ARI": 1.0,
+      "RZZ_family_NMI": 0.0
+    }
+  },
+  "rzz_depth_features": {
+    "active_clusters": 6,
+    "ari": 1.0,
+    "nmi": 1.0,
+    "rzz_family_metrics": {
+      "M1_M10_merge_count": 0,
+      "M1_M7_merge_count": 0,
+      "M1_M8_merge_count": 0,
+      "M1_split_count": 0,
+      "M5_split_count": 0,
+      "RZZ_family_ARI": 1.0,
+      "RZZ_family_NMI": 1.0
+    }
+  },
+  "scrambled_depth_control": {
+    "active_clusters": 6,
+    "ari": 1.0,
+    "nmi": 1.0,
+    "rzz_family_metrics": {
+      "M1_M10_merge_count": 0,
+      "M1_M7_merge_count": 0,
+      "M1_M8_merge_count": 0,
+      "M1_split_count": 0,
+      "M5_split_count": 0,
+      "RZZ_family_ARI": 1.0,
+      "RZZ_family_NMI": 1.0
+    }
+  }
+}

@@ -1,0 +1,351 @@
+{
+  "confusion_matrix": [
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      2,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      4,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      2,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      5,
+      0,
+      0,
+      0,
+      0
+    ]
+  ],
+  "degradation_pattern": "specific_pair_or_singleton_failures",
+  "merge_clusters": [
+    {
+      "cluster": 3,
+      "mechanisms": {
+        "M1": 4,
+        "M7": 1
+      }
+    },
+    {
+      "cluster": 9,
+      "mechanisms": {
+        "M1": 1,
+        "M10": 1,
+        "M8": 1
+      }
+    }
+  ],
+  "oracle_label_names": [
+    "M0",
+    "M1",
+    "M10",
+    "M2",
+    "M3",
+    "M4",
+    "M5",
+    "M6",
+    "M7",
+    "M8",
+    "M9"
+  ],
+  "pauli_depolarizing_custom_kraus_distinguishable": {
+    "distinguishable": true,
+    "mechanisms": [
+      "M0",
+      "M7",
+      "M6"
+    ],
+    "shared_clusters": []
+  },
+  "per_mechanism_recall_purity": [
+    {
+      "best_cluster": 6,
+      "dominant_cluster_purity": 1.0,
+      "failed_singleton": false,
+      "mechanism": "M0",
+      "recall": 1.0,
+      "singleton": true,
+      "support": 1
+    },
+    {
+      "best_cluster": 3,
+      "dominant_cluster_purity": 0.8,
+      "failed_singleton": false,
+      "mechanism": "M1",
+      "recall": 0.8,
+      "singleton": false,
+      "support": 5
+    },
+    {
+      "best_cluster": 9,
+      "dominant_cluster_purity": 0.3333333333333333,
+      "failed_singleton": true,
+      "mechanism": "M10",
+      "recall": 1.0,
+      "singleton": true,
+      "support": 1
+    },
+    {
+      "best_cluster": 1,
+      "dominant_cluster_purity": 1.0,
+      "failed_singleton": false,
+      "mechanism": "M2",
+      "recall": 1.0,
+      "singleton": true,
+      "support": 1
+    },
+    {
+      "best_cluster": 2,
+      "dominant_cluster_purity": 1.0,
+      "failed_singleton": false,
+      "mechanism": "M3",
+      "recall": 1.0,
+      "singleton": true,
+      "support": 1
+    },
+    {
+      "best_cluster": 5,
+      "dominant_cluster_purity": 1.0,
+      "failed_singleton": false,
+      "mechanism": "M4",
+      "recall": 1.0,
+      "singleton": true,
+      "support": 1
+    },
+    {
+      "best_cluster": 10,
+      "dominant_cluster_purity": 1.0,
+      "failed_singleton": false,
+      "mechanism": "M5",
+      "recall": 0.5555555555555556,
+      "singleton": false,
+      "support": 9
+    },
+    {
+      "best_cluster": 4,
+      "dominant_cluster_purity": 1.0,
+      "failed_singleton": false,
+      "mechanism": "M6",
+      "recall": 1.0,
+      "singleton": true,
+      "support": 1
+    },
+    {
+      "best_cluster": 3,
+      "dominant_cluster_purity": 0.2,
+      "failed_singleton": true,
+      "mechanism": "M7",
+      "recall": 1.0,
+      "singleton": true,
+      "support": 1
+    },
+    {
+      "best_cluster": 9,
+      "dominant_cluster_purity": 0.3333333333333333,
+      "failed_singleton": true,
+      "mechanism": "M8",
+      "recall": 1.0,
+      "singleton": true,
+      "support": 1
+    },
+    {
+      "best_cluster": 7,
+      "dominant_cluster_purity": 1.0,
+      "failed_singleton": false,
+      "mechanism": "M9",
+      "recall": 1.0,
+      "singleton": true,
+      "support": 1
+    }
+  ],
+  "readout_amplitude_damping_distinguishable": {
+    "distinguishable": true,
+    "mechanisms": [
+      "M5",
+      "M4"
+    ],
+    "shared_clusters": []
+  },
+  "rx_rz_distinguishable": {
+    "distinguishable": true,
+    "mechanisms": [
+      "M2",
+      "M3"
+    ],
+    "shared_clusters": []
+  },
+  "singleton_failure_count": 3,
+  "singleton_failures": [
+    {
+      "best_cluster": 9,
+      "dominant_cluster_purity": 0.3333333333333333,
+      "failed_singleton": true,
+      "mechanism": "M10",
+      "recall": 1.0,
+      "singleton": true,
+      "support": 1
+    },
+    {
+      "best_cluster": 3,
+      "dominant_cluster_purity": 0.2,
+      "failed_singleton": true,
+      "mechanism": "M7",
+      "recall": 1.0,
+      "singleton": true,
+      "support": 1
+    },
+    {
+      "best_cluster": 9,
+      "dominant_cluster_purity": 0.3333333333333333,
+      "failed_singleton": true,
+      "mechanism": "M8",
+      "recall": 1.0,
+      "singleton": true,
+      "support": 1
+    }
+  ],
+  "split_mechanisms": [
+    {
+      "clusters": {
+        "3": 4,
+        "9": 1
+      },
+      "mechanism": "M1"
+    },
+    {
+      "clusters": {
+        "0": 2,
+        "8": 2,
+        "10": 5
+      },
+      "mechanism": "M5"
+    }
+  ]
+}

@@ -1,0 +1,80 @@
+{
+  "primary_method": "minimal_intervention_all",
+  "rows": [
+    {
+      "mean_feature_norm": 571.5031783574814,
+      "num_rows": 8,
+      "oracle_label": "M1",
+      "predicted_clusters": [
+        1
+      ],
+      "record_refs": [
+        {
+          "circuit_id": 0,
+          "location_id": 1,
+          "qubits": [
+            0,
+            1
+          ]
+        },
+        {
+          "circuit_id": 0,
+          "location_id": 2,
+          "qubits": [
+            1,
+            2
+          ]
+        },
+        {
+          "circuit_id": 0,
+          "location_id": 3,
+          "qubits": [
+            2,
+            3
+          ]
+        },
+        {
+          "circuit_id": 0,
+          "location_id": 4,
+          "qubits": [
+            3,
+            4
+          ]
+        },
+        {
+          "circuit_id": 0,
+          "location_id": 5,
+          "qubits": [
+            4,
+            5
+          ]
+        },
+        {
+          "circuit_id": 0,
+          "location_id": 6,
+          "qubits": [
+            5,
+            6
+          ]
+        },
+        {
+          "circuit_id": 0,
+          "location_id": 7,
+          "qubits": [
+            6,
+            7
+          ]
+        },
+        {
+          "circuit_id": 0,
+          "location_id": 8,
+          "qubits": [
+            7,
+            8
+          ]
+        }
+      ]
+    }
+  ],
+  "schema": "scope_static_s2d8d_mechanism_response_table_v1"
+}

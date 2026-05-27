@@ -1,0 +1,60 @@
+run:
+  name: s2d8a_rzz_depth_sweep
+  output_root: outputs/scope_static
+
+s2d_physical:
+  backend: qiskit_aer_gpu
+  require_gpu: true
+  allow_cpu_aer_fallback: false
+  paper_informed_ptm_features: true
+  shots: 10000
+  seed: 0
+  theta: 0.18
+  mechanisms:
+    M0:
+      p_x: 0.0015
+      p_y: 0.0008
+      p_z: 0.0022
+    M1:
+      epsilon: 0.045
+    M2:
+      epsilon: 0.035
+    M3:
+      epsilon: 0.04
+    M4:
+      gamma: 0.018
+    M5:
+      p0_to_1: 0.025
+      p1_to_0: 0.011
+    M6:
+      eta: 0.02
+    M7:
+      p: 0.006
+    M8:
+      epsilon_x: 0.024
+      epsilon_y: 0.017
+    M9:
+      epsilon: 0.025
+    M10:
+      gamma: 0.012
+
+s2d8a_rzz_depth_sweep:
+  output_dir: outputs/scope_static/S2D.8_RZZ_dynamical_probe_design
+  baseline_probe_set: base
+  static_active_probe_set: rzz_active_minimal
+  depth_probe_set: rzz_depth_sweep
+  random_baseline_trials: 64
+  bootstrap_replicates: 16
+  runs:
+    - name: phys9_setA
+      profile: phys9_chain
+      mechanism_set: set_A
+      purpose: regression sanity profile before balanced depth sweep runs
+    - name: phys9_multicircuit_setB_balanced
+      profile: phys9_multicircuit_setB_balanced
+      mechanism_set: set_B
+      purpose: balanced set_B RZZ depth sweep target
+    - name: phys9_multicircuit_setC_balanced
+      profile: phys9_multicircuit_setC_balanced
+      mechanism_set: set_C
+      purpose: balanced set_C RZZ depth sweep target

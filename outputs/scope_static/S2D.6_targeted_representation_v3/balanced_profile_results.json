@@ -1,0 +1,59 @@
+{
+  "runs": [
+    {
+      "decision": "partial_readout_fixed",
+      "key_comparison": {
+        "best_v1_v2_ari": 0.9424735290907106,
+        "best_v1_v2_method": "v1_physical_local_inverse_probability",
+        "best_v1_v2_nmi": 0.9171862245410478,
+        "primary": "v3c_vs_v1_v2",
+        "v3c_ari": 0.9360760893607609,
+        "v3c_delta_ari_vs_best_v1_v2": -0.006397439729949661,
+        "v3c_delta_nmi_vs_best_v1_v2": -0.0887501222156103,
+        "v3c_nmi": 0.8284361023254375
+      },
+      "mechanism_counts": {
+        "M0": 3,
+        "M1": 3,
+        "M2": 3,
+        "M3": 3,
+        "M4": 3,
+        "M5": 27,
+        "M6": 3,
+        "M7": 3,
+        "M8": 3
+      },
+      "profile": "phys9_multicircuit_setB_balanced",
+      "run": "phys9_multicircuit_setB_balanced"
+    },
+    {
+      "decision": "partial_improvement",
+      "key_comparison": {
+        "best_v1_v2_ari": 0.8893840462772165,
+        "best_v1_v2_method": "v2_physical_local_inverse_probability_v2",
+        "best_v1_v2_nmi": 0.8495273690650972,
+        "primary": "v3c_vs_v1_v2",
+        "v3c_ari": 0.9176996113163034,
+        "v3c_delta_ari_vs_best_v1_v2": 0.028315565039086943,
+        "v3c_delta_nmi_vs_best_v1_v2": -0.05809066050203282,
+        "v3c_nmi": 0.7914367085630644
+      },
+      "mechanism_counts": {
+        "M0": 3,
+        "M1": 3,
+        "M10": 3,
+        "M2": 3,
+        "M3": 3,
+        "M4": 3,
+        "M5": 27,
+        "M6": 3,
+        "M7": 3,
+        "M8": 3,
+        "M9": 3
+      },
+      "profile": "phys9_multicircuit_setC_balanced",
+      "run": "phys9_multicircuit_setC_balanced"
+    }
+  ],
+  "schema": "scope_static_s2d6_balanced_profile_results_v1"
+}

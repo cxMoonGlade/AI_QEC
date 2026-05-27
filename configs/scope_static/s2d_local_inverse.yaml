@@ -1,0 +1,44 @@
+run:
+  name: s2d_phys3_local_inverse
+  output_root: outputs/scope_static
+
+s2d_physical:
+  backend: qiskit_aer_gpu
+  require_gpu: true
+  allow_cpu_aer_fallback: false
+  paper_informed_ptm_features: true
+  num_qubits: 5
+  shots: 10000
+  seed: 0
+  theta: 0.18
+  probe_set: base
+  include_m5: true
+  mechanisms:
+    M0:
+      p_x: 0.0015
+      p_y: 0.0008
+      p_z: 0.0022
+    M1:
+      epsilon: 0.045
+    M2:
+      axis: rx
+      epsilon: 0.035
+    M3:
+      gamma: 0.018
+    M4:
+      p0_to_1: 0.025
+      p1_to_0: 0.011
+    M5:
+      eta: 0.02
+
+s2d_local_inverse:
+  teacher_dir: outputs/scope_static/S2D_PHYS1_teacher
+  separability_dir: outputs/scope_static/S2D_PHYS2_oracle_separability
+  output_dir: outputs/scope_static/S2D_PHYS3_local_inverse
+  predeclared_representation: physical_local_inverse_probability
+  num_clusters: 6
+  random_baseline_seed: 0
+  random_baseline_trials: 64
+  bootstrap_replicates: 16
+  heldout_fraction: 0.25
+  seed: 0

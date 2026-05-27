@@ -1,0 +1,2984 @@
+{
+  "feature_names": [
+    "basis_rotation_no_intervention_zz_mean",
+    "basis_rotation_no_intervention_zz_connected",
+    "basis_rotation_no_intervention_zz_normalized_correlation",
+    "basis_rotation_no_intervention_zz_standard_error",
+    "basis_rotation_no_intervention_zz_z_score",
+    "basis_rotation_x_zz_mean",
+    "basis_rotation_x_zz_connected",
+    "basis_rotation_x_zz_normalized_correlation",
+    "basis_rotation_x_zz_standard_error",
+    "basis_rotation_x_zz_z_score",
+    "basis_rotation_y_zz_mean",
+    "basis_rotation_y_zz_connected",
+    "basis_rotation_y_zz_normalized_correlation",
+    "basis_rotation_y_zz_standard_error",
+    "basis_rotation_y_zz_z_score",
+    "basis_rotation_xz_zz_mean",
+    "basis_rotation_xz_zz_connected",
+    "basis_rotation_xz_zz_normalized_correlation",
+    "basis_rotation_xz_zz_standard_error",
+    "basis_rotation_xz_zz_z_score",
+    "basis_rotation_yz_zz_mean",
+    "basis_rotation_yz_zz_connected",
+    "basis_rotation_yz_zz_normalized_correlation",
+    "basis_rotation_yz_zz_standard_error",
+    "basis_rotation_yz_zz_z_score",
+    "basis_rotation_x_minus_baseline_mean",
+    "basis_rotation_x_minus_baseline_connected",
+    "basis_rotation_x_minus_baseline_normalized_correlation",
+    "basis_rotation_y_minus_baseline_mean",
+    "basis_rotation_y_minus_baseline_connected",
+    "basis_rotation_y_minus_baseline_normalized_correlation",
+    "basis_rotation_xz_minus_baseline_mean",
+    "basis_rotation_xz_minus_baseline_connected",
+    "basis_rotation_xz_minus_baseline_normalized_correlation",
+    "basis_rotation_yz_minus_baseline_mean",
+    "basis_rotation_yz_minus_baseline_connected",
+    "basis_rotation_yz_minus_baseline_normalized_correlation",
+    "basis_rotation_intervention_contrast_norm_connected",
+    "basis_rotation_intervention_contrast_norm_mean",
+    "basis_rotation_intervention_response_variance_connected",
+    "basis_rotation_intervention_response_variance_normalized_correlation",
+    "basis_rotation_intervention_response_range_connected",
+    "basis_rotation_mean_intervention_over_baseline_connected"
+  ],
+  "real_response_audit": {
+    "rzz_location_records": [
+      {
+        "baseline_role": "no_intervention",
+        "baseline_stats": {
+          "available": true,
+          "connected": -0.00048304000000010117,
+          "edge_parity": "even",
+          "family": "baseline",
+          "mean": 0.8882,
+          "normalized_correlation": -0.004339495904433416,
+          "num_shots": 10000,
+          "probes": [
+            {
+              "probe_index": 3,
+              "probe_name": "c0:rzz_int_no_intervention"
+            }
+          ],
+          "role": "no_intervention",
+          "standard_error": 0.004594570273703516,
+          "z_score": 193.3151409357059
+        },
+        "contrast_features": {
+          "intervention_contrast_norm_connected": 0.02295252355722133,
+          "intervention_contrast_norm_mean": 1.785186802550366,
+          "intervention_response_range_connected": 0.03240016,
+          "intervention_response_variance_connected": 0.0001316873867116,
+          "intervention_response_variance_normalized_correlation": 0.0001344025959727764,
+          "mean_intervention_over_baseline_connected": -0.7270060325591403,
+          "x_minus_baseline_connected": -0.0164511999999999,
+          "x_minus_baseline_mean": -0.9046,
+          "x_minus_baseline_normalized_correlation": -0.012603931572678397,
+          "xz_minus_baseline_connected": 0.001313360000000101,
+          "xz_minus_baseline_mean": -0.89,
+          "xz_minus_baseline_normalized_correlation": 0.006761512941007585,
+          "y_minus_baseline_connected": 0.015948960000000102,
+          "y_minus_baseline_mean": -0.8724,
+          "y_minus_baseline_normalized_correlation": 0.019810609565685734,
+          "yz_minus_baseline_connected": -0.0002865599999998993,
+          "yz_minus_baseline_mean": -0.903,
+          "yz_minus_baseline_normalized_correlation": 0.0019211608001832347
+        },
+        "family": "basis_rotation",
+        "location_id": 1,
+        "oracle_label_evaluator_only": "M1",
+        "qubits": [
+          0,
+          1
+        ],
+        "role_stats": {
+          "x": {
+            "available": true,
+            "connected": -0.01693424,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": -0.0164,
+            "normalized_correlation": -0.016943427477111812,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 4,
+                "probe_name": "c0:rzz_int_basis_x"
+              }
+            ],
+            "role": "x",
+            "standard_error": 0.009998655109563485,
+            "z_score": -1.6402205916987551
+          },
+          "xz": {
+            "available": true,
+            "connected": 0.0008303199999999998,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": -0.0018,
+            "normalized_correlation": 0.0024220170365741697,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 6,
+                "probe_name": "c0:rzz_int_basis_xz"
+              }
+            ],
+            "role": "xz",
+            "standard_error": 0.009999983799986878,
+            "z_score": -0.1800002916007086
+          },
+          "y": {
+            "available": true,
+            "connected": 0.015465920000000001,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": 0.0158,
+            "normalized_correlation": 0.01547111366125232,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 5,
+                "probe_name": "c0:rzz_int_basis_y"
+              }
+            ],
+            "role": "y",
+            "standard_error": 0.009998751722090114,
+            "z_score": 1.58019725253236
+          },
+          "yz": {
+            "available": true,
+            "connected": -0.0007696000000000005,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": -0.0148,
+            "normalized_correlation": -0.002418335104250181,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 7,
+                "probe_name": "c0:rzz_int_basis_yz"
+              }
+            ],
+            "role": "yz",
+            "standard_error": 0.009998904740020279,
+            "z_score": -1.480162116232941
+          }
+        }
+      },
+      {
+        "baseline_role": "no_intervention",
+        "baseline_stats": {
+          "available": true,
+          "connected": 0.001442240000000039,
+          "edge_parity": "odd",
+          "family": "baseline",
+          "mean": 0.8756,
+          "normalized_correlation": 0.011559279322022274,
+          "num_shots": 10000,
+          "probes": [
+            {
+              "probe_index": 3,
+              "probe_name": "c0:rzz_int_no_intervention"
+            }
+          ],
+          "role": "no_intervention",
+          "standard_error": 0.0048303689300093836,
+          "z_score": 181.26979795688175
+        },
+        "contrast_features": {
+          "intervention_contrast_norm_connected": 0.014589777141656423,
+          "intervention_contrast_norm_mean": 1.8103692882945182,
+          "intervention_response_range_connected": 0.01926016,
+          "intervention_response_variance_connected": 5.285611890080001e-05,
+          "intervention_response_variance_normalized_correlation": 9.865613669305392e-05,
+          "mean_intervention_over_baseline_connected": 0.5839915745128831,
+          "x_minus_baseline_connected": 0.007567599999999961,
+          "x_minus_baseline_mean": -0.8674000000000001,
+          "x_minus_baseline_normalized_correlation": -0.002540831505925876,
+          "xz_minus_baseline_connected": 0.0038119999999999613,
+          "xz_minus_baseline_mean": -0.8230000000000001,
+          "xz_minus_baseline_normalized_correlation": 0.003786614503917929,
+          "y_minus_baseline_connected": -0.01169256000000004,
+          "y_minus_baseline_mean": -0.8826,
+          "y_minus_baseline_normalized_correlation": -0.021994838453665566,
+          "yz_minus_baseline_connected": -0.0020846400000000542,
+          "yz_minus_baseline_mean": -1.0338,
+          "yz_minus_baseline_normalized_correlation": -0.013606157143158144
+        },
+        "family": "basis_rotation",
+        "location_id": 15,
+        "oracle_label_evaluator_only": "M7",
+        "qubits": [
+          1,
+          2
+        ],
+        "role_stats": {
+          "x": {
+            "available": true,
+            "connected": 0.00900984,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": 0.0082,
+            "normalized_correlation": 0.009018447816096398,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 4,
+                "probe_name": "c0:rzz_int_basis_x"
+              }
+            ],
+            "role": "x",
+            "standard_error": 0.009999663794348287,
+            "z_score": 0.8200275697903524
+          },
+          "xz": {
+            "available": true,
+            "connected": 0.00525424,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": 0.0526,
+            "normalized_correlation": 0.015345893825940203,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 6,
+                "probe_name": "c0:rzz_int_basis_xz"
+              }
+            ],
+            "role": "xz",
+            "standard_error": 0.009986156618038793,
+            "z_score": 5.267291713108566
+          },
+          "y": {
+            "available": true,
+            "connected": -0.01025032,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": -0.007,
+            "normalized_correlation": -0.01043555913164329,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 5,
+                "probe_name": "c0:rzz_int_basis_y"
+              }
+            ],
+            "role": "y",
+            "standard_error": 0.009999754996998676,
+            "z_score": -0.7000171506302882
+          },
+          "yz": {
+            "available": true,
+            "connected": -0.0006424000000000152,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": -0.1582,
+            "normalized_correlation": -0.0020468778211358697,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 7,
+                "probe_name": "c0:rzz_int_basis_yz"
+              }
+            ],
+            "role": "yz",
+            "standard_error": 0.009874070893000516,
+            "z_score": -16.021760600498023
+          }
+        }
+      },
+      {
+        "baseline_role": "no_intervention",
+        "baseline_stats": {
+          "available": true,
+          "connected": -7.463999999990367e-05,
+          "edge_parity": "even",
+          "family": "baseline",
+          "mean": 0.8802,
+          "normalized_correlation": -0.0006352590777833617,
+          "num_shots": 10000,
+          "probes": [
+            {
+              "probe_index": 3,
+              "probe_name": "c0:rzz_int_no_intervention"
+            }
+          ],
+          "role": "no_intervention",
+          "standard_error": 0.004746029498433401,
+          "z_score": 185.46028849811023
+        },
+        "contrast_features": {
+          "intervention_contrast_norm_connected": 0.010606430322177186,
+          "intervention_contrast_norm_mean": 1.8186440333391247,
+          "intervention_response_range_connected": 0.013763200000000001,
+          "intervention_response_variance_connected": 2.7866656580400008e-05,
+          "intervention_response_variance_normalized_correlation": 7.920607085430649e-05,
+          "mean_intervention_over_baseline_connected": 5.721047065052282,
+          "x_minus_baseline_connected": 0.008919119999999904,
+          "x_minus_baseline_mean": -0.8715999999999999,
+          "x_minus_baseline_normalized_correlation": 0.009486380531180396,
+          "xz_minus_baseline_connected": -0.004844080000000098,
+          "xz_minus_baseline_mean": -0.8374,
+          "xz_minus_baseline_normalized_correlation": -0.014668140092624269,
+          "y_minus_baseline_connected": -0.002944800000000096,
+          "y_minus_baseline_mean": -0.8784,
+          "y_minus_baseline_normalized_correlation": -0.0024393049402220506,
+          "yz_minus_baseline_connected": 0.000899279999999919,
+          "yz_minus_baseline_mean": -1.0368,
+          "yz_minus_baseline_normalized_correlation": 0.003243361792734583
+        },
+        "family": "basis_rotation",
+        "location_id": 16,
+        "oracle_label_evaluator_only": "M8",
+        "qubits": [
+          2,
+          3
+        ],
+        "role_stats": {
+          "x": {
+            "available": true,
+            "connected": 0.00884448,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": 0.0086,
+            "normalized_correlation": 0.008851121453397033,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 4,
+                "probe_name": "c0:rzz_int_basis_x"
+              }
+            ],
+            "role": "x",
+            "standard_error": 0.009999630193162145,
+            "z_score": 0.86003180456421
+          },
+          "xz": {
+            "available": true,
+            "connected": -0.004918720000000001,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": 0.0428,
+            "normalized_correlation": -0.015303399170407631,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 6,
+                "probe_name": "c0:rzz_int_basis_xz"
+              }
+            ],
+            "role": "xz",
+            "standard_error": 0.009990836601606493,
+            "z_score": 4.283925531633447
+          },
+          "y": {
+            "available": true,
+            "connected": -0.0030194399999999995,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": 0.0018,
+            "normalized_correlation": -0.0030745640180054124,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 5,
+                "probe_name": "c0:rzz_int_basis_y"
+              }
+            ],
+            "role": "y",
+            "standard_error": 0.009999983799986878,
+            "z_score": 0.1800002916007086
+          },
+          "yz": {
+            "available": true,
+            "connected": 0.0008246400000000154,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": -0.1566,
+            "normalized_correlation": 0.0026081027149512212,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 7,
+                "probe_name": "c0:rzz_int_basis_yz"
+              }
+            ],
+            "role": "yz",
+            "standard_error": 0.009876621082131276,
+            "z_score": -15.855624985281635
+          }
+        }
+      },
+      {
+        "baseline_role": "no_intervention",
+        "baseline_stats": {
+          "available": true,
+          "connected": 0.0031839999999999646,
+          "edge_parity": "odd",
+          "family": "baseline",
+          "mean": 0.877,
+          "normalized_correlation": 0.025967525072471808,
+          "num_shots": 10000,
+          "probes": [
+            {
+              "probe_index": 3,
+              "probe_name": "c0:rzz_int_no_intervention"
+            }
+          ],
+          "role": "no_intervention",
+          "standard_error": 0.004804903745133715,
+          "z_score": 182.52186651776393
+        },
+        "contrast_features": {
+          "intervention_contrast_norm_connected": 0.008641649668159371,
+          "intervention_contrast_norm_mean": 1.7975401636681168,
+          "intervention_response_range_connected": 0.005231559999999998,
+          "intervention_response_variance_connected": 4.2306672242999984e-06,
+          "intervention_response_variance_normalized_correlation": 1.674842523220231e-05,
+          "mean_intervention_over_baseline_connected": -0.19335949764521443,
+          "x_minus_baseline_connected": -0.0023238399999999646,
+          "x_minus_baseline_mean": -0.877,
+          "x_minus_baseline_normalized_correlation": -0.025099471748499514,
+          "xz_minus_baseline_connected": -0.0014403999999999667,
+          "xz_minus_baseline_mean": -0.7588,
+          "xz_minus_baseline_normalized_correlation": -0.02050817805553312,
+          "y_minus_baseline_connected": -0.006671959999999965,
+          "y_minus_baseline_mean": -0.8762,
+          "y_minus_baseline_normalized_correlation": -0.029505857412549297,
+          "yz_minus_baseline_connected": -0.0047631999999999675,
+          "yz_minus_baseline_mean": -1.0576,
+          "yz_minus_baseline_normalized_correlation": -0.03098301703987471
+        },
+        "family": "basis_rotation",
+        "location_id": 18,
+        "oracle_label_evaluator_only": "M10",
+        "qubits": [
+          3,
+          4
+        ],
+        "role_stats": {
+          "x": {
+            "available": true,
+            "connected": 0.00086016,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": 0.0,
+            "normalized_correlation": 0.0008680533239722926,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 4,
+                "probe_name": "c0:rzz_int_basis_x"
+              }
+            ],
+            "role": "x",
+            "standard_error": 0.01,
+            "z_score": 0.0
+          },
+          "xz": {
+            "available": true,
+            "connected": 0.001743599999999998,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": 0.1182,
+            "normalized_correlation": 0.005459347016938685,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 6,
+                "probe_name": "c0:rzz_int_basis_xz"
+              }
+            ],
+            "role": "xz",
+            "standard_error": 0.00992989808608326,
+            "z_score": 11.90344543068948
+          },
+          "y": {
+            "available": true,
+            "connected": -0.0034879599999999996,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": 0.0008,
+            "normalized_correlation": -0.0035383323400774887,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 5,
+                "probe_name": "c0:rzz_int_basis_y"
+              }
+            ],
+            "role": "y",
+            "standard_error": 0.009999996799999487,
+            "z_score": 0.08000002560001229
+          },
+          "yz": {
+            "available": true,
+            "connected": -0.0015792000000000028,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": -0.1806,
+            "normalized_correlation": -0.0050154919674029,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 7,
+                "probe_name": "c0:rzz_int_basis_yz"
+              }
+            ],
+            "role": "yz",
+            "standard_error": 0.009835566277545995,
+            "z_score": -18.361932084408696
+          }
+        }
+      },
+      {
+        "baseline_role": "no_intervention",
+        "baseline_stats": {
+          "available": true,
+          "connected": -0.0017449600000000176,
+          "edge_parity": "odd",
+          "family": "baseline",
+          "mean": 0.8792,
+          "normalized_correlation": -0.01470872812031131,
+          "num_shots": 10000,
+          "probes": [
+            {
+              "probe_index": 22,
+              "probe_name": "c1:rzz_int_no_intervention"
+            }
+          ],
+          "role": "no_intervention",
+          "standard_error": 0.0047645289378909226,
+          "z_score": 184.53030959849488
+        },
+        "contrast_features": {
+          "intervention_contrast_norm_connected": 0.023431263149117695,
+          "intervention_contrast_norm_mean": 1.7902559146669506,
+          "intervention_response_range_connected": 0.03064804,
+          "intervention_response_variance_connected": 0.00011876645318830005,
+          "intervention_response_variance_normalized_correlation": 0.00014228880497157287,
+          "mean_intervention_over_baseline_connected": 1.4633725858553344,
+          "x_minus_baseline_connected": 0.01875664000000002,
+          "x_minus_baseline_mean": -0.8626,
+          "x_minus_baseline_normalized_correlation": 0.0317279870415948,
+          "xz_minus_baseline_connected": 0.0062640000000000265,
+          "xz_minus_baseline_mean": -0.816,
+          "xz_minus_baseline_normalized_correlation": 0.028023219851331747,
+          "y_minus_baseline_connected": -0.011891399999999983,
+          "y_minus_baseline_mean": -0.8892,
+          "y_minus_baseline_normalized_correlation": 0.0009008904830499209,
+          "yz_minus_baseline_connected": 0.004070560000000029,
+          "yz_minus_baseline_mean": -1.0022,
+          "yz_minus_baseline_normalized_correlation": 0.022080425060258244
+        },
+        "family": "basis_rotation",
+        "location_id": 20,
+        "oracle_label_evaluator_only": "M1",
+        "qubits": [
+          1,
+          2
+        ],
+        "role_stats": {
+          "x": {
+            "available": true,
+            "connected": 0.01701168,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": 0.0166,
+            "normalized_correlation": 0.017019258921283493,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 23,
+                "probe_name": "c1:rzz_int_basis_x"
+              }
+            ],
+            "role": "x",
+            "standard_error": 0.009998622105070278,
+            "z_score": 1.6602287620793448
+          },
+          "xz": {
+            "available": true,
+            "connected": 0.004519040000000009,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": 0.0632,
+            "normalized_correlation": 0.013314491731020436,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 25,
+                "probe_name": "c1:rzz_int_basis_xz"
+              }
+            ],
+            "role": "xz",
+            "standard_error": 0.009980008817631374,
+            "z_score": 6.3326597355652146
+          },
+          "y": {
+            "available": true,
+            "connected": -0.01363636,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": -0.01,
+            "normalized_correlation": -0.01380783763726139,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 24,
+                "probe_name": "c1:rzz_int_basis_y"
+              }
+            ],
+            "role": "y",
+            "standard_error": 0.009999499987499374,
+            "z_score": -1.0000500037503126
+          },
+          "yz": {
+            "available": true,
+            "connected": 0.002325600000000011,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": -0.123,
+            "normalized_correlation": 0.007371696939946935,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 26,
+                "probe_name": "c1:rzz_int_basis_yz"
+              }
+            ],
+            "role": "yz",
+            "standard_error": 0.0099240667067488,
+            "z_score": -12.39411257850117
+          }
+        }
+      },
+      {
+        "baseline_role": "no_intervention",
+        "baseline_stats": {
+          "available": true,
+          "connected": 0.003494879999999978,
+          "edge_parity": "even",
+          "family": "baseline",
+          "mean": 0.885,
+          "normalized_correlation": 0.029612654606934154,
+          "num_shots": 10000,
+          "probes": [
+            {
+              "probe_index": 22,
+              "probe_name": "c1:rzz_int_no_intervention"
+            }
+          ],
+          "role": "no_intervention",
+          "standard_error": 0.004655910222502147,
+          "z_score": 190.08098474982825
+        },
+        "contrast_features": {
+          "intervention_contrast_norm_connected": 0.010327850282106102,
+          "intervention_contrast_norm_mean": 1.8066847539070008,
+          "intervention_response_range_connected": 0.008031439999999983,
+          "intervention_response_variance_connected": 1.1829913693999971e-05,
+          "intervention_response_variance_normalized_correlation": 5.203768433066294e-05,
+          "mean_intervention_over_baseline_connected": -0.10209160497499868,
+          "x_minus_baseline_connected": -0.001382399999999978,
+          "x_minus_baseline_mean": -0.8832,
+          "x_minus_baseline_normalized_correlation": -0.027499356917040335,
+          "xz_minus_baseline_connected": -0.006825439999999981,
+          "xz_minus_baseline_mean": -0.8294,
+          "xz_minus_baseline_normalized_correlation": -0.03976191113156102,
+          "y_minus_baseline_connected": 0.00041608000000002265,
+          "y_minus_baseline_mean": -0.8768,
+          "y_minus_baseline_normalized_correlation": -0.025652089735640593,
+          "yz_minus_baseline_connected": -0.00761535999999996,
+          "yz_minus_baseline_mean": -1.0136,
+          "yz_minus_baseline_normalized_correlation": -0.04195762654665853
+        },
+        "family": "basis_rotation",
+        "location_id": 34,
+        "oracle_label_evaluator_only": "M7",
+        "qubits": [
+          2,
+          3
+        ],
+        "role_stats": {
+          "x": {
+            "available": true,
+            "connected": 0.00211248,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": 0.0018,
+            "normalized_correlation": 0.0021132976898938175,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 23,
+                "probe_name": "c1:rzz_int_basis_x"
+              }
+            ],
+            "role": "x",
+            "standard_error": 0.009999983799986878,
+            "z_score": 0.1800002916007086
+          },
+          "xz": {
+            "available": true,
+            "connected": -0.0033305600000000032,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": 0.0556,
+            "normalized_correlation": -0.01014925652462687,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 25,
+                "probe_name": "c1:rzz_int_basis_xz"
+              }
+            ],
+            "role": "xz",
+            "standard_error": 0.00998453123586681,
+            "z_score": 5.568613957585868
+          },
+          "y": {
+            "available": true,
+            "connected": 0.003910960000000001,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": 0.0082,
+            "normalized_correlation": 0.0039605648712935605,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 24,
+                "probe_name": "c1:rzz_int_basis_y"
+              }
+            ],
+            "role": "y",
+            "standard_error": 0.009999663794348287,
+            "z_score": 0.8200275697903524
+          },
+          "yz": {
+            "available": true,
+            "connected": -0.004120479999999982,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": -0.1286,
+            "normalized_correlation": -0.012344971939724374,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 26,
+                "probe_name": "c1:rzz_int_basis_yz"
+              }
+            ],
+            "role": "yz",
+            "standard_error": 0.009916965463285632,
+            "z_score": -12.96767650105267
+          }
+        }
+      },
+      {
+        "baseline_role": "no_intervention",
+        "baseline_stats": {
+          "available": true,
+          "connected": 0.0014649199999999807,
+          "edge_parity": "odd",
+          "family": "baseline",
+          "mean": 0.896,
+          "normalized_correlation": 0.013896514487574665,
+          "num_shots": 10000,
+          "probes": [
+            {
+              "probe_index": 22,
+              "probe_name": "c1:rzz_int_no_intervention"
+            }
+          ],
+          "role": "no_intervention",
+          "standard_error": 0.0044405405076409325,
+          "z_score": 201.77723825697205
+        },
+        "contrast_features": {
+          "intervention_contrast_norm_connected": 0.005942948026964376,
+          "intervention_contrast_norm_mean": 1.8169181159314802,
+          "intervention_response_range_connected": 0.006763119999999999,
+          "intervention_response_variance_connected": 6.5611398671999985e-06,
+          "intervention_response_variance_normalized_correlation": 2.635905774804372e-05,
+          "mean_intervention_over_baseline_connected": -0.02813250382012706,
+          "x_minus_baseline_connected": -0.002661479999999981,
+          "x_minus_baseline_mean": -0.897,
+          "x_minus_baseline_normalized_correlation": -0.015093315117380221,
+          "xz_minus_baseline_connected": 0.0017449200000000178,
+          "xz_minus_baseline_mean": -0.9198000000000001,
+          "xz_minus_baseline_normalized_correlation": -0.004130196216773577,
+          "y_minus_baseline_connected": -0.005018199999999981,
+          "y_minus_baseline_mean": -0.8992,
+          "y_minus_baseline_normalized_correlation": -0.017451439865977778,
+          "yz_minus_baseline_connected": -8.98799999999797e-05,
+          "yz_minus_baseline_mean": -0.9176,
+          "yz_minus_baseline_normalized_correlation": -0.009811831598717862
+        },
+        "family": "basis_rotation",
+        "location_id": 35,
+        "oracle_label_evaluator_only": "M8",
+        "qubits": [
+          3,
+          4
+        ],
+        "role_stats": {
+          "x": {
+            "available": true,
+            "connected": -0.00119656,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": -0.001,
+            "normalized_correlation": -0.0011968006298055558,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 23,
+                "probe_name": "c1:rzz_int_basis_x"
+              }
+            ],
+            "role": "x",
+            "standard_error": 0.00999999499999875,
+            "z_score": -0.1000000500000375
+          },
+          "xz": {
+            "available": true,
+            "connected": 0.0032098399999999985,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": -0.0238,
+            "normalized_correlation": 0.009766318270801088,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 25,
+                "probe_name": "c1:rzz_int_basis_xz"
+              }
+            ],
+            "role": "xz",
+            "standard_error": 0.009997167398818528,
+            "z_score": -2.380674350097679
+          },
+          "y": {
+            "available": true,
+            "connected": -0.0035532800000000002,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": -0.0032,
+            "normalized_correlation": -0.003554925378403113,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 24,
+                "probe_name": "c1:rzz_int_basis_y"
+              }
+            ],
+            "role": "y",
+            "standard_error": 0.009999948799868926,
+            "z_score": -0.32000163841258306
+          },
+          "yz": {
+            "available": true,
+            "connected": 0.001375040000000001,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": -0.0216,
+            "normalized_correlation": 0.004084682888856803,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 26,
+                "probe_name": "c1:rzz_int_basis_yz"
+              }
+            ],
+            "role": "yz",
+            "standard_error": 0.009997666927838714,
+            "z_score": -2.1605040611879502
+          }
+        }
+      },
+      {
+        "baseline_role": "no_intervention",
+        "baseline_stats": {
+          "available": true,
+          "connected": -0.0012502000000000901,
+          "edge_parity": "even",
+          "family": "baseline",
+          "mean": 0.8732,
+          "normalized_correlation": -0.010151355451733183,
+          "num_shots": 10000,
+          "probes": [
+            {
+              "probe_index": 22,
+              "probe_name": "c1:rzz_int_no_intervention"
+            }
+          ],
+          "role": "no_intervention",
+          "standard_error": 0.004873620420180464,
+          "z_score": 179.16865178590714
+        },
+        "contrast_features": {
+          "intervention_contrast_norm_connected": 0.018218163141305,
+          "intervention_contrast_norm_mean": 1.762514260935213,
+          "intervention_response_range_connected": 0.018278,
+          "intervention_response_variance_connected": 4.96956213612e-05,
+          "intervention_response_variance_normalized_correlation": 0.0001167649506357257,
+          "mean_intervention_over_baseline_connected": 3.611460997442195,
+          "x_minus_baseline_connected": 0.01055244000000009,
+          "x_minus_baseline_mean": -0.8664,
+          "x_minus_baseline_normalized_correlation": 0.01957676687828435,
+          "xz_minus_baseline_connected": -0.004511959999999909,
+          "xz_minus_baseline_mean": -0.9054,
+          "xz_minus_baseline_normalized_correlation": -0.0049617750292964835,
+          "y_minus_baseline_connected": 0.01376604000000009,
+          "y_minus_baseline_mean": -0.8588,
+          "y_minus_baseline_normalized_correlation": 0.022806071883646736,
+          "yz_minus_baseline_connected": 0.0032689200000000883,
+          "yz_minus_baseline_mean": -0.8936,
+          "yz_minus_baseline_normalized_correlation": 0.015267143411810399
+        },
+        "family": "basis_rotation",
+        "location_id": 37,
+        "oracle_label_evaluator_only": "M10",
+        "qubits": [
+          4,
+          5
+        ],
+        "role_stats": {
+          "x": {
+            "available": true,
+            "connected": 0.00930224,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": 0.0068,
+            "normalized_correlation": 0.00942541142655117,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 23,
+                "probe_name": "c1:rzz_int_basis_x"
+              }
+            ],
+            "role": "x",
+            "standard_error": 0.009999768797327266,
+            "z_score": 0.6800157221452461
+          },
+          "xz": {
+            "available": true,
+            "connected": -0.005762159999999999,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": -0.0322,
+            "normalized_correlation": -0.015113130481029666,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 25,
+                "probe_name": "c1:rzz_int_basis_xz"
+              }
+            ],
+            "role": "xz",
+            "standard_error": 0.009994814455506415,
+            "z_score": -3.2216706116300284
+          },
+          "y": {
+            "available": true,
+            "connected": 0.01251584,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": 0.0144,
+            "normalized_correlation": 0.012654716431913553,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 24,
+                "probe_name": "c1:rzz_int_basis_y"
+              }
+            ],
+            "role": "y",
+            "standard_error": 0.009998963146246714,
+            "z_score": 1.4401493224230246
+          },
+          "yz": {
+            "available": true,
+            "connected": 0.002018719999999998,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": -0.0204,
+            "normalized_correlation": 0.005115787960077215,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 26,
+                "probe_name": "c1:rzz_int_basis_yz"
+              }
+            ],
+            "role": "yz",
+            "standard_error": 0.00999791898346851,
+            "z_score": -2.040424615735661
+          }
+        }
+      },
+      {
+        "baseline_role": "no_intervention",
+        "baseline_stats": {
+          "available": true,
+          "connected": -0.00044504000000000765,
+          "edge_parity": "even",
+          "family": "baseline",
+          "mean": 0.8822,
+          "normalized_correlation": -0.0038006597513065136,
+          "num_shots": 10000,
+          "probes": [
+            {
+              "probe_index": 41,
+              "probe_name": "c2:rzz_int_no_intervention"
+            }
+          ],
+          "role": "no_intervention",
+          "standard_error": 0.004708748878417705,
+          "z_score": 187.35337618948333
+        },
+        "contrast_features": {
+          "intervention_contrast_norm_connected": 0.004778082884505038,
+          "intervention_contrast_norm_mean": 1.813129504475618,
+          "intervention_response_range_connected": 0.005841120000000002,
+          "intervention_response_variance_connected": 5.705977665199996e-06,
+          "intervention_response_variance_normalized_correlation": 2.1814062884224715e-05,
+          "mean_intervention_over_baseline_connected": -0.9097390368576627,
+          "x_minus_baseline_connected": 0.00033744000000000764,
+          "x_minus_baseline_mean": -0.8832,
+          "x_minus_baseline_normalized_correlation": 0.0036929501741205756,
+          "xz_minus_baseline_connected": -0.002010639999999994,
+          "xz_minus_baseline_mean": -0.8473999999999999,
+          "xz_minus_baseline_normalized_correlation": -0.0034497293966302164,
+          "y_minus_baseline_connected": 0.003830480000000008,
+          "y_minus_baseline_mean": -0.8752,
+          "y_minus_baseline_normalized_correlation": 0.007228874437310341,
+          "yz_minus_baseline_connected": -0.0020002399999999865,
+          "yz_minus_baseline_mean": -1.0116,
+          "yz_minus_baseline_normalized_correlation": -0.0036272367196003006
+        },
+        "family": "basis_rotation",
+        "location_id": 39,
+        "oracle_label_evaluator_only": "M1",
+        "qubits": [
+          2,
+          3
+        ],
+        "role_stats": {
+          "x": {
+            "available": true,
+            "connected": -0.00010760000000000001,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": -0.001,
+            "normalized_correlation": -0.00010770957718593805,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 42,
+                "probe_name": "c2:rzz_int_basis_x"
+              }
+            ],
+            "role": "x",
+            "standard_error": 0.00999999499999875,
+            "z_score": -0.1000000500000375
+          },
+          "xz": {
+            "available": true,
+            "connected": -0.0024556800000000018,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": 0.0348,
+            "normalized_correlation": -0.00725038914793673,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 44,
+                "probe_name": "c2:rzz_int_basis_xz"
+              }
+            ],
+            "role": "xz",
+            "standard_error": 0.009993942965616724,
+            "z_score": 3.4821091254699286
+          },
+          "y": {
+            "available": true,
+            "connected": 0.0033854400000000004,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": 0.007,
+            "normalized_correlation": 0.0034282146860038277,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 43,
+                "probe_name": "c2:rzz_int_basis_y"
+              }
+            ],
+            "role": "y",
+            "standard_error": 0.009999754996998676,
+            "z_score": 0.7000171506302882
+          },
+          "yz": {
+            "available": true,
+            "connected": -0.002445279999999994,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": -0.1294,
+            "normalized_correlation": -0.007427896470906814,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 45,
+                "probe_name": "c2:rzz_int_basis_yz"
+              }
+            ],
+            "role": "yz",
+            "standard_error": 0.009915924767766243,
+            "z_score": -13.049715788550692
+          }
+        }
+      },
+      {
+        "baseline_role": "no_intervention",
+        "baseline_stats": {
+          "available": true,
+          "connected": 0.005883239999999956,
+          "edge_parity": "odd",
+          "family": "baseline",
+          "mean": 0.894,
+          "normalized_correlation": 0.05259215053783738,
+          "num_shots": 10000,
+          "probes": [
+            {
+              "probe_index": 41,
+              "probe_name": "c2:rzz_int_no_intervention"
+            }
+          ],
+          "role": "no_intervention",
+          "standard_error": 0.004480669592817572,
+          "z_score": 199.5237500736642
+        },
+        "contrast_features": {
+          "intervention_contrast_norm_connected": 0.020195544615820526,
+          "intervention_contrast_norm_mean": 1.8142985531604219,
+          "intervention_response_range_connected": 0.016920400000000002,
+          "intervention_response_variance_connected": 4.6344136538799996e-05,
+          "intervention_response_variance_normalized_correlation": 0.00013004740384032622,
+          "mean_intervention_over_baseline_connected": -0.2676131497015778,
+          "x_minus_baseline_connected": 0.0006659600000000435,
+          "x_minus_baseline_mean": -0.887,
+          "x_minus_baseline_normalized_correlation": -0.04603995892099912,
+          "xz_minus_baseline_connected": -0.002551399999999957,
+          "xz_minus_baseline_mean": -0.914,
+          "xz_minus_baseline_normalized_correlation": -0.042759593192861246,
+          "y_minus_baseline_connected": -0.016254439999999957,
+          "y_minus_baseline_mean": -0.904,
+          "y_minus_baseline_normalized_correlation": -0.06296747088840754,
+          "yz_minus_baseline_connected": -0.011691879999999957,
+          "yz_minus_baseline_mean": -0.9232,
+          "yz_minus_baseline_normalized_correlation": -0.07008155968560709
+        },
+        "family": "basis_rotation",
+        "location_id": 53,
+        "oracle_label_evaluator_only": "M7",
+        "qubits": [
+          3,
+          4
+        ],
+        "role_stats": {
+          "x": {
+            "available": true,
+            "connected": 0.0065492,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": 0.007,
+            "normalized_correlation": 0.006552191616838261,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 42,
+                "probe_name": "c2:rzz_int_basis_x"
+              }
+            ],
+            "role": "x",
+            "standard_error": 0.009999754996998676,
+            "z_score": 0.7000171506302882
+          },
+          "xz": {
+            "available": true,
+            "connected": 0.003331839999999999,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": -0.02,
+            "normalized_correlation": 0.009832557344976137,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 44,
+                "probe_name": "c2:rzz_int_basis_xz"
+              }
+            ],
+            "role": "xz",
+            "standard_error": 0.00999799979995999,
+            "z_score": -2.0004001200400143
+          },
+          "y": {
+            "available": true,
+            "connected": -0.0103712,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": -0.01,
+            "normalized_correlation": -0.01037532035057016,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 43,
+                "probe_name": "c2:rzz_int_basis_y"
+              }
+            ],
+            "role": "y",
+            "standard_error": 0.009999499987499374,
+            "z_score": -1.0000500037503126
+          },
+          "yz": {
+            "available": true,
+            "connected": -0.00580864,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": -0.0292,
+            "normalized_correlation": -0.017489409147769707,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 45,
+                "probe_name": "c2:rzz_int_basis_yz"
+              }
+            ],
+            "role": "yz",
+            "standard_error": 0.009995735890868666,
+            "z_score": -2.921245651025541
+          }
+        }
+      },
+      {
+        "baseline_role": "no_intervention",
+        "baseline_stats": {
+          "available": true,
+          "connected": -0.0005299999999999194,
+          "edge_parity": "even",
+          "family": "baseline",
+          "mean": 0.8938,
+          "normalized_correlation": -0.005032308313575985,
+          "num_shots": 10000,
+          "probes": [
+            {
+              "probe_index": 41,
+              "probe_name": "c2:rzz_int_no_intervention"
+            }
+          ],
+          "role": "no_intervention",
+          "standard_error": 0.004484657846480598,
+          "z_score": 199.30171500183073
+        },
+        "contrast_features": {
+          "intervention_contrast_norm_connected": 0.01805389148734411,
+          "intervention_contrast_norm_mean": 1.8003349466141016,
+          "intervention_response_range_connected": 0.01801808,
+          "intervention_response_variance_connected": 4.46413350576e-05,
+          "intervention_response_variance_normalized_correlation": 5.9697330973921204e-05,
+          "mean_intervention_over_baseline_connected": 10.433069679850925,
+          "x_minus_baseline_connected": 0.01693783999999992,
+          "x_minus_baseline_mean": -0.8774000000000001,
+          "x_minus_baseline_normalized_correlation": 0.02144330215269769,
+          "xz_minus_baseline_connected": -0.0010802400000000795,
+          "xz_minus_baseline_mean": -0.919,
+          "xz_minus_baseline_normalized_correlation": -0.0001876063298087479,
+          "y_minus_baseline_connected": 0.005310799999999919,
+          "y_minus_baseline_mean": -0.889,
+          "y_minus_baseline_normalized_correlation": 0.009813723816114398,
+          "yz_minus_baseline_connected": 0.0031114399999999202,
+          "yz_minus_baseline_mean": -0.9146000000000001,
+          "yz_minus_baseline_normalized_correlation": 0.01277841668733986
+        },
+        "family": "basis_rotation",
+        "location_id": 54,
+        "oracle_label_evaluator_only": "M8",
+        "qubits": [
+          4,
+          5
+        ],
+        "role_stats": {
+          "x": {
+            "available": true,
+            "connected": 0.01640784,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": 0.0164,
+            "normalized_correlation": 0.016410993839121705,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 42,
+                "probe_name": "c2:rzz_int_basis_x"
+              }
+            ],
+            "role": "x",
+            "standard_error": 0.009998655109563485,
+            "z_score": 1.6402205916987551
+          },
+          "xz": {
+            "available": true,
+            "connected": -0.001610239999999999,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": -0.0252,
+            "normalized_correlation": -0.005219914643384733,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 44,
+                "probe_name": "c2:rzz_int_basis_xz"
+              }
+            ],
+            "role": "xz",
+            "standard_error": 0.009996824295745124,
+            "z_score": -2.5208005316974207
+          },
+          "y": {
+            "available": true,
+            "connected": 0.0047808,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": 0.0048,
+            "normalized_correlation": 0.004781415502538413,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 43,
+                "probe_name": "c2:rzz_int_basis_y"
+              }
+            ],
+            "role": "y",
+            "standard_error": 0.009999884799336441,
+            "z_score": 0.4800055296955532
+          },
+          "yz": {
+            "available": true,
+            "connected": 0.002581440000000001,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": -0.0208,
+            "normalized_correlation": 0.0077461083737638756,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 45,
+                "probe_name": "c2:rzz_int_basis_yz"
+              }
+            ],
+            "role": "yz",
+            "standard_error": 0.009997836565977662,
+            "z_score": -2.0804500916510054
+          }
+        }
+      },
+      {
+        "baseline_role": "no_intervention",
+        "baseline_stats": {
+          "available": true,
+          "connected": 0.0024999999999999467,
+          "edge_parity": "odd",
+          "family": "baseline",
+          "mean": 0.8784,
+          "normalized_correlation": 0.020678246484697658,
+          "num_shots": 10000,
+          "probes": [
+            {
+              "probe_index": 41,
+              "probe_name": "c2:rzz_int_no_intervention"
+            }
+          ],
+          "role": "no_intervention",
+          "standard_error": 0.004779261867694635,
+          "z_score": 183.79407203809745
+        },
+        "contrast_features": {
+          "intervention_contrast_norm_connected": 0.01151038092992579,
+          "intervention_contrast_norm_mean": 1.7833885723532041,
+          "intervention_response_range_connected": 0.01382056,
+          "intervention_response_variance_connected": 3.146383995959996e-05,
+          "intervention_response_variance_normalized_correlation": 6.5989098055101e-05,
+          "mean_intervention_over_baseline_connected": 0.4846941223510718,
+          "x_minus_baseline_connected": 0.008247840000000053,
+          "x_minus_baseline_mean": -0.8675999999999999,
+          "x_minus_baseline_normalized_correlation": -0.009837844491736409,
+          "xz_minus_baseline_connected": -0.005092479999999927,
+          "xz_minus_baseline_mean": -0.7522,
+          "xz_minus_baseline_normalized_correlation": -0.02915779148830501,
+          "y_minus_baseline_connected": -0.0027337599999999467,
+          "y_minus_baseline_mean": -0.8784,
+          "y_minus_baseline_normalized_correlation": -0.02091657226367649,
+          "yz_minus_baseline_connected": -0.005572719999999948,
+          "yz_minus_baseline_mean": -1.0442,
+          "yz_minus_baseline_normalized_correlation": -0.03003614265486449
+        },
+        "family": "basis_rotation",
+        "location_id": 56,
+        "oracle_label_evaluator_only": "M10",
+        "qubits": [
+          5,
+          6
+        ],
+        "role_stats": {
+          "x": {
+            "available": true,
+            "connected": 0.01074784,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": 0.0108,
+            "normalized_correlation": 0.01084040199296125,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 42,
+                "probe_name": "c2:rzz_int_basis_x"
+              }
+            ],
+            "role": "x",
+            "standard_error": 0.009999416782992897,
+            "z_score": 1.080062991110516
+          },
+          "xz": {
+            "available": true,
+            "connected": -0.0025924799999999804,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": 0.1262,
+            "normalized_correlation": -0.00847954500360735,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 44,
+                "probe_name": "c2:rzz_int_basis_xz"
+              }
+            ],
+            "role": "xz",
+            "standard_error": 0.009920048185366842,
+            "z_score": 12.721712399155361
+          },
+          "y": {
+            "available": true,
+            "connected": -0.00023375999999999998,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": 0.0,
+            "normalized_correlation": -0.0002383257789788349,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 43,
+                "probe_name": "c2:rzz_int_basis_y"
+              }
+            ],
+            "role": "y",
+            "standard_error": 0.01,
+            "z_score": 0.0
+          },
+          "yz": {
+            "available": true,
+            "connected": -0.003072720000000001,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": -0.1658,
+            "normalized_correlation": -0.009357896170166835,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 45,
+                "probe_name": "c2:rzz_int_basis_yz"
+              }
+            ],
+            "role": "yz",
+            "standard_error": 0.00986159398880323,
+            "z_score": -16.81269784461294
+          }
+        }
+      }
+    ]
+  },
+  "schema": "scope_static_s2d8d_basis_response_metrics_v1",
+  "scrambled_response_audit": {
+    "rzz_location_records": [
+      {
+        "baseline_role": "no_intervention",
+        "baseline_stats": {
+          "available": true,
+          "connected": -0.00048304000000010117,
+          "edge_parity": "even",
+          "family": "baseline",
+          "mean": 0.8882,
+          "normalized_correlation": -0.004339495904433416,
+          "num_shots": 10000,
+          "probes": [
+            {
+              "probe_index": 3,
+              "probe_name": "c0:rzz_int_no_intervention"
+            }
+          ],
+          "role": "no_intervention",
+          "standard_error": 0.004594570273703516,
+          "z_score": 193.3151409357059
+        },
+        "contrast_features": {
+          "intervention_contrast_norm_connected": 0.02295252355722133,
+          "intervention_contrast_norm_mean": 1.7851868025503663,
+          "intervention_response_range_connected": 0.03240016,
+          "intervention_response_variance_connected": 0.0001316873867116,
+          "intervention_response_variance_normalized_correlation": 0.0001344025959727764,
+          "mean_intervention_over_baseline_connected": -0.7270060325591394,
+          "x_minus_baseline_connected": -0.0002865599999998993,
+          "x_minus_baseline_mean": -0.903,
+          "x_minus_baseline_normalized_correlation": 0.0019211608001832347,
+          "xz_minus_baseline_connected": 0.015948960000000102,
+          "xz_minus_baseline_mean": -0.8724,
+          "xz_minus_baseline_normalized_correlation": 0.019810609565685734,
+          "y_minus_baseline_connected": -0.0164511999999999,
+          "y_minus_baseline_mean": -0.9046,
+          "y_minus_baseline_normalized_correlation": -0.012603931572678397,
+          "yz_minus_baseline_connected": 0.001313360000000101,
+          "yz_minus_baseline_mean": -0.89,
+          "yz_minus_baseline_normalized_correlation": 0.006761512941007585
+        },
+        "family": "basis_rotation",
+        "location_id": 1,
+        "oracle_label_evaluator_only": "M1",
+        "qubits": [
+          0,
+          1
+        ],
+        "role_stats": {
+          "x": {
+            "available": true,
+            "connected": -0.0007696000000000005,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": -0.0148,
+            "normalized_correlation": -0.002418335104250181,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 7,
+                "probe_name": "c0:rzz_int_basis_yz"
+              }
+            ],
+            "role": "x",
+            "standard_error": 0.009998904740020279,
+            "z_score": -1.480162116232941
+          },
+          "xz": {
+            "available": true,
+            "connected": 0.015465920000000001,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": 0.0158,
+            "normalized_correlation": 0.01547111366125232,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 5,
+                "probe_name": "c0:rzz_int_basis_y"
+              }
+            ],
+            "role": "xz",
+            "standard_error": 0.009998751722090114,
+            "z_score": 1.58019725253236
+          },
+          "y": {
+            "available": true,
+            "connected": -0.01693424,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": -0.0164,
+            "normalized_correlation": -0.016943427477111812,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 4,
+                "probe_name": "c0:rzz_int_basis_x"
+              }
+            ],
+            "role": "y",
+            "standard_error": 0.009998655109563485,
+            "z_score": -1.6402205916987551
+          },
+          "yz": {
+            "available": true,
+            "connected": 0.0008303199999999998,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": -0.0018,
+            "normalized_correlation": 0.0024220170365741697,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 6,
+                "probe_name": "c0:rzz_int_basis_xz"
+              }
+            ],
+            "role": "yz",
+            "standard_error": 0.009999983799986878,
+            "z_score": -0.1800002916007086
+          }
+        }
+      },
+      {
+        "baseline_role": "no_intervention",
+        "baseline_stats": {
+          "available": true,
+          "connected": 0.001442240000000039,
+          "edge_parity": "odd",
+          "family": "baseline",
+          "mean": 0.8756,
+          "normalized_correlation": 0.011559279322022274,
+          "num_shots": 10000,
+          "probes": [
+            {
+              "probe_index": 3,
+              "probe_name": "c0:rzz_int_no_intervention"
+            }
+          ],
+          "role": "no_intervention",
+          "standard_error": 0.0048303689300093836,
+          "z_score": 181.26979795688175
+        },
+        "contrast_features": {
+          "intervention_contrast_norm_connected": 0.014589777141656423,
+          "intervention_contrast_norm_mean": 1.8103692882945182,
+          "intervention_response_range_connected": 0.01926016,
+          "intervention_response_variance_connected": 5.285611890080001e-05,
+          "intervention_response_variance_normalized_correlation": 9.865613669305392e-05,
+          "mean_intervention_over_baseline_connected": 0.5839915745128831,
+          "x_minus_baseline_connected": -0.0020846400000000542,
+          "x_minus_baseline_mean": -1.0338,
+          "x_minus_baseline_normalized_correlation": -0.013606157143158144,
+          "xz_minus_baseline_connected": -0.01169256000000004,
+          "xz_minus_baseline_mean": -0.8826,
+          "xz_minus_baseline_normalized_correlation": -0.021994838453665566,
+          "y_minus_baseline_connected": 0.007567599999999961,
+          "y_minus_baseline_mean": -0.8674000000000001,
+          "y_minus_baseline_normalized_correlation": -0.002540831505925876,
+          "yz_minus_baseline_connected": 0.0038119999999999613,
+          "yz_minus_baseline_mean": -0.8230000000000001,
+          "yz_minus_baseline_normalized_correlation": 0.003786614503917929
+        },
+        "family": "basis_rotation",
+        "location_id": 15,
+        "oracle_label_evaluator_only": "M7",
+        "qubits": [
+          1,
+          2
+        ],
+        "role_stats": {
+          "x": {
+            "available": true,
+            "connected": -0.0006424000000000152,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": -0.1582,
+            "normalized_correlation": -0.0020468778211358697,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 7,
+                "probe_name": "c0:rzz_int_basis_yz"
+              }
+            ],
+            "role": "x",
+            "standard_error": 0.009874070893000516,
+            "z_score": -16.021760600498023
+          },
+          "xz": {
+            "available": true,
+            "connected": -0.01025032,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": -0.007,
+            "normalized_correlation": -0.01043555913164329,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 5,
+                "probe_name": "c0:rzz_int_basis_y"
+              }
+            ],
+            "role": "xz",
+            "standard_error": 0.009999754996998676,
+            "z_score": -0.7000171506302882
+          },
+          "y": {
+            "available": true,
+            "connected": 0.00900984,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": 0.0082,
+            "normalized_correlation": 0.009018447816096398,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 4,
+                "probe_name": "c0:rzz_int_basis_x"
+              }
+            ],
+            "role": "y",
+            "standard_error": 0.009999663794348287,
+            "z_score": 0.8200275697903524
+          },
+          "yz": {
+            "available": true,
+            "connected": 0.00525424,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": 0.0526,
+            "normalized_correlation": 0.015345893825940203,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 6,
+                "probe_name": "c0:rzz_int_basis_xz"
+              }
+            ],
+            "role": "yz",
+            "standard_error": 0.009986156618038793,
+            "z_score": 5.267291713108566
+          }
+        }
+      },
+      {
+        "baseline_role": "no_intervention",
+        "baseline_stats": {
+          "available": true,
+          "connected": -7.463999999990367e-05,
+          "edge_parity": "even",
+          "family": "baseline",
+          "mean": 0.8802,
+          "normalized_correlation": -0.0006352590777833617,
+          "num_shots": 10000,
+          "probes": [
+            {
+              "probe_index": 3,
+              "probe_name": "c0:rzz_int_no_intervention"
+            }
+          ],
+          "role": "no_intervention",
+          "standard_error": 0.004746029498433401,
+          "z_score": 185.46028849811023
+        },
+        "contrast_features": {
+          "intervention_contrast_norm_connected": 0.010606430322177186,
+          "intervention_contrast_norm_mean": 1.818644033339125,
+          "intervention_response_range_connected": 0.013763200000000001,
+          "intervention_response_variance_connected": 2.7866656580400008e-05,
+          "intervention_response_variance_normalized_correlation": 7.920607085430649e-05,
+          "mean_intervention_over_baseline_connected": 5.721047065052282,
+          "x_minus_baseline_connected": 0.000899279999999919,
+          "x_minus_baseline_mean": -1.0368,
+          "x_minus_baseline_normalized_correlation": 0.003243361792734583,
+          "xz_minus_baseline_connected": -0.002944800000000096,
+          "xz_minus_baseline_mean": -0.8784,
+          "xz_minus_baseline_normalized_correlation": -0.0024393049402220506,
+          "y_minus_baseline_connected": 0.008919119999999904,
+          "y_minus_baseline_mean": -0.8715999999999999,
+          "y_minus_baseline_normalized_correlation": 0.009486380531180396,
+          "yz_minus_baseline_connected": -0.004844080000000098,
+          "yz_minus_baseline_mean": -0.8374,
+          "yz_minus_baseline_normalized_correlation": -0.014668140092624269
+        },
+        "family": "basis_rotation",
+        "location_id": 16,
+        "oracle_label_evaluator_only": "M8",
+        "qubits": [
+          2,
+          3
+        ],
+        "role_stats": {
+          "x": {
+            "available": true,
+            "connected": 0.0008246400000000154,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": -0.1566,
+            "normalized_correlation": 0.0026081027149512212,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 7,
+                "probe_name": "c0:rzz_int_basis_yz"
+              }
+            ],
+            "role": "x",
+            "standard_error": 0.009876621082131276,
+            "z_score": -15.855624985281635
+          },
+          "xz": {
+            "available": true,
+            "connected": -0.0030194399999999995,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": 0.0018,
+            "normalized_correlation": -0.0030745640180054124,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 5,
+                "probe_name": "c0:rzz_int_basis_y"
+              }
+            ],
+            "role": "xz",
+            "standard_error": 0.009999983799986878,
+            "z_score": 0.1800002916007086
+          },
+          "y": {
+            "available": true,
+            "connected": 0.00884448,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": 0.0086,
+            "normalized_correlation": 0.008851121453397033,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 4,
+                "probe_name": "c0:rzz_int_basis_x"
+              }
+            ],
+            "role": "y",
+            "standard_error": 0.009999630193162145,
+            "z_score": 0.86003180456421
+          },
+          "yz": {
+            "available": true,
+            "connected": -0.004918720000000001,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": 0.0428,
+            "normalized_correlation": -0.015303399170407631,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 6,
+                "probe_name": "c0:rzz_int_basis_xz"
+              }
+            ],
+            "role": "yz",
+            "standard_error": 0.009990836601606493,
+            "z_score": 4.283925531633447
+          }
+        }
+      },
+      {
+        "baseline_role": "no_intervention",
+        "baseline_stats": {
+          "available": true,
+          "connected": 0.0031839999999999646,
+          "edge_parity": "odd",
+          "family": "baseline",
+          "mean": 0.877,
+          "normalized_correlation": 0.025967525072471808,
+          "num_shots": 10000,
+          "probes": [
+            {
+              "probe_index": 3,
+              "probe_name": "c0:rzz_int_no_intervention"
+            }
+          ],
+          "role": "no_intervention",
+          "standard_error": 0.004804903745133715,
+          "z_score": 182.52186651776393
+        },
+        "contrast_features": {
+          "intervention_contrast_norm_connected": 0.00864164966815937,
+          "intervention_contrast_norm_mean": 1.7975401636681168,
+          "intervention_response_range_connected": 0.005231559999999998,
+          "intervention_response_variance_connected": 4.2306672242999984e-06,
+          "intervention_response_variance_normalized_correlation": 1.674842523220231e-05,
+          "mean_intervention_over_baseline_connected": -0.19335949764521443,
+          "x_minus_baseline_connected": -0.0047631999999999675,
+          "x_minus_baseline_mean": -1.0576,
+          "x_minus_baseline_normalized_correlation": -0.03098301703987471,
+          "xz_minus_baseline_connected": -0.006671959999999965,
+          "xz_minus_baseline_mean": -0.8762,
+          "xz_minus_baseline_normalized_correlation": -0.029505857412549297,
+          "y_minus_baseline_connected": -0.0023238399999999646,
+          "y_minus_baseline_mean": -0.877,
+          "y_minus_baseline_normalized_correlation": -0.025099471748499514,
+          "yz_minus_baseline_connected": -0.0014403999999999667,
+          "yz_minus_baseline_mean": -0.7588,
+          "yz_minus_baseline_normalized_correlation": -0.02050817805553312
+        },
+        "family": "basis_rotation",
+        "location_id": 18,
+        "oracle_label_evaluator_only": "M10",
+        "qubits": [
+          3,
+          4
+        ],
+        "role_stats": {
+          "x": {
+            "available": true,
+            "connected": -0.0015792000000000028,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": -0.1806,
+            "normalized_correlation": -0.0050154919674029,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 7,
+                "probe_name": "c0:rzz_int_basis_yz"
+              }
+            ],
+            "role": "x",
+            "standard_error": 0.009835566277545995,
+            "z_score": -18.361932084408696
+          },
+          "xz": {
+            "available": true,
+            "connected": -0.0034879599999999996,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": 0.0008,
+            "normalized_correlation": -0.0035383323400774887,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 5,
+                "probe_name": "c0:rzz_int_basis_y"
+              }
+            ],
+            "role": "xz",
+            "standard_error": 0.009999996799999487,
+            "z_score": 0.08000002560001229
+          },
+          "y": {
+            "available": true,
+            "connected": 0.00086016,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": 0.0,
+            "normalized_correlation": 0.0008680533239722926,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 4,
+                "probe_name": "c0:rzz_int_basis_x"
+              }
+            ],
+            "role": "y",
+            "standard_error": 0.01,
+            "z_score": 0.0
+          },
+          "yz": {
+            "available": true,
+            "connected": 0.001743599999999998,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": 0.1182,
+            "normalized_correlation": 0.005459347016938685,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 6,
+                "probe_name": "c0:rzz_int_basis_xz"
+              }
+            ],
+            "role": "yz",
+            "standard_error": 0.00992989808608326,
+            "z_score": 11.90344543068948
+          }
+        }
+      },
+      {
+        "baseline_role": "no_intervention",
+        "baseline_stats": {
+          "available": true,
+          "connected": -0.0017449600000000176,
+          "edge_parity": "odd",
+          "family": "baseline",
+          "mean": 0.8792,
+          "normalized_correlation": -0.01470872812031131,
+          "num_shots": 10000,
+          "probes": [
+            {
+              "probe_index": 22,
+              "probe_name": "c1:rzz_int_no_intervention"
+            }
+          ],
+          "role": "no_intervention",
+          "standard_error": 0.0047645289378909226,
+          "z_score": 184.53030959849488
+        },
+        "contrast_features": {
+          "intervention_contrast_norm_connected": 0.023431263149117695,
+          "intervention_contrast_norm_mean": 1.7902559146669506,
+          "intervention_response_range_connected": 0.03064804,
+          "intervention_response_variance_connected": 0.00011876645318830005,
+          "intervention_response_variance_normalized_correlation": 0.0001422888049715729,
+          "mean_intervention_over_baseline_connected": 1.4633725858553344,
+          "x_minus_baseline_connected": 0.004070560000000029,
+          "x_minus_baseline_mean": -1.0022,
+          "x_minus_baseline_normalized_correlation": 0.022080425060258244,
+          "xz_minus_baseline_connected": -0.011891399999999983,
+          "xz_minus_baseline_mean": -0.8892,
+          "xz_minus_baseline_normalized_correlation": 0.0009008904830499209,
+          "y_minus_baseline_connected": 0.01875664000000002,
+          "y_minus_baseline_mean": -0.8626,
+          "y_minus_baseline_normalized_correlation": 0.0317279870415948,
+          "yz_minus_baseline_connected": 0.0062640000000000265,
+          "yz_minus_baseline_mean": -0.816,
+          "yz_minus_baseline_normalized_correlation": 0.028023219851331747
+        },
+        "family": "basis_rotation",
+        "location_id": 20,
+        "oracle_label_evaluator_only": "M1",
+        "qubits": [
+          1,
+          2
+        ],
+        "role_stats": {
+          "x": {
+            "available": true,
+            "connected": 0.002325600000000011,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": -0.123,
+            "normalized_correlation": 0.007371696939946935,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 26,
+                "probe_name": "c1:rzz_int_basis_yz"
+              }
+            ],
+            "role": "x",
+            "standard_error": 0.0099240667067488,
+            "z_score": -12.39411257850117
+          },
+          "xz": {
+            "available": true,
+            "connected": -0.01363636,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": -0.01,
+            "normalized_correlation": -0.01380783763726139,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 24,
+                "probe_name": "c1:rzz_int_basis_y"
+              }
+            ],
+            "role": "xz",
+            "standard_error": 0.009999499987499374,
+            "z_score": -1.0000500037503126
+          },
+          "y": {
+            "available": true,
+            "connected": 0.01701168,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": 0.0166,
+            "normalized_correlation": 0.017019258921283493,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 23,
+                "probe_name": "c1:rzz_int_basis_x"
+              }
+            ],
+            "role": "y",
+            "standard_error": 0.009998622105070278,
+            "z_score": 1.6602287620793448
+          },
+          "yz": {
+            "available": true,
+            "connected": 0.004519040000000009,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": 0.0632,
+            "normalized_correlation": 0.013314491731020436,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 25,
+                "probe_name": "c1:rzz_int_basis_xz"
+              }
+            ],
+            "role": "yz",
+            "standard_error": 0.009980008817631374,
+            "z_score": 6.3326597355652146
+          }
+        }
+      },
+      {
+        "baseline_role": "no_intervention",
+        "baseline_stats": {
+          "available": true,
+          "connected": 0.003494879999999978,
+          "edge_parity": "even",
+          "family": "baseline",
+          "mean": 0.885,
+          "normalized_correlation": 0.029612654606934154,
+          "num_shots": 10000,
+          "probes": [
+            {
+              "probe_index": 22,
+              "probe_name": "c1:rzz_int_no_intervention"
+            }
+          ],
+          "role": "no_intervention",
+          "standard_error": 0.004655910222502147,
+          "z_score": 190.08098474982825
+        },
+        "contrast_features": {
+          "intervention_contrast_norm_connected": 0.010327850282106102,
+          "intervention_contrast_norm_mean": 1.8066847539070008,
+          "intervention_response_range_connected": 0.008031439999999983,
+          "intervention_response_variance_connected": 1.1829913693999973e-05,
+          "intervention_response_variance_normalized_correlation": 5.203768433066294e-05,
+          "mean_intervention_over_baseline_connected": -0.10209160497499868,
+          "x_minus_baseline_connected": -0.00761535999999996,
+          "x_minus_baseline_mean": -1.0136,
+          "x_minus_baseline_normalized_correlation": -0.04195762654665853,
+          "xz_minus_baseline_connected": 0.00041608000000002265,
+          "xz_minus_baseline_mean": -0.8768,
+          "xz_minus_baseline_normalized_correlation": -0.025652089735640593,
+          "y_minus_baseline_connected": -0.001382399999999978,
+          "y_minus_baseline_mean": -0.8832,
+          "y_minus_baseline_normalized_correlation": -0.027499356917040335,
+          "yz_minus_baseline_connected": -0.006825439999999981,
+          "yz_minus_baseline_mean": -0.8294,
+          "yz_minus_baseline_normalized_correlation": -0.03976191113156102
+        },
+        "family": "basis_rotation",
+        "location_id": 34,
+        "oracle_label_evaluator_only": "M7",
+        "qubits": [
+          2,
+          3
+        ],
+        "role_stats": {
+          "x": {
+            "available": true,
+            "connected": -0.004120479999999982,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": -0.1286,
+            "normalized_correlation": -0.012344971939724374,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 26,
+                "probe_name": "c1:rzz_int_basis_yz"
+              }
+            ],
+            "role": "x",
+            "standard_error": 0.009916965463285632,
+            "z_score": -12.96767650105267
+          },
+          "xz": {
+            "available": true,
+            "connected": 0.003910960000000001,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": 0.0082,
+            "normalized_correlation": 0.0039605648712935605,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 24,
+                "probe_name": "c1:rzz_int_basis_y"
+              }
+            ],
+            "role": "xz",
+            "standard_error": 0.009999663794348287,
+            "z_score": 0.8200275697903524
+          },
+          "y": {
+            "available": true,
+            "connected": 0.00211248,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": 0.0018,
+            "normalized_correlation": 0.0021132976898938175,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 23,
+                "probe_name": "c1:rzz_int_basis_x"
+              }
+            ],
+            "role": "y",
+            "standard_error": 0.009999983799986878,
+            "z_score": 0.1800002916007086
+          },
+          "yz": {
+            "available": true,
+            "connected": -0.0033305600000000032,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": 0.0556,
+            "normalized_correlation": -0.01014925652462687,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 25,
+                "probe_name": "c1:rzz_int_basis_xz"
+              }
+            ],
+            "role": "yz",
+            "standard_error": 0.00998453123586681,
+            "z_score": 5.568613957585868
+          }
+        }
+      },
+      {
+        "baseline_role": "no_intervention",
+        "baseline_stats": {
+          "available": true,
+          "connected": 0.0014649199999999807,
+          "edge_parity": "odd",
+          "family": "baseline",
+          "mean": 0.896,
+          "normalized_correlation": 0.013896514487574665,
+          "num_shots": 10000,
+          "probes": [
+            {
+              "probe_index": 22,
+              "probe_name": "c1:rzz_int_no_intervention"
+            }
+          ],
+          "role": "no_intervention",
+          "standard_error": 0.0044405405076409325,
+          "z_score": 201.77723825697205
+        },
+        "contrast_features": {
+          "intervention_contrast_norm_connected": 0.005942948026964376,
+          "intervention_contrast_norm_mean": 1.8169181159314802,
+          "intervention_response_range_connected": 0.006763119999999999,
+          "intervention_response_variance_connected": 6.561139867199999e-06,
+          "intervention_response_variance_normalized_correlation": 2.6359057748043722e-05,
+          "mean_intervention_over_baseline_connected": -0.02813250382012706,
+          "x_minus_baseline_connected": -8.98799999999797e-05,
+          "x_minus_baseline_mean": -0.9176,
+          "x_minus_baseline_normalized_correlation": -0.009811831598717862,
+          "xz_minus_baseline_connected": -0.005018199999999981,
+          "xz_minus_baseline_mean": -0.8992,
+          "xz_minus_baseline_normalized_correlation": -0.017451439865977778,
+          "y_minus_baseline_connected": -0.002661479999999981,
+          "y_minus_baseline_mean": -0.897,
+          "y_minus_baseline_normalized_correlation": -0.015093315117380221,
+          "yz_minus_baseline_connected": 0.0017449200000000178,
+          "yz_minus_baseline_mean": -0.9198000000000001,
+          "yz_minus_baseline_normalized_correlation": -0.004130196216773577
+        },
+        "family": "basis_rotation",
+        "location_id": 35,
+        "oracle_label_evaluator_only": "M8",
+        "qubits": [
+          3,
+          4
+        ],
+        "role_stats": {
+          "x": {
+            "available": true,
+            "connected": 0.001375040000000001,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": -0.0216,
+            "normalized_correlation": 0.004084682888856803,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 26,
+                "probe_name": "c1:rzz_int_basis_yz"
+              }
+            ],
+            "role": "x",
+            "standard_error": 0.009997666927838714,
+            "z_score": -2.1605040611879502
+          },
+          "xz": {
+            "available": true,
+            "connected": -0.0035532800000000002,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": -0.0032,
+            "normalized_correlation": -0.003554925378403113,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 24,
+                "probe_name": "c1:rzz_int_basis_y"
+              }
+            ],
+            "role": "xz",
+            "standard_error": 0.009999948799868926,
+            "z_score": -0.32000163841258306
+          },
+          "y": {
+            "available": true,
+            "connected": -0.00119656,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": -0.001,
+            "normalized_correlation": -0.0011968006298055558,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 23,
+                "probe_name": "c1:rzz_int_basis_x"
+              }
+            ],
+            "role": "y",
+            "standard_error": 0.00999999499999875,
+            "z_score": -0.1000000500000375
+          },
+          "yz": {
+            "available": true,
+            "connected": 0.0032098399999999985,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": -0.0238,
+            "normalized_correlation": 0.009766318270801088,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 25,
+                "probe_name": "c1:rzz_int_basis_xz"
+              }
+            ],
+            "role": "yz",
+            "standard_error": 0.009997167398818528,
+            "z_score": -2.380674350097679
+          }
+        }
+      },
+      {
+        "baseline_role": "no_intervention",
+        "baseline_stats": {
+          "available": true,
+          "connected": -0.0012502000000000901,
+          "edge_parity": "even",
+          "family": "baseline",
+          "mean": 0.8732,
+          "normalized_correlation": -0.010151355451733183,
+          "num_shots": 10000,
+          "probes": [
+            {
+              "probe_index": 22,
+              "probe_name": "c1:rzz_int_no_intervention"
+            }
+          ],
+          "role": "no_intervention",
+          "standard_error": 0.004873620420180464,
+          "z_score": 179.16865178590714
+        },
+        "contrast_features": {
+          "intervention_contrast_norm_connected": 0.018218163141305,
+          "intervention_contrast_norm_mean": 1.762514260935213,
+          "intervention_response_range_connected": 0.018278,
+          "intervention_response_variance_connected": 4.96956213612e-05,
+          "intervention_response_variance_normalized_correlation": 0.0001167649506357257,
+          "mean_intervention_over_baseline_connected": 3.611460997442195,
+          "x_minus_baseline_connected": 0.0032689200000000883,
+          "x_minus_baseline_mean": -0.8936,
+          "x_minus_baseline_normalized_correlation": 0.015267143411810399,
+          "xz_minus_baseline_connected": 0.01376604000000009,
+          "xz_minus_baseline_mean": -0.8588,
+          "xz_minus_baseline_normalized_correlation": 0.022806071883646736,
+          "y_minus_baseline_connected": 0.01055244000000009,
+          "y_minus_baseline_mean": -0.8664,
+          "y_minus_baseline_normalized_correlation": 0.01957676687828435,
+          "yz_minus_baseline_connected": -0.004511959999999909,
+          "yz_minus_baseline_mean": -0.9054,
+          "yz_minus_baseline_normalized_correlation": -0.0049617750292964835
+        },
+        "family": "basis_rotation",
+        "location_id": 37,
+        "oracle_label_evaluator_only": "M10",
+        "qubits": [
+          4,
+          5
+        ],
+        "role_stats": {
+          "x": {
+            "available": true,
+            "connected": 0.002018719999999998,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": -0.0204,
+            "normalized_correlation": 0.005115787960077215,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 26,
+                "probe_name": "c1:rzz_int_basis_yz"
+              }
+            ],
+            "role": "x",
+            "standard_error": 0.00999791898346851,
+            "z_score": -2.040424615735661
+          },
+          "xz": {
+            "available": true,
+            "connected": 0.01251584,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": 0.0144,
+            "normalized_correlation": 0.012654716431913553,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 24,
+                "probe_name": "c1:rzz_int_basis_y"
+              }
+            ],
+            "role": "xz",
+            "standard_error": 0.009998963146246714,
+            "z_score": 1.4401493224230246
+          },
+          "y": {
+            "available": true,
+            "connected": 0.00930224,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": 0.0068,
+            "normalized_correlation": 0.00942541142655117,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 23,
+                "probe_name": "c1:rzz_int_basis_x"
+              }
+            ],
+            "role": "y",
+            "standard_error": 0.009999768797327266,
+            "z_score": 0.6800157221452461
+          },
+          "yz": {
+            "available": true,
+            "connected": -0.005762159999999999,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": -0.0322,
+            "normalized_correlation": -0.015113130481029666,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 25,
+                "probe_name": "c1:rzz_int_basis_xz"
+              }
+            ],
+            "role": "yz",
+            "standard_error": 0.009994814455506415,
+            "z_score": -3.2216706116300284
+          }
+        }
+      },
+      {
+        "baseline_role": "no_intervention",
+        "baseline_stats": {
+          "available": true,
+          "connected": -0.00044504000000000765,
+          "edge_parity": "even",
+          "family": "baseline",
+          "mean": 0.8822,
+          "normalized_correlation": -0.0038006597513065136,
+          "num_shots": 10000,
+          "probes": [
+            {
+              "probe_index": 41,
+              "probe_name": "c2:rzz_int_no_intervention"
+            }
+          ],
+          "role": "no_intervention",
+          "standard_error": 0.004708748878417705,
+          "z_score": 187.35337618948333
+        },
+        "contrast_features": {
+          "intervention_contrast_norm_connected": 0.004778082884505038,
+          "intervention_contrast_norm_mean": 1.813129504475618,
+          "intervention_response_range_connected": 0.005841120000000002,
+          "intervention_response_variance_connected": 5.705977665199996e-06,
+          "intervention_response_variance_normalized_correlation": 2.1814062884224715e-05,
+          "mean_intervention_over_baseline_connected": -0.9097390368576629,
+          "x_minus_baseline_connected": -0.0020002399999999865,
+          "x_minus_baseline_mean": -1.0116,
+          "x_minus_baseline_normalized_correlation": -0.0036272367196003006,
+          "xz_minus_baseline_connected": 0.003830480000000008,
+          "xz_minus_baseline_mean": -0.8752,
+          "xz_minus_baseline_normalized_correlation": 0.007228874437310341,
+          "y_minus_baseline_connected": 0.00033744000000000764,
+          "y_minus_baseline_mean": -0.8832,
+          "y_minus_baseline_normalized_correlation": 0.0036929501741205756,
+          "yz_minus_baseline_connected": -0.002010639999999994,
+          "yz_minus_baseline_mean": -0.8473999999999999,
+          "yz_minus_baseline_normalized_correlation": -0.0034497293966302164
+        },
+        "family": "basis_rotation",
+        "location_id": 39,
+        "oracle_label_evaluator_only": "M1",
+        "qubits": [
+          2,
+          3
+        ],
+        "role_stats": {
+          "x": {
+            "available": true,
+            "connected": -0.002445279999999994,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": -0.1294,
+            "normalized_correlation": -0.007427896470906814,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 45,
+                "probe_name": "c2:rzz_int_basis_yz"
+              }
+            ],
+            "role": "x",
+            "standard_error": 0.009915924767766243,
+            "z_score": -13.049715788550692
+          },
+          "xz": {
+            "available": true,
+            "connected": 0.0033854400000000004,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": 0.007,
+            "normalized_correlation": 0.0034282146860038277,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 43,
+                "probe_name": "c2:rzz_int_basis_y"
+              }
+            ],
+            "role": "xz",
+            "standard_error": 0.009999754996998676,
+            "z_score": 0.7000171506302882
+          },
+          "y": {
+            "available": true,
+            "connected": -0.00010760000000000001,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": -0.001,
+            "normalized_correlation": -0.00010770957718593805,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 42,
+                "probe_name": "c2:rzz_int_basis_x"
+              }
+            ],
+            "role": "y",
+            "standard_error": 0.00999999499999875,
+            "z_score": -0.1000000500000375
+          },
+          "yz": {
+            "available": true,
+            "connected": -0.0024556800000000018,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": 0.0348,
+            "normalized_correlation": -0.00725038914793673,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 44,
+                "probe_name": "c2:rzz_int_basis_xz"
+              }
+            ],
+            "role": "yz",
+            "standard_error": 0.009993942965616724,
+            "z_score": 3.4821091254699286
+          }
+        }
+      },
+      {
+        "baseline_role": "no_intervention",
+        "baseline_stats": {
+          "available": true,
+          "connected": 0.005883239999999956,
+          "edge_parity": "odd",
+          "family": "baseline",
+          "mean": 0.894,
+          "normalized_correlation": 0.05259215053783738,
+          "num_shots": 10000,
+          "probes": [
+            {
+              "probe_index": 41,
+              "probe_name": "c2:rzz_int_no_intervention"
+            }
+          ],
+          "role": "no_intervention",
+          "standard_error": 0.004480669592817572,
+          "z_score": 199.5237500736642
+        },
+        "contrast_features": {
+          "intervention_contrast_norm_connected": 0.020195544615820526,
+          "intervention_contrast_norm_mean": 1.8142985531604219,
+          "intervention_response_range_connected": 0.016920400000000002,
+          "intervention_response_variance_connected": 4.6344136538799996e-05,
+          "intervention_response_variance_normalized_correlation": 0.0001300474038403262,
+          "mean_intervention_over_baseline_connected": -0.2676131497015778,
+          "x_minus_baseline_connected": -0.011691879999999957,
+          "x_minus_baseline_mean": -0.9232,
+          "x_minus_baseline_normalized_correlation": -0.07008155968560709,
+          "xz_minus_baseline_connected": -0.016254439999999957,
+          "xz_minus_baseline_mean": -0.904,
+          "xz_minus_baseline_normalized_correlation": -0.06296747088840754,
+          "y_minus_baseline_connected": 0.0006659600000000435,
+          "y_minus_baseline_mean": -0.887,
+          "y_minus_baseline_normalized_correlation": -0.04603995892099912,
+          "yz_minus_baseline_connected": -0.002551399999999957,
+          "yz_minus_baseline_mean": -0.914,
+          "yz_minus_baseline_normalized_correlation": -0.042759593192861246
+        },
+        "family": "basis_rotation",
+        "location_id": 53,
+        "oracle_label_evaluator_only": "M7",
+        "qubits": [
+          3,
+          4
+        ],
+        "role_stats": {
+          "x": {
+            "available": true,
+            "connected": -0.00580864,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": -0.0292,
+            "normalized_correlation": -0.017489409147769707,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 45,
+                "probe_name": "c2:rzz_int_basis_yz"
+              }
+            ],
+            "role": "x",
+            "standard_error": 0.009995735890868666,
+            "z_score": -2.921245651025541
+          },
+          "xz": {
+            "available": true,
+            "connected": -0.0103712,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": -0.01,
+            "normalized_correlation": -0.01037532035057016,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 43,
+                "probe_name": "c2:rzz_int_basis_y"
+              }
+            ],
+            "role": "xz",
+            "standard_error": 0.009999499987499374,
+            "z_score": -1.0000500037503126
+          },
+          "y": {
+            "available": true,
+            "connected": 0.0065492,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": 0.007,
+            "normalized_correlation": 0.006552191616838261,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 42,
+                "probe_name": "c2:rzz_int_basis_x"
+              }
+            ],
+            "role": "y",
+            "standard_error": 0.009999754996998676,
+            "z_score": 0.7000171506302882
+          },
+          "yz": {
+            "available": true,
+            "connected": 0.003331839999999999,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": -0.02,
+            "normalized_correlation": 0.009832557344976137,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 44,
+                "probe_name": "c2:rzz_int_basis_xz"
+              }
+            ],
+            "role": "yz",
+            "standard_error": 0.00999799979995999,
+            "z_score": -2.0004001200400143
+          }
+        }
+      },
+      {
+        "baseline_role": "no_intervention",
+        "baseline_stats": {
+          "available": true,
+          "connected": -0.0005299999999999194,
+          "edge_parity": "even",
+          "family": "baseline",
+          "mean": 0.8938,
+          "normalized_correlation": -0.005032308313575985,
+          "num_shots": 10000,
+          "probes": [
+            {
+              "probe_index": 41,
+              "probe_name": "c2:rzz_int_no_intervention"
+            }
+          ],
+          "role": "no_intervention",
+          "standard_error": 0.004484657846480598,
+          "z_score": 199.30171500183073
+        },
+        "contrast_features": {
+          "intervention_contrast_norm_connected": 0.01805389148734411,
+          "intervention_contrast_norm_mean": 1.8003349466141016,
+          "intervention_response_range_connected": 0.01801808,
+          "intervention_response_variance_connected": 4.46413350576e-05,
+          "intervention_response_variance_normalized_correlation": 5.969733097392121e-05,
+          "mean_intervention_over_baseline_connected": 10.433069679850924,
+          "x_minus_baseline_connected": 0.0031114399999999202,
+          "x_minus_baseline_mean": -0.9146000000000001,
+          "x_minus_baseline_normalized_correlation": 0.01277841668733986,
+          "xz_minus_baseline_connected": 0.005310799999999919,
+          "xz_minus_baseline_mean": -0.889,
+          "xz_minus_baseline_normalized_correlation": 0.009813723816114398,
+          "y_minus_baseline_connected": 0.01693783999999992,
+          "y_minus_baseline_mean": -0.8774000000000001,
+          "y_minus_baseline_normalized_correlation": 0.02144330215269769,
+          "yz_minus_baseline_connected": -0.0010802400000000795,
+          "yz_minus_baseline_mean": -0.919,
+          "yz_minus_baseline_normalized_correlation": -0.0001876063298087479
+        },
+        "family": "basis_rotation",
+        "location_id": 54,
+        "oracle_label_evaluator_only": "M8",
+        "qubits": [
+          4,
+          5
+        ],
+        "role_stats": {
+          "x": {
+            "available": true,
+            "connected": 0.002581440000000001,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": -0.0208,
+            "normalized_correlation": 0.0077461083737638756,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 45,
+                "probe_name": "c2:rzz_int_basis_yz"
+              }
+            ],
+            "role": "x",
+            "standard_error": 0.009997836565977662,
+            "z_score": -2.0804500916510054
+          },
+          "xz": {
+            "available": true,
+            "connected": 0.0047808,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": 0.0048,
+            "normalized_correlation": 0.004781415502538413,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 43,
+                "probe_name": "c2:rzz_int_basis_y"
+              }
+            ],
+            "role": "xz",
+            "standard_error": 0.009999884799336441,
+            "z_score": 0.4800055296955532
+          },
+          "y": {
+            "available": true,
+            "connected": 0.01640784,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": 0.0164,
+            "normalized_correlation": 0.016410993839121705,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 42,
+                "probe_name": "c2:rzz_int_basis_x"
+              }
+            ],
+            "role": "y",
+            "standard_error": 0.009998655109563485,
+            "z_score": 1.6402205916987551
+          },
+          "yz": {
+            "available": true,
+            "connected": -0.001610239999999999,
+            "edge_parity": "even",
+            "family": "basis_rotation",
+            "mean": -0.0252,
+            "normalized_correlation": -0.005219914643384733,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 44,
+                "probe_name": "c2:rzz_int_basis_xz"
+              }
+            ],
+            "role": "yz",
+            "standard_error": 0.009996824295745124,
+            "z_score": -2.5208005316974207
+          }
+        }
+      },
+      {
+        "baseline_role": "no_intervention",
+        "baseline_stats": {
+          "available": true,
+          "connected": 0.0024999999999999467,
+          "edge_parity": "odd",
+          "family": "baseline",
+          "mean": 0.8784,
+          "normalized_correlation": 0.020678246484697658,
+          "num_shots": 10000,
+          "probes": [
+            {
+              "probe_index": 41,
+              "probe_name": "c2:rzz_int_no_intervention"
+            }
+          ],
+          "role": "no_intervention",
+          "standard_error": 0.004779261867694635,
+          "z_score": 183.79407203809745
+        },
+        "contrast_features": {
+          "intervention_contrast_norm_connected": 0.01151038092992579,
+          "intervention_contrast_norm_mean": 1.7833885723532041,
+          "intervention_response_range_connected": 0.01382056,
+          "intervention_response_variance_connected": 3.1463839959599955e-05,
+          "intervention_response_variance_normalized_correlation": 6.598909805510098e-05,
+          "mean_intervention_over_baseline_connected": 0.4846941223510717,
+          "x_minus_baseline_connected": -0.005572719999999948,
+          "x_minus_baseline_mean": -1.0442,
+          "x_minus_baseline_normalized_correlation": -0.03003614265486449,
+          "xz_minus_baseline_connected": -0.0027337599999999467,
+          "xz_minus_baseline_mean": -0.8784,
+          "xz_minus_baseline_normalized_correlation": -0.02091657226367649,
+          "y_minus_baseline_connected": 0.008247840000000053,
+          "y_minus_baseline_mean": -0.8675999999999999,
+          "y_minus_baseline_normalized_correlation": -0.009837844491736409,
+          "yz_minus_baseline_connected": -0.005092479999999927,
+          "yz_minus_baseline_mean": -0.7522,
+          "yz_minus_baseline_normalized_correlation": -0.02915779148830501
+        },
+        "family": "basis_rotation",
+        "location_id": 56,
+        "oracle_label_evaluator_only": "M10",
+        "qubits": [
+          5,
+          6
+        ],
+        "role_stats": {
+          "x": {
+            "available": true,
+            "connected": -0.003072720000000001,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": -0.1658,
+            "normalized_correlation": -0.009357896170166835,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 45,
+                "probe_name": "c2:rzz_int_basis_yz"
+              }
+            ],
+            "role": "x",
+            "standard_error": 0.00986159398880323,
+            "z_score": -16.81269784461294
+          },
+          "xz": {
+            "available": true,
+            "connected": -0.00023375999999999998,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": 0.0,
+            "normalized_correlation": -0.0002383257789788349,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 43,
+                "probe_name": "c2:rzz_int_basis_y"
+              }
+            ],
+            "role": "xz",
+            "standard_error": 0.01,
+            "z_score": 0.0
+          },
+          "y": {
+            "available": true,
+            "connected": 0.01074784,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": 0.0108,
+            "normalized_correlation": 0.01084040199296125,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 42,
+                "probe_name": "c2:rzz_int_basis_x"
+              }
+            ],
+            "role": "y",
+            "standard_error": 0.009999416782992897,
+            "z_score": 1.080062991110516
+          },
+          "yz": {
+            "available": true,
+            "connected": -0.0025924799999999804,
+            "edge_parity": "odd",
+            "family": "basis_rotation",
+            "mean": 0.1262,
+            "normalized_correlation": -0.00847954500360735,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 44,
+                "probe_name": "c2:rzz_int_basis_xz"
+              }
+            ],
+            "role": "yz",
+            "standard_error": 0.009920048185366842,
+            "z_score": 12.721712399155361
+          }
+        }
+      }
+    ]
+  }
+}

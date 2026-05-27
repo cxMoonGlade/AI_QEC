@@ -1,0 +1,28 @@
+{
+  "runs": {
+    "phys9_multicircuit_setB_balanced": {
+      "interpretation": "primary linear ceiling does not show strong transferable signal",
+      "primary_balanced_accuracy": 0.2222222222222222,
+      "primary_block": "v3c_plus_active_all",
+      "residualized_active_balanced_accuracy": 0.3333333333333333,
+      "residualized_active_block": "active_residualized_against_v3c",
+      "residualized_minus_scrambled_balanced_accuracy": -0.1111111111111111,
+      "schema": "scope_static_s2d8c_residualized_active_attribution_v1",
+      "scrambled_residualized_active_balanced_accuracy": 0.4444444444444444,
+      "scrambled_residualized_active_block": "scrambled_active_residualized_against_v3c"
+    },
+    "phys9_multicircuit_setC_balanced": {
+      "interpretation": "primary linear ceiling does not show strong transferable signal",
+      "primary_balanced_accuracy": 0.5833333333333333,
+      "primary_block": "v3c_plus_active_all",
+      "residualized_active_balanced_accuracy": 0.3333333333333333,
+      "residualized_active_block": "active_residualized_against_v3c",
+      "residualized_minus_scrambled_balanced_accuracy": -0.08333333333333331,
+      "schema": "scope_static_s2d8c_residualized_active_attribution_v1",
+      "scrambled_residualized_active_balanced_accuracy": 0.41666666666666663,
+      "scrambled_residualized_active_block": "scrambled_active_residualized_against_v3c"
+    },
+    "phys9_setA": {}
+  },
+  "schema": "scope_static_s2d8c_residualized_active_attribution_aggregate_v1"
+}

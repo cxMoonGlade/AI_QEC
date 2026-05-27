@@ -1,0 +1,195 @@
+{
+  "methods": {
+    "active_basis_marginals_only": {
+      "M10__M7": {
+        "center_distance": 5.855051237989329,
+        "margin": -0.3311134531617763,
+        "median_radius_left": 2.901102660407183,
+        "median_radius_right": 3.2850620307439224
+      },
+      "M10__M8": {
+        "center_distance": 6.91927679848501,
+        "margin": 0.917751836676739,
+        "median_radius_left": 2.901102660407183,
+        "median_radius_right": 3.1004223014010877
+      },
+      "M1__M10": {
+        "center_distance": 6.572913232934382,
+        "margin": 0.12977400120919347,
+        "median_radius_left": 3.5420365713180053,
+        "median_radius_right": 2.901102660407183
+      },
+      "M1__M7": {
+        "center_distance": 2.0571621155834685,
+        "margin": -4.769936486478459,
+        "median_radius_left": 3.5420365713180053,
+        "median_radius_right": 3.2850620307439224
+      },
+      "M1__M8": {
+        "center_distance": 3.790556553395402,
+        "margin": -2.851902319323691,
+        "median_radius_left": 3.5420365713180053,
+        "median_radius_right": 3.1004223014010877
+      },
+      "M7__M8": {
+        "center_distance": 2.939029659852537,
+        "margin": -3.446454672292473,
+        "median_radius_left": 3.2850620307439224,
+        "median_radius_right": 3.1004223014010877
+      }
+    },
+    "active_mixed_basis_moments": {
+      "M10__M7": {
+        "center_distance": 33.49535360266025,
+        "margin": -1.8597361200101226,
+        "median_radius_left": 17.17473938289954,
+        "median_radius_right": 18.180350339770836
+      },
+      "M10__M8": {
+        "center_distance": 34.718012409241915,
+        "margin": -2.725165677115065,
+        "median_radius_left": 17.17473938289954,
+        "median_radius_right": 20.26843870345744
+      },
+      "M1__M10": {
+        "center_distance": 34.713231662272676,
+        "margin": -1.3700686318623383,
+        "median_radius_left": 18.908560911235476,
+        "median_radius_right": 17.17473938289954
+      },
+      "M1__M7": {
+        "center_distance": 13.739239541734811,
+        "margin": -23.3496717092715,
+        "median_radius_left": 18.908560911235476,
+        "median_radius_right": 18.180350339770836
+      },
+      "M1__M8": {
+        "center_distance": 15.484144933340794,
+        "margin": -23.692854681352124,
+        "median_radius_left": 18.908560911235476,
+        "median_radius_right": 20.26843870345744
+      },
+      "M7__M8": {
+        "center_distance": 16.66370173132977,
+        "margin": -21.785087311898508,
+        "median_radius_left": 18.180350339770836,
+        "median_radius_right": 20.26843870345744
+      }
+    },
+    "active_mixed_basis_moments_plus_signed_contrasts": {
+      "M10__M7": {
+        "center_distance": 34.42291370830338,
+        "margin": -3.0444786569795355,
+        "median_radius_left": 17.77729878456441,
+        "median_radius_right": 19.690093580718507
+      },
+      "M10__M8": {
+        "center_distance": 35.39584283225584,
+        "margin": -3.9857739740372793,
+        "median_radius_left": 17.77729878456441,
+        "median_radius_right": 21.604318021728705
+      },
+      "M1__M10": {
+        "center_distance": 35.55167743694137,
+        "margin": -1.4364525703679618,
+        "median_radius_left": 19.21083122274492,
+        "median_radius_right": 17.77729878456441
+      },
+      "M1__M7": {
+        "center_distance": 14.118703665431793,
+        "margin": -24.78222113803163,
+        "median_radius_left": 19.21083122274492,
+        "median_radius_right": 19.690093580718507
+      },
+      "M1__M8": {
+        "center_distance": 16.11256284587393,
+        "margin": -24.702586398599692,
+        "median_radius_left": 19.21083122274492,
+        "median_radius_right": 21.604318021728705
+      },
+      "M7__M8": {
+        "center_distance": 17.314527750150617,
+        "margin": -23.979883852296595,
+        "median_radius_left": 19.690093580718507,
+        "median_radius_right": 21.604318021728705
+      }
+    },
+    "active_mixed_basis_scrambled": {
+      "M10__M7": {
+        "center_distance": 33.99931155229545,
+        "margin": -2.914963300273339,
+        "median_radius_left": 19.335793497486037,
+        "median_radius_right": 17.578481355082754
+      },
+      "M10__M8": {
+        "center_distance": 34.75843998737711,
+        "margin": -4.523693710135841,
+        "median_radius_left": 19.335793497486037,
+        "median_radius_right": 19.946340200026913
+      },
+      "M1__M10": {
+        "center_distance": 34.79680251595428,
+        "margin": -4.85545287765909,
+        "median_radius_left": 20.316461896127336,
+        "median_radius_right": 19.335793497486037
+      },
+      "M1__M7": {
+        "center_distance": 14.152077001060363,
+        "margin": -23.742866250149728,
+        "median_radius_left": 20.316461896127336,
+        "median_radius_right": 17.578481355082754
+      },
+      "M1__M8": {
+        "center_distance": 15.646393431477126,
+        "margin": -24.616408664677124,
+        "median_radius_left": 20.316461896127336,
+        "median_radius_right": 19.946340200026913
+      },
+      "M7__M8": {
+        "center_distance": 17.6104038520641,
+        "margin": -19.91441770304557,
+        "median_radius_left": 17.578481355082754,
+        "median_radius_right": 19.946340200026913
+      }
+    },
+    "active_probe_only_v3c": {
+      "M10__M7": {
+        "center_distance": 29.695412903424977,
+        "margin": -1.102447166912647,
+        "median_radius_left": 16.484583651371427,
+        "median_radius_right": 14.313276418966197
+      },
+      "M10__M8": {
+        "center_distance": 33.036889413698006,
+        "margin": -0.3250801044809961,
+        "median_radius_left": 16.484583651371427,
+        "median_radius_right": 16.877385866807575
+      },
+      "M1__M10": {
+        "center_distance": 32.430994545600086,
+        "margin": 1.0025702438820439,
+        "median_radius_left": 14.943840650346614,
+        "median_radius_right": 16.484583651371427
+      },
+      "M1__M7": {
+        "center_distance": 9.826755848441609,
+        "margin": -19.4303612208712,
+        "median_radius_left": 14.943840650346614,
+        "median_radius_right": 14.313276418966197
+      },
+      "M1__M8": {
+        "center_distance": 14.106248420526114,
+        "margin": -17.714978096628073,
+        "median_radius_left": 14.943840650346614,
+        "median_radius_right": 16.877385866807575
+      },
+      "M7__M8": {
+        "center_distance": 11.41868183435609,
+        "margin": -19.771980451417683,
+        "median_radius_left": 14.313276418966197,
+        "median_radius_right": 16.877385866807575
+      }
+    }
+  },
+  "schema": "scope_static_s2d7_rzz_family_distance_audit_v1"
+}

@@ -1,0 +1,303 @@
+{
+  "claim": "teacher_contains_non_clifford_ideal_gates_and_non_clifford_oracle_noise",
+  "ideal_gate_records": [
+    {
+      "angle": 0.13,
+      "gate": "rx",
+      "is_clifford_angle": false,
+      "reason": "single-qubit arbitrary-angle probe rotation",
+      "source": "ideal_probe_circuit"
+    },
+    {
+      "angle": 0.18,
+      "gate": "rzz",
+      "is_clifford_angle": false,
+      "reason": "two-qubit arbitrary-angle RZZ entangling probe",
+      "source": "ideal_probe_circuit"
+    }
+  ],
+  "non_clifford_sources": [
+    {
+      "angle": 0.13,
+      "gate": "rx",
+      "is_clifford_angle": false,
+      "reason": "single-qubit arbitrary-angle probe rotation",
+      "source": "ideal_probe_circuit"
+    },
+    {
+      "angle": 0.18,
+      "gate": "rzz",
+      "is_clifford_angle": false,
+      "reason": "two-qubit arbitrary-angle RZZ entangling probe",
+      "source": "ideal_probe_circuit"
+    },
+    {
+      "angle": 0.045,
+      "gate": "rzz",
+      "is_clifford_angle": false,
+      "location_qubits": [
+        0,
+        1
+      ],
+      "mechanism_id": "M1",
+      "reason": "coherent RZZ over-rotation",
+      "source": "oracle_noise"
+    },
+    {
+      "angle": 0.045,
+      "gate": "rzz",
+      "is_clifford_angle": false,
+      "location_qubits": [
+        1,
+        2
+      ],
+      "mechanism_id": "M1",
+      "reason": "coherent RZZ over-rotation",
+      "source": "oracle_noise"
+    },
+    {
+      "angle": 0.045,
+      "gate": "rzz",
+      "is_clifford_angle": false,
+      "location_qubits": [
+        2,
+        3
+      ],
+      "mechanism_id": "M1",
+      "reason": "coherent RZZ over-rotation",
+      "source": "oracle_noise"
+    },
+    {
+      "angle": 0.045,
+      "gate": "rzz",
+      "is_clifford_angle": false,
+      "location_qubits": [
+        3,
+        4
+      ],
+      "mechanism_id": "M1",
+      "reason": "coherent RZZ over-rotation",
+      "source": "oracle_noise"
+    },
+    {
+      "angle": 0.045,
+      "gate": "rzz",
+      "is_clifford_angle": false,
+      "location_qubits": [
+        4,
+        5
+      ],
+      "mechanism_id": "M1",
+      "reason": "coherent RZZ over-rotation",
+      "source": "oracle_noise"
+    },
+    {
+      "angle": 0.045,
+      "gate": "rzz",
+      "is_clifford_angle": false,
+      "location_qubits": [
+        5,
+        6
+      ],
+      "mechanism_id": "M1",
+      "reason": "coherent RZZ over-rotation",
+      "source": "oracle_noise"
+    },
+    {
+      "angle": 0.045,
+      "gate": "rzz",
+      "is_clifford_angle": false,
+      "location_qubits": [
+        6,
+        7
+      ],
+      "mechanism_id": "M1",
+      "reason": "coherent RZZ over-rotation",
+      "source": "oracle_noise"
+    },
+    {
+      "angle": 0.045,
+      "gate": "rzz",
+      "is_clifford_angle": false,
+      "location_qubits": [
+        7,
+        8
+      ],
+      "mechanism_id": "M1",
+      "reason": "coherent RZZ over-rotation",
+      "source": "oracle_noise"
+    },
+    {
+      "angle": 0.035,
+      "gate": "rx",
+      "is_clifford_angle": false,
+      "location_qubits": [
+        2
+      ],
+      "mechanism_id": "M2",
+      "reason": "coherent RX over-rotation",
+      "source": "oracle_noise"
+    },
+    {
+      "angle": 0.04,
+      "gate": "rz",
+      "is_clifford_angle": false,
+      "location_qubits": [
+        1
+      ],
+      "mechanism_id": "M3",
+      "reason": "coherent RZ over-rotation",
+      "source": "oracle_noise"
+    },
+    {
+      "angle": null,
+      "gate": null,
+      "is_clifford_angle": false,
+      "location_qubits": [
+        3
+      ],
+      "mechanism_id": "M4",
+      "reason": "non-Pauli Kraus channel",
+      "source": "oracle_noise"
+    }
+  ],
+  "non_clifford_teacher": true,
+  "oracle_noise_records": [
+    {
+      "angle": 0.045,
+      "gate": "rzz",
+      "is_clifford_angle": false,
+      "location_qubits": [
+        0,
+        1
+      ],
+      "mechanism_id": "M1",
+      "reason": "coherent RZZ over-rotation",
+      "source": "oracle_noise"
+    },
+    {
+      "angle": 0.045,
+      "gate": "rzz",
+      "is_clifford_angle": false,
+      "location_qubits": [
+        1,
+        2
+      ],
+      "mechanism_id": "M1",
+      "reason": "coherent RZZ over-rotation",
+      "source": "oracle_noise"
+    },
+    {
+      "angle": 0.045,
+      "gate": "rzz",
+      "is_clifford_angle": false,
+      "location_qubits": [
+        2,
+        3
+      ],
+      "mechanism_id": "M1",
+      "reason": "coherent RZZ over-rotation",
+      "source": "oracle_noise"
+    },
+    {
+      "angle": 0.045,
+      "gate": "rzz",
+      "is_clifford_angle": false,
+      "location_qubits": [
+        3,
+        4
+      ],
+      "mechanism_id": "M1",
+      "reason": "coherent RZZ over-rotation",
+      "source": "oracle_noise"
+    },
+    {
+      "angle": 0.045,
+      "gate": "rzz",
+      "is_clifford_angle": false,
+      "location_qubits": [
+        4,
+        5
+      ],
+      "mechanism_id": "M1",
+      "reason": "coherent RZZ over-rotation",
+      "source": "oracle_noise"
+    },
+    {
+      "angle": 0.045,
+      "gate": "rzz",
+      "is_clifford_angle": false,
+      "location_qubits": [
+        5,
+        6
+      ],
+      "mechanism_id": "M1",
+      "reason": "coherent RZZ over-rotation",
+      "source": "oracle_noise"
+    },
+    {
+      "angle": 0.045,
+      "gate": "rzz",
+      "is_clifford_angle": false,
+      "location_qubits": [
+        6,
+        7
+      ],
+      "mechanism_id": "M1",
+      "reason": "coherent RZZ over-rotation",
+      "source": "oracle_noise"
+    },
+    {
+      "angle": 0.045,
+      "gate": "rzz",
+      "is_clifford_angle": false,
+      "location_qubits": [
+        7,
+        8
+      ],
+      "mechanism_id": "M1",
+      "reason": "coherent RZZ over-rotation",
+      "source": "oracle_noise"
+    },
+    {
+      "angle": 0.035,
+      "gate": "rx",
+      "is_clifford_angle": false,
+      "location_qubits": [
+        2
+      ],
+      "mechanism_id": "M2",
+      "reason": "coherent RX over-rotation",
+      "source": "oracle_noise"
+    },
+    {
+      "angle": 0.04,
+      "gate": "rz",
+      "is_clifford_angle": false,
+      "location_qubits": [
+        1
+      ],
+      "mechanism_id": "M3",
+      "reason": "coherent RZ over-rotation",
+      "source": "oracle_noise"
+    },
+    {
+      "angle": null,
+      "gate": null,
+      "is_clifford_angle": false,
+      "location_qubits": [
+        3
+      ],
+      "mechanism_id": "M4",
+      "reason": "non-Pauli Kraus channel",
+      "source": "oracle_noise"
+    }
+  ],
+  "probe_names": [
+    "z_basis",
+    "x_measure",
+    "y_measure"
+  ],
+  "schema": "scope_static_s2d_non_clifford_audit_v1",
+  "stage": "S2D_PHYS1_teacher"
+}

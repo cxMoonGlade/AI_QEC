@@ -1,0 +1,1324 @@
+{
+  "mechanisms": [
+    {
+      "circuit_id": 0,
+      "instruction": "id",
+      "location_id": 0,
+      "mechanism_id": "M0",
+      "name": "stochastic_pauli_error",
+      "num_qubits": 1,
+      "oracle_label": "M0",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "p_x": 0.0015,
+        "p_y": 0.0008,
+        "p_z": 0.0022
+      },
+      "probe_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "qubits": [
+        0
+      ]
+    },
+    {
+      "circuit_id": 0,
+      "instruction": "rzz",
+      "location_id": 1,
+      "mechanism_id": "M1",
+      "name": "coherent_rzz_over_rotation",
+      "num_qubits": 2,
+      "oracle_label": "M1",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "epsilon": 0.045
+      },
+      "probe_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "qubits": [
+        0,
+        1
+      ]
+    },
+    {
+      "circuit_id": 0,
+      "instruction": "rx",
+      "location_id": 2,
+      "mechanism_id": "M2",
+      "name": "coherent_rx_over_rotation",
+      "num_qubits": 1,
+      "oracle_label": "M2",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "epsilon": 0.035
+      },
+      "probe_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "qubits": [
+        2
+      ]
+    },
+    {
+      "circuit_id": 0,
+      "instruction": "rz",
+      "location_id": 3,
+      "mechanism_id": "M3",
+      "name": "coherent_rz_over_rotation",
+      "num_qubits": 1,
+      "oracle_label": "M3",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "epsilon": 0.04
+      },
+      "probe_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "qubits": [
+        1
+      ]
+    },
+    {
+      "circuit_id": 0,
+      "instruction": "id",
+      "location_id": 4,
+      "mechanism_id": "M4",
+      "name": "amplitude_damping",
+      "num_qubits": 1,
+      "oracle_label": "M4",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "gamma": 0.018
+      },
+      "probe_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "qubits": [
+        3
+      ]
+    },
+    {
+      "circuit_id": 0,
+      "instruction": "measure",
+      "location_id": 5,
+      "mechanism_id": "M5",
+      "name": "readout_bias",
+      "num_qubits": 1,
+      "oracle_label": "M5",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "p0_to_1": 0.025,
+        "p1_to_0": 0.011
+      },
+      "probe_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "qubits": [
+        0
+      ]
+    },
+    {
+      "circuit_id": 0,
+      "instruction": "measure",
+      "location_id": 6,
+      "mechanism_id": "M5",
+      "name": "readout_bias",
+      "num_qubits": 1,
+      "oracle_label": "M5",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "p0_to_1": 0.025,
+        "p1_to_0": 0.011
+      },
+      "probe_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "qubits": [
+        1
+      ]
+    },
+    {
+      "circuit_id": 0,
+      "instruction": "measure",
+      "location_id": 7,
+      "mechanism_id": "M5",
+      "name": "readout_bias",
+      "num_qubits": 1,
+      "oracle_label": "M5",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "p0_to_1": 0.025,
+        "p1_to_0": 0.011
+      },
+      "probe_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "qubits": [
+        2
+      ]
+    },
+    {
+      "circuit_id": 0,
+      "instruction": "measure",
+      "location_id": 8,
+      "mechanism_id": "M5",
+      "name": "readout_bias",
+      "num_qubits": 1,
+      "oracle_label": "M5",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "p0_to_1": 0.025,
+        "p1_to_0": 0.011
+      },
+      "probe_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "qubits": [
+        3
+      ]
+    },
+    {
+      "circuit_id": 0,
+      "instruction": "measure",
+      "location_id": 9,
+      "mechanism_id": "M5",
+      "name": "readout_bias",
+      "num_qubits": 1,
+      "oracle_label": "M5",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "p0_to_1": 0.025,
+        "p1_to_0": 0.011
+      },
+      "probe_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "qubits": [
+        4
+      ]
+    },
+    {
+      "circuit_id": 0,
+      "instruction": "measure",
+      "location_id": 10,
+      "mechanism_id": "M5",
+      "name": "readout_bias",
+      "num_qubits": 1,
+      "oracle_label": "M5",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "p0_to_1": 0.025,
+        "p1_to_0": 0.011
+      },
+      "probe_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "qubits": [
+        5
+      ]
+    },
+    {
+      "circuit_id": 0,
+      "instruction": "measure",
+      "location_id": 11,
+      "mechanism_id": "M5",
+      "name": "readout_bias",
+      "num_qubits": 1,
+      "oracle_label": "M5",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "p0_to_1": 0.025,
+        "p1_to_0": 0.011
+      },
+      "probe_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "qubits": [
+        6
+      ]
+    },
+    {
+      "circuit_id": 0,
+      "instruction": "measure",
+      "location_id": 12,
+      "mechanism_id": "M5",
+      "name": "readout_bias",
+      "num_qubits": 1,
+      "oracle_label": "M5",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "p0_to_1": 0.025,
+        "p1_to_0": 0.011
+      },
+      "probe_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "qubits": [
+        7
+      ]
+    },
+    {
+      "circuit_id": 0,
+      "instruction": "measure",
+      "location_id": 13,
+      "mechanism_id": "M5",
+      "name": "readout_bias",
+      "num_qubits": 1,
+      "oracle_label": "M5",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "p0_to_1": 0.025,
+        "p1_to_0": 0.011
+      },
+      "probe_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "qubits": [
+        8
+      ]
+    },
+    {
+      "circuit_id": 0,
+      "instruction": "id",
+      "location_id": 14,
+      "mechanism_id": "M6",
+      "name": "custom_hard_non_pauli_channel",
+      "num_qubits": 1,
+      "oracle_label": "M6",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "eta": 0.02
+      },
+      "probe_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "qubits": [
+        4
+      ]
+    },
+    {
+      "circuit_id": 0,
+      "instruction": "rzz",
+      "location_id": 15,
+      "mechanism_id": "M7",
+      "name": "two_qubit_depolarizing_after_rzz",
+      "num_qubits": 2,
+      "oracle_label": "M7",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "p": 0.006
+      },
+      "probe_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "qubits": [
+        1,
+        2
+      ]
+    },
+    {
+      "circuit_id": 0,
+      "instruction": "rzz",
+      "location_id": 16,
+      "mechanism_id": "M8",
+      "name": "coherent_rxx_ryy_perturbation",
+      "num_qubits": 2,
+      "oracle_label": "M8",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "epsilon_x": 0.024,
+        "epsilon_y": 0.017
+      },
+      "probe_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "qubits": [
+        2,
+        3
+      ]
+    },
+    {
+      "circuit_id": 1,
+      "instruction": "id",
+      "location_id": 17,
+      "mechanism_id": "M0",
+      "name": "stochastic_pauli_error",
+      "num_qubits": 1,
+      "oracle_label": "M0",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "p_x": 0.0015,
+        "p_y": 0.0008,
+        "p_z": 0.0022
+      },
+      "probe_indices": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "qubits": [
+        1
+      ]
+    },
+    {
+      "circuit_id": 1,
+      "instruction": "rzz",
+      "location_id": 18,
+      "mechanism_id": "M1",
+      "name": "coherent_rzz_over_rotation",
+      "num_qubits": 2,
+      "oracle_label": "M1",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "epsilon": 0.045
+      },
+      "probe_indices": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "qubits": [
+        1,
+        2
+      ]
+    },
+    {
+      "circuit_id": 1,
+      "instruction": "rx",
+      "location_id": 19,
+      "mechanism_id": "M2",
+      "name": "coherent_rx_over_rotation",
+      "num_qubits": 1,
+      "oracle_label": "M2",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "epsilon": 0.035
+      },
+      "probe_indices": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "qubits": [
+        3
+      ]
+    },
+    {
+      "circuit_id": 1,
+      "instruction": "rz",
+      "location_id": 20,
+      "mechanism_id": "M3",
+      "name": "coherent_rz_over_rotation",
+      "num_qubits": 1,
+      "oracle_label": "M3",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "epsilon": 0.04
+      },
+      "probe_indices": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "qubits": [
+        2
+      ]
+    },
+    {
+      "circuit_id": 1,
+      "instruction": "id",
+      "location_id": 21,
+      "mechanism_id": "M4",
+      "name": "amplitude_damping",
+      "num_qubits": 1,
+      "oracle_label": "M4",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "gamma": 0.018
+      },
+      "probe_indices": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "qubits": [
+        4
+      ]
+    },
+    {
+      "circuit_id": 1,
+      "instruction": "measure",
+      "location_id": 22,
+      "mechanism_id": "M5",
+      "name": "readout_bias",
+      "num_qubits": 1,
+      "oracle_label": "M5",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "p0_to_1": 0.025,
+        "p1_to_0": 0.011
+      },
+      "probe_indices": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "qubits": [
+        0
+      ]
+    },
+    {
+      "circuit_id": 1,
+      "instruction": "measure",
+      "location_id": 23,
+      "mechanism_id": "M5",
+      "name": "readout_bias",
+      "num_qubits": 1,
+      "oracle_label": "M5",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "p0_to_1": 0.025,
+        "p1_to_0": 0.011
+      },
+      "probe_indices": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "qubits": [
+        1
+      ]
+    },
+    {
+      "circuit_id": 1,
+      "instruction": "measure",
+      "location_id": 24,
+      "mechanism_id": "M5",
+      "name": "readout_bias",
+      "num_qubits": 1,
+      "oracle_label": "M5",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "p0_to_1": 0.025,
+        "p1_to_0": 0.011
+      },
+      "probe_indices": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "qubits": [
+        2
+      ]
+    },
+    {
+      "circuit_id": 1,
+      "instruction": "measure",
+      "location_id": 25,
+      "mechanism_id": "M5",
+      "name": "readout_bias",
+      "num_qubits": 1,
+      "oracle_label": "M5",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "p0_to_1": 0.025,
+        "p1_to_0": 0.011
+      },
+      "probe_indices": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "qubits": [
+        3
+      ]
+    },
+    {
+      "circuit_id": 1,
+      "instruction": "measure",
+      "location_id": 26,
+      "mechanism_id": "M5",
+      "name": "readout_bias",
+      "num_qubits": 1,
+      "oracle_label": "M5",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "p0_to_1": 0.025,
+        "p1_to_0": 0.011
+      },
+      "probe_indices": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "qubits": [
+        4
+      ]
+    },
+    {
+      "circuit_id": 1,
+      "instruction": "measure",
+      "location_id": 27,
+      "mechanism_id": "M5",
+      "name": "readout_bias",
+      "num_qubits": 1,
+      "oracle_label": "M5",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "p0_to_1": 0.025,
+        "p1_to_0": 0.011
+      },
+      "probe_indices": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "qubits": [
+        5
+      ]
+    },
+    {
+      "circuit_id": 1,
+      "instruction": "measure",
+      "location_id": 28,
+      "mechanism_id": "M5",
+      "name": "readout_bias",
+      "num_qubits": 1,
+      "oracle_label": "M5",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "p0_to_1": 0.025,
+        "p1_to_0": 0.011
+      },
+      "probe_indices": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "qubits": [
+        6
+      ]
+    },
+    {
+      "circuit_id": 1,
+      "instruction": "measure",
+      "location_id": 29,
+      "mechanism_id": "M5",
+      "name": "readout_bias",
+      "num_qubits": 1,
+      "oracle_label": "M5",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "p0_to_1": 0.025,
+        "p1_to_0": 0.011
+      },
+      "probe_indices": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "qubits": [
+        7
+      ]
+    },
+    {
+      "circuit_id": 1,
+      "instruction": "measure",
+      "location_id": 30,
+      "mechanism_id": "M5",
+      "name": "readout_bias",
+      "num_qubits": 1,
+      "oracle_label": "M5",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "p0_to_1": 0.025,
+        "p1_to_0": 0.011
+      },
+      "probe_indices": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "qubits": [
+        8
+      ]
+    },
+    {
+      "circuit_id": 1,
+      "instruction": "id",
+      "location_id": 31,
+      "mechanism_id": "M6",
+      "name": "custom_hard_non_pauli_channel",
+      "num_qubits": 1,
+      "oracle_label": "M6",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "eta": 0.02
+      },
+      "probe_indices": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "qubits": [
+        5
+      ]
+    },
+    {
+      "circuit_id": 1,
+      "instruction": "rzz",
+      "location_id": 32,
+      "mechanism_id": "M7",
+      "name": "two_qubit_depolarizing_after_rzz",
+      "num_qubits": 2,
+      "oracle_label": "M7",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "p": 0.006
+      },
+      "probe_indices": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "qubits": [
+        2,
+        3
+      ]
+    },
+    {
+      "circuit_id": 1,
+      "instruction": "rzz",
+      "location_id": 33,
+      "mechanism_id": "M8",
+      "name": "coherent_rxx_ryy_perturbation",
+      "num_qubits": 2,
+      "oracle_label": "M8",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "epsilon_x": 0.024,
+        "epsilon_y": 0.017
+      },
+      "probe_indices": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "qubits": [
+        3,
+        4
+      ]
+    },
+    {
+      "circuit_id": 2,
+      "instruction": "id",
+      "location_id": 34,
+      "mechanism_id": "M0",
+      "name": "stochastic_pauli_error",
+      "num_qubits": 1,
+      "oracle_label": "M0",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "p_x": 0.0015,
+        "p_y": 0.0008,
+        "p_z": 0.0022
+      },
+      "probe_indices": [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "qubits": [
+        2
+      ]
+    },
+    {
+      "circuit_id": 2,
+      "instruction": "rzz",
+      "location_id": 35,
+      "mechanism_id": "M1",
+      "name": "coherent_rzz_over_rotation",
+      "num_qubits": 2,
+      "oracle_label": "M1",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "epsilon": 0.045
+      },
+      "probe_indices": [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "qubits": [
+        2,
+        3
+      ]
+    },
+    {
+      "circuit_id": 2,
+      "instruction": "rx",
+      "location_id": 36,
+      "mechanism_id": "M2",
+      "name": "coherent_rx_over_rotation",
+      "num_qubits": 1,
+      "oracle_label": "M2",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "epsilon": 0.035
+      },
+      "probe_indices": [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "qubits": [
+        4
+      ]
+    },
+    {
+      "circuit_id": 2,
+      "instruction": "rz",
+      "location_id": 37,
+      "mechanism_id": "M3",
+      "name": "coherent_rz_over_rotation",
+      "num_qubits": 1,
+      "oracle_label": "M3",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "epsilon": 0.04
+      },
+      "probe_indices": [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "qubits": [
+        3
+      ]
+    },
+    {
+      "circuit_id": 2,
+      "instruction": "id",
+      "location_id": 38,
+      "mechanism_id": "M4",
+      "name": "amplitude_damping",
+      "num_qubits": 1,
+      "oracle_label": "M4",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "gamma": 0.018
+      },
+      "probe_indices": [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "qubits": [
+        5
+      ]
+    },
+    {
+      "circuit_id": 2,
+      "instruction": "measure",
+      "location_id": 39,
+      "mechanism_id": "M5",
+      "name": "readout_bias",
+      "num_qubits": 1,
+      "oracle_label": "M5",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "p0_to_1": 0.025,
+        "p1_to_0": 0.011
+      },
+      "probe_indices": [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "qubits": [
+        0
+      ]
+    },
+    {
+      "circuit_id": 2,
+      "instruction": "measure",
+      "location_id": 40,
+      "mechanism_id": "M5",
+      "name": "readout_bias",
+      "num_qubits": 1,
+      "oracle_label": "M5",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "p0_to_1": 0.025,
+        "p1_to_0": 0.011
+      },
+      "probe_indices": [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "qubits": [
+        1
+      ]
+    },
+    {
+      "circuit_id": 2,
+      "instruction": "measure",
+      "location_id": 41,
+      "mechanism_id": "M5",
+      "name": "readout_bias",
+      "num_qubits": 1,
+      "oracle_label": "M5",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "p0_to_1": 0.025,
+        "p1_to_0": 0.011
+      },
+      "probe_indices": [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "qubits": [
+        2
+      ]
+    },
+    {
+      "circuit_id": 2,
+      "instruction": "measure",
+      "location_id": 42,
+      "mechanism_id": "M5",
+      "name": "readout_bias",
+      "num_qubits": 1,
+      "oracle_label": "M5",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "p0_to_1": 0.025,
+        "p1_to_0": 0.011
+      },
+      "probe_indices": [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "qubits": [
+        3
+      ]
+    },
+    {
+      "circuit_id": 2,
+      "instruction": "measure",
+      "location_id": 43,
+      "mechanism_id": "M5",
+      "name": "readout_bias",
+      "num_qubits": 1,
+      "oracle_label": "M5",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "p0_to_1": 0.025,
+        "p1_to_0": 0.011
+      },
+      "probe_indices": [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "qubits": [
+        4
+      ]
+    },
+    {
+      "circuit_id": 2,
+      "instruction": "measure",
+      "location_id": 44,
+      "mechanism_id": "M5",
+      "name": "readout_bias",
+      "num_qubits": 1,
+      "oracle_label": "M5",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "p0_to_1": 0.025,
+        "p1_to_0": 0.011
+      },
+      "probe_indices": [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "qubits": [
+        5
+      ]
+    },
+    {
+      "circuit_id": 2,
+      "instruction": "measure",
+      "location_id": 45,
+      "mechanism_id": "M5",
+      "name": "readout_bias",
+      "num_qubits": 1,
+      "oracle_label": "M5",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "p0_to_1": 0.025,
+        "p1_to_0": 0.011
+      },
+      "probe_indices": [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "qubits": [
+        6
+      ]
+    },
+    {
+      "circuit_id": 2,
+      "instruction": "measure",
+      "location_id": 46,
+      "mechanism_id": "M5",
+      "name": "readout_bias",
+      "num_qubits": 1,
+      "oracle_label": "M5",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "p0_to_1": 0.025,
+        "p1_to_0": 0.011
+      },
+      "probe_indices": [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "qubits": [
+        7
+      ]
+    },
+    {
+      "circuit_id": 2,
+      "instruction": "measure",
+      "location_id": 47,
+      "mechanism_id": "M5",
+      "name": "readout_bias",
+      "num_qubits": 1,
+      "oracle_label": "M5",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "p0_to_1": 0.025,
+        "p1_to_0": 0.011
+      },
+      "probe_indices": [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "qubits": [
+        8
+      ]
+    },
+    {
+      "circuit_id": 2,
+      "instruction": "id",
+      "location_id": 48,
+      "mechanism_id": "M6",
+      "name": "custom_hard_non_pauli_channel",
+      "num_qubits": 1,
+      "oracle_label": "M6",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "eta": 0.02
+      },
+      "probe_indices": [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "qubits": [
+        6
+      ]
+    },
+    {
+      "circuit_id": 2,
+      "instruction": "rzz",
+      "location_id": 49,
+      "mechanism_id": "M7",
+      "name": "two_qubit_depolarizing_after_rzz",
+      "num_qubits": 2,
+      "oracle_label": "M7",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "p": 0.006
+      },
+      "probe_indices": [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "qubits": [
+        3,
+        4
+      ]
+    },
+    {
+      "circuit_id": 2,
+      "instruction": "rzz",
+      "location_id": 50,
+      "mechanism_id": "M8",
+      "name": "coherent_rxx_ryy_perturbation",
+      "num_qubits": 2,
+      "oracle_label": "M8",
+      "oracle_label_evaluator_only": true,
+      "parameters": {
+        "epsilon_x": 0.024,
+        "epsilon_y": 0.017
+      },
+      "probe_indices": [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "qubits": [
+        4,
+        5
+      ]
+    }
+  ]
+}

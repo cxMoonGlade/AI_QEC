@@ -1,0 +1,315 @@
+{
+  "runs": {
+    "phys9_multicircuit_setB_balanced": {
+      "methods": {
+        "active_basis_marginals_only": {
+          "M1__M7": {
+            "center_distance": 2.019935153651308,
+            "margin": -4.683420643555445,
+            "median_radius_left": 3.4289665220584955,
+            "median_radius_right": 3.2743892751482577
+          },
+          "M1__M8": {
+            "center_distance": 3.811368031849198,
+            "margin": -2.847577007986543,
+            "median_radius_left": 3.4289665220584955,
+            "median_radius_right": 3.229978517777245
+          },
+          "M7__M8": {
+            "center_distance": 3.037149878693429,
+            "margin": -3.467217914232074,
+            "median_radius_left": 3.2743892751482577,
+            "median_radius_right": 3.229978517777245
+          }
+        },
+        "active_mixed_basis_moments": {
+          "M1__M7": {
+            "center_distance": 15.28667184687262,
+            "margin": -27.218849368252137,
+            "median_radius_left": 21.122817619310638,
+            "median_radius_right": 21.38270359581412
+          },
+          "M1__M8": {
+            "center_distance": 18.7056259263598,
+            "margin": -25.045539282958643,
+            "median_radius_left": 21.122817619310638,
+            "median_radius_right": 22.628347590007806
+          },
+          "M7__M8": {
+            "center_distance": 19.412047279271363,
+            "margin": -24.599003906550564,
+            "median_radius_left": 21.38270359581412,
+            "median_radius_right": 22.628347590007806
+          }
+        },
+        "active_mixed_basis_moments_plus_signed_contrasts": {
+          "M1__M7": {
+            "center_distance": 15.703483596633678,
+            "margin": -29.212232812173184,
+            "median_radius_left": 21.97990122481401,
+            "median_radius_right": 22.93581518399285
+          },
+          "M1__M8": {
+            "center_distance": 19.39047828980382,
+            "margin": -26.592103082313606,
+            "median_radius_left": 21.97990122481401,
+            "median_radius_right": 24.002680147303415
+          },
+          "M7__M8": {
+            "center_distance": 20.047502316490046,
+            "margin": -26.89099301480622,
+            "median_radius_left": 22.93581518399285,
+            "median_radius_right": 24.002680147303415
+          }
+        },
+        "active_mixed_basis_scrambled": {
+          "M1__M7": {
+            "center_distance": 15.93740892476089,
+            "margin": -29.285469301867558,
+            "median_radius_left": 22.828845141269742,
+            "median_radius_right": 22.394033085358704
+          },
+          "M1__M8": {
+            "center_distance": 18.839011251549476,
+            "margin": -27.22896181554189,
+            "median_radius_left": 22.828845141269742,
+            "median_radius_right": 23.239127925821624
+          },
+          "M7__M8": {
+            "center_distance": 20.58680491641608,
+            "margin": -25.046356094764246,
+            "median_radius_left": 22.394033085358704,
+            "median_radius_right": 23.239127925821624
+          }
+        },
+        "active_probe_only_v3c": {
+          "M1__M7": {
+            "center_distance": 11.877327664721546,
+            "margin": -24.21725179763972,
+            "median_radius_left": 17.669938152900325,
+            "median_radius_right": 18.424641309460938
+          },
+          "M1__M8": {
+            "center_distance": 16.837836833093974,
+            "margin": -20.347933709603442,
+            "median_radius_left": 17.669938152900325,
+            "median_radius_right": 19.51583238979709
+          },
+          "M7__M8": {
+            "center_distance": 14.706996479399477,
+            "margin": -23.23347721985855,
+            "median_radius_left": 18.424641309460938,
+            "median_radius_right": 19.51583238979709
+          }
+        }
+      },
+      "schema": "scope_static_s2d7_rzz_family_distance_audit_v1"
+    },
+    "phys9_multicircuit_setC_balanced": {
+      "methods": {
+        "active_basis_marginals_only": {
+          "M10__M7": {
+            "center_distance": 5.855051237989329,
+            "margin": -0.3311134531617763,
+            "median_radius_left": 2.901102660407183,
+            "median_radius_right": 3.2850620307439224
+          },
+          "M10__M8": {
+            "center_distance": 6.91927679848501,
+            "margin": 0.917751836676739,
+            "median_radius_left": 2.901102660407183,
+            "median_radius_right": 3.1004223014010877
+          },
+          "M1__M10": {
+            "center_distance": 6.572913232934382,
+            "margin": 0.12977400120919347,
+            "median_radius_left": 3.5420365713180053,
+            "median_radius_right": 2.901102660407183
+          },
+          "M1__M7": {
+            "center_distance": 2.0571621155834685,
+            "margin": -4.769936486478459,
+            "median_radius_left": 3.5420365713180053,
+            "median_radius_right": 3.2850620307439224
+          },
+          "M1__M8": {
+            "center_distance": 3.790556553395402,
+            "margin": -2.851902319323691,
+            "median_radius_left": 3.5420365713180053,
+            "median_radius_right": 3.1004223014010877
+          },
+          "M7__M8": {
+            "center_distance": 2.939029659852537,
+            "margin": -3.446454672292473,
+            "median_radius_left": 3.2850620307439224,
+            "median_radius_right": 3.1004223014010877
+          }
+        },
+        "active_mixed_basis_moments": {
+          "M10__M7": {
+            "center_distance": 33.49535360266025,
+            "margin": -1.8597361200101226,
+            "median_radius_left": 17.17473938289954,
+            "median_radius_right": 18.180350339770836
+          },
+          "M10__M8": {
+            "center_distance": 34.718012409241915,
+            "margin": -2.725165677115065,
+            "median_radius_left": 17.17473938289954,
+            "median_radius_right": 20.26843870345744
+          },
+          "M1__M10": {
+            "center_distance": 34.713231662272676,
+            "margin": -1.3700686318623383,
+            "median_radius_left": 18.908560911235476,
+            "median_radius_right": 17.17473938289954
+          },
+          "M1__M7": {
+            "center_distance": 13.739239541734811,
+            "margin": -23.3496717092715,
+            "median_radius_left": 18.908560911235476,
+            "median_radius_right": 18.180350339770836
+          },
+          "M1__M8": {
+            "center_distance": 15.484144933340794,
+            "margin": -23.692854681352124,
+            "median_radius_left": 18.908560911235476,
+            "median_radius_right": 20.26843870345744
+          },
+          "M7__M8": {
+            "center_distance": 16.66370173132977,
+            "margin": -21.785087311898508,
+            "median_radius_left": 18.180350339770836,
+            "median_radius_right": 20.26843870345744
+          }
+        },
+        "active_mixed_basis_moments_plus_signed_contrasts": {
+          "M10__M7": {
+            "center_distance": 34.42291370830338,
+            "margin": -3.0444786569795355,
+            "median_radius_left": 17.77729878456441,
+            "median_radius_right": 19.690093580718507
+          },
+          "M10__M8": {
+            "center_distance": 35.39584283225584,
+            "margin": -3.9857739740372793,
+            "median_radius_left": 17.77729878456441,
+            "median_radius_right": 21.604318021728705
+          },
+          "M1__M10": {
+            "center_distance": 35.55167743694137,
+            "margin": -1.4364525703679618,
+            "median_radius_left": 19.21083122274492,
+            "median_radius_right": 17.77729878456441
+          },
+          "M1__M7": {
+            "center_distance": 14.118703665431793,
+            "margin": -24.78222113803163,
+            "median_radius_left": 19.21083122274492,
+            "median_radius_right": 19.690093580718507
+          },
+          "M1__M8": {
+            "center_distance": 16.11256284587393,
+            "margin": -24.702586398599692,
+            "median_radius_left": 19.21083122274492,
+            "median_radius_right": 21.604318021728705
+          },
+          "M7__M8": {
+            "center_distance": 17.314527750150617,
+            "margin": -23.979883852296595,
+            "median_radius_left": 19.690093580718507,
+            "median_radius_right": 21.604318021728705
+          }
+        },
+        "active_mixed_basis_scrambled": {
+          "M10__M7": {
+            "center_distance": 33.99931155229545,
+            "margin": -2.914963300273339,
+            "median_radius_left": 19.335793497486037,
+            "median_radius_right": 17.578481355082754
+          },
+          "M10__M8": {
+            "center_distance": 34.75843998737711,
+            "margin": -4.523693710135841,
+            "median_radius_left": 19.335793497486037,
+            "median_radius_right": 19.946340200026913
+          },
+          "M1__M10": {
+            "center_distance": 34.79680251595428,
+            "margin": -4.85545287765909,
+            "median_radius_left": 20.316461896127336,
+            "median_radius_right": 19.335793497486037
+          },
+          "M1__M7": {
+            "center_distance": 14.152077001060363,
+            "margin": -23.742866250149728,
+            "median_radius_left": 20.316461896127336,
+            "median_radius_right": 17.578481355082754
+          },
+          "M1__M8": {
+            "center_distance": 15.646393431477126,
+            "margin": -24.616408664677124,
+            "median_radius_left": 20.316461896127336,
+            "median_radius_right": 19.946340200026913
+          },
+          "M7__M8": {
+            "center_distance": 17.6104038520641,
+            "margin": -19.91441770304557,
+            "median_radius_left": 17.578481355082754,
+            "median_radius_right": 19.946340200026913
+          }
+        },
+        "active_probe_only_v3c": {
+          "M10__M7": {
+            "center_distance": 29.695412903424977,
+            "margin": -1.102447166912647,
+            "median_radius_left": 16.484583651371427,
+            "median_radius_right": 14.313276418966197
+          },
+          "M10__M8": {
+            "center_distance": 33.036889413698006,
+            "margin": -0.3250801044809961,
+            "median_radius_left": 16.484583651371427,
+            "median_radius_right": 16.877385866807575
+          },
+          "M1__M10": {
+            "center_distance": 32.430994545600086,
+            "margin": 1.0025702438820439,
+            "median_radius_left": 14.943840650346614,
+            "median_radius_right": 16.484583651371427
+          },
+          "M1__M7": {
+            "center_distance": 9.826755848441609,
+            "margin": -19.4303612208712,
+            "median_radius_left": 14.943840650346614,
+            "median_radius_right": 14.313276418966197
+          },
+          "M1__M8": {
+            "center_distance": 14.106248420526114,
+            "margin": -17.714978096628073,
+            "median_radius_left": 14.943840650346614,
+            "median_radius_right": 16.877385866807575
+          },
+          "M7__M8": {
+            "center_distance": 11.41868183435609,
+            "margin": -19.771980451417683,
+            "median_radius_left": 14.313276418966197,
+            "median_radius_right": 16.877385866807575
+          }
+        }
+      },
+      "schema": "scope_static_s2d7_rzz_family_distance_audit_v1"
+    },
+    "phys9_setA": {
+      "methods": {
+        "active_basis_marginals_only": {},
+        "active_mixed_basis_moments": {},
+        "active_mixed_basis_moments_plus_signed_contrasts": {},
+        "active_mixed_basis_scrambled": {},
+        "active_probe_only_v3c": {}
+      },
+      "schema": "scope_static_s2d7_rzz_family_distance_audit_v1"
+    }
+  },
+  "schema": "scope_static_s2d7_rzz_family_distance_audit_aggregate_v1"
+}

@@ -1,0 +1,9 @@
+{
+  "main_conclusion": "RZZ depth sweep features are learner-visible and improve some global scores, but they match the scrambled-depth control and do not close the RZZ-family gap.",
+  "next_recommended_step": "S2D.8b_RZZ_echo_no_echo_probe_design",
+  "not_ruled_out": "echo/no-echo or twirl-style dynamical probes",
+  "phase_label": "depth_sweep_control_matched_negative",
+  "ruled_out_hypothesis": "RZZ-family gap can be solved by depth-sweep final-shot response features alone.",
+  "schema": "scope_static_s2d8a_phase_summary_v1",
+  "stage": "S2D.8a_RZZ_depth_sweep"
+}

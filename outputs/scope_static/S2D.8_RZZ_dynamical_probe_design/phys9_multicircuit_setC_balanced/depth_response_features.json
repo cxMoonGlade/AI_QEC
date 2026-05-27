@@ -1,0 +1,2065 @@
+{
+  "depths": [
+    1,
+    2,
+    4,
+    8
+  ],
+  "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+  "feature_names": [
+    "depth_1_zz_mean",
+    "depth_1_zz_connected",
+    "depth_1_zz_normalized_correlation",
+    "depth_1_zz_standard_error",
+    "depth_1_zz_z_score",
+    "depth_2_zz_mean",
+    "depth_2_zz_connected",
+    "depth_2_zz_normalized_correlation",
+    "depth_2_zz_standard_error",
+    "depth_2_zz_z_score",
+    "depth_4_zz_mean",
+    "depth_4_zz_connected",
+    "depth_4_zz_normalized_correlation",
+    "depth_4_zz_standard_error",
+    "depth_4_zz_z_score",
+    "depth_8_zz_mean",
+    "depth_8_zz_connected",
+    "depth_8_zz_normalized_correlation",
+    "depth_8_zz_standard_error",
+    "depth_8_zz_z_score",
+    "depth_slope",
+    "depth_curvature",
+    "log_decay_proxy",
+    "odd_even_contrast",
+    "variance_across_depth",
+    "depth_response_range",
+    "final_minus_initial_depth_response",
+    "final_over_initial_raw_response",
+    "normalized_response_variance_across_depth"
+  ],
+  "real_depth_response_audit": {
+    "rzz_location_records": [
+      {
+        "curve_features": {
+          "depth_curvature": -0.0005397057142857317,
+          "depth_response_range": 0.0028914399999999674,
+          "depth_slope": 6.545321739131594e-05,
+          "final_minus_initial_depth_response": 0.0002300800000001324,
+          "final_over_initial_raw_response": 0.9635206445387925,
+          "log_decay_proxy": -0.0054369193705373275,
+          "normalized_response_variance_across_depth": 9.461602324998095e-05,
+          "odd_even_contrast": -0.0009600266666667985,
+          "variance_across_depth": 1.4176710604000236e-06
+        },
+        "depth_stats": [
+          {
+            "available": true,
+            "connected": -0.00048304000000010117,
+            "depth": 1,
+            "mean": 0.8882,
+            "normalized_correlation": -0.004339495904433416,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 3,
+                "probe_name": "c0:rzz_depth_1"
+              }
+            ],
+            "standard_error": 0.004594570273703516,
+            "z_score": 193.3151409357059
+          },
+          {
+            "available": true,
+            "connected": -0.0006037599999999532,
+            "depth": 2,
+            "mean": 0.8858,
+            "normalized_correlation": -0.005330261822884023,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 4,
+                "probe_name": "c0:rzz_depth_2"
+              }
+            ],
+            "standard_error": 0.004640671934106094,
+            "z_score": 190.87753079245118
+          },
+          {
+            "available": true,
+            "connected": 0.002287680000000014,
+            "depth": 4,
+            "mean": 0.8772,
+            "normalized_correlation": 0.01843251579467784,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 5,
+                "probe_name": "c0:rzz_depth_4"
+              }
+            ],
+            "standard_error": 0.004801251503514475,
+            "z_score": 182.7023640311067
+          },
+          {
+            "available": true,
+            "connected": -0.00025295999999996877,
+            "depth": 8,
+            "mean": 0.8558,
+            "normalized_correlation": -0.0018482662242769977,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 6,
+                "probe_name": "c0:rzz_depth_8"
+              }
+            ],
+            "standard_error": 0.005173068335137281,
+            "z_score": 165.43373188927518
+          }
+        ],
+        "location_id": 1,
+        "qubits": [
+          0,
+          1
+        ]
+      },
+      {
+        "curve_features": {
+          "depth_curvature": 0.0005387171428571644,
+          "depth_response_range": 0.03683871999999999,
+          "depth_slope": 0.0050536048695652225,
+          "final_minus_initial_depth_response": 0.03683871999999999,
+          "final_over_initial_raw_response": 0.9588842406529914,
+          "log_decay_proxy": -0.005945465471358108,
+          "normalized_response_variance_across_depth": 0.005004287656326506,
+          "odd_even_contrast": -0.023302959999999946,
+          "variance_across_depth": 0.00019340394576440004
+        },
+        "depth_stats": [
+          {
+            "available": true,
+            "connected": 0.001442240000000039,
+            "depth": 1,
+            "mean": 0.8756,
+            "normalized_correlation": 0.011559279322022274,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 3,
+                "probe_name": "c0:rzz_depth_1"
+              }
+            ],
+            "standard_error": 0.0048303689300093836,
+            "z_score": 181.26979795688175
+          },
+          {
+            "available": true,
+            "connected": 0.011212719999999954,
+            "depth": 2,
+            "mean": 0.871,
+            "normalized_correlation": 0.08077882654926247,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 4,
+                "probe_name": "c0:rzz_depth_2"
+              }
+            ],
+            "standard_error": 0.004912830141578273,
+            "z_score": 177.29088425601185
+          },
+          {
+            "available": true,
+            "connected": 0.024741919999999973,
+            "depth": 4,
+            "mean": 0.8696,
+            "normalized_correlation": 0.1604226229626754,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 5,
+                "probe_name": "c0:rzz_depth_4"
+              }
+            ],
+            "standard_error": 0.0049375686324343885,
+            "z_score": 176.11907089000965
+          },
+          {
+            "available": true,
+            "connected": 0.03828096000000003,
+            "depth": 8,
+            "mean": 0.8396,
+            "normalized_correlation": 0.19330336464307268,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 6,
+                "probe_name": "c0:rzz_depth_8"
+              }
+            ],
+            "standard_error": 0.005432051546147182,
+            "z_score": 154.56407084272004
+          }
+        ],
+        "location_id": 15,
+        "qubits": [
+          1,
+          2
+        ]
+      },
+      {
+        "curve_features": {
+          "depth_curvature": -0.00011116857142855404,
+          "depth_response_range": 0.00047327999999990933,
+          "depth_slope": 1.62017391302674e-06,
+          "final_minus_initial_depth_response": 0.00018039999999985845,
+          "final_over_initial_raw_response": 0.9518280483662254,
+          "log_decay_proxy": -0.007275376166939746,
+          "normalized_response_variance_across_depth": 2.638250347543622e-06,
+          "odd_even_contrast": -0.0003620533333332047,
+          "variance_across_depth": 3.716029559998494e-08
+        },
+        "depth_stats": [
+          {
+            "available": true,
+            "connected": -7.463999999990367e-05,
+            "depth": 1,
+            "mean": 0.8802,
+            "normalized_correlation": -0.0006352590777833617,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 3,
+                "probe_name": "c0:rzz_depth_1"
+              }
+            ],
+            "standard_error": 0.004746029498433401,
+            "z_score": 185.46028849811023
+          },
+          {
+            "available": true,
+            "connected": 0.00039864000000000566,
+            "depth": 2,
+            "mean": 0.8778,
+            "normalized_correlation": 0.0034297496249093683,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 4,
+                "probe_name": "c0:rzz_depth_2"
+              }
+            ],
+            "standard_error": 0.0047902730611104,
+            "z_score": 183.24633873721663
+          },
+          {
+            "available": true,
+            "connected": 0.00035783999999994265,
+            "depth": 4,
+            "mean": 0.8658,
+            "normalized_correlation": 0.002781279240568203,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 5,
+                "probe_name": "c0:rzz_depth_4"
+              }
+            ],
+            "standard_error": 0.005003902077379212,
+            "z_score": 173.02496863676873
+          },
+          {
+            "available": true,
+            "connected": 0.00010575999999995478,
+            "depth": 8,
+            "mean": 0.8378,
+            "normalized_correlation": 0.000695937693574839,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 6,
+                "probe_name": "c0:rzz_depth_8"
+              }
+            ],
+            "standard_error": 0.005459772522733892,
+            "z_score": 153.4496165383252
+          }
+        ],
+        "location_id": 16,
+        "qubits": [
+          2,
+          3
+        ]
+      },
+      {
+        "curve_features": {
+          "depth_curvature": 0.0010154771428571455,
+          "depth_response_range": 0.004698160000000007,
+          "depth_slope": -0.00015541217391304158,
+          "final_minus_initial_depth_response": -0.0027123199999999903,
+          "final_over_initial_raw_response": 1.0013671592164661,
+          "log_decay_proxy": 0.00020198111419119828,
+          "normalized_response_variance_across_depth": 0.000256047104965787,
+          "odd_even_contrast": 0.004020186666666666,
+          "variance_across_depth": 3.672088574000008e-06
+        },
+        "depth_stats": [
+          {
+            "available": true,
+            "connected": 0.0031839999999999646,
+            "depth": 1,
+            "mean": 0.877,
+            "normalized_correlation": 0.025967525072471808,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 3,
+                "probe_name": "c0:rzz_depth_1"
+              }
+            ],
+            "standard_error": 0.004804903745133715,
+            "z_score": 182.52186651776393
+          },
+          {
+            "available": true,
+            "connected": -0.0015141600000000421,
+            "depth": 2,
+            "mean": 0.8778,
+            "normalized_correlation": -0.013181032512615648,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 4,
+                "probe_name": "c0:rzz_depth_2"
+              }
+            ],
+            "standard_error": 0.0047902730611104,
+            "z_score": 183.24633873721663
+          },
+          {
+            "available": true,
+            "connected": -0.0014660800000000362,
+            "depth": 4,
+            "mean": 0.8826,
+            "normalized_correlation": -0.012834387500621474,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 5,
+                "probe_name": "c0:rzz_depth_4"
+              }
+            ],
+            "standard_error": 0.004701247068597861,
+            "z_score": 187.737420969716
+          },
+          {
+            "available": true,
+            "connected": 0.00047167999999997434,
+            "depth": 8,
+            "mean": 0.8782,
+            "normalized_correlation": 0.00388543741730061,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 6,
+                "probe_name": "c0:rzz_depth_8"
+              }
+            ],
+            "standard_error": 0.00478293591845009,
+            "z_score": 183.61107382023647
+          }
+        ],
+        "location_id": 18,
+        "qubits": [
+          3,
+          4
+        ]
+      },
+      {
+        "curve_features": {
+          "depth_curvature": -0.00012720999999999284,
+          "depth_response_range": 0.001806239999999959,
+          "depth_slope": 0.000240545739130434,
+          "final_minus_initial_depth_response": 0.0016650400000000065,
+          "final_over_initial_raw_response": 0.9597350321485075,
+          "log_decay_proxy": -0.005618266888682233,
+          "normalized_response_variance_across_depth": 4.330158185483257e-05,
+          "odd_even_contrast": -0.0012737199999999966,
+          "variance_across_depth": 6.267403042999775e-07
+        },
+        "depth_stats": [
+          {
+            "available": true,
+            "connected": -0.0017449600000000176,
+            "depth": 1,
+            "mean": 0.8792,
+            "normalized_correlation": -0.01470872812031131,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 10,
+                "probe_name": "c1:rzz_depth_1"
+              }
+            ],
+            "standard_error": 0.0047645289378909226,
+            "z_score": 184.53030959849488
+          },
+          {
+            "available": true,
+            "connected": -0.001395079999999993,
+            "depth": 2,
+            "mean": 0.8712,
+            "normalized_correlation": -0.011136158934842287,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 11,
+                "probe_name": "c1:rzz_depth_2"
+              }
+            ],
+            "standard_error": 0.004909282635986648,
+            "z_score": 177.4597358917205
+          },
+          {
+            "available": true,
+            "connected": 6.127999999994138e-05,
+            "depth": 4,
+            "mean": 0.8692,
+            "normalized_correlation": 0.00048145350379075896,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 12,
+                "probe_name": "c1:rzz_depth_4"
+              }
+            ],
+            "standard_error": 0.004944606758883865,
+            "z_score": 175.78748773870188
+          },
+          {
+            "available": true,
+            "connected": -7.99200000000111e-05,
+            "depth": 8,
+            "mean": 0.8438,
+            "normalized_correlation": -0.000534174962712375,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 13,
+                "probe_name": "c1:rzz_depth_8"
+              }
+            ],
+            "standard_error": 0.005366577680421667,
+            "z_score": 157.23242078063058
+          }
+        ],
+        "location_id": 20,
+        "qubits": [
+          1,
+          2
+        ]
+      },
+      {
+        "curve_features": {
+          "depth_curvature": 0.0007082171428571617,
+          "depth_response_range": 0.03492376000000008,
+          "depth_slope": 0.004725685565217402,
+          "final_minus_initial_depth_response": 0.03492376000000008,
+          "final_over_initial_raw_response": 0.9548011810156146,
+          "log_decay_proxy": -0.006900772555831895,
+          "normalized_response_variance_across_depth": 0.004026412315515725,
+          "odd_even_contrast": -0.021930586666666696,
+          "variance_across_depth": 0.0001675011894796005
+        },
+        "depth_stats": [
+          {
+            "available": true,
+            "connected": 0.003494879999999978,
+            "depth": 1,
+            "mean": 0.885,
+            "normalized_correlation": 0.029612654606934154,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 10,
+                "probe_name": "c1:rzz_depth_1"
+              }
+            ],
+            "standard_error": 0.004655910222502147,
+            "z_score": 190.08098474982825
+          },
+          {
+            "available": true,
+            "connected": 0.013634640000000031,
+            "depth": 2,
+            "mean": 0.8842,
+            "normalized_correlation": 0.10675438650448649,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 11,
+                "probe_name": "c1:rzz_depth_2"
+              }
+            ],
+            "standard_error": 0.00467108509877523,
+            "z_score": 189.29220540894005
+          },
+          {
+            "available": true,
+            "connected": 0.02422311999999993,
+            "depth": 4,
+            "mean": 0.873,
+            "normalized_correlation": 0.1604173377553852,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 12,
+                "probe_name": "c1:rzz_depth_4"
+              }
+            ],
+            "standard_error": 0.004877202066759179,
+            "z_score": 178.9960694780264
+          },
+          {
+            "available": true,
+            "connected": 0.03841864000000006,
+            "depth": 8,
+            "mean": 0.845,
+            "normalized_correlation": 0.1986533566092996,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 13,
+                "probe_name": "c1:rzz_depth_8"
+              }
+            ],
+            "standard_error": 0.005347663040992767,
+            "z_score": 158.01294762265536
+          }
+        ],
+        "location_id": 34,
+        "qubits": [
+          2,
+          3
+        ]
+      },
+      {
+        "curve_features": {
+          "depth_curvature": 0.0009176085714285772,
+          "depth_response_range": 0.005113920000000105,
+          "depth_slope": 0.0004593384347826217,
+          "final_minus_initial_depth_response": 0.0018146800000000685,
+          "final_over_initial_raw_response": 0.956472146794479,
+          "log_decay_proxy": -0.006390735384394255,
+          "normalized_response_variance_across_depth": 0.00023095167963918753,
+          "odd_even_contrast": 0.0008682933333333068,
+          "variance_across_depth": 3.4342037572001218e-06
+        },
+        "depth_stats": [
+          {
+            "available": true,
+            "connected": 0.0014649199999999807,
+            "depth": 1,
+            "mean": 0.896,
+            "normalized_correlation": 0.013896514487574665,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 10,
+                "probe_name": "c1:rzz_depth_1"
+              }
+            ],
+            "standard_error": 0.0044405405076409325,
+            "z_score": 201.77723825697205
+          },
+          {
+            "available": true,
+            "connected": -0.001834320000000056,
+            "depth": 2,
+            "mean": 0.891,
+            "normalized_correlation": -0.017121713756264534,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 11,
+                "probe_name": "c1:rzz_depth_2"
+              }
+            ],
+            "standard_error": 0.004540033039527355,
+            "z_score": 196.25407838282132
+          },
+          {
+            "available": true,
+            "connected": 0.0003446000000000282,
+            "depth": 4,
+            "mean": 0.8804,
+            "normalized_correlation": 0.002940754030518177,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 12,
+                "probe_name": "c1:rzz_depth_4"
+              }
+            ],
+            "standard_error": 0.004742318420350958,
+            "z_score": 185.64759300469865
+          },
+          {
+            "available": true,
+            "connected": 0.003279600000000049,
+            "depth": 8,
+            "mean": 0.857,
+            "normalized_correlation": 0.023819461190423667,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 13,
+                "probe_name": "c1:rzz_depth_8"
+              }
+            ],
+            "standard_error": 0.005153164076564999,
+            "z_score": 166.3055915291678
+          }
+        ],
+        "location_id": 35,
+        "qubits": [
+          3,
+          4
+        ]
+      },
+      {
+        "curve_features": {
+          "depth_curvature": -0.0005486085714285772,
+          "depth_response_range": 0.002045600000000092,
+          "depth_slope": -2.4004869565201243e-05,
+          "final_minus_initial_depth_response": 0.000449600000000161,
+          "final_over_initial_raw_response": 1.0091605483731696,
+          "log_decay_proxy": 0.0016216111682485518,
+          "normalized_response_variance_across_depth": 5.3070220524367096e-05,
+          "odd_even_contrast": -0.0014245600000001302,
+          "variance_across_depth": 7.458813612000441e-07
+        },
+        "depth_stats": [
+          {
+            "available": true,
+            "connected": -0.0012502000000000901,
+            "depth": 1,
+            "mean": 0.8732,
+            "normalized_correlation": -0.010151355451733183,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 10,
+                "probe_name": "c1:rzz_depth_1"
+              }
+            ],
+            "standard_error": 0.004873620420180464,
+            "z_score": 179.16865178590714
+          },
+          {
+            "available": true,
+            "connected": 0.0005282800000000476,
+            "depth": 2,
+            "mean": 0.8716,
+            "normalized_correlation": 0.004180715203229265,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 11,
+                "probe_name": "c1:rzz_depth_2"
+              }
+            ],
+            "standard_error": 0.00490217747536745,
+            "z_score": 177.79854041997285
+          },
+          {
+            "available": true,
+            "connected": 0.0007954000000000017,
+            "depth": 4,
+            "mean": 0.8896,
+            "normalized_correlation": 0.007232266917746673,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 12,
+                "probe_name": "c1:rzz_depth_4"
+              }
+            ],
+            "standard_error": 0.004567404514601264,
+            "z_score": 194.77144999005247
+          },
+          {
+            "available": true,
+            "connected": -0.0008005999999999291,
+            "depth": 8,
+            "mean": 0.8812,
+            "normalized_correlation": -0.00688035886232597,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 13,
+                "probe_name": "c1:rzz_depth_8"
+              }
+            ],
+            "standard_error": 0.004727436514645121,
+            "z_score": 186.40123400285364
+          }
+        ],
+        "location_id": 37,
+        "qubits": [
+          4,
+          5
+        ]
+      },
+      {
+        "curve_features": {
+          "depth_curvature": -0.00017115428571431594,
+          "depth_response_range": 0.0022628000000000092,
+          "depth_slope": -0.00029648034782608494,
+          "final_minus_initial_depth_response": -0.0017344799999999827,
+          "final_over_initial_raw_response": 0.9553378425098135,
+          "log_decay_proxy": -0.006622537387037014,
+          "normalized_response_variance_across_depth": 3.407450732995565e-05,
+          "odd_even_contrast": 0.0007056666666666045,
+          "variance_across_depth": 7.491875370999764e-07
+        },
+        "depth_stats": [
+          {
+            "available": true,
+            "connected": -0.00044504000000000765,
+            "depth": 1,
+            "mean": 0.8822,
+            "normalized_correlation": -0.0038006597513065136,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 17,
+                "probe_name": "c2:rzz_depth_1"
+              }
+            ],
+            "standard_error": 0.004708748878417705,
+            "z_score": 187.35337618948333
+          },
+          {
+            "available": true,
+            "connected": 8.32800000000189e-05,
+            "depth": 2,
+            "mean": 0.8782,
+            "normalized_correlation": 0.0006869572469410252,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 18,
+                "probe_name": "c2:rzz_depth_2"
+              }
+            ],
+            "standard_error": 0.00478293591845009,
+            "z_score": 183.61107382023647
+          },
+          {
+            "available": true,
+            "connected": -0.001355879999999865,
+            "depth": 4,
+            "mean": 0.8676,
+            "normalized_correlation": -0.01039645842293699,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 19,
+                "probe_name": "c2:rzz_depth_4"
+              }
+            ],
+            "standard_error": 0.004972627474484691,
+            "z_score": 174.4751651821472
+          },
+          {
+            "available": true,
+            "connected": -0.0021795199999999904,
+            "depth": 8,
+            "mean": 0.8428,
+            "normalized_correlation": -0.014445636187166686,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 20,
+                "probe_name": "c2:rzz_depth_8"
+              }
+            ],
+            "standard_error": 0.00538226866664978,
+            "z_score": 156.58824413992048
+          }
+        ],
+        "location_id": 39,
+        "qubits": [
+          2,
+          3
+        ]
+      },
+      {
+        "curve_features": {
+          "depth_curvature": 0.0015749771428571163,
+          "depth_response_range": 0.034270360000000055,
+          "depth_slope": 0.00486335443478262,
+          "final_minus_initial_depth_response": 0.034270360000000055,
+          "final_over_initial_raw_response": 0.9565984825520328,
+          "log_decay_proxy": -0.006557880280738736,
+          "normalized_response_variance_across_depth": 0.003997930849751244,
+          "odd_even_contrast": -0.019482346666666744,
+          "variance_across_depth": 0.00017210122733840081
+        },
+        "depth_stats": [
+          {
+            "available": true,
+            "connected": 0.005883239999999956,
+            "depth": 1,
+            "mean": 0.894,
+            "normalized_correlation": 0.05259215053783738,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 17,
+                "probe_name": "c2:rzz_depth_1"
+              }
+            ],
+            "standard_error": 0.004480669592817572,
+            "z_score": 199.5237500736642
+          },
+          {
+            "available": true,
+            "connected": 0.01181911999999996,
+            "depth": 2,
+            "mean": 0.8922,
+            "normalized_correlation": 0.09916746299847677,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 18,
+                "probe_name": "c2:rzz_depth_2"
+              }
+            ],
+            "standard_error": 0.0045164052076845365,
+            "z_score": 197.54649084230678
+          },
+          {
+            "available": true,
+            "connected": 0.024124040000000124,
+            "depth": 4,
+            "mean": 0.8816,
+            "normalized_correlation": 0.16926362043448537,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 19,
+                "probe_name": "c2:rzz_depth_4"
+              }
+            ],
+            "standard_error": 0.004719972881278026,
+            "z_score": 186.78073416415253
+          },
+          {
+            "available": true,
+            "connected": 0.04015360000000001,
+            "depth": 8,
+            "mean": 0.8552,
+            "normalized_correlation": 0.21711921805461848,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 20,
+                "probe_name": "c2:rzz_depth_8"
+              }
+            ],
+            "standard_error": 0.00518298138140588,
+            "z_score": 165.00155741790985
+          }
+        ],
+        "location_id": 53,
+        "qubits": [
+          3,
+          4
+        ]
+      },
+      {
+        "curve_features": {
+          "depth_curvature": 0.00014750000000004655,
+          "depth_response_range": 0.002433999999999936,
+          "depth_slope": 0.0003060504347826117,
+          "final_minus_initial_depth_response": 0.002433999999999936,
+          "final_over_initial_raw_response": 0.9619590938027591,
+          "log_decay_proxy": -0.005173550149060229,
+          "normalized_response_variance_across_depth": 4.640793795077353e-05,
+          "odd_even_contrast": -0.0014251599999998512,
+          "variance_across_depth": 7.658670610999821e-07
+        },
+        "depth_stats": [
+          {
+            "available": true,
+            "connected": -0.0005299999999999194,
+            "depth": 1,
+            "mean": 0.8938,
+            "normalized_correlation": -0.005032308313575985,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 17,
+                "probe_name": "c2:rzz_depth_1"
+              }
+            ],
+            "standard_error": 0.004484657846480598,
+            "z_score": 199.30171500183073
+          },
+          {
+            "available": true,
+            "connected": 0.0004729599999998557,
+            "depth": 2,
+            "mean": 0.8844,
+            "normalized_correlation": 0.004104644471772775,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 18,
+                "probe_name": "c2:rzz_depth_2"
+              }
+            ],
+            "standard_error": 0.004667297290724044,
+            "z_score": 189.48867940289313
+          },
+          {
+            "available": true,
+            "connected": 0.0003085199999999233,
+            "depth": 4,
+            "mean": 0.8852,
+            "normalized_correlation": 0.0027708895688488195,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 19,
+                "probe_name": "c2:rzz_depth_4"
+              }
+            ],
+            "standard_error": 0.0046521066195864425,
+            "z_score": 190.2793878956049
+          },
+          {
+            "available": true,
+            "connected": 0.0019040000000000168,
+            "depth": 8,
+            "mean": 0.8598,
+            "normalized_correlation": 0.014125598174993616,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 20,
+                "probe_name": "c2:rzz_depth_8"
+              }
+            ],
+            "standard_error": 0.005106309430498704,
+            "z_score": 168.37992520872913
+          }
+        ],
+        "location_id": 54,
+        "qubits": [
+          4,
+          5
+        ]
+      },
+      {
+        "curve_features": {
+          "depth_curvature": -0.0001740871428571287,
+          "depth_response_range": 0.004284199999999849,
+          "depth_slope": -0.0004234222608695396,
+          "final_minus_initial_depth_response": -0.004284199999999849,
+          "final_over_initial_raw_response": 0.9981773700166553,
+          "log_decay_proxy": -4.603891090225322e-05,
+          "normalized_response_variance_across_depth": 0.0002241026101459528,
+          "odd_even_contrast": 0.0029449999999999386,
+          "variance_across_depth": 3.1576794586999263e-06
+        },
+        "depth_stats": [
+          {
+            "available": true,
+            "connected": 0.0024999999999999467,
+            "depth": 1,
+            "mean": 0.8784,
+            "normalized_correlation": 0.020678246484697658,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 17,
+                "probe_name": "c2:rzz_depth_1"
+              }
+            ],
+            "standard_error": 0.004779261867694635,
+            "z_score": 183.79407203809745
+          },
+          {
+            "available": true,
+            "connected": -0.0010860800000001003,
+            "depth": 2,
+            "mean": 0.8764,
+            "normalized_correlation": -0.008995544009656721,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 18,
+                "probe_name": "c2:rzz_depth_2"
+              }
+            ],
+            "standard_error": 0.004815838867736338,
+            "z_score": 181.98283291233696
+          },
+          {
+            "available": true,
+            "connected": 0.0015352800000000277,
+            "depth": 4,
+            "mean": 0.887,
+            "normalized_correlation": 0.013842945156580237,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 19,
+                "probe_name": "c2:rzz_depth_4"
+              }
+            ],
+            "standard_error": 0.004617694229807772,
+            "z_score": 192.08720973214471
+          },
+          {
+            "available": true,
+            "connected": -0.0017841999999999025,
+            "depth": 8,
+            "mean": 0.8768,
+            "normalized_correlation": -0.014970799141254598,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 20,
+                "probe_name": "c2:rzz_depth_8"
+              }
+            ],
+            "standard_error": 0.004808552380914655,
+            "z_score": 182.3417799252964
+          }
+        ],
+        "location_id": 56,
+        "qubits": [
+          5,
+          6
+        ]
+      }
+    ]
+  },
+  "schema": "scope_static_s2d8a_depth_response_features_v1",
+  "scrambled_depth_response_audit": {
+    "rzz_location_records": [
+      {
+        "curve_features": {
+          "depth_curvature": 0.0005535085714285793,
+          "depth_response_range": 0.0028914399999999674,
+          "depth_slope": 0.0003865273043478319,
+          "final_minus_initial_depth_response": 0.002540639999999983,
+          "final_over_initial_raw_response": 1.0250046447713896,
+          "log_decay_proxy": 0.0016887315557970884,
+          "normalized_response_variance_across_depth": 9.461602324998095e-05,
+          "odd_even_contrast": -0.0006532533333332886,
+          "variance_across_depth": 1.4176710604000236e-06
+        },
+        "depth_stats": [
+          {
+            "available": true,
+            "connected": -0.00025295999999996877,
+            "depth": 1,
+            "mean": 0.8558,
+            "normalized_correlation": -0.0018482662242769977,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 6,
+                "probe_name": "c0:rzz_depth_8"
+              }
+            ],
+            "standard_error": 0.005173068335137281,
+            "z_score": 165.43373188927518
+          },
+          {
+            "available": true,
+            "connected": -0.00048304000000010117,
+            "depth": 2,
+            "mean": 0.8882,
+            "normalized_correlation": -0.004339495904433416,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 3,
+                "probe_name": "c0:rzz_depth_1"
+              }
+            ],
+            "standard_error": 0.004594570273703516,
+            "z_score": 193.3151409357059
+          },
+          {
+            "available": true,
+            "connected": -0.0006037599999999532,
+            "depth": 4,
+            "mean": 0.8858,
+            "normalized_correlation": -0.005330261822884023,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 4,
+                "probe_name": "c0:rzz_depth_2"
+              }
+            ],
+            "standard_error": 0.004640671934106094,
+            "z_score": 190.87753079245118
+          },
+          {
+            "available": true,
+            "connected": 0.002287680000000014,
+            "depth": 8,
+            "mean": 0.8772,
+            "normalized_correlation": 0.01843251579467784,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 5,
+                "probe_name": "c0:rzz_depth_4"
+              }
+            ],
+            "standard_error": 0.004801251503514475,
+            "z_score": 182.7023640311067
+          }
+        ],
+        "location_id": 1,
+        "qubits": [
+          0,
+          1
+        ]
+      },
+      {
+        "curve_features": {
+          "depth_curvature": 0.007329657142857146,
+          "depth_response_range": 0.03683871999999999,
+          "depth_slope": 5.557565217381944e-06,
+          "final_minus_initial_depth_response": -0.013539040000000058,
+          "final_over_initial_raw_response": 1.0357300670199296,
+          "log_decay_proxy": 0.0029535796401677027,
+          "normalized_response_variance_across_depth": 0.005004287656326506,
+          "odd_even_contrast": 0.025815333333333378,
+          "variance_across_depth": 0.00019340394576440004
+        },
+        "depth_stats": [
+          {
+            "available": true,
+            "connected": 0.03828096000000003,
+            "depth": 1,
+            "mean": 0.8396,
+            "normalized_correlation": 0.19330336464307268,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 6,
+                "probe_name": "c0:rzz_depth_8"
+              }
+            ],
+            "standard_error": 0.005432051546147182,
+            "z_score": 154.56407084272004
+          },
+          {
+            "available": true,
+            "connected": 0.001442240000000039,
+            "depth": 2,
+            "mean": 0.8756,
+            "normalized_correlation": 0.011559279322022274,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 3,
+                "probe_name": "c0:rzz_depth_1"
+              }
+            ],
+            "standard_error": 0.0048303689300093836,
+            "z_score": 181.26979795688175
+          },
+          {
+            "available": true,
+            "connected": 0.011212719999999954,
+            "depth": 4,
+            "mean": 0.871,
+            "normalized_correlation": 0.08077882654926247,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 4,
+                "probe_name": "c0:rzz_depth_2"
+              }
+            ],
+            "standard_error": 0.004912830141578273,
+            "z_score": 177.29088425601185
+          },
+          {
+            "available": true,
+            "connected": 0.024741919999999973,
+            "depth": 8,
+            "mean": 0.8696,
+            "normalized_correlation": 0.1604226229626754,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 5,
+                "probe_name": "c0:rzz_depth_4"
+              }
+            ],
+            "standard_error": 0.0049375686324343885,
+            "z_score": 176.11907089000965
+          }
+        ],
+        "location_id": 15,
+        "qubits": [
+          1,
+          2
+        ]
+      },
+      {
+        "curve_features": {
+          "depth_curvature": 1.5828571428288498e-06,
+          "depth_response_range": 0.00047327999999990933,
+          "depth_slope": 5.079165217390311e-05,
+          "final_minus_initial_depth_response": 0.00025207999999998787,
+          "final_over_initial_raw_response": 1.0334196306760197,
+          "log_decay_proxy": 0.00226015737484244,
+          "normalized_response_variance_across_depth": 2.638250347543622e-06,
+          "odd_even_contrast": -0.00012152000000006011,
+          "variance_across_depth": 3.716029559998494e-08
+        },
+        "depth_stats": [
+          {
+            "available": true,
+            "connected": 0.00010575999999995478,
+            "depth": 1,
+            "mean": 0.8378,
+            "normalized_correlation": 0.000695937693574839,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 6,
+                "probe_name": "c0:rzz_depth_8"
+              }
+            ],
+            "standard_error": 0.005459772522733892,
+            "z_score": 153.4496165383252
+          },
+          {
+            "available": true,
+            "connected": -7.463999999990367e-05,
+            "depth": 2,
+            "mean": 0.8802,
+            "normalized_correlation": -0.0006352590777833617,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 3,
+                "probe_name": "c0:rzz_depth_1"
+              }
+            ],
+            "standard_error": 0.004746029498433401,
+            "z_score": 185.46028849811023
+          },
+          {
+            "available": true,
+            "connected": 0.00039864000000000566,
+            "depth": 4,
+            "mean": 0.8778,
+            "normalized_correlation": 0.0034297496249093683,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 4,
+                "probe_name": "c0:rzz_depth_2"
+              }
+            ],
+            "standard_error": 0.0047902730611104,
+            "z_score": 183.24633873721663
+          },
+          {
+            "available": true,
+            "connected": 0.00035783999999994265,
+            "depth": 8,
+            "mean": 0.8658,
+            "normalized_correlation": 0.002781279240568203,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 5,
+                "probe_name": "c0:rzz_depth_4"
+              }
+            ],
+            "standard_error": 0.005003902077379212,
+            "z_score": 173.02496863676873
+          }
+        ],
+        "location_id": 16,
+        "qubits": [
+          2,
+          3
+        ]
+      },
+      {
+        "curve_features": {
+          "depth_curvature": -0.0002110971428571396,
+          "depth_response_range": 0.004698160000000007,
+          "depth_slope": -0.0004688173913043493,
+          "final_minus_initial_depth_response": -0.0019377600000000106,
+          "final_over_initial_raw_response": 1.0050091038384152,
+          "log_decay_proxy": 0.000818065543023147,
+          "normalized_response_variance_across_depth": 0.000256047104965787,
+          "odd_even_contrast": 0.0004037600000000123,
+          "variance_across_depth": 3.672088574000008e-06
+        },
+        "depth_stats": [
+          {
+            "available": true,
+            "connected": 0.00047167999999997434,
+            "depth": 1,
+            "mean": 0.8782,
+            "normalized_correlation": 0.00388543741730061,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 6,
+                "probe_name": "c0:rzz_depth_8"
+              }
+            ],
+            "standard_error": 0.00478293591845009,
+            "z_score": 183.61107382023647
+          },
+          {
+            "available": true,
+            "connected": 0.0031839999999999646,
+            "depth": 2,
+            "mean": 0.877,
+            "normalized_correlation": 0.025967525072471808,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 3,
+                "probe_name": "c0:rzz_depth_1"
+              }
+            ],
+            "standard_error": 0.004804903745133715,
+            "z_score": 182.52186651776393
+          },
+          {
+            "available": true,
+            "connected": -0.0015141600000000421,
+            "depth": 4,
+            "mean": 0.8778,
+            "normalized_correlation": -0.013181032512615648,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 4,
+                "probe_name": "c0:rzz_depth_2"
+              }
+            ],
+            "standard_error": 0.0047902730611104,
+            "z_score": 183.24633873721663
+          },
+          {
+            "available": true,
+            "connected": -0.0014660800000000362,
+            "depth": 8,
+            "mean": 0.8826,
+            "normalized_correlation": -0.012834387500621474,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 5,
+                "probe_name": "c0:rzz_depth_4"
+              }
+            ],
+            "standard_error": 0.004701247068597861,
+            "z_score": 187.737420969716
+          }
+        ],
+        "location_id": 18,
+        "qubits": [
+          3,
+          4
+        ]
+      },
+      {
+        "curve_features": {
+          "depth_curvature": 0.00048543142857141694,
+          "depth_response_range": 0.001806239999999959,
+          "depth_slope": 0.00011078713043477615,
+          "final_minus_initial_depth_response": 0.00014119999999995247,
+          "final_over_initial_raw_response": 1.030100699098484,
+          "log_decay_proxy": 0.0021605171817297058,
+          "normalized_response_variance_across_depth": 4.3301581854832576e-05,
+          "odd_even_contrast": 0.0009463333333333452,
+          "variance_across_depth": 6.267403042999774e-07
+        },
+        "depth_stats": [
+          {
+            "available": true,
+            "connected": -7.99200000000111e-05,
+            "depth": 1,
+            "mean": 0.8438,
+            "normalized_correlation": -0.000534174962712375,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 13,
+                "probe_name": "c1:rzz_depth_8"
+              }
+            ],
+            "standard_error": 0.005366577680421667,
+            "z_score": 157.23242078063058
+          },
+          {
+            "available": true,
+            "connected": -0.0017449600000000176,
+            "depth": 2,
+            "mean": 0.8792,
+            "normalized_correlation": -0.01470872812031131,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 10,
+                "probe_name": "c1:rzz_depth_1"
+              }
+            ],
+            "standard_error": 0.0047645289378909226,
+            "z_score": 184.53030959849488
+          },
+          {
+            "available": true,
+            "connected": -0.001395079999999993,
+            "depth": 4,
+            "mean": 0.8712,
+            "normalized_correlation": -0.011136158934842287,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 11,
+                "probe_name": "c1:rzz_depth_2"
+              }
+            ],
+            "standard_error": 0.004909282635986648,
+            "z_score": 177.4597358917205
+          },
+          {
+            "available": true,
+            "connected": 6.127999999994138e-05,
+            "depth": 8,
+            "mean": 0.8692,
+            "normalized_correlation": 0.00048145350379075896,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 12,
+                "probe_name": "c1:rzz_depth_4"
+              }
+            ],
+            "standard_error": 0.004944606758883865,
+            "z_score": 175.78748773870188
+          }
+        ],
+        "location_id": 20,
+        "qubits": [
+          1,
+          2
+        ]
+      },
+      {
+        "curve_features": {
+          "depth_curvature": 0.0065177742857142765,
+          "depth_response_range": 0.03492376000000008,
+          "depth_slope": -0.00018818713043479692,
+          "final_minus_initial_depth_response": -0.014195520000000128,
+          "final_over_initial_raw_response": 1.0331348720297373,
+          "log_decay_proxy": 0.002398011432008372,
+          "normalized_response_variance_across_depth": 0.004026412315515724,
+          "odd_even_contrast": 0.024634426666666744,
+          "variance_across_depth": 0.00016750118947960046
+        },
+        "depth_stats": [
+          {
+            "available": true,
+            "connected": 0.03841864000000006,
+            "depth": 1,
+            "mean": 0.845,
+            "normalized_correlation": 0.1986533566092996,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 13,
+                "probe_name": "c1:rzz_depth_8"
+              }
+            ],
+            "standard_error": 0.005347663040992767,
+            "z_score": 158.01294762265536
+          },
+          {
+            "available": true,
+            "connected": 0.003494879999999978,
+            "depth": 2,
+            "mean": 0.885,
+            "normalized_correlation": 0.029612654606934154,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 10,
+                "probe_name": "c1:rzz_depth_1"
+              }
+            ],
+            "standard_error": 0.004655910222502147,
+            "z_score": 190.08098474982825
+          },
+          {
+            "available": true,
+            "connected": 0.013634640000000031,
+            "depth": 4,
+            "mean": 0.8842,
+            "normalized_correlation": 0.10675438650448649,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 11,
+                "probe_name": "c1:rzz_depth_2"
+              }
+            ],
+            "standard_error": 0.00467108509877523,
+            "z_score": 189.29220540894005
+          },
+          {
+            "available": true,
+            "connected": 0.02422311999999993,
+            "depth": 8,
+            "mean": 0.873,
+            "normalized_correlation": 0.1604173377553852,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 12,
+                "probe_name": "c1:rzz_depth_4"
+              }
+            ],
+            "standard_error": 0.004877202066759179,
+            "z_score": 178.9960694780264
+          }
+        ],
+        "location_id": 34,
+        "qubits": [
+          2,
+          3
+        ]
+      },
+      {
+        "curve_features": {
+          "depth_curvature": 0.0007661628571428836,
+          "depth_response_range": 0.005113920000000105,
+          "depth_slope": -0.00036787965217391307,
+          "final_minus_initial_depth_response": -0.002935000000000021,
+          "final_over_initial_raw_response": 1.0273033520380956,
+          "log_decay_proxy": 0.0016116728361732962,
+          "normalized_response_variance_across_depth": 0.0002309516796391875,
+          "odd_even_contrast": 0.0032878666666667313,
+          "variance_across_depth": 3.4342037572001218e-06
+        },
+        "depth_stats": [
+          {
+            "available": true,
+            "connected": 0.003279600000000049,
+            "depth": 1,
+            "mean": 0.857,
+            "normalized_correlation": 0.023819461190423667,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 13,
+                "probe_name": "c1:rzz_depth_8"
+              }
+            ],
+            "standard_error": 0.005153164076564999,
+            "z_score": 166.3055915291678
+          },
+          {
+            "available": true,
+            "connected": 0.0014649199999999807,
+            "depth": 2,
+            "mean": 0.896,
+            "normalized_correlation": 0.013896514487574665,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 10,
+                "probe_name": "c1:rzz_depth_1"
+              }
+            ],
+            "standard_error": 0.0044405405076409325,
+            "z_score": 201.77723825697205
+          },
+          {
+            "available": true,
+            "connected": -0.001834320000000056,
+            "depth": 4,
+            "mean": 0.891,
+            "normalized_correlation": -0.017121713756264534,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 11,
+                "probe_name": "c1:rzz_depth_2"
+              }
+            ],
+            "standard_error": 0.004540033039527355,
+            "z_score": 196.25407838282132
+          },
+          {
+            "available": true,
+            "connected": 0.0003446000000000282,
+            "depth": 8,
+            "mean": 0.8804,
+            "normalized_correlation": 0.002940754030518177,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 12,
+                "probe_name": "c1:rzz_depth_4"
+              }
+            ],
+            "standard_error": 0.004742318420350958,
+            "z_score": 185.64759300469865
+          }
+        ],
+        "location_id": 35,
+        "qubits": [
+          3,
+          4
+        ]
+      },
+      {
+        "curve_features": {
+          "depth_curvature": 4.841142857143827e-05,
+          "depth_response_range": 0.002045600000000092,
+          "depth_slope": 0.0002748528695652169,
+          "final_minus_initial_depth_response": 0.0015959999999999308,
+          "final_over_initial_raw_response": 1.0095313101097252,
+          "log_decay_proxy": 0.0018623492658024227,
+          "normalized_response_variance_across_depth": 5.3070220524367096e-05,
+          "odd_even_contrast": -0.0008250933333332489,
+          "variance_across_depth": 7.45881361200044e-07
+        },
+        "depth_stats": [
+          {
+            "available": true,
+            "connected": -0.0008005999999999291,
+            "depth": 1,
+            "mean": 0.8812,
+            "normalized_correlation": -0.00688035886232597,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 13,
+                "probe_name": "c1:rzz_depth_8"
+              }
+            ],
+            "standard_error": 0.004727436514645121,
+            "z_score": 186.40123400285364
+          },
+          {
+            "available": true,
+            "connected": -0.0012502000000000901,
+            "depth": 2,
+            "mean": 0.8732,
+            "normalized_correlation": -0.010151355451733183,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 10,
+                "probe_name": "c1:rzz_depth_1"
+              }
+            ],
+            "standard_error": 0.004873620420180464,
+            "z_score": 179.16865178590714
+          },
+          {
+            "available": true,
+            "connected": 0.0005282800000000476,
+            "depth": 4,
+            "mean": 0.8716,
+            "normalized_correlation": 0.004180715203229265,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 11,
+                "probe_name": "c1:rzz_depth_2"
+              }
+            ],
+            "standard_error": 0.00490217747536745,
+            "z_score": 177.79854041997285
+          },
+          {
+            "available": true,
+            "connected": 0.0007954000000000017,
+            "depth": 8,
+            "mean": 0.8896,
+            "normalized_correlation": 0.007232266917746673,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 12,
+                "probe_name": "c1:rzz_depth_4"
+              }
+            ],
+            "standard_error": 0.004567404514601264,
+            "z_score": 194.77144999005247
+          }
+        ],
+        "location_id": 37,
+        "qubits": [
+          4,
+          5
+        ]
+      },
+      {
+        "curve_features": {
+          "depth_curvature": -0.0005236442857142635,
+          "depth_response_range": 0.0022628000000000092,
+          "depth_slope": 3.5854956521758764e-05,
+          "final_minus_initial_depth_response": 0.0008236400000001254,
+          "final_over_initial_raw_response": 1.0294245023439696,
+          "log_decay_proxy": 0.001863822481718241,
+          "normalized_response_variance_across_depth": 3.407450732995565e-05,
+          "odd_even_contrast": -0.0016069733333333724,
+          "variance_across_depth": 7.491875370999764e-07
+        },
+        "depth_stats": [
+          {
+            "available": true,
+            "connected": -0.0021795199999999904,
+            "depth": 1,
+            "mean": 0.8428,
+            "normalized_correlation": -0.014445636187166686,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 20,
+                "probe_name": "c2:rzz_depth_8"
+              }
+            ],
+            "standard_error": 0.00538226866664978,
+            "z_score": 156.58824413992048
+          },
+          {
+            "available": true,
+            "connected": -0.00044504000000000765,
+            "depth": 2,
+            "mean": 0.8822,
+            "normalized_correlation": -0.0038006597513065136,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 17,
+                "probe_name": "c2:rzz_depth_1"
+              }
+            ],
+            "standard_error": 0.004708748878417705,
+            "z_score": 187.35337618948333
+          },
+          {
+            "available": true,
+            "connected": 8.32800000000189e-05,
+            "depth": 4,
+            "mean": 0.8782,
+            "normalized_correlation": 0.0006869572469410252,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 18,
+                "probe_name": "c2:rzz_depth_2"
+              }
+            ],
+            "standard_error": 0.00478293591845009,
+            "z_score": 183.61107382023647
+          },
+          {
+            "available": true,
+            "connected": -0.001355879999999865,
+            "depth": 8,
+            "mean": 0.8676,
+            "normalized_correlation": -0.01039645842293699,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 19,
+                "probe_name": "c2:rzz_depth_4"
+              }
+            ],
+            "standard_error": 0.004972627474484691,
+            "z_score": 174.4751651821472
+          }
+        ],
+        "location_id": 39,
+        "qubits": [
+          2,
+          3
+        ]
+      },
+      {
+        "curve_features": {
+          "depth_curvature": 0.0068810771428571785,
+          "depth_response_range": 0.034270360000000055,
+          "depth_slope": -0.0005299519999999794,
+          "final_minus_initial_depth_response": -0.016029559999999887,
+          "final_over_initial_raw_response": 1.0308687665238934,
+          "log_decay_proxy": 0.00216186428206458,
+          "normalized_response_variance_across_depth": 0.003997930849751244,
+          "odd_even_contrast": 0.026211466666666662,
+          "variance_across_depth": 0.00017210122733840084
+        },
+        "depth_stats": [
+          {
+            "available": true,
+            "connected": 0.04015360000000001,
+            "depth": 1,
+            "mean": 0.8552,
+            "normalized_correlation": 0.21711921805461848,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 20,
+                "probe_name": "c2:rzz_depth_8"
+              }
+            ],
+            "standard_error": 0.00518298138140588,
+            "z_score": 165.00155741790985
+          },
+          {
+            "available": true,
+            "connected": 0.005883239999999956,
+            "depth": 2,
+            "mean": 0.894,
+            "normalized_correlation": 0.05259215053783738,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 17,
+                "probe_name": "c2:rzz_depth_1"
+              }
+            ],
+            "standard_error": 0.004480669592817572,
+            "z_score": 199.5237500736642
+          },
+          {
+            "available": true,
+            "connected": 0.01181911999999996,
+            "depth": 4,
+            "mean": 0.8922,
+            "normalized_correlation": 0.09916746299847677,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 18,
+                "probe_name": "c2:rzz_depth_2"
+              }
+            ],
+            "standard_error": 0.0045164052076845365,
+            "z_score": 197.54649084230678
+          },
+          {
+            "available": true,
+            "connected": 0.024124040000000124,
+            "depth": 8,
+            "mean": 0.8816,
+            "normalized_correlation": 0.16926362043448537,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 19,
+                "probe_name": "c2:rzz_depth_4"
+              }
+            ],
+            "standard_error": 0.004719972881278026,
+            "z_score": 186.78073416415253
+          }
+        ],
+        "location_id": 53,
+        "qubits": [
+          3,
+          4
+        ]
+      },
+      {
+        "curve_features": {
+          "depth_curvature": 0.00028253000000001086,
+          "depth_response_range": 0.002433999999999936,
+          "depth_slope": -0.00010014086956523651,
+          "final_minus_initial_depth_response": -0.0015954800000000935,
+          "final_over_initial_raw_response": 1.0295405564776035,
+          "log_decay_proxy": 0.002188423372269974,
+          "normalized_response_variance_across_depth": 4.640793795077353e-05,
+          "odd_even_contrast": 0.001820173333333397,
+          "variance_across_depth": 7.65867061099982e-07
+        },
+        "depth_stats": [
+          {
+            "available": true,
+            "connected": 0.0019040000000000168,
+            "depth": 1,
+            "mean": 0.8598,
+            "normalized_correlation": 0.014125598174993616,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 20,
+                "probe_name": "c2:rzz_depth_8"
+              }
+            ],
+            "standard_error": 0.005106309430498704,
+            "z_score": 168.37992520872913
+          },
+          {
+            "available": true,
+            "connected": -0.0005299999999999194,
+            "depth": 2,
+            "mean": 0.8938,
+            "normalized_correlation": -0.005032308313575985,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 17,
+                "probe_name": "c2:rzz_depth_1"
+              }
+            ],
+            "standard_error": 0.004484657846480598,
+            "z_score": 199.30171500183073
+          },
+          {
+            "available": true,
+            "connected": 0.0004729599999998557,
+            "depth": 4,
+            "mean": 0.8844,
+            "normalized_correlation": 0.004104644471772775,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 18,
+                "probe_name": "c2:rzz_depth_2"
+              }
+            ],
+            "standard_error": 0.004667297290724044,
+            "z_score": 189.48867940289313
+          },
+          {
+            "available": true,
+            "connected": 0.0003085199999999233,
+            "depth": 8,
+            "mean": 0.8852,
+            "normalized_correlation": 0.0027708895688488195,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 19,
+                "probe_name": "c2:rzz_depth_4"
+              }
+            ],
+            "standard_error": 0.0046521066195864425,
+            "z_score": 190.2793878956049
+          }
+        ],
+        "location_id": 54,
+        "qubits": [
+          4,
+          5
+        ]
+      },
+      {
+        "curve_features": {
+          "depth_curvature": -1.5854285714239103e-05,
+          "depth_response_range": 0.004284199999999849,
+          "depth_slope": 0.00023599895652173631,
+          "final_minus_initial_depth_response": 0.0033194799999999303,
+          "final_over_initial_raw_response": 1.0116320579013938,
+          "log_decay_proxy": 0.0015948237701394555,
+          "normalized_response_variance_across_depth": 0.0002241026101459528,
+          "odd_even_contrast": -0.0027672666666665275,
+          "variance_across_depth": 3.1576794586999263e-06
+        },
+        "depth_stats": [
+          {
+            "available": true,
+            "connected": -0.0017841999999999025,
+            "depth": 1,
+            "mean": 0.8768,
+            "normalized_correlation": -0.014970799141254598,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 20,
+                "probe_name": "c2:rzz_depth_8"
+              }
+            ],
+            "standard_error": 0.004808552380914655,
+            "z_score": 182.3417799252964
+          },
+          {
+            "available": true,
+            "connected": 0.0024999999999999467,
+            "depth": 2,
+            "mean": 0.8784,
+            "normalized_correlation": 0.020678246484697658,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 17,
+                "probe_name": "c2:rzz_depth_1"
+              }
+            ],
+            "standard_error": 0.004779261867694635,
+            "z_score": 183.79407203809745
+          },
+          {
+            "available": true,
+            "connected": -0.0010860800000001003,
+            "depth": 4,
+            "mean": 0.8764,
+            "normalized_correlation": -0.008995544009656721,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 18,
+                "probe_name": "c2:rzz_depth_2"
+              }
+            ],
+            "standard_error": 0.004815838867736338,
+            "z_score": 181.98283291233696
+          },
+          {
+            "available": true,
+            "connected": 0.0015352800000000277,
+            "depth": 8,
+            "mean": 0.887,
+            "normalized_correlation": 0.013842945156580237,
+            "num_shots": 10000,
+            "probes": [
+              {
+                "probe_index": 19,
+                "probe_name": "c2:rzz_depth_4"
+              }
+            ],
+            "standard_error": 0.004617694229807772,
+            "z_score": 192.08720973214471
+          }
+        ],
+        "location_id": 56,
+        "qubits": [
+          5,
+          6
+        ]
+      }
+    ]
+  }
+}

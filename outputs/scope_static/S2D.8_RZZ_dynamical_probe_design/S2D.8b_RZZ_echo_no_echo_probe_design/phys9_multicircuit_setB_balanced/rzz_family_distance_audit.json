@@ -1,0 +1,65 @@
+{
+  "methods": {
+    "rzz_echo_contrast_features": {
+      "M1__M7": {
+        "center_distance": 20.40899939656072,
+        "margin": -26.441081438934603,
+        "median_radius_left": 22.14649457232512,
+        "median_radius_right": 24.7035862631702
+      },
+      "M1__M8": {
+        "center_distance": 31.89545584809906,
+        "margin": -24.833975642837682,
+        "median_radius_left": 22.14649457232512,
+        "median_radius_right": 34.58293691861162
+      },
+      "M7__M8": {
+        "center_distance": 32.48073878960871,
+        "margin": -26.805784392173116,
+        "median_radius_left": 24.7035862631702,
+        "median_radius_right": 34.58293691861162
+      }
+    },
+    "rzz_echo_probe_only_v3c": {
+      "M1__M7": {
+        "center_distance": 16.069336167367247,
+        "margin": -28.73676809727206,
+        "median_radius_left": 21.023432541606667,
+        "median_radius_right": 23.78267172303264
+      },
+      "M1__M8": {
+        "center_distance": 31.179108098257398,
+        "margin": -22.762633921643772,
+        "median_radius_left": 21.023432541606667,
+        "median_radius_right": 32.9183094782945
+      },
+      "M7__M8": {
+        "center_distance": 29.697804621994575,
+        "margin": -27.003176579332568,
+        "median_radius_left": 23.78267172303264,
+        "median_radius_right": 32.9183094782945
+      }
+    },
+    "scrambled_echo_control": {
+      "M1__M7": {
+        "center_distance": 23.28042069415328,
+        "margin": -24.22030650860777,
+        "median_radius_left": 21.731563917164003,
+        "median_radius_right": 25.769163285597045
+      },
+      "M1__M8": {
+        "center_distance": 31.73188093958048,
+        "margin": -24.234938861959993,
+        "median_radius_left": 21.731563917164003,
+        "median_radius_right": 34.23525588437647
+      },
+      "M7__M8": {
+        "center_distance": 33.47297813349462,
+        "margin": -26.531441036478896,
+        "median_radius_left": 25.769163285597045,
+        "median_radius_right": 34.23525588437647
+      }
+    }
+  },
+  "schema": "scope_static_s2d7_rzz_family_distance_audit_v1"
+}

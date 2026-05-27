@@ -1,0 +1,9 @@
+{
+  "control_requirement": "real minimal intervention must beat scrambled intervention control",
+  "grouped_ceiling_requirement": "primary grouped ceiling must pass for full success",
+  "main_conclusion": "Minimal RZZ intervention probes do not beat controls and do not expose a grouped transferable RZZ-family ceiling.",
+  "next_recommended_step": "S2D.8e stronger benchmarking/tomography-like local channel probes",
+  "phase_label": "minimal_intervention_negative",
+  "schema": "scope_static_s2d8d_phase_summary_v1",
+  "stage": "S2D.8d_RZZ_minimal_intervention_probe"
+}

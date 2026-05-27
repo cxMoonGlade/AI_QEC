@@ -1,0 +1,8675 @@
+{
+  "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+  "num_qubits": 9,
+  "probe_records": [
+    {
+      "base_probe_name": "z_basis",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 0,
+      "probe_name": "c0:z_basis",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "none",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [],
+      "rzz_intervention_edge_parity": "none",
+      "rzz_intervention_family": "none",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "I"
+      },
+      "rzz_intervention_role": "none",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "x_measure",
+      "basis_by_qubit": [
+        "X",
+        "X",
+        "X",
+        "X",
+        "X",
+        "X",
+        "X",
+        "X",
+        "X"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "XX",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 1,
+      "probe_name": "c0:x_measure",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "none",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [],
+      "rzz_intervention_edge_parity": "none",
+      "rzz_intervention_family": "none",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "I"
+      },
+      "rzz_intervention_role": "none",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "y_measure",
+      "basis_by_qubit": [
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "YY",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 2,
+      "probe_name": "c0:y_measure",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "none",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [],
+      "rzz_intervention_edge_parity": "none",
+      "rzz_intervention_family": "none",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "I"
+      },
+      "rzz_intervention_role": "none",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_no_intervention",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 3,
+      "probe_name": "c0:rzz_int_no_intervention",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "none",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            0,
+            1
+          ],
+          "edge_parity": "all",
+          "intervention_family": "baseline",
+          "intervention_role": "no_intervention",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            1,
+            2
+          ],
+          "edge_parity": "all",
+          "intervention_family": "baseline",
+          "intervention_role": "no_intervention",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            2,
+            3
+          ],
+          "edge_parity": "all",
+          "intervention_family": "baseline",
+          "intervention_role": "no_intervention",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            3,
+            4
+          ],
+          "edge_parity": "all",
+          "intervention_family": "baseline",
+          "intervention_role": "no_intervention",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            4,
+            5
+          ],
+          "edge_parity": "all",
+          "intervention_family": "baseline",
+          "intervention_role": "no_intervention",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            5,
+            6
+          ],
+          "edge_parity": "all",
+          "intervention_family": "baseline",
+          "intervention_role": "no_intervention",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            6,
+            7
+          ],
+          "edge_parity": "all",
+          "intervention_family": "baseline",
+          "intervention_role": "no_intervention",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            7,
+            8
+          ],
+          "edge_parity": "all",
+          "intervention_family": "baseline",
+          "intervention_role": "no_intervention",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "all",
+      "rzz_intervention_family": "baseline",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "I"
+      },
+      "rzz_intervention_role": "no_intervention",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_basis_x",
+      "basis_by_qubit": [
+        "X",
+        "X",
+        "X",
+        "X",
+        "X",
+        "X",
+        "X",
+        "X",
+        "X"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "XX",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 4,
+      "probe_name": "c0:rzz_int_basis_x",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "none",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            0,
+            1
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "x",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            1,
+            2
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "x",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            2,
+            3
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "x",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            3,
+            4
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "x",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            4,
+            5
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "x",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            5,
+            6
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "x",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            6,
+            7
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "x",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            7,
+            8
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "x",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "all",
+      "rzz_intervention_family": "basis_rotation",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "I"
+      },
+      "rzz_intervention_role": "x",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_basis_y",
+      "basis_by_qubit": [
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "YY",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 5,
+      "probe_name": "c0:rzz_int_basis_y",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "none",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            0,
+            1
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "y",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            1,
+            2
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "y",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            2,
+            3
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "y",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            3,
+            4
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "y",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            4,
+            5
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "y",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            5,
+            6
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "y",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            6,
+            7
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "y",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            7,
+            8
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "y",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "all",
+      "rzz_intervention_family": "basis_rotation",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "I"
+      },
+      "rzz_intervention_role": "y",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_basis_xz",
+      "basis_by_qubit": [
+        "X",
+        "Z",
+        "X",
+        "Z",
+        "X",
+        "Z",
+        "X",
+        "Z",
+        "X"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "XZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZX",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "XZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZX",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "XZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZX",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "XZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZX",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 6,
+      "probe_name": "c0:rzz_int_basis_xz",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "none",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            0,
+            1
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "xz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            1,
+            2
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "xz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            2,
+            3
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "xz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            3,
+            4
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "xz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            4,
+            5
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "xz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            5,
+            6
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "xz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            6,
+            7
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "xz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            7,
+            8
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "xz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "all",
+      "rzz_intervention_family": "basis_rotation",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "I"
+      },
+      "rzz_intervention_role": "xz",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_basis_yz",
+      "basis_by_qubit": [
+        "Y",
+        "Z",
+        "Y",
+        "Z",
+        "Y",
+        "Z",
+        "Y",
+        "Z",
+        "Y"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "YZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZY",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "YZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZY",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "YZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZY",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "YZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZY",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 7,
+      "probe_name": "c0:rzz_int_basis_yz",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "none",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            0,
+            1
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "yz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            1,
+            2
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "yz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            2,
+            3
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "yz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            3,
+            4
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "yz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            4,
+            5
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "yz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            5,
+            6
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "yz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            6,
+            7
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "yz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            7,
+            8
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "yz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "all",
+      "rzz_intervention_family": "basis_rotation",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "I"
+      },
+      "rzz_intervention_role": "yz",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_twirl_x_left_even",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 8,
+      "probe_name": "c0:rzz_int_twirl_x_left_even",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "even",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            0,
+            1
+          ],
+          "edge_parity": "even",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_x_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            2,
+            3
+          ],
+          "edge_parity": "even",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_x_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            4,
+            5
+          ],
+          "edge_parity": "even",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_x_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            6,
+            7
+          ],
+          "edge_parity": "even",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_x_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "even",
+      "rzz_intervention_family": "pauli_frame_twirl",
+      "rzz_intervention_pauli_frame": {
+        "left": "X",
+        "right": "I"
+      },
+      "rzz_intervention_role": "twirl_x_left",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_twirl_x_left_odd",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 9,
+      "probe_name": "c0:rzz_int_twirl_x_left_odd",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "odd",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            1,
+            2
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_x_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            3,
+            4
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_x_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            5,
+            6
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_x_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            7,
+            8
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_x_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "odd",
+      "rzz_intervention_family": "pauli_frame_twirl",
+      "rzz_intervention_pauli_frame": {
+        "left": "X",
+        "right": "I"
+      },
+      "rzz_intervention_role": "twirl_x_left",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_twirl_y_left_even",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 10,
+      "probe_name": "c0:rzz_int_twirl_y_left_even",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "even",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            0,
+            1
+          ],
+          "edge_parity": "even",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_y_left",
+          "pauli_frame": {
+            "left": "Y",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            2,
+            3
+          ],
+          "edge_parity": "even",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_y_left",
+          "pauli_frame": {
+            "left": "Y",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            4,
+            5
+          ],
+          "edge_parity": "even",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_y_left",
+          "pauli_frame": {
+            "left": "Y",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            6,
+            7
+          ],
+          "edge_parity": "even",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_y_left",
+          "pauli_frame": {
+            "left": "Y",
+            "right": "I"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "even",
+      "rzz_intervention_family": "pauli_frame_twirl",
+      "rzz_intervention_pauli_frame": {
+        "left": "Y",
+        "right": "I"
+      },
+      "rzz_intervention_role": "twirl_y_left",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_twirl_y_left_odd",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 11,
+      "probe_name": "c0:rzz_int_twirl_y_left_odd",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "odd",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            1,
+            2
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_y_left",
+          "pauli_frame": {
+            "left": "Y",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            3,
+            4
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_y_left",
+          "pauli_frame": {
+            "left": "Y",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            5,
+            6
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_y_left",
+          "pauli_frame": {
+            "left": "Y",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            7,
+            8
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_y_left",
+          "pauli_frame": {
+            "left": "Y",
+            "right": "I"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "odd",
+      "rzz_intervention_family": "pauli_frame_twirl",
+      "rzz_intervention_pauli_frame": {
+        "left": "Y",
+        "right": "I"
+      },
+      "rzz_intervention_role": "twirl_y_left",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_twirl_xy_even",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 12,
+      "probe_name": "c0:rzz_int_twirl_xy_even",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "even",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            0,
+            1
+          ],
+          "edge_parity": "even",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_xy",
+          "pauli_frame": {
+            "left": "X",
+            "right": "Y"
+          }
+        },
+        {
+          "edge": [
+            2,
+            3
+          ],
+          "edge_parity": "even",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_xy",
+          "pauli_frame": {
+            "left": "X",
+            "right": "Y"
+          }
+        },
+        {
+          "edge": [
+            4,
+            5
+          ],
+          "edge_parity": "even",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_xy",
+          "pauli_frame": {
+            "left": "X",
+            "right": "Y"
+          }
+        },
+        {
+          "edge": [
+            6,
+            7
+          ],
+          "edge_parity": "even",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_xy",
+          "pauli_frame": {
+            "left": "X",
+            "right": "Y"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "even",
+      "rzz_intervention_family": "pauli_frame_twirl",
+      "rzz_intervention_pauli_frame": {
+        "left": "X",
+        "right": "Y"
+      },
+      "rzz_intervention_role": "twirl_xy",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_twirl_xy_odd",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 13,
+      "probe_name": "c0:rzz_int_twirl_xy_odd",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "odd",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            1,
+            2
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_xy",
+          "pauli_frame": {
+            "left": "X",
+            "right": "Y"
+          }
+        },
+        {
+          "edge": [
+            3,
+            4
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_xy",
+          "pauli_frame": {
+            "left": "X",
+            "right": "Y"
+          }
+        },
+        {
+          "edge": [
+            5,
+            6
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_xy",
+          "pauli_frame": {
+            "left": "X",
+            "right": "Y"
+          }
+        },
+        {
+          "edge": [
+            7,
+            8
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_xy",
+          "pauli_frame": {
+            "left": "X",
+            "right": "Y"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "odd",
+      "rzz_intervention_family": "pauli_frame_twirl",
+      "rzz_intervention_pauli_frame": {
+        "left": "X",
+        "right": "Y"
+      },
+      "rzz_intervention_role": "twirl_xy",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_sign_no_flip",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 14,
+      "probe_name": "c0:rzz_int_sign_no_flip",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "none",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            0,
+            1
+          ],
+          "edge_parity": "all",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_no_flip",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            1,
+            2
+          ],
+          "edge_parity": "all",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_no_flip",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            2,
+            3
+          ],
+          "edge_parity": "all",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_no_flip",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            3,
+            4
+          ],
+          "edge_parity": "all",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_no_flip",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            4,
+            5
+          ],
+          "edge_parity": "all",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_no_flip",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            5,
+            6
+          ],
+          "edge_parity": "all",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_no_flip",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            6,
+            7
+          ],
+          "edge_parity": "all",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_no_flip",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            7,
+            8
+          ],
+          "edge_parity": "all",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_no_flip",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "all",
+      "rzz_intervention_family": "sign_flip_echo",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "I"
+      },
+      "rzz_intervention_role": "sign_no_flip",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_sign_flip_left_even",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 15,
+      "probe_name": "c0:rzz_int_sign_flip_left_even",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "even",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            0,
+            1
+          ],
+          "edge_parity": "even",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            2,
+            3
+          ],
+          "edge_parity": "even",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            4,
+            5
+          ],
+          "edge_parity": "even",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            6,
+            7
+          ],
+          "edge_parity": "even",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "even",
+      "rzz_intervention_family": "sign_flip_echo",
+      "rzz_intervention_pauli_frame": {
+        "left": "X",
+        "right": "I"
+      },
+      "rzz_intervention_role": "sign_flip_left",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_sign_flip_right_even",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 16,
+      "probe_name": "c0:rzz_int_sign_flip_right_even",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "even",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            0,
+            1
+          ],
+          "edge_parity": "even",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_right",
+          "pauli_frame": {
+            "left": "I",
+            "right": "X"
+          }
+        },
+        {
+          "edge": [
+            2,
+            3
+          ],
+          "edge_parity": "even",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_right",
+          "pauli_frame": {
+            "left": "I",
+            "right": "X"
+          }
+        },
+        {
+          "edge": [
+            4,
+            5
+          ],
+          "edge_parity": "even",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_right",
+          "pauli_frame": {
+            "left": "I",
+            "right": "X"
+          }
+        },
+        {
+          "edge": [
+            6,
+            7
+          ],
+          "edge_parity": "even",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_right",
+          "pauli_frame": {
+            "left": "I",
+            "right": "X"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "even",
+      "rzz_intervention_family": "sign_flip_echo",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "X"
+      },
+      "rzz_intervention_role": "sign_flip_right",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_sign_flip_left_odd",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 17,
+      "probe_name": "c0:rzz_int_sign_flip_left_odd",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "odd",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            1,
+            2
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            3,
+            4
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            5,
+            6
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            7,
+            8
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "odd",
+      "rzz_intervention_family": "sign_flip_echo",
+      "rzz_intervention_pauli_frame": {
+        "left": "X",
+        "right": "I"
+      },
+      "rzz_intervention_role": "sign_flip_left",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_sign_flip_right_odd",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 18,
+      "probe_name": "c0:rzz_int_sign_flip_right_odd",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "odd",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            1,
+            2
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_right",
+          "pauli_frame": {
+            "left": "I",
+            "right": "X"
+          }
+        },
+        {
+          "edge": [
+            3,
+            4
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_right",
+          "pauli_frame": {
+            "left": "I",
+            "right": "X"
+          }
+        },
+        {
+          "edge": [
+            5,
+            6
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_right",
+          "pauli_frame": {
+            "left": "I",
+            "right": "X"
+          }
+        },
+        {
+          "edge": [
+            7,
+            8
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_right",
+          "pauli_frame": {
+            "left": "I",
+            "right": "X"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "odd",
+      "rzz_intervention_family": "sign_flip_echo",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "X"
+      },
+      "rzz_intervention_role": "sign_flip_right",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "z_basis",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 19,
+      "probe_name": "c1:z_basis",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "none",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [],
+      "rzz_intervention_edge_parity": "none",
+      "rzz_intervention_family": "none",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "I"
+      },
+      "rzz_intervention_role": "none",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "x_measure",
+      "basis_by_qubit": [
+        "X",
+        "X",
+        "X",
+        "X",
+        "X",
+        "X",
+        "X",
+        "X",
+        "X"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "XX",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 20,
+      "probe_name": "c1:x_measure",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "none",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [],
+      "rzz_intervention_edge_parity": "none",
+      "rzz_intervention_family": "none",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "I"
+      },
+      "rzz_intervention_role": "none",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "y_measure",
+      "basis_by_qubit": [
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "YY",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 21,
+      "probe_name": "c1:y_measure",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "none",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [],
+      "rzz_intervention_edge_parity": "none",
+      "rzz_intervention_family": "none",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "I"
+      },
+      "rzz_intervention_role": "none",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_no_intervention",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 22,
+      "probe_name": "c1:rzz_int_no_intervention",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "none",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            0,
+            1
+          ],
+          "edge_parity": "all",
+          "intervention_family": "baseline",
+          "intervention_role": "no_intervention",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            1,
+            2
+          ],
+          "edge_parity": "all",
+          "intervention_family": "baseline",
+          "intervention_role": "no_intervention",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            2,
+            3
+          ],
+          "edge_parity": "all",
+          "intervention_family": "baseline",
+          "intervention_role": "no_intervention",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            3,
+            4
+          ],
+          "edge_parity": "all",
+          "intervention_family": "baseline",
+          "intervention_role": "no_intervention",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            4,
+            5
+          ],
+          "edge_parity": "all",
+          "intervention_family": "baseline",
+          "intervention_role": "no_intervention",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            5,
+            6
+          ],
+          "edge_parity": "all",
+          "intervention_family": "baseline",
+          "intervention_role": "no_intervention",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            6,
+            7
+          ],
+          "edge_parity": "all",
+          "intervention_family": "baseline",
+          "intervention_role": "no_intervention",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            7,
+            8
+          ],
+          "edge_parity": "all",
+          "intervention_family": "baseline",
+          "intervention_role": "no_intervention",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "all",
+      "rzz_intervention_family": "baseline",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "I"
+      },
+      "rzz_intervention_role": "no_intervention",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_basis_x",
+      "basis_by_qubit": [
+        "X",
+        "X",
+        "X",
+        "X",
+        "X",
+        "X",
+        "X",
+        "X",
+        "X"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "XX",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 23,
+      "probe_name": "c1:rzz_int_basis_x",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "none",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            0,
+            1
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "x",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            1,
+            2
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "x",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            2,
+            3
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "x",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            3,
+            4
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "x",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            4,
+            5
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "x",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            5,
+            6
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "x",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            6,
+            7
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "x",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            7,
+            8
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "x",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "all",
+      "rzz_intervention_family": "basis_rotation",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "I"
+      },
+      "rzz_intervention_role": "x",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_basis_y",
+      "basis_by_qubit": [
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "YY",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 24,
+      "probe_name": "c1:rzz_int_basis_y",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "none",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            0,
+            1
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "y",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            1,
+            2
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "y",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            2,
+            3
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "y",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            3,
+            4
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "y",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            4,
+            5
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "y",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            5,
+            6
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "y",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            6,
+            7
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "y",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            7,
+            8
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "y",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "all",
+      "rzz_intervention_family": "basis_rotation",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "I"
+      },
+      "rzz_intervention_role": "y",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_basis_xz",
+      "basis_by_qubit": [
+        "X",
+        "Z",
+        "X",
+        "Z",
+        "X",
+        "Z",
+        "X",
+        "Z",
+        "X"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "XZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZX",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "XZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZX",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "XZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZX",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "XZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZX",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 25,
+      "probe_name": "c1:rzz_int_basis_xz",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "none",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            0,
+            1
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "xz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            1,
+            2
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "xz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            2,
+            3
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "xz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            3,
+            4
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "xz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            4,
+            5
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "xz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            5,
+            6
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "xz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            6,
+            7
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "xz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            7,
+            8
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "xz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "all",
+      "rzz_intervention_family": "basis_rotation",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "I"
+      },
+      "rzz_intervention_role": "xz",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_basis_yz",
+      "basis_by_qubit": [
+        "Y",
+        "Z",
+        "Y",
+        "Z",
+        "Y",
+        "Z",
+        "Y",
+        "Z",
+        "Y"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "YZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZY",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "YZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZY",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "YZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZY",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "YZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZY",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 26,
+      "probe_name": "c1:rzz_int_basis_yz",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "none",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            0,
+            1
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "yz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            1,
+            2
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "yz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            2,
+            3
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "yz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            3,
+            4
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "yz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            4,
+            5
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "yz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            5,
+            6
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "yz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            6,
+            7
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "yz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            7,
+            8
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "yz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "all",
+      "rzz_intervention_family": "basis_rotation",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "I"
+      },
+      "rzz_intervention_role": "yz",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_twirl_x_left_even",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 27,
+      "probe_name": "c1:rzz_int_twirl_x_left_even",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "even",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            0,
+            1
+          ],
+          "edge_parity": "even",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_x_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            2,
+            3
+          ],
+          "edge_parity": "even",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_x_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            4,
+            5
+          ],
+          "edge_parity": "even",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_x_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            6,
+            7
+          ],
+          "edge_parity": "even",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_x_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "even",
+      "rzz_intervention_family": "pauli_frame_twirl",
+      "rzz_intervention_pauli_frame": {
+        "left": "X",
+        "right": "I"
+      },
+      "rzz_intervention_role": "twirl_x_left",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_twirl_x_left_odd",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 28,
+      "probe_name": "c1:rzz_int_twirl_x_left_odd",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "odd",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            1,
+            2
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_x_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            3,
+            4
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_x_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            5,
+            6
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_x_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            7,
+            8
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_x_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "odd",
+      "rzz_intervention_family": "pauli_frame_twirl",
+      "rzz_intervention_pauli_frame": {
+        "left": "X",
+        "right": "I"
+      },
+      "rzz_intervention_role": "twirl_x_left",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_twirl_y_left_even",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 29,
+      "probe_name": "c1:rzz_int_twirl_y_left_even",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "even",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            0,
+            1
+          ],
+          "edge_parity": "even",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_y_left",
+          "pauli_frame": {
+            "left": "Y",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            2,
+            3
+          ],
+          "edge_parity": "even",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_y_left",
+          "pauli_frame": {
+            "left": "Y",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            4,
+            5
+          ],
+          "edge_parity": "even",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_y_left",
+          "pauli_frame": {
+            "left": "Y",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            6,
+            7
+          ],
+          "edge_parity": "even",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_y_left",
+          "pauli_frame": {
+            "left": "Y",
+            "right": "I"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "even",
+      "rzz_intervention_family": "pauli_frame_twirl",
+      "rzz_intervention_pauli_frame": {
+        "left": "Y",
+        "right": "I"
+      },
+      "rzz_intervention_role": "twirl_y_left",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_twirl_y_left_odd",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 30,
+      "probe_name": "c1:rzz_int_twirl_y_left_odd",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "odd",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            1,
+            2
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_y_left",
+          "pauli_frame": {
+            "left": "Y",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            3,
+            4
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_y_left",
+          "pauli_frame": {
+            "left": "Y",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            5,
+            6
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_y_left",
+          "pauli_frame": {
+            "left": "Y",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            7,
+            8
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_y_left",
+          "pauli_frame": {
+            "left": "Y",
+            "right": "I"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "odd",
+      "rzz_intervention_family": "pauli_frame_twirl",
+      "rzz_intervention_pauli_frame": {
+        "left": "Y",
+        "right": "I"
+      },
+      "rzz_intervention_role": "twirl_y_left",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_twirl_xy_even",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 31,
+      "probe_name": "c1:rzz_int_twirl_xy_even",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "even",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            0,
+            1
+          ],
+          "edge_parity": "even",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_xy",
+          "pauli_frame": {
+            "left": "X",
+            "right": "Y"
+          }
+        },
+        {
+          "edge": [
+            2,
+            3
+          ],
+          "edge_parity": "even",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_xy",
+          "pauli_frame": {
+            "left": "X",
+            "right": "Y"
+          }
+        },
+        {
+          "edge": [
+            4,
+            5
+          ],
+          "edge_parity": "even",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_xy",
+          "pauli_frame": {
+            "left": "X",
+            "right": "Y"
+          }
+        },
+        {
+          "edge": [
+            6,
+            7
+          ],
+          "edge_parity": "even",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_xy",
+          "pauli_frame": {
+            "left": "X",
+            "right": "Y"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "even",
+      "rzz_intervention_family": "pauli_frame_twirl",
+      "rzz_intervention_pauli_frame": {
+        "left": "X",
+        "right": "Y"
+      },
+      "rzz_intervention_role": "twirl_xy",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_twirl_xy_odd",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 32,
+      "probe_name": "c1:rzz_int_twirl_xy_odd",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "odd",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            1,
+            2
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_xy",
+          "pauli_frame": {
+            "left": "X",
+            "right": "Y"
+          }
+        },
+        {
+          "edge": [
+            3,
+            4
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_xy",
+          "pauli_frame": {
+            "left": "X",
+            "right": "Y"
+          }
+        },
+        {
+          "edge": [
+            5,
+            6
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_xy",
+          "pauli_frame": {
+            "left": "X",
+            "right": "Y"
+          }
+        },
+        {
+          "edge": [
+            7,
+            8
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_xy",
+          "pauli_frame": {
+            "left": "X",
+            "right": "Y"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "odd",
+      "rzz_intervention_family": "pauli_frame_twirl",
+      "rzz_intervention_pauli_frame": {
+        "left": "X",
+        "right": "Y"
+      },
+      "rzz_intervention_role": "twirl_xy",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_sign_no_flip",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 33,
+      "probe_name": "c1:rzz_int_sign_no_flip",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "none",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            0,
+            1
+          ],
+          "edge_parity": "all",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_no_flip",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            1,
+            2
+          ],
+          "edge_parity": "all",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_no_flip",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            2,
+            3
+          ],
+          "edge_parity": "all",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_no_flip",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            3,
+            4
+          ],
+          "edge_parity": "all",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_no_flip",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            4,
+            5
+          ],
+          "edge_parity": "all",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_no_flip",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            5,
+            6
+          ],
+          "edge_parity": "all",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_no_flip",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            6,
+            7
+          ],
+          "edge_parity": "all",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_no_flip",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            7,
+            8
+          ],
+          "edge_parity": "all",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_no_flip",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "all",
+      "rzz_intervention_family": "sign_flip_echo",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "I"
+      },
+      "rzz_intervention_role": "sign_no_flip",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_sign_flip_left_even",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 34,
+      "probe_name": "c1:rzz_int_sign_flip_left_even",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "even",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            0,
+            1
+          ],
+          "edge_parity": "even",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            2,
+            3
+          ],
+          "edge_parity": "even",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            4,
+            5
+          ],
+          "edge_parity": "even",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            6,
+            7
+          ],
+          "edge_parity": "even",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "even",
+      "rzz_intervention_family": "sign_flip_echo",
+      "rzz_intervention_pauli_frame": {
+        "left": "X",
+        "right": "I"
+      },
+      "rzz_intervention_role": "sign_flip_left",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_sign_flip_right_even",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 35,
+      "probe_name": "c1:rzz_int_sign_flip_right_even",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "even",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            0,
+            1
+          ],
+          "edge_parity": "even",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_right",
+          "pauli_frame": {
+            "left": "I",
+            "right": "X"
+          }
+        },
+        {
+          "edge": [
+            2,
+            3
+          ],
+          "edge_parity": "even",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_right",
+          "pauli_frame": {
+            "left": "I",
+            "right": "X"
+          }
+        },
+        {
+          "edge": [
+            4,
+            5
+          ],
+          "edge_parity": "even",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_right",
+          "pauli_frame": {
+            "left": "I",
+            "right": "X"
+          }
+        },
+        {
+          "edge": [
+            6,
+            7
+          ],
+          "edge_parity": "even",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_right",
+          "pauli_frame": {
+            "left": "I",
+            "right": "X"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "even",
+      "rzz_intervention_family": "sign_flip_echo",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "X"
+      },
+      "rzz_intervention_role": "sign_flip_right",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_sign_flip_left_odd",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 36,
+      "probe_name": "c1:rzz_int_sign_flip_left_odd",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "odd",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            1,
+            2
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            3,
+            4
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            5,
+            6
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            7,
+            8
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "odd",
+      "rzz_intervention_family": "sign_flip_echo",
+      "rzz_intervention_pauli_frame": {
+        "left": "X",
+        "right": "I"
+      },
+      "rzz_intervention_role": "sign_flip_left",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_sign_flip_right_odd",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 37,
+      "probe_name": "c1:rzz_int_sign_flip_right_odd",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "odd",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            1,
+            2
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_right",
+          "pauli_frame": {
+            "left": "I",
+            "right": "X"
+          }
+        },
+        {
+          "edge": [
+            3,
+            4
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_right",
+          "pauli_frame": {
+            "left": "I",
+            "right": "X"
+          }
+        },
+        {
+          "edge": [
+            5,
+            6
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_right",
+          "pauli_frame": {
+            "left": "I",
+            "right": "X"
+          }
+        },
+        {
+          "edge": [
+            7,
+            8
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_right",
+          "pauli_frame": {
+            "left": "I",
+            "right": "X"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "odd",
+      "rzz_intervention_family": "sign_flip_echo",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "X"
+      },
+      "rzz_intervention_role": "sign_flip_right",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "z_basis",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 38,
+      "probe_name": "c2:z_basis",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "none",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [],
+      "rzz_intervention_edge_parity": "none",
+      "rzz_intervention_family": "none",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "I"
+      },
+      "rzz_intervention_role": "none",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "x_measure",
+      "basis_by_qubit": [
+        "X",
+        "X",
+        "X",
+        "X",
+        "X",
+        "X",
+        "X",
+        "X",
+        "X"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "XX",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 39,
+      "probe_name": "c2:x_measure",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "none",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [],
+      "rzz_intervention_edge_parity": "none",
+      "rzz_intervention_family": "none",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "I"
+      },
+      "rzz_intervention_role": "none",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "y_measure",
+      "basis_by_qubit": [
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "YY",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 40,
+      "probe_name": "c2:y_measure",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "none",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [],
+      "rzz_intervention_edge_parity": "none",
+      "rzz_intervention_family": "none",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "I"
+      },
+      "rzz_intervention_role": "none",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_no_intervention",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 41,
+      "probe_name": "c2:rzz_int_no_intervention",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "none",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            0,
+            1
+          ],
+          "edge_parity": "all",
+          "intervention_family": "baseline",
+          "intervention_role": "no_intervention",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            1,
+            2
+          ],
+          "edge_parity": "all",
+          "intervention_family": "baseline",
+          "intervention_role": "no_intervention",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            2,
+            3
+          ],
+          "edge_parity": "all",
+          "intervention_family": "baseline",
+          "intervention_role": "no_intervention",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            3,
+            4
+          ],
+          "edge_parity": "all",
+          "intervention_family": "baseline",
+          "intervention_role": "no_intervention",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            4,
+            5
+          ],
+          "edge_parity": "all",
+          "intervention_family": "baseline",
+          "intervention_role": "no_intervention",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            5,
+            6
+          ],
+          "edge_parity": "all",
+          "intervention_family": "baseline",
+          "intervention_role": "no_intervention",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            6,
+            7
+          ],
+          "edge_parity": "all",
+          "intervention_family": "baseline",
+          "intervention_role": "no_intervention",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            7,
+            8
+          ],
+          "edge_parity": "all",
+          "intervention_family": "baseline",
+          "intervention_role": "no_intervention",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "all",
+      "rzz_intervention_family": "baseline",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "I"
+      },
+      "rzz_intervention_role": "no_intervention",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_basis_x",
+      "basis_by_qubit": [
+        "X",
+        "X",
+        "X",
+        "X",
+        "X",
+        "X",
+        "X",
+        "X",
+        "X"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "XX",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "XX",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 42,
+      "probe_name": "c2:rzz_int_basis_x",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "none",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            0,
+            1
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "x",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            1,
+            2
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "x",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            2,
+            3
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "x",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            3,
+            4
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "x",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            4,
+            5
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "x",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            5,
+            6
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "x",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            6,
+            7
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "x",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            7,
+            8
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "x",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "all",
+      "rzz_intervention_family": "basis_rotation",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "I"
+      },
+      "rzz_intervention_role": "x",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_basis_y",
+      "basis_by_qubit": [
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y",
+        "Y"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "YY",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "YY",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 43,
+      "probe_name": "c2:rzz_int_basis_y",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "none",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            0,
+            1
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "y",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            1,
+            2
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "y",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            2,
+            3
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "y",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            3,
+            4
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "y",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            4,
+            5
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "y",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            5,
+            6
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "y",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            6,
+            7
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "y",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            7,
+            8
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "y",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "all",
+      "rzz_intervention_family": "basis_rotation",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "I"
+      },
+      "rzz_intervention_role": "y",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_basis_xz",
+      "basis_by_qubit": [
+        "X",
+        "Z",
+        "X",
+        "Z",
+        "X",
+        "Z",
+        "X",
+        "Z",
+        "X"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "XZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZX",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "XZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZX",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "XZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZX",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "XZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZX",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 44,
+      "probe_name": "c2:rzz_int_basis_xz",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "none",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            0,
+            1
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "xz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            1,
+            2
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "xz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            2,
+            3
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "xz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            3,
+            4
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "xz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            4,
+            5
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "xz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            5,
+            6
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "xz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            6,
+            7
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "xz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            7,
+            8
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "xz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "all",
+      "rzz_intervention_family": "basis_rotation",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "I"
+      },
+      "rzz_intervention_role": "xz",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_basis_yz",
+      "basis_by_qubit": [
+        "Y",
+        "Z",
+        "Y",
+        "Z",
+        "Y",
+        "Z",
+        "Y",
+        "Z",
+        "Y"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "YZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZY",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "YZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZY",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "YZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZY",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "YZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZY",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 45,
+      "probe_name": "c2:rzz_int_basis_yz",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "none",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            0,
+            1
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "yz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            1,
+            2
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "yz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            2,
+            3
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "yz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            3,
+            4
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "yz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            4,
+            5
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "yz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            5,
+            6
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "yz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            6,
+            7
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "yz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            7,
+            8
+          ],
+          "edge_parity": "all",
+          "intervention_family": "basis_rotation",
+          "intervention_role": "yz",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "all",
+      "rzz_intervention_family": "basis_rotation",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "I"
+      },
+      "rzz_intervention_role": "yz",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_twirl_x_left_even",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 46,
+      "probe_name": "c2:rzz_int_twirl_x_left_even",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "even",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            0,
+            1
+          ],
+          "edge_parity": "even",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_x_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            2,
+            3
+          ],
+          "edge_parity": "even",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_x_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            4,
+            5
+          ],
+          "edge_parity": "even",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_x_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            6,
+            7
+          ],
+          "edge_parity": "even",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_x_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "even",
+      "rzz_intervention_family": "pauli_frame_twirl",
+      "rzz_intervention_pauli_frame": {
+        "left": "X",
+        "right": "I"
+      },
+      "rzz_intervention_role": "twirl_x_left",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_twirl_x_left_odd",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 47,
+      "probe_name": "c2:rzz_int_twirl_x_left_odd",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "odd",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            1,
+            2
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_x_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            3,
+            4
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_x_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            5,
+            6
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_x_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            7,
+            8
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_x_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "odd",
+      "rzz_intervention_family": "pauli_frame_twirl",
+      "rzz_intervention_pauli_frame": {
+        "left": "X",
+        "right": "I"
+      },
+      "rzz_intervention_role": "twirl_x_left",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_twirl_y_left_even",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 48,
+      "probe_name": "c2:rzz_int_twirl_y_left_even",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "even",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            0,
+            1
+          ],
+          "edge_parity": "even",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_y_left",
+          "pauli_frame": {
+            "left": "Y",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            2,
+            3
+          ],
+          "edge_parity": "even",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_y_left",
+          "pauli_frame": {
+            "left": "Y",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            4,
+            5
+          ],
+          "edge_parity": "even",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_y_left",
+          "pauli_frame": {
+            "left": "Y",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            6,
+            7
+          ],
+          "edge_parity": "even",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_y_left",
+          "pauli_frame": {
+            "left": "Y",
+            "right": "I"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "even",
+      "rzz_intervention_family": "pauli_frame_twirl",
+      "rzz_intervention_pauli_frame": {
+        "left": "Y",
+        "right": "I"
+      },
+      "rzz_intervention_role": "twirl_y_left",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_twirl_y_left_odd",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 49,
+      "probe_name": "c2:rzz_int_twirl_y_left_odd",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "odd",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            1,
+            2
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_y_left",
+          "pauli_frame": {
+            "left": "Y",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            3,
+            4
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_y_left",
+          "pauli_frame": {
+            "left": "Y",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            5,
+            6
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_y_left",
+          "pauli_frame": {
+            "left": "Y",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            7,
+            8
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_y_left",
+          "pauli_frame": {
+            "left": "Y",
+            "right": "I"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "odd",
+      "rzz_intervention_family": "pauli_frame_twirl",
+      "rzz_intervention_pauli_frame": {
+        "left": "Y",
+        "right": "I"
+      },
+      "rzz_intervention_role": "twirl_y_left",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_twirl_xy_even",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 50,
+      "probe_name": "c2:rzz_int_twirl_xy_even",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "even",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            0,
+            1
+          ],
+          "edge_parity": "even",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_xy",
+          "pauli_frame": {
+            "left": "X",
+            "right": "Y"
+          }
+        },
+        {
+          "edge": [
+            2,
+            3
+          ],
+          "edge_parity": "even",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_xy",
+          "pauli_frame": {
+            "left": "X",
+            "right": "Y"
+          }
+        },
+        {
+          "edge": [
+            4,
+            5
+          ],
+          "edge_parity": "even",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_xy",
+          "pauli_frame": {
+            "left": "X",
+            "right": "Y"
+          }
+        },
+        {
+          "edge": [
+            6,
+            7
+          ],
+          "edge_parity": "even",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_xy",
+          "pauli_frame": {
+            "left": "X",
+            "right": "Y"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "even",
+      "rzz_intervention_family": "pauli_frame_twirl",
+      "rzz_intervention_pauli_frame": {
+        "left": "X",
+        "right": "Y"
+      },
+      "rzz_intervention_role": "twirl_xy",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_twirl_xy_odd",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 51,
+      "probe_name": "c2:rzz_int_twirl_xy_odd",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "odd",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            1,
+            2
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_xy",
+          "pauli_frame": {
+            "left": "X",
+            "right": "Y"
+          }
+        },
+        {
+          "edge": [
+            3,
+            4
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_xy",
+          "pauli_frame": {
+            "left": "X",
+            "right": "Y"
+          }
+        },
+        {
+          "edge": [
+            5,
+            6
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_xy",
+          "pauli_frame": {
+            "left": "X",
+            "right": "Y"
+          }
+        },
+        {
+          "edge": [
+            7,
+            8
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "pauli_frame_twirl",
+          "intervention_role": "twirl_xy",
+          "pauli_frame": {
+            "left": "X",
+            "right": "Y"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "odd",
+      "rzz_intervention_family": "pauli_frame_twirl",
+      "rzz_intervention_pauli_frame": {
+        "left": "X",
+        "right": "Y"
+      },
+      "rzz_intervention_role": "twirl_xy",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_sign_no_flip",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 52,
+      "probe_name": "c2:rzz_int_sign_no_flip",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "none",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            0,
+            1
+          ],
+          "edge_parity": "all",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_no_flip",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            1,
+            2
+          ],
+          "edge_parity": "all",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_no_flip",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            2,
+            3
+          ],
+          "edge_parity": "all",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_no_flip",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            3,
+            4
+          ],
+          "edge_parity": "all",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_no_flip",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            4,
+            5
+          ],
+          "edge_parity": "all",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_no_flip",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            5,
+            6
+          ],
+          "edge_parity": "all",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_no_flip",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            6,
+            7
+          ],
+          "edge_parity": "all",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_no_flip",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            7,
+            8
+          ],
+          "edge_parity": "all",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_no_flip",
+          "pauli_frame": {
+            "left": "I",
+            "right": "I"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "all",
+      "rzz_intervention_family": "sign_flip_echo",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "I"
+      },
+      "rzz_intervention_role": "sign_no_flip",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_sign_flip_left_even",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 53,
+      "probe_name": "c2:rzz_int_sign_flip_left_even",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "even",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            0,
+            1
+          ],
+          "edge_parity": "even",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            2,
+            3
+          ],
+          "edge_parity": "even",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            4,
+            5
+          ],
+          "edge_parity": "even",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            6,
+            7
+          ],
+          "edge_parity": "even",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "even",
+      "rzz_intervention_family": "sign_flip_echo",
+      "rzz_intervention_pauli_frame": {
+        "left": "X",
+        "right": "I"
+      },
+      "rzz_intervention_role": "sign_flip_left",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_sign_flip_right_even",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 54,
+      "probe_name": "c2:rzz_int_sign_flip_right_even",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "even",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            0,
+            1
+          ],
+          "edge_parity": "even",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_right",
+          "pauli_frame": {
+            "left": "I",
+            "right": "X"
+          }
+        },
+        {
+          "edge": [
+            2,
+            3
+          ],
+          "edge_parity": "even",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_right",
+          "pauli_frame": {
+            "left": "I",
+            "right": "X"
+          }
+        },
+        {
+          "edge": [
+            4,
+            5
+          ],
+          "edge_parity": "even",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_right",
+          "pauli_frame": {
+            "left": "I",
+            "right": "X"
+          }
+        },
+        {
+          "edge": [
+            6,
+            7
+          ],
+          "edge_parity": "even",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_right",
+          "pauli_frame": {
+            "left": "I",
+            "right": "X"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "even",
+      "rzz_intervention_family": "sign_flip_echo",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "X"
+      },
+      "rzz_intervention_role": "sign_flip_right",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_sign_flip_left_odd",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 55,
+      "probe_name": "c2:rzz_int_sign_flip_left_odd",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "odd",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            1,
+            2
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            3,
+            4
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            5,
+            6
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        },
+        {
+          "edge": [
+            7,
+            8
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_left",
+          "pauli_frame": {
+            "left": "X",
+            "right": "I"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "odd",
+      "rzz_intervention_family": "sign_flip_echo",
+      "rzz_intervention_pauli_frame": {
+        "left": "X",
+        "right": "I"
+      },
+      "rzz_intervention_role": "sign_flip_left",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    },
+    {
+      "base_probe_name": "rzz_int_sign_flip_right_odd",
+      "basis_by_qubit": [
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z",
+        "Z"
+      ],
+      "edge_orientation_rule": "lower_qubit_to_higher_qubit",
+      "measurable_edge_pairs": [
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            0,
+            1
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            1,
+            2
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            2,
+            3
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            3,
+            4
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            4,
+            5
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            5,
+            6
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            6,
+            7
+          ]
+        },
+        {
+          "basis_pair": "ZZ",
+          "edge": [
+            7,
+            8
+          ]
+        }
+      ],
+      "probe_index": 56,
+      "probe_name": "c2:rzz_int_sign_flip_right_odd",
+      "rzz_depth": 1,
+      "rzz_echo_edge_pairs": [],
+      "rzz_echo_edge_parity": "odd",
+      "rzz_echo_role": "none",
+      "rzz_intervention_edge_pairs": [
+        {
+          "edge": [
+            1,
+            2
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_right",
+          "pauli_frame": {
+            "left": "I",
+            "right": "X"
+          }
+        },
+        {
+          "edge": [
+            3,
+            4
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_right",
+          "pauli_frame": {
+            "left": "I",
+            "right": "X"
+          }
+        },
+        {
+          "edge": [
+            5,
+            6
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_right",
+          "pauli_frame": {
+            "left": "I",
+            "right": "X"
+          }
+        },
+        {
+          "edge": [
+            7,
+            8
+          ],
+          "edge_parity": "odd",
+          "intervention_family": "sign_flip_echo",
+          "intervention_role": "sign_flip_right",
+          "pauli_frame": {
+            "left": "I",
+            "right": "X"
+          }
+        }
+      ],
+      "rzz_intervention_edge_parity": "odd",
+      "rzz_intervention_family": "sign_flip_echo",
+      "rzz_intervention_pauli_frame": {
+        "left": "I",
+        "right": "X"
+      },
+      "rzz_intervention_role": "sign_flip_right",
+      "source": "visible_circuit_schedule",
+      "uses_exact_ptm": false,
+      "uses_exact_teacher_channel": false,
+      "uses_oracle_label": false
+    }
+  ],
+  "probe_set_role": "learner_visible_measurement_metadata",
+  "schema": "scope_static_s2d_active_probe_manifest_v1"
+}

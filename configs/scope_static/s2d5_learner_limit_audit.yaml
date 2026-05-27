@@ -1,0 +1,11 @@
+run:
+  name: s2d5_learner_limit_audit_and_representation_v2
+  output_root: outputs/scope_static
+
+s2d5_learner_limit_audit:
+  phys4_dir: outputs/scope_static/S2D_PHYS4_difficulty_expansion
+  output_dir: outputs/scope_static/S2D.5_learner_limit_audit_and_representation_v2
+  runs:
+    - phys5_setB
+    - phys9_setB
+    - phys9_setC
