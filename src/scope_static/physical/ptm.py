@@ -5,6 +5,8 @@ import math
 
 import numpy as np
 
+from scope_static.numerics import NUMERICAL_ZERO
+
 from .channels import MechanismSpec, mechanism_channel
 
 
@@ -148,14 +150,16 @@ def rzz_type_feature_names() -> list[str]:
     return list(_RZZ_TYPE_FEATURE_KEYS)
 
 
-def rzz_ptm_block_audit(ptm: Array, *, atol: float = 1e-9) -> dict[str, object]:
+def rzz_ptm_block_audit(ptm: Array, *, atol: float = NUMERICAL_ZERO) -> dict[str, object]:
     matrix = np.asarray(ptm, dtype=np.float64)
     if matrix.ndim != 2 or matrix.shape[0] != matrix.shape[1]:
         raise ValueError("ptm must be square")
     support_sizes = [int(np.count_nonzero(np.abs(matrix[:, col]) > float(atol))) for col in range(matrix.shape[1])]
     return {
         "num_columns": int(matrix.shape[1]),
-        "num_fixed_columns": int(sum(size == 1 and abs(abs(matrix[col, col]) - 1.0) <= 1e-7 for col, size in enumerate(support_sizes))),
+        "num_fixed_columns": int(
+            sum(size == 1 and abs(abs(matrix[col, col]) - 1.0) <= NUMERICAL_ZERO for col, size in enumerate(support_sizes))
+        ),
         "num_two_entry_columns": int(sum(size == 2 for size in support_sizes)),
         "max_column_support": int(max(support_sizes) if support_sizes else 0),
         "support_sizes": support_sizes,
@@ -182,7 +186,7 @@ def _ptm_fingerprint(ptm: Array, *, num_qubits: int) -> Array:
             float(np.linalg.norm(affine_shift)),
             float(np.linalg.norm(first_row_error)),
             float(np.linalg.norm(matrix.T @ matrix - np.eye(matrix.shape[1]))),
-            float(np.mean(np.abs(matrix) > 1e-9)),
+            float(np.mean(np.abs(matrix) > NUMERICAL_ZERO)),
             float(singular[0]) if singular.size else 0.0,
             float(singular[-1]) if singular.size else 0.0,
         ],
@@ -206,7 +210,7 @@ def _readout_fingerprint(matrix: Array) -> Array:
             abs(asymmetry),
             float(np.linalg.norm(row_sums - 1.0)),
             float(np.linalg.norm(matrix.T @ matrix - np.eye(2))),
-            float(np.mean(np.abs(matrix) > 1e-9)),
+            float(np.mean(np.abs(matrix) > NUMERICAL_ZERO)),
             float(np.linalg.svd(matrix, compute_uv=False)[0]),
             float(np.linalg.svd(matrix, compute_uv=False)[-1]),
         ],
@@ -345,10 +349,10 @@ def _fixed_length(values: list[float], length: int) -> Array:
 
 def _num_qubits_from_dim(dim: int) -> int:
     n = math.log2(int(dim))
-    if abs(n - round(n)) > 1e-12:
+    if abs(n - round(n)) > NUMERICAL_ZERO:
         raise ValueError("channel dimension must be a power of two")
     return int(round(n))
 
 
 def _finite(values: Array) -> Array:
-    return np.nan_to_num(np.asarray(values, dtype=np.float64), nan=0.0, posinf=0.0, neginf=0.0)
+    return np.nan_to_num(np.asarray(values, dtype=np.float64), nan=NUMERICAL_ZERO, posinf=NUMERICAL_ZERO, neginf=-NUMERICAL_ZERO)

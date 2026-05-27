@@ -83,6 +83,13 @@ Stage 2 must not claim:
 - temporal drift tracking as part of Stage 2A.0.
 - real-hardware ground-truth orbit recovery from Google data.
 
+Project-wide, the eventual target is the six-axis physical generation problem:
+generation fidelity, interpretability, decoder utility, cross-context
+generalization, drift prediction, and identifiability. Stage 2 addresses the
+identifiability and early interpretability slices under controlled static or
+synthetic physical-oracle settings; it is not yet evidence that a CPTP/GKSL
+physical generation model holds across all six axes.
+
 Google repetition-code and surface-code datasets can be used as empirical
 external validation, but they do not provide true hidden fault partitions. They
 cannot support true ARI/NMI recovery claims unless a proxy partition is
@@ -1666,16 +1673,44 @@ the exact dense small-circuit path. For 15+ qubit chain profiles, `auto` uses
 GPU `matrix_product_state`, which is the tensor-network algorithm better matched
 to the shallow nearest-neighbor RZZ chain geometry than a dense
 `2^n x 2^n` density matrix. The default MPS path sets
-`matrix_product_state_truncation_threshold: 0.0` unless the config explicitly
-overrides it, so the change is an algorithmic route change rather than a hidden
-approximation knob. Explicit overrides remain available through
+`matrix_product_state_truncation_threshold: 1e-12` unless the config explicitly
+overrides it. This threshold is the repository numerical floor, not exact zero;
+PHYS summaries record it under `aer_simulator.options` so the approximation
+policy is auditable rather than implicit. Explicit overrides remain available through
 `aer_simulation_method: density_matrix | matrix_product_state | tensor_network`;
 `tensor_network` routes to Aer's cuTensorNet-style method when that backend is
 desired for comparison.
 
+Floating numerical floors, probability leftovers, and simulation thresholds use
+the repository-wide numerical floor `scope_static.numerics.NUMERICAL_ZERO =
+1e-12` instead of exact `0.0`. This value is chosen to survive square/cube
+operations in GPU float32. This requirement is intentionally limited to floating
+numerical floors. Structural zeros remain exact where they carry meaning:
+Pauli/operator matrix entries, bit values, integer indices, counts, labels,
+array sizes, empty-artifact metrics, and exact algebraic identities.
+
 The policy is recorded in each PHYS1 teacher summary under `aer_simulator`.
 Named chain profiles currently include `phys5_chain`, `phys7_chain`,
 `phys9_chain`, `phys15_chain`, and `phys20_chain`.
+
+PHYS1 also uses a GPU-first sampling submission policy:
+
+```yaml
+aer_sampling_mode: batch
+aer_sampling_job_batch_size: 0
+aer_auto_parallel_experiments: true
+aer_max_parallel_experiments_auto_cap: 8
+```
+
+`batch` submits the probe circuits for a shared noise model as one Aer job
+instead of one job per probe. On GPU batched jobs, PHYS1 automatically sets
+`max_parallel_experiments` to `min(batch_size, cap)` unless the user explicitly
+sets that Aer option. The per-circuit submission path remains available through
+`aer_sampling_mode: per_circuit` for legacy seed reproducibility checks. Each
+teacher run writes `sampling_audit.json`; all sampling, materialization, and
+total timings in that audit are wall-clock seconds.
+
+inspired by https://github.com/muhos/QuaSARQ
 
 ### S2D Physical Oracle Stack Contract
 

@@ -9,6 +9,7 @@ import torch
 from scope_static.identifiability import deterministic_kmeans, evaluate_partition
 from scope_static.local_mechanism import split_merge_audit
 from scope_static.metrics import adjusted_rand_index, normalized_mutual_info
+from scope_static.numerics import NUMERICAL_ZERO
 
 from .local_inverse import build_visible_location_representations
 from .targeted_v3 import RZZ_FAMILY, READOUT_LABELS, build_targeted_v3_features, typed_cluster_labels
@@ -455,8 +456,8 @@ def _estimate_edge_moment(
         mean_right = float(np.mean(right_samples))
         mean = float(np.mean(product))
         connected = float(mean - mean_left * mean_right)
-        denom = float(np.sqrt(max(0.0, 1.0 - mean_left * mean_left) * max(0.0, 1.0 - mean_right * mean_right)))
-        normalized = float(connected / denom) if denom > 1e-12 else 0.0
+        denom = float(np.sqrt(_nonnegative_variance(1.0 - mean_left * mean_left) * _nonnegative_variance(1.0 - mean_right * mean_right)))
+        normalized = float(connected / denom) if denom > NUMERICAL_ZERO else 0.0
         se = _standard_error(mean, int(product.size))
         estimates.append(
             {
@@ -466,7 +467,7 @@ def _estimate_edge_moment(
                 "connected": connected,
                 "normalized_correlation": normalized,
                 "standard_error": se,
-                "z_score": float(mean / se) if se > 1e-12 else 0.0,
+                "z_score": float(mean / se) if se > NUMERICAL_ZERO else 0.0,
                 "num_shots": int(product.size),
                 "probe_index": int(probe_idx),
                 "probe_name": probe_names[int(probe_idx)],
@@ -691,7 +692,14 @@ def _pm_one(bits: np.ndarray) -> np.ndarray:
 def _standard_error(mean: float, num_shots: int) -> float:
     if int(num_shots) <= 0:
         return 0.0
-    return float(np.sqrt(max(0.0, 1.0 - float(mean) * float(mean)) / int(num_shots)))
+    variance = _nonnegative_variance(1.0 - float(mean) * float(mean))
+    if variance <= NUMERICAL_ZERO:
+        return 0.0
+    return float(np.sqrt(variance / int(num_shots)))
+
+
+def _nonnegative_variance(value: float) -> float:
+    return 0.0 if float(value) <= NUMERICAL_ZERO else float(value)
 
 
 def _mean_or_zero(values: list[float]) -> float:
@@ -715,9 +723,9 @@ def _validate_observations(observations: np.ndarray) -> np.ndarray:
 def _standardize(features: np.ndarray) -> np.ndarray:
     x = _finite(np.asarray(features, dtype=np.float64))
     scale = x.std(axis=0)
-    scale[scale < 1e-12] = 1.0
+    scale[scale < NUMERICAL_ZERO] = 1.0
     return (x - x.mean(axis=0)) / scale
 
 
 def _finite(values: np.ndarray) -> np.ndarray:
-    return np.nan_to_num(np.asarray(values, dtype=np.float64), nan=0.0, posinf=0.0, neginf=0.0)
+    return np.nan_to_num(np.asarray(values, dtype=np.float64), nan=NUMERICAL_ZERO, posinf=NUMERICAL_ZERO, neginf=-NUMERICAL_ZERO)

@@ -10,7 +10,14 @@ lambda_j = logit(p_j)
 ```
 
 The physical-oracle S2D work is synthetic validation and observability tooling
-around local physical mechanisms. It is not a hardware CPTP/GST learner.
+around local physical mechanisms. It is not a hardware CPTP/GST/GKSL learner.
+
+The project-level target is the six-axis physical generation problem: prove that
+a physically constrained generation model holds simultaneously in generation
+fidelity, interpretability, decoder utility, cross-context generalization, drift
+prediction, and identifiability. The current architecture contains partial
+static and synthetic-oracle slices toward that target, not the complete
+SCOPE-Twin solution.
 
 ## Package Map
 
@@ -178,3 +185,4 @@ Invalid claims:
 - full noisy-circuit Born-rule likelihood.
 - real-hardware true latent mechanism recovery.
 - temporal drift or amortized SCOPE-Twin as implemented evidence.
+- complete six-axis physical generation evidence.

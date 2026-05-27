@@ -4,6 +4,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from scope_static.numerics import NUMERICAL_ZERO
+
 from .generator_space_calibration import (
     GENERATOR_CORE,
     blockwise_decision_metrics,
@@ -234,9 +236,9 @@ def generator_invariants_from_coordinates(
         "affine_nonunital_norm": affine,
         "nonunital_to_total": float(affine / (total + affine + float(eps))),
         "unitarity_R_error": u_error,
-        "unitarity_loss_R_error": float(1.0 - np.clip(u_error, 0.0, 1.0)),
+        "unitarity_loss_R_error": float(1.0 - np.clip(u_error, NUMERICAL_ZERO, 1.0)),
         "unitarity_R_est": u_est,
-        "unitarity_loss_R_est": float(1.0 - np.clip(u_est, 0.0, 1.0)),
+        "unitarity_loss_R_est": float(1.0 - np.clip(u_est, NUMERICAL_ZERO, 1.0)),
     }
 
 
@@ -457,9 +459,9 @@ def _extract_invariant_rows(run_record: dict[str, object], *, eps: float, seed: 
         invariants = generator_invariants_from_coordinates(features, r_error=r_error, r_est=r_est, eps=float(eps))
         scrambled_invariants = generator_invariants_from_coordinates(scrambled_features, r_error=None, r_est=None, eps=float(eps))
         scrambled_invariants["unitarity_R_error"] = float(perm_error[idx]) if idx < perm_error.size else 0.0
-        scrambled_invariants["unitarity_loss_R_error"] = float(1.0 - np.clip(scrambled_invariants["unitarity_R_error"], 0.0, 1.0))
+        scrambled_invariants["unitarity_loss_R_error"] = float(1.0 - np.clip(scrambled_invariants["unitarity_R_error"], NUMERICAL_ZERO, 1.0))
         scrambled_invariants["unitarity_R_est"] = float(perm_est[idx]) if idx < perm_est.size else 0.0
-        scrambled_invariants["unitarity_loss_R_est"] = float(1.0 - np.clip(scrambled_invariants["unitarity_R_est"], 0.0, 1.0))
+        scrambled_invariants["unitarity_loss_R_est"] = float(1.0 - np.clip(scrambled_invariants["unitarity_R_est"], NUMERICAL_ZERO, 1.0))
         invariant_rows.append([float(invariants[name]) for name in INVARIANT_FEATURES])
         scrambled_invariant_rows.append([float(scrambled_invariants[name]) for name in INVARIANT_FEATURES])
         qubits = [int(value) for value in ptm.get("qubits", [])] if isinstance(ptm.get("qubits", []), list) else []
@@ -520,4 +522,4 @@ def _skipped_invariant_ablation(feature_blocks: dict[str, FeatureBlock]) -> dict
 
 
 def _finite(values: np.ndarray) -> np.ndarray:
-    return np.nan_to_num(np.asarray(values, dtype=np.float64), nan=0.0, posinf=0.0, neginf=0.0)
+    return np.nan_to_num(np.asarray(values, dtype=np.float64), nan=NUMERICAL_ZERO, posinf=NUMERICAL_ZERO, neginf=-NUMERICAL_ZERO)

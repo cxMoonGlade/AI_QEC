@@ -10,6 +10,8 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 
+from scope_static.numerics import NUMERICAL_ZERO
+
 from .targeted_v3 import RZZ_FAMILY
 
 
@@ -477,14 +479,14 @@ def _predict_balanced_logistic(model: dict[str, object], x_test: np.ndarray, *, 
     if model.get("kind") == "constant":
         prob = np.zeros((x.shape[0], int(num_classes)), dtype=np.float64)
         prob[:, int(model.get("class", 0))] = 1.0
-        return np.log(np.clip(prob, 1e-12, 1.0)), prob
+        return np.log(np.clip(prob, NUMERICAL_ZERO, 1.0)), prob
     clf = model["classifier"]
     classes = np.asarray(model["classes"], dtype=np.int64)
     local_prob = np.asarray(clf.predict_proba(x), dtype=np.float64)
     prob = np.zeros((x.shape[0], int(num_classes)), dtype=np.float64)
     for local_idx, class_idx in enumerate(classes.tolist()):
         prob[:, int(class_idx)] = local_prob[:, int(local_idx)]
-    return np.log(np.clip(prob, 1e-12, 1.0)), prob
+    return np.log(np.clip(prob, NUMERICAL_ZERO, 1.0)), prob
 
 
 def _classification_metrics(y_true: np.ndarray, y_pred: np.ndarray, prob: np.ndarray, class_names: list[str]) -> dict[str, object]:
@@ -614,7 +616,7 @@ def _softmax(logits: np.ndarray) -> np.ndarray:
     x = np.asarray(logits, dtype=np.float64)
     x = x - np.max(x, axis=1, keepdims=True)
     exp = np.exp(x)
-    return exp / np.maximum(np.sum(exp, axis=1, keepdims=True), 1e-12)
+    return exp / np.maximum(np.sum(exp, axis=1, keepdims=True), NUMERICAL_ZERO)
 
 
 def _ci95(values: Iterable[float]) -> dict[str, float | int | None]:

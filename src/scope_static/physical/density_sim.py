@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import numpy as np
 
+from scope_static.numerics import NUMERICAL_ZERO
+
 
 Array = np.ndarray
 
@@ -27,9 +29,9 @@ def measurement_probabilities_z(rho: Array, num_qubits: int | None = None) -> Ar
     if num_qubits is not None and dim != 2 ** int(num_qubits):
         raise ValueError("rho dimension does not match num_qubits")
     probs = np.real(np.diag(state)).astype(np.float64)
-    probs = np.clip(probs, 0.0, None)
+    probs = np.clip(probs, NUMERICAL_ZERO, None)
     total = float(probs.sum())
-    if total <= 0.0:
+    if total <= NUMERICAL_ZERO:
         raise ValueError("density matrix has zero measurement weight")
     return probs / total
 

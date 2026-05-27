@@ -5,6 +5,8 @@ from typing import Iterable
 
 import numpy as np
 
+from scope_static.numerics import NUMERICAL_ZERO
+
 from .generator_invariant_calibration import INVARIANT_FEATURES, generator_invariants_from_coordinates, ptm_unitarity
 from .generator_space_calibration import GENERATOR_CORE, grouped_mahalanobis_prototype, residualize_by_design
 from .local_pauli_lindblad import PAULI_LABELS
@@ -842,13 +844,13 @@ def _record_features(record: dict[str, object], observations: np.ndarray, probe_
     features.update(invariants)
     error = abs(float(features.get("delta_norm", 0.0)))
     total = abs(float(features.get("generator_total", 0.0)))
-    snr = total / max(1e-9, error)
+    snr = total / max(NUMERICAL_ZERO, error)
     features.update(
         {
             "fit_residual_or_reconstruction_error": error,
             "feature_snr": snr,
             "feature_confidence": float(snr / (1.0 + snr)),
-            "low_confidence_flag": float(total < 1e-8 or snr < 0.05),
+            "low_confidence_flag": float(total < NUMERICAL_ZERO or snr < 0.05),
         }
     )
     qubits = [int(value) for value in record.get("qubits", [])]
@@ -886,7 +888,7 @@ def _single_qubit_response_features(record: dict[str, object], observations: np.
     z = _probe_mean(probe_names, observations, indices, q, "z")
     x = _probe_mean(probe_names, observations, indices, q, "x")
     y = _probe_mean(probe_names, observations, indices, q, "y")
-    p = np.clip(means, 1e-6, 1.0 - 1e-6)
+    p = np.clip(means, NUMERICAL_ZERO, 1.0 - NUMERICAL_ZERO)
     entropy = float(np.mean(-(p * np.log(p) + (1.0 - p) * np.log(1.0 - p))))
     return {
         "sq_response_mean": float(np.mean(means)),
@@ -918,7 +920,7 @@ def _readout_features(record: dict[str, object], observations: np.ndarray, probe
     x = _probe_mean(probe_names, observations, indices, q, "x")
     y = _probe_mean(probe_names, observations, indices, q, "y")
     strength = float(np.linalg.norm(means))
-    p = np.clip(means, 1e-6, 1.0 - 1e-6)
+    p = np.clip(means, NUMERICAL_ZERO, 1.0 - NUMERICAL_ZERO)
     entropy = float(np.mean(-(p * np.log(p) + (1.0 - p) * np.log(1.0 - p))))
     return {
         "readout_shape_norm": float(np.linalg.norm(centered)),
@@ -947,7 +949,7 @@ def _prep_features(record: dict[str, object], observations: np.ndarray, probe_na
         "prep_axis_bias_z": float(prep_axis[2]),
         "initial_state_affine_shift": float(np.linalg.norm(prep_axis)),
         "reset_prep_asymmetry": float(z_plus - (1.0 - z_minus)),
-        "prep_confidence_proxy": float(np.linalg.norm(prep_axis) / max(1e-9, np.std(prep_axis) + 1e-9)),
+        "prep_confidence_proxy": float(np.linalg.norm(prep_axis) / max(NUMERICAL_ZERO, np.std(prep_axis) + NUMERICAL_ZERO)),
     }
 
 
@@ -1137,7 +1139,7 @@ def _feature_margin(labels: list[str], features: np.ndarray, feature_names: list
         return {"available": False}
     diff = np.mean(features[left_mask], axis=0) - np.mean(features[right_mask], axis=0)
     pooled = np.sqrt(0.5 * (np.var(features[left_mask], axis=0) + np.var(features[right_mask], axis=0)))
-    z = diff / np.maximum(pooled, 1e-9)
+    z = diff / np.maximum(pooled, NUMERICAL_ZERO)
     return {"available": True, "z_margin": float(np.linalg.norm(z)), "top_feature": str(feature_names[int(np.argmax(np.abs(z)))])}
 
 
@@ -1195,7 +1197,7 @@ def _skipped_head(model: str, class_names: list[str]) -> dict[str, object]:
 
 def _standardize_train_test(x_train: np.ndarray, x_test: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     mean = np.mean(x_train, axis=0, keepdims=True)
-    std = np.maximum(np.std(x_train, axis=0, keepdims=True), 1e-9)
+    std = np.maximum(np.std(x_train, axis=0, keepdims=True), NUMERICAL_ZERO)
     return (x_train - mean) / std, (x_test - mean) / std
 
 
@@ -1219,7 +1221,7 @@ def _distribution(values: np.ndarray) -> dict[str, float | int]:
 
 def _snr(values: np.ndarray) -> float:
     arr = _finite(np.asarray(values, dtype=np.float64))
-    return float(abs(np.mean(arr)) / max(np.std(arr), 1e-9)) if arr.size else 0.0
+    return float(abs(np.mean(arr)) / max(np.std(arr), NUMERICAL_ZERO)) if arr.size else 0.0
 
 
 def _counts(values: Iterable[object]) -> dict[str, int]:
@@ -1236,4 +1238,4 @@ def _mechanism_sort_key(name: str) -> tuple[int, str]:
 
 
 def _finite(values: np.ndarray) -> np.ndarray:
-    return np.nan_to_num(np.asarray(values, dtype=np.float64), nan=0.0, posinf=0.0, neginf=0.0)
+    return np.nan_to_num(np.asarray(values, dtype=np.float64), nan=NUMERICAL_ZERO, posinf=NUMERICAL_ZERO, neginf=-NUMERICAL_ZERO)

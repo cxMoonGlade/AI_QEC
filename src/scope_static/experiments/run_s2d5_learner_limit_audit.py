@@ -10,6 +10,7 @@ import yaml
 
 from scope_static.identifiability import deterministic_kmeans, evaluate_partition
 from scope_static.local_mechanism import split_merge_audit
+from scope_static.numerics import NUMERICAL_ZERO
 from scope_static.physical.channels import MechanismSpec
 from scope_static.physical.local_inverse import (
     _train_heldout_observations,
@@ -385,8 +386,8 @@ def _cluster_centers(train: np.ndarray, labels: np.ndarray, k: int) -> np.ndarra
 
 
 def _prediction_record(target: np.ndarray, prediction: np.ndarray) -> dict[str, object]:
-    q = np.clip(np.asarray(target, dtype=np.float64), 0.0, 1.0)
-    p = np.clip(np.asarray(prediction, dtype=np.float64), 1e-6, 1.0 - 1e-6)
+    q = np.clip(np.asarray(target, dtype=np.float64), NUMERICAL_ZERO, 1.0)
+    p = np.clip(np.asarray(prediction, dtype=np.float64), NUMERICAL_ZERO, 1.0 - NUMERICAL_ZERO)
     error = q - p
     return {
         "nll": float(-np.mean(q * np.log(p) + (1.0 - q) * np.log(1.0 - p))),
@@ -552,7 +553,7 @@ def _spec_from_record(record: dict[str, object]) -> MechanismSpec:
 
 
 def _bernoulli_entropy(target: np.ndarray) -> float:
-    q = np.clip(np.asarray(target, dtype=np.float64), 1e-6, 1.0 - 1e-6)
+    q = np.clip(np.asarray(target, dtype=np.float64), NUMERICAL_ZERO, 1.0 - NUMERICAL_ZERO)
     return float(-np.mean(q * np.log(q) + (1.0 - q) * np.log(1.0 - q)))
 
 

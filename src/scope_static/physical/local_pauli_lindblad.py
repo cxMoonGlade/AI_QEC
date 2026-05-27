@@ -5,6 +5,8 @@ from typing import Iterable
 
 import numpy as np
 
+from scope_static.numerics import NUMERICAL_ZERO, positive_floor, probability_floor
+
 from .channels import correlated_relaxation_kraus, pauli_stochastic_kraus, rxx_unitary, ryy_unitary, rzz_unitary
 from .ptm import pauli_basis, ptm_from_kraus, ptm_from_unitary
 from .teacher import (
@@ -181,7 +183,7 @@ def reconstruct_record_local_ptm(
     vout = np.stack(output_vectors, axis=1)
     if used == 0:
         return _empty_reconstruction(ideal)
-    r_est = _finite(vout @ np.linalg.pinv(vin, rcond=max(1e-12, float(ridge))))
+    r_est = _finite(vout @ np.linalg.pinv(vin, rcond=max(NUMERICAL_ZERO, float(ridge))))
     r_error = local_error_ptm_from_observed(r_est, ideal, error_order="post_ideal")
     delta = _finite(r_error - np.eye(len(PAULI_LABELS), dtype=np.float64))
     return {
@@ -212,7 +214,7 @@ def fit_generator_coordinates(r_error: np.ndarray, *, jacobian: np.ndarray | Non
     log_info = _logm_safe(np.asarray(r_error, dtype=np.float64))
     coord = {name: float(coeff[idx]) for idx, name in enumerate(GENERATOR_COORDINATES)}
     diag_cov = np.diag(np.linalg.pinv(lhs))
-    stderr = {name: float(np.sqrt(max(0.0, diag_cov[idx]))) for idx, name in enumerate(GENERATOR_COORDINATES)}
+    stderr = {name: float(np.sqrt(positive_floor(diag_cov[idx]))) for idx, name in enumerate(GENERATOR_COORDINATES)}
     return {
         "schema": "scope_static_s2d9_generator_coordinates_v1",
         "official_target": "R_error_minus_I",
@@ -280,7 +282,7 @@ def observability_rank_metrics(jacobian: np.ndarray) -> dict[str, object]:
                 continue
             a, b = j[:, i], j[:, k]
             denom = float(np.linalg.norm(a) * np.linalg.norm(b))
-            cosine = 0.0 if denom <= 1e-15 else float(np.dot(a, b) / denom)
+            cosine = NUMERICAL_ZERO if denom <= NUMERICAL_ZERO else float(np.dot(a, b) / denom)
             angle = float(np.degrees(np.arccos(np.clip(cosine, -1.0, 1.0))))
             key = f"{left}/{right}"
             angles[key] = {"cosine": cosine, "abs_cosine": abs(cosine), "angle_degrees": angle}
@@ -293,7 +295,7 @@ def observability_rank_metrics(jacobian: np.ndarray) -> dict[str, object]:
         "num_coordinates": int(j.shape[1]),
         "full_column_rank": bool(rank == int(j.shape[1])),
         "singular_values": [float(value) for value in singular.tolist()],
-        "condition_number": float(singular[0] / singular[-1]) if singular.size and singular[-1] > 1e-15 else float("inf"),
+        "condition_number": float(singular[0] / singular[-1]) if singular.size and singular[-1] > NUMERICAL_ZERO else float("inf"),
         "pairwise_column_angles": angles,
         "weakest_pairwise_margin": weakest,
         "shot_weighted_gram_proxy": _round_matrix(gram),
@@ -496,8 +498,8 @@ def _dominant_coordinate(row: np.ndarray, feature_names: list[str]) -> str:
 
 def _two_qubit_pauli_kraus(label: str, probability: float) -> list[np.ndarray]:
     pauli = _two_qubit_pauli_matrix(label)
-    p = max(0.0, min(1.0, float(probability)))
-    return [np.sqrt(max(0.0, 1.0 - p)) * np.eye(4, dtype=np.complex128), np.sqrt(p) * pauli]
+    p = probability_floor(float(probability))
+    return [np.sqrt(positive_floor(1.0 - p)) * np.eye(4, dtype=np.complex128), np.sqrt(p) * pauli]
 
 
 def _two_qubit_pauli_matrix(label: str) -> np.ndarray:
@@ -519,7 +521,7 @@ def _affine_column(label: str) -> np.ndarray:
 def _logm_safe(matrix: np.ndarray) -> dict[str, object]:
     try:
         values, vectors = np.linalg.eig(np.asarray(matrix, dtype=np.float64))
-        if np.any(np.abs(values) < 1e-12):
+        if np.any(np.abs(values) < NUMERICAL_ZERO):
             return {"stable": False, "log_delta_norm": None}
         log_diag = np.diag(np.log(values.astype(np.complex128)))
         logm = vectors @ log_diag @ np.linalg.inv(vectors)
@@ -571,4 +573,4 @@ def _validate_observations(observations: np.ndarray) -> np.ndarray:
 
 
 def _finite(values: np.ndarray) -> np.ndarray:
-    return np.nan_to_num(np.asarray(values, dtype=np.float64), nan=0.0, posinf=0.0, neginf=0.0)
+    return np.nan_to_num(np.asarray(values, dtype=np.float64), nan=NUMERICAL_ZERO, posinf=NUMERICAL_ZERO, neginf=-NUMERICAL_ZERO)

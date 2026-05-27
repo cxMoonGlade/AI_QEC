@@ -5,6 +5,7 @@ from typing import Iterable
 
 import torch
 
+from .numerics import NUMERICAL_ZERO
 from .parity_map import (
     DemParityMap,
     mask_states_from_matrix,
@@ -70,7 +71,7 @@ def combine_duplicate_probabilities(probabilities: torch.Tensor) -> torch.Tensor
 
 def _standardize_features(features: torch.Tensor) -> torch.Tensor:
     features = features - features.mean(dim=0, keepdim=True)
-    scale = features.std(dim=0, keepdim=True, unbiased=False).clamp_min(1e-12)
+    scale = features.std(dim=0, keepdim=True, unbiased=False).clamp_min(NUMERICAL_ZERO)
     return features / scale
 
 

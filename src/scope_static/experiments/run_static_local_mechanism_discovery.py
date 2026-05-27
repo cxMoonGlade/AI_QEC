@@ -30,6 +30,7 @@ from scope_static.local_mechanism import (
     split_merge_audit,
 )
 from scope_static.metrics import normalized_mutual_info
+from scope_static.numerics import NUMERICAL_ZERO
 
 
 DISC15_AUDIT = {
@@ -76,7 +77,12 @@ def run_local_mechanism_discovery(
     candidates = _build_candidates(graph, local_logits, cfg, k)
     records = []
     for name, features, method in candidates:
-        features = torch.nan_to_num(torch.as_tensor(features, dtype=torch.float64, device="cpu"), nan=0.0, posinf=0.0, neginf=0.0)
+        features = torch.nan_to_num(
+            torch.as_tensor(features, dtype=torch.float64, device="cpu"),
+            nan=NUMERICAL_ZERO,
+            posinf=NUMERICAL_ZERO,
+            neginf=-NUMERICAL_ZERO,
+        )
         np.save(reps_dir / f"{_safe_name(name)}.npy", features.numpy())
         record = _evaluate_candidate(
             name,

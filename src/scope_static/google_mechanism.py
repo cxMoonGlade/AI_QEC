@@ -8,6 +8,7 @@ import torch
 from scope_static.fault_graph import FaultGraph
 from scope_static.identifiability import structural_signature
 from scope_static.metrics import adjusted_rand_index, normalized_mutual_info
+from scope_static.numerics import NUMERICAL_ZERO
 
 
 @dataclass(frozen=True)
@@ -34,14 +35,14 @@ def fit_cluster_mean_logits(labels: torch.Tensor, source_logits: torch.Tensor, *
     masses = torch.bincount(labels, minlength=int(num_clusters))
     return PrototypeLogitModel(
         labels=labels,
-        logits=torch.nan_to_num(logits, nan=0.0, posinf=0.0, neginf=0.0),
+        logits=torch.nan_to_num(logits, nan=NUMERICAL_ZERO, posinf=NUMERICAL_ZERO, neginf=-NUMERICAL_ZERO),
         prototype_logits=[float(value) for value in prototype_values.tolist()],
         active_prototypes=int((masses > 0).sum().item()),
         dead_prototypes=[idx for idx, value in enumerate(masses.tolist()) if int(value) <= 0],
     )
 
 
-def probability_to_logit(probabilities: torch.Tensor, *, eps: float = 1e-12) -> torch.Tensor:
+def probability_to_logit(probabilities: torch.Tensor, *, eps: float = NUMERICAL_ZERO) -> torch.Tensor:
     p = torch.as_tensor(probabilities, dtype=torch.float64, device="cpu").clamp(float(eps), 1.0 - float(eps))
     return torch.log(p) - torch.log1p(-p)
 
@@ -141,7 +142,7 @@ def _corr(left: torch.Tensor, right: torch.Tensor) -> float:
     a = a - a.mean()
     b = b - b.mean()
     denom = a.norm() * b.norm()
-    if float(denom.item()) <= 1e-12:
+    if float(denom.item()) <= NUMERICAL_ZERO:
         return 0.0
     return float((a @ b / denom).item())
 
@@ -165,7 +166,7 @@ def _boundary_bulk_labels(graph: FaultGraph, detector_weight: torch.Tensor, logi
     coords = graph.detector_coordinates.to(dtype=torch.float64, device="cpu")
     min_coord = coords.min(dim=0).values
     max_coord = coords.max(dim=0).values
-    spans = (max_coord - min_coord).clamp_min(1e-12)
+    spans = (max_coord - min_coord).clamp_min(NUMERICAL_ZERO)
     detector = graph.A[: graph.num_detectors].to(dtype=torch.float64, device="cpu")
     labels = []
     for fault in range(graph.M):
@@ -190,7 +191,7 @@ def _space_time_region_labels(graph: FaultGraph) -> list[int]:
     detector = graph.A[: graph.num_detectors].to(dtype=torch.float64, device="cpu")
     mins = coords.min(dim=0).values
     maxs = coords.max(dim=0).values
-    spans = (maxs - mins).clamp_min(1e-12)
+    spans = (maxs - mins).clamp_min(NUMERICAL_ZERO)
     labels = []
     mapping: dict[tuple[int, ...], int] = {}
     dims = min(3, coords.shape[1])
@@ -213,7 +214,7 @@ def _round_layer_labels(graph: FaultGraph, *, rounds: int) -> list[int]:
     t = coords[:, -1]
     t_min = float(t.min().item())
     t_max = float(t.max().item())
-    denom = max(1e-12, t_max - t_min)
+    denom = max(NUMERICAL_ZERO, t_max - t_min)
     bins = max(2, min(4, int(rounds) if int(rounds) > 0 else 4))
     labels = []
     for fault in range(graph.M):

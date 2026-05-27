@@ -9,6 +9,7 @@ import torch
 from scope_static.identifiability import evaluate_partition
 from scope_static.local_mechanism import split_merge_audit
 from scope_static.metrics import normalized_mutual_info
+from scope_static.numerics import NUMERICAL_ZERO
 
 from .active_mixed_basis import rzz_family_distance_audit, rzz_family_metrics
 from .targeted_v3 import build_targeted_v3_features, typed_cluster_labels
@@ -280,8 +281,8 @@ def _estimate_depth_moment(
         mean_right = float(np.mean(right_samples))
         mean = float(np.mean(product))
         connected = float(mean - mean_left * mean_right)
-        denom = float(np.sqrt(max(0.0, 1.0 - mean_left * mean_left) * max(0.0, 1.0 - mean_right * mean_right)))
-        normalized = float(connected / denom) if denom > 1e-12 else 0.0
+        denom = float(np.sqrt(_nonnegative_variance(1.0 - mean_left * mean_left) * _nonnegative_variance(1.0 - mean_right * mean_right)))
+        normalized = float(connected / denom) if denom > NUMERICAL_ZERO else 0.0
         se = _standard_error(mean, product.size)
         estimates.append(
             {
@@ -289,7 +290,7 @@ def _estimate_depth_moment(
                 "connected": connected,
                 "normalized_correlation": normalized,
                 "standard_error": se,
-                "z_score": float(mean / se) if se > 1e-12 else 0.0,
+                "z_score": float(mean / se) if se > NUMERICAL_ZERO else 0.0,
                 "num_shots": int(product.size),
                 "probe_index": int(probe_idx),
                 "probe_name": probe_names[int(probe_idx)],
@@ -314,7 +315,7 @@ def _curve_features(curve: np.ndarray, raw_curve: np.ndarray, norm_curve: np.nda
     depth_values = np.asarray(DEPTHS, dtype=np.float64)
     slope = _linear_slope(depth_values, curve)
     curvature = _linear_slope(depth_values[1:], np.diff(curve)) if curve.size > 2 else 0.0
-    log_decay = _linear_slope(depth_values, np.log(np.clip(np.abs(raw_curve), 1e-6, None)))
+    log_decay = _linear_slope(depth_values, np.log(np.clip(np.abs(raw_curve), NUMERICAL_ZERO, None)))
     odd_even = float(np.mean(curve[[idx for idx, depth in enumerate(DEPTHS) if depth % 2 == 1]]) - np.mean(curve[[idx for idx, depth in enumerate(DEPTHS) if depth % 2 == 0]]))
     return [
         float(slope),
@@ -499,7 +500,14 @@ def _pm_one(bits: np.ndarray) -> np.ndarray:
 def _standard_error(mean: float, num_shots: int) -> float:
     if int(num_shots) <= 0:
         return 0.0
-    return float(np.sqrt(max(0.0, 1.0 - float(mean) * float(mean)) / int(num_shots)))
+    variance = _nonnegative_variance(1.0 - float(mean) * float(mean))
+    if variance <= NUMERICAL_ZERO:
+        return 0.0
+    return float(np.sqrt(variance / int(num_shots)))
+
+
+def _nonnegative_variance(value: float) -> float:
+    return 0.0 if float(value) <= NUMERICAL_ZERO else float(value)
 
 
 def _counts(values: Iterable[str]) -> dict[str, int]:
@@ -517,4 +525,4 @@ def _validate_observations(observations: np.ndarray) -> np.ndarray:
 
 
 def _finite(values: np.ndarray) -> np.ndarray:
-    return np.nan_to_num(np.asarray(values, dtype=np.float64), nan=0.0, posinf=0.0, neginf=0.0)
+    return np.nan_to_num(np.asarray(values, dtype=np.float64), nan=NUMERICAL_ZERO, posinf=NUMERICAL_ZERO, neginf=-NUMERICAL_ZERO)

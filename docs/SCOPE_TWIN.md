@@ -751,6 +751,29 @@ $$
 When code distance \(d\) increases, for example \(d=7,9\), we may use a
 surrogate likelihood, but this definition remains the target object.
 
+##### Core Problem: Six-Axis Physical Generation
+
+SCOPE-Twin is aimed at the project-level physical generation problem. The
+scientific ceiling is not set by saying that the output is CPTP/GKSL; it is set
+by whether the physically constrained generation model can be validated
+simultaneously along six axes:
+
+1. **Generation fidelity**: held-out observations are explained by the generated
+   noise model, under the target likelihood or a declared surrogate.
+2. **Interpretability**: learned parameters and mechanisms map to auditable
+   physical structure rather than opaque labels.
+3. **Decoder utility**: the generated model improves decoder-facing tasks such
+   as logical prediction, calibration, or threshold-relevant decisions.
+4. **Cross-context generalization**: the same learned structure transfers across
+   circuit contexts, schedules, rounds, distances, or related devices.
+5. **Drift prediction**: latent or observed temporal variation is forecast before
+   it is fitted post hoc.
+6. **Identifiability**: the relevant quotient, mechanism, or parameter field is
+   recovered up to declared symmetries, gauges, and observational limits.
+
+CPTP/GKSL constraints are therefore necessary physical structure for this
+contract, but they are not sufficient evidence for the SCOPE-Twin claim.
+
 ##### Contributions
 
 1. **New model class**
@@ -774,16 +797,18 @@ surrogate likelihood, but this definition remains the target object.
 
 4. **Evaluation protocol**
 
-   We propose a Pareto-front evaluation protocol measuring held-out likelihood,
-   sample efficiency, parameter count, quotient recovery, physical validity, and
-   OOD transfer under controlled symmetry breaking.
+   We propose a Pareto-front evaluation protocol organized around the six-axis
+   physical generation bar: generation fidelity, interpretability, decoder
+   utility, cross-context generalization, drift prediction, and identifiability.
+   Held-out likelihood, sample efficiency, parameter count, quotient recovery,
+   physical validity, and OOD transfer are supporting measurements for those
+   axes.
 
 5. **Empirical evidence**
 
    Across synthetic and QEC syndrome tasks, SCOPE-Twin should be evaluated for
-   sample efficiency and OOD transfer against fully local, hard-sharing,
-   black-box, and non-physical alternatives at matched parameter or compute
-   budgets.
+   six-axis evidence against fully local, hard-sharing, black-box, and
+   non-physical alternatives at matched parameter or compute budgets.
 
 ##### Experiments
 

@@ -30,6 +30,12 @@ This stage may claim evidence about orbit sharing, fixed residual features, exac
 
 This stage must not claim CPTP/GKSL learning, full noisy-circuit Born-rule likelihood, context-conditioned amortization, latent quotient discovery, OOD transfer, or temporal drift tracking.
 
+Project-wide, the eventual target is the six-axis physical generation problem:
+generation fidelity, interpretability, decoder utility, cross-context
+generalization, drift prediction, and identifiability. Stage 1 contributes a
+narrow DEM-level slice of generation-fidelity, compression, and known-quotient
+evidence only; it does not solve that full physical generation problem.
+
 ## Baselines
 
 - `local`: fully independent DEM fault logits with neutral initialization. This is the uncompressed per-effective-fault baseline, not a spatially local model.

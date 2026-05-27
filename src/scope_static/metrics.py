@@ -18,6 +18,7 @@ from .likelihood import (
     subset_window_batch_nll_cache,
 )
 from .likelihoods.local_window_parity import ExactLocalWindowParityLikelihood
+from .numerics import NUMERICAL_ZERO
 from .windows import ObservationWindow
 
 
@@ -439,7 +440,7 @@ def _scale_or_none(value: float | None, scale: float) -> float | None:
 
 
 def _ratio_or_none(value: float, denominator: float) -> float | None:
-    if abs(denominator) < 1e-15:
+    if abs(denominator) < NUMERICAL_ZERO:
         return None
     return float(value / denominator)
 
@@ -520,7 +521,7 @@ def adjusted_rand_index(
     expected = left_pairs * right_pairs / total_pairs if total_pairs else 0.0
     max_index = 0.5 * (left_pairs + right_pairs)
     denom = max_index - expected
-    if abs(denom) < 1e-12:
+    if abs(denom) < NUMERICAL_ZERO:
         return 1.0 if sum_pairs == max_index else 0.0
     return float((sum_pairs - expected) / denom)
 
@@ -548,7 +549,7 @@ def normalized_mutual_info(
     h_left = _entropy_from_counts(left_counts.values(), n)
     h_right = _entropy_from_counts(right_counts.values(), n)
     denom = math.sqrt(h_left * h_right)
-    if denom < 1e-12:
+    if denom < NUMERICAL_ZERO:
         return 1.0 if left == right else 0.0
     return float(mutual_info / denom)
 

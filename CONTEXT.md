@@ -27,13 +27,22 @@ This repository is currently centered on the SCOPE family of QEC noise-learning 
 - **Physical Oracle Stack**: the S2D physical-oracle validation stack that runs PHYS1 teacher generation, PHYS2 teacher self-distinguishability, and PHYS3 learner recovery as one artifact contract.
 - **Teacher self-distinguishability**: the oracle-only PHYS2 question of whether the physical teacher contains enough mechanism signal to separate oracle mechanism labels before judging a learner.
 - **Learner recovery verdict**: the PHYS3 learner-visible assessment of how well local-inverse features recover physical oracle mechanism labels after teacher self-distinguishability is established.
+- **Six-axis physical generation problem**: the project-level SCOPE-Twin target. A physical constraint generation model is not validated merely by emitting CPTP/GKSL objects; it must hold simultaneously across generation fidelity, interpretability, decoder utility, cross-context generalization, drift prediction, and identifiability.
+- **Numerical floor**: floating numerical floors, thresholds, and probability leftovers use `scope_static.numerics.NUMERICAL_ZERO == 1e-12` instead of exact `0.0`. This value survives square/cube operations in GPU float32. It does not apply to structural zeros such as Pauli matrix entries, bit values, integer indices, counts, labels, or genuinely absent artifacts.
 
 ## Claim Boundary
+
+The long-horizon problem for the project is the six-axis physical generation
+problem: prove that physically constrained generation is faithful, interpretable,
+useful to decoders, cross-context generalizing, drift-predictive, and
+identifiable at the same time. CPTP/GKSL parameterization is only one constraint
+mechanism, not the claim by itself.
 
 The current implemented evidence package studies sample efficiency, compression,
 and quotient-aware recovery for a fixed DEM/Bernoulli Stage 1 setting. It does
 not claim CPTP/GKSL learning, Born-rule likelihood, context-conditioned
-amortization, OOD transfer, or temporal drift tracking.
+amortization, OOD transfer, temporal drift tracking, or a complete solution to
+the six-axis physical generation problem.
 
 Stage 2A static discovery is implemented as a synthetic-first identifiability
 path. It may claim latent assignment recovery only when synthetic teacher runs

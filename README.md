@@ -2,6 +2,17 @@
 
 Research code for SCOPE-style quantum-error-correction noise learning.
 
+The project-level problem is to learn a physically constrained generation model
+for QEC data whose constraint is more than the words CPTP/GKSL. The real bar is
+whether the model can be validated simultaneously along six axes:
+
+- generation fidelity.
+- interpretability.
+- decoder utility.
+- cross-context generalization.
+- drift prediction.
+- identifiability.
+
 The implemented package is `scope_static`. Its main production object is a
 fixed-context DEM/Bernoulli learner:
 
@@ -13,7 +24,8 @@ y = A e mod 2
 Stage 2 also contains synthetic physical-oracle diagnostics for local
 mechanism observability. Those diagnostics use learner-visible shot data and
 local reconstructed PTM/generator summaries, but they are not a hardware
-CPTP/GST learner.
+CPTP/GST/GKSL learner and do not yet solve the full six-axis physical
+generation problem.
 
 ## Docs
 

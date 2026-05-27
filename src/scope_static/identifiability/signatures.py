@@ -3,6 +3,7 @@ from __future__ import annotations
 import torch
 
 from scope_static.fault_graph import FaultGraph
+from scope_static.numerics import NUMERICAL_ZERO
 
 
 def detector_incidence(graph: FaultGraph) -> torch.Tensor:
@@ -170,7 +171,7 @@ def _spectral_projection(H: torch.Tensor, covariance: torch.Tensor, *, spectral_
         basis = torch.zeros((H.shape[1], 0), dtype=torch.float64)
         q = 0
     projected = H @ basis if q else torch.zeros((H.shape[0], 0), dtype=torch.float64)
-    norms = projected.norm(dim=1, keepdim=True).clamp_min(1e-12)
+    norms = projected.norm(dim=1, keepdim=True).clamp_min(NUMERICAL_ZERO)
     projected = projected / norms if projected.numel() else projected
     if projected.shape[1] < int(spectral_rank):
         pad = torch.zeros((H.shape[0], int(spectral_rank) - projected.shape[1]), dtype=torch.float64)
@@ -180,11 +181,11 @@ def _spectral_projection(H: torch.Tensor, covariance: torch.Tensor, *, spectral_
 
 def _finite_1d(values: torch.Tensor) -> torch.Tensor:
     result = torch.as_tensor(values, dtype=torch.float64, device="cpu").flatten()
-    return torch.nan_to_num(result, nan=0.0, posinf=0.0, neginf=0.0)
+    return torch.nan_to_num(result, nan=NUMERICAL_ZERO, posinf=NUMERICAL_ZERO, neginf=-NUMERICAL_ZERO)
 
 
 def _finite_2d(values: torch.Tensor) -> torch.Tensor:
     result = torch.as_tensor(values, dtype=torch.float64, device="cpu")
     if result.ndim != 2:
         raise ValueError("signature matrix must have shape [M, F]")
-    return torch.nan_to_num(result, nan=0.0, posinf=0.0, neginf=0.0)
+    return torch.nan_to_num(result, nan=NUMERICAL_ZERO, posinf=NUMERICAL_ZERO, neginf=-NUMERICAL_ZERO)

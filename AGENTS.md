@@ -15,6 +15,12 @@ stage-specific docs:
 The implemented package is `scope_static`. It is a fixed-context DEM/Bernoulli
 research stack, not a CPTP/GKSL physical-channel learner.
 
+The project-level problem is the six-axis physical generation problem: prove
+that a physically constrained generation model holds simultaneously in
+generation fidelity, interpretability, decoder utility, cross-context
+generalization, drift prediction, and identifiability. CPTP/GKSL structure is a
+constraint mechanism, not the full claim by itself.
+
 Stage 1 learns fault logits over a canonicalized detector error model:
 
 ```text
@@ -30,6 +36,17 @@ Keep notation aligned with `docs/SCOPE_TWIN.md`:
 - `S` or `Pi` is a learned Stage 2 discovery assignment.
 - Do not use `o` for orbit or observable.
 - Do not use `ell_j` for logits.
+
+## Numerical Floor Policy
+
+Use `scope_static.numerics.NUMERICAL_ZERO == 1e-12` for floating numerical
+floors, simulation thresholds, probability floors, and leftover/complement
+probabilities that would otherwise become exact `0.0`. This value is chosen to
+survive square/cube operations in GPU float32. `NUMERICAL_FLOOR` exists only as
+a descriptive alias. Do not replace structural zeros: Pauli/operator matrix
+entries, bit values, integer indices, counts, labels, array sizes,
+empty-artifact metrics, and exact algebraic identities must remain exact zeros
+where required.
 
 ## GPU-First Execution
 

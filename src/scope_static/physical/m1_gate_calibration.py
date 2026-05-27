@@ -6,6 +6,8 @@ from pathlib import Path
 import json
 import numpy as np
 
+from scope_static.numerics import NUMERICAL_ZERO
+
 from .local_inverse import build_visible_location_representations
 from .typed_spam_gate_invariant import (
     classification_metrics,
@@ -399,8 +401,8 @@ def _fit_predict_scores(x_train_np: np.ndarray, y_train_names: np.ndarray, x_tes
     counts = torch.bincount(y_train, minlength=len(class_names)).to(dtype=dtype)
     present = counts > 0
     weights = torch.zeros_like(counts)
-    weights[present] = float(x_train.shape[0]) / torch.clamp(torch.sum(present).to(dtype=dtype) * counts[present], min=1e-9)
-    sqrt_w = torch.sqrt(torch.clamp(weights[y_train], min=1e-12)).reshape(-1, 1)
+    weights[present] = float(x_train.shape[0]) / torch.clamp(torch.sum(present).to(dtype=dtype) * counts[present], min=NUMERICAL_ZERO)
+    sqrt_w = torch.sqrt(torch.clamp(weights[y_train], min=NUMERICAL_ZERO)).reshape(-1, 1)
     xw = x_train * sqrt_w
     yw = targets * sqrt_w
     gram = xw @ xw.T
@@ -854,11 +856,11 @@ def _softmax(scores: np.ndarray) -> np.ndarray:
     current = _finite(np.asarray(scores, dtype=np.float64))
     current = current - np.max(current, axis=1, keepdims=True)
     exp = np.exp(np.clip(current, -80.0, 80.0))
-    return exp / np.maximum(np.sum(exp, axis=1, keepdims=True), 1e-12)
+    return exp / np.maximum(np.sum(exp, axis=1, keepdims=True), NUMERICAL_ZERO)
 
 
 def _finite(values: np.ndarray) -> np.ndarray:
-    return np.nan_to_num(np.asarray(values, dtype=np.float64), nan=0.0, posinf=0.0, neginf=0.0)
+    return np.nan_to_num(np.asarray(values, dtype=np.float64), nan=NUMERICAL_ZERO, posinf=NUMERICAL_ZERO, neginf=-NUMERICAL_ZERO)
 
 
 def _mechanism_sort_key(name: str) -> tuple[int, str]:

@@ -16,6 +16,7 @@ from scope_static.identifiability import (
 )
 from scope_static.local_mechanism import split_merge_audit
 from scope_static.metrics import normalized_mutual_info
+from scope_static.numerics import NUMERICAL_ZERO
 
 from .channels import MechanismSpec
 from .ptm import channel_fingerprint, probe_response_fingerprint, rzz_type_feature_vector
@@ -611,7 +612,7 @@ def _basis_response_differences(local_response: np.ndarray, probe_names: list[st
 
 
 def _response_entropy_variance_features(local_response: np.ndarray) -> np.ndarray:
-    values = np.clip(_finite(local_response), 1e-6, 1.0 - 1e-6)
+    values = np.clip(_finite(local_response), NUMERICAL_ZERO, 1.0 - NUMERICAL_ZERO)
     entropy = -(values * np.log(values) + (1.0 - values) * np.log(1.0 - values))
     return np.array(
         [
@@ -713,8 +714,8 @@ def _response_reconstruction(response_train: np.ndarray, response_heldout: np.nd
             centers[cluster] = train[idx].mean(axis=0)
     prediction = centers[labels]
     error = heldout - prediction
-    p = np.clip(prediction, 1e-6, 1.0 - 1e-6)
-    q = np.clip(heldout, 0.0, 1.0)
+    p = np.clip(prediction, NUMERICAL_ZERO, 1.0 - NUMERICAL_ZERO)
+    q = np.clip(heldout, NUMERICAL_ZERO, 1.0)
     nll = -np.mean(q * np.log(p) + (1.0 - q) * np.log(1.0 - p))
     return {"mse": float(np.mean(error * error)), "mae": float(np.mean(np.abs(error))), "nll": float(nll)}
 
@@ -766,13 +767,13 @@ def _nll_difficulty_audit(
 
 
 def _bernoulli_cross_entropy(target: np.ndarray, prediction: np.ndarray) -> float:
-    q = np.clip(_finite(target), 0.0, 1.0)
-    p = np.clip(_finite(prediction), 1e-6, 1.0 - 1e-6)
+    q = np.clip(_finite(target), NUMERICAL_ZERO, 1.0)
+    p = np.clip(_finite(prediction), NUMERICAL_ZERO, 1.0 - NUMERICAL_ZERO)
     return float(-np.mean(q * np.log(p) + (1.0 - q) * np.log(1.0 - p)))
 
 
 def _bernoulli_entropy(target: np.ndarray) -> float:
-    q = np.clip(_finite(target), 1e-6, 1.0 - 1e-6)
+    q = np.clip(_finite(target), NUMERICAL_ZERO, 1.0 - NUMERICAL_ZERO)
     return float(-np.mean(q * np.log(q) + (1.0 - q) * np.log(1.0 - q)))
 
 
@@ -927,7 +928,7 @@ def _load_separability_metrics(path: Path) -> dict[str, object]:
 def _train_heldout_observations(observations: np.ndarray, *, seed: int, heldout_fraction: float) -> tuple[np.ndarray, np.ndarray]:
     obs = _validate_observations(observations)
     shots = int(obs.shape[1])
-    heldout = max(1, min(shots - 1, int(round(shots * max(0.0, min(0.9, float(heldout_fraction)))))))
+    heldout = max(1, min(shots - 1, int(round(shots * max(NUMERICAL_ZERO, min(0.9, float(heldout_fraction)))))))
     train = shots - heldout
     rng = np.random.default_rng(int(seed))
     train_rows = np.empty((obs.shape[0], train, obs.shape[2]), dtype=obs.dtype)
@@ -1094,4 +1095,4 @@ def _merged_config(config: dict[str, object] | None) -> dict[str, object]:
 
 
 def _finite(values: np.ndarray) -> np.ndarray:
-    return np.nan_to_num(np.asarray(values, dtype=np.float64), nan=0.0, posinf=0.0, neginf=0.0)
+    return np.nan_to_num(np.asarray(values, dtype=np.float64), nan=NUMERICAL_ZERO, posinf=NUMERICAL_ZERO, neginf=-NUMERICAL_ZERO)

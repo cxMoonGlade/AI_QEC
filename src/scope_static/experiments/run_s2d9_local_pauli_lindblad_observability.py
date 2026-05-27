@@ -9,6 +9,7 @@ import yaml
 
 from scope_static.experiments.run_s2d_physical_teacher import generate_physical_teacher_dataset
 from scope_static.experiments.s2d_config import load_s2d_physical_config, output_root_from_config
+from scope_static.numerics import NUMERICAL_ZERO
 from scope_static.physical.local_pauli_lindblad import (
     GENERATOR_COORDINATES,
     LocalPauliLindbladBundle,
@@ -421,7 +422,12 @@ def _aggregate_artifact(records: list[dict[str, object]], artifact: str) -> dict
 
 
 def _rows(features: np.ndarray, mask: np.ndarray) -> np.ndarray:
-    return np.nan_to_num(np.asarray(features, dtype=np.float64)[np.asarray(mask, dtype=bool)], nan=0.0, posinf=0.0, neginf=0.0)
+    return np.nan_to_num(
+        np.asarray(features, dtype=np.float64)[np.asarray(mask, dtype=bool)],
+        nan=NUMERICAL_ZERO,
+        posinf=NUMERICAL_ZERO,
+        neginf=-NUMERICAL_ZERO,
+    )
 
 
 def _single_group_fold_audit(groups: list[int]) -> dict[str, object]:

@@ -8,6 +8,7 @@ import torch
 
 from scope_static.identifiability import deterministic_kmeans, evaluate_partition
 from scope_static.local_mechanism import split_merge_audit
+from scope_static.numerics import NUMERICAL_ZERO
 
 from .local_inverse import build_visible_location_representations
 
@@ -344,7 +345,7 @@ def _rzz_signed_features(record: dict[str, object], local_response: np.ndarray, 
     z = _probe_value(probes, "z_basis")
     x = _probe_value(probes, "x_measure", fallback=z)
     y = _probe_value(probes, "y_measure", fallback=z)
-    eps = 1e-6
+    eps = NUMERICAL_ZERO
     qubits = _record_qubits(record)
     left = min(qubits) if qubits else 0
     right = max(qubits) if qubits else left
@@ -385,7 +386,7 @@ def _readout_normalized_features(local_response: np.ndarray) -> np.ndarray:
     values = _finite(np.asarray(local_response, dtype=np.float64))
     centered = values - float(np.mean(values))
     norm = float(np.linalg.norm(centered))
-    shape = centered / max(norm, 1e-9)
+    shape = centered / max(norm, NUMERICAL_ZERO)
     strength = float(np.linalg.norm(values))
     entropy = _entropy(values)
     return _finite(
@@ -486,10 +487,10 @@ def _counts(values: Iterable[str]) -> dict[str, int]:
 
 
 def _entropy(values: np.ndarray) -> float:
-    probs = np.clip(_finite(values), 1e-6, 1.0 - 1e-6)
+    probs = np.clip(_finite(values), NUMERICAL_ZERO, 1.0 - NUMERICAL_ZERO)
     entropy = -(probs * np.log(probs) + (1.0 - probs) * np.log(1.0 - probs))
     return float(np.mean(entropy))
 
 
 def _finite(values: np.ndarray) -> np.ndarray:
-    return np.nan_to_num(np.asarray(values, dtype=np.float64), nan=0.0, posinf=0.0, neginf=0.0)
+    return np.nan_to_num(np.asarray(values, dtype=np.float64), nan=NUMERICAL_ZERO, posinf=NUMERICAL_ZERO, neginf=-NUMERICAL_ZERO)

@@ -5,6 +5,8 @@ import math
 
 import torch
 
+from scope_static.numerics import NUMERICAL_ZERO, positive_floor
+
 
 @dataclass(frozen=True)
 class KMeansResult:
@@ -23,13 +25,13 @@ def standardize_features(features: torch.Tensor) -> torch.Tensor:
     x = torch.as_tensor(features, dtype=torch.float64, device="cpu")
     if x.ndim != 2:
         raise ValueError("features must have shape [M, F]")
-    x = torch.nan_to_num(x, nan=0.0, posinf=0.0, neginf=0.0)
+    x = torch.nan_to_num(x, nan=NUMERICAL_ZERO, posinf=NUMERICAL_ZERO, neginf=-NUMERICAL_ZERO)
     if x.numel() == 0:
         return x.clone()
     centered = x - x.mean(dim=0, keepdim=True)
-    scale = centered.std(dim=0, keepdim=True, unbiased=False).clamp_min(1e-12)
+    scale = centered.std(dim=0, keepdim=True, unbiased=False).clamp_min(NUMERICAL_ZERO)
     standardized = centered / scale
-    return torch.nan_to_num(standardized, nan=0.0, posinf=0.0, neginf=0.0)
+    return torch.nan_to_num(standardized, nan=NUMERICAL_ZERO, posinf=NUMERICAL_ZERO, neginf=-NUMERICAL_ZERO)
 
 
 def deterministic_kmeans(
@@ -157,7 +159,7 @@ def _silhouette_like(distances: torch.Tensor, labels: torch.Tensor) -> float:
     masked = distances.clone()
     masked[torch.arange(distances.shape[0]), labels] = float("inf")
     other = torch.min(masked, dim=1).values
-    denom = torch.maximum(own, other).clamp_min(1e-12)
+    denom = torch.maximum(own, other).clamp_min(NUMERICAL_ZERO)
     score = (other - own) / denom
     finite = torch.isfinite(score)
     return float(score[finite].mean().item()) if bool(finite.any()) else 0.0
@@ -185,5 +187,5 @@ def _observable_selection_score(
     if not finite:
         return float("-inf")
     active_fraction = active_clusters / max(1, requested_clusters)
-    compactness = -math.log1p(max(0.0, float(dispersion)))
+    compactness = -math.log1p(positive_floor(float(dispersion)))
     return float(silhouette + mass_entropy + active_fraction + compactness)

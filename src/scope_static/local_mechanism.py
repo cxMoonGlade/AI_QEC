@@ -7,6 +7,7 @@ import torch
 
 from scope_static.fault_graph import FaultGraph
 from scope_static.identifiability import detector_incidence, standardize_features
+from scope_static.numerics import NUMERICAL_ZERO, probability_floor
 
 
 def load_local_logit_matrix(path: str | Path, num_faults: int) -> torch.Tensor:
@@ -56,8 +57,8 @@ def graph_smooth_features(
         return x
     overlap = fault_overlap_matrix(graph)
     degree = overlap.sum(dim=1, keepdim=True)
-    transition = torch.where(degree > 0, overlap / degree.clamp_min(1e-12), torch.eye(overlap.shape[0], dtype=torch.float64))
-    alpha = min(1.0, max(0.0, float(strength)))
+    transition = torch.where(degree > 0, overlap / degree.clamp_min(NUMERICAL_ZERO), torch.eye(overlap.shape[0], dtype=torch.float64))
+    alpha = probability_floor(float(strength))
     out = x
     for _ in range(int(steps)):
         out = (1.0 - alpha) * out + alpha * (transition @ out)
@@ -70,7 +71,7 @@ def fault_overlap_matrix(graph: FaultGraph) -> torch.Tensor:
         return torch.eye(graph.M, dtype=torch.float64)
     overlap = H @ H.T
     overlap.fill_diagonal_(0.0)
-    return torch.nan_to_num(overlap, nan=0.0, posinf=0.0, neginf=0.0)
+    return torch.nan_to_num(overlap, nan=NUMERICAL_ZERO, posinf=NUMERICAL_ZERO, neginf=-NUMERICAL_ZERO)
 
 
 def pca_scores(features: torch.Tensor, rank: int) -> torch.Tensor:
@@ -110,10 +111,10 @@ def spectral_similarity_embedding(
     distances = torch.cdist(x, x, p=2)
     positive = distances[distances > 0]
     scale = float(rbf_scale) if rbf_scale is not None else float(torch.median(positive).item()) if positive.numel() else 1.0
-    scale = max(scale, 1e-6)
+    scale = max(scale, NUMERICAL_ZERO)
     affinity = torch.exp(-(distances**2) / (2.0 * scale**2))
     affinity.fill_diagonal_(0.0)
-    degree = affinity.sum(dim=1).clamp_min(1e-12)
+    degree = affinity.sum(dim=1).clamp_min(NUMERICAL_ZERO)
     normalized = affinity / torch.sqrt(torch.outer(degree, degree))
     try:
         values, vectors = torch.linalg.eigh(normalized)
@@ -134,14 +135,14 @@ def nmf_codes(
     if x.numel() == 0:
         return x
     V = x - x.min(dim=0, keepdim=True).values
-    V = V + 1e-6
+    V = V + NUMERICAL_ZERO
     m, f = V.shape
     r = max(1, min(int(rank), m, max(1, f)))
     generator = torch.Generator(device="cpu")
     generator.manual_seed(int(seed))
-    W = torch.rand((m, r), generator=generator, dtype=torch.float64).clamp_min(1e-6)
-    H = torch.rand((r, f), generator=generator, dtype=torch.float64).clamp_min(1e-6)
-    eps = 1e-9
+    W = torch.rand((m, r), generator=generator, dtype=torch.float64).clamp_min(NUMERICAL_ZERO)
+    H = torch.rand((r, f), generator=generator, dtype=torch.float64).clamp_min(NUMERICAL_ZERO)
+    eps = NUMERICAL_ZERO
     for _ in range(int(steps)):
         H = H * ((W.T @ V) / ((W.T @ W @ H).clamp_min(eps)))
         W = W * ((V @ H.T) / ((W @ H @ H.T).clamp_min(eps)))
@@ -159,7 +160,7 @@ def overlapping_topk_codes(codes: torch.Tensor, *, topk: int = 2) -> torch.Tenso
     values, indices = torch.topk(x, k=k, dim=1)
     out = torch.zeros_like(x)
     out.scatter_(1, indices, values)
-    row_sum = out.sum(dim=1, keepdim=True).clamp_min(1e-12)
+    row_sum = out.sum(dim=1, keepdim=True).clamp_min(NUMERICAL_ZERO)
     return _finite_2d(out / row_sum)
 
 
@@ -204,4 +205,4 @@ def _finite_2d(values: torch.Tensor) -> torch.Tensor:
     result = torch.as_tensor(values, dtype=torch.float64, device="cpu")
     if result.ndim != 2:
         raise ValueError("matrix must have shape [M, F]")
-    return torch.nan_to_num(result, nan=0.0, posinf=0.0, neginf=0.0)
+    return torch.nan_to_num(result, nan=NUMERICAL_ZERO, posinf=NUMERICAL_ZERO, neginf=-NUMERICAL_ZERO)

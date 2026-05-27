@@ -199,6 +199,7 @@ def load_phys3_metrics(local_inverse_dir: str | Path) -> dict[str, object]:
 def format_physical_oracle_stack_summary(result: dict[str, object]) -> str:
     verdicts = dict(result.get("verdicts", {}))
     teacher = dict(result.get("teacher", {}))
+    sampling = dict(teacher.get("sampling", {})) if isinstance(teacher.get("sampling"), dict) else {}
     teacher_self = dict(result.get("teacher_self", {}))
     learner = dict(result.get("learner", {}))
     timings = dict(result.get("timings_seconds", {}))
@@ -212,6 +213,7 @@ def format_physical_oracle_stack_summary(result: dict[str, object]) -> str:
         f"- Probes: `{teacher.get('num_probes')}`",
         f"- Shots: `{teacher.get('shots')}`",
         f"- Aer simulator: `{_format_aer(teacher.get('aer_simulator'))}`",
+        f"- Sampling: `mode={sampling.get('mode')} jobs={sampling.get('num_jobs')} wall={float(sampling.get('total_wall_clock_seconds', 0.0)):.4f}s`",
         f"- PHYS2 ARI/NMI: `{float(teacher_self.get('ari', 0.0)):.4f}` / `{float(teacher_self.get('nmi', 0.0)):.4f}`",
     ]
     if bool(learner.get("ran")) and isinstance(learner.get("metrics"), dict):
@@ -299,6 +301,8 @@ def _compact_teacher(teacher: dict[str, object], paths: PhysicalOracleStackPaths
         "num_circuit_batches": teacher.get("num_circuit_batches", 1),
         "balanced_min_instances_per_mechanism": teacher.get("balanced_min_instances_per_mechanism"),
         "aer_simulator": teacher.get("aer_simulator"),
+        "sampling": teacher.get("sampling"),
+        "sampling_audit": teacher.get("sampling_audit"),
         "backend_audit_dir": str(paths.preflight_dir),
         "active_probe_manifest": teacher.get("active_probe_manifest"),
         "noise_application_audit": teacher.get("noise_application_audit"),

@@ -3,6 +3,7 @@ from __future__ import annotations
 import torch
 
 from .fault_graph import FaultGraph, fixed_fault_features
+from .numerics import NUMERICAL_ZERO
 
 
 class FaultLogitField(torch.nn.Module):
@@ -169,7 +170,7 @@ class DiscoveryHardFaultLogitField(FaultLogitField):
             return self.alpha.new_ones((self.num_faults, 1))
         reference = self.assignment_logits.new_zeros((self.num_faults, 1))
         logits = torch.cat([reference, self.assignment_logits], dim=1)
-        logits = logits / max(1e-12, float(self.assignment_temperature))
+        logits = logits / max(NUMERICAL_ZERO, float(self.assignment_temperature))
         return torch.softmax(logits, dim=1)
 
     def hard_assignments(self) -> torch.Tensor:

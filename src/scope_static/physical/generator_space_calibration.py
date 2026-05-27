@@ -5,6 +5,8 @@ from typing import Iterable
 
 import numpy as np
 
+from scope_static.numerics import NUMERICAL_ZERO
+
 from .rzz_observability_ceiling import FeatureBlock, evaluate_ceiling_feature_blocks
 from .targeted_v3 import RZZ_FAMILY
 
@@ -217,7 +219,7 @@ def pairwise_generator_margins(
             right_center = np.mean(x[right_mask], axis=0)
             pooled = _pooled_std(x[left_mask], x[right_mask])
             diff = left_center - right_center
-            z = diff / np.maximum(pooled, 1e-9)
+            z = diff / np.maximum(pooled, NUMERICAL_ZERO)
             variant_rows[pair] = {
                 "available": True,
                 "euclidean_margin": float(np.linalg.norm(diff)),
@@ -239,7 +241,7 @@ def residualization_audit(raw: np.ndarray, residual: np.ndarray, groups: list[ob
         "num_groups": int(len(set(groups))),
         "raw_variance": float(np.mean(np.var(raw, axis=0))) if raw.size else 0.0,
         "residual_variance": float(np.mean(np.var(residual, axis=0))) if residual.size else 0.0,
-        "variance_removed_fraction": float(1.0 - (np.mean(np.var(residual, axis=0)) / max(np.mean(np.var(raw, axis=0)), 1e-12))) if raw.size else 0.0,
+        "variance_removed_fraction": float(1.0 - (np.mean(np.var(residual, axis=0)) / max(np.mean(np.var(raw, axis=0)), NUMERICAL_ZERO))) if raw.size else 0.0,
         "group_mean_norm_before": _group_mean_norm(raw, groups),
         "group_mean_norm_after": _group_mean_norm(residual, groups),
     }
@@ -394,7 +396,7 @@ def run_decision(
 
 def zscore_features(features: np.ndarray) -> np.ndarray:
     x = np.asarray(features, dtype=np.float64)
-    return _finite((x - np.mean(x, axis=0, keepdims=True)) / np.maximum(np.std(x, axis=0, keepdims=True), 1e-9))
+    return _finite((x - np.mean(x, axis=0, keepdims=True)) / np.maximum(np.std(x, axis=0, keepdims=True), NUMERICAL_ZERO))
 
 
 def whiten_features(features: np.ndarray, *, ridge: float = 1e-6) -> np.ndarray:
@@ -499,11 +501,11 @@ def _response_jacobian(run_record: dict[str, object]) -> np.ndarray:
 
 def _matrix_rank_summary(matrix: np.ndarray) -> dict[str, object]:
     values = np.linalg.svd(np.asarray(matrix, dtype=np.float64), compute_uv=False)
-    stable_rank = float(np.sum(values * values) / max(values[0] * values[0], 1e-18)) if values.size else 0.0
+    stable_rank = float(np.sum(values * values) / max(values[0] * values[0], NUMERICAL_ZERO)) if values.size else 0.0
     return {
         "singular_values": [float(value) for value in values.tolist()],
-        "rank": int(np.linalg.matrix_rank(matrix, tol=1e-9)),
-        "condition_number": float(values[0] / values[-1]) if values.size and values[-1] > 1e-15 else float("inf"),
+        "rank": int(np.linalg.matrix_rank(matrix, tol=NUMERICAL_ZERO)),
+        "condition_number": float(values[0] / values[-1]) if values.size and values[-1] > NUMERICAL_ZERO else float("inf"),
         "stable_rank": stable_rank,
         "minimum_singular_value": float(values[-1]) if values.size else 0.0,
     }
@@ -520,7 +522,7 @@ def _column_angles(matrix: np.ndarray, names: list[str]) -> dict[str, object]:
             a = x[:, i]
             b = x[:, j]
             denom = float(np.linalg.norm(a) * np.linalg.norm(b))
-            cosine = 0.0 if denom <= 1e-15 else float(np.dot(a, b) / denom)
+            cosine = NUMERICAL_ZERO if denom <= NUMERICAL_ZERO else float(np.dot(a, b) / denom)
             out[f"{names[i]}/{names[j]}"] = {
                 "cosine": cosine,
                 "abs_cosine": abs(cosine),
@@ -556,7 +558,7 @@ def _between_within_ratio(values: np.ndarray, labels: list[str]) -> float:
         if np.any(mask):
             class_means.append(float(np.mean(values[mask])))
             within.append(float(np.var(values[mask])))
-    return float(np.var(class_means) / max(np.mean(within), 1e-12)) if class_means else 0.0
+    return float(np.var(class_means) / max(np.mean(within), NUMERICAL_ZERO)) if class_means else 0.0
 
 
 def _pooled_std(left: np.ndarray, right: np.ndarray) -> np.ndarray:
@@ -680,7 +682,7 @@ def _label_metrics(true: list[str], pred: list[str], class_names: list[str]) -> 
 
 def _standardize_train_test(x_train: np.ndarray, x_test: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     mean = np.mean(x_train, axis=0, keepdims=True)
-    std = np.maximum(np.std(x_train, axis=0, keepdims=True), 1e-9)
+    std = np.maximum(np.std(x_train, axis=0, keepdims=True), NUMERICAL_ZERO)
     return (x_train - mean) / std, (x_test - mean) / std
 
 
@@ -715,4 +717,4 @@ def _skipped_whitening(feature_blocks: dict[str, FeatureBlock]) -> dict[str, obj
 
 
 def _finite(values: np.ndarray) -> np.ndarray:
-    return np.nan_to_num(np.asarray(values, dtype=np.float64), nan=0.0, posinf=0.0, neginf=0.0)
+    return np.nan_to_num(np.asarray(values, dtype=np.float64), nan=NUMERICAL_ZERO, posinf=NUMERICAL_ZERO, neginf=-NUMERICAL_ZERO)

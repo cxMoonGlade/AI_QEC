@@ -9,6 +9,7 @@ import torch
 import yaml
 
 from scope_static.experiments.s2d_config import load_s2d_physical_config, output_root_from_config
+from scope_static.numerics import NUMERICAL_ZERO
 from scope_static.physical.active_mixed_basis import rzz_family_metrics
 from scope_static.physical.rzz_minimal_intervention import (
     build_rzz_minimal_intervention_features,
@@ -597,7 +598,7 @@ def _rows(features: np.ndarray, mask: np.ndarray) -> np.ndarray:
 
 
 def _finite(values: np.ndarray) -> np.ndarray:
-    return np.nan_to_num(np.asarray(values, dtype=np.float64), nan=0.0, posinf=0.0, neginf=0.0)
+    return np.nan_to_num(np.asarray(values, dtype=np.float64), nan=NUMERICAL_ZERO, posinf=NUMERICAL_ZERO, neginf=-NUMERICAL_ZERO)
 
 
 def _single_group_fold_audit(groups: list[int]) -> dict[str, object]:

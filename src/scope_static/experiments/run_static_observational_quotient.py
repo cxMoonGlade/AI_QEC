@@ -12,6 +12,7 @@ from scope_static.experiments.plan import ExperimentPlan
 from scope_static.identifiability import deterministic_kmeans
 from scope_static.metrics import adjusted_rand_index, exact_observation_bit_rates, normalized_mutual_info
 from scope_static.multi_env import make_multi_env_teacher
+from scope_static.numerics import NUMERICAL_ZERO
 
 
 DISC13_AUDIT = {
@@ -346,7 +347,7 @@ def _finite_2d(values: torch.Tensor) -> torch.Tensor:
     result = torch.as_tensor(values, dtype=torch.float64, device="cpu")
     if result.ndim != 2:
         raise ValueError("fingerprint matrix must have shape [M, F]")
-    return torch.nan_to_num(result, nan=0.0, posinf=0.0, neginf=0.0)
+    return torch.nan_to_num(result, nan=NUMERICAL_ZERO, posinf=NUMERICAL_ZERO, neginf=-NUMERICAL_ZERO)
 
 
 def _fmt(value: object) -> str:

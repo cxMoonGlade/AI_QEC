@@ -24,6 +24,12 @@ Stage 2 must not claim true physical-mechanism recovery on Google data. Google
 work is external predictive validation unless an explicit proxy partition is
 defined and labelled as proxy-only.
 
+The project-level target remains the six-axis physical generation problem:
+generation fidelity, interpretability, decoder utility, cross-context
+generalization, drift prediction, and identifiability. Stage 2 mainly builds the
+identifiability and early interpretability evidence needed before that full
+physical generation claim can be made.
+
 ## Tracks
 
 ### Stage 2A: Static DEM Quotient Recovery

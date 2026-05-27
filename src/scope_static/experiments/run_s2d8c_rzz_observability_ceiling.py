@@ -8,6 +8,7 @@ import numpy as np
 import yaml
 
 from scope_static.experiments.s2d_config import output_root_from_config, load_s2d_physical_config
+from scope_static.numerics import NUMERICAL_ZERO
 from scope_static.physical.active_mixed_basis import build_active_mixed_basis_features
 from scope_static.physical.rzz_depth_sweep import build_rzz_depth_sweep_features
 from scope_static.physical.rzz_echo_contrast import build_rzz_echo_contrast_features
@@ -244,7 +245,7 @@ def _rows(features: np.ndarray, mask: np.ndarray) -> np.ndarray:
 
 
 def _finite(values: np.ndarray) -> np.ndarray:
-    return np.nan_to_num(np.asarray(values, dtype=np.float64), nan=0.0, posinf=0.0, neginf=0.0)
+    return np.nan_to_num(np.asarray(values, dtype=np.float64), nan=NUMERICAL_ZERO, posinf=NUMERICAL_ZERO, neginf=-NUMERICAL_ZERO)
 
 
 def _load_stack(path: Path) -> tuple[list[dict[str, object]], np.ndarray, list[str]]:

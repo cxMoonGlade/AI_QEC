@@ -6,6 +6,8 @@ from typing import Mapping
 
 import numpy as np
 
+from ..numerics import NUMERICAL_ZERO, positive_floor, probability_floor
+
 
 Array = np.ndarray
 
@@ -86,8 +88,8 @@ def mechanism_channel(spec: MechanismSpec) -> dict[str, object]:
         return {"kind": "unitary", "unitary": rx_unitary(angle) if axis == "rx" else rz_unitary(angle)}
     if mech in READOUT_MECHANISM_IDS:
         p = float(params.get("p", 0.02))
-        p0_to_1 = p if mech in {"M13", "M15", "M16"} else 0.0
-        p1_to_0 = p if mech in {"M14", "M15"} else 0.0
+        p0_to_1 = p if mech in {"M13", "M15", "M16"} else NUMERICAL_ZERO
+        p1_to_0 = p if mech in {"M14", "M15"} else NUMERICAL_ZERO
         if mech == "M16":
             p1_to_0 = 0.5 * p
         return {
@@ -143,19 +145,19 @@ def pauli_stochastic_kraus(probabilities: Mapping[str, float]) -> list[Array]:
 
     paulis = _single_qubit_paulis()
     probs = {str(key).upper(): float(value) for key, value in probabilities.items()}
-    error_probability = sum(max(0.0, probs.get(key, 0.0)) for key in ("X", "Y", "Z"))
+    error_probability = sum(probability_floor(probs.get(key, NUMERICAL_ZERO)) for key in ("X", "Y", "Z"))
     if error_probability > 1.0 + 1e-12:
         raise ValueError("stochastic Pauli probabilities sum to more than one")
-    kraus = [math.sqrt(max(0.0, 1.0 - error_probability)) * paulis["I"]]
+    kraus = [math.sqrt(positive_floor(1.0 - error_probability)) * paulis["I"]]
     for key in ("X", "Y", "Z"):
-        p = max(0.0, probs.get(key, 0.0))
-        if p > 0.0:
+        p = probability_floor(probs.get(key, NUMERICAL_ZERO))
+        if p >= NUMERICAL_ZERO:
             kraus.append(math.sqrt(p) * paulis[key])
     return [np.asarray(k, dtype=np.complex128) for k in kraus]
 
 
 def amplitude_damping_kraus(gamma: float) -> list[Array]:
-    g = min(1.0, max(0.0, float(gamma)))
+    g = probability_floor(float(gamma))
     return [
         np.array([[1.0, 0.0], [0.0, math.sqrt(1.0 - g)]], dtype=np.complex128),
         np.array([[0.0, math.sqrt(g)], [0.0, 0.0]], dtype=np.complex128),
@@ -165,18 +167,18 @@ def amplitude_damping_kraus(gamma: float) -> list[Array]:
 def custom_non_pauli_kraus(eta: float) -> list[Array]:
     """A small coherent/non-Pauli CPTP perturbation for hard optional tests."""
 
-    e = min(1.0, max(0.0, float(eta)))
+    e = probability_floor(float(eta))
     base = amplitude_damping_kraus(e)
     rotate = rz_unitary(0.37) @ rx_unitary(0.23)
     return [item @ rotate for item in base]
 
 
 def two_qubit_depolarizing_kraus(probability: float) -> list[Array]:
-    p = min(1.0, max(0.0, float(probability)))
+    p = probability_floor(float(probability))
     paulis = _single_qubit_paulis()
     labels = [(left, right) for left in ("I", "X", "Y", "Z") for right in ("I", "X", "Y", "Z")]
     non_identity = [(left, right) for left, right in labels if not (left == "I" and right == "I")]
-    kraus = [math.sqrt(max(0.0, 1.0 - p)) * np.eye(4, dtype=np.complex128)]
+    kraus = [math.sqrt(positive_floor(1.0 - p)) * np.eye(4, dtype=np.complex128)]
     each = p / len(non_identity)
     for left, right in non_identity:
         kraus.append(math.sqrt(each) * np.kron(paulis[left], paulis[right]))
@@ -184,7 +186,7 @@ def two_qubit_depolarizing_kraus(probability: float) -> list[Array]:
 
 
 def correlated_relaxation_kraus(gamma: float) -> list[Array]:
-    g = min(1.0, max(0.0, float(gamma)))
+    g = probability_floor(float(gamma))
     k0 = np.diag([1.0, 1.0, 1.0, math.sqrt(1.0 - g)]).astype(np.complex128)
     k1 = np.zeros((4, 4), dtype=np.complex128)
     k1[0, 3] = math.sqrt(g)
@@ -192,19 +194,19 @@ def correlated_relaxation_kraus(gamma: float) -> list[Array]:
 
 
 def weak_type4_mixing_kraus(eta: float) -> list[Array]:
-    e = min(1.0, max(0.0, float(eta)))
+    e = probability_floor(float(eta))
     rotate = rz_unitary(0.17) @ rx_unitary(0.11)
     paulis = _single_qubit_paulis()
     return [
-        math.sqrt(max(0.0, 1.0 - 2.0 * e)) * rotate,
+        math.sqrt(positive_floor(1.0 - 2.0 * e)) * rotate,
         math.sqrt(e) * paulis["X"] @ rotate,
         math.sqrt(e) * paulis["Z"] @ rotate,
     ]
 
 
 def readout_bias_matrix(*, p0_to_1: float, p1_to_0: float) -> Array:
-    p01 = min(1.0, max(0.0, float(p0_to_1)))
-    p10 = min(1.0, max(0.0, float(p1_to_0)))
+    p01 = probability_floor(float(p0_to_1))
+    p10 = probability_floor(float(p1_to_0))
     return np.array([[1.0 - p01, p01], [p10, 1.0 - p10]], dtype=np.float64)
 
 

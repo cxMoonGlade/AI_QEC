@@ -12,6 +12,7 @@ from scope_static.experiments.plan import ExperimentPlan
 from scope_static.identifiability import deterministic_kmeans
 from scope_static.metrics import adjusted_rand_index, normalized_mutual_info
 from scope_static.multi_env import make_multi_env_teacher
+from scope_static.numerics import NUMERICAL_ZERO
 
 
 DISC13B_AUDIT = {
@@ -129,9 +130,9 @@ def _linear_recovery_metrics(local_features: torch.Tensor, oracle_features: torc
         solution = torch.linalg.lstsq(x, y).solution
         pred = x @ solution
         ss_res = torch.sum((y - pred) ** 2)
-        ss_tot = torch.sum((y - y.mean(dim=0, keepdim=True)) ** 2).clamp_min(1e-12)
+        ss_tot = torch.sum((y - y.mean(dim=0, keepdim=True)) ** 2).clamp_min(NUMERICAL_ZERO)
         values = torch.linalg.svdvals(x)
-        condition = float((values.max() / values.min().clamp_min(1e-12)).item()) if values.numel() else 0.0
+        condition = float((values.max() / values.min().clamp_min(NUMERICAL_ZERO)).item()) if values.numel() else 0.0
         return {"r2": float((1.0 - ss_res / ss_tot).item()), "condition": condition}
     except RuntimeError:
         return {"r2": 0.0, "condition": "failed"}
@@ -154,8 +155,8 @@ def _disc13b_conclusion(result: dict[str, object]) -> str:
 def _standardize_columns(values: torch.Tensor) -> torch.Tensor:
     x = torch.as_tensor(values, dtype=torch.float64, device="cpu")
     x = x - x.mean(dim=0, keepdim=True)
-    scale = x.std(dim=0, keepdim=True, unbiased=False).clamp_min(1e-12)
-    return torch.nan_to_num(x / scale, nan=0.0, posinf=0.0, neginf=0.0)
+    scale = x.std(dim=0, keepdim=True, unbiased=False).clamp_min(NUMERICAL_ZERO)
+    return torch.nan_to_num(x / scale, nan=NUMERICAL_ZERO, posinf=NUMERICAL_ZERO, neginf=-NUMERICAL_ZERO)
 
 
 def _mean_column_corr(left: torch.Tensor, right: torch.Tensor) -> float:
@@ -165,7 +166,7 @@ def _mean_column_corr(left: torch.Tensor, right: torch.Tensor) -> float:
         a = left[:, col] - left[:, col].mean()
         b = right[:, col] - right[:, col].mean()
         denom = a.norm() * b.norm()
-        values.append(float((a @ b / denom.clamp_min(1e-12)).item()))
+        values.append(float((a @ b / denom.clamp_min(NUMERICAL_ZERO)).item()))
     return float(sum(values) / len(values)) if values else 0.0
 
 

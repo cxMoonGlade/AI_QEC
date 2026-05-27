@@ -9,6 +9,7 @@ from .fault_graph import FaultGraph
 from .fields import FaultLogitField
 from .hardening import AssignmentInitialization, apply_assignment_initialization, local_logit_assignment_initialization
 from .metrics import adjusted_rand_index, normalized_mutual_info
+from .numerics import NUMERICAL_ZERO
 
 
 @dataclass(frozen=True)
@@ -258,7 +259,7 @@ def codebook_perturbations(
         rows.append(pattern)
     code = torch.stack(rows, dim=0)
     code = code - code.mean(dim=0, keepdim=True)
-    scale = code.std(dim=0, unbiased=False).clamp_min(1e-12)
+    scale = code.std(dim=0, unbiased=False).clamp_min(NUMERICAL_ZERO)
     return code / scale
 
 
@@ -346,7 +347,7 @@ def _orbit_mean(values: torch.Tensor, orbit_ids: torch.Tensor, num_orbits: int) 
 
 def _standardize_vector(values: torch.Tensor) -> torch.Tensor:
     centered = values - values.mean()
-    return centered / centered.std(unbiased=False).clamp_min(1e-12)
+    return centered / centered.std(unbiased=False).clamp_min(NUMERICAL_ZERO)
 
 
 def _mean(values: list[object]) -> float:

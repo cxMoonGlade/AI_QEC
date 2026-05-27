@@ -8,6 +8,7 @@ import torch
 
 from scope_static.identifiability import deterministic_kmeans, evaluate_partition
 from scope_static.local_mechanism import split_merge_audit
+from scope_static.numerics import NUMERICAL_ZERO
 
 from .channels import MechanismSpec
 from .ptm import channel_fingerprint, probe_response_fingerprint, rzz_type_feature_names, rzz_type_feature_vector
@@ -173,9 +174,9 @@ def _class_centers(features: np.ndarray, labels: np.ndarray) -> dict[int, np.nda
 
 
 def _standardize(features: np.ndarray) -> np.ndarray:
-    x = np.nan_to_num(np.asarray(features, dtype=np.float64), nan=0.0, posinf=0.0, neginf=0.0)
+    x = np.nan_to_num(np.asarray(features, dtype=np.float64), nan=NUMERICAL_ZERO, posinf=NUMERICAL_ZERO, neginf=-NUMERICAL_ZERO)
     scale = x.std(axis=0)
-    scale[scale < 1e-12] = 1.0
+    scale[scale < NUMERICAL_ZERO] = 1.0
     return (x - x.mean(axis=0)) / scale
 
 
