@@ -5,20 +5,12 @@ run:
 s2d_physical:
   backend: local_observable_gpu
   require_gpu: true
-  allow_cpu_aer_fallback: false
   paper_informed_ptm_features: true
-  local_observable_response_model: separability_v2
+  local_observable_response_model: born_local
   local_observable_slot_remap: true
   shots: 10000
   seed: 0
   theta: 0.18
-  aer_simulation_method: auto
-  aer_tensor_network_qubit_threshold: 15
-  aer_large_qubit_method: matrix_product_state
-  # Fastest stock-Aer setting measured for this 30q/depth30 finite-shot workload:
-  # CPU MPS batched in 4-circuit Aer jobs. True GPU Aer methods were slower here.
-  aer_sampling_job_batch_size: 4
-  aer_max_parallel_experiments_auto_cap: 4
   mechanisms:
     M0:
       p_x: 0.0015

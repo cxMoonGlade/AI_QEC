@@ -27,6 +27,10 @@ This repository is currently centered on the SCOPE family of QEC noise-learning 
 - **Physical Oracle Stack**: the S2D physical-oracle validation stack that runs PHYS1 teacher generation, PHYS2 teacher self-distinguishability, and PHYS3 learner recovery as one artifact contract.
 - **Teacher self-distinguishability**: the oracle-only PHYS2 question of whether the physical teacher contains enough mechanism signal to separate oracle mechanism labels before judging a learner.
 - **Learner recovery verdict**: the PHYS3 learner-visible assessment of how well local-inverse features recover physical oracle mechanism labels after teacher self-distinguishability is established.
+- **PHYC2 sampled-observation separability**: the learner-visible audit asking whether sampled local observations and visible probe metadata classify mechanism labels under grouped folds. Exact PTMs and oracle fingerprints are evaluator-only.
+- **PHYC2-separability_v2**: the engineered local-observable sampled-response stress teacher. It is useful for separability and leakage-control evidence, but it is not a Born-rule physical baseline.
+- **PHYC2-Born-local**: the late Stage 2E target baseline where sampled local observations come from exact local Born probabilities for CPTP/readout mechanisms. Stage 3 is gated on this baseline.
+- **PHYC3 sampled quantum-error quality**: the audit that consumes PHYC2 grouped predictions and checks whether predicted mechanism labels map to close fold-trained quantum/readout error prototypes. For `separability_v2`, this is a mechanism-to-error translation diagnostic, not direct channel reconstruction from raw shots.
 - **Six-axis physical generation problem**: the project-level SCOPE-Twin target. A physical constraint generation model is not validated merely by emitting CPTP/GKSL objects; it must hold simultaneously across generation fidelity, interpretability, decoder utility, cross-context generalization, drift prediction, and identifiability.
 - **Numerical floor**: floating numerical floors, thresholds, and probability leftovers use `scope_static.numerics.NUMERICAL_ZERO == 1e-12` instead of exact `0.0`. This value survives square/cube operations in GPU float32. It does not apply to structural zeros such as Pauli matrix entries, bit values, integer indices, counts, labels, or genuinely absent artifacts.
 
@@ -49,3 +53,9 @@ path. It may claim latent assignment recovery only when synthetic teacher runs
 report permutation-invariant discovery metrics such as ARI/NMI and heldout NLL
 close to matched known-orbit oracles. Google hardware datasets are external
 empirical validation data, not oracle hidden-partition teachers.
+
+Stage 2E is the planned Born-local physical baseline gate. Current
+`separability_v2` PHYC2/PHYC3 evidence shows learner separability and
+mechanism-to-error prototype quality for an engineered local-observable stress
+teacher. It does not prove full noisy-circuit Born-rule likelihood or direct
+continuous channel reconstruction from hardware-like samples.

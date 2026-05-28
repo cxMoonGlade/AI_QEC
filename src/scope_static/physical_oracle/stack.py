@@ -212,7 +212,7 @@ def format_physical_oracle_stack_summary(result: dict[str, object]) -> str:
         f"- Qubits: `{teacher.get('num_qubits')}`",
         f"- Probes: `{teacher.get('num_probes')}`",
         f"- Shots: `{teacher.get('shots')}`",
-        f"- Aer simulator: `{_format_aer(teacher.get('aer_simulator'))}`",
+        f"- CUDA-Q backend: `{_format_cudaq(teacher.get('cudaq_backend'))}`",
         f"- Sampling: `mode={sampling.get('mode')} jobs={sampling.get('num_jobs')} wall={float(sampling.get('total_wall_clock_seconds', 0.0)):.4f}s`",
         f"- PHYS2 ARI/NMI: `{float(teacher_self.get('ari', 0.0)):.4f}` / `{float(teacher_self.get('nmi', 0.0)):.4f}`",
     ]
@@ -300,7 +300,7 @@ def _compact_teacher(teacher: dict[str, object], paths: PhysicalOracleStackPaths
         "mechanism_counts": teacher.get("mechanism_counts", {}),
         "num_circuit_batches": teacher.get("num_circuit_batches", 1),
         "balanced_min_instances_per_mechanism": teacher.get("balanced_min_instances_per_mechanism"),
-        "aer_simulator": teacher.get("aer_simulator"),
+        "cudaq_backend": teacher.get("cudaq_backend"),
         "sampling": teacher.get("sampling"),
         "sampling_audit": teacher.get("sampling_audit"),
         "backend_audit_dir": str(paths.preflight_dir),
@@ -351,10 +351,10 @@ def _weakest_pairwise_distances(metrics: dict[str, object], *, limit: int = 8) -
     return sorted(rows, key=lambda item: item["distance"])[: int(limit)]
 
 
-def _format_aer(value: object) -> str:
+def _format_cudaq(value: object) -> str:
     if not isinstance(value, dict):
         return "unavailable"
-    return f"method={value.get('method')} device={value.get('device')} reason={value.get('selection_reason')}"
+    return f"target={value.get('target')} gpu_count={value.get('gpu_count')}"
 
 
 def _json_default(value: object) -> Any:

@@ -4,7 +4,7 @@ import argparse
 from pathlib import Path
 
 from scope_static.experiments.s2d_config import load_s2d_physical_config, output_root_from_config
-from scope_static.physical.preflight import audit_aer_backend, write_backend_audit
+from scope_static.physical.preflight import audit_cudaq_backend, write_backend_audit
 
 
 def run_s2d_preflight(
@@ -14,10 +14,11 @@ def run_s2d_preflight(
 ) -> dict[str, object]:
     cfg = load_s2d_physical_config(config_path)
     output = Path(output_dir) if output_dir is not None else output_root_from_config(cfg) / "S2D_PHYS0_preflight"
-    audit = audit_aer_backend(
-        backend=str(cfg.get("backend", "qiskit_aer_gpu")),
+    audit = audit_cudaq_backend(
+        backend=str(cfg.get("backend", "cudaq")),
         require_gpu=bool(cfg.get("require_gpu", True)),
-        allow_cpu_aer_fallback=bool(cfg.get("allow_cpu_aer_fallback", False)),
+        cudaq_target=str(cfg.get("cudaq_target", "nvidia")),
+        cudaq_target_options=str(cfg.get("cudaq_target_options", "fp32")),
     )
     write_backend_audit(audit, output)
     print(format_preflight_terminal_summary(audit, output))
@@ -33,7 +34,7 @@ def format_preflight_terminal_summary(audit: dict[str, object], output: Path) ->
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description="Run S2D PHYS0 Qiskit Aer GPU backend preflight.")
+    parser = argparse.ArgumentParser(description="Run S2D PHYS0 CUDA-Q backend preflight.")
     parser.add_argument("--config", type=Path, default=None)
     parser.add_argument("--output-dir", type=Path, default=None)
     parser.add_argument("--strict", action="store_true", help="Exit nonzero when the backend audit fails.")

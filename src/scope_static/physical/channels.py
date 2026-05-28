@@ -16,7 +16,7 @@ READOUT_MECHANISM_IDS = {"M13", "M14", "M15", "M16"}
 
 @dataclass(frozen=True)
 class MechanismSpec:
-    """Oracle physical mechanism attached to a Qiskit noise location."""
+    """Oracle physical mechanism attached to a local teacher location."""
 
     mechanism_id: str
     name: str

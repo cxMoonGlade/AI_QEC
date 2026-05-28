@@ -3,9 +3,10 @@ run:
   output_root: outputs/scope_static
 
 s2d_physical:
-  backend: qiskit_aer_gpu
+  backend: cudaq
   require_gpu: true
-  allow_cpu_aer_fallback: false
+  cudaq_target: nvidia
+  cudaq_target_options: fp32
 
 s2d10b_generator_invariant_calibration:
   source_root: outputs/scope_static/S2D.9_local_Pauli_Lindblad_observability

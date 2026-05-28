@@ -12,7 +12,7 @@ from .channels import (
     rzz_unitary,
 )
 from .density_sim import apply_kraus, measurement_probabilities_z
-from .preflight import audit_aer_backend, write_backend_audit
+from .preflight import audit_cudaq_backend, write_backend_audit
 from .ptm import (
     channel_fingerprint,
     pauli_basis,
@@ -29,7 +29,7 @@ __all__ = [
     "MechanismSpec",
     "amplitude_damping_kraus",
     "apply_kraus",
-    "audit_aer_backend",
+    "audit_cudaq_backend",
     "channel_fingerprint",
     "custom_non_pauli_kraus",
     "measurement_probabilities_z",

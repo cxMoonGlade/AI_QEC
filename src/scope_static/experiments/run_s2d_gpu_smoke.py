@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 from scope_static.experiments.s2d_config import load_s2d_physical_config
-from scope_static.physical.preflight import audit_aer_backend, write_backend_audit
+from scope_static.physical.preflight import audit_cudaq_backend, write_backend_audit
 from scope_static.physical.teacher import generate_physical_teacher_dataset
 
 
@@ -22,20 +22,22 @@ def run_s2d_gpu_smoke(
         cfg["profile"] = str(profile)
     if shots is not None:
         cfg["shots"] = int(shots)
-    cfg.setdefault("backend", "qiskit_aer_gpu")
+    cfg.setdefault("backend", "cudaq")
     cfg.setdefault("require_gpu", True)
-    cfg.setdefault("allow_cpu_aer_fallback", False)
+    cfg.setdefault("cudaq_target", "nvidia")
+    cfg.setdefault("cudaq_target_options", "fp32")
 
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
     torch_audit = _torch_cuda_audit()
-    aer_audit = audit_aer_backend(
-        backend=str(cfg.get("backend", "qiskit_aer_gpu")),
+    cudaq_audit = audit_cudaq_backend(
+        backend=str(cfg.get("backend", "cudaq")),
         require_gpu=bool(cfg.get("require_gpu", True)),
-        allow_cpu_aer_fallback=bool(cfg.get("allow_cpu_aer_fallback", False)),
+        cudaq_target=str(cfg.get("cudaq_target", "nvidia")),
+        cudaq_target_options=str(cfg.get("cudaq_target_options", "fp32")),
     )
     preflight_dir = output / "S2D_PHYS0_preflight"
-    write_backend_audit(aer_audit, preflight_dir)
+    write_backend_audit(cudaq_audit, preflight_dir)
     teacher = None
     if bool(teacher_smoke):
         teacher = generate_physical_teacher_dataset(
@@ -47,12 +49,13 @@ def run_s2d_gpu_smoke(
         "schema": "scope_static_s2d_gpu_smoke_v1",
         "output_dir": str(output),
         "torch_cuda": torch_audit,
-        "aer_backend": {
-            "status": aer_audit.get("status"),
-            "backend_usable": aer_audit.get("backend_usable"),
-            "simulator_device": aer_audit.get("simulator_device"),
-            "tiny_density_matrix_gpu_simulation": aer_audit.get("tiny_density_matrix_gpu_simulation"),
-            "errors": aer_audit.get("errors", []),
+        "cudaq_backend": {
+            "status": cudaq_audit.get("status"),
+            "backend_usable": cudaq_audit.get("backend_usable"),
+            "target": cudaq_audit.get("cudaq_target"),
+            "gpu_count": cudaq_audit.get("cudaq_gpu_count"),
+            "tiny_cudaq_sample": cudaq_audit.get("tiny_cudaq_sample"),
+            "errors": cudaq_audit.get("errors", []),
         },
         "teacher_smoke": teacher,
         "command_note": "Use this module for streamed GPU checks; avoid `conda run --no-capture-output ... python -c ...` in sandboxed agent sessions.",
@@ -78,7 +81,7 @@ def _torch_cuda_audit() -> dict[str, object]:
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description="Run a GPU visibility smoke for torch and Qiskit Aer.")
+    parser = argparse.ArgumentParser(description="Run a GPU visibility smoke for torch and CUDA-Q.")
     parser.add_argument("--config", type=Path, default=None)
     parser.add_argument("--output-dir", type=Path, default=Path("outputs/scope_static/S2D_GPU_smoke"))
     parser.add_argument("--teacher-smoke", action="store_true")
@@ -96,8 +99,8 @@ def main(argv: list[str] | None = None) -> None:
     print(json.dumps(result, indent=2, sort_keys=True))
     if args.strict:
         torch_ok = bool(result["torch_cuda"].get("cuda_available"))  # type: ignore[index,union-attr]
-        aer_ok = bool(result["aer_backend"].get("backend_usable"))  # type: ignore[index,union-attr]
-        if not torch_ok or not aer_ok:
+        cudaq_ok = bool(result["cudaq_backend"].get("backend_usable"))  # type: ignore[index,union-attr]
+        if not torch_ok or not cudaq_ok:
             raise SystemExit(1)
 
 

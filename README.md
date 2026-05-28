@@ -27,6 +27,22 @@ local reconstructed PTM/generator summaries, but they are not a hardware
 CPTP/GST/GKSL learner and do not yet solve the full six-axis physical
 generation problem.
 
+The current local-observable allM milestone distinguishes two teacher contracts:
+
+```text
+PHYC2-separability_v2:
+  engineered separability stress teacher
+
+PHYC2-Born-local:
+  physically and mathematically correct local baseline
+```
+
+`PHYC2-separability_v2` has passed balanced/weighted sampled-observation
+separability, leakage controls, a 74-qubit/depth-200 scalability smoke, and the
+PHYC3 mechanism-to-error-prototype diagnostic. The minimal
+`PHYC2-Born-local` teacher is implemented; full allM PHYC2/PHYC3 Born-local
+evidence remains the late Stage 2E gate before Stage 3.
+
 ## Docs
 
 - `CONTEXT.md`: glossary and claim boundaries.
@@ -71,6 +87,15 @@ conda run -n aiqec python -m pytest -q \
   tests/test_s2d11_typed_spam_gate_invariant.py
 ```
 
+Focused PHYC2/PHYC3 local-observable slice:
+
+```bash
+conda run -n aiqec python -m pytest -q \
+  tests/test_local_observable_teacher.py \
+  tests/test_phyc2_sampled_observation_separability.py \
+  tests/test_phyc3_sampled_quantum_error_quality.py
+```
+
 ## Common Runs
 
 Full command catalog: `docs/RUNBOOK.md`.
@@ -110,17 +135,35 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run
   --config configs/scope_static/s2d11b_m1_gate_branch_grouped_calibration_audit.yaml
 ```
 
+PHYC2/PHYC3 local-observable weighted allM evidence:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_local_observable_gpu_teacher \
+  --config configs/scope_static/s2d11_allM_30q_depth30_weighted.yaml \
+  --output-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/S2D_PHYS1_teacher
+
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_phyc2_sampled_observation_separability \
+  --contract weighted \
+  --teacher-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/S2D_PHYS1_teacher \
+  --output-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/PHYC2_weighted_slot_only_control
+
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_phyc3_sampled_quantum_error_quality \
+  --teacher-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/S2D_PHYS1_teacher \
+  --phyc2-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/PHYC2_weighted_slot_only_control \
+  --output-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/PHYC3_quantum_error_quality
+```
+
 Physical Oracle Stack facade:
 
 ```bash
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_physical_oracle_stack \
-  --config configs/scope_static/d3_r1_S2D_PHYS_aer_gpu.yaml \
+  --config configs/scope_static/d3_r1_S2D_PHYS_cudaq.yaml \
   --run-local-inverse auto
 ```
 
 Outputs are written under `outputs/scope_static/`.
 
-## Current Stage 2D State
+## Current Stage 2 State
 
 S2D.9 showed local two-qubit Pauli-Lindblad generator coordinates are
 algebraically observable from `rzz_local_tomography`.
@@ -159,6 +202,22 @@ gate recall:        1.0000
 readout recall:     0.9630
 prep/reset recall:  1.0000
 ```
+
+The local-observable Torch CUDA allM stress teacher now passes:
+
+```text
+PHYC2-balanced 30q/depth30/30 groups: BA 1.0000, min recall 1.0000
+PHYC2-weighted 30q/depth30/support 2-8: prevalence accuracy 1.0000
+PHYC2-weighted 74q/depth200/support 2-8: prevalence accuracy 1.0000
+PHYC3 weighted mechanism-to-error quality: mean channel distance 0.000026
+slot-only leakage controls: low, leakage_suspected false
+```
+
+This closes the engineered separability stress milestone, not the physical
+baseline. Stage 2E now has a minimal `PHYC2-Born-local` teacher that samples
+exact local Born probabilities for CPTP/readout mechanisms, without response
+templates or post-hoc correlation overlays; allM PHYC2/PHYC3 evidence is still
+the gate before Stage 3.
 
 ## Claim Boundary
 

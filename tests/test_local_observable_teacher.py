@@ -99,6 +99,34 @@ s2d11_typed_spam_gate_invariant_learner:
     assert captured["cfg"]["local_observable_slot_remap"] is False
 
 
+def test_local_observable_runner_accepts_born_local_response_model(monkeypatch, tmp_path: Path) -> None:
+    config = tmp_path / "config.yaml"
+    config.write_text(
+        """
+s2d_physical:
+  shots: 10000
+s2d11_typed_spam_gate_invariant_learner:
+  runs:
+    - name: allM30
+      mechanism_set: allM
+      num_qubits: 30
+      circuit_depth: 30
+      balanced_min_instances_per_mechanism: 3
+""",
+    )
+    captured: dict[str, object] = {}
+
+    def fake_generate(cfg, *, output_dir):
+        captured["cfg"] = dict(cfg)
+        return {"mechanism_counts": {"M0": 3}, "sampling": {}}
+
+    monkeypatch.setattr(runner, "generate_local_observable_teacher_dataset", fake_generate)
+
+    runner.run_local_observable_gpu_teacher(config, response_model="born-local")
+
+    assert captured["cfg"]["local_observable_response_model"] == "born-local"
+
+
 def test_local_observable_probability_profile_is_finite_and_bounded() -> None:
     record = {
         "oracle_label": "M1",

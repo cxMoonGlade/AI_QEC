@@ -6,7 +6,7 @@ s2d_physical:
   backend: local_observable_gpu
   require_gpu: true
   paper_informed_ptm_features: true
-  local_observable_response_model: separability_v2
+  local_observable_response_model: born_local
   local_observable_slot_remap: true
   shots: 10000
   seed: 0

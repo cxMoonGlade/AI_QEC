@@ -56,6 +56,10 @@ Stage 2D: Active local-logit observability
   Question: Which probes improve recoverability of local inverse logits and
             their mechanism clusters?
 
+Stage 2E: Born-local physical baseline
+  Question: Can exact local Born probabilities produce learner-separable
+            sampled observations and high-quality quantum-error estimates?
+
 Stage 2B: Google external validation
   Question: On real data without true omega(j), do discovery models improve
             likelihood, calibration, transfer, or decoder-facing utility?
@@ -1654,46 +1658,37 @@ forbidden:
   oracle fingerprints
 ```
 
-### S2D Physical Teacher GPU Simulation Policy
+### S2D Physical Teacher CUDA-Q Policy
 
 Status: implemented.
 
-The physical teacher keeps the same Qiskit circuits, noise model, finite-shot
-sampling contract, and oracle mechanism taxonomy, but the Aer simulator method is
-now selected by circuit size:
+The physical teacher now preflights CUDA-Q directly and routes PHYS1 generation
+through the local-observable teacher. The default CUDA-Q target policy is:
 
 ```yaml
-aer_simulation_method: auto
-aer_tensor_network_qubit_threshold: 15
-aer_large_qubit_method: matrix_product_state
+backend: cudaq
+require_gpu: true
+cudaq_target: nvidia
+cudaq_target_options: fp32
+local_observable_response_model: born_local
 ```
 
-For profiles below the threshold, `auto` uses GPU `density_matrix`, preserving
-the exact dense small-circuit path. For 15+ qubit chain profiles, `auto` uses
-`matrix_product_state`, which is the tensor-network algorithm better matched to
-the shallow nearest-neighbor RZZ chain geometry than a dense `2^n x 2^n` density
-matrix. Qiskit Aer 0.15.1 does not provide GPU execution for
-`matrix_product_state`, so this large-qubit default is the fastest stock-Aer
-path observed for chain teachers, not a true GPU sampler. The resolved Aer
-settings and `sampling_audit.json` therefore record both the requested device
-and whether the selected method supports GPU execution:
+PHYS0 writes `backend_audit.json` and `backend_audit.md` with the CUDA-Q package
+versions, selected target, visible GPU count, and a tiny sampled CUDA-Q kernel.
+The physical teacher requires that audit to pass before writing PHYS1 artifacts.
+The compact stack summary records this under `cudaq_backend`.
+
+The Stage 2E Born-local path computes exact local probabilities from:
 
 ```text
-method_gpu_supported
-requested_gpu_method_supported
-gpu_support_note
+rho_probe -> ideal local operation/context -> mechanism channel/readout -> POVM
 ```
 
-The default MPS path sets `matrix_product_state_truncation_threshold: 1e-12`
-unless the config explicitly overrides it. This threshold is the repository
-numerical floor, not exact zero; PHYS summaries record it under
-`aer_simulator.options` so the approximation policy is auditable rather than
-implicit. Explicit overrides remain available through
-`aer_simulation_method: density_matrix | matrix_product_state | tensor_network`.
-`tensor_network` and dense `statevector`/`density_matrix` are true GPU-capable
-Aer methods, but the 30-qubit depth-30 noisy tomography stress test found them
-slower or memory-heavy enough to be impractical for the full finite-shot
-teacher.
+It then samples those probabilities on GPU for PHYC2/PHYC3 artifacts. The
+Born-local teacher intentionally does not use mechanism-label response
+templates, artificial response-code margins, or post-sampling correlation
+overlays. Two-qubit correlations come from the exact local two-qubit output
+distribution.
 
 Floating numerical floors, probability leftovers, and simulation thresholds use
 the repository-wide numerical floor `scope_static.numerics.NUMERICAL_ZERO =
@@ -1703,37 +1698,13 @@ numerical floors. Structural zeros remain exact where they carry meaning:
 Pauli/operator matrix entries, bit values, integer indices, counts, labels,
 array sizes, empty-artifact metrics, and exact algebraic identities.
 
-The policy is recorded in each PHYS1 teacher summary under `aer_simulator`.
 Named chain profiles currently include `phys5_chain`, `phys7_chain`,
 `phys9_chain`, `phys15_chain`, and `phys20_chain`.
 
-PHYS1 also uses a GPU-first sampling submission policy:
-
-```yaml
-aer_sampling_mode: batch
-aer_sampling_job_batch_size: 0
-aer_auto_parallel_experiments: true
-aer_max_parallel_experiments_auto_cap: 8
-```
-
-`batch` submits probe circuits for a shared noise model in Aer jobs instead of
-one job per probe. PHYS1 automatically sets `max_parallel_experiments` to
-`min(batch_size, cap)` unless the user explicitly sets that Aer option. On the
-30-qubit depth-30 all-mechanism stress test, 4-circuit MPS batches were the best
-stock-Aer setting measured; larger batches increased wall time. The per-circuit
-submission path remains available through `aer_sampling_mode: per_circuit` for
-legacy seed reproducibility checks. Each teacher run writes
-`sampling_audit.json`; all sampling, materialization, and total timings in that
-audit are wall-clock seconds.
-
-The next real GPU-sampling path should not rely on stock Aer MPS. It should be
-a custom CUDA/cuTensorNet local-tensor sampler, or an observable-first teacher
-that computes local tomography responses on GPU and injects finite-shot noise
-without materializing full bitstrings when the learner only consumes local
-statistics. The implemented local-observable GPU teacher follows the second
-path: it emits PHYS1-compatible `observations.npz` artifacts by sampling local
-probe-response bits with Torch CUDA, then PHYC2 audits whether those sampled
-observations are learner-separable.
+The implemented local-observable GPU teacher emits PHYS1-compatible
+`observations.npz` artifacts by sampling local probe-response bits with Torch
+CUDA, then PHYC2 audits whether those sampled observations are
+learner-separable.
 
 inspired by https://github.com/muhos/QuaSARQ
 
@@ -1957,7 +1928,7 @@ outputs/scope_static/local_observable_gpu_allM_74q_depth200_weighted_v2_slot_rem
 The same PHYC3 quantum-error-quality audit passes on the 74-qubit/depth-200
 weighted artifact with the same classification and channel-distance metrics.
 
-Stage 3 should replace the engineered `separability_v2` response model with a
+Stage 2E replaces the engineered `separability_v2` response model with a
 Born-local physical baseline:
 
 ```text
@@ -1968,8 +1939,21 @@ local probe state -> CPTP/readout mechanism -> exact local Born probability
 That teacher must not use mechanism-label response templates, artificial
 response-code margins, or post-sampling pair-correlation overlays. Two-qubit
 correlations should come from the exact two-qubit output distribution. Small
-Born-local cases should be validated against CUDA-Q/Qiskit exact simulation
-before using PHYC2/PHYC3 as physical baseline evidence.
+Born-local cases should be validated against direct density-matrix math and
+CUDA-Q local circuits before using PHYC2/PHYC3 as physical baseline evidence.
+
+Use the names precisely:
+
+```text
+PHYC2-separability_v2:
+  engineered separability stress teacher
+
+PHYC2-Born-local:
+  physically and mathematically correct local baseline
+```
+
+Stage 3 should remain gated until PHYC2-Born-local and the corresponding PHYC3
+Born-local quality audit pass.
 
 The legacy PHYS2 oracle-fingerprint audit remains useful as a ceiling: it says
 whether the mechanism family is in principle distinguishable. It does not prove
@@ -1985,8 +1969,8 @@ PHYS3 local-inverse result, and `overall_diagnosis` distinguishes
 Under `run_local_inverse: auto`, PHYS3 is skipped when PHYS2 has
 `ari < 0.85` or `nmi < 0.85`; diagnostic runners can request
 `run_local_inverse: always`. The facade runs PHYS1 before importing the
-Torch-heavy PHYS2/PHYS3 implementations, preserving Aer GPU visibility for
-large teacher sampling.
+Torch-heavy PHYS2/PHYS3 implementations, keeping backend visibility failures
+localized to the PHYS0/PHYS1 boundary.
 
 ### Canonical S2D Physical Mechanism Taxonomy
 

@@ -90,16 +90,14 @@ mechanisms when data comes from a non-Stim physical-channel teacher?
 Default backend:
 
 ```text
-qiskit-aer-gpu
-qiskit==1.4.5
-qiskit-aer-gpu==0.15.1
+cudaq
+cuda-quantum
+target=nvidia option=fp32
 ```
 
-CPU Aer fallback is disabled for default S2D runs. Treat a missing GPU as an
+CPU fallback is disabled for default S2D runs. Treat a missing GPU as an
 environment visibility problem to diagnose, not as evidence for a CPU-first
-experiment design. Do not install `qiskit-ibm-runtime` in the `aiqec` S2D
-environment; current runtime packages require Qiskit 2.x, while Aer GPU 0.15.1
-needs the Qiskit 1.x provider API.
+experiment design.
 
 Implemented gate order:
 
@@ -114,7 +112,7 @@ The preferred orchestration layer is the Physical Oracle Stack facade:
 
 ```bash
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_physical_oracle_stack \
-  --config configs/scope_static/d3_r1_S2D_PHYS_aer_gpu.yaml \
+  --config configs/scope_static/d3_r1_S2D_PHYS_cudaq.yaml \
   --run-local-inverse auto
 ```
 
@@ -317,7 +315,7 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run
   --config configs/scope_static/s2d11b_m1_gate_branch_grouped_calibration_audit.yaml
 ```
 
-### Stage 3: Born-Local Physical Baseline
+### Stage 2E: Born-Local Physical Baseline
 
 Question:
 
@@ -327,7 +325,7 @@ and still support mechanism classification plus high-quality quantum-error
 reconstruction?
 ```
 
-Stage 3 should add a physically correct local teacher:
+Stage 2E adds a physically correct local teacher:
 
 ```text
 local probe state -> CPTP/readout mechanism -> exact local Born probability
@@ -337,17 +335,23 @@ local probe state -> CPTP/readout mechanism -> exact local Born probability
 This teacher must not use mechanism-label response templates, artificial
 response-code margins, or post-sampling pair-correlation overlays. Two-qubit
 correlations should come from the exact two-qubit output distribution. Validate
-small cases against CUDA-Q/Qiskit exact simulation, then rerun PHYC2 and PHYC3.
+small cases against direct density-matrix math and CUDA-Q local circuits, then
+rerun PHYC2 and PHYC3.
 
 The intended distinction is:
 
 ```text
-PHYC2/PHYC3 separability_v2:
+PHYC2-separability_v2 / PHYC3-separability_v2:
   engineered sampled-observation stress teacher
 
-PHYC2/PHYC3 Born-local:
+PHYC2-Born-local / PHYC3-Born-local:
   mathematically and physically correct local baseline
 ```
+
+Stage 3 is blocked until Stage 2E passes. The current `separability_v2`
+evidence is good enough to motivate Stage 2E, but it does not close the physical
+baseline milestone. The gating decision is recorded in
+`docs/adr/0004-stage2e-born-local-gate.md`.
 
 ### Stage 2B: Google External Validation
 
@@ -363,18 +367,18 @@ metrics and explicitly labelled proxy ARI/NMI only.
 
 ## Immediate Next Steps
 
-1. Keep `aiqec` clean for Aer GPU S2D:
+1. Keep `aiqec` clean for CUDA-Q S2D:
 
    ```text
-   qiskit==1.4.5
-   qiskit-aer-gpu==0.15.1
-   no qiskit-aer
-   no qiskit-ibm-runtime
+   cuda-quantum installed
+   CUDA-Q target nvidia visible
+   no physical-teacher dependency on legacy simulator packages
    ```
 
 2. Keep PHYS0 -> PHYS1 -> PHYS2 -> PHYS3 artifacts refreshed together when
    changing the physical teacher or local-inverse representation.
 3. Use `docs/ARCHITECTURE.md` for module routing and `docs/RUNBOOK.md` for
    command recipes.
-4. After S2D.11b, do not treat readout/prep as the main blocker. The current
-   passed fix is gate-branch M1 calibration over existing S2D.11 artifacts.
+4. Implement Stage 2E as the next milestone: a Born-local teacher that produces
+   exact local Born probabilities, then rerun PHYC2-Born-local and
+   PHYC3-Born-local before any Stage 3 work.

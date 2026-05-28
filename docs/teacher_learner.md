@@ -14,6 +14,11 @@ Implemented forms:
   faults `e_j ~ Bernoulli(p_j)`, and observations `y = A e mod 2`.
 - S2D physical-oracle work: PHYS1/PHYS2 generate physical mechanism cases and
   oracle separability evidence before PHYS3 learner recovery is judged.
+- PHYC2-separability_v2: generates PHYS1-compatible sampled local observations
+  from engineered branch-specific response profiles for stress testing
+  learner-visible separability.
+- PHYC2-Born-local: Stage 2E teacher that generates sampled local observations
+  from exact local Born probabilities for CPTP/readout mechanisms.
 
 Expected properties:
 
@@ -34,6 +39,10 @@ Implemented forms:
   learner-visible features; hidden `omega(j)` is withheld.
 - PHYS3: learns from shot bits, probe metadata, visible instruction type,
   visible qubit/edge ids, chain position, and visible-data-derived invariants.
+- PHYC2: trains grouped classifiers from sampled observation bits and
+  learner-visible probe/instruction metadata to classify mechanism labels.
+- PHYC3: consumes PHYC2 grouped predictions and audits whether predicted
+  mechanism labels map to close quantum/readout error prototypes.
 
 Expected properties:
 
@@ -61,6 +70,8 @@ Allowed learner-visible data:
 - shot bits.
 - visible circuit/probe/instruction/location metadata.
 - features computed only from visible data.
+- PHYC2 slot-remapped observation cells, provided sampled response features are
+  used and slot-only leakage control remains low.
 
 Forbidden learner exposure:
 
@@ -70,6 +81,14 @@ Forbidden learner exposure:
 - exact oracle PTM/RZZ-type features.
 - hidden-orbit-centered features.
 - ARI/NMI or recovery metrics used for model selection.
+- observation slot ids if a remap deterministically encodes mechanism identity.
+
+For the current local-observable path, `PHYC2.slot_only_leakage_control` trains
+on slot/layout metadata without sampled bits. High slot-only accuracy means the
+PHYC2 result is leaking and should not be trusted. The current accepted
+`separability_v2` evidence has low slot-only accuracy and is explicitly
+classified as an engineered separability stress result, not a Born-local
+physical baseline.
 
 Rule: hidden or oracle-only data may appear in evaluator artifacts, not in
 learner paths. If recovery succeeds without leakage, the declared visible

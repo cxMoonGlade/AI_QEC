@@ -3,9 +3,10 @@ run:
   output_root: outputs/scope_static
 
 s2d_physical:
-  backend: qiskit_aer_gpu
+  backend: cudaq
   require_gpu: true
-  allow_cpu_aer_fallback: false
+  cudaq_target: nvidia
+  cudaq_target_options: fp32
 
 s2d8c_rzz_observability_ceiling:
   source_root: outputs/scope_static/S2D.8_RZZ_dynamical_probe_design/S2D.8b_RZZ_echo_no_echo_probe_design

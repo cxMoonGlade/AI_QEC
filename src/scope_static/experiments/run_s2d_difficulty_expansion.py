@@ -108,7 +108,7 @@ def _run_one(output: Path, physical_cfg: dict[str, object], cfg: dict[str, objec
             "mechanism_counts": teacher.get("mechanism_counts", {}),
             "output_dir": str(paths["teacher_dir"]),
             "noise_application_audit": str(run_dir / "noise_application_audit.json"),
-            "aer_simulator": teacher.get("aer_simulator"),
+            "cudaq_backend": teacher.get("cudaq_backend"),
         },
         "PHYS2": separability,
         "PHYS3": local if isinstance(local, dict) else None,

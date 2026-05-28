@@ -11,7 +11,7 @@
 
 这意味着：在你当前只有 `z_basis / x_measure / y_measure` 三种**全局同轴测量**的 PHYS3 中，很多真正区分 RZZ-family 的信息根本没有被看见。更具体地说，当前 probe 最多看到 \(\{I,Z\}^{\otimes n}\)、\(\{I,X\}^{\otimes n}\)、\(\{I,Y\}^{\otimes n}\) 三个集合里的 Pauli 字符串；而 RZZ 论文里最关键的下右角 2×2 anti-commuting 块，恰恰涉及 \(XZ,YZ,ZX,ZY\) 这样的 mixed-basis 字符串，commuting-sector 的精细扰动还会涉及 \(XY,YX\)。所以，PHYS3 v1/v2 把 M1、M7、M8、M10 混在一起，并不意外；它更像是“传感器没装够”，而不是“学习器写错了”。citeturn11view3turn11view0turn18view0
 
-对 M5 读出分裂，结论恰好相反。Qiskit Aer 文档把 `ReadoutError` 明确区分为**经典读出噪声**，与 `QuantumError` 分开；Bravyi 等将 readout mitigation 写成对 noisy probability vector 应用**逆噪声矩阵**，van den Berg 等给出不依赖具体模型的**model-free** 期望值修正，Hicks 等则表明 readout rebalancing 可以显著降低校正后的方差。因此，M5 分裂更像是**位置/强度 nuisance 没被规范化**，而不是缺少量子可观测量。citeturn17view0turn24view1turn23view1turn23view2
+对 M5 读出分裂，结论恰好相反。读出噪声应作为**经典测量混淆**与量子过程噪声分开处理；Bravyi 等将 readout mitigation 写成对 noisy probability vector 应用**逆噪声矩阵**，van den Berg 等给出不依赖具体模型的**model-free** 期望值修正，Hicks 等则表明 readout rebalancing 可以显著降低校正后的方差。因此，M5 分裂更像是**位置/强度 nuisance 没被规范化**，而不是缺少量子可观测量。citeturn17view0turn24view1turn23view1turn23view2
 
 因此，最优先的工程路径不是继续“堆复杂聚类”，而是四步：先给 PHYS2/PHYS3 特征做 provenance 标注与 learner-visible ablation；再对 M5 做 affine readout normalization；然后为 RZZ-family 增加**最小 mixed-basis edge probe**，并用 DPTM-lite 或 partial/correlated twirl 提取下右角块的不变量；最后，如果 M8 仍然和 M1/M7 合并，再加针对 \(XX/YY\) commuting perturbation 的 echo probes。Roncallo 等的 direct PTM reconstruction 表明：如果你只想学少数关键 PTM 元素，而不是全量 tomography，那么每个 PTM entry 最多只需要两个实验配置，这对于当前 5–9 qubit 的 S2D slice 是现实可行的。citeturn21view0turn20view3
 
@@ -23,7 +23,7 @@
 \[
 R_{ij}=2^{-n}\operatorname{Tr}[P_i\,\mathcal E(P_j)].
 \]
-在这种表示里，门组合就是矩阵乘法；这正是 GST 与 Qiskit 文档偏好 PTM 的原因之一。与此同时，Qiskit Aer 支持自定义 `NoiseModel`、`QuantumError` 和 `ReadoutError`，并且 `density_matrix` 方法可以在支持 CUDA 的 GPU 上运行，所以你把 Aer GPU 作为 S2D 的物理教师后端，这个方向在方法上是合理的。citeturn17view2turn19view2turn17view0turn17view1
+在这种表示里，门组合就是矩阵乘法；这也是 GST 语境常用 PTM 的原因之一。当前实现已转向 CUDA-Q preflight 与 Born-local local-observable teacher，旧的全局模拟器教师只作为历史背景，不再是 S2D 默认路径。citeturn17view2turn19view2turn17view0turn17view1
 
 RZZ 非-Clifford 论文对 \(R_{ZZ}(\theta)\) 做了一个特别重要的基重排：把与 \(ZZ\) **对易**的 Pauli 放在前半，把与 \(ZZ\) **反对易**的 Pauli 放在后半。这样，理想 \(R_{ZZ}(\theta)\) 的 PTM 在前半是单位块，在后半是 \(2\times2\) 旋转块 \(R^{(2)}(\theta)\)。对 noisy gate 再做 commuting-Pauli partial twirl 后，PTM 变成 \(2\times2\) block-diagonal，并自然分成 Type 1–4：Type 1 是 commuting-sector 保持项、Type 2 是 anti-commuting-sector 的对角保持项、Type 3 是 anti-commuting-sector 的有符号混合项、Type 4 是 commuting-sector 的本应接近 0 的混合项。citeturn11view3turn11view0
 
@@ -31,7 +31,7 @@ RZZ 非-Clifford 论文对 \(R_{ZZ}(\theta)\) 做了一个特别重要的基重�
 
 ```mermaid
 flowchart LR
-    T[Qiskit Aer 物理教师] --> P2[PHYS2<br/>exact PTM + exact probe fingerprints]
+    T[历史物理教师] --> P2[PHYS2<br/>exact PTM + exact probe fingerprints]
     T --> C[有限 shots 计数]
     C --> P3[PHYS3 v1/v2<br/>global z/x/y moments + local_inverse_probability]
     P2 --> S2[完美可分]

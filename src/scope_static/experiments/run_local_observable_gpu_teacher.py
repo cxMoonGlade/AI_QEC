@@ -17,6 +17,7 @@ def run_local_observable_gpu_teacher(
     shots: int | None = None,
     balanced_min_instances_per_mechanism: int | None = None,
     disable_slot_remap: bool = False,
+    response_model: str | None = None,
 ) -> dict[str, object]:
     physical_cfg = load_s2d_physical_config(config_path)
     full_cfg = _load_config(config_path)
@@ -32,6 +33,8 @@ def run_local_observable_gpu_teacher(
         cfg["shots"] = int(shots)
     if balanced_min_instances_per_mechanism is not None:
         cfg["balanced_min_instances_per_mechanism"] = int(balanced_min_instances_per_mechanism)
+    if response_model is not None:
+        cfg["local_observable_response_model"] = str(response_model)
     if disable_slot_remap:
         cfg["local_observable_slot_remap"] = False
 
@@ -59,6 +62,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--run-name", type=str, default=None)
     parser.add_argument("--shots", type=int, default=None)
     parser.add_argument("--balanced-min-instances-per-mechanism", type=int, default=None)
+    parser.add_argument("--response-model", type=str, default=None, help="Local response model, e.g. separability_v2 or born_local.")
     parser.add_argument("--disable-slot-remap", action="store_true", help="Run PHYC2.no_slot_remap_ablation by preserving original local-observable qubit cells.")
     args = parser.parse_args(argv)
     run_local_observable_gpu_teacher(
@@ -68,6 +72,7 @@ def main(argv: list[str] | None = None) -> None:
         shots=args.shots,
         balanced_min_instances_per_mechanism=args.balanced_min_instances_per_mechanism,
         disable_slot_remap=bool(args.disable_slot_remap),
+        response_model=args.response_model,
     )
 
 

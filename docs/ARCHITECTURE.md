@@ -95,6 +95,8 @@ The important tracks are:
 ```text
 Stage 2A: direct free-assignment recovery of hidden DEM quotient
 Stage 2C: local-inverse-first mechanism discovery
+Stage 2D: active local-logit observability and typed physical learners
+Stage 2E: Born-local physical baseline gate
 Stage 2B: Google external predictive validation, no true ARI/NMI
 ```
 
@@ -127,6 +129,9 @@ physical/generator_space_calibration.py   S2D.10 nuisance geometry audit
 physical/generator_invariant_calibration.py S2D.10b scalar invariants
 physical/typed_spam_gate_invariant.py     S2D.11 typed gate/readout/prep learner
 physical/m1_gate_calibration.py           S2D.11b M1 grouped calibration audit
+physical/local_observable_teacher.py      Torch CUDA local-observable sampled teacher
+physical/sampled_observation_separability.py PHYC2 sampled-observation separability
+physical/sampled_quantum_error_quality.py PHYC3 mechanism-to-error quality audit
 physical_oracle/stack.py                  PHYS1/PHYS2/PHYS3 facade
 ```
 
@@ -142,6 +147,46 @@ other   -> gate_process_branch
 
 S2D.11b then reuses the S2D.11 artifacts and changes only gate-branch M1
 calibration, converting the set_D typed learner into a pass.
+
+## PHYC2/PHYC3 Local-Observable Flow
+
+The local-observable Torch CUDA path is a scalable sampled-observation teacher,
+not a full-circuit simulator:
+
+```text
+mechanism records + probe metadata
+-> local response probabilities
+-> Torch CUDA Bernoulli samples
+-> PHYC2 grouped sampled-observation separability
+-> PHYC3 mechanism-to-error prototype quality
+```
+
+`PHYC2-separability_v2` is an engineered separability stress teacher. It uses
+branch-specific local response profiles, GPU-side pair-correlation overlays,
+and slot remapping to avoid local-response overwrite in the PHYS1-compatible
+`observations.npz` tensor. PHYC2 neutralizes synthetic slot geometry and runs a
+slot-only leakage control to ensure slot/layout metadata alone do not classify
+mechanisms.
+
+PHYC3 consumes PHYC2 grouped predictions. For each held-out circuit group it
+builds fold-trained channel/readout prototypes from training groups, maps each
+predicted mechanism label to its prototype, and compares that vector to the
+evaluator-only oracle channel/readout matrix. This validates
+mechanism-to-error translation quality for the synthetic teacher; it does not
+directly reconstruct a continuous channel from raw shots.
+
+Stage 2E is the current physical-baseline gate:
+
+```text
+PHYC2-Born-local:
+  local probe state -> CPTP/readout mechanism -> exact local Born probability
+  -> GPU sampled observation bits
+```
+
+The Born-local teacher must not use mechanism-label response templates,
+artificial response-code margins, or post-sampling pair-correlation overlays.
+Stage 3 is blocked until the Born-local PHYC2/PHYC3 path passes. See
+`docs/adr/0004-stage2e-born-local-gate.md` for the milestone-gating decision.
 
 ## Physical Oracle Stack Facade
 

@@ -27,7 +27,7 @@ def run_s2d_physical_teacher(
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description="Generate the S2D PHYS1 Qiskit Aer physical-oracle teacher dataset.")
+    parser = argparse.ArgumentParser(description="Generate the S2D PHYS1 CUDA-Q physical-oracle teacher dataset.")
     parser.add_argument("--config", type=Path, default=None)
     parser.add_argument("--output-dir", type=Path, default=None)
     parser.add_argument("--preflight-dir", type=Path, default=None)

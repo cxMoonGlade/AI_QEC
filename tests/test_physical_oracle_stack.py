@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from scope_static.physical.preflight import audit_aer_backend
+from scope_static.physical.preflight import audit_cudaq_backend
 from scope_static.physical_oracle import (
     load_phys1_teacher_artifact,
     load_phys2_metrics,
@@ -80,19 +80,23 @@ def test_physical_oracle_stack_always_mode_runs_learner_for_diagnostics(tmp_path
 
 
 def test_physical_oracle_stack_real_small_smoke_when_gpu_available(tmp_path: Path) -> None:
-    audit = audit_aer_backend(backend="qiskit_aer_gpu", require_gpu=True, allow_cpu_aer_fallback=False)
+    audit = audit_cudaq_backend(backend="cudaq", require_gpu=True)
     if not bool(audit["backend_usable"]):
-        pytest.skip(f"qiskit-aer-gpu preflight is not usable here: {audit.get('errors')}")
+        pytest.skip(f"CUDA-Q preflight is not usable here: {audit.get('errors')}")
+    torch = pytest.importorskip("torch")
+    if not torch.cuda.is_available():
+        pytest.skip("local sampled teacher requires torch CUDA")
 
     result = run_physical_oracle_stack(
         {
             "profile": "phys5_chain",
-            "mechanism_set": "set_A",
+            "mechanism_set": ["M13", "M14"],
             "shots": 16,
             "seed": 2,
-            "backend": "qiskit_aer_gpu",
+            "backend": "cudaq",
             "require_gpu": True,
-            "allow_cpu_aer_fallback": False,
+            "local_observable_response_model": "born_local",
+            "balanced_min_instances_per_mechanism": 2,
         },
         output_dir=tmp_path,
         bootstrap_replicates=1,
@@ -118,7 +122,7 @@ def _patch_stack_adapters(monkeypatch, *, calls: list[str], phys2_ari: float, ph
             "num_qubits": 5,
             "shots": int(config.get("shots", 8)),
             "mechanism_counts": {"M0": 1},
-            "aer_simulator": {"method": "matrix_product_state", "device": "GPU", "selection_reason": "test"},
+            "cudaq_backend": {"target": "nvidia", "gpu_count": 1},
         }
 
     def fake_phys2(*, teacher_dir, output_dir, paper_informed):

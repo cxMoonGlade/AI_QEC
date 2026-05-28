@@ -9,6 +9,7 @@ stage-specific docs:
 - `docs/RUNBOOK.md`: install, test, GPU, and experiment commands.
 - `docs/STAGE2_ROADMAP.md`: compact Stage 2 execution state.
 - `docs/SCOPE_TWIN.md`: full SCOPE-Twin notation and future object contract.
+- `docs/adr/`: durable architecture and milestone-gating decisions.
 
 ## Current Scope
 
@@ -121,7 +122,7 @@ Run Physical Oracle Stack facade:
 
 ```bash
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_physical_oracle_stack \
-  --config configs/scope_static/d3_r1_S2D_PHYS_aer_gpu.yaml \
+  --config configs/scope_static/d3_r1_S2D_PHYS_cudaq.yaml \
   --run-local-inverse auto
 ```
 
@@ -133,6 +134,24 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run
 
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_s2d11b_m1_gate_branch_grouped_calibration_audit \
   --config configs/scope_static/s2d11b_m1_gate_branch_grouped_calibration_audit.yaml
+```
+
+Run PHYC2/PHYC3 local-observable weighted allM evidence:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_local_observable_gpu_teacher \
+  --config configs/scope_static/s2d11_allM_30q_depth30_weighted.yaml \
+  --output-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/S2D_PHYS1_teacher
+
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_phyc2_sampled_observation_separability \
+  --contract weighted \
+  --teacher-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/S2D_PHYS1_teacher \
+  --output-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/PHYC2_weighted_slot_only_control
+
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_phyc3_sampled_quantum_error_quality \
+  --teacher-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/S2D_PHYS1_teacher \
+  --phyc2-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/PHYC2_weighted_slot_only_control \
+  --output-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/PHYC3_quantum_error_quality
 ```
 
 Do not use `PYTHONPATH="$PWD/src"` for normal runs on this WSL/CUDA setup. The
@@ -151,3 +170,22 @@ Compression claims require explicit parameter audits.
 Stage 2 discovery should begin with synthetic teachers and report ARI/NMI before
 using Google repetition-code or surface-code data as external empirical
 validation.
+
+## Current PHYC2/PHYC3 Milestone Boundary
+
+The current local-observable Torch CUDA teacher has two distinct roles:
+
+```text
+PHYC2-separability_v2:
+  engineered separability stress teacher
+
+PHYC2-Born-local:
+  physically and mathematically correct local baseline
+```
+
+The `separability_v2` allM artifacts pass PHYC2-balanced, PHYC2-weighted,
+slot-only leakage control, no-remap ablation, 74q/depth200 scalability smoke,
+and PHYC3 mechanism-to-error prototype quality. This is strong Stage 2
+separability evidence, not a Born-rule physical baseline. The minimal
+Stage 2E Born-local teacher is implemented; it must still pass PHYC2-Born-local
+plus the corresponding PHYC3-Born-local quality audit before Stage 3 begins.

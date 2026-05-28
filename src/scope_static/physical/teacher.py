@@ -4,24 +4,12 @@ import json
 from pathlib import Path
 import time
 from typing import Iterable
-import warnings
 
 import numpy as np
 
-from ..numerics import NUMERICAL_ZERO, positive_floor
-from .channels import (
-    MechanismSpec,
-    amplitude_damping_kraus,
-    correlated_relaxation_kraus,
-    custom_non_pauli_kraus,
-    readout_bias_matrix,
-    rx_unitary,
-    rxx_ryy_unitary,
-    rz_unitary,
-    rzz_unitary,
-    weak_type4_mixing_kraus,
-)
-from .preflight import audit_aer_backend, write_backend_audit
+from ..numerics import NUMERICAL_ZERO
+from .channels import MechanismSpec
+from .preflight import audit_cudaq_backend, write_backend_audit
 
 
 MIXED_BASIS_ACTIVE_PROBES = ("alt_xz", "alt_zx", "alt_yz", "alt_zy", "alt_xy", "alt_yx")
@@ -71,19 +59,67 @@ READOUT_MECHANISM_IDS = {"M13", "M14", "M15", "M16"}
 PREP_RESET_MECHANISM_IDS = {"M17", "M18"}
 OTHER_MECHANISM_IDS = {"M19"}
 RZZ_FAMILY_IDS = ("M1", "M6", "M7", "M9")
-AER_GPU_SUPPORTED_METHODS = {
-    "statevector",
-    "density_matrix",
-    "unitary",
-    "tensor_network",
-}
+
+
+class ProbeCircuit:
+    """Lightweight visible probe schedule used after retiring simulator-specific circuits."""
+
+    def __init__(self, num_qubits: int, num_clbits: int, *, name: str) -> None:
+        self.num_qubits = int(num_qubits)
+        self.num_clbits = int(num_clbits)
+        self.name = str(name)
+        self._ops: dict[str, int] = {}
+
+    def count_ops(self) -> dict[str, int]:
+        return dict(self._ops)
+
+    def _add(self, name: str, count: int = 1) -> None:
+        self._ops[str(name)] = self._ops.get(str(name), 0) + int(count)
+
+    def h(self, _qubit: int) -> None:
+        self._add("h")
+
+    def s(self, _qubit: int) -> None:
+        self._add("s")
+
+    def sdg(self, _qubit: int) -> None:
+        self._add("sdg")
+
+    def x(self, _qubit: int) -> None:
+        self._add("x")
+
+    def y(self, _qubit: int) -> None:
+        self._add("y")
+
+    def id(self, _qubit: int) -> None:
+        self._add("id")
+
+    def reset(self, _qubit: int) -> None:
+        self._add("reset")
+
+    def rx(self, _angle: float, _qubit: int) -> None:
+        self._add("rx")
+
+    def rz(self, _angle: float, _qubit: int) -> None:
+        self._add("rz")
+
+    def rzz(self, _angle: float, _left: int, _right: int) -> None:
+        self._add("rzz")
+
+    def measure(self, qubits, _clbits) -> None:
+        try:
+            count = len(list(qubits))
+        except TypeError:
+            count = 1
+        self._add("measure", count)
 
 
 def default_teacher_config() -> dict[str, object]:
     return {
-        "backend": "qiskit_aer_gpu",
+        "backend": "cudaq",
         "require_gpu": True,
-        "allow_cpu_aer_fallback": False,
+        "cudaq_target": "nvidia",
+        "cudaq_target_options": "fp32",
         "num_qubits": 5,
         "profile": "phys5_chain",
         "mechanism_set": "set_A",
@@ -95,14 +131,7 @@ def default_teacher_config() -> dict[str, object]:
         "include_m5": True,
         "include_m6": False,
         "paper_informed_ptm_features": True,
-        "aer_simulation_method": "auto",
-        "aer_tensor_network_qubit_threshold": 15,
-        "aer_large_qubit_method": "matrix_product_state",
-        "aer_simulator_options": {},
-        "aer_sampling_mode": "batch",
-        "aer_sampling_job_batch_size": 0,
-        "aer_auto_parallel_experiments": True,
-        "aer_max_parallel_experiments_auto_cap": 8,
+        "local_observable_response_model": "born_local",
         "mechanisms": {
             "M0": {"p_x": 0.0015, "p_y": 0.0008, "p_z": 0.0022},
             "M1": {"epsilon": 0.045},
@@ -207,152 +236,27 @@ def generate_physical_teacher_dataset(
     preflight_dir: str | Path = "outputs/scope_static/S2D_PHYS0_preflight",
 ) -> dict[str, object]:
     cfg = _merged_config(config)
-    audit = audit_aer_backend(
-        backend=str(cfg.get("backend", "qiskit_aer_gpu")),
+    audit = audit_cudaq_backend(
+        backend=str(cfg.get("backend", "cudaq")),
         require_gpu=bool(cfg.get("require_gpu", True)),
-        allow_cpu_aer_fallback=bool(cfg.get("allow_cpu_aer_fallback", False)),
+        cudaq_target=str(cfg.get("cudaq_target", "nvidia")),
+        cudaq_target_options=str(cfg.get("cudaq_target_options", "fp32")),
     )
     write_backend_audit(audit, preflight_dir)
     if not bool(audit.get("backend_usable")):
         raise RuntimeError("S2D_PHYS1_teacher requires a passing S2D_PHYS0_preflight backend audit")
-    if _balanced_profile_enabled(cfg):
-        return _generate_balanced_physical_teacher_dataset(cfg, output_dir=output_dir, preflight_dir=preflight_dir, audit=audit)
+    from .local_observable_teacher import generate_local_observable_teacher_dataset
 
-    output = Path(output_dir)
-    output.mkdir(parents=True, exist_ok=True)
-    circuits, probe_names = build_probe_circuits(cfg)
-    probe_manifest = build_probe_basis_manifest(
-        probe_names,
-        num_qubits=int(cfg.get("num_qubits", 5)),
-        circuit_depth=_circuit_depth(cfg),
-    )
-    noise_model, mechanisms = build_qiskit_noise_model(cfg)
-    observations, sampling_warnings, sampling_audit = _sample_circuits(circuits, cfg, noise_model)
-    aer_settings = resolve_aer_simulator_settings(cfg)
-    np.savez_compressed(
-        output / "observations.npz",
-        observations=observations,
-        probe_names=np.asarray(probe_names),
-        shots=np.asarray([int(cfg.get("shots", 10_000))], dtype=np.int64),
-    )
-    mechanism_records = [_mechanism_record(idx, spec) for idx, spec in enumerate(mechanisms)]
-    noise_application = build_noise_application_audit(mechanisms, probe_names=probe_names, config=cfg)
-    non_clifford_audit = build_non_clifford_audit(mechanisms, probe_names=probe_names, config=cfg)
-    (output / "oracle_mechanisms.json").write_text(json.dumps({"mechanisms": mechanism_records}, indent=2, sort_keys=True) + "\n")
-    (output / "teacher_config.json").write_text(json.dumps(cfg, indent=2, sort_keys=True) + "\n")
-    (output / "active_probe_manifest.json").write_text(json.dumps(probe_manifest, indent=2, sort_keys=True) + "\n")
-    (output / "noise_application_audit.json").write_text(json.dumps(noise_application, indent=2, sort_keys=True) + "\n")
-    (output / "non_clifford_audit.json").write_text(json.dumps(non_clifford_audit, indent=2, sort_keys=True) + "\n")
-    (output / "sampling_audit.json").write_text(json.dumps(sampling_audit, indent=2, sort_keys=True) + "\n")
-    summary = {
-        "stage": "S2D_PHYS1_teacher",
-        "output_dir": str(output),
-        "num_probes": len(probe_names),
-        "num_qubits": int(cfg.get("num_qubits", 5)),
-        "shots": int(cfg.get("shots", 10_000)),
-        "mechanism_counts": _mechanism_counts(mechanism_records),
-        "backend_audit_dir": str(preflight_dir),
-        "aer_simulator": _summary_aer_settings(aer_settings),
-        "active_probe_manifest": str(output / "active_probe_manifest.json"),
-        "noise_application_audit": str(output / "noise_application_audit.json"),
-        "sampling": sampling_audit,
-        "sampling_audit": str(output / "sampling_audit.json"),
-        "non_clifford_teacher": bool(non_clifford_audit["non_clifford_teacher"]),
-        "non_clifford_audit": str(output / "non_clifford_audit.json"),
-        "warnings": _merged_warning_strings(audit.get("warnings", []), sampling_warnings),
+    cfg["backend"] = "cudaq"
+    cfg.setdefault("local_observable_response_model", "born_local")
+    summary = generate_local_observable_teacher_dataset(cfg, output_dir=output_dir)
+    summary["backend_audit_dir"] = str(preflight_dir)
+    summary["cudaq_backend"] = {
+        "target": audit.get("cudaq_target"),
+        "gpu_count": audit.get("cudaq_gpu_count"),
+        "tiny_cudaq_sample": audit.get("tiny_cudaq_sample"),
     }
-    (output / "summary.md").write_text(format_teacher_summary(summary))
-    return {**summary, "oracle_mechanisms": mechanism_records}
-
-
-def _generate_balanced_physical_teacher_dataset(
-    cfg: dict[str, object],
-    *,
-    output_dir: str | Path,
-    preflight_dir: str | Path,
-    audit: dict[str, object],
-) -> dict[str, object]:
-    output = Path(output_dir)
-    output.mkdir(parents=True, exist_ok=True)
-    all_observations = []
-    all_probe_names: list[str] = []
-    all_mechanisms: list[MechanismSpec] = []
-    sampling_warnings: list[dict[str, str]] = []
-    sampling_audits: list[dict[str, object]] = []
-    local_probe_count = 0
-    for circuit_id in range(_balanced_repetitions(cfg)):
-        batch_cfg = dict(cfg)
-        batch_cfg["balanced_batch_index"] = circuit_id
-        circuits, probe_names = _build_single_probe_circuits(batch_cfg)
-        mechanisms = _build_balanced_oracle_mechanism_batch(batch_cfg, circuit_id=circuit_id)
-        probe_indices = tuple(range(local_probe_count, local_probe_count + len(probe_names)))
-        mechanisms = [
-            MechanismSpec(
-                spec.mechanism_id,
-                spec.name,
-                spec.num_qubits,
-                dict(spec.parameters),
-                instruction=spec.instruction,
-                qubits=spec.qubits,
-                circuit_id=circuit_id,
-                probe_indices=probe_indices,
-            )
-            for spec in mechanisms
-        ]
-        noise_model, _ = _build_qiskit_noise_model_for_mechanisms(batch_cfg, mechanisms)
-        observations, warnings_for_batch, sampling_audit = _sample_circuits(circuits, batch_cfg, noise_model)
-        all_observations.append(observations)
-        all_probe_names.extend([f"c{circuit_id}:{name}" for name in probe_names])
-        all_mechanisms.extend(mechanisms)
-        sampling_warnings.extend(warnings_for_batch)
-        sampling_audits.append(sampling_audit)
-        local_probe_count += len(probe_names)
-
-    observations = np.concatenate(all_observations, axis=0)
-    probe_manifest = build_probe_basis_manifest(
-        all_probe_names,
-        num_qubits=int(cfg.get("num_qubits", 9)),
-        circuit_depth=_circuit_depth(cfg),
-    )
-    np.savez_compressed(
-        output / "observations.npz",
-        observations=observations,
-        probe_names=np.asarray(all_probe_names),
-        shots=np.asarray([int(cfg.get("shots", 10_000))], dtype=np.int64),
-    )
-    mechanism_records = [_mechanism_record(idx, spec) for idx, spec in enumerate(all_mechanisms)]
-    aer_settings = resolve_aer_simulator_settings(cfg)
-    noise_application = build_noise_application_audit(all_mechanisms, probe_names=all_probe_names, config=cfg)
-    non_clifford_audit = build_non_clifford_audit(all_mechanisms, probe_names=all_probe_names, config=cfg)
-    sampling_audit = _merge_sampling_audits(sampling_audits, config=cfg)
-    (output / "oracle_mechanisms.json").write_text(json.dumps({"mechanisms": mechanism_records}, indent=2, sort_keys=True) + "\n")
-    (output / "teacher_config.json").write_text(json.dumps(cfg, indent=2, sort_keys=True) + "\n")
-    (output / "active_probe_manifest.json").write_text(json.dumps(probe_manifest, indent=2, sort_keys=True) + "\n")
-    (output / "noise_application_audit.json").write_text(json.dumps(noise_application, indent=2, sort_keys=True) + "\n")
-    (output / "non_clifford_audit.json").write_text(json.dumps(non_clifford_audit, indent=2, sort_keys=True) + "\n")
-    (output / "sampling_audit.json").write_text(json.dumps(sampling_audit, indent=2, sort_keys=True) + "\n")
-    summary = {
-        "stage": "S2D_PHYS1_teacher",
-        "output_dir": str(output),
-        "num_probes": len(all_probe_names),
-        "num_qubits": int(cfg.get("num_qubits", 9)),
-        "shots": int(cfg.get("shots", 10_000)),
-        "mechanism_counts": _mechanism_counts(mechanism_records),
-        "balanced_min_instances_per_mechanism": int(cfg.get("balanced_min_instances_per_mechanism", 3)),
-        "multicircuit_teacher_batch": True,
-        "num_circuit_batches": _balanced_repetitions(cfg),
-        "backend_audit_dir": str(preflight_dir),
-        "aer_simulator": _summary_aer_settings(aer_settings),
-        "active_probe_manifest": str(output / "active_probe_manifest.json"),
-        "noise_application_audit": str(output / "noise_application_audit.json"),
-        "sampling": sampling_audit,
-        "sampling_audit": str(output / "sampling_audit.json"),
-        "non_clifford_teacher": bool(non_clifford_audit["non_clifford_teacher"]),
-        "non_clifford_audit": str(output / "non_clifford_audit.json"),
-        "warnings": _merged_warning_strings(audit.get("warnings", []), sampling_warnings),
-    }
-    (output / "summary.md").write_text(format_teacher_summary(summary))
-    return {**summary, "oracle_mechanisms": mechanism_records}
+    return summary
 
 
 def build_probe_circuits(config: dict[str, object] | None = None):
@@ -369,8 +273,6 @@ def build_probe_circuits(config: dict[str, object] | None = None):
 
 
 def _build_single_probe_circuits(config: dict[str, object] | None = None):
-    from qiskit import QuantumCircuit
-
     cfg = _merged_config(config)
     n = int(cfg.get("num_qubits", 5))
     theta = float(cfg.get("theta", 0.18))
@@ -378,7 +280,7 @@ def _build_single_probe_circuits(config: dict[str, object] | None = None):
     probe_names = _probe_names(str(cfg.get("probe_set", "base")))
     circuits = []
     for probe in probe_names:
-        qc = QuantumCircuit(n, n)
+        qc = ProbeCircuit(n, n, name=str(probe))
         if any(_mechanism_set_contains(cfg, mech) for mech in PREP_RESET_MECHANISM_IDS):
             for q in range(n):
                 qc.reset(q)
@@ -914,57 +816,6 @@ def _apply_measurement_basis_rotations(qc, probe: str, num_qubits: int) -> None:
             qc.h(q)
 
 
-def build_qiskit_noise_model(config: dict[str, object] | None = None):
-    try:
-        from qiskit_aer.noise import NoiseModel, ReadoutError
-        from qiskit_aer.noise.errors import (
-            amplitude_damping_error,
-            coherent_unitary_error,
-            depolarizing_error,
-            kraus_error,
-            pauli_error,
-        )
-    except Exception as exc:  # pragma: no cover - depends on optional Aer install
-        raise RuntimeError(f"qiskit_aer noise imports failed: {type(exc).__name__}: {exc}") from exc
-
-    cfg = _merged_config(config)
-    mechanisms = build_default_oracle_mechanisms(cfg)
-    if _balanced_profile_enabled(cfg):
-        raise ValueError("balanced multicircuit profiles use one noise model per circuit batch")
-    return _build_qiskit_noise_model_for_mechanisms(cfg, mechanisms)
-
-
-def _build_qiskit_noise_model_for_mechanisms(config: dict[str, object], mechanisms: list[MechanismSpec]):
-    try:
-        from qiskit_aer.noise import NoiseModel, ReadoutError
-        from qiskit_aer.noise.errors import (
-            amplitude_damping_error,
-            coherent_unitary_error,
-            depolarizing_error,
-            kraus_error,
-            pauli_error,
-        )
-    except Exception as exc:  # pragma: no cover - depends on optional Aer install
-        raise RuntimeError(f"qiskit_aer noise imports failed: {type(exc).__name__}: {exc}") from exc
-
-    noise_model = NoiseModel()
-    for spec in mechanisms:
-        if spec.mechanism_id in READOUT_MECHANISM_IDS:
-            matrix = _readout_matrix_for_spec(spec)
-            noise_model.add_readout_error(ReadoutError(matrix.tolist()), list(spec.qubits))
-            continue
-        error = _quantum_error_for_spec(
-            spec,
-            pauli_error=pauli_error,
-            coherent_unitary_error=coherent_unitary_error,
-            amplitude_damping_error=amplitude_damping_error,
-            kraus_error=kraus_error,
-            depolarizing_error=depolarizing_error,
-        )
-        noise_model.add_quantum_error(error, [str(spec.instruction)], list(spec.qubits))
-    return noise_model, mechanisms
-
-
 def build_noise_application_audit(
     mechanisms: list[MechanismSpec],
     *,
@@ -984,7 +835,7 @@ def build_noise_application_audit(
                 "probe_indices": [int(idx) for idx in spec.probe_indices],
                 "num_qubits": int(spec.num_qubits),
                 "noise_kind": _noise_kind(spec),
-                "qiskit_application_api": "add_readout_error" if spec.mechanism_id in READOUT_MECHANISM_IDS else "add_quantum_error",
+                "mechanism_application_kind": "readout_confusion" if spec.mechanism_id in READOUT_MECHANISM_IDS else "local_channel",
                 "applies_to_all_qubits": False,
                 "parameters": {str(key): value for key, value in spec.audit_dict()["parameters"].items()},
                 "oracle_label_evaluator_only": True,
@@ -993,7 +844,7 @@ def build_noise_application_audit(
     return {
         "schema": "scope_static_s2d_noise_application_audit_v1",
         "stage": "S2D_PHYS1_teacher",
-        "backend": str(config.get("backend", "qiskit_aer_gpu")),
+        "backend": str(config.get("backend", "cudaq")),
         "num_qubits": int(config.get("num_qubits", 5)),
         "probe_names": list(probe_names),
         "mechanism_counts": _mechanism_counts(records),
@@ -1128,7 +979,6 @@ def format_teacher_summary(summary: dict[str, object]) -> str:
         f"- Qubits: `{summary['num_qubits']}`",
         f"- Shots: `{summary['shots']}`",
         f"- Backend audit: `{summary['backend_audit_dir']}`",
-        f"- Aer simulator: `{_format_aer_settings(summary.get('aer_simulator'))}`",
         f"- Sampling audit: `{summary.get('sampling_audit', '')}`",
         f"- Active probe manifest: `{summary.get('active_probe_manifest', '')}`",
         f"- Noise application audit: `{summary['noise_application_audit']}`",
@@ -1148,57 +998,6 @@ def format_teacher_summary(summary: dict[str, object]) -> str:
         lines.extend(f"- {item}" for item in warnings_list)
     lines.append("")
     return "\n".join(lines)
-
-
-def _quantum_error_for_spec(spec: MechanismSpec, **factories):
-    if spec.mechanism_id == "M0":
-        p_x = float(spec.parameters.get("p_x", 0.0015))
-        p_y = float(spec.parameters.get("p_y", 0.0008))
-        p_z = float(spec.parameters.get("p_z", 0.0022))
-        p_i = positive_floor(1.0 - p_x - p_y - p_z)
-        return factories["pauli_error"]([("I", p_i), ("X", p_x), ("Y", p_y), ("Z", p_z)])
-    if spec.mechanism_id == "M1":
-        return factories["coherent_unitary_error"](rzz_unitary(float(spec.parameters.get("epsilon", 0.045))))
-    if spec.mechanism_id == "M2":
-        return factories["coherent_unitary_error"](rx_unitary(float(spec.parameters.get("epsilon", 0.035))))
-    if spec.mechanism_id == "M3":
-        return factories["coherent_unitary_error"](rz_unitary(float(spec.parameters.get("epsilon", 0.04))))
-    if spec.mechanism_id == "M4":
-        return factories["amplitude_damping_error"](float(spec.parameters.get("gamma", 0.018)))
-    if spec.mechanism_id == "M5":
-        return factories["kraus_error"](custom_non_pauli_kraus(float(spec.parameters.get("eta", 0.02))))
-    if spec.mechanism_id == "M6":
-        return factories["depolarizing_error"](float(spec.parameters.get("p", 0.006)), 2)
-    if spec.mechanism_id == "M7":
-        return factories["coherent_unitary_error"](
-            rxx_ryy_unitary(
-                theta_x=float(spec.parameters.get("epsilon_x", spec.parameters.get("epsilon", 0.024))),
-                theta_y=float(spec.parameters.get("epsilon_y", float(spec.parameters.get("epsilon", 0.024)) * 0.7)),
-            )
-        )
-    if spec.mechanism_id == "M8":
-        return factories["coherent_unitary_error"](rz_unitary(float(spec.parameters.get("epsilon", 0.025))))
-    if spec.mechanism_id == "M9":
-        return factories["kraus_error"](correlated_relaxation_kraus(float(spec.parameters.get("gamma", 0.012))))
-    if spec.mechanism_id == "M10":
-        angle = float(spec.parameters.get("epsilon", spec.parameters.get("epsilon_mean", 0.032)))
-        axis = str(spec.parameters.get("axis", "rx")).lower()
-        return factories["coherent_unitary_error"](rx_unitary(angle) if axis == "rx" else rz_unitary(angle))
-    if spec.mechanism_id == "M11":
-        p = float(spec.parameters.get("p_z", spec.parameters.get("p", 0.0025)))
-        return factories["pauli_error"]([("I", positive_floor(1.0 - p)), ("Z", p)])
-    if spec.mechanism_id == "M12":
-        angle = float(spec.parameters.get("epsilon", 0.028))
-        axis = str(spec.parameters.get("axis", "rx")).lower()
-        return factories["coherent_unitary_error"](rx_unitary(angle) if axis == "rx" else rz_unitary(angle))
-    if spec.mechanism_id == "M17":
-        p = float(spec.parameters.get("p", 0.018))
-        return factories["pauli_error"]([("I", positive_floor(1.0 - p)), ("X", p)])
-    if spec.mechanism_id == "M18":
-        return factories["coherent_unitary_error"](rx_unitary(float(spec.parameters.get("epsilon", 0.025))))
-    if spec.mechanism_id == "M19":
-        return factories["kraus_error"](weak_type4_mixing_kraus(float(spec.parameters.get("eta", 0.006))))
-    raise ValueError(f"unsupported quantum mechanism {spec.mechanism_id!r}")
 
 
 def _noise_kind(spec: MechanismSpec) -> str:
@@ -1223,19 +1022,6 @@ def _noise_kind(spec: MechanismSpec) -> str:
     return "unknown"
 
 
-def _readout_matrix_for_spec(spec: MechanismSpec) -> np.ndarray:
-    params = dict(spec.parameters)
-    p = float(params.get("p", 0.02))
-    p0_to_1 = p if spec.mechanism_id in {"M13", "M15", "M16"} else NUMERICAL_ZERO
-    p1_to_0 = p if spec.mechanism_id in {"M14", "M15"} else NUMERICAL_ZERO
-    if spec.mechanism_id == "M16":
-        p1_to_0 = 0.5 * p
-    return readout_bias_matrix(
-        p0_to_1=float(params.get("p0_to_1", p0_to_1)),
-        p1_to_0=float(params.get("p1_to_0", p1_to_0)),
-    )
-
-
 def _is_clifford_angle(angle: float, *, atol: float = 1e-9) -> bool:
     """Return true for rotations equivalent to integer multiples of pi/2."""
 
@@ -1243,399 +1029,6 @@ def _is_clifford_angle(angle: float, *, atol: float = 1e-9) -> bool:
 
     scaled = float(angle) / (math.pi / 2.0)
     return abs(scaled - round(scaled)) <= float(atol)
-
-
-def _sample_circuits(circuits, config: dict[str, object], noise_model) -> tuple[np.ndarray, list[dict[str, str]], dict[str, object]]:
-    from qiskit_aer import AerSimulator
-
-    shots = int(config.get("shots", 10_000))
-    n = int(config.get("num_qubits", 5))
-    circuit_list = list(circuits)
-    sampling_mode = _resolve_sampling_mode(config)
-    job_batch_size = _resolve_sampling_job_batch_size(config, num_circuits=len(circuit_list), sampling_mode=sampling_mode)
-    aer_settings = _apply_sampling_aer_option_defaults(
-        resolve_aer_simulator_settings(config),
-        config=config,
-        sampling_mode=sampling_mode,
-        job_batch_size=job_batch_size,
-    )
-    simulator = AerSimulator(
-        method=str(aer_settings["method"]),
-        device=str(aer_settings["device"]),
-        noise_model=noise_model,
-        **dict(aer_settings["options"]),
-    )
-    results: list[np.ndarray] = []
-    warning_records: list[dict[str, str]] = []
-    unique_outcome_counts: list[int] = []
-    sampling_seconds = 0.0
-    materialization_seconds = 0.0
-    total_start = time.perf_counter()
-    seed = int(config.get("seed", 0))
-    num_jobs = 0
-    for batch_start, circuit_batch in _sampling_batches(circuit_list, batch_size=job_batch_size, mode=sampling_mode):
-        run_input = circuit_batch if sampling_mode == "batch" else circuit_batch[0]
-        seed_simulator = seed + (batch_start if sampling_mode == "per_circuit" else num_jobs)
-        with warnings.catch_warnings(record=True) as caught:
-            warnings.simplefilter("always")
-            run_start = time.perf_counter()
-            job = simulator.run(run_input, shots=shots, seed_simulator=seed_simulator)
-            result = job.result()
-            sampling_seconds += time.perf_counter() - run_start
-        warning_records.extend(_warning_records(caught))
-        counts_by_circuit = _counts_from_aer_result(result, num_circuits=len(circuit_batch), batched=sampling_mode == "batch")
-        for counts in counts_by_circuit:
-            unique_outcome_counts.append(len(counts))
-            materialize_start = time.perf_counter()
-            results.append(_counts_to_bit_matrix(counts, shots=shots, num_bits=n))
-            materialization_seconds += time.perf_counter() - materialize_start
-        num_jobs += 1
-    observations = np.stack(results, axis=0) if results else np.zeros((0, shots, n), dtype=np.uint8)
-    audit = _sampling_audit(
-        config=config,
-        aer_settings=aer_settings,
-        sampling_mode=sampling_mode,
-        job_batch_size=job_batch_size,
-        num_jobs=num_jobs,
-        num_circuits=len(circuit_list),
-        shots=shots,
-        unique_outcome_counts=unique_outcome_counts,
-        sampling_seconds=sampling_seconds,
-        materialization_seconds=materialization_seconds,
-        total_seconds=time.perf_counter() - total_start,
-    )
-    return observations, _dedupe_warning_records(warning_records), audit
-
-
-def resolve_aer_simulator_settings(config: dict[str, object] | None = None) -> dict[str, object]:
-    """Resolve GPU Aer method/device/options for the physical teacher.
-
-    The default stays exact dense density-matrix for small teacher circuits, but
-    15+ qubit chain profiles use MPS instead of a dense 2^n x 2^n density
-    matrix. Qiskit Aer's MPS method is CPU-only in the Aer builds this project
-    targets, so the resolved settings separately audit requested GPU device and
-    whether the selected method can actually execute on GPU.
-    """
-
-    cfg = _merged_config(config)
-    n = int(cfg.get("num_qubits", 5))
-    threshold = int(cfg.get("aer_tensor_network_qubit_threshold", 15))
-    explicit_method, explicit_source = _explicit_aer_method(cfg)
-    if explicit_method is None:
-        requested = "auto"
-    else:
-        requested = explicit_method
-    requested = _normalize_aer_method(requested)
-    if requested == "auto":
-        if n >= threshold:
-            method = _normalize_aer_method(str(cfg.get("aer_large_qubit_method", "matrix_product_state")))
-            reason = "auto_large_qubit_tensor_network"
-        else:
-            method = "density_matrix"
-            reason = "auto_small_qubit_density_matrix"
-    else:
-        method = requested
-        reason = f"explicit_{explicit_source}"
-    device = _resolve_aer_device(cfg)
-    options = _aer_simulator_options(cfg)
-    if method == "matrix_product_state":
-        options.setdefault("matrix_product_state_truncation_threshold", NUMERICAL_ZERO)
-    return {
-        "method": method,
-        "device": device,
-        "method_gpu_supported": _aer_method_gpu_supported(method),
-        "requested_gpu_method_supported": bool(device == "GPU" and _aer_method_gpu_supported(method)),
-        "gpu_support_note": _aer_gpu_support_note(method, device),
-        "options": options,
-        "num_qubits": n,
-        "tensor_network_threshold": threshold,
-        "requested_method": requested,
-        "selection_reason": reason,
-    }
-
-
-def _explicit_aer_method(config: dict[str, object]) -> tuple[str | None, str]:
-    for key in ("aer_simulation_method", "aer_simulator_method", "aer_method"):
-        if key in config:
-            method = _normalize_aer_method(str(config[key]))
-            if method != "auto":
-                return method, key
-    raw_options = config.get("aer_simulator_options", {})
-    if isinstance(raw_options, dict) and "method" in raw_options:
-        method = _normalize_aer_method(str(raw_options["method"]))
-        if method != "auto":
-            return method, "aer_simulator_options.method"
-    return None, "default_auto"
-
-
-def _normalize_aer_method(value: str) -> str:
-    text = str(value).strip().lower().replace("-", "_")
-    aliases = {
-        "": "auto",
-        "auto": "auto",
-        "scope_auto": "auto",
-        "dense": "density_matrix",
-        "density": "density_matrix",
-        "dm": "density_matrix",
-        "density_matrix": "density_matrix",
-        "mps": "matrix_product_state",
-        "matrix_product_state": "matrix_product_state",
-        "matrix_product": "matrix_product_state",
-        "tn": "tensor_network",
-        "tensor": "tensor_network",
-        "tensor_network": "tensor_network",
-        "cutensornet": "tensor_network",
-        "cu_tensor_net": "tensor_network",
-        "cuquantum": "tensor_network",
-        "automatic": "automatic",
-        "statevector": "statevector",
-        "stabilizer": "stabilizer",
-        "extended_stabilizer": "extended_stabilizer",
-        "unitary": "unitary",
-        "superop": "superop",
-    }
-    if text not in aliases:
-        supported = ", ".join(sorted(set(aliases.values())))
-        raise ValueError(f"unsupported Aer simulation method {value!r}; expected one of {supported}")
-    return aliases[text]
-
-
-def _resolve_aer_device(config: dict[str, object]) -> str:
-    explicit: object | None = None
-    for key in ("aer_device", "aer_simulator_device"):
-        if key in config:
-            explicit = config[key]
-            break
-    raw_options = config.get("aer_simulator_options", {})
-    if explicit is None and isinstance(raw_options, dict) and "device" in raw_options:
-        explicit = raw_options["device"]
-    if explicit is None:
-        device = "GPU" if str(config.get("backend", "qiskit_aer_gpu")) == "qiskit_aer_gpu" or bool(config.get("require_gpu", True)) else "CPU"
-    else:
-        device = str(explicit).strip().upper()
-    if device not in {"CPU", "GPU"}:
-        raise ValueError(f"unsupported Aer simulator device {device!r}; expected 'CPU' or 'GPU'")
-    if device == "CPU" and bool(config.get("require_gpu", True)) and not bool(config.get("allow_cpu_aer_fallback", False)):
-        raise ValueError("Aer simulator device is CPU but require_gpu is true and allow_cpu_aer_fallback is false")
-    return device
-
-
-def _summary_aer_settings(settings: dict[str, object]) -> dict[str, object]:
-    return {
-        "method": str(settings.get("method", "")),
-        "device": str(settings.get("device", "")),
-        "method_gpu_supported": bool(settings.get("method_gpu_supported", False)),
-        "requested_gpu_method_supported": bool(settings.get("requested_gpu_method_supported", False)),
-        "gpu_support_note": str(settings.get("gpu_support_note", "")),
-        "selection_reason": str(settings.get("selection_reason", "")),
-        "requested_method": str(settings.get("requested_method", "")),
-        "num_qubits": int(settings.get("num_qubits", 0) or 0),
-        "tensor_network_threshold": int(settings.get("tensor_network_threshold", 0) or 0),
-        "options": dict(settings.get("options", {})) if isinstance(settings.get("options", {}), dict) else {},
-    }
-
-
-def _format_aer_settings(value: object) -> str:
-    if not isinstance(value, dict):
-        return "unavailable"
-    method = str(value.get("method", ""))
-    device = str(value.get("device", ""))
-    reason = str(value.get("selection_reason", ""))
-    gpu_note = str(value.get("gpu_support_note", ""))
-    n = value.get("num_qubits", "")
-    threshold = value.get("tensor_network_threshold", "")
-    parts = [f"method={method}", f"device={device}"]
-    if n != "":
-        parts.append(f"n={n}")
-    if threshold != "":
-        parts.append(f"threshold={threshold}")
-    if reason:
-        parts.append(f"reason={reason}")
-    if gpu_note:
-        parts.append(f"gpu={gpu_note}")
-    return ", ".join(parts)
-
-
-def _aer_method_gpu_supported(method: str) -> bool:
-    return _normalize_aer_method(str(method)) in AER_GPU_SUPPORTED_METHODS
-
-
-def _aer_gpu_support_note(method: str, device: str) -> str:
-    normalized = _normalize_aer_method(str(method))
-    if str(device).upper() != "GPU":
-        return "gpu_not_requested"
-    if _aer_method_gpu_supported(normalized):
-        return "aer_method_supports_gpu"
-    return f"aer_method_{normalized}_does_not_support_gpu"
-
-
-def _resolve_sampling_mode(config: dict[str, object]) -> str:
-    mode = str(config.get("aer_sampling_mode", "batch")).strip().lower().replace("-", "_")
-    aliases = {
-        "batch": "batch",
-        "batched": "batch",
-        "multi_circuit": "batch",
-        "multi": "batch",
-        "per_circuit": "per_circuit",
-        "single": "per_circuit",
-        "legacy": "per_circuit",
-    }
-    if mode not in aliases:
-        raise ValueError("aer_sampling_mode must be 'batch' or 'per_circuit'")
-    return aliases[mode]
-
-
-def _resolve_sampling_job_batch_size(config: dict[str, object], *, num_circuits: int, sampling_mode: str) -> int:
-    if sampling_mode == "per_circuit":
-        return 1
-    raw = int(config.get("aer_sampling_job_batch_size", 0) or 0)
-    if raw <= 0:
-        return max(1, int(num_circuits))
-    return max(1, raw)
-
-
-def _apply_sampling_aer_option_defaults(
-    aer_settings: dict[str, object],
-    *,
-    config: dict[str, object],
-    sampling_mode: str,
-    job_batch_size: int,
-) -> dict[str, object]:
-    resolved = dict(aer_settings)
-    options = dict(resolved.get("options", {})) if isinstance(resolved.get("options", {}), dict) else {}
-    defaults: dict[str, object] = {}
-    if (
-        bool(config.get("aer_auto_parallel_experiments", True))
-        and sampling_mode == "batch"
-        and int(job_batch_size) > 1
-        and str(resolved.get("device", "")).upper() == "GPU"
-        and "max_parallel_experiments" not in options
-    ):
-        cap = max(1, int(config.get("aer_max_parallel_experiments_auto_cap", 8) or 8))
-        defaults["max_parallel_experiments"] = min(int(job_batch_size), cap)
-        options["max_parallel_experiments"] = defaults["max_parallel_experiments"]
-    resolved["options"] = options
-    resolved["sampling_option_defaults"] = defaults
-    return resolved
-
-
-def _sampling_batches(circuits: list[object], *, batch_size: int, mode: str) -> Iterable[tuple[int, list[object]]]:
-    if mode == "per_circuit":
-        for idx, circuit in enumerate(circuits):
-            yield idx, [circuit]
-        return
-    for start in range(0, len(circuits), max(1, int(batch_size))):
-        yield start, circuits[start : start + max(1, int(batch_size))]
-
-
-def _counts_from_aer_result(result, *, num_circuits: int, batched: bool) -> list[dict[str, int]]:
-    if not batched:
-        return [dict(result.get_counts())]
-    counts_by_circuit = []
-    for idx in range(int(num_circuits)):
-        counts_by_circuit.append(dict(result.get_counts(idx)))
-    return counts_by_circuit
-
-
-def _sampling_audit(
-    *,
-    config: dict[str, object],
-    aer_settings: dict[str, object],
-    sampling_mode: str,
-    job_batch_size: int,
-    num_jobs: int,
-    num_circuits: int,
-    shots: int,
-    unique_outcome_counts: list[int],
-    sampling_seconds: float,
-    materialization_seconds: float,
-    total_seconds: float,
-) -> dict[str, object]:
-    counts = np.asarray(unique_outcome_counts, dtype=np.float64) if unique_outcome_counts else np.asarray([], dtype=np.float64)
-    return {
-        "schema": "scope_static_s2d_phys1_sampling_audit_v1",
-        "stage": "S2D_PHYS1_teacher",
-        "backend": str(config.get("backend", "qiskit_aer_gpu")),
-        "aer_method": str(aer_settings.get("method", "")),
-        "aer_device": str(aer_settings.get("device", "")),
-        "aer_method_gpu_supported": bool(aer_settings.get("method_gpu_supported", False)),
-        "aer_requested_gpu_method_supported": bool(aer_settings.get("requested_gpu_method_supported", False)),
-        "aer_gpu_support_note": str(aer_settings.get("gpu_support_note", "")),
-        "aer_options": dict(aer_settings.get("options", {})) if isinstance(aer_settings.get("options", {}), dict) else {},
-        "aer_sampling_option_defaults": dict(aer_settings.get("sampling_option_defaults", {}))
-        if isinstance(aer_settings.get("sampling_option_defaults", {}), dict)
-        else {},
-        "requested_mode": str(config.get("aer_sampling_mode", "batch")),
-        "mode": sampling_mode,
-        "job_batch_size": int(job_batch_size),
-        "num_jobs": int(num_jobs),
-        "num_circuits": int(num_circuits),
-        "shots_per_circuit": int(shots),
-        "total_requested_shots": int(shots) * int(num_circuits),
-        "seed": int(config.get("seed", 0)),
-        "seed_policy": "one_seed_per_aer_job" if sampling_mode == "batch" else "seed_plus_circuit_index",
-        "counts_unique_outcomes": {
-            "min": int(counts.min()) if counts.size else 0,
-            "max": int(counts.max()) if counts.size else 0,
-            "mean": float(counts.mean()) if counts.size else 0.0,
-        },
-        "sampling_wall_clock_seconds": float(sampling_seconds),
-        "materialization_wall_clock_seconds": float(materialization_seconds),
-        "total_wall_clock_seconds": float(total_seconds),
-        "count_materialization": "grouped_counts_np_repeat",
-        "metrics_are_wall_clock": True,
-    }
-
-
-def _merge_sampling_audits(audits: list[dict[str, object]], *, config: dict[str, object]) -> dict[str, object]:
-    if not audits:
-        return _sampling_audit(
-            config=config,
-            aer_settings=resolve_aer_simulator_settings(config),
-            sampling_mode=_resolve_sampling_mode(config),
-            job_batch_size=0,
-            num_jobs=0,
-            num_circuits=0,
-            shots=int(config.get("shots", 10_000)),
-            unique_outcome_counts=[],
-            sampling_seconds=0.0,
-            materialization_seconds=0.0,
-            total_seconds=0.0,
-        )
-    first = dict(audits[0])
-    min_values = []
-    max_values = []
-    weighted_unique_total = 0.0
-    weighted_unique_count = 0
-    for audit in audits:
-        stats = audit.get("counts_unique_outcomes", {})
-        if not isinstance(stats, dict):
-            continue
-        min_values.append(int(stats.get("min", 0)))
-        max_values.append(int(stats.get("max", 0)))
-        num = int(audit.get("num_circuits", 0) or 0)
-        weighted_unique_total += float(stats.get("mean", 0.0)) * num
-        weighted_unique_count += num
-    first.update(
-        {
-            "mode": "balanced_multicircuit_merged",
-            "requested_mode": str(config.get("aer_sampling_mode", first.get("requested_mode", "batch"))),
-            "num_jobs": int(sum(int(audit.get("num_jobs", 0) or 0) for audit in audits)),
-            "num_circuits": int(sum(int(audit.get("num_circuits", 0) or 0) for audit in audits)),
-            "total_requested_shots": int(sum(int(audit.get("total_requested_shots", 0) or 0) for audit in audits)),
-            "sampling_wall_clock_seconds": float(sum(float(audit.get("sampling_wall_clock_seconds", 0.0) or 0.0) for audit in audits)),
-            "materialization_wall_clock_seconds": float(sum(float(audit.get("materialization_wall_clock_seconds", 0.0) or 0.0) for audit in audits)),
-            "total_wall_clock_seconds": float(sum(float(audit.get("total_wall_clock_seconds", 0.0) or 0.0) for audit in audits)),
-            "counts_unique_outcomes": {
-                "min": min(min_values) if min_values else 0,
-                "max": max(max_values) if max_values else 0,
-                "mean": weighted_unique_total / weighted_unique_count if weighted_unique_count else 0.0,
-            },
-            "balanced_sampling_batches": len(audits),
-            "metrics_are_wall_clock": True,
-        }
-    )
-    return first
 
 
 def _counts_to_bit_matrix(counts: dict[str, int], *, shots: int, num_bits: int) -> np.ndarray:
@@ -1684,8 +1077,6 @@ def _merged_config(config: dict[str, object] | None) -> dict[str, object]:
             for mech, params in value.items():
                 merged[str(mech)] = {**dict(merged.get(str(mech), {})), **dict(params)}  # type: ignore[arg-type]
             result[key] = merged
-        elif key == "aer_simulator_options" and isinstance(value, dict):
-            result[key] = {**dict(result.get(key, {})), **dict(value)}
         else:
             result[key] = value
     if "circuit_depth" not in config:
@@ -2029,49 +1420,6 @@ def _mechanism_sort_key(mechanism_id: str) -> int:
         return int(str(mechanism_id).lstrip("M"))
     except ValueError:
         return 10_000
-
-
-def _aer_simulator_options(config: dict[str, object]) -> dict[str, object]:
-    raw = config.get("aer_simulator_options", {})
-    if not isinstance(raw, dict):
-        return {}
-    allowed = {
-        "max_parallel_threads",
-        "max_parallel_experiments",
-        "max_parallel_shots",
-        "num_threads_per_device",
-        "batched_shots_gpu",
-        "batched_shots_gpu_max_qubits",
-        "cuStateVec_enable",
-        "matrix_product_state_max_bond_dimension",
-        "matrix_product_state_truncation_threshold",
-        "mps_lapack",
-        "mps_log_data",
-        "mps_omp_threads",
-        "mps_parallel_threshold",
-        "mps_sample_measure_algorithm",
-        "mps_swap_direction",
-        "shot_branching_enable",
-        "shot_branching_sampling_enable",
-        "tensor_network_num_sampling_qubits",
-    }
-    return {str(key): value for key, value in raw.items() if str(key) in allowed}
-
-
-def _warning_records(caught: list[warnings.WarningMessage]) -> list[dict[str, str]]:
-    return [{"category": item.category.__name__, "message": str(item.message)} for item in caught]
-
-
-def _dedupe_warning_records(records: list[dict[str, str]]) -> list[dict[str, str]]:
-    out: list[dict[str, str]] = []
-    seen = set()
-    for record in records:
-        key = (record.get("category", ""), record.get("message", ""))
-        if key in seen:
-            continue
-        seen.add(key)
-        out.append({"category": key[0], "message": key[1]})
-    return out
 
 
 def _merged_warning_strings(*sources: object) -> list[str]:

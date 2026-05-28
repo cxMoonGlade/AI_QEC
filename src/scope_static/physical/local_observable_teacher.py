@@ -7,6 +7,11 @@ import time
 
 import numpy as np
 
+from .born_local import (
+    BORN_LOCAL_SUPPORTED_MECHANISMS,
+    born_local_probability_tables,
+    outcome_zz_correlation,
+)
 from .ptm import channel_fingerprint, probe_response_fingerprint, rzz_type_feature_vector
 from .teacher import _build_balanced_oracle_mechanisms, _merged_config, _probe_names, build_probe_basis_manifest
 
@@ -40,6 +45,12 @@ def generate_local_observable_teacher_dataset(
     response_model = _normalize_response_model(str(cfg.get("local_observable_response_model", "separability_v2")))
     cfg["local_observable_response_model"] = response_model
     records, repetitions, sampling_contract = _build_local_observable_records(cfg)
+    born_scope = _born_local_scope_audit(records)
+    if response_model == "born_local":
+        records = _filter_born_local_supported_records(records)
+        if not records:
+            raise ValueError("Born-local teacher scope removed every mechanism record")
+        cfg["born_local_scope"] = born_scope
     num_qubits = int(cfg.get("num_qubits", 30))
     slot_remap_enabled = bool(cfg.get("local_observable_slot_remap", True))
     cfg["local_observable_slot_remap"] = slot_remap_enabled
@@ -61,6 +72,7 @@ def generate_local_observable_teacher_dataset(
         num_qubits=num_qubits,
         seed=seed,
         response_model=response_model,
+        theta=float(cfg.get("theta", 0.18)),
     )
     total_seconds = time.perf_counter() - started
     sampling_audit["total_wall_clock_seconds"] = float(total_seconds)
@@ -70,6 +82,7 @@ def generate_local_observable_teacher_dataset(
         probe_names,
         response_model=response_model,
         num_qubits=num_qubits,
+        theta=float(cfg.get("theta", 0.18)),
     )
 
     output = Path(output_dir)
@@ -92,6 +105,7 @@ def generate_local_observable_teacher_dataset(
         "stage": "S2D_PHYS1_teacher",
         "teacher_model": "local_observable_gpu",
         "local_observable_response_model": response_model,
+        "born_local_scope": born_scope if response_model == "born_local" else None,
         "output_dir": str(output),
         "num_qubits": int(num_qubits),
         "num_probes": int(len(probe_names)),
@@ -208,6 +222,7 @@ def _sample_local_observations(
     num_qubits: int,
     seed: int,
     response_model: str = "separability_v2",
+    theta: float = 0.18,
 ) -> tuple[np.ndarray, dict[str, object]]:
     import torch
 
@@ -218,20 +233,33 @@ def _sample_local_observations(
     started = time.perf_counter()
     probabilities = torch.full((len(probe_names), int(num_qubits)), 0.5, dtype=torch.float32, device=device)
     cpu_probability_table = np.full((len(probe_names), int(num_qubits)), 0.5, dtype=np.float32)
+    joint_sampling_entries: list[dict[str, object]] = []
     for record in records:
         qubits = [int(value) for value in record.get("qubits", [])]
         probe_indices = [int(value) for value in record.get("probe_indices", [])]
         if not qubits or not probe_indices:
             continue
         local_probe_names = [probe_names[probe_idx] for probe_idx in probe_indices if 0 <= probe_idx < len(probe_names)]
-        local = _record_probability_profile(record, local_probe_names, response_model=model)
+        local = _record_probability_table(record, local_probe_names, response_model=model, num_qubits=num_qubits, theta=float(theta))
         for local_idx, probe_idx in enumerate(probe_indices):
             if probe_idx < 0 or probe_idx >= len(probe_names):
                 continue
             for pos, qubit in enumerate(qubits):
                 if 0 <= qubit < int(num_qubits):
-                    p = float(local[(local_idx + 7 * pos) % local.size])
+                    p = float(local[local_idx % local.shape[0], pos % local.shape[1]])
                     cpu_probability_table[probe_idx, qubit] = p
+        if model == "born_local" and len(qubits) >= 2:
+            outcome_table, _ = _record_born_local_tables(record, local_probe_names, num_qubits=num_qubits, theta=float(theta))
+            valid_probe_indices = [probe_idx for probe_idx in probe_indices if 0 <= probe_idx < len(probe_names)]
+            if len(valid_probe_indices) == outcome_table.shape[0]:
+                joint_sampling_entries.append(
+                    {
+                        "probe_indices": valid_probe_indices,
+                        "left": int(qubits[0]),
+                        "right": int(qubits[1]),
+                        "outcomes": outcome_table.astype(np.float32),
+                    }
+                )
     probabilities.copy_(torch.as_tensor(cpu_probability_table, dtype=torch.float32, device=device))
     torch.cuda.synchronize()
     probability_seconds = time.perf_counter() - started
@@ -242,13 +270,23 @@ def _sample_local_observations(
     random = torch.rand((len(probe_names), int(shots), int(num_qubits)), dtype=torch.float32, device=device, generator=gen)
     observations_gpu = random < probabilities[:, None, :]
     del random
-    overlay_audit = _apply_pair_correlation_overlays(
-        observations_gpu,
-        records,
-        probe_names,
-        generator=gen,
-        response_model=model,
-    )
+    if model == "born_local":
+        overlay_audit = {"enabled": False, "reason": "born_local samples exact local joint POVMs directly", "num_overlay_entries": 0, "num_records": 0}
+        joint_sampling_audit = _sample_born_local_joint_entries(
+            observations_gpu,
+            joint_sampling_entries,
+            shots=int(shots),
+            generator=gen,
+        )
+    else:
+        overlay_audit = _apply_pair_correlation_overlays(
+            observations_gpu,
+            records,
+            probe_names,
+            generator=gen,
+            response_model=model,
+        )
+        joint_sampling_audit = {"enabled": False, "num_entries": 0, "num_records": 0}
     torch.cuda.synchronize()
     sampling_seconds = time.perf_counter() - sample_started
     copy_started = time.perf_counter()
@@ -269,6 +307,7 @@ def _sample_local_observations(
         "sampling_wall_clock_seconds": float(sampling_seconds),
         "host_copy_wall_clock_seconds": float(copy_seconds),
         "pair_correlation_overlay": overlay_audit,
+        "born_local_joint_sampling": joint_sampling_audit,
         "metrics_are_wall_clock": True,
         "contract_note": "Samples local mechanism responses directly; not a global full-circuit simulator.",
     }
@@ -307,11 +346,63 @@ def _record_probability_profile(
         probe_names = [f"probe_{idx}" for idx in range(max(1, int(probe_names_or_count)))]
     else:
         probe_names = [str(name) for name in probe_names_or_count]
+    if model == "born_local":
+        _, marginals = _record_born_local_tables(record, probe_names, num_qubits=None, theta=0.18)
+        return np.mean(marginals, axis=1).astype(np.float32)
     if model == "separability_v1":
         profile = _fingerprint_response_profile(raw, probe_names)
     else:
         profile = _branch_specific_probability_profile(spec, raw, probe_names)
     return np.clip(profile, 0.02, 0.98).astype(np.float32)
+
+
+def _record_probability_table(
+    record: dict[str, object],
+    probe_names: list[str],
+    *,
+    response_model: str,
+    num_qubits: int,
+    theta: float,
+) -> np.ndarray:
+    model = _normalize_response_model(response_model)
+    if model == "born_local":
+        _, marginals = _record_born_local_tables(record, probe_names, num_qubits=int(num_qubits), theta=float(theta))
+        return marginals.astype(np.float32)
+    profile = _record_probability_profile(record, probe_names, response_model=model).astype(np.float32)
+    width = max(1, len(record.get("qubits", [])))
+    table = np.zeros((max(1, len(probe_names)), width), dtype=np.float32)
+    for local_idx in range(table.shape[0]):
+        for pos in range(width):
+            table[local_idx, pos] = float(profile[(local_idx + 7 * pos) % profile.size])
+    return table
+
+
+def _record_born_local_tables(
+    record: dict[str, object],
+    probe_names: list[str],
+    *,
+    num_qubits: int | None,
+    theta: float,
+) -> tuple[np.ndarray, np.ndarray]:
+    from .channels import MechanismSpec
+
+    spec = MechanismSpec(
+        mechanism_id=str(record["oracle_label"]),
+        name=str(record.get("name", record["oracle_label"])),
+        num_qubits=int(record.get("num_qubits", 1)),
+        parameters=dict(record.get("parameters", {})),
+        instruction=None if record.get("instruction") is None else str(record.get("instruction")),
+        qubits=tuple(int(value) for value in record.get("physical_qubits", record.get("qubits", []))),
+        circuit_id=int(record.get("circuit_id", 0)),
+        probe_indices=tuple(int(value) for value in record.get("probe_indices", [])),
+    )
+    return born_local_probability_tables(
+        spec,
+        probe_names,
+        theta=float(theta),
+        num_qubits=num_qubits,
+        physical_qubits=tuple(int(value) for value in record.get("physical_qubits", record.get("qubits", []))),
+    )
 
 
 def _record_pair_correlation_profile(
@@ -320,7 +411,17 @@ def _record_pair_correlation_profile(
     *,
     response_model: str = "separability_v2",
 ) -> np.ndarray:
-    if _normalize_response_model(response_model) != "separability_v2":
+    model = _normalize_response_model(response_model)
+    if model == "born_local":
+        if isinstance(probe_names_or_count, int):
+            probe_names = [f"probe_{idx}" for idx in range(max(1, int(probe_names_or_count)))]
+        else:
+            probe_names = [str(name) for name in probe_names_or_count]
+        if int(record.get("num_qubits", 1)) < 2:
+            return np.zeros(max(1, len(probe_names)), dtype=np.float32)
+        outcome_table, _ = _record_born_local_tables(record, probe_names, num_qubits=None, theta=0.18)
+        return np.asarray([outcome_zz_correlation(row) for row in outcome_table], dtype=np.float32)
+    if model != "separability_v2":
         count = int(probe_names_or_count) if isinstance(probe_names_or_count, int) else len(probe_names_or_count)
         return np.zeros(max(1, count), dtype=np.float32)
     if isinstance(probe_names_or_count, int):
@@ -419,14 +520,21 @@ def build_self_distinguishability_preflight(
     *,
     response_model: str,
     num_qubits: int,
+    theta: float = 0.18,
 ) -> dict[str, object]:
     model = _normalize_response_model(response_model)
     rows = []
     for idx, record in enumerate(records):
         probe_indices = [int(value) for value in record.get("probe_indices", [])]
         local_probe_names = [probe_names[probe_idx] for probe_idx in probe_indices if 0 <= probe_idx < len(probe_names)]
-        probabilities = _record_probability_profile(record, local_probe_names, response_model=model)
-        correlations = _record_pair_correlation_profile(record, local_probe_names, response_model=model)
+        if model == "born_local":
+            table = _record_probability_table(record, local_probe_names, response_model=model, num_qubits=int(num_qubits), theta=float(theta))
+            probabilities = np.mean(table, axis=1)
+            outcome_table, _ = _record_born_local_tables(record, local_probe_names, num_qubits=int(num_qubits), theta=float(theta))
+            correlations = np.asarray([outcome_zz_correlation(row) for row in outcome_table], dtype=np.float32)
+        else:
+            probabilities = _record_probability_profile(record, local_probe_names, response_model=model)
+            correlations = _record_pair_correlation_profile(record, local_probe_names, response_model=model)
         expected = _expected_response_vector(probabilities, correlations, local_probe_names)
         rows.append(
             {
@@ -861,10 +969,76 @@ def _normalize_response_model(value: str) -> str:
         "v2": "separability_v2",
         "separability_v2": "separability_v2",
         "branch_specific": "separability_v2",
+        "born": "born_local",
+        "born_local": "born_local",
+        "born_local_v1": "born_local",
+        "bornlocal": "born_local",
+        "born-rule-local": "born_local",
+        "born_rule_local": "born_local",
+        "phyc2_born_local": "born_local",
     }
     if text not in aliases:
-        raise ValueError("local_observable_response_model must be 'separability_v1' or 'separability_v2'")
+        raise ValueError("local_observable_response_model must be 'separability_v1', 'separability_v2', or 'born_local'")
     return aliases[text]
+
+
+def _filter_born_local_supported_records(records: list[dict[str, object]]) -> list[dict[str, object]]:
+    supported = set(BORN_LOCAL_SUPPORTED_MECHANISMS)
+    return [record for record in records if str(record.get("oracle_label", "")) in supported]
+
+
+def _born_local_scope_audit(records: list[dict[str, object]]) -> dict[str, object]:
+    supported = set(BORN_LOCAL_SUPPORTED_MECHANISMS)
+    requested = sorted({str(record.get("oracle_label", "")) for record in records}, key=_mechanism_sort_key)
+    excluded = [label for label in requested if label not in supported]
+    return {
+        "schema": "scope_static_stage2e_born_local_scope_v1",
+        "stage": "Stage 2E.1",
+        "teacher_model": "PHYC2-Born-local minimal teacher",
+        "supported_mechanisms": list(BORN_LOCAL_SUPPORTED_MECHANISMS),
+        "requested_mechanisms": requested,
+        "excluded_unsupported_mechanisms": excluded,
+        "num_supported_records": int(sum(1 for record in records if str(record.get("oracle_label", "")) in supported)),
+        "num_excluded_records": int(sum(1 for record in records if str(record.get("oracle_label", "")) not in supported)),
+    }
+
+
+def _sample_born_local_joint_entries(
+    observations_gpu,
+    entries: list[dict[str, object]],
+    *,
+    shots: int,
+    generator,
+) -> dict[str, object]:
+    import torch
+
+    if not entries:
+        return {"enabled": True, "num_entries": 0, "num_records": 0}
+    device = observations_gpu.device
+    num_entries = 0
+    for entry in entries:
+        probe_indices = [int(value) for value in entry["probe_indices"]]
+        if not probe_indices:
+            continue
+        left = int(entry["left"])
+        right = int(entry["right"])
+        if left < 0 or right < 0 or left >= observations_gpu.shape[2] or right >= observations_gpu.shape[2]:
+            continue
+        outcomes = torch.as_tensor(entry["outcomes"], dtype=torch.float32, device=device)
+        cdf = torch.cumsum(outcomes, dim=1)
+        cdf[:, -1] = 1.0
+        random = torch.rand((len(probe_indices), int(shots)), dtype=torch.float32, device=device, generator=generator)
+        sampled = torch.sum(random[:, :, None] > cdf[:, None, :], dim=2)
+        probe_t = torch.as_tensor(probe_indices, dtype=torch.long, device=device)
+        observations_gpu[probe_t, :, left] = sampled >= 2
+        observations_gpu[probe_t, :, right] = torch.remainder(sampled, 2) == 1
+        num_entries += len(probe_indices)
+    return {
+        "enabled": True,
+        "num_entries": int(num_entries),
+        "num_records": int(len(entries)),
+        "method": "direct_categorical_sampling_from_born_local_joint_povm",
+    }
 
 
 def _mechanism_sort_key(name: str) -> tuple[int, str]:
