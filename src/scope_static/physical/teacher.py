@@ -71,6 +71,12 @@ READOUT_MECHANISM_IDS = {"M13", "M14", "M15", "M16"}
 PREP_RESET_MECHANISM_IDS = {"M17", "M18"}
 OTHER_MECHANISM_IDS = {"M19"}
 RZZ_FAMILY_IDS = ("M1", "M6", "M7", "M9")
+AER_GPU_SUPPORTED_METHODS = {
+    "statevector",
+    "density_matrix",
+    "unitary",
+    "tensor_network",
+}
 
 
 def default_teacher_config() -> dict[str, object]:
@@ -1305,8 +1311,10 @@ def resolve_aer_simulator_settings(config: dict[str, object] | None = None) -> d
     """Resolve GPU Aer method/device/options for the physical teacher.
 
     The default stays exact dense density-matrix for small teacher circuits, but
-    15+ qubit chain profiles use the GPU MPS tensor-network method instead of a
-    dense 2^n x 2^n density matrix.
+    15+ qubit chain profiles use MPS instead of a dense 2^n x 2^n density
+    matrix. Qiskit Aer's MPS method is CPU-only in the Aer builds this project
+    targets, so the resolved settings separately audit requested GPU device and
+    whether the selected method can actually execute on GPU.
     """
 
     cfg = _merged_config(config)
@@ -1335,6 +1343,9 @@ def resolve_aer_simulator_settings(config: dict[str, object] | None = None) -> d
     return {
         "method": method,
         "device": device,
+        "method_gpu_supported": _aer_method_gpu_supported(method),
+        "requested_gpu_method_supported": bool(device == "GPU" and _aer_method_gpu_supported(method)),
+        "gpu_support_note": _aer_gpu_support_note(method, device),
         "options": options,
         "num_qubits": n,
         "tensor_network_threshold": threshold,
@@ -1413,6 +1424,9 @@ def _summary_aer_settings(settings: dict[str, object]) -> dict[str, object]:
     return {
         "method": str(settings.get("method", "")),
         "device": str(settings.get("device", "")),
+        "method_gpu_supported": bool(settings.get("method_gpu_supported", False)),
+        "requested_gpu_method_supported": bool(settings.get("requested_gpu_method_supported", False)),
+        "gpu_support_note": str(settings.get("gpu_support_note", "")),
         "selection_reason": str(settings.get("selection_reason", "")),
         "requested_method": str(settings.get("requested_method", "")),
         "num_qubits": int(settings.get("num_qubits", 0) or 0),
@@ -1427,6 +1441,7 @@ def _format_aer_settings(value: object) -> str:
     method = str(value.get("method", ""))
     device = str(value.get("device", ""))
     reason = str(value.get("selection_reason", ""))
+    gpu_note = str(value.get("gpu_support_note", ""))
     n = value.get("num_qubits", "")
     threshold = value.get("tensor_network_threshold", "")
     parts = [f"method={method}", f"device={device}"]
@@ -1436,7 +1451,22 @@ def _format_aer_settings(value: object) -> str:
         parts.append(f"threshold={threshold}")
     if reason:
         parts.append(f"reason={reason}")
+    if gpu_note:
+        parts.append(f"gpu={gpu_note}")
     return ", ".join(parts)
+
+
+def _aer_method_gpu_supported(method: str) -> bool:
+    return _normalize_aer_method(str(method)) in AER_GPU_SUPPORTED_METHODS
+
+
+def _aer_gpu_support_note(method: str, device: str) -> str:
+    normalized = _normalize_aer_method(str(method))
+    if str(device).upper() != "GPU":
+        return "gpu_not_requested"
+    if _aer_method_gpu_supported(normalized):
+        return "aer_method_supports_gpu"
+    return f"aer_method_{normalized}_does_not_support_gpu"
 
 
 def _resolve_sampling_mode(config: dict[str, object]) -> str:
@@ -1528,6 +1558,9 @@ def _sampling_audit(
         "backend": str(config.get("backend", "qiskit_aer_gpu")),
         "aer_method": str(aer_settings.get("method", "")),
         "aer_device": str(aer_settings.get("device", "")),
+        "aer_method_gpu_supported": bool(aer_settings.get("method_gpu_supported", False)),
+        "aer_requested_gpu_method_supported": bool(aer_settings.get("requested_gpu_method_supported", False)),
+        "aer_gpu_support_note": str(aer_settings.get("gpu_support_note", "")),
         "aer_options": dict(aer_settings.get("options", {})) if isinstance(aer_settings.get("options", {}), dict) else {},
         "aer_sampling_option_defaults": dict(aer_settings.get("sampling_option_defaults", {}))
         if isinstance(aer_settings.get("sampling_option_defaults", {}), dict)

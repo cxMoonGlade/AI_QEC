@@ -188,6 +188,78 @@ ARI/NMI < 0.70:
 Keep detailed S2D physical-oracle run notes in `docs/SCOPE_STATIC_DISC.md`; this
 roadmap should stay as a compact orientation page.
 
+Current PHYC2-balanced local-observable teacher result:
+
+```text
+outputs/scope_static/local_observable_gpu_allM_30q_depth30_30groups_v2_slot_remap/
+
+allM, 30 qubits, depth 30, 30 groups, 10k shots:
+  contract_passed true
+  balanced_accuracy 1.0000
+  min_class_recall 1.0000
+  scrambled-control BA gap 0.8567
+```
+
+This result uses `local_observable_response_model: separability_v2` and the
+local-observable observation-slot remap. Synthetic slot geometry is neutralized
+in PHYC2 features; branch flags and sampled response/correlation features remain
+visible. Slot-only leakage control BA is `0.0000`.
+
+Current PHYC2-weighted local-observable teacher result:
+
+```text
+outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/
+
+allM, 30 qubits, depth 30, uneven support 2-8, 10k shots:
+  contract_passed true
+  balanced_accuracy 1.0000
+  min_class_recall 1.0000
+  prevalence_weighted_accuracy 1.0000
+  rare_class_recall_min 1.0000
+  scrambled-control BA gap 0.8779
+  slot-only leakage control BA 0.0313
+  no-remap ablation weighted BA 0.9708
+```
+
+Current PHYC3 quantum-error-quality diagnostic:
+
+```text
+outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/PHYC3_quantum_error_quality/
+
+allM, 30 qubits, depth 30, uneven support 2-8, 10k shots:
+  contract_passed true
+  mechanism balanced_accuracy 1.0000
+  mechanism min_class_recall 1.0000
+  mean predicted channel/readout distance 0.000026
+  max predicted channel/readout distance 0.001364
+  incompatible predictions 0
+```
+
+PHYC3 consumes PHYC2 grouped predictions, builds fold-trained mechanism
+channel/readout prototypes from training groups, and compares predicted
+prototypes to evaluator-only oracle mechanism channels. For the
+`separability_v2` teacher this is a mechanism-to-error translation diagnostic,
+not evidence that the sampled observations came from Born-rule circuit physics.
+
+Current PHYC2-weighted scalability smoke:
+
+```text
+outputs/scope_static/local_observable_gpu_allM_74q_depth200_weighted_v2_slot_remap/
+
+allM, 74 qubits, depth 200, uneven support 2-8, 10k shots:
+  contract_passed true
+  balanced_accuracy 1.0000
+  min_class_recall 1.0000
+  prevalence_weighted_accuracy 1.0000
+  rare_class_recall_min 1.0000
+  slot-only leakage control BA 0.0479
+  teacher total wall-clock 4.0741s
+  artifact size 1.7G
+```
+
+The same PHYC3 audit also passes on the 74-qubit/depth-200 weighted artifact
+with the same mechanism and channel-distance metrics.
+
 Current S2D_PHYS3 default result:
 
 ```text
@@ -240,6 +312,38 @@ Calibration-only S2D.11b command:
 ```bash
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_s2d11b_m1_gate_branch_grouped_calibration_audit \
   --config configs/scope_static/s2d11b_m1_gate_branch_grouped_calibration_audit.yaml
+```
+
+### Stage 3: Born-Local Physical Baseline
+
+Question:
+
+```text
+Can sampled local observations be generated from exact local Born probabilities
+and still support mechanism classification plus high-quality quantum-error
+reconstruction?
+```
+
+Stage 3 should add a physically correct local teacher:
+
+```text
+local probe state -> CPTP/readout mechanism -> exact local Born probability
+-> GPU sampled observation bits
+```
+
+This teacher must not use mechanism-label response templates, artificial
+response-code margins, or post-sampling pair-correlation overlays. Two-qubit
+correlations should come from the exact two-qubit output distribution. Validate
+small cases against CUDA-Q/Qiskit exact simulation, then rerun PHYC2 and PHYC3.
+
+The intended distinction is:
+
+```text
+PHYC2/PHYC3 separability_v2:
+  engineered sampled-observation stress teacher
+
+PHYC2/PHYC3 Born-local:
+  mathematically and physically correct local baseline
 ```
 
 ### Stage 2B: Google External Validation

@@ -1,9 +1,0 @@
-{
-  "real_ari": 0.9246787771377937,
-  "real_beats_scrambled": false,
-  "real_method": "rzz_echo_contrast_features",
-  "real_nmi": 0.7770370914297744,
-  "scrambled_ari": 0.9266187050359712,
-  "scrambled_method": "scrambled_echo_control",
-  "scrambled_nmi": 0.791666492474772
-}

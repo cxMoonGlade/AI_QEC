@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import re
 from typing import Iterable
 
 import numpy as np
@@ -57,6 +58,23 @@ SINGLE_QUBIT_RESPONSE_FEATURES = (
     "sq_population_visibility",
     "sq_basis_anisotropy",
 )
+LOCAL_OBSERVABLE_RESPONSE_FEATURES = tuple(f"local_response_projection_{idx:02d}" for idx in range(17))
+PAIR_CORRELATION_FEATURES = (
+    "pair_corr_mean",
+    "pair_corr_std",
+    "pair_corr_min",
+    "pair_corr_max",
+    "pair_corr_abs_mean",
+    "pair_corr_meas_x",
+    "pair_corr_meas_y",
+    "pair_corr_meas_z",
+    "pair_corr_even",
+    "pair_corr_odd",
+    "pair_corr_even_minus_odd",
+    "pair_corr_same_xy",
+    "pair_corr_mixed_xy",
+    *tuple(f"pair_corr_projection_{idx:02d}" for idx in range(8)),
+)
 
 
 @dataclass(frozen=True)
@@ -93,7 +111,7 @@ def build_typed_spam_gate_features(
     enabled_mechanisms: list[str],
     seed: int = 0,
 ) -> TypedSpamGateBundle:
-    obs = np.asarray(observations, dtype=np.float64)
+    obs = np.asarray(observations, dtype=np.float32)
     names = [str(name) for name in probe_names]
     labels = [str(record.get("oracle_label", "")) for record in records]
     groups = [int(record.get("circuit_id", 0)) for record in records]
@@ -105,6 +123,8 @@ def build_typed_spam_gate_features(
         *LOCATION_FEATURES,
         *INSTRUCTION_FEATURES,
         *SINGLE_QUBIT_RESPONSE_FEATURES,
+        *LOCAL_OBSERVABLE_RESPONSE_FEATURES,
+        *PAIR_CORRELATION_FEATURES,
         *READOUT_FEATURES,
         *PREP_RESET_FEATURES,
         *CONFIDENCE_FEATURES,
@@ -856,9 +876,11 @@ def _record_features(record: dict[str, object], observations: np.ndarray, probe_
     qubits = [int(value) for value in record.get("qubits", [])]
     num_qubits = int(observations.shape[2]) if observations.ndim == 3 else 1
     branch = visible_branch(record)
-    features.update(_location_features(qubits, num_qubits, branch))
+    features.update(_location_features(qubits, num_qubits, branch, slot_remapped=bool(record.get("local_observable_slot_remap", False))))
     features.update(_instruction_features(record))
     features.update(_single_qubit_response_features(record, observations, probe_names, qubits))
+    features.update(_local_observable_response_features(record, observations, probe_names, qubits))
+    features.update(_pair_correlation_features(record, observations, probe_names, qubits))
     features.update(_readout_features(record, observations, probe_names, qubits))
     features.update(_prep_features(record, observations, probe_names, qubits))
     return features
@@ -908,6 +930,64 @@ def _single_qubit_response_features(record: dict[str, object], observations: np.
     }
 
 
+def _local_observable_response_features(record: dict[str, object], observations: np.ndarray, probe_names: list[str], qubits: list[int]) -> dict[str, float]:
+    q = qubits[0] if qubits else 0
+    q = min(max(q, 0), observations.shape[2] - 1)
+    indices = _record_probe_indices(record, len(probe_names))
+    if not indices:
+        return {name: 0.0 for name in LOCAL_OBSERVABLE_RESPONSE_FEATURES}
+    means = np.asarray([float(np.mean(observations[idx, :, q])) for idx in indices], dtype=np.float64) - 0.5
+    basis = _probe_projection_basis([probe_names[idx] for idx in indices], width=len(LOCAL_OBSERVABLE_RESPONSE_FEATURES))
+    projections = _moment_projections(means, basis)
+    return {name: float(projections[idx]) for idx, name in enumerate(LOCAL_OBSERVABLE_RESPONSE_FEATURES)}
+
+
+def _pair_correlation_features(record: dict[str, object], observations: np.ndarray, probe_names: list[str], qubits: list[int]) -> dict[str, float]:
+    empty = {name: 0.0 for name in PAIR_CORRELATION_FEATURES}
+    if len(qubits) < 2:
+        return empty
+    left = min(max(int(qubits[0]), 0), observations.shape[2] - 1)
+    right = min(max(int(qubits[1]), 0), observations.shape[2] - 1)
+    indices = _record_probe_indices(record, len(probe_names))
+    if not indices:
+        return empty
+    corr_values = []
+    local_names = []
+    for idx in indices:
+        left_bits = observations[idx, :, left].astype(np.float32, copy=False)
+        right_bits = observations[idx, :, right].astype(np.float32, copy=False)
+        left_spin = 2.0 * left_bits - 1.0
+        right_spin = 2.0 * right_bits - 1.0
+        raw_corr = float(np.mean(left_spin * right_spin))
+        centered_corr = raw_corr - float(np.mean(left_spin)) * float(np.mean(right_spin))
+        corr_values.append(centered_corr)
+        local_names.append(probe_names[idx])
+    corr = np.asarray(corr_values, dtype=np.float64)
+    basis = _probe_projection_basis(local_names, width=8)
+    projected = _moment_projections(corr, basis)
+    out = dict(empty)
+    out.update(
+        {
+            "pair_corr_mean": float(np.mean(corr)),
+            "pair_corr_std": float(np.std(corr)),
+            "pair_corr_min": float(np.min(corr)),
+            "pair_corr_max": float(np.max(corr)),
+            "pair_corr_abs_mean": float(np.mean(np.abs(corr))),
+            "pair_corr_meas_x": _probe_subset_mean(corr, local_names, meas_axis="X"),
+            "pair_corr_meas_y": _probe_subset_mean(corr, local_names, meas_axis="Y"),
+            "pair_corr_meas_z": _probe_subset_mean(corr, local_names, meas_axis="Z"),
+            "pair_corr_even": _probe_subset_mean(corr, local_names, parity="even"),
+            "pair_corr_odd": _probe_subset_mean(corr, local_names, parity="odd"),
+            "pair_corr_even_minus_odd": _probe_subset_mean(corr, local_names, parity="even") - _probe_subset_mean(corr, local_names, parity="odd"),
+            "pair_corr_same_xy": _probe_subset_mean(corr, local_names, same_xy=True),
+            "pair_corr_mixed_xy": _probe_subset_mean(corr, local_names, mixed_xy=True),
+        }
+    )
+    for idx, value in enumerate(projected):
+        out[f"pair_corr_projection_{idx:02d}"] = float(value)
+    return out
+
+
 def _readout_features(record: dict[str, object], observations: np.ndarray, probe_names: list[str], qubits: list[int]) -> dict[str, float]:
     q = qubits[0] if qubits else 0
     q = min(max(q, 0), observations.shape[2] - 1)
@@ -953,18 +1033,26 @@ def _prep_features(record: dict[str, object], observations: np.ndarray, probe_na
     }
 
 
-def _location_features(qubits: list[int], num_qubits: int, branch: str) -> dict[str, float]:
+def _location_features(qubits: list[int], num_qubits: int, branch: str, *, slot_remapped: bool = False) -> dict[str, float]:
     if qubits:
         mean_q = float(np.mean(qubits))
         span = float(max(qubits) - min(qubits)) if len(qubits) > 1 else 0.0
     else:
         mean_q = 0.0
         span = 0.0
+    if slot_remapped:
+        mean_q = 0.0
+        span = 0.0
+        chain_position = 0.0
+        neighbor_count = 0.0
+    else:
+        chain_position = float(mean_q / max(1, int(num_qubits) - 1))
+        neighbor_count = float(2 if 0 < mean_q < int(num_qubits) - 1 else 1)
     return {
         "location_qubit_mean": mean_q,
         "location_span": span,
-        "chain_position": float(mean_q / max(1, int(num_qubits) - 1)),
-        "neighbor_rzz_count": float(2 if 0 < mean_q < int(num_qubits) - 1 else 1),
+        "chain_position": chain_position,
+        "neighbor_rzz_count": neighbor_count,
         "branch_gate": float(branch == "gate_process_branch"),
         "branch_readout": float(branch == "readout_branch"),
         "branch_prep_reset": float(branch == "prep_reset_branch"),
@@ -1141,6 +1229,115 @@ def _feature_margin(labels: list[str], features: np.ndarray, feature_names: list
     pooled = np.sqrt(0.5 * (np.var(features[left_mask], axis=0) + np.var(features[right_mask], axis=0)))
     z = diff / np.maximum(pooled, NUMERICAL_ZERO)
     return {"available": True, "z_margin": float(np.linalg.norm(z)), "top_feature": str(feature_names[int(np.argmax(np.abs(z)))])}
+
+
+def _probe_projection_basis(probe_names: list[str], *, width: int) -> np.ndarray:
+    rows = []
+    for name in probe_names:
+        tokens = _probe_tokens(name)
+        mx = 0.5 * (_axis_indicator(tokens["meas_left"], "X") + _axis_indicator(tokens["meas_right"], "X"))
+        my = 0.5 * (_axis_indicator(tokens["meas_left"], "Y") + _axis_indicator(tokens["meas_right"], "Y"))
+        mz = 0.5 * (_axis_indicator(tokens["meas_left"], "Z") + _axis_indicator(tokens["meas_right"], "Z"))
+        prep_x = 0.5 * (_prep_axis_signed(tokens["prep_left"], "X") + _prep_axis_signed(tokens["prep_right"], "X"))
+        prep_y = 0.5 * (_prep_axis_signed(tokens["prep_left"], "Y") + _prep_axis_signed(tokens["prep_right"], "Y"))
+        prep_z = 0.5 * (_prep_axis_signed(tokens["prep_left"], "Z") + _prep_axis_signed(tokens["prep_right"], "Z"))
+        parity = _parity_sign(tokens["parity"])
+        prep_product = _prep_sign(tokens["prep_left"]) * _prep_sign(tokens["prep_right"])
+        same_axis = 1.0 if tokens["meas_left"] == tokens["meas_right"] else -0.35
+        mixed_xy = 1.0 if {tokens["meas_left"], tokens["meas_right"]} == {"X", "Y"} else -0.35
+        rows.append(
+            [
+                1.0,
+                mx,
+                my,
+                mz,
+                prep_x,
+                prep_y,
+                prep_z,
+                parity,
+                prep_product,
+                same_axis,
+                mixed_xy,
+                mx * prep_x,
+                my * prep_y,
+                mz * prep_z,
+                parity * mx,
+                parity * my,
+                parity * mz,
+            ][: int(width)]
+        )
+    basis = np.asarray(rows, dtype=np.float64)
+    if basis.size == 0:
+        return np.zeros((0, int(width)), dtype=np.float64)
+    basis = basis - np.mean(basis, axis=0, keepdims=True)
+    scale = np.sqrt(np.sum(basis * basis, axis=0, keepdims=True))
+    return basis / np.maximum(scale, NUMERICAL_ZERO)
+
+
+def _moment_projections(values: np.ndarray, basis: np.ndarray) -> np.ndarray:
+    width = int(basis.shape[1]) if basis.ndim == 2 else 0
+    if width == 0:
+        return np.zeros(0, dtype=np.float64)
+    centered = np.asarray(values, dtype=np.float64).reshape(-1)
+    if centered.size == 0:
+        return np.zeros(width, dtype=np.float64)
+    centered = centered - float(np.mean(centered))
+    return centered @ basis
+
+
+def _probe_subset_mean(
+    values: np.ndarray,
+    probe_names: list[str],
+    *,
+    meas_axis: str | None = None,
+    parity: str | None = None,
+    same_xy: bool = False,
+    mixed_xy: bool = False,
+) -> float:
+    selected = []
+    for idx, name in enumerate(probe_names):
+        tokens = _probe_tokens(name)
+        if meas_axis is not None and meas_axis not in {tokens["meas_left"], tokens["meas_right"]}:
+            continue
+        if parity is not None and parity != tokens["parity"]:
+            continue
+        if same_xy and not (tokens["meas_left"] == tokens["meas_right"] and tokens["meas_left"] in {"X", "Y"}):
+            continue
+        if mixed_xy and {tokens["meas_left"], tokens["meas_right"]} != {"X", "Y"}:
+            continue
+        selected.append(float(values[idx % values.size]))
+    return float(np.mean(selected)) if selected else float(np.mean(values))
+
+
+def _probe_tokens(name: str) -> dict[str, str]:
+    base = str(name).split(":", 1)[1] if ":" in str(name) else str(name)
+    match = re.match(r"rzz_tomo_p([XYZ][pm])([XYZ][pm])_m([XYZ])([XYZ])_(even|odd)$", base)
+    if match is None:
+        return {"prep_left": "Zp", "prep_right": "Zp", "meas_left": "Z", "meas_right": "Z", "parity": "even"}
+    prep_left, prep_right, meas_left, meas_right, parity = match.groups()
+    return {
+        "prep_left": prep_left,
+        "prep_right": prep_right,
+        "meas_left": meas_left,
+        "meas_right": meas_right,
+        "parity": parity,
+    }
+
+
+def _axis_indicator(axis: str, target: str) -> float:
+    return 1.0 if str(axis).upper() == str(target).upper() else -0.35
+
+
+def _prep_sign(prep: str) -> float:
+    return -1.0 if str(prep).endswith("m") else 1.0
+
+
+def _prep_axis_signed(prep: str, axis: str) -> float:
+    return _prep_sign(prep) if str(prep).startswith(str(axis).upper()) else -0.25
+
+
+def _parity_sign(parity: str) -> float:
+    return 1.0 if str(parity) == "even" else -1.0
 
 
 def _probe_mean(probe_names: list[str], observations: np.ndarray, indices: list[int], q: int, token: str) -> float:

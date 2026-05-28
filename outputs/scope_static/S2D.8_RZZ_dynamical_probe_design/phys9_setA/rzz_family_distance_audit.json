@@ -1,8 +1,0 @@
-{
-  "methods": {
-    "rzz_depth_features": {},
-    "rzz_depth_probe_only_v3c": {},
-    "scrambled_depth_control": {}
-  },
-  "schema": "scope_static_s2d7_rzz_family_distance_audit_v1"
-}

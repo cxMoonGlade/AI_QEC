@@ -48,12 +48,19 @@ def test_aer_simulator_auto_uses_mps_tensor_network_for_phys15() -> None:
 
     assert small["method"] == "density_matrix"
     assert small["selection_reason"] == "auto_small_qubit_density_matrix"
+    assert small["method_gpu_supported"] is True
+    assert small["requested_gpu_method_supported"] is True
+    assert small["gpu_support_note"] == "aer_method_supports_gpu"
     assert large["method"] == "matrix_product_state"
     assert large["device"] == "GPU"
+    assert large["method_gpu_supported"] is False
+    assert large["requested_gpu_method_supported"] is False
+    assert large["gpu_support_note"] == "aer_method_matrix_product_state_does_not_support_gpu"
     assert large["options"] == {"matrix_product_state_truncation_threshold": NUMERICAL_ZERO}
     assert large["selection_reason"] == "auto_large_qubit_tensor_network"
     assert larger["method"] == "matrix_product_state"
     assert larger["num_qubits"] == 20
+    assert larger["requested_gpu_method_supported"] is False
 
 
 def test_aer_simulator_allows_explicit_tensor_network_method() -> None:
@@ -66,6 +73,9 @@ def test_aer_simulator_allows_explicit_tensor_network_method() -> None:
 
     assert settings["method"] == "tensor_network"
     assert settings["selection_reason"] == "explicit_aer_simulation_method"
+    assert settings["method_gpu_supported"] is True
+    assert settings["requested_gpu_method_supported"] is True
+    assert settings["gpu_support_note"] == "aer_method_supports_gpu"
 
 
 def test_aer_simulator_options_do_not_duplicate_method_or_device() -> None:
@@ -84,6 +94,8 @@ def test_aer_simulator_options_do_not_duplicate_method_or_device() -> None:
 
     assert settings["method"] == "tensor_network"
     assert settings["device"] == "GPU"
+    assert settings["method_gpu_supported"] is True
+    assert settings["requested_gpu_method_supported"] is True
     assert settings["options"] == {"matrix_product_state_truncation_threshold": NUMERICAL_ZERO, "shot_branching_enable": True}
 
 
@@ -145,6 +157,11 @@ def test_sample_circuits_batches_aer_jobs_and_reports_wall_clock(monkeypatch: py
     assert [call["seed"] for call in calls] == [11, 12, 13]
     assert audit["schema"] == "scope_static_s2d_phys1_sampling_audit_v1"
     assert audit["mode"] == "batch"
+    assert audit["aer_method"] == "density_matrix"
+    assert audit["aer_device"] == "GPU"
+    assert audit["aer_method_gpu_supported"] is True
+    assert audit["aer_requested_gpu_method_supported"] is True
+    assert audit["aer_gpu_support_note"] == "aer_method_supports_gpu"
     assert audit["num_jobs"] == 3
     assert audit["job_batch_size"] == 2
     assert audit["aer_options"]["max_parallel_experiments"] == 2
@@ -242,6 +259,8 @@ def test_s2d_teacher_generation_writes_noise_application_audit_when_gpu_availabl
     assert sampling_audit["schema"] == "scope_static_s2d_phys1_sampling_audit_v1"
     assert sampling_audit["mode"] == "batch"
     assert sampling_audit["metrics_are_wall_clock"] is True
+    assert sampling_audit["aer_method_gpu_supported"] is True
+    assert sampling_audit["aer_requested_gpu_method_supported"] is True
     observations = np.load(tmp_path / "S2D_PHYS1_teacher" / "observations.npz")
     assert observations["observations"].ndim == 3
 

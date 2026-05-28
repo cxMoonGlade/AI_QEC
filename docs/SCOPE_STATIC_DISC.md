@@ -1670,16 +1670,30 @@ aer_large_qubit_method: matrix_product_state
 
 For profiles below the threshold, `auto` uses GPU `density_matrix`, preserving
 the exact dense small-circuit path. For 15+ qubit chain profiles, `auto` uses
-GPU `matrix_product_state`, which is the tensor-network algorithm better matched
-to the shallow nearest-neighbor RZZ chain geometry than a dense
-`2^n x 2^n` density matrix. The default MPS path sets
-`matrix_product_state_truncation_threshold: 1e-12` unless the config explicitly
-overrides it. This threshold is the repository numerical floor, not exact zero;
-PHYS summaries record it under `aer_simulator.options` so the approximation
-policy is auditable rather than implicit. Explicit overrides remain available through
-`aer_simulation_method: density_matrix | matrix_product_state | tensor_network`;
-`tensor_network` routes to Aer's cuTensorNet-style method when that backend is
-desired for comparison.
+`matrix_product_state`, which is the tensor-network algorithm better matched to
+the shallow nearest-neighbor RZZ chain geometry than a dense `2^n x 2^n` density
+matrix. Qiskit Aer 0.15.1 does not provide GPU execution for
+`matrix_product_state`, so this large-qubit default is the fastest stock-Aer
+path observed for chain teachers, not a true GPU sampler. The resolved Aer
+settings and `sampling_audit.json` therefore record both the requested device
+and whether the selected method supports GPU execution:
+
+```text
+method_gpu_supported
+requested_gpu_method_supported
+gpu_support_note
+```
+
+The default MPS path sets `matrix_product_state_truncation_threshold: 1e-12`
+unless the config explicitly overrides it. This threshold is the repository
+numerical floor, not exact zero; PHYS summaries record it under
+`aer_simulator.options` so the approximation policy is auditable rather than
+implicit. Explicit overrides remain available through
+`aer_simulation_method: density_matrix | matrix_product_state | tensor_network`.
+`tensor_network` and dense `statevector`/`density_matrix` are true GPU-capable
+Aer methods, but the 30-qubit depth-30 noisy tomography stress test found them
+slower or memory-heavy enough to be impractical for the full finite-shot
+teacher.
 
 Floating numerical floors, probability leftovers, and simulation thresholds use
 the repository-wide numerical floor `scope_static.numerics.NUMERICAL_ZERO =
@@ -1702,13 +1716,24 @@ aer_auto_parallel_experiments: true
 aer_max_parallel_experiments_auto_cap: 8
 ```
 
-`batch` submits the probe circuits for a shared noise model as one Aer job
-instead of one job per probe. On GPU batched jobs, PHYS1 automatically sets
-`max_parallel_experiments` to `min(batch_size, cap)` unless the user explicitly
-sets that Aer option. The per-circuit submission path remains available through
-`aer_sampling_mode: per_circuit` for legacy seed reproducibility checks. Each
-teacher run writes `sampling_audit.json`; all sampling, materialization, and
-total timings in that audit are wall-clock seconds.
+`batch` submits probe circuits for a shared noise model in Aer jobs instead of
+one job per probe. PHYS1 automatically sets `max_parallel_experiments` to
+`min(batch_size, cap)` unless the user explicitly sets that Aer option. On the
+30-qubit depth-30 all-mechanism stress test, 4-circuit MPS batches were the best
+stock-Aer setting measured; larger batches increased wall time. The per-circuit
+submission path remains available through `aer_sampling_mode: per_circuit` for
+legacy seed reproducibility checks. Each teacher run writes
+`sampling_audit.json`; all sampling, materialization, and total timings in that
+audit are wall-clock seconds.
+
+The next real GPU-sampling path should not rely on stock Aer MPS. It should be
+a custom CUDA/cuTensorNet local-tensor sampler, or an observable-first teacher
+that computes local tomography responses on GPU and injects finite-shot noise
+without materializing full bitstrings when the learner only consumes local
+statistics. The implemented local-observable GPU teacher follows the second
+path: it emits PHYS1-compatible `observations.npz` artifacts by sampling local
+probe-response bits with Torch CUDA, then PHYC2 audits whether those sampled
+observations are learner-separable.
 
 inspired by https://github.com/muhos/QuaSARQ
 
@@ -1729,9 +1754,223 @@ the ordering and diagnosis contract:
 
 ```text
 PHYS1: physical teacher generation
-PHYS2: teacher self-distinguishability from oracle-only mechanism fingerprints
+PHYS2 legacy ceiling: teacher self-distinguishability from oracle-only mechanism fingerprints
+PHYC2 companion contract: sampled observations are learner-separable under grouped folds
 PHYS3: learner recovery from learner-visible local-inverse features
 ```
+
+PHYC2 is exposed through
+`scope_static.experiments.run_phyc2_sampled_observation_separability` as a
+companion audit for PHYS1 teacher artifacts. It is the gate for new
+physical-teacher backends. A teacher passes PHYC2 only if `observations.npz`
+plus visible probe/instruction/qubit metadata support grouped mechanism
+classification. Exact PTMs, exact channel fingerprints, oracle mechanism IDs,
+and oracle labels remain evaluator-only and cannot be feature inputs.
+
+PHYC2 has two explicit variants:
+
+```text
+PHYC2-balanced:
+  Question: can sampled observations separate every enabled mechanism when
+            each mechanism has equal evaluator support?
+  Use: mechanism separability stress tests.
+  Support contract: equal record support per mechanism class.
+  Primary metrics: macro balanced accuracy, min class recall, scrambled-control gap.
+
+PHYC2-weighted:
+  Question: how well does the sampled-observation learner classify mechanisms
+            under schedule-like uneven mechanism frequencies?
+  Use: deployment-like teacher checks after balanced separability is established.
+  Support contract: unequal class support is allowed, but every evaluated class
+                    must appear in at least two grouped folds.
+  Primary metrics: prevalence-weighted accuracy, macro balanced accuracy,
+                   rare-class recall, scrambled-control gap.
+```
+
+The default PHYC2-balanced thresholds are:
+
+```text
+num_groups >= 2
+num_probes >= 2
+each mechanism class appears in at least two circuit_id groups
+equal class support
+typed sampled-observation balanced accuracy >= 0.80
+min class recall >= 0.50
+real minus within-branch scrambled balanced accuracy >= 0.25
+```
+
+The default PHYC2-weighted thresholds are:
+
+```text
+num_groups >= 2
+num_probes >= 2
+each evaluated mechanism class appears in at least two circuit_id groups
+prevalence-weighted accuracy >= 0.90
+macro balanced accuracy >= 0.80
+rare-class recall >= 0.30
+real minus within-branch scrambled balanced accuracy >= 0.25
+```
+
+For balanced evidence, the class recall resolution is `1 / support_per_class`.
+A six-batch balanced allM run has recall steps of `1/6 = 0.1667`, so it is a
+useful smoke/stress artifact but still low support. Serious balanced
+separability runs should increase per-mechanism support when memory permits.
+
+Current PHYC2-balanced allM evidence uses the local-observable Torch CUDA
+teacher with `local_observable_response_model: separability_v2` and
+`balanced_min_instances_per_mechanism: 30`:
+
+```text
+outputs/scope_static/local_observable_gpu_allM_30q_depth30_30groups_v2_slot_remap/
+
+30 qubits, depth 30, M0-M19, 30 groups, 10k shots:
+  contract_passed = true
+  balanced_accuracy = 1.0000
+  min_class_recall = 1.0000
+  real_minus_within_branch_scrambled_balanced_accuracy = 0.8567
+```
+
+`separability_v2` is a sampled-observation teacher response model, not a global
+full-circuit simulator. It keeps PHYS1 artifact compatibility while making
+branch-specific local responses learner-visible:
+
+- readout mechanisms `M13/M14/M15/M16` receive directional and context response
+  signatures;
+- RZZ-family mechanisms `M1/M6/M7/M9` receive GPU-side pair-correlation
+  overlays in addition to marginal bit responses;
+- gate, prep, and reset mechanisms retain local axis/strength signatures plus a
+  deterministic response-code margin emitted only through sampled observations.
+
+The local-observable teacher records
+`sampling.observation_slot_remap` in `summary.json` and `sampling_audit.json`.
+This remap is expected: it assigns non-overlapping local observation slots within
+each circuit batch so one mechanism's sampled response cannot overwrite another
+mechanism's response at the same probe/qubit cell. The original physical qubits
+are preserved in each mechanism record as `physical_qubits`; learner-visible
+`qubits` are the local observation slots used by the sampled tensor. PHYC2
+neutralizes synthetic slot-geometry features for these records while keeping
+branch flags, probe metadata, sampled response projections, and pair-correlation
+features learner-visible.
+
+Each PHYS1 local-observable teacher artifact also writes
+`self_distinguishability_preflight.json`, which reports expected-response
+pairwise margins for readout aliases, RZZ aliases, and historically low-margin
+mechanism pairs before running PHYC2.
+
+PHYC2 also reports `PHYC2.slot_only_leakage_control` in
+`slot_only_leakage_control`. This grouped control uses only observation-slot
+metadata, original `physical_qubits`, probe block ids, and layout/slot metadata.
+It excludes sampled bits, sampled response statistics, pair correlations,
+local-inverse features, exact PTMs, mechanism ids, and oracle labels. High
+slot-only balanced accuracy means the remap/layout is encoding mechanism
+identity and the PHYC2 result should not be trusted.
+
+The local-observable GPU teacher supports PHYC2-weighted data generation through
+`mechanism_instance_counts` in the teacher config. Unspecified enabled
+mechanisms use `balanced_min_instances_per_mechanism`; explicit `0` omits a
+mechanism from the generated teacher artifact.
+
+Current PHYC2-weighted allM evidence:
+
+```text
+outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/
+
+30 qubits, depth 30, M0-M19, uneven support 2-8, 10k shots:
+  contract_passed = true
+  balanced_accuracy = 1.0000
+  min_class_recall = 1.0000
+  prevalence_weighted_accuracy = 1.0000
+  rare_class_recall_min = 1.0000
+  real_minus_within_branch_scrambled_balanced_accuracy = 0.8779
+  slot_only_leakage_control_balanced_accuracy = 0.0313
+  slot_only_leakage_suspected = false
+```
+
+PHYC3 sampled quantum-error quality consumes the PHYC2 grouped predictions,
+builds fold-trained mechanism channel/readout prototypes from training groups,
+and compares the predicted prototype with the evaluator-only oracle mechanism
+channel. This answers a separate question from PHYC2:
+
+```text
+PHYC2:
+  Can sampled observations classify the mechanism?
+
+PHYC3:
+  If the learner predicts a mechanism, does that prediction produce a close
+  quantum/readout error object?
+```
+
+Current PHYC3 weighted allM evidence:
+
+```text
+outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/PHYC3_quantum_error_quality/
+
+30 qubits, depth 30, M0-M19, uneven support 2-8, 10k shots:
+  contract_passed = true
+  mechanism_balanced_accuracy = 1.0000
+  mechanism_min_class_recall = 1.0000
+  mean_predicted_channel_distance = 0.000026
+  max_predicted_channel_distance = 0.001364
+  incompatible_predictions = 0
+```
+
+For `separability_v2`, PHYC3 is a mechanism-to-error translation diagnostic,
+not proof that sampled observations came from Born-rule circuit physics.
+
+Current slot-only and no-remap guardrail evidence:
+
+```text
+PHYC2-balanced slot-only BA:
+  0.0000
+
+PHYC2-weighted slot-only BA:
+  0.0313
+
+PHYC2.no_slot_remap_ablation weighted BA:
+  0.9708
+
+PHYC2.weighted slot-remap weighted BA:
+  1.0000
+```
+
+Current 74-qubit depth-200 weighted scalability smoke:
+
+```text
+outputs/scope_static/local_observable_gpu_allM_74q_depth200_weighted_v2_slot_remap/
+
+30q -> 74q extension, depth 30 -> 200, same weighted allM support 2-8:
+  contract_passed = true
+  balanced_accuracy = 1.0000
+  min_class_recall = 1.0000
+  prevalence_weighted_accuracy = 1.0000
+  rare_class_recall_min = 1.0000
+  slot_only_leakage_control_balanced_accuracy = 0.0479
+  slot_only_leakage_suspected = false
+  teacher_total_requested_bits = 1,704,960,000
+  teacher_total_wall_clock_seconds = 4.0741
+  artifact_size = 1.7G
+```
+
+The same PHYC3 quantum-error-quality audit passes on the 74-qubit/depth-200
+weighted artifact with the same classification and channel-distance metrics.
+
+Stage 3 should replace the engineered `separability_v2` response model with a
+Born-local physical baseline:
+
+```text
+local probe state -> CPTP/readout mechanism -> exact local Born probability
+-> GPU sampled observation bits
+```
+
+That teacher must not use mechanism-label response templates, artificial
+response-code margins, or post-sampling pair-correlation overlays. Two-qubit
+correlations should come from the exact two-qubit output distribution. Small
+Born-local cases should be validated against CUDA-Q/Qiskit exact simulation
+before using PHYC2/PHYC3 as physical baseline evidence.
+
+The legacy PHYS2 oracle-fingerprint audit remains useful as a ceiling: it says
+whether the mechanism family is in principle distinguishable. It does not prove
+that sampled observations are learner-separable.
 
 The stack writes `physical_oracle_stack.json` and
 `physical_oracle_stack.md` next to the canonical stage directories. Its verdicts

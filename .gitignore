@@ -6,6 +6,9 @@ __pycache__/
 # Experiment caches
 outputs/**/prepared_cache/
 
+# Generated experiment outputs and large data artifacts
+outputs/
+
 # Packaging/build artifacts
 *.egg-info
 build/

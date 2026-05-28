@@ -1,9 +1,0 @@
-{
-  "real_ari": 0.8878418695577177,
-  "real_beats_scrambled": false,
-  "real_method": "active_mixed_basis_moments_plus_signed_contrasts",
-  "real_nmi": 0.7265392490993027,
-  "scrambled_ari": 0.8878418695577177,
-  "scrambled_method": "active_mixed_basis_scrambled",
-  "scrambled_nmi": 0.7265392490993027
-}
