@@ -21,6 +21,12 @@ e_j ~ Bernoulli(p_j)
 y = A e mod 2
 ```
 
+Here `A in F_2^{B x M}` is the DEM parity map, `e in {0,1}^M` is the
+latent effective-fault vector for one shot, and `y in {0,1}^B` is the observed
+detector/logical bit vector. `M` is the number of effective DEM fault
+mechanisms after duplicate-mask canonicalization, `B` is the number of
+observation bits, and `lambda_j = logit(p_j)` is the Stage 1 fault logit.
+
 Stage 2 also contains synthetic physical-oracle diagnostics for local
 mechanism observability. Those diagnostics use learner-visible shot data and
 local reconstructed PTM/generator summaries, but they are not a hardware

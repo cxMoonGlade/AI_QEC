@@ -110,8 +110,14 @@ y = A e mod 2
 A in F_2^{B x M}
 ```
 
-`B` is the number of detector plus logical observable bits. `M` is the number
-of effective DEM fault mechanisms after duplicate-mask canonicalization.
+- `A`: DEM parity map. Column `j` records which observation bits flip when
+  effective DEM fault `j` occurs.
+- `e in {0,1}^M`: latent effective-fault vector for one shot.
+- `y in {0,1}^B`: observed detector/logical bit vector for one shot.
+- `B`: number of detector plus logical observable bits.
+- `M`: number of effective DEM fault mechanisms after duplicate-mask
+  canonicalization.
+- `lambda_j`: Stage 1 fault logit, `logit(p_j)`.
 
 The sparse parity-map views remain the scalable interface:
 

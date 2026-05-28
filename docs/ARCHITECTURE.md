@@ -9,6 +9,12 @@ y = A e mod 2
 lambda_j = logit(p_j)
 ```
 
+Here `A in F_2^{B x M}` is the DEM parity map, `e in {0,1}^M` is the
+latent effective-fault vector for one shot, and `y in {0,1}^B` is the observed
+detector/logical bit vector. `M` is the number of effective DEM fault
+mechanisms after duplicate-mask canonicalization; `B` is the number of
+observation bits.
+
 The physical-oracle S2D work is synthetic validation and observability tooling
 around local physical mechanisms. It is not a hardware CPTP/GST/GKSL learner.
 

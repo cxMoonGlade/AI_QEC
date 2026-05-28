@@ -4,6 +4,36 @@ This note defines **teacher**, **learner**, and **exposure to the learner** for
 `scope_static`: a fixed-context DEM/Bernoulli research stack, not a CPTP/GKSL
 physical-channel learner.
 
+## Core Notation
+
+For SCOPE-Static Stage 1 and Stage 2 discovery, the data model is the
+canonicalized DEM/Bernoulli parity model:
+
+```text
+e_j ~ Bernoulli(p_j)
+y = A e mod 2
+p_j = sigmoid(lambda_j)
+```
+
+- `M`: number of effective DEM fault mechanisms after duplicate-mask
+  canonicalization.
+- `B`: number of observation bits, including detector bits and logical
+  observable bits.
+- `A in F_2^{B x M}`: DEM parity map. Column `j` records which observation
+  bits flip when effective DEM fault `j` occurs.
+- `e in {0,1}^M`: latent sampled DEM fault vector for one shot.
+- `y in {0,1}^B`: observed detector/logical bit vector for one shot.
+- `p_j`: Bernoulli probability of effective DEM fault `j`.
+- `lambda_j`: Stage 1 fault logit, `logit(p_j)`.
+- `omega(j)`: known orbit assignment for fault `j` in known-orbit Stage 1
+  baselines.
+- `S[j, k]` or `Pi[j, k]`: learned Stage 2 discovery assignment. Do not call
+  this matrix `A`; `A` is reserved for the DEM parity map.
+
+For PHYC2/PHYC3 physical-oracle paths, sampled local observation bits are
+learner-visible data when declared, but oracle mechanism labels, exact channels,
+exact PTMs, and oracle fingerprints remain evaluator-only.
+
 ## Teacher
 
 A **teacher** is the source of reference truth for an experiment.
@@ -66,7 +96,7 @@ Included paths:
 
 Allowed learner-visible data:
 
-- `A` and `y`.
+- `A` and `y` for DEM/Bernoulli Stage 1 and Stage 2 static runs.
 - shot bits.
 - visible circuit/probe/instruction/location metadata.
 - features computed only from visible data.

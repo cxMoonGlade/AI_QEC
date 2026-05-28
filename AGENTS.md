@@ -33,6 +33,8 @@ y = A e mod 2
 Keep notation aligned with `docs/SCOPE_TWIN.md`:
 
 - `A` is the DEM parity map.
+- `e in {0,1}^M` is the latent effective-fault vector.
+- `y in {0,1}^B` is the observed detector/logical bit vector.
 - `lambda_j` is the Stage 1 fault logit.
 - `omega(j)` is a known orbit assignment.
 - `S` or `Pi` is a learned Stage 2 discovery assignment.
