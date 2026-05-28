@@ -1828,6 +1828,9 @@ outputs/scope_static/local_observable_gpu_allM_30q_depth30_30groups_v2_slot_rema
   balanced_accuracy = 1.0000
   min_class_recall = 1.0000
   real_minus_within_branch_scrambled_balanced_accuracy = 0.8567
+  PHYC3_contract_passed = true
+  PHYC3_mean_predicted_channel_distance = 0.000085
+  PHYC3_max_predicted_channel_distance = 0.003292
 ```
 
 `separability_v2` is a sampled-observation teacher response model, not a global

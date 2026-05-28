@@ -198,6 +198,9 @@ allM, 30 qubits, depth 30, 30 groups, 10k shots:
   balanced_accuracy 1.0000
   min_class_recall 1.0000
   scrambled-control BA gap 0.8567
+  PHYC3 contract_passed true
+  PHYC3 mean predicted channel/readout distance 0.000085
+  PHYC3 max predicted channel/readout distance 0.003292
 ```
 
 This result uses `local_observable_response_model: separability_v2` and the

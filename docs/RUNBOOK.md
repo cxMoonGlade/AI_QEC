@@ -228,7 +228,12 @@ PHYC2-balanced sampled-observation mechanism-separability audit:
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_phyc2_sampled_observation_separability \
   --contract balanced \
   --teacher-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_30groups_v2_slot_remap/S2D_PHYS1_teacher \
-  --output-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_30groups_v2_slot_remap/PHYC2_balanced_sampled_observation_separability
+  --output-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_30groups_v2_slot_remap/PHYC2_balanced_slot_only_control
+
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_phyc3_sampled_quantum_error_quality \
+  --teacher-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_30groups_v2_slot_remap/S2D_PHYS1_teacher \
+  --phyc2-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_30groups_v2_slot_remap/PHYC2_balanced_slot_only_control \
+  --output-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_30groups_v2_slot_remap/PHYC3_quantum_error_quality
 ```
 
 Current evidence for `configs/scope_static/s2d11_allM_30q_depth30.yaml`
@@ -241,6 +246,9 @@ PHYC2-balanced allM, 30 qubits, depth 30, 30 groups, 10k shots:
   balanced_accuracy: 1.0000
   min_class_recall: 1.0000
   real_minus_within_branch_scrambled_balanced_accuracy: 0.8567
+  PHYC3_quantum_error_quality_contract_passed: true
+  PHYC3_mean_predicted_channel_distance: 0.000085
+  PHYC3_max_predicted_channel_distance: 0.003292
 ```
 
 The local-observable teacher writes
