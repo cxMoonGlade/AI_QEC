@@ -11,6 +11,7 @@ from scope_static.physical.channels import (
     rzz_unitary,
 )
 from scope_static.physical.density_sim import apply_kraus, measurement_probabilities_z
+from scope_static.physical.mechanism_catalog import IMPLEMENTED_MECHANISM_IDS, MECHANISM_NAMES, READOUT_MECHANISM_IDS, RZZ_FAMILY_IDS
 from scope_static.physical.ptm import channel_fingerprint, ptm_from_kraus, ptm_from_unitary, rzz_ptm_block_audit
 from scope_static.physical.ptm import probe_response_fingerprint, rzz_type_feature_names, rzz_type_feature_vector
 
@@ -50,13 +51,13 @@ def test_readout_and_mechanism_fingerprints_are_finite() -> None:
 
     specs = [
         MechanismSpec("M0", "pauli", 1, {"p_x": 0.001, "p_y": 0.002, "p_z": 0.003}),
-        MechanismSpec("M1", "rzz", 2, {"epsilon": 0.04}),
-        MechanismSpec("M2", "rx", 1, {"axis": "rx", "epsilon": 0.03}),
-        MechanismSpec("M3", "rz", 1, {"epsilon": 0.04}),
+        MechanismSpec("M8", "rzz", 2, {"epsilon": 0.04}),
+        MechanismSpec("M6", "rx", 1, {"axis": "rx", "epsilon": 0.03}),
+        MechanismSpec("M7", "rz", 1, {"epsilon": 0.04}),
         MechanismSpec("M4", "amp", 1, {"gamma": 0.02}),
-        MechanismSpec("M5", "custom", 1, {"eta": 0.02}),
-        MechanismSpec("M6", "depolarizing", 2, {"p": 0.006}),
-        MechanismSpec("M13", "readout", 1, {"p": 0.02}),
+        MechanismSpec("M15", "custom", 1, {"eta": 0.02}),
+        MechanismSpec("M9", "depolarizing", 2, {"p": 0.006}),
+        MechanismSpec("M1", "readout", 1, {"p": 0.02}),
     ]
     for spec in specs:
         channel = mechanism_channel(spec)
@@ -70,7 +71,7 @@ def test_readout_and_mechanism_fingerprints_are_finite() -> None:
 
 
 def test_rzz_type_features_are_named_and_rzz_specific() -> None:
-    rzz = MechanismSpec("M1", "rzz", 2, {"epsilon": 0.04})
+    rzz = MechanismSpec("M8", "rzz", 2, {"epsilon": 0.04})
     pauli = MechanismSpec("M0", "pauli", 1, {"p_x": 0.001, "p_y": 0.002, "p_z": 0.003})
 
     assert rzz_type_feature_names() == [
@@ -82,3 +83,29 @@ def test_rzz_type_features_are_named_and_rzz_specific() -> None:
     assert rzz_type_feature_vector(rzz).shape == (4,)
     assert np.isfinite(rzz_type_feature_vector(rzz)).all()
     assert np.allclose(rzz_type_feature_vector(pauli), 0.0)
+
+
+def test_implemented_catalog_mechanisms_have_distinct_channel_fingerprints() -> None:
+    fingerprints = {}
+    for mechanism_id in IMPLEMENTED_MECHANISM_IDS:
+        num_qubits = 2 if mechanism_id in RZZ_FAMILY_IDS else 1
+        instruction = "rzz" if num_qubits == 2 else ("measure" if mechanism_id in READOUT_MECHANISM_IDS else "id")
+        spec = MechanismSpec(
+            mechanism_id,
+            MECHANISM_NAMES[mechanism_id],
+            num_qubits,
+            {},
+            instruction=instruction,
+            qubits=tuple(range(num_qubits)),
+        )
+        channel = mechanism_channel(spec)
+        fingerprint = np.concatenate([channel_fingerprint(spec, paper_informed=True), probe_response_fingerprint(spec)])
+
+        assert channel["kind"] in {"kraus", "unitary", "readout"}
+        assert np.isfinite(fingerprint).all()
+        fingerprints[mechanism_id] = fingerprint
+
+    assert set(fingerprints) == set(IMPLEMENTED_MECHANISM_IDS)
+    for left_idx, left in enumerate(IMPLEMENTED_MECHANISM_IDS):
+        for right in IMPLEMENTED_MECHANISM_IDS[left_idx + 1 :]:
+            assert float(np.linalg.norm(fingerprints[left] - fingerprints[right])) > 1e-6

@@ -1,9 +1,9 @@
 # 缩小 S2D 中 PHYS2–PHYS3 间隙的研究报告
 
-> 术语注记：本文是机制重编号之前的历史分析报告。当前代码与
-> `docs/SCOPE_STATIC_DISC.md` 使用新的 M0-M19 分类：旧 M5 读出拆分为
-> M13-M16，旧 M11 prep/reset 拆分为 M17-M18，旧 M13 Type-4 变为 M19；
-> RZZ-family 旧 M1/M7/M8/M10 现在对应 M1/M6/M7/M9。
+> 术语注记：本文是机制重编号之前的历史分析报告，保留旧编号用于
+> 解释当时的实验结果。当前代码使用 `docs/error_mechanisms.md` 中的
+> M0-M34 分类；当前 RZZ-family 是 M8/M9/M10/M12，readout 是
+> M1/M2/M3/M16。
 
 ## 执行摘要
 

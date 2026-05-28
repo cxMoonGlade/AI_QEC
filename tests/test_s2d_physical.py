@@ -34,7 +34,7 @@ def test_s2d_preflight_writes_cudaq_backend_audit(tmp_path: Path) -> None:
 def test_default_oracle_mechanisms_include_required_labels() -> None:
     labels = [spec.mechanism_id for spec in build_default_oracle_mechanisms()]
 
-    assert {"M0", "M1", "M2", "M3", "M4", "M13", "M14", "M15", "M16"} <= set(labels)
+    assert {"M0", "M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", "M9"} <= set(labels)
 
 
 def test_probe_circuits_are_internal_visible_schedules() -> None:
@@ -68,7 +68,7 @@ def test_s2d_teacher_generation_writes_born_local_artifact_when_cuda_available(t
                 "s2d_physical": {
                     "shots": 64,
                     "num_qubits": 5,
-                    "mechanism_set": ["M13", "M14"],
+                    "mechanism_set": ["M1", "M2"],
                     "backend": "cudaq",
                     "require_gpu": True,
                     "local_observable_response_model": "born_local",
@@ -85,7 +85,7 @@ def test_s2d_teacher_generation_writes_born_local_artifact_when_cuda_available(t
 
     assert result["local_observable_response_model"] == "born_local"
     assert result["cudaq_backend"]["target"] is not None
-    assert result["mechanism_counts"] == {"M13": 2, "M14": 2}
+    assert result["mechanism_counts"] == {"M1": 2, "M2": 2}
     assert (tmp_path / "S2D_PHYS1_teacher" / "sampling_audit.json").exists()
     observations = np.load(tmp_path / "S2D_PHYS1_teacher" / "observations.npz")
     assert observations["observations"].ndim == 3

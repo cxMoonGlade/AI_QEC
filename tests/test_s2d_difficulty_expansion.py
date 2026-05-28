@@ -13,20 +13,20 @@ def test_difficulty_profiles_and_mechanism_sets_are_configurable() -> None:
     specs = build_default_oracle_mechanisms({"profile": "phys9_chain", "mechanism_set": "set_B"})
     labels = [spec.mechanism_id for spec in specs]
 
-    assert {"M0", "M1", "M2", "M3", "M4", "M5", "M6", "M7", "M13", "M14", "M15", "M16"} <= set(labels)
-    assert "M8" not in labels
-    assert sum(1 for spec in specs if spec.mechanism_id in {"M13", "M14", "M15", "M16"}) == 4
+    assert {f"M{idx}" for idx in range(15)} <= set(labels)
+    assert "M15" not in labels
+    assert sum(1 for spec in specs if spec.mechanism_id in {"M1", "M2", "M3", "M16"}) == 3
     assert max(max(spec.qubits) for spec in specs if spec.qubits) < 9
 
 
-def test_difficulty_set_d_has_drifted_m12_strengths() -> None:
-    specs = build_default_oracle_mechanisms({"profile": "phys9_chain", "mechanism_set": "set_D"})
-    m10 = [spec for spec in specs if spec.mechanism_id == "M10"]
+def test_difficulty_set_d_has_drifted_m13_strengths() -> None:
+    specs = build_default_oracle_mechanisms({"mechanism_set": "set_D", "num_qubits": 40})
+    m13 = [spec for spec in specs if spec.mechanism_id == "M13"]
 
-    assert len(m10) >= 2
-    assert len({float(spec.parameters["epsilon"]) for spec in m10}) == len(m10)
-    assert all(spec.instruction == "rx" for spec in m10)
-    assert {f"M{idx}" for idx in range(19)} <= {
+    assert len(m13) >= 2
+    assert len({float(spec.parameters["epsilon"]) for spec in m13}) == len(m13)
+    assert all(spec.instruction == "rx" for spec in m13)
+    assert {f"M{idx}" for idx in range(35)} <= {
         spec.mechanism_id for spec in specs
     }
 
@@ -41,7 +41,7 @@ def test_balanced_multicircuit_profiles_have_minimum_mechanism_instances() -> No
         assert min(counts.values()) >= 3
         assert len({spec.circuit_id for spec in specs}) == 3
         assert all(spec.probe_indices for spec in specs)
-    assert {f"M{idx}" for idx in range(20)} == set(counts)
+    assert {f"M{idx}" for idx in range(35)} == set(counts)
 
 
 def test_circuit_depth_is_visible_probe_metadata() -> None:

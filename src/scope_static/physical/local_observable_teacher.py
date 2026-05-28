@@ -8,18 +8,22 @@ import time
 import numpy as np
 
 from .born_local import (
+    BORN_LOCAL_DEPTH_SEMANTICS,
+    BORN_LOCAL_EFFECTIVE_CIRCUIT_DEPTH,
     BORN_LOCAL_SUPPORTED_MECHANISMS,
+    BORN_LOCAL_UNSUPPORTED_MECHANISM_REASONS,
     born_local_probability_tables,
     outcome_zz_correlation,
 )
+from .mechanism_catalog import READOUT_MECHANISM_IDS, RZZ_FAMILY_IDS
 from .ptm import channel_fingerprint, probe_response_fingerprint, rzz_type_feature_vector
 from .teacher import _build_balanced_oracle_mechanisms, _merged_config, _probe_names, build_probe_basis_manifest
 
-READOUT_ALIAS_GROUP = ("M13", "M14", "M15", "M16")
-RZZ_ALIAS_GROUP = ("M1", "M6", "M7", "M9")
+READOUT_ALIAS_GROUP = tuple(sorted(READOUT_MECHANISM_IDS, key=lambda value: int(value[1:])))
+RZZ_ALIAS_GROUP = tuple(RZZ_FAMILY_IDS[:4])
 SELF_DISTINGUISHABILITY_ALIAS_GROUPS = {
     "readout_bias_context": READOUT_ALIAS_GROUP,
-    "readout_symmetric_vs_context": ("M15", "M16"),
+    "readout_symmetric_vs_context": ("M3", "M16"),
     "rzz_gate_family": RZZ_ALIAS_GROUP,
     "rare_low_margin_last_run": ("M5", "M9", "M10", "M12", "M17", "M18", "M19"),
 }
@@ -44,6 +48,11 @@ def generate_local_observable_teacher_dataset(
     cfg.setdefault("local_observable_response_model", "separability_v2")
     response_model = _normalize_response_model(str(cfg.get("local_observable_response_model", "separability_v2")))
     cfg["local_observable_response_model"] = response_model
+    configured_circuit_depth = int(cfg.get("circuit_depth", 1))
+    effective_circuit_depth = _effective_circuit_depth(response_model, configured_circuit_depth)
+    cfg["configured_circuit_depth"] = int(configured_circuit_depth)
+    cfg["effective_circuit_depth"] = int(effective_circuit_depth)
+    cfg["circuit_depth_semantics"] = _circuit_depth_semantics(response_model)
     records, repetitions, sampling_contract = _build_local_observable_records(cfg)
     born_scope = _born_local_scope_audit(records)
     if response_model == "born_local":
@@ -51,13 +60,20 @@ def generate_local_observable_teacher_dataset(
         if not records:
             raise ValueError("Born-local teacher scope removed every mechanism record")
         cfg["born_local_scope"] = born_scope
-    num_qubits = int(cfg.get("num_qubits", 30))
+    physical_num_qubits = int(cfg.get("num_qubits", 30))
     slot_remap_enabled = bool(cfg.get("local_observable_slot_remap", True))
     cfg["local_observable_slot_remap"] = slot_remap_enabled
-    slot_audit = (
-        _assign_nonoverlapping_observation_slots(records, num_qubits=num_qubits)
+    observation_slots = (
+        max(physical_num_qubits, _max_observation_slots_required(records))
         if slot_remap_enabled
-        else _disabled_observation_slot_audit(records, num_qubits=num_qubits)
+        else physical_num_qubits
+    )
+    cfg["num_physical_qubits"] = int(physical_num_qubits)
+    cfg["num_observation_slots"] = int(observation_slots)
+    slot_audit = (
+        _assign_nonoverlapping_observation_slots(records, num_qubits=observation_slots, physical_num_qubits=physical_num_qubits)
+        if slot_remap_enabled
+        else _disabled_observation_slot_audit(records, num_qubits=observation_slots, physical_num_qubits=physical_num_qubits)
     )
     base_probe_names = _probe_names(str(cfg.get("probe_set", "rzz_local_tomography")))
     probe_names = [f"c{circuit_id}:{name}" for circuit_id in range(repetitions) for name in base_probe_names]
@@ -69,10 +85,11 @@ def generate_local_observable_teacher_dataset(
         records,
         probe_names,
         shots=shots,
-        num_qubits=num_qubits,
+        num_qubits=observation_slots,
         seed=seed,
         response_model=response_model,
         theta=float(cfg.get("theta", 0.18)),
+        configured_circuit_depth=configured_circuit_depth,
     )
     total_seconds = time.perf_counter() - started
     sampling_audit["total_wall_clock_seconds"] = float(total_seconds)
@@ -81,8 +98,9 @@ def generate_local_observable_teacher_dataset(
         records,
         probe_names,
         response_model=response_model,
-        num_qubits=num_qubits,
+        num_qubits=observation_slots,
         theta=float(cfg.get("theta", 0.18)),
+        configured_circuit_depth=configured_circuit_depth,
     )
 
     output = Path(output_dir)
@@ -97,9 +115,13 @@ def generate_local_observable_teacher_dataset(
     (output / "teacher_config.json").write_text(json.dumps(_json_safe(cfg), indent=2, sort_keys=True) + "\n")
     (output / "sampling_audit.json").write_text(json.dumps(sampling_audit, indent=2, sort_keys=True) + "\n")
     (output / "self_distinguishability_preflight.json").write_text(json.dumps(_json_safe(self_preflight), indent=2, sort_keys=True) + "\n")
-    (output / "active_probe_manifest.json").write_text(
-        json.dumps(build_probe_basis_manifest(probe_names, num_qubits=num_qubits, circuit_depth=int(cfg.get("circuit_depth", 1))), indent=2, sort_keys=True) + "\n"
-    )
+    probe_manifest = build_probe_basis_manifest(probe_names, num_qubits=observation_slots, circuit_depth=effective_circuit_depth)
+    probe_manifest["num_physical_qubits"] = int(physical_num_qubits)
+    probe_manifest["num_observation_slots"] = int(observation_slots)
+    probe_manifest["configured_circuit_depth"] = int(configured_circuit_depth)
+    probe_manifest["effective_circuit_depth"] = int(effective_circuit_depth)
+    probe_manifest["circuit_depth_semantics"] = _circuit_depth_semantics(response_model)
+    (output / "active_probe_manifest.json").write_text(json.dumps(probe_manifest, indent=2, sort_keys=True) + "\n")
     summary = {
         "schema": "scope_static_local_observable_gpu_teacher_v1",
         "stage": "S2D_PHYS1_teacher",
@@ -107,7 +129,12 @@ def generate_local_observable_teacher_dataset(
         "local_observable_response_model": response_model,
         "born_local_scope": born_scope if response_model == "born_local" else None,
         "output_dir": str(output),
-        "num_qubits": int(num_qubits),
+        "num_qubits": int(observation_slots),
+        "num_physical_qubits": int(physical_num_qubits),
+        "num_observation_slots": int(observation_slots),
+        "configured_circuit_depth": int(configured_circuit_depth),
+        "effective_circuit_depth": int(effective_circuit_depth),
+        "circuit_depth_semantics": _circuit_depth_semantics(response_model),
         "num_probes": int(len(probe_names)),
         "shots": int(shots),
         "mechanism_counts": _counts(str(record["oracle_label"]) for record in records),
@@ -154,7 +181,12 @@ def _build_local_observable_records(cfg: dict[str, object]) -> tuple[list[dict[s
     return records, int(repetitions), sampling_contract
 
 
-def _assign_nonoverlapping_observation_slots(records: list[dict[str, object]], *, num_qubits: int) -> dict[str, object]:
+def _assign_nonoverlapping_observation_slots(
+    records: list[dict[str, object]],
+    *,
+    num_qubits: int,
+    physical_num_qubits: int | None = None,
+) -> dict[str, object]:
     """Give each local mechanism in a circuit its own sampled-observation slots.
 
     Full-circuit samplers naturally combine all mechanisms into one bit tensor.
@@ -196,11 +228,13 @@ def _assign_nonoverlapping_observation_slots(records: list[dict[str, object]], *
         "num_circuits": int(len(by_circuit)),
         "max_slots_required_per_circuit": int(max_slots),
         "num_qubits": int(num_qubits),
+        "num_physical_qubits": int(physical_num_qubits if physical_num_qubits is not None else num_qubits),
+        "num_observation_slots": int(num_qubits),
         "skipped_circuit_ids": skipped,
     }
 
 
-def _disabled_observation_slot_audit(records: list[dict[str, object]], *, num_qubits: int) -> dict[str, object]:
+def _disabled_observation_slot_audit(records: list[dict[str, object]], *, num_qubits: int, physical_num_qubits: int | None = None) -> dict[str, object]:
     by_circuit = {int(record.get("circuit_id", 0)) for record in records}
     return {
         "schema": "scope_static_local_observable_slot_remap_v1",
@@ -210,8 +244,19 @@ def _disabled_observation_slot_audit(records: list[dict[str, object]], *, num_qu
         "num_circuits": int(len(by_circuit)),
         "max_slots_required_per_circuit": 0,
         "num_qubits": int(num_qubits),
+        "num_physical_qubits": int(physical_num_qubits if physical_num_qubits is not None else num_qubits),
+        "num_observation_slots": int(num_qubits),
         "skipped_circuit_ids": [],
     }
+
+
+def _max_observation_slots_required(records: list[dict[str, object]]) -> int:
+    by_circuit: dict[int, int] = {}
+    for record in records:
+        width = 2 if int(record.get("num_qubits", len(record.get("qubits", [])))) >= 2 else 1
+        circuit_id = int(record.get("circuit_id", 0))
+        by_circuit[circuit_id] = by_circuit.get(circuit_id, 0) + int(width)
+    return max(by_circuit.values()) if by_circuit else 1
 
 
 def _sample_local_observations(
@@ -223,6 +268,7 @@ def _sample_local_observations(
     seed: int,
     response_model: str = "separability_v2",
     theta: float = 0.18,
+    configured_circuit_depth: int = 1,
 ) -> tuple[np.ndarray, dict[str, object]]:
     import torch
 
@@ -302,6 +348,9 @@ def _sample_local_observations(
         "num_probes": int(len(probe_names)),
         "shots": int(shots),
         "num_qubits": int(num_qubits),
+        "configured_circuit_depth": int(configured_circuit_depth),
+        "effective_circuit_depth": int(_effective_circuit_depth(model, configured_circuit_depth)),
+        "circuit_depth_semantics": _circuit_depth_semantics(model),
         "total_requested_bits": int(len(probe_names) * int(shots) * int(num_qubits)),
         "probability_table_wall_clock_seconds": float(probability_seconds),
         "sampling_wall_clock_seconds": float(sampling_seconds),
@@ -441,11 +490,11 @@ def _record_pair_correlation_profile(
         same_xy = 1.0 if tokens["meas_left"] == tokens["meas_right"] and tokens["meas_left"] in {"X", "Y"} else 0.0
         parity = _parity_sign(tokens["parity"])
         prep_product = _prep_sign(tokens["prep_left"]) * _prep_sign(tokens["prep_right"])
-        if mech == "M1":
+        if mech == "M8":
             score = 1.8 * mz + 1.2 * same_xy + 0.45 * parity
-        elif mech == "M6":
+        elif mech == "M9":
             score = -2.0 - 1.65 * mixed_xy - 0.85 * mz + 0.55 * prep_product
-        elif mech == "M7":
+        elif mech == "M10":
             score = 2.0 + 2.1 * same_xy - 1.55 * mixed_xy - 1.45 * mz + 0.45 * _axis_indicator(tokens["meas_left"], "X")
         else:
             score = -2.05 * mz + 1.85 * parity * (mx + my + 0.25) - 1.15 * prep_product
@@ -521,6 +570,7 @@ def build_self_distinguishability_preflight(
     response_model: str,
     num_qubits: int,
     theta: float = 0.18,
+    configured_circuit_depth: int = 1,
 ) -> dict[str, object]:
     model = _normalize_response_model(response_model)
     rows = []
@@ -571,6 +621,9 @@ def build_self_distinguishability_preflight(
         "num_records": int(len(records)),
         "num_qubits": int(num_qubits),
         "num_probes": int(len(probe_names)),
+        "configured_circuit_depth": int(configured_circuit_depth),
+        "effective_circuit_depth": int(_effective_circuit_depth(model, configured_circuit_depth)),
+        "circuit_depth_semantics": _circuit_depth_semantics(model),
         "expected_response_feature_names": _expected_response_feature_names(),
         "alias_pairwise_margins": alias_margins,
         "lowest_pairwise_margins": [{"pair": key, "distance": float(value)} for key, value in low_margin],
@@ -676,10 +729,10 @@ def _branch_specific_probability_profile(spec, raw: np.ndarray, probe_names: lis
 
 def _mechanism_response_bias(mechanism_id: str) -> float:
     explicit = {
-        "M1": -1.75,
-        "M6": -0.55,
-        "M7": 0.65,
-        "M9": 1.75,
+        "M8": -1.75,
+        "M9": -0.55,
+        "M10": 0.65,
+        "M12": 1.75,
     }
     if mechanism_id in explicit:
         return explicit[mechanism_id]
@@ -694,10 +747,10 @@ def _mechanism_response_bias(mechanism_id: str) -> float:
 
 def _mechanism_response_scale(mechanism_id: str) -> float:
     explicit = {
-        "M1": 0.76,
-        "M6": 0.96,
-        "M7": 1.16,
-        "M9": 1.36,
+        "M8": 0.76,
+        "M9": 0.96,
+        "M10": 1.16,
+        "M12": 1.36,
     }
     if mechanism_id in explicit:
         return explicit[mechanism_id]
@@ -806,11 +859,11 @@ def _readout_score(mech: str, tokens: dict[str, str]) -> float:
     prep_z = 0.5 * (_prep_axis_signed(tokens["prep_left"], "Z") + _prep_axis_signed(tokens["prep_right"], "Z"))
     prep_product = _prep_sign(tokens["prep_left"]) * _prep_sign(tokens["prep_right"])
     parity = _parity_sign(tokens["parity"])
-    if mech == "M13":
+    if mech == "M1":
         return 2.6 * mz + 1.3 * prep_z + 0.35 * parity
-    if mech == "M14":
+    if mech == "M2":
         return -2.6 * mz - 1.3 * prep_z + 0.35 * parity
-    if mech == "M15":
+    if mech == "M3":
         return 2.25 * mx - 1.25 * my + 0.85 * prep_product - 0.25 * parity
     return -1.45 * mx + 2.35 * my + 1.75 * parity - 0.95 * prep_product
 
@@ -823,11 +876,11 @@ def _rzz_gate_score(mech: str, tokens: dict[str, str]) -> float:
     mixed_xy = 1.0 if {tokens["meas_left"], tokens["meas_right"]} == {"X", "Y"} else 0.0
     prep_product = _prep_sign(tokens["prep_left"]) * _prep_sign(tokens["prep_right"])
     parity = _parity_sign(tokens["parity"])
-    if mech == "M1":
+    if mech == "M8":
         return 2.2 * mz + 1.15 * same_xy + 0.55 * parity
-    if mech == "M6":
+    if mech == "M9":
         return -1.8 * mixed_xy - 1.05 * mz + 1.1 * prep_product
-    if mech == "M7":
+    if mech == "M10":
         return 2.45 * same_xy + 1.05 * mx + 0.95 * my - 1.45 * mixed_xy - 1.55 * mz
     return 2.15 * parity + 1.65 * my - 1.7 * mz - 1.1 * prep_product - 0.35 * mx
 
@@ -842,14 +895,14 @@ def _single_gate_score(mech: str, tokens: dict[str, str]) -> float:
     parity = _parity_sign(tokens["parity"])
     code = {
         "M0": (1.4, -0.3, 1.0, 0.6, 0.1, 0.2, -0.4),
-        "M2": (2.3, -0.6, -0.2, 1.0, 0.2, -0.1, 0.3),
-        "M3": (-0.4, 0.2, 2.4, -0.2, 0.1, 1.0, -0.3),
+        "M6": (2.3, -0.6, -0.2, 1.0, 0.2, -0.1, 0.3),
+        "M7": (-0.4, 0.2, 2.4, -0.2, 0.1, 1.0, -0.3),
         "M4": (-0.8, 0.6, -1.9, -0.4, 0.2, -1.1, 0.7),
-        "M5": (0.8, 1.7, -0.9, 0.9, -0.8, 0.5, -0.6),
-        "M8": (-1.2, 1.2, 0.8, -0.5, 1.1, -0.4, 1.0),
-        "M10": (1.8, 0.4, -1.2, 1.3, -0.2, -0.9, -1.0),
-        "M11": (-0.5, -1.0, 2.2, -0.6, -0.2, 1.2, 0.6),
-        "M12": (2.0, -1.1, 0.4, 0.3, 1.0, -0.5, -0.8),
+        "M15": (0.8, 1.7, -0.9, 0.9, -0.8, 0.5, -0.6),
+        "M11": (-1.2, 1.2, 0.8, -0.5, 1.1, -0.4, 1.0),
+        "M13": (1.8, 0.4, -1.2, 1.3, -0.2, -0.9, -1.0),
+        "M5": (-0.5, -1.0, 2.2, -0.6, -0.2, 1.2, 0.6),
+        "M14": (2.0, -1.1, 0.4, 0.3, 1.0, -0.5, -0.8),
         "M19": (0.6, -1.8, -0.6, -1.0, 1.2, 0.9, 0.5),
     }.get(mech, (0.9, -0.7, 0.4, 0.3, -0.2, 0.1, 0.5))
     return (
@@ -982,6 +1035,18 @@ def _normalize_response_model(value: str) -> str:
     return aliases[text]
 
 
+def _effective_circuit_depth(response_model: str, configured_circuit_depth: int) -> int:
+    if _normalize_response_model(response_model) == "born_local":
+        return BORN_LOCAL_EFFECTIVE_CIRCUIT_DEPTH
+    return max(1, int(configured_circuit_depth))
+
+
+def _circuit_depth_semantics(response_model: str) -> str:
+    if _normalize_response_model(response_model) == "born_local":
+        return BORN_LOCAL_DEPTH_SEMANTICS
+    return "configured circuit_depth is artifact provenance for the engineered local-observable response model"
+
+
 def _filter_born_local_supported_records(records: list[dict[str, object]]) -> list[dict[str, object]]:
     supported = set(BORN_LOCAL_SUPPORTED_MECHANISMS)
     return [record for record in records if str(record.get("oracle_label", "")) in supported]
@@ -998,6 +1063,10 @@ def _born_local_scope_audit(records: list[dict[str, object]]) -> dict[str, objec
         "supported_mechanisms": list(BORN_LOCAL_SUPPORTED_MECHANISMS),
         "requested_mechanisms": requested,
         "excluded_unsupported_mechanisms": excluded,
+        "unsupported_mechanism_reasons": {
+            label: BORN_LOCAL_UNSUPPORTED_MECHANISM_REASONS.get(label, "not in Stage 2E.1 Born-local thin-slice scope")
+            for label in excluded
+        },
         "num_supported_records": int(sum(1 for record in records if str(record.get("oracle_label", "")) in supported)),
         "num_excluded_records": int(sum(1 for record in records if str(record.get("oracle_label", "")) not in supported)),
     }
@@ -1089,6 +1158,8 @@ def _summary_markdown(summary: dict[str, object]) -> str:
             "",
             f"- Output: `{summary.get('output_dir')}`",
             f"- Qubits: `{summary.get('num_qubits')}`",
+            f"- Configured circuit depth: `{summary.get('configured_circuit_depth')}`",
+            f"- Effective circuit depth: `{summary.get('effective_circuit_depth')}`",
             f"- Probes: `{summary.get('num_probes')}`",
             f"- Shots: `{summary.get('shots')}`",
             f"- Sampling seconds: `{float(sampling.get('sampling_wall_clock_seconds', 0.0)):.6f}`",

@@ -88,8 +88,15 @@ def test_s2d_local_inverse_discovery_writes_required_artifacts(tmp_path: Path) -
 
 
 def _mechanism_records() -> list[dict[str, object]]:
-    specs = build_default_oracle_mechanisms({"mechanism_set": ["M0", "M1", "M2", "M3", "M4", "M13"], "num_qubits": 5})
-    return [{"location_id": idx, **spec.audit_dict(), "oracle_label": spec.mechanism_id} for idx, spec in enumerate(specs)]
+    specs = build_default_oracle_mechanisms({"mechanism_set": ["M0", "M1", "M2", "M3", "M4", "M8"], "num_qubits": 5})
+    records = []
+    seen: set[str] = set()
+    for spec in specs:
+        if spec.mechanism_id in seen:
+            continue
+        seen.add(spec.mechanism_id)
+        records.append({"location_id": len(records), **spec.audit_dict(), "oracle_label": spec.mechanism_id})
+    return records
 
 
 def _observations(*, shots: int = 64) -> np.ndarray:

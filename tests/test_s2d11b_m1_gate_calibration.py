@@ -52,9 +52,9 @@ def test_s2d11b_runner_reads_existing_s2d11_artifacts_and_writes_bundle(tmp_path
     assert leakage["checks"]["does_not_resample_teacher"] is True
     assert "typed_linear_plus_M1_logit_boost" in result["calibration_variant_metrics"]
     taxonomy = json.loads((output / "error_type_taxonomy.json").read_text())
-    assert taxonomy["mechanism_to_error_type"]["M13"] == "readout"
+    assert taxonomy["mechanism_to_error_type"]["M1"] == "readout"
     assert taxonomy["mechanism_to_error_type"]["M17"] == "prep_reset"
-    assert taxonomy["mechanism_to_error_type"]["M1"] == "gate"
+    assert taxonomy["mechanism_to_error_type"]["M8"] == "gate"
     type_metrics = json.loads((output / "error_type_metrics.json").read_text())
     best = result["best_variant"]
     assert type_metrics["variants"][best]["overall"]["support"]["readout"] == 12
@@ -65,8 +65,8 @@ def test_m1_false_negative_audit_counts_target_classes(tmp_path: Path) -> None:
     _write_fake_s2d11_source(source)
     data = load_s2d11b_data(source)
     baseline = {
-        "true_labels": ["M1", "M1", "M1", "M6"],
-        "predicted_labels": ["M6", "M7", "M10", "M6"],
+        "true_labels": ["M8", "M8", "M8", "M9"],
+        "predicted_labels": ["M9", "M10", "M12", "M9"],
     }
 
     audit = m1_false_negative_audit(data, baseline)
@@ -103,7 +103,7 @@ def _write_fake_s2d11_source(root: Path) -> None:
     for circuit_id in range(3):
         for label in labels:
             branch = _branch(label)
-            instruction = {"readout_branch": "measure", "prep_reset_branch": "reset"}.get(branch, "rzz" if label in {"M1", "M6", "M7", "M9"} else "id")
+            instruction = {"readout_branch": "measure", "prep_reset_branch": "reset"}.get(branch, "rzz" if label in {"M8", "M9", "M10", "M12"} else "id")
             qubits = [circuit_id % 8, circuit_id % 8 + 1] if instruction == "rzz" else [location_id % 9]
             records.append({"location_id": location_id, "circuit_id": circuit_id, "oracle_label": label, "qubits": qubits})
             row = {
@@ -136,7 +136,7 @@ def _write_fake_s2d11_source(root: Path) -> None:
 
 
 def _branch(label: str) -> str:
-    if label in {"M13", "M14", "M15", "M16"}:
+    if label in {"M1", "M2", "M3", "M16"}:
         return "readout_branch"
     if label in {"M17", "M18"}:
         return "prep_reset_branch"
@@ -167,15 +167,15 @@ def _features(label: str, circuit_id: int) -> dict[str, float]:
         "branch_prep_reset": 0.0,
         "feature_confidence": 1.0,
     }
-    if label == "M1":
+    if label == "M8":
         base.update({"h_ZZ": 0.08 + 0.01 * circuit_id, "log_coherence_ratio": 4.0, "h_zz_axial_ratio": 100.0, "coherence_norm": 0.08})
-    elif label == "M6":
-        base.update({"gamma_XX": 0.03, "gamma_YY": 0.03, "gamma_ZZ": 0.03, "log_coherence_ratio": -3.0})
-    elif label == "M7":
-        base.update({"h_XX": 0.05, "h_YY": 0.04, "log_coherence_ratio": 3.0, "h_zz_axial_ratio": 0.1, "coherence_norm": 0.07})
     elif label == "M9":
+        base.update({"gamma_XX": 0.03, "gamma_YY": 0.03, "gamma_ZZ": 0.03, "log_coherence_ratio": -3.0})
+    elif label == "M10":
+        base.update({"h_XX": 0.05, "h_YY": 0.04, "log_coherence_ratio": 3.0, "h_zz_axial_ratio": 0.1, "coherence_norm": 0.07})
+    elif label == "M12":
         base.update({"coherence_norm": 0.01})
-    elif label in {"M13", "M14", "M15", "M16"}:
+    elif label in {"M1", "M2", "M3", "M16"}:
         base.update({"branch_gate": 0.0, "branch_readout": 1.0})
     elif label in {"M17", "M18"}:
         base.update({"branch_gate": 0.0, "branch_prep_reset": 1.0})

@@ -90,7 +90,7 @@ def test_physical_oracle_stack_real_small_smoke_when_gpu_available(tmp_path: Pat
     result = run_physical_oracle_stack(
         {
             "profile": "phys5_chain",
-            "mechanism_set": ["M13", "M14"],
+            "mechanism_set": ["M1", "M2"],
             "shots": 16,
             "seed": 2,
             "backend": "cudaq",

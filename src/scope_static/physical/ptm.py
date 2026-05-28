@@ -8,6 +8,7 @@ import numpy as np
 from scope_static.numerics import NUMERICAL_ZERO
 
 from .channels import MechanismSpec, mechanism_channel
+from .mechanism_catalog import RZZ_FAMILY_IDS
 
 
 Array = np.ndarray
@@ -71,7 +72,7 @@ def channel_fingerprint(spec: MechanismSpec, *, paper_informed: bool = False) ->
         features = _ptm_fingerprint(ptm, num_qubits=int(spec.num_qubits))
     else:
         raise ValueError(f"unknown channel kind {kind!r}")
-    if paper_informed and spec.mechanism_id == "M1":
+    if paper_informed and spec.mechanism_id in RZZ_FAMILY_IDS and kind in {"unitary", "kraus"}:
         audit = rzz_ptm_block_audit(ptm)
         features = np.concatenate(
             [

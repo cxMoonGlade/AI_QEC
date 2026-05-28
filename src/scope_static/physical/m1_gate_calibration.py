@@ -9,6 +9,7 @@ import numpy as np
 from scope_static.numerics import NUMERICAL_ZERO
 
 from .local_inverse import build_visible_location_representations
+from .mechanism_catalog import PREP_RESET_MECHANISM_IDS, READOUT_MECHANISM_IDS
 from .typed_spam_gate_invariant import (
     classification_metrics,
     m5_overfragmentation_report,
@@ -16,7 +17,9 @@ from .typed_spam_gate_invariant import (
 
 
 M1_BOOST_FEATURES = ("log_coherence_ratio", "h_zz_axial_ratio_log", "coherence_norm")
-NEIGHBORS = ("M6", "M7", "M10", "M2", "M3", "M9")
+TARGET_RZZ_GATE_LABEL = "M8"
+TARGET_RZZ_NEIGHBORS = ("M9", "M10", "M12")
+NEIGHBORS = (*TARGET_RZZ_NEIGHBORS, "M6", "M7", "M21")
 ERROR_TYPE_NAMES = ("gate", "readout", "prep_reset", "other")
 
 
@@ -149,9 +152,9 @@ def m1_logit_boost_variant(data: S2D11bData, *, seed: int = 0) -> dict[str, obje
     labels = np.asarray(data.labels, dtype=object)
     groups = np.asarray(data.groups, dtype=np.int64)
     class_index = {name: idx for idx, name in enumerate(data.class_names)}
-    m1_idx = class_index.get("M1")
+    m1_idx = class_index.get(TARGET_RZZ_GATE_LABEL)
     if m1_idx is None:
-        return _skipped_variant("typed_linear_plus_M1_logit_boost", "M1 absent", data)
+        return _skipped_variant("typed_linear_plus_M1_logit_boost", f"{TARGET_RZZ_GATE_LABEL} absent", data)
     regs = (1e-4, 1e-3, 1e-2, 1e-1, 1.0, 10.0)
     gains = (0.25, 0.5, 1.0, 2.0, 4.0)
     true_all: list[str] = []
@@ -178,7 +181,7 @@ def m1_logit_boost_variant(data: S2D11bData, *, seed: int = 0) -> dict[str, obje
                 "fold": int(fold_idx),
                 "test_circuit_id": int(test_group),
                 **selected,
-                "outer_test_M1_recall": _class_recall(true_labels, pred_labels, "M1"),
+                "outer_test_M1_recall": _class_recall(true_labels, pred_labels, TARGET_RZZ_GATE_LABEL),
             }
         )
     prob = np.concatenate(prob_all, axis=0) if prob_all else np.zeros((0, len(data.class_names)))
@@ -221,7 +224,7 @@ def axial_reweighting_variant(data: S2D11bData, *, seed: int = 0) -> dict[str, o
                 result = _fit_predict_scores(x_mod[inner_train], labels[inner_train], x_mod[inner_val], data.class_names, seed=int(seed) + fold_idx)
                 pred = [data.class_names[int(value)] for value in np.argmax(result["probabilities"], axis=1).tolist()]
                 true = labels[inner_val].astype(str).tolist()
-                local_scores.append((_class_recall(true, pred, "M1"), classification_metrics(true, pred, data.class_names)["balanced_accuracy"]))
+                local_scores.append((_class_recall(true, pred, TARGET_RZZ_GATE_LABEL), classification_metrics(true, pred, data.class_names)["balanced_accuracy"]))
             score = tuple(np.mean([item[i] for item in local_scores]) for i in range(2)) if local_scores else (0.0, 0.0)
             if score > best_score:
                 best_score = score
@@ -431,7 +434,7 @@ def _select_boost_hyperparams(
     train_groups = sorted(set(groups[train_mask].tolist()))
     if len(train_groups) < 2:
         return {**best, "inner_validation_M1_recall": 0.0, "inner_validation_balanced_accuracy": 0.0, "training_fold_M1_recall": 0.0}
-    m1_idx = class_names.index("M1")
+    m1_idx = class_names.index(TARGET_RZZ_GATE_LABEL)
     for reg in regs:
         for gain in gains:
             true_all: list[str] = []
@@ -448,7 +451,7 @@ def _select_boost_hyperparams(
                 true_all.extend(true)
                 pred_all.extend(pred)
             metrics = classification_metrics(true_all, pred_all, class_names)
-            score = (float(metrics["per_class_recall"].get("M1", 0.0)), float(metrics["balanced_accuracy"]))
+            score = (float(metrics["per_class_recall"].get(TARGET_RZZ_GATE_LABEL, 0.0)), float(metrics["balanced_accuracy"]))
             if score > (float(best["inner_validation_M1_recall"]), float(best["inner_validation_balanced_accuracy"])):
                 best = {
                     "selected_reg": float(reg),
@@ -457,14 +460,14 @@ def _select_boost_hyperparams(
                     "inner_validation_balanced_accuracy": score[1],
                 }
     train_pred = _fit_predict_scores(x[train_mask], labels[train_mask], x[train_mask], class_names, seed=int(seed))
-    best["training_fold_M1_recall"] = _class_recall(labels[train_mask].astype(str).tolist(), [class_names[int(value)] for value in np.argmax(train_pred["probabilities"], axis=1).tolist()], "M1")
+    best["training_fold_M1_recall"] = _class_recall(labels[train_mask].astype(str).tolist(), [class_names[int(value)] for value in np.argmax(train_pred["probabilities"], axis=1).tolist()], TARGET_RZZ_GATE_LABEL)
     return best
 
 
 def _fit_boost_coefficients(boost_train: np.ndarray, labels_train: np.ndarray, *, reg: float) -> np.ndarray:
     x = _finite(np.asarray(boost_train, dtype=np.float64))
     x = np.concatenate([x, np.ones((x.shape[0], 1), dtype=np.float64)], axis=1)
-    y = np.asarray([1.0 if str(label) == "M1" else -1.0 for label in labels_train], dtype=np.float64)
+    y = np.asarray([1.0 if str(label) == TARGET_RZZ_GATE_LABEL else -1.0 for label in labels_train], dtype=np.float64)
     lhs = x.T @ x + float(reg) * np.eye(x.shape[1], dtype=np.float64)
     rhs = x.T @ y
     return _finite(np.linalg.solve(lhs, rhs))
@@ -506,7 +509,7 @@ def _load_dense_features(data: S2D11bData) -> tuple[np.ndarray, list[str]] | Non
 
 
 def _select_dense_columns(dense_train: np.ndarray, labels_train: np.ndarray, *, max_columns: int) -> list[int]:
-    mask = np.asarray([str(label) == "M1" for label in labels_train], dtype=bool)
+    mask = np.asarray([str(label) == TARGET_RZZ_GATE_LABEL for label in labels_train], dtype=bool)
     if not np.any(mask) or np.all(mask):
         return list(range(min(max_columns, dense_train.shape[1])))
     diff = np.abs(np.mean(dense_train[mask], axis=0) - np.mean(dense_train[~mask], axis=0))
@@ -535,10 +538,10 @@ def m1_false_negative_audit(data: S2D11bData, baseline: dict[str, object]) -> di
     per_circuit: dict[str, dict[str, int]] = {}
     per_location = []
     for idx, (label, got) in enumerate(zip(true, pred)):
-        if label != "M1":
+        if label != TARGET_RZZ_GATE_LABEL:
             continue
         row = rows[idx]
-        if got != "M1":
+        if got != TARGET_RZZ_GATE_LABEL:
             targets[got] = targets.get(got, 0) + 1
         group = str(row["circuit_id"])
         per_fold.setdefault(group, {}).setdefault(got, 0)
@@ -546,17 +549,17 @@ def m1_false_negative_audit(data: S2D11bData, baseline: dict[str, object]) -> di
         per_circuit.setdefault(group, {}).setdefault(got, 0)
         per_circuit[group][got] += 1
         per_location.append({"location_id": int(row["location_id"]), "circuit_id": int(row["circuit_id"]), "qubits": row["qubits"], "predicted": got})
-    total = sum(1 for label in true if label == "M1")
-    correct = sum(1 for label, got in zip(true, pred) if label == "M1" and got == "M1")
+    total = sum(1 for label in true if label == TARGET_RZZ_GATE_LABEL)
+    correct = sum(1 for label, got in zip(true, pred) if label == TARGET_RZZ_GATE_LABEL and got == TARGET_RZZ_GATE_LABEL)
     return {
         "schema": "scope_static_s2d11b_m1_false_negative_audit_v1",
         "M1_true_count": int(total),
         "M1_recall": float(correct / total) if total else 0.0,
         "M1_false_negative_target_classes": targets,
-        "M1_to_M6_count": int(targets.get("M6", 0)),
-        "M1_to_M7_count": int(targets.get("M7", 0)),
-        "M1_to_M10_count": int(targets.get("M10", 0)),
-        "M1_to_other_count": int(sum(count for label, count in targets.items() if label not in {"M6", "M7", "M10"})),
+        "M1_to_M6_count": int(targets.get("M9", 0)),
+        "M1_to_M7_count": int(targets.get("M10", 0)),
+        "M1_to_M10_count": int(targets.get("M12", 0)),
+        "M1_to_other_count": int(sum(count for label, count in targets.items() if label not in set(TARGET_RZZ_NEIGHBORS))),
         "per_fold_M1_confusion": per_fold,
         "per_circuit_M1_confusion": per_circuit,
         "per_edge_location_M1_confusion": per_location,
@@ -583,8 +586,8 @@ def m1_invariant_snr_audit(data: S2D11bData) -> dict[str, object]:
                     name: {
                         "train": _stat_summary(boost[train, idx]),
                         "test": _stat_summary(boost[test, idx]),
-                        "train_M1": _stat_summary(boost[train & (labels == "M1"), idx]),
-                        "test_M1": _stat_summary(boost[test & (labels == "M1"), idx]),
+                        "train_M1": _stat_summary(boost[train & (labels == TARGET_RZZ_GATE_LABEL), idx]),
+                        "test_M1": _stat_summary(boost[test & (labels == TARGET_RZZ_GATE_LABEL), idx]),
                     }
                     for idx, name in enumerate(names)
                 },
@@ -614,13 +617,13 @@ def tradeoff_report(variants: dict[str, dict[str, object]], data: S2D11bData) ->
                 "variant_recall": float(recalls.get(label, 0.0)),
                 "absolute_drop": float(baseline_recalls.get(label, 0.0)) - float(recalls.get(label, 0.0)),
             }
-            for label in ("M6", "M7", "M10", "M9", "M2", "M3")
+            for label in (*TARGET_RZZ_NEIGHBORS, "M6", "M7", "M21")
         }
     return {"schema": "scope_static_s2d11b_m1_vs_m7_m8_m12_tradeoff_v1", "variants": out}
 
 
 def gate_neighbor_recall_report(variants: dict[str, dict[str, object]], data: S2D11bData) -> dict[str, object]:
-    labels = ("M1", "M6", "M7", "M10", "M2", "M3", "M9")
+    labels = (TARGET_RZZ_GATE_LABEL, *TARGET_RZZ_NEIGHBORS, "M6", "M7", "M21")
     return {
         "schema": "scope_static_s2d11b_gate_neighbor_recall_report_v1",
         "variants": {
@@ -726,17 +729,17 @@ def s2d11b_success(variant: dict[str, object], data: S2D11bData) -> dict[str, ob
     margins = overall.get("pairwise_margins", {})
     controls_gap = float(overall.get("balanced_accuracy", 0.0)) - float(_within_scrambled_balanced(data))
     checks = {
-        "M1_recall_ge_0_65": float(recalls.get("M1", 0.0)) >= 0.65,
+        "M1_recall_ge_0_65": float(recalls.get(TARGET_RZZ_GATE_LABEL, 0.0)) >= 0.65,
         "macro_F1_ge_0_80": float(overall.get("macro_F1", 0.0)) >= 0.80,
         "balanced_accuracy_ge_0_80": float(overall.get("balanced_accuracy", 0.0)) >= 0.80,
         "real_minus_scrambled_ge_0_25": controls_gap >= 0.25,
         "readout_split_count_within_declared_taxonomy": int(m5.get("readout_split_count", m5.get("M5_split_count", 99))) <= 4,
         "readout_vs_gate_confusion_rate_le_0_10": float(m5.get("readout_vs_gate_confusion_rate", m5.get("M5_vs_gate_confusion_rate", 1.0))) <= 0.10,
-        "M7_recall_drop_le_0_15": float(baseline_recalls.get("M7", 0.0)) - float(recalls.get("M7", 0.0)) <= 0.15,
-        "M9_recall_drop_le_0_15": float(baseline_recalls.get("M9", 0.0)) - float(recalls.get("M9", 0.0)) <= 0.15,
+        "M7_recall_drop_le_0_15": float(baseline_recalls.get("M10", 0.0)) - float(recalls.get("M10", 0.0)) <= 0.15,
+        "M9_recall_drop_le_0_15": float(baseline_recalls.get("M12", 0.0)) - float(recalls.get("M12", 0.0)) <= 0.15,
         "M17_recall_drop_le_0_15": float(baseline_recalls.get("M17", 0.0)) - float(recalls.get("M17", 0.0)) <= 0.15,
         "M17_M4_margin_positive": _margin_positive(margins, "M17/M4"),
-        "M17_M13_margin_positive": _margin_positive(margins, "M17/M13"),
+        "M17_M13_margin_positive": _margin_positive(margins, "M17/M1"),
     }
     return {
         "schema": "scope_static_s2d11b_primary_verdict_v1",
@@ -756,9 +759,9 @@ def summary_record(best_name: str, best: dict[str, object], data: S2D11bData) ->
         "passed": bool(verdict["passed"]),
         "balanced_accuracy": overall.get("balanced_accuracy"),
         "macro_F1": overall.get("macro_F1"),
-        "M1_recall": overall.get("per_class_recall", {}).get("M1"),
-        "M7_recall": overall.get("per_class_recall", {}).get("M7"),
-        "M9_recall": overall.get("per_class_recall", {}).get("M9"),
+        "M1_recall": overall.get("per_class_recall", {}).get(TARGET_RZZ_GATE_LABEL),
+        "M7_recall": overall.get("per_class_recall", {}).get("M10"),
+        "M9_recall": overall.get("per_class_recall", {}).get("M12"),
         "M17_recall": overall.get("per_class_recall", {}).get("M17"),
         "interpretation": _interpretation(best_name, best, data),
     }
@@ -786,7 +789,7 @@ def _best_variant_name(variants: dict[str, dict[str, object]]) -> str:
     def key(item: tuple[str, dict[str, object]]) -> tuple[float, float, float]:
         row = item[1].get("overall", {})
         recalls = row.get("per_class_recall", {})
-        return (float(recalls.get("M1", 0.0)), float(row.get("balanced_accuracy", 0.0)), float(row.get("macro_F1", 0.0)))
+        return (float(recalls.get(TARGET_RZZ_GATE_LABEL, 0.0)), float(row.get("balanced_accuracy", 0.0)), float(row.get("macro_F1", 0.0)))
 
     return max(variants.items(), key=key)[0]
 
@@ -797,8 +800,8 @@ def _variant_summary(row: dict[str, object]) -> dict[str, object]:
         "variant": row.get("variant"),
         "balanced_accuracy": overall.get("balanced_accuracy"),
         "macro_F1": overall.get("macro_F1"),
-        "M1_recall": overall.get("per_class_recall", {}).get("M1"),
-        "M7_recall": overall.get("per_class_recall", {}).get("M7"),
+        "M1_recall": overall.get("per_class_recall", {}).get(TARGET_RZZ_GATE_LABEL),
+        "M7_recall": overall.get("per_class_recall", {}).get("M10"),
         "M9_recall": overall.get("per_class_recall", {}).get("M9"),
         "M17_recall": overall.get("per_class_recall", {}).get("M17"),
         "skipped": row.get("skipped", False),
@@ -871,9 +874,9 @@ def _mechanism_sort_key(name: str) -> tuple[int, str]:
 
 def _mechanism_error_type(name: str) -> str:
     label = str(name)
-    if label in {"M13", "M14", "M15", "M16"}:
+    if label in set(READOUT_MECHANISM_IDS):
         return "readout"
-    if label in {"M17", "M18"}:
+    if label in set(PREP_RESET_MECHANISM_IDS):
         return "prep_reset"
     if label == "M19":
         return "other"

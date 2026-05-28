@@ -203,7 +203,7 @@ def pairwise_generator_margins(
     feature_names: list[str],
     labels: list[str],
 ) -> dict[str, object]:
-    pairs = ("M1/M6", "M1/M7", "M1/M9", "M6/M7", "M6/M9", "M7/M9")
+    pairs = ("M8/M9", "M8/M10", "M8/M12", "M9/M10", "M9/M12", "M10/M12")
     out = {"schema": "scope_static_s2d10_pairwise_generator_margins_v1", "variants": {}}
     for variant, features in variants.items():
         x = np.asarray(features, dtype=np.float64)
@@ -573,11 +573,11 @@ def _dominant_block(mean_abs: dict[str, float]) -> str:
 
 
 def _expected_block(label: str) -> str:
-    if label in {"M1", "M7"}:
+    if label in {"M8", "M10"}:
         return "hamiltonian"
-    if label == "M6":
-        return "stochastic"
     if label == "M9":
+        return "stochastic"
+    if label == "M12":
         return "affine_nonunital"
     return "unknown"
 
@@ -600,11 +600,11 @@ def _blockwise_predict(row: np.ndarray, feature_names: list[str]) -> dict[str, s
 
 def _proxy_label(block: str, h_xx_yy: float, h_zz: float) -> str:
     if block == "hamiltonian":
-        return "M7" if h_xx_yy >= h_zz else "M1"
+        return "M10" if h_xx_yy >= h_zz else "M8"
     if block == "stochastic":
-        return "M6"
-    if block == "affine_nonunital":
         return "M9"
+    if block == "affine_nonunital":
+        return "M12"
     return "unknown"
 
 
@@ -612,8 +612,8 @@ def _blockwise_stage_metrics(labels: list[str], preds: list[dict[str, str]]) -> 
     expected_blocks = [_expected_block(label) for label in labels]
     pred_blocks = [item["stage1_block"] for item in preds]
     proxy = [item["mechanism_proxy"] for item in preds]
-    h_mask = [label in {"M1", "M7"} for label in labels]
-    h_true = ["ZZ" if label == "M1" else "XX_YY" for label, keep in zip(labels, h_mask) if keep]
+    h_mask = [label in {"M8", "M10"} for label in labels]
+    h_true = ["ZZ" if label == "M8" else "XX_YY" for label, keep in zip(labels, h_mask) if keep]
     h_pred = [item["stage2_hamiltonian_axis"] for item, keep in zip(preds, h_mask) if keep]
     return {
         "stage1_block_accuracy": _accuracy(expected_blocks, pred_blocks),

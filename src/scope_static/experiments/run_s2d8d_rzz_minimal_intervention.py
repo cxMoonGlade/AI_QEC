@@ -420,7 +420,7 @@ def _run_decision(method_rows: list[dict[str, object]], combined_rzz: dict[str, 
 
 def _rzz_error(combined_rzz: dict[str, object], method: str) -> int:
     metrics = combined_rzz.get("methods", {}).get(method, {}) if isinstance(combined_rzz.get("methods"), dict) else {}
-    keys = ["M1_M6_merge_count", "M1_M7_merge_count", "M1_M9_merge_count", "M1_split_count"]
+    keys = ["M8_M9_merge_count", "M8_M10_merge_count", "M8_M12_merge_count", "M8_split_count"]
     return int(sum(int(metrics.get(key, 0)) for key in keys))
 
 

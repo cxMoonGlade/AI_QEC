@@ -98,9 +98,9 @@ def _fake_s2d9_metrics() -> dict[str, object]:
     return {
         "stage": "S2D.9_local_Pauli_Lindblad_observability",
         "records": [
-            _fake_run_record("phys9_setA", ["M1", "M6", "M7"]),
-            _fake_run_record("phys9_multicircuit_setB_balanced", ["M1", "M6", "M7"]),
-            _fake_run_record("phys9_multicircuit_setC_balanced", ["M1", "M6", "M7", "M9"]),
+            _fake_run_record("phys9_setA", ["M8", "M9", "M10"]),
+            _fake_run_record("phys9_multicircuit_setB_balanced", ["M8", "M9", "M10"]),
+            _fake_run_record("phys9_multicircuit_setC_balanced", ["M8", "M9", "M10", "M12"]),
         ],
     }
 
@@ -150,27 +150,27 @@ def _fake_run_record(name: str, labels: list[str]) -> dict[str, object]:
 
 def _mechanism_features(label: str) -> dict[str, float]:
     values = {key: 0.0 for key in GENERATOR_CORE}
-    if label == "M1":
+    if label == "M8":
         values["h_ZZ"] = 4.0
-    elif label == "M7":
+    elif label == "M10":
         values["h_XX"] = 3.0
         values["h_YY"] = 2.0
-    elif label == "M6":
+    elif label == "M9":
         values["gamma_XX"] = 1.0
         values["gamma_YY"] = 1.0
         values["gamma_ZZ"] = 1.0
-    elif label == "M9":
+    elif label == "M12":
         values["relaxation_pair"] = 2.0
         values["nonunital_norm_proxy"] = 2.0
     return values
 
 
 def _ptm_for_label(label: str) -> np.ndarray:
-    if label in {"M1", "M7"}:
+    if label in {"M8", "M10"}:
         return np.eye(16)
-    if label == "M6":
-        return _scaled_ptm(0.93)
     if label == "M9":
+        return _scaled_ptm(0.93)
+    if label == "M12":
         matrix = _scaled_ptm(0.88)
         matrix[1, 0] = 0.08
         return matrix

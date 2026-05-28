@@ -19,7 +19,7 @@ from scope_static.physical.generator_space_calibration import (
 def test_effective_rank_reports_stable_rank_and_angles() -> None:
     jacobian = np.diag([4.0, 2.0, 1.0])
     variants = {"raw_generator_coordinates": np.asarray([[1.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 0.0, 3.0]])}
-    metrics = effective_rank_metrics(jacobian, variants, ["h_XX", "h_YY", "h_ZZ"], ["M7", "M7", "M1"])
+    metrics = effective_rank_metrics(jacobian, variants, ["h_XX", "h_YY", "h_ZZ"], ["M10", "M10", "M8"])
 
     rank = metrics["response_jacobian"]
     assert rank["rank"] == 3
@@ -40,7 +40,7 @@ def test_residualize_by_group_removes_group_means() -> None:
 def test_blockwise_decision_routes_rzz_family_to_physics_blocks() -> None:
     names = list(GENERATOR_CORE)
     rows = np.zeros((4, len(names)), dtype=np.float64)
-    labels = ["M1", "M7", "M6", "M9"]
+    labels = ["M8", "M10", "M9", "M12"]
     rows[0, names.index("h_ZZ")] = 2.0
     rows[1, names.index("h_XX")] = 2.0
     rows[2, names.index("gamma_ZZ")] = 2.0
@@ -60,10 +60,10 @@ def test_mahalanobis_prototype_separates_synthetic_generator_signatures() -> Non
     groups = []
     rows = []
     prototypes = {
-        "M1": [0.0, 0.0, 4.0, 0.0],
-        "M6": [0.0, 0.0, 0.0, 4.0],
-        "M7": [4.0, 0.0, 0.0, 0.0],
-        "M9": [0.0, 4.0, 0.0, 0.0],
+        "M8": [0.0, 0.0, 4.0, 0.0],
+        "M9": [0.0, 0.0, 0.0, 4.0],
+        "M10": [4.0, 0.0, 0.0, 0.0],
+        "M12": [0.0, 4.0, 0.0, 0.0],
     }
     for group in range(3):
         for label, proto in prototypes.items():
@@ -74,7 +74,7 @@ def test_mahalanobis_prototype_separates_synthetic_generator_signatures() -> Non
 
     assert metrics["available"] is True
     assert metrics["balanced_accuracy"] == 1.0
-    assert metrics["per_class_recall"]["M1"] == 1.0
+    assert metrics["per_class_recall"]["M8"] == 1.0
 
 
 def test_s2d10_runner_writes_required_artifacts_with_fake_s2d9_bundle(tmp_path: Path) -> None:
@@ -131,9 +131,9 @@ def _fake_s2d9_metrics() -> dict[str, object]:
     return {
         "stage": "S2D.9_local_Pauli_Lindblad_observability",
         "records": [
-            _fake_run_record("phys9_setA", ["M1", "M6", "M7"]),
-            _fake_run_record("phys9_multicircuit_setB_balanced", ["M1", "M6", "M7"]),
-            _fake_run_record("phys9_multicircuit_setC_balanced", ["M1", "M6", "M7", "M9"]),
+            _fake_run_record("phys9_setA", ["M8", "M9", "M10"]),
+            _fake_run_record("phys9_multicircuit_setB_balanced", ["M8", "M9", "M10"]),
+            _fake_run_record("phys9_multicircuit_setC_balanced", ["M8", "M9", "M10", "M12"]),
         ],
     }
 
@@ -181,14 +181,14 @@ def _fake_run_record(name: str, labels: list[str]) -> dict[str, object]:
 
 def _mechanism_features(label: str) -> dict[str, float]:
     values = {key: 0.0 for key in GENERATOR_CORE}
-    if label == "M1":
+    if label == "M8":
         values["h_ZZ"] = 4.0
-    elif label == "M7":
+    elif label == "M10":
         values["h_XX"] = 3.0
         values["h_YY"] = 2.0
-    elif label == "M6":
-        values["gamma_ZZ"] = 4.0
     elif label == "M9":
+        values["gamma_ZZ"] = 4.0
+    elif label == "M12":
         values["relaxation_pair"] = 2.0
         values["nonunital_norm_proxy"] = 2.0
     return values

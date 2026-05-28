@@ -7,30 +7,26 @@ from typing import Iterable
 import numpy as np
 
 from ..numerics import NUMERICAL_ZERO
-from .channels import MechanismSpec, mechanism_channel, rx_unitary, rz_unitary, rzz_unitary
+from .channels import MechanismSpec, mechanism_channel, rx_unitary, ry_unitary, rz_unitary, rzz_unitary
+from .mechanism_catalog import IMPLEMENTED_MECHANISM_IDS
 
 
-BORN_LOCAL_SUPPORTED_MECHANISMS = (
-    "M0",
-    "M1",
-    "M2",
-    "M3",
-    "M4",
-    "M5",
-    "M6",
-    "M7",
-    "M9",
-    "M10",
-    "M11",
-    "M12",
-    "M13",
-    "M14",
-    "M15",
-    "M16",
-    "M17",
-    "M18",
-    "M19",
+BORN_LOCAL_EFFECTIVE_CIRCUIT_DEPTH = 1
+BORN_LOCAL_DEPTH_SEMANTICS = (
+    "Born-local uses one explicit local context: probe preparation, one ideal "
+    "local operation when applicable, one mechanism channel/readout, then the "
+    "local POVM. It does not compose hidden depth layers."
 )
+BORN_LOCAL_UNSUPPORTED_MECHANISM_REASONS = {
+    "M11": (
+        "spectator_crosstalk_rz_or_zz needs an explicit spectator contract "
+        "covering victim qubit, aggressor operation or edge, and whether the "
+        "observable local support is the one-qubit RZ victim or the two-qubit "
+        "ZZ spectator pair"
+    )
+}
+
+BORN_LOCAL_SUPPORTED_MECHANISMS = tuple(mech for mech in IMPLEMENTED_MECHANISM_IDS if mech not in BORN_LOCAL_UNSUPPORTED_MECHANISM_REASONS)
 
 
 def born_local_outcome_probabilities(
@@ -38,6 +34,7 @@ def born_local_outcome_probabilities(
     probe_name: str,
     *,
     theta: float = 0.18,
+    circuit_depth: int = BORN_LOCAL_EFFECTIVE_CIRCUIT_DEPTH,
     num_qubits: int | None = None,
     physical_qubits: Iterable[int] | None = None,
 ) -> np.ndarray:
@@ -48,6 +45,7 @@ def born_local_outcome_probabilities(
     order matching ``physical_qubits``/``spec.qubits``.
     """
 
+    _validate_born_local_circuit_depth(circuit_depth)
     qubits = _qubit_tuple(spec, physical_qubits)
     width = int(spec.num_qubits)
     if width not in {1, 2}:
@@ -65,11 +63,13 @@ def born_local_probability_tables(
     probe_names: Iterable[str],
     *,
     theta: float = 0.18,
+    circuit_depth: int = BORN_LOCAL_EFFECTIVE_CIRCUIT_DEPTH,
     num_qubits: int | None = None,
     physical_qubits: Iterable[int] | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Return outcome and marginal-``P(bit=1)`` tables for local probes."""
 
+    _validate_born_local_circuit_depth(circuit_depth)
     names = [str(name) for name in probe_names]
     qubits = _qubit_tuple(spec, physical_qubits)
     width = int(spec.num_qubits)
@@ -79,6 +79,7 @@ def born_local_probability_tables(
                 spec,
                 name,
                 theta=float(theta),
+                circuit_depth=int(circuit_depth),
                 num_qubits=num_qubits,
                 physical_qubits=qubits,
             )
@@ -110,6 +111,14 @@ def outcome_zz_correlation(probabilities: np.ndarray) -> float:
     if probs.size != 4:
         return 0.0
     return float(probs[0] - probs[1] - probs[2] + probs[3])
+
+
+def _validate_born_local_circuit_depth(circuit_depth: int) -> None:
+    if int(circuit_depth) != BORN_LOCAL_EFFECTIVE_CIRCUIT_DEPTH:
+        raise ValueError(
+            "Born-local effective circuit depth is exactly 1; "
+            "use the configured circuit_depth only as artifact provenance."
+        )
 
 
 def _one_qubit_probabilities(
@@ -151,6 +160,8 @@ def _apply_ideal_one_qubit_operation(rho: np.ndarray, spec: MechanismSpec, *, qu
     instruction = str(spec.instruction or "").lower()
     if instruction == "rx":
         return _apply_unitary(rho, rx_unitary(0.13 + 0.01 * (int(qubit) % 3)))
+    if instruction == "ry":
+        return _apply_unitary(rho, ry_unitary(0.11 + 0.01 * (int(qubit) % 3)))
     if instruction == "rz":
         return _apply_unitary(rho, rz_unitary(0.09 + 0.01 * (int(qubit) % 2)))
     return rho

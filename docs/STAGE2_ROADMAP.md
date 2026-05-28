@@ -128,46 +128,17 @@ outputs/scope_static/S2D_PHYS2_oracle_separability/
 outputs/scope_static/S2D_PHYS3_local_inverse/
 ```
 
-Current default teacher mechanisms:
+Current default teacher mechanisms are defined in
+`src/scope_static/physical/mechanism_catalog.py` and documented in
+`docs/error_mechanisms.md`. The renumbered implemented catalog has 35 distinct
+mechanisms:
 
 ```text
-Gate/process:
-M0 stochastic Pauli gate error
-M1 coherent RZZ over-rotation
-M2 coherent RX over-rotation
-M3 coherent RZ over-rotation
-M4 amplitude damping gate error
-M5 hard custom non-Pauli Kraus channel
-M6 two-qubit depolarizing after RZZ
-M7 coherent RXX/RYY perturbation
-M8 spectator crosstalk RZ/ZZ
-M9 correlated two-qubit relaxation surrogate
-M10 drifted coherent over-rotation with location-varying strength
-M11 idle dephasing / relaxation error
-M12 operation-dependent error
-
-Readout/measurement:
-M13 readout 0->1 bias
-M14 readout 1->0 bias
-M15 symmetric readout assignment noise
-M16 measurement-context bias
-
-Prep/reset:
-M17 reset-to-1 bias
-M18 prep-axis / reset-asymmetry bias
-
-Other:
-M19 weak Type-4-like PTM mixing
-```
-
-Named mechanism sets:
-
-```text
-set_A: M0-M4 plus M13-M16
-set_B: M0-M7 plus M13-M16
-set_C: M0-M9 plus M13-M16
-set_D: M0-M18
-allM:  M0-M19
+set_A: M0-M9
+set_B: M0-M14
+set_C: M0-M24
+set_D: M0-M34
+allM:  M0-M34
 ```
 
 Decision rule:
@@ -297,8 +268,8 @@ S2D.8d: minimal deterministic interventions matched scrambled controls.
 S2D.9:  local Pauli-Lindblad generator coordinates are algebraically observable.
 S2D.10: generator-space calibration exposed nuisance geometry.
 S2D.10b: scalar generator invariants made setB/setC grouped recovery pass.
-S2D.11: typed gate/readout/prep learner was close on set_D but failed M1 recall.
-S2D.11b: M1 gate-branch calibration converted set_D into a pass.
+S2D.11: typed gate/readout/prep learner was close on set_D but failed M8 recall.
+S2D.11b: M8 gate-branch calibration converted set_D into a pass; artifact names still say `M1`.
 ```
 
 Primary typed learner command:
@@ -332,11 +303,19 @@ local probe state -> CPTP/readout mechanism -> exact local Born probability
 -> GPU sampled observation bits
 ```
 
-This teacher must not use mechanism-label response templates, artificial
-response-code margins, or post-sampling pair-correlation overlays. Two-qubit
-correlations should come from the exact two-qubit output distribution. Validate
-small cases against direct density-matrix math and CUDA-Q local circuits, then
-rerun PHYC2 and PHYC3.
+This teacher has effective circuit depth one by design: one explicit local
+context, one ideal local operation when applicable, one mechanism
+channel/readout, then one local POVM. Configured schedule depths remain artifact
+provenance, not hidden repeated channel composition. The teacher must not use
+mechanism-label response templates, artificial response-code margins, or
+post-sampling pair-correlation overlays. Two-qubit correlations should come
+from the exact two-qubit output distribution. Validate small cases against
+direct density-matrix math and CUDA-Q local circuits, then rerun PHYC2 and
+PHYC3.
+
+M8 `spectator_crosstalk_rz_or_zz` stays outside the Stage 2E.1 thin slice until
+the spectator contract specifies victim, aggressor operation or edge, and
+whether the observable local support is RZ-on-victim or ZZ-on-pair.
 
 The intended distinction is:
 
@@ -379,6 +358,6 @@ metrics and explicitly labelled proxy ARI/NMI only.
    changing the physical teacher or local-inverse representation.
 3. Use `docs/ARCHITECTURE.md` for module routing and `docs/RUNBOOK.md` for
    command recipes.
-4. Implement Stage 2E as the next milestone: a Born-local teacher that produces
-   exact local Born probabilities, then rerun PHYC2-Born-local and
-   PHYC3-Born-local before any Stage 3 work.
+4. Run the S2E.1 learner test on existing PHYC2-Born-local data. The test
+   reuses PHYC2 metrics and checks Born-local source, no overlays, and full
+   S2E.1 mechanism scope before any Stage 3 work.

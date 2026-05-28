@@ -26,8 +26,8 @@ def test_phyc2_reports_insufficient_grouped_sampled_observation_coverage(tmp_pat
         },
         {
             "location_id": 1,
-            "oracle_label": "M1",
-            "mechanism_id": "M1",
+            "oracle_label": "M8",
+            "mechanism_id": "M8",
             "name": "coherent_rzz_overrotation",
             "num_qubits": 2,
             "parameters": {"epsilon": 0.04},
@@ -58,8 +58,8 @@ def test_phyc2_balanced_requires_equal_class_support_but_weighted_allows_unequal
         {"oracle_label": "M0", "circuit_id": 0},
         {"oracle_label": "M0", "circuit_id": 1},
         {"oracle_label": "M0", "circuit_id": 2},
-        {"oracle_label": "M1", "circuit_id": 0},
-        {"oracle_label": "M1", "circuit_id": 1},
+        {"oracle_label": "M8", "circuit_id": 0},
+        {"oracle_label": "M8", "circuit_id": 1},
     ]
     observations = np.zeros((2, 4, 2), dtype=np.uint8)
     probe_names = ["z_basis", "x_measure"]
@@ -97,9 +97,9 @@ def test_phyc2_weighted_metrics_report_prevalence_accuracy_and_rare_recall() -> 
 def test_slot_only_leakage_control_excludes_sampled_response_features() -> None:
     records = [
         {"oracle_label": "M0", "circuit_id": 0, "qubits": [0], "physical_qubits": [2], "probe_indices": [0, 1], "local_observable_slot_remap": True},
-        {"oracle_label": "M1", "circuit_id": 0, "qubits": [1, 2], "physical_qubits": [3, 4], "probe_indices": [0, 1], "local_observable_slot_remap": True},
+        {"oracle_label": "M8", "circuit_id": 0, "qubits": [1, 2], "physical_qubits": [3, 4], "probe_indices": [0, 1], "local_observable_slot_remap": True},
         {"oracle_label": "M0", "circuit_id": 1, "qubits": [2], "physical_qubits": [4], "probe_indices": [2, 3], "local_observable_slot_remap": True},
-        {"oracle_label": "M1", "circuit_id": 1, "qubits": [3, 4], "physical_qubits": [5, 6], "probe_indices": [2, 3], "local_observable_slot_remap": True},
+        {"oracle_label": "M8", "circuit_id": 1, "qubits": [3, 4], "physical_qubits": [5, 6], "probe_indices": [2, 3], "local_observable_slot_remap": True},
     ]
     observations = np.random.default_rng(0).integers(0, 2, size=(4, 8, 8), dtype=np.uint8)
     control = slot_only_leakage_control(records, ["p0", "p1", "p2", "p3"], observations, seed=0)

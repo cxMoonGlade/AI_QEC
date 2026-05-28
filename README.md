@@ -40,7 +40,8 @@ PHYC2-Born-local:
 `PHYC2-separability_v2` has passed balanced/weighted sampled-observation
 separability, leakage controls, a 74-qubit/depth-200 scalability smoke, and the
 PHYC3 mechanism-to-error-prototype diagnostic. The minimal
-`PHYC2-Born-local` teacher is implemented; full allM PHYC2/PHYC3 Born-local
+`PHYC2-Born-local` teacher is implemented with effective circuit depth one and
+explicit M11 spectator-crosstalk exclusion; full allM PHYC2/PHYC3 Born-local
 evidence remains the late Stage 2E gate before Stage 3.
 
 ## Docs
@@ -51,6 +52,7 @@ evidence remains the late Stage 2E gate before Stage 3.
 - `docs/SCOPE_STATIC_MVP.md`: Stage 1 known-orbit DEM MVP.
 - `docs/SCOPE_STATIC_DISC.md`: Stage 2 discovery and physical-oracle notes.
 - `docs/STAGE2_ROADMAP.md`: compact Stage 2 execution state.
+- `docs/error_mechanisms.md`: physical-error mechanism taxonomy and adoption map.
 - `docs/SCOPE_TWIN.md`: future SCOPE-Twin contract.
 - `AGENTS.md`: agent runbook and GPU-first execution rules.
 
@@ -168,7 +170,7 @@ Outputs are written under `outputs/scope_static/`.
 S2D.9 showed local two-qubit Pauli-Lindblad generator coordinates are
 algebraically observable from `rzz_local_tomography`.
 
-S2D.10b showed scalar invariants make the M1/M6/M7/M9 gate-family signal much
+S2D.10b showed scalar invariants make the M8/M9/M10/M12 gate-family signal much
 more usable.
 
 S2D.11 promotes those invariants into a typed learner:
@@ -185,19 +187,20 @@ S2D.11 set_D was close but not a strict pass:
 balanced accuracy: 0.8689
 macro F1:          0.8614
 min recall:        0.3333
-readout branch:    M13-M16
+readout branch:    M1/M2/M3/M16
 prep/reset branch: M17-M18
-main weakness:     M1 grouped-fold recall
+main weakness:     M8 grouped-fold recall
 ```
 
-S2D.11b reuses the S2D.11 artifacts, changes only gate-branch M1 calibration,
-and passes the set_D acceptance checks:
+S2D.11b reuses the S2D.11 artifacts, changes only gate-branch M8 calibration,
+and passes the set_D acceptance checks. Some artifact names still say `M1`
+because that stage predated the M0-M34 renumbering:
 
 ```text
 best variant:       typed_linear_plus_M1_logit_boost
 balanced accuracy:  0.8946
 macro F1:           0.8927
-M1 recall:          0.6667
+M8 recall:          0.6667
 gate recall:        1.0000
 readout recall:     0.9630
 prep/reset recall:  1.0000
@@ -216,8 +219,9 @@ slot-only leakage controls: low, leakage_suspected false
 This closes the engineered separability stress milestone, not the physical
 baseline. Stage 2E now has a minimal `PHYC2-Born-local` teacher that samples
 exact local Born probabilities for CPTP/readout mechanisms, without response
-templates or post-hoc correlation overlays; allM PHYC2/PHYC3 evidence is still
-the gate before Stage 3.
+templates or post-hoc correlation overlays. Its effective depth is one local
+operation/context for explainability; allM PHYC2/PHYC3 evidence is still the
+gate before Stage 3.
 
 ## Claim Boundary
 

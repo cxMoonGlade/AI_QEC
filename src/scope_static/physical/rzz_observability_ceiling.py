@@ -15,7 +15,7 @@ from scope_static.numerics import NUMERICAL_ZERO
 from .targeted_v3 import RZZ_FAMILY
 
 
-PAIR_NAMES = ("M1/M6", "M1/M7", "M1/M9", "M6/M7", "M6/M9", "M7/M9")
+PAIR_NAMES = ("M8/M9", "M8/M10", "M8/M12", "M9/M10", "M9/M12", "M10/M12")
 FORBIDDEN_FEATURE_TOKENS = ("oracle_label", "mechanism_id", "exact_ptm", "teacher_channel", "oracle_fingerprint")
 
 

@@ -129,7 +129,7 @@ s2d11_typed_spam_gate_invariant_learner:
 
 def test_local_observable_probability_profile_is_finite_and_bounded() -> None:
     record = {
-        "oracle_label": "M1",
+        "oracle_label": "M8",
         "name": "coherent_rzz_overrotation",
         "num_qubits": 2,
         "parameters": {"epsilon": 0.04},
@@ -152,11 +152,11 @@ def test_local_observable_probability_profile_is_finite_and_bounded() -> None:
 
 def test_local_observable_records_support_weighted_mechanism_instance_counts() -> None:
     cfg = {
-        "mechanism_set": ["M0", "M1"],
+        "mechanism_set": ["M0", "M8"],
         "num_qubits": 5,
         "probe_set": "base",
         "balanced_min_instances_per_mechanism": 3,
-        "mechanism_instance_counts": {"M0": 5, "M1": 2},
+        "mechanism_instance_counts": {"M0": 5, "M8": 2},
     }
 
     records, repetitions, sampling_contract = _build_local_observable_records(cfg)
@@ -166,7 +166,7 @@ def test_local_observable_records_support_weighted_mechanism_instance_counts() -
         counts[str(record["oracle_label"])] = counts.get(str(record["oracle_label"]), 0) + 1
     assert repetitions == 5
     assert sampling_contract == "weighted"
-    assert counts == {"M0": 5, "M1": 2}
+    assert counts == {"M0": 5, "M8": 2}
 
 
 def test_slot_remapped_location_features_neutralize_synthetic_geometry() -> None:
@@ -231,7 +231,7 @@ def test_local_observable_teacher_writes_phyc2_compatible_schema_when_cuda_avail
     teacher_dir = tmp_path / "teacher"
     result = generate_local_observable_teacher_dataset(
         {
-            "mechanism_set": ["M13", "M14"],
+            "mechanism_set": ["M1", "M2"],
             "num_qubits": 6,
             "circuit_depth": 3,
             "probe_set": "rzz_local_tomography",
@@ -257,7 +257,7 @@ def test_readout_alias_phyc2_balanced_is_perfect_when_cuda_available(tmp_path: P
     if not torch.cuda.is_available():
         pytest.skip("requires CUDA")
 
-    audit = _small_phyc2_balanced_audit(tmp_path, ["M13", "M14", "M15", "M16"])
+    audit = _small_phyc2_balanced_audit(tmp_path, ["M1", "M2", "M3", "M16"])
 
     assert audit["balanced_accuracy"] == 1.0
     assert audit["min_class_recall"] == 1.0
@@ -268,7 +268,7 @@ def test_rzz_alias_phyc2_balanced_is_perfect_when_cuda_available(tmp_path: Path)
     if not torch.cuda.is_available():
         pytest.skip("requires CUDA")
 
-    audit = _small_phyc2_balanced_audit(tmp_path, ["M1", "M6", "M7", "M9"])
+    audit = _small_phyc2_balanced_audit(tmp_path, ["M8", "M9", "M10", "M12"])
 
     assert audit["balanced_accuracy"] == 1.0
     assert audit["min_class_recall"] == 1.0

@@ -7,7 +7,11 @@ import numpy as np
 import pytest
 
 from scope_static.numerics import NUMERICAL_ZERO
-from scope_static.physical.born_local import born_local_outcome_probabilities, born_local_probability_tables
+from scope_static.physical.born_local import (
+    BORN_LOCAL_EFFECTIVE_CIRCUIT_DEPTH,
+    born_local_outcome_probabilities,
+    born_local_probability_tables,
+)
 from scope_static.physical.channels import MechanismSpec, readout_bias_matrix, rx_unitary, rzz_unitary
 from scope_static.physical.local_observable_teacher import (
     RZZ_ALIAS_GROUP,
@@ -25,7 +29,7 @@ from scope_static.physical.teacher import _probe_names
 
 def test_born_local_one_qubit_probability_matches_direct_density_matrix() -> None:
     spec = MechanismSpec(
-        "M2",
+        "M6",
         "coherent_rx_overrotation",
         1,
         {"epsilon": 0.035},
@@ -47,7 +51,7 @@ def test_born_local_two_qubit_rzz_probability_matches_direct_density_matrix() ->
     theta = 0.18
     epsilon = 0.045
     spec = MechanismSpec(
-        "M1",
+        "M8",
         "coherent_rzz_overrotation",
         2,
         {"epsilon": epsilon},
@@ -72,7 +76,7 @@ def test_born_local_two_qubit_rzz_probability_matches_direct_density_matrix() ->
 
 def test_born_local_readout_bias_applies_after_povm() -> None:
     spec = MechanismSpec(
-        "M13",
+        "M1",
         "readout_0_to_1_bias",
         1,
         {"p": 0.025},
@@ -89,10 +93,33 @@ def test_born_local_readout_bias_applies_after_povm() -> None:
     np.testing.assert_allclose(actual, expected, atol=1e-12)
 
 
+def test_born_local_rejects_hidden_depth_stacking() -> None:
+    spec = MechanismSpec(
+        "M6",
+        "coherent_rx_overrotation",
+        1,
+        {"epsilon": 0.035},
+        instruction="rx",
+        qubits=(0,),
+    )
+
+    actual = born_local_outcome_probabilities(
+        spec,
+        "z_basis",
+        theta=0.18,
+        circuit_depth=BORN_LOCAL_EFFECTIVE_CIRCUIT_DEPTH,
+        num_qubits=1,
+    )
+
+    assert actual.shape == (2,)
+    with pytest.raises(ValueError, match="effective circuit depth is exactly 1"):
+        born_local_outcome_probabilities(spec, "z_basis", theta=0.18, circuit_depth=2, num_qubits=1)
+
+
 def test_born_local_inactive_rzz_tomography_probe_skips_pair_mechanism() -> None:
-    m1 = MechanismSpec("M1", "coherent_rzz_overrotation", 2, {"epsilon": 0.045}, instruction="rzz", qubits=(0, 1))
-    m7 = MechanismSpec(
-        "M7",
+    m8 = MechanismSpec("M8", "coherent_rzz_overrotation", 2, {"epsilon": 0.045}, instruction="rzz", qubits=(0, 1))
+    m10 = MechanismSpec(
+        "M10",
         "coherent_rxx_ryy_perturbation",
         2,
         {"epsilon_x": 0.024, "epsilon_y": 0.017},
@@ -100,12 +127,12 @@ def test_born_local_inactive_rzz_tomography_probe_skips_pair_mechanism() -> None
         qubits=(0, 1),
     )
 
-    inactive_m1 = born_local_outcome_probabilities(m1, "rzz_tomo_pXpZp_mXY_odd", theta=0.18, num_qubits=3)
-    inactive_m7 = born_local_outcome_probabilities(m7, "rzz_tomo_pXpZp_mXY_odd", theta=0.18, num_qubits=3)
-    active_m1 = born_local_outcome_probabilities(m1, "rzz_tomo_pXpZp_mXY_even", theta=0.18, num_qubits=3)
+    inactive_m8 = born_local_outcome_probabilities(m8, "rzz_tomo_pXpZp_mXY_odd", theta=0.18, num_qubits=3)
+    inactive_m10 = born_local_outcome_probabilities(m10, "rzz_tomo_pXpZp_mXY_odd", theta=0.18, num_qubits=3)
+    active_m8 = born_local_outcome_probabilities(m8, "rzz_tomo_pXpZp_mXY_even", theta=0.18, num_qubits=3)
 
-    np.testing.assert_allclose(inactive_m1, inactive_m7, atol=1e-12)
-    assert float(np.linalg.norm(active_m1 - inactive_m1)) > 1e-4
+    np.testing.assert_allclose(inactive_m8, inactive_m10, atol=1e-12)
+    assert float(np.linalg.norm(active_m8 - inactive_m8)) > 1e-4
 
 
 def test_born_local_readout_probability_profiles_are_pairwise_distinct() -> None:
@@ -158,7 +185,7 @@ def test_born_local_rzz_family_joint_profiles_are_pairwise_distinct() -> None:
 def test_born_local_response_model_has_no_template_overlay() -> None:
     assert _normalize_response_model("PHYC2-Born-local") == "born_local"
     record = {
-        "oracle_label": "M1",
+        "oracle_label": "M8",
         "name": "coherent_rzz_overrotation",
         "num_qubits": 2,
         "parameters": {"epsilon": 0.045},
@@ -174,7 +201,7 @@ def test_born_local_response_model_has_no_template_overlay() -> None:
     assert np.all(np.isfinite(profile))
 
 
-def test_born_local_allm_thin_slice_excludes_only_m8() -> None:
+def test_born_local_allm_thin_slice_excludes_only_m11() -> None:
     records, _, _ = _build_local_observable_records(
         {
             "mechanism_set": "allM",
@@ -186,7 +213,8 @@ def test_born_local_allm_thin_slice_excludes_only_m8() -> None:
 
     audit = _born_local_scope_audit(records)
 
-    assert audit["excluded_unsupported_mechanisms"] == ["M8"]
+    assert audit["excluded_unsupported_mechanisms"] == ["M11"]
+    assert "spectator" in str(audit["unsupported_mechanism_reasons"]["M11"])
     assert audit["num_excluded_records"] == 2
     assert audit["num_supported_records"] == len(records) - 2
 
@@ -194,8 +222,8 @@ def test_born_local_allm_thin_slice_excludes_only_m8() -> None:
 @pytest.mark.parametrize(
     ("mechanisms", "expects_joint_sampling"),
     [
-        (["M13", "M14", "M15", "M16"], False),
-        (["M1", "M6", "M7", "M9"], True),
+        (["M1", "M2", "M3", "M16"], False),
+        (["M8", "M9", "M10", "M12"], True),
     ],
 )
 def test_born_local_teacher_writes_phyc2_evaluable_artifact_when_cuda_available(
@@ -224,6 +252,9 @@ def test_born_local_teacher_writes_phyc2_evaluable_artifact_when_cuda_available(
     audit = run_sampled_observation_separability_audit(teacher_dir=teacher_dir, output_dir=tmp_path / "phyc2")
 
     assert result["local_observable_response_model"] == "born_local"
+    assert result["configured_circuit_depth"] == 2
+    assert result["effective_circuit_depth"] == BORN_LOCAL_EFFECTIVE_CIRCUIT_DEPTH
+    assert result["sampling"]["effective_circuit_depth"] == BORN_LOCAL_EFFECTIVE_CIRCUIT_DEPTH
     assert result["sampling"]["pair_correlation_overlay"]["enabled"] is False
     assert result["sampling"]["born_local_joint_sampling"]["enabled"] is True
     assert bool(result["sampling"]["born_local_joint_sampling"]["num_entries"]) is expects_joint_sampling
@@ -233,7 +264,7 @@ def test_born_local_teacher_writes_phyc2_evaluable_artifact_when_cuda_available(
 def test_born_local_matches_direct_statevector_rzz_probe_probability() -> None:
     theta = 0.18
     epsilon = 0.045
-    spec = MechanismSpec("M1", "coherent_rzz_overrotation", 2, {"epsilon": epsilon}, instruction="rzz", qubits=(0, 1))
+    spec = MechanismSpec("M8", "coherent_rzz_overrotation", 2, {"epsilon": epsilon}, instruction="rzz", qubits=(0, 1))
     actual = born_local_outcome_probabilities(spec, "rzz_tomo_pXpZm_mXY_even", theta=theta, num_qubits=2)
 
     rho = np.kron(_density(_state("Xp")), _density(_state("Zm")))

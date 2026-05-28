@@ -9,8 +9,8 @@ from scope_static.physical.sampled_quantum_error_quality import channel_vector, 
 def test_channel_vector_represents_quantum_and_readout_errors() -> None:
     quantum = channel_vector(
         {
-            "oracle_label": "M2",
-            "mechanism_id": "M2",
+            "oracle_label": "M6",
+            "mechanism_id": "M6",
             "name": "coherent_rx_overrotation",
             "num_qubits": 1,
             "parameters": {"epsilon": 0.035},
@@ -22,8 +22,8 @@ def test_channel_vector_represents_quantum_and_readout_errors() -> None:
     )
     readout = channel_vector(
         {
-            "oracle_label": "M13",
-            "mechanism_id": "M13",
+            "oracle_label": "M1",
+            "mechanism_id": "M1",
             "name": "readout_0_to_1_bias",
             "num_qubits": 1,
             "parameters": {"p": 0.025},
@@ -50,9 +50,9 @@ def test_phyc3_quantum_error_quality_uses_phyc2_fold_predictions(tmp_path: Path)
     phyc2.mkdir()
     records = [
         _record(0, "M0", "stochastic_pauli_gate_error", "id", {"p_x": 0.0015, "p_y": 0.0008, "p_z": 0.0022}),
-        _record(1, "M2", "coherent_rx_overrotation", "rx", {"epsilon": 0.25}),
+        _record(1, "M6", "coherent_rx_overrotation", "rx", {"epsilon": 0.25}),
         _record(2, "M0", "stochastic_pauli_gate_error", "id", {"p_x": 0.0015, "p_y": 0.0008, "p_z": 0.0022}, circuit_id=1),
-        _record(3, "M2", "coherent_rx_overrotation", "rx", {"epsilon": 0.25}, circuit_id=1),
+        _record(3, "M6", "coherent_rx_overrotation", "rx", {"epsilon": 0.25}, circuit_id=1),
     ]
     (teacher / "oracle_mechanisms.json").write_text(json.dumps({"mechanisms": records}) + "\n")
     phyc2_metrics = {
@@ -62,8 +62,8 @@ def test_phyc3_quantum_error_quality_uses_phyc2_fold_predictions(tmp_path: Path)
         "rare_class_recall_min": 1.0,
         "supervised_grouped_ceiling": {
             "grouped_fold_predictions": [
-                {"fold": 0, "test_circuit_id": 0, "true_labels": ["M0", "M2"], "predicted_labels": ["M0", "M2"]},
-                {"fold": 1, "test_circuit_id": 1, "true_labels": ["M0", "M2"], "predicted_labels": ["M0", "M2"]},
+                {"fold": 0, "test_circuit_id": 0, "true_labels": ["M0", "M6"], "predicted_labels": ["M0", "M6"]},
+                {"fold": 1, "test_circuit_id": 1, "true_labels": ["M0", "M6"], "predicted_labels": ["M0", "M6"]},
             ]
         },
     }

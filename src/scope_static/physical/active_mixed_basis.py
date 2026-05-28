@@ -260,10 +260,10 @@ def rzz_family_metrics(
         method_metrics = {
             "RZZ_family_ARI": float(adjusted_rand_index(pred_family, hidden_family)) if pred_family.numel() else 0.0,
             "RZZ_family_NMI": float(normalized_mutual_info(pred_family, hidden_family)) if pred_family.numel() else 0.0,
-            "M1_M6_merge_count": _pair_merge_count(pred, hidden, label_names, "M1", "M6"),
-            "M1_M7_merge_count": _pair_merge_count(pred, hidden, label_names, "M1", "M7"),
-            "M1_M9_merge_count": _pair_merge_count(pred, hidden, label_names, "M1", "M9"),
-            "M1_split_count": _label_split_count(pred, hidden, label_names, "M1"),
+            "M8_M9_merge_count": _pair_merge_count(pred, hidden, label_names, "M8", "M9"),
+            "M8_M10_merge_count": _pair_merge_count(pred, hidden, label_names, "M8", "M10"),
+            "M8_M12_merge_count": _pair_merge_count(pred, hidden, label_names, "M8", "M12"),
+            "M8_split_count": _label_split_count(pred, hidden, label_names, "M8"),
             "readout_split_count": sum(_label_split_count(pred, hidden, label_names, label) for label in readout_labels),
             "M5_split_count": sum(_label_split_count(pred, hidden, label_names, label) for label in readout_labels),
         }

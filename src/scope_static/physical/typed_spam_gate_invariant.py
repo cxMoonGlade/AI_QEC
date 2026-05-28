@@ -11,6 +11,7 @@ from scope_static.numerics import NUMERICAL_ZERO
 from .generator_invariant_calibration import INVARIANT_FEATURES, generator_invariants_from_coordinates, ptm_unitarity
 from .generator_space_calibration import GENERATOR_CORE, grouped_mahalanobis_prototype, residualize_by_design
 from .local_pauli_lindblad import PAULI_LABELS
+from .mechanism_catalog import PREP_RESET_MECHANISM_IDS, READOUT_MECHANISM_IDS, RZZ_FAMILY_IDS
 from .rzz_observability_ceiling import FeatureBlock, audit_labels_schema, features_schema, grouped_fold_audit
 from .targeted_v3 import RZZ_FAMILY
 
@@ -18,9 +19,6 @@ from .targeted_v3 import RZZ_FAMILY
 BRANCH_NAMES = ("gate_process_branch", "readout_branch", "prep_reset_branch")
 FORBIDDEN_FEATURE_TOKENS = ("oracle_label", "mechanism_id", "exact_ptm", "teacher_channel", "oracle_fingerprint")
 M5_TAU = 0.10
-READOUT_MECHANISM_IDS = ("M13", "M14", "M15", "M16")
-PREP_RESET_MECHANISM_IDS = ("M17", "M18")
-RZZ_FAMILY_IDS = ("M1", "M6", "M7", "M9")
 LOCATION_FEATURES = ("location_qubit_mean", "location_span", "chain_position", "neighbor_rzz_count", "branch_gate", "branch_readout", "branch_prep_reset")
 READOUT_FEATURES = (
     "readout_shape_norm",
@@ -369,7 +367,7 @@ def branch_budget_audit(enabled_mechanisms: list[str], branches: list[str]) -> d
         "schema": "scope_static_s2d11_branch_budget_audit_v1",
         "total_K": int(total),
         "enabled_visible_branches": sorted(set(branches)),
-        "readout_budget_rule": "number of enabled readout mechanisms in M13/M14/M15/M16",
+        "readout_budget_rule": "number of enabled readout mechanisms in M1/M2/M3/M16",
         "prep_reset_budget_rule": "number of enabled prep/reset mechanisms in M17/M18",
         "gate_budget_rule": "K - readout_budget - prep_reset_budget",
         "budget_source": "visible_run_config",
@@ -570,8 +568,8 @@ def m11_readout_confound_audit(bundle: TypedSpamGateBundle, labels: list[str], g
 
 def single_qubit_invariant_reconstruction_audit(records: list[dict[str, object]], labels: list[str], features: np.ndarray, feature_names: list[str]) -> dict[str, object]:
     pairs = {
-        "RX/RZ pairwise margin": ("M2", "M3"),
-        "coherent-vs-stochastic 1Q margin": ("M2", "M0"),
+        "RX/RZ pairwise margin": ("M6", "M7"),
+        "coherent-vs-stochastic 1Q margin": ("M6", "M0"),
         "nonunital detection score": ("M4", "M0"),
     }
     margins = {}
@@ -774,7 +772,7 @@ def s2d11_success(
 
 
 def pairwise_probability_margins(true: list[str], probabilities: np.ndarray, class_names: list[str]) -> dict[str, object]:
-    pairs = ("M1/M6", "M1/M7", "M6/M7", "M9/M1", "M9/M6", "M9/M7", "M17/M4", "M17/M13")
+    pairs = ("M8/M9", "M8/M10", "M9/M10", "M12/M8", "M12/M9", "M12/M10", "M17/M4", "M17/M1")
     out = {
         "definition": (
             "For classifier/prototype score heads, pairwise_margin(a,b) is the mean over true a rows of "
@@ -799,7 +797,7 @@ def pairwise_probability_margins(true: list[str], probabilities: np.ndarray, cla
 
 
 def distance_pairwise_margins(true: list[str], distances: np.ndarray, class_names: list[str]) -> dict[str, object]:
-    pairs = ("M1/M6", "M1/M7", "M6/M7", "M9/M1", "M9/M6", "M9/M7", "M17/M4", "M17/M13")
+    pairs = ("M8/M9", "M8/M10", "M9/M10", "M12/M8", "M12/M9", "M12/M10", "M17/M4", "M17/M1")
     out = {
         "definition": (
             "For distance heads, pairwise_margin(a,b) is the mean over true a rows of distance_to_b(x)-distance_to_a(x), "

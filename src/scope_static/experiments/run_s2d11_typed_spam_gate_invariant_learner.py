@@ -11,6 +11,7 @@ import yaml
 from scope_static.experiments.run_s2d_physical_teacher import generate_physical_teacher_dataset
 from scope_static.experiments.s2d_config import load_s2d_physical_config, output_root_from_config
 from scope_static.physical.local_pauli_lindblad import build_local_pauli_lindblad_observability
+from scope_static.physical.mechanism_catalog import IMPLEMENTED_MECHANISM_IDS
 from scope_static.physical.typed_spam_gate_invariant import (
     TypedSpamGateBundle,
     build_typed_spam_gate_features,
@@ -29,7 +30,7 @@ DEFAULT_RUNS = [
 SECONDARY_ALLM_RUN = {
     "name": "phys9_multicircuit_allM_balanced",
     "profile": "phys9_multicircuit_allM_balanced",
-    "mechanism_set": [f"M{idx}" for idx in range(20)],
+    "mechanism_set": list(IMPLEMENTED_MECHANISM_IDS),
     "purpose": "secondary M19/other-mechanism stress test only after primary set_D pass",
     "secondary_stress": True,
 }

@@ -282,6 +282,28 @@ PHYC2-Born-local:
 Stage 2E has a minimal PHYC2-Born-local teacher. It must pass allM
 PHYC2-Born-local and PHYC3-Born-local before Stage 3 starts.
 
+The Born-local teacher records both `configured_circuit_depth` and
+`effective_circuit_depth`. The effective depth is intentionally `1`: one local
+probe context, one ideal local operation when applicable, one mechanism
+channel/readout, then one local POVM. M8 `spectator_crosstalk_rz_or_zz` is not
+part of the S2E.1 Born-local scope until the spectator victim/aggressor contract
+is explicit.
+
+S2E.1 learner test from existing PHYC2 data:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_s2e1_born_local_learner_test \
+  --teacher-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_born_local/S2D_PHYS1_teacher \
+  --phyc2-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_born_local/PHYC2_balanced_sampled_observation_separability \
+  --output-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_born_local/S2E1_born_local_learner_test \
+  --contract balanced
+```
+
+This task reuses the existing PHYC2 `metrics.json`; it does not regenerate the
+teacher or rerun PHYC2. It fails by design if the source teacher is still
+`separability_v2`, if pair-correlation overlays were used, or if the full
+S2E.1 Born-local mechanism scope is not present.
+
 PHYC2-weighted sampled-observation audit for uneven schedule-like support:
 
 ```bash

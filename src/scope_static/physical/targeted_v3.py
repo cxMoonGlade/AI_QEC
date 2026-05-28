@@ -10,11 +10,12 @@ from scope_static.identifiability import deterministic_kmeans, evaluate_partitio
 from scope_static.local_mechanism import split_merge_audit
 from scope_static.numerics import NUMERICAL_ZERO
 
+from .mechanism_catalog import READOUT_MECHANISM_IDS, RZZ_FAMILY_IDS
 from .local_inverse import build_visible_location_representations
 
 
-RZZ_FAMILY = ("M1", "M6", "M7", "M9")
-READOUT_LABELS = ("M13", "M14", "M15", "M16")
+RZZ_FAMILY = tuple(RZZ_FAMILY_IDS[:4])
+READOUT_LABELS = tuple(READOUT_MECHANISM_IDS)
 READOUT_LABEL = READOUT_LABELS[0]
 
 
@@ -45,7 +46,7 @@ def build_targeted_v3_features(
     obs = np.asarray(observations, dtype=np.float64)
     num_qubits = int(obs.shape[2])
     visible = [_visible_type(record) for record in records]
-    budgets = _typed_cluster_budgets(visible, int(num_clusters))
+    budgets = _typed_cluster_budgets(visible, int(num_clusters), records=records)
     base = build_visible_location_representations(records, obs, names)
     v1 = base["physical_local_inverse_probability"]
     v2 = base["physical_local_inverse_probability_v2"]
@@ -230,8 +231,8 @@ def typed_feature_manifest() -> dict[str, object]:
         "uses_oracle_labels": False,
         "visible_types": ["rzz_edge", "single_qubit", "readout", "other"],
         "type_budget_rule": {
-            "readout": "1 cluster when visible readout locations exist",
-            "rzz_edge": "1 cluster for K<9, 3 clusters for 9<=K<11, 4 clusters for K>=11",
+            "readout": "visible readout locations per circuit batch, capped at 4",
+            "rzz_edge": "visible RZZ-edge locations per circuit batch, capped at 4; lower caps for small K",
             "single_qubit": "remaining clusters after readout/rzz allocation",
             "other": "fallback remaining visible-type budget",
         },
@@ -407,14 +408,14 @@ def _readout_normalized_features(local_response: np.ndarray) -> np.ndarray:
     )
 
 
-def _typed_cluster_budgets(visible_types: list[str], num_clusters: int) -> dict[str, int]:
+def _typed_cluster_budgets(visible_types: list[str], num_clusters: int, *, records: list[dict[str, object]] | None = None) -> dict[str, int]:
     counts = _counts(visible_types)
-    readout = min(4, int(counts.get("readout", 0))) if counts.get("readout", 0) else 0
+    readout = _visible_mechanism_budget(visible_types, records, "readout", cap=4)
     if counts.get("rzz_edge", 0):
         if int(num_clusters) >= 11:
-            rzz = min(4, int(counts["rzz_edge"]))
+            rzz = _visible_mechanism_budget(visible_types, records, "rzz_edge", cap=4)
         elif int(num_clusters) >= 9:
-            rzz = min(3, int(counts["rzz_edge"]))
+            rzz = min(3, _visible_mechanism_budget(visible_types, records, "rzz_edge", cap=4))
         else:
             rzz = 1
     else:
@@ -425,6 +426,23 @@ def _typed_cluster_budgets(visible_types: list[str], num_clusters: int) -> dict[
     if counts.get("single_qubit", 0) and readout + rzz + single + other < int(num_clusters):
         single = min(int(counts["single_qubit"]), single + int(num_clusters) - readout - rzz - single - other)
     return {"readout": readout, "rzz_edge": rzz, "single_qubit": single, "other": other}
+
+
+def _visible_mechanism_budget(
+    visible_types: list[str],
+    records: list[dict[str, object]] | None,
+    type_name: str,
+    *,
+    cap: int,
+) -> int:
+    count = sum(1 for current in visible_types if current == type_name)
+    if count <= 0:
+        return 0
+    if records:
+        groups = {int(record.get("circuit_id", 0)) for record, current in zip(records, visible_types) if current == type_name}
+        repetitions = max(1, len(groups))
+        return min(int(cap), max(1, int(round(count / repetitions))))
+    return min(int(cap), int(count))
 
 
 def _visible_type(record: dict[str, object]) -> str:

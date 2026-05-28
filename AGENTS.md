@@ -8,6 +8,7 @@ stage-specific docs:
 - `docs/ARCHITECTURE.md`: current code architecture and module map.
 - `docs/RUNBOOK.md`: install, test, GPU, and experiment commands.
 - `docs/STAGE2_ROADMAP.md`: compact Stage 2 execution state.
+- `docs/error_mechanisms.md`: physical-error mechanism taxonomy and adoption map.
 - `docs/SCOPE_TWIN.md`: full SCOPE-Twin notation and future object contract.
 - `docs/adr/`: durable architecture and milestone-gating decisions.
 
@@ -189,3 +190,7 @@ and PHYC3 mechanism-to-error prototype quality. This is strong Stage 2
 separability evidence, not a Born-rule physical baseline. The minimal
 Stage 2E Born-local teacher is implemented; it must still pass PHYC2-Born-local
 plus the corresponding PHYC3-Born-local quality audit before Stage 3 begins.
+Its effective circuit depth is intentionally one local operation/context even
+when artifact names carry a configured schedule depth. M11 spectator crosstalk
+RZ/ZZ remains excluded from the S2E.1 Born-local scope until the
+victim/aggressor spectator contract is explicit.

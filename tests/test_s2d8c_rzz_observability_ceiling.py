@@ -71,7 +71,7 @@ def test_feature_and_label_schemas_are_separate() -> None:
 
 
 def _separable_blocks() -> tuple[list[str], list[int], dict[str, FeatureBlock]]:
-    class_order = ["M1", "M6", "M7"]
+    class_order = ["M8", "M9", "M10"]
     labels = class_order * 3
     groups = [0, 0, 0, 1, 1, 1, 2, 2, 2]
     y = np.asarray([class_order.index(label) for label in labels], dtype=np.int64)

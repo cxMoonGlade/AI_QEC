@@ -12,6 +12,7 @@ from scope_static.metrics import normalized_mutual_info
 from scope_static.numerics import NUMERICAL_ZERO
 
 from .active_mixed_basis import rzz_family_distance_audit, rzz_family_metrics
+from .mechanism_catalog import RZZ_FAMILY_IDS
 from .targeted_v3 import build_targeted_v3_features, typed_cluster_labels
 from .teacher import (
     EDGE_ORIENTATION_RULE,
@@ -277,7 +278,7 @@ def mechanism_response_table(
     bundle: RZZMinimalInterventionBundle,
 ) -> dict[str, object]:
     labels = torch.as_tensor(hidden_labels, dtype=torch.long).numpy()
-    family_ids = [idx for idx, name in enumerate(label_names) if name in {"M1", "M6", "M7", "M9"}]
+    family_ids = [idx for idx, name in enumerate(label_names) if name in set(RZZ_FAMILY_IDS[:4])]
     rows = []
     method_labels = labels_by_method.get("minimal_intervention_all", [])
     features = bundle.feature_spaces["minimal_intervention_all"]

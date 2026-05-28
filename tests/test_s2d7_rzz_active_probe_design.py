@@ -36,7 +36,7 @@ def test_active_probe_basis_metadata_and_edge_orientation_are_reproducible() -> 
 
 
 def test_mixed_basis_edge_moments_and_signed_contrasts_from_shot_bits() -> None:
-    records = [_record("M1", [0, 1])]
+    records = [_record("M8", [0, 1])]
     observations = _known_two_qubit_observations()
     bundle = build_active_mixed_basis_features(records, observations, ACTIVE_PROBES, num_clusters=1)
 
@@ -53,7 +53,7 @@ def test_mixed_basis_edge_moments_and_signed_contrasts_from_shot_bits() -> None:
 
 
 def test_centered_normalized_moments_handle_zero_variance_safely() -> None:
-    records = [_record("M1", [0, 1])]
+    records = [_record("M8", [0, 1])]
     observations = np.zeros((len(ACTIVE_PROBES), 8, 2), dtype=np.uint8)
     bundle = build_active_mixed_basis_features(records, observations, ACTIVE_PROBES, num_clusters=1)
     names = bundle.feature_names["active_mixed_basis_moments"]
@@ -66,7 +66,7 @@ def test_centered_normalized_moments_handle_zero_variance_safely() -> None:
 
 
 def test_feature_provenance_manifest_marks_active_features_learner_visible() -> None:
-    bundle = build_active_mixed_basis_features([_record("M1", [0, 1])], _known_two_qubit_observations(), ACTIVE_PROBES, num_clusters=1)
+    bundle = build_active_mixed_basis_features([_record("M8", [0, 1])], _known_two_qubit_observations(), ACTIVE_PROBES, num_clusters=1)
     manifest = bundle.feature_provenance_manifest
 
     for features in manifest["feature_blocks"].values():
@@ -80,8 +80,8 @@ def test_feature_provenance_manifest_marks_active_features_learner_visible() -> 
 
 def test_oracle_label_permutation_leaves_active_features_unchanged() -> None:
     observations = _known_two_qubit_observations()
-    left = [_record("M1", [0, 1]), _record("M7", [0, 1])]
-    right = [_record("M7", [0, 1]), _record("M1", [0, 1])]
+    left = [_record("M8", [0, 1]), _record("M10", [0, 1])]
+    right = [_record("M10", [0, 1]), _record("M8", [0, 1])]
 
     left_features = build_active_mixed_basis_features(left, observations, ACTIVE_PROBES, num_clusters=2).feature_spaces
     right_features = build_active_mixed_basis_features(right, observations, ACTIVE_PROBES, num_clusters=2).feature_spaces
@@ -100,7 +100,7 @@ def test_teacher_channel_deletion_still_allows_feature_extraction() -> None:
 
 
 def test_scrambled_control_preserves_dimensions_and_marginals_exclude_edge_products() -> None:
-    bundle = build_active_mixed_basis_features([_record("M1", [0, 1])], _known_two_qubit_observations(), ACTIVE_PROBES, num_clusters=1)
+    bundle = build_active_mixed_basis_features([_record("M8", [0, 1])], _known_two_qubit_observations(), ACTIVE_PROBES, num_clusters=1)
 
     real = bundle.feature_spaces["active_mixed_basis_moments_plus_signed_contrasts"]
     scrambled = bundle.feature_spaces["active_mixed_basis_scrambled"]
@@ -120,7 +120,7 @@ def test_visibility_matrix_separates_base_and_active_mixed_basis_visibility() ->
 
 
 def test_active_evaluation_reports_rzz_family_metrics() -> None:
-    records = [_record("M1", [0, 1]), _record("M7", [0, 1]), _record("M8", [0, 1]), _record("M10", [0, 1])]
+    records = [_record("M8", [0, 1]), _record("M9", [0, 1]), _record("M10", [0, 1]), _record("M12", [0, 1])]
     observations = np.concatenate([_known_two_qubit_observations(), _known_two_qubit_observations()], axis=1)
     label_names = sorted({str(record["oracle_label"]) for record in records})
     index = {name: idx for idx, name in enumerate(label_names)}
@@ -131,7 +131,7 @@ def test_active_evaluation_reports_rzz_family_metrics() -> None:
     assert "active_mixed_basis_moments_plus_signed_contrasts" in result["labels_by_method"]
     metrics = result["rzz_family_metrics"]["methods"]["active_mixed_basis_moments_plus_signed_contrasts"]
     assert "RZZ_family_ARI" in metrics
-    assert "M1_M7_merge_count" in metrics
+    assert "M8_M10_merge_count" in metrics
 
 
 def test_s2d7_runner_writes_required_artifacts_with_fakes(tmp_path: Path, monkeypatch) -> None:
@@ -163,7 +163,7 @@ def test_s2d7_runner_writes_required_artifacts_with_fakes(tmp_path: Path, monkey
         (out / "oracle_mechanisms.json").write_text(json.dumps({"mechanisms": records}, indent=2) + "\n")
         (out / "noise_application_audit.json").write_text(json.dumps({"records": []}))
         (out / "active_probe_manifest.json").write_text(json.dumps(build_probe_basis_manifest(probe_names, num_qubits=9)))
-        return {"mechanism_counts": {"M1": 1}, "num_qubits": 9, "output_dir": str(out)}
+        return {"mechanism_counts": {"M8": 1}, "num_qubits": 9, "output_dir": str(out)}
 
     def fake_sep(*, teacher_dir, output_dir, paper_informed):
         records = json.loads((Path(teacher_dir) / "oracle_mechanisms.json").read_text())["mechanisms"]

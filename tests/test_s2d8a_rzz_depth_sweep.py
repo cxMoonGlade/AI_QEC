@@ -24,7 +24,7 @@ def test_depth_probe_naming_and_rzz_repetition_count() -> None:
 
 
 def test_depth_response_feature_extraction_from_shot_bits() -> None:
-    records = [_record("M1", [0, 1])]
+    records = [_record("M8", [0, 1])]
     observations = _known_depth_observations()
     bundle = build_rzz_depth_sweep_features(records, observations, DEPTH_PROBES, num_clusters=1)
 
@@ -39,7 +39,7 @@ def test_depth_response_feature_extraction_from_shot_bits() -> None:
 
 
 def test_scrambled_depth_control_preserves_shape() -> None:
-    records = [_record("M1", [0, 1])]
+    records = [_record("M8", [0, 1])]
     bundle = build_rzz_depth_sweep_features(records, _known_depth_observations(), DEPTH_PROBES, num_clusters=1)
 
     real = bundle.feature_spaces["rzz_depth_features"]
@@ -49,7 +49,7 @@ def test_scrambled_depth_control_preserves_shape() -> None:
 
 
 def test_depth_feature_provenance_is_learner_visible_and_oracle_free() -> None:
-    bundle = build_rzz_depth_sweep_features([_record("M1", [0, 1])], _known_depth_observations(), DEPTH_PROBES, num_clusters=1)
+    bundle = build_rzz_depth_sweep_features([_record("M8", [0, 1])], _known_depth_observations(), DEPTH_PROBES, num_clusters=1)
     manifest = bundle.feature_provenance_manifest
 
     assert "exact_ptm_entries" in manifest["forbidden_in_phys3"]
@@ -63,7 +63,7 @@ def test_depth_feature_provenance_is_learner_visible_and_oracle_free() -> None:
 
 
 def test_depth_evaluation_reports_bootstrap_and_rzz_metrics() -> None:
-    records = [_record("M1", [0, 1]), _record("M6", [0, 1]), _record("M7", [0, 1]), _record("M9", [0, 1])]
+    records = [_record("M8", [0, 1]), _record("M9", [0, 1]), _record("M10", [0, 1]), _record("M12", [0, 1])]
     observations = np.concatenate([_known_depth_observations(), _known_depth_observations()], axis=1)
     label_names = sorted({str(record["oracle_label"]) for record in records})
     index = {name: idx for idx, name in enumerate(label_names)}
@@ -81,7 +81,7 @@ def test_depth_evaluation_reports_bootstrap_and_rzz_metrics() -> None:
     depth = next(row for row in result["methods"] if row["method"] == "rzz_depth_features")
     assert depth["bootstrap_nmi"]["replicates"] == 2
     assert "rzz_depth_features" in result["rzz_family_metrics"]["methods"]
-    assert "M1_M6_merge_count" in result["rzz_family_metrics"]["methods"]["rzz_depth_features"]
+    assert "M8_M9_merge_count" in result["rzz_family_metrics"]["methods"]["rzz_depth_features"]
 
 
 def test_s2d8a_runner_writes_required_artifacts_with_fakes(tmp_path: Path, monkeypatch) -> None:
@@ -118,7 +118,7 @@ def test_s2d8a_runner_writes_required_artifacts_with_fakes(tmp_path: Path, monke
         (out / "oracle_mechanisms.json").write_text(json.dumps({"mechanisms": records}, indent=2) + "\n")
         (out / "noise_application_audit.json").write_text(json.dumps({"records": []}))
         (out / "active_probe_manifest.json").write_text(json.dumps(build_probe_basis_manifest(probe_names, num_qubits=9)))
-        return {"mechanism_counts": {"M1": 1}, "num_qubits": 9, "output_dir": str(out)}
+        return {"mechanism_counts": {"M8": 1}, "num_qubits": 9, "output_dir": str(out)}
 
     def fake_sep(*, teacher_dir, output_dir, paper_informed):
         records = json.loads((Path(teacher_dir) / "oracle_mechanisms.json").read_text())["mechanisms"]

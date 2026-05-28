@@ -42,7 +42,7 @@ def test_echo_probe_manifest_has_reproducible_edge_coloring() -> None:
 
 
 def test_echo_contrast_feature_extraction_from_shot_bits() -> None:
-    records = [_record("M1", [0, 1])]
+    records = [_record("M8", [0, 1])]
     bundle = build_rzz_echo_contrast_features(records, _known_echo_observations(), ECHO_PROBES, num_clusters=1)
 
     names = bundle.feature_names["rzz_echo_contrast_features"]
@@ -57,7 +57,7 @@ def test_echo_contrast_feature_extraction_from_shot_bits() -> None:
 
 
 def test_odd_edge_uses_odd_echo_probe_pairing() -> None:
-    records = [_record("M1", [1, 2])]
+    records = [_record("M8", [1, 2])]
     observations = _known_echo_observations(num_qubits=3)
     observations[7] = np.asarray([[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]], dtype=np.uint8)
     bundle = build_rzz_echo_contrast_features(records, observations, ECHO_PROBES, num_clusters=1)
@@ -69,7 +69,7 @@ def test_odd_edge_uses_odd_echo_probe_pairing() -> None:
 
 
 def test_scrambled_echo_control_preserves_shape_and_changes_features() -> None:
-    records = [_record("M1", [0, 1])]
+    records = [_record("M8", [0, 1])]
     bundle = build_rzz_echo_contrast_features(records, _known_echo_observations(), ECHO_PROBES, num_clusters=1)
 
     real = bundle.feature_spaces["rzz_echo_contrast_features"]
@@ -79,7 +79,7 @@ def test_scrambled_echo_control_preserves_shape_and_changes_features() -> None:
 
 
 def test_echo_feature_provenance_is_learner_visible_and_oracle_free() -> None:
-    bundle = build_rzz_echo_contrast_features([_record("M1", [0, 1])], _known_echo_observations(), ECHO_PROBES, num_clusters=1)
+    bundle = build_rzz_echo_contrast_features([_record("M8", [0, 1])], _known_echo_observations(), ECHO_PROBES, num_clusters=1)
     manifest = bundle.feature_provenance_manifest
 
     assert "exact_ptm_entries" in manifest["forbidden_in_phys3"]
@@ -93,8 +93,8 @@ def test_echo_feature_provenance_is_learner_visible_and_oracle_free() -> None:
 
 
 def test_oracle_label_permutation_leaves_echo_features_unchanged() -> None:
-    records_a = [_record("M1", [0, 1])]
-    records_b = [_record("M7", [0, 1])]
+    records_a = [_record("M8", [0, 1])]
+    records_b = [_record("M10", [0, 1])]
     obs = _known_echo_observations()
 
     a = build_rzz_echo_contrast_features(records_a, obs, ECHO_PROBES, num_clusters=1)
@@ -104,7 +104,7 @@ def test_oracle_label_permutation_leaves_echo_features_unchanged() -> None:
 
 
 def test_echo_evaluation_reports_bootstrap_and_rzz_metrics() -> None:
-    records = [_record("M1", [0, 1]), _record("M6", [0, 1]), _record("M7", [0, 1]), _record("M9", [0, 1])]
+    records = [_record("M8", [0, 1]), _record("M9", [0, 1]), _record("M10", [0, 1]), _record("M12", [0, 1])]
     observations = np.concatenate([_known_echo_observations(), _known_echo_observations()], axis=1)
     label_names = sorted({str(record["oracle_label"]) for record in records})
     index = {name: idx for idx, name in enumerate(label_names)}
@@ -122,7 +122,7 @@ def test_echo_evaluation_reports_bootstrap_and_rzz_metrics() -> None:
     echo = next(row for row in result["methods"] if row["method"] == "rzz_echo_contrast_features")
     assert echo["bootstrap_nmi"]["replicates"] == 2
     assert "rzz_echo_contrast_features" in result["rzz_family_metrics"]["methods"]
-    assert "M1_M6_merge_count" in result["rzz_family_metrics"]["methods"]["rzz_echo_contrast_features"]
+    assert "M8_M9_merge_count" in result["rzz_family_metrics"]["methods"]["rzz_echo_contrast_features"]
 
 
 def test_s2d8b_runner_writes_required_artifacts_with_fakes(tmp_path: Path, monkeypatch) -> None:
@@ -165,7 +165,7 @@ def test_s2d8b_runner_writes_required_artifacts_with_fakes(tmp_path: Path, monke
         (out / "oracle_mechanisms.json").write_text(json.dumps({"mechanisms": records}, indent=2) + "\n")
         (out / "noise_application_audit.json").write_text(json.dumps({"records": []}))
         (out / "active_probe_manifest.json").write_text(json.dumps(build_probe_basis_manifest(probe_names, num_qubits=9)))
-        return {"mechanism_counts": {"M1": 1}, "num_qubits": 9, "output_dir": str(out)}
+        return {"mechanism_counts": {"M8": 1}, "num_qubits": 9, "output_dir": str(out)}
 
     def fake_sep(*, teacher_dir, output_dir, paper_informed):
         records = json.loads((Path(teacher_dir) / "oracle_mechanisms.json").read_text())["mechanisms"]

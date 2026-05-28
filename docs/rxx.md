@@ -17,10 +17,10 @@ chosen probes → local Pauli/Lindblad response matrix → estimate generator co
 For the RZZ-family ambiguity, do not ask the learner to distinguish labels like:
 
 ```text
-M1 coherent RZZ
-M7 depolarizing after RZZ
-M8 coherent RXX/RYY
-M10 correlated relaxation
+M8 coherent RZZ
+M9 depolarizing after RZZ
+M10 coherent RXX/RYY
+M12 correlated relaxation
 ```
 
 Instead, fit a local two-qubit generator:
