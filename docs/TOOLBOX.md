@@ -85,3 +85,7 @@ The toolbox does not yet claim real-hardware ground-truth mechanism recovery,
 complete SCOPE-Twin physical generation, decoder utility, drift prediction, or
 cross-context generalization.
 
+Roadmaps:
+
+- `docs/STAGE2_ROADMAP.md`: closed Stage 2 validation record.
+- `docs/STAGE3_ROADMAP.md`: active Stage 3 discovery plan.

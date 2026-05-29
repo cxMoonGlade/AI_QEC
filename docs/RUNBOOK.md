@@ -1,92 +1,111 @@
 # Runbook
 
-Use this page for reproducible commands. Use `CONTEXT.md` and
-`docs/ARCHITECTURE.md` for terminology and code structure.
+This runbook lists supported functions and reproducible commands. Use
+`CONTEXT.md` for terminology and `docs/ARCHITECTURE.md` for system structure.
 
 ## Environment
 
-Install the package editable from the repo root:
+Install from the repo root:
 
 ```bash
 conda run -n aiqec python -m pip install -e .
 ```
 
-Do not set `PYTHONPATH="$PWD/src"` for normal WSL/CUDA runs. The editable
-install is the supported path. `pyproject.toml` gives pytest a local source path
-for tests, but experiment commands should run as installed modules.
+Do not use `PYTHONPATH="$PWD/src"` for normal runs. The editable install is the
+supported path.
 
-Check CUDA visibility before serious training, Google, likelihood, or S2D runs:
+Check CUDA before serious training, likelihood, Google, or physical-oracle runs:
 
 ```bash
 conda run -n aiqec python -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0) if torch.cuda.is_available() else None)"
 ```
 
-If CUDA is unexpectedly unavailable, diagnose the environment. Do not treat that
-as evidence for CPU-first experiment design.
+If CUDA is unavailable in one shell, diagnose the environment before changing
+experiment design.
 
-Pre-release toolbox manifest:
+## Function: Inspect Toolbox
 
 ```bash
 conda run -n aiqec scope-static-toolbox
+conda run -n aiqec scope-static-toolbox --json
 ```
 
-CUDA-Q target smoke test for sandbox-compatible GPU access:
+## Function: Run Tests
 
-```bash
-conda run -n aiqec python -c "import cudaq; print('cudaq', cudaq.__version__); cudaq.set_target('nvidia', option='fp32'); k = cudaq.make_kernel(); q = k.qalloc(2); k.h(q[0]); k.cx(q[0], q[1]); k.mz(q); print(cudaq.get_target()); print(cudaq.sample(k, shots_count=64))"
-```
-
-When running through the Codex sandbox, prefer CUDA-Q `make_kernel()` dynamic
-kernels for smoke tests and teacher prototypes. Source-decorated
-`@cudaq.kernel` GPU samples can hit a sandbox-specific CUDA driver/runtime error
-even when the same target works outside the sandbox.
-
-Full-circuit PHYC1 refuses CPU fallback when `require_gpu: true`. If a CUDA-Q
-target is omitted, the teacher selects the NVIDIA target; if CUDA-Q reports a
-CPU-only target, generation fails before writing sampling artifacts.
-
-## Tests
-
-Full unit test suite:
+Full suite:
 
 ```bash
 conda run -n aiqec python -m pytest -q
 ```
 
-Focused S2D physical-oracle and typed-learner tests:
+Focused physical-layer/toolbox suite:
 
 ```bash
 conda run -n aiqec python -m pytest -q \
-  tests/test_physical_channels.py \
-  tests/test_physical_oracle_stack.py \
-  tests/test_s2d9_local_pauli_lindblad.py \
-  tests/test_s2d10_generator_space_calibration.py \
-  tests/test_s2d10b_generator_invariant_calibration.py \
-  tests/test_s2d11_typed_spam_gate_invariant.py \
-  tests/test_s2d11b_m1_gate_calibration.py
+  tests/test_toolbox_packaging.py \
+  tests/test_phyc2_sampled_observation_separability.py \
+  tests/test_phyc3_sampled_quantum_error_quality.py \
+  tests/test_phyc3b_zx_visible_probe_suite.py \
+  tests/test_phyc3c_gaussian_likelihood.py \
+  tests/test_phyc3c_validation.py \
+  tests/test_phyc3_canonical_acceptance.py
 ```
 
-## Stage 1 DEM Runs
+## Function: Train Stage 1 DEM Models
 
-MVP05 smoke:
+Smoke:
 
 ```bash
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static \
   --config configs/scope_static/d3_r1_MVP05_windows.yaml
 ```
 
-MVP05 full local-window sweep:
+Full local-window sweep:
 
 ```bash
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static \
   --config configs/scope_static/d3_r1_MVP05_windows_full.yaml
 ```
 
-Outputs go under `outputs/scope_static/`.
+Supported outputs include metrics JSON, graph audits, window audits,
+compression accounting, model records, and heldout likelihood summaries.
 
-## Google Set1
+## Function: Run Stage 2 Static Discovery
 
-Native GPU Stage 1/Stage 2B validation path:
+Direct free-assignment discovery:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static_discovery \
+  --config configs/scope_static/d3_r1_STAGE2A_full.yaml
+```
+
+Summarize Stage 2A:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.stage2a0_summary \
+  --metrics outputs/scope_static/STAGE2A_full/metrics.json
+```
+
+Passive identifiability audit:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static_identifiability \
+  --config configs/scope_static/d3_r1_STAGE2A_DISC10_passive_audit.yaml
+```
+
+Robust local-inverse discovery:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static_disc16b_robustness \
+  --config configs/scope_static/d3_r1_STAGE2C_DISC16b_robustness.yaml
+```
+
+Supported outputs include evaluator-only ARI/NMI, quotient recovery metrics,
+active prototype counts, collapse flags, and label-use audits.
+
+## Function: Validate Google Set1 Predictive Utility
+
+Native GPU path:
 
 ```bash
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_google_static \
@@ -94,7 +113,7 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run
   --native-gpu
 ```
 
-Fast real-data smoke:
+Fast smoke:
 
 ```bash
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_google_static \
@@ -106,105 +125,10 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run
   --skip-cross-sample-transfer
 ```
 
-Google local-inverse smoke:
+Google data has no true hidden mechanism labels. Supported claims are
+predictive, calibration, transfer, and proxy-label diagnostics only.
 
-```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_google_local_mechanism \
-  --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
-  --native-gpu \
-  --sample-id sample_00 \
-  --patch-id d3_at_q5_5 \
-  --basis X \
-  --rounds-label r13 \
-  --dem-source decoder_si1000 \
-  --orbit-mode fault_graph_heuristic \
-  --train-shots 4096 \
-  --heldout-shots 1024 \
-  --steps 40 \
-  --subsample-count 2 \
-  --subsample-shots 2048 \
-  --subsample-steps 30 \
-  --max-windows 96 \
-  --detector-pair-window-budget 48 \
-  --logical-detector-pair-window-budget 48 \
-  --window-plan-mode logical_aware \
-  --output-root outputs/google_static
-```
-
-Google GDISC15b small grid:
-
-```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_google_gdisc15b_grid \
-  --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
-  --native-gpu \
-  --samples sample_00,sample_01 \
-  --patches d3_at_q5_5 \
-  --bases X,Z \
-  --rounds-labels r13 \
-  --heldout-split-types shot-heldout \
-  --train-shots 4096 \
-  --heldout-shots 1024 \
-  --steps 40 \
-  --subsample-count 2 \
-  --subsample-shots 2048 \
-  --subsample-steps 30 \
-  --max-windows 96 \
-  --detector-pair-window-budget 48 \
-  --logical-detector-pair-window-budget 48 \
-  --window-plan-mode logical_aware \
-  --pca-ranks 1,2,3,5,8 \
-  --random-control-ranks 1,2,3,5,8 \
-  --random-control-seeds 0 \
-  --output-dir outputs/google_static/GDISC15b_google_grid_validation
-```
-
-Google outputs go under `outputs/google_static/`.
-
-## Stage 2 Static Discovery
-
-Stage 2A.0 direct free-assignment discovery:
-
-```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static_discovery \
-  --config configs/scope_static/d3_r1_STAGE2A_full.yaml
-```
-
-Summarize Stage 2A.0:
-
-```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.stage2a0_summary \
-  --metrics outputs/scope_static/STAGE2A_full/metrics.json
-```
-
-DISC10 passive identifiability audit:
-
-```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static_identifiability \
-  --config configs/scope_static/d3_r1_STAGE2A_DISC10_passive_audit.yaml
-```
-
-Stage 2A.1 hardening:
-
-```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static_hardening \
-  --config configs/scope_static/d3_r1_STAGE2A1_hardening.yaml
-```
-
-Stage 2C local-inverse robustness:
-
-```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static_disc16b_robustness \
-  --config configs/scope_static/d3_r1_STAGE2C_DISC16b_robustness.yaml
-```
-
-## S2D Physical Oracle
-
-CUDA-Q GPU preflight:
-
-```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_s2d_preflight \
-  --config configs/scope_static/d3_r1_S2D_PHYS_cudaq.yaml
-```
+## Function: Generate Physical-Mechanism Data
 
 Physical Oracle Stack facade:
 
@@ -214,25 +138,7 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run
   --run-local-inverse auto
 ```
 
-The stack writes `physical_oracle_stack.json`, `physical_oracle_stack.md`, and
-legacy PHYS1/PHYS2/PHYS3 stage folders under its output directory. Public
-pre-release claims should use the Layer vocabulary:
-
-```text
-Layer 1: Data Preparation (Prep)
-  legacy alias PHYC1; teacher generation from the declared physical contract
-
-Layer 2: Teacher Self-Distinguishment (Teacher)
-  legacy alias PHYC2; a pass means the teacher itself can separate every
-  generated mechanism
-
-Layer 3: Learner Classification and Noise Generation (Learner)
-  legacy alias PHYC3; no-leakage learner recovery plus generated noise/error
-  quality; it must consume learner-visible grouped predictions, not Layer 2
-  teacher-self predictions
-```
-
-Full-circuit CUDA-Q Layer 1 teacher for the 30-qubit depth-30 allM mainline:
+Layer 1 full-circuit CUDA-Q teacher:
 
 ```bash
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_s2d_physical_teacher \
@@ -241,283 +147,101 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run
   --preflight-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/S2D_PHYS0_preflight
 ```
 
-Layer 2 balanced teacher self-distinguishment, followed by Layer 3 no-leakage
-learner recovery and Layer 3 quantum-error quality:
+Layer 1 produces mechanism records, probe schedules, sampled observations,
+teacher config, sampling audits, and active probe manifests.
+
+## Function: Audit Teacher Self-Distinguishment
+
+Layer 2 balanced teacher audit:
 
 ```bash
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_phyc2_sampled_observation_separability \
   --contract balanced \
   --teacher-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/S2D_PHYC1_teacher \
   --output-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/PHYC2_balanced_teacher_self_distinguishment
+```
 
+Layer 2 tests teacher/catalog self-distinguishability. It is not a learner
+success claim and must not emit canonical learner predictions.
+
+## Function: Run No-Leakage Learner Recovery
+
+Layer 3 legacy no-leakage recovery:
+
+```bash
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_phyc3_no_leakage_learner_recovery \
   --contract balanced \
   --teacher-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/S2D_PHYC1_teacher \
   --output-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/PHYC3_no_leakage_learner_recovery
+```
 
+Layer 3 quality from learner predictions:
+
+```bash
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_phyc3_sampled_quantum_error_quality \
   --teacher-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/S2D_PHYC1_teacher \
   --prediction-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/PHYC3_no_leakage_learner_recovery \
   --output-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/PHYC3_no_leakage_learner_quality
 ```
 
-Canonical Layer 3 acceptance resolver:
+Layer 3 consumes learner-visible sampled observations. Forbidden learner inputs
+include mechanism IDs, family labels, teacher self embeddings, exact channel
+matrices, exact PTMs, oracle prototypes, and hidden parameters.
+
+## Function: Run Canonical Layer 3 Acceptance
+
+```bash
+conda run -n aiqec scope-layer3-canonical \
+  --config configs/scope_static/layer3_canonical_acceptance.yaml
+```
+
+Equivalent module form:
 
 ```bash
 conda run -n aiqec python -m scope_static.experiments.run_layer3_canonical_acceptance \
   --config configs/scope_static/layer3_canonical_acceptance.yaml
 ```
 
-The PHYC2 runner keeps the historical schema name
-`PHYC2_sampled_observation_separability` for compatibility, but its primary
-contract is teacher self-distinguishment only. It does not emit learner grouped
-predictions. The Layer 3 learner-recovery artifact owns no-leakage grouped
-predictions, and Layer 3 quality consumes that artifact through `--prediction-dir`.
+The canonical resolver selects `phyc3c_distributional_gaussian_likelihood_head`
+only after Layer 2, Layer 3b, Layer 3c, and validation gates pass. It rejects
+Layer 2 teacher-self predictions, legacy Layer 2 grouped predictions, and the
+Layer 3a old visible-surface baseline as canonical learner evidence.
 
-The canonical resolver is deliberately small: it loads Layer 2 teacher-self,
-Layer 3a old-surface baseline, Layer 3b visible-repair, Layer 3c learner, and Layer 3c
-validation artifacts, then selects only
-`phyc3c_distributional_gaussian_likelihood_head` as canonical. It rejects Layer 2
-teacher-self predictions, legacy Layer 2 grouped predictions, and Layer 3a
-old-surface predictions as canonical learner evidence.
+## Function: Run Active Physical-Observability Audits
 
-Legacy evidence for the previous `separability_v2` allM 30q/depth30 stress
-contract (`balanced_min_instances_per_mechanism: 30`):
-
-```text
-PHYC2-balanced allM, 30 qubits, depth 30, 30 groups, 10k shots:
-  contract_passed: true
-  balanced_accuracy: 1.0000
-  min_class_recall: 1.0000
-  real_minus_within_branch_scrambled_balanced_accuracy: 0.8567
-  PHYC3_quantum_error_quality_contract_passed: true
-  PHYC3_mean_predicted_channel_distance: 0.000085
-  PHYC3_max_predicted_channel_distance: 0.003292
-```
-
-The local-observable teacher writes
-`self_distinguishability_preflight.json` and records
-`sampling.observation_slot_remap`. The slot remap is expected for this teacher:
-it assigns non-overlapping per-mechanism observation slots inside each circuit
-batch so local responses do not overwrite each other in `observations.npz`.
-Layer 3 learner recovery neutralizes the synthetic slot-geometry columns for
-slot-remapped records; branch flags, probe metadata, sampled response moments,
-and pair correlations remain learner-visible.
-Each Layer 3 learner report includes `slot_only_leakage_control`, which trains the same
-grouped classifier using only observation slots, original physical qubits, probe
-block ids, and slot/layout metadata. It must stay low; high slot-only accuracy
-means the remap/layout metadata are leaking mechanism identity.
-
-Layer 3 sampled quantum-error quality consumes no-leakage learner grouped
-predictions from `PHYC3_no_leakage_learner_recovery`. It asks whether
-predicted mechanism labels translate into close fold-trained quantum/readout
-error prototypes. Layer 3 must reject Layer 2 teacher-self predictions as learner
-evidence. For `separability_v2`, this is a mechanism-to-error translation
-diagnostic; it is not proof that the sampled observations themselves were
-generated by Born-rule circuit physics.
-
-Terminology for later Stage 2:
-
-```text
-PHYC1-full-circuit-cudaq:
-  required Stage 2E teacher generation gate
-
-PHYC2-separability_v2:
-  engineered separability stress teacher
-
-PHYC2-Born-local:
-  exact local Born-rule diagnostic, effective depth one
-
-PHYC2-full-circuit-cudaq:
-  teacher self-distinguishment for full-circuit CUDA-Q PHYC1
-
-PHYC3-full-circuit-cudaq:
-  no-leakage learner recovery and error-quality gate for full-circuit CUDA-Q
-```
-
-Stage 2 validated the physical mechanism catalog and the no-leakage visible
-recovery protocol. Stage 3 now removes direct mechanism-label supervision and
-tests whether SCOPE-Discovery can recover latent mechanism structure,
-assignments, and prototypes from the same learner-visible observation surface.
-
-The Born-local teacher records both `configured_circuit_depth` and
-`effective_circuit_depth`; its effective depth is intentionally `1`, so it
-remains a diagnostic rather than the full-circuit gate.
-
-S2E.1 learner test from existing PHYC2 data:
-
-```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_s2e1_born_local_learner_test \
-  --teacher-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_born_local/S2D_PHYS1_teacher \
-  --phyc2-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_born_local/PHYC2_balanced_sampled_observation_separability \
-  --output-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_born_local/S2E1_born_local_learner_test \
-  --contract balanced
-```
-
-This task reuses the existing PHYC2 `metrics.json`; it does not regenerate the
-teacher or rerun PHYC2. It fails by design if the source teacher is still
-`separability_v2`, if pair-correlation overlays were used, or if the full
-S2E.1 Born-local mechanism scope is not present.
-
-PHYC2-weighted teacher self-distinguishment plus PHYC3 no-leakage learner
-recovery for uneven schedule-like support:
-
-```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_local_observable_gpu_teacher \
-  --config configs/scope_static/s2d11_allM_30q_depth30_weighted.yaml \
-  --output-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/S2D_PHYS1_teacher
-
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_phyc2_sampled_observation_separability \
-  --contract weighted \
-  --teacher-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/S2D_PHYS1_teacher \
-  --output-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/PHYC2_weighted_slot_only_control
-
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_phyc3_no_leakage_learner_recovery \
-  --contract weighted \
-  --teacher-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/S2D_PHYS1_teacher \
-  --output-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/PHYC3_no_leakage_learner_recovery
-
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_phyc3_sampled_quantum_error_quality \
-  --teacher-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/S2D_PHYS1_teacher \
-  --prediction-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/PHYC3_no_leakage_learner_recovery \
-  --output-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/PHYC3_quantum_error_quality
-```
-
-Current legacy `separability_v2` evidence for
-`configs/scope_static/s2d11_allM_30q_depth30_weighted.yaml` should be cited
-with the PHYC2/PHYC3 distinction above:
-
-```text
-PHYC2-weighted allM, 30 qubits, depth 30, uneven support 2-8, 10k shots:
-  contract_passed: true
-  balanced_accuracy: 1.0000
-  min_class_recall: 1.0000
-  prevalence_weighted_accuracy: 1.0000
-  rare_class_recall_min: 1.0000
-  real_minus_within_branch_scrambled_balanced_accuracy: 0.8779
-  slot_only_leakage_control_balanced_accuracy: 0.0313
-  slot_only_leakage_suspected: false
-  PHYC3_quantum_error_quality_contract_passed: true
-  PHYC3_mean_predicted_channel_distance: 0.000026
-  PHYC3_max_predicted_channel_distance: 0.001364
-  PHYC3_incompatible_predictions: 0
-```
-
-Before citing any older artifact as PHYC3 no-leakage learner evidence, confirm
-that its `prediction_source_audit.source_name` is
-`phyc3_no_leakage_learner_recovery`, not a PHYC2 teacher-self source.
-
-No-remap weighted ablation:
-
-```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_local_observable_gpu_teacher \
-  --config configs/scope_static/s2d11_allM_30q_depth30_weighted.yaml \
-  --disable-slot-remap \
-  --output-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_no_slot_remap/S2D_PHYS1_teacher
-
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_phyc2_sampled_observation_separability \
-  --contract weighted \
-  --teacher-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_no_slot_remap/S2D_PHYS1_teacher \
-  --output-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_no_slot_remap/PHYC2_weighted_no_slot_remap_ablation
-```
-
-Expected diagnostic relation:
-
-```text
-PHYC2.no_slot_remap_ablation weighted BA: 0.9708
-PHYC2.weighted slot-remap weighted BA:     1.0000
-```
-
-74-qubit depth-200 weighted allM scalability smoke:
-
-```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_local_observable_gpu_teacher \
-  --config configs/scope_static/s2d11_allM_74q_depth200_weighted.yaml \
-  --output-dir outputs/scope_static/local_observable_gpu_allM_74q_depth200_weighted_v2_slot_remap/S2D_PHYS1_teacher
-
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_phyc2_sampled_observation_separability \
-  --contract weighted \
-  --teacher-dir outputs/scope_static/local_observable_gpu_allM_74q_depth200_weighted_v2_slot_remap/S2D_PHYS1_teacher \
-  --output-dir outputs/scope_static/local_observable_gpu_allM_74q_depth200_weighted_v2_slot_remap/PHYC2_weighted_slot_only_control
-
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_phyc3_no_leakage_learner_recovery \
-  --contract weighted \
-  --teacher-dir outputs/scope_static/local_observable_gpu_allM_74q_depth200_weighted_v2_slot_remap/S2D_PHYS1_teacher \
-  --output-dir outputs/scope_static/local_observable_gpu_allM_74q_depth200_weighted_v2_slot_remap/PHYC3_no_leakage_learner_recovery
-
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_phyc3_sampled_quantum_error_quality \
-  --teacher-dir outputs/scope_static/local_observable_gpu_allM_74q_depth200_weighted_v2_slot_remap/S2D_PHYS1_teacher \
-  --prediction-dir outputs/scope_static/local_observable_gpu_allM_74q_depth200_weighted_v2_slot_remap/PHYC3_no_leakage_learner_recovery \
-  --output-dir outputs/scope_static/local_observable_gpu_allM_74q_depth200_weighted_v2_slot_remap/PHYC3_quantum_error_quality
-```
-
-Current evidence:
-
-```text
-PHYC2-weighted allM, 74 qubits, depth 200, uneven support 2-8, 10k shots:
-  contract_passed: true
-  balanced_accuracy: 1.0000
-  min_class_recall: 1.0000
-  prevalence_weighted_accuracy: 1.0000
-  rare_class_recall_min: 1.0000
-  slot_only_leakage_control_balanced_accuracy: 0.0479
-  slot_only_leakage_suspected: false
-  teacher_total_requested_bits: 1,704,960,000
-  teacher_total_seconds: 4.0741
-  artifact_size: 1.7G
-  PHYC3_quantum_error_quality_contract_passed: true
-  PHYC3_mean_predicted_channel_distance: 0.000026
-  PHYC3_max_predicted_channel_distance: 0.001364
-```
-
-For weighted local-observable teachers, add `mechanism_instance_counts` to the
-S2D physical config. Unspecified enabled mechanisms use
-`balanced_min_instances_per_mechanism`; explicit `0` omits a mechanism from the
-teacher artifact.
-
-## S2D Active Observability And Typed Learners
-
-S2D.9 local Pauli-Lindblad observability:
+Local Pauli-Lindblad observability:
 
 ```bash
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_s2d9_local_pauli_lindblad_observability \
   --config configs/scope_static/s2d9_local_pauli_lindblad_observability.yaml
 ```
 
-S2D.10b generator invariant calibration:
+Generator invariant calibration:
 
 ```bash
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_s2d10b_generator_invariant_calibration \
   --config configs/scope_static/s2d10b_generator_invariant_calibration.yaml
 ```
 
-S2D.11 typed gate/readout/prep invariant learner:
+Typed gate/readout/prep invariant learner:
 
 ```bash
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_s2d11_typed_spam_gate_invariant_learner \
   --config configs/scope_static/s2d11_typed_spam_gate_invariant_learner.yaml
 ```
 
-S2D.11b M1 gate-branch grouped calibration audit:
+Calibration-only audit:
 
 ```bash
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_s2d11b_m1_gate_branch_grouped_calibration_audit \
   --config configs/scope_static/s2d11b_m1_gate_branch_grouped_calibration_audit.yaml
 ```
 
-S2D.11b consumes the existing S2D.11 artifact tree and performs no new teacher
-sampling.
+These functions support probe-design and observability analysis. They are not a
+replacement for canonical Layer 3 acceptance.
 
-## Output Hygiene
+## Output Discipline
 
-Each serious run should produce:
-
-- config or run manifest.
-- metrics JSON.
-- compact summary markdown.
-- leakage or claim-boundary audit when hidden labels or oracle features exist.
-- graph/window/compression audits for DEM likelihood runs.
-- grouped-fold and scrambled-control audits for S2D typed learner runs.
-
-Do not promote a result by terminal output alone. The artifact tree is the
-evidence object.
+Promote artifact files, not terminal output. Serious runs should write metrics
+JSON, compact summaries, config manifests, leakage or label-use audits, and
+the relevant graph/window/probe/prototype audits.

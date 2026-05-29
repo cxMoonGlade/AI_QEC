@@ -7,7 +7,8 @@ stage-specific docs:
 - `docs/SCOPE_STATIC_DISC.md`: Stage 2 static discovery plan.
 - `docs/ARCHITECTURE.md`: current code architecture and module map.
 - `docs/RUNBOOK.md`: install, test, GPU, and experiment commands.
-- `docs/STAGE2_ROADMAP.md`: compact Stage 2 execution state.
+- `docs/STAGE2_ROADMAP.md`: closed Stage 2 validation record.
+- `docs/STAGE3_ROADMAP.md`: active Stage 3 mechanism-structure discovery plan.
 - `docs/error_mechanisms.md`: physical-error mechanism taxonomy and adoption map.
 - `docs/SCOPE_TWIN.md`: full SCOPE-Twin notation and future object contract.
 - `docs/adr/`: durable architecture and milestone-gating decisions.

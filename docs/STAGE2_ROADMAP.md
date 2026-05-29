@@ -1,9 +1,13 @@
-# Stage 2 Roadmap: SCOPE-Static Discovery
+# Stage 2 Roadmap: Closed Record
 
-This roadmap is the compact execution view for Stage 2. The detailed contract
-and historical run notes live in `docs/SCOPE_STATIC_DISC.md`.
+Stage 2 is closed as the validation stage for the physical mechanism catalog
+and the no-leakage visible recovery protocol.
 
-Stage 2 keeps the Stage 1 fixed DEM/Bernoulli likelihood:
+Closure date: 2026-05-29.
+
+## Scope
+
+Stage 2 kept the Stage 1 fixed DEM/Bernoulli object:
 
 ```text
 e_j ~ Bernoulli(p_j)
@@ -11,387 +15,81 @@ y = A e mod 2
 lambda_j = logit(p_j)
 ```
 
-Here `A in F_2^{B x M}` is the DEM parity map, `e in {0,1}^M` is the
-latent effective-fault vector for one shot, and `y in {0,1}^B` is the observed
-detector/logical bit vector. `M` is the number of effective DEM fault
-mechanisms after duplicate-mask canonicalization; `B` is the number of
-observation bits.
+It then added synthetic discovery, physical-oracle teacher generation, teacher
+self-distinguishment, and no-leakage visible learner validation.
 
-Use `A` only for the DEM parity map, `omega(j)` for hidden oracle labels, and
-`S` or `Pi` for learned discovery assignments.
-
-## Claim Boundary
-
-Stage 2 can claim synthetic oracle recovery only when evaluator-visible labels
-exist and ARI/NMI are reported without using those labels for training,
-initialization, selection, or checkpointing.
-
-Stage 2 must not claim true physical-mechanism recovery on Google data. Google
-work is external predictive validation unless an explicit proxy partition is
-defined and labelled as proxy-only.
-
-The project-level target remains the six-axis physical generation problem:
-generation fidelity, interpretability, decoder utility, cross-context
-generalization, drift prediction, and identifiability. Stage 2 mainly builds the
-identifiability and early interpretability evidence needed before that full
-physical generation claim can be made.
-
-## Tracks
-
-### Stage 2A: Static DEM Quotient Recovery
-
-Question:
-
-```text
-Can observations recover hidden DEM-fault sharing structure omega(j)?
-```
-
-Status:
-
-- Stage 2A.0 free assignment: likelihood can improve without reliable quotient
-  recovery.
-- DISC10/DISC13/DISC13b: hidden quotient is valid in teacher parameter space,
-  but passive observation likelihood does not isolate it cleanly.
-- Stage 2A.1/2A.2 remain useful diagnostics for optimization and
-  identifiability-aware probe design.
-
-Keep reporting `delta_nll_known_orbit`, ARI/NMI, active prototypes, collapse
-flags, and evaluator-only label-use audits.
-
-### Stage 2C: Local Inverse Representation Discovery
-
-Question:
-
-```text
-Can fitted local inverse logits/probabilities be denoised, factorized, and
-clustered better than direct S/alpha assignment learning?
-```
-
-Status:
-
-- DISC15 promoted local inverse representations to a first-class route.
-- DISC15c/16a show the predeclared `local_logit_probability` representation can
-  reach strong recovery in the controlled synthetic setting.
-- DISC16b freezes the claim as robustly near-strong, with failures dominated by
-  split/merge near misses rather than collapse.
-
-Next use Stage 2C as the default synthetic mechanism-discovery baseline:
-
-```text
-physical observations
--> local inverse probability / PTM-like response representation
--> clustering
--> ARI/NMI against oracle labels
-```
-
-### S2D_PHYS: Physical-Oracle Non-Stim Teacher
-
-Question:
-
-```text
-Can the Stage 2C local-inverse-first route recover known oracle physical
-mechanisms when data comes from a non-Stim physical-channel teacher?
-```
-
-Default backend:
-
-```text
-cudaq
-cuda-quantum
-target=nvidia option=fp32
-```
-
-CPU fallback is disabled for default S2D runs. Treat a missing GPU as an
-environment visibility problem to diagnose, not as evidence for a CPU-first
-experiment design.
-
-Implemented gate order:
-
-```text
-S2D_PHYS0_preflight
-S2D_PHYS1_teacher
-S2D_PHYS2_oracle_separability
-S2D_PHYS3_local_inverse
-```
-
-The preferred orchestration layer is the Physical Oracle Stack facade:
-
-```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_physical_oracle_stack \
-  --config configs/scope_static/d3_r1_S2D_PHYS_cudaq.yaml \
-  --run-local-inverse auto
-```
-
-The facade preserves the existing PHYS1/PHYS2/PHYS3 artifact folders and adds
-`physical_oracle_stack.json` plus `physical_oracle_stack.md`.
-
-Artifacts:
-
-```text
-outputs/scope_static/S2D_PHYS0_preflight/backend_audit.{json,md}
-outputs/scope_static/S2D_PHYS1_teacher/
-outputs/scope_static/S2D_PHYS2_oracle_separability/
-outputs/scope_static/S2D_PHYS3_local_inverse/
-```
-
-Current default teacher mechanisms are defined in
-`src/scope_static/physical/mechanism_catalog.py` and documented in
-`docs/error_mechanisms.md`. The renumbered implemented catalog has 35 distinct
-mechanisms:
-
-```text
-set_A: M0-M9
-set_B: M0-M14
-set_C: M0-M24
-set_D: M0-M34
-allM:  M0-M34
-```
-
-Decision rule:
-
-```text
-S2D_PHYS2 ARI/NMI >= 0.90:
-  default teacher is identifying; continue to S2D_PHYS3 local inverse discovery
-
-0.70 <= ARI/NMI < 0.90:
-  continue, but label the teacher/probe set as limited
-
-ARI/NMI < 0.70:
-  redesign probes before learner tests
-```
-
-Keep detailed S2D physical-oracle run notes in `docs/SCOPE_STATIC_DISC.md`; this
-roadmap should stay as a compact orientation page.
-
-Current PHYC2-balanced local-observable teacher result:
-
-```text
-outputs/scope_static/local_observable_gpu_allM_30q_depth30_30groups_v2_slot_remap/
-
-allM, 30 qubits, depth 30, 30 groups, 10k shots:
-  contract_passed true
-  balanced_accuracy 1.0000
-  min_class_recall 1.0000
-  scrambled-control BA gap 0.8567
-  PHYC3 contract_passed true
-  PHYC3 mean predicted channel/readout distance 0.000085
-  PHYC3 max predicted channel/readout distance 0.003292
-```
-
-This result uses `local_observable_response_model: separability_v2` and the
-local-observable observation-slot remap. Synthetic slot geometry is neutralized
-in PHYC2 features; branch flags and sampled response/correlation features remain
-visible. Slot-only leakage control BA is `0.0000`.
-
-Current PHYC2-weighted local-observable teacher result:
-
-```text
-outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/
-
-allM, 30 qubits, depth 30, uneven support 2-8, 10k shots:
-  contract_passed true
-  balanced_accuracy 1.0000
-  min_class_recall 1.0000
-  prevalence_weighted_accuracy 1.0000
-  rare_class_recall_min 1.0000
-  scrambled-control BA gap 0.8779
-  slot-only leakage control BA 0.0313
-  no-remap ablation weighted BA 0.9708
-```
-
-Current PHYC3 quantum-error-quality diagnostic:
-
-```text
-outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/PHYC3_quantum_error_quality/
-
-allM, 30 qubits, depth 30, uneven support 2-8, 10k shots:
-  contract_passed true
-  mechanism balanced_accuracy 1.0000
-  mechanism min_class_recall 1.0000
-  mean predicted channel/readout distance 0.000026
-  max predicted channel/readout distance 0.001364
-  incompatible predictions 0
-```
-
-Layer 3 learner recovery owns no-leakage grouped sampled-observation predictions.
-Layer 3 quantum-error quality consumes those Layer 3 learner predictions, builds
-fold-trained mechanism channel/readout prototypes from training groups, and
-compares predicted prototypes to evaluator-only oracle mechanism channels. It
-must not consume Layer 2 teacher-self predictions as learner evidence. For the `separability_v2`
-teacher this is a mechanism-to-error translation diagnostic, not evidence that
-the sampled observations came from Born-rule circuit physics.
-
-Canonical Layer 3 acceptance now resolves the learner source explicitly:
-
-```text
-Layer 2 / PHYC2_teacher_self_only_v4:
-  teacher/catalog self-distinguishability only
-Layer 3a / PHYC3a_old_surface_no_leakage_learner_recovery:
-  old visible-surface failing baseline
-Layer 3b / PHYC3b_ZX_visible_alias_breaking_probe_suite:
-  Z/X-only visible-surface repair and deterministic ceiling audit
-Layer 3c / PHYC3c_distributional_gaussian_likelihood_head:
-  accepted multi-context distributional learner head
-Layer 3 canonical / PHYC3_canonical_quality_acceptance:
-  final resolver that consumes PHYC3c predictions only
-```
+## Closed Outcome
 
 Stage 2 validated the physical mechanism catalog and the no-leakage visible
 recovery protocol. Stage 3 now removes direct mechanism-label supervision and
 tests whether SCOPE-Discovery can recover latent mechanism structure,
 assignments, and prototypes from the same learner-visible observation surface.
 
-Current PHYC2-weighted scalability smoke:
+## What Stage 2 Proved
+
+- The implemented physical catalog uses stable `M0-M34` mechanism IDs.
+- The public physical stack is Layer 1/2/3:
+
+  ```text
+  Layer 1: Data Preparation (Prep)
+  Layer 2: Teacher Self-Distinguishment (Teacher)
+  Layer 3: Learner Classification and Noise Generation (Learner)
+  ```
+
+- Layer 2 teacher self-distinguishment can verify catalog separability.
+- Layer 3b repaired the learner-visible surface with a strict Z/X-only probe
+  suite.
+- Layer 3c established an accepted multi-context learner head on that visible
+  surface.
+- Canonical Layer 3 quality consumes PHYC3c predictions only.
+- Layer 3 quality reports classification, incompatible predictions,
+  channel/readout prototype distance, NLL, CE, and MAE.
+
+## What Stage 2 Did Not Claim
+
+- Unsupervised latent mechanism-structure discovery.
+- Real-hardware ground-truth mechanism recovery.
+- Complete SCOPE-Twin physical generation.
+- Completed decoder utility, cross-context generalization, or drift prediction
+  axes.
+
+Those are Stage 3 or later claims.
+
+## Frozen Stage 2 Evidence Paths
+
+Primary public evidence:
 
 ```text
-outputs/scope_static/local_observable_gpu_allM_74q_depth200_weighted_v2_slot_remap/
-
-allM, 74 qubits, depth 200, uneven support 2-8, 10k shots:
-  contract_passed true
-  balanced_accuracy 1.0000
-  min_class_recall 1.0000
-  prevalence_weighted_accuracy 1.0000
-  rare_class_recall_min 1.0000
-  slot-only leakage control BA 0.0479
-  teacher total wall-clock 4.0741s
-  artifact size 1.7G
+outputs/scope_static/PHYC3_canonical_quality_acceptance/
 ```
 
-The same PHYC3 audit also passes on the 74-qubit/depth-200 weighted artifact
-with the same mechanism and channel-distance metrics.
-
-Current S2D_PHYS3 default result:
+Canonical source:
 
 ```text
-physical_local_inverse_probability:
-  ARI 1.0000
-  NMI 1.0000
-  label physical_oracle_strong_recovery
-
-direct S/alpha:
-  ARI 0.6887
-  NMI 0.8865
+phyc3c_distributional_gaussian_likelihood_head
 ```
 
-### Stage 2D: Active Local-Logit Observability
-
-Question:
+Current public layer docs:
 
 ```text
-Which probe contexts improve recoverability of local inverse logits?
+docs/PRE_RELEASE_LAYERS.md
+docs/TOOLBOX.md
+docs/SCOPE_STATIC_DISC.md
 ```
 
-Use Stage 2D for active probe design after the S2D_PHYS default teacher is
-separable. Keep it distinct from S2D_PHYS: Stage 2D designs probes, while
-S2D_PHYS tests oracle physical mechanism recovery.
+## Stage 2 Artifact Rules
 
-Current implementation state:
+Layer 2 artifacts are teacher/catalog self-distinguishability evidence only.
+They must not be cited as learner predictions.
 
-```text
-S2D.7:  static mixed-basis final-shot moments were negative.
-S2D.8a: depth sweep was control-matched negative.
-S2D.8b: echo/no-echo was control-limited.
-S2D.8c: saved-feature ceiling failed on balanced setB/setC.
-S2D.8d: minimal deterministic interventions matched scrambled controls.
-S2D.9:  local Pauli-Lindblad generator coordinates are algebraically observable.
-S2D.10: generator-space calibration exposed nuisance geometry.
-S2D.10b: scalar generator invariants made setB/setC grouped recovery pass.
-S2D.11: typed gate/readout/prep learner was close on set_D but failed M8 recall.
-S2D.11b: M8 gate-branch calibration converted set_D into a pass; artifact names still say `M1`.
-```
+Layer 3 artifacts are no-leakage learner evidence only when their provenance
+shows a Layer 3 learner source. Canonical Layer 3 rejects teacher-self
+predictions and old-surface baseline predictions as canonical sources.
 
-Primary typed learner command:
+Evaluator-only labels, exact channels, PTMs, teacher self embeddings, and
+mechanism IDs may be used for audits. They must not enter learner inputs.
 
-```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_s2d11_typed_spam_gate_invariant_learner \
-  --config configs/scope_static/s2d11_typed_spam_gate_invariant_learner.yaml
-```
+## Handoff To Stage 3
 
-Calibration-only S2D.11b command:
-
-```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_s2d11b_m1_gate_branch_grouped_calibration_audit \
-  --config configs/scope_static/s2d11b_m1_gate_branch_grouped_calibration_audit.yaml
-```
-
-### Stage 2E: Born-Local Physical Baseline
-
-Question:
-
-```text
-Can sampled local observations be generated from exact local Born probabilities
-and still support mechanism classification plus high-quality quantum-error
-reconstruction?
-```
-
-Stage 2E now uses a literal full-circuit CUDA-Q PHYC1 teacher as the mainline:
-
-```text
-rho_probe -> full n-qubit ideal schedule of configured depth d
--> mechanism channels/readout -> sampled observations
-```
-
-Configured and effective circuit depth must be the same for this teacher.
-Entangling gates remain actual circuit operations. The implementation must not
-fall back to Born-local shortcuts, local-observable response templates,
-mechanism-code margins, slot leakage, or post-hoc overlays. CUDA-Q CPU fallback
-is refused when `require_gpu: true`.
-
-The intended distinction is:
-
-```text
-PHYC1:
-  teacher generation from the declared physical contract
-
-PHYC2:
-  teacher self-distinguishment, requiring BA/min recall/ARI/NMI = 1.0
-
-PHYC3:
-  no-leakage learner recovery plus quantum/readout error quality
-
-separability_v2:
-  engineered sampled-observation stress teacher
-
-Born-local:
-  mathematically correct local diagnostic, effective depth one
-
-full-circuit-cudaq:
-  required Stage 2E full-circuit gate
-```
-
-Stage 2 validated the physical mechanism catalog and the no-leakage visible
-recovery protocol. Stage 3 now removes direct mechanism-label supervision and
-tests whether SCOPE-Discovery can recover latent mechanism structure,
-assignments, and prototypes from the same learner-visible observation surface.
-Full-circuit CUDA-Q remains an important Layer 1 source for future larger-scale
-physical-teacher runs. The current mainline decision is recorded in
-`docs/adr/0005-stage2e-full-circuit-cudaq-mainline.md`.
-
-### Stage 2B: Google External Validation
-
-Question:
-
-```text
-Do discovered/local-inverse representations improve real-data predictive
-utility, calibration, transfer, or decoder-facing value?
-```
-
-Google data has no true hidden physical mechanism labels. Report predictive
-metrics and explicitly labelled proxy ARI/NMI only.
-
-## Immediate Next Steps
-
-1. Keep `aiqec` clean for full-circuit CUDA-Q S2D:
-
-   ```text
-   cuda-quantum installed
-   CUDA-Q target nvidia visible
-   no physical-teacher dependency on CUDA-QEC, Qiskit Aer, or TensorFlow
-   ```
-
-2. Keep PHYS0/PHYC1, PHYC2, and PHYC3 artifacts refreshed together when
-   changing the physical teacher or learner-visible representation.
-3. Use `docs/ARCHITECTURE.md` for module routing and `docs/RUNBOOK.md` for
-   command recipes.
-4. Use small and medium full-circuit CUDA-Q smoke artifacts before launching a
-   large allM 30q/depth30 run.
+Stage 3 starts from the Stage 2 visible observation surface and removes direct
+mechanism-label supervision. The active roadmap is `docs/STAGE3_ROADMAP.md`.

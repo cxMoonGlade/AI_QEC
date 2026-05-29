@@ -1,7 +1,8 @@
-# Code Architecture
+# Architecture
 
-This repository implements `scope_static`, a fixed-context QEC research package.
-The primary implemented object is still the DEM/Bernoulli model:
+`scope_static` is a fixed-context QEC research package. Its implemented core is
+the DEM/Bernoulli parity model, with synthetic discovery and physical-mechanism
+validation layers built around that core.
 
 ```text
 e_j ~ Bernoulli(p_j)
@@ -9,69 +10,75 @@ y = A e mod 2
 lambda_j = logit(p_j)
 ```
 
-Here `A in F_2^{B x M}` is the DEM parity map, `e in {0,1}^M` is the
-latent effective-fault vector for one shot, and `y in {0,1}^B` is the observed
-detector/logical bit vector. `M` is the number of effective DEM fault
-mechanisms after duplicate-mask canonicalization; `B` is the number of
-observation bits.
+`A in F_2^{B x M}` is the DEM parity map, `e in {0,1}^M` is the latent
+effective-fault vector, and `y in {0,1}^B` is the observed detector/logical bit
+vector.
 
-The physical-oracle S2D work is synthetic validation and observability tooling
-around local physical mechanisms. It is not a hardware CPTP/GST/GKSL learner.
+The architecture has four public surfaces:
 
-The project-level target is the six-axis physical generation problem: prove that
-a physically constrained generation model holds simultaneously in generation
-fidelity, interpretability, decoder utility, cross-context generalization, drift
-prediction, and identifiability. The current architecture contains partial
-static and synthetic-oracle slices toward that target, not the complete
-SCOPE-Twin solution.
+1. Stage 1 DEM fault-logit learning.
+2. Stage 2 static discovery and physical catalog validation.
+3. Layer 1/2/3 physical-mechanism probe, teacher, and learner diagnostics.
+4. Stage 3 latent mechanism-structure discovery on the same learner-visible
+   surface.
+
+Stage 2 validated the physical mechanism catalog and the no-leakage visible
+recovery protocol. Stage 3 now removes direct mechanism-label supervision and
+tests whether SCOPE-Discovery can recover latent mechanism structure,
+assignments, and prototypes from the same learner-visible observation surface.
 
 ## Package Map
 
 ```text
 src/scope_static/
-  fault_graph.py          canonical DEM fault graph and feature audits
-  stim_dem.py             Stim circuit/DEM construction helpers
-  parity_map.py           parity-map utilities
-  fields.py               local, hard-orbit, soft-orbit, and discovery logit fields
-  likelihood.py           exact global/window DEM likelihood and CUDA dispatch
-  likelihoods/            objective adapters such as local-window parity
-  windows.py              local-window builders and audits
-  training.py             generic field fitting loop
-  evidence.py             metrics, threshold summaries, compression audits
-  baselines.py            local, DMLE-style, hard-orbit, soft-orbit baselines
-  discovery.py            Stage 2 assignment metrics and known-orbit deltas
-  hardening.py            Stage 2A.1 assignment hardening helpers
-  identifiability/        DISC10 passive visible-signature clustering
-  multi_env.py            DISC12 shared-assignment multi-environment models
-  local_mechanism.py      Stage 2C local-inverse representation transforms
-  google_set1.py          Google Set1 read-only adapter
-  google_mechanism.py     Google proxy partitions and local-inverse audits
-  physical/               S2D physical teacher, PTM, observability, typed learners
-  physical_oracle/        legacy PHYS stack facade plus PHYC claim boundary
-  experiments/            runnable `python -m ...` entry points
-  cuda/                   C++/CUDA exact DEM/window kernels
+  fault_graph.py        DEM fault graph, duplicate-mask canonicalization
+  parity_map.py         parity-map utilities
+  stim_dem.py           Stim circuit and DEM helpers
+  fields.py             local, hard-orbit, soft-orbit, discovery fields
+  likelihood.py         exact global/window likelihood and CUDA dispatch
+  likelihoods/          likelihood adapters
+  windows.py            local-window builders and audits
+  training.py           generic fitting loop
+  evidence.py           metrics, compression, threshold summaries
+  baselines.py          local, DMLE-style, hard-orbit, soft-orbit baselines
+  discovery.py          Stage 2 assignment metrics and oracle deltas
+  hardening.py          Stage 2 assignment hardening helpers
+  identifiability/      passive visible-signature clustering
+  multi_env.py          shared-assignment multi-environment models
+  local_mechanism.py    local-inverse representation transforms
+  google_set1.py        Google Set1 read-only adapter
+  google_mechanism.py   Google proxy partitions and local-inverse audits
+  physical/             physical mechanism channels, probes, layers, learners
+  physical_oracle/      legacy PHYS stack facade
+  experiments/          runnable command entry points
+  cuda/                 C++/CUDA exact DEM/window kernels
 ```
 
-`configs/scope_static/*.yaml` holds reproducible experiment plans. Runners write
-artifacts under `outputs/scope_static/` or `outputs/google_static/`.
+`configs/scope_static/*.yaml` stores reproducible experiment plans. Runners
+write artifacts under `outputs/scope_static/` or `outputs/google_static/`.
 
-## Stage 1 Flow
+## Stage 1 DEM Core
 
 Stage 1 learns `lambda_j` over effective DEM fault columns.
 
 ```text
-Stim circuit or synthetic DEM
+Stim or synthetic DEM
 -> FaultGraph canonicalization
--> window plan / exact objective
--> FaultLogitField from fields.py
+-> window plan or exact objective
+-> FaultLogitField
 -> fit_field
--> evidence records, graph audits, window audits, compression audits
+-> evidence records
 ```
 
-The scalable interface is sparse fault support plus packed masks. Dense `A`
-exists for small tests and exact toy runs.
+Important contracts:
 
-The main model families are:
+- sparse fault supports are the scalable interface;
+- dense parity matrices are compatibility artifacts for small tests;
+- duplicate parity masks are canonicalized before learning;
+- compression claims require explicit parameter audits;
+- local-window likelihood evaluates exact parity likelihood on each window.
+
+Main model families:
 
 ```text
 local
@@ -80,140 +87,103 @@ hard_orbit
 soft_feature_orbit
 ```
 
-Local-window exact likelihood can use pure PyTorch or the C++/CUDA extension.
-The Google runner is GPU-first and uses prepared graph/window caches to avoid
-rebuilding expensive state across models, samples, and transfer evaluations.
+## Stage 2 Static Discovery
 
-## Stage 2 Static Flow
-
-Stage 2 keeps the same DEM parity likelihood but withholds the known orbit map
-from discovery learners.
+Stage 2 withholds the known orbit map and evaluates recovery with
+evaluator-only labels.
 
 ```text
 synthetic teacher with hidden omega(j)
 -> sampled observations y
--> discovery field S[j, k] or local-inverse representation
--> evaluator-only ARI/NMI against omega(j)
+-> learned assignment S[j, k] or Pi[j, k]
+-> evaluator-only ARI/NMI
 ```
 
-The important tracks are:
+Tracks:
 
 ```text
-Stage 2A: direct free-assignment recovery of hidden DEM quotient
-Stage 2C: local-inverse-first mechanism discovery
+Stage 2A: direct free-assignment DEM quotient recovery
+Stage 2C: local-inverse-first discovery
 Stage 2D: active local-logit observability and typed physical learners
-Stage 2E: full-circuit CUDA-Q physical-teacher gate
-Stage 2B: Google external predictive validation, no true ARI/NMI
+Stage 2E: physical catalog and visible recovery validation
+Stage 2B: Google external predictive validation
 ```
 
-Stage 2A established that direct `S`/`alpha` likelihood learning can be
-predictive without reliably recovering hidden `omega(j)`. Stage 2C moved the
-successful synthetic path to local inverse logits/probabilities, with recovery
-evaluated only after training.
+Stage 2 is now a closed validation record. Stage 3 owns the next unsupervised
+latent mechanism-structure claim.
 
-## S2D Physical-Oracle Flow
+## Physical Layer Stack
 
-The S2D branch uses synthetic physical teachers to test whether learner-visible
-probe data exposes local mechanism structure.
+The public layer names replace the old PHYC vocabulary in reports. Legacy
+artifact names remain compatible.
 
 ```text
 Layer 1: Data Preparation (Prep)
--> finite-shot probe observations
--> Layer 2: Teacher Self-Distinguishment (Teacher)
--> Layer 3: Learner Classification and Noise Generation (Learner)
-```
-
-Core implementation modules:
-
-```text
-physical/phyc1_contract.py               PHYC1 model, stage, probe, and depth contract
-physical/teacher.py                       teacher facade plus legacy mechanism-plan helpers
-physical/channels.py                      synthetic channel/mechanism definitions
-physical/ptm.py                           oracle PTM and RZZ-type fingerprints
-physical/local_inverse.py                 PHYS3 local-inverse discovery
-physical/local_pauli_lindblad.py          S2D.9 local generator coordinates
-physical/generator_space_calibration.py   S2D.10 nuisance geometry audit
-physical/generator_invariant_calibration.py S2D.10b scalar invariants
-physical/typed_spam_gate_invariant.py     S2D.11 typed gate/readout/prep learner
-physical/m1_gate_calibration.py           S2D.11b M1 grouped calibration audit
-physical/local_observable_teacher.py      Torch CUDA local-observable sampled teacher
-physical/full_circuit_cudaq_teacher.py    Stage 2E literal full-circuit CUDA-Q teacher
-physical/layers.py                        public Layer 1/2/3 naming contract
-physical/sampled_observation_separability.py Layer 2 teacher self-distinguishment
-physical/phyc3_no_leakage_learner_recovery.py Layer 3 no-leakage learner grouped predictions
-physical/phyc3b_zx_visible_probe_suite.py Layer 3b Z/X-only visible-observability repair
-physical/phyc3c_gaussian_likelihood.py    Layer 3c distributional Gaussian learner head
-physical/phyc3c_validation.py             Layer 3c robustness, non-leakage, protocol audit
-physical/sampled_quantum_error_quality.py Layer 3 learner error-quality audit
-physical/phyc3_canonical_acceptance.py    Layer 3 canonical resolver selecting PHYC3c predictions
-physical_oracle/stack.py                  legacy PHYS facade plus PHYC claim boundary
-```
-
-S2D.9 made local Pauli-Lindblad generator coordinates observable. S2D.10b
-showed scalar invariants expose the coherent-vs-stochastic and RZZ-axis signal.
-S2D.11 splits rows into visible typed branches:
-
-```text
-measure -> readout_branch
-reset   -> prep_reset_branch
-other   -> gate_process_branch
-```
-
-S2D.11b then reuses the S2D.11 artifacts and changes only gate-branch M1
-calibration, converting the set_D typed learner into a pass.
-
-## Layer 1/Layer 2/Layer 3 Physical Flow
-
-The public pre-release vocabulary has three separate layers. `PHYC1/PHYC2/PHYC3`
-remain legacy artifact aliases:
-
-```text
-Layer 1: Data Preparation (Prep)
-  Can the declared teacher generate sampled observations from its physical
-  contract?
+  legacy alias: PHYC1
 
 Layer 2: Teacher Self-Distinguishment (Teacher)
-  Can that teacher self-distinguish every generated mechanism from
-  teacher-internal mechanism evidence?
+  legacy alias: PHYC2
 
 Layer 3: Learner Classification and Noise Generation (Learner)
-  Can a no-leakage learner recover those mechanisms from learner-visible
-  sampled observations, and can the recovered labels generate close visible
-  noise/error distributions?
+  legacy alias: PHYC3
 ```
 
-Layer 2 is a teacher-identifiability gate, not a learner-success claim. Layer 3
-learner recovery owns sampled-observation grouped predictions; Layer 3 quality
-audits consume that Layer 3 learner artifact and must not consume Layer 2
-teacher-self predictions as evidence.
-
-The local-observable Torch CUDA path is a scalable sampled-observation teacher,
-not a full-circuit simulator:
+Layer flow:
 
 ```text
-mechanism records + probe metadata
--> local response probabilities
--> Torch CUDA Bernoulli samples
--> Layer 2 teacher self-distinguishment
--> sampled-observation learner diagnostic
--> Layer 3 no-leakage mechanism-to-error prototype quality
+mechanism catalog
+-> Layer 1 probe schedule and sampled observations
+-> Layer 2 teacher/catalog self-distinguishability
+-> Layer 3 no-leakage learner recovery
+-> Layer 3 generated-noise quality
 ```
 
-`PHYC2-separability_v2` is an engineered separability stress teacher. It uses
-branch-specific local response profiles, GPU-side pair-correlation overlays,
-and slot remapping to avoid local-response overwrite in the PHYS1-compatible
-`observations.npz` tensor. PHYC2 neutralizes synthetic slot geometry and runs a
-slot-only leakage control to ensure slot/layout metadata alone do not classify
-mechanisms in the learner diagnostic.
+Layer 2 may use teacher-internal mechanism evidence because its role is teacher
+self-distinguishability. Layer 3 may consume only learner-visible probe
+observations and declared visible metadata.
 
-Layer 3 consumes no-leakage learner grouped predictions. For each held-out
-circuit group it builds fold-trained channel/readout prototypes from training
-groups, maps each predicted mechanism label to its prototype, and compares that
-vector to the evaluator-only oracle channel/readout matrix. This validates
-mechanism-to-error translation quality for the synthetic teacher; it does not
-directly reconstruct a continuous channel from raw shots.
+## Physical Modules
 
-The canonical PHYC3 path is split deliberately:
+Core physical modules:
+
+```text
+physical/mechanism_catalog.py             M0-M34 mechanism records
+physical/channels.py                      synthetic channel/readout objects
+physical/ptm.py                           PTM and fingerprint utilities
+physical/phyc1_contract.py                Layer 1 contract structures
+physical/teacher.py                       teacher facade and mechanism plans
+physical/full_circuit_cudaq_teacher.py    full-circuit CUDA-Q teacher
+physical/local_observable_teacher.py      scalable local-observable teacher
+physical/layers.py                        public Layer 1/2/3 metadata
+```
+
+Layer 2 and Layer 3 modules:
+
+```text
+physical/sampled_observation_separability.py     Layer 2 teacher audit
+physical/phyc3_no_leakage_learner_recovery.py    Layer 3a old-surface learner
+physical/phyc3b_zx_visible_probe_suite.py        Layer 3b Z/X visible repair
+physical/phyc3c_gaussian_likelihood.py           Layer 3c Gaussian head
+physical/phyc3c_validation.py                    Layer 3c validation audits
+physical/sampled_quantum_error_quality.py        Layer 3 quality metrics
+physical/phyc3_canonical_acceptance.py           canonical Layer 3 resolver
+```
+
+Observability and typed-learner modules:
+
+```text
+physical/local_pauli_lindblad.py
+physical/generator_space_calibration.py
+physical/generator_invariant_calibration.py
+physical/typed_spam_gate_invariant.py
+physical/m1_gate_calibration.py
+physical/local_inverse.py
+physical_oracle/stack.py
+```
+
+## Layer 3 Canonical Path
+
+The canonical Layer 3 path is deliberately decomposed:
 
 ```text
 PHYC2_teacher_self_only_v4
@@ -224,82 +194,84 @@ PHYC3_canonical_quality_acceptance
 ```
 
 `PHYC3_canonical_quality_acceptance` is the legacy artifact name for the Layer 3
-canonical resolver and acceptance artifact. It
-does not train a new learner; it accepts PHYC3c multi-context predictions as
-the canonical learner source only after Layer 2, Layer 3b, Layer 3c, and
-Layer 3c validation gates pass. It rejects Layer 2 teacher-self predictions,
-legacy Layer 2 grouped predictions, and the PHYC3a old-surface baseline as canonical learner
-evidence.
+canonical resolver. It does not train a new learner. It accepts PHYC3c
+multi-context predictions only after Layer 2, Layer 3b, Layer 3c, and protocol
+validation pass.
 
-Stage 2 validated the physical mechanism catalog and the no-leakage visible
-recovery protocol. Stage 3 now removes direct mechanism-label supervision and
-tests whether SCOPE-Discovery can recover latent mechanism structure,
-assignments, and prototypes from the same learner-visible observation surface.
+The resolver rejects:
 
-Stage 2E is the current physical-baseline gate:
+- Layer 2 teacher-self predictions;
+- legacy Layer 2 grouped predictions;
+- Layer 3a old-surface baseline predictions as the canonical source.
 
-```text
-PHYC1-full-circuit:
-  rho_probe -> full n-qubit ideal schedule of configured depth d
-  -> mechanism channels/readout -> sampled observations
-```
+Accepted Layer 3 quality reports include classification metrics, incompatible
+prediction counts, channel/readout prototype distances, visible Gaussian NLL,
+population cross entropy, and visible-feature MAE.
 
-The full-circuit teacher must not fall back to Born-local shortcuts,
-local-observable response templates, mechanism-code margins, slot leakage, or
-post-hoc overlays. Full-circuit CUDA-Q remains an important Layer 1 source for
-future larger-scale physical-teacher runs, while Stage 3 now removes direct
-mechanism-label supervision on the same learner-visible observation surface. See
-`docs/adr/0005-stage2e-full-circuit-cudaq-mainline.md` for the mainline
-decision.
+## Stage 3 Discovery Surface
 
-## Physical Oracle Stack Facade
+Stage 3 should use the same learner-visible Z/X observation surface validated
+by Layer 3b/3c, but remove direct mechanism-label supervision.
 
-`scope_static.physical_oracle.run_physical_oracle_stack` centralizes the legacy
-PHYS1/PHYS2/PHYS3 ordering while preserving existing stage artifacts. New
-physical-teacher claims should use Layer 1/2/3 public names:
+Allowed learner-visible inputs:
 
-```text
-Layer 1 data preparation
-Layer 2 teacher self-distinguishment
-Layer 3 learner classification and noise generation
-```
+- probe preparation label;
+- measurement basis label;
+- repeat count;
+- qubit count;
+- empirical probabilities and expectations;
+- shot count;
+- finite-shot uncertainty estimates;
+- derived features computed only from sampled observations.
 
-It writes:
+Forbidden learner inputs:
 
-```text
-physical_oracle_stack.json
-physical_oracle_stack.md
-S2D_PHYS1_teacher/
-S2D_PHYS2_oracle_separability/
-S2D_PHYS3_local_inverse/
-```
+- true mechanism ID;
+- physical-family label;
+- teacher self-distinguishment features;
+- exact channel, Kraus, or PTM matrices;
+- oracle prototype vectors;
+- hidden drift parameters or other identity-derived fields.
 
-The stack keeps verdicts separate:
+Evaluator-only labels may be used for ARI/NMI, quotient-class reports, and
+post-training audits.
 
-```text
-teacher_self_verdict       PHYC2-style teacher self-distinguishment
-learner_recovery_verdict   PHYC3-style learner-visible recovery
-overall_diagnosis          probe_limited / learner_limited / near_strong / strong_recovery
-```
+## Google Adapter
 
-With `run_local_inverse: auto`, PHYS3 is skipped if PHYS2 is below the configured
-self-distinguishability threshold. That legacy skip rule is an oracle-ceiling
-guardrail, not a replacement for PHYC3 no-leakage learner evidence.
+The Google Set1 path is read-only external validation. It supports predictive
+likelihood, calibration, transfer, and explicitly labelled proxy-partition
+diagnostics. It does not provide true physical-mechanism labels.
+
+## Artifact Contract
+
+Serious experiment artifacts should include:
+
+- run config or manifest;
+- metrics JSON;
+- compact summary markdown;
+- label-use or leakage audit when hidden labels or oracle features exist;
+- graph/window/compression audits for DEM runs;
+- probe/schema/protocol audits for physical-layer runs.
+
+Terminal output is not evidence by itself. The artifact tree is the evidence
+object.
 
 ## Claim Boundaries
 
-Valid implemented claims:
+Implemented claims:
 
-- fixed-context DEM/Bernoulli likelihood experiments.
-- known-orbit, discovery, and local-inverse comparisons inside that DEM family.
-- synthetic oracle ARI/NMI when hidden labels are evaluator-only.
-- S2D physical-oracle observability diagnostics when labelled synthetic.
+- fixed-context DEM/Bernoulli likelihood experiments;
+- known-orbit, discovery, and local-inverse comparisons inside that family;
+- synthetic oracle ARI/NMI when hidden labels are evaluator-only;
+- physical-mechanism catalog and visible-recovery validation on synthetic
+  teachers;
 - Google predictive validation with proxy labels only when explicitly labelled.
 
-Invalid claims:
+Not claimed:
 
-- hardware CPTP/GST/GKSL learning.
-- learned full noisy-circuit Born-rule likelihood from hardware data.
-- real-hardware true latent mechanism recovery.
-- temporal drift or amortized SCOPE-Twin as implemented evidence.
-- complete six-axis physical generation evidence.
+- real-hardware ground-truth mechanism recovery;
+- hardware CPTP/GST/GKSL learning;
+- learned full noisy-circuit Born-rule likelihood from hardware data;
+- complete SCOPE-Twin physical generation;
+- decoder utility, cross-context generalization, or drift prediction as
+  completed axes.

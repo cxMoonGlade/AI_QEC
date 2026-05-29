@@ -103,6 +103,9 @@ recovery protocol. Stage 3 now removes direct mechanism-label supervision and
 tests whether SCOPE-Discovery can recover latent mechanism structure,
 assignments, and prototypes from the same learner-visible observation surface.
 
+See `docs/STAGE2_ROADMAP.md` for the closed Stage 2 record and
+`docs/STAGE3_ROADMAP.md` for the active discovery roadmap.
+
 ## Public Claim Boundary
 
 Valid pre-release claims:

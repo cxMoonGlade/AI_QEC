@@ -17,9 +17,10 @@ def toolbox_manifest() -> dict[str, object]:
         "status": "pre-release",
         "claim_boundary": (
             "Stage 2 validated the physical mechanism catalog and the no-leakage "
-            "visible recovery protocol. Stage 3 removes direct mechanism-label "
-            "supervision and tests SCOPE-Discovery on the same learner-visible "
-            "observation surface."
+            "visible recovery protocol. Stage 3 now removes direct mechanism-label "
+            "supervision and tests whether SCOPE-Discovery can recover latent "
+            "mechanism structure, assignments, and prototypes from the same "
+            "learner-visible observation surface."
         ),
         "layers": layer_stack_metadata(),
         "commands": [
@@ -84,4 +85,3 @@ def main(argv: list[str] | None = None) -> None:
 
 if __name__ == "__main__":
     main()
-
