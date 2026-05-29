@@ -5,14 +5,19 @@ This runbook lists supported functions and reproducible commands. Use
 
 ## Environment
 
-Install from the repo root:
+Use any Python `>=3.10` environment. From the repo root:
 
 ```bash
-conda run -n aiqec python -m pip install -e .
+python -m pip install -e .
 ```
 
 Do not use `PYTHONPATH="$PWD/src"` for normal runs. The editable install is the
 supported path.
+
+The commands below use this workstation's development environment name
+(`aiqec`) where GPU access matters. In another environment, replace
+`conda run -n aiqec python` with your active environment's `python`, and replace
+`conda run -n aiqec <command>` with `<command>` after activation.
 
 Check CUDA before serious training, likelihood, Google, or physical-oracle runs:
 

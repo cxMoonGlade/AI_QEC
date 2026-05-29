@@ -17,8 +17,10 @@ compatibility. Public-facing reports should use Layer 1/2/3 names.
 
 ## Install
 
+Use any Python `>=3.10` environment. From the repo root:
+
 ```bash
-conda run -n aiqec python -m pip install -e .
+python -m pip install -e .
 ```
 
 ## Quick Checks
@@ -26,26 +28,26 @@ conda run -n aiqec python -m pip install -e .
 Print the toolbox manifest:
 
 ```bash
-conda run -n aiqec scope-static-toolbox
+scope-static-toolbox
 ```
 
 Machine-readable manifest:
 
 ```bash
-conda run -n aiqec scope-static-toolbox --json
+scope-static-toolbox --json
 ```
 
 Run the current canonical Layer 3 acceptance artifact:
 
 ```bash
-conda run -n aiqec scope-layer3-canonical \
+scope-layer3-canonical \
   --config configs/scope_static/layer3_canonical_acceptance.yaml
 ```
 
 Equivalent module form:
 
 ```bash
-conda run -n aiqec python -m scope_static.experiments.run_layer3_canonical_acceptance \
+python -m scope_static.experiments.run_layer3_canonical_acceptance \
   --config configs/scope_static/layer3_canonical_acceptance.yaml
 ```
 

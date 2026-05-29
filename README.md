@@ -40,34 +40,44 @@ assignments, and prototypes from the same learner-visible observation surface.
 
 ## Install
 
-Python `>=3.10` is required. From the repository root:
+Python `>=3.10` is required. Use any environment manager you prefer. From the
+repository root:
 
 ```bash
-conda run -n aiqec python -m pip install -e .
+python -m pip install -e .
 ```
 
-Do not set `PYTHONPATH="$PWD/src"` for normal WSL/CUDA runs. Use the editable
-install.
+Optional isolated environment:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -e .
+```
+
+If you use Conda, create or activate your own environment first, then run the
+same `python -m pip install -e .` command. Do not set `PYTHONPATH="$PWD/src"`
+for normal runs; use the editable install.
 
 ## Brief Use
 
 Print the toolbox manifest:
 
 ```bash
-conda run -n aiqec scope-static-toolbox
+scope-static-toolbox
 ```
 
 Run the current canonical Layer 3 acceptance artifact:
 
 ```bash
-conda run -n aiqec scope-layer3-canonical \
+scope-layer3-canonical \
   --config configs/scope_static/layer3_canonical_acceptance.yaml
 ```
 
 Run tests:
 
 ```bash
-conda run -n aiqec python -m pytest -q
+python -m pytest -q
 ```
 
 Outputs are written under `outputs/scope_static/` and `outputs/google_static/`.
