@@ -6,6 +6,7 @@ from pathlib import Path
 
 import numpy as np
 
+from .layers import LAYER3_LEARNER
 from .phyc3b_zx_visible_probe_suite import build_zx_visible_feature_table
 from .phyc3c_gaussian_likelihood import (
     HEADS,
@@ -164,6 +165,7 @@ def run_phyc3c_validation_audit(
     result = {
         "schema": "scope_static_phyc3c_validation_v1",
         "stage": STAGE_NAME,
+        "public_layer": LAYER3_LEARNER.metadata(artifact_stage=STAGE_NAME, substage="distributional_head_validation"),
         "teacher_dir": str(teacher),
         "output_dir": str(output),
         "claim_boundary": {
@@ -541,8 +543,10 @@ def _write_outputs(output: Path, result: dict[str, object]) -> None:
 def format_phyc3c_validation_summary(result: dict[str, object]) -> str:
     return "\n".join(
         [
-            "# PHYC3c Robustness, Leakage, and Protocol Validation",
+            "# Layer 3c Validation: Robustness, Leakage, and Protocol",
             "",
+            f"- Layer: `{LAYER3_LEARNER.public_name}`",
+            f"- Legacy alias: `{LAYER3_LEARNER.legacy_alias}`",
             f"- Decision: `{result.get('decision')}`",
             f"- Robustness passed: `{str(bool(result.get('robustness_passed'))).lower()}`",
             f"- Non-leakage passed: `{str(bool(result.get('non_leakage_passed'))).lower()}`",
@@ -555,7 +559,7 @@ def format_phyc3c_validation_summary(result: dict[str, object]) -> str:
             "",
             "## Claim Boundary",
             "",
-            "PHYC3c validation does not add learner inputs. It reuses PHYC3b Z/X sampled-observation features, rejects single-realization M13 batches as invalid for distributional recovery claims, and checks that forbidden oracle fields are absent from feature names and schema.",
+            "Layer 3c validation does not add learner inputs. It reuses Layer 3b Z/X sampled-observation features, rejects single-realization M13 batches as invalid for distributional recovery claims, and checks that forbidden oracle fields are absent from feature names and schema.",
             "",
         ]
     )

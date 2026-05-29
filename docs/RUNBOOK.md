@@ -24,6 +24,12 @@ conda run -n aiqec python -c "import torch; print(torch.cuda.is_available(), tor
 If CUDA is unexpectedly unavailable, diagnose the environment. Do not treat that
 as evidence for CPU-first experiment design.
 
+Pre-release toolbox manifest:
+
+```bash
+conda run -n aiqec scope-static-toolbox
+```
+
 CUDA-Q target smoke test for sandbox-compatible GPU access:
 
 ```bash
@@ -209,24 +215,24 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run
 ```
 
 The stack writes `physical_oracle_stack.json`, `physical_oracle_stack.md`, and
-legacy PHYS1/PHYS2/PHYS3 stage folders under its output directory. New claims
-should use the PHYC vocabulary:
+legacy PHYS1/PHYS2/PHYS3 stage folders under its output directory. Public
+pre-release claims should use the Layer vocabulary:
 
 ```text
-PHYC1:
-  teacher generation from the declared physical contract
+Layer 1: Data Preparation (Prep)
+  legacy alias PHYC1; teacher generation from the declared physical contract
 
-PHYC2:
-  teacher self-distinguishment; a pass means the teacher itself can separate
-  every generated mechanism
+Layer 2: Teacher Self-Distinguishment (Teacher)
+  legacy alias PHYC2; a pass means the teacher itself can separate every
+  generated mechanism
 
-PHYC3:
-  no-leakage learner recovery plus quantum/readout error quality; it must
-  consume learner-visible grouped predictions, not PHYC2 teacher-self
-  predictions
+Layer 3: Learner Classification and Noise Generation (Learner)
+  legacy alias PHYC3; no-leakage learner recovery plus generated noise/error
+  quality; it must consume learner-visible grouped predictions, not Layer 2
+  teacher-self predictions
 ```
 
-Full-circuit CUDA-Q PHYC1 teacher for the 30-qubit depth-30 allM mainline:
+Full-circuit CUDA-Q Layer 1 teacher for the 30-qubit depth-30 allM mainline:
 
 ```bash
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_s2d_physical_teacher \
@@ -235,8 +241,8 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run
   --preflight-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/S2D_PHYS0_preflight
 ```
 
-PHYC2-balanced teacher self-distinguishment, followed by PHYC3 no-leakage
-learner recovery and PHYC3 quantum-error quality:
+Layer 2 balanced teacher self-distinguishment, followed by Layer 3 no-leakage
+learner recovery and Layer 3 quantum-error quality:
 
 ```bash
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_phyc2_sampled_observation_separability \
@@ -255,24 +261,24 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run
   --output-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/PHYC3_no_leakage_learner_quality
 ```
 
-Canonical PHYC3 acceptance resolver:
+Canonical Layer 3 acceptance resolver:
 
 ```bash
-conda run -n aiqec python -m scope_static.experiments.run_phyc3_canonical_acceptance \
-  --config configs/scope_static/phyc3_canonical_acceptance.yaml
+conda run -n aiqec python -m scope_static.experiments.run_layer3_canonical_acceptance \
+  --config configs/scope_static/layer3_canonical_acceptance.yaml
 ```
 
 The PHYC2 runner keeps the historical schema name
 `PHYC2_sampled_observation_separability` for compatibility, but its primary
 contract is teacher self-distinguishment only. It does not emit learner grouped
-predictions. The PHYC3 learner-recovery artifact owns no-leakage grouped
-predictions, and PHYC3 quality consumes that artifact through `--prediction-dir`.
+predictions. The Layer 3 learner-recovery artifact owns no-leakage grouped
+predictions, and Layer 3 quality consumes that artifact through `--prediction-dir`.
 
-The canonical resolver is deliberately small: it loads PHYC2 teacher-self,
-PHYC3a old-surface baseline, PHYC3b visible-repair, PHYC3c learner, and PHYC3c
+The canonical resolver is deliberately small: it loads Layer 2 teacher-self,
+Layer 3a old-surface baseline, Layer 3b visible-repair, Layer 3c learner, and Layer 3c
 validation artifacts, then selects only
-`phyc3c_distributional_gaussian_likelihood_head` as canonical. It rejects PHYC2
-teacher-self predictions, legacy PHYC2 grouped predictions, and PHYC3a
+`phyc3c_distributional_gaussian_likelihood_head` as canonical. It rejects Layer 2
+teacher-self predictions, legacy Layer 2 grouped predictions, and Layer 3a
 old-surface predictions as canonical learner evidence.
 
 Legacy evidence for the previous `separability_v2` allM 30q/depth30 stress
@@ -294,18 +300,18 @@ The local-observable teacher writes
 `sampling.observation_slot_remap`. The slot remap is expected for this teacher:
 it assigns non-overlapping per-mechanism observation slots inside each circuit
 batch so local responses do not overwrite each other in `observations.npz`.
-PHYC3 learner recovery neutralizes the synthetic slot-geometry columns for
+Layer 3 learner recovery neutralizes the synthetic slot-geometry columns for
 slot-remapped records; branch flags, probe metadata, sampled response moments,
 and pair correlations remain learner-visible.
-Each PHYC3 learner report includes `slot_only_leakage_control`, which trains the same
+Each Layer 3 learner report includes `slot_only_leakage_control`, which trains the same
 grouped classifier using only observation slots, original physical qubits, probe
 block ids, and slot/layout metadata. It must stay low; high slot-only accuracy
 means the remap/layout metadata are leaking mechanism identity.
 
-PHYC3 sampled quantum-error quality consumes no-leakage learner grouped
+Layer 3 sampled quantum-error quality consumes no-leakage learner grouped
 predictions from `PHYC3_no_leakage_learner_recovery`. It asks whether
 predicted mechanism labels translate into close fold-trained quantum/readout
-error prototypes. PHYC3 must reject PHYC2 teacher-self predictions as learner
+error prototypes. Layer 3 must reject Layer 2 teacher-self predictions as learner
 evidence. For `separability_v2`, this is a mechanism-to-error translation
 diagnostic; it is not proof that the sampled observations themselves were
 generated by Born-rule circuit physics.
@@ -329,10 +335,10 @@ PHYC3-full-circuit-cudaq:
   no-leakage learner recovery and error-quality gate for full-circuit CUDA-Q
 ```
 
-Stage 2E now uses the full-circuit CUDA-Q teacher as the mainline. It must
-produce allM PHYC1-full-circuit-cudaq data, pass PHYC2-full-circuit-cudaq
-teacher self-distinguishment, and pass PHYC3-full-circuit-cudaq no-leakage
-learner recovery before Stage 3 starts.
+Stage 2 validated the physical mechanism catalog and the no-leakage visible
+recovery protocol. Stage 3 now removes direct mechanism-label supervision and
+tests whether SCOPE-Discovery can recover latent mechanism structure,
+assignments, and prototypes from the same learner-visible observation surface.
 
 The Born-local teacher records both `configured_circuit_depth` and
 `effective_circuit_depth`; its effective depth is intentionally `1`, so it

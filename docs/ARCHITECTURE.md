@@ -117,10 +117,10 @@ The S2D branch uses synthetic physical teachers to test whether learner-visible
 probe data exposes local mechanism structure.
 
 ```text
-PHYC1 physical teacher
+Layer 1: Data Preparation (Prep)
 -> finite-shot probe observations
--> PHYC2 teacher self-distinguishment
--> PHYC3 no-leakage learner recovery and error-quality audit
+-> Layer 2: Teacher Self-Distinguishment (Teacher)
+-> Layer 3: Learner Classification and Noise Generation (Learner)
 ```
 
 Core implementation modules:
@@ -138,13 +138,14 @@ physical/typed_spam_gate_invariant.py     S2D.11 typed gate/readout/prep learner
 physical/m1_gate_calibration.py           S2D.11b M1 grouped calibration audit
 physical/local_observable_teacher.py      Torch CUDA local-observable sampled teacher
 physical/full_circuit_cudaq_teacher.py    Stage 2E literal full-circuit CUDA-Q teacher
-physical/sampled_observation_separability.py PHYC2 teacher self-distinguishment
-physical/phyc3_no_leakage_learner_recovery.py PHYC3 no-leakage learner grouped predictions
-physical/phyc3b_zx_visible_probe_suite.py PHYC3b Z/X-only visible-observability repair
-physical/phyc3c_gaussian_likelihood.py    PHYC3c distributional Gaussian learner head
-physical/phyc3c_validation.py             PHYC3c robustness, non-leakage, protocol audit
-physical/sampled_quantum_error_quality.py PHYC3 no-leakage learner error-quality audit
-physical/phyc3_canonical_acceptance.py    PHYC3 canonical resolver selecting PHYC3c predictions
+physical/layers.py                        public Layer 1/2/3 naming contract
+physical/sampled_observation_separability.py Layer 2 teacher self-distinguishment
+physical/phyc3_no_leakage_learner_recovery.py Layer 3 no-leakage learner grouped predictions
+physical/phyc3b_zx_visible_probe_suite.py Layer 3b Z/X-only visible-observability repair
+physical/phyc3c_gaussian_likelihood.py    Layer 3c distributional Gaussian learner head
+physical/phyc3c_validation.py             Layer 3c robustness, non-leakage, protocol audit
+physical/sampled_quantum_error_quality.py Layer 3 learner error-quality audit
+physical/phyc3_canonical_acceptance.py    Layer 3 canonical resolver selecting PHYC3c predictions
 physical_oracle/stack.py                  legacy PHYS facade plus PHYC claim boundary
 ```
 
@@ -161,28 +162,30 @@ other   -> gate_process_branch
 S2D.11b then reuses the S2D.11 artifacts and changes only gate-branch M1
 calibration, converting the set_D typed learner into a pass.
 
-## PHYC1/PHYC2/PHYC3 Physical Flow
+## Layer 1/Layer 2/Layer 3 Physical Flow
 
-The current PHYC vocabulary has three separate questions:
+The public pre-release vocabulary has three separate layers. `PHYC1/PHYC2/PHYC3`
+remain legacy artifact aliases:
 
 ```text
-PHYC1:
+Layer 1: Data Preparation (Prep)
   Can the declared teacher generate sampled observations from its physical
   contract?
 
-PHYC2:
+Layer 2: Teacher Self-Distinguishment (Teacher)
   Can that teacher self-distinguish every generated mechanism from
   teacher-internal mechanism evidence?
 
-PHYC3:
+Layer 3: Learner Classification and Noise Generation (Learner)
   Can a no-leakage learner recover those mechanisms from learner-visible
-  sampled observations, and do the recovered labels map to close error objects?
+  sampled observations, and can the recovered labels generate close visible
+  noise/error distributions?
 ```
 
-PHYC2 is a teacher-identifiability gate, not a learner-success claim. PHYC3
-learner recovery owns sampled-observation grouped predictions; PHYC3
-error-quality audits consume that PHYC3 learner artifact and must not consume
-PHYC2 teacher-self predictions as evidence.
+Layer 2 is a teacher-identifiability gate, not a learner-success claim. Layer 3
+learner recovery owns sampled-observation grouped predictions; Layer 3 quality
+audits consume that Layer 3 learner artifact and must not consume Layer 2
+teacher-self predictions as evidence.
 
 The local-observable Torch CUDA path is a scalable sampled-observation teacher,
 not a full-circuit simulator:
@@ -191,9 +194,9 @@ not a full-circuit simulator:
 mechanism records + probe metadata
 -> local response probabilities
 -> Torch CUDA Bernoulli samples
--> PHYC2 teacher self-distinguishment
+-> Layer 2 teacher self-distinguishment
 -> sampled-observation learner diagnostic
--> PHYC3 no-leakage mechanism-to-error prototype quality
+-> Layer 3 no-leakage mechanism-to-error prototype quality
 ```
 
 `PHYC2-separability_v2` is an engineered separability stress teacher. It uses
@@ -203,7 +206,7 @@ and slot remapping to avoid local-response overwrite in the PHYS1-compatible
 slot-only leakage control to ensure slot/layout metadata alone do not classify
 mechanisms in the learner diagnostic.
 
-PHYC3 consumes no-leakage learner grouped predictions. For each held-out
+Layer 3 consumes no-leakage learner grouped predictions. For each held-out
 circuit group it builds fold-trained channel/readout prototypes from training
 groups, maps each predicted mechanism label to its prototype, and compares that
 vector to the evaluator-only oracle channel/readout matrix. This validates
@@ -220,12 +223,18 @@ PHYC3c_distributional_gaussian_likelihood_head
 PHYC3_canonical_quality_acceptance
 ```
 
-`PHYC3_canonical_quality_acceptance` is a resolver and acceptance artifact. It
+`PHYC3_canonical_quality_acceptance` is the legacy artifact name for the Layer 3
+canonical resolver and acceptance artifact. It
 does not train a new learner; it accepts PHYC3c multi-context predictions as
-the canonical learner source only after PHYC2, PHYC3b, PHYC3c, and PHYC3c
-validation gates pass. It rejects PHYC2 teacher-self predictions, legacy PHYC2
-grouped predictions, and the PHYC3a old-surface baseline as canonical learner
+the canonical learner source only after Layer 2, Layer 3b, Layer 3c, and
+Layer 3c validation gates pass. It rejects Layer 2 teacher-self predictions,
+legacy Layer 2 grouped predictions, and the PHYC3a old-surface baseline as canonical learner
 evidence.
+
+Stage 2 validated the physical mechanism catalog and the no-leakage visible
+recovery protocol. Stage 3 now removes direct mechanism-label supervision and
+tests whether SCOPE-Discovery can recover latent mechanism structure,
+assignments, and prototypes from the same learner-visible observation surface.
 
 Stage 2E is the current physical-baseline gate:
 
@@ -237,9 +246,9 @@ PHYC1-full-circuit:
 
 The full-circuit teacher must not fall back to Born-local shortcuts,
 local-observable response templates, mechanism-code margins, slot leakage, or
-post-hoc overlays. Stage 3 is blocked until full-circuit CUDA-Q PHYC1 is
-generated, PHYC2 teacher self-distinguishment passes, and PHYC3 no-leakage
-learner quality passes. See
+post-hoc overlays. Full-circuit CUDA-Q remains an important Layer 1 source for
+future larger-scale physical-teacher runs, while Stage 3 now removes direct
+mechanism-label supervision on the same learner-visible observation surface. See
 `docs/adr/0005-stage2e-full-circuit-cudaq-mainline.md` for the mainline
 decision.
 
@@ -247,12 +256,12 @@ decision.
 
 `scope_static.physical_oracle.run_physical_oracle_stack` centralizes the legacy
 PHYS1/PHYS2/PHYS3 ordering while preserving existing stage artifacts. New
-physical-teacher claims should use PHYC1/PHYC2/PHYC3:
+physical-teacher claims should use Layer 1/2/3 public names:
 
 ```text
-PHYC1 teacher generation
-PHYC2 teacher self-distinguishment
-PHYC3 no-leakage learner recovery and error quality
+Layer 1 data preparation
+Layer 2 teacher self-distinguishment
+Layer 3 learner classification and noise generation
 ```
 
 It writes:

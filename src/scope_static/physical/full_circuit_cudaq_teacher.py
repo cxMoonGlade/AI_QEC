@@ -9,6 +9,7 @@ import numpy as np
 
 from .channels import MechanismSpec, mechanism_channel, readout_bias_matrix
 from .mechanism_catalog import PREP_RESET_MECHANISM_IDS, READOUT_MECHANISM_IDS
+from .layers import LAYER1_PREP
 from .phyc1_contract import (
     FULL_CIRCUIT_CONTRACT_NOTE,
     FULL_CIRCUIT_DEPTH_SEMANTICS,
@@ -316,6 +317,7 @@ def generate_full_circuit_cudaq_teacher_dataset(
     total_seconds = time.perf_counter() - started
     sampling_audit = {
         "schema": "scope_static_full_circuit_cudaq_sampling_audit_v1",
+        "public_layer": LAYER1_PREP.metadata(artifact_stage=PHYC1_LEGACY_STAGE_NAME, substage="full_circuit_cudaq_sampling"),
         "teacher_model": FULL_CIRCUIT_TEACHER_MODEL,
         "physical_teacher_model": FULL_CIRCUIT_TEACHER_MODEL,
         "backend": "cudaq",
@@ -368,6 +370,7 @@ def generate_full_circuit_cudaq_teacher_dataset(
     summary = {
         "schema": "scope_static_full_circuit_cudaq_teacher_v1",
         "stage": PHYC1_LEGACY_STAGE_NAME,
+        "public_layer": LAYER1_PREP.metadata(artifact_stage=PHYC1_LEGACY_STAGE_NAME, substage="full_circuit_cudaq_teacher"),
         "teacher_model": FULL_CIRCUIT_TEACHER_MODEL,
         "physical_teacher_model": FULL_CIRCUIT_TEACHER_MODEL,
         "output_dir": str(output),

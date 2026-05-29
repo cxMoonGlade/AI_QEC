@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np
 
 from .channels import MechanismSpec, mechanism_channel
+from .layers import LAYER3_LEARNER
 from ..metrics import adjusted_rand_index, normalized_mutual_info
 from .ptm import ptm_from_kraus, ptm_from_unitary
 
@@ -30,10 +31,10 @@ def run_sampled_quantum_error_quality_audit(
     max_worst_predicted_channel_distance: float = 0.005,
     min_nearest_wrong_channel_gap: float | None = None,
 ) -> dict[str, object]:
-    """PHYC3 diagnostic: mechanism classification plus quantum-error quality.
+    """Layer 3 diagnostic: mechanism classification plus quantum-error quality.
 
-    This audit consumes no-leakage learner grouped predictions from a PHYC3
-    learner-recovery artifact. It rejects PHYC2 teacher-self predictions as
+    This audit consumes no-leakage learner grouped predictions from a Layer 3
+    learner-recovery artifact. It rejects Layer 2 teacher-self predictions as
     learner evidence. For each held-out circuit group, it builds
     class-conditional channel/readout prototypes only from the training groups,
     then compares the predicted prototype against the evaluator-only oracle
@@ -118,12 +119,16 @@ def run_sampled_quantum_error_quality_audit(
     result = {
         "schema": "scope_static_phyc3_sampled_quantum_error_quality_v1",
         "stage": "PHYC3_sampled_quantum_error_quality",
+        "public_layer": LAYER3_LEARNER.metadata(
+            artifact_stage="PHYC3_sampled_quantum_error_quality",
+            substage="learner_noise_generation_quality",
+        ),
         "teacher_dir": str(teacher),
         "prediction_dir": str(phyc2),
         "output_dir": str(output),
         "contract": {
             "name": "sampled_observation_mechanism_predictions_yield_good_quantum_error_prototypes",
-            "primary_role": "PHYC3 no-leakage learner mechanism classification and quantum-error quality",
+            "primary_role": LAYER3_LEARNER.public_name,
             "teacher_self_predictions_allowed": False,
             "learner_contract_passed_required": True,
             "leakage_clean_required": True,
@@ -138,7 +143,7 @@ def run_sampled_quantum_error_quality_audit(
             "incompatible_prediction_count_eq": 0,
         },
         "claim_boundary": (
-            "PHYC3 consumes no-leakage learner predictions, not PHYC2 teacher-self predictions. "
+            "Layer 3 consumes no-leakage learner predictions, not Layer 2 teacher-self predictions. "
             "Channel/readout quality is then measured against evaluator-only mechanism-channel definitions."
         ),
         "contract_passed": bool(passed),
@@ -171,7 +176,7 @@ def _learner_prediction_source(phyc2_metrics: dict[str, object]) -> dict[str, ob
     else:
         primary_block = str(phyc2_metrics.get("primary_feature_block", ""))
         if primary_block.startswith("teacher_self"):
-            reason = "PHYC3 requires no-leakage learner predictions from PHYC3 learner recovery; PHYC2 teacher-self predictions are forbidden"
+            reason = "Layer 3 requires no-leakage learner predictions from Layer 3 learner recovery; Layer 2 teacher-self predictions are forbidden"
             teacher_self = True
         elif isinstance(phyc2_metrics.get("sampled_observation_learner_diagnostic"), dict):
             reason = "legacy PHYC2-embedded learner diagnostics must be regenerated as PHYC3_no_leakage_learner_recovery artifacts"
@@ -284,8 +289,9 @@ def format_sampled_quantum_error_quality_summary(result: dict[str, object]) -> s
         prediction_source = {}
     return "\n".join(
         [
-            "# PHYC3 Sampled Quantum Error Quality",
+            "# Layer 3: Learner Noise Generation Quality",
             "",
+            f"- Legacy alias: `{dict(result.get('public_layer', {})).get('legacy_alias', 'PHYC3')}`",
             f"- Decision: `{result.get('decision')}`",
             f"- Contract passed: `{str(bool(result.get('contract_passed'))).lower()}`",
             f"- Prediction source: `{prediction_source.get('source_name', 'unknown')}`",
@@ -414,6 +420,10 @@ def _not_evaluable_result(teacher: Path, phyc2: Path, output: Path, reason: str)
     return {
         "schema": "scope_static_phyc3_sampled_quantum_error_quality_v1",
         "stage": "PHYC3_sampled_quantum_error_quality",
+        "public_layer": LAYER3_LEARNER.metadata(
+            artifact_stage="PHYC3_sampled_quantum_error_quality",
+            substage="learner_noise_generation_quality",
+        ),
         "teacher_dir": str(teacher),
         "phyc2_dir": str(phyc2),
         "prediction_dir": str(phyc2),

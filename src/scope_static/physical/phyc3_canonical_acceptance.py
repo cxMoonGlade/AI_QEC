@@ -5,6 +5,9 @@ from pathlib import Path
 
 import numpy as np
 
+from .layers import LAYER2_TEACHER, LAYER3_LEARNER, layer_stack_metadata
+from .phyc3b_zx_visible_probe_suite import build_zx_visible_feature_table
+from .phyc3c_gaussian_likelihood import fit_gaussian_fold_model
 from .sampled_observation_separability import _load_mechanism_records
 from .sampled_quantum_error_quality import ChannelVector, channel_vector
 
@@ -56,6 +59,11 @@ def run_phyc3_canonical_acceptance(
         max_mean_predicted_channel_distance=float(max_mean_predicted_channel_distance),
         max_worst_predicted_channel_distance=float(max_worst_predicted_channel_distance),
     )
+    generation = learner_generation_quality_from_phyc3c_batches(
+        records,
+        phyc3c,
+        primary_head=str(primary_head),
+    )
     checks = {
         "phyc2_teacher_self_passed": bool(phyc2_audit["passed"]),
         "phyc2_emits_no_learner_predictions": bool(phyc2_audit["checks"]["phyc2_emits_no_learner_predictions"]),
@@ -70,6 +78,8 @@ def run_phyc3_canonical_acceptance(
     result = {
         "schema": "scope_static_phyc3_canonical_quality_acceptance_v1",
         "stage": STAGE_NAME,
+        "public_layer": LAYER3_LEARNER.metadata(artifact_stage=STAGE_NAME, substage="canonical_quality_acceptance"),
+        "public_layer_stack": layer_stack_metadata(),
         "output_dir": str(output),
         "teacher_dir": str(teacher),
         "inputs": {
@@ -81,7 +91,9 @@ def run_phyc3_canonical_acceptance(
         },
         "claim_boundary": {
             "resolver_not_new_learner": True,
+            "public_name": LAYER3_LEARNER.public_name,
             "canonical_prediction_source": ACCEPTED_SOURCE_NAME,
+            "rejects_layer2_teacher_self_predictions": True,
             "rejects_phyc2_teacher_self_predictions": True,
             "rejects_legacy_phyc2_grouped_predictions": True,
             "rejects_phyc3a_old_surface_as_canonical_source": True,
@@ -96,6 +108,7 @@ def run_phyc3_canonical_acceptance(
         "rejected_sources": rejected,
         "canonical_prediction_source": canonical_source,
         "canonical_quality_metrics": quality,
+        "learner_generation_quality_metrics": generation,
         "acceptance_checks": checks,
         "contract_passed": passed,
         "decision": "phyc3_canonical_quality_accepted" if passed else "phyc3_canonical_quality_rejected",
@@ -117,6 +130,7 @@ def audit_phyc2_teacher_self(phyc2: dict[str, object]) -> dict[str, object]:
     return {
         "schema": "scope_static_phyc3_canonical_phyc2_teacher_self_audit_v1",
         "role": "PHYC2_teacher_self_only_v4",
+        "public_layer": LAYER2_TEACHER.metadata(artifact_stage="PHYC2_teacher_self_only_v4", substage="teacher_self_only"),
         "checks": checks,
         "passed": bool(all(checks.values())),
     }
@@ -133,6 +147,7 @@ def audit_phyc3a_baseline(phyc3a: dict[str, object]) -> dict[str, object]:
     return {
         "schema": "scope_static_phyc3_canonical_phyc3a_baseline_audit_v1",
         "role": "PHYC3a_old_surface_no_leakage_learner_recovery",
+        "public_layer": LAYER3_LEARNER.metadata(artifact_stage="PHYC3a_old_surface_no_leakage_learner_recovery", substage="old_surface_baseline"),
         "decision": phyc3a.get("decision"),
         "balanced_accuracy": float(phyc3a.get("balanced_accuracy", 0.0)),
         "adjusted_rand_index": float(phyc3a.get("adjusted_rand_index", 0.0)),
@@ -156,6 +171,7 @@ def audit_phyc3b_visible_repair(phyc3b: dict[str, object]) -> dict[str, object]:
     return {
         "schema": "scope_static_phyc3_canonical_phyc3b_visible_repair_audit_v1",
         "role": "PHYC3b_ZX_visible_alias_breaking_probe_suite",
+        "public_layer": LAYER3_LEARNER.metadata(artifact_stage="PHYC3b_ZX_visible_alias_breaking_probe_suite", substage="zx_visible_surface_repair"),
         "checks": checks,
         "passed": bool(all(checks.values())),
     }
@@ -187,6 +203,7 @@ def audit_phyc3c_accepted_learner(
     return {
         "schema": "scope_static_phyc3_canonical_phyc3c_accepted_learner_audit_v1",
         "role": "PHYC3c_distributional_gaussian_likelihood_head",
+        "public_layer": LAYER3_LEARNER.metadata(artifact_stage="PHYC3c_distributional_gaussian_likelihood_head", substage="distributional_gaussian_likelihood_head"),
         "source_name": ACCEPTED_SOURCE_NAME,
         "protocol": phyc3c.get("primary_mode"),
         "primary_head": primary_head,
@@ -329,6 +346,162 @@ def canonical_quality_from_phyc3c_batches(
     }
 
 
+def learner_generation_quality_from_phyc3c_batches(
+    records: list[dict[str, object]],
+    phyc3c: dict[str, object],
+    *,
+    primary_head: str,
+) -> dict[str, object]:
+    """Score held-out visible error-generation quality from PHYC3c predictions.
+
+    This diagnostic re-fits the same fold-local PHYC3c calibration model from
+    training groups only. It then evaluates each held-out batch under the
+    predicted label's visible-feature generator. True labels appear only in the
+    evaluator rows and in the oracle-comparator baseline.
+    """
+
+    config = dict(phyc3c.get("config", {})) if isinstance(phyc3c.get("config", {}), dict) else {}
+    table = build_zx_visible_feature_table(
+        records,
+        shots=int(config.get("shots", 20_000)),
+        seed=int(config.get("seed", 0)),
+        robustness_mode=bool(config.get("robustness_mode", False)),
+        sampling_mode=str(config.get("sampling_mode", "expected")),
+    )
+    labels = [str(label) for label in table.labels]
+    groups = [int(group) for group in table.groups]
+    class_names = sorted(set(labels), key=_mechanism_sort_key)
+    features = np.asarray(table.features, dtype=np.float64)
+    folds = (
+        dict(dict(phyc3c.get("multi_context_batch_mode", {})).get("head_results", {}))
+        .get(primary_head, {})
+        .get("grouped_fold_predictions", [])
+    )
+    if not isinstance(folds, list):
+        folds = []
+    rows = []
+    for fold in folds:
+        if not isinstance(fold, dict):
+            continue
+        train_groups = {int(group) for group in fold.get("train_groups", [])}
+        train_indices = [idx for idx, group in enumerate(groups) if int(group) in train_groups]
+        if not train_indices:
+            continue
+        model = fit_gaussian_fold_model(
+            features,
+            labels,
+            train_indices,
+            class_names,
+            shrinkage_alpha=float(config.get("shrinkage_alpha", 0.25)),
+            ridge=float(config.get("ridge", 1e-6)),
+            variance_floor=float(config.get("variance_floor", 1e-8)),
+            max_pca_components=int(config.get("max_pca_components", 24)),
+        )
+        prototypes = _visible_feature_prototypes(features, labels, train_indices, class_names)
+        global_proto = np.mean(features[np.asarray(train_indices, dtype=np.int64)], axis=0)
+        for batch in fold.get("batches", []):
+            if not isinstance(batch, dict):
+                continue
+            true_label = str(batch.get("true_label_evaluator_only", ""))
+            predicted_label = str(batch.get("predicted_label", ""))
+            test_groups = {int(group) for group in batch.get("test_groups", [])}
+            test_indices = [
+                idx
+                for idx, (label, group) in enumerate(zip(labels, groups))
+                if label == true_label and int(group) in test_groups
+            ]
+            if not test_indices:
+                continue
+            batch_features = features[np.asarray(test_indices, dtype=np.int64)]
+            predicted_proto = prototypes.get(predicted_label)
+            oracle_proto = prototypes.get(true_label)
+            predicted_visible = _visible_distribution_scores(batch_features, predicted_proto, table.feature_names)
+            oracle_visible = _visible_distribution_scores(batch_features, oracle_proto, table.feature_names)
+            null_visible = _visible_distribution_scores(batch_features, global_proto, table.feature_names)
+            predicted_nll = _diagonal_gaussian_nll(model, features, test_indices, predicted_label, head=primary_head)
+            oracle_nll = _diagonal_gaussian_nll(model, features, test_indices, true_label, head=primary_head)
+            null_nll = _global_diagonal_gaussian_nll(model, features, test_indices)
+            rows.append(
+                {
+                    "fold": int(fold.get("fold", -1)),
+                    "test_groups": sorted(test_groups),
+                    "true_label_evaluator_only": true_label,
+                    "predicted_label": predicted_label,
+                    "classification_correct": bool(true_label == predicted_label),
+                    "num_contexts": int(batch_features.shape[0]),
+                    "prediction_source": ACCEPTED_SOURCE_NAME,
+                    "visible_gaussian_nll_nats_per_feature": float(predicted_nll),
+                    "oracle_label_gaussian_nll_nats_per_feature": float(oracle_nll),
+                    "global_null_gaussian_nll_nats_per_feature": float(null_nll),
+                    "gaussian_nll_gap_to_oracle": float(predicted_nll - oracle_nll),
+                    "gaussian_nll_lift_over_global_null": float(null_nll - predicted_nll),
+                    "visible_population_cross_entropy_nats_per_probe": float(predicted_visible["population_cross_entropy"]),
+                    "oracle_label_population_cross_entropy_nats_per_probe": float(oracle_visible["population_cross_entropy"]),
+                    "global_null_population_cross_entropy_nats_per_probe": float(null_visible["population_cross_entropy"]),
+                    "population_cross_entropy_gap_to_oracle": float(
+                        predicted_visible["population_cross_entropy"] - oracle_visible["population_cross_entropy"]
+                    ),
+                    "population_cross_entropy_lift_over_global_null": float(
+                        null_visible["population_cross_entropy"] - predicted_visible["population_cross_entropy"]
+                    ),
+                    "visible_raw_feature_mae": float(predicted_visible["raw_feature_mae"]),
+                    "visible_population_mae": float(predicted_visible["population_mae"]),
+                    "visible_expectation_mae": float(predicted_visible["expectation_mae"]),
+                    "oracle_label_raw_feature_mae": float(oracle_visible["raw_feature_mae"]),
+                    "global_null_raw_feature_mae": float(null_visible["raw_feature_mae"]),
+                    "raw_feature_mae_gap_to_oracle": float(predicted_visible["raw_feature_mae"] - oracle_visible["raw_feature_mae"]),
+                    "raw_feature_mae_lift_over_global_null": float(null_visible["raw_feature_mae"] - predicted_visible["raw_feature_mae"]),
+                }
+            )
+    return {
+        "schema": "scope_static_phyc3_canonical_learner_generation_quality_v1",
+        "prediction_source": ACCEPTED_SOURCE_NAME,
+        "primary_head": primary_head,
+        "feature_source": "PHYC3b Z/X-only visible sampled-observation features",
+        "metric_role": "diagnostic_only_not_used_for_learner_training_or_source_selection",
+        "units": {
+            "visible_gaussian_nll": "nats_per_selected_feature",
+            "visible_population_cross_entropy": "nats_per_probe_distribution",
+            "mae": "visible_feature_units",
+        },
+        "no_leakage_audit": {
+            "fold_calibration_uses_training_groups_only": True,
+            "test_labels_are_evaluator_only": True,
+            "generation_uses_predicted_label_not_true_label": True,
+            "oracle_label_metrics_are_comparators_only": True,
+            "global_null_metrics_are_comparators_only": True,
+            "teacher_self_predictions_used": False,
+        },
+        "num_batches": int(len(rows)),
+        "visible_gaussian_nll_nats_per_feature": _distribution(
+            [float(row["visible_gaussian_nll_nats_per_feature"]) for row in rows]
+        ),
+        "oracle_label_gaussian_nll_nats_per_feature": _distribution(
+            [float(row["oracle_label_gaussian_nll_nats_per_feature"]) for row in rows]
+        ),
+        "global_null_gaussian_nll_nats_per_feature": _distribution(
+            [float(row["global_null_gaussian_nll_nats_per_feature"]) for row in rows]
+        ),
+        "gaussian_nll_gap_to_oracle": _distribution([float(row["gaussian_nll_gap_to_oracle"]) for row in rows]),
+        "gaussian_nll_lift_over_global_null": _distribution([float(row["gaussian_nll_lift_over_global_null"]) for row in rows]),
+        "visible_population_cross_entropy_nats_per_probe": _distribution(
+            [float(row["visible_population_cross_entropy_nats_per_probe"]) for row in rows]
+        ),
+        "population_cross_entropy_gap_to_oracle": _distribution(
+            [float(row["population_cross_entropy_gap_to_oracle"]) for row in rows]
+        ),
+        "population_cross_entropy_lift_over_global_null": _distribution(
+            [float(row["population_cross_entropy_lift_over_global_null"]) for row in rows]
+        ),
+        "visible_raw_feature_mae": _distribution([float(row["visible_raw_feature_mae"]) for row in rows]),
+        "visible_population_mae": _distribution([float(row["visible_population_mae"]) for row in rows]),
+        "visible_expectation_mae": _distribution([float(row["visible_expectation_mae"]) for row in rows]),
+        "raw_feature_mae_gap_to_oracle": _distribution([float(row["raw_feature_mae_gap_to_oracle"]) for row in rows]),
+        "raw_feature_mae_lift_over_global_null": _distribution([float(row["raw_feature_mae_lift_over_global_null"]) for row in rows]),
+        "records": rows,
+    }
+
+
 def _channel_prototypes(records: list[dict[str, object]]) -> dict[str, ChannelVector]:
     grouped: dict[str, list[ChannelVector]] = {}
     for record in records:
@@ -347,6 +520,155 @@ def _channel_prototypes(records: list[dict[str, object]]) -> dict[str, ChannelVe
             mechanism_id=label,
         )
     return prototypes
+
+
+def _visible_feature_prototypes(
+    features: np.ndarray,
+    labels: list[str],
+    train_indices: list[int],
+    class_names: list[str],
+) -> dict[str, np.ndarray]:
+    x = np.asarray(features, dtype=np.float64)
+    idx = np.asarray(train_indices, dtype=np.int64)
+    out = {}
+    for label in class_names:
+        local = [int(i) for i in idx.tolist() if labels[int(i)] == label]
+        if local:
+            out[label] = np.mean(x[np.asarray(local, dtype=np.int64)], axis=0)
+    return out
+
+
+def _visible_distribution_scores(
+    rows: np.ndarray,
+    prototype: np.ndarray | None,
+    feature_names: list[str],
+) -> dict[str, float]:
+    x = np.asarray(rows, dtype=np.float64)
+    if prototype is None or x.size == 0:
+        return {
+            "population_cross_entropy": float("inf"),
+            "population_mae": float("inf"),
+            "expectation_mae": float("inf"),
+            "raw_feature_mae": float("inf"),
+        }
+    proto = np.asarray(prototype, dtype=np.float64)
+    population_groups = _population_distribution_groups(feature_names)
+    ce_values = []
+    pop_mae_values = []
+    for row in x:
+        for cols in population_groups:
+            q = _distribution_vector(row, cols)
+            p = _distribution_vector(proto, cols)
+            ce_values.append(float(-np.sum(q * np.log(np.maximum(p, 1e-12)))))
+            pop_mae_values.append(float(np.mean(np.abs(q - p))))
+    expectation_cols = _expectation_columns(feature_names)
+    raw_cols = _raw_observation_columns(feature_names)
+    expectation_mae = float(np.mean(np.abs(x[:, expectation_cols] - proto[expectation_cols]))) if expectation_cols else 0.0
+    raw_mae = float(np.mean(np.abs(x[:, raw_cols] - proto[raw_cols]))) if raw_cols else 0.0
+    return {
+        "population_cross_entropy": float(np.mean(ce_values)) if ce_values else 0.0,
+        "population_mae": float(np.mean(pop_mae_values)) if pop_mae_values else 0.0,
+        "expectation_mae": expectation_mae,
+        "raw_feature_mae": raw_mae,
+    }
+
+
+def _distribution_vector(values: np.ndarray, cols: list[int]) -> np.ndarray:
+    probs = np.asarray([float(values[int(col)]) for col in cols], dtype=np.float64)
+    probs = np.clip(probs, 0.0, 1.0)
+    leftover = max(0.0, 1.0 - float(np.sum(probs)))
+    vec = np.concatenate([probs, np.asarray([leftover], dtype=np.float64)])
+    total = float(np.sum(vec))
+    if total <= 0.0:
+        return np.ones_like(vec) / float(max(1, vec.size))
+    return vec / total
+
+
+def _population_distribution_groups(feature_names: list[str]) -> list[list[int]]:
+    by_probe: dict[str, dict[str, int]] = {}
+    for idx, name in enumerate(feature_names):
+        parsed = _raw_feature_metric(name)
+        if parsed is None:
+            continue
+        base, metric = parsed
+        if metric in {"P0", "P1", "P00", "P01", "P10", "P11"}:
+            by_probe.setdefault(base, {})[metric] = int(idx)
+    groups = []
+    for local in by_probe.values():
+        if {"P0", "P1"}.issubset(local):
+            groups.append([local["P0"], local["P1"]])
+        elif {"P00", "P01", "P10", "P11"}.issubset(local):
+            groups.append([local["P00"], local["P01"], local["P10"], local["P11"]])
+    return groups
+
+
+def _expectation_columns(feature_names: list[str]) -> list[int]:
+    cols = []
+    for idx, name in enumerate(feature_names):
+        parsed = _raw_feature_metric(name)
+        if parsed is None:
+            continue
+        _base, metric = parsed
+        if metric.startswith("E_") or metric in {"ZI", "IZ", "ZZ", "XI", "IX", "XX", "ZX", "XZ"}:
+            cols.append(int(idx))
+    return cols
+
+
+def _raw_observation_columns(feature_names: list[str]) -> list[int]:
+    cols = []
+    for idx, name in enumerate(feature_names):
+        if _raw_feature_metric(name) is not None:
+            cols.append(int(idx))
+    return cols
+
+
+def _raw_feature_metric(name: str) -> tuple[str, str] | None:
+    text = str(name)
+    if not text.startswith("raw__") or "__se_" in text:
+        return None
+    if "__" not in text:
+        return None
+    base, metric = text.rsplit("__", 1)
+    return base, metric
+
+
+def _diagonal_gaussian_nll(
+    model: object,
+    features: np.ndarray,
+    indices: list[int],
+    label: str,
+    *,
+    head: str,
+) -> float:
+    if str(label) not in getattr(model, "means"):
+        return float("inf")
+    selected = np.asarray(getattr(model, "selected_columns"), dtype=np.int64)
+    rows = np.asarray(features, dtype=np.float64)[np.asarray(indices, dtype=np.int64)][:, selected]
+    z = (rows - getattr(model, "feature_mean")) / getattr(model, "feature_scale")
+    mean = np.asarray(getattr(model, "means")[str(label)], dtype=np.float64)
+    if str(head) == "PHYC3c_shared_covariance_lda":
+        variance = np.asarray(getattr(model, "pooled_variance"), dtype=np.float64)
+    else:
+        variance = np.asarray(getattr(model, "shrinkage_variances")[str(label)], dtype=np.float64)
+    return _diagonal_gaussian_nll_from_z(z, mean, variance)
+
+
+def _global_diagonal_gaussian_nll(model: object, features: np.ndarray, indices: list[int]) -> float:
+    selected = np.asarray(getattr(model, "selected_columns"), dtype=np.int64)
+    rows = np.asarray(features, dtype=np.float64)[np.asarray(indices, dtype=np.int64)][:, selected]
+    z = (rows - getattr(model, "feature_mean")) / getattr(model, "feature_scale")
+    mean = np.zeros(z.shape[1], dtype=np.float64)
+    variance = np.asarray(getattr(model, "pooled_variance"), dtype=np.float64)
+    return _diagonal_gaussian_nll_from_z(z, mean, variance)
+
+
+def _diagonal_gaussian_nll_from_z(z: np.ndarray, mean: np.ndarray, variance: np.ndarray) -> float:
+    if z.size == 0:
+        return float("inf")
+    var = np.maximum(np.asarray(variance, dtype=np.float64), 1e-12)
+    delta = np.asarray(z, dtype=np.float64) - np.asarray(mean, dtype=np.float64)
+    total = 0.5 * float(np.sum(np.log(2.0 * np.pi * var)) * z.shape[0] + np.sum((delta * delta) / var))
+    return float(total / float(max(1, z.shape[0] * z.shape[1])))
 
 
 def _distance(true_channel: ChannelVector, predicted: ChannelVector | None) -> tuple[float, bool]:
@@ -372,10 +694,16 @@ def _distribution(values: list[float]) -> dict[str, float]:
 def format_phyc3_canonical_acceptance_summary(result: dict[str, object]) -> str:
     quality = dict(result.get("canonical_quality_metrics", {}))
     distances = dict(quality.get("predicted_channel_distance", {}))
+    generation = dict(result.get("learner_generation_quality_metrics", {}))
+    gaussian_nll = dict(generation.get("visible_gaussian_nll_nats_per_feature", {}))
+    population_ce = dict(generation.get("visible_population_cross_entropy_nats_per_probe", {}))
+    raw_mae = dict(generation.get("visible_raw_feature_mae", {}))
     return "\n".join(
         [
-            "# PHYC3 Canonical Quality Acceptance",
+            "# Layer 3 Canonical Quality Acceptance",
             "",
+            f"- Layer: `{dict(result.get('public_layer', {})).get('layer_name', LAYER3_LEARNER.public_name)}`",
+            f"- Legacy alias: `{dict(result.get('public_layer', {})).get('legacy_alias', 'PHYC3')}`",
             f"- Decision: `{result.get('decision')}`",
             f"- Contract passed: `{str(bool(result.get('contract_passed'))).lower()}`",
             f"- Canonical source: `{dict(result.get('canonical_prediction_source', {})).get('source_name', 'unknown')}`",
@@ -384,10 +712,13 @@ def format_phyc3_canonical_acceptance_summary(result: dict[str, object]) -> str:
             f"- Incompatible predictions: `{int(quality.get('incompatible_prediction_count', 0))}`",
             f"- Mean predicted channel distance: `{float(distances.get('mean', 0.0)):.6f}`",
             f"- Max predicted channel distance: `{float(distances.get('max', 0.0)):.6f}`",
+            f"- Learner visible Gaussian NLL: `{float(gaussian_nll.get('mean', 0.0)):.6f}` nats/feature",
+            f"- Learner visible population CE: `{float(population_ce.get('mean', 0.0)):.6f}` nats/probe",
+            f"- Learner visible raw-feature MAE: `{float(raw_mae.get('mean', 0.0)):.6f}`",
             "",
             "## Claim Boundary",
             "",
-            "This stage is a resolver and acceptance artifact. It does not train another learner; it accepts PHYC3c multi-context predictions as canonical only after PHYC2, PHYC3b, PHYC3c, and PHYC3c validation gates pass.",
+            "This stage is a resolver and acceptance artifact. It does not train another learner; it accepts Layer 3c multi-context predictions as canonical only after Layer 2, Layer 3b, Layer 3c, and Layer 3c validation gates pass. The generation-quality block is diagnostic: it scores held-out Z/X visible observations under the Layer 3c predicted-label generator and does not feed back into learner training.",
             "",
         ]
     )
@@ -411,6 +742,7 @@ def _write_outputs(output: Path, result: dict[str, object]) -> None:
         },
         "acceptance_checks.json": result["acceptance_checks"],
         "canonical_quality_metrics.json": result["canonical_quality_metrics"],
+        "learner_generation_quality.json": result["learner_generation_quality_metrics"],
         "rejected_sources.json": result["rejected_sources"],
         "canonical_prediction_source.json": result["canonical_prediction_source"],
     }
@@ -440,3 +772,10 @@ def _is_one(value: object) -> bool:
         return abs(float(value) - 1.0) <= 1e-12
     except (TypeError, ValueError):
         return False
+
+
+def _mechanism_sort_key(name: str) -> tuple[int, str]:
+    text = str(name)
+    if text.startswith("M") and text[1:].isdigit():
+        return (int(text[1:]), text)
+    return (10_000, text)

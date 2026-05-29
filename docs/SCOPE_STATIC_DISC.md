@@ -1873,12 +1873,12 @@ outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_rema
   slot_only_leakage_suspected = false
 ```
 
-PHYC3 has two linked jobs. First, PHYC3 learner recovery trains grouped
+Layer 3 has two linked jobs. First, Layer 3 learner recovery trains grouped
 classifiers from learner-visible sampled observations and writes the grouped
-predictions. Second, PHYC3 sampled quantum-error quality consumes those PHYC3
+predictions. Second, Layer 3 sampled quantum-error quality consumes those Layer 3
 learner grouped predictions, builds fold-trained mechanism channel/readout
 prototypes from training groups, and compares the predicted prototype with the
-evaluator-only oracle mechanism channel. It must reject PHYC2 teacher-self
+evaluator-only oracle mechanism channel. It must reject Layer 2 teacher-self
 predictions as learner evidence.
 
 ```text
@@ -1907,10 +1907,29 @@ outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_rema
   incompatible_predictions = 0
 ```
 
-For `separability_v2`, PHYC3 is a mechanism-to-error translation diagnostic,
+For `separability_v2`, Layer 3 is a mechanism-to-error translation diagnostic,
 not proof that sampled observations came from Born-rule circuit physics.
 
-PHYC3b is the visible-observability repair stage for the full-circuit/CUDA-Q
+The public pre-release names for the physical-mechanism stack are:
+
+```text
+Layer 1: Data Preparation (Prep)
+  legacy alias: PHYC1
+
+Layer 2: Teacher Self-Distinguishment (Teacher)
+  legacy alias: PHYC2
+
+Layer 3: Learner Classification and Noise Generation (Learner)
+  legacy alias: PHYC3
+```
+
+Layer 1 writes the mechanism records, probe schedules, observations, and
+sampling audits. Layer 2 is teacher/catalog self-distinguishability only and
+must not be cited as no-leakage learner evidence. Layer 3 owns learner-visible
+classification, channel/readout prototype quality, and visible noise-generation
+NLL/MAE.
+
+Layer 3b is the visible-observability repair stage for the full-circuit/CUDA-Q
 learner bottleneck. It is not a classifier-tuning stage: it first asks whether
 the learner-visible deterministic ceiling improves under new probes, then
 reports learner recovery. The probe suite is strictly Y-free and uses only
@@ -1923,13 +1942,13 @@ two-qubit:    prepare |00>, |01>, |10>, |++>; measure ZZ, ZX, XZ, XX
 
 Y-basis preparation and Y-basis measurement are not required. X-prepared states
 are required because Z-only probes do not expose the phase/coherence response
-needed to break several visible aliases. PHYC3b reports quotient alias classes
+needed to break several visible aliases. Layer 3b reports quotient alias classes
 instead of forcing exact labels whenever the Z/X sampled observations do not
 make exact recovery observable.
 
-PHYC3c is the distributional head upgrade on top of PHYC3b. It keeps the same
+Layer 3c is the distributional head upgrade on top of Layer 3b. It keeps the same
 Z/X-visible feature vectors and compares mean-only, covariance-only, diagonal
-Gaussian, shared-covariance LDA, full Gaussian, and shrinkage-QDA heads. PHYC3c
+Gaussian, shared-covariance LDA, full Gaussian, and shrinkage-QDA heads. Layer 3c
 reports two modes:
 
 ```text
@@ -1947,20 +1966,25 @@ batch mode. The Gaussian calibration parameters are learned from training
 groups only; test labels remain evaluator-only and are not learner-visible
 features.
 
-PHYC3c validation is an acceptance audit for the head, not another learner input
+Layer 3c validation is an acceptance audit for the head, not another learner input
 source. It reports a robustness grid over batch size, shrinkage, and PCA
 dimension; an explicit non-leakage audit with forbidden-feature injection
 control; and a protocol-validity audit that rejects single-realization M13
 batches as invalid for distributional recovery claims.
 
-PHYC3 canonical quality acceptance is a resolver, not another learner. It
-loads the teacher-self PHYC2 artifact, the old-surface PHYC3a failing baseline,
-the PHYC3b visible-repair artifact, PHYC3c predictions, and PHYC3c validation.
-It accepts PHYC3 only when PHYC3b has deterministic visible ceiling 1.0 and
-PHYC3c passes the multi-context distributional protocol. The canonical
+Layer 3 canonical quality acceptance is a resolver, not another learner. It
+loads the Layer 2 teacher-self artifact, the old-surface Layer 3a failing baseline,
+the Layer 3b visible-repair artifact, Layer 3c predictions, and Layer 3c validation.
+It accepts Layer 3 only when Layer 3b has deterministic visible ceiling 1.0 and
+Layer 3c passes the multi-context distributional protocol. The canonical
 prediction source is `phyc3c_distributional_gaussian_likelihood_head`; PHYC2
 teacher-self predictions, legacy PHYC2 grouped predictions, and PHYC3a
 old-surface predictions are rejected as canonical learner evidence.
+
+Stage 2 validated the physical mechanism catalog and the no-leakage visible
+recovery protocol. Stage 3 now removes direct mechanism-label supervision and
+tests whether SCOPE-Discovery can recover latent mechanism structure,
+assignments, and prototypes from the same learner-visible observation surface.
 
 Current slot-only and no-remap guardrail evidence:
 
@@ -2029,9 +2053,11 @@ PHYC3-full-circuit-cudaq:
   required Stage 2E no-leakage learner recovery and error-quality gate
 ```
 
-Stage 3 should remain gated until PHYC1-full-circuit-cudaq data exist,
-PHYC2-full-circuit-cudaq teacher self-distinguishment passes, and the
-corresponding PHYC3-full-circuit-cudaq no-leakage learner quality audit passes.
+Full-circuit CUDA-Q remains an important Layer 1 source for future larger-scale
+physical-teacher runs. The current pre-release boundary is that Stage 2
+validated the physical mechanism catalog and no-leakage visible recovery
+protocol, and Stage 3 now removes direct mechanism-label supervision on the
+same learner-visible observation surface.
 
 The Born-local S2E.1 learner test is artifact-backed: it should consume an
 existing PHYC3 learner-recovery `metrics.json` plus the linked PHYC1 teacher

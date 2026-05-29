@@ -14,6 +14,7 @@ from .channels import (
 )
 from .density_sim import apply_kraus, measurement_probabilities_z
 from .full_circuit_cudaq_teacher import generate_full_circuit_cudaq_teacher_dataset
+from .layers import LAYER1_PREP, LAYER2_TEACHER, LAYER3_LEARNER, PHYSICAL_MECHANISM_LAYERS, layer_stack_metadata
 from .mechanism_catalog import IMPLEMENTED_MECHANISM_IDS, MECHANISM_NAMES, NAMED_MECHANISM_SETS
 from .phyc1_contract import (
     FULL_CIRCUIT_TEACHER_MODEL,
@@ -44,6 +45,11 @@ __all__ = [
     "channel_fingerprint",
     "custom_non_pauli_kraus",
     "generate_full_circuit_cudaq_teacher_dataset",
+    "layer_stack_metadata",
+    "LAYER1_PREP",
+    "LAYER2_TEACHER",
+    "LAYER3_LEARNER",
+    "PHYSICAL_MECHANISM_LAYERS",
     "FULL_CIRCUIT_TEACHER_MODEL",
     "LOCAL_OBSERVABLE_TEACHER_MODEL",
     "measurement_probabilities_z",

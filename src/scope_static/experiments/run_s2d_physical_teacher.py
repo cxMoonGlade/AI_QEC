@@ -19,7 +19,7 @@ def run_s2d_physical_teacher(
     preflight_output = Path(preflight_dir) if preflight_dir is not None else root / "S2D_PHYS0_preflight"
     result = generate_physical_teacher_dataset(cfg, output_dir=teacher_output, preflight_dir=preflight_output)
     print(
-        "S2D PHYS1 teacher complete\n"
+        "Layer 1 data preparation complete (legacy S2D PHYS1/PHYC1 teacher)\n"
         f"  output={teacher_output}\n"
         f"  mechanisms={result.get('mechanism_counts')}"
     )
@@ -27,7 +27,7 @@ def run_s2d_physical_teacher(
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description="Generate the S2D PHYS1 CUDA-Q physical-oracle teacher dataset.")
+    parser = argparse.ArgumentParser(description="Generate the Layer 1 Data Preparation physical-oracle teacher dataset.")
     parser.add_argument("--config", type=Path, default=None)
     parser.add_argument("--output-dir", type=Path, default=None)
     parser.add_argument("--preflight-dir", type=Path, default=None)

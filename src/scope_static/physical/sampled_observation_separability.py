@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 
+from .layers import LAYER2_TEACHER, LAYER3_LEARNER
 from .local_pauli_lindblad import build_local_pauli_lindblad_observability
 from .sampled_quantum_error_quality import ChannelVector, channel_vector
 from .typed_spam_gate_invariant import build_typed_spam_gate_features, classification_metrics, evaluate_typed_spam_gate_learner, grouped_linear_head
@@ -44,6 +45,10 @@ def run_sampled_observation_separability_audit(
         result = {
             "schema": "scope_static_phyc2_sampled_observation_separability_v1",
             "stage": "PHYC2_sampled_observation_separability",
+            "public_layer": LAYER2_TEACHER.metadata(
+                artifact_stage="PHYC2_sampled_observation_separability",
+                substage="teacher_self_distinguishment",
+            ),
             "contract_variant": variant,
             "teacher_dir": str(teacher),
             "output_dir": str(output),
@@ -73,6 +78,10 @@ def run_sampled_observation_separability_audit(
     result = {
         "schema": "scope_static_phyc2_sampled_observation_separability_v1",
         "stage": "PHYC2_sampled_observation_separability",
+        "public_layer": LAYER2_TEACHER.metadata(
+            artifact_stage="PHYC2_sampled_observation_separability",
+            substage="teacher_self_distinguishment",
+        ),
         "contract_variant": variant,
         "teacher_dir": str(teacher),
         "output_dir": str(output),
@@ -88,9 +97,9 @@ def run_sampled_observation_separability_audit(
         "coverage": coverage,
         "teacher_self_distinguishment": teacher_self,
         "claim_boundary": (
-            "PHYC2 is teacher self-distinguishment only. PHYC2 may use teacher "
+            "Layer 2 is teacher self-distinguishment only. Layer 2 may use teacher "
             "internal mechanism evidence for this self-test, but it does not "
-            "emit learner-visible grouped predictions for PHYC3."
+            "emit learner-visible grouped predictions for Layer 3."
         ),
         "contract_passed": bool(passed),
         "decision": "teacher_self_distinguishes_all_mechanisms" if passed else "teacher_self_distinguishment_failed",
@@ -109,6 +118,7 @@ def run_sampled_observation_separability_audit(
         "teacher_self_grouped_predictions": teacher_self.get("grouped_fold_predictions", []),
         "phyc2_emits_learner_grouped_predictions": False,
         "learner_recovery_stage": "PHYC3_no_leakage_learner_recovery",
+        "learner_recovery_layer": LAYER3_LEARNER.public_name,
     }
     _write_outputs(output, result)
     return result
@@ -535,9 +545,10 @@ def format_sampled_observation_separability_summary(result: dict[str, object]) -
     if not isinstance(diagnostic, dict):
         diagnostic = {}
     lines = [
-        "# PHYC2 Teacher Self-Distinguishment",
+        "# Layer 2: Teacher Self-Distinguishment (Teacher)",
         "",
-        f"- Primary role: `{dict(result.get('contract', {})).get('primary_role', 'PHYC2 teacher self-distinguishment') if isinstance(result.get('contract', {}), dict) else 'PHYC2 teacher self-distinguishment'}`",
+        f"- Legacy alias: `{dict(result.get('public_layer', {})).get('legacy_alias', 'PHYC2')}`",
+        f"- Primary role: `{dict(result.get('contract', {})).get('primary_role', LAYER2_TEACHER.public_name) if isinstance(result.get('contract', {}), dict) else LAYER2_TEACHER.public_name}`",
         f"- Contract variant: `{result.get('contract_variant', 'balanced')}`",
         f"- Decision: `{result.get('decision')}`",
         f"- Contract passed: `{str(bool(result.get('contract_passed'))).lower()}`",
@@ -559,7 +570,7 @@ def format_sampled_observation_separability_summary(result: dict[str, object]) -
                 "",
                 "## Sampled-Observation Learner Diagnostic",
                 "",
-                "- Role: `diagnostic input for PHYC3; not the PHYC2 teacher-self gate`",
+                "- Role: `diagnostic input for Layer 3; not the Layer 2 teacher-self gate`",
                 f"- Diagnostic passed: `{str(bool(diagnostic.get('contract_passed', False))).lower()}`",
                 f"- Balanced accuracy: `{float(diagnostic.get('balanced_accuracy', 0.0)):.4f}`",
                 f"- ARI: `{float(diagnostic.get('adjusted_rand_index', 0.0)):.4f}`",
@@ -611,11 +622,12 @@ def _contract(
     return {
         "name": f"teacher_self_distinguishes_mechanisms_{variant}",
         "variant": variant,
-        "primary_role": "PHYC2 teacher self-distinguishment",
+        "primary_role": LAYER2_TEACHER.public_name,
         "teacher_internal_inputs": ["mechanism_channel", "mechanism_parameters", "readout_assignment_matrix"],
         "evaluator_only_inputs": ["oracle_label", "mechanism_id"],
         "requirements": requirements,
         "learner_recovery_moved_to": "PHYC3_no_leakage_learner_recovery",
+        "learner_recovery_layer": LAYER3_LEARNER.public_name,
     }
 
 

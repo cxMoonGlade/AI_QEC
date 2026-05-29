@@ -1,6 +1,6 @@
 # AI QEC
 
-Research code for SCOPE-style quantum-error-correction noise learning.
+Pre-release toolbox for SCOPE-style quantum-error-correction noise learning.
 
 The project-level problem is to learn a physically constrained generation model
 for QEC data whose constraint is more than the words CPTP/GKSL. The real bar is
@@ -13,8 +13,9 @@ whether the model can be validated simultaneously along six axes:
 - drift prediction.
 - identifiability.
 
-The implemented package is `scope_static`. Its main production object is a
-fixed-context DEM/Bernoulli learner:
+The implemented package is `scope_static`. It exposes a toolbox of reusable
+data-generation, teacher-audit, learner-recovery, and visible noise-generation
+diagnostics. Its main Stage 1 object is a fixed-context DEM/Bernoulli learner:
 
 ```text
 e_j ~ Bernoulli(p_j)
@@ -27,39 +28,52 @@ detector/logical bit vector. `M` is the number of effective DEM fault
 mechanisms after duplicate-mask canonicalization, `B` is the number of
 observation bits, and `lambda_j = logit(p_j)` is the Stage 1 fault logit.
 
-Stage 2 also contains synthetic physical-oracle diagnostics for local
-mechanism observability. Those diagnostics use learner-visible shot data and
-local reconstructed PTM/generator summaries, but they are not a hardware
-CPTP/GST/GKSL learner and do not yet solve the full six-axis physical
-generation problem.
-
-The current Stage 2E physical-teacher milestone distinguishes three contracts:
+Stage 2 also contains a layered physical-mechanism recovery stack. Historical
+code and artifact names may still say `PHYC`; the public pre-release names are:
 
 ```text
-PHYC2-separability_v2:
+Layer 1: Data Preparation (Prep)
+Layer 2: Teacher Self-Distinguishment (Teacher)
+Layer 3: Learner Classification and Noise Generation (Learner)
+```
+
+Layer 1 generates mechanism-catalog records, probe schedules, sampled
+observations, and teacher metadata. Layer 2 verifies that the teacher/catalog
+can self-distinguish its generated mechanisms. Layer 3 consumes only
+learner-visible observations to classify mechanisms and generate/scored visible
+noise distributions with channel-distance, NLL, and MAE diagnostics.
+
+Stage 2 validated the physical mechanism catalog and the no-leakage visible
+recovery protocol. Stage 3 now removes direct mechanism-label supervision and
+tests whether SCOPE-Discovery can recover latent mechanism structure,
+assignments, and prototypes from the same learner-visible observation surface.
+
+The current physical-teacher source variants are:
+
+```text
+separability_v2:
   engineered separability stress teacher
 
-PHYC2-Born-local:
+Born-local:
   mathematically correct local diagnostic, effective depth one
 
-PHYC1-full-circuit:
+full-circuit-cudaq:
   literal full n-qubit CUDA-Q teacher at configured circuit depth
 ```
 
-`PHYC2-separability_v2` has passed balanced/weighted sampled-observation
-separability, leakage controls, a 74-qubit/depth-200 scalability smoke, and the
-PHYC3 mechanism-to-error-prototype diagnostic. The minimal
-`PHYC2-Born-local` teacher is implemented with effective circuit depth one and
-explicit M11 spectator-crosstalk exclusion. The current Stage 2E mainline is
-`PHYC1-full-circuit`: full n-qubit CUDA-Q circuits with literal configured
-depth, mechanism channels/readout, sampled observations, checkpoint/resume, and
-no CPU fallback when GPU execution is required.
+The current canonical Layer 3 artifact accepts
+`phyc3c_distributional_gaussian_likelihood_head` as the learner source, with
+BA/ARI/NMI/min recall/M13 recall all equal to `1.0`, zero incompatible
+predictions, mean predicted channel distance `5.64e-05`, visible Gaussian NLL
+`0.226681`, and raw visible-feature MAE `4.888e-06`.
 
 ## Docs
 
 - `CONTEXT.md`: glossary and claim boundaries.
+- `docs/TOOLBOX.md`: installable toolbox commands and layer data products.
 - `docs/ARCHITECTURE.md`: current package architecture and data flows.
 - `docs/RUNBOOK.md`: install, test, GPU, and experiment commands.
+- `docs/PRE_RELEASE_LAYERS.md`: public Layer 1/2/3 naming, data products, and current evidence.
 - `docs/SCOPE_STATIC_MVP.md`: Stage 1 known-orbit DEM MVP.
 - `docs/SCOPE_STATIC_DISC.md`: Stage 2 discovery and physical-oracle notes.
 - `docs/STAGE2_ROADMAP.md`: compact Stage 2 execution state.
@@ -84,6 +98,24 @@ Check GPU visibility before serious runs:
 conda run -n aiqec python -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0) if torch.cuda.is_available() else None)"
 ```
 
+## Toolbox Commands
+
+After editable install, the pre-release toolbox exposes:
+
+```bash
+conda run -n aiqec scope-static-toolbox
+conda run -n aiqec scope-layer1-prep --help
+conda run -n aiqec scope-layer2-teacher --help
+conda run -n aiqec scope-layer3-canonical --help
+```
+
+The current public canonical Layer 3 acceptance run is:
+
+```bash
+conda run -n aiqec scope-layer3-canonical \
+  --config configs/scope_static/layer3_canonical_acceptance.yaml
+```
+
 ## Test
 
 ```bash
@@ -100,7 +132,7 @@ conda run -n aiqec python -m pytest -q \
   tests/test_s2d11_typed_spam_gate_invariant.py
 ```
 
-Focused PHYC2/PHYC3 local-observable slice:
+Focused Layer 2/Layer 3 local-observable slice:
 
 ```bash
 conda run -n aiqec python -m pytest -q \
@@ -148,7 +180,7 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run
   --config configs/scope_static/s2d11b_m1_gate_branch_grouped_calibration_audit.yaml
 ```
 
-PHYC2/PHYC3 local-observable weighted allM evidence:
+Layer 2/Layer 3 local-observable weighted allM evidence:
 
 ```bash
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_local_observable_gpu_teacher \
@@ -220,17 +252,16 @@ prep/reset recall:  1.0000
 The local-observable Torch CUDA allM stress teacher now passes:
 
 ```text
-PHYC2-balanced 30q/depth30/30 groups: BA 1.0000, min recall 1.0000
-PHYC2-weighted 30q/depth30/support 2-8: prevalence accuracy 1.0000
-PHYC2-weighted 74q/depth200/support 2-8: prevalence accuracy 1.0000
-PHYC3 weighted mechanism-to-error quality: mean channel distance 0.000026
+Layer 2 balanced 30q/depth30/30 groups: BA 1.0000, min recall 1.0000
+Layer 2 weighted 30q/depth30/support 2-8: prevalence accuracy 1.0000
+Layer 2 weighted 74q/depth200/support 2-8: prevalence accuracy 1.0000
+Layer 3 weighted mechanism-to-error quality: mean channel distance 0.000026
 slot-only leakage controls: low, leakage_suspected false
 ```
 
-This closes the engineered separability stress milestone, not the full-circuit
-physical baseline. Stage 2E mainline work now targets the literal
-`PHYC1-full-circuit` CUDA-Q teacher; Born-local/local-observable artifacts remain
-diagnostics and historical evidence paths.
+The canonical pre-release Layer 3 path now additionally reports visible
+generation quality: Gaussian NLL, population cross entropy, and raw/population/
+expectation MAE. See `docs/PRE_RELEASE_LAYERS.md`.
 
 ## Claim Boundary
 

@@ -213,28 +213,33 @@ allM, 30 qubits, depth 30, uneven support 2-8, 10k shots:
   incompatible predictions 0
 ```
 
-PHYC3 learner recovery owns no-leakage grouped sampled-observation predictions.
-PHYC3 quantum-error quality consumes those PHYC3 learner predictions, builds
+Layer 3 learner recovery owns no-leakage grouped sampled-observation predictions.
+Layer 3 quantum-error quality consumes those Layer 3 learner predictions, builds
 fold-trained mechanism channel/readout prototypes from training groups, and
 compares predicted prototypes to evaluator-only oracle mechanism channels. It
-must not consume PHYC2 teacher-self predictions as learner evidence. For the `separability_v2`
+must not consume Layer 2 teacher-self predictions as learner evidence. For the `separability_v2`
 teacher this is a mechanism-to-error translation diagnostic, not evidence that
 the sampled observations came from Born-rule circuit physics.
 
-Canonical PHYC3 acceptance now resolves the learner source explicitly:
+Canonical Layer 3 acceptance now resolves the learner source explicitly:
 
 ```text
-PHYC2_teacher_self_only_v4:
+Layer 2 / PHYC2_teacher_self_only_v4:
   teacher/catalog self-distinguishability only
-PHYC3a_old_surface_no_leakage_learner_recovery:
+Layer 3a / PHYC3a_old_surface_no_leakage_learner_recovery:
   old visible-surface failing baseline
-PHYC3b_ZX_visible_alias_breaking_probe_suite:
+Layer 3b / PHYC3b_ZX_visible_alias_breaking_probe_suite:
   Z/X-only visible-surface repair and deterministic ceiling audit
-PHYC3c_distributional_gaussian_likelihood_head:
+Layer 3c / PHYC3c_distributional_gaussian_likelihood_head:
   accepted multi-context distributional learner head
-PHYC3_canonical_quality_acceptance:
+Layer 3 canonical / PHYC3_canonical_quality_acceptance:
   final resolver that consumes PHYC3c predictions only
 ```
+
+Stage 2 validated the physical mechanism catalog and the no-leakage visible
+recovery protocol. Stage 3 now removes direct mechanism-label supervision and
+tests whether SCOPE-Discovery can recover latent mechanism structure,
+assignments, and prototypes from the same learner-visible observation surface.
 
 Current PHYC2-weighted scalability smoke:
 
@@ -354,11 +359,12 @@ full-circuit-cudaq:
   required Stage 2E full-circuit gate
 ```
 
-Stage 3 is blocked until the full-circuit CUDA-Q Stage 2E gate passes all three
-roles: PHYC1 generation, PHYC2 teacher self-distinguishment, and PHYC3
-no-leakage learner recovery/error quality. The current `separability_v2` and
-Born-local evidence remains useful, but neither closes the full-circuit
-physical-teacher milestone. The current mainline decision is recorded in
+Stage 2 validated the physical mechanism catalog and the no-leakage visible
+recovery protocol. Stage 3 now removes direct mechanism-label supervision and
+tests whether SCOPE-Discovery can recover latent mechanism structure,
+assignments, and prototypes from the same learner-visible observation surface.
+Full-circuit CUDA-Q remains an important Layer 1 source for future larger-scale
+physical-teacher runs. The current mainline decision is recorded in
 `docs/adr/0005-stage2e-full-circuit-cudaq-mainline.md`.
 
 ### Stage 2B: Google External Validation

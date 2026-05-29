@@ -15,6 +15,7 @@ from .born_local import (
     born_local_probability_tables,
     outcome_zz_correlation,
 )
+from .layers import LAYER1_PREP
 from .mechanism_catalog import READOUT_MECHANISM_IDS, RZZ_FAMILY_IDS
 from .phyc1_contract import LOCAL_OBSERVABLE_TEACHER_MODEL, PHYC1_LEGACY_STAGE_NAME, probe_names as phyc1_probe_names
 from .ptm import channel_fingerprint, probe_response_fingerprint, rzz_type_feature_vector
@@ -126,6 +127,7 @@ def generate_local_observable_teacher_dataset(
     summary = {
         "schema": "scope_static_local_observable_gpu_teacher_v1",
         "stage": PHYC1_LEGACY_STAGE_NAME,
+        "public_layer": LAYER1_PREP.metadata(artifact_stage=PHYC1_LEGACY_STAGE_NAME, substage="local_observable_teacher"),
         "teacher_model": LOCAL_OBSERVABLE_TEACHER_MODEL,
         "local_observable_response_model": response_model,
         "born_local_scope": born_scope if response_model == "born_local" else None,

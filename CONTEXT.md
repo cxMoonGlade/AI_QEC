@@ -27,15 +27,15 @@ This repository is currently centered on the SCOPE family of QEC noise-learning 
 - **GPU batched local-window exact adapter**: the C++/CUDA implementation of local-window exact likelihood that evaluates all prepared windows in one extension call and returns a first-order gradient for SCOPE-Static training.
 - **Evidence record**: one metrics row for a trained SCOPE-Static model, including likelihood source, compression audit, baseline metadata, and threshold inputs.
 - **Experiment plan**: the normalized SCOPE-Static run matrix compiled from YAML, including residual ranks, teacher cases, shot budgets, model names, backend choice, and output identity.
-- **Physical Oracle Stack**: the S2D physical-oracle validation stack that runs PHYC1 teacher generation, PHYC2 teacher self-distinguishment, and PHYC3 no-leakage learner recovery as one artifact contract. `PHYS1/PHYS2/PHYS3` are legacy spellings for older stage folders and summaries.
-- **PHYC1 teacher generation**: the physical-teacher artifact stage that samples or otherwise emits learner-visible probe observations from a declared physical teacher contract. `PHYS1` is a legacy spelling and should not be used for new claims.
-- **PHYC1-full-circuit**: the main Stage 2E PHYC1 teacher contract: literal full n-qubit noisy circuits with configured circuit depth, mechanism channels/readout, and sampled observations.
-- **PHYC2 teacher self-distinguishment**: the teacher-internal question of whether the PHYC1 teacher can distinguish every generated mechanism label from its own declared mechanism evidence. A PHYC2 pass establishes that the teacher itself is identifiable; it is not a no-leakage learner claim.
-- **Sampled-observation learner diagnostic**: the PHYC2 companion diagnostic that asks whether learner-visible sampled observations and visible probe/instruction/location metadata classify mechanism labels under grouped folds. Exact PTMs, oracle fingerprints, and teacher-self signatures are evaluator-only.
-- **PHYC3 no-leakage learner recovery**: the learner-visible assessment of whether the sampled-observation learner diagnostic recovers mechanism labels without hidden/oracle leakage after PHYC2 teacher self-distinguishment is established.
-- **PHYC2-separability_v2**: the engineered local-observable sampled-response stress teacher. It is useful for separability and leakage-control evidence, but it is not a Born-rule physical baseline.
-- **PHYC2-Born-local**: an exact local Born-rule diagnostic where sampled local observations come from exact local Born probabilities for CPTP/readout mechanisms. It has effective depth one and is not the full-circuit Stage 2E gate.
-- **PHYC3 sampled quantum-error quality**: the audit that consumes no-leakage learner grouped predictions, never PHYC2 teacher-self predictions, and checks whether predicted mechanism labels map to close fold-trained quantum/readout error prototypes. For `separability_v2`, this is a mechanism-to-error translation diagnostic, not direct channel reconstruction from raw shots.
+- **Physical mechanism layer stack**: the public pre-release naming for the former PHYC stack. Layer 1 is Data Preparation (Prep), Layer 2 is Teacher Self-Distinguishment (Teacher), and Layer 3 is Learner Classification and Noise Generation (Learner). `PHYC1/PHYC2/PHYC3` remain legacy artifact aliases.
+- **Layer 1: Data Preparation (Prep)**: generates mechanism-catalog records, probe schedules, sampled observations, teacher config, sampling audits, and active probe manifests. Legacy alias: `PHYC1`.
+- **Layer 2: Teacher Self-Distinguishment (Teacher)**: asks whether the declared teacher/catalog can distinguish every generated mechanism from teacher-internal mechanism evidence. A Layer 2 pass establishes teacher/catalog identifiability; it is not a no-leakage learner claim. Legacy alias: `PHYC2`.
+- **Layer 3: Learner Classification and Noise Generation (Learner)**: consumes learner-visible observations to classify mechanisms and score generated noise/error quality with channel-distance, NLL, and MAE diagnostics. It must not consume Layer 2 teacher-self predictions or hidden/oracle feature inputs. Legacy alias: `PHYC3`.
+- **Layer 3b Z/X visible repair**: the strict Y-free, Z/X-only visible probe surface that raises the deterministic visible ceiling before learner-head claims.
+- **Layer 3c distributional Gaussian head**: the accepted multi-context learner head on Layer 3b visible features; it recovers drifted M13 only under a valid multi-context protocol.
+- **separability_v2**: the engineered local-observable sampled-response stress teacher. It is useful for separability and leakage-control evidence, but it is not a Born-rule physical baseline.
+- **Born-local**: an exact local Born-rule diagnostic where sampled local observations come from exact local Born probabilities for CPTP/readout mechanisms. It has effective depth one and is not the full-circuit teacher.
+- **full-circuit-cudaq**: the literal full n-qubit CUDA-Q teacher source at configured circuit depth.
 - **Six-axis physical generation problem**: the project-level SCOPE-Twin target. A physical constraint generation model is not validated merely by emitting CPTP/GKSL objects; it must hold simultaneously across generation fidelity, interpretability, decoder utility, cross-context generalization, drift prediction, and identifiability.
 - **Numerical floor**: floating numerical floors, thresholds, and probability leftovers use `scope_static.numerics.NUMERICAL_ZERO == 1e-12` instead of exact `0.0`. This value survives square/cube operations in GPU float32. It does not apply to structural zeros such as Pauli matrix entries, bit values, integer indices, counts, labels, or genuinely absent artifacts.
 
@@ -59,12 +59,10 @@ report permutation-invariant discovery metrics such as ARI/NMI and heldout NLL
 close to matched known-orbit oracles. Google hardware datasets are external
 empirical validation data, not oracle hidden-partition teachers.
 
-Stage 2E is the full-circuit CUDA-Q physical-teacher gate. PHYC1 must generate
-literal full n-qubit noisy-circuit samples at configured depth. PHYC2 then asks
-whether that teacher can self-distinguish every generated mechanism. PHYC3 is
-separate: it asks whether learner-visible observations recover those mechanisms
-without hidden/oracle leakage and whether the recovered labels imply close
-quantum/readout error prototypes. Current `separability_v2` evidence is an
-engineered local-observable stress result, while Born-local remains an exact
-local diagnostic. Neither replaces full-circuit CUDA-Q PHYC1 at configured
-depth.
+Stage 2 validated the physical mechanism catalog and the no-leakage visible
+recovery protocol. Stage 3 now removes direct mechanism-label supervision and
+tests whether SCOPE-Discovery can recover latent mechanism structure,
+assignments, and prototypes from the same learner-visible observation surface.
+The Layer 1/2/3 physical stack remains the pre-release validation surface for
+data preparation, teacher/catalog self-distinguishment, and no-leakage learner
+classification/noise-generation quality.

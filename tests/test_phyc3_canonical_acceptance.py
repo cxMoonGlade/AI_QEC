@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 
 from scope_static.physical.phyc3_canonical_acceptance import run_phyc3_canonical_acceptance
+from scope_static.experiments.run_phyc3_canonical_acceptance import run_phyc3_canonical_acceptance_from_config
 
 
 def test_phyc3_canonical_acceptance_selects_phyc3c_and_writes_quality(tmp_path: Path) -> None:
@@ -12,12 +14,21 @@ def test_phyc3_canonical_acceptance_selects_phyc3c_and_writes_quality(tmp_path: 
     result = run_phyc3_canonical_acceptance(**paths, output_dir=tmp_path / "PHYC3_canonical")
 
     assert result["stage"] == "PHYC3_canonical_quality_acceptance"
+    assert result["public_layer"]["layer_name"] == "Layer 3: Learner Classification and Noise Generation (Learner)"
+    assert result["public_layer"]["legacy_alias"] == "PHYC3"
+    assert [row["layer_index"] for row in result["public_layer_stack"]] == [1, 2, 3]
     assert result["contract_passed"] is True
     assert result["decision"] == "phyc3_canonical_quality_accepted"
     assert result["canonical_prediction_source"]["source_name"] == "phyc3c_distributional_gaussian_likelihood_head"
     assert result["canonical_quality_metrics"]["passed"] is True
     assert result["canonical_quality_metrics"]["classification_accuracy"] == 1.0
     assert result["canonical_quality_metrics"]["incompatible_prediction_count"] == 0
+    generation = result["learner_generation_quality_metrics"]
+    assert generation["prediction_source"] == "phyc3c_distributional_gaussian_likelihood_head"
+    assert generation["no_leakage_audit"]["generation_uses_predicted_label_not_true_label"] is True
+    assert generation["num_batches"] == 4
+    assert math.isfinite(generation["visible_gaussian_nll_nats_per_feature"]["mean"])
+    assert math.isfinite(generation["visible_raw_feature_mae"]["mean"])
     assert result["phyc3a_baseline_audit"]["passed"] is True
     assert all(not row["accepted_as_canonical"] for row in result["rejected_sources"]["sources"])
     for name in [
@@ -26,6 +37,7 @@ def test_phyc3_canonical_acceptance_selects_phyc3c_and_writes_quality(tmp_path: 
         "provenance_audit.json",
         "acceptance_checks.json",
         "canonical_quality_metrics.json",
+        "learner_generation_quality.json",
         "rejected_sources.json",
         "canonical_prediction_source.json",
     ]:
@@ -56,6 +68,28 @@ def test_phyc3_canonical_acceptance_requires_phyc3c_multi_context_protocol(tmp_p
 
     assert result["contract_passed"] is False
     assert result["phyc3c_accepted_learner_audit"]["checks"]["primary_mode_is_multi_context"] is False
+
+
+def test_layer3_canonical_acceptance_config_alias(tmp_path: Path) -> None:
+    paths = _write_acceptance_fixture(tmp_path)
+    config = {
+        "layer3_canonical_acceptance": {
+            "teacher_dir": str(paths["teacher_dir"]),
+            "phyc2_dir": str(paths["phyc2_dir"]),
+            "phyc3a_dir": str(paths["phyc3a_dir"]),
+            "phyc3b_dir": str(paths["phyc3b_dir"]),
+            "phyc3c_dir": str(paths["phyc3c_dir"]),
+            "phyc3c_validation_dir": str(paths["phyc3c_validation_dir"]),
+            "output_dir": str(tmp_path / "Layer3_canonical"),
+        }
+    }
+    config_path = tmp_path / "layer3.yaml"
+    config_path.write_text(json.dumps(config))
+
+    result = run_phyc3_canonical_acceptance_from_config(config_path=config_path)
+
+    assert result["contract_passed"] is True
+    assert result["public_layer"]["layer_short_name"] == "Learner"
 
 
 def _write_acceptance_fixture(tmp_path: Path) -> dict[str, Path]:

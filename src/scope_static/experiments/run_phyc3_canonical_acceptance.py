@@ -28,7 +28,7 @@ def run_phyc3_canonical_acceptance_from_config(
         max_worst_predicted_channel_distance=float(cfg.get("max_worst_predicted_channel_distance", 0.005)),
     )
     print(
-        "PHYC3 canonical quality acceptance complete\n"
+        "Layer 3 canonical quality acceptance complete (legacy PHYC3)\n"
         f"  decision={result.get('decision')}\n"
         f"  passed={bool(result.get('contract_passed'))}\n"
         f"  canonical_source={dict(result.get('canonical_prediction_source', {})).get('source_name', 'unknown')}\n"
@@ -39,7 +39,7 @@ def run_phyc3_canonical_acceptance_from_config(
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description="Run PHYC3 canonical quality acceptance resolver.")
+    parser = argparse.ArgumentParser(description="Run Layer 3 canonical quality acceptance resolver.")
     parser.add_argument("--config", type=Path, default=Path("configs/scope_static/phyc3_canonical_acceptance.yaml"))
     parser.add_argument("--output-dir", type=Path)
     args = parser.parse_args(argv)
@@ -56,10 +56,10 @@ def _load_config(config_path: str | Path | None) -> dict[str, object]:
     if data is None:
         return {}
     if not isinstance(data, dict):
-        raise ValueError("PHYC3 canonical acceptance config must be a mapping")
-    section = data.get("phyc3_canonical_acceptance", data)
+        raise ValueError("Layer 3 canonical acceptance config must be a mapping")
+    section = data.get("layer3_canonical_acceptance", data.get("phyc3_canonical_acceptance", data))
     if not isinstance(section, dict):
-        raise ValueError("PHYC3 canonical acceptance config section must be a mapping")
+        raise ValueError("Layer 3 canonical acceptance config section must be a mapping")
     return dict(section)
 
 

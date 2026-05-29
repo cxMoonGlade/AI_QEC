@@ -21,24 +21,25 @@ rho_probe -> full n-qubit ideal schedule of configured depth d
 
 ## Decision
 
-Use `full_circuit_cudaq` as the PHYC1 mainline. CUDA-QEC/NVIDIA-QEC companion
+Use `full_circuit_cudaq` as the Layer 1 full-circuit source. CUDA-QEC/NVIDIA-QEC companion
 adapters, duck-test entry points, and optional install extras are not part of
 the codebase mainline.
 
-The PHYC gates are distinct:
+The public layer gates are distinct. `PHYC1/PHYC2/PHYC3` remain legacy artifact
+aliases:
 
 ```text
-PHYC1:
+Layer 1: Data Preparation (Prep)
   generate sampled observations from the declared teacher contract
 
-PHYC2:
+Layer 2: Teacher Self-Distinguishment (Teacher)
   teacher self-distinguishment; the teacher itself must classify every
   generated mechanism with BA, min recall, ARI, and NMI all equal to 1.0
 
-PHYC3:
-  no-leakage learner recovery plus quantum/readout error quality; PHYC3 must
-  consume learner-visible grouped predictions, not PHYC2 teacher-self
-  predictions
+Layer 3: Learner Classification and Noise Generation (Learner)
+  no-leakage learner recovery plus quantum/readout and visible-generation
+  quality; Layer 3 must consume learner-visible grouped predictions, not Layer 2
+  teacher-self predictions
 ```
 
 The full-circuit teacher must:
@@ -53,8 +54,10 @@ The full-circuit teacher must:
 
 - `separability_v2` remains synthetic separability evidence.
 - Born-local remains an exact local diagnostic with effective depth one.
-- Full-circuit CUDA-Q artifacts are the Stage 2E acceptance surface only when
-  PHYC1 generation, PHYC2 teacher self-distinguishment, and PHYC3 no-leakage
-  learner quality all pass.
+- Stage 2 validated the physical mechanism catalog and the no-leakage visible
+  recovery protocol. Stage 3 now removes direct mechanism-label supervision and
+  tests whether SCOPE-Discovery can recover latent mechanism structure,
+  assignments, and prototypes from the same learner-visible observation
+  surface.
 - CUDA-QEC/CUDA-QX can be reconsidered later for decoder-utility baselines, not
-  as the PHYC1 teacher engine.
+  as the Layer 1 teacher engine.

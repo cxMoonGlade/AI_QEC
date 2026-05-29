@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 
+from .layers import LAYER3_LEARNER
 from .local_pauli_lindblad import build_local_pauli_lindblad_observability
 from .sampled_observation_separability import (
     _contract_passed,
@@ -51,6 +52,7 @@ def run_phyc3_no_leakage_learner_recovery(
         result = {
             "schema": "scope_static_phyc3_no_leakage_learner_recovery_v1",
             "stage": STAGE_NAME,
+            "public_layer": LAYER3_LEARNER.metadata(artifact_stage=STAGE_NAME, substage="old_surface_learner_recovery"),
             "teacher_dir": str(teacher),
             "output_dir": str(output),
             "contract_variant": str(contract_variant),
@@ -98,12 +100,13 @@ def run_phyc3_no_leakage_learner_recovery(
     result = {
         "schema": "scope_static_phyc3_no_leakage_learner_recovery_v1",
         "stage": STAGE_NAME,
+        "public_layer": LAYER3_LEARNER.metadata(artifact_stage=STAGE_NAME, substage="old_surface_learner_recovery"),
         "teacher_dir": str(teacher),
         "output_dir": str(output),
         "contract_variant": str(contract_variant),
         "contract": {
             "name": f"no_leakage_sampled_observation_learner_recovery_{contract_variant}",
-            "primary_role": "PHYC3 no-leakage learner mechanism classification",
+            "primary_role": LAYER3_LEARNER.public_name,
             "teacher_self_predictions_allowed": False,
             "learner_visible_inputs_only": True,
             "oracle_labels_used_for_supervised_training_and_evaluation_only": True,
@@ -114,7 +117,7 @@ def run_phyc3_no_leakage_learner_recovery(
             "rare_class_recall_ge": float(min_rare_class_recall),
         },
         "claim_boundary": (
-            "PHYC3 learner recovery owns grouped sampled-observation predictions. "
+            "Layer 3 learner recovery owns grouped sampled-observation predictions. "
             "The feature matrix is learner-visible; oracle labels are supervision/evaluator fields, not features."
         ),
         "coverage": coverage,
@@ -151,8 +154,9 @@ def run_phyc3_no_leakage_learner_recovery(
 def format_phyc3_no_leakage_learner_recovery_summary(result: dict[str, object]) -> str:
     return "\n".join(
         [
-            "# PHYC3 No-Leakage Learner Recovery",
+            "# Layer 3: Learner Classification and Noise Generation",
             "",
+            f"- Legacy alias: `{dict(result.get('public_layer', {})).get('legacy_alias', 'PHYC3')}`",
             f"- Decision: `{result.get('decision')}`",
             f"- Contract passed: `{str(bool(result.get('contract_passed'))).lower()}`",
             f"- Balanced accuracy: `{float(result.get('balanced_accuracy', 0.0)):.4f}`",

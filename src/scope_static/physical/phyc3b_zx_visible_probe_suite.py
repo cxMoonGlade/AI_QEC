@@ -9,6 +9,7 @@ from typing import Iterable
 import numpy as np
 
 from .channels import MechanismSpec, mechanism_channel
+from .layers import LAYER3_LEARNER
 from .mechanism_catalog import MECHANISM_NAMES
 from .sampled_observation_separability import visible_input_identifiability_audit
 from .sampled_quantum_error_quality import ChannelVector, channel_vector
@@ -191,6 +192,7 @@ def feature_schema_zx_visible(
     return {
         "schema": "scope_static_phyc3b_zx_visible_feature_schema_v1",
         "stage": STAGE_NAME,
+        "public_layer": LAYER3_LEARNER.metadata(artifact_stage=STAGE_NAME, substage="zx_visible_surface_repair"),
         "claim_boundary": "Z/X measurement axes are sufficient; Y measurement is not required; X-prepared states are required for phase/coherence observability.",
         "measurement_axes": ["Z", "X"],
         "preparations": {"single_qubit": list(SINGLE_PREPS), "two_qubit": list(TWO_PREPS)},
@@ -259,6 +261,7 @@ def run_phyc3b_zx_visible_alias_breaking_probe_suite(
     result = {
         "schema": "scope_static_phyc3b_zx_visible_alias_breaking_probe_suite_v1",
         "stage": STAGE_NAME,
+        "public_layer": LAYER3_LEARNER.metadata(artifact_stage=STAGE_NAME, substage="zx_visible_surface_repair"),
         "teacher_dir": str(teacher),
         "phyc2_dir": None if phyc2_dir is None else str(phyc2_dir),
         "output_dir": str(output),
@@ -623,8 +626,10 @@ def format_phyc3b_summary(result: dict[str, object]) -> str:
         m34 = {}
     return "\n".join(
         [
-            "# PHYC3b Z/X Visible Alias-Breaking Probe Suite",
+            "# Layer 3b: Z/X Visible Alias-Breaking Probe Suite",
             "",
+            f"- Layer: `{LAYER3_LEARNER.public_name}`",
+            f"- Legacy alias: `{LAYER3_LEARNER.legacy_alias}`",
             f"- Decision: `{result.get('decision')}`",
             f"- Main ceiling criterion passed: `{str(bool(result.get('main_success_criterion_passed'))).lower()}`",
             f"- Visible conflicts before: `{int(result.get('visible_signature_conflicts_before', 0))}`",

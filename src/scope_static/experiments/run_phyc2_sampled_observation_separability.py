@@ -24,7 +24,7 @@ def run_phyc2_sampled_observation_separability(
         seed=int(seed),
     )
     print(
-        "PHYC2 teacher self-distinguishment complete\n"
+        "Layer 2 teacher self-distinguishment complete (legacy PHYC2)\n"
         f"  contract={result.get('contract_variant')}\n"
         f"  decision={result.get('decision')}\n"
         f"  passed={bool(result.get('contract_passed'))}\n"
@@ -39,7 +39,7 @@ def run_phyc2_sampled_observation_separability(
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description="Run PHYC2 teacher self-distinguishment only.")
+    parser = argparse.ArgumentParser(description="Run Layer 2 Teacher Self-Distinguishment only.")
     parser.add_argument("--teacher-dir", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--contract", choices=("balanced", "weighted"), default="balanced")

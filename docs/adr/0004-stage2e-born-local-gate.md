@@ -12,9 +12,10 @@ control, no-remap ablation, 74-qubit/depth-200 scalability smoke, and PHYC3
 mechanism-to-error prototype quality on the engineered sampled-observation
 teacher.
 
-Current terminology separates these claims more sharply: PHYC2 means teacher
-self-distinguishment, while PHYC3 means no-leakage learner recovery plus
-quantum/readout error quality. Older PHYC3 artifacts should be rechecked for a
+Current public terminology separates these claims more sharply: Layer 2 means
+teacher self-distinguishment, while Layer 3 means no-leakage learner recovery
+plus quantum/readout and visible-generation quality. Older PHYC3 artifacts
+should be rechecked for a
 learner prediction source before being cited as no-leakage learner evidence.
 
 However, `separability_v2` is intentionally engineered for learner-visible
@@ -49,8 +50,11 @@ PHYC3-Born-local:
 ```
 
 Historically, Stage 3 was blocked on PHYC2-Born-local and the corresponding
-PHYC3-Born-local quality audit. ADR 0005 replaces that gate with the
-full-circuit CUDA-Q PHYC1/PHYC2/PHYC3 gate.
+PHYC3-Born-local quality audit. ADR 0005 superseded that gate. The current
+pre-release boundary is: Stage 2 validated the physical mechanism catalog and
+the no-leakage visible recovery protocol; Stage 3 removes direct
+mechanism-label supervision and tests SCOPE-Discovery on the same
+learner-visible observation surface.
 
 ## Consequences
 

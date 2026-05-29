@@ -139,7 +139,7 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run
   --config configs/scope_static/s2d11b_m1_gate_branch_grouped_calibration_audit.yaml
 ```
 
-Run PHYC2/PHYC3 local-observable weighted allM evidence:
+Run Layer 2/Layer 3 local-observable weighted allM evidence:
 
 ```bash
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_local_observable_gpu_teacher \
@@ -179,22 +179,25 @@ Stage 2 discovery should begin with synthetic teachers and report ARI/NMI before
 using Google repetition-code or surface-code data as external empirical
 validation.
 
-## Current PHYC1/PHYC2/PHYC3 Milestone Boundary
+## Current Layer 1/Layer 2/Layer 3 Milestone Boundary
 
-The current physical-teacher stack has three distinct PHYC roles:
+The current physical-mechanism stack uses public Layer names. `PHYC1`,
+`PHYC2`, and `PHYC3` remain legacy artifact aliases in existing paths,
+schemas, and tests.
 
 ```text
-PHYC1:
-  teacher generation from the declared physical contract
+Layer 1: Data Preparation (Prep)
+  legacy alias PHYC1; generates mechanism records, probe schedules,
+  sampled observations, teacher config, and sampling audits
 
-PHYC2:
-  teacher self-distinguishment; a pass means the teacher itself can classify
-  every generated mechanism with BA, min recall, ARI, and NMI all equal 1.0
+Layer 2: Teacher Self-Distinguishment (Teacher)
+  legacy alias PHYC2; a pass means the teacher/catalog can classify every
+  generated mechanism with BA, min recall, ARI, and NMI all equal 1.0
 
-PHYC3:
-  no-leakage learner recovery plus quantum/readout error quality; PHYC3 must
-  consume learner-visible grouped predictions, not PHYC2 teacher-self
-  predictions
+Layer 3: Learner Classification and Noise Generation (Learner)
+  legacy alias PHYC3; consumes learner-visible grouped predictions, not
+  Layer 2 teacher-self predictions, and reports classification plus generated
+  noise/error quality including channel distance, NLL, and MAE
 ```
 
 Variant labels describe the teacher source, not a change in the PHYC meaning:
@@ -210,12 +213,18 @@ full-circuit-cudaq:
   required Stage 2E mainline: literal n-qubit noisy circuits at gate depth d
 ```
 
+Stage 2 validated the physical mechanism catalog and the no-leakage visible
+recovery protocol. Stage 3 now removes direct mechanism-label supervision and
+tests whether SCOPE-Discovery can recover latent mechanism structure,
+assignments, and prototypes from the same learner-visible observation surface.
+
 The `separability_v2` allM artifacts are strong Stage 2 separability evidence,
-not a Born-rule physical baseline. Older PHYC3 artifacts must be rechecked for
+not a Born-rule physical baseline. Older Layer 3/PHYC3 artifacts must be rechecked for
 `prediction_source_audit.source_name == "phyc3_no_leakage_learner_recovery"`
 before being cited as current no-leakage learner evidence. The minimal Born-local
 teacher remains a density-matrix diagnostic with effective circuit depth one.
-Stage 2E acceptance requires full-circuit CUDA-Q PHYC1 generation, PHYC2 teacher
-self-distinguishment, and PHYC3 no-leakage learner recovery/error quality. M11
-spectator crosstalk RZ/ZZ remains a contract-sensitive mechanism; do not
-collapse it into a local Born diagnostic when making full-circuit claims.
+The pre-release acceptance surface is Layer 1 data preparation, Layer 2 teacher
+self-distinguishment, and Layer 3 no-leakage learner classification plus noise
+generation quality. M11 spectator crosstalk RZ/ZZ remains a contract-sensitive
+mechanism; do not collapse it into a local Born diagnostic when making
+full-circuit claims.

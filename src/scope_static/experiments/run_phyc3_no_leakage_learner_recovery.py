@@ -32,7 +32,7 @@ def run_phyc3_no_leakage_learner_recovery_experiment(
         seed=int(seed if seed is not None else cfg.get("seed", 0)),
     )
     print(
-        "PHYC3 no-leakage learner recovery complete\n"
+        "Layer 3 no-leakage learner recovery complete (legacy PHYC3)\n"
         f"  contract={result.get('contract_variant')}\n"
         f"  decision={result.get('decision')}\n"
         f"  passed={bool(result.get('contract_passed'))}\n"
@@ -46,7 +46,7 @@ def run_phyc3_no_leakage_learner_recovery_experiment(
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description="Run PHYC3 no-leakage sampled-observation learner recovery.")
+    parser = argparse.ArgumentParser(description="Run Layer 3 no-leakage sampled-observation learner recovery.")
     parser.add_argument("--config", type=Path, default=Path("configs/scope_static/phyc3_no_leakage_learner_recovery.yaml"))
     parser.add_argument("--teacher-dir", type=Path)
     parser.add_argument("--output-dir", type=Path)
@@ -76,10 +76,10 @@ def _load_config(config_path: str | Path | None) -> dict[str, object]:
     if data is None:
         return {}
     if not isinstance(data, dict):
-        raise ValueError("PHYC3 learner recovery config must be a mapping")
-    section = data.get("phyc3_no_leakage_learner_recovery", data)
+        raise ValueError("Layer 3 learner recovery config must be a mapping")
+    section = data.get("layer3_no_leakage_learner_recovery", data.get("phyc3_no_leakage_learner_recovery", data))
     if not isinstance(section, dict):
-        raise ValueError("PHYC3 learner recovery config section must be a mapping")
+        raise ValueError("Layer 3 learner recovery config section must be a mapping")
     return dict(section)
 
 

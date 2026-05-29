@@ -6,6 +6,7 @@ from pathlib import Path
 
 import numpy as np
 
+from .layers import LAYER3_LEARNER
 from .phyc3b_zx_visible_probe_suite import (
     FORBIDDEN_FEATURE_TOKENS,
     build_zx_visible_feature_table,
@@ -103,6 +104,7 @@ def run_phyc3c_distributional_gaussian_likelihood_head(
     result = {
         "schema": "scope_static_phyc3c_distributional_gaussian_likelihood_head_v1",
         "stage": STAGE_NAME,
+        "public_layer": LAYER3_LEARNER.metadata(artifact_stage=STAGE_NAME, substage="distributional_gaussian_likelihood_head"),
         "teacher_dir": str(teacher),
         "output_dir": str(output),
         "claim_boundary": {
@@ -668,8 +670,10 @@ def format_phyc3c_summary(result: dict[str, object]) -> str:
     single = dict(single) if isinstance(single, dict) else {}
     return "\n".join(
         [
-            "# PHYC3c Distributional Gaussian Likelihood Head",
+            "# Layer 3c: Distributional Gaussian Likelihood Head",
             "",
+            f"- Layer: `{LAYER3_LEARNER.public_name}`",
+            f"- Legacy alias: `{LAYER3_LEARNER.legacy_alias}`",
             f"- Decision: `{result.get('decision')}`",
             f"- Primary mode: `{result.get('primary_mode')}`",
             f"- Primary head: `{result.get('primary_head')}`",
