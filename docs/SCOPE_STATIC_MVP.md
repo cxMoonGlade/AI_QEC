@@ -38,7 +38,7 @@ The dense `A` tensor remains as a compatibility artifact for small tests and toy
 
 This stage may claim evidence about orbit sharing, fixed residual features, exact DEM likelihood, and `d_Q^DEM` inside this fixed Bernoulli parity-map family.
 
-This stage must not claim CPTP/GKSL learning, full noisy-circuit Born-rule likelihood, context-conditioned amortization, latent quotient discovery, OOD transfer, or temporal drift tracking.
+This stage must not claim CPTP/GKSL learning, learned full noisy-circuit Born-rule likelihood from hardware data, context-conditioned amortization, latent quotient discovery, OOD transfer, or temporal drift tracking.
 
 Project-wide, the eventual target is the six-axis physical generation problem:
 generation fidelity, interpretability, decoder utility, cross-context

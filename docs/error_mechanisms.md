@@ -39,7 +39,8 @@ context role. The source taxonomy was cross-checked against:
   <https://arxiv.org/abs/2305.13132>
 
 The Qiskit Aer source is cited as a public noise-taxonomy reference only. The
-repo direction is CUDA-Q plus native math/Born-local paths, not Qiskit Aer.
+repo direction is literal full-circuit CUDA-Q plus native math diagnostics, not
+Qiskit Aer or CUDA-QEC memory-circuit shortcuts.
 
 ## Controlled-Gate Noise Model
 

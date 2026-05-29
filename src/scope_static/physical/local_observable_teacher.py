@@ -16,8 +16,9 @@ from .born_local import (
     outcome_zz_correlation,
 )
 from .mechanism_catalog import READOUT_MECHANISM_IDS, RZZ_FAMILY_IDS
+from .phyc1_contract import LOCAL_OBSERVABLE_TEACHER_MODEL, PHYC1_LEGACY_STAGE_NAME, probe_names as phyc1_probe_names
 from .ptm import channel_fingerprint, probe_response_fingerprint, rzz_type_feature_vector
-from .teacher import _build_balanced_oracle_mechanisms, _merged_config, _probe_names, build_probe_basis_manifest
+from .teacher import _build_balanced_oracle_mechanisms, _merged_config, build_probe_basis_manifest
 
 READOUT_ALIAS_GROUP = tuple(sorted(READOUT_MECHANISM_IDS, key=lambda value: int(value[1:])))
 RZZ_ALIAS_GROUP = tuple(RZZ_FAMILY_IDS[:4])
@@ -75,7 +76,7 @@ def generate_local_observable_teacher_dataset(
         if slot_remap_enabled
         else _disabled_observation_slot_audit(records, num_qubits=observation_slots, physical_num_qubits=physical_num_qubits)
     )
-    base_probe_names = _probe_names(str(cfg.get("probe_set", "rzz_local_tomography")))
+    base_probe_names = phyc1_probe_names(str(cfg.get("probe_set", "rzz_local_tomography")))
     probe_names = [f"c{circuit_id}:{name}" for circuit_id in range(repetitions) for name in base_probe_names]
     shots = int(cfg.get("shots", 10_000))
     seed = int(cfg.get("seed", 0))
@@ -124,8 +125,8 @@ def generate_local_observable_teacher_dataset(
     (output / "active_probe_manifest.json").write_text(json.dumps(probe_manifest, indent=2, sort_keys=True) + "\n")
     summary = {
         "schema": "scope_static_local_observable_gpu_teacher_v1",
-        "stage": "S2D_PHYS1_teacher",
-        "teacher_model": "local_observable_gpu",
+        "stage": PHYC1_LEGACY_STAGE_NAME,
+        "teacher_model": LOCAL_OBSERVABLE_TEACHER_MODEL,
         "local_observable_response_model": response_model,
         "born_local_scope": born_scope if response_model == "born_local" else None,
         "output_dir": str(output),
@@ -341,7 +342,7 @@ def _sample_local_observations(
     copy_seconds = time.perf_counter() - copy_started
     audit = {
         "schema": "scope_static_local_observable_gpu_sampling_audit_v1",
-        "teacher_model": "local_observable_gpu",
+        "teacher_model": LOCAL_OBSERVABLE_TEACHER_MODEL,
         "local_observable_response_model": model,
         "backend": "torch_cuda",
         "device": str(torch.cuda.get_device_name(0)),
@@ -616,7 +617,7 @@ def build_self_distinguishability_preflight(
     low_margin = sorted(pairwise.items(), key=lambda item: item[1])[:20]
     return {
         "schema": "scope_static_local_observable_self_distinguishability_preflight_v1",
-        "teacher_model": "local_observable_gpu",
+        "teacher_model": LOCAL_OBSERVABLE_TEACHER_MODEL,
         "local_observable_response_model": model,
         "num_records": int(len(records)),
         "num_qubits": int(num_qubits),

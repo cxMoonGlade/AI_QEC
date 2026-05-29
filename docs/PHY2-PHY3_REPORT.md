@@ -23,7 +23,7 @@
 \[
 R_{ij}=2^{-n}\operatorname{Tr}[P_i\,\mathcal E(P_j)].
 \]
-在这种表示里，门组合就是矩阵乘法；这也是 GST 语境常用 PTM 的原因之一。当前实现已转向 CUDA-Q preflight 与 Born-local local-observable teacher，旧的全局模拟器教师只作为历史背景，不再是 S2D 默认路径。citeturn17view2turn19view2turn17view0turn17view1
+在这种表示里，门组合就是矩阵乘法；这也是 GST 语境常用 PTM 的原因之一。当前实现已转向 full-circuit CUDA-Q PHYC1 teacher；Born-local/local-observable 路径保留为诊断和历史证据，不是当前主线。citeturn17view2turn19view2turn17view0turn17view1
 
 RZZ 非-Clifford 论文对 \(R_{ZZ}(\theta)\) 做了一个特别重要的基重排：把与 \(ZZ\) **对易**的 Pauli 放在前半，把与 \(ZZ\) **反对易**的 Pauli 放在后半。这样，理想 \(R_{ZZ}(\theta)\) 的 PTM 在前半是单位块，在后半是 \(2\times2\) 旋转块 \(R^{(2)}(\theta)\)。对 noisy gate 再做 commuting-Pauli partial twirl 后，PTM 变成 \(2\times2\) block-diagonal，并自然分成 Type 1–4：Type 1 是 commuting-sector 保持项、Type 2 是 anti-commuting-sector 的对角保持项、Type 3 是 anti-commuting-sector 的有符号混合项、Type 4 是 commuting-sector 的本应接近 0 的混合项。citeturn11view3turn11view0
 

@@ -18,51 +18,31 @@ from .mechanism_catalog import (
     READOUT_MECHANISM_IDS,
     RZZ_FAMILY_IDS,
 )
+from .phyc1_contract import (
+    EDGE_ORIENTATION_RULE,
+    FULL_CIRCUIT_TEACHER_MODEL,
+    LOCAL_OBSERVABLE_TEACHER_MODEL,
+    MIXED_BASIS_ACTIVE_PROBES,
+    PHYC1_LEGACY_STAGE_NAME,
+    PHYC1_PREFLIGHT_STAGE_NAME,
+    RZZ_DEPTH_SWEEP_DEPTHS,
+    RZZ_DEPTH_SWEEP_PROBES,
+    RZZ_ECHO_CONTRAST_PROBES,
+    RZZ_LOCAL_TOMOGRAPHY_PROBES,
+    RZZ_MINIMAL_INTERVENTION_PROBES,
+    RZZ_TOMO_EDGE_PARITIES,
+    RZZ_TOMO_MEAS_AXES,
+    RZZ_TOMO_PREP_STATES,
+    circuit_depth,
+    count_key_to_bit_row,
+    counts_to_bit_matrix,
+    mechanism_counts,
+    normalize_phyc1_teacher_model,
+    probe_names,
+)
 from .preflight import audit_cudaq_backend, write_backend_audit
 
 
-MIXED_BASIS_ACTIVE_PROBES = ("alt_xz", "alt_zx", "alt_yz", "alt_zy", "alt_xy", "alt_yx")
-RZZ_DEPTH_SWEEP_DEPTHS = (1, 2, 4, 8)
-RZZ_DEPTH_SWEEP_PROBES = tuple(f"rzz_depth_{depth}" for depth in RZZ_DEPTH_SWEEP_DEPTHS)
-RZZ_ECHO_CONTRAST_PROBES = (
-    "rzz_no_echo",
-    "rzz_echo_left_even",
-    "rzz_echo_right_even",
-    "rzz_echo_both_even",
-    "rzz_echo_left_odd",
-    "rzz_echo_right_odd",
-    "rzz_echo_both_odd",
-)
-RZZ_MINIMAL_INTERVENTION_PROBES = (
-    "rzz_int_no_intervention",
-    "rzz_int_basis_x",
-    "rzz_int_basis_y",
-    "rzz_int_basis_xz",
-    "rzz_int_basis_yz",
-    "rzz_int_twirl_x_left_even",
-    "rzz_int_twirl_x_left_odd",
-    "rzz_int_twirl_y_left_even",
-    "rzz_int_twirl_y_left_odd",
-    "rzz_int_twirl_xy_even",
-    "rzz_int_twirl_xy_odd",
-    "rzz_int_sign_no_flip",
-    "rzz_int_sign_flip_left_even",
-    "rzz_int_sign_flip_right_even",
-    "rzz_int_sign_flip_left_odd",
-    "rzz_int_sign_flip_right_odd",
-)
-RZZ_TOMO_PREP_STATES = ("Zp", "Zm", "Xp", "Yp")
-RZZ_TOMO_MEAS_AXES = ("X", "Y", "Z")
-RZZ_TOMO_EDGE_PARITIES = ("even", "odd")
-RZZ_LOCAL_TOMOGRAPHY_PROBES = tuple(
-    f"rzz_tomo_p{prep_left}{prep_right}_m{meas_left}{meas_right}_{parity}"
-    for prep_left in RZZ_TOMO_PREP_STATES
-    for prep_right in RZZ_TOMO_PREP_STATES
-    for meas_left in RZZ_TOMO_MEAS_AXES
-    for meas_right in RZZ_TOMO_MEAS_AXES
-    for parity in RZZ_TOMO_EDGE_PARITIES
-)
-EDGE_ORIENTATION_RULE = "lower_qubit_to_higher_qubit"
 GATE_MECHANISM_IDS = set(IMPLEMENTED_MECHANISM_IDS).difference(set(READOUT_MECHANISM_IDS) | set(PREP_RESET_MECHANISM_IDS))
 OTHER_MECHANISM_IDS = {"M19", "M24"}
 
@@ -262,8 +242,8 @@ def build_default_oracle_mechanisms(config: dict[str, object] | None = None) -> 
 def generate_physical_teacher_dataset(
     config: dict[str, object] | None = None,
     *,
-    output_dir: str | Path = "outputs/scope_static/S2D_PHYS1_teacher",
-    preflight_dir: str | Path = "outputs/scope_static/S2D_PHYS0_preflight",
+    output_dir: str | Path = f"outputs/scope_static/{PHYC1_LEGACY_STAGE_NAME}",
+    preflight_dir: str | Path = f"outputs/scope_static/{PHYC1_PREFLIGHT_STAGE_NAME}",
 ) -> dict[str, object]:
     cfg = _merged_config(config)
     audit = audit_cudaq_backend(
@@ -274,12 +254,20 @@ def generate_physical_teacher_dataset(
     )
     write_backend_audit(audit, preflight_dir)
     if not bool(audit.get("backend_usable")):
-        raise RuntimeError("S2D_PHYS1_teacher requires a passing S2D_PHYS0_preflight backend audit")
-    from .local_observable_teacher import generate_local_observable_teacher_dataset
+        raise RuntimeError(f"{PHYC1_LEGACY_STAGE_NAME} requires a passing {PHYC1_PREFLIGHT_STAGE_NAME} backend audit")
 
     cfg["backend"] = "cudaq"
-    cfg.setdefault("local_observable_response_model", "born_local")
-    summary = generate_local_observable_teacher_dataset(cfg, output_dir=output_dir)
+    teacher_model = normalize_phyc1_teacher_model(cfg, original_config=config or {})
+    if teacher_model == LOCAL_OBSERVABLE_TEACHER_MODEL:
+        from .local_observable_teacher import generate_local_observable_teacher_dataset
+
+        cfg.setdefault("local_observable_response_model", "born_local")
+        summary = generate_local_observable_teacher_dataset(cfg, output_dir=output_dir)
+    elif teacher_model == FULL_CIRCUIT_TEACHER_MODEL:
+        from .full_circuit_cudaq_teacher import generate_full_circuit_cudaq_teacher_dataset
+
+        cfg["physical_teacher_model"] = FULL_CIRCUIT_TEACHER_MODEL
+        summary = generate_full_circuit_cudaq_teacher_dataset(cfg, output_dir=output_dir)
     summary["backend_audit_dir"] = str(preflight_dir)
     summary["cudaq_backend"] = {
         "target": audit.get("cudaq_target"),
@@ -882,7 +870,7 @@ def build_noise_application_audit(
         )
     return {
         "schema": "scope_static_s2d_noise_application_audit_v1",
-        "stage": "S2D_PHYS1_teacher",
+        "stage": PHYC1_LEGACY_STAGE_NAME,
         "backend": str(config.get("backend", "cudaq")),
         "num_qubits": int(config.get("num_qubits", 5)),
         "probe_names": list(probe_names),
@@ -999,7 +987,7 @@ def build_non_clifford_audit(
     non_clifford_sources = [record for record in [*ideal_records, *mechanism_records] if not bool(record["is_clifford_angle"])]
     return {
         "schema": "scope_static_s2d_non_clifford_audit_v1",
-        "stage": "S2D_PHYS1_teacher",
+        "stage": PHYC1_LEGACY_STAGE_NAME,
         "non_clifford_teacher": bool(non_clifford_sources),
         "claim": "teacher_contains_non_clifford_ideal_gates_and_non_clifford_oracle_noise",
         "probe_names": list(probe_names),
@@ -1069,36 +1057,11 @@ def _is_clifford_angle(angle: float, *, atol: float = 1e-9) -> bool:
 
 
 def _counts_to_bit_matrix(counts: dict[str, int], *, shots: int, num_bits: int) -> np.ndarray:
-    num_bits = int(num_bits)
-    keys = []
-    repeat_counts = []
-    total = 0
-    for key, count in sorted(counts.items()):
-        c = int(count)
-        keys.append(key)
-        repeat_counts.append(c)
-        total += c
-    if total != int(shots):
-        raise ValueError(f"counts contain {total} shots, expected {shots}")
-    if not keys:
-        return np.zeros((0, num_bits), dtype=np.uint8)
-    unique_rows = np.zeros((len(keys), num_bits), dtype=np.uint8)
-    for idx, key in enumerate(keys):
-        unique_rows[idx] = _count_key_to_bit_row(key, num_bits=num_bits)
-    return np.repeat(unique_rows, np.asarray(repeat_counts, dtype=np.int64), axis=0)
+    return counts_to_bit_matrix(counts, shots=shots, num_bits=num_bits)
 
 
 def _count_key_to_bit_row(key: object, *, num_bits: int) -> np.ndarray:
-    text = str(key).replace(" ", "")
-    row = np.zeros(int(num_bits), dtype=np.uint8)
-    if text.startswith(("0x", "0X")):
-        value = int(text, 16)
-        for idx in range(int(num_bits)):
-            row[idx] = (value >> idx) & 1
-        return row
-    for idx, char in enumerate(reversed(text[-int(num_bits) :])):
-        row[idx] = 1 if char == "1" else 0
-    return row
+    return count_key_to_bit_row(key, num_bits=num_bits)
 
 
 def _merged_config(config: dict[str, object] | None) -> dict[str, object]:
@@ -1146,27 +1109,7 @@ def _renumber_legacy_mapping(value: dict[object, object]) -> dict[str, object]:
 
 
 def _probe_names(probe_set: str) -> list[str]:
-    if probe_set == "base":
-        return ["z_basis", "x_measure", "y_measure"]
-    if probe_set == "rzz_active_minimal":
-        return ["z_basis", "x_measure", "y_measure", *MIXED_BASIS_ACTIVE_PROBES]
-    if probe_set == "rzz_depth_sweep":
-        return ["z_basis", "x_measure", "y_measure", *RZZ_DEPTH_SWEEP_PROBES]
-    if probe_set == "rzz_echo_no_echo":
-        return ["z_basis", "x_measure", "y_measure", *RZZ_ECHO_CONTRAST_PROBES]
-    if probe_set == "rzz_minimal_intervention":
-        return ["z_basis", "x_measure", "y_measure", *RZZ_MINIMAL_INTERVENTION_PROBES]
-    if probe_set == "rzz_local_tomography":
-        return list(RZZ_LOCAL_TOMOGRAPHY_PROBES)
-    if probe_set == "basis":
-        return ["z_basis", "x_basis", "y_basis", "x_measure", "y_measure"]
-    if probe_set == "full":
-        return ["z_basis", "x_basis", "y_basis", "x_measure", "y_measure", "alternating_x", "echo"]
-    if probe_set == "echo":
-        return ["z_basis", "echo"]
-    if probe_set == "base_idle_echo":
-        return ["z_basis", "x_measure", "y_measure", "idle", "echo"]
-    return [probe_set]
+    return probe_names(probe_set)
 
 
 def _mechanism_record(location_id: int, spec: MechanismSpec) -> dict[str, object]:
@@ -1179,11 +1122,7 @@ def _mechanism_record(location_id: int, spec: MechanismSpec) -> dict[str, object
 
 
 def _mechanism_counts(records: Iterable[dict[str, object]]) -> dict[str, int]:
-    counts: dict[str, int] = {}
-    for record in records:
-        label = str(record["oracle_label"])
-        counts[label] = counts.get(label, 0) + 1
-    return counts
+    return mechanism_counts(records)
 
 
 def _profile_defaults(profile: str) -> dict[str, object]:
@@ -1292,10 +1231,7 @@ def _balanced_repetitions(config: dict[str, object]) -> int:
 
 
 def _circuit_depth(config: dict[str, object]) -> int:
-    for key in ("circuit_depth", "depth", "num_layers"):
-        if key in config:
-            return max(1, int(config.get(key, 1) or 1))
-    return 1
+    return circuit_depth(config)
 
 
 def _build_balanced_oracle_mechanisms(config: dict[str, object]) -> list[MechanismSpec]:

@@ -302,26 +302,18 @@ and still support mechanism classification plus high-quality quantum-error
 reconstruction?
 ```
 
-Stage 2E adds a physically correct local teacher:
+Stage 2E now uses a literal full-circuit CUDA-Q PHYC1 teacher as the mainline:
 
 ```text
-local probe state -> CPTP/readout mechanism -> exact local Born probability
--> GPU sampled observation bits
+rho_probe -> full n-qubit ideal schedule of configured depth d
+-> mechanism channels/readout -> sampled observations
 ```
 
-This teacher has effective circuit depth one by design: one explicit local
-context, one ideal local operation when applicable, one mechanism
-channel/readout, then one local POVM. Configured schedule depths remain artifact
-provenance, not hidden repeated channel composition. The teacher must not use
-mechanism-label response templates, artificial response-code margins, or
-post-sampling pair-correlation overlays. Two-qubit correlations should come
-from the exact two-qubit output distribution. Validate small cases against
-direct density-matrix math and CUDA-Q local circuits, then rerun PHYC2 and
-PHYC3.
-
-M8 `spectator_crosstalk_rz_or_zz` stays outside the Stage 2E.1 thin slice until
-the spectator contract specifies victim, aggressor operation or edge, and
-whether the observable local support is RZ-on-victim or ZZ-on-pair.
+Configured and effective circuit depth must be the same for this teacher.
+Entangling gates remain actual circuit operations. The implementation must not
+fall back to Born-local shortcuts, local-observable response templates,
+mechanism-code margins, slot leakage, or post-hoc overlays. CUDA-Q CPU fallback
+is refused when `require_gpu: true`.
 
 The intended distinction is:
 
@@ -330,13 +322,16 @@ PHYC2-separability_v2 / PHYC3-separability_v2:
   engineered sampled-observation stress teacher
 
 PHYC2-Born-local / PHYC3-Born-local:
-  mathematically and physically correct local baseline
+  mathematically correct local diagnostic, effective depth one
+
+PHYC2-full-circuit-cudaq / PHYC3-full-circuit-cudaq:
+  required Stage 2E full-circuit gate
 ```
 
-Stage 3 is blocked until Stage 2E passes. The current `separability_v2`
-evidence is good enough to motivate Stage 2E, but it does not close the physical
-baseline milestone. The gating decision is recorded in
-`docs/adr/0004-stage2e-born-local-gate.md`.
+Stage 3 is blocked until the full-circuit CUDA-Q Stage 2E gate passes. The
+current `separability_v2` and Born-local evidence remains useful, but neither
+closes the full-circuit physical-teacher milestone. The current mainline
+decision is recorded in `docs/adr/0005-stage2e-full-circuit-cudaq-mainline.md`.
 
 ### Stage 2B: Google External Validation
 
@@ -352,18 +347,17 @@ metrics and explicitly labelled proxy ARI/NMI only.
 
 ## Immediate Next Steps
 
-1. Keep `aiqec` clean for CUDA-Q S2D:
+1. Keep `aiqec` clean for full-circuit CUDA-Q S2D:
 
    ```text
    cuda-quantum installed
    CUDA-Q target nvidia visible
-   no physical-teacher dependency on legacy simulator packages
+   no physical-teacher dependency on CUDA-QEC, Qiskit Aer, or TensorFlow
    ```
 
 2. Keep PHYS0 -> PHYS1 -> PHYS2 -> PHYS3 artifacts refreshed together when
    changing the physical teacher or local-inverse representation.
 3. Use `docs/ARCHITECTURE.md` for module routing and `docs/RUNBOOK.md` for
    command recipes.
-4. Run the S2E.1 learner test on existing PHYC2-Born-local data. The test
-   reuses PHYC2 metrics and checks Born-local source, no overlays, and full
-   S2E.1 mechanism scope before any Stage 3 work.
+4. Use small and medium full-circuit CUDA-Q smoke artifacts before launching a
+   large allM 30q/depth30 run.

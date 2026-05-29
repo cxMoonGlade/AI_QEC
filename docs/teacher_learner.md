@@ -44,6 +44,9 @@ Implemented forms:
   faults `e_j ~ Bernoulli(p_j)`, and observations `y = A e mod 2`.
 - S2D physical-oracle work: PHYS1/PHYS2 generate physical mechanism cases and
   oracle separability evidence before PHYS3 learner recovery is judged.
+- PHYC1-full-circuit: the current Stage 2E mainline teacher; samples literal
+  full n-qubit CUDA-Q circuits at configured gate depth with mechanism
+  channels/readout.
 - PHYC2-separability_v2: generates PHYS1-compatible sampled local observations
   from engineered branch-specific response profiles for stress testing
   learner-visible separability.

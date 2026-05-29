@@ -176,23 +176,25 @@ validation.
 
 ## Current PHYC2/PHYC3 Milestone Boundary
 
-The current local-observable Torch CUDA teacher has two distinct roles:
+The current physical-teacher stack has three distinct roles:
 
 ```text
 PHYC2-separability_v2:
   engineered separability stress teacher
 
 PHYC2-Born-local:
-  physically and mathematically correct local baseline
+  exact local Born-rule diagnostic, effective depth one
+
+PHYC2-full-circuit-cudaq:
+  required Stage 2E gate: literal n-qubit noisy circuits at gate depth d
 ```
 
 The `separability_v2` allM artifacts pass PHYC2-balanced, PHYC2-weighted,
 slot-only leakage control, no-remap ablation, 74q/depth200 scalability smoke,
 and PHYC3 mechanism-to-error prototype quality. This is strong Stage 2
-separability evidence, not a Born-rule physical baseline. The minimal
-Stage 2E Born-local teacher is implemented; it must still pass PHYC2-Born-local
-plus the corresponding PHYC3-Born-local quality audit before Stage 3 begins.
-Its effective circuit depth is intentionally one local operation/context even
-when artifact names carry a configured schedule depth. M11 spectator crosstalk
-RZ/ZZ remains excluded from the S2E.1 Born-local scope until the
-victim/aggressor spectator contract is explicit.
+separability evidence, not a Born-rule physical baseline. The minimal Born-local
+teacher remains a density-matrix diagnostic with effective circuit depth one.
+Stage 2E acceptance now requires the full-circuit CUDA-Q teacher: sample literal
+n-qubit noisy circuits with the configured gate depth applied in the schedule.
+M11 spectator crosstalk RZ/ZZ remains a contract-sensitive mechanism; do not
+collapse it into a local Born diagnostic when making full-circuit claims.

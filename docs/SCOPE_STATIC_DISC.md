@@ -56,9 +56,10 @@ Stage 2D: Active local-logit observability
   Question: Which probes improve recoverability of local inverse logits and
             their mechanism clusters?
 
-Stage 2E: Born-local physical baseline
-  Question: Can exact local Born probabilities produce learner-separable
-            sampled observations and high-quality quantum-error estimates?
+Stage 2E: full-circuit CUDA-Q physical-teacher gate
+  Question: Can literal n-qubit noisy circuits at configured depth produce
+            learner-separable sampled observations and high-quality
+            quantum-error estimates?
 
 Stage 2B: Google external validation
   Question: On real data without true omega(j), do discovery models improve
@@ -82,7 +83,7 @@ Stage 2 may claim evidence about:
 Stage 2 must not claim:
 
 - CPTP/GKSL physical-channel learning.
-- full noisy-circuit Born-rule likelihood.
+- learned full noisy-circuit Born-rule likelihood from hardware data.
 - context-conditioned amortization as part of Stage 2A.0.
 - temporal drift tracking as part of Stage 2A.0.
 - real-hardware ground-truth orbit recovery from Google data.
@@ -1668,15 +1669,16 @@ forbidden:
 
 Status: implemented.
 
-The physical teacher now preflights CUDA-Q directly and routes PHYS1 generation
-through the local-observable teacher. The default CUDA-Q target policy is:
+The physical teacher now preflights CUDA-Q directly and routes PHYC1 generation
+through the literal full-circuit CUDA-Q teacher. The default CUDA-Q target
+policy is:
 
 ```yaml
 backend: cudaq
 require_gpu: true
 cudaq_target: nvidia
 cudaq_target_options: fp32
-local_observable_response_model: born_local
+physical_teacher_model: full_circuit_cudaq
 ```
 
 PHYS0 writes `backend_audit.json` and `backend_audit.md` with the CUDA-Q package
@@ -1684,31 +1686,17 @@ versions, selected target, visible GPU count, and a tiny sampled CUDA-Q kernel.
 The physical teacher requires that audit to pass before writing PHYS1 artifacts.
 The compact stack summary records this under `cudaq_backend`.
 
-The Stage 2E Born-local path computes exact local probabilities from:
+The current Stage 2E PHYC1 mainline samples:
 
 ```text
-rho_probe -> ideal local operation/context -> mechanism channel/readout -> POVM
+rho_probe -> full n-qubit ideal schedule of configured depth d
+-> mechanism channels/readout -> sampled observations
 ```
 
-Its effective circuit depth is intentionally exactly one local context. A run
-may carry a configured schedule depth such as `30` for provenance and naming,
-but Born-local probabilities are not hidden compositions of 30 local channels.
-This keeps the teacher explainable: each row is one probe state, one ideal local
-operation when applicable, one mechanism channel or readout matrix, and one
-local POVM.
-
-M8 `spectator_crosstalk_rz_or_zz` is intentionally outside the Stage 2E.1
-thin-slice support. A physically honest Born-local M8 needs an explicit
-spectator contract: victim qubit, aggressor operation or edge, and whether the
-learner-visible local support is the one-qubit RZ victim or the two-qubit ZZ
-spectator pair. Collapsing it to the fallback one-qubit RZ channel would make
-the artifact less interpretable.
-
-The teacher then samples those probabilities on GPU for PHYC2/PHYC3 artifacts.
-Born-local teacher intentionally does not use mechanism-label response
-templates, artificial response-code margins, or post-sampling correlation
-overlays. Two-qubit correlations come from the exact local two-qubit output
-distribution.
+Configured and effective circuit depth must match for `full_circuit_cudaq`.
+Entangling operations remain real circuit operations. Readout mechanisms may be
+applied as readout assignment/postprocessing when that is the declared
+mechanism model. The teacher refuses CPU fallback when `require_gpu: true`.
 
 Floating numerical floors, probability leftovers, and simulation thresholds use
 the repository-wide numerical floor `scope_static.numerics.NUMERICAL_ZERO =
@@ -1721,10 +1709,8 @@ array sizes, empty-artifact metrics, and exact algebraic identities.
 Named chain profiles currently include `phys5_chain`, `phys7_chain`,
 `phys9_chain`, `phys15_chain`, and `phys20_chain`.
 
-The implemented local-observable GPU teacher emits PHYS1-compatible
-`observations.npz` artifacts by sampling local probe-response bits with Torch
-CUDA, then PHYC2 audits whether those sampled observations are
-learner-separable.
+The local-observable GPU and Born-local teachers remain diagnostics and
+historical evidence paths. They are not the Stage 2E PHYC1 mainline.
 
 inspired by https://github.com/muhos/QuaSARQ
 
@@ -1949,21 +1935,18 @@ The same PHYC3 quantum-error-quality audit passes on the 74-qubit/depth-200
 weighted artifact with the same classification and channel-distance metrics.
 
 Stage 2E replaces the engineered `separability_v2` response model with a
-Born-local physical baseline:
+literal full-circuit CUDA-Q teacher:
 
 ```text
-local probe state -> CPTP/readout mechanism -> exact local Born probability
--> GPU sampled observation bits
+rho_probe -> full n-qubit ideal schedule of configured depth d
+-> mechanism channels/readout -> sampled observations
 ```
 
-That teacher has effective circuit depth one by design. Configured depths in
-artifact names remain provenance for the surrounding schedule, not a request to
-compose the local channel repeatedly. The teacher must not use mechanism-label
-response templates, artificial response-code margins, or post-sampling
-pair-correlation overlays. Two-qubit correlations should come from the exact
-two-qubit output distribution. Small Born-local cases should be validated
-against direct density-matrix math and CUDA-Q local circuits before using
-PHYC2/PHYC3 as physical baseline evidence.
+Configured and effective circuit depth must match for this teacher. The teacher
+must not use mechanism-label response templates, artificial response-code
+margins, local-observable shortcuts, or post-sampling pair-correlation overlays.
+Small full-circuit CUDA-Q cases should be validated before using PHYC2/PHYC3 as
+physical baseline evidence.
 
 Use the names precisely:
 
@@ -1972,17 +1955,20 @@ PHYC2-separability_v2:
   engineered separability stress teacher
 
 PHYC2-Born-local:
-  physically and mathematically correct local baseline
+  exact local Born-rule diagnostic, effective depth one
+
+PHYC2-full-circuit-cudaq:
+  required Stage 2E full-circuit gate
 ```
 
-Stage 3 should remain gated until PHYC2-Born-local and the corresponding PHYC3
-Born-local quality audit pass.
+Stage 3 should remain gated until PHYC2-full-circuit-cudaq and the
+corresponding PHYC3-full-circuit-cudaq quality audit pass.
 
-The S2E.1 learner test is artifact-backed: it consumes an existing PHYC2
+The Born-local S2E.1 learner test is artifact-backed: it consumes an existing PHYC2
 `metrics.json` plus the linked PHYS1 teacher metadata and writes a separate
 S2E.1 report. It intentionally does not rerun PHYC2. Existing
 `separability_v2` PHYC2 outputs can be used as negative controls, but they do
-not satisfy the Born-local source gate.
+not satisfy the full-circuit source gate.
 
 The legacy PHYS2 oracle-fingerprint audit remains useful as a ceiling: it says
 whether the mechanism family is in principle distinguishable. It does not prove

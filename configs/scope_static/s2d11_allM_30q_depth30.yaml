@@ -3,11 +3,13 @@ run:
   output_root: outputs/scope_static
 
 s2d_physical:
-  backend: local_observable_gpu
+  backend: cudaq
   require_gpu: true
+  cudaq_target: nvidia
+  cudaq_target_options: fp32,mqpu
+  full_circuit_cudaq_rzz_implementation: exp_pauli
+  physical_teacher_model: full_circuit_cudaq
   paper_informed_ptm_features: true
-  local_observable_response_model: born_local
-  local_observable_slot_remap: true
   shots: 10000
   seed: 0
   theta: 0.18

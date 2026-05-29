@@ -27,20 +27,17 @@ as evidence for CPU-first experiment design.
 CUDA-Q target smoke test for sandbox-compatible GPU access:
 
 ```bash
-conda run -n aiqec python -c "import cudaq; print('cudaq', cudaq.__version__); targets=['nvidia','tensornet','tensornet-mps'];
-for target in targets:
-    try:
-        cudaq.set_target(target)
-        k = cudaq.make_kernel(); q = k.qalloc(2); k.h(q[0]); k.cx(q[0], q[1]); k.mz(q)
-        print('TARGET_OK', target, cudaq.sample(k, shots_count=64))
-    except Exception as exc:
-        print('TARGET_ERROR', target, type(exc).__name__, str(exc))"
+conda run -n aiqec python -c "import cudaq; print('cudaq', cudaq.__version__); cudaq.set_target('nvidia', option='fp32'); k = cudaq.make_kernel(); q = k.qalloc(2); k.h(q[0]); k.cx(q[0], q[1]); k.mz(q); print(cudaq.get_target()); print(cudaq.sample(k, shots_count=64))"
 ```
 
 When running through the Codex sandbox, prefer CUDA-Q `make_kernel()` dynamic
 kernels for smoke tests and teacher prototypes. Source-decorated
 `@cudaq.kernel` GPU samples can hit a sandbox-specific CUDA driver/runtime error
 even when the same target works outside the sandbox.
+
+Full-circuit PHYC1 refuses CPU fallback when `require_gpu: true`. If a CUDA-Q
+target is omitted, the teacher selects the NVIDIA target; if CUDA-Q reports a
+CPU-only target, generation fails before writing sampling artifacts.
 
 ## Tests
 
@@ -212,14 +209,16 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run
 ```
 
 The stack writes `physical_oracle_stack.json`, `physical_oracle_stack.md`, and
-canonical PHYS1/PHYS2/PHYS3 stage folders under its output directory.
+legacy PHYS1/PHYS2/PHYS3 stage folders under its output directory. New claims
+should spell the teacher stage as PHYC1.
 
-Local-observable GPU PHYS1 teacher for the 30-qubit depth-30 allM stress run:
+Full-circuit CUDA-Q PHYC1 teacher for the 30-qubit depth-30 allM mainline:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_local_observable_gpu_teacher \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_s2d_physical_teacher \
   --config configs/scope_static/s2d11_allM_30q_depth30.yaml \
-  --output-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_30groups_v2_slot_remap/S2D_PHYS1_teacher
+  --output-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/S2D_PHYC1_teacher \
+  --preflight-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/S2D_PHYS0_preflight
 ```
 
 PHYC2-balanced sampled-observation mechanism-separability audit:
@@ -227,13 +226,13 @@ PHYC2-balanced sampled-observation mechanism-separability audit:
 ```bash
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_phyc2_sampled_observation_separability \
   --contract balanced \
-  --teacher-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_30groups_v2_slot_remap/S2D_PHYS1_teacher \
-  --output-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_30groups_v2_slot_remap/PHYC2_balanced_slot_only_control
+  --teacher-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/S2D_PHYC1_teacher \
+  --output-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/PHYC2_balanced_sampled_observation_separability
 
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_phyc3_sampled_quantum_error_quality \
-  --teacher-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_30groups_v2_slot_remap/S2D_PHYS1_teacher \
-  --phyc2-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_30groups_v2_slot_remap/PHYC2_balanced_slot_only_control \
-  --output-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_30groups_v2_slot_remap/PHYC3_quantum_error_quality
+  --teacher-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/S2D_PHYC1_teacher \
+  --phyc2-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/PHYC2_balanced_sampled_observation_separability \
+  --output-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/PHYC3_quantum_error_quality
 ```
 
 Legacy evidence for the previous `separability_v2` allM 30q/depth30 stress
@@ -276,18 +275,19 @@ PHYC2-separability_v2:
   engineered separability stress teacher
 
 PHYC2-Born-local:
-  physically and mathematically correct local baseline
+  exact local Born-rule diagnostic, effective depth one
+
+PHYC2-full-circuit-cudaq:
+  required Stage 2E full-circuit gate
 ```
 
-Stage 2E has a minimal PHYC2-Born-local teacher. It must pass allM
-PHYC2-Born-local and PHYC3-Born-local before Stage 3 starts.
+Stage 2E now uses the full-circuit CUDA-Q teacher as the mainline. It must pass
+allM PHYC2-full-circuit-cudaq and PHYC3-full-circuit-cudaq before Stage 3
+starts.
 
 The Born-local teacher records both `configured_circuit_depth` and
-`effective_circuit_depth`. The effective depth is intentionally `1`: one local
-probe context, one ideal local operation when applicable, one mechanism
-channel/readout, then one local POVM. M8 `spectator_crosstalk_rz_or_zz` is not
-part of the S2E.1 Born-local scope until the spectator victim/aggressor contract
-is explicit.
+`effective_circuit_depth`; its effective depth is intentionally `1`, so it
+remains a diagnostic rather than the full-circuit gate.
 
 S2E.1 learner test from existing PHYC2 data:
 

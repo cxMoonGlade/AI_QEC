@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted.
+Superseded by `0005-stage2e-full-circuit-cudaq-mainline.md`.
 
 ## Context
 
@@ -25,6 +25,9 @@ Stage 2 adds a late gate:
 Stage 2E: Born-local physical baseline
 ```
 
+This decision is historical. ADR 0005 supersedes it by making full-circuit
+CUDA-Q PHYC1 the Stage 2E mainline and acceptance surface.
+
 Use the names precisely:
 
 ```text
@@ -35,8 +38,9 @@ PHYC2-Born-local:
   physically and mathematically correct local baseline
 ```
 
-Stage 3 is blocked until Stage 2E passes PHYC2-Born-local and the corresponding
-PHYC3-Born-local quality audit.
+Historically, Stage 3 was blocked on PHYC2-Born-local and the corresponding
+PHYC3-Born-local quality audit. ADR 0005 replaces that gate with the
+full-circuit CUDA-Q PHYC2/PHYC3 gate.
 
 ## Consequences
 

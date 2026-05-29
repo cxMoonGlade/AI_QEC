@@ -53,14 +53,10 @@ def test_counts_to_bit_matrix_materializes_grouped_counts_with_numpy_repeat() ->
     assert rows.tolist() == [[0, 0], [0, 0], [0, 1], [0, 1], [1, 1]]
 
 
-def test_s2d_teacher_generation_writes_born_local_artifact_when_cuda_available(tmp_path: Path) -> None:
+def test_s2d_teacher_generation_writes_full_circuit_artifact_when_cuda_available(tmp_path: Path) -> None:
     audit = audit_cudaq_backend(backend="cudaq", require_gpu=True)
     if not bool(audit["backend_usable"]):
         pytest.skip(f"CUDA-Q preflight is not usable here: {audit.get('errors')}")
-    torch = pytest.importorskip("torch")
-    if not torch.cuda.is_available():
-        pytest.skip("local sampled teacher requires torch CUDA")
-
     config_path = tmp_path / "s2d_phys.yaml"
     config_path.write_text(
         yaml.safe_dump(
@@ -71,7 +67,7 @@ def test_s2d_teacher_generation_writes_born_local_artifact_when_cuda_available(t
                     "mechanism_set": ["M1", "M2"],
                     "backend": "cudaq",
                     "require_gpu": True,
-                    "local_observable_response_model": "born_local",
+                    "physical_teacher_model": "full_circuit_cudaq",
                     "balanced_min_instances_per_mechanism": 2,
                 }
             }
@@ -83,7 +79,8 @@ def test_s2d_teacher_generation_writes_born_local_artifact_when_cuda_available(t
         preflight_dir=tmp_path / "S2D_PHYS0_preflight",
     )
 
-    assert result["local_observable_response_model"] == "born_local"
+    assert result["teacher_model"] == "full_circuit_cudaq"
+    assert result["effective_circuit_depth"] == 1
     assert result["cudaq_backend"]["target"] is not None
     assert result["mechanism_counts"] == {"M1": 2, "M2": 2}
     assert (tmp_path / "S2D_PHYS1_teacher" / "sampling_audit.json").exists()

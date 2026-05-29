@@ -13,7 +13,15 @@ from .channels import (
     rzz_unitary,
 )
 from .density_sim import apply_kraus, measurement_probabilities_z
+from .full_circuit_cudaq_teacher import generate_full_circuit_cudaq_teacher_dataset
 from .mechanism_catalog import IMPLEMENTED_MECHANISM_IDS, MECHANISM_NAMES, NAMED_MECHANISM_SETS
+from .phyc1_contract import (
+    FULL_CIRCUIT_TEACHER_MODEL,
+    LOCAL_OBSERVABLE_TEACHER_MODEL,
+    PHYC1_LEGACY_STAGE_NAME,
+    PHYC1_STAGE_NAME,
+    normalize_phyc1_teacher_model,
+)
 from .preflight import audit_cudaq_backend, write_backend_audit
 from .s2e1_born_local_learner_test import run_s2e1_born_local_learner_test
 from .ptm import (
@@ -35,13 +43,19 @@ __all__ = [
     "audit_cudaq_backend",
     "channel_fingerprint",
     "custom_non_pauli_kraus",
+    "generate_full_circuit_cudaq_teacher_dataset",
+    "FULL_CIRCUIT_TEACHER_MODEL",
+    "LOCAL_OBSERVABLE_TEACHER_MODEL",
     "measurement_probabilities_z",
     "mechanism_channel",
     "IMPLEMENTED_MECHANISM_IDS",
     "MECHANISM_NAMES",
     "NAMED_MECHANISM_SETS",
+    "normalize_phyc1_teacher_model",
     "pauli_basis",
     "pauli_stochastic_kraus",
+    "PHYC1_LEGACY_STAGE_NAME",
+    "PHYC1_STAGE_NAME",
     "probe_response_fingerprint",
     "ptm_from_kraus",
     "ptm_from_unitary",

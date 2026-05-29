@@ -33,22 +33,27 @@ local reconstructed PTM/generator summaries, but they are not a hardware
 CPTP/GST/GKSL learner and do not yet solve the full six-axis physical
 generation problem.
 
-The current local-observable allM milestone distinguishes two teacher contracts:
+The current Stage 2E physical-teacher milestone distinguishes three contracts:
 
 ```text
 PHYC2-separability_v2:
   engineered separability stress teacher
 
 PHYC2-Born-local:
-  physically and mathematically correct local baseline
+  mathematically correct local diagnostic, effective depth one
+
+PHYC1-full-circuit:
+  literal full n-qubit CUDA-Q teacher at configured circuit depth
 ```
 
 `PHYC2-separability_v2` has passed balanced/weighted sampled-observation
 separability, leakage controls, a 74-qubit/depth-200 scalability smoke, and the
 PHYC3 mechanism-to-error-prototype diagnostic. The minimal
 `PHYC2-Born-local` teacher is implemented with effective circuit depth one and
-explicit M11 spectator-crosstalk exclusion; full allM PHYC2/PHYC3 Born-local
-evidence remains the late Stage 2E gate before Stage 3.
+explicit M11 spectator-crosstalk exclusion. The current Stage 2E mainline is
+`PHYC1-full-circuit`: full n-qubit CUDA-Q circuits with literal configured
+depth, mechanism channels/readout, sampled observations, checkpoint/resume, and
+no CPU fallback when GPU execution is required.
 
 ## Docs
 
@@ -222,12 +227,10 @@ PHYC3 weighted mechanism-to-error quality: mean channel distance 0.000026
 slot-only leakage controls: low, leakage_suspected false
 ```
 
-This closes the engineered separability stress milestone, not the physical
-baseline. Stage 2E now has a minimal `PHYC2-Born-local` teacher that samples
-exact local Born probabilities for CPTP/readout mechanisms, without response
-templates or post-hoc correlation overlays. Its effective depth is one local
-operation/context for explainability; allM PHYC2/PHYC3 evidence is still the
-gate before Stage 3.
+This closes the engineered separability stress milestone, not the full-circuit
+physical baseline. Stage 2E mainline work now targets the literal
+`PHYC1-full-circuit` CUDA-Q teacher; Born-local/local-observable artifacts remain
+diagnostics and historical evidence paths.
 
 ## Claim Boundary
 
@@ -242,7 +245,7 @@ Valid claims:
 Invalid claims:
 
 - general CPTP/GKSL learning from hardware;
-- full noisy-circuit Born-rule likelihood;
+- learned full noisy-circuit Born-rule likelihood from hardware data;
 - real-hardware ground-truth latent mechanism recovery;
 - temporal drift or context-conditioned amortization as current implemented
   evidence.

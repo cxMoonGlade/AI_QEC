@@ -47,7 +47,7 @@ src/scope_static/
   google_set1.py          Google Set1 read-only adapter
   google_mechanism.py     Google proxy partitions and local-inverse audits
   physical/               S2D physical teacher, PTM, observability, typed learners
-  physical_oracle/        PHYS1/PHYS2/PHYS3 stack facade
+  physical_oracle/        PHYC1/PHYS2/PHYS3 stack facade
   experiments/            runnable `python -m ...` entry points
   cuda/                   C++/CUDA exact DEM/window kernels
 ```
@@ -102,7 +102,7 @@ The important tracks are:
 Stage 2A: direct free-assignment recovery of hidden DEM quotient
 Stage 2C: local-inverse-first mechanism discovery
 Stage 2D: active local-logit observability and typed physical learners
-Stage 2E: Born-local physical baseline gate
+Stage 2E: full-circuit CUDA-Q physical-teacher gate
 Stage 2B: Google external predictive validation, no true ARI/NMI
 ```
 
@@ -117,7 +117,7 @@ The S2D branch uses synthetic physical teachers to test whether learner-visible
 probe data exposes local mechanism structure.
 
 ```text
-PHYS1 physical teacher
+PHYC1 physical teacher
 -> finite-shot probe observations
 -> PHYS2 oracle-only teacher self-distinguishability
 -> PHYS3 learner-visible local-inverse recovery
@@ -126,7 +126,8 @@ PHYS1 physical teacher
 Core implementation modules:
 
 ```text
-physical/teacher.py                       teacher generation and mechanism taxonomy
+physical/phyc1_contract.py               PHYC1 model, stage, probe, and depth contract
+physical/teacher.py                       teacher facade plus legacy mechanism-plan helpers
 physical/channels.py                      synthetic channel/mechanism definitions
 physical/ptm.py                           oracle PTM and RZZ-type fingerprints
 physical/local_inverse.py                 PHYS3 local-inverse discovery
@@ -136,9 +137,10 @@ physical/generator_invariant_calibration.py S2D.10b scalar invariants
 physical/typed_spam_gate_invariant.py     S2D.11 typed gate/readout/prep learner
 physical/m1_gate_calibration.py           S2D.11b M1 grouped calibration audit
 physical/local_observable_teacher.py      Torch CUDA local-observable sampled teacher
+physical/full_circuit_cudaq_teacher.py    Stage 2E literal full-circuit CUDA-Q teacher
 physical/sampled_observation_separability.py PHYC2 sampled-observation separability
 physical/sampled_quantum_error_quality.py PHYC3 mechanism-to-error quality audit
-physical_oracle/stack.py                  PHYS1/PHYS2/PHYS3 facade
+physical_oracle/stack.py                  PHYC1/PHYS2/PHYS3 facade
 ```
 
 S2D.9 made local Pauli-Lindblad generator coordinates observable. S2D.10b
@@ -184,15 +186,16 @@ directly reconstruct a continuous channel from raw shots.
 Stage 2E is the current physical-baseline gate:
 
 ```text
-PHYC2-Born-local:
-  local probe state -> CPTP/readout mechanism -> exact local Born probability
-  -> GPU sampled observation bits
+PHYC1-full-circuit:
+  rho_probe -> full n-qubit ideal schedule of configured depth d
+  -> mechanism channels/readout -> sampled observations
 ```
 
-The Born-local teacher must not use mechanism-label response templates,
-artificial response-code margins, or post-sampling pair-correlation overlays.
-Stage 3 is blocked until the Born-local PHYC2/PHYC3 path passes. See
-`docs/adr/0004-stage2e-born-local-gate.md` for the milestone-gating decision.
+The full-circuit teacher must not fall back to Born-local shortcuts,
+local-observable response templates, mechanism-code margins, slot leakage, or
+post-hoc overlays. Stage 3 is blocked until the full-circuit CUDA-Q PHYC2/PHYC3
+path passes. See `docs/adr/0005-stage2e-full-circuit-cudaq-mainline.md` for the
+mainline decision.
 
 ## Physical Oracle Stack Facade
 
@@ -233,7 +236,7 @@ Valid implemented claims:
 Invalid claims:
 
 - hardware CPTP/GST/GKSL learning.
-- full noisy-circuit Born-rule likelihood.
+- learned full noisy-circuit Born-rule likelihood from hardware data.
 - real-hardware true latent mechanism recovery.
 - temporal drift or amortized SCOPE-Twin as implemented evidence.
 - complete six-axis physical generation evidence.
