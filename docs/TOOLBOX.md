@@ -3,6 +3,22 @@
 `scope-static` is a pre-release toolbox for physical-mechanism QEC experiments.
 It is organized as reusable tools rather than a single end-to-end claim.
 
+## Program Surface: 2+1
+
+1. **Generate noisy data.** Layer 1 prepares sampled noisy data from a declared
+   physical mechanism set. Users control enabled mechanism IDs, parameters,
+   shot count, probe schedule, circuit depth, and instance counts through YAML.
+
+2. **Learn and replay visible noise.** Layer 3 learns from the
+   learner-visible observation surface and reports whether predicted mechanisms
+   can generate similar visible noisy data, scored by channel distance, NLL,
+   population CE, and MAE.
+
+3. **The +1: discover the mechanism cause.** Stage 3 removes direct
+   mechanism-label supervision and asks whether SCOPE-Discovery can recover the
+   latent mechanism structure, assignments, and prototypes that caused the
+   noisy observations.
+
 ## Tool Layers
 
 | command | layer | purpose |
@@ -49,6 +65,14 @@ Equivalent module form:
 ```bash
 python -m scope_static.experiments.run_layer3_canonical_acceptance \
   --config configs/scope_static/layer3_canonical_acceptance.yaml
+```
+
+Generate a user-defined noisy mechanism dataset:
+
+```bash
+scope-layer1-prep \
+  --config configs/scope_static/layer1_user_defined_mechanisms.yaml \
+  --output-dir outputs/scope_static/user_defined_layer1_demo/S2D_PHYC1_teacher
 ```
 
 ## Data Products

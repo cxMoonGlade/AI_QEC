@@ -135,6 +135,35 @@ predictive, calibration, transfer, and proxy-label diagnostics only.
 
 ## Function: Generate Physical-Mechanism Data
 
+Use this function when you want noisy data from explicitly enabled mechanisms.
+The maintainable interface is YAML:
+
+```yaml
+s2d_physical:
+  mechanism_set: [M0, M4, M8, M24]
+  mechanisms:
+    M0: {p_x: 0.0015, p_y: 0.0008, p_z: 0.0022}
+    M4: {gamma: 0.018}
+    M8: {epsilon: 0.025}
+    M24: {gamma: 0.010}
+  mechanism_instance_counts:
+    M0: 4
+    M4: 4
+    M8: 2
+    M24: 2
+```
+
+The full template is
+`configs/scope_static/layer1_user_defined_mechanisms.yaml`.
+
+Small user-defined Layer 1 run:
+
+```bash
+scope-layer1-prep \
+  --config configs/scope_static/layer1_user_defined_mechanisms.yaml \
+  --output-dir outputs/scope_static/user_defined_layer1_demo/S2D_PHYC1_teacher
+```
+
 Physical Oracle Stack facade:
 
 ```bash

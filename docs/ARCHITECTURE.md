@@ -14,7 +14,15 @@ lambda_j = logit(p_j)
 effective-fault vector, and `y in {0,1}^B` is the observed detector/logical bit
 vector.
 
-The architecture has four public surfaces:
+The public program has a 2+1 surface:
+
+1. generate noisy data from a user-defined physical mechanism set;
+2. learn from the learner-visible observation surface and generate similar
+   reproducible noisy data;
+3. the "+1" research object: distinguish the latent mechanism cause through
+   Stage 3 mechanism-structure discovery.
+
+The architecture has four implementation surfaces:
 
 1. Stage 1 DEM fault-logit learning.
 2. Stage 2 static discovery and physical catalog validation.
@@ -50,6 +58,7 @@ src/scope_static/
   google_mechanism.py   Google proxy partitions and local-inverse audits
   physical/             physical mechanism channels, probes, layers, learners
   physical_oracle/      legacy PHYS stack facade
+  archive/              historical research-stage modules with wrappers
   experiments/          runnable command entry points
   cuda/                 C++/CUDA exact DEM/window kernels
 ```
@@ -112,6 +121,10 @@ Stage 2B: Google external predictive validation
 Stage 2 is now a closed validation record. Stage 3 owns the next unsupervised
 latent mechanism-structure claim.
 
+Historical Stage 2 waypoints that are no longer public entry points live under
+`scope_static.archive`. Thin wrappers remain at their old paths so historical
+configs, tests, and artifact readers keep working.
+
 ## Physical Layer Stack
 
 The public layer names replace the old PHYC vocabulary in reports. Legacy
@@ -131,11 +144,11 @@ Layer 3: Learner Classification and Noise Generation (Learner)
 Layer flow:
 
 ```text
-mechanism catalog
--> Layer 1 probe schedule and sampled observations
+mechanism catalog + user-enabled mechanism set
+-> Layer 1 probe schedule and sampled noisy observations
 -> Layer 2 teacher/catalog self-distinguishability
 -> Layer 3 no-leakage learner recovery
--> Layer 3 generated-noise quality
+-> Layer 3 generated noisy-data quality
 ```
 
 Layer 2 may use teacher-internal mechanism evidence because its role is teacher
@@ -181,6 +194,14 @@ physical/local_inverse.py
 physical_oracle/stack.py
 ```
 
+Archived physical research modules:
+
+```text
+archive/physical/stage2_learner_limit/      S2D.6 targeted representation
+archive/physical/stage2_rzz_probe_design/   S2D.7/S2D.8 RZZ probe attempts
+archive/physical/stage2_born_local_gate/    S2E.1 Born-local gate audit
+```
+
 ## Layer 3 Canonical Path
 
 The canonical Layer 3 path is deliberately decomposed:
@@ -207,6 +228,10 @@ The resolver rejects:
 Accepted Layer 3 quality reports include classification metrics, incompatible
 prediction counts, channel/readout prototype distances, visible Gaussian NLL,
 population cross entropy, and visible-feature MAE.
+
+Layer 3 is the accepted supervised/no-leakage learner surface for generating
+similar visible noisy data. Stage 3 removes direct mechanism-label supervision
+and turns the same surface into a mechanism-cause discovery problem.
 
 ## Stage 3 Discovery Surface
 

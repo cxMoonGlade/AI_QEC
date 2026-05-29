@@ -22,6 +22,25 @@ def toolbox_manifest() -> dict[str, object]:
             "mechanism structure, assignments, and prototypes from the same "
             "learner-visible observation surface."
         ),
+        "program_surface": [
+            {
+                "name": "generate_noisy_data",
+                "role": "Generate sampled noisy data from user-enabled physical mechanisms.",
+                "primary_layer": "Layer 1: Data Preparation (Prep)",
+                "config_template": "configs/scope_static/layer1_user_defined_mechanisms.yaml",
+            },
+            {
+                "name": "learn_and_replay_visible_noise",
+                "role": "Learn from learner-visible observations and score similar generated noisy data.",
+                "primary_layer": "Layer 3: Learner Classification and Noise Generation (Learner)",
+                "metrics": ["channel_distance", "visible_gaussian_nll", "population_ce", "visible_feature_mae"],
+            },
+            {
+                "name": "discover_mechanism_cause",
+                "role": "Stage 3 +1 object: distinguish the latent mechanism cause without direct mechanism-label supervision.",
+                "roadmap": "docs/STAGE3_ROADMAP.md",
+            },
+        ],
         "layers": layer_stack_metadata(),
         "commands": [
             {
@@ -55,6 +74,12 @@ def toolbox_manifest() -> dict[str, object]:
 
 def format_toolbox_manifest(manifest: dict[str, object]) -> str:
     lines = [f"{manifest['name']} ({manifest['status']})", ""]
+    lines.append("Program surface:")
+    for item in manifest.get("program_surface", []):  # type: ignore[assignment]
+        if not isinstance(item, dict):
+            continue
+        lines.append(f"  {item['name']}: {item['role']}")
+    lines.append("")
     lines.append("Layers:")
     for layer in manifest["layers"]:  # type: ignore[index]
         if not isinstance(layer, dict):

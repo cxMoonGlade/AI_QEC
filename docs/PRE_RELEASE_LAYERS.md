@@ -30,6 +30,17 @@ Layer 3 is not allowed to consume Layer 2 teacher-self predictions, oracle
 channel matrices, teacher-self embeddings, hidden prototype vectors, hidden
 mechanism IDs as features, or physical-family labels as features.
 
+## Public Program Surface
+
+The pre-release toolbox should be read as two supported capabilities plus one
+active research object:
+
+1. Layer 1 generates noisy data from user-enabled physical mechanisms.
+2. Layer 3 learns from learner-visible observations and generates similar
+   reproducible visible noisy data.
+3. Stage 3 asks which latent mechanism caused the noise, without direct
+   mechanism-label supervision.
+
 ## Toolbox Commands
 
 ```bash

@@ -77,6 +77,16 @@ docs/TOOLBOX.md
 docs/SCOPE_STATIC_DISC.md
 ```
 
+Historical implementation modules from superseded Stage 2 learner-limit, RZZ
+probe-design, and Born-local gate attempts are archived under:
+
+```text
+src/scope_static/archive/
+```
+
+Compatibility wrappers remain at the old `scope_static.experiments.*` and
+`scope_static.physical.*` paths.
+
 ## Stage 2 Artifact Rules
 
 Layer 2 artifacts are teacher/catalog self-distinguishability evidence only.

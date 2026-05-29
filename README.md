@@ -9,29 +9,42 @@ be faithful as a generator, interpretable, useful to decoders, transferable
 across contexts, predictive under drift, and identifiable. CPTP/GKSL structure
 is one constraint mechanism, not the claim by itself.
 
-## What It Can Do
+## What It Can Do: 2+1 Surface
 
-- Prepare canonical DEM/Bernoulli data:
+`scope-static` exposes two toolbox capabilities plus one active discovery
+object.
 
-  ```text
-  e_j ~ Bernoulli(p_j)
-  y = A e mod 2
-  lambda_j = logit(p_j)
-  ```
+1. Generate noisy data from user-defined physical mechanisms.
+   Users choose enabled mechanism IDs, mechanism parameters, shot count, probe
+   schedule, circuit depth, and mechanism instance counts. Layer 1 writes
+   sampled observations and the manifests needed to reproduce them.
 
-- Train and compare fixed-context fault-logit models.
-- Run synthetic SCOPE-Discovery audits with evaluator-only ARI/NMI.
-- Generate physical-mechanism probe data through the public layer stack:
+2. Learn from the learner-visible surface and generate similar reproducible
+   noisy data.
+   Layer 3 consumes only declared visible probe observations, predicts
+   mechanism structure under no-leakage guardrails, and scores generated visible
+   noise with channel-distance, NLL, CE, and MAE diagnostics.
 
-  ```text
-  Layer 1: Data Preparation (Prep)
-  Layer 2: Teacher Self-Distinguishment (Teacher)
-  Layer 3: Learner Classification and Noise Generation (Learner)
-  ```
+3. The "+1": distinguish which mechanism caused the noise.
+   This is the Stage 3 research object: remove direct mechanism-label
+   supervision and test whether SCOPE-Discovery can recover latent mechanism
+   structure, assignments, and prototypes from learner-visible observations.
 
-- Audit no-leakage learner recovery from Z/X visible observations.
-- Score generated visible noise/error quality with channel distance, NLL, CE,
-  and MAE diagnostics.
+The fixed DEM/Bernoulli object remains:
+
+```text
+e_j ~ Bernoulli(p_j)
+y = A e mod 2
+lambda_j = logit(p_j)
+```
+
+The physical layer stack is:
+
+```text
+Layer 1: Data Preparation (Prep)
+Layer 2: Teacher Self-Distinguishment (Teacher)
+Layer 3: Learner Classification and Noise Generation (Learner)
+```
 
 Stage 2 validated the physical mechanism catalog and the no-leakage visible
 recovery protocol. Stage 3 now removes direct mechanism-label supervision and
@@ -79,6 +92,18 @@ Run tests:
 ```bash
 python -m pytest -q
 ```
+
+Generate a small user-defined noisy mechanism dataset:
+
+```bash
+scope-layer1-prep \
+  --config configs/scope_static/layer1_user_defined_mechanisms.yaml \
+  --output-dir outputs/scope_static/user_defined_layer1_demo/S2D_PHYC1_teacher
+```
+
+Full-circuit physical generation requires a CUDA-Q-capable environment. The
+config file is the public maintenance surface for changing enabled mechanisms
+and their parameters.
 
 Outputs are written under `outputs/scope_static/` and `outputs/google_static/`.
 

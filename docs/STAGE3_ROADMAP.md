@@ -19,6 +19,11 @@ The Stage 3 learner should infer latent assignments and prototypes. Mechanism
 IDs, physical-family labels, exact channels, exact PTMs, and teacher-self
 features are evaluator-only.
 
+Operationally, Stage 3 is the "+1" object above the toolbox: Layer 1 can
+generate noisy data, Layer 3 can learn/replay visible noisy data, and Stage 3
+must distinguish what latent mechanism caused that noise without direct
+mechanism-label supervision.
+
 ## Starting Surface
 
 Stage 3 starts from the Layer 3b/3c visible surface:
