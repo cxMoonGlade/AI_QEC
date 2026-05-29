@@ -213,11 +213,28 @@ allM, 30 qubits, depth 30, uneven support 2-8, 10k shots:
   incompatible predictions 0
 ```
 
-PHYC3 consumes PHYC2 grouped predictions, builds fold-trained mechanism
-channel/readout prototypes from training groups, and compares predicted
-prototypes to evaluator-only oracle mechanism channels. For the
-`separability_v2` teacher this is a mechanism-to-error translation diagnostic,
-not evidence that the sampled observations came from Born-rule circuit physics.
+PHYC3 learner recovery owns no-leakage grouped sampled-observation predictions.
+PHYC3 quantum-error quality consumes those PHYC3 learner predictions, builds
+fold-trained mechanism channel/readout prototypes from training groups, and
+compares predicted prototypes to evaluator-only oracle mechanism channels. It
+must not consume PHYC2 teacher-self predictions as learner evidence. For the `separability_v2`
+teacher this is a mechanism-to-error translation diagnostic, not evidence that
+the sampled observations came from Born-rule circuit physics.
+
+Canonical PHYC3 acceptance now resolves the learner source explicitly:
+
+```text
+PHYC2_teacher_self_only_v4:
+  teacher/catalog self-distinguishability only
+PHYC3a_old_surface_no_leakage_learner_recovery:
+  old visible-surface failing baseline
+PHYC3b_ZX_visible_alias_breaking_probe_suite:
+  Z/X-only visible-surface repair and deterministic ceiling audit
+PHYC3c_distributional_gaussian_likelihood_head:
+  accepted multi-context distributional learner head
+PHYC3_canonical_quality_acceptance:
+  final resolver that consumes PHYC3c predictions only
+```
 
 Current PHYC2-weighted scalability smoke:
 
@@ -318,20 +335,31 @@ is refused when `require_gpu: true`.
 The intended distinction is:
 
 ```text
-PHYC2-separability_v2 / PHYC3-separability_v2:
+PHYC1:
+  teacher generation from the declared physical contract
+
+PHYC2:
+  teacher self-distinguishment, requiring BA/min recall/ARI/NMI = 1.0
+
+PHYC3:
+  no-leakage learner recovery plus quantum/readout error quality
+
+separability_v2:
   engineered sampled-observation stress teacher
 
-PHYC2-Born-local / PHYC3-Born-local:
+Born-local:
   mathematically correct local diagnostic, effective depth one
 
-PHYC2-full-circuit-cudaq / PHYC3-full-circuit-cudaq:
+full-circuit-cudaq:
   required Stage 2E full-circuit gate
 ```
 
-Stage 3 is blocked until the full-circuit CUDA-Q Stage 2E gate passes. The
-current `separability_v2` and Born-local evidence remains useful, but neither
-closes the full-circuit physical-teacher milestone. The current mainline
-decision is recorded in `docs/adr/0005-stage2e-full-circuit-cudaq-mainline.md`.
+Stage 3 is blocked until the full-circuit CUDA-Q Stage 2E gate passes all three
+roles: PHYC1 generation, PHYC2 teacher self-distinguishment, and PHYC3
+no-leakage learner recovery/error quality. The current `separability_v2` and
+Born-local evidence remains useful, but neither closes the full-circuit
+physical-teacher milestone. The current mainline decision is recorded in
+`docs/adr/0005-stage2e-full-circuit-cudaq-mainline.md`.
 
 ### Stage 2B: Google External Validation
 
@@ -355,8 +383,8 @@ metrics and explicitly labelled proxy ARI/NMI only.
    no physical-teacher dependency on CUDA-QEC, Qiskit Aer, or TensorFlow
    ```
 
-2. Keep PHYS0 -> PHYS1 -> PHYS2 -> PHYS3 artifacts refreshed together when
-   changing the physical teacher or local-inverse representation.
+2. Keep PHYS0/PHYC1, PHYC2, and PHYC3 artifacts refreshed together when
+   changing the physical teacher or learner-visible representation.
 3. Use `docs/ARCHITECTURE.md` for module routing and `docs/RUNBOOK.md` for
    command recipes.
 4. Use small and medium full-circuit CUDA-Q smoke artifacts before launching a

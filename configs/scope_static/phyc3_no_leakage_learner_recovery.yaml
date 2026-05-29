@@ -1,0 +1,8 @@
+phyc3_no_leakage_learner_recovery:
+  name: PHYC3_no_leakage_learner_recovery
+  teacher_dir: outputs/scope_static/full_circuit_cudaq_allM_10q_depth20_phyc2_ladder/rungC_local_tomography_g30_s10000/S2D_PHYC1_teacher
+  output_dir: outputs/scope_static/full_circuit_cudaq_allM_10q_depth20_phyc2_ladder/rungC_local_tomography_g30_s10000/PHYC3_no_leakage_learner_recovery
+  contract: balanced
+  theta: 0.18
+  ridge: 1.0e-8
+  seed: 0

@@ -210,7 +210,21 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run
 
 The stack writes `physical_oracle_stack.json`, `physical_oracle_stack.md`, and
 legacy PHYS1/PHYS2/PHYS3 stage folders under its output directory. New claims
-should spell the teacher stage as PHYC1.
+should use the PHYC vocabulary:
+
+```text
+PHYC1:
+  teacher generation from the declared physical contract
+
+PHYC2:
+  teacher self-distinguishment; a pass means the teacher itself can separate
+  every generated mechanism
+
+PHYC3:
+  no-leakage learner recovery plus quantum/readout error quality; it must
+  consume learner-visible grouped predictions, not PHYC2 teacher-self
+  predictions
+```
 
 Full-circuit CUDA-Q PHYC1 teacher for the 30-qubit depth-30 allM mainline:
 
@@ -221,19 +235,45 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run
   --preflight-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/S2D_PHYS0_preflight
 ```
 
-PHYC2-balanced sampled-observation mechanism-separability audit:
+PHYC2-balanced teacher self-distinguishment, followed by PHYC3 no-leakage
+learner recovery and PHYC3 quantum-error quality:
 
 ```bash
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_phyc2_sampled_observation_separability \
   --contract balanced \
   --teacher-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/S2D_PHYC1_teacher \
-  --output-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/PHYC2_balanced_sampled_observation_separability
+  --output-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/PHYC2_balanced_teacher_self_distinguishment
+
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_phyc3_no_leakage_learner_recovery \
+  --contract balanced \
+  --teacher-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/S2D_PHYC1_teacher \
+  --output-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/PHYC3_no_leakage_learner_recovery
 
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_phyc3_sampled_quantum_error_quality \
   --teacher-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/S2D_PHYC1_teacher \
-  --phyc2-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/PHYC2_balanced_sampled_observation_separability \
-  --output-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/PHYC3_quantum_error_quality
+  --prediction-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/PHYC3_no_leakage_learner_recovery \
+  --output-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/PHYC3_no_leakage_learner_quality
 ```
+
+Canonical PHYC3 acceptance resolver:
+
+```bash
+conda run -n aiqec python -m scope_static.experiments.run_phyc3_canonical_acceptance \
+  --config configs/scope_static/phyc3_canonical_acceptance.yaml
+```
+
+The PHYC2 runner keeps the historical schema name
+`PHYC2_sampled_observation_separability` for compatibility, but its primary
+contract is teacher self-distinguishment only. It does not emit learner grouped
+predictions. The PHYC3 learner-recovery artifact owns no-leakage grouped
+predictions, and PHYC3 quality consumes that artifact through `--prediction-dir`.
+
+The canonical resolver is deliberately small: it loads PHYC2 teacher-self,
+PHYC3a old-surface baseline, PHYC3b visible-repair, PHYC3c learner, and PHYC3c
+validation artifacts, then selects only
+`phyc3c_distributional_gaussian_likelihood_head` as canonical. It rejects PHYC2
+teacher-self predictions, legacy PHYC2 grouped predictions, and PHYC3a
+old-surface predictions as canonical learner evidence.
 
 Legacy evidence for the previous `separability_v2` allM 30q/depth30 stress
 contract (`balanced_min_instances_per_mechanism: 30`):
@@ -254,23 +294,28 @@ The local-observable teacher writes
 `sampling.observation_slot_remap`. The slot remap is expected for this teacher:
 it assigns non-overlapping per-mechanism observation slots inside each circuit
 batch so local responses do not overwrite each other in `observations.npz`.
-PHYC2 neutralizes the synthetic slot-geometry columns for slot-remapped records;
-branch flags, probe metadata, sampled response moments, and pair correlations
-remain learner-visible.
-Each PHYC2 report includes `slot_only_leakage_control`, which trains the same
+PHYC3 learner recovery neutralizes the synthetic slot-geometry columns for
+slot-remapped records; branch flags, probe metadata, sampled response moments,
+and pair correlations remain learner-visible.
+Each PHYC3 learner report includes `slot_only_leakage_control`, which trains the same
 grouped classifier using only observation slots, original physical qubits, probe
 block ids, and slot/layout metadata. It must stay low; high slot-only accuracy
 means the remap/layout metadata are leaking mechanism identity.
 
-PHYC3 sampled quantum-error quality consumes the PHYC2 grouped predictions and
-asks whether the predicted mechanism labels translate into close fold-trained
-quantum/readout error prototypes. For `separability_v2`, this is a
-mechanism-to-error translation diagnostic; it is not proof that the sampled
-observations themselves were generated by Born-rule circuit physics.
+PHYC3 sampled quantum-error quality consumes no-leakage learner grouped
+predictions from `PHYC3_no_leakage_learner_recovery`. It asks whether
+predicted mechanism labels translate into close fold-trained quantum/readout
+error prototypes. PHYC3 must reject PHYC2 teacher-self predictions as learner
+evidence. For `separability_v2`, this is a mechanism-to-error translation
+diagnostic; it is not proof that the sampled observations themselves were
+generated by Born-rule circuit physics.
 
 Terminology for later Stage 2:
 
 ```text
+PHYC1-full-circuit-cudaq:
+  required Stage 2E teacher generation gate
+
 PHYC2-separability_v2:
   engineered separability stress teacher
 
@@ -278,12 +323,16 @@ PHYC2-Born-local:
   exact local Born-rule diagnostic, effective depth one
 
 PHYC2-full-circuit-cudaq:
-  required Stage 2E full-circuit gate
+  teacher self-distinguishment for full-circuit CUDA-Q PHYC1
+
+PHYC3-full-circuit-cudaq:
+  no-leakage learner recovery and error-quality gate for full-circuit CUDA-Q
 ```
 
-Stage 2E now uses the full-circuit CUDA-Q teacher as the mainline. It must pass
-allM PHYC2-full-circuit-cudaq and PHYC3-full-circuit-cudaq before Stage 3
-starts.
+Stage 2E now uses the full-circuit CUDA-Q teacher as the mainline. It must
+produce allM PHYC1-full-circuit-cudaq data, pass PHYC2-full-circuit-cudaq
+teacher self-distinguishment, and pass PHYC3-full-circuit-cudaq no-leakage
+learner recovery before Stage 3 starts.
 
 The Born-local teacher records both `configured_circuit_depth` and
 `effective_circuit_depth`; its effective depth is intentionally `1`, so it
@@ -304,7 +353,8 @@ teacher or rerun PHYC2. It fails by design if the source teacher is still
 `separability_v2`, if pair-correlation overlays were used, or if the full
 S2E.1 Born-local mechanism scope is not present.
 
-PHYC2-weighted sampled-observation audit for uneven schedule-like support:
+PHYC2-weighted teacher self-distinguishment plus PHYC3 no-leakage learner
+recovery for uneven schedule-like support:
 
 ```bash
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_local_observable_gpu_teacher \
@@ -316,14 +366,20 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run
   --teacher-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/S2D_PHYS1_teacher \
   --output-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/PHYC2_weighted_slot_only_control
 
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_phyc3_no_leakage_learner_recovery \
+  --contract weighted \
+  --teacher-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/S2D_PHYS1_teacher \
+  --output-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/PHYC3_no_leakage_learner_recovery
+
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_phyc3_sampled_quantum_error_quality \
   --teacher-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/S2D_PHYS1_teacher \
-  --phyc2-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/PHYC2_weighted_slot_only_control \
+  --prediction-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/PHYC3_no_leakage_learner_recovery \
   --output-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/PHYC3_quantum_error_quality
 ```
 
-Current evidence for
-`configs/scope_static/s2d11_allM_30q_depth30_weighted.yaml`:
+Current legacy `separability_v2` evidence for
+`configs/scope_static/s2d11_allM_30q_depth30_weighted.yaml` should be cited
+with the PHYC2/PHYC3 distinction above:
 
 ```text
 PHYC2-weighted allM, 30 qubits, depth 30, uneven support 2-8, 10k shots:
@@ -340,6 +396,10 @@ PHYC2-weighted allM, 30 qubits, depth 30, uneven support 2-8, 10k shots:
   PHYC3_max_predicted_channel_distance: 0.001364
   PHYC3_incompatible_predictions: 0
 ```
+
+Before citing any older artifact as PHYC3 no-leakage learner evidence, confirm
+that its `prediction_source_audit.source_name` is
+`phyc3_no_leakage_learner_recovery`, not a PHYC2 teacher-self source.
 
 No-remap weighted ablation:
 
@@ -374,9 +434,14 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run
   --teacher-dir outputs/scope_static/local_observable_gpu_allM_74q_depth200_weighted_v2_slot_remap/S2D_PHYS1_teacher \
   --output-dir outputs/scope_static/local_observable_gpu_allM_74q_depth200_weighted_v2_slot_remap/PHYC2_weighted_slot_only_control
 
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_phyc3_no_leakage_learner_recovery \
+  --contract weighted \
+  --teacher-dir outputs/scope_static/local_observable_gpu_allM_74q_depth200_weighted_v2_slot_remap/S2D_PHYS1_teacher \
+  --output-dir outputs/scope_static/local_observable_gpu_allM_74q_depth200_weighted_v2_slot_remap/PHYC3_no_leakage_learner_recovery
+
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_phyc3_sampled_quantum_error_quality \
   --teacher-dir outputs/scope_static/local_observable_gpu_allM_74q_depth200_weighted_v2_slot_remap/S2D_PHYS1_teacher \
-  --phyc2-dir outputs/scope_static/local_observable_gpu_allM_74q_depth200_weighted_v2_slot_remap/PHYC2_weighted_slot_only_control \
+  --prediction-dir outputs/scope_static/local_observable_gpu_allM_74q_depth200_weighted_v2_slot_remap/PHYC3_no_leakage_learner_recovery \
   --output-dir outputs/scope_static/local_observable_gpu_allM_74q_depth200_weighted_v2_slot_remap/PHYC3_quantum_error_quality
 ```
 

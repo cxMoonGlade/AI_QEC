@@ -30,9 +30,11 @@ p_j = sigmoid(lambda_j)
 - `S[j, k]` or `Pi[j, k]`: learned Stage 2 discovery assignment. Do not call
   this matrix `A`; `A` is reserved for the DEM parity map.
 
-For PHYC2/PHYC3 physical-oracle paths, sampled local observation bits are
-learner-visible data when declared, but oracle mechanism labels, exact channels,
-exact PTMs, and oracle fingerprints remain evaluator-only.
+For PHYC physical-oracle paths, sampled observation bits are learner-visible
+data when declared. Oracle mechanism labels, exact channels, exact PTMs,
+teacher-self signatures, and oracle fingerprints remain evaluator-only. PHYC2
+may use teacher-internal evidence to ask whether the teacher can distinguish
+itself; PHYC3 may not use that evidence as learner input.
 
 ## Teacher
 
@@ -42,12 +44,13 @@ Implemented forms:
 
 - SCOPE-Static: defines hidden `omega(j)`, teacher logits `lambda_j`, sampled
   faults `e_j ~ Bernoulli(p_j)`, and observations `y = A e mod 2`.
-- S2D physical-oracle work: PHYS1/PHYS2 generate physical mechanism cases and
-  oracle separability evidence before PHYS3 learner recovery is judged.
+- S2D physical-oracle work: PHYC1 generates physical mechanism cases, PHYC2
+  audits teacher self-distinguishment, and PHYC3 judges no-leakage learner
+  recovery. `PHYS1/PHYS2/PHYS3` are legacy folder names only.
 - PHYC1-full-circuit: the current Stage 2E mainline teacher; samples literal
   full n-qubit CUDA-Q circuits at configured gate depth with mechanism
   channels/readout.
-- PHYC2-separability_v2: generates PHYS1-compatible sampled local observations
+- PHYC2-separability_v2: generates PHYC1-compatible sampled local observations
   from engineered branch-specific response profiles for stress testing
   learner-visible separability.
 - PHYC2-Born-local: Stage 2E teacher that generates sampled local observations
@@ -70,12 +73,18 @@ Implemented forms:
   supplied `omega(j)` because Stage 1 is the known-orbit setting.
 - Stage 2 static discovery: learns `S[j, k]` or `Pi[j, k]` from `A`, `y`, and
   learner-visible features; hidden `omega(j)` is withheld.
-- PHYS3: learns from shot bits, probe metadata, visible instruction type,
-  visible qubit/edge ids, chain position, and visible-data-derived invariants.
-- PHYC2: trains grouped classifiers from sampled observation bits and
-  learner-visible probe/instruction metadata to classify mechanism labels.
-- PHYC3: consumes PHYC2 grouped predictions and audits whether predicted
-  mechanism labels map to close quantum/readout error prototypes.
+- PHYS3 legacy local-inverse recovery: learns from shot bits, probe metadata,
+  visible instruction type, visible qubit/edge ids, chain position, and
+  visible-data-derived invariants.
+- PHYC2: not a learner-success claim. It audits whether the PHYC1 teacher can
+  self-distinguish generated mechanisms from teacher-internal mechanism
+  evidence.
+- PHYC2 sampled-observation learner diagnostic: trains grouped classifiers from
+  sampled observation bits and learner-visible probe/instruction/location
+  metadata to classify mechanism labels. This diagnostic feeds PHYC3.
+- PHYC3: consumes no-leakage learner grouped predictions, not PHYC2
+  teacher-self predictions, and audits whether predicted mechanism labels map
+  to close quantum/readout error prototypes.
 
 Expected properties:
 
@@ -103,8 +112,8 @@ Allowed learner-visible data:
 - shot bits.
 - visible circuit/probe/instruction/location metadata.
 - features computed only from visible data.
-- PHYC2 slot-remapped observation cells, provided sampled response features are
-  used and slot-only leakage control remains low.
+- PHYC2/PHYC3 slot-remapped observation cells, provided sampled response
+  features are used and slot-only leakage control remains low.
 
 Forbidden learner exposure:
 
@@ -118,8 +127,9 @@ Forbidden learner exposure:
 
 For the current local-observable path, `PHYC2.slot_only_leakage_control` trains
 on slot/layout metadata without sampled bits. High slot-only accuracy means the
-PHYC2 result is leaking and should not be trusted. The current accepted
-`separability_v2` evidence has low slot-only accuracy and is explicitly
+sampled-observation learner diagnostic is leaking and should not be trusted as
+PHYC3 evidence. It does not invalidate PHYC2 teacher self-distinguishment by
+itself. The current accepted `separability_v2` evidence is explicitly
 classified as an engineered separability stress result, not a Born-local
 physical baseline.
 

@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np
 
 from .channels import MechanismSpec, mechanism_channel
+from ..metrics import adjusted_rand_index, normalized_mutual_info
 from .ptm import ptm_from_kraus, ptm_from_unitary
 
 
@@ -31,10 +32,12 @@ def run_sampled_quantum_error_quality_audit(
 ) -> dict[str, object]:
     """PHYC3 diagnostic: mechanism classification plus quantum-error quality.
 
-    This audit consumes learner-visible PHYC2 grouped predictions. For each
-    held-out circuit group, it builds class-conditional channel/readout
-    prototypes only from the training groups, then compares the predicted
-    prototype against the evaluator-only oracle mechanism channel.
+    This audit consumes no-leakage learner grouped predictions from a PHYC3
+    learner-recovery artifact. It rejects PHYC2 teacher-self predictions as
+    learner evidence. For each held-out circuit group, it builds
+    class-conditional channel/readout prototypes only from the training groups,
+    then compares the predicted prototype against the evaluator-only oracle
+    mechanism channel.
     """
 
     teacher = Path(teacher_dir)
@@ -44,9 +47,11 @@ def run_sampled_quantum_error_quality_audit(
 
     records = _load_mechanism_records(teacher / "oracle_mechanisms.json")
     phyc2_metrics = json.loads((phyc2 / "metrics.json").read_text())
-    folds = phyc2_metrics.get("supervised_grouped_ceiling", {}).get("grouped_fold_predictions", [])
+    prediction_source = _learner_prediction_source(phyc2_metrics)
+    folds = prediction_source.get("grouped_fold_predictions", [])
     if not isinstance(folds, list) or not folds:
-        result = _not_evaluable_result(teacher, phyc2, output, "PHYC2 grouped fold predictions are missing")
+        result = _not_evaluable_result(teacher, phyc2, output, str(prediction_source.get("reason", "PHYC3 no-leakage learner predictions are missing")))
+        result["prediction_source_audit"] = prediction_source
         _write_outputs(output, result)
         return result
 
@@ -88,12 +93,20 @@ def run_sampled_quantum_error_quality_audit(
             )
 
     summary = _quality_summary(rows)
-    mechanism_balanced_accuracy = float(phyc2_metrics.get("balanced_accuracy", 0.0))
-    mechanism_min_recall = float(phyc2_metrics.get("min_class_recall", 0.0))
+    mechanism_balanced_accuracy = float(prediction_source.get("balanced_accuracy", 0.0))
+    mechanism_min_recall = float(prediction_source.get("min_class_recall", 0.0))
+    mechanism_ari = float(prediction_source.get("adjusted_rand_index", 0.0))
+    mechanism_nmi = float(prediction_source.get("normalized_mutual_info", 0.0))
+    learner_contract_passed = bool(prediction_source.get("learner_contract_passed", False))
+    leakage_clean = bool(prediction_source.get("leakage_clean", False))
     passed = (
         bool(rows)
+        and learner_contract_passed
+        and leakage_clean
         and mechanism_balanced_accuracy >= float(min_mechanism_balanced_accuracy)
         and mechanism_min_recall >= float(min_mechanism_min_recall)
+        and mechanism_ari >= 1.0
+        and mechanism_nmi >= 1.0
         and summary["predicted_channel_distance"]["mean"] <= float(max_mean_predicted_channel_distance)
         and summary["predicted_channel_distance"]["max"] <= float(max_worst_predicted_channel_distance)
         and (
@@ -106,12 +119,18 @@ def run_sampled_quantum_error_quality_audit(
         "schema": "scope_static_phyc3_sampled_quantum_error_quality_v1",
         "stage": "PHYC3_sampled_quantum_error_quality",
         "teacher_dir": str(teacher),
-        "phyc2_dir": str(phyc2),
+        "prediction_dir": str(phyc2),
         "output_dir": str(output),
         "contract": {
             "name": "sampled_observation_mechanism_predictions_yield_good_quantum_error_prototypes",
+            "primary_role": "PHYC3 no-leakage learner mechanism classification and quantum-error quality",
+            "teacher_self_predictions_allowed": False,
+            "learner_contract_passed_required": True,
+            "leakage_clean_required": True,
             "mechanism_balanced_accuracy_ge": float(min_mechanism_balanced_accuracy),
             "mechanism_min_class_recall_ge": float(min_mechanism_min_recall),
+            "mechanism_ARI_eq": 1.0,
+            "mechanism_NMI_eq": 1.0,
             "mean_predicted_channel_distance_le": float(max_mean_predicted_channel_distance),
             "max_predicted_channel_distance_le": float(max_worst_predicted_channel_distance),
             "mean_nearest_wrong_channel_gap_ge": None if min_nearest_wrong_channel_gap is None else float(min_nearest_wrong_channel_gap),
@@ -119,23 +138,110 @@ def run_sampled_quantum_error_quality_audit(
             "incompatible_prediction_count_eq": 0,
         },
         "claim_boundary": (
-            "Channel/readout quality is measured against evaluator-only mechanism-channel definitions. "
-            "For separability_v2 local-observable teachers this is a mechanism-to-error translation diagnostic, "
-            "not proof that the sampled observations came from Born-rule circuit physics."
+            "PHYC3 consumes no-leakage learner predictions, not PHYC2 teacher-self predictions. "
+            "Channel/readout quality is then measured against evaluator-only mechanism-channel definitions."
         ),
         "contract_passed": bool(passed),
         "decision": "sampled_predictions_yield_good_quantum_error_prototypes" if passed else "quantum_error_quality_diagnostic_failed",
+        "prediction_source_audit": prediction_source,
         "mechanism_classification": {
             "balanced_accuracy": mechanism_balanced_accuracy,
             "min_class_recall": mechanism_min_recall,
-            "prevalence_weighted_accuracy": float(phyc2_metrics.get("prevalence_weighted_accuracy", 0.0)),
-            "rare_class_recall_min": float(phyc2_metrics.get("rare_class_recall_min", 0.0)),
+            "adjusted_rand_index": mechanism_ari,
+            "normalized_mutual_info": mechanism_nmi,
+            "prevalence_weighted_accuracy": float(prediction_source.get("prevalence_weighted_accuracy", 0.0)),
+            "rare_class_recall_min": float(prediction_source.get("rare_class_recall_min", 0.0)),
         },
         "quality_summary": summary,
         "records": rows,
     }
     _write_outputs(output, result)
     return result
+
+
+def _learner_prediction_source(phyc2_metrics: dict[str, object]) -> dict[str, object]:
+    primary_block = str(phyc2_metrics.get("primary_feature_block", ""))
+    stage = str(phyc2_metrics.get("stage", ""))
+    if stage == "PHYC3_no_leakage_learner_recovery" or primary_block == "typed_gate_readout_prep_invariant_learner":
+        source = _prediction_source_from_metrics(
+            phyc2_metrics,
+            source_name="phyc3_no_leakage_learner_recovery",
+            teacher_self=False,
+        )
+    else:
+        primary_block = str(phyc2_metrics.get("primary_feature_block", ""))
+        if primary_block.startswith("teacher_self"):
+            reason = "PHYC3 requires no-leakage learner predictions from PHYC3 learner recovery; PHYC2 teacher-self predictions are forbidden"
+            teacher_self = True
+        elif isinstance(phyc2_metrics.get("sampled_observation_learner_diagnostic"), dict):
+            reason = "legacy PHYC2-embedded learner diagnostics must be regenerated as PHYC3_no_leakage_learner_recovery artifacts"
+            teacher_self = False
+        else:
+            reason = "PHYC3 learner-recovery predictions are missing"
+            teacher_self = False
+        return {
+            "schema": "scope_static_phyc3_prediction_source_audit_v1",
+            "source_name": "none",
+            "teacher_self_predictions": bool(teacher_self),
+            "teacher_self_predictions_allowed": False,
+            "learner_contract_passed": False,
+            "leakage_clean": False,
+            "grouped_fold_predictions": [],
+            "reason": reason,
+        }
+
+    leakage_guardrail = phyc2_metrics.get("leakage_guardrail_audit", {})
+    leakage_guardrail_passed = bool(leakage_guardrail.get("passed", True)) if isinstance(leakage_guardrail, dict) else True
+    slot_only = phyc2_metrics.get("slot_only_leakage_control", {})
+    slot_only_leakage_suspected = bool(slot_only.get("leakage_suspected", False)) if isinstance(slot_only, dict) else False
+    source["leakage_guardrail_passed"] = leakage_guardrail_passed
+    source["slot_only_leakage_suspected"] = slot_only_leakage_suspected
+    source["leakage_clean"] = bool(leakage_guardrail_passed and not slot_only_leakage_suspected)
+    return source
+
+
+def _prediction_source_from_metrics(metrics: dict[str, object], *, source_name: str, teacher_self: bool) -> dict[str, object]:
+    ceiling = metrics.get("supervised_grouped_ceiling", {})
+    folds = ceiling.get("grouped_fold_predictions", []) if isinstance(ceiling, dict) else []
+    true, pred = _fold_true_pred(folds if isinstance(folds, list) else [])
+    ari, nmi = _partition_scores(true, pred)
+    return {
+        "schema": "scope_static_phyc3_prediction_source_audit_v1",
+        "source_name": source_name,
+        "teacher_self_predictions": bool(teacher_self),
+        "teacher_self_predictions_allowed": False,
+        "learner_contract_passed": bool(metrics.get("contract_passed", False)),
+        "primary_feature_block": metrics.get("primary_feature_block"),
+        "primary_head": metrics.get("primary_head"),
+        "balanced_accuracy": float(metrics.get("balanced_accuracy", 0.0)),
+        "min_class_recall": float(metrics.get("min_class_recall", 0.0)),
+        "adjusted_rand_index": float(metrics.get("adjusted_rand_index", ari)),
+        "normalized_mutual_info": float(metrics.get("normalized_mutual_info", nmi)),
+        "prevalence_weighted_accuracy": float(metrics.get("prevalence_weighted_accuracy", 0.0)),
+        "rare_class_recall_min": float(metrics.get("rare_class_recall_min", 0.0)),
+        "grouped_fold_predictions": folds if isinstance(folds, list) else [],
+    }
+
+
+def _fold_true_pred(folds: list[object]) -> tuple[list[str], list[str]]:
+    true: list[str] = []
+    pred: list[str] = []
+    for fold in folds:
+        if not isinstance(fold, dict):
+            continue
+        true.extend(str(item) for item in fold.get("true_labels", []))
+        pred.extend(str(item) for item in fold.get("predicted_labels", []))
+    return true, pred
+
+
+def _partition_scores(true: list[str], pred: list[str]) -> tuple[float, float]:
+    labels = sorted(set(true) | set(pred), key=_mechanism_sort_key)
+    if not labels:
+        return 0.0, 0.0
+    index = {label: idx for idx, label in enumerate(labels)}
+    left = [index[label] for label in true]
+    right = [index[label] for label in pred]
+    return float(adjusted_rand_index(left, right)), float(normalized_mutual_info(left, right))
 
 
 def channel_vector(record: dict[str, object]) -> ChannelVector:
@@ -173,14 +279,20 @@ def format_sampled_quantum_error_quality_summary(result: dict[str, object]) -> s
     classification = result.get("mechanism_classification", {})
     if not isinstance(classification, dict):
         classification = {}
+    prediction_source = result.get("prediction_source_audit", {})
+    if not isinstance(prediction_source, dict):
+        prediction_source = {}
     return "\n".join(
         [
             "# PHYC3 Sampled Quantum Error Quality",
             "",
             f"- Decision: `{result.get('decision')}`",
             f"- Contract passed: `{str(bool(result.get('contract_passed'))).lower()}`",
+            f"- Prediction source: `{prediction_source.get('source_name', 'unknown')}`",
             f"- Mechanism balanced accuracy: `{float(classification.get('balanced_accuracy', 0.0)):.4f}`",
             f"- Mechanism min class recall: `{float(classification.get('min_class_recall', 0.0)):.4f}`",
+            f"- Mechanism ARI: `{float(classification.get('adjusted_rand_index', 0.0)):.4f}`",
+            f"- Mechanism NMI: `{float(classification.get('normalized_mutual_info', 0.0)):.4f}`",
             f"- Mean predicted channel distance: `{float(predicted.get('mean', 0.0)):.6f}`",
             f"- Max predicted channel distance: `{float(predicted.get('max', 0.0)):.6f}`",
             f"- Mean nearest-wrong gap: `{float(gap.get('mean', 0.0)):.6f}`",
@@ -304,6 +416,7 @@ def _not_evaluable_result(teacher: Path, phyc2: Path, output: Path, reason: str)
         "stage": "PHYC3_sampled_quantum_error_quality",
         "teacher_dir": str(teacher),
         "phyc2_dir": str(phyc2),
+        "prediction_dir": str(phyc2),
         "output_dir": str(output),
         "contract_passed": False,
         "decision": "insufficient_phyc2_predictions",

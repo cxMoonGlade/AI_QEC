@@ -10,6 +10,7 @@ import yaml
 from scope_static.experiments.run_s2d_oracle_separability import run_s2d_oracle_separability
 from scope_static.experiments.run_s2d_physical_teacher import run_s2d_physical_teacher
 from scope_static.experiments.run_s2d_preflight import run_s2d_preflight
+from scope_static.physical import preflight as preflight_module
 from scope_static.physical.preflight import audit_cudaq_backend
 from scope_static.physical.teacher import (
     _counts_to_bit_matrix,
@@ -29,6 +30,44 @@ def test_s2d_preflight_writes_cudaq_backend_audit(tmp_path: Path) -> None:
         assert audit["tiny_cudaq_sample"]["passed"] is True
     assert (tmp_path / "S2D_PHYS0_preflight" / "backend_audit.json").exists()
     assert (tmp_path / "S2D_PHYS0_preflight" / "backend_audit.md").exists()
+
+
+def test_cudaq_preflight_accepts_successful_gpu_target_sample_when_gpu_count_is_zero(monkeypatch: pytest.MonkeyPatch) -> None:
+    class FakeKernel:
+        def qalloc(self, count: int):
+            return list(range(count))
+
+        def h(self, _qubit: int) -> None:
+            return None
+
+        def mz(self, _qubit: int) -> None:
+            return None
+
+    class FakeCudaq:
+        def set_target(self, _target: str, *, option: str | None = None) -> None:
+            self.option = option
+
+        def get_target(self) -> str:
+            return "Target nvidia simulator=cusvsim_fp32"
+
+        def make_kernel(self) -> FakeKernel:
+            return FakeKernel()
+
+        def sample(self, _kernel: FakeKernel, *, shots_count: int) -> dict[str, int]:
+            return {"0": int(shots_count)}
+
+        def num_available_gpus(self) -> int:
+            return 0
+
+    monkeypatch.setattr(preflight_module.importlib, "import_module", lambda _name: FakeCudaq())
+
+    audit = audit_cudaq_backend(backend="cudaq", require_gpu=True, cudaq_target="nvidia", cudaq_target_options="fp32")
+
+    assert audit["backend_usable"] is True
+    assert audit["status"] == "pass"
+    assert audit["cudaq_gpu_count"] == 0
+    assert audit["tiny_cudaq_sample"]["passed"] is True
+    assert any("GPU count is zero" in item for item in audit["warnings"])
 
 
 def test_default_oracle_mechanisms_include_required_labels() -> None:

@@ -5,7 +5,15 @@ from pathlib import Path
 
 import numpy as np
 
-from scope_static.physical.sampled_observation_separability import _coverage, _weighted_metrics, run_sampled_observation_separability_audit, slot_only_leakage_control
+from scope_static.physical.sampled_observation_separability import (
+    _coverage,
+    _weighted_metrics,
+    format_sampled_observation_separability_summary,
+    run_sampled_observation_separability_audit,
+    slot_only_leakage_control,
+    teacher_self_distinguishment_audit,
+    visible_input_identifiability_audit,
+)
 
 
 def test_phyc2_reports_insufficient_grouped_sampled_observation_coverage(tmp_path: Path) -> None:
@@ -45,10 +53,12 @@ def test_phyc2_reports_insufficient_grouped_sampled_observation_coverage(tmp_pat
     assert result["schema"] == "scope_static_phyc2_sampled_observation_separability_v1"
     assert result["stage"] == "PHYC2_sampled_observation_separability"
     assert result["contract_variant"] == "balanced"
-    assert result["contract"]["name"] == "sampled_observations_are_learner_separable_balanced"
+    assert result["contract"]["name"] == "teacher_self_distinguishes_mechanisms_balanced"
     assert result["contract_passed"] is False
-    assert result["decision"] == "insufficient_sampled_observation_coverage"
+    assert result["decision"] == "insufficient_teacher_self_coverage"
     assert result["coverage"]["contract_evaluable"] is False
+    assert result["phyc2_emits_learner_grouped_predictions"] is False
+    assert "sampled_observation_learner_diagnostic" not in result
     assert (tmp_path / "PHYC2" / "metrics.json").exists()
     assert (tmp_path / "PHYC2" / "summary.md").exists()
 
@@ -94,6 +104,100 @@ def test_phyc2_weighted_metrics_report_prevalence_accuracy_and_rare_recall() -> 
     assert metrics["rare_class_recall_min"] == 0.5
 
 
+def test_visible_input_identifiability_audit_flags_conflicting_visible_rows() -> None:
+    records = [
+        {"oracle_label": "M0", "circuit_id": 0, "instruction": "id", "qubits": [0], "probe_indices": [0, 1]},
+        {"oracle_label": "M24", "circuit_id": 0, "instruction": "id", "qubits": [0], "probe_indices": [0, 1]},
+        {"oracle_label": "M1", "circuit_id": 0, "instruction": "measure", "qubits": [1], "probe_indices": [0, 1]},
+    ]
+    observations = np.random.default_rng(0).integers(0, 2, size=(2, 8, 2), dtype=np.uint8)
+
+    audit = visible_input_identifiability_audit(records, ["p0", "p1"], observations)
+
+    assert audit["perfect_mechanism_recovery_possible_from_visible_inputs"] is False
+    assert audit["conflicting_visible_signature_count"] == 1
+    assert audit["conflicting_record_count"] == 2
+    assert audit["conflicting_labels"] == ["M0", "M24"]
+    ceiling = audit["optimistic_duplicate_signature_ceiling"]
+    assert ceiling["balanced_accuracy"] < 1.0
+    assert ceiling["normalized_mutual_info"] < 1.0
+
+
+def test_teacher_self_distinguishment_passes_distinct_mechanism_channels() -> None:
+    records = [
+        {
+            "oracle_label": "M0",
+            "mechanism_id": "M0",
+            "name": "local_stochastic_pauli_gate_error",
+            "num_qubits": 1,
+            "parameters": {"p_x": 0.002, "p_y": 0.001, "p_z": 0.001},
+            "instruction": "id",
+            "qubits": [0],
+            "circuit_id": group,
+        }
+        for group in range(2)
+    ]
+    records.extend(
+        {
+            "oracle_label": "M6",
+            "mechanism_id": "M6",
+            "name": "coherent_rx_overrotation",
+            "num_qubits": 1,
+            "parameters": {"epsilon": 0.035},
+            "instruction": "rx",
+            "qubits": [1],
+            "circuit_id": group,
+        }
+        for group in range(2)
+    )
+
+    audit = teacher_self_distinguishment_audit(records)
+
+    assert audit["contract_passed"] is True
+    assert audit["overall"]["balanced_accuracy"] == 1.0
+    assert audit["overall"]["normalized_mutual_info"] == 1.0
+
+
+def test_phyc2_success_does_not_emit_learner_grouped_predictions(tmp_path: Path) -> None:
+    teacher = tmp_path / "S2D_PHYS1_teacher"
+    teacher.mkdir()
+    records = []
+    for group in range(2):
+        records.append(
+            {
+                "oracle_label": "M0",
+                "mechanism_id": "M0",
+                "name": "local_stochastic_pauli_gate_error",
+                "num_qubits": 1,
+                "parameters": {"p_x": 0.002, "p_y": 0.001, "p_z": 0.001},
+                "instruction": "id",
+                "qubits": [0],
+                "circuit_id": group,
+            }
+        )
+        records.append(
+            {
+                "oracle_label": "M6",
+                "mechanism_id": "M6",
+                "name": "coherent_rx_overrotation",
+                "num_qubits": 1,
+                "parameters": {"epsilon": 0.035},
+                "instruction": "rx",
+                "qubits": [0],
+                "circuit_id": group,
+            }
+        )
+    (teacher / "oracle_mechanisms.json").write_text(json.dumps({"mechanisms": records}))
+
+    result = run_sampled_observation_separability_audit(teacher_dir=teacher, output_dir=tmp_path / "PHYC2")
+
+    assert result["contract_passed"] is True
+    assert result["phyc2_emits_learner_grouped_predictions"] is False
+    assert "sampled_observation_learner_diagnostic" not in result
+    assert "supervised_grouped_ceiling" not in result
+    assert result["teacher_self_grouped_predictions"]
+
+
 def test_slot_only_leakage_control_excludes_sampled_response_features() -> None:
     records = [
         {"oracle_label": "M0", "circuit_id": 0, "qubits": [0], "physical_qubits": [2], "probe_indices": [0, 1], "local_observable_slot_remap": True},
@@ -109,3 +213,22 @@ def test_slot_only_leakage_control_excludes_sampled_response_features() -> None:
     assert "sampled_bits" in control["excluded_inputs"]
     assert all("response" not in name for name in control["feature_names"])
     assert all("corr" not in name for name in control["feature_names"])
+
+
+def test_phyc2_summary_names_teacher_self_only() -> None:
+    summary = format_sampled_observation_separability_summary(
+        {
+            "contract": {"primary_role": "PHYC2 teacher self-distinguishment"},
+            "contract_variant": "balanced",
+            "decision": "teacher_self_distinguishes_all_mechanisms",
+            "contract_passed": True,
+            "balanced_accuracy": 1.0,
+            "adjusted_rand_index": 1.0,
+            "normalized_mutual_info": 1.0,
+            "min_class_recall": 1.0,
+            "coverage": {"num_records": 4, "num_classes": 2, "num_groups": 2, "num_probes": 2, "num_shots": 32, "num_qubits": 2, "reason": "ok"},
+        }
+    )
+
+    assert "# PHYC2 Teacher Self-Distinguishment" in summary
+    assert "Sampled-Observation Learner Diagnostic" not in summary

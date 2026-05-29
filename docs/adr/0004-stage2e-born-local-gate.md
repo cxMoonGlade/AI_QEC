@@ -6,10 +6,16 @@ Superseded by `0005-stage2e-full-circuit-cudaq-mainline.md`.
 
 ## Context
 
-The local-observable Torch CUDA path now has strong `separability_v2` evidence:
-PHYC2-balanced, PHYC2-weighted, slot-only leakage control, no-remap ablation,
-74-qubit/depth-200 scalability smoke, and PHYC3 mechanism-to-error prototype
-quality all pass on the engineered sampled-observation teacher.
+The local-observable Torch CUDA path produced strong historical
+`separability_v2` evidence: PHYC2-balanced, PHYC2-weighted, slot-only leakage
+control, no-remap ablation, 74-qubit/depth-200 scalability smoke, and PHYC3
+mechanism-to-error prototype quality on the engineered sampled-observation
+teacher.
+
+Current terminology separates these claims more sharply: PHYC2 means teacher
+self-distinguishment, while PHYC3 means no-leakage learner recovery plus
+quantum/readout error quality. Older PHYC3 artifacts should be rechecked for a
+learner prediction source before being cited as no-leakage learner evidence.
 
 However, `separability_v2` is intentionally engineered for learner-visible
 mechanism separability. It uses branch-specific response profiles and
@@ -36,11 +42,15 @@ PHYC2-separability_v2:
 
 PHYC2-Born-local:
   physically and mathematically correct local baseline
+
+PHYC3-Born-local:
+  no-leakage learner recovery and error-quality audit for the Born-local
+  diagnostic
 ```
 
 Historically, Stage 3 was blocked on PHYC2-Born-local and the corresponding
 PHYC3-Born-local quality audit. ADR 0005 replaces that gate with the
-full-circuit CUDA-Q PHYC2/PHYC3 gate.
+full-circuit CUDA-Q PHYC1/PHYC2/PHYC3 gate.
 
 ## Consequences
 
@@ -56,4 +66,4 @@ full-circuit CUDA-Q PHYC2/PHYC3 gate.
 - The Born-local teacher must not use mechanism-label response templates,
   artificial response-code margins, or post-sampling pair-correlation overlays.
 - Small Born-local cases should be validated against direct density-matrix math
-  and CUDA-Q local circuits before promoting allM PHYC2/PHYC3 evidence.
+  and CUDA-Q local circuits before promoting allM PHYC1/PHYC2/PHYC3 evidence.

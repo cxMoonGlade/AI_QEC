@@ -1,0 +1,24 @@
+run:
+  name: full_circuit_cudaq_allM_10q_depth20_phyc2_rungA
+  output_root: outputs/scope_static/full_circuit_cudaq_allM_10q_depth20_phyc2_ladder/rungA_minimal_intervention_g6_s10000
+
+s2d_physical:
+  backend: cudaq
+  require_gpu: true
+  cudaq_target: nvidia
+  cudaq_target_options: fp32
+  physical_teacher_model: full_circuit_cudaq
+  full_circuit_cudaq_rzz_implementation: exp_pauli
+  full_circuit_cudaq_noise_mode: hybrid
+  full_circuit_cudaq_progress_logging: true
+  full_circuit_cudaq_shot_batch_size: 10000
+  paper_informed_ptm_features: true
+  num_qubits: 10
+  circuit_depth: 20
+  probe_set: rzz_minimal_intervention
+  mechanism_set: allM
+  balanced_min_instances_per_mechanism: 6
+  multicircuit_teacher_batch: true
+  shots: 10000
+  seed: 29
+  theta: 0.18

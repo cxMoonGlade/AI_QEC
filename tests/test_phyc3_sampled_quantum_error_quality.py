@@ -42,7 +42,56 @@ def test_channel_vector_represents_quantum_and_readout_errors() -> None:
     assert readout.vector.shape == (4,)
 
 
-def test_phyc3_quantum_error_quality_uses_phyc2_fold_predictions(tmp_path: Path) -> None:
+def test_phyc3_quantum_error_quality_uses_phyc3_learner_recovery_predictions(tmp_path: Path) -> None:
+    teacher = tmp_path / "S2D_PHYS1_teacher"
+    learner = tmp_path / "PHYC3_learner"
+    output = tmp_path / "PHYC3"
+    teacher.mkdir()
+    learner.mkdir()
+    records = [
+        _record(0, "M0", "stochastic_pauli_gate_error", "id", {"p_x": 0.0015, "p_y": 0.0008, "p_z": 0.0022}),
+        _record(1, "M6", "coherent_rx_overrotation", "rx", {"epsilon": 0.25}),
+        _record(2, "M0", "stochastic_pauli_gate_error", "id", {"p_x": 0.0015, "p_y": 0.0008, "p_z": 0.0022}, circuit_id=1),
+        _record(3, "M6", "coherent_rx_overrotation", "rx", {"epsilon": 0.25}, circuit_id=1),
+    ]
+    (teacher / "oracle_mechanisms.json").write_text(json.dumps({"mechanisms": records}) + "\n")
+    learner_metrics = {
+        "stage": "PHYC3_no_leakage_learner_recovery",
+        "contract_passed": True,
+        "primary_feature_block": "typed_gate_readout_prep_invariant_learner",
+        "balanced_accuracy": 1.0,
+        "min_class_recall": 1.0,
+        "adjusted_rand_index": 1.0,
+        "normalized_mutual_info": 1.0,
+        "prevalence_weighted_accuracy": 1.0,
+        "rare_class_recall_min": 1.0,
+        "supervised_grouped_ceiling": {
+            "grouped_fold_predictions": [
+                {"fold": 0, "test_circuit_id": 0, "true_labels": ["M0", "M6"], "predicted_labels": ["M0", "M6"]},
+                {"fold": 1, "test_circuit_id": 1, "true_labels": ["M0", "M6"], "predicted_labels": ["M0", "M6"]},
+            ]
+        },
+        "leakage_guardrail_audit": {"passed": True},
+        "slot_only_leakage_control": {"leakage_suspected": False},
+    }
+    (learner / "metrics.json").write_text(json.dumps(learner_metrics) + "\n")
+
+    result = run_sampled_quantum_error_quality_audit(teacher_dir=teacher, phyc2_dir=learner, output_dir=output)
+
+    assert result["schema"] == "scope_static_phyc3_sampled_quantum_error_quality_v1"
+    assert result["stage"] == "PHYC3_sampled_quantum_error_quality"
+    assert result["contract_passed"] is True
+    assert result["prediction_source_audit"]["source_name"] == "phyc3_no_leakage_learner_recovery"
+    assert result["mechanism_classification"]["balanced_accuracy"] == 1.0
+    assert result["mechanism_classification"]["normalized_mutual_info"] == 1.0
+    assert result["quality_summary"]["num_records"] == 4
+    assert result["quality_summary"]["incompatible_prediction_count"] == 0
+    assert result["quality_summary"]["predicted_channel_distance"]["mean"] == 0.0
+    assert (output / "metrics.json").exists()
+    assert (output / "summary.md").exists()
+
+
+def test_phyc3_rejects_teacher_self_predictions_as_no_leakage_learner_evidence(tmp_path: Path) -> None:
     teacher = tmp_path / "S2D_PHYS1_teacher"
     phyc2 = tmp_path / "PHYC2"
     output = tmp_path / "PHYC3"
@@ -56,10 +105,12 @@ def test_phyc3_quantum_error_quality_uses_phyc2_fold_predictions(tmp_path: Path)
     ]
     (teacher / "oracle_mechanisms.json").write_text(json.dumps({"mechanisms": records}) + "\n")
     phyc2_metrics = {
+        "contract_passed": True,
+        "primary_feature_block": "teacher_self_mechanism_signature",
         "balanced_accuracy": 1.0,
         "min_class_recall": 1.0,
-        "prevalence_weighted_accuracy": 1.0,
-        "rare_class_recall_min": 1.0,
+        "adjusted_rand_index": 1.0,
+        "normalized_mutual_info": 1.0,
         "supervised_grouped_ceiling": {
             "grouped_fold_predictions": [
                 {"fold": 0, "test_circuit_id": 0, "true_labels": ["M0", "M6"], "predicted_labels": ["M0", "M6"]},
@@ -71,15 +122,9 @@ def test_phyc3_quantum_error_quality_uses_phyc2_fold_predictions(tmp_path: Path)
 
     result = run_sampled_quantum_error_quality_audit(teacher_dir=teacher, phyc2_dir=phyc2, output_dir=output)
 
-    assert result["schema"] == "scope_static_phyc3_sampled_quantum_error_quality_v1"
-    assert result["stage"] == "PHYC3_sampled_quantum_error_quality"
-    assert result["contract_passed"] is True
-    assert result["mechanism_classification"]["balanced_accuracy"] == 1.0
-    assert result["quality_summary"]["num_records"] == 4
-    assert result["quality_summary"]["incompatible_prediction_count"] == 0
-    assert result["quality_summary"]["predicted_channel_distance"]["mean"] == 0.0
-    assert (output / "metrics.json").exists()
-    assert (output / "summary.md").exists()
+    assert result["contract_passed"] is False
+    assert result["decision"] == "insufficient_phyc2_predictions"
+    assert result["prediction_source_audit"]["teacher_self_predictions_allowed"] is False
 
 
 def _record(

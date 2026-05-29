@@ -6,6 +6,7 @@ from typing import Iterable
 
 import numpy as np
 
+from scope_static.metrics import adjusted_rand_index, normalized_mutual_info
 from scope_static.numerics import NUMERICAL_ZERO
 
 from .generator_invariant_calibration import INVARIANT_FEATURES, generator_invariants_from_coordinates, ptm_unitarity
@@ -57,6 +58,11 @@ SINGLE_QUBIT_RESPONSE_FEATURES = (
     "sq_basis_anisotropy",
 )
 LOCAL_OBSERVABLE_RESPONSE_FEATURES = tuple(f"local_response_projection_{idx:02d}" for idx in range(17))
+SHOT_RECONSTRUCTED_PTM_FEATURES = tuple(
+    f"shot_ptm_delta_{row_label}_{col_label}"
+    for row_label in PAULI_LABELS
+    for col_label in PAULI_LABELS
+)
 PAIR_CORRELATION_FEATURES = (
     "pair_corr_mean",
     "pair_corr_std",
@@ -72,6 +78,16 @@ PAIR_CORRELATION_FEATURES = (
     "pair_corr_same_xy",
     "pair_corr_mixed_xy",
     *tuple(f"pair_corr_projection_{idx:02d}" for idx in range(8)),
+)
+SAMPLED_TOMOGRAPHY_FEATURE_KINDS = (
+    "left_mean",
+    "right_mean",
+    "left_centered",
+    "right_centered",
+    "pair_spin_corr",
+    "pair_centered_corr",
+    "pair_xor_mean",
+    "pair_both_one_mean",
 )
 
 
@@ -115,6 +131,7 @@ def build_typed_spam_gate_features(
     groups = [int(record.get("circuit_id", 0)) for record in records]
     branches = [visible_branch(record) for record in records]
     local_rows = _local_rows(local_record)
+    sampled_tomography_names = _sampled_tomography_feature_names(names)
     static_names = [
         *GENERATOR_CORE,
         *INVARIANT_FEATURES,
@@ -122,7 +139,9 @@ def build_typed_spam_gate_features(
         *INSTRUCTION_FEATURES,
         *SINGLE_QUBIT_RESPONSE_FEATURES,
         *LOCAL_OBSERVABLE_RESPONSE_FEATURES,
+        *SHOT_RECONSTRUCTED_PTM_FEATURES,
         *PAIR_CORRELATION_FEATURES,
+        *sampled_tomography_names,
         *READOUT_FEATURES,
         *PREP_RESET_FEATURES,
         *CONFIDENCE_FEATURES,
@@ -141,7 +160,7 @@ def build_typed_spam_gate_features(
     for idx, record in enumerate(records):
         location_id = int(record.get("location_id", idx))
         local = local_rows.get(location_id, {})
-        features = _record_features(record, obs, names, local)
+        features = _record_features(record, obs, names, local, sampled_tomography_names=sampled_tomography_names)
         real = np.asarray([features.get(name, 0.0) for name in base_names], dtype=np.float64)
         raw = np.concatenate(
             [
@@ -509,7 +528,20 @@ def classification_metrics(true: list[str], pred: list[str], class_names: list[s
         "confusion_matrix_labels": class_names,
         "support": {name: int(value) for name, value in support.items()},
         "pairwise_margins": pairwise_probability_margins(true, probabilities, class_names) if probabilities is not None else {},
+        "adjusted_rand_index": _partition_metric(adjusted_rand_index, true, pred, index),
+        "normalized_mutual_info": _partition_metric(normalized_mutual_info, true, pred, index),
     }
+
+
+def _partition_metric(metric: object, true: list[str], pred: list[str], index: dict[str, int]) -> float:
+    true_ids = []
+    pred_ids = []
+    for left, right in zip(true, pred):
+        if left not in index or right not in index:
+            continue
+        true_ids.append(int(index[left]))
+        pred_ids.append(int(index[right]))
+    return float(metric(true_ids, pred_ids)) if true_ids else 1.0
 
 
 def m5_overfragmentation_report(true_labels: list[str], pred_labels: list[str], class_names: list[str], *, tau: float = M5_TAU) -> dict[str, object]:
@@ -733,7 +765,14 @@ def typed_branch_feature_manifest(feature_names: list[str]) -> dict[str, object]
         "uses_oracle_labels": False,
         "uses_exact_teacher_channel": False,
         "uses_exact_ptm": False,
-        "visible_inputs": ["shot_bits", "probe_metadata", "visible_instruction_type", "visible_qubits", "shot_reconstructed_local_ptm"],
+        "visible_inputs": [
+            "shot_bits",
+            "probe_metadata",
+            "visible_instruction_type",
+            "visible_qubits",
+            "per_probe_sampled_response_vector",
+            "shot_reconstructed_local_ptm",
+        ],
     }
 
 
@@ -851,7 +890,14 @@ def confusion_matrix_by_branch(labels: list[str], pred: list[str], branches: lis
     return out
 
 
-def _record_features(record: dict[str, object], observations: np.ndarray, probe_names: list[str], local: dict[str, object]) -> dict[str, float]:
+def _record_features(
+    record: dict[str, object],
+    observations: np.ndarray,
+    probe_names: list[str],
+    local: dict[str, object],
+    *,
+    sampled_tomography_names: list[str] | None = None,
+) -> dict[str, float]:
     features = {name: float(local.get("features", {}).get(name, 0.0)) for name in GENERATOR_CORE}
     ptm = local.get("ptm", {})
     invariants = generator_invariants_from_coordinates(
@@ -878,7 +924,9 @@ def _record_features(record: dict[str, object], observations: np.ndarray, probe_
     features.update(_instruction_features(record))
     features.update(_single_qubit_response_features(record, observations, probe_names, qubits))
     features.update(_local_observable_response_features(record, observations, probe_names, qubits))
+    features.update(_shot_reconstructed_ptm_features(ptm))
     features.update(_pair_correlation_features(record, observations, probe_names, qubits))
+    features.update(_sampled_tomography_features(record, observations, probe_names, qubits, sampled_tomography_names or []))
     features.update(_readout_features(record, observations, probe_names, qubits))
     features.update(_prep_features(record, observations, probe_names, qubits))
     return features
@@ -940,6 +988,22 @@ def _local_observable_response_features(record: dict[str, object], observations:
     return {name: float(projections[idx]) for idx, name in enumerate(LOCAL_OBSERVABLE_RESPONSE_FEATURES)}
 
 
+def _shot_reconstructed_ptm_features(ptm: dict[str, object]) -> dict[str, float]:
+    matrix = _matrix_or_none(ptm.get("Delta"))
+    if matrix is None:
+        r_error = _matrix_or_none(ptm.get("R_error"))
+        if r_error is None:
+            return {name: 0.0 for name in SHOT_RECONSTRUCTED_PTM_FEATURES}
+        matrix = r_error - np.eye(r_error.shape[0], dtype=np.float64)
+    if matrix.shape != (len(PAULI_LABELS), len(PAULI_LABELS)):
+        return {name: 0.0 for name in SHOT_RECONSTRUCTED_PTM_FEATURES}
+    return {
+        f"shot_ptm_delta_{row_label}_{col_label}": float(matrix[row_idx, col_idx])
+        for row_idx, row_label in enumerate(PAULI_LABELS)
+        for col_idx, col_label in enumerate(PAULI_LABELS)
+    }
+
+
 def _pair_correlation_features(record: dict[str, object], observations: np.ndarray, probe_names: list[str], qubits: list[int]) -> dict[str, float]:
     empty = {name: 0.0 for name in PAIR_CORRELATION_FEATURES}
     if len(qubits) < 2:
@@ -983,6 +1047,83 @@ def _pair_correlation_features(record: dict[str, object], observations: np.ndarr
     )
     for idx, value in enumerate(projected):
         out[f"pair_corr_projection_{idx:02d}"] = float(value)
+    return out
+
+
+def _sampled_tomography_feature_names(probe_names: list[str]) -> list[str]:
+    count = _local_probe_template_count(probe_names)
+    return [
+        f"sampled_tomo_{kind}_{idx:03d}"
+        for idx in range(int(count))
+        for kind in SAMPLED_TOMOGRAPHY_FEATURE_KINDS
+    ]
+
+
+def _local_probe_template_count(probe_names: list[str]) -> int:
+    if not probe_names:
+        return 0
+    first = str(probe_names[0])
+    if ":" not in first:
+        return len(probe_names)
+    prefix = first.split(":", 1)[0]
+    count = 0
+    for name in probe_names:
+        text = str(name)
+        if ":" not in text or text.split(":", 1)[0] != prefix:
+            break
+        count += 1
+    return count
+
+
+def _sampled_tomography_features(
+    record: dict[str, object],
+    observations: np.ndarray,
+    probe_names: list[str],
+    qubits: list[int],
+    feature_names: list[str],
+) -> dict[str, float]:
+    out = {name: 0.0 for name in feature_names}
+    if not feature_names or observations.ndim != 3 or observations.shape[2] <= 0:
+        return out
+    num_templates = len(feature_names) // len(SAMPLED_TOMOGRAPHY_FEATURE_KINDS)
+    indices = [idx for idx in _record_probe_indices(record, len(probe_names)) if 0 <= int(idx) < int(observations.shape[0])]
+    if not indices or num_templates <= 0:
+        return out
+    indices = indices[:num_templates]
+    left = min(max(int(qubits[0]) if qubits else 0, 0), observations.shape[2] - 1)
+    has_right = len(qubits) >= 2
+    right = min(max(int(qubits[1]) if has_right else left, 0), observations.shape[2] - 1)
+    left_bits = np.asarray(observations[indices, :, left], dtype=np.float32)
+    left_mean = np.mean(left_bits, axis=1, dtype=np.float64)
+    global_mean = np.mean(observations[indices], axis=(1, 2), dtype=np.float64)
+    if has_right:
+        right_bits = np.asarray(observations[indices, :, right], dtype=np.float32)
+        right_mean = np.mean(right_bits, axis=1, dtype=np.float64)
+        left_spin = 2.0 * left_bits - 1.0
+        right_spin = 2.0 * right_bits - 1.0
+        pair_spin_corr = np.mean(left_spin * right_spin, axis=1, dtype=np.float64)
+        pair_centered_corr = pair_spin_corr - np.mean(left_spin, axis=1, dtype=np.float64) * np.mean(right_spin, axis=1, dtype=np.float64)
+        pair_xor_mean = np.mean(left_bits != right_bits, axis=1, dtype=np.float64)
+        pair_both_one_mean = np.mean(left_bits * right_bits, axis=1, dtype=np.float64)
+    else:
+        right_mean = np.zeros_like(left_mean)
+        pair_spin_corr = np.zeros_like(left_mean)
+        pair_centered_corr = np.zeros_like(left_mean)
+        pair_xor_mean = np.zeros_like(left_mean)
+        pair_both_one_mean = np.zeros_like(left_mean)
+    columns = {
+        "left_mean": left_mean,
+        "right_mean": right_mean,
+        "left_centered": left_mean - global_mean,
+        "right_centered": right_mean - global_mean if has_right else np.zeros_like(left_mean),
+        "pair_spin_corr": pair_spin_corr,
+        "pair_centered_corr": pair_centered_corr,
+        "pair_xor_mean": pair_xor_mean,
+        "pair_both_one_mean": pair_both_one_mean,
+    }
+    for local_idx in range(len(indices)):
+        for kind in SAMPLED_TOMOGRAPHY_FEATURE_KINDS:
+            out[f"sampled_tomo_{kind}_{local_idx:03d}"] = float(columns[kind][local_idx])
     return out
 
 

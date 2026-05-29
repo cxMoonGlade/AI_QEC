@@ -1,0 +1,19 @@
+phyc3c_validation:
+  name: PHYC3c_validation_robustness
+  teacher_dir: outputs/scope_static/full_circuit_cudaq_allM_10q_depth20_phyc2_ladder/rungC_local_tomography_g30_s10000/S2D_PHYC1_teacher
+  output_dir: outputs/scope_static/PHYC3c_validation_robustness
+  shots: 20000
+  seeds: [29]
+  sampling_modes: [expected]
+  robustness_modes: [false]
+  batch_sizes: [3, 5, 6]
+  shrinkage_alphas: [0.0, 0.25, 0.5]
+  ridge: 1.0e-6
+  variance_floor: 1.0e-8
+  max_pca_components_values: [0]
+  primary_head: PHYC3c_diagonal_gaussian
+  grid_heads: [PHYC3c_diagonal_gaussian]
+  primary_min_ba: 1.0
+  primary_min_nmi: 1.0
+  primary_min_m13_recall: 1.0
+  required_m13_contexts: 2

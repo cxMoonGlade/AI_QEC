@@ -151,9 +151,14 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run
   --teacher-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/S2D_PHYS1_teacher \
   --output-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/PHYC2_weighted_slot_only_control
 
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_phyc3_no_leakage_learner_recovery \
+  --contract weighted \
+  --teacher-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/S2D_PHYS1_teacher \
+  --output-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/PHYC3_no_leakage_learner_recovery
+
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_phyc3_sampled_quantum_error_quality \
   --teacher-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/S2D_PHYS1_teacher \
-  --phyc2-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/PHYC2_weighted_slot_only_control \
+  --prediction-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/PHYC3_no_leakage_learner_recovery \
   --output-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/PHYC3_quantum_error_quality
 ```
 
@@ -174,27 +179,43 @@ Stage 2 discovery should begin with synthetic teachers and report ARI/NMI before
 using Google repetition-code or surface-code data as external empirical
 validation.
 
-## Current PHYC2/PHYC3 Milestone Boundary
+## Current PHYC1/PHYC2/PHYC3 Milestone Boundary
 
-The current physical-teacher stack has three distinct roles:
+The current physical-teacher stack has three distinct PHYC roles:
 
 ```text
-PHYC2-separability_v2:
-  engineered separability stress teacher
+PHYC1:
+  teacher generation from the declared physical contract
 
-PHYC2-Born-local:
-  exact local Born-rule diagnostic, effective depth one
+PHYC2:
+  teacher self-distinguishment; a pass means the teacher itself can classify
+  every generated mechanism with BA, min recall, ARI, and NMI all equal 1.0
 
-PHYC2-full-circuit-cudaq:
-  required Stage 2E gate: literal n-qubit noisy circuits at gate depth d
+PHYC3:
+  no-leakage learner recovery plus quantum/readout error quality; PHYC3 must
+  consume learner-visible grouped predictions, not PHYC2 teacher-self
+  predictions
 ```
 
-The `separability_v2` allM artifacts pass PHYC2-balanced, PHYC2-weighted,
-slot-only leakage control, no-remap ablation, 74q/depth200 scalability smoke,
-and PHYC3 mechanism-to-error prototype quality. This is strong Stage 2
-separability evidence, not a Born-rule physical baseline. The minimal Born-local
+Variant labels describe the teacher source, not a change in the PHYC meaning:
+
+```text
+separability_v2:
+  engineered local-observable stress teacher
+
+Born-local:
+  exact local Born-rule diagnostic, effective depth one
+
+full-circuit-cudaq:
+  required Stage 2E mainline: literal n-qubit noisy circuits at gate depth d
+```
+
+The `separability_v2` allM artifacts are strong Stage 2 separability evidence,
+not a Born-rule physical baseline. Older PHYC3 artifacts must be rechecked for
+`prediction_source_audit.source_name == "phyc3_no_leakage_learner_recovery"`
+before being cited as current no-leakage learner evidence. The minimal Born-local
 teacher remains a density-matrix diagnostic with effective circuit depth one.
-Stage 2E acceptance now requires the full-circuit CUDA-Q teacher: sample literal
-n-qubit noisy circuits with the configured gate depth applied in the schedule.
-M11 spectator crosstalk RZ/ZZ remains a contract-sensitive mechanism; do not
+Stage 2E acceptance requires full-circuit CUDA-Q PHYC1 generation, PHYC2 teacher
+self-distinguishment, and PHYC3 no-leakage learner recovery/error quality. M11
+spectator crosstalk RZ/ZZ remains a contract-sensitive mechanism; do not
 collapse it into a local Born diagnostic when making full-circuit claims.

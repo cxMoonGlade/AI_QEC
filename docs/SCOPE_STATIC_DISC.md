@@ -58,8 +58,9 @@ Stage 2D: Active local-logit observability
 
 Stage 2E: full-circuit CUDA-Q physical-teacher gate
   Question: Can literal n-qubit noisy circuits at configured depth produce
-            learner-separable sampled observations and high-quality
-            quantum-error estimates?
+            PHYC1 data, PHYC2 teacher self-distinguishment, and PHYC3
+            no-leakage learner recovery with high-quality quantum/readout
+            error estimates?
 
 Stage 2B: Google external validation
   Question: On real data without true omega(j), do discovery models improve
@@ -1718,7 +1719,7 @@ inspired by https://github.com/muhos/QuaSARQ
 
 Status: implemented.
 
-The PHYS1/PHYS2/PHYS3 path is now exposed through the Physical Oracle Stack
+The PHYC1/PHYC2/PHYC3 path is exposed through the Physical Oracle Stack
 facade:
 
 ```text
@@ -1726,66 +1727,72 @@ scope_static.physical_oracle.run_physical_oracle_stack
 scope_static.experiments.run_physical_oracle_stack
 ```
 
-The stack keeps the existing stage artifacts and math unchanged, but centralizes
-the ordering and diagnosis contract:
+The stack keeps existing legacy stage artifacts where needed, but the claim
+vocabulary is:
 
 ```text
-PHYS1: physical teacher generation
-PHYS2 legacy ceiling: teacher self-distinguishability from oracle-only mechanism fingerprints
-PHYC2 companion contract: sampled observations are learner-separable under grouped folds
-PHYS3: learner recovery from learner-visible local-inverse features
+PHYC1:
+  physical teacher generation from the declared teacher contract
+
+PHYC2:
+  teacher self-distinguishment from teacher-internal mechanism evidence
+
+PHYC3:
+  no-leakage learner recovery plus quantum/readout error quality from
+  learner-visible grouped predictions
 ```
 
 PHYC2 is exposed through
 `scope_static.experiments.run_phyc2_sampled_observation_separability` as a
-companion audit for PHYS1 teacher artifacts. It is the gate for new
-physical-teacher backends. A teacher passes PHYC2 only if `observations.npz`
-plus visible probe/instruction/qubit metadata support grouped mechanism
-classification. Exact PTMs, exact channel fingerprints, oracle mechanism IDs,
-and oracle labels remain evaluator-only and cannot be feature inputs.
+companion audit for PHYC1 teacher artifacts. The runner keeps its historical
+name for compatibility, but the primary PHYC2 gate is teacher
+self-distinguishment: a teacher passes only when it can separate every generated
+mechanism with BA, min recall, ARI, and NMI all equal to `1.0`. PHYC2 does not
+emit learner grouped predictions. If grouped predictions are produced from
+learner-visible sampled observations, they belong to PHYC3 learner recovery.
+Exact PTMs, exact channel fingerprints, teacher-self signatures, oracle
+mechanism IDs, and oracle labels remain evaluator-only and cannot be learner
+feature inputs.
 
-PHYC2 has two explicit variants:
+PHYC2 has two support variants:
 
 ```text
 PHYC2-balanced:
-  Question: can sampled observations separate every enabled mechanism when
-            each mechanism has equal evaluator support?
-  Use: mechanism separability stress tests.
+  Question: can the teacher self-distinguish every enabled mechanism?
+  Use: teacher-identifiability gate.
   Support contract: equal record support per mechanism class.
-  Primary metrics: macro balanced accuracy, min class recall, scrambled-control gap.
+  Primary PHYC2 metrics: teacher-self BA, min recall, ARI, NMI all equal 1.0.
 
 PHYC2-weighted:
-  Question: how well does the sampled-observation learner classify mechanisms
-            under schedule-like uneven mechanism frequencies?
-  Use: deployment-like teacher checks after balanced separability is established.
+  Question: can the teacher self-distinguish every enabled mechanism under
+            uneven mechanism support?
+  Use: deployment-like checks after balanced teacher self-distinguishment.
   Support contract: unequal class support is allowed, but every evaluated class
                     must appear in at least two grouped folds.
-  Primary metrics: prevalence-weighted accuracy, macro balanced accuracy,
-                   rare-class recall, scrambled-control gap.
+  Primary PHYC2 metrics: teacher-self BA, min recall, ARI, NMI all equal 1.0.
 ```
 
-The default PHYC2-balanced thresholds are:
+The default PHYC2-balanced teacher-self requirements are:
 
 ```text
 num_groups >= 2
-num_probes >= 2
 each mechanism class appears in at least two circuit_id groups
 equal class support
-typed sampled-observation balanced accuracy >= 0.80
-min class recall >= 0.50
-real minus within-branch scrambled balanced accuracy >= 0.25
+teacher-self balanced accuracy = 1.0
+teacher-self min class recall = 1.0
+teacher-self ARI = 1.0
+teacher-self NMI = 1.0
 ```
 
-The default PHYC2-weighted thresholds are:
+The default PHYC2-weighted teacher-self requirements are:
 
 ```text
 num_groups >= 2
-num_probes >= 2
 each evaluated mechanism class appears in at least two circuit_id groups
-prevalence-weighted accuracy >= 0.90
-macro balanced accuracy >= 0.80
-rare-class recall >= 0.30
-real minus within-branch scrambled balanced accuracy >= 0.25
+teacher-self balanced accuracy = 1.0
+teacher-self min class recall = 1.0
+teacher-self ARI = 1.0
+teacher-self NMI = 1.0
 ```
 
 For balanced evidence, the class recall resolution is `1 / support_per_class`.
@@ -1837,13 +1844,13 @@ Each PHYS1 local-observable teacher artifact also writes
 pairwise margins for readout aliases, RZZ aliases, and historically low-margin
 mechanism pairs before running PHYC2.
 
-PHYC2 also reports `PHYC2.slot_only_leakage_control` in
-`slot_only_leakage_control`. This grouped control uses only observation-slot
-metadata, original `physical_qubits`, probe block ids, and layout/slot metadata.
-It excludes sampled bits, sampled response statistics, pair correlations,
-local-inverse features, exact PTMs, mechanism ids, and oracle labels. High
-slot-only balanced accuracy means the remap/layout is encoding mechanism
-identity and the PHYC2 result should not be trusted.
+PHYC3 learner recovery reports `PHYC3.slot_only_leakage_control` style leakage
+controls. These grouped controls use only observation-slot metadata, original
+`physical_qubits`, probe block ids, and layout/slot metadata. They exclude
+sampled bits, sampled response statistics, pair correlations, local-inverse
+features, exact PTMs, mechanism ids, and oracle labels. High slot-only balanced
+accuracy means the remap/layout is encoding mechanism identity and the PHYC3
+learner result should not be trusted.
 
 The local-observable GPU teacher supports PHYC2-weighted data generation through
 `mechanism_instance_counts` in the teacher config. Unspecified enabled
@@ -1866,18 +1873,24 @@ outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_rema
   slot_only_leakage_suspected = false
 ```
 
-PHYC3 sampled quantum-error quality consumes the PHYC2 grouped predictions,
-builds fold-trained mechanism channel/readout prototypes from training groups,
-and compares the predicted prototype with the evaluator-only oracle mechanism
-channel. This answers a separate question from PHYC2:
+PHYC3 has two linked jobs. First, PHYC3 learner recovery trains grouped
+classifiers from learner-visible sampled observations and writes the grouped
+predictions. Second, PHYC3 sampled quantum-error quality consumes those PHYC3
+learner grouped predictions, builds fold-trained mechanism channel/readout
+prototypes from training groups, and compares the predicted prototype with the
+evaluator-only oracle mechanism channel. It must reject PHYC2 teacher-self
+predictions as learner evidence.
 
 ```text
 PHYC2:
-  Can sampled observations classify the mechanism?
+  Can the teacher self-distinguish every generated mechanism?
 
-PHYC3:
-  If the learner predicts a mechanism, does that prediction produce a close
-  quantum/readout error object?
+PHYC3 learner recovery:
+  Can sampled observations classify the mechanism without hidden/oracle leakage?
+
+PHYC3 error quality:
+  If the no-leakage learner predicts a mechanism, does that prediction produce
+  a close quantum/readout error object?
 ```
 
 Current PHYC3 weighted allM evidence:
@@ -1896,6 +1909,58 @@ outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_rema
 
 For `separability_v2`, PHYC3 is a mechanism-to-error translation diagnostic,
 not proof that sampled observations came from Born-rule circuit physics.
+
+PHYC3b is the visible-observability repair stage for the full-circuit/CUDA-Q
+learner bottleneck. It is not a classifier-tuning stage: it first asks whether
+the learner-visible deterministic ceiling improves under new probes, then
+reports learner recovery. The probe suite is strictly Y-free and uses only
+Clifford Z/X preparation and measurement:
+
+```text
+single-qubit: prepare |0>, |1>, |+>; measure Z or X; repeat r in {1,2,4,8}
+two-qubit:    prepare |00>, |01>, |10>, |++>; measure ZZ, ZX, XZ, XX
+```
+
+Y-basis preparation and Y-basis measurement are not required. X-prepared states
+are required because Z-only probes do not expose the phase/coherence response
+needed to break several visible aliases. PHYC3b reports quotient alias classes
+instead of forcing exact labels whenever the Z/X sampled observations do not
+make exact recovery observable.
+
+PHYC3c is the distributional head upgrade on top of PHYC3b. It keeps the same
+Z/X-visible feature vectors and compares mean-only, covariance-only, diagonal
+Gaussian, shared-covariance LDA, full Gaussian, and shrinkage-QDA heads. PHYC3c
+reports two modes:
+
+```text
+single-realization mode:
+  pointwise mechanism appearance; M13 can collapse into a fixed coherent
+  rotation such as M6, M20, or M27
+
+multi-context batch mode:
+  drifted-mechanism distribution recovery from several locations, time windows,
+  calibration contexts, or generated drift samples
+```
+
+M13 should be expected to become perfectly recoverable only in multi-context
+batch mode. The Gaussian calibration parameters are learned from training
+groups only; test labels remain evaluator-only and are not learner-visible
+features.
+
+PHYC3c validation is an acceptance audit for the head, not another learner input
+source. It reports a robustness grid over batch size, shrinkage, and PCA
+dimension; an explicit non-leakage audit with forbidden-feature injection
+control; and a protocol-validity audit that rejects single-realization M13
+batches as invalid for distributional recovery claims.
+
+PHYC3 canonical quality acceptance is a resolver, not another learner. It
+loads the teacher-self PHYC2 artifact, the old-surface PHYC3a failing baseline,
+the PHYC3b visible-repair artifact, PHYC3c predictions, and PHYC3c validation.
+It accepts PHYC3 only when PHYC3b has deterministic visible ceiling 1.0 and
+PHYC3c passes the multi-context distributional protocol. The canonical
+prediction source is `phyc3c_distributional_gaussian_likelihood_head`; PHYC2
+teacher-self predictions, legacy PHYC2 grouped predictions, and PHYC3a
+old-surface predictions are rejected as canonical learner evidence.
 
 Current slot-only and no-remap guardrail evidence:
 
@@ -1958,17 +2023,21 @@ PHYC2-Born-local:
   exact local Born-rule diagnostic, effective depth one
 
 PHYC2-full-circuit-cudaq:
-  required Stage 2E full-circuit gate
+  required Stage 2E teacher self-distinguishment gate
+
+PHYC3-full-circuit-cudaq:
+  required Stage 2E no-leakage learner recovery and error-quality gate
 ```
 
-Stage 3 should remain gated until PHYC2-full-circuit-cudaq and the
-corresponding PHYC3-full-circuit-cudaq quality audit pass.
+Stage 3 should remain gated until PHYC1-full-circuit-cudaq data exist,
+PHYC2-full-circuit-cudaq teacher self-distinguishment passes, and the
+corresponding PHYC3-full-circuit-cudaq no-leakage learner quality audit passes.
 
-The Born-local S2E.1 learner test is artifact-backed: it consumes an existing PHYC2
-`metrics.json` plus the linked PHYS1 teacher metadata and writes a separate
-S2E.1 report. It intentionally does not rerun PHYC2. Existing
-`separability_v2` PHYC2 outputs can be used as negative controls, but they do
-not satisfy the full-circuit source gate.
+The Born-local S2E.1 learner test is artifact-backed: it should consume an
+existing PHYC3 learner-recovery `metrics.json` plus the linked PHYC1 teacher
+metadata and write a separate S2E.1 report. Existing `separability_v2` learner
+outputs can be used as negative controls, but they do not satisfy the
+full-circuit source gate.
 
 The legacy PHYS2 oracle-fingerprint audit remains useful as a ceiling: it says
 whether the mechanism family is in principle distinguishable. It does not prove

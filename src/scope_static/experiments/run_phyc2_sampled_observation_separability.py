@@ -24,19 +24,22 @@ def run_phyc2_sampled_observation_separability(
         seed=int(seed),
     )
     print(
-        "PHYC2 sampled-observation separability complete\n"
+        "PHYC2 teacher self-distinguishment complete\n"
         f"  contract={result.get('contract_variant')}\n"
         f"  decision={result.get('decision')}\n"
         f"  passed={bool(result.get('contract_passed'))}\n"
-        f"  balanced_accuracy={float(result.get('balanced_accuracy', 0.0)):.4f}\n"
-        f"  prevalence_weighted_accuracy={float(result.get('prevalence_weighted_accuracy', 0.0)):.4f}\n"
+        f"  teacher_self_balanced_accuracy={float(result.get('balanced_accuracy', 0.0)):.4f}\n"
+        f"  teacher_self_ari={float(result.get('adjusted_rand_index', 0.0)):.4f}\n"
+        f"  teacher_self_nmi={float(result.get('normalized_mutual_info', 0.0)):.4f}\n"
+        f"  learner_grouped_predictions_emitted={bool(result.get('phyc2_emits_learner_grouped_predictions', False))}\n"
+        f"  learner_recovery_stage={result.get('learner_recovery_stage', 'PHYC3_no_leakage_learner_recovery')}\n"
         f"  output={output_dir}"
     )
     return result
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description="Run PHYC2 sampled-observation learner separability audit.")
+    parser = argparse.ArgumentParser(description="Run PHYC2 teacher self-distinguishment only.")
     parser.add_argument("--teacher-dir", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--contract", choices=("balanced", "weighted"), default="balanced")

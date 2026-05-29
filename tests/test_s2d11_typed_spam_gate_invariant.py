@@ -13,6 +13,7 @@ from scope_static.physical.generator_space_calibration import GENERATOR_CORE
 from scope_static.physical.typed_spam_gate_invariant import (
     build_typed_spam_gate_features,
     branch_budget_audit,
+    classification_metrics,
     m5_overfragmentation_report,
     visible_branch,
 )
@@ -45,6 +46,13 @@ def test_m5_split_count_uses_tau_threshold() -> None:
     assert split["readout_vs_gate_confusion_rate"] == 0.1
 
 
+def test_classification_metrics_report_evaluator_only_partition_scores() -> None:
+    metrics = classification_metrics(["M0", "M1", "M2"], ["M0", "M1", "M2"], ["M0", "M1", "M2"])
+
+    assert metrics["adjusted_rand_index"] == 1.0
+    assert metrics["normalized_mutual_info"] == 1.0
+
+
 def test_typed_features_are_oracle_label_permutation_invariant_and_include_confidence_fields() -> None:
     records = _fake_records(["M8", "M1", "M17"])
     observations, probe_names = _fake_observations(num_qubits=9)
@@ -56,7 +64,12 @@ def test_typed_features_are_oracle_label_permutation_invariant_and_include_confi
 
     np.testing.assert_allclose(first.feature_spaces["typed_gate_readout_prep_invariant_learner"], second.feature_spaces["typed_gate_readout_prep_invariant_learner"])
     assert first.leakage_guardrail_audit["passed"] is True
-    assert {"feature_confidence", "feature_snr", "fit_residual_or_reconstruction_error", "low_confidence_flag"} <= set(first.feature_names["typed_gate_readout_prep_invariant_learner"])
+    feature_names = first.feature_names["typed_gate_readout_prep_invariant_learner"]
+    assert {"feature_confidence", "feature_snr", "fit_residual_or_reconstruction_error", "low_confidence_flag"} <= set(feature_names)
+    assert any(name.startswith("sampled_tomo_left_mean_") for name in feature_names)
+    assert any(name.startswith("sampled_tomo_pair_centered_corr_") for name in feature_names)
+    assert "shot_ptm_delta_XX_YY" in feature_names
+    assert "per_probe_sampled_response_vector" in first.typed_branch_feature_manifest["visible_inputs"]
     readout_row = first.readout_branch_feature_table["records"][0]
     assert "feature_confidence" in readout_row
     assert "feature_snr" in readout_row

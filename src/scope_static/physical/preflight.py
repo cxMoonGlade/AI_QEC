@@ -25,7 +25,7 @@ def audit_cudaq_backend(
 ) -> dict[str, object]:
     """Audit CUDA-Q availability and the requested GPU target."""
 
-    packages = {name: _package_version(name) for name in ("cudaq", "cuda-quantum")}
+    packages: dict[str, str | None] = {}
     warnings: list[str] = []
     errors: list[str] = []
     if str(backend) not in {"cudaq", "cudaq_nvidia", "local_observable_gpu"}:
@@ -50,10 +50,6 @@ def audit_cudaq_backend(
         cudaq = importlib.import_module("cudaq")
         import_ok = True
         try:
-            gpu_count = int(cudaq.num_available_gpus())
-        except Exception as exc:  # pragma: no cover - depends on CUDA-Q runtime
-            warnings.append(f"failed to query CUDA-Q GPU count: {type(exc).__name__}: {exc}")
-        try:
             _set_cudaq_target(cudaq, target=str(cudaq_target), options=str(cudaq_target_options))
             target = cudaq.get_target()
             target_name = str(target.name if hasattr(target, "name") else target)
@@ -62,16 +58,31 @@ def audit_cudaq_backend(
         except Exception as exc:  # pragma: no cover - depends on CUDA-Q runtime
             errors.append(f"failed CUDA-Q target/sample audit: {type(exc).__name__}: {exc}")
             tiny_sample["error"] = f"{type(exc).__name__}: {exc}"
+        try:
+            gpu_count = int(cudaq.num_available_gpus())
+        except Exception as exc:  # pragma: no cover - depends on CUDA-Q runtime
+            warnings.append(f"failed to query CUDA-Q GPU count: {type(exc).__name__}: {exc}")
     except Exception as exc:
         import_error = f"{type(exc).__name__}: {exc}"
         errors.append(f"failed to import cudaq: {import_error}")
+    packages = {name: _package_version(name) for name in ("cudaq", "cuda-quantum")}
 
-    gpu_ready = bool(import_ok and (gpu_count > 0 or not require_gpu) and tiny_sample.get("passed"))
-    if require_gpu and gpu_count <= 0:
+    target_looks_gpu = _cudaq_target_looks_gpu(
+        target=str(cudaq_target),
+        target_name=target_name,
+        target_description=target_description,
+    )
+    sample_passed = bool(tiny_sample.get("passed"))
+    gpu_ready = bool(import_ok and sample_passed and target_looks_gpu)
+    if require_gpu and sample_passed and target_looks_gpu and gpu_count <= 0:
+        warnings.append("CUDA-Q GPU count is zero, but the requested GPU target sample passed")
+    if require_gpu and not target_looks_gpu:
+        errors.append("CUDA-Q GPU target is required but the active CUDA-Q target does not look GPU-backed")
+    if require_gpu and not gpu_ready:
         errors.append("CUDA-Q GPU target is required but no CUDA-Q GPU is visible")
-    if require_gpu and not bool(tiny_sample.get("passed")):
+    if require_gpu and not sample_passed:
         errors.append("tiny CUDA-Q GPU sample failed")
-    backend_usable = bool(gpu_ready if require_gpu else import_ok and tiny_sample.get("passed"))
+    backend_usable = bool(gpu_ready if require_gpu else import_ok and sample_passed)
     status = "pass" if backend_usable and not errors else "fail"
     return {
         "schema": "scope_static_s2d_backend_audit_v2",
@@ -175,3 +186,13 @@ def _run_tiny_cudaq_sample(cudaq, *, target: str, options: str) -> dict[str, obj
 def _tiny_sample_passed(audit: dict[str, object]) -> bool:
     tiny = audit.get("tiny_cudaq_sample")
     return isinstance(tiny, dict) and bool(tiny.get("passed"))
+
+
+def _cudaq_target_looks_gpu(
+    *,
+    target: str,
+    target_name: str | None,
+    target_description: str | None,
+) -> bool:
+    text = " ".join(item for item in (target, target_name, target_description) if item).lower()
+    return any(marker in text for marker in ("nvidia", "cusvsim", "cuda", "gpu"))

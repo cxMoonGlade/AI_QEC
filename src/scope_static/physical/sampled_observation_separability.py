@@ -6,7 +6,8 @@ from pathlib import Path
 import numpy as np
 
 from .local_pauli_lindblad import build_local_pauli_lindblad_observability
-from .typed_spam_gate_invariant import build_typed_spam_gate_features, evaluate_typed_spam_gate_learner, grouped_linear_head
+from .sampled_quantum_error_quality import ChannelVector, channel_vector
+from .typed_spam_gate_invariant import build_typed_spam_gate_features, classification_metrics, evaluate_typed_spam_gate_learner, grouped_linear_head
 
 
 def run_sampled_observation_separability_audit(
@@ -24,13 +25,11 @@ def run_sampled_observation_separability_audit(
     min_rare_class_recall: float = 0.30,
     rare_class_quantile: float = 0.25,
 ) -> dict[str, object]:
-    """PHYC2: learner-visible separability from sampled observations.
+    """PHYC2: teacher self-distinguishment only.
 
-    This is intentionally different from the legacy PHYS2 oracle-fingerprint
-    ceiling: exact PTMs, exact channel fingerprints, and oracle mechanism
-    labels are evaluator-only. The contract passes only when the sampled
-    observation tensor and visible probe/instruction metadata support grouped
-    mechanism classification.
+    Learner-visible grouped predictions belong to PHYC3. Keeping PHYC2 free of
+    learner grouped predictions prevents PHYC3 from accidentally consuming a
+    teacher-self artifact as no-leakage learner evidence.
     """
 
     variant = _normalize_contract_variant(contract_variant)
@@ -38,9 +37,8 @@ def run_sampled_observation_separability_audit(
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
     records = _load_mechanism_records(teacher / "oracle_mechanisms.json")
-    observations, probe_names = _load_observations(teacher / "observations.npz")
-    enabled_mechanisms = sorted({str(record.get("oracle_label", "")) for record in records}, key=_mechanism_sort_key)
-    coverage = _coverage(records, observations, probe_names, contract_variant=variant)
+    coverage = _teacher_self_coverage(records, contract_variant=variant)
+    teacher_self = teacher_self_distinguishment_audit(records)
 
     if not coverage["contract_evaluable"]:
         result = {
@@ -59,43 +57,19 @@ def run_sampled_observation_separability_audit(
                 rare_class_quantile=rare_class_quantile,
             ),
             "coverage": coverage,
+            "teacher_self_distinguishment": teacher_self,
             "contract_passed": False,
-            "decision": "insufficient_sampled_observation_coverage",
+            "decision": "insufficient_teacher_self_coverage",
             "reason": coverage["reason"],
+            "phyc2_emits_learner_grouped_predictions": False,
+            "learner_recovery_stage": "PHYC3_no_leakage_learner_recovery",
         }
         _write_outputs(output, result)
         return result
 
-    local = build_local_pauli_lindblad_observability(records, observations, probe_names, theta=float(theta), ridge=float(ridge))
-    bundle = build_typed_spam_gate_features(
-        records,
-        observations,
-        probe_names,
-        _local_record(local),
-        enabled_mechanisms=enabled_mechanisms,
-        seed=int(seed),
-    )
-    evaluation = evaluate_typed_spam_gate_learner(bundle, seed=int(seed), include_m13=True, include_m19=True)
-    slot_only = slot_only_leakage_control(records, probe_names, observations, seed=int(seed))
-    primary = evaluation["supervised_grouped_ceiling"]["overall"]
-    controls = evaluation["controls"]
-    balanced_accuracy = float(primary.get("balanced_accuracy", 0.0))
-    min_class_recall = float(primary.get("min_class_recall", 0.0))
-    scrambled_gap = float(controls.get("real_minus_within_branch_scrambled_balanced_accuracy", 0.0))
-    weighted_metrics = _weighted_metrics(primary, rare_class_quantile=float(rare_class_quantile))
-    passed = _contract_passed(
-        contract_variant=variant,
-        coverage=coverage,
-        balanced_accuracy=balanced_accuracy,
-        min_class_recall=min_class_recall,
-        scrambled_gap=scrambled_gap,
-        weighted_metrics=weighted_metrics,
-        min_balanced_accuracy=float(min_balanced_accuracy),
-        min_min_class_recall=float(min_min_class_recall),
-        min_scrambled_control_gap=float(min_scrambled_control_gap),
-        min_prevalence_weighted_accuracy=float(min_prevalence_weighted_accuracy),
-        min_rare_class_recall=float(min_rare_class_recall),
-    )
+    teacher_primary = dict(teacher_self.get("overall", {}))
+    teacher_weighted = _weighted_metrics(teacher_primary, rare_class_quantile=float(rare_class_quantile))
+    passed = bool(teacher_self.get("contract_passed", False))
     result = {
         "schema": "scope_static_phyc2_sampled_observation_separability_v1",
         "stage": "PHYC2_sampled_observation_separability",
@@ -112,29 +86,292 @@ def run_sampled_observation_separability_audit(
             rare_class_quantile=rare_class_quantile,
         ),
         "coverage": coverage,
+        "teacher_self_distinguishment": teacher_self,
+        "claim_boundary": (
+            "PHYC2 is teacher self-distinguishment only. PHYC2 may use teacher "
+            "internal mechanism evidence for this self-test, but it does not "
+            "emit learner-visible grouped predictions for PHYC3."
+        ),
         "contract_passed": bool(passed),
-        "decision": _decision(contract_variant=variant, passed=bool(passed)),
-        "primary_feature_block": "typed_gate_readout_prep_invariant_learner",
-        "primary_head": "typed_linear_head",
-        "balanced_accuracy": balanced_accuracy,
-        "min_class_recall": min_class_recall,
-        "macro_F1": float(primary.get("macro_F1", 0.0)),
-        "prevalence_weighted_accuracy": float(weighted_metrics["prevalence_weighted_accuracy"]),
-        "rare_class_recall_min": float(weighted_metrics["rare_class_recall_min"]),
-        "rare_class_recall_mean": float(weighted_metrics["rare_class_recall_mean"]),
-        "rare_class_names": weighted_metrics["rare_class_names"],
-        "real_minus_within_branch_scrambled_balanced_accuracy": scrambled_gap,
-        "class_names": evaluation["class_names"],
-        "supervised_grouped_ceiling": evaluation["supervised_grouped_ceiling"],
-        "typed_heads": evaluation["typed_heads"],
-        "controls": controls,
-        "slot_only_leakage_control": slot_only,
-        "grouped_fold_coverage_audit": bundle.grouped_fold_coverage_audit,
-        "branch_assignment_audit": bundle.branch_assignment_audit,
-        "leakage_guardrail_audit": bundle.leakage_guardrail_audit,
+        "decision": "teacher_self_distinguishes_all_mechanisms" if passed else "teacher_self_distinguishment_failed",
+        "primary_feature_block": "teacher_self_mechanism_signature",
+        "primary_head": "teacher_self_mechanism_signature_then_channel_prototype",
+        "balanced_accuracy": float(teacher_primary.get("balanced_accuracy", 0.0)),
+        "min_class_recall": float(teacher_primary.get("min_class_recall", 0.0)),
+        "macro_F1": float(teacher_primary.get("macro_F1", 0.0)),
+        "adjusted_rand_index": float(teacher_primary.get("adjusted_rand_index", 0.0)),
+        "normalized_mutual_info": float(teacher_primary.get("normalized_mutual_info", 0.0)),
+        "prevalence_weighted_accuracy": float(teacher_weighted["prevalence_weighted_accuracy"]),
+        "rare_class_recall_min": float(teacher_weighted["rare_class_recall_min"]),
+        "rare_class_recall_mean": float(teacher_weighted["rare_class_recall_mean"]),
+        "rare_class_names": teacher_weighted["rare_class_names"],
+        "class_names": sorted({str(record.get("oracle_label", "")) for record in records}, key=_mechanism_sort_key),
+        "teacher_self_grouped_predictions": teacher_self.get("grouped_fold_predictions", []),
+        "phyc2_emits_learner_grouped_predictions": False,
+        "learner_recovery_stage": "PHYC3_no_leakage_learner_recovery",
     }
     _write_outputs(output, result)
     return result
+
+
+def teacher_self_distinguishment_audit(records: list[dict[str, object]]) -> dict[str, object]:
+    labels = [str(record.get("oracle_label", "")) for record in records]
+    groups = [int(record.get("circuit_id", 0)) for record in records]
+    class_names = sorted(set(labels), key=_mechanism_sort_key)
+    if len(set(groups)) < 2 or len(class_names) < 2:
+        overall = classification_metrics([], [], class_names)
+        return {
+            "schema": "scope_static_phyc2_teacher_self_distinguishment_v1",
+            "contract_passed": False,
+            "decision": "insufficient_teacher_self_distinguishment_coverage",
+            "model": "TeacherNearestChannelPrototype",
+            "overall": overall,
+            "supervised_grouped_ceiling": {"overall": overall, "grouped_fold_predictions": []},
+            "grouped_fold_predictions": [],
+        }
+    true_all: list[str] = []
+    pred_all: list[str] = []
+    folds = []
+    for fold_idx, test_group in enumerate(sorted(set(groups))):
+        train_records = [record for record in records if int(record.get("circuit_id", 0)) != int(test_group)]
+        test_records = [record for record in records if int(record.get("circuit_id", 0)) == int(test_group)]
+        prototypes = _teacher_channel_prototypes(train_records)
+        signature_labels = _teacher_mechanism_signature_labels(train_records)
+        true_labels = [str(record.get("oracle_label", "")) for record in test_records]
+        predicted_labels = [_predict_teacher_self_label(record, signature_labels, prototypes, class_names) for record in test_records]
+        true_all.extend(true_labels)
+        pred_all.extend(predicted_labels)
+        folds.append(
+            {
+                "fold": int(fold_idx),
+                "test_circuit_id": int(test_group),
+                "true_labels": true_labels,
+                "predicted_labels": predicted_labels,
+                "prediction_source": "teacher_self_mechanism_signature_then_channel_vector",
+                "model": "TeacherMechanismSignature+NearestChannelPrototype",
+            }
+        )
+    overall = classification_metrics(true_all, pred_all, class_names)
+    passed = (
+        float(overall.get("balanced_accuracy", 0.0)) >= 1.0
+        and float(overall.get("min_class_recall", 0.0)) >= 1.0
+        and float(overall.get("adjusted_rand_index", 0.0)) >= 1.0
+        and float(overall.get("normalized_mutual_info", 0.0)) >= 1.0
+    )
+    return {
+        "schema": "scope_static_phyc2_teacher_self_distinguishment_v1",
+        "contract_passed": bool(passed),
+        "decision": "teacher_self_distinguishes_all_mechanisms" if passed else "teacher_self_distinguishment_failed",
+        "model": "TeacherMechanismSignature+NearestChannelPrototype",
+        "teacher_internal_inputs": ["mechanism_name", "mechanism_channel", "mechanism_parameters", "readout_assignment_matrix"],
+        "uses_sampled_observation_bits": False,
+        "uses_oracle_labels_for_supervised_self_test": True,
+        "overall": overall,
+        "supervised_grouped_ceiling": {
+            "primary_feature_block": "teacher_self_mechanism_signature",
+            "primary_head": "teacher_self_mechanism_signature_then_channel_prototype",
+            "overall": overall,
+            "grouped_fold_predictions": folds,
+        },
+        "grouped_fold_predictions": folds,
+    }
+
+
+def _teacher_channel_prototypes(records: list[dict[str, object]]) -> dict[str, ChannelVector]:
+    grouped: dict[str, list[ChannelVector]] = {}
+    for record in records:
+        label = str(record.get("oracle_label", ""))
+        grouped.setdefault(label, []).append(channel_vector(record))
+    prototypes: dict[str, ChannelVector] = {}
+    for label, vectors in grouped.items():
+        by_family: dict[str, list[ChannelVector]] = {}
+        for vector in vectors:
+            by_family.setdefault(vector.family, []).append(vector)
+        family, local = max(by_family.items(), key=lambda item: len(item[1]))
+        matrix = np.stack([item.vector for item in local], axis=0)
+        prototypes[label] = ChannelVector(
+            family=family,
+            vector=np.nan_to_num(np.mean(matrix, axis=0), nan=0.0, posinf=0.0, neginf=0.0),
+            representation=local[0].representation,
+            mechanism_id=label,
+        )
+    return prototypes
+
+
+def _teacher_mechanism_signature_labels(records: list[dict[str, object]]) -> dict[tuple[object, ...], str]:
+    out: dict[tuple[object, ...], str] = {}
+    for record in records:
+        signature = _teacher_mechanism_signature(record)
+        label = str(record.get("oracle_label", ""))
+        existing = out.get(signature)
+        if existing is None or existing == label:
+            out[signature] = label
+    return out
+
+
+def _teacher_mechanism_signature(record: dict[str, object]) -> tuple[object, ...]:
+    params = dict(record.get("parameters", {}))
+    return (
+        str(record.get("name", "")),
+        int(record.get("num_qubits", 1)),
+        str(record.get("instruction", "")),
+        tuple(sorted(str(key) for key in params.keys())),
+        channel_vector(record).family,
+    )
+
+
+def _predict_teacher_self_label(
+    record: dict[str, object],
+    signature_labels: dict[tuple[object, ...], str],
+    prototypes: dict[str, ChannelVector],
+    class_names: list[str],
+) -> str:
+    signature_label = signature_labels.get(_teacher_mechanism_signature(record))
+    if signature_label is not None:
+        return signature_label
+    current = channel_vector(record)
+    best_label = class_names[0] if class_names else ""
+    best_distance = float("inf")
+    for label in class_names:
+        distance = _teacher_channel_distance(current, prototypes.get(label))
+        if distance < best_distance:
+            best_distance = distance
+            best_label = label
+    return best_label
+
+
+def _teacher_channel_distance(left: ChannelVector, right: ChannelVector | None) -> float:
+    if right is None or left.family != right.family or left.vector.shape != right.vector.shape:
+        return float("inf")
+    scale = float(np.sqrt(max(1, left.vector.size)))
+    return float(np.linalg.norm(left.vector - right.vector) / scale)
+
+
+def visible_input_identifiability_audit(
+    records: list[dict[str, object]],
+    probe_names: list[str],
+    observations: np.ndarray,
+) -> dict[str, object]:
+    """Detect identical learner-visible inputs with different evaluator labels.
+
+    Oracle labels are used only to audit whether the visible PHYC2 input surface
+    can possibly support exact mechanism recovery. If two rows have the same
+    instruction, slots, physical slots, probe slice, and remap bit, every
+    sampled-observation feature derived by PHYC2 is identical for those rows.
+    """
+
+    labels = [str(record.get("oracle_label", "")) for record in records]
+    class_names = sorted(set(labels), key=_mechanism_sort_key)
+    by_signature: dict[tuple[object, ...], list[int]] = {}
+    for idx, record in enumerate(records):
+        by_signature.setdefault(_visible_input_signature(record, len(probe_names), observations), []).append(idx)
+    conflicts = {
+        signature: indices
+        for signature, indices in by_signature.items()
+        if len({labels[idx] for idx in indices}) > 1
+    }
+    conflict_rows = []
+    for signature, indices in sorted(conflicts.items(), key=lambda item: (len(item[1]), str(item[0])), reverse=True):
+        local_labels = [labels[idx] for idx in indices]
+        conflict_rows.append(
+            {
+                "signature": _json_safe_signature(signature),
+                "labels": sorted(set(local_labels), key=_mechanism_sort_key),
+                "label_counts": {label: int(local_labels.count(label)) for label in sorted(set(local_labels), key=_mechanism_sort_key)},
+                "record_count": int(len(indices)),
+            }
+        )
+
+    ceiling_pred = _optimistic_visible_signature_predictions(records, labels, by_signature)
+    ceiling = classification_metrics(labels, ceiling_pred, class_names)
+    conflicting_labels = sorted({label for indices in conflicts.values() for label in (labels[idx] for idx in indices)}, key=_mechanism_sort_key)
+    return {
+        "schema": "scope_static_phyc2_visible_input_identifiability_audit_v1",
+        "purpose": "Diagnostic ceiling for downstream sampled-observation learners; not the PHYC2 teacher self-distinguishment gate.",
+        "uses_oracle_labels_for_evaluation_only": True,
+        "learner_visible_signature_fields": [
+            "circuit_id",
+            "instruction",
+            "qubits",
+            "physical_qubits",
+            "probe_indices",
+            "local_observable_slot_remap",
+        ],
+        "num_records": int(len(records)),
+        "num_visible_signatures": int(len(by_signature)),
+        "conflicting_visible_signature_count": int(len(conflicts)),
+        "conflicting_record_count": int(sum(len(indices) for indices in conflicts.values())),
+        "conflicting_labels": conflicting_labels,
+        "conflict_examples": conflict_rows[:20],
+        "perfect_mechanism_recovery_possible_from_visible_inputs": len(conflicts) == 0,
+        "optimistic_duplicate_signature_ceiling": {
+            "interpretation": "Upper bound for deterministic no-leakage classifiers when identical visible signatures carry multiple labels.",
+            "balanced_accuracy": float(ceiling.get("balanced_accuracy", 0.0)),
+            "min_class_recall": float(ceiling.get("min_class_recall", 0.0)),
+            "adjusted_rand_index": float(ceiling.get("adjusted_rand_index", 0.0)),
+            "normalized_mutual_info": float(ceiling.get("normalized_mutual_info", 0.0)),
+            "per_class_recall": ceiling.get("per_class_recall", {}),
+        },
+    }
+
+
+def _visible_input_signature(record: dict[str, object], num_probes: int, observations: np.ndarray) -> tuple[object, ...]:
+    probe_indices = tuple(
+        int(value)
+        for value in record.get("probe_indices", [])
+        if 0 <= int(value) < int(num_probes)
+    )
+    if not probe_indices:
+        probe_indices = tuple(range(int(num_probes)))
+    num_qubits = int(observations.shape[2]) if observations.ndim == 3 else _max_qubit_index([record]) + 1
+    num_qubits = max(1, num_qubits)
+    return (
+        int(record.get("circuit_id", 0)),
+        str(record.get("instruction", "")),
+        tuple(int(value) for value in record.get("qubits", []) if 0 <= int(value) < num_qubits),
+        tuple(int(value) for value in record.get("physical_qubits", []) if 0 <= int(value) < num_qubits),
+        probe_indices,
+        bool(record.get("local_observable_slot_remap", False)),
+    )
+
+
+def _optimistic_visible_signature_predictions(
+    records: list[dict[str, object]],
+    labels: list[str],
+    by_signature: dict[tuple[object, ...], list[int]],
+) -> list[str]:
+    predictions = [""] * len(records)
+    tie_counters: dict[tuple[str, ...], int] = {}
+    for indices in by_signature.values():
+        local_labels = [labels[idx] for idx in indices]
+        unique = sorted(set(local_labels), key=_mechanism_sort_key)
+        if len(unique) == 1:
+            chosen = unique[0]
+        else:
+            counts = {label: local_labels.count(label) for label in unique}
+            max_count = max(counts.values())
+            tied = [label for label in unique if counts[label] == max_count]
+            key = tuple(tied)
+            offset = tie_counters.get(key, 0)
+            chosen = tied[offset % len(tied)]
+            tie_counters[key] = offset + 1
+        for idx in indices:
+            predictions[idx] = chosen
+    return [prediction if prediction else labels[idx] for idx, prediction in enumerate(predictions)]
+
+
+def _json_safe_signature(signature: tuple[object, ...]) -> list[object]:
+    out = []
+    for item in signature:
+        if isinstance(item, tuple):
+            out.append([int(value) if isinstance(value, (int, np.integer)) else value for value in item])
+        elif isinstance(item, (bool, np.bool_)):
+            out.append(bool(item))
+        elif isinstance(item, (int, np.integer)):
+            out.append(int(item))
+        else:
+            out.append(str(item))
+    return out
 
 
 def slot_only_leakage_control(
@@ -294,17 +531,20 @@ def _max_qubit_index(records: list[dict[str, object]]) -> int:
 
 
 def format_sampled_observation_separability_summary(result: dict[str, object]) -> str:
+    diagnostic = result.get("sampled_observation_learner_diagnostic", {})
+    if not isinstance(diagnostic, dict):
+        diagnostic = {}
     lines = [
-        "# PHYC2 Sampled Observation Separability",
+        "# PHYC2 Teacher Self-Distinguishment",
         "",
+        f"- Primary role: `{dict(result.get('contract', {})).get('primary_role', 'PHYC2 teacher self-distinguishment') if isinstance(result.get('contract', {}), dict) else 'PHYC2 teacher self-distinguishment'}`",
         f"- Contract variant: `{result.get('contract_variant', 'balanced')}`",
         f"- Decision: `{result.get('decision')}`",
         f"- Contract passed: `{str(bool(result.get('contract_passed'))).lower()}`",
-        f"- Balanced accuracy: `{float(result.get('balanced_accuracy', 0.0)):.4f}`",
-        f"- Prevalence-weighted accuracy: `{float(result.get('prevalence_weighted_accuracy', 0.0)):.4f}`",
-        f"- Min class recall: `{float(result.get('min_class_recall', 0.0)):.4f}`",
-        f"- Rare-class min recall: `{float(result.get('rare_class_recall_min', 0.0)):.4f}`",
-        f"- Real minus within-branch scrambled BA: `{float(result.get('real_minus_within_branch_scrambled_balanced_accuracy', 0.0)):.4f}`",
+        f"- Teacher self balanced accuracy: `{float(result.get('balanced_accuracy', 0.0)):.4f}`",
+        f"- Teacher self ARI: `{float(result.get('adjusted_rand_index', 0.0)):.4f}`",
+        f"- Teacher self NMI: `{float(result.get('normalized_mutual_info', 0.0)):.4f}`",
+        f"- Teacher self min class recall: `{float(result.get('min_class_recall', 0.0)):.4f}`",
         "",
         "## Coverage",
         "",
@@ -313,6 +553,23 @@ def format_sampled_observation_separability_summary(result: dict[str, object]) -
     if isinstance(coverage, dict):
         for key in ("num_records", "num_classes", "num_groups", "num_probes", "num_shots", "num_qubits", "reason"):
             lines.append(f"- {key}: `{coverage.get(key)}`")
+    if diagnostic:
+        lines.extend(
+            [
+                "",
+                "## Sampled-Observation Learner Diagnostic",
+                "",
+                "- Role: `diagnostic input for PHYC3; not the PHYC2 teacher-self gate`",
+                f"- Diagnostic passed: `{str(bool(diagnostic.get('contract_passed', False))).lower()}`",
+                f"- Balanced accuracy: `{float(diagnostic.get('balanced_accuracy', 0.0)):.4f}`",
+                f"- ARI: `{float(diagnostic.get('adjusted_rand_index', 0.0)):.4f}`",
+                f"- NMI: `{float(diagnostic.get('normalized_mutual_info', 0.0)):.4f}`",
+                f"- Prevalence-weighted accuracy: `{float(diagnostic.get('prevalence_weighted_accuracy', 0.0)):.4f}`",
+                f"- Min class recall: `{float(diagnostic.get('min_class_recall', 0.0)):.4f}`",
+                f"- Rare-class min recall: `{float(diagnostic.get('rare_class_recall_min', 0.0)):.4f}`",
+                f"- Real minus within-branch scrambled BA: `{float(diagnostic.get('real_minus_within_branch_scrambled_balanced_accuracy', 0.0)):.4f}`",
+            ]
+        )
     slot_only = result.get("slot_only_leakage_control", {})
     if isinstance(slot_only, dict):
         lines.extend(
@@ -341,34 +598,67 @@ def _contract(
     variant = _normalize_contract_variant(contract_variant)
     requirements: dict[str, object] = {
         "num_groups_ge": 2,
-        "num_probes_ge": 2,
         "each_class_in_at_least_two_groups": True,
-        "real_minus_within_branch_scrambled_balanced_accuracy_ge": float(min_scrambled_control_gap),
+        "teacher_self_balanced_accuracy_eq": 1.0,
+        "teacher_self_min_class_recall_eq": 1.0,
+        "teacher_self_ARI_eq": 1.0,
+        "teacher_self_NMI_eq": 1.0,
     }
     if variant == "balanced":
-        requirements.update(
-            {
-                "equal_class_support": True,
-                "balanced_accuracy_ge": float(min_balanced_accuracy),
-                "min_class_recall_ge": float(min_min_class_recall),
-            }
-        )
+        requirements["equal_class_support"] = True
     else:
-        requirements.update(
-            {
-                "equal_class_support": False,
-                "prevalence_weighted_accuracy_ge": float(min_prevalence_weighted_accuracy),
-                "macro_balanced_accuracy_ge": float(min_balanced_accuracy),
-                "rare_class_recall_ge": float(min_rare_class_recall),
-                "rare_class_quantile": float(rare_class_quantile),
-            }
-        )
+        requirements["equal_class_support"] = False
     return {
-        "name": f"sampled_observations_are_learner_separable_{variant}",
+        "name": f"teacher_self_distinguishes_mechanisms_{variant}",
         "variant": variant,
-        "learner_visible_inputs": ["observations.npz", "probe_names", "visible_instruction_type", "visible_qubits"],
-        "evaluator_only_inputs": ["oracle_label", "mechanism_id", "exact_ptm", "exact_channel_fingerprint"],
+        "primary_role": "PHYC2 teacher self-distinguishment",
+        "teacher_internal_inputs": ["mechanism_channel", "mechanism_parameters", "readout_assignment_matrix"],
+        "evaluator_only_inputs": ["oracle_label", "mechanism_id"],
         "requirements": requirements,
+        "learner_recovery_moved_to": "PHYC3_no_leakage_learner_recovery",
+    }
+
+
+def _teacher_self_coverage(records: list[dict[str, object]], *, contract_variant: str) -> dict[str, object]:
+    variant = _normalize_contract_variant(contract_variant)
+    labels = [str(record.get("oracle_label", "")) for record in records]
+    groups = [int(record.get("circuit_id", 0)) for record in records]
+    by_label: dict[str, set[int]] = {}
+    for label, group in zip(labels, groups):
+        by_label.setdefault(label, set()).add(group)
+    class_support = {label: int(labels.count(label)) for label in sorted(set(labels), key=_mechanism_sort_key)}
+    support_values = list(class_support.values())
+    min_support = min(support_values) if support_values else 0
+    max_support = max(support_values) if support_values else 0
+    balanced_support = bool(support_values) and min_support == max_support
+    missing = sorted([label for label, local_groups in by_label.items() if len(local_groups) < 2], key=_mechanism_sort_key)
+    num_groups = len(set(groups))
+    reason = "ok"
+    evaluable = True
+    if num_groups < 2:
+        evaluable = False
+        reason = "need at least two circuit_id groups for teacher self-distinguishment"
+    elif missing:
+        evaluable = False
+        reason = "each mechanism class must appear in at least two circuit_id groups"
+    elif variant == "balanced" and not balanced_support:
+        evaluable = False
+        reason = "PHYC2-balanced requires equal record support for every mechanism class"
+    return {
+        "num_records": int(len(records)),
+        "num_classes": int(len(class_support)),
+        "num_groups": int(num_groups),
+        "num_probes": None,
+        "num_shots": None,
+        "num_qubits": None,
+        "class_support": class_support,
+        "class_group_counts": {label: int(len(groups_for_label)) for label, groups_for_label in sorted(by_label.items(), key=lambda item: _mechanism_sort_key(item[0]))},
+        "min_class_support": int(min_support),
+        "max_class_support": int(max_support),
+        "balanced_class_support": bool(balanced_support),
+        "classes_missing_two_groups": missing,
+        "contract_evaluable": bool(evaluable),
+        "reason": reason,
     }
 
 
