@@ -28,6 +28,8 @@ assignments, and prototypes from the same learner-visible observation surface.
 ## What Stage 2 Proved
 
 - The implemented physical catalog uses stable `M0-M34` mechanism IDs.
+- Layer 1 mechanism definitions are catalog unitary/Kraus/readout objects, not
+  arbitrary learned CPTP/GKSL channels.
 - The public physical stack is Layer 1/2/3:
 
   ```text
@@ -49,6 +51,7 @@ assignments, and prototypes from the same learner-visible observation surface.
 
 - Unsupervised latent mechanism-structure discovery.
 - Real-hardware ground-truth mechanism recovery.
+- Arbitrary CPTP/GKSL channel learning by construction.
 - Complete SCOPE-Twin physical generation.
 - Completed decoder utility, cross-context generalization, or drift prediction
   axes.

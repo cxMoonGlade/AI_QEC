@@ -15,6 +15,7 @@ from .born_local import (
     born_local_probability_tables,
     outcome_zz_correlation,
 )
+from .cptp_guardrail import build_cptp_guardrail_audit_from_records
 from .layers import LAYER1_PREP
 from .mechanism_catalog import READOUT_MECHANISM_IDS, RZZ_FAMILY_IDS
 from .phyc1_contract import LOCAL_OBSERVABLE_TEACHER_MODEL, PHYC1_LEGACY_STAGE_NAME, probe_names as phyc1_probe_names
@@ -117,6 +118,8 @@ def generate_local_observable_teacher_dataset(
     (output / "teacher_config.json").write_text(json.dumps(_json_safe(cfg), indent=2, sort_keys=True) + "\n")
     (output / "sampling_audit.json").write_text(json.dumps(sampling_audit, indent=2, sort_keys=True) + "\n")
     (output / "self_distinguishability_preflight.json").write_text(json.dumps(_json_safe(self_preflight), indent=2, sort_keys=True) + "\n")
+    cptp_guardrail = build_cptp_guardrail_audit_from_records(records)
+    (output / "cptp_guardrail_audit.json").write_text(json.dumps(_json_safe(cptp_guardrail), indent=2, sort_keys=True) + "\n")
     probe_manifest = build_probe_basis_manifest(probe_names, num_qubits=observation_slots, circuit_depth=effective_circuit_depth)
     probe_manifest["num_physical_qubits"] = int(physical_num_qubits)
     probe_manifest["num_observation_slots"] = int(observation_slots)
@@ -146,6 +149,8 @@ def generate_local_observable_teacher_dataset(
         "multicircuit_teacher_batch": True,
         "num_circuit_batches": int(repetitions),
         "sampling": sampling_audit,
+        "cptp_guardrail_passed": bool(cptp_guardrail["passed"]),
+        "cptp_guardrail_audit": str(output / "cptp_guardrail_audit.json"),
         "observation_slot_remap": slot_audit,
         "self_distinguishability_preflight": str(output / "self_distinguishability_preflight.json"),
     }

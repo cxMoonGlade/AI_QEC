@@ -9,6 +9,11 @@ a fixed-context SCOPE-Static research stack. The long-horizon target is the
 six-axis physical generation problem. CPTP/GKSL structure is one constraint
 mechanism, not the whole claim.
 
+Physicality boundary: the catalog entries below are implemented as unitary
+channels, Kraus channels, or classical readout assignment matrices. Enabling a
+mechanism ID selects that implementation. The current learner does not yet
+learn arbitrary CPTP/GKSL channels by construction.
+
 ## Evidence Sources
 
 The implemented list below is deliberately conservative: every public mechanism

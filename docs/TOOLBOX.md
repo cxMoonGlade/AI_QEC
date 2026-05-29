@@ -8,6 +8,7 @@ It is organized as reusable tools rather than a single end-to-end claim.
 1. **Generate noisy data.** Layer 1 prepares sampled noisy data from a declared
    physical mechanism set. Users control enabled mechanism IDs, parameters,
    shot count, probe schedule, circuit depth, and instance counts through YAML.
+   The enabled mechanisms use catalog unitary/Kraus/readout definitions.
 
 2. **Learn and replay visible noise.** Layer 3 learns from the
    learner-visible observation surface and reports whether predicted mechanisms
@@ -30,6 +31,17 @@ It is organized as reusable tools rather than a single end-to-end claim.
 
 Historical modules and artifact folders still use `PHYC1/PHYC2/PHYC3` names for
 compatibility. Public-facing reports should use Layer 1/2/3 names.
+
+## Physicality Boundary
+
+Layer 1 physicality comes from the implemented catalog mechanisms: unitary
+channels, Kraus channels, and classical readout assignment matrices. Layer 3
+inherits catalog physicality only when it predicts/reuses a catalog mechanism;
+visible empirical replay is a visible-distribution model, not by itself a
+learned CPTP channel.
+
+The toolbox does not yet claim arbitrary CPTP/GKSL channel learning by
+construction. See `docs/PHYSICALITY.md`.
 
 ## Install
 
@@ -85,6 +97,13 @@ Layer 1 produces:
 - `sampling_audit.json`
 - `active_probe_manifest.json`
 
+Layer 1 also emits:
+
+- `cptp_guardrail_audit.json`, checking complete-positivity representation
+  class, declared channel dimension, unitarity, Kraus trace preservation,
+  readout stochasticity, and parameter validity for every enabled mechanism
+  record.
+
 Layer 2 produces:
 
 - teacher self-distinguishment metrics;
@@ -108,8 +127,9 @@ tests whether SCOPE-Discovery can recover latent mechanism structure,
 assignments, and prototypes from the same learner-visible observation surface.
 
 The toolbox does not yet claim real-hardware ground-truth mechanism recovery,
-complete SCOPE-Twin physical generation, decoder utility, drift prediction, or
-cross-context generalization.
+arbitrary CPTP/GKSL channel learning by construction, complete SCOPE-Twin
+physical generation, decoder utility, drift prediction, or cross-context
+generalization.
 
 Roadmaps:
 

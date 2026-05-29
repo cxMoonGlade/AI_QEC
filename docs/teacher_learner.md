@@ -37,6 +37,10 @@ evaluator-only. Layer 2 may use teacher-internal evidence to ask whether the
 teacher can distinguish itself; Layer 3 may not use that evidence as learner
 input. `PHYC1/PHYC2/PHYC3` remain legacy artifact aliases for Layer 1/2/3.
 
+Physicality boundary: Layer 1 mechanisms are catalog definitions implemented as
+unitary channels, Kraus channels, or classical readout assignment matrices.
+Layer 3 is not yet an arbitrary CPTP/GKSL channel learner by construction.
+
 ## Teacher
 
 A **teacher** is the source of reference truth for an experiment.
@@ -83,6 +87,11 @@ Implemented forms:
   teacher-self predictions, and audits whether predicted mechanism labels map
   to close quantum/readout error prototypes and visible generated-noise metrics
   such as NLL and MAE.
+
+If Layer 3 replays a predicted catalog mechanism, it inherits the catalog
+unitary/Kraus/readout definition. If it replays only empirical visible
+distributions, the result is a visible-distribution model, not a proven learned
+CPTP channel.
 
 Expected properties:
 

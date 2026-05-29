@@ -1,4 +1,4 @@
-"""Physical-channel helpers for S2D synthetic oracle experiments."""
+"""Physical mechanism helpers for the SCOPE-Static layer stack."""
 
 from .channels import (
     MechanismSpec,
@@ -11,6 +11,11 @@ from .channels import (
     ry_unitary,
     rz_unitary,
     rzz_unitary,
+)
+from .cptp_guardrail import (
+    audit_mechanism_physicality,
+    build_cptp_guardrail_audit,
+    build_cptp_guardrail_audit_from_records,
 )
 from .density_sim import apply_kraus, measurement_probabilities_z
 from .full_circuit_cudaq_teacher import generate_full_circuit_cudaq_teacher_dataset
@@ -42,6 +47,9 @@ __all__ = [
     "amplitude_damping_kraus",
     "apply_kraus",
     "audit_cudaq_backend",
+    "audit_mechanism_physicality",
+    "build_cptp_guardrail_audit",
+    "build_cptp_guardrail_audit_from_records",
     "channel_fingerprint",
     "custom_non_pauli_kraus",
     "generate_full_circuit_cudaq_teacher_dataset",

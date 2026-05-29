@@ -34,6 +34,8 @@ This repository is currently centered on the SCOPE family of QEC noise-learning 
 - **Layer 3b Z/X visible repair**: the strict Y-free, Z/X-only visible probe surface that raises the deterministic visible ceiling before learner-head claims.
 - **Layer 3c distributional Gaussian head**: the accepted multi-context learner head on Layer 3b visible features; it recovers drifted M13 only under a valid multi-context protocol.
 - **2+1 public program surface**: the pre-release toolbox has two supported capabilities plus one active research object: generate noisy data from user-enabled mechanisms; learn from learner-visible observations and generate similar reproducible noisy data; and, as the "+1", distinguish the latent mechanism cause through Stage 3 discovery.
+- **Physicality boundary**: Layer 1 mechanism definitions are implemented as unitary channels, Kraus channels, or classical readout assignment matrices. Enabling a mechanism ID selects that catalog definition. The current learner does not yet learn an arbitrary CPTP/GKSL channel family by construction.
+- **CPTP guardrail audit**: the Layer 1 artifact `cptp_guardrail_audit.json`; it checks complete-positivity representation class, channel dimension, unitary unitarity, Kraus trace preservation, readout stochasticity, and parameter validity for every enabled mechanism record.
 - **separability_v2**: the engineered local-observable sampled-response stress teacher. It is useful for separability and leakage-control evidence, but it is not a Born-rule physical baseline.
 - **Born-local**: an exact local Born-rule diagnostic where sampled local observations come from exact local Born probabilities for CPTP/readout mechanisms. It has effective depth one and is not the full-circuit teacher.
 - **full-circuit-cudaq**: the literal full n-qubit CUDA-Q teacher source at configured circuit depth.
@@ -49,10 +51,12 @@ identifiable at the same time. CPTP/GKSL parameterization is only one constraint
 mechanism, not the claim by itself.
 
 The current implemented evidence package studies sample efficiency, compression,
-and quotient-aware recovery for a fixed DEM/Bernoulli Stage 1 setting. It does
-not claim CPTP/GKSL learning, Born-rule likelihood, context-conditioned
-amortization, OOD transfer, temporal drift tracking, or a complete solution to
-the six-axis physical generation problem.
+quotient-aware recovery, and catalog-based physical-mechanism data generation.
+Layer 1 physical mechanisms are implemented as unitary/Kraus/readout
+definitions, but the learner does not yet learn an arbitrary CPTP/GKSL channel
+family by construction. The package does not claim Born-rule likelihood,
+context-conditioned amortization, OOD transfer, temporal drift tracking, or a
+complete solution to the six-axis physical generation problem.
 
 Stage 2A static discovery is implemented as a synthetic-first identifiability
 path. It may claim latent assignment recovery only when synthetic teacher runs

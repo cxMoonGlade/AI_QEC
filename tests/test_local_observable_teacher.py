@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import numpy as np
@@ -248,6 +249,10 @@ def test_local_observable_teacher_writes_phyc2_compatible_schema_when_cuda_avail
     assert result["stage"] == "S2D_PHYS1_teacher"
     assert result["local_observable_response_model"] == "separability_v2"
     assert (teacher_dir / "self_distinguishability_preflight.json").exists()
+    assert result["cptp_guardrail_passed"] is True
+    cptp = json.loads((teacher_dir / "cptp_guardrail_audit.json").read_text())
+    assert cptp["passed"] is True
+    assert cptp["num_mechanism_records"] == 4
     assert audit["schema"] == "scope_static_phyc2_sampled_observation_separability_v1"
     assert audit["coverage"]["contract_evaluable"] is True
 

@@ -9,6 +9,11 @@ be faithful as a generator, interpretable, useful to decoders, transferable
 across contexts, predictive under drift, and identifiable. CPTP/GKSL structure
 is one constraint mechanism, not the claim by itself.
 
+Physicality boundary: Layer 1 generates noisy data from implemented
+unitary/Kraus/readout mechanism definitions. The current learner recovers
+mechanisms and visible noisy behavior; it does not yet learn an arbitrary
+CPTP/GKSL channel family by construction. See `docs/PHYSICALITY.md`.
+
 ## What It Can Do: 2+1 Surface
 
 `scope-static` exposes two toolbox capabilities plus one active discovery
@@ -111,6 +116,7 @@ Outputs are written under `outputs/scope_static/` and `outputs/google_static/`.
 
 - `CONTEXT.md`: glossary and claim boundaries.
 - `docs/TOOLBOX.md`: toolbox commands and data products.
+- `docs/PHYSICALITY.md`: CPTP/readout implementation and claim boundary.
 - `docs/RUNBOOK.md`: supported functions and command recipes.
 - `docs/ARCHITECTURE.md`: architecture and module map.
 - `docs/STAGE2_ROADMAP.md`: closed Stage 2 record.

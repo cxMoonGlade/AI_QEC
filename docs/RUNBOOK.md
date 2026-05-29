@@ -184,6 +184,12 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run
 Layer 1 produces mechanism records, probe schedules, sampled observations,
 teacher config, sampling audits, and active probe manifests.
 
+Physicality boundary: Layer 1 mechanisms use catalog unitary/Kraus/readout
+definitions. Layer 1 emits `cptp_guardrail_audit.json`, which checks unitarity,
+complete-positivity representation class, declared channel dimension, Kraus
+trace preservation, readout stochasticity, and parameter validity for every
+enabled mechanism record.
+
 ## Function: Audit Teacher Self-Distinguishment
 
 Layer 2 balanced teacher audit:
@@ -221,6 +227,10 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run
 Layer 3 consumes learner-visible sampled observations. Forbidden learner inputs
 include mechanism IDs, family labels, teacher self embeddings, exact channel
 matrices, exact PTMs, oracle prototypes, and hidden parameters.
+
+Layer 3 generated-noise language must distinguish two cases: catalog-mechanism
+replay inherits the catalog mechanism definition, while empirical visible replay
+is a visible-distribution model and is not by itself a learned CPTP channel.
 
 ## Function: Run Canonical Layer 3 Acceptance
 

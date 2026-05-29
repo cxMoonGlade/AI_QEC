@@ -10,6 +10,7 @@ from scope_static.physical.channels import (
     readout_bias_matrix,
     rzz_unitary,
 )
+from scope_static.physical.cptp_guardrail import audit_mechanism_physicality, build_cptp_guardrail_audit
 from scope_static.physical.density_sim import apply_kraus, measurement_probabilities_z
 from scope_static.physical.mechanism_catalog import IMPLEMENTED_MECHANISM_IDS, MECHANISM_NAMES, READOUT_MECHANISM_IDS, RZZ_FAMILY_IDS
 from scope_static.physical.ptm import channel_fingerprint, ptm_from_kraus, ptm_from_unitary, rzz_ptm_block_audit
@@ -109,3 +110,69 @@ def test_implemented_catalog_mechanisms_have_distinct_channel_fingerprints() -> 
     for left_idx, left in enumerate(IMPLEMENTED_MECHANISM_IDS):
         for right in IMPLEMENTED_MECHANISM_IDS[left_idx + 1 :]:
             assert float(np.linalg.norm(fingerprints[left] - fingerprints[right])) > 1e-6
+
+
+def test_cptp_guardrail_accepts_implemented_catalog_mechanisms() -> None:
+    specs = []
+    for mechanism_id in IMPLEMENTED_MECHANISM_IDS:
+        num_qubits = 2 if mechanism_id in RZZ_FAMILY_IDS else 1
+        instruction = "rzz" if num_qubits == 2 else ("measure" if mechanism_id in READOUT_MECHANISM_IDS else "id")
+        specs.append(
+            MechanismSpec(
+                mechanism_id,
+                MECHANISM_NAMES[mechanism_id],
+                num_qubits,
+                {},
+                instruction=instruction,
+                qubits=tuple(range(num_qubits)),
+            )
+        )
+
+    audit = build_cptp_guardrail_audit(specs)
+
+    assert audit["schema"] == "scope_static_layer1_cptp_guardrail_audit_v1"
+    assert audit["passed"] is True
+    assert audit["num_failed_records"] == 0
+    assert audit["num_mechanism_records"] == len(IMPLEMENTED_MECHANISM_IDS)
+
+
+def test_cptp_guardrail_checks_unitary_kraus_and_readout_representations() -> None:
+    unitary = audit_mechanism_physicality(MechanismSpec("M8", "rzz", 2, {"epsilon": 0.04}, instruction="rzz", qubits=(0, 1)))
+    kraus = audit_mechanism_physicality(MechanismSpec("M4", "amp", 1, {"gamma": 0.02}, instruction="id", qubits=(0,)))
+    readout = audit_mechanism_physicality(MechanismSpec("M1", "readout", 1, {"p": 0.02}, instruction="measure", qubits=(0,)))
+
+    assert unitary["kind"] == "unitary"
+    assert unitary["passed"] is True
+    assert unitary["complete_positivity_source"] == "unitary_representation"
+    assert unitary["complete_positivity_passed"] is True
+    assert float(unitary["unitary_residual_max_abs"]) <= 1.0e-9
+    assert kraus["kind"] == "kraus"
+    assert kraus["passed"] is True
+    assert kraus["complete_positivity_source"] == "kraus_representation"
+    assert kraus["complete_positivity_passed"] is True
+    assert float(kraus["kraus_tp_residual_max_abs"]) <= 1.0e-9
+    assert readout["kind"] == "readout"
+    assert readout["passed"] is True
+    assert readout["complete_positivity_source"] == "classical_stochastic_readout_matrix"
+    assert readout["complete_positivity_passed"] is True
+    assert float(readout["readout_row_sum_residual_max_abs"]) <= 1.0e-9
+
+
+def test_cptp_guardrail_rejects_invalid_probability_parameters_before_flooring() -> None:
+    audit = audit_mechanism_physicality(MechanismSpec("M4", "amp", 1, {"gamma": -0.1}, instruction="id", qubits=(0,)))
+
+    assert audit["kind"] == "kraus"
+    assert audit["passed"] is False
+    assert audit["parameter_validity_passed"] is False
+    invalid = audit["parameter_validity"]["invalid_parameters"]  # type: ignore[index]
+    assert invalid[0]["parameter"] == "gamma"
+
+
+def test_cptp_guardrail_rejects_wrong_declared_channel_dimension() -> None:
+    audit = audit_mechanism_physicality(MechanismSpec("M8", "rzz", 1, {"epsilon": 0.04}, instruction="rzz", qubits=(0,)))
+
+    assert audit["kind"] == "unitary"
+    assert audit["passed"] is False
+    assert audit["channel_dimension_expected"] == 2
+    assert audit["channel_dimension_actual"] == [4, 4]
+    assert audit["channel_dimension_passed"] is False

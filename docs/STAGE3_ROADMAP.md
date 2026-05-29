@@ -24,6 +24,11 @@ generate noisy data, Layer 3 can learn/replay visible noisy data, and Stage 3
 must distinguish what latent mechanism caused that noise without direct
 mechanism-label supervision.
 
+Physicality boundary: Stage 3 discovery may reuse catalog unitary/Kraus/readout
+mechanism definitions when replaying predicted catalog mechanisms. It should
+not claim arbitrary CPTP/GKSL channel generation unless a future learner is
+parameterized and audited to enforce that constraint directly.
+
 ## Starting Surface
 
 Stage 3 starts from the Layer 3b/3c visible surface:
@@ -69,6 +74,7 @@ Stage 3 should produce:
 - evaluator-only ARI/NMI/BA/min-recall reports;
 - prototype quality metrics;
 - no-leakage and protocol-validity audits.
+- physicality audit references when generated replay uses catalog mechanisms.
 
 ## Work Packages
 
@@ -197,6 +203,7 @@ teacher-self feature count = 0
 oracle matrix feature count = 0
 test-label model-selection count = 0
 protocol-valid passed = true
+catalog physicality audit present for catalog-mechanism replay
 ```
 
 ## Acceptance Rule

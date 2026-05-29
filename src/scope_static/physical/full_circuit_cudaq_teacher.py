@@ -8,6 +8,7 @@ from typing import Mapping
 import numpy as np
 
 from .channels import MechanismSpec, mechanism_channel, readout_bias_matrix
+from .cptp_guardrail import build_cptp_guardrail_audit
 from .mechanism_catalog import PREP_RESET_MECHANISM_IDS, READOUT_MECHANISM_IDS
 from .layers import LAYER1_PREP
 from .phyc1_contract import (
@@ -97,7 +98,7 @@ def generate_full_circuit_cudaq_teacher_dataset(
 
     apply_full_circuit_depth_metadata(cfg, depth)
     cfg["sampling_contract"] = sampling_contract
-    _write_static_artifacts(
+    static_artifacts = _write_static_artifacts(
         output,
         cfg=cfg,
         mechanisms=mechanisms,
@@ -392,6 +393,8 @@ def generate_full_circuit_cudaq_teacher_dataset(
         "sampling_progress": str(output / "sampling_progress.json"),
         "noise_application_audit": str(output / "noise_application_audit.json"),
         "non_clifford_audit": str(output / "non_clifford_audit.json"),
+        "cptp_guardrail_passed": bool(static_artifacts["cptp_guardrail_passed"]),
+        "cptp_guardrail_audit": str(output / "cptp_guardrail_audit.json"),
         "active_probe_manifest": str(output / "active_probe_manifest.json"),
     }
     (output / "summary.json").write_text(json.dumps(_json_safe(summary), indent=2, sort_keys=True) + "\n")
@@ -674,7 +677,7 @@ def _write_static_artifacts(
     num_qubits: int,
     circuit_depth: int,
     target_audit: dict[str, object],
-) -> None:
+) -> dict[str, object]:
     (output / "oracle_mechanisms.json").write_text(json.dumps({"mechanisms": records}, indent=2, sort_keys=True) + "\n")
     (output / "teacher_config.json").write_text(json.dumps(_json_safe(cfg), indent=2, sort_keys=True) + "\n")
     probe_manifest = build_probe_basis_manifest(probe_names, num_qubits=num_qubits, circuit_depth=circuit_depth)
@@ -698,6 +701,9 @@ def _write_static_artifacts(
     non_clifford = build_non_clifford_audit(mechanisms, probe_names=probe_names, config=cfg)
     non_clifford["teacher_model"] = FULL_CIRCUIT_TEACHER_MODEL
     (output / "non_clifford_audit.json").write_text(json.dumps(_json_safe(non_clifford), indent=2, sort_keys=True) + "\n")
+    cptp_guardrail = build_cptp_guardrail_audit(mechanisms)
+    (output / "cptp_guardrail_audit.json").write_text(json.dumps(_json_safe(cptp_guardrail), indent=2, sort_keys=True) + "\n")
+    return {"cptp_guardrail_passed": bool(cptp_guardrail["passed"])}
 
 
 def _initial_progress(

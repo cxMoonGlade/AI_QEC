@@ -41,6 +41,20 @@ active research object:
 3. Stage 3 asks which latent mechanism caused the noise, without direct
    mechanism-label supervision.
 
+## Physicality Boundary
+
+Layer 1 noisy-data generation uses implemented catalog definitions: unitary
+channels, Kraus channels, and classical readout assignment matrices. Enabling a
+mechanism ID selects that definition and its parameters.
+
+Layer 3 generated-noise claims have two meanings:
+
+- catalog-mechanism replay inherits the selected catalog mechanism definition;
+- empirical visible replay is a visible-distribution model and is not by itself
+  a learned CPTP channel.
+
+Layer 1 emits `cptp_guardrail_audit.json` for per-run physicality audits.
+
 ## Toolbox Commands
 
 ```bash
@@ -122,7 +136,7 @@ See `docs/STAGE2_ROADMAP.md` for the closed Stage 2 record and
 Valid pre-release claims:
 
 - the implemented M0-M34 physical mechanism catalog can generate layered
-  physical-oracle artifacts;
+  physical-oracle artifacts from unitary/Kraus/readout definitions;
 - the Layer 2 teacher self-distinguishment gate can verify catalog
   distinguishability;
 - the Layer 3 learner can recover mechanisms from a strict no-leakage Z/X
@@ -133,6 +147,7 @@ Valid pre-release claims:
 Not claimed yet:
 
 - real-hardware ground-truth mechanism recovery;
+- arbitrary CPTP/GKSL channel learning by construction;
 - a complete SCOPE-Twin physical-generation model;
 - decoder utility, drift prediction, or cross-context generalization as
   completed axes;

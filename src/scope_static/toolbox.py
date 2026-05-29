@@ -25,7 +25,7 @@ def toolbox_manifest() -> dict[str, object]:
         "program_surface": [
             {
                 "name": "generate_noisy_data",
-                "role": "Generate sampled noisy data from user-enabled physical mechanisms.",
+                "role": "Generate sampled noisy data from user-enabled catalog unitary/Kraus/readout mechanisms.",
                 "primary_layer": "Layer 1: Data Preparation (Prep)",
                 "config_template": "configs/scope_static/layer1_user_defined_mechanisms.yaml",
             },
@@ -41,6 +41,13 @@ def toolbox_manifest() -> dict[str, object]:
                 "roadmap": "docs/STAGE3_ROADMAP.md",
             },
         ],
+        "physicality_boundary": (
+            "Layer 1 physicality comes from implemented catalog mechanisms: "
+            "unitary channels, Kraus channels, and classical readout assignment "
+            "matrices. Layer 3 does not yet learn arbitrary CPTP/GKSL channels "
+            "by construction. Layer 1 emits cptp_guardrail_audit.json for "
+            "per-run artifact-level physicality audits."
+        ),
         "layers": layer_stack_metadata(),
         "commands": [
             {
@@ -79,6 +86,9 @@ def format_toolbox_manifest(manifest: dict[str, object]) -> str:
         if not isinstance(item, dict):
             continue
         lines.append(f"  {item['name']}: {item['role']}")
+    lines.append("")
+    lines.append("Physicality boundary:")
+    lines.append(f"  {manifest['physicality_boundary']}")
     lines.append("")
     lines.append("Layers:")
     for layer in manifest["layers"]:  # type: ignore[index]

@@ -68,6 +68,9 @@ def test_full_circuit_cudaq_teacher_writes_literal_depth_artifact(tmp_path: Path
     assert noise["teacher_model"] == "full_circuit_cudaq"
     assert noise["rzz_implementation"] == "cx_rz_cx"
     assert noise["mechanism_application_convention"] == "post_gate_or_post_reset_channel_at_scheduled_location"
+    cptp = json.loads((tmp_path / "teacher" / "cptp_guardrail_audit.json").read_text())
+    assert cptp["passed"] is True
+    assert result["cptp_guardrail_passed"] is True
 
 
 def test_full_circuit_gpu_target_guard_rejects_cpu_target_description() -> None:

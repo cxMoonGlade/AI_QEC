@@ -35,6 +35,10 @@ recovery protocol. Stage 3 now removes direct mechanism-label supervision and
 tests whether SCOPE-Discovery can recover latent mechanism structure,
 assignments, and prototypes from the same learner-visible observation surface.
 
+Physicality boundary: Layer 1 mechanisms are catalog definitions implemented as
+unitary channels, Kraus channels, or classical readout assignment matrices. The
+current learner is not an arbitrary CPTP/GKSL channel learner by construction.
+
 ## Package Map
 
 ```text
@@ -154,6 +158,11 @@ mechanism catalog + user-enabled mechanism set
 Layer 2 may use teacher-internal mechanism evidence because its role is teacher
 self-distinguishability. Layer 3 may consume only learner-visible probe
 observations and declared visible metadata.
+
+Layer 1 emits `cptp_guardrail_audit.json` to check complete-positivity
+representation class, declared channel dimension, unitary unitarity, Kraus
+trace preservation, readout stochasticity, and parameter validity for every
+enabled mechanism record.
 
 ## Physical Modules
 
@@ -288,6 +297,8 @@ Implemented claims:
 - fixed-context DEM/Bernoulli likelihood experiments;
 - known-orbit, discovery, and local-inverse comparisons inside that family;
 - synthetic oracle ARI/NMI when hidden labels are evaluator-only;
+- Layer 1 noisy-data generation from catalog unitary/Kraus/readout mechanism
+  definitions;
 - physical-mechanism catalog and visible-recovery validation on synthetic
   teachers;
 - Google predictive validation with proxy labels only when explicitly labelled.
@@ -295,7 +306,7 @@ Implemented claims:
 Not claimed:
 
 - real-hardware ground-truth mechanism recovery;
-- hardware CPTP/GST/GKSL learning;
+- arbitrary learned CPTP/GST/GKSL channel generation by construction;
 - learned full noisy-circuit Born-rule likelihood from hardware data;
 - complete SCOPE-Twin physical generation;
 - decoder utility, cross-context generalization, or drift prediction as

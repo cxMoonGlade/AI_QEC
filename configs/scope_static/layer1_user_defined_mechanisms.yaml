@@ -27,7 +27,7 @@ s2d_physical:
     M8:
       epsilon: 0.025
     M24:
-      gamma: 0.010
+      gamma_up: 0.010
 
   num_qubits: 6
   circuit_depth: 4
