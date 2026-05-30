@@ -280,10 +280,16 @@ Acceptance:
 ### Stage 3C: Prototype And Generator Learning
 
 Learn visible prototypes that can generate heldout probe observations.
+The first implementation is conditional visible replay: fold-local generators
+are fit on Stage 3A train folds from frozen `visible_features.npy` and Stage
+3B.1 `learned_assignments.npy`, then scored on validation+test heldout rows.
+This is not an unconditional future-context prediction claim.
 
 Metrics:
 
-- Gaussian NLL on visible features;
+- categorical population NLL over raw visible outcome groups;
+- Gaussian density NLL on visible features as a secondary continuous-density
+  diagnostic;
 - population cross entropy;
 - raw visible-feature MAE;
 - population MAE;
@@ -296,6 +302,9 @@ Acceptance:
 - prototype quality is reported for predicted assignments and oracle-label
   comparators separately;
 - oracle comparators remain evaluator-only.
+- predicted-assignment generation does not rebuild visible features from
+  oracle records and does not use mechanism labels, channels, PTMs, Kraus
+  matrices, teacher IDs, or oracle prototypes.
 
 ### Stage 3D: Quotient Evaluation And Robustness
 
@@ -356,7 +365,8 @@ quotient alias classes
 Primary generation metrics:
 
 ```text
-visible Gaussian NLL
+categorical population NLL
+visible Gaussian density NLL
 population cross entropy
 raw visible-feature MAE
 population MAE
@@ -401,6 +411,9 @@ outputs/PHYC_STAGE3_discovery/
   oracle_assignment_comparator_metrics.json
   global_null_metrics.json
   mean_only_baseline_metrics.json
+  assignment_source_audit.json
+  heldout_protocol.json
+  leakage_audit.json
   evaluator_only_label_metrics.json
   quotient_metrics.json
   controls.json

@@ -26,6 +26,7 @@ scope-stage3a-freeze = "scope_static.experiments.run_stage3a_protocol_freeze:mai
 scope-stage3a5-ceiling = "scope_static.experiments.run_stage3a5_observability_ceiling:main"
 scope-stage3b0-baselines = "scope_static.experiments.run_stage3b0_baselines:main"
 scope-stage3b1-discovery = "scope_static.experiments.run_stage3b1_discovery_model:main"
+scope-stage3c-generator = "scope_static.experiments.run_stage3c_generator_learning:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

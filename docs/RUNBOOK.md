@@ -387,6 +387,33 @@ declared first-run iteration budget from config, and writes
 teacher IDs, and oracle prototypes are withheld from fitting and model
 selection.
 
+## Function: Run Stage 3C Prototype And Generator Learning
+
+```bash
+conda run -n aiqec scope-stage3c-generator \
+  --config configs/scope_static/stage3c_generator_learning.yaml
+```
+
+Equivalent module form:
+
+```bash
+conda run -n aiqec python -m scope_static.experiments.run_stage3c_generator_learning \
+  --config configs/scope_static/stage3c_generator_learning.yaml
+```
+
+Stage 3C consumes Stage 3A, Stage 3A.5, and Stage 3B.1. It fits fold-local
+visible generators from frozen `visible_features.npy` and B1
+`learned_assignments.npy`, then scores heldout validation+test rows against
+global-null and mean-only baselines. The primary likelihood metric is positive
+`categorical_population_nll` over raw visible outcome groups; Gaussian density
+NLL is retained as a secondary continuous-density diagnostic. It writes
+`prototype_generation_metrics.json`, `predicted_assignment_metrics.json`,
+`oracle_assignment_comparator_metrics.json`, `global_null_metrics.json`,
+`mean_only_baseline_metrics.json`, `leakage_audit.json`, and
+`acceptance_audit.json`. Oracle-label prototypes are evaluator-only
+comparators; they are not used for predicted-assignment fitting or model
+selection.
+
 ## Function: Run Active Physical-Observability Audits
 
 Local Pauli-Lindblad observability:
