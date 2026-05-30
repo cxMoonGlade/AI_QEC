@@ -122,6 +122,9 @@ Freeze the learner-visible dataset contract.
 Deliverables:
 
 - visible feature schema;
+- frozen learner-visible feature matrix (`visible_features.npy`);
+- frozen sampled-visible comparator matrix (`sampled_visible_features.npy`);
+- visible feature matrix manifest;
 - probe schedule manifest;
 - batch/context schema;
 - train/validation/test split policy;
@@ -234,6 +237,8 @@ First implementation:
 
 - diagonal-covariance visible prototype mixture;
 - annealed soft assignment matrix `Pi[j,k]`;
+- training from the frozen Stage 3A `visible_features.npy` matrix, not
+  regenerated mechanism records;
 - context-balanced assignment candidate that enforces one visible instance per
   latent prototype per context group when the Stage 3A protocol is balanced;
 - K-mode selection by validation visible NLL plus visible-only complexity
@@ -246,6 +251,7 @@ First implementation:
 Artifacts:
 
 - `candidate_selection.json`;
+- `visible_feature_matrix.json`;
 - `learned_assignments.npy`;
 - `learned_prototypes.json`;
 - `learned_covariances.npy`;
@@ -379,6 +385,9 @@ The first Stage 3 implementation should write one reviewable artifact tree:
 outputs/PHYC_STAGE3_discovery/
   config.yaml
   visible_feature_schema.json
+  visible_feature_matrix.json
+  visible_features.npy
+  sampled_visible_features.npy
   forbidden_feature_audit.json
   split_manifest.json
   probe_schedule_manifest.json

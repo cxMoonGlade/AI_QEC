@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+import hashlib
 from pathlib import Path
 from typing import Iterable
 
+import numpy as np
 import yaml
 
 from .layers import LAYER3_LEARNER
@@ -89,11 +91,18 @@ def run_stage3a_dataset_protocol_freeze(
         assignment_unit=str(assignment_unit),
         class_count=len(class_names),
     )
+    feature_matrix = visible_feature_matrix_manifest(
+        table.expected_features,
+        table.features,
+        table.feature_names,
+        sampling_mode=str(sampling_mode),
+    )
     acceptance = stage3a_acceptance_audit(
         forbidden_audit=forbidden_audit,
         split_manifest=split_manifest,
         batch_context_schema=batch_schema,
         assignment_unit_artifact=assignment,
+        visible_feature_matrix=feature_matrix,
     )
     result = {
         "schema": "scope_static_stage3a_protocol_freeze_v1",
@@ -117,6 +126,7 @@ def run_stage3a_dataset_protocol_freeze(
             "mechanism_labels_evaluator_only": class_names,
         },
         "visible_feature_schema": table.feature_schema,
+        "visible_feature_matrix": feature_matrix,
         "probe_schedule_manifest": probe_schedule,
         "forbidden_feature_audit": forbidden_audit,
         "split_manifest": split_manifest,
@@ -125,7 +135,7 @@ def run_stage3a_dataset_protocol_freeze(
         "acceptance_audit": acceptance,
         "decision": "stage3a_protocol_freeze_passed" if acceptance["passed"] else "stage3a_protocol_freeze_failed",
     }
-    _write_outputs(output, result)
+    _write_outputs(output, result, table.expected_features, table.features)
     return result
 
 
@@ -320,12 +330,43 @@ def assignment_unit_manifest(
     }
 
 
+def visible_feature_matrix_manifest(
+    visible_features: np.ndarray,
+    sampled_visible_features: np.ndarray,
+    feature_names: list[str],
+    *,
+    sampling_mode: str,
+) -> dict[str, object]:
+    matrix = np.asarray(visible_features, dtype=np.float64)
+    sampled = np.asarray(sampled_visible_features, dtype=np.float64)
+    return {
+        "schema": "scope_static_stage3a_visible_feature_matrix_v1",
+        "training_matrix_path": "visible_features.npy",
+        "training_matrix_kind": "expected_visible_observation_features",
+        "sampled_matrix_path": "sampled_visible_features.npy",
+        "sampled_matrix_kind": "finite_shot_visible_observation_features",
+        "feature_schema_path": "visible_feature_schema.json",
+        "feature_count": int(matrix.shape[1]) if matrix.ndim == 2 else 0,
+        "record_count": int(matrix.shape[0]) if matrix.ndim == 2 else 0,
+        "shape": [int(dim) for dim in matrix.shape],
+        "sampled_shape": [int(dim) for dim in sampled.shape],
+        "sampling_mode": str(sampling_mode),
+        "feature_names_sha256": _text_digest("\n".join(str(name) for name in feature_names)),
+        "visible_features_sha256": _matrix_digest(matrix),
+        "sampled_visible_features_sha256": _matrix_digest(sampled),
+        "learner_training_source": "Stage 3A frozen visible_features.npy",
+        "contains_evaluator_labels": False,
+        "contains_oracle_fields": False,
+    }
+
+
 def stage3a_acceptance_audit(
     *,
     forbidden_audit: dict[str, object],
     split_manifest: dict[str, object],
     batch_context_schema: dict[str, object],
     assignment_unit_artifact: dict[str, object],
+    visible_feature_matrix: dict[str, object],
 ) -> dict[str, object]:
     primary_protocol = dict(batch_context_schema.get("primary_protocol", {}))
     checks = {
@@ -337,6 +378,9 @@ def stage3a_acceptance_audit(
         "single_shot_assignment_not_used_first_pass": not bool(assignment_unit_artifact.get("single_shot_j_allowed_first_pass", True)),
         "validation_label_model_selection_disabled": not bool(split_manifest.get("validation_labels_available_to_model_selection", True)),
         "test_label_model_selection_disabled": not bool(split_manifest.get("test_labels_available_to_model_selection", True)),
+        "frozen_visible_feature_matrix_declared": bool(visible_feature_matrix.get("training_matrix_path")),
+        "frozen_visible_feature_matrix_has_no_labels": not bool(visible_feature_matrix.get("contains_evaluator_labels", True)),
+        "frozen_visible_feature_matrix_has_no_oracle_fields": not bool(visible_feature_matrix.get("contains_oracle_fields", True)),
         "learner_training_not_run_in_stage3a": True,
         "observability_ceiling_deferred_to_stage3a5": True,
     }
@@ -370,10 +414,11 @@ def format_stage3a_summary(result: dict[str, object]) -> str:
     )
 
 
-def _write_outputs(output: Path, result: dict[str, object]) -> None:
+def _write_outputs(output: Path, result: dict[str, object], visible_features: np.ndarray, sampled_visible_features: np.ndarray) -> None:
     artifacts = {
         "metrics.json": result,
         "visible_feature_schema.json": result["visible_feature_schema"],
+        "visible_feature_matrix.json": result["visible_feature_matrix"],
         "forbidden_feature_audit.json": result["forbidden_feature_audit"],
         "split_manifest.json": result["split_manifest"],
         "probe_schedule_manifest.json": result["probe_schedule_manifest"],
@@ -383,8 +428,43 @@ def _write_outputs(output: Path, result: dict[str, object]) -> None:
     }
     for name, payload in artifacts.items():
         (output / name).write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    np.save(output / "visible_features.npy", np.asarray(visible_features, dtype=np.float64))
+    np.save(output / "sampled_visible_features.npy", np.asarray(sampled_visible_features, dtype=np.float64))
     (output / "config.yaml").write_text(yaml.safe_dump({"stage3a_protocol_freeze": result["config"]}, sort_keys=False))
     (output / "summary.md").write_text(format_stage3a_summary(result))
+
+
+def load_stage3a_frozen_visible_features(stage3a_dir: str | Path) -> tuple[np.ndarray, list[str], dict[str, object]]:
+    s3a = Path(stage3a_dir)
+    manifest_path = s3a / "visible_feature_matrix.json"
+    if not manifest_path.exists():
+        raise FileNotFoundError(f"missing frozen Stage 3A visible feature matrix manifest: {manifest_path}")
+    manifest = _load_json(manifest_path)
+    matrix_path = s3a / str(manifest.get("training_matrix_path", "visible_features.npy"))
+    if not matrix_path.exists():
+        raise FileNotFoundError(f"missing frozen Stage 3A visible feature matrix: {matrix_path}")
+    matrix = np.asarray(np.load(matrix_path), dtype=np.float64)
+    schema = _load_json(s3a / str(manifest.get("feature_schema_path", "visible_feature_schema.json")))
+    feature_names = [str(item.get("name", "")) for item in schema.get("features", []) if isinstance(item, dict)]
+    if matrix.ndim != 2:
+        raise ValueError(f"{matrix_path} must be a 2D visible feature matrix")
+    if len(feature_names) != int(matrix.shape[1]):
+        raise ValueError(f"{matrix_path} has {matrix.shape[1]} columns but schema has {len(feature_names)} features")
+    expected_shape = [int(dim) for dim in manifest.get("shape", [])] if isinstance(manifest.get("shape", []), list) else []
+    if expected_shape and expected_shape != [int(dim) for dim in matrix.shape]:
+        raise ValueError(f"{matrix_path} shape {matrix.shape} does not match manifest shape {expected_shape}")
+    expected_digest = str(manifest.get("visible_features_sha256", ""))
+    if expected_digest and _matrix_digest(matrix) != expected_digest:
+        raise ValueError(f"{matrix_path} digest does not match Stage 3A manifest")
+    out_manifest = dict(manifest)
+    out_manifest.update(
+        {
+            "loaded_from_stage3a_artifact": True,
+            "resolved_training_matrix_path": str(matrix_path),
+            "resolved_feature_schema_path": str(s3a / str(manifest.get("feature_schema_path", "visible_feature_schema.json"))),
+        }
+    )
+    return matrix, feature_names, out_manifest
 
 
 def _indices_for_groups(groups: list[int], selected_groups: Iterable[int]) -> list[int]:
@@ -398,6 +478,22 @@ def _load_mechanism_records(path: Path) -> list[dict[str, object]]:
     if not isinstance(records, list) or not records:
         raise ValueError(f"{path} does not contain non-empty mechanisms")
     return [dict(record) for record in records]
+
+
+def _load_json(path: Path) -> dict[str, object]:
+    data = json.loads(path.read_text())
+    if not isinstance(data, dict):
+        raise ValueError(f"{path} must contain a JSON object")
+    return data
+
+
+def _text_digest(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _matrix_digest(matrix: np.ndarray) -> str:
+    arr = np.ascontiguousarray(np.asarray(matrix, dtype=np.float64))
+    return hashlib.sha256(arr.tobytes()).hexdigest()
 
 
 def _mechanism_sort_key(label: str) -> tuple[int, str]:

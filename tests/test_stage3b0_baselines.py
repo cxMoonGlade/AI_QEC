@@ -27,6 +27,9 @@ def test_stage3b0_runs_visible_only_baselines_and_prefers_quotient_on_alias_fixt
 
     assert result["decision"] == "stage3b0_baselines_completed"
     assert result["claim_boundary"]["uses_mechanism_labels_for_fit"] is False
+    assert result["claim_boundary"]["trains_from_stage3a_frozen_visible_features"] is True
+    assert result["claim_boundary"]["rebuilds_visible_features_from_oracle_records_for_fit"] is False
+    assert result["visible_feature_matrix"]["loaded_from_stage3a_artifact"] is True
     assert result["model_selection_audit"]["validation_ari_used_for_selection"] is False
     assert result["model_selection_audit"]["test_nmi_used_for_selection"] is False
     names = {row["baseline_name"] for row in result["baseline_results"]}
@@ -35,6 +38,7 @@ def test_stage3b0_runs_visible_only_baselines_and_prefers_quotient_on_alias_fixt
     assert primary["row_stochastic"] is True
     assert primary["compressed_claim_allowed"] is False
     assert result["acceptance_audit"]["checks"]["evaluator_metrics_reported_after_fit"] is True
+    assert result["acceptance_audit"]["checks"]["uses_stage3a_frozen_visible_features_for_fit"] is True
 
     kmeans_fixed = _baseline(result, "kmeans_visible", "fixed_oracle_count")
     assert kmeans_fixed["quotient_label_metrics"]["normalized_mutual_info"] >= kmeans_fixed["exact_label_metrics"]["normalized_mutual_info"]
@@ -53,6 +57,8 @@ def test_stage3b0_runs_visible_only_baselines_and_prefers_quotient_on_alias_fixt
         "quotient_metrics.json",
         "model_selection_audit.json",
         "acceptance_audit.json",
+        "feature_schema_match_audit.json",
+        "visible_feature_matrix.json",
         "summary.md",
     ]:
         assert (output / name).exists()
@@ -74,6 +80,22 @@ def test_stage3b0_exact_separable_fixture_reaches_perfect_kmeans_metrics(tmp_pat
     assert kmeans_fixed["exact_label_metrics"]["normalized_mutual_info"] == 1.0
     assert kmeans_fixed["exact_label_metrics"]["adjusted_rand_index"] == 1.0
     assert kmeans_fixed["exact_label_metrics"]["balanced_accuracy_after_label_matching"] == 1.0
+
+
+def test_stage3b0_fit_uses_frozen_s3a_features_not_teacher_record_rebuild(tmp_path: Path) -> None:
+    teacher, s3a, s3a5 = _prepare_artifacts(
+        tmp_path,
+        [
+            ("M0", "M0"),
+            ("M4", "M4"),
+        ],
+    )
+    _poison_teacher_mechanism_definitions(teacher)
+
+    result = run_stage3b0_nonlearned_clustering_baselines(stage3a_dir=s3a, stage3a5_dir=s3a5, output_dir=tmp_path / "S3B0", max_iter=5)
+
+    assert result["decision"] == "stage3b0_baselines_completed"
+    assert result["visible_feature_matrix"]["loaded_from_stage3a_artifact"] is True
 
 
 def test_stage3b0_config_wrapper_runs_from_yaml(tmp_path: Path) -> None:
@@ -135,6 +157,18 @@ def _record(label: str, mechanism_id: str, group: int) -> dict[str, object]:
         "location_id": int(group),
         "probe_indices": [],
     }
+
+
+def _poison_teacher_mechanism_definitions(teacher: Path) -> None:
+    path = teacher / "oracle_mechanisms.json"
+    data = json.loads(path.read_text())
+    for record in data["mechanisms"]:
+        record["mechanism_id"] = "NOT_A_REAL_MECHANISM"
+        record["name"] = "poisoned mechanism definition"
+        record["num_qubits"] = 999
+        record["instruction"] = "not_a_gate"
+        record["parameters"] = {"poisoned": True}
+    path.write_text(json.dumps(data, indent=2) + "\n")
 
 
 def _baseline(result: dict[str, object], baseline_name: str, k_mode: str) -> dict[str, object]:

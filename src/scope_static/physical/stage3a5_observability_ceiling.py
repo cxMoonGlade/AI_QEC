@@ -8,8 +8,9 @@ import numpy as np
 import yaml
 
 from .layers import LAYER3_LEARNER
-from .phyc3b_zx_visible_probe_suite import build_zx_visible_feature_table, deterministic_visible_ceiling_audit
+from .phyc3b_zx_visible_probe_suite import deterministic_visible_ceiling_audit
 from .stage3a_protocol_freeze import DEFAULT_OUTPUT_DIR as DEFAULT_STAGE3A_DIR
+from .stage3a_protocol_freeze import load_stage3a_frozen_visible_features
 
 
 STAGE_NAME = "Stage3A5_observability_alias_ceiling"
@@ -42,18 +43,13 @@ def run_stage3a5_observability_alias_ceiling(
     if not str(teacher):
         raise ValueError("teacher_dir is required either directly or through Stage 3A metrics.json")
 
+    expected, feature_names, feature_matrix = load_stage3a_frozen_visible_features(s3a)
     records = _load_mechanism_records(teacher / "oracle_mechanisms.json")
-    table = build_zx_visible_feature_table(
-        records,
-        shots=int(s3a_config.get("shots", 20_000)),
-        seed=int(s3a_config.get("seed", 0)),
-        robustness_mode=bool(s3a_config.get("robustness_mode", False)),
-        sampling_mode=str(s3a_config.get("sampling_mode", "expected")),
-    )
     labels = [str(record.get("oracle_label", record.get("mechanism_id", ""))) for record in records]
+    if len(labels) != int(expected.shape[0]):
+        raise ValueError(f"Stage 3A frozen feature row count {expected.shape[0]} does not match evaluator label count {len(labels)}")
     class_names = sorted(set(labels), key=_mechanism_sort_key)
-    expected = np.asarray(table.expected_features, dtype=np.float64)
-    feature_match = _feature_schema_matches_s3a(s3a, table.feature_names)
+    feature_match = _feature_schema_matches_s3a(s3a, feature_names)
 
     pairwise = pairwise_visible_distance_matrix(labels, expected, threshold=float(distance_threshold))
     exact_ceiling = deterministic_visible_ceiling_audit(
@@ -82,6 +78,7 @@ def run_stage3a5_observability_alias_ceiling(
     acceptance = stage3a5_acceptance_audit(
         s3a_metrics=s3a_metrics,
         feature_match=feature_match,
+        feature_matrix=feature_matrix,
         exact_ceiling=exact_ceiling,
         quotient_ceiling=quotient_ceiling,
         alias_artifact=alias_artifact,
@@ -97,6 +94,7 @@ def run_stage3a5_observability_alias_ceiling(
         "claim_boundary": {
             "stage3a5_trains_model": False,
             "evaluator_only_labels_used_for_ceiling": True,
+            "uses_stage3a_frozen_visible_features": True,
             "learner_inputs_written": False,
             "exact_label_recovery_claim_allowed": exact_allowed,
             "target_if_exact_not_visible": "quotient_recovery",
@@ -108,6 +106,7 @@ def run_stage3a5_observability_alias_ceiling(
             "distance_threshold": float(distance_threshold),
             "signature_decimals": int(signature_decimals),
         },
+        "visible_feature_matrix": feature_matrix,
         "feature_schema_match_audit": feature_match,
         "pairwise_visible_distance_matrix": pairwise,
         "observability_ceiling": exact_ceiling,
@@ -244,6 +243,7 @@ def stage3a5_acceptance_audit(
     *,
     s3a_metrics: dict[str, object],
     feature_match: dict[str, object],
+    feature_matrix: dict[str, object],
     exact_ceiling: dict[str, object],
     quotient_ceiling: dict[str, object],
     alias_artifact: dict[str, object],
@@ -254,6 +254,7 @@ def stage3a5_acceptance_audit(
     checks = {
         "stage3a_acceptance_passed": bool(dict(s3a_metrics.get("acceptance_audit", {})).get("passed", False)),
         "approved_feature_schema_matches_stage3a": bool(feature_match.get("passed", False)),
+        "uses_stage3a_frozen_visible_features": bool(feature_matrix.get("loaded_from_stage3a_artifact", False)),
         "pairwise_distance_matrix_written": True,
         "oracle_alias_classes_written": True,
         "exact_label_claim_allowed_only_when_no_alias_classes": exact_allowed == (int(alias_artifact.get("alias_class_count", 0)) == 0),
@@ -331,6 +332,7 @@ def _write_outputs(output: Path, result: dict[str, object]) -> None:
         "quotient_metrics.json": result["quotient_metrics"],
         "acceptance_audit.json": result["acceptance_audit"],
         "feature_schema_match_audit.json": result["feature_schema_match_audit"],
+        "visible_feature_matrix.json": result["visible_feature_matrix"],
     }
     for name, payload in artifacts.items():
         (output / name).write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")

@@ -9,10 +9,10 @@ import yaml
 from scope_static.metrics import adjusted_rand_index, normalized_mutual_info
 
 from .layers import LAYER3_LEARNER
-from .phyc3b_zx_visible_probe_suite import build_zx_visible_feature_table
 from .stage3a5_observability_ceiling import DEFAULT_OUTPUT_DIR as DEFAULT_STAGE3A5_DIR
 from .stage3a5_observability_ceiling import _feature_schema_matches_s3a
 from .stage3a_protocol_freeze import DEFAULT_OUTPUT_DIR as DEFAULT_STAGE3A_DIR
+from .stage3a_protocol_freeze import load_stage3a_frozen_visible_features
 
 
 STAGE_NAME = "Stage3B0_nonlearned_clustering_baselines"
@@ -52,31 +52,23 @@ def run_stage3b0_nonlearned_clustering_baselines(
     if not str(teacher):
         raise ValueError("teacher_dir is required either directly or through Stage 3A metrics.json")
 
-    records = _load_mechanism_records(teacher / "oracle_mechanisms.json")
-    table = build_zx_visible_feature_table(
-        records,
-        shots=int(s3a_config.get("shots", 20_000)),
-        seed=int(s3a_config.get("seed", 0)),
-        robustness_mode=bool(s3a_config.get("robustness_mode", False)),
-        sampling_mode=str(s3a_config.get("sampling_mode", "expected")),
-    )
-    x_raw = np.asarray(table.expected_features, dtype=np.float64)
+    x_raw, feature_names, feature_matrix = load_stage3a_frozen_visible_features(s3a)
     x, standardization = _standardize_visible_features(x_raw)
-    labels = [str(record.get("oracle_label", record.get("mechanism_id", ""))) for record in records]
-    class_names = sorted(set(labels), key=_mechanism_sort_key)
     alias = dict(s3a5_metrics.get("oracle_alias_classes", {})) if isinstance(s3a5_metrics.get("oracle_alias_classes", {}), dict) else {}
     label_to_quotient = {str(k): str(v) for k, v in dict(alias.get("label_to_quotient", {})).items()}
-    quotient_labels = [label_to_quotient.get(label, label) for label in labels]
-    quotient_class_names = sorted(set(quotient_labels), key=_mechanism_sort_key)
-    feature_match = _feature_schema_matches_s3a(s3a, table.feature_names)
+    mechanism_scope = dict(s3a_metrics.get("mechanism_scope", {})) if isinstance(s3a_metrics.get("mechanism_scope", {}), dict) else {}
+    class_count = int(mechanism_scope.get("class_count_evaluator_only", max(1, x_raw.shape[0])))
+    quotient_class_count = int(alias.get("quotient_class_count", class_count))
+    feature_match = _feature_schema_matches_s3a(s3a, feature_names)
     k_runs = k_selection_runs(
-        record_count=len(records),
-        class_count=len(class_names),
-        quotient_class_count=len(quotient_class_names),
+        record_count=int(x_raw.shape[0]),
+        class_count=class_count,
+        quotient_class_count=quotient_class_count,
     )
     rng = np.random.default_rng(int(seed))
     baseline_results = []
     assignment_arrays: dict[str, np.ndarray] = {}
+    fitted_rows: list[tuple[dict[str, object], np.ndarray]] = []
     for run in k_runs:
         k = int(run["k"])
         if k <= 0:
@@ -89,13 +81,6 @@ def run_stage3b0_nonlearned_clustering_baselines(
             max_full_cov_features=int(max_full_cov_features),
         ):
             key = f"{baseline_name}__{run['mode']}"
-            metrics = evaluate_cluster_assignments(
-                assignments,
-                exact_labels=labels,
-                exact_class_names=class_names,
-                quotient_labels=quotient_labels,
-                quotient_class_names=quotient_class_names,
-            )
             row = {
                 "baseline_name": baseline_name,
                 "k_mode": run["mode"],
@@ -103,13 +88,29 @@ def run_stage3b0_nonlearned_clustering_baselines(
                 "used_mechanism_labels_for_fit": False,
                 "used_labels_for_model_selection": False,
                 "objective": objective,
-                **metrics,
             }
-            baseline_results.append(row)
+            fitted_rows.append((row, assignments))
             assignment_arrays[_safe_npz_key(key)] = _one_hot(assignments, k=int(max(int(np.max(assignments)) + 1 if assignments.size else 1, k)))
+    records = _load_mechanism_records(teacher / "oracle_mechanisms.json")
+    labels = [str(record.get("oracle_label", record.get("mechanism_id", ""))) for record in records]
+    if len(labels) != int(x_raw.shape[0]):
+        raise ValueError(f"Stage 3A frozen feature row count {x_raw.shape[0]} does not match evaluator label count {len(labels)}")
+    class_names = sorted(set(labels), key=_mechanism_sort_key)
+    quotient_labels = [label_to_quotient.get(label, label) for label in labels]
+    quotient_class_names = sorted(set(quotient_labels), key=_mechanism_sort_key)
+    for row, assignments in fitted_rows:
+        metrics = evaluate_cluster_assignments(
+            assignments,
+            exact_labels=labels,
+            exact_class_names=class_names,
+            quotient_labels=quotient_labels,
+            quotient_class_names=quotient_class_names,
+        )
+        row.update(metrics)
+        baseline_results.append(row)
     control_results = [row for row in baseline_results if row["baseline_name"] in {"global_null_control", "mean_only_control"}]
     primary = _select_primary_baseline(baseline_results)
-    primary_assignments = assignment_arrays[_safe_npz_key(str(primary["assignment_key"]))] if primary else np.zeros((len(records), 1), dtype=np.float64)
+    primary_assignments = assignment_arrays[_safe_npz_key(str(primary["assignment_key"]))] if primary else np.zeros((int(x_raw.shape[0]), 1), dtype=np.float64)
     learned_summary = learned_assignment_summary(primary, primary_assignments)
     evaluator_metrics = {
         "schema": "scope_static_stage3b0_evaluator_only_label_metrics_v1",
@@ -140,6 +141,7 @@ def run_stage3b0_nonlearned_clustering_baselines(
         s3a_metrics=s3a_metrics,
         s3a5_metrics=s3a5_metrics,
         feature_match=feature_match,
+        feature_matrix=feature_matrix,
         baseline_results=baseline_results,
         model_selection=model_selection,
     )
@@ -155,6 +157,8 @@ def run_stage3b0_nonlearned_clustering_baselines(
             "trains_supervised_classifier": False,
             "uses_mechanism_labels_for_fit": False,
             "uses_mechanism_labels_for_model_selection": False,
+            "trains_from_stage3a_frozen_visible_features": True,
+            "rebuilds_visible_features_from_oracle_records_for_fit": False,
             "evaluator_only_metrics_after_fit": True,
             "discovers_cptp_gksl_channels": False,
         },
@@ -167,6 +171,7 @@ def run_stage3b0_nonlearned_clustering_baselines(
             "max_iter": int(max_iter),
             "max_full_cov_features": int(max_full_cov_features),
         },
+        "visible_feature_matrix": feature_matrix,
         "visible_feature_standardization": standardization,
         "feature_schema_match_audit": feature_match,
         "k_selection_protocol": {
@@ -271,6 +276,7 @@ def stage3b0_acceptance_audit(
     s3a_metrics: dict[str, object],
     s3a5_metrics: dict[str, object],
     feature_match: dict[str, object],
+    feature_matrix: dict[str, object],
     baseline_results: list[dict[str, object]],
     model_selection: dict[str, object],
 ) -> dict[str, object]:
@@ -279,6 +285,7 @@ def stage3b0_acceptance_audit(
         "stage3a_acceptance_passed": bool(dict(s3a_metrics.get("acceptance_audit", {})).get("passed", False)),
         "stage3a5_acceptance_passed": bool(dict(s3a5_metrics.get("acceptance_audit", {})).get("passed", False)),
         "approved_feature_schema_matches_stage3a": bool(feature_match.get("passed", False)),
+        "uses_stage3a_frozen_visible_features_for_fit": bool(feature_matrix.get("loaded_from_stage3a_artifact", False)),
         "gaussian_diagonal_baseline_run": "gaussian_mixture_diagonal" in names,
         "gaussian_full_baseline_run": "gaussian_mixture_full" in names,
         "kmeans_baseline_run": "kmeans_visible" in names,
@@ -583,6 +590,7 @@ def _write_outputs(output: Path, result: dict[str, object], primary_assignments:
         "model_selection_audit.json": result["model_selection_audit"],
         "acceptance_audit.json": result["acceptance_audit"],
         "feature_schema_match_audit.json": result["feature_schema_match_audit"],
+        "visible_feature_matrix.json": result["visible_feature_matrix"],
     }
     for name, payload in artifacts.items():
         (output / name).write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")

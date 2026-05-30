@@ -7,10 +7,10 @@ import numpy as np
 import yaml
 
 from .layers import LAYER3_LEARNER
-from .phyc3b_zx_visible_probe_suite import build_zx_visible_feature_table
 from .stage3a5_observability_ceiling import DEFAULT_OUTPUT_DIR as DEFAULT_STAGE3A5_DIR
 from .stage3a5_observability_ceiling import _feature_schema_matches_s3a
 from .stage3a_protocol_freeze import DEFAULT_OUTPUT_DIR as DEFAULT_STAGE3A_DIR
+from .stage3a_protocol_freeze import load_stage3a_frozen_visible_features
 from .stage3b0_baselines import VARIANCE_FLOOR
 from .stage3b0_baselines import _diag_log_prob
 from .stage3b0_baselines import _load_json
@@ -66,31 +66,22 @@ def run_stage3b1_first_discovery_model(
     if not str(teacher):
         raise ValueError("teacher_dir is required either directly or through Stage 3A metrics.json")
 
-    records = _load_mechanism_records(teacher / "oracle_mechanisms.json")
-    table = build_zx_visible_feature_table(
-        records,
-        shots=int(s3a_config.get("shots", 20_000)),
-        seed=int(s3a_config.get("seed", 0)),
-        robustness_mode=bool(s3a_config.get("robustness_mode", False)),
-        sampling_mode=str(s3a_config.get("sampling_mode", "expected")),
-    )
-    x_raw = np.asarray(table.expected_features, dtype=np.float64)
+    x_raw, feature_names, feature_matrix = load_stage3a_frozen_visible_features(s3a)
     x, standardization = _standardize_visible_features_with_values(x_raw)
-    labels = [str(record.get("oracle_label", record.get("mechanism_id", ""))) for record in records]
-    class_names = sorted(set(labels), key=_mechanism_sort_key)
     alias = dict(s3a5_metrics.get("oracle_alias_classes", {})) if isinstance(s3a5_metrics.get("oracle_alias_classes", {}), dict) else {}
     label_to_quotient = {str(k): str(v) for k, v in dict(alias.get("label_to_quotient", {})).items()}
-    quotient_labels = [label_to_quotient.get(label, label) for label in labels]
-    quotient_class_names = sorted(set(quotient_labels), key=_mechanism_sort_key)
-    feature_match = _feature_schema_matches_s3a(s3a, table.feature_names)
+    mechanism_scope = dict(s3a_metrics.get("mechanism_scope", {})) if isinstance(s3a_metrics.get("mechanism_scope", {}), dict) else {}
+    class_count = int(mechanism_scope.get("class_count_evaluator_only", max(1, x_raw.shape[0])))
+    quotient_class_count = int(alias.get("quotient_class_count", class_count))
+    feature_match = _feature_schema_matches_s3a(s3a, feature_names)
     split_manifest = dict(s3a_metrics.get("split_manifest", {})) if isinstance(s3a_metrics.get("split_manifest", {}), dict) else {}
-    context_groups = _context_groups_from_split_manifest(split_manifest, record_count=len(records))
-    all_folds = _valid_folds(split_manifest, record_count=len(records))
+    context_groups = _context_groups_from_split_manifest(split_manifest, record_count=int(x_raw.shape[0]))
+    all_folds = _valid_folds(split_manifest, record_count=int(x_raw.shape[0]))
     folds = _cap_folds(all_folds, max_cv_folds=max_cv_folds)
     k_runs = k_selection_runs(
-        record_count=len(records),
-        class_count=len(class_names),
-        quotient_class_count=len(quotient_class_names),
+        record_count=int(x_raw.shape[0]),
+        class_count=class_count,
+        quotient_class_count=quotient_class_count,
     )
     candidate_results = _evaluate_candidates(
         x,
@@ -124,6 +115,13 @@ def run_stage3b1_first_discovery_model(
         temperature=float(final_temperature),
     )
     hard_assignments = np.argmax(responsibilities, axis=1).astype(np.int64) if responsibilities.size else np.zeros(0, dtype=np.int64)
+    records = _load_mechanism_records(teacher / "oracle_mechanisms.json")
+    labels = [str(record.get("oracle_label", record.get("mechanism_id", ""))) for record in records]
+    if len(labels) != int(x_raw.shape[0]):
+        raise ValueError(f"Stage 3A frozen feature row count {x_raw.shape[0]} does not match evaluator label count {len(labels)}")
+    class_names = sorted(set(labels), key=_mechanism_sort_key)
+    quotient_labels = [label_to_quotient.get(label, label) for label in labels]
+    quotient_class_names = sorted(set(quotient_labels), key=_mechanism_sort_key)
     evaluator_metrics = evaluate_cluster_assignments(
         hard_assignments,
         exact_labels=labels,
@@ -139,7 +137,7 @@ def run_stage3b1_first_discovery_model(
     )
     prototypes = learned_prototypes_artifact(
         final_model,
-        feature_names=table.feature_names,
+        feature_names=feature_names,
         standardization=standardization,
     )
     generation_metrics = prototype_generation_metrics(
@@ -174,6 +172,7 @@ def run_stage3b1_first_discovery_model(
         s3a_metrics=s3a_metrics,
         s3a5_metrics=s3a5_metrics,
         feature_match=feature_match,
+        feature_matrix=feature_matrix,
         selected=selected,
         responsibilities=responsibilities,
         prototypes=prototypes,
@@ -195,6 +194,8 @@ def run_stage3b1_first_discovery_model(
             "trains_supervised_classifier": False,
             "uses_mechanism_labels_for_fit": False,
             "uses_mechanism_labels_for_model_selection": False,
+            "trains_from_stage3a_frozen_visible_features": True,
+            "rebuilds_visible_features_from_oracle_records_for_fit": False,
             "uses_visible_validation_objective_for_model_selection": True,
             "evaluator_only_metrics_after_fit": True,
             "discovers_cptp_gksl_channels": False,
@@ -212,6 +213,7 @@ def run_stage3b1_first_discovery_model(
             "max_cv_folds": None if max_cv_folds is None else int(max_cv_folds),
             "context_balance_penalty": float(context_balance_penalty),
         },
+        "visible_feature_matrix": feature_matrix,
         "visible_feature_standardization": _standardization_summary(standardization),
         "feature_schema_match_audit": feature_match,
         "k_selection_protocol": {
@@ -408,6 +410,7 @@ def stage3b1_acceptance_audit(
     s3a_metrics: dict[str, object],
     s3a5_metrics: dict[str, object],
     feature_match: dict[str, object],
+    feature_matrix: dict[str, object],
     selected: dict[str, object] | None,
     responsibilities: np.ndarray,
     prototypes: dict[str, object],
@@ -421,6 +424,7 @@ def stage3b1_acceptance_audit(
         "stage3a_acceptance_passed": bool(dict(s3a_metrics.get("acceptance_audit", {})).get("passed", False)),
         "stage3a5_acceptance_passed": bool(dict(s3a5_metrics.get("acceptance_audit", {})).get("passed", False)),
         "approved_feature_schema_matches_stage3a": bool(feature_match.get("passed", False)),
+        "uses_stage3a_frozen_visible_features_for_fit": bool(feature_matrix.get("loaded_from_stage3a_artifact", False)),
         "selected_model_exists": selected is not None,
         "selected_model_chosen_by_visible_validation_objective": bool(model_selection.get("validation_visible_nll_used_for_selection", False)),
         "cross_validation_fold_count_positive": bool(evaluated_folds),
@@ -999,6 +1003,7 @@ def _write_outputs(
         "quotient_metrics.json": result["quotient_metrics"],
         "acceptance_audit.json": result["acceptance_audit"],
         "feature_schema_match_audit.json": result["feature_schema_match_audit"],
+        "visible_feature_matrix.json": result["visible_feature_matrix"],
     }
     for name, payload in artifacts.items():
         (output / name).write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")

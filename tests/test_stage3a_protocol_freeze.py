@@ -3,11 +3,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from scope_static.physical.mechanism_catalog import MECHANISM_NAMES
 from scope_static.physical.stage3a_protocol_freeze import (
     forbidden_feature_audit,
+    load_stage3a_frozen_visible_features,
     run_stage3a_dataset_protocol_freeze,
 )
 from scope_static.experiments.run_stage3a_protocol_freeze import run_stage3a_protocol_freeze_from_config
@@ -37,6 +39,8 @@ def test_stage3a_freezes_visible_schema_splits_and_protocol_without_training(tmp
     assert result["assignment_unit"]["j_definition"] == "mechanism_condition_instance"
     assert result["assignment_unit"]["single_shot_j_allowed_first_pass"] is False
     assert result["forbidden_feature_audit"]["passed"] is True
+    assert result["visible_feature_matrix"]["training_matrix_path"] == "visible_features.npy"
+    assert result["visible_feature_matrix"]["contains_evaluator_labels"] is False
     assert result["batch_context_schema"]["primary_protocol"]["mode"] == "multi_context_batch"
     assert result["batch_context_schema"]["single_context_m13_claim_allowed"] is False
     assert result["split_manifest"]["train_validation_test_splits_non_empty"] is True
@@ -52,6 +56,9 @@ def test_stage3a_freezes_visible_schema_splits_and_protocol_without_training(tmp
         "metrics.json",
         "config.yaml",
         "visible_feature_schema.json",
+        "visible_feature_matrix.json",
+        "visible_features.npy",
+        "sampled_visible_features.npy",
         "forbidden_feature_audit.json",
         "split_manifest.json",
         "probe_schedule_manifest.json",
@@ -63,6 +70,11 @@ def test_stage3a_freezes_visible_schema_splits_and_protocol_without_training(tmp
         assert (output / name).exists()
 
     assert not (output / "learned_assignments.npy").exists()
+    frozen, feature_names, manifest = load_stage3a_frozen_visible_features(output)
+    assert frozen.shape == (9, result["visible_feature_schema"]["num_features"])
+    assert len(feature_names) == frozen.shape[1]
+    assert manifest["loaded_from_stage3a_artifact"] is True
+    assert np.allclose(frozen, np.load(output / "visible_features.npy"))
 
 
 def test_stage3a_forbidden_feature_audit_rejects_identity_feature_names() -> None:

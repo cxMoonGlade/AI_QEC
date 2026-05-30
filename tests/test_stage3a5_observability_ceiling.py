@@ -26,6 +26,9 @@ def test_stage3a5_reports_alias_quotient_when_two_labels_share_visible_distribut
     assert alias["exact_label_recovery_claim_allowed"] is False
     assert any(set(row["mechanisms"]) == {"AliasA", "AliasB"} for row in alias["alias_classes"])
     assert result["claim_boundary"]["target_if_exact_not_visible"] == "quotient_recovery"
+    assert result["claim_boundary"]["uses_stage3a_frozen_visible_features"] is True
+    assert result["visible_feature_matrix"]["loaded_from_stage3a_artifact"] is True
+    assert result["acceptance_audit"]["checks"]["uses_stage3a_frozen_visible_features"] is True
     exact = result["evaluator_only_label_metrics"]["exact_label_ceiling"]
     quotient = result["evaluator_only_label_metrics"]["quotient_label_ceiling"]
     assert exact["balanced_accuracy"] < 1.0
@@ -42,6 +45,7 @@ def test_stage3a5_reports_alias_quotient_when_two_labels_share_visible_distribut
         "quotient_metrics.json",
         "acceptance_audit.json",
         "feature_schema_match_audit.json",
+        "visible_feature_matrix.json",
         "config.yaml",
         "summary.md",
     ]:

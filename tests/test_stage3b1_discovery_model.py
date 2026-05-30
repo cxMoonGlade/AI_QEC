@@ -32,6 +32,9 @@ def test_stage3b1_trains_visible_only_prototype_mixture_and_reports_quotient_met
     assert result["decision"] == "stage3b1_first_discovery_model_completed"
     assert result["claim_boundary"]["uses_mechanism_labels_for_fit"] is False
     assert result["claim_boundary"]["uses_mechanism_labels_for_model_selection"] is False
+    assert result["claim_boundary"]["trains_from_stage3a_frozen_visible_features"] is True
+    assert result["claim_boundary"]["rebuilds_visible_features_from_oracle_records_for_fit"] is False
+    assert result["visible_feature_matrix"]["loaded_from_stage3a_artifact"] is True
     assert result["model_selection_audit"]["validation_visible_nll_used_for_selection"] is True
     assert result["model_selection_audit"]["validation_ari_used_for_selection"] is False
     assert result["assignment_hardening_audit"]["uses_mechanism_labels_in_hardening"] is False
@@ -40,6 +43,7 @@ def test_stage3b1_trains_visible_only_prototype_mixture_and_reports_quotient_met
     assert result["learned_assignment_summary"]["row_stochastic"] is True
     assert result["learned_prototypes"]["prototype_count"] == result["learned_assignment_summary"]["selected_k"]
     assert result["acceptance_audit"]["checks"]["selected_model_chosen_by_visible_validation_objective"] is True
+    assert result["acceptance_audit"]["checks"]["uses_stage3a_frozen_visible_features_for_fit"] is True
 
     exact = result["evaluator_only_label_metrics"]["selected_model_exact_metrics"]
     quotient = result["evaluator_only_label_metrics"]["selected_model_quotient_metrics"]
@@ -63,6 +67,8 @@ def test_stage3b1_trains_visible_only_prototype_mixture_and_reports_quotient_met
         "evaluator_only_label_metrics.json",
         "quotient_metrics.json",
         "acceptance_audit.json",
+        "feature_schema_match_audit.json",
+        "visible_feature_matrix.json",
         "summary.md",
     ]:
         assert (output / name).exists()
@@ -84,6 +90,22 @@ def test_stage3b1_exact_separable_fixture_recovers_visible_mechanism_structure(t
     assert exact["normalized_mutual_info"] == 1.0
     assert exact["adjusted_rand_index"] == 1.0
     assert exact["balanced_accuracy_after_label_matching"] == 1.0
+
+
+def test_stage3b1_fit_uses_frozen_s3a_features_not_teacher_record_rebuild(tmp_path: Path) -> None:
+    teacher, s3a, s3a5 = _prepare_artifacts(
+        tmp_path,
+        [
+            ("M0", "M0"),
+            ("M4", "M4"),
+        ],
+    )
+    _poison_teacher_mechanism_definitions(teacher)
+
+    result = run_stage3b1_first_discovery_model(stage3a_dir=s3a, stage3a5_dir=s3a5, output_dir=tmp_path / "S3B1", max_iter=5)
+
+    assert result["decision"] == "stage3b1_first_discovery_model_completed"
+    assert result["visible_feature_matrix"]["loaded_from_stage3a_artifact"] is True
 
 
 def test_stage3b1_config_wrapper_runs_from_yaml(tmp_path: Path) -> None:
@@ -168,3 +190,15 @@ def _record(label: str, mechanism_id: str, group: int) -> dict[str, object]:
         "location_id": int(group),
         "probe_indices": [],
     }
+
+
+def _poison_teacher_mechanism_definitions(teacher: Path) -> None:
+    path = teacher / "oracle_mechanisms.json"
+    data = json.loads(path.read_text())
+    for record in data["mechanisms"]:
+        record["mechanism_id"] = "NOT_A_REAL_MECHANISM"
+        record["name"] = "poisoned mechanism definition"
+        record["num_qubits"] = 999
+        record["instruction"] = "not_a_gate"
+        record["parameters"] = {"poisoned": True}
+    path.write_text(json.dumps(data, indent=2) + "\n")

@@ -190,6 +190,54 @@ complete-positivity representation class, declared channel dimension, Kraus
 trace preservation, readout stochasticity, and parameter validity for every
 enabled mechanism record.
 
+### Full-Circuit g30 Timing Reference
+
+The current full-circuit g30 run shows that the dominant cost is CUDA-Q
+sampling inside the Layer 1 teacher. The teacher artifact records explicit
+wall-clock fields; Stage 3 stage timings below use artifact end-time deltas and
+should be treated as approximate upper bounds.
+
+Instrumented Layer 1 teacher wall clock:
+
+| Participant | Wall clock | Share |
+| --- | ---: | ---: |
+| CUDA-Q sampling | 3501.79s = 58m 21.8s | 83.88% |
+| Observation materialization | 628.58s = 10m 28.6s | 15.06% |
+| Other run overhead | 29.95s | 0.72% |
+| Checkpoint writes | 10.00s | 0.24% |
+| Readout postprocess | 2.98s | 0.07% |
+| Circuit/mechanism assembly | 1.61s | 0.04% |
+| **Teacher total** | **4174.91s = 1h 9m 34.9s** | **100%** |
+
+Teacher run details:
+
+```text
+completed probe circuits: 8640
+resumed/skipped probes:   691
+new sampled probes:       7949
+sampling sec / new probe: 0.4405s
+teacher sec / probe:      0.4832s
+```
+
+Pipeline participant timing:
+
+| Stage | Wall clock / interval |
+| --- | ---: |
+| S2D_PHYS0 preflight | 2.09s |
+| S2D_PHYC1 full-circuit teacher resumed | 4174.91s = 1h 9m 34.9s |
+| S3A protocol freeze | ~51.3s |
+| S3A.5 observability ceiling | ~13.8s |
+| S3B.0 baselines | ~67.7s |
+| S3B.1 discovery model | ~281.3s = 4m 41.3s |
+
+Practical bottleneck order:
+
+```text
+1. CUDA-Q sampling
+2. observation/materialization writeout
+3. S3B.1 candidate/model sweep
+```
+
 ## Function: Audit Teacher Self-Distinguishment
 
 Layer 2 balanced teacher audit:
