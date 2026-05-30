@@ -90,8 +90,8 @@ near-term hardware-style experiments. This order defines the mechanism sets.
 | M10 | `coherent_rxx_ryy_perturbation` | composed `RXX(eps_x)` and `RYY(eps_y)` unitary | parasitic XX/YY coupling |
 | M11 | `spectator_crosstalk_rz_or_zz` | explicit spectator placeholder, currently outside Born-local | spectator crosstalk |
 | M12 | `correlated_two_qubit_relaxation` | 2q non-unital correlated relaxation Kraus channel | correlated relaxation |
-| M13 | `drifted_coherent_overrotation` | location/batch-varying 1q coherent unitary | slow calibration drift |
-| M14 | `operation_dependent_error` | 1q coherent unitary keyed by visible operation axis | operation-context error |
+| M13 | `drifted_coherent_overrotation` | context-varying 1q coherent overrotation on the declared operation axis | slow calibration drift |
+| M14 | `operation_dependent_error` | 1q coherent error generator attached to a visible operation axis; default `operation_axis=rx`, `error_axis=rz` | operation-context error |
 | M15 | `hard_non_pauli_kraus_gate_error` | non-Pauli custom Kraus channel | hard non-Pauli CPTP stress case |
 | M16 | `measurement_context_bias` | context-shaped readout assignment matrix | context-conditioned readout |
 | M17 | `reset_to_1_bias` | reset-to-state Kraus channel | reset/preparation bias |

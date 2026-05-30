@@ -11,6 +11,8 @@ from scope_static.physical.full_circuit_cudaq_teacher import (
     _build_full_circuit_oracle_mechanisms,
     _cudaq_target_looks_gpu,
     _mechanism_channels_by_location,
+    _operation_sites_from_mechanisms,
+    build_full_circuit_mechanism_definition_audit,
     generate_full_circuit_cudaq_teacher_dataset,
 )
 from scope_static.physical.channels import MechanismSpec
@@ -68,6 +70,9 @@ def test_full_circuit_cudaq_teacher_writes_literal_depth_artifact(tmp_path: Path
     assert noise["teacher_model"] == "full_circuit_cudaq"
     assert noise["rzz_implementation"] == "cx_rz_cx"
     assert noise["mechanism_application_convention"] == "post_gate_or_post_reset_channel_at_scheduled_location"
+    definition = json.loads((tmp_path / "teacher" / "mechanism_definition_audit.json").read_text())
+    assert definition["passed"] is True
+    assert result["mechanism_definition_audit_passed"] is True
     cptp = json.loads((tmp_path / "teacher" / "cptp_guardrail_audit.json").read_text())
     assert cptp["passed"] is True
     assert result["cptp_guardrail_passed"] is True
@@ -134,6 +139,42 @@ def test_full_circuit_weighted_mechanism_instance_counts_are_preserved() -> None
     assert repetitions == 4
     assert sampling_contract == "weighted"
     assert counts == {"M0": 4, "M8": 1}
+
+
+def test_m13_m14_operation_sites_and_definition_audit_are_explicit() -> None:
+    mechanisms, repetitions, sampling_contract = _build_full_circuit_oracle_mechanisms(
+        {
+            "num_qubits": 10,
+            "mechanism_set": ["M13", "M14"],
+            "balanced_min_instances_per_mechanism": 6,
+            "probe_set": "base",
+        }
+    )
+    groups: dict[int, list[MechanismSpec]] = {}
+    for spec in mechanisms:
+        groups.setdefault(int(spec.circuit_id), []).append(spec)
+    operation_sites_by_group = {
+        circuit_id: _operation_sites_from_mechanisms(specs)
+        for circuit_id, specs in groups.items()
+    }
+
+    audit = build_full_circuit_mechanism_definition_audit(
+        mechanisms,
+        operation_sites_by_group=operation_sites_by_group,
+    )
+
+    assert repetitions == 6
+    assert sampling_contract == "balanced"
+    assert audit["passed"] is True
+    assert audit["m13_has_observed_drift_span"] is True
+    assert audit["m14_operation_error_axes_distinct"] is True
+    for record in audit["records"]:
+        if record["oracle_label"] in {"M13", "M14"}:
+            assert record["instruction"] == "rx"
+            assert record["operation_axis"] == "rx"
+            assert record["scheduled_operation_site_present"] is True
+        if record["oracle_label"] == "M14":
+            assert record["error_axis"] == "rz"
 
 
 def test_decomposed_rzz_keeps_scheduled_rz_noise_inline() -> None:

@@ -11,6 +11,14 @@ from .mechanism_catalog import READOUT_MECHANISM_IDS
 
 
 Array = np.ndarray
+ROTATION_AXIS_ALIASES = {
+    "x": "rx",
+    "rx": "rx",
+    "y": "ry",
+    "ry": "ry",
+    "z": "rz",
+    "rz": "rz",
+}
 
 
 @dataclass(frozen=True)
@@ -37,6 +45,95 @@ class MechanismSpec:
             "circuit_id": int(self.circuit_id),
             "probe_indices": [int(idx) for idx in self.probe_indices],
         }
+
+
+def canonical_single_qubit_axis(value: object | None, *, default: str = "rx") -> str:
+    raw = default if value is None else value
+    text = str(raw).strip().lower()
+    axis = ROTATION_AXIS_ALIASES.get(text)
+    if axis is None:
+        raise ValueError("single-qubit rotation axis must be one of x/rx, y/ry, or z/rz")
+    return axis
+
+
+def mechanism_operation_axis(spec: MechanismSpec) -> str:
+    params = dict(spec.parameters)
+    default = _instruction_default_axis(spec.instruction)
+    if spec.mechanism_id == "M14":
+        return canonical_single_qubit_axis(
+            params.get("operation_axis", params.get("instruction", params.get("axis", default))),
+            default="rx",
+        )
+    return canonical_single_qubit_axis(
+        params.get("operation_axis", params.get("axis", default)),
+        default="rx",
+    )
+
+
+def mechanism_error_axis(spec: MechanismSpec) -> str:
+    params = dict(spec.parameters)
+    if spec.mechanism_id == "M14":
+        return canonical_single_qubit_axis(params.get("error_axis", params.get("channel_axis")), default="rz")
+    if spec.mechanism_id == "M13":
+        operation_axis = mechanism_operation_axis(spec)
+        requested_axis = canonical_single_qubit_axis(
+            params.get("error_axis", params.get("channel_axis", operation_axis)),
+            default=operation_axis,
+        )
+        if requested_axis != operation_axis:
+            raise ValueError("M13 drifted coherent overrotation requires channel axis to match operation_axis")
+        return operation_axis
+    return mechanism_operation_axis(spec)
+
+
+def _instruction_default_axis(instruction: object | None) -> str:
+    text = str(instruction or "rx").strip().lower()
+    return ROTATION_AXIS_ALIASES.get(text, "rx")
+
+
+def mechanism_definition_contract(spec: MechanismSpec) -> dict[str, object]:
+    params = dict(spec.parameters)
+    if spec.mechanism_id == "M13":
+        operation_axis = mechanism_operation_axis(spec)
+        channel_axis = mechanism_error_axis(spec)
+        return {
+            "mechanism_id": "M13",
+            "formal_name": "drifted_coherent_overrotation",
+            "definition": "context-dependent coherent overrotation attached to the declared operation axis",
+            "operation_axis": operation_axis,
+            "channel_axis": channel_axis,
+            "error_axis": channel_axis,
+            "drift_parameter": "epsilon",
+            "epsilon": float(params.get("epsilon", params.get("epsilon_mean", 0.03))),
+            "epsilon_mean": float(params.get("epsilon_mean", params.get("epsilon", 0.03))),
+            "epsilon_span": float(params.get("epsilon_span", 0.0)),
+            "context_dependent": True,
+            "operation_dependent": False,
+            "single_context_exact_recovery_required": False,
+            "well_defined": True,
+        }
+    if spec.mechanism_id == "M14":
+        operation_axis = mechanism_operation_axis(spec)
+        channel_axis = mechanism_error_axis(spec)
+        return {
+            "mechanism_id": "M14",
+            "formal_name": "operation_dependent_error",
+            "definition": "coherent error generator attached to a visible operation axis",
+            "operation_axis": operation_axis,
+            "channel_axis": channel_axis,
+            "error_axis": channel_axis,
+            "epsilon": float(params.get("epsilon", 0.028)),
+            "context_dependent": False,
+            "operation_dependent": True,
+            "distinct_from_axis_overrotation": bool(channel_axis != operation_axis),
+            "well_defined": bool(channel_axis != operation_axis),
+        }
+    return {
+        "mechanism_id": str(spec.mechanism_id),
+        "formal_name": str(spec.name),
+        "instruction": spec.instruction,
+        "well_defined": True,
+    }
 
 
 def mechanism_channel(spec: MechanismSpec) -> dict[str, object]:
@@ -89,13 +186,13 @@ def mechanism_channel(spec: MechanismSpec) -> dict[str, object]:
     if mech == "M12":
         return {"kind": "kraus", "kraus": correlated_relaxation_kraus(float(params.get("gamma", 0.01)))}
     if mech == "M13":
-        axis = str(params.get("axis", "rx")).lower()
+        axis = mechanism_error_axis(spec)
         angle = float(params.get("epsilon", params.get("epsilon_mean", 0.03)))
-        return {"kind": "unitary", "unitary": _axis_unitary(axis, angle)}
+        return {"kind": "unitary", "unitary": _axis_unitary(axis, angle), "definition_contract": mechanism_definition_contract(spec)}
     if mech == "M14":
-        axis = str(params.get("axis", "rx")).lower()
+        axis = mechanism_error_axis(spec)
         angle = float(params.get("epsilon", 0.028))
-        return {"kind": "unitary", "unitary": _axis_unitary(axis, angle)}
+        return {"kind": "unitary", "unitary": _axis_unitary(axis, angle), "definition_contract": mechanism_definition_contract(spec)}
     if mech == "M15":
         return {"kind": "kraus", "kraus": custom_non_pauli_kraus(float(params.get("eta", 0.02)))}
     if mech == "M17":
@@ -181,7 +278,7 @@ def controlled_phase_error_unitary(theta: float) -> Array:
 
 
 def _axis_unitary(axis: str, theta: float) -> Array:
-    text = str(axis).lower()
+    text = canonical_single_qubit_axis(axis)
     if text == "ry":
         return ry_unitary(float(theta))
     if text == "rz":

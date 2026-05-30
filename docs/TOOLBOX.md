@@ -31,6 +31,10 @@ It is organized as reusable tools rather than a single end-to-end claim.
 | `scope-layer1-prep` | Layer 1: Data Preparation (Prep) | Generate mechanism records, probe schedules, sampled observations, and sampling audits. |
 | `scope-layer2-teacher` | Layer 2: Teacher Self-Distinguishment (Teacher) | Verify that the declared teacher/catalog can self-distinguish generated mechanisms. |
 | `scope-layer3-canonical` | Layer 3: Learner Classification and Noise Generation (Learner) | Select the accepted learner source and report classification, channel-distance, NLL, and MAE quality. |
+| `scope-stage3a-freeze` | Stage 3A: Dataset And Protocol Freeze | Freeze visible schema, split manifest, batch/context protocol, assignment unit, and forbidden-feature audit before discovery training. |
+| `scope-stage3a5-ceiling` | Stage 3A.5: Observability And Alias Ceiling | Compute pairwise visible distances, oracle-visible alias classes, exact-label ceiling, and quotient-label ceiling before discovery training. |
+| `scope-stage3b0-baselines` | Stage 3B.0: Non-Learned Clustering Baselines | Run visible-only k-means/GMM baselines and null controls with evaluator-only exact-label and quotient-label scoring. |
+| `scope-stage3b1-discovery` | Stage 3B.1: First Discovery Model | Train a visible-only prototype-mixture discovery model with learned diagonal covariance and evaluator-only exact/quotient scoring. |
 
 Historical modules and artifact folders still use `PHYC1/PHYC2/PHYC3` names for
 compatibility. Public-facing reports should use Layer 1/2/3 names.
@@ -121,6 +125,15 @@ Layer 3 produces:
 - protocol-validity and leakage audits;
 - channel/readout prototype quality;
 - visible-generation Gaussian NLL, population cross entropy, and MAE.
+
+Stage 3 discovery scaffolding produces:
+
+- Stage 3A protocol-freeze artifacts;
+- Stage 3A.5 observability ceiling and oracle alias classes;
+- Stage 3B.0 non-learned assignment matrices, baseline metrics, controls,
+  quotient metrics, and model-selection leakage audits.
+- Stage 3B.1 learned assignment matrix, visible prototypes, covariance
+  parameters, heldout visible-generation metrics, and label-leakage audits.
 
 ## Current Pre-Release Boundary
 

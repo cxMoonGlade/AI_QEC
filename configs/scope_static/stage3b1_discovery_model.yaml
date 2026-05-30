@@ -1,0 +1,12 @@
+stage3b1_first_discovery_model:
+  name: Stage3B1_first_discovery_model
+  stage3a_dir: outputs/scope_static/PHYC_STAGE3_discovery/S3A_protocol_freeze
+  stage3a5_dir: outputs/scope_static/PHYC_STAGE3_discovery/S3A5_observability_alias_ceiling
+  output_dir: outputs/scope_static/PHYC_STAGE3_discovery/S3B1_first_discovery_model
+  seed: 0
+  max_iter: 15
+  initial_temperature: 1.5
+  final_temperature: 0.75
+  complexity_penalty: 0.01
+  context_balance_penalty: 100000.0
+  max_cv_folds: 5

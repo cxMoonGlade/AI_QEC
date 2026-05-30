@@ -55,6 +55,15 @@ Stage 3 starts from the Layer 3b/3c visible surface:
 - multi-context batches for drifted mechanisms such as M13;
 - raw time-sequence features retained before derived summaries.
 
+M13 is not a single-context mechanism-recovery target. It is a
+context-dependent latent-drift recovery target. Single-context failure is not a
+Stage 3 failure by itself; multi-context recovery is the intended test.
+
+M14 is the paired operation-dependent control target. Its contract separates
+the visible operation axis from the error-generator axis: the first Stage 3
+catalog uses an `rx` operation site with an `rz` coherent error generator, so
+M14 is not another fixed `rx` overrotation.
+
 Allowed learner inputs:
 
 - preparation label;
@@ -93,6 +102,17 @@ Stage 3 should produce:
 - no-leakage and protocol-validity audits;
 - physicality audit references when generated replay uses catalog mechanisms.
 
+Assignment index rule:
+
+- `j` indexes the protocol-declared unit of assignment.
+- For the first Stage 3 pass, `j` should be one mechanism-condition instance or
+  generated probe-batch instance.
+- `k` indexes a learned latent mechanism/prototype.
+- Do not make `j` a single shot in the first pass; single-shot assignment is
+  noisier and less aligned with the current probe-batch feature surface.
+- Each experiment must declare whether `j` means a mechanism-condition,
+  probe-batch, context-window, or another visible instance type before training.
+
 ## Work Packages
 
 ### Stage 3A: Dataset And Protocol Freeze
@@ -105,32 +125,150 @@ Deliverables:
 - probe schedule manifest;
 - batch/context schema;
 - train/validation/test split policy;
-- leakage guardrail audit;
-- deterministic visible ceiling audit.
+- protocol-declared assignment unit for `j`;
+- leakage guardrail audit.
 
 Acceptance:
 
 - no forbidden learner fields;
-- Stage 2 visible ceiling remains valid;
-- multi-context batch protocol is explicit.
+- split policy is fixed before model training;
+- multi-context batch protocol is explicit;
+- assignment unit is declared before model training.
+
+### Stage 3A.5: Observability And Alias Ceiling
+
+Before training discovery models, compute the maximum recoverable quotient from
+the learner-visible surface.
+
+Deliverables:
+
+- pairwise visible-distance matrix between true mechanisms;
+- oracle-visible clustering under the approved feature surface;
+- alias-class map;
+- ceiling ARI/NMI/BA/min-recall against exact labels and quotient labels;
+- report of mechanisms that are theoretically indistinguishable under the
+  current probe surface.
+
+Acceptance:
+
+- exact-label Stage 3 claims are allowed only when the visible ceiling separates
+  the mechanisms;
+- otherwise the target is quotient recovery, not exact mechanism recovery;
+- alias classes are fixed before model training and treated as evaluator-only
+  ceiling information.
 
 ### Stage 3B: Unsupervised Assignment Recovery
 
 Train discovery models without mechanism-label supervision.
 
-Candidate heads:
+K-selection protocol:
 
-- mixture model on visible time-sequence features;
-- prototype clustering with learned covariance;
-- contrastive context-consistency objective;
-- local-inverse representation clustering;
+- fixed-K oracle-count run: evaluator declares `K` only as catalog cardinality,
+  not labels;
+- overcomplete-K run: `K_max > K_true`, with pruning/merge by assignment mass
+  and visible distance;
+- quotient-K run: accepted `K` may be smaller than `K_true` if alias classes
+  exist.
+
+First implementation modes:
+
+- Mode A: `K =` known number of catalog mechanisms;
+- Mode B: `K_max = 2 *` known number of catalog mechanisms, then merge/prune.
+
+Model selection may use:
+
+- validation visible NLL;
+- validation reconstruction/generation loss;
+- assignment entropy and active-prototype regularity;
+- stability across seeds on visible-only criteria.
+
+Model selection may not use:
+
+- validation/test ARI;
+- validation/test NMI;
+- validation/test BA after label matching;
+- validation/test min recall;
+- oracle-label prototype quality.
+
+### Stage 3B.0: Non-Learned Clustering Baselines
+
+Run auditable visible-only baselines before learned discovery models.
+
+Baselines:
+
+- Gaussian mixture with diagonal covariance;
+- Gaussian mixture with full covariance;
+- k-means or prototype baseline on visible feature vectors;
+- global-null and mean-only controls.
+
+Artifacts:
+
+- `baseline_results.json`;
+- `learned_assignments.npy`;
+- `baseline_assignments.npz`;
+- `learned_assignment_summary.json`;
+- `controls.json`;
+- `evaluator_only_label_metrics.json`;
+- `quotient_metrics.json`;
+- `model_selection_audit.json`.
+
+Acceptance:
+
+- baselines use the same frozen visible feature schema and splits;
+- evaluator-only ARI/NMI/BA/min-recall are reported after training;
+- validation/test label metrics are not used for baseline selection;
+- baseline failures identify aliasing, feature weakness, or optimization limits.
+
+### Stage 3B.1: First Discovery Model
+
+Train the first learned discovery model.
+
+Initial model:
+
+- prototype mixture on visible feature vectors;
+- learned covariance;
+- visible-generation or reconstruction loss;
 - quotient-aware assignment hardening.
+
+First implementation:
+
+- diagonal-covariance visible prototype mixture;
+- annealed soft assignment matrix `Pi[j,k]`;
+- context-balanced assignment candidate that enforces one visible instance per
+  latent prototype per context group when the Stage 3A protocol is balanced;
+- K-mode selection by validation visible NLL plus visible-only complexity
+  and context-balance penalties;
+- declared cap on Stage 3A validation folds for the first operational run;
+- declared first-run iteration budget, with seed/fold robustness deferred to
+  Stage 3D;
+- evaluator-only exact-label and quotient-label reports after fitting.
+
+Artifacts:
+
+- `candidate_selection.json`;
+- `learned_assignments.npy`;
+- `learned_prototypes.json`;
+- `learned_covariances.npy`;
+- `model_parameters.npz`;
+- `prototype_generation_metrics.json`;
+- `assignment_hardening_audit.json`;
+- `label_permutation_audit.json`;
+- `model_selection_audit.json`;
+- `evaluator_only_label_metrics.json`;
+- `quotient_metrics.json`.
+
+Later candidates:
+
+- contrastive context-consistency objective for M13/multi-context drift;
+- local-inverse representation clustering.
 
 Acceptance:
 
 - evaluator-only ARI/NMI reported;
-- selected model is not chosen by test labels;
+- selected model is not chosen by validation/test labels;
+- validation visible NLL may be used for model selection;
 - label permutation is handled explicitly;
+- selected `K` follows the declared K-selection protocol;
 - failure reports quotient alias classes instead of forcing exact labels.
 
 ### Stage 3C: Prototype And Generator Learning
@@ -227,10 +365,43 @@ Primary guardrails:
 forbidden feature count = 0
 teacher-self feature count = 0
 oracle matrix feature count = 0
+validation-label model-selection count = 0
 test-label model-selection count = 0
 protocol-valid passed = true
 catalog physicality audit present for catalog-mechanism replay
 ```
+
+## Discovery Artifact Bundle
+
+The first Stage 3 implementation should write one reviewable artifact tree:
+
+```text
+outputs/PHYC_STAGE3_discovery/
+  config.yaml
+  visible_feature_schema.json
+  forbidden_feature_audit.json
+  split_manifest.json
+  probe_schedule_manifest.json
+  observability_ceiling.json
+  oracle_alias_classes.json
+  learned_assignments.npy
+  learned_assignment_summary.json
+  learned_prototypes.json
+  prototype_generation_metrics.json
+  predicted_assignment_metrics.json
+  oracle_assignment_comparator_metrics.json
+  global_null_metrics.json
+  mean_only_baseline_metrics.json
+  evaluator_only_label_metrics.json
+  quotient_metrics.json
+  controls.json
+  seed_stability.json
+  summary.md
+```
+
+Evaluator-only files may contain labels, channels, PTMs, Kraus matrices, and
+oracle prototypes for audit and scoring. Learner-input files must contain only
+approved visible observations and derived visible features.
 
 ## Acceptance Rule
 
@@ -240,6 +411,7 @@ Stage 3 passes only when the accepted discovery model:
 - consumes only the learner-visible observation surface;
 - recovers latent assignments or reports the remaining quotient aliases;
 - generates heldout visible observations better than null baselines;
+- follows the declared assignment-unit and K-selection protocols;
 - passes leakage and protocol audits;
 - is validated under the declared batch/context protocol.
 

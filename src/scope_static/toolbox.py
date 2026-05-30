@@ -16,28 +16,31 @@ def toolbox_manifest() -> dict[str, object]:
         "package": "scope-static",
         "status": "pre-release",
         "claim_boundary": (
-            "Stage 2 validated the physical mechanism catalog and the no-leakage "
-            "visible recovery protocol. Stage 3 now removes direct mechanism-label "
-            "supervision and tests whether SCOPE-Discovery can recover latent "
-            "mechanism structure, assignments, and prototypes from the same "
-            "learner-visible observation surface."
+            "Stage 2 is closed as a no-leakage physical-mechanism catalog "
+            "validation stage: the system can generate controlled noisy QEC "
+            "observations from declared mechanisms, verify teacher/catalog "
+            "separability, and train Layer 3 learners that recover and replay "
+            "learner-visible noisy observation distributions without oracle "
+            "leakage. Stage 3 is the next claim boundary: remove direct "
+            "mechanism-label supervision and test whether latent mechanism "
+            "structure can be inferred from visible observations alone."
         ),
         "program_surface": [
             {
-                "name": "generate_noisy_data",
-                "role": "Generate sampled noisy data from user-enabled catalog unitary/Kraus/readout mechanisms.",
+                "name": "generate_teacher_declared_observations",
+                "role": "Generate teacher-declared noisy QEC observations from a controlled catalog.",
                 "primary_layer": "Layer 1: Data Preparation (Prep)",
                 "config_template": "configs/scope_static/layer1_user_defined_mechanisms.yaml",
             },
             {
                 "name": "learn_and_replay_visible_noise",
-                "role": "Learn from learner-visible observations and score similar generated noisy data.",
+                "role": "Learn from learner-visible observations and score recovery/replay of visible noisy observation distributions.",
                 "primary_layer": "Layer 3: Learner Classification and Noise Generation (Learner)",
                 "metrics": ["channel_distance", "visible_gaussian_nll", "population_ce", "visible_feature_mae"],
             },
             {
-                "name": "discover_mechanism_cause",
-                "role": "Stage 3 +1 object: distinguish the latent mechanism cause without direct mechanism-label supervision.",
+                "name": "discover_latent_mechanism_quotient",
+                "role": "Stage 3 +1 object: infer the latent mechanism quotient without direct mechanism-label supervision.",
                 "roadmap": "docs/STAGE3_ROADMAP.md",
             },
         ],
@@ -70,11 +73,35 @@ def toolbox_manifest() -> dict[str, object]:
                 "role": "Run Layer 3 canonical learner/noise-generation acceptance.",
                 "module": "scope_static.experiments.run_layer3_canonical_acceptance",
             },
+            {
+                "name": "scope-stage3a-freeze",
+                "role": "Freeze the Stage 3A learner-visible dataset and protocol artifacts.",
+                "module": "scope_static.experiments.run_stage3a_protocol_freeze",
+            },
+            {
+                "name": "scope-stage3a5-ceiling",
+                "role": "Compute the Stage 3A.5 visible observability and alias ceiling.",
+                "module": "scope_static.experiments.run_stage3a5_observability_ceiling",
+            },
+            {
+                "name": "scope-stage3b0-baselines",
+                "role": "Run Stage 3B.0 visible-only non-learned clustering baselines.",
+                "module": "scope_static.experiments.run_stage3b0_baselines",
+            },
+            {
+                "name": "scope-stage3b1-discovery",
+                "role": "Train the Stage 3B.1 visible-only prototype-mixture discovery model.",
+                "module": "scope_static.experiments.run_stage3b1_discovery_model",
+            },
         ],
         "primary_outputs": [
             "Layer 1 mechanism records, probe schedules, sampled observations, and sampling audits",
             "Layer 2 teacher self-distinguishment BA/ARI/NMI/min-recall metrics",
             "Layer 3 visible ceiling, learner classification, channel-distance, NLL, and MAE metrics",
+            "Stage 3A visible schema, split manifest, batch/context schema, assignment unit, and forbidden-feature audit",
+            "Stage 3A.5 pairwise visible distances, oracle alias classes, exact-label ceiling, and quotient-label ceiling",
+            "Stage 3B.0 non-learned visible-only baseline assignments, controls, evaluator-only metrics, and model-selection audit",
+            "Stage 3B.1 learned assignment matrix, visible prototypes, covariance parameters, heldout visible-generation metrics, and label-leakage audit",
         ],
     }
 

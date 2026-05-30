@@ -8,6 +8,7 @@ from scope_static.physical.channels import (
     mechanism_channel,
     pauli_stochastic_kraus,
     readout_bias_matrix,
+    rz_unitary,
     rzz_unitary,
 )
 from scope_static.physical.cptp_guardrail import audit_mechanism_physicality, build_cptp_guardrail_audit
@@ -84,6 +85,34 @@ def test_rzz_type_features_are_named_and_rzz_specific() -> None:
     assert rzz_type_feature_vector(rzz).shape == (4,)
     assert np.isfinite(rzz_type_feature_vector(rzz)).all()
     assert np.allclose(rzz_type_feature_vector(pauli), 0.0)
+
+
+def test_m13_m14_contracts_are_mathematically_separated() -> None:
+    m13 = MechanismSpec(
+        "M13",
+        MECHANISM_NAMES["M13"],
+        1,
+        {"operation_axis": "rx", "epsilon": 0.031},
+        instruction="rx",
+        qubits=(0,),
+    )
+    m14 = MechanismSpec(
+        "M14",
+        MECHANISM_NAMES["M14"],
+        1,
+        {"operation_axis": "rx", "error_axis": "rz", "epsilon": 0.028},
+        instruction="rx",
+        qubits=(0,),
+    )
+
+    m13_channel = mechanism_channel(m13)
+    m14_channel = mechanism_channel(m14)
+
+    assert m13_channel["definition_contract"]["context_dependent"] is True
+    assert m14_channel["definition_contract"]["operation_dependent"] is True
+    assert m14_channel["definition_contract"]["distinct_from_axis_overrotation"] is True
+    assert np.allclose(m14_channel["unitary"], rz_unitary(0.028))
+    assert not np.allclose(m13_channel["unitary"], m14_channel["unitary"])
 
 
 def test_implemented_catalog_mechanisms_have_distinct_channel_fingerprints() -> None:

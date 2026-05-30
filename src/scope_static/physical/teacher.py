@@ -8,7 +8,7 @@ from typing import Iterable
 import numpy as np
 
 from ..numerics import NUMERICAL_ZERO
-from .channels import MechanismSpec
+from .channels import MechanismSpec, canonical_single_qubit_axis, mechanism_error_axis, mechanism_operation_axis
 from .mechanism_catalog import (
     IMPLEMENTED_MECHANISM_IDS,
     LEGACY_TO_CURRENT_MECHANISM_IDS,
@@ -135,8 +135,8 @@ def default_teacher_config() -> dict[str, object]:
             "M10": {"epsilon_x": 0.024, "epsilon_y": 0.017},
             "M11": {"epsilon": 0.025},
             "M12": {"gamma": 0.012},
-            "M13": {"axis": "rx", "epsilon_mean": 0.032, "epsilon_span": 0.018},
-            "M14": {"axis": "rx", "epsilon": 0.028},
+            "M13": {"operation_axis": "rx", "epsilon_mean": 0.032, "epsilon_span": 0.018},
+            "M14": {"operation_axis": "rx", "error_axis": "rz", "epsilon": 0.028},
             "M15": {"eta": 0.02},
             "M16": {"p": 0.02},
             "M17": {"p": 0.018},
@@ -184,8 +184,7 @@ def build_default_oracle_mechanisms(config: dict[str, object] | None = None) -> 
         specs.append(MechanismSpec("M11", MECHANISM_NAMES["M11"], 1, dict(params.get("M11", {})), instruction="id", qubits=(single_targets["M11"],)))
     if "M13" in enabled:
         drift = dict(params.get("M13", {}))
-        axis = str(drift.get("axis", "rx")).lower()
-        instruction = "ry" if axis == "ry" else ("rz" if axis == "rz" else "rx")
+        instruction = _operation_instruction_from_params(drift, default="rx")
         for drift_idx, (target, epsilon) in enumerate(zip(_drift_targets(n), _drift_epsilons(drift, len(_drift_targets(n))))):
             local_drift = dict(drift)
             local_drift["epsilon"] = float(epsilon)
@@ -201,7 +200,17 @@ def build_default_oracle_mechanisms(config: dict[str, object] | None = None) -> 
                 )
             )
     if "M14" in enabled:
-        specs.append(MechanismSpec("M14", MECHANISM_NAMES["M14"], 1, dict(params.get("M14", {})), instruction=str(params.get("M14", {}).get("instruction", params.get("M14", {}).get("axis", "rx"))), qubits=(single_targets["M14"],)))
+        m14_params = dict(params.get("M14", {}))
+        specs.append(
+            MechanismSpec(
+                "M14",
+                MECHANISM_NAMES["M14"],
+                1,
+                m14_params,
+                instruction=_operation_instruction_from_params(m14_params, default="rx"),
+                qubits=(single_targets["M14"],),
+            )
+        )
     if "M15" in enabled:
         specs.append(MechanismSpec("M15", MECHANISM_NAMES["M15"], 1, dict(params.get("M15", {})), instruction="id", qubits=(single_targets["M15"],)))
     if "M17" in enabled:
@@ -321,26 +330,26 @@ def _build_single_probe_circuits(config: dict[str, object] | None = None):
         rz_qubits = set(_profile_rz_qubits(n))
         if any(_mechanism_set_contains(cfg, mech) for mech in ("M13", "M14", "M20")):
             mechanism_params = cfg.get("mechanisms", {})
-            m10_params = (
+            m13_params = (
                 dict(mechanism_params.get("M13", {}))
                 if isinstance(mechanism_params, dict) and isinstance(mechanism_params.get("M13", {}), dict)
                 else {}
             )
             if _mechanism_set_contains(cfg, "M13"):
-                axis = str(m10_params.get("axis", "rx")).lower()
+                axis = _operation_instruction_from_params(m13_params, default="rx")
                 if axis == "ry":
                     ry_qubits.update(_drift_targets(n))
                 elif axis == "rz":
                     rz_qubits.update(_drift_targets(n))
                 else:
                     rx_qubits.update(_drift_targets(n))
-            m12_params = (
+            m14_params = (
                 dict(mechanism_params.get("M14", {}))
                 if isinstance(mechanism_params, dict) and isinstance(mechanism_params.get("M14", {}), dict)
                 else {}
             )
             if _mechanism_set_contains(cfg, "M14"):
-                axis = str(m12_params.get("axis", "rx")).lower()
+                axis = _operation_instruction_from_params(m14_params, default="rx")
                 targets = [_single_targets(n)["M14"]]
                 if axis == "ry":
                     ry_qubits.update(targets)
@@ -961,11 +970,13 @@ def build_non_clifford_audit(
             )
         elif spec.mechanism_id in {"M11", "M13", "M14", "M18", "M20", "M21", "M22", "M23", "M27", "M28", "M29", "M30", "M31", "M32", "M33"}:
             angle = float(spec.parameters.get("epsilon", spec.parameters.get("epsilon_mean", 0.03)))
+            gate = mechanism_error_axis(spec) if spec.mechanism_id in {"M13", "M14"} else str(spec.parameters.get("axis", "rz")).lower()
             mechanism_records.append(
                 {
                     "source": "oracle_noise",
                     "mechanism_id": spec.mechanism_id,
-                    "gate": str(spec.parameters.get("axis", "rz")).lower(),
+                    "gate": gate,
+                    "operation_axis": mechanism_operation_axis(spec) if spec.mechanism_id in {"M13", "M14"} else None,
                     "angle": angle,
                     "location_qubits": [int(q) for q in spec.qubits],
                     "is_clifford_angle": _is_clifford_angle(angle),
@@ -1291,11 +1302,9 @@ def _build_balanced_oracle_mechanism_batch(config: dict[str, object], *, circuit
         if mech == "M13":
             epsilons = _drift_epsilons(local_params, _balanced_repetitions(config))
             local_params["epsilon"] = epsilons[int(circuit_id) % len(epsilons)]
-            axis = str(local_params.get("axis", "rx")).lower()
-            instruction = "ry" if axis == "ry" else ("rz" if axis == "rz" else "rx")
+            instruction = _operation_instruction_from_params(local_params, default="rx")
         if mech == "M14":
-            axis = str(local_params.get("axis", local_params.get("instruction", "rx"))).lower()
-            instruction = "ry" if axis == "ry" else ("rz" if axis == "rz" else "rx")
+            instruction = _operation_instruction_from_params(local_params, default="rx")
         specs.append(
             MechanismSpec(
                 mech,
@@ -1374,6 +1383,13 @@ def _single_targets(num_qubits: int) -> dict[str, int]:
         "M34": 14,
     }
     return {key: min(max(0, value), n - 1) for key, value in requested.items()}
+
+
+def _operation_instruction_from_params(parameters: dict[str, object], *, default: str = "rx") -> str:
+    return canonical_single_qubit_axis(
+        parameters.get("operation_axis", parameters.get("instruction", parameters.get("axis", default))),
+        default=default,
+    )
 
 
 def _drift_targets(num_qubits: int) -> list[int]:

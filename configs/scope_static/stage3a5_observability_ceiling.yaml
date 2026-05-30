@@ -1,0 +1,6 @@
+stage3a5_observability_alias_ceiling:
+  name: Stage3A5_observability_alias_ceiling
+  stage3a_dir: outputs/scope_static/PHYC_STAGE3_discovery/S3A_protocol_freeze
+  output_dir: outputs/scope_static/PHYC_STAGE3_discovery/S3A5_observability_alias_ceiling
+  distance_threshold: 1.0e-9
+  signature_decimals: 10

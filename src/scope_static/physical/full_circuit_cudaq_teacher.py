@@ -7,7 +7,14 @@ from typing import Mapping
 
 import numpy as np
 
-from .channels import MechanismSpec, mechanism_channel, readout_bias_matrix
+from .channels import (
+    MechanismSpec,
+    mechanism_channel,
+    mechanism_definition_contract,
+    mechanism_error_axis,
+    mechanism_operation_axis,
+    readout_bias_matrix,
+)
 from .cptp_guardrail import build_cptp_guardrail_audit
 from .mechanism_catalog import PREP_RESET_MECHANISM_IDS, READOUT_MECHANISM_IDS
 from .layers import LAYER1_PREP
@@ -40,6 +47,7 @@ from .teacher import (
     _is_rzz_minimal_sign_probe,
     _is_rzz_tomography_probe,
     _mechanism_set_contains,
+    _operation_instruction_from_params,
     _merged_config,
     _probe_rzz_depth,
     _profile_rx_qubits,
@@ -95,6 +103,10 @@ def generate_full_circuit_cudaq_teacher_dataset(
     specs_by_group: dict[int, list[MechanismSpec]] = {}
     for spec in mechanisms:
         specs_by_group.setdefault(int(spec.circuit_id), []).append(spec)
+    operation_sites_by_group = {
+        circuit_id: _operation_sites_from_mechanisms(specs)
+        for circuit_id, specs in specs_by_group.items()
+    }
 
     apply_full_circuit_depth_metadata(cfg, depth)
     cfg["sampling_contract"] = sampling_contract
@@ -107,6 +119,7 @@ def generate_full_circuit_cudaq_teacher_dataset(
         num_qubits=n,
         circuit_depth=depth,
         target_audit=target_audit,
+        operation_sites_by_group=operation_sites_by_group,
     )
 
     shot_batch_size = _shot_batch_size(cfg, shots=shots, num_qubits=n, circuit_depth=depth)
@@ -158,6 +171,7 @@ def generate_full_circuit_cudaq_teacher_dataset(
     )
     for circuit_id in range(repetitions):
         group_specs = specs_by_group.get(circuit_id, [])
+        operation_sites = operation_sites_by_group.get(circuit_id, {})
         inline_channels, noise_model, has_noise_model_channels = channel_cache.get(circuit_id, ({}, cudaq.NoiseModel(), False))
         sample_noise_model = noise_model if inline_channels or has_noise_model_channels else None
         for local_probe_idx, base_probe in enumerate(base_probe_names):
@@ -202,6 +216,7 @@ def generate_full_circuit_cudaq_teacher_dataset(
                 cfg,
                 probe_name=base_probe,
                 inline_channels=inline_channels,
+                operation_sites=operation_sites,
                 num_qubits=n,
                 circuit_depth=depth,
                 theta=theta,
@@ -392,6 +407,8 @@ def generate_full_circuit_cudaq_teacher_dataset(
         "sampling_audit": str(output / "sampling_audit.json"),
         "sampling_progress": str(output / "sampling_progress.json"),
         "noise_application_audit": str(output / "noise_application_audit.json"),
+        "mechanism_definition_audit": str(output / "mechanism_definition_audit.json"),
+        "mechanism_definition_audit_passed": bool(static_artifacts["mechanism_definition_audit_passed"]),
         "non_clifford_audit": str(output / "non_clifford_audit.json"),
         "cptp_guardrail_passed": bool(static_artifacts["cptp_guardrail_passed"]),
         "cptp_guardrail_audit": str(output / "cptp_guardrail_audit.json"),
@@ -408,6 +425,7 @@ def _build_cudaq_kernel(
     *,
     probe_name: str,
     inline_channels: dict[tuple[str, tuple[int, ...]], list[object]],
+    operation_sites: Mapping[str, object] | None = None,
     num_qubits: int,
     circuit_depth: int,
     theta: float,
@@ -435,7 +453,10 @@ def _build_cudaq_kernel(
     rx_qubits = set(_profile_rx_qubits(int(num_qubits)))
     ry_qubits = set(_profile_ry_qubits(int(num_qubits)))
     rz_qubits = set(_profile_rz_qubits(int(num_qubits)))
-    if any(_mechanism_set_contains(dict(config), mech) for mech in ("M13", "M14", "M20")):
+    rx_qubits.update(_single_qubit_operation_sites(operation_sites, "rx"))
+    ry_qubits.update(_single_qubit_operation_sites(operation_sites, "ry"))
+    rz_qubits.update(_single_qubit_operation_sites(operation_sites, "rz"))
+    if not operation_sites and any(_mechanism_set_contains(dict(config), mech) for mech in ("M13", "M14", "M20")):
         mechanism_params = config.get("mechanisms", {})
         m13_params = (
             dict(mechanism_params.get("M13", {}))
@@ -443,7 +464,7 @@ def _build_cudaq_kernel(
             else {}
         )
         if _mechanism_set_contains(dict(config), "M13"):
-            axis = str(m13_params.get("axis", "rx")).lower()
+            axis = _operation_instruction_from_params(m13_params, default="rx")
             if axis == "ry":
                 ry_qubits.update(_drift_targets(int(num_qubits)))
             elif axis == "rz":
@@ -456,7 +477,7 @@ def _build_cudaq_kernel(
             else {}
         )
         if _mechanism_set_contains(dict(config), "M14"):
-            axis = str(m14_params.get("axis", m14_params.get("instruction", "rx"))).lower()
+            axis = _operation_instruction_from_params(m14_params, default="rx")
             target = _single_targets(int(num_qubits))["M14"]
             if axis == "ry":
                 ry_qubits.add(target)
@@ -493,6 +514,31 @@ def _build_cudaq_kernel(
     _apply_measurement_basis_rotations(schedule, str(probe_name), int(num_qubits))
     schedule.measure(range(int(num_qubits)), range(int(num_qubits)))
     return kernel
+
+
+def _operation_sites_from_mechanisms(mechanisms: list[MechanismSpec]) -> dict[str, list[object]]:
+    sites: dict[str, set[object]] = {"rx": set(), "ry": set(), "rz": set(), "reset": set(), "id": set(), "rzz": set()}
+    for spec in mechanisms:
+        instruction = str(spec.instruction or "id").lower()
+        if instruction in {"rx", "ry", "rz", "reset", "id"} and len(spec.qubits) == 1:
+            sites[instruction].add(int(spec.qubits[0]))
+        elif instruction == "rzz" and len(spec.qubits) == 2:
+            sites[instruction].add((int(spec.qubits[0]), int(spec.qubits[1])))
+    return {key: sorted(value) for key, value in sites.items()}
+
+
+def _single_qubit_operation_sites(operation_sites: Mapping[str, object] | None, instruction: str) -> set[int]:
+    if not operation_sites:
+        return set()
+    raw = operation_sites.get(str(instruction).lower(), [])
+    if not isinstance(raw, (list, tuple, set)):
+        return set()
+    out: set[int] = set()
+    for item in raw:
+        if isinstance(item, (list, tuple, set)):
+            continue
+        out.add(int(item))
+    return out
 
 
 class _CudaqSchedule:
@@ -648,6 +694,85 @@ def _cudaq_channel_from_mechanism(cudaq, spec: MechanismSpec):
     return cudaq.KrausChannel(operators)
 
 
+def build_full_circuit_mechanism_definition_audit(
+    mechanisms: list[MechanismSpec],
+    *,
+    operation_sites_by_group: dict[int, dict[str, list[object]]],
+) -> dict[str, object]:
+    records: list[dict[str, object]] = []
+    errors: list[str] = []
+    m13_epsilons: list[float] = []
+    m14_distinct_flags: list[bool] = []
+    for idx, spec in enumerate(mechanisms):
+        instruction = str(spec.instruction or "id").lower()
+        sites = operation_sites_by_group.get(int(spec.circuit_id), {})
+        scheduled_site_present = _scheduled_site_present(spec, sites)
+        contract = mechanism_definition_contract(spec)
+        record = {
+            "location_id": int(idx),
+            "oracle_label": spec.mechanism_id,
+            "name": spec.name,
+            "instruction": instruction,
+            "qubits": [int(q) for q in spec.qubits],
+            "circuit_id": int(spec.circuit_id),
+            "definition_contract": contract,
+            "scheduled_operation_site_present": bool(scheduled_site_present),
+            "oracle_label_evaluator_only": True,
+        }
+        if spec.mechanism_id in {"M13", "M14"}:
+            operation_axis = mechanism_operation_axis(spec)
+            error_axis = mechanism_error_axis(spec)
+            record["operation_axis_matches_instruction"] = bool(operation_axis == instruction)
+            record["operation_axis"] = operation_axis
+            record["error_axis"] = error_axis
+            if operation_axis != instruction:
+                errors.append(f"{spec.mechanism_id} location {idx} operation_axis={operation_axis} instruction={instruction}")
+        if spec.mechanism_id == "M13":
+            epsilon = float(spec.parameters.get("epsilon", spec.parameters.get("epsilon_mean", 0.03)))
+            m13_epsilons.append(epsilon)
+            if not scheduled_site_present:
+                errors.append(f"M13 location {idx} has no scheduled {instruction} site at qubits={spec.qubits}")
+        if spec.mechanism_id == "M14":
+            distinct = bool(contract.get("distinct_from_axis_overrotation", False))
+            m14_distinct_flags.append(distinct)
+            if not distinct:
+                errors.append(f"M14 location {idx} must declare a distinct error_axis from operation_axis")
+            if not scheduled_site_present:
+                errors.append(f"M14 location {idx} has no scheduled {instruction} site at qubits={spec.qubits}")
+        records.append(record)
+
+    m13_unique_epsilons = sorted({round(float(value), 15) for value in m13_epsilons})
+    m13_has_observed_drift_span = len(m13_unique_epsilons) > 1
+    if len(m13_epsilons) > 1 and not m13_has_observed_drift_span:
+        errors.append("M13 appears more than once but has no observed epsilon drift span")
+    return {
+        "schema": "scope_static_full_circuit_mechanism_definition_audit_v1",
+        "passed": len(errors) == 0,
+        "num_mechanism_records": int(len(mechanisms)),
+        "num_failed_records": int(len(errors)),
+        "errors": errors,
+        "m13_context_dependent": bool(len(m13_epsilons) > 0),
+        "m13_unique_epsilon_count": int(len(m13_unique_epsilons)),
+        "m13_has_observed_drift_span": bool(m13_has_observed_drift_span),
+        "m13_single_context_exact_recovery_required": False,
+        "m14_operation_dependent": bool(len(m14_distinct_flags) > 0),
+        "m14_operation_error_axes_distinct": bool(all(m14_distinct_flags)) if m14_distinct_flags else True,
+        "operation_sites_by_group": operation_sites_by_group,
+        "records": records,
+    }
+
+
+def _scheduled_site_present(spec: MechanismSpec, operation_sites: Mapping[str, object]) -> bool:
+    instruction = str(spec.instruction or "id").lower()
+    raw = operation_sites.get(instruction, [])
+    if instruction in {"rx", "ry", "rz", "reset", "id"} and len(spec.qubits) == 1:
+        return int(spec.qubits[0]) in {int(item) for item in raw if not isinstance(item, (list, tuple, set))}
+    if instruction == "rzz" and len(spec.qubits) == 2:
+        target = (int(spec.qubits[0]), int(spec.qubits[1]))
+        return target in {tuple(int(q) for q in item) for item in raw if isinstance(item, (list, tuple))}
+    return True
+
+
 def _apply_readout_mechanisms(rows: np.ndarray, mechanisms: list[MechanismSpec], *, rng: np.random.Generator) -> None:
     for spec in mechanisms:
         if spec.mechanism_id not in READOUT_MECHANISM_IDS:
@@ -677,6 +802,7 @@ def _write_static_artifacts(
     num_qubits: int,
     circuit_depth: int,
     target_audit: dict[str, object],
+    operation_sites_by_group: dict[int, dict[str, list[object]]],
 ) -> dict[str, object]:
     (output / "oracle_mechanisms.json").write_text(json.dumps({"mechanisms": records}, indent=2, sort_keys=True) + "\n")
     (output / "teacher_config.json").write_text(json.dumps(_json_safe(cfg), indent=2, sort_keys=True) + "\n")
@@ -698,12 +824,25 @@ def _write_static_artifacts(
     noise_audit["mechanism_application_convention"] = FULL_CIRCUIT_MECHANISM_APPLICATION_CONVENTION
     noise_audit["readout_application_convention"] = READOUT_APPLICATION_CONVENTION
     (output / "noise_application_audit.json").write_text(json.dumps(_json_safe(noise_audit), indent=2, sort_keys=True) + "\n")
+    definition_audit = build_full_circuit_mechanism_definition_audit(
+        mechanisms,
+        operation_sites_by_group=operation_sites_by_group,
+    )
+    definition_audit["teacher_model"] = FULL_CIRCUIT_TEACHER_MODEL
+    definition_audit.update(full_circuit_depth_metadata(circuit_depth))
+    definition_audit["mechanism_application_convention"] = FULL_CIRCUIT_MECHANISM_APPLICATION_CONVENTION
+    (output / "mechanism_definition_audit.json").write_text(
+        json.dumps(_json_safe(definition_audit), indent=2, sort_keys=True) + "\n"
+    )
     non_clifford = build_non_clifford_audit(mechanisms, probe_names=probe_names, config=cfg)
     non_clifford["teacher_model"] = FULL_CIRCUIT_TEACHER_MODEL
     (output / "non_clifford_audit.json").write_text(json.dumps(_json_safe(non_clifford), indent=2, sort_keys=True) + "\n")
     cptp_guardrail = build_cptp_guardrail_audit(mechanisms)
     (output / "cptp_guardrail_audit.json").write_text(json.dumps(_json_safe(cptp_guardrail), indent=2, sort_keys=True) + "\n")
-    return {"cptp_guardrail_passed": bool(cptp_guardrail["passed"])}
+    return {
+        "cptp_guardrail_passed": bool(cptp_guardrail["passed"]),
+        "mechanism_definition_audit_passed": bool(definition_audit["passed"]),
+    }
 
 
 def _initial_progress(
@@ -1026,6 +1165,8 @@ def _summary_markdown(summary: dict[str, object]) -> str:
             f"- Probes: `{summary.get('num_probes')}`",
             f"- Shots: `{summary.get('shots')}`",
             f"- Mechanisms: `{summary.get('mechanism_counts')}`",
+            f"- Mechanism definition audit: `{summary.get('mechanism_definition_audit')}`",
+            f"- Mechanism definition audit passed: `{summary.get('mechanism_definition_audit_passed')}`",
             f"- Completed probe circuits: `{sampling.get('completed_probe_circuits')}`",
             f"- Skipped/resumed probe circuits: `{sampling.get('skipped_resumed_probe_circuits')}`",
             f"- Sampling seconds: `{float(sampling.get('sampling_wall_clock_seconds', 0.0)):.6f}`",

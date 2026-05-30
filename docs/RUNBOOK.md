@@ -251,6 +251,94 @@ only after Layer 2, Layer 3b, Layer 3c, and validation gates pass. It rejects
 Layer 2 teacher-self predictions, legacy Layer 2 grouped predictions, and the
 Layer 3a old visible-surface baseline as canonical learner evidence.
 
+## Function: Run Stage 3A Protocol Freeze
+
+```bash
+conda run -n aiqec scope-stage3a-freeze \
+  --config configs/scope_static/stage3a_protocol_freeze.yaml
+```
+
+Equivalent module form:
+
+```bash
+conda run -n aiqec python -m scope_static.experiments.run_stage3a_protocol_freeze \
+  --config configs/scope_static/stage3a_protocol_freeze.yaml
+```
+
+Stage 3A writes `visible_feature_schema.json`, `forbidden_feature_audit.json`,
+`split_manifest.json`, `probe_schedule_manifest.json`, `batch_context_schema.json`,
+and `assignment_unit.json`. It does not train a discovery model and does not
+compute the Stage 3A.5 observability ceiling.
+
+## Function: Run Stage 3A.5 Observability Ceiling
+
+```bash
+conda run -n aiqec scope-stage3a5-ceiling \
+  --config configs/scope_static/stage3a5_observability_ceiling.yaml
+```
+
+Equivalent module form:
+
+```bash
+conda run -n aiqec python -m scope_static.experiments.run_stage3a5_observability_ceiling \
+  --config configs/scope_static/stage3a5_observability_ceiling.yaml
+```
+
+Stage 3A.5 consumes the frozen Stage 3A artifacts and writes
+`observability_ceiling.json`, `oracle_alias_classes.json`,
+`pairwise_visible_distance_matrix.json`, `evaluator_only_label_metrics.json`,
+and `quotient_metrics.json`. It is evaluator-only and does not train a
+discovery model.
+
+## Function: Run Stage 3B.0 Non-Learned Clustering Baselines
+
+```bash
+conda run -n aiqec scope-stage3b0-baselines \
+  --config configs/scope_static/stage3b0_baselines.yaml
+```
+
+Equivalent module form:
+
+```bash
+conda run -n aiqec python -m scope_static.experiments.run_stage3b0_baselines \
+  --config configs/scope_static/stage3b0_baselines.yaml
+```
+
+Stage 3B.0 consumes the frozen Stage 3A and Stage 3A.5 artifacts, then runs
+visible-only k-means, diagonal/full-covariance GMM baselines, global-null
+controls, and mean-only controls. It writes `learned_assignments.npy`,
+`baseline_assignments.npz`, `baseline_results.json`,
+`evaluator_only_label_metrics.json`, `quotient_metrics.json`, `controls.json`,
+and `model_selection_audit.json`. Mechanism and quotient labels are used only
+after fitting for evaluator-only ARI/NMI/BA/min-recall reports.
+
+## Function: Run Stage 3B.1 First Discovery Model
+
+```bash
+conda run -n aiqec scope-stage3b1-discovery \
+  --config configs/scope_static/stage3b1_discovery_model.yaml
+```
+
+Equivalent module form:
+
+```bash
+conda run -n aiqec python -m scope_static.experiments.run_stage3b1_discovery_model \
+  --config configs/scope_static/stage3b1_discovery_model.yaml
+```
+
+Stage 3B.1 consumes Stage 3A and Stage 3A.5, trains a visible-only
+prototype-mixture discovery model with learned diagonal covariance, selects the
+declared K mode using validation visible NLL plus a visible-only complexity
+penalty over a declared capped set of Stage 3A validation folds, uses the
+declared first-run iteration budget from config, and writes
+`learned_assignments.npy`, `learned_prototypes.json`,
+`learned_covariances.npy`, `model_parameters.npz`,
+`prototype_generation_metrics.json`, `evaluator_only_label_metrics.json`,
+`quotient_metrics.json`, `assignment_hardening_audit.json`, and
+`model_selection_audit.json`. Mechanism labels, quotient labels, channels,
+teacher IDs, and oracle prototypes are withheld from fitting and model
+selection.
+
 ## Function: Run Active Physical-Observability Audits
 
 Local Pauli-Lindblad observability:
