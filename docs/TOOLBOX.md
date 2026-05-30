@@ -5,20 +5,23 @@ It is organized as reusable tools rather than a single end-to-end claim.
 
 ## Program Surface: 2+1
 
-1. **Generate noisy data.** Layer 1 prepares sampled noisy data from a declared
-   physical mechanism set. Users control enabled mechanism IDs, parameters,
-   shot count, probe schedule, circuit depth, and instance counts through YAML.
-   The enabled mechanisms use catalog unitary/Kraus/readout definitions.
+1. **Generate teacher-declared noisy QEC observations.** Layer 1 prepares
+   sampled observations from a declared physical mechanism set in a controlled
+   catalog. Users control enabled mechanism IDs, parameters, shot count, probe
+   schedule, circuit depth, and instance counts through YAML. The enabled
+   mechanisms use catalog unitary/Kraus/readout definitions.
 
 2. **Learn and replay visible noise.** Layer 3 learns from the
    learner-visible observation surface and reports whether predicted mechanisms
-   can generate similar visible noisy data, scored by channel distance, NLL,
-   population CE, and MAE.
+   can replay similar visible noisy observation distributions, scored by channel
+   distance, NLL, population CE, and MAE. This is a no-leakage recovery/replay
+   claim under the current protocol, not unsupervised hidden-partition
+   inference.
 
-3. **The +1: discover the mechanism cause.** Stage 3 removes direct
-   mechanism-label supervision and asks whether SCOPE-Discovery can recover the
-   latent mechanism structure, assignments, and prototypes that caused the
-   noisy observations.
+3. **The +1: discover the latent mechanism quotient.** Stage 3 removes direct
+   mechanism-label supervision and asks whether SCOPE-Discovery can learn the
+   latent mechanism structure, assignments, prototypes, and observational alias
+   classes from visible observations alone.
 
 ## Tool Layers
 
@@ -121,10 +124,13 @@ Layer 3 produces:
 
 ## Current Pre-Release Boundary
 
-Stage 2 validated the physical mechanism catalog and the no-leakage visible
-recovery protocol. Stage 3 now removes direct mechanism-label supervision and
-tests whether SCOPE-Discovery can recover latent mechanism structure,
-assignments, and prototypes from the same learner-visible observation surface.
+Stage 2 is closed as a no-leakage physical-mechanism catalog validation stage:
+the system can generate controlled noisy QEC observations from declared
+mechanisms, verify teacher/catalog separability, and train Layer 3 learners
+that recover and replay learner-visible noisy observation distributions without
+oracle leakage. Stage 3 is the next claim boundary: remove direct
+mechanism-label supervision and test whether latent mechanism structure can be
+inferred from visible observations alone.
 
 The toolbox does not yet claim real-hardware ground-truth mechanism recovery,
 arbitrary CPTP/GKSL channel learning by construction, complete SCOPE-Twin

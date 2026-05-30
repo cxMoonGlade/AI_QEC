@@ -51,10 +51,10 @@ PHYC3-Born-local:
 
 Historically, Stage 3 was blocked on PHYC2-Born-local and the corresponding
 PHYC3-Born-local quality audit. ADR 0005 superseded that gate. The current
-pre-release boundary is: Stage 2 validated the physical mechanism catalog and
-the no-leakage visible recovery protocol; Stage 3 removes direct
-mechanism-label supervision and tests SCOPE-Discovery on the same
-learner-visible observation surface.
+pre-release boundary is: Stage 2 is closed as a controlled-catalog/no-leakage
+recovery validation stage; Stage 3 removes direct mechanism-label supervision
+and tests whether latent mechanism structure can be inferred from visible
+observations alone.
 
 ## Consequences
 

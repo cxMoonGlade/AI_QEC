@@ -33,7 +33,9 @@ This repository is currently centered on the SCOPE family of QEC noise-learning 
 - **Layer 3: Learner Classification and Noise Generation (Learner)**: consumes learner-visible observations to classify mechanisms and score generated noise/error quality with channel-distance, NLL, and MAE diagnostics. It must not consume Layer 2 teacher-self predictions or hidden/oracle feature inputs. Legacy alias: `PHYC3`.
 - **Layer 3b Z/X visible repair**: the strict Y-free, Z/X-only visible probe surface that raises the deterministic visible ceiling before learner-head claims.
 - **Layer 3c distributional Gaussian head**: the accepted multi-context learner head on Layer 3b visible features; it recovers drifted M13 only under a valid multi-context protocol.
-- **2+1 public program surface**: the pre-release toolbox has two supported capabilities plus one active research object: generate noisy data from user-enabled mechanisms; learn from learner-visible observations and generate similar reproducible noisy data; and, as the "+1", distinguish the latent mechanism cause through Stage 3 discovery.
+- **2+1 public program surface**: the pre-release toolbox has two supported capabilities plus one active research object: generate teacher-declared noisy QEC observations from a controlled physical-mechanism catalog; learn from learner-visible observations and replay similar visible noisy observation distributions; and, as the "+1", discover the latent mechanism quotient through Stage 3 discovery.
+- **Stage 3 discovery**: learning a latent mechanism quotient from observations, not predicting a provided mechanism label. The learner receives only visible noisy observations and approved visible features; evaluator-only labels, channels, PTMs, Kraus matrices, teacher IDs, and oracle prototypes are withheld from the learner path.
+- **Observational alias class**: a quotient class for mechanisms that induce indistinguishable or near-indistinguishable visible distributions. If `p(y | m_a) ~= p(y | m_b)` on the declared visible surface, the correct discovery output is `m_a ~_obs m_b`, not an arbitrary forced split.
 - **Physicality boundary**: Layer 1 mechanism definitions are implemented as unitary channels, Kraus channels, or classical readout assignment matrices. Enabling a mechanism ID selects that catalog definition. The current learner does not yet learn an arbitrary CPTP/GKSL channel family by construction.
 - **CPTP guardrail audit**: the Layer 1 artifact `cptp_guardrail_audit.json`; it checks complete-positivity representation class, channel dimension, unitary unitarity, Kraus trace preservation, readout stochasticity, and parameter validity for every enabled mechanism record.
 - **separability_v2**: the engineered local-observable sampled-response stress teacher. It is useful for separability and leakage-control evidence, but it is not a Born-rule physical baseline.
@@ -51,12 +53,14 @@ identifiable at the same time. CPTP/GKSL parameterization is only one constraint
 mechanism, not the claim by itself.
 
 The current implemented evidence package studies sample efficiency, compression,
-quotient-aware recovery, and catalog-based physical-mechanism data generation.
+quotient-aware recovery, and controlled-catalog physical-mechanism observations.
 Layer 1 physical mechanisms are implemented as unitary/Kraus/readout
 definitions, but the learner does not yet learn an arbitrary CPTP/GKSL channel
-family by construction. The package does not claim Born-rule likelihood,
-context-conditioned amortization, OOD transfer, temporal drift tracking, or a
-complete solution to the six-axis physical generation problem.
+family by construction. The package does not claim unsupervised latent
+mechanism discovery, real-hardware ground-truth mechanism recovery, Born-rule
+likelihood, context-conditioned amortization, OOD transfer, temporal drift
+tracking, decoder utility, or a complete solution to the six-axis physical
+generation problem.
 
 Stage 2A static discovery is implemented as a synthetic-first identifiability
 path. It may claim latent assignment recovery only when synthetic teacher runs
@@ -64,10 +68,13 @@ report permutation-invariant discovery metrics such as ARI/NMI and heldout NLL
 close to matched known-orbit oracles. Google hardware datasets are external
 empirical validation data, not oracle hidden-partition teachers.
 
-Stage 2 validated the physical mechanism catalog and the no-leakage visible
-recovery protocol. Stage 3 now removes direct mechanism-label supervision and
-tests whether SCOPE-Discovery can recover latent mechanism structure,
-assignments, and prototypes from the same learner-visible observation surface.
-The Layer 1/2/3 physical stack remains the pre-release validation surface for
-data preparation, teacher/catalog self-distinguishment, and no-leakage learner
-classification/noise-generation quality.
+Stage 2 is closed as a no-leakage physical-mechanism catalog validation stage:
+the system can generate controlled noisy QEC observations from declared
+mechanisms, verify teacher/catalog separability, and train Layer 3 learners
+that recover and replay learner-visible noisy observation distributions without
+oracle leakage. Stage 3 is the next claim boundary: remove direct
+mechanism-label supervision and test whether latent mechanism structure can be
+inferred from visible observations alone. The Layer 1/2/3 physical stack remains
+the pre-release validation surface for data preparation, teacher/catalog
+self-distinguishment, and no-leakage learner classification/visible-generation
+quality.

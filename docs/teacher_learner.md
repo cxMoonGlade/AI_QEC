@@ -140,10 +140,13 @@ itself. The current accepted `separability_v2` evidence is explicitly
 classified as an engineered separability stress result, not a Born-local
 physical baseline.
 
-Stage 2 validated the physical mechanism catalog and the no-leakage visible
-recovery protocol. Stage 3 now removes direct mechanism-label supervision and
-tests whether SCOPE-Discovery can recover latent mechanism structure,
-assignments, and prototypes from the same learner-visible observation surface.
+Stage 2 is closed as a no-leakage physical-mechanism catalog validation stage:
+the system can generate controlled noisy QEC observations from declared
+mechanisms, verify teacher/catalog separability, and train Layer 3 learners
+that recover and replay learner-visible noisy observation distributions without
+oracle leakage. Stage 3 is the next claim boundary: remove direct
+mechanism-label supervision and test whether latent mechanism structure can be
+inferred from visible observations alone.
 
 Rule: hidden or oracle-only data may appear in evaluator artifacts, not in
 learner paths. If recovery succeeds without leakage, the declared visible

@@ -5,8 +5,9 @@ claimed.
 
 ## Current Implementation
 
-Layer 1 generates noisy data from the implemented physical mechanism catalog.
-Each enabled mechanism maps to one of three representations:
+Layer 1 generates teacher-declared noisy QEC observations from the implemented
+physical mechanism catalog. Each enabled mechanism maps to one of three
+representations:
 
 - **unitary channel**: coherent control and coupling errors such as RX, RZ,
   RZZ, RXX/RYY, and mixed two-qubit rotations;
@@ -24,12 +25,12 @@ mechanism implementation.
 
 Valid:
 
-- Layer 1 can generate noisy data from implemented unitary/Kraus/readout
-  mechanism definitions.
+- Layer 1 can generate teacher-declared noisy QEC observations from implemented
+  unitary/Kraus/readout mechanism definitions.
 - When Layer 3 predicts a catalog mechanism and reuses its catalog channel, the
   generated channel-level replay inherits the catalog mechanism definition.
-- Layer 3 can also generate and score visible empirical noise distributions
-  from learner-visible observations.
+- Layer 3 can also replay and score visible empirical noise distributions from
+  learner-visible observations.
 
 Not claimed yet:
 

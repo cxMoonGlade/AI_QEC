@@ -35,11 +35,13 @@ mechanism IDs as features, or physical-family labels as features.
 The pre-release toolbox should be read as two supported capabilities plus one
 active research object:
 
-1. Layer 1 generates noisy data from user-enabled physical mechanisms.
-2. Layer 3 learns from learner-visible observations and generates similar
-   reproducible visible noisy data.
-3. Stage 3 asks which latent mechanism caused the noise, without direct
-   mechanism-label supervision.
+1. Layer 1 generates teacher-declared noisy QEC observations from a controlled
+   physical-mechanism catalog.
+2. Layer 3 learns from learner-visible observations and replays similar
+   reproducible visible noisy observation distributions under no-leakage
+   controls.
+3. Stage 3 asks whether the latent mechanism quotient can be inferred from
+   visible observations alone, without direct mechanism-label supervision.
 
 ## Physicality Boundary
 
@@ -123,10 +125,13 @@ The oracle comparator is evaluator-only and is not used as a learner input.
 
 ## Stage Boundary
 
-Stage 2 validated the physical mechanism catalog and the no-leakage visible
-recovery protocol. Stage 3 now removes direct mechanism-label supervision and
-tests whether SCOPE-Discovery can recover latent mechanism structure,
-assignments, and prototypes from the same learner-visible observation surface.
+Stage 2 is closed as a no-leakage physical-mechanism catalog validation stage:
+the system can generate controlled noisy QEC observations from declared
+mechanisms, verify teacher/catalog separability, and train Layer 3 learners
+that recover and replay learner-visible noisy observation distributions without
+oracle leakage. Stage 3 is the next claim boundary: remove direct
+mechanism-label supervision and test whether latent mechanism structure can be
+inferred from visible observations alone.
 
 See `docs/STAGE2_ROADMAP.md` for the closed Stage 2 record and
 `docs/STAGE3_ROADMAP.md` for the active discovery roadmap.
@@ -135,14 +140,16 @@ See `docs/STAGE2_ROADMAP.md` for the closed Stage 2 record and
 
 Valid pre-release claims:
 
-- the implemented M0-M34 physical mechanism catalog can generate layered
-  physical-oracle artifacts from unitary/Kraus/readout definitions;
+- the implemented M0-M34 physical mechanism catalog can generate
+  teacher-declared noisy QEC observations and layered physical-oracle artifacts
+  from unitary/Kraus/readout definitions;
 - the Layer 2 teacher self-distinguishment gate can verify catalog
   distinguishability;
-- the Layer 3 learner can recover mechanisms from a strict no-leakage Z/X
-  visible observation surface under the accepted multi-context protocol;
-- the accepted Layer 3 learner can generate/scored visible error distributions
-  with NLL and MAE close to the oracle comparator on the current artifact.
+- the Layer 3 learner can recover/replay visible noisy observation
+  distributions from a strict no-leakage Z/X visible observation surface under
+  the accepted multi-context protocol;
+- the accepted Layer 3 learner can score visible-generation quality with NLL
+  and MAE close to the oracle comparator on the current artifact.
 
 Not claimed yet:
 
@@ -152,4 +159,4 @@ Not claimed yet:
 - decoder utility, drift prediction, or cross-context generalization as
   completed axes;
 - Stage 3 unsupervised latent discovery success before its own ARI/NMI,
-  prototype, and heldout-generation audits run.
+  quotient/alias-class, prototype, and heldout-generation audits run.

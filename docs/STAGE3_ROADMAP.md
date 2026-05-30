@@ -1,13 +1,18 @@
 # Stage 3 Roadmap: Mechanism-Structure Discovery
 
-Stage 3 tests whether SCOPE-Discovery can recover latent mechanism structure,
-assignments, and prototypes from learner-visible observations without direct
-mechanism-label supervision.
+Stage 3 tests whether SCOPE-Discovery can learn a latent mechanism quotient
+from learner-visible observations without direct mechanism-label supervision.
+Discovery means learning assignments, prototypes, and observational alias
+classes from visible data, not predicting a mechanism label that was provided to
+the learner.
 
-Stage 2 validated the physical mechanism catalog and the no-leakage visible
-recovery protocol. Stage 3 now removes direct mechanism-label supervision and
-tests whether SCOPE-Discovery can recover latent mechanism structure,
-assignments, and prototypes from the same learner-visible observation surface.
+Stage 2 is closed as a no-leakage physical-mechanism catalog validation stage:
+the system can generate controlled noisy QEC observations from declared
+mechanisms, verify teacher/catalog separability, and train Layer 3 learners
+that recover and replay learner-visible noisy observation distributions without
+oracle leakage. Stage 3 is the next claim boundary: remove direct
+mechanism-label supervision and test whether latent mechanism structure can be
+inferred from visible observations alone.
 
 ## Core Question
 
@@ -15,14 +20,24 @@ assignments, and prototypes from the same learner-visible observation surface.
 Can learner-visible probe observations recover the mechanism structure itself?
 ```
 
-The Stage 3 learner should infer latent assignments and prototypes. Mechanism
-IDs, physical-family labels, exact channels, exact PTMs, and teacher-self
-features are evaluator-only.
+The Stage 3 learner should infer latent assignments and visible prototypes.
+Mechanism IDs, physical-family labels, exact channels, exact PTMs, Kraus
+matrices, teacher IDs, teacher-self features, and oracle prototypes are
+evaluator-only.
 
-Operationally, Stage 3 is the "+1" object above the toolbox: Layer 1 can
-generate noisy data, Layer 3 can learn/replay visible noisy data, and Stage 3
-must distinguish what latent mechanism caused that noise without direct
-mechanism-label supervision.
+Operationally, Stage 3 is the "+1" object above the toolbox: Layer 1 generates
+teacher-declared noisy QEC observations from a controlled catalog, Layer 3
+learns/replays visible noisy observation distributions under no-leakage
+guardrails, and Stage 3 must infer the latent mechanism quotient from visible
+observations without direct mechanism-label supervision.
+
+If two mechanisms induce the same visible distribution, exact hidden-label
+recovery should not be forced. The correct discovery output is an observational
+quotient class:
+
+```text
+m_a ~_obs m_b  <=>  p(y | m_a) ~= p(y | m_b)
+```
 
 Physicality boundary: Stage 3 discovery may reuse catalog unitary/Kraus/readout
 mechanism definitions when replaying predicted catalog mechanisms. It should
@@ -67,13 +82,15 @@ Forbidden learner inputs:
 
 Stage 3 should produce:
 
-- latent assignment matrix `S[j, k]` or `Pi[j, k]`;
-- learned visible prototypes;
-- cluster/quotient alias classes when exact labels are not observable;
+- learned assignment matrix `S[j, k]` or `Pi[j, k]`;
+- learned visible prototypes / cluster representatives;
+- quotient or alias classes for observationally indistinguishable mechanisms;
 - heldout visible-generation model;
 - evaluator-only ARI/NMI/BA/min-recall reports;
 - prototype quality metrics;
-- no-leakage and protocol-validity audits.
+- leakage audit showing labels/channels/oracle features were not used by the
+  learner;
+- no-leakage and protocol-validity audits;
 - physicality audit references when generated replay uses catalog mechanisms.
 
 ## Work Packages
@@ -136,14 +153,18 @@ Acceptance:
   comparators separately;
 - oracle comparators remain evaluator-only.
 
-### Stage 3D: Robustness And Ablations
+### Stage 3D: Quotient Evaluation And Robustness
 
-Prove the result is not accidental.
+Evaluate quotient recovery with evaluator-only labels and prove the result is
+not accidental.
 
 Required controls:
 
-- label-shuffled control;
+- label-permutation control;
 - context-shuffled control;
+- feature-scramble control;
+- alias stress test;
+- family-holdout control;
 - mean-only ablation;
 - covariance-only ablation;
 - single-context versus multi-context M13 protocol;
@@ -154,6 +175,7 @@ Acceptance:
 
 - accepted result survives seed/fold changes;
 - M13 is only expected to be fully recoverable in multi-context mode;
+- observational aliases are reported as quotient classes, not forced labels;
 - failures identify observability, optimization, or protocol limits.
 
 ### Stage 3E: Scale And External Validation
@@ -164,11 +186,15 @@ Targets:
 
 - larger allM artifacts;
 - additional circuit depths and supports;
-- Google proxy validation;
+- Google/surface-code proxy validation;
 - decoder-facing utility tests;
 - cross-context transfer audits.
 
-These are not required for the first Stage 3 discovery pass.
+These are not required for the first Stage 3 discovery pass. Google/surface-code
+datasets contain real measurement-derived detection events, observable flips,
+Stim circuits, noisy SI1000 circuits, metadata, and decoder priors/pathways, but
+they do not by themselves provide ground-truth physical mechanism labels for
+Stage 3 discovery.
 
 ## Metrics
 

@@ -16,11 +16,12 @@ vector.
 
 The public program has a 2+1 surface:
 
-1. generate noisy data from a user-defined physical mechanism set;
-2. learn from the learner-visible observation surface and generate similar
-   reproducible noisy data;
-3. the "+1" research object: distinguish the latent mechanism cause through
-   Stage 3 mechanism-structure discovery.
+1. generate teacher-declared noisy QEC observations from a controlled physical
+   mechanism catalog;
+2. learn from the learner-visible observation surface and replay similar
+   reproducible visible noisy observation distributions;
+3. the "+1" research object: infer the latent mechanism quotient through Stage
+   3 mechanism-structure discovery.
 
 The architecture has four implementation surfaces:
 
@@ -30,10 +31,13 @@ The architecture has four implementation surfaces:
 4. Stage 3 latent mechanism-structure discovery on the same learner-visible
    surface.
 
-Stage 2 validated the physical mechanism catalog and the no-leakage visible
-recovery protocol. Stage 3 now removes direct mechanism-label supervision and
-tests whether SCOPE-Discovery can recover latent mechanism structure,
-assignments, and prototypes from the same learner-visible observation surface.
+Stage 2 is closed as a no-leakage physical-mechanism catalog validation stage:
+the system can generate controlled noisy QEC observations from declared
+mechanisms, verify teacher/catalog separability, and train Layer 3 learners
+that recover and replay learner-visible noisy observation distributions without
+oracle leakage. Stage 3 is the next claim boundary: remove direct
+mechanism-label supervision and test whether latent mechanism structure can be
+inferred from visible observations alone.
 
 Physicality boundary: Layer 1 mechanisms are catalog definitions implemented as
 unitary channels, Kraus channels, or classical readout assignment matrices. The
@@ -238,9 +242,10 @@ Accepted Layer 3 quality reports include classification metrics, incompatible
 prediction counts, channel/readout prototype distances, visible Gaussian NLL,
 population cross entropy, and visible-feature MAE.
 
-Layer 3 is the accepted supervised/no-leakage learner surface for generating
-similar visible noisy data. Stage 3 removes direct mechanism-label supervision
-and turns the same surface into a mechanism-cause discovery problem.
+Layer 3 is the accepted supervised/no-leakage learner surface for replaying
+similar visible noisy observation distributions. Stage 3 removes direct
+mechanism-label supervision and turns the same surface into a latent mechanism
+quotient discovery problem.
 
 ## Stage 3 Discovery Surface
 
@@ -270,6 +275,14 @@ Forbidden learner inputs:
 Evaluator-only labels may be used for ARI/NMI, quotient-class reports, and
 post-training audits.
 
+Exact hidden-label recovery should not be forced when two mechanisms induce the
+same visible distribution. In that case, the correct Stage 3 output is an
+observational alias class:
+
+```text
+m_a ~_obs m_b  <=>  p(y | m_a) ~= p(y | m_b)
+```
+
 ## Google Adapter
 
 The Google Set1 path is read-only external validation. It supports predictive
@@ -297,8 +310,8 @@ Implemented claims:
 - fixed-context DEM/Bernoulli likelihood experiments;
 - known-orbit, discovery, and local-inverse comparisons inside that family;
 - synthetic oracle ARI/NMI when hidden labels are evaluator-only;
-- Layer 1 noisy-data generation from catalog unitary/Kraus/readout mechanism
-  definitions;
+- Layer 1 teacher-declared noisy QEC observation generation from catalog
+  unitary/Kraus/readout mechanism definitions;
 - physical-mechanism catalog and visible-recovery validation on synthetic
   teachers;
 - Google predictive validation with proxy labels only when explicitly labelled.

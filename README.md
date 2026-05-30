@@ -9,9 +9,10 @@ be faithful as a generator, interpretable, useful to decoders, transferable
 across contexts, predictive under drift, and identifiable. CPTP/GKSL structure
 is one constraint mechanism, not the claim by itself.
 
-Physicality boundary: Layer 1 generates noisy data from implemented
-unitary/Kraus/readout mechanism definitions. The current learner recovers
-mechanisms and visible noisy behavior; it does not yet learn an arbitrary
+Physicality boundary: Layer 1 generates teacher-declared noisy QEC
+observations from implemented catalog unitary/Kraus/readout mechanism
+definitions. The current learner recovers and replays visible noisy observation
+distributions under the declared protocol; it does not yet learn an arbitrary
 CPTP/GKSL channel family by construction. See `docs/PHYSICALITY.md`.
 
 ## What It Can Do: 2+1 Surface
@@ -19,21 +20,25 @@ CPTP/GKSL channel family by construction. See `docs/PHYSICALITY.md`.
 `scope-static` exposes two toolbox capabilities plus one active discovery
 object.
 
-1. Generate noisy data from user-defined physical mechanisms.
+1. Generate teacher-declared noisy QEC observations.
    Users choose enabled mechanism IDs, mechanism parameters, shot count, probe
    schedule, circuit depth, and mechanism instance counts. Layer 1 writes
-   sampled observations and the manifests needed to reproduce them.
+   sampled observations and the manifests needed to reproduce them from the
+   controlled mechanism catalog.
 
-2. Learn from the learner-visible surface and generate similar reproducible
-   noisy data.
-   Layer 3 consumes only declared visible probe observations, predicts
-   mechanism structure under no-leakage guardrails, and scores generated visible
-   noise with channel-distance, NLL, CE, and MAE diagnostics.
+2. Learn from the learner-visible surface and replay similar reproducible
+   visible noisy observations.
+   Layer 3 consumes only declared visible probe observations and approved
+   visible features, then scores recovery/replay with channel-distance, NLL, CE,
+   and MAE diagnostics. This proves that the visible surface contains enough
+   signal for no-leakage recovery/replay under the current protocol; it does not
+   prove unsupervised hidden-partition inference.
 
-3. The "+1": distinguish which mechanism caused the noise.
+3. The "+1": discover the latent mechanism quotient.
    This is the Stage 3 research object: remove direct mechanism-label
    supervision and test whether SCOPE-Discovery can recover latent mechanism
-   structure, assignments, and prototypes from learner-visible observations.
+   structure, assignments, prototypes, and observational alias classes from
+   learner-visible observations alone.
 
 The fixed DEM/Bernoulli object remains:
 
@@ -51,10 +56,13 @@ Layer 2: Teacher Self-Distinguishment (Teacher)
 Layer 3: Learner Classification and Noise Generation (Learner)
 ```
 
-Stage 2 validated the physical mechanism catalog and the no-leakage visible
-recovery protocol. Stage 3 now removes direct mechanism-label supervision and
-tests whether SCOPE-Discovery can recover latent mechanism structure,
-assignments, and prototypes from the same learner-visible observation surface.
+Stage 2 is closed as a no-leakage physical-mechanism catalog validation stage:
+the system can generate controlled noisy QEC observations from declared
+mechanisms, verify teacher/catalog separability, and train Layer 3 learners
+that recover and replay learner-visible noisy observation distributions without
+oracle leakage. Stage 3 is the next claim boundary: remove direct
+mechanism-label supervision and test whether latent mechanism structure can be
+inferred from visible observations alone.
 
 ## Install
 

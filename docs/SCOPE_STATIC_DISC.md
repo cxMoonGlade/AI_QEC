@@ -96,8 +96,10 @@ identifiability and early interpretability slices under controlled static or
 synthetic physical-oracle settings; it is not yet evidence that a CPTP/GKSL
 physical generation model holds across all six axes.
 
-Google repetition-code and surface-code datasets can be used as empirical
-external validation, but they do not provide true hidden fault partitions. They
+Google repetition-code and surface-code datasets can be used later as empirical
+external validation, but they should remain outside the first Stage 3 discovery
+claim unless the project explicitly moves beyond the current controlled
+physical-mechanism catalog. They do not provide true hidden fault partitions and
 cannot support true ARI/NMI recovery claims unless a proxy partition is
 explicitly defined and labelled as a proxy.
 
@@ -1981,10 +1983,13 @@ prediction source is `phyc3c_distributional_gaussian_likelihood_head`; PHYC2
 teacher-self predictions, legacy PHYC2 grouped predictions, and PHYC3a
 old-surface predictions are rejected as canonical learner evidence.
 
-Stage 2 validated the physical mechanism catalog and the no-leakage visible
-recovery protocol. Stage 3 now removes direct mechanism-label supervision and
-tests whether SCOPE-Discovery can recover latent mechanism structure,
-assignments, and prototypes from the same learner-visible observation surface.
+Stage 2 is closed as a no-leakage physical-mechanism catalog validation stage:
+the system can generate controlled noisy QEC observations from declared
+mechanisms, verify teacher/catalog separability, and train Layer 3 learners
+that recover and replay learner-visible noisy observation distributions without
+oracle leakage. Stage 3 is the next claim boundary: remove direct
+mechanism-label supervision and test whether latent mechanism structure can be
+inferred from visible observations alone.
 
 Current slot-only and no-remap guardrail evidence:
 
@@ -2054,10 +2059,10 @@ PHYC3-full-circuit-cudaq:
 ```
 
 Full-circuit CUDA-Q remains an important Layer 1 source for future larger-scale
-physical-teacher runs. The current pre-release boundary is that Stage 2
-validated the physical mechanism catalog and no-leakage visible recovery
-protocol, and Stage 3 now removes direct mechanism-label supervision on the
-same learner-visible observation surface.
+physical-teacher runs. The current pre-release boundary is that Stage 2 is
+closed as a controlled-catalog/no-leakage recovery validation stage, and Stage 3
+now removes direct mechanism-label supervision to test latent mechanism
+structure recovery from the same learner-visible observation surface.
 
 The Born-local S2E.1 learner test is artifact-backed: it should consume an
 existing PHYC3 learner-recovery `metrics.json` plus the linked PHYC1 teacher
@@ -2700,7 +2705,8 @@ The following ideas are useful but should not be the main Stage 2A path:
 
 ## Stage 2B Google External Validation
 
-Google datasets are useful for external validation, not oracle discovery.
+Google datasets are useful for later external validation, not oracle discovery
+or the first Stage 3 controlled-catalog discovery claim.
 
 They provide:
 
@@ -2715,8 +2721,9 @@ decoding_results/*/error_model.dem
 decoding_results/*/obs_flips_predicted.b8
 ```
 
-They do not provide the true hidden physical fault mechanism or true orbit
-partition.
+They do not provide the true hidden physical fault mechanism, true orbit
+partition, or ground-truth physical mechanism labels needed for a Stage 3
+discovery claim.
 
 Use Google data to evaluate:
 
