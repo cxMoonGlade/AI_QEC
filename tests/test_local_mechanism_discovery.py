@@ -6,8 +6,8 @@ from pathlib import Path
 import torch
 import yaml
 
-from scope_static.experiments.run_static_local_mechanism_discovery import run_local_mechanism_discovery
-from scope_static.local_mechanism import (
+from scope_static.experiments.static.local_mechanism_discovery import run_local_mechanism_discovery
+from scope_static.dem.local_mechanism import (
     graph_smooth_features,
     load_local_logit_matrix,
     local_probability_features,
@@ -16,7 +16,7 @@ from scope_static.local_mechanism import (
     spectral_similarity_embedding,
     split_merge_audit,
 )
-from scope_static.stim_dem import build_surface_code_graph
+from scope_static.dem.stim_dem import build_surface_code_graph
 
 
 NOISE = {

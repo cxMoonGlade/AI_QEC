@@ -3,8 +3,8 @@ import math
 import pytest
 import torch
 
-from scope_static.fault_graph import FaultGraph
-from scope_static.likelihood import (
+from scope_static.dem.fault_graph import FaultGraph
+from scope_static.dem.likelihood import (
     build_window_batch_nll_cache,
     build_window_batch_nll_cache_from_observations,
     build_window_nll_caches,
@@ -20,17 +20,17 @@ from scope_static.likelihood import (
     resolve_likelihood_backend,
     subset_window_batch_nll_cache,
 )
-from scope_static.likelihoods.local_window_parity import ExactLocalWindowParityLikelihood
-from scope_static.objectives import build_likelihood_objective
-from scope_static.fields import HardOrbitFaultLogitField
-from scope_static.metrics import (
+from scope_static.dem.likelihoods.local_window_parity import ExactLocalWindowParityLikelihood
+from scope_static.dem.objectives import build_likelihood_objective
+from scope_static.dem.fields import HardOrbitFaultLogitField
+from scope_static.dem.metrics import (
     augment_model_comparison_metrics,
     empirical_window_entropy,
     empirical_window_entropy_from_batch_cache,
     evaluate_real_data_model,
 )
-from scope_static.training import fit_field
-from scope_static.windows import (
+from scope_static.dem.training import fit_field
+from scope_static.dem.windows import (
     ObservationWindow,
     WindowPlan,
     build_windows_from_config,

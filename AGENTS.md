@@ -18,6 +18,21 @@ stage-specific docs:
 The implemented package is `scope_static`. It is a fixed-context DEM/Bernoulli
 research stack, not a CPTP/GKSL physical-channel learner.
 
+Stage 1 DEM/Bernoulli implementation modules live under `scope_static.dem`.
+Google Set1 adapters live under `scope_static.google`. The root package should
+stay a narrow public re-export surface plus shared utilities such as
+`scope_static.numerics`; do not add new flat Stage 1, discovery, likelihood,
+window, Google, or local-mechanism implementation modules directly under
+`src/scope_static/`.
+
+Experiment command wrappers should be grouped by experiment family. Stage 3
+wrappers live under `scope_static.experiments.stage3`; Google Set1 wrappers
+live under `scope_static.experiments.google`; QEC noise catalog/S2D wrappers live
+under `scope_static.experiments.qec_noise_catalog`; Stage 1/Stage 2 DEM wrappers live
+under `scope_static.experiments.static`. Do not add new flat `run_stage3*`,
+`run_google*`, `run_static*`, `run_phyc*`, `run_layer*`, or `run_s2d*` modules
+under `scope_static.experiments`.
+
 The project-level problem is the six-axis physical generation problem: prove
 that a physically constrained generation model holds simultaneously in
 generation fidelity, interpretability, decoder utility, cross-context
@@ -82,7 +97,7 @@ For S1.6 Google runs, use the native GPU path unless deliberately testing CPU
 behavior:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_google_static \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.google.static \
   --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
   --native-gpu
 ```
@@ -113,19 +128,19 @@ conda run -n aiqec python -m pytest -q
 Run MVP05 smoke:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static --config configs/scope_static/d3_r1_MVP05_windows.yaml
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.static.run --config configs/scope_static/d3_r1_MVP05_windows.yaml
 ```
 
 Run MVP05 full:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static --config configs/scope_static/d3_r1_MVP05_windows_full.yaml
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.static.run --config configs/scope_static/d3_r1_MVP05_windows_full.yaml
 ```
 
-Run Physical Oracle Stack facade:
+Run Catalog Pipeline facade:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_physical_oracle_stack \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.qec_noise_catalog.catalog_pipeline \
   --config configs/scope_static/d3_r1_S2D_PHYS_cudaq.yaml \
   --run-local-inverse auto
 ```
@@ -133,31 +148,31 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run
 Run S2D.11 typed learner and S2D.11b calibration audit:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_s2d11_typed_spam_gate_invariant_learner \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.qec_noise_catalog.s2d11_typed_spam_gate_invariant_learner \
   --config configs/scope_static/s2d11_typed_spam_gate_invariant_learner.yaml
 
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_s2d11b_m1_gate_branch_grouped_calibration_audit \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.qec_noise_catalog.s2d11b_m1_gate_branch_grouped_calibration_audit \
   --config configs/scope_static/s2d11b_m1_gate_branch_grouped_calibration_audit.yaml
 ```
 
-Run Layer 2/Layer 3 local-observable weighted allM evidence:
+Run teacher/learner local-observable weighted allM evidence:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_local_observable_gpu_teacher \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.qec_noise_catalog.local_observable_gpu_teacher \
   --config configs/scope_static/s2d11_allM_30q_depth30_weighted.yaml \
   --output-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/S2D_PHYS1_teacher
 
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_phyc2_sampled_observation_separability \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.qec_noise_catalog.teacher_distinguishment \
   --contract weighted \
   --teacher-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/S2D_PHYS1_teacher \
   --output-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/PHYC2_weighted_slot_only_control
 
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_phyc3_no_leakage_learner_recovery \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.qec_noise_catalog.learner_recovery \
   --contract weighted \
   --teacher-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/S2D_PHYS1_teacher \
   --output-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/PHYC3_no_leakage_learner_recovery
 
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_phyc3_sampled_quantum_error_quality \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.qec_noise_catalog.learner_quality \
   --teacher-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/S2D_PHYS1_teacher \
   --prediction-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/PHYC3_no_leakage_learner_recovery \
   --output-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/PHYC3_quantum_error_quality
@@ -180,26 +195,40 @@ Stage 2 discovery should begin with synthetic teachers and report ARI/NMI before
 using Google repetition-code or surface-code data as external empirical
 validation.
 
-## Current Layer 1/Layer 2/Layer 3 Milestone Boundary
+## Current Catalog Milestone Boundary
 
-The current physical-mechanism stack uses public Layer names. `PHYC1`,
-`PHYC2`, and `PHYC3` remain legacy artifact aliases in existing paths,
-schemas, and tests.
+The catalog pipeline uses responsibility-named packages. `PHYC1`, `PHYC2`, and
+`PHYC3` remain legacy artifact aliases in existing paths, schemas, and tests.
 
 ```text
-Layer 1: Data Preparation (Prep)
+scope_static.backend
+  low-level channel, PTM, probe, CPTP/POVM, density-sim, and preflight support
+
+scope_static.data_preparation
   legacy alias PHYC1; generates mechanism records, probe schedules,
   sampled observations, teacher config, and sampling audits
 
-Layer 2: Teacher Self-Distinguishment (Teacher)
-  legacy alias PHYC2; a pass means the teacher/catalog can classify every
-  generated mechanism with BA, min recall, ARI, and NMI all equal 1.0
+scope_static.teacher
+  legacy alias PHYC2; verifies teacher/catalog self-distinguishment with
+  BA, min recall, ARI, and NMI gates
 
-Layer 3: Learner Classification and Noise Generation (Learner)
+scope_static.learner
   legacy alias PHYC3; consumes learner-visible grouped predictions, not
-  Layer 2 teacher-self predictions, and reports classification plus generated
+  teacher-self predictions, and reports classification plus generated
   noise/error quality including channel distance, NLL, and MAE
+
+scope_static.mechanism_observability
+  S2D local inverse, typed SPAM/gate features, generator-space calibration,
+  M1 calibration, and RZZ probe adapters
+
+scope_static.mechanism_discovery
+  Stage 3 latent assignment, alias-ceiling, prototype, generator, and robustness
+  artifacts
 ```
+
+Do not rebuild a broad `scope_static.physical` package. New workflow code should
+live in the responsibility package that owns it; new backend math/sampling
+support should live in `scope_static.backend`.
 
 Variant labels describe the teacher source, not a change in the PHYC meaning:
 
@@ -218,14 +247,19 @@ Stage 2 validated the physical mechanism catalog and the no-leakage visible
 recovery protocol. Stage 3 now removes direct mechanism-label supervision and
 tests whether SCOPE-Discovery can recover latent mechanism structure,
 assignments, and prototypes from the same learner-visible observation surface.
+Stage 3B/3C/3D must consume frozen visible features, evaluator-only labels,
+teacher paths, and JSON artifacts through `scope_static.mechanism_discovery.artifacts`.
+Public Stage 3 run functions are exported from `scope_static.mechanism_discovery`;
+do not add new flat Stage 3 modules, rebuild visible features from
+`oracle_mechanisms.json`, or import private helpers from sibling stages.
 
 The `separability_v2` allM artifacts are strong Stage 2 separability evidence,
-not a Born-rule physical baseline. Older Layer 3/PHYC3 artifacts must be rechecked for
+not a Born-rule physical baseline. Older PHYC3 artifacts must be rechecked for
 `prediction_source_audit.source_name == "phyc3_no_leakage_learner_recovery"`
 before being cited as current no-leakage learner evidence. The minimal Born-local
 teacher remains a density-matrix diagnostic with effective circuit depth one.
-The pre-release acceptance surface is Layer 1 data preparation, Layer 2 teacher
-self-distinguishment, and Layer 3 no-leakage learner classification plus noise
+The pre-release acceptance surface is data preparation, teacher
+self-distinguishment, and no-leakage learner classification plus noise
 generation quality. M11 spectator crosstalk RZ/ZZ remains a contract-sensitive
 mechanism; do not collapse it into a local Born diagnostic when making
 full-circuit claims.

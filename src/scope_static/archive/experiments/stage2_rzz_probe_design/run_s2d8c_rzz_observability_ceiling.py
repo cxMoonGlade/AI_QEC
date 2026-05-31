@@ -7,12 +7,12 @@ from pathlib import Path
 import numpy as np
 import yaml
 
-from scope_static.experiments.s2d_config import output_root_from_config, load_s2d_physical_config
+from scope_static.experiments.qec_noise_catalog.config import output_root_from_config, load_s2d_physical_config
 from scope_static.numerics import NUMERICAL_ZERO
-from scope_static.physical.active_mixed_basis import build_active_mixed_basis_features
-from scope_static.physical.rzz_depth_sweep import build_rzz_depth_sweep_features
-from scope_static.physical.rzz_echo_contrast import build_rzz_echo_contrast_features
-from scope_static.physical.rzz_observability_ceiling import (
+from scope_static.mechanism_observability import build_active_mixed_basis_features
+from scope_static.mechanism_observability import build_rzz_depth_sweep_features
+from scope_static.mechanism_observability import build_rzz_echo_contrast_features
+from scope_static.mechanism_observability import (
     FeatureBlock,
     audit_labels_schema,
     evaluate_ceiling_feature_blocks,
@@ -20,7 +20,7 @@ from scope_static.physical.rzz_observability_ceiling import (
     grouped_fold_audit,
     leakage_guardrail_audit,
 )
-from scope_static.physical.targeted_v3 import RZZ_FAMILY, build_targeted_v3_features
+from scope_static.mechanism_observability import RZZ_FAMILY, build_targeted_v3_features
 
 
 DEFAULT_RUNS = ["phys9_setA", "phys9_multicircuit_setB_balanced", "phys9_multicircuit_setC_balanced"]

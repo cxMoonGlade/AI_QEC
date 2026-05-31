@@ -6,13 +6,13 @@ from pathlib import Path
 import numpy as np
 import yaml
 
-from scope_static.experiments import run_s2d7_rzz_active_probe_design as runner
-from scope_static.physical.active_mixed_basis import (
+from scope_static.experiments.qec_noise_catalog import s2d7_rzz_active_probe_design as runner
+from scope_static.mechanism_observability import (
     build_active_mixed_basis_features,
     evaluate_active_mixed_basis_methods,
     visibility_matrix,
 )
-from scope_static.physical.teacher import (
+from scope_static.backend.probe_catalog import (
     EDGE_ORIENTATION_RULE,
     build_default_oracle_mechanisms,
     build_probe_basis_manifest,
@@ -194,7 +194,7 @@ def test_s2d7_runner_writes_required_artifacts_with_fakes(tmp_path: Path, monkey
             ]
         }
 
-    def fake_stack(cfg, *, output_dir, bootstrap_replicates, random_baseline_trials, run_local_inverse):
+    def fake_pipeline(cfg, *, output_dir, bootstrap_replicates, random_baseline_trials, run_local_inverse):
         root = Path(output_dir)
         teacher_dir = root / "S2D_PHYS1_teacher"
         sep_dir = root / "S2D_PHYS2_oracle_separability"
@@ -207,7 +207,7 @@ def test_s2d7_runner_writes_required_artifacts_with_fakes(tmp_path: Path, monkey
             "stage_results": {"teacher": teacher, "teacher_self": sep, "learner": local},
         }
 
-    monkeypatch.setattr(runner, "run_physical_oracle_stack", fake_stack)
+    monkeypatch.setattr(runner, "run_catalog_pipeline", fake_pipeline)
 
     result = runner.run_s2d7_rzz_active_probe_design(config_path)
 

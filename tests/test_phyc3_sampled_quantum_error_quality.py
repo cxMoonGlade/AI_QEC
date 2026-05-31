@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from scope_static.physical.sampled_quantum_error_quality import channel_vector, run_sampled_quantum_error_quality_audit
+from scope_static.learner import channel_vector, run_sampled_quantum_error_quality_audit
 
 
 def test_channel_vector_represents_quantum_and_readout_errors() -> None:

@@ -16,13 +16,13 @@ lambda_j = logit(p_j)
 ```
 
 It then added synthetic discovery, physical-oracle teacher generation, teacher
-self-distinguishment, and no-leakage visible learner validation.
+self-distinguishment, and no-leakage visible learner.
 
 ## Closed Outcome
 
 Stage 2 is closed as a no-leakage physical-mechanism catalog validation stage:
 the system can generate controlled noisy QEC observations from declared
-mechanisms, verify teacher/catalog separability, and train Layer 3 learners
+mechanisms, verify teacher/catalog separability, and train learner models
 that recover and replay learner-visible noisy observation distributions without
 oracle leakage. Stage 3 is the next claim boundary: remove direct
 mechanism-label supervision and test whether latent mechanism structure can be
@@ -31,23 +31,23 @@ inferred from visible observations alone.
 ## What Stage 2 Proved
 
 - The implemented physical catalog uses stable `M0-M34` mechanism IDs.
-- Layer 1 mechanism definitions are catalog unitary/Kraus/readout objects, not
+- Data-preparation mechanism definitions are catalog unitary/Kraus/readout objects, not
   arbitrary learned CPTP/GKSL channels.
-- The public physical stack is Layer 1/2/3:
+- The public catalog pipeline is responsibility named:
 
   ```text
-  Layer 1: Data Preparation (Prep)
-  Layer 2: Teacher Self-Distinguishment (Teacher)
-  Layer 3: Learner Classification and Noise Generation (Learner)
+  data_preparation: Data Preparation (Prep)
+  teacher: Teacher Self-Distinguishment (Teacher)
+  learner: Learner Classification and Noise Generation (Learner)
   ```
 
-- Layer 2 teacher self-distinguishment can verify catalog separability.
-- Layer 3b repaired the learner-visible surface with a strict Z/X-only probe
+- Teacher self-distinguishment can verify catalog separability.
+- Z/X visible repair raised the learner-visible surface with a strict Z/X-only probe
   suite.
-- Layer 3c established an accepted multi-context learner head on that visible
+- The distributional learner head established an accepted multi-context learner head on that visible
   surface.
-- Canonical Layer 3 quality consumes PHYC3c predictions only.
-- Layer 3 quality reports classification, incompatible predictions,
+- Canonical learner quality consumes PHYC3c predictions only.
+- Learner quality reports classification, incompatible predictions,
   channel/readout prototype distance, NLL, CE, and MAE.
 
 ## What Stage 2 Did Not Claim
@@ -78,7 +78,7 @@ phyc3c_distributional_gaussian_likelihood_head
 Current public layer docs:
 
 ```text
-docs/PRE_RELEASE_LAYERS.md
+docs/CATALOG_PIPELINE.md
 docs/TOOLBOX.md
 docs/SCOPE_STATIC_DISC.md
 ```
@@ -90,16 +90,16 @@ probe-design, and Born-local gate attempts are archived under:
 src/scope_static/archive/
 ```
 
-Compatibility wrappers remain at the old `scope_static.experiments.*` and
-`scope_static.physical.*` paths.
+Compatibility wrappers remain for selected old experiment modules, but current
+code should import from the responsibility-named packages.
 
 ## Stage 2 Artifact Rules
 
-Layer 2 artifacts are teacher/catalog self-distinguishability evidence only.
+Teacher artifacts are teacher/catalog self-distinguishability evidence only.
 They must not be cited as learner predictions.
 
-Layer 3 artifacts are no-leakage learner evidence only when their provenance
-shows a Layer 3 learner source. Canonical Layer 3 rejects teacher-self
+Learner artifacts are no-leakage learner evidence only when their provenance
+shows a learner source. Canonical learner quality rejects teacher-self
 predictions and old-surface baseline predictions as canonical sources.
 
 Evaluator-only labels, exact channels, PTMs, teacher self embeddings, and

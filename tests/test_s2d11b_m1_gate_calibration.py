@@ -5,8 +5,8 @@ from pathlib import Path
 
 import yaml
 
-from scope_static.experiments import run_s2d11b_m1_gate_branch_grouped_calibration_audit as runner
-from scope_static.physical.m1_gate_calibration import load_s2d11b_data, m1_false_negative_audit
+from scope_static.experiments.qec_noise_catalog import s2d11b_m1_gate_branch_grouped_calibration_audit as runner
+from scope_static.mechanism_observability import load_s2d11b_data, m1_false_negative_audit
 
 
 def test_s2d11b_runner_reads_existing_s2d11_artifacts_and_writes_bundle(tmp_path: Path) -> None:

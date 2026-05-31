@@ -6,9 +6,9 @@ from pathlib import Path
 import numpy as np
 import yaml
 
-from scope_static.experiments.run_s2d_local_inverse_discovery import run_s2d_local_inverse_discovery
-from scope_static.physical.local_inverse import build_visible_location_representations
-from scope_static.physical.teacher import build_default_oracle_mechanisms
+from scope_static.experiments.qec_noise_catalog.s2d_local_inverse_discovery import run_s2d_local_inverse_discovery
+from scope_static.mechanism_observability import build_visible_location_representations
+from scope_static.backend.probe_catalog import build_default_oracle_mechanisms
 
 
 def test_visible_location_representations_ignore_oracle_labels() -> None:
@@ -64,7 +64,7 @@ def test_s2d_local_inverse_discovery_writes_required_artifacts(tmp_path: Path) -
     assert result["run_selection_audit"]["uses_oracle_labels_for_selection"] is False
     assert result["main_result"]["ari"] == 1.0
     assert result["main_result"]["nmi"] == 1.0
-    assert result["s2d3_result"] == "physical_oracle_strong_recovery"
+    assert result["s2d3_result"] == "catalog_validation_strong_recovery"
     assert set(result["prediction_metrics"]) == {"local_inverse", "local_inverse_v2", "direct_Salpha", "oracle_fingerprint"}
     assert "heldout_response_nll" in result["prediction_metrics"]["local_inverse"]
     assert "physical_local_inverse_probability_v2_result" in result

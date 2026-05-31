@@ -3,9 +3,9 @@ import json
 import torch
 import yaml
 
-from scope_static.experiments.run_static_hardening import run_hardening_experiment
-from scope_static.fields import DiscoveryHardFaultLogitField
-from scope_static.hardening import (
+from scope_static.experiments.static.hardening import run_hardening_experiment
+from scope_static.dem.fields import DiscoveryHardFaultLogitField
+from scope_static.dem.hardening import (
     apply_assignment_initialization,
     local_logit_assignment_initialization,
 )

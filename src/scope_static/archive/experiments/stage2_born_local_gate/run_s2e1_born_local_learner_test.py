@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from scope_static.physical.s2e1_born_local_learner_test import run_s2e1_born_local_learner_test as _run
+from scope_static.teacher.born_local_learner_test import run_s2e1_born_local_learner_test as _run
 
 
 def run_s2e1_born_local_learner_test(

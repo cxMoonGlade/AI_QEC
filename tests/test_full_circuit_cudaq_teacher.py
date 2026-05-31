@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from scope_static.physical.full_circuit_cudaq_teacher import (
+from scope_static.data_preparation.full_circuit_cudaq import (
     _CudaqSchedule,
     _build_full_circuit_oracle_mechanisms,
     _cudaq_target_looks_gpu,
@@ -15,7 +15,7 @@ from scope_static.physical.full_circuit_cudaq_teacher import (
     build_full_circuit_mechanism_definition_audit,
     generate_full_circuit_cudaq_teacher_dataset,
 )
-from scope_static.physical.channels import MechanismSpec
+from scope_static.backend.channels import MechanismSpec
 
 
 def _reset_cudaq_target_if_available() -> None:

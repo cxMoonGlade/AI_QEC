@@ -5,14 +5,16 @@ from pathlib import Path
 
 import numpy as np
 
-from scope_static.physical.sampled_observation_separability import (
+from scope_static.teacher.observation_surface import (
     _coverage,
     _weighted_metrics,
+    slot_only_leakage_control,
+    visible_input_identifiability_audit,
+)
+from scope_static.teacher import (
     format_sampled_observation_separability_summary,
     run_sampled_observation_separability_audit,
-    slot_only_leakage_control,
     teacher_self_distinguishment_audit,
-    visible_input_identifiability_audit,
 )
 
 

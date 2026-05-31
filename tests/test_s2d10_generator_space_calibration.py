@@ -6,8 +6,8 @@ from pathlib import Path
 import numpy as np
 import yaml
 
-from scope_static.experiments import run_s2d10_generator_space_calibration as runner
-from scope_static.physical.generator_space_calibration import (
+from scope_static.experiments.qec_noise_catalog import s2d10_generator_space_calibration as runner
+from scope_static.mechanism_observability import (
     GENERATOR_CORE,
     blockwise_decision_metrics,
     effective_rank_metrics,

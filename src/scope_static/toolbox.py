@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 
-from .physical.layers import layer_stack_metadata
+from .protocols import catalog_validation_stage_metadata
 
 
 TOOLBOX_NAME = "SCOPE-Static Physical Mechanism Toolbox"
@@ -19,7 +19,7 @@ def toolbox_manifest() -> dict[str, object]:
             "Stage 2 is closed as a no-leakage physical-mechanism catalog "
             "validation stage: the system can generate controlled noisy QEC "
             "observations from declared mechanisms, verify teacher/catalog "
-            "separability, and train Layer 3 learners that recover and replay "
+            "separability, and train learner models that recover and replay "
             "learner-visible noisy observation distributions without oracle "
             "leakage. Stage 3 is the next claim boundary: remove direct "
             "mechanism-label supervision and test whether latent mechanism "
@@ -29,13 +29,13 @@ def toolbox_manifest() -> dict[str, object]:
             {
                 "name": "generate_teacher_declared_observations",
                 "role": "Generate teacher-declared noisy QEC observations from a controlled catalog.",
-                "primary_layer": "Layer 1: Data Preparation (Prep)",
+                "primary_stage": "Data Preparation (Prep)",
                 "config_template": "configs/scope_static/layer1_user_defined_mechanisms.yaml",
             },
             {
                 "name": "learn_and_replay_visible_noise",
                 "role": "Learn from learner-visible observations and score recovery/replay of visible noisy observation distributions.",
-                "primary_layer": "Layer 3: Learner Classification and Noise Generation (Learner)",
+                "primary_stage": "Learner Classification and Noise Generation (Learner)",
                 "metrics": ["channel_distance", "visible_gaussian_nll", "population_ce", "visible_feature_mae"],
             },
             {
@@ -45,59 +45,65 @@ def toolbox_manifest() -> dict[str, object]:
             },
         ],
         "physicality_boundary": (
-            "Layer 1 physicality comes from implemented catalog mechanisms: "
-            "unitary channels, Kraus channels, and classical readout assignment "
-            "matrices. Layer 3 does not yet learn arbitrary CPTP/GKSL channels "
-            "by construction. Layer 1 emits cptp_guardrail_audit.json for "
-            "per-run artifact-level physicality audits."
+            "Data preparation is the first-class physical-process teacher. It validates "
+            "implemented catalog mechanisms as unitary channels, Kraus channels, "
+            "or stochastic readout maps before sampling, then runs a blocking "
+            "post-sampling physicality audit. Learner does not yet learn "
+            "arbitrary CPTP/GKSL channels by construction."
         ),
-        "layers": layer_stack_metadata(),
+        "catalog_stages": catalog_validation_stage_metadata(),
+        "layers": catalog_validation_stage_metadata(),
         "commands": [
             {
                 "name": "scope-static-toolbox",
-                "role": "Print the toolbox manifest and public layer map.",
+                "role": "Print the toolbox manifest and public catalog stage map.",
                 "module": "scope_static.toolbox",
             },
             {
-                "name": "scope-layer1-prep",
-                "role": "Generate Layer 1 physical-mechanism data artifacts.",
-                "module": "scope_static.experiments.run_s2d_physical_teacher",
+                "name": "scope-catalog-teacher",
+                "role": "Compatibility command for controlled-catalog teacher generation.",
+                "module": "scope_static.experiments.qec_noise_catalog.controlled_catalog_teacher",
             },
             {
-                "name": "scope-layer2-teacher",
-                "role": "Run Layer 2 teacher self-distinguishment.",
-                "module": "scope_static.experiments.run_phyc2_sampled_observation_separability",
+                "name": "scope-data-preparation-teacher",
+                "role": "Generate the first-class data-preparation physical-process teacher artifact.",
+                "module": "scope_static.experiments.qec_noise_catalog.data_preparation_teacher",
             },
             {
-                "name": "scope-layer3-canonical",
-                "role": "Run Layer 3 canonical learner/noise-generation acceptance.",
-                "module": "scope_static.experiments.run_layer3_canonical_acceptance",
+                "name": "teacher-distinguishment",
+                "role": "Run teacher self-distinguishment.",
+                "module": "scope_static.experiments.qec_noise_catalog.teacher_distinguishment",
+            },
+            {
+                "name": "learner-acceptance",
+                "role": "Run canonical learner/noise-generation acceptance.",
+                "module": "scope_static.experiments.qec_noise_catalog.learner_acceptance",
             },
             {
                 "name": "scope-stage3a-freeze",
                 "role": "Freeze the Stage 3A learner-visible dataset and protocol artifacts.",
-                "module": "scope_static.experiments.run_stage3a_protocol_freeze",
+                "module": "scope_static.experiments.stage3.protocol_freeze",
             },
             {
                 "name": "scope-stage3a5-ceiling",
                 "role": "Compute the Stage 3A.5 visible observability and alias ceiling.",
-                "module": "scope_static.experiments.run_stage3a5_observability_ceiling",
+                "module": "scope_static.experiments.stage3.observability_ceiling",
             },
             {
                 "name": "scope-stage3b0-baselines",
                 "role": "Run Stage 3B.0 visible-only non-learned clustering baselines.",
-                "module": "scope_static.experiments.run_stage3b0_baselines",
+                "module": "scope_static.experiments.stage3.baselines",
             },
             {
                 "name": "scope-stage3b1-discovery",
                 "role": "Train the Stage 3B.1 visible-only prototype-mixture discovery model.",
-                "module": "scope_static.experiments.run_stage3b1_discovery_model",
+                "module": "scope_static.experiments.stage3.discovery_model",
             },
         ],
         "primary_outputs": [
-            "Layer 1 mechanism records, probe schedules, sampled observations, and sampling audits",
-            "Layer 2 teacher self-distinguishment BA/ARI/NMI/min-recall metrics",
-            "Layer 3 visible ceiling, learner classification, channel-distance, NLL, and MAE metrics",
+            "Data-preparation mechanism records, probe schedules, sampled observations, and sampling audits",
+            "Teacher self-distinguishment BA/ARI/NMI/min-recall metrics",
+            "Learner visible ceiling, learner classification, channel-distance, NLL, and MAE metrics",
             "Stage 3A visible schema, split manifest, batch/context schema, assignment unit, and forbidden-feature audit",
             "Stage 3A.5 pairwise visible distances, oracle alias classes, exact-label ceiling, and quotient-label ceiling",
             "Stage 3B.0 non-learned visible-only baseline assignments, controls, evaluator-only metrics, and model-selection audit",

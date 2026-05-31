@@ -2,15 +2,15 @@ from pathlib import Path
 
 import torch
 
-from scope_static.fault_graph import FaultGraph
-from scope_static.likelihood import build_window_batch_nll_cache, build_window_nll_caches
-from scope_static.window_cache_store import (
+from scope_static.dem.fault_graph import FaultGraph
+from scope_static.dem.likelihood import build_window_batch_nll_cache, build_window_nll_caches
+from scope_static.dem.window_cache_store import (
     load_window_batch_cache,
     save_window_batch_cache,
     window_batch_cache_file,
     window_batch_cache_key,
 )
-from scope_static.windows import ObservationWindow
+from scope_static.dem.windows import ObservationWindow
 
 
 def _tiny_graph():

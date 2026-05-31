@@ -8,12 +8,12 @@ import numpy as np
 import torch
 import yaml
 
-from scope_static.experiments.s2d_config import load_s2d_physical_config, output_root_from_config
-from scope_static.physical.active_mixed_basis import evaluate_active_mixed_basis_methods, rzz_family_metrics
-from scope_static.physical.rzz_depth_sweep import evaluate_rzz_depth_sweep_methods
-from scope_static.physical.rzz_echo_contrast import evaluate_rzz_echo_contrast_methods
-from scope_static.physical.targeted_v3 import evaluate_targeted_v3_methods
-from scope_static.physical_oracle import run_physical_oracle_stack, stack_stage_results
+from scope_static.experiments.qec_noise_catalog.config import load_s2d_physical_config, output_root_from_config
+from scope_static.mechanism_observability import evaluate_active_mixed_basis_methods, rzz_family_metrics
+from scope_static.mechanism_observability import evaluate_rzz_depth_sweep_methods
+from scope_static.mechanism_observability import evaluate_rzz_echo_contrast_methods
+from scope_static.mechanism_observability import evaluate_targeted_v3_methods
+from scope_static.catalog_pipeline import run_catalog_pipeline, pipeline_stage_results
 
 
 DEFAULT_RUNS = [
@@ -94,10 +94,10 @@ def _run_one(output: Path, physical_cfg: dict[str, object], cfg: dict[str, objec
     depth_stack = _run_phys_stack(run_dir / "s2d8a_depth_probe", depth_cfg, cfg)
     echo_stack = _run_phys_stack(run_dir / "rzz_echo_probe", echo_cfg, cfg)
 
-    base_records, base_observations, base_probe_names, base_hidden, base_label_names = _load_stack_data(base_stack)
-    static_records, static_observations, static_probe_names, static_hidden, static_label_names = _load_stack_data(static_stack)
-    depth_records, depth_observations, depth_probe_names, depth_hidden, depth_label_names = _load_stack_data(depth_stack)
-    echo_records, echo_observations, echo_probe_names, hidden, label_names = _load_stack_data(echo_stack)
+    base_records, base_observations, base_probe_names, base_hidden, base_label_names = _load_pipeline_data(base_stack)
+    static_records, static_observations, static_probe_names, static_hidden, static_label_names = _load_pipeline_data(static_stack)
+    depth_records, depth_observations, depth_probe_names, depth_hidden, depth_label_names = _load_pipeline_data(depth_stack)
+    echo_records, echo_observations, echo_probe_names, hidden, label_names = _load_pipeline_data(echo_stack)
     if (
         base_label_names != label_names
         or static_label_names != label_names
@@ -203,17 +203,17 @@ def _run_one(output: Path, physical_cfg: dict[str, object], cfg: dict[str, objec
 
 
 def _run_phys_stack(run_dir: Path, cfg: dict[str, object], s2d8_cfg: dict[str, object]) -> dict[str, object]:
-    stack = run_physical_oracle_stack(
+    pipeline = run_catalog_pipeline(
         cfg,
         output_dir=run_dir,
         bootstrap_replicates=int(s2d8_cfg.get("bootstrap_replicates", 16)),
         random_baseline_trials=int(s2d8_cfg.get("random_baseline_trials", 64)),
         run_local_inverse="always",
     )
-    return stack_stage_results(stack)
+    return pipeline_stage_results(pipeline)
 
 
-def _load_stack_data(stack: dict[str, object]) -> tuple[list[dict[str, object]], np.ndarray, list[str], torch.Tensor, list[str]]:
+def _load_pipeline_data(stack: dict[str, object]) -> tuple[list[dict[str, object]], np.ndarray, list[str], torch.Tensor, list[str]]:
     records = _load_mechanism_records(stack["teacher_dir"] / "oracle_mechanisms.json")
     observations, probe_names = _load_observations(stack["teacher_dir"] / "observations.npz")
     hidden, label_names = _encode_labels([str(record["oracle_label"]) for record in records])

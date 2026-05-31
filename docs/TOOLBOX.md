@@ -5,13 +5,13 @@ It is organized as reusable tools rather than a single end-to-end claim.
 
 ## Program Surface: 2+1
 
-1. **Generate teacher-declared noisy QEC observations.** Layer 1 prepares
+1. **Generate teacher-declared noisy QEC observations.** Data preparation creates
    sampled observations from a declared physical mechanism set in a controlled
    catalog. Users control enabled mechanism IDs, parameters, shot count, probe
    schedule, circuit depth, and instance counts through YAML. The enabled
    mechanisms use catalog unitary/Kraus/readout definitions.
 
-2. **Learn and replay visible noise.** Layer 3 learns from the
+2. **Learn and replay visible noise.** Learner learns from the
    learner-visible observation surface and reports whether predicted mechanisms
    can replay similar visible noisy observation distributions, scored by channel
    distance, NLL, population CE, and MAE. This is a no-leakage recovery/replay
@@ -23,26 +23,29 @@ It is organized as reusable tools rather than a single end-to-end claim.
    latent mechanism structure, assignments, prototypes, and observational alias
    classes from visible observations alone.
 
-## Tool Layers
+## Command Surface
 
-| command | layer | purpose |
+| command | responsibility | purpose |
 | --- | --- | --- |
-| `scope-static-toolbox` | manifest | Print the toolbox manifest and public Layer map. |
-| `scope-layer1-prep` | Layer 1: Data Preparation (Prep) | Generate mechanism records, probe schedules, sampled observations, and sampling audits. |
-| `scope-layer2-teacher` | Layer 2: Teacher Self-Distinguishment (Teacher) | Verify that the declared teacher/catalog can self-distinguish generated mechanisms. |
-| `scope-layer3-canonical` | Layer 3: Learner Classification and Noise Generation (Learner) | Select the accepted learner source and report classification, channel-distance, NLL, and MAE quality. |
+| `scope-static-toolbox` | manifest | Print the toolbox manifest and public catalog stage map. |
+| `scope-data-preparation-teacher` | data preparation | Generate a first-class physical-process teacher with pre-sampling CPTP/POVM checks and post-sampling physicality audit. |
+| `scope-catalog-teacher` | catalog teacher | Generate controlled-catalog teacher artifacts through the compatibility command. |
+| `teacher-distinguishment` | teacher | Verify that the declared teacher/catalog can self-distinguish generated mechanisms. |
+| `learner-acceptance` | learner | Select the accepted learner source and report classification, channel-distance, NLL, and MAE quality. |
 | `scope-stage3a-freeze` | Stage 3A: Dataset And Protocol Freeze | Freeze visible schema, split manifest, batch/context protocol, assignment unit, and forbidden-feature audit before discovery training. |
 | `scope-stage3a5-ceiling` | Stage 3A.5: Observability And Alias Ceiling | Compute pairwise visible distances, oracle-visible alias classes, exact-label ceiling, and quotient-label ceiling before discovery training. |
 | `scope-stage3b0-baselines` | Stage 3B.0: Non-Learned Clustering Baselines | Run visible-only k-means/GMM baselines and null controls with evaluator-only exact-label and quotient-label scoring. |
 | `scope-stage3b1-discovery` | Stage 3B.1: First Discovery Model | Train a visible-only prototype-mixture discovery model with learned diagonal covariance and evaluator-only exact/quotient scoring. |
 
-Historical modules and artifact folders still use `PHYC1/PHYC2/PHYC3` names for
-compatibility. Public-facing reports should use Layer 1/2/3 names.
+Historical artifact folders may still use `PHYC1/PHYC2/PHYC3` names for
+compatibility. Public-facing code should use `data_preparation`,
+`teacher`, and `learner`.
 
 ## Physicality Boundary
 
-Layer 1 physicality comes from the implemented catalog mechanisms: unitary
-channels, Kraus channels, and classical readout assignment matrices. Layer 3
+Layer1.P physicality comes from implemented catalog mechanisms validated before
+sampling as unitary channels, Kraus channels, or classical readout assignment
+matrices, then checked again by a post-sampling physicality audit. Learner
 inherits catalog physicality only when it predicts/reuses a catalog mechanism;
 visible empirical replay is a visible-distribution model, not by itself a
 learned CPTP channel.
@@ -72,31 +75,31 @@ Machine-readable manifest:
 scope-static-toolbox --json
 ```
 
-Run the current canonical Layer 3 acceptance artifact:
+Run the current canonical learner acceptance artifact:
 
 ```bash
-scope-layer3-canonical \
-  --config configs/scope_static/layer3_canonical_acceptance.yaml
+learner-acceptance \
+  --config configs/scope_static/learner_acceptance.yaml
 ```
 
 Equivalent module form:
 
 ```bash
-python -m scope_static.experiments.run_layer3_canonical_acceptance \
-  --config configs/scope_static/layer3_canonical_acceptance.yaml
+python -m scope_static.experiments.qec_noise_catalog.learner_acceptance \
+  --config configs/scope_static/learner_acceptance.yaml
 ```
 
 Generate a user-defined noisy mechanism dataset:
 
 ```bash
-scope-layer1-prep \
+scope-data-preparation-teacher \
   --config configs/scope_static/layer1_user_defined_mechanisms.yaml \
-  --output-dir outputs/scope_static/user_defined_layer1_demo/S2D_PHYC1_teacher
+  --output-dir outputs/scope_static/user_defined_data_preparation_demo/DataPreparation_teacher
 ```
 
 ## Data Products
 
-Layer 1 produces:
+Data preparation produces:
 
 - `oracle_mechanisms.json`
 - `observations.npz`
@@ -104,20 +107,24 @@ Layer 1 produces:
 - `sampling_audit.json`
 - `active_probe_manifest.json`
 
-Layer 1 also emits:
+Data preparation also emits:
 
+- `layer1p_pre_sampling_contract.json`, checking the local mechanism process
+  contract before sampling;
+- `layer1p_teacher_contract.json`, summarizing the accepted physical teacher;
 - `cptp_guardrail_audit.json`, checking complete-positivity representation
   class, declared channel dimension, unitarity, Kraus trace preservation,
   readout stochasticity, and parameter validity for every enabled mechanism
   record.
+- `Layer1_teacher_physicality_audit/`, the legacy-named post-sampling blocking audit.
 
-Layer 2 produces:
+Teacher produces:
 
 - teacher self-distinguishment metrics;
 - BA, ARI, NMI, and min-recall gates;
 - coverage and no-learner-prediction audits.
 
-Layer 3 produces:
+Learner produces:
 
 - Z/X visible feature schema and deterministic visible ceiling;
 - no-leakage learner predictions;
@@ -139,7 +146,7 @@ Stage 3 discovery scaffolding produces:
 
 Stage 2 is closed as a no-leakage physical-mechanism catalog validation stage:
 the system can generate controlled noisy QEC observations from declared
-mechanisms, verify teacher/catalog separability, and train Layer 3 learners
+mechanisms, verify teacher/catalog separability, and train learner models
 that recover and replay learner-visible noisy observation distributions without
 oracle leakage. Stage 3 is the next claim boundary: remove direct
 mechanism-label supervision and test whether latent mechanism structure can be

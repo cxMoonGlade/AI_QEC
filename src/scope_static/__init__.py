@@ -1,23 +1,27 @@
-"""SCOPE-Static DEM fault-logit MVP."""
+"""SCOPE-Static research package."""
 
-from .fault_graph import FaultGraph
-from .fields import (
+from .dem import (
+    DemParityMap,
     DiscoveryHardFaultLogitField,
     DiscoveryHardField,
     DiscoverySoftFeatureFaultLogitField,
     DiscoverySoftFeatureField,
+    ExactLocalWindowParityLikelihood,
+    FaultGraph,
     HardOrbitFaultLogitField,
     HardOrbitField,
+    LikelihoodObjective,
     LocalFaultLogitField,
     LocalField,
+    ObservationWindow,
     SoftFeatureOrbitFaultLogitField,
     SoftFeatureOrbitField,
+    WindowPlan,
+    build_likelihood_objective,
+    exact_dem_nll,
+    local_window_exact_nll,
+    parity_distribution,
 )
-from .likelihood import exact_dem_nll, local_window_exact_nll, parity_distribution
-from .likelihoods.local_window_parity import ExactLocalWindowParityLikelihood
-from .objectives import LikelihoodObjective, build_likelihood_objective
-from .parity_map import DemParityMap
-from .windows import ObservationWindow, WindowPlan
 
 __all__ = [
     "DemParityMap",

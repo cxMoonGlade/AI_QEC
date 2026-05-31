@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from scope_static.physical.rzz_observability_ceiling import (
+from scope_static.mechanism_observability import (
     FeatureBlock,
     audit_labels_schema,
     evaluate_ceiling_feature_blocks,

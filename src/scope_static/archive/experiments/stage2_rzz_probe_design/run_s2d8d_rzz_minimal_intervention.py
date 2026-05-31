@@ -8,14 +8,14 @@ import numpy as np
 import torch
 import yaml
 
-from scope_static.experiments.s2d_config import load_s2d_physical_config, output_root_from_config
+from scope_static.experiments.qec_noise_catalog.config import load_s2d_physical_config, output_root_from_config
 from scope_static.numerics import NUMERICAL_ZERO
-from scope_static.physical.active_mixed_basis import rzz_family_metrics
-from scope_static.physical.rzz_minimal_intervention import (
+from scope_static.mechanism_observability import rzz_family_metrics
+from scope_static.mechanism_observability import (
     build_rzz_minimal_intervention_features,
     evaluate_rzz_minimal_intervention_methods,
 )
-from scope_static.physical.rzz_observability_ceiling import (
+from scope_static.mechanism_observability import (
     FeatureBlock,
     audit_labels_schema,
     evaluate_ceiling_feature_blocks,
@@ -23,8 +23,8 @@ from scope_static.physical.rzz_observability_ceiling import (
     grouped_fold_audit,
     leakage_guardrail_audit,
 )
-from scope_static.physical.targeted_v3 import RZZ_FAMILY, build_targeted_v3_features, evaluate_targeted_v3_methods
-from scope_static.physical_oracle import run_physical_oracle_stack, stack_stage_results
+from scope_static.mechanism_observability import RZZ_FAMILY, build_targeted_v3_features, evaluate_targeted_v3_methods
+from scope_static.catalog_pipeline import run_catalog_pipeline, pipeline_stage_results
 
 
 DEFAULT_RUNS = [
@@ -92,8 +92,8 @@ def _run_one(output: Path, physical_cfg: dict[str, object], cfg: dict[str, objec
     base_stack = _run_phys_stack(run_dir / "base_probe", base_cfg, cfg)
     intervention_stack = _run_phys_stack(run_dir / "rzz_minimal_intervention_probe", intervention_cfg, cfg)
 
-    base_records, base_observations, base_probe_names, base_hidden, base_label_names = _load_stack_data(base_stack)
-    intervention_records, intervention_observations, intervention_probe_names, hidden, label_names = _load_stack_data(intervention_stack)
+    base_records, base_observations, base_probe_names, base_hidden, base_label_names = _load_pipeline_data(base_stack)
+    intervention_records, intervention_observations, intervention_probe_names, hidden, label_names = _load_pipeline_data(intervention_stack)
     if base_label_names != label_names or len(base_records) != len(intervention_records):
         raise ValueError("S2D.8d probe stacks must produce the same mechanism label inventory")
 
@@ -177,17 +177,17 @@ def _run_one(output: Path, physical_cfg: dict[str, object], cfg: dict[str, objec
 
 
 def _run_phys_stack(run_dir: Path, cfg: dict[str, object], s2d8_cfg: dict[str, object]) -> dict[str, object]:
-    stack = run_physical_oracle_stack(
+    pipeline = run_catalog_pipeline(
         cfg,
         output_dir=run_dir,
         bootstrap_replicates=int(s2d8_cfg.get("bootstrap_replicates", 16)),
         random_baseline_trials=int(s2d8_cfg.get("random_baseline_trials", 64)),
         run_local_inverse="always",
     )
-    return stack_stage_results(stack)
+    return pipeline_stage_results(pipeline)
 
 
-def _load_stack_data(stack: dict[str, object]) -> tuple[list[dict[str, object]], np.ndarray, list[str], torch.Tensor, list[str]]:
+def _load_pipeline_data(stack: dict[str, object]) -> tuple[list[dict[str, object]], np.ndarray, list[str], torch.Tensor, list[str]]:
     records = _load_mechanism_records(stack["teacher_dir"] / "oracle_mechanisms.json")
     observations, probe_names = _load_observations(stack["teacher_dir"] / "observations.npz")
     hidden, label_names = _encode_labels([str(record["oracle_label"]) for record in records])

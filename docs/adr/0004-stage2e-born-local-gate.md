@@ -12,9 +12,10 @@ control, no-remap ablation, 74-qubit/depth-200 scalability smoke, and PHYC3
 mechanism-to-error prototype quality on the engineered sampled-observation
 teacher.
 
-Current public terminology separates these claims more sharply: Layer 2 means
-teacher self-distinguishment, while Layer 3 means no-leakage learner recovery
-plus quantum/readout and visible-generation quality. Older PHYC3 artifacts
+Current public terminology separates these claims more sharply: teacher
+validation means teacher self-distinguishment, while learner means
+no-leakage learner recovery plus quantum/readout and visible-generation quality.
+Older PHYC3 artifacts
 should be rechecked for a
 learner prediction source before being cited as no-leakage learner evidence.
 

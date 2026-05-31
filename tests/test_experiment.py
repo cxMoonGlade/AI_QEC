@@ -3,9 +3,9 @@ import json
 import pytest
 import yaml
 
-from scope_static.experiments.plan import ExperimentPlan
-from scope_static.experiments.run_static_discovery import format_discovery_terminal_summary, run_discovery_experiment
-from scope_static.experiments.run_static import run_experiment
+from scope_static.experiments.static.plan import ExperimentPlan
+from scope_static.experiments.static.discovery import format_discovery_terminal_summary, run_discovery_experiment
+from scope_static.experiments.static.run import run_experiment
 
 
 def test_smoke_experiment_writes_claim_boundary_metadata(tmp_path):

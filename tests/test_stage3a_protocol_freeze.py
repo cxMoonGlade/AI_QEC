@@ -6,13 +6,13 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from scope_static.physical.mechanism_catalog import MECHANISM_NAMES
-from scope_static.physical.stage3a_protocol_freeze import (
+from scope_static.backend.mechanism_catalog import MECHANISM_NAMES
+from scope_static.mechanism_discovery.protocol_freeze import (
     forbidden_feature_audit,
     load_stage3a_frozen_visible_features,
     run_stage3a_dataset_protocol_freeze,
 )
-from scope_static.experiments.run_stage3a_protocol_freeze import run_stage3a_protocol_freeze_from_config
+from scope_static.experiments.stage3.protocol_freeze import run_stage3a_protocol_freeze_from_config
 
 
 def test_stage3a_freezes_visible_schema_splits_and_protocol_without_training(tmp_path: Path) -> None:

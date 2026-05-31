@@ -4,8 +4,8 @@ import json
 import math
 from pathlib import Path
 
-from scope_static.physical.phyc3_canonical_acceptance import run_phyc3_canonical_acceptance
-from scope_static.experiments.run_phyc3_canonical_acceptance import run_phyc3_canonical_acceptance_from_config
+from scope_static.learner import run_phyc3_canonical_acceptance
+from scope_static.experiments.qec_noise_catalog.learner_acceptance import run_learner_acceptance_from_config
 
 
 def test_phyc3_canonical_acceptance_selects_phyc3c_and_writes_quality(tmp_path: Path) -> None:
@@ -14,9 +14,9 @@ def test_phyc3_canonical_acceptance_selects_phyc3c_and_writes_quality(tmp_path: 
     result = run_phyc3_canonical_acceptance(**paths, output_dir=tmp_path / "PHYC3_canonical")
 
     assert result["stage"] == "PHYC3_canonical_quality_acceptance"
-    assert result["public_layer"]["layer_name"] == "Layer 3: Learner Classification and Noise Generation (Learner)"
+    assert result["public_layer"]["stage_name"] == "Learner Classification and Noise Generation (Learner)"
     assert result["public_layer"]["legacy_alias"] == "PHYC3"
-    assert [row["layer_index"] for row in result["public_layer_stack"]] == [1, 2, 3]
+    assert [row["stage_index"] for row in result["public_layer_stack"]] == [1, 2, 3]
     assert result["contract_passed"] is True
     assert result["decision"] == "phyc3_canonical_quality_accepted"
     assert result["canonical_prediction_source"]["source_name"] == "phyc3c_distributional_gaussian_likelihood_head"
@@ -80,13 +80,13 @@ def test_layer3_canonical_acceptance_config_alias(tmp_path: Path) -> None:
             "phyc3b_dir": str(paths["phyc3b_dir"]),
             "phyc3c_dir": str(paths["phyc3c_dir"]),
             "phyc3c_validation_dir": str(paths["phyc3c_validation_dir"]),
-            "output_dir": str(tmp_path / "Layer3_canonical"),
+            "output_dir": str(tmp_path / "Learner_canonical"),
         }
     }
     config_path = tmp_path / "layer3.yaml"
     config_path.write_text(json.dumps(config))
 
-    result = run_phyc3_canonical_acceptance_from_config(config_path=config_path)
+    result = run_learner_acceptance_from_config(config_path=config_path)
 
     assert result["contract_passed"] is True
     assert result["public_layer"]["layer_short_name"] == "Learner"

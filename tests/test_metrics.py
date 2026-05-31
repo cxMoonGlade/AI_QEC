@@ -1,7 +1,7 @@
 import torch
 
-from scope_static.fault_graph import FaultGraph
-from scope_static.metrics import (
+from scope_static.dem.fault_graph import FaultGraph
+from scope_static.dem.metrics import (
     compression_audit,
     d_q_dem_distance,
     exact_observation_bit_rates,
@@ -10,7 +10,7 @@ from scope_static.metrics import (
     observation_pair_rates_from_distribution,
     shots_to_threshold,
 )
-from scope_static.likelihood import parity_distribution
+from scope_static.dem.likelihood import parity_distribution
 
 
 def test_dq_dem_only_permits_identical_mask_permutations():

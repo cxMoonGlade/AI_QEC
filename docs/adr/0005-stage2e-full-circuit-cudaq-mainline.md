@@ -21,24 +21,24 @@ rho_probe -> full n-qubit ideal schedule of configured depth d
 
 ## Decision
 
-Use `full_circuit_cudaq` as the Layer 1 full-circuit source. CUDA-QEC/NVIDIA-QEC companion
+Use `full_circuit_cudaq` as the data-preparation full-circuit source. CUDA-QEC/NVIDIA-QEC companion
 adapters, duck-test entry points, and optional install extras are not part of
 the codebase mainline.
 
-The public layer gates are distinct. `PHYC1/PHYC2/PHYC3` remain legacy artifact
+The public catalog gates are distinct. `PHYC1/PHYC2/PHYC3` remain legacy artifact
 aliases:
 
 ```text
-Layer 1: Data Preparation (Prep)
+data_preparation: Data Preparation (Prep)
   generate sampled observations from the declared teacher contract
 
-Layer 2: Teacher Self-Distinguishment (Teacher)
+teacher: Teacher Self-Distinguishment (Teacher)
   teacher self-distinguishment; the teacher itself must classify every
   generated mechanism with BA, min recall, ARI, and NMI all equal to 1.0
 
-Layer 3: Learner Classification and Noise Generation (Learner)
+learner: Learner Classification and Noise Generation (Learner)
   no-leakage learner recovery plus quantum/readout and visible-generation
-  quality; Layer 3 must consume learner-visible grouped predictions, not Layer 2
+  quality; learner must consume learner-visible grouped predictions, not teacher
   teacher-self predictions
 ```
 
@@ -56,10 +56,10 @@ The full-circuit teacher must:
 - Born-local remains an exact local diagnostic with effective depth one.
 - Stage 2 is closed as a no-leakage physical-mechanism catalog validation
   stage: the system can generate controlled noisy QEC observations from declared
-  mechanisms, verify teacher/catalog separability, and train Layer 3 learners
+  mechanisms, verify teacher/catalog separability, and train learner models
   that recover and replay learner-visible noisy observation distributions
   without oracle leakage. Stage 3 is the next claim boundary: remove direct
   mechanism-label supervision and test whether latent mechanism structure can be
   inferred from visible observations alone.
 - CUDA-QEC/CUDA-QX can be reconsidered later for decoder-utility baselines, not
-  as the Layer 1 teacher engine.
+  as the data-preparation teacher engine.

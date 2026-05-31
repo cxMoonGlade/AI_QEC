@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import torch
 
-from scope_static.fault_graph import FaultGraph
+from scope_static.dem.fault_graph import FaultGraph
 from scope_static.numerics import NUMERICAL_ZERO
 
 

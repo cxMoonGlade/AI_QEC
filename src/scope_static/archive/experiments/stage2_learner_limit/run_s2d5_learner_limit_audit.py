@@ -9,16 +9,16 @@ import torch
 import yaml
 
 from scope_static.identifiability import deterministic_kmeans, evaluate_partition
-from scope_static.local_mechanism import split_merge_audit
+from scope_static.dem.local_mechanism import split_merge_audit
 from scope_static.numerics import NUMERICAL_ZERO
-from scope_static.physical.channels import MechanismSpec
-from scope_static.physical.local_inverse import (
+from scope_static.backend.channels import MechanismSpec
+from scope_static.mechanism_observability.local_inverse import (
     _train_heldout_observations,
     _visible_operation_aware_local_inverse_labels,
     build_visible_location_representations,
 )
-from scope_static.physical.ptm import channel_fingerprint, rzz_type_feature_vector
-from scope_static.physical.teacher import build_default_oracle_mechanisms
+from scope_static.backend.ptm import channel_fingerprint, rzz_type_feature_vector
+from scope_static.backend.probe_catalog import build_default_oracle_mechanisms
 
 
 DEFAULT_RUNS = ["phys5_setB", "phys9_setB", "phys9_setC"]

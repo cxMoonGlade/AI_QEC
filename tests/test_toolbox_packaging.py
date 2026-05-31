@@ -10,14 +10,15 @@ def test_toolbox_manifest_exports_public_layers_and_commands() -> None:
     manifest = toolbox_manifest()
 
     assert manifest["name"] == "SCOPE-Static Physical Mechanism Toolbox"
-    assert [layer["layer_index"] for layer in manifest["layers"]] == [1, 2, 3]
-    assert [layer["legacy_alias"] for layer in manifest["layers"]] == ["PHYC1", "PHYC2", "PHYC3"]
+    assert [stage["stage_index"] for stage in manifest["catalog_stages"]] == [1, 2, 3]
+    assert [stage["legacy_alias"] for stage in manifest["catalog_stages"]] == ["PHYC1", "PHYC2", "PHYC3"]
     command_names = {command["name"] for command in manifest["commands"]}
     assert {
         "scope-static-toolbox",
-        "scope-layer1-prep",
-        "scope-layer2-teacher",
-        "scope-layer3-canonical",
+        "scope-catalog-teacher",
+        "scope-data-preparation-teacher",
+        "teacher-distinguishment",
+        "learner-acceptance",
         "scope-stage3a-freeze",
         "scope-stage3a5-ceiling",
         "scope-stage3b0-baselines",
@@ -30,10 +31,11 @@ def test_pyproject_exposes_toolbox_console_scripts() -> None:
     scripts = data["project"]["scripts"]
 
     assert scripts["scope-static-toolbox"] == "scope_static.toolbox:main"
-    assert scripts["scope-layer1-prep"] == "scope_static.experiments.run_s2d_physical_teacher:main"
-    assert scripts["scope-layer2-teacher"] == "scope_static.experiments.run_phyc2_sampled_observation_separability:main"
-    assert scripts["scope-layer3-canonical"] == "scope_static.experiments.run_layer3_canonical_acceptance:main"
-    assert scripts["scope-stage3a-freeze"] == "scope_static.experiments.run_stage3a_protocol_freeze:main"
-    assert scripts["scope-stage3a5-ceiling"] == "scope_static.experiments.run_stage3a5_observability_ceiling:main"
-    assert scripts["scope-stage3b0-baselines"] == "scope_static.experiments.run_stage3b0_baselines:main"
-    assert scripts["scope-stage3b1-discovery"] == "scope_static.experiments.run_stage3b1_discovery_model:main"
+    assert scripts["scope-catalog-teacher"] == "scope_static.experiments.qec_noise_catalog.controlled_catalog_teacher:main"
+    assert scripts["scope-data-preparation-teacher"] == "scope_static.experiments.qec_noise_catalog.data_preparation_teacher:main"
+    assert scripts["teacher-distinguishment"] == "scope_static.experiments.qec_noise_catalog.teacher_distinguishment:main"
+    assert scripts["learner-acceptance"] == "scope_static.experiments.qec_noise_catalog.learner_acceptance:main"
+    assert scripts["scope-stage3a-freeze"] == "scope_static.experiments.stage3.protocol_freeze:main"
+    assert scripts["scope-stage3a5-ceiling"] == "scope_static.experiments.stage3.observability_ceiling:main"
+    assert scripts["scope-stage3b0-baselines"] == "scope_static.experiments.stage3.baselines:main"
+    assert scripts["scope-stage3b1-discovery"] == "scope_static.experiments.stage3.discovery_model:main"

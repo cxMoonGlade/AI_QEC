@@ -6,8 +6,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from scope_static.experiments import run_local_observable_gpu_teacher as runner
-from scope_static.physical.local_observable_teacher import (
+from scope_static.experiments.qec_noise_catalog import local_observable_gpu_teacher as runner
+from scope_static.data_preparation.local_observable_teacher import (
     RZZ_ALIAS_GROUP,
     READOUT_ALIAS_GROUP,
     _build_local_observable_records,
@@ -15,9 +15,9 @@ from scope_static.physical.local_observable_teacher import (
     _record_probability_profile,
     generate_local_observable_teacher_dataset,
 )
-from scope_static.physical.sampled_observation_separability import run_sampled_observation_separability_audit
-from scope_static.physical.teacher import _probe_names
-from scope_static.physical.typed_spam_gate_invariant import _location_features
+from scope_static.teacher import run_sampled_observation_separability_audit
+from scope_static.backend.probe_catalog import _probe_names
+from scope_static.mechanism_observability.typed_spam_gate_invariant import _location_features
 
 
 def test_local_observable_runner_merges_s2d11_stress_run_without_sampling(monkeypatch, tmp_path: Path) -> None:

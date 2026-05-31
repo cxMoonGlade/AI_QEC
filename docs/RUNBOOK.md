@@ -61,14 +61,14 @@ conda run -n aiqec python -m pytest -q \
 Smoke:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.static.run \
   --config configs/scope_static/d3_r1_MVP05_windows.yaml
 ```
 
 Full local-window sweep:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.static.run \
   --config configs/scope_static/d3_r1_MVP05_windows_full.yaml
 ```
 
@@ -80,28 +80,28 @@ compression accounting, model records, and heldout likelihood summaries.
 Direct free-assignment discovery:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static_discovery \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.static.discovery \
   --config configs/scope_static/d3_r1_STAGE2A_full.yaml
 ```
 
 Summarize Stage 2A:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.stage2a0_summary \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.static.stage2a0_summary \
   --metrics outputs/scope_static/STAGE2A_full/metrics.json
 ```
 
 Passive identifiability audit:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static_identifiability \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.static.identifiability \
   --config configs/scope_static/d3_r1_STAGE2A_DISC10_passive_audit.yaml
 ```
 
 Robust local-inverse discovery:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static_disc16b_robustness \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.static.disc16b_robustness \
   --config configs/scope_static/d3_r1_STAGE2C_DISC16b_robustness.yaml
 ```
 
@@ -113,7 +113,7 @@ active prototype counts, collapse flags, and label-use audits.
 Native GPU path:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_google_static \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.google.static \
   --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
   --native-gpu
 ```
@@ -121,7 +121,7 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run
 Fast smoke:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_google_static \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.google.static \
   --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
   --native-gpu \
   --train-shots 256 --heldout-shots 256 --max-windows 8 --steps 2 \
@@ -156,48 +156,85 @@ s2d_physical:
 The full template is
 `configs/scope_static/layer1_user_defined_mechanisms.yaml`.
 
-Small user-defined Layer 1 run:
+Small user-defined Layer1.P run:
 
 ```bash
-scope-layer1-prep \
+scope-data-preparation-teacher \
   --config configs/scope_static/layer1_user_defined_mechanisms.yaml \
-  --output-dir outputs/scope_static/user_defined_layer1_demo/S2D_PHYC1_teacher
+  --output-dir outputs/scope_static/user_defined_data_preparation_demo/DataPreparation_teacher
 ```
 
-Physical Oracle Stack facade:
+Catalog Pipeline facade:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_physical_oracle_stack \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.qec_noise_catalog.catalog_pipeline \
   --config configs/scope_static/d3_r1_S2D_PHYS_cudaq.yaml \
   --run-local-inverse auto
 ```
 
-Layer 1 full-circuit CUDA-Q teacher:
+Layer1.P full-circuit CUDA-Q teacher:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_s2d_physical_teacher \
-  --config configs/scope_static/s2d11_allM_30q_depth30.yaml \
-  --output-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/S2D_PHYC1_teacher \
-  --preflight-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/S2D_PHYS0_preflight
+conda run -n aiqec scope-data-preparation-teacher \
+  --config configs/scope_static/data_preparation_teacher.yaml
 ```
 
-Layer 1 produces mechanism records, probe schedules, sampled observations,
-teacher config, sampling audits, and active probe manifests.
+Layer1.P produces mechanism records, probe schedules, sampled observations,
+teacher config, sampling audits, active probe manifests, a pre-sampling
+physical-process contract, and a post-sampling physicality audit. The older
+`scope-catalog-teacher` command remains as a compatibility alias, but it now routes
+through Layer1.P.
 
-Physicality boundary: Layer 1 mechanisms use catalog unitary/Kraus/readout
-definitions. Layer 1 emits `cptp_guardrail_audit.json`, which checks unitarity,
-complete-positivity representation class, declared channel dimension, Kraus
-trace preservation, readout stochasticity, and parameter validity for every
-enabled mechanism record.
+Layer1.P teacher generation:
+
+```bash
+conda run -n aiqec scope-data-preparation-teacher \
+  --config configs/scope_static/data_preparation_teacher.yaml
+```
+
+Equivalent module form:
+
+```bash
+conda run -n aiqec python -m scope_static.experiments.qec_noise_catalog.data_preparation_teacher \
+  --config configs/scope_static/data_preparation_teacher.yaml
+```
+
+Layer1.P is the first-class physical-process teacher. It validates the declared
+local CPTP/POVM mechanism contract before sampling, runs full-circuit CUDA-Q
+Born-rule sampling, then runs the post-sampling physicality audit as a blocking
+gate. It writes `layer1p_pre_sampling_contract.json`,
+`layer1p_teacher_contract.json`, `full_circuit_cudaq_summary.json`, and
+`Layer1_teacher_physicality_audit/`.
+
+Layer1.P teacher physicality audit only:
+
+```bash
+conda run -n aiqec scope-teacher-physicality-audit \
+  --config configs/scope_static/teacher_physicality_audit.yaml
+```
+
+Equivalent module form:
+
+```bash
+conda run -n aiqec python -m scope_static.experiments.qec_noise_catalog.teacher_physicality_audit \
+  --config configs/scope_static/teacher_physicality_audit.yaml
+```
+
+This post-hoc audit checks the teacher's generating maps, not the data as
+`CPTP`. It checks local unitary/Kraus channels through Choi/TP/random-state
+tests, readout maps as stochastic matrices embedded into POVMs, reset/prep
+surrogates, leakage-surrogate bookkeeping, and empirical circuit output
+normalization. It writes a `Layer1_teacher_physicality_audit/` artifact bundle
+and is run automatically by the Layer1.P teacher generator.
 
 ### Full-Circuit g30 Timing Reference
 
 The current full-circuit g30 run shows that the dominant cost is CUDA-Q
-sampling inside the Layer 1 teacher. The teacher artifact records explicit
+sampling inside the data-preparation teacher. The teacher artifact records explicit
 wall-clock fields; Stage 3 stage timings below use artifact end-time deltas and
 should be treated as approximate upper bounds.
 
-Instrumented Layer 1 teacher wall clock:
+Instrumented data-preparation teacher wall clock:
 
 | Participant | Wall clock | Share |
 | --- | ---: | ---: |
@@ -240,64 +277,64 @@ Practical bottleneck order:
 
 ## Function: Audit Teacher Self-Distinguishment
 
-Layer 2 balanced teacher audit:
+Teacher balanced audit:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_phyc2_sampled_observation_separability \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.qec_noise_catalog.teacher_distinguishment \
   --contract balanced \
-  --teacher-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/S2D_PHYC1_teacher \
+  --teacher-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/DataPreparation_teacher \
   --output-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/PHYC2_balanced_teacher_self_distinguishment
 ```
 
-Layer 2 tests teacher/catalog self-distinguishability. It is not a learner
+Teacher tests teacher/catalog self-distinguishability. It is not a learner
 success claim and must not emit canonical learner predictions.
 
 ## Function: Run No-Leakage Learner Recovery
 
-Layer 3 legacy no-leakage recovery:
+Learner legacy no-leakage recovery:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_phyc3_no_leakage_learner_recovery \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.qec_noise_catalog.learner_recovery \
   --contract balanced \
-  --teacher-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/S2D_PHYC1_teacher \
+  --teacher-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/DataPreparation_teacher \
   --output-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/PHYC3_no_leakage_learner_recovery
 ```
 
-Layer 3 quality from learner predictions:
+Learner quality from learner predictions:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_phyc3_sampled_quantum_error_quality \
-  --teacher-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/S2D_PHYC1_teacher \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.qec_noise_catalog.learner_quality \
+  --teacher-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/DataPreparation_teacher \
   --prediction-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/PHYC3_no_leakage_learner_recovery \
   --output-dir outputs/scope_static/full_circuit_cudaq_allM_30q_depth30/PHYC3_no_leakage_learner_quality
 ```
 
-Layer 3 consumes learner-visible sampled observations. Forbidden learner inputs
+Learner consumes learner-visible sampled observations. Forbidden learner inputs
 include mechanism IDs, family labels, teacher self embeddings, exact channel
 matrices, exact PTMs, oracle prototypes, and hidden parameters.
 
-Layer 3 generated-noise language must distinguish two cases: catalog-mechanism
+Learner generated-noise language must distinguish two cases: catalog-mechanism
 replay inherits the catalog mechanism definition, while empirical visible replay
 is a visible-distribution model and is not by itself a learned CPTP channel.
 
-## Function: Run Canonical Layer 3 Acceptance
+## Function: Run Canonical Learner Acceptance
 
 ```bash
-conda run -n aiqec scope-layer3-canonical \
-  --config configs/scope_static/layer3_canonical_acceptance.yaml
+conda run -n aiqec learner-acceptance \
+  --config configs/scope_static/learner_acceptance.yaml
 ```
 
 Equivalent module form:
 
 ```bash
-conda run -n aiqec python -m scope_static.experiments.run_layer3_canonical_acceptance \
-  --config configs/scope_static/layer3_canonical_acceptance.yaml
+conda run -n aiqec python -m scope_static.experiments.qec_noise_catalog.learner_acceptance \
+  --config configs/scope_static/learner_acceptance.yaml
 ```
 
 The canonical resolver selects `phyc3c_distributional_gaussian_likelihood_head`
-only after Layer 2, Layer 3b, Layer 3c, and validation gates pass. It rejects
-Layer 2 teacher-self predictions, legacy Layer 2 grouped predictions, and the
-Layer 3a old visible-surface baseline as canonical learner evidence.
+only after teacher, visible repair, distributional learner, and
+validation gates pass. It rejects teacher-self predictions, legacy grouped
+predictions, and the old visible-surface baseline as canonical learner evidence.
 
 ## Function: Run Stage 3A Protocol Freeze
 
@@ -309,7 +346,7 @@ conda run -n aiqec scope-stage3a-freeze \
 Equivalent module form:
 
 ```bash
-conda run -n aiqec python -m scope_static.experiments.run_stage3a_protocol_freeze \
+conda run -n aiqec python -m scope_static.experiments.stage3.protocol_freeze \
   --config configs/scope_static/stage3a_protocol_freeze.yaml
 ```
 
@@ -328,7 +365,7 @@ conda run -n aiqec scope-stage3a5-ceiling \
 Equivalent module form:
 
 ```bash
-conda run -n aiqec python -m scope_static.experiments.run_stage3a5_observability_ceiling \
+conda run -n aiqec python -m scope_static.experiments.stage3.observability_ceiling \
   --config configs/scope_static/stage3a5_observability_ceiling.yaml
 ```
 
@@ -348,7 +385,7 @@ conda run -n aiqec scope-stage3b0-baselines \
 Equivalent module form:
 
 ```bash
-conda run -n aiqec python -m scope_static.experiments.run_stage3b0_baselines \
+conda run -n aiqec python -m scope_static.experiments.stage3.baselines \
   --config configs/scope_static/stage3b0_baselines.yaml
 ```
 
@@ -370,7 +407,7 @@ conda run -n aiqec scope-stage3b1-discovery \
 Equivalent module form:
 
 ```bash
-conda run -n aiqec python -m scope_static.experiments.run_stage3b1_discovery_model \
+conda run -n aiqec python -m scope_static.experiments.stage3.discovery_model \
   --config configs/scope_static/stage3b1_discovery_model.yaml
 ```
 
@@ -397,7 +434,7 @@ conda run -n aiqec scope-stage3c-generator \
 Equivalent module form:
 
 ```bash
-conda run -n aiqec python -m scope_static.experiments.run_stage3c_generator_learning \
+conda run -n aiqec python -m scope_static.experiments.stage3.generator_learning \
   --config configs/scope_static/stage3c_generator_learning.yaml
 ```
 
@@ -414,38 +451,60 @@ NLL is retained as a secondary continuous-density diagnostic. It writes
 comparators; they are not used for predicted-assignment fitting or model
 selection.
 
+## Function: Run Stage 3D.1 Assignment-Shuffle Generator Audit
+
+```bash
+conda run -n aiqec scope-stage3d1-assignment-shuffle \
+  --config configs/scope_static/stage3d1_assignment_shuffle_audit.yaml
+```
+
+Equivalent module form:
+
+```bash
+conda run -n aiqec python -m scope_static.experiments.stage3.assignment_shuffle_audit \
+  --config configs/scope_static/stage3d1_assignment_shuffle_audit.yaml
+```
+
+Stage 3D.1 keeps frozen Stage 3A visible features fixed, shuffles only Stage
+3B.1 discovered assignment rows, refits/evaluates the Stage 3C generator, and
+expects `categorical_population_nll` plus replay metrics to collapse toward
+global-null. It writes `assignment_shuffle_metrics.json`,
+`shuffled_assignment_metrics_summary.json`, `shuffle_runs.json`,
+`s3c_consistency_audit.json`, `leakage_audit.json`, and
+`acceptance_audit.json`.
+
 ## Function: Run Active Physical-Observability Audits
 
 Local Pauli-Lindblad observability:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_s2d9_local_pauli_lindblad_observability \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.qec_noise_catalog.s2d9_local_pauli_lindblad_observability \
   --config configs/scope_static/s2d9_local_pauli_lindblad_observability.yaml
 ```
 
 Generator invariant calibration:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_s2d10b_generator_invariant_calibration \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.qec_noise_catalog.s2d10b_generator_invariant_calibration \
   --config configs/scope_static/s2d10b_generator_invariant_calibration.yaml
 ```
 
 Typed gate/readout/prep invariant learner:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_s2d11_typed_spam_gate_invariant_learner \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.qec_noise_catalog.s2d11_typed_spam_gate_invariant_learner \
   --config configs/scope_static/s2d11_typed_spam_gate_invariant_learner.yaml
 ```
 
 Calibration-only audit:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_s2d11b_m1_gate_branch_grouped_calibration_audit \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.qec_noise_catalog.s2d11b_m1_gate_branch_grouped_calibration_audit \
   --config configs/scope_static/s2d11b_m1_gate_branch_grouped_calibration_audit.yaml
 ```
 
 These functions support probe-design and observability analysis. They are not a
-replacement for canonical Layer 3 acceptance.
+replacement for canonical learner acceptance.
 
 ## Output Discipline
 

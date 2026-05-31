@@ -69,8 +69,8 @@ conditional phase, correlated relaxation, and spectator crosstalk.
 
 ## Implemented Catalog
 
-Status: implemented in `src/scope_static/physical/mechanism_catalog.py` and
-channelized in `src/scope_static/physical/channels.py`.
+Status: implemented in `src/scope_static/backend/mechanism_catalog.py` and
+channelized in `src/scope_static/backend/channels.py`.
 
 The IDs are priority ordered by expected practical frequency/importance for
 near-term hardware-style experiments. This order defines the mechanism sets.

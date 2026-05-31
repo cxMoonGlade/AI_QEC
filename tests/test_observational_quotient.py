@@ -3,12 +3,12 @@ import json
 import torch
 import yaml
 
-from scope_static.experiments.run_static_observational_quotient import (
+from scope_static.experiments.static.observational_quotient import (
     build_disc13_fingerprints,
     run_observational_quotient_audit,
 )
-from scope_static.multi_env import make_multi_env_teacher
-from scope_static.stim_dem import build_surface_code_graph
+from scope_static.dem.multi_env import make_multi_env_teacher
+from scope_static.dem.stim_dem import build_surface_code_graph
 
 
 def _graph():

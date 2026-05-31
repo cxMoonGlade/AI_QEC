@@ -6,16 +6,16 @@ from pathlib import Path
 import numpy as np
 import yaml
 
-from scope_static.experiments import run_s2d9_local_pauli_lindblad_observability as runner
-from scope_static.physical.channels import correlated_relaxation_kraus, rxx_ryy_unitary, rxx_unitary, rzz_unitary
-from scope_static.physical.local_pauli_lindblad import (
+from scope_static.experiments.qec_noise_catalog import s2d9_local_pauli_lindblad_observability as runner
+from scope_static.backend.channels import correlated_relaxation_kraus, rxx_ryy_unitary, rxx_unitary, rzz_unitary
+from scope_static.mechanism_observability import (
     PAULI_LABELS,
     fit_generator_coordinates,
     local_error_ptm_from_observed,
     reconstruct_record_local_ptm,
 )
-from scope_static.physical.ptm import ptm_from_kraus, ptm_from_unitary
-from scope_static.physical.teacher import RZZ_LOCAL_TOMOGRAPHY_PROBES, build_probe_basis_manifest, build_probe_circuits
+from scope_static.backend.ptm import ptm_from_kraus, ptm_from_unitary
+from scope_static.backend.probe_catalog import RZZ_LOCAL_TOMOGRAPHY_PROBES, build_probe_basis_manifest, build_probe_circuits
 
 
 TOMO_PROBES = list(RZZ_LOCAL_TOMOGRAPHY_PROBES)
@@ -147,7 +147,7 @@ def test_s2d9_runner_writes_required_artifacts_with_fakes(tmp_path: Path, monkey
         (out / "oracle_mechanisms.json").write_text(json.dumps({"mechanisms": records}, indent=2) + "\n")
         return {"mechanism_counts": {"M1": 1}, "num_qubits": 2, "num_probes": len(TOMO_PROBES), "output_dir": str(out)}
 
-    monkeypatch.setattr(runner, "generate_physical_teacher_dataset", fake_teacher)
+    monkeypatch.setattr(runner, "generate_controlled_catalog_teacher_dataset", fake_teacher)
 
     result = runner.run_s2d9_local_pauli_lindblad_observability(config_path)
     out = tmp_path / "S2D.9_local_Pauli_Lindblad_observability"

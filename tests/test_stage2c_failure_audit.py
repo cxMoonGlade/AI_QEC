@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from scope_static.experiments.stage2c_failure_audit import run_stage2c_failure_audit
+from scope_static.experiments.static.stage2c_failure_audit import run_stage2c_failure_audit
 
 
 def test_stage2c_failure_audit_summarizes_near_miss_failures(tmp_path: Path) -> None:

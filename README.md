@@ -1,15 +1,15 @@
 # SCOPE-Static
 
 `scope-static` is a pre-release toolbox for QEC noise-learning experiments.
-It provides fixed-context DEM/Bernoulli learning tools and a layered
-physical-mechanism validation stack.
+It provides fixed-context DEM/Bernoulli learning tools and a controlled-catalog
+QEC noise pipeline.
 
 The long-term target is the six-axis physical generation problem: a model must
 be faithful as a generator, interpretable, useful to decoders, transferable
 across contexts, predictive under drift, and identifiable. CPTP/GKSL structure
 is one constraint mechanism, not the claim by itself.
 
-Physicality boundary: Layer 1 generates teacher-declared noisy QEC
+Physicality boundary: data preparation generates teacher-declared noisy QEC
 observations from implemented catalog unitary/Kraus/readout mechanism
 definitions. The current learner recovers and replays visible noisy observation
 distributions under the declared protocol; it does not yet learn an arbitrary
@@ -22,13 +22,13 @@ object.
 
 1. Generate teacher-declared noisy QEC observations.
    Users choose enabled mechanism IDs, mechanism parameters, shot count, probe
-   schedule, circuit depth, and mechanism instance counts. Layer 1 writes
+   schedule, circuit depth, and mechanism instance counts. Data preparation writes
    sampled observations and the manifests needed to reproduce them from the
    controlled mechanism catalog.
 
 2. Learn from the learner-visible surface and replay similar reproducible
    visible noisy observations.
-   Layer 3 consumes only declared visible probe observations and approved
+   Learner consumes only declared visible probe observations and approved
    visible features, then scores recovery/replay with channel-distance, NLL, CE,
    and MAE diagnostics. This proves that the visible surface contains enough
    signal for no-leakage recovery/replay under the current protocol; it does not
@@ -48,17 +48,17 @@ y = A e mod 2
 lambda_j = logit(p_j)
 ```
 
-The physical layer stack is:
+The catalog validation responsibilities are:
 
 ```text
-Layer 1: Data Preparation (Prep)
-Layer 2: Teacher Self-Distinguishment (Teacher)
-Layer 3: Learner Classification and Noise Generation (Learner)
+data_preparation: Data Preparation (Prep)
+teacher: Teacher Self-Distinguishment (Teacher)
+learner: Learner Classification and Noise Generation (Learner)
 ```
 
 Stage 2 is closed as a no-leakage physical-mechanism catalog validation stage:
 the system can generate controlled noisy QEC observations from declared
-mechanisms, verify teacher/catalog separability, and train Layer 3 learners
+mechanisms, verify teacher/catalog separability, and train learner models
 that recover and replay learner-visible noisy observation distributions without
 oracle leakage. Stage 3 is the next claim boundary: remove direct
 mechanism-label supervision and test whether latent mechanism structure can be
@@ -93,11 +93,11 @@ Print the toolbox manifest:
 scope-static-toolbox
 ```
 
-Run the current canonical Layer 3 acceptance artifact:
+Run the current canonical learner acceptance artifact:
 
 ```bash
-scope-layer3-canonical \
-  --config configs/scope_static/layer3_canonical_acceptance.yaml
+learner-acceptance \
+  --config configs/scope_static/learner_acceptance.yaml
 ```
 
 Run tests:
@@ -109,9 +109,9 @@ python -m pytest -q
 Generate a small user-defined noisy mechanism dataset:
 
 ```bash
-scope-layer1-prep \
+scope-data-preparation-teacher \
   --config configs/scope_static/layer1_user_defined_mechanisms.yaml \
-  --output-dir outputs/scope_static/user_defined_layer1_demo/S2D_PHYC1_teacher
+  --output-dir outputs/scope_static/user_defined_data_preparation_demo/DataPreparation_teacher
 ```
 
 Full-circuit physical generation requires a CUDA-Q-capable environment. The

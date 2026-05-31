@@ -6,12 +6,12 @@ from pathlib import Path
 import torch
 import yaml
 
-from scope_static.experiments.plan import ExperimentPlan
-from scope_static.experiments.run_static_disc16_observability import _fit_local_inverse, _sample_env_observations
-from scope_static.experiments.run_static_disc16_observability import run_disc16_observability
+from scope_static.experiments.static.plan import ExperimentPlan
+from scope_static.experiments.static.disc16_observability import _fit_local_inverse, _sample_env_observations
+from scope_static.experiments.static.disc16_observability import run_disc16_observability
 from scope_static.identifiability import deterministic_kmeans
-from scope_static.local_mechanism import local_probability_features
-from scope_static.multi_env import make_multi_env_teacher
+from scope_static.dem.local_mechanism import local_probability_features
+from scope_static.dem.multi_env import make_multi_env_teacher
 
 
 NOISE = {

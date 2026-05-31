@@ -7,10 +7,10 @@ from types import SimpleNamespace
 import numpy as np
 import yaml
 
-from scope_static.experiments import run_s2d11_typed_spam_gate_invariant_learner as runner
-from scope_static.physical.generator_invariant_calibration import INVARIANT_FEATURES
-from scope_static.physical.generator_space_calibration import GENERATOR_CORE
-from scope_static.physical.typed_spam_gate_invariant import (
+from scope_static.experiments.qec_noise_catalog import s2d11_typed_spam_gate_invariant_learner as runner
+from scope_static.mechanism_observability import INVARIANT_FEATURES
+from scope_static.mechanism_observability import GENERATOR_CORE
+from scope_static.mechanism_observability import (
     build_typed_spam_gate_features,
     branch_budget_audit,
     classification_metrics,
@@ -101,7 +101,7 @@ def test_runner_writes_full_audit_bundle_with_fake_setD(tmp_path: Path, monkeypa
             response_jacobian_json={"matrix": np.eye(2).tolist()},
         )
 
-    monkeypatch.setattr(runner, "generate_physical_teacher_dataset", fake_teacher)
+    monkeypatch.setattr(runner, "generate_controlled_catalog_teacher_dataset", fake_teacher)
     monkeypatch.setattr(runner, "build_local_pauli_lindblad_observability", fake_local)
 
     output = tmp_path / "S2D.11_typed_SPAM_gate_invariant_learner"

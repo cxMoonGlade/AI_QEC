@@ -5,11 +5,11 @@ from pathlib import Path
 
 import numpy as np
 
-from scope_static.experiments.run_stage3b1_discovery_model import run_stage3b1_discovery_model_from_config
-from scope_static.physical.mechanism_catalog import MECHANISM_NAMES
-from scope_static.physical.stage3a_protocol_freeze import run_stage3a_dataset_protocol_freeze
-from scope_static.physical.stage3a5_observability_ceiling import run_stage3a5_observability_alias_ceiling
-from scope_static.physical.stage3b1_discovery_model import (
+from scope_static.experiments.stage3.discovery_model import run_stage3b1_discovery_model_from_config
+from scope_static.backend.mechanism_catalog import MECHANISM_NAMES
+from scope_static.mechanism_discovery.protocol_freeze import run_stage3a_dataset_protocol_freeze
+from scope_static.mechanism_discovery.observability_ceiling import run_stage3a5_observability_alias_ceiling
+from scope_static.mechanism_discovery.discovery_model import (
     _context_balanced_hard_assignments,
     _fit_context_balanced_prototype_mixture,
     run_stage3b1_first_discovery_model,

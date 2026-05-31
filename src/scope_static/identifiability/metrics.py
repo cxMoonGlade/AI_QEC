@@ -4,7 +4,7 @@ from collections import defaultdict
 
 import torch
 
-from scope_static.metrics import adjusted_rand_index, normalized_mutual_info
+from scope_static.dem.metrics import adjusted_rand_index, normalized_mutual_info
 
 
 def contingency_table(

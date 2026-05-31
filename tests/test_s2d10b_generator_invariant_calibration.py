@@ -6,13 +6,13 @@ from pathlib import Path
 import numpy as np
 import yaml
 
-from scope_static.experiments import run_s2d10b_generator_invariant_calibration as runner
-from scope_static.physical.generator_invariant_calibration import (
+from scope_static.experiments.qec_noise_catalog import s2d10b_generator_invariant_calibration as runner
+from scope_static.mechanism_observability import (
     INVARIANT_FEATURES,
     generator_invariants_from_coordinates,
     ptm_unitarity,
 )
-from scope_static.physical.generator_space_calibration import GENERATOR_CORE
+from scope_static.mechanism_observability import GENERATOR_CORE
 
 
 def test_generator_invariants_separate_coherent_and_stochastic_signatures() -> None:

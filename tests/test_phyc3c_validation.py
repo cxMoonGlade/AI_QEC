@@ -3,9 +3,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from scope_static.physical.mechanism_catalog import MECHANISM_NAMES
-from scope_static.physical.phyc3c_gaussian_likelihood import build_batch_protocol, leakage_guardrail_audit_phyc3c
-from scope_static.physical.phyc3c_validation import (
+from scope_static.backend.mechanism_catalog import MECHANISM_NAMES
+from scope_static.learner import build_batch_protocol, leakage_guardrail_audit_phyc3c
+from scope_static.learner import (
     non_leakage_audit,
     protocol_validity_audit,
     run_phyc3c_validation_audit,

@@ -30,16 +30,18 @@ p_j = sigmoid(lambda_j)
 - `S[j, k]` or `Pi[j, k]`: learned Stage 2 discovery assignment. Do not call
   this matrix `A`; `A` is reserved for the DEM parity map.
 
-For physical-mechanism layer paths, sampled observation bits are
+For catalog validation paths, sampled observation bits are
 learner-visible data when declared. Oracle mechanism labels, exact channels,
 exact PTMs, teacher-self signatures, and oracle fingerprints remain
-evaluator-only. Layer 2 may use teacher-internal evidence to ask whether the
-teacher can distinguish itself; Layer 3 may not use that evidence as learner
-input. `PHYC1/PHYC2/PHYC3` remain legacy artifact aliases for Layer 1/2/3.
+evaluator-only. Teacher may use teacher-internal evidence to ask whether the
+teacher can distinguish itself; Learner may not use that evidence as learner
+input. `PHYC1/PHYC2/PHYC3` remain legacy artifact aliases.
 
-Physicality boundary: Layer 1 mechanisms are catalog definitions implemented as
-unitary channels, Kraus channels, or classical readout assignment matrices.
-Layer 3 is not yet an arbitrary CPTP/GKSL channel learner by construction.
+Physicality boundary: data preparation is the first-class physical-process teacher.
+It validates catalog definitions as unitary channels, Kraus channels, or
+classical readout assignment matrices before sampling and blocks failed
+artifacts with a post-sampling physicality audit. Learner is not yet an
+arbitrary CPTP/GKSL channel learner by construction.
 
 ## Teacher
 
@@ -49,12 +51,13 @@ Implemented forms:
 
 - SCOPE-Static: defines hidden `omega(j)`, teacher logits `lambda_j`, sampled
   faults `e_j ~ Bernoulli(p_j)`, and observations `y = A e mod 2`.
-- S2D physical-oracle work: Layer 1 generates physical mechanism cases,
-  Layer 2 audits teacher self-distinguishment, and Layer 3 judges no-leakage
-  learner recovery plus generated noise/error quality.
-- Layer 1 full-circuit: samples literal full n-qubit CUDA-Q circuits at
-  configured gate depth with mechanism channels/readout.
-- separability_v2: generates Layer 1-compatible sampled local observations
+- S2D catalog work: data preparation generates physical mechanism cases,
+  teacher audits teacher self-distinguishment, and learner
+  judges no-leakage learner recovery plus generated noise/error quality.
+- Data-preparation full-circuit: validates local CPTP/POVM mechanism modules, samples
+  literal full n-qubit CUDA-Q circuits at configured gate depth with mechanism
+  channels/readout, and runs a blocking post-sampling physicality audit.
+- separability_v2: generates data-preparation-compatible sampled local observations
   from engineered branch-specific response profiles for stress testing
   learner-visible separability.
 - Born-local: generates sampled local observations
@@ -80,15 +83,15 @@ Implemented forms:
 - PHYS3 legacy local-inverse recovery: learns from shot bits, probe metadata,
   visible instruction type, visible qubit/edge ids, chain position, and
   visible-data-derived invariants.
-- Layer 2: not a learner-success claim. It audits whether the Layer 1 teacher can
-  self-distinguish generated mechanisms from teacher-internal mechanism
-  evidence.
-- Layer 3: consumes no-leakage learner grouped predictions, not Layer 2
-  teacher-self predictions, and audits whether predicted mechanism labels map
-  to close quantum/readout error prototypes and visible generated-noise metrics
-  such as NLL and MAE.
+- Teacher: not a learner-success claim. It audits whether the
+  data-preparation teacher can self-distinguish generated mechanisms from
+  teacher-internal mechanism evidence.
+- Learner: consumes no-leakage learner grouped predictions, not
+  teacher-self predictions, and audits whether predicted
+  mechanism labels map to close quantum/readout error prototypes and visible
+  generated-noise metrics such as NLL and MAE.
 
-If Layer 3 replays a predicted catalog mechanism, it inherits the catalog
+If learner replays a predicted catalog mechanism, it inherits the catalog
 unitary/Kraus/readout definition. If it replays only empirical visible
 distributions, the result is a visible-distribution model, not a proven learned
 CPTP channel.
@@ -119,7 +122,7 @@ Allowed learner-visible data:
 - shot bits.
 - visible circuit/probe/instruction/location metadata.
 - features computed only from visible data.
-- Layer 2/Layer 3 slot-remapped observation cells, provided sampled response
+- teacher/learner slot-remapped observation cells, provided sampled response
   features are used and slot-only leakage control remains low.
 
 Forbidden learner exposure:
@@ -135,14 +138,14 @@ Forbidden learner exposure:
 For the current local-observable path, `PHYC2.slot_only_leakage_control` trains
 on slot/layout metadata without sampled bits. High slot-only accuracy means the
 sampled-observation learner diagnostic is leaking and should not be trusted as
-Layer 3 evidence. It does not invalidate Layer 2 teacher self-distinguishment by
+learner evidence. It does not invalidate teacher by
 itself. The current accepted `separability_v2` evidence is explicitly
 classified as an engineered separability stress result, not a Born-local
 physical baseline.
 
 Stage 2 is closed as a no-leakage physical-mechanism catalog validation stage:
 the system can generate controlled noisy QEC observations from declared
-mechanisms, verify teacher/catalog separability, and train Layer 3 learners
+mechanisms, verify teacher/catalog separability, and train learner models
 that recover and replay learner-visible noisy observation distributions without
 oracle leakage. Stage 3 is the next claim boundary: remove direct
 mechanism-label supervision and test whether latent mechanism structure can be

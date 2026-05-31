@@ -3,8 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from scope_static.physical.mechanism_catalog import MECHANISM_NAMES
-from scope_static.physical.phyc3b_zx_visible_probe_suite import (
+from scope_static.backend.mechanism_catalog import MECHANISM_NAMES
+from scope_static.learner import (
     ALIAS_PAIRS,
     audit_m34_implementation,
     build_zx_visible_feature_table,

@@ -125,14 +125,14 @@ then validates that `sample_00` exists before enumerating leaves.
 The new runner is intentionally separate from `run_static`:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_google_static \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.google.static \
   --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1
 ```
 
 For a fast real-data smoke:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_google_static \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.google.static \
   --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
   --train-shots 256 --heldout-shots 256 --max-windows 8 --steps 2 \
   --models hard_orbit \
@@ -152,7 +152,7 @@ heldout model comparison, transfer means, and decision summary. Use `--progress-
 when per-stage JSON progress events are needed for profiling or automation.
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_google_static \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.google.static \
   --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
   --train-shots 5000 --heldout-shots 2000 --max-windows 32 --steps 50 \
   --models hard_orbit,soft_feature_orbit \
@@ -178,7 +178,7 @@ kernel and the new active-fault Walsh/Fourier spectral kernel, returns the DP
 result, and fails on loss/gradient mismatch.
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_google_static \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.google.static \
   --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
   --native-gpu \
   --cuda-kernel-variant spectral_shadow \
@@ -190,10 +190,10 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run
 ```
 
 Kernel benchmarks are available through
-`scope_static.experiments.benchmark_cuda_kernels`; records include CPU/PyTorch,
+`scope_static.experiments.google.benchmark_cuda_kernels`; records include CPU/PyTorch,
 CUDA DP, CUDA spectral, and active-window workload audits. A small
 metric-reproduction gate is available through
-`scope_static.experiments.compare_cuda_kernel_variants`.
+`scope_static.experiments.google.compare_cuda_kernel_variants`.
 
 The default leaf is `sample_00/d3_at_q5_5/X/r13` with `decoder_si1000`.
 Observations are loaded as `torch.bool[N, B] = [detection_events |
@@ -302,7 +302,7 @@ parameter reduction.
 Existing result files can be re-summarized without rerunning Google data:
 
 ```bash
-conda run -n aiqec python -m scope_static.experiments.summarize_google_static \
+conda run -n aiqec python -m scope_static.experiments.google.summarize_static \
   outputs/google_static/S1_7_logical_aware_full_clean/google_static_metrics.json \
   --preprocessing-mode fault_graph_heuristic
 ```
@@ -322,31 +322,31 @@ though `nvidia-smi` sees the RTX 5090.
 Claim path:
 
 ```bash
-conda run -n aiqec python -m scope_static.experiments.run_static --config configs/scope_static/d3_r1_MVP01.yaml
+conda run -n aiqec python -m scope_static.experiments.static.run --config configs/scope_static/d3_r1_MVP01.yaml
 ```
 
 MVP03 rank-5 global exact rerun:
 
 ```bash
-conda run -n aiqec python -m scope_static.experiments.run_static --config configs/scope_static/d3_r1_MVP03.yaml
+conda run -n aiqec python -m scope_static.experiments.static.run --config configs/scope_static/d3_r1_MVP03.yaml
 ```
 
 MVP04 rank sweep:
 
 ```bash
-conda run -n aiqec python -m scope_static.experiments.run_static --config configs/scope_static/d3_r1_MVP04.yaml
+conda run -n aiqec python -m scope_static.experiments.static.run --config configs/scope_static/d3_r1_MVP04.yaml
 ```
 
 MVP05 local-window smoke objective:
 
 ```bash
-conda run -n aiqec python -m scope_static.experiments.run_static --config configs/scope_static/d3_r1_MVP05_windows.yaml
+conda run -n aiqec python -m scope_static.experiments.static.run --config configs/scope_static/d3_r1_MVP05_windows.yaml
 ```
 
 MVP05 full local-window sweep:
 
 ```bash
-conda run -n aiqec python -m scope_static.experiments.run_static --config configs/scope_static/d3_r1_MVP05_windows_full.yaml
+conda run -n aiqec python -m scope_static.experiments.static.run --config configs/scope_static/d3_r1_MVP05_windows_full.yaml
 ```
 
 For small local windows, CPU/PyTorch is usually faster than launching many tiny CUDA-extension kernels. The smoke config is intentionally small; use the full sweep as a long-running evidence job.
@@ -355,7 +355,7 @@ The full MVP05 config uses explicit `teacher_cases` to avoid duplicate exact-orb
 Diagnostic path:
 
 ```bash
-conda run -n aiqec python -m scope_static.experiments.run_static --config configs/scope_static/d3_r3_diagnostic.yaml
+conda run -n aiqec python -m scope_static.experiments.static.run --config configs/scope_static/d3_r3_diagnostic.yaml
 ```
 
 The default likelihood backend is `auto`. On CUDA tensors it tries the custom C++/CUDA extension first and falls back to the exact PyTorch dynamic program if the extension is unavailable. On CPU tensors it uses PyTorch. Runs record both the requested backend and the resolved backend in `metrics.json`.

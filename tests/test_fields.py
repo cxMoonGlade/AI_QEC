@@ -1,6 +1,6 @@
 import torch
 
-from scope_static.fields import (
+from scope_static.dem.fields import (
     DiscoveryHardFaultLogitField,
     DiscoveryHardField,
     DiscoverySoftFeatureFaultLogitField,
@@ -12,7 +12,7 @@ from scope_static.fields import (
     SoftFeatureOrbitFaultLogitField,
     SoftFeatureOrbitField,
 )
-from scope_static.stim_dem import build_surface_code_graph
+from scope_static.dem.stim_dem import build_surface_code_graph
 
 
 def test_field_parameter_counts_are_compressed():

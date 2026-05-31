@@ -1,0 +1,7 @@
+teacher_physicality_audit:
+  name: Layer1.P_teacher_physicality_audit
+  teacher_dir: outputs/scope_static/full_circuit_cudaq_allM_10q_depth20_phyc2_ladder/rungC_local_tomography_g30_s10000_m13m14_formalized/S2D_PHYC1_teacher
+  output_dir: outputs/scope_static/full_circuit_cudaq_allM_10q_depth20_phyc2_ladder/rungC_local_tomography_g30_s10000_m13m14_formalized/Layer1_teacher_physicality_audit
+  tolerance_mode: strict
+  probability_tolerance: 1.0e-12
+  random_state_count: 4

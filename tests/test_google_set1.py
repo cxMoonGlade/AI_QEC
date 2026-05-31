@@ -9,7 +9,7 @@ import pytest
 import stim
 import torch
 
-from scope_static.google_set1 import (
+from scope_static.google.set1 import (
     DATASET_NAME,
     GoogleScheduleContext,
     build_google_fault_graph,
@@ -21,9 +21,9 @@ from scope_static.google_set1 import (
     provenance_audit,
     schedule_geometric_orbit_ids,
 )
-from scope_static.metrics import adjusted_rand_index, normalized_mutual_info, partition_comparison
-from scope_static.fault_graph import FaultGraph
-from scope_static.prepared_graph_store import (
+from scope_static.dem.metrics import adjusted_rand_index, normalized_mutual_info, partition_comparison
+from scope_static.dem.fault_graph import FaultGraph
+from scope_static.dem.prepared_graph_store import (
     load_prepared_fault_graph_cache,
     prepared_fault_graph_cache_file,
     prepared_fault_graph_cache_key,
@@ -190,7 +190,7 @@ def test_partition_metrics_on_known_partitions():
 
 
 def test_google_runner_native_gpu_requires_visible_cuda(monkeypatch, tmp_path: Path):
-    from scope_static.experiments.run_google_static import main
+    from scope_static.experiments.google.static import main
 
     root = _write_tiny_dataset(tmp_path)
     monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
@@ -220,7 +220,7 @@ def test_google_runner_native_gpu_requires_visible_cuda(monkeypatch, tmp_path: P
 
 
 def test_google_runner_is_gpu_first_and_requires_explicit_cpu_fallback(monkeypatch, tmp_path: Path, capsys):
-    from scope_static.experiments.run_google_static import main
+    from scope_static.experiments.google.static import main
 
     root = _write_tiny_dataset(tmp_path)
     monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
@@ -267,7 +267,7 @@ def test_google_runner_is_gpu_first_and_requires_explicit_cpu_fallback(monkeypat
 
 
 def test_google_runner_can_evaluate_discovery_on_real_data_path(monkeypatch, tmp_path: Path, capsys):
-    from scope_static.experiments.run_google_static import main
+    from scope_static.experiments.google.static import main
 
     root = _write_tiny_dataset(tmp_path)
     monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
@@ -315,7 +315,7 @@ def test_google_runner_can_evaluate_discovery_on_real_data_path(monkeypatch, tmp
 
 
 def test_google_local_mechanism_smoke_uses_proxy_not_true_recovery(monkeypatch, tmp_path: Path):
-    from scope_static.experiments.run_google_local_mechanism import main
+    from scope_static.experiments.google.local_mechanism import main
 
     root = _write_tiny_dataset(tmp_path)
     monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
@@ -358,7 +358,7 @@ def test_google_local_mechanism_smoke_uses_proxy_not_true_recovery(monkeypatch, 
 
 
 def test_google_gdisc15b_grid_writes_paired_summary(monkeypatch, tmp_path: Path):
-    from scope_static.experiments.run_google_gdisc15b_grid import main
+    from scope_static.experiments.google.gdisc15b_grid import main
 
     root = _write_tiny_dataset(tmp_path)
     monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
@@ -426,7 +426,7 @@ def test_google_set1_gated_default_leaf_and_tiny_smoke(tmp_path: Path):
     graph, _ = build_google_fault_graph(leaf, dem_source="decoder_si1000", orbit_mode="fault_graph_heuristic")
     assert graph.B == 105
 
-    from scope_static.experiments.run_google_static import main
+    from scope_static.experiments.google.static import main
 
     result = main(
         [

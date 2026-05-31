@@ -3,10 +3,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from scope_static.experiments.run_stage3a5_observability_ceiling import run_stage3a5_observability_ceiling_from_config
-from scope_static.physical.mechanism_catalog import MECHANISM_NAMES
-from scope_static.physical.stage3a_protocol_freeze import run_stage3a_dataset_protocol_freeze
-from scope_static.physical.stage3a5_observability_ceiling import run_stage3a5_observability_alias_ceiling
+from scope_static.experiments.stage3.observability_ceiling import run_stage3a5_observability_ceiling_from_config
+from scope_static.backend.mechanism_catalog import MECHANISM_NAMES
+from scope_static.mechanism_discovery.protocol_freeze import run_stage3a_dataset_protocol_freeze
+from scope_static.mechanism_discovery.observability_ceiling import run_stage3a5_observability_alias_ceiling
 
 
 def test_stage3a5_reports_alias_quotient_when_two_labels_share_visible_distribution(tmp_path: Path) -> None:

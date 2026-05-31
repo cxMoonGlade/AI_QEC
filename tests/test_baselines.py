@@ -1,8 +1,8 @@
 import torch
 
-from scope_static.baselines import DMLE_QEC_SOURCE_COMMIT, DMLE_QEC_SOURCE_REPOSITORY, baseline_metadata
-from scope_static.fields import make_field
-from scope_static.fault_graph import FaultGraph
+from scope_static.dem.baselines import DMLE_QEC_SOURCE_COMMIT, DMLE_QEC_SOURCE_REPOSITORY, baseline_metadata
+from scope_static.dem.fields import make_field
+from scope_static.dem.fault_graph import FaultGraph
 
 
 def test_dmle_qec_baseline_initializes_from_effective_dem_probabilities():

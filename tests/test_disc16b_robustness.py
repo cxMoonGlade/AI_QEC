@@ -4,7 +4,7 @@ from pathlib import Path
 
 import yaml
 
-from scope_static.experiments.run_static_disc16b_robustness import run_disc16b_robustness
+from scope_static.experiments.static.disc16b_robustness import run_disc16b_robustness
 
 
 NOISE = {

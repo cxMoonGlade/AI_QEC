@@ -2,9 +2,9 @@ import json
 
 import yaml
 
-from scope_static.experiments.run_static_inverse_logit_audit import run_inverse_logit_audit
-from scope_static.multi_env import make_multi_env_teacher
-from scope_static.stim_dem import build_surface_code_graph
+from scope_static.experiments.static.inverse_logit_audit import run_inverse_logit_audit
+from scope_static.dem.multi_env import make_multi_env_teacher
+from scope_static.dem.stim_dem import build_surface_code_graph
 
 
 def _graph():

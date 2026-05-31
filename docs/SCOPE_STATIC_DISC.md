@@ -93,7 +93,7 @@ Project-wide, the eventual target is the six-axis physical generation problem:
 generation fidelity, interpretability, decoder utility, cross-context
 generalization, drift prediction, and identifiability. Stage 2 addresses the
 identifiability and early interpretability slices under controlled static or
-synthetic physical-oracle settings; it is not yet evidence that a CPTP/GKSL
+synthetic catalog-validation settings; it is not yet evidence that a CPTP/GKSL
 physical generation model holds across all six axes.
 
 Google repetition-code and surface-code datasets can be used later as empirical
@@ -341,7 +341,7 @@ outputs/scope_static/STAGE2A_full/
 Run:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static_discovery \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.static.discovery \
   --config configs/scope_static/d3_r1_STAGE2A_full.yaml
 ```
 
@@ -351,7 +351,7 @@ to the terminal.
 Summarize the completed Stage 2A.0 run:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.stage2a0_summary \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.static.stage2a0_summary \
   --metrics outputs/scope_static/STAGE2A_full/metrics.json
 ```
 
@@ -415,7 +415,7 @@ Signature families currently include:
 Run:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static_identifiability \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.static.identifiability \
   --config configs/scope_static/d3_r1_STAGE2A_DISC10_passive_audit.yaml
 ```
 
@@ -564,7 +564,7 @@ This distinguishes three cases:
 Run:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static_hardening \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.static.hardening \
   --config configs/scope_static/d3_r1_STAGE2A1_hardening.yaml
 ```
 
@@ -709,7 +709,7 @@ env_holdout_dNLL
 Run:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static_multi_env_discovery \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.static.multi_env_discovery \
   --config configs/scope_static/d3_r1_STAGE2A2_DISC12_multi_env.yaml
 ```
 
@@ -836,7 +836,7 @@ main problem and active probe design becomes the next credible step.
 Run:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static_observational_quotient \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.static.observational_quotient \
   --config configs/scope_static/d3_r1_STAGE2A2_DISC13_observational_quotient.yaml
 ```
 
@@ -913,7 +913,7 @@ ARI(cluster(local_logit), cluster(oracle_logit))
 Run:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static_inverse_logit_audit \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.static.inverse_logit_audit \
   --config configs/scope_static/d3_r1_STAGE2A2_DISC13b_inverse_logit.yaml
 ```
 
@@ -1017,7 +1017,7 @@ Any new method must beat this baseline, not merely beat DISC12.
 Run:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static_local_mechanism_discovery \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.static.local_mechanism_discovery \
   --config configs/scope_static/d3_r1_STAGE2C_DISC15_local_logit_mechanism.yaml
 ```
 
@@ -1126,7 +1126,7 @@ hidden omega used for final evaluation: true
 Run:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static_disc15c_confirmatory \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.static.disc15c_confirmatory \
   --config configs/scope_static/d3_r1_STAGE2C_DISC15c_confirmatory.yaml
 ```
 
@@ -1182,7 +1182,7 @@ Which probes improve recoverability of local inverse logits?
 
 ### S2D Physical-Oracle Current Note
 
-S2D_PHYS keeps repetition-style physical-oracle circuits and runs:
+S2D_PHYS keeps repetition-style catalog-validation circuits and runs:
 
 ```text
 PHYS0 preflight -> PHYS1 teacher -> PHYS2 oracle separability -> PHYS3 learner
@@ -1200,7 +1200,7 @@ setA regression and improved setC ARI, but did not reduce RZZ-family
 merge/split counts. The next step is therefore active observability, not another
 clustering-only representation.
 
-Current physical-oracle step:
+Current catalog-validation step:
 
 ```text
 S2D.7_RZZ_active_probe_design
@@ -1235,7 +1235,7 @@ gap. Phase label:
 S2D.8a = depth_sweep_control_matched_negative
 ```
 
-Next physical-oracle step:
+Next catalog-validation step:
 
 ```text
 S2D.8b_RZZ_echo_no_echo_probe_design
@@ -1687,7 +1687,7 @@ physical_teacher_model: full_circuit_cudaq
 PHYS0 writes `backend_audit.json` and `backend_audit.md` with the CUDA-Q package
 versions, selected target, visible GPU count, and a tiny sampled CUDA-Q kernel.
 The physical teacher requires that audit to pass before writing PHYS1 artifacts.
-The compact stack summary records this under `cudaq_backend`.
+The compact pipeline summary records this under `cudaq_backend`.
 
 The current Stage 2E PHYC1 mainline samples:
 
@@ -1717,19 +1717,19 @@ historical evidence paths. They are not the Stage 2E PHYC1 mainline.
 
 inspired by https://github.com/muhos/QuaSARQ
 
-### S2D Physical Oracle Stack Contract
+### S2D Catalog Pipeline Contract
 
 Status: implemented.
 
-The PHYC1/PHYC2/PHYC3 path is exposed through the Physical Oracle Stack
+The PHYC1/PHYC2/PHYC3 path is exposed through the Catalog Pipeline
 facade:
 
 ```text
-scope_static.physical_oracle.run_physical_oracle_stack
-scope_static.experiments.run_physical_oracle_stack
+scope_static.catalog_pipeline.run_catalog_pipeline
+scope_static.experiments.qec_noise_catalog.catalog_pipeline
 ```
 
-The stack keeps existing legacy stage artifacts where needed, but the claim
+The pipeline keeps existing legacy stage artifacts where needed, but the claim
 vocabulary is:
 
 ```text
@@ -1745,7 +1745,7 @@ PHYC3:
 ```
 
 PHYC2 is exposed through
-`scope_static.experiments.run_phyc2_sampled_observation_separability` as a
+`scope_static.experiments.qec_noise_catalog.teacher_distinguishment` as a
 companion audit for PHYC1 teacher artifacts. The runner keeps its historical
 name for compatibility, but the primary PHYC2 gate is teacher
 self-distinguishment: a teacher passes only when it can separate every generated
@@ -1875,12 +1875,12 @@ outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_rema
   slot_only_leakage_suspected = false
 ```
 
-Layer 3 has two linked jobs. First, Layer 3 learner recovery trains grouped
-classifiers from learner-visible sampled observations and writes the grouped
-predictions. Second, Layer 3 sampled quantum-error quality consumes those Layer 3
-learner grouped predictions, builds fold-trained mechanism channel/readout
-prototypes from training groups, and compares the predicted prototype with the
-evaluator-only oracle mechanism channel. It must reject Layer 2 teacher-self
+Learner has two linked jobs. First, learner recovery trains grouped
+classifiers from learner-visible sampled observations and writes grouped
+predictions. Second, sampled quantum-error quality consumes those learner
+predictions, builds fold-trained mechanism channel/readout prototypes from
+training groups, and compares the predicted prototype with the evaluator-only
+oracle mechanism channel. It must reject teacher-self
 predictions as learner evidence.
 
 ```text
@@ -1909,29 +1909,29 @@ outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_rema
   incompatible_predictions = 0
 ```
 
-For `separability_v2`, Layer 3 is a mechanism-to-error translation diagnostic,
+For `separability_v2`, Learner is a mechanism-to-error translation diagnostic,
 not proof that sampled observations came from Born-rule circuit physics.
 
-The public pre-release names for the physical-mechanism stack are:
+The public pre-release code responsibilities are:
 
 ```text
-Layer 1: Data Preparation (Prep)
+data_preparation: Data Preparation (Prep)
   legacy alias: PHYC1
 
-Layer 2: Teacher Self-Distinguishment (Teacher)
+teacher: Teacher Self-Distinguishment (Teacher)
   legacy alias: PHYC2
 
-Layer 3: Learner Classification and Noise Generation (Learner)
+learner: Learner Classification and Noise Generation (Learner)
   legacy alias: PHYC3
 ```
 
-Layer 1 writes the mechanism records, probe schedules, observations, and
-sampling audits. Layer 2 is teacher/catalog self-distinguishability only and
-must not be cited as no-leakage learner evidence. Layer 3 owns learner-visible
+Data preparation writes the mechanism records, probe schedules, observations, and
+sampling audits. Teacher is teacher/catalog self-distinguishability only and
+must not be cited as no-leakage learner evidence. Learner owns learner-visible
 classification, channel/readout prototype quality, and visible noise-generation
 NLL/MAE.
 
-Layer 3b is the visible-observability repair stage for the full-circuit/CUDA-Q
+Z/X visible repair is the visible-observability repair stage for the full-circuit/CUDA-Q
 learner bottleneck. It is not a classifier-tuning stage: it first asks whether
 the learner-visible deterministic ceiling improves under new probes, then
 reports learner recovery. The probe suite is strictly Y-free and uses only
@@ -1944,13 +1944,13 @@ two-qubit:    prepare |00>, |01>, |10>, |++>; measure ZZ, ZX, XZ, XX
 
 Y-basis preparation and Y-basis measurement are not required. X-prepared states
 are required because Z-only probes do not expose the phase/coherence response
-needed to break several visible aliases. Layer 3b reports quotient alias classes
+needed to break several visible aliases. Z/X visible repair reports quotient alias classes
 instead of forcing exact labels whenever the Z/X sampled observations do not
 make exact recovery observable.
 
-Layer 3c is the distributional head upgrade on top of Layer 3b. It keeps the same
+The distributional learner head is the upgrade on top of Z/X visible repair. It keeps the same
 Z/X-visible feature vectors and compares mean-only, covariance-only, diagonal
-Gaussian, shared-covariance LDA, full Gaussian, and shrinkage-QDA heads. Layer 3c
+Gaussian, shared-covariance LDA, full Gaussian, and shrinkage-QDA heads. It
 reports two modes:
 
 ```text
@@ -1968,24 +1968,25 @@ batch mode. The Gaussian calibration parameters are learned from training
 groups only; test labels remain evaluator-only and are not learner-visible
 features.
 
-Layer 3c validation is an acceptance audit for the head, not another learner input
+Distributional learner-head validation is an acceptance audit for the head, not another learner input
 source. It reports a robustness grid over batch size, shrinkage, and PCA
 dimension; an explicit non-leakage audit with forbidden-feature injection
 control; and a protocol-validity audit that rejects single-realization M13
 batches as invalid for distributional recovery claims.
 
-Layer 3 canonical quality acceptance is a resolver, not another learner. It
-loads the Layer 2 teacher-self artifact, the old-surface Layer 3a failing baseline,
-the Layer 3b visible-repair artifact, Layer 3c predictions, and Layer 3c validation.
-It accepts Layer 3 only when Layer 3b has deterministic visible ceiling 1.0 and
-Layer 3c passes the multi-context distributional protocol. The canonical
+Canonical learner quality acceptance is a resolver, not another learner. It
+loads the teacher-self artifact, the old-surface learner
+baseline, the Z/X visible-repair artifact, distributional learner-head
+predictions, and distributional learner-head validation. It accepts learner
+validation only when Z/X visible repair has deterministic visible ceiling 1.0
+and the distributional learner head passes the multi-context distributional protocol. The canonical
 prediction source is `phyc3c_distributional_gaussian_likelihood_head`; PHYC2
 teacher-self predictions, legacy PHYC2 grouped predictions, and PHYC3a
 old-surface predictions are rejected as canonical learner evidence.
 
 Stage 2 is closed as a no-leakage physical-mechanism catalog validation stage:
 the system can generate controlled noisy QEC observations from declared
-mechanisms, verify teacher/catalog separability, and train Layer 3 learners
+mechanisms, verify teacher/catalog separability, and train learner models
 that recover and replay learner-visible noisy observation distributions without
 oracle leakage. Stage 3 is the next claim boundary: remove direct
 mechanism-label supervision and test whether latent mechanism structure can be
@@ -2058,7 +2059,7 @@ PHYC3-full-circuit-cudaq:
   required Stage 2E no-leakage learner recovery and error-quality gate
 ```
 
-Full-circuit CUDA-Q remains an important Layer 1 source for future larger-scale
+Full-circuit CUDA-Q remains an important data preparation source for future larger-scale
 physical-teacher runs. The current pre-release boundary is that Stage 2 is
 closed as a controlled-catalog/no-leakage recovery validation stage, and Stage 3
 now removes direct mechanism-label supervision to test latent mechanism
@@ -2074,8 +2075,8 @@ The legacy PHYS2 oracle-fingerprint audit remains useful as a ceiling: it says
 whether the mechanism family is in principle distinguishable. It does not prove
 that sampled observations are learner-separable.
 
-The stack writes `physical_oracle_stack.json` and
-`physical_oracle_stack.md` next to the canonical stage directories. Its verdicts
+The pipeline writes `catalog_pipeline.json` and
+`catalog_pipeline.md` next to the canonical stage directories. Its verdicts
 are intentionally separated: `teacher_self_verdict` answers whether the teacher
 contains enough oracle mechanism signal, `learner_recovery_verdict` reports the
 PHYS3 local-inverse result, and `overall_diagnosis` distinguishes
@@ -2089,8 +2090,8 @@ localized to the PHYS0/PHYS1 boundary.
 
 ### Canonical S2D Physical Mechanism Taxonomy
 
-Status: implemented for new S2D physical-oracle runs. The canonical source is
-`src/scope_static/physical/mechanism_catalog.py`; the cited taxonomy and legacy
+Status: implemented for new S2D catalog-validation runs. The canonical source is
+`src/scope_static/backend/mechanism_catalog.py`; the cited taxonomy and legacy
 renumbering table live in `docs/error_mechanisms.md`.
 
 Named mechanism sets:
@@ -2377,7 +2378,7 @@ hidden omega used for final evaluation: true
 Run:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static_disc16_observability \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.static.disc16_observability \
   --config configs/scope_static/d3_r1_STAGE2C_DISC16a_shot_budget.yaml
 ```
 
@@ -2479,7 +2480,7 @@ K_mode: known_K_synthetic_audit
 Run:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_static_disc16b_robustness \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.static.disc16b_robustness \
   --config configs/scope_static/d3_r1_STAGE2C_DISC16b_robustness.yaml
 ```
 
@@ -2524,7 +2525,7 @@ seed-regime cells fall below ARI 0.80.
 Failure-case audit:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.stage2c_failure_audit \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.static.stage2c_failure_audit \
   --metrics outputs/scope_static/STAGE2C_DISC16b_local_inverse_robustness/metrics.json
 ```
 
@@ -2741,7 +2742,7 @@ partition is explicitly defined as a proxy.
 Run:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_google_static \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.google.static \
   --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
   --native-gpu \
   --models local,dmle_qec,hard_orbit,soft_feature_orbit,disc_hard,disc_soft \
@@ -2819,7 +2820,7 @@ Did we recover true physical mechanisms?
 Smoke run:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_google_local_mechanism \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.google.local_mechanism \
   --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
   --native-gpu \
   --sample-id sample_00 \
@@ -2915,7 +2916,7 @@ random low-rank controls
 Small grid run:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.run_google_gdisc15b_grid \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.google.gdisc15b_grid \
   --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
   --native-gpu \
   --samples sample_00,sample_01 \

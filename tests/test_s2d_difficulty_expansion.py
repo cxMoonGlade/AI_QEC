@@ -5,8 +5,8 @@ from pathlib import Path
 
 import yaml
 
-from scope_static.experiments import run_s2d_difficulty_expansion as mod
-from scope_static.physical.teacher import build_default_oracle_mechanisms, build_probe_basis_manifest, build_probe_circuits
+from scope_static.experiments.qec_noise_catalog import s2d_difficulty_expansion as mod
+from scope_static.backend.probe_catalog import build_default_oracle_mechanisms, build_probe_basis_manifest, build_probe_circuits
 
 
 def test_difficulty_profiles_and_mechanism_sets_are_configurable() -> None:
@@ -92,7 +92,7 @@ def test_difficulty_runner_writes_aggregate_artifacts_without_oracle_selection(t
         Path(output_dir).mkdir(parents=True)
         return {
             "num_clusters": 3,
-            "s2d3_result": "physical_oracle_strong_recovery",
+            "s2d3_result": "catalog_validation_strong_recovery",
             "main_result": {"ari": 0.9, "nmi": 0.91, "active_clusters": 3, "cluster_masses": [1, 1, 1]},
             "physical_local_inverse_probability_v2_result": {"ari": 0.92, "nmi": 0.93},
             "direct_S_alpha_result": {"ari": 0.2, "nmi": 0.4},
@@ -112,7 +112,7 @@ def test_difficulty_runner_writes_aggregate_artifacts_without_oracle_selection(t
             "key_comparison": {"local_inverse_beats_direct": True},
         }
 
-    def fake_stack(cfg, *, output_dir, bootstrap_replicates, random_baseline_trials, run_local_inverse):
+    def fake_pipeline(cfg, *, output_dir, bootstrap_replicates, random_baseline_trials, run_local_inverse):
         root = Path(output_dir)
         teacher_dir = root / "S2D_PHYS1_teacher"
         sep_dir = root / "S2D_PHYS2_oracle_separability"
@@ -150,11 +150,11 @@ def test_difficulty_runner_writes_aggregate_artifacts_without_oracle_selection(t
             "stage_results": {"teacher": teacher, "teacher_self": sep, "learner": local},
         }
 
-    monkeypatch.setattr(mod, "run_physical_oracle_stack", fake_stack)
+    monkeypatch.setattr(mod, "run_catalog_pipeline", fake_pipeline)
 
     result = mod.run_s2d_difficulty_expansion(config_path)
 
-    assert result["stage"] == "S2D.4_physical_oracle_difficulty_expansion"
+    assert result["stage"] == "S2D.4_catalog_validation_difficulty_expansion"
     assert result["summary"]["strong_recovery"] == 2
     out = tmp_path / "S2D_PHYS4_difficulty_expansion"
     assert (out / "comparison_table.json").exists()

@@ -5,8 +5,8 @@ import numpy as np
 import torch
 import yaml
 
-from scope_static.experiments.run_static_identifiability import run_identifiability_audit
-from scope_static.experiments.stage2a0_summary import build_stage2a0_summary, write_stage2a0_summary
+from scope_static.experiments.static.identifiability import run_identifiability_audit
+from scope_static.experiments.static.stage2a0_summary import build_stage2a0_summary, write_stage2a0_summary
 from scope_static.identifiability import (
     classify_passive_identifiability,
     deterministic_kmeans,
@@ -16,7 +16,7 @@ from scope_static.identifiability import (
     shuffled_omega_control,
     structural_signature,
 )
-from scope_static.stim_dem import build_surface_code_graph
+from scope_static.dem.stim_dem import build_surface_code_graph
 
 
 def _d3_graph():

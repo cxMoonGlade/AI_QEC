@@ -8,9 +8,9 @@ import numpy as np
 import torch
 import yaml
 
-from scope_static.experiments.s2d_config import load_s2d_physical_config, output_root_from_config
-from scope_static.physical.targeted_v3 import evaluate_targeted_v3_methods, typed_feature_manifest
-from scope_static.physical_oracle import run_physical_oracle_stack, stack_stage_results
+from scope_static.experiments.qec_noise_catalog.config import load_s2d_physical_config, output_root_from_config
+from scope_static.mechanism_observability import evaluate_targeted_v3_methods, typed_feature_manifest
+from scope_static.catalog_pipeline import run_catalog_pipeline, pipeline_stage_results
 
 
 DEFAULT_RUNS: list[dict[str, object]] = [
@@ -75,14 +75,14 @@ def _run_one(output: Path, physical_cfg: dict[str, object], cfg: dict[str, objec
     merged = dict(physical_cfg)
     merged.update({key: value for key, value in run_cfg.items() if key not in {"name", "purpose", "enabled"}})
     merged.update(dict(cfg.get("physical_overrides", {})))
-    stack = run_physical_oracle_stack(
+    pipeline = run_catalog_pipeline(
         merged,
         output_dir=run_dir,
         bootstrap_replicates=int(cfg.get("bootstrap_replicates", 16)),
         random_baseline_trials=int(cfg.get("random_baseline_trials", 64)),
         run_local_inverse="always",
     )
-    stage = stack_stage_results(stack)
+    stage = pipeline_stage_results(pipeline)
     teacher_dir = stage["teacher_dir"]
     teacher = stage["teacher"]
     separability = stage["separability"]

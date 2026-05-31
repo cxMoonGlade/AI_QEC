@@ -1,26 +1,34 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import numpy as np
 import pytest
 import yaml
 
-from scope_static.experiments.run_s2d_oracle_separability import run_s2d_oracle_separability
-from scope_static.experiments.run_s2d_physical_teacher import run_s2d_physical_teacher
-from scope_static.experiments.run_s2d_preflight import run_s2d_preflight
-from scope_static.physical import preflight as preflight_module
-from scope_static.physical.preflight import audit_cudaq_backend
-from scope_static.physical.teacher import (
+from scope_static.experiments.qec_noise_catalog.s2d_oracle_separability import run_s2d_oracle_separability
+from scope_static.experiments.qec_noise_catalog.controlled_catalog_teacher import run_controlled_catalog_teacher
+from scope_static.experiments.qec_noise_catalog.backend_preflight import run_backend_preflight
+import scope_static.backend.preflight as preflight_module
+from scope_static.experiments.qec_noise_catalog import controlled_catalog_teacher as teacher_module
+from scope_static.backend.preflight import audit_cudaq_backend
+from scope_static.backend.probe_catalog import (
     _counts_to_bit_matrix,
     build_default_oracle_mechanisms,
     build_probe_circuits,
 )
 
 
+def _skip_unless_cudaq_smoke_enabled() -> None:
+    if os.environ.get("AIQEC_RUN_CUDAQ_SMOKE") != "1":
+        pytest.skip("set AIQEC_RUN_CUDAQ_SMOKE=1 to run CUDA-Q smoke tests")
+
+
 def test_s2d_preflight_writes_cudaq_backend_audit(tmp_path: Path) -> None:
-    audit = run_s2d_preflight(output_dir=tmp_path / "S2D_PHYS0_preflight")
+    _skip_unless_cudaq_smoke_enabled()
+    audit = run_backend_preflight(output_dir=tmp_path / "S2D_PHYS0_preflight")
 
     assert audit["schema"] == "scope_static_s2d_backend_audit_v2"
     assert audit["backend_policy"]["priority"] == ["cudaq"]
@@ -92,7 +100,44 @@ def test_counts_to_bit_matrix_materializes_grouped_counts_with_numpy_repeat() ->
     assert rows.tolist() == [[0, 0], [0, 0], [0, 1], [0, 1], [1, 1]]
 
 
+def test_legacy_physical_teacher_import_routes_to_layer1p(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    def fake_audit_cudaq_backend(**_kwargs: object) -> dict[str, object]:
+        return {
+            "backend_usable": True,
+            "cudaq_target": "fake-target",
+            "cudaq_gpu_count": 1,
+            "tiny_cudaq_sample": {"passed": True},
+        }
+
+    def fake_write_backend_audit(_audit: dict[str, object], preflight_dir: str | Path) -> None:
+        Path(preflight_dir).mkdir(parents=True, exist_ok=True)
+
+    def fake_layer1p_teacher_dataset(config: dict[str, object], *, output_dir: str | Path) -> dict[str, object]:
+        return {
+            "stage": "Layer1.P_teacher",
+            "teacher_model": "layer1p_full_circuit_cudaq",
+            "received_backend": config.get("backend"),
+            "received_output_dir": str(output_dir),
+        }
+
+    monkeypatch.setattr(teacher_module, "audit_cudaq_backend", fake_audit_cudaq_backend)
+    monkeypatch.setattr(teacher_module, "write_backend_audit", fake_write_backend_audit)
+    monkeypatch.setattr(teacher_module, "generate_layer1p_teacher_dataset", fake_layer1p_teacher_dataset)
+
+    result = teacher_module.generate_controlled_catalog_teacher_dataset(
+        {"physical_teacher_model": "local_observable", "require_gpu": True},
+        output_dir=tmp_path / "teacher",
+        preflight_dir=tmp_path / "preflight",
+    )
+
+    assert result["stage"] == "Layer1.P_teacher"
+    assert result["teacher_model"] == "layer1p_full_circuit_cudaq"
+    assert result["received_backend"] == "cudaq"
+    assert result["cudaq_backend"]["target"] == "fake-target"
+
+
 def test_s2d_teacher_generation_writes_full_circuit_artifact_when_cuda_available(tmp_path: Path) -> None:
+    _skip_unless_cudaq_smoke_enabled()
     audit = audit_cudaq_backend(backend="cudaq", require_gpu=True)
     if not bool(audit["backend_usable"]):
         pytest.skip(f"CUDA-Q preflight is not usable here: {audit.get('errors')}")
@@ -112,17 +157,21 @@ def test_s2d_teacher_generation_writes_full_circuit_artifact_when_cuda_available
             }
         )
     )
-    result = run_s2d_physical_teacher(
+    result = run_controlled_catalog_teacher(
         config_path,
         output_dir=tmp_path / "S2D_PHYS1_teacher",
         preflight_dir=tmp_path / "S2D_PHYS0_preflight",
     )
 
-    assert result["teacher_model"] == "full_circuit_cudaq"
+    assert result["teacher_model"] == "layer1p_full_circuit_cudaq"
+    assert result["stage"] == "Layer1.P_teacher"
+    assert result["acceptance_audit"]["passed"] is True
     assert result["effective_circuit_depth"] == 1
     assert result["cudaq_backend"]["target"] is not None
     assert result["mechanism_counts"] == {"M1": 2, "M2": 2}
     assert (tmp_path / "S2D_PHYS1_teacher" / "sampling_audit.json").exists()
+    assert (tmp_path / "S2D_PHYS1_teacher" / "layer1p_teacher_contract.json").exists()
+    assert (tmp_path / "S2D_PHYS1_teacher" / "Layer1_teacher_physicality_audit" / "metrics.json").exists()
     observations = np.load(tmp_path / "S2D_PHYS1_teacher" / "observations.npz")
     assert observations["observations"].ndim == 3
 
@@ -160,6 +209,7 @@ def test_s2d_oracle_separability_writes_artifacts(tmp_path: Path) -> None:
 
 
 def test_cudaq_execution_preflight_when_available() -> None:
+    _skip_unless_cudaq_smoke_enabled()
     audit = audit_cudaq_backend(backend="cudaq", require_gpu=True)
     if not bool(audit["backend_usable"]):
         pytest.skip(f"CUDA-Q preflight is not usable here: {audit.get('errors')}")

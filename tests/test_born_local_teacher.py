@@ -7,13 +7,13 @@ import numpy as np
 import pytest
 
 from scope_static.numerics import NUMERICAL_ZERO
-from scope_static.physical.born_local import (
+from scope_static.backend.born_local import (
     BORN_LOCAL_EFFECTIVE_CIRCUIT_DEPTH,
     born_local_outcome_probabilities,
     born_local_probability_tables,
 )
-from scope_static.physical.channels import MechanismSpec, readout_bias_matrix, rx_unitary, rzz_unitary
-from scope_static.physical.local_observable_teacher import (
+from scope_static.backend.channels import MechanismSpec, readout_bias_matrix, rx_unitary, rzz_unitary
+from scope_static.data_preparation.local_observable_teacher import (
     RZZ_ALIAS_GROUP,
     READOUT_ALIAS_GROUP,
     _born_local_scope_audit,
@@ -23,8 +23,8 @@ from scope_static.physical.local_observable_teacher import (
     _record_probability_table,
     generate_local_observable_teacher_dataset,
 )
-from scope_static.physical.sampled_observation_separability import run_sampled_observation_separability_audit
-from scope_static.physical.teacher import _probe_names
+from scope_static.teacher import run_sampled_observation_separability_audit
+from scope_static.backend.probe_catalog import _probe_names
 
 
 def test_born_local_one_qubit_probability_matches_direct_density_matrix() -> None:

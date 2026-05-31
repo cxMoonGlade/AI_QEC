@@ -6,9 +6,9 @@ from pathlib import Path
 import numpy as np
 import yaml
 
-from scope_static.experiments import run_s2d8b_rzz_echo_no_echo as runner
-from scope_static.physical.rzz_echo_contrast import build_rzz_echo_contrast_features, evaluate_rzz_echo_contrast_methods
-from scope_static.physical.teacher import (
+from scope_static.experiments.qec_noise_catalog import s2d8b_rzz_echo_no_echo as runner
+from scope_static.mechanism_observability import build_rzz_echo_contrast_features, evaluate_rzz_echo_contrast_methods
+from scope_static.backend.probe_catalog import (
     RZZ_ECHO_CONTRAST_PROBES,
     build_default_oracle_mechanisms,
     build_probe_basis_manifest,
@@ -196,7 +196,7 @@ def test_s2d8b_runner_writes_required_artifacts_with_fakes(tmp_path: Path, monke
             ]
         }
 
-    def fake_stack(cfg, *, output_dir, bootstrap_replicates, random_baseline_trials, run_local_inverse):
+    def fake_pipeline(cfg, *, output_dir, bootstrap_replicates, random_baseline_trials, run_local_inverse):
         root = Path(output_dir)
         teacher_dir = root / "S2D_PHYS1_teacher"
         sep_dir = root / "S2D_PHYS2_oracle_separability"
@@ -209,7 +209,7 @@ def test_s2d8b_runner_writes_required_artifacts_with_fakes(tmp_path: Path, monke
             "stage_results": {"teacher": teacher, "teacher_self": sep, "learner": local},
         }
 
-    monkeypatch.setattr(runner, "run_physical_oracle_stack", fake_stack)
+    monkeypatch.setattr(runner, "run_catalog_pipeline", fake_pipeline)
 
     result = runner.run_s2d8b_rzz_echo_no_echo(config_path)
 

@@ -1,7 +1,7 @@
 import torch
 
-from scope_static.fault_graph import FaultGraph, combine_duplicate_probabilities, gf2_rank, mask_states_from_matrix
-from scope_static.stim_dem import build_surface_code_graph
+from scope_static.dem.fault_graph import FaultGraph, combine_duplicate_probabilities, gf2_rank, mask_states_from_matrix
+from scope_static.dem.stim_dem import build_surface_code_graph
 
 
 def test_duplicate_mask_canonicalization_combines_probabilities():

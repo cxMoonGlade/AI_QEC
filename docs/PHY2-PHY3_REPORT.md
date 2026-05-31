@@ -256,14 +256,14 @@ flowchart LR
 
 | 路径 | 建议内容 |
 | --- | --- |
-| `src/scope_static/physical/feature_manifest.py` | `FeatureSpec` 数据类：`name/block/provenance/signed/phase_sensitive/offdiag_sensitive/requires_mixed_basis/requires_depth_sweep/oracle_only` |
-| `src/scope_static/physical/pauli_obs.py` | `estimate_pauli_moment_from_counts(counts, pauli_string, basis_map)`；支持任意局部 mixed basis |
-| `src/scope_static/physical/readout_affine.py` | `fit_affine_readout(cal_counts)`、`correct_one_body`、`correct_two_body` |
-| `src/scope_static/physical/dptm_lite.py` | `estimate_dptm_entry(counts_rhoj, counts_rho0, pauli_i)`；`estimate_block_entries(edge, block_id, ...)` |
-| `src/scope_static/physical/rzz_twirl.py` | `build_partial_twirl_circuits`、`build_correlated_twirl_circuits`、`fit_partial_twirl_curve`、`fit_correlated_twirl_curve` |
-| `src/scope_static/physical/rzz_echo.py` | `build_x_echo_probe`、`build_y_echo_probe`、`estimate_echo_witnesses` |
-| `src/scope_static/physical/gap_audit.py` | PHYS2 block ablation、PHYS3 feature injection、pairwise Mahalanobis margin audit、sign/phase loss audit |
-| `src/scope_static/physical/clustering_typed.py` | 先分 `readout / two_qubit_rzz_like / single_qubit / other`，再做族内聚类；支持 nuisance residualization |
+| `src/scope_static/mechanism_observability/feature_manifest.py` | `FeatureSpec` 数据类：`name/block/provenance/signed/phase_sensitive/offdiag_sensitive/requires_mixed_basis/requires_depth_sweep/oracle_only` |
+| `src/scope_static/mechanism_observability/pauli_obs.py` | `estimate_pauli_moment_from_counts(counts, pauli_string, basis_map)`；支持任意局部 mixed basis |
+| `src/scope_static/backend/readout_affine.py` | `fit_affine_readout(cal_counts)`、`correct_one_body`、`correct_two_body` |
+| `src/scope_static/mechanism_observability/dptm_lite.py` | `estimate_dptm_entry(counts_rhoj, counts_rho0, pauli_i)`；`estimate_block_entries(edge, block_id, ...)` |
+| `src/scope_static/mechanism_observability/rzz_twirl.py` | `build_partial_twirl_circuits`、`build_correlated_twirl_circuits`、`fit_partial_twirl_curve`、`fit_correlated_twirl_curve` |
+| `src/scope_static/mechanism_observability/rzz_echo.py` | `build_x_echo_probe`、`build_y_echo_probe`、`estimate_echo_witnesses` |
+| `src/scope_static/mechanism_observability/gap_audit.py` | PHYS2 block ablation、PHYS3 feature injection、pairwise Mahalanobis margin audit、sign/phase loss audit |
+| `src/scope_static/mechanism_observability/clustering_typed.py` | 先分 `readout / two_qubit_rzz_like / single_qubit / other`，再做族内聚类；支持 nuisance residualization |
 
 数据结构我建议最少加两个。第一个是特征 manifest：
 

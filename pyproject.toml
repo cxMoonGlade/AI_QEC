@@ -19,14 +19,17 @@ cuda-extension = ["ninja"]
 
 [project.scripts]
 scope-static-toolbox = "scope_static.toolbox:main"
-scope-layer1-prep = "scope_static.experiments.run_s2d_physical_teacher:main"
-scope-layer2-teacher = "scope_static.experiments.run_phyc2_sampled_observation_separability:main"
-scope-layer3-canonical = "scope_static.experiments.run_layer3_canonical_acceptance:main"
-scope-stage3a-freeze = "scope_static.experiments.run_stage3a_protocol_freeze:main"
-scope-stage3a5-ceiling = "scope_static.experiments.run_stage3a5_observability_ceiling:main"
-scope-stage3b0-baselines = "scope_static.experiments.run_stage3b0_baselines:main"
-scope-stage3b1-discovery = "scope_static.experiments.run_stage3b1_discovery_model:main"
-scope-stage3c-generator = "scope_static.experiments.run_stage3c_generator_learning:main"
+scope-catalog-teacher = "scope_static.experiments.qec_noise_catalog.controlled_catalog_teacher:main"
+scope-data-preparation-teacher = "scope_static.experiments.qec_noise_catalog.data_preparation_teacher:main"
+teacher-distinguishment = "scope_static.experiments.qec_noise_catalog.teacher_distinguishment:main"
+learner-acceptance = "scope_static.experiments.qec_noise_catalog.learner_acceptance:main"
+scope-stage3a-freeze = "scope_static.experiments.stage3.protocol_freeze:main"
+scope-stage3a5-ceiling = "scope_static.experiments.stage3.observability_ceiling:main"
+scope-stage3b0-baselines = "scope_static.experiments.stage3.baselines:main"
+scope-stage3b1-discovery = "scope_static.experiments.stage3.discovery_model:main"
+scope-stage3c-generator = "scope_static.experiments.stage3.generator_learning:main"
+scope-stage3d1-assignment-shuffle = "scope_static.experiments.stage3.assignment_shuffle_audit:main"
+scope-teacher-physicality-audit = "scope_static.experiments.qec_noise_catalog.teacher_physicality_audit:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

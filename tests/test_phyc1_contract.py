@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from scope_static.physical.phyc1_contract import (
+from scope_static.data_preparation.contract import (
     FULL_CIRCUIT_DEPTH_SEMANTICS,
     FULL_CIRCUIT_TEACHER_MODEL,
     LOCAL_OBSERVABLE_TEACHER_MODEL,
@@ -13,7 +13,7 @@ from scope_static.physical.phyc1_contract import (
     normalize_phyc1_teacher_model,
     probe_names,
 )
-from scope_static.physical.teacher import _counts_to_bit_matrix, _probe_names
+from scope_static.backend.probe_catalog import _counts_to_bit_matrix, _probe_names
 
 
 def test_phyc1_contract_normalizes_teacher_model_aliases() -> None:

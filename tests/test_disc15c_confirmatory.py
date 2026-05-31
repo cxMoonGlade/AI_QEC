@@ -5,8 +5,8 @@ from pathlib import Path
 
 import yaml
 
-from scope_static.experiments.run_static_disc15c_confirmatory import run_disc15c_confirmatory
-from scope_static.stim_dem import build_surface_code_graph
+from scope_static.experiments.static.disc15c_confirmatory import run_disc15c_confirmatory
+from scope_static.dem.stim_dem import build_surface_code_graph
 
 
 NOISE = {

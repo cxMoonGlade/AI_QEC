@@ -6,9 +6,9 @@ from pathlib import Path
 import numpy as np
 import yaml
 
-from scope_static.experiments import run_s2d8a_rzz_depth_sweep as runner
-from scope_static.physical.rzz_depth_sweep import build_rzz_depth_sweep_features, evaluate_rzz_depth_sweep_methods
-from scope_static.physical.teacher import build_default_oracle_mechanisms, build_probe_basis_manifest, build_probe_circuits
+from scope_static.experiments.qec_noise_catalog import s2d8a_rzz_depth_sweep as runner
+from scope_static.mechanism_observability import build_rzz_depth_sweep_features, evaluate_rzz_depth_sweep_methods
+from scope_static.backend.probe_catalog import build_default_oracle_mechanisms, build_probe_basis_manifest, build_probe_circuits
 
 
 DEPTH_PROBES = ["z_basis", "x_measure", "y_measure", "rzz_depth_1", "rzz_depth_2", "rzz_depth_4", "rzz_depth_8"]
@@ -149,7 +149,7 @@ def test_s2d8a_runner_writes_required_artifacts_with_fakes(tmp_path: Path, monke
             ]
         }
 
-    def fake_stack(cfg, *, output_dir, bootstrap_replicates, random_baseline_trials, run_local_inverse):
+    def fake_pipeline(cfg, *, output_dir, bootstrap_replicates, random_baseline_trials, run_local_inverse):
         root = Path(output_dir)
         teacher_dir = root / "S2D_PHYS1_teacher"
         sep_dir = root / "S2D_PHYS2_oracle_separability"
@@ -162,7 +162,7 @@ def test_s2d8a_runner_writes_required_artifacts_with_fakes(tmp_path: Path, monke
             "stage_results": {"teacher": teacher, "teacher_self": sep, "learner": local},
         }
 
-    monkeypatch.setattr(runner, "run_physical_oracle_stack", fake_stack)
+    monkeypatch.setattr(runner, "run_catalog_pipeline", fake_pipeline)
 
     result = runner.run_s2d8a_rzz_depth_sweep(config_path)
 

@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from scope_static.physical.born_local import BORN_LOCAL_SUPPORTED_MECHANISMS
-from scope_static.physical.s2e1_born_local_learner_test import run_s2e1_born_local_learner_test
+from scope_static.backend.born_local import BORN_LOCAL_SUPPORTED_MECHANISMS
+from scope_static.teacher.born_local_learner_test import run_s2e1_born_local_learner_test
 
 
 def test_s2e1_learner_test_passes_full_born_local_phyc2_artifact(tmp_path: Path) -> None:

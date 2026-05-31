@@ -3,14 +3,14 @@ import json
 import torch
 import yaml
 
-from scope_static.experiments.run_static_multi_env_discovery import run_multi_env_discovery
-from scope_static.multi_env import (
+from scope_static.experiments.static.multi_env_discovery import run_multi_env_discovery
+from scope_static.dem.multi_env import (
     MultiEnvSharedAssignmentField,
     assignment_recovery_metrics,
     codebook_perturbations,
     make_multi_env_teacher,
 )
-from scope_static.stim_dem import build_surface_code_graph
+from scope_static.dem.stim_dem import build_surface_code_graph
 
 
 def _graph():

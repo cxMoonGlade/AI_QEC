@@ -27,18 +27,18 @@ This repository is currently centered on the SCOPE family of QEC noise-learning 
 - **GPU batched local-window exact adapter**: the C++/CUDA implementation of local-window exact likelihood that evaluates all prepared windows in one extension call and returns a first-order gradient for SCOPE-Static training.
 - **Evidence record**: one metrics row for a trained SCOPE-Static model, including likelihood source, compression audit, baseline metadata, and threshold inputs.
 - **Experiment plan**: the normalized SCOPE-Static run matrix compiled from YAML, including residual ranks, teacher cases, shot budgets, model names, backend choice, and output identity.
-- **Physical mechanism layer stack**: the public pre-release naming for the former PHYC stack. Layer 1 is Data Preparation (Prep), Layer 2 is Teacher Self-Distinguishment (Teacher), and Layer 3 is Learner Classification and Noise Generation (Learner). `PHYC1/PHYC2/PHYC3` remain legacy artifact aliases.
-- **Layer 1: Data Preparation (Prep)**: generates mechanism-catalog records, probe schedules, sampled observations, teacher config, sampling audits, and active probe manifests. Legacy alias: `PHYC1`.
-- **Layer 2: Teacher Self-Distinguishment (Teacher)**: asks whether the declared teacher/catalog can distinguish every generated mechanism from teacher-internal mechanism evidence. A Layer 2 pass establishes teacher/catalog identifiability; it is not a no-leakage learner claim. Legacy alias: `PHYC2`.
-- **Layer 3: Learner Classification and Noise Generation (Learner)**: consumes learner-visible observations to classify mechanisms and score generated noise/error quality with channel-distance, NLL, and MAE diagnostics. It must not consume Layer 2 teacher-self predictions or hidden/oracle feature inputs. Legacy alias: `PHYC3`.
-- **Layer 3b Z/X visible repair**: the strict Y-free, Z/X-only visible probe surface that raises the deterministic visible ceiling before learner-head claims.
-- **Layer 3c distributional Gaussian head**: the accepted multi-context learner head on Layer 3b visible features; it recovers drifted M13 only under a valid multi-context protocol.
+- **Catalog pipeline**: the pre-release controlled-catalog workflow. `data_preparation`, `teacher`, and `learner` are the public code responsibilities. `PHYC1/PHYC2/PHYC3` remain legacy artifact aliases.
+- **Data Preparation (Prep)**: generates mechanism-catalog records, probe schedules, sampled observations, teacher config, sampling audits, and active probe manifests. Legacy alias: `PHYC1`.
+- **Teacher Self-Distinguishment (Teacher)**: asks whether the declared teacher/catalog can distinguish every generated mechanism from teacher-internal mechanism evidence. A pass establishes teacher/catalog identifiability; it is not a no-leakage learner claim. Legacy alias: `PHYC2`.
+- **Learner Classification and Noise Generation (Learner)**: consumes learner-visible observations to classify mechanisms and score generated noise/error quality with channel-distance, NLL, and MAE diagnostics. It must not consume teacher-self predictions or hidden/oracle feature inputs. Legacy alias: `PHYC3`.
+- **Z/X visible repair**: the strict Y-free, Z/X-only visible probe surface that raises the deterministic visible ceiling before learner-head claims.
+- **Distributional Gaussian learner head**: the accepted multi-context learner head on Z/X visible features; it recovers drifted M13 only under a valid multi-context protocol.
 - **M13/M14 catalog distinction**: M13 is a context-varying coherent overrotation on its declared operation axis. M14 is operation-dependent error with a visible operation axis and a separate coherent error-generator axis; the first Stage 3 catalog default is `operation_axis=rx`, `error_axis=rz`.
 - **2+1 public program surface**: the pre-release toolbox has two supported capabilities plus one active research object: generate teacher-declared noisy QEC observations from a controlled physical-mechanism catalog; learn from learner-visible observations and replay similar visible noisy observation distributions; and, as the "+1", discover the latent mechanism quotient through Stage 3 discovery.
 - **Stage 3 discovery**: learning a latent mechanism quotient from observations, not predicting a provided mechanism label. The learner receives only visible noisy observations and approved visible features; evaluator-only labels, channels, PTMs, Kraus matrices, teacher IDs, and oracle prototypes are withheld from the learner path.
 - **Observational alias class**: a quotient class for mechanisms that induce indistinguishable or near-indistinguishable visible distributions. If `p(y | m_a) ~= p(y | m_b)` on the declared visible surface, the correct discovery output is `m_a ~_obs m_b`, not an arbitrary forced split.
-- **Physicality boundary**: Layer 1 mechanism definitions are implemented as unitary channels, Kraus channels, or classical readout assignment matrices. Enabling a mechanism ID selects that catalog definition. The current learner does not yet learn an arbitrary CPTP/GKSL channel family by construction.
-- **CPTP guardrail audit**: the Layer 1 artifact `cptp_guardrail_audit.json`; it checks complete-positivity representation class, channel dimension, unitary unitarity, Kraus trace preservation, readout stochasticity, and parameter validity for every enabled mechanism record.
+- **Physicality boundary**: data-preparation mechanism definitions are implemented as unitary channels, Kraus channels, or classical readout assignment matrices. Enabling a mechanism ID selects that catalog definition. The current learner does not yet learn an arbitrary CPTP/GKSL channel family by construction.
+- **CPTP guardrail audit**: the data-preparation artifact `cptp_guardrail_audit.json`; it checks complete-positivity representation class, channel dimension, unitary unitarity, Kraus trace preservation, readout stochasticity, and parameter validity for every enabled mechanism record.
 - **separability_v2**: the engineered local-observable sampled-response stress teacher. It is useful for separability and leakage-control evidence, but it is not a Born-rule physical baseline.
 - **Born-local**: an exact local Born-rule diagnostic where sampled local observations come from exact local Born probabilities for CPTP/readout mechanisms. It has effective depth one and is not the full-circuit teacher.
 - **full-circuit-cudaq**: the literal full n-qubit CUDA-Q teacher source at configured circuit depth.
@@ -55,7 +55,7 @@ mechanism, not the claim by itself.
 
 The current implemented evidence package studies sample efficiency, compression,
 quotient-aware recovery, and controlled-catalog physical-mechanism observations.
-Layer 1 physical mechanisms are implemented as unitary/Kraus/readout
+Data-preparation mechanisms are implemented as unitary/Kraus/readout
 definitions, but the learner does not yet learn an arbitrary CPTP/GKSL channel
 family by construction. The package does not claim unsupervised latent
 mechanism discovery, real-hardware ground-truth mechanism recovery, Born-rule
@@ -71,11 +71,11 @@ empirical validation data, not oracle hidden-partition teachers.
 
 Stage 2 is closed as a no-leakage physical-mechanism catalog validation stage:
 the system can generate controlled noisy QEC observations from declared
-mechanisms, verify teacher/catalog separability, and train Layer 3 learners
+mechanisms, verify teacher/catalog separability, and train learner models
 that recover and replay learner-visible noisy observation distributions without
 oracle leakage. Stage 3 is the next claim boundary: remove direct
 mechanism-label supervision and test whether latent mechanism structure can be
-inferred from visible observations alone. The Layer 1/2/3 physical stack remains
+inferred from visible observations alone. The catalog pipeline remains
 the pre-release validation surface for data preparation, teacher/catalog
 self-distinguishment, and no-leakage learner classification/visible-generation
 quality.

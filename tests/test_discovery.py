@@ -2,12 +2,12 @@ import math
 
 import torch
 
-from scope_static.discovery import (
+from scope_static.dem.discovery import (
     add_known_orbit_deltas,
     discovery_assignment_metrics,
     discovery_parameter_audit,
 )
-from scope_static.fault_graph import FaultGraph
+from scope_static.dem.fault_graph import FaultGraph
 
 
 def test_discovery_assignment_metrics_are_permutation_invariant_and_audit_entropy():
