@@ -10,7 +10,7 @@ from scope_static.identifiability import deterministic_kmeans, evaluate_partitio
 from scope_static.dem.local_mechanism import split_merge_audit
 from scope_static.numerics import NUMERICAL_ZERO
 
-from scope_static.backend.mechanism_catalog import READOUT_MECHANISM_IDS, RZZ_FAMILY_IDS
+from scope_static.primitives.mechanism_catalog import READOUT_MECHANISM_IDS, RZZ_FAMILY_IDS
 
 
 RZZ_FAMILY = tuple(RZZ_FAMILY_IDS[:4])

@@ -11,10 +11,10 @@ import yaml
 from scope_static.experiments.qec_noise_catalog.s2d_oracle_separability import run_s2d_oracle_separability
 from scope_static.experiments.qec_noise_catalog.controlled_catalog_teacher import run_controlled_catalog_teacher
 from scope_static.experiments.qec_noise_catalog.backend_preflight import run_backend_preflight
-import scope_static.backend.preflight as preflight_module
+import scope_static.primitives.preflight as preflight_module
 from scope_static.experiments.qec_noise_catalog import controlled_catalog_teacher as teacher_module
-from scope_static.backend.preflight import audit_cudaq_backend
-from scope_static.backend.probe_catalog import (
+from scope_static.primitives.preflight import audit_cudaq_backend
+from scope_static.primitives.probe_catalog import (
     _counts_to_bit_matrix,
     build_default_oracle_mechanisms,
     build_probe_circuits,

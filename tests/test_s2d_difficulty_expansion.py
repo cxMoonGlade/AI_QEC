@@ -6,7 +6,7 @@ from pathlib import Path
 import yaml
 
 from scope_static.experiments.qec_noise_catalog import s2d_difficulty_expansion as mod
-from scope_static.backend.probe_catalog import build_default_oracle_mechanisms, build_probe_basis_manifest, build_probe_circuits
+from scope_static.primitives.probe_catalog import build_default_oracle_mechanisms, build_probe_basis_manifest, build_probe_circuits
 
 
 def test_difficulty_profiles_and_mechanism_sets_are_configurable() -> None:

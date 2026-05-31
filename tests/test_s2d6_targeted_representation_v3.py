@@ -4,7 +4,7 @@ import numpy as np
 import torch
 
 from scope_static.mechanism_observability import evaluate_targeted_v3_methods, typed_feature_manifest
-from scope_static.backend.probe_catalog import build_default_oracle_mechanisms
+from scope_static.primitives.probe_catalog import build_default_oracle_mechanisms
 
 
 def test_targeted_v3_typed_features_are_learner_visible_and_fix_readout_split() -> None:

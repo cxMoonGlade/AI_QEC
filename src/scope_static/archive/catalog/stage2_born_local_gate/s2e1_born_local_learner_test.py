@@ -4,8 +4,8 @@ import json
 from pathlib import Path
 from typing import Iterable
 
-from scope_static.backend.born_local import BORN_LOCAL_SUPPORTED_MECHANISMS
-from scope_static.backend.mechanism_catalog import IMPLEMENTED_MECHANISM_IDS
+from scope_static.primitives.born_local import BORN_LOCAL_SUPPORTED_MECHANISMS
+from scope_static.primitives.mechanism_catalog import IMPLEMENTED_MECHANISM_IDS
 
 
 S2E1_REQUIRED_MECHANISMS = tuple(BORN_LOCAL_SUPPORTED_MECHANISMS)

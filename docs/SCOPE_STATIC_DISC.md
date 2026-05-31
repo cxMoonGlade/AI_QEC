@@ -1854,12 +1854,14 @@ features, exact PTMs, mechanism ids, and oracle labels. High slot-only balanced
 accuracy means the remap/layout is encoding mechanism identity and the PHYC3
 learner result should not be trusted.
 
-The local-observable GPU teacher supports PHYC2-weighted data generation through
-`mechanism_instance_counts` in the teacher config. Unspecified enabled
-mechanisms use `balanced_min_instances_per_mechanism`; explicit `0` omits a
-mechanism from the generated teacher artifact.
+The data-preparation teachers support PHYC2-weighted data generation through
+catalog-resolved `mechanism_weight_profile` names or explicit
+`mechanism_instance_counts`. Use `weighted_realistic_v1` for realistic-ish
+superconducting-QEC exposure imbalance and `weighted_discovery_floor_v1` when
+rare/high-impact mechanisms need a minimum support floor. These profiles are
+not hardware-calibrated mechanism frequency distributions.
 
-Current PHYC2-weighted allM evidence:
+Historical PHYC2-weighted allM evidence:
 
 ```text
 outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/
@@ -2091,7 +2093,7 @@ localized to the PHYS0/PHYS1 boundary.
 ### Canonical S2D Physical Mechanism Taxonomy
 
 Status: implemented for new S2D catalog-validation runs. The canonical source is
-`src/scope_static/backend/mechanism_catalog.py`; the cited taxonomy and legacy
+`src/scope_static/primitives/mechanism_catalog.py`; the cited taxonomy and legacy
 renumbering table live in `docs/error_mechanisms.md`.
 
 Named mechanism sets:

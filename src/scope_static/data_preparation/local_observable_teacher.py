@@ -7,7 +7,7 @@ import time
 
 import numpy as np
 
-from scope_static.backend.born_local import (
+from scope_static.primitives.born_local import (
     BORN_LOCAL_DEPTH_SEMANTICS,
     BORN_LOCAL_EFFECTIVE_CIRCUIT_DEPTH,
     BORN_LOCAL_SUPPORTED_MECHANISMS,
@@ -15,12 +15,12 @@ from scope_static.backend.born_local import (
     born_local_probability_tables,
     outcome_zz_correlation,
 )
-from scope_static.backend.cptp_guardrail import build_cptp_guardrail_audit_from_records
+from scope_static.primitives.cptp_guardrail import build_cptp_guardrail_audit_from_records
 from scope_static.protocols import DATA_PREPARATION_STAGE
-from scope_static.backend.mechanism_catalog import READOUT_MECHANISM_IDS, RZZ_FAMILY_IDS
+from scope_static.primitives.mechanism_catalog import READOUT_MECHANISM_IDS, RZZ_FAMILY_IDS
 from .contract import LOCAL_OBSERVABLE_TEACHER_MODEL, PHYC1_LEGACY_STAGE_NAME, probe_names as phyc1_probe_names
-from scope_static.backend.ptm import channel_fingerprint, probe_response_fingerprint, rzz_type_feature_vector
-from scope_static.backend.probe_catalog import _build_balanced_oracle_mechanisms, _merged_config, build_probe_basis_manifest
+from scope_static.primitives.ptm import channel_fingerprint, probe_response_fingerprint, rzz_type_feature_vector
+from scope_static.primitives.probe_catalog import _build_balanced_oracle_mechanisms, _merged_config, build_probe_basis_manifest
 
 READOUT_ALIAS_GROUP = tuple(sorted(READOUT_MECHANISM_IDS, key=lambda value: int(value[1:])))
 RZZ_ALIAS_GROUP = tuple(RZZ_FAMILY_IDS[:4])
@@ -377,7 +377,7 @@ def _record_probability_profile(
     *,
     response_model: str = "separability_v2",
 ) -> np.ndarray:
-    from scope_static.backend.channels import MechanismSpec
+    from scope_static.primitives.channels import MechanismSpec
 
     model = _normalize_response_model(response_model)
     spec = MechanismSpec(
@@ -441,7 +441,7 @@ def _record_born_local_tables(
     num_qubits: int | None,
     theta: float,
 ) -> tuple[np.ndarray, np.ndarray]:
-    from scope_static.backend.channels import MechanismSpec
+    from scope_static.primitives.channels import MechanismSpec
 
     spec = MechanismSpec(
         mechanism_id=str(record["oracle_label"]),

@@ -140,18 +140,13 @@ The maintainable interface is YAML:
 
 ```yaml
 s2d_physical:
-  mechanism_set: [M0, M4, M8, M24]
-  mechanisms:
-    M0: {p_x: 0.0015, p_y: 0.0008, p_z: 0.0022}
-    M4: {gamma: 0.018}
-    M8: {epsilon: 0.025}
-    M24: {gamma: 0.010}
-  mechanism_instance_counts:
-    M0: 4
-    M4: 4
-    M8: 2
-    M24: 2
+  mechanism_set: allM
+  mechanism_weight_profile: weighted_realistic_v1
 ```
+
+Use `weighted_discovery_floor_v1` when rare/high-impact mechanisms should keep
+a minimum support floor. These are synthetic exposure-weighted support profiles,
+not hardware-calibrated frequency distributions.
 
 The full template is
 `configs/scope_static/layer1_user_defined_mechanisms.yaml`.

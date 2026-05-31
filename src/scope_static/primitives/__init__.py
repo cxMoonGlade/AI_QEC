@@ -1,4 +1,4 @@
-"""Backend support for quantum-process mechanisms and probe construction.
+"""Low-level primitives for quantum-process mechanisms and probe construction.
 
 This package contains low-level channel, PTM, density-simulation, CPTP/POVM
 audit, preflight, and probe-catalog helpers. Stage workflows live in
@@ -25,6 +25,7 @@ from .cptp_guardrail import (
 )
 from .density_sim import apply_kraus, measurement_probabilities_z
 from .mechanism_catalog import IMPLEMENTED_MECHANISM_IDS, MECHANISM_NAMES, NAMED_MECHANISM_SETS
+from .mechanism_profiles import apply_mechanism_weight_profile, mechanism_profile_names, resolve_mechanism_weight_profile
 from .preflight import audit_cudaq_backend, write_backend_audit
 from .probe_contract import (
     FULL_CIRCUIT_TEACHER_MODEL,
@@ -56,6 +57,7 @@ __all__ = [
     "PHYC1_STAGE_NAME",
     "amplitude_damping_kraus",
     "apply_kraus",
+    "apply_mechanism_weight_profile",
     "audit_cudaq_backend",
     "audit_mechanism_physicality",
     "build_cptp_guardrail_audit",
@@ -64,6 +66,7 @@ __all__ = [
     "custom_non_pauli_kraus",
     "measurement_probabilities_z",
     "mechanism_channel",
+    "mechanism_profile_names",
     "normalize_phyc1_teacher_model",
     "pauli_basis",
     "pauli_stochastic_kraus",
@@ -71,6 +74,7 @@ __all__ = [
     "ptm_from_kraus",
     "ptm_from_unitary",
     "readout_bias_matrix",
+    "resolve_mechanism_weight_profile",
     "rx_unitary",
     "ry_unitary",
     "rz_unitary",

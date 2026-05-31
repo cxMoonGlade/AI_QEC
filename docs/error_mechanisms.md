@@ -69,8 +69,8 @@ conditional phase, correlated relaxation, and spectator crosstalk.
 
 ## Implemented Catalog
 
-Status: implemented in `src/scope_static/backend/mechanism_catalog.py` and
-channelized in `src/scope_static/backend/channels.py`.
+Status: implemented in `src/scope_static/primitives/mechanism_catalog.py` and
+channelized in `src/scope_static/primitives/channels.py`.
 
 The IDs are priority ordered by expected practical frequency/importance for
 near-term hardware-style experiments. This order defines the mechanism sets.
@@ -128,6 +128,34 @@ allM:  M0-M34     alias for set_D
 
 `allM` and `set_D` are intentionally the same current universe. Future labels
 should extend `set_D/allM`, not silently overload existing IDs.
+
+## Weighted Profiles
+
+Balanced profiles test identifiability under equal support. Weighted profiles
+test robustness under realistic-ish QEC exposure imbalance.
+
+Current weighted profiles are resolved from
+`src/scope_static/primitives/mechanism_profiles.py`, which imports the current
+M0-M34 catalog names from `mechanism_catalog.py`. Do not hand-maintain stale
+M-ID parameter blocks in YAML.
+
+```text
+weighted_realistic_v1:
+  exposure-weighted superconducting-QEC synthetic prior over M0-M34
+
+weighted_discovery_floor_v1:
+  same prior, but with a support floor so rare/high-impact mechanisms remain visible
+```
+
+These profiles are not hardware-calibrated mechanism frequency distributions.
+They encode synthetic support for controlled stress tests:
+
+```text
+mechanism_weight[M]
+  ~= circuit_exposure[M]
+   * hardware_family_prior[M]
+   * severity_or_discovery_importance[M]
+```
 
 ## Stage 2E.1 Born-Local Scope
 

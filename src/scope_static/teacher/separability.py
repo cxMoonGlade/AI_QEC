@@ -10,8 +10,8 @@ from scope_static.identifiability import deterministic_kmeans, evaluate_partitio
 from scope_static.dem.local_mechanism import split_merge_audit
 from scope_static.numerics import NUMERICAL_ZERO
 
-from scope_static.backend.channels import MechanismSpec
-from scope_static.backend.ptm import channel_fingerprint, probe_response_fingerprint, rzz_type_feature_names, rzz_type_feature_vector
+from scope_static.primitives.channels import MechanismSpec
+from scope_static.primitives.ptm import channel_fingerprint, probe_response_fingerprint, rzz_type_feature_names, rzz_type_feature_vector
 
 
 def run_oracle_separability_audit(

@@ -12,9 +12,9 @@ from scope_static.dem.metrics import normalized_mutual_info
 from scope_static.numerics import NUMERICAL_ZERO
 
 from scope_static.archive.catalog.stage2_rzz_probe_design.active_mixed_basis import rzz_family_distance_audit, rzz_family_metrics
-from scope_static.backend.mechanism_catalog import RZZ_FAMILY_IDS
+from scope_static.primitives.mechanism_catalog import RZZ_FAMILY_IDS
 from scope_static.archive.catalog.stage2_learner_limit.targeted_v3 import build_targeted_v3_features, typed_cluster_labels
-from scope_static.backend.probe_catalog import (
+from scope_static.primitives.probe_catalog import (
     EDGE_ORIENTATION_RULE,
     RZZ_MINIMAL_INTERVENTION_PROBES,
     build_probe_basis_manifest,

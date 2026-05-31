@@ -30,7 +30,7 @@ used by data preparation. Public evidence should cite the teacher contract,
 not a bare legacy sampler artifact.
 
 Legacy public entrypoints, including `scope-catalog-teacher` and
-`scope_static.backend.probe_catalog.generate_catalog_teacher_dataset`, now route
+`scope_static.primitives.probe_catalog.generate_catalog_teacher_dataset`, now route
 through data preparation as compatibility shims.
 
 ## Current Claim
@@ -88,7 +88,7 @@ Data are not CPTP. The physical object is the generating process.
 
 ## Local CPTP / POVM Proof
 
-Data preparation uses `scope_static.backend.cptp_guardrail` as an internal validator. That file should
+Data preparation uses `scope_static.primitives.cptp_guardrail` as an internal validator. That module should
 remain in the codebase: it is not a legacy teacher path, it is the low-level
 proof/check routine used by data preparation before sampling.
 

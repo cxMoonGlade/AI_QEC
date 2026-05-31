@@ -6,10 +6,10 @@ from pathlib import Path
 
 import numpy as np
 
-from scope_static.backend.channels import MechanismSpec, mechanism_channel
+from scope_static.primitives.channels import MechanismSpec, mechanism_channel
 from scope_static.protocols import LEARNER_VALIDATION_STAGE
 from scope_static.dem.metrics import adjusted_rand_index, normalized_mutual_info
-from scope_static.backend.ptm import ptm_from_kraus, ptm_from_unitary
+from scope_static.primitives.ptm import ptm_from_kraus, ptm_from_unitary
 
 
 @dataclass(frozen=True)

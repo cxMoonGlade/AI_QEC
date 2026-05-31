@@ -11,7 +11,7 @@ import yaml
 from scope_static.experiments.qec_noise_catalog.controlled_catalog_teacher import generate_controlled_catalog_teacher_dataset
 from scope_static.experiments.qec_noise_catalog.config import load_s2d_physical_config, output_root_from_config
 from scope_static.mechanism_observability import build_local_pauli_lindblad_observability
-from scope_static.backend.mechanism_catalog import IMPLEMENTED_MECHANISM_IDS
+from scope_static.primitives.mechanism_catalog import IMPLEMENTED_MECHANISM_IDS
 from scope_static.mechanism_observability import (
     TypedSpamGateBundle,
     build_typed_spam_gate_features,

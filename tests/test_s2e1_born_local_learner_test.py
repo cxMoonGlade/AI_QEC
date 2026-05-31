@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from scope_static.backend.born_local import BORN_LOCAL_SUPPORTED_MECHANISMS
+from scope_static.primitives.born_local import BORN_LOCAL_SUPPORTED_MECHANISMS
 from scope_static.teacher.born_local_learner_test import run_s2e1_born_local_learner_test
 
 

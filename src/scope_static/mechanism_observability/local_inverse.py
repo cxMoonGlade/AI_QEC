@@ -18,8 +18,8 @@ from scope_static.dem.local_mechanism import split_merge_audit
 from scope_static.dem.metrics import normalized_mutual_info
 from scope_static.numerics import NUMERICAL_ZERO
 
-from scope_static.backend.channels import MechanismSpec
-from scope_static.backend.ptm import channel_fingerprint, probe_response_fingerprint, rzz_type_feature_vector
+from scope_static.primitives.channels import MechanismSpec
+from scope_static.primitives.ptm import channel_fingerprint, probe_response_fingerprint, rzz_type_feature_vector
 
 
 DEFAULT_LOCAL_INVERSE_CONFIG: dict[str, object] = {

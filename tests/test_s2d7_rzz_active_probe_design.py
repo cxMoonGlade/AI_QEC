@@ -12,7 +12,7 @@ from scope_static.mechanism_observability import (
     evaluate_active_mixed_basis_methods,
     visibility_matrix,
 )
-from scope_static.backend.probe_catalog import (
+from scope_static.primitives.probe_catalog import (
     EDGE_ORIENTATION_RULE,
     build_default_oracle_mechanisms,
     build_probe_basis_manifest,

@@ -7,8 +7,8 @@ import numpy as np
 import yaml
 
 from scope_static.experiments.qec_noise_catalog.s2d5_learner_limit_audit import run_s2d5_learner_limit_audit
-from scope_static.backend.ptm import channel_fingerprint, probe_response_fingerprint, rzz_type_feature_vector
-from scope_static.backend.probe_catalog import build_default_oracle_mechanisms
+from scope_static.primitives.ptm import channel_fingerprint, probe_response_fingerprint, rzz_type_feature_vector
+from scope_static.primitives.probe_catalog import build_default_oracle_mechanisms
 
 
 def test_s2d5_audit_writes_failure_representation_and_nll_artifacts(tmp_path: Path) -> None:

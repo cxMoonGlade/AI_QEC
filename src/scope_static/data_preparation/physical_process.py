@@ -7,7 +7,7 @@ from typing import Mapping
 import numpy as np
 import yaml
 
-from scope_static.backend.cptp_guardrail import build_cptp_guardrail_audit
+from scope_static.primitives.cptp_guardrail import build_cptp_guardrail_audit
 from .full_circuit_cudaq import (
     _build_full_circuit_oracle_mechanisms,
     _operation_sites_from_mechanisms,
@@ -16,7 +16,7 @@ from .full_circuit_cudaq import (
 )
 from scope_static.protocols import DATA_PREPARATION_STAGE
 from .contract import FULL_CIRCUIT_TEACHER_MODEL
-from scope_static.backend.probe_catalog import _merged_config
+from scope_static.primitives.probe_catalog import _merged_config
 from .physicality_audit import run_teacher_physicality_audit
 
 

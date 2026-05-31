@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 
 from scope_static.experiments.qec_noise_catalog.teacher_physicality_audit import run_teacher_physicality_audit_from_config
-from scope_static.backend.mechanism_catalog import MECHANISM_NAMES
+from scope_static.primitives.mechanism_catalog import MECHANISM_NAMES
 from scope_static.data_preparation import run_teacher_physicality_audit
 
 

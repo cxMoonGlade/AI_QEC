@@ -12,7 +12,7 @@ from scope_static.numerics import NUMERICAL_ZERO
 from .generator_invariant_calibration import INVARIANT_FEATURES, generator_invariants_from_coordinates, ptm_unitarity
 from .generator_space_calibration import GENERATOR_CORE, grouped_mahalanobis_prototype, residualize_by_design
 from .local_pauli_lindblad import PAULI_LABELS
-from scope_static.backend.mechanism_catalog import PREP_RESET_MECHANISM_IDS, READOUT_MECHANISM_IDS, RZZ_FAMILY_IDS
+from scope_static.primitives.mechanism_catalog import PREP_RESET_MECHANISM_IDS, READOUT_MECHANISM_IDS, RZZ_FAMILY_IDS
 from .rzz_observability_ceiling import FeatureBlock, audit_labels_schema, features_schema, grouped_fold_audit
 from .targeted_v3 import RZZ_FAMILY
 

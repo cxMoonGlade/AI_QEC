@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from scope_static.backend.mechanism_catalog import MECHANISM_NAMES
+from scope_static.primitives.mechanism_catalog import MECHANISM_NAMES
 from scope_static.mechanism_discovery.artifacts import load_stage3_evaluator_labels
 from scope_static.mechanism_discovery.artifacts import load_stage3a_visible_features
 from scope_static.mechanism_discovery.artifacts import resolve_teacher_dir

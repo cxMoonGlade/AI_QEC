@@ -8,7 +8,7 @@ import yaml
 
 from scope_static.experiments.qec_noise_catalog.s2d_local_inverse_discovery import run_s2d_local_inverse_discovery
 from scope_static.mechanism_observability import build_visible_location_representations
-from scope_static.backend.probe_catalog import build_default_oracle_mechanisms
+from scope_static.primitives.probe_catalog import build_default_oracle_mechanisms
 
 
 def test_visible_location_representations_ignore_oracle_labels() -> None:

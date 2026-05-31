@@ -7,7 +7,7 @@ from typing import Mapping
 
 import numpy as np
 
-from scope_static.backend.channels import (
+from scope_static.primitives.channels import (
     MechanismSpec,
     mechanism_channel,
     mechanism_definition_contract,
@@ -15,8 +15,8 @@ from scope_static.backend.channels import (
     mechanism_operation_axis,
     readout_bias_matrix,
 )
-from scope_static.backend.cptp_guardrail import build_cptp_guardrail_audit
-from scope_static.backend.mechanism_catalog import PREP_RESET_MECHANISM_IDS, READOUT_MECHANISM_IDS
+from scope_static.primitives.cptp_guardrail import build_cptp_guardrail_audit
+from scope_static.primitives.mechanism_catalog import PREP_RESET_MECHANISM_IDS, READOUT_MECHANISM_IDS
 from scope_static.protocols import DATA_PREPARATION_STAGE
 from .contract import (
     FULL_CIRCUIT_CONTRACT_NOTE,
@@ -33,7 +33,7 @@ from .contract import (
     mechanism_counts,
     probe_names as phyc1_probe_names,
 )
-from scope_static.backend.probe_catalog import (
+from scope_static.primitives.probe_catalog import (
     _apply_measurement_basis_rotations,
     _apply_rzz_echo_block,
     _apply_rzz_minimal_sign_block,

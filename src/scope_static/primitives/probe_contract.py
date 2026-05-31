@@ -4,7 +4,7 @@ from collections.abc import Iterable, Mapping
 
 import numpy as np
 
-from scope_static.backend.mechanism_catalog import IMPLEMENTED_MECHANISM_IDS, PREP_RESET_MECHANISM_IDS, READOUT_MECHANISM_IDS
+from scope_static.primitives.mechanism_catalog import IMPLEMENTED_MECHANISM_IDS, PREP_RESET_MECHANISM_IDS, READOUT_MECHANISM_IDS
 
 PHYC1_STAGE_NAME = "S2D_PHYC1_teacher"
 PHYC1_LEGACY_STAGE_NAME = "S2D_PHYS1_teacher"

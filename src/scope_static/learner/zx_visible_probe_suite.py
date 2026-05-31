@@ -8,9 +8,9 @@ from typing import Iterable
 
 import numpy as np
 
-from scope_static.backend.channels import MechanismSpec, mechanism_channel
+from scope_static.primitives.channels import MechanismSpec, mechanism_channel
 from scope_static.protocols import LEARNER_VALIDATION_STAGE
-from scope_static.backend.mechanism_catalog import MECHANISM_NAMES
+from scope_static.primitives.mechanism_catalog import MECHANISM_NAMES
 from scope_static.teacher.observation_surface import visible_input_identifiability_audit
 from .quality import ChannelVector, channel_vector
 from scope_static.mechanism_observability import classification_metrics

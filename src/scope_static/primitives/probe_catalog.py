@@ -8,8 +8,8 @@ from typing import Iterable
 import numpy as np
 
 from ..numerics import NUMERICAL_ZERO
-from scope_static.backend.channels import MechanismSpec, canonical_single_qubit_axis, mechanism_error_axis, mechanism_operation_axis
-from scope_static.backend.mechanism_catalog import (
+from scope_static.primitives.channels import MechanismSpec, canonical_single_qubit_axis, mechanism_error_axis, mechanism_operation_axis
+from scope_static.primitives.mechanism_catalog import (
     IMPLEMENTED_MECHANISM_IDS,
     LEGACY_TO_CURRENT_MECHANISM_IDS,
     MECHANISM_NAMES,
@@ -1100,6 +1100,27 @@ def _merged_config(config: dict[str, object] | None) -> dict[str, object]:
             result["circuit_depth"] = config["depth"]
         elif "num_layers" in config:
             result["circuit_depth"] = config["num_layers"]
+    if result.get("mechanism_weight_profile"):
+        from scope_static.primitives.mechanism_profiles import apply_mechanism_weight_profile
+
+        explicit_mechanisms: dict[object, object] = {}
+        if isinstance(config.get("mechanisms"), dict):
+            raw_mechanisms = config["mechanisms"]  # type: ignore[index]
+            explicit_mechanisms = _renumber_legacy_mapping(raw_mechanisms) if legacy_mechanisms else dict(raw_mechanisms)
+        explicit_counts: dict[object, object] = {}
+        if isinstance(config.get("mechanism_instance_counts"), dict):
+            raw_counts = config["mechanism_instance_counts"]  # type: ignore[index]
+            explicit_counts = _renumber_legacy_mapping(raw_counts) if legacy_mechanisms else dict(raw_counts)
+        profile_cfg = dict(result)
+        profile_cfg["mechanisms"] = explicit_mechanisms
+        if explicit_counts:
+            profile_cfg["mechanism_instance_counts"] = explicit_counts
+        else:
+            profile_cfg.pop("mechanism_instance_counts", None)
+        result = apply_mechanism_weight_profile(
+            profile_cfg,
+            profile_name=str(result["mechanism_weight_profile"]),
+        )
     return result
 
 

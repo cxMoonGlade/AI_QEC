@@ -13,76 +13,11 @@ s2d_physical:
   shots: 10000
   seed: 0
   theta: 0.18
-  mechanisms:
-    M0:
-      p_x: 0.0015
-      p_y: 0.0008
-      p_z: 0.0022
-    M1:
-      epsilon: 0.045
-    M2:
-      epsilon: 0.035
-    M3:
-      epsilon: 0.04
-    M4:
-      gamma: 0.018
-    M5:
-      eta: 0.02
-    M6:
-      p: 0.006
-    M7:
-      epsilon_x: 0.024
-      epsilon_y: 0.017
-    M8:
-      epsilon: 0.025
-    M9:
-      gamma: 0.012
-    M10:
-      epsilon_mean: 0.032
-      epsilon_span: 0.018
-      axis: rx
-    M11:
-      p_z: 0.0025
-    M12:
-      epsilon: 0.028
-      axis: rx
-    M13:
-      p: 0.025
-    M14:
-      p: 0.011
-    M15:
-      p: 0.018
-    M16:
-      p: 0.02
-    M17:
-      p: 0.018
-    M18:
-      epsilon: 0.025
-    M19:
-      eta: 0.004
-  # Uneven support profile for PHYC2-weighted smoke/evidence. This is a
-  # schedule-like stress profile, not a hardware-calibrated frequency model.
-  mechanism_instance_counts:
-    M0: 8
-    M1: 8
-    M2: 5
-    M3: 5
-    M4: 4
-    M5: 3
-    M6: 8
-    M7: 5
-    M8: 4
-    M9: 3
-    M10: 3
-    M11: 4
-    M12: 3
-    M13: 8
-    M14: 8
-    M15: 8
-    M16: 8
-    M17: 3
-    M18: 3
-    M19: 2
+  mechanism_set: allM
+  # Catalog-resolved current M0-M34 profile. This is a realistic-ish
+  # exposure-weighted superconducting-QEC synthetic prior, not a
+  # hardware-calibrated mechanism frequency distribution.
+  mechanism_weight_profile: weighted_realistic_v1
 
 s2d11_typed_spam_gate_invariant_learner:
   output_dir: outputs/scope_static/S2D.11_allM_30q_depth30_weighted
@@ -92,7 +27,7 @@ s2d11_typed_spam_gate_invariant_learner:
   run_secondary_allM_if_primary_passes: false
   runs:
     - name: phys30_multicircuit_allM_depth30_weighted
-      purpose: 30-qubit depth-30 all-mechanism weighted-frequency sampled-observation stress test
+      purpose: 30-qubit depth-30 all-mechanism realistic-weighted sampled-observation stress test
       mechanism_set: allM
       num_qubits: 30
       circuit_depth: 30

@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from scope_static.experiments.stage3.assignment_shuffle_audit import run_stage3d1_assignment_shuffle_audit_from_config
-from scope_static.backend.mechanism_catalog import MECHANISM_NAMES
+from scope_static.primitives.mechanism_catalog import MECHANISM_NAMES
 from scope_static.mechanism_discovery.protocol_freeze import run_stage3a_dataset_protocol_freeze
 from scope_static.mechanism_discovery.observability_ceiling import run_stage3a5_observability_alias_ceiling
 from scope_static.mechanism_discovery.discovery_model import run_stage3b1_first_discovery_model

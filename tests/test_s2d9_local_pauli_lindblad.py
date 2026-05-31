@@ -7,15 +7,15 @@ import numpy as np
 import yaml
 
 from scope_static.experiments.qec_noise_catalog import s2d9_local_pauli_lindblad_observability as runner
-from scope_static.backend.channels import correlated_relaxation_kraus, rxx_ryy_unitary, rxx_unitary, rzz_unitary
+from scope_static.primitives.channels import correlated_relaxation_kraus, rxx_ryy_unitary, rxx_unitary, rzz_unitary
 from scope_static.mechanism_observability import (
     PAULI_LABELS,
     fit_generator_coordinates,
     local_error_ptm_from_observed,
     reconstruct_record_local_ptm,
 )
-from scope_static.backend.ptm import ptm_from_kraus, ptm_from_unitary
-from scope_static.backend.probe_catalog import RZZ_LOCAL_TOMOGRAPHY_PROBES, build_probe_basis_manifest, build_probe_circuits
+from scope_static.primitives.ptm import ptm_from_kraus, ptm_from_unitary
+from scope_static.primitives.probe_catalog import RZZ_LOCAL_TOMOGRAPHY_PROBES, build_probe_basis_manifest, build_probe_circuits
 
 
 TOMO_PROBES = list(RZZ_LOCAL_TOMOGRAPHY_PROBES)

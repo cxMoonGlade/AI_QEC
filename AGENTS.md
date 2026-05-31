@@ -201,7 +201,7 @@ The catalog pipeline uses responsibility-named packages. `PHYC1`, `PHYC2`, and
 `PHYC3` remain legacy artifact aliases in existing paths, schemas, and tests.
 
 ```text
-scope_static.backend
+scope_static.primitives
   low-level channel, PTM, probe, CPTP/POVM, density-sim, and preflight support
 
 scope_static.data_preparation
@@ -227,8 +227,8 @@ scope_static.mechanism_discovery
 ```
 
 Do not rebuild a broad `scope_static.physical` package. New workflow code should
-live in the responsibility package that owns it; new backend math/sampling
-support should live in `scope_static.backend`.
+live in the responsibility package that owns it; new primitive math/sampling
+support should live in `scope_static.primitives`.
 
 Variant labels describe the teacher source, not a change in the PHYC meaning:
 

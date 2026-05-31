@@ -7,7 +7,7 @@ from typing import Mapping
 import numpy as np
 
 from ..numerics import NUMERICAL_ZERO, positive_floor, probability_floor
-from scope_static.backend.mechanism_catalog import READOUT_MECHANISM_IDS
+from scope_static.primitives.mechanism_catalog import READOUT_MECHANISM_IDS
 
 
 Array = np.ndarray

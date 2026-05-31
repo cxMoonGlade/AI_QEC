@@ -7,8 +7,8 @@ from typing import Iterable
 import numpy as np
 
 from ..numerics import NUMERICAL_ZERO
-from scope_static.backend.channels import MechanismSpec, mechanism_channel, rx_unitary, ry_unitary, rz_unitary, rzz_unitary
-from scope_static.backend.mechanism_catalog import IMPLEMENTED_MECHANISM_IDS
+from scope_static.primitives.channels import MechanismSpec, mechanism_channel, rx_unitary, ry_unitary, rz_unitary, rzz_unitary
+from scope_static.primitives.mechanism_catalog import IMPLEMENTED_MECHANISM_IDS
 
 
 BORN_LOCAL_EFFECTIVE_CIRCUIT_DEPTH = 1

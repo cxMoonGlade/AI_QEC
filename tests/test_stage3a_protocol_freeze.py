@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from scope_static.backend.mechanism_catalog import MECHANISM_NAMES
+from scope_static.primitives.mechanism_catalog import MECHANISM_NAMES
 from scope_static.mechanism_discovery.protocol_freeze import (
     forbidden_feature_audit,
     load_stage3a_frozen_visible_features,

@@ -16,7 +16,7 @@ from scope_static.data_preparation.local_observable_teacher import (
     generate_local_observable_teacher_dataset,
 )
 from scope_static.teacher import run_sampled_observation_separability_audit
-from scope_static.backend.probe_catalog import _probe_names
+from scope_static.primitives.probe_catalog import _probe_names
 from scope_static.mechanism_observability.typed_spam_gate_invariant import _location_features
 
 

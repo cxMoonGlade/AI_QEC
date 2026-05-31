@@ -5,7 +5,7 @@ from pathlib import Path
 
 from scope_static.experiments.qec_noise_catalog.config import load_s2d_physical_config, output_root_from_config
 from scope_static.data_preparation import generate_layer1p_teacher_dataset
-from scope_static.backend.preflight import audit_cudaq_backend, write_backend_audit
+from scope_static.primitives.preflight import audit_cudaq_backend, write_backend_audit
 
 
 def generate_controlled_catalog_teacher_dataset(

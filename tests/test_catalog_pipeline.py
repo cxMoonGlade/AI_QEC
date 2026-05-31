@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from scope_static.backend.preflight import audit_cudaq_backend
+from scope_static.primitives.preflight import audit_cudaq_backend
 from scope_static.catalog_pipeline import (
     load_phys1_teacher_artifact,
     load_phys2_metrics,

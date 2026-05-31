@@ -9,7 +9,7 @@ import yaml
 
 from scope_static.experiments.qec_noise_catalog import s2d8d_rzz_minimal_intervention as runner
 from scope_static.mechanism_observability import build_rzz_minimal_intervention_features
-from scope_static.backend.probe_catalog import (
+from scope_static.primitives.probe_catalog import (
     RZZ_MINIMAL_INTERVENTION_PROBES,
     build_default_oracle_mechanisms,
     build_probe_basis_manifest,

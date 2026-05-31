@@ -8,7 +8,7 @@ import yaml
 
 from scope_static.experiments.qec_noise_catalog import s2d8a_rzz_depth_sweep as runner
 from scope_static.mechanism_observability import build_rzz_depth_sweep_features, evaluate_rzz_depth_sweep_methods
-from scope_static.backend.probe_catalog import build_default_oracle_mechanisms, build_probe_basis_manifest, build_probe_circuits
+from scope_static.primitives.probe_catalog import build_default_oracle_mechanisms, build_probe_basis_manifest, build_probe_circuits
 
 
 DEPTH_PROBES = ["z_basis", "x_measure", "y_measure", "rzz_depth_1", "rzz_depth_2", "rzz_depth_4", "rzz_depth_8"]

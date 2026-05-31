@@ -4,7 +4,7 @@ import argparse
 from pathlib import Path
 
 from scope_static.experiments.qec_noise_catalog.config import load_s2d_physical_config, output_root_from_config
-from scope_static.backend.preflight import audit_cudaq_backend, write_backend_audit
+from scope_static.primitives.preflight import audit_cudaq_backend, write_backend_audit
 
 
 def run_backend_preflight(

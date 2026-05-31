@@ -15,7 +15,7 @@ from scope_static.data_preparation.full_circuit_cudaq import (
     build_full_circuit_mechanism_definition_audit,
     generate_full_circuit_cudaq_teacher_dataset,
 )
-from scope_static.backend.channels import MechanismSpec
+from scope_static.primitives.channels import MechanismSpec
 
 
 def _reset_cudaq_target_if_available() -> None:

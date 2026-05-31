@@ -9,7 +9,7 @@ import numpy as np
 from scope_static.numerics import NUMERICAL_ZERO
 
 from .local_inverse import build_visible_location_representations
-from scope_static.backend.mechanism_catalog import PREP_RESET_MECHANISM_IDS, READOUT_MECHANISM_IDS
+from scope_static.primitives.mechanism_catalog import PREP_RESET_MECHANISM_IDS, READOUT_MECHANISM_IDS
 from .typed_spam_gate_invariant import (
     classification_metrics,
     m5_overfragmentation_report,

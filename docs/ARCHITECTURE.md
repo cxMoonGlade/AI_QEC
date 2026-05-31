@@ -18,7 +18,7 @@ generic "physical" layers.
 src/scope_static/
   dem/                     Stage 1 DEM/Bernoulli implementation
   google/                  Google Set1 adapters and proxy partitions
-  backend/                 channel, PTM, probe, CPTP/POVM, and preflight support
+  primitives/              channel, PTM, probe, CPTP/POVM, and preflight support
   data_preparation/        controlled-catalog teacher generation
   teacher/                teacher self-distinguishment and visible-surface helpers
   learner/                no-leakage learner recovery and visible replay quality
@@ -30,10 +30,11 @@ src/scope_static/
   cuda/                    C++/CUDA exact DEM/window kernels
 ```
 
-`backend` is intentionally low level. It contains physical and mathematical
+`primitives` is intentionally low level. It contains physical and mathematical
 support code: mechanism catalog definitions, unitary/Kraus/readout channels,
 PTM fingerprints, local Born-rule utilities, CPTP/POVM audits, CUDA-Q preflight,
-and probe-catalog helpers. It does not own the catalog workflows.
+and probe-catalog helpers. It does not own catalog workflows, and it is not a
+CUDA execution backend.
 
 ## Catalog Workflow
 

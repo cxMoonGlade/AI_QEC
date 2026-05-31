@@ -7,9 +7,9 @@ import numpy as np
 
 from scope_static.numerics import NUMERICAL_ZERO, positive_floor, probability_floor
 
-from scope_static.backend.channels import correlated_relaxation_kraus, pauli_stochastic_kraus, rxx_unitary, ryy_unitary, rzz_unitary
-from scope_static.backend.ptm import pauli_basis, ptm_from_kraus, ptm_from_unitary
-from scope_static.backend.probe_catalog import (
+from scope_static.primitives.channels import correlated_relaxation_kraus, pauli_stochastic_kraus, rxx_unitary, ryy_unitary, rzz_unitary
+from scope_static.primitives.ptm import pauli_basis, ptm_from_kraus, ptm_from_unitary
+from scope_static.primitives.probe_catalog import (
     EDGE_ORIENTATION_RULE,
     RZZ_LOCAL_TOMOGRAPHY_PROBES,
     RZZ_TOMO_EDGE_PARITIES,

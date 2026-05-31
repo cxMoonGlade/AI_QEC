@@ -7,8 +7,8 @@ import numpy as np
 
 from scope_static.numerics import NUMERICAL_ZERO
 
-from scope_static.backend.channels import MechanismSpec, mechanism_channel
-from scope_static.backend.mechanism_catalog import RZZ_FAMILY_IDS
+from scope_static.primitives.channels import MechanismSpec, mechanism_channel
+from scope_static.primitives.mechanism_catalog import RZZ_FAMILY_IDS
 
 
 Array = np.ndarray

@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 
 from scope_static.experiments.stage3.baselines import run_stage3b0_baselines_from_config
-from scope_static.backend.mechanism_catalog import MECHANISM_NAMES
+from scope_static.primitives.mechanism_catalog import MECHANISM_NAMES
 from scope_static.mechanism_discovery.protocol_freeze import run_stage3a_dataset_protocol_freeze
 from scope_static.mechanism_discovery.observability_ceiling import run_stage3a5_observability_alias_ceiling
 from scope_static.mechanism_discovery.baselines import run_stage3b0_nonlearned_clustering_baselines

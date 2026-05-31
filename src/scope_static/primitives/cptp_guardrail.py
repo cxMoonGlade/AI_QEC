@@ -4,7 +4,7 @@ from typing import Mapping, Sequence
 
 import numpy as np
 
-from scope_static.backend.channels import MechanismSpec, mechanism_channel
+from scope_static.primitives.channels import MechanismSpec, mechanism_channel
 
 
 PROBABILITY_PARAMETER_NAMES = {

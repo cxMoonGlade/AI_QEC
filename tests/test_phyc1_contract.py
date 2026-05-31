@@ -13,7 +13,7 @@ from scope_static.data_preparation.contract import (
     normalize_phyc1_teacher_model,
     probe_names,
 )
-from scope_static.backend.probe_catalog import _counts_to_bit_matrix, _probe_names
+from scope_static.primitives.probe_catalog import _counts_to_bit_matrix, _probe_names
 
 
 def test_phyc1_contract_normalizes_teacher_model_aliases() -> None:

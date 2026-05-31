@@ -12,7 +12,7 @@ from scope_static.dem.metrics import adjusted_rand_index, normalized_mutual_info
 from scope_static.numerics import NUMERICAL_ZERO
 
 from scope_static.archive.catalog.stage2_learner_limit.targeted_v3 import RZZ_FAMILY, READOUT_LABELS, build_targeted_v3_features, typed_cluster_labels
-from scope_static.backend.probe_catalog import EDGE_ORIENTATION_RULE, MIXED_BASIS_ACTIVE_PROBES, build_probe_basis_manifest, probe_basis_by_qubit
+from scope_static.primitives.probe_catalog import EDGE_ORIENTATION_RULE, MIXED_BASIS_ACTIVE_PROBES, build_probe_basis_manifest, probe_basis_by_qubit
 
 
 MOMENT_NAMES = ("ZZ", "XX", "YY", "XZ", "ZX", "YZ", "ZY", "XY", "YX")

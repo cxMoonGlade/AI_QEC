@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from scope_static.experiments.stage3.observability_ceiling import run_stage3a5_observability_ceiling_from_config
-from scope_static.backend.mechanism_catalog import MECHANISM_NAMES
+from scope_static.primitives.mechanism_catalog import MECHANISM_NAMES
 from scope_static.mechanism_discovery.protocol_freeze import run_stage3a_dataset_protocol_freeze
 from scope_static.mechanism_discovery.observability_ceiling import run_stage3a5_observability_alias_ceiling
 

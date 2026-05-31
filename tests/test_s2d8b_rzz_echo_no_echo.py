@@ -8,7 +8,7 @@ import yaml
 
 from scope_static.experiments.qec_noise_catalog import s2d8b_rzz_echo_no_echo as runner
 from scope_static.mechanism_observability import build_rzz_echo_contrast_features, evaluate_rzz_echo_contrast_methods
-from scope_static.backend.probe_catalog import (
+from scope_static.primitives.probe_catalog import (
     RZZ_ECHO_CONTRAST_PROBES,
     build_default_oracle_mechanisms,
     build_probe_basis_manifest,

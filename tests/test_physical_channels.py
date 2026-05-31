@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from scope_static.backend.channels import (
+from scope_static.primitives.channels import (
     MechanismSpec,
     amplitude_damping_kraus,
     mechanism_channel,
@@ -11,11 +11,11 @@ from scope_static.backend.channels import (
     rz_unitary,
     rzz_unitary,
 )
-from scope_static.backend.cptp_guardrail import audit_mechanism_physicality, build_cptp_guardrail_audit
-from scope_static.backend.density_sim import apply_kraus, measurement_probabilities_z
-from scope_static.backend.mechanism_catalog import IMPLEMENTED_MECHANISM_IDS, MECHANISM_NAMES, READOUT_MECHANISM_IDS, RZZ_FAMILY_IDS
-from scope_static.backend.ptm import channel_fingerprint, ptm_from_kraus, ptm_from_unitary, rzz_ptm_block_audit
-from scope_static.backend.ptm import probe_response_fingerprint, rzz_type_feature_names, rzz_type_feature_vector
+from scope_static.primitives.cptp_guardrail import audit_mechanism_physicality, build_cptp_guardrail_audit
+from scope_static.primitives.density_sim import apply_kraus, measurement_probabilities_z
+from scope_static.primitives.mechanism_catalog import IMPLEMENTED_MECHANISM_IDS, MECHANISM_NAMES, READOUT_MECHANISM_IDS, RZZ_FAMILY_IDS
+from scope_static.primitives.ptm import channel_fingerprint, ptm_from_kraus, ptm_from_unitary, rzz_ptm_block_audit
+from scope_static.primitives.ptm import probe_response_fingerprint, rzz_type_feature_names, rzz_type_feature_vector
 
 
 def test_amplitude_damping_preserves_trace_and_probabilities_normalize() -> None:

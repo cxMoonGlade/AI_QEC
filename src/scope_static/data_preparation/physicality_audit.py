@@ -9,14 +9,14 @@ from typing import Mapping, Sequence
 import numpy as np
 import yaml
 
-from scope_static.backend.channels import MechanismSpec
-from scope_static.backend.channels import mechanism_channel
-from scope_static.backend.cptp_guardrail import PROBABILITY_PARAMETER_NAMES
-from scope_static.backend.cptp_guardrail import audit_mechanism_physicality
-from scope_static.backend.cptp_guardrail import mechanism_spec_from_record
+from scope_static.primitives.channels import MechanismSpec
+from scope_static.primitives.channels import mechanism_channel
+from scope_static.primitives.cptp_guardrail import PROBABILITY_PARAMETER_NAMES
+from scope_static.primitives.cptp_guardrail import audit_mechanism_physicality
+from scope_static.primitives.cptp_guardrail import mechanism_spec_from_record
 from scope_static.protocols import DATA_PREPARATION_STAGE
-from scope_static.backend.mechanism_catalog import PREP_RESET_MECHANISM_IDS
-from scope_static.backend.mechanism_catalog import READOUT_MECHANISM_IDS
+from scope_static.primitives.mechanism_catalog import PREP_RESET_MECHANISM_IDS
+from scope_static.primitives.mechanism_catalog import READOUT_MECHANISM_IDS
 
 
 STAGE_NAME = "Layer1.P_teacher_physicality_audit"

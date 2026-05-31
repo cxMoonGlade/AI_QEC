@@ -258,7 +258,7 @@ flowchart LR
 | --- | --- |
 | `src/scope_static/mechanism_observability/feature_manifest.py` | `FeatureSpec` 数据类：`name/block/provenance/signed/phase_sensitive/offdiag_sensitive/requires_mixed_basis/requires_depth_sweep/oracle_only` |
 | `src/scope_static/mechanism_observability/pauli_obs.py` | `estimate_pauli_moment_from_counts(counts, pauli_string, basis_map)`；支持任意局部 mixed basis |
-| `src/scope_static/backend/readout_affine.py` | `fit_affine_readout(cal_counts)`、`correct_one_body`、`correct_two_body` |
+| `src/scope_static/primitives/readout_affine.py` | `fit_affine_readout(cal_counts)`、`correct_one_body`、`correct_two_body` |
 | `src/scope_static/mechanism_observability/dptm_lite.py` | `estimate_dptm_entry(counts_rhoj, counts_rho0, pauli_i)`；`estimate_block_entries(edge, block_id, ...)` |
 | `src/scope_static/mechanism_observability/rzz_twirl.py` | `build_partial_twirl_circuits`、`build_correlated_twirl_circuits`、`fit_partial_twirl_curve`、`fit_correlated_twirl_curve` |
 | `src/scope_static/mechanism_observability/rzz_echo.py` | `build_x_echo_probe`、`build_y_echo_probe`、`estimate_echo_witnesses` |
