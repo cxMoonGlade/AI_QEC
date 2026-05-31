@@ -1,0 +1,108 @@
+google_benchmark_suite_v1:
+  suite:
+    output_dir: outputs/google_static/google_benchmark_suite_v1
+    benchmarks: B0
+
+  inventory:
+    datasets: google_72Q_repetition_code_d29,google_72Q_surface_code_d3_d5_set1,google_72Q_surface_code_d3_d5_set2,google_105Q_surface_code_d3_d5_d7
+    repetition_root: /home/cx/Document/google_72Q_repetition_code_d29
+    set1_root: /home/cx/Document/google_72Q_surface_code_d3_d5_set1
+    set2_root: /home/cx/Document/google_72Q_surface_code_d3_d5_set2
+    surface_105q_root: /home/cx/Document/google_105Q_surface_code_d3_d5_d7
+    dem_proxy_mode: first_per_dataset
+
+  common_grid:
+    dataset_root: /home/cx/Document/google_72Q_surface_code_d3_d5_set1
+    dataset_name: google_72Q_surface_code_d3_d5_set1
+    dataset_family: surface
+    patches: d3_at_q5_5,d3_at_q7_5,d3_at_q3_5,d5_at_q5_5,d3_at_q5_3,d3_at_q5_7
+    bases: X,Z
+    rounds_labels: r13
+    heldout_split_types: shot-heldout
+    dem_source: decoder_si1000
+    reference_dem_sources: decoder_si1000,decoder_rl
+    orbit_mode: fault_graph_heuristic
+    train_shots: 4096
+    heldout_shots: 4096
+    steps: 40
+    subsample_count: 2
+    subsample_shots: 2048
+    subsample_steps: 30
+    max_windows: 96
+    max_window_bits: 8
+    detector_pair_window_budget: 48
+    logical_detector_pair_window_budget: 48
+    window_plan_mode: logical_aware
+    eval_window_plan_mode: structured_higher_order
+    eval_max_window_bits: 6
+    eval_max_windows: 256
+    eval_radius: 1.0
+    eval_template_window_budget: 32
+    eval_orbit_window_budget: 64
+    pca_ranks: 1,2,3,5,8
+    random_control_ranks: 1,2,3,5,8
+    random_control_seeds: "0"
+    nmf_steps: 120
+    kmeans_max_iter: 32
+    kmeans_check_convergence: false
+    include_upstream_dmle: false
+    upstream_dmle_repo: /tmp/DMLE-QEC
+    upstream_dmle_epochs: 200
+    upstream_dmle_lr: 0.01
+    upstream_dmle_batch_size: 10000
+    upstream_dmle_minibatch: 1000
+    upstream_dmle_path_file: ""
+    upstream_dmle_path_search_max_time: 0
+    seed: 0
+    dtype: float64
+    likelihood_backend: auto
+    cuda_kernel_variant: dp
+    spectral_memory_cap_mib: 1024
+    disable_prepared_cache: false
+
+  B0:
+    name: inventory/window audit lock
+    window_audit_context:
+      enabled: true
+      sample_id: sample_01
+      patch_id: d3_at_q5_5
+      basis: X
+      rounds_label: r13
+
+  B1:
+    name: Set1 structured same-context sanity benchmark
+    grid:
+      samples: sample_01,sample_02
+      max_contexts: 24
+
+  B2:
+    name: Set1 sample-efficiency benchmark
+    train_shot_grid: 128,256,512,1024,2048,4096,8192
+    heldout_shots: 4096
+    grid:
+      samples: sample_01,sample_02
+      max_contexts: 24
+
+  B3:
+    name: Set1 cross-sample transfer benchmark
+    transfer:
+      source_samples: sample_00,sample_01
+      target_sample_start: 2
+      target_sample_stop: 4
+      patches: d3_at_q5_5
+      bases: X,Z
+      rounds_labels: r13
+      orbit_modes: fault_graph_heuristic
+      models: local,dmle_qec,hard_orbit,soft_feature_orbit
+      train_shots: 4096
+      heldout_shots: 4096
+      steps: 40
+
+  B4:
+    name: Set2 calibration/domain-shift benchmark
+
+  B5:
+    name: 105Q cross-distance benchmark
+
+  B6:
+    name: repetition d29 drift benchmark

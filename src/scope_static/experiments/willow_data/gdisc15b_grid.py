@@ -23,13 +23,16 @@ from scope_static.google.inventory import (
 from scope_static.google.set1 import find_google_set1_leaf, normalize_google_set1_root
 
 from . import local_mechanism as run_google_local_mechanism
-from .static import _fmt_float, _print_table
+from .static import GOOGLE_COMPAT_METRIC, GOOGLE_PRIMARY_METRIC, _fmt_float, _print_table
 
 
-PRIMARY_METRIC = "heldout_local_window_excess_nll"
+PRIMARY_METRIC = GOOGLE_PRIMARY_METRIC
 SUMMARY_METRICS = [
+    "heldout_eval_window_nll",
+    "heldout_eval_window_empirical_entropy",
+    "heldout_eval_window_excess_nll",
     "heldout_local_window_nll",
-    "heldout_local_window_excess_nll",
+    GOOGLE_COMPAT_METRIC,
     "detector_rate_mae",
     "local_correlation_error",
     "logical_flip_rate_calibration",
@@ -285,6 +288,18 @@ def _local_mechanism_args(args: argparse.Namespace, context: dict[str, object], 
         str(args.logical_detector_pair_window_budget),
         "--window-plan-mode",
         args.window_plan_mode,
+        "--eval-window-plan-mode",
+        args.eval_window_plan_mode,
+        "--eval-max-window-bits",
+        str(args.eval_max_window_bits),
+        "--eval-max-windows",
+        str(args.eval_max_windows),
+        "--eval-radius",
+        str(args.eval_radius),
+        "--eval-template-window-budget",
+        str(args.eval_template_window_budget),
+        "--eval-orbit-window-budget",
+        str(args.eval_orbit_window_budget),
         "--pca-ranks",
         args.pca_ranks,
         "--random-control-ranks",
@@ -420,13 +435,14 @@ def _summary_markdown(result: dict[str, object]) -> str:
         f"- Primary win metric: `{PRIMARY_METRIC}`",
         f"- True omega recovery claim: `false`",
         "",
-        "| model | params | heldout NLL | detector MAE | local corr err | logical calib | wins/total |",
-        "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
+        "| model | params | eval NLL | legacy local NLL | detector MAE | local corr err | logical calib | wins/total |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     for row in rows:
         wins = f"{row['wins_primary_vs_local_full']}/{row['total_paired']}"
         lines.append(
             f"| {row['model']} | {_mean_std(row.get('params_mean'), row.get('params_std'))} | "
+            f"{_mean_std(row.get('heldout_eval_window_nll_mean'), row.get('heldout_eval_window_nll_std'))} | "
             f"{_mean_std(row.get('heldout_local_window_nll_mean'), row.get('heldout_local_window_nll_std'))} | "
             f"{_mean_std(row.get('detector_rate_mae_mean'), row.get('detector_rate_mae_std'))} | "
             f"{_mean_std(row.get('local_correlation_error_mean'), row.get('local_correlation_error_std'))} | "
@@ -448,11 +464,12 @@ def _print_summary(result: dict[str, object]) -> None:
         key=lambda row: (_none_high(row.get(f"{PRIMARY_METRIC}_mean")), int(row.get("params_mean") or 10**9)),
     )[:10]
     _print_table(
-        ["model", "params", "heldout NLL", "det MAE", "corr err", "log calib", "wins/total"],
+        ["model", "params", "eval NLL", "legacy NLL", "det MAE", "corr err", "log calib", "wins/total"],
         [
             [
                 row["model"],
                 _fmt_float(row.get("params_mean"), precision=1),
+                _mean_std(row.get("heldout_eval_window_nll_mean"), row.get("heldout_eval_window_nll_std")),
                 _mean_std(row.get("heldout_local_window_nll_mean"), row.get("heldout_local_window_nll_std")),
                 _mean_std(row.get("detector_rate_mae_mean"), row.get("detector_rate_mae_std")),
                 _mean_std(row.get("local_correlation_error_mean"), row.get("local_correlation_error_std")),
@@ -644,6 +661,16 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--detector-pair-window-budget", type=int, default=48)
     parser.add_argument("--logical-detector-pair-window-budget", type=int, default=48)
     parser.add_argument("--window-plan-mode", choices=["logical_aware", "detector_local"], default="logical_aware")
+    parser.add_argument(
+        "--eval-window-plan-mode",
+        choices=["same_as_train", "structured_higher_order"],
+        default="same_as_train",
+    )
+    parser.add_argument("--eval-max-window-bits", type=int, default=6)
+    parser.add_argument("--eval-max-windows", type=int, default=256)
+    parser.add_argument("--eval-radius", type=float, default=1.0)
+    parser.add_argument("--eval-template-window-budget", type=int, default=32)
+    parser.add_argument("--eval-orbit-window-budget", type=int, default=64)
     parser.add_argument("--pca-ranks", default="1,2,3,5,8")
     parser.add_argument("--random-control-ranks", default="1,2,3,5,8")
     parser.add_argument("--random-control-seeds", default="0")

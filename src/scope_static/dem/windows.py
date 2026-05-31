@@ -43,11 +43,19 @@ class WindowPlan:
         audit = window_audit_dict(list(self.windows))
         builders = self.config.get("builders", ["detector_geometry"]) if bool(self.config.get("enabled", False)) else []
         audit["window_plan_enabled"] = bool(self.config.get("enabled", False))
+        audit["window_plan_mode"] = str(self.config.get("plan_mode", "custom"))
         audit["window_plan_builders"] = [str(builder) for builder in builders]
+        audit["requested_max_window_bits"] = (
+            None if self.config.get("max_window_bits") is None else int(self.config["max_window_bits"])
+        )
+        audit["requested_max_windows"] = None if self.config.get("max_windows") is None else int(self.config["max_windows"])
         family_budgets = _coerce_family_budgets(self.config.get("window_family_budgets"))
         audit["window_family_budget_mode"] = "family_aware" if family_budgets else "global_max_windows"
         audit["window_family_budgets"] = family_budgets
         audit["window_family_counts"] = _window_kind_counts(self.windows)
+        audit["window_global_budget_applied_after_family_budgets"] = bool(
+            self.config.get("respect_max_windows_with_family_budgets", False)
+        )
         return audit
 
     def __iter__(self):
@@ -201,38 +209,47 @@ def _build_windows_from_config_dict(graph: FaultGraph, cfg: dict[str, object]) -
     max_window_bits = int(cfg.get("max_window_bits", 8))
     builders = cfg.get("builders", ["detector_geometry"])
     windows: list[ObservationWindow] = []
-    if "detector_geometry" in builders:
-        windows.extend(
-            build_windows_from_detector_geometry(
-                graph,
-                include_single_detectors=bool(cfg.get("include_single_detectors", True)),
-                include_detector_pairs=bool(cfg.get("include_detector_pairs", True)),
-                include_radius1=bool(cfg.get("include_radius1", True)),
-                include_boundary_logical=bool(cfg.get("include_boundary_logical", True)),
-                radius=float(cfg.get("radius", 1.0)),
-                max_window_bits=max_window_bits,
+    for builder in [str(value) for value in builders]:
+        if builder == "detector_geometry":
+            windows.extend(
+                build_windows_from_detector_geometry(
+                    graph,
+                    include_single_detectors=bool(cfg.get("include_single_detectors", True)),
+                    include_detector_pairs=bool(cfg.get("include_detector_pairs", True)),
+                    include_radius1=bool(cfg.get("include_radius1", True)),
+                    include_boundary_logical=bool(cfg.get("include_boundary_logical", True)),
+                    radius=float(cfg.get("radius", 1.0)),
+                    max_window_bits=max_window_bits,
+                )
             )
-        )
-    if "template_motifs" in builders:
-        windows.extend(build_windows_from_template_motifs(graph, max_window_bits=max_window_bits))
-    if "orbits" in builders:
-        windows.extend(build_windows_from_orbits(graph, max_window_bits=max_window_bits))
-    if "logical_observable" in builders:
-        windows.extend(
-            build_windows_from_logical_observables(
-                graph,
-                include_logical_single=bool(cfg.get("include_logical_single", True)),
-                include_logical_detector_pairs=bool(cfg.get("include_logical_detector_pairs", True)),
-                include_logical_fault_support=bool(cfg.get("include_logical_fault_support", True)),
-                max_window_bits=max_window_bits,
+        elif builder == "template_motifs":
+            windows.extend(build_windows_from_template_motifs(graph, max_window_bits=max_window_bits))
+        elif builder == "orbits":
+            windows.extend(build_windows_from_orbits(graph, max_window_bits=max_window_bits))
+        elif builder == "logical_observable":
+            windows.extend(
+                build_windows_from_logical_observables(
+                    graph,
+                    include_logical_single=bool(cfg.get("include_logical_single", True)),
+                    include_logical_detector_pairs=bool(cfg.get("include_logical_detector_pairs", True)),
+                    include_logical_fault_support=bool(cfg.get("include_logical_fault_support", True)),
+                    max_window_bits=max_window_bits,
+                )
             )
-        )
+        else:
+            raise ValueError(f"unknown window builder: {builder}")
     windows = dedupe_windows(windows, max_window_bits=max_window_bits)
     family_budgets = _coerce_family_budgets(cfg.get("window_family_budgets"))
+    max_windows = cfg.get("max_windows")
     if family_budgets:
         windows = _apply_family_budgets(windows, family_budgets)
-    elif cfg.get("max_windows") is not None:
-        max_windows = cfg.get("max_windows")
+        if bool(cfg.get("respect_max_windows_with_family_budgets", False)) and max_windows is not None:
+            windows = _apply_global_window_budget(
+                windows,
+                max_windows=int(max_windows),
+                family_priority=_coerce_family_priority(cfg.get("window_family_priority")),
+            )
+    elif max_windows is not None:
         windows = windows[: int(max_windows)]
     return windows
 
@@ -240,11 +257,15 @@ def _build_windows_from_config_dict(graph: FaultGraph, cfg: dict[str, object]) -
 def window_audit_dict(windows: list[ObservationWindow]) -> dict[str, object]:
     sizes = [window.size for window in windows]
     kinds = sorted(set(window.kind for window in windows))
+    size_counts: dict[int, int] = {}
+    for size in sizes:
+        size_counts[int(size)] = size_counts.get(int(size), 0) + 1
     return {
         "num_windows": len(windows),
         "window_kinds": kinds,
         "max_window_bits": max(sizes) if sizes else 0,
         "mean_window_bits": float(mean(sizes)) if sizes else 0.0,
+        "window_size_distribution": {str(size): int(size_counts[size]) for size in sorted(size_counts)},
     }
 
 
@@ -451,6 +472,31 @@ def _apply_family_budgets(
             selected.append(window)
             counts[window.kind] = used + 1
     return selected
+
+
+def _coerce_family_priority(value: object) -> dict[str, int]:
+    if not isinstance(value, dict):
+        return {}
+    return {str(key): int(priority) for key, priority in value.items()}
+
+
+def _apply_global_window_budget(
+    windows: list[ObservationWindow],
+    *,
+    max_windows: int,
+    family_priority: dict[str, int],
+) -> list[ObservationWindow]:
+    if max_windows < 0:
+        raise ValueError("max_windows must be non-negative")
+    if len(windows) <= max_windows:
+        return windows
+    indexed = list(enumerate(windows))
+    selected = sorted(
+        indexed,
+        key=lambda item: (family_priority.get(item[1].kind, 100), item[0]),
+    )[:max_windows]
+    selected_indices = {index for index, _window in selected}
+    return [window for index, window in indexed if index in selected_indices]
 
 
 def _window_kind_counts(windows: list[ObservationWindow] | tuple[ObservationWindow, ...] | object) -> dict[str, int]:

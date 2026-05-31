@@ -65,9 +65,14 @@ from .static import (
     _prepare_train_objectives,
     _print_table,
     _resolve_execution_mode,
+    _eval_window_config,
+    _same_windows,
     _spectral_memory_cap_bytes,
     _train_heldout_split,
+    _window_plan_audit,
+    _with_eval_window_metrics,
     _window_config,
+    GOOGLE_PRIMARY_METRIC,
 )
 
 
@@ -316,13 +321,16 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
         dem_data_cache=dem_data_cache,
         cache_events=cache_events,
     )
-    windows = WindowPlan.from_config(graph, _window_config(args))
+    train_window_config = _window_config(args)
+    train_windows = WindowPlan.from_config(graph, train_window_config)
+    eval_window_config = _eval_window_config(args, train_window_config)
+    eval_windows = train_windows if train_window_config == eval_window_config else WindowPlan.from_config(graph, eval_window_config)
     train_objectives = _prepare_train_objectives(
         args,
         leaf,
         graph,
         train,
-        windows,
+        train_windows,
         orbit_mode=args.orbit_mode,
         split=split,
         observation_modes={"detectors", "full"},
@@ -330,19 +338,40 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
     )
     train_objective = train_objectives["full"]
     dmle_train_objective = train_objectives["detectors"]
-    eval_cache = _prepare_eval_cache(
+    legacy_eval_cache = _prepare_eval_cache(
         args,
         leaf,
         graph,
         heldout,
-        windows,
+        train_windows,
         orbit_mode=args.orbit_mode,
         role="gdisc_heldout_eval",
         slice_start=int(split["heldout_start"]),
         slice_end=int(split["heldout_end"]),
         cache_events=cache_events,
     )
-    prepared_evaluator = _prepare_fast_evaluator(args, graph, heldout, windows, eval_cache, heldout_predicted)
+    eval_cache = (
+        legacy_eval_cache
+        if train_windows is eval_windows
+        else _prepare_eval_cache(
+            args,
+            leaf,
+            graph,
+            heldout,
+            eval_windows,
+            orbit_mode=args.orbit_mode,
+            role=f"gdisc_heldout_eval_{args.eval_window_plan_mode}",
+            slice_start=int(split["heldout_start"]),
+            slice_end=int(split["heldout_end"]),
+            cache_events=cache_events,
+        )
+    )
+    prepared_evaluator = _prepare_fast_evaluator(args, graph, heldout, train_windows, legacy_eval_cache, heldout_predicted)
+    eval_prepared_evaluator = (
+        prepared_evaluator
+        if train_windows is eval_windows
+        else _prepare_fast_evaluator(args, graph, heldout, eval_windows, eval_cache, heldout_predicted)
+    )
     timings["data_graph_window_cache_preparation"] = time.perf_counter() - phase
 
     dtype = torch.float64 if args.dtype == "float64" else torch.float32
@@ -351,7 +380,19 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
     timings["local_full_fit"] = time.perf_counter() - phase
     local_logits = local_fit["logits"]
     phase = time.perf_counter()
-    local_metrics = _eval_logits(args, graph, local_logits, heldout, windows, eval_cache, heldout_predicted, prepared_evaluator=prepared_evaluator)
+    local_metrics = _eval_logits(
+        args,
+        graph,
+        local_logits,
+        heldout,
+        train_windows,
+        legacy_eval_cache,
+        heldout_predicted,
+        prepared_evaluator=prepared_evaluator,
+        eval_windows=eval_windows,
+        structured_eval_cache=eval_cache,
+        eval_prepared_evaluator=eval_prepared_evaluator,
+    )
     timings["local_full_eval"] = time.perf_counter() - phase
     local_record = _model_record(
         "local_full",
@@ -364,7 +405,19 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
     dmle_fit = _fit_dmle_qec(args, graph, train, train_objective=dmle_train_objective, dtype=dtype)
     timings["dmle_qec_detector_fit"] = time.perf_counter() - phase
     phase = time.perf_counter()
-    dmle_metrics = _eval_logits(args, graph, dmle_fit["logits"], heldout, windows, eval_cache, heldout_predicted, prepared_evaluator=prepared_evaluator)
+    dmle_metrics = _eval_logits(
+        args,
+        graph,
+        dmle_fit["logits"],
+        heldout,
+        train_windows,
+        legacy_eval_cache,
+        heldout_predicted,
+        prepared_evaluator=prepared_evaluator,
+        eval_windows=eval_windows,
+        structured_eval_cache=eval_cache,
+        eval_prepared_evaluator=eval_prepared_evaluator,
+    )
     timings["dmle_qec_eval"] = time.perf_counter() - phase
     dmle_record = _model_record(
         "dmle_qec",
@@ -389,10 +442,13 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
             graph,
             upstream_dmle_fit["logits"],
             heldout,
-            windows,
-            eval_cache,
+            train_windows,
+            legacy_eval_cache,
             heldout_predicted,
             prepared_evaluator=prepared_evaluator,
+            eval_windows=eval_windows,
+            structured_eval_cache=eval_cache,
+            eval_prepared_evaluator=eval_prepared_evaluator,
         )
         timings["dmle_qec_upstream_eval"] = time.perf_counter() - phase
         upstream_dmle_record = _model_record(
@@ -410,7 +466,19 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
         )
     global_logits = torch.full_like(local_logits, float(local_logits.mean().item()))
     phase = time.perf_counter()
-    global_metrics = _eval_logits(args, graph, global_logits, heldout, windows, eval_cache, heldout_predicted, prepared_evaluator=prepared_evaluator)
+    global_metrics = _eval_logits(
+        args,
+        graph,
+        global_logits,
+        heldout,
+        train_windows,
+        legacy_eval_cache,
+        heldout_predicted,
+        prepared_evaluator=prepared_evaluator,
+        eval_windows=eval_windows,
+        structured_eval_cache=eval_cache,
+        eval_prepared_evaluator=eval_prepared_evaluator,
+    )
     timings["global_shared_scalar_eval"] = time.perf_counter() - phase
     global_record = _model_record(
         "global_shared_scalar",
@@ -427,14 +495,17 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
         graph,
         local_logits,
         heldout,
-        windows,
-        eval_cache,
+        train_windows,
+        legacy_eval_cache,
         heldout_predicted,
         prepared_evaluator,
+        eval_windows,
+        eval_cache,
+        eval_prepared_evaluator,
     )
     timings["prior_reference_eval"] = time.perf_counter() - phase
     phase = time.perf_counter()
-    subsample = _fit_subsample_local_logits(args, graph, train, windows, dtype=dtype)
+    subsample = _fit_subsample_local_logits(args, graph, train, train_windows, dtype=dtype)
     timings["subsample_local_fits"] = time.perf_counter() - phase
     phase = time.perf_counter()
     stability = _local_inverse_stability(graph, local_logits, subsample)
@@ -485,10 +556,13 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
         graph,
         [spec["prototype"].logits for spec in candidate_specs],
         heldout,
-        windows,
-        eval_cache,
+        train_windows,
+        legacy_eval_cache,
         heldout_predicted,
         prepared_evaluator=prepared_evaluator,
+        eval_windows=eval_windows,
+        structured_eval_cache=eval_cache,
+        eval_prepared_evaluator=eval_prepared_evaluator,
     )
     batch_eval_seconds = time.perf_counter() - eval_start
     timings["candidate_batch_eval"] = batch_eval_seconds
@@ -559,6 +633,9 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
             "likelihood_backend": args.likelihood_backend,
             "cuda_kernel_variant": args.cuda_kernel_variant,
             "window_plan_mode": args.window_plan_mode,
+            "eval_window_plan_mode": args.eval_window_plan_mode,
+            "eval_max_window_bits": int(args.eval_max_window_bits),
+            "eval_max_windows": int(args.eval_max_windows),
             "wall_seconds": time.perf_counter() - start,
             "wallclock_breakdown": timings,
             "claim_boundary": {
@@ -575,8 +652,9 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
             **preprocessing_audit,
         },
         "window_audit": {
-            **window_coverage_audit_dict(graph, list(windows.windows)),
-            **windows.audit_dict(),
+            **_window_plan_audit(graph, train_windows, preprocessing_mode=args.orbit_mode, role="train"),
+            "train_window_audit": _window_plan_audit(graph, train_windows, preprocessing_mode=args.orbit_mode, role="train"),
+            "eval_window_audit": _window_plan_audit(graph, eval_windows, preprocessing_mode=args.orbit_mode, role="eval"),
         },
         "schedule_context_audit": schedule_context.audit_dict(),
         "GDISC13b_real_local_inverse_audit": stability,
@@ -795,20 +873,43 @@ def _eval_logits(
     heldout_predicted,
     *,
     prepared_evaluator: "_FastGoogleEvaluator | None" = None,
+    eval_windows: WindowPlan | None = None,
+    structured_eval_cache=None,
+    eval_prepared_evaluator: "_FastGoogleEvaluator | None" = None,
 ) -> dict[str, object]:
+    eval_windows = windows if eval_windows is None else eval_windows
+    structured_eval_cache = eval_cache if structured_eval_cache is None else structured_eval_cache
     if prepared_evaluator is not None:
-        return prepared_evaluator.evaluate(logits)
-    return evaluate_real_data_model(
-        graph,
-        torch.as_tensor(logits, dtype=torch.float64, device=torch.device(args.device)),
-        heldout,
-        aggregate_unique=True,
-        backend=args.likelihood_backend,
-        windows=list(windows.windows),
-        window_caches=eval_cache[0],
-        window_batch_cache=eval_cache[1],
-        predicted_observables=heldout_predicted,
-    )
+        legacy_metrics = prepared_evaluator.evaluate(logits)
+    else:
+        legacy_metrics = evaluate_real_data_model(
+            graph,
+            torch.as_tensor(logits, dtype=torch.float64, device=torch.device(args.device)),
+            heldout,
+            aggregate_unique=True,
+            backend=args.likelihood_backend,
+            windows=list(windows.windows),
+            window_caches=eval_cache[0],
+            window_batch_cache=eval_cache[1],
+            predicted_observables=heldout_predicted,
+        )
+    if _same_windows(windows, eval_windows):
+        eval_metrics = legacy_metrics
+    elif eval_prepared_evaluator is not None:
+        eval_metrics = eval_prepared_evaluator.evaluate(logits)
+    else:
+        eval_metrics = evaluate_real_data_model(
+            graph,
+            torch.as_tensor(logits, dtype=torch.float64, device=torch.device(args.device)),
+            heldout,
+            aggregate_unique=True,
+            backend=args.likelihood_backend,
+            windows=list(eval_windows.windows),
+            window_caches=structured_eval_cache[0],
+            window_batch_cache=structured_eval_cache[1],
+            predicted_observables=heldout_predicted,
+        )
+    return _with_eval_window_metrics(legacy_metrics, eval_metrics)
 
 
 def _eval_logits_batch(
@@ -821,38 +922,94 @@ def _eval_logits_batch(
     heldout_predicted,
     *,
     prepared_evaluator: "_FastGoogleEvaluator | None" = None,
+    eval_windows: WindowPlan | None = None,
+    structured_eval_cache=None,
+    eval_prepared_evaluator: "_FastGoogleEvaluator | None" = None,
 ) -> list[dict[str, object]]:
     logits_values = list(logits_list)
     if not logits_values:
         return []
+    eval_windows = windows if eval_windows is None else eval_windows
+    structured_eval_cache = eval_cache if structured_eval_cache is None else structured_eval_cache
     if prepared_evaluator is not None:
         logits_batch = torch.stack(
             [torch.as_tensor(logits, dtype=torch.float64, device=prepared_evaluator.device) for logits in logits_values],
             dim=0,
         )
-        return prepared_evaluator.evaluate_batch(logits_batch)
-    return [
-        _eval_logits(
-            args,
-            graph,
-            logits,
-            heldout,
-            windows,
-            eval_cache,
-            heldout_predicted,
-            prepared_evaluator=prepared_evaluator,
+        legacy_results = prepared_evaluator.evaluate_batch(logits_batch)
+    else:
+        legacy_results = [
+            evaluate_real_data_model(
+                graph,
+                torch.as_tensor(logits, dtype=torch.float64, device=torch.device(args.device)),
+                heldout,
+                aggregate_unique=True,
+                backend=args.likelihood_backend,
+                windows=list(windows.windows),
+                window_caches=eval_cache[0],
+                window_batch_cache=eval_cache[1],
+                predicted_observables=heldout_predicted,
+            )
+            for logits in logits_values
+        ]
+    if _same_windows(windows, eval_windows):
+        eval_results = legacy_results
+    elif eval_prepared_evaluator is not None:
+        logits_batch = torch.stack(
+            [torch.as_tensor(logits, dtype=torch.float64, device=eval_prepared_evaluator.device) for logits in logits_values],
+            dim=0,
         )
-        for logits in logits_values
-    ]
+        eval_results = eval_prepared_evaluator.evaluate_batch(logits_batch)
+    else:
+        eval_results = [
+            evaluate_real_data_model(
+                graph,
+                torch.as_tensor(logits, dtype=torch.float64, device=torch.device(args.device)),
+                heldout,
+                aggregate_unique=True,
+                backend=args.likelihood_backend,
+                windows=list(eval_windows.windows),
+                window_caches=structured_eval_cache[0],
+                window_batch_cache=structured_eval_cache[1],
+                predicted_observables=heldout_predicted,
+            )
+            for logits in logits_values
+        ]
+    return [_with_eval_window_metrics(legacy, eval_) for legacy, eval_ in zip(legacy_results, eval_results, strict=True)]
 
 
-def _reference_prior_records(args, leaf, graph, local_logits, heldout, windows, eval_cache, heldout_predicted, prepared_evaluator):
+def _reference_prior_records(
+    args,
+    leaf,
+    graph,
+    local_logits,
+    heldout,
+    windows,
+    eval_cache,
+    heldout_predicted,
+    prepared_evaluator,
+    eval_windows,
+    structured_eval_cache,
+    eval_prepared_evaluator,
+):
     records = []
     agreements = {}
     base_prior = None
     if graph.effective_probabilities is not None:
         base_prior = probability_to_logit(graph.effective_probabilities)
-        metrics = _eval_logits(args, graph, base_prior, heldout, windows, eval_cache, heldout_predicted, prepared_evaluator=prepared_evaluator)
+        metrics = _eval_logits(
+            args,
+            graph,
+            base_prior,
+            heldout,
+            windows,
+            eval_cache,
+            heldout_predicted,
+            prepared_evaluator=prepared_evaluator,
+            eval_windows=eval_windows,
+            structured_eval_cache=structured_eval_cache,
+            eval_prepared_evaluator=eval_prepared_evaluator,
+        )
         records.append(_model_record("SI1000_prior_reference" if "si1000" in args.dem_source else f"{args.dem_source}_prior_reference", base_prior, metrics, parameter_count=0))
     agreements[args.dem_source] = dem_prior_agreement(local_logits, base_prior, label=args.dem_source)
     for source in [item.strip() for item in str(args.reference_dem_sources).split(",") if item.strip()]:
@@ -873,7 +1030,19 @@ def _reference_prior_records(args, leaf, graph, local_logits, heldout, windows, 
             prior = None if ref_graph.effective_probabilities is None else probability_to_logit(ref_graph.effective_probabilities)
             agreements[source] = dem_prior_agreement(local_logits, prior, label=source)
             if prior is not None:
-                metrics = _eval_logits(args, graph, prior, heldout, windows, eval_cache, heldout_predicted, prepared_evaluator=prepared_evaluator)
+                metrics = _eval_logits(
+                    args,
+                    graph,
+                    prior,
+                    heldout,
+                    windows,
+                    eval_cache,
+                    heldout_predicted,
+                    prepared_evaluator=prepared_evaluator,
+                    eval_windows=eval_windows,
+                    structured_eval_cache=structured_eval_cache,
+                    eval_prepared_evaluator=eval_prepared_evaluator,
+                )
                 records.append(_model_record(f"{source}_prior_reference", prior, metrics, parameter_count=0))
         except Exception as exc:
             agreements[source] = {"reference": source, "available": False, "reason": str(exc)}
@@ -945,7 +1114,7 @@ def _select_google_record(records: list[dict[str, object]]) -> dict[str, object]
     best = min(
         candidates,
         key=lambda record: (
-            _none_high(record.get("heldout_local_window_excess_nll")),
+            _none_high(record.get(GOOGLE_PRIMARY_METRIC)),
             _none_high(record.get("detector_rate_mae")),
             int(record.get("parameter_count", 10**9)),
         ),
@@ -957,8 +1126,12 @@ def _compact_predictiveness(metrics: dict[str, object]) -> dict[str, object]:
     keys = [
         "heldout_local_window_nll",
         "heldout_local_window_excess_nll",
+        "heldout_eval_window_nll",
+        "heldout_eval_window_excess_nll",
         "heldout_detector_window_excess_nll",
         "heldout_logical_window_excess_nll",
+        "heldout_eval_detector_window_excess_nll",
+        "heldout_eval_logical_window_excess_nll",
         "detector_rate_mae",
         "local_correlation_error",
         "logical_flip_rate_calibration",
@@ -971,9 +1144,12 @@ def _compact_record(record: dict[str, object]) -> dict[str, object]:
     keys = [
         "model",
         "parameter_count",
+        "heldout_eval_window_excess_nll",
         "heldout_local_window_excess_nll",
         "heldout_detector_window_excess_nll",
         "heldout_logical_window_excess_nll",
+        "heldout_eval_detector_window_excess_nll",
+        "heldout_eval_logical_window_excess_nll",
         "detector_rate_mae",
         "local_correlation_error",
         "logical_flip_rate_calibration",
@@ -1071,9 +1247,9 @@ def _g15_summary(result: dict[str, object]) -> str:
         "| model | params | ex_nll | det_ex | log_ex | det_mae | corr_err | log_cal |",
         "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
-    for row in sorted(rows, key=lambda item: _none_high(item.get("heldout_local_window_excess_nll")))[:12]:
+    for row in sorted(rows, key=lambda item: _none_high(item.get(GOOGLE_PRIMARY_METRIC)))[:12]:
         lines.append(
-            f"| {row.get('model')} | {row.get('parameter_count')} | {_fmt_float(row.get('heldout_local_window_excess_nll'))} | "
+            f"| {row.get('model')} | {row.get('parameter_count')} | {_fmt_float(row.get(GOOGLE_PRIMARY_METRIC))} | "
             f"{_fmt_float(row.get('heldout_detector_window_excess_nll'))} | {_fmt_float(row.get('heldout_logical_window_excess_nll'))} | "
             f"{_fmt_float(row.get('detector_rate_mae'))} | {_fmt_float(row.get('local_correlation_error'))} | "
             f"{_fmt_float(row.get('logical_flip_rate_calibration'))} |"
@@ -1100,7 +1276,7 @@ def _comparison_summary(result: dict[str, object]) -> str:
             ),
             (
                 "| DISC15 | evaluator-best local inverse representation nearly strong | "
-                f"selected {selected.get('model')} ex_nll {_fmt_float(selected.get('heldout_local_window_excess_nll'))} | "
+                f"selected {selected.get('model')} ex_nll {_fmt_float(selected.get(GOOGLE_PRIMARY_METRIC))} | "
                 "real-data claim is predictive utility, not true omega recovery |"
             ),
             "",
@@ -1124,7 +1300,7 @@ def _print_summary(result: dict[str, object]) -> None:
     )
     print(
         "GDISC15 selected: "
-        f"{selected.get('model')} ex_nll={_fmt_float(selected.get('heldout_local_window_excess_nll'))} "
+        f"{selected.get('model')} ex_nll={_fmt_float(selected.get(GOOGLE_PRIMARY_METRIC))} "
         f"det_mae={_fmt_float(selected.get('detector_rate_mae'))} params={selected.get('parameter_count')}"
     )
 
@@ -1189,6 +1365,16 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--max-window-bits", type=int, default=8)
     parser.add_argument("--max-windows", type=int, default=128)
     parser.add_argument("--window-plan-mode", choices=["logical_aware", "detector_local"], default="logical_aware")
+    parser.add_argument(
+        "--eval-window-plan-mode",
+        choices=["same_as_train", "structured_higher_order"],
+        default="same_as_train",
+    )
+    parser.add_argument("--eval-max-window-bits", type=int, default=6)
+    parser.add_argument("--eval-max-windows", type=int, default=256)
+    parser.add_argument("--eval-radius", type=float, default=1.0)
+    parser.add_argument("--eval-template-window-budget", type=int, default=32)
+    parser.add_argument("--eval-orbit-window-budget", type=int, default=64)
     parser.add_argument("--detector-pair-window-budget", type=int, default=64)
     parser.add_argument("--logical-detector-pair-window-budget", type=int, default=64)
     parser.add_argument("--output-root", default="outputs/google_static")

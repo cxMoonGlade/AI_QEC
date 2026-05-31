@@ -86,6 +86,7 @@ scope-stage3c-generator
 scope-stage3d1-assignment-shuffle
 scope-stage3e-google
 scope-google-xz-scorecard
+scope-google-benchmark-suite
 scope-teacher-physicality-audit
 ```
 

@@ -189,6 +189,20 @@ outputs/google_static/google_xz_scorecard/label_manifest.json
 outputs/google_static/google_xz_scorecard/summary.md
 ```
 
+Google Benchmark Suite V1 audit lock and ladder facade:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.benchmark_suite \
+  --config configs/scope_static/google_benchmark_suite_v1.yaml \
+  --benchmarks B0
+```
+
+Use `--benchmarks B0,B1,B2,B3` to run the executable Set1 ladder rungs after
+the audit lock. B4/B5/B6 currently write manifest-backed pending artifacts until
+the non-Set1 unified `GoogleLeaf` runner exists. The suite always passes the
+native GPU flag for training/evaluation rungs and reports
+`heldout_eval_window_excess_nll` beside the legacy local-window metric.
+
 ## Function: Generate Physical-Mechanism Data
 
 Use this function when you want noisy data from explicitly enabled mechanisms.

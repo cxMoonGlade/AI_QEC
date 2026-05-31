@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -249,6 +250,37 @@ def test_google_runner_rejects_cpu_fallback(monkeypatch, tmp_path: Path):
         main([*base_args, "--allow-cpu-fallback", "--output-dir", str(tmp_path / "cpu")])
 
 
+def test_google_eval_window_config_splits_train_and_structured_eval():
+    from scope_static.experiments.willow_data.static import _eval_window_config, _window_config
+
+    args = SimpleNamespace(
+        window_plan_mode="logical_aware",
+        max_window_bits=8,
+        max_windows=96,
+        detector_pair_window_budget=48,
+        logical_detector_pair_window_budget=48,
+        eval_window_plan_mode="same_as_train",
+        eval_max_window_bits=6,
+        eval_max_windows=256,
+        eval_radius=1.0,
+        eval_template_window_budget=32,
+        eval_orbit_window_budget=64,
+    )
+    train = _window_config(args)
+
+    assert _eval_window_config(args, train) == train
+
+    args.eval_window_plan_mode = "structured_higher_order"
+    eval_cfg = _eval_window_config(args, train)
+
+    assert train["plan_mode"] == "logical_aware"
+    assert train["max_windows"] == 96
+    assert eval_cfg["plan_mode"] == "structured_higher_order"
+    assert eval_cfg["max_window_bits"] == 6
+    assert eval_cfg["max_windows"] == 256
+    assert {"template_motifs", "orbits", "logical_observable"}.issubset(set(eval_cfg["builders"]))
+
+
 def test_google_runner_can_evaluate_discovery_on_real_data_path(monkeypatch, tmp_path: Path, capsys):
     from scope_static.experiments.willow_data.static import main
 
@@ -469,6 +501,8 @@ def test_google_xz_scorecard_is_gpu_only_and_writes_label_manifest(monkeypatch, 
     def fake_grid_main(argv):
         assert "--native-gpu" in argv
         assert "--allow-cpu-fallback" not in argv
+        assert argv[argv.index("--eval-window-plan-mode") + 1] == "structured_higher_order"
+        assert argv[argv.index("--eval-max-window-bits") + 1] == "6"
         output = Path(argv[argv.index("--output-dir") + 1])
         contexts = []
         flat_records = []
@@ -527,6 +561,7 @@ def test_google_xz_scorecard_is_gpu_only_and_writes_label_manifest(monkeypatch, 
 
     assert result["run"]["name"] == "Google_XZ_scorecard"
     assert result["scorecard"]["google_xz_scorecard_passed"] is True
+    assert result["scorecard"]["primary_metric"] == "heldout_eval_window_excess_nll"
     assert {row["basis"] for row in result["scorecard"]["basis_summary"]} == {"X", "Z"}
     assert all(row["best_baseline_model_counts"] == {"dmle_qec": 1} for row in result["scorecard"]["basis_summary"])
     assert all(row["compressed_minus_best_baseline_excess_nll_mean"] < 0 for row in result["scorecard"]["basis_summary"])
@@ -630,6 +665,9 @@ def _scorecard_record(context: dict[str, object], model: str, params: int, nll: 
         "compression_ratio": None,
         "heldout_local_window_nll": nll,
         "heldout_local_window_excess_nll": nll,
+        "heldout_eval_window_nll": nll + 0.01,
+        "heldout_eval_window_empirical_entropy": 0.01,
+        "heldout_eval_window_excess_nll": nll,
         "detector_rate_mae": detector_mae,
         "local_correlation_error": detector_mae / 2,
         "logical_flip_rate_calibration": detector_mae / 3,

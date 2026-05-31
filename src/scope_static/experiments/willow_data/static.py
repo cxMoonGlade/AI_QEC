@@ -59,6 +59,9 @@ from scope_static.dem.windows import ObservationWindow, WindowPlan, detector_onl
 
 PreparedEvalCache = tuple[list[WindowNLLCache], WindowBatchNLLCache | None]
 
+GOOGLE_PRIMARY_METRIC = "heldout_eval_window_excess_nll"
+GOOGLE_COMPAT_METRIC = "heldout_local_window_excess_nll"
+
 
 def main(argv: list[str] | None = None) -> dict[str, object]:
     run_start = time.perf_counter()
@@ -111,29 +114,48 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
             dem_data_cache=dem_data_cache,
             cache_events=prepared_cache_events,
         )
-        windows = WindowPlan.from_config(graph, _window_config(args))
+        train_window_config = _window_config(args)
+        train_windows = WindowPlan.from_config(graph, train_window_config)
+        eval_window_config = _eval_window_config(args, train_window_config)
+        eval_windows = train_windows if _same_window_plan_config(train_window_config, eval_window_config) else WindowPlan.from_config(graph, eval_window_config)
         train_objectives = _prepare_train_objectives(
             args,
             leaf,
             graph,
             train_observations,
-            windows,
+            train_windows,
             orbit_mode=orbit_mode,
             split=split,
             observation_modes=required_observation_modes,
             cache_events=prepared_cache_events,
         )
-        heldout_eval_cache = _prepare_eval_cache(
+        legacy_eval_cache = _prepare_eval_cache(
             args,
             leaf,
             graph,
             heldout_observations,
-            windows,
+            train_windows,
             orbit_mode=orbit_mode,
             role="heldout_eval",
             slice_start=int(split["heldout_start"]),
             slice_end=int(split["heldout_end"]),
             cache_events=prepared_cache_events,
+        )
+        heldout_eval_cache = (
+            legacy_eval_cache
+            if train_windows is eval_windows
+            else _prepare_eval_cache(
+                args,
+                leaf,
+                graph,
+                heldout_observations,
+                eval_windows,
+                orbit_mode=orbit_mode,
+                role=f"heldout_eval_{args.eval_window_plan_mode}",
+                slice_start=int(split["heldout_start"]),
+                slice_end=int(split["heldout_end"]),
+                cache_events=prepared_cache_events,
+            )
         )
         graph_audit = graph.audit_dict(
             exact_likelihood_trainable=False,
@@ -144,16 +166,22 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
         graph_audit.update(compression_audit(graph))
         graph_audits.append(graph_audit)
 
-        window_audit = window_coverage_audit_dict(graph, list(windows.windows))
-        window_audit.update(windows.audit_dict())
-        window_audit["preprocessing_mode"] = orbit_mode
+        train_window_audit = _window_plan_audit(graph, train_windows, preprocessing_mode=orbit_mode, role="train")
+        eval_window_audit = _window_plan_audit(graph, eval_windows, preprocessing_mode=orbit_mode, role="eval")
+        window_audit = {
+            **train_window_audit,
+            "preprocessing_mode": orbit_mode,
+            "train_window_audit": train_window_audit,
+            "eval_window_audit": eval_window_audit,
+        }
         window_audits.append(window_audit)
         _emit_progress_event(
             args,
             {
                 "event": "prepared_preprocessing",
                 "preprocessing_mode": orbit_mode,
-                "num_windows": len(windows),
+                "num_train_windows": len(train_windows),
+                "num_eval_windows": len(eval_windows),
                 "prepare_wall_seconds": time.perf_counter() - prepare_start,
             },
         )
@@ -184,7 +212,7 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
                         model_options=model_options,
                         train_observations=train_observations,
                         train_objective=train_objectives[observation_mode],
-                        windows=windows,
+                        windows=train_windows,
                         dtype=dtype,
                         observation_mode=observation_mode,
                     )
@@ -208,7 +236,7 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
                         spectral_memory_cap_bytes=_spectral_memory_cap_bytes(args),
                         observation_mode=observation_mode,
                         likelihood_objective="local_exact",
-                        windows=windows,
+                        windows=train_windows,
                         prepared_objective=train_objectives[observation_mode],
                     )
                     restart_outcomes = []
@@ -216,17 +244,32 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
                 trained_field = fit["field"]
                 logits = trained_field.realized_logits(graph).detach()
                 eval_start = time.perf_counter()
-                metrics = evaluate_real_data_model(
+                legacy_metrics = evaluate_real_data_model(
                     graph,
                     logits,
                     heldout_observations,
                     aggregate_unique=True,
                     backend=args.likelihood_backend,
-                    windows=list(windows.windows),
-                    window_caches=heldout_eval_cache[0],
-                    window_batch_cache=heldout_eval_cache[1],
+                    windows=list(train_windows.windows),
+                    window_caches=legacy_eval_cache[0],
+                    window_batch_cache=legacy_eval_cache[1],
                     predicted_observables=heldout_predicted,
                 )
+                if train_windows is eval_windows:
+                    eval_metrics = legacy_metrics
+                else:
+                    eval_metrics = evaluate_real_data_model(
+                        graph,
+                        logits,
+                        heldout_observations,
+                        aggregate_unique=True,
+                        backend=args.likelihood_backend,
+                        windows=list(eval_windows.windows),
+                        window_caches=heldout_eval_cache[0],
+                        window_batch_cache=heldout_eval_cache[1],
+                        predicted_observables=heldout_predicted,
+                    )
+                metrics = _with_eval_window_metrics(legacy_metrics, eval_metrics)
                 if is_discovery_model(model_name):
                     metrics.update(
                         field_discovery_metrics(
@@ -284,6 +327,7 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
                         "eval_wall_seconds": eval_seconds,
                         "heldout_local_window_nll": metrics.get("heldout_local_window_nll"),
                         "heldout_local_window_excess_nll": metrics.get("heldout_local_window_excess_nll"),
+                        "heldout_eval_window_excess_nll": metrics.get("heldout_eval_window_excess_nll"),
                         "adapter": fit.get("likelihood_adapter"),
                     },
                 )
@@ -295,7 +339,8 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
                             source_leaf=leaf,
                             source_graph=graph,
                             logits=logits,
-                            windows=windows,
+                            train_windows=train_windows,
+                            eval_windows=eval_windows,
                             model_name=model_label,
                             orbit_mode=orbit_mode,
                             transfer_cache=transfer_cache,
@@ -338,6 +383,9 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
             "spectral_min_abs_factor": float(args.spectral_min_abs_factor),
             "spectral_memory_cap_bytes": _spectral_memory_cap_bytes(args),
             "window_plan_mode": args.window_plan_mode,
+            "eval_window_plan_mode": args.eval_window_plan_mode,
+            "eval_max_window_bits": int(args.eval_max_window_bits),
+            "eval_max_windows": int(args.eval_max_windows),
             "native_gpu": bool(args.native_gpu),
             "gpu_policy": args.gpu_policy,
             "prepared_cache": {
@@ -387,6 +435,16 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         choices=["logical_aware", "detector_local"],
         default="logical_aware",
     )
+    parser.add_argument(
+        "--eval-window-plan-mode",
+        choices=["same_as_train", "structured_higher_order"],
+        default="same_as_train",
+    )
+    parser.add_argument("--eval-max-window-bits", type=int, default=6)
+    parser.add_argument("--eval-max-windows", type=int, default=256)
+    parser.add_argument("--eval-radius", type=float, default=1.0)
+    parser.add_argument("--eval-template-window-budget", type=int, default=32)
+    parser.add_argument("--eval-orbit-window-budget", type=int, default=64)
     parser.add_argument("--detector-pair-window-budget", type=int, default=64)
     parser.add_argument("--logical-detector-pair-window-budget", type=int, default=64)
     parser.add_argument("--steps", type=int, default=200)
@@ -455,6 +513,7 @@ def _print_final_summary(result: dict[str, object], metrics_path: Path) -> None:
         print("")
         print("Window Coverage")
         for audit in window_audits:
+            eval_audit = audit.get("eval_window_audit") if isinstance(audit.get("eval_window_audit"), dict) else None
             coverage = audit.get("detector_logical_bit_coverage", {})
             logical = audit.get("logical_bit_coverage", {})
             family_counts = audit.get("window_family_counts", audit.get("window_type_counts", {}))
@@ -469,6 +528,15 @@ def _print_final_summary(result: dict[str, object], metrics_path: Path) -> None:
                 f"{audit.get('logical_fault_support_unique', 0)} "
                 f"families={_compact_counts(family_counts)}"
             )
+            if eval_audit is not None and eval_audit.get("window_plan_mode") != audit.get("window_plan_mode"):
+                eval_coverage = eval_audit.get("detector_logical_bit_coverage", {})
+                print(
+                    "  "
+                    f"{audit.get('preprocessing_mode')} eval: "
+                    f"windows={eval_audit.get('num_windows')} max_bits={eval_audit.get('max_window_bits')} "
+                    f"bits={eval_coverage.get('num_bits_covered')}/{eval_coverage.get('num_bits_total')} "
+                    f"families={_compact_counts(eval_audit.get('window_family_counts', {}))}"
+                )
 
     print("")
     print("Heldout Model Comparison")
@@ -675,6 +743,7 @@ def _window_config(args: argparse.Namespace) -> dict[str, object]:
     if args.window_plan_mode == "detector_local":
         return {
             "enabled": True,
+            "plan_mode": "detector_local",
             "builders": ["detector_geometry", "orbits"],
             "include_single_detectors": True,
             "include_detector_pairs": True,
@@ -685,6 +754,7 @@ def _window_config(args: argparse.Namespace) -> dict[str, object]:
         }
     return {
         "enabled": True,
+        "plan_mode": "logical_aware",
         "builders": ["detector_geometry", "logical_observable"],
         "include_single_detectors": True,
         "include_detector_pairs": True,
@@ -703,6 +773,111 @@ def _window_config(args: argparse.Namespace) -> dict[str, object]:
             "logical_fault_support": "all",
         },
     }
+
+
+def _eval_window_config(args: argparse.Namespace, train_config: dict[str, object]) -> dict[str, object]:
+    mode = str(getattr(args, "eval_window_plan_mode", "same_as_train"))
+    if mode == "same_as_train":
+        return dict(train_config)
+    if mode != "structured_higher_order":
+        raise ValueError(f"unknown eval_window_plan_mode: {mode}")
+
+    eval_max_windows = int(getattr(args, "eval_max_windows", 256))
+    radius_budget = max(0, min(eval_max_windows, eval_max_windows // 8))
+    return {
+        "enabled": True,
+        "plan_mode": "structured_higher_order",
+        "builders": ["detector_geometry", "logical_observable", "template_motifs", "orbits"],
+        "include_single_detectors": True,
+        "include_detector_pairs": True,
+        "include_radius1": True,
+        "include_boundary_logical": False,
+        "include_logical_single": True,
+        "include_logical_detector_pairs": True,
+        "include_logical_fault_support": True,
+        "radius": float(getattr(args, "eval_radius", 1.0)),
+        "max_window_bits": int(getattr(args, "eval_max_window_bits", 6)),
+        "max_windows": eval_max_windows,
+        "respect_max_windows_with_family_budgets": True,
+        "window_family_budgets": {
+            "single_detector": "all",
+            "detector_pair": int(args.detector_pair_window_budget),
+            "radius1_detector_geometry": radius_budget,
+            "logical_single": "all",
+            "logical_detector_pair": int(args.logical_detector_pair_window_budget),
+            "logical_fault_support": "all",
+            "template_motif": int(getattr(args, "eval_template_window_budget", 32)),
+            "template_fault": int(getattr(args, "eval_template_window_budget", 32)),
+            "orbit": int(getattr(args, "eval_orbit_window_budget", 64)),
+            "orbit_fault": int(getattr(args, "eval_orbit_window_budget", 64)),
+        },
+        "window_family_priority": {
+            "logical_single": 0,
+            "logical_fault_support": 0,
+            "logical_detector_pair": 0,
+            "single_detector": 1,
+            "detector_pair": 2,
+            "radius1_detector_geometry": 3,
+            "template_motif": 4,
+            "template_fault": 4,
+            "orbit": 5,
+            "orbit_fault": 5,
+        },
+    }
+
+
+def _same_window_plan_config(left: dict[str, object], right: dict[str, object]) -> bool:
+    return left == right
+
+
+def _same_windows(left: WindowPlan, right: WindowPlan) -> bool:
+    return tuple(left.windows) == tuple(right.windows)
+
+
+def _window_plan_audit(
+    graph: FaultGraph,
+    windows: WindowPlan,
+    *,
+    preprocessing_mode: str,
+    role: str,
+) -> dict[str, object]:
+    audit = window_coverage_audit_dict(graph, list(windows.windows))
+    audit.update(windows.audit_dict())
+    audit["preprocessing_mode"] = preprocessing_mode
+    audit["window_role"] = role
+    return audit
+
+
+def _with_eval_window_metrics(
+    legacy_metrics: dict[str, object],
+    eval_metrics: dict[str, object],
+) -> dict[str, object]:
+    metrics = dict(legacy_metrics)
+    metrics.update(
+        {
+            "heldout_eval_window_nll": eval_metrics.get("heldout_local_window_nll"),
+            "heldout_eval_window_empirical_entropy": eval_metrics.get("heldout_local_window_empirical_entropy"),
+            "heldout_eval_window_excess_nll": eval_metrics.get("heldout_local_window_excess_nll"),
+            "heldout_eval_detector_window_nll": eval_metrics.get("heldout_detector_window_nll"),
+            "heldout_eval_detector_window_empirical_entropy": eval_metrics.get(
+                "heldout_detector_window_empirical_entropy"
+            ),
+            "heldout_eval_detector_window_excess_nll": eval_metrics.get("heldout_detector_window_excess_nll"),
+            "heldout_eval_logical_window_nll": eval_metrics.get("heldout_logical_window_nll"),
+            "heldout_eval_logical_window_empirical_entropy": eval_metrics.get(
+                "heldout_logical_window_empirical_entropy"
+            ),
+            "heldout_eval_logical_window_excess_nll": eval_metrics.get("heldout_logical_window_excess_nll"),
+            "num_eval_windows": eval_metrics.get("num_evaluation_windows"),
+            "max_eval_window_bits": eval_metrics.get("max_evaluation_window_bits"),
+            "eval_window_evidence_groups": eval_metrics.get("window_evidence_groups"),
+            "eval_window_nll_weighting": eval_metrics.get("window_nll_weighting"),
+            "eval_window_nll_units": eval_metrics.get("window_nll_units"),
+            "eval_window_empirical_entropy_source": eval_metrics.get("window_empirical_entropy_source"),
+            "eval_window_excess_nll_definition": eval_metrics.get("window_excess_nll_definition"),
+        }
+    )
+    return metrics
 
 
 def _spectral_memory_cap_bytes(args: argparse.Namespace) -> int:
@@ -791,6 +966,7 @@ def _prepare_train_objectives(
             slice_start=int(split["train_start"]),
             slice_end=int(split["train_end"]),
             cache_events=cache_events,
+            window_config=windows.config,
         )
         if batch_cache is not None:
             local_window_likelihood = ExactLocalWindowParityLikelihood(
@@ -864,6 +1040,7 @@ def _prepare_eval_cache(
             slice_start=slice_start,
             slice_end=slice_end,
             cache_events=cache_events,
+            window_config=windows.config,
         )
         if batch_cache is None:
             batch_cache = build_window_batch_nll_cache_from_observations(
@@ -900,6 +1077,7 @@ def _prepare_window_batch_cache(
     slice_start: int,
     slice_end: int,
     cache_events: list[dict[str, object]],
+    window_config: dict[str, object] | None = None,
 ) -> WindowBatchNLLCache | None:
     device = torch.device(args.device)
     if device.type != "cuda" or args.likelihood_backend != "cuda_extension":
@@ -917,6 +1095,7 @@ def _prepare_window_batch_cache(
         role=role,
         slice_start=slice_start,
         slice_end=slice_end,
+        window_config=window_config,
     )
     key = window_batch_cache_key(graph, windows, identity)
     path = window_batch_cache_file(args.prepared_cache_dir, key)
@@ -975,6 +1154,7 @@ def _window_cache_identity(
     role: str,
     slice_start: int,
     slice_end: int,
+    window_config: dict[str, object] | None = None,
 ) -> dict[str, object]:
     return {
         "experiment": "S1.6_google_static",
@@ -986,7 +1166,7 @@ def _window_cache_identity(
         "dem_source": args.dem_source,
         "preprocessing_mode": orbit_mode,
         "residual_rank": int(args.residual_rank),
-        "window_config": _window_config(args),
+        "window_config": dict(window_config or _window_config(args)),
         "num_windows": len(windows),
         "aggregate_unique": True,
         "observation_shape": tuple(int(value) for value in observations.shape),
@@ -1253,7 +1433,8 @@ def _cross_sample_transfer(
     source_leaf,
     source_graph,
     logits: torch.Tensor,
-    windows: WindowPlan,
+    train_windows: WindowPlan,
+    eval_windows: WindowPlan,
     model_name: str,
     orbit_mode: str,
     transfer_cache: dict[tuple[str, str], dict[str, object]],
@@ -1269,7 +1450,8 @@ def _cross_sample_transfer(
                 args=args,
                 source_leaf=source_leaf,
                 source_graph=source_graph,
-                windows=windows,
+                train_windows=train_windows,
+                eval_windows=eval_windows,
                 orbit_mode=orbit_mode,
                 sample_id=sample_id,
                 transfer_cache=transfer_cache,
@@ -1289,17 +1471,33 @@ def _cross_sample_transfer(
                 )
                 continue
             eval_cache = prepared["eval_cache"]
-            metrics = evaluate_real_data_model(
+            legacy_eval_cache = prepared["legacy_eval_cache"]
+            legacy_metrics = evaluate_real_data_model(
                 source_graph,
                 logits,
                 prepared["eval_observations"],
                 aggregate_unique=True,
                 backend=args.likelihood_backend,
-                windows=list(windows.windows),
-                window_caches=eval_cache[0],
-                window_batch_cache=eval_cache[1],
+                windows=list(train_windows.windows),
+                window_caches=legacy_eval_cache[0],
+                window_batch_cache=legacy_eval_cache[1],
                 predicted_observables=prepared["eval_predicted"],
             )
+            if _same_windows(train_windows, eval_windows):
+                eval_metrics = legacy_metrics
+            else:
+                eval_metrics = evaluate_real_data_model(
+                    source_graph,
+                    logits,
+                    prepared["eval_observations"],
+                    aggregate_unique=True,
+                    backend=args.likelihood_backend,
+                    windows=list(eval_windows.windows),
+                    window_caches=eval_cache[0],
+                    window_batch_cache=eval_cache[1],
+                    predicted_observables=prepared["eval_predicted"],
+                )
+            metrics = _with_eval_window_metrics(legacy_metrics, eval_metrics)
             record = {
                 "sample_id": sample_id,
                 "model": model_name,
@@ -1341,7 +1539,8 @@ def _prepare_transfer_target(
     args: argparse.Namespace,
     source_leaf,
     source_graph,
-    windows: WindowPlan,
+    train_windows: WindowPlan,
+    eval_windows: WindowPlan,
     orbit_mode: str,
     sample_id: str,
     transfer_cache: dict[tuple[str, str], dict[str, object]],
@@ -1379,22 +1578,40 @@ def _prepare_transfer_target(
     eval_observations = target_observations[split["heldout_slice"]]
     predicted = load_google_predicted_observables(target_leaf, args.dem_source)
     eval_predicted = None if predicted is None else predicted[split["heldout_slice"]]
-    prepared = {
-        "transfer_evaluated": True,
-        "eval_observations": eval_observations,
-        "eval_predicted": eval_predicted,
-        "eval_cache": _prepare_eval_cache(
+    legacy_eval_cache = _prepare_eval_cache(
+        args,
+        target_leaf,
+        source_graph,
+        eval_observations,
+        train_windows,
+        orbit_mode=orbit_mode,
+        role="transfer_eval",
+        slice_start=int(split["heldout_start"]),
+        slice_end=int(split["heldout_end"]),
+        cache_events=cache_events,
+    )
+    eval_cache = (
+        legacy_eval_cache
+        if _same_windows(train_windows, eval_windows)
+        else _prepare_eval_cache(
             args,
             target_leaf,
             source_graph,
             eval_observations,
-            windows,
+            eval_windows,
             orbit_mode=orbit_mode,
-            role="transfer_eval",
+            role="transfer_eval" if _same_windows(train_windows, eval_windows) else f"transfer_eval_{args.eval_window_plan_mode}",
             slice_start=int(split["heldout_start"]),
             slice_end=int(split["heldout_end"]),
             cache_events=cache_events,
-        ),
+        )
+    )
+    prepared = {
+        "transfer_evaluated": True,
+        "eval_observations": eval_observations,
+        "eval_predicted": eval_predicted,
+        "legacy_eval_cache": legacy_eval_cache,
+        "eval_cache": eval_cache,
         "split": _json_split(split),
         "cache_reused": False,
     }

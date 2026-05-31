@@ -60,6 +60,12 @@ GRID_DEFAULTS: dict[str, Any] = {
     "detector_pair_window_budget": 48,
     "logical_detector_pair_window_budget": 48,
     "window_plan_mode": "logical_aware",
+    "eval_window_plan_mode": "structured_higher_order",
+    "eval_max_window_bits": 6,
+    "eval_max_windows": 256,
+    "eval_radius": 1.0,
+    "eval_template_window_budget": 32,
+    "eval_orbit_window_budget": 64,
     "pca_ranks": "1,2,3,5,8",
     "random_control_ranks": "1,2,3,5,8",
     "random_control_seeds": "0",
@@ -117,6 +123,12 @@ GRID_FLAGS = {
     "detector_pair_window_budget": "--detector-pair-window-budget",
     "logical_detector_pair_window_budget": "--logical-detector-pair-window-budget",
     "window_plan_mode": "--window-plan-mode",
+    "eval_window_plan_mode": "--eval-window-plan-mode",
+    "eval_max_window_bits": "--eval-max-window-bits",
+    "eval_max_windows": "--eval-max-windows",
+    "eval_radius": "--eval-radius",
+    "eval_template_window_budget": "--eval-template-window-budget",
+    "eval_orbit_window_budget": "--eval-orbit-window-budget",
     "pca_ranks": "--pca-ranks",
     "random_control_ranks": "--random-control-ranks",
     "random_control_seeds": "--random-control-seeds",
@@ -561,6 +573,12 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--detector-pair-window-budget", type=int)
     parser.add_argument("--logical-detector-pair-window-budget", type=int)
     parser.add_argument("--window-plan-mode")
+    parser.add_argument("--eval-window-plan-mode")
+    parser.add_argument("--eval-max-window-bits", type=int)
+    parser.add_argument("--eval-max-windows", type=int)
+    parser.add_argument("--eval-radius", type=float)
+    parser.add_argument("--eval-template-window-budget", type=int)
+    parser.add_argument("--eval-orbit-window-budget", type=int)
     parser.add_argument("--pca-ranks")
     parser.add_argument("--random-control-ranks")
     parser.add_argument("--random-control-seeds")
@@ -620,6 +638,12 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
             "detector_pair_window_budget",
             "logical_detector_pair_window_budget",
             "window_plan_mode",
+            "eval_window_plan_mode",
+            "eval_max_window_bits",
+            "eval_max_windows",
+            "eval_radius",
+            "eval_template_window_budget",
+            "eval_orbit_window_budget",
             "pca_ranks",
             "random_control_ranks",
             "random_control_seeds",

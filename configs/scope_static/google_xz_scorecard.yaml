@@ -23,6 +23,12 @@ google_xz_scorecard:
     detector_pair_window_budget: 48
     logical_detector_pair_window_budget: 48
     window_plan_mode: logical_aware
+    eval_window_plan_mode: structured_higher_order
+    eval_max_window_bits: 6
+    eval_max_windows: 256
+    eval_radius: 1.0
+    eval_template_window_budget: 32
+    eval_orbit_window_budget: 64
     pca_ranks: 1,2,3,5,8
     random_control_ranks: 1,2,3,5,8
     random_control_seeds: "0"

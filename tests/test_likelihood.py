@@ -243,6 +243,43 @@ def test_window_family_budgets_do_not_silently_drop_logical_windows():
     assert coverage["logical_fault_support_selected"] == 3
 
 
+def test_structured_higher_order_window_plan_exposes_actual_size_distribution():
+    graph = _tiny_logical_graph()
+    plan = WindowPlan.from_config(
+        graph,
+        {
+            "enabled": True,
+            "plan_mode": "structured_higher_order",
+            "builders": ["detector_geometry", "logical_observable", "template_motifs", "orbits"],
+            "include_radius1": True,
+            "include_boundary_logical": False,
+            "max_window_bits": 6,
+            "max_windows": 32,
+            "respect_max_windows_with_family_budgets": True,
+            "window_family_budgets": {
+                "single_detector": "all",
+                "detector_pair": "all",
+                "logical_single": "all",
+                "logical_detector_pair": "all",
+                "logical_fault_support": "all",
+                "template_motif": 2,
+                "template_fault": 2,
+                "orbit": 2,
+                "orbit_fault": 2,
+            },
+        },
+    )
+
+    audit = plan.audit_dict()
+    coverage = window_coverage_audit_dict(graph, list(plan.windows))
+
+    assert audit["window_plan_mode"] == "structured_higher_order"
+    assert audit["max_window_bits"] > 2
+    assert int(audit["window_size_distribution"]["4"]) >= 1
+    assert coverage["fraction_dem_faults_active"] > 0
+    assert coverage["logical_fault_support_selected"] == 3
+
+
 def test_window_plan_carries_audit_metadata():
     graph = _tiny_graph()
     plan = WindowPlan.from_config(
