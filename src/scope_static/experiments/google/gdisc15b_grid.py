@@ -83,6 +83,8 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
         },
         "required_baselines": {
             "local_full": True,
+            "dmle_qec": True,
+            "dmle_qec_upstream": bool(args.include_upstream_dmle),
             "global_shared_scalar": True,
             "si1000_prior_reference": True,
             "rl_optimized_prior_reference_where_available": True,
@@ -182,6 +184,20 @@ def _local_mechanism_args(args: argparse.Namespace, context: dict[str, str], out
         args.random_control_seeds,
         "--nmf-steps",
         str(args.nmf_steps),
+        "--kmeans-max-iter",
+        str(args.kmeans_max_iter),
+        "--upstream-dmle-repo",
+        args.upstream_dmle_repo,
+        "--upstream-dmle-epochs",
+        str(args.upstream_dmle_epochs),
+        "--upstream-dmle-lr",
+        str(args.upstream_dmle_lr),
+        "--upstream-dmle-batch-size",
+        str(args.upstream_dmle_batch_size),
+        "--upstream-dmle-minibatch",
+        str(args.upstream_dmle_minibatch),
+        "--upstream-dmle-path-search-max-time",
+        str(args.upstream_dmle_path_search_max_time),
         "--seed",
         str(args.seed),
         "--dtype",
@@ -197,10 +213,14 @@ def _local_mechanism_args(args: argparse.Namespace, context: dict[str, str], out
     ]
     if args.native_gpu:
         result.append("--native-gpu")
-    if args.allow_cpu_fallback:
-        result.append("--allow-cpu-fallback")
+    if args.include_upstream_dmle:
+        result.append("--include-upstream-dmle")
+    if args.upstream_dmle_path_file:
+        result.extend(["--upstream-dmle-path-file", args.upstream_dmle_path_file])
     if args.disable_prepared_cache:
         result.append("--disable-prepared-cache")
+    if args.kmeans_check_convergence:
+        result.append("--kmeans-check-convergence")
     return result
 
 
@@ -215,6 +235,15 @@ def _flatten_records(result: dict[str, object], context: dict[str, str], output_
             "model": record.get("model"),
             "parameter_count": record.get("parameter_count"),
             "compression_ratio": record.get("compression_ratio"),
+            "baseline_family": record.get("baseline_family"),
+            "baseline_display_name": record.get("baseline_display_name"),
+            "baseline_variant": record.get("baseline_variant"),
+            "baseline_implementation": record.get("baseline_implementation"),
+            "baseline_kind": record.get("baseline_kind"),
+            "upstream_dmle_qec_direct_adapter": record.get("upstream_dmle_qec_direct_adapter"),
+            "upstream_dmle_qec_component": record.get("upstream_dmle_qec_component"),
+            "upstream_dmle_qec_complete_implementation": record.get("upstream_dmle_qec_complete_implementation"),
+            "upstream_dmle_qec_compatibility_scope": record.get("upstream_dmle_qec_compatibility_scope"),
             "combined_excess_parameter_pareto_status": record.get("combined_excess_parameter_pareto_status"),
         }
         for metric in SUMMARY_METRICS:
@@ -405,13 +434,22 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--random-control-ranks", default="1,2,3,5,8")
     parser.add_argument("--random-control-seeds", default="0")
     parser.add_argument("--nmf-steps", type=int, default=120)
+    parser.add_argument("--kmeans-max-iter", type=int, default=32)
+    parser.add_argument("--kmeans-check-convergence", action="store_true")
+    parser.add_argument("--include-upstream-dmle", action="store_true")
+    parser.add_argument("--upstream-dmle-repo", default="/tmp/DMLE-QEC")
+    parser.add_argument("--upstream-dmle-epochs", type=int, default=20)
+    parser.add_argument("--upstream-dmle-lr", type=float, default=0.01)
+    parser.add_argument("--upstream-dmle-batch-size", type=int, default=10000)
+    parser.add_argument("--upstream-dmle-minibatch", type=int, default=1000)
+    parser.add_argument("--upstream-dmle-path-file", default="")
+    parser.add_argument("--upstream-dmle-path-search-max-time", type=int, default=0)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--dtype", choices=["float64", "float32"], default="float64")
     parser.add_argument("--likelihood-backend", choices=["auto", "pytorch", "cuda_extension"], default="auto")
     parser.add_argument("--cuda-kernel-variant", choices=["dp", "spectral_shadow", "spectral", "auto"], default="dp")
     parser.add_argument("--spectral-memory-cap-mib", type=int, default=1024)
     parser.add_argument("--native-gpu", action="store_true")
-    parser.add_argument("--allow-cpu-fallback", action="store_true")
     parser.add_argument("--disable-prepared-cache", action="store_true")
     parser.add_argument("--output-dir", default="outputs/google_static/GDISC15b_google_grid_validation")
     return parser.parse_args(argv)

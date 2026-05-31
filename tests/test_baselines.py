@@ -1,6 +1,7 @@
 import torch
 
 from scope_static.dem.baselines import DMLE_QEC_SOURCE_COMMIT, DMLE_QEC_SOURCE_REPOSITORY, baseline_metadata
+from scope_static.dem.dmle_upstream import upstream_dmle_qec_dependency_audit
 from scope_static.dem.fields import make_field
 from scope_static.dem.fault_graph import FaultGraph
 
@@ -31,3 +32,19 @@ def test_dmle_qec_metadata_is_reportable():
     assert metadata["baseline_family"] == "dmle_qec"
     assert metadata["baseline_source_repository"] == DMLE_QEC_SOURCE_REPOSITORY
     assert metadata["baseline_source_commit"] == DMLE_QEC_SOURCE_COMMIT
+    assert metadata["baseline_variant"] == "scope_static_dmle_qec_style_independent_dem_mle"
+    assert metadata["upstream_dmle_qec_complete_implementation"] is False
+    assert "TensorNetwork/PCM contraction optimizer" in metadata["upstream_dmle_qec_missing_components"]
+
+
+def test_dmle_qec_upstream_metadata_and_dependency_audit_are_explicit():
+    metadata = baseline_metadata("dmle_qec_upstream")
+    assert metadata["baseline_variant"] == "upstream_dmle_qec_tensor_network_adapter"
+    assert metadata["upstream_dmle_qec_direct_adapter"] is True
+    assert metadata["upstream_dmle_qec_component"] == "TensorNetwork"
+
+    audit = upstream_dmle_qec_dependency_audit("/tmp/DMLE-QEC")
+    assert audit["baseline"] == "dmle_qec_upstream"
+    assert "repository_exists" in audit
+    assert "required_modules" in audit
+    assert "importable" in audit

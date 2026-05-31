@@ -26,6 +26,7 @@ def fit_field(
     likelihood_objective: str = "global_exact",
     windows: WindowPlan | list[ObservationWindow] | tuple[ObservationWindow, ...] | None = None,
     prepared_objective: LikelihoodObjective | None = None,
+    history_interval: int = 1,
 ) -> dict[str, object]:
     device = torch.device(device)
     field = field.to(device=device)
@@ -59,7 +60,9 @@ def fit_field(
             spectral_min_abs_factor=spectral_min_abs_factor,
             spectral_memory_cap_bytes=spectral_memory_cap_bytes,
         )
-    for _ in range(int(steps)):
+    steps_int = int(steps)
+    sync_interval = max(1, int(history_interval))
+    for step in range(steps_int):
         optimizer.zero_grad(set_to_none=True)
         logits = field.realized_logits(graph)
         if resolved_backend is None:
@@ -69,7 +72,8 @@ def fit_field(
         loss = nll + float(regularization_weight) * reg
         loss.backward()
         optimizer.step()
-        history.append(float(nll.detach().cpu()))
+        if step == 0 or step == steps_int - 1 or (step + 1) % sync_interval == 0:
+            history.append(float(nll.detach().cpu()))
     objective_audit = objective.audit_dict(scalar_bytes=_field_scalar_bytes(field))
     adapter_name = objective.adapter_name(resolved_backend or backend)
     return {

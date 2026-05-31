@@ -23,6 +23,7 @@ from scope_static.google.set1 import (
 )
 from scope_static.dem.metrics import adjusted_rand_index, normalized_mutual_info, partition_comparison
 from scope_static.dem.fault_graph import FaultGraph
+from scope_static.dem.baselines import baseline_metadata
 from scope_static.dem.prepared_graph_store import (
     load_prepared_fault_graph_cache,
     prepared_fault_graph_cache_file,
@@ -219,7 +220,7 @@ def test_google_runner_native_gpu_requires_visible_cuda(monkeypatch, tmp_path: P
         )
 
 
-def test_google_runner_is_gpu_first_and_requires_explicit_cpu_fallback(monkeypatch, tmp_path: Path, capsys):
+def test_google_runner_rejects_cpu_fallback(monkeypatch, tmp_path: Path):
     from scope_static.experiments.google.static import main
 
     root = _write_tiny_dataset(tmp_path)
@@ -244,39 +245,22 @@ def test_google_runner_is_gpu_first_and_requires_explicit_cpu_fallback(monkeypat
     with pytest.raises(RuntimeError, match="GPU-first"):
         main([*base_args, "--output-dir", str(tmp_path / "blocked")])
 
-    result = main([*base_args, "--allow-cpu-fallback", "--output-dir", str(tmp_path / "cpu")])
-    assert result["run"]["gpu_policy"] == "cpu_fallback_explicit"
-    assert result["run"]["device"] == "cpu"
-    assert result["run"]["window_plan_mode"] == "logical_aware"
-    assert result["window_audits"][0]["logical_bit_coverage"]["num_logical_bits_covered"] == 1
-    assert result["window_audits"][0]["window_family_budget_mode"] == "family_aware"
-    graph_events = [event for event in result["prepared_cache_events"] if event.get("cache_kind") == "fault_graph"]
-    assert graph_events[0]["cache_status"] == "miss"
-    assert graph_events[0]["cache_written"] is True
-
-    second = main([*base_args, "--allow-cpu-fallback", "--output-dir", str(tmp_path / "cpu")])
-    second_graph_events = [
-        event for event in second["prepared_cache_events"] if event.get("cache_kind") == "fault_graph"
-    ]
-    assert second_graph_events[0]["cache_status"] == "hit"
-    assert second_graph_events[0]["cache_written"] is False
-
-    output = capsys.readouterr().out
-    assert "Heldout Model Comparison" in output
-    assert '"event"' not in output
+    with pytest.raises(SystemExit):
+        main([*base_args, "--allow-cpu-fallback", "--output-dir", str(tmp_path / "cpu")])
 
 
 def test_google_runner_can_evaluate_discovery_on_real_data_path(monkeypatch, tmp_path: Path, capsys):
     from scope_static.experiments.google.static import main
 
+    if not torch.cuda.is_available():
+        pytest.skip("Google workflows require CUDA")
     root = _write_tiny_dataset(tmp_path)
-    monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
 
     result = main(
         [
             "--dataset-root",
             str(root),
-            "--allow-cpu-fallback",
+            "--native-gpu",
             "--train-shots",
             "2",
             "--heldout-shots",
@@ -317,14 +301,15 @@ def test_google_runner_can_evaluate_discovery_on_real_data_path(monkeypatch, tmp
 def test_google_local_mechanism_smoke_uses_proxy_not_true_recovery(monkeypatch, tmp_path: Path):
     from scope_static.experiments.google.local_mechanism import main
 
+    if not torch.cuda.is_available():
+        pytest.skip("Google workflows require CUDA")
     root = _write_tiny_dataset(tmp_path)
-    monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
 
     result = main(
         [
             "--dataset-root",
             str(root),
-            "--allow-cpu-fallback",
+            "--native-gpu",
             "--train-shots",
             "2",
             "--heldout-shots",
@@ -351,6 +336,7 @@ def test_google_local_mechanism_smoke_uses_proxy_not_true_recovery(monkeypatch, 
     g15 = result["GDISC15_real_local_mechanism_discovery"]
     assert g15["true_hidden_omega_available"] is False
     assert g15["ari_nmi_ground_truth_recovery_claim_allowed"] is False
+    assert any(record["model"] == "dmle_qec" for record in g15["records"])
     assert "proxy_support_size" in g15["proxy_partitions"]
     assert (tmp_path / "google_static" / "GDISC13b_real_local_inverse_audit" / "metrics.json").exists()
     assert (tmp_path / "google_static" / "GDISC15_real_local_mechanism_discovery" / "metrics.json").exists()
@@ -360,14 +346,15 @@ def test_google_local_mechanism_smoke_uses_proxy_not_true_recovery(monkeypatch, 
 def test_google_gdisc15b_grid_writes_paired_summary(monkeypatch, tmp_path: Path):
     from scope_static.experiments.google.gdisc15b_grid import main
 
+    if not torch.cuda.is_available():
+        pytest.skip("Google workflows require CUDA")
     root = _write_tiny_dataset(tmp_path)
-    monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
 
     result = main(
         [
             "--dataset-root",
             str(root),
-            "--allow-cpu-fallback",
+            "--native-gpu",
             "--samples",
             "sample_00",
             "--patches",
@@ -407,10 +394,148 @@ def test_google_gdisc15b_grid_writes_paired_summary(monkeypatch, tmp_path: Path)
     assert len(result["grid"]["completed_contexts"]) == 1
     models = {row["model"] for row in result["model_summary"]}
     assert "local_full" in models
+    assert "dmle_qec" in models
     assert "global_shared_scalar" in models
     assert any(model.startswith("GDISC15_random_low_rank1") for model in models)
     assert (tmp_path / "grid" / "metrics.json").exists()
     assert (tmp_path / "grid" / "summary.md").read_text().count("wins/total") == 1
+
+
+def test_google_s3e_external_validation_wraps_grid_acceptance(monkeypatch, tmp_path: Path):
+    from scope_static.experiments.google.s3e_external_validation import main
+
+    if not torch.cuda.is_available():
+        pytest.skip("Google workflows require CUDA")
+    root = _write_tiny_dataset(tmp_path)
+
+    result = main(
+        [
+            "--dataset-root",
+            str(root),
+            "--samples",
+            "sample_00",
+            "--patches",
+            "d3_at_q5_5",
+            "--bases",
+            "X",
+            "--rounds-labels",
+            "r13",
+            "--heldout-split-types",
+            "shot-heldout",
+            "--train-shots",
+            "2",
+            "--heldout-shots",
+            "1",
+            "--max-windows",
+            "1",
+            "--steps",
+            "1",
+            "--subsample-count",
+            "1",
+            "--subsample-shots",
+            "1",
+            "--subsample-steps",
+            "1",
+            "--nmf-steps",
+            "2",
+            "--pca-ranks",
+            "1",
+            "--random-control-ranks",
+            "1",
+            "--min-contexts",
+            "1",
+            "--min-compression-ratio",
+            "0.0",
+            "--near-local-excess-tolerance",
+            "10.0",
+            "--min-random-control-margin",
+            "-10.0",
+            "--output-dir",
+            str(tmp_path / "s3e"),
+        ]
+    )
+
+    assert result["run"]["name"] == "S3E_google_external_validation"
+    assert result["acceptance"]["checks"]["true_hidden_omega_claim"]["value"] is False
+    assert result["acceptance"]["checks"]["contexts_completed"]["passed"] is True
+    assert result["acceptance"]["best_compressed_model"]["model"].startswith("GDISC15_")
+    assert (tmp_path / "s3e" / "acceptance.json").exists()
+    assert (tmp_path / "s3e" / "GDISC15b_grid" / "metrics.json").exists()
+
+
+def test_google_xz_scorecard_is_gpu_only_and_writes_label_manifest(monkeypatch, tmp_path: Path):
+    from scope_static.experiments.google import xz_scorecard
+
+    def fake_grid_main(argv):
+        assert "--native-gpu" in argv
+        assert "--allow-cpu-fallback" not in argv
+        output = Path(argv[argv.index("--output-dir") + 1])
+        contexts = []
+        flat_records = []
+        for basis in ["X", "Z"]:
+            context = {
+                "heldout_split_type": "shot-heldout",
+                "sample_id": "sample_00",
+                "patch_id": "d3_at_q5_5",
+                "basis": basis,
+                "rounds_label": "r13",
+                "output_root": str(output / f"ctx_{basis}"),
+            }
+            metrics_dir = Path(context["output_root"]) / "GDISC15_real_local_mechanism_discovery"
+            metrics_dir.mkdir(parents=True, exist_ok=True)
+            (metrics_dir / "metrics.json").write_text(
+                json.dumps({"run": {"device": "cuda", "likelihood_backend": "cuda_extension", "cuda_kernel_variant": "dp"}})
+            )
+            contexts.append(context)
+            flat_records.extend(
+                [
+                    _scorecard_record(context, "local_full", 100, 0.50, 0.010),
+                    _scorecard_record(context, "dmle_qec", 100, 0.58, 0.012),
+                    _scorecard_record(context, "global_shared_scalar", 1, 0.90, 0.030),
+                    _scorecard_record(context, "SI1000_prior_reference", 0, 0.65, 0.020),
+                    _scorecard_record(context, "GDISC15_local_logit", 10, 0.51, 0.009),
+                    _scorecard_record(context, "GDISC15_random_low_rank1_seed0", 10, 0.75, 0.020),
+                ]
+            )
+        return {
+            "grid": {"completed_contexts": contexts, "skipped_contexts": []},
+            "flat_records": flat_records,
+            "model_summary": [],
+        }
+
+    monkeypatch.setattr(xz_scorecard.gdisc15b_grid, "main", fake_grid_main)
+    result = xz_scorecard.main(
+        [
+            "--config",
+            str(tmp_path / "missing.yaml"),
+            "--dataset-root",
+            str(_write_tiny_dataset(tmp_path)),
+            "--samples",
+            "sample_00",
+            "--patches",
+            "d3_at_q5_5",
+            "--bases",
+            "X,Z",
+            "--rounds-labels",
+            "r13",
+            "--min-contexts",
+            "2",
+            "--output-dir",
+            str(tmp_path / "xz"),
+        ]
+    )
+
+    assert result["run"]["name"] == "Google_XZ_scorecard"
+    assert result["scorecard"]["google_xz_scorecard_passed"] is True
+    assert {row["basis"] for row in result["scorecard"]["basis_summary"]} == {"X", "Z"}
+    assert all(row["best_baseline_model_counts"] == {"dmle_qec": 1} for row in result["scorecard"]["basis_summary"])
+    assert all(row["compressed_minus_best_baseline_excess_nll_mean"] < 0 for row in result["scorecard"]["basis_summary"])
+    for row in result["scorecard"]["context_scorecard"]:
+        assert row["best_baseline"]["baseline_variant"] == "scope_static_dmle_qec_style_independent_dem_mle"
+        assert row["best_baseline"]["upstream_dmle_qec_complete_implementation"] is False
+    assert result["scorecard"]["label_manifest"]["label_layers"]["forbidden_true_labels"]
+    assert (tmp_path / "xz" / "context_scorecard.json").exists()
+    assert (tmp_path / "xz" / "label_manifest.json").exists()
 
 
 @pytest.mark.skipif(not os.environ.get("SCOPE_GOOGLE_SET1_ROOT"), reason="requires Google Set1 dataset")
@@ -494,6 +619,22 @@ def _write_tiny_dataset(tmp_path: Path) -> Path:
 def _write_b8(path: Path, rows: list[list[int]]) -> None:
     data = np.array(rows, dtype=np.bool_)
     stim.write_shot_data_file(path=str(path), data=data, format="b8", num_measurements=data.shape[1])
+
+
+def _scorecard_record(context: dict[str, object], model: str, params: int, nll: float, detector_mae: float):
+    metadata = baseline_metadata(model) if model == "dmle_qec" else {}
+    return {
+        **context,
+        "model": model,
+        "parameter_count": params,
+        "compression_ratio": None,
+        "heldout_local_window_nll": nll,
+        "heldout_local_window_excess_nll": nll,
+        "detector_rate_mae": detector_mae,
+        "local_correlation_error": detector_mae / 2,
+        "logical_flip_rate_calibration": detector_mae / 3,
+        **metadata,
+    }
 
 
 def _manual_context(center: tuple[float, float], qubit_coords: list[tuple[float, float]]) -> GoogleScheduleContext:

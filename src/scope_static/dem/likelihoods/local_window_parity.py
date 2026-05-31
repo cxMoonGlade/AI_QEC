@@ -15,6 +15,7 @@ from ..likelihood import (
     build_window_nll_caches,
     local_window_cuda_kernel_audit,
     local_window_exact_nll_batched_from_cache,
+    local_window_exact_nll_values_batched_from_cache,
     local_window_exact_nll_from_caches,
     local_window_workload_audit,
     resolve_likelihood_backend,
@@ -132,6 +133,18 @@ class ExactLocalWindowParityLikelihood:
             list(self.window_caches),
             backend=self.requested_backend,
         )
+
+    def loss_batch(self, logits_batch: torch.Tensor) -> torch.Tensor:
+        if logits_batch.ndim != 2 or logits_batch.shape[1] != self.graph.M:
+            raise ValueError(f"logits_batch must have shape [C, {self.graph.M}]")
+        if logits_batch.shape[0] == 0:
+            return logits_batch.new_empty((0,))
+        if self.adapter_name(self.resolved_backend_for(logits_batch)) == "cuda_extension_batched_window_exact":
+            if self.window_batch_cache is None:
+                raise ValueError("CUDA local-window likelihood is missing its batch cache")
+            return local_window_exact_nll_values_batched_from_cache(logits_batch, self.window_batch_cache)
+        losses = [self.loss(candidate) for candidate in torch.unbind(logits_batch, dim=0)]
+        return torch.stack(losses)
 
     def resolved_backend_for(self, logits: torch.Tensor) -> str:
         return resolve_likelihood_backend(logits, self.requested_backend)

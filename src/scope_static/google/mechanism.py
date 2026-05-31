@@ -21,17 +21,18 @@ class PrototypeLogitModel:
 
 
 def fit_cluster_mean_logits(labels: torch.Tensor, source_logits: torch.Tensor, *, num_clusters: int) -> PrototypeLogitModel:
-    labels = torch.as_tensor(labels, dtype=torch.long, device="cpu").flatten()
-    source = torch.as_tensor(source_logits, dtype=torch.float64, device="cpu").flatten()
+    device = source_logits.device if isinstance(source_logits, torch.Tensor) else torch.device("cpu")
+    labels = torch.as_tensor(labels, dtype=torch.long, device=device).flatten()
+    source = torch.as_tensor(source_logits, dtype=torch.float64, device=device).flatten()
     if labels.numel() != source.numel():
         raise ValueError("labels and source_logits must have the same length")
-    global_mean = source.mean() if source.numel() else torch.tensor(-5.5, dtype=torch.float64)
-    prototype_values = torch.full((int(num_clusters),), float(global_mean.item()), dtype=torch.float64)
+    global_mean = source.mean() if source.numel() else torch.tensor(-5.5, dtype=torch.float64, device=device)
+    prototype_values = torch.full((int(num_clusters),), float(global_mean.item()), dtype=torch.float64, device=device)
     for cluster in range(int(num_clusters)):
         idx = labels == cluster
         if bool(idx.any()):
             prototype_values[cluster] = source[idx].mean()
-    logits = prototype_values[labels] if labels.numel() else torch.empty((0,), dtype=torch.float64)
+    logits = prototype_values[labels] if labels.numel() else torch.empty((0,), dtype=torch.float64, device=device)
     masses = torch.bincount(labels, minlength=int(num_clusters))
     return PrototypeLogitModel(
         labels=labels,

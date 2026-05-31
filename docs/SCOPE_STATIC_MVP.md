@@ -49,7 +49,8 @@ evidence only; it does not solve that full physical generation problem.
 ## Baselines
 
 - `local`: fully independent DEM fault logits with neutral initialization. This is the uncompressed per-effective-fault baseline, not a spatially local model.
-- `dmle_qec`: DMLE-QEC-style independent DEM prior-logit MLE baseline. It follows the compatible Stage-1 interpretation of [cxMoonGlade/DMLE-QEC](https://github.com/cxMoonGlade/DMLE-QEC): initialize independent DEM priors from the DEM, then optimize those priors by differentiable detector-syndrome NLL. In this package the detector-syndrome NLL is computed by the exact parity-map backend, and learned logits are evaluated with the common Stage-1 metrics.
+- `dmle_qec`: DMLE-QEC-style independent DEM prior-logit MLE baseline. It follows only the compatible Stage-1 slice of [cxMoonGlade/DMLE-QEC](https://github.com/cxMoonGlade/DMLE-QEC): initialize independent DEM priors from the DEM, then optimize those priors by differentiable detector-syndrome NLL. In this package the detector-syndrome NLL is computed by the exact parity-map backend, and learned logits are evaluated with the common Stage-1 metrics. This is not the complete upstream PlanarNet/TensorNetwork/gate-to-DEM implementation.
+- `dmle_qec_upstream`: optional direct adapter to `/tmp/DMLE-QEC` using the upstream `TensorNetwork`/`PCM` surface-code DEM MLE path. It is disabled by default and fails closed when the upstream repository or dependencies are unavailable.
 - `hard_orbit`: one logit per known orbit.
 - `soft_feature_orbit`: one orbit logit plus centered fixed residual features per known orbit. MVP04 selects residual feature columns by within-orbit centered energy, so the soft model is only credited when its features actually vary inside known orbits. Optional `beta_l2` regularizes the soft residual coefficients.
 
@@ -143,10 +144,10 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.goo
 Cross-sample transfer from `sample_00` to `sample_01` through `sample_20` is
 available with `--cross-sample-transfer`.
 
-The Google runner is GPU-first. With CUDA visible, the default `--device auto`
-selects `cuda` and the C++/CUDA `cuda_extension` backend. Use `--native-gpu`
-when the run must fail instead of falling back. CPU execution is allowed only
-when requested explicitly with `--allow-cpu-fallback`.
+The Google runner is GPU-only for current evidence runs. With CUDA visible, the
+default `--device auto` selects `cuda` and the C++/CUDA `cuda_extension`
+backend. If CUDA is not visible, fix the environment before running; CPU fallback
+is not an accepted Google-data execution path.
 Terminal output is concise by default and prints only the final coverage,
 heldout model comparison, transfer means, and decision summary. Use `--progress-json`
 when per-stage JSON progress events are needed for profiling or automation.

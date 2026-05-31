@@ -9,8 +9,7 @@ Accepted.
 The SCOPE-Static Google path is a large QEC preprocessing and local-likelihood
 workflow. The target workstation is assumed to have a CUDA device, at least RTX
 5090 class, even when a particular agent sandbox cannot see it. CPU execution is
-useful for unit tests and debugging, but it must not drive the architecture of
-serious training, local-window likelihood, or Google-data ablations.
+not an accepted fallback for Google-data evidence or benchmark commands.
 
 Recent S1.6 runs showed that the exact local-window likelihood can execute on
 the C++/CUDA backend, while remaining runtime is often dominated by CPU-side
@@ -21,10 +20,10 @@ window-cache construction, and cross-sample bookkeeping.
 
 GPU acceleration is P0 for this repository.
 
-For serious runs, modules should prefer native CUDA/PyTorch/C++ execution and
-should make CPU fallback explicit. The Google runner is GPU-first: by default it
-uses CUDA plus the `cuda_extension` backend when CUDA is visible; if CUDA is not
-visible, CPU execution requires an explicit `--allow-cpu-fallback`.
+For serious runs, modules should prefer native CUDA/PyTorch/C++ execution. The
+Google runner is GPU-only for current evidence paths: by default it uses CUDA
+plus the `cuda_extension` backend when CUDA is visible; if CUDA is not visible,
+the run fails and the environment must be fixed.
 
 Performance work should prioritize:
 
@@ -41,5 +40,5 @@ Performance work should prioritize:
   inactive; local-window kernels can be bursty and launch-bound.
 - CUDA invisibility in one agent/session is an environment issue to diagnose,
   not a reason to design CPU-first.
-- Unit tests may still use CPU, but large evidence commands and performance
-  refinements should assume a CUDA-capable workstation.
+- Unit tests may mock Google runner outputs, but Google evidence commands should
+  not fall back to CPU execution.

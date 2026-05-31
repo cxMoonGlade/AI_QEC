@@ -591,6 +591,87 @@ __global__ void local_window_forward_only_loss_kernel(
 }
 
 template <typename scalar_t>
+__global__ void local_window_forward_only_loss_batched_kernel(
+    const scalar_t* __restrict__ probabilities,
+    const int64_t* __restrict__ flat_fault_ids,
+    const int64_t* __restrict__ flat_masks,
+    const int64_t* __restrict__ fault_offsets,
+    const int64_t* __restrict__ flat_states,
+    const int64_t* __restrict__ flat_counts,
+    const int64_t* __restrict__ state_offsets,
+    const int64_t* __restrict__ window_num_bits,
+    const int64_t* __restrict__ window_total_counts,
+    scalar_t* __restrict__ candidate_window_losses,
+    const int64_t window_count,
+    const int64_t fault_count,
+    const int64_t max_state_count) {
+  extern __shared__ unsigned char shared_raw[];
+  scalar_t* current_base = reinterpret_cast<scalar_t*>(shared_raw);
+  scalar_t* next_base = current_base + max_state_count;
+  scalar_t* reduction = next_base + max_state_count;
+
+  const int64_t window = static_cast<int64_t>(blockIdx.x);
+  const int64_t candidate = static_cast<int64_t>(blockIdx.y);
+  const scalar_t* candidate_probabilities = probabilities + candidate * fault_count;
+  const int64_t fault_begin = fault_offsets[window];
+  const int64_t fault_end = fault_offsets[window + 1];
+  const int64_t num_bits = window_num_bits[window];
+  const int64_t state_count = int64_t{1} << num_bits;
+  scalar_t* current = current_base;
+  scalar_t* next = next_base;
+
+  for (int64_t state = threadIdx.x; state < state_count; state += blockDim.x) {
+    current[state] = state == 0 ? static_cast<scalar_t>(1) : static_cast<scalar_t>(0);
+    next[state] = static_cast<scalar_t>(0);
+  }
+  sync_active_state_threads(state_count);
+
+  for (int64_t flat_index = fault_begin; flat_index < fault_end; ++flat_index) {
+    const int64_t global_fault = flat_fault_ids[flat_index];
+    const int64_t mask = flat_masks[flat_index];
+    const scalar_t prob = candidate_probabilities[global_fault];
+    for (int64_t state = threadIdx.x; state < state_count; state += blockDim.x) {
+      next[state] = (static_cast<scalar_t>(1) - prob) * current[state] + prob * current[state ^ mask];
+    }
+    sync_active_state_threads(state_count);
+    scalar_t* tmp = current;
+    current = next;
+    next = tmp;
+    sync_active_state_threads(state_count);
+  }
+
+  const int64_t state_begin = state_offsets[window];
+  const int64_t state_end = state_offsets[window + 1];
+  const scalar_t total_count = static_cast<scalar_t>(window_total_counts[window]);
+  if (total_count <= static_cast<scalar_t>(0)) {
+    if (threadIdx.x == 0) {
+      candidate_window_losses[candidate * window_count + window] = static_cast<scalar_t>(0);
+    }
+    return;
+  }
+
+  scalar_t loss_sum = static_cast<scalar_t>(0);
+  const scalar_t tiny = likelihood_probability_floor<scalar_t>();
+  for (int64_t index = state_begin + threadIdx.x; index < state_end; index += blockDim.x) {
+    const int64_t state = flat_states[index];
+    const scalar_t count = static_cast<scalar_t>(flat_counts[index]);
+    const scalar_t prob = current[state] > tiny ? current[state] : tiny;
+    loss_sum += -count * log(prob);
+  }
+  reduction[threadIdx.x] = loss_sum;
+  sync_reduction_threads();
+  for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
+    if (threadIdx.x < stride) {
+      reduction[threadIdx.x] += reduction[threadIdx.x + stride];
+    }
+    sync_reduction_threads();
+  }
+  if (threadIdx.x == 0) {
+    candidate_window_losses[candidate * window_count + window] = reduction[0] / total_count;
+  }
+}
+
+template <typename scalar_t>
 __global__ void spectral_prefix_kernel(
     const scalar_t* __restrict__ probabilities,
     const int64_t* __restrict__ flat_fault_ids,
@@ -1054,4 +1135,51 @@ torch::Tensor local_window_nll_value_cuda(
   });
   C10_CUDA_KERNEL_LAUNCH_CHECK();
   return window_losses.mean();
+}
+
+torch::Tensor local_window_nll_values_cuda(
+    torch::Tensor logits_batch,
+    torch::Tensor flat_fault_ids,
+    torch::Tensor flat_masks,
+    torch::Tensor fault_offsets,
+    torch::Tensor flat_states,
+    torch::Tensor flat_counts,
+    torch::Tensor state_offsets,
+    torch::Tensor window_num_bits,
+    torch::Tensor window_total_counts,
+    int64_t max_faults_per_window,
+    int64_t max_state_count) {
+  const c10::cuda::CUDAGuard device_guard(logits_batch.device());
+  const int64_t candidate_count = logits_batch.size(0);
+  const int64_t fault_count = logits_batch.size(1);
+  const int64_t window_count = window_num_bits.size(0);
+  auto probabilities = torch::sigmoid(logits_batch).contiguous();
+  auto candidate_window_losses = torch::empty({candidate_count, window_count}, logits_batch.options());
+
+  if (window_count == 0) {
+    return torch::zeros({candidate_count}, logits_batch.options());
+  }
+
+  const int threads = threads_for_state_count(max_state_count);
+  cudaStream_t stream = at::cuda::getCurrentCUDAStream();
+  dim3 blocks(static_cast<unsigned int>(window_count), static_cast<unsigned int>(candidate_count));
+  AT_DISPATCH_FLOATING_TYPES(logits_batch.scalar_type(), "local_window_nll_values_cuda", [&] {
+    const size_t shared_bytes = (2 * max_state_count + threads) * sizeof(scalar_t);
+    local_window_forward_only_loss_batched_kernel<scalar_t><<<blocks, threads, shared_bytes, stream>>>(
+        probabilities.data_ptr<scalar_t>(),
+        flat_fault_ids.data_ptr<int64_t>(),
+        flat_masks.data_ptr<int64_t>(),
+        fault_offsets.data_ptr<int64_t>(),
+        flat_states.data_ptr<int64_t>(),
+        flat_counts.data_ptr<int64_t>(),
+        state_offsets.data_ptr<int64_t>(),
+        window_num_bits.data_ptr<int64_t>(),
+        window_total_counts.data_ptr<int64_t>(),
+        candidate_window_losses.data_ptr<scalar_t>(),
+        window_count,
+        fault_count,
+        max_state_count);
+  });
+  C10_CUDA_KERNEL_LAUNCH_CHECK();
+  return candidate_window_losses.mean({1});
 }

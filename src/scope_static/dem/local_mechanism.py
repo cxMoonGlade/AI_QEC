@@ -55,9 +55,13 @@ def graph_smooth_features(
     x = standardize_features(features)
     if x.numel() == 0 or int(steps) <= 0:
         return x
-    overlap = fault_overlap_matrix(graph)
+    overlap = fault_overlap_matrix(graph, device=x.device)
     degree = overlap.sum(dim=1, keepdim=True)
-    transition = torch.where(degree > 0, overlap / degree.clamp_min(NUMERICAL_ZERO), torch.eye(overlap.shape[0], dtype=torch.float64))
+    transition = torch.where(
+        degree > 0,
+        overlap / degree.clamp_min(NUMERICAL_ZERO),
+        torch.eye(overlap.shape[0], dtype=torch.float64, device=x.device),
+    )
     alpha = probability_floor(float(strength))
     out = x
     for _ in range(int(steps)):
@@ -65,10 +69,11 @@ def graph_smooth_features(
     return _finite_2d(out)
 
 
-def fault_overlap_matrix(graph: FaultGraph) -> torch.Tensor:
-    H = detector_incidence(graph)
+def fault_overlap_matrix(graph: FaultGraph, *, device: str | torch.device | None = None) -> torch.Tensor:
+    target = torch.device("cpu") if device is None else torch.device(device)
+    H = detector_incidence(graph, device=target)
     if H.numel() == 0:
-        return torch.eye(graph.M, dtype=torch.float64)
+        return torch.eye(graph.M, dtype=torch.float64, device=target)
     overlap = H @ H.T
     overlap.fill_diagonal_(0.0)
     return torch.nan_to_num(overlap, nan=NUMERICAL_ZERO, posinf=NUMERICAL_ZERO, neginf=-NUMERICAL_ZERO)
@@ -138,10 +143,11 @@ def nmf_codes(
     V = V + NUMERICAL_ZERO
     m, f = V.shape
     r = max(1, min(int(rank), m, max(1, f)))
-    generator = torch.Generator(device="cpu")
+    device = V.device
+    generator = torch.Generator(device=device)
     generator.manual_seed(int(seed))
-    W = torch.rand((m, r), generator=generator, dtype=torch.float64).clamp_min(NUMERICAL_ZERO)
-    H = torch.rand((r, f), generator=generator, dtype=torch.float64).clamp_min(NUMERICAL_ZERO)
+    W = torch.rand((m, r), generator=generator, dtype=torch.float64, device=device).clamp_min(NUMERICAL_ZERO)
+    H = torch.rand((r, f), generator=generator, dtype=torch.float64, device=device).clamp_min(NUMERICAL_ZERO)
     eps = NUMERICAL_ZERO
     for _ in range(int(steps)):
         H = H * ((W.T @ V) / ((W.T @ W @ H).clamp_min(eps)))
@@ -202,7 +208,8 @@ def _validate_local_matrix(matrix: torch.Tensor, num_faults: int, source: Path) 
 
 
 def _finite_2d(values: torch.Tensor) -> torch.Tensor:
-    result = torch.as_tensor(values, dtype=torch.float64, device="cpu")
+    device = values.device if isinstance(values, torch.Tensor) else torch.device("cpu")
+    result = torch.as_tensor(values, dtype=torch.float64, device=device)
     if result.ndim != 2:
         raise ValueError("matrix must have shape [M, F]")
     return torch.nan_to_num(result, nan=NUMERICAL_ZERO, posinf=NUMERICAL_ZERO, neginf=-NUMERICAL_ZERO)

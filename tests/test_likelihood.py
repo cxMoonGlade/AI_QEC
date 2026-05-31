@@ -11,6 +11,7 @@ from scope_static.dem.likelihood import (
     exact_dem_nll,
     exact_detector_dem_nll,
     local_window_exact_nll_batched_from_cache,
+    local_window_exact_nll_values_batched_from_cache,
     local_window_exact_nll_from_caches,
     local_window_exact_nll,
     local_window_cuda_kernel_audit,
@@ -618,6 +619,42 @@ def test_cuda_window_batch_cache_builder_matches_cpu_when_available():
         atol=1e-12,
         rtol=1e-12,
     )
+
+
+def test_cuda_local_window_candidate_batched_nll_matches_loop_when_available():
+    if not torch.cuda.is_available():
+        pytest.skip("CUDA is not available")
+    graph = _tiny_graph()
+    windows = [
+        ObservationWindow(name="left", bits=(0,), kind="test"),
+        ObservationWindow(name="full", bits=(0, 1), kind="test"),
+    ]
+    observations = torch.tensor([[0, 0], [1, 0], [1, 1], [0, 1], [1, 1]], dtype=torch.bool)
+    try:
+        cache = build_window_batch_nll_cache_from_observations(
+            graph,
+            observations,
+            windows,
+            aggregate_unique=True,
+            device="cuda",
+            cache_backend="cuda_extension",
+        )
+    except RuntimeError as exc:
+        pytest.skip(f"CUDA extension is not buildable in this environment: {exc}")
+
+    logits_batch = torch.tensor(
+        [
+            [-1.2, -2.0, -3.0],
+            [-0.7, -1.8, -2.5],
+            [-3.1, -1.1, -4.0],
+        ],
+        dtype=torch.float64,
+        device="cuda",
+    )
+    actual = local_window_exact_nll_values_batched_from_cache(logits_batch, cache)
+    expected = torch.stack([local_window_exact_nll_batched_from_cache(row, cache) for row in logits_batch])
+
+    assert torch.allclose(actual.cpu(), expected.cpu(), atol=1e-12, rtol=1e-12)
 
 
 def test_local_window_workload_audit_reports_active_fault_shape():

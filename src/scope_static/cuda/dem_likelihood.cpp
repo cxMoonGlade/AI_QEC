@@ -49,6 +49,18 @@ torch::Tensor local_window_nll_value_cuda(
     torch::Tensor window_total_counts,
     int64_t max_faults_per_window,
     int64_t max_state_count);
+torch::Tensor local_window_nll_values_cuda(
+    torch::Tensor logits_batch,
+    torch::Tensor flat_fault_ids,
+    torch::Tensor flat_masks,
+    torch::Tensor fault_offsets,
+    torch::Tensor flat_states,
+    torch::Tensor flat_counts,
+    torch::Tensor state_offsets,
+    torch::Tensor window_num_bits,
+    torch::Tensor window_total_counts,
+    int64_t max_faults_per_window,
+    int64_t max_state_count);
 std::tuple<torch::Tensor, torch::Tensor, torch::Tensor> window_observation_state_counts(
     torch::Tensor observations,
     torch::Tensor flat_window_bits,
@@ -158,6 +170,35 @@ void check_local_window_inputs(
   TORCH_CHECK(window_total_counts.scalar_type() == torch::kInt64, "window_total_counts must have dtype int64");
   TORCH_CHECK(max_faults_per_window >= 0, "max_faults_per_window must be non-negative");
   TORCH_CHECK(max_state_count > 0, "max_state_count must be positive");
+}
+
+void check_local_window_batch_inputs(
+    const torch::Tensor& logits_batch,
+    const torch::Tensor& flat_fault_ids,
+    const torch::Tensor& flat_masks,
+    const torch::Tensor& fault_offsets,
+    const torch::Tensor& flat_states,
+    const torch::Tensor& flat_counts,
+    const torch::Tensor& state_offsets,
+    const torch::Tensor& window_num_bits,
+    const torch::Tensor& window_total_counts,
+    int64_t max_faults_per_window,
+    int64_t max_state_count) {
+  TORCH_CHECK(logits_batch.dim() == 2, "logits_batch must have shape [C, M]");
+  TORCH_CHECK(logits_batch.size(0) > 0, "logits_batch must contain at least one candidate");
+  check_local_window_inputs(
+      logits_batch.select(0, 0),
+      flat_fault_ids,
+      flat_masks,
+      fault_offsets,
+      flat_states,
+      flat_counts,
+      state_offsets,
+      window_num_bits,
+      window_total_counts,
+      max_faults_per_window,
+      max_state_count);
+  TORCH_CHECK(logits_batch.is_floating_point(), "logits_batch must be floating point");
 }
 
 std::tuple<torch::Tensor, torch::Tensor> local_window_nll_value_and_grad(
@@ -281,6 +322,44 @@ torch::Tensor local_window_nll_value(
       max_state_count);
 }
 
+torch::Tensor local_window_nll_values(
+    torch::Tensor logits_batch,
+    torch::Tensor flat_fault_ids,
+    torch::Tensor flat_masks,
+    torch::Tensor fault_offsets,
+    torch::Tensor flat_states,
+    torch::Tensor flat_counts,
+    torch::Tensor state_offsets,
+    torch::Tensor window_num_bits,
+    torch::Tensor window_total_counts,
+    int64_t max_faults_per_window,
+    int64_t max_state_count) {
+  check_local_window_batch_inputs(
+      logits_batch,
+      flat_fault_ids,
+      flat_masks,
+      fault_offsets,
+      flat_states,
+      flat_counts,
+      state_offsets,
+      window_num_bits,
+      window_total_counts,
+      max_faults_per_window,
+      max_state_count);
+  return local_window_nll_values_cuda(
+      logits_batch.contiguous(),
+      flat_fault_ids.contiguous(),
+      flat_masks.contiguous(),
+      fault_offsets.contiguous(),
+      flat_states.contiguous(),
+      flat_counts.contiguous(),
+      state_offsets.contiguous(),
+      window_num_bits.contiguous(),
+      window_total_counts.contiguous(),
+      max_faults_per_window,
+      max_state_count);
+}
+
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def("dem_parity_distribution", &dem_parity_distribution, "Exact DEM parity distribution (CUDA)");
   m.def(
@@ -303,6 +382,10 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
       "local_window_nll_value",
       &local_window_nll_value,
       "Batched exact local-window NLL value without gradient history (CUDA)");
+  m.def(
+      "local_window_nll_values",
+      &local_window_nll_values,
+      "Candidate-batched exact local-window NLL values without gradient history (CUDA)");
   m.def(
       "window_observation_state_counts",
       &window_observation_state_counts,

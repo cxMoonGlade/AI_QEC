@@ -305,7 +305,7 @@ def exact_detector_dem_nll(
     aggregate_unique: bool = True,
     backend: LikelihoodBackend = "auto",
 ) -> torch.Tensor:
-    """Exact mean NLL for detector syndromes only, matching DMLE-QEC training."""
+    """Exact mean NLL for detector syndromes only, used by the DMLE-QEC-style baseline."""
 
     if logits.ndim != 1 or logits.numel() != graph.M:
         raise ValueError(f"logits must have shape [{graph.M}]")
@@ -771,6 +771,50 @@ def local_window_exact_nll_batched_from_cache(
         float(spectral_min_abs_factor),
         int(spectral_memory_cap_bytes),
     )
+
+
+def local_window_exact_nll_values_batched_from_cache(
+    logits_batch: torch.Tensor,
+    cache: WindowBatchNLLCache,
+) -> torch.Tensor:
+    """Evaluate local-window NLL for a batch of candidate logit vectors.
+
+    This is a forward-only helper for model selection/evaluation. Training keeps
+    using the single-candidate autograd path.
+    """
+
+    if not logits_batch.is_cuda:
+        raise ValueError("candidate-batched CUDA local-window NLL requires CUDA logits")
+    if logits_batch.ndim != 2:
+        raise ValueError("logits_batch must have shape [C, M]")
+    if logits_batch.shape[0] == 0:
+        return logits_batch.new_empty((0,))
+    if torch.is_grad_enabled() and logits_batch.requires_grad:
+        losses = [
+            local_window_exact_nll_batched_from_cache(candidate, cache)
+            for candidate in torch.unbind(logits_batch, dim=0)
+        ]
+        return torch.stack(losses)
+    extension = _load_cuda_extension()
+    if hasattr(extension, "local_window_nll_values") and cache.max_state_count <= 4096:
+        return extension.local_window_nll_values(
+            logits_batch.contiguous(),
+            cache.flat_fault_ids.contiguous(),
+            cache.flat_masks.contiguous(),
+            cache.fault_offsets.contiguous(),
+            cache.flat_states.contiguous(),
+            cache.flat_counts.contiguous(),
+            cache.state_offsets.contiguous(),
+            cache.window_num_bits.contiguous(),
+            cache.window_total_counts.contiguous(),
+            int(cache.max_faults_per_window),
+            int(cache.max_state_count),
+        )
+    losses = [
+        _local_window_exact_nll_batched_forward_only(candidate.contiguous(), cache)
+        for candidate in torch.unbind(logits_batch, dim=0)
+    ]
+    return torch.stack(losses)
 
 
 def _select_cuda_kernel_variant(

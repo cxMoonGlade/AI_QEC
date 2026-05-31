@@ -413,11 +413,6 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         action="store_true",
         help="Require CUDA and use the C++/CUDA local-window likelihood backend.",
     )
-    parser.add_argument(
-        "--allow-cpu-fallback",
-        action="store_true",
-        help="Explicitly allow CPU/PyTorch execution when CUDA is not visible.",
-    )
     parser.add_argument("--output-dir", default="outputs/google_static/S1_7_logical_aware")
     parser.add_argument("--prepared-cache-dir", default=None)
     parser.add_argument("--disable-prepared-cache", action="store_true")
@@ -646,24 +641,13 @@ def _resolve_execution_mode(args: argparse.Namespace) -> None:
                 args.likelihood_backend = "cuda_extension"
             args.gpu_policy = "gpu_first_auto_cuda"
             return
-        if args.allow_cpu_fallback:
-            args.device = "cpu"
-            if args.likelihood_backend == "auto":
-                args.likelihood_backend = "pytorch"
-            args.gpu_policy = "cpu_fallback_explicit"
-            return
         raise RuntimeError(
             "GPU-first Google run could not see CUDA. The target workstation is assumed to have at least "
-            "an RTX 5090-class CUDA device; fix CUDA visibility or pass --allow-cpu-fallback for an explicit CPU run."
+            "an RTX 5090-class CUDA device; fix CUDA visibility before running Google workflows."
         )
 
     if requested_device == "cpu":
-        if not args.allow_cpu_fallback:
-            raise RuntimeError("GPU-first Google run requires --allow-cpu-fallback for explicit CPU execution")
-        if args.likelihood_backend == "auto":
-            args.likelihood_backend = "pytorch"
-        args.gpu_policy = "cpu_fallback_explicit"
-        return
+        raise RuntimeError("Google workflows do not allow CPU fallback; request a CUDA device instead")
 
     if requested_device.startswith("cuda"):
         if not torch.cuda.is_available():

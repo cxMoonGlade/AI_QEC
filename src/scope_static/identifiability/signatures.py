@@ -6,23 +6,25 @@ from scope_static.dem.fault_graph import FaultGraph
 from scope_static.numerics import NUMERICAL_ZERO
 
 
-def detector_incidence(graph: FaultGraph) -> torch.Tensor:
+def detector_incidence(graph: FaultGraph, *, device: str | torch.device | None = None) -> torch.Tensor:
     """Return H[j, d] = 1 iff effective DEM fault j touches detector d."""
 
+    target = torch.device("cpu") if device is None else torch.device(device)
     if graph.num_detectors <= 0:
-        return torch.zeros((graph.M, 0), dtype=torch.float64)
-    return graph.A[: graph.num_detectors, :].T.to(dtype=torch.float64, device="cpu")
+        return torch.zeros((graph.M, 0), dtype=torch.float64, device=target)
+    return graph.A[: graph.num_detectors, :].T.to(dtype=torch.float64, device=target)
 
 
-def structural_signature(graph: FaultGraph) -> torch.Tensor:
+def structural_signature(graph: FaultGraph, *, device: str | torch.device | None = None) -> torch.Tensor:
     """Visible fault-support/geometry signature that does not use orbit labels."""
 
-    dense = graph.A.to(device="cpu", dtype=torch.float64)
+    target = torch.device("cpu") if device is None else torch.device(device)
+    dense = graph.A.to(device=target, dtype=torch.float64)
     detector_part = dense[: graph.num_detectors, :]
     logical_part = dense[graph.num_detectors :, :]
     total_weight = dense.sum(dim=0)
     detector_weight = detector_part.sum(dim=0)
-    logical_weight = logical_part.sum(dim=0) if logical_part.numel() else torch.zeros(graph.M, dtype=torch.float64)
+    logical_weight = logical_part.sum(dim=0) if logical_part.numel() else torch.zeros(graph.M, dtype=torch.float64, device=target)
     features = [
         total_weight,
         detector_weight,
@@ -33,7 +35,7 @@ def structural_signature(graph: FaultGraph) -> torch.Tensor:
     ]
 
     if graph.detector_coordinates is not None and graph.num_detectors > 0:
-        coords = graph.detector_coordinates.to(device="cpu", dtype=torch.float64)
+        coords = graph.detector_coordinates.to(device=target, dtype=torch.float64)
         denom = detector_weight.clamp_min(1.0)
         for coord_dim in range(coords.shape[1]):
             values = coords[:, coord_dim].unsqueeze(1)
@@ -46,7 +48,7 @@ def structural_signature(graph: FaultGraph) -> torch.Tensor:
             mean_coord = torch.where(detector_weight > 0, mean_coord, torch.zeros_like(mean_coord))
             features.extend([mean_coord, span])
 
-    index = torch.arange(graph.M, dtype=torch.float64)
+    index = torch.arange(graph.M, dtype=torch.float64, device=target)
     features.append(index / max(1, graph.M - 1))
     return _finite_2d(torch.stack(features, dim=1))
 
@@ -54,7 +56,8 @@ def structural_signature(graph: FaultGraph) -> torch.Tensor:
 def local_logit_signature(logits: torch.Tensor) -> torch.Tensor:
     """Fault-level signature from a visible local logit fit."""
 
-    lam = torch.as_tensor(logits, dtype=torch.float64, device="cpu").flatten()
+    device = logits.device if isinstance(logits, torch.Tensor) else torch.device("cpu")
+    lam = torch.as_tensor(logits, dtype=torch.float64, device=device).flatten()
     if lam.ndim != 1:
         raise ValueError("logits must be a rank-1 fault-logit vector")
     prob = torch.sigmoid(lam)
@@ -180,12 +183,14 @@ def _spectral_projection(H: torch.Tensor, covariance: torch.Tensor, *, spectral_
 
 
 def _finite_1d(values: torch.Tensor) -> torch.Tensor:
-    result = torch.as_tensor(values, dtype=torch.float64, device="cpu").flatten()
+    device = values.device if isinstance(values, torch.Tensor) else torch.device("cpu")
+    result = torch.as_tensor(values, dtype=torch.float64, device=device).flatten()
     return torch.nan_to_num(result, nan=NUMERICAL_ZERO, posinf=NUMERICAL_ZERO, neginf=-NUMERICAL_ZERO)
 
 
 def _finite_2d(values: torch.Tensor) -> torch.Tensor:
-    result = torch.as_tensor(values, dtype=torch.float64, device="cpu")
+    device = values.device if isinstance(values, torch.Tensor) else torch.device("cpu")
+    result = torch.as_tensor(values, dtype=torch.float64, device=device)
     if result.ndim != 2:
         raise ValueError("signature matrix must have shape [M, F]")
     return torch.nan_to_num(result, nan=NUMERICAL_ZERO, posinf=NUMERICAL_ZERO, neginf=-NUMERICAL_ZERO)

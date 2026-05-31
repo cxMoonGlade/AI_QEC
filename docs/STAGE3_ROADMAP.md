@@ -521,6 +521,64 @@ Stim circuits, noisy SI1000 circuits, metadata, and decoder priors/pathways, but
 they do not by themselves provide ground-truth physical mechanism labels for
 Stage 3 discovery.
 
+Current Google facade:
+
+```bash
+scope-stage3e-google --config configs/scope_static/stage3e_google_external_validation.yaml
+```
+
+Acceptance is external-validation only:
+
+```text
+- completed Google contexts meet the declared minimum;
+- compressed visible models are near local_full on heldout excess NLL;
+- compressed visible models beat random low-rank controls;
+- parameter compression ratio is reported against local_full;
+- skipped contexts are bounded;
+- all accepted full Google contexts use `device=cuda` and `cuda_extension`;
+- true hidden omega / physical-mechanism recovery claim remains false.
+```
+
+Primary artifacts:
+
+```text
+outputs/google_static/S3E_google_external_validation/
+  metrics.json
+  acceptance.json
+  run_manifest.json
+  summary.md
+  GDISC15b_grid/metrics.json
+```
+
+Current X/Z scorecard:
+
+```bash
+scope-google-xz-scorecard --config configs/scope_static/google_xz_scorecard.yaml
+```
+
+This GPU-only scorecard is a current-model level check on real Google X/Z
+contexts. It reports predictive utility, compression, calibration,
+decoder-facing diagnostics, and context/proxy labels only. It explicitly does
+not report true physical-mechanism recovery, true hidden partitions, or catalog
+M-ID labels. Baselines are `dmle_qec`, `global_shared_scalar`, and available
+decoder-prior references; random low-rank partitions are reported only as
+negative controls. The `dmle_qec` baseline is the scope_static
+DMLE-QEC-style independent DEM MLE slice, not the complete upstream
+PlanarNet/TensorNetwork/gate-to-DEM implementation.
+
+Optional upstream baseline:
+
+```text
+dmle_qec_upstream
+```
+
+This is a direct adapter to `/tmp/DMLE-QEC` using the upstream
+`TensorNetwork`/`PCM` detector-syndrome DEM MLE path. It is disabled by default
+because it requires the upstream dependency stack (`ldpc`, `cotengra`,
+`kahypar`, `pymatching`, etc.). When enabled, missing upstream code or
+dependencies are hard failures/skipped contexts, not a fallback to
+`dmle_qec`.
+
 ## Metrics
 
 Primary discovery metrics:

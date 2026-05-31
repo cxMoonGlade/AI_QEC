@@ -133,6 +133,62 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.goo
 Google data has no true hidden mechanism labels. Supported claims are
 predictive, calibration, transfer, and proxy-label diagnostics only.
 
+Stage 3E Google external validation facade:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.google.s3e_external_validation \
+  --config configs/scope_static/stage3e_google_external_validation.yaml
+```
+
+This wraps the GDISC15b grid, keeps the no-true-omega claim boundary explicit,
+always requires CUDA execution, and writes:
+
+```text
+outputs/google_static/S3E_google_external_validation/metrics.json
+outputs/google_static/S3E_google_external_validation/acceptance.json
+outputs/google_static/S3E_google_external_validation/run_manifest.json
+outputs/google_static/S3E_google_external_validation/summary.md
+outputs/google_static/S3E_google_external_validation/GDISC15b_grid/metrics.json
+```
+
+Google X/Z current-model scorecard:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.google.xz_scorecard \
+  --config configs/scope_static/google_xz_scorecard.yaml
+```
+
+This is GPU-only. It writes context-level X/Z scorecards and a label-manifest
+preview without claiming true physical-mechanism recovery. The comparison suite
+separates real baselines from negative controls: `dmle_qec` is a
+DMLE-QEC-style independent DEM MLE baseline, `global_shared_scalar` and
+decoder-prior references are additional baselines, and random low-rank
+partitions remain controls only. The `dmle_qec` model id is source-aligned to
+`cxMoonGlade/DMLE-QEC`, but it does not claim the complete upstream
+PlanarNet/TensorNetwork/gate-to-DEM implementation.
+
+To include the direct upstream TensorNetwork baseline, first install the
+upstream DMLE-QEC dependencies into `aiqec`, then enable:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.google.xz_scorecard \
+  --config configs/scope_static/google_xz_scorecard.yaml \
+  --include-upstream-dmle
+```
+
+This adds `dmle_qec_upstream`, which imports `/tmp/DMLE-QEC` and runs the
+upstream `TensorNetwork`/`PCM` detector-syndrome DEM MLE path. If the upstream
+repo or dependencies are missing, the run must fail or skip the context; it must
+not fall back to the scope_static DMLE-QEC-style implementation.
+
+```text
+outputs/google_static/google_xz_scorecard/metrics.json
+outputs/google_static/google_xz_scorecard/scorecard.json
+outputs/google_static/google_xz_scorecard/context_scorecard.json
+outputs/google_static/google_xz_scorecard/label_manifest.json
+outputs/google_static/google_xz_scorecard/summary.md
+```
+
 ## Function: Generate Physical-Mechanism Data
 
 Use this function when you want noisy data from explicitly enabled mechanisms.

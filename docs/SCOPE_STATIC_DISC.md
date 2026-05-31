@@ -272,7 +272,12 @@ The Stage 2A.0 model set is:
 - `known_hard_orbit`: synthetic-only known-orbit oracle.
 - `known_soft_feature_orbit`: synthetic-only known soft-feature oracle.
 - `local`: unshared fault-logit baseline.
-- `dmle_qec`: detector-only baseline.
+- `dmle_qec`: DMLE-QEC-style detector-only independent DEM MLE baseline; not
+  the complete upstream DMLE-QEC PlanarNet/TensorNetwork/gate-to-DEM
+  implementation.
+- `dmle_qec_upstream`: optional direct upstream DMLE-QEC TensorNetwork/PCM
+  surface-code DEM MLE adapter; disabled by default and fail-closed when
+  upstream dependencies are unavailable.
 
 Discovery runs use multiple restarts. The selected restart is the one with the
 lowest training NLL. All restart outcomes are recorded, including collapse,
@@ -2998,6 +3003,38 @@ models preserve local_full heldout NLL surprisingly well under strong parameter
 compression, but they do not yet win consistently. The current positive result
 is compression-with-near-parity plus occasional small metric gains, not robust
 predictive improvement.
+```
+
+### S3E Google External Validation Facade
+
+S3E wraps the GDISC15b grid with an explicit external-validation acceptance
+layer:
+
+```bash
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.google.s3e_external_validation \
+  --config configs/scope_static/stage3e_google_external_validation.yaml
+```
+
+Acceptance checks:
+
+```text
+contexts_completed >= declared minimum
+contexts_skipped <= declared maximum
+best compressed GDISC15 model is near local_full on heldout excess NLL
+best compressed GDISC15 model beats random low-rank controls
+compression ratio against local_full exceeds the declared threshold
+accepted full Google contexts use device=cuda and cuda_extension
+true hidden omega / physical-mechanism recovery claim remains false
+```
+
+Outputs:
+
+```text
+outputs/google_static/S3E_google_external_validation/metrics.json
+outputs/google_static/S3E_google_external_validation/acceptance.json
+outputs/google_static/S3E_google_external_validation/run_manifest.json
+outputs/google_static/S3E_google_external_validation/summary.md
+outputs/google_static/S3E_google_external_validation/GDISC15b_grid/metrics.json
 ```
 
 ## Decision Rules

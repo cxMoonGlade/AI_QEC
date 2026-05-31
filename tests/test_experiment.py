@@ -59,6 +59,8 @@ def test_smoke_experiment_writes_claim_boundary_metadata(tmp_path):
     assert metrics["records"]
     assert metrics["records"][0]["baseline_family"] == "dmle_qec"
     assert metrics["records"][0]["baseline_source_repository"] == "https://github.com/cxMoonGlade/DMLE-QEC"
+    assert metrics["records"][0]["baseline_variant"] == "scope_static_dmle_qec_style_independent_dem_mle"
+    assert metrics["records"][0]["upstream_dmle_qec_complete_implementation"] is False
     assert metrics["records"][0]["train_observation_mode"] == "detectors"
     assert metrics["records"][0]["evidence_record_schema"] == "scope_static_v1"
     assert metrics["records"][0]["train_likelihood_adapter"] == "pytorch_detector_exact"
