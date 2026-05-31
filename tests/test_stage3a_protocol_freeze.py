@@ -41,6 +41,10 @@ def test_stage3a_freezes_visible_schema_splits_and_protocol_without_training(tmp
     assert result["forbidden_feature_audit"]["passed"] is True
     assert result["visible_feature_matrix"]["training_matrix_path"] == "visible_features.npy"
     assert result["visible_feature_matrix"]["contains_evaluator_labels"] is False
+    assert "visible_operation_context" in result["batch_context_schema"]["learner_visible_fields"]
+    assert result["operation_context_public_audit"]["passed"] is True
+    assert result["operation_context_public_audit"]["allowed_source_fields"] == ["instruction"]
+    assert result["acceptance_audit"]["checks"]["operation_context_is_public_instruction_context"] is True
     assert result["batch_context_schema"]["primary_protocol"]["mode"] == "multi_context_batch"
     assert result["batch_context_schema"]["single_context_m13_claim_allowed"] is False
     assert result["split_manifest"]["train_validation_test_splits_non_empty"] is True
@@ -60,6 +64,7 @@ def test_stage3a_freezes_visible_schema_splits_and_protocol_without_training(tmp
         "visible_features.npy",
         "sampled_visible_features.npy",
         "forbidden_feature_audit.json",
+        "operation_context_public_audit.json",
         "split_manifest.json",
         "probe_schedule_manifest.json",
         "batch_context_schema.json",
@@ -83,6 +88,28 @@ def test_stage3a_forbidden_feature_audit_rejects_identity_feature_names() -> Non
     assert audit["passed"] is False
     assert audit["forbidden_feature_count"] >= 1
     assert any(hit["token"] == "oracle" for hit in audit["forbidden_feature_hits"])
+
+
+def test_stage3a_rejects_mechanism_surrogate_instruction_context(tmp_path: Path) -> None:
+    teacher = tmp_path / "S2D_PHYC1_teacher"
+    teacher.mkdir()
+    records = [_record("M0", 0), _record("M4", 1), _record("M8", 2)]
+    for record in records:
+        record["instruction"] = str(record["mechanism_id"])
+    (teacher / "oracle_mechanisms.json").write_text(json.dumps({"mechanisms": records}, indent=2) + "\n")
+
+    result = run_stage3a_dataset_protocol_freeze(
+        teacher_dir=teacher,
+        output_dir=tmp_path / "out",
+        shots=1000,
+        batch_size=2,
+    )
+
+    assert result["decision"] == "stage3a_protocol_freeze_failed"
+    audit = result["operation_context_public_audit"]
+    assert audit["passed"] is False
+    assert audit["checks"]["all_record_instructions_in_public_alphabet"] is False
+    assert audit["checks"]["operation_context_matches_public_instruction_field"] is False
 
 
 def test_stage3a_config_wrapper_runs_from_yaml(tmp_path: Path) -> None:

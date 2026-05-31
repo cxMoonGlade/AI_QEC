@@ -346,9 +346,14 @@ conda run -n aiqec python -m scope_static.experiments.stage3.protocol_freeze \
 ```
 
 Stage 3A writes `visible_feature_schema.json`, `forbidden_feature_audit.json`,
-`split_manifest.json`, `probe_schedule_manifest.json`, `batch_context_schema.json`,
-and `assignment_unit.json`. It does not train a discovery model and does not
-compute the Stage 3A.5 observability ceiling.
+`operation_context_public_audit.json`, `split_manifest.json`,
+`probe_schedule_manifest.json`, `batch_context_schema.json`, and
+`assignment_unit.json`. It does not train a discovery model and does not compute
+the Stage 3A.5 observability ceiling. The frozen visible feature matrix includes
+Z/X sampled-observation features, derived visible summaries, and learner-visible
+operation/instruction context metadata. That context is restricted to a fixed
+public instruction alphabet and must not encode mechanism ID, record ID,
+location ID, qubits, circuit ID, or slot ID.
 
 ## Function: Run Stage 3A.5 Observability Ceiling
 
@@ -409,8 +414,10 @@ conda run -n aiqec python -m scope_static.experiments.stage3.discovery_model \
 Stage 3B.1 consumes Stage 3A and Stage 3A.5, trains a visible-only
 prototype-mixture discovery model with learned diagonal covariance, selects the
 declared K mode using validation visible NLL plus a visible-only complexity
-penalty over a declared capped set of Stage 3A validation folds, uses the
-declared first-run iteration budget from config, and writes
+penalty over a declared capped set of Stage 3A validation folds. The default
+structured objective applies `operation_context_weight: 2.0` to the
+learner-visible operation-context block; this uses no mechanism labels. It uses
+the declared first-run iteration budget from config and writes
 `learned_assignments.npy`, `learned_prototypes.json`,
 `learned_covariances.npy`, `model_parameters.npz`,
 `prototype_generation_metrics.json`, `evaluator_only_label_metrics.json`,
@@ -467,6 +474,103 @@ global-null. It writes `assignment_shuffle_metrics.json`,
 `shuffled_assignment_metrics_summary.json`, `shuffle_runs.json`,
 `s3c_consistency_audit.json`, `leakage_audit.json`, and
 `acceptance_audit.json`.
+
+## Function: Run Stage 3D.2 Feature-Scramble Audit
+
+```bash
+conda run -n aiqec scope-stage3d2-feature-scramble \
+  --config configs/scope_static/stage3d2_feature_scramble_audit.yaml
+```
+
+Equivalent module form:
+
+```bash
+conda run -n aiqec python -m scope_static.experiments.stage3.feature_scramble_audit \
+  --config configs/scope_static/stage3d2_feature_scramble_audit.yaml
+```
+
+Stage 3D.2 keeps the Stage 3B.1 discovered assignment matrix fixed, row-scrambles
+the frozen Stage 3A visible feature matrix, refits/evaluates the Stage 3C
+generator, and expects `categorical_population_nll` plus replay metrics to
+collapse toward global-null. It writes `feature_scramble_metrics.json`,
+`scrambled_feature_metrics_summary.json`, `feature_scramble_runs.json`,
+`s3c_consistency_audit.json`, `leakage_audit.json`, and
+`acceptance_audit.json`.
+
+## Function: Run Stage 3D.3 Context-Shuffle Audit
+
+```bash
+conda run -n aiqec scope-stage3d3-context-shuffle \
+  --config configs/scope_static/stage3d3_context_shuffle_audit.yaml
+```
+
+Equivalent module form:
+
+```bash
+conda run -n aiqec python -m scope_static.experiments.stage3.context_shuffle_audit \
+  --config configs/scope_static/stage3d3_context_shuffle_audit.yaml
+```
+
+Stage 3D.3 keeps frozen Stage 3A visible features and Stage 3B.1 assignments
+fixed, row-shuffles only the protocol-only `context_group` labels, rebuilds the
+grouped folds, and refits/evaluates the Stage 3C generator. For the current
+context-free selected B1 model, this is a split-protocol audit: shuffled
+pseudo-context folds should remain meaningful, and the original grouped-context
+split should not be artificially easier. It writes
+`context_shuffle_metrics.json`, `context_shuffled_metrics_summary.json`,
+`context_shuffle_runs.json`, `context_protocol_audit.json`,
+`selected_context_usage_audit.json`, `s3c_consistency_audit.json`,
+`leakage_audit.json`, and `acceptance_audit.json`.
+
+## Function: Run Stage 3D.4 K-Stress Audit
+
+```bash
+conda run -n aiqec scope-stage3d4-k-stress \
+  --config configs/scope_static/stage3d4_k_stress_audit.yaml
+```
+
+Equivalent module form:
+
+```bash
+conda run -n aiqec python -m scope_static.experiments.stage3.k_stress_audit \
+  --config configs/scope_static/stage3d4_k_stress_audit.yaml
+```
+
+Stage 3D.4 reruns visible-only prototype discovery at fixed undercomplete,
+exact, and overcomplete K settings. K values may use catalog cardinality and
+Stage 3A.5 quotient count, but mechanism labels are used only after fitting for
+evaluator metrics. Passing means exact/overcomplete K preserve mechanism or
+quotient recovery and heldout visible replay, while undercomplete K degrades
+recovery as expected. It uses the same declared operation-context feature
+weighting as Stage 3B.1. It writes `k_stress_plan.json`,
+`k_stress_results.json`, `k_stress_summary.json`, `model_summaries.json`,
+`learned_assignments_by_k.npz`, `leakage_audit.json`, and
+`acceptance_audit.json`.
+
+## Function: Run Stage 3D.4b Overcomplete Merge/Prune Audit
+
+```bash
+conda run -n aiqec scope-stage3d4b-overcomplete-merge-prune \
+  --config configs/scope_static/stage3d4b_overcomplete_merge_prune_audit.yaml
+```
+
+Equivalent module form:
+
+```bash
+conda run -n aiqec python -m scope_static.experiments.stage3.overcomplete_merge_prune_audit \
+  --config configs/scope_static/stage3d4b_overcomplete_merge_prune_audit.yaml
+```
+
+Stage 3D.4b consumes the overcomplete assignment matrix from Stage 3D.4,
+prunes inactive clusters, keeps macro clusters separate, and merges only
+declared assignment microclusters into one visible-only tail-submode family.
+The merge rule uses assignments and learner-visible feature summaries only;
+mechanism labels are loaded after the merge map is fixed for evaluator scoring.
+It writes `merge_prune_plan.json`, `overcomplete_cluster_summary.json`,
+`merge_map.json`, `postmerge_metrics.json`, `postmerge_assignments.npy`,
+`leakage_audit.json`, and `acceptance_audit.json`.
+Use `--assignment-key fixed_oracle_count` to run the same audit as an exact-K
+boundary test.
 
 ## Function: Run Active Physical-Observability Audits
 

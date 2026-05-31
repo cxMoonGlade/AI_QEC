@@ -38,6 +38,7 @@ FORBIDDEN_LEARNER_INPUTS = (
 FORBIDDEN_FEATURE_TOKENS = ("oracle", "mechanism", "teacher", "channel", "kraus", "ptm", "prototype", "omega", "family", "label")
 RAW_SINGLE_METRICS = ("P0", "P1", "p_comp")
 RAW_TWO_PROB_METRICS = ("P00", "P01", "P10", "P11", "p_comp")
+VISIBLE_OPERATION_CONTEXTS = ("idle", "measure", "reset", "rx", "ry", "rz", "rzz")
 H_GATE = (1.0 / math.sqrt(2.0)) * np.asarray([[1.0, 1.0], [1.0, -1.0]], dtype=np.complex128)
 I_GATE = np.eye(2, dtype=np.complex128)
 
@@ -114,7 +115,11 @@ def build_zx_visible_feature_table(
     observed_rows = []
     expected_rows = []
     derived_names: list[str] | None = None
-    metadata_names = ["visible_metadata__qubit_count", "visible_metadata__shot_count"]
+    metadata_names = [
+        "visible_metadata__qubit_count",
+        "visible_metadata__shot_count",
+        *_operation_context_feature_names(),
+    ]
 
     for row_idx, record in enumerate(records):
         values = {name: 0.0 for name in raw_names}
@@ -134,6 +139,7 @@ def build_zx_visible_feature_table(
         metadata = {
             "visible_metadata__qubit_count": float(spec.num_qubits),
             "visible_metadata__shot_count": float(shots),
+            **_operation_context_metadata(spec),
         }
         observed_rows.append([values[name] for name in raw_names] + [derived[name] for name in derived_names] + [metadata[name] for name in metadata_names])
         expected_rows.append(
@@ -203,6 +209,25 @@ def feature_schema_zx_visible(
         "num_features": int(len(feature_names)),
         "features": features,
     }
+
+
+def _operation_context_feature_names() -> list[str]:
+    return [f"visible_metadata__instruction_{name}" for name in VISIBLE_OPERATION_CONTEXTS]
+
+
+def _operation_context_metadata(spec: MechanismSpec) -> dict[str, float]:
+    operation = _public_instruction_context(spec.instruction)
+    return {
+        f"visible_metadata__instruction_{name}": 1.0 if operation == name else 0.0
+        for name in VISIBLE_OPERATION_CONTEXTS
+    }
+
+
+def _public_instruction_context(instruction: object | None) -> str:
+    operation = str(instruction or "id").strip().lower()
+    if operation == "id":
+        return "idle"
+    return operation
 
 
 def run_phyc3b_zx_visible_alias_breaking_probe_suite(

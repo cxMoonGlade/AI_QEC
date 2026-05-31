@@ -1,0 +1,13 @@
+stage3d2_feature_scramble_audit:
+  name: Stage3D2_feature_scramble_audit
+  stage3a_dir: outputs/scope_static/PHYC_STAGE3_discovery/S3A_protocol_freeze
+  stage3a5_dir: outputs/scope_static/PHYC_STAGE3_discovery/S3A5_observability_alias_ceiling
+  stage3b1_dir: outputs/scope_static/PHYC_STAGE3_discovery/S3B1_first_discovery_model
+  stage3c_dir: outputs/scope_static/PHYC_STAGE3_discovery/S3C_prototype_generator_learning
+  output_dir: outputs/scope_static/PHYC_STAGE3_discovery/S3D2_feature_scramble_audit
+  seed: 0
+  scramble_count: 16
+  max_cv_folds: 5
+  variance_floor: 1.0e-6
+  min_categorical_nll_degradation: 1.0e-6
+  min_collapse_fraction: 0.5

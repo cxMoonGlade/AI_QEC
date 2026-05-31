@@ -57,7 +57,10 @@ Stage 3 starts from the accepted learner visible surface:
 - no Y-basis preparation;
 - no Y-basis measurement;
 - multi-context batches for drifted mechanisms such as M13;
-- raw time-sequence features retained before derived summaries.
+- raw time-sequence features retained before derived summaries;
+- learner-visible operation/instruction context metadata from a fixed public
+  instruction alphabet. This is circuit context, not a mechanism label or
+  mechanism-instance surrogate ID.
 
 M13 is not a single-context mechanism-recovery target. It is a
 context-dependent latent-drift recovery target. Single-context failure is not a
@@ -133,6 +136,7 @@ Deliverables:
 - frozen learner-visible feature matrix (`visible_features.npy`);
 - frozen sampled-visible comparator matrix (`sampled_visible_features.npy`);
 - visible feature matrix manifest;
+- operation-context publicness audit;
 - probe schedule manifest;
 - batch/context schema;
 - train/validation/test split policy;
@@ -142,6 +146,8 @@ Deliverables:
 Acceptance:
 
 - no forbidden learner fields;
+- operation context is derived only from public instruction context and cannot
+  encode mechanism ID, record ID, location ID, qubits, circuit ID, or slot ID;
 - split policy is fixed before model training;
 - multi-context batch protocol is explicit;
 - assignment unit is declared before model training.
@@ -247,6 +253,9 @@ First implementation:
 - annealed soft assignment matrix `Pi[j,k]`;
 - training from the frozen Stage 3A `visible_features.npy` matrix, not
   regenerated mechanism records;
+- declared operation-context feature weighting in the visible objective, used
+  to keep operation-dependent/crosstalk context from being drowned out by the
+  larger probability feature block;
 - context-balanced assignment candidate that enforces one visible instance per
   latent prototype per context group when the Stage 3A protocol is balanced;
 - K-mode selection by validation visible NLL plus visible-only complexity
@@ -375,6 +384,110 @@ Purpose:
 - verify that S3C replay comes from discovered latent structure rather than an
   unconditional generator, assignment-mass marginal, or metric artifact.
 
+The second control is the feature-scramble audit:
+
+- keep the Stage 3B.1 discovered assignment matrix fixed;
+- row-scramble the frozen Stage 3A visible feature matrix;
+- preserve the visible feature row distribution while breaking row alignment
+  with the assignments;
+- refit and evaluate the Stage 3C generator;
+- compare original-assignment, scrambled-feature, global-null, and mean-only
+  generation metrics.
+
+Expected result:
+
+- `categorical_population_nll` should degrade after feature scrambling;
+- replay metrics should collapse toward the global-null baseline;
+- the feature-row multiset should be preserved, so the audit breaks
+  feature-assignment alignment rather than changing the marginal visible
+  distribution.
+
+Purpose:
+
+- verify that S3C replay comes from the discovered latent structure aligned to
+  the correct visible observations rather than from an unconditional generator,
+  row-distribution artifact, or metric artifact.
+
+The third control is the context-shuffle audit:
+
+- keep frozen Stage 3A visible features fixed;
+- keep the Stage 3B.1 discovered assignment matrix fixed;
+- row-shuffle only Stage 3A protocol `context_group` labels;
+- rebuild grouped validation/test folds from the shuffled context groups;
+- refit and evaluate the Stage 3C generator;
+- compare original grouped-context, context-shuffled, global-null, and
+  mean-only generation metrics.
+
+Expected result:
+
+- for the current context-free selected B1 model, context-shuffled
+  pseudo-context folds should remain meaningfully above null and the original
+  grouped-context split should not be artificially easier;
+- if a future selected model uses context groups directly, the same audit must
+  report whether context shuffling damages the context-conditioned claim;
+- `context_group` remains a protocol-only field, not a learner-visible feature.
+
+Purpose:
+
+- verify that S3C replay is not an artifact of an overly easy context split or
+  hidden context-label leakage.
+
+The fourth control is the K-stress audit:
+
+- rerun visible-only prototype discovery at fixed K values;
+- include an undercomplete K below the Stage 3A.5 quotient count;
+- include exact catalog-cardinality K;
+- include overcomplete K, currently `2 * catalog_cardinality` capped by record
+  count;
+- score evaluator-only exact/quotient recovery after fitting;
+- score heldout visible generation for each K against global-null and mean-only
+  baselines.
+
+Expected result:
+
+- exact and overcomplete K preserve mechanism or quotient recovery;
+- exact and overcomplete K preserve heldout visible replay above null;
+- undercomplete K degrades recovery when the quotient size is too small;
+- undercomplete K may still generate visible observations well, so recovery and
+  generation must be reported separately.
+- exact-K failures must report whether they come from missing visible
+  operation context, missing probe quadrature, or a genuine structured-model
+  limitation.
+
+Purpose:
+
+- verify that Stage 3 discovery is not an artifact of a single lucky K choice,
+  and document the recoverable K range before claiming latent mechanism
+  structure.
+
+The fourth-b control is the overcomplete merge/prune audit:
+
+- consume the overcomplete assignment matrix from Stage 3D.4;
+- prune inactive clusters;
+- keep macro clusters separate;
+- merge only declared assignment microclusters into a visible-only tail-submode
+  family;
+- score post-merge exact/quotient recovery and heldout visible generation;
+- keep mechanism labels out of the merge rule and use them only after the merge
+  map is fixed.
+
+Expected result:
+
+- overcomplete microclusters that represent one context/drift family can be
+  merged without label supervision;
+- post-merge family count drops toward the mechanism/quotient scale;
+- post-merge recovery improves without destroying heldout visible generation;
+- if rare mechanisms are also microclusters, the audit must fail or report an
+  unsafe merge rather than hiding the ambiguity.
+- applying this audit to exact-K assignments is allowed as a boundary test, but
+  exact-K need not contain mergeable microclusters; failure there is evidence
+  that merge/prune is not the right repair for that K setting.
+
+Purpose:
+
+- distinguish scientifically valid visible-only submode consolidation from
+  label-informed post-hoc relabeling.
+
 Acceptance:
 
 - accepted result survives seed/fold changes;
@@ -382,6 +495,12 @@ Acceptance:
 - observational aliases are reported as quotient classes, not forced labels;
 - S3D.1 passes before S3C replay is described as assignment-structure
   dependent;
+- S3D.2 passes before S3C replay is described as feature-assignment alignment
+  dependent;
+- S3D.3 passes before S3C replay is described as context-split robust;
+- S3D.4 passes before Stage 3 recovery is described as K-robust;
+- S3D.4b passes before overcomplete subclusters are described as recoverable
+  mechanism families;
 - failures identify observability, optimization, or protocol limits.
 
 ### Stage 3E: Scale And External Validation
@@ -452,6 +571,7 @@ outputs/PHYC_STAGE3_discovery/
   visible_features.npy
   sampled_visible_features.npy
   forbidden_feature_audit.json
+  operation_context_public_audit.json
   split_manifest.json
   probe_schedule_manifest.json
   observability_ceiling.json
@@ -470,6 +590,20 @@ outputs/PHYC_STAGE3_discovery/
   assignment_shuffle_metrics.json
   shuffled_assignment_metrics_summary.json
   shuffle_runs.json
+  feature_scramble_metrics.json
+  scrambled_feature_metrics_summary.json
+  feature_scramble_runs.json
+  context_shuffle_metrics.json
+  context_shuffled_metrics_summary.json
+  context_shuffle_runs.json
+  k_stress_plan.json
+  k_stress_results.json
+  k_stress_summary.json
+  learned_assignments_by_k.npz
+  merge_prune_plan.json
+  merge_map.json
+  postmerge_metrics.json
+  postmerge_assignments.npy
   evaluator_only_label_metrics.json
   quotient_metrics.json
   controls.json

@@ -31,6 +31,7 @@ DEFAULT_FINAL_TEMPERATURE = 0.75
 DEFAULT_COMPLEXITY_PENALTY = 0.01
 DEFAULT_MAX_CV_FOLDS = 5
 DEFAULT_CONTEXT_BALANCE_PENALTY = 100_000.0
+DEFAULT_OPERATION_CONTEXT_WEIGHT = 2.0
 MIN_COMPONENT_MASS = 1.0e-8
 CONTEXT_DEPENDENT_MECHANISM_IDS = ("M13",)
 
@@ -48,6 +49,7 @@ def run_stage3b1_first_discovery_model(
     complexity_penalty: float = DEFAULT_COMPLEXITY_PENALTY,
     max_cv_folds: int | None = DEFAULT_MAX_CV_FOLDS,
     context_balance_penalty: float = DEFAULT_CONTEXT_BALANCE_PENALTY,
+    operation_context_weight: float = DEFAULT_OPERATION_CONTEXT_WEIGHT,
 ) -> dict[str, object]:
     """Train the first visible-only Stage 3 discovery model.
 
@@ -67,6 +69,12 @@ def run_stage3b1_first_discovery_model(
 
     x_raw, feature_names, feature_matrix = load_stage3a_frozen_visible_features(s3a)
     x, standardization = _standardize_visible_features_with_values(x_raw)
+    x, feature_weighting = _apply_visible_feature_weights(
+        x,
+        feature_names=feature_names,
+        operation_context_weight=float(operation_context_weight),
+    )
+    standardization["feature_weight"] = feature_weighting["feature_weights"]
     alias = dict(s3a5_metrics.get("oracle_alias_classes", {})) if isinstance(s3a5_metrics.get("oracle_alias_classes", {}), dict) else {}
     label_to_quotient = {str(k): str(v) for k, v in dict(alias.get("label_to_quotient", {})).items()}
     mechanism_scope = dict(s3a_metrics.get("mechanism_scope", {})) if isinstance(s3a_metrics.get("mechanism_scope", {}), dict) else {}
@@ -217,9 +225,11 @@ def run_stage3b1_first_discovery_model(
             "complexity_penalty": float(complexity_penalty),
             "max_cv_folds": None if max_cv_folds is None else int(max_cv_folds),
             "context_balance_penalty": float(context_balance_penalty),
+            "operation_context_weight": float(operation_context_weight),
         },
         "visible_feature_matrix": feature_matrix,
         "visible_feature_standardization": _standardization_summary(standardization),
+        "visible_feature_weighting": _feature_weighting_summary(feature_weighting, feature_names),
         "feature_schema_match_audit": feature_match,
         "k_selection_protocol": {
             "schema": "scope_static_stage3b1_k_selection_protocol_v1",
@@ -289,8 +299,12 @@ def learned_prototypes_artifact(
     means = np.asarray(model["means"], dtype=np.float64)
     variances = np.asarray(model["variances"], dtype=np.float64)
     weights = np.asarray(model["weights"], dtype=np.float64)
-    raw_mean = means * standardization["scale"][None, :] + standardization["mean"][None, :]
-    raw_variance = variances * standardization["scale"][None, :] * standardization["scale"][None, :]
+    feature_weight = np.asarray(standardization.get("feature_weight", np.ones(means.shape[1], dtype=np.float64)), dtype=np.float64)
+    feature_weight = np.where(np.abs(feature_weight) > 1.0e-12, feature_weight, 1.0)
+    unweighted_means = means / feature_weight[None, :]
+    unweighted_variances = variances / (feature_weight[None, :] * feature_weight[None, :])
+    raw_mean = unweighted_means * standardization["scale"][None, :] + standardization["mean"][None, :]
+    raw_variance = unweighted_variances * standardization["scale"][None, :] * standardization["scale"][None, :]
     prototypes = []
     for idx in range(means.shape[0]):
         prototypes.append(
@@ -1004,12 +1018,75 @@ def _standardize_visible_features_with_values(x: np.ndarray) -> tuple[np.ndarray
     return z, {"mean": mean, "scale": scale}
 
 
+def _apply_visible_feature_weights(
+    x: np.ndarray,
+    *,
+    feature_names: list[str],
+    operation_context_weight: float,
+) -> tuple[np.ndarray, dict[str, np.ndarray | float | int]]:
+    weights = _visible_feature_weight_vector(
+        feature_names,
+        operation_context_weight=float(operation_context_weight),
+    )
+    weighted = np.asarray(x, dtype=np.float64) * weights[None, :] if x.size else np.asarray(x, dtype=np.float64)
+    return weighted, {
+        "feature_weights": weights,
+        "operation_context_weight": float(operation_context_weight),
+        "operation_context_feature_count": int(np.sum(_operation_context_feature_mask(feature_names))),
+    }
+
+
+def _visible_feature_weight_vector(
+    feature_names: list[str],
+    *,
+    operation_context_weight: float,
+) -> np.ndarray:
+    weights = np.ones(len(feature_names), dtype=np.float64)
+    mask = _operation_context_feature_mask(feature_names)
+    weights[mask] = float(operation_context_weight)
+    return weights
+
+
+def _operation_context_feature_mask(feature_names: list[str]) -> np.ndarray:
+    return np.asarray(
+        [
+            str(name).startswith("visible_metadata__instruction_")
+            or str(name).startswith("visible_metadata__operation_")
+            for name in feature_names
+        ],
+        dtype=bool,
+    )
+
+
 def _standardization_summary(standardization: dict[str, np.ndarray]) -> dict[str, object]:
+    weights = np.asarray(standardization.get("feature_weight", np.ones_like(standardization["mean"])), dtype=np.float64)
     return {
         "schema": "scope_static_stage3b1_visible_feature_standardization_v1",
-        "method": "feature-wise z-score over visible instances",
+        "method": "feature-wise z-score over visible instances, followed by declared visible-feature group weights",
         "feature_count": int(standardization["mean"].shape[0]),
         "zero_scale_replaced_with_one": True,
+        "weighted_feature_count": int(np.sum(np.abs(weights - 1.0) > 1.0e-12)),
+    }
+
+
+def _feature_weighting_summary(weighting: dict[str, np.ndarray | float | int], feature_names: list[str]) -> dict[str, object]:
+    weights = np.asarray(weighting.get("feature_weights", np.ones(len(feature_names), dtype=np.float64)), dtype=np.float64)
+    weighted = [
+        {
+            "feature": str(feature_names[idx]),
+            "weight": float(weights[idx]),
+        }
+        for idx in range(len(feature_names))
+        if abs(float(weights[idx]) - 1.0) > 1.0e-12
+    ]
+    return {
+        "schema": "scope_static_stage3b1_visible_feature_weighting_v1",
+        "uses_mechanism_labels": False,
+        "uses_visible_operation_context": True,
+        "operation_context_weight": float(weighting.get("operation_context_weight", 1.0)),
+        "operation_context_feature_count": int(weighting.get("operation_context_feature_count", 0)),
+        "weighted_feature_count": int(len(weighted)),
+        "weighted_features": weighted,
     }
 
 
@@ -1137,6 +1214,7 @@ def _write_outputs(
         "acceptance_audit.json": result["acceptance_audit"],
         "feature_schema_match_audit.json": result["feature_schema_match_audit"],
         "visible_feature_matrix.json": result["visible_feature_matrix"],
+        "visible_feature_weighting.json": result["visible_feature_weighting"],
     }
     for name, payload in artifacts.items():
         (output / name).write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")

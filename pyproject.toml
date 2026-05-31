@@ -29,6 +29,10 @@ scope-stage3b0-baselines = "scope_static.experiments.stage3.baselines:main"
 scope-stage3b1-discovery = "scope_static.experiments.stage3.discovery_model:main"
 scope-stage3c-generator = "scope_static.experiments.stage3.generator_learning:main"
 scope-stage3d1-assignment-shuffle = "scope_static.experiments.stage3.assignment_shuffle_audit:main"
+scope-stage3d2-feature-scramble = "scope_static.experiments.stage3.feature_scramble_audit:main"
+scope-stage3d3-context-shuffle = "scope_static.experiments.stage3.context_shuffle_audit:main"
+scope-stage3d4-k-stress = "scope_static.experiments.stage3.k_stress_audit:main"
+scope-stage3d4b-overcomplete-merge-prune = "scope_static.experiments.stage3.overcomplete_merge_prune_audit:main"
 scope-teacher-physicality-audit = "scope_static.experiments.qec_noise_catalog.teacher_physicality_audit:main"
 
 [tool.setuptools]

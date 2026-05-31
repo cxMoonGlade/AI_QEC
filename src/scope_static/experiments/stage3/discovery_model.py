@@ -14,6 +14,7 @@ from scope_static.mechanism_discovery.discovery_model import (
     DEFAULT_CONTEXT_BALANCE_PENALTY,
     DEFAULT_MAX_CV_FOLDS,
     DEFAULT_MAX_ITER,
+    DEFAULT_OPERATION_CONTEXT_WEIGHT,
     DEFAULT_OUTPUT_DIR,
     DEFAULT_SEED,
     run_stage3b1_first_discovery_model,
@@ -29,6 +30,7 @@ def run_stage3b1_discovery_model_from_config(
     teacher_dir: str | Path | None = None,
     seed: int | None = None,
     context_balance_penalty: float | None = None,
+    operation_context_weight: float | None = None,
 ) -> dict[str, object]:
     cfg = _load_config(config_path)
     s3a = Path(stage3a_dir) if stage3a_dir is not None else Path(str(cfg.get("stage3a_dir", DEFAULT_STAGE3A_DIR)))
@@ -46,6 +48,9 @@ def run_stage3b1_discovery_model_from_config(
         complexity_penalty=float(cfg.get("complexity_penalty", DEFAULT_COMPLEXITY_PENALTY)),
         max_cv_folds=None if cfg.get("max_cv_folds") is None else int(cfg.get("max_cv_folds", DEFAULT_MAX_CV_FOLDS)),
         context_balance_penalty=float(context_balance_penalty if context_balance_penalty is not None else cfg.get("context_balance_penalty", DEFAULT_CONTEXT_BALANCE_PENALTY)),
+        operation_context_weight=float(
+            operation_context_weight if operation_context_weight is not None else cfg.get("operation_context_weight", DEFAULT_OPERATION_CONTEXT_WEIGHT)
+        ),
     )
     summary = dict(result.get("learned_assignment_summary", {}))
     print(
@@ -67,6 +72,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--seed", type=int)
     parser.add_argument("--context-balance-penalty", type=float)
+    parser.add_argument("--operation-context-weight", type=float)
     args = parser.parse_args(argv)
     run_stage3b1_discovery_model_from_config(
         config_path=args.config,
@@ -76,6 +82,7 @@ def main(argv: list[str] | None = None) -> None:
         output_dir=args.output_dir,
         seed=args.seed,
         context_balance_penalty=args.context_balance_penalty,
+        operation_context_weight=args.operation_context_weight,
     )
 
 

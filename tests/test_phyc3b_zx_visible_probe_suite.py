@@ -34,6 +34,8 @@ def test_phyc3b_feature_schema_contains_raw_observations_and_no_forbidden_featur
     assert "raw__two__prep_00__r_1__meas_ZZ__P00" in names
     assert "raw__two__prep_00__r_1__meas_ZZ__P11" in names
     assert "derived__computational_subspace_survival_proxy" in names
+    assert "visible_metadata__instruction_rzz" in names
+    assert "visible_metadata__operation_id" not in names
     assert not any(token in name.lower() for token in forbidden for name in names)
 
 

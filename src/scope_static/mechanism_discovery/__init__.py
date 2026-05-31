@@ -41,6 +41,22 @@ from .assignment_shuffle_audit import (
     DEFAULT_OUTPUT_DIR as DEFAULT_STAGE3D1_OUTPUT_DIR,
     run_stage3d1_assignment_shuffle_audit,
 )
+from .feature_scramble_audit import (
+    DEFAULT_OUTPUT_DIR as DEFAULT_STAGE3D2_OUTPUT_DIR,
+    run_stage3d2_feature_scramble_audit,
+)
+from .context_shuffle_audit import (
+    DEFAULT_OUTPUT_DIR as DEFAULT_STAGE3D3_OUTPUT_DIR,
+    run_stage3d3_context_shuffle_audit,
+)
+from .k_stress_audit import (
+    DEFAULT_OUTPUT_DIR as DEFAULT_STAGE3D4_OUTPUT_DIR,
+    run_stage3d4_k_stress_audit,
+)
+from .overcomplete_merge_prune_audit import (
+    DEFAULT_OUTPUT_DIR as DEFAULT_STAGE3D4B_OUTPUT_DIR,
+    run_stage3d4b_overcomplete_merge_prune_audit,
+)
 
 __all__ = [
     "DEFAULT_STAGE3A_OUTPUT_DIR",
@@ -49,6 +65,10 @@ __all__ = [
     "DEFAULT_STAGE3B1_OUTPUT_DIR",
     "DEFAULT_STAGE3C_OUTPUT_DIR",
     "DEFAULT_STAGE3D1_OUTPUT_DIR",
+    "DEFAULT_STAGE3D2_OUTPUT_DIR",
+    "DEFAULT_STAGE3D3_OUTPUT_DIR",
+    "DEFAULT_STAGE3D4_OUTPUT_DIR",
+    "DEFAULT_STAGE3D4B_OUTPUT_DIR",
     "PRIMARY_GENERATION_LIKELIHOOD_METRIC",
     "SECONDARY_CONTINUOUS_DENSITY_DIAGNOSTIC",
     "Stage3EvaluatorLabels",
@@ -66,4 +86,8 @@ __all__ = [
     "run_stage3b1_first_discovery_model",
     "run_stage3c_prototype_generator_learning",
     "run_stage3d1_assignment_shuffle_audit",
+    "run_stage3d2_feature_scramble_audit",
+    "run_stage3d3_context_shuffle_audit",
+    "run_stage3d4_k_stress_audit",
+    "run_stage3d4b_overcomplete_merge_prune_audit",
 ]

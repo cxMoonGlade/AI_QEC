@@ -99,6 +99,36 @@ def toolbox_manifest() -> dict[str, object]:
                 "role": "Train the Stage 3B.1 visible-only prototype-mixture discovery model.",
                 "module": "scope_static.experiments.stage3.discovery_model",
             },
+            {
+                "name": "scope-stage3c-generator",
+                "role": "Fit and score the Stage 3C heldout visible generator.",
+                "module": "scope_static.experiments.stage3.generator_learning",
+            },
+            {
+                "name": "scope-stage3d1-assignment-shuffle",
+                "role": "Run the Stage 3D.1 assignment-shuffle generator audit.",
+                "module": "scope_static.experiments.stage3.assignment_shuffle_audit",
+            },
+            {
+                "name": "scope-stage3d2-feature-scramble",
+                "role": "Run the Stage 3D.2 feature-scramble generator audit.",
+                "module": "scope_static.experiments.stage3.feature_scramble_audit",
+            },
+            {
+                "name": "scope-stage3d3-context-shuffle",
+                "role": "Run the Stage 3D.3 context-shuffle protocol audit.",
+                "module": "scope_static.experiments.stage3.context_shuffle_audit",
+            },
+            {
+                "name": "scope-stage3d4-k-stress",
+                "role": "Run the Stage 3D.4 K undercomplete/exact/overcomplete stress audit.",
+                "module": "scope_static.experiments.stage3.k_stress_audit",
+            },
+            {
+                "name": "scope-stage3d4b-overcomplete-merge-prune",
+                "role": "Run the Stage 3D.4b visible-only overcomplete merge/prune audit.",
+                "module": "scope_static.experiments.stage3.overcomplete_merge_prune_audit",
+            },
         ],
         "primary_outputs": [
             "Data-preparation mechanism records, probe schedules, sampled observations, and sampling audits",
@@ -108,6 +138,8 @@ def toolbox_manifest() -> dict[str, object]:
             "Stage 3A.5 pairwise visible distances, oracle alias classes, exact-label ceiling, and quotient-label ceiling",
             "Stage 3B.0 non-learned visible-only baseline assignments, controls, evaluator-only metrics, and model-selection audit",
             "Stage 3B.1 learned assignment matrix, visible prototypes, covariance parameters, heldout visible-generation metrics, and label-leakage audit",
+            "Stage 3C heldout visible-generation metrics against predicted assignments, oracle comparators, global-null, and mean-only baselines",
+            "Stage 3D assignment-shuffle, feature-scramble, context-shuffle, K-stress, and overcomplete merge/prune robustness audits",
         ],
     }
 
