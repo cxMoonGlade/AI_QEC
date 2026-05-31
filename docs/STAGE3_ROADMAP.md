@@ -62,6 +62,10 @@ Stage 3 starts from the accepted learner visible surface:
 M13 is not a single-context mechanism-recovery target. It is a
 context-dependent latent-drift recovery target. Single-context failure is not a
 Stage 3 failure by itself; multi-context recovery is the intended test.
+When an overcomplete discovery model splits M13 into pure context/drift
+submodes, exact one-cluster label recall may be low even though the mechanism
+family is not confused with other mechanisms. Reports must distinguish exact
+label recall from evaluator-only M13 pure-submode recall.
 
 M14 is the paired operation-dependent control target. Its contract separates
 the visible operation axis from the error-generator axis: the first Stage 3
@@ -265,6 +269,7 @@ Artifacts:
 - `label_permutation_audit.json`;
 - `model_selection_audit.json`;
 - `evaluator_only_label_metrics.json`;
+- `context_dependent_mechanism_diagnostics.json`;
 - `quotient_metrics.json`.
 
 Later candidates:

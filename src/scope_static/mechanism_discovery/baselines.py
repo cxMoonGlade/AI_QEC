@@ -421,17 +421,53 @@ def _cluster_metrics(true_labels: list[str], cluster_labels: list[str], class_na
     predicted = [mapping.get(cluster, "__unmatched__") for cluster in cluster_labels]
     support = {name: 0 for name in class_names}
     correct = {name: 0 for name in class_names}
+    cluster_counts_by_label = {name: {cluster: 0 for cluster in cluster_names} for name in class_names}
     for true, pred in zip(true_labels, predicted):
         if true in support:
             support[true] += 1
             if true == pred:
                 correct[true] += 1
+    for true, cluster in zip(true_labels, cluster_labels):
+        if true in cluster_counts_by_label:
+            cluster_counts_by_label[true][cluster] = int(cluster_counts_by_label[true].get(cluster, 0)) + 1
     recalls = [float(correct[name]) / float(support[name]) if support[name] else 0.0 for name in class_names]
+    min_recall = float(min(recalls)) if recalls else 0.0
+    per_label = {}
+    for name in class_names:
+        label_support = int(support[name])
+        label_correct = int(correct[name])
+        label_recall = float(label_correct) / float(label_support) if label_support else 0.0
+        clusters = [
+            {
+                "cluster": cluster,
+                "count": int(count),
+                "mapped_label": mapping.get(cluster),
+                "credited_after_label_matching": mapping.get(cluster) == name,
+            }
+            for cluster, count in sorted(
+                cluster_counts_by_label[name].items(),
+                key=lambda item: (-int(item[1]), item[0]),
+            )
+            if int(count) > 0
+        ]
+        per_label[name] = {
+            "support": label_support,
+            "correct_after_label_matching": label_correct,
+            "recall_after_label_matching": label_recall,
+            "cluster_count": int(len(clusters)),
+            "clusters": clusters,
+        }
     true_ids = _encode_partition(true_labels)
     cluster_ids = _encode_partition(cluster_labels)
     return {
         "balanced_accuracy_after_label_matching": float(np.mean(recalls)) if recalls else 0.0,
-        "min_recall_after_label_matching": float(min(recalls)) if recalls else 0.0,
+        "min_recall_after_label_matching": min_recall,
+        "min_recall_labels": [
+            name
+            for name, recall in zip(class_names, recalls)
+            if abs(float(recall) - min_recall) <= 1.0e-12
+        ],
+        "per_label_recall_after_label_matching": per_label,
         "adjusted_rand_index": float(adjusted_rand_index(true_ids, cluster_ids)),
         "normalized_mutual_info": float(normalized_mutual_info(true_ids, cluster_ids)),
         "cluster_to_label_match": mapping,

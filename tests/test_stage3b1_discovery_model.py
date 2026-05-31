@@ -12,6 +12,7 @@ from scope_static.mechanism_discovery.observability_ceiling import run_stage3a5_
 from scope_static.mechanism_discovery.discovery_model import (
     _context_balanced_hard_assignments,
     _fit_context_balanced_prototype_mixture,
+    context_dependent_mechanism_diagnostics,
     run_stage3b1_first_discovery_model,
 )
 
@@ -40,6 +41,7 @@ def test_stage3b1_trains_visible_only_prototype_mixture_and_reports_quotient_met
     assert result["assignment_hardening_audit"]["uses_mechanism_labels_in_hardening"] is False
     assert result["assignment_hardening_audit"]["row_stochastic"] is True
     assert result["label_permutation_audit"]["cluster_label_matching_used_only_for_reporting"] is True
+    assert result["context_dependent_mechanism_diagnostics"]["used_for_fit"] is False
     assert result["learned_assignment_summary"]["row_stochastic"] is True
     assert result["learned_prototypes"]["prototype_count"] == result["learned_assignment_summary"]["selected_k"]
     assert result["acceptance_audit"]["checks"]["selected_model_chosen_by_visible_validation_objective"] is True
@@ -65,6 +67,7 @@ def test_stage3b1_trains_visible_only_prototype_mixture_and_reports_quotient_met
         "label_permutation_audit.json",
         "model_selection_audit.json",
         "evaluator_only_label_metrics.json",
+        "context_dependent_mechanism_diagnostics.json",
         "quotient_metrics.json",
         "acceptance_audit.json",
         "feature_schema_match_audit.json",
@@ -161,6 +164,33 @@ def test_stage3b1_context_balanced_candidate_tracks_one_instance_per_context() -
         assert sorted(local.tolist()) == [0, 1]
 
 
+def test_stage3b1_m13_drift_diagnostic_distinguishes_pure_submode_split_from_confusion() -> None:
+    records = [
+        _record("M13", "M13", 0, epsilon=0.023),
+        _record("M13", "M13", 1, epsilon=0.024),
+        _record("M13", "M13", 2, epsilon=0.025),
+        _record("M0", "M0", 0),
+        _record("M0", "M0", 1),
+    ]
+    hard = np.asarray([1, 2, 2, 0, 0], dtype=np.int64)
+
+    diagnostic = context_dependent_mechanism_diagnostics(
+        hard,
+        records=records,
+        cluster_to_label_match={"C000": "M0", "C001": "M13"},
+    )
+
+    m13 = diagnostic["diagnostics"]["M13"]
+    assert diagnostic["evaluator_only"] is True
+    assert diagnostic["used_for_fit"] is False
+    assert m13["exact_label_recall_after_one_cluster_matching"] == 1.0 / 3.0
+    assert m13["pure_context_submode_recall"] == 1.0
+    assert m13["family_recovered_as_pure_submodes"] is True
+    assert m13["interpretation"] == "split_into_pure_context_submodes_not_cross_mechanism_confusion"
+    assert m13["epsilon_min"] == 0.023
+    assert m13["epsilon_max"] == 0.025
+
+
 def _prepare_artifacts(tmp_path: Path, label_specs: list[tuple[str, str]]) -> tuple[Path, Path, Path]:
     teacher = tmp_path / "S2D_PHYC1_teacher"
     teacher.mkdir()
@@ -176,14 +206,14 @@ def _prepare_artifacts(tmp_path: Path, label_specs: list[tuple[str, str]]) -> tu
     return teacher, s3a, s3a5
 
 
-def _record(label: str, mechanism_id: str, group: int) -> dict[str, object]:
+def _record(label: str, mechanism_id: str, group: int, *, epsilon: float | None = None) -> dict[str, object]:
     two_qubit = mechanism_id in {"M8", "M9", "M10", "M12", "M21", "M22", "M23", "M28", "M29", "M30", "M31", "M32", "M33"}
     return {
         "oracle_label": label,
         "mechanism_id": mechanism_id,
         "name": MECHANISM_NAMES[mechanism_id],
         "num_qubits": 2 if two_qubit else 1,
-        "parameters": {},
+        "parameters": {} if epsilon is None else {"epsilon": float(epsilon)},
         "instruction": "rzz" if two_qubit else "id",
         "qubits": [0, 1] if two_qubit else [0],
         "circuit_id": int(group),

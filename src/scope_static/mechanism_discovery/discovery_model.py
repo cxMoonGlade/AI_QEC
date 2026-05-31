@@ -32,6 +32,7 @@ DEFAULT_COMPLEXITY_PENALTY = 0.01
 DEFAULT_MAX_CV_FOLDS = 5
 DEFAULT_CONTEXT_BALANCE_PENALTY = 100_000.0
 MIN_COMPONENT_MASS = 1.0e-8
+CONTEXT_DEPENDENT_MECHANISM_IDS = ("M13",)
 
 
 def run_stage3b1_first_discovery_model(
@@ -127,6 +128,11 @@ def run_stage3b1_first_discovery_model(
         quotient_labels=quotient_labels,
         quotient_class_names=quotient_class_names,
     )
+    context_dependent = context_dependent_mechanism_diagnostics(
+        hard_assignments,
+        records=evaluator.records,
+        cluster_to_label_match=dict(evaluator_metrics["exact_label_metrics"].get("cluster_to_label_match", {})),
+    )
     learned_summary = learned_assignment_summary(
         selected=selected,
         responsibilities=responsibilities,
@@ -163,6 +169,7 @@ def run_stage3b1_first_discovery_model(
         "schema": "scope_static_stage3b1_evaluator_only_label_metrics_v1",
         "selected_model_exact_metrics": evaluator_metrics["exact_label_metrics"],
         "selected_model_quotient_metrics": evaluator_metrics["quotient_label_metrics"],
+        "context_dependent_mechanism_diagnostics": context_dependent,
         "active_cluster_count": evaluator_metrics["active_cluster_count"],
         "assignment_entropy": evaluator_metrics["assignment_entropy"],
     }
@@ -240,6 +247,7 @@ def run_stage3b1_first_discovery_model(
         "label_permutation_audit": label_permutation,
         "model_selection_audit": model_selection,
         "evaluator_only_label_metrics": evaluator_only,
+        "context_dependent_mechanism_diagnostics": context_dependent,
         "quotient_metrics": quotient_metrics,
         "acceptance_audit": acceptance,
         "decision": "stage3b1_first_discovery_model_completed" if acceptance["passed"] else "stage3b1_first_discovery_model_failed",
@@ -384,6 +392,132 @@ def label_permutation_audit(evaluator_metrics: dict[str, object]) -> dict[str, o
         "quotient_cluster_to_label_match": quotient.get("cluster_to_label_match", {}),
         "label_permutation_handled": True,
     }
+
+
+def context_dependent_mechanism_diagnostics(
+    hard_assignments: np.ndarray,
+    *,
+    records: list[dict[str, object]],
+    cluster_to_label_match: dict[str, object],
+) -> dict[str, object]:
+    """Evaluator-only split-vs-confusion report for declared drift mechanisms.
+
+    Exact label matching permits only one cluster to be credited for a label.
+    That is the right strict metric, but it can understate a drift-family result
+    when the learner splits one context-dependent mechanism into pure submodes.
+    """
+
+    labels = [str(record.get("oracle_label", record.get("mechanism_id", ""))) for record in records]
+    clusters = [f"C{int(value):03d}" for value in np.asarray(hard_assignments, dtype=np.int64).tolist()]
+    cluster_totals: dict[str, int] = {}
+    for cluster in clusters:
+        cluster_totals[cluster] = cluster_totals.get(cluster, 0) + 1
+    diagnostics = {}
+    for mechanism_id in CONTEXT_DEPENDENT_MECHANISM_IDS:
+        indices = [
+            idx
+            for idx, record in enumerate(records)
+            if str(record.get("mechanism_id", record.get("oracle_label", ""))) == mechanism_id
+            or str(record.get("oracle_label", "")) == mechanism_id
+        ]
+        if not indices:
+            diagnostics[mechanism_id] = {
+                "present": False,
+                "schema": "scope_static_stage3b1_context_dependent_mechanism_v1",
+            }
+            continue
+        target_label = mechanism_id if mechanism_id in set(labels) else labels[indices[0]]
+        cluster_rows = []
+        matched_count = 0
+        pure_count = 0
+        mixed_count = 0
+        for cluster in sorted({clusters[idx] for idx in indices}):
+            local_indices = [idx for idx in indices if clusters[idx] == cluster]
+            mechanism_count = len(local_indices)
+            total_count = int(cluster_totals.get(cluster, 0))
+            mapped_label = cluster_to_label_match.get(cluster)
+            purity = float(mechanism_count) / float(total_count) if total_count else 0.0
+            epsilons = _finite_parameter_values([records[idx] for idx in local_indices], "epsilon")
+            circuit_ids = sorted(
+                {
+                    int(records[idx]["circuit_id"])
+                    for idx in local_indices
+                    if records[idx].get("circuit_id") is not None
+                }
+            )
+            if mapped_label == target_label:
+                matched_count += mechanism_count
+            if total_count == mechanism_count:
+                pure_count += mechanism_count
+            else:
+                mixed_count += mechanism_count
+            cluster_rows.append(
+                {
+                    "cluster": cluster,
+                    "mechanism_count": int(mechanism_count),
+                    "cluster_total_count": int(total_count),
+                    "purity": purity,
+                    "mapped_label": None if mapped_label is None else str(mapped_label),
+                    "credited_by_exact_label_matching": mapped_label == target_label,
+                    "pure_context_submode": total_count == mechanism_count,
+                    "epsilon_min": None if not epsilons else float(min(epsilons)),
+                    "epsilon_max": None if not epsilons else float(max(epsilons)),
+                    "circuit_ids": circuit_ids,
+                }
+            )
+        support = int(len(indices))
+        exact_recall = float(matched_count) / float(support) if support else 0.0
+        pure_submode_recall = float(pure_count) / float(support) if support else 0.0
+        epsilon_values = _finite_parameter_values([records[idx] for idx in indices], "epsilon")
+        if pure_submode_recall >= 1.0 - 1.0e-12 and exact_recall < 1.0:
+            interpretation = "split_into_pure_context_submodes_not_cross_mechanism_confusion"
+        elif mixed_count > 0:
+            interpretation = "mixed_with_other_mechanisms"
+        else:
+            interpretation = "single_or_matched_context_family"
+        diagnostics[mechanism_id] = {
+            "schema": "scope_static_stage3b1_context_dependent_mechanism_v1",
+            "present": True,
+            "mechanism_id": mechanism_id,
+            "target_exact_label": target_label,
+            "support": support,
+            "exact_label_matched_count": int(matched_count),
+            "exact_label_recall_after_one_cluster_matching": exact_recall,
+            "pure_context_submode_count": int(sum(1 for row in cluster_rows if bool(row["pure_context_submode"]))),
+            "pure_context_submode_recall": pure_submode_recall,
+            "mixed_cluster_count": int(sum(1 for row in cluster_rows if not bool(row["pure_context_submode"]))),
+            "mixed_cluster_row_count": int(mixed_count),
+            "assigned_cluster_count": int(len(cluster_rows)),
+            "family_recovered_as_pure_submodes": bool(pure_submode_recall >= 1.0 - 1.0e-12 and mixed_count == 0),
+            "epsilon_min": None if not epsilon_values else float(min(epsilon_values)),
+            "epsilon_max": None if not epsilon_values else float(max(epsilon_values)),
+            "epsilon_unique_count": int(len(set(epsilon_values))),
+            "cluster_rows": cluster_rows,
+            "interpretation": interpretation,
+        }
+    return {
+        "schema": "scope_static_stage3b1_context_dependent_mechanism_diagnostics_v1",
+        "evaluator_only": True,
+        "used_for_fit": False,
+        "used_for_model_selection": False,
+        "diagnostics": diagnostics,
+    }
+
+
+def _finite_parameter_values(records: list[dict[str, object]], name: str) -> list[float]:
+    values = []
+    for record in records:
+        parameters = record.get("parameters", {})
+        if not isinstance(parameters, dict) or name not in parameters:
+            continue
+        value = parameters[name]
+        try:
+            number = float(value)
+        except (TypeError, ValueError):
+            continue
+        if np.isfinite(number):
+            values.append(number)
+    return values
 
 
 def cross_validation_protocol(
@@ -998,6 +1132,7 @@ def _write_outputs(
         "label_permutation_audit.json": result["label_permutation_audit"],
         "model_selection_audit.json": result["model_selection_audit"],
         "evaluator_only_label_metrics.json": result["evaluator_only_label_metrics"],
+        "context_dependent_mechanism_diagnostics.json": result["context_dependent_mechanism_diagnostics"],
         "quotient_metrics.json": result["quotient_metrics"],
         "acceptance_audit.json": result["acceptance_audit"],
         "feature_schema_match_audit.json": result["feature_schema_match_audit"],
@@ -1023,6 +1158,16 @@ def format_stage3b1_summary(result: dict[str, object]) -> str:
     evaluator = dict(result.get("evaluator_only_label_metrics", {}))
     exact = dict(evaluator.get("selected_model_exact_metrics", {}))
     quotient = dict(evaluator.get("selected_model_quotient_metrics", {}))
+    context_dependent = dict(result.get("context_dependent_mechanism_diagnostics", {}))
+    m13 = dict(dict(context_dependent.get("diagnostics", {})).get("M13", {}))
+    m13_lines = []
+    if bool(m13.get("present", False)):
+        m13_lines = [
+            f"- M13 exact-label matched recall: `{float(m13.get('exact_label_recall_after_one_cluster_matching', 0.0)):.4f}`",
+            f"- M13 pure-submode recall: `{float(m13.get('pure_context_submode_recall', 0.0)):.4f}`",
+            f"- M13 assigned clusters: `{int(m13.get('assigned_cluster_count', 0))}`",
+            f"- M13 interpretation: `{m13.get('interpretation')}`",
+        ]
     return "\n".join(
         [
             "# Stage 3B.1: First Discovery Model",
@@ -1037,6 +1182,7 @@ def format_stage3b1_summary(result: dict[str, object]) -> str:
             f"- Exact-label min recall: `{float(exact.get('min_recall_after_label_matching', 0.0)):.4f}`",
             f"- Exact-label NMI: `{float(exact.get('normalized_mutual_info', 0.0)):.4f}`",
             f"- Quotient-label NMI: `{float(quotient.get('normalized_mutual_info', 0.0)):.4f}`",
+            *m13_lines,
             "",
             "## Claim Boundary",
             "",
