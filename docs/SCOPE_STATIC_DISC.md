@@ -2749,7 +2749,7 @@ partition is explicitly defined as a proxy.
 Run:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.google.static \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.static \
   --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
   --native-gpu \
   --models local,dmle_qec,hard_orbit,soft_feature_orbit,disc_hard,disc_soft \
@@ -2827,7 +2827,7 @@ Did we recover true physical mechanisms?
 Smoke run:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.google.local_mechanism \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.local_mechanism \
   --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
   --native-gpu \
   --sample-id sample_00 \
@@ -2923,7 +2923,7 @@ random low-rank controls
 Small grid run:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.google.gdisc15b_grid \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.gdisc15b_grid \
   --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
   --native-gpu \
   --samples sample_00,sample_01 \
@@ -3011,7 +3011,7 @@ S3E wraps the GDISC15b grid with an explicit external-validation acceptance
 layer:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.google.s3e_external_validation \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.s3e_external_validation \
   --config configs/scope_static/stage3e_google_external_validation.yaml
 ```
 

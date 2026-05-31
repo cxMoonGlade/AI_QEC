@@ -126,14 +126,14 @@ then validates that `sample_00` exists before enumerating leaves.
 The new runner is intentionally separate from `run_static`:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.google.static \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.static \
   --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1
 ```
 
 For a fast real-data smoke:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.google.static \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.static \
   --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
   --train-shots 256 --heldout-shots 256 --max-windows 8 --steps 2 \
   --models hard_orbit \
@@ -153,7 +153,7 @@ heldout model comparison, transfer means, and decision summary. Use `--progress-
 when per-stage JSON progress events are needed for profiling or automation.
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.google.static \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.static \
   --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
   --train-shots 5000 --heldout-shots 2000 --max-windows 32 --steps 50 \
   --models hard_orbit,soft_feature_orbit \
@@ -179,7 +179,7 @@ kernel and the new active-fault Walsh/Fourier spectral kernel, returns the DP
 result, and fails on loss/gradient mismatch.
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.google.static \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.static \
   --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
   --native-gpu \
   --cuda-kernel-variant spectral_shadow \
@@ -191,10 +191,10 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.goo
 ```
 
 Kernel benchmarks are available through
-`scope_static.experiments.google.benchmark_cuda_kernels`; records include CPU/PyTorch,
+`scope_static.experiments.willow_data.benchmark_cuda_kernels`; records include CPU/PyTorch,
 CUDA DP, CUDA spectral, and active-window workload audits. A small
 metric-reproduction gate is available through
-`scope_static.experiments.google.compare_cuda_kernel_variants`.
+`scope_static.experiments.willow_data.compare_cuda_kernel_variants`.
 
 The default leaf is `sample_00/d3_at_q5_5/X/r13` with `decoder_si1000`.
 Observations are loaded as `torch.bool[N, B] = [detection_events |
@@ -303,7 +303,7 @@ parameter reduction.
 Existing result files can be re-summarized without rerunning Google data:
 
 ```bash
-conda run -n aiqec python -m scope_static.experiments.google.summarize_static \
+conda run -n aiqec python -m scope_static.experiments.willow_data.summarize_static \
   outputs/google_static/S1_7_logical_aware_full_clean/google_static_metrics.json \
   --preprocessing-mode fault_graph_heuristic
 ```

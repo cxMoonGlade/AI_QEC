@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
+import re
 import time
 
 import torch
@@ -12,6 +13,7 @@ import torch
 from scope_static.dem.discovery import discovery_parameter_audit, field_discovery_metrics, is_discovery_model
 from scope_static.dem.fault_graph import FaultGraph
 from scope_static.dem.fields import make_field
+from scope_static.google.inventory import DATASET_SURFACE_SET1, google_context_id, normalize_decoder_pathway
 from scope_static.google.set1 import (
     CLAIM_BOUNDARY,
     build_google_fault_graph,
@@ -664,6 +666,11 @@ def _csv(value: str) -> list[str]:
     return [part.strip() for part in str(value).split(",") if part.strip()]
 
 
+def _distance_from_patch_id(patch_id: object) -> int | None:
+    match = re.match(r"d(\d+)_", str(patch_id or ""))
+    return int(match.group(1)) if match else None
+
+
 def _window_config(args: argparse.Namespace) -> dict[str, object]:
     if args.window_plan_mode == "detector_local":
         return {
@@ -1183,11 +1190,25 @@ def _record(
     hard_parameter_count = graph.O
     soft_parameter_count = graph.O * (1 + graph.residual_rank)
     record = {
+        "context_id": google_context_id(
+            dataset_name=DATASET_SURFACE_SET1,
+            sample_id=leaf.sample_id,
+            patch_id=leaf.patch_id,
+            basis=leaf.basis,
+            rounds_label=leaf.rounds_label,
+        ),
+        "dataset_name": DATASET_SURFACE_SET1,
+        "dataset_family": "surface",
         "sample_id": leaf.sample_id,
+        "sample_index": leaf.sample_index,
         "patch_id": leaf.patch_id,
         "basis": leaf.basis,
+        "distance": _distance_from_patch_id(leaf.patch_id),
+        "rounds": leaf.rounds,
         "rounds_label": leaf.rounds_label,
         "dem_source": args.dem_source,
+        "decoder_pathway": normalize_decoder_pathway(DATASET_SURFACE_SET1, args.dem_source),
+        "dem_proxy_label_boundary": "DEM proxy labels only; no true physical mechanism or catalog M labels are available.",
         "preprocessing_mode": orbit_mode,
         "model": model_name,
         "base_model": base_model,

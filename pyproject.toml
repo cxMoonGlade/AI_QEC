@@ -33,8 +33,8 @@ scope-stage3d2-feature-scramble = "scope_static.experiments.stage3.feature_scram
 scope-stage3d3-context-shuffle = "scope_static.experiments.stage3.context_shuffle_audit:main"
 scope-stage3d4-k-stress = "scope_static.experiments.stage3.k_stress_audit:main"
 scope-stage3d4b-overcomplete-merge-prune = "scope_static.experiments.stage3.overcomplete_merge_prune_audit:main"
-scope-stage3e-google = "scope_static.experiments.google.s3e_external_validation:main"
-scope-google-xz-scorecard = "scope_static.experiments.google.xz_scorecard:main"
+scope-stage3e-google = "scope_static.experiments.willow_data.s3e_external_validation:main"
+scope-google-xz-scorecard = "scope_static.experiments.willow_data.xz_scorecard:main"
 scope-teacher-physicality-audit = "scope_static.experiments.qec_noise_catalog.teacher_physicality_audit:main"
 
 [tool.setuptools]

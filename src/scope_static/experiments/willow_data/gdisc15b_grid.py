@@ -4,12 +4,22 @@ import argparse
 from datetime import datetime, timezone
 import json
 from pathlib import Path
+import re
 import statistics
 import time
 
 import numpy as np
 import torch
 
+from scope_static.google.inventory import (
+    DATASET_SURFACE_SET1,
+    extract_dem_proxy_labels,
+    google_context_id,
+    load_context_manifest,
+    load_decoder_manifest,
+    normalize_decoder_pathway,
+    select_context_rows,
+)
 from scope_static.google.set1 import find_google_set1_leaf, normalize_google_set1_root
 
 from . import local_mechanism as run_google_local_mechanism
@@ -41,6 +51,9 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
     for index, context in enumerate(contexts):
         if args.max_contexts is not None and len(completed) >= int(args.max_contexts):
             break
+        if context.get("skip_reason"):
+            skipped.append(context)
+            continue
         split_type = context["heldout_split_type"]
         if split_type != "shot-heldout":
             skipped.append({**context, "skip_reason": "cross_context_transfer_split_not_implemented_in_gdisc15b_grid"})
@@ -52,7 +65,8 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
             skipped.append({**context, "skip_reason": str(exc)})
             continue
         completed.append({**context, "output_root": str(run_output)})
-        flat_records.extend(_flatten_records(result, context, run_output))
+        dem_proxy_labels = _context_dem_proxy_labels(args, context)
+        flat_records.extend(_flatten_records(result, context, run_output, dem_proxy_labels=dem_proxy_labels))
         print(
             "[gdisc15b] "
             f"{len(completed)}/{len(contexts)} {context['sample_id']} {context['patch_id']} "
@@ -73,6 +87,13 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
             ),
         },
         "grid": {
+            "context_manifest": args.context_manifest or None,
+            "decoder_manifest": args.decoder_manifest or None,
+            "dataset_name_filter": args.dataset_name,
+            "dataset_family_filter": args.dataset_family or None,
+            "distance_filter": args.distances or None,
+            "rounds_filter": args.rounds or None,
+            "decoder_pathway_filter": args.decoder_pathway or None,
             "samples": _csv(args.samples),
             "patches": _csv(args.patches),
             "bases": _csv(args.bases),
@@ -106,7 +127,9 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
     return result
 
 
-def _context_specs(args: argparse.Namespace) -> list[dict[str, str]]:
+def _context_specs(args: argparse.Namespace) -> list[dict[str, object]]:
+    if args.context_manifest:
+        return _context_specs_from_manifest(args)
     contexts = []
     root = args.dataset_root
     for split_type in _csv(args.heldout_split_types):
@@ -126,30 +149,116 @@ def _context_specs(args: argparse.Namespace) -> list[dict[str, str]]:
                             continue
                         contexts.append(
                             {
+                                "context_id": google_context_id(
+                                    dataset_name=DATASET_SURFACE_SET1,
+                                    sample_id=sample,
+                                    patch_id=patch,
+                                    basis=basis,
+                                    rounds_label=rounds,
+                                ),
+                                "dataset_name": DATASET_SURFACE_SET1,
+                                "dataset_family": "surface",
                                 "sample_id": sample,
+                                "sample_index": _sample_index(sample),
                                 "patch_id": patch,
                                 "basis": basis,
+                                "distance": _distance_from_patch(patch),
+                                "rounds": _rounds_from_label(rounds),
                                 "rounds_label": rounds,
+                                "dem_source": args.dem_source,
+                                "decoder_pathway": normalize_decoder_pathway(DATASET_SURFACE_SET1, args.dem_source),
                                 "heldout_split_type": split_type,
                             }
                         )
     return contexts
 
 
-def _local_mechanism_args(args: argparse.Namespace, context: dict[str, str], output_root: Path) -> list[str]:
+def _context_specs_from_manifest(args: argparse.Namespace) -> list[dict[str, object]]:
+    rows = load_context_manifest(args.context_manifest)
+    dataset_name = _single_filter(args.dataset_name)
+    dataset_family = _single_filter(args.dataset_family)
+    selected = select_context_rows(
+        rows,
+        dataset_name=dataset_name,
+        dataset_family=dataset_family,
+    )
+    selected = [
+        row
+        for row in selected
+        if _matches_filter(row.get("sample_id"), args.samples)
+        and _matches_filter(row.get("patch_id"), args.patches)
+        and _matches_filter(row.get("basis"), args.bases)
+        and _matches_filter(row.get("rounds_label"), args.rounds_labels)
+        and _matches_int_filter(row.get("distance"), args.distances)
+        and _matches_int_filter(row.get("rounds"), args.rounds)
+    ]
+
+    decoder_manifest = _decoder_manifest_rows(args)
+    decoder_pathway = _single_filter(args.decoder_pathway)
+    contexts: list[dict[str, object]] = []
+    for split_type in _csv(args.heldout_split_types):
+        for row in selected:
+            context = {
+                "context_id": row.get("context_id"),
+                "dataset_name": row.get("dataset_name"),
+                "dataset_family": row.get("dataset_family"),
+                "sample_id": row.get("sample_id"),
+                "sample_index": row.get("sample_index"),
+                "patch_id": row.get("patch_id"),
+                "basis": row.get("basis"),
+                "distance": row.get("distance"),
+                "rounds": row.get("rounds"),
+                "rounds_label": row.get("rounds_label"),
+                "shots": row.get("shots"),
+                "dem_source": args.dem_source,
+                "heldout_split_type": split_type,
+            }
+            if row.get("dataset_name") != DATASET_SURFACE_SET1:
+                contexts.append({**context, "skip_reason": "dataset_not_supported_by_set1_runner"})
+                continue
+            if row.get("sample_id") is None or row.get("patch_id") is None:
+                contexts.append({**context, "skip_reason": "set1_runner_requires_sample_and_patch"})
+                continue
+            if decoder_pathway:
+                pathway = normalize_decoder_pathway(str(row.get("dataset_name")), decoder_pathway)
+                decoder_row = decoder_manifest.get((str(row.get("context_id")), pathway))
+                context["dem_source"] = pathway
+                context["decoder_pathway"] = pathway
+                if decoder_row is None:
+                    contexts.append({**context, "skip_reason": "decoder_pathway_not_in_manifest"})
+                    continue
+                if not decoder_row.get("available_dem") or not decoder_row.get("available_predictions"):
+                    contexts.append(
+                        {
+                            **context,
+                            "skip_reason": "missing_decoder_outputs",
+                            "available_dem": bool(decoder_row.get("available_dem")),
+                            "available_predictions": bool(decoder_row.get("available_predictions")),
+                        }
+                    )
+                    continue
+                context["dem_proxy_labels"] = decoder_row.get("dem_proxy_labels")
+            else:
+                context["decoder_pathway"] = normalize_decoder_pathway(DATASET_SURFACE_SET1, args.dem_source)
+            contexts.append(context)
+    return contexts
+
+
+def _local_mechanism_args(args: argparse.Namespace, context: dict[str, object], output_root: Path) -> list[str]:
+    dem_source = str(context.get("dem_source") or args.dem_source)
     result = [
         "--dataset-root",
         str(args.dataset_root),
         "--sample-id",
-        context["sample_id"],
+        str(context["sample_id"]),
         "--patch-id",
-        context["patch_id"],
+        str(context["patch_id"]),
         "--basis",
-        context["basis"],
+        str(context["basis"]),
         "--rounds-label",
-        context["rounds_label"],
+        str(context["rounds_label"]),
         "--dem-source",
-        args.dem_source,
+        dem_source,
         "--reference-dem-sources",
         args.reference_dem_sources,
         "--orbit-mode",
@@ -224,7 +333,13 @@ def _local_mechanism_args(args: argparse.Namespace, context: dict[str, str], out
     return result
 
 
-def _flatten_records(result: dict[str, object], context: dict[str, str], output_root: Path) -> list[dict[str, object]]:
+def _flatten_records(
+    result: dict[str, object],
+    context: dict[str, object],
+    output_root: Path,
+    *,
+    dem_proxy_labels: dict[str, object] | None = None,
+) -> list[dict[str, object]]:
     records = list(result["GDISC15_real_local_mechanism_discovery"]["records"])
     local = next((record for record in records if record.get("model") == "local_full"), None)
     flat = []
@@ -232,6 +347,8 @@ def _flatten_records(result: dict[str, object], context: dict[str, str], output_
         row = {
             **context,
             "output_root": str(output_root),
+            "decoder_pathway": context.get("decoder_pathway"),
+            "dem_proxy_labels": dem_proxy_labels,
             "model": record.get("model"),
             "parameter_count": record.get("parameter_count"),
             "compression_ratio": record.get("compression_ratio"),
@@ -347,12 +464,102 @@ def _print_summary(result: dict[str, object]) -> None:
     )
 
 
-def _context_id(context: dict[str, str]) -> str:
+def _context_dem_proxy_labels(args: argparse.Namespace, context: dict[str, object]) -> dict[str, object] | None:
+    existing = context.get("dem_proxy_labels")
+    if isinstance(existing, dict):
+        return existing
+    if context.get("dataset_name") not in {None, DATASET_SURFACE_SET1}:
+        return None
+    try:
+        leaf = find_google_set1_leaf(
+            args.dataset_root,
+            sample_id=str(context["sample_id"]),
+            patch_id=str(context["patch_id"]),
+            basis=str(context["basis"]),
+            rounds_label=str(context["rounds_label"]),
+        )
+        pathway = str(context.get("decoder_pathway") or args.dem_source)
+        return extract_dem_proxy_labels(
+            leaf.decoder_dem_path(pathway),
+            dataset_name=DATASET_SURFACE_SET1,
+            context_id=str(context.get("context_id")),
+            pathway_name=normalize_decoder_pathway(DATASET_SURFACE_SET1, pathway),
+        )
+    except Exception as exc:
+        return {
+            "proxy_label_only": True,
+            "available": False,
+            "error": str(exc),
+        }
+
+
+def _context_id(context: dict[str, object]) -> str:
+    if context.get("context_id"):
+        return "__".join([str(context["heldout_split_type"]), str(context["context_id"])])
     return "__".join(str(context[key]) for key in ["heldout_split_type", "sample_id", "patch_id", "basis", "rounds_label"])
 
 
 def _csv(value: str) -> list[str]:
     return [part.strip() for part in str(value).split(",") if part.strip()]
+
+
+def _single_filter(value: str) -> str | None:
+    values = _csv(value)
+    if len(values) != 1:
+        return None
+    text = values[0]
+    return None if text.lower() in {"all", "*", "any"} else text
+
+
+def _matches_filter(value: object, csv_value: str) -> bool:
+    values = _csv(csv_value)
+    if not values or any(item.lower() in {"all", "*", "any"} for item in values):
+        return True
+    return str(value) in set(values)
+
+
+def _matches_int_filter(value: object, csv_value: str) -> bool:
+    values = _csv(csv_value)
+    if not values or any(item.lower() in {"all", "*", "any"} for item in values):
+        return True
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        return False
+    return number in {int(item) for item in values}
+
+
+def _decoder_manifest_rows(args: argparse.Namespace) -> dict[tuple[str, str], dict[str, object]]:
+    if not args.decoder_pathway:
+        return {}
+    path = Path(args.decoder_manifest) if args.decoder_manifest else Path(args.context_manifest).with_name("google_decoder_manifest.jsonl")
+    if not path.is_file():
+        return {}
+    rows = {}
+    for row in load_decoder_manifest(path):
+        rows[(str(row.get("context_id")), str(row.get("pathway_name")))] = row
+    return rows
+
+
+def _sample_index(sample_id: str | None) -> int | None:
+    if sample_id is None:
+        return None
+    match = re.search(r"(\d+)$", str(sample_id))
+    return int(match.group(1)) if match else None
+
+
+def _rounds_from_label(rounds_label: str | None) -> int | None:
+    if rounds_label is None:
+        return None
+    match = re.search(r"(\d+)$", str(rounds_label))
+    return int(match.group(1)) if match else None
+
+
+def _distance_from_patch(patch_id: str | None) -> int | None:
+    if patch_id is None:
+        return None
+    match = re.match(r"d(\d+)_", str(patch_id))
+    return int(match.group(1)) if match else None
 
 
 def _delta(value: object, baseline: object) -> float | None:
@@ -410,10 +617,17 @@ def _jsonable(value):
 def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run GDISC15b Google grid validation.")
     parser.add_argument("--dataset-root", default="/home/cx/Document/google_72Q_surface_code_d3_d5_set1")
+    parser.add_argument("--context-manifest", default="")
+    parser.add_argument("--decoder-manifest", default="")
+    parser.add_argument("--dataset-name", default=DATASET_SURFACE_SET1)
+    parser.add_argument("--dataset-family", default="")
     parser.add_argument("--samples", default="sample_00")
     parser.add_argument("--patches", default="d3_at_q5_5")
     parser.add_argument("--bases", default="X")
+    parser.add_argument("--distances", default="")
+    parser.add_argument("--rounds", default="")
     parser.add_argument("--rounds-labels", default="r13")
+    parser.add_argument("--decoder-pathway", default="")
     parser.add_argument("--heldout-split-types", default="shot-heldout")
     parser.add_argument("--max-contexts", type=int, default=None)
     parser.add_argument("--dem-source", default="decoder_si1000")

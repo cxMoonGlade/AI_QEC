@@ -592,7 +592,7 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
         },
         "GDISC12_multi_context_shared_response": {
             "status": "not_run_by_this_smoke",
-            "recommended_existing_runner": "scope_static.experiments.google.static with cross-context extensions",
+            "recommended_existing_runner": "scope_static.experiments.willow_data.static with cross-context extensions",
             "no_ari": True,
         },
         "prepared_cache_events": cache_events,

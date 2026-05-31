@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 import statistics
 import time
-from typing import Any
+from typing import Any, Iterable
 
 import numpy as np
 import torch
@@ -33,10 +33,17 @@ BASELINE_MODELS = {"dmle_qec", "dmle_qec_upstream", "global_shared_scalar"}
 
 GRID_DEFAULTS: dict[str, Any] = {
     "dataset_root": "/home/cx/Document/google_72Q_surface_code_d3_d5_set1",
+    "context_manifest": "",
+    "decoder_manifest": "",
+    "dataset_name": DATASET_NAME,
+    "dataset_family": "",
     "samples": "sample_00,sample_01,sample_02,sample_03,sample_04",
     "patches": "d3_at_q5_5,d3_at_q7_5,d3_at_q3_5,d5_at_q5_5,d3_at_q5_3,d3_at_q5_7",
     "bases": "X,Z",
+    "distances": "",
+    "rounds": "",
     "rounds_labels": "r13",
+    "decoder_pathway": "",
     "heldout_split_types": "shot-heldout",
     "max_contexts": 12,
     "dem_source": "decoder_si1000",
@@ -83,10 +90,17 @@ SCORECARD_DEFAULTS: dict[str, Any] = {
 
 GRID_FLAGS = {
     "dataset_root": "--dataset-root",
+    "context_manifest": "--context-manifest",
+    "decoder_manifest": "--decoder-manifest",
+    "dataset_name": "--dataset-name",
+    "dataset_family": "--dataset-family",
     "samples": "--samples",
     "patches": "--patches",
     "bases": "--bases",
+    "distances": "--distances",
+    "rounds": "--rounds",
     "rounds_labels": "--rounds-labels",
+    "decoder_pathway": "--decoder-pathway",
     "heldout_split_types": "--heldout-split-types",
     "max_contexts": "--max-contexts",
     "dem_source": "--dem-source",
@@ -188,6 +202,10 @@ def _context_scorecard(flat_records: list[dict[str, object]]) -> list[dict[str, 
     grouped: dict[tuple[object, ...], list[dict[str, object]]] = {}
     for record in flat_records:
         key = (
+            record.get("dataset_name"),
+            record.get("dataset_family"),
+            record.get("context_id"),
+            record.get("decoder_pathway"),
             record.get("heldout_split_type"),
             record.get("sample_id"),
             record.get("patch_id"),
@@ -214,14 +232,19 @@ def _context_scorecard(flat_records: list[dict[str, object]]) -> list[dict[str, 
         best_compressed = _best_record(compressed)
         best_baseline = _best_record(baselines)
         best_random = _best_record(random_controls)
-        basis = str(key[3])
+        basis = str(key[7])
         context = {
-            "heldout_split_type": key[0],
-            "sample_id": key[1],
-            "patch_id": key[2],
+            "dataset_name": key[0],
+            "dataset_family": key[1],
+            "context_id": key[2],
+            "decoder_pathway": key[3],
+            "heldout_split_type": key[4],
+            "sample_id": key[5],
+            "patch_id": key[6],
             "basis": basis,
-            "rounds_label": key[4],
-            "distance": _distance_from_patch(key[2]),
+            "rounds_label": key[8],
+            "distance": record_distance(records, key[6]),
+            "dem_proxy_labels": _first_non_null(record.get("dem_proxy_labels") for record in records),
             "local_full": _compact_record(local),
             "best_compressed": _compact_record(best_compressed),
             "best_baseline": _compact_record(best_baseline),
@@ -289,17 +312,24 @@ def _label_manifest(grid_result: dict[str, object], grid_cfg: dict[str, Any]) ->
     for context in grid_result["grid"]["completed_contexts"]:
         contexts.append(
             {
-                "dataset": DATASET_NAME,
+                "context_id": context.get("context_id"),
+                "dataset": context.get("dataset_name", DATASET_NAME),
+                "dataset_name": context.get("dataset_name", DATASET_NAME),
+                "dataset_family": context.get("dataset_family", "surface"),
                 "dataset_root": str(normalize_google_set1_root(str(grid_cfg["dataset_root"]))),
                 "sample_id": context.get("sample_id"),
+                "sample_index": context.get("sample_index"),
                 "patch_id": context.get("patch_id"),
                 "basis": context.get("basis"),
                 "rounds_label": context.get("rounds_label"),
-                "distance": _distance_from_patch(context.get("patch_id")),
+                "rounds": context.get("rounds"),
+                "distance": context.get("distance", _distance_from_patch(context.get("patch_id"))),
+                "decoder_pathway": context.get("decoder_pathway"),
                 "heldout_split_type": context.get("heldout_split_type"),
                 "output_root": context.get("output_root"),
                 "context_labels": [
-                    "dataset",
+                    "dataset_name",
+                    "dataset_family",
                     "sample_id",
                     "patch_id",
                     "basis",
@@ -504,10 +534,17 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--dataset-root")
+    parser.add_argument("--context-manifest")
+    parser.add_argument("--decoder-manifest")
+    parser.add_argument("--dataset-name")
+    parser.add_argument("--dataset-family")
     parser.add_argument("--samples")
     parser.add_argument("--patches")
     parser.add_argument("--bases")
+    parser.add_argument("--distances")
+    parser.add_argument("--rounds")
     parser.add_argument("--rounds-labels")
+    parser.add_argument("--decoder-pathway")
     parser.add_argument("--heldout-split-types")
     parser.add_argument("--max-contexts", type=int)
     parser.add_argument("--dem-source")
@@ -556,10 +593,17 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
         key: getattr(args, key)
         for key in [
             "dataset_root",
+            "context_manifest",
+            "decoder_manifest",
+            "dataset_name",
+            "dataset_family",
             "samples",
             "patches",
             "bases",
+            "distances",
+            "rounds",
             "rounds_labels",
+            "decoder_pathway",
             "heldout_split_types",
             "max_contexts",
             "dem_source",
@@ -639,6 +683,8 @@ def _mapping(value: object) -> dict[str, Any]:
 
 
 def _context_id(context: dict[str, object]) -> str:
+    if context.get("context_id"):
+        return str(context["context_id"])
     keys = ["heldout_split_type", "sample_id", "patch_id", "basis", "rounds_label"]
     return "__".join(str(context.get(key)) for key in keys)
 
@@ -701,6 +747,20 @@ def _distance_from_patch(patch_id: object) -> int | None:
         return 5
     if text.startswith("d7_"):
         return 7
+    return None
+
+
+def record_distance(records: list[dict[str, object]], patch_id: object) -> int | None:
+    for record in records:
+        if record.get("distance") is not None:
+            return int(record["distance"])
+    return _distance_from_patch(patch_id)
+
+
+def _first_non_null(values: Iterable[object]) -> object | None:
+    for value in values:
+        if value is not None:
+            return value
     return None
 
 

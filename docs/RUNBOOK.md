@@ -113,7 +113,7 @@ active prototype counts, collapse flags, and label-use audits.
 Native GPU path:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.google.static \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.static \
   --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
   --native-gpu
 ```
@@ -121,7 +121,7 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.goo
 Fast smoke:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.google.static \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.static \
   --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
   --native-gpu \
   --train-shots 256 --heldout-shots 256 --max-windows 8 --steps 2 \
@@ -136,7 +136,7 @@ predictive, calibration, transfer, and proxy-label diagnostics only.
 Stage 3E Google external validation facade:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.google.s3e_external_validation \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.s3e_external_validation \
   --config configs/scope_static/stage3e_google_external_validation.yaml
 ```
 
@@ -154,7 +154,7 @@ outputs/google_static/S3E_google_external_validation/GDISC15b_grid/metrics.json
 Google X/Z current-model scorecard:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.google.xz_scorecard \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.xz_scorecard \
   --config configs/scope_static/google_xz_scorecard.yaml
 ```
 
@@ -171,7 +171,7 @@ To include the direct upstream TensorNetwork baseline, first install the
 upstream DMLE-QEC dependencies into `aiqec`, then enable:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.google.xz_scorecard \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.xz_scorecard \
   --config configs/scope_static/google_xz_scorecard.yaml \
   --include-upstream-dmle
 ```

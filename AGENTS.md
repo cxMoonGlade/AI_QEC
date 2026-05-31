@@ -26,8 +26,8 @@ window, Google, or local-mechanism implementation modules directly under
 `src/scope_static/`.
 
 Experiment command wrappers should be grouped by experiment family. Stage 3
-wrappers live under `scope_static.experiments.stage3`; Google Set1 wrappers
-live under `scope_static.experiments.google`; QEC noise catalog/S2D wrappers live
+wrappers live under `scope_static.experiments.stage3`; Willow/Google hardware-data
+wrappers live under `scope_static.experiments.willow_data`; QEC noise catalog/S2D wrappers live
 under `scope_static.experiments.qec_noise_catalog`; Stage 1/Stage 2 DEM wrappers live
 under `scope_static.experiments.static`. Do not add new flat `run_stage3*`,
 `run_google*`, `run_static*`, `run_phyc*`, `run_layer*`, or `run_s2d*` modules
@@ -97,7 +97,7 @@ For S1.6 Google runs, use the native GPU path unless deliberately testing CPU
 behavior:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.google.static \
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.static \
   --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
   --native-gpu
 ```

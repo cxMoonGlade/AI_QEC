@@ -65,7 +65,7 @@ flat modules under `src/scope_static/` or rebuild a broad `physical` package.
 
 ```text
 experiments/static/            DEM and Stage 2 static-discovery commands
-experiments/google/            GPU-only Google commands, CUDA comparisons, S3E, and X/Z scorecards
+experiments/willow_data/       Willow/Google hardware-data commands, CUDA comparisons, S3E, and X/Z scorecards
 experiments/qec_noise_catalog/ catalog teacher, validation, observability commands
 experiments/stage3/            Stage 3A through Stage 3D commands
 ```

@@ -191,7 +191,7 @@ def test_partition_metrics_on_known_partitions():
 
 
 def test_google_runner_native_gpu_requires_visible_cuda(monkeypatch, tmp_path: Path):
-    from scope_static.experiments.google.static import main
+    from scope_static.experiments.willow_data.static import main
 
     root = _write_tiny_dataset(tmp_path)
     monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
@@ -221,7 +221,7 @@ def test_google_runner_native_gpu_requires_visible_cuda(monkeypatch, tmp_path: P
 
 
 def test_google_runner_rejects_cpu_fallback(monkeypatch, tmp_path: Path):
-    from scope_static.experiments.google.static import main
+    from scope_static.experiments.willow_data.static import main
 
     root = _write_tiny_dataset(tmp_path)
     monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
@@ -250,7 +250,7 @@ def test_google_runner_rejects_cpu_fallback(monkeypatch, tmp_path: Path):
 
 
 def test_google_runner_can_evaluate_discovery_on_real_data_path(monkeypatch, tmp_path: Path, capsys):
-    from scope_static.experiments.google.static import main
+    from scope_static.experiments.willow_data.static import main
 
     if not torch.cuda.is_available():
         pytest.skip("Google workflows require CUDA")
@@ -299,7 +299,7 @@ def test_google_runner_can_evaluate_discovery_on_real_data_path(monkeypatch, tmp
 
 
 def test_google_local_mechanism_smoke_uses_proxy_not_true_recovery(monkeypatch, tmp_path: Path):
-    from scope_static.experiments.google.local_mechanism import main
+    from scope_static.experiments.willow_data.local_mechanism import main
 
     if not torch.cuda.is_available():
         pytest.skip("Google workflows require CUDA")
@@ -344,7 +344,7 @@ def test_google_local_mechanism_smoke_uses_proxy_not_true_recovery(monkeypatch, 
 
 
 def test_google_gdisc15b_grid_writes_paired_summary(monkeypatch, tmp_path: Path):
-    from scope_static.experiments.google.gdisc15b_grid import main
+    from scope_static.experiments.willow_data.gdisc15b_grid import main
 
     if not torch.cuda.is_available():
         pytest.skip("Google workflows require CUDA")
@@ -402,7 +402,7 @@ def test_google_gdisc15b_grid_writes_paired_summary(monkeypatch, tmp_path: Path)
 
 
 def test_google_s3e_external_validation_wraps_grid_acceptance(monkeypatch, tmp_path: Path):
-    from scope_static.experiments.google.s3e_external_validation import main
+    from scope_static.experiments.willow_data.s3e_external_validation import main
 
     if not torch.cuda.is_available():
         pytest.skip("Google workflows require CUDA")
@@ -464,7 +464,7 @@ def test_google_s3e_external_validation_wraps_grid_acceptance(monkeypatch, tmp_p
 
 
 def test_google_xz_scorecard_is_gpu_only_and_writes_label_manifest(monkeypatch, tmp_path: Path):
-    from scope_static.experiments.google import xz_scorecard
+    from scope_static.experiments.willow_data import xz_scorecard
 
     def fake_grid_main(argv):
         assert "--native-gpu" in argv
@@ -551,7 +551,7 @@ def test_google_set1_gated_default_leaf_and_tiny_smoke(tmp_path: Path):
     graph, _ = build_google_fault_graph(leaf, dem_source="decoder_si1000", orbit_mode="fault_graph_heuristic")
     assert graph.B == 105
 
-    from scope_static.experiments.google.static import main
+    from scope_static.experiments.willow_data.static import main
 
     result = main(
         [
