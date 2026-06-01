@@ -93,7 +93,7 @@ def run_multi_env_discovery(
         env_ids=teacher.env_ids,
     )
 
-    local_logits_by_train_env, local_record = _fit_local_full_per_env(
+    local_logits_by_train_env, local_record = _fit_per_fault_per_env_baseline(
         plan,
         graph,
         train_env_ids=train_env_ids,
@@ -330,7 +330,7 @@ def _fit_known_orbit_oracle(
     )
 
 
-def _fit_local_full_per_env(
+def _fit_per_fault_per_env_baseline(
     plan: ExperimentPlan,
     graph,
     *,
@@ -359,8 +359,8 @@ def _fit_local_full_per_env(
     )
     record = {
         **DISC12_AUDIT,
-        "model": "local_full_per_fault_per_env",
-        "condition": "local_full_per_fault_per_env",
+        "model": "per_fault_per_env_baseline",
+        "condition": "per_fault_per_env_baseline",
         "shared_assignment": False,
         "parameter_count": int(fitted.parameter_count),
         "env_alpha_train": {
@@ -796,7 +796,7 @@ def _run_contrast_sweep(
             seed_base=140_000 + int(100 * strength),
             env_ids=teacher.env_ids,
         )
-        local_logits, _local_record = _fit_local_full_per_env(
+        local_logits, _local_record = _fit_per_fault_per_env_baseline(
             plan,
             graph,
             train_env_ids=train_env_ids,

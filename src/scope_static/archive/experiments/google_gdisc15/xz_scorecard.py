@@ -17,10 +17,10 @@ from scope_static.google.set1 import DATASET_NAME, normalize_google_set1_root
 
 from . import gdisc15b_grid
 from .gdisc15b_grid import PRIMARY_METRIC, SUMMARY_METRICS
-from .static import _fmt_float, _print_table
+from scope_static.archive.experiments.google_gdisc15.static import _fmt_float, _print_table
 
 
-DEFAULT_CONFIG = Path("configs/scope_static/google_xz_scorecard.yaml")
+DEFAULT_CONFIG = Path("configs/archive/google_gdisc15/google_xz_scorecard.yaml")
 DEFAULT_OUTPUT_DIR = Path("outputs/google_static/google_xz_scorecard")
 
 CLAIM_BOUNDARY = (

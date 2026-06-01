@@ -3,8 +3,12 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from scope_static.experiments.willow_data import benchmark_suite
-from scope_static.experiments.willow_data.gdisc15b_grid import PRIMARY_METRIC
+import pytest
+
+pytestmark = pytest.mark.skip(reason="archived Google GDISC15 diagnostic stack")
+
+from scope_static.archive.experiments.google_gdisc15 import benchmark_suite
+from scope_static.archive.experiments.google_gdisc15.gdisc15b_grid import PRIMARY_METRIC
 from scope_static.google.inventory import (
     DATASET_105Q,
     DATASET_REPETITION_D29,

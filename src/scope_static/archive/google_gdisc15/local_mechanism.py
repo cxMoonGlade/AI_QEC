@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import json
 from pathlib import Path
+import re
 import time
 
 import numpy as np
@@ -31,6 +32,7 @@ from scope_static.google.set1 import (
     load_google_observations,
     load_google_predicted_observables,
 )
+from scope_static.google.inventory import FORBIDDEN_TRUE_LABELS
 from scope_static.identifiability import combined_signature, deterministic_kmeans, structural_signature
 from scope_static.dem.local_mechanism import (
     graph_smooth_features,
@@ -57,8 +59,9 @@ from scope_static.dem.metrics import (
 )
 from scope_static.dem.training import fit_field
 from scope_static.dem.windows import WindowPlan, window_coverage_audit_dict
+from scope_static.numerics import NUMERICAL_ZERO
 
-from .static import (
+from scope_static.archive.experiments.google_gdisc15.static import (
     _fmt_float,
     _prepare_eval_cache,
     _prepare_google_fault_graph,
@@ -73,6 +76,16 @@ from .static import (
     _with_eval_window_metrics,
     _window_config,
     GOOGLE_PRIMARY_METRIC,
+)
+
+
+PROXY_FEATURE_PROFILES = (
+    "fg_only",
+    "fg_support",
+    "fg_boundary",
+    "fg_geometry",
+    "fg_context",
+    "fg_full_proxy",
 )
 
 
@@ -173,7 +186,10 @@ class _FastGoogleEvaluator:
         result["window_evidence_groups"] = evidence_by_group
         if empirical_metrics is None:
             result.update(empirical_detector_rate_metrics(self.graph, model_logits, self.observations))
-            result.update(empirical_local_correlation_metrics(self.graph, model_logits, self.observations))
+            if bool(getattr(self.args, "skip_local_correlation_metrics", False)):
+                result.update({"local_correlation_error": None, "num_local_correlation_pairs": 0})
+            else:
+                result.update(empirical_local_correlation_metrics(self.graph, model_logits, self.observations))
             result.update(logical_flip_calibration_metrics(self.graph, model_logits, self.observations))
         else:
             result.update(empirical_metrics)
@@ -200,14 +216,16 @@ class _FastGoogleEvaluator:
         else:
             detector_mae = torch.zeros((logits_batch.shape[0],), dtype=logits_batch.dtype, device=logits_batch.device)
 
-        pairs = tuple(local_detector_pairs(self.graph))
-        if pairs:
+        include_correlations = not bool(getattr(self.args, "skip_local_correlation_metrics", False))
+        pairs = tuple(local_detector_pairs(self.graph)) if include_correlations else ()
+        if include_correlations and pairs:
             pair_rates = _exact_observation_pair_joint_rates_batch(self.graph, logits_batch, pairs)
             obs = self.observations.to(device=logits_batch.device, dtype=pair_rates.dtype)
             pair_empirical = torch.stack([obs[:, left] * obs[:, right] for left, right in pairs], dim=1).mean(dim=0)
             correlation_error = torch.mean(torch.abs(pair_rates - pair_empirical.unsqueeze(0)), dim=1)
+            correlation_error_cpu: list[float | None] = [float(value) for value in correlation_error.detach().cpu().tolist()]
         else:
-            correlation_error = torch.zeros((logits_batch.shape[0],), dtype=logits_batch.dtype, device=logits_batch.device)
+            correlation_error_cpu = [None] * int(logits_batch.shape[0])
 
         if self.graph.num_observables == 0:
             logical_calibration = torch.zeros((logits_batch.shape[0],), dtype=logits_batch.dtype, device=logits_batch.device)
@@ -225,12 +243,11 @@ class _FastGoogleEvaluator:
             logical_empirical_list = [float(value) for value in logical_empirical.detach().cpu().tolist()]
 
         detector_mae_cpu = detector_mae.detach().cpu().tolist()
-        correlation_error_cpu = correlation_error.detach().cpu().tolist()
         logical_calibration_cpu = logical_calibration.detach().cpu().tolist()
         return [
             {
                 "detector_rate_mae": float(detector_mae_cpu[idx]),
-                "local_correlation_error": float(correlation_error_cpu[idx]),
+                "local_correlation_error": correlation_error_cpu[idx],
                 "num_local_correlation_pairs": len(pairs),
                 "logical_flip_rate_calibration": float(logical_calibration_cpu[idx]),
                 "logical_flip_rate_predicted": logical_predicted[idx],
@@ -505,7 +522,10 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
     )
     timings["prior_reference_eval"] = time.perf_counter() - phase
     phase = time.perf_counter()
-    subsample = _fit_subsample_local_logits(args, graph, train, train_windows, dtype=dtype)
+    if args.candidate_family in {"legacy", "all"}:
+        subsample = _fit_subsample_local_logits(args, graph, train, train_windows, dtype=dtype)
+    else:
+        subsample = {}
     timings["subsample_local_fits"] = time.perf_counter() - phase
     phase = time.perf_counter()
     stability = _local_inverse_stability(graph, local_logits, subsample)
@@ -521,7 +541,28 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
 
     phase = time.perf_counter()
     proxies = proxy_partitions(graph, basis=leaf.basis, rounds=leaf.rounds, dem_source=args.dem_source)
-    candidates = _build_representation_candidates(args, graph, local_logits, subsample)
+    candidates: list[tuple[str, torch.Tensor, str]] = []
+    candidate_audits: dict[str, dict[str, object]] = {}
+    feature_profile_audit: dict[str, object] = {
+        "enabled": False,
+        "profiles": {},
+        "forbidden_label_audit_passed": True,
+        "forbidden_labels": list(FORBIDDEN_TRUE_LABELS),
+    }
+    if args.candidate_family in {"legacy", "all"}:
+        candidates.extend(_build_representation_candidates(args, graph, local_logits, subsample))
+    if args.candidate_family in {"proxy_profiles", "all"}:
+        proxy_candidates, feature_profile_audit = _build_proxy_feature_candidates(args, graph, leaf)
+        candidates.extend(proxy_candidates)
+        for profile_name, audit in feature_profile_audit["profiles"].items():
+            candidate_audits[f"proxy_{profile_name}"] = {
+                "proxy_feature_profile": profile_name,
+                "proxy_feature_device": audit["feature_device"],
+                "proxy_feature_count": audit["feature_count"],
+                "proxy_feature_rank": audit["feature_rank"],
+                "proxy_constant_feature_count": audit["constant_feature_count"],
+                "proxy_missing_feature_count": audit["missing_feature_count"],
+            }
     timings["candidate_feature_construction"] = time.perf_counter() - phase
     g15_records = [local_record, dmle_record]
     if upstream_dmle_record is not None:
@@ -578,6 +619,7 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
             {
                 "candidate": name,
                 "method": method,
+                "feature_device": str(features.device),
                 "cluster_seconds": cluster_seconds,
                 "eval_seconds": eval_seconds_share,
                 "eval_mode": "batched_candidate_logits",
@@ -592,6 +634,7 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
             metrics,
             parameter_count=prototype.active_prototypes,
             extra={
+                **candidate_audits.get(name, {}),
                 "representation": name,
                 "method": method,
                 "active_prototypes": int(prototype.active_prototypes),
@@ -668,9 +711,10 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
             "records": g15_records,
             "candidate_wallclock": candidate_timings,
         },
+        "preprocessing_feature_audit": feature_profile_audit,
         "GDISC12_multi_context_shared_response": {
             "status": "not_run_by_this_smoke",
-            "recommended_existing_runner": "scope_static.experiments.willow_data.static with cross-context extensions",
+            "recommended_existing_runner": "scope_static.archive.experiments.google_gdisc15.static with cross-context extensions",
             "no_ari": True,
         },
         "prepared_cache_events": cache_events,
@@ -689,7 +733,7 @@ def _prepare_fast_evaluator(
     heldout_predicted: torch.Tensor | None,
 ) -> _FastGoogleEvaluator | None:
     _window_caches, batch_cache = eval_cache
-    device = torch.device(args.device)
+    device = torch.device(getattr(args, "device", "cpu"))
     if batch_cache is None or device.type != "cuda" or args.likelihood_backend != "cuda_extension":
         return None
 
@@ -992,6 +1036,8 @@ def _reference_prior_records(
     structured_eval_cache,
     eval_prepared_evaluator,
 ):
+    if bool(getattr(args, "skip_reference_priors", False)):
+        return [], {"skipped": True, "reason": "skip_reference_priors"}
     records = []
     agreements = {}
     base_prior = None
@@ -1092,6 +1138,313 @@ def _build_representation_candidates(args, graph, local_logits: torch.Tensor, su
             features = torch.randn((graph.M, max(1, int(rank))), generator=generator, dtype=torch.float64, device=device)
             candidates.append((f"random_low_rank{rank}_seed{seed}", features, "random_low_rank_control"))
     return candidates
+
+
+def _build_proxy_feature_candidates(args, graph, leaf):
+    profiles = _csv(args.proxy_feature_profiles) or list(PROXY_FEATURE_PROFILES)
+    unknown = [profile for profile in profiles if profile not in PROXY_FEATURE_PROFILES]
+    if unknown:
+        raise ValueError(f"unknown proxy feature profile(s): {','.join(unknown)}")
+    device = torch.device(getattr(args, "device", "cpu"))
+    candidates = []
+    audits: dict[str, object] = {}
+    for profile in profiles:
+        features, feature_names, missing_features = _proxy_feature_matrix(
+            graph,
+            leaf,
+            profile=profile,
+            dem_source=args.dem_source,
+            device=device,
+        )
+        audit = _feature_profile_audit(profile, features, feature_names, missing_features)
+        audits[profile] = audit
+        candidates.append((f"proxy_{profile}", features, "proxy_feature_kmeans"))
+    forbidden_passed = all(bool(audit["forbidden_label_audit"]["passed"]) for audit in audits.values())
+    return candidates, {
+        "enabled": True,
+        "profiles": audits,
+        "forbidden_label_audit_passed": forbidden_passed,
+        "forbidden_labels": list(FORBIDDEN_TRUE_LABELS),
+        "correlation_with_heldout_targets": {
+            "evaluated": False,
+            "reason": "profile construction does not inspect heldout targets; wrapper-level metric correlations are evaluator-only",
+        },
+    }
+
+
+def _proxy_feature_matrix(
+    graph,
+    leaf,
+    *,
+    profile: str,
+    dem_source: str,
+    device: torch.device | str = "cpu",
+) -> tuple[torch.Tensor, list[str], list[str]]:
+    device = torch.device(device)
+    A = graph.A.to(dtype=torch.float64, device=device)
+    detector = A[: graph.num_detectors]
+    logical = A[graph.num_detectors :]
+    detector_weight = detector.sum(dim=0) if detector.numel() else torch.zeros(graph.M, dtype=torch.float64, device=device)
+    logical_weight = logical.sum(dim=0) if logical.numel() else torch.zeros(graph.M, dtype=torch.float64, device=device)
+    total_weight = detector_weight + logical_weight
+    features: list[torch.Tensor] = []
+    names: list[str] = []
+    missing: list[str] = []
+
+    def add(name: str, values: torch.Tensor) -> None:
+        vector = torch.as_tensor(values, dtype=torch.float64, device=device).flatten()
+        if vector.numel() != graph.M:
+            raise ValueError(f"feature {name} has length {vector.numel()}, expected {graph.M}")
+        features.append(torch.nan_to_num(vector, nan=0.0, posinf=0.0, neginf=0.0))
+        names.append(name)
+
+    orbit = graph.orbit_ids.to(dtype=torch.float64, device=device)
+    orbit_ids = graph.orbit_ids.to(dtype=torch.long, device=device)
+    orbit_denom = max(1.0, float(graph.O - 1))
+    orbit_sizes = graph.orbit_sizes.to(dtype=torch.float64, device=device)
+    add("fg_orbit_id", orbit / orbit_denom)
+    add("fg_orbit_size", orbit_sizes[orbit_ids] / max(1.0, float(graph.M)))
+    add("fg_template_id", graph.template_ids.to(dtype=torch.float64, device=device))
+
+    if profile in {"fg_support", "fg_boundary", "fg_geometry", "fg_context", "fg_full_proxy"}:
+        add("support_total_size", total_weight)
+        add("support_detector_size", detector_weight)
+        add("support_logical_size", logical_weight)
+        add("support_detector_fraction", detector_weight / max(1, graph.num_detectors))
+
+    if profile in {"fg_boundary", "fg_geometry", "fg_context", "fg_full_proxy"}:
+        add("logical_touch", (logical_weight > 0).to(dtype=torch.float64))
+        degree_mean, degree_max = _detector_degree_features(detector)
+        add("detector_degree_mean", degree_mean)
+        add("detector_degree_max", degree_max)
+        boundary, bulk, no_detector = _boundary_bulk_features(graph, detector)
+        add("boundary_touch", boundary)
+        add("bulk_only", bulk)
+        add("no_detector_support", no_detector)
+        if graph.detector_coordinates is None:
+            missing.append("boundary_bulk_detector_coordinates")
+
+    if profile in {"fg_geometry", "fg_context", "fg_full_proxy"}:
+        geometry, geometry_names, geometry_missing = _geometry_features(graph, detector, detector_weight)
+        for name, values in zip(geometry_names, geometry, strict=True):
+            add(name, values)
+        missing.extend(geometry_missing)
+
+    if profile in {"fg_context", "fg_full_proxy"}:
+        context = _context_feature_values(leaf)
+        for name, value in context.items():
+            add(f"context_{name}", torch.full((graph.M,), float(value), dtype=torch.float64, device=device))
+
+    if profile == "fg_full_proxy":
+        proxies = _proxy_partition_feature_tensors(graph, leaf, dem_source=dem_source, device=device)
+        for name in ["proxy_fault_graph_community", "proxy_round_layer", "proxy_space_time_region"]:
+            labels = proxies.get(name)
+            if labels is None:
+                missing.append(name)
+                continue
+            add(name, labels)
+
+    matrix = torch.stack(features, dim=1) if features else torch.empty((graph.M, 0), dtype=torch.float64, device=device)
+    return matrix, names, missing
+
+
+def _detector_degree_features(detector: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    device = detector.device
+    if detector.numel() == 0:
+        m = int(detector.shape[1]) if detector.ndim == 2 else 0
+        zeros = torch.zeros((m,), dtype=torch.float64, device=device)
+        return zeros, zeros
+    degree_by_detector = detector.sum(dim=1)
+    support = detector > 0
+    weight = support.to(dtype=torch.float64)
+    counts = weight.sum(dim=0)
+    means = (weight * degree_by_detector.unsqueeze(1)).sum(dim=0) / counts.clamp_min(1.0)
+    filled = torch.where(
+        support,
+        degree_by_detector.unsqueeze(1),
+        torch.full_like(detector, float("-inf")),
+    )
+    maxes = filled.max(dim=0).values
+    maxes = torch.where(counts > 0, maxes, torch.zeros_like(maxes))
+    return means, maxes
+
+
+def _boundary_bulk_features(graph, detector: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    device = detector.device
+    m = graph.M
+    boundary = torch.zeros((m,), dtype=torch.float64, device=device)
+    bulk = torch.zeros((m,), dtype=torch.float64, device=device)
+    no_detector = torch.zeros((m,), dtype=torch.float64, device=device)
+    if graph.detector_coordinates is None or graph.num_detectors <= 0:
+        no_detector[:] = (detector.sum(dim=0) <= 0).to(dtype=torch.float64) if detector.numel() else 1.0
+        return boundary, bulk, no_detector
+    coords = graph.detector_coordinates.to(dtype=torch.float64, device=device)
+    mins = coords.min(dim=0).values
+    maxs = coords.max(dim=0).values
+    axes = range(min(2, coords.shape[1]))
+    boundary_detectors = torch.zeros((graph.num_detectors,), dtype=torch.bool, device=device)
+    for axis in axes:
+        boundary_detectors |= torch.isclose(coords[:, axis], mins[axis]) | torch.isclose(coords[:, axis], maxs[axis])
+    support = detector > 0
+    detector_support = support.any(dim=0)
+    boundary_bool = (support & boundary_detectors.unsqueeze(1)).any(dim=0)
+    no_detector = (~detector_support).to(dtype=torch.float64)
+    boundary = boundary_bool.to(dtype=torch.float64)
+    bulk = (detector_support & ~boundary_bool).to(dtype=torch.float64)
+    return boundary, bulk, no_detector
+
+
+def _geometry_features(graph, detector: torch.Tensor, detector_weight: torch.Tensor) -> tuple[list[torch.Tensor], list[str], list[str]]:
+    if graph.detector_coordinates is None or graph.num_detectors <= 0:
+        return [], [], ["detector_coordinates"]
+    device = detector.device
+    coords = graph.detector_coordinates.to(dtype=torch.float64, device=device)
+    denom = detector_weight.clamp_min(1.0)
+    values: list[torch.Tensor] = []
+    names: list[str] = []
+    for coord_dim in range(coords.shape[1]):
+        coord = coords[:, coord_dim].unsqueeze(1)
+        present = detector > 0
+        mean_coord = (detector * coord).sum(dim=0) / denom
+        max_coord = torch.where(present, coord, torch.full_like(coord, float("-inf"))).max(dim=0).values
+        min_coord = torch.where(present, coord, torch.full_like(coord, float("inf"))).min(dim=0).values
+        span = torch.where(detector_weight > 0, max_coord - min_coord, torch.zeros_like(mean_coord))
+        mean_coord = torch.where(detector_weight > 0, mean_coord, torch.zeros_like(mean_coord))
+        values.extend([mean_coord, span])
+        names.extend([f"geometry_mean_coord_{coord_dim}", f"geometry_span_coord_{coord_dim}"])
+    return values, names, []
+
+
+def _proxy_partition_feature_tensors(
+    graph,
+    leaf,
+    *,
+    dem_source: str,
+    device: torch.device,
+) -> dict[str, torch.Tensor]:
+    del dem_source
+    detector = graph.A[: graph.num_detectors].to(dtype=torch.float64, device=device)
+    labels: dict[str, torch.Tensor] = {
+        "proxy_fault_graph_community": _fault_graph_community_proxy_tensor(graph, device=device),
+        "proxy_round_layer": _round_layer_proxy_tensor(graph, detector, rounds=int(leaf.rounds or 0), device=device),
+        "proxy_space_time_region": _space_time_region_proxy_tensor(graph, detector, device=device),
+    }
+    return labels
+
+
+def _fault_graph_community_proxy_tensor(graph, *, device: torch.device) -> torch.Tensor:
+    structural = structural_signature(graph, device=device)
+    if structural.numel() == 0:
+        return torch.empty((graph.M,), dtype=torch.float64, device=device)
+    support_size = graph.A.to(dtype=torch.float64, device=device).sum(dim=0)
+    features = torch.cat([structural[:, : min(3, structural.shape[1])], support_size.unsqueeze(1)], dim=1)
+    k = max(2, min(8, graph.M))
+    labels = deterministic_kmeans(features, k).labels
+    return labels.to(dtype=torch.float64, device=device)
+
+
+def _round_layer_proxy_tensor(graph, detector: torch.Tensor, *, rounds: int, device: torch.device) -> torch.Tensor:
+    if graph.detector_coordinates is None or graph.detector_coordinates.shape[1] < 3 or graph.num_detectors == 0:
+        return torch.zeros((graph.M,), dtype=torch.float64, device=device)
+    coords = graph.detector_coordinates.to(dtype=torch.float64, device=device)
+    t = coords[:, -1]
+    t_min = t.min()
+    denom = (t.max() - t_min).clamp_min(NUMERICAL_ZERO)
+    bins = max(2, min(4, int(rounds) if int(rounds) > 0 else 4))
+    support = detector > 0
+    counts = support.to(dtype=torch.float64).sum(dim=0)
+    mean_t = (support.to(dtype=torch.float64) * t.unsqueeze(1)).sum(dim=0) / counts.clamp_min(1.0)
+    normalized = ((mean_t - t_min) / denom).clamp(0.0, 1.0 - NUMERICAL_ZERO)
+    layer = 1 + torch.floor(normalized * bins)
+    return torch.where(counts > 0, layer, torch.zeros_like(layer)).to(dtype=torch.float64)
+
+
+def _space_time_region_proxy_tensor(graph, detector: torch.Tensor, *, device: torch.device) -> torch.Tensor:
+    if graph.detector_coordinates is None or graph.num_detectors == 0:
+        return torch.zeros((graph.M,), dtype=torch.float64, device=device)
+    coords = graph.detector_coordinates.to(dtype=torch.float64, device=device)
+    dims = min(3, coords.shape[1])
+    if dims <= 0:
+        return torch.zeros((graph.M,), dtype=torch.float64, device=device)
+    coords = coords[:, :dims]
+    mins = coords.min(dim=0).values
+    spans = (coords.max(dim=0).values - mins).clamp_min(NUMERICAL_ZERO)
+    support = detector > 0
+    counts = support.to(dtype=torch.float64).sum(dim=0)
+    mean_coords = (support.to(dtype=torch.float64).T @ coords) / counts.clamp_min(1.0).unsqueeze(1)
+    bins = torch.floor(((mean_coords - mins) / spans).clamp(0.0, 1.0 - NUMERICAL_ZERO) * 3.0).to(dtype=torch.long)
+    code = torch.zeros((graph.M,), dtype=torch.long, device=device)
+    multiplier = 1
+    for dim in range(dims):
+        code += bins[:, dim] * multiplier
+        multiplier *= 3
+    return torch.where(counts > 0, code.to(dtype=torch.float64), torch.full_like(counts, -1.0))
+
+
+def _context_feature_values(leaf) -> dict[str, float]:
+    distance = _distance_from_patch(leaf.patch_id)
+    return {
+        "basis_is_z": 1.0 if str(leaf.basis).upper() == "Z" else 0.0,
+        "distance": float(distance or 0),
+        "rounds": float(leaf.rounds if leaf.rounds is not None else 0),
+        "sample_index": float(leaf.sample_index if leaf.sample_index is not None else -1),
+        "patch_x": float(_patch_center(leaf.patch_id)[0]),
+        "patch_y": float(_patch_center(leaf.patch_id)[1]),
+    }
+
+
+def _distance_from_patch(patch_id: object) -> int | None:
+    match = re.match(r"d(\d+)_", str(patch_id or ""))
+    return int(match.group(1)) if match else None
+
+
+def _patch_center(patch_id: object) -> tuple[int, int]:
+    match = re.search(r"_q(-?\d+)_(-?\d+)$", str(patch_id or ""))
+    if not match:
+        return (0, 0)
+    return (int(match.group(1)), int(match.group(2)))
+
+
+def _feature_profile_audit(
+    profile: str,
+    features: torch.Tensor,
+    feature_names: list[str],
+    missing_features: list[str],
+) -> dict[str, object]:
+    device = features.device if isinstance(features, torch.Tensor) else torch.device("cpu")
+    matrix = torch.as_tensor(features, dtype=torch.float64, device=device)
+    finite = torch.isfinite(matrix)
+    nonzero = (matrix.abs() > 1e-12).any(dim=0) if matrix.numel() else torch.zeros((matrix.shape[1],), dtype=torch.bool)
+    constant = (
+        matrix.std(dim=0, unbiased=False) <= 1e-12
+        if matrix.numel()
+        else torch.zeros((matrix.shape[1],), dtype=torch.bool)
+    )
+    centered = matrix - matrix.mean(dim=0, keepdim=True) if matrix.numel() else matrix
+    rank = int(torch.linalg.matrix_rank(centered).item()) if centered.numel() else 0
+    forbidden_hits = [
+        name
+        for name in feature_names
+        for forbidden in FORBIDDEN_TRUE_LABELS
+        if forbidden.lower() in name.lower()
+    ]
+    return {
+        "profile": profile,
+        "feature_device": str(matrix.device),
+        "feature_count": int(matrix.shape[1]),
+        "feature_names": list(feature_names),
+        "nonzero_feature_count": int(nonzero.sum().item()),
+        "constant_feature_count": int(constant.sum().item()),
+        "feature_rank": rank,
+        "missing_feature_count": len(missing_features),
+        "missing_features": sorted(set(missing_features)),
+        "finite": bool(finite.all().item()) if finite.numel() else True,
+        "forbidden_label_audit": {
+            "passed": len(forbidden_hits) == 0,
+            "forbidden_labels": list(FORBIDDEN_TRUE_LABELS),
+            "hits": forbidden_hits,
+        },
+    }
 
 
 def _model_record(name: str, logits: torch.Tensor, metrics: dict[str, object], *, parameter_count: int, extra: dict[str, object] | None = None) -> dict[str, object]:
@@ -1208,6 +1561,8 @@ def _write_outputs(g13_dir: Path, g15_dir: Path, comparison_dir: Path, result: d
         "train_heldout_split": result["train_heldout_split"],
         "graph_audit": result["graph_audit"],
         "window_audit": result["window_audit"],
+        "preprocessing_feature_audit": result["preprocessing_feature_audit"],
+        "prepared_cache_events": result["prepared_cache_events"],
         "GDISC15_real_local_mechanism_discovery": result["GDISC15_real_local_mechanism_discovery"],
     }
     (g13_dir / "metrics.json").write_text(json.dumps(_jsonable(g13), indent=2, sort_keys=True) + "\n")
@@ -1319,6 +1674,10 @@ def _jsonable(value):
     return value
 
 
+def _csv(value: object) -> list[str]:
+    return [part.strip() for part in str(value or "").split(",") if part.strip()]
+
+
 def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run Google Stage 2B local inverse mechanism smoke.")
     parser.add_argument("--dataset-root", default="/home/cx/Document/google_72Q_surface_code_d3_d5_set1")
@@ -1328,6 +1687,7 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--rounds-label", default="r13")
     parser.add_argument("--dem-source", default="decoder_si1000")
     parser.add_argument("--reference-dem-sources", default="decoder_si1000,decoder_rl")
+    parser.add_argument("--skip-reference-priors", action="store_true")
     parser.add_argument("--orbit-mode", default="fault_graph_heuristic")
     parser.add_argument("--train-shots", type=int, default=8000)
     parser.add_argument("--heldout-shots", type=int, default=2000)
@@ -1339,6 +1699,17 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--residual-rank", type=int, default=2)
     parser.add_argument("--num-prototypes", type=int, default=0)
     parser.add_argument("--pca-ranks", default="1,2,3")
+    parser.add_argument(
+        "--candidate-family",
+        choices=["legacy", "proxy_profiles", "all"],
+        default="legacy",
+        help="Candidate feature family for GDISC15; proxy_profiles is the Google preprocessing ablation path.",
+    )
+    parser.add_argument(
+        "--proxy-feature-profiles",
+        default="",
+        help="Comma-separated proxy feature profiles; default is all profiles when candidate-family includes proxy_profiles.",
+    )
     parser.add_argument("--graph-smoothing-strength", type=float, default=0.55)
     parser.add_argument("--graph-smoothing-steps", type=int, default=2)
     parser.add_argument("--nmf-steps", type=int, default=120)
@@ -1361,13 +1732,22 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--cuda-kernel-variant", choices=["dp", "spectral_shadow", "spectral", "auto"], default="dp")
     parser.add_argument("--spectral-min-abs-factor", type=float, default=1e-6)
     parser.add_argument("--spectral-memory-cap-mib", type=int, default=1024)
+    parser.add_argument("--skip-local-correlation-metrics", action="store_true")
     parser.add_argument("--native-gpu", action="store_true")
     parser.add_argument("--max-window-bits", type=int, default=8)
     parser.add_argument("--max-windows", type=int, default=128)
     parser.add_argument("--window-plan-mode", choices=["logical_aware", "detector_local"], default="logical_aware")
     parser.add_argument(
         "--eval-window-plan-mode",
-        choices=["same_as_train", "structured_higher_order"],
+        choices=[
+            "same_as_train",
+            "structured_higher_order",
+            "current_structured",
+            "balanced_structured",
+            "detector_local",
+            "logical_tail",
+            "mixed_claim",
+        ],
         default="same_as_train",
     )
     parser.add_argument("--eval-max-window-bits", type=int, default=6)

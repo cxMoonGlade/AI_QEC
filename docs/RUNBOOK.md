@@ -108,100 +108,34 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.sta
 Supported outputs include evaluator-only ARI/NMI, quotient recovery metrics,
 active prototype counts, collapse flags, and label-use audits.
 
-## Function: Validate Google Set1 Predictive Utility
-
-Native GPU path:
+## Function: Build Google S3 Visible Surface
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.static \
-  --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
-  --native-gpu
+scope-google-s3-visible-adapter --config configs/scope_static/google_s3_visible_adapter_v1.yaml
 ```
 
-Fast smoke:
+Google data has no true hidden mechanism labels. The current mainline Google
+path is a real-data adapter that freezes learner-visible Stage 3 artifacts.
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.static \
-  --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
-  --native-gpu \
-  --train-shots 256 --heldout-shots 256 --max-windows 8 --steps 2 \
-  --models hard_orbit \
-  --orbit-modes fault_graph_heuristic,schedule_geometric \
-  --skip-cross-sample-transfer
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.s3_visible_adapter \
+  --config configs/scope_static/google_s3_visible_adapter_v1.yaml
 ```
 
-Google data has no true hidden mechanism labels. Supported claims are
-predictive, calibration, transfer, and proxy-label diagnostics only.
-
-Stage 3E Google external validation facade:
-
-```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.s3e_external_validation \
-  --config configs/scope_static/stage3e_google_external_validation.yaml
-```
-
-This wraps the GDISC15b grid, keeps the no-true-omega claim boundary explicit,
-always requires CUDA execution, and writes:
+This adapter reads Google detection events and observable flips, builds
+empirical fixed-window visible rows plus public context/window metadata, and
+writes Stage 3A-compatible frozen visible artifacts:
 
 ```text
-outputs/google_static/S3E_google_external_validation/metrics.json
-outputs/google_static/S3E_google_external_validation/acceptance.json
-outputs/google_static/S3E_google_external_validation/run_manifest.json
-outputs/google_static/S3E_google_external_validation/summary.md
-outputs/google_static/S3E_google_external_validation/GDISC15b_grid/metrics.json
+outputs/google_static/google_s3_visible_surface_v1/S3A_protocol_freeze/visible_features.npy
+outputs/google_static/google_s3_visible_surface_v1/S3A_protocol_freeze/visible_feature_schema.json
+outputs/google_static/google_s3_visible_surface_v1/S3A_protocol_freeze/forbidden_feature_audit.json
+outputs/google_static/google_s3_visible_surface_v1/S3A_protocol_freeze/split_manifest.json
+outputs/google_static/google_s3_visible_surface_v1/S3A_protocol_freeze/metrics.json
 ```
 
-Google X/Z current-model scorecard:
-
-```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.xz_scorecard \
-  --config configs/scope_static/google_xz_scorecard.yaml
-```
-
-This is GPU-only. It writes context-level X/Z scorecards and a label-manifest
-preview without claiming true physical-mechanism recovery. The comparison suite
-separates real baselines from negative controls: `dmle_qec` is a
-DMLE-QEC-style independent DEM MLE baseline, `global_shared_scalar` and
-decoder-prior references are additional baselines, and random low-rank
-partitions remain controls only. The `dmle_qec` model id is source-aligned to
-`cxMoonGlade/DMLE-QEC`, but it does not claim the complete upstream
-PlanarNet/TensorNetwork/gate-to-DEM implementation.
-
-To include the direct upstream TensorNetwork baseline, first install the
-upstream DMLE-QEC dependencies into `aiqec`, then enable:
-
-```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.xz_scorecard \
-  --config configs/scope_static/google_xz_scorecard.yaml \
-  --include-upstream-dmle
-```
-
-This adds `dmle_qec_upstream`, which imports `/tmp/DMLE-QEC` and runs the
-upstream `TensorNetwork`/`PCM` detector-syndrome DEM MLE path. If the upstream
-repo or dependencies are missing, the run must fail or skip the context; it must
-not fall back to the scope_static DMLE-QEC-style implementation.
-
-```text
-outputs/google_static/google_xz_scorecard/metrics.json
-outputs/google_static/google_xz_scorecard/scorecard.json
-outputs/google_static/google_xz_scorecard/context_scorecard.json
-outputs/google_static/google_xz_scorecard/label_manifest.json
-outputs/google_static/google_xz_scorecard/summary.md
-```
-
-Google Benchmark Suite V1 audit lock and ladder facade:
-
-```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.benchmark_suite \
-  --config configs/scope_static/google_benchmark_suite_v1.yaml \
-  --benchmarks B0
-```
-
-Use `--benchmarks B0,B1,B2,B3` to run the executable Set1 ladder rungs after
-the audit lock. B4/B5/B6 currently write manifest-backed pending artifacts until
-the non-Set1 unified `GoogleLeaf` runner exists. The suite always passes the
-native GPU flag for training/evaluation rungs and reports
-`heldout_eval_window_excess_nll` beside the legacy local-window metric.
+Historical Google DEM-proxy diagnostics are archived under
+`docs/archive/google_gdisc15.md`.
 
 ## Function: Generate Physical-Mechanism Data
 

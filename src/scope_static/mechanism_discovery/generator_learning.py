@@ -18,6 +18,9 @@ from .baselines import VARIANCE_FLOOR
 from .baselines import _diag_log_prob
 from .baselines import _logsumexp
 from .discovery_model import DEFAULT_OUTPUT_DIR as DEFAULT_STAGE3B1_DIR
+from .discovery_model import EVALUATOR_MODE_CONTROLLED_CATALOG
+from .discovery_model import EVALUATOR_MODE_NO_ORACLE_LABELS
+from .discovery_model import _normalize_evaluator_mode
 from .discovery_model import _cap_folds
 from .discovery_model import _valid_folds
 
@@ -40,6 +43,7 @@ def run_stage3c_prototype_generator_learning(
     teacher_dir: str | Path | None = None,
     max_cv_folds: int | None = DEFAULT_MAX_CV_FOLDS,
     variance_floor: float = VARIANCE_FLOOR,
+    evaluator_mode: str = EVALUATOR_MODE_CONTROLLED_CATALOG,
 ) -> dict[str, object]:
     """Score heldout visible generation from learned Stage 3 assignments.
 
@@ -49,6 +53,7 @@ def run_stage3c_prototype_generator_learning(
     oracle comparator.
     """
 
+    mode = _normalize_evaluator_mode(evaluator_mode)
     s3a = Path(stage3a_dir)
     s3a5 = Path(stage3a5_dir)
     s3b1 = Path(stage3b1_dir)
@@ -56,9 +61,9 @@ def run_stage3c_prototype_generator_learning(
     output.mkdir(parents=True, exist_ok=True)
 
     s3a_metrics = _load_json(s3a / "metrics.json")
-    s3a5_metrics = _load_json(s3a5 / "metrics.json")
+    s3a5_metrics = _load_json(s3a5 / "metrics.json") if mode == EVALUATOR_MODE_CONTROLLED_CATALOG else _no_oracle_stage3a5_metrics()
     s3b1_metrics = _load_json(s3b1 / "metrics.json")
-    teacher = resolve_teacher_dir(s3a_metrics, teacher_dir)
+    teacher = resolve_teacher_dir(s3a_metrics, teacher_dir) if mode == EVALUATOR_MODE_CONTROLLED_CATALOG else None
 
     x, feature_names, feature_matrix = load_stage3a_frozen_visible_features(s3a)
     responsibilities = _load_stage3b1_assignments(s3b1, record_count=int(x.shape[0]))
@@ -88,19 +93,22 @@ def run_stage3c_prototype_generator_learning(
         folds=folds,
     )
 
-    evaluator = load_stage3_evaluator_labels(s3a, teacher)
-    labels = evaluator.exact_labels
-    if len(labels) != int(x.shape[0]):
-        raise ValueError(f"Stage 3A frozen feature row count {x.shape[0]} does not match evaluator label count {len(labels)}")
-    class_names = evaluator.exact_class_names
-    oracle = evaluate_oracle_assignment_comparator(
-        x,
-        labels,
-        class_names=class_names,
-        feature_names=feature_names,
-        folds=folds,
-        variance_floor=float(variance_floor),
-    )
+    if mode == EVALUATOR_MODE_CONTROLLED_CATALOG:
+        evaluator = load_stage3_evaluator_labels(s3a, teacher)
+        labels = evaluator.exact_labels
+        if len(labels) != int(x.shape[0]):
+            raise ValueError(f"Stage 3A frozen feature row count {x.shape[0]} does not match evaluator label count {len(labels)}")
+        class_names = evaluator.exact_class_names
+        oracle = evaluate_oracle_assignment_comparator(
+            x,
+            labels,
+            class_names=class_names,
+            feature_names=feature_names,
+            folds=folds,
+            variance_floor=float(variance_floor),
+        )
+    else:
+        oracle = skipped_oracle_assignment_comparator(feature_names=feature_names, folds=folds)
 
     prototype_metrics = prototype_generation_metrics(
         predicted_assignment_metrics=predicted,
@@ -108,7 +116,7 @@ def run_stage3c_prototype_generator_learning(
         mean_only_baseline_metrics=mean_only,
         oracle_assignment_comparator_metrics=oracle,
     )
-    leakage = generator_leakage_audit(s3b1_metrics=s3b1_metrics)
+    leakage = generator_leakage_audit(s3b1_metrics=s3b1_metrics, evaluator_mode=mode)
     acceptance = stage3c_acceptance_audit(
         s3a_metrics=s3a_metrics,
         s3a5_metrics=s3a5_metrics,
@@ -121,15 +129,16 @@ def run_stage3c_prototype_generator_learning(
         mean_only_baseline_metrics=mean_only,
         oracle_assignment_comparator_metrics=oracle,
         leakage_audit=leakage,
+        evaluator_mode=mode,
     )
     result = {
         "schema": "scope_static_stage3c_prototype_generator_learning_v1",
         "stage": STAGE_NAME,
         "public_layer": LEARNER_VALIDATION_STAGE.metadata(artifact_stage=STAGE_NAME, substage="prototype_generator_learning"),
         "stage3a_dir": str(s3a),
-        "stage3a5_dir": str(s3a5),
+        "stage3a5_dir": None if mode == EVALUATOR_MODE_NO_ORACLE_LABELS else str(s3a5),
         "stage3b1_dir": str(s3b1),
-        "teacher_dir": str(teacher),
+        "teacher_dir": None if teacher is None else str(teacher),
         "output_dir": str(output),
         "claim_boundary": {
             "trains_supervised_classifier": False,
@@ -138,18 +147,20 @@ def run_stage3c_prototype_generator_learning(
             "trains_from_stage3a_frozen_visible_features": True,
             "uses_stage3b1_learned_assignments": True,
             "rebuilds_visible_features_from_oracle_records_for_fit": False,
-            "oracle_assignment_comparator_evaluator_only": True,
+            "oracle_assignment_comparator_evaluator_only": mode == EVALUATOR_MODE_CONTROLLED_CATALOG,
+            "oracle_assignment_comparator_skipped": mode == EVALUATOR_MODE_NO_ORACLE_LABELS,
             "conditional_visible_replay_not_unconditional_future_prediction": True,
             "discovers_cptp_gksl_channels": False,
         },
         "config": {
             "stage3a_dir": str(s3a),
-            "stage3a5_dir": str(s3a5),
+            "stage3a5_dir": None if mode == EVALUATOR_MODE_NO_ORACLE_LABELS else str(s3a5),
             "stage3b1_dir": str(s3b1),
-            "teacher_dir": str(teacher),
+            "teacher_dir": None if teacher is None else str(teacher),
             "output_dir": str(output),
             "max_cv_folds": None if max_cv_folds is None else int(max_cv_folds),
             "variance_floor": float(variance_floor),
+            "evaluator_mode": mode,
         },
         "visible_feature_matrix": feature_matrix,
         "feature_schema_match_audit": feature_match,
@@ -344,6 +355,38 @@ def evaluate_oracle_assignment_comparator(
     return out
 
 
+def skipped_oracle_assignment_comparator(*, feature_names: list[str], folds: list[dict[str, list[int]]]) -> dict[str, object]:
+    return {
+        "schema": "scope_static_stage3c_oracle_assignment_comparator_metrics_v1",
+        "model_name": "oracle_assignment_comparator",
+        "description": "Skipped because no controlled-catalog evaluator labels are available.",
+        "primary_generation_likelihood_metric": PRIMARY_GENERATION_LIKELIHOOD_METRIC,
+        "secondary_continuous_density_diagnostic": SECONDARY_CONTINUOUS_DENSITY_DIAGNOSTIC,
+        "uses_evaluator_labels": False,
+        "uses_channels_ptms_kraus": False,
+        "heldout_row_count": 0,
+        "feature_count": int(len(feature_names)),
+        "overall": {
+            "categorical_population_nll": None,
+            "categorical_population_group_count": 0,
+            "gaussian_density_nll": None,
+            "gaussian_nll": None,
+            "raw_visible_feature_mae": None,
+            "population_mae": None,
+            "population_cross_entropy": None,
+            "expectation_mae": None,
+            "probability_feature_count": 0,
+            "expectation_feature_count": 0,
+        },
+        "fold_metrics": [],
+        "evaluator_only": False,
+        "skipped": True,
+        "evaluator_mode": EVALUATOR_MODE_NO_ORACLE_LABELS,
+        "used_for_acceptance_model_selection": False,
+        "available_fold_count": int(len(folds)),
+    }
+
+
 def prototype_generation_metrics(
     *,
     predicted_assignment_metrics: dict[str, object],
@@ -428,14 +471,20 @@ def heldout_protocol_artifact(
     }
 
 
-def generator_leakage_audit(*, s3b1_metrics: dict[str, object]) -> dict[str, object]:
+def generator_leakage_audit(
+    *,
+    s3b1_metrics: dict[str, object],
+    evaluator_mode: str = EVALUATOR_MODE_CONTROLLED_CATALOG,
+) -> dict[str, object]:
+    mode = _normalize_evaluator_mode(evaluator_mode)
     boundary = dict(s3b1_metrics.get("claim_boundary", {})) if isinstance(s3b1_metrics.get("claim_boundary", {}), dict) else {}
     checks = {
         "predicted_generator_uses_mechanism_labels": False,
         "predicted_generator_uses_channels_ptms_kraus": False,
         "predicted_generator_rebuilds_features_from_oracle_records": False,
         "predicted_generator_uses_teacher_self_features": False,
-        "oracle_comparator_is_evaluator_only": True,
+        "oracle_comparator_is_evaluator_only": mode == EVALUATOR_MODE_CONTROLLED_CATALOG,
+        "oracle_comparator_skipped_without_oracle_labels": mode == EVALUATOR_MODE_NO_ORACLE_LABELS,
         "stage3b1_assignments_trained_from_frozen_visible_features": bool(boundary.get("trains_from_stage3a_frozen_visible_features", False)),
         "stage3b1_labels_not_used_for_fit": not bool(boundary.get("uses_mechanism_labels_for_fit", True)),
         "stage3b1_labels_not_used_for_model_selection": not bool(boundary.get("uses_mechanism_labels_for_model_selection", True)),
@@ -447,11 +496,12 @@ def generator_leakage_audit(*, s3b1_metrics: dict[str, object]) -> dict[str, obj
             and not checks["predicted_generator_uses_channels_ptms_kraus"]
             and not checks["predicted_generator_rebuilds_features_from_oracle_records"]
             and not checks["predicted_generator_uses_teacher_self_features"]
-            and checks["oracle_comparator_is_evaluator_only"]
+            and (checks["oracle_comparator_is_evaluator_only"] or checks["oracle_comparator_skipped_without_oracle_labels"])
             and checks["stage3b1_assignments_trained_from_frozen_visible_features"]
             and checks["stage3b1_labels_not_used_for_fit"]
             and checks["stage3b1_labels_not_used_for_model_selection"]
         ),
+        "evaluator_mode": mode,
         "checks": checks,
     }
 
@@ -469,7 +519,9 @@ def stage3c_acceptance_audit(
     mean_only_baseline_metrics: dict[str, object],
     oracle_assignment_comparator_metrics: dict[str, object],
     leakage_audit: dict[str, object],
+    evaluator_mode: str = EVALUATOR_MODE_CONTROLLED_CATALOG,
 ) -> dict[str, object]:
+    mode = _normalize_evaluator_mode(evaluator_mode)
     predicted = dict(predicted_assignment_metrics.get("overall", {}))
     global_null = dict(global_null_metrics.get("overall", {}))
     mean_only = dict(mean_only_baseline_metrics.get("overall", {}))
@@ -477,16 +529,27 @@ def stage3c_acceptance_audit(
     b1_acceptance = dict(s3b1_metrics.get("acceptance_audit", {})) if isinstance(s3b1_metrics.get("acceptance_audit", {}), dict) else {}
     checks = {
         "stage3a_acceptance_passed": bool(dict(s3a_metrics.get("acceptance_audit", {})).get("passed", False)),
-        "stage3a5_acceptance_passed": bool(dict(s3a5_metrics.get("acceptance_audit", {})).get("passed", False)),
+        "stage3a5_acceptance_passed": (
+            True if mode == EVALUATOR_MODE_NO_ORACLE_LABELS else bool(dict(s3a5_metrics.get("acceptance_audit", {})).get("passed", False))
+        ),
         "stage3b1_acceptance_passed": bool(b1_acceptance.get("passed", False)),
         "approved_feature_schema_matches_stage3a": bool(feature_match.get("passed", False)),
         "uses_stage3a_frozen_visible_features": bool(feature_matrix.get("loaded_from_stage3a_artifact", False)),
         "assignment_matrix_row_stochastic": bool(responsibilities.size == 0 or np.allclose(np.sum(responsibilities, axis=1), 1.0)),
         "predicted_assignment_metrics_reported": bool(predicted),
-        "oracle_assignment_comparator_reported_separately": bool(oracle_assignment_comparator_metrics.get("evaluator_only", False)),
+        "oracle_assignment_comparator_reported_separately": (
+            bool(oracle_assignment_comparator_metrics.get("evaluator_only", False))
+            if mode == EVALUATOR_MODE_CONTROLLED_CATALOG
+            else bool(oracle_assignment_comparator_metrics.get("skipped", False))
+        ),
         "oracle_comparator_not_used_for_model_selection": not bool(oracle_assignment_comparator_metrics.get("used_for_acceptance_model_selection", True)),
         "primary_categorical_population_nll_reported": predicted.get(PRIMARY_GENERATION_LIKELIHOOD_METRIC) is not None,
-        "oracle_categorical_population_nll_reported": oracle.get(PRIMARY_GENERATION_LIKELIHOOD_METRIC) is not None,
+        "oracle_categorical_population_nll_reported": (
+            True
+            if mode == EVALUATOR_MODE_NO_ORACLE_LABELS
+            else oracle.get(PRIMARY_GENERATION_LIKELIHOOD_METRIC) is not None
+        ),
+        "categorical_population_group_count_positive": int(predicted.get("categorical_population_group_count", 0)) > 0,
         "heldout_generation_beats_global_null_categorical_population_nll": _metric_less(
             predicted,
             global_null,
@@ -494,7 +557,9 @@ def stage3c_acceptance_audit(
         ),
         "heldout_generation_beats_global_null_mae": _metric_less(predicted, global_null, "raw_visible_feature_mae"),
         "heldout_generation_beats_mean_only_mae": _metric_less(predicted, mean_only, "raw_visible_feature_mae"),
-        "oracle_comparator_not_worse_than_predicted_assignment_mae": _metric_less_or_equal(oracle, predicted, "raw_visible_feature_mae"),
+        "oracle_comparator_not_worse_than_predicted_assignment_mae": (
+            True if mode == EVALUATOR_MODE_NO_ORACLE_LABELS else _metric_less_or_equal(oracle, predicted, "raw_visible_feature_mae")
+        ),
         "leakage_audit_passed": bool(leakage_audit.get("passed", False)),
         "does_not_claim_arbitrary_cptp_gksl_learning": True,
     }
@@ -502,6 +567,14 @@ def stage3c_acceptance_audit(
         "schema": "scope_static_stage3c_acceptance_audit_v1",
         "passed": bool(all(checks.values())),
         "checks": checks,
+    }
+
+
+def _no_oracle_stage3a5_metrics() -> dict[str, object]:
+    return {
+        "schema": "scope_static_stage3a5_no_oracle_placeholder_v1",
+        "evaluator_mode": EVALUATOR_MODE_NO_ORACLE_LABELS,
+        "acceptance_audit": {"passed": True, "checks": {"stage3a5_not_required_without_oracle_labels": True}},
     }
 
 

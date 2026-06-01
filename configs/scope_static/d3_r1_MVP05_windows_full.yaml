@@ -1,5 +1,5 @@
 run:
-  name: d3_r1_mvp05_windowed_local_full
+  name: d3_r1_mvp05_windowed_unshared
   output_dir: outputs/scope_static/MVP05_full_02
   device: cuda
   dtype: float64

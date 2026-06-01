@@ -17,6 +17,7 @@ from scope_static.mechanism_discovery.discovery_model import (
     DEFAULT_OPERATION_CONTEXT_WEIGHT,
     DEFAULT_OUTPUT_DIR,
     DEFAULT_SEED,
+    EVALUATOR_MODE_CONTROLLED_CATALOG,
     run_stage3b1_first_discovery_model,
 )
 
@@ -31,6 +32,8 @@ def run_stage3b1_discovery_model_from_config(
     seed: int | None = None,
     context_balance_penalty: float | None = None,
     operation_context_weight: float | None = None,
+    evaluator_mode: str | None = None,
+    k_values: list[int] | None = None,
 ) -> dict[str, object]:
     cfg = _load_config(config_path)
     s3a = Path(stage3a_dir) if stage3a_dir is not None else Path(str(cfg.get("stage3a_dir", DEFAULT_STAGE3A_DIR)))
@@ -51,6 +54,8 @@ def run_stage3b1_discovery_model_from_config(
         operation_context_weight=float(
             operation_context_weight if operation_context_weight is not None else cfg.get("operation_context_weight", DEFAULT_OPERATION_CONTEXT_WEIGHT)
         ),
+        evaluator_mode=str(evaluator_mode if evaluator_mode is not None else cfg.get("evaluator_mode", EVALUATOR_MODE_CONTROLLED_CATALOG)),
+        k_values=k_values if k_values is not None else _int_list(cfg.get("k_values")),
     )
     summary = dict(result.get("learned_assignment_summary", {}))
     print(
@@ -73,6 +78,8 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--seed", type=int)
     parser.add_argument("--context-balance-penalty", type=float)
     parser.add_argument("--operation-context-weight", type=float)
+    parser.add_argument("--evaluator-mode", default=None)
+    parser.add_argument("--k-values", default=None)
     args = parser.parse_args(argv)
     run_stage3b1_discovery_model_from_config(
         config_path=args.config,
@@ -83,6 +90,8 @@ def main(argv: list[str] | None = None) -> None:
         seed=args.seed,
         context_balance_penalty=args.context_balance_penalty,
         operation_context_weight=args.operation_context_weight,
+        evaluator_mode=args.evaluator_mode,
+        k_values=_csv_ints(args.k_values),
     )
 
 
@@ -101,6 +110,22 @@ def _load_config(config_path: str | Path | None) -> dict[str, object]:
     if not isinstance(section, dict):
         raise ValueError("Stage 3B.1 config section must be a mapping")
     return dict(section)
+
+
+def _csv_ints(value: str | None) -> list[int] | None:
+    if value is None or not str(value).strip():
+        return None
+    return [int(item.strip()) for item in str(value).split(",") if item.strip()]
+
+
+def _int_list(value: object) -> list[int] | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return _csv_ints(value)
+    if isinstance(value, list):
+        return [int(item) for item in value]
+    return [int(value)]
 
 
 if __name__ == "__main__":

@@ -94,10 +94,10 @@ def _load_local_logits(cfg: dict[str, object], num_faults: int) -> torch.Tensor:
     path = Path(str(cfg.get("local_logit_metrics_path", "outputs/scope_static/STAGE2A2_DISC12_multi_env/env_alpha.json")))
     if path.exists():
         data = json.loads(path.read_text())
-        local = data.get("local_full_per_fault_per_env", {}).get("train")
+        local = data.get("per_fault_per_env_baseline", {}).get("train")
         if local is None and isinstance(data.get("records"), list):
             for record in data["records"]:
-                if record.get("model") == "local_full_per_fault_per_env":
+                if record.get("model") == "per_fault_per_env_baseline":
                     local = record.get("env_alpha_train")
                     break
         if isinstance(local, dict) and local:
@@ -108,7 +108,7 @@ def _load_local_logits(cfg: dict[str, object], num_faults: int) -> torch.Tensor:
                     rows.append(torch.tensor(values, dtype=torch.float64))
             if rows:
                 return torch.stack(rows, dim=1)
-    raise ValueError(f"could not load local full per-fault env logits from {path}")
+    raise ValueError(f"could not load per-fault per-env baseline logits from {path}")
 
 
 def _align_local_matrix(local_logits: torch.Tensor, num_oracle_envs: int) -> torch.Tensor:

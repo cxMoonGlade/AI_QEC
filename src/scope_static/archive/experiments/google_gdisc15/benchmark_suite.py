@@ -31,13 +31,18 @@ from scope_static.google.inventory import (
 from scope_static.google.set1 import build_google_fault_graph, find_google_set1_leaf
 
 from . import gdisc15b_grid
-from . import static as run_google_static
 from .gdisc15b_grid import PRIMARY_METRIC, SUMMARY_METRICS
-from .static import _eval_window_config, _fmt_float, _window_config, _window_plan_audit
 from .xz_scorecard import GRID_DEFAULTS, GRID_FLAGS
+from scope_static.archive.experiments.google_gdisc15 import static as run_google_static
+from scope_static.archive.experiments.google_gdisc15.static import (
+    _eval_window_config,
+    _fmt_float,
+    _window_config,
+    _window_plan_audit,
+)
 
 
-DEFAULT_CONFIG = Path("configs/scope_static/google_benchmark_suite_v1.yaml")
+DEFAULT_CONFIG = Path("configs/archive/google_gdisc15/google_benchmark_suite_v1.yaml")
 DEFAULT_OUTPUT_DIR = Path("outputs/google_static/google_benchmark_suite_v1")
 
 BENCHMARK_ORDER = ("B0", "B1", "B2", "B3", "B4", "B5", "B6")

@@ -65,7 +65,7 @@ flat modules under `src/scope_static/` or rebuild a broad `physical` package.
 
 ```text
 experiments/static/            DEM and Stage 2 static-discovery commands
-experiments/willow_data/       Willow/Google hardware-data commands, CUDA comparisons, S3E, and X/Z scorecards
+experiments/willow_data/       Google/Willow inventory, GPU diagnostics, and S3 visible adapter
 experiments/qec_noise_catalog/ catalog teacher, validation, observability commands
 experiments/stage3/            Stage 3A through Stage 3D commands
 ```
@@ -84,9 +84,7 @@ scope-stage3b0-baselines
 scope-stage3b1-discovery
 scope-stage3c-generator
 scope-stage3d1-assignment-shuffle
-scope-stage3e-google
-scope-google-xz-scorecard
-scope-google-benchmark-suite
+scope-google-s3-visible-adapter
 scope-teacher-physicality-audit
 ```
 

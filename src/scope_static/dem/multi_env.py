@@ -170,7 +170,7 @@ class MultiEnvKnownOrbitField(FaultLogitField):
 
 
 class MultiEnvLocalField(FaultLogitField):
-    name = "local_full_per_fault_per_env"
+    name = "per_fault_per_env_baseline"
 
     def __init__(
         self,

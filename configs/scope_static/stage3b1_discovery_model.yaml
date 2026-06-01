@@ -11,3 +11,4 @@ stage3b1_first_discovery_model:
   context_balance_penalty: 100000.0
   operation_context_weight: 2.0
   max_cv_folds: 5
+  evaluator_mode: controlled_catalog

@@ -60,7 +60,7 @@ def test_load_local_logit_matrix_from_env_alpha(tmp_path: Path) -> None:
     path.write_text(
         json.dumps(
             {
-                "local_full_per_fault_per_env": {
+                "per_fault_per_env_baseline": {
                     "train": {
                         "0": [-1.0, -2.0, -3.0],
                         "1": [-4.0, -5.0, -6.0],
@@ -88,7 +88,7 @@ def test_load_local_logit_matrix_ignores_oracle_entries(tmp_path: Path) -> None:
         json.dumps(
             {
                 "known_orbit_oracle_shared_S": {"train": oracle_values},
-                "local_full_per_fault_per_env": {"train": local_values},
+                "per_fault_per_env_baseline": {"train": local_values},
             }
         )
     )
@@ -162,7 +162,7 @@ def test_disc15_runner_writes_artifacts(tmp_path: Path) -> None:
     local = {}
     for env in range(graph.O):
         local[str(env)] = [2.0 if int(label) == env else -2.0 for label in graph.orbit_ids.tolist()]
-    source_path.write_text(json.dumps({"local_full_per_fault_per_env": {"train": local}}))
+    source_path.write_text(json.dumps({"per_fault_per_env_baseline": {"train": local}}))
 
     result = run_local_mechanism_discovery(config_path)
 

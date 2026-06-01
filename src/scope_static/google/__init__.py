@@ -39,6 +39,13 @@ from .inventory import (
     set1_leaf_from_google_leaf,
     write_google_inventory_artifacts,
 )
+from .s3_visible_surface import (
+    DEFAULT_OUTPUT_DIR as DEFAULT_GOOGLE_S3_VISIBLE_OUTPUT_DIR,
+    STAGE_NAME as GOOGLE_S3_VISIBLE_STAGE_NAME,
+    forbidden_feature_audit_google,
+    format_google_s3_visible_surface_summary,
+    write_google_s3_visible_surface,
+)
 from .set1 import (
     DATASET_NAME,
     DECODER_ALIASES,
@@ -69,9 +76,11 @@ __all__ = [
     "DATASET_SURFACE_SET2",
     "DECODER_ALIASES",
     "DEFAULT_DATASET_ROOTS",
+    "DEFAULT_GOOGLE_S3_VISIBLE_OUTPUT_DIR",
     "EXPECTED_DECODER_PATHWAYS",
     "EXPECTED_LEAF_COUNTS",
     "FORBIDDEN_TRUE_LABELS",
+    "GOOGLE_S3_VISIBLE_STAGE_NAME",
     "GoogleDecoderPathway",
     "GoogleDemData",
     "GoogleLeaf",
@@ -86,6 +95,8 @@ __all__ = [
     "decoder_pathways_for_leaf",
     "extract_dem_proxy_labels",
     "find_google_set1_leaf",
+    "forbidden_feature_audit_google",
+    "format_google_s3_visible_surface_summary",
     "fit_cluster_mean_logits",
     "google_context_id",
     "google_label_manifest",
@@ -114,4 +125,5 @@ __all__ = [
     "select_context_rows",
     "set1_leaf_from_google_leaf",
     "write_google_inventory_artifacts",
+    "write_google_s3_visible_surface",
 ]

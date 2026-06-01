@@ -521,52 +521,36 @@ Stim circuits, noisy SI1000 circuits, metadata, and decoder priors/pathways, but
 they do not by themselves provide ground-truth physical mechanism labels for
 Stage 3 discovery.
 
-Current Google facade:
+Current Google adapter:
 
 ```bash
-scope-stage3e-google --config configs/scope_static/stage3e_google_external_validation.yaml
+scope-google-s3-visible-adapter --config configs/scope_static/google_s3_visible_adapter_v1.yaml
 ```
 
-Acceptance is external-validation only:
+Acceptance is artifact-contract only:
 
 ```text
-- completed Google contexts meet the declared minimum;
-- compressed visible models are near local_full on heldout excess NLL;
-- compressed visible models beat random low-rank controls;
-- parameter compression ratio is reported against local_full;
-- skipped contexts are bounded;
-- all accepted full Google contexts use `device=cuda` and `cuda_extension`;
-- true hidden omega / physical-mechanism recovery claim remains false.
+- `visible_features.npy` is frozen before Stage 3B/3C;
+- `visible_feature_schema.json` names learner-visible columns;
+- `forbidden_feature_audit.json` blocks context/sample/path surrogate IDs;
+- `split_manifest.json` fixes grouped context splits before learner fitting;
+- Stage 3 artifact loaders can read the frozen visible matrix.
 ```
 
 Primary artifacts:
 
 ```text
-outputs/google_static/S3E_google_external_validation/
+outputs/google_static/google_s3_visible_surface_v1/S3A_protocol_freeze/
   metrics.json
-  acceptance.json
-  run_manifest.json
-  summary.md
-  GDISC15b_grid/metrics.json
+  visible_features.npy
+  visible_feature_schema.json
+  forbidden_feature_audit.json
+  split_manifest.json
+  probe_schedule_manifest.json
 ```
 
-Current X/Z scorecard:
-
-```bash
-scope-google-xz-scorecard --config configs/scope_static/google_xz_scorecard.yaml
-```
-
-This GPU-only scorecard is a current-model level check on real Google X/Z
-contexts. It reports predictive utility, compression, calibration,
-decoder-facing diagnostics, and context/proxy labels only. It explicitly does
-not report true physical-mechanism recovery, true hidden partitions, or catalog
-M-ID labels. Baselines are `dmle_qec`, `global_shared_scalar`, and available
-decoder-prior references; random low-rank partitions are reported only as
-negative controls. The `dmle_qec` baseline is the scope_static
-DMLE-QEC-style independent DEM MLE slice, not the complete upstream
-PlanarNet/TensorNetwork/gate-to-DEM implementation.
-
-Optional upstream baseline:
+Historical Google DEM-proxy scorecards are archived separately and are not the
+current Google Stage 3 path.
 
 ```text
 dmle_qec_upstream

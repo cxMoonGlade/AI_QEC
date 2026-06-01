@@ -5,7 +5,6 @@ import json
 
 import torch
 
-from .static import _train_heldout_split
 from scope_static.dem.fields import make_field
 from scope_static.google.set1 import build_google_fault_graph, find_google_set1_leaf, load_google_observations
 from scope_static.dem.metrics import evaluate_real_data_model
@@ -141,6 +140,28 @@ def _without_logits(record: dict[str, object]) -> dict[str, object]:
 
 def _metric_delta(left: dict[str, object], right: dict[str, object], key: str) -> float:
     return float(right["metrics"][key]) - float(left["metrics"][key])
+
+
+def _train_heldout_split(num_shots: int, train_shots: int, heldout_shots: int) -> dict[str, object]:
+    if num_shots <= 0:
+        raise ValueError("observations must contain at least one shot")
+    heldout_count = min(int(heldout_shots), int(num_shots))
+    train_count = min(int(train_shots), max(0, int(num_shots) - heldout_count))
+    if train_count <= 0:
+        raise ValueError("train_shots leaves no training data after the heldout split")
+    heldout_start = int(num_shots) - heldout_count
+    return {
+        "num_shots": int(num_shots),
+        "train_shots": int(train_count),
+        "heldout_shots": int(heldout_count),
+        "train_start": 0,
+        "train_end": int(train_count),
+        "heldout_start": int(heldout_start),
+        "heldout_end": int(num_shots),
+        "disjoint": bool(train_count <= heldout_start),
+        "train_slice": slice(0, int(train_count)),
+        "heldout_slice": slice(int(heldout_start), int(num_shots)),
+    }
 
 
 def _parse_args(argv: list[str] | None) -> argparse.Namespace:

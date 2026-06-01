@@ -1,0 +1,13 @@
+google_s3_visible_adapter_v1:
+  name: Google_S3A_real_visible_surface_v1
+  dataset_root: /home/cx/Document/google_72Q_surface_code_d3_d5_set1
+  dataset_name: google_72Q_surface_code_d3_d5_set1
+  output_dir: outputs/google_static/google_s3_visible_surface_v1/S3A_protocol_freeze
+  dem_source: decoder_si1000
+  max_contexts: 24
+  windows_per_context: 64
+  shotblocks_per_context: 8
+  shotblock_size: 4096
+  min_shotblock_size: 2048
+  seed: 0
+  split_policy: grouped_context_leave_one_out_with_cyclic_validation

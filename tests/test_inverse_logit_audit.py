@@ -28,7 +28,7 @@ def test_disc13b_smoke_quantifies_local_oracle_gap(tmp_path):
     env_alpha_path.write_text(
         json.dumps(
             {
-                "local_full_per_fault_per_env": {
+                "per_fault_per_env_baseline": {
                     "train": {
                         str(env): [float(value) for value in teacher.logits_by_env[:, env].tolist()]
                         for env in range(4)

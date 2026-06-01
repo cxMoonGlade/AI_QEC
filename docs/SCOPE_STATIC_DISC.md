@@ -660,7 +660,7 @@ multi_env_independent_S_per_env
 multi_env_shared_S_random_init
 multi_env_shared_S_DISC10_init
 known_orbit_oracle_shared_S
-local_full_per_fault_per_env
+per_fault_per_env_baseline
 ```
 
 The key comparison is:
@@ -2457,7 +2457,7 @@ Allowed oracle use:
 
 Post-sampling learner-visible path:
   observations + DEM parity map A
-  -> local_full_per_fault_per_env inverse fit
+  -> per_fault_per_env_baseline inverse fit
   -> local_logit_probability = [lambda_hat, sigmoid(lambda_hat)]
   -> deterministic k-means with K=9
 
@@ -2746,20 +2746,14 @@ Use Google data to evaluate:
 Do not use Google data to claim true latent partition recovery unless the
 partition is explicitly defined as a proxy.
 
-Run:
+Current Google real-data path:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.static \
-  --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
-  --native-gpu \
-  --models local,dmle_qec,hard_orbit,soft_feature_orbit,disc_hard,disc_soft \
-  --orbit-modes fault_graph_heuristic,schedule_geometric \
-  --window-plan-mode logical_aware \
-  --discovery-restarts 4 \
-  --discovery-prototype-counts O \
-  --cross-sample-transfer \
-  --output-dir outputs/google_static/S2B_discovery_logical_aware
+scope-google-s3-visible-adapter --config configs/scope_static/google_s3_visible_adapter_v1.yaml
 ```
+
+The old Google DEM/static discovery runner is archived as a historical
+DEM-proxy diagnostic and is not the current Google Stage 3 path.
 
 Google discovery records must report:
 
@@ -2769,273 +2763,31 @@ Google discovery records must report:
 - free-assignment parameter accounting.
 - heldout and transfer deltas against local and known-orbit-like baselines.
 
-### Google DISC Tasks
+### Google S3 Visible Surface Adapter
 
-The Stage 2B Google path separates three real-data questions.
-
-```text
-GDISC12_multi_context_shared_response:
-  Question: Does shared response structure improve transfer across real
-            contexts such as sample, patch, basis, cycles, time/window, or
-            decoder pathway?
-  Claim: predictive/context transfer only; no ARI.
-
-GDISC13b_real_local_inverse_audit:
-  Question: Do local inverse logits on Google data contain stable reusable
-            structure, or mostly window-specific noise?
-
-GDISC15_real_local_mechanism_discovery:
-  Question: Can local inverse representations be clustered or factorized into
-            useful real-data response modes?
-```
-
-Google DISC13b replaces synthetic oracle-logit metrics:
-
-```text
-synthetic corr(local, oracle)      -> stability across shot subsamples/windows
-synthetic R2(local -> oracle)      -> predictiveness on heldout detector/logical data
-synthetic ARI/NMI against omega    -> no true label; proxy ARI/NMI only if labelled
-```
-
-Google DISC15 may report proxy ARI/NMI only against explicitly labelled proxy
-partitions:
-
-```text
-proxy_boundary_bulk
-proxy_support_size
-proxy_detector_degree
-proxy_space_time_region
-proxy_basis_type
-proxy_round_layer
-proxy_decoder_prior_family
-proxy_fault_graph_community
-```
-
-These proxies answer:
-
-```text
-Do discovered real-data mechanisms align with interpretable geometry or
-schedule structure?
-```
-
-They do not answer:
-
-```text
-Did we recover true physical mechanisms?
-```
-
-Smoke run:
+Historical Google DEM-proxy diagnostics are archived separately. The current
+Google path builds a Stage 3 learner-visible surface from real Google
+detection events and observable flips:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.local_mechanism \
-  --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
-  --native-gpu \
-  --sample-id sample_00 \
-  --patch-id d3_at_q5_5 \
-  --basis X \
-  --rounds-label r13 \
-  --dem-source decoder_si1000 \
-  --orbit-mode fault_graph_heuristic \
-  --train-shots 4096 \
-  --heldout-shots 1024 \
-  --steps 40 \
-  --subsample-count 2 \
-  --subsample-shots 2048 \
-  --subsample-steps 30 \
-  --max-windows 96 \
-  --detector-pair-window-budget 48 \
-  --logical-detector-pair-window-budget 48 \
-  --window-plan-mode logical_aware \
-  --output-root outputs/google_static
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.s3_visible_adapter \
+  --config configs/scope_static/google_s3_visible_adapter_v1.yaml
 ```
 
-Outputs:
+The adapter writes frozen Stage 3A-style artifacts:
 
 ```text
-outputs/google_static/GDISC13b_real_local_inverse_audit/metrics.json
-outputs/google_static/GDISC13b_real_local_inverse_audit/summary.md
-outputs/google_static/GDISC15_real_local_mechanism_discovery/metrics.json
-outputs/google_static/GDISC15_real_local_mechanism_discovery/summary.md
-outputs/google_static/STIM_vs_Google_comparison/summary.md
+outputs/google_static/google_s3_visible_surface_v1/S3A_protocol_freeze/visible_features.npy
+outputs/google_static/google_s3_visible_surface_v1/S3A_protocol_freeze/visible_feature_schema.json
+outputs/google_static/google_s3_visible_surface_v1/S3A_protocol_freeze/forbidden_feature_audit.json
+outputs/google_static/google_s3_visible_surface_v1/S3A_protocol_freeze/split_manifest.json
+outputs/google_static/google_s3_visible_surface_v1/S3A_protocol_freeze/metrics.json
 ```
 
-Current smoke result:
-
-```text
-GDISC15_smoke:
-  early_positive_predictive_utility_under_parameter_compression
-  continuous_local_inverse_stable
-  discrete_cluster_identity_unstable
-  proxy_labels_only_no_recovery_claim
-
-GDISC13b:
-  mean pairwise local-logit corr: 0.9177
-  mean pairwise cluster NMI: 0.4310
-
-GDISC15 selected:
-  model: GDISC15_pca_scores_rank3
-  parameters: 99
-  heldout local-window excess NLL: 0.006583
-  detector-rate MAE: 0.007060
-  local-correlation error: 0.005075
-  logical flip calibration: 0.002853
-
-local_full baseline:
-  parameters: 1341
-  heldout local-window excess NLL: 0.006611
-  detector-rate MAE: 0.007211
-  local-correlation error: 0.005092
-  logical flip calibration: 0.004470
-```
-
-Interpretation:
-
-```text
-The Google smoke suggests local inverse logits are stable at the logit level,
-but their hard clusterings are less stable. A compressed PCA local-inverse
-mechanism model slightly improves heldout excess NLL, detector-rate MAE,
-local-correlation error, and logical calibration versus local_full while using
-far fewer parameters. This is a predictive-utility result, not quotient or
-physical-mechanism recovery.
-```
-
-### GDISC15b Google Grid Validation
-
-GDISC15b scales the smoke to paired Google contexts and reports uncertainty:
-
-```text
-mean +/- std
-paired improvement over local_full
-number of contexts where the compressed model wins
-```
-
-Required baseline/model families:
-
-```text
-local_full
-global_shared_scalar
-SI1000 prior reference
-RL-optimized prior reference, where available
-GDISC15_pca_scores_rank{1,2,3,5,8}
-random low-rank controls
-```
-
-Small grid run:
-
-```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.gdisc15b_grid \
-  --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
-  --native-gpu \
-  --samples sample_00,sample_01 \
-  --patches d3_at_q5_5 \
-  --bases X,Z \
-  --rounds-labels r13 \
-  --heldout-split-types shot-heldout \
-  --train-shots 4096 \
-  --heldout-shots 1024 \
-  --steps 40 \
-  --subsample-count 2 \
-  --subsample-shots 2048 \
-  --subsample-steps 30 \
-  --max-windows 96 \
-  --detector-pair-window-budget 48 \
-  --logical-detector-pair-window-budget 48 \
-  --window-plan-mode logical_aware \
-  --pca-ranks 1,2,3,5,8 \
-  --random-control-ranks 1,2,3,5,8 \
-  --random-control-seeds 0 \
-  --output-dir outputs/google_static/GDISC15b_google_grid_validation
-```
-
-Outputs:
-
-```text
-outputs/google_static/GDISC15b_google_grid_validation/metrics.json
-outputs/google_static/GDISC15b_google_grid_validation/flat_records.json
-outputs/google_static/GDISC15b_google_grid_validation/run_manifest.json
-outputs/google_static/GDISC15b_google_grid_validation/summary.md
-```
-
-Current small-grid result:
-
-```text
-contexts:
-  samples: sample_00, sample_01
-  patch: d3_at_q5_5
-  basis: X, Z
-  cycles: r13
-  split: shot-heldout
-  completed: 4
-
-local_full:
-  params: 1340.0 +/- 1.155
-  heldout NLL: 0.7715 +/- 0.02805
-  heldout excess NLL: 0.006607
-  detector MAE: 0.007337 +/- 0.000450
-  local corr err: 0.005122 +/- 0.000116
-  logical calib: 0.01414 +/- 0.01213
-
-GDISC15_local_logit:
-  params: 98.5 +/- 0.577
-  heldout NLL: 0.7715 +/- 0.02805
-  heldout excess NLL delta vs local_full: +0.00000165
-  wins/total: 0/4
-
-GDISC15_pca_scores_rank3/5/8:
-  params: 98.5 +/- 0.577
-  heldout excess NLL delta vs local_full: +0.0000381
-  detector MAE: 0.007285 +/- 0.000435
-  wins/total: 1/4
-
-random low-rank controls:
-  worse than local inverse models on NLL, detector MAE, correlation, and
-  logical calibration.
-
-global_shared_scalar:
-  worse than local inverse models and local_full.
-```
-
-Interpretation:
-
-```text
-The broader grid weakens the one-context smoke claim. Compressed local inverse
-models preserve local_full heldout NLL surprisingly well under strong parameter
-compression, but they do not yet win consistently. The current positive result
-is compression-with-near-parity plus occasional small metric gains, not robust
-predictive improvement.
-```
-
-### S3E Google External Validation Facade
-
-S3E wraps the GDISC15b grid with an explicit external-validation acceptance
-layer:
-
-```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.s3e_external_validation \
-  --config configs/scope_static/stage3e_google_external_validation.yaml
-```
-
-Acceptance checks:
-
-```text
-contexts_completed >= declared minimum
-contexts_skipped <= declared maximum
-best compressed GDISC15 model is near local_full on heldout excess NLL
-best compressed GDISC15 model beats random low-rank controls
-compression ratio against local_full exceeds the declared threshold
-accepted full Google contexts use device=cuda and cuda_extension
-true hidden omega / physical-mechanism recovery claim remains false
-```
-
-Outputs:
-
-```text
-outputs/google_static/S3E_google_external_validation/metrics.json
-outputs/google_static/S3E_google_external_validation/acceptance.json
-outputs/google_static/S3E_google_external_validation/run_manifest.json
-outputs/google_static/S3E_google_external_validation/summary.md
-outputs/google_static/S3E_google_external_validation/GDISC15b_grid/metrics.json
-```
+The learner-visible matrix contains empirical fixed-window observation
+features plus approved public context/window metadata. It does not expose
+context IDs, sample IDs, paths, decoder correctness targets, catalog labels,
+hidden mechanism labels, or oracle channel objects.
 
 ## Decision Rules
 

@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import ProcessPoolExecutor, as_completed
+import contextlib
 from datetime import datetime, timezone
+import io
 import json
+import multiprocessing as mp
 from pathlib import Path
 import re
 import statistics
 import time
+import traceback
 
 import numpy as np
 import torch
@@ -22,8 +27,13 @@ from scope_static.google.inventory import (
 )
 from scope_static.google.set1 import find_google_set1_leaf, normalize_google_set1_root
 
-from . import local_mechanism as run_google_local_mechanism
-from .static import GOOGLE_COMPAT_METRIC, GOOGLE_PRIMARY_METRIC, _fmt_float, _print_table
+from scope_static.archive.google_gdisc15 import local_mechanism as run_google_local_mechanism
+from scope_static.archive.experiments.google_gdisc15.static import (
+    GOOGLE_COMPAT_METRIC,
+    GOOGLE_PRIMARY_METRIC,
+    _fmt_float,
+    _print_table,
+)
 
 
 PRIMARY_METRIC = GOOGLE_PRIMARY_METRIC
@@ -48,33 +58,19 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
     runs_dir.mkdir(parents=True, exist_ok=True)
 
     contexts = _context_specs(args)
+    runnable, skipped = _runnable_contexts(args, contexts)
+    outcomes = _run_contexts(args, runnable, runs_dir)
     completed = []
-    skipped = []
     flat_records = []
-    for index, context in enumerate(contexts):
-        if args.max_contexts is not None and len(completed) >= int(args.max_contexts):
-            break
-        if context.get("skip_reason"):
-            skipped.append(context)
+    for outcome in sorted(outcomes, key=lambda item: int(item.get("index", 0))):
+        context = dict(outcome["context"])
+        if not outcome.get("ok"):
+            skipped.append({**context, "skip_reason": str(outcome.get("skip_reason", "context_worker_failed"))})
             continue
-        split_type = context["heldout_split_type"]
-        if split_type != "shot-heldout":
-            skipped.append({**context, "skip_reason": "cross_context_transfer_split_not_implemented_in_gdisc15b_grid"})
-            continue
-        run_output = runs_dir / _context_id(context)
-        try:
-            result = run_google_local_mechanism.main(_local_mechanism_args(args, context, run_output))
-        except Exception as exc:
-            skipped.append({**context, "skip_reason": str(exc)})
-            continue
+        run_output = Path(str(outcome["output_root"]))
         completed.append({**context, "output_root": str(run_output)})
         dem_proxy_labels = _context_dem_proxy_labels(args, context)
-        flat_records.extend(_flatten_records(result, context, run_output, dem_proxy_labels=dem_proxy_labels))
-        print(
-            "[gdisc15b] "
-            f"{len(completed)}/{len(contexts)} {context['sample_id']} {context['patch_id']} "
-            f"{context['basis']} {context['rounds_label']} {split_type}"
-        )
+        flat_records.extend(_flatten_records(outcome["result"], context, run_output, dem_proxy_labels=dem_proxy_labels))
 
     summary = _model_summary(flat_records)
     result = {
@@ -128,6 +124,109 @@ def main(argv: list[str] | None = None) -> dict[str, object]:
     _write_outputs(output, result)
     _print_summary(result)
     return result
+
+
+def _runnable_contexts(args: argparse.Namespace, contexts: list[dict[str, object]]) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+    runnable = []
+    skipped = []
+    for context in contexts:
+        if args.max_contexts is not None and len(runnable) >= int(args.max_contexts):
+            break
+        if context.get("skip_reason"):
+            skipped.append(context)
+            continue
+        split_type = context["heldout_split_type"]
+        if split_type != "shot-heldout":
+            skipped.append({**context, "skip_reason": "cross_context_transfer_split_not_implemented_in_gdisc15b_grid"})
+            continue
+        runnable.append(context)
+    return runnable, skipped
+
+
+def _run_contexts(args: argparse.Namespace, contexts: list[dict[str, object]], runs_dir: Path) -> list[dict[str, object]]:
+    workers = max(1, int(getattr(args, "context_workers", 1)))
+    if workers <= 1 or len(contexts) <= 1:
+        outcomes = []
+        for index, context in enumerate(contexts):
+            outcome = _run_context_job(vars(args), index, context, str(runs_dir / _context_id(context)))
+            outcomes.append(outcome)
+            _print_context_progress(outcome, len(outcomes), len(contexts))
+        return outcomes
+
+    outcomes = []
+    worker_args = dict(vars(args))
+    with ProcessPoolExecutor(max_workers=workers, mp_context=mp.get_context("spawn")) as pool:
+        futures = [
+            pool.submit(_run_context_job, worker_args, index, context, str(runs_dir / _context_id(context)))
+            for index, context in enumerate(contexts)
+        ]
+        for future in as_completed(futures):
+            outcome = future.result()
+            outcomes.append(outcome)
+            _print_context_progress(outcome, len(outcomes), len(contexts), workers=workers)
+    return outcomes
+
+
+def _run_context_job(
+    args_dict: dict[str, object],
+    index: int,
+    context: dict[str, object],
+    output_root: str,
+) -> dict[str, object]:
+    args = argparse.Namespace(**args_dict)
+    _configure_worker_threads(args)
+    run_output = Path(output_root)
+    try:
+        captured = io.StringIO()
+        with contextlib.redirect_stdout(captured):
+            result = run_google_local_mechanism.main(_local_mechanism_args(args, context, run_output))
+        return {
+            "ok": True,
+            "index": int(index),
+            "context": context,
+            "output_root": str(run_output),
+            "result": result,
+            "stdout_tail": captured.getvalue()[-2000:],
+        }
+    except Exception as exc:
+        return {
+            "ok": False,
+            "index": int(index),
+            "context": context,
+            "output_root": str(run_output),
+            "skip_reason": str(exc),
+            "traceback": traceback.format_exc(),
+        }
+
+
+def _configure_worker_threads(args: argparse.Namespace) -> None:
+    num_threads = int(getattr(args, "torch_num_threads", 0) or 0)
+    if num_threads <= 0:
+        workers = max(1, int(getattr(args, "context_workers", 1) or 1))
+        cpu_count = mp.cpu_count()
+        num_threads = max(1, cpu_count // max(1, workers))
+    torch.set_num_threads(max(1, int(num_threads)))
+    try:
+        torch.set_num_interop_threads(1)
+    except RuntimeError:
+        pass
+
+
+def _print_context_progress(
+    outcome: dict[str, object],
+    done: int,
+    total: int,
+    *,
+    workers: int = 1,
+) -> None:
+    context = outcome["context"]
+    status = "ok" if outcome.get("ok") else "skip"
+    suffix = f" workers={workers}" if workers > 1 else ""
+    print(
+        "[gdisc15b] "
+        f"{done}/{total} {context['sample_id']} {context['patch_id']} "
+        f"{context['basis']} {context['rounds_label']} {context['heldout_split_type']} {status}{suffix}"
+    )
 
 
 def _context_specs(args: argparse.Namespace) -> list[dict[str, object]]:
@@ -266,6 +365,10 @@ def _local_mechanism_args(args: argparse.Namespace, context: dict[str, object], 
         args.reference_dem_sources,
         "--orbit-mode",
         args.orbit_mode,
+        "--candidate-family",
+        args.candidate_family,
+        "--proxy-feature-profiles",
+        args.proxy_feature_profiles,
         "--train-shots",
         str(args.train_shots),
         "--heldout-shots",
@@ -332,6 +435,8 @@ def _local_mechanism_args(args: argparse.Namespace, context: dict[str, object], 
         args.cuda_kernel_variant,
         "--spectral-memory-cap-mib",
         str(args.spectral_memory_cap_mib),
+        "--prepared-cache-dir",
+        args.prepared_cache_dir,
         "--output-root",
         str(output_root),
     ]
@@ -345,6 +450,10 @@ def _local_mechanism_args(args: argparse.Namespace, context: dict[str, object], 
         result.append("--disable-prepared-cache")
     if args.kmeans_check_convergence:
         result.append("--kmeans-check-convergence")
+    if args.skip_reference_priors:
+        result.append("--skip-reference-priors")
+    if args.skip_local_correlation_metrics:
+        result.append("--skip-local-correlation-metrics")
     return result
 
 
@@ -376,6 +485,12 @@ def _flatten_records(
             "upstream_dmle_qec_component": record.get("upstream_dmle_qec_component"),
             "upstream_dmle_qec_complete_implementation": record.get("upstream_dmle_qec_complete_implementation"),
             "upstream_dmle_qec_compatibility_scope": record.get("upstream_dmle_qec_compatibility_scope"),
+            "proxy_feature_profile": record.get("proxy_feature_profile"),
+            "proxy_feature_device": record.get("proxy_feature_device"),
+            "proxy_feature_count": record.get("proxy_feature_count"),
+            "proxy_feature_rank": record.get("proxy_feature_rank"),
+            "proxy_constant_feature_count": record.get("proxy_constant_feature_count"),
+            "proxy_missing_feature_count": record.get("proxy_missing_feature_count"),
             "combined_excess_parameter_pareto_status": record.get("combined_excess_parameter_pareto_status"),
         }
         for metric in SUMMARY_METRICS:
@@ -647,9 +762,14 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--decoder-pathway", default="")
     parser.add_argument("--heldout-split-types", default="shot-heldout")
     parser.add_argument("--max-contexts", type=int, default=None)
+    parser.add_argument("--context-workers", type=int, default=1)
+    parser.add_argument("--torch-num-threads", type=int, default=0)
     parser.add_argument("--dem-source", default="decoder_si1000")
     parser.add_argument("--reference-dem-sources", default="decoder_si1000,decoder_rl")
+    parser.add_argument("--skip-reference-priors", action="store_true")
     parser.add_argument("--orbit-mode", default="fault_graph_heuristic")
+    parser.add_argument("--candidate-family", choices=["legacy", "proxy_profiles", "all"], default="legacy")
+    parser.add_argument("--proxy-feature-profiles", default="")
     parser.add_argument("--train-shots", type=int, default=4096)
     parser.add_argument("--heldout-shots", type=int, default=1024)
     parser.add_argument("--steps", type=int, default=40)
@@ -663,7 +783,15 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--window-plan-mode", choices=["logical_aware", "detector_local"], default="logical_aware")
     parser.add_argument(
         "--eval-window-plan-mode",
-        choices=["same_as_train", "structured_higher_order"],
+        choices=[
+            "same_as_train",
+            "structured_higher_order",
+            "current_structured",
+            "balanced_structured",
+            "detector_local",
+            "logical_tail",
+            "mixed_claim",
+        ],
         default="same_as_train",
     )
     parser.add_argument("--eval-max-window-bits", type=int, default=6)
@@ -690,7 +818,9 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--likelihood-backend", choices=["auto", "pytorch", "cuda_extension"], default="auto")
     parser.add_argument("--cuda-kernel-variant", choices=["dp", "spectral_shadow", "spectral", "auto"], default="dp")
     parser.add_argument("--spectral-memory-cap-mib", type=int, default=1024)
+    parser.add_argument("--skip-local-correlation-metrics", action="store_true")
     parser.add_argument("--native-gpu", action="store_true")
+    parser.add_argument("--prepared-cache-dir", default="")
     parser.add_argument("--disable-prepared-cache", action="store_true")
     parser.add_argument("--output-dir", default="outputs/google_static/GDISC15b_google_grid_validation")
     return parser.parse_args(argv)

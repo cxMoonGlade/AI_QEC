@@ -30,7 +30,7 @@ def test_disc15c_confirmatory_disables_candidate_selection(tmp_path: Path) -> No
     local = {}
     for env in range(graph.O):
         local[str(env)] = [2.0 if int(label) == env else -2.0 for label in graph.orbit_ids.tolist()]
-    source.write_text(json.dumps({"local_full_per_fault_per_env": {"train": local}}))
+    source.write_text(json.dumps({"per_fault_per_env_baseline": {"train": local}}))
     config = {
         "run": {"name": "d3_r1_stage2c_disc15c_test", "output_dir": str(tmp_path / "out"), "device": "cpu", "dtype": "float64"},
         "circuit": {"family": "surface_code:rotated_memory_x", "distance": 3, "rounds": 1, "noise": NOISE},

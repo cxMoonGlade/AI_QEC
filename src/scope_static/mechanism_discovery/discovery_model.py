@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Iterable
 
 import numpy as np
 import yaml
@@ -34,6 +35,10 @@ DEFAULT_CONTEXT_BALANCE_PENALTY = 100_000.0
 DEFAULT_OPERATION_CONTEXT_WEIGHT = 2.0
 MIN_COMPONENT_MASS = 1.0e-8
 CONTEXT_DEPENDENT_MECHANISM_IDS = ("M13",)
+EVALUATOR_MODE_CONTROLLED_CATALOG = "controlled_catalog"
+EVALUATOR_MODE_NO_ORACLE_LABELS = "no_oracle_labels"
+ALLOWED_EVALUATOR_MODES = (EVALUATOR_MODE_CONTROLLED_CATALOG, EVALUATOR_MODE_NO_ORACLE_LABELS)
+DEFAULT_NO_ORACLE_K_VALUES = (2, 4, 8, 16)
 
 
 def run_stage3b1_first_discovery_model(
@@ -50,6 +55,8 @@ def run_stage3b1_first_discovery_model(
     max_cv_folds: int | None = DEFAULT_MAX_CV_FOLDS,
     context_balance_penalty: float = DEFAULT_CONTEXT_BALANCE_PENALTY,
     operation_context_weight: float = DEFAULT_OPERATION_CONTEXT_WEIGHT,
+    evaluator_mode: str = EVALUATOR_MODE_CONTROLLED_CATALOG,
+    k_values: Iterable[int] | None = None,
 ) -> dict[str, object]:
     """Train the first visible-only Stage 3 discovery model.
 
@@ -58,14 +65,15 @@ def run_stage3b1_first_discovery_model(
     metrics, never for fitting or model selection.
     """
 
+    mode = _normalize_evaluator_mode(evaluator_mode)
     s3a = Path(stage3a_dir)
     s3a5 = Path(stage3a5_dir)
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
 
     s3a_metrics = _load_json(s3a / "metrics.json")
-    s3a5_metrics = _load_json(s3a5 / "metrics.json")
-    teacher = resolve_teacher_dir(s3a_metrics, teacher_dir)
+    s3a5_metrics = _load_json(s3a5 / "metrics.json") if mode == EVALUATOR_MODE_CONTROLLED_CATALOG else _no_oracle_stage3a5_metrics()
+    teacher = resolve_teacher_dir(s3a_metrics, teacher_dir) if mode == EVALUATOR_MODE_CONTROLLED_CATALOG else None
 
     x_raw, feature_names, feature_matrix = load_stage3a_frozen_visible_features(s3a)
     x, standardization = _standardize_visible_features_with_values(x_raw)
@@ -85,10 +93,12 @@ def run_stage3b1_first_discovery_model(
     context_groups = _context_groups_from_split_manifest(split_manifest, record_count=int(x_raw.shape[0]))
     all_folds = _valid_folds(split_manifest, record_count=int(x_raw.shape[0]))
     folds = _cap_folds(all_folds, max_cv_folds=max_cv_folds)
-    k_runs = k_selection_runs(
+    k_runs = _k_selection_runs_for_evaluator_mode(
+        evaluator_mode=mode,
         record_count=int(x_raw.shape[0]),
         class_count=class_count,
         quotient_class_count=quotient_class_count,
+        k_values=k_values,
     )
     candidate_results = _evaluate_candidates(
         x,
@@ -122,25 +132,30 @@ def run_stage3b1_first_discovery_model(
         temperature=float(final_temperature),
     )
     hard_assignments = np.argmax(responsibilities, axis=1).astype(np.int64) if responsibilities.size else np.zeros(0, dtype=np.int64)
-    evaluator = load_stage3_evaluator_labels(s3a, teacher)
-    labels = evaluator.exact_labels
-    if len(labels) != int(x_raw.shape[0]):
-        raise ValueError(f"Stage 3A frozen feature row count {x_raw.shape[0]} does not match evaluator label count {len(labels)}")
-    class_names = evaluator.exact_class_names
-    quotient_labels = [label_to_quotient.get(label, label) for label in labels]
-    quotient_class_names = sorted(set(quotient_labels), key=_mechanism_sort_key)
-    evaluator_metrics = evaluate_cluster_assignments(
-        hard_assignments,
-        exact_labels=labels,
-        exact_class_names=class_names,
-        quotient_labels=quotient_labels,
-        quotient_class_names=quotient_class_names,
-    )
-    context_dependent = context_dependent_mechanism_diagnostics(
-        hard_assignments,
-        records=evaluator.records,
-        cluster_to_label_match=dict(evaluator_metrics["exact_label_metrics"].get("cluster_to_label_match", {})),
-    )
+    if mode == EVALUATOR_MODE_CONTROLLED_CATALOG:
+        evaluator = load_stage3_evaluator_labels(s3a, teacher)
+        labels = evaluator.exact_labels
+        if len(labels) != int(x_raw.shape[0]):
+            raise ValueError(f"Stage 3A frozen feature row count {x_raw.shape[0]} does not match evaluator label count {len(labels)}")
+        class_names = evaluator.exact_class_names
+        quotient_labels = [label_to_quotient.get(label, label) for label in labels]
+        quotient_class_names = sorted(set(quotient_labels), key=_mechanism_sort_key)
+        evaluator_metrics = evaluate_cluster_assignments(
+            hard_assignments,
+            exact_labels=labels,
+            exact_class_names=class_names,
+            quotient_labels=quotient_labels,
+            quotient_class_names=quotient_class_names,
+        )
+        context_dependent = context_dependent_mechanism_diagnostics(
+            hard_assignments,
+            records=evaluator.records,
+            cluster_to_label_match=dict(evaluator_metrics["exact_label_metrics"].get("cluster_to_label_match", {})),
+        )
+    else:
+        quotient_class_names = []
+        evaluator_metrics = no_oracle_evaluator_metrics(hard_assignments)
+        context_dependent = no_oracle_context_dependent_diagnostics()
     learned_summary = learned_assignment_summary(
         selected=selected,
         responsibilities=responsibilities,
@@ -171,7 +186,11 @@ def run_stage3b1_first_discovery_model(
         "schema": "scope_static_stage3b1_quotient_metrics_v1",
         "quotient_class_count": int(len(quotient_class_names)),
         "selected_model_quotient_metrics": evaluator_metrics["quotient_label_metrics"],
-        "exact_recovery_required": bool(dict(s3a5_metrics.get("oracle_alias_classes", {})).get("exact_label_recovery_claim_allowed", False)),
+        "exact_recovery_required": bool(
+            mode == EVALUATOR_MODE_CONTROLLED_CATALOG
+            and dict(s3a5_metrics.get("oracle_alias_classes", {})).get("exact_label_recovery_claim_allowed", False)
+        ),
+        "evaluator_mode": mode,
     }
     evaluator_only = {
         "schema": "scope_static_stage3b1_evaluator_only_label_metrics_v1",
@@ -194,14 +213,15 @@ def run_stage3b1_first_discovery_model(
         hardening=hardening,
         label_permutation=label_permutation,
         evaluator_metrics=evaluator_metrics,
+        evaluator_mode=mode,
     )
     result = {
         "schema": "scope_static_stage3b1_first_discovery_model_v1",
         "stage": STAGE_NAME,
         "public_layer": LEARNER_VALIDATION_STAGE.metadata(artifact_stage=STAGE_NAME, substage="first_discovery_model"),
         "stage3a_dir": str(s3a),
-        "stage3a5_dir": str(s3a5),
-        "teacher_dir": str(teacher),
+        "stage3a5_dir": None if mode == EVALUATOR_MODE_NO_ORACLE_LABELS else str(s3a5),
+        "teacher_dir": None if teacher is None else str(teacher),
         "output_dir": str(output),
         "claim_boundary": {
             "trains_supervised_classifier": False,
@@ -210,13 +230,14 @@ def run_stage3b1_first_discovery_model(
             "trains_from_stage3a_frozen_visible_features": True,
             "rebuilds_visible_features_from_oracle_records_for_fit": False,
             "uses_visible_validation_objective_for_model_selection": True,
-            "evaluator_only_metrics_after_fit": True,
+            "evaluator_only_metrics_after_fit": mode == EVALUATOR_MODE_CONTROLLED_CATALOG,
+            "oracle_label_metrics_skipped": mode == EVALUATOR_MODE_NO_ORACLE_LABELS,
             "discovers_cptp_gksl_channels": False,
         },
         "config": {
             "stage3a_dir": str(s3a),
-            "stage3a5_dir": str(s3a5),
-            "teacher_dir": str(teacher),
+            "stage3a5_dir": None if mode == EVALUATOR_MODE_NO_ORACLE_LABELS else str(s3a5),
+            "teacher_dir": None if teacher is None else str(teacher),
             "output_dir": str(output),
             "seed": int(seed),
             "max_iter": int(max_iter),
@@ -226,6 +247,8 @@ def run_stage3b1_first_discovery_model(
             "max_cv_folds": None if max_cv_folds is None else int(max_cv_folds),
             "context_balance_penalty": float(context_balance_penalty),
             "operation_context_weight": float(operation_context_weight),
+            "evaluator_mode": mode,
+            "k_values": [int(row["k"]) for row in k_runs],
         },
         "visible_feature_matrix": feature_matrix,
         "visible_feature_standardization": _standardization_summary(standardization),
@@ -236,8 +259,9 @@ def run_stage3b1_first_discovery_model(
             "runs": k_runs,
             "selected_k_mode": None if selected is None else selected.get("k_mode"),
             "selected_k": None if selected is None else selected.get("k"),
-            "uses_catalog_cardinality_only_not_labels": True,
-            "uses_quotient_count_from_stage3a5": True,
+            "uses_catalog_cardinality_only_not_labels": mode == EVALUATOR_MODE_CONTROLLED_CATALOG,
+            "uses_quotient_count_from_stage3a5": mode == EVALUATOR_MODE_CONTROLLED_CATALOG,
+            "uses_no_oracle_visible_only_k_grid": mode == EVALUATOR_MODE_NO_ORACLE_LABELS,
         },
         "candidate_selection": {
             "schema": "scope_static_stage3b1_candidate_selection_v1",
@@ -369,6 +393,47 @@ def model_selection_audit(selected: dict[str, object] | None, candidates: list[d
         "test_ba_used_for_selection": False,
         "test_min_recall_used_for_selection": False,
         "oracle_label_prototype_quality_used_for_selection": False,
+    }
+
+
+def no_oracle_evaluator_metrics(hard_assignments: np.ndarray) -> dict[str, object]:
+    clusters = [f"C{int(value):03d}" for value in np.asarray(hard_assignments, dtype=np.int64).tolist()]
+    masses = {cluster: int(clusters.count(cluster)) for cluster in sorted(set(clusters))}
+    probs = np.asarray(list(masses.values()), dtype=np.float64)
+    probs = probs / max(float(np.sum(probs)), 1.0)
+    entropy = float(-np.sum([p * np.log(p) for p in probs if p > 0.0]))
+    skipped = {
+        "schema": "scope_static_stage3b1_no_oracle_label_metrics_v1",
+        "evaluator_mode": EVALUATOR_MODE_NO_ORACLE_LABELS,
+        "skipped": True,
+        "reason": "Google real-data mode has no controlled-catalog evaluator labels.",
+        "used_for_fit": False,
+        "used_for_model_selection": False,
+        "adjusted_rand_index": None,
+        "normalized_mutual_info": None,
+        "balanced_accuracy_after_label_matching": None,
+        "min_recall_after_label_matching": None,
+        "cluster_to_label_match": {},
+    }
+    return {
+        "active_cluster_count": int(len(masses)),
+        "assignment_entropy": entropy,
+        "cluster_masses": masses,
+        "exact_label_metrics": dict(skipped),
+        "quotient_label_metrics": dict(skipped),
+    }
+
+
+def no_oracle_context_dependent_diagnostics() -> dict[str, object]:
+    return {
+        "schema": "scope_static_stage3b1_context_dependent_mechanism_diagnostics_v1",
+        "evaluator_mode": EVALUATOR_MODE_NO_ORACLE_LABELS,
+        "evaluator_only": False,
+        "used_for_fit": False,
+        "used_for_model_selection": False,
+        "skipped": True,
+        "reason": "No Google oracle mechanism labels are available.",
+        "diagnostics": {},
     }
 
 
@@ -565,10 +630,14 @@ def stage3b1_acceptance_audit(
     hardening: dict[str, object],
     label_permutation: dict[str, object],
     evaluator_metrics: dict[str, object],
+    evaluator_mode: str = EVALUATOR_MODE_CONTROLLED_CATALOG,
 ) -> dict[str, object]:
+    mode = _normalize_evaluator_mode(evaluator_mode)
     checks = {
         "stage3a_acceptance_passed": bool(dict(s3a_metrics.get("acceptance_audit", {})).get("passed", False)),
-        "stage3a5_acceptance_passed": bool(dict(s3a5_metrics.get("acceptance_audit", {})).get("passed", False)),
+        "stage3a5_acceptance_passed": (
+            True if mode == EVALUATOR_MODE_NO_ORACLE_LABELS else bool(dict(s3a5_metrics.get("acceptance_audit", {})).get("passed", False))
+        ),
         "approved_feature_schema_matches_stage3a": bool(feature_match.get("passed", False)),
         "uses_stage3a_frozen_visible_features_for_fit": bool(feature_matrix.get("loaded_from_stage3a_artifact", False)),
         "selected_model_exists": selected is not None,
@@ -583,7 +652,16 @@ def stage3b1_acceptance_audit(
         "learned_covariance_written": all("standardized_variance" in row for row in prototypes.get("prototypes", []) if isinstance(row, dict)),
         "assignment_hardening_used_no_labels": not bool(hardening.get("uses_mechanism_labels_in_hardening", True)),
         "label_permutation_reporting_only": bool(label_permutation.get("cluster_label_matching_used_only_for_reporting", False)),
-        "evaluator_metrics_reported_after_fit": "exact_label_metrics" in evaluator_metrics and "quotient_label_metrics" in evaluator_metrics,
+        "evaluator_metrics_reported_after_fit": (
+            True
+            if mode == EVALUATOR_MODE_NO_ORACLE_LABELS
+            else "exact_label_metrics" in evaluator_metrics and "quotient_label_metrics" in evaluator_metrics
+        ),
+        "oracle_label_metrics_skipped_in_no_oracle_mode": (
+            True
+            if mode == EVALUATOR_MODE_CONTROLLED_CATALOG
+            else bool(dict(evaluator_metrics.get("exact_label_metrics", {})).get("skipped", False))
+        ),
         "does_not_claim_arbitrary_cptp_gksl_learning": True,
     }
     return {
@@ -591,6 +669,66 @@ def stage3b1_acceptance_audit(
         "passed": bool(all(checks.values())),
         "checks": checks,
     }
+
+
+def _normalize_evaluator_mode(value: str) -> str:
+    mode = str(value)
+    if mode not in ALLOWED_EVALUATOR_MODES:
+        raise ValueError(f"evaluator_mode must be one of {ALLOWED_EVALUATOR_MODES!r}")
+    return mode
+
+
+def _no_oracle_stage3a5_metrics() -> dict[str, object]:
+    return {
+        "schema": "scope_static_stage3a5_no_oracle_placeholder_v1",
+        "evaluator_mode": EVALUATOR_MODE_NO_ORACLE_LABELS,
+        "acceptance_audit": {"passed": True, "checks": {"stage3a5_not_required_without_oracle_labels": True}},
+        "oracle_alias_classes": {
+            "quotient_class_count": 0,
+            "label_to_quotient": {},
+            "exact_label_recovery_claim_allowed": False,
+        },
+    }
+
+
+def _k_selection_runs_for_evaluator_mode(
+    *,
+    evaluator_mode: str,
+    record_count: int,
+    class_count: int,
+    quotient_class_count: int,
+    k_values: Iterable[int] | None,
+) -> list[dict[str, object]]:
+    mode = _normalize_evaluator_mode(evaluator_mode)
+    if mode == EVALUATOR_MODE_CONTROLLED_CATALOG:
+        return k_selection_runs(
+            record_count=int(record_count),
+            class_count=int(class_count),
+            quotient_class_count=int(quotient_class_count),
+        )
+    return _no_oracle_k_selection_runs(record_count=int(record_count), k_values=k_values)
+
+
+def _no_oracle_k_selection_runs(*, record_count: int, k_values: Iterable[int] | None) -> list[dict[str, object]]:
+    count = max(1, int(record_count))
+    requested = list(DEFAULT_NO_ORACLE_K_VALUES if k_values is None else k_values)
+    runs = []
+    seen = set()
+    for raw in requested:
+        k = max(1, min(int(raw), count))
+        if k in seen:
+            continue
+        seen.add(k)
+        runs.append(
+            {
+                "mode": f"visible_only_k_{k}",
+                "k": int(k),
+                "description": "K is selected from a visible-only no-oracle grid; no evaluator labels are available.",
+            }
+        )
+    if not runs:
+        runs.append({"mode": "visible_only_k_1", "k": 1, "description": "Fallback one-prototype no-oracle visible model."})
+    return runs
 
 
 def _evaluate_candidates(
@@ -1256,10 +1394,10 @@ def format_stage3b1_summary(result: dict[str, object]) -> str:
             f"- Selected K: `{summary.get('selected_k')}`",
             f"- Selected model family: `{dict(result.get('candidate_selection', {})).get('selected', {}).get('model_family') if isinstance(dict(result.get('candidate_selection', {})).get('selected', {}), dict) else None}`",
             f"- Active prototypes: `{summary.get('active_prototype_count')}`",
-            f"- Exact-label BA: `{float(exact.get('balanced_accuracy_after_label_matching', 0.0)):.4f}`",
-            f"- Exact-label min recall: `{float(exact.get('min_recall_after_label_matching', 0.0)):.4f}`",
-            f"- Exact-label NMI: `{float(exact.get('normalized_mutual_info', 0.0)):.4f}`",
-            f"- Quotient-label NMI: `{float(quotient.get('normalized_mutual_info', 0.0)):.4f}`",
+            f"- Exact-label BA: `{_format_optional_metric(exact.get('balanced_accuracy_after_label_matching'))}`",
+            f"- Exact-label min recall: `{_format_optional_metric(exact.get('min_recall_after_label_matching'))}`",
+            f"- Exact-label NMI: `{_format_optional_metric(exact.get('normalized_mutual_info'))}`",
+            f"- Quotient-label NMI: `{_format_optional_metric(quotient.get('normalized_mutual_info'))}`",
             *m13_lines,
             "",
             "## Claim Boundary",
@@ -1268,3 +1406,9 @@ def format_stage3b1_summary(result: dict[str, object]) -> str:
             "",
         ]
     )
+
+
+def _format_optional_metric(value: object) -> str:
+    if value is None:
+        return "none"
+    return f"{float(value):.4f}"

@@ -93,13 +93,12 @@ report no CUDA/NVML even though the workstation GPU is healthy. Prefer in-proces
 approval for the wrapped command before treating CUDA invisibility as a real
 runtime failure.
 
-For S1.6 Google runs, use the native GPU path unless deliberately testing CPU
-behavior:
+For current Google real-data work, build the frozen Stage 3 learner-visible
+surface. The old Google DEM/static predictive runner is archived as a historical
+diagnostic, not a mainline Google path:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.static \
-  --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
-  --native-gpu
+scope-google-s3-visible-adapter --config configs/scope_static/google_s3_visible_adapter_v1.yaml
 ```
 
 If GPU utilization is low, do not assume the GPU path is broken. First check

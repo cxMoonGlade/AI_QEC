@@ -9,7 +9,11 @@ We found several Google QEC datasets under `/home/cx/Document`, not only the 72Q
 - `google_72Q_surface_code_d3_d5_set2`
 - `google_105Q_surface_code_d3_d5_d7`
 
-These datasets contain real hardware measurement records, detection events, logical observable flips, Stim circuits, metadata, DEM files, and decoder predictions. They are valuable for external validation, decoder utility, calibration, transfer, drift-style analysis, and proxy mechanism discovery.
+These datasets contain real hardware measurement records, detection events,
+logical observable flips, Stim circuits, metadata, DEM files, and decoder
+predictions. They are valuable for external validation, decoder utility,
+calibration, transfer, drift-style analysis, and learner-visible Stage 3
+surface construction.
 
 The strongest labels available are:
 
@@ -23,10 +27,12 @@ However, these datasets do **not** provide true per-shot physical error mechanis
 
 Recommendation: build a unified `google_dataset_inventory` and `label_manifest` that records strong labels, context labels, decoder labels, and DEM/proxy labels separately. This would turn the Google datasets into a strong external validation benchmark without overstating them as true physical-mechanism supervision.
 
-## Current Scorecard Diagnosis
+## Historical Scorecard Diagnosis
 
-The current Google X/Z scorecard should be treated as a smoke benchmark, not as
-the primary benchmark for SCOPE-level advantage over dMLE.
+The archived Google X/Z scorecard should be treated as a smoke benchmark, not
+as the primary benchmark for SCOPE-level advantage over dMLE. The current
+Google mainline is the real-data adapter that writes S3 frozen visible surface
+artifacts.
 
 ### Question 1: Why are NLL results concentrated near `0.0024-0.0026`?
 
@@ -42,7 +48,7 @@ with units:
 nats_per_window, equal-window averaged
 ```
 
-In the current 24-context Set1 run, the actual evaluation windows were very
+In the archived 24-context Set1 run, the actual evaluation windows were very
 shallow:
 
 ```text
@@ -59,21 +65,21 @@ evidence that all models have the same generated-noise quality.
 
 Evidence:
 
-- `src/scope_static/experiments/willow_data/local_mechanism.py` defines the excess
-  metric as model window NLL minus empirical window entropy.
+- the archived Google DEM-proxy runner defined the excess metric as model
+  window NLL minus empirical window entropy.
 - `src/scope_static/dem/metrics.py` records the same definition in flattened
   metric fields.
 - The completed 24-context run recorded only size-1 and size-2 effective
   evaluation windows.
 
-### Question 2: Is current preprocessing exposing the right Google-data structure?
+### Question 2: Did the archived preprocessing expose the right Google-data structure?
 
-Answer: not yet. The current preprocessing is useful for checking that the DEM
+Answer: not yet. The archived preprocessing was useful for checking that the DEM
 pipeline, upstream dMLE adapter, and same-context heldout likelihood evaluation
 work. It does not yet expose the richest Google-data structure to the model or
 to the primary metric.
 
-The current scorecard mostly reduces each Google leaf to:
+The archived scorecard mostly reduced each Google leaf to:
 
 ```text
 same-context train shots
@@ -95,22 +101,20 @@ boundary / bulk / chain / region effects
 high-order syndrome correlations
 ```
 
-This means that the current X/Z scorecard can show whether SCOPE-style models
-can match dMLE on a narrow same-leaf task, but it cannot establish exponential
-or structural advantage over dMLE.
+This means that the archived scorecard can show whether SCOPE-style models can
+match dMLE on a narrow same-leaf task, but it cannot establish exponential or
+structural advantage over dMLE.
 
 ## Implication
 
-The next Google-data step should be read-only and diagnostic before more large
-training runs:
+The next Google-data step is read-only and artifact-contract-first:
 
 ```text
 1. Build a real google_dataset_inventory artifact.
 2. Build a real label_manifest artifact with strong/context/decoder/proxy
    labels separated.
-3. Add a scorecard_metric_audit artifact reporting raw NLL, empirical entropy,
-   excess NLL, window size distribution, window kind distribution,
-   detector/logical coverage, and per-window residual spread.
+3. Build a Google real-data S3 visible surface with frozen visible features,
+   schema, forbidden-feature audit, and split manifest.
 ```
 
 Only after that should the benchmark move to harder metrics such as:

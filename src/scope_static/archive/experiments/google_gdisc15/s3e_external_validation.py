@@ -13,7 +13,7 @@ from . import gdisc15b_grid
 from .gdisc15b_grid import PRIMARY_METRIC, SUMMARY_METRICS
 
 
-DEFAULT_CONFIG = Path("configs/scope_static/stage3e_google_external_validation.yaml")
+DEFAULT_CONFIG = Path("configs/archive/google_gdisc15/stage3e_google_external_validation.yaml")
 DEFAULT_OUTPUT_DIR = Path("outputs/google_static/S3E_google_external_validation")
 
 CLAIM_BOUNDARY = (

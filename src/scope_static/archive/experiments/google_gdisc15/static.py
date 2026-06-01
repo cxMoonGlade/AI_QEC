@@ -437,7 +437,15 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--eval-window-plan-mode",
-        choices=["same_as_train", "structured_higher_order"],
+        choices=[
+            "same_as_train",
+            "structured_higher_order",
+            "current_structured",
+            "balanced_structured",
+            "detector_local",
+            "logical_tail",
+            "mixed_claim",
+        ],
         default="same_as_train",
     )
     parser.add_argument("--eval-max-window-bits", type=int, default=6)
@@ -779,14 +787,25 @@ def _eval_window_config(args: argparse.Namespace, train_config: dict[str, object
     mode = str(getattr(args, "eval_window_plan_mode", "same_as_train"))
     if mode == "same_as_train":
         return dict(train_config)
-    if mode != "structured_higher_order":
-        raise ValueError(f"unknown eval_window_plan_mode: {mode}")
+    if mode in {"structured_higher_order", "current_structured"}:
+        return _structured_higher_order_window_config(args, plan_mode=mode)
+    if mode == "balanced_structured":
+        return _balanced_structured_window_config(args)
+    if mode == "detector_local":
+        return _detector_local_eval_window_config(args)
+    if mode == "logical_tail":
+        return _logical_tail_window_config(args)
+    if mode == "mixed_claim":
+        return _balanced_structured_window_config(args, plan_mode="mixed_claim")
+    raise ValueError(f"unknown eval_window_plan_mode: {mode}")
 
+
+def _structured_higher_order_window_config(args: argparse.Namespace, *, plan_mode: str) -> dict[str, object]:
     eval_max_windows = int(getattr(args, "eval_max_windows", 256))
     radius_budget = max(0, min(eval_max_windows, eval_max_windows // 8))
     return {
         "enabled": True,
-        "plan_mode": "structured_higher_order",
+        "plan_mode": plan_mode,
         "builders": ["detector_geometry", "logical_observable", "template_motifs", "orbits"],
         "include_single_detectors": True,
         "include_detector_pairs": True,
@@ -822,6 +841,111 @@ def _eval_window_config(args: argparse.Namespace, train_config: dict[str, object
             "template_fault": 4,
             "orbit": 5,
             "orbit_fault": 5,
+        },
+    }
+
+
+def _balanced_structured_window_config(
+    args: argparse.Namespace,
+    *,
+    plan_mode: str = "balanced_structured",
+) -> dict[str, object]:
+    eval_max_windows = int(getattr(args, "eval_max_windows", 256))
+    detector_pair_budget = int(getattr(args, "detector_pair_window_budget", 48))
+    logical_pair_budget = int(getattr(args, "logical_detector_pair_window_budget", 48))
+    logical_support_budget = max(16, eval_max_windows // 4)
+    radius_budget = max(16, eval_max_windows // 6)
+    template_budget = int(getattr(args, "eval_template_window_budget", 32))
+    orbit_budget = int(getattr(args, "eval_orbit_window_budget", 64))
+    return {
+        "enabled": True,
+        "plan_mode": plan_mode,
+        "builders": ["detector_geometry", "logical_observable", "template_motifs", "orbits"],
+        "include_single_detectors": True,
+        "include_detector_pairs": True,
+        "include_radius1": True,
+        "include_boundary_logical": False,
+        "include_logical_single": True,
+        "include_logical_detector_pairs": True,
+        "include_logical_fault_support": True,
+        "radius": float(getattr(args, "eval_radius", 1.0)),
+        "max_window_bits": int(getattr(args, "eval_max_window_bits", 6)),
+        "max_windows": eval_max_windows,
+        "respect_max_windows_with_family_budgets": True,
+        "window_family_budgets": {
+            "single_detector": "all",
+            "detector_pair": detector_pair_budget,
+            "radius1_detector_geometry": radius_budget,
+            "logical_single": "all",
+            "logical_detector_pair": logical_pair_budget,
+            "logical_fault_support": logical_support_budget,
+            "template_motif": template_budget,
+            "template_fault": template_budget,
+            "orbit": orbit_budget,
+            "orbit_fault": orbit_budget,
+        },
+        "window_family_priority": {
+            "single_detector": 0,
+            "detector_pair": 0,
+            "radius1_detector_geometry": 1,
+            "logical_single": 2,
+            "logical_detector_pair": 2,
+            "logical_fault_support": 3,
+            "template_motif": 4,
+            "template_fault": 4,
+            "orbit": 5,
+            "orbit_fault": 5,
+        },
+    }
+
+
+def _detector_local_eval_window_config(args: argparse.Namespace) -> dict[str, object]:
+    eval_max_windows = int(getattr(args, "eval_max_windows", 256))
+    return {
+        "enabled": True,
+        "plan_mode": "detector_local",
+        "builders": ["detector_geometry"],
+        "include_single_detectors": True,
+        "include_detector_pairs": True,
+        "include_radius1": True,
+        "include_boundary_logical": False,
+        "radius": float(getattr(args, "eval_radius", 1.0)),
+        "max_window_bits": int(getattr(args, "eval_max_window_bits", 6)),
+        "max_windows": eval_max_windows,
+        "respect_max_windows_with_family_budgets": True,
+        "window_family_budgets": {
+            "single_detector": "all",
+            "detector_pair": int(getattr(args, "detector_pair_window_budget", 48)),
+            "radius1_detector_geometry": max(16, eval_max_windows // 3),
+        },
+        "window_family_priority": {
+            "single_detector": 0,
+            "detector_pair": 1,
+            "radius1_detector_geometry": 2,
+        },
+    }
+
+
+def _logical_tail_window_config(args: argparse.Namespace) -> dict[str, object]:
+    return {
+        "enabled": True,
+        "plan_mode": "logical_tail",
+        "builders": ["logical_observable"],
+        "include_logical_single": True,
+        "include_logical_detector_pairs": True,
+        "include_logical_fault_support": True,
+        "max_window_bits": int(getattr(args, "eval_max_window_bits", 6)),
+        "max_windows": int(getattr(args, "eval_max_windows", 256)),
+        "respect_max_windows_with_family_budgets": True,
+        "window_family_budgets": {
+            "logical_single": "all",
+            "logical_detector_pair": int(getattr(args, "logical_detector_pair_window_budget", 48)),
+            "logical_fault_support": "all",
+        },
+        "window_family_priority": {
+            "logical_single": 0,
+            "logical_detector_pair": 1,
+            "logical_fault_support": 2,
         },
     }
 

@@ -21,14 +21,14 @@ def load_local_logit_matrix(path: str | Path, num_faults: int) -> torch.Tensor:
         return _validate_local_matrix(matrix, num_faults, source)
 
     data = json.loads(source.read_text())
-    local = data.get("local_full_per_fault_per_env", {}).get("train")
+    local = data.get("per_fault_per_env_baseline", {}).get("train")
     if local is None and isinstance(data.get("records"), list):
         for record in data["records"]:
-            if record.get("model") == "local_full_per_fault_per_env":
+            if record.get("model") == "per_fault_per_env_baseline":
                 local = record.get("env_alpha_train")
                 break
     if not isinstance(local, dict) or not local:
-        raise ValueError(f"could not find local_full_per_fault_per_env.train in {source}")
+        raise ValueError(f"could not find per_fault_per_env_baseline.train in {source}")
     rows = []
     for env in sorted(local, key=lambda value: int(value)):
         values = local[env]

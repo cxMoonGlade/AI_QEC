@@ -115,198 +115,25 @@ Every run also writes compression audit fields:
 
 This prevents rank-soft runs from being described as compressed when `O(1+r) >= M`.
 
-## S1.6 Google Set1 Preprocessing Ablation
+## S1.6/S1.7 Google DEM Diagnostics
 
-S1.6 adds a read-only adapter for
-`/home/cx/Document/google_72Q_surface_code_d3_d5_set1`. The adapter accepts
-either the outer dataset path or the nested
-`google_72Q_surface_code_d3_d5_set1/google_72Q_surface_code_d3_d5_set1` path,
-then validates that `sample_00` exists before enumerating leaves.
+The old Google DEM/static preprocessing-ablation runner, logical-aware window
+runner, and summarizer are archived with the Google DEM-proxy diagnostic stack
+under `scope_static.archive.experiments.google_gdisc15`. They remain historical
+evidence only; they are not the current Google real-data teacher-learner path.
 
-The new runner is intentionally separate from `run_static`:
-
-```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.static \
-  --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1
-```
-
-For a fast real-data smoke:
+The active Google path keeps the read-only Set1 data readers and builds a frozen
+Stage 3 learner-visible surface:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.static \
-  --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
-  --train-shots 256 --heldout-shots 256 --max-windows 8 --steps 2 \
-  --models hard_orbit \
-  --orbit-modes fault_graph_heuristic,schedule_geometric \
-  --skip-cross-sample-transfer
+scope-google-s3-visible-adapter --config configs/scope_static/google_s3_visible_adapter_v1.yaml
 ```
 
-Cross-sample transfer from `sample_00` to `sample_01` through `sample_20` is
-available with `--cross-sample-transfer`.
-
-The Google runner is GPU-only for current evidence runs. With CUDA visible, the
-default `--device auto` selects `cuda` and the C++/CUDA `cuda_extension`
-backend. If CUDA is not visible, fix the environment before running; CPU fallback
-is not an accepted Google-data execution path.
-Terminal output is concise by default and prints only the final coverage,
-heldout model comparison, transfer means, and decision summary. Use `--progress-json`
-when per-stage JSON progress events are needed for profiling or automation.
-
-```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.static \
-  --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
-  --train-shots 5000 --heldout-shots 2000 --max-windows 32 --steps 50 \
-  --models hard_orbit,soft_feature_orbit \
-  --orbit-modes fault_graph_heuristic,schedule_geometric \
-  --output-dir outputs/google_static/S1_6_native_gpu
-```
-
-The CUDA path uses a batched exact local-window training kernel. By default the
-Google runner uses `--cuda-kernel-variant auto`, which keeps the DP kernel for
-larger windows and selects the active-fault Walsh/Fourier spectral kernel for
-small exact windows whose prepared workload fits the memory cap. Pass
-`--cuda-kernel-variant dp` for conservative DP-only reproduction runs.
-Detached evaluation and transfer use a forward-only CUDA kernel, so they do not
-build gradient history or run the backward adjoint. The runner streams JSON
-progress events with fit/evaluation wall times. Prepared local-window
-state/count caches are persisted by default under `<output-dir>/prepared_cache`; use
-`--prepared-cache-dir` to share them across output directories or
-`--disable-prepared-cache` for one-off uncached runs.
-
-The training kernel can be audited with
-`--cuda-kernel-variant spectral_shadow`. This computes both the current DP
-kernel and the new active-fault Walsh/Fourier spectral kernel, returns the DP
-result, and fails on loss/gradient mismatch.
-
-```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.static \
-  --dataset-root /home/cx/Document/google_72Q_surface_code_d3_d5_set1 \
-  --native-gpu \
-  --cuda-kernel-variant spectral_shadow \
-  --train-shots 512 --heldout-shots 256 --max-windows 8 --steps 2 \
-  --models hard_orbit \
-  --orbit-modes fault_graph_heuristic \
-  --skip-cross-sample-transfer \
-  --output-dir outputs/google_static/S1_6_spectral_shadow_smoke
-```
-
-Kernel benchmarks are available through
-`scope_static.experiments.willow_data.benchmark_cuda_kernels`; records include CPU/PyTorch,
-CUDA DP, CUDA spectral, and active-window workload audits. A small
+Kernel benchmarks remain available through
+`scope_static.experiments.willow_data.benchmark_cuda_kernels`; records include
+CPU/PyTorch, CUDA DP, CUDA spectral, and active-window workload audits. A small
 metric-reproduction gate is available through
 `scope_static.experiments.willow_data.compare_cuda_kernel_variants`.
-
-The default leaf is `sample_00/d3_at_q5_5/X/r13` with `decoder_si1000`.
-Observations are loaded as `torch.bool[N, B] = [detection_events |
-obs_flips_actual]`.
-
-S1.6 builds a minimal `GoogleScheduleContext` proxy for
-`c = (H_sched, u, kappa, tau)`. It records hardware layout, qubit roles and
-coordinates, TICK/layer schedule, gate instances, detector and observable
-definitions, `.b8` paths, metadata, sample/order proxies, code descriptor, and
-coverage checks. This object is a minimal `H_sched` proxy, not a full
-`Aut(H_sched)` solver.
-
-The preprocessing modes are:
-
-- `local`: singleton DEM-fault orbits.
-- `fault_graph_heuristic`: current DEM-mask geometry heuristic for `omega(j)`.
-- `schedule_geometric`: coordinate/schedule-derived candidate symmetries,
-  validated against effective DEM fault columns.
-
-Claim boundary: `schedule_geometric` is an audited schedule-derived
-preprocessing proxy. It is not a full hardware automorphism solver, not full
-SCOPE-Twin, and not CPTP/GKSL learning. It only tests whether schedule-derived
-coloring gives a better fixed quotient/orbit prior than the current DEM-mask
-geometry heuristic. S1.6 still induces orbits over effective DEM fault columns,
-not true hardware/schedule fault locations.
-
-The runner emits provenance, schedule-coverage, symmetry-validation, partition,
-window, model, residual, heldout, and optional cross-sample transfer audits.
-`schedule_symmetry_status` is one of `nontrivial`, `identity_only`, or
-`invalid`; `identity_only` is a valid empirical outcome, not a code failure. It
-also records a tiny synthetic audit comparing local-window NLL to global exact
-NLL in a `B=3` case where global exact is feasible.
-
-Decision rule: schedule preprocessing is useful only when it produces
-nontrivial accepted symmetries and matches or improves heldout/transfer metrics
-at equal or fewer parameters, or gives a clearer stable quotient with comparable
-metrics. If only identity survives, record that the DEM-mask `FaultGraph`
-heuristic is sufficient for Stage-1 Google validation.
-
-## S1.7 Logical-Aware Window Plan
-
-S1.7 keeps the S1.6 Google data path but changes the default local-window plan
-from detector-local to logical-aware. The runner now defaults to
-`--window-plan-mode logical_aware`, which adds deduplicated logical observable
-windows before any family budget is applied:
-
-- `logical_single`: the logical observable bit alone.
-- `logical_fault_support`: the full DEM support of each effective fault that
-  touches a logical observable bit, deduplicated by sorted bit-set key.
-- `logical_detector_pair`: detector/logical two-bit marginals not already
-  represented by exact logical fault supports.
-
-Family budgets replace global truncation in this mode:
-
-```text
-single_detector: all
-detector_pair: 64
-logical_single: all
-logical_detector_pair: 64
-logical_fault_support: all
-```
-
-This prevents `--max-windows` from silently dropping the logical bit. The
-previous detector-local plan is still available with
-`--window-plan-mode detector_local`.
-
-Window audits now report logical coverage, raw/unique logical fault-support
-counts, duplicates removed, windows containing logical bits, logical family
-counts, and the fraction of logical fault supports represented by exact logical
-windows.
-
-Real-data metrics split local-window evidence into combined, detector, logical,
-logical-single, logical-fault-support, and logical-detector-pair groups. Each
-group reports:
-
-```text
-model_window_nll
-heldout_empirical_window_entropy
-excess_window_nll = model_window_nll - heldout_empirical_window_entropy
-num_windows
-mean_window_bits
-```
-
-Raw NLL values are cross-entropies in nats per local window and should not be
-compared across different window plans without their empirical entropy
-baselines. `excess_window_nll` is the preferred real-data evidence metric when
-no oracle teacher distribution exists.
-
-Because S1.7 excess values are often close to zero, Google records also include
-paired comparison fields against the uncompressed `local` baseline:
-
-```text
-excess_mnats_per_window = 1000 * excess_window_nll
-excess_delta_mnats_vs_baseline = 1000 * (model_excess - local_excess)
-pseudo_delta_bits_per_shot_vs_baseline
-combined_excess_parameter_pareto_status
-```
-
-The pseudo per-shot delta multiplies the mean window excess gap by the number
-of windows and converts nats to bits. It is a diagnostic scale for the
-local-window pseudo-likelihood, not a global exact likelihood. The Pareto
-status compares combined excess NLL against parameter count, so compressed
-models can be credited when they trade a tiny evidence gap for a large
-parameter reduction.
-
-Existing result files can be re-summarized without rerunning Google data:
-
-```bash
-conda run -n aiqec python -m scope_static.experiments.willow_data.summarize_static \
-  outputs/google_static/S1_7_logical_aware_full_clean/google_static_metrics.json \
-  --preprocessing-mode fault_graph_heuristic
-```
 
 ## Running
 

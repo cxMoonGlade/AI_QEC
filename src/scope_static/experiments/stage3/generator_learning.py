@@ -11,6 +11,7 @@ from scope_static.mechanism_discovery.discovery_model import DEFAULT_OUTPUT_DIR 
 from scope_static.mechanism_discovery.generator_learning import (
     DEFAULT_MAX_CV_FOLDS,
     DEFAULT_OUTPUT_DIR,
+    EVALUATOR_MODE_CONTROLLED_CATALOG,
     run_stage3c_prototype_generator_learning,
 )
 
@@ -23,6 +24,7 @@ def run_stage3c_generator_learning_from_config(
     stage3b1_dir: str | Path | None = None,
     output_dir: str | Path | None = None,
     teacher_dir: str | Path | None = None,
+    evaluator_mode: str | None = None,
 ) -> dict[str, object]:
     cfg = _load_config(config_path)
     s3a = Path(stage3a_dir) if stage3a_dir is not None else Path(str(cfg.get("stage3a_dir", DEFAULT_STAGE3A_DIR)))
@@ -37,6 +39,7 @@ def run_stage3c_generator_learning_from_config(
         teacher_dir=None if teacher_dir is None and not cfg.get("teacher_dir") else Path(str(teacher_dir if teacher_dir is not None else cfg.get("teacher_dir"))),
         max_cv_folds=None if cfg.get("max_cv_folds") is None else int(cfg.get("max_cv_folds", DEFAULT_MAX_CV_FOLDS)),
         variance_floor=float(cfg.get("variance_floor", 1.0e-6)),
+        evaluator_mode=str(evaluator_mode if evaluator_mode is not None else cfg.get("evaluator_mode", EVALUATOR_MODE_CONTROLLED_CATALOG)),
     )
     predicted = dict(dict(result.get("predicted_assignment_metrics", {})).get("overall", {}))
     print(
@@ -57,6 +60,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--stage3b1-dir", type=Path)
     parser.add_argument("--teacher-dir", type=Path)
     parser.add_argument("--output-dir", type=Path)
+    parser.add_argument("--evaluator-mode")
     args = parser.parse_args(argv)
     run_stage3c_generator_learning_from_config(
         config_path=args.config,
@@ -65,6 +69,7 @@ def main(argv: list[str] | None = None) -> None:
         stage3b1_dir=args.stage3b1_dir,
         teacher_dir=args.teacher_dir,
         output_dir=args.output_dir,
+        evaluator_mode=args.evaluator_mode,
     )
 
 

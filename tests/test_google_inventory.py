@@ -84,63 +84,6 @@ def test_observation_shape_and_dem_proxy_on_tiny_leaf(tmp_path: Path):
     assert proxy["forbidden_true_labels_absent"] is True
 
 
-def test_gdisc15b_manifest_context_selection_records_decoder_skips(tmp_path: Path):
-    from scope_static.experiments.willow_data import gdisc15b_grid
-
-    roots = _write_tiny_google_roots(tmp_path)
-    inventory = write_google_inventory_artifacts(
-        output_dir=tmp_path / "inventory",
-        dataset_roots=roots,
-        dataset_names=(DATASET_SURFACE_SET1,),
-        dem_proxy_mode="none",
-    )
-
-    args = gdisc15b_grid._parse_args(
-        [
-            "--dataset-root",
-            str(roots[DATASET_SURFACE_SET1]),
-            "--context-manifest",
-            inventory["context_manifest_path"],
-            "--decoder-manifest",
-            inventory["decoder_manifest_path"],
-            "--dataset-name",
-            DATASET_SURFACE_SET1,
-            "--samples",
-            "sample_00",
-            "--patches",
-            "d3_at_q5_5",
-            "--bases",
-            "X",
-            "--rounds-labels",
-            "r13",
-            "--decoder-pathway",
-            "correlated_matching_decoder_with_si1000_prior",
-        ]
-    )
-    contexts = gdisc15b_grid._context_specs(args)
-    assert len(contexts) == 1
-    assert contexts[0]["dataset_name"] == DATASET_SURFACE_SET1
-    assert contexts[0]["decoder_pathway"] == "correlated_matching_decoder_with_si1000_prior"
-    assert contexts[0].get("skip_reason") is None
-
-    missing_args = gdisc15b_grid._parse_args(
-        [
-            "--dataset-root",
-            str(roots[DATASET_SURFACE_SET1]),
-            "--context-manifest",
-            inventory["context_manifest_path"],
-            "--decoder-manifest",
-            inventory["decoder_manifest_path"],
-            "--dataset-name",
-            DATASET_SURFACE_SET1,
-            "--decoder-pathway",
-            "not_a_decoder",
-        ]
-    )
-    skipped = gdisc15b_grid._context_specs(missing_args)
-    assert skipped[0]["skip_reason"] == "decoder_pathway_not_in_manifest"
-
-
 @pytest.mark.skipif(
     not all(root.exists() for root in DEFAULT_DATASET_ROOTS.values()),
     reason="requires local Google datasets under /home/cx/Document",

@@ -102,19 +102,17 @@ def random_partition_baseline(
 
 def _farthest_point_initial_centers(x: torch.Tensor, k: int) -> torch.Tensor:
     norms = torch.sum(x**2, dim=1)
-    first = int(torch.argmax(norms).item())
-    indices = [first]
+    first = torch.argmax(norms)
+    indices = torch.empty((int(k),), dtype=torch.long, device=x.device)
+    indices[0] = first
     pairwise = torch.cdist(x, x, p=2)
     min_distances = pairwise[:, first].clone()
-    while len(indices) < int(k):
-        for used in indices:
-            min_distances[used] = -1.0
-        candidate = int(torch.argmax(min_distances).item())
-        if candidate in indices:
-            candidate = next((idx for idx in range(x.shape[0]) if idx not in indices), candidate)
-        indices.append(candidate)
+    for center_id in range(1, int(k)):
+        min_distances.index_fill_(0, indices[:center_id], -1.0)
+        candidate = torch.argmax(min_distances)
+        indices[center_id] = candidate
         min_distances = torch.minimum(min_distances, pairwise[:, candidate])
-    return x[torch.tensor(indices, dtype=torch.long, device=x.device)].clone()
+    return x.index_select(0, indices).clone()
 
 
 def _label_means(x: torch.Tensor, labels: torch.Tensor, k: int) -> torch.Tensor:
