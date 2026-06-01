@@ -71,6 +71,14 @@ from .source_pretrain import (
     DEFAULT_OUTPUT_DIR as DEFAULT_STAGE4_SOURCE_PRETRAIN_OUTPUT_DIR,
     run_stage4_source_pretrain,
 )
+from .support_audit import (
+    DEFAULT_OUTPUT_DIR as DEFAULT_STAGE4_SUPPORT_AUDIT_OUTPUT_DIR,
+    run_stage4_support_alignment_audit,
+)
+from .assignment_geometry import (
+    DEFAULT_OUTPUT_DIR as DEFAULT_STAGE4_ASSIGNMENT_GEOMETRY_OUTPUT_DIR,
+    run_stage4_assignment_geometry_repair,
+)
 from .google_transfer import (
     DEFAULT_OUTPUT_DIR as DEFAULT_STAGE4_GOOGLE_TRANSFER_OUTPUT_DIR,
     DEFAULT_DIAGNOSTIC_OUTPUT_DIR as DEFAULT_STAGE4_TRANSFER_DIAGNOSTICS_OUTPUT_DIR,
@@ -90,8 +98,10 @@ __all__ = [
     "DEFAULT_STAGE3D4_OUTPUT_DIR",
     "DEFAULT_STAGE3D4B_OUTPUT_DIR",
     "DEFAULT_STAGE4_GOOGLE_TRANSFER_OUTPUT_DIR",
+    "DEFAULT_STAGE4_ASSIGNMENT_GEOMETRY_OUTPUT_DIR",
     "DEFAULT_STAGE4_SOURCE_CEILING_OUTPUT_DIR",
     "DEFAULT_STAGE4_SOURCE_PRETRAIN_OUTPUT_DIR",
+    "DEFAULT_STAGE4_SUPPORT_AUDIT_OUTPUT_DIR",
     "DEFAULT_STAGE4_TRANSFER_DIAGNOSTICS_OUTPUT_DIR",
     "PRIMARY_GENERATION_LIKELIHOOD_METRIC",
     "SECONDARY_CONTINUOUS_DENSITY_DIAGNOSTIC",
@@ -118,8 +128,10 @@ __all__ = [
     "run_stage3d4_k_stress_audit",
     "run_stage3d4b_overcomplete_merge_prune_audit",
     "run_stage4_google_transfer",
+    "run_stage4_assignment_geometry_repair",
     "run_stage4_source_pretrain",
     "run_stage4_source_surface_survival_audit",
+    "run_stage4_support_alignment_audit",
     "run_stage4_transfer_diagnostics",
     "validate_stage4_source_label_separation",
 ]

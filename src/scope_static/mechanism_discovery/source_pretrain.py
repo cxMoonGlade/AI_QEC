@@ -8,7 +8,7 @@ from typing import Iterable, Mapping
 import numpy as np
 import yaml
 
-from .baselines import _kmeans, _standardize_visible_features
+from .baselines import _kmeans
 from .stage4_artifacts import load_stage4_source_evaluator_labels, load_stage4_visible_matrix, load_stage4_json
 
 
@@ -43,7 +43,7 @@ def run_stage4_source_pretrain(
         raise ValueError(f"source surface survival decision {decision!r} blocks S4.1 source pretraining")
     x_raw, feature_names, feature_matrix = load_stage4_visible_matrix(source)
     labels = load_stage4_source_evaluator_labels(source)
-    x, standardization = _standardize_visible_features(x_raw)
+    x, standardization = _fit_source_standardization(x_raw)
     mlp = _fit_mlp_continuous(x, rank=min(2, max(1, min(x.shape) - 1)))
     attention = _fit_attention_vq(x, k=max(1, min(int(k), max(1, x.shape[0]))), max_iter=int(max_iter), code_dim=int(code_dim))
     global_null = _global_null_metrics(x)
@@ -274,6 +274,8 @@ def _write_outputs(output: Path, result: dict[str, object], attention: Mapping[s
         output / "source_codebook.npz",
         codebook=np.asarray(attention["codebook"], dtype=np.float64),
         centers=np.asarray(attention["centers"], dtype=np.float64),
+        standardization_mean=np.asarray(result["visible_feature_standardization"]["mean"], dtype=np.float64),
+        standardization_scale=np.asarray(result["visible_feature_standardization"]["scale"], dtype=np.float64),
         feature_names=np.asarray(feature_names, dtype=object),
     )
     (output / "config.yaml").write_text(yaml.safe_dump({"stage4_source_pretrain_v1": result["config"]}, sort_keys=False), encoding="utf-8")
@@ -292,3 +294,19 @@ def format_source_pretrain_summary(result: Mapping[str, object]) -> str:
             "",
         ]
     )
+
+
+def _fit_source_standardization(x: np.ndarray) -> tuple[np.ndarray, dict[str, object]]:
+    mean = np.mean(x, axis=0) if x.size else np.zeros(x.shape[1], dtype=np.float64)
+    scale = np.std(x, axis=0) if x.size else np.ones(x.shape[1], dtype=np.float64)
+    scale = np.where(scale > 1.0e-12, scale, 1.0)
+    z = (x - mean) / scale if x.size else np.asarray(x, dtype=np.float64)
+    return z, {
+        "schema": "scope_static_stage4_source_visible_feature_standardization_v1",
+        "method": "frozen feature-wise z-score over S4.0 source visible instances",
+        "coordinate_system": "source_standardized_visible_features",
+        "feature_count": int(x.shape[1]) if x.ndim == 2 else 0,
+        "zero_scale_replaced_with_one": True,
+        "mean": [float(value) for value in np.asarray(mean, dtype=np.float64).tolist()],
+        "scale": [float(value) for value in np.asarray(scale, dtype=np.float64).tolist()],
+    }

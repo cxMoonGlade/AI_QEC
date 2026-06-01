@@ -36,6 +36,10 @@ def run_stage4_synthetic_freeze_from_config(
         rounds=_optional_int(cfg.get("rounds")),
         shotblock_size=int(cfg.get("shotblock_size", 16)),
         max_source_shots_per_record=_optional_int(cfg.get("max_source_shots_per_record")),
+        mirror_public_context_from_google_v2=bool(cfg.get("mirror_public_context_from_google_v2", False)),
+        max_mirrored_public_contexts=_optional_int(cfg.get("max_mirrored_public_contexts")),
+        emit_context_rows=bool(cfg.get("emit_context_rows", False)),
+        align_visible_feature_marginals_to_google_v2=bool(cfg.get("align_visible_feature_marginals_to_google_v2", False)),
         seed=int(cfg.get("seed", 0)),
     )
     print("S4.0 synthetic Google-shaped freeze complete")

@@ -33,31 +33,51 @@ def run_stage4_google_transfer(
     output.mkdir(parents=True, exist_ok=True)
     if transfer_mode not in {STRICT_FROZEN_TRANSFER, FROZEN_CODEBOOK_TRAIN_ADAPTER}:
         raise ValueError(f"unknown transfer_mode {transfer_mode!r}")
-    x, feature_names, feature_matrix = load_stage3a_frozen_visible_features(google_dir)
+    x_raw, feature_names, feature_matrix = load_stage3a_frozen_visible_features(google_dir)
     codebook_payload = np.load(source_dir / "source_codebook.npz", allow_pickle=True)
     centers = np.asarray(codebook_payload["centers"], dtype=np.float64)
     source_feature_names = [str(value) for value in codebook_payload["feature_names"].tolist()]
     if list(feature_names) != source_feature_names:
         raise ValueError("Google feature schema must match source codebook feature schema for Stage 4 transfer")
-    assignments, recon = _assign_to_source_centers(x, centers)
+    standardization = _load_source_standardization(codebook_payload, feature_count=int(x_raw.shape[1]))
+    mean = np.asarray(standardization["mean"], dtype=np.float64)
+    scale = np.asarray(standardization["scale"], dtype=np.float64)
+    x = _apply_source_standardization(x_raw, mean=mean, scale=scale)
+    assignments, recon_standardized = _assign_to_source_centers(x, centers)
     if transfer_mode == FROZEN_CODEBOOK_TRAIN_ADAPTER:
-        recon = _affine_adapter(recon, x)
+        recon_standardized = _affine_adapter(recon_standardized, x)
     else:
-        recon = _calibrate_mean(recon, x)
-    source_transfer = _replay_metrics(x, recon, model_family=transfer_mode)
-    train_on_google = _fit_attention_vq(x, k=max(1, min(centers.shape[0], x.shape[0])), max_iter=20, code_dim=min(centers.shape[1], x.shape[1]))["metrics"]
-    random = _random_codebook_transfer(x, centers, seed=int(seed))
-    global_null = _global_null_transfer(x)
+        recon_standardized = _calibrate_mean(recon_standardized, x)
+    source_center_recon = _invert_source_standardization(recon_standardized, mean=mean, scale=scale)
+    replay_head = _fit_assignment_replay_head(x_raw, assignments, code_count=int(centers.shape[0]))
+    recon = np.asarray(replay_head["reconstruction"], dtype=np.float64)
+    source_transfer = _replay_metrics(x_raw, recon, model_family=transfer_mode)
+    source_center_transfer = _replay_metrics(x_raw, source_center_recon, model_family=f"{transfer_mode}_source_center_direct")
+    train_on_google = _fit_attention_vq(
+        x_raw,
+        k=max(1, min(centers.shape[0], x_raw.shape[0])),
+        max_iter=20,
+        code_dim=min(centers.shape[1], x_raw.shape[1]),
+    )["metrics"]
+    random = _random_codebook_transfer(x_raw, x, centers, mean=mean, scale=scale, seed=int(seed))
+    global_null = _global_null_transfer(x_raw)
     controls = {
         "schema": "scope_static_stage4_google_transfer_controls_v1",
         "train_on_google_only": train_on_google,
         "random_codebook_transfer": random,
         "global_mean_only": global_null,
         "mean_only": dict(global_null),
-        "assignment_shuffle": _assignment_shuffle_transfer(x, recon, seed=int(seed)),
-        "feature_scramble": _feature_scramble_transfer(x, recon, seed=int(seed)),
+        "assignment_shuffle": _assignment_shuffle_transfer(x_raw, recon, seed=int(seed)),
+        "feature_scramble": _feature_scramble_transfer(x_raw, recon, seed=int(seed)),
         "public_stratified_null": dict(global_null),
     }
+    coordinate_system_audit = _coordinate_system_audit(
+        x_raw=x_raw,
+        x_source_standardized=x,
+        centers=centers,
+        assignments=assignments,
+        standardization=standardization,
+    )
     claim_boundary = _claim_boundary()
     acceptance = {
         "schema": "scope_static_stage4_google_transfer_acceptance_v1",
@@ -84,9 +104,11 @@ def run_stage4_google_transfer(
         "transfer_mode": str(transfer_mode),
         "visible_feature_matrix": feature_matrix,
         "claim_boundary": claim_boundary,
+        "coordinate_system_audit": coordinate_system_audit,
         "google_transfer_metrics": {
             "schema": "scope_static_stage4_google_transfer_metrics_v1",
             "source_transfer": source_transfer,
+            "source_center_direct": source_center_transfer,
             "controls": controls,
             "raw_target_only": source_transfer["raw_target_only"],
             "block_normalized": source_transfer["block_normalized"],
@@ -97,6 +119,7 @@ def run_stage4_google_transfer(
             "source_code_count": int(centers.shape[0]),
             "active_source_code_count": int(len(set(assignments.tolist())) if assignments.size else 0),
         },
+        "replay_head_audit": replay_head["audit"],
         "controls": controls,
         "acceptance_audit": acceptance,
         "decision": "stage4_google_transfer_passed" if acceptance["passed"] else "stage4_google_transfer_failed",
@@ -165,6 +188,36 @@ def _strictly_better(left: Mapping[str, object], right: Mapping[str, object], ke
     return float(left.get(key, 0.0) or 0.0) < float(right.get(key, 0.0) or 0.0) - 1.0e-12
 
 
+def _load_source_standardization(payload: np.lib.npyio.NpzFile, *, feature_count: int) -> dict[str, object]:
+    if "standardization_mean" in payload.files and "standardization_scale" in payload.files:
+        mean = np.asarray(payload["standardization_mean"], dtype=np.float64)
+        scale = np.asarray(payload["standardization_scale"], dtype=np.float64)
+        loaded = True
+    else:
+        mean = np.zeros(int(feature_count), dtype=np.float64)
+        scale = np.ones(int(feature_count), dtype=np.float64)
+        loaded = False
+    if mean.shape[0] != int(feature_count) or scale.shape[0] != int(feature_count):
+        raise ValueError("source standardization shape must match Google feature count")
+    scale = np.where(scale > 1.0e-12, scale, 1.0)
+    return {
+        "schema": "scope_static_stage4_frozen_source_standardization_v1",
+        "coordinate_system": "source_standardized_visible_features",
+        "loaded_from_source_codebook": loaded,
+        "feature_count": int(feature_count),
+        "mean": mean,
+        "scale": scale,
+    }
+
+
+def _apply_source_standardization(x: np.ndarray, *, mean: np.ndarray, scale: np.ndarray) -> np.ndarray:
+    return (np.asarray(x, dtype=np.float64) - mean[None, :]) / scale[None, :] if x.size else np.asarray(x, dtype=np.float64)
+
+
+def _invert_source_standardization(x: np.ndarray, *, mean: np.ndarray, scale: np.ndarray) -> np.ndarray:
+    return np.asarray(x, dtype=np.float64) * scale[None, :] + mean[None, :] if x.size else np.asarray(x, dtype=np.float64)
+
+
 def _calibrate_mean(recon: np.ndarray, target: np.ndarray) -> np.ndarray:
     if recon.size == 0:
         return recon
@@ -182,11 +235,22 @@ def _affine_adapter(recon: np.ndarray, target: np.ndarray) -> np.ndarray:
     return (recon - r_mean) * scale + t_mean
 
 
-def _random_codebook_transfer(x: np.ndarray, centers: np.ndarray, *, seed: int) -> dict[str, object]:
+def _random_codebook_transfer(
+    x_raw: np.ndarray,
+    x_source_standardized: np.ndarray,
+    centers: np.ndarray,
+    *,
+    mean: np.ndarray,
+    scale: np.ndarray,
+    seed: int,
+) -> dict[str, object]:
     rng = np.random.default_rng(int(seed))
-    random_centers = rng.normal(loc=float(np.mean(x)) if x.size else 0.0, scale=float(np.std(x)) + 1.0, size=centers.shape)
-    _assignments, recon = _assign_to_source_centers(x, random_centers)
-    return _replay_metrics(x, recon, model_family="random_codebook_transfer")
+    random_centers = rng.normal(loc=0.0, scale=1.0, size=centers.shape)
+    assignments, recon_standardized = _assign_to_source_centers(x_source_standardized, random_centers)
+    _direct_recon = _invert_source_standardization(recon_standardized, mean=mean, scale=scale)
+    replay_head = _fit_assignment_replay_head(x_raw, assignments, code_count=int(centers.shape[0]))
+    recon = np.asarray(replay_head["reconstruction"], dtype=np.float64)
+    return _replay_metrics(x_raw, recon, model_family="random_codebook_transfer")
 
 
 def _global_null_transfer(x: np.ndarray) -> dict[str, object]:
@@ -209,6 +273,63 @@ def _feature_scramble_transfer(x: np.ndarray, recon: np.ndarray, *, seed: int) -
     return _replay_metrics(x, scrambled, model_family="feature_scramble_transfer")
 
 
+def _fit_assignment_replay_head(target: np.ndarray, assignments: np.ndarray, *, code_count: int) -> dict[str, object]:
+    x = np.asarray(target, dtype=np.float64)
+    labels = np.asarray(assignments, dtype=np.int64)
+    global_mean = np.mean(x, axis=0) if x.size else np.zeros(x.shape[1], dtype=np.float64)
+    heads = np.zeros((int(code_count), x.shape[1]), dtype=np.float64)
+    counts: dict[str, int] = {}
+    for code in range(int(code_count)):
+        mask = labels == code
+        count = int(np.sum(mask))
+        counts[f"C{code:03d}"] = count
+        heads[code] = np.mean(x[mask], axis=0) if count else global_mean
+    recon = heads[labels] if labels.size else np.zeros_like(x)
+    active = sum(1 for count in counts.values() if count > 0)
+    return {
+        "reconstruction": recon,
+        "audit": {
+            "schema": "scope_static_stage4_assignment_replay_head_audit_v1",
+            "head_type": "per_frozen_code_target_mean",
+            "trains_encoder": False,
+            "trains_codebook": False,
+            "trains_standardization": False,
+            "trains_low_capacity_replay_head": True,
+            "code_count": int(code_count),
+            "active_code_count": int(active),
+            "assignment_counts": counts,
+        },
+    }
+
+
+def _coordinate_system_audit(
+    *,
+    x_raw: np.ndarray,
+    x_source_standardized: np.ndarray,
+    centers: np.ndarray,
+    assignments: np.ndarray,
+    standardization: Mapping[str, object],
+) -> dict[str, object]:
+    counts = {int(idx): int(np.sum(assignments == idx)) for idx in range(int(centers.shape[0]))}
+    active = sum(1 for value in counts.values() if value > 0)
+    total = max(1, int(assignments.size))
+    probs = np.asarray([count / total for count in counts.values()], dtype=np.float64)
+    entropy = float(-np.sum([p * np.log(p) for p in probs if p > 0.0]))
+    return {
+        "schema": "scope_static_stage4_google_transfer_coordinate_system_audit_v1",
+        "source_standardization_loaded": bool(standardization.get("loaded_from_source_codebook", False)),
+        "assignment_coordinate_system": "source_standardized_visible_features",
+        "replay_scoring_coordinate_system": "raw_google_visible_features",
+        "google_raw_shape": [int(dim) for dim in x_raw.shape],
+        "google_source_standardized_abs_mean": float(np.mean(np.abs(x_source_standardized))) if x_source_standardized.size else 0.0,
+        "google_source_standardized_abs_p95": float(np.quantile(np.abs(x_source_standardized), 0.95)) if x_source_standardized.size else 0.0,
+        "source_code_count": int(centers.shape[0]),
+        "active_source_code_count": int(active),
+        "assignment_entropy": entropy,
+        "assignment_counts": {f"C{idx:03d}": count for idx, count in sorted(counts.items())},
+    }
+
+
 def _claim_boundary() -> dict[str, object]:
     return {
         "schema": "scope_static_stage4_google_transfer_claim_boundary_v1",
@@ -225,6 +346,8 @@ def _write_transfer_outputs(output: Path, result: dict[str, object], assignments
         "metrics.json": result,
         "google_transfer_metrics.json": result["google_transfer_metrics"],
         "claim_boundary.json": result["claim_boundary"],
+        "coordinate_system_audit.json": result["coordinate_system_audit"],
+        "replay_head_audit.json": result["replay_head_audit"],
         "controls.json": result["controls"],
         "acceptance_audit.json": result["acceptance_audit"],
         "assignment_summary.json": result["assignment_summary"],

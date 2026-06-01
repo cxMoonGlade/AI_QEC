@@ -7,8 +7,10 @@ import numpy as np
 
 from scope_static.google.s4_bridge_surface import compare_stage4_bridge_contract, write_stage4_synthetic_google_shaped_freeze
 from scope_static.mechanism_discovery.google_transfer import run_stage4_google_transfer, run_stage4_transfer_diagnostics
+from scope_static.mechanism_discovery.assignment_geometry import run_stage4_assignment_geometry_repair
 from scope_static.mechanism_discovery.source_ceiling import run_stage4_source_surface_survival_audit
 from scope_static.mechanism_discovery.source_pretrain import run_stage4_source_pretrain
+from scope_static.mechanism_discovery.support_audit import run_stage4_support_alignment_audit
 from scope_static.mechanism_discovery.stage4_artifacts import (
     load_stage4_source_evaluator_labels,
     load_stage4_visible_matrix,
@@ -90,6 +92,9 @@ def test_stage4_source_pretrain_runs_mlp_and_attention_vq_after_survival_gate(tm
     assert "attention_vq" in result["models"]
     assert result["codebook_usage"]["active_code_count"] >= 1
     assert (output / "source_codebook.npz").exists()
+    payload = np.load(output / "source_codebook.npz", allow_pickle=True)
+    assert "standardization_mean" in payload.files
+    assert "standardization_scale" in payload.files
     assert (output / "codebook_usage.json").exists()
     assert (output / "prototype_cards.json").exists()
 
@@ -124,11 +129,74 @@ def test_stage4_google_transfer_and_diagnostics_write_claim_boundary(tmp_path: P
     assert boundary["claims_visible_syndrome_response_replay"] is True
     assert result["acceptance_audit"]["checks"]["raw_target_beats_random_codebook"] is True
     assert (transfer_out / "claim_boundary.json").exists()
+    assert (transfer_out / "coordinate_system_audit.json").exists()
+    assert (transfer_out / "replay_head_audit.json").exists()
+    assert result["coordinate_system_audit"]["source_standardization_loaded"] is True
+    assert result["replay_head_audit"]["trains_codebook"] is False
 
     diagnostics = run_stage4_transfer_diagnostics(source_pretrain_dir=pretrain, google_stage3a_dir=source, output_dir=tmp_path / "S4_3")
     assert diagnostics["does_not_replace_main_claim"] is True
     assert "strict_frozen_transfer" in diagnostics
     assert "frozen_codebook_train_adapter" in diagnostics
+    assert (tmp_path / "S4_3" / "domain_shift_report.json").exists()
+    assert (tmp_path / "S4_3" / "failure_taxonomy.json").exists()
+
+
+def test_stage4_support_alignment_audit_reports_source_google_support(tmp_path: Path) -> None:
+    source = _write_source_freeze(tmp_path)
+    ceiling = tmp_path / "S4_0_5"
+    run_stage4_source_surface_survival_audit(stage4_source_dir=source, output_dir=ceiling, max_iter=5)
+    pretrain = tmp_path / "S4_1"
+    run_stage4_source_pretrain(stage4_source_dir=source, source_ceiling_dir=ceiling, output_dir=pretrain, k=4, code_dim=4, max_iter=5)
+    output = tmp_path / "support"
+
+    result = run_stage4_support_alignment_audit(
+        stage4_source_dir=source,
+        google_stage3a_dir=source,
+        source_pretrain_dir=pretrain,
+        output_dir=output,
+    )
+
+    assert result["decision"] in {
+        "source_google_support_overlap",
+        "source_google_support_shifted",
+        "source_google_support_mismatch",
+    }
+    assert result["source_google_support_report"]["feature_schema_match"] is True
+    assert result["codebook_google_coverage"]["skipped"] is False
+    assert (output / "source_google_support_report.json").exists()
+    assert (output / "block_shift_ranking.json").exists()
+    assert (output / "domain_classifier_audit.json").exists()
+    assert (output / "nearest_source_coverage.json").exists()
+    assert (output / "codebook_google_coverage.json").exists()
+
+
+def test_stage4_assignment_geometry_repair_writes_diagnostics(tmp_path: Path) -> None:
+    source = _write_source_freeze(tmp_path)
+    ceiling = tmp_path / "S4_0_5"
+    run_stage4_source_surface_survival_audit(stage4_source_dir=source, output_dir=ceiling, max_iter=5)
+    pretrain = tmp_path / "S4_1"
+    run_stage4_source_pretrain(stage4_source_dir=source, source_ceiling_dir=ceiling, output_dir=pretrain, k=4, code_dim=4, max_iter=5)
+    output = tmp_path / "S4_5"
+
+    result = run_stage4_assignment_geometry_repair(
+        stage4_source_dir=source,
+        source_pretrain_dir=pretrain,
+        google_stage3a_dir=source,
+        output_dir=output,
+        k=4,
+    )
+
+    assert result["decision"] in {"s4_assignment_geometry_repaired", "s4_assignment_geometry_repair_incomplete"}
+    assert result["claim_boundary"]["uses_google_ground_truth_mechanism_labels"] is False
+    assert "per_code_google_count" in result["assignment_geometry_audit"]
+    assert result["frozen_codebook_soft_reassignment"]["trains_code_vectors"] is False
+    assert result["google_native_partition_alignment"]["not_ground_truth_mechanism_label"] is True
+    assert result["raw_only_codebook_branch"]["excludes_meta_public_geometry_from_assignment"] is True
+    assert (output / "assignment_geometry_audit.json").exists()
+    assert (output / "frozen_codebook_soft_reassignment.json").exists()
+    assert (output / "google_native_partition_alignment.json").exists()
+    assert (output / "raw_only_codebook_branch.json").exists()
 
 
 def test_stage4_bridge_contract_comparator_detects_mismatch(tmp_path: Path) -> None:

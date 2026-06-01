@@ -49,6 +49,10 @@ def write_stage4_synthetic_google_shaped_freeze(
     rounds: int | None = None,
     shotblock_size: int = 16,
     max_source_shots_per_record: int | None = None,
+    mirror_public_context_from_google_v2: bool = False,
+    max_mirrored_public_contexts: int | None = None,
+    emit_context_rows: bool = False,
+    align_visible_feature_marginals_to_google_v2: bool = False,
     seed: int = 0,
 ) -> dict[str, object]:
     """Project controlled-catalog observations into a Google V2-shaped freeze."""
@@ -80,6 +84,14 @@ def write_stage4_synthetic_google_shaped_freeze(
     )
     coords = _synthetic_detector_coords(detector_count)
     boundary = {0, detector_count - 1} if detector_count > 1 else {0}
+    context_specs = _public_context_specs(
+        default_context=context,
+        bands=bands,
+        regions=regions,
+        google_stage3a_dir=google_stage3a_dir,
+        mirror_public_context_from_google_v2=bool(mirror_public_context_from_google_v2),
+        max_mirrored_public_contexts=max_mirrored_public_contexts,
+    )
     rows: list[np.ndarray] = []
     sampled_rows: list[np.ndarray] = []
     assignment_instances: list[dict[str, object]] = []
@@ -88,89 +100,114 @@ def write_stage4_synthetic_google_shaped_freeze(
     replicate_rows_by_unit: list[np.ndarray] = []
     detector_rate_means: list[float] = []
     logical_rate_means: list[float] = []
-    rng = np.random.default_rng(int(seed))
 
-    for row_idx, record in enumerate(records):
+    for source_idx, record in enumerate(records):
         local_observations = _record_google_shaped_observations(
             record,
             observations,
             max_source_shots=max_source_shots,
         )
         logical_support = _record_logical_support(record, detector_count=detector_count)
-        record_replicas: list[np.ndarray] = []
-        support_values: list[dict[str, float]] = []
-        for round_band in bands:
+        context_rows: list[tuple[np.ndarray, dict[str, float], dict[str, object]]] = []
+        for spec in context_specs:
+            round_band = str(spec["round_band"])
+            region = str(spec["region_family"])
+            row_context = spec["context"]
+            if not isinstance(row_context, _PublicSignatureContext):
+                raise TypeError("internal public context spec must carry _PublicSignatureContext")
             round_detectors = _detectors_for_round_band(coords, detector_count=detector_count, round_band=round_band)
-            for region in regions:
-                region_detectors = _detectors_for_region(
-                    str(region),
-                    detector_count=detector_count,
-                    boundary_detectors=boundary,
-                    logical_support_detectors=logical_support,
-                    coords=coords,
-                )
-                selected = sorted(set(round_detectors).intersection(region_detectors)) or sorted(range(detector_count))
-                feature_row, support = _signature_feature_row(
-                    local_observations,
-                    context=context,
-                    coords=coords,
-                    boundary_detectors=boundary,
-                    logical_support_detectors=logical_support,
-                    selected_detectors=selected,
-                    detector_count=detector_count,
-                    observable_count=observable_count,
-                    round_band=str(round_band),
-                    region_family=str(region),
-                    shotblocks=_shotblocks(local_observations.shape[0], int(shotblock_size)),
-                )
-                record_replicas.append(feature_row)
-                support_values.append(support)
-        row = np.mean(np.asarray(record_replicas, dtype=np.float64), axis=0)
-        rows.append(row)
-        sampled_rows.append(row.copy())
-        replicate_rows_by_unit.append(np.asarray(record_replicas, dtype=np.float64))
-        detector_rate_means.append(float(np.mean([value["detector_rate_mean"] for value in support_values])))
-        logical_rate_means.append(float(np.mean([value["logical_rate_mean"] for value in support_values])))
-        public_fields = {
-            "dataset_family": str(dataset_family),
-            "basis": context.basis,
-            "distance": context.distance,
-            "rounds": context.rounds,
-            "round_band": "mixed" if len(bands) > 1 else str(bands[0]),
-            "region_family": "mixed" if len(regions) > 1 else str(regions[0]),
-            "patch_public_geometry_class": context.patch_public_geometry_class,
-        }
-        assignment_instances.append(
-            {
-                "j": int(row_idx),
-                "record_index": int(row_idx),
-                "visible_instance_id": f"s4srcj{row_idx:06d}",
-                "context_group": int(row_idx),
-                "assignment_unit": DEFAULT_ASSIGNMENT_UNIT,
-                "unit_id_internal_only": f"synthetic_signature_unit_{row_idx:06d}",
-                "public_fields": public_fields,
-                "source_probe_count": int(len(_record_probe_indices(record, observations.shape[0]))),
-                "source_shot_count_total": int(local_observations.shape[0]),
-            }
-        )
-        signature_rows.append({"j": int(row_idx), "public_fields": public_fields, "source_shot_count_total": int(local_observations.shape[0])})
-        label = str(record.get("oracle_label", record.get("mechanism_id", f"M{row_idx}")))
+            region_detectors = _detectors_for_region(
+                region,
+                detector_count=detector_count,
+                boundary_detectors=boundary,
+                logical_support_detectors=logical_support,
+                coords=coords,
+            )
+            selected = sorted(set(round_detectors).intersection(region_detectors)) or sorted(range(detector_count))
+            feature_row, support = _signature_feature_row(
+                local_observations,
+                context=row_context,
+                coords=coords,
+                boundary_detectors=boundary,
+                logical_support_detectors=logical_support,
+                selected_detectors=selected,
+                detector_count=detector_count,
+                observable_count=observable_count,
+                round_band=round_band,
+                region_family=region,
+                shotblocks=_shotblocks(local_observations.shape[0], int(shotblock_size)),
+            )
+            feature_row = _override_mirrored_public_geometry(feature_row, spec)
+            context_rows.append((feature_row, support, dict(spec["public_fields"])))
+        label = str(record.get("oracle_label", record.get("mechanism_id", f"M{source_idx}")))
         quotient = str(record.get("quotient_label", label))
-        evaluator_records.append(
-            {
-                "j": int(row_idx),
-                "exact_mechanism_label": label,
-                "quotient_label": quotient,
-                "alias_label": quotient,
-                "mechanism_family": str(record.get("name", record.get("mechanism_family", label))),
-                "mechanism_set": str(record.get("mechanism_set", "controlled_catalog")),
-                "teacher_config_hash": _file_digest(teacher / "teacher_config.json"),
-                "source_record_index": int(row_idx),
+        if bool(emit_context_rows):
+            for feature_row, support, public_fields in context_rows:
+                _append_projected_row(
+                    rows=rows,
+                    sampled_rows=sampled_rows,
+                    replicate_rows_by_unit=replicate_rows_by_unit,
+                    detector_rate_means=detector_rate_means,
+                    logical_rate_means=logical_rate_means,
+                    assignment_instances=assignment_instances,
+                    signature_rows=signature_rows,
+                    evaluator_records=evaluator_records,
+                    feature_row=feature_row,
+                    replicate_rows=np.asarray([feature_row], dtype=np.float64),
+                    support_values=[support],
+                    public_fields=public_fields,
+                    source_idx=source_idx,
+                    record=record,
+                    label=label,
+                    quotient=quotient,
+                    teacher=teacher,
+                    observation_probe_count=int(observations.shape[0]),
+                    local_observation_count=int(local_observations.shape[0]),
+                )
+        else:
+            feature_rows = [row for row, _support, _public in context_rows]
+            support_values = [support for _row, support, _public in context_rows]
+            row = np.mean(np.asarray(feature_rows, dtype=np.float64), axis=0)
+            public_fields = {
+                "dataset_family": str(dataset_family),
+                "basis": context.basis,
+                "distance": context.distance,
+                "rounds": context.rounds,
+                "round_band": "mixed" if len({str(spec["round_band"]) for spec in context_specs}) > 1 else str(context_specs[0]["round_band"]),
+                "region_family": "mixed" if len({str(spec["region_family"]) for spec in context_specs}) > 1 else str(context_specs[0]["region_family"]),
+                "patch_public_geometry_class": context.patch_public_geometry_class,
             }
-        )
+            _append_projected_row(
+                rows=rows,
+                sampled_rows=sampled_rows,
+                replicate_rows_by_unit=replicate_rows_by_unit,
+                detector_rate_means=detector_rate_means,
+                logical_rate_means=logical_rate_means,
+                assignment_instances=assignment_instances,
+                signature_rows=signature_rows,
+                evaluator_records=evaluator_records,
+                feature_row=row,
+                replicate_rows=np.asarray(feature_rows, dtype=np.float64),
+                support_values=support_values,
+                public_fields=public_fields,
+                source_idx=source_idx,
+                record=record,
+                label=label,
+                quotient=quotient,
+                teacher=teacher,
+                observation_probe_count=int(observations.shape[0]),
+                local_observation_count=int(local_observations.shape[0]),
+            )
 
     matrix = _finite(np.asarray(rows, dtype=np.float64))
     sampled = _finite(np.asarray(sampled_rows, dtype=np.float64))
+    google_distribution_alignment = None
+    if bool(align_visible_feature_marginals_to_google_v2) and google_stage3a_dir is not None:
+        matrix, sampled, google_distribution_alignment = _align_visible_feature_marginals_to_google_v2(
+            matrix=matrix,
+            sampled=sampled,
+            google_stage3a_dir=Path(google_stage3a_dir),
+        )
     feature_schema = _feature_schema(list(FEATURE_NAMES))
     visible_feature_matrix = _visible_feature_matrix_manifest(matrix, sampled)
     split_manifest = _split_manifest(assignment_instances, split_policy=str(split_policy))
@@ -219,6 +256,7 @@ def write_stage4_synthetic_google_shaped_freeze(
         schema_compatibility_with_google_v2 is None
         or bool(dict(schema_compatibility_with_google_v2).get("passed", False))
     )
+    alignment_passed = google_distribution_alignment is None or bool(google_distribution_alignment.get("passed", False))
     result = {
         "schema": "scope_static_stage4_synthetic_google_shaped_freeze_v1",
         "stage": STAGE_NAME,
@@ -246,6 +284,14 @@ def write_stage4_synthetic_google_shaped_freeze(
             "rounds": context.rounds,
             "shotblock_size": int(shotblock_size),
             "max_source_shots_per_record": max_source_shots,
+            "mirror_public_context_from_google_v2": bool(mirror_public_context_from_google_v2),
+            "max_mirrored_public_contexts": _optional_positive_int(max_mirrored_public_contexts),
+            "emit_context_rows": bool(emit_context_rows),
+            "emitted_public_context_count": int(len(context_specs)),
+            "mirrors_google_public_geometry_numeric_features": bool(
+                context_specs and isinstance(context_specs[0].get("meta_feature_values"), Mapping)
+            ),
+            "align_visible_feature_marginals_to_google_v2": bool(align_visible_feature_marginals_to_google_v2),
             "seed": int(seed),
         },
         "visible_feature_schema": feature_schema,
@@ -256,6 +302,7 @@ def write_stage4_synthetic_google_shaped_freeze(
         "acceptance_audit": acceptance,
         "bridge_contract_audit": bridge_contract,
         "schema_compatibility_with_google_v2": schema_compatibility_with_google_v2,
+        "google_distribution_alignment_audit": google_distribution_alignment,
         "probe_schedule_manifest": _probe_schedule_manifest(probe_names),
         "signature_schedule_manifest": _signature_schedule_manifest(signature_rows, bands=bands, regions=regions),
         "batch_context_schema": _batch_context_schema(len(assignment_instances)),
@@ -263,7 +310,7 @@ def write_stage4_synthetic_google_shaped_freeze(
         "source_label_manifest_path": "source_label_manifest.json",
         "source_evaluator_labels_path": "source_evaluator_labels.json",
         "decision": "stage4_synthetic_bridge_freeze_passed"
-        if acceptance["passed"] and bridge_contract["passed"] and comparator_passed
+        if acceptance["passed"] and bridge_contract["passed"] and comparator_passed and alignment_passed
         else "stage4_synthetic_bridge_freeze_failed",
     }
     _write_outputs(output, result, matrix, sampled, source_label_manifest, source_evaluator_labels)
@@ -339,6 +386,7 @@ def _write_outputs(
         "acceptance_audit.json": result["acceptance_audit"],
         "bridge_contract_audit.json": result["bridge_contract_audit"],
         "schema_compatibility_with_google_v2.json": result["schema_compatibility_with_google_v2"],
+        "google_distribution_alignment_audit.json": result["google_distribution_alignment_audit"],
         "source_label_manifest.json": source_label_manifest,
         "source_evaluator_labels.json": source_evaluator_labels,
     }
@@ -399,6 +447,237 @@ def _record_google_shaped_observations(record: Mapping[str, object], observation
     selected = detector_bits[:, qubits] if qubits else detector_bits
     logical = np.mod(np.sum(selected, axis=1), 2.0).reshape(-1, 1)
     return np.concatenate([detector_bits, logical], axis=1)
+
+
+def _append_projected_row(
+    *,
+    rows: list[np.ndarray],
+    sampled_rows: list[np.ndarray],
+    replicate_rows_by_unit: list[np.ndarray],
+    detector_rate_means: list[float],
+    logical_rate_means: list[float],
+    assignment_instances: list[dict[str, object]],
+    signature_rows: list[dict[str, object]],
+    evaluator_records: list[dict[str, object]],
+    feature_row: np.ndarray,
+    replicate_rows: np.ndarray,
+    support_values: list[dict[str, float]],
+    public_fields: dict[str, object],
+    source_idx: int,
+    record: Mapping[str, object],
+    label: str,
+    quotient: str,
+    teacher: Path,
+    observation_probe_count: int,
+    local_observation_count: int,
+) -> None:
+    j = int(len(rows))
+    row = np.asarray(feature_row, dtype=np.float64)
+    rows.append(row)
+    sampled_rows.append(row.copy())
+    replicate_rows_by_unit.append(np.asarray(replicate_rows, dtype=np.float64))
+    detector_rate_means.append(float(np.mean([value["detector_rate_mean"] for value in support_values])) if support_values else 0.0)
+    logical_rate_means.append(float(np.mean([value["logical_rate_mean"] for value in support_values])) if support_values else 0.0)
+    assignment_instances.append(
+        {
+            "j": j,
+            "record_index": j,
+            "visible_instance_id": f"s4srcj{j:06d}",
+            "context_group": j,
+            "assignment_unit": DEFAULT_ASSIGNMENT_UNIT,
+            "unit_id_internal_only": f"synthetic_signature_unit_{j:06d}",
+            "public_fields": public_fields,
+            "source_probe_count": int(len(_record_probe_indices(record, observation_probe_count))),
+            "source_shot_count_total": int(local_observation_count),
+            "source_record_index_evaluator_only": int(source_idx),
+        }
+    )
+    signature_rows.append({"j": j, "public_fields": public_fields, "source_shot_count_total": int(local_observation_count)})
+    evaluator_records.append(
+        {
+            "j": j,
+            "exact_mechanism_label": label,
+            "quotient_label": quotient,
+            "alias_label": quotient,
+            "mechanism_family": str(record.get("name", record.get("mechanism_family", label))),
+            "mechanism_set": str(record.get("mechanism_set", "controlled_catalog")),
+            "teacher_config_hash": _file_digest(teacher / "teacher_config.json"),
+            "source_record_index": int(source_idx),
+        }
+    )
+
+
+def _public_context_specs(
+    *,
+    default_context: _PublicSignatureContext,
+    bands: tuple[str, ...],
+    regions: tuple[str, ...],
+    google_stage3a_dir: str | Path | None,
+    mirror_public_context_from_google_v2: bool,
+    max_mirrored_public_contexts: int | None,
+) -> list[dict[str, object]]:
+    if mirror_public_context_from_google_v2 and google_stage3a_dir is not None:
+        google_dir = Path(google_stage3a_dir)
+        manifest_path = google_dir / "split_manifest.json"
+        if manifest_path.exists():
+            rows = _google_public_context_rows(google_dir)
+            limit = _optional_positive_int(max_mirrored_public_contexts)
+            if limit is not None and len(rows) > limit:
+                indices = np.linspace(0, len(rows) - 1, int(limit), dtype=np.int64)
+                rows = [rows[int(idx)] for idx in indices.tolist()]
+            return rows
+    out = []
+    for band in bands:
+        for region in regions:
+            public_fields = {
+                "dataset_family": default_context.dataset_family,
+                "dataset_name": default_context.dataset_name,
+                "basis": default_context.basis,
+                "distance": default_context.distance,
+                "rounds": default_context.rounds,
+                "round_band": str(band),
+                "region_family": str(region),
+                "patch_public_geometry_class": default_context.patch_public_geometry_class,
+            }
+            out.append(
+                {
+                    "context": default_context,
+                    "round_band": str(band),
+                    "region_family": str(region),
+                    "public_fields": public_fields,
+                }
+            )
+    return out
+
+
+def _override_mirrored_public_geometry(feature_row: np.ndarray, spec: Mapping[str, object]) -> np.ndarray:
+    values = spec.get("meta_feature_values")
+    if not isinstance(values, Mapping):
+        return feature_row
+    out = np.asarray(feature_row, dtype=np.float64).copy()
+    name_to_idx = {name: idx for idx, name in enumerate(FEATURE_NAMES)}
+    for name, value in values.items():
+        idx = name_to_idx.get(str(name))
+        if idx is not None:
+            out[int(idx)] = float(value)
+    return out
+
+
+def _google_public_context_rows(google_dir: Path) -> list[dict[str, object]]:
+    payload = _load_json(google_dir / "split_manifest.json")
+    meta_values = _google_public_geometry_feature_values(google_dir)
+    rows = payload.get("assignment_instances", [])
+    if not isinstance(rows, list):
+        return []
+    seen: set[tuple[object, ...]] = set()
+    out: list[dict[str, object]] = []
+    for row in rows:
+        if not isinstance(row, Mapping):
+            continue
+        public = dict(row.get("public_fields", {})) if isinstance(row.get("public_fields", {}), Mapping) else {}
+        row_index = int(row.get("j", row.get("record_index", len(out))))
+        key = (
+            public.get("dataset_name"),
+            public.get("dataset_family"),
+            public.get("basis"),
+            public.get("distance"),
+            public.get("rounds"),
+            public.get("round_band"),
+            public.get("region_family"),
+            public.get("patch_public_geometry_class"),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        basis = str(public.get("basis", "X")).upper()
+        context = _PublicSignatureContext(
+            dataset_name=str(public.get("dataset_name", "google_v2_public_context_mirror")),
+            dataset_family=str(public.get("dataset_family", "surface")),
+            basis=basis if basis in {"X", "Z"} else "X",
+            distance=int(public.get("distance", 0) or 0),
+            rounds=int(public.get("rounds", 0) or 0),
+            patch_public_geometry_class=str(public.get("patch_public_geometry_class", "google_v2_public_context_mirror")),
+        )
+        out.append(
+            {
+                "context": context,
+                "round_band": str(public.get("round_band", "all")),
+                "region_family": str(public.get("region_family", "full_patch")),
+                "public_fields": public,
+                "meta_feature_values": meta_values.get(row_index, {}),
+            }
+        )
+    return out
+
+
+def _google_public_geometry_feature_values(google_dir: Path) -> dict[int, dict[str, float]]:
+    schema_path = google_dir / "visible_feature_schema.json"
+    matrix_path = google_dir / "visible_features.npy"
+    if not schema_path.exists() or not matrix_path.exists():
+        return {}
+    schema = _load_json(schema_path)
+    names = _feature_names(schema)
+    meta_indices = [(idx, name) for idx, name in enumerate(names) if str(name).startswith("meta__public_geometry")]
+    matrix = np.asarray(np.load(matrix_path), dtype=np.float64)
+    out: dict[int, dict[str, float]] = {}
+    for row_idx in range(int(matrix.shape[0])):
+        out[row_idx] = {name: float(matrix[row_idx, idx]) for idx, name in meta_indices}
+    return out
+
+
+def _align_visible_feature_marginals_to_google_v2(
+    *,
+    matrix: np.ndarray,
+    sampled: np.ndarray,
+    google_stage3a_dir: Path,
+) -> tuple[np.ndarray, np.ndarray, dict[str, object]]:
+    google_path = google_stage3a_dir / "visible_features.npy"
+    if not google_path.exists():
+        return matrix, sampled, {
+            "schema": "scope_static_stage4_google_distribution_alignment_audit_v1",
+            "passed": False,
+            "uses_google_labels": False,
+            "error": "google_visible_features_missing",
+            "google_stage3a_dir": str(google_stage3a_dir),
+        }
+    google = np.asarray(np.load(google_path), dtype=np.float64)
+    if google.ndim != 2 or google.shape[1] != matrix.shape[1]:
+        return matrix, sampled, {
+            "schema": "scope_static_stage4_google_distribution_alignment_audit_v1",
+            "passed": False,
+            "uses_google_labels": False,
+            "error": "google_visible_feature_shape_mismatch",
+            "source_shape": [int(dim) for dim in matrix.shape],
+            "google_shape": [int(dim) for dim in google.shape],
+        }
+    source_mean = np.mean(matrix, axis=0) if matrix.size else np.zeros(matrix.shape[1], dtype=np.float64)
+    source_std = np.std(matrix, axis=0) if matrix.size else np.ones(matrix.shape[1], dtype=np.float64)
+    google_mean = np.mean(google, axis=0) if google.size else np.zeros(google.shape[1], dtype=np.float64)
+    google_std = np.std(google, axis=0) if google.size else np.ones(google.shape[1], dtype=np.float64)
+    safe_source_std = np.where(source_std > 1.0e-12, source_std, 1.0)
+    aligned = ((matrix - source_mean[None, :]) / safe_source_std[None, :]) * google_std[None, :] + google_mean[None, :]
+    aligned_sampled = ((sampled - source_mean[None, :]) / safe_source_std[None, :]) * google_std[None, :] + google_mean[None, :]
+    before_mean_abs = float(np.mean(np.abs(source_mean - google_mean))) if source_mean.size else 0.0
+    before_std_abs = float(np.mean(np.abs(source_std - google_std))) if source_std.size else 0.0
+    after_mean = np.mean(aligned, axis=0) if aligned.size else np.zeros_like(source_mean)
+    after_std = np.std(aligned, axis=0) if aligned.size else np.ones_like(source_std)
+    after_mean_abs = float(np.mean(np.abs(after_mean - google_mean))) if after_mean.size else 0.0
+    after_std_abs = float(np.mean(np.abs(after_std - google_std))) if after_std.size else 0.0
+    return _finite(aligned), _finite(aligned_sampled), {
+        "schema": "scope_static_stage4_google_distribution_alignment_audit_v1",
+        "passed": True,
+        "method": "featurewise_affine_match_source_visible_marginals_to_google_v2_visible_marginals",
+        "uses_google_labels": False,
+        "uses_google_evaluator_only_fields": False,
+        "uses_google_visible_features_only": True,
+        "source_shape": [int(dim) for dim in matrix.shape],
+        "google_shape": [int(dim) for dim in google.shape],
+        "before_mean_abs_error": before_mean_abs,
+        "before_std_abs_error": before_std_abs,
+        "after_mean_abs_error": after_mean_abs,
+        "after_std_abs_error": after_std_abs,
+        "zero_source_scales_replaced_with_one": True,
+    }
 
 
 def _optional_positive_int(value: object) -> int | None:

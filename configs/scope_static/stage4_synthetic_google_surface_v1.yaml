@@ -8,5 +8,9 @@ stage4_synthetic_google_surface_v1:
   dataset_family: synthetic_controlled_catalog
   basis: X
   shotblock_size: 2048
-  max_source_shots_per_record: 50000
+  max_source_shots_per_record: 8192
+  mirror_public_context_from_google_v2: true
+  max_mirrored_public_contexts: 80
+  emit_context_rows: true
+  align_visible_feature_marginals_to_google_v2: true
   seed: 0

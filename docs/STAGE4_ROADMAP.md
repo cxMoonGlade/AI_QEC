@@ -158,11 +158,24 @@ Apply the S4.1 source bundle to a real Google V2 `S3A_protocol_freeze`. The main
 claim path is strict frozen transfer: freeze standardization, tokenizer/encoder,
 and codebook; train only a low-capacity calibrator and replay heads.
 
+Before interpreting a transfer failure, run the support alignment audit. It
+checks whether real Google rows occupy the frozen source coordinate support,
+whether public-geometry metadata has been mirrored, whether feature marginals
+were aligned using visible-only Google statistics, and whether Google rows use
+more than a collapsed subset of source codes.
+
 Required decision and artifacts:
 
 - `google_transfer_decision`
 - strict frozen transfer vs controls
 - `claim_boundary.json`
+- `coordinate_system_audit.json`
+- `replay_head_audit.json`
+- `source_google_support_report.json`
+- `block_shift_ranking.json`
+- `domain_classifier_audit.json`
+- `nearest_source_coverage.json`
+- `codebook_google_coverage.json`
 - `google_transfer_metrics.json`
 - `control_margin_metrics.json`
 - `transfer_acceptance_audit.json`
@@ -237,6 +250,8 @@ Expected Stage 4 configs:
 configs/scope_static/stage4_synthetic_google_surface_v1.yaml
 configs/scope_static/stage4_source_ceiling_v1.yaml
 configs/scope_static/stage4_source_pretrain_v1.yaml
+configs/scope_static/stage4_support_audit_v1.yaml
+configs/scope_static/stage4_assignment_geometry_v1.yaml
 configs/scope_static/stage4_google_transfer_v1.yaml
 configs/scope_static/stage4_transfer_diagnostics_v1.yaml
 ```
@@ -247,6 +262,8 @@ Expected Stage 4 commands:
 scope-stage4-synthetic-freeze
 scope-stage4-source-ceiling
 scope-stage4-source-pretrain
+scope-stage4-support-audit
+scope-stage4-assignment-geometry
 scope-stage4-google-transfer
 scope-stage4-transfer-diagnostics
 ```
