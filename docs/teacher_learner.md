@@ -43,6 +43,36 @@ classical readout assignment matrices before sampling and blocks failed
 artifacts with a post-sampling physicality audit. Learner is not yet an
 arbitrary CPTP/GKSL channel learner by construction.
 
+## Response-Surface Intuition
+
+Teacher-learner mechanism recovery should be understood as learning from a
+probe- and context-induced visible response surface, not from direct access to a
+continuous geometric surface of the quantum circuit itself. The teacher inserts
+or declares probes, basis choices, locations, rounds, and public context. These
+choices induce sampled detector and logical-observable responses. Under a
+reference or no-error condition, those syndrome/observable responses should be
+close to a stable baseline distribution; it is useful, but only intuitive, to
+think of that baseline as a smooth surface.
+
+An error mechanism perturbs this visible response distribution. The learner sees
+the resulting statistical shape across probes, qubits or detectors, time,
+basis, and context: marginal rate shifts, spatial and temporal correlations,
+logical-observable coupling, drift, and other sampled-observation-derived
+features. In the surface picture, those response signatures are the bumps or
+depressions on the otherwise smooth baseline. The learner does not observe the
+physical mechanism object directly; it observes these visible response
+signatures.
+
+For Stage 2 catalog validation, if these signatures are separable on the
+declared learner-visible surface, a no-leakage learner can classify the catalog
+mechanisms from sampled observations and approved visible features. For Stage 3
+discovery, the stricter goal is to learn assignments, prototypes, or a codebook
+from the visible surface without mechanism-label supervision, then use
+evaluator-only labels only after training to audit recovery. If two mechanisms
+induce indistinguishable or near-indistinguishable visible distributions,
+`p(y | m_a) ~= p(y | m_b)`, the correct discovery target is an observational
+alias or quotient class, not a forced exact-label split.
+
 ## Teacher
 
 A **teacher** is the source of reference truth for an experiment.
