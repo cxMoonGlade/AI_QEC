@@ -1,5 +1,14 @@
 ### SCOPE-Twin: Symmetry-Compressed Orbit-Physical Emulator
 
+SCOPE-Twin is the long-horizon target: a digital twin built by discovering
+compact, auditable latent noise structure from QEC observations, then using
+that structure for generation, interpretation, decoder-facing utility,
+cross-context transfer, drift prediction, and identifiability tests.
+
+The current code does not implement the full amortized physical parameter-field
+object below. It implements the SCOPE-Static, controlled-catalog, and Stage 3
+visible-discovery pieces that form the evidence ladder toward this target.
+
 ##### Notation and Object Contract
 
 This contract is part of the model specification. Before running or interpreting new
@@ -28,11 +37,19 @@ experiments, the implementation and writeup must use these names consistently.
 | fault-level features | \(\phi^{\mathrm{fault}}_j\) or \(\tilde\phi_j\) | features attached to DEM fault \(j\) |
 | location-level features | \(\phi^{\mathrm{loc}}_{i,t}\) | features attached to physical location/template |
 | orbit-level features | \(\phi^{\mathrm{orb}}_\omega\) | orbit prototype features |
+| visible assignment unit | \(\xi\in\mathcal U_{\mathrm{vis}}\) | protocol-declared visible unit such as a probe batch or public syndrome-response signature |
+| visible feature vector | \(x^{\mathrm{vis}}_\xi\) | frozen learner-visible features for visible unit \(\xi\) |
+| visible prototype assignment | \(\Pi_{\xi k}\) | Stage 3 visible-surface assignment matrix when rows are not DEM faults or physical locations |
 
 Do not use \(o\) for orbit or logical observable. Use \(\omega\) for orbit and
 \(m\) for logical observable. Do not use \(\ell\) for both circuit operations and
 logits. Use \(q\) for circuit operations and \(\lambda_j\) for Stage-1 fault
 logits.
+
+When the assignment rows are visible-surface units rather than DEM faults or
+physical locations, use \(\xi\) for the row index and \(\Pi_{\xi k}\) for the
+assignment. Reserve \(j\) for DEM faults and \(i\) for physical/circuit
+locations inside this document.
 
 ###### Stage-1 DEM-fault contract
 
@@ -774,6 +791,66 @@ simultaneously along six axes:
 CPTP/GKSL constraints are therefore necessary physical structure for this
 contract, but they are not sufficient evidence for the SCOPE-Twin claim.
 
+##### Current Implementation Bridge
+
+The implemented repository currently covers three pieces of the SCOPE-Twin
+evidence ladder.
+
+1. **SCOPE-Static DEM/Bernoulli learning**
+
+   The fixed-context DEM object learns fault logits over
+   \(e_j\sim\mathrm{Bernoulli}(p_j)\) and \(y=\mathsf A e\bmod 2\). This tests
+   compression, likelihood, and orbit/residual hypotheses over effective DEM
+   faults, not a full physical parameter field.
+
+2. **Controlled physical-mechanism catalog**
+
+   The data-preparation teacher generates observations from declared catalog
+   mechanisms whose local modules are implemented as unitary channels, Kraus
+   channels, or stochastic readout maps embedded into valid measurement models.
+   The emitted physicality/guardrail artifacts audit the generating modules.
+   This validates controlled observation generation and no-leakage learner
+   replay under a declared catalog protocol; it does not make the learner an
+   arbitrary CPTP/GKSL parameter-field optimizer.
+
+3. **Stage 3 visible-structure discovery and replay**
+
+   Stage 3 removes direct mechanism-label supervision and learns assignments,
+   prototypes, and visible replay models from frozen learner-visible features.
+   For Google hardware data, the V2 public visible surface constructs
+   \(x^{\mathrm{vis}}_\xi\) from public syndrome-response signatures:
+
+   ```text
+   raw__marginal
+   raw__spatial_corr
+   raw__temporal_corr
+   raw__logical_coupling
+   raw__stability
+   meta__public_geometry
+   ```
+
+   The current Google Stage 3 closeout supports this bounded statement:
+
+   ```text
+   V2 raw syndrome-response replay beats global/mean-only,
+   assignment-shuffle, feature-scramble, and public-stratified-null controls
+   under no-oracle rules.
+   ```
+
+   This is evidence that public syndrome-response observations contain
+   assignment-aligned latent structure. It is not yet a learned
+   \(\Theta_\psi(c)\), not a physical channel decoder, and not a decoder-utility
+   or drift-prediction result.
+
+The next implementation stage is **S4 neural syndrome-response discovery**:
+learn a neural representation over \(x^{\mathrm{vis}}_\xi\) with an auditable
+prototype or VQ bottleneck \(\Pi_{\xi k}\), preserve the no-oracle and
+no-surrogate-ID controls from Stage 3, and require raw-target-only plus
+block-normalized improvements over the Stage 3 prototype mixture. S4 remains a
+visible-observation discovery stage unless and until its latent variables are
+connected to a physical decoder \(\mathrm{PhysDec}_t\) and circuit-level
+observation distribution \(p_{\Theta}(y\mid c)\).
+
 ##### Contributions
 
 1. **New model class**
@@ -1023,81 +1100,145 @@ $$
 ---
 
 
-### Stage 3: SCOPE-Amortized / SCOPE-Twin
+### Stage 3: Visible SCOPE-Discovery
 
-Only after Stage 1 and Stage 2 work, implement the amortized map:
+Stage 3 is the current no-oracle visible-discovery layer. It does not yet learn
+the full context-to-physical-field map \(f_\psi:c\mapsto\Theta_\psi(c)\).
+Instead, it freezes a learner-visible surface and asks whether assignments and
+prototypes can be recovered from observations alone.
 
-[
-f_\psi:c\mapsto\Theta_\psi(c).
-]
+For controlled catalog data, the visible unit may be a mechanism-condition or
+probe-batch instance. For Google V2 data, the visible unit is a public
+syndrome-response signature \(\xi\), and the learner sees
+\(x^{\mathrm{vis}}_\xi\).
 
-This is what your document calls SCOPE-Amortized: it learns the map from context (c) to the parameter field (\Theta_\psi(c)), with contexts coming from code distance, noise regimes, injected defects, calibration windows, schedule variants, or synthetic teacher-generated circuits.
+The visible assignment object is
 
-At this stage, go back to **known orbit structure first**.
+$$
+\Pi\in[0,1]^{|\mathcal U_{\mathrm{vis}}|\times K},
+\qquad
+\sum_{k=1}^{K}\Pi_{\xi k}=1.
+$$
 
-So the model is:
+The Stage 3 visible replay model learns prototypes in visible-feature space:
 
-# [ \theta_{i,t}(c)
+$$
+\hat x^{\mathrm{vis}}_\xi
+=
+g_\psi(\Pi_{\xi\cdot}),
+$$
 
-\rho_t(g_{i\leftarrow o})
-\vartheta_{o,t,\psi}(c)
-+
-U_{o,t,\psi}(c)z_{i,t,\psi}(c).
-]
-
-Your current document already defines this as the core SCOPE-Twin field construction, with orbit prototype (\vartheta_{o,t,\psi}), residual basis (U_{o,t,\psi}), residual coordinate (z_{i,t,\psi}), and a physical decoder producing CPTP/GKSL local channels.
+and is evaluated on heldout visible-generation quality plus falsification
+controls. Evaluator-only labels, channels, PTMs, Kraus matrices, teacher IDs,
+decoder correctness targets, and oracle prototypes are not learner inputs.
 
 This stage answers:
 
-[
+$$
+\boxed{
+\text{Can visible observations support no-oracle latent assignment and replay?}
+}
+$$
+
+### Stage 4: Neural Syndrome-Response Discovery
+
+S4 is the next implementation step after the Stage 3 Google V2 closeout. It
+keeps the visible-observation boundary, but replaces the shallow prototype
+mixture with a neural representation and auditable bottleneck:
+
+$$
+x^{\mathrm{vis}}_\xi
+\xrightarrow{\mathrm{Enc}_\psi}
+h_\xi
+\xrightarrow{\mathrm{prototype/VQ}}
+\Pi_{\xi k}
+\xrightarrow{\mathrm{Dec}_\psi}
+\hat x^{\mathrm{vis}}_\xi.
+$$
+
+S4 must keep the same controls as Stage 3:
+
+- no mechanism labels, channel objects, decoder correctness labels, or
+  context/path/sample surrogate IDs in the learner path;
+- raw-target-only and block-normalized scoring;
+- assignment-shuffle and feature-scramble collapse checks;
+- public-stratified-null comparison;
+- seed/fold stability.
+
+This stage answers:
+
+$$
+\boxed{
+\text{Can a neural prototype bottleneck learn stronger public syndrome-response regimes?}
+}
+$$
+
+### Later Stage: Amortized Physical SCOPE-Twin
+
+Only after the visible neural discovery stage is stable should the project move
+to the amortized physical field:
+
+$$
+f_\psi:c\mapsto\Theta_\psi(c).
+$$
+
+Start with known quotient/orbit structure before combining amortization with
+latent quotient discovery:
+
+$$
+\theta_{i,t}(c)
+=
+\rho_t(g_{i\leftarrow \omega})
+\vartheta_{\omega,t,\psi}(c)
++
+U_{\omega,t,\psi}(c)z_{i,t,\psi}(c),
+\qquad
+\omega=q_t(i).
+$$
+
+This known-quotient amortized stage answers:
+
+$$
 \boxed{
 \text{Can known-quotient SCOPE transfer across contexts?}
 }
-]
+$$
 
-------
+The full amortized SCOPE-Discovery version then combines context-conditioned
+parameter learning with latent quotient discovery:
 
-### Stage 4: Amortized SCOPE-Discovery
-
-Now combine the two difficult parts:
-
-[
-\boxed{
-\text{context-conditioned parameter learning}
-+
-\text{latent quotient discovery}.
-}
-]
-
-Use:
-
-[
-A^{(t)}_\psi(c)
+$$
+\Pi^{(t)}_\psi(c)
 \in
-[0,1]^{|\mathcal I_t|\times K_t}.
-]
+[0,1]^{|\mathcal I_t|\times K_t},
+\qquad
+\sum_{k=1}^{K_t}\Pi^{(t)}_{ik,\psi}(c)=1.
+$$
 
-Then:
+Then
 
-# [ \theta_{i,t}(c)
-
+$$
+\theta_{i,t}(c)
+=
 \sum_{k=1}^{K_t}
-A^{(t)}*{ik,\psi}(c)
+\Pi^{(t)}_{ik,\psi}(c)
 \left[
-\vartheta*{k,t,\psi}(c)
+\vartheta_{k,t,\psi}(c)
 +
 U_{k,t,\psi}(c)z_{i,t,\psi}(c)
 \right].
-]
-
-This is the full SCOPE-Discovery version.
+$$
 
 This stage answers:
 
-[
+$$
 \boxed{
-\text{Can the discovered quotient structure transfer across circuit/noise/code contexts?}
+\text{Can discovered quotient structure transfer across circuit, noise, and code contexts?}
 }
-]
+$$
 
-This is where you test OOD transfer, e.g. train at (d=3,5), test at (d=7), or train on bulk-only circuits and test on boundary/defect-heavy circuits. Your document already lists this as an OOD axis with held-out NLL, TVD, detector-rate MAE, local correlation error, (d_Q), and logical observation statistics.
+This is where OOD transfer should be tested, for example training at \(d=3,5\)
+and testing at \(d=7\), or training on bulk-only circuits and testing on
+boundary/defect-heavy circuits. Metrics include held-out likelihood, TVD,
+detector-rate MAE, local-correlation error, \(d_Q\), logical observation
+statistics, physical-validity audits, and decoder-facing utility.
