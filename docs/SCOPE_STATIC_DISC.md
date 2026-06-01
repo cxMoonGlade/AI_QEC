@@ -2784,8 +2784,8 @@ The adapter writes frozen Stage 3A-style artifacts through a public cache and
 aggregate cache:
 
 ```text
-outputs/google_static/google_s3_visible_cache_v2/cache_manifest.json
-outputs/google_static/google_s3_visible_cache_v2/aggregates/aggregate_manifest.json
+outputs/google_static/google_s3_visible_surface_v2_cache/precompute_cache/cache_manifest.json
+outputs/google_static/google_s3_visible_surface_v2_cache/precompute_cache/aggregates/aggregate_manifest.json
 outputs/google_static/google_s3_visible_surface_v2/S3A_protocol_freeze/visible_features.npy
 outputs/google_static/google_s3_visible_surface_v2/S3A_protocol_freeze/visible_feature_schema.json
 outputs/google_static/google_s3_visible_surface_v2/S3A_protocol_freeze/forbidden_feature_audit.json

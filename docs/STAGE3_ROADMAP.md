@@ -542,12 +542,12 @@ Acceptance is artifact-contract only:
 Primary artifacts:
 
 ```text
-outputs/google_static/google_s3_visible_cache_v2/
+outputs/google_static/google_s3_visible_surface_v2_cache/precompute_cache/
   cache_manifest.json
   source_file_manifest.json
   contexts/cache_context_*.npz
 
-outputs/google_static/google_s3_visible_cache_v2/aggregates/
+outputs/google_static/google_s3_visible_surface_v2_cache/precompute_cache/aggregates/
   aggregate_manifest.json
   aggregate_context_*.npz
 
