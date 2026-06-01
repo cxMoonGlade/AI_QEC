@@ -9,6 +9,8 @@ stage-specific docs:
 - `docs/RUNBOOK.md`: install, test, GPU, and experiment commands.
 - `docs/STAGE2_ROADMAP.md`: closed Stage 2 validation record.
 - `docs/STAGE3_ROADMAP.md`: active Stage 3 mechanism-structure discovery plan.
+- `docs/STAGE4_ROADMAP.md`: S4 bridge-survival, neural pretrain, and
+  frozen-transfer gates.
 - `docs/error_mechanisms.md`: physical-error mechanism taxonomy and adoption map.
 - `docs/SCOPE_TWIN.md`: full SCOPE-Twin notation and future object contract.
 - `docs/adr/`: durable architecture and milestone-gating decisions.

@@ -1,0 +1,8 @@
+stage4_source_pretrain_v1:
+  stage4_source_dir: outputs/scope_static/S4_bridge/S4_0_synthetic_google_shaped_freeze/S3A_protocol_freeze
+  source_ceiling_dir: outputs/scope_static/S4_bridge/S4_0_5_source_surface_survival_audit
+  output_dir: outputs/scope_static/S4_bridge/S4_1_source_pretrain
+  seed: 0
+  k: 32
+  code_dim: 32
+  max_iter: 30

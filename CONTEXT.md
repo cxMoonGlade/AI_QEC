@@ -94,4 +94,6 @@ raw syndrome-response structure, not real physical mechanism recovery. The V2
 surface beats global/mean-only, assignment-shuffle, feature-scramble, and public
 stratified-null controls on raw-target-only scoring; Google still provides no
 ground-truth mechanism partition. Stronger learned representations belong to
-S4 neural syndrome-response discovery.
+S4 neural syndrome-response discovery. The S4 execution roadmap is
+`docs/STAGE4_ROADMAP.md`; its first gate is bridge-surface survival, not neural
+training.

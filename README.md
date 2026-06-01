@@ -204,6 +204,8 @@ Outputs are written under `outputs/scope_static/` and `outputs/google_static/`.
 - `docs/STAGE2_ROADMAP.md`: closed Stage 2 record.
 - `docs/STAGE3_ROADMAP.md`: Stage 3 discovery roadmap and Google V2 closeout
   boundary.
+- `docs/STAGE4_ROADMAP.md`: S4 bridge-survival, neural pretrain, and
+  frozen-transfer gates.
 
 
 +====================================================================+ <br>

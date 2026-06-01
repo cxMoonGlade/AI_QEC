@@ -1,0 +1,12 @@
+stage4_synthetic_google_surface_v1:
+  teacher_dir: outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/S2D_PHYS1_teacher
+  google_stage3a_dir: outputs/google_static/google_s3_visible_surface_v2/S3A_protocol_freeze
+  output_dir: outputs/scope_static/S4_bridge/S4_0_synthetic_google_shaped_freeze/S3A_protocol_freeze
+  round_bands: [all]
+  region_families: [full_patch]
+  split_policy: leave_one_context_group_out
+  dataset_family: synthetic_controlled_catalog
+  basis: X
+  shotblock_size: 2048
+  max_source_shots_per_record: 50000
+  seed: 0

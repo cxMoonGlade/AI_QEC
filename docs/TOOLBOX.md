@@ -161,3 +161,5 @@ Roadmaps:
 
 - `docs/STAGE2_ROADMAP.md`: closed Stage 2 validation record.
 - `docs/STAGE3_ROADMAP.md`: active Stage 3 discovery plan.
+- `docs/STAGE4_ROADMAP.md`: S4 bridge-survival, neural pretrain, and
+  frozen-transfer gates.
