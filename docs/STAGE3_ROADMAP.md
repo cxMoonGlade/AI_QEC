@@ -521,10 +521,12 @@ Stim circuits, noisy SI1000 circuits, metadata, and decoder priors/pathways, but
 they do not by themselves provide ground-truth physical mechanism labels for
 Stage 3 discovery.
 
-Current Google adapter:
+Current Google Stage 3 closeout adapter:
 
 ```bash
-scope-google-s3-visible-adapter --config configs/scope_static/google_s3_visible_adapter_v1.yaml
+scope-google-s3-visible-cache-v2 --config configs/scope_static/google_s3_visible_cache_v2.yaml
+scope-google-s3-visible-aggregate-v2 --config configs/scope_static/google_s3_visible_aggregate_v2.yaml
+scope-google-s3-visible-adapter-v2 --config configs/scope_static/google_s3_visible_adapter_v2.yaml
 ```
 
 Acceptance is artifact-contract only:
@@ -540,17 +542,42 @@ Acceptance is artifact-contract only:
 Primary artifacts:
 
 ```text
-outputs/google_static/google_s3_visible_surface_v1/S3A_protocol_freeze/
+outputs/google_static/google_s3_visible_cache_v2/
+  cache_manifest.json
+  source_file_manifest.json
+  contexts/cache_context_*.npz
+
+outputs/google_static/google_s3_visible_cache_v2/aggregates/
+  aggregate_manifest.json
+  aggregate_context_*.npz
+
+outputs/google_static/google_s3_visible_surface_v2/S3A_protocol_freeze/
   metrics.json
   visible_features.npy
   visible_feature_schema.json
   forbidden_feature_audit.json
   split_manifest.json
+  adequacy_report.json
   probe_schedule_manifest.json
 ```
 
 Historical Google DEM-proxy scorecards are archived separately and are not the
 current Google Stage 3 path.
+
+Stage 3 Google V2 closeout claim:
+
+```text
+The public syndrome-response V2 surface supports no-oracle replay of raw Google
+syndrome-response structure. Raw-target-only scoring beats global/mean-only,
+assignment-shuffle, feature-scramble, and public-stratified-null controls. This
+is not true physical mechanism recovery because Google data provide no hidden
+mechanism partition.
+```
+
+The next research stage is S4 neural syndrome-response discovery: use a neural
+encoder with an auditable prototype or VQ bottleneck, keep the same no-oracle
+and no-surrogate-ID restrictions, and require raw-target-only plus
+block-normalized improvements over the S3B1 prototype mixture.
 
 ```text
 dmle_qec_upstream

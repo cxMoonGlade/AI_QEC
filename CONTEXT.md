@@ -44,6 +44,15 @@ This repository is currently centered on the SCOPE family of QEC noise-learning 
 - **full-circuit-cudaq**: the literal full n-qubit CUDA-Q teacher source at configured circuit depth.
 - **Six-axis physical generation problem**: the project-level SCOPE-Twin target. A physical constraint generation model is not validated merely by emitting CPTP/GKSL objects; it must hold simultaneously across generation fidelity, interpretability, decoder utility, cross-context generalization, drift prediction, and identifiability.
 - **Numerical floor**: floating numerical floors, thresholds, and probability leftovers use `scope_static.numerics.NUMERICAL_ZERO == 1e-12` instead of exact `0.0`. This value survives square/cube operations in GPU float32. It does not apply to structural zeros such as Pauli matrix entries, bit values, integer indices, counts, labels, or genuinely absent artifacts.
+- **Google S3 V2 visible surface**: the current Google real-data Stage 3
+  closeout surface. It maps public Google detection-event and observable-flip
+  data into public syndrome-response signatures with raw marginal, spatial
+  correlation, temporal correlation, logical-coupling, stability, and public
+  geometry blocks. It is not a true physical-mechanism label source.
+- **S4 neural syndrome-response discovery**: the next research stage after the
+  Stage 3 Google V2 closeout. It should use a neural representation with an
+  auditable prototype or VQ bottleneck while preserving the Stage 3 no-oracle,
+  no-surrogate-ID, shuffle/scramble, and public-stratified-null controls.
 
 ## Claim Boundary
 
@@ -79,3 +88,10 @@ inferred from visible observations alone. The catalog pipeline remains
 the pre-release validation surface for data preparation, teacher/catalog
 self-distinguishment, and no-leakage learner classification/visible-generation
 quality.
+
+Stage 3's Google real-data closeout is bounded to no-oracle replay of public
+raw syndrome-response structure, not real physical mechanism recovery. The V2
+surface beats global/mean-only, assignment-shuffle, feature-scramble, and public
+stratified-null controls on raw-target-only scoring; Google still provides no
+ground-truth mechanism partition. Stronger learned representations belong to
+S4 neural syndrome-response discovery.

@@ -17,6 +17,7 @@ from scope_static.mechanism_discovery.discovery_model import (
     DEFAULT_OPERATION_CONTEXT_WEIGHT,
     DEFAULT_OUTPUT_DIR,
     DEFAULT_SEED,
+    DEFAULT_LEARNER_INPUT_PROFILE,
     EVALUATOR_MODE_CONTROLLED_CATALOG,
     run_stage3b1_first_discovery_model,
 )
@@ -34,6 +35,7 @@ def run_stage3b1_discovery_model_from_config(
     operation_context_weight: float | None = None,
     evaluator_mode: str | None = None,
     k_values: list[int] | None = None,
+    learner_input_profile: str | None = None,
 ) -> dict[str, object]:
     cfg = _load_config(config_path)
     s3a = Path(stage3a_dir) if stage3a_dir is not None else Path(str(cfg.get("stage3a_dir", DEFAULT_STAGE3A_DIR)))
@@ -56,6 +58,9 @@ def run_stage3b1_discovery_model_from_config(
         ),
         evaluator_mode=str(evaluator_mode if evaluator_mode is not None else cfg.get("evaluator_mode", EVALUATOR_MODE_CONTROLLED_CATALOG)),
         k_values=k_values if k_values is not None else _int_list(cfg.get("k_values")),
+        learner_input_profile=str(
+            learner_input_profile if learner_input_profile is not None else cfg.get("learner_input_profile", DEFAULT_LEARNER_INPUT_PROFILE)
+        ),
     )
     summary = dict(result.get("learned_assignment_summary", {}))
     print(
@@ -63,6 +68,7 @@ def run_stage3b1_discovery_model_from_config(
         f"  decision={result.get('decision')}\n"
         f"  selected_k_mode={summary.get('selected_k_mode')}\n"
         f"  selected_k={summary.get('selected_k')}\n"
+        f"  learner_input_profile={dict(result.get('learner_input_mask_audit', {})).get('learner_input_profile')}\n"
         f"  output={output}"
     )
     return result
@@ -80,6 +86,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--operation-context-weight", type=float)
     parser.add_argument("--evaluator-mode", default=None)
     parser.add_argument("--k-values", default=None)
+    parser.add_argument("--learner-input-profile", default=None)
     args = parser.parse_args(argv)
     run_stage3b1_discovery_model_from_config(
         config_path=args.config,
@@ -92,6 +99,7 @@ def main(argv: list[str] | None = None) -> None:
         operation_context_weight=args.operation_context_weight,
         evaluator_mode=args.evaluator_mode,
         k_values=_csv_ints(args.k_values),
+        learner_input_profile=args.learner_input_profile,
     )
 
 

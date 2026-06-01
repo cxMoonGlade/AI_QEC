@@ -39,6 +39,37 @@ EVALUATOR_MODE_CONTROLLED_CATALOG = "controlled_catalog"
 EVALUATOR_MODE_NO_ORACLE_LABELS = "no_oracle_labels"
 ALLOWED_EVALUATOR_MODES = (EVALUATOR_MODE_CONTROLLED_CATALOG, EVALUATOR_MODE_NO_ORACLE_LABELS)
 DEFAULT_NO_ORACLE_K_VALUES = (2, 4, 8, 16)
+LEARNER_INPUT_PROFILE_FULL = "full"
+LEARNER_INPUT_PROFILE_RAW_POPULATION_ONLY = "raw_population_only"
+LEARNER_INPUT_PROFILE_RAW_POPULATION_EXPECTATION = "raw_population_expectation"
+LEARNER_INPUT_PROFILE_RAW_ALL = "raw_all"
+LEARNER_INPUT_PROFILE_RAW_MULTIVIEW_ONLY = "raw_multiview_only"
+LEARNER_INPUT_PROFILE_METADATA_ONLY = "metadata_only"
+LEARNER_INPUT_PROFILE_RAW_PLUS_BASIC_METADATA = "raw_plus_basic_metadata"
+DEFAULT_LEARNER_INPUT_PROFILE = LEARNER_INPUT_PROFILE_FULL
+ALLOWED_LEARNER_INPUT_PROFILES = (
+    LEARNER_INPUT_PROFILE_FULL,
+    LEARNER_INPUT_PROFILE_RAW_POPULATION_ONLY,
+    LEARNER_INPUT_PROFILE_RAW_POPULATION_EXPECTATION,
+    LEARNER_INPUT_PROFILE_RAW_ALL,
+    LEARNER_INPUT_PROFILE_RAW_MULTIVIEW_ONLY,
+    LEARNER_INPUT_PROFILE_METADATA_ONLY,
+    LEARNER_INPUT_PROFILE_RAW_PLUS_BASIC_METADATA,
+)
+LEARNER_INPUT_PROFILE_ALIASES = {
+    "raw_population_plus_expectation": LEARNER_INPUT_PROFILE_RAW_POPULATION_EXPECTATION,
+    "raw_syndrome_response_only": LEARNER_INPUT_PROFILE_RAW_MULTIVIEW_ONLY,
+    "raw_signature_only": LEARNER_INPUT_PROFILE_RAW_MULTIVIEW_ONLY,
+}
+POPULATION_METRICS = {"P0", "P1", "P00", "P01", "P10", "P11", "p_comp"}
+BASIC_METADATA_FEATURES = {
+    "visible_metadata__basis_is_z",
+    "visible_metadata__distance",
+    "visible_metadata__rounds",
+    "visible_metadata__window_kind_detector_pair",
+    "visible_metadata__window_kind_logical_detector_pair",
+    "visible_metadata__touches_logical",
+}
 
 
 def run_stage3b1_first_discovery_model(
@@ -57,6 +88,7 @@ def run_stage3b1_first_discovery_model(
     operation_context_weight: float = DEFAULT_OPERATION_CONTEXT_WEIGHT,
     evaluator_mode: str = EVALUATOR_MODE_CONTROLLED_CATALOG,
     k_values: Iterable[int] | None = None,
+    learner_input_profile: str = DEFAULT_LEARNER_INPUT_PROFILE,
 ) -> dict[str, object]:
     """Train the first visible-only Stage 3 discovery model.
 
@@ -76,10 +108,14 @@ def run_stage3b1_first_discovery_model(
     teacher = resolve_teacher_dir(s3a_metrics, teacher_dir) if mode == EVALUATOR_MODE_CONTROLLED_CATALOG else None
 
     x_raw, feature_names, feature_matrix = load_stage3a_frozen_visible_features(s3a)
-    x, standardization = _standardize_visible_features_with_values(x_raw)
+    learner_input = learner_input_mask_audit(feature_names, learner_input_profile=learner_input_profile)
+    learner_input_indices = np.asarray(learner_input["selected_feature_indices"], dtype=np.int64)
+    assignment_feature_names = [feature_names[int(idx)] for idx in learner_input_indices.tolist()]
+    x_assignment_raw = x_raw[:, learner_input_indices]
+    x, standardization = _standardize_visible_features_with_values(x_assignment_raw)
     x, feature_weighting = _apply_visible_feature_weights(
         x,
-        feature_names=feature_names,
+        feature_names=assignment_feature_names,
         operation_context_weight=float(operation_context_weight),
     )
     standardization["feature_weight"] = feature_weighting["feature_weights"]
@@ -164,7 +200,7 @@ def run_stage3b1_first_discovery_model(
     )
     prototypes = learned_prototypes_artifact(
         final_model,
-        feature_names=feature_names,
+        feature_names=assignment_feature_names,
         standardization=standardization,
     )
     generation_metrics = prototype_generation_metrics(
@@ -212,6 +248,7 @@ def run_stage3b1_first_discovery_model(
         evaluated_folds=folds,
         hardening=hardening,
         label_permutation=label_permutation,
+        learner_input_mask=learner_input,
         evaluator_metrics=evaluator_metrics,
         evaluator_mode=mode,
     )
@@ -228,6 +265,8 @@ def run_stage3b1_first_discovery_model(
             "uses_mechanism_labels_for_fit": False,
             "uses_mechanism_labels_for_model_selection": False,
             "trains_from_stage3a_frozen_visible_features": True,
+            "training_matrix_for_assignment": "masked view of Stage 3A frozen visible_features.npy",
+            "generation_target_matrix_for_s3c": "full Stage 3A frozen visible_features.npy",
             "rebuilds_visible_features_from_oracle_records_for_fit": False,
             "uses_visible_validation_objective_for_model_selection": True,
             "evaluator_only_metrics_after_fit": mode == EVALUATOR_MODE_CONTROLLED_CATALOG,
@@ -249,10 +288,12 @@ def run_stage3b1_first_discovery_model(
             "operation_context_weight": float(operation_context_weight),
             "evaluator_mode": mode,
             "k_values": [int(row["k"]) for row in k_runs],
+            "learner_input_profile": str(learner_input["learner_input_profile"]),
         },
         "visible_feature_matrix": feature_matrix,
+        "learner_input_mask_audit": learner_input,
         "visible_feature_standardization": _standardization_summary(standardization),
-        "visible_feature_weighting": _feature_weighting_summary(feature_weighting, feature_names),
+        "visible_feature_weighting": _feature_weighting_summary(feature_weighting, assignment_feature_names),
         "feature_schema_match_audit": feature_match,
         "k_selection_protocol": {
             "schema": "scope_static_stage3b1_k_selection_protocol_v1",
@@ -273,6 +314,9 @@ def run_stage3b1_first_discovery_model(
             ),
             "candidate_results": candidate_results,
             "selected": selected,
+            "learner_input_profile": str(learner_input["learner_input_profile"]),
+            "training_matrix_for_assignment": learner_input["training_matrix_for_assignment"],
+            "generation_target_matrix": learner_input["generation_target_matrix"],
         },
         "learned_assignment_summary": learned_summary,
         "learned_prototypes": prototypes,
@@ -394,6 +438,129 @@ def model_selection_audit(selected: dict[str, object] | None, candidates: list[d
         "test_min_recall_used_for_selection": False,
         "oracle_label_prototype_quality_used_for_selection": False,
     }
+
+
+def learner_input_mask_audit(feature_names: list[str], *, learner_input_profile: str = DEFAULT_LEARNER_INPUT_PROFILE) -> dict[str, object]:
+    names = [str(name) for name in feature_names]
+    profile = _normalize_learner_input_profile(learner_input_profile)
+    mask = _learner_input_mask(names, profile=profile)
+    selected_indices = [int(idx) for idx, keep in enumerate(mask.tolist()) if bool(keep)]
+    selected_index_set = set(selected_indices)
+    selected_names = [names[idx] for idx in selected_indices]
+    dropped_names = [name for idx, name in enumerate(names) if idx not in selected_index_set]
+    checks = {
+        "selected_feature_count_positive": bool(selected_indices),
+        "selected_features_are_subset_of_stage3a_features": set(selected_names).issubset(set(names)),
+        "training_matrix_for_assignment_is_masked_view": True,
+        "generation_target_matrix_is_full_stage3a_visible_features": True,
+        "does_not_introduce_new_features": True,
+        "does_not_use_evaluator_labels": True,
+    }
+    if not bool(checks["selected_feature_count_positive"]):
+        raise ValueError(f"learner_input_profile {profile!r} selected zero Stage 3A visible features")
+    return {
+        "schema": "scope_static_stage3b1_learner_input_mask_audit_v1",
+        "requested_learner_input_profile": str(learner_input_profile),
+        "learner_input_profile": profile,
+        "profile_description": _learner_input_profile_description(profile),
+        "training_matrix_for_assignment": "masked view of Stage 3A frozen visible_features.npy",
+        "generation_target_matrix": "full Stage 3A frozen visible_features.npy",
+        "scientific_separation": (
+            "S3B1 fits assignments on the selected learner-input columns; S3C scores those assignments "
+            "against the full frozen visible_features.npy target."
+        ),
+        "full_feature_count": int(len(names)),
+        "selected_feature_count": int(len(selected_names)),
+        "dropped_feature_count": int(len(dropped_names)),
+        "selected_feature_indices": selected_indices,
+        "selected_feature_names": selected_names,
+        "dropped_feature_names": dropped_names,
+        "selected_feature_kind_counts": _feature_kind_counts(selected_names),
+        "full_feature_kind_counts": _feature_kind_counts(names),
+        "checks": checks,
+        "passed": bool(all(checks.values())),
+    }
+
+
+def _learner_input_mask(feature_names: list[str], *, profile: str) -> np.ndarray:
+    if profile == LEARNER_INPUT_PROFILE_FULL:
+        return np.ones(len(feature_names), dtype=bool)
+    if profile == LEARNER_INPUT_PROFILE_RAW_POPULATION_ONLY:
+        return np.asarray([_is_raw_population_feature(name) for name in feature_names], dtype=bool)
+    if profile == LEARNER_INPUT_PROFILE_RAW_POPULATION_EXPECTATION:
+        return np.asarray([_is_raw_population_feature(name) or _is_raw_expectation_feature(name) for name in feature_names], dtype=bool)
+    if profile == LEARNER_INPUT_PROFILE_RAW_ALL:
+        return np.asarray([str(name).startswith("raw__") for name in feature_names], dtype=bool)
+    if profile == LEARNER_INPUT_PROFILE_RAW_MULTIVIEW_ONLY:
+        return np.asarray([str(name).startswith("raw__") for name in feature_names], dtype=bool)
+    if profile == LEARNER_INPUT_PROFILE_METADATA_ONLY:
+        return np.asarray([str(name).startswith("visible_metadata__") or str(name).startswith("meta__") for name in feature_names], dtype=bool)
+    if profile == LEARNER_INPUT_PROFILE_RAW_PLUS_BASIC_METADATA:
+        return np.asarray(
+            [str(name).startswith("raw__") or str(name) in BASIC_METADATA_FEATURES for name in feature_names],
+            dtype=bool,
+        )
+    raise ValueError(f"unknown learner_input_profile {profile!r}")
+
+
+def _normalize_learner_input_profile(value: str) -> str:
+    profile = LEARNER_INPUT_PROFILE_ALIASES.get(str(value), str(value))
+    if profile not in ALLOWED_LEARNER_INPUT_PROFILES:
+        raise ValueError(f"learner_input_profile must be one of {ALLOWED_LEARNER_INPUT_PROFILES!r}")
+    return profile
+
+
+def _learner_input_profile_description(profile: str) -> str:
+    return {
+        LEARNER_INPUT_PROFILE_FULL: "raw + expectations + finite-shot SE + public metadata",
+        LEARNER_INPUT_PROFILE_RAW_POPULATION_ONLY: "P00/P01/P10/P11/p_comp population features only",
+        LEARNER_INPUT_PROFILE_RAW_POPULATION_EXPECTATION: "population features plus E_left/E_right/E_pair expectations",
+        LEARNER_INPUT_PROFILE_RAW_ALL: "all raw empirical observation features, including expectations and finite-shot SE",
+        LEARNER_INPUT_PROFILE_RAW_MULTIVIEW_ONLY: "all raw V2 syndrome-response signature blocks, excluding public metadata",
+        LEARNER_INPUT_PROFILE_METADATA_ONLY: "visible_metadata__* or meta__* public metadata only",
+        LEARNER_INPUT_PROFILE_RAW_PLUS_BASIC_METADATA: "raw_all plus basis/distance/rounds/window_kind/touches_logical metadata",
+    }[profile]
+
+
+def _is_raw_population_feature(name: str) -> bool:
+    text = str(name)
+    metric = text.rsplit("__", 1)[-1]
+    return bool(text.startswith("raw__") and "__se_" not in text and metric in POPULATION_METRICS)
+
+
+def _is_raw_expectation_feature(name: str) -> bool:
+    text = str(name)
+    metric = text.rsplit("__", 1)[-1]
+    return bool(text.startswith("raw__") and "__se_" not in text and metric.startswith("E_"))
+
+
+def _feature_kind_counts(feature_names: list[str]) -> dict[str, int]:
+    counts = {
+        "raw_population": 0,
+        "raw_expectation": 0,
+        "raw_finite_shot_se": 0,
+        "raw_multiview": 0,
+        "metadata_basic": 0,
+        "metadata_other": 0,
+        "other": 0,
+    }
+    for name in feature_names:
+        text = str(name)
+        if _is_raw_population_feature(text):
+            counts["raw_population"] += 1
+        elif _is_raw_expectation_feature(text):
+            counts["raw_expectation"] += 1
+        elif text.startswith("raw__") and "__se_" in text:
+            counts["raw_finite_shot_se"] += 1
+        elif text.startswith("raw__"):
+            counts["raw_multiview"] += 1
+        elif text in BASIC_METADATA_FEATURES:
+            counts["metadata_basic"] += 1
+        elif text.startswith("visible_metadata__") or text.startswith("meta__"):
+            counts["metadata_other"] += 1
+        else:
+            counts["other"] += 1
+    return {key: int(value) for key, value in counts.items()}
 
 
 def no_oracle_evaluator_metrics(hard_assignments: np.ndarray) -> dict[str, object]:
@@ -629,6 +796,7 @@ def stage3b1_acceptance_audit(
     evaluated_folds: list[dict[str, list[int]]],
     hardening: dict[str, object],
     label_permutation: dict[str, object],
+    learner_input_mask: dict[str, object],
     evaluator_metrics: dict[str, object],
     evaluator_mode: str = EVALUATOR_MODE_CONTROLLED_CATALOG,
 ) -> dict[str, object]:
@@ -652,6 +820,12 @@ def stage3b1_acceptance_audit(
         "learned_covariance_written": all("standardized_variance" in row for row in prototypes.get("prototypes", []) if isinstance(row, dict)),
         "assignment_hardening_used_no_labels": not bool(hardening.get("uses_mechanism_labels_in_hardening", True)),
         "label_permutation_reporting_only": bool(label_permutation.get("cluster_label_matching_used_only_for_reporting", False)),
+        "learner_input_mask_declared": bool(learner_input_mask.get("passed", False)),
+        "assignment_training_uses_nonempty_masked_view": int(learner_input_mask.get("selected_feature_count", 0)) > 0,
+        "generation_target_matrix_declared_full_stage3a_visible_features": str(
+            learner_input_mask.get("generation_target_matrix", "")
+        )
+        == "full Stage 3A frozen visible_features.npy",
         "evaluator_metrics_reported_after_fit": (
             True
             if mode == EVALUATOR_MODE_NO_ORACLE_LABELS
@@ -1346,6 +1520,7 @@ def _write_outputs(
         "assignment_hardening_audit.json": result["assignment_hardening_audit"],
         "label_permutation_audit.json": result["label_permutation_audit"],
         "model_selection_audit.json": result["model_selection_audit"],
+        "learner_input_mask_audit.json": result["learner_input_mask_audit"],
         "evaluator_only_label_metrics.json": result["evaluator_only_label_metrics"],
         "context_dependent_mechanism_diagnostics.json": result["context_dependent_mechanism_diagnostics"],
         "quotient_metrics.json": result["quotient_metrics"],
@@ -1371,6 +1546,7 @@ def _write_outputs(
 def format_stage3b1_summary(result: dict[str, object]) -> str:
     acceptance = dict(result.get("acceptance_audit", {}))
     summary = dict(result.get("learned_assignment_summary", {}))
+    mask = dict(result.get("learner_input_mask_audit", {}))
     evaluator = dict(result.get("evaluator_only_label_metrics", {}))
     exact = dict(evaluator.get("selected_model_exact_metrics", {}))
     quotient = dict(evaluator.get("selected_model_quotient_metrics", {}))
@@ -1394,6 +1570,8 @@ def format_stage3b1_summary(result: dict[str, object]) -> str:
             f"- Selected K: `{summary.get('selected_k')}`",
             f"- Selected model family: `{dict(result.get('candidate_selection', {})).get('selected', {}).get('model_family') if isinstance(dict(result.get('candidate_selection', {})).get('selected', {}), dict) else None}`",
             f"- Active prototypes: `{summary.get('active_prototype_count')}`",
+            f"- Learner input profile: `{mask.get('learner_input_profile')}`",
+            f"- Assignment training features: `{mask.get('selected_feature_count')}` of `{mask.get('full_feature_count')}`",
             f"- Exact-label BA: `{_format_optional_metric(exact.get('balanced_accuracy_after_label_matching'))}`",
             f"- Exact-label min recall: `{_format_optional_metric(exact.get('min_recall_after_label_matching'))}`",
             f"- Exact-label NMI: `{_format_optional_metric(exact.get('normalized_mutual_info'))}`",

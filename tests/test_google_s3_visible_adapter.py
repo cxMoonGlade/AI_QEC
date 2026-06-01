@@ -30,11 +30,11 @@ def test_google_s3_visible_adapter_cli_uses_config_and_writes_artifacts(tmp_path
         encoding="utf-8",
     )
 
-    result = main(["--config", str(config)])
+    main(["--config", str(config)])
     visible = load_stage3a_visible_features(output)
+    metrics = yaml.safe_load((output / "metrics.json").read_text(encoding="utf-8"))
 
-    assert result["decision"] == "google_s3_visible_surface_passed"
+    assert metrics["decision"] == "google_s3_visible_surface_passed"
     assert visible.matrix.shape[0] == 6
     assert (output / "forbidden_feature_audit.json").exists()
     assert (output / "split_manifest.json").exists()
-

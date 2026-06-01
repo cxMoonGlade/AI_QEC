@@ -123,10 +123,12 @@ under `scope_static.archive.experiments.google_gdisc15`. They remain historical
 evidence only; they are not the current Google real-data teacher-learner path.
 
 The active Google path keeps the read-only Set1 data readers and builds a frozen
-Stage 3 learner-visible surface:
+Stage 3 V2 public syndrome-response surface through cache and aggregate stages:
 
 ```bash
-scope-google-s3-visible-adapter --config configs/scope_static/google_s3_visible_adapter_v1.yaml
+scope-google-s3-visible-cache-v2 --config configs/scope_static/google_s3_visible_cache_v2.yaml
+scope-google-s3-visible-aggregate-v2 --config configs/scope_static/google_s3_visible_aggregate_v2.yaml
+scope-google-s3-visible-adapter-v2 --config configs/scope_static/google_s3_visible_adapter_v2.yaml
 ```
 
 Kernel benchmarks remain available through

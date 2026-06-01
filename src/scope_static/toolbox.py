@@ -129,6 +129,26 @@ def toolbox_manifest() -> dict[str, object]:
                 "role": "Run the Stage 3D.4b visible-only overcomplete merge/prune audit.",
                 "module": "scope_static.experiments.stage3.overcomplete_merge_prune_audit",
             },
+            {
+                "name": "scope-google-s3-visible-adapter",
+                "role": "Build Google real-data fixed-window rows as a Stage 3A-compatible visible surface.",
+                "module": "scope_static.experiments.willow_data.s3_visible_adapter",
+            },
+            {
+                "name": "scope-google-s3-visible-cache-v2",
+                "role": "Precompute the read-only public cache for Google S3A V2 syndrome-response signatures.",
+                "module": "scope_static.experiments.willow_data.s3_visible_cache_v2",
+            },
+            {
+                "name": "scope-google-s3-visible-aggregate-v2",
+                "role": "Precompute accelerated per-context aggregate rows for Google S3A V2 syndrome-response signatures.",
+                "module": "scope_static.experiments.willow_data.s3_visible_aggregate_v2",
+            },
+            {
+                "name": "scope-google-s3-visible-adapter-v2",
+                "role": "Build Google real-data public syndrome-response signatures as a Stage 3A-compatible visible surface.",
+                "module": "scope_static.experiments.willow_data.s3_visible_adapter_v2",
+            },
         ],
         "primary_outputs": [
             "Data-preparation mechanism records, probe schedules, sampled observations, and sampling audits",

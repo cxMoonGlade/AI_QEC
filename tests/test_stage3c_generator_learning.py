@@ -9,6 +9,8 @@ from scope_static.experiments.stage3.generator_learning import run_stage3c_gener
 from scope_static.primitives.mechanism_catalog import MECHANISM_NAMES
 from scope_static.mechanism_discovery.protocol_freeze import run_stage3a_dataset_protocol_freeze
 from scope_static.mechanism_discovery.observability_ceiling import run_stage3a5_observability_alias_ceiling
+from scope_static.mechanism_discovery.artifacts import matrix_digest
+from scope_static.mechanism_discovery.discovery_model import EVALUATOR_MODE_NO_ORACLE_LABELS
 from scope_static.mechanism_discovery.discovery_model import run_stage3b1_first_discovery_model
 from scope_static.mechanism_discovery.generator_learning import run_stage3c_prototype_generator_learning
 
@@ -34,6 +36,18 @@ def test_stage3c_scores_predicted_assignment_generator_against_nulls_and_oracle(
     assert result["leakage_audit"]["passed"] is True
     assert result["prototype_generation_metrics"]["primary_generation_likelihood_metric"] == "categorical_population_nll"
     assert result["prototype_generation_metrics"]["secondary_continuous_density_diagnostic"] == "gaussian_density_nll"
+    assert result["stratified_null_metrics"]["schema"] == "scope_static_stage3c_public_stratified_null_metrics_v1"
+    assert result["stratified_null_metrics"]["stratification_audit"]["uses_evaluator_labels"] is False
+    assert result["stratified_null_metrics"]["stratification_audit"]["uses_learned_assignments"] is False
+    assert result["assignment_shuffle_audit"]["schema"] == "scope_static_stage3c_assignment_shuffle_audit_v1"
+    assert result["assignment_shuffle_audit"]["used_for_model_selection"] is False
+    assert result["assignment_shuffle_audit"]["seed_count"] == 1
+    assert result["assignment_shuffle_audit"]["checks"]["shuffled_assignments_row_stochastic"] is True
+    assert result["feature_scramble_audit"]["schema"] == "scope_static_stage3c_feature_scramble_audit_v1"
+    assert result["feature_scramble_audit"]["used_for_model_selection"] is False
+    assert result["feature_scramble_audit"]["seed_count"] == 1
+    assert result["feature_scramble_audit"]["checks"]["feature_marginals_preserved"] is True
+    assert result["feature_scramble_audit"]["checks"]["row_order_fold_and_assignments_preserved"] is True
     assert result["acceptance_audit"]["checks"]["heldout_generation_beats_global_null_categorical_population_nll"] is True
     assert result["acceptance_audit"]["checks"]["heldout_generation_beats_mean_only_mae"] is True
 
@@ -49,6 +63,16 @@ def test_stage3c_scores_predicted_assignment_generator_against_nulls_and_oracle(
     assert report["predicted_minus_oracle_gap"] == result["prototype_generation_metrics"]["oracle_comparator_gap"]["categorical_population_nll_gap"]
     assert predicted["gaussian_density_nll"] == predicted["gaussian_nll"]
     assert predicted["gaussian_density_nll"] < global_null["gaussian_density_nll"]
+    assert result["assignment_shuffle_audit"]["runs"][0]["overall"]["categorical_population_nll"] is not None
+    assert (
+        result["assignment_shuffle_audit"]["reference_metrics"]["predicted_assignment"]["categorical_population_nll"]
+        == predicted["categorical_population_nll"]
+    )
+    assert result["feature_scramble_audit"]["runs"][0]["predicted_assignment"]["categorical_population_nll"] is not None
+    assert (
+        result["feature_scramble_audit"]["reference_metrics"]["predicted_assignment"]["categorical_population_nll"]
+        == predicted["categorical_population_nll"]
+    )
     assert oracle["raw_visible_feature_mae"] <= predicted["raw_visible_feature_mae"] + 1.0e-12
     assert result["oracle_assignment_comparator_metrics"]["uses_evaluator_labels"] is True
     assert result["oracle_assignment_comparator_metrics"]["used_for_acceptance_model_selection"] is False
@@ -59,7 +83,10 @@ def test_stage3c_scores_predicted_assignment_generator_against_nulls_and_oracle(
         "predicted_assignment_metrics.json",
         "oracle_assignment_comparator_metrics.json",
         "global_null_metrics.json",
+        "stratified_null_metrics.json",
         "mean_only_baseline_metrics.json",
+        "assignment_shuffle_audit.json",
+        "feature_scramble_audit.json",
         "leakage_audit.json",
         "acceptance_audit.json",
         "assignment_source_audit.json",
@@ -136,6 +163,136 @@ def test_stage3c_config_wrapper_runs_from_yaml(tmp_path: Path) -> None:
 
     assert result["decision"] == "stage3c_prototype_generator_learning_completed"
     assert (output / "prototype_generation_metrics.json").exists()
+
+
+def test_stage3c_no_categorical_surface_uses_gaussian_primary_and_block_lift(tmp_path: Path) -> None:
+    s3a = tmp_path / "S3A_v2_like"
+    s3b1 = tmp_path / "S3B1"
+    s3a.mkdir()
+    s3b1.mkdir()
+    feature_names = [
+        "raw__marginal__detector_rate_mean",
+        "raw__spatial_corr__neighbor_cov_mean",
+        "raw__logical_coupling__obs_flip_rate_delta",
+        "meta__public_geometry__basis_is_z",
+    ]
+    x = np.asarray(
+        [
+            [0.10, 0.00, 0.20, 1.00],
+            [0.10, 0.00, 0.20, 1.00],
+            [0.10, 0.00, 0.20, 1.00],
+            [0.90, 0.50, -0.20, 0.00],
+            [0.90, 0.50, -0.20, 0.00],
+            [0.90, 0.50, -0.20, 0.00],
+        ],
+        dtype=np.float64,
+    )
+    np.save(s3a / "visible_features.npy", x)
+    (s3a / "visible_feature_schema.json").write_text(
+        json.dumps({"features": [{"index": idx, "name": name} for idx, name in enumerate(feature_names)]}, indent=2) + "\n"
+    )
+    (s3a / "visible_feature_matrix.json").write_text(
+        json.dumps(
+            {
+                "training_matrix_path": "visible_features.npy",
+                "feature_schema_path": "visible_feature_schema.json",
+                "shape": [int(dim) for dim in x.shape],
+                "visible_features_sha256": matrix_digest(x),
+            },
+            indent=2,
+        )
+        + "\n"
+    )
+    (s3a / "metrics.json").write_text(
+        json.dumps(
+            {
+                "acceptance_audit": {"passed": True},
+                "split_manifest": {
+                    "folds": [
+                        {
+                            "train_indices": [0, 3],
+                            "validation_indices": [1, 4],
+                            "test_indices": [2, 5],
+                        }
+                    ]
+                },
+            },
+            indent=2,
+        )
+        + "\n"
+    )
+    responsibilities = np.asarray(
+        [
+            [1.0, 0.0],
+            [1.0, 0.0],
+            [1.0, 0.0],
+            [0.0, 1.0],
+            [0.0, 1.0],
+            [0.0, 1.0],
+        ],
+        dtype=np.float64,
+    )
+    np.save(s3b1 / "learned_assignments.npy", responsibilities)
+    (s3b1 / "metrics.json").write_text(
+        json.dumps(
+            {
+                "acceptance_audit": {"passed": True},
+                "claim_boundary": {
+                    "trains_from_stage3a_frozen_visible_features": True,
+                    "uses_mechanism_labels_for_fit": False,
+                    "uses_mechanism_labels_for_model_selection": False,
+                },
+            },
+            indent=2,
+        )
+        + "\n"
+    )
+
+    result = run_stage3c_prototype_generator_learning(
+        stage3a_dir=s3a,
+        stage3b1_dir=s3b1,
+        output_dir=tmp_path / "S3C",
+        evaluator_mode=EVALUATOR_MODE_NO_ORACLE_LABELS,
+    )
+
+    predicted = result["predicted_assignment_metrics"]["overall"]
+    global_null = result["global_null_metrics"]["overall"]
+    blocks = result["prototype_generation_metrics"]["feature_block_lift"]["global_null_minus_predicted"]
+    profile_report = result["prototype_generation_metrics"]["target_score_profile_report"]["profiles"]
+    assert result["decision"] == "stage3c_prototype_generator_learning_completed"
+    assert result["prototype_generation_metrics"]["primary_generation_likelihood_metric"] == "gaussian_density_nll"
+    assert result["assignment_shuffle_audit"]["primary_generation_likelihood_metric"] == "gaussian_density_nll"
+    assert result["feature_scramble_audit"]["primary_generation_likelihood_metric"] == "gaussian_density_nll"
+    assert result["acceptance_audit"]["primary_generation_likelihood_metric"] == "gaussian_density_nll"
+    assert result["stratified_null_metrics"]["stratification_audit"]["public_fields_available"] is False
+    assert result["prototype_generation_metrics"]["target_score_profile_report"]["profiles"]["raw_target_only"]["gaussian_density_nll"][
+        "stratified_null"
+    ] is not None
+    assert profile_report["full_target"]["target_feature_count"] == 4
+    assert profile_report["raw_target_only"]["target_feature_count"] == 3
+    assert profile_report["raw_target_only"]["included_blocks"] == [
+        "raw__logical_coupling",
+        "raw__marginal",
+        "raw__spatial_corr",
+    ]
+    assert "meta__public_geometry" not in profile_report["raw_target_only"]["included_blocks"]
+    assert result["prototype_generation_metrics"]["target_score_profile_report"]["block_profiles"]["blocks"]["raw__marginal"][
+        "gaussian_density_nll"
+    ]["global_null_minus_predicted_lift"] > 0.0
+    assert profile_report["block_normalized"]["target_feature_count"] == 4
+    assert result["predicted_assignment_metrics"]["fold_metrics"][0]["target_score_profiles"]["profiles"]["raw_target_only"][
+        "target_feature_count"
+    ] == 3
+    assert result["assignment_shuffle_audit"]["target_score_profile_aggregate"]["profiles"]["raw_target_only"]["run_count"] == 1
+    assert (
+        result["feature_scramble_audit"]["aggregate"]["target_score_profiles"]["predicted_assignment"]["profiles"]["raw_target_only"]["run_count"]
+        == 1
+    )
+    assert predicted["categorical_population_group_count"] == 0
+    assert predicted["gaussian_density_nll"] < global_null["gaussian_density_nll"]
+    assert blocks["raw__marginal"]["raw_visible_feature_mae_reduction"] > 0.0
+    assert blocks["raw__spatial_corr"]["raw_visible_feature_mae_reduction"] > 0.0
+    assert blocks["raw__logical_coupling"]["raw_visible_feature_mae_reduction"] > 0.0
 
 
 def _prepare_artifacts(tmp_path: Path, label_specs: list[tuple[str, str]]) -> tuple[Path, Path, Path, Path]:

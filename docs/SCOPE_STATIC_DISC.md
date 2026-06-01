@@ -2749,7 +2749,9 @@ partition is explicitly defined as a proxy.
 Current Google real-data path:
 
 ```bash
-scope-google-s3-visible-adapter --config configs/scope_static/google_s3_visible_adapter_v1.yaml
+scope-google-s3-visible-cache-v2 --config configs/scope_static/google_s3_visible_cache_v2.yaml
+scope-google-s3-visible-aggregate-v2 --config configs/scope_static/google_s3_visible_aggregate_v2.yaml
+scope-google-s3-visible-adapter-v2 --config configs/scope_static/google_s3_visible_adapter_v2.yaml
 ```
 
 The old Google DEM/static discovery runner is archived as a historical
@@ -2763,31 +2765,46 @@ Google discovery records must report:
 - free-assignment parameter accounting.
 - heldout and transfer deltas against local and known-orbit-like baselines.
 
-### Google S3 Visible Surface Adapter
+### Google S3 V2 Visible Surface Adapter
 
 Historical Google DEM-proxy diagnostics are archived separately. The current
 Google path builds a Stage 3 learner-visible surface from real Google
 detection events and observable flips:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.s3_visible_adapter \
-  --config configs/scope_static/google_s3_visible_adapter_v1.yaml
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.s3_visible_cache_v2 \
+  --config configs/scope_static/google_s3_visible_cache_v2.yaml
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.s3_visible_aggregate_v2 \
+  --config configs/scope_static/google_s3_visible_aggregate_v2.yaml
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.s3_visible_adapter_v2 \
+  --config configs/scope_static/google_s3_visible_adapter_v2.yaml
 ```
 
-The adapter writes frozen Stage 3A-style artifacts:
+The adapter writes frozen Stage 3A-style artifacts through a public cache and
+aggregate cache:
 
 ```text
-outputs/google_static/google_s3_visible_surface_v1/S3A_protocol_freeze/visible_features.npy
-outputs/google_static/google_s3_visible_surface_v1/S3A_protocol_freeze/visible_feature_schema.json
-outputs/google_static/google_s3_visible_surface_v1/S3A_protocol_freeze/forbidden_feature_audit.json
-outputs/google_static/google_s3_visible_surface_v1/S3A_protocol_freeze/split_manifest.json
-outputs/google_static/google_s3_visible_surface_v1/S3A_protocol_freeze/metrics.json
+outputs/google_static/google_s3_visible_cache_v2/cache_manifest.json
+outputs/google_static/google_s3_visible_cache_v2/aggregates/aggregate_manifest.json
+outputs/google_static/google_s3_visible_surface_v2/S3A_protocol_freeze/visible_features.npy
+outputs/google_static/google_s3_visible_surface_v2/S3A_protocol_freeze/visible_feature_schema.json
+outputs/google_static/google_s3_visible_surface_v2/S3A_protocol_freeze/forbidden_feature_audit.json
+outputs/google_static/google_s3_visible_surface_v2/S3A_protocol_freeze/split_manifest.json
+outputs/google_static/google_s3_visible_surface_v2/S3A_protocol_freeze/adequacy_report.json
+outputs/google_static/google_s3_visible_surface_v2/S3A_protocol_freeze/metrics.json
 ```
 
-The learner-visible matrix contains empirical fixed-window observation
-features plus approved public context/window metadata. It does not expose
-context IDs, sample IDs, paths, decoder correctness targets, catalog labels,
-hidden mechanism labels, or oracle channel objects.
+The learner-visible matrix contains public syndrome-response signatures:
+raw marginal, spatial-correlation, temporal-correlation, logical-coupling,
+stability, and public-geometry blocks. It does not expose context IDs, sample
+IDs, paths, decoder correctness targets, catalog labels, hidden mechanism
+labels, or oracle channel objects.
+
+The Stage 3 Google V2 closeout uses raw-target-only and block-normalized S3C
+scoring so public geometry metadata cannot dominate the headline. The accepted
+claim is no-oracle replay of raw public syndrome-response structure against
+global/mean-only, assignment-shuffle, feature-scramble, and public
+stratified-null controls, not true hardware mechanism recovery.
 
 ## Decision Rules
 

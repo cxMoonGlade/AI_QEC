@@ -93,13 +93,20 @@ report no CUDA/NVML even though the workstation GPU is healthy. Prefer in-proces
 approval for the wrapped command before treating CUDA invisibility as a real
 runtime failure.
 
-For current Google real-data work, build the frozen Stage 3 learner-visible
-surface. The old Google DEM/static predictive runner is archived as a historical
-diagnostic, not a mainline Google path:
+For current Google real-data work, the mainline Stage 3 closeout path is the V2
+public syndrome-response surface. Build it through the public cache and
+aggregate cache so the frozen learner-visible matrix is not coupled to repeated
+Google source parsing:
 
 ```bash
-scope-google-s3-visible-adapter --config configs/scope_static/google_s3_visible_adapter_v1.yaml
+scope-google-s3-visible-cache-v2 --config configs/scope_static/google_s3_visible_cache_v2.yaml
+scope-google-s3-visible-aggregate-v2 --config configs/scope_static/google_s3_visible_aggregate_v2.yaml
+scope-google-s3-visible-adapter-v2 --config configs/scope_static/google_s3_visible_adapter_v2.yaml
 ```
+
+The old Google DEM/static predictive runner is archived as a historical
+diagnostic, not a mainline Google path. The V1 fixed-window adapter remains for
+regression comparison only; do not use it as the current Google evidence path.
 
 If GPU utilization is low, do not assume the GPU path is broken. First check
 whether the workload is launch-bound or CPU-preprocessing-bound: local exact

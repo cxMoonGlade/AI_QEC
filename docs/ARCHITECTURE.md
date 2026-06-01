@@ -17,7 +17,7 @@ generic "physical" layers.
 ```text
 src/scope_static/
   dem/                     Stage 1 DEM/Bernoulli implementation
-  google/                  Google Set1 adapters and proxy partitions
+  google/                  Google readers, inventory, and S3 visible surfaces/cache
   primitives/              channel, PTM, probe, CPTP/POVM, and preflight support
   data_preparation/        controlled-catalog teacher generation
   teacher/                teacher self-distinguishment and visible-surface helpers
@@ -65,7 +65,7 @@ flat modules under `src/scope_static/` or rebuild a broad `physical` package.
 
 ```text
 experiments/static/            DEM and Stage 2 static-discovery commands
-experiments/willow_data/       Google/Willow inventory, GPU diagnostics, and S3 visible adapter
+experiments/willow_data/       Google/Willow inventory, GPU diagnostics, S3 cache, and visible adapters
 experiments/qec_noise_catalog/ catalog teacher, validation, observability commands
 experiments/stage3/            Stage 3A through Stage 3D commands
 ```
@@ -85,6 +85,9 @@ scope-stage3b1-discovery
 scope-stage3c-generator
 scope-stage3d1-assignment-shuffle
 scope-google-s3-visible-adapter
+scope-google-s3-visible-cache-v2
+scope-google-s3-visible-aggregate-v2
+scope-google-s3-visible-adapter-v2
 scope-teacher-physicality-audit
 ```
 
@@ -99,6 +102,12 @@ without oracle leakage.
 Stage 3 is the next claim boundary: remove direct mechanism-label supervision
 and test whether latent mechanism structure can be inferred from visible
 observations alone.
+
+The current Google real-data Stage 3 closeout path is V2 public
+syndrome-response replay: source Google files are reduced to a public cache,
+then an aggregate cache, then frozen Stage 3A visible features. It supports a
+no-oracle external replay claim over raw syndrome-response blocks, not true
+hardware mechanism recovery.
 
 ## Physicality Boundary
 

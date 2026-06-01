@@ -108,30 +108,55 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.sta
 Supported outputs include evaluator-only ARI/NMI, quotient recovery metrics,
 active prototype counts, collapse flags, and label-use audits.
 
-## Function: Build Google S3 Visible Surface
+## Function: Build Google S3 V2 Visible Surface
 
 ```bash
-scope-google-s3-visible-adapter --config configs/scope_static/google_s3_visible_adapter_v1.yaml
+scope-google-s3-visible-cache-v2 --config configs/scope_static/google_s3_visible_cache_v2.yaml
+scope-google-s3-visible-aggregate-v2 --config configs/scope_static/google_s3_visible_aggregate_v2.yaml
+scope-google-s3-visible-adapter-v2 --config configs/scope_static/google_s3_visible_adapter_v2.yaml
 ```
 
 Google data has no true hidden mechanism labels. The current mainline Google
-path is a real-data adapter that freezes learner-visible Stage 3 artifacts.
+path is a real-data adapter that freezes learner-visible Stage 3 artifacts from
+public syndrome-response signatures.
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.s3_visible_adapter \
-  --config configs/scope_static/google_s3_visible_adapter_v1.yaml
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.s3_visible_cache_v2 \
+  --config configs/scope_static/google_s3_visible_cache_v2.yaml
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.s3_visible_aggregate_v2 \
+  --config configs/scope_static/google_s3_visible_aggregate_v2.yaml
+conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.s3_visible_adapter_v2 \
+  --config configs/scope_static/google_s3_visible_adapter_v2.yaml
 ```
 
-This adapter reads Google detection events and observable flips, builds
-empirical fixed-window visible rows plus public context/window metadata, and
-writes Stage 3A-compatible frozen visible artifacts:
+This path reads Google detection events and observable flips into a public
+precompute cache, builds aggregate syndrome-response summaries, and writes
+Stage 3A-compatible frozen visible artifacts:
 
 ```text
-outputs/google_static/google_s3_visible_surface_v1/S3A_protocol_freeze/visible_features.npy
-outputs/google_static/google_s3_visible_surface_v1/S3A_protocol_freeze/visible_feature_schema.json
-outputs/google_static/google_s3_visible_surface_v1/S3A_protocol_freeze/forbidden_feature_audit.json
-outputs/google_static/google_s3_visible_surface_v1/S3A_protocol_freeze/split_manifest.json
-outputs/google_static/google_s3_visible_surface_v1/S3A_protocol_freeze/metrics.json
+outputs/google_static/google_s3_visible_cache_v2/
+  cache_manifest.json
+  source_file_manifest.json
+  contexts/cache_context_*.npz
+
+outputs/google_static/google_s3_visible_cache_v2/aggregates/
+  aggregate_manifest.json
+  aggregate_context_*.npz
+
+outputs/google_static/google_s3_visible_surface_v2/S3A_protocol_freeze/
+  visible_features.npy
+  visible_feature_schema.json
+  forbidden_feature_audit.json
+  split_manifest.json
+  adequacy_report.json
+  aggregate_cache_manifest.json
+  metrics.json
+```
+
+The V1 fixed-window adapter remains available for regression comparison:
+
+```bash
+scope-google-s3-visible-adapter --config configs/scope_static/google_s3_visible_adapter_v1.yaml
 ```
 
 Historical Google DEM-proxy diagnostics are archived under

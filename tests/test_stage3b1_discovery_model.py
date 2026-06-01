@@ -36,6 +36,9 @@ def test_stage3b1_trains_visible_only_prototype_mixture_and_reports_quotient_met
     assert result["claim_boundary"]["trains_from_stage3a_frozen_visible_features"] is True
     assert result["claim_boundary"]["rebuilds_visible_features_from_oracle_records_for_fit"] is False
     assert result["visible_feature_matrix"]["loaded_from_stage3a_artifact"] is True
+    assert result["learner_input_mask_audit"]["learner_input_profile"] == "full"
+    assert result["learner_input_mask_audit"]["training_matrix_for_assignment"] == "masked view of Stage 3A frozen visible_features.npy"
+    assert result["learner_input_mask_audit"]["generation_target_matrix"] == "full Stage 3A frozen visible_features.npy"
     assert result["visible_feature_weighting"]["uses_visible_operation_context"] is True
     assert result["visible_feature_weighting"]["operation_context_weight"] == 2.0
     assert result["model_selection_audit"]["validation_visible_nll_used_for_selection"] is True
@@ -73,6 +76,7 @@ def test_stage3b1_trains_visible_only_prototype_mixture_and_reports_quotient_met
         "quotient_metrics.json",
         "acceptance_audit.json",
         "feature_schema_match_audit.json",
+        "learner_input_mask_audit.json",
         "visible_feature_matrix.json",
         "visible_feature_weighting.json",
         "summary.md",

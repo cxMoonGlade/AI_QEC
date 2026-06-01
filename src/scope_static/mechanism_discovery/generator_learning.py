@@ -28,10 +28,23 @@ from .discovery_model import _valid_folds
 STAGE_NAME = "Stage3C_prototype_generator_learning"
 DEFAULT_OUTPUT_DIR = "outputs/scope_static/PHYC_STAGE3_discovery/S3C_prototype_generator_learning"
 DEFAULT_MAX_CV_FOLDS = 5
+DEFAULT_ASSIGNMENT_SHUFFLE_SEEDS = (0,)
+DEFAULT_FEATURE_SCRAMBLE_SEEDS = (0,)
 MIN_WEIGHT = 1.0e-12
 PROBABILITY_METRICS = {"P0", "P1", "P00", "P01", "P10", "P11", "p_comp"}
 PRIMARY_GENERATION_LIKELIHOOD_METRIC = "categorical_population_nll"
 SECONDARY_CONTINUOUS_DENSITY_DIAGNOSTIC = "gaussian_density_nll"
+FALLBACK_GENERATION_LIKELIHOOD_METRIC = SECONDARY_CONTINUOUS_DENSITY_DIAGNOSTIC
+TARGET_SCORE_PROFILE_FULL = "full_target"
+TARGET_SCORE_PROFILE_RAW = "raw_target_only"
+TARGET_SCORE_PROFILE_BLOCK_NORMALIZED = "block_normalized"
+TARGET_SCORE_PROFILE_NAMES = (
+    TARGET_SCORE_PROFILE_FULL,
+    TARGET_SCORE_PROFILE_RAW,
+    TARGET_SCORE_PROFILE_BLOCK_NORMALIZED,
+)
+DEFAULT_PUBLIC_STRATIFICATION_FIELDS = ("dataset_family", "distance", "basis", "region_family", "round_band")
+DEFAULT_MIN_STRATIFIED_TRAIN_ROWS = 2
 
 
 def run_stage3c_prototype_generator_learning(
@@ -44,6 +57,8 @@ def run_stage3c_prototype_generator_learning(
     max_cv_folds: int | None = DEFAULT_MAX_CV_FOLDS,
     variance_floor: float = VARIANCE_FLOOR,
     evaluator_mode: str = EVALUATOR_MODE_CONTROLLED_CATALOG,
+    assignment_shuffle_seeds: tuple[int, ...] | list[int] | None = DEFAULT_ASSIGNMENT_SHUFFLE_SEEDS,
+    feature_scramble_seeds: tuple[int, ...] | list[int] | None = DEFAULT_FEATURE_SCRAMBLE_SEEDS,
 ) -> dict[str, object]:
     """Score heldout visible generation from learned Stage 3 assignments.
 
@@ -87,10 +102,42 @@ def run_stage3c_prototype_generator_learning(
         folds=folds,
         variance_floor=float(variance_floor),
     )
+    stratified_null = evaluate_public_stratified_null_generation(
+        x,
+        feature_names=feature_names,
+        folds=folds,
+        split_manifest=split_manifest,
+        variance_floor=float(variance_floor),
+    )
     mean_only = evaluate_mean_only_generation(
         x,
         feature_names=feature_names,
         folds=folds,
+    )
+    shuffle_audit = assignment_shuffle_audit(
+        x,
+        responsibilities,
+        feature_names=feature_names,
+        folds=folds,
+        variance_floor=float(variance_floor),
+        predicted_assignment_metrics=predicted,
+        global_null_metrics=global_null,
+        stratified_null_metrics=stratified_null,
+        mean_only_baseline_metrics=mean_only,
+        seeds=assignment_shuffle_seeds,
+    )
+    scramble_audit = feature_scramble_audit(
+        x,
+        responsibilities,
+        feature_names=feature_names,
+        folds=folds,
+        split_manifest=split_manifest,
+        variance_floor=float(variance_floor),
+        predicted_assignment_metrics=predicted,
+        global_null_metrics=global_null,
+        stratified_null_metrics=stratified_null,
+        mean_only_baseline_metrics=mean_only,
+        seeds=feature_scramble_seeds,
     )
 
     if mode == EVALUATOR_MODE_CONTROLLED_CATALOG:
@@ -113,6 +160,7 @@ def run_stage3c_prototype_generator_learning(
     prototype_metrics = prototype_generation_metrics(
         predicted_assignment_metrics=predicted,
         global_null_metrics=global_null,
+        stratified_null_metrics=stratified_null,
         mean_only_baseline_metrics=mean_only,
         oracle_assignment_comparator_metrics=oracle,
     )
@@ -126,6 +174,7 @@ def run_stage3c_prototype_generator_learning(
         responsibilities=responsibilities,
         predicted_assignment_metrics=predicted,
         global_null_metrics=global_null,
+        stratified_null_metrics=stratified_null,
         mean_only_baseline_metrics=mean_only,
         oracle_assignment_comparator_metrics=oracle,
         leakage_audit=leakage,
@@ -161,6 +210,8 @@ def run_stage3c_prototype_generator_learning(
             "max_cv_folds": None if max_cv_folds is None else int(max_cv_folds),
             "variance_floor": float(variance_floor),
             "evaluator_mode": mode,
+            "assignment_shuffle_seeds": [int(seed) for seed in _audit_seed_list(assignment_shuffle_seeds)],
+            "feature_scramble_seeds": [int(seed) for seed in _audit_seed_list(feature_scramble_seeds)],
         },
         "visible_feature_matrix": feature_matrix,
         "feature_schema_match_audit": feature_match,
@@ -170,7 +221,10 @@ def run_stage3c_prototype_generator_learning(
         "predicted_assignment_metrics": predicted,
         "oracle_assignment_comparator_metrics": oracle,
         "global_null_metrics": global_null,
+        "stratified_null_metrics": stratified_null,
         "mean_only_baseline_metrics": mean_only,
+        "assignment_shuffle_audit": shuffle_audit,
+        "feature_scramble_audit": scramble_audit,
         "leakage_audit": leakage,
         "acceptance_audit": acceptance,
         "decision": "stage3c_prototype_generator_learning_completed" if acceptance["passed"] else "stage3c_prototype_generator_learning_failed",
@@ -191,6 +245,7 @@ def evaluate_predicted_assignment_generation(
     y_rows = []
     pred_rows = []
     nll_rows = []
+    profile_nll_rows = []
     for fold_idx, fold in enumerate(folds):
         train_idx = _indices(fold.get("train_indices", []), record_count=int(x.shape[0]))
         heldout_idx = _heldout_indices(fold, record_count=int(x.shape[0]))
@@ -199,6 +254,14 @@ def evaluate_predicted_assignment_generation(
         params = _fit_responsibility_generator(x[train_idx], responsibilities[train_idx], variance_floor=float(variance_floor))
         pred_mean = _responsibility_prediction_mean(responsibilities[heldout_idx], params["means"])
         nll = _conditional_responsibility_nll(x[heldout_idx], responsibilities[heldout_idx], params["means"], params["variances"])
+        profile_nll = _responsibility_target_profile_nll(
+            x[heldout_idx],
+            responsibilities[heldout_idx],
+            params["means"],
+            params["variances"],
+            feature_names,
+            full_nll=nll,
+        )
         metrics = _score_generation(x[heldout_idx], pred_mean, nll, feature_names)
         fold_rows.append(
             {
@@ -206,12 +269,19 @@ def evaluate_predicted_assignment_generation(
                 "train_count": int(train_idx.size),
                 "heldout_count": int(heldout_idx.size),
                 "active_prototype_count": int(params["active_prototype_count"]),
+                "target_score_profiles": _target_score_profiles(
+                    x[heldout_idx],
+                    pred_mean,
+                    feature_names,
+                    profile_nll=profile_nll,
+                ),
                 **metrics,
             }
         )
         y_rows.append(x[heldout_idx])
         pred_rows.append(pred_mean)
         nll_rows.append(nll)
+        profile_nll_rows.append(profile_nll)
     return _generation_artifact(
         schema="scope_static_stage3c_predicted_assignment_metrics_v1",
         model_name="predicted_assignment_generator",
@@ -220,9 +290,295 @@ def evaluate_predicted_assignment_generation(
         y_rows=y_rows,
         pred_rows=pred_rows,
         nll_rows=nll_rows,
+        profile_nll_rows=profile_nll_rows,
         fold_rows=fold_rows,
         uses_evaluator_labels=False,
     )
+
+
+def assignment_shuffle_audit(
+    x: np.ndarray,
+    responsibilities: np.ndarray,
+    *,
+    feature_names: list[str],
+    folds: list[dict[str, list[int]]],
+    variance_floor: float,
+    predicted_assignment_metrics: dict[str, object],
+    global_null_metrics: dict[str, object],
+    stratified_null_metrics: dict[str, object],
+    mean_only_baseline_metrics: dict[str, object],
+    seeds: tuple[int, ...] | list[int] | None,
+) -> dict[str, object]:
+    seed_list = _audit_seed_list(seeds)
+    predicted = dict(predicted_assignment_metrics.get("overall", {}))
+    global_null = dict(global_null_metrics.get("overall", {}))
+    stratified_null = dict(stratified_null_metrics.get("overall", {}))
+    mean_only = dict(mean_only_baseline_metrics.get("overall", {}))
+    metric = _effective_primary_generation_likelihood_metric(predicted)
+    runs = []
+    for seed in seed_list:
+        permutation = np.random.default_rng(int(seed)).permutation(int(responsibilities.shape[0]))
+        shuffled = responsibilities[permutation]
+        metrics = evaluate_predicted_assignment_generation(
+            x,
+            shuffled,
+            feature_names=feature_names,
+            folds=folds,
+            variance_floor=float(variance_floor),
+        )
+        overall = dict(metrics.get("overall", {}))
+        runs.append(
+            {
+                "seed": int(seed),
+                "assignment_permutation_mode": "global_row_shuffle_preserving_responsibility_rows",
+                "prototype_mass_preserved": True,
+                "row_stochastic": bool(shuffled.size == 0 or np.allclose(np.sum(shuffled, axis=1), 1.0)),
+                "overall": overall,
+                "target_score_profiles": metrics.get("target_score_profiles", {}),
+                "predicted_minus_shuffle": _gap(predicted, overall),
+                "global_null_minus_shuffle": _optional_difference(
+                    global_null.get(metric),
+                    overall.get(metric),
+                ),
+                "stratified_null_minus_shuffle": _optional_difference(
+                    stratified_null.get(metric),
+                    overall.get(metric),
+                ),
+                "mean_only_minus_shuffle": _optional_difference(
+                    mean_only.get(metric),
+                    overall.get(metric),
+                ),
+            }
+        )
+    aggregate = _aggregate_shuffle_runs(runs)
+    target_profile_aggregate = _aggregate_target_score_profile_runs(
+        [dict(row.get("target_score_profiles", {})) for row in runs if isinstance(row.get("target_score_profiles", {}), dict)]
+    )
+    primary_mean = aggregate.get(f"{metric}_mean")
+    predicted_primary = predicted.get(metric)
+    global_primary = global_null.get(metric)
+    checks = {
+        "assignment_shuffle_runs_reported": bool(runs),
+        "shuffled_assignments_row_stochastic": all(bool(row.get("row_stochastic", False)) for row in runs),
+        "shuffle_preserves_prototype_masses": all(bool(row.get("prototype_mass_preserved", False)) for row in runs),
+        "shuffled_primary_nll_not_better_than_predicted": (
+            True if primary_mean is None or predicted_primary is None else float(primary_mean) >= float(predicted_primary)
+        ),
+        "shuffled_primary_lift_no_better_than_predicted_lift": (
+            True
+            if primary_mean is None or predicted_primary is None or global_primary is None
+            else (float(global_primary) - float(primary_mean)) <= (float(global_primary) - float(predicted_primary)) + 1.0e-12
+        ),
+    }
+    return {
+        "schema": "scope_static_stage3c_assignment_shuffle_audit_v1",
+        "description": "Evaluator-side falsification audit: row-shuffle Stage 3B.1 assignments before fitting/scoring the S3C visible generator.",
+        "primary_generation_likelihood_metric": metric,
+        "assignment_shuffle_mode": "global row permutation of responsibility rows; visible features and folds unchanged",
+        "uses_evaluator_labels": False,
+        "used_for_model_selection": False,
+        "seed_count": int(len(seed_list)),
+        "seeds": [int(seed) for seed in seed_list],
+        "runs": runs,
+        "aggregate": aggregate,
+        "target_score_profile_aggregate": target_profile_aggregate,
+        "reference_metrics": {
+            "predicted_assignment": predicted,
+            "global_null": global_null,
+            "stratified_null": stratified_null,
+            "mean_only_baseline": mean_only,
+            "target_score_profiles": {
+                "predicted_assignment": predicted_assignment_metrics.get("target_score_profiles", {}),
+                "global_null": global_null_metrics.get("target_score_profiles", {}),
+                "stratified_null": stratified_null_metrics.get("target_score_profiles", {}),
+                "mean_only_baseline": mean_only_baseline_metrics.get("target_score_profiles", {}),
+            },
+        },
+        "checks": checks,
+        "passed": bool(all(checks.values())),
+    }
+
+
+def feature_scramble_audit(
+    x: np.ndarray,
+    responsibilities: np.ndarray,
+    *,
+    feature_names: list[str],
+    folds: list[dict[str, list[int]]],
+    split_manifest: dict[str, object],
+    variance_floor: float,
+    predicted_assignment_metrics: dict[str, object],
+    global_null_metrics: dict[str, object],
+    stratified_null_metrics: dict[str, object],
+    mean_only_baseline_metrics: dict[str, object],
+    seeds: tuple[int, ...] | list[int] | None,
+) -> dict[str, object]:
+    seed_list = _audit_seed_list(seeds)
+    predicted = dict(predicted_assignment_metrics.get("overall", {}))
+    global_null = dict(global_null_metrics.get("overall", {}))
+    stratified_null = dict(stratified_null_metrics.get("overall", {}))
+    mean_only = dict(mean_only_baseline_metrics.get("overall", {}))
+    metric = _effective_primary_generation_likelihood_metric(predicted)
+    runs = []
+    for seed in seed_list:
+        scrambled_x = _scramble_visible_feature_columns(x, seed=int(seed))
+        scrambled_predicted = evaluate_predicted_assignment_generation(
+            scrambled_x,
+            responsibilities,
+            feature_names=feature_names,
+            folds=folds,
+            variance_floor=float(variance_floor),
+        )
+        scrambled_global = evaluate_global_null_generation(
+            scrambled_x,
+            feature_names=feature_names,
+            folds=folds,
+            variance_floor=float(variance_floor),
+        )
+        scrambled_stratified = evaluate_public_stratified_null_generation(
+            scrambled_x,
+            feature_names=feature_names,
+            folds=folds,
+            split_manifest=split_manifest,
+            variance_floor=float(variance_floor),
+        )
+        scrambled_mean = evaluate_mean_only_generation(
+            scrambled_x,
+            feature_names=feature_names,
+            folds=folds,
+        )
+        pred_overall = dict(scrambled_predicted.get("overall", {}))
+        global_overall = dict(scrambled_global.get("overall", {}))
+        stratified_overall = dict(scrambled_stratified.get("overall", {}))
+        mean_overall = dict(scrambled_mean.get("overall", {}))
+        runs.append(
+            {
+                "seed": int(seed),
+                "feature_scramble_mode": "independent_column_row_permutation",
+                "feature_marginals_preserved": True,
+                "row_order_preserved": True,
+                "fold_indices_preserved": True,
+                "assignment_matrix_preserved": True,
+                "predicted_assignment": pred_overall,
+                "global_null": global_overall,
+                "stratified_null": stratified_overall,
+                "mean_only_baseline": mean_overall,
+                "target_score_profiles": {
+                    "predicted_assignment": scrambled_predicted.get("target_score_profiles", {}),
+                    "global_null": scrambled_global.get("target_score_profiles", {}),
+                    "stratified_null": scrambled_stratified.get("target_score_profiles", {}),
+                    "mean_only_baseline": scrambled_mean.get("target_score_profiles", {}),
+                },
+                "global_null_minus_predicted": _optional_difference(
+                    global_overall.get(metric),
+                    pred_overall.get(metric),
+                ),
+                "mean_only_minus_predicted": _optional_difference(
+                    mean_overall.get(metric),
+                    pred_overall.get(metric),
+                ),
+            }
+        )
+    predicted_aggregate = _aggregate_overall_runs([dict(row.get("predicted_assignment", {})) for row in runs])
+    global_aggregate = _aggregate_overall_runs([dict(row.get("global_null", {})) for row in runs])
+    stratified_aggregate = _aggregate_overall_runs([dict(row.get("stratified_null", {})) for row in runs])
+    mean_aggregate = _aggregate_overall_runs([dict(row.get("mean_only_baseline", {})) for row in runs])
+    target_profile_aggregate = {
+        "predicted_assignment": _aggregate_target_score_profile_runs(
+            [
+                dict(dict(row.get("target_score_profiles", {})).get("predicted_assignment", {}))
+                for row in runs
+                if isinstance(dict(row.get("target_score_profiles", {})).get("predicted_assignment", {}), dict)
+            ]
+        ),
+        "global_null": _aggregate_target_score_profile_runs(
+            [
+                dict(dict(row.get("target_score_profiles", {})).get("global_null", {}))
+                for row in runs
+                if isinstance(dict(row.get("target_score_profiles", {})).get("global_null", {}), dict)
+            ]
+        ),
+        "stratified_null": _aggregate_target_score_profile_runs(
+            [
+                dict(dict(row.get("target_score_profiles", {})).get("stratified_null", {}))
+                for row in runs
+                if isinstance(dict(row.get("target_score_profiles", {})).get("stratified_null", {}), dict)
+            ]
+        ),
+        "mean_only_baseline": _aggregate_target_score_profile_runs(
+            [
+                dict(dict(row.get("target_score_profiles", {})).get("mean_only_baseline", {}))
+                for row in runs
+                if isinstance(dict(row.get("target_score_profiles", {})).get("mean_only_baseline", {}), dict)
+            ]
+        ),
+    }
+    original_lift = _optional_difference(global_null.get(metric), predicted.get(metric))
+    scrambled_lift = _optional_difference(
+        global_aggregate.get(f"{metric}_mean"),
+        predicted_aggregate.get(f"{metric}_mean"),
+    )
+    lift_fraction = None
+    if original_lift is not None and abs(float(original_lift)) > MIN_WEIGHT and scrambled_lift is not None:
+        lift_fraction = float(scrambled_lift) / float(original_lift)
+    checks = {
+        "feature_scramble_runs_reported": bool(runs),
+        "feature_marginals_preserved": all(bool(row.get("feature_marginals_preserved", False)) for row in runs),
+        "row_order_fold_and_assignments_preserved": all(
+            bool(row.get("row_order_preserved", False))
+            and bool(row.get("fold_indices_preserved", False))
+            and bool(row.get("assignment_matrix_preserved", False))
+            for row in runs
+        ),
+        "scrambled_primary_nll_not_better_than_original_predicted": (
+            True
+            if predicted_aggregate.get(f"{metric}_mean") is None
+            or predicted.get(metric) is None
+            else float(predicted_aggregate[f"{metric}_mean"])
+            >= float(predicted[metric])
+        ),
+        "scrambled_primary_lift_no_better_than_original_lift": (
+            True
+            if original_lift is None or scrambled_lift is None
+            else float(scrambled_lift) <= float(original_lift) + 1.0e-12
+        ),
+    }
+    return {
+        "schema": "scope_static_stage3c_feature_scramble_audit_v1",
+        "description": "Evaluator-side falsification audit: independently permute each visible feature column across rows before fitting/scoring S3C.",
+        "primary_generation_likelihood_metric": metric,
+        "feature_scramble_mode": "independent column-wise row permutation; one-feature marginals preserved, row-level visible semantics broken",
+        "uses_evaluator_labels": False,
+        "used_for_model_selection": False,
+        "seed_count": int(len(seed_list)),
+        "seeds": [int(seed) for seed in seed_list],
+        "runs": runs,
+        "aggregate": {
+            "predicted_assignment": predicted_aggregate,
+            "global_null": global_aggregate,
+            "stratified_null": stratified_aggregate,
+            "mean_only_baseline": mean_aggregate,
+            "target_score_profiles": target_profile_aggregate,
+            "target_score_profile_lift": _scrambled_target_score_profile_lift(target_profile_aggregate),
+            "original_global_null_minus_predicted_lift": original_lift,
+            "scrambled_global_null_minus_predicted_lift": scrambled_lift,
+            "scrambled_lift_fraction_of_original": lift_fraction,
+        },
+        "reference_metrics": {
+            "predicted_assignment": predicted,
+            "global_null": global_null,
+            "stratified_null": stratified_null,
+            "mean_only_baseline": mean_only,
+            "target_score_profiles": {
+                "predicted_assignment": predicted_assignment_metrics.get("target_score_profiles", {}),
+                "global_null": global_null_metrics.get("target_score_profiles", {}),
+                "stratified_null": stratified_null_metrics.get("target_score_profiles", {}),
+                "mean_only_baseline": mean_only_baseline_metrics.get("target_score_profiles", {}),
+            },
+        },
+        "checks": checks,
+        "passed": bool(all(checks.values())),
+    }
 
 
 def evaluate_global_null_generation(
@@ -236,6 +592,7 @@ def evaluate_global_null_generation(
     y_rows = []
     pred_rows = []
     nll_rows = []
+    profile_nll_rows = []
     for fold_idx, fold in enumerate(folds):
         train_idx = _indices(fold.get("train_indices", []), record_count=int(x.shape[0]))
         heldout_idx = _heldout_indices(fold, record_count=int(x.shape[0]))
@@ -244,11 +601,26 @@ def evaluate_global_null_generation(
         mean, variance = _fit_global_generator(x[train_idx], variance_floor=float(variance_floor))
         pred_mean = np.tile(mean[None, :], (int(heldout_idx.size), 1))
         nll = -_diag_log_prob(x[heldout_idx], mean[None, :], variance[None, :])[:, 0]
+        profile_nll = _global_target_profile_nll(x[heldout_idx], mean, variance, feature_names, full_nll=nll)
         metrics = _score_generation(x[heldout_idx], pred_mean, nll, feature_names)
-        fold_rows.append({"fold": int(fold_idx), "train_count": int(train_idx.size), "heldout_count": int(heldout_idx.size), **metrics})
+        fold_rows.append(
+            {
+                "fold": int(fold_idx),
+                "train_count": int(train_idx.size),
+                "heldout_count": int(heldout_idx.size),
+                "target_score_profiles": _target_score_profiles(
+                    x[heldout_idx],
+                    pred_mean,
+                    feature_names,
+                    profile_nll=profile_nll,
+                ),
+                **metrics,
+            }
+        )
         y_rows.append(x[heldout_idx])
         pred_rows.append(pred_mean)
         nll_rows.append(nll)
+        profile_nll_rows.append(profile_nll)
     return _generation_artifact(
         schema="scope_static_stage3c_global_null_metrics_v1",
         model_name="global_null_diagonal_gaussian",
@@ -257,9 +629,123 @@ def evaluate_global_null_generation(
         y_rows=y_rows,
         pred_rows=pred_rows,
         nll_rows=nll_rows,
+        profile_nll_rows=profile_nll_rows,
         fold_rows=fold_rows,
         uses_evaluator_labels=False,
     )
+
+
+def evaluate_public_stratified_null_generation(
+    x: np.ndarray,
+    *,
+    feature_names: list[str],
+    folds: list[dict[str, list[int]]],
+    split_manifest: dict[str, object],
+    variance_floor: float,
+    public_stratification_fields: tuple[str, ...] = DEFAULT_PUBLIC_STRATIFICATION_FIELDS,
+    min_stratum_train_rows: int = DEFAULT_MIN_STRATIFIED_TRAIN_ROWS,
+) -> dict[str, object]:
+    labels, label_audit = _public_stratification_labels(
+        split_manifest,
+        record_count=int(x.shape[0]),
+        fields=tuple(public_stratification_fields),
+    )
+    fold_rows = []
+    y_rows = []
+    pred_rows = []
+    nll_rows = []
+    profile_nll_rows = []
+    fallback_total = 0
+    heldout_total = 0
+    train_stratum_counts = []
+    for fold_idx, fold in enumerate(folds):
+        train_idx = _indices(fold.get("train_indices", []), record_count=int(x.shape[0]))
+        heldout_idx = _heldout_indices(fold, record_count=int(x.shape[0]))
+        if train_idx.size == 0 or heldout_idx.size == 0:
+            continue
+        global_mean, global_var = _fit_global_generator(x[train_idx], variance_floor=float(variance_floor))
+        means_by_label: dict[str, np.ndarray] = {}
+        variances_by_label: dict[str, np.ndarray] = {}
+        train_labels = labels[train_idx]
+        for label in sorted(set(train_labels.tolist())):
+            mask = train_labels == label
+            if int(np.sum(mask)) < int(min_stratum_train_rows):
+                continue
+            rows = x[train_idx[mask]]
+            mean = np.mean(rows, axis=0)
+            var = np.maximum(np.var(rows, axis=0), float(variance_floor))
+            means_by_label[str(label)] = mean
+            variances_by_label[str(label)] = var
+        pred_mean = np.empty((int(heldout_idx.size), int(x.shape[1])), dtype=np.float64)
+        pred_var = np.empty_like(pred_mean)
+        fallback_count = 0
+        for local_row, record_idx in enumerate(heldout_idx.tolist()):
+            label = str(labels[int(record_idx)])
+            if label in means_by_label:
+                pred_mean[local_row] = means_by_label[label]
+                pred_var[local_row] = variances_by_label[label]
+            else:
+                pred_mean[local_row] = global_mean
+                pred_var[local_row] = global_var
+                fallback_count += 1
+        nll = _rowwise_diag_nll(x[heldout_idx], pred_mean, pred_var)
+        profile_nll = _rowwise_target_profile_nll(x[heldout_idx], pred_mean, pred_var, feature_names, full_nll=nll)
+        metrics = _score_generation(x[heldout_idx], pred_mean, nll, feature_names)
+        fold_rows.append(
+            {
+                "fold": int(fold_idx),
+                "train_count": int(train_idx.size),
+                "heldout_count": int(heldout_idx.size),
+                "train_stratum_count": int(len(means_by_label)),
+                "heldout_fallback_to_global_count": int(fallback_count),
+                "target_score_profiles": _target_score_profiles(
+                    x[heldout_idx],
+                    pred_mean,
+                    feature_names,
+                    profile_nll=profile_nll,
+                ),
+                **metrics,
+            }
+        )
+        fallback_total += int(fallback_count)
+        heldout_total += int(heldout_idx.size)
+        train_stratum_counts.append(int(len(means_by_label)))
+        y_rows.append(x[heldout_idx])
+        pred_rows.append(pred_mean)
+        nll_rows.append(nll)
+        profile_nll_rows.append(profile_nll)
+    out = _generation_artifact(
+        schema="scope_static_stage3c_public_stratified_null_metrics_v1",
+        model_name="public_stratified_null_diagonal_gaussian",
+        description="Fold-local diagonal visible generator conditioned only on public Stage 3A metadata strata.",
+        feature_names=feature_names,
+        y_rows=y_rows,
+        pred_rows=pred_rows,
+        nll_rows=nll_rows,
+        profile_nll_rows=profile_nll_rows,
+        fold_rows=fold_rows,
+        uses_evaluator_labels=False,
+    )
+    out["stratification_audit"] = {
+        "schema": "scope_static_stage3c_public_stratified_null_audit_v1",
+        "description": "Strong no-oracle baseline: condition visible replay on public Stage 3A strata, never on labels, paths, samples, or learned assignments.",
+        "public_stratification_fields": [str(field) for field in public_stratification_fields],
+        "min_stratum_train_rows": int(min_stratum_train_rows),
+        "uses_evaluator_labels": False,
+        "uses_learned_assignments": False,
+        "uses_context_path_sample_ids": False,
+        "fit_from_training_fold_only": True,
+        "record_count": int(x.shape[0]),
+        "stratum_count": int(label_audit["stratum_count"]),
+        "stratum_count_positive": int(label_audit["stratum_count"]) > 0,
+        "public_fields_available": bool(label_audit["public_fields_available"]),
+        "fallback_to_global_heldout_count": int(fallback_total),
+        "heldout_count": int(heldout_total),
+        "fallback_to_global_fraction": float(fallback_total / max(1, heldout_total)),
+        "mean_train_stratum_count": float(np.mean(train_stratum_counts)) if train_stratum_counts else 0.0,
+        "label_audit": label_audit,
+    }
+    return out
 
 
 def evaluate_mean_only_generation(
@@ -280,7 +766,20 @@ def evaluate_mean_only_generation(
         pred_mean = np.tile(mean[None, :], (int(heldout_idx.size), 1))
         metrics = _score_generation(x[heldout_idx], pred_mean, np.zeros(int(heldout_idx.size), dtype=np.float64), feature_names)
         metrics["gaussian_nll"] = None
-        fold_rows.append({"fold": int(fold_idx), "train_count": int(train_idx.size), "heldout_count": int(heldout_idx.size), **metrics})
+        fold_rows.append(
+            {
+                "fold": int(fold_idx),
+                "train_count": int(train_idx.size),
+                "heldout_count": int(heldout_idx.size),
+                "target_score_profiles": _target_score_profiles(
+                    x[heldout_idx],
+                    pred_mean,
+                    feature_names,
+                    profile_nll={},
+                ),
+                **metrics,
+            }
+        )
         y_rows.append(x[heldout_idx])
         pred_rows.append(pred_mean)
     return _generation_artifact(
@@ -291,6 +790,7 @@ def evaluate_mean_only_generation(
         y_rows=y_rows,
         pred_rows=pred_rows,
         nll_rows=[],
+        profile_nll_rows=[],
         fold_rows=fold_rows,
         uses_evaluator_labels=False,
     )
@@ -309,6 +809,7 @@ def evaluate_oracle_assignment_comparator(
     y_rows = []
     pred_rows = []
     nll_rows = []
+    profile_nll_rows = []
     label_array = np.asarray(labels, dtype=object)
     for fold_idx, fold in enumerate(folds):
         train_idx = _indices(fold.get("train_indices", []), record_count=int(x.shape[0]))
@@ -325,6 +826,14 @@ def evaluate_oracle_assignment_comparator(
         component_rows = np.asarray([label_to_row[str(label_array[idx])] for idx in heldout_idx.tolist()], dtype=np.int64)
         pred_mean = means[component_rows]
         nll = -_diag_log_prob(x[heldout_idx], means, variances)[np.arange(int(heldout_idx.size)), component_rows]
+        profile_nll = _label_target_profile_nll(
+            x[heldout_idx],
+            component_rows,
+            means,
+            variances,
+            feature_names,
+            full_nll=nll,
+        )
         metrics = _score_generation(x[heldout_idx], pred_mean, nll, feature_names)
         fold_rows.append(
             {
@@ -332,12 +841,19 @@ def evaluate_oracle_assignment_comparator(
                 "train_count": int(train_idx.size),
                 "heldout_count": int(heldout_idx.size),
                 "oracle_class_count": int(len(class_names)),
+                "target_score_profiles": _target_score_profiles(
+                    x[heldout_idx],
+                    pred_mean,
+                    feature_names,
+                    profile_nll=profile_nll,
+                ),
                 **metrics,
             }
         )
         y_rows.append(x[heldout_idx])
         pred_rows.append(pred_mean)
         nll_rows.append(nll)
+        profile_nll_rows.append(profile_nll)
     out = _generation_artifact(
         schema="scope_static_stage3c_oracle_assignment_comparator_metrics_v1",
         model_name="oracle_assignment_comparator",
@@ -346,6 +862,7 @@ def evaluate_oracle_assignment_comparator(
         y_rows=y_rows,
         pred_rows=pred_rows,
         nll_rows=nll_rows,
+        profile_nll_rows=profile_nll_rows,
         fold_rows=fold_rows,
         uses_evaluator_labels=True,
     )
@@ -391,31 +908,54 @@ def prototype_generation_metrics(
     *,
     predicted_assignment_metrics: dict[str, object],
     global_null_metrics: dict[str, object],
+    stratified_null_metrics: dict[str, object],
     mean_only_baseline_metrics: dict[str, object],
     oracle_assignment_comparator_metrics: dict[str, object],
 ) -> dict[str, object]:
     predicted = dict(predicted_assignment_metrics.get("overall", {}))
     global_null = dict(global_null_metrics.get("overall", {}))
+    stratified_null = dict(stratified_null_metrics.get("overall", {}))
     mean_only = dict(mean_only_baseline_metrics.get("overall", {}))
     oracle = dict(oracle_assignment_comparator_metrics.get("overall", {}))
+    metric = _effective_primary_generation_likelihood_metric(predicted)
+    primary_target_profile = _effective_primary_target_score_profile(predicted_assignment_metrics)
     return {
         "schema": "scope_static_stage3c_prototype_generation_metrics_v1",
         "heldout_generation_protocol": "fold-local generators fit on Stage 3A train folds and scored on validation+test heldout rows",
-        "primary_generation_likelihood_metric": PRIMARY_GENERATION_LIKELIHOOD_METRIC,
+        "primary_generation_likelihood_metric": metric,
+        "primary_target_score_profile": primary_target_profile,
         "secondary_continuous_density_diagnostic": SECONDARY_CONTINUOUS_DENSITY_DIAGNOSTIC,
         "primary_likelihood_report": primary_likelihood_report(
             predicted_assignment=predicted,
             oracle_assignment=oracle,
             global_null=global_null,
+            stratified_null=stratified_null,
             mean_only=mean_only,
+            metric=metric,
         ),
         "predicted_assignment_model": predicted,
         "global_null_model": global_null,
+        "stratified_null_model": stratified_null,
         "mean_only_baseline": mean_only,
         "oracle_assignment_comparator_evaluator_only": oracle,
         "global_null_lift": _lift(predicted, global_null),
+        "stratified_null_lift": _lift(predicted, stratified_null),
         "mean_only_lift": _lift(predicted, mean_only),
         "oracle_comparator_gap": _gap(predicted, oracle),
+        "feature_block_lift": _feature_block_lift_report(
+            predicted_assignment_metrics=predicted_assignment_metrics,
+            global_null_metrics=global_null_metrics,
+            stratified_null_metrics=stratified_null_metrics,
+            mean_only_baseline_metrics=mean_only_baseline_metrics,
+            oracle_assignment_comparator_metrics=oracle_assignment_comparator_metrics,
+        ),
+        "target_score_profile_report": _target_score_profile_report(
+            predicted_assignment_metrics=predicted_assignment_metrics,
+            global_null_metrics=global_null_metrics,
+            stratified_null_metrics=stratified_null_metrics,
+            mean_only_baseline_metrics=mean_only_baseline_metrics,
+            oracle_assignment_comparator_metrics=oracle_assignment_comparator_metrics,
+        ),
     }
 
 
@@ -424,22 +964,230 @@ def primary_likelihood_report(
     predicted_assignment: dict[str, object],
     oracle_assignment: dict[str, object],
     global_null: dict[str, object],
+    stratified_null: dict[str, object],
     mean_only: dict[str, object],
+    metric: str | None = None,
 ) -> dict[str, object]:
-    metric = PRIMARY_GENERATION_LIKELIHOOD_METRIC
+    metric = str(metric or _effective_primary_generation_likelihood_metric(predicted_assignment))
+    metric_kind = (
+        "positive_discrete_probability_mass_nll"
+        if metric == PRIMARY_GENERATION_LIKELIHOOD_METRIC
+        else "diagonal_gaussian_visible_density_nll"
+    )
     return {
         "schema": "scope_static_stage3c_primary_likelihood_report_v1",
         "metric": metric,
-        "metric_kind": "positive_discrete_probability_mass_nll",
+        "metric_kind": metric_kind,
         "lower_is_better": True,
         "predicted_assignment": _optional_float(predicted_assignment.get(metric)),
         "oracle_assignment_comparator": _optional_float(oracle_assignment.get(metric)),
         "predicted_minus_oracle_gap": _optional_difference(predicted_assignment.get(metric), oracle_assignment.get(metric)),
         "global_null": _optional_float(global_null.get(metric)),
+        "stratified_null": _optional_float(stratified_null.get(metric)),
         "mean_only_baseline": _optional_float(mean_only.get(metric)),
         "global_null_minus_predicted_lift": _optional_difference(global_null.get(metric), predicted_assignment.get(metric)),
+        "stratified_null_minus_predicted_lift": _optional_difference(stratified_null.get(metric), predicted_assignment.get(metric)),
         "mean_only_minus_predicted_lift": _optional_difference(mean_only.get(metric), predicted_assignment.get(metric)),
     }
+
+
+def _target_score_profile_report(
+    *,
+    predicted_assignment_metrics: dict[str, object],
+    global_null_metrics: dict[str, object],
+    stratified_null_metrics: dict[str, object],
+    mean_only_baseline_metrics: dict[str, object],
+    oracle_assignment_comparator_metrics: dict[str, object],
+) -> dict[str, object]:
+    predicted = _profiles_from_generation_metrics(predicted_assignment_metrics)
+    global_null = _profiles_from_generation_metrics(global_null_metrics)
+    stratified_null = _profiles_from_generation_metrics(stratified_null_metrics)
+    mean_only = _profiles_from_generation_metrics(mean_only_baseline_metrics)
+    oracle = _profiles_from_generation_metrics(oracle_assignment_comparator_metrics)
+    profile_names = list(TARGET_SCORE_PROFILE_NAMES)
+    for source in (predicted, global_null, stratified_null, mean_only, oracle):
+        for name in source:
+            if name not in profile_names:
+                profile_names.append(name)
+    profiles: dict[str, object] = {}
+    for name in profile_names:
+        pred = dict(predicted.get(name, {}))
+        glob = dict(global_null.get(name, {}))
+        strat = dict(stratified_null.get(name, {}))
+        mean = dict(mean_only.get(name, {}))
+        ora = dict(oracle.get(name, {}))
+        profiles[name] = {
+            "profile": name,
+            "target_feature_count": int(pred.get("target_feature_count", glob.get("target_feature_count", 0)) or 0),
+            "included_blocks": list(pred.get("included_blocks", glob.get("included_blocks", [])) or []),
+            "metric_definition": pred.get("metric_definition", glob.get("metric_definition")),
+            "gaussian_density_nll": {
+                "predicted_assignment": _optional_float(pred.get("gaussian_density_nll")),
+                "global_null": _optional_float(glob.get("gaussian_density_nll")),
+                "stratified_null": _optional_float(strat.get("gaussian_density_nll")),
+                "mean_only_baseline": _optional_float(mean.get("gaussian_density_nll")),
+                "oracle_assignment_comparator": _optional_float(ora.get("gaussian_density_nll")),
+                "global_null_minus_predicted_lift": _optional_difference(
+                    glob.get("gaussian_density_nll"),
+                    pred.get("gaussian_density_nll"),
+                ),
+                "mean_only_minus_predicted_lift": _optional_difference(
+                    mean.get("gaussian_density_nll"),
+                    pred.get("gaussian_density_nll"),
+                ),
+                "stratified_null_minus_predicted_lift": _optional_difference(
+                    strat.get("gaussian_density_nll"),
+                    pred.get("gaussian_density_nll"),
+                ),
+            },
+            "gaussian_density_nll_per_feature": {
+                "predicted_assignment": _optional_float(pred.get("gaussian_density_nll_per_feature")),
+                "global_null": _optional_float(glob.get("gaussian_density_nll_per_feature")),
+                "stratified_null": _optional_float(strat.get("gaussian_density_nll_per_feature")),
+                "mean_only_baseline": _optional_float(mean.get("gaussian_density_nll_per_feature")),
+                "oracle_assignment_comparator": _optional_float(ora.get("gaussian_density_nll_per_feature")),
+                "global_null_minus_predicted_lift": _optional_difference(
+                    glob.get("gaussian_density_nll_per_feature"),
+                    pred.get("gaussian_density_nll_per_feature"),
+                ),
+                "mean_only_minus_predicted_lift": _optional_difference(
+                    mean.get("gaussian_density_nll_per_feature"),
+                    pred.get("gaussian_density_nll_per_feature"),
+                ),
+                "stratified_null_minus_predicted_lift": _optional_difference(
+                    strat.get("gaussian_density_nll_per_feature"),
+                    pred.get("gaussian_density_nll_per_feature"),
+                ),
+            },
+            "raw_visible_feature_mae": {
+                "predicted_assignment": _optional_float(pred.get("raw_visible_feature_mae")),
+                "global_null": _optional_float(glob.get("raw_visible_feature_mae")),
+                "stratified_null": _optional_float(strat.get("raw_visible_feature_mae")),
+                "mean_only_baseline": _optional_float(mean.get("raw_visible_feature_mae")),
+                "oracle_assignment_comparator": _optional_float(ora.get("raw_visible_feature_mae")),
+                "global_null_minus_predicted_lift": _optional_difference(
+                    glob.get("raw_visible_feature_mae"),
+                    pred.get("raw_visible_feature_mae"),
+                ),
+                "mean_only_minus_predicted_lift": _optional_difference(
+                    mean.get("raw_visible_feature_mae"),
+                    pred.get("raw_visible_feature_mae"),
+                ),
+                "stratified_null_minus_predicted_lift": _optional_difference(
+                    strat.get("raw_visible_feature_mae"),
+                    pred.get("raw_visible_feature_mae"),
+                ),
+            },
+        }
+    return {
+        "schema": "scope_static_stage3c_target_score_profile_report_v1",
+        "description": "Headline scoring profiles separating full target, raw observation target, and equal-block-weight target views.",
+        "profiles": profiles,
+        "block_profiles": _target_score_block_profile_report(
+            predicted_assignment_metrics=predicted_assignment_metrics,
+            global_null_metrics=global_null_metrics,
+            stratified_null_metrics=stratified_null_metrics,
+            mean_only_baseline_metrics=mean_only_baseline_metrics,
+            oracle_assignment_comparator_metrics=oracle_assignment_comparator_metrics,
+        ),
+    }
+
+
+def _target_score_block_profile_report(
+    *,
+    predicted_assignment_metrics: dict[str, object],
+    global_null_metrics: dict[str, object],
+    stratified_null_metrics: dict[str, object],
+    mean_only_baseline_metrics: dict[str, object],
+    oracle_assignment_comparator_metrics: dict[str, object],
+) -> dict[str, object]:
+    predicted = _block_profiles_from_generation_metrics(predicted_assignment_metrics)
+    global_null = _block_profiles_from_generation_metrics(global_null_metrics)
+    stratified_null = _block_profiles_from_generation_metrics(stratified_null_metrics)
+    mean_only = _block_profiles_from_generation_metrics(mean_only_baseline_metrics)
+    oracle = _block_profiles_from_generation_metrics(oracle_assignment_comparator_metrics)
+    block_names = sorted(set(predicted) | set(global_null) | set(stratified_null) | set(mean_only) | set(oracle))
+    blocks: dict[str, object] = {}
+    for name in block_names:
+        pred = dict(predicted.get(name, {}))
+        glob = dict(global_null.get(name, {}))
+        strat = dict(stratified_null.get(name, {}))
+        mean = dict(mean_only.get(name, {}))
+        ora = dict(oracle.get(name, {}))
+        blocks[name] = {
+            "block": name,
+            "target_feature_count": int(pred.get("target_feature_count", glob.get("target_feature_count", 0)) or 0),
+            "metric_definition": pred.get("metric_definition", glob.get("metric_definition")),
+            "gaussian_density_nll": {
+                "predicted_assignment": _optional_float(pred.get("gaussian_density_nll")),
+                "global_null": _optional_float(glob.get("gaussian_density_nll")),
+                "stratified_null": _optional_float(strat.get("gaussian_density_nll")),
+                "mean_only_baseline": _optional_float(mean.get("gaussian_density_nll")),
+                "oracle_assignment_comparator": _optional_float(ora.get("gaussian_density_nll")),
+                "global_null_minus_predicted_lift": _optional_difference(
+                    glob.get("gaussian_density_nll"),
+                    pred.get("gaussian_density_nll"),
+                ),
+                "stratified_null_minus_predicted_lift": _optional_difference(
+                    strat.get("gaussian_density_nll"),
+                    pred.get("gaussian_density_nll"),
+                ),
+            },
+            "gaussian_density_nll_per_feature": {
+                "predicted_assignment": _optional_float(pred.get("gaussian_density_nll_per_feature")),
+                "global_null": _optional_float(glob.get("gaussian_density_nll_per_feature")),
+                "stratified_null": _optional_float(strat.get("gaussian_density_nll_per_feature")),
+                "mean_only_baseline": _optional_float(mean.get("gaussian_density_nll_per_feature")),
+                "oracle_assignment_comparator": _optional_float(ora.get("gaussian_density_nll_per_feature")),
+                "global_null_minus_predicted_lift": _optional_difference(
+                    glob.get("gaussian_density_nll_per_feature"),
+                    pred.get("gaussian_density_nll_per_feature"),
+                ),
+                "stratified_null_minus_predicted_lift": _optional_difference(
+                    strat.get("gaussian_density_nll_per_feature"),
+                    pred.get("gaussian_density_nll_per_feature"),
+                ),
+            },
+            "raw_visible_feature_mae": {
+                "predicted_assignment": _optional_float(pred.get("raw_visible_feature_mae")),
+                "global_null": _optional_float(glob.get("raw_visible_feature_mae")),
+                "stratified_null": _optional_float(strat.get("raw_visible_feature_mae")),
+                "mean_only_baseline": _optional_float(mean.get("raw_visible_feature_mae")),
+                "oracle_assignment_comparator": _optional_float(ora.get("raw_visible_feature_mae")),
+                "global_null_minus_predicted_lift": _optional_difference(
+                    glob.get("raw_visible_feature_mae"),
+                    pred.get("raw_visible_feature_mae"),
+                ),
+                "stratified_null_minus_predicted_lift": _optional_difference(
+                    strat.get("raw_visible_feature_mae"),
+                    pred.get("raw_visible_feature_mae"),
+                ),
+            },
+        }
+    return {
+        "schema": "scope_static_stage3c_target_score_block_profile_report_v1",
+        "blocks": blocks,
+    }
+
+
+def _profiles_from_generation_metrics(metrics: dict[str, object]) -> dict[str, dict[str, object]]:
+    target = metrics.get("target_score_profiles", {})
+    if not isinstance(target, dict):
+        return {}
+    profiles = target.get("profiles", {})
+    if not isinstance(profiles, dict):
+        return {}
+    return {str(name): dict(value) for name, value in profiles.items() if isinstance(value, dict)}
+
+
+def _block_profiles_from_generation_metrics(metrics: dict[str, object]) -> dict[str, dict[str, object]]:
+    target = metrics.get("target_score_profiles", {})
+    if not isinstance(target, dict):
+        return {}
+    profiles = target.get("block_profiles", {})
+    if not isinstance(profiles, dict):
+        return {}
+    return {str(name): dict(value) for name, value in profiles.items() if isinstance(value, dict)}
 
 
 def assignment_source_audit(*, s3b1_dir: Path, responsibilities: np.ndarray) -> dict[str, object]:
@@ -516,6 +1264,7 @@ def stage3c_acceptance_audit(
     responsibilities: np.ndarray,
     predicted_assignment_metrics: dict[str, object],
     global_null_metrics: dict[str, object],
+    stratified_null_metrics: dict[str, object],
     mean_only_baseline_metrics: dict[str, object],
     oracle_assignment_comparator_metrics: dict[str, object],
     leakage_audit: dict[str, object],
@@ -524,9 +1273,19 @@ def stage3c_acceptance_audit(
     mode = _normalize_evaluator_mode(evaluator_mode)
     predicted = dict(predicted_assignment_metrics.get("overall", {}))
     global_null = dict(global_null_metrics.get("overall", {}))
+    stratified_null = dict(stratified_null_metrics.get("overall", {}))
     mean_only = dict(mean_only_baseline_metrics.get("overall", {}))
     oracle = dict(oracle_assignment_comparator_metrics.get("overall", {}))
     b1_acceptance = dict(s3b1_metrics.get("acceptance_audit", {})) if isinstance(s3b1_metrics.get("acceptance_audit", {}), dict) else {}
+    metric = _effective_primary_generation_likelihood_metric(predicted)
+    primary_target_profile = _effective_primary_target_score_profile(predicted_assignment_metrics)
+    categorical_primary = metric == PRIMARY_GENERATION_LIKELIHOOD_METRIC
+    stratification_audit = (
+        dict(stratified_null_metrics.get("stratification_audit", {}))
+        if isinstance(stratified_null_metrics.get("stratification_audit", {}), dict)
+        else {}
+    )
+    stratified_applicable = int(stratification_audit.get("stratum_count", 0) or 0) > 1
     checks = {
         "stage3a_acceptance_passed": bool(dict(s3a_metrics.get("acceptance_audit", {})).get("passed", False)),
         "stage3a5_acceptance_passed": (
@@ -543,18 +1302,48 @@ def stage3c_acceptance_audit(
             else bool(oracle_assignment_comparator_metrics.get("skipped", False))
         ),
         "oracle_comparator_not_used_for_model_selection": not bool(oracle_assignment_comparator_metrics.get("used_for_acceptance_model_selection", True)),
-        "primary_categorical_population_nll_reported": predicted.get(PRIMARY_GENERATION_LIKELIHOOD_METRIC) is not None,
+        "primary_generation_likelihood_metric_reported": predicted.get(metric) is not None,
+        "primary_categorical_population_nll_reported": (
+            predicted.get(PRIMARY_GENERATION_LIKELIHOOD_METRIC) is not None if categorical_primary else True
+        ),
         "oracle_categorical_population_nll_reported": (
             True
             if mode == EVALUATOR_MODE_NO_ORACLE_LABELS
+            else True
+            if not categorical_primary
             else oracle.get(PRIMARY_GENERATION_LIKELIHOOD_METRIC) is not None
         ),
-        "categorical_population_group_count_positive": int(predicted.get("categorical_population_group_count", 0)) > 0,
+        "categorical_population_group_count_positive": (
+            int(predicted.get("categorical_population_group_count", 0)) > 0 if categorical_primary else True
+        ),
+        "heldout_generation_beats_global_null_primary_likelihood": (
+            _metric_less(predicted, global_null, metric)
+            if primary_target_profile == TARGET_SCORE_PROFILE_FULL
+            else _target_profile_metric_less(predicted_assignment_metrics, global_null_metrics, primary_target_profile, metric)
+        ),
+        "stratified_null_metrics_reported": bool(stratified_null),
+        "stratified_null_uses_public_fields_only": (
+            not bool(stratification_audit.get("uses_evaluator_labels", True))
+            and not bool(stratification_audit.get("uses_learned_assignments", True))
+            and not bool(stratification_audit.get("uses_context_path_sample_ids", True))
+        ),
+        "heldout_generation_beats_stratified_null_raw_target_only": (
+            True
+            if not stratified_applicable
+            else _target_profile_metric_less(
+                predicted_assignment_metrics,
+                stratified_null_metrics,
+                TARGET_SCORE_PROFILE_RAW,
+                "gaussian_density_nll",
+            )
+        ),
         "heldout_generation_beats_global_null_categorical_population_nll": _metric_less(
             predicted,
             global_null,
             PRIMARY_GENERATION_LIKELIHOOD_METRIC,
-        ),
+        )
+        if categorical_primary
+        else True,
         "heldout_generation_beats_global_null_mae": _metric_less(predicted, global_null, "raw_visible_feature_mae"),
         "heldout_generation_beats_mean_only_mae": _metric_less(predicted, mean_only, "raw_visible_feature_mae"),
         "oracle_comparator_not_worse_than_predicted_assignment_mae": (
@@ -566,6 +1355,8 @@ def stage3c_acceptance_audit(
     return {
         "schema": "scope_static_stage3c_acceptance_audit_v1",
         "passed": bool(all(checks.values())),
+        "primary_generation_likelihood_metric": metric,
+        "primary_target_score_profile": primary_target_profile,
         "checks": checks,
     }
 
@@ -641,6 +1432,221 @@ def _conditional_responsibility_nll(
     return -_logsumexp(log_prob + log_resp, axis=1)
 
 
+def _responsibility_target_profile_nll(
+    x: np.ndarray,
+    responsibilities: np.ndarray,
+    means: np.ndarray,
+    variances: np.ndarray,
+    feature_names: list[str],
+    *,
+    full_nll: np.ndarray,
+) -> dict[str, object]:
+    masks = _target_profile_feature_masks(feature_names)
+    profiles: dict[str, np.ndarray] = {TARGET_SCORE_PROFILE_FULL: np.asarray(full_nll, dtype=np.float64)}
+    raw_mask = masks.get(TARGET_SCORE_PROFILE_RAW)
+    if raw_mask is not None and bool(np.any(raw_mask)):
+        profiles[TARGET_SCORE_PROFILE_RAW] = _conditional_responsibility_nll(
+            x[:, raw_mask],
+            responsibilities,
+            np.asarray(means, dtype=np.float64)[:, raw_mask],
+            np.asarray(variances, dtype=np.float64)[:, raw_mask],
+        )
+    blocks: dict[str, np.ndarray] = {}
+    for block_name, mask in _feature_block_masks(feature_names).items():
+        if bool(np.any(mask)):
+            blocks[block_name] = _conditional_responsibility_nll(
+                x[:, mask],
+                responsibilities,
+                np.asarray(means, dtype=np.float64)[:, mask],
+                np.asarray(variances, dtype=np.float64)[:, mask],
+            )
+    return {"profiles": profiles, "blocks": blocks}
+
+
+def _global_target_profile_nll(
+    x: np.ndarray,
+    mean: np.ndarray,
+    variance: np.ndarray,
+    feature_names: list[str],
+    *,
+    full_nll: np.ndarray,
+) -> dict[str, object]:
+    masks = _target_profile_feature_masks(feature_names)
+    profiles: dict[str, np.ndarray] = {TARGET_SCORE_PROFILE_FULL: np.asarray(full_nll, dtype=np.float64)}
+    raw_mask = masks.get(TARGET_SCORE_PROFILE_RAW)
+    if raw_mask is not None and bool(np.any(raw_mask)):
+        profiles[TARGET_SCORE_PROFILE_RAW] = -_diag_log_prob(
+            x[:, raw_mask],
+            np.asarray(mean, dtype=np.float64)[None, raw_mask],
+            np.asarray(variance, dtype=np.float64)[None, raw_mask],
+        )[:, 0]
+    blocks: dict[str, np.ndarray] = {}
+    for block_name, mask in _feature_block_masks(feature_names).items():
+        if bool(np.any(mask)):
+            blocks[block_name] = -_diag_log_prob(
+                x[:, mask],
+                np.asarray(mean, dtype=np.float64)[None, mask],
+                np.asarray(variance, dtype=np.float64)[None, mask],
+            )[:, 0]
+    return {"profiles": profiles, "blocks": blocks}
+
+
+def _label_target_profile_nll(
+    x: np.ndarray,
+    component_rows: np.ndarray,
+    means: np.ndarray,
+    variances: np.ndarray,
+    feature_names: list[str],
+    *,
+    full_nll: np.ndarray,
+) -> dict[str, object]:
+    masks = _target_profile_feature_masks(feature_names)
+    profiles: dict[str, np.ndarray] = {TARGET_SCORE_PROFILE_FULL: np.asarray(full_nll, dtype=np.float64)}
+    raw_mask = masks.get(TARGET_SCORE_PROFILE_RAW)
+    row_indices = np.arange(int(x.shape[0]))
+    if raw_mask is not None and bool(np.any(raw_mask)):
+        profiles[TARGET_SCORE_PROFILE_RAW] = -_diag_log_prob(
+            x[:, raw_mask],
+            np.asarray(means, dtype=np.float64)[:, raw_mask],
+            np.asarray(variances, dtype=np.float64)[:, raw_mask],
+        )[row_indices, component_rows]
+    blocks: dict[str, np.ndarray] = {}
+    for block_name, mask in _feature_block_masks(feature_names).items():
+        if bool(np.any(mask)):
+            blocks[block_name] = -_diag_log_prob(
+                x[:, mask],
+                np.asarray(means, dtype=np.float64)[:, mask],
+                np.asarray(variances, dtype=np.float64)[:, mask],
+            )[row_indices, component_rows]
+    return {"profiles": profiles, "blocks": blocks}
+
+
+def _rowwise_target_profile_nll(
+    x: np.ndarray,
+    means: np.ndarray,
+    variances: np.ndarray,
+    feature_names: list[str],
+    *,
+    full_nll: np.ndarray,
+) -> dict[str, object]:
+    masks = _target_profile_feature_masks(feature_names)
+    profiles: dict[str, np.ndarray] = {TARGET_SCORE_PROFILE_FULL: np.asarray(full_nll, dtype=np.float64)}
+    raw_mask = masks.get(TARGET_SCORE_PROFILE_RAW)
+    if raw_mask is not None and bool(np.any(raw_mask)):
+        profiles[TARGET_SCORE_PROFILE_RAW] = _rowwise_diag_nll(x[:, raw_mask], means[:, raw_mask], variances[:, raw_mask])
+    blocks: dict[str, np.ndarray] = {}
+    for block_name, mask in _feature_block_masks(feature_names).items():
+        if bool(np.any(mask)):
+            blocks[block_name] = _rowwise_diag_nll(x[:, mask], means[:, mask], variances[:, mask])
+    return {"profiles": profiles, "blocks": blocks}
+
+
+def _rowwise_diag_nll(x: np.ndarray, means: np.ndarray, variances: np.ndarray) -> np.ndarray:
+    arr = np.asarray(x, dtype=np.float64)
+    mu = np.asarray(means, dtype=np.float64)
+    var = np.maximum(np.asarray(variances, dtype=np.float64), MIN_WEIGHT)
+    if arr.shape != mu.shape or arr.shape != var.shape:
+        raise ValueError("rowwise diagonal NLL inputs must have matching shapes")
+    if arr.size == 0:
+        return np.zeros(int(arr.shape[0]), dtype=np.float64)
+    log_norm = np.sum(np.log(2.0 * np.pi * var), axis=1)
+    quad = np.sum((arr - mu) * (arr - mu) / var, axis=1)
+    return 0.5 * (log_norm + quad)
+
+
+def _concat_target_profile_nll(rows: list[dict[str, object]]) -> dict[str, object]:
+    profile_rows: dict[str, list[np.ndarray]] = {}
+    block_rows: dict[str, list[np.ndarray]] = {}
+    for row in rows:
+        profiles = dict(row.get("profiles", {})) if isinstance(row.get("profiles", {}), dict) else {}
+        blocks = dict(row.get("blocks", {})) if isinstance(row.get("blocks", {}), dict) else {}
+        for name, values in profiles.items():
+            arr = np.asarray(values, dtype=np.float64)
+            if arr.size:
+                profile_rows.setdefault(str(name), []).append(arr)
+        for name, values in blocks.items():
+            arr = np.asarray(values, dtype=np.float64)
+            if arr.size:
+                block_rows.setdefault(str(name), []).append(arr)
+    return {
+        "profiles": {name: np.concatenate(parts, axis=0) for name, parts in profile_rows.items()},
+        "blocks": {name: np.concatenate(parts, axis=0) for name, parts in block_rows.items()},
+    }
+
+
+def _target_profile_feature_masks(feature_names: list[str]) -> dict[str, np.ndarray]:
+    return {
+        TARGET_SCORE_PROFILE_FULL: np.ones(len(feature_names), dtype=bool),
+        TARGET_SCORE_PROFILE_RAW: _raw_feature_mask(feature_names),
+    }
+
+
+def _public_stratification_labels(
+    split_manifest: dict[str, object],
+    *,
+    record_count: int,
+    fields: tuple[str, ...],
+) -> tuple[np.ndarray, dict[str, object]]:
+    labels = np.asarray(["global"] * int(record_count), dtype=object)
+    seen = np.zeros(int(record_count), dtype=bool)
+    public_available = False
+    for row in split_manifest.get("assignment_instances", []):
+        if not isinstance(row, dict):
+            continue
+        idx = int(row.get("record_index", -1))
+        if not (0 <= idx < int(record_count)):
+            continue
+        public_fields = row.get("public_fields", {})
+        if not isinstance(public_fields, dict) or not public_fields:
+            continue
+        public_available = True
+        parts = []
+        for field in fields:
+            value = public_fields.get(field, "unknown")
+            parts.append(f"{field}={_stratum_value(value)}")
+        labels[idx] = "|".join(parts)
+        seen[idx] = True
+    if not public_available:
+        seen[:] = True
+    counts = _label_counts(labels.tolist())
+    values = list(counts.values())
+    return labels, {
+        "schema": "scope_static_stage3c_public_stratification_label_audit_v1",
+        "public_fields_available": bool(public_available),
+        "fields": [str(field) for field in fields],
+        "record_count": int(record_count),
+        "assigned_record_count": int(np.sum(seen)),
+        "missing_record_count": int(record_count - int(np.sum(seen))),
+        "stratum_count": int(len(counts)),
+        "min_stratum_count": int(min(values)) if values else 0,
+        "max_stratum_count": int(max(values)) if values else 0,
+        "singleton_stratum_count": int(sum(1 for value in values if int(value) == 1)),
+        "stratum_counts": counts,
+    }
+
+
+def _stratum_value(value: object) -> str:
+    text = str(value)
+    return text.replace("|", "_").replace("=", "_")
+
+
+def _label_counts(labels: list[object]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for label in labels:
+        key = str(label)
+        counts[key] = counts.get(key, 0) + 1
+    return dict(sorted(counts.items()))
+
+
+def _feature_block_masks(feature_names: list[str]) -> dict[str, np.ndarray]:
+    out: dict[str, np.ndarray] = {}
+    for block_name, indices in _feature_block_indices(feature_names).items():
+        mask = np.zeros(len(feature_names), dtype=bool)
+        mask[np.asarray(indices, dtype=np.int64)] = True
+        out[block_name] = mask
+    return out
+
+
 def _score_generation(y: np.ndarray, predicted_mean: np.ndarray, nll: np.ndarray, feature_names: list[str]) -> dict[str, object]:
     probability_mask, expectation_mask = _feature_masks(feature_names)
     probability_groups = _probability_groups(feature_names)
@@ -648,8 +1654,9 @@ def _score_generation(y: np.ndarray, predicted_mean: np.ndarray, nll: np.ndarray
     probability_mae = _masked_mae(y, predicted_mean, probability_mask)
     expectation_mae = _masked_mae(y, predicted_mean, expectation_mask)
     gaussian_density_nll = float(np.mean(nll)) if nll.size else 0.0
+    categorical_population_nll = None if not probability_groups else _categorical_population_nll(y, predicted_mean, probability_groups)
     return {
-        "categorical_population_nll": _categorical_population_nll(y, predicted_mean, probability_groups),
+        "categorical_population_nll": categorical_population_nll,
         "categorical_population_group_count": int(len(probability_groups)),
         "gaussian_density_nll": gaussian_density_nll,
         "gaussian_nll": gaussian_density_nll,
@@ -671,29 +1678,298 @@ def _generation_artifact(
     y_rows: list[np.ndarray],
     pred_rows: list[np.ndarray],
     nll_rows: list[np.ndarray],
+    profile_nll_rows: list[dict[str, object]] | None,
     fold_rows: list[dict[str, object]],
     uses_evaluator_labels: bool,
 ) -> dict[str, object]:
     y = np.concatenate(y_rows, axis=0) if y_rows else np.zeros((0, len(feature_names)), dtype=np.float64)
     pred = np.concatenate(pred_rows, axis=0) if pred_rows else np.zeros((0, len(feature_names)), dtype=np.float64)
     nll = np.concatenate(nll_rows, axis=0) if nll_rows else np.zeros(0, dtype=np.float64)
+    profile_nll = _concat_target_profile_nll(profile_nll_rows or [])
     overall = _score_generation(y, pred, nll, feature_names)
     if not nll_rows:
         overall["gaussian_nll"] = None
         overall["gaussian_density_nll"] = None
+        profile_nll = {}
+    primary_metric = _effective_primary_generation_likelihood_metric(overall)
     return {
         "schema": schema,
         "model_name": str(model_name),
         "description": str(description),
-        "primary_generation_likelihood_metric": PRIMARY_GENERATION_LIKELIHOOD_METRIC,
+        "primary_generation_likelihood_metric": primary_metric,
         "secondary_continuous_density_diagnostic": SECONDARY_CONTINUOUS_DENSITY_DIAGNOSTIC,
         "uses_evaluator_labels": bool(uses_evaluator_labels),
         "uses_channels_ptms_kraus": False,
         "heldout_row_count": int(y.shape[0]),
         "feature_count": int(y.shape[1]) if y.ndim == 2 else 0,
         "overall": overall,
+        "feature_block_metrics": _feature_block_metrics(y, pred, feature_names),
+        "target_score_profiles": _target_score_profiles(y, pred, feature_names, profile_nll=profile_nll),
         "fold_metrics": fold_rows,
     }
+
+
+def _effective_primary_generation_likelihood_metric(overall: dict[str, object]) -> str:
+    if int(overall.get("categorical_population_group_count", 0) or 0) > 0 and overall.get(PRIMARY_GENERATION_LIKELIHOOD_METRIC) is not None:
+        return PRIMARY_GENERATION_LIKELIHOOD_METRIC
+    return FALLBACK_GENERATION_LIKELIHOOD_METRIC
+
+
+def _effective_primary_target_score_profile(metrics: dict[str, object]) -> str:
+    overall = dict(metrics.get("overall", {})) if isinstance(metrics.get("overall", {}), dict) else {}
+    if _effective_primary_generation_likelihood_metric(overall) == PRIMARY_GENERATION_LIKELIHOOD_METRIC:
+        return TARGET_SCORE_PROFILE_FULL
+    profiles = _profiles_from_generation_metrics(metrics)
+    raw = dict(profiles.get(TARGET_SCORE_PROFILE_RAW, {}))
+    if int(raw.get("target_feature_count", 0) or 0) > 0 and raw.get(FALLBACK_GENERATION_LIKELIHOOD_METRIC) is not None:
+        return TARGET_SCORE_PROFILE_RAW
+    return TARGET_SCORE_PROFILE_FULL
+
+
+def _feature_block_metrics(y: np.ndarray, predicted: np.ndarray, feature_names: list[str]) -> dict[str, dict[str, object]]:
+    blocks = _feature_block_indices(feature_names)
+    out: dict[str, dict[str, object]] = {}
+    for block_name, indices in blocks.items():
+        cols = np.asarray(indices, dtype=np.int64)
+        if y.shape[0] == 0 or cols.size == 0:
+            mae = 0.0
+            mse = 0.0
+            target_abs_mean = 0.0
+        else:
+            residual = y[:, cols] - predicted[:, cols]
+            mae = float(np.mean(np.abs(residual)))
+            mse = float(np.mean(residual * residual))
+            target_abs_mean = float(np.mean(np.abs(y[:, cols])))
+        out[block_name] = {
+            "feature_count": int(cols.size),
+            "raw_visible_feature_mae": mae,
+            "raw_visible_feature_mse": mse,
+            "target_abs_mean": target_abs_mean,
+        }
+    return out
+
+
+def _target_score_profiles(
+    y: np.ndarray,
+    predicted: np.ndarray,
+    feature_names: list[str],
+    *,
+    profile_nll: dict[str, object] | None,
+) -> dict[str, object]:
+    nll_payload = dict(profile_nll or {})
+    profile_nlls = dict(nll_payload.get("profiles", {})) if isinstance(nll_payload.get("profiles", {}), dict) else {}
+    block_nlls = dict(nll_payload.get("blocks", {})) if isinstance(nll_payload.get("blocks", {}), dict) else {}
+    block_indices = _feature_block_indices(feature_names)
+    all_mask = np.ones(len(feature_names), dtype=bool)
+    raw_mask = _raw_feature_mask(feature_names)
+    full = _target_profile_metrics(
+        y,
+        predicted,
+        all_mask,
+        _optional_nll_array(profile_nlls.get(TARGET_SCORE_PROFILE_FULL)),
+        profile_name=TARGET_SCORE_PROFILE_FULL,
+        included_blocks=sorted(block_indices),
+        metric_definition="all frozen Stage 3A visible features; current legacy S3C full-target behavior",
+    )
+    raw = _target_profile_metrics(
+        y,
+        predicted,
+        raw_mask,
+        _optional_nll_array(profile_nlls.get(TARGET_SCORE_PROFILE_RAW)),
+        profile_name=TARGET_SCORE_PROFILE_RAW,
+        included_blocks=[name for name in sorted(block_indices) if name.startswith("raw__")],
+        metric_definition="only raw learner-visible observation features; public metadata excluded",
+    )
+    block_profiles: dict[str, dict[str, object]] = {}
+    for block_name, indices in block_indices.items():
+        mask = np.zeros(len(feature_names), dtype=bool)
+        mask[np.asarray(indices, dtype=np.int64)] = True
+        block_profiles[block_name] = _target_profile_metrics(
+            y,
+            predicted,
+            mask,
+            _optional_nll_array(block_nlls.get(block_name)),
+            profile_name=block_name,
+            included_blocks=[block_name],
+            metric_definition="single feature-block target profile",
+        )
+    block_normalized = _block_normalized_profile(block_profiles)
+    return {
+        "schema": "scope_static_stage3c_target_score_profiles_v1",
+        "description": "Evaluator-side target scoring views; learner fitting and assignments are unchanged.",
+        "profiles": {
+            TARGET_SCORE_PROFILE_FULL: full,
+            TARGET_SCORE_PROFILE_RAW: raw,
+            TARGET_SCORE_PROFILE_BLOCK_NORMALIZED: block_normalized,
+        },
+        "block_profiles": block_profiles,
+    }
+
+
+def _target_profile_metrics(
+    y: np.ndarray,
+    predicted: np.ndarray,
+    mask: np.ndarray,
+    nll: np.ndarray | None,
+    *,
+    profile_name: str,
+    included_blocks: list[str],
+    metric_definition: str,
+) -> dict[str, object]:
+    target_feature_count = int(np.sum(mask))
+    if target_feature_count <= 0:
+        return {
+            "profile": str(profile_name),
+            "metric_definition": str(metric_definition),
+            "target_feature_count": 0,
+            "included_blocks": list(included_blocks),
+            "gaussian_density_nll": None,
+            "gaussian_density_nll_per_feature": None,
+            "raw_visible_feature_mae": None,
+            "raw_visible_feature_mse": None,
+            "target_abs_mean": None,
+        }
+    if y.shape[0] == 0:
+        mae = 0.0
+        mse = 0.0
+        target_abs_mean = 0.0
+    else:
+        residual = y[:, mask] - predicted[:, mask]
+        mae = float(np.mean(np.abs(residual)))
+        mse = float(np.mean(residual * residual))
+        target_abs_mean = float(np.mean(np.abs(y[:, mask])))
+    gaussian_density_nll = float(np.mean(nll)) if nll is not None and nll.size else None
+    gaussian_density_nll_per_feature = (
+        None if gaussian_density_nll is None else float(gaussian_density_nll) / float(max(1, target_feature_count))
+    )
+    return {
+        "profile": str(profile_name),
+        "metric_definition": str(metric_definition),
+        "target_feature_count": int(target_feature_count),
+        "included_blocks": list(included_blocks),
+        "gaussian_density_nll": gaussian_density_nll,
+        "gaussian_density_nll_per_feature": gaussian_density_nll_per_feature,
+        "raw_visible_feature_mae": mae,
+        "raw_visible_feature_mse": mse,
+        "target_abs_mean": target_abs_mean,
+    }
+
+
+def _block_normalized_profile(block_profiles: dict[str, dict[str, object]]) -> dict[str, object]:
+    rows = [dict(block_profiles[name]) for name in sorted(block_profiles)]
+    nll_values = [float(row["gaussian_density_nll_per_feature"]) for row in rows if row.get("gaussian_density_nll_per_feature") is not None]
+    mae_values = [float(row["raw_visible_feature_mae"]) for row in rows if row.get("raw_visible_feature_mae") is not None]
+    mse_values = [float(row["raw_visible_feature_mse"]) for row in rows if row.get("raw_visible_feature_mse") is not None]
+    target_abs_values = [float(row["target_abs_mean"]) for row in rows if row.get("target_abs_mean") is not None]
+    target_feature_count = int(sum(int(row.get("target_feature_count", 0) or 0) for row in rows))
+    return {
+        "profile": TARGET_SCORE_PROFILE_BLOCK_NORMALIZED,
+        "metric_definition": "equal-weight average across feature blocks; Gaussian NLL uses each block's per-feature NLL before block averaging",
+        "target_feature_count": target_feature_count,
+        "included_blocks": [str(row.get("profile")) for row in rows],
+        "block_count": int(len(rows)),
+        "gaussian_density_nll": float(np.mean(nll_values)) if nll_values else None,
+        "gaussian_density_nll_per_feature": float(np.mean(nll_values)) if nll_values else None,
+        "raw_visible_feature_mae": float(np.mean(mae_values)) if mae_values else None,
+        "raw_visible_feature_mse": float(np.mean(mse_values)) if mse_values else None,
+        "target_abs_mean": float(np.mean(target_abs_values)) if target_abs_values else None,
+        "block_metrics": block_profiles,
+    }
+
+
+def _optional_nll_array(value: object) -> np.ndarray | None:
+    if value is None:
+        return None
+    arr = np.asarray(value, dtype=np.float64)
+    if arr.size == 0:
+        return None
+    return arr
+
+
+def _feature_block_indices(feature_names: list[str]) -> dict[str, list[int]]:
+    blocks: dict[str, list[int]] = {}
+    for idx, name in enumerate(feature_names):
+        block = _feature_block_name(str(name))
+        blocks.setdefault(block, []).append(int(idx))
+    return dict(sorted(blocks.items()))
+
+
+def _raw_feature_mask(feature_names: list[str]) -> np.ndarray:
+    return np.asarray([str(name).startswith("raw__") for name in feature_names], dtype=bool)
+
+
+def _feature_block_name(name: str) -> str:
+    parts = name.split("__")
+    if len(parts) >= 2 and parts[0] in {"raw", "meta"}:
+        return f"{parts[0]}__{parts[1]}"
+    if parts and parts[0] == "visible_metadata":
+        return "visible_metadata"
+    return "other"
+
+
+def _feature_block_lift_report(
+    *,
+    predicted_assignment_metrics: dict[str, object],
+    global_null_metrics: dict[str, object],
+    stratified_null_metrics: dict[str, object],
+    mean_only_baseline_metrics: dict[str, object],
+    oracle_assignment_comparator_metrics: dict[str, object],
+) -> dict[str, object]:
+    predicted = dict(predicted_assignment_metrics.get("feature_block_metrics", {}))
+    global_null = dict(global_null_metrics.get("feature_block_metrics", {}))
+    stratified_null = dict(stratified_null_metrics.get("feature_block_metrics", {}))
+    mean_only = dict(mean_only_baseline_metrics.get("feature_block_metrics", {}))
+    oracle = dict(oracle_assignment_comparator_metrics.get("feature_block_metrics", {}))
+    blocks = sorted(set(predicted) | set(global_null) | set(stratified_null) | set(mean_only) | set(oracle))
+    return {
+        "schema": "scope_static_stage3c_feature_block_lift_v1",
+        "block_metric": "raw_visible_feature_mae",
+        "higher_lift_is_better": True,
+        "global_null_minus_predicted": _feature_block_lift(predicted, global_null),
+        "stratified_null_minus_predicted": _feature_block_lift(predicted, stratified_null),
+        "mean_only_minus_predicted": _feature_block_lift(predicted, mean_only),
+        "oracle_minus_predicted_gap": _feature_block_gap(predicted, oracle),
+        "block_count": int(len(blocks)),
+        "blocks": blocks,
+    }
+
+
+def _feature_block_lift(predicted: dict[str, object], baseline: dict[str, object]) -> dict[str, dict[str, object]]:
+    out: dict[str, dict[str, object]] = {}
+    for block in sorted(set(predicted) | set(baseline)):
+        pred = dict(predicted.get(block, {})) if isinstance(predicted.get(block, {}), dict) else {}
+        base = dict(baseline.get(block, {})) if isinstance(baseline.get(block, {}), dict) else {}
+        out[block] = {
+            "feature_count": int(pred.get("feature_count", base.get("feature_count", 0)) or 0),
+            "raw_visible_feature_mae_reduction": _optional_difference(
+                base.get("raw_visible_feature_mae"),
+                pred.get("raw_visible_feature_mae"),
+            ),
+            "raw_visible_feature_mse_reduction": _optional_difference(
+                base.get("raw_visible_feature_mse"),
+                pred.get("raw_visible_feature_mse"),
+            ),
+        }
+    return out
+
+
+def _feature_block_gap(predicted: dict[str, object], comparator: dict[str, object]) -> dict[str, dict[str, object]]:
+    out: dict[str, dict[str, object]] = {}
+    for block in sorted(set(predicted) | set(comparator)):
+        pred = dict(predicted.get(block, {})) if isinstance(predicted.get(block, {}), dict) else {}
+        comp = dict(comparator.get(block, {})) if isinstance(comparator.get(block, {}), dict) else {}
+        out[block] = {
+            "feature_count": int(pred.get("feature_count", comp.get("feature_count", 0)) or 0),
+            "raw_visible_feature_mae_gap": _optional_difference(
+                pred.get("raw_visible_feature_mae"),
+                comp.get("raw_visible_feature_mae"),
+            ),
+            "raw_visible_feature_mse_gap": _optional_difference(
+                pred.get("raw_visible_feature_mse"),
+                comp.get("raw_visible_feature_mse"),
+            ),
+        }
+    return out
 
 
 def _feature_masks(feature_names: list[str]) -> tuple[np.ndarray, np.ndarray]:
@@ -752,9 +2028,9 @@ def _probability_groups(feature_names: list[str]) -> list[dict[str, object]]:
     return groups
 
 
-def _categorical_population_nll(y: np.ndarray, predicted: np.ndarray, groups: list[dict[str, object]]) -> float:
+def _categorical_population_nll(y: np.ndarray, predicted: np.ndarray, groups: list[dict[str, object]]) -> float | None:
     if y.shape[0] == 0 or not groups:
-        return 0.0
+        return None
     total = 0.0
     group_rows = 0
     for group in groups:
@@ -790,6 +2066,171 @@ def _load_stage3b1_assignments(stage3b1_dir: Path, *, record_count: int) -> np.n
     if responsibilities.shape[1] == 0:
         raise ValueError(f"{path} must contain at least one prototype column")
     return _normalize_rows(responsibilities)
+
+
+def _audit_seed_list(seeds: tuple[int, ...] | list[int] | None) -> list[int]:
+    if seeds is None:
+        return []
+    out = []
+    seen = set()
+    for seed in seeds:
+        value = int(seed)
+        if value in seen:
+            continue
+        seen.add(value)
+        out.append(value)
+    return out
+
+
+def _aggregate_shuffle_runs(runs: list[dict[str, object]]) -> dict[str, object]:
+    return _aggregate_overall_runs([dict(row.get("overall", {})) for row in runs])
+
+
+def _aggregate_overall_runs(overalls: list[dict[str, object]]) -> dict[str, object]:
+    keys = (
+        "categorical_population_nll",
+        "gaussian_density_nll",
+        "gaussian_nll",
+        "raw_visible_feature_mae",
+        "population_cross_entropy",
+        "population_mae",
+        "expectation_mae",
+    )
+    aggregate: dict[str, object] = {"run_count": int(len(overalls))}
+    for key in keys:
+        values = [float(row.get(key)) for row in overalls if row.get(key) is not None]
+        if not values:
+            aggregate[f"{key}_mean"] = None
+            aggregate[f"{key}_std"] = None
+            aggregate[f"{key}_min"] = None
+            aggregate[f"{key}_max"] = None
+            continue
+        arr = np.asarray(values, dtype=np.float64)
+        aggregate[f"{key}_mean"] = float(np.mean(arr))
+        aggregate[f"{key}_std"] = float(np.std(arr))
+        aggregate[f"{key}_min"] = float(np.min(arr))
+        aggregate[f"{key}_max"] = float(np.max(arr))
+    return aggregate
+
+
+def _aggregate_target_score_profile_runs(profile_artifacts: list[dict[str, object]]) -> dict[str, object]:
+    profiles_by_name: dict[str, list[dict[str, object]]] = {}
+    for artifact in profile_artifacts:
+        profiles = dict(artifact.get("profiles", {})) if isinstance(artifact.get("profiles", {}), dict) else {}
+        for name, row in profiles.items():
+            if isinstance(row, dict):
+                profiles_by_name.setdefault(str(name), []).append(dict(row))
+    out: dict[str, object] = {
+        "schema": "scope_static_stage3c_target_score_profile_aggregate_v1",
+        "run_count": int(len(profile_artifacts)),
+        "profiles": {},
+    }
+    profile_out: dict[str, object] = {}
+    for profile_name in TARGET_SCORE_PROFILE_NAMES:
+        rows = profiles_by_name.get(profile_name, [])
+        profile_out[profile_name] = _aggregate_target_profile_rows(rows)
+    for profile_name in sorted(set(profiles_by_name) - set(TARGET_SCORE_PROFILE_NAMES)):
+        profile_out[profile_name] = _aggregate_target_profile_rows(profiles_by_name[profile_name])
+    out["profiles"] = profile_out
+    return out
+
+
+def _aggregate_target_profile_rows(rows: list[dict[str, object]]) -> dict[str, object]:
+    first = rows[0] if rows else {}
+    out: dict[str, object] = {
+        "run_count": int(len(rows)),
+        "target_feature_count": int(first.get("target_feature_count", 0) or 0),
+        "included_blocks": list(first.get("included_blocks", []) or []),
+        "metric_definition": first.get("metric_definition"),
+    }
+    for key in (
+        "gaussian_density_nll",
+        "gaussian_density_nll_per_feature",
+        "raw_visible_feature_mae",
+        "raw_visible_feature_mse",
+        "target_abs_mean",
+    ):
+        values = [float(row.get(key)) for row in rows if row.get(key) is not None]
+        if not values:
+            out[f"{key}_mean"] = None
+            out[f"{key}_std"] = None
+            out[f"{key}_min"] = None
+            out[f"{key}_max"] = None
+            continue
+        arr = np.asarray(values, dtype=np.float64)
+        out[f"{key}_mean"] = float(np.mean(arr))
+        out[f"{key}_std"] = float(np.std(arr))
+        out[f"{key}_min"] = float(np.min(arr))
+        out[f"{key}_max"] = float(np.max(arr))
+    return out
+
+
+def _scrambled_target_score_profile_lift(target_profile_aggregate: dict[str, object]) -> dict[str, object]:
+    predicted = _aggregate_profiles_from_target_aggregate(target_profile_aggregate.get("predicted_assignment", {}))
+    global_null = _aggregate_profiles_from_target_aggregate(target_profile_aggregate.get("global_null", {}))
+    stratified_null = _aggregate_profiles_from_target_aggregate(target_profile_aggregate.get("stratified_null", {}))
+    mean_only = _aggregate_profiles_from_target_aggregate(target_profile_aggregate.get("mean_only_baseline", {}))
+    profiles: dict[str, object] = {}
+    for name in TARGET_SCORE_PROFILE_NAMES:
+        pred = dict(predicted.get(name, {}))
+        glob = dict(global_null.get(name, {}))
+        strat = dict(stratified_null.get(name, {}))
+        mean = dict(mean_only.get(name, {}))
+        profiles[name] = {
+            "gaussian_density_nll_mean_lift": _optional_difference(
+                glob.get("gaussian_density_nll_mean"),
+                pred.get("gaussian_density_nll_mean"),
+            ),
+            "gaussian_density_nll_per_feature_mean_lift": _optional_difference(
+                glob.get("gaussian_density_nll_per_feature_mean"),
+                pred.get("gaussian_density_nll_per_feature_mean"),
+            ),
+            "raw_visible_feature_mae_mean_lift": _optional_difference(
+                glob.get("raw_visible_feature_mae_mean"),
+                pred.get("raw_visible_feature_mae_mean"),
+            ),
+            "mean_only_raw_visible_feature_mae_mean_lift": _optional_difference(
+                mean.get("raw_visible_feature_mae_mean"),
+                pred.get("raw_visible_feature_mae_mean"),
+            ),
+            "stratified_null_gaussian_density_nll_mean_lift": _optional_difference(
+                strat.get("gaussian_density_nll_mean"),
+                pred.get("gaussian_density_nll_mean"),
+            ),
+            "stratified_null_gaussian_density_nll_per_feature_mean_lift": _optional_difference(
+                strat.get("gaussian_density_nll_per_feature_mean"),
+                pred.get("gaussian_density_nll_per_feature_mean"),
+            ),
+            "stratified_null_raw_visible_feature_mae_mean_lift": _optional_difference(
+                strat.get("raw_visible_feature_mae_mean"),
+                pred.get("raw_visible_feature_mae_mean"),
+            ),
+        }
+    return {
+        "schema": "scope_static_stage3c_scrambled_target_score_profile_lift_v1",
+        "profiles": profiles,
+    }
+
+
+def _aggregate_profiles_from_target_aggregate(value: object) -> dict[str, dict[str, object]]:
+    aggregate = dict(value) if isinstance(value, dict) else {}
+    profiles = aggregate.get("profiles", {})
+    if not isinstance(profiles, dict):
+        return {}
+    return {str(name): dict(row) for name, row in profiles.items() if isinstance(row, dict)}
+
+
+def _scramble_visible_feature_columns(x: np.ndarray, *, seed: int) -> np.ndarray:
+    arr = np.asarray(x, dtype=np.float64)
+    if arr.ndim != 2:
+        raise ValueError("visible feature matrix must be 2D")
+    scrambled = np.array(arr, copy=True)
+    if scrambled.shape[0] <= 1:
+        return scrambled
+    rng = np.random.default_rng(int(seed))
+    for col in range(int(scrambled.shape[1])):
+        scrambled[:, col] = arr[rng.permutation(int(arr.shape[0])), col]
+    return scrambled
 
 
 def _normalize_rows(matrix: np.ndarray) -> np.ndarray:
@@ -831,6 +2272,16 @@ def _metric_less_or_equal(left: dict[str, object], right: dict[str, object], key
     if left.get(key) is None or right.get(key) is None:
         return False
     return bool(float(left.get(key, np.inf)) <= float(right.get(key, np.inf)) + 1.0e-12)
+
+
+def _target_profile_metric_less(left: dict[str, object], right: dict[str, object], profile: str, key: str) -> bool:
+    left_profiles = _profiles_from_generation_metrics(left)
+    right_profiles = _profiles_from_generation_metrics(right)
+    left_profile = dict(left_profiles.get(profile, {}))
+    right_profile = dict(right_profiles.get(profile, {}))
+    if left_profile.get(key) is None or right_profile.get(key) is None:
+        return False
+    return bool(float(left_profile[key]) < float(right_profile[key]))
 
 
 def _lift(predicted: dict[str, object], baseline: dict[str, object]) -> dict[str, object]:
@@ -885,10 +2336,14 @@ def _write_outputs(output: Path, result: dict[str, object]) -> None:
     artifacts = {
         "metrics.json": result,
         "prototype_generation_metrics.json": result["prototype_generation_metrics"],
+        "target_score_profile_report.json": result["prototype_generation_metrics"]["target_score_profile_report"],
         "predicted_assignment_metrics.json": result["predicted_assignment_metrics"],
         "oracle_assignment_comparator_metrics.json": result["oracle_assignment_comparator_metrics"],
         "global_null_metrics.json": result["global_null_metrics"],
+        "stratified_null_metrics.json": result["stratified_null_metrics"],
         "mean_only_baseline_metrics.json": result["mean_only_baseline_metrics"],
+        "assignment_shuffle_audit.json": result["assignment_shuffle_audit"],
+        "feature_scramble_audit.json": result["feature_scramble_audit"],
         "leakage_audit.json": result["leakage_audit"],
         "acceptance_audit.json": result["acceptance_audit"],
         "assignment_source_audit.json": result["assignment_source_audit"],
@@ -906,14 +2361,26 @@ def format_stage3c_summary(result: dict[str, object]) -> str:
     acceptance = dict(result.get("acceptance_audit", {}))
     predicted = dict(dict(result.get("predicted_assignment_metrics", {})).get("overall", {}))
     global_null = dict(dict(result.get("global_null_metrics", {})).get("overall", {}))
+    stratified_null = dict(dict(result.get("stratified_null_metrics", {})).get("overall", {}))
     oracle = dict(dict(result.get("oracle_assignment_comparator_metrics", {})).get("overall", {}))
+    primary_metric = str(dict(result.get("prototype_generation_metrics", {})).get("primary_generation_likelihood_metric", PRIMARY_GENERATION_LIKELIHOOD_METRIC))
+    shuffle = dict(dict(result.get("assignment_shuffle_audit", {})).get("aggregate", {}))
+    scramble = dict(dict(dict(result.get("feature_scramble_audit", {})).get("aggregate", {})).get("predicted_assignment", {}))
     return "\n".join(
         [
             "# Stage 3C: Prototype And Generator Learning",
             "",
             f"- Decision: `{result.get('decision')}`",
             f"- Acceptance passed: `{str(bool(acceptance.get('passed', False))).lower()}`",
+            f"- Primary generation likelihood metric: `{primary_metric}`",
+            f"- Predicted-assignment primary NLL: `{_format_metric(predicted.get(primary_metric))}`",
+            f"- Global-null primary NLL: `{_format_metric(global_null.get(primary_metric))}`",
+            f"- Stratified-null primary NLL: `{_format_metric(stratified_null.get(primary_metric))}`",
+            f"- Assignment-shuffle mean primary NLL: `{_format_metric(shuffle.get(f'{primary_metric}_mean'))}`",
+            f"- Feature-scramble mean primary NLL: `{_format_metric(scramble.get(f'{primary_metric}_mean'))}`",
             f"- Predicted-assignment categorical population NLL: `{_format_metric(predicted.get('categorical_population_nll'))}`",
+            f"- Assignment-shuffle mean categorical population NLL: `{_format_metric(shuffle.get('categorical_population_nll_mean'))}`",
+            f"- Feature-scramble mean categorical population NLL: `{_format_metric(scramble.get('categorical_population_nll_mean'))}`",
             f"- Oracle-comparator categorical population NLL: `{_format_metric(oracle.get('categorical_population_nll'))}`",
             f"- Predicted-minus-oracle categorical NLL gap: `{_format_metric(_optional_difference(predicted.get('categorical_population_nll'), oracle.get('categorical_population_nll')))}`",
             f"- Predicted-assignment Gaussian density NLL: `{_format_metric(predicted.get('gaussian_density_nll'))}`",

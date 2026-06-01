@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections import Counter
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 import hashlib
 import json
@@ -21,7 +21,7 @@ from scope_static.google.inventory import (
     load_google_observations,
     set1_leaf_from_google_leaf,
 )
-from scope_static.google.set1 import build_google_fault_graph
+from scope_static.google.set1 import load_google_dem_data
 from scope_static.learner import FORBIDDEN_FEATURE_TOKENS, FORBIDDEN_LEARNER_INPUTS
 
 
@@ -30,26 +30,52 @@ DEFAULT_DATASET_NAME = DATASET_SURFACE_SET1
 DEFAULT_DATASET_ROOT = "/home/cx/Document/google_72Q_surface_code_d3_d5_set1"
 DEFAULT_OUTPUT_DIR = "outputs/google_static/google_s3_visible_surface_v1/S3A_protocol_freeze"
 DEFAULT_ASSIGNMENT_UNIT = "google_context_window_shotblock_instance"
+DEFAULT_BUNDLE_ASSIGNMENT_UNIT = "google_context_windowbundle_shotblock_instance"
 DEFAULT_SPLIT_POLICY = "grouped_context_leave_one_out_with_cyclic_validation"
+WINDOW_FAMILY_PROFILE_MIXED_PUBLIC = "mixed_public"
+WINDOW_FAMILY_PROFILE_DETECTOR_PAIR_ONLY = "detector_pair_only"
+WINDOW_FAMILY_PROFILE_LOGICAL_DETECTOR_PAIR_ONLY = "logical_detector_pair_only"
+WINDOW_FAMILY_PROFILE_DEM_SUPPORT_ONLY = "dem_support_only"
+WINDOW_FAMILY_PROFILE_BOUNDARY_HEAVY = "boundary_heavy"
+WINDOW_FAMILY_PROFILE_BULK_ONLY = "bulk_only"
+WINDOW_FAMILY_PROFILE_MIXED_BALANCED = "mixed_balanced"
+DEFAULT_WINDOW_FAMILY_PROFILE = WINDOW_FAMILY_PROFILE_MIXED_PUBLIC
+ALLOWED_WINDOW_FAMILY_PROFILES = (
+    WINDOW_FAMILY_PROFILE_MIXED_PUBLIC,
+    WINDOW_FAMILY_PROFILE_DETECTOR_PAIR_ONLY,
+    WINDOW_FAMILY_PROFILE_LOGICAL_DETECTOR_PAIR_ONLY,
+    WINDOW_FAMILY_PROFILE_DEM_SUPPORT_ONLY,
+    WINDOW_FAMILY_PROFILE_BOUNDARY_HEAVY,
+    WINDOW_FAMILY_PROFILE_BULK_ONLY,
+    WINDOW_FAMILY_PROFILE_MIXED_BALANCED,
+)
+WINDOW_FAMILY_PROFILE_ALIASES = {
+    "default": WINDOW_FAMILY_PROFILE_MIXED_PUBLIC,
+    "all": WINDOW_FAMILY_PROFILE_MIXED_PUBLIC,
+    "dem_support_selected_only": WINDOW_FAMILY_PROFILE_DEM_SUPPORT_ONLY,
+    "logical_only": WINDOW_FAMILY_PROFILE_LOGICAL_DETECTOR_PAIR_ONLY,
+    "detector_only": WINDOW_FAMILY_PROFILE_DETECTOR_PAIR_ONLY,
+}
 
-RAW_FEATURE_NAMES = [
-    "raw__google_window2__P00",
-    "raw__google_window2__P01",
-    "raw__google_window2__P10",
-    "raw__google_window2__P11",
-    "raw__google_window2__p_comp",
-    "raw__google_window2__E_left",
-    "raw__google_window2__E_right",
-    "raw__google_window2__E_pair",
-    "raw__google_window2__se_P00",
-    "raw__google_window2__se_P01",
-    "raw__google_window2__se_P10",
-    "raw__google_window2__se_P11",
-    "raw__google_window2__se_p_comp",
-    "raw__google_window2__se_E_left",
-    "raw__google_window2__se_E_right",
-    "raw__google_window2__se_E_pair",
+RAW_METRICS = [
+    "P00",
+    "P01",
+    "P10",
+    "P11",
+    "p_comp",
+    "E_left",
+    "E_right",
+    "E_pair",
+    "se_P00",
+    "se_P01",
+    "se_P10",
+    "se_P11",
+    "se_p_comp",
+    "se_E_left",
+    "se_E_right",
+    "se_E_pair",
 ]
+RAW_FEATURE_NAMES = [f"raw__google_window2__{metric}" for metric in RAW_METRICS]
 
 METADATA_FEATURE_NAMES = [
     "visible_metadata__shot_count",
@@ -69,6 +95,10 @@ METADATA_FEATURE_NAMES = [
     "visible_metadata__detector_coord_summary_t_span",
     "visible_metadata__detector_coord_summary_missing_fraction",
     "visible_metadata__shotblock_index_normalized",
+]
+BUNDLE_METADATA_FEATURE_NAMES = [
+    "visible_metadata__window_bundle_size",
+    "visible_metadata__window_bundle_index_normalized",
 ]
 
 FEATURE_NAMES = [*RAW_FEATURE_NAMES, *METADATA_FEATURE_NAMES]
@@ -99,6 +129,21 @@ class GoogleWindow2:
     source_kind: str
 
 
+@dataclass
+class GoogleContextPublicMetadata:
+    detector_count: int
+    coords: dict[int, tuple[float, ...]]
+    boundary_detectors: set[int]
+
+
+@dataclass(frozen=True)
+class GoogleDemSupportSurface:
+    supports_by_fault: tuple[tuple[int, ...], ...]
+    faults_by_observation_bit: tuple[tuple[int, ...], ...]
+    num_detectors: int
+    num_observables: int
+
+
 def write_google_s3_visible_surface(
     *,
     dataset_root: str | Path | None = None,
@@ -110,6 +155,8 @@ def write_google_s3_visible_surface(
     shotblocks_per_context: int = 8,
     shotblock_size: int = 4096,
     min_shotblock_size: int | None = None,
+    window_bundle_size: int = 1,
+    window_family_profile: str = DEFAULT_WINDOW_FAMILY_PROFILE,
     basis: str | None = None,
     distance: int | None = None,
     rounds: int | None = None,
@@ -132,9 +179,15 @@ def write_google_s3_visible_surface(
         raise ValueError("shotblocks_per_context must be positive")
     if int(shotblock_size) <= 0:
         raise ValueError("shotblock_size must be positive")
+    if int(window_bundle_size) <= 0:
+        raise ValueError("window_bundle_size must be positive")
     minimum_block = int(min_shotblock_size) if min_shotblock_size is not None else int(shotblock_size)
     if minimum_block <= 0:
         raise ValueError("min_shotblock_size must be positive")
+    bundle_size = int(window_bundle_size)
+    family_profile = _normalize_window_family_profile(window_family_profile)
+    assignment_unit = _assignment_unit_name(bundle_size)
+    feature_names = _feature_names(bundle_size)
 
     root = Path(dataset_root or os.environ.get("SCOPE_GOOGLE_SET1_ROOT", DEFAULT_DATASET_ROOT))
     output = Path(output_dir)
@@ -164,6 +217,7 @@ def write_google_s3_visible_surface(
             leaf,
             dem_source=str(dem_source),
             windows_per_context=int(windows_per_context),
+            window_family_profile=family_profile,
             rng=rng,
         )
         blocks = _shotblocks(
@@ -172,25 +226,41 @@ def write_google_s3_visible_surface(
             shotblocks_per_context=int(shotblocks_per_context),
             min_shotblock_size=minimum_block,
         )
-        if not selected_windows or not blocks:
+        window_bundles = _window_bundles(selected_windows, bundle_size=bundle_size)
+        if not window_bundles or not blocks:
             skipped_contexts.append(
                 {
                     "context_group": int(context_groups[leaf.context_id]),
-                    "reason": "no_fixed_window2_or_shotblock",
+                    "reason": "no_fixed_window2_bundle_or_shotblock",
                     "available_windows": int(len(selected_windows)),
+                    "available_window_bundles": int(len(window_bundles)),
                     "available_shots": int(observations.shape[0]),
+                    "window_family_profile": family_profile,
                 }
             )
             continue
-        context_summary_rows.append(_context_summary(leaf, observations=observations, windows=selected_windows, blocks=blocks))
-        for window_idx, google_window in enumerate(selected_windows):
-            window = google_window.window
+        public_metadata = _context_public_metadata(leaf)
+        context_summary_rows.append(
+            _context_summary(
+                leaf,
+                observations=observations,
+                windows=selected_windows,
+                window_bundles=window_bundles,
+                blocks=blocks,
+                window_family_profile=family_profile,
+            )
+        )
+        for bundle_idx, bundle in enumerate(window_bundles):
             for block_idx, (start, stop) in enumerate(blocks):
-                block = np.asarray(observations[start:stop, list(window.bits)], dtype=np.bool_)
-                row = _row_features(
-                    block,
+                row = _bundle_row_features(
+                    observations,
                     leaf=leaf,
-                    window=window,
+                    window_bundle=bundle,
+                    public_metadata=public_metadata,
+                    start=start,
+                    stop=stop,
+                    bundle_idx=bundle_idx,
+                    bundle_count=len(window_bundles),
                     block_idx=block_idx,
                     block_count=len(blocks),
                 )
@@ -201,8 +271,10 @@ def write_google_s3_visible_surface(
                         "record_index": int(row_idx),
                         "visible_instance_id": f"j{row_idx:06d}",
                         "context_group": int(context_groups[leaf.context_id]),
-                        "assignment_unit": DEFAULT_ASSIGNMENT_UNIT,
-                        "window_kind": str(window.kind),
+                        "assignment_unit": assignment_unit,
+                        "window_bundle_size": int(bundle_size),
+                        "window_bundle_index": int(bundle_idx),
+                        "window_kinds": [str(item.window.kind) for item in bundle],
                         "shotblock_index": int(block_idx),
                         "shot_count": int(stop - start),
                     }
@@ -211,42 +283,49 @@ def write_google_s3_visible_surface(
                     {
                         "j": int(row_idx),
                         "context_group": int(context_groups[leaf.context_id]),
-                        "window_index_within_context": int(window_idx),
-                        "window_name": str(window.name),
-                        "window_kind": str(window.kind),
-                        "source_kind": str(google_window.source_kind),
-                        "bits": [int(bit) for bit in window.bits],
+                        "window_bundle_index_within_context": int(bundle_idx),
+                        "window_bundle_size": int(bundle_size),
+                        "window_names": [str(item.window.name) for item in bundle],
+                        "window_kinds": [str(item.window.kind) for item in bundle],
+                        "source_kinds": [str(item.source_kind) for item in bundle],
+                        "bits": [[int(bit) for bit in item.window.bits] for item in bundle],
                         "shotblock_start": int(start),
                         "shotblock_stop": int(stop),
                     }
                 )
                 row_idx += 1
 
-    matrix = _finite(np.asarray(rows, dtype=np.float64)) if rows else np.zeros((0, len(FEATURE_NAMES)), dtype=np.float64)
+    matrix = _finite(np.asarray(rows, dtype=np.float64)) if rows else np.zeros((0, len(feature_names)), dtype=np.float64)
     sampled_matrix = np.array(matrix, copy=True)
     split_manifest = _split_manifest(
         assignment_instances,
         context_group_count=len(leaves),
+        assignment_unit=assignment_unit,
         split_policy=str(split_policy),
     )
     batch_schema = _batch_context_schema(
         context_group_count=len(leaves),
-        assignment_unit=DEFAULT_ASSIGNMENT_UNIT,
+        assignment_unit=assignment_unit,
         split_policy=str(split_policy),
         shotblocks_per_context=int(shotblocks_per_context),
+        window_bundle_size=bundle_size,
     )
-    feature_schema = _feature_schema()
-    visible_feature_matrix = _visible_feature_matrix_manifest(matrix, sampled_matrix)
-    forbidden_audit = forbidden_feature_audit_google(FEATURE_NAMES)
+    feature_schema = _feature_schema(feature_names, window_bundle_size=bundle_size)
+    visible_feature_matrix = _visible_feature_matrix_manifest(matrix, sampled_matrix, feature_names=feature_names)
+    forbidden_audit = forbidden_feature_audit_google(feature_names)
     assignment = _assignment_unit_manifest(
         record_count=int(matrix.shape[0]),
         context_group_count=len(leaves),
         windows_per_context=int(windows_per_context),
         shotblocks_per_context=int(shotblocks_per_context),
+        window_bundle_size=bundle_size,
+        assignment_unit=assignment_unit,
     )
     probe_schedule = _probe_schedule_manifest(
         window_rows,
         requested_windows_per_context=int(windows_per_context),
+        window_bundle_size=bundle_size,
+        window_family_profile=family_profile,
         dem_source=str(dem_source),
     )
     config = {
@@ -259,6 +338,8 @@ def write_google_s3_visible_surface(
         "shotblocks_per_context": int(shotblocks_per_context),
         "shotblock_size": int(shotblock_size),
         "min_shotblock_size": int(minimum_block),
+        "window_bundle_size": int(bundle_size),
+        "window_family_profile": family_profile,
         "basis": basis,
         "distance": None if distance is None else int(distance),
         "rounds": None if rounds is None else int(rounds),
@@ -281,7 +362,11 @@ def write_google_s3_visible_surface(
             "constructs_counterfactual_teacher_probes": False,
             "uses_real_google_detection_events": True,
             "uses_real_google_obs_flips_actual": True,
-            "learner_visible_surface_kind": "empirical fixed 2-bit observation windows plus public context metadata",
+            "learner_visible_surface_kind": (
+                "empirical fixed 2-bit observation-window bundles plus public context metadata"
+                if bundle_size > 1
+                else "empirical fixed 2-bit observation windows plus public context metadata"
+            ),
             "evaluator_mode": "no_oracle_labels",
             "contains_true_hidden_mechanism_labels": False,
             "contains_catalog_m_labels": False,
@@ -373,6 +458,182 @@ def forbidden_feature_audit_google(feature_names: Iterable[str]) -> dict[str, ob
     }
 
 
+def _assignment_unit_name(window_bundle_size: int) -> str:
+    return DEFAULT_ASSIGNMENT_UNIT if int(window_bundle_size) <= 1 else DEFAULT_BUNDLE_ASSIGNMENT_UNIT
+
+
+def _feature_names(window_bundle_size: int) -> list[str]:
+    bundle_size = int(window_bundle_size)
+    if bundle_size <= 1:
+        return [*RAW_FEATURE_NAMES, *METADATA_FEATURE_NAMES]
+    raw = [
+        f"raw__google_window2_bundle_w{slot:02d}__{metric}"
+        for slot in range(bundle_size)
+        for metric in RAW_METRICS
+    ]
+    return [*raw, *METADATA_FEATURE_NAMES, *BUNDLE_METADATA_FEATURE_NAMES]
+
+
+def _normalize_window_family_profile(value: str) -> str:
+    profile = WINDOW_FAMILY_PROFILE_ALIASES.get(str(value), str(value))
+    if profile not in ALLOWED_WINDOW_FAMILY_PROFILES:
+        raise ValueError(f"window_family_profile must be one of {ALLOWED_WINDOW_FAMILY_PROFILES!r}")
+    return profile
+
+
+def _select_windows_for_family_profile(
+    groups: dict[str, list[GoogleWindow2]],
+    *,
+    detector_count: int,
+    boundary_detectors: set[int],
+    windows_per_context: int,
+    profile: str,
+    rng: np.random.Generator,
+) -> list[GoogleWindow2]:
+    geometry = groups.get("geometry", [])
+    dem_support = groups.get("dem_support", [])
+    logical = groups.get("logical", [])
+    boundary = groups.get("boundary", [])
+    all_candidates = [*geometry, *dem_support, *logical, *boundary]
+    if profile == WINDOW_FAMILY_PROFILE_MIXED_PUBLIC:
+        return _limit_window_count(_dedupe_windows(all_candidates), windows_per_context=windows_per_context, rng=rng)
+    if profile == WINDOW_FAMILY_PROFILE_DETECTOR_PAIR_ONLY:
+        candidates = [item for item in all_candidates if str(item.window.kind) == "detector_pair"]
+        return _limit_window_count(_dedupe_windows(candidates), windows_per_context=windows_per_context, rng=rng)
+    if profile == WINDOW_FAMILY_PROFILE_LOGICAL_DETECTOR_PAIR_ONLY:
+        candidates = [item for item in logical if str(item.window.kind) == "logical_detector_pair"]
+        return _limit_window_count(_dedupe_windows(candidates), windows_per_context=windows_per_context, rng=rng)
+    if profile == WINDOW_FAMILY_PROFILE_DEM_SUPPORT_ONLY:
+        candidates = [item for item in dem_support if str(item.source_kind) == "dem_support_detector_pair"]
+        return _limit_window_count(_dedupe_windows(candidates), windows_per_context=windows_per_context, rng=rng)
+    if profile == WINDOW_FAMILY_PROFILE_BOUNDARY_HEAVY:
+        deduped = _dedupe_windows(all_candidates)
+        ordered = sorted(
+            deduped,
+            key=lambda item: (
+                -_window_boundary_score(item, detector_count=detector_count, boundary_detectors=boundary_detectors),
+                _window_source_priority(item.source_kind),
+                str(item.window.name),
+            ),
+        )
+        return ordered[: int(windows_per_context)]
+    if profile == WINDOW_FAMILY_PROFILE_BULK_ONLY:
+        candidates = [
+            item
+            for item in all_candidates
+            if _is_bulk_detector_window(item, detector_count=detector_count, boundary_detectors=boundary_detectors)
+        ]
+        return _limit_window_count(_dedupe_windows(candidates), windows_per_context=windows_per_context, rng=rng)
+    if profile == WINDOW_FAMILY_PROFILE_MIXED_BALANCED:
+        group_order = [
+            _dedupe_windows(dem_support),
+            _dedupe_windows(logical),
+            _dedupe_windows(
+                [
+                    item
+                    for item in all_candidates
+                    if _window_boundary_score(item, detector_count=detector_count, boundary_detectors=boundary_detectors) > 0
+                ]
+            ),
+            _dedupe_windows(
+                [
+                    item
+                    for item in all_candidates
+                    if _is_bulk_detector_window(item, detector_count=detector_count, boundary_detectors=boundary_detectors)
+                ]
+            ),
+        ]
+        return _round_robin_window_mix(group_order, windows_per_context=windows_per_context, rng=rng)
+    raise ValueError(f"unknown window_family_profile {profile!r}")
+
+
+def _dedupe_windows(windows: Iterable[GoogleWindow2]) -> list[GoogleWindow2]:
+    out: list[GoogleWindow2] = []
+    seen: set[tuple[int, ...]] = set()
+    for item in windows:
+        bits = tuple(int(bit) for bit in item.window.bits)
+        if len(bits) != 2 or bits in seen:
+            continue
+        seen.add(bits)
+        out.append(item)
+    return out
+
+
+def _limit_window_count(windows: list[GoogleWindow2], *, windows_per_context: int, rng: np.random.Generator) -> list[GoogleWindow2]:
+    if len(windows) <= int(windows_per_context):
+        return list(windows)
+    order = np.arange(len(windows))
+    rng.shuffle(order)
+    selected = sorted(order[: int(windows_per_context)].tolist())
+    return [windows[idx] for idx in selected]
+
+
+def _round_robin_window_mix(
+    groups: list[list[GoogleWindow2]],
+    *,
+    windows_per_context: int,
+    rng: np.random.Generator,
+) -> list[GoogleWindow2]:
+    prepared = []
+    for group in groups:
+        local = list(group)
+        if len(local) > 1:
+            order = np.arange(len(local))
+            rng.shuffle(order)
+            local = [local[int(idx)] for idx in order.tolist()]
+        prepared.append(local)
+    selected: list[GoogleWindow2] = []
+    seen: set[tuple[int, ...]] = set()
+    positions = [0 for _ in prepared]
+    while len(selected) < int(windows_per_context):
+        added = False
+        for group_idx, group in enumerate(prepared):
+            while positions[group_idx] < len(group):
+                item = group[positions[group_idx]]
+                positions[group_idx] += 1
+                bits = tuple(int(bit) for bit in item.window.bits)
+                if len(bits) != 2 or bits in seen:
+                    continue
+                seen.add(bits)
+                selected.append(item)
+                added = True
+                break
+            if len(selected) >= int(windows_per_context):
+                break
+        if not added:
+            break
+    return selected
+
+
+def _window_boundary_score(item: GoogleWindow2, *, detector_count: int, boundary_detectors: set[int]) -> int:
+    detector_bits = [int(bit) for bit in item.window.bits if int(bit) < int(detector_count)]
+    score = sum(1 for bit in detector_bits if bit in boundary_detectors)
+    if str(item.source_kind).startswith("boundary_"):
+        score += 2
+    return int(score)
+
+
+def _window_source_priority(source_kind: str) -> int:
+    order = {
+        "boundary_representative_pair": 0,
+        "boundary_interior_representative_pair": 1,
+        "dem_support_detector_pair": 2,
+        "logical_detector_pair": 3,
+        "detector_geometry_pair": 4,
+    }
+    return int(order.get(str(source_kind), 99))
+
+
+def _is_bulk_detector_window(item: GoogleWindow2, *, detector_count: int, boundary_detectors: set[int]) -> bool:
+    bits = [int(bit) for bit in item.window.bits]
+    return bool(
+        str(item.window.kind) == "detector_pair"
+        and bits
+        and all(bit < int(detector_count) for bit in bits)
+        and all(bit not in boundary_detectors for bit in bits)
+    )
+
+
 def _select_contexts(
     root: Path,
     *,
@@ -401,55 +662,87 @@ def _select_window2_for_leaf(
     *,
     dem_source: str,
     windows_per_context: int,
+    window_family_profile: str,
     rng: np.random.Generator,
 ) -> list[GoogleWindow2]:
+    profile = _normalize_window_family_profile(window_family_profile)
     circuit = load_google_circuit(leaf)
     detector_count = int(circuit.num_detectors)
     observable_count = int(circuit.num_observables)
-    candidates: list[GoogleWindow2] = []
-    candidates.extend(_geometry_detector_pairs(circuit, detector_count))
+    geometry = _geometry_detector_pairs(circuit, detector_count)
+    dem_support: list[GoogleWindow2] = []
+    logical: list[GoogleWindow2] = []
     if leaf.dataset_name == DATASET_SURFACE_SET1:
         try:
-            graph, _audit = build_google_fault_graph(set1_leaf_from_google_leaf(leaf), dem_source=str(dem_source))
-            candidates.extend(_dem_support_detector_pairs(graph))
-            candidates.extend(_logical_detector_pairs(graph))
+            support_surface = _load_dem_support_surface(leaf, dem_source=str(dem_source))
+            dem_support.extend(_dem_support_detector_pairs(support_surface))
+            logical.extend(_logical_detector_pairs(support_surface))
         except (FileNotFoundError, ValueError):
-            candidates.extend(_fallback_logical_detector_pairs(detector_count, observable_count))
+            logical.extend(_fallback_logical_detector_pairs(detector_count, observable_count))
     else:
-        candidates.extend(_fallback_logical_detector_pairs(detector_count, observable_count))
-    candidates.extend(_boundary_representative_pairs(circuit, detector_count))
-    deduped: list[GoogleWindow2] = []
-    seen: set[tuple[int, ...]] = set()
-    for item in candidates:
-        bits = tuple(item.window.bits)
-        if len(bits) != 2 or bits in seen:
-            continue
-        seen.add(bits)
-        deduped.append(item)
-    if len(deduped) <= int(windows_per_context):
-        return deduped
-    # Keep the selection deterministic but not tied to context path ordering.
-    order = np.arange(len(deduped))
-    rng.shuffle(order)
-    selected = sorted(order[: int(windows_per_context)].tolist())
-    return [deduped[idx] for idx in selected]
+        logical.extend(_fallback_logical_detector_pairs(detector_count, observable_count))
+    boundary = _boundary_representative_pairs(circuit, detector_count)
+    boundary_detectors = _boundary_detectors(_detector_coords(circuit, detector_count))
+    groups = {
+        "geometry": geometry,
+        "dem_support": dem_support,
+        "logical": logical,
+        "boundary": boundary,
+    }
+    return _select_windows_for_family_profile(
+        groups,
+        detector_count=detector_count,
+        boundary_detectors=boundary_detectors,
+        windows_per_context=int(windows_per_context),
+        profile=profile,
+        rng=rng,
+    )
+
+
+def _window_bundles(windows: list[GoogleWindow2], *, bundle_size: int) -> list[list[GoogleWindow2]]:
+    size = max(1, int(bundle_size))
+    return [windows[start : start + size] for start in range(0, len(windows), size) if len(windows[start : start + size]) == size]
 
 
 def _geometry_detector_pairs(circuit: object, detector_count: int) -> list[GoogleWindow2]:
     coords = _detector_coords(circuit, detector_count)
     if not coords:
         return []
-    pairs = []
-    for left in range(detector_count):
-        for right in range(left + 1, detector_count):
-            if left not in coords or right not in coords:
-                continue
-            distance = _linf_distance(coords[left], coords[right])
-            pairs.append((distance, left, right))
-    windows = []
-    for _distance, left, right in sorted(pairs, key=lambda item: (item[0], item[1], item[2])):
-        windows.append(GoogleWindow2(make_window(f"detector_pair:{left}:{right}", [left, right], "detector_pair"), "detector_geometry_pair"))
-    return windows
+    padded = {idx: _pad_coord(value) for idx, value in coords.items()}
+    pairs: set[tuple[int, int]] = set()
+
+    def add_adjacent(indices: Iterable[int], *, key) -> None:
+        ordered = sorted((int(idx) for idx in indices), key=key)
+        for left, right in zip(ordered, ordered[1:]):
+            if left != right:
+                pairs.add((min(left, right), max(left, right)))
+
+    add_adjacent(padded, key=lambda idx: (padded[idx][2], padded[idx][0], padded[idx][1], idx))
+
+    by_xy: dict[tuple[float, float], list[int]] = defaultdict(list)
+    by_xt: dict[tuple[float, float], list[int]] = defaultdict(list)
+    by_yt: dict[tuple[float, float], list[int]] = defaultdict(list)
+    by_t: dict[float, list[int]] = defaultdict(list)
+    for idx, (x_coord, y_coord, t_coord) in padded.items():
+        x_key, y_key, t_key = round(x_coord, 6), round(y_coord, 6), round(t_coord, 6)
+        by_xy[(x_key, y_key)].append(int(idx))
+        by_xt[(x_key, t_key)].append(int(idx))
+        by_yt[(y_key, t_key)].append(int(idx))
+        by_t[t_key].append(int(idx))
+
+    for indices in by_xy.values():
+        add_adjacent(indices, key=lambda idx: (padded[idx][2], idx))
+    for indices in by_xt.values():
+        add_adjacent(indices, key=lambda idx: (padded[idx][1], idx))
+    for indices in by_yt.values():
+        add_adjacent(indices, key=lambda idx: (padded[idx][0], idx))
+    for indices in by_t.values():
+        add_adjacent(indices, key=lambda idx: (padded[idx][0], padded[idx][1], idx))
+
+    return [
+        GoogleWindow2(make_window(f"detector_pair:{left}:{right}", [left, right], "detector_pair"), "detector_geometry_pair")
+        for left, right in sorted(pairs, key=lambda item: (_linf_distance(coords[item[0]], coords[item[1]]), item[0], item[1]))
+    ]
 
 
 def _dem_support_detector_pairs(graph: object) -> list[GoogleWindow2]:
@@ -481,6 +774,27 @@ def _logical_detector_pairs(graph: object) -> list[GoogleWindow2]:
         GoogleWindow2(make_window(f"logical_detector_pair:{logical - detector_count}:{detector}", [detector, logical], "logical_detector_pair"), "logical_detector_pair")
         for detector, logical in sorted(pairs)
     ]
+
+
+def _load_dem_support_surface(leaf: GoogleLeaf, *, dem_source: str) -> GoogleDemSupportSurface:
+    dem_data = load_google_dem_data(set1_leaf_from_google_leaf(leaf), dem_source=str(dem_source))
+    raw_masks = dem_data.raw_masks
+    bit_count = int(raw_masks.shape[0])
+    fault_count = int(raw_masks.shape[1])
+    supports_by_fault: list[list[int]] = [[] for _ in range(fault_count)]
+    faults_by_observation_bit: list[list[int]] = [[] for _ in range(bit_count)]
+    bit_ids, fault_ids = raw_masks.nonzero(as_tuple=True)
+    for bit, fault in zip(bit_ids.cpu().tolist(), fault_ids.cpu().tolist()):
+        bit_int = int(bit)
+        fault_int = int(fault)
+        supports_by_fault[fault_int].append(bit_int)
+        faults_by_observation_bit[bit_int].append(fault_int)
+    return GoogleDemSupportSurface(
+        supports_by_fault=tuple(tuple(bits) for bits in supports_by_fault),
+        faults_by_observation_bit=tuple(tuple(faults) for faults in faults_by_observation_bit),
+        num_detectors=int(dem_data.num_detectors),
+        num_observables=int(dem_data.num_observables),
+    )
 
 
 def _fallback_logical_detector_pairs(detector_count: int, observable_count: int) -> list[GoogleWindow2]:
@@ -530,14 +844,48 @@ def _shotblocks(
     return blocks
 
 
-def _row_features(
-    block: np.ndarray,
+def _bundle_row_features(
+    observations: np.ndarray,
     *,
     leaf: GoogleLeaf,
-    window: ObservationWindow,
+    window_bundle: list[GoogleWindow2],
+    public_metadata: GoogleContextPublicMetadata,
+    start: int,
+    stop: int,
+    bundle_idx: int,
+    bundle_count: int,
     block_idx: int,
     block_count: int,
 ) -> np.ndarray:
+    raw: list[float] = []
+    metadata_rows: list[list[float]] = []
+    for item in window_bundle:
+        window = item.window
+        block = np.asarray(observations[start:stop, list(window.bits)], dtype=np.bool_)
+        raw.extend(_window_raw_features(block).tolist())
+        metadata_rows.append(
+            _metadata_features(
+                leaf=leaf,
+                window=window,
+                public_metadata=public_metadata,
+                shot_count=int(block.shape[0]),
+                block_idx=int(block_idx),
+                block_count=int(block_count),
+            )
+        )
+    if len(window_bundle) == 1:
+        metadata = metadata_rows[0]
+    else:
+        metadata = _bundle_metadata_features(
+            metadata_rows,
+            bundle_idx=int(bundle_idx),
+            bundle_count=int(bundle_count),
+            bundle_size=len(window_bundle),
+        )
+    return np.asarray([*raw, *metadata], dtype=np.float64)
+
+
+def _window_raw_features(block: np.ndarray) -> np.ndarray:
     if block.ndim != 2 or block.shape[1] != 2 or block.shape[0] == 0:
         raise ValueError("Google S3 visible rows require non-empty fixed 2-bit shotblocks")
     left = block[:, 0].astype(np.int64)
@@ -569,25 +917,46 @@ def _row_features(
         _expectation_se(e_right, n),
         _expectation_se(e_pair, n),
     ]
-    metadata = _metadata_features(leaf=leaf, window=window, shot_count=int(block.shape[0]), block_idx=int(block_idx), block_count=int(block_count))
-    return np.asarray([*raw, *metadata], dtype=np.float64)
+    return np.asarray(raw, dtype=np.float64)
+
+
+def _bundle_metadata_features(
+    metadata_rows: list[list[float]],
+    *,
+    bundle_idx: int,
+    bundle_count: int,
+    bundle_size: int,
+) -> list[float]:
+    arr = np.asarray(metadata_rows, dtype=np.float64)
+    if arr.ndim != 2 or arr.shape[0] == 0:
+        raise ValueError("window bundle metadata requires at least one fixed 2-bit window")
+    metadata = np.mean(arr, axis=0).tolist()
+    metadata[0] = float(arr[0, 0])
+    metadata[-1] = float(arr[0, -1])
+    metadata.extend(
+        [
+            float(bundle_size),
+            0.0 if int(bundle_count) <= 1 else float(bundle_idx) / float(int(bundle_count) - 1),
+        ]
+    )
+    return metadata
 
 
 def _metadata_features(
     *,
     leaf: GoogleLeaf,
     window: ObservationWindow,
+    public_metadata: GoogleContextPublicMetadata,
     shot_count: int,
     block_idx: int,
     block_count: int,
 ) -> list[float]:
-    circuit = load_google_circuit(leaf)
-    detector_count = int(circuit.num_detectors)
-    coords = _detector_coords(circuit, detector_count)
+    detector_count = int(public_metadata.detector_count)
+    coords = public_metadata.coords
     detector_bits = [int(bit) for bit in window.bits if int(bit) < detector_count]
     coord_summary = _coord_summary(coords, detector_bits)
     touches_logical = any(int(bit) >= detector_count for bit in window.bits)
-    boundary_touch = any(bit in _boundary_detectors(coords) for bit in detector_bits) if coords else False
+    boundary_touch = any(bit in public_metadata.boundary_detectors for bit in detector_bits) if coords else False
     return [
         float(shot_count),
         1.0 if str(leaf.basis).upper() == "Z" else 0.0,
@@ -609,16 +978,35 @@ def _metadata_features(
     ]
 
 
-def _feature_schema() -> dict[str, object]:
-    raw_set = set(RAW_FEATURE_NAMES)
-    metadata_set = set(METADATA_FEATURE_NAMES)
+def _context_public_metadata(leaf: GoogleLeaf) -> GoogleContextPublicMetadata:
+    circuit = load_google_circuit(leaf)
+    detector_count = int(circuit.num_detectors)
+    coords = _detector_coords(circuit, detector_count)
+    return GoogleContextPublicMetadata(
+        detector_count=detector_count,
+        coords=coords,
+        boundary_detectors=_boundary_detectors(coords),
+    )
+
+
+def _feature_schema(feature_names: list[str], *, window_bundle_size: int) -> dict[str, object]:
+    names = [str(name) for name in feature_names]
+    raw_set = {name for name in names if name.startswith("raw__")}
+    metadata_set = {name for name in names if name.startswith("visible_metadata__")}
+    bundle_size = int(window_bundle_size)
     features = []
-    for idx, name in enumerate(FEATURE_NAMES):
+    for idx, name in enumerate(names):
         features.append(
             {
                 "index": int(idx),
                 "name": str(name),
-                "kind": "raw_google_window2_empirical_observation" if name in raw_set else "allowed_google_public_metadata",
+                "kind": (
+                    "raw_google_window2_bundle_empirical_observation"
+                    if bundle_size > 1 and name in raw_set
+                    else "raw_google_window2_empirical_observation"
+                    if name in raw_set
+                    else "allowed_google_public_metadata"
+                ),
                 "learner_visible": True,
                 "source": (
                     "Google detection_events.b8 and obs_flips_actual.b8 fixed 2-bit shotblock empirical distribution"
@@ -632,27 +1020,34 @@ def _feature_schema() -> dict[str, object]:
         "stage": STAGE_NAME,
         "claim_boundary": "Real Google data provide empirical fixed-window visible observations, not counterfactual teacher probe responses.",
         "fixed_window_bits": 2,
+        "window_bundle_size": int(bundle_size),
         "raw_feature_count": int(len(raw_set)),
         "metadata_feature_count": int(len(metadata_set)),
-        "num_features": int(len(FEATURE_NAMES)),
+        "num_features": int(len(names)),
         "features": features,
     }
 
 
-def _visible_feature_matrix_manifest(matrix: np.ndarray, sampled: np.ndarray) -> dict[str, object]:
+def _visible_feature_matrix_manifest(matrix: np.ndarray, sampled: np.ndarray, *, feature_names: list[str]) -> dict[str, object]:
+    names = [str(name) for name in feature_names]
+    matrix_kind = (
+        "empirical_google_real_window2_bundle_observation_features"
+        if any("raw__google_window2_bundle_" in name for name in names)
+        else "empirical_google_real_window2_observation_features"
+    )
     return {
         "schema": "scope_static_stage3a_visible_feature_matrix_v1",
         "training_matrix_path": "visible_features.npy",
-        "training_matrix_kind": "empirical_google_real_window2_observation_features",
+        "training_matrix_kind": matrix_kind,
         "sampled_matrix_path": "sampled_visible_features.npy",
-        "sampled_matrix_kind": "same_empirical_google_real_window2_observation_features",
+        "sampled_matrix_kind": f"same_{matrix_kind}",
         "feature_schema_path": "visible_feature_schema.json",
         "feature_count": int(matrix.shape[1]) if matrix.ndim == 2 else 0,
         "record_count": int(matrix.shape[0]) if matrix.ndim == 2 else 0,
         "shape": [int(dim) for dim in matrix.shape],
         "sampled_shape": [int(dim) for dim in sampled.shape],
         "sampling_mode": "real_google_empirical_shotblocks",
-        "feature_names_sha256": _text_digest("\n".join(FEATURE_NAMES)),
+        "feature_names_sha256": _text_digest("\n".join(names)),
         "visible_features_sha256": _matrix_digest(matrix),
         "sampled_visible_features_sha256": _matrix_digest(sampled),
         "learner_training_source": "Google S3A-real frozen visible_features.npy",
@@ -666,9 +1061,12 @@ def _split_manifest(
     assignment_instances: list[dict[str, object]],
     *,
     context_group_count: int,
+    assignment_unit: str,
     split_policy: str,
 ) -> dict[str, object]:
-    groups = list(range(int(context_group_count)))
+    groups = sorted({int(row.get("context_group", -1)) for row in assignment_instances if int(row.get("context_group", -1)) >= 0})
+    if not groups and int(context_group_count) > 0:
+        groups = list(range(int(context_group_count)))
     folds = []
     for fold_idx, test_group in enumerate(groups):
         validation_groups = [int(groups[(fold_idx + 1) % len(groups)])] if len(groups) >= 3 else []
@@ -695,7 +1093,7 @@ def _split_manifest(
         "split_policy": str(split_policy),
         "split_policy_fixed_before_training": True,
         "group_key": "google_public_context_group",
-        "assignment_unit": DEFAULT_ASSIGNMENT_UNIT,
+        "assignment_unit": str(assignment_unit),
         "record_count": int(len(assignment_instances)),
         "context_groups": groups,
         "fold_count": int(len(folds)),
@@ -714,32 +1112,42 @@ def _batch_context_schema(
     assignment_unit: str,
     split_policy: str,
     shotblocks_per_context: int,
+    window_bundle_size: int,
 ) -> dict[str, object]:
+    bundle_size = int(window_bundle_size)
+    learner_visible_fields = [
+        "empirical_google_window2_probabilities",
+        "empirical_google_window2_expectations",
+        "shot_count",
+        "finite_shot_uncertainty_estimates",
+        "basis_is_z",
+        "distance",
+        "rounds",
+        "window_kind",
+        "support_size",
+        "touches_logical",
+        "boundary_touch",
+        "detector_coordinate_summaries",
+        "shotblock_index_normalized",
+    ]
+    if bundle_size > 1:
+        learner_visible_fields.extend(["window_bundle_size", "window_bundle_index_normalized"])
     return {
         "schema": "scope_static_stage3a_batch_context_schema_v1",
         "assignment_unit": str(assignment_unit),
         "split_policy": str(split_policy),
         "primary_protocol": {
-            "mode": "google_real_context_window_shotblock_batch",
+            "mode": (
+                "google_real_context_windowbundle_shotblock_batch"
+                if bundle_size > 1
+                else "google_real_context_window_shotblock_batch"
+            ),
             "context_group_key": "google_public_context_group",
             "context_group_count": int(context_group_count),
             "shotblocks_per_context": int(shotblocks_per_context),
+            "window_bundle_size": int(bundle_size),
         },
-        "learner_visible_fields": [
-            "empirical_google_window2_probabilities",
-            "empirical_google_window2_expectations",
-            "shot_count",
-            "finite_shot_uncertainty_estimates",
-            "basis_is_z",
-            "distance",
-            "rounds",
-            "window_kind",
-            "support_size",
-            "touches_logical",
-            "boundary_touch",
-            "detector_coordinate_summaries",
-            "shotblock_index_normalized",
-        ],
+        "learner_visible_fields": learner_visible_fields,
         "protocol_only_fields": ["j", "fold", "train_validation_test_split", "context_group"],
         "evaluator_only_fields": [
             "optional_external_proxy_labels",
@@ -765,18 +1173,28 @@ def _assignment_unit_manifest(
     context_group_count: int,
     windows_per_context: int,
     shotblocks_per_context: int,
+    window_bundle_size: int,
+    assignment_unit: str,
 ) -> dict[str, object]:
+    bundle_size = int(window_bundle_size)
     return {
         "schema": "scope_static_stage3a_assignment_unit_v1",
         "assignment_matrix": "S[j,k] or Pi[j,k]",
-        "j_definition": DEFAULT_ASSIGNMENT_UNIT,
-        "j_description": "Google context-window-shotblock instance",
+        "j_definition": str(assignment_unit),
+        "j_description": (
+            "Google context-windowbundle-shotblock instance"
+            if bundle_size > 1
+            else "Google context-window-shotblock instance"
+        ),
         "single_shot_j_allowed_first_pass": False,
         "k_definition": "learned latent visible prototype index; no Google oracle mechanism labels are available",
         "record_count": int(record_count),
         "context_group_count": int(context_group_count),
         "requested_windows_per_context": int(windows_per_context),
         "requested_shotblocks_per_context": int(shotblocks_per_context),
+        "requested_window_bundle_size": int(bundle_size),
+        "requested_window_bundles_per_context": int(int(windows_per_context) // max(1, bundle_size)),
+        "expected_categorical_population_group_count_per_row": int(bundle_size),
         "catalog_cardinality_evaluator_only": 0,
         "evaluator_mode": "no_oracle_labels",
     }
@@ -786,20 +1204,27 @@ def _probe_schedule_manifest(
     window_rows: list[dict[str, object]],
     *,
     requested_windows_per_context: int,
+    window_bundle_size: int,
+    window_family_profile: str,
     dem_source: str,
 ) -> dict[str, object]:
-    kind_counts = Counter(str(row["window_kind"]) for row in window_rows)
-    source_counts = Counter(str(row["source_kind"]) for row in window_rows)
+    kind_counts = Counter(str(kind) for row in window_rows for kind in row.get("window_kinds", []))
+    source_counts = Counter(str(source) for row in window_rows for source in row.get("source_kinds", []))
+    window_instance_count = sum(len(list(row.get("window_kinds", []))) for row in window_rows)
     return {
         "schema": "scope_static_google_s3a_window_schedule_manifest_v1",
         "source": "public fixed 2-bit Google detector/logical windows",
         "dem_source_for_public_support_windows": str(dem_source),
         "fixed_window_bits": 2,
         "requested_windows_per_context": int(requested_windows_per_context),
-        "window_instance_count": int(len(window_rows)),
+        "window_bundle_size": int(window_bundle_size),
+        "window_family_profile": str(window_family_profile),
+        "window_bundle_instance_count": int(len(window_rows)),
+        "window_instance_count": int(window_instance_count),
         "window_kind_counts": dict(sorted(kind_counts.items())),
         "window_source_counts": dict(sorted(source_counts.items())),
         "selection_policy": [
+            f"window family profile: {window_family_profile}",
             "detector-detector local geometry pairs",
             "DEM-support-derived detector pairs",
             "logical-detector pairs",
@@ -849,15 +1274,19 @@ def _context_summary(
     *,
     observations: np.ndarray,
     windows: list[GoogleWindow2],
+    window_bundles: list[list[GoogleWindow2]],
     blocks: list[tuple[int, int]],
+    window_family_profile: str,
 ) -> dict[str, object]:
     return {
         "context_group_summary_only": True,
+        "window_family_profile": str(window_family_profile),
         "basis": str(leaf.basis),
         "distance": None if leaf.distance is None else int(leaf.distance),
         "rounds": None if leaf.rounds is None else int(leaf.rounds),
         "shot_count": int(observations.shape[0]),
         "selected_window_count": int(len(windows)),
+        "selected_window_bundle_count": int(len(window_bundles)),
         "selected_shotblock_count": int(len(blocks)),
     }
 

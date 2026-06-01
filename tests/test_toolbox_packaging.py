@@ -23,6 +23,11 @@ def test_toolbox_manifest_exports_public_layers_and_commands() -> None:
         "scope-stage3a5-ceiling",
         "scope-stage3b0-baselines",
         "scope-stage3b1-discovery",
+        "scope-stage3c-generator",
+        "scope-google-s3-visible-adapter",
+        "scope-google-s3-visible-cache-v2",
+        "scope-google-s3-visible-aggregate-v2",
+        "scope-google-s3-visible-adapter-v2",
     }.issubset(command_names)
 
 
@@ -39,3 +44,8 @@ def test_pyproject_exposes_toolbox_console_scripts() -> None:
     assert scripts["scope-stage3a5-ceiling"] == "scope_static.experiments.stage3.observability_ceiling:main"
     assert scripts["scope-stage3b0-baselines"] == "scope_static.experiments.stage3.baselines:main"
     assert scripts["scope-stage3b1-discovery"] == "scope_static.experiments.stage3.discovery_model:main"
+    assert scripts["scope-stage3c-generator"] == "scope_static.experiments.stage3.generator_learning:main"
+    assert scripts["scope-google-s3-visible-adapter"] == "scope_static.experiments.willow_data.s3_visible_adapter:main"
+    assert scripts["scope-google-s3-visible-cache-v2"] == "scope_static.experiments.willow_data.s3_visible_cache_v2:main"
+    assert scripts["scope-google-s3-visible-aggregate-v2"] == "scope_static.experiments.willow_data.s3_visible_aggregate_v2:main"
+    assert scripts["scope-google-s3-visible-adapter-v2"] == "scope_static.experiments.willow_data.s3_visible_adapter_v2:main"
