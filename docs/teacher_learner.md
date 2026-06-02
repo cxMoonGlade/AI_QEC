@@ -43,6 +43,7 @@ classical readout assignment matrices before sampling and blocks failed
 artifacts with a post-sampling physicality audit. Learner is not yet an
 arbitrary CPTP/GKSL channel learner by construction.
 
+
 ## Response-Surface Intuition
 
 See `docs/RESPONSE_SURFACES.md` for the fuller implementation view across the
@@ -75,6 +76,7 @@ evaluator-only labels only after training to audit recovery. If two mechanisms
 induce indistinguishable or near-indistinguishable visible distributions,
 `p(y | m_a) ~= p(y | m_b)`, the correct discovery target is an observational
 alias or quotient class, not a forced exact-label split.
+
 
 ## Teacher
 
