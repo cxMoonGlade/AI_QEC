@@ -17,6 +17,7 @@ from scope_static.mechanism_discovery.google_transfer import run_stage4_google_t
 from scope_static.mechanism_discovery.google_unit_source import (
     CONTROL_NAMES,
     _robustness_closeout_report,
+    _soft_bucket_weights_for_mode,
     _target_mean_std_only_control_matrix,
     run_stage4_google_unit_source_expansion,
 )
@@ -253,6 +254,8 @@ def test_stage4_google_unit_source_expansion_writes_split_clean_freeze_and_contr
     assert split["google_heldout_indices_used_for_missing_mode_selection"] == []
     assert set(split["design"]).isdisjoint(set(split["heldout_eval"]))
     assert result["mode_design_audit"]["used_heldout_eval_rows_for_mode_design"] is False
+    assert result["mode_design_audit"]["public_context_mode_index_policy"] == "diagnostic_only_not_used_for_source_row_assignment"
+    assert result["mode_design_audit"]["public_context_mode_index_key_count"] > 0
     assert result["visible_surrogate_transform_audit"]["claims_physical_channel_sampling"] is False
     assert result["visible_surrogate_transform_audit"]["claims_cptp_gksl_generation"] is False
     assert result["source_visible_calibration_audit"]["uses_google_heldout_eval_rows"] is False
@@ -458,6 +461,22 @@ def test_stage4_google_unit_source_closeout_requires_seed_split_source_ablation_
     assert report["decision"] == "s4_6_current_split_positive_only"
     assert report["upgrades_current_split_positive_to_robust_positive"] is False
     assert report["mechanism_mixture_stability_passed"] is False
+
+
+def test_stage4_google_unit_soft_family_weights_are_uncertainty_capped() -> None:
+    weights = _soft_bucket_weights_for_mode(
+        block_scores={
+            "raw__spatial_corr": 10.0,
+            "raw__logical_coupling": 0.2,
+            "raw__stability": 0.1,
+        },
+        dominant_bucket="spatial_two_qubit_crosstalk",
+        missing=True,
+    )
+
+    assert abs(sum(weights.values()) - 1.0) < 1.0e-12
+    assert max(weights.values()) <= 0.55 + 1.0e-12
+    assert sum(1 for value in weights.values() if value > 0.05) >= 2
 
 
 def test_stage4_google_unit_source_expansion_cli_requires_explicit_heavy_approval(monkeypatch, tmp_path: Path) -> None:

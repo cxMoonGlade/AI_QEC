@@ -30,7 +30,11 @@ def test_stage3c_scores_predicted_assignment_generator_against_nulls_and_oracle(
 
     assert result["decision"] == "stage3c_prototype_generator_learning_completed"
     assert result["claim_boundary"]["uses_mechanism_labels_for_predicted_assignment_generator"] is False
+    assert result["claim_boundary"]["uses_family_labels_for_predicted_assignment_generator"] is False
     assert result["claim_boundary"]["oracle_assignment_comparator_evaluator_only"] is True
+    assert result["claim_boundary"]["soft_family_classification_evaluator_only"] is True
+    assert result["claim_boundary"]["soft_family_strength_location_audit_evaluator_only"] is True
+    assert result["claim_boundary"]["claims_physical_parameter_recovery"] is False
     assert result["visible_feature_matrix"]["loaded_from_stage3a_artifact"] is True
     assert result["assignment_source_audit"]["row_stochastic"] is True
     assert result["leakage_audit"]["passed"] is True
@@ -50,10 +54,19 @@ def test_stage3c_scores_predicted_assignment_generator_against_nulls_and_oracle(
     assert result["feature_scramble_audit"]["checks"]["row_order_fold_and_assignments_preserved"] is True
     assert result["acceptance_audit"]["checks"]["heldout_generation_beats_global_null_categorical_population_nll"] is True
     assert result["acceptance_audit"]["checks"]["heldout_generation_beats_mean_only_mae"] is True
+    assert result["acceptance_audit"]["checks"]["soft_family_classification_nmi_is_one"] is True
+    assert result["acceptance_audit"]["checks"]["soft_family_classification_ari_is_one"] is True
+    assert result["acceptance_audit"]["checks"]["soft_family_classification_balanced_accuracy_is_one"] is True
+    assert result["acceptance_audit"]["checks"]["soft_family_classification_min_recall_is_one"] is True
+    assert result["acceptance_audit"]["checks"]["soft_family_strength_location_audit_evaluator_only_or_skipped"] is True
+    assert result["acceptance_audit"]["checks"]["soft_family_strength_location_is_context_relative"] is True
+    assert result["acceptance_audit"]["checks"]["soft_family_strength_does_not_claim_physical_parameter_recovery"] is True
 
     predicted = result["predicted_assignment_metrics"]["overall"]
     global_null = result["global_null_metrics"]["overall"]
     oracle = result["oracle_assignment_comparator_metrics"]["overall"]
+    family = result["soft_family_classification_metrics"]
+    strength = result["soft_family_strength_location_audit"]
     report = result["prototype_generation_metrics"]["primary_likelihood_report"]
     assert predicted["categorical_population_nll"] >= 0.0
     assert oracle["categorical_population_nll"] >= 0.0
@@ -76,12 +89,38 @@ def test_stage3c_scores_predicted_assignment_generator_against_nulls_and_oracle(
     assert oracle["raw_visible_feature_mae"] <= predicted["raw_visible_feature_mae"] + 1.0e-12
     assert result["oracle_assignment_comparator_metrics"]["uses_evaluator_labels"] is True
     assert result["oracle_assignment_comparator_metrics"]["used_for_acceptance_model_selection"] is False
+    assert family["schema"] == "scope_static_stage3c_soft_family_classification_metrics_v1"
+    assert family["evaluator_only"] is True
+    assert family["used_for_training"] is False
+    assert family["used_for_model_selection"] is False
+    assert family["uses_channels_ptms_kraus"] is False
+    assert family["normalized_mutual_info"] == 1.0
+    assert family["adjusted_rand_index"] == 1.0
+    assert family["balanced_accuracy"] == 1.0
+    assert family["min_recall"] == 1.0
+    assert family["passed"] is True
+    assert strength["schema"] == "scope_static_stage3c_soft_family_strength_location_audit_v1"
+    assert strength["evaluator_only"] is True
+    assert strength["location_reference_frame"] == "context_relative"
+    assert strength["claims_physical_parameter_recovery"] is False
+    assert "readout_spam" in strength["per_family"]
+    readout_strength = strength["per_family"]["readout_spam"]["visible_strength"]
+    assert readout_strength["primary_reference_frame"] == "context_relative"
+    assert "context_relative_reference" in readout_strength
+    assert "global_reference" in readout_strength
+    assert (
+        strength["per_family"]["readout_spam"]["context_relative_action_locations"]["reference_frame"]
+        == "context_relative"
+    )
+    assert strength["per_family"]["readout_spam"]["absolute_provenance_counts"]["provenance_only"] is True
 
     for name in [
         "metrics.json",
         "prototype_generation_metrics.json",
         "predicted_assignment_metrics.json",
         "oracle_assignment_comparator_metrics.json",
+        "soft_family_classification_metrics.json",
+        "soft_family_strength_location_audit.json",
         "global_null_metrics.json",
         "stratified_null_metrics.json",
         "mean_only_baseline_metrics.json",
@@ -260,6 +299,12 @@ def test_stage3c_no_categorical_surface_uses_gaussian_primary_and_block_lift(tmp
     blocks = result["prototype_generation_metrics"]["feature_block_lift"]["global_null_minus_predicted"]
     profile_report = result["prototype_generation_metrics"]["target_score_profile_report"]["profiles"]
     assert result["decision"] == "stage3c_prototype_generator_learning_completed"
+    assert result["soft_family_classification_metrics"]["skipped"] is True
+    assert result["soft_family_strength_location_audit"]["skipped"] is True
+    assert result["claim_boundary"]["soft_family_classification_skipped"] is True
+    assert result["claim_boundary"]["soft_family_strength_location_audit_skipped"] is True
+    assert result["acceptance_audit"]["checks"]["soft_family_classification_evaluator_only_or_skipped"] is True
+    assert result["acceptance_audit"]["checks"]["soft_family_strength_location_audit_evaluator_only_or_skipped"] is True
     assert result["prototype_generation_metrics"]["primary_generation_likelihood_metric"] == "gaussian_density_nll"
     assert result["assignment_shuffle_audit"]["primary_generation_likelihood_metric"] == "gaussian_density_nll"
     assert result["feature_scramble_audit"]["primary_generation_likelihood_metric"] == "gaussian_density_nll"

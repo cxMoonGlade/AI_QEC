@@ -43,6 +43,9 @@ from scope_static.google.s4_bridge_surface import (
 
 from .artifacts import load_json_object, load_stage3a_frozen_visible_features
 from .google_transfer import _assign_to_source_centers
+from .mechanism_families import FAMILY_BUCKETS
+from .mechanism_families import mechanism_family_bucket as _bucket_for_record
+from .mechanism_families import records_by_family_bucket as _records_by_family_bucket
 from .source_pretrain import _fit_attention_vq, _replay_metrics
 from .stage4_artifacts import load_stage4_visible_matrix
 
@@ -93,14 +96,6 @@ ROBUSTNESS_TRANSFER_CONTROLS = (
     "random_codebook_transfer",
     "global_null",
     "train_on_google_only",
-)
-
-FAMILY_BUCKETS = (
-    "readout_spam",
-    "prep_reset",
-    "spatial_two_qubit_crosstalk",
-    "temporal_stability_drift",
-    "logical_tail_high_impact",
 )
 
 RAW_BLOCK_NAMES = (
@@ -162,6 +157,7 @@ def run_stage4_google_unit_source_expansion(
         google_raw=google_raw,
         design_indices=[int(idx) for idx in split["design"]],
         feature_names=google_feature_names,
+        google_public_rows=google_public_rows,
         source_codebook=source_codebook,
         assignment_baseline=assignment_baseline,
         seed=int(seed),
@@ -544,6 +540,7 @@ def _design_google_unit_modes(
     google_raw: np.ndarray,
     design_indices: list[int],
     feature_names: list[str],
+    google_public_rows: list[dict[str, object]],
     source_codebook: Mapping[str, object] | None,
     assignment_baseline: Mapping[str, object],
     seed: int,
@@ -560,6 +557,7 @@ def _design_google_unit_modes(
     source_distance_by_mode = _nearest_source_distance_by_mode(centers, source_codebook)
     mode_specs = []
     design_row_assignments = []
+    context_mode_counts: dict[str, Counter[str]] = defaultdict(Counter)
     counts = Counter(int(value) for value in assignments.tolist())
     for mode_id in range(native_k):
         mask = assignments == mode_id
@@ -570,6 +568,11 @@ def _design_google_unit_modes(
         bucket = _bucket_for_visible_block(dominant_block)
         nearest = float(source_distance_by_mode.get(int(mode_id), np.inf))
         missing = bool(mass >= float(min_missing_mode_mass) and (not np.isfinite(nearest) or nearest > source_radius))
+        bucket_weights = _soft_bucket_weights_for_mode(
+            block_scores=block_scores,
+            dominant_bucket=bucket,
+            missing=missing,
+        )
         spec = {
             "mode_id": f"GUM{mode_id:03d}",
             "google_native_mode": f"G{mode_id:03d}",
@@ -577,7 +580,10 @@ def _design_google_unit_modes(
             "design_row_count": count,
             "dominant_visible_block": dominant_block,
             "dominant_family_bucket": bucket,
-            "bucket_weights": _bucket_weights_for_mode(bucket, missing=missing),
+            "bucket_weights": bucket_weights,
+            "family_mapping_policy": "uncertainty_aware_soft_family_mixture_v1",
+            "max_family_weight_cap": 0.55,
+            "hard_dominant_family_bucket_for_audit_only": bucket,
             "visible_transform": _visible_transform_for_bucket(bucket) if missing else "none",
             "visible_mode_tag": f"{bucket}_{'missing' if missing else 'covered'}",
             "alias_label": f"{bucket}_{'missing' if missing else 'covered'}",
@@ -591,11 +597,19 @@ def _design_google_unit_modes(
         mode_specs.append(_fallback_mode_spec())
     for local_idx, google_idx in enumerate(design_indices):
         mode = int(assignments[local_idx]) if assignments.size else 0
+        mode_id = str(mode_specs[min(mode, len(mode_specs) - 1)]["mode_id"])
+        public_fields = (
+            dict(google_public_rows[int(google_idx)].get("public_fields", {}))
+            if 0 <= int(google_idx) < len(google_public_rows)
+            else {}
+        )
+        for key in _public_context_mode_keys(public_fields):
+            context_mode_counts[key][mode_id] += 1
         design_row_assignments.append(
             {
                 "google_row_index": int(google_idx),
                 "design_local_index": int(local_idx),
-                "mode_id": mode_specs[min(mode, len(mode_specs) - 1)]["mode_id"],
+                "mode_id": mode_id,
                 "google_native_mode": f"G{mode:03d}",
             }
         )
@@ -608,6 +622,11 @@ def _design_google_unit_modes(
         "min_missing_mode_mass": float(min_missing_mode_mass),
         "mode_specs": mode_specs,
         "design_row_assignments": design_row_assignments,
+        "public_context_mode_index_policy": "diagnostic_only_not_used_for_source_row_assignment",
+        "public_context_mode_index": {
+            key: {mode_id: int(count) for mode_id, count in sorted(counter.items())}
+            for key, counter in sorted(context_mode_counts.items())
+        },
         "native_centers": centers.tolist(),
         "source_radius_threshold": source_radius,
     }
@@ -1389,6 +1408,8 @@ def _mode_design_audit(
         "used_heldout_eval_rows_for_mode_design": False,
         "source_expansion_config_inputs": ["google_design_split_visible_features", "controlled_catalog_teacher", "optional_source_artifacts"],
         "source_codebook_available": source_codebook is not None,
+        "public_context_mode_index_policy": mode_design.get("public_context_mode_index_policy"),
+        "public_context_mode_index_key_count": int(len(dict(mode_design.get("public_context_mode_index", {})))),
         "mode_specs": mode_design.get("mode_specs", []),
         "design_row_assignments": mode_design.get("design_row_assignments", []),
     }
@@ -1486,36 +1507,6 @@ def _s4_6_acceptance(
     }
 
 
-def _records_by_family_bucket(records: list[dict[str, object]]) -> dict[str, list[int]]:
-    out: dict[str, list[int]] = {bucket: [] for bucket in FAMILY_BUCKETS}
-    for idx, record in enumerate(records):
-        out[_bucket_for_record(record)].append(idx)
-    all_indices = list(range(len(records)))
-    for bucket in FAMILY_BUCKETS:
-        if not out[bucket]:
-            out[bucket] = list(all_indices)
-    return out
-
-
-def _bucket_for_record(record: Mapping[str, object]) -> str:
-    label = str(record.get("oracle_label", record.get("mechanism_id", "")))
-    text = " ".join(str(record.get(key, "")) for key in ("name", "mechanism_id", "mechanism_set", "instruction")).lower()
-    if label in {"M1", "M2", "M3", "M16"} or any(token in text for token in ("readout", "measure", "spam")):
-        return "readout_spam"
-    if label in {"M17", "M18"} or any(token in text for token in ("prep", "reset")):
-        return "prep_reset"
-    if label in {"M8", "M9", "M10", "M11", "M12"} or any(token in text for token in ("rzz", "crosstalk", "correlated", "two")):
-        return "spatial_two_qubit_crosstalk"
-    if label in {"M13", "M14", "M20"} or any(token in text for token in ("drift", "idle", "dephasing", "relaxation", "overrotation")):
-        return "temporal_stability_drift"
-    if any(token in text for token in ("logical", "boundary", "leakage", "thermal", "tail")):
-        return "logical_tail_high_impact"
-    if label.startswith("M") and label[1:].isdigit():
-        idx = int(label[1:])
-        return FAMILY_BUCKETS[idx % len(FAMILY_BUCKETS)]
-    return "readout_spam"
-
-
 def _bucket_for_visible_block(block: str) -> str:
     if block == "raw__marginal":
         return "readout_spam"
@@ -1533,6 +1524,50 @@ def _bucket_weights_for_mode(bucket: str, *, missing: bool) -> dict[str, float]:
     base[str(bucket)] = 0.80 if missing else 0.60
     total = sum(base.values())
     return {key: float(value / total) for key, value in base.items()}
+
+
+def _soft_bucket_weights_for_mode(
+    *,
+    block_scores: Mapping[str, object],
+    dominant_bucket: str,
+    missing: bool,
+    max_family_weight: float = 0.55,
+) -> dict[str, float]:
+    evidence = {bucket: 0.05 for bucket in FAMILY_BUCKETS}
+    for block, value in block_scores.items():
+        bucket = _bucket_for_visible_block(str(block))
+        evidence[bucket] += max(float(value), 0.0)
+    evidence[str(dominant_bucket)] = evidence.get(str(dominant_bucket), 0.05) + (0.20 if missing else 0.10)
+    total = sum(evidence.values()) or 1.0
+    weights = {key: float(value / total) for key, value in evidence.items()}
+    weights = _cap_family_weight(weights, cap=float(max_family_weight))
+    return {key: float(value) for key, value in sorted(weights.items())}
+
+
+def _cap_family_weight(weights: Mapping[str, float], *, cap: float) -> dict[str, float]:
+    out = {key: max(float(value), 0.0) for key, value in weights.items()}
+    if not out:
+        return {bucket: float(1.0 / len(FAMILY_BUCKETS)) for bucket in FAMILY_BUCKETS}
+    total = sum(out.values()) or 1.0
+    out = {key: float(value / total) for key, value in out.items()}
+    bounded_cap = max(1.0 / max(1, len(out)), min(float(cap), 1.0))
+    for _ in range(len(out)):
+        top_key, top_value = max(out.items(), key=lambda item: item[1])
+        if top_value <= bounded_cap + 1.0e-12:
+            break
+        out[top_key] = bounded_cap
+        other_keys = [key for key in out if key != top_key]
+        other_total = sum(out[key] for key in other_keys)
+        if other_total <= 0.0:
+            share = (1.0 - bounded_cap) / max(1, len(other_keys))
+            for key in other_keys:
+                out[key] = share
+        else:
+            scale = (1.0 - bounded_cap) / other_total
+            for key in other_keys:
+                out[key] *= scale
+    total = sum(out.values()) or 1.0
+    return {key: float(value / total) for key, value in sorted(out.items())}
 
 
 def _visible_transform_for_bucket(bucket: str) -> str:
@@ -1592,6 +1627,24 @@ def _mode_spec_for_row(
     return specs[min(idx, len(specs) - 1)]
 
 
+def _public_context_mode_keys(public_fields: Mapping[str, object]) -> list[str]:
+    fields = _defaulted_public_fields(public_fields)
+    basis = str(fields["basis"])
+    distance = str(fields["distance"])
+    rounds = str(fields["rounds"])
+    band = str(fields["round_band"])
+    region = str(fields["region_family"])
+    geometry = str(fields["patch_public_geometry_class"])
+    return [
+        f"exact|basis={basis}|distance={distance}|rounds={rounds}|band={band}|region={region}|geometry={geometry}",
+        f"roundless|basis={basis}|distance={distance}|band={band}|region={region}|geometry={geometry}",
+        f"basis_band_region|basis={basis}|band={band}|region={region}",
+        f"basis_region|basis={basis}|region={region}",
+        f"basis|basis={basis}",
+        "global",
+    ]
+
+
 def _fallback_mode_spec() -> dict[str, object]:
     return {
         "mode_id": "GUM000",
@@ -1600,7 +1653,14 @@ def _fallback_mode_spec() -> dict[str, object]:
         "design_row_count": 0,
         "dominant_visible_block": "raw__marginal",
         "dominant_family_bucket": "readout_spam",
-        "bucket_weights": _bucket_weights_for_mode("readout_spam", missing=True),
+        "bucket_weights": _soft_bucket_weights_for_mode(
+            block_scores={"raw__marginal": 1.0},
+            dominant_bucket="readout_spam",
+            missing=True,
+        ),
+        "family_mapping_policy": "uncertainty_aware_soft_family_mixture_v1",
+        "max_family_weight_cap": 0.55,
+        "hard_dominant_family_bucket_for_audit_only": "readout_spam",
         "visible_transform": "marginal_rate_add_drop",
         "visible_mode_tag": "readout_spam_missing",
         "alias_label": "readout_spam_missing",
@@ -2532,6 +2592,7 @@ def _seed_split_repeat_report(
                 google_raw=google_raw,
                 design_indices=[int(idx) for idx in repeat_split["design"]],
                 feature_names=feature_names,
+                google_public_rows=google_public_rows,
                 source_codebook=source_codebook,
                 assignment_baseline=assignment_baseline,
                 seed=repeat_seed,
