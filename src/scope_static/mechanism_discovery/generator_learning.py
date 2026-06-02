@@ -6,12 +6,14 @@ from pathlib import Path
 import numpy as np
 import yaml
 
+from scope_static.dem.metrics import adjusted_rand_index, normalized_mutual_info
 from scope_static.protocols import LEARNER_VALIDATION_STAGE
 from .artifacts import feature_schema_matches_stage3a as _feature_schema_matches_s3a
 from .artifacts import load_json_object as _load_json
 from .artifacts import load_stage3_evaluator_labels
 from .artifacts import load_stage3a_frozen_visible_features
 from .artifacts import resolve_teacher_dir
+from .mechanism_families import FAMILY_BUCKETS, mechanism_family_bucket
 from .observability_ceiling import DEFAULT_OUTPUT_DIR as DEFAULT_STAGE3A5_DIR
 from .protocol_freeze import DEFAULT_OUTPUT_DIR as DEFAULT_STAGE3A_DIR
 from .baselines import VARIANCE_FLOOR
@@ -154,8 +156,22 @@ def run_stage3c_prototype_generator_learning(
             folds=folds,
             variance_floor=float(variance_floor),
         )
+        soft_family = evaluate_soft_family_classification(
+            responsibilities,
+            evaluator.records,
+            evaluator_mode=mode,
+        )
+        strength_location = evaluate_soft_family_strength_location_audit(
+            x,
+            responsibilities,
+            evaluator.records,
+            feature_names=feature_names,
+            evaluator_mode=mode,
+        )
     else:
         oracle = skipped_oracle_assignment_comparator(feature_names=feature_names, folds=folds)
+        soft_family = skipped_soft_family_classification()
+        strength_location = skipped_soft_family_strength_location_audit()
 
     prototype_metrics = prototype_generation_metrics(
         predicted_assignment_metrics=predicted,
@@ -177,6 +193,8 @@ def run_stage3c_prototype_generator_learning(
         stratified_null_metrics=stratified_null,
         mean_only_baseline_metrics=mean_only,
         oracle_assignment_comparator_metrics=oracle,
+        soft_family_classification_metrics=soft_family,
+        soft_family_strength_location_audit=strength_location,
         leakage_audit=leakage,
         evaluator_mode=mode,
     )
@@ -192,12 +210,19 @@ def run_stage3c_prototype_generator_learning(
         "claim_boundary": {
             "trains_supervised_classifier": False,
             "uses_mechanism_labels_for_predicted_assignment_generator": False,
+            "uses_family_labels_for_predicted_assignment_generator": False,
             "uses_mechanism_labels_for_model_selection": False,
+            "uses_family_labels_for_model_selection": False,
             "trains_from_stage3a_frozen_visible_features": True,
             "uses_stage3b1_learned_assignments": True,
             "rebuilds_visible_features_from_oracle_records_for_fit": False,
             "oracle_assignment_comparator_evaluator_only": mode == EVALUATOR_MODE_CONTROLLED_CATALOG,
             "oracle_assignment_comparator_skipped": mode == EVALUATOR_MODE_NO_ORACLE_LABELS,
+            "soft_family_classification_evaluator_only": mode == EVALUATOR_MODE_CONTROLLED_CATALOG,
+            "soft_family_classification_skipped": mode == EVALUATOR_MODE_NO_ORACLE_LABELS,
+            "soft_family_strength_location_audit_evaluator_only": mode == EVALUATOR_MODE_CONTROLLED_CATALOG,
+            "soft_family_strength_location_audit_skipped": mode == EVALUATOR_MODE_NO_ORACLE_LABELS,
+            "claims_physical_parameter_recovery": False,
             "conditional_visible_replay_not_unconditional_future_prediction": True,
             "discovers_cptp_gksl_channels": False,
         },
@@ -220,6 +245,8 @@ def run_stage3c_prototype_generator_learning(
         "prototype_generation_metrics": prototype_metrics,
         "predicted_assignment_metrics": predicted,
         "oracle_assignment_comparator_metrics": oracle,
+        "soft_family_classification_metrics": soft_family,
+        "soft_family_strength_location_audit": strength_location,
         "global_null_metrics": global_null,
         "stratified_null_metrics": stratified_null,
         "mean_only_baseline_metrics": mean_only,
@@ -904,6 +931,187 @@ def skipped_oracle_assignment_comparator(*, feature_names: list[str], folds: lis
     }
 
 
+def evaluate_soft_family_classification(
+    responsibilities: np.ndarray,
+    records: list[dict[str, object]],
+    *,
+    evaluator_mode: str,
+) -> dict[str, object]:
+    projection = _soft_family_projection(responsibilities, records)
+    resp = projection["responsibilities"]
+    family_names = projection["family_names"]
+    true_labels = projection["true_family_labels"]
+    row_family_prob = projection["row_family_probabilities"]
+    cluster_family_mass = projection["cluster_family_mass"]
+    cluster_family_prob = projection["cluster_family_probabilities"]
+    predicted_ids = np.argmax(row_family_prob, axis=1).astype(np.int64)
+    predicted_labels = [family_names[int(idx)] for idx in predicted_ids.tolist()]
+    metrics = _classification_metrics(true_labels, predicted_labels, class_names=family_names)
+    cluster_decoder = []
+    for cluster_idx, row in enumerate(cluster_family_prob.tolist()):
+        top_idx = int(np.argmax(row)) if row else 0
+        cluster_decoder.append(
+            {
+                "cluster": f"C{int(cluster_idx):03d}",
+                "dominant_family": family_names[top_idx],
+                "family_probabilities": {family_names[idx]: float(value) for idx, value in enumerate(row)},
+                "family_mass": {family_names[idx]: float(value) for idx, value in enumerate(cluster_family_mass[cluster_idx].tolist())},
+            }
+        )
+    passed = (
+        _is_one(metrics["normalized_mutual_info"])
+        and _is_one(metrics["adjusted_rand_index"])
+        and _is_one(metrics["balanced_accuracy"])
+        and _is_one(metrics["min_recall"])
+    )
+    return {
+        "schema": "scope_static_stage3c_soft_family_classification_metrics_v1",
+        "description": "Evaluator-only soft family decoder from Stage 3B.1 responsibilities; not used for learner fit or model selection.",
+        "evaluator_mode": _normalize_evaluator_mode(evaluator_mode),
+        "evaluator_only": True,
+        "skipped": False,
+        "used_for_training": False,
+        "used_for_model_selection": False,
+        "uses_evaluator_labels_to_name_family_decoder": True,
+        "uses_channels_ptms_kraus": False,
+        "row_count": int(resp.shape[0]),
+        "prototype_count": int(resp.shape[1]),
+        "family_names": family_names,
+        "family_count": int(len(family_names)),
+        "soft_probability_matrix_shape": [int(resp.shape[0]), int(len(family_names))],
+        "cluster_family_decoder": cluster_decoder,
+        "confusion_matrix": metrics["confusion_matrix"],
+        "support": metrics["support"],
+        "per_family_recall": metrics["per_family_recall"],
+        "balanced_accuracy": metrics["balanced_accuracy"],
+        "min_recall": metrics["min_recall"],
+        "adjusted_rand_index": metrics["adjusted_rand_index"],
+        "normalized_mutual_info": metrics["normalized_mutual_info"],
+        "passed": bool(passed),
+    }
+
+
+def skipped_soft_family_classification() -> dict[str, object]:
+    return {
+        "schema": "scope_static_stage3c_soft_family_classification_metrics_v1",
+        "description": "Skipped because controlled-catalog evaluator family labels are unavailable.",
+        "evaluator_mode": EVALUATOR_MODE_NO_ORACLE_LABELS,
+        "evaluator_only": False,
+        "skipped": True,
+        "used_for_training": False,
+        "used_for_model_selection": False,
+        "uses_evaluator_labels_to_name_family_decoder": False,
+        "uses_channels_ptms_kraus": False,
+        "passed": True,
+        "normalized_mutual_info": None,
+        "adjusted_rand_index": None,
+        "balanced_accuracy": None,
+        "min_recall": None,
+    }
+
+
+def evaluate_soft_family_strength_location_audit(
+    x: np.ndarray,
+    responsibilities: np.ndarray,
+    records: list[dict[str, object]],
+    *,
+    feature_names: list[str],
+    evaluator_mode: str,
+) -> dict[str, object]:
+    matrix = np.asarray(x, dtype=np.float64)
+    if matrix.ndim != 2:
+        raise ValueError("visible feature matrix must be 2D")
+    if int(matrix.shape[0]) != len(records):
+        raise ValueError(f"visible feature row count {matrix.shape[0]} does not match evaluator record count {len(records)}")
+    projection = _soft_family_projection(responsibilities, records)
+    row_family_prob = projection["row_family_probabilities"]
+    family_names = projection["family_names"]
+    true_family_labels = projection["true_family_labels"]
+    if int(row_family_prob.shape[0]) != int(matrix.shape[0]):
+        raise ValueError("soft family probability row count must match visible feature rows")
+
+    relative_records = _records_with_context_relative_location(records)
+    exact_labels = [str(record.get("oracle_label", record.get("mechanism_id", ""))) for record in records]
+    per_family = {}
+    for family_idx, family in enumerate(family_names):
+        hard_indices = [idx for idx, label in enumerate(true_family_labels) if label == family]
+        weights = np.asarray(row_family_prob[:, family_idx], dtype=np.float64)
+        per_family[family] = _location_strength_payload(
+            matrix,
+            weights,
+            [relative_records[idx] for idx in hard_indices],
+            all_context_records=relative_records,
+            feature_names=feature_names,
+            label=str(family),
+            support_count=len(hard_indices),
+            soft_assignment_mass=float(np.sum(weights)),
+        )
+
+    per_exact = {}
+    for label in sorted(set(exact_labels), key=_mechanism_sort_key):
+        indices = [idx for idx, value in enumerate(exact_labels) if value == label]
+        weights = np.zeros(int(matrix.shape[0]), dtype=np.float64)
+        weights[indices] = 1.0
+        per_exact[label] = _location_strength_payload(
+            matrix,
+            weights,
+            [relative_records[idx] for idx in indices],
+            all_context_records=relative_records,
+            feature_names=feature_names,
+            label=str(label),
+            support_count=len(indices),
+            soft_assignment_mass=float(np.sum(weights)),
+        )
+
+    return {
+        "schema": "scope_static_stage3c_soft_family_strength_location_audit_v1",
+        "description": "Evaluator-only location and strength audit for recovered mechanism families and exact catalog mechanisms.",
+        "evaluator_mode": _normalize_evaluator_mode(evaluator_mode),
+        "evaluator_only": True,
+        "skipped": False,
+        "used_for_training": False,
+        "used_for_model_selection": False,
+        "uses_stage3b1_responsibilities": True,
+        "uses_evaluator_labels_to_name_families": True,
+        "uses_oracle_records_for_location_and_parameter_audit": True,
+        "uses_channels_ptms_kraus": False,
+        "claims_physical_parameter_recovery": False,
+        "location_reference_frame": "context_relative",
+        "absolute_location_ids_are_provenance_only": True,
+        "visible_strength_definition": "Primary strength is the weighted shift of frozen learner-visible surface features after subtracting context-local visible means; global-reference strength is reported only as a comparison.",
+        "oracle_parameter_strength_definition": "Evaluator-only numeric summary of teacher record parameters; diagnostic only.",
+        "row_count": int(matrix.shape[0]),
+        "feature_count": int(matrix.shape[1]),
+        "family_count": int(len(family_names)),
+        "exact_mechanism_count": int(len(set(exact_labels))),
+        "per_family": per_family,
+        "per_exact_mechanism": per_exact,
+        "passed": True,
+    }
+
+
+def skipped_soft_family_strength_location_audit() -> dict[str, object]:
+    return {
+        "schema": "scope_static_stage3c_soft_family_strength_location_audit_v1",
+        "description": "Skipped because controlled-catalog evaluator records are unavailable.",
+        "evaluator_mode": EVALUATOR_MODE_NO_ORACLE_LABELS,
+        "evaluator_only": False,
+        "skipped": True,
+        "used_for_training": False,
+        "used_for_model_selection": False,
+        "uses_stage3b1_responsibilities": False,
+        "uses_evaluator_labels_to_name_families": False,
+        "uses_oracle_records_for_location_and_parameter_audit": False,
+        "uses_channels_ptms_kraus": False,
+        "claims_physical_parameter_recovery": False,
+        "location_reference_frame": "context_relative",
+        "absolute_location_ids_are_provenance_only": True,
+        "passed": True,
+        "per_family": {},
+        "per_exact_mechanism": {},
+    }
+
+
 def prototype_generation_metrics(
     *,
     predicted_assignment_metrics: dict[str, object],
@@ -1267,6 +1475,8 @@ def stage3c_acceptance_audit(
     stratified_null_metrics: dict[str, object],
     mean_only_baseline_metrics: dict[str, object],
     oracle_assignment_comparator_metrics: dict[str, object],
+    soft_family_classification_metrics: dict[str, object],
+    soft_family_strength_location_audit: dict[str, object],
     leakage_audit: dict[str, object],
     evaluator_mode: str = EVALUATOR_MODE_CONTROLLED_CATALOG,
 ) -> dict[str, object]:
@@ -1276,6 +1486,8 @@ def stage3c_acceptance_audit(
     stratified_null = dict(stratified_null_metrics.get("overall", {}))
     mean_only = dict(mean_only_baseline_metrics.get("overall", {}))
     oracle = dict(oracle_assignment_comparator_metrics.get("overall", {}))
+    soft_family = dict(soft_family_classification_metrics)
+    strength_location = dict(soft_family_strength_location_audit)
     b1_acceptance = dict(s3b1_metrics.get("acceptance_audit", {})) if isinstance(s3b1_metrics.get("acceptance_audit", {}), dict) else {}
     metric = _effective_primary_generation_likelihood_metric(predicted)
     primary_target_profile = _effective_primary_target_score_profile(predicted_assignment_metrics)
@@ -1302,6 +1514,38 @@ def stage3c_acceptance_audit(
             else bool(oracle_assignment_comparator_metrics.get("skipped", False))
         ),
         "oracle_comparator_not_used_for_model_selection": not bool(oracle_assignment_comparator_metrics.get("used_for_acceptance_model_selection", True)),
+        "soft_family_classification_evaluator_only_or_skipped": (
+            bool(soft_family.get("evaluator_only", False))
+            if mode == EVALUATOR_MODE_CONTROLLED_CATALOG
+            else bool(soft_family.get("skipped", False))
+        ),
+        "soft_family_classification_not_used_for_training": not bool(soft_family.get("used_for_training", True)),
+        "soft_family_classification_not_used_for_model_selection": not bool(soft_family.get("used_for_model_selection", True)),
+        "soft_family_classification_nmi_is_one": (
+            True if mode == EVALUATOR_MODE_NO_ORACLE_LABELS else _is_one(soft_family.get("normalized_mutual_info"))
+        ),
+        "soft_family_classification_ari_is_one": (
+            True if mode == EVALUATOR_MODE_NO_ORACLE_LABELS else _is_one(soft_family.get("adjusted_rand_index"))
+        ),
+        "soft_family_classification_balanced_accuracy_is_one": (
+            True if mode == EVALUATOR_MODE_NO_ORACLE_LABELS else _is_one(soft_family.get("balanced_accuracy"))
+        ),
+        "soft_family_classification_min_recall_is_one": (
+            True if mode == EVALUATOR_MODE_NO_ORACLE_LABELS else _is_one(soft_family.get("min_recall"))
+        ),
+        "soft_family_strength_location_audit_evaluator_only_or_skipped": (
+            bool(strength_location.get("evaluator_only", False))
+            if mode == EVALUATOR_MODE_CONTROLLED_CATALOG
+            else bool(strength_location.get("skipped", False))
+        ),
+        "soft_family_strength_location_not_used_for_training": not bool(strength_location.get("used_for_training", True)),
+        "soft_family_strength_location_not_used_for_model_selection": not bool(strength_location.get("used_for_model_selection", True)),
+        "soft_family_strength_location_is_context_relative": (
+            True if mode == EVALUATOR_MODE_NO_ORACLE_LABELS else str(strength_location.get("location_reference_frame", "")) == "context_relative"
+        ),
+        "soft_family_strength_does_not_claim_physical_parameter_recovery": not bool(
+            strength_location.get("claims_physical_parameter_recovery", True)
+        ),
         "primary_generation_likelihood_metric_reported": predicted.get(metric) is not None,
         "primary_categorical_population_nll_reported": (
             predicted.get(PRIMARY_GENERATION_LIKELIHOOD_METRIC) is not None if categorical_primary else True
@@ -2244,6 +2488,464 @@ def _normalize_rows(matrix: np.ndarray) -> np.ndarray:
     return clipped / row_sum
 
 
+def _normalize_rows_with_zeros(matrix: np.ndarray) -> np.ndarray:
+    arr = np.asarray(matrix, dtype=np.float64)
+    if arr.ndim != 2:
+        raise ValueError("matrix must be 2D")
+    clipped = np.maximum(arr, 0.0)
+    row_sum = np.sum(clipped, axis=1, keepdims=True)
+    if clipped.shape[1] == 0:
+        return clipped
+    out = np.divide(clipped, row_sum, out=np.zeros_like(clipped), where=row_sum > 0.0)
+    zero_rows = np.where(np.squeeze(row_sum, axis=1) <= 0.0)[0]
+    if zero_rows.size:
+        out[zero_rows, :] = 1.0 / float(clipped.shape[1])
+    return out
+
+
+def _soft_family_projection(responsibilities: np.ndarray, records: list[dict[str, object]]) -> dict[str, object]:
+    resp = _normalize_rows(responsibilities)
+    if int(resp.shape[0]) != len(records):
+        raise ValueError(f"assignment row count {resp.shape[0]} does not match evaluator record count {len(records)}")
+    true_labels = [mechanism_family_bucket(record) for record in records]
+    family_names = [name for name in FAMILY_BUCKETS if name in set(true_labels)]
+    family_names.extend(sorted(set(true_labels) - set(family_names)))
+    if not family_names:
+        family_names = list(FAMILY_BUCKETS)
+    family_to_idx = {name: idx for idx, name in enumerate(family_names)}
+    true_ids = np.asarray([family_to_idx[label] for label in true_labels], dtype=np.int64)
+    true_one_hot = np.zeros((len(true_labels), len(family_names)), dtype=np.float64)
+    for row, idx in enumerate(true_ids.tolist()):
+        true_one_hot[int(row), int(idx)] = 1.0
+    cluster_family_mass = resp.T @ true_one_hot
+    cluster_family_prob = _normalize_rows_with_zeros(cluster_family_mass)
+    row_family_prob = resp @ cluster_family_prob
+    return {
+        "responsibilities": resp,
+        "family_names": family_names,
+        "true_family_labels": true_labels,
+        "cluster_family_mass": cluster_family_mass,
+        "cluster_family_probabilities": cluster_family_prob,
+        "row_family_probabilities": row_family_prob,
+    }
+
+
+def _location_strength_payload(
+    matrix: np.ndarray,
+    weights: np.ndarray,
+    support_records: list[dict[str, object]],
+    *,
+    all_context_records: list[dict[str, object]],
+    feature_names: list[str],
+    label: str,
+    support_count: int,
+    soft_assignment_mass: float,
+) -> dict[str, object]:
+    return {
+        "label": str(label),
+        "support_count": int(support_count),
+        "soft_assignment_mass": float(soft_assignment_mass),
+        "visible_strength": _weighted_visible_strength(matrix, weights, feature_names=feature_names, records=all_context_records),
+        "context_relative_action_locations": _context_relative_location_summary(support_records),
+        "absolute_provenance_counts": _absolute_provenance_summary(support_records),
+        "oracle_parameter_strength": _oracle_parameter_strength(support_records),
+    }
+
+
+def _weighted_visible_strength(
+    matrix: np.ndarray,
+    weights: np.ndarray,
+    *,
+    feature_names: list[str],
+    records: list[dict[str, object]],
+) -> dict[str, object]:
+    arr = np.asarray(matrix, dtype=np.float64)
+    w = np.asarray(weights, dtype=np.float64).reshape(-1)
+    if arr.ndim != 2:
+        raise ValueError("visible feature matrix must be 2D")
+    if int(w.size) != int(arr.shape[0]):
+        raise ValueError("weight row count must match visible feature rows")
+    if len(records) != int(arr.shape[0]):
+        raise ValueError("record count must match visible feature rows")
+    names = [str(name) for name in feature_names]
+    if len(names) != int(arr.shape[1]):
+        names = [f"feature_{idx}" for idx in range(int(arr.shape[1]))]
+    surface_mask = np.asarray([not name.startswith(("meta__", "visible_metadata__")) for name in names], dtype=bool)
+    raw_mask = np.asarray([name.startswith("raw__") for name in names], dtype=bool)
+    if arr.shape[1] == 0 or arr.shape[0] == 0 or float(np.sum(w)) <= 0.0:
+        return {
+            "weight_mass": float(np.sum(w)),
+            "surface_feature_count": int(np.sum(surface_mask)),
+            "raw_feature_count": int(np.sum(raw_mask)),
+            "primary_reference_frame": "context_relative",
+            "context_relative_reference": _empty_strength_reference(),
+            "global_reference": _empty_strength_reference(),
+        }
+    mass = float(np.sum(w))
+    global_mean = np.mean(arr, axis=0)
+    global_scale = np.std(arr, axis=0)
+    global_scale = np.where(global_scale > 1.0e-12, global_scale, 1.0)
+    global_shift = (w[:, None] * arr).sum(axis=0) / mass - global_mean
+    global_z = global_shift / global_scale
+    context_z = _context_relative_weighted_z_shift(arr, w, records)
+    context_shift = context_z
+    context_count = int(len({_context_key(record) for record in records}))
+    return {
+        "weight_mass": mass,
+        "surface_feature_count": int(np.sum(surface_mask)),
+        "raw_feature_count": int(np.sum(raw_mask)),
+        "primary_reference_frame": "context_relative",
+        "context_count": context_count,
+        "context_relative_reference": _strength_reference_payload(names, context_shift, context_z, surface_mask=surface_mask, raw_mask=raw_mask),
+        "global_reference": _strength_reference_payload(names, global_shift, global_z, surface_mask=surface_mask, raw_mask=raw_mask),
+    }
+
+
+def _context_relative_weighted_z_shift(arr: np.ndarray, weights: np.ndarray, records: list[dict[str, object]]) -> np.ndarray:
+    residual = np.zeros_like(arr, dtype=np.float64)
+    by_context: dict[str, list[int]] = {}
+    for idx, record in enumerate(records):
+        by_context.setdefault(_context_key(record), []).append(int(idx))
+    for indices in by_context.values():
+        idx = np.asarray(indices, dtype=np.int64)
+        context = arr[idx]
+        mean = np.mean(context, axis=0)
+        scale = np.std(context, axis=0)
+        scale = np.where(scale > 1.0e-12, scale, 1.0)
+        residual[idx] = (context - mean[None, :]) / scale[None, :]
+    mass = float(np.sum(weights))
+    if mass <= 0.0:
+        return np.zeros(int(arr.shape[1]), dtype=np.float64)
+    return (weights[:, None] * residual).sum(axis=0) / mass
+
+
+def _empty_strength_reference() -> dict[str, object]:
+    return {
+        "overall_standardized_l2_shift": 0.0,
+        "overall_mean_abs_standardized_shift": 0.0,
+        "surface_standardized_l2_shift": 0.0,
+        "surface_mean_abs_standardized_shift": 0.0,
+        "raw_standardized_l2_shift": 0.0,
+        "raw_mean_abs_standardized_shift": 0.0,
+        "top_feature_shifts": [],
+        "top_surface_feature_shifts": [],
+        "top_raw_feature_shifts": [],
+        "block_strengths": {},
+    }
+
+
+def _strength_reference_payload(
+    names: list[str],
+    shift: np.ndarray,
+    z_shift: np.ndarray,
+    *,
+    surface_mask: np.ndarray,
+    raw_mask: np.ndarray,
+) -> dict[str, object]:
+    surface_z = z_shift[surface_mask]
+    raw_z = z_shift[raw_mask]
+    block_strengths = {}
+    for block, indices in _feature_block_indices(names).items():
+        idx = np.asarray(indices, dtype=np.int64)
+        values = z_shift[idx]
+        block_strengths[block] = {
+            "feature_count": int(idx.size),
+            "standardized_l2_shift": float(np.linalg.norm(values)),
+            "mean_abs_standardized_shift": float(np.mean(np.abs(values))) if values.size else 0.0,
+            "max_abs_standardized_shift": float(np.max(np.abs(values))) if values.size else 0.0,
+        }
+    return {
+        "overall_standardized_l2_shift": float(np.linalg.norm(z_shift)),
+        "overall_mean_abs_standardized_shift": float(np.mean(np.abs(z_shift))) if z_shift.size else 0.0,
+        "surface_standardized_l2_shift": float(np.linalg.norm(surface_z)) if surface_z.size else 0.0,
+        "surface_mean_abs_standardized_shift": float(np.mean(np.abs(surface_z))) if surface_z.size else 0.0,
+        "raw_standardized_l2_shift": float(np.linalg.norm(raw_z)) if raw_z.size else 0.0,
+        "raw_mean_abs_standardized_shift": float(np.mean(np.abs(raw_z))) if raw_z.size else 0.0,
+        "top_feature_shifts": _top_feature_shifts(names, shift, z_shift, limit=8),
+        "top_surface_feature_shifts": _top_feature_shifts(names, shift, z_shift, mask=surface_mask, limit=8),
+        "top_raw_feature_shifts": _top_feature_shifts(names, shift, z_shift, mask=raw_mask, limit=8),
+        "block_strengths": block_strengths,
+    }
+
+
+def _top_feature_shifts(
+    feature_names: list[str],
+    shift: np.ndarray,
+    z_shift: np.ndarray,
+    *,
+    mask: np.ndarray | None = None,
+    limit: int,
+) -> list[dict[str, object]]:
+    idxs = np.arange(int(len(feature_names)), dtype=np.int64)
+    if mask is not None:
+        idxs = idxs[np.asarray(mask, dtype=bool)]
+    ranked = sorted(idxs.tolist(), key=lambda idx: (-abs(float(z_shift[int(idx)])), str(feature_names[int(idx)])))
+    return [
+        {
+            "feature_name": str(feature_names[int(idx)]),
+            "signed_shift": float(shift[int(idx)]),
+            "standardized_shift": float(z_shift[int(idx)]),
+            "abs_standardized_shift": abs(float(z_shift[int(idx)])),
+        }
+        for idx in ranked[: max(0, int(limit))]
+    ]
+
+
+def _records_with_context_relative_location(records: list[dict[str, object]]) -> list[dict[str, object]]:
+    out = [dict(record) for record in records]
+    by_context: dict[str, list[int]] = {}
+    for idx, record in enumerate(out):
+        by_context.setdefault(_context_key(record), []).append(idx)
+    for context_key, indices in by_context.items():
+        context_records = [out[idx] for idx in indices]
+        unique_locations = sorted({int(record["location_id"]) for record in context_records if _is_int_like(record.get("location_id"))})
+        location_rank = {value: idx for idx, value in enumerate(unique_locations)}
+        location_den = max(1, len(unique_locations) - 1)
+        unique_qubits = sorted({int(value) for record in context_records for value in _list_values(record.get("qubits", [])) if _is_int_like(value)})
+        qubit_rank = {value: idx for idx, value in enumerate(unique_qubits)}
+        qubit_den = max(1, len(unique_qubits) - 1)
+        for idx in indices:
+            record = out[idx]
+            qubits = [int(value) for value in _list_values(record.get("qubits", [])) if _is_int_like(value)]
+            loc = record.get("location_id")
+            loc_fraction = None
+            loc_rank = None
+            if _is_int_like(loc) and int(loc) in location_rank:
+                loc_rank = int(location_rank[int(loc)])
+                loc_fraction = float(loc_rank / float(location_den))
+            qubit_fractions = [float(qubit_rank[q] / float(qubit_den)) for q in qubits if q in qubit_rank]
+            center = float(np.mean(qubit_fractions)) if qubit_fractions else None
+            span = float(max(qubit_fractions) - min(qubit_fractions)) if qubit_fractions else None
+            record["_context_relative_location"] = {
+                "context_key": str(context_key),
+                "context_record_count": int(len(indices)),
+                "context_unique_location_count": int(len(unique_locations)),
+                "context_unique_qubit_count": int(len(unique_qubits)),
+                "location_rank_in_context": loc_rank,
+                "location_fraction_in_context": loc_fraction,
+                "location_bucket_in_context": _fraction_bucket(loc_fraction),
+                "qubit_center_fraction_in_context": center,
+                "qubit_span_fraction_in_context": span,
+                "qubit_center_bucket_in_context": _fraction_bucket(center),
+                "qubit_arity": int(len(qubits)),
+                "instruction": str(record.get("instruction", "unknown")),
+            }
+    return out
+
+
+def _context_relative_location_summary(records: list[dict[str, object]]) -> dict[str, object]:
+    rows = [dict(record.get("_context_relative_location", {})) for record in records if isinstance(record.get("_context_relative_location", {}), dict)]
+    location_fractions = [float(row["location_fraction_in_context"]) for row in rows if row.get("location_fraction_in_context") is not None]
+    qubit_centers = [float(row["qubit_center_fraction_in_context"]) for row in rows if row.get("qubit_center_fraction_in_context") is not None]
+    qubit_spans = [float(row["qubit_span_fraction_in_context"]) for row in rows if row.get("qubit_span_fraction_in_context") is not None]
+    cells = [
+        "|".join(
+            [
+                str(row.get("location_bucket_in_context", "unknown")),
+                str(row.get("qubit_center_bucket_in_context", "unknown")),
+                f"arity={int(row.get('qubit_arity', 0) or 0)}",
+                str(row.get("instruction", "unknown")),
+            ]
+        )
+        for row in rows
+    ]
+    return {
+        "reference_frame": "context_relative",
+        "record_count": int(len(records)),
+        "context_count": int(len(set(str(row.get("context_key", "")) for row in rows))),
+        "location_fraction_in_context": _numeric_summary(np.asarray(location_fractions, dtype=np.float64)),
+        "qubit_center_fraction_in_context": _numeric_summary(np.asarray(qubit_centers, dtype=np.float64)),
+        "qubit_span_fraction_in_context": _numeric_summary(np.asarray(qubit_spans, dtype=np.float64)),
+        "location_bucket_counts": _value_counts([row.get("location_bucket_in_context", "unknown") for row in rows]),
+        "qubit_center_bucket_counts": _value_counts([row.get("qubit_center_bucket_in_context", "unknown") for row in rows]),
+        "qubit_arity_counts": _value_counts([row.get("qubit_arity", 0) for row in rows]),
+        "instruction_counts": _value_counts([row.get("instruction", "unknown") for row in rows]),
+        "top_relative_location_cells": _top_counts(cells),
+    }
+
+
+def _absolute_provenance_summary(records: list[dict[str, object]]) -> dict[str, object]:
+    qubits: list[object] = []
+    locations: list[object] = []
+    circuits: list[object] = []
+    probe_indices: list[object] = []
+    for record in records:
+        qubits.extend(_list_values(record.get("qubits", [])))
+        probe_indices.extend(_list_values(record.get("probe_indices", [])))
+        if record.get("location_id") is not None:
+            locations.append(record.get("location_id"))
+        if record.get("circuit_id") is not None:
+            circuits.append(record.get("circuit_id"))
+    return {
+        "provenance_only": True,
+        "record_count": int(len(records)),
+        "qubit_counts": _value_counts(qubits),
+        "location_id_counts": _value_counts(locations),
+        "circuit_id_counts": _value_counts(circuits),
+        "probe_index_counts": _value_counts(probe_indices),
+    }
+
+
+def _oracle_parameter_strength(records: list[dict[str, object]]) -> dict[str, object]:
+    by_name: dict[str, list[float]] = {}
+    all_values: list[float] = []
+    records_with_numeric = 0
+    for record in records:
+        leaves = _numeric_leaves(record.get("parameters", {}))
+        if leaves:
+            records_with_numeric += 1
+        for name, value in leaves:
+            by_name.setdefault(name, []).append(float(value))
+            all_values.append(float(value))
+    values = np.asarray(all_values, dtype=np.float64)
+    summary = _numeric_summary(values)
+    summary.update(
+        {
+            "record_count": int(len(records)),
+            "records_with_numeric_parameters": int(records_with_numeric),
+            "numeric_parameter_count": int(values.size),
+            "per_parameter": {name: _numeric_summary(np.asarray(raw, dtype=np.float64)) for name, raw in sorted(by_name.items())},
+        }
+    )
+    return summary
+
+
+def _numeric_summary(values: np.ndarray) -> dict[str, object]:
+    arr = np.asarray(values, dtype=np.float64)
+    if arr.size == 0:
+        return {"count": 0, "signed_mean": 0.0, "mean_abs": 0.0, "max_abs": 0.0, "rms": 0.0, "min": 0.0, "max": 0.0}
+    return {
+        "count": int(arr.size),
+        "signed_mean": float(np.mean(arr)),
+        "mean_abs": float(np.mean(np.abs(arr))),
+        "max_abs": float(np.max(np.abs(arr))),
+        "rms": float(np.sqrt(np.mean(arr * arr))),
+        "min": float(np.min(arr)),
+        "max": float(np.max(arr)),
+    }
+
+
+def _numeric_leaves(value: object, *, prefix: str = "") -> list[tuple[str, float]]:
+    if isinstance(value, bool):
+        return []
+    if isinstance(value, (int, float, np.integer, np.floating)):
+        number = float(value)
+        return [(prefix or "value", number)] if np.isfinite(number) else []
+    if isinstance(value, dict):
+        leaves: list[tuple[str, float]] = []
+        for key, child in sorted(value.items(), key=lambda item: str(item[0])):
+            leaves.extend(_numeric_leaves(child, prefix=f"{prefix}.{key}" if prefix else str(key)))
+        return leaves
+    if isinstance(value, (list, tuple)):
+        leaves = []
+        for idx, child in enumerate(value):
+            leaves.extend(_numeric_leaves(child, prefix=f"{prefix}.{idx}" if prefix else str(idx)))
+        return leaves
+    return []
+
+
+def _list_values(value: object) -> list[object]:
+    if isinstance(value, (list, tuple)):
+        return list(value)
+    if value is None:
+        return []
+    return [value]
+
+
+def _value_counts(values: list[object]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for value in values:
+        key = str(value)
+        counts[key] = int(counts.get(key, 0)) + 1
+    return dict(sorted(counts.items(), key=lambda item: (-int(item[1]), item[0])))
+
+
+def _top_counts(values: list[object], *, limit: int = 8) -> list[dict[str, object]]:
+    return [{"value": key, "count": int(count)} for key, count in list(_value_counts(values).items())[: max(0, int(limit))]]
+
+
+def _context_key(record: dict[str, object]) -> str:
+    if record.get("circuit_id") is not None:
+        return f"circuit:{record.get('circuit_id')}"
+    if record.get("context_group") is not None:
+        return f"context:{record.get('context_group')}"
+    return "context:global"
+
+
+def _fraction_bucket(value: object) -> str:
+    if value is None:
+        return "unknown"
+    number = float(value)
+    if number <= 1.0 / 3.0:
+        return "leading"
+    if number <= 2.0 / 3.0:
+        return "middle"
+    return "trailing"
+
+
+def _is_int_like(value: object) -> bool:
+    if isinstance(value, bool):
+        return False
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return False
+    return bool(np.isfinite(number) and abs(number - int(number)) <= 1.0e-12)
+
+
+def _mechanism_sort_key(label: str) -> tuple[int, str]:
+    text = str(label)
+    if text.startswith("M") and text[1:].isdigit():
+        return (int(text[1:]), text)
+    return (10_000, text)
+
+
+def _classification_metrics(true_labels: list[str], predicted_labels: list[str], *, class_names: list[str]) -> dict[str, object]:
+    if len(true_labels) != len(predicted_labels):
+        raise ValueError("true and predicted label counts must match")
+    names = [name for name in class_names if name in set(true_labels) or name in set(predicted_labels)]
+    names.extend(sorted((set(true_labels) | set(predicted_labels)) - set(names)))
+    name_to_idx = {name: idx for idx, name in enumerate(names)}
+    confusion = np.zeros((len(names), len(names)), dtype=np.int64)
+    support = {name: 0 for name in names}
+    correct = {name: 0 for name in names}
+    for true, pred in zip(true_labels, predicted_labels):
+        if true not in name_to_idx or pred not in name_to_idx:
+            continue
+        confusion[name_to_idx[true], name_to_idx[pred]] += 1
+        support[true] += 1
+        if true == pred:
+            correct[true] += 1
+    recalls = [float(correct[name]) / float(support[name]) if support[name] else 0.0 for name in names]
+    true_ids = _encode_with_names(true_labels, names)
+    pred_ids = _encode_with_names(predicted_labels, names)
+    return {
+        "class_names": names,
+        "support": {name: int(value) for name, value in support.items()},
+        "per_family_recall": {name: float(recall) for name, recall in zip(names, recalls)},
+        "balanced_accuracy": float(np.mean(recalls)) if recalls else 1.0,
+        "min_recall": float(min(recalls)) if recalls else 1.0,
+        "adjusted_rand_index": float(adjusted_rand_index(true_ids, pred_ids)),
+        "normalized_mutual_info": float(normalized_mutual_info(true_ids, pred_ids)),
+        "confusion_matrix": {
+            "rows_true_family": names,
+            "columns_predicted_family": names,
+            "matrix": [[int(value) for value in row] for row in confusion.tolist()],
+        },
+    }
+
+
+def _encode_with_names(labels: list[str], names: list[str]) -> list[int]:
+    mapping = {name: idx for idx, name in enumerate(names)}
+    return [int(mapping[label]) for label in labels]
+
+
+def _is_one(value: object, *, atol: float = 1.0e-12) -> bool:
+    if value is None:
+        return False
+    return bool(abs(float(value) - 1.0) <= float(atol))
+
+
 def _indices(values: object, *, record_count: int) -> np.ndarray:
     if not isinstance(values, list):
         return np.zeros(0, dtype=np.int64)
@@ -2339,6 +3041,8 @@ def _write_outputs(output: Path, result: dict[str, object]) -> None:
         "target_score_profile_report.json": result["prototype_generation_metrics"]["target_score_profile_report"],
         "predicted_assignment_metrics.json": result["predicted_assignment_metrics"],
         "oracle_assignment_comparator_metrics.json": result["oracle_assignment_comparator_metrics"],
+        "soft_family_classification_metrics.json": result["soft_family_classification_metrics"],
+        "soft_family_strength_location_audit.json": result["soft_family_strength_location_audit"],
         "global_null_metrics.json": result["global_null_metrics"],
         "stratified_null_metrics.json": result["stratified_null_metrics"],
         "mean_only_baseline_metrics.json": result["mean_only_baseline_metrics"],
@@ -2363,6 +3067,7 @@ def format_stage3c_summary(result: dict[str, object]) -> str:
     global_null = dict(dict(result.get("global_null_metrics", {})).get("overall", {}))
     stratified_null = dict(dict(result.get("stratified_null_metrics", {})).get("overall", {}))
     oracle = dict(dict(result.get("oracle_assignment_comparator_metrics", {})).get("overall", {}))
+    family = dict(result.get("soft_family_classification_metrics", {}))
     primary_metric = str(dict(result.get("prototype_generation_metrics", {})).get("primary_generation_likelihood_metric", PRIMARY_GENERATION_LIKELIHOOD_METRIC))
     shuffle = dict(dict(result.get("assignment_shuffle_audit", {})).get("aggregate", {}))
     scramble = dict(dict(dict(result.get("feature_scramble_audit", {})).get("aggregate", {})).get("predicted_assignment", {}))
@@ -2387,6 +3092,7 @@ def format_stage3c_summary(result: dict[str, object]) -> str:
             f"- Global-null Gaussian density NLL: `{_format_metric(global_null.get('gaussian_density_nll'))}`",
             f"- Predicted-assignment raw MAE: `{_format_metric(predicted.get('raw_visible_feature_mae'))}`",
             f"- Oracle-comparator raw MAE: `{_format_metric(oracle.get('raw_visible_feature_mae'))}`",
+            f"- Soft-family NMI / ARI: `{_format_metric(family.get('normalized_mutual_info'))}` / `{_format_metric(family.get('adjusted_rand_index'))}`",
             "",
             "## Claim Boundary",
             "",
