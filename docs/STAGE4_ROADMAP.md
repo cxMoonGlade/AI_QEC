@@ -278,6 +278,12 @@ Required S4.6 controls:
 - `control_no_visible_transform`;
 - `control_target_mean_std_only`.
 
+S4.6 also reports `dmle_qec_visible_marginal_mle` as a baseline comparator.
+Because S4.6 consumes frozen public syndrome-response signatures rather than a
+DEM parity-map likelihood object, this is a visible-surface projection of the
+dMLE-style independent marginal MLE baseline, not the full upstream
+DMLE-QEC TensorNetwork/DEM implementation.
+
 Any deterministic visible shape transform must be recorded as a
 `visible_surrogate_shape_transform` with `claims_physical_channel_sampling` and
 `claims_cptp_gksl_generation` set to `false`.

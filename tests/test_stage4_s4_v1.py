@@ -7,7 +7,11 @@ import numpy as np
 
 from scope_static.google.s4_bridge_surface import compare_stage4_bridge_contract, write_stage4_synthetic_google_shaped_freeze
 from scope_static.mechanism_discovery.google_transfer import run_stage4_google_transfer, run_stage4_transfer_diagnostics
-from scope_static.mechanism_discovery.google_unit_source import CONTROL_NAMES, run_stage4_google_unit_source_expansion
+from scope_static.mechanism_discovery.google_unit_source import (
+    CONTROL_NAMES,
+    _target_mean_std_only_control_matrix,
+    run_stage4_google_unit_source_expansion,
+)
 from scope_static.mechanism_discovery.assignment_geometry import run_stage4_assignment_geometry_repair
 from scope_static.mechanism_discovery.source_ceiling import run_stage4_source_surface_survival_audit
 from scope_static.mechanism_discovery.source_pretrain import run_stage4_source_pretrain
@@ -248,6 +252,13 @@ def test_stage4_google_unit_source_expansion_writes_split_clean_freeze_and_contr
     assert result["expanded_transfer_report"]["strict_frozen_transfer"]["raw_feature_count"] > 0
     assert "full_visible_mae" in result["expanded_transfer_report"]["strict_frozen_transfer"]
     assert set(CONTROL_NAMES).issubset(set(result["controls"]["control_names"]))
+    assert result["controls"]["control_construction"]["control_target_mean_std_only"]["uses_source_row_geometry"] is False
+    assert result["controls"]["control_construction"]["control_target_mean_std_only"]["preserves_source_standardized_geometry"] is False
+    assert "dmle_qec_visible_marginal_mle" in result["controls"]["baseline_names"]
+    dmle_metrics = result["expanded_transfer_report"]["controls"]["dmle_qec_visible_marginal_mle"]
+    assert dmle_metrics["baseline_family"] == "dmle_qec"
+    assert dmle_metrics["uses_dem_parity_map"] is False
+    assert dmle_metrics["baseline_metadata"]["baseline_variant"] == "scope_static_dmle_qec_style_independent_dem_mle"
     assert result["acceptance_audit"]["checks"]["freeze_contains_no_downstream_transfer_diagnostics"] is True
     assert (output / "mode_design_split_manifest.json").exists()
     assert (output / "mode_design_audit.json").exists()
@@ -282,6 +293,29 @@ def test_stage4_google_unit_source_expansion_writes_split_clean_freeze_and_contr
         "claim_boundary.json",
     ]:
         assert (freeze / name).exists()
+
+
+def test_stage4_target_mean_std_control_does_not_preserve_source_geometry() -> None:
+    google = np.asarray(
+        [
+            [0.1, 0.2, 10.0],
+            [0.3, 0.4, 20.0],
+            [0.5, 0.6, 30.0],
+            [0.7, 0.8, 40.0],
+        ],
+        dtype=np.float64,
+    )
+    control = _target_mean_std_only_control_matrix(
+        google_raw=google,
+        split={"design": [0, 1, 2]},
+        row_count=4,
+        seed=123,
+    )
+    affine_preserving = (google - np.mean(google, axis=0, keepdims=True)) / np.std(google, axis=0, keepdims=True)
+    control_z = (control - np.mean(control, axis=0, keepdims=True)) / np.std(control, axis=0, keepdims=True)
+
+    assert control.shape == google.shape
+    assert not np.allclose(control_z, affine_preserving)
 
 
 def test_stage4_bridge_contract_comparator_detects_mismatch(tmp_path: Path) -> None:

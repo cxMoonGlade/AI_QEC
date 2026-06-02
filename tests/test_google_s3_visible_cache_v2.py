@@ -146,6 +146,53 @@ def test_google_s3_visible_surface_v2_consumes_aggregate_cache(tmp_path: Path) -
     assert np.allclose(direct_matrix, aggregate_matrix)
 
 
+def test_google_s3_visible_aggregate_v2_parallel_matches_serial(tmp_path: Path) -> None:
+    root = write_tiny_google_s3_dataset(tmp_path, contexts=4)
+    cache = tmp_path / "cache_v2"
+    kwargs = {
+        "max_contexts": 4,
+        "round_bands": ("early", "mid", "late"),
+        "region_families": ("boundary_adjacent", "logical_support_neighborhood", "full_patch"),
+        "shotblocks_per_context": 2,
+        "shotblock_size": 2,
+        "min_shotblock_size": 2,
+    }
+    write_google_s3_visible_cache_v2(
+        dataset_root=root,
+        cache_dir=cache,
+        hash_source_files=False,
+        **kwargs,
+    )
+
+    serial = write_google_s3_visible_aggregate_cache_v2(
+        cache_dir=cache,
+        round_bands=kwargs["round_bands"],
+        region_families=kwargs["region_families"],
+        num_workers=1,
+    )
+    serial_rows = {
+        str(row["cache_context_id"]): np.load(cache / str(row["arrays_path"]))["feature_rows"].copy()
+        for row in serial["aggregate_contexts"]
+    }
+    parallel = write_google_s3_visible_aggregate_cache_v2(
+        cache_dir=cache,
+        round_bands=kwargs["round_bands"],
+        region_families=kwargs["region_families"],
+        num_workers=2,
+    )
+
+    assert parallel["decision"] == "google_s3_visible_aggregate_cache_v2_passed"
+    assert parallel["num_workers"] == 2
+    assert parallel["parallelism"]["mode"] == "threaded_context_aggregation"
+    assert [row["cache_context_id"] for row in serial["aggregate_contexts"]] == [
+        row["cache_context_id"] for row in parallel["aggregate_contexts"]
+    ]
+    for row in parallel["aggregate_contexts"]:
+        context_id = str(row["cache_context_id"])
+        parallel_rows = np.load(cache / str(row["arrays_path"]))["feature_rows"]
+        assert np.allclose(serial_rows[context_id], parallel_rows, rtol=1e-12, atol=1e-12)
+
+
 def test_google_s3_visible_cache_v2_config_wrapper(tmp_path: Path) -> None:
     root = write_tiny_google_s3_dataset(tmp_path, contexts=3)
     cache = tmp_path / "configured_cache_v2"
@@ -208,6 +255,7 @@ def test_google_s3_visible_aggregate_v2_config_wrapper(tmp_path: Path) -> None:
                     "cache_dir": str(cache),
                     "round_bands": ["early", "mid", "late"],
                     "region_families": ["boundary_adjacent", "logical_support_neighborhood", "full_patch"],
+                    "num_workers": 2,
                 }
             },
             sort_keys=False,
@@ -218,4 +266,5 @@ def test_google_s3_visible_aggregate_v2_config_wrapper(tmp_path: Path) -> None:
     result = run_google_s3_visible_aggregate_v2_from_config(config_path=aggregate_config)
 
     assert result["decision"] == "google_s3_visible_aggregate_cache_v2_passed"
+    assert result["num_workers"] == 2
     assert (cache / "aggregates" / "aggregate_manifest.json").exists()

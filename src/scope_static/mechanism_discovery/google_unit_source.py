@@ -9,6 +9,7 @@ from typing import Iterable, Mapping
 import numpy as np
 import yaml
 
+from scope_static.dem.baselines import baseline_metadata
 from scope_static.dem.metrics import normalized_mutual_info
 from scope_static.google.s3_visible_common import _json_safe
 from scope_static.google.s3_visible_surface_v2 import (
@@ -56,6 +57,10 @@ CONTROL_NAMES = (
     "control_family_bucket_shuffled",
     "control_no_visible_transform",
     "control_target_mean_std_only",
+)
+
+BASELINE_NAMES = (
+    "dmle_qec_visible_marginal_mle",
 )
 
 FAMILY_BUCKETS = (
@@ -747,13 +752,41 @@ def _control_matrices(
             family_shuffled[np.ix_(row_idx, raw_cols)] = family_shuffled[np.ix_(shuffled, raw_cols)]
     controls["control_family_bucket_shuffled"] = family_shuffled
     controls["control_no_visible_transform"] = np.asarray(no_transform_matrix, dtype=np.float64)
-    design = [int(idx) for idx in split.get("design", [])]
-    target_mean = np.mean(google_raw[design], axis=0) if design else np.mean(google_raw, axis=0)
-    target_std = np.std(google_raw[design], axis=0) if design else np.std(google_raw, axis=0)
-    source_mean = np.mean(main_matrix, axis=0)
-    source_std = np.where(np.std(main_matrix, axis=0) > 1.0e-12, np.std(main_matrix, axis=0), 1.0)
-    controls["control_target_mean_std_only"] = _finite(((main_matrix - source_mean[None, :]) / source_std[None, :]) * target_std[None, :] + target_mean[None, :])
+    controls["control_target_mean_std_only"] = _target_mean_std_only_control_matrix(
+        google_raw=google_raw,
+        split=split,
+        row_count=int(main_matrix.shape[0]),
+        seed=int(seed) + 1009,
+    )
     return controls
+
+
+def _target_mean_std_only_control_matrix(
+    *,
+    google_raw: np.ndarray,
+    split: Mapping[str, object],
+    row_count: int,
+    seed: int,
+) -> np.ndarray:
+    """Build a moment-only control without preserving source row geometry."""
+
+    target = np.asarray(google_raw, dtype=np.float64)
+    design = [int(idx) for idx in split.get("design", [])]
+    design_matrix = target[design] if design else target
+    feature_count = int(target.shape[1]) if target.ndim == 2 else 0
+    if int(row_count) <= 0 or feature_count <= 0:
+        return np.zeros((max(0, int(row_count)), max(0, feature_count)), dtype=np.float64)
+    target_mean = np.mean(design_matrix, axis=0)
+    target_std = np.std(design_matrix, axis=0)
+    rng = np.random.default_rng(int(seed))
+    z = rng.standard_normal(size=(int(row_count), feature_count))
+    if int(row_count) >= 2:
+        z = z - np.mean(z, axis=0, keepdims=True)
+        z_scale = np.where(np.std(z, axis=0, keepdims=True) > 1.0e-12, np.std(z, axis=0, keepdims=True), 1.0)
+        z = z / z_scale
+    else:
+        z[:] = 0.0
+    return _finite(target_mean[None, :] + z * target_std[None, :])
 
 
 def _calibrate_source_visible_surface_to_design_split(
@@ -921,12 +954,19 @@ def _expanded_transfer_report(
         heldout_indices=heldout,
         feature_names=feature_names,
     )
+    dmle_visible = _dmle_qec_visible_marginal_mle_baseline(
+        target_matrix=google_raw,
+        calibration_indices=calibration,
+        heldout_indices=heldout,
+        feature_names=feature_names,
+    )
     all_controls = dict(control_metrics)
     all_controls.update(
         {
             "random_codebook_transfer": random_codebook,
             "train_on_google_only": train_on_google,
             "global_null": global_null,
+            "dmle_qec_visible_marginal_mle": dmle_visible,
         }
     )
     strict_gap = _gap_closure(strict, global_null=global_null, train_on_google=train_on_google)
@@ -937,6 +977,8 @@ def _expanded_transfer_report(
         "strict_beats_random_codebook_block": _better(strict, random_codebook, "block_normalized"),
         "strict_beats_global_null_raw": _better(strict, global_null, "raw_target_only"),
         "strict_beats_global_null_block": _better(strict, global_null, "block_normalized"),
+        "strict_beats_dmle_qec_visible_marginal_raw": _better(strict, dmle_visible, "raw_target_only"),
+        "strict_beats_dmle_qec_visible_marginal_block": _better(strict, dmle_visible, "block_normalized"),
         "strict_or_adapter_beats_train_on_google_or_random_raw": (
             _better(strict, train_on_google, "raw_target_only")
             or _better(adapter, train_on_google, "raw_target_only")
@@ -1046,6 +1088,41 @@ def _random_codebook_transfer(
     heads = _fit_replay_heads(target_matrix[calibration_indices], calib_assign, code_count=int(centers.shape[0]))
     recon = heads[heldout_assign] if heldout_assign.size else np.zeros_like(target_matrix[heldout_indices])
     return _stage4_6_replay_metrics(target_matrix[heldout_indices], recon, feature_names=feature_names, model_family="random_codebook_transfer")
+
+
+def _dmle_qec_visible_marginal_mle_baseline(
+    *,
+    target_matrix: np.ndarray,
+    calibration_indices: list[int],
+    heldout_indices: list[int],
+    feature_names: list[str],
+) -> dict[str, object]:
+    mean = np.mean(target_matrix[calibration_indices], axis=0, keepdims=True)
+    recon = np.repeat(mean, len(heldout_indices), axis=0)
+    metrics = _stage4_6_replay_metrics(
+        target_matrix[heldout_indices],
+        recon,
+        feature_names=feature_names,
+        model_family="dmle_qec_visible_marginal_mle",
+    )
+    metadata = baseline_metadata("dmle_qec")
+    metrics.update(
+        {
+            "baseline_metadata": metadata,
+            "baseline_family": "dmle_qec",
+            "visible_surface_projection": True,
+            "uses_visible_signature_matrix_only": True,
+            "uses_dem_parity_map": False,
+            "uses_upstream_dmle_qec_tensor_network": False,
+            "scope_note": (
+                "S4.6 consumes frozen public syndrome-response signatures, not a DEM parity-map "
+                "likelihood object. This baseline is the legal visible-surface projection of "
+                "dMLE-style independent marginal MLE, included for heldout replay comparison; "
+                "it is not the full upstream DMLE-QEC TensorNetwork path."
+            ),
+        }
+    )
+    return metrics
 
 
 def _fit_replay_heads(target: np.ndarray, assignments: np.ndarray, *, code_count: int) -> np.ndarray:
@@ -1260,6 +1337,7 @@ def _s4_6_acceptance(
         "source_google_distance_reported_on_heldout": bool(distance.get("heldout_eval_only", False)),
         "expanded_transfer_reported_on_heldout": bool(transfer.get("heldout_eval_only", False)),
         "s4_6_controls_reported": all(name in dict(transfer.get("controls", {})) for name in CONTROL_NAMES),
+        "s4_6_dmle_visible_baseline_reported": all(name in dict(transfer.get("controls", {})) for name in BASELINE_NAMES),
     }
     checks.update({f"transfer_{key}": bool(value) for key, value in transfer_checks.items()})
     return {
@@ -1871,8 +1949,27 @@ def _control_report(controls: Mapping[str, np.ndarray], transfer: Mapping[str, o
     return {
         "schema": "scope_static_stage4_6_controls_v1",
         "control_names": list(CONTROL_NAMES),
+        "baseline_names": list(BASELINE_NAMES),
         "matrix_shapes": {name: [int(dim) for dim in np.asarray(matrix).shape] for name, matrix in sorted(controls.items())},
         "heldout_transfer_metrics": {name: metrics.get(name, {}) for name in CONTROL_NAMES},
+        "heldout_baseline_metrics": {name: metrics.get(name, {}) for name in BASELINE_NAMES},
+        "control_construction": {
+            "control_target_mean_std_only": {
+                "uses_google_design_split_rows": True,
+                "uses_google_validation_rows": False,
+                "uses_google_heldout_eval_rows": False,
+                "uses_source_row_geometry": False,
+                "preserves_source_standardized_geometry": False,
+                "construction": "independent deterministic Gaussian moment match from Google design mean/std only",
+                "purpose": "pure marginal/statistical alignment control without source codebook geometry",
+            },
+            "dmle_qec_visible_marginal_mle": {
+                "baseline_family": "dmle_qec",
+                "visible_surface_projection": True,
+                "uses_dem_parity_map": False,
+                "uses_upstream_dmle_qec_tensor_network": False,
+            },
+        },
         "used_for_model_selection": False,
     }
 
