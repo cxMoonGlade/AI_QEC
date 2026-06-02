@@ -31,9 +31,10 @@ Experiment command wrappers should be grouped by experiment family. Stage 3
 wrappers live under `scope_static.experiments.stage3`; Willow/Google hardware-data
 wrappers live under `scope_static.experiments.willow_data`; QEC noise catalog/S2D wrappers live
 under `scope_static.experiments.qec_noise_catalog`; Stage 1/Stage 2 DEM wrappers live
-under `scope_static.experiments.static`. Do not add new flat `run_stage3*`,
-`run_google*`, `run_static*`, `run_phyc*`, `run_layer*`, or `run_s2d*` modules
-under `scope_static.experiments`.
+under `scope_static.experiments.static`; Stage 4 bridge/transfer wrappers live
+under `scope_static.experiments.stage4`. Do not add new flat `run_stage3*`,
+`run_stage4*`, `run_google*`, `run_static*`, `run_phyc*`, `run_layer*`, or
+`run_s2d*` modules under `scope_static.experiments`.
 
 The project-level problem is the six-axis physical generation problem: prove
 that a physically constrained generation model holds simultaneously in
@@ -105,6 +106,11 @@ scope-google-s3-visible-cache-v2 --config configs/scope_static/google_s3_visible
 scope-google-s3-visible-aggregate-v2 --config configs/scope_static/google_s3_visible_aggregate_v2.yaml
 scope-google-s3-visible-adapter-v2 --config configs/scope_static/google_s3_visible_adapter_v2.yaml
 ```
+
+The cache and aggregate configs support `num_workers`; current configs use 8
+workers and emit per-block wall-clock timing. If a console script is missing
+after code changes, reinstall the editable package with
+`conda run -n aiqec python -m pip install -e .` or run the module entrypoint.
 
 The old Google DEM/static predictive runner is archived as a historical
 diagnostic, not a mainline Google path. The V1 fixed-window adapter remains for
@@ -230,8 +236,8 @@ scope_static.mechanism_observability
   M1 calibration, and RZZ probe adapters
 
 scope_static.mechanism_discovery
-  Stage 3 latent assignment, alias-ceiling, prototype, generator, and robustness
-  artifacts
+  Stage 3/4 latent assignment, alias-ceiling, prototype, generator, transfer,
+  Google-unit source expansion, and robustness artifacts
 ```
 
 Do not rebuild a broad `scope_static.physical` package. New workflow code should
@@ -260,6 +266,16 @@ teacher paths, and JSON artifacts through `scope_static.mechanism_discovery.arti
 Public Stage 3 run functions are exported from `scope_static.mechanism_discovery`;
 do not add new flat Stage 3 modules, rebuild visible features from
 `oracle_mechanisms.json`, or import private helpers from sibling stages.
+
+Stage 4 remains artifact-contract-first. S4.6 Google-unit source expansion may
+use Google visible data only through the declared design split to construct
+source modes, then must report transfer only on heldout Google rows. Robustness
+closeout requires paired bootstrap, seed/split repeat, stronger statistical
+controls including the visible-surface dMLE-style marginal MLE baseline, and
+mechanism/source-structure ablations. It still may claim only visible
+syndrome-response replay/source-transfer evidence, not true Google physical
+mechanism recovery, Google `M*` recovery, Born-rule physical generation, or
+CPTP/GKSL channel learning.
 
 The `separability_v2` allM artifacts are strong Stage 2 separability evidence,
 not a Born-rule physical baseline. Older PHYC3 artifacts must be rechecked for

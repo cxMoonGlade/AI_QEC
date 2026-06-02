@@ -93,6 +93,17 @@ The current Stage 3 Google closeout supports a specific result: V2 raw
 syndrome-response replay beats global/mean-only, assignment-shuffle,
 feature-scramble, and public-stratified-null controls under no-oracle rules.
 
+### Stage 4 Bridge And Google-Unit Source Work
+
+Stage 4 is artifact-contract-first. The code now covers S4.0 through S4.6:
+bridge freeze, source ceiling, source pretrain, support/assignment diagnostics,
+frozen transfer, and Google-unit source expansion.
+
+S4.6 writes a Stage-3A-compatible source freeze at the
+`synthetic_public_syndrome_response_signature` unit plus split-clean transfer,
+control, and robustness-closeout audits. Robust-positive evidence still requires
+a completed S4.6 rerun whose closeout artifacts pass.
+
 ## Current Limits
 
 The package does not currently provide:
@@ -102,8 +113,12 @@ The package does not currently provide:
 - a validated decoder-utility win from the discovered latent structure;
 - a validated drift-prediction result on heldout future calibration periods;
 - a validated cross-dataset transfer result across the four Google datasets;
-- a neural S4 model; the current Google closeout uses the Stage 3 prototype
-  mixture, and neural syndrome-response discovery is the next stage;
+- a closed robust-positive S4.6 evidence claim until the paired-bootstrap,
+  repeat, stronger-control, and ablation closeout artifacts pass on the intended
+  heldout Google run;
+- a neural S4 model accepted as the main scientific claim; current S4 neural
+  work remains gated by bridge-surface survival and source/Google transfer
+  controls;
 - true mechanism-label ARI/NMI on Google hardware data, because the Google
   artifacts used here provide observations, circuits, metadata, and decoder
   products rather than hidden physical mechanism labels;
@@ -173,6 +188,9 @@ scope-google-s3-visible-aggregate-v2 --config configs/scope_static/google_s3_vis
 scope-google-s3-visible-adapter-v2 --config configs/scope_static/google_s3_visible_adapter_v2.yaml
 ```
 
+The cache and aggregate configs support `num_workers`; the current defaults use
+8 workers and write block-level wall-clock timing into their manifests.
+
 Then run the Stage 3 learner/generator stages against the frozen V2 artifact:
 
 ```bash
@@ -193,6 +211,22 @@ scope-stage3c-generator \
 ```
 
 Outputs are written under `outputs/scope_static/` and `outputs/google_static/`.
+
+Run the S4.6 Google-unit source expansion after the Google V2 freeze and S4.5
+assignment/support diagnostics exist:
+
+```bash
+scope-stage4-google-unit-source-expansion \
+  --config configs/scope_static/stage4_google_unit_source_expansion_v1.yaml
+```
+
+If console scripts are unavailable because the editable install is stale, rerun
+`python -m pip install -e .` or use the module entrypoint:
+
+```bash
+python -m scope_static.experiments.stage4.google_unit_source_expansion \
+  --config configs/scope_static/stage4_google_unit_source_expansion_v1.yaml
+```
 
 ## Docs
 

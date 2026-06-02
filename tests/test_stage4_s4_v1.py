@@ -4,11 +4,19 @@ import json
 from pathlib import Path
 
 import numpy as np
+import pytest
 
-from scope_static.google.s4_bridge_surface import compare_stage4_bridge_contract, write_stage4_synthetic_google_shaped_freeze
+from scope_static.experiments.stage4 import google_unit_source_expansion as s4_6_cli
+from scope_static.google.s4_bridge_surface import (
+    _record_google_shaped_observations,
+    compare_stage4_bridge_contract,
+    write_stage4_synthetic_google_shaped_freeze,
+)
+from scope_static.mechanism_discovery import google_unit_source as s4_6_source
 from scope_static.mechanism_discovery.google_transfer import run_stage4_google_transfer, run_stage4_transfer_diagnostics
 from scope_static.mechanism_discovery.google_unit_source import (
     CONTROL_NAMES,
+    _robustness_closeout_report,
     _target_mean_std_only_control_matrix,
     run_stage4_google_unit_source_expansion,
 )
@@ -220,6 +228,8 @@ def test_stage4_google_unit_source_expansion_writes_split_clean_freeze_and_contr
         k=4,
         shotblock_size=4,
         mixture_component_count=2,
+        bootstrap_replicates=16,
+        repeat_seed_count=2,
     )
 
     freeze = output / "S3A_protocol_freeze"
@@ -259,12 +269,72 @@ def test_stage4_google_unit_source_expansion_writes_split_clean_freeze_and_contr
     assert dmle_metrics["baseline_family"] == "dmle_qec"
     assert dmle_metrics["uses_dem_parity_map"] is False
     assert dmle_metrics["baseline_metadata"]["baseline_variant"] == "scope_static_dmle_qec_style_independent_dem_mle"
+    assert result["paired_bootstrap_report"]["uses_paired_heldout_rows"] is True
+    assert result["paired_bootstrap_report"]["heldout_eval_only"] is True
+    assert result["seed_split_repeat_report"]["heldout_only"] is True
+    assert result["seed_split_repeat_report"]["repeat_seed_count_completed"] == 2
+    repeat_rows = result["seed_split_repeat_report"]["repeats"]
+    for repeat in repeat_rows:
+        checks = repeat["checks"]
+        semantic = checks["semantic_source_structure_ablation_comparisons"]
+        assert {
+            "no_family_structure",
+            "no_mode_conditioning",
+            "no_mixture_weights",
+            "calibration_only",
+            "geometry_mirror_only",
+        }.issubset(set(semantic))
+        assert "raw__marginal" in semantic["no_family_structure"]["raw_block_comparisons"]
+        assert "source_ablations_beating_or_tying_strict_raw" in checks
+        assert "strict_code_occupancy" in repeat
+        assert "per_code_heldout_mass" in repeat["strict_code_occupancy"]
+        assert "source_native_alignment" in repeat
+        assert "native_mode_coverage_ratio" in repeat["source_native_alignment"]
+        assert "source_family_surface_audit" in repeat
+        assert "family_surface_separable" in repeat["source_family_surface_audit"]
+        assert "family_mapping_audit" in repeat
+        assert "mean_max_family_weight" in repeat["family_mapping_audit"]
+        assert "low_margin_hard_mapping_mode_count" in repeat["family_mapping_audit"]
+        assert repeat["preprocessing_audit"]["calibration_design_indices_match_repeat_design"] is True
+        assert repeat["preprocessing_audit"]["uses_google_heldout_eval_rows"] is False
+        assert "heldout_eval" in repeat["split_composition"]
+        assert "basis" in repeat["split_composition"]["heldout_eval"]["counts"]
+    assert repeat_rows[0]["preprocessing_audit"]["source_surface_rebuilt_for_this_split"] is False
+    assert repeat_rows[1]["preprocessing_audit"]["source_surface_rebuilt_for_this_split"] is True
+    assert result["stronger_statistical_controls_report"]["uses_google_evaluator_labels"] is False
+    assert "dmle_qec_visible_marginal_mle" in result["stronger_statistical_controls_report"]["control_families"]["mechanism_mixture_claim_controls"]
+    assert set(result["mechanism_source_structure_ablation_report"]["ablation_names"]) == {
+        "control_no_visible_transform",
+        "control_family_bucket_shuffled",
+        "control_shuffled_google_native_mode",
+        "control_random_mixture_same_context",
+        "control_public_context_only",
+    }
+    assert result["family_mapping_validation_report"]["diagnosis"] in {
+        "hard_family_mapping_brittle",
+        "mixed_hard_mapping_and_source_surface_risk",
+        "source_family_surface_or_catalog_mechanism_risk",
+        "family_structure_ablation_failure_unexplained",
+        "no_family_mapping_failure_detected",
+    }
+    assert result["robustness_closeout_report"]["decision"] in {
+        "s4_6_robust_positive",
+        "s4_6_robust_source_structure_positive_target_native_dominates",
+        "s4_6_current_split_positive_only",
+        "s4_6_robustness_inconclusive",
+    }
     assert result["acceptance_audit"]["checks"]["freeze_contains_no_downstream_transfer_diagnostics"] is True
     assert (output / "mode_design_split_manifest.json").exists()
     assert (output / "mode_design_audit.json").exists()
     assert (output / "visible_surrogate_transform_audit.json").exists()
     assert (output / "source_visible_calibration_audit.json").exists()
     assert (output / "expanded_transfer_report.json").exists()
+    assert (output / "paired_bootstrap_report.json").exists()
+    assert (output / "seed_split_repeat_report.json").exists()
+    assert (output / "stronger_statistical_controls_report.json").exists()
+    assert (output / "mechanism_source_structure_ablation_report.json").exists()
+    assert (output / "family_mapping_validation_report.json").exists()
+    assert (output / "robustness_closeout_report.json").exists()
 
     for name in [
         "expanded_transfer_report.json",
@@ -273,6 +343,12 @@ def test_stage4_google_unit_source_expansion_writes_split_clean_freeze_and_contr
         "mode_design_audit.json",
         "mode_design_split_manifest.json",
         "source_visible_calibration_audit.json",
+        "paired_bootstrap_report.json",
+        "seed_split_repeat_report.json",
+        "stronger_statistical_controls_report.json",
+        "mechanism_source_structure_ablation_report.json",
+        "family_mapping_validation_report.json",
+        "robustness_closeout_report.json",
     ]:
         assert not (freeze / name).exists()
     for name in [
@@ -293,6 +369,159 @@ def test_stage4_google_unit_source_expansion_writes_split_clean_freeze_and_contr
         "claim_boundary.json",
     ]:
         assert (freeze / name).exists()
+
+
+def test_stage4_google_unit_source_expansion_samples_records_without_full_materialization(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    teacher = _write_teacher(tmp_path)
+    google = tmp_path / "google_s3a" / "S3A_protocol_freeze"
+    write_stage4_synthetic_google_shaped_freeze(teacher_dir=teacher, output_dir=google, shotblock_size=4)
+    _force_google_public_geometry_fixture_values(google)
+
+    def forbid_full_materialization(*_args: object, **_kwargs: object) -> np.ndarray:
+        raise AssertionError("S4.6 mixing must not materialize full per-record observations")
+
+    monkeypatch.setattr(s4_6_source, "_record_google_shaped_observations", forbid_full_materialization)
+
+    result = run_stage4_google_unit_source_expansion(
+        teacher_dir=teacher,
+        google_stage3a_dir=google,
+        output_dir=tmp_path / "S4_6_mem_guard",
+        seed=11,
+        k=4,
+        shotblock_size=4,
+        mixture_component_count=2,
+        bootstrap_replicates=4,
+        repeat_seed_count=1,
+    )
+
+    assert result["decision"] in {
+        "stage4_google_unit_source_expansion_passed",
+        "stage4_google_unit_source_expansion_failed",
+    }
+    assert result["paired_bootstrap_report"]["bootstrap_replicates"] == 4
+
+
+def test_stage4_google_unit_direct_sampling_matches_materialized_record_sampling(tmp_path: Path) -> None:
+    teacher = _write_teacher(tmp_path)
+    observations = np.load(teacher / "observations.npz", allow_pickle=True)["observations"]
+    records = json.loads((teacher / "oracle_mechanisms.json").read_text())["mechanisms"]
+
+    for max_source_shots in [None, 5]:
+        for sample_count in [1, 9]:
+            for seed in [0, 7]:
+                for record in records:
+                    materialized = _record_google_shaped_observations(
+                        record,
+                        observations,
+                        max_source_shots=max_source_shots,
+                    )
+                    old_rng = np.random.default_rng(seed)
+                    old = materialized[old_rng.integers(0, max(1, materialized.shape[0]), size=max(1, sample_count))]
+                    new_rng = np.random.default_rng(seed)
+                    new = s4_6_source._sample_record_google_shaped_observations(
+                        record,
+                        observations,
+                        sample_count=sample_count,
+                        rng=new_rng,
+                        max_source_shots=max_source_shots,
+                    )
+                    assert np.array_equal(new, old.astype(np.float64))
+
+
+def test_stage4_google_unit_source_closeout_requires_seed_split_source_ablation_stability() -> None:
+    report = _robustness_closeout_report(
+        paired_bootstrap={
+            "strict_bootstrap_mechanism_controls_passed": True,
+            "strict_bootstrap_core_transfer_controls_passed": True,
+            "strict_or_adapter_bootstrap_train_on_google_passed": True,
+        },
+        seed_split_repeat={
+            "mechanism_structure_stable_raw": True,
+            "mechanism_structure_stable_block": True,
+            "source_ablation_stable_raw": False,
+            "source_ablation_stable_block": True,
+            "core_transfer_controls_stable_raw": True,
+            "target_native_train_on_google_stable_raw": True,
+        },
+        stronger_statistical_controls={
+            "mechanism_mixture_controls_passed": True,
+            "core_transfer_controls_passed": True,
+            "target_native_train_on_google_beaten": True,
+        },
+        mechanism_source_structure_ablation={"passed": True},
+        current_transfer={"passed": True},
+    )
+
+    assert report["decision"] == "s4_6_current_split_positive_only"
+    assert report["upgrades_current_split_positive_to_robust_positive"] is False
+    assert report["mechanism_mixture_stability_passed"] is False
+
+
+def test_stage4_google_unit_source_expansion_cli_requires_explicit_heavy_approval(monkeypatch, tmp_path: Path) -> None:
+    config = tmp_path / "stage4_google_unit_source_expansion_v1.yaml"
+    config.write_text(
+        "\n".join(
+            [
+                "stage4_google_unit_source_expansion_v1:",
+                "  teacher_dir: outputs/scope_static/real_teacher",
+                "  google_stage3a_dir: outputs/google_static/real_google/S3A_protocol_freeze",
+                "  output_dir: outputs/scope_static/S4_bridge/S4_6_google_unit_source_expansion",
+                "  k: 32",
+                "  bootstrap_replicates: 256",
+                "  repeat_seed_count: 3",
+                "",
+            ]
+        )
+    )
+    called = False
+
+    def fake_run(**_kwargs: object) -> dict[str, object]:
+        nonlocal called
+        called = True
+        return {"decision": "should_not_run"}
+
+    monkeypatch.setattr(s4_6_cli, "run_stage4_google_unit_source_expansion", fake_run)
+
+    with pytest.raises(RuntimeError, match="--allow-heavy-run"):
+        s4_6_cli.run_stage4_google_unit_source_expansion_from_config(config_path=config)
+
+    assert called is False
+
+
+def test_stage4_google_unit_source_expansion_cli_allows_explicit_smoke_budget(monkeypatch, tmp_path: Path) -> None:
+    config = tmp_path / "stage4_google_unit_source_expansion_smoke.yaml"
+    config.write_text(
+        "\n".join(
+            [
+                "stage4_google_unit_source_expansion_v1:",
+                "  execution_mode: smoke",
+                "  teacher_dir: outputs/scope_static/smoke_teacher",
+                "  google_stage3a_dir: outputs/google_static/smoke_google/S3A_protocol_freeze",
+                "  output_dir: outputs/scope_static/S4_bridge/S4_6_google_unit_source_expansion_smoke",
+                "  k: 4",
+                "  bootstrap_replicates: 4",
+                "  repeat_seed_count: 1",
+                "",
+            ]
+        )
+    )
+    captured: dict[str, object] = {}
+
+    def fake_run(**kwargs: object) -> dict[str, object]:
+        captured.update(kwargs)
+        return {"decision": "smoke_ran", "output_dir": kwargs["output_dir"]}
+
+    monkeypatch.setattr(s4_6_cli, "run_stage4_google_unit_source_expansion", fake_run)
+
+    result = s4_6_cli.run_stage4_google_unit_source_expansion_from_config(config_path=config)
+
+    assert result["decision"] == "smoke_ran"
+    assert captured["k"] == 4
+    assert captured["bootstrap_replicates"] == 4
+    assert captured["repeat_seed_count"] == 1
 
 
 def test_stage4_target_mean_std_control_does_not_preserve_source_geometry() -> None:

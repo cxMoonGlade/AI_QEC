@@ -34,6 +34,8 @@ from scope_static.google.s4_bridge_surface import (
     _matrix_digest,
     _record_google_shaped_observations,
     _record_logical_support,
+    _record_probe_indices,
+    _record_qubits,
     _shotblocks,
     _synthetic_detector_coords,
     _text_digest,
@@ -63,12 +65,50 @@ BASELINE_NAMES = (
     "dmle_qec_visible_marginal_mle",
 )
 
+ROBUSTNESS_MECHANISM_CONTROLS = (
+    "control_public_context_only",
+    "control_random_mixture_same_context",
+    "control_target_mean_std_only",
+    "dmle_qec_visible_marginal_mle",
+)
+
+ROBUSTNESS_SOURCE_ABLATIONS = (
+    "control_no_visible_transform",
+    "control_family_bucket_shuffled",
+    "control_shuffled_google_native_mode",
+    "control_random_mixture_same_context",
+    "control_public_context_only",
+)
+
+SEMANTIC_SOURCE_ABLATION_ALIASES = {
+    "no_visible_transform": "control_no_visible_transform",
+    "no_family_structure": "control_family_bucket_shuffled",
+    "no_mode_conditioning": "control_shuffled_google_native_mode",
+    "no_mixture_weights": "control_random_mixture_same_context",
+    "geometry_mirror_only": "control_public_context_only",
+    "calibration_only": "control_target_mean_std_only",
+}
+
+ROBUSTNESS_TRANSFER_CONTROLS = (
+    "random_codebook_transfer",
+    "global_null",
+    "train_on_google_only",
+)
+
 FAMILY_BUCKETS = (
     "readout_spam",
     "prep_reset",
     "spatial_two_qubit_crosstalk",
     "temporal_stability_drift",
     "logical_tail_high_impact",
+)
+
+RAW_BLOCK_NAMES = (
+    "raw__marginal",
+    "raw__spatial_corr",
+    "raw__temporal_corr",
+    "raw__logical_coupling",
+    "raw__stability",
 )
 
 
@@ -87,6 +127,8 @@ def run_stage4_google_unit_source_expansion(
     design_fraction: float = 0.50,
     validation_fraction: float = 0.25,
     min_missing_mode_mass: float = 0.02,
+    bootstrap_replicates: int = 256,
+    repeat_seed_count: int = 3,
 ) -> dict[str, object]:
     """Build a Google-unit synthetic source freeze plus split-clean S4.6 audits."""
 
@@ -233,6 +275,8 @@ def run_stage4_google_unit_source_expansion(
             "design_fraction": float(design_fraction),
             "validation_fraction": float(validation_fraction),
             "min_missing_mode_mass": float(min_missing_mode_mass),
+            "bootstrap_replicates": int(max(1, bootstrap_replicates)),
+            "repeat_seed_count": int(max(1, repeat_seed_count)),
         },
         "decision": "stage4_google_unit_source_freeze_passed"
         if bool(freeze_acceptance.get("passed", False)) and bool(schema_compatibility.get("passed", False))
@@ -274,6 +318,34 @@ def run_stage4_google_unit_source_expansion(
         k=int(k),
         assignment_baseline=assignment_baseline,
     )
+    robustness = _robustness_closeout_reports(
+        current_source_matrix=matrix,
+        current_control_matrices=controls,
+        current_transfer=transfer,
+        current_mode_design=mode_design,
+        current_source_visible_calibration=source_visible_calibration,
+        current_evaluator_records=build.evaluator_records,
+        google_raw=google_raw,
+        split=split,
+        feature_names=google_feature_names,
+        seed=int(seed),
+        k=int(k),
+        bootstrap_replicates=int(max(1, bootstrap_replicates)),
+        repeat_seed_count=int(max(1, repeat_seed_count)),
+        records=records,
+        observations=observations,
+        google_public_rows=google_public_rows,
+        bucket_records=bucket_records,
+        source_codebook=source_codebook,
+        assignment_baseline=assignment_baseline,
+        shotblock_size=int(shotblock_size),
+        max_source_shots_per_record=_optional_positive_int(max_source_shots_per_record),
+        mixture_component_count=max(1, int(mixture_component_count)),
+        design_fraction=float(design_fraction),
+        validation_fraction=float(validation_fraction),
+        min_missing_mode_mass=float(min_missing_mode_mass),
+        teacher=teacher,
+    )
     acceptance = _s4_6_acceptance(
         freeze_result=freeze_result,
         split=split,
@@ -303,6 +375,12 @@ def run_stage4_google_unit_source_expansion(
         "source_google_mode_distance": distance,
         "expanded_transfer_report": transfer,
         "controls": _control_report(controls, transfer),
+        "paired_bootstrap_report": robustness["paired_bootstrap_report"],
+        "seed_split_repeat_report": robustness["seed_split_repeat_report"],
+        "stronger_statistical_controls_report": robustness["stronger_statistical_controls_report"],
+        "mechanism_source_structure_ablation_report": robustness["mechanism_source_structure_ablation_report"],
+        "family_mapping_validation_report": robustness["family_mapping_validation_report"],
+        "robustness_closeout_report": robustness["robustness_closeout_report"],
         "acceptance_audit": acceptance,
         "decision": "stage4_google_unit_source_expansion_passed" if acceptance["passed"] else "stage4_google_unit_source_expansion_failed",
     }
@@ -676,13 +754,60 @@ def _mixed_observations_for_weights(
     target_shots = max(8, min(256, int(observations.shape[1]) * max(1, int(len(selected)))))
     for label, weight in selected:
         record_idx = label_to_record.get(str(label), 0)
-        local = _record_google_shaped_observations(records[record_idx], observations, max_source_shots=max_source_shots)
         take = max(1, int(round(target_shots * float(weight) / total_weight)))
-        indices = rng.integers(0, max(1, local.shape[0]), size=take)
-        components.append(local[indices])
-    mixed = np.vstack(components) if components else _record_google_shaped_observations(records[0], observations, max_source_shots=max_source_shots)
+        components.append(
+            _sample_record_google_shaped_observations(
+                records[record_idx],
+                observations,
+                sample_count=take,
+                rng=rng,
+                max_source_shots=max_source_shots,
+            )
+        )
+    mixed = (
+        np.vstack(components)
+        if components
+        else _sample_record_google_shaped_observations(
+            records[0],
+            observations,
+            sample_count=target_shots,
+            rng=rng,
+            max_source_shots=max_source_shots,
+        )
+    )
     rng.shuffle(mixed, axis=0)
     return np.asarray(mixed, dtype=np.float64)
+
+
+def _sample_record_google_shaped_observations(
+    record: Mapping[str, object],
+    observations: np.ndarray,
+    *,
+    sample_count: int,
+    rng: np.random.Generator,
+    max_source_shots: int | None,
+) -> np.ndarray:
+    probe_indices = _record_probe_indices(record, observations.shape[0])
+    if not probe_indices:
+        probe_indices = [0]
+    shots = int(observations.shape[1])
+    qubit_count = int(observations.shape[2])
+    total_rows = max(1, int(len(probe_indices)) * shots)
+    capped_rows = int(max_source_shots) if max_source_shots is not None else total_rows
+    capped_rows = max(1, min(capped_rows, total_rows))
+    if capped_rows < total_rows:
+        eligible = np.linspace(0, total_rows - 1, capped_rows, dtype=np.int64)
+        flat_positions = eligible[rng.integers(0, eligible.size, size=max(1, int(sample_count)))]
+    else:
+        flat_positions = rng.integers(0, total_rows, size=max(1, int(sample_count)))
+    probe_offsets = flat_positions // shots
+    shot_indices = flat_positions % shots
+    selected_probes = np.asarray([probe_indices[int(offset)] for offset in probe_offsets], dtype=np.int64)
+    detector_bits = np.asarray(observations[selected_probes, shot_indices, :], dtype=np.float64).reshape(-1, qubit_count)
+    qubits = [idx for idx in _record_qubits(record, qubit_count) if 0 <= idx < qubit_count]
+    selected = detector_bits[:, qubits] if qubits else detector_bits
+    logical = np.mod(np.sum(selected, axis=1), 2.0).reshape(-1, 1)
+    return np.concatenate([detector_bits, logical], axis=1)
 
 
 def _apply_visible_surrogate_transform(observations: np.ndarray, *, transform_kind: str, seed: int) -> np.ndarray:
@@ -1036,10 +1161,12 @@ def _transfer_from_source_matrix(
     heads = _fit_replay_heads(target_matrix[calibration_indices], calib_assign, code_count=int(centers.shape[0]))
     recon = heads[heldout_assign] if heldout_assign.size else np.zeros_like(target_matrix[heldout_indices])
     metrics = _stage4_6_replay_metrics(target_matrix[heldout_indices], recon, feature_names=feature_names, model_family=model_family)
+    occupancy = _assignment_occupancy(heldout_assign, code_count=int(centers.shape[0]))
     metrics["calibration_row_count"] = int(len(calibration_indices))
     metrics["heldout_eval_row_count"] = int(len(heldout_indices))
     metrics["source_code_count"] = int(centers.shape[0])
-    metrics["active_heldout_code_count"] = int(len(set(int(value) for value in heldout_assign.tolist())) if heldout_assign.size else 0)
+    metrics["active_heldout_code_count"] = int(occupancy["active_code_count"])
+    metrics["heldout_code_occupancy"] = occupancy
     return metrics
 
 
@@ -1158,11 +1285,14 @@ def _stage4_6_replay_metrics(target: np.ndarray, recon: np.ndarray, *, feature_n
     full_mae = float(np.mean(err)) if err.size else 0.0
     raw_mae = float(np.mean(raw_err)) if raw_err.size else 0.0
     block_values = []
+    raw_block_mae: dict[str, float] = {}
     for block, indices in _block_indices(feature_names).items():
         if not str(block).startswith("raw__"):
             continue
         if indices:
-            block_values.append(float(np.mean(err[:, indices])) if err.size else 0.0)
+            value = float(np.mean(err[:, indices])) if err.size else 0.0
+            raw_block_mae[str(block)] = value
+            block_values.append(value)
     block_normalized = float(np.mean(block_values)) if block_values else raw_mae
     mse = float(np.mean((x[:, raw_indices] - y[:, raw_indices]) ** 2)) if raw_indices and x.size else 0.0
     return {
@@ -1175,6 +1305,7 @@ def _stage4_6_replay_metrics(target: np.ndarray, recon: np.ndarray, *, feature_n
         "raw_mae": raw_mae,
         "full_visible_mae": full_mae,
         "metadata_public_geometry_mae": float(np.mean(err[:, meta_indices])) if meta_indices and err.size else 0.0,
+        "raw_block_mae": {block: float(raw_block_mae.get(block, 0.0)) for block in RAW_BLOCK_NAMES},
         "raw_feature_count": int(len(raw_indices)),
         "metadata_feature_count": int(len(meta_indices)),
         "scoring_profile": "raw_features_only_excludes_meta_public_geometry",
@@ -1322,6 +1453,12 @@ def _s4_6_acceptance(
         "mode_design_audit.json",
         "mode_design_split_manifest.json",
         "source_visible_calibration_audit.json",
+        "paired_bootstrap_report.json",
+        "seed_split_repeat_report.json",
+        "stronger_statistical_controls_report.json",
+        "mechanism_source_structure_ablation_report.json",
+        "family_mapping_validation_report.json",
+        "robustness_closeout_report.json",
     }
     transfer_checks = dict(transfer.get("checks", {})) if isinstance(transfer.get("checks", {}), Mapping) else {}
     checks = {
@@ -1840,6 +1977,12 @@ def _write_parent_outputs(output: Path, result: Mapping[str, object]) -> None:
         "source_google_mode_distance.json": result["source_google_mode_distance"],
         "expanded_transfer_report.json": result["expanded_transfer_report"],
         "controls.json": result["controls"],
+        "paired_bootstrap_report.json": result["paired_bootstrap_report"],
+        "seed_split_repeat_report.json": result["seed_split_repeat_report"],
+        "stronger_statistical_controls_report.json": result["stronger_statistical_controls_report"],
+        "mechanism_source_structure_ablation_report.json": result["mechanism_source_structure_ablation_report"],
+        "family_mapping_validation_report.json": result["family_mapping_validation_report"],
+        "robustness_closeout_report.json": result["robustness_closeout_report"],
         "acceptance_audit.json": result["acceptance_audit"],
     }
     for name, payload in artifacts.items():
@@ -1873,6 +2016,7 @@ def format_google_unit_source_expansion_summary(result: Mapping[str, object]) ->
             f"- Decision: `{result.get('decision')}`",
             f"- Freeze dir: `{result.get('freeze_dir')}`",
             f"- Heldout strict raw replay: `{float(strict.get('raw_target_only', 0.0)):.6f}`",
+            f"- Robustness decision: `{dict(result.get('robustness_closeout_report', {})).get('decision', 'not_run')}`",
             "",
         ]
     )
@@ -1974,6 +2118,1251 @@ def _control_report(controls: Mapping[str, np.ndarray], transfer: Mapping[str, o
     }
 
 
+def _robustness_closeout_reports(
+    *,
+    current_source_matrix: np.ndarray,
+    current_control_matrices: Mapping[str, np.ndarray],
+    current_transfer: Mapping[str, object],
+    current_mode_design: Mapping[str, object],
+    current_source_visible_calibration: Mapping[str, object],
+    current_evaluator_records: list[dict[str, object]],
+    google_raw: np.ndarray,
+    split: Mapping[str, object],
+    feature_names: list[str],
+    seed: int,
+    k: int,
+    bootstrap_replicates: int,
+    repeat_seed_count: int,
+    records: list[dict[str, object]],
+    observations: np.ndarray,
+    google_public_rows: list[dict[str, object]],
+    bucket_records: Mapping[str, list[int]],
+    source_codebook: Mapping[str, object] | None,
+    assignment_baseline: Mapping[str, object],
+    shotblock_size: int,
+    max_source_shots_per_record: int | None,
+    mixture_component_count: int,
+    design_fraction: float,
+    validation_fraction: float,
+    min_missing_mode_mass: float,
+    teacher: Path,
+) -> dict[str, object]:
+    paired = _paired_bootstrap_report(
+        source_matrix=current_source_matrix,
+        control_matrices=current_control_matrices,
+        google_raw=google_raw,
+        split=split,
+        feature_names=feature_names,
+        seed=int(seed),
+        k=int(k),
+        replicates=int(bootstrap_replicates),
+    )
+    stronger = _stronger_statistical_controls_report(
+        transfer=current_transfer,
+        paired_bootstrap=paired,
+    )
+    ablation = _mechanism_source_structure_ablation_report(
+        transfer=current_transfer,
+        paired_bootstrap=paired,
+    )
+    repeat = _seed_split_repeat_report(
+        current_source_matrix=current_source_matrix,
+        current_control_matrices=current_control_matrices,
+        current_transfer=current_transfer,
+        current_mode_design=current_mode_design,
+        current_source_visible_calibration=current_source_visible_calibration,
+        current_evaluator_records=current_evaluator_records,
+        google_raw=google_raw,
+        feature_names=feature_names,
+        seed=int(seed),
+        k=int(k),
+        repeat_seed_count=int(repeat_seed_count),
+        records=records,
+        observations=observations,
+        google_public_rows=google_public_rows,
+        bucket_records=bucket_records,
+        source_codebook=source_codebook,
+        assignment_baseline=assignment_baseline,
+        shotblock_size=int(shotblock_size),
+        max_source_shots_per_record=max_source_shots_per_record,
+        mixture_component_count=int(mixture_component_count),
+        design_fraction=float(design_fraction),
+        validation_fraction=float(validation_fraction),
+        min_missing_mode_mass=float(min_missing_mode_mass),
+        teacher=teacher,
+        current_split=split,
+    )
+    family_validation = _family_mapping_validation_report(seed_split_repeat=repeat)
+    closeout = _robustness_closeout_report(
+        paired_bootstrap=paired,
+        seed_split_repeat=repeat,
+        stronger_statistical_controls=stronger,
+        mechanism_source_structure_ablation=ablation,
+        current_transfer=current_transfer,
+    )
+    return {
+        "paired_bootstrap_report": paired,
+        "seed_split_repeat_report": repeat,
+        "stronger_statistical_controls_report": stronger,
+        "mechanism_source_structure_ablation_report": ablation,
+        "family_mapping_validation_report": family_validation,
+        "robustness_closeout_report": closeout,
+    }
+
+
+def _paired_bootstrap_report(
+    *,
+    source_matrix: np.ndarray,
+    control_matrices: Mapping[str, np.ndarray],
+    google_raw: np.ndarray,
+    split: Mapping[str, object],
+    feature_names: list[str],
+    seed: int,
+    k: int,
+    replicates: int,
+) -> dict[str, object]:
+    bundle = _heldout_reconstruction_bundle(
+        source_matrix=source_matrix,
+        control_matrices=control_matrices,
+        google_raw=google_raw,
+        split=split,
+        feature_names=feature_names,
+        seed=int(seed),
+        k=int(k),
+    )
+    if bool(bundle.get("skipped", False)):
+        return {
+            "schema": "scope_static_stage4_6_paired_bootstrap_report_v1",
+            "skipped": True,
+            "reason": bundle.get("reason", "insufficient_split"),
+            "uses_paired_heldout_rows": True,
+            "heldout_eval_only": True,
+            "uses_google_evaluator_labels": False,
+            "used_for_model_selection": False,
+            "comparisons": {},
+            "passed": False,
+        }
+    target = np.asarray(bundle["target"], dtype=np.float64)
+    reconstructions = dict(bundle["reconstructions"])
+    rng = np.random.default_rng(int(seed) + 4049)
+    comparisons: dict[str, object] = {}
+    profiles = ("raw_target_only", "block_normalized")
+    main_models = ("strict_frozen_transfer", "frozen_codebook_train_adapter")
+    control_names = tuple(CONTROL_NAMES) + ROBUSTNESS_TRANSFER_CONTROLS + BASELINE_NAMES
+    for main_name in main_models:
+        if main_name not in reconstructions:
+            continue
+        main_recon = np.asarray(reconstructions[main_name], dtype=np.float64)
+        for control_name in control_names:
+            if control_name not in reconstructions or control_name == main_name:
+                continue
+            control_recon = np.asarray(reconstructions[control_name], dtype=np.float64)
+            comparison_profiles = {}
+            for profile in profiles:
+                main_errors = _per_row_profile_error(target, main_recon, feature_names=feature_names, profile=profile)
+                control_errors = _per_row_profile_error(target, control_recon, feature_names=feature_names, profile=profile)
+                comparison_profiles[profile] = _bootstrap_error_delta(
+                    main_errors=main_errors,
+                    control_errors=control_errors,
+                    rng=rng,
+                    replicates=int(replicates),
+                )
+            comparisons[f"{main_name}_vs_{control_name}"] = {
+                "main_model": main_name,
+                "control_model": control_name,
+                "delta_definition": "control_error_minus_main_error; positive means the main model is better",
+                "profiles": comparison_profiles,
+            }
+    strict_mechanism = _bootstrap_group_passed(comparisons, main="strict_frozen_transfer", controls=ROBUSTNESS_MECHANISM_CONTROLS)
+    strict_core_transfer = _bootstrap_group_passed(
+        comparisons,
+        main="strict_frozen_transfer",
+        controls=("random_codebook_transfer", "global_null"),
+    )
+    strict_train_native = _bootstrap_group_passed(
+        comparisons,
+        main="strict_frozen_transfer",
+        controls=("train_on_google_only",),
+    )
+    adapter_train_native = _bootstrap_group_passed(
+        comparisons,
+        main="frozen_codebook_train_adapter",
+        controls=("train_on_google_only",),
+    )
+    return {
+        "schema": "scope_static_stage4_6_paired_bootstrap_report_v1",
+        "uses_paired_heldout_rows": True,
+        "heldout_eval_only": True,
+        "uses_google_evaluator_labels": False,
+        "used_for_model_selection": False,
+        "bootstrap_replicates": int(replicates),
+        "heldout_eval_row_count": int(target.shape[0]),
+        "profile_count": 2,
+        "comparisons": comparisons,
+        "strict_bootstrap_mechanism_controls_passed": strict_mechanism,
+        "strict_bootstrap_core_transfer_controls_passed": strict_core_transfer,
+        "strict_bootstrap_train_on_google_passed": strict_train_native,
+        "strict_or_adapter_bootstrap_train_on_google_passed": bool(strict_train_native or adapter_train_native),
+        "passed": bool(strict_mechanism and strict_core_transfer),
+    }
+
+
+def _bootstrap_error_delta(
+    *,
+    main_errors: np.ndarray,
+    control_errors: np.ndarray,
+    rng: np.random.Generator,
+    replicates: int,
+) -> dict[str, object]:
+    main = np.asarray(main_errors, dtype=np.float64)
+    control = np.asarray(control_errors, dtype=np.float64)
+    n = int(min(main.size, control.size))
+    if n <= 0:
+        return {
+            "skipped": True,
+            "reason": "empty_heldout_errors",
+            "passed": False,
+            "point_delta": 0.0,
+        }
+    main = main[:n]
+    control = control[:n]
+    reps = max(1, int(replicates))
+    deltas = np.zeros(reps, dtype=np.float64)
+    for rep in range(reps):
+        sample = rng.integers(0, n, size=n)
+        deltas[rep] = float(np.mean(control[sample] - main[sample]))
+    point = float(np.mean(control - main))
+    ci_low = float(np.quantile(deltas, 0.025))
+    ci_high = float(np.quantile(deltas, 0.975))
+    win_rate = float(np.mean(deltas > 0.0))
+    return {
+        "point_delta": point,
+        "bootstrap_mean_delta": float(np.mean(deltas)),
+        "ci95": [ci_low, ci_high],
+        "win_rate": win_rate,
+        "one_sided_p_value_delta_leq_zero": float(np.mean(deltas <= 0.0)),
+        "main_mean_error": float(np.mean(main)),
+        "control_mean_error": float(np.mean(control)),
+        "relative_delta_over_main_error": float(point / max(float(np.mean(main)), 1.0e-12)),
+        "sample_count": n,
+        "passed": bool(point > 0.0 and win_rate >= 0.80 and ci_low >= 0.0),
+    }
+
+
+def _bootstrap_group_passed(
+    comparisons: Mapping[str, object],
+    *,
+    main: str,
+    controls: Iterable[str],
+) -> bool:
+    for control in controls:
+        key = f"{main}_vs_{control}"
+        payload = dict(comparisons.get(key, {})) if isinstance(comparisons.get(key, {}), Mapping) else {}
+        profiles = dict(payload.get("profiles", {})) if isinstance(payload.get("profiles", {}), Mapping) else {}
+        raw = dict(profiles.get("raw_target_only", {})) if isinstance(profiles.get("raw_target_only", {}), Mapping) else {}
+        block = dict(profiles.get("block_normalized", {})) if isinstance(profiles.get("block_normalized", {}), Mapping) else {}
+        if not (bool(raw.get("passed", False)) and bool(block.get("passed", False))):
+            return False
+    return True
+
+
+def _stronger_statistical_controls_report(
+    *,
+    transfer: Mapping[str, object],
+    paired_bootstrap: Mapping[str, object],
+) -> dict[str, object]:
+    strict = dict(transfer.get("strict_frozen_transfer", {})) if isinstance(transfer.get("strict_frozen_transfer", {}), Mapping) else {}
+    controls = dict(transfer.get("controls", {})) if isinstance(transfer.get("controls", {}), Mapping) else {}
+    bootstrap_comparisons = dict(paired_bootstrap.get("comparisons", {})) if isinstance(paired_bootstrap.get("comparisons", {}), Mapping) else {}
+    names = tuple(ROBUSTNESS_MECHANISM_CONTROLS) + ROBUSTNESS_TRANSFER_CONTROLS
+    comparisons = {}
+    for name in names:
+        metrics = dict(controls.get(name, {})) if isinstance(controls.get(name, {}), Mapping) else {}
+        bootstrap = _bootstrap_profile_payload(bootstrap_comparisons, main="strict_frozen_transfer", control=name)
+        comparisons[name] = {
+            "strict_raw_target_only": float(strict.get("raw_target_only", 0.0) or 0.0),
+            "control_raw_target_only": float(metrics.get("raw_target_only", 0.0) or 0.0),
+            "raw_delta_control_minus_strict": float(metrics.get("raw_target_only", 0.0) or 0.0)
+            - float(strict.get("raw_target_only", 0.0) or 0.0),
+            "strict_block_normalized": float(strict.get("block_normalized", 0.0) or 0.0),
+            "control_block_normalized": float(metrics.get("block_normalized", 0.0) or 0.0),
+            "block_delta_control_minus_strict": float(metrics.get("block_normalized", 0.0) or 0.0)
+            - float(strict.get("block_normalized", 0.0) or 0.0),
+            "strict_beats_control_raw": _better(strict, metrics, "raw_target_only"),
+            "strict_beats_control_block": _better(strict, metrics, "block_normalized"),
+            "paired_bootstrap_raw": bootstrap.get("raw_target_only", {}),
+            "paired_bootstrap_block": bootstrap.get("block_normalized", {}),
+            "passed": bool(
+                _better(strict, metrics, "raw_target_only")
+                and _better(strict, metrics, "block_normalized")
+                and bool(dict(bootstrap.get("raw_target_only", {})).get("passed", False))
+                and bool(dict(bootstrap.get("block_normalized", {})).get("passed", False))
+            ),
+        }
+    mechanism_passed = all(bool(dict(comparisons[name]).get("passed", False)) for name in ROBUSTNESS_MECHANISM_CONTROLS)
+    core_transfer_controls = ("random_codebook_transfer", "global_null")
+    core_transfer_passed = all(bool(dict(comparisons[name]).get("passed", False)) for name in core_transfer_controls)
+    train_native_passed = bool(dict(comparisons.get("train_on_google_only", {})).get("passed", False))
+    return {
+        "schema": "scope_static_stage4_6_stronger_statistical_controls_report_v1",
+        "heldout_eval_only": True,
+        "uses_google_evaluator_labels": False,
+        "used_for_model_selection": False,
+        "control_families": {
+            "mechanism_mixture_claim_controls": list(ROBUSTNESS_MECHANISM_CONTROLS),
+            "core_transfer_controls": list(core_transfer_controls),
+            "target_native_upper_bar": ["train_on_google_only"],
+        },
+        "comparisons": comparisons,
+        "mechanism_mixture_controls_passed": bool(mechanism_passed),
+        "core_transfer_controls_passed": bool(core_transfer_passed),
+        "target_native_train_on_google_beaten": bool(train_native_passed),
+        "passed": bool(mechanism_passed and core_transfer_passed),
+    }
+
+
+def _mechanism_source_structure_ablation_report(
+    *,
+    transfer: Mapping[str, object],
+    paired_bootstrap: Mapping[str, object],
+) -> dict[str, object]:
+    strict = dict(transfer.get("strict_frozen_transfer", {})) if isinstance(transfer.get("strict_frozen_transfer", {}), Mapping) else {}
+    controls = dict(transfer.get("controls", {})) if isinstance(transfer.get("controls", {}), Mapping) else {}
+    bootstrap_comparisons = dict(paired_bootstrap.get("comparisons", {})) if isinstance(paired_bootstrap.get("comparisons", {}), Mapping) else {}
+    descriptions = {
+        "control_no_visible_transform": "removes deterministic visible mode coverage repair",
+        "control_family_bucket_shuffled": "keeps bucket mass but breaks bucket identity",
+        "control_shuffled_google_native_mode": "keeps native-mode frequency but breaks row-to-mode assignment",
+        "control_random_mixture_same_context": "keeps public context and row count but randomizes mixture structure",
+        "control_public_context_only": "keeps public context and removes mechanism-conditioned raw structure",
+    }
+    ablations = {}
+    for name in ROBUSTNESS_SOURCE_ABLATIONS:
+        metrics = dict(controls.get(name, {})) if isinstance(controls.get(name, {}), Mapping) else {}
+        bootstrap = _bootstrap_profile_payload(bootstrap_comparisons, main="strict_frozen_transfer", control=name)
+        ablations[name] = {
+            "structure_removed": descriptions.get(name, "source structure ablation"),
+            "strict_raw_target_only": float(strict.get("raw_target_only", 0.0) or 0.0),
+            "ablation_raw_target_only": float(metrics.get("raw_target_only", 0.0) or 0.0),
+            "raw_delta_ablation_minus_strict": float(metrics.get("raw_target_only", 0.0) or 0.0)
+            - float(strict.get("raw_target_only", 0.0) or 0.0),
+            "strict_block_normalized": float(strict.get("block_normalized", 0.0) or 0.0),
+            "ablation_block_normalized": float(metrics.get("block_normalized", 0.0) or 0.0),
+            "block_delta_ablation_minus_strict": float(metrics.get("block_normalized", 0.0) or 0.0)
+            - float(strict.get("block_normalized", 0.0) or 0.0),
+            "paired_bootstrap_raw": bootstrap.get("raw_target_only", {}),
+            "paired_bootstrap_block": bootstrap.get("block_normalized", {}),
+            "passed": bool(
+                _better(strict, metrics, "raw_target_only")
+                and _better(strict, metrics, "block_normalized")
+                and bool(dict(bootstrap.get("raw_target_only", {})).get("passed", False))
+                and bool(dict(bootstrap.get("block_normalized", {})).get("passed", False))
+            ),
+        }
+    passed = all(bool(dict(ablations[name]).get("passed", False)) for name in ROBUSTNESS_SOURCE_ABLATIONS)
+    return {
+        "schema": "scope_static_stage4_6_mechanism_source_structure_ablation_report_v1",
+        "heldout_eval_only": True,
+        "uses_google_evaluator_labels": False,
+        "used_for_model_selection": False,
+        "ablation_names": list(ROBUSTNESS_SOURCE_ABLATIONS),
+        "ablations": ablations,
+        "passed": bool(passed),
+    }
+
+
+def _bootstrap_profile_payload(comparisons: Mapping[str, object], *, main: str, control: str) -> dict[str, object]:
+    payload = dict(comparisons.get(f"{main}_vs_{control}", {})) if isinstance(comparisons.get(f"{main}_vs_{control}", {}), Mapping) else {}
+    profiles = dict(payload.get("profiles", {})) if isinstance(payload.get("profiles", {}), Mapping) else {}
+    return {
+        "raw_target_only": dict(profiles.get("raw_target_only", {})) if isinstance(profiles.get("raw_target_only", {}), Mapping) else {},
+        "block_normalized": dict(profiles.get("block_normalized", {})) if isinstance(profiles.get("block_normalized", {}), Mapping) else {},
+    }
+
+
+def _seed_split_repeat_report(
+    *,
+    current_source_matrix: np.ndarray,
+    current_control_matrices: Mapping[str, np.ndarray],
+    current_transfer: Mapping[str, object],
+    current_mode_design: Mapping[str, object],
+    current_source_visible_calibration: Mapping[str, object],
+    current_evaluator_records: list[dict[str, object]],
+    google_raw: np.ndarray,
+    feature_names: list[str],
+    seed: int,
+    k: int,
+    repeat_seed_count: int,
+    records: list[dict[str, object]],
+    observations: np.ndarray,
+    google_public_rows: list[dict[str, object]],
+    bucket_records: Mapping[str, list[int]],
+    source_codebook: Mapping[str, object] | None,
+    assignment_baseline: Mapping[str, object],
+    shotblock_size: int,
+    max_source_shots_per_record: int | None,
+    mixture_component_count: int,
+    design_fraction: float,
+    validation_fraction: float,
+    min_missing_mode_mass: float,
+    teacher: Path,
+    current_split: Mapping[str, object],
+) -> dict[str, object]:
+    repeats = []
+    count = max(1, int(repeat_seed_count))
+    for repeat_idx in range(count):
+        repeat_seed = int(seed) + repeat_idx
+        if repeat_idx == 0:
+            repeat_split = current_split
+            repeat_transfer = current_transfer
+            repeat_matrix = current_source_matrix
+            repeat_controls = current_control_matrices
+            repeat_mode_design = current_mode_design
+            repeat_calibration = current_source_visible_calibration
+            repeat_evaluator_records = current_evaluator_records
+            mode = "current_run"
+        else:
+            repeat_split = _mode_design_split_manifest(
+                row_count=int(google_raw.shape[0]),
+                seed=repeat_seed,
+                design_fraction=float(design_fraction),
+                validation_fraction=float(validation_fraction),
+            )
+            mode_design = _design_google_unit_modes(
+                google_raw=google_raw,
+                design_indices=[int(idx) for idx in repeat_split["design"]],
+                feature_names=feature_names,
+                source_codebook=source_codebook,
+                assignment_baseline=assignment_baseline,
+                seed=repeat_seed,
+                k=int(k),
+                min_missing_mode_mass=float(min_missing_mode_mass),
+            )
+            build = _build_google_unit_matrix(
+                records=records,
+                observations=observations,
+                google_public_rows=google_public_rows,
+                split=repeat_split,
+                mode_design=mode_design,
+                bucket_records=bucket_records,
+                teacher=teacher,
+                seed=repeat_seed,
+                shotblock_size=int(shotblock_size),
+                max_source_shots_per_record=max_source_shots_per_record,
+                mixture_component_count=int(mixture_component_count),
+                apply_surrogate_transforms=True,
+            )
+            no_transform = _build_google_unit_matrix(
+                records=records,
+                observations=observations,
+                google_public_rows=google_public_rows,
+                split=repeat_split,
+                mode_design=mode_design,
+                bucket_records=bucket_records,
+                teacher=teacher,
+                seed=repeat_seed,
+                shotblock_size=int(shotblock_size),
+                max_source_shots_per_record=max_source_shots_per_record,
+                mixture_component_count=int(mixture_component_count),
+                apply_surrogate_transforms=False,
+            )
+            repeat_matrix, repeat_calibration = _calibrate_source_visible_surface_to_design_split(
+                source_matrix=build.matrix,
+                google_raw=google_raw,
+                split=repeat_split,
+                evaluator_records=build.evaluator_records,
+                feature_names=feature_names,
+            )
+            repeat_controls = _control_matrices(
+                main_matrix=repeat_matrix,
+                no_transform_matrix=no_transform.matrix,
+                google_raw=google_raw,
+                split=repeat_split,
+                build=build,
+                seed=repeat_seed,
+            )
+            repeat_transfer = _expanded_transfer_report(
+                source_matrix=repeat_matrix,
+                control_matrices=repeat_controls,
+                google_raw=google_raw,
+                split=repeat_split,
+                feature_names=feature_names,
+                seed=repeat_seed,
+                k=int(k),
+                assignment_baseline=assignment_baseline,
+            )
+            repeat_mode_design = mode_design
+            repeat_evaluator_records = build.evaluator_records
+            mode = "redesigned_modes_and_source_surface"
+        repeat_coverage = _google_native_mode_coverage(
+            source_matrix=np.asarray(repeat_matrix, dtype=np.float64),
+            google_raw=google_raw,
+            split=repeat_split,
+            mode_design=repeat_mode_design,
+        )
+        repeat_distance = _source_google_mode_distance(
+            source_matrix=np.asarray(repeat_matrix, dtype=np.float64),
+            google_raw=google_raw,
+            split=repeat_split,
+            assignment_baseline=assignment_baseline,
+        )
+        repeat_checks = _repeat_key_checks(repeat_transfer)
+        repeats.append(
+            {
+                "repeat_index": int(repeat_idx),
+                "seed": int(repeat_seed),
+                "mode": mode,
+                "design_indices": [int(idx) for idx in repeat_split.get("design", [])],
+                "validation_indices": [int(idx) for idx in repeat_split.get("validation", [])],
+                "heldout_eval_indices": [int(idx) for idx in repeat_split.get("heldout_eval", [])],
+                "source_matrix_shape": [int(dim) for dim in np.asarray(repeat_matrix).shape],
+                "control_names": sorted(str(name) for name in repeat_controls.keys()),
+                "strict_raw_target_only": float(dict(repeat_transfer.get("strict_frozen_transfer", {})).get("raw_target_only", 0.0) or 0.0),
+                "strict_block_normalized": float(dict(repeat_transfer.get("strict_frozen_transfer", {})).get("block_normalized", 0.0) or 0.0),
+                "strict_code_occupancy": _strict_code_occupancy(repeat_transfer),
+                "source_native_alignment": _repeat_source_native_alignment(
+                    coverage=repeat_coverage,
+                    distance=repeat_distance,
+                ),
+                "source_family_surface_audit": _source_family_surface_audit(
+                    source_matrix=np.asarray(repeat_matrix, dtype=np.float64),
+                    evaluator_records=repeat_evaluator_records,
+                    k=int(k),
+                ),
+                "family_mapping_audit": _family_mapping_audit(mode_design=repeat_mode_design),
+                "preprocessing_audit": _repeat_preprocessing_audit(
+                    repeat_index=repeat_idx,
+                    split=repeat_split,
+                    calibration=repeat_calibration,
+                ),
+                "split_composition": _split_public_composition_by_name(
+                    google_public_rows=google_public_rows,
+                    split=repeat_split,
+                ),
+                "checks": repeat_checks,
+            }
+        )
+    mechanism_structure_stable = all(bool(dict(row.get("checks", {})).get("strict_beats_mechanism_controls_raw", False)) for row in repeats)
+    mechanism_structure_block_stable = all(bool(dict(row.get("checks", {})).get("strict_beats_mechanism_controls_block", False)) for row in repeats)
+    source_ablation_stable = all(bool(dict(row.get("checks", {})).get("strict_beats_source_ablations_raw", False)) for row in repeats)
+    source_ablation_block_stable = all(bool(dict(row.get("checks", {})).get("strict_beats_source_ablations_block", False)) for row in repeats)
+    core_transfer_stable = all(bool(dict(row.get("checks", {})).get("strict_beats_core_transfer_controls_raw", False)) for row in repeats)
+    target_native_stable = all(bool(dict(row.get("checks", {})).get("strict_or_adapter_beats_train_on_google_raw", False)) for row in repeats)
+    return {
+        "schema": "scope_static_stage4_6_seed_split_repeat_report_v1",
+        "heldout_only": True,
+        "mode_design_reads_design_split_only": True,
+        "uses_google_evaluator_labels": False,
+        "used_for_model_selection": False,
+        "repeat_seed_count_requested": int(count),
+        "repeat_seed_count_completed": int(len(repeats)),
+        "repeats": repeats,
+        "mechanism_structure_stable_raw": bool(mechanism_structure_stable),
+        "mechanism_structure_stable_block": bool(mechanism_structure_block_stable),
+        "source_ablation_stable_raw": bool(source_ablation_stable),
+        "source_ablation_stable_block": bool(source_ablation_block_stable),
+        "core_transfer_controls_stable_raw": bool(core_transfer_stable),
+        "target_native_train_on_google_stable_raw": bool(target_native_stable),
+        "passed": bool(
+            mechanism_structure_stable
+            and mechanism_structure_block_stable
+            and source_ablation_stable
+            and source_ablation_block_stable
+            and core_transfer_stable
+        ),
+    }
+
+
+def _repeat_key_checks(transfer: Mapping[str, object]) -> dict[str, object]:
+    strict = dict(transfer.get("strict_frozen_transfer", {})) if isinstance(transfer.get("strict_frozen_transfer", {}), Mapping) else {}
+    adapter = dict(transfer.get("frozen_codebook_train_adapter", {})) if isinstance(transfer.get("frozen_codebook_train_adapter", {}), Mapping) else {}
+    controls = dict(transfer.get("controls", {})) if isinstance(transfer.get("controls", {}), Mapping) else {}
+
+    def all_strict(names: Iterable[str], key: str) -> bool:
+        return all(name in controls and _better(strict, dict(controls.get(name, {})), key) for name in names)
+
+    train = dict(controls.get("train_on_google_only", {})) if isinstance(controls.get("train_on_google_only", {}), Mapping) else {}
+    mechanism_comparisons = _named_model_comparisons(strict, controls, ROBUSTNESS_MECHANISM_CONTROLS)
+    source_ablation_comparisons = _named_model_comparisons(strict, controls, ROBUSTNESS_SOURCE_ABLATIONS)
+    core_transfer_comparisons = _named_model_comparisons(strict, controls, ("random_codebook_transfer", "global_null"))
+    semantic_ablation_comparisons = {
+        alias: _model_comparison(strict, dict(controls.get(control, {})))
+        for alias, control in SEMANTIC_SOURCE_ABLATION_ALIASES.items()
+        if control in controls
+    }
+    return {
+        "heldout_eval_only": bool(transfer.get("heldout_eval_only", False)),
+        "strict_beats_mechanism_controls_raw": all_strict(ROBUSTNESS_MECHANISM_CONTROLS, "raw_target_only"),
+        "strict_beats_mechanism_controls_block": all_strict(ROBUSTNESS_MECHANISM_CONTROLS, "block_normalized"),
+        "strict_beats_source_ablations_raw": all_strict(ROBUSTNESS_SOURCE_ABLATIONS, "raw_target_only"),
+        "strict_beats_source_ablations_block": all_strict(ROBUSTNESS_SOURCE_ABLATIONS, "block_normalized"),
+        "strict_beats_core_transfer_controls_raw": all_strict(("random_codebook_transfer", "global_null"), "raw_target_only"),
+        "strict_beats_core_transfer_controls_block": all_strict(("random_codebook_transfer", "global_null"), "block_normalized"),
+        "strict_beats_train_on_google_raw": "train_on_google_only" in controls and _better(strict, train, "raw_target_only"),
+        "adapter_beats_train_on_google_raw": "train_on_google_only" in controls and _better(adapter, train, "raw_target_only"),
+        "strict_or_adapter_beats_train_on_google_raw": "train_on_google_only" in controls
+        and (_better(strict, train, "raw_target_only") or _better(adapter, train, "raw_target_only")),
+        "mechanism_control_comparisons": mechanism_comparisons,
+        "source_structure_ablation_comparisons": source_ablation_comparisons,
+        "semantic_source_structure_ablation_comparisons": semantic_ablation_comparisons,
+        "core_transfer_control_comparisons": core_transfer_comparisons,
+        "train_on_google_comparison": _model_comparison(strict, train) if train else {},
+        "source_ablations_beating_or_tying_strict_raw": _names_beating_or_tying_strict(source_ablation_comparisons, profile="raw_target_only"),
+        "source_ablations_beating_or_tying_strict_block": _names_beating_or_tying_strict(source_ablation_comparisons, profile="block_normalized"),
+        "semantic_ablations_beating_or_tying_strict_raw": _names_beating_or_tying_strict(semantic_ablation_comparisons, profile="raw_target_only"),
+        "semantic_ablations_beating_or_tying_strict_block": _names_beating_or_tying_strict(semantic_ablation_comparisons, profile="block_normalized"),
+    }
+
+
+def _named_model_comparisons(
+    strict: Mapping[str, object],
+    controls: Mapping[str, object],
+    names: Iterable[str],
+) -> dict[str, object]:
+    return {
+        str(name): _model_comparison(strict, dict(controls.get(str(name), {})))
+        for name in names
+        if str(name) in controls
+    }
+
+
+def _model_comparison(strict: Mapping[str, object], control: Mapping[str, object]) -> dict[str, object]:
+    raw = _profile_delta(strict, control, profile="raw_target_only")
+    block = _profile_delta(strict, control, profile="block_normalized")
+    strict_blocks = dict(strict.get("raw_block_mae", {})) if isinstance(strict.get("raw_block_mae", {}), Mapping) else {}
+    control_blocks = dict(control.get("raw_block_mae", {})) if isinstance(control.get("raw_block_mae", {}), Mapping) else {}
+    raw_block_comparisons = {
+        block_name: _profile_delta_from_values(
+            strict_error=float(strict_blocks.get(block_name, 0.0) or 0.0),
+            control_error=float(control_blocks.get(block_name, 0.0) or 0.0),
+        )
+        for block_name in RAW_BLOCK_NAMES
+    }
+    control_family = str(control.get("model_family", control.get("baseline_family", "control")))
+    return {
+        "strict_model_family": str(strict.get("model_family", "strict_frozen_transfer")),
+        "control_model_family": control_family,
+        "raw_target_only": raw,
+        "block_normalized": block,
+        "raw_block_comparisons": raw_block_comparisons,
+        "raw_blocks_where_control_beats_or_ties_strict": [
+            block_name for block_name, payload in raw_block_comparisons.items() if bool(dict(payload).get("control_beats_or_ties_strict", False))
+        ],
+        "control_beats_or_ties_strict_raw": bool(raw["control_beats_or_ties_strict"]),
+        "control_beats_or_ties_strict_block": bool(block["control_beats_or_ties_strict"]),
+    }
+
+
+def _profile_delta(strict: Mapping[str, object], control: Mapping[str, object], *, profile: str) -> dict[str, object]:
+    return _profile_delta_from_values(
+        strict_error=float(strict.get(profile, 0.0) or 0.0),
+        control_error=float(control.get(profile, 0.0) or 0.0),
+    )
+
+
+def _profile_delta_from_values(*, strict_error: float, control_error: float) -> dict[str, object]:
+    delta = float(control_error - strict_error)
+    return {
+        "strict_error": float(strict_error),
+        "control_error": float(control_error),
+        "delta_control_minus_strict": delta,
+        "strict_beats_control": bool(delta > 1.0e-12),
+        "control_beats_or_ties_strict": bool(delta <= 1.0e-12),
+    }
+
+
+def _names_beating_or_tying_strict(comparisons: Mapping[str, object], *, profile: str) -> list[str]:
+    out = []
+    for name, payload in sorted(comparisons.items()):
+        profile_payload = dict(dict(payload).get(profile, {})) if isinstance(dict(payload).get(profile, {}), Mapping) else {}
+        if bool(profile_payload.get("control_beats_or_ties_strict", False)):
+            out.append(str(name))
+    return out
+
+
+def _strict_code_occupancy(transfer: Mapping[str, object]) -> dict[str, object]:
+    strict = dict(transfer.get("strict_frozen_transfer", {})) if isinstance(transfer.get("strict_frozen_transfer", {}), Mapping) else {}
+    occupancy = strict.get("heldout_code_occupancy", {})
+    if isinstance(occupancy, Mapping):
+        return dict(occupancy)
+    return {
+        "schema": "scope_static_stage4_6_code_occupancy_v1",
+        "code_count": int(strict.get("source_code_count", 0) or 0),
+        "heldout_row_count": int(strict.get("heldout_eval_row_count", 0) or 0),
+        "active_code_count": int(strict.get("active_heldout_code_count", 0) or 0),
+    }
+
+
+def _source_family_surface_audit(
+    *,
+    source_matrix: np.ndarray,
+    evaluator_records: list[dict[str, object]],
+    k: int,
+) -> dict[str, object]:
+    labels = [str(row.get("dominant_family", "")) for row in evaluator_records]
+    x_raw = np.asarray(source_matrix, dtype=np.float64)
+    if x_raw.ndim != 2 or x_raw.shape[0] <= 1 or len(labels) != int(x_raw.shape[0]):
+        return {
+            "schema": "scope_static_stage4_6_source_family_surface_audit_v1",
+            "skipped": True,
+            "reason": "insufficient_rows_or_label_mismatch",
+            "uses_evaluator_labels_for_learner_training": False,
+            "used_for_model_selection": False,
+        }
+    x = _standardize_matrix(x_raw)
+    fitted = _fit_attention_vq(x, k=max(1, min(int(k), int(x.shape[0]))), max_iter=20, code_dim=min(x.shape[1], int(k)))
+    assignments = np.asarray(fitted["assignments"], dtype=np.int64)
+    centroid = _leave_one_out_centroid_accuracy(x, labels)
+    knn = _leave_one_out_1nn_accuracy(x, labels)
+    purity = _label_prototype_purity(assignments, labels)
+    silhouette = _label_silhouette(x, labels)
+    family_counts = dict(sorted(Counter(labels).items()))
+    separable = bool(float(centroid["accuracy"]) >= 0.55 and float(purity["weighted_purity"]) >= 0.60)
+    return {
+        "schema": "scope_static_stage4_6_source_family_surface_audit_v1",
+        "skipped": False,
+        "row_count": int(x.shape[0]),
+        "family_count": int(len(family_counts)),
+        "family_counts": family_counts,
+        "centroid_probe": centroid,
+        "knn_probe": knn,
+        "prototype_purity": purity,
+        "silhouette_by_dominant_family": silhouette,
+        "family_surface_separable": separable,
+        "possible_catalog_or_source_surface_issue": not separable,
+        "uses_evaluator_labels_for_learner_training": False,
+        "uses_evaluator_labels_for_posthoc_audit": True,
+        "used_for_model_selection": False,
+    }
+
+
+def _family_mapping_audit(*, mode_design: Mapping[str, object]) -> dict[str, object]:
+    specs = [dict(spec) for spec in mode_design.get("mode_specs", []) if isinstance(spec, Mapping)]
+    if not specs:
+        return {
+            "schema": "scope_static_stage4_6_family_mapping_audit_v1",
+            "skipped": True,
+            "reason": "no_mode_specs",
+            "uses_google_heldout_eval_rows": False,
+            "used_for_model_selection": False,
+        }
+    mode_rows = []
+    hard_mass_by_family: dict[str, float] = defaultdict(float)
+    hard_weights = []
+    relative_margins = []
+    low_margin_hard_modes = []
+    for spec in specs:
+        weights = {str(key): float(value) for key, value in dict(spec.get("bucket_weights", {})).items()}
+        mass = float(spec.get("design_split_mass", 0.0) or 0.0)
+        family = str(spec.get("dominant_family_bucket", _dominant_family_from_bucket_weights(weights)))
+        hard_mass_by_family[family] += mass
+        max_weight = max(weights.values()) if weights else 0.0
+        entropy = _weight_entropy(weights)
+        block_scores = {str(key): float(value) for key, value in dict(spec.get("block_scores", {})).items()}
+        top_block, second_block, top_score, second_score = _top_two_scores(block_scores)
+        margin = float(top_score - second_score)
+        relative_margin = float(margin / max(abs(top_score), 1.0e-12))
+        hard_weights.append(max_weight)
+        relative_margins.append(relative_margin)
+        low_margin_hard = bool(max_weight >= 0.70 and relative_margin <= 0.15)
+        if low_margin_hard:
+            low_margin_hard_modes.append(str(spec.get("mode_id", "")))
+        mode_rows.append(
+            {
+                "mode_id": str(spec.get("mode_id", "")),
+                "google_native_mode": str(spec.get("google_native_mode", "")),
+                "design_split_mass": mass,
+                "dominant_visible_block": str(spec.get("dominant_visible_block", "")),
+                "dominant_family_bucket": family,
+                "max_family_weight": float(max_weight),
+                "family_weight_entropy": entropy,
+                "top_block": top_block,
+                "second_block": second_block,
+                "block_margin": margin,
+                "relative_block_margin": relative_margin,
+                "low_margin_hard_mapping": low_margin_hard,
+                "nearest_source_code_distance": spec.get("nearest_source_code_distance"),
+                "source_radius_threshold": spec.get("source_radius_threshold"),
+                "selected_as_missing_mode": bool(spec.get("selected_as_missing_mode", False)),
+            }
+        )
+    mean_max_weight = float(np.mean(hard_weights)) if hard_weights else 0.0
+    mean_relative_margin = float(np.mean(relative_margins)) if relative_margins else 0.0
+    low_margin_mass = float(sum(row["design_split_mass"] for row in mode_rows if bool(row["low_margin_hard_mapping"])))
+    return {
+        "schema": "scope_static_stage4_6_family_mapping_audit_v1",
+        "skipped": False,
+        "mode_count": int(len(mode_rows)),
+        "uses_google_visible_rows": str(mode_design.get("uses_google_visible_rows", "design_split_only")),
+        "uses_google_heldout_eval_rows": bool(mode_design.get("uses_google_heldout_eval_rows", False)),
+        "block_to_family_rule": {block: _bucket_for_visible_block(block) for block in RAW_BLOCK_NAMES},
+        "hard_family_mass_by_bucket": {key: float(value) for key, value in sorted(hard_mass_by_family.items())},
+        "mean_max_family_weight": mean_max_weight,
+        "min_max_family_weight": float(np.min(hard_weights)) if hard_weights else 0.0,
+        "mean_relative_block_margin": mean_relative_margin,
+        "low_margin_hard_mapping_mode_count": int(len(low_margin_hard_modes)),
+        "low_margin_hard_mapping_design_mass": low_margin_mass,
+        "low_margin_hard_mapping_modes": low_margin_hard_modes,
+        "hard_mapping_overconfident": bool(mean_max_weight >= 0.70),
+        "hard_mapping_low_margin": bool(low_margin_mass >= 0.10),
+        "mode_rows": mode_rows,
+        "used_for_model_selection": False,
+    }
+
+
+def _family_mapping_validation_report(*, seed_split_repeat: Mapping[str, object]) -> dict[str, object]:
+    repeats = [dict(row) for row in seed_split_repeat.get("repeats", []) if isinstance(row, Mapping)]
+    failing = []
+    source_surface_weak = []
+    hard_mapping_brittle = []
+    for row in repeats:
+        checks = dict(row.get("checks", {})) if isinstance(row.get("checks", {}), Mapping) else {}
+        source_audit = dict(row.get("source_family_surface_audit", {})) if isinstance(row.get("source_family_surface_audit", {}), Mapping) else {}
+        mapping_audit = dict(row.get("family_mapping_audit", {})) if isinstance(row.get("family_mapping_audit", {}), Mapping) else {}
+        preproc = dict(row.get("preprocessing_audit", {})) if isinstance(row.get("preprocessing_audit", {}), Mapping) else {}
+        loses_to_family_ablation = "no_family_structure" in list(checks.get("semantic_ablations_beating_or_tying_strict_raw", [])) or "no_family_structure" in list(
+            checks.get("semantic_ablations_beating_or_tying_strict_block", [])
+        )
+        if loses_to_family_ablation:
+            failing.append(int(row.get("seed", -1)))
+        if bool(source_audit.get("possible_catalog_or_source_surface_issue", False)):
+            source_surface_weak.append(int(row.get("seed", -1)))
+        clean_preproc = bool(preproc.get("calibration_design_indices_match_repeat_design", False)) and not bool(
+            preproc.get("uses_google_heldout_eval_rows", True)
+        )
+        if loses_to_family_ablation and clean_preproc and bool(mapping_audit.get("hard_mapping_overconfident", False)):
+            hard_mapping_brittle.append(int(row.get("seed", -1)))
+    if hard_mapping_brittle and not source_surface_weak:
+        diagnosis = "hard_family_mapping_brittle"
+    elif hard_mapping_brittle and source_surface_weak:
+        diagnosis = "mixed_hard_mapping_and_source_surface_risk"
+    elif source_surface_weak:
+        diagnosis = "source_family_surface_or_catalog_mechanism_risk"
+    elif failing:
+        diagnosis = "family_structure_ablation_failure_unexplained"
+    else:
+        diagnosis = "no_family_mapping_failure_detected"
+    return {
+        "schema": "scope_static_stage4_6_family_mapping_validation_report_v1",
+        "diagnosis": diagnosis,
+        "failing_repeat_seeds_losing_to_no_family_structure": failing,
+        "source_family_surface_weak_repeat_seeds": source_surface_weak,
+        "hard_family_mapping_brittle_repeat_seeds": hard_mapping_brittle,
+        "interpretation": (
+            "If source family surface is separable but strict loses to no_family_structure under clean preprocessing, "
+            "the failure points to brittle Google-mode-to-family mapping rather than stale split preprocessing."
+        ),
+        "uses_google_evaluator_labels": False,
+        "uses_google_heldout_eval_for_mode_design": False,
+        "used_for_model_selection": False,
+    }
+
+
+def _standardize_matrix(x: np.ndarray) -> np.ndarray:
+    matrix = np.asarray(x, dtype=np.float64)
+    mean = np.mean(matrix, axis=0, keepdims=True)
+    scale = np.where(np.std(matrix, axis=0, keepdims=True) > 1.0e-12, np.std(matrix, axis=0, keepdims=True), 1.0)
+    return _finite((matrix - mean) / scale)
+
+
+def _leave_one_out_centroid_accuracy(x: np.ndarray, labels: list[str]) -> dict[str, object]:
+    preds = []
+    for idx in range(int(x.shape[0])):
+        candidates = [j for j in range(int(x.shape[0])) if j != idx]
+        centroids = {
+            label: np.mean(x[[j for j in candidates if labels[j] == label]], axis=0)
+            for label in sorted(set(labels))
+            if any(labels[j] == label for j in candidates)
+        }
+        if not centroids:
+            preds.append(labels[idx])
+            continue
+        distances = {label: float(np.sum((x[idx] - center) ** 2)) for label, center in centroids.items()}
+        preds.append(min(distances, key=distances.get))
+    return {
+        "probe": "leave_one_out_nearest_family_centroid",
+        "accuracy": float(np.mean([pred == label for pred, label in zip(preds, labels)])) if labels else 0.0,
+        "used_for_model_selection": False,
+    }
+
+
+def _leave_one_out_1nn_accuracy(x: np.ndarray, labels: list[str]) -> dict[str, object]:
+    preds = []
+    for idx in range(int(x.shape[0])):
+        candidates = [j for j in range(int(x.shape[0])) if j != idx]
+        if not candidates:
+            preds.append(labels[idx])
+            continue
+        nearest = min(candidates, key=lambda j: float(np.sum((x[idx] - x[j]) ** 2)))
+        preds.append(labels[nearest])
+    return {
+        "probe": "leave_one_out_1nn_family",
+        "accuracy": float(np.mean([pred == label for pred, label in zip(preds, labels)])) if labels else 0.0,
+        "used_for_model_selection": False,
+    }
+
+
+def _label_prototype_purity(assignments: np.ndarray, labels: list[str]) -> dict[str, object]:
+    clusters: dict[int, list[str]] = defaultdict(list)
+    for cluster, label in zip(np.asarray(assignments, dtype=np.int64).tolist(), labels):
+        clusters[int(cluster)].append(str(label))
+    total = max(1, len(labels))
+    weighted = 0.0
+    purities = {}
+    for cluster, values in clusters.items():
+        counts = Counter(values)
+        purity = max(counts.values()) / max(1, len(values))
+        purities[f"C{cluster:03d}"] = float(purity)
+        weighted += purity * len(values) / total
+    return {
+        "weighted_purity": float(weighted),
+        "cluster_purity": purities,
+        "used_for_model_selection": False,
+    }
+
+
+def _label_silhouette(x: np.ndarray, labels: list[str]) -> dict[str, object]:
+    matrix = np.asarray(x, dtype=np.float64)
+    n = int(matrix.shape[0])
+    if n <= 1:
+        return {"mean_silhouette": 0.0, "per_label_mean": {}, "used_for_model_selection": False}
+    distances = np.sqrt(np.maximum(np.sum((matrix[:, None, :] - matrix[None, :, :]) ** 2, axis=2), 0.0))
+    values = []
+    by_label: dict[str, list[float]] = defaultdict(list)
+    labels_arr = np.asarray(labels, dtype=object)
+    for idx in range(n):
+        same = labels_arr == labels_arr[idx]
+        same[idx] = False
+        other_labels = sorted({str(value) for value in labels_arr.tolist() if str(value) != str(labels_arr[idx])})
+        a = float(np.mean(distances[idx, same])) if np.any(same) else 0.0
+        b = min((float(np.mean(distances[idx, labels_arr == other])) for other in other_labels), default=0.0)
+        denom = max(a, b, 1.0e-12)
+        score = float((b - a) / denom)
+        values.append(score)
+        by_label[str(labels_arr[idx])].append(score)
+    return {
+        "mean_silhouette": float(np.mean(values)) if values else 0.0,
+        "per_label_mean": {key: float(np.mean(vals)) for key, vals in sorted(by_label.items())},
+        "used_for_model_selection": False,
+    }
+
+
+def _weight_entropy(weights: Mapping[str, float]) -> float:
+    vals = np.asarray([float(value) for value in weights.values()], dtype=np.float64)
+    total = float(np.sum(vals))
+    if total <= 0.0:
+        return 0.0
+    probs = vals / total
+    return float(-np.sum([p * np.log(p) for p in probs if p > 0.0]))
+
+
+def _top_two_scores(scores: Mapping[str, float]) -> tuple[str, str, float, float]:
+    if not scores:
+        return "", "", 0.0, 0.0
+    rows = sorted(((str(key), float(value)) for key, value in scores.items()), key=lambda item: (-item[1], item[0]))
+    top = rows[0]
+    second = rows[1] if len(rows) > 1 else ("", 0.0)
+    return top[0], second[0], float(top[1]), float(second[1])
+
+
+def _repeat_source_native_alignment(
+    *,
+    coverage: Mapping[str, object],
+    distance: Mapping[str, object],
+) -> dict[str, object]:
+    return {
+        "heldout_eval_only": bool(coverage.get("heldout_eval_only", False)) and bool(distance.get("heldout_eval_only", False)),
+        "source_native_nmi_lift": float(coverage.get("source_code_vs_google_native_code_nmi_lift", 0.0) or 0.0),
+        "native_mode_coverage_ratio": float(coverage.get("covered_heldout_google_native_mode_ratio", 0.0) or 0.0),
+        "covered_heldout_google_native_mode_count": int(coverage.get("covered_heldout_google_native_mode_count", 0) or 0),
+        "heldout_google_native_mode_count": int(coverage.get("heldout_google_native_mode_count", 0) or 0),
+        "google_heldout_to_source_nearest_p50": float(distance.get("google_heldout_to_source_nearest_p50", 0.0) or 0.0),
+        "google_heldout_to_source_nearest_p95": float(distance.get("google_heldout_to_source_nearest_p95", 0.0) or 0.0),
+        "outside_source_radius_fraction": float(distance.get("outside_source_radius_fraction", 0.0) or 0.0),
+        "source_radius_p95": float(distance.get("source_radius_p95", 0.0) or 0.0),
+    }
+
+
+def _repeat_preprocessing_audit(
+    *,
+    repeat_index: int,
+    split: Mapping[str, object],
+    calibration: Mapping[str, object],
+) -> dict[str, object]:
+    design = [int(idx) for idx in split.get("design", [])]
+    calibration_design = [int(idx) for idx in calibration.get("design_indices", [])] if isinstance(calibration, Mapping) else []
+    return {
+        "source_surface_rebuilt_for_this_split": bool(int(repeat_index) > 0),
+        "calibration_design_indices_match_repeat_design": calibration_design == design,
+        "repeat_design_indices_sha256": _indices_digest(design),
+        "calibration_design_indices_sha256": _indices_digest(calibration_design),
+        "uses_google_design_split_rows": bool(calibration.get("uses_google_design_split_rows", False)) if isinstance(calibration, Mapping) else False,
+        "uses_google_validation_rows": bool(calibration.get("uses_google_validation_rows", True)) if isinstance(calibration, Mapping) else True,
+        "uses_google_heldout_eval_rows": bool(calibration.get("uses_google_heldout_eval_rows", True)) if isinstance(calibration, Mapping) else True,
+        "public_geometry_features_mirrored_per_row": bool(calibration.get("public_geometry_features_mirrored_per_row", False))
+        if isinstance(calibration, Mapping)
+        else False,
+    }
+
+
+def _split_public_composition_by_name(
+    *,
+    google_public_rows: list[dict[str, object]],
+    split: Mapping[str, object],
+) -> dict[str, object]:
+    return {
+        "design": _split_public_composition(google_public_rows, [int(idx) for idx in split.get("design", [])]),
+        "validation": _split_public_composition(google_public_rows, [int(idx) for idx in split.get("validation", [])]),
+        "heldout_eval": _split_public_composition(google_public_rows, [int(idx) for idx in split.get("heldout_eval", [])]),
+    }
+
+
+def _split_public_composition(google_public_rows: list[dict[str, object]], indices: list[int]) -> dict[str, object]:
+    fields = ("basis", "distance", "rounds", "round_band", "region_family", "patch_public_geometry_class")
+    rows = []
+    for idx in indices:
+        if 0 <= int(idx) < len(google_public_rows):
+            public = dict(google_public_rows[int(idx)].get("public_fields", {}))
+            rows.append(_defaulted_public_fields(public))
+    counts = {
+        field: dict(sorted(Counter(str(row.get(field)) for row in rows).items()))
+        for field in fields
+    }
+    joint = Counter(
+        "|".join(
+            [
+                str(row.get("basis")),
+                str(row.get("distance")),
+                str(row.get("rounds")),
+                str(row.get("round_band")),
+                str(row.get("region_family")),
+            ]
+        )
+        for row in rows
+    )
+    return {
+        "row_count": int(len(rows)),
+        "counts": counts,
+        "top_public_context_keys": dict(sorted(joint.items(), key=lambda item: (-int(item[1]), str(item[0])))[:20]),
+    }
+
+
+def _indices_digest(indices: Iterable[int]) -> str:
+    payload = [int(idx) for idx in indices]
+    return hashlib.sha256(json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()
+
+
+def _robustness_closeout_report(
+    *,
+    paired_bootstrap: Mapping[str, object],
+    seed_split_repeat: Mapping[str, object],
+    stronger_statistical_controls: Mapping[str, object],
+    mechanism_source_structure_ablation: Mapping[str, object],
+    current_transfer: Mapping[str, object],
+) -> dict[str, object]:
+    mechanism_stable = bool(stronger_statistical_controls.get("mechanism_mixture_controls_passed", False)) and bool(
+        mechanism_source_structure_ablation.get("passed", False)
+    ) and bool(seed_split_repeat.get("mechanism_structure_stable_raw", False)) and bool(
+        seed_split_repeat.get("mechanism_structure_stable_block", False)
+    ) and bool(seed_split_repeat.get("source_ablation_stable_raw", False)) and bool(
+        seed_split_repeat.get("source_ablation_stable_block", False)
+    ) and bool(paired_bootstrap.get("strict_bootstrap_mechanism_controls_passed", False))
+    core_transfer_stable = bool(stronger_statistical_controls.get("core_transfer_controls_passed", False)) and bool(
+        seed_split_repeat.get("core_transfer_controls_stable_raw", False)
+    ) and bool(paired_bootstrap.get("strict_bootstrap_core_transfer_controls_passed", False))
+    target_native_stable = bool(stronger_statistical_controls.get("target_native_train_on_google_beaten", False)) and bool(
+        seed_split_repeat.get("target_native_train_on_google_stable_raw", False)
+    ) and bool(paired_bootstrap.get("strict_or_adapter_bootstrap_train_on_google_passed", False))
+    current_split_positive = bool(current_transfer.get("passed", False)) or bool(stronger_statistical_controls.get("passed", False))
+    if mechanism_stable and core_transfer_stable and target_native_stable:
+        decision = "s4_6_robust_positive"
+    elif mechanism_stable and core_transfer_stable:
+        decision = "s4_6_robust_source_structure_positive_target_native_dominates"
+    elif current_split_positive:
+        decision = "s4_6_current_split_positive_only"
+    else:
+        decision = "s4_6_robustness_inconclusive"
+    return {
+        "schema": "scope_static_stage4_6_robustness_closeout_report_v1",
+        "decision": decision,
+        "upgrades_current_split_positive_to_robust_positive": decision == "s4_6_robust_positive",
+        "robust_source_structure_positive": bool(mechanism_stable and core_transfer_stable),
+        "robust_full_transfer_positive": bool(mechanism_stable and core_transfer_stable and target_native_stable),
+        "mechanism_mixture_stability_passed": bool(mechanism_stable),
+        "core_transfer_stability_passed": bool(core_transfer_stable),
+        "target_native_train_on_google_stability_passed": bool(target_native_stable),
+        "claim_boundary": {
+            "claims_true_google_physical_mechanism_recovery": False,
+            "claims_google_m_label_recovery": False,
+            "claims_cptp_gksl_generation": False,
+            "claims_visible_syndrome_response_replay": True,
+            "claims_google_visible_data_guided_source_mode_construction": True,
+        },
+        "subreports": {
+            "paired_bootstrap_report": "paired_bootstrap_report.json",
+            "seed_split_repeat_report": "seed_split_repeat_report.json",
+            "stronger_statistical_controls_report": "stronger_statistical_controls_report.json",
+            "mechanism_source_structure_ablation_report": "mechanism_source_structure_ablation_report.json",
+        },
+    }
+
+
+def _heldout_reconstruction_bundle(
+    *,
+    source_matrix: np.ndarray,
+    control_matrices: Mapping[str, np.ndarray],
+    google_raw: np.ndarray,
+    split: Mapping[str, object],
+    feature_names: list[str],
+    seed: int,
+    k: int,
+) -> dict[str, object]:
+    calibration = [int(idx) for idx in split.get("validation", [])]
+    heldout = [int(idx) for idx in split.get("heldout_eval", [])]
+    if not calibration or not heldout:
+        return {"skipped": True, "reason": "validation_or_heldout_split_empty"}
+    target = np.asarray(google_raw[heldout], dtype=np.float64)
+    reconstructions: dict[str, np.ndarray] = {
+        "strict_frozen_transfer": _source_matrix_heldout_reconstruction(
+            source_matrix=source_matrix,
+            target_matrix=google_raw,
+            calibration_indices=calibration,
+            heldout_indices=heldout,
+            k=int(k),
+        ),
+        "frozen_codebook_train_adapter": _source_matrix_heldout_reconstruction(
+            source_matrix=_affine_match_source_to_calibration(source_matrix, google_raw[calibration]),
+            target_matrix=google_raw,
+            calibration_indices=calibration,
+            heldout_indices=heldout,
+            k=int(k),
+        ),
+    }
+    for idx, (name, matrix) in enumerate(sorted(control_matrices.items())):
+        reconstructions[str(name)] = _source_matrix_heldout_reconstruction(
+            source_matrix=np.asarray(matrix, dtype=np.float64),
+            target_matrix=google_raw,
+            calibration_indices=calibration,
+            heldout_indices=heldout,
+            k=int(k),
+        )
+    reconstructions["random_codebook_transfer"] = _random_codebook_heldout_reconstruction(
+        source_matrix=source_matrix,
+        target_matrix=google_raw,
+        calibration_indices=calibration,
+        heldout_indices=heldout,
+        seed=int(seed) + 17,
+        k=int(k),
+    )
+    reconstructions["train_on_google_only"] = _train_on_google_heldout_reconstruction(
+        target_matrix=google_raw,
+        calibration_indices=calibration,
+        heldout_indices=heldout,
+        k=int(k),
+    )
+    mean = np.mean(google_raw[calibration], axis=0, keepdims=True)
+    null = np.repeat(mean, len(heldout), axis=0)
+    reconstructions["global_null"] = null
+    reconstructions["dmle_qec_visible_marginal_mle"] = null.copy()
+    return {
+        "target": target,
+        "reconstructions": reconstructions,
+        "calibration_indices": calibration,
+        "heldout_eval_indices": heldout,
+        "feature_names": list(feature_names),
+    }
+
+
+def _source_matrix_heldout_reconstruction(
+    *,
+    source_matrix: np.ndarray,
+    target_matrix: np.ndarray,
+    calibration_indices: list[int],
+    heldout_indices: list[int],
+    k: int,
+) -> np.ndarray:
+    source = np.asarray(source_matrix, dtype=np.float64)
+    target = np.asarray(target_matrix, dtype=np.float64)
+    if source.ndim != 2 or source.shape[0] <= 0:
+        return np.zeros_like(target[heldout_indices], dtype=np.float64)
+    mean = np.mean(source, axis=0)
+    scale = np.where(np.std(source, axis=0) > 1.0e-12, np.std(source, axis=0), 1.0)
+    source_z = (source - mean[None, :]) / scale[None, :]
+    fitted = _fit_attention_vq(source_z, k=max(1, min(int(k), int(source_z.shape[0]))), max_iter=20, code_dim=min(source_z.shape[1], int(k)))
+    centers = np.asarray(fitted["centers"], dtype=np.float64)
+    target_z = (target - mean[None, :]) / scale[None, :]
+    calib_assign, _ = _assign_to_source_centers(target_z[calibration_indices], centers)
+    heldout_assign, _ = _assign_to_source_centers(target_z[heldout_indices], centers)
+    heads = _fit_replay_heads(target[calibration_indices], calib_assign, code_count=int(centers.shape[0]))
+    return heads[heldout_assign] if heldout_assign.size else np.zeros_like(target[heldout_indices], dtype=np.float64)
+
+
+def _random_codebook_heldout_reconstruction(
+    *,
+    source_matrix: np.ndarray,
+    target_matrix: np.ndarray,
+    calibration_indices: list[int],
+    heldout_indices: list[int],
+    seed: int,
+    k: int,
+) -> np.ndarray:
+    source = np.asarray(source_matrix, dtype=np.float64)
+    target = np.asarray(target_matrix, dtype=np.float64)
+    if source.ndim != 2 or source.shape[0] <= 0:
+        return np.zeros_like(target[heldout_indices], dtype=np.float64)
+    rng = np.random.default_rng(int(seed))
+    mean = np.mean(source, axis=0)
+    scale = np.where(np.std(source, axis=0) > 1.0e-12, np.std(source, axis=0), 1.0)
+    target_z = (target - mean[None, :]) / scale[None, :]
+    centers = rng.normal(size=(max(1, min(int(k), int(source.shape[0]))), source.shape[1]))
+    calib_assign, _ = _assign_to_source_centers(target_z[calibration_indices], centers)
+    heldout_assign, _ = _assign_to_source_centers(target_z[heldout_indices], centers)
+    heads = _fit_replay_heads(target[calibration_indices], calib_assign, code_count=int(centers.shape[0]))
+    return heads[heldout_assign] if heldout_assign.size else np.zeros_like(target[heldout_indices], dtype=np.float64)
+
+
+def _train_on_google_heldout_reconstruction(
+    *,
+    target_matrix: np.ndarray,
+    calibration_indices: list[int],
+    heldout_indices: list[int],
+    k: int,
+) -> np.ndarray:
+    target = np.asarray(target_matrix, dtype=np.float64)
+    calibration = target[calibration_indices]
+    if calibration.ndim != 2 or calibration.shape[0] <= 0:
+        return np.zeros_like(target[heldout_indices], dtype=np.float64)
+    fitted = _fit_attention_vq(calibration, k=max(1, min(int(k), int(calibration.shape[0]))), max_iter=20, code_dim=min(calibration.shape[1], int(k)))
+    centers = np.asarray(fitted["centers"], dtype=np.float64)
+    calib_assign, _ = _assign_to_source_centers(calibration, centers)
+    heldout_assign, _ = _assign_to_source_centers(target[heldout_indices], centers)
+    heads = _fit_replay_heads(calibration, calib_assign, code_count=int(centers.shape[0]))
+    return heads[heldout_assign] if heldout_assign.size else np.zeros_like(target[heldout_indices], dtype=np.float64)
+
+
+def _per_row_profile_error(target: np.ndarray, recon: np.ndarray, *, feature_names: list[str], profile: str) -> np.ndarray:
+    x = np.asarray(target, dtype=np.float64)
+    y = np.asarray(recon, dtype=np.float64)
+    if x.size == 0 or y.size == 0:
+        return np.zeros(0, dtype=np.float64)
+    err = np.abs(x - y)
+    raw_indices = [idx for idx, name in enumerate(feature_names) if str(name).startswith("raw__")]
+    if profile == "raw_target_only":
+        selected = err[:, raw_indices] if raw_indices else err
+        return _finite(np.mean(selected, axis=1))
+    if profile == "block_normalized":
+        values = []
+        for block, indices in _block_indices(feature_names).items():
+            if str(block).startswith("raw__") and indices:
+                values.append(np.mean(err[:, indices], axis=1))
+        if not values:
+            selected = err[:, raw_indices] if raw_indices else err
+            return _finite(np.mean(selected, axis=1))
+        return _finite(np.mean(np.vstack(values), axis=0))
+    selected = err[:, raw_indices] if raw_indices else err
+    return _finite(np.mean(selected, axis=1))
+
+
 def _gap_closure(frozen: Mapping[str, object], *, global_null: Mapping[str, object], train_on_google: Mapping[str, object]) -> dict[str, object]:
     global_score = float(global_null.get("raw_target_only", 0.0) or 0.0)
     frozen_score = float(frozen.get("raw_target_only", 0.0) or 0.0)
@@ -1994,6 +3383,34 @@ def _affine_match_source_to_calibration(source_matrix: np.ndarray, calibration: 
     t_mean = np.mean(calibration, axis=0, keepdims=True)
     t_std = np.std(calibration, axis=0, keepdims=True)
     return _finite(((source_matrix - s_mean) / s_std) * t_std + t_mean)
+
+
+def _assignment_occupancy(assignments: np.ndarray, *, code_count: int) -> dict[str, object]:
+    labels = np.asarray(assignments, dtype=np.int64)
+    k = max(1, int(code_count))
+    counts = Counter(int(value) for value in labels.tolist())
+    n = max(1, int(labels.size))
+    masses = {f"C{idx:03d}": float(counts.get(idx, 0) / n) for idx in range(k)}
+    probs = np.asarray([masses[f"C{idx:03d}"] for idx in range(k)], dtype=np.float64)
+    active = int(sum(1 for value in counts.values() if int(value) > 0))
+    entropy = float(-np.sum([p * np.log(p) for p in probs if p > 0.0]))
+    normalized_entropy = float(entropy / max(np.log(float(k)), 1.0e-12)) if k > 1 else 1.0
+    overload_threshold = float(2.0 / max(1, k))
+    overloaded = {key: value for key, value in masses.items() if value > overload_threshold}
+    return {
+        "schema": "scope_static_stage4_6_code_occupancy_v1",
+        "code_count": int(k),
+        "heldout_row_count": int(labels.size),
+        "active_code_count": int(active),
+        "active_code_ratio": float(active / max(1, k)),
+        "code_entropy": entropy,
+        "normalized_code_entropy": normalized_entropy,
+        "per_code_heldout_mass": masses,
+        "max_code_mass": float(np.max(probs)) if probs.size else 0.0,
+        "overload_threshold_mass": overload_threshold,
+        "overloaded_code_fraction": float(len(overloaded) / max(1, k)),
+        "overloaded_codes": overloaded,
+    }
 
 
 def _better(left: Mapping[str, object], right: Mapping[str, object], key: str) -> bool:

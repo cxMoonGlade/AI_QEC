@@ -23,7 +23,7 @@ src/scope_static/
   teacher/                teacher self-distinguishment and visible-surface helpers
   learner/                no-leakage learner recovery and visible replay quality
   mechanism_observability/ S2D observability, calibration, and typed learner audits
-  mechanism_discovery/     Stage 3 latent mechanism discovery artifacts and models
+  mechanism_discovery/     Stage 3/4 discovery, bridge, transfer, and robustness artifacts
   catalog_pipeline/       controlled-catalog orchestration
   experiments/             thin CLI/config wrappers grouped by experiment family
   archive/                 historical research-stage modules with compatibility wrappers
@@ -68,6 +68,7 @@ experiments/static/            DEM and Stage 2 static-discovery commands
 experiments/willow_data/       Google/Willow inventory, GPU diagnostics, S3 cache, and visible adapters
 experiments/qec_noise_catalog/ catalog teacher, validation, observability commands
 experiments/stage3/            Stage 3A through Stage 3D commands
+experiments/stage4/            S4 bridge, source, transfer, and Google-unit commands
 ```
 
 Preferred console scripts:
@@ -84,6 +85,14 @@ scope-stage3b0-baselines
 scope-stage3b1-discovery
 scope-stage3c-generator
 scope-stage3d1-assignment-shuffle
+scope-stage4-synthetic-freeze
+scope-stage4-source-ceiling
+scope-stage4-source-pretrain
+scope-stage4-support-audit
+scope-stage4-assignment-geometry
+scope-stage4-google-unit-source-expansion
+scope-stage4-google-transfer
+scope-stage4-transfer-diagnostics
 scope-google-s3-visible-cache-v2
 scope-google-s3-visible-aggregate-v2
 scope-google-s3-visible-adapter-v2
@@ -107,6 +116,11 @@ syndrome-response replay: source Google files are reduced to a public cache,
 then an aggregate cache, then frozen Stage 3A visible features. It supports a
 no-oracle external replay claim over raw syndrome-response blocks, not true
 hardware mechanism recovery.
+
+Stage 4 extends the same artifact discipline. S4.6 builds a Google-unit
+synthetic source surface from controlled-catalog mixtures and Google design-split
+visible modes, then reports transfer only on heldout Google rows. Robustness
+closeout is an audit layer, not a physical-channel claim.
 
 ## Physicality Boundary
 

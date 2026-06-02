@@ -53,6 +53,16 @@ This repository is currently centered on the SCOPE family of QEC noise-learning 
   Stage 3 Google V2 closeout. It should use a neural representation with an
   auditable prototype or VQ bottleneck while preserving the Stage 3 no-oracle,
   no-surrogate-ID, shuffle/scramble, and public-stratified-null controls.
+- **Google-unit controlled source teacher**: the S4.6 visible-source expansion
+  path. It constructs synthetic source rows at the same assignment unit as
+  Google V2 public syndrome-response signatures, using design-split Google
+  visible modes plus controlled-catalog mechanism mixtures. It is a visible
+  syndrome-response source repair, not a Born-rule physical generation model.
+- **S4.6 robustness closeout**: the artifact layer that can upgrade a
+  current-split S4.6 positive result to a robust positive. It requires paired
+  heldout bootstrap, seed/split repeat, stronger statistical controls including
+  the visible-surface dMLE-style marginal MLE comparator, and mechanism/source
+  structure ablations. These audits never use Google mechanism labels.
 
 ## Claim Boundary
 
@@ -97,3 +107,10 @@ ground-truth mechanism partition. Stronger learned representations belong to
 S4 neural syndrome-response discovery. The S4 execution roadmap is
 `docs/STAGE4_ROADMAP.md`; its first gate is bridge-surface survival, not neural
 training.
+
+S4.6 may use Google visible data to design source modes only through the declared
+design split, then score transfer only on heldout Google rows. Its final claim
+boundary remains visible syndrome-response replay and source-to-Google visible
+structure transfer. It must not claim true Google physical mechanism recovery,
+Google `M*` label recovery, Born-rule physical generation, or CPTP/GKSL channel
+learning.

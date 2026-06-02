@@ -1,5 +1,9 @@
 # AI_QEC S4 神经综合征响应发现与 Controlled-to-Google Bridge 技术方案
 
+Status note, 2026-06-02: this is a pre-implementation planning memo. The current
+artifact contract, script names, S4.6 Google-unit source expansion, and
+robustness closeout gates live in `docs/STAGE4_ROADMAP.md`.
+
 ## Executive summary
 
 `scope_static` 当前已经明确了三条工作面：固定上下文 DEM/Bernoulli 学习、受控物理机制 catalog 管线，以及 Stage 3 的 no-oracle 可见结构发现与 replay；仓库的近程目标不是单点分类器，而是“通过 discovery mechanism 构建 digital twin”，也就是先从 QEC 观测中学出紧凑、可审计的潜结构，再把它用于 generation、interpretation、transfer、drift 与 decoder-facing tests。Stage 3 的 Google V2 closeout 已经把主张边界钉死在“raw syndrome-response replay 优于 global/mean-only、assignment-shuffle、feature-scramble、public-stratified-null 控制”，而不是“恢复了真实硬件机制”；S4 则被仓库文档直接定义为下一步：在保持 no-oracle、no-surrogate-ID 与现有 controls 的前提下，引入带可审计 prototype 或 VQ bottleneck 的神经表示，并要求在 `raw_target_only` 和 `block_normalized` 上都优于 Stage 3 的 prototype mixture。
@@ -405,9 +409,8 @@ artifact logging 方面，最重要的是**继续遵守 Stage 3 bundle 风格**�
 
 ```text
 src/scope_static/google/s4_bridge_surface.py
-src/scope_static/google/s4_bridge_cache.py
-src/scope_static/mechanism_discovery/s4_bridge_artifacts.py
-src/scope_static/experiments/stage4/synthetic_google_surface.py
+src/scope_static/mechanism_discovery/stage4_artifacts.py
+src/scope_static/experiments/stage4/synthetic_freeze.py
 configs/scope_static/stage4_synthetic_google_surface_v1.yaml
 ```
 
@@ -418,12 +421,8 @@ configs/scope_static/stage4_synthetic_google_surface_v1.yaml
 这一阶段才引入真正的 S4 模型。建议新增：
 
 ```text
-src/scope_static/mechanism_discovery/s4_encoder.py
-src/scope_static/mechanism_discovery/s4_bottleneck.py
-src/scope_static/mechanism_discovery/s4_decoder.py
-src/scope_static/mechanism_discovery/s4_losses.py
-src/scope_static/mechanism_discovery/s4_metrics.py
-src/scope_static/mechanism_discovery/s4_training.py
+src/scope_static/mechanism_discovery/source_pretrain.py
+src/scope_static/mechanism_discovery/stage4_artifacts.py
 src/scope_static/experiments/stage4/source_pretrain.py
 configs/scope_static/stage4_source_pretrain_v1.yaml
 ```
@@ -435,12 +434,14 @@ configs/scope_static/stage4_source_pretrain_v1.yaml
 这一阶段新增：
 
 ```text
-src/scope_static/mechanism_discovery/s4_transfer.py
-src/scope_static/mechanism_discovery/s4_controls.py
+src/scope_static/mechanism_discovery/google_transfer.py
+src/scope_static/mechanism_discovery/support_audit.py
+src/scope_static/mechanism_discovery/assignment_geometry.py
+src/scope_static/mechanism_discovery/google_unit_source.py
 src/scope_static/experiments/stage4/google_transfer.py
-src/scope_static/experiments/stage4/ablation_grid.py
+src/scope_static/experiments/stage4/transfer_diagnostics.py
 configs/scope_static/stage4_google_transfer_v1.yaml
-configs/scope_static/stage4_ablation_grid_v1.yaml
+configs/scope_static/stage4_transfer_diagnostics_v1.yaml
 ```
 
 MVP 是：冻结 source adapter+codebook，在 Google V2 freeze 包上训练一个低容量 calibrator + replay heads，证明相对于 Stage 3 B1/C 与 null/control baselines，`raw_target_only` 和 `block_normalized` 至少有稳定改善，同时不触发 forbidden-feature / target leakage。只要这一步做到，你们就已经拥有一个**严格对齐 repo claim boundary 的 S4**。此时还不需要宣称“数字孪生完成”，但可以很稳地宣称“source-structured prototype vocabulary 能迁移到 Google visible surface，并改善 no-oracle replay”。
