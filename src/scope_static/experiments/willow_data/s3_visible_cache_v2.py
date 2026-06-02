@@ -30,6 +30,7 @@ def run_google_s3_visible_cache_v2_from_config(
     dataset_root: str | Path | None = None,
     cache_dir: str | Path | None = None,
     max_contexts: int | None = None,
+    num_workers: int | None = None,
 ) -> dict[str, object]:
     cfg = _load_config(Path(config_path) if config_path is not None else DEFAULT_CONFIG)
     resolved_cache_dir = cache_dir if cache_dir is not None else cfg.get("cache_dir", DEFAULT_CACHE_DIR)
@@ -51,6 +52,7 @@ def run_google_s3_visible_cache_v2_from_config(
         seed=int(cfg.get("seed", 0)),
         split_policy=str(cfg.get("split_policy", DEFAULT_SPLIT_POLICY)),
         hash_source_files=bool(cfg.get("hash_source_files", True)),
+        num_workers=num_workers if num_workers is not None else _optional_int(cfg.get("num_workers")),
     )
     print("Google S3 visible cache V2 complete")
     print(f"decision: {result.get('decision')}")
@@ -85,6 +87,7 @@ def main(argv: list[str] | None = None) -> None:
         seed=int(args.seed if args.seed is not None else cfg.get("seed", 0)),
         split_policy=str(args.split_policy or cfg.get("split_policy", DEFAULT_SPLIT_POLICY)),
         hash_source_files=bool(args.hash_source_files if args.hash_source_files is not None else cfg.get("hash_source_files", True)),
+        num_workers=args.num_workers if args.num_workers is not None else _optional_int(cfg.get("num_workers")),
     )
     if args.progress_json:
         print(
@@ -96,6 +99,8 @@ def main(argv: list[str] | None = None) -> None:
                     "context_count": result.get("context_count"),
                     "shot_count": result.get("shot_count"),
                     "detector_count": result.get("detector_count"),
+                    "total_wallclock_seconds": result.get("total_wallclock_seconds"),
+                    "num_workers": result.get("num_workers"),
                     "cache_dir": str(args.cache_dir or cfg.get("cache_dir", DEFAULT_CACHE_DIR)),
                 },
                 sort_keys=True,
@@ -127,6 +132,7 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--seed", type=int)
     parser.add_argument("--split-policy")
     parser.add_argument("--hash-source-files", action=argparse.BooleanOptionalAction)
+    parser.add_argument("--num-workers", type=int)
     parser.add_argument("--progress-json", action="store_true")
     return parser.parse_args(argv)
 
