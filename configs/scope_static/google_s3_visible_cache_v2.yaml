@@ -21,3 +21,4 @@ google_s3_visible_cache_v2:
   seed: 0
   split_policy: grouped_public_signature_leave_one_out_with_cyclic_validation
   hash_source_files: true
+  num_workers: 8

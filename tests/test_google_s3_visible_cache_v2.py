@@ -41,6 +41,10 @@ def test_google_s3_visible_cache_v2_writes_public_precompute_artifacts(tmp_path:
     assert manifest["context_count"] == 3
     assert manifest["shot_count"] == 12
     assert manifest["detector_count"] == 1
+    assert manifest["num_workers"] == 1
+    assert manifest["parallelism"]["mode"] == "serial_context_precompute"
+    assert manifest["total_wallclock_seconds"] >= 0.0
+    assert manifest["wallclock_table"]
     assert manifest["forbidden_feature_audit"]["passed"] is True
     assert loaded["config_hash"] == manifest["config_hash"]
     assert len(contexts) == 3
@@ -48,6 +52,15 @@ def test_google_s3_visible_cache_v2_writes_public_precompute_artifacts(tmp_path:
     assert contexts[0].obs_flips_actual.shape == (4, 1)
     assert contexts[0].round_band_memberships
     assert contexts[0].region_memberships
+    assert loaded["contexts"][0]["slowest_block"]["cache_block"] in {
+        "cache_writeout",
+        "circuit_load",
+        "dem_support",
+        "detector_geometry",
+        "observation_load_slice",
+        "public_memberships",
+        "source_file_manifest_hash",
+    }
 
     for name in [
         "cache_manifest.json",
@@ -57,6 +70,50 @@ def test_google_s3_visible_cache_v2_writes_public_precompute_artifacts(tmp_path:
         "summary.md",
     ]:
         assert (cache / name).exists()
+
+
+def test_google_s3_visible_cache_v2_parallel_matches_serial(tmp_path: Path) -> None:
+    root = write_tiny_google_s3_dataset(tmp_path, contexts=4)
+    serial_cache = tmp_path / "cache_v2_serial"
+    parallel_cache = tmp_path / "cache_v2_parallel"
+    kwargs = {
+        "max_contexts": 4,
+        "round_bands": ("early", "mid", "late"),
+        "region_families": ("boundary_adjacent", "logical_support_neighborhood", "full_patch"),
+        "shotblocks_per_context": 2,
+        "shotblock_size": 2,
+        "min_shotblock_size": 2,
+        "hash_source_files": False,
+    }
+
+    serial = write_google_s3_visible_cache_v2(
+        dataset_root=root,
+        cache_dir=serial_cache,
+        num_workers=1,
+        **kwargs,
+    )
+    parallel = write_google_s3_visible_cache_v2(
+        dataset_root=root,
+        cache_dir=parallel_cache,
+        num_workers=2,
+        **kwargs,
+    )
+    serial_contexts, _serial_manifest = load_google_s3_visible_cache_v2(serial_cache)
+    parallel_contexts, _parallel_manifest = load_google_s3_visible_cache_v2(parallel_cache)
+
+    assert parallel["decision"] == "google_s3_visible_cache_v2_passed"
+    assert parallel["num_workers"] == 2
+    assert parallel["parallelism"]["mode"] == "process_context_precompute"
+    assert [row["cache_context_id"] for row in serial["contexts"]] == [
+        row["cache_context_id"] for row in parallel["contexts"]
+    ]
+    assert len(serial_contexts) == len(parallel_contexts)
+    for left, right in zip(serial_contexts, parallel_contexts):
+        assert left.cache_context_id == right.cache_context_id
+        assert np.array_equal(left.detection_events, right.detection_events)
+        assert np.array_equal(left.obs_flips_actual, right.obs_flips_actual)
+        assert left.region_memberships == right.region_memberships
+        assert left.round_band_memberships == right.round_band_memberships
 
 
 def test_google_s3_visible_surface_v2_consumes_cache_without_source_root(tmp_path: Path) -> None:
@@ -210,6 +267,7 @@ def test_google_s3_visible_cache_v2_config_wrapper(tmp_path: Path) -> None:
                     "shotblock_size": 2,
                     "min_shotblock_size": 2,
                     "hash_source_files": False,
+                    "num_workers": 2,
                 }
             },
             sort_keys=False,
@@ -220,6 +278,7 @@ def test_google_s3_visible_cache_v2_config_wrapper(tmp_path: Path) -> None:
     result = run_google_s3_visible_cache_v2_from_config(config_path=config)
 
     assert result["decision"] == "google_s3_visible_cache_v2_passed"
+    assert result["num_workers"] == 2
     assert (cache / "cache_manifest.json").exists()
 
 
