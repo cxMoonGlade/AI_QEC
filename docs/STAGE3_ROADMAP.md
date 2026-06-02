@@ -303,6 +303,12 @@ are fit on Stage 3A train folds from frozen `visible_features.npy` and Stage
 3B.1 `learned_assignments.npy`, then scored on validation+test heldout rows.
 This is not an unconditional future-context prediction claim.
 
+For controlled-catalog runs, Stage 3C also emits the current S5 interpretation
+artifact, `s5_context_relative_mechanism_effect_audit.json`. S5 is a separate
+effect-audit claim layer: it reports evaluator-only context-relative action
+location and context-normalized visible strength after fitting, and does not
+feed training or model selection.
+
 Metrics:
 
 - categorical population NLL over raw visible outcome groups;
