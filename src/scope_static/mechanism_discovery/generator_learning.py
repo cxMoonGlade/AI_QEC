@@ -222,6 +222,8 @@ def run_stage3c_prototype_generator_learning(
             "soft_family_classification_skipped": mode == EVALUATOR_MODE_NO_ORACLE_LABELS,
             "soft_family_strength_location_audit_evaluator_only": mode == EVALUATOR_MODE_CONTROLLED_CATALOG,
             "soft_family_strength_location_audit_skipped": mode == EVALUATOR_MODE_NO_ORACLE_LABELS,
+            "s5_context_relative_mechanism_effect_audit_evaluator_only": mode == EVALUATOR_MODE_CONTROLLED_CATALOG,
+            "s5_context_relative_mechanism_effect_audit_skipped": mode == EVALUATOR_MODE_NO_ORACLE_LABELS,
             "claims_physical_parameter_recovery": False,
             "conditional_visible_replay_not_unconditional_future_prediction": True,
             "discovers_cptp_gksl_channels": False,
@@ -247,6 +249,7 @@ def run_stage3c_prototype_generator_learning(
         "oracle_assignment_comparator_metrics": oracle,
         "soft_family_classification_metrics": soft_family,
         "soft_family_strength_location_audit": strength_location,
+        "s5_context_relative_mechanism_effect_audit": strength_location,
         "global_null_metrics": global_null,
         "stratified_null_metrics": stratified_null,
         "mean_only_baseline_metrics": mean_only,
@@ -1064,8 +1067,10 @@ def evaluate_soft_family_strength_location_audit(
         )
 
     return {
-        "schema": "scope_static_stage3c_soft_family_strength_location_audit_v1",
-        "description": "Evaluator-only location and strength audit for recovered mechanism families and exact catalog mechanisms.",
+        "schema": "scope_static_s5_context_relative_mechanism_effect_audit_v1",
+        "compatibility_aliases": ["scope_static_stage3c_soft_family_strength_location_audit_v1"],
+        "stage": "S5_context_relative_mechanism_effect_recovery",
+        "description": "Evaluator-only context-relative strength and location audit for recovered mechanism families and exact catalog mechanisms.",
         "evaluator_mode": _normalize_evaluator_mode(evaluator_mode),
         "evaluator_only": True,
         "skipped": False,
@@ -1092,7 +1097,9 @@ def evaluate_soft_family_strength_location_audit(
 
 def skipped_soft_family_strength_location_audit() -> dict[str, object]:
     return {
-        "schema": "scope_static_stage3c_soft_family_strength_location_audit_v1",
+        "schema": "scope_static_s5_context_relative_mechanism_effect_audit_v1",
+        "compatibility_aliases": ["scope_static_stage3c_soft_family_strength_location_audit_v1"],
+        "stage": "S5_context_relative_mechanism_effect_recovery",
         "description": "Skipped because controlled-catalog evaluator records are unavailable.",
         "evaluator_mode": EVALUATOR_MODE_NO_ORACLE_LABELS,
         "evaluator_only": False,
@@ -1488,6 +1495,7 @@ def stage3c_acceptance_audit(
     oracle = dict(oracle_assignment_comparator_metrics.get("overall", {}))
     soft_family = dict(soft_family_classification_metrics)
     strength_location = dict(soft_family_strength_location_audit)
+    primary_strength_reference = _primary_strength_reference_frame(strength_location)
     b1_acceptance = dict(s3b1_metrics.get("acceptance_audit", {})) if isinstance(s3b1_metrics.get("acceptance_audit", {}), dict) else {}
     metric = _effective_primary_generation_likelihood_metric(predicted)
     primary_target_profile = _effective_primary_target_score_profile(predicted_assignment_metrics)
@@ -1544,6 +1552,20 @@ def stage3c_acceptance_audit(
             True if mode == EVALUATOR_MODE_NO_ORACLE_LABELS else str(strength_location.get("location_reference_frame", "")) == "context_relative"
         ),
         "soft_family_strength_does_not_claim_physical_parameter_recovery": not bool(
+            strength_location.get("claims_physical_parameter_recovery", True)
+        ),
+        "s5_context_relative_effect_audit_evaluator_only_or_skipped": (
+            bool(strength_location.get("evaluator_only", False))
+            if mode == EVALUATOR_MODE_CONTROLLED_CATALOG
+            else bool(strength_location.get("skipped", False))
+        ),
+        "s5_context_relative_effect_uses_context_relative_location": (
+            True if mode == EVALUATOR_MODE_NO_ORACLE_LABELS else str(strength_location.get("location_reference_frame", "")) == "context_relative"
+        ),
+        "s5_context_relative_effect_uses_context_relative_strength": (
+            True if mode == EVALUATOR_MODE_NO_ORACLE_LABELS else primary_strength_reference == "context_relative"
+        ),
+        "s5_context_relative_effect_does_not_claim_physical_parameter_recovery": not bool(
             strength_location.get("claims_physical_parameter_recovery", True)
         ),
         "primary_generation_likelihood_metric_reported": predicted.get(metric) is not None,
@@ -2946,6 +2968,20 @@ def _is_one(value: object, *, atol: float = 1.0e-12) -> bool:
     return bool(abs(float(value) - 1.0) <= float(atol))
 
 
+def _primary_strength_reference_frame(audit: dict[str, object]) -> str:
+    per_family = audit.get("per_family", {})
+    if not isinstance(per_family, dict):
+        return ""
+    for payload in per_family.values():
+        row = dict(payload) if isinstance(payload, dict) else {}
+        strength = row.get("visible_strength", {})
+        if isinstance(strength, dict):
+            frame = str(strength.get("primary_reference_frame", ""))
+            if frame:
+                return frame
+    return ""
+
+
 def _indices(values: object, *, record_count: int) -> np.ndarray:
     if not isinstance(values, list):
         return np.zeros(0, dtype=np.int64)
@@ -3043,6 +3079,7 @@ def _write_outputs(output: Path, result: dict[str, object]) -> None:
         "oracle_assignment_comparator_metrics.json": result["oracle_assignment_comparator_metrics"],
         "soft_family_classification_metrics.json": result["soft_family_classification_metrics"],
         "soft_family_strength_location_audit.json": result["soft_family_strength_location_audit"],
+        "s5_context_relative_mechanism_effect_audit.json": result["s5_context_relative_mechanism_effect_audit"],
         "global_null_metrics.json": result["global_null_metrics"],
         "stratified_null_metrics.json": result["stratified_null_metrics"],
         "mean_only_baseline_metrics.json": result["mean_only_baseline_metrics"],
@@ -3068,6 +3105,7 @@ def format_stage3c_summary(result: dict[str, object]) -> str:
     stratified_null = dict(dict(result.get("stratified_null_metrics", {})).get("overall", {}))
     oracle = dict(dict(result.get("oracle_assignment_comparator_metrics", {})).get("overall", {}))
     family = dict(result.get("soft_family_classification_metrics", {}))
+    s5 = dict(result.get("s5_context_relative_mechanism_effect_audit", result.get("soft_family_strength_location_audit", {})))
     primary_metric = str(dict(result.get("prototype_generation_metrics", {})).get("primary_generation_likelihood_metric", PRIMARY_GENERATION_LIKELIHOOD_METRIC))
     shuffle = dict(dict(result.get("assignment_shuffle_audit", {})).get("aggregate", {}))
     scramble = dict(dict(dict(result.get("feature_scramble_audit", {})).get("aggregate", {})).get("predicted_assignment", {}))
@@ -3093,6 +3131,7 @@ def format_stage3c_summary(result: dict[str, object]) -> str:
             f"- Predicted-assignment raw MAE: `{_format_metric(predicted.get('raw_visible_feature_mae'))}`",
             f"- Oracle-comparator raw MAE: `{_format_metric(oracle.get('raw_visible_feature_mae'))}`",
             f"- Soft-family NMI / ARI: `{_format_metric(family.get('normalized_mutual_info'))}` / `{_format_metric(family.get('adjusted_rand_index'))}`",
+            f"- S5 effect reference frame: `{str(s5.get('location_reference_frame', 'none'))}`",
             "",
             "## Claim Boundary",
             "",

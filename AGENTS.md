@@ -11,6 +11,7 @@ stage-specific docs:
 - `docs/STAGE3_ROADMAP.md`: active Stage 3 mechanism-structure discovery plan.
 - `docs/STAGE4_ROADMAP.md`: S4 bridge-survival, neural pretrain, and
   frozen-transfer gates.
+- `docs/STAGE5_ROADMAP.md`: S5 context-relative mechanism-effect audits.
 - `docs/error_mechanisms.md`: physical-error mechanism taxonomy and adoption map.
 - `docs/SCOPE_TWIN.md`: full SCOPE-Twin notation and future object contract.
 - `docs/adr/`: durable architecture and milestone-gating decisions.
@@ -237,7 +238,7 @@ scope_static.mechanism_observability
 
 scope_static.mechanism_discovery
   Stage 3/4 latent assignment, alias-ceiling, prototype, generator, transfer,
-  Google-unit source expansion, and robustness artifacts
+  Google-unit source expansion, robustness artifacts, and S5 effect audits
 ```
 
 Do not rebuild a broad `scope_static.physical` package. New workflow code should
@@ -276,6 +277,13 @@ mechanism/source-structure ablations. It still may claim only visible
 syndrome-response replay/source-transfer evidence, not true Google physical
 mechanism recovery, Google `M*` recovery, Born-rule physical generation, or
 CPTP/GKSL channel learning.
+
+Stage 5 extends recovered mechanism/family structure with context-relative
+effect audits: common action location inside each context and
+context-normalized visible strength. S5 artifacts are evaluator-only
+interpretation outputs. They must not feed learner training or model selection
+and must not claim true Google physical mechanism recovery, Google `M*`
+recovery, or CPTP/GKSL parameter learning.
 
 The `separability_v2` allM artifacts are strong Stage 2 separability evidence,
 not a Born-rule physical baseline. Older PHYC3 artifacts must be rechecked for

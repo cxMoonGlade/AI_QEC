@@ -5,12 +5,13 @@ to build a **digital twin by discovery mechanism**: learn compact,
 auditable latent structure from QEC observations, then use that structure for
 generation, interpretation, transfer, drift, and decoder-facing tests.
 
-The package currently has three working surfaces:
+The package currently has four working surfaces:
 
 1. fixed-context DEM/Bernoulli learning;
 2. a controlled physical-mechanism catalog pipeline;
 3. Stage 3 no-oracle visible-structure discovery and replay, including a real
-   Google hardware-data V2 visible surface.
+   Google hardware-data V2 visible surface;
+4. S5 context-relative mechanism-effect audits on controlled source data.
 
 ## Current Capabilities
 
@@ -103,6 +104,15 @@ S4.6 writes a Stage-3A-compatible source freeze at the
 `synthetic_public_syndrome_response_signature` unit plus split-clean transfer,
 control, and robustness-closeout audits. Robust-positive evidence still requires
 a completed S4.6 rerun whose closeout artifacts pass.
+
+### Stage 5 Context-Relative Mechanism Effects
+
+S5 extends recovered mechanism/family structure with evaluator-only effect
+audits. On controlled source data it reports context-relative action location
+and context-normalized visible strength for recovered family buckets and exact
+catalog mechanisms. These audits are interpretation artifacts only: they do not
+feed learner training or model selection, and they do not claim Google physical
+mechanism or CPTP/GKSL parameter recovery.
 
 ## Current Limits
 
@@ -240,6 +250,7 @@ python -m scope_static.experiments.stage4.google_unit_source_expansion \
   boundary.
 - `docs/STAGE4_ROADMAP.md`: S4 bridge-survival, neural pretrain, and
   frozen-transfer gates.
+- `docs/STAGE5_ROADMAP.md`: S5 context-relative mechanism-effect audits.
 
 
 +====================================================================+ <br>

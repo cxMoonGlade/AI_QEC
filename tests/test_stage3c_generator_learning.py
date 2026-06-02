@@ -34,6 +34,7 @@ def test_stage3c_scores_predicted_assignment_generator_against_nulls_and_oracle(
     assert result["claim_boundary"]["oracle_assignment_comparator_evaluator_only"] is True
     assert result["claim_boundary"]["soft_family_classification_evaluator_only"] is True
     assert result["claim_boundary"]["soft_family_strength_location_audit_evaluator_only"] is True
+    assert result["claim_boundary"]["s5_context_relative_mechanism_effect_audit_evaluator_only"] is True
     assert result["claim_boundary"]["claims_physical_parameter_recovery"] is False
     assert result["visible_feature_matrix"]["loaded_from_stage3a_artifact"] is True
     assert result["assignment_source_audit"]["row_stochastic"] is True
@@ -61,12 +62,17 @@ def test_stage3c_scores_predicted_assignment_generator_against_nulls_and_oracle(
     assert result["acceptance_audit"]["checks"]["soft_family_strength_location_audit_evaluator_only_or_skipped"] is True
     assert result["acceptance_audit"]["checks"]["soft_family_strength_location_is_context_relative"] is True
     assert result["acceptance_audit"]["checks"]["soft_family_strength_does_not_claim_physical_parameter_recovery"] is True
+    assert result["acceptance_audit"]["checks"]["s5_context_relative_effect_audit_evaluator_only_or_skipped"] is True
+    assert result["acceptance_audit"]["checks"]["s5_context_relative_effect_uses_context_relative_location"] is True
+    assert result["acceptance_audit"]["checks"]["s5_context_relative_effect_uses_context_relative_strength"] is True
+    assert result["acceptance_audit"]["checks"]["s5_context_relative_effect_does_not_claim_physical_parameter_recovery"] is True
 
     predicted = result["predicted_assignment_metrics"]["overall"]
     global_null = result["global_null_metrics"]["overall"]
     oracle = result["oracle_assignment_comparator_metrics"]["overall"]
     family = result["soft_family_classification_metrics"]
     strength = result["soft_family_strength_location_audit"]
+    s5 = result["s5_context_relative_mechanism_effect_audit"]
     report = result["prototype_generation_metrics"]["primary_likelihood_report"]
     assert predicted["categorical_population_nll"] >= 0.0
     assert oracle["categorical_population_nll"] >= 0.0
@@ -99,7 +105,9 @@ def test_stage3c_scores_predicted_assignment_generator_against_nulls_and_oracle(
     assert family["balanced_accuracy"] == 1.0
     assert family["min_recall"] == 1.0
     assert family["passed"] is True
-    assert strength["schema"] == "scope_static_stage3c_soft_family_strength_location_audit_v1"
+    assert strength["schema"] == "scope_static_s5_context_relative_mechanism_effect_audit_v1"
+    assert s5["schema"] == "scope_static_s5_context_relative_mechanism_effect_audit_v1"
+    assert s5["stage"] == "S5_context_relative_mechanism_effect_recovery"
     assert strength["evaluator_only"] is True
     assert strength["location_reference_frame"] == "context_relative"
     assert strength["claims_physical_parameter_recovery"] is False
@@ -121,6 +129,7 @@ def test_stage3c_scores_predicted_assignment_generator_against_nulls_and_oracle(
         "oracle_assignment_comparator_metrics.json",
         "soft_family_classification_metrics.json",
         "soft_family_strength_location_audit.json",
+        "s5_context_relative_mechanism_effect_audit.json",
         "global_null_metrics.json",
         "stratified_null_metrics.json",
         "mean_only_baseline_metrics.json",
@@ -301,10 +310,13 @@ def test_stage3c_no_categorical_surface_uses_gaussian_primary_and_block_lift(tmp
     assert result["decision"] == "stage3c_prototype_generator_learning_completed"
     assert result["soft_family_classification_metrics"]["skipped"] is True
     assert result["soft_family_strength_location_audit"]["skipped"] is True
+    assert result["s5_context_relative_mechanism_effect_audit"]["skipped"] is True
     assert result["claim_boundary"]["soft_family_classification_skipped"] is True
     assert result["claim_boundary"]["soft_family_strength_location_audit_skipped"] is True
+    assert result["claim_boundary"]["s5_context_relative_mechanism_effect_audit_skipped"] is True
     assert result["acceptance_audit"]["checks"]["soft_family_classification_evaluator_only_or_skipped"] is True
     assert result["acceptance_audit"]["checks"]["soft_family_strength_location_audit_evaluator_only_or_skipped"] is True
+    assert result["acceptance_audit"]["checks"]["s5_context_relative_effect_audit_evaluator_only_or_skipped"] is True
     assert result["prototype_generation_metrics"]["primary_generation_likelihood_metric"] == "gaussian_density_nll"
     assert result["assignment_shuffle_audit"]["primary_generation_likelihood_metric"] == "gaussian_density_nll"
     assert result["feature_scramble_audit"]["primary_generation_likelihood_metric"] == "gaussian_density_nll"
