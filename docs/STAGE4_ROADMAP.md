@@ -258,6 +258,11 @@ Required decision and artifacts:
 - `google_native_mode_coverage.json`
 - `source_google_mode_distance.json`
 - `expanded_transfer_report.json`
+- `paired_bootstrap_report.json`
+- `seed_split_repeat_report.json`
+- `stronger_statistical_controls_report.json`
+- `mechanism_source_structure_ablation_report.json`
+- `robustness_closeout_report.json`
 - `acceptance_audit.json`
 - `S3A_protocol_freeze/`
 
@@ -283,6 +288,32 @@ Because S4.6 consumes frozen public syndrome-response signatures rather than a
 DEM parity-map likelihood object, this is a visible-surface projection of the
 dMLE-style independent marginal MLE baseline, not the full upstream
 DMLE-QEC TensorNetwork/DEM implementation.
+
+S4.6 robustness closeout:
+
+- `paired_bootstrap_report.json`: paired heldout-row bootstrap for strict and
+  adapter transfer against controls.
+- `seed_split_repeat_report.json`: repeated design/validation/heldout splits
+  with redesigned source modes.
+- `stronger_statistical_controls_report.json`: strict transfer against
+  public-context, random-mixture, target-mean/std, dMLE-style marginal, random
+  codebook, global-null, and train-on-Google-only controls.
+- `mechanism_source_structure_ablation_report.json`: no-transform,
+  family-bucket-shuffle, native-mode-shuffle, random-mixture, and public-only
+  ablations.
+- `robustness_closeout_report.json`: final robustness decision.
+
+Robustness decisions:
+
+- `s4_6_robust_positive`: mechanism/source structure and transfer remain stable
+  against controls, including target-native train-on-Google.
+- `s4_6_robust_source_structure_positive_target_native_dominates`: source
+  structure is stable against mechanism/marginal/random/global controls, but
+  target-native train-on-Google remains stronger.
+- `s4_6_current_split_positive_only`: current split is positive but robustness
+  gates do not all pass.
+- `s4_6_robustness_inconclusive`: current split or robustness evidence is not
+  sufficient.
 
 Any deterministic visible shape transform must be recorded as a
 `visible_surrogate_shape_transform` with `claims_physical_channel_sampling` and

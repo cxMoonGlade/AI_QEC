@@ -153,6 +153,48 @@ outputs/google_static/google_s3_visible_surface_v2/S3A_protocol_freeze/
   metrics.json
 ```
 
+Current cache and aggregate configs use `num_workers: 8`. Their manifests report
+`parallelism`, `wallclock_by_block_seconds`, `wallclock_table`,
+`slowest_block`, and `total_wallclock_seconds`.
+
+## Function: Run Stage 4 Bridge And Transfer
+
+Stage 4 wrappers are console scripts after an editable install. If a script is
+missing, rerun `conda run -n aiqec python -m pip install -e .` or use the module
+entrypoint.
+
+```bash
+conda run -n aiqec scope-stage4-synthetic-freeze \
+  --config configs/scope_static/stage4_synthetic_google_surface_v1.yaml
+
+conda run -n aiqec scope-stage4-source-ceiling \
+  --config configs/scope_static/stage4_source_ceiling_v1.yaml
+
+conda run -n aiqec scope-stage4-source-pretrain \
+  --config configs/scope_static/stage4_source_pretrain_v1.yaml
+
+conda run -n aiqec scope-stage4-google-unit-source-expansion \
+  --config configs/scope_static/stage4_google_unit_source_expansion_v1.yaml
+```
+
+Equivalent S4.6 module command:
+
+```bash
+conda run -n aiqec python -m scope_static.experiments.stage4.google_unit_source_expansion \
+  --config configs/scope_static/stage4_google_unit_source_expansion_v1.yaml
+```
+
+S4.6 writes the synthetic source freeze under `S3A_protocol_freeze/` and keeps
+downstream diagnostics in the parent run directory. Robustness closeout artifacts:
+
+```text
+paired_bootstrap_report.json
+seed_split_repeat_report.json
+stronger_statistical_controls_report.json
+mechanism_source_structure_ablation_report.json
+robustness_closeout_report.json
+```
+
 Historical Google DEM-proxy diagnostics are archived under
 `docs/archive/google_gdisc15.md`.
 

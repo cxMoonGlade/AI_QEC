@@ -302,6 +302,10 @@ aggregate units: 347
 aggregate feature_count: 66
 ```
 
+The cache and aggregate stages support worker parallelism. Current configs use
+`num_workers: 8` and write block-level timing fields into the cache/aggregate
+manifests.
+
 ## What Google Learns And Does Not Learn
 
 Because Google provides no ground-truth mechanism partition, the Google learner
@@ -362,3 +366,29 @@ different. In controlled teacher-learner runs, those shapes can be audited
 against known catalog mechanisms. In Google runs, those shapes can only be
 audited as public visible replay or transfer structure unless a separate,
 credible ground-truth mechanism partition is introduced.
+
+## S4.6 Google-Unit Source Surface
+
+S4.6 constructs a controlled source surface at the Google public signature unit:
+
+```text
+controlled catalog observations
+  -> design-split Google native visible modes
+  -> evaluator-only catalog-family mixtures
+  -> synthetic_public_syndrome_response_signature rows
+  -> Stage-3A-compatible source freeze
+```
+
+The learner-visible S4.6 matrix contains only visible syndrome-response features.
+Mixture weights, dominant family, mode tags, and exact catalog summaries are
+evaluator-only manifests.
+
+S4.6 may use Google visible rows only through the declared design split for mode
+construction. Validation rows train calibrator/replay heads. Heldout rows score
+final transfer and gap closure.
+
+S4.6 robustness closeout checks whether the mechanism-mixture source structure
+beats public-context-only, random-mixture, target-mean/std, visible dMLE-style
+marginal MLE, random-codebook, global-null, and source-structure ablation
+controls. It still claims visible replay/source-transfer only, not true Google
+physical mechanism recovery.

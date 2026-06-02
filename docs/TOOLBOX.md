@@ -36,6 +36,14 @@ It is organized as reusable tools rather than a single end-to-end claim.
 | `scope-stage3a5-ceiling` | Stage 3A.5: Observability And Alias Ceiling | Compute pairwise visible distances, oracle-visible alias classes, exact-label ceiling, and quotient-label ceiling before discovery training. |
 | `scope-stage3b0-baselines` | Stage 3B.0: Non-Learned Clustering Baselines | Run visible-only k-means/GMM baselines and null controls with evaluator-only exact-label and quotient-label scoring. |
 | `scope-stage3b1-discovery` | Stage 3B.1: First Discovery Model | Train a visible-only prototype-mixture discovery model with learned diagonal covariance and evaluator-only exact/quotient scoring. |
+| `scope-stage4-synthetic-freeze` | S4.0 Bridge Freeze | Build a synthetic Google-shaped Stage-3A-compatible source freeze. |
+| `scope-stage4-source-ceiling` | S4.0.5 Surface Survival | Audit mechanism/quotient survival with evaluator-only labels. |
+| `scope-stage4-source-pretrain` | S4.1 Source Pretrain | Train MLP and Attention-VQ source replay models from visible features. |
+| `scope-stage4-support-audit` | S4.4 Support Audit | Audit source/Google support overlap before transfer claims. |
+| `scope-stage4-assignment-geometry` | S4.5 Assignment Geometry | Repair and audit source/Google assignment support geometry. |
+| `scope-stage4-google-unit-source-expansion` | S4.6 Google-Unit Source | Build the Google-unit controlled source freeze plus transfer, controls, and robustness audits. |
+| `scope-stage4-google-transfer` | S4.2 Frozen Transfer | Run strict frozen source-to-Google transfer and controls. |
+| `scope-stage4-transfer-diagnostics` | S4.3 Transfer Diagnostics | Compare strict frozen transfer with frozen-codebook adapter diagnostics. |
 
 Historical artifact folders may still use `PHYC1/PHYC2/PHYC3` names for
 compatibility. Public-facing code should use `data_preparation`,
@@ -141,6 +149,14 @@ Stage 3 discovery scaffolding produces:
   quotient metrics, and model-selection leakage audits.
 - Stage 3B.1 learned assignment matrix, visible prototypes, covariance
   parameters, heldout visible-generation metrics, and label-leakage audits.
+
+Stage 4 bridge/transfer scaffolding produces:
+
+- S4.0 bridge freeze and schema/leakage audits;
+- S4.0.5 source ceiling and projection alias audits;
+- S4.1 source MLP/Attention-VQ pretrain artifacts;
+- S4.6 Google-unit source freeze, controls, transfer reports, and robustness
+  closeout reports.
 
 ## Current Pre-Release Boundary
 
