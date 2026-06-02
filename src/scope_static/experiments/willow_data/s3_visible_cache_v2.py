@@ -14,7 +14,7 @@ from scope_static.google.s3_visible_cache_v2 import (
     DEFAULT_ROUND_BANDS,
     write_google_s3_visible_cache_v2,
 )
-from scope_static.google.s3_visible_surface import (
+from scope_static.google.s3_visible_common import (
     DEFAULT_DATASET_NAME,
     DEFAULT_DATASET_ROOT,
     DEFAULT_SPLIT_POLICY,

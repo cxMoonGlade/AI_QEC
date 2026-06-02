@@ -17,7 +17,7 @@ from scope_static.google.inventory import (
     load_google_circuit,
     load_google_observations,
 )
-from scope_static.google.s3_visible_surface import (
+from scope_static.google.s3_visible_common import (
     DEFAULT_DATASET_NAME,
     DEFAULT_DATASET_ROOT,
     DEFAULT_SPLIT_POLICY,

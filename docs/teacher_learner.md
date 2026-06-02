@@ -45,6 +45,9 @@ arbitrary CPTP/GKSL channel learner by construction.
 
 ## Response-Surface Intuition
 
+See `docs/RESPONSE_SURFACES.md` for the fuller implementation view across the
+controlled teacher-learner path and the Google S3 V2 real-data path.
+
 Teacher-learner mechanism recovery should be understood as learning from a
 probe- and context-induced visible response surface, not from direct access to a
 continuous geometric surface of the quantum circuit itself. The teacher inserts

@@ -59,7 +59,9 @@ from .overcomplete_merge_prune_audit import (
 )
 from .stage4_artifacts import (
     Stage4SourceLabels,
+    Stage4SourceMixtureLabels,
     load_stage4_source_evaluator_labels,
+    load_stage4_source_mixture_evaluator_labels,
     load_stage4_visible_matrix,
     validate_stage4_source_label_separation,
 )
@@ -85,6 +87,10 @@ from .google_transfer import (
     run_stage4_google_transfer,
     run_stage4_transfer_diagnostics,
 )
+from .google_unit_source import (
+    DEFAULT_OUTPUT_DIR as DEFAULT_STAGE4_GOOGLE_UNIT_SOURCE_OUTPUT_DIR,
+    run_stage4_google_unit_source_expansion,
+)
 
 __all__ = [
     "DEFAULT_STAGE3A_OUTPUT_DIR",
@@ -98,6 +104,7 @@ __all__ = [
     "DEFAULT_STAGE3D4_OUTPUT_DIR",
     "DEFAULT_STAGE3D4B_OUTPUT_DIR",
     "DEFAULT_STAGE4_GOOGLE_TRANSFER_OUTPUT_DIR",
+    "DEFAULT_STAGE4_GOOGLE_UNIT_SOURCE_OUTPUT_DIR",
     "DEFAULT_STAGE4_ASSIGNMENT_GEOMETRY_OUTPUT_DIR",
     "DEFAULT_STAGE4_SOURCE_CEILING_OUTPUT_DIR",
     "DEFAULT_STAGE4_SOURCE_PRETRAIN_OUTPUT_DIR",
@@ -108,6 +115,7 @@ __all__ = [
     "Stage3EvaluatorLabels",
     "Stage3VisibleFeatures",
     "Stage4SourceLabels",
+    "Stage4SourceMixtureLabels",
     "feature_schema_matches_stage3a",
     "load_json_object",
     "load_mechanism_records",
@@ -115,6 +123,7 @@ __all__ = [
     "load_stage3a_frozen_visible_features",
     "load_stage3a_visible_features",
     "load_stage4_source_evaluator_labels",
+    "load_stage4_source_mixture_evaluator_labels",
     "load_stage4_visible_matrix",
     "resolve_teacher_dir",
     "run_stage3a_dataset_protocol_freeze",
@@ -128,6 +137,7 @@ __all__ = [
     "run_stage3d4_k_stress_audit",
     "run_stage3d4b_overcomplete_merge_prune_audit",
     "run_stage4_google_transfer",
+    "run_stage4_google_unit_source_expansion",
     "run_stage4_assignment_geometry_repair",
     "run_stage4_source_pretrain",
     "run_stage4_source_surface_survival_audit",

@@ -242,6 +242,46 @@ Failure taxonomy:
 - `model_capacity_or_training_failure`: source ceiling is high, transfer surface
   is adequate, but trained models underperform simple visible-only baselines.
 
+### S4.6 Google-Unit Source Expansion
+
+S4.6 repairs the source/Google support mismatch by constructing a controlled
+source teacher at the Google public signature assignment unit. It is a
+visible-source expansion milestone, not a physical-channel generation claim.
+
+Required decision and artifacts:
+
+- `stage4_google_unit_source_expansion_decision`
+- `mode_design_split_manifest.json`
+- `mode_design_audit.json`
+- `visible_surrogate_transform_audit.json`
+- `mixture_mode_survival_report.json`
+- `google_native_mode_coverage.json`
+- `source_google_mode_distance.json`
+- `expanded_transfer_report.json`
+- `acceptance_audit.json`
+- `S3A_protocol_freeze/`
+
+Split rule:
+
+- missing-mode selection uses only the Google `design` split;
+- calibrator/replay heads may use only the `validation` split;
+- final transfer and gap closure are reported only on `heldout_eval`;
+- `S3A_protocol_freeze/` contains only the frozen visible matrix, schema,
+  split, forbidden audit, learner/evaluator manifests, and claim boundary.
+
+Required S4.6 controls:
+
+- `control_public_context_only`;
+- `control_random_mixture_same_context`;
+- `control_shuffled_google_native_mode`;
+- `control_family_bucket_shuffled`;
+- `control_no_visible_transform`;
+- `control_target_mean_std_only`.
+
+Any deterministic visible shape transform must be recorded as a
+`visible_surrogate_shape_transform` with `claims_physical_channel_sampling` and
+`claims_cptp_gksl_generation` set to `false`.
+
 ## Public Interfaces
 
 Expected Stage 4 configs:
@@ -252,6 +292,7 @@ configs/scope_static/stage4_source_ceiling_v1.yaml
 configs/scope_static/stage4_source_pretrain_v1.yaml
 configs/scope_static/stage4_support_audit_v1.yaml
 configs/scope_static/stage4_assignment_geometry_v1.yaml
+configs/scope_static/stage4_google_unit_source_expansion_v1.yaml
 configs/scope_static/stage4_google_transfer_v1.yaml
 configs/scope_static/stage4_transfer_diagnostics_v1.yaml
 ```
@@ -264,6 +305,7 @@ scope-stage4-source-ceiling
 scope-stage4-source-pretrain
 scope-stage4-support-audit
 scope-stage4-assignment-geometry
+scope-stage4-google-unit-source-expansion
 scope-stage4-google-transfer
 scope-stage4-transfer-diagnostics
 ```

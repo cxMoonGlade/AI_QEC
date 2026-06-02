@@ -7,16 +7,18 @@ import numpy as np
 
 from scope_static.google.s4_bridge_surface import compare_stage4_bridge_contract, write_stage4_synthetic_google_shaped_freeze
 from scope_static.mechanism_discovery.google_transfer import run_stage4_google_transfer, run_stage4_transfer_diagnostics
+from scope_static.mechanism_discovery.google_unit_source import CONTROL_NAMES, run_stage4_google_unit_source_expansion
 from scope_static.mechanism_discovery.assignment_geometry import run_stage4_assignment_geometry_repair
 from scope_static.mechanism_discovery.source_ceiling import run_stage4_source_surface_survival_audit
 from scope_static.mechanism_discovery.source_pretrain import run_stage4_source_pretrain
 from scope_static.mechanism_discovery.support_audit import run_stage4_support_alignment_audit
 from scope_static.mechanism_discovery.stage4_artifacts import (
     load_stage4_source_evaluator_labels,
+    load_stage4_source_mixture_evaluator_labels,
     load_stage4_visible_matrix,
     validate_stage4_source_label_separation,
 )
-from scope_static.mechanism_discovery.artifacts import load_stage3a_frozen_visible_features
+from scope_static.mechanism_discovery.artifacts import load_stage3a_frozen_visible_features, matrix_digest
 
 
 def test_stage4_synthetic_freeze_is_stage3a_compatible_and_label_separated(tmp_path: Path) -> None:
@@ -199,6 +201,89 @@ def test_stage4_assignment_geometry_repair_writes_diagnostics(tmp_path: Path) ->
     assert (output / "raw_only_codebook_branch.json").exists()
 
 
+def test_stage4_google_unit_source_expansion_writes_split_clean_freeze_and_controls(tmp_path: Path) -> None:
+    teacher = _write_teacher(tmp_path)
+    google = tmp_path / "google_s3a" / "S3A_protocol_freeze"
+    write_stage4_synthetic_google_shaped_freeze(teacher_dir=teacher, output_dir=google, shotblock_size=4)
+    _force_google_public_geometry_fixture_values(google)
+    output = tmp_path / "S4_6"
+
+    result = run_stage4_google_unit_source_expansion(
+        teacher_dir=teacher,
+        google_stage3a_dir=google,
+        output_dir=output,
+        seed=7,
+        k=4,
+        shotblock_size=4,
+        mixture_component_count=2,
+    )
+
+    freeze = output / "S3A_protocol_freeze"
+    matrix, feature_names, manifest = load_stage3a_frozen_visible_features(freeze)
+    labels = load_stage4_source_evaluator_labels(freeze)
+    mixture = load_stage4_source_mixture_evaluator_labels(freeze)
+    separation = validate_stage4_source_label_separation(freeze)
+    split = result["mode_design_split_manifest"]
+    google_matrix, google_names, _google_manifest = load_stage3a_frozen_visible_features(google)
+    meta_indices = [idx for idx, name in enumerate(google_names) if name.startswith("meta__public_geometry")]
+
+    assert matrix.shape[0] == 4
+    assert len(feature_names) == matrix.shape[1]
+    assert np.allclose(matrix[:, meta_indices], google_matrix[:, meta_indices])
+    assert manifest["loaded_from_stage3a_artifact"] is True
+    assert labels.records
+    assert mixture.records
+    assert separation["passed"] is True
+    assert result["claim_boundary"]["claims_true_google_physical_mechanism_recovery"] is False
+    assert result["claim_boundary"]["claims_cptp_gksl_generation"] is False
+    assert split["google_heldout_indices_used_for_missing_mode_selection"] == []
+    assert set(split["design"]).isdisjoint(set(split["heldout_eval"]))
+    assert result["mode_design_audit"]["used_heldout_eval_rows_for_mode_design"] is False
+    assert result["visible_surrogate_transform_audit"]["claims_physical_channel_sampling"] is False
+    assert result["visible_surrogate_transform_audit"]["claims_cptp_gksl_generation"] is False
+    assert result["source_visible_calibration_audit"]["uses_google_heldout_eval_rows"] is False
+    assert result["source_visible_calibration_audit"]["public_geometry_features_mirrored_per_row"] is True
+    assert result["expanded_transfer_report"]["heldout_eval_only"] is True
+    assert result["expanded_transfer_report"]["strict_frozen_transfer"]["scoring_profile"] == "raw_features_only_excludes_meta_public_geometry"
+    assert result["expanded_transfer_report"]["strict_frozen_transfer"]["raw_feature_count"] > 0
+    assert "full_visible_mae" in result["expanded_transfer_report"]["strict_frozen_transfer"]
+    assert set(CONTROL_NAMES).issubset(set(result["controls"]["control_names"]))
+    assert result["acceptance_audit"]["checks"]["freeze_contains_no_downstream_transfer_diagnostics"] is True
+    assert (output / "mode_design_split_manifest.json").exists()
+    assert (output / "mode_design_audit.json").exists()
+    assert (output / "visible_surrogate_transform_audit.json").exists()
+    assert (output / "source_visible_calibration_audit.json").exists()
+    assert (output / "expanded_transfer_report.json").exists()
+
+    for name in [
+        "expanded_transfer_report.json",
+        "google_native_mode_coverage.json",
+        "source_google_mode_distance.json",
+        "mode_design_audit.json",
+        "mode_design_split_manifest.json",
+        "source_visible_calibration_audit.json",
+    ]:
+        assert not (freeze / name).exists()
+    for name in [
+        "visible_features.npy",
+        "sampled_visible_features.npy",
+        "visible_feature_schema.json",
+        "visible_feature_matrix.json",
+        "split_manifest.json",
+        "forbidden_feature_audit.json",
+        "adequacy_report.json",
+        "acceptance_audit.json",
+        "metrics.json",
+        "source_public_signature_manifest.json",
+        "source_mixture_label_manifest.json",
+        "source_mixture_evaluator_labels.json",
+        "source_label_manifest.json",
+        "source_evaluator_labels.json",
+        "claim_boundary.json",
+    ]:
+        assert (freeze / name).exists()
+
+
 def test_stage4_bridge_contract_comparator_detects_mismatch(tmp_path: Path) -> None:
     source = _write_source_freeze(tmp_path)
     other = tmp_path / "other"
@@ -228,6 +313,23 @@ def _write_source_freeze(tmp_path: Path) -> Path:
     matrix, _names, _manifest = load_stage4_visible_matrix(output)
     assert matrix.shape[0] == 4
     return output
+
+
+def _force_google_public_geometry_fixture_values(stage3a_dir: Path) -> None:
+    matrix = np.load(stage3a_dir / "visible_features.npy")
+    schema = json.loads((stage3a_dir / "visible_feature_schema.json").read_text())
+    names = [str(row["name"]) for row in schema["features"]]
+    for name, base in [
+        ("meta__public_geometry__detector_count", 1000.0),
+        ("meta__public_geometry__coord_t_span", 90.0),
+        ("meta__public_geometry__shot_count_total", 32768.0),
+    ]:
+        idx = names.index(name)
+        matrix[:, idx] = base + np.arange(matrix.shape[0], dtype=np.float64)
+    np.save(stage3a_dir / "visible_features.npy", matrix)
+    manifest = json.loads((stage3a_dir / "visible_feature_matrix.json").read_text())
+    manifest["visible_features_sha256"] = matrix_digest(matrix)
+    (stage3a_dir / "visible_feature_matrix.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
 
 
 def _write_teacher(tmp_path: Path) -> Path:

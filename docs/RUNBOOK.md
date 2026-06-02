@@ -153,12 +153,6 @@ outputs/google_static/google_s3_visible_surface_v2/S3A_protocol_freeze/
   metrics.json
 ```
 
-The V1 fixed-window adapter remains available for regression comparison:
-
-```bash
-scope-google-s3-visible-adapter --config configs/scope_static/google_s3_visible_adapter_v1.yaml
-```
-
 Historical Google DEM-proxy diagnostics are archived under
 `docs/archive/google_gdisc15.md`.
 

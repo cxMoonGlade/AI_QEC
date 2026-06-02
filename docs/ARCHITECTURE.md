@@ -84,7 +84,6 @@ scope-stage3b0-baselines
 scope-stage3b1-discovery
 scope-stage3c-generator
 scope-stage3d1-assignment-shuffle
-scope-google-s3-visible-adapter
 scope-google-s3-visible-cache-v2
 scope-google-s3-visible-aggregate-v2
 scope-google-s3-visible-adapter-v2

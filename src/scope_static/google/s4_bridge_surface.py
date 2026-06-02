@@ -9,7 +9,7 @@ from typing import Iterable, Mapping
 import numpy as np
 import yaml
 
-from scope_static.google.s3_visible_surface import _json_safe
+from scope_static.google.s3_visible_common import _json_safe
 from scope_static.google.s3_visible_surface_v2 import (
     DEFAULT_REGION_FAMILIES,
     FEATURE_NAMES,
