@@ -2,7 +2,10 @@
 
 This document is the public-facing view of the controlled physical-mechanism
 catalog toolbox. Historical artifacts may still use `PHYC1`, `PHYC2`, and
-`PHYC3`; current code uses responsibility-named packages.
+`PHYC3`; current code uses responsibility-named packages. Current controlled
+Stage 3/5 evidence starts from the Layer1.P medium contract teacher plus
+blocking physicality/protocol-freeze audits; PHYC2/PHYC3 teacher-learner
+artifacts are Stage 2 compatibility evidence unless explicitly cited as such.
 
 ## Responsibilities
 
@@ -27,6 +30,8 @@ object:
    similar visible noisy observation distributions under no-leakage controls.
 3. Stage 3 asks whether the latent mechanism quotient can be inferred from
    visible observations alone, without direct mechanism-label supervision.
+4. Stage 5 audits context-relative location and strength recovery from fixed
+   Stage 3 assignments; it is evaluator-side interpretation, not learner input.
 
 ## Physicality Boundary
 

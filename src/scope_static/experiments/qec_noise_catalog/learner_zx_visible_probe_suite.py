@@ -51,7 +51,7 @@ def run_phyc3b_zx_visible_alias_breaking_probe_suite_from_config(
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Run PHYC3b Z/X-only visible alias-breaking probe suite.")
-    parser.add_argument("--config", type=Path, default=Path("configs/scope_static/phyc3b_zx_visible_alias_breaking_probe_suite.yaml"))
+    parser.add_argument("--config", type=Path, default=Path("configs/archive/stage2_teacher_learner/phyc3b_zx_visible_alias_breaking_probe_suite.yaml"))
     parser.add_argument("--teacher-dir", type=Path)
     parser.add_argument("--phyc2-dir", type=Path)
     parser.add_argument("--output-dir", type=Path)

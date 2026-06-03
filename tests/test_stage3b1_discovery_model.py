@@ -13,6 +13,7 @@ from scope_static.mechanism_discovery.discovery_model import (
     _context_balanced_hard_assignments,
     _fit_context_balanced_prototype_mixture,
     context_dependent_mechanism_diagnostics,
+    learner_input_mask_audit,
     run_stage3b1_first_discovery_model,
 )
 
@@ -88,6 +89,7 @@ def test_stage3b1_trains_visible_only_prototype_mixture_and_reports_quotient_met
         "shortcut_correlation_audit.json",
         "targeted_bleed_audit.json",
         "targeted_m6_m13_m18_m27_bleed_audit.json",
+        "targeted_pair_geometry_audit.json",
         "summary.md",
     ]:
         assert (output / name).exists()
@@ -155,6 +157,27 @@ def test_stage3b1_config_wrapper_runs_from_yaml(tmp_path: Path) -> None:
 
     assert result["decision"] == "stage3b1_first_discovery_model_completed"
     assert (output / "learned_prototypes.json").exists()
+
+
+def test_stage3b1_full_no_finite_shot_se_profile_excludes_se_columns() -> None:
+    audit = learner_input_mask_audit(
+        [
+            "raw__single__prep_0__r_1__meas_Z__P0",
+            "raw__single__prep_0__r_1__meas_Z__se_P0",
+            "derived__single__prep_0__meas_Z__P0__first_diff_r_1_to_2",
+            "visible_metadata__instruction_rx",
+        ],
+        learner_input_profile="full_no_finite_shot_se",
+    )
+
+    assert audit["learner_input_profile"] == "full_no_finite_shot_se"
+    assert audit["selected_feature_names"] == [
+        "raw__single__prep_0__r_1__meas_Z__P0",
+        "derived__single__prep_0__meas_Z__P0__first_diff_r_1_to_2",
+        "visible_metadata__instruction_rx",
+    ]
+    assert audit["selected_feature_kind_counts"]["raw_finite_shot_se"] == 0
+    assert audit["dropped_feature_names"] == ["raw__single__prep_0__r_1__meas_Z__se_P0"]
 
 
 def test_stage3b1_public_context_residualized_transform_is_local_to_s3b1(tmp_path: Path) -> None:

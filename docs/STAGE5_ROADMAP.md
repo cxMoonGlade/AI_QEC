@@ -82,9 +82,9 @@ The artifact reports predicted-vs-oracle effect recovery:
 
 - S5 artifact is evaluator-only or explicitly skipped in no-oracle mode.
 - Family classification NMI/ARI/BA/min-recall are `1.0` on controlled
-  teacher-learner fixtures before S5 effect claims are cited.
+  Layer1.P/Stage3 fixtures before S5 effect claims are cited.
 - Predicted family/exact-mechanism effects match oracle evaluator effects on
-  controlled teacher-learner fixtures.
+  controlled Layer1.P/Stage3 fixtures.
 - The S5 leaf-effect contract fixture must cover every current implementation
   leaf with `leaf_exact_effect_supported=true`, with at least 20
   context/location/strength variants per leaf.
@@ -96,11 +96,16 @@ The artifact reports predicted-vs-oracle effect recovery:
   standalone physical mechanism recovery from exact-label recall alone. They
   require family/dimension audit: axis, direction, branch, mixture, context,
   operation, surrogate, or overlay fields as applicable.
+- Surface-conditional flat `F*` targets keep their public flat label but are not
+  flat-exact claim gates on the current Z/X-visible surface. Current examples
+  are legacy M6/public F2 and legacy M22-M23/public F9-F10; S5 must claim them
+  through family/dimension plus context-relative location and strength until a
+  stronger probe surface exposes the required drift or axis signature.
 - Legacy `M11` / public `M6` is tested as a spectator-crosstalk overlay
   family, not as a flat exact mechanism. The overlay contract must report base
   mechanism, overlay presence, victim/aggressor relative location, coupling
   axis, timing context, and overlay strength.
-- The harder learned teacher-learner fixture must include multiple public
+- The harder learned Layer1.P/Stage3 fixture must include multiple public
   contexts, all five family buckets, public F/M label coverage with
   non-degenerate context-relative location fractions, and non-degenerate
   numeric parameter strengths.
@@ -111,7 +116,10 @@ The artifact reports predicted-vs-oracle effect recovery:
 - The artifact does not claim physical parameter recovery.
 
 Current boundary: the leaf-effect contract fixture verifies S5 recovery when
-the implementation-leaf assignment is already correct. It is not evidence that
+the implementation-leaf assignment is already correct. The current learned
+fixture is the medium Layer1.P allM contract teacher with M11/public M6
+spectator-overlay payload serialized into `oracle_mechanisms.json` and checked
+by the blocking physicality/protocol-freeze audits. It is not evidence that
 every public `M*` label is an atomic flat discovery target. A learned S3B1
 all-catalog gate should target public `F*` atomic leaves where allowed and
 family/dimension recovery for aggregate, context-conditioned, mixture,

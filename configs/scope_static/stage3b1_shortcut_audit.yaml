@@ -1,8 +1,8 @@
 stage3b1_first_discovery_model:
   name: Stage3B1_shortcut_audit
-  stage3a_dir: outputs/scope_static/PHYC_STAGE3_discovery/S3A_protocol_freeze
-  stage3a5_dir: outputs/scope_static/PHYC_STAGE3_discovery/S3A5_observability_alias_ceiling
-  output_dir: outputs/scope_static/PHYC_STAGE3_discovery/S3B1_shortcut_audit
+  stage3a_dir: outputs/scope_static/s5_medium_hard_allM_contract_teacher_20q_depth20_rzz_active_g20_strength_decorrelated_s1000/S3A_protocol_freeze
+  stage3a5_dir: outputs/scope_static/s5_medium_hard_allM_contract_teacher_20q_depth20_rzz_active_g20_strength_decorrelated_s1000/S3A5_observability_alias_ceiling
+  output_dir: outputs/scope_static/s5_medium_hard_allM_contract_teacher_20q_depth20_rzz_active_g20_strength_decorrelated_s1000/S3B1_shortcut_audit
   seed: 0
   max_iter: 15
   initial_temperature: 1.5

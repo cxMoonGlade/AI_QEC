@@ -47,6 +47,7 @@ LEARNER_INPUT_PROFILE_RAW_ALL = "raw_all"
 LEARNER_INPUT_PROFILE_RAW_MULTIVIEW_ONLY = "raw_multiview_only"
 LEARNER_INPUT_PROFILE_METADATA_ONLY = "metadata_only"
 LEARNER_INPUT_PROFILE_RAW_PLUS_BASIC_METADATA = "raw_plus_basic_metadata"
+LEARNER_INPUT_PROFILE_FULL_NO_FINITE_SHOT_SE = "full_no_finite_shot_se"
 DEFAULT_LEARNER_INPUT_PROFILE = LEARNER_INPUT_PROFILE_FULL
 ALLOWED_LEARNER_INPUT_PROFILES = (
     LEARNER_INPUT_PROFILE_FULL,
@@ -56,11 +57,14 @@ ALLOWED_LEARNER_INPUT_PROFILES = (
     LEARNER_INPUT_PROFILE_RAW_MULTIVIEW_ONLY,
     LEARNER_INPUT_PROFILE_METADATA_ONLY,
     LEARNER_INPUT_PROFILE_RAW_PLUS_BASIC_METADATA,
+    LEARNER_INPUT_PROFILE_FULL_NO_FINITE_SHOT_SE,
 )
 LEARNER_INPUT_PROFILE_ALIASES = {
     "raw_population_plus_expectation": LEARNER_INPUT_PROFILE_RAW_POPULATION_EXPECTATION,
     "raw_syndrome_response_only": LEARNER_INPUT_PROFILE_RAW_MULTIVIEW_ONLY,
     "raw_signature_only": LEARNER_INPUT_PROFILE_RAW_MULTIVIEW_ONLY,
+    "full_no_se": LEARNER_INPUT_PROFILE_FULL_NO_FINITE_SHOT_SE,
+    "full_without_finite_shot_se": LEARNER_INPUT_PROFILE_FULL_NO_FINITE_SHOT_SE,
 }
 POPULATION_METRICS = {"P0", "P1", "P00", "P01", "P10", "P11", "p_comp"}
 BASIC_METADATA_FEATURES = {
@@ -81,6 +85,7 @@ ALLOWED_VISIBLE_TRANSFORMS = (
     VISIBLE_TRANSFORM_ORACLE_NUISANCE_RESIDUALIZED_DIAGNOSTIC,
 )
 TARGETED_BLEED_MECHANISM_IDS = ("M6", "M13", "M18", "M27")
+TARGETED_PAIR_GEOMETRY_AUDIT_PAIRS = (("M6", "M13"), ("M22", "M23"))
 
 
 def run_stage3b1_first_discovery_model(
@@ -223,12 +228,19 @@ def run_stage3b1_first_discovery_model(
             records=evaluator.records,
             cluster_to_label_match=dict(evaluator_metrics["exact_label_metrics"].get("cluster_to_label_match", {})),
         )
+        targeted_pair_geometry = targeted_pair_visible_geometry_audit(
+            x,
+            hard_assignments,
+            labels=labels,
+            target_pairs=TARGETED_PAIR_GEOMETRY_AUDIT_PAIRS,
+        )
     else:
         quotient_class_names = []
         evaluator_metrics = no_oracle_evaluator_metrics(hard_assignments)
         context_dependent = no_oracle_context_dependent_diagnostics()
         shortcut = skipped_shortcut_correlation_audit("no_oracle_labels")
         targeted_bleed = skipped_targeted_bleed_audit("no_oracle_labels")
+        targeted_pair_geometry = skipped_targeted_pair_visible_geometry_audit("no_oracle_labels")
     learned_summary = learned_assignment_summary(
         selected=selected,
         responsibilities=responsibilities,
@@ -371,6 +383,7 @@ def run_stage3b1_first_discovery_model(
         "shortcut_correlation_audit": shortcut,
         "targeted_bleed_audit": targeted_bleed,
         "targeted_m6_m13_m18_m27_bleed_audit": targeted_bleed,
+        "targeted_pair_geometry_audit": targeted_pair_geometry,
         "quotient_metrics": quotient_metrics,
         "acceptance_audit": acceptance,
         "decision": "stage3b1_first_discovery_model_completed" if acceptance["passed"] else "stage3b1_first_discovery_model_failed",
@@ -527,6 +540,102 @@ def learner_input_mask_audit(feature_names: list[str], *, learner_input_profile:
     }
 
 
+def load_stage3b1_assignment_visible_feature_view(
+    stage3b1_dir: str | Path,
+    *,
+    fallback_matrix: np.ndarray,
+    fallback_feature_names: list[str],
+) -> tuple[np.ndarray, list[str], dict[str, object]]:
+    """Load the exact visible feature view used by S3B1 assignment fitting.
+
+    Downstream K-stress and merge diagnostics should stress the same assignment
+    geometry that produced the S3B1 responsibilities. They still score
+    generation against the full Stage 3A matrix separately.
+    """
+
+    s3b1 = Path(stage3b1_dir)
+    matrix_path = s3b1 / "assignment_visible_features.npy"
+    mask_path = s3b1 / "learner_input_mask_audit.json"
+    fallback = np.asarray(fallback_matrix, dtype=np.float64)
+    fallback_names = [str(name) for name in fallback_feature_names]
+    if not matrix_path.exists() or not mask_path.exists():
+        return fallback, fallback_names, _stage3b1_assignment_feature_view_audit(
+            source="stage3a_full_visible_fallback",
+            matrix_path=matrix_path,
+            mask_path=mask_path,
+            matrix=fallback,
+            feature_names=fallback_names,
+            reason="missing_s3b1_assignment_feature_artifact",
+        )
+    try:
+        matrix = np.asarray(np.load(matrix_path), dtype=np.float64)
+        mask = _load_json(mask_path)
+    except Exception as exc:
+        return fallback, fallback_names, _stage3b1_assignment_feature_view_audit(
+            source="stage3a_full_visible_fallback",
+            matrix_path=matrix_path,
+            mask_path=mask_path,
+            matrix=fallback,
+            feature_names=fallback_names,
+            reason=f"invalid_s3b1_assignment_feature_artifact:{type(exc).__name__}",
+        )
+    names = [str(name) for name in list(mask.get("selected_feature_names", []))]
+    if matrix.ndim != 2 or int(matrix.shape[0]) != int(fallback.shape[0]) or len(names) != int(matrix.shape[1]):
+        return fallback, fallback_names, _stage3b1_assignment_feature_view_audit(
+            source="stage3a_full_visible_fallback",
+            matrix_path=matrix_path,
+            mask_path=mask_path,
+            matrix=fallback,
+            feature_names=fallback_names,
+            reason="s3b1_assignment_feature_shape_mismatch",
+        )
+    audit = _stage3b1_assignment_feature_view_audit(
+        source="stage3b1_assignment_visible_features",
+        matrix_path=matrix_path,
+        mask_path=mask_path,
+        matrix=matrix,
+        feature_names=names,
+        reason=None,
+    )
+    audit.update(
+        {
+            "learner_input_profile": str(mask.get("learner_input_profile", "")),
+            "requested_learner_input_profile": str(mask.get("requested_learner_input_profile", "")),
+            "selected_feature_kind_counts": dict(mask.get("selected_feature_kind_counts", {}))
+            if isinstance(mask.get("selected_feature_kind_counts", {}), dict)
+            else _feature_kind_counts(names),
+            "full_feature_kind_counts": dict(mask.get("full_feature_kind_counts", {}))
+            if isinstance(mask.get("full_feature_kind_counts", {}), dict)
+            else _feature_kind_counts(fallback_names),
+        }
+    )
+    return matrix, names, audit
+
+
+def _stage3b1_assignment_feature_view_audit(
+    *,
+    source: str,
+    matrix_path: Path,
+    mask_path: Path,
+    matrix: np.ndarray,
+    feature_names: list[str],
+    reason: str | None,
+) -> dict[str, object]:
+    return {
+        "schema": "scope_static_stage3b1_assignment_feature_view_v1",
+        "source": str(source),
+        "assignment_visible_features_path": str(matrix_path),
+        "learner_input_mask_audit_path": str(mask_path),
+        "row_count": int(np.asarray(matrix).shape[0]) if np.asarray(matrix).ndim == 2 else 0,
+        "feature_count": int(np.asarray(matrix).shape[1]) if np.asarray(matrix).ndim == 2 else 0,
+        "feature_kind_counts": _feature_kind_counts(feature_names),
+        "uses_mechanism_labels": False,
+        "uses_oracle_location_or_strength": False,
+        "fallback_reason": reason,
+        "passed": reason is None,
+    }
+
+
 def _learner_input_mask(feature_names: list[str], *, profile: str) -> np.ndarray:
     if profile == LEARNER_INPUT_PROFILE_FULL:
         return np.ones(len(feature_names), dtype=bool)
@@ -545,6 +654,8 @@ def _learner_input_mask(feature_names: list[str], *, profile: str) -> np.ndarray
             [str(name).startswith("raw__") or str(name) in BASIC_METADATA_FEATURES for name in feature_names],
             dtype=bool,
         )
+    if profile == LEARNER_INPUT_PROFILE_FULL_NO_FINITE_SHOT_SE:
+        return np.asarray([not _is_finite_shot_se_feature(name) for name in feature_names], dtype=bool)
     raise ValueError(f"unknown learner_input_profile {profile!r}")
 
 
@@ -564,6 +675,7 @@ def _learner_input_profile_description(profile: str) -> str:
         LEARNER_INPUT_PROFILE_RAW_MULTIVIEW_ONLY: "all raw V2 syndrome-response signature blocks, excluding public metadata",
         LEARNER_INPUT_PROFILE_METADATA_ONLY: "visible_metadata__* or meta__* public metadata only",
         LEARNER_INPUT_PROFILE_RAW_PLUS_BASIC_METADATA: "raw_all plus basis/distance/rounds/window_kind/touches_logical metadata",
+        LEARNER_INPUT_PROFILE_FULL_NO_FINITE_SHOT_SE: "full visible feature surface excluding finite-shot standard-error nuisance columns",
     }[profile]
 
 
@@ -577,6 +689,11 @@ def _is_raw_expectation_feature(name: str) -> bool:
     text = str(name)
     metric = text.rsplit("__", 1)[-1]
     return bool(text.startswith("raw__") and "__se_" not in text and metric.startswith("E_"))
+
+
+def _is_finite_shot_se_feature(name: str) -> bool:
+    text = str(name)
+    return bool(text.startswith("raw__") and "__se_" in text)
 
 
 def _feature_kind_counts(feature_names: list[str]) -> dict[str, int]:
@@ -595,7 +712,7 @@ def _feature_kind_counts(feature_names: list[str]) -> dict[str, int]:
             counts["raw_population"] += 1
         elif _is_raw_expectation_feature(text):
             counts["raw_expectation"] += 1
-        elif text.startswith("raw__") and "__se_" in text:
+        elif _is_finite_shot_se_feature(text):
             counts["raw_finite_shot_se"] += 1
         elif text.startswith("raw__"):
             counts["raw_multiview"] += 1
@@ -1010,6 +1127,110 @@ def skipped_targeted_bleed_audit(reason: str) -> dict[str, object]:
         "used_for_model_selection": False,
         "passed": True,
     }
+
+
+def targeted_pair_visible_geometry_audit(
+    x: np.ndarray,
+    hard_assignments: np.ndarray,
+    *,
+    labels: list[str],
+    target_pairs: tuple[tuple[str, str], ...],
+) -> dict[str, object]:
+    matrix = np.asarray(x, dtype=np.float64)
+    hard = np.asarray(hard_assignments, dtype=np.int64)
+    label_arr = np.asarray([str(label) for label in labels])
+    rows = {}
+    for left, right in target_pairs:
+        pair_mask = np.isin(label_arr, [left, right])
+        indices = np.flatnonzero(pair_mask)
+        if indices.size == 0:
+            rows[f"{left}/{right}"] = {
+                "mechanism_pair": [left, right],
+                "present": False,
+                "support": 0,
+            }
+            continue
+        local = matrix[indices]
+        true_groups = np.asarray([0 if label_arr[idx] == left else 1 for idx in indices], dtype=np.int64)
+        learned_groups = hard[indices]
+        true_sse = _partition_sse(local, true_groups)
+        learned_sse = _partition_sse(local, learned_groups)
+        true_centroid_rms = _pair_centroid_rms(local, true_groups)
+        learned_cluster_count = int(len(set(learned_groups.tolist())))
+        exact_partition_preferred = bool(true_sse <= learned_sse + 1.0e-12)
+        rows[f"{left}/{right}"] = {
+            "schema": "scope_static_stage3b1_targeted_pair_geometry_row_v1",
+            "mechanism_pair": [left, right],
+            "present": True,
+            "support": int(indices.size),
+            "feature_count": int(matrix.shape[1]) if matrix.ndim == 2 else 0,
+            "true_exact_label_partition_sse": true_sse,
+            "learned_assignment_partition_sse": learned_sse,
+            "true_minus_learned_sse": float(true_sse - learned_sse),
+            "true_exact_centroid_rms_distance": true_centroid_rms,
+            "learned_cluster_count_on_pair_rows": learned_cluster_count,
+            "visible_geometry_prefers_exact_partition": exact_partition_preferred,
+            "visible_geometry_prefers_learned_partition": bool(not exact_partition_preferred),
+            "interpretation": (
+                "exact labels are aligned with the selected visible assignment geometry"
+                if exact_partition_preferred
+                else "selected visible assignment geometry has lower within-partition SSE than the exact-label split"
+            ),
+        }
+    return {
+        "schema": "scope_static_stage3b1_targeted_pair_geometry_audit_v1",
+        "description": (
+            "Evaluator-only post-fit audit comparing exact-label pair partitions against the learned visible "
+            "partition in the selected S3B1 assignment feature geometry."
+        ),
+        "evaluator_only": True,
+        "used_for_fit": False,
+        "used_for_model_selection": False,
+        "target_pairs": [[left, right] for left, right in target_pairs],
+        "rows": rows,
+        "passed": True,
+    }
+
+
+def skipped_targeted_pair_visible_geometry_audit(reason: str) -> dict[str, object]:
+    return {
+        "schema": "scope_static_stage3b1_targeted_pair_geometry_audit_v1",
+        "skipped": True,
+        "skip_reason": str(reason),
+        "evaluator_only": False,
+        "used_for_fit": False,
+        "used_for_model_selection": False,
+        "passed": True,
+    }
+
+
+def _partition_sse(x: np.ndarray, groups: np.ndarray) -> float:
+    matrix = np.asarray(x, dtype=np.float64)
+    labels = np.asarray(groups, dtype=np.int64)
+    total = 0.0
+    for group in sorted(set(labels.tolist())):
+        idx = np.flatnonzero(labels == int(group))
+        if idx.size == 0:
+            continue
+        mean = np.mean(matrix[idx], axis=0)
+        diff = matrix[idx] - mean[None, :]
+        total += float(np.sum(diff * diff))
+    return total
+
+
+def _pair_centroid_rms(x: np.ndarray, groups: np.ndarray) -> float | None:
+    matrix = np.asarray(x, dtype=np.float64)
+    labels = np.asarray(groups, dtype=np.int64)
+    unique = sorted(set(labels.tolist()))
+    if len(unique) != 2 or matrix.shape[1] == 0:
+        return None
+    means = []
+    for group in unique:
+        idx = np.flatnonzero(labels == int(group))
+        if idx.size == 0:
+            return None
+        means.append(np.mean(matrix[idx], axis=0))
+    return float(np.linalg.norm(means[0] - means[1]) / np.sqrt(float(matrix.shape[1])))
 
 
 def stage3b1_acceptance_audit(
@@ -1948,6 +2169,7 @@ def _write_outputs(
         "shortcut_correlation_audit.json": result["shortcut_correlation_audit"],
         "targeted_bleed_audit.json": result["targeted_bleed_audit"],
         "targeted_m6_m13_m18_m27_bleed_audit.json": result["targeted_m6_m13_m18_m27_bleed_audit"],
+        "targeted_pair_geometry_audit.json": result["targeted_pair_geometry_audit"],
         "quotient_metrics.json": result["quotient_metrics"],
         "acceptance_audit.json": result["acceptance_audit"],
         "feature_schema_match_audit.json": result["feature_schema_match_audit"],

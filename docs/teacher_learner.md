@@ -47,7 +47,7 @@ arbitrary CPTP/GKSL channel learner by construction.
 ## Response-Surface Intuition
 
 See `docs/RESPONSE_SURFACES.md` for the fuller implementation view across the
-controlled teacher-learner path and the Google S3 V2 real-data path.
+controlled catalog/Layer1.P path and the Google S3 V2 real-data path.
 
 Teacher-learner mechanism recovery should be understood as learning from a
 probe- and context-induced visible response surface, not from direct access to a
@@ -170,13 +170,15 @@ Forbidden learner exposure:
 - ARI/NMI or recovery metrics used for model selection.
 - observation slot ids if a remap deterministically encodes mechanism identity.
 
-For the current local-observable path, `PHYC2.slot_only_leakage_control` trains
-on slot/layout metadata without sampled bits. High slot-only accuracy means the
-sampled-observation learner diagnostic is leaking and should not be trusted as
-learner evidence. It does not invalidate teacher by
-itself. The current accepted `separability_v2` evidence is explicitly
-classified as an engineered separability stress result, not a Born-local
-physical baseline.
+For the legacy local-observable Stage 2 path,
+`PHYC2.slot_only_leakage_control` trains on slot/layout metadata without
+sampled bits. High slot-only accuracy means the sampled-observation learner
+diagnostic is leaking and should not be trusted as learner evidence. It does
+not invalidate the teacher by itself. The accepted `separability_v2` evidence
+is explicitly classified as an engineered separability stress result, not a
+Born-local physical baseline. The current controlled Stage 3/5 route instead
+starts from the Layer1.P medium contract teacher, then freezes learner-visible
+features and audits assignment/property recovery with evaluator-only labels.
 
 Stage 2 is closed as a no-leakage physical-mechanism catalog validation stage:
 the system can generate controlled noisy QEC observations from declared

@@ -7,6 +7,7 @@ import numpy as np
 import yaml
 
 from scope_static.experiments.qec_noise_catalog import s2d_difficulty_expansion as mod
+from scope_static.primitives.overlay_contract import overlay_contract_audit
 from scope_static.primitives.probe_catalog import build_default_oracle_mechanisms, build_probe_basis_manifest, build_probe_circuits
 
 
@@ -81,6 +82,41 @@ def test_balanced_strength_variants_cover_every_mechanism() -> None:
     for mechanism_id, values in by_mechanism.items():
         assert len(values) == 20, mechanism_id
         assert len({round(value, 12) for value in values}) == 20, mechanism_id
+
+
+def test_balanced_teacher_serializes_m11_overlay_payload_in_records() -> None:
+    specs = build_default_oracle_mechanisms(
+        {
+            "num_qubits": 20,
+            "mechanism_set": "allM",
+            "balanced_min_instances_per_mechanism": 4,
+            "multicircuit_teacher_batch": True,
+            "balanced_strength_variants": True,
+        }
+    )
+    records = [{"location_id": idx, **spec.audit_dict(), "oracle_label": spec.mechanism_id} for idx, spec in enumerate(specs)]
+    m11 = [record for record in records if record["mechanism_id"] == "M11"]
+
+    assert len(m11) == 4
+    audit = overlay_contract_audit(m11)
+    assert audit["passed"] is True
+    assert audit["num_overlay_records"] == 4
+    assert audit["num_overlay_records_missing_payload"] == 0
+    for record in m11:
+        assert record["spectator_overlay_present"] is True
+        assert record["contract_role"] == "overlay_family"
+        assert record["overlay_family"] == "spectator_crosstalk"
+        assert record["public_effect_family"] == "spectator_overlay"
+        assert str(record["public_overlay_class"]).endswith("_overlay")
+        assert str(record["nonflat_public_label"]).startswith("spectator_overlay_")
+        assert record["base_mechanism"] in {"M8", "M7", "M1", "M17"}
+        assert record["victim_relative_location"] in {"edge", "qubit_id", "detector"}
+        assert record["aggressor_relative_location"] in {"adjacent_gate", "previous_cycle_edge", "same_cycle_qubit", "shot_block"}
+        assert record["coupling_axis"] in {"ZZ", "RZ", "readout_bias", "reset_bias"}
+        assert record["timing_context"] in {"same_cycle", "prev_cycle", "shot_block_drift"}
+        assert float(record["spectator_strength"]) > 0.0
+        assert record["spectator_overlay"]["present"] is True
+        assert record["spectator_overlay"]["base_mechanism"] == record["base_mechanism"]
 
 
 def test_balanced_strength_variants_can_decouple_context_and_strength() -> None:

@@ -7,14 +7,15 @@ import numpy as np
 
 from scope_static.experiments.stage3.generator_learning import run_stage3c_generator_learning_from_config
 from scope_static.learner.zx_visible_probe_suite import build_zx_visible_feature_table
-from scope_static.primitives.mechanism_catalog import MECHANISM_LEAF_EXACT_IDS, MECHANISM_NAMES, NON_FLAT_PRIMARY_TARGET_IDS
+from scope_static.primitives.mechanism_catalog import CONTRACT_TYPED_DIMENSION_TARGET_IDS, MECHANISM_LEAF_EXACT_IDS, MECHANISM_NAMES
+from scope_static.primitives.mechanism_catalog import NON_FLAT_PRIMARY_TARGET_IDS, SURFACE_CONDITIONAL_DIMENSION_TARGET_IDS
 from scope_static.primitives.mechanism_catalog import mechanism_public_label
 from scope_static.mechanism_discovery.protocol_freeze import run_stage3a_dataset_protocol_freeze
 from scope_static.mechanism_discovery.observability_ceiling import run_stage3a5_observability_alias_ceiling
 from scope_static.mechanism_discovery.artifacts import matrix_digest
 from scope_static.mechanism_discovery.discovery_model import EVALUATOR_MODE_CONTROLLED_CATALOG, EVALUATOR_MODE_NO_ORACLE_LABELS
 from scope_static.mechanism_discovery.discovery_model import run_stage3b1_first_discovery_model
-from scope_static.mechanism_discovery.generator_learning import evaluate_soft_family_strength_location_audit
+from scope_static.mechanism_discovery.recovery_metrics import evaluate_soft_family_strength_location_audit
 from scope_static.mechanism_discovery.generator_learning import run_stage3c_prototype_generator_learning
 from scope_static.mechanism_discovery.generator_learning import stage3c_claim_gate_audit
 
@@ -279,12 +280,21 @@ def test_s5_leaf_effect_audit_covers_current_leaf_mechanisms_with_twenty_context
     assert "M11" not in result["per_exact_mechanism"]
     dimension = result["mechanism_dimension_recovery_audit"]
     expected_non_flat_leaf_ids = set(NON_FLAT_PRIMARY_TARGET_IDS) & set(leaf_mechanism_ids)
+    expected_dimension_leaf_ids = set(CONTRACT_TYPED_DIMENSION_TARGET_IDS) & set(leaf_mechanism_ids)
     assert dimension["passed"] is True
     assert set(dimension["non_flat_primary_target_ids_present"]) == expected_non_flat_leaf_ids
+    assert set(dimension["contract_typed_dimension_target_ids_present"]) == expected_dimension_leaf_ids
+    assert set(dimension["surface_conditional_dimension_target_ids_present"]) == (
+        set(SURFACE_CONDITIONAL_DIMENSION_TARGET_IDS) & set(leaf_mechanism_ids)
+    )
     assert "M11" not in dimension["non_flat_primary_target_ids_present"]
     for target in dimension["targets"]:
-        assert target["mechanism_id"] in expected_non_flat_leaf_ids
-        assert target["primary_flat_cluster_target"] is False
+        assert target["mechanism_id"] in expected_dimension_leaf_ids
+        if target["mechanism_id"] in SURFACE_CONDITIONAL_DIMENSION_TARGET_IDS:
+            assert target["primary_flat_cluster_target"] is True
+            assert target["current_visible_surface_flat_exact_claim_allowed"] is False
+        else:
+            assert target["primary_flat_cluster_target"] is False
         assert target["dimension_values"]["all_declared_dimensions_have_values"] is True
         assert target["dimension_values"]["strength_dimension_available"] is True
     for mechanism_id in leaf_mechanism_ids:
@@ -657,18 +667,44 @@ def test_stage3c_claim_gate_keeps_residualized_assignment_diagnostic_only() -> N
             "acceptance_audit": {"passed": True},
             "visible_transform_audit": {"visible_transform": "public_context_residualized", "claim_allowed": True},
         },
-        stage3d4b_metrics=None,
+        stage3d4b_metrics={"decision": "stage3d4b_overcomplete_merge_prune_audit_passed", "acceptance_audit": {"passed": True}},
         stage5b1_metrics={
             "decision": "stage5b1_property_recovery_passed",
-            "acceptance_audit": {"passed": True},
-            "assignment_source_audit": {"assignment_source": "stage3b1"},
+            "acceptance_audit": {"passed": True, "property_recovery_passed": True, "claim_passed": True},
+            "claim_boundary": {"claim_allowed": True},
+            "assignment_source_audit": {"assignment_source": "stage3d4b_postmerge"},
         },
     )
 
     assert gate["claim_allowed"] is True
     assert gate["residualized_s3b1_role"] == "diagnostic_only_shortcut_and_bleed_audit"
     assert gate["checks"]["s3b1_residualized_not_used_as_claim_assignment_source"] is True
-    assert gate["claim_assignment_source"] == "stage3b1_raw"
+    assert gate["checks"]["s5b1_claim_gate_passed"] is True
+    assert gate["claim_assignment_source"] == "stage3d4b_postmerge"
+
+
+def test_stage3c_claim_gate_blocks_s5b1_diagnostic_pass_without_claim_gate() -> None:
+    gate = stage3c_claim_gate_audit(
+        s3b1_metrics={"decision": "stage3b1_first_discovery_model_completed", "acceptance_audit": {"passed": True}},
+        s3b1_residualized_metrics={
+            "decision": "stage3b1_first_discovery_model_completed",
+            "acceptance_audit": {"passed": True},
+            "visible_transform_audit": {"visible_transform": "public_context_residualized", "claim_allowed": False},
+        },
+        stage3d4b_metrics=None,
+        stage5b1_metrics={
+            "decision": "stage5b1_property_recovery_diagnostic_passed_claim_blocked",
+            "acceptance_audit": {"passed": True, "property_recovery_passed": True, "claim_passed": False},
+            "claim_boundary": {"claim_allowed": False},
+            "assignment_source_audit": {"assignment_source": "stage3b1"},
+        },
+    )
+
+    assert gate["claim_allowed"] is False
+    assert gate["diagnostic_only"] is True
+    assert gate["checks"]["s5b1_property_recovery_acceptance_passed"] is True
+    assert gate["checks"]["s5b1_property_recovery_decision_passed"] is False
+    assert gate["checks"]["s5b1_claim_gate_passed"] is False
 
 
 def _prepare_artifacts(tmp_path: Path, label_specs: list[tuple[str, str]]) -> tuple[Path, Path, Path, Path]:

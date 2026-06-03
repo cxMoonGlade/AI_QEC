@@ -11,11 +11,13 @@ from scope_static.data_preparation.full_circuit_cudaq import (
     _build_full_circuit_oracle_mechanisms,
     _cudaq_target_looks_gpu,
     _mechanism_channels_by_location,
+    _mechanism_records,
     _operation_sites_from_mechanisms,
     build_full_circuit_mechanism_definition_audit,
     generate_full_circuit_cudaq_teacher_dataset,
 )
 from scope_static.primitives.channels import MechanismSpec
+from scope_static.primitives.overlay_contract import overlay_contract_audit
 
 
 def _reset_cudaq_target_if_available() -> None:
@@ -139,6 +141,33 @@ def test_full_circuit_weighted_mechanism_instance_counts_are_preserved() -> None
     assert repetitions == 4
     assert sampling_contract == "weighted"
     assert counts == {"M0": 4, "M8": 1}
+
+
+def test_full_circuit_mechanism_records_include_m11_overlay_payload() -> None:
+    mechanisms, repetitions, sampling_contract = _build_full_circuit_oracle_mechanisms(
+        {
+            "num_qubits": 20,
+            "mechanism_set": ["M11"],
+            "balanced_min_instances_per_mechanism": 4,
+            "probe_set": "base",
+            "balanced_strength_variants": True,
+        }
+    )
+
+    records = _mechanism_records(mechanisms)
+    audit = overlay_contract_audit(records)
+    m11 = [record for record in records if record["mechanism_id"] == "M11"]
+
+    assert repetitions == 4
+    assert sampling_contract == "balanced"
+    assert audit["passed"] is True
+    assert audit["num_overlay_records"] == 4
+    assert audit["num_overlay_records_missing_payload"] == 0
+    assert len(m11) == 4
+    assert {record["base_mechanism"] for record in m11} == {"M8", "M7", "M1", "M17"}
+    assert all(record["spectator_overlay"]["present"] is True for record in m11)
+    assert all(record["spectator_overlay"]["base_mechanism"] == record["base_mechanism"] for record in m11)
+    assert all(record["claims_standalone_flat_mechanism"] is False for record in m11)
 
 
 def test_m13_m14_operation_sites_and_definition_audit_are_explicit() -> None:

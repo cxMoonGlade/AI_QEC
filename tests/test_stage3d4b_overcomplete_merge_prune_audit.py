@@ -38,6 +38,7 @@ def test_stage3d4b_merges_overcomplete_microclusters_without_labels(tmp_path: Pa
 
     assert result["decision"] == "stage3d4b_overcomplete_merge_prune_audit_passed"
     assert result["claim_boundary"]["uses_mechanism_labels_for_merge_rule"] is False
+    assert result["assignment_feature_view_audit"]["source"] == "stage3a_full_visible_fallback"
     assert result["merge_prune_plan"]["uses_mechanism_labels_for_merge_rule"] is False
     assert result["leakage_audit"]["passed"] is True
     assert result["merge_map"]["active_cluster_count"] == 5
@@ -65,6 +66,8 @@ def test_stage3d4b_merges_overcomplete_microclusters_without_labels(tmp_path: Pa
         "postmerge_assignments.npy",
         "leakage_audit.json",
         "acceptance_audit.json",
+        "assignment_feature_view_audit.json",
+        "assignment_feature_weighting.json",
         "summary.md",
     ]:
         assert (output / name).exists()
@@ -173,6 +176,62 @@ def test_stage3d4b_residual_profile_veto_prevents_visible_distinct_microcluster_
     assert merge["residual_profile_veto_audit"]["veto_applied"] is True
     assert merge["residual_profile_veto_audit"]["uses_mechanism_labels"] is False
     assert merge["cluster_to_family"]["C002"] != merge["cluster_to_family"]["C000"]
+
+
+def test_stage3d4b_merges_visible_compatible_split_parent_siblings() -> None:
+    summary = {
+        "clusters": [
+            {
+                "cluster": "C000",
+                "split_parent": 0,
+                "support": 5,
+                "support_fraction": 0.25,
+                "context_residual_profile": [0.0, 0.0],
+                "context_residual_profile_l2_norm": 0.0,
+            },
+            {
+                "cluster": "C001",
+                "split_parent": 0,
+                "support": 5,
+                "support_fraction": 0.25,
+                "context_residual_profile": [0.01, 0.0],
+                "context_residual_profile_l2_norm": 0.01,
+            },
+            {
+                "cluster": "C002",
+                "split_parent": 1,
+                "support": 5,
+                "support_fraction": 0.25,
+                "context_residual_profile": [0.0, 0.0],
+                "context_residual_profile_l2_norm": 0.0,
+            },
+            {
+                "cluster": "C003",
+                "split_parent": 1,
+                "support": 5,
+                "support_fraction": 0.25,
+                "context_residual_profile": [2.0, 0.0],
+                "context_residual_profile_l2_norm": 2.0,
+            },
+        ]
+    }
+
+    merge = microcluster_merge_map(
+        summary,
+        record_count=20,
+        max_microcluster_support=1,
+        max_microcluster_fraction=0.01,
+        min_microcluster_family_count=2,
+        context_residual_profile_veto_threshold=0.1,
+    )
+
+    assert merge["microcluster_merge_applied"] is False
+    assert merge["split_parent_merge_applied"] is True
+    assert merge["visible_merge_applied"] is True
+    assert merge["cluster_to_family"]["C000"] == merge["cluster_to_family"]["C001"]
+    assert merge["cluster_to_family"]["C002"] != merge["cluster_to_family"]["C003"]
+    assert merge["uses_labels_for_merge_rule"] is False
+    assert merge["residual_profile_veto_audit"]["veto_applied"] is True
 
 
 def _prepare_stage3a_artifacts(tmp_path: Path) -> tuple[Path, Path, Path]:

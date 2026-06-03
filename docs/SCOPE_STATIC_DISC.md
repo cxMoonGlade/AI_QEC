@@ -1807,7 +1807,15 @@ A six-batch balanced allM run has recall steps of `1/6 = 0.1667`, so it is a
 useful smoke/stress artifact but still low support. Serious balanced
 separability runs should increase per-mechanism support when memory permits.
 
-Current PHYC2-balanced allM evidence uses the local-observable Torch CUDA
+The following PHYC2/PHYC3 local-observable runs are retained as historical
+Stage 2 catalog-separability evidence. They are not the current Stage 3/5 claim
+path. Current controlled Stage 3/5 evidence starts from:
+
+```text
+outputs/scope_static/s5_medium_hard_allM_contract_teacher_20q_depth20_rzz_active_g20_strength_decorrelated_s1000/
+```
+
+Historical PHYC2-balanced allM evidence used the local-observable Torch CUDA
 teacher with `local_observable_response_model: separability_v2` and
 `balanced_min_instances_per_mechanism: 30`:
 
@@ -1902,7 +1910,7 @@ PHYC3 error quality:
   a close quantum/readout error object?
 ```
 
-Current PHYC3 weighted allM evidence:
+Historical PHYC3 weighted allM evidence:
 
 ```text
 outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/PHYC3_quantum_error_quality/

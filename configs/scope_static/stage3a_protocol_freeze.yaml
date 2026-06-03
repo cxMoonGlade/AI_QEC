@@ -1,7 +1,7 @@
 stage3a_protocol_freeze:
   name: Stage3A_dataset_protocol_freeze
-  teacher_dir: outputs/scope_static/full_circuit_cudaq_allM_10q_depth20_phyc2_ladder/rungC_local_tomography_g30_s10000/S2D_PHYC1_teacher
-  output_dir: outputs/scope_static/PHYC_STAGE3_discovery/S3A_protocol_freeze
+  teacher_dir: outputs/scope_static/s5_medium_hard_allM_contract_teacher_20q_depth20_rzz_active_g20_strength_decorrelated_s1000/S2D_PHYS1_teacher
+  output_dir: outputs/scope_static/s5_medium_hard_allM_contract_teacher_20q_depth20_rzz_active_g20_strength_decorrelated_s1000/S3A_protocol_freeze
   shots: 20000
   seed: 29
   sampling_mode: expected

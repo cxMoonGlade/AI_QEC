@@ -39,7 +39,9 @@ def test_stage3d4_k_stress_reports_under_exact_overcomplete_runs(tmp_path: Path)
     assert result["decision"] == "stage3d4_k_stress_audit_passed"
     assert result["claim_boundary"]["uses_mechanism_labels_for_fit"] is False
     assert result["claim_boundary"]["uses_catalog_cardinality_for_k_values_only"] is True
+    assert result["claim_boundary"]["uses_stage3b1_assignment_feature_view_for_stress_geometry"] is True
     assert result["visible_feature_matrix"]["loaded_from_stage3a_artifact"] is True
+    assert result["assignment_feature_view_audit"]["source"] == "stage3b1_assignment_visible_features"
     assert result["visible_feature_weighting"]["uses_visible_operation_context"] is True
     assert result["feature_schema_match_audit"]["passed"] is True
     assert result["leakage_audit"]["passed"] is True
@@ -67,11 +69,51 @@ def test_stage3d4_k_stress_reports_under_exact_overcomplete_runs(tmp_path: Path)
         "leakage_audit.json",
         "s3c_reference_audit.json",
         "acceptance_audit.json",
+        "assignment_feature_view_audit.json",
         "visible_feature_weighting.json",
         "learned_assignments_by_k.npz",
         "summary.md",
     ]:
         assert (output / name).exists()
+
+
+def test_stage3d4_inherits_stage3b1_context_balanced_assignment_family(tmp_path: Path) -> None:
+    _teacher, s3a, s3a5, s3b1, _s3c = _prepare_artifacts(
+        tmp_path,
+        [
+            ("M0", "M0"),
+            ("M4", "M4"),
+            ("M8", "M8"),
+        ],
+        run_s3c=False,
+    )
+    metrics_path = s3b1 / "metrics.json"
+    metrics = json.loads(metrics_path.read_text())
+    metrics.setdefault("candidate_selection", {}).setdefault("selected", {})[
+        "model_family"
+    ] = "context_balanced_visible_prototype_mixture"
+    metrics_path.write_text(json.dumps(metrics, indent=2, sort_keys=True) + "\n")
+
+    result = run_stage3d4_k_stress_audit(
+        stage3a_dir=s3a,
+        stage3a5_dir=s3a5,
+        stage3b1_dir=s3b1,
+        stage3c_dir=None,
+        output_dir=tmp_path / "S3D4",
+        max_iter=8,
+        min_success_nmi=0.0,
+        min_success_ari=0.0,
+        min_success_ba=0.0,
+        min_undercomplete_nmi_gap=0.0,
+    )
+
+    by_mode = {row["mode"]: row for row in result["k_stress_results"]}
+    assert by_mode["fixed_oracle_count"]["model_family"] == "context_balanced_visible_prototype_mixture"
+    assert by_mode["fixed_oracle_count"]["assignment_construction"] == "stage3b1_assignment_replay"
+    assert by_mode["fixed_oracle_count"]["used_context_groups_for_fit"] is True
+    assert by_mode["overcomplete_2x"]["model_family"] == "s3b1_seeded_visible_overcomplete_split"
+    assert by_mode["overcomplete_2x"]["assignment_construction"] == "stage3b1_seeded_visible_only_split"
+    assert by_mode["overcomplete_2x"]["used_context_groups_for_fit"] is True
 
 
 def test_stage3d4_config_wrapper_runs_from_yaml(tmp_path: Path) -> None:
