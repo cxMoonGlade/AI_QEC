@@ -7,17 +7,24 @@ import numpy as np
 import yaml
 
 from scope_static.protocols import LEARNER_VALIDATION_STAGE
+from scope_static.primitives.mechanism_catalog import mechanism_contract
 from .artifacts import feature_schema_matches_stage3a as _feature_schema_matches_s3a
 from .artifacts import load_json_object as _load_json
 from .artifacts import load_stage3_evaluator_labels
 from .artifacts import load_stage3a_frozen_visible_features
 from .artifacts import resolve_teacher_dir
+from .contract_claims import claimable_exact_metrics
+from .contract_claims import claimable_recall_mapping
+from .contract_claims import flat_exact_claim_allowed
+from .contract_claims import optional_float
+from .contract_claims import postmerge_assignment_gate
+from .contract_claims import target_contract_recovery_passed
 from .discovery_model import DEFAULT_OUTPUT_DIR as DEFAULT_STAGE3B1_DIR
 from .discovery_model import _context_groups_from_split_manifest
-from .generator_learning import evaluate_soft_family_classification
-from .generator_learning import evaluate_soft_family_strength_location_audit
 from .observability_ceiling import DEFAULT_OUTPUT_DIR as DEFAULT_STAGE3A5_DIR
 from .protocol_freeze import DEFAULT_OUTPUT_DIR as DEFAULT_STAGE3A_DIR
+from .recovery_metrics import evaluate_soft_family_classification
+from .recovery_metrics import evaluate_soft_family_strength_location_audit
 
 
 STAGE_NAME = "Stage5B1_property_recovery"
@@ -30,6 +37,9 @@ ALLOWED_PROPERTY_HEAD_MODELS = (
     PROPERTY_HEAD_LINEAR_PROTO,
     PROPERTY_HEAD_CONDITIONAL_VISIBLE_CONTEXT,
 )
+DEFAULT_MIN_ASSIGNMENT_EXACT_BA_FOR_CLAIM = 0.99
+DEFAULT_MIN_ASSIGNMENT_EXACT_MIN_RECALL_FOR_CLAIM = 0.99
+DEFAULT_MIN_TARGETED_SELF_RECALL_FOR_CLAIM = 0.99
 
 
 def run_stage5b1_property_recovery(
@@ -108,6 +118,10 @@ def run_stage5b1_property_recovery(
     location = context_relative_location_recovery_audit(s5)
     strength = context_normalized_strength_recovery_audit(s5)
     targeted = targeted_property_recovery_audit(s5, targets=("M6", "M13", "M18", "M27"))
+    assignment_quality_gate = stage5b1_assignment_quality_gate(
+        s3b1_metrics=s3b1_metrics,
+        assignment_audit=assignment_audit,
+    )
     contract_breakdown = stage5b1_contract_breakdown_audit(
         family=family,
         s5=s5,
@@ -128,6 +142,27 @@ def run_stage5b1_property_recovery(
         strength=strength,
         targeted=targeted,
         contract_breakdown=contract_breakdown,
+        assignment_quality_gate=assignment_quality_gate,
+    )
+    claim_allowed = bool(acceptance.get("claim_passed", False))
+    property_check_blockers = [
+        f"s5b1_property_check_failed:{name}"
+        for name, passed in dict(acceptance.get("property_recovery_checks", {})).items()
+        if not bool(passed)
+    ]
+    claim_check_blockers = [
+        f"s5b1_claim_check_failed:{name}"
+        for name, passed in dict(acceptance.get("claim_checks", {})).items()
+        if not bool(passed)
+    ]
+    decision = (
+        "stage5b1_property_recovery_passed"
+        if claim_allowed
+        else (
+            "stage5b1_property_recovery_diagnostic_passed_claim_blocked"
+            if bool(acceptance.get("property_recovery_passed", False))
+            else "stage5b1_property_recovery_failed"
+        )
     )
     result = {
         "schema": "scope_static_stage5b1_property_recovery_v1",
@@ -148,6 +183,10 @@ def run_stage5b1_property_recovery(
             "uses_evaluator_records_after_fit_for_scoring": True,
             "claims_physical_parameter_recovery": False,
             "discovers_cptp_gksl_channels": False,
+            "claim_allowed": claim_allowed,
+            "claim_blockers": list(assignment_quality_gate.get("claim_blockers", []))
+            + property_check_blockers
+            + claim_check_blockers,
         },
         "config": {
             "stage3a_dir": str(s3a),
@@ -163,6 +202,7 @@ def run_stage5b1_property_recovery(
         "visible_feature_matrix": feature_matrix,
         "feature_schema_match_audit": feature_match,
         "assignment_source_audit": assignment_audit,
+        "s5b1_assignment_quality_gate": assignment_quality_gate,
         "s5b1_property_recovery_metrics": property_head,
         "soft_family_classification_metrics": family,
         "s5_context_relative_mechanism_effect_audit": s5,
@@ -174,7 +214,7 @@ def run_stage5b1_property_recovery(
         "targeted_m6_m13_m18_m27_property_audit": targeted,
         "s5b1_contract_breakdown_audit": contract_breakdown,
         "acceptance_audit": acceptance,
-        "decision": "stage5b1_property_recovery_passed" if acceptance["passed"] else "stage5b1_property_recovery_failed",
+        "decision": decision,
     }
     _write_outputs(output, result)
     return result
@@ -224,6 +264,154 @@ def load_s5b1_assignment_source(
         "passed": True,
     }
     return matrix, audit
+
+
+def stage5b1_assignment_quality_gate(
+    *,
+    s3b1_metrics: dict[str, object],
+    assignment_audit: dict[str, object],
+    min_exact_ba: float = DEFAULT_MIN_ASSIGNMENT_EXACT_BA_FOR_CLAIM,
+    min_exact_min_recall: float = DEFAULT_MIN_ASSIGNMENT_EXACT_MIN_RECALL_FOR_CLAIM,
+    min_targeted_self_recall: float = DEFAULT_MIN_TARGETED_SELF_RECALL_FOR_CLAIM,
+) -> dict[str, object]:
+    """Gate whether fixed assignments may support an S5B1 property claim.
+
+    Raw S3B1 assignments remain diagnostic-only in the current chain. Postmerge
+    assignments can become claim sources only when their visible-only S3D4b
+    acceptance audit is present and passed. Fixture/external assignments are
+    permitted for unit tests and controlled diagnostics when row-stochastic.
+    """
+
+    source = str(assignment_audit.get("assignment_source", ""))
+    path = Path(str(assignment_audit.get("assignment_path", "")))
+    row_stochastic = bool(assignment_audit.get("row_stochastic", False))
+    raw_stage3b1 = source == "stage3b1" and path.name == "learned_assignments.npy"
+    postmerge = source.startswith("stage3d4b") or "postmerge" in source or path.name == "postmerge_assignments.npy"
+    fixture_or_external = source.startswith("fixture") or (not raw_stage3b1 and not postmerge)
+    exact_metrics = _s3b1_exact_metrics(s3b1_metrics)
+    targeted = _s3b1_targeted_bleed_metrics(s3b1_metrics)
+    exact_ba = optional_float(exact_metrics.get("balanced_accuracy_after_label_matching"))
+    exact_min_recall = optional_float(exact_metrics.get("min_recall_after_label_matching"))
+    claimable_exact = claimable_exact_metrics(exact_metrics)
+    claimable_exact_ba = optional_float(claimable_exact.get("balanced_accuracy_after_label_matching"))
+    claimable_exact_min_recall = optional_float(claimable_exact.get("min_recall_after_label_matching"))
+    d4b_gate = (
+        postmerge_assignment_gate(
+            path,
+            min_exact_ba=min_exact_ba,
+            min_exact_min_recall=min_exact_min_recall,
+        )
+        if postmerge
+        else {}
+    )
+    if postmerge:
+        exact_ba = optional_float(d4b_gate.get("postmerge_exact_balanced_accuracy"))
+        exact_min_recall = optional_float(d4b_gate.get("postmerge_exact_min_recall"))
+        claimable_exact_ba = optional_float(d4b_gate.get("postmerge_claimable_exact_balanced_accuracy"))
+        claimable_exact_min_recall = optional_float(d4b_gate.get("postmerge_claimable_exact_min_recall"))
+    targeted_rows = {
+        label: dict(row)
+        for label, row in dict(targeted.get("rows", {})).items()
+        if isinstance(row, dict) and bool(row.get("present", False))
+    }
+    claimable_targeted_recalls = claimable_recall_mapping(targeted_rows)
+    targeted_self_recalls = list(claimable_targeted_recalls.values())
+    if postmerge:
+        postmerge_recalls = dict(d4b_gate.get("postmerge_targeted_self_recall_by_label", {})) if isinstance(d4b_gate.get("postmerge_targeted_self_recall_by_label", {}), dict) else {}
+        claimable_targeted_recalls = claimable_recall_mapping(postmerge_recalls)
+        targeted_self_recalls = list(claimable_targeted_recalls.values())
+    min_targeted_recall = min(targeted_self_recalls) if targeted_self_recalls else None
+    quality_checks = {
+        "assignment_source_row_stochastic": row_stochastic,
+        "claimable_exact_balanced_accuracy_meets_threshold": (
+            True
+            if claimable_exact_ba is None and not raw_stage3b1
+            else claimable_exact_ba is not None and claimable_exact_ba >= float(min_exact_ba)
+        ),
+        "claimable_exact_min_recall_meets_threshold": (
+            True
+            if claimable_exact_min_recall is None and not raw_stage3b1
+            else claimable_exact_min_recall is not None and claimable_exact_min_recall >= float(min_exact_min_recall)
+        ),
+        "claimable_targeted_self_recall_meets_threshold": (
+            True
+            if min_targeted_recall is None and not raw_stage3b1
+            else min_targeted_recall is not None and min_targeted_recall >= float(min_targeted_self_recall)
+        ),
+    }
+    checks = dict(quality_checks)
+    checks["raw_stage3b1_is_not_claim_source"] = not raw_stage3b1
+    if postmerge:
+        checks["stage3d4b_postmerge_claimable_acceptance_passed"] = bool(d4b_gate.get("stage3d4b_claimable_acceptance_passed", False))
+    if fixture_or_external:
+        checks["fixture_or_external_assignment_source_declared"] = bool(source)
+    blockers = [name for name, passed in checks.items() if not bool(passed)]
+    claim_allowed = bool(all(checks.values()))
+    return {
+        "schema": "scope_static_stage5b1_assignment_quality_gate_v1",
+        "description": (
+            "Claim gate for S5B1 fixed responsibilities. Raw S3B1 remains diagnostic-only; "
+            "postmerge assignments must pass the visible-only S3D4b gate."
+        ),
+        "assignment_source": source,
+        "assignment_path": str(path),
+        "raw_stage3b1_diagnostic_only": raw_stage3b1,
+        "postmerge_assignment_source": postmerge,
+        "fixture_or_external_assignment_source": fixture_or_external,
+        "thresholds": {
+            "min_exact_balanced_accuracy": float(min_exact_ba),
+            "min_exact_min_recall": float(min_exact_min_recall),
+            "min_targeted_self_recall": float(min_targeted_self_recall),
+        },
+        "observed": {
+            "exact_balanced_accuracy": exact_ba,
+            "exact_min_recall": exact_min_recall,
+            "claimable_exact_balanced_accuracy": claimable_exact_ba,
+            "claimable_exact_min_recall": claimable_exact_min_recall,
+            "claimable_flat_exact_target_ids": (
+                list(d4b_gate.get("claimable_flat_exact_target_ids", []))
+                if postmerge and isinstance(d4b_gate.get("claimable_flat_exact_target_ids", []), list)
+                else list(claimable_exact.get("claimable_flat_exact_target_ids", []))
+            ),
+            "targeted_min_self_recall": min_targeted_recall,
+            "targeted_self_recall_by_label": (
+                dict(d4b_gate.get("postmerge_targeted_self_recall_by_label", {}))
+                if postmerge and isinstance(d4b_gate.get("postmerge_targeted_self_recall_by_label", {}), dict)
+                else {
+                    str(label): float(row.get("self_recall", 0.0) or 0.0)
+                    for label, row in targeted_rows.items()
+                }
+            ),
+            "claimable_targeted_self_recall_by_label": (
+                claimable_recall_mapping(dict(d4b_gate.get("postmerge_targeted_self_recall_by_label", {})))
+                if postmerge and isinstance(d4b_gate.get("postmerge_targeted_self_recall_by_label", {}), dict)
+                else claimable_targeted_recalls
+            ),
+        },
+        "postmerge_gate": d4b_gate,
+        "quality_checks": quality_checks,
+        "checks": checks,
+        "claim_blockers": blockers,
+        "quality_checks_passed": bool(all(quality_checks.values())),
+        "claim_allowed": claim_allowed,
+        "passed": claim_allowed,
+        "evaluator_only": True,
+        "used_for_training": False,
+        "used_for_model_selection": False,
+    }
+
+
+def _s3b1_exact_metrics(s3b1_metrics: dict[str, object]) -> dict[str, object]:
+    evaluator = dict(s3b1_metrics.get("evaluator_only_label_metrics", {})) if isinstance(s3b1_metrics.get("evaluator_only_label_metrics", {}), dict) else {}
+    exact = dict(evaluator.get("selected_model_exact_metrics", {})) if isinstance(evaluator.get("selected_model_exact_metrics", {}), dict) else {}
+    if exact:
+        return exact
+    return dict(s3b1_metrics.get("selected_model_exact_metrics", {})) if isinstance(s3b1_metrics.get("selected_model_exact_metrics", {}), dict) else {}
+
+
+def _s3b1_targeted_bleed_metrics(s3b1_metrics: dict[str, object]) -> dict[str, object]:
+    targeted = s3b1_metrics.get("targeted_m6_m13_m18_m27_bleed_audit", s3b1_metrics.get("targeted_bleed_audit", {}))
+    return dict(targeted) if isinstance(targeted, dict) else {}
 
 
 def fit_linear_proto_property_head(
@@ -400,11 +588,36 @@ def targeted_property_recovery_audit(s5: dict[str, object], *, targets: tuple[st
     for target in targets:
         payload = dict(per_exact.get(target, {})) if isinstance(per_exact.get(target, {}), dict) else {}
         metrics = dict(payload.get("recovery_metrics", {})) if isinstance(payload.get("recovery_metrics", {}), dict) else {}
+        contract = mechanism_contract(str(target))
+        location_errors = dict(metrics.get("location_errors", {})) if isinstance(metrics.get("location_errors", {}), dict) else {}
+        strength_errors = dict(metrics.get("strength_errors", {})) if isinstance(metrics.get("strength_errors", {}), dict) else {}
+        exact_passed = bool(metrics.get("passed", False)) if payload else False
+        location_passed = bool(location_errors.get("top_relative_location_cell_match", False)) if payload else False
+        strength_passed = bool(strength_errors.get("top_context_relative_strength_block_match", False)) if payload else False
+        location_strength_passed = bool(location_passed and strength_passed)
+        primary_flat = bool(contract.get("primary_flat_cluster_target", False))
+        current_flat_exact_allowed = flat_exact_claim_allowed(contract)
+        contract_typed_passed = target_contract_recovery_passed(
+            contract=contract,
+            exact_passed=exact_passed,
+            location_strength_passed=location_strength_passed,
+        )
         rows[target] = {
             "mechanism_id": str(target),
             "present": bool(payload),
             "support_count": int(payload.get("support_count", 0) or 0),
-            "passed": bool(metrics.get("passed", False)) if payload else False,
+            "contract_role": str(contract.get("contract_role", "unknown")),
+            "base_family": str(contract.get("base_family", "unknown")),
+            "primary_flat_cluster_target": primary_flat,
+            "current_visible_surface_flat_exact_claim_allowed": current_flat_exact_allowed,
+            "current_visible_surface_claim_target": str(contract.get("current_visible_surface_claim_target", "flat_exact_recovery")),
+            "flat_exact_claim_blocker": contract.get("flat_exact_claim_blocker"),
+            "paired_observability_group": list(contract.get("paired_observability_group", [])),
+            "exact_scalar_passed": exact_passed,
+            "location_passed": location_passed,
+            "strength_passed": strength_passed,
+            "location_strength_passed": location_strength_passed,
+            "passed": contract_typed_passed,
             "max_abs_scalar_error": float(metrics.get("max_abs_scalar_error", 0.0) or 0.0),
         }
     return {
@@ -412,6 +625,14 @@ def targeted_property_recovery_audit(s5: dict[str, object], *, targets: tuple[st
         "target_mechanism_ids": [str(target) for target in targets],
         "rows": rows,
         "present_target_count": int(sum(1 for row in rows.values() if bool(row.get("present", False)))),
+        "location_strength_passed": all(
+            (not bool(row.get("present", False))) or bool(row.get("location_strength_passed", False))
+            for row in rows.values()
+        ),
+        "exact_scalar_passed": all(
+            (not bool(row.get("present", False))) or bool(row.get("exact_scalar_passed", False))
+            for row in rows.values()
+        ),
         "passed": all((not bool(row.get("present", False))) or bool(row.get("passed", False)) for row in rows.values()),
     }
 
@@ -448,6 +669,8 @@ def stage5b1_contract_breakdown_audit(
     family_passed = bool(family.get("passed", False)) and not family_failed
     flat_exact_passed = not flat_failed
     targeted_passed = bool(targeted.get("passed", False))
+    targeted_location_strength_passed = bool(targeted.get("location_strength_passed", False))
+    targeted_exact_scalar_passed = bool(targeted.get("exact_scalar_passed", False))
     location_strength_passed = bool(location_passed and strength_passed)
     property_without_dimension_passed = bool(
         family_passed
@@ -477,6 +700,8 @@ def stage5b1_contract_breakdown_audit(
         "s5b1_overlay_contract_passed": overlay_contract_passed,
         "s5b1_overlay_recovery_evaluable_or_not_required": bool(overlay_recovery.get("passed", True)),
         "s5b1_targeted_m6_m13_m18_m27_passed": targeted_passed,
+        "s5b1_targeted_m6_m13_m18_m27_location_strength_passed": targeted_location_strength_passed,
+        "s5b1_targeted_m6_m13_m18_m27_exact_scalar_passed": targeted_exact_scalar_passed,
         "s5b1_property_without_dimension_passed": property_without_dimension_passed,
         "s5b1_contract_passed": contract_passed,
         "family_failed_labels": family_failed,
@@ -506,32 +731,57 @@ def stage5b1_acceptance_audit(
     strength: dict[str, object],
     targeted: dict[str, object],
     contract_breakdown: dict[str, object],
+    assignment_quality_gate: dict[str, object],
 ) -> dict[str, object]:
-    checks = {
+    soft_family_reported = bool(family) and not bool(family.get("skipped", False))
+    targeted_reported = bool(targeted) and bool(targeted.get("rows", {}))
+    property_checks = {
         "stage3a_acceptance_passed": bool(dict(s3a_metrics.get("acceptance_audit", {})).get("passed", False)),
         "stage3a5_acceptance_passed": bool(dict(s3a5_metrics.get("acceptance_audit", {})).get("passed", False)) if s3a5_metrics else True,
         "stage3b1_acceptance_passed": bool(dict(s3b1_metrics.get("acceptance_audit", {})).get("passed", False)) if s3b1_metrics else True,
         "feature_schema_matches_stage3a": bool(feature_match.get("passed", False)),
         "assignment_source_row_stochastic": bool(assignment_audit.get("row_stochastic", False)),
+        "assignment_quality_gate_reported": bool(assignment_quality_gate),
         "property_head_fit_uses_no_oracle_fields": not bool(property_head.get("uses_oracle_location_or_strength_for_fit", True)),
         "property_head_passed": bool(property_head.get("passed", False)),
-        "soft_family_classification_reported": bool(family.get("passed", False)),
+        "soft_family_classification_reported": soft_family_reported,
+        "soft_family_classification_passed": bool(family.get("passed", False)),
         "s5b1_contract_breakdown_reported": bool(contract_breakdown),
         "s5b1_location_passed": bool(contract_breakdown.get("s5b1_location_passed", False)),
         "s5b1_strength_passed": bool(contract_breakdown.get("s5b1_strength_passed", False)),
         "s5b1_dimension_passed": bool(contract_breakdown.get("s5b1_dimension_passed", False)),
         "s5b1_overlay_contract_passed": bool(contract_breakdown.get("s5b1_overlay_contract_passed", False)),
-        "s5b1_contract_passed": bool(contract_breakdown.get("s5b1_contract_passed", False)),
-        "contract_typed_property_recovery_passed": bool(contract_breakdown.get("s5b1_contract_passed", False)),
         "context_relative_location_recovery_passed": bool(location.get("passed", False)),
         "context_normalized_strength_recovery_passed": bool(strength.get("passed", False)),
-        "targeted_m6_m13_m18_m27_reported": bool(targeted.get("passed", False)),
+        "targeted_m6_m13_m18_m27_reported": targeted_reported,
+        "targeted_m6_m13_m18_m27_location_strength_passed": bool(
+            contract_breakdown.get("s5b1_targeted_m6_m13_m18_m27_location_strength_passed", targeted.get("location_strength_passed", False))
+        ),
         "location_strength_reported_separately_from_dimension": True,
         "does_not_claim_physical_parameter_recovery": not bool(s5.get("claims_physical_parameter_recovery", True)),
     }
+    claim_checks = {
+        "assignment_quality_gate_passed": bool(assignment_quality_gate.get("passed", False)),
+        "claim_allowed_by_assignment_quality_gate": bool(assignment_quality_gate.get("claim_allowed", False)),
+        "s5b1_contract_passed": bool(contract_breakdown.get("s5b1_contract_passed", False)),
+        "contract_typed_property_recovery_passed": bool(contract_breakdown.get("s5b1_contract_passed", False)),
+        "targeted_m6_m13_m18_m27_passed": bool(targeted.get("passed", False)),
+    }
+    property_recovery_passed = bool(all(property_checks.values()))
+    claim_passed = bool(property_recovery_passed and all(claim_checks.values()))
+    checks = {**property_checks, **claim_checks}
     return {
         "schema": "scope_static_stage5b1_acceptance_audit_v1",
-        "passed": bool(all(checks.values())),
+        "description": (
+            "S5B1 separates diagnostic property recovery from strict scientific claim gating. "
+            "The top-level passed flag means contract-typed location/strength/dimension diagnostics recovered; "
+            "claim_passed requires the assignment-quality and exact/flat-target gates too."
+        ),
+        "passed": property_recovery_passed,
+        "property_recovery_passed": property_recovery_passed,
+        "claim_passed": claim_passed,
+        "property_recovery_checks": property_checks,
+        "claim_checks": claim_checks,
         "checks": checks,
     }
 
@@ -597,6 +847,7 @@ def _write_outputs(output: Path, result: dict[str, object]) -> None:
         "metrics.json": result,
         "s5b1_property_recovery_metrics.json": result["s5b1_property_recovery_metrics"],
         "assignment_source_audit.json": result["assignment_source_audit"],
+        "s5b1_assignment_quality_gate.json": result["s5b1_assignment_quality_gate"],
         "soft_family_classification_metrics.json": result["soft_family_classification_metrics"],
         "s5_context_relative_mechanism_effect_audit.json": result["s5_context_relative_mechanism_effect_audit"],
         "mechanism_dimension_recovery_audit.json": result["mechanism_dimension_recovery_audit"],
@@ -621,12 +872,16 @@ def format_stage5b1_summary(result: dict[str, object]) -> str:
     property_head = dict(result.get("s5b1_property_recovery_metrics", {}))
     s5 = dict(result.get("s5_context_relative_mechanism_effect_audit", {}))
     breakdown = dict(result.get("s5b1_contract_breakdown_audit", {}))
+    assignment_gate = dict(result.get("s5b1_assignment_quality_gate", {}))
+    claim_boundary = dict(result.get("claim_boundary", {}))
     return "\n".join(
         [
             "# Stage 5B1: Property Recovery",
             "",
             f"- Decision: `{result.get('decision')}`",
             f"- Acceptance passed: `{str(bool(acceptance.get('passed', False))).lower()}`",
+            f"- Claim allowed: `{str(bool(claim_boundary.get('claim_allowed', False))).lower()}`",
+            f"- Assignment quality gate passed: `{str(bool(assignment_gate.get('passed', False))).lower()}`",
             f"- Property head: `{property_head.get('model_name')}`",
             f"- Prototype count: `{property_head.get('prototype_count')}`",
             f"- Location / strength / dimension passed: `{str(bool(breakdown.get('s5b1_location_passed', False))).lower()}` / `{str(bool(breakdown.get('s5b1_strength_passed', False))).lower()}` / `{str(bool(breakdown.get('s5b1_dimension_passed', False))).lower()}`",

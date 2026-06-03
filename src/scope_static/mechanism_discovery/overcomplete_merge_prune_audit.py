@@ -14,12 +14,17 @@ from .artifacts import load_stage3_evaluator_labels
 from .artifacts import load_stage3a_frozen_visible_features
 from .artifacts import mechanism_sort_key
 from .artifacts import resolve_teacher_dir
+from .audit_values import optional_float as _optional_float
 from .baselines import VARIANCE_FLOOR
 from .baselines import evaluate_cluster_assignments
+from .discovery_model import DEFAULT_OPERATION_CONTEXT_WEIGHT
+from .discovery_model import _apply_visible_feature_weights
 from .discovery_model import context_dependent_mechanism_diagnostics
 from .discovery_model import _cap_folds
 from .discovery_model import _context_groups_from_split_manifest
+from .discovery_model import _standardize_visible_features_with_values
 from .discovery_model import _valid_folds
+from .discovery_model import load_stage3b1_assignment_visible_feature_view
 from .generator_learning import DEFAULT_MAX_CV_FOLDS
 from .generator_learning import PRIMARY_GENERATION_LIKELIHOOD_METRIC
 from .generator_learning import SECONDARY_CONTINUOUS_DENSITY_DIAGNOSTIC
@@ -86,6 +91,23 @@ def run_stage3d4b_overcomplete_merge_prune_audit(
     s3d4_metrics = _load_json(s3d4 / "metrics.json")
     teacher = resolve_teacher_dir(s3a_metrics, teacher_dir)
     x, feature_names, feature_matrix = load_stage3a_frozen_visible_features(s3a)
+    s3b1_dir = _stage3b1_dir_from_stage3d4_metrics(s3d4_metrics)
+    x_summary_raw, summary_feature_names, assignment_feature_view = load_stage3b1_assignment_visible_feature_view(
+        s3b1_dir,
+        fallback_matrix=x,
+        fallback_feature_names=feature_names,
+    )
+    x_summary, _summary_standardization = _standardize_visible_features_with_values(x_summary_raw)
+    operation_context_weight = float(
+        dict(s3d4_metrics.get("config", {})).get("operation_context_weight", DEFAULT_OPERATION_CONTEXT_WEIGHT)
+        if isinstance(s3d4_metrics.get("config", {}), dict)
+        else DEFAULT_OPERATION_CONTEXT_WEIGHT
+    )
+    x_summary, summary_feature_weighting = _apply_visible_feature_weights(
+        x_summary,
+        feature_names=summary_feature_names,
+        operation_context_weight=operation_context_weight,
+    )
     feature_match = _feature_schema_matches_s3a(s3a, feature_names)
     split_manifest = dict(s3a_metrics.get("split_manifest", {})) if isinstance(s3a_metrics.get("split_manifest", {}), dict) else {}
     context_groups = _context_groups_from_split_manifest(split_manifest, record_count=int(x.shape[0]))
@@ -99,13 +121,19 @@ def run_stage3d4b_overcomplete_merge_prune_audit(
         key=str(overcomplete_assignment_key),
         record_count=int(x.shape[0]),
     )
+    split_parent_map = load_split_parent_map(
+        s3d4 / "overcomplete_split_parent_maps.json",
+        key=str(overcomplete_assignment_key),
+        cluster_count=int(overcomplete.shape[1]),
+    )
     raw_hard = np.argmax(overcomplete, axis=1).astype(np.int64) if overcomplete.size else np.zeros(0, dtype=np.int64)
     cluster_summary = overcomplete_cluster_summary(
-        x,
+        x_summary,
         raw_hard,
         responsibilities=overcomplete,
-        feature_names=feature_names,
+        feature_names=summary_feature_names,
         context_groups=context_groups,
+        split_parent_map=split_parent_map,
     )
     merge_map = microcluster_merge_map(
         cluster_summary,
@@ -206,12 +234,15 @@ def run_stage3d4b_overcomplete_merge_prune_audit(
         "claim_boundary": {
             "uses_overcomplete_assignments_from_stage3d4": True,
             "uses_visible_features_for_cluster_summaries": True,
+            "uses_stage3b1_assignment_feature_view_for_cluster_summaries": str(assignment_feature_view.get("source", ""))
+            == "stage3b1_assignment_visible_features",
             "uses_mechanism_labels_for_merge_rule": False,
             "uses_mechanism_labels_for_model_selection": False,
             "uses_channels_ptms_kraus": False,
             "uses_teacher_self_features": False,
             "evaluator_only_metrics_after_merge": True,
             "postmerge_family_claim_not_raw_hidden_label_supervision": True,
+            "uses_stage3d4_split_parent_map_without_labels": split_parent_map is not None,
         },
         "config": {
             "stage3a_dir": str(s3a),
@@ -235,8 +266,11 @@ def run_stage3d4b_overcomplete_merge_prune_audit(
                 if context_residual_profile_veto_threshold is None
                 else float(context_residual_profile_veto_threshold)
             ),
+            "assignment_feature_view_source": str(assignment_feature_view.get("source", "")),
         },
         "visible_feature_matrix": feature_matrix,
+        "assignment_feature_view_audit": assignment_feature_view,
+        "assignment_feature_weighting": _d4b_assignment_feature_weighting_artifact(summary_feature_weighting, summary_feature_names),
         "feature_schema_match_audit": feature_match,
         "heldout_protocol": heldout_protocol_artifact(all_folds=all_folds, evaluated_folds=folds, max_cv_folds=max_cv_folds),
         "merge_prune_plan": merge_prune_plan_artifact(
@@ -278,6 +312,49 @@ def load_overcomplete_assignments(path: str | Path, *, key: str, record_count: i
     return matrix
 
 
+def _stage3b1_dir_from_stage3d4_metrics(metrics: dict[str, object]) -> Path:
+    raw = metrics.get("stage3b1_dir")
+    if raw is None and isinstance(metrics.get("config", {}), dict):
+        raw = dict(metrics.get("config", {})).get("stage3b1_dir")
+    if raw is None or not str(raw):
+        return Path(".")
+    return Path(str(raw))
+
+
+def _d4b_assignment_feature_weighting_artifact(weighting: dict[str, object], feature_names: list[str]) -> dict[str, object]:
+    weights = np.asarray(weighting.get("feature_weights", np.ones(len(feature_names), dtype=np.float64)), dtype=np.float64)
+    weighted_features = [
+        {"feature": str(feature_names[idx]), "weight": float(weights[idx])}
+        for idx in range(len(feature_names))
+        if abs(float(weights[idx]) - 1.0) > 1.0e-12
+    ]
+    return {
+        "schema": "scope_static_stage3d4b_assignment_feature_weighting_v1",
+        "uses_mechanism_labels": False,
+        "uses_visible_operation_context": True,
+        "operation_context_weight": float(weighting.get("operation_context_weight", 1.0)),
+        "operation_context_feature_count": int(weighting.get("operation_context_feature_count", 0)),
+        "weighted_feature_count": int(len(weighted_features)),
+        "weighted_features": weighted_features,
+    }
+
+
+def load_split_parent_map(path: str | Path, *, key: str, cluster_count: int) -> list[int] | None:
+    source = Path(path)
+    if not source.exists():
+        return None
+    data = _load_json(source)
+    maps = data.get("maps")
+    if not isinstance(maps, dict):
+        return None
+    values = maps.get(str(key))
+    if not isinstance(values, list):
+        return None
+    if len(values) != int(cluster_count):
+        return None
+    return [int(value) for value in values]
+
+
 def overcomplete_cluster_summary(
     x: np.ndarray,
     hard_assignments: np.ndarray,
@@ -285,6 +362,7 @@ def overcomplete_cluster_summary(
     responsibilities: np.ndarray,
     feature_names: list[str],
     context_groups: np.ndarray | None = None,
+    split_parent_map: list[int] | None = None,
 ) -> dict[str, object]:
     rows = []
     active = sorted(set(np.asarray(hard_assignments, dtype=np.int64).tolist()))
@@ -299,6 +377,9 @@ def overcomplete_cluster_summary(
             {
                 "cluster": f"C{int(cluster):03d}",
                 "cluster_index": int(cluster),
+                "split_parent": None
+                if split_parent_map is None or int(cluster) >= len(split_parent_map)
+                else int(split_parent_map[int(cluster)]),
                 "support": int(idx.size),
                 "support_fraction": float(idx.size) / float(max(1, int(x.shape[0]))),
                 "assignment_mass": float(np.sum(responsibilities[:, int(cluster)])) if int(cluster) < int(responsibilities.shape[1]) else 0.0,
@@ -316,6 +397,7 @@ def overcomplete_cluster_summary(
         "feature_count": int(x.shape[1]) if x.ndim == 2 else 0,
         "active_cluster_count": int(len(rows)),
         "uses_context_normalized_residual_profiles": True,
+        "uses_split_parent_map": split_parent_map is not None,
         "clusters": rows,
     }
 
@@ -342,8 +424,27 @@ def microcluster_merge_map(
     )
     mergeable_micro_groups = [group for group in micro_groups if len(group) >= int(min_microcluster_family_count)]
     unmerged_micro_clusters = [row for group in micro_groups if len(group) < int(min_microcluster_family_count) for row in group]
+    split_parent_groups = _split_parent_residual_profile_groups(
+        clusters,
+        threshold=context_residual_profile_veto_threshold,
+    )
+    mergeable_split_parent_groups = [group for group in split_parent_groups if len(group) >= 2]
+    split_parent_merged_clusters = {
+        str(row["cluster"])
+        for group in mergeable_split_parent_groups
+        for row in group
+    }
     merge_micro = bool(mergeable_micro_groups)
-    macro = [row for row in clusters if row not in micro] + unmerged_micro_clusters
+    merge_split_parent = bool(mergeable_split_parent_groups)
+    macro = [
+        row
+        for row in clusters
+        if row not in micro and str(row.get("cluster")) not in split_parent_merged_clusters
+    ] + [
+        row
+        for row in unmerged_micro_clusters
+        if str(row.get("cluster")) not in split_parent_merged_clusters
+    ]
     family_rows = []
     cluster_to_family: dict[str, str] = {}
     for family_idx, row in enumerate(macro):
@@ -358,7 +459,25 @@ def microcluster_merge_map(
                 "support": int(row.get("support", 0)),
             }
         )
+    for group_idx, group in enumerate(mergeable_split_parent_groups):
+        family = f"F{len(family_rows):03d}"
+        source_clusters = [str(row["cluster"]) for row in group]
+        for cluster in source_clusters:
+            cluster_to_family[cluster] = family
+        family_rows.append(
+            {
+                "family": family,
+                "merge_type": "split_parent_sibling_family",
+                "source_clusters": source_clusters,
+                "support": int(sum(int(row.get("support", 0)) for row in group)),
+                "split_parent": int(group[0].get("split_parent")),
+                "residual_profile_group": int(group_idx),
+            }
+        )
     for group_idx, group in enumerate(mergeable_micro_groups):
+        group = [row for row in group if str(row.get("cluster")) not in split_parent_merged_clusters]
+        if len(group) < int(min_microcluster_family_count):
+            continue
         family = f"F{len(family_rows):03d}"
         source_clusters = [str(row["cluster"]) for row in group]
         for cluster in source_clusters:
@@ -372,10 +491,10 @@ def microcluster_merge_map(
                 "residual_profile_group": int(group_idx),
             }
         )
-    veto = _residual_profile_veto_audit(micro_groups, threshold=context_residual_profile_veto_threshold)
+    veto = _residual_profile_veto_audit(micro_groups + split_parent_groups, threshold=context_residual_profile_veto_threshold)
     return {
         "schema": "scope_static_stage3d4b_microcluster_merge_map_v1",
-        "strategy": "prune inactive clusters, keep macro clusters separate, and merge only context-residual-profile-compatible microclusters",
+        "strategy": "prune inactive clusters, merge context-residual-profile-compatible S3B1 split siblings, and merge only context-residual-profile-compatible microclusters",
         "uses_labels_for_merge_rule": False,
         "uses_channels_ptms_kraus": False,
         "uses_context_normalized_residual_profile_veto": True,
@@ -385,7 +504,12 @@ def microcluster_merge_map(
         "microcluster_count": int(len(micro)),
         "microcluster_total_support": int(sum(int(row.get("support", 0)) for row in micro)),
         "microcluster_merge_applied": bool(merge_micro),
+        "split_parent_merge_applied": bool(merge_split_parent),
+        "split_parent_group_count": int(len(split_parent_groups)),
+        "split_parent_merged_cluster_count": int(len(split_parent_merged_clusters)),
+        "visible_merge_applied": bool(merge_micro or merge_split_parent),
         "microcluster_residual_profile_group_count": int(len(micro_groups)),
+        "split_parent_residual_profile_group_count": int(len(split_parent_groups)),
         "microcluster_residual_profile_veto_applied": bool(veto.get("veto_applied", False)),
         "max_microcluster_support": int(max_microcluster_support),
         "max_microcluster_fraction": float(max_microcluster_fraction),
@@ -428,7 +552,7 @@ def merge_prune_plan_artifact(
     return {
         "schema": "scope_static_stage3d4b_merge_prune_plan_v1",
         "input_assignment_key": str(overcomplete_assignment_key),
-        "rule": "active clusters with support <= max_microcluster_support and support_fraction <= max_microcluster_fraction are microclusters; merge only microclusters with compatible context-normalized residual profiles",
+        "rule": "merge S3B1-seeded split siblings only when context-normalized residual profiles are compatible; active clusters with support <= max_microcluster_support and support_fraction <= max_microcluster_fraction are microclusters and may also merge when compatible",
         "max_microcluster_support": int(max_microcluster_support),
         "max_microcluster_fraction": float(max_microcluster_fraction),
         "min_microcluster_family_count": int(min_microcluster_family_count),
@@ -438,6 +562,7 @@ def merge_prune_plan_artifact(
             else float(context_residual_profile_veto_threshold)
         ),
         "uses_context_normalized_residual_profile_veto": True,
+        "uses_stage3d4_split_parent_map_when_available": True,
         "uses_mechanism_labels_for_merge_rule": False,
         "uses_oracle_prototypes": False,
         "uses_channels_ptms_kraus": False,
@@ -545,7 +670,7 @@ def stage3d4b_acceptance_audit(
         "stage3d4_acceptance_passed": bool(dict(s3d4_metrics.get("acceptance_audit", {})).get("passed", False)),
         "approved_feature_schema_matches_stage3a": bool(feature_match.get("passed", False)),
         "uses_stage3a_frozen_visible_features": bool(feature_matrix.get("loaded_from_stage3a_artifact", False)),
-        "microcluster_merge_applied": bool(merge_map.get("microcluster_merge_applied", False)),
+        "microcluster_merge_applied": bool(merge_map.get("visible_merge_applied", False)),
         "postmerge_reduces_active_cluster_count": int(merge_map.get("postmerge_family_count", 0)) < int(merge_map.get("active_cluster_count", 0)),
         "merge_rule_uses_no_labels": not bool(merge_map.get("uses_labels_for_merge_rule", True)),
         "postmerge_exact_nmi_passed": float(post.get("normalized_mutual_info", 0.0)) >= float(min_postmerge_nmi),
@@ -588,7 +713,7 @@ def _microcluster_residual_profile_groups(
         placed = False
         for group in groups:
             distances = [
-                float(np.linalg.norm(profile - _cluster_residual_profile(member)))
+                _normalized_residual_profile_distance(profile, _cluster_residual_profile(member))
                 for member in group
             ]
             if not distances or max(distances) <= float(threshold):
@@ -597,6 +722,26 @@ def _microcluster_residual_profile_groups(
                 break
         if not placed:
             groups.append([row])
+    return groups
+
+
+def _split_parent_residual_profile_groups(
+    clusters: list[dict[str, object]],
+    *,
+    threshold: float | None,
+) -> list[list[dict[str, object]]]:
+    by_parent: dict[int, list[dict[str, object]]] = {}
+    for row in clusters:
+        parent = row.get("split_parent")
+        if parent is None:
+            continue
+        by_parent.setdefault(int(parent), []).append(row)
+    groups: list[list[dict[str, object]]] = []
+    for parent in sorted(by_parent):
+        rows = by_parent[parent]
+        if len(rows) < 2:
+            continue
+        groups.extend(_microcluster_residual_profile_groups(rows, threshold=threshold))
     return groups
 
 
@@ -623,7 +768,10 @@ def _residual_profile_veto_audit(
                 continue
             for left in left_group:
                 for right in right_group:
-                    distance = float(np.linalg.norm(_cluster_residual_profile(left) - _cluster_residual_profile(right)))
+                    distance = _normalized_residual_profile_distance(
+                        _cluster_residual_profile(left),
+                        _cluster_residual_profile(right),
+                    )
                     if threshold is not None and distance > float(threshold):
                         vetoed += 1
     return {
@@ -632,6 +780,7 @@ def _residual_profile_veto_audit(
         "uses_mechanism_labels": False,
         "uses_oracle_location_or_strength": False,
         "uses_channels_ptms_kraus": False,
+        "distance_metric": "rms_normalized_l2_over_context_residual_profile",
         "threshold": None if threshold is None else float(threshold),
         "group_count": int(len(groups)),
         "cluster_count": int(sum(len(group) for group in groups)),
@@ -647,6 +796,14 @@ def _cluster_residual_profile(row: dict[str, object]) -> np.ndarray:
     if not isinstance(values, list):
         return np.zeros(0, dtype=np.float64)
     return np.asarray([float(value) for value in values], dtype=np.float64)
+
+
+def _normalized_residual_profile_distance(left: np.ndarray, right: np.ndarray) -> float:
+    a = np.asarray(left, dtype=np.float64)
+    b = np.asarray(right, dtype=np.float64)
+    if a.shape != b.shape or a.size == 0:
+        return float(np.linalg.norm(a - b)) if a.shape == b.shape else float("inf")
+    return float(np.linalg.norm(a - b) / np.sqrt(float(a.size)))
 
 
 def _context_residual_matrix(matrix: np.ndarray, context_groups: np.ndarray | None) -> np.ndarray:
@@ -680,12 +837,6 @@ def _vector_digest(vector: np.ndarray) -> str:
     return hashlib.sha256(arr.tobytes()).hexdigest()
 
 
-def _optional_float(value: object) -> float | None:
-    if value is None:
-        return None
-    return float(value)
-
-
 def _delta(left: object, right: object) -> float | None:
     if left is None or right is None:
         return None
@@ -709,6 +860,8 @@ def _write_outputs(output: Path, result: dict[str, object], merged_assignments: 
         "heldout_protocol.json": result["heldout_protocol"],
         "feature_schema_match_audit.json": result["feature_schema_match_audit"],
         "visible_feature_matrix.json": result["visible_feature_matrix"],
+        "assignment_feature_view_audit.json": result["assignment_feature_view_audit"],
+        "assignment_feature_weighting.json": result["assignment_feature_weighting"],
     }
     for name, payload in artifacts.items():
         (output / name).write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")

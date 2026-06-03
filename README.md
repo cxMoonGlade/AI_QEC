@@ -165,11 +165,11 @@ Print the toolbox manifest:
 scope-static-toolbox
 ```
 
-Run the current canonical learner acceptance artifact:
+Run the legacy Stage 2 canonical learner acceptance artifact:
 
 ```bash
 learner-acceptance \
-  --config configs/scope_static/learner_acceptance.yaml
+  --config configs/archive/stage2_teacher_learner/learner_acceptance.yaml
 ```
 
 Run tests:

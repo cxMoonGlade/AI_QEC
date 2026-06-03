@@ -335,7 +335,40 @@ Practical bottleneck order:
 3. S3B.1 candidate/model sweep
 ```
 
-## Function: Audit Teacher Self-Distinguishment
+## Function: Run Current Stage 3/5 Contract Teacher
+
+The current controlled Stage 3/5 route uses the Layer1.P medium contract
+teacher, not the older PHYC2/PHYC3 teacher-learner ladder. The blocking gate is
+teacher physicality plus Stage 3 protocol freeze; S5 property recovery is an
+evaluator-side interpretation audit.
+
+```bash
+conda run -n aiqec python -m scope_static.experiments.qec_noise_catalog.data_preparation_teacher \
+  --config configs/scope_static/s5_medium_hard_allM_contract_teacher_20q_depth20_g20.yaml
+
+conda run -n aiqec python -m scope_static.experiments.qec_noise_catalog.teacher_physicality_audit \
+  --config configs/scope_static/teacher_physicality_audit.yaml
+
+conda run -n aiqec python -m scope_static.experiments.stage3.protocol_freeze \
+  --config configs/scope_static/stage3a_protocol_freeze.yaml
+
+conda run -n aiqec python -m scope_static.experiments.stage3.observability_ceiling \
+  --config configs/scope_static/stage3a5_observability_ceiling.yaml
+
+conda run -n aiqec python -m scope_static.experiments.stage3.discovery_model \
+  --config configs/scope_static/stage3b1_discovery_model.yaml
+
+conda run -n aiqec python -m scope_static.experiments.stage5.property_recovery \
+  --config configs/scope_static/stage5b1_property_recovery.yaml
+```
+
+Default artifact root:
+
+```text
+outputs/scope_static/s5_medium_hard_allM_contract_teacher_20q_depth20_rzz_active_g20_strength_decorrelated_s1000/
+```
+
+## Legacy Function: Audit Teacher Self-Distinguishment
 
 Teacher balanced audit:
 
@@ -349,7 +382,7 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.qec
 Teacher tests teacher/catalog self-distinguishability. It is not a learner
 success claim and must not emit canonical learner predictions.
 
-## Function: Run No-Leakage Learner Recovery
+## Legacy Function: Run No-Leakage Learner Recovery
 
 Learner legacy no-leakage recovery:
 
@@ -377,18 +410,18 @@ Learner generated-noise language must distinguish two cases: catalog-mechanism
 replay inherits the catalog mechanism definition, while empirical visible replay
 is a visible-distribution model and is not by itself a learned CPTP channel.
 
-## Function: Run Canonical Learner Acceptance
+## Legacy Function: Run Canonical Learner Acceptance
 
 ```bash
 conda run -n aiqec learner-acceptance \
-  --config configs/scope_static/learner_acceptance.yaml
+  --config configs/archive/stage2_teacher_learner/learner_acceptance.yaml
 ```
 
 Equivalent module form:
 
 ```bash
 conda run -n aiqec python -m scope_static.experiments.qec_noise_catalog.learner_acceptance \
-  --config configs/scope_static/learner_acceptance.yaml
+  --config configs/archive/stage2_teacher_learner/learner_acceptance.yaml
 ```
 
 The canonical resolver selects `phyc3c_distributional_gaussian_likelihood_head`

@@ -71,6 +71,13 @@ submodes, exact one-cluster label recall may be low even though the mechanism
 family is not confused with other mechanisms. Reports must distinguish legacy
 exact-ID recall from evaluator-only drift-submode recall.
 
+Legacy M6 / public F2 remains a flat RX-overrotation leaf, but the current
+Z/X-visible Stage 3 surface must not claim its flat-exact separation from
+legacy M13/public M7 when the visible geometry supports only coherent-control
+family plus drift/location/strength dimensions. Legacy M22-M23 / public F9-F10
+are likewise surface-conditional flat parasitic-coupling leaves until an
+axis-sensitive quadrature probe exposes XX-vs-YY separation.
+
 Legacy M14 / public M8 is the paired operation-dependent control target. Its
 contract separates the visible operation axis from the error-generator axis:
 the first Stage 3 catalog uses an `rx` operation site with an `rz` coherent
@@ -664,10 +671,14 @@ catalog physicality audit present for catalog-mechanism replay
 
 ## Discovery Artifact Bundle
 
-The first Stage 3 implementation should write one reviewable artifact tree:
+The current controlled Stage 3 implementation writes one reviewable artifact
+tree rooted at the medium Layer1.P allM contract teacher:
 
 ```text
-outputs/PHYC_STAGE3_discovery/
+outputs/scope_static/s5_medium_hard_allM_contract_teacher_20q_depth20_rzz_active_g20_strength_decorrelated_s1000/
+  S2D_PHYS1_teacher/
+  Layer1_teacher_physicality_audit/
+  S3A_protocol_freeze/
   config.yaml
   visible_feature_schema.json
   visible_feature_matrix.json

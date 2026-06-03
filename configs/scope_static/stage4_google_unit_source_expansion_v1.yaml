@@ -3,7 +3,7 @@ stage4_google_unit_source_expansion_v1:
   allow_heavy_run: false
   memory_guard_gib: 16
   memory_guard_interval_seconds: 1.0
-  teacher_dir: outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/S2D_PHYS1_teacher
+  teacher_dir: outputs/scope_static/s5_medium_hard_allM_contract_teacher_20q_depth20_rzz_active_g20_strength_decorrelated_s1000/S2D_PHYS1_teacher
   google_stage3a_dir: outputs/google_static/google_s3_visible_surface_v2/S3A_protocol_freeze
   assignment_geometry_dir: outputs/scope_static/S4_bridge/S4_5_assignment_geometry_repair
   source_pretrain_dir: outputs/scope_static/S4_bridge/S4_1_source_pretrain

@@ -134,7 +134,9 @@ the same semantic kind. Stage 3/S5 should distinguish:
 - `leaf_exact_effect_supported`: the current controlled teacher can still emit
   and audit this implementation leaf when the assignment is already correct.
 - `primary_flat_cluster_target`: the implementation leaf maps to a public
-  `F*` label and is safe to demand as a primary flat discovery cluster.
+  `F*` label. Some `F*` leaves are still surface-conditional on the current
+  Z/X-visible Stage 3/S5 surface and must be claimed through dimension/property
+  recovery until a stronger probe exposes the flat exact split.
 - public `M*` labels: non-flat family/dimension targets.
 
 The current audit is pinned in
@@ -142,7 +144,8 @@ The current audit is pinned in
 
 | Role | Legacy IDs | Public labels | S3/S5 interpretation |
 | --- | --- | --- | --- |
-| Primary flat cluster targets | M4, M5, M6, M7, M8, M12, M17, M20, M21, M22, M23, M24, M25, M26, M28, M29, M30, M31, M32, M33 | F0-F19 | Exact `F*` clusters are acceptable controlled-catalog evaluator targets, with S5 reporting context-relative location and strength. |
+| Primary flat cluster targets | M4, M5, M6, M7, M8, M12, M17, M20, M21, M22, M23, M24, M25, M26, M28, M29, M30, M31, M32, M33 | F0-F19 | Exact `F*` clusters are acceptable controlled-catalog evaluator targets only when the current visible surface declares flat-exact claims allowed; otherwise S5 requires dimension/property recovery. |
+| Surface-conditional flat targets | M6, M22, M23 | F2, F9, F10 | These remain public `F*` leaves, but current Z/X-visible Stage 3/S5 evidence does not claim flat-exact separation. M6 is paired with drifted M13 on the RX coherent-control surface; M22/M23 need an axis-sensitive quadrature probe for flat XX-vs-YY separation. |
 | Aggregate or direction-slice families | M0, M1, M2, M3 | M0-M3 | Prefer family plus axis/direction/mixture recovery over treating the broad leaf as an atomic physical mechanism. |
 | Coarse or coherent mixture families | M9, M10, M27 | M4, M5, M13 | Do not interpret a single flat cluster as full mechanism recovery unless the Pauli/axis mixture dimensions are also audited. |
 | Context- or operation-conditioned families | M13, M14, M16, M18 | M7, M8, M10, M11 | Recover base family plus operation/context, location, and strength dimensions; exact-label recall alone is not enough. |

@@ -94,6 +94,14 @@ MECHANISM_CONTRACTS: dict[str, dict[str, object]] = {
         "dimensions": ["axis_rx", "strength", "context_relative_location"],
         "leaf_exact_effect_supported": True,
         "primary_flat_cluster_target": True,
+        "current_visible_surface_flat_exact_claim_allowed": False,
+        "current_visible_surface_claim_target": "family_axis_dimension_recovery",
+        "paired_observability_group": ["M6", "M13"],
+        "flat_exact_claim_blocker": (
+            "M6 shares the RX coherent-control surface with drifted M13; current Stage 3/S5 "
+            "Z/X-visible rows support family, location, strength, and axis diagnostics, not a "
+            "standalone flat-exact M6 claim when M13 is present."
+        ),
     },
     "M7": {
         "contract_role": "family_axis_slice",
@@ -143,6 +151,10 @@ MECHANISM_CONTRACTS: dict[str, dict[str, object]] = {
         "dimensions": ["operation_axis", "drift_index", "drift_strength", "context_relative_location"],
         "leaf_exact_effect_supported": True,
         "primary_flat_cluster_target": False,
+        "current_visible_surface_flat_exact_claim_allowed": False,
+        "current_visible_surface_claim_target": "context_conditioned_drift_recovery",
+        "paired_observability_group": ["M6", "M13"],
+        "flat_exact_claim_blocker": "M13 is a multi-context drift target, not a single flat exact cluster target.",
     },
     "M14": {
         "contract_role": "operation_conditioned_family",
@@ -206,6 +218,13 @@ MECHANISM_CONTRACTS: dict[str, dict[str, object]] = {
         "dimensions": ["axis_xx", "strength", "context_relative_edge"],
         "leaf_exact_effect_supported": True,
         "primary_flat_cluster_target": True,
+        "current_visible_surface_flat_exact_claim_allowed": False,
+        "current_visible_surface_claim_target": "parasitic_axis_dimension_recovery",
+        "paired_observability_group": ["M22", "M23"],
+        "flat_exact_claim_blocker": (
+            "M22/M23 require an axis-sensitive quadrature probe before current Stage 3/S5 "
+            "Z/X-visible evidence may claim flat-exact XX-vs-YY separation."
+        ),
     },
     "M23": {
         "contract_role": "family_axis_slice",
@@ -213,6 +232,13 @@ MECHANISM_CONTRACTS: dict[str, dict[str, object]] = {
         "dimensions": ["axis_yy", "strength", "context_relative_edge"],
         "leaf_exact_effect_supported": True,
         "primary_flat_cluster_target": True,
+        "current_visible_surface_flat_exact_claim_allowed": False,
+        "current_visible_surface_claim_target": "parasitic_axis_dimension_recovery",
+        "paired_observability_group": ["M22", "M23"],
+        "flat_exact_claim_blocker": (
+            "M22/M23 require an axis-sensitive quadrature probe before current Stage 3/S5 "
+            "Z/X-visible evidence may claim flat-exact XX-vs-YY separation."
+        ),
     },
     "M24": {
         "contract_role": "atomic_channel",
@@ -299,6 +325,19 @@ PRIMARY_FLAT_CLUSTER_TARGET_IDS = tuple(
 )
 NON_FLAT_PRIMARY_TARGET_IDS = tuple(
     mechanism_id for mechanism_id in IMPLEMENTED_MECHANISM_IDS if not MECHANISM_CONTRACTS[mechanism_id]["primary_flat_cluster_target"]
+)
+CURRENT_VISIBLE_SURFACE_FLAT_EXACT_CLAIM_TARGET_IDS = tuple(
+    mechanism_id
+    for mechanism_id in PRIMARY_FLAT_CLUSTER_TARGET_IDS
+    if bool(MECHANISM_CONTRACTS[mechanism_id].get("current_visible_surface_flat_exact_claim_allowed", True))
+)
+SURFACE_CONDITIONAL_DIMENSION_TARGET_IDS = tuple(
+    mechanism_id
+    for mechanism_id in PRIMARY_FLAT_CLUSTER_TARGET_IDS
+    if not bool(MECHANISM_CONTRACTS[mechanism_id].get("current_visible_surface_flat_exact_claim_allowed", True))
+)
+CONTRACT_TYPED_DIMENSION_TARGET_IDS = tuple(
+    dict.fromkeys((*NON_FLAT_PRIMARY_TARGET_IDS, *SURFACE_CONDITIONAL_DIMENSION_TARGET_IDS))
 )
 
 PRIMARY_FLAT_PUBLIC_LABELS = tuple(f"F{idx}" for idx, _mechanism_id in enumerate(PRIMARY_FLAT_CLUSTER_TARGET_IDS))
@@ -405,12 +444,19 @@ def mechanism_taxonomy_contract_audit() -> dict[str, object]:
     leaf = list(MECHANISM_LEAF_EXACT_IDS)
     primary_flat = list(PRIMARY_FLAT_CLUSTER_TARGET_IDS)
     non_flat = list(NON_FLAT_PRIMARY_TARGET_IDS)
+    current_flat_claim = list(CURRENT_VISIBLE_SURFACE_FLAT_EXACT_CLAIM_TARGET_IDS)
+    surface_conditional = list(SURFACE_CONDITIONAL_DIMENSION_TARGET_IDS)
     checks = {
         "all_implemented_mechanisms_have_contracts": not missing and not extra,
         "m11_is_overlay_not_leaf_exact": "M11" not in set(leaf) and MECHANISM_CONTRACTS["M11"]["contract_role"] == "overlay_family",
         "non_flat_primary_targets_are_explicit": bool(non_flat),
         "leaf_exact_targets_are_subset_of_implemented": set(leaf).issubset(expected),
         "primary_flat_targets_are_subset_of_leaf_exact": set(primary_flat).issubset(set(leaf)),
+        "current_visible_surface_flat_exact_claim_targets_are_subset_of_primary_flat": set(current_flat_claim).issubset(set(primary_flat)),
+        "surface_conditional_dimension_targets_are_primary_flat": set(surface_conditional).issubset(set(primary_flat)),
+        "surface_conditional_dimension_targets_have_blocker": all(
+            bool(MECHANISM_CONTRACTS[value].get("flat_exact_claim_blocker", "")) for value in surface_conditional
+        ),
         "all_implemented_mechanisms_have_public_labels": set(LEGACY_MECHANISM_ID_TO_PUBLIC_LABEL) == expected,
         "public_labels_are_unique": len(set(LEGACY_MECHANISM_ID_TO_PUBLIC_LABEL.values())) == len(IMPLEMENTED_MECHANISM_IDS),
         "flat_targets_use_f_namespace": all(str(LEGACY_MECHANISM_ID_TO_PUBLIC_LABEL[value]).startswith("F") for value in primary_flat),
@@ -428,6 +474,9 @@ def mechanism_taxonomy_contract_audit() -> dict[str, object]:
         "leaf_exact_effect_ids": leaf,
         "primary_flat_cluster_target_ids": primary_flat,
         "non_flat_primary_target_ids": non_flat,
+        "current_visible_surface_flat_exact_claim_target_ids": current_flat_claim,
+        "surface_conditional_dimension_target_ids": surface_conditional,
+        "contract_typed_dimension_target_ids": list(CONTRACT_TYPED_DIMENSION_TARGET_IDS),
         "primary_flat_public_labels": list(PRIMARY_FLAT_PUBLIC_LABELS),
         "non_flat_public_labels": list(NON_FLAT_PUBLIC_LABELS),
         "legacy_catalog_id_to_public_label": dict(LEGACY_MECHANISM_ID_TO_PUBLIC_LABEL),

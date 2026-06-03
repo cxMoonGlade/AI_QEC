@@ -47,7 +47,7 @@ def run_phyc3_no_leakage_learner_recovery_experiment(
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Run Layer 3 no-leakage sampled-observation learner recovery.")
-    parser.add_argument("--config", type=Path, default=Path("configs/scope_static/phyc3_no_leakage_learner_recovery.yaml"))
+    parser.add_argument("--config", type=Path, default=Path("configs/archive/stage2_teacher_learner/phyc3_no_leakage_learner_recovery.yaml"))
     parser.add_argument("--teacher-dir", type=Path)
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--contract", choices=("balanced", "weighted"))

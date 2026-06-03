@@ -14,9 +14,11 @@ from scope_static.primitives.channels import (
 from scope_static.primitives.cptp_guardrail import audit_mechanism_physicality, build_cptp_guardrail_audit
 from scope_static.primitives.density_sim import apply_kraus, measurement_probabilities_z
 from scope_static.primitives.mechanism_catalog import IMPLEMENTED_MECHANISM_IDS, MECHANISM_NAMES, READOUT_MECHANISM_IDS, RZZ_FAMILY_IDS
+from scope_static.primitives.mechanism_catalog import CURRENT_VISIBLE_SURFACE_FLAT_EXACT_CLAIM_TARGET_IDS
 from scope_static.primitives.mechanism_catalog import MECHANISM_LEAF_EXACT_IDS, NON_FLAT_PRIMARY_TARGET_IDS, PRIMARY_FLAT_CLUSTER_TARGET_IDS
 from scope_static.primitives.mechanism_catalog import NON_FLAT_PUBLIC_LABELS, PRIMARY_FLAT_PUBLIC_LABELS
 from scope_static.primitives.mechanism_catalog import PUBLIC_LABEL_TO_LEGACY_MECHANISM_ID
+from scope_static.primitives.mechanism_catalog import SURFACE_CONDITIONAL_DIMENSION_TARGET_IDS
 from scope_static.primitives.mechanism_catalog import legacy_mechanism_id, mechanism_label_namespace, mechanism_public_label
 from scope_static.primitives.mechanism_catalog import mechanism_contract, mechanism_taxonomy_contract_audit
 from scope_static.primitives.ptm import channel_fingerprint, ptm_from_kraus, ptm_from_unitary, rzz_ptm_block_audit
@@ -157,6 +159,10 @@ def test_mechanism_taxonomy_contract_marks_composite_targets_explicitly() -> Non
     assert "M11" in NON_FLAT_PRIMARY_TARGET_IDS
     assert set(PRIMARY_FLAT_CLUSTER_TARGET_IDS) < set(IMPLEMENTED_MECHANISM_IDS)
     assert set(PRIMARY_FLAT_CLUSTER_TARGET_IDS) <= set(MECHANISM_LEAF_EXACT_IDS)
+    assert {"M6", "M22", "M23"} <= set(SURFACE_CONDITIONAL_DIMENSION_TARGET_IDS)
+    assert not {"M6", "M22", "M23"} & set(CURRENT_VISIBLE_SURFACE_FLAT_EXACT_CLAIM_TARGET_IDS)
+    assert set(audit["surface_conditional_dimension_target_ids"]) == set(SURFACE_CONDITIONAL_DIMENSION_TARGET_IDS)
+    assert set(audit["current_visible_surface_flat_exact_claim_target_ids"]) == set(CURRENT_VISIBLE_SURFACE_FLAT_EXACT_CLAIM_TARGET_IDS)
     assert list(PRIMARY_FLAT_PUBLIC_LABELS) == [f"F{idx}" for idx in range(len(PRIMARY_FLAT_CLUSTER_TARGET_IDS))]
     assert list(NON_FLAT_PUBLIC_LABELS) == [f"M{idx}" for idx in range(len(NON_FLAT_PRIMARY_TARGET_IDS))]
     assert len(PUBLIC_LABEL_TO_LEGACY_MECHANISM_ID) == len(IMPLEMENTED_MECHANISM_IDS)
@@ -182,11 +188,33 @@ def test_mechanism_taxonomy_contract_marks_composite_targets_explicitly() -> Non
     assert mechanism_contract("M11")["public_label"].startswith("M")
     assert mechanism_contract("M13")["contract_role"] == "context_conditioned_family"
     assert mechanism_contract("M16")["base_family"] == "readout_spam"
+    assert mechanism_contract("M6")["primary_flat_cluster_target"] is True
+    assert mechanism_contract("M6")["current_visible_surface_flat_exact_claim_allowed"] is False
+    assert mechanism_contract("M22")["current_visible_surface_claim_target"] == "parasitic_axis_dimension_recovery"
 
 
 def test_mechanism_spec_audit_dict_exposes_public_label_and_legacy_id() -> None:
     flat = MechanismSpec("M8", MECHANISM_NAMES["M8"], 2, {"epsilon": 0.04}, instruction="rzz", qubits=(0, 1))
-    non_flat = MechanismSpec("M11", MECHANISM_NAMES["M11"], 2, {"epsilon": 0.02}, instruction="rzz", qubits=(1, 2))
+    non_flat = MechanismSpec(
+        "M11",
+        MECHANISM_NAMES["M11"],
+        2,
+        {
+            "epsilon": 0.02,
+            "spectator_overlay_present": True,
+            "base_mechanism": "M8",
+            "victim_relative_location": "edge",
+            "aggressor_relative_location": "adjacent_gate",
+            "coupling_axis": "ZZ",
+            "timing_context": "same_cycle",
+            "spectator_strength": 0.02,
+            "victim_qubit": 1,
+            "aggressor_qubit": 2,
+            "claims_standalone_flat_mechanism": False,
+        },
+        instruction="rzz",
+        qubits=(1, 2),
+    )
 
     flat_audit = flat.audit_dict()
     non_flat_audit = non_flat.audit_dict()
@@ -199,6 +227,19 @@ def test_mechanism_spec_audit_dict_exposes_public_label_and_legacy_id() -> None:
     assert non_flat_audit["mechanism_id"] == "M11"
     assert non_flat_audit["public_label"].startswith("M")
     assert non_flat_audit["label_namespace"] == "non_flat"
+    assert non_flat_audit["contract_role"] == "overlay_family"
+    assert non_flat_audit["public_effect_family"] == "spectator_overlay"
+    assert str(non_flat_audit["public_overlay_class"]).endswith("_overlay")
+    assert str(non_flat_audit["nonflat_public_label"]).startswith("spectator_overlay_")
+    assert non_flat_audit["spectator_overlay_present"] is True
+    assert non_flat_audit["base_mechanism"] == "M8"
+    assert non_flat_audit["victim_relative_location"] == "edge"
+    assert non_flat_audit["aggressor_relative_location"] == "adjacent_gate"
+    assert non_flat_audit["coupling_axis"] == "ZZ"
+    assert non_flat_audit["timing_context"] == "same_cycle"
+    assert non_flat_audit["spectator_strength"] == 0.02
+    assert non_flat_audit["spectator_overlay"]["present"] is True
+    assert non_flat_audit["spectator_overlay"]["base_mechanism"] == "M8"
 
 
 def test_carrier_surrogate_claim_boundary() -> None:

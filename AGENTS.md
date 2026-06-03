@@ -170,27 +170,26 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.qec
   --config configs/scope_static/s2d11b_m1_gate_branch_grouped_calibration_audit.yaml
 ```
 
-Run teacher/learner local-observable weighted allM evidence:
+Run current Layer1.P medium contract teacher and Stage 3/5 chain:
 
 ```bash
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.qec_noise_catalog.local_observable_gpu_teacher \
-  --config configs/scope_static/s2d11_allM_30q_depth30_weighted.yaml \
-  --output-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/S2D_PHYS1_teacher
+conda run -n aiqec python -m scope_static.experiments.qec_noise_catalog.data_preparation_teacher \
+  --config configs/scope_static/s5_medium_hard_allM_contract_teacher_20q_depth20_g20.yaml
 
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.qec_noise_catalog.teacher_distinguishment \
-  --contract weighted \
-  --teacher-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/S2D_PHYS1_teacher \
-  --output-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/PHYC2_weighted_slot_only_control
+conda run -n aiqec python -m scope_static.experiments.qec_noise_catalog.teacher_physicality_audit \
+  --config configs/scope_static/teacher_physicality_audit.yaml
 
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.qec_noise_catalog.learner_recovery \
-  --contract weighted \
-  --teacher-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/S2D_PHYS1_teacher \
-  --output-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/PHYC3_no_leakage_learner_recovery
+conda run -n aiqec python -m scope_static.experiments.stage3.protocol_freeze \
+  --config configs/scope_static/stage3a_protocol_freeze.yaml
 
-conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.qec_noise_catalog.learner_quality \
-  --teacher-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/S2D_PHYS1_teacher \
-  --prediction-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/PHYC3_no_leakage_learner_recovery \
-  --output-dir outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/PHYC3_quantum_error_quality
+conda run -n aiqec python -m scope_static.experiments.stage3.observability_ceiling \
+  --config configs/scope_static/stage3a5_observability_ceiling.yaml
+
+conda run -n aiqec python -m scope_static.experiments.stage3.discovery_model \
+  --config configs/scope_static/stage3b1_discovery_model.yaml
+
+conda run -n aiqec python -m scope_static.experiments.stage5.property_recovery \
+  --config configs/scope_static/stage5b1_property_recovery.yaml
 ```
 
 Do not use `PYTHONPATH="$PWD/src"` for normal runs on this WSL/CUDA setup. The
@@ -287,12 +286,12 @@ label recovery, Google legacy catalog-ID recovery, or CPTP/GKSL parameter
 learning.
 
 The `separability_v2` allM artifacts are strong Stage 2 separability evidence,
-not a Born-rule physical baseline. Older PHYC3 artifacts must be rechecked for
-`prediction_source_audit.source_name == "phyc3_no_leakage_learner_recovery"`
-before being cited as current no-leakage learner evidence. The minimal Born-local
-teacher remains a density-matrix diagnostic with effective circuit depth one.
-The pre-release acceptance surface is data preparation, teacher
-self-distinguishment, and no-leakage learner classification plus noise
-generation quality. Legacy M11 / public M6 spectator crosstalk RZ/ZZ remains a
-contract-sensitive overlay mechanism; do not collapse it into a local Born
-diagnostic when making full-circuit claims.
+not a Born-rule physical baseline. Older PHYC2/PHYC3 artifacts are compatibility
+evidence and must not be cited as the current Stage 3/5 claim path unless their
+source audits are rechecked and the claim is explicitly Stage 2. The current
+controlled Stage 3/5 path starts from the Layer1.P medium contract teacher,
+runs the blocking physicality audit, freezes the Stage 3 visible protocol, and
+uses S5 property heads only as evaluator-side interpretation. Legacy M11 /
+public M6 spectator crosstalk RZ/ZZ remains a contract-sensitive overlay
+mechanism; do not collapse it into a local Born diagnostic when making
+full-circuit claims.

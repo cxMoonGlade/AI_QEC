@@ -11,6 +11,7 @@ from scope_static.protocols import LEARNER_VALIDATION_STAGE
 from .artifacts import feature_schema_matches_stage3a as _feature_schema_matches_s3a
 from .artifacts import load_json_object as _load_json
 from .artifacts import load_stage3a_frozen_visible_features
+from .audit_values import optional_float as _optional_float
 from .observability_ceiling import DEFAULT_OUTPUT_DIR as DEFAULT_STAGE3A5_DIR
 from .protocol_freeze import DEFAULT_OUTPUT_DIR as DEFAULT_STAGE3A_DIR
 from .baselines import VARIANCE_FLOOR
@@ -472,12 +473,6 @@ def _optional_json(path: Path | None) -> dict[str, object] | None:
     if path is None or not path.exists():
         return None
     return _load_json(path)
-
-
-def _optional_float(value: object) -> float | None:
-    if value is None:
-        return None
-    return float(value)
 
 
 def _write_outputs(output: Path, result: dict[str, object]) -> None:

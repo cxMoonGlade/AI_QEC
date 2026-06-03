@@ -8,7 +8,14 @@ import numpy as np
 from scope_static.experiments.stage5.property_recovery import run_stage5b1_property_recovery_from_config
 from scope_static.experiments.stage5.conditional_property_recovery import run_stage5b1b_conditional_property_recovery_from_config
 from scope_static.mechanism_discovery.observability_ceiling import run_stage3a5_observability_alias_ceiling
-from scope_static.mechanism_discovery.property_recovery import run_stage5b1_property_recovery, stage5b1_contract_breakdown_audit
+from scope_static.mechanism_discovery.property_recovery import (
+    run_stage5b1_property_recovery,
+    stage5b1_acceptance_audit,
+    stage5b1_assignment_quality_gate,
+    stage5b1_contract_breakdown_audit,
+    targeted_property_recovery_audit,
+)
+from scope_static.primitives.mechanism_catalog import CURRENT_VISIBLE_SURFACE_FLAT_EXACT_CLAIM_TARGET_IDS
 from scope_static.mechanism_discovery.protocol_freeze import run_stage3a_dataset_protocol_freeze
 from scope_static.primitives.mechanism_catalog import MECHANISM_NAMES
 
@@ -34,6 +41,8 @@ def test_stage5b1_recovers_context_relative_location_and_strength_from_fixed_ass
     assert result["claim_boundary"]["uses_oracle_location_or_strength_for_property_head_fit"] is False
     assert result["claim_boundary"]["uses_evaluator_records_after_fit_for_scoring"] is True
     assert result["assignment_source_audit"]["row_stochastic"] is True
+    assert result["s5b1_assignment_quality_gate"]["passed"] is True
+    assert result["claim_boundary"]["claim_allowed"] is True
     assert result["s5b1_property_recovery_metrics"]["model_name"] == "linear_proto_visible_residual_energy"
     assert result["s5b1_property_recovery_metrics"]["uses_oracle_location_or_strength_for_fit"] is False
     assert result["context_relative_location_recovery_audit"]["passed"] is True
@@ -62,6 +71,7 @@ def test_stage5b1_recovers_context_relative_location_and_strength_from_fixed_ass
         "overlay_contract_audit.json",
         "overlay_recovery_audit.json",
         "s5b1_contract_breakdown_audit.json",
+        "s5b1_assignment_quality_gate.json",
         "acceptance_audit.json",
         "summary.md",
     ]:
@@ -123,6 +133,249 @@ def test_stage5b1_contract_breakdown_separates_location_strength_from_dimension(
     assert breakdown["s5b1_property_without_dimension_passed"] is True
     assert breakdown["s5b1_contract_passed"] is False
     assert breakdown["dimension_failed_labels"] == ["M13"]
+
+
+def test_stage5b1_acceptance_reports_soft_family_separately_from_pass() -> None:
+    acceptance = stage5b1_acceptance_audit(
+        s3a_metrics={"acceptance_audit": {"passed": True}},
+        s3a5_metrics={"acceptance_audit": {"passed": True}},
+        s3b1_metrics={"acceptance_audit": {"passed": True}},
+        feature_match={"passed": True},
+        assignment_audit={"row_stochastic": True},
+        assignment_quality_gate={"passed": True, "claim_allowed": True},
+        property_head={"passed": True, "uses_oracle_location_or_strength_for_fit": False},
+        family={"schema": "scope_static_soft_family_classification_v1", "passed": False, "skipped": False},
+        s5={"claims_physical_parameter_recovery": False},
+        location={"passed": True},
+        strength={"passed": True},
+        targeted={"passed": False, "rows": {"M6": {"present": True, "passed": False}}},
+        contract_breakdown={
+            "s5b1_location_passed": True,
+            "s5b1_strength_passed": True,
+            "s5b1_dimension_passed": True,
+            "s5b1_overlay_contract_passed": True,
+            "s5b1_contract_passed": False,
+        },
+    )
+
+    checks = acceptance["checks"]
+    assert checks["soft_family_classification_reported"] is True
+    assert checks["soft_family_classification_passed"] is False
+    assert checks["targeted_m6_m13_m18_m27_reported"] is True
+    assert checks["targeted_m6_m13_m18_m27_passed"] is False
+    assert acceptance["passed"] is False
+
+
+def test_stage5b1_acceptance_allows_diagnostic_property_pass_without_claim_pass() -> None:
+    acceptance = stage5b1_acceptance_audit(
+        s3a_metrics={"acceptance_audit": {"passed": True}},
+        s3a5_metrics={"acceptance_audit": {"passed": True}},
+        s3b1_metrics={"acceptance_audit": {"passed": True}},
+        feature_match={"passed": True},
+        assignment_audit={"row_stochastic": True},
+        assignment_quality_gate={"passed": False, "claim_allowed": False},
+        property_head={"passed": True, "uses_oracle_location_or_strength_for_fit": False},
+        family={"schema": "scope_static_soft_family_classification_v1", "passed": True, "skipped": False},
+        s5={"claims_physical_parameter_recovery": False},
+        location={"passed": True},
+        strength={"passed": True},
+        targeted={"passed": False, "location_strength_passed": True, "rows": {"M6": {"present": True, "passed": False}}},
+        contract_breakdown={
+            "s5b1_location_passed": True,
+            "s5b1_strength_passed": True,
+            "s5b1_dimension_passed": True,
+            "s5b1_overlay_contract_passed": True,
+            "s5b1_targeted_m6_m13_m18_m27_location_strength_passed": True,
+            "s5b1_contract_passed": False,
+        },
+    )
+
+    assert acceptance["passed"] is True
+    assert acceptance["property_recovery_passed"] is True
+    assert acceptance["claim_passed"] is False
+    assert acceptance["property_recovery_checks"]["targeted_m6_m13_m18_m27_location_strength_passed"] is True
+    assert acceptance["claim_checks"]["assignment_quality_gate_passed"] is False
+    assert acceptance["claim_checks"]["targeted_m6_m13_m18_m27_passed"] is False
+
+
+def test_targeted_property_recovery_uses_surface_conditional_m6_contract() -> None:
+    audit = targeted_property_recovery_audit(
+        {
+            "per_exact_mechanism": {
+                "M6": {
+                    "support_count": 20,
+                    "recovery_metrics": {
+                        "passed": False,
+                        "location_errors": {"top_relative_location_cell_match": True},
+                        "strength_errors": {"top_context_relative_strength_block_match": True},
+                    },
+                },
+                "M13": {
+                    "support_count": 20,
+                    "recovery_metrics": {
+                        "passed": False,
+                        "location_errors": {"top_relative_location_cell_match": True},
+                        "strength_errors": {"top_context_relative_strength_block_match": True},
+                    },
+                },
+            }
+        },
+        targets=("M6", "M13"),
+    )
+
+    assert audit["rows"]["M6"]["primary_flat_cluster_target"] is True
+    assert audit["rows"]["M6"]["current_visible_surface_flat_exact_claim_allowed"] is False
+    assert audit["rows"]["M6"]["exact_scalar_passed"] is False
+    assert audit["rows"]["M6"]["location_strength_passed"] is True
+    assert audit["rows"]["M6"]["passed"] is True
+    assert audit["passed"] is True
+
+
+def test_stage5b1_assignment_quality_gate_blocks_raw_stage3b1_claim_source() -> None:
+    gate = stage5b1_assignment_quality_gate(
+        s3b1_metrics={
+            "evaluator_only_label_metrics": {
+                "selected_model_exact_metrics": {
+                    "balanced_accuracy_after_label_matching": 0.875,
+                    "min_recall_after_label_matching": 0.4,
+                }
+            },
+            "targeted_m6_m13_m18_m27_bleed_audit": {
+                "rows": {
+                    "M6": {"present": True, "self_recall": 0.45},
+                    "M13": {"present": True, "self_recall": 0.6},
+                    "M18": {"present": True, "self_recall": 1.0},
+                    "M27": {"present": True, "self_recall": 0.75},
+                }
+            },
+        },
+        assignment_audit={
+            "assignment_source": "stage3b1",
+            "assignment_path": "outputs/example/S3B1_first_discovery_model/learned_assignments.npy",
+            "row_stochastic": True,
+        },
+    )
+
+    assert gate["raw_stage3b1_diagnostic_only"] is True
+    assert gate["quality_checks_passed"] is False
+    assert gate["claim_allowed"] is False
+    assert gate["passed"] is False
+    assert "raw_stage3b1_is_not_claim_source" in gate["claim_blockers"]
+    assert gate["observed"]["exact_min_recall"] == 0.4
+    assert gate["observed"]["targeted_min_self_recall"] is None
+    assert gate["observed"]["targeted_self_recall_by_label"]["M6"] == 0.45
+    assert gate["observed"]["claimable_targeted_self_recall_by_label"] == {}
+
+
+def test_stage5b1_assignment_quality_gate_uses_claimable_flat_exact_subset(tmp_path: Path) -> None:
+    d4b = tmp_path / "S3D4b_claimable"
+    d4b.mkdir()
+    assignment_path = d4b / "postmerge_assignments.npy"
+    np.save(assignment_path, np.eye(2, dtype=np.float64))
+    per_label = {
+        label: {"recall_after_label_matching": 1.0}
+        for label in CURRENT_VISIBLE_SURFACE_FLAT_EXACT_CLAIM_TARGET_IDS
+    }
+    per_label["M6"] = {"recall_after_label_matching": 0.65}
+    per_label["M13"] = {"recall_after_label_matching": 0.65}
+    (d4b / "metrics.json").write_text(
+        json.dumps(
+            {
+                "decision": "stage3d4b_overcomplete_merge_prune_audit_failed",
+                "acceptance_audit": {"passed": False},
+                "postmerge_metrics": {
+                    "postmerge_exact_metrics": {
+                        "balanced_accuracy_after_label_matching": 0.97,
+                        "min_recall_after_label_matching": 0.65,
+                        "per_label_recall_after_label_matching": per_label,
+                    }
+                },
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n"
+    )
+
+    gate = stage5b1_assignment_quality_gate(
+        s3b1_metrics={},
+        assignment_audit={
+            "assignment_source": "stage3d4b_postmerge",
+            "assignment_path": str(assignment_path),
+            "row_stochastic": True,
+        },
+    )
+
+    assert gate["observed"]["exact_min_recall"] == 0.65
+    assert gate["observed"]["claimable_exact_min_recall"] == 1.0
+    assert gate["postmerge_gate"]["stage3d4b_acceptance_passed"] is False
+    assert gate["postmerge_gate"]["stage3d4b_claimable_acceptance_passed"] is True
+    assert gate["quality_checks_passed"] is True
+    assert gate["claim_allowed"] is True
+
+
+def test_stage5b1_assignment_quality_gate_uses_postmerge_metrics_for_postmerge_source(tmp_path: Path) -> None:
+    d4b = tmp_path / "S3D4b"
+    d4b.mkdir()
+    assignment_path = d4b / "postmerge_assignments.npy"
+    np.save(assignment_path, np.eye(2, dtype=np.float64))
+    (d4b / "metrics.json").write_text(
+        json.dumps(
+            {
+                "decision": "stage3d4b_overcomplete_merge_prune_audit_failed",
+                "acceptance_audit": {"passed": False},
+                "postmerge_metrics": {
+                    "postmerge_exact_metrics": {
+                        "balanced_accuracy_after_label_matching": 0.7,
+                        "min_recall_after_label_matching": 0.2,
+                        "per_label_recall_after_label_matching": {
+                            "M6": {"recall_after_label_matching": 0.2},
+                            "M13": {"recall_after_label_matching": 0.4},
+                            "M18": {"recall_after_label_matching": 1.0},
+                            "M27": {"recall_after_label_matching": 0.8},
+                        },
+                    }
+                },
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n"
+    )
+
+    gate = stage5b1_assignment_quality_gate(
+        s3b1_metrics={
+            "evaluator_only_label_metrics": {
+                "selected_model_exact_metrics": {
+                    "balanced_accuracy_after_label_matching": 1.0,
+                    "min_recall_after_label_matching": 1.0,
+                }
+            },
+            "targeted_m6_m13_m18_m27_bleed_audit": {
+                "rows": {
+                    "M6": {"present": True, "self_recall": 1.0},
+                    "M13": {"present": True, "self_recall": 1.0},
+                    "M18": {"present": True, "self_recall": 1.0},
+                    "M27": {"present": True, "self_recall": 1.0},
+                }
+            },
+        },
+        assignment_audit={
+            "assignment_source": "stage3d4b_postmerge",
+            "assignment_path": str(assignment_path),
+            "row_stochastic": True,
+        },
+    )
+
+    assert gate["postmerge_assignment_source"] is True
+    assert gate["observed"]["exact_balanced_accuracy"] == 0.7
+    assert gate["observed"]["exact_min_recall"] == 0.2
+    assert gate["observed"]["targeted_min_self_recall"] is None
+    assert gate["observed"]["targeted_self_recall_by_label"]["M6"] == 0.2
+    assert gate["observed"]["claimable_targeted_self_recall_by_label"] == {}
+    assert gate["postmerge_gate"]["stage3d4b_acceptance_passed"] is False
+    assert gate["claim_allowed"] is False
+    assert "stage3d4b_postmerge_claimable_acceptance_passed" in gate["claim_blockers"]
 
 
 def test_stage5b1_contract_breakdown_relabels_overlay_missing_payload() -> None:

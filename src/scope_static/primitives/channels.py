@@ -38,7 +38,7 @@ class MechanismSpec:
     def audit_dict(self) -> dict[str, object]:
         public_label = mechanism_public_label(self.mechanism_id)
         label_namespace = mechanism_label_namespace(self.mechanism_id)
-        return {
+        record = {
             "legacy_catalog_id": self.mechanism_id,
             "public_label": public_label,
             "label_namespace": label_namespace,
@@ -51,6 +51,11 @@ class MechanismSpec:
             "circuit_id": int(self.circuit_id),
             "probe_indices": [int(idx) for idx in self.probe_indices],
         }
+        if self.mechanism_id == "M11":
+            overlay = _m11_overlay_payload_from_parameters(self.parameters, public_label=public_label)
+            if overlay:
+                record.update(overlay)
+        return record
 
 
 def canonical_single_qubit_axis(value: object | None, *, default: str = "rx") -> str:
@@ -157,6 +162,53 @@ def mechanism_definition_contract(spec: MechanismSpec) -> dict[str, object]:
         "instruction": spec.instruction,
         "well_defined": True,
     }
+
+
+def _m11_overlay_payload_from_parameters(parameters: Mapping[str, object], *, public_label: str) -> dict[str, object]:
+    params = dict(parameters)
+    if not bool(params.get("spectator_overlay_present", False)):
+        return {}
+    strength = _first_present(params, "spectator_strength", "strength", "coupling_strength")
+    overlay = {
+        "present": True,
+        "base_mechanism": _first_present(params, "base_mechanism"),
+        "victim_relative_location": _first_present(params, "victim_relative_location"),
+        "aggressor_relative_location": _first_present(params, "aggressor_relative_location"),
+        "coupling_axis": _first_present(params, "coupling_axis"),
+        "timing_context": _first_present(params, "timing_context"),
+        "spectator_strength": strength,
+        "victim_qubit": _first_present(params, "victim_qubit"),
+        "aggressor_qubit": _first_present(params, "aggressor_qubit"),
+    }
+    compact_overlay = {key: _json_value(value) for key, value in overlay.items() if value is not None}
+    out = {
+        "contract_role": "overlay_family",
+        "overlay_family": "spectator_crosstalk",
+        "public_effect_family": "spectator_overlay",
+        "public_overlay_class": f"{public_label}_overlay",
+        "nonflat_public_label": f"spectator_overlay_{public_label}",
+        "spectator_overlay_present": True,
+        "spectator_overlay": compact_overlay,
+        "base_mechanism": compact_overlay.get("base_mechanism"),
+        "victim_relative_location": compact_overlay.get("victim_relative_location"),
+        "aggressor_relative_location": compact_overlay.get("aggressor_relative_location"),
+        "coupling_axis": compact_overlay.get("coupling_axis"),
+        "timing_context": compact_overlay.get("timing_context"),
+        "spectator_strength": compact_overlay.get("spectator_strength"),
+        "claims_standalone_flat_mechanism": bool(params.get("claims_standalone_flat_mechanism", False)),
+    }
+    if compact_overlay.get("victim_qubit") is not None:
+        out["victim_qubit"] = compact_overlay["victim_qubit"]
+    if compact_overlay.get("aggressor_qubit") is not None:
+        out["aggressor_qubit"] = compact_overlay["aggressor_qubit"]
+    return out
+
+
+def _first_present(values: Mapping[str, object], *keys: str) -> object | None:
+    for key in keys:
+        if values.get(key) is not None:
+            return values.get(key)
+    return None
 
 
 def mechanism_channel(spec: MechanismSpec) -> dict[str, object]:
