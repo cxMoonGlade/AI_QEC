@@ -85,15 +85,9 @@ docs/TOOLBOX.md
 docs/SCOPE_STATIC_DISC.md
 ```
 
-Historical implementation modules from superseded Stage 2 learner-limit, RZZ
-probe-design, and Born-local gate attempts are archived under:
-
-```text
-src/scope_static/archive/
-```
-
-Compatibility wrappers remain for selected old experiment modules, but current
-code should import from the responsibility-named packages.
+Superseded Stage 2 learner-limit, RZZ probe-design, and Born-local support code
+has been promoted into the responsibility-named packages where it is still part
+of the tested contract, or removed from the active tree otherwise.
 
 ## Stage 2 Artifact Rules
 

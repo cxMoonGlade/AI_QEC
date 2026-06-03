@@ -195,8 +195,8 @@ mechanism_source_structure_ablation_report.json
 robustness_closeout_report.json
 ```
 
-Historical Google DEM-proxy diagnostics are archived under
-`docs/archive/google_gdisc15.md`.
+Historical Google DEM-proxy diagnostics were removed from the active tree; the
+current Google path is the Stage 3 V2 public syndrome-response surface.
 
 ## Function: Generate Physical-Mechanism Data
 
@@ -409,25 +409,6 @@ matrices, exact PTMs, oracle prototypes, and hidden parameters.
 Learner generated-noise language must distinguish two cases: catalog-mechanism
 replay inherits the catalog mechanism definition, while empirical visible replay
 is a visible-distribution model and is not by itself a learned CPTP channel.
-
-## Legacy Function: Run Canonical Learner Acceptance
-
-```bash
-conda run -n aiqec learner-acceptance \
-  --config configs/archive/stage2_teacher_learner/learner_acceptance.yaml
-```
-
-Equivalent module form:
-
-```bash
-conda run -n aiqec python -m scope_static.experiments.qec_noise_catalog.learner_acceptance \
-  --config configs/archive/stage2_teacher_learner/learner_acceptance.yaml
-```
-
-The canonical resolver selects `phyc3c_distributional_gaussian_likelihood_head`
-only after teacher, visible repair, distributional learner, and
-validation gates pass. It rejects teacher-self predictions, legacy grouped
-predictions, and the old visible-surface baseline as canonical learner evidence.
 
 ## Function: Run Stage 3A Protocol Freeze
 

@@ -1681,7 +1681,7 @@ def _batch_context_schema(*, split_policy: str, row_count: int) -> dict[str, obj
         "protocol_only_fields": ["j", "fold", "train_validation_test_split", "public_fields", "unit_id_internal_only"],
         "evaluator_only_fields": [
             "optional_decoder_facing_proxy_metrics",
-            "optional_local_full_baseline_metrics",
+            "optional_reference_baseline_metrics",
             "optional_dmle_qec_baseline_metrics",
         ],
         "forbidden_learner_fields": [

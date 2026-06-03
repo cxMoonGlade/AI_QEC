@@ -44,7 +44,7 @@ def run_learner_acceptance_from_config(
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Run Layer 3 canonical quality acceptance resolver.")
-    parser.add_argument("--config", type=Path, default=Path("configs/archive/stage2_teacher_learner/learner_acceptance.yaml"))
+    parser.add_argument("--config", type=Path)
     parser.add_argument("--output-dir", type=Path)
     args = parser.parse_args(argv)
     run_learner_acceptance_from_config(config_path=args.config, output_dir=args.output_dir)

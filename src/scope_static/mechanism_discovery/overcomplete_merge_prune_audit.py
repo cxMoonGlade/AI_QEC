@@ -17,6 +17,7 @@ from .artifacts import resolve_teacher_dir
 from .audit_values import optional_float as _optional_float
 from .baselines import VARIANCE_FLOOR
 from .baselines import evaluate_cluster_assignments
+from .contract_claims import stage3d4b_claim_gate_audit
 from .discovery_model import DEFAULT_OPERATION_CONTEXT_WEIGHT
 from .discovery_model import _apply_visible_feature_weights
 from .discovery_model import context_dependent_mechanism_diagnostics
@@ -222,6 +223,12 @@ def run_stage3d4b_overcomplete_merge_prune_audit(
         min_postmerge_min_recall=float(min_postmerge_min_recall),
         max_generation_nll_increase=float(max_generation_nll_increase),
     )
+    claim_gate = stage3d4b_claim_gate_audit(
+        {
+            "acceptance_audit": acceptance,
+            "postmerge_metrics": postmerge_metrics,
+        }
+    )
     result = {
         "schema": "scope_static_stage3d4b_overcomplete_merge_prune_audit_v1",
         "stage": STAGE_NAME,
@@ -289,6 +296,12 @@ def run_stage3d4b_overcomplete_merge_prune_audit(
         "mean_only_baseline_metrics": mean_only,
         "leakage_audit": leakage,
         "acceptance_audit": acceptance,
+        "claim_gate_audit": claim_gate,
+        "claim_decision": (
+            "stage3d4b_postmerge_claim_gate_passed"
+            if bool(claim_gate.get("passed", False))
+            else "stage3d4b_postmerge_claim_gate_failed"
+        ),
         "decision": "stage3d4b_overcomplete_merge_prune_audit_passed" if acceptance["passed"] else "stage3d4b_overcomplete_merge_prune_audit_failed",
     }
     _write_outputs(output, result, merged_assignments)
@@ -857,6 +870,7 @@ def _write_outputs(output: Path, result: dict[str, object], merged_assignments: 
         "mean_only_baseline_metrics.json": result["mean_only_baseline_metrics"],
         "leakage_audit.json": result["leakage_audit"],
         "acceptance_audit.json": result["acceptance_audit"],
+        "claim_gate_audit.json": result["claim_gate_audit"],
         "heldout_protocol.json": result["heldout_protocol"],
         "feature_schema_match_audit.json": result["feature_schema_match_audit"],
         "visible_feature_matrix.json": result["visible_feature_matrix"],
@@ -877,12 +891,15 @@ def format_stage3d4b_summary(result: dict[str, object]) -> str:
     raw = dict(metrics.get("raw_overcomplete_exact_metrics", {}))
     post = dict(metrics.get("postmerge_exact_metrics", {}))
     gen = dict(metrics.get("generation_report", {}))
+    claim_gate = dict(result.get("claim_gate_audit", {}))
     return "\n".join(
         [
             "# Stage 3D.4b: Overcomplete Merge/Prune Audit",
             "",
             f"- Decision: `{result.get('decision')}`",
             f"- Acceptance passed: `{str(bool(acceptance.get('passed', False))).lower()}`",
+            f"- Claim decision: `{result.get('claim_decision')}`",
+            f"- Claim gate passed: `{str(bool(claim_gate.get('passed', False))).lower()}`",
             f"- Active overcomplete clusters: `{int(merge_map.get('active_cluster_count', 0))}`",
             f"- Post-merge families: `{int(merge_map.get('postmerge_family_count', 0))}`",
             f"- Microclusters merged: `{int(merge_map.get('microcluster_count', 0))}`",

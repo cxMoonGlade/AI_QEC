@@ -17,8 +17,6 @@ def test_toolbox_manifest_exports_public_layers_and_commands() -> None:
         "scope-static-toolbox",
         "scope-catalog-teacher",
         "scope-data-preparation-teacher",
-        "teacher-distinguishment",
-        "learner-acceptance",
         "scope-stage3a-freeze",
         "scope-stage3a5-ceiling",
         "scope-stage3b0-baselines",
@@ -37,8 +35,8 @@ def test_pyproject_exposes_toolbox_console_scripts() -> None:
     assert scripts["scope-static-toolbox"] == "scope_static.toolbox:main"
     assert scripts["scope-catalog-teacher"] == "scope_static.experiments.qec_noise_catalog.controlled_catalog_teacher:main"
     assert scripts["scope-data-preparation-teacher"] == "scope_static.experiments.qec_noise_catalog.data_preparation_teacher:main"
-    assert scripts["teacher-distinguishment"] == "scope_static.experiments.qec_noise_catalog.teacher_distinguishment:main"
-    assert scripts["learner-acceptance"] == "scope_static.experiments.qec_noise_catalog.learner_acceptance:main"
+    assert "teacher-distinguishment" not in scripts
+    assert "learner-acceptance" not in scripts
     assert scripts["scope-stage3a-freeze"] == "scope_static.experiments.stage3.protocol_freeze:main"
     assert scripts["scope-stage3a5-ceiling"] == "scope_static.experiments.stage3.observability_ceiling:main"
     assert scripts["scope-stage3b0-baselines"] == "scope_static.experiments.stage3.baselines:main"

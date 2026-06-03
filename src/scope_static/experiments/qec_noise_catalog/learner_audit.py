@@ -54,7 +54,7 @@ def run_phyc3c_validation_from_config(
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Run PHYC3c robustness, non-leakage, and protocol validation.")
-    parser.add_argument("--config", type=Path, default=Path("configs/archive/stage2_teacher_learner/phyc3c_validation_robustness.yaml"))
+    parser.add_argument("--config", type=Path)
     parser.add_argument("--teacher-dir", type=Path)
     parser.add_argument("--output-dir", type=Path)
     args = parser.parse_args(argv)

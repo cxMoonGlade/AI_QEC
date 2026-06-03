@@ -29,7 +29,7 @@ Recommendation: build a unified `google_dataset_inventory` and `label_manifest` 
 
 ## Historical Scorecard Diagnosis
 
-The archived Google X/Z scorecard should be treated as a smoke benchmark, not
+The superseded Google X/Z scorecard should be treated as a smoke benchmark, not
 as the primary benchmark for SCOPE-level advantage over dMLE. The current
 Google mainline is the real-data adapter that writes S3 frozen visible surface
 artifacts.
@@ -48,7 +48,7 @@ with units:
 nats_per_window, equal-window averaged
 ```
 
-In the archived 24-context Set1 run, the actual evaluation windows were very
+In the superseded 24-context Set1 run, the actual evaluation windows were very
 shallow:
 
 ```text
@@ -65,21 +65,21 @@ evidence that all models have the same generated-noise quality.
 
 Evidence:
 
-- the archived Google DEM-proxy runner defined the excess metric as model
+- the superseded Google DEM-proxy runner defined the excess metric as model
   window NLL minus empirical window entropy.
 - `src/scope_static/dem/metrics.py` records the same definition in flattened
   metric fields.
 - The completed 24-context run recorded only size-1 and size-2 effective
   evaluation windows.
 
-### Question 2: Did the archived preprocessing expose the right Google-data structure?
+### Question 2: Did the superseded preprocessing expose the right Google-data structure?
 
-Answer: not yet. The archived preprocessing was useful for checking that the DEM
+Answer: not yet. The superseded preprocessing was useful for checking that the DEM
 pipeline, upstream dMLE adapter, and same-context heldout likelihood evaluation
 work. It does not yet expose the richest Google-data structure to the model or
 to the primary metric.
 
-The archived scorecard mostly reduced each Google leaf to:
+The superseded scorecard mostly reduced each Google leaf to:
 
 ```text
 same-context train shots
@@ -101,7 +101,7 @@ boundary / bulk / chain / region effects
 high-order syndrome correlations
 ```
 
-This means that the archived scorecard can show whether SCOPE-style models can
+This means that the superseded scorecard can show whether SCOPE-style models can
 match dMLE on a narrow same-leaf task, but it cannot establish exponential or
 structural advantage over dMLE.
 

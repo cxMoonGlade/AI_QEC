@@ -135,6 +135,33 @@ def test_stage5b1_contract_breakdown_separates_location_strength_from_dimension(
     assert breakdown["dimension_failed_labels"] == ["M13"]
 
 
+def test_stage5b1_contract_breakdown_keeps_legacy_scalar_effect_diagnostic() -> None:
+    breakdown = stage5b1_contract_breakdown_audit(
+        family={"passed": True},
+        s5={
+            "effect_recovery_metrics": {"passed": False},
+            "contract_typed_recovery_metrics": {
+                "passed": True,
+                "family_failed_labels": [],
+                "atomic_flat_exact_failed_labels": [],
+            },
+            "mechanism_dimension_recovery_audit": {
+                "passed": True,
+                "recovery_passed_excluding_not_evaluable": True,
+                "targets": [],
+            },
+        },
+        location={"passed": True, "failed_labels": []},
+        strength={"passed": True, "failed_labels": []},
+        targeted={"passed": True, "location_strength_passed": True, "rows": {}},
+    )
+
+    assert breakdown["s5b1_legacy_scalar_effect_passed"] is False
+    assert breakdown["s5b1_location_strength_passed"] is True
+    assert breakdown["s5b1_property_without_dimension_passed"] is True
+    assert breakdown["s5b1_contract_passed"] is True
+
+
 def test_stage5b1_acceptance_reports_soft_family_separately_from_pass() -> None:
     acceptance = stage5b1_acceptance_audit(
         s3a_metrics={"acceptance_audit": {"passed": True}},

@@ -70,16 +70,6 @@ def toolbox_manifest() -> dict[str, object]:
                 "module": "scope_static.experiments.qec_noise_catalog.data_preparation_teacher",
             },
             {
-                "name": "teacher-distinguishment",
-                "role": "Run teacher self-distinguishment.",
-                "module": "scope_static.experiments.qec_noise_catalog.teacher_distinguishment",
-            },
-            {
-                "name": "learner-acceptance",
-                "role": "Run canonical learner/noise-generation acceptance.",
-                "module": "scope_static.experiments.qec_noise_catalog.learner_acceptance",
-            },
-            {
                 "name": "scope-stage3a-freeze",
                 "role": "Freeze the Stage 3A learner-visible dataset and protocol artifacts.",
                 "module": "scope_static.experiments.stage3.protocol_freeze",
