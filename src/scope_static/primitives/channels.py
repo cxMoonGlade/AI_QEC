@@ -8,6 +8,7 @@ import numpy as np
 
 from ..numerics import NUMERICAL_ZERO, positive_floor, probability_floor
 from scope_static.primitives.mechanism_catalog import READOUT_MECHANISM_IDS
+from scope_static.primitives.mechanism_catalog import mechanism_label_namespace, mechanism_public_label
 
 
 Array = np.ndarray
@@ -35,7 +36,12 @@ class MechanismSpec:
     probe_indices: tuple[int, ...] = ()
 
     def audit_dict(self) -> dict[str, object]:
+        public_label = mechanism_public_label(self.mechanism_id)
+        label_namespace = mechanism_label_namespace(self.mechanism_id)
         return {
+            "legacy_catalog_id": self.mechanism_id,
+            "public_label": public_label,
+            "label_namespace": label_namespace,
             "mechanism_id": self.mechanism_id,
             "name": self.name,
             "num_qubits": int(self.num_qubits),
@@ -128,6 +134,23 @@ def mechanism_definition_contract(spec: MechanismSpec) -> dict[str, object]:
             "distinct_from_axis_overrotation": bool(channel_axis != operation_axis),
             "well_defined": bool(channel_axis != operation_axis),
         }
+    if spec.mechanism_id == "M11":
+        carrier = "rzz_unitary" if int(spec.num_qubits) == 2 else "rz_unitary"
+        return {
+            "mechanism_id": "M11",
+            "formal_name": "spectator_crosstalk_overlay",
+            "definition": "non-flat spectator overlay represented scientifically as base_mechanism plus spectator_overlay metadata",
+            "contract_role": "overlay_family",
+            "overlay_family": "spectator_crosstalk",
+            "sampling_surrogate": {
+                "carrier_channel": carrier,
+                "claims_exact_physical_overlay_channel": False,
+                "claims_standalone_flat_mechanism": False,
+            },
+            "leaf_exact_effect_supported": False,
+            "primary_flat_cluster_target": False,
+            "well_defined": True,
+        }
     return {
         "mechanism_id": str(spec.mechanism_id),
         "formal_name": str(spec.name),
@@ -181,8 +204,8 @@ def mechanism_channel(spec: MechanismSpec) -> dict[str, object]:
         }
     if mech == "M11":
         if int(spec.num_qubits) == 2:
-            return {"kind": "unitary", "unitary": rzz_unitary(float(params.get("epsilon", 0.02)))}
-        return {"kind": "unitary", "unitary": rz_unitary(float(params.get("epsilon", 0.02)))}
+            return {"kind": "unitary", "unitary": rzz_unitary(float(params.get("epsilon", 0.02))), "definition_contract": mechanism_definition_contract(spec)}
+        return {"kind": "unitary", "unitary": rz_unitary(float(params.get("epsilon", 0.02))), "definition_contract": mechanism_definition_contract(spec)}
     if mech == "M12":
         return {"kind": "kraus", "kraus": correlated_relaxation_kraus(float(params.get("gamma", 0.01)))}
     if mech == "M13":

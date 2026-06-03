@@ -16,9 +16,9 @@ robustness closeout gates live in `docs/STAGE4_ROADMAP.md`.
 
 ## 边界条件与成功准则
 
-仓库已经反复定义了 S4 不能越过的边界。第一，Google 数据没有真值 hidden mechanism partition，也没有 `M0/M1/...` 这类 per-shot physical mechanism 标签，所以 Google 上不能宣称“真实机制恢复”；能宣称的是 no-oracle replay、transfer、calibration、decoder-facing utility 的改善。第二，learner path 只能使用 approved visible surface 与 public metadata，不能触碰 hidden/oracle-only 字段。第三，Stage 4 仍然是 visible-observation discovery stage，除非你把 latent 真正接到 `PhysDec_t` 与 circuit-level observation distribution 上，否则它不是完整的 CPTP/GKSL digital twin。
+仓库已经反复定义了 S4 不能越过的边界。第一，Google 数据没有真值 hidden mechanism partition，也没有 public F/M label 或 legacy catalog ID 这类 per-shot physical mechanism 标签，所以 Google 上不能宣称“真实机制恢复”；能宣称的是 no-oracle replay、transfer、calibration、decoder-facing utility 的改善。第二，learner path 只能使用 approved visible surface 与 public metadata，不能触碰 hidden/oracle-only 字段。第三，Stage 4 仍然是 visible-observation discovery stage，除非你把 latent 真正接到 `PhysDec_t` 与 circuit-level observation distribution 上，否则它不是完整的 CPTP/GKSL digital twin。
 
-在 Google V2 现有 surface 上，允许学习器看到的是经验 detector marginal、observable flip、公开 detector geometry summary、公开 round/region 指示、经验 detector-detector covariance、经验 temporal covariance、经验 detector-logical coupling、以及 finite-shot/cross-replicate stability summary；而 `context_id`/`path`/`sample_id` one-hot、decoder correctness target、catalog M label、true hidden mechanism label、oracle PTM/Kraus/channel 都被显式列为 forbidden。公开上下文字段则包括 `dataset_family`、`basis`、`distance`、`rounds`、`round_band`、`region_family`、`patch_public_geometry_class` 等。这意味着 S4 的 context-conditioned prior 可以合法使用这些 public context，但不能把它们扩展成 surrogate identity shortcut。
+在 Google V2 现有 surface 上，允许学习器看到的是经验 detector marginal、observable flip、公开 detector geometry summary、公开 round/region 指示、经验 detector-detector covariance、经验 temporal covariance、detector-logical coupling、以及 finite-shot/cross-replicate stability summary；而 `context_id`/`path`/`sample_id` one-hot、decoder correctness target、public F/M mechanism label、legacy catalog ID、true hidden mechanism label、oracle PTM/Kraus/channel 都被显式列为 forbidden。公开上下文字段则包括 `dataset_family`、`basis`、`distance`、`rounds`、`round_band`、`region_family`、`patch_public_geometry_class` 等。这意味着 S4 的 context-conditioned prior 可以合法使用这些 public context，但不能把它们扩展成 surrogate identity shortcut。
 
 S4 的成功不应只定义成“loss 下降”，而应同时对齐 Stage 3 的控制实验逻辑与 SCOPE-Twin 的六轴目标。SCOPE-Twin 明确把长期科学上限定义为 generation fidelity、interpretability、decoder utility、cross-context generalization、drift prediction 与 identifiability 六轴同时成立；在此之前，S4 至少要为其中的 generation fidelity、interpretability、cross-context generalization 与 identifiability 提供更强证据，并在 Google 上用强标签或 proxy label 做 evaluator-only 的 decoder utility 检查。
 
@@ -115,7 +115,7 @@ SCOPE-Twin 的长期目标是从 context 直接映射到物理参数场 \(\Theta
 
 ```mermaid
 flowchart TD
-    A[M0-M34 catalog<br/>weighted_realistic_v1 / discovery_floor_v1] --> B[Synthetic Google-shaped context sampler]
+    A[legacy M0-M34 catalog + public F/M labels<br/>weighted_realistic_v1 / discovery_floor_v1] --> B[Synthetic Google-shaped context sampler]
     B --> C[measurements / detection_events / obs_flips_actual<br/>+ public geometry memberships]
     C --> D[synthetic cache_v2 writer]
     D --> E[synthetic aggregate_v2]
@@ -127,9 +127,9 @@ flowchart TD
     J --> K[no-oracle replay / transfer / proxy utility evaluation]
 ```
 
-### 从 M0–M34 catalog 到 Google-shaped visible surface
+### 从 legacy M0–M34 catalog 到 Google-shaped visible surface
 
-`error_mechanisms.md` 现在已经把 M0–M34 catalog 与 set_A / set_B / set_C / set_D 划分写清楚了，而且 Born-local 当前支持 M0–M10、M12–M34，不支持 M11 spectator crosstalk；另外还提供了 `weighted_realistic_v1` 与 `weighted_discovery_floor_v1` 两个加权 profile。基于这些现状，我建议桥接面按三档推进：**MVP 先做 set_B 的 supported 子集**，随后扩到 set_C，再扩 set_D。也就是说，第一版 source pretrain 不要把 M11 强行塞进去；那会把 bridge 的失败风险和机制契约未完成问题混在一起。
+`error_mechanisms.md` 现在已经把 legacy M0–M34 catalog、public F/M label mapping 与 set_A / set_B / set_C / set_D 划分写清楚了，而且 Born-local 当前支持 legacy M0–M10、M12–M34，不支持 legacy M11 / public M6 spectator crosstalk；另外还提供了 `weighted_realistic_v1` 与 `weighted_discovery_floor_v1` 两个加权 profile。基于这些现状，我建议桥接面按三档推进：**MVP 先做 set_B 的 supported 子集**，随后扩到 set_C，再扩 set_D。也就是说，第一版 source pretrain 不要把 legacy M11 / public M6 强行塞进去；那会把 bridge 的失败风险和机制契约未完成问题混在一起。
 
 桥接面的 context sampler 应该显式采样下列公开上下文轴：`basis`、`distance`、`rounds`、`round_band`、`region_family`、`patch_public_geometry_class`，并让 synthetic contexts 产出和 Google cache v2 一样的公开几何结构：coords、boundary detector 集合、logical support detector 集合、round-band memberships、region-family memberships。由于 Google cache/aggregate 代码就是围绕这些字段组织单位行与 public_fields 的，因此 synthetic source 只要把这些公共成员关系写成同 schema，就能复用后续 surface builder。
 
@@ -143,14 +143,14 @@ flowchart TD
 4. adapter 阶段写出标准 `S3A_protocol_freeze` 包；
 5. S4 只吃这个 freeze 包，不回头读取 teacher labels。
 
-这里最重要的一点是：Google V2 允许的可见 feature block 已经被仓库写死为经验 marginal、空间相关、时间相关、detector-logical coupling、stability 与 public geometry；bridge 不能为了 source-pretrain 提升而偷偷加入“机制名 embedding”或 oracle channel summary。source synthetic 里当然存在 exact `M*` labels，但它们应当被放进 **evaluator-only artifacts**，而不是 learner input。
+这里最重要的一点是：Google V2 允许的可见 feature block 已经被仓库写死为经验 marginal、空间相关、时间相关、detector-logical coupling、stability 与 public geometry；bridge 不能为了 source-pretrain 提升而偷偷加入“机制名 embedding”或 oracle channel summary。source synthetic 里当然存在 legacy exact IDs 和 public F/M labels，但它们应当被放进 **evaluator-only artifacts**，而不是 learner input。
 
 在任何 S4 neural training 开始前，bridge surface 必须先通过一个硬门槛：
 
 - `visible_feature_schema.json` 的 block 名称、block 顺序、dtype、维度和 normalization policy 与 Google V2 freeze 可比；
 - `visible_features.npy`、`split_manifest.json`、`forbidden_feature_audit.json`、`adequacy_report.json` 和 `metrics.json` 全部存在；
 - synthetic freeze 写出 schema hash、source config hash、teacher config hash 和 public context schema hash；
-- learner-safe manifest 不含 exact `M*`、mechanism family、oracle PTM/Kraus/channel、sample/path/context surrogate ID；
+- learner-safe manifest 不含 public F/M label、legacy catalog ID、mechanism family、oracle PTM/Kraus/channel、sample/path/context surrogate ID；
 - evaluator-only 标签单独落在 `source_evaluator_labels.json`，并有 loader 层面的 no-leakage audit；
 - 如果 schema/hash 或 forbidden-feature audit 不通过，本阶段直接失败，不进入 source pretrain。
 
@@ -161,7 +161,7 @@ flowchart TD
 我建议 synthetic bridge 产出两层标签：
 
 - **learner-visible / proxy-visible**：support size bucket、boundary/bulk、detector degree bucket、round-layer bucket、logical-support overlap bucket、fault-graph community、source detector-rate quantile；
-- **evaluator-only**：exact `M*`、mechanism family、mechanism set、quotient alias class、teacher config hash。
+- **evaluator-only**：legacy exact ID、public F/M label、mechanism family、mechanism set、quotient alias class、teacher config hash。
 
 这样做有两个好处。第一，source pretrain 可以用 learner-visible proxies 做弱辅助，而不破坏 no-oracle 边界。第二，Google target 端可以用同名 proxy 结构做对齐与评估，方便计算“catalog→Google 结构保留性”，而不必在 target 端发明新的标签体系。
 

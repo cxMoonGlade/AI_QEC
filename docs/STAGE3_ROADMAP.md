@@ -56,24 +56,35 @@ Stage 3 starts from the accepted learner visible surface:
 - X-prepared states for phase/coherence observability;
 - no Y-basis preparation;
 - no Y-basis measurement;
-- multi-context batches for drifted mechanisms such as M13;
+- multi-context batches for drifted mechanisms such as legacy M13 / public M7;
 - raw time-sequence features retained before derived summaries;
 - learner-visible operation/instruction context metadata from a fixed public
   instruction alphabet. This is circuit context, not a mechanism label or
   mechanism-instance surrogate ID.
 
-M13 is not a single-context mechanism-recovery target. It is a
-context-dependent latent-drift recovery target. Single-context failure is not a
-Stage 3 failure by itself; multi-context recovery is the intended test.
-When an overcomplete discovery model splits M13 into pure context/drift
+Legacy M13 / public M7 is not a single-context mechanism-recovery target. It is
+a context-dependent latent-drift recovery target. Single-context failure is not
+a Stage 3 failure by itself; multi-context recovery is the intended test.
+When an overcomplete discovery model splits legacy M13 / public M7 into pure
+context/drift
 submodes, exact one-cluster label recall may be low even though the mechanism
-family is not confused with other mechanisms. Reports must distinguish exact
-label recall from evaluator-only M13 pure-submode recall.
+family is not confused with other mechanisms. Reports must distinguish legacy
+exact-ID recall from evaluator-only drift-submode recall.
 
-M14 is the paired operation-dependent control target. Its contract separates
-the visible operation axis from the error-generator axis: the first Stage 3
-catalog uses an `rx` operation site with an `rz` coherent error generator, so
-M14 is not another fixed `rx` overrotation.
+Legacy M14 / public M8 is the paired operation-dependent control target. Its
+contract separates the visible operation axis from the error-generator axis:
+the first Stage 3 catalog uses an `rx` operation site with an `rz` coherent
+error generator, so it is not another fixed `rx` overrotation.
+
+The broader catalog is contract-typed in
+`scope_static.primitives.mechanism_catalog.MECHANISM_CONTRACTS`. Historical
+`M0`-`M34` values are `legacy_catalog_id` fields. Public semantic labels use
+`F0`-`Fn` for flat atomic targets and `M0`-`Mn` for non-flat
+family/dimension targets. Legacy exact-ID metrics remain useful evaluator-only
+diagnostics, but primary flat-cluster claims are allowed only for public `F*`
+labels whose legacy contracts have `primary_flat_cluster_target=true`.
+Aggregate, context-conditioned, operation-conditioned, mixture, surrogate, and
+overlay roles must be interpreted as family-plus-dimension recovery targets.
 
 Allowed learner inputs:
 
@@ -169,7 +180,8 @@ Deliverables:
 Acceptance:
 
 - exact-label Stage 3 claims are allowed only when the visible ceiling separates
-  the mechanisms;
+  the mechanisms and the mechanism contract allows a primary flat-cluster
+  target;
 - otherwise the target is quotient recovery, not exact mechanism recovery;
 - alias classes are fixed before model training and treated as evaluator-only
   ceiling information.
@@ -283,7 +295,8 @@ Artifacts:
 
 Later candidates:
 
-- contrastive context-consistency objective for M13/multi-context drift;
+- contrastive context-consistency objective for legacy M13 / public M7
+  multi-context drift;
 - local-inverse representation clustering.
 
 Acceptance:
@@ -305,9 +318,23 @@ This is not an unconditional future-context prediction claim.
 
 For controlled-catalog runs, Stage 3C also emits the current S5 interpretation
 artifact, `s5_context_relative_mechanism_effect_audit.json`. S5 is a separate
-effect-audit claim layer: it reports evaluator-only context-relative action
-location and context-normalized visible strength after fitting, and does not
-feed training or model selection.
+effect-audit claim layer: it reports evaluator-only context-conditioned
+error likelihood over context-relative cells and context-normalized visible
+strength after fitting, compares predicted effects against oracle evaluator
+effects on controlled teachers, and does not feed training or model selection.
+S5 "location" is therefore a likelihood/support claim conditioned on
+public/probe context, not absolute physical-coordinate recovery.
+Controlled S5 teachers must not make `context_id`, context-relative location,
+and mechanism strength the same hidden variable; context is the way to discover
+mechanism properties, not a property to balance as if real data were context
+balanced.
+Legacy `M11` / public `M6` spectator crosstalk is treated as a base-mechanism
+plus spectator-overlay family in S5, not as a required flat exact cluster.
+Stage 3C/S5 also writes `mechanism_taxonomy_contract_audit.json` and
+`mechanism_dimension_recovery_audit.json`. Acceptance uses
+`contract_typed_recovery_metrics`: public `F*` atomic flat targets require
+exact recovery, public `M*` non-flat targets require family/dimension recovery,
+and legacy M11/public M6 requires overlay signature recovery when present.
 
 Metrics:
 
@@ -367,7 +394,7 @@ Implementation order:
 4. `S3D.4` K undercomplete/exact/overcomplete stress;
 5. `S3D.5` finite-shot sensitivity;
 6. `S3D.6` seed/fold stability;
-7. `S3D.7` M13/M14 targeted robustness;
+7. `S3D.7` legacy M13/public M7 and legacy M14/public M8 targeted robustness;
 8. `S3D.8` covariance-floor / likelihood-degeneracy audit.
 
 The first control is the assignment-shuffle generator audit:
@@ -497,7 +524,8 @@ Purpose:
 Acceptance:
 
 - accepted result survives seed/fold changes;
-- M13 is only expected to be fully recoverable in multi-context mode;
+- legacy M13 / public M7 is only expected to be fully recoverable in
+  multi-context mode;
 - observational aliases are reported as quotient classes, not forced labels;
 - S3D.1 passes before S3C replay is described as assignment-structure
   dependent;

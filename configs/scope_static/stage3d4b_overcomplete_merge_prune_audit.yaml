@@ -8,6 +8,7 @@ stage3d4b_overcomplete_merge_prune_audit:
   max_microcluster_support: 3
   max_microcluster_fraction: 0.01
   min_microcluster_family_count: 2
+  context_residual_profile_veto_threshold: 0.75
   max_cv_folds: 5
   variance_floor: 1.0e-6
   min_postmerge_nmi: 0.99

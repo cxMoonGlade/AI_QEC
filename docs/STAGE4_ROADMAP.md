@@ -37,10 +37,11 @@ mechanism labels, quotient labels, channels, PTMs, Kraus matrices, oracle
 prototypes, teacher IDs, path/sample/context surrogate IDs, and decoder
 correctness fields must not enter training or model selection.
 
-Google V2 has no ground-truth `M*` mechanism labels. S4 may claim improved
-no-oracle replay of public Google syndrome-response structure and audited
-source-to-Google prototype transfer. It must not claim true Google physical
-mechanism recovery or Google `M*` label recovery.
+Google V2 has no ground-truth public F/M mechanism labels or legacy catalog
+IDs. S4 may claim improved no-oracle replay of public Google
+syndrome-response structure and audited source-to-Google prototype transfer. It
+must not claim true Google physical mechanism recovery, Google public F/M label
+recovery, or Google legacy catalog-ID recovery.
 
 ## Milestone Gates
 
@@ -363,4 +364,5 @@ files.
 - S4.2 shows that frozen source structure transfers to Google V2 better than
   random-codebook, train-on-Google-only, and global-null controls.
 - `claim_boundary.json` and the final report never state true Google physical
-  mechanism recovery or Google `M*` label recovery.
+  mechanism recovery, Google public F/M label recovery, or Google legacy
+  catalog-ID recovery.

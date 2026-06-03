@@ -18,7 +18,15 @@ from .targeted_v3 import RZZ_FAMILY
 
 
 BRANCH_NAMES = ("gate_process_branch", "readout_branch", "prep_reset_branch")
-FORBIDDEN_FEATURE_TOKENS = ("oracle_label", "mechanism_id", "exact_ptm", "teacher_channel", "oracle_fingerprint")
+FORBIDDEN_FEATURE_TOKENS = (
+    "oracle_label",
+    "mechanism_id",
+    "public_label",
+    "legacy_catalog_id",
+    "exact_ptm",
+    "teacher_channel",
+    "oracle_fingerprint",
+)
 M5_TAU = 0.10
 LOCATION_FEATURES = ("location_qubit_mean", "location_span", "chain_position", "neighbor_rzz_count", "branch_gate", "branch_readout", "branch_prep_reset")
 READOUT_FEATURES = (

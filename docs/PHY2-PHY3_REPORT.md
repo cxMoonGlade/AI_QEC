@@ -2,7 +2,8 @@
 
 > 术语注记：本文是机制重编号之前的历史分析报告，保留旧编号用于
 > 解释当时的实验结果。当前代码使用 `docs/error_mechanisms.md` 中的
-> M0-M34 分类；当前 RZZ-family 是 M8/M9/M10/M12，readout 是
+> legacy M0-M34 implementation IDs，并另有 public F/M semantic labels；
+> 当前 RZZ-family legacy IDs 是 M8/M9/M10/M12，readout legacy IDs 是
 > M1/M2/M3/M16。
 
 ## 执行摘要

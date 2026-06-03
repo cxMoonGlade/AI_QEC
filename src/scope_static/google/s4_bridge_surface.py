@@ -25,6 +25,7 @@ from scope_static.google.s3_visible_surface_v2 import (
     _signature_feature_row,
     forbidden_feature_audit_google_v2,
 )
+from scope_static.primitives.mechanism_catalog import mechanism_label_namespace, mechanism_public_label
 
 
 STAGE_NAME = "Stage4_0_synthetic_google_shaped_bridge_freeze"
@@ -473,6 +474,8 @@ def _append_projected_row(
 ) -> None:
     j = int(len(rows))
     row = np.asarray(feature_row, dtype=np.float64)
+    public_label = _record_public_label(record, fallback=label)
+    label_namespace = _record_label_namespace(record, fallback=label)
     rows.append(row)
     sampled_rows.append(row.copy())
     replicate_rows_by_unit.append(np.asarray(replicate_rows, dtype=np.float64))
@@ -497,6 +500,9 @@ def _append_projected_row(
         {
             "j": j,
             "exact_mechanism_label": label,
+            "legacy_catalog_id": str(record.get("legacy_catalog_id", record.get("mechanism_id", label))),
+            "public_label": public_label,
+            "label_namespace": label_namespace,
             "quotient_label": quotient,
             "alias_label": quotient,
             "mechanism_family": str(record.get("name", record.get("mechanism_family", label))),
@@ -505,6 +511,24 @@ def _append_projected_row(
             "source_record_index": int(source_idx),
         }
     )
+
+
+def _record_public_label(record: Mapping[str, object], *, fallback: str) -> str:
+    if "public_label" in record:
+        return str(record["public_label"])
+    try:
+        return mechanism_public_label(str(record.get("legacy_catalog_id", record.get("mechanism_id", fallback))))
+    except KeyError:
+        return str(fallback)
+
+
+def _record_label_namespace(record: Mapping[str, object], *, fallback: str) -> str:
+    if "label_namespace" in record:
+        return str(record["label_namespace"])
+    try:
+        return mechanism_label_namespace(str(record.get("legacy_catalog_id", record.get("mechanism_id", fallback))))
+    except KeyError:
+        return "legacy_unknown"
 
 
 def _public_context_specs(
@@ -792,7 +816,15 @@ def _indices_for_groups(rows: list[dict[str, object]], groups: Iterable[int]) ->
 
 def _source_label_manifest() -> dict[str, object]:
     fields = [
-        ("exact_mechanism_label", "evaluator_only", "posthoc_eval", "Controlled-catalog M label; never learner-visible."),
+        (
+            "exact_mechanism_label",
+            "evaluator_only",
+            "posthoc_eval",
+            "Compatibility exact label from legacy catalog IDs; never learner-visible.",
+        ),
+        ("public_label", "evaluator_only", "posthoc_eval", "Canonical F/M mechanism label; never learner-visible."),
+        ("legacy_catalog_id", "evaluator_only", "posthoc_eval", "Implementation-stable legacy catalog ID; never learner-visible."),
+        ("label_namespace", "evaluator_only", "posthoc_eval", "flat or non_flat public-label namespace; never learner-visible."),
         ("quotient_label", "evaluator_only", "posthoc_eval", "Observable quotient or alias class label for ceiling audits."),
         ("alias_label", "evaluator_only", "posthoc_eval", "Alias class used to report projection collapse."),
         ("mechanism_family", "evaluator_only", "posthoc_eval", "Mechanism taxonomy for audit summaries only."),
@@ -814,6 +846,7 @@ def _source_label_manifest() -> dict[str, object]:
 
 def _source_evaluator_labels(records: list[dict[str, object]]) -> dict[str, object]:
     exact = [str(row["exact_mechanism_label"]) for row in records]
+    public = [str(row.get("public_label", row["exact_mechanism_label"])) for row in records]
     quotient = [str(row["quotient_label"]) for row in records]
     return {
         "schema": "scope_static_stage4_source_evaluator_labels_v1",
@@ -822,8 +855,10 @@ def _source_evaluator_labels(records: list[dict[str, object]]) -> dict[str, obje
         "used_for_validation_selection": False,
         "records": records,
         "exact_mechanism_labels": exact,
+        "public_labels": public,
         "quotient_labels": quotient,
         "exact_class_names": sorted(set(exact), key=_mechanism_sort_key),
+        "public_class_names": sorted(set(public), key=_mechanism_sort_key),
         "quotient_class_names": sorted(set(quotient), key=_mechanism_sort_key),
     }
 
@@ -890,7 +925,15 @@ def _batch_context_schema(row_count: int) -> dict[str, object]:
         },
         "learner_visible_fields": ["raw__*", "meta__public_geometry__*"],
         "protocol_only_fields": ["j", "fold", "train_validation_test_split", "public_fields", "unit_id_internal_only"],
-        "evaluator_only_fields": ["exact_mechanism_label", "quotient_label", "alias_label", "mechanism_family"],
+        "evaluator_only_fields": [
+            "exact_mechanism_label",
+            "legacy_catalog_id",
+            "public_label",
+            "label_namespace",
+            "quotient_label",
+            "alias_label",
+            "mechanism_family",
+        ],
         "forbidden_learner_fields": ["source_record_index", "teacher_id", "path", "sample_id", "oracle_channel_ptm_kraus"],
     }
 
@@ -940,6 +983,8 @@ def _finite(matrix: np.ndarray) -> np.ndarray:
 
 def _mechanism_sort_key(label: str) -> tuple[int, str]:
     text = str(label)
-    if text.startswith("M") and text[1:].isdigit():
+    if text.startswith("F") and text[1:].isdigit():
         return (int(text[1:]), text)
-    return (10_000, text)
+    if text.startswith("M") and text[1:].isdigit():
+        return (10_000 + int(text[1:]), text)
+    return (20_000, text)

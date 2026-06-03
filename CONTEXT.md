@@ -31,9 +31,12 @@ This repository is currently centered on the SCOPE family of QEC noise-learning 
 - **Data Preparation (Prep)**: generates mechanism-catalog records, probe schedules, sampled observations, teacher config, sampling audits, and active probe manifests. Legacy alias: `PHYC1`.
 - **Teacher Self-Distinguishment (Teacher)**: asks whether the declared teacher/catalog can distinguish every generated mechanism from teacher-internal mechanism evidence. A pass establishes teacher/catalog identifiability; it is not a no-leakage learner claim. Legacy alias: `PHYC2`.
 - **Learner Classification and Noise Generation (Learner)**: consumes learner-visible observations to classify mechanisms and score generated noise/error quality with channel-distance, NLL, and MAE diagnostics. It must not consume teacher-self predictions or hidden/oracle feature inputs. Legacy alias: `PHYC3`.
+- **Controlled-catalog mechanism labels**: legacy `M0`-`M34` IDs remain stable
+  implementation/provenance IDs. Public semantic labels use `F0`-`Fn` for flat
+  atomic targets and `M0`-`Mn` for non-flat family/dimension targets.
 - **Z/X visible repair**: the strict Y-free, Z/X-only visible probe surface that raises the deterministic visible ceiling before learner-head claims.
-- **Distributional Gaussian learner head**: the accepted multi-context learner head on Z/X visible features; it recovers drifted M13 only under a valid multi-context protocol.
-- **M13/M14 catalog distinction**: M13 is a context-varying coherent overrotation on its declared operation axis. M14 is operation-dependent error with a visible operation axis and a separate coherent error-generator axis; the first Stage 3 catalog default is `operation_axis=rx`, `error_axis=rz`.
+- **Distributional Gaussian learner head**: the accepted multi-context learner head on Z/X visible features; it recovers legacy M13 / public M7 only under a valid multi-context protocol.
+- **Legacy M13/M14 catalog distinction**: legacy M13 / public M7 is a context-varying coherent overrotation on its declared operation axis. Legacy M14 / public M8 is operation-dependent error with a visible operation axis and a separate coherent error-generator axis; the first Stage 3 catalog default is `operation_axis=rx`, `error_axis=rz`.
 - **2+1 public program surface**: the pre-release toolbox has two supported capabilities plus one active research object: generate teacher-declared noisy QEC observations from a controlled physical-mechanism catalog; learn from learner-visible observations and replay similar visible noisy observation distributions; and, as the "+1", discover the latent mechanism quotient through Stage 3 discovery.
 - **Stage 3 discovery**: learning a latent mechanism quotient from observations, not predicting a provided mechanism label. The learner receives only visible noisy observations and approved visible features; evaluator-only labels, channels, PTMs, Kraus matrices, teacher IDs, and oracle prototypes are withheld from the learner path.
 - **Observational alias class**: a quotient class for mechanisms that induce indistinguishable or near-indistinguishable visible distributions. If `p(y | m_a) ~= p(y | m_b)` on the declared visible surface, the correct discovery output is `m_a ~_obs m_b`, not an arbitrary forced split.
@@ -112,5 +115,5 @@ S4.6 may use Google visible data to design source modes only through the declare
 design split, then score transfer only on heldout Google rows. Its final claim
 boundary remains visible syndrome-response replay and source-to-Google visible
 structure transfer. It must not claim true Google physical mechanism recovery,
-Google `M*` label recovery, Born-rule physical generation, or CPTP/GKSL channel
-learning.
+Google public F/M label recovery, legacy catalog-ID recovery, Born-rule
+physical generation, or CPTP/GKSL channel learning.

@@ -26,7 +26,7 @@ DEFAULT_OUTPUT_DIR = Path("outputs/google_static/google_xz_scorecard")
 CLAIM_BOUNDARY = (
     "Google X/Z scorecard reports current-model predictive utility, compression, calibration, "
     "decoder-facing and DEM-proxy diagnostics only. Google datasets do not provide true per-shot "
-    "physical-mechanism labels, true hidden fault partitions, or catalog M-ID labels."
+    "physical-mechanism labels, true hidden fault partitions, public F/M labels, or legacy catalog-ID labels."
 )
 
 BASELINE_MODELS = {"dmle_qec", "dmle_qec_upstream", "global_shared_scalar"}

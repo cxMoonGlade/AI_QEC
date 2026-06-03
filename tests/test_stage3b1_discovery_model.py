@@ -39,6 +39,8 @@ def test_stage3b1_trains_visible_only_prototype_mixture_and_reports_quotient_met
     assert result["learner_input_mask_audit"]["learner_input_profile"] == "full"
     assert result["learner_input_mask_audit"]["training_matrix_for_assignment"] == "masked view of Stage 3A frozen visible_features.npy"
     assert result["learner_input_mask_audit"]["generation_target_matrix"] == "full Stage 3A frozen visible_features.npy"
+    assert result["visible_transform_audit"]["visible_transform"] == "raw"
+    assert result["visible_transform_audit"]["claim_allowed"] is True
     assert result["visible_feature_weighting"]["uses_visible_operation_context"] is True
     assert result["visible_feature_weighting"]["operation_context_weight"] == 2.0
     assert result["model_selection_audit"]["validation_visible_nll_used_for_selection"] is True
@@ -47,6 +49,8 @@ def test_stage3b1_trains_visible_only_prototype_mixture_and_reports_quotient_met
     assert result["assignment_hardening_audit"]["row_stochastic"] is True
     assert result["label_permutation_audit"]["cluster_label_matching_used_only_for_reporting"] is True
     assert result["context_dependent_mechanism_diagnostics"]["used_for_fit"] is False
+    assert result["shortcut_correlation_audit"]["used_for_fit"] is False
+    assert result["targeted_m6_m13_m18_m27_bleed_audit"]["used_for_model_selection"] is False
     assert result["learned_assignment_summary"]["row_stochastic"] is True
     assert result["learned_prototypes"]["prototype_count"] == result["learned_assignment_summary"]["selected_k"]
     assert result["acceptance_audit"]["checks"]["selected_model_chosen_by_visible_validation_objective"] is True
@@ -62,6 +66,7 @@ def test_stage3b1_trains_visible_only_prototype_mixture_and_reports_quotient_met
     for name in [
         "metrics.json",
         "candidate_selection.json",
+        "assignment_visible_features.npy",
         "learned_assignments.npy",
         "learned_covariances.npy",
         "model_parameters.npz",
@@ -77,8 +82,12 @@ def test_stage3b1_trains_visible_only_prototype_mixture_and_reports_quotient_met
         "acceptance_audit.json",
         "feature_schema_match_audit.json",
         "learner_input_mask_audit.json",
+        "visible_transform_audit.json",
         "visible_feature_matrix.json",
         "visible_feature_weighting.json",
+        "shortcut_correlation_audit.json",
+        "targeted_bleed_audit.json",
+        "targeted_m6_m13_m18_m27_bleed_audit.json",
         "summary.md",
     ]:
         assert (output / name).exists()
@@ -146,6 +155,67 @@ def test_stage3b1_config_wrapper_runs_from_yaml(tmp_path: Path) -> None:
 
     assert result["decision"] == "stage3b1_first_discovery_model_completed"
     assert (output / "learned_prototypes.json").exists()
+
+
+def test_stage3b1_public_context_residualized_transform_is_local_to_s3b1(tmp_path: Path) -> None:
+    _teacher, s3a, s3a5 = _prepare_artifacts(
+        tmp_path,
+        [
+            ("M0", "M0"),
+            ("M4", "M4"),
+            ("M8", "M8"),
+        ],
+    )
+    before = np.load(s3a / "visible_features.npy").copy()
+    output = tmp_path / "S3B1_residualized"
+
+    result = run_stage3b1_first_discovery_model(
+        stage3a_dir=s3a,
+        stage3a5_dir=s3a5,
+        output_dir=output,
+        max_iter=5,
+        visible_transform="public_context_residualized",
+    )
+
+    after = np.load(s3a / "visible_features.npy")
+    transformed = np.load(output / "assignment_visible_features.npy")
+    audit = result["visible_transform_audit"]
+    assert np.allclose(before, after)
+    assert transformed.shape[0] == before.shape[0]
+    assert audit["visible_transform"] == "public_context_residualized"
+    assert audit["claim_allowed"] is True
+    assert audit["uses_evaluator_records"] is False
+    assert audit["fit_audit"]["fit_train_fold_only"] is True
+    assert audit["writes_transformed_matrix_only_in_s3b1_output"] is True
+    assert result["claim_boundary"]["visible_transform_claim_allowed"] is True
+
+
+def test_stage3b1_oracle_nuisance_residualized_transform_is_diagnostic_only(tmp_path: Path) -> None:
+    _teacher, s3a, s3a5 = _prepare_artifacts(
+        tmp_path,
+        [
+            ("M6", "M6"),
+            ("M13", "M13"),
+        ],
+    )
+
+    result = run_stage3b1_first_discovery_model(
+        stage3a_dir=s3a,
+        stage3a5_dir=s3a5,
+        output_dir=tmp_path / "S3B1_oracle_residualized",
+        max_iter=5,
+        visible_transform="oracle_nuisance_residualized_diagnostic",
+    )
+
+    audit = result["visible_transform_audit"]
+    assert audit["visible_transform"] == "oracle_nuisance_residualized_diagnostic"
+    assert audit["claim_allowed"] is False
+    assert audit["diagnostic_only"] is True
+    assert audit["uses_evaluator_records"] is True
+    assert audit["uses_mechanism_labels"] is False
+    assert result["claim_boundary"]["visible_transform_claim_allowed"] is False
+    assert result["shortcut_correlation_audit"]["metrics"]["assignment_context_nmi"] >= 0.0
+    assert "M6" in result["targeted_m6_m13_m18_m27_bleed_audit"]["rows"]
 
 
 def test_stage3b1_context_balanced_candidate_tracks_one_instance_per_context() -> None:

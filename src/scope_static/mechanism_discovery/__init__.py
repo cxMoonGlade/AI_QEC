@@ -57,6 +57,10 @@ from .overcomplete_merge_prune_audit import (
     DEFAULT_OUTPUT_DIR as DEFAULT_STAGE3D4B_OUTPUT_DIR,
     run_stage3d4b_overcomplete_merge_prune_audit,
 )
+from .property_recovery import (
+    DEFAULT_OUTPUT_DIR as DEFAULT_STAGE5B1_OUTPUT_DIR,
+    run_stage5b1_property_recovery,
+)
 from .stage4_artifacts import (
     Stage4SourceLabels,
     Stage4SourceMixtureLabels,
@@ -103,6 +107,7 @@ __all__ = [
     "DEFAULT_STAGE3D3_OUTPUT_DIR",
     "DEFAULT_STAGE3D4_OUTPUT_DIR",
     "DEFAULT_STAGE3D4B_OUTPUT_DIR",
+    "DEFAULT_STAGE5B1_OUTPUT_DIR",
     "DEFAULT_STAGE4_GOOGLE_TRANSFER_OUTPUT_DIR",
     "DEFAULT_STAGE4_GOOGLE_UNIT_SOURCE_OUTPUT_DIR",
     "DEFAULT_STAGE4_ASSIGNMENT_GEOMETRY_OUTPUT_DIR",
@@ -136,6 +141,7 @@ __all__ = [
     "run_stage3d3_context_shuffle_audit",
     "run_stage3d4_k_stress_audit",
     "run_stage3d4b_overcomplete_merge_prune_audit",
+    "run_stage5b1_property_recovery",
     "run_stage4_google_transfer",
     "run_stage4_google_unit_source_expansion",
     "run_stage4_assignment_geometry_repair",

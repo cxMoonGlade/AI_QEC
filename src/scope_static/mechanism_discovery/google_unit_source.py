@@ -40,6 +40,7 @@ from scope_static.google.s4_bridge_surface import (
     _synthetic_detector_coords,
     _text_digest,
 )
+from scope_static.primitives.mechanism_catalog import mechanism_public_label
 
 from .artifacts import load_json_object, load_stage3a_frozen_visible_features
 from .google_transfer import _assign_to_source_centers
@@ -447,6 +448,7 @@ def _build_google_unit_matrix(
             bucket_records=bucket_records,
             bucket_weights=dict(mode_spec.get("bucket_weights", {})),
         )
+        public_label_weights = _public_label_weights_for_legacy(label_weights)
         mixed = _mixed_observations_for_weights(
             records=records,
             observations=observations,
@@ -515,6 +517,8 @@ def _build_google_unit_matrix(
                 "alias_label": str(mode_spec.get("alias_label", mode_spec.get("visible_mode_tag", dominant_family))),
                 "dominant_family": dominant_family,
                 "visible_mode_tag": str(mode_spec.get("visible_mode_tag", dominant_family)),
+                "mixture_weights_by_public_label": {key: float(value) for key, value in sorted(public_label_weights.items())},
+                "mixture_weights_by_legacy_catalog_id": {key: float(value) for key, value in sorted(label_weights.items())},
                 "mixture_weights_by_mechanism_label": {key: float(value) for key, value in sorted(label_weights.items())},
                 "mixture_weights_by_family_bucket": {
                     key: float(value) for key, value in sorted(dict(mode_spec.get("bucket_weights", {})).items())
@@ -1597,6 +1601,18 @@ def _mixture_label_weights(
     return {key: float(value / total) for key, value in sorted(weights.items())}
 
 
+def _public_label_weights_for_legacy(label_weights: Mapping[str, float]) -> dict[str, float]:
+    weights: dict[str, float] = defaultdict(float)
+    for label, weight in label_weights.items():
+        try:
+            public_label = mechanism_public_label(str(label))
+        except KeyError:
+            public_label = str(label)
+        weights[public_label] += float(weight)
+    total = sum(weights.values()) or 1.0
+    return {key: float(value / total) for key, value in sorted(weights.items())}
+
+
 def _dominant_family_from_bucket_weights(bucket_weights: Mapping[str, object]) -> str:
     if not bucket_weights:
         return "readout_spam"
@@ -1778,7 +1794,9 @@ def _source_mixture_label_manifest() -> dict[str, object]:
         ("assignment_unit", "evaluator_only", "posthoc_eval", "Declares the Google-unit source assignment contract."),
         ("google_row_index", "forbidden", "never", "Target row index is an identity surrogate."),
         ("mode_design_split", "evaluator_only", "posthoc_eval", "Split provenance for leakage audit."),
-        ("mixture_weights_by_mechanism_label", "evaluator_only", "posthoc_eval", "Catalog M mixture weights for audit only."),
+        ("mixture_weights_by_public_label", "evaluator_only", "posthoc_eval", "Canonical F/M mixture weights for audit only."),
+        ("mixture_weights_by_legacy_catalog_id", "evaluator_only", "posthoc_eval", "Legacy catalog-ID mixture weights for compatibility only."),
+        ("mixture_weights_by_mechanism_label", "evaluator_only", "posthoc_eval", "Compatibility alias for legacy catalog-ID mixture weights."),
         ("mixture_weights_by_family_bucket", "evaluator_only", "posthoc_eval", "Family mixture weights for audit only."),
         ("dominant_family", "evaluator_only", "posthoc_eval", "Mixture family summary for audit only."),
         ("visible_mode_tag", "evaluator_only", "posthoc_eval", "Visible mode class induced by design split only."),
@@ -1976,7 +1994,13 @@ def _batch_context_schema(*, row_count: int) -> dict[str, object]:
         },
         "learner_visible_fields": ["raw__*", "meta__public_geometry__*"],
         "protocol_only_fields": ["j", "fold", "train_validation_test_split", "public_fields", "unit_id_internal_only"],
-        "evaluator_only_fields": ["mixture_weights_by_mechanism_label", "dominant_family", "visible_mode_tag"],
+        "evaluator_only_fields": [
+            "mixture_weights_by_public_label",
+            "mixture_weights_by_legacy_catalog_id",
+            "mixture_weights_by_mechanism_label",
+            "dominant_family",
+            "visible_mode_tag",
+        ],
         "forbidden_learner_fields": ["google_row_index", "source_record_index", "teacher_id", "path", "sample_id", "oracle_channel_ptm_kraus"],
     }
 

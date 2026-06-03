@@ -1,0 +1,7 @@
+stage5b1_property_recovery:
+  name: Stage5B1_targeted_M6_M13_M18_M27
+  stage3a_dir: outputs/scope_static/PHYC_STAGE3_discovery/S3A_protocol_freeze
+  stage3a5_dir: outputs/scope_static/PHYC_STAGE3_discovery/S3A5_observability_alias_ceiling
+  stage3b1_dir: outputs/scope_static/PHYC_STAGE3_discovery/S3B1_public_context_residualized_discovery
+  output_dir: outputs/scope_static/PHYC_STAGE3_discovery/S5B1_targeted_M6_M13_M18_M27
+  assignment_source: s3b1_public_context_residualized
