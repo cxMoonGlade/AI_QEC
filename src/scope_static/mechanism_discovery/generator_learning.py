@@ -7,6 +7,14 @@ import numpy as np
 import yaml
 
 from scope_static.dem.metrics import adjusted_rand_index, normalized_mutual_info
+from scope_static.primitives.mechanism_catalog import NON_FLAT_PRIMARY_TARGET_IDS
+from scope_static.primitives.mechanism_catalog import PRIMARY_FLAT_CLUSTER_TARGET_IDS
+from scope_static.primitives.mechanism_catalog import NON_FLAT_PUBLIC_LABELS
+from scope_static.primitives.mechanism_catalog import PRIMARY_FLAT_PUBLIC_LABELS
+from scope_static.primitives.mechanism_catalog import mechanism_contract
+from scope_static.primitives.mechanism_catalog import mechanism_taxonomy_contract_audit
+from scope_static.primitives.overlay_contract import OVERLAY_CONTRACT_MISSING_REASON
+from scope_static.primitives.overlay_contract import overlay_contract_audit
 from scope_static.protocols import LEARNER_VALIDATION_STAGE
 from .artifacts import feature_schema_matches_stage3a as _feature_schema_matches_s3a
 from .artifacts import load_json_object as _load_json
@@ -61,6 +69,9 @@ def run_stage3c_prototype_generator_learning(
     evaluator_mode: str = EVALUATOR_MODE_CONTROLLED_CATALOG,
     assignment_shuffle_seeds: tuple[int, ...] | list[int] | None = DEFAULT_ASSIGNMENT_SHUFFLE_SEEDS,
     feature_scramble_seeds: tuple[int, ...] | list[int] | None = DEFAULT_FEATURE_SCRAMBLE_SEEDS,
+    stage3b1_residualized_dir: str | Path | None = None,
+    stage3d4b_dir: str | Path | None = None,
+    stage5b1_dir: str | Path | None = None,
 ) -> dict[str, object]:
     """Score heldout visible generation from learned Stage 3 assignments.
 
@@ -80,6 +91,9 @@ def run_stage3c_prototype_generator_learning(
     s3a_metrics = _load_json(s3a / "metrics.json")
     s3a5_metrics = _load_json(s3a5 / "metrics.json") if mode == EVALUATOR_MODE_CONTROLLED_CATALOG else _no_oracle_stage3a5_metrics()
     s3b1_metrics = _load_json(s3b1 / "metrics.json")
+    s3b1_residualized_metrics = _optional_json(None if stage3b1_residualized_dir is None else Path(stage3b1_residualized_dir) / "metrics.json")
+    s3d4b_metrics = _optional_json(None if stage3d4b_dir is None else Path(stage3d4b_dir) / "metrics.json")
+    stage5b1_metrics = _optional_json(None if stage5b1_dir is None else Path(stage5b1_dir) / "metrics.json")
     teacher = resolve_teacher_dir(s3a_metrics, teacher_dir) if mode == EVALUATOR_MODE_CONTROLLED_CATALOG else None
 
     x, feature_names, feature_matrix = load_stage3a_frozen_visible_features(s3a)
@@ -172,6 +186,7 @@ def run_stage3c_prototype_generator_learning(
         oracle = skipped_oracle_assignment_comparator(feature_names=feature_names, folds=folds)
         soft_family = skipped_soft_family_classification()
         strength_location = skipped_soft_family_strength_location_audit()
+    taxonomy_contract = mechanism_taxonomy_contract_audit()
 
     prototype_metrics = prototype_generation_metrics(
         predicted_assignment_metrics=predicted,
@@ -195,7 +210,15 @@ def run_stage3c_prototype_generator_learning(
         oracle_assignment_comparator_metrics=oracle,
         soft_family_classification_metrics=soft_family,
         soft_family_strength_location_audit=strength_location,
+        mechanism_taxonomy_contract_audit=taxonomy_contract,
         leakage_audit=leakage,
+        evaluator_mode=mode,
+    )
+    claim_gate = stage3c_claim_gate_audit(
+        s3b1_metrics=s3b1_metrics,
+        s3b1_residualized_metrics=s3b1_residualized_metrics,
+        stage3d4b_metrics=s3d4b_metrics,
+        stage5b1_metrics=stage5b1_metrics,
         evaluator_mode=mode,
     )
     result = {
@@ -224,6 +247,11 @@ def run_stage3c_prototype_generator_learning(
             "soft_family_strength_location_audit_skipped": mode == EVALUATOR_MODE_NO_ORACLE_LABELS,
             "s5_context_relative_mechanism_effect_audit_evaluator_only": mode == EVALUATOR_MODE_CONTROLLED_CATALOG,
             "s5_context_relative_mechanism_effect_audit_skipped": mode == EVALUATOR_MODE_NO_ORACLE_LABELS,
+            "claim_gate_allows_assignment_dependent_generator_claim": bool(claim_gate.get("claim_allowed", False)),
+            "diagnostic_only_until_s3b1_s5b1_gates_pass": not bool(claim_gate.get("claim_allowed", False)),
+            "mechanism_taxonomy_contract_audit_reported": True,
+            "mechanism_dimension_recovery_audit_evaluator_only": mode == EVALUATOR_MODE_CONTROLLED_CATALOG,
+            "mechanism_dimension_recovery_audit_skipped": mode == EVALUATOR_MODE_NO_ORACLE_LABELS,
             "claims_physical_parameter_recovery": False,
             "conditional_visible_replay_not_unconditional_future_prediction": True,
             "discovers_cptp_gksl_channels": False,
@@ -239,6 +267,9 @@ def run_stage3c_prototype_generator_learning(
             "evaluator_mode": mode,
             "assignment_shuffle_seeds": [int(seed) for seed in _audit_seed_list(assignment_shuffle_seeds)],
             "feature_scramble_seeds": [int(seed) for seed in _audit_seed_list(feature_scramble_seeds)],
+            "stage3b1_residualized_dir": None if stage3b1_residualized_dir is None else str(stage3b1_residualized_dir),
+            "stage3d4b_dir": None if stage3d4b_dir is None else str(stage3d4b_dir),
+            "stage5b1_dir": None if stage5b1_dir is None else str(stage5b1_dir),
         },
         "visible_feature_matrix": feature_matrix,
         "feature_schema_match_audit": feature_match,
@@ -250,12 +281,17 @@ def run_stage3c_prototype_generator_learning(
         "soft_family_classification_metrics": soft_family,
         "soft_family_strength_location_audit": strength_location,
         "s5_context_relative_mechanism_effect_audit": strength_location,
+        "mechanism_taxonomy_contract_audit": taxonomy_contract,
+        "mechanism_dimension_recovery_audit": strength_location.get("mechanism_dimension_recovery_audit", {}),
+        "overlay_contract_audit": strength_location.get("overlay_contract_audit", {}),
+        "overlay_recovery_audit": strength_location.get("overlay_recovery_audit", {}),
         "global_null_metrics": global_null,
         "stratified_null_metrics": stratified_null,
         "mean_only_baseline_metrics": mean_only,
         "assignment_shuffle_audit": shuffle_audit,
         "feature_scramble_audit": scramble_audit,
         "leakage_audit": leakage,
+        "claim_gate_audit": claim_gate,
         "acceptance_audit": acceptance,
         "decision": "stage3c_prototype_generator_learning_completed" if acceptance["passed"] else "stage3c_prototype_generator_learning_failed",
     }
@@ -1034,43 +1070,67 @@ def evaluate_soft_family_strength_location_audit(
         raise ValueError("soft family probability row count must match visible feature rows")
 
     relative_records = _records_with_context_relative_location(records)
+    overlay_contract = overlay_contract_audit(relative_records, fail_on_missing_overlay_payload=True)
     exact_labels = [str(record.get("oracle_label", record.get("mechanism_id", ""))) for record in records]
     per_family = {}
     for family_idx, family in enumerate(family_names):
-        hard_indices = [idx for idx, label in enumerate(true_family_labels) if label == family]
         weights = np.asarray(row_family_prob[:, family_idx], dtype=np.float64)
-        per_family[family] = _location_strength_payload(
+        oracle_weights = np.asarray([1.0 if label == family else 0.0 for label in true_family_labels], dtype=np.float64)
+        per_family[family] = _effect_recovery_payload(
             matrix,
-            weights,
-            [relative_records[idx] for idx in hard_indices],
-            all_context_records=relative_records,
+            predicted_weights=weights,
+            oracle_weights=oracle_weights,
+            records=relative_records,
             feature_names=feature_names,
             label=str(family),
-            support_count=len(hard_indices),
-            soft_assignment_mass=float(np.sum(weights)),
         )
 
+    exact_projection = _soft_exact_projection(responsibilities, records, exact_labels=exact_labels)
+    row_exact_prob = exact_projection["row_exact_probabilities"]
+    exact_names = exact_projection["exact_names"]
     per_exact = {}
-    for label in sorted(set(exact_labels), key=_mechanism_sort_key):
-        indices = [idx for idx, value in enumerate(exact_labels) if value == label]
-        weights = np.zeros(int(matrix.shape[0]), dtype=np.float64)
-        weights[indices] = 1.0
-        per_exact[label] = _location_strength_payload(
+    for label_idx, label in enumerate(exact_names):
+        weights = np.asarray(row_exact_prob[:, label_idx], dtype=np.float64)
+        oracle_weights = np.asarray([1.0 if value == label else 0.0 for value in exact_labels], dtype=np.float64)
+        per_exact[label] = _effect_recovery_payload(
             matrix,
-            weights,
-            [relative_records[idx] for idx in indices],
-            all_context_records=relative_records,
+            predicted_weights=weights,
+            oracle_weights=oracle_weights,
+            records=relative_records,
             feature_names=feature_names,
             label=str(label),
-            support_count=len(indices),
-            soft_assignment_mass=float(np.sum(weights)),
         )
+    recovery_summary = _effect_recovery_summary(per_family=per_family, per_exact=per_exact)
+    spectator_overlay = _spectator_overlay_audit(matrix, relative_records, feature_names=feature_names)
+    overlay_recovery = _overlay_recovery_audit(spectator_overlay, overlay_contract)
+    dimension_audit = _mechanism_dimension_recovery_audit(
+        matrix,
+        records=relative_records,
+        feature_names=feature_names,
+        exact_labels=exact_labels,
+        exact_names=exact_names,
+        row_exact_prob=row_exact_prob,
+        per_exact=per_exact,
+        overlay_contract_audit=overlay_contract,
+    )
+    contract_typed = _contract_typed_recovery_summary(
+        per_family=per_family,
+        per_exact=per_exact,
+        dimension_audit=dimension_audit,
+        spectator_overlay=spectator_overlay,
+        overlay_contract_audit=overlay_contract,
+        overlay_recovery_audit=overlay_recovery,
+    )
 
     return {
         "schema": "scope_static_s5_context_relative_mechanism_effect_audit_v1",
         "compatibility_aliases": ["scope_static_stage3c_soft_family_strength_location_audit_v1"],
         "stage": "S5_context_relative_mechanism_effect_recovery",
-        "description": "Evaluator-only context-relative strength and location audit for recovered mechanism families and exact catalog mechanisms.",
+        "description": (
+            "Evaluator-only audit for recovered mechanism families and exact catalog mechanisms. "
+            "S5 location means context-conditioned likelihood/support over context-relative cells, "
+            "not absolute physical-coordinate recovery."
+        ),
         "evaluator_mode": _normalize_evaluator_mode(evaluator_mode),
         "evaluator_only": True,
         "skipped": False,
@@ -1082,6 +1142,11 @@ def evaluate_soft_family_strength_location_audit(
         "uses_channels_ptms_kraus": False,
         "claims_physical_parameter_recovery": False,
         "location_reference_frame": "context_relative",
+        "location_semantics": "context_conditioned_error_likelihood",
+        "context_likelihood_definition": (
+            "For a recovered family/mechanism, location is the weighted likelihood/support that its "
+            "visible effect appears in a context-relative cell conditioned on the public/probe context."
+        ),
         "absolute_location_ids_are_provenance_only": True,
         "visible_strength_definition": "Primary strength is the weighted shift of frozen learner-visible surface features after subtracting context-local visible means; global-reference strength is reported only as a comparison.",
         "oracle_parameter_strength_definition": "Evaluator-only numeric summary of teacher record parameters; diagnostic only.",
@@ -1089,9 +1154,16 @@ def evaluate_soft_family_strength_location_audit(
         "feature_count": int(matrix.shape[1]),
         "family_count": int(len(family_names)),
         "exact_mechanism_count": int(len(set(exact_labels))),
+        "effect_recovery_metrics": recovery_summary,
+        "contract_typed_recovery_metrics": contract_typed,
+        "mechanism_taxonomy_contract_audit": mechanism_taxonomy_contract_audit(),
+        "mechanism_dimension_recovery_audit": dimension_audit,
+        "overlay_contract_audit": overlay_contract,
+        "spectator_overlay_audit": spectator_overlay,
+        "overlay_recovery_audit": overlay_recovery,
         "per_family": per_family,
         "per_exact_mechanism": per_exact,
-        "passed": True,
+        "passed": bool(contract_typed["passed"]),
     }
 
 
@@ -1113,6 +1185,20 @@ def skipped_soft_family_strength_location_audit() -> dict[str, object]:
         "claims_physical_parameter_recovery": False,
         "location_reference_frame": "context_relative",
         "absolute_location_ids_are_provenance_only": True,
+        "effect_recovery_metrics": {
+            "schema": "scope_static_s5_effect_recovery_summary_v1",
+            "family_count": 0,
+            "exact_mechanism_count": 0,
+            "max_abs_scalar_error": 0.0,
+            "failed_labels": [],
+            "passed": True,
+        },
+        "contract_typed_recovery_metrics": _skipped_contract_typed_recovery_summary("no_oracle_labels"),
+        "mechanism_taxonomy_contract_audit": mechanism_taxonomy_contract_audit(),
+        "mechanism_dimension_recovery_audit": _skipped_mechanism_dimension_recovery_audit("no_oracle_labels"),
+        "overlay_contract_audit": _skipped_overlay_contract_audit("no_oracle_labels"),
+        "spectator_overlay_audit": _skipped_spectator_overlay_audit("no_oracle_labels"),
+        "overlay_recovery_audit": _skipped_overlay_recovery_audit("no_oracle_labels"),
         "passed": True,
         "per_family": {},
         "per_exact_mechanism": {},
@@ -1484,6 +1570,7 @@ def stage3c_acceptance_audit(
     oracle_assignment_comparator_metrics: dict[str, object],
     soft_family_classification_metrics: dict[str, object],
     soft_family_strength_location_audit: dict[str, object],
+    mechanism_taxonomy_contract_audit: dict[str, object],
     leakage_audit: dict[str, object],
     evaluator_mode: str = EVALUATOR_MODE_CONTROLLED_CATALOG,
 ) -> dict[str, object]:
@@ -1495,6 +1582,17 @@ def stage3c_acceptance_audit(
     oracle = dict(oracle_assignment_comparator_metrics.get("overall", {}))
     soft_family = dict(soft_family_classification_metrics)
     strength_location = dict(soft_family_strength_location_audit)
+    taxonomy_contract = dict(mechanism_taxonomy_contract_audit)
+    dimension_audit = (
+        dict(strength_location.get("mechanism_dimension_recovery_audit", {}))
+        if isinstance(strength_location.get("mechanism_dimension_recovery_audit", {}), dict)
+        else {}
+    )
+    contract_typed_recovery = (
+        dict(strength_location.get("contract_typed_recovery_metrics", {}))
+        if isinstance(strength_location.get("contract_typed_recovery_metrics", {}), dict)
+        else {}
+    )
     primary_strength_reference = _primary_strength_reference_frame(strength_location)
     b1_acceptance = dict(s3b1_metrics.get("acceptance_audit", {})) if isinstance(s3b1_metrics.get("acceptance_audit", {}), dict) else {}
     metric = _effective_primary_generation_likelihood_metric(predicted)
@@ -1568,6 +1666,28 @@ def stage3c_acceptance_audit(
         "s5_context_relative_effect_does_not_claim_physical_parameter_recovery": not bool(
             strength_location.get("claims_physical_parameter_recovery", True)
         ),
+        "s5_context_relative_effect_recovery_metrics_passed": (
+            True
+            if mode == EVALUATOR_MODE_NO_ORACLE_LABELS
+            else bool(contract_typed_recovery.get("passed", False))
+        ),
+        "mechanism_taxonomy_contract_audit_passed": bool(taxonomy_contract.get("passed", False)),
+        "mechanism_dimension_recovery_audit_evaluator_only_or_skipped": (
+            bool(dimension_audit.get("evaluator_only", False))
+            if mode == EVALUATOR_MODE_CONTROLLED_CATALOG
+            else bool(dimension_audit.get("skipped", False))
+        ),
+        "mechanism_dimension_recovery_audit_not_used_for_training": not bool(dimension_audit.get("used_for_training", True)),
+        "mechanism_dimension_recovery_audit_not_used_for_model_selection": not bool(dimension_audit.get("used_for_model_selection", True)),
+        "mechanism_dimension_recovery_does_not_claim_physical_parameter_recovery": not bool(
+            dimension_audit.get("claims_physical_parameter_recovery", True)
+        ),
+        "mechanism_dimension_recovery_audit_passed": (
+            True if mode == EVALUATOR_MODE_NO_ORACLE_LABELS else bool(dimension_audit.get("passed", False))
+        ),
+        "s5_contract_typed_recovery_metrics_passed": (
+            True if mode == EVALUATOR_MODE_NO_ORACLE_LABELS else bool(contract_typed_recovery.get("passed", False))
+        ),
         "primary_generation_likelihood_metric_reported": predicted.get(metric) is not None,
         "primary_categorical_population_nll_reported": (
             predicted.get(PRIMARY_GENERATION_LIKELIHOOD_METRIC) is not None if categorical_primary else True
@@ -1632,6 +1752,96 @@ def _no_oracle_stage3a5_metrics() -> dict[str, object]:
         "schema": "scope_static_stage3a5_no_oracle_placeholder_v1",
         "evaluator_mode": EVALUATOR_MODE_NO_ORACLE_LABELS,
         "acceptance_audit": {"passed": True, "checks": {"stage3a5_not_required_without_oracle_labels": True}},
+    }
+
+
+def stage3c_claim_gate_audit(
+    *,
+    s3b1_metrics: dict[str, object],
+    s3b1_residualized_metrics: dict[str, object] | None,
+    stage3d4b_metrics: dict[str, object] | None,
+    stage5b1_metrics: dict[str, object] | None,
+    evaluator_mode: str = EVALUATOR_MODE_CONTROLLED_CATALOG,
+) -> dict[str, object]:
+    mode = _normalize_evaluator_mode(evaluator_mode)
+    if mode == EVALUATOR_MODE_NO_ORACLE_LABELS:
+        checks = {
+            "no_oracle_mode_diagnostic_gate": True,
+            "claim_allowed_without_controlled_s5b1": False,
+        }
+        return {
+            "schema": "scope_static_stage3c_claim_gate_audit_v1",
+            "description": "No-oracle mode may report replay diagnostics, but controlled S3B1/S5B1 claim gates are unavailable.",
+            "claim_allowed": False,
+            "diagnostic_only": True,
+            "evaluator_mode": mode,
+            "checks": checks,
+            "passed": False,
+        }
+    raw_b1_passed = _artifact_acceptance_passed(s3b1_metrics)
+    residual_b1_passed = _artifact_acceptance_passed(s3b1_residualized_metrics)
+    transform = (
+        dict(s3b1_residualized_metrics.get("visible_transform_audit", {}))
+        if isinstance(s3b1_residualized_metrics, dict) and isinstance(s3b1_residualized_metrics.get("visible_transform_audit", {}), dict)
+        else {}
+    )
+    residual_claim_allowed = bool(transform.get("claim_allowed", False))
+    d4b_passed = _artifact_acceptance_passed(stage3d4b_metrics)
+    s5b1_passed = _artifact_acceptance_passed(stage5b1_metrics)
+    s5b1_decision_passed = str((stage5b1_metrics or {}).get("decision", "")).endswith("_passed")
+    s5b1_source = (
+        dict(stage5b1_metrics.get("assignment_source_audit", {}))
+        if isinstance(stage5b1_metrics, dict) and isinstance(stage5b1_metrics.get("assignment_source_audit", {}), dict)
+        else {}
+    )
+    s5b1_assignment_source = str(s5b1_source.get("assignment_source", ""))
+    s5b1_uses_raw = s5b1_assignment_source in {
+        "stage3b1",
+        "raw_stage3b1",
+        "s3b1_raw",
+    }
+    s5b1_uses_postmerge = s5b1_assignment_source in {
+        "stage3d4b_postmerge",
+        "s3d4b_postmerge",
+        "postmerge",
+    }
+    raw_assignment_source_ready = bool(raw_b1_passed and s5b1_uses_raw)
+    postmerge_assignment_source_ready = bool(d4b_passed and s5b1_uses_postmerge)
+    raw_or_postmerge_assignment_source = bool(raw_assignment_source_ready or postmerge_assignment_source_ready)
+    checks = {
+        "s3b1_raw_acceptance_passed": raw_b1_passed,
+        "s3b1_residualized_diagnostic_reported": bool(s3b1_residualized_metrics is not None),
+        "s3b1_residualized_diagnostic_passed_if_present": (True if s3b1_residualized_metrics is None else residual_b1_passed),
+        "s3b1_residualized_not_used_as_claim_assignment_source": True,
+        "stage3d4b_overcomplete_postmerge_passed_if_present": (True if stage3d4b_metrics is None else d4b_passed),
+        "s5b1_assignment_source_matches_raw_or_postmerge_gate": raw_or_postmerge_assignment_source,
+        "raw_or_postmerge_assignment_source_available": raw_or_postmerge_assignment_source,
+        "s3b1_residualized_or_stage3d4b_overcomplete_gate_passed": raw_or_postmerge_assignment_source,
+        "s5b1_property_recovery_acceptance_passed": s5b1_passed,
+        "s5b1_property_recovery_decision_passed": s5b1_decision_passed,
+        "s3c_claim_not_allowed_from_raw_s3b1_alone": True,
+    }
+    claim_allowed = bool(all(checks.values()))
+    return {
+        "schema": "scope_static_stage3c_claim_gate_audit_v1",
+        "description": "Scientific claim gate for assignment-dependent S3C/S5 replay/effect claims.",
+        "claim_allowed": claim_allowed,
+        "diagnostic_only": not claim_allowed,
+        "evaluator_mode": mode,
+        "raw_s3b1_decision": s3b1_metrics.get("decision"),
+        "residualized_s3b1_decision": None if not isinstance(s3b1_residualized_metrics, dict) else s3b1_residualized_metrics.get("decision"),
+        "stage3d4b_decision": None if not isinstance(stage3d4b_metrics, dict) else stage3d4b_metrics.get("decision"),
+        "stage5b1_decision": None if not isinstance(stage5b1_metrics, dict) else stage5b1_metrics.get("decision"),
+        "residualized_s3b1_claim_allowed_flag": residual_claim_allowed,
+        "residualized_s3b1_role": "diagnostic_only_shortcut_and_bleed_audit",
+        "s5b1_assignment_source": s5b1_assignment_source or None,
+        "claim_assignment_source": (
+            "stage3d4b_postmerge"
+            if postmerge_assignment_source_ready
+            else ("stage3b1_raw" if raw_assignment_source_ready else None)
+        ),
+        "checks": checks,
+        "passed": claim_allowed,
     }
 
 
@@ -2552,25 +2762,792 @@ def _soft_family_projection(responsibilities: np.ndarray, records: list[dict[str
     }
 
 
-def _location_strength_payload(
+def _soft_exact_projection(responsibilities: np.ndarray, records: list[dict[str, object]], *, exact_labels: list[str]) -> dict[str, object]:
+    resp = _normalize_rows(responsibilities)
+    if int(resp.shape[0]) != len(records) or len(exact_labels) != len(records):
+        raise ValueError("assignment, record, and exact-label row counts must match")
+    exact_names = sorted(set(exact_labels), key=_mechanism_sort_key)
+    label_to_idx = {name: idx for idx, name in enumerate(exact_names)}
+    true_one_hot = np.zeros((len(exact_labels), len(exact_names)), dtype=np.float64)
+    for row, label in enumerate(exact_labels):
+        true_one_hot[int(row), int(label_to_idx[label])] = 1.0
+    cluster_exact_mass = resp.T @ true_one_hot
+    cluster_exact_prob = _normalize_rows_with_zeros(cluster_exact_mass)
+    row_exact_prob = resp @ cluster_exact_prob
+    return {
+        "responsibilities": resp,
+        "exact_names": exact_names,
+        "cluster_exact_mass": cluster_exact_mass,
+        "cluster_exact_probabilities": cluster_exact_prob,
+        "row_exact_probabilities": row_exact_prob,
+    }
+
+
+def _mechanism_dimension_recovery_audit(
     matrix: np.ndarray,
-    weights: np.ndarray,
-    support_records: list[dict[str, object]],
     *,
-    all_context_records: list[dict[str, object]],
+    records: list[dict[str, object]],
+    feature_names: list[str],
+    exact_labels: list[str],
+    exact_names: list[str],
+    row_exact_prob: np.ndarray,
+    per_exact: dict[str, object],
+    overlay_contract_audit: dict[str, object],
+) -> dict[str, object]:
+    non_flat = set(NON_FLAT_PRIMARY_TARGET_IDS)
+    present_non_flat = [label for label in exact_names if label in non_flat]
+    overlay_contract_missing_labels = set(_overlay_contract_missing_labels(overlay_contract_audit))
+    rows = []
+    for label in present_non_flat:
+        contract = mechanism_contract(label)
+        indices = [idx for idx, value in enumerate(exact_labels) if value == label]
+        label_idx = exact_names.index(label)
+        weights = np.asarray(row_exact_prob[:, label_idx], dtype=np.float64)
+        local_records = [records[idx] for idx in indices]
+        dimensions = _mechanism_dimension_payload(label, contract=contract, records=local_records)
+        visible = _weighted_visible_strength(matrix, weights, feature_names=feature_names, records=records)
+        effect_metrics = (
+            dict(dict(per_exact.get(label, {})).get("recovery_metrics", {}))
+            if isinstance(per_exact.get(label, {}), dict)
+            else {}
+        )
+        checks = {
+            "contract_is_non_flat_primary_target": not bool(contract.get("primary_flat_cluster_target", True)),
+            "dimension_fields_declared": bool(contract.get("dimensions", [])),
+            "dimension_values_available": bool(dimensions.get("all_declared_dimensions_have_values", False)),
+            "location_dimension_available": bool(dimensions.get("location_dimension_available", False)),
+            "strength_dimension_available": bool(dimensions.get("strength_dimension_available", False)),
+            "does_not_claim_flat_exact_recovery": True,
+        }
+        not_evaluable = bool(str(contract.get("contract_role", "")) == "overlay_family" and label in overlay_contract_missing_labels)
+        recovery_passed = bool(all(checks.values()))
+        rows.append(
+            {
+                "legacy_catalog_id": str(label),
+                "mechanism_id": str(label),
+                "public_label": str(contract.get("public_label", label)),
+                "label_namespace": str(contract.get("label_namespace", "legacy")),
+                "support_count": int(len(indices)),
+                "soft_assignment_mass": float(np.sum(weights)),
+                "contract_role": str(contract.get("contract_role", "unknown")),
+                "base_family": str(contract.get("base_family", "unknown")),
+                "primary_flat_cluster_target": bool(contract.get("primary_flat_cluster_target", False)),
+                "leaf_exact_effect_supported": bool(contract.get("leaf_exact_effect_supported", False)),
+                "declared_dimensions": list(contract.get("dimensions", [])),
+                "dimension_values": dimensions,
+                "visible_strength": visible,
+                "effect_recovery_metrics_diagnostic_only": effect_metrics,
+                "checks": checks,
+                "dimension_recovery_evaluated": not not_evaluable,
+                "not_evaluable": not_evaluable,
+                "not_evaluable_reason": OVERLAY_CONTRACT_MISSING_REASON if not_evaluable else None,
+                "failure_kind": OVERLAY_CONTRACT_MISSING_REASON if not_evaluable else None,
+                "recoverable_failure": False if not_evaluable else not recovery_passed,
+                "recovery_passed": None if not_evaluable else recovery_passed,
+                "passed": True if not_evaluable else recovery_passed,
+            }
+        )
+    evaluable_rows = [row for row in rows if not bool(row.get("not_evaluable", False))]
+    not_evaluable_ids = [str(row.get("mechanism_id", "")) for row in rows if bool(row.get("not_evaluable", False))]
+    recovery_passed_excluding_not_evaluable = all(bool(row.get("passed", False)) for row in evaluable_rows)
+    taxonomy = mechanism_taxonomy_contract_audit()
+    checks = {
+        "taxonomy_contract_passed": bool(taxonomy.get("passed", False)),
+        "evaluator_only": True,
+        "not_used_for_training": True,
+        "not_used_for_model_selection": True,
+        "non_flat_exact_labels_not_primary_targets": all(not bool(row.get("primary_flat_cluster_target", True)) for row in rows),
+        "all_present_non_flat_targets_have_dimension_rows": len(rows) == len(present_non_flat),
+        "present_non_flat_dimension_rows_pass_excluding_not_evaluable": bool(recovery_passed_excluding_not_evaluable),
+        "overlay_contract_missing_targets_are_not_recovery_failures": all(
+            not bool(row.get("recoverable_failure", True)) for row in rows if bool(row.get("not_evaluable", False))
+        ),
+    }
+    return {
+        "schema": "scope_static_s5_mechanism_dimension_recovery_audit_v1",
+        "description": "Evaluator-only dimension audit for non-flat public M* targets. Legacy M0-M34 IDs are provenance only.",
+        "evaluator_only": True,
+        "skipped": False,
+        "used_for_training": False,
+        "used_for_model_selection": False,
+        "classification_target": "contract_typed_family_plus_dimension_recovery",
+        "claims_physical_parameter_recovery": False,
+        "row_count": int(len(records)),
+        "feature_count": int(matrix.shape[1]) if matrix.ndim == 2 else 0,
+        "non_flat_primary_target_ids_present": present_non_flat,
+        "primary_flat_cluster_target_ids_present": [label for label in exact_names if label in set(PRIMARY_FLAT_CLUSTER_TARGET_IDS)],
+        "non_flat_public_labels_present": [str(mechanism_contract(label).get("public_label", label)) for label in present_non_flat],
+        "primary_flat_public_labels_present": [
+            str(mechanism_contract(label).get("public_label", label))
+            for label in exact_names
+            if label in set(PRIMARY_FLAT_CLUSTER_TARGET_IDS)
+        ],
+        "not_evaluable_target_ids": sorted([label for label in not_evaluable_ids if label]),
+        "overlay_contract_missing_target_ids": sorted([label for label in overlay_contract_missing_labels if label in set(present_non_flat)]),
+        "recovery_passed_excluding_not_evaluable": bool(recovery_passed_excluding_not_evaluable),
+        "overlay_contract_payload_complete": bool(overlay_contract_audit.get("passed", False)),
+        "checks": checks,
+        "targets": rows,
+        "passed": bool(all(checks.values())),
+    }
+
+
+def _skipped_mechanism_dimension_recovery_audit(reason: str) -> dict[str, object]:
+    return {
+        "schema": "scope_static_s5_mechanism_dimension_recovery_audit_v1",
+        "description": "Skipped because controlled-catalog evaluator labels are unavailable.",
+        "evaluator_only": False,
+        "skipped": True,
+        "skip_reason": str(reason),
+        "used_for_training": False,
+        "used_for_model_selection": False,
+        "classification_target": "contract_typed_family_plus_dimension_recovery",
+        "claims_physical_parameter_recovery": False,
+        "row_count": 0,
+        "feature_count": 0,
+        "non_flat_primary_target_ids_present": [],
+        "primary_flat_cluster_target_ids_present": [],
+        "non_flat_public_labels_present": [],
+        "primary_flat_public_labels_present": [],
+        "not_evaluable_target_ids": [],
+        "overlay_contract_missing_target_ids": [],
+        "recovery_passed_excluding_not_evaluable": True,
+        "overlay_contract_payload_complete": True,
+        "checks": {"skipped_without_oracle_labels": True},
+        "targets": [],
+        "passed": True,
+    }
+
+
+def _contract_typed_recovery_summary(
+    *,
+    per_family: dict[str, object],
+    per_exact: dict[str, object],
+    dimension_audit: dict[str, object],
+    spectator_overlay: dict[str, object],
+    overlay_contract_audit: dict[str, object],
+    overlay_recovery_audit: dict[str, object],
+) -> dict[str, object]:
+    family_failed = _failed_effect_labels(per_family)
+    primary_flat_failed = _failed_effect_labels(
+        {label: payload for label, payload in per_exact.items() if label in set(PRIMARY_FLAT_CLUSTER_TARGET_IDS)}
+    )
+    overlay_contract_passed = bool(overlay_contract_audit.get("passed", False))
+    overlay_recovery_passed = bool(overlay_recovery_audit.get("passed", False))
+    dimension_passed = bool(dimension_audit.get("recovery_passed_excluding_not_evaluable", dimension_audit.get("passed", False)))
+    checks = {
+        "family_recovery_passed": not family_failed,
+        "atomic_flat_exact_recovery_passed": not primary_flat_failed,
+        "dimension_recovery_passed": dimension_passed,
+        "overlay_contract_payload_available_or_no_overlay_records": overlay_contract_passed,
+        "overlay_recovery_evaluable_or_not_required": overlay_recovery_passed,
+        "non_flat_exact_labels_not_required_as_primary_flat_targets": True,
+    }
+    return {
+        "schema": "scope_static_s5_contract_typed_recovery_summary_v1",
+        "classification_target": "atomic_flat_exact_plus_family_plus_dimension_recovery",
+        "description": "S5 acceptance summary: flat IDs use exact recovery, non-flat IDs use family/dimension recovery, and M11 uses overlay recovery when present.",
+        "family_failed_labels": family_failed,
+        "atomic_flat_exact_failed_labels": primary_flat_failed,
+        "dimension_not_evaluable_target_ids": list(dimension_audit.get("not_evaluable_target_ids", [])),
+        "overlay_contract_missing_target_ids": list(dimension_audit.get("overlay_contract_missing_target_ids", [])),
+        "overlay_failure_kinds": list(overlay_contract_audit.get("failure_kinds", [])),
+        "non_flat_primary_target_ids": list(NON_FLAT_PRIMARY_TARGET_IDS),
+        "primary_flat_cluster_target_ids": list(PRIMARY_FLAT_CLUSTER_TARGET_IDS),
+        "non_flat_public_labels": list(NON_FLAT_PUBLIC_LABELS),
+        "primary_flat_public_labels": list(PRIMARY_FLAT_PUBLIC_LABELS),
+        "checks": checks,
+        "passed": bool(all(checks.values())),
+    }
+
+
+def _skipped_contract_typed_recovery_summary(reason: str) -> dict[str, object]:
+    return {
+        "schema": "scope_static_s5_contract_typed_recovery_summary_v1",
+        "classification_target": "atomic_flat_exact_plus_family_plus_dimension_recovery",
+        "description": "Skipped because controlled-catalog evaluator labels are unavailable.",
+        "skipped": True,
+        "skip_reason": str(reason),
+        "family_failed_labels": [],
+        "atomic_flat_exact_failed_labels": [],
+        "dimension_not_evaluable_target_ids": [],
+        "overlay_contract_missing_target_ids": [],
+        "overlay_failure_kinds": [],
+        "non_flat_primary_target_ids": list(NON_FLAT_PRIMARY_TARGET_IDS),
+        "primary_flat_cluster_target_ids": list(PRIMARY_FLAT_CLUSTER_TARGET_IDS),
+        "non_flat_public_labels": list(NON_FLAT_PUBLIC_LABELS),
+        "primary_flat_public_labels": list(PRIMARY_FLAT_PUBLIC_LABELS),
+        "checks": {"skipped_without_oracle_labels": True},
+        "passed": True,
+    }
+
+
+def _failed_effect_labels(rows: dict[str, object]) -> list[str]:
+    failed = []
+    for label, payload in rows.items():
+        if not isinstance(payload, dict):
+            failed.append(str(label))
+            continue
+        metrics = payload.get("recovery_metrics", {})
+        if not isinstance(metrics, dict) or not bool(metrics.get("passed", False)):
+            failed.append(str(label))
+    return sorted(failed)
+
+
+def _mechanism_dimension_payload(label: str, *, contract: dict[str, object], records: list[dict[str, object]]) -> dict[str, object]:
+    dimensions = [str(value) for value in list(contract.get("dimensions", []))]
+    values: dict[str, object] = {}
+    missing: list[str] = []
+    for dimension in dimensions:
+        extracted = [_mechanism_dimension_value(record, label=label, dimension=dimension, contract=contract) for record in records]
+        available = [value for value in extracted if value is not None and str(value) != "unknown"]
+        numeric = [_as_finite_float(value) for value in available]
+        numeric = [value for value in numeric if value is not None]
+        values[dimension] = {
+            "available_count": int(len(available)),
+            "missing_count": int(max(0, len(records) - len(available))),
+            "value_counts": _value_counts(available),
+            "numeric_summary": _numeric_summary(np.asarray(numeric, dtype=np.float64)),
+            "non_degenerate": bool(len(set(str(value) for value in available)) > 1 or _numeric_values_non_degenerate(numeric)),
+        }
+        if not available:
+            missing.append(dimension)
+    strength_values = [_mechanism_strength_value(record, label=label) for record in records]
+    strength_values = [value for value in strength_values if value is not None]
+    generic_location_dimensions = {"context_relative_location", "context_relative_edge", "relative_location"}
+    overlay_location_dimensions = {"victim_relative_location", "aggressor_relative_location"}
+    declared_location_dimensions = set(dimensions) & (generic_location_dimensions | overlay_location_dimensions)
+    location_dimension_available = (
+        all(_mechanism_dimension_has_available_value(values, name) for name in declared_location_dimensions)
+        if declared_location_dimensions
+        else True
+    )
+    return {
+        "contract_role": str(contract.get("contract_role", "unknown")),
+        "base_family": str(contract.get("base_family", "unknown")),
+        "declared_dimensions": dimensions,
+        "per_dimension": values,
+        "missing_dimensions": missing,
+        "all_declared_dimensions_have_values": not missing,
+        "context_relative_location_available": any(
+            _mechanism_dimension_has_available_value(values, name)
+            for name in generic_location_dimensions
+        ),
+        "declared_location_dimensions": sorted(declared_location_dimensions),
+        "location_dimension_available": bool(location_dimension_available),
+        "strength_dimension_available": bool(strength_values),
+        "strength": _numeric_summary(np.asarray(strength_values, dtype=np.float64)),
+    }
+
+
+def _mechanism_dimension_has_available_value(values: dict[str, object], name: str) -> bool:
+    row = values.get(name, {})
+    return bool(isinstance(row, dict) and int(row.get("available_count", 0) or 0) > 0)
+
+
+def _mechanism_dimension_value(record: dict[str, object], *, label: str, dimension: str, contract: dict[str, object]) -> object:
+    if dimension in {"strength", "drift_strength", "custom_kraus_eta", "eta", "computational_subspace_survival"}:
+        return _mechanism_strength_value(record, label=label)
+    if dimension in {"context_relative_location", "context_relative_edge", "relative_location"}:
+        location = dict(record.get("_context_relative_location", {})) if isinstance(record.get("_context_relative_location", {}), dict) else {}
+        return location.get("location_bucket_in_context", location.get("location_fraction_in_context", "unknown"))
+    if dimension == "base_mechanism":
+        return _spectator_overlay_base_mechanism(record)
+    if dimension in {"victim_relative_location", "aggressor_relative_location", "coupling_axis", "timing_context"}:
+        return _spectator_overlay_field(record, dimension, default="unknown")
+    if dimension == "pauli_axis_mixture":
+        params = _record_params(record)
+        axes = [axis for axis in ("x", "y", "z") if _as_finite_float(params.get(f"p_{axis}")) not in {None, 0.0}]
+        return "".join(axis.upper() for axis in axes) if axes else "XYZ_mixture"
+    if dimension == "assignment_direction":
+        if label == "M16":
+            return "measurement_context_bias"
+        return "direction_unspecified"
+    if dimension.startswith("assignment_direction_"):
+        return dimension.removeprefix("assignment_direction_")
+    if dimension in {"symmetric_assignment", "15_pauli_support_mixture", "correlated_relaxation", "relaxation_down", "excitation_up"}:
+        return dimension
+    if dimension in {"xx_component", "yy_component"}:
+        params = _record_params(record)
+        key = "epsilon_x" if dimension == "xx_component" else "epsilon_y"
+        return params.get(key, dimension)
+    if dimension in {"operation_axis", "error_axis", "drift_index", "measurement_context", "prep_or_reset_axis"}:
+        direct = _record_nested_value(record, dimension)
+        if direct is not None:
+            return direct
+        if dimension == "drift_index":
+            return record.get("circuit_id", record.get("location_id", "unknown"))
+        if dimension == "measurement_context":
+            return str(record.get("instruction", "unknown"))
+        if dimension == "prep_or_reset_axis":
+            return str(record.get("instruction", "unknown"))
+    if dimension.startswith("axis_") or dimension.endswith("_axis") or dimension.endswith("_vector"):
+        return dimension
+    if dimension in {"mixed_ptm_residual", "coherent_asymmetry"}:
+        return dimension
+    if dimension == "surrogate_type":
+        return str(contract.get("base_family", "surrogate"))
+    direct = _record_nested_value(record, dimension)
+    return "unknown" if direct is None else direct
+
+
+def _record_nested_value(record: dict[str, object], key: str) -> object | None:
+    if record.get(key) is not None:
+        return record.get(key)
+    overlay = record.get("spectator_overlay", {})
+    if isinstance(overlay, dict) and overlay.get(key) is not None:
+        return overlay.get(key)
+    params = _record_params(record)
+    if params.get(key) is not None:
+        return params.get(key)
+    return None
+
+
+def _record_params(record: dict[str, object]) -> dict[str, object]:
+    params = record.get("parameters", {})
+    return dict(params) if isinstance(params, dict) else {}
+
+
+def _mechanism_strength_value(record: dict[str, object], *, label: str) -> float | None:
+    if _spectator_overlay_present(record):
+        return _spectator_overlay_strength(record)
+    params = _record_params(record)
+    keys_by_label = {
+        "M4": ("gamma",),
+        "M12": ("gamma",),
+        "M15": ("eta",),
+        "M19": ("eta",),
+        "M24": ("gamma_up", "p"),
+    }
+    keys = keys_by_label.get(label, ("epsilon", "p", "p_z", "gamma", "gamma_up", "eta", "strength"))
+    for key in keys:
+        value = _as_finite_float(params.get(key, record.get(key)))
+        if value is not None:
+            return value
+    numeric = [value for _key, value in _numeric_leaves(params)]
+    if numeric:
+        return float(np.linalg.norm(np.asarray(numeric, dtype=np.float64)))
+    return _default_mechanism_strength(label)
+
+
+def _as_finite_float(value: object) -> float | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if np.isfinite(number) else None
+
+
+def _default_mechanism_strength(label: str) -> float | None:
+    defaults = {
+        "M0": 0.002,
+        "M1": 0.02,
+        "M2": 0.02,
+        "M3": 0.02,
+        "M4": 0.015,
+        "M5": 0.0025,
+        "M6": 0.035,
+        "M7": 0.035,
+        "M8": 0.04,
+        "M9": 0.006,
+        "M10": 0.025,
+        "M11": 0.02,
+        "M12": 0.01,
+        "M13": 0.03,
+        "M14": 0.028,
+        "M15": 0.02,
+        "M16": 0.02,
+        "M17": 0.018,
+        "M18": 0.025,
+        "M19": 0.006,
+        "M20": 0.03,
+        "M21": 0.035,
+        "M22": 0.022,
+        "M23": 0.019,
+        "M24": 0.006,
+        "M25": 0.006,
+        "M26": 0.006,
+        "M27": 0.026,
+        "M28": 0.015,
+        "M29": 0.018,
+        "M30": 0.016,
+        "M31": 0.017,
+        "M32": 0.014,
+        "M33": 0.013,
+        "M34": 0.004,
+    }
+    return defaults.get(str(label))
+
+
+def _numeric_values_non_degenerate(values: list[float]) -> bool:
+    return bool(values and min(values) < max(values))
+
+
+def _overlay_contract_missing_labels(audit: dict[str, object]) -> list[str]:
+    labels = set()
+    rows = audit.get("rows", [])
+    if not isinstance(rows, list):
+        return []
+    for row in rows:
+        if not isinstance(row, dict) or bool(row.get("overlay_payload_complete", False)):
+            continue
+        label = str(row.get("oracle_label", row.get("mechanism_id", "")))
+        if label:
+            labels.add(label)
+    return sorted(labels)
+
+
+def _overlay_recovery_audit(spectator_overlay: dict[str, object], overlay_contract: dict[str, object]) -> dict[str, object]:
+    missing_labels = _overlay_contract_missing_labels(overlay_contract)
+    num_overlay_records = int(overlay_contract.get("num_overlay_records", 0) or 0)
+    missing_count = int(overlay_contract.get("num_overlay_records_missing_payload", 0) or 0)
+    if missing_count > 0:
+        return {
+            "schema": "scope_static_s5_overlay_recovery_audit_v1",
+            "description": "Evaluator-only S5 audit for non-flat overlay-family recovery; missing overlay payload is a contract failure, not a learner recovery failure.",
+            "overlay_family": "spectator_crosstalk",
+            "evaluator_only": True,
+            "skipped": False,
+            "used_for_training": False,
+            "used_for_model_selection": False,
+            "classification_target": "base_mechanism_plus_spectator_overlay_dimensions",
+            "flat_exact_m11_target": False,
+            "visible_only_selection": True,
+            "uses_oracle_overlay_fields_for_training": False,
+            "claims_physical_parameter_recovery": False,
+            "num_overlay_records": num_overlay_records,
+            "num_overlay_records_missing_payload": missing_count,
+            "overlay_contract_payload_complete": False,
+            "recovery_evaluable": False,
+            "not_evaluable_target_ids": missing_labels,
+            "failure_kind": OVERLAY_CONTRACT_MISSING_REASON,
+            "recovery_failure": False,
+            "base_mechanism_recovery": {},
+            "victim_relative_location_recovery": {},
+            "aggressor_relative_location_recovery": {},
+            "coupling_axis_recovery": {},
+            "timing_context_recovery": {},
+            "overlay_strength_recovery": {},
+            "joint_overlay_recovery": {},
+            "checks": {
+                "overlay_contract_payload_complete": False,
+                "overlay_recovery_evaluable": False,
+                "missing_overlay_payload_is_contract_failure_not_recovery_failure": True,
+                "does_not_claim_flat_exact_m11_recovery": True,
+            },
+            "passed": False,
+        }
+    if bool(spectator_overlay.get("skipped", False)):
+        return _skipped_overlay_recovery_audit(str(spectator_overlay.get("skip_reason", "no_spectator_overlay_records")))
+    checks = {
+        "overlay_contract_payload_complete": bool(overlay_contract.get("passed", False)),
+        "overlay_recovery_evaluable": True,
+        "spectator_overlay_recovery_passed": bool(spectator_overlay.get("passed", False)),
+        "does_not_claim_flat_exact_m11_recovery": not bool(spectator_overlay.get("flat_exact_m11_target", True)),
+    }
+    return {
+        "schema": "scope_static_s5_overlay_recovery_audit_v1",
+        "description": "Evaluator-only S5 audit for M11-style spectator crosstalk overlay recovery.",
+        "overlay_family": "spectator_crosstalk",
+        "evaluator_only": True,
+        "skipped": False,
+        "used_for_training": False,
+        "used_for_model_selection": False,
+        "classification_target": "base_mechanism_plus_spectator_overlay_dimensions",
+        "flat_exact_m11_target": False,
+        "visible_only_selection": True,
+        "uses_oracle_overlay_fields_for_training": False,
+        "claims_physical_parameter_recovery": False,
+        "num_overlay_records": num_overlay_records,
+        "num_overlay_records_missing_payload": 0,
+        "overlay_contract_payload_complete": bool(overlay_contract.get("passed", False)),
+        "recovery_evaluable": True,
+        "not_evaluable_target_ids": [],
+        "failure_kind": None,
+        "recovery_failure": not bool(spectator_overlay.get("passed", False)),
+        "base_mechanism_recovery": {"base_mechanisms": spectator_overlay.get("base_mechanisms", [])},
+        "victim_relative_location_recovery": {
+            "reported_in_groups": all(
+                bool(dict(row.get("victim_relative_location_counts", {}))) for row in list(spectator_overlay.get("groups", []))
+            )
+        },
+        "aggressor_relative_location_recovery": {
+            "reported_in_groups": all(
+                bool(dict(row.get("aggressor_relative_location_counts", {}))) for row in list(spectator_overlay.get("groups", []))
+            )
+        },
+        "coupling_axis_recovery": {"coupling_axes": spectator_overlay.get("coupling_axes", [])},
+        "timing_context_recovery": {"timing_contexts": spectator_overlay.get("timing_contexts", [])},
+        "overlay_strength_recovery": {
+            "non_degenerate": bool(dict(spectator_overlay.get("checks", {})).get("overlay_strength_non_degenerate", False))
+        },
+        "joint_overlay_recovery": {
+            "group_count": int(len(list(spectator_overlay.get("groups", [])))),
+            "passed": bool(spectator_overlay.get("passed", False)),
+        },
+        "checks": checks,
+        "passed": bool(all(checks.values())),
+    }
+
+
+def _skipped_overlay_contract_audit(reason: str) -> dict[str, object]:
+    return {
+        "schema": "scope_static_m11_overlay_contract_audit_v1",
+        "skipped": True,
+        "skip_reason": str(reason),
+        "overlay_mechanism_ids": ["M11"],
+        "overlay_family": "spectator_crosstalk",
+        "required_fields": [],
+        "fail_on_missing_overlay_payload": True,
+        "num_overlay_records": 0,
+        "num_overlay_records_missing_payload": 0,
+        "missing_by_field": {},
+        "failure_kinds": [],
+        "rows": [],
+        "passed": True,
+    }
+
+
+def _skipped_overlay_recovery_audit(reason: str) -> dict[str, object]:
+    return {
+        "schema": "scope_static_s5_overlay_recovery_audit_v1",
+        "description": "Skipped because no evaluator-only overlay records are available.",
+        "overlay_family": "spectator_crosstalk",
+        "evaluator_only": False,
+        "skipped": True,
+        "skip_reason": str(reason),
+        "used_for_training": False,
+        "used_for_model_selection": False,
+        "classification_target": "base_mechanism_plus_spectator_overlay_dimensions",
+        "flat_exact_m11_target": False,
+        "visible_only_selection": True,
+        "uses_oracle_overlay_fields_for_training": False,
+        "claims_physical_parameter_recovery": False,
+        "num_overlay_records": 0,
+        "num_overlay_records_missing_payload": 0,
+        "overlay_contract_payload_complete": True,
+        "recovery_evaluable": False,
+        "not_evaluable_target_ids": [],
+        "failure_kind": None,
+        "recovery_failure": False,
+        "base_mechanism_recovery": {},
+        "victim_relative_location_recovery": {},
+        "aggressor_relative_location_recovery": {},
+        "coupling_axis_recovery": {},
+        "timing_context_recovery": {},
+        "overlay_strength_recovery": {},
+        "joint_overlay_recovery": {},
+        "checks": {"skipped_without_overlay_records": True},
+        "passed": True,
+    }
+
+
+def _spectator_overlay_audit(matrix: np.ndarray, records: list[dict[str, object]], *, feature_names: list[str]) -> dict[str, object]:
+    overlay_indices = [idx for idx, record in enumerate(records) if _spectator_overlay_present(record)]
+    if not overlay_indices:
+        return _skipped_spectator_overlay_audit("no_spectator_overlay_records")
+
+    groups: dict[tuple[str, str], list[int]] = {}
+    for idx in overlay_indices:
+        record = records[idx]
+        key = (_spectator_overlay_base_mechanism(record), _spectator_overlay_field(record, "coupling_axis", default="unknown"))
+        groups.setdefault(key, []).append(int(idx))
+
+    group_rows = []
+    for (base_mechanism, coupling_axis), indices in sorted(groups.items(), key=lambda item: item[0]):
+        weights = np.zeros(len(records), dtype=np.float64)
+        weights[np.asarray(indices, dtype=np.int64)] = 1.0
+        local_records = [records[idx] for idx in indices]
+        group_rows.append(
+            {
+                "base_mechanism": str(base_mechanism),
+                "coupling_axis": str(coupling_axis),
+                "support_count": int(len(indices)),
+                "classification_target": "base_mechanism_plus_spectator_overlay_dimensions",
+                "flat_exact_m11_target": False,
+                "timing_context_counts": _value_counts([_spectator_overlay_field(record, "timing_context", default="unknown") for record in local_records]),
+                "victim_relative_location_counts": _value_counts(
+                    [_spectator_overlay_field(record, "victim_relative_location", default="unknown") for record in local_records]
+                ),
+                "aggressor_relative_location_counts": _value_counts(
+                    [_spectator_overlay_field(record, "aggressor_relative_location", default="unknown") for record in local_records]
+                ),
+                "overlay_strength": _numeric_summary(np.asarray([_spectator_overlay_strength(record) for record in local_records], dtype=np.float64)),
+                "context_relative_action_locations": _context_relative_location_summary(records, weights=weights),
+                "visible_strength": _weighted_visible_strength(matrix, weights, feature_names=feature_names, records=records),
+                "oracle_parameter_strength": _oracle_parameter_strength(local_records),
+            }
+        )
+
+    overlay_records = [records[idx] for idx in overlay_indices]
+    strengths = np.asarray([_spectator_overlay_strength(record) for record in overlay_records], dtype=np.float64)
+    checks = {
+        "overlay_is_not_flat_exact_m11_target": True,
+        "overlay_rows_have_base_mechanism": all(_spectator_overlay_base_mechanism(record) != "unknown" for record in overlay_records),
+        "overlay_rows_have_victim_relative_location": all(
+            _spectator_overlay_field(record, "victim_relative_location", default="unknown") != "unknown" for record in overlay_records
+        ),
+        "overlay_rows_have_aggressor_relative_location": all(
+            _spectator_overlay_field(record, "aggressor_relative_location", default="unknown") != "unknown" for record in overlay_records
+        ),
+        "overlay_rows_have_coupling_axis": all(_spectator_overlay_field(record, "coupling_axis", default="unknown") != "unknown" for record in overlay_records),
+        "overlay_rows_have_timing_context": all(_spectator_overlay_field(record, "timing_context", default="unknown") != "unknown" for record in overlay_records),
+        "overlay_strength_non_degenerate": bool(strengths.size > 1 and float(np.min(strengths)) < float(np.max(strengths))),
+        "overlay_groups_have_visible_strength": all(
+            float(dict(dict(row.get("visible_strength", {})).get("context_relative_reference", {})).get("surface_standardized_l2_shift", 0.0) or 0.0)
+            > 0.0
+            for row in group_rows
+        ),
+    }
+    return {
+        "schema": "scope_static_s5_spectator_overlay_audit_v1",
+        "description": "Evaluator-only S5 audit for M11-style spectator crosstalk as a context-conditioned overlay family, not a flat exact mechanism.",
+        "evaluator_only": True,
+        "skipped": False,
+        "used_for_training": False,
+        "used_for_model_selection": False,
+        "classification_target": "base_mechanism_plus_spectator_overlay_dimensions",
+        "flat_exact_m11_target": False,
+        "claims_physical_parameter_recovery": False,
+        "overlay_row_count": int(len(overlay_indices)),
+        "base_mechanisms": sorted({_spectator_overlay_base_mechanism(record) for record in overlay_records}),
+        "coupling_axes": sorted({_spectator_overlay_field(record, "coupling_axis", default="unknown") for record in overlay_records}),
+        "timing_contexts": sorted({_spectator_overlay_field(record, "timing_context", default="unknown") for record in overlay_records}),
+        "checks": checks,
+        "groups": group_rows,
+        "passed": bool(all(checks.values())),
+    }
+
+
+def _skipped_spectator_overlay_audit(reason: str) -> dict[str, object]:
+    return {
+        "schema": "scope_static_s5_spectator_overlay_audit_v1",
+        "description": "Skipped because no evaluator-only spectator overlay records are available.",
+        "evaluator_only": False,
+        "skipped": True,
+        "skip_reason": str(reason),
+        "used_for_training": False,
+        "used_for_model_selection": False,
+        "classification_target": "base_mechanism_plus_spectator_overlay_dimensions",
+        "flat_exact_m11_target": False,
+        "claims_physical_parameter_recovery": False,
+        "overlay_row_count": 0,
+        "base_mechanisms": [],
+        "coupling_axes": [],
+        "timing_contexts": [],
+        "checks": {},
+        "groups": [],
+        "passed": True,
+    }
+
+
+def _spectator_overlay_present(record: dict[str, object]) -> bool:
+    if bool(record.get("spectator_overlay_present", False)):
+        return True
+    overlay = record.get("spectator_overlay", {})
+    if isinstance(overlay, dict) and overlay.get("present", False):
+        return True
+    params = record.get("parameters", {})
+    return bool(isinstance(params, dict) and params.get("spectator_overlay_present", False))
+
+
+def _spectator_overlay_base_mechanism(record: dict[str, object]) -> str:
+    return _spectator_overlay_field(record, "base_mechanism", default=str(record.get("oracle_label", record.get("mechanism_id", "unknown"))))
+
+
+def _spectator_overlay_field(record: dict[str, object], field: str, *, default: str) -> str:
+    if record.get(field) is not None:
+        return str(record.get(field))
+    overlay = record.get("spectator_overlay", {})
+    if isinstance(overlay, dict) and overlay.get(field) is not None:
+        return str(overlay.get(field))
+    params = record.get("parameters", {})
+    if isinstance(params, dict) and params.get(field) is not None:
+        return str(params.get(field))
+    return str(default)
+
+
+def _spectator_overlay_strength(record: dict[str, object]) -> float:
+    for container in (record.get("spectator_overlay", {}), record.get("parameters", {}), record):
+        if not isinstance(container, dict):
+            continue
+        for key in ("strength", "spectator_strength", "coupling_strength"):
+            if container.get(key) is None:
+                continue
+            try:
+                value = float(container.get(key))
+            except (TypeError, ValueError):
+                continue
+            if np.isfinite(value):
+                return value
+    return 0.0
+
+
+def _effect_recovery_payload(
+    matrix: np.ndarray,
+    *,
+    predicted_weights: np.ndarray,
+    oracle_weights: np.ndarray,
+    records: list[dict[str, object]],
     feature_names: list[str],
     label: str,
-    support_count: int,
-    soft_assignment_mass: float,
+) -> dict[str, object]:
+    predicted = _effect_payload(
+        matrix,
+        predicted_weights,
+        records=records,
+        feature_names=feature_names,
+        label=str(label),
+        source="predicted_from_stage3b1_soft_assignment",
+    )
+    oracle = _effect_payload(
+        matrix,
+        oracle_weights,
+        records=records,
+        feature_names=feature_names,
+        label=str(label),
+        source="oracle_evaluator_only",
+    )
+    metrics = _effect_recovery_metrics(predicted, oracle)
+    return {
+        "label": str(label),
+        "support_count": int(np.sum(np.asarray(oracle_weights, dtype=np.float64) > 0.0)),
+        "soft_assignment_mass": float(np.sum(np.asarray(predicted_weights, dtype=np.float64))),
+        "oracle_assignment_mass": float(np.sum(np.asarray(oracle_weights, dtype=np.float64))),
+        "predicted_effect": predicted,
+        "oracle_effect": oracle,
+        "recovery_metrics": metrics,
+        "visible_strength": predicted["visible_strength"],
+        "context_relative_action_locations": predicted["context_relative_action_locations"],
+        "context_likelihood": predicted["context_relative_action_locations"]["context_likelihood"],
+        "oracle_visible_strength": oracle["visible_strength"],
+        "oracle_context_relative_action_locations": oracle["context_relative_action_locations"],
+        "oracle_context_likelihood": oracle["context_relative_action_locations"]["context_likelihood"],
+        "absolute_provenance_counts": oracle["absolute_provenance_counts"],
+        "oracle_parameter_strength": oracle["oracle_parameter_strength"],
+        "passed": bool(metrics["passed"]),
+    }
+
+
+def _effect_payload(
+    matrix: np.ndarray,
+    weights: np.ndarray,
+    *,
+    records: list[dict[str, object]],
+    feature_names: list[str],
+    label: str,
+    source: str,
 ) -> dict[str, object]:
     return {
         "label": str(label),
-        "support_count": int(support_count),
-        "soft_assignment_mass": float(soft_assignment_mass),
-        "visible_strength": _weighted_visible_strength(matrix, weights, feature_names=feature_names, records=all_context_records),
-        "context_relative_action_locations": _context_relative_location_summary(support_records),
-        "absolute_provenance_counts": _absolute_provenance_summary(support_records),
-        "oracle_parameter_strength": _oracle_parameter_strength(support_records),
+        "source": str(source),
+        "assignment_mass": float(np.sum(np.asarray(weights, dtype=np.float64))),
+        "visible_strength": _weighted_visible_strength(matrix, weights, feature_names=feature_names, records=records),
+        "context_relative_action_locations": _context_relative_location_summary(records, weights=weights),
+        "absolute_provenance_counts": _absolute_provenance_summary(_records_with_positive_weight(records, weights)),
+        "oracle_parameter_strength": _oracle_parameter_strength(_records_with_positive_weight(records, weights)),
     }
 
 
@@ -2621,6 +3598,130 @@ def _weighted_visible_strength(
         "context_relative_reference": _strength_reference_payload(names, context_shift, context_z, surface_mask=surface_mask, raw_mask=raw_mask),
         "global_reference": _strength_reference_payload(names, global_shift, global_z, surface_mask=surface_mask, raw_mask=raw_mask),
     }
+
+
+def _effect_recovery_metrics(predicted: dict[str, object], oracle: dict[str, object]) -> dict[str, object]:
+    pred_strength = dict(predicted.get("visible_strength", {}))
+    oracle_strength = dict(oracle.get("visible_strength", {}))
+    pred_context = dict(pred_strength.get("context_relative_reference", {}))
+    oracle_context = dict(oracle_strength.get("context_relative_reference", {}))
+    pred_location = dict(predicted.get("context_relative_action_locations", {}))
+    oracle_location = dict(oracle.get("context_relative_action_locations", {}))
+    strength_errors = {
+        "surface_l2_abs_error": _abs_diff(
+            pred_context.get("surface_standardized_l2_shift"),
+            oracle_context.get("surface_standardized_l2_shift"),
+        ),
+        "raw_l2_abs_error": _abs_diff(
+            pred_context.get("raw_standardized_l2_shift"),
+            oracle_context.get("raw_standardized_l2_shift"),
+        ),
+        "surface_mean_abs_shift_abs_error": _abs_diff(
+            pred_context.get("surface_mean_abs_standardized_shift"),
+            oracle_context.get("surface_mean_abs_standardized_shift"),
+        ),
+        "raw_mean_abs_shift_abs_error": _abs_diff(
+            pred_context.get("raw_mean_abs_standardized_shift"),
+            oracle_context.get("raw_mean_abs_standardized_shift"),
+        ),
+        "top_context_relative_strength_block_match": _top_strength_block(pred_context) == _top_strength_block(oracle_context),
+    }
+    location_errors = {
+        "location_fraction_mean_abs_error": _summary_mean_abs_error(
+            pred_location.get("location_fraction_in_context"),
+            oracle_location.get("location_fraction_in_context"),
+        ),
+        "qubit_center_fraction_mean_abs_error": _summary_mean_abs_error(
+            pred_location.get("qubit_center_fraction_in_context"),
+            oracle_location.get("qubit_center_fraction_in_context"),
+        ),
+        "qubit_span_fraction_mean_abs_error": _summary_mean_abs_error(
+            pred_location.get("qubit_span_fraction_in_context"),
+            oracle_location.get("qubit_span_fraction_in_context"),
+        ),
+        "top_relative_location_cell_match": _top_count_value(pred_location.get("top_relative_location_cells"))
+        == _top_count_value(oracle_location.get("top_relative_location_cells")),
+    }
+    context_likelihood_errors = {
+        "context_likelihood_location_fraction_mean_abs_error": location_errors["location_fraction_mean_abs_error"],
+        "context_likelihood_qubit_center_fraction_mean_abs_error": location_errors["qubit_center_fraction_mean_abs_error"],
+        "context_likelihood_qubit_span_fraction_mean_abs_error": location_errors["qubit_span_fraction_mean_abs_error"],
+        "top_context_likelihood_cell_match": location_errors["top_relative_location_cell_match"],
+        "semantic_note": "Alias of location_errors with S5 location interpreted as context-conditioned likelihood/support.",
+    }
+    scalar_errors = [
+        value
+        for value in [*strength_errors.values(), *location_errors.values()]
+        if isinstance(value, float)
+    ]
+    passed = (
+        all(abs(float(value)) <= 1.0e-12 for value in scalar_errors)
+        and bool(strength_errors["top_context_relative_strength_block_match"])
+        and bool(location_errors["top_relative_location_cell_match"])
+    )
+    return {
+        "schema": "scope_static_s5_effect_recovery_metrics_v1",
+        "metric_role": "predicted_effect_vs_oracle_effect",
+        "strength_errors": strength_errors,
+        "location_errors": location_errors,
+        "context_likelihood_errors": context_likelihood_errors,
+        "max_abs_scalar_error": float(max([abs(float(value)) for value in scalar_errors], default=0.0)),
+        "passed": bool(passed),
+    }
+
+
+def _effect_recovery_summary(*, per_family: dict[str, object], per_exact: dict[str, object]) -> dict[str, object]:
+    rows = [dict(row) for row in [*per_family.values(), *per_exact.values()] if isinstance(row, dict)]
+    metrics = [dict(row.get("recovery_metrics", {})) for row in rows if isinstance(row.get("recovery_metrics", {}), dict)]
+    max_error = float(max([float(row.get("max_abs_scalar_error", 0.0) or 0.0) for row in metrics], default=0.0))
+    failed = [
+        str(row.get("label", ""))
+        for row in rows
+        if isinstance(row.get("recovery_metrics", {}), dict) and not bool(dict(row.get("recovery_metrics", {})).get("passed", False))
+    ]
+    return {
+        "schema": "scope_static_s5_effect_recovery_summary_v1",
+        "family_count": int(len(per_family)),
+        "exact_mechanism_count": int(len(per_exact)),
+        "max_abs_scalar_error": max_error,
+        "failed_labels": failed,
+        "passed": not failed and max_error <= 1.0e-12,
+    }
+
+
+def _abs_diff(left: object, right: object) -> float:
+    if left is None or right is None:
+        return 0.0
+    return abs(float(left) - float(right))
+
+
+def _summary_mean_abs_error(left: object, right: object) -> float:
+    left_summary = dict(left) if isinstance(left, dict) else {}
+    right_summary = dict(right) if isinstance(right, dict) else {}
+    return _abs_diff(left_summary.get("signed_mean"), right_summary.get("signed_mean"))
+
+
+def _top_strength_block(reference: dict[str, object]) -> str:
+    blocks = reference.get("block_strengths", {})
+    if not isinstance(blocks, dict) or not blocks:
+        return ""
+    ranked = sorted(
+        (
+            (float(dict(payload).get("standardized_l2_shift", 0.0) or 0.0), str(name))
+            for name, payload in blocks.items()
+            if isinstance(payload, dict)
+        ),
+        key=lambda item: (-item[0], item[1]),
+    )
+    return ranked[0][1] if ranked else ""
+
+
+def _top_count_value(value: object) -> str:
+    rows = value if isinstance(value, list) else []
+    if not rows:
+        return ""
+    first = dict(rows[0]) if isinstance(rows[0], dict) else {}
+    return str(first.get("value", ""))
 
 
 def _context_relative_weighted_z_shift(arr: np.ndarray, weights: np.ndarray, records: list[dict[str, object]]) -> np.ndarray:
@@ -2755,11 +3856,31 @@ def _records_with_context_relative_location(records: list[dict[str, object]]) ->
     return out
 
 
-def _context_relative_location_summary(records: list[dict[str, object]]) -> dict[str, object]:
+def _context_relative_location_summary(records: list[dict[str, object]], *, weights: np.ndarray | None = None) -> dict[str, object]:
     rows = [dict(record.get("_context_relative_location", {})) for record in records if isinstance(record.get("_context_relative_location", {}), dict)]
-    location_fractions = [float(row["location_fraction_in_context"]) for row in rows if row.get("location_fraction_in_context") is not None]
-    qubit_centers = [float(row["qubit_center_fraction_in_context"]) for row in rows if row.get("qubit_center_fraction_in_context") is not None]
-    qubit_spans = [float(row["qubit_span_fraction_in_context"]) for row in rows if row.get("qubit_span_fraction_in_context") is not None]
+    if weights is None:
+        row_weights = np.ones(len(rows), dtype=np.float64)
+    else:
+        raw_weights = np.asarray(weights, dtype=np.float64).reshape(-1)
+        row_weights = np.asarray(
+            [float(raw_weights[idx]) if idx < int(raw_weights.size) else 0.0 for idx, record in enumerate(records) if isinstance(record.get("_context_relative_location", {}), dict)],
+            dtype=np.float64,
+        )
+    location_pairs = [
+        (float(row["location_fraction_in_context"]), float(row_weights[idx]))
+        for idx, row in enumerate(rows)
+        if row.get("location_fraction_in_context") is not None
+    ]
+    qubit_center_pairs = [
+        (float(row["qubit_center_fraction_in_context"]), float(row_weights[idx]))
+        for idx, row in enumerate(rows)
+        if row.get("qubit_center_fraction_in_context") is not None
+    ]
+    qubit_span_pairs = [
+        (float(row["qubit_span_fraction_in_context"]), float(row_weights[idx]))
+        for idx, row in enumerate(rows)
+        if row.get("qubit_span_fraction_in_context") is not None
+    ]
     cells = [
         "|".join(
             [
@@ -2771,18 +3892,48 @@ def _context_relative_location_summary(records: list[dict[str, object]]) -> dict
         )
         for row in rows
     ]
+    loc_summary = _weighted_numeric_summary(location_pairs)
+    center_summary = _weighted_numeric_summary(qubit_center_pairs)
+    span_summary = _weighted_numeric_summary(qubit_span_pairs)
+    location_bucket_counts = _weighted_value_counts([row.get("location_bucket_in_context", "unknown") for row in rows], row_weights)
+    qubit_center_bucket_counts = _weighted_value_counts([row.get("qubit_center_bucket_in_context", "unknown") for row in rows], row_weights)
+    qubit_arity_counts = _weighted_value_counts([row.get("qubit_arity", 0) for row in rows], row_weights)
+    instruction_counts = _weighted_value_counts([row.get("instruction", "unknown") for row in rows], row_weights)
+    top_cells = _top_weighted_counts(cells, row_weights)
+    context_likelihood = {
+        "schema": "scope_static_s5_context_conditioned_likelihood_v1",
+        "semantic_role": "context_conditioned_error_likelihood",
+        "definition": "Weighted likelihood/support that an error effect appears in a context-relative cell conditioned on the public/probe context.",
+        "conditioned_on": "context_key",
+        "cell_definition": "location_bucket_in_context|qubit_center_bucket_in_context|qubit_arity|instruction",
+        "reference_frame": "context_relative",
+        "weight_mass": float(np.sum(row_weights)),
+        "context_count": int(len(set(str(row.get("context_key", "")) for row in rows))),
+        "location_fraction_in_context": loc_summary,
+        "qubit_center_fraction_in_context": center_summary,
+        "qubit_span_fraction_in_context": span_summary,
+        "location_bucket_likelihood_mass": location_bucket_counts,
+        "qubit_center_bucket_likelihood_mass": qubit_center_bucket_counts,
+        "qubit_arity_likelihood_mass": qubit_arity_counts,
+        "instruction_likelihood_mass": instruction_counts,
+        "top_context_likelihood_cells": top_cells,
+    }
     return {
         "reference_frame": "context_relative",
+        "semantic_role": "context_conditioned_error_likelihood",
+        "location_semantics": "context-likelihood, not absolute coordinate recovery",
         "record_count": int(len(records)),
+        "weight_mass": float(np.sum(row_weights)),
         "context_count": int(len(set(str(row.get("context_key", "")) for row in rows))),
-        "location_fraction_in_context": _numeric_summary(np.asarray(location_fractions, dtype=np.float64)),
-        "qubit_center_fraction_in_context": _numeric_summary(np.asarray(qubit_centers, dtype=np.float64)),
-        "qubit_span_fraction_in_context": _numeric_summary(np.asarray(qubit_spans, dtype=np.float64)),
-        "location_bucket_counts": _value_counts([row.get("location_bucket_in_context", "unknown") for row in rows]),
-        "qubit_center_bucket_counts": _value_counts([row.get("qubit_center_bucket_in_context", "unknown") for row in rows]),
-        "qubit_arity_counts": _value_counts([row.get("qubit_arity", 0) for row in rows]),
-        "instruction_counts": _value_counts([row.get("instruction", "unknown") for row in rows]),
-        "top_relative_location_cells": _top_counts(cells),
+        "location_fraction_in_context": loc_summary,
+        "qubit_center_fraction_in_context": center_summary,
+        "qubit_span_fraction_in_context": span_summary,
+        "location_bucket_counts": location_bucket_counts,
+        "qubit_center_bucket_counts": qubit_center_bucket_counts,
+        "qubit_arity_counts": qubit_arity_counts,
+        "instruction_counts": instruction_counts,
+        "top_relative_location_cells": top_cells,
+        "context_likelihood": context_likelihood,
     }
 
 
@@ -2806,6 +3957,11 @@ def _absolute_provenance_summary(records: list[dict[str, object]]) -> dict[str, 
         "circuit_id_counts": _value_counts(circuits),
         "probe_index_counts": _value_counts(probe_indices),
     }
+
+
+def _records_with_positive_weight(records: list[dict[str, object]], weights: np.ndarray) -> list[dict[str, object]]:
+    raw_weights = np.asarray(weights, dtype=np.float64).reshape(-1)
+    return [record for idx, record in enumerate(records) if idx < int(raw_weights.size) and float(raw_weights[idx]) > 0.0]
 
 
 def _oracle_parameter_strength(records: list[dict[str, object]]) -> dict[str, object]:
@@ -2847,6 +4003,26 @@ def _numeric_summary(values: np.ndarray) -> dict[str, object]:
     }
 
 
+def _weighted_numeric_summary(pairs: list[tuple[float, float]]) -> dict[str, object]:
+    if not pairs:
+        return {"count": 0, "weight_mass": 0.0, "signed_mean": 0.0, "mean_abs": 0.0, "max_abs": 0.0, "rms": 0.0, "min": 0.0, "max": 0.0}
+    values = np.asarray([value for value, _weight in pairs], dtype=np.float64)
+    weights = np.asarray([max(0.0, weight) for _value, weight in pairs], dtype=np.float64)
+    mass = float(np.sum(weights))
+    if mass <= 0.0:
+        return {"count": int(values.size), "weight_mass": 0.0, "signed_mean": 0.0, "mean_abs": 0.0, "max_abs": 0.0, "rms": 0.0, "min": 0.0, "max": 0.0}
+    return {
+        "count": int(values.size),
+        "weight_mass": mass,
+        "signed_mean": float(np.sum(weights * values) / mass),
+        "mean_abs": float(np.sum(weights * np.abs(values)) / mass),
+        "max_abs": float(np.max(np.abs(values[weights > 0.0]))) if np.any(weights > 0.0) else 0.0,
+        "rms": float(np.sqrt(np.sum(weights * values * values) / mass)),
+        "min": float(np.min(values[weights > 0.0])) if np.any(weights > 0.0) else 0.0,
+        "max": float(np.max(values[weights > 0.0])) if np.any(weights > 0.0) else 0.0,
+    }
+
+
 def _numeric_leaves(value: object, *, prefix: str = "") -> list[tuple[str, float]]:
     if isinstance(value, bool):
         return []
@@ -2882,8 +4058,24 @@ def _value_counts(values: list[object]) -> dict[str, int]:
     return dict(sorted(counts.items(), key=lambda item: (-int(item[1]), item[0])))
 
 
+def _weighted_value_counts(values: list[object], weights: np.ndarray) -> dict[str, float]:
+    counts: dict[str, float] = {}
+    raw_weights = np.asarray(weights, dtype=np.float64).reshape(-1)
+    for idx, value in enumerate(values):
+        weight = float(raw_weights[idx]) if idx < int(raw_weights.size) else 0.0
+        if weight <= 0.0:
+            continue
+        key = str(value)
+        counts[key] = float(counts.get(key, 0.0)) + weight
+    return dict(sorted(counts.items(), key=lambda item: (-float(item[1]), item[0])))
+
+
 def _top_counts(values: list[object], *, limit: int = 8) -> list[dict[str, object]]:
     return [{"value": key, "count": int(count)} for key, count in list(_value_counts(values).items())[: max(0, int(limit))]]
+
+
+def _top_weighted_counts(values: list[object], weights: np.ndarray, *, limit: int = 8) -> list[dict[str, object]]:
+    return [{"value": key, "count": float(count)} for key, count in list(_weighted_value_counts(values, weights).items())[: max(0, int(limit))]]
 
 
 def _context_key(record: dict[str, object]) -> str:
@@ -2917,9 +4109,11 @@ def _is_int_like(value: object) -> bool:
 
 def _mechanism_sort_key(label: str) -> tuple[int, str]:
     text = str(label)
-    if text.startswith("M") and text[1:].isdigit():
+    if text.startswith("F") and text[1:].isdigit():
         return (int(text[1:]), text)
-    return (10_000, text)
+    if text.startswith("M") and text[1:].isdigit():
+        return (10_000 + int(text[1:]), text)
+    return (20_000, text)
 
 
 def _classification_metrics(true_labels: list[str], predicted_labels: list[str], *, class_names: list[str]) -> dict[str, object]:
@@ -2966,6 +4160,21 @@ def _is_one(value: object, *, atol: float = 1.0e-12) -> bool:
     if value is None:
         return False
     return bool(abs(float(value) - 1.0) <= float(atol))
+
+
+def _artifact_acceptance_passed(metrics: dict[str, object] | None) -> bool:
+    if not isinstance(metrics, dict):
+        return False
+    acceptance = metrics.get("acceptance_audit", {})
+    if not isinstance(acceptance, dict):
+        return False
+    return bool(acceptance.get("passed", False))
+
+
+def _optional_json(path: Path | None) -> dict[str, object] | None:
+    if path is None or not Path(path).exists():
+        return None
+    return _load_json(Path(path))
 
 
 def _primary_strength_reference_frame(audit: dict[str, object]) -> str:
@@ -3080,12 +4289,17 @@ def _write_outputs(output: Path, result: dict[str, object]) -> None:
         "soft_family_classification_metrics.json": result["soft_family_classification_metrics"],
         "soft_family_strength_location_audit.json": result["soft_family_strength_location_audit"],
         "s5_context_relative_mechanism_effect_audit.json": result["s5_context_relative_mechanism_effect_audit"],
+        "mechanism_taxonomy_contract_audit.json": result["mechanism_taxonomy_contract_audit"],
+        "mechanism_dimension_recovery_audit.json": result["mechanism_dimension_recovery_audit"],
+        "overlay_contract_audit.json": result["overlay_contract_audit"],
+        "overlay_recovery_audit.json": result["overlay_recovery_audit"],
         "global_null_metrics.json": result["global_null_metrics"],
         "stratified_null_metrics.json": result["stratified_null_metrics"],
         "mean_only_baseline_metrics.json": result["mean_only_baseline_metrics"],
         "assignment_shuffle_audit.json": result["assignment_shuffle_audit"],
         "feature_scramble_audit.json": result["feature_scramble_audit"],
         "leakage_audit.json": result["leakage_audit"],
+        "claim_gate_audit.json": result["claim_gate_audit"],
         "acceptance_audit.json": result["acceptance_audit"],
         "assignment_source_audit.json": result["assignment_source_audit"],
         "heldout_protocol.json": result["heldout_protocol"],
@@ -3100,6 +4314,7 @@ def _write_outputs(output: Path, result: dict[str, object]) -> None:
 
 def format_stage3c_summary(result: dict[str, object]) -> str:
     acceptance = dict(result.get("acceptance_audit", {}))
+    claim_gate = dict(result.get("claim_gate_audit", {}))
     predicted = dict(dict(result.get("predicted_assignment_metrics", {})).get("overall", {}))
     global_null = dict(dict(result.get("global_null_metrics", {})).get("overall", {}))
     stratified_null = dict(dict(result.get("stratified_null_metrics", {})).get("overall", {}))
@@ -3115,6 +4330,7 @@ def format_stage3c_summary(result: dict[str, object]) -> str:
             "",
             f"- Decision: `{result.get('decision')}`",
             f"- Acceptance passed: `{str(bool(acceptance.get('passed', False))).lower()}`",
+            f"- Claim allowed: `{str(bool(claim_gate.get('claim_allowed', False))).lower()}`",
             f"- Primary generation likelihood metric: `{primary_metric}`",
             f"- Predicted-assignment primary NLL: `{_format_metric(predicted.get(primary_metric))}`",
             f"- Global-null primary NLL: `{_format_metric(global_null.get(primary_metric))}`",

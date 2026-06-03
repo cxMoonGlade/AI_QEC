@@ -275,15 +275,16 @@ closeout requires paired bootstrap, seed/split repeat, stronger statistical
 controls including the visible-surface dMLE-style marginal MLE baseline, and
 mechanism/source-structure ablations. It still may claim only visible
 syndrome-response replay/source-transfer evidence, not true Google physical
-mechanism recovery, Google `M*` recovery, Born-rule physical generation, or
-CPTP/GKSL channel learning.
+mechanism recovery, Google public F/M label recovery, Google legacy catalog-ID
+recovery, Born-rule physical generation, or CPTP/GKSL channel learning.
 
 Stage 5 extends recovered mechanism/family structure with context-relative
 effect audits: common action location inside each context and
 context-normalized visible strength. S5 artifacts are evaluator-only
 interpretation outputs. They must not feed learner training or model selection
-and must not claim true Google physical mechanism recovery, Google `M*`
-recovery, or CPTP/GKSL parameter learning.
+and must not claim true Google physical mechanism recovery, Google public F/M
+label recovery, Google legacy catalog-ID recovery, or CPTP/GKSL parameter
+learning.
 
 The `separability_v2` allM artifacts are strong Stage 2 separability evidence,
 not a Born-rule physical baseline. Older PHYC3 artifacts must be rechecked for
@@ -292,6 +293,6 @@ before being cited as current no-leakage learner evidence. The minimal Born-loca
 teacher remains a density-matrix diagnostic with effective circuit depth one.
 The pre-release acceptance surface is data preparation, teacher
 self-distinguishment, and no-leakage learner classification plus noise
-generation quality. M11 spectator crosstalk RZ/ZZ remains a contract-sensitive
-mechanism; do not collapse it into a local Born diagnostic when making
-full-circuit claims.
+generation quality. Legacy M11 / public M6 spectator crosstalk RZ/ZZ remains a
+contract-sensitive overlay mechanism; do not collapse it into a local Born
+diagnostic when making full-circuit claims.

@@ -18,6 +18,22 @@ def test_teacher_physicality_audit_accepts_cptp_povm_teacher_and_writes_bundle(t
             _record("M1", "M1", 0, instruction="measure"),
             _record("M4", "M4", 1),
             _record("M8", "M8", 1, num_qubits=2, instruction="rzz"),
+            _record(
+                "M11",
+                "M11",
+                1,
+                parameters={
+                    "epsilon": 0.025,
+                    "strength": 0.025,
+                    "spectator_overlay_present": True,
+                    "base_mechanism": "M8",
+                    "victim_relative_location": "edge",
+                    "aggressor_relative_location": "adjacent_gate",
+                    "coupling_axis": "ZZ",
+                    "timing_context": "same_cycle",
+                    "claims_standalone_flat_mechanism": False,
+                },
+            ),
             _record("M13", "M13", 2, parameters={"operation_axis": "rx", "epsilon": 0.031, "epsilon_mean": 0.032, "epsilon_span": 0.018}, instruction="rx"),
             _record("M14", "M14", 2, parameters={"operation_axis": "rx", "error_axis": "rz", "epsilon": 0.028}, instruction="rx"),
             _record("M17", "M17", 2, instruction="reset"),
@@ -39,6 +55,25 @@ def test_teacher_physicality_audit_accepts_cptp_povm_teacher_and_writes_bundle(t
     assert result["leakage_space_audit"]["records"][0]["true_qutrit_leakage_claim_allowed"] is False
     assert result["circuit_probability_audit"]["all_probability_distributions_valid"] is True
     assert float(result["summary"]["max_probability_sum_defect"]) <= 1.0e-12
+    m11_range = [
+        row
+        for row in result["mechanism_parameter_ranges"]["records"]
+        if row["mechanism_id"] == "M11"
+    ][0]
+    assert m11_range["passed"] is True
+    categorical = {
+        row["parameter"]: row
+        for row in m11_range["checked_parameters"]
+        if row["range_family"] == "categorical_enum"
+    }
+    assert categorical["base_mechanism"]["value"] == "M8"
+    assert categorical["coupling_axis"]["value"] == "ZZ"
+    assert categorical["timing_context"]["value"] == "same_cycle"
+    overlay = result["overlay_contract_audit"]
+    assert overlay["passed"] is True
+    assert overlay["num_overlay_records"] == 1
+    assert overlay["num_overlay_records_missing_payload"] == 0
+    assert result["acceptance_audit"]["checks"]["overlay_contract_payload_complete"] is True
 
     for name in [
         "config.yaml",
@@ -55,11 +90,41 @@ def test_teacher_physicality_audit_accepts_cptp_povm_teacher_and_writes_bundle(t
         "leakage_space_audit.json",
         "circuit_probability_audit.json",
         "sampling_audit.json",
+        "overlay_contract_audit.json",
         "physicality_by_mechanism.csv",
         "failure_cases.json",
         "summary.md",
     ]:
         assert (output / name).exists()
+
+
+def test_m11_overlay_payload_required(tmp_path: Path) -> None:
+    teacher = _write_teacher(
+        tmp_path,
+        [
+            _record(
+                "M11",
+                "M11",
+                0,
+                num_qubits=2,
+                instruction="rzz",
+                parameters={"epsilon": 0.025, "strength": 0.025},
+            )
+        ],
+    )
+
+    result = run_teacher_physicality_audit(teacher_dir=teacher, output_dir=tmp_path / "audit")
+
+    assert result["decision"] == "teacher_physicality_failed"
+    overlay = result["overlay_contract_audit"]
+    assert overlay["passed"] is False
+    assert overlay["num_overlay_records"] == 1
+    assert overlay["num_overlay_records_missing_payload"] == 1
+    assert "M11_overlay_contract_missing" in overlay["failure_kinds"]
+    assert "spectator_overlay_present" in overlay["rows"][0]["missing_fields"]
+    assert "base_mechanism" in overlay["rows"][0]["missing_fields"]
+    assert result["acceptance_audit"]["checks"]["overlay_contract_payload_complete"] is False
+    assert any(row["artifact"] == "overlay_contract_audit" for row in result["failure_cases"]["global_failures"])
 
 
 def test_teacher_physicality_audit_rejects_invalid_parameter_range(tmp_path: Path) -> None:

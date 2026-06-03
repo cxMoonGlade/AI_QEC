@@ -27,6 +27,8 @@ TWO_MEASUREMENTS = ("ZZ", "ZX", "XZ", "XX")
 ALIAS_PAIRS = (("M8", "M30"), ("M9", "M31"), ("M10", "M32"), ("M12", "M33"), ("M0", "M24"), ("M15", "M34"), ("M4", "M27"))
 FORBIDDEN_LEARNER_INPUTS = (
     "true mechanism ID",
+    "canonical public F/M mechanism label",
+    "legacy catalog ID",
     "mechanism name",
     "physical family label",
     "teacher self-distinguishment features",
@@ -35,7 +37,20 @@ FORBIDDEN_LEARNER_INPUTS = (
     "oracle prototype vector",
     "hidden omega",
 )
-FORBIDDEN_FEATURE_TOKENS = ("oracle", "mechanism", "teacher", "channel", "kraus", "ptm", "prototype", "omega", "family", "label")
+FORBIDDEN_FEATURE_TOKENS = (
+    "oracle",
+    "mechanism",
+    "teacher",
+    "channel",
+    "kraus",
+    "ptm",
+    "prototype",
+    "omega",
+    "family",
+    "label",
+    "catalog",
+    "legacy",
+)
 RAW_SINGLE_METRICS = ("P0", "P1", "p_comp")
 RAW_TWO_PROB_METRICS = ("P00", "P01", "P10", "P11", "p_comp")
 VISIBLE_OPERATION_CONTEXTS = ("idle", "measure", "reset", "rx", "ry", "rz", "rzz")

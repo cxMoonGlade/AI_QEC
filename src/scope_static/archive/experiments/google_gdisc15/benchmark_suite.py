@@ -50,7 +50,7 @@ CLAIM_BOUNDARY = (
     "Google Benchmark Suite V1 reports predictive utility, transfer, calibration, "
     "decoder-facing proxies, DEM proxy structure, and sample efficiency only. It does "
     "not claim true physical mechanism recovery, true hidden fault partitions, or "
-    "catalog M-ID recovery from Google hardware data."
+    "public F/M label or legacy catalog-ID recovery from Google hardware data."
 )
 
 BASELINE_MODELS = {"dmle_qec", "dmle_qec_upstream", "global_shared_scalar"}

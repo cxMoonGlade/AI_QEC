@@ -2107,12 +2107,12 @@ Named mechanism sets:
 set_A: M0-M9
 set_B: M0-M14
 set_C: M0-M24
-set_D: M0-M34
-allM:  M0-M34
+set_D: legacy M0-M34
+allM:  legacy M0-M34
 ```
 
-Historical M0-M19 artifacts produced before the M0-M34 migration retain their
-old labels and should be treated as pre-taxonomy-migration results.
+Historical M0-M19 artifacts produced before the legacy M0-M34 migration retain
+their old labels and should be treated as pre-taxonomy-migration results.
 
 ### S2D.11_typed_gate_readout_prep_invariant_learner
 
@@ -2337,8 +2337,9 @@ leakage guardrails pass
 
 Interpretation: S2D.11b converts the S2D.11 strong partial into a pass. The
 remaining S2D.11 failure was gate-branch M1 calibration, not a readout/prep
-branch failure and not a missing-probe result. In current M0-M34 labels this is
-the M8 RZZ gate branch; the artifact name predates renumbering.
+branch failure and not a missing-probe result. In current legacy M0-M34 labels
+this is the legacy M8 / public F4 RZZ gate branch; the artifact name predates
+renumbering.
 
 Primary verdict rules:
 

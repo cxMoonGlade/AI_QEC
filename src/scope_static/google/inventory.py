@@ -99,14 +99,18 @@ REQUIRED_LEAF_FILE_FIELDS = (
 FORBIDDEN_TRUE_LABELS = (
     "true_per_shot_physical_error_mechanism",
     "true_hidden_fault_partition",
+    "true_public_FM_label",
+    "true_legacy_catalog_id",
     "true_catalog_M_id",
     "catalog_M_label",
+    "public_FM_label",
+    "legacy_catalog_id",
 )
 
 LABEL_CLAIM_BOUNDARY = (
     "Google inventory labels expose hardware context, decoder outputs, strong shot labels, "
     "and DEM-derived proxy labels only. They are not true physical mechanism labels, "
-    "hidden fault partitions, or catalog M-ID labels."
+    "hidden fault partitions, public F/M labels, or legacy catalog-ID labels."
 )
 
 

@@ -129,9 +129,9 @@ The package does not currently provide:
 - a neural S4 model accepted as the main scientific claim; current S4 neural
   work remains gated by bridge-surface survival and source/Google transfer
   controls;
-- true mechanism-label ARI/NMI on Google hardware data, because the Google
-  artifacts used here provide observations, circuits, metadata, and decoder
-  products rather than hidden physical mechanism labels;
+- true public F/M label or legacy catalog-ID ARI/NMI on Google hardware data,
+  because the Google artifacts used here provide observations, circuits,
+  metadata, and decoder products rather than hidden physical mechanism labels;
 - a claim that the metadata-inclusive `full_target` score alone measures
   syndrome-response learning. The current headline for Google V2 is
   `raw_target_only` plus block-normalized reporting and controls.

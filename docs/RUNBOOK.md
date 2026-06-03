@@ -520,9 +520,10 @@ selection.
 
 For controlled-catalog runs, Stage 3C also emits the current S5 artifact:
 `s5_context_relative_mechanism_effect_audit.json`. It reports evaluator-only
-family/exact-mechanism effect location and strength using context-relative
-location and context-normalized visible strength. The compatibility alias
-`soft_family_strength_location_audit.json` is written with the same payload.
+predicted-vs-oracle family/exact-mechanism effect recovery using
+context-relative location and context-normalized visible strength. The
+compatibility alias `soft_family_strength_location_audit.json` is written with
+the same payload.
 
 ## Function: Run Stage 3D.1 Assignment-Shuffle Generator Audit
 

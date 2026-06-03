@@ -345,7 +345,8 @@ not:
 
 ```text
 true Google physical mechanism recovery
-Google M* label recovery
+Google public F/M label recovery
+Google legacy catalog-ID recovery
 ```
 
 ## Controlled Vs Google Surface

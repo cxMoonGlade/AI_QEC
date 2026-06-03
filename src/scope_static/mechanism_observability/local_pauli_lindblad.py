@@ -32,7 +32,15 @@ GENERATOR_COORDINATES = (
     "affine_IZ",
     "affine_ZZ",
 )
-FORBIDDEN_FEATURE_TOKENS = ("oracle_label", "mechanism_id", "exact_ptm", "teacher_channel", "oracle_fingerprint")
+FORBIDDEN_FEATURE_TOKENS = (
+    "oracle_label",
+    "mechanism_id",
+    "public_label",
+    "legacy_catalog_id",
+    "exact_ptm",
+    "teacher_channel",
+    "oracle_fingerprint",
+)
 
 
 @dataclass(frozen=True)

@@ -18,6 +18,7 @@ from .baselines import VARIANCE_FLOOR
 from .baselines import evaluate_cluster_assignments
 from .discovery_model import context_dependent_mechanism_diagnostics
 from .discovery_model import _cap_folds
+from .discovery_model import _context_groups_from_split_manifest
 from .discovery_model import _valid_folds
 from .generator_learning import DEFAULT_MAX_CV_FOLDS
 from .generator_learning import PRIMARY_GENERATION_LIKELIHOOD_METRIC
@@ -42,6 +43,7 @@ DEFAULT_MIN_POSTMERGE_ARI = 0.99
 DEFAULT_MIN_POSTMERGE_BA = 0.99
 DEFAULT_MIN_POSTMERGE_MIN_RECALL = 0.99
 DEFAULT_MAX_GENERATION_NLL_INCREASE = 0.05
+DEFAULT_CONTEXT_RESIDUAL_PROFILE_VETO_THRESHOLD = 0.75
 
 
 def run_stage3d4b_overcomplete_merge_prune_audit(
@@ -62,6 +64,7 @@ def run_stage3d4b_overcomplete_merge_prune_audit(
     min_postmerge_ba: float = DEFAULT_MIN_POSTMERGE_BA,
     min_postmerge_min_recall: float = DEFAULT_MIN_POSTMERGE_MIN_RECALL,
     max_generation_nll_increase: float = DEFAULT_MAX_GENERATION_NLL_INCREASE,
+    context_residual_profile_veto_threshold: float | None = DEFAULT_CONTEXT_RESIDUAL_PROFILE_VETO_THRESHOLD,
 ) -> dict[str, object]:
     """Merge/prune overcomplete microclusters using visible-only assignments.
 
@@ -85,6 +88,7 @@ def run_stage3d4b_overcomplete_merge_prune_audit(
     x, feature_names, feature_matrix = load_stage3a_frozen_visible_features(s3a)
     feature_match = _feature_schema_matches_s3a(s3a, feature_names)
     split_manifest = dict(s3a_metrics.get("split_manifest", {})) if isinstance(s3a_metrics.get("split_manifest", {}), dict) else {}
+    context_groups = _context_groups_from_split_manifest(split_manifest, record_count=int(x.shape[0]))
     all_folds = _valid_folds(split_manifest, record_count=int(x.shape[0]))
     folds = _cap_folds(all_folds, max_cv_folds=max_cv_folds)
     if not folds:
@@ -101,6 +105,7 @@ def run_stage3d4b_overcomplete_merge_prune_audit(
         raw_hard,
         responsibilities=overcomplete,
         feature_names=feature_names,
+        context_groups=context_groups,
     )
     merge_map = microcluster_merge_map(
         cluster_summary,
@@ -108,6 +113,7 @@ def run_stage3d4b_overcomplete_merge_prune_audit(
         max_microcluster_support=int(max_microcluster_support),
         max_microcluster_fraction=float(max_microcluster_fraction),
         min_microcluster_family_count=int(min_microcluster_family_count),
+        context_residual_profile_veto_threshold=context_residual_profile_veto_threshold,
     )
     merged_hard, merged_assignments = apply_merge_map(raw_hard, merge_map)
 
@@ -224,6 +230,11 @@ def run_stage3d4b_overcomplete_merge_prune_audit(
             "min_postmerge_ba": float(min_postmerge_ba),
             "min_postmerge_min_recall": float(min_postmerge_min_recall),
             "max_generation_nll_increase": float(max_generation_nll_increase),
+            "context_residual_profile_veto_threshold": (
+                None
+                if context_residual_profile_veto_threshold is None
+                else float(context_residual_profile_veto_threshold)
+            ),
         },
         "visible_feature_matrix": feature_matrix,
         "feature_schema_match_audit": feature_match,
@@ -233,6 +244,7 @@ def run_stage3d4b_overcomplete_merge_prune_audit(
             max_microcluster_support=int(max_microcluster_support),
             max_microcluster_fraction=float(max_microcluster_fraction),
             min_microcluster_family_count=int(min_microcluster_family_count),
+            context_residual_profile_veto_threshold=context_residual_profile_veto_threshold,
         ),
         "overcomplete_cluster_summary": cluster_summary,
         "merge_map": merge_map,
@@ -272,13 +284,16 @@ def overcomplete_cluster_summary(
     *,
     responsibilities: np.ndarray,
     feature_names: list[str],
+    context_groups: np.ndarray | None = None,
 ) -> dict[str, object]:
     rows = []
     active = sorted(set(np.asarray(hard_assignments, dtype=np.int64).tolist()))
+    residual = _context_residual_matrix(x, context_groups)
     for cluster in active:
         idx = np.asarray([row for row, value in enumerate(hard_assignments.tolist()) if int(value) == int(cluster)], dtype=np.int64)
         local = x[idx]
         mean = np.mean(local, axis=0) if idx.size else np.zeros(int(x.shape[1]), dtype=np.float64)
+        residual_mean = np.mean(residual[idx], axis=0) if idx.size else np.zeros(int(x.shape[1]), dtype=np.float64)
         top = _top_feature_rows(mean, feature_names, limit=8)
         rows.append(
             {
@@ -289,6 +304,10 @@ def overcomplete_cluster_summary(
                 "assignment_mass": float(np.sum(responsibilities[:, int(cluster)])) if int(cluster) < int(responsibilities.shape[1]) else 0.0,
                 "prototype_sha256": _vector_digest(mean),
                 "top_visible_features_by_abs_mean": top,
+                "context_residual_profile": [float(value) for value in residual_mean.tolist()],
+                "context_residual_profile_sha256": _vector_digest(residual_mean),
+                "context_residual_profile_l2_norm": float(np.linalg.norm(residual_mean)),
+                "top_context_residual_features_by_abs_mean": _top_feature_rows(residual_mean, feature_names, limit=8),
             }
         )
     return {
@@ -296,6 +315,7 @@ def overcomplete_cluster_summary(
         "record_count": int(x.shape[0]),
         "feature_count": int(x.shape[1]) if x.ndim == 2 else 0,
         "active_cluster_count": int(len(rows)),
+        "uses_context_normalized_residual_profiles": True,
         "clusters": rows,
     }
 
@@ -307,6 +327,7 @@ def microcluster_merge_map(
     max_microcluster_support: int,
     max_microcluster_fraction: float,
     min_microcluster_family_count: int,
+    context_residual_profile_veto_threshold: float | None = DEFAULT_CONTEXT_RESIDUAL_PROFILE_VETO_THRESHOLD,
 ) -> dict[str, object]:
     clusters = [dict(row) for row in cluster_summary.get("clusters", []) if isinstance(row, dict)]
     micro = [
@@ -315,8 +336,14 @@ def microcluster_merge_map(
         if int(row.get("support", 0)) <= int(max_microcluster_support)
         and float(row.get("support_fraction", 0.0)) <= float(max_microcluster_fraction)
     ]
-    merge_micro = len(micro) >= int(min_microcluster_family_count)
-    macro = [row for row in clusters if row not in micro or not merge_micro]
+    micro_groups = _microcluster_residual_profile_groups(
+        micro,
+        threshold=context_residual_profile_veto_threshold,
+    )
+    mergeable_micro_groups = [group for group in micro_groups if len(group) >= int(min_microcluster_family_count)]
+    unmerged_micro_clusters = [row for group in micro_groups if len(group) < int(min_microcluster_family_count) for row in group]
+    merge_micro = bool(mergeable_micro_groups)
+    macro = [row for row in clusters if row not in micro] + unmerged_micro_clusters
     family_rows = []
     cluster_to_family: dict[str, str] = {}
     for family_idx, row in enumerate(macro):
@@ -331,9 +358,9 @@ def microcluster_merge_map(
                 "support": int(row.get("support", 0)),
             }
         )
-    if merge_micro:
+    for group_idx, group in enumerate(mergeable_micro_groups):
         family = f"F{len(family_rows):03d}"
-        source_clusters = [str(row["cluster"]) for row in micro]
+        source_clusters = [str(row["cluster"]) for row in group]
         for cluster in source_clusters:
             cluster_to_family[cluster] = family
         family_rows.append(
@@ -341,23 +368,34 @@ def microcluster_merge_map(
                 "family": family,
                 "merge_type": "microcluster_tail_family",
                 "source_clusters": source_clusters,
-                "support": int(sum(int(row.get("support", 0)) for row in micro)),
+                "support": int(sum(int(row.get("support", 0)) for row in group)),
+                "residual_profile_group": int(group_idx),
             }
         )
+    veto = _residual_profile_veto_audit(micro_groups, threshold=context_residual_profile_veto_threshold)
     return {
         "schema": "scope_static_stage3d4b_microcluster_merge_map_v1",
-        "strategy": "prune inactive clusters, keep macro clusters separate, merge all declared microclusters into one visible-only tail-submode family",
+        "strategy": "prune inactive clusters, keep macro clusters separate, and merge only context-residual-profile-compatible microclusters",
         "uses_labels_for_merge_rule": False,
         "uses_channels_ptms_kraus": False,
+        "uses_context_normalized_residual_profile_veto": True,
         "record_count": int(record_count),
         "active_cluster_count": int(len(clusters)),
         "postmerge_family_count": int(len(family_rows)),
         "microcluster_count": int(len(micro)),
         "microcluster_total_support": int(sum(int(row.get("support", 0)) for row in micro)),
         "microcluster_merge_applied": bool(merge_micro),
+        "microcluster_residual_profile_group_count": int(len(micro_groups)),
+        "microcluster_residual_profile_veto_applied": bool(veto.get("veto_applied", False)),
         "max_microcluster_support": int(max_microcluster_support),
         "max_microcluster_fraction": float(max_microcluster_fraction),
         "min_microcluster_family_count": int(min_microcluster_family_count),
+        "context_residual_profile_veto_threshold": (
+            None
+            if context_residual_profile_veto_threshold is None
+            else float(context_residual_profile_veto_threshold)
+        ),
+        "residual_profile_veto_audit": veto,
         "cluster_to_family": cluster_to_family,
         "families": family_rows,
     }
@@ -385,14 +423,21 @@ def merge_prune_plan_artifact(
     max_microcluster_support: int,
     max_microcluster_fraction: float,
     min_microcluster_family_count: int,
+    context_residual_profile_veto_threshold: float | None,
 ) -> dict[str, object]:
     return {
         "schema": "scope_static_stage3d4b_merge_prune_plan_v1",
         "input_assignment_key": str(overcomplete_assignment_key),
-        "rule": "active clusters with support <= max_microcluster_support and support_fraction <= max_microcluster_fraction are microclusters; if enough exist, merge them into one tail-submode family",
+        "rule": "active clusters with support <= max_microcluster_support and support_fraction <= max_microcluster_fraction are microclusters; merge only microclusters with compatible context-normalized residual profiles",
         "max_microcluster_support": int(max_microcluster_support),
         "max_microcluster_fraction": float(max_microcluster_fraction),
         "min_microcluster_family_count": int(min_microcluster_family_count),
+        "context_residual_profile_veto_threshold": (
+            None
+            if context_residual_profile_veto_threshold is None
+            else float(context_residual_profile_veto_threshold)
+        ),
+        "uses_context_normalized_residual_profile_veto": True,
         "uses_mechanism_labels_for_merge_rule": False,
         "uses_oracle_prototypes": False,
         "uses_channels_ptms_kraus": False,
@@ -528,6 +573,96 @@ def stage3d4b_acceptance_audit(
     }
 
 
+def _microcluster_residual_profile_groups(
+    microclusters: list[dict[str, object]],
+    *,
+    threshold: float | None,
+) -> list[list[dict[str, object]]]:
+    if not microclusters:
+        return []
+    if threshold is None or float(threshold) < 0.0:
+        return [list(microclusters)]
+    groups: list[list[dict[str, object]]] = []
+    for row in microclusters:
+        profile = _cluster_residual_profile(row)
+        placed = False
+        for group in groups:
+            distances = [
+                float(np.linalg.norm(profile - _cluster_residual_profile(member)))
+                for member in group
+            ]
+            if not distances or max(distances) <= float(threshold):
+                group.append(row)
+                placed = True
+                break
+        if not placed:
+            groups.append([row])
+    return groups
+
+
+def _residual_profile_veto_audit(
+    groups: list[list[dict[str, object]]],
+    *,
+    threshold: float | None,
+) -> dict[str, object]:
+    pair_rows = []
+    vetoed = 0
+    for group_idx, group in enumerate(groups):
+        for row in group:
+            pair_rows.append(
+                {
+                    "cluster": str(row.get("cluster")),
+                    "residual_profile_group": int(group_idx),
+                    "support": int(row.get("support", 0)),
+                    "context_residual_profile_l2_norm": float(row.get("context_residual_profile_l2_norm", 0.0) or 0.0),
+                }
+            )
+    for left_idx, left_group in enumerate(groups):
+        for right_idx, right_group in enumerate(groups):
+            if right_idx <= left_idx:
+                continue
+            for left in left_group:
+                for right in right_group:
+                    distance = float(np.linalg.norm(_cluster_residual_profile(left) - _cluster_residual_profile(right)))
+                    if threshold is not None and distance > float(threshold):
+                        vetoed += 1
+    return {
+        "schema": "scope_static_stage3d4b_residual_profile_veto_audit_v1",
+        "description": "Visible-only non-merge veto: overcomplete components with distinct context-normalized residual profiles are not forced into one merged family.",
+        "uses_mechanism_labels": False,
+        "uses_oracle_location_or_strength": False,
+        "uses_channels_ptms_kraus": False,
+        "threshold": None if threshold is None else float(threshold),
+        "group_count": int(len(groups)),
+        "cluster_count": int(sum(len(group) for group in groups)),
+        "vetoed_pair_count": int(vetoed),
+        "veto_applied": bool(vetoed > 0),
+        "clusters": pair_rows,
+        "passed": True,
+    }
+
+
+def _cluster_residual_profile(row: dict[str, object]) -> np.ndarray:
+    values = row.get("context_residual_profile", [])
+    if not isinstance(values, list):
+        return np.zeros(0, dtype=np.float64)
+    return np.asarray([float(value) for value in values], dtype=np.float64)
+
+
+def _context_residual_matrix(matrix: np.ndarray, context_groups: np.ndarray | None) -> np.ndarray:
+    arr = np.asarray(matrix, dtype=np.float64)
+    groups = np.asarray([] if context_groups is None else context_groups, dtype=np.int64)
+    if arr.ndim != 2:
+        return np.zeros_like(arr, dtype=np.float64)
+    if int(groups.shape[0]) != int(arr.shape[0]):
+        return arr - np.mean(arr, axis=0, keepdims=True)
+    out = np.zeros_like(arr, dtype=np.float64)
+    for group in sorted(set(groups.tolist())):
+        mask = groups == int(group)
+        out[mask] = arr[mask] - np.mean(arr[mask], axis=0, keepdims=True)
+    return out
+
+
 def _top_feature_rows(vector: np.ndarray, feature_names: list[str], *, limit: int) -> list[dict[str, object]]:
     order = np.argsort(-np.abs(np.asarray(vector, dtype=np.float64)))[: max(0, int(limit))]
     return [
@@ -563,6 +698,7 @@ def _write_outputs(output: Path, result: dict[str, object], merged_assignments: 
         "merge_prune_plan.json": result["merge_prune_plan"],
         "overcomplete_cluster_summary.json": result["overcomplete_cluster_summary"],
         "merge_map.json": result["merge_map"],
+        "residual_profile_veto_audit.json": result["merge_map"].get("residual_profile_veto_audit", {}),
         "postmerge_metrics.json": result["postmerge_metrics"],
         "raw_overcomplete_generation_metrics.json": result["raw_overcomplete_generation_metrics"],
         "postmerge_generation_metrics.json": result["postmerge_generation_metrics"],

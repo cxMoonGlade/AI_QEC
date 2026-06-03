@@ -16,6 +16,7 @@ from scope_static.learner import (
     build_zx_visible_feature_table,
 )
 from scope_static.learner import leakage_guardrail_audit_phyc3c
+from scope_static.primitives.overlay_contract import overlay_contract_audit
 from .artifacts import load_stage3a_frozen_visible_features as _load_stage3a_frozen_visible_features
 
 
@@ -99,6 +100,7 @@ def run_stage3a_dataset_protocol_freeze(
         table.feature_names,
         sampling_mode=str(sampling_mode),
     )
+    overlay_audit = overlay_contract_audit(records, fail_on_missing_overlay_payload=True)
     operation_context_audit = operation_context_public_audit(
         records,
         table.feature_names,
@@ -111,6 +113,7 @@ def run_stage3a_dataset_protocol_freeze(
         batch_context_schema=batch_schema,
         assignment_unit_artifact=assignment,
         visible_feature_matrix=feature_matrix,
+        overlay_contract_audit=overlay_audit,
     )
     result = {
         "schema": "scope_static_stage3a_protocol_freeze_v1",
@@ -127,6 +130,8 @@ def run_stage3a_dataset_protocol_freeze(
             "single_shot_assignment_first_pass_allowed": False,
             "operation_context_is_public_instruction_context": True,
             "operation_context_not_mechanism_instance_surrogate_id": True,
+            "overlay_truth_evaluator_only": True,
+            "public_overlay_context_allowed_only_as_declared_public_context": True,
         },
         "config": config,
         "mechanism_scope": {
@@ -140,6 +145,7 @@ def run_stage3a_dataset_protocol_freeze(
         "probe_schedule_manifest": probe_schedule,
         "forbidden_feature_audit": forbidden_audit,
         "operation_context_public_audit": operation_context_audit,
+        "overlay_contract_audit": overlay_audit,
         "split_manifest": split_manifest,
         "batch_context_schema": batch_schema,
         "assignment_unit": assignment,
@@ -413,6 +419,12 @@ def batch_context_schema(
             "finite_shot_uncertainty_estimates",
             "sampled_observation_derived_features",
             "visible_operation_context",
+            "public_overlay_context_if_declared_by_public_instruction",
+        ],
+        "public_overlay_context_fields": [
+            "public_effect_family",
+            "public_overlay_class",
+            "nonflat_public_label",
         ],
         "protocol_only_fields": [
             "j",
@@ -431,6 +443,14 @@ def batch_context_schema(
             "teacher_self_features",
             "oracle_prototypes",
             "hidden_drift_parameters",
+            "spectator_overlay_present",
+            "base_mechanism",
+            "victim_relative_location",
+            "aggressor_relative_location",
+            "coupling_axis",
+            "timing_context",
+            "spectator_strength",
+            "sampling_surrogate",
         ],
     }
 
@@ -493,6 +513,7 @@ def stage3a_acceptance_audit(
     batch_context_schema: dict[str, object],
     assignment_unit_artifact: dict[str, object],
     visible_feature_matrix: dict[str, object],
+    overlay_contract_audit: dict[str, object],
 ) -> dict[str, object]:
     primary_protocol = dict(batch_context_schema.get("primary_protocol", {}))
     checks = {
@@ -508,6 +529,9 @@ def stage3a_acceptance_audit(
         "frozen_visible_feature_matrix_declared": bool(visible_feature_matrix.get("training_matrix_path")),
         "frozen_visible_feature_matrix_has_no_labels": not bool(visible_feature_matrix.get("contains_evaluator_labels", True)),
         "frozen_visible_feature_matrix_has_no_oracle_fields": not bool(visible_feature_matrix.get("contains_oracle_fields", True)),
+        "overlay_contract_payload_complete": bool(overlay_contract_audit.get("passed", False)),
+        "overlay_truth_not_in_visible_feature_matrix": not bool(visible_feature_matrix.get("contains_evaluator_labels", True))
+        and not bool(visible_feature_matrix.get("contains_oracle_fields", True)),
         "learner_training_not_run_in_stage3a": True,
         "observability_ceiling_deferred_to_stage3a5": True,
     }
@@ -523,6 +547,7 @@ def format_stage3a_summary(result: dict[str, object]) -> str:
     mechanism_scope = dict(result.get("mechanism_scope", {}))
     assignment = dict(result.get("assignment_unit", {}))
     operation_context = dict(result.get("operation_context_public_audit", {}))
+    overlay_contract = dict(result.get("overlay_contract_audit", {}))
     return "\n".join(
         [
             "# Stage 3A: Dataset And Protocol Freeze",
@@ -534,6 +559,7 @@ def format_stage3a_summary(result: dict[str, object]) -> str:
             f"- Context groups: `{int(mechanism_scope.get('context_group_count', 0))}`",
             f"- Assignment unit j: `{assignment.get('j_definition')}`",
             f"- Operation context public audit passed: `{str(bool(operation_context.get('passed', False))).lower()}`",
+            f"- Overlay records missing payload: `{int(overlay_contract.get('num_overlay_records_missing_payload', 0) or 0)}`",
             "",
             "## Claim Boundary",
             "",
@@ -550,6 +576,7 @@ def _write_outputs(output: Path, result: dict[str, object], visible_features: np
         "visible_feature_matrix.json": result["visible_feature_matrix"],
         "forbidden_feature_audit.json": result["forbidden_feature_audit"],
         "operation_context_public_audit.json": result["operation_context_public_audit"],
+        "overlay_contract_audit.json": result["overlay_contract_audit"],
         "split_manifest.json": result["split_manifest"],
         "probe_schedule_manifest.json": result["probe_schedule_manifest"],
         "batch_context_schema.json": result["batch_context_schema"],

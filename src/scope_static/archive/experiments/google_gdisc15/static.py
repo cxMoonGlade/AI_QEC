@@ -1512,7 +1512,7 @@ def _record(
         "rounds_label": leaf.rounds_label,
         "dem_source": args.dem_source,
         "decoder_pathway": normalize_decoder_pathway(DATASET_SURFACE_SET1, args.dem_source),
-        "dem_proxy_label_boundary": "DEM proxy labels only; no true physical mechanism or catalog M labels are available.",
+        "dem_proxy_label_boundary": "DEM proxy labels only; no true physical mechanism, public F/M labels, or legacy catalog IDs are available.",
         "preprocessing_mode": orbit_mode,
         "model": model_name,
         "base_model": base_model,

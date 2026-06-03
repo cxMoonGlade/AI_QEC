@@ -45,6 +45,274 @@ PREP_RESET_MECHANISM_IDS = ("M17", "M18")
 SPECTATOR_MECHANISM_IDS = ("M11",)
 RZZ_FAMILY_IDS = ("M8", "M9", "M10", "M12", "M21", "M22", "M23", "M28", "M29", "M30", "M31", "M32", "M33")
 
+MECHANISM_CONTRACTS: dict[str, dict[str, object]] = {
+    "M0": {
+        "contract_role": "aggregate_family",
+        "base_family": "local_pauli_process",
+        "dimensions": ["pauli_axis_mixture", "strength", "context_relative_location"],
+        "leaf_exact_effect_supported": True,
+        "primary_flat_cluster_target": False,
+    },
+    "M1": {
+        "contract_role": "family_direction_slice",
+        "base_family": "readout_spam",
+        "dimensions": ["assignment_direction_0_to_1", "strength", "context_relative_location"],
+        "leaf_exact_effect_supported": True,
+        "primary_flat_cluster_target": False,
+    },
+    "M2": {
+        "contract_role": "family_direction_slice",
+        "base_family": "readout_spam",
+        "dimensions": ["assignment_direction_1_to_0", "strength", "context_relative_location"],
+        "leaf_exact_effect_supported": True,
+        "primary_flat_cluster_target": False,
+    },
+    "M3": {
+        "contract_role": "coarse_mixture_family",
+        "base_family": "readout_spam",
+        "dimensions": ["symmetric_assignment", "strength", "context_relative_location"],
+        "leaf_exact_effect_supported": True,
+        "primary_flat_cluster_target": False,
+    },
+    "M4": {
+        "contract_role": "atomic_channel",
+        "base_family": "relaxation_dephasing",
+        "dimensions": ["relaxation_down", "strength", "context_relative_location"],
+        "leaf_exact_effect_supported": True,
+        "primary_flat_cluster_target": True,
+    },
+    "M5": {
+        "contract_role": "family_axis_slice",
+        "base_family": "relaxation_dephasing",
+        "dimensions": ["idle_phase_axis", "strength", "context_relative_location"],
+        "leaf_exact_effect_supported": True,
+        "primary_flat_cluster_target": True,
+    },
+    "M6": {
+        "contract_role": "family_axis_slice",
+        "base_family": "coherent_control",
+        "dimensions": ["axis_rx", "strength", "context_relative_location"],
+        "leaf_exact_effect_supported": True,
+        "primary_flat_cluster_target": True,
+    },
+    "M7": {
+        "contract_role": "family_axis_slice",
+        "base_family": "coherent_control",
+        "dimensions": ["axis_rz", "strength", "context_relative_location"],
+        "leaf_exact_effect_supported": True,
+        "primary_flat_cluster_target": True,
+    },
+    "M8": {
+        "contract_role": "family_axis_slice",
+        "base_family": "coherent_two_qubit_phase",
+        "dimensions": ["axis_zz", "strength", "context_relative_edge"],
+        "leaf_exact_effect_supported": True,
+        "primary_flat_cluster_target": True,
+    },
+    "M9": {
+        "contract_role": "coarse_mixture_family",
+        "base_family": "two_qubit_pauli_process",
+        "dimensions": ["15_pauli_support_mixture", "strength", "context_relative_edge"],
+        "leaf_exact_effect_supported": True,
+        "primary_flat_cluster_target": False,
+    },
+    "M10": {
+        "contract_role": "coherent_mixture_family",
+        "base_family": "parasitic_coupling",
+        "dimensions": ["xx_component", "yy_component", "strength", "context_relative_edge"],
+        "leaf_exact_effect_supported": True,
+        "primary_flat_cluster_target": False,
+    },
+    "M11": {
+        "contract_role": "overlay_family",
+        "base_family": "spectator_crosstalk",
+        "dimensions": ["base_mechanism", "victim_relative_location", "aggressor_relative_location", "coupling_axis", "timing_context", "strength"],
+        "leaf_exact_effect_supported": False,
+        "primary_flat_cluster_target": False,
+    },
+    "M12": {
+        "contract_role": "atomic_channel",
+        "base_family": "correlated_relaxation",
+        "dimensions": ["correlated_relaxation", "strength", "context_relative_edge"],
+        "leaf_exact_effect_supported": True,
+        "primary_flat_cluster_target": True,
+    },
+    "M13": {
+        "contract_role": "context_conditioned_family",
+        "base_family": "coherent_control_drift",
+        "dimensions": ["operation_axis", "drift_index", "drift_strength", "context_relative_location"],
+        "leaf_exact_effect_supported": True,
+        "primary_flat_cluster_target": False,
+    },
+    "M14": {
+        "contract_role": "operation_conditioned_family",
+        "base_family": "coherent_control_operation_context",
+        "dimensions": ["operation_axis", "error_axis", "strength", "context_relative_location"],
+        "leaf_exact_effect_supported": True,
+        "primary_flat_cluster_target": False,
+    },
+    "M15": {
+        "contract_role": "surrogate_stress_family",
+        "base_family": "non_pauli_stress",
+        "dimensions": ["custom_kraus_eta", "strength", "context_relative_location"],
+        "leaf_exact_effect_supported": True,
+        "primary_flat_cluster_target": False,
+    },
+    "M16": {
+        "contract_role": "context_conditioned_family",
+        "base_family": "readout_spam",
+        "dimensions": ["measurement_context", "assignment_direction", "strength", "context_relative_location"],
+        "leaf_exact_effect_supported": True,
+        "primary_flat_cluster_target": False,
+    },
+    "M17": {
+        "contract_role": "atomic_channel",
+        "base_family": "prep_reset_spam",
+        "dimensions": ["reset_to_1", "strength", "context_relative_location"],
+        "leaf_exact_effect_supported": True,
+        "primary_flat_cluster_target": True,
+    },
+    "M18": {
+        "contract_role": "operation_conditioned_family",
+        "base_family": "prep_reset_spam",
+        "dimensions": ["prep_or_reset_axis", "coherent_asymmetry", "strength", "context_relative_location"],
+        "leaf_exact_effect_supported": True,
+        "primary_flat_cluster_target": False,
+    },
+    "M19": {
+        "contract_role": "surrogate_stress_family",
+        "base_family": "non_pauli_stress",
+        "dimensions": ["mixed_ptm_residual", "eta", "context_relative_location"],
+        "leaf_exact_effect_supported": True,
+        "primary_flat_cluster_target": False,
+    },
+    "M20": {
+        "contract_role": "family_axis_slice",
+        "base_family": "coherent_control",
+        "dimensions": ["axis_ry", "strength", "context_relative_location"],
+        "leaf_exact_effect_supported": True,
+        "primary_flat_cluster_target": True,
+    },
+    "M21": {
+        "contract_role": "family_branch_slice",
+        "base_family": "coherent_two_qubit_phase",
+        "dimensions": ["conditional_phase_branch", "strength", "context_relative_edge"],
+        "leaf_exact_effect_supported": True,
+        "primary_flat_cluster_target": True,
+    },
+    "M22": {
+        "contract_role": "family_axis_slice",
+        "base_family": "parasitic_coupling",
+        "dimensions": ["axis_xx", "strength", "context_relative_edge"],
+        "leaf_exact_effect_supported": True,
+        "primary_flat_cluster_target": True,
+    },
+    "M23": {
+        "contract_role": "family_axis_slice",
+        "base_family": "parasitic_coupling",
+        "dimensions": ["axis_yy", "strength", "context_relative_edge"],
+        "leaf_exact_effect_supported": True,
+        "primary_flat_cluster_target": True,
+    },
+    "M24": {
+        "contract_role": "atomic_channel",
+        "base_family": "thermal_relaxation",
+        "dimensions": ["excitation_up", "strength", "context_relative_location"],
+        "leaf_exact_effect_supported": True,
+        "primary_flat_cluster_target": True,
+    },
+    "M25": {
+        "contract_role": "family_axis_slice",
+        "base_family": "local_pauli_process",
+        "dimensions": ["pauli_axis_x", "strength", "context_relative_location"],
+        "leaf_exact_effect_supported": True,
+        "primary_flat_cluster_target": True,
+    },
+    "M26": {
+        "contract_role": "family_axis_slice",
+        "base_family": "local_pauli_process",
+        "dimensions": ["pauli_axis_y", "strength", "context_relative_location"],
+        "leaf_exact_effect_supported": True,
+        "primary_flat_cluster_target": True,
+    },
+    "M27": {
+        "contract_role": "coherent_mixture_family",
+        "base_family": "coherent_control",
+        "dimensions": ["axis_xz_vector", "strength", "context_relative_location"],
+        "leaf_exact_effect_supported": True,
+        "primary_flat_cluster_target": False,
+    },
+    "M28": {
+        "contract_role": "family_axis_slice",
+        "base_family": "parasitic_coupling",
+        "dimensions": ["axis_xy", "strength", "context_relative_edge"],
+        "leaf_exact_effect_supported": True,
+        "primary_flat_cluster_target": True,
+    },
+    "M29": {
+        "contract_role": "family_axis_slice",
+        "base_family": "parasitic_coupling",
+        "dimensions": ["axis_zx", "strength", "context_relative_edge"],
+        "leaf_exact_effect_supported": True,
+        "primary_flat_cluster_target": True,
+    },
+    "M30": {
+        "contract_role": "family_axis_slice",
+        "base_family": "parasitic_coupling",
+        "dimensions": ["axis_zy", "strength", "context_relative_edge"],
+        "leaf_exact_effect_supported": True,
+        "primary_flat_cluster_target": True,
+    },
+    "M31": {
+        "contract_role": "family_axis_slice",
+        "base_family": "parasitic_coupling",
+        "dimensions": ["axis_xz", "strength", "context_relative_edge"],
+        "leaf_exact_effect_supported": True,
+        "primary_flat_cluster_target": True,
+    },
+    "M32": {
+        "contract_role": "family_axis_slice",
+        "base_family": "parasitic_coupling",
+        "dimensions": ["axis_yz", "strength", "context_relative_edge"],
+        "leaf_exact_effect_supported": True,
+        "primary_flat_cluster_target": True,
+    },
+    "M33": {
+        "contract_role": "family_axis_slice",
+        "base_family": "parasitic_coupling",
+        "dimensions": ["axis_yx", "strength", "context_relative_edge"],
+        "leaf_exact_effect_supported": True,
+        "primary_flat_cluster_target": True,
+    },
+    "M34": {
+        "contract_role": "surrogate_stress_family",
+        "base_family": "leakage_surrogate",
+        "dimensions": ["computational_subspace_survival", "strength", "context_relative_location"],
+        "leaf_exact_effect_supported": True,
+        "primary_flat_cluster_target": False,
+    },
+}
+
+MECHANISM_LEAF_EXACT_IDS = tuple(mechanism_id for mechanism_id in IMPLEMENTED_MECHANISM_IDS if MECHANISM_CONTRACTS[mechanism_id]["leaf_exact_effect_supported"])
+PRIMARY_FLAT_CLUSTER_TARGET_IDS = tuple(
+    mechanism_id for mechanism_id in IMPLEMENTED_MECHANISM_IDS if MECHANISM_CONTRACTS[mechanism_id]["primary_flat_cluster_target"]
+)
+NON_FLAT_PRIMARY_TARGET_IDS = tuple(
+    mechanism_id for mechanism_id in IMPLEMENTED_MECHANISM_IDS if not MECHANISM_CONTRACTS[mechanism_id]["primary_flat_cluster_target"]
+)
+
+PRIMARY_FLAT_PUBLIC_LABELS = tuple(f"F{idx}" for idx, _mechanism_id in enumerate(PRIMARY_FLAT_CLUSTER_TARGET_IDS))
+NON_FLAT_PUBLIC_LABELS = tuple(f"M{idx}" for idx, _mechanism_id in enumerate(NON_FLAT_PRIMARY_TARGET_IDS))
+LEGACY_MECHANISM_ID_TO_PUBLIC_LABEL = {
+    **{mechanism_id: label for mechanism_id, label in zip(PRIMARY_FLAT_CLUSTER_TARGET_IDS, PRIMARY_FLAT_PUBLIC_LABELS)},
+    **{mechanism_id: label for mechanism_id, label in zip(NON_FLAT_PRIMARY_TARGET_IDS, NON_FLAT_PUBLIC_LABELS)},
+}
+PUBLIC_LABEL_TO_LEGACY_MECHANISM_ID = {label: mechanism_id for mechanism_id, label in LEGACY_MECHANISM_ID_TO_PUBLIC_LABEL.items()}
+LEGACY_MECHANISM_ID_TO_LABEL_NAMESPACE = {
+    **{mechanism_id: "flat" for mechanism_id in PRIMARY_FLAT_CLUSTER_TARGET_IDS},
+    **{mechanism_id: "non_flat" for mechanism_id in NON_FLAT_PRIMARY_TARGET_IDS},
+}
+
 MECHANISM_SET_A_IDS = tuple(f"M{idx}" for idx in range(10))
 MECHANISM_SET_B_IDS = tuple(f"M{idx}" for idx in range(15))
 MECHANISM_SET_C_IDS = tuple(f"M{idx}" for idx in range(25))
@@ -84,3 +352,85 @@ LEGACY_TO_CURRENT_MECHANISM_IDS = {
 
 def mechanism_name(mechanism_id: str) -> str:
     return MECHANISM_NAMES[str(mechanism_id)]
+
+
+def mechanism_public_label(mechanism_id: str) -> str:
+    """Return the canonical public F/M label for a legacy catalog ID."""
+
+    key = str(mechanism_id)
+    if key not in LEGACY_MECHANISM_ID_TO_PUBLIC_LABEL:
+        raise KeyError(f"unknown mechanism id {mechanism_id!r}")
+    return LEGACY_MECHANISM_ID_TO_PUBLIC_LABEL[key]
+
+
+def mechanism_label_namespace(mechanism_id: str) -> str:
+    """Return ``flat`` or ``non_flat`` for a legacy catalog ID."""
+
+    key = str(mechanism_id)
+    if key not in LEGACY_MECHANISM_ID_TO_LABEL_NAMESPACE:
+        raise KeyError(f"unknown mechanism id {mechanism_id!r}")
+    return LEGACY_MECHANISM_ID_TO_LABEL_NAMESPACE[key]
+
+
+def legacy_mechanism_id(public_label: str) -> str:
+    """Return the legacy catalog ID for a canonical public F/M label."""
+
+    key = str(public_label)
+    if key not in PUBLIC_LABEL_TO_LEGACY_MECHANISM_ID:
+        raise KeyError(f"unknown public mechanism label {public_label!r}")
+    return PUBLIC_LABEL_TO_LEGACY_MECHANISM_ID[key]
+
+
+def mechanism_contract(mechanism_id: str) -> dict[str, object]:
+    """Return the Stage 3/5 interpretation contract for a legacy catalog ID."""
+
+    key = str(mechanism_id)
+    if key not in MECHANISM_CONTRACTS:
+        raise KeyError(f"unknown mechanism id {mechanism_id!r}")
+    return {
+        "legacy_catalog_id": key,
+        "public_label": mechanism_public_label(key),
+        "label_namespace": mechanism_label_namespace(key),
+        **dict(MECHANISM_CONTRACTS[key]),
+    }
+
+
+def mechanism_taxonomy_contract_audit() -> dict[str, object]:
+    """Audit whether the legacy catalog is covered by explicit public labels."""
+
+    covered = set(MECHANISM_CONTRACTS)
+    expected = set(IMPLEMENTED_MECHANISM_IDS)
+    missing = sorted(expected - covered)
+    extra = sorted(covered - expected)
+    leaf = list(MECHANISM_LEAF_EXACT_IDS)
+    primary_flat = list(PRIMARY_FLAT_CLUSTER_TARGET_IDS)
+    non_flat = list(NON_FLAT_PRIMARY_TARGET_IDS)
+    checks = {
+        "all_implemented_mechanisms_have_contracts": not missing and not extra,
+        "m11_is_overlay_not_leaf_exact": "M11" not in set(leaf) and MECHANISM_CONTRACTS["M11"]["contract_role"] == "overlay_family",
+        "non_flat_primary_targets_are_explicit": bool(non_flat),
+        "leaf_exact_targets_are_subset_of_implemented": set(leaf).issubset(expected),
+        "primary_flat_targets_are_subset_of_leaf_exact": set(primary_flat).issubset(set(leaf)),
+        "all_implemented_mechanisms_have_public_labels": set(LEGACY_MECHANISM_ID_TO_PUBLIC_LABEL) == expected,
+        "public_labels_are_unique": len(set(LEGACY_MECHANISM_ID_TO_PUBLIC_LABEL.values())) == len(IMPLEMENTED_MECHANISM_IDS),
+        "flat_targets_use_f_namespace": all(str(LEGACY_MECHANISM_ID_TO_PUBLIC_LABEL[value]).startswith("F") for value in primary_flat),
+        "non_flat_targets_use_m_namespace": all(str(LEGACY_MECHANISM_ID_TO_PUBLIC_LABEL[value]).startswith("M") for value in non_flat),
+        "public_label_reverse_map_is_complete": set(PUBLIC_LABEL_TO_LEGACY_MECHANISM_ID.values()) == expected,
+    }
+    return {
+        "schema": "scope_static_mechanism_taxonomy_contract_audit_v2",
+        "passed": all(checks.values()),
+        "checks": checks,
+        "label_scheme": "flat_F_nonflat_M_v1",
+        "legacy_catalog_id_policy": "M0-M34 remain implementation-stable legacy IDs; public_label is the semantic mechanism label.",
+        "missing_contracts": missing,
+        "extra_contracts": extra,
+        "leaf_exact_effect_ids": leaf,
+        "primary_flat_cluster_target_ids": primary_flat,
+        "non_flat_primary_target_ids": non_flat,
+        "primary_flat_public_labels": list(PRIMARY_FLAT_PUBLIC_LABELS),
+        "non_flat_public_labels": list(NON_FLAT_PUBLIC_LABELS),
+        "legacy_catalog_id_to_public_label": dict(LEGACY_MECHANISM_ID_TO_PUBLIC_LABEL),
+        "public_label_to_legacy_catalog_id": dict(PUBLIC_LABEL_TO_LEGACY_MECHANISM_ID),
+        "contracts": {key: mechanism_contract(key) for key in IMPLEMENTED_MECHANISM_IDS},
+    }

@@ -7,8 +7,9 @@ Accepted.
 ## Context
 
 CUDA-QEC/CUDA-QX provides useful QEC memory-circuit, DEM, and decoder
-infrastructure, but it does not natively express the repository's M0-M34
-mechanism semantics over arbitrary full-circuit tomography schedules. A
+infrastructure, but it does not natively express the repository's legacy
+M0-M34 catalog plus public F/M mechanism semantics over arbitrary full-circuit
+tomography schedules. A
 CUDA-QEC memory-circuit artifact would not satisfy the Stage 2E physical
 teacher contract.
 
@@ -46,7 +47,7 @@ The full-circuit teacher must:
 
 - sample literal n-qubit CUDA-Q circuits at configured depth;
 - keep entangling gates as circuit operations;
-- preserve M0-M34 mechanism semantics;
+- preserve legacy M0-M34 catalog semantics and the public F/M label mapping;
 - write progress/checkpoint artifacts for resumable long runs;
 - refuse CPU fallback when `require_gpu: true`.
 

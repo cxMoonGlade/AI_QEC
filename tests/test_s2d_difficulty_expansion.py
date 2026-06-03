@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import numpy as np
 import yaml
 
 from scope_static.experiments.qec_noise_catalog import s2d_difficulty_expansion as mod
@@ -22,13 +23,28 @@ def test_difficulty_profiles_and_mechanism_sets_are_configurable() -> None:
 def test_difficulty_set_d_has_drifted_m13_strengths() -> None:
     specs = build_default_oracle_mechanisms({"mechanism_set": "set_D", "num_qubits": 40})
     m13 = [spec for spec in specs if spec.mechanism_id == "M13"]
+    m11 = [spec for spec in specs if spec.mechanism_id == "M11"]
 
     assert len(m13) >= 2
     assert len({float(spec.parameters["epsilon"]) for spec in m13}) == len(m13)
     assert all(spec.instruction == "rx" for spec in m13)
+    assert m11
+    assert all(bool(spec.parameters["spectator_overlay_present"]) for spec in m11)
+    assert all(spec.parameters["base_mechanism"] for spec in m11)
+    assert all(spec.parameters["victim_relative_location"] for spec in m11)
+    assert all(spec.parameters["aggressor_relative_location"] for spec in m11)
+    assert all(spec.parameters["coupling_axis"] for spec in m11)
+    assert all(spec.parameters["timing_context"] for spec in m11)
+    assert all(spec.parameters["claims_standalone_flat_mechanism"] is False for spec in m11)
     assert {f"M{idx}" for idx in range(35)} <= {
         spec.mechanism_id for spec in specs
     }
+    for spec in specs:
+        audit = spec.audit_dict()
+        assert audit["legacy_catalog_id"] == spec.mechanism_id
+        assert audit["mechanism_id"] == spec.mechanism_id
+        assert str(audit["public_label"]).startswith("F" if audit["label_namespace"] == "flat" else "M")
+        assert audit["label_namespace"] in {"flat", "non_flat"}
 
 
 def test_balanced_multicircuit_profiles_have_minimum_mechanism_instances() -> None:
@@ -42,6 +58,63 @@ def test_balanced_multicircuit_profiles_have_minimum_mechanism_instances() -> No
         assert len({spec.circuit_id for spec in specs}) == 3
         assert all(spec.probe_indices for spec in specs)
     assert {f"M{idx}" for idx in range(35)} == set(counts)
+
+
+def test_balanced_strength_variants_cover_every_mechanism() -> None:
+    specs = build_default_oracle_mechanisms(
+        {
+            "num_qubits": 20,
+            "mechanism_set": "allM",
+            "balanced_min_instances_per_mechanism": 20,
+            "multicircuit_teacher_batch": True,
+            "balanced_strength_variants": True,
+            "balanced_strength_min_scale": 0.65,
+            "balanced_strength_max_scale": 1.35,
+        }
+    )
+
+    by_mechanism: dict[str, list[float]] = {}
+    for spec in specs:
+        by_mechanism.setdefault(spec.mechanism_id, []).append(_primary_strength(spec.parameters))
+
+    assert set(by_mechanism) == {f"M{idx}" for idx in range(35)}
+    for mechanism_id, values in by_mechanism.items():
+        assert len(values) == 20, mechanism_id
+        assert len({round(value, 12) for value in values}) == 20, mechanism_id
+
+
+def test_balanced_strength_variants_can_decouple_context_and_strength() -> None:
+    specs = build_default_oracle_mechanisms(
+        {
+            "num_qubits": 20,
+            "mechanism_set": "allM",
+            "balanced_min_instances_per_mechanism": 20,
+            "multicircuit_teacher_batch": True,
+            "balanced_strength_variants": True,
+            "balanced_strength_variant_strategy": "decorrelated_latin",
+            "balanced_strength_min_scale": 0.65,
+            "balanced_strength_max_scale": 1.35,
+        }
+    )
+
+    by_mechanism: dict[str, list[tuple[int, int, float]]] = {}
+    for spec in specs:
+        by_mechanism.setdefault(spec.mechanism_id, []).append(
+            (int(spec.circuit_id or 0), int(spec.qubits[0] if spec.qubits else 0), _primary_strength(spec.parameters))
+        )
+
+    for mechanism_id, rows in by_mechanism.items():
+        strengths = [row[2] for row in rows]
+        assert len(rows) == 20, mechanism_id
+        assert len({round(value, 12) for value in strengths}) == 20, mechanism_id
+
+    for mechanism_id in ("M6", "M13", "M18"):
+        rows = sorted(by_mechanism[mechanism_id])
+        circuit_ids = np.asarray([row[0] for row in rows], dtype=float)
+        relative_locations = np.asarray([row[1] for row in rows], dtype=float)
+        strengths = np.asarray([row[2] for row in rows], dtype=float)
+        assert abs(float(np.corrcoef(circuit_ids, strengths)[0, 1])) < 0.1, mechanism_id
+        assert abs(float(np.corrcoef(relative_locations, strengths)[0, 1])) < 0.1, mechanism_id
 
 
 def test_circuit_depth_is_visible_probe_metadata() -> None:
@@ -165,3 +238,10 @@ def test_difficulty_runner_writes_aggregate_artifacts_without_oracle_selection(t
     metrics = json.loads((out / "phys5_setB" / "metrics.json").read_text())
     assert "prediction_metrics" in metrics["PHYS3"]
     assert metrics["num_qubits"] == 5
+
+
+def _primary_strength(parameters: dict[str, object]) -> float:
+    for key in ("epsilon", "p", "p_z", "gamma", "gamma_up", "eta", "strength", "epsilon_x", "epsilon_y", "p_x"):
+        if key in parameters:
+            return float(parameters[key])
+    raise AssertionError(f"record has no primary strength parameter: {parameters}")
