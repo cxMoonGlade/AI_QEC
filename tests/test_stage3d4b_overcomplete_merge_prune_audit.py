@@ -37,6 +37,11 @@ def test_stage3d4b_merges_overcomplete_microclusters_without_labels(tmp_path: Pa
     )
 
     assert result["decision"] == "stage3d4b_overcomplete_merge_prune_audit_passed"
+    assert result["claim_decision"] in {
+        "stage3d4b_postmerge_claim_gate_passed",
+        "stage3d4b_postmerge_claim_gate_failed",
+    }
+    assert result["claim_gate_audit"]["present"] is True
     assert result["claim_boundary"]["uses_mechanism_labels_for_merge_rule"] is False
     assert result["assignment_feature_view_audit"]["source"] == "stage3a_full_visible_fallback"
     assert result["merge_prune_plan"]["uses_mechanism_labels_for_merge_rule"] is False
@@ -66,6 +71,7 @@ def test_stage3d4b_merges_overcomplete_microclusters_without_labels(tmp_path: Pa
         "postmerge_assignments.npy",
         "leakage_audit.json",
         "acceptance_audit.json",
+        "claim_gate_audit.json",
         "assignment_feature_view_audit.json",
         "assignment_feature_weighting.json",
         "summary.md",

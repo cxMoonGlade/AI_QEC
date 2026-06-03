@@ -2763,8 +2763,8 @@ scope-google-s3-visible-aggregate-v2 --config configs/scope_static/google_s3_vis
 scope-google-s3-visible-adapter-v2 --config configs/scope_static/google_s3_visible_adapter_v2.yaml
 ```
 
-The old Google DEM/static discovery runner is archived as a historical
-DEM-proxy diagnostic and is not the current Google Stage 3 path.
+The old Google DEM/static discovery runner has been removed from the active
+package and is not the current Google Stage 3 path.
 
 Google discovery records must report:
 
@@ -2776,8 +2776,7 @@ Google discovery records must report:
 
 ### Google S3 V2 Visible Surface Adapter
 
-Historical Google DEM-proxy diagnostics are archived separately. The current
-Google path builds a Stage 3 learner-visible surface from real Google
+The current Google path builds a Stage 3 learner-visible surface from real Google
 detection events and observable flips:
 
 ```bash

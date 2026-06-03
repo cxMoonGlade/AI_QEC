@@ -602,8 +602,7 @@ outputs/google_static/google_s3_visible_surface_v2/S3A_protocol_freeze/
   probe_schedule_manifest.json
 ```
 
-Historical Google DEM-proxy scorecards are archived separately and are not the
-current Google Stage 3 path.
+Superseded Google DEM-proxy scorecards are not the current Google Stage 3 path.
 
 Stage 3 Google V2 closeout claim:
 

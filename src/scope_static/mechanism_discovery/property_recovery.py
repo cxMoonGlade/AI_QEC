@@ -672,13 +672,8 @@ def stage5b1_contract_breakdown_audit(
     targeted_location_strength_passed = bool(targeted.get("location_strength_passed", False))
     targeted_exact_scalar_passed = bool(targeted.get("exact_scalar_passed", False))
     location_strength_passed = bool(location_passed and strength_passed)
-    property_without_dimension_passed = bool(
-        family_passed
-        and flat_exact_passed
-        and location_strength_passed
-        and targeted_passed
-        and bool(effect.get("passed", False))
-    )
+    legacy_scalar_effect_passed = bool(effect.get("passed", False))
+    property_without_dimension_passed = bool(family_passed and flat_exact_passed and location_strength_passed and targeted_passed)
     contract_passed = bool(contract.get("passed", False))
     return {
         "schema": "scope_static_stage5b1_contract_breakdown_audit_v1",
@@ -702,6 +697,7 @@ def stage5b1_contract_breakdown_audit(
         "s5b1_targeted_m6_m13_m18_m27_passed": targeted_passed,
         "s5b1_targeted_m6_m13_m18_m27_location_strength_passed": targeted_location_strength_passed,
         "s5b1_targeted_m6_m13_m18_m27_exact_scalar_passed": targeted_exact_scalar_passed,
+        "s5b1_legacy_scalar_effect_passed": legacy_scalar_effect_passed,
         "s5b1_property_without_dimension_passed": property_without_dimension_passed,
         "s5b1_contract_passed": contract_passed,
         "family_failed_labels": family_failed,

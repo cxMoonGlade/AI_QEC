@@ -26,7 +26,6 @@ src/scope_static/
   mechanism_discovery/     Stage 3/4 discovery, bridge, transfer, and robustness artifacts
   catalog_pipeline/       controlled-catalog orchestration
   experiments/             thin CLI/config wrappers grouped by experiment family
-  archive/                 historical research-stage modules with compatibility wrappers
   cuda/                    C++/CUDA exact DEM/window kernels
 ```
 

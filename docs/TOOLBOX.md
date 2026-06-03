@@ -83,20 +83,6 @@ Machine-readable manifest:
 scope-static-toolbox --json
 ```
 
-Run the legacy Stage 2 canonical learner acceptance artifact:
-
-```bash
-learner-acceptance \
-  --config configs/archive/stage2_teacher_learner/learner_acceptance.yaml
-```
-
-Equivalent module form:
-
-```bash
-python -m scope_static.experiments.qec_noise_catalog.learner_acceptance \
-  --config configs/archive/stage2_teacher_learner/learner_acceptance.yaml
-```
-
 Generate a user-defined noisy mechanism dataset:
 
 ```bash
