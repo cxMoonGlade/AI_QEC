@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import time
 from typing import Iterable
 
 import numpy as np
@@ -106,6 +107,7 @@ def run_stage3b1_first_discovery_model(
     k_values: Iterable[int] | None = None,
     learner_input_profile: str = DEFAULT_LEARNER_INPUT_PROFILE,
     visible_transform: str = DEFAULT_VISIBLE_TRANSFORM,
+    k_prior_contract: dict[str, object] | None = None,
 ) -> dict[str, object]:
     """Train the first visible-only Stage 3 discovery model.
 
@@ -114,7 +116,9 @@ def run_stage3b1_first_discovery_model(
     metrics, never for fitting or model selection.
     """
 
+    started = time.perf_counter()
     mode = _normalize_evaluator_mode(evaluator_mode)
+    k_prior = _normalize_k_prior_contract(k_prior_contract)
     s3a = Path(stage3a_dir)
     s3a5 = Path(stage3a5_dir)
     output = Path(output_dir)
@@ -321,6 +325,12 @@ def run_stage3b1_first_discovery_model(
             "residualized_matrix_written_only_to_s3b1_output": bool(visible_transform_audit.get("writes_transformed_matrix_only_in_s3b1_output", False)),
             "rebuilds_visible_features_from_oracle_records_for_fit": False,
             "uses_visible_validation_objective_for_model_selection": True,
+            "uses_external_k_prior_for_no_oracle_mode": bool(k_prior.get("enabled", False)),
+            "external_k_prior_used_for_model_selection_only": bool(k_prior.get("enabled", False)),
+            "external_k_prior_uses_google_true_labels": bool(k_prior.get("uses_google_true_labels", False)),
+            "external_k_prior_used_for_feature_construction": bool(k_prior.get("used_for_feature_construction", False)),
+            "external_k_prior_used_for_oracle_scoring": bool(k_prior.get("used_for_oracle_scoring", False)),
+            "k_prior_contract": k_prior,
             "evaluator_only_metrics_after_fit": mode == EVALUATOR_MODE_CONTROLLED_CATALOG,
             "oracle_label_metrics_skipped": mode == EVALUATOR_MODE_NO_ORACLE_LABELS,
             "discovers_cptp_gksl_channels": False,
@@ -342,7 +352,9 @@ def run_stage3b1_first_discovery_model(
             "k_values": [int(row["k"]) for row in k_runs],
             "learner_input_profile": str(learner_input["learner_input_profile"]),
             "visible_transform": str(visible_transform_audit["visible_transform"]),
+            "k_prior_contract": k_prior,
         },
+        "wall_clock_seconds": float(time.perf_counter() - started),
         "visible_feature_matrix": feature_matrix,
         "learner_input_mask_audit": learner_input,
         "visible_transform_audit": visible_transform_audit,
@@ -357,6 +369,7 @@ def run_stage3b1_first_discovery_model(
             "uses_catalog_cardinality_only_not_labels": mode == EVALUATOR_MODE_CONTROLLED_CATALOG,
             "uses_quotient_count_from_stage3a5": mode == EVALUATOR_MODE_CONTROLLED_CATALOG,
             "uses_no_oracle_visible_only_k_grid": mode == EVALUATOR_MODE_NO_ORACLE_LABELS,
+            "k_prior_contract": k_prior,
         },
         "candidate_selection": {
             "schema": "scope_static_stage3b1_candidate_selection_v1",
@@ -1520,6 +1533,37 @@ def _no_oracle_stage3a5_metrics() -> dict[str, object]:
     }
 
 
+def _normalize_k_prior_contract(value: dict[str, object] | None) -> dict[str, object]:
+    if value is None:
+        return {
+            "schema": "scope_static_stage3b1_k_prior_contract_v1",
+            "enabled": False,
+            "source": None,
+            "mechanism_count_prior": None,
+            "overcomplete_multiplier": None,
+            "role": "not_declared",
+            "uses_google_true_labels": False,
+            "used_for_feature_construction": False,
+            "used_for_oracle_scoring": False,
+        }
+    raw = dict(value)
+    out = {
+        "schema": str(raw.get("schema", "scope_static_stage3b1_k_prior_contract_v1")),
+        "enabled": bool(raw.get("enabled", True)),
+        "source": None if raw.get("source") is None else str(raw.get("source")),
+        "mechanism_count_prior": None if raw.get("mechanism_count_prior") is None else int(raw.get("mechanism_count_prior")),
+        "overcomplete_multiplier": None if raw.get("overcomplete_multiplier") is None else float(raw.get("overcomplete_multiplier")),
+        "role": str(raw.get("role", "external_no_oracle_k_design_prior")),
+        "uses_google_true_labels": bool(raw.get("uses_google_true_labels", False)),
+        "used_for_feature_construction": bool(raw.get("used_for_feature_construction", False)),
+        "used_for_oracle_scoring": bool(raw.get("used_for_oracle_scoring", False)),
+        "note": str(raw.get("note", "")),
+    }
+    if out["uses_google_true_labels"]:
+        raise ValueError("k_prior_contract must not use Google true labels in no-oracle mode")
+    return out
+
+
 def _k_selection_runs_for_evaluator_mode(
     *,
     evaluator_mode: str,
@@ -2238,6 +2282,7 @@ def format_stage3b1_summary(result: dict[str, object]) -> str:
             f"- Learner input profile: `{mask.get('learner_input_profile')}`",
             f"- Visible transform: `{transform.get('visible_transform')}` (claim allowed: `{str(bool(transform.get('claim_allowed', False))).lower()}`)",
             f"- Assignment training features: `{mask.get('selected_feature_count')}` of `{mask.get('full_feature_count')}`",
+            f"- Wall-clock seconds: `{_format_optional_metric(result.get('wall_clock_seconds'))}`",
             f"- Exact-label BA: `{_format_optional_metric(exact.get('balanced_accuracy_after_label_matching'))}`",
             f"- Exact-label min recall: `{_format_optional_metric(exact.get('min_recall_after_label_matching'))}`",
             f"- Exact-label NMI: `{_format_optional_metric(exact.get('normalized_mutual_info'))}`",

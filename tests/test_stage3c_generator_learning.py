@@ -589,6 +589,25 @@ def test_stage3c_no_categorical_surface_uses_gaussian_primary_and_block_lift(tmp
         json.dumps(
             {
                 "acceptance_audit": {"passed": True},
+                "learned_assignment_summary": {
+                    "selected_k": 2,
+                    "selected_k_mode": "visible_only_k_2",
+                },
+                "k_selection_protocol": {
+                    "selected_k": 2,
+                    "selected_k_mode": "visible_only_k_2",
+                    "k_prior_contract": {
+                        "schema": "scope_static_stage3b1_k_prior_contract_v1",
+                        "enabled": True,
+                        "source": "controlled_s3_s5_allM_contract_teacher",
+                        "mechanism_count_prior": 35,
+                        "overcomplete_multiplier": 1.0,
+                        "role": "catalog_cardinality_matched_no_oracle_design_prior",
+                        "uses_google_true_labels": False,
+                        "used_for_feature_construction": False,
+                        "used_for_oracle_scoring": False,
+                    },
+                },
                 "claim_boundary": {
                     "trains_from_stage3a_frozen_visible_features": True,
                     "uses_mechanism_labels_for_fit": False,
@@ -620,6 +639,10 @@ def test_stage3c_no_categorical_surface_uses_gaussian_primary_and_block_lift(tmp
     assert result["claim_boundary"]["soft_family_strength_location_audit_skipped"] is True
     assert result["claim_boundary"]["s5_context_relative_mechanism_effect_audit_skipped"] is True
     assert result["claim_boundary"]["mechanism_dimension_recovery_audit_skipped"] is True
+    assert result["claim_boundary"]["stage3b1_k_prior_contract"]["mechanism_count_prior"] == 35
+    assert result["assignment_source_audit"]["selected_k"] == 2
+    assert result["assignment_source_audit"]["selected_k_mode"] == "visible_only_k_2"
+    assert result["assignment_source_audit"]["k_prior_contract"]["uses_google_true_labels"] is False
     assert result["acceptance_audit"]["checks"]["soft_family_classification_evaluator_only_or_skipped"] is True
     assert result["acceptance_audit"]["checks"]["soft_family_strength_location_audit_evaluator_only_or_skipped"] is True
     assert result["acceptance_audit"]["checks"]["s5_context_relative_effect_audit_evaluator_only_or_skipped"] is True

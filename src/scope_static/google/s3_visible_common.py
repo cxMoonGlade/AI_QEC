@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import defaultdict, deque
 from dataclasses import dataclass
 import hashlib
 import math
@@ -50,7 +51,55 @@ def _select_contexts(
         leaves.append(leaf)
     if not leaves:
         raise ValueError("no Google contexts matched the requested filters")
-    return leaves[: int(max_contexts)]
+    return _balanced_context_prefix(leaves, max_contexts=int(max_contexts))
+
+
+def _balanced_context_prefix(leaves: list[GoogleLeaf], *, max_contexts: int) -> list[GoogleLeaf]:
+    grouped: dict[tuple[str, str], list[GoogleLeaf]] = defaultdict(list)
+    for leaf in leaves:
+        grouped[_primary_context_balance_key(leaf)].append(leaf)
+    buckets = {
+        key: deque(_balanced_round_subsequence(bucket))
+        for key, bucket in grouped.items()
+    }
+    keys = sorted(buckets)
+    selected: list[GoogleLeaf] = []
+    while keys and len(selected) < int(max_contexts):
+        next_keys: list[tuple[str, str]] = []
+        for key in keys:
+            bucket = buckets[key]
+            if bucket:
+                selected.append(bucket.popleft())
+            if bucket:
+                next_keys.append(key)
+            if len(selected) >= int(max_contexts):
+                break
+        keys = next_keys
+    return selected
+
+
+def _primary_context_balance_key(leaf: GoogleLeaf) -> tuple[str, str]:
+    distance = "none" if leaf.distance is None else f"{int(leaf.distance):04d}"
+    return distance, str(leaf.basis).upper()
+
+
+def _balanced_round_subsequence(leaves: list[GoogleLeaf]) -> list[GoogleLeaf]:
+    buckets: dict[str, deque[GoogleLeaf]] = defaultdict(deque)
+    for leaf in leaves:
+        rounds = "none" if leaf.rounds is None else f"{int(leaf.rounds):04d}"
+        buckets[rounds].append(leaf)
+    keys = sorted(buckets)
+    selected: list[GoogleLeaf] = []
+    while keys:
+        next_keys: list[str] = []
+        for key in keys:
+            bucket = buckets[key]
+            if bucket:
+                selected.append(bucket.popleft())
+            if bucket:
+                next_keys.append(key)
+        keys = next_keys
+    return selected
 
 
 def _load_dem_support_surface(leaf: GoogleLeaf, *, dem_source: str) -> GoogleDemSupportSurface:

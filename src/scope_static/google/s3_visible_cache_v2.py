@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import Counter
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass
 import hashlib
@@ -250,6 +251,16 @@ def write_google_s3_visible_cache_v2(
         "forbidden_feature_audit_path": "forbidden_feature_audit.json",
         "config": config,
         "context_count": int(len(contexts)),
+        "selection_policy": {
+            "strategy": "hierarchical_round_robin_by_public_distance_basis_then_rounds",
+            "max_contexts": int(max_contexts),
+            "filtered_basis": None if basis is None else str(basis),
+            "filtered_distance": None if distance is None else int(distance),
+            "filtered_rounds": None if rounds is None else int(rounds),
+        },
+        "basis_counts": dict(sorted(Counter(str(row.get("basis")) for row in contexts).items())),
+        "distance_counts": dict(sorted(Counter(str(row.get("distance")) for row in contexts).items())),
+        "rounds_counts": dict(sorted(Counter(str(row.get("rounds")) for row in contexts).items())),
         "shot_count": int(total_shots),
         "detector_count": _single_or_range(detector_counts),
         "detector_count_range": _count_range(detector_counts),
@@ -348,6 +359,9 @@ def format_google_s3_visible_cache_v2_summary(manifest: dict[str, object]) -> st
             f"- Schema version: `{manifest.get('schema_version')}`",
             f"- Config hash: `{manifest.get('config_hash')}`",
             f"- Contexts: `{int(manifest.get('context_count', 0))}`",
+            f"- Distance counts: `{manifest.get('distance_counts', {})}`",
+            f"- Basis counts: `{manifest.get('basis_counts', {})}`",
+            f"- Round counts: `{manifest.get('rounds_counts', {})}`",
             f"- Shots cached: `{int(manifest.get('shot_count', 0))}`",
             f"- Detector count: `{manifest.get('detector_count')}`",
             "",

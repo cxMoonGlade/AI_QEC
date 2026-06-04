@@ -38,6 +38,7 @@ def run_stage3b1_discovery_model_from_config(
     k_values: list[int] | None = None,
     learner_input_profile: str | None = None,
     visible_transform: str | None = None,
+    k_prior_contract: dict[str, object] | None = None,
 ) -> dict[str, object]:
     cfg = _load_config(config_path)
     s3a = Path(stage3a_dir) if stage3a_dir is not None else Path(str(cfg.get("stage3a_dir", DEFAULT_STAGE3A_DIR)))
@@ -64,6 +65,7 @@ def run_stage3b1_discovery_model_from_config(
             learner_input_profile if learner_input_profile is not None else cfg.get("learner_input_profile", DEFAULT_LEARNER_INPUT_PROFILE)
         ),
         visible_transform=str(visible_transform if visible_transform is not None else cfg.get("visible_transform", DEFAULT_VISIBLE_TRANSFORM)),
+        k_prior_contract=k_prior_contract if k_prior_contract is not None else _optional_mapping(cfg.get("k_prior_contract")),
     )
     summary = dict(result.get("learned_assignment_summary", {}))
     print(
@@ -140,6 +142,14 @@ def _int_list(value: object) -> list[int] | None:
     if isinstance(value, list):
         return [int(item) for item in value]
     return [int(value)]
+
+
+def _optional_mapping(value: object) -> dict[str, object] | None:
+    if value is None:
+        return None
+    if not isinstance(value, dict):
+        raise ValueError("k_prior_contract must be a mapping when provided")
+    return dict(value)
 
 
 if __name__ == "__main__":

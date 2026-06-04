@@ -8,6 +8,7 @@ outputs/**/prepared_cache/
 
 # Generated experiment outputs and large data artifacts
 outputs/
+external/baselines/
 
 # Packaging/build artifacts
 *.egg-info
