@@ -3,6 +3,7 @@ from __future__ import annotations
 import numpy as np
 
 from scope_static.primitives.channels import (
+    M13_DEFAULT_DRIFT_VISIBILITY_SCALE,
     MechanismSpec,
     amplitude_damping_kraus,
     mechanism_channel,
@@ -24,6 +25,7 @@ from scope_static.primitives.mechanism_catalog import legacy_mechanism_id, mecha
 from scope_static.primitives.mechanism_catalog import mechanism_contract, mechanism_taxonomy_contract_audit
 from scope_static.primitives.ptm import channel_fingerprint, ptm_from_kraus, ptm_from_unitary, rzz_ptm_block_audit
 from scope_static.primitives.ptm import probe_response_fingerprint, rzz_type_feature_names, rzz_type_feature_vector
+from scope_static.primitives.probe_catalog import build_default_oracle_mechanisms
 
 
 def test_amplitude_damping_preserves_trace_and_probabilities_normalize() -> None:
@@ -153,6 +155,29 @@ def test_m13_drift_overlay_channel_is_not_plain_rx_at_row_level() -> None:
     assert float(np.linalg.norm(drift_ptm - plain_ptm)) > 1.0e-4
     assert channel["definition_contract"]["drift_overlay_payload_present"] is True
     assert channel["definition_contract"]["single_context_exact_recovery_required"] is False
+
+
+def test_balanced_m13_records_serialize_drift_overlay_payload() -> None:
+    specs = build_default_oracle_mechanisms(
+        {
+            "num_qubits": 20,
+            "mechanism_set": ["M13"],
+            "balanced_min_instances_per_mechanism": 3,
+            "multicircuit_teacher_batch": True,
+            "balanced_strength_variants": True,
+            "balanced_strength_variant_strategy": "decorrelated_latin",
+        }
+    )
+
+    assert len(specs) == 3
+    for spec in specs:
+        record = spec.audit_dict()
+
+        assert spec.parameters["drift_visibility_scale"] == M13_DEFAULT_DRIFT_VISIBILITY_SCALE
+        assert record["parameters"]["drift_visibility_scale"] == M13_DEFAULT_DRIFT_VISIBILITY_SCALE
+        assert record["drift_overlay_present"] is True
+        assert record["drift_overlay"]["drift_visibility_scale"] == M13_DEFAULT_DRIFT_VISIBILITY_SCALE
+        assert record["claims_standalone_flat_mechanism"] is False
 
 
 def test_implemented_catalog_mechanisms_have_distinct_channel_fingerprints() -> None:

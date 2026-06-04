@@ -12,6 +12,8 @@ stage-specific docs:
 - `docs/STAGE4_ROADMAP.md`: S4 bridge-survival, neural pretrain, and
   frozen-transfer gates.
 - `docs/STAGE5_ROADMAP.md`: S5 context-relative mechanism-effect audits.
+- `docs/BENCHMARKS_AND_BASELINES.md`: current benchmark ladder and baseline
+  selection rules.
 - `docs/error_mechanisms.md`: physical-error mechanism taxonomy and adoption map.
 - `docs/SCOPE_TWIN.md`: full SCOPE-Twin notation and future object contract.
 - `docs/adr/`: durable architecture and milestone-gating decisions.
@@ -189,8 +191,14 @@ conda run -n aiqec python -m scope_static.experiments.stage3.observability_ceili
 conda run -n aiqec python -m scope_static.experiments.stage3.discovery_model \
   --config configs/scope_static/stage3b1_discovery_model.yaml
 
+conda run -n aiqec python -m scope_static.experiments.stage3.k_stress_audit \
+  --config configs/scope_static/stage3d4_k_stress_audit.yaml
+
+conda run -n aiqec python -m scope_static.experiments.stage3.overcomplete_merge_prune_audit \
+  --config configs/scope_static/stage3d4b_overcomplete_merge_prune_audit.yaml
+
 conda run -n aiqec python -m scope_static.experiments.stage5.property_recovery \
-  --config configs/scope_static/stage5b1_property_recovery.yaml
+  --config configs/scope_static/stage5b1b_conditional_property_recovery.yaml
 ```
 
 Do not use `PYTHONPATH="$PWD/src"` for normal runs on this WSL/CUDA setup. The

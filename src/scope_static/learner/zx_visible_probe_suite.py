@@ -782,6 +782,31 @@ def _derived_features(values: dict[str, float], schedule: list[dict[str, object]
     support_bits = [p00 > 1e-9, p01 > 1e-9, p10 > 1e-9, p11 > 1e-9]
     out["derived__two_prep_00_r_1_ZZ_population_support_pattern"] = float(sum((1 << idx) for idx, keep in enumerate(support_bits) if keep))
     out["derived__two_prep_00_r_1_ZZ_population_asymmetry_score"] = float(abs(p10 - p01) + abs(p11 - p00))
+    xx_p00 = float(values.get("raw__two__prep_plusplus__r_2__meas_XX__P00", 0.0))
+    xx_p11 = float(values.get("raw__two__prep_plusplus__r_2__meas_XX__P11", 0.0))
+    zx_ix = float(values.get("raw__two__prep_plusplus__r_2__meas_ZX__IX", 0.0))
+    xz_xi = float(values.get("raw__two__prep_plusplus__r_2__meas_XZ__XI", 0.0))
+    zx_transfer = float(
+        values.get("raw__two__prep_plusplus__r_2__meas_ZX__P01", 0.0)
+        + values.get("raw__two__prep_plusplus__r_2__meas_ZX__P11", 0.0)
+    )
+    xz_transfer = float(
+        values.get("raw__two__prep_plusplus__r_2__meas_XZ__P10", 0.0)
+        + values.get("raw__two__prep_plusplus__r_2__meas_XZ__P11", 0.0)
+    )
+    xx_pair_transfer = float(max(0.0, 1.0 - xx_p00) + xx_p11)
+    zx_xz_single_axis_loss = float(abs(1.0 - zx_ix) + abs(1.0 - xz_xi))
+    zx_xz_population_transfer = float(zx_transfer + xz_transfer)
+    axis_support_bits = [
+        xx_pair_transfer > 1e-9,
+        zx_xz_single_axis_loss > 1e-9,
+        zx_xz_population_transfer > 1e-9,
+    ]
+    out["derived__two_axis_quadrature_plus_xx_pair_transfer_proxy"] = xx_pair_transfer
+    out["derived__two_axis_quadrature_plus_zx_xz_single_axis_loss_proxy"] = zx_xz_single_axis_loss
+    out["derived__two_axis_quadrature_plus_zx_xz_population_transfer_proxy"] = zx_xz_population_transfer
+    out["derived__two_axis_quadrature_plus_support_pattern"] = float(sum((1 << idx) for idx, keep in enumerate(axis_support_bits) if keep))
+    out["derived__two_axis_quadrature_plus_any_transfer_flag"] = float(any(axis_support_bits))
     ez0 = float(values.get("raw__single__prep_0__r_8__meas_Z__E_Z", 0.0))
     ez1 = float(values.get("raw__single__prep_1__r_8__meas_Z__E_Z", 0.0))
     ez0_r1 = float(values.get("raw__single__prep_0__r_1__meas_Z__E_Z", 0.0))

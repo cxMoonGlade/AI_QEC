@@ -7,6 +7,7 @@ from scope_static.experiments.stage3.k_stress_audit import run_stage3d4_k_stress
 from scope_static.mechanism_discovery.discovery_model import run_stage3b1_first_discovery_model
 from scope_static.mechanism_discovery.generator_learning import run_stage3c_prototype_generator_learning
 from scope_static.mechanism_discovery.k_stress_audit import run_stage3d4_k_stress_audit
+from scope_static.mechanism_discovery.k_stress_audit import stage3d4_acceptance_audit
 from scope_static.mechanism_discovery.observability_ceiling import run_stage3a5_observability_alias_ceiling
 from scope_static.mechanism_discovery.protocol_freeze import run_stage3a_dataset_protocol_freeze
 from scope_static.primitives.mechanism_catalog import MECHANISM_NAMES
@@ -183,6 +184,59 @@ def test_stage3d4_rejects_impossible_success_threshold(tmp_path: Path) -> None:
     assert result["acceptance_audit"]["checks"]["exact_and_overcomplete_recovery_meet_thresholds"] is False
 
 
+def test_stage3d4_accepts_overcomplete_split_before_d4b_merge() -> None:
+    exact = _stress_result(
+        "exact",
+        k=35,
+        nmi=1.0,
+        ari=1.0,
+        ba=1.0,
+        min_recall=1.0,
+        generation_lift=0.5,
+    )
+    overcomplete = _stress_result(
+        "overcomplete",
+        k=70,
+        nmi=0.92,
+        ari=0.6,
+        ba=0.54,
+        min_recall=0.5,
+        generation_lift=0.5,
+    )
+    undercomplete = _stress_result(
+        "undercomplete",
+        k=17,
+        nmi=0.7,
+        ari=0.2,
+        ba=0.3,
+        min_recall=0.0,
+        generation_lift=0.5,
+    )
+
+    audit = stage3d4_acceptance_audit(
+        s3a_metrics={"acceptance_audit": {"passed": True}},
+        s3a5_metrics={"acceptance_audit": {"passed": True}},
+        s3b1_metrics={"acceptance_audit": {"passed": True}},
+        feature_match={"passed": True},
+        feature_matrix={"loaded_from_stage3a_artifact": True},
+        k_plan={"quotient_class_count_from_stage3a5": 35},
+        stress_results=[undercomplete, exact, overcomplete],
+        stress_summary={"undercomplete_nmi_gap": 0.3},
+        leakage_audit={"passed": True},
+        s3c_reference_audit={"passed": True},
+        min_success_nmi=0.9,
+        min_success_ari=0.85,
+        min_success_ba=0.85,
+        min_undercomplete_nmi_gap=0.05,
+        min_generation_null_lift=1.0e-6,
+    )
+
+    assert audit["passed"] is True
+    assert audit["checks"]["exact_recovery_meets_thresholds"] is True
+    assert audit["checks"]["overcomplete_recovery_signal_meets_threshold"] is True
+    assert audit["checks"]["exact_and_overcomplete_recovery_meet_thresholds"] is True
+
+
 def _prepare_artifacts(
     tmp_path: Path,
     label_specs: list[tuple[str, str]],
@@ -207,6 +261,33 @@ def _prepare_artifacts(
         run_stage3c_prototype_generator_learning(stage3a_dir=s3a, stage3a5_dir=s3a5, stage3b1_dir=s3b1, output_dir=s3c)
         return teacher, s3a, s3a5, s3b1, s3c
     return teacher, s3a, s3a5, s3b1, None
+
+
+def _stress_result(
+    stress_family: str,
+    *,
+    k: int,
+    nmi: float,
+    ari: float,
+    ba: float,
+    min_recall: float,
+    generation_lift: float,
+) -> dict[str, object]:
+    label_metrics = {
+        "adjusted_rand_index": float(ari),
+        "balanced_accuracy_after_label_matching": float(ba),
+        "min_recall_after_label_matching": float(min_recall),
+        "normalized_mutual_info": float(nmi),
+    }
+    return {
+        "stress_family": stress_family,
+        "k": int(k),
+        "used_mechanism_labels_for_fit": False,
+        "used_labels_for_model_selection": False,
+        "exact_label_metrics": label_metrics,
+        "quotient_label_metrics": dict(label_metrics),
+        "predicted_assignment_overall": {"generation_null_lift": float(generation_lift)},
+    }
 
 
 def _record(label: str, mechanism_id: str, group: int) -> dict[str, object]:

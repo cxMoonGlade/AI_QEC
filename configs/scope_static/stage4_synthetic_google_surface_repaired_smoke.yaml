@@ -1,0 +1,16 @@
+stage4_synthetic_google_surface_v1:
+  teacher_dir: outputs/scope_static/s5_medium_hard_allM_contract_teacher_20q_depth20_rzz_active_g20_strength_decorrelated_s1000/S2D_PHYS1_teacher
+  google_stage3a_dir: outputs/google_static/google_s3_visible_surface_v2/S3A_protocol_freeze
+  output_dir: outputs/scope_static/S4_bridge/S4_0_synthetic_google_shaped_freeze_repaired_smoke/S3A_protocol_freeze
+  round_bands: [all]
+  region_families: [full_patch]
+  split_policy: leave_one_context_group_out
+  dataset_family: synthetic_controlled_catalog
+  basis: X
+  shotblock_size: 2048
+  max_source_shots_per_record: 8192
+  mirror_public_context_from_google_v2: true
+  max_mirrored_public_contexts: 8
+  emit_context_rows: false
+  align_visible_feature_marginals_to_google_v2: true
+  seed: 0

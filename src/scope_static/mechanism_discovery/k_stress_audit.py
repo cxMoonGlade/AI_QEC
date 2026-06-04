@@ -753,7 +753,10 @@ def stage3d4_acceptance_audit(
     under = by_family.get("undercomplete")
     success_rows = [row for row in [exact, over] if isinstance(row, dict)]
     generation_lifts = [_generation_null_lift(row) for row in success_rows]
-    recovery_rows_ok = [_recovery_ok(row, min_nmi=min_success_nmi, min_ari=min_success_ari, min_ba=min_success_ba) for row in success_rows]
+    exact_recovery_ok = _recovery_ok(exact, min_nmi=min_success_nmi, min_ari=min_success_ari, min_ba=min_success_ba) if isinstance(exact, dict) else False
+    overcomplete_signal_ok = (
+        _overcomplete_recovery_signal_ok(over, min_nmi=min_success_nmi) if isinstance(over, dict) else False
+    )
     checks = {
         "stage3a_acceptance_passed": bool(dict(s3a_metrics.get("acceptance_audit", {})).get("passed", False)),
         "stage3a5_acceptance_passed": bool(dict(s3a5_metrics.get("acceptance_audit", {})).get("passed", False)),
@@ -765,7 +768,9 @@ def stage3d4_acceptance_audit(
         "undercomplete_exact_overcomplete_runs_present": all(family in by_family for family in ["undercomplete", "exact", "overcomplete"]),
         "all_runs_use_no_labels_for_fit": all(not bool(row.get("used_mechanism_labels_for_fit", True)) for row in stress_results),
         "all_runs_use_no_labels_for_model_selection": all(not bool(row.get("used_labels_for_model_selection", True)) for row in stress_results),
-        "exact_and_overcomplete_recovery_meet_thresholds": bool(success_rows and all(recovery_rows_ok)),
+        "exact_recovery_meets_thresholds": bool(exact_recovery_ok),
+        "overcomplete_recovery_signal_meets_threshold": bool(overcomplete_signal_ok),
+        "exact_and_overcomplete_recovery_meet_thresholds": bool(exact_recovery_ok and overcomplete_signal_ok),
         "exact_and_overcomplete_generation_beat_null": bool(
             success_rows and all(lift is not None and float(lift) >= float(min_generation_null_lift) for lift in generation_lifts)
         ),
@@ -799,6 +804,17 @@ def _recovery_ok(row: dict[str, object], *, min_nmi: float, min_ari: float, min_
         and max(float(exact.get("adjusted_rand_index", 0.0)), float(quotient.get("adjusted_rand_index", 0.0))) >= float(min_ari)
         and max(float(exact.get("balanced_accuracy_after_label_matching", 0.0)), float(quotient.get("balanced_accuracy_after_label_matching", 0.0)))
         >= float(min_ba)
+    )
+
+
+def _overcomplete_recovery_signal_ok(row: dict[str, object], *, min_nmi: float) -> bool:
+    """Raw overcomplete assignments may split true families before D4b merge."""
+
+    exact = dict(row.get("exact_label_metrics", {}))
+    quotient = dict(row.get("quotient_label_metrics", {}))
+    return bool(
+        max(float(exact.get("normalized_mutual_info", 0.0)), float(quotient.get("normalized_mutual_info", 0.0)))
+        >= float(min_nmi)
     )
 
 
