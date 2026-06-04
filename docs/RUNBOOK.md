@@ -242,8 +242,7 @@ conda run -n aiqec scope-data-preparation-teacher \
 Layer1 preprocessing - teacher generator produces mechanism records, probe
 schedules, sampled observations, teacher config, sampling audits, active probe
 manifests, a pre-sampling physical-process contract, and a post-sampling
-physicality audit. The `scope-catalog-teacher` command is a
-compatibility entry point for this Layer1 preprocessing path.
+physicality audit.
 
 Layer1 preprocessing - teacher generator:
 

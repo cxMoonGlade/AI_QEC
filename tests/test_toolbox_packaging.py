@@ -11,11 +11,15 @@ def test_toolbox_manifest_exports_public_layers_and_commands() -> None:
 
     assert manifest["name"] == "SCOPE-Static Physical Mechanism Toolbox"
     assert [stage["stage_index"] for stage in manifest["catalog_stages"]] == [1, 2, 3]
-    assert [stage["legacy_alias"] for stage in manifest["catalog_stages"]] == ["PHYC1", "PHYC2", "PHYC3"]
+    assert [stage["stage_name"] for stage in manifest["catalog_stages"]] == [
+        "Layer1 preprocessing - teacher generator",
+        "Layer 2 teacher self-audit",
+        "Layer 3 learner",
+    ]
+    assert all("legacy_alias" not in stage for stage in manifest["catalog_stages"])
     command_names = {command["name"] for command in manifest["commands"]}
     assert {
         "scope-static-toolbox",
-        "scope-catalog-teacher",
         "scope-data-preparation-teacher",
         "scope-stage3a-freeze",
         "scope-stage3a5-ceiling",
@@ -34,8 +38,8 @@ def test_pyproject_exposes_toolbox_console_scripts() -> None:
     scripts = data["project"]["scripts"]
 
     assert scripts["scope-static-toolbox"] == "scope_static.toolbox:main"
-    assert scripts["scope-catalog-teacher"] == "scope_static.experiments.qec_noise_catalog.controlled_catalog_teacher:main"
     assert scripts["scope-data-preparation-teacher"] == "scope_static.experiments.qec_noise_catalog.data_preparation_teacher:main"
+    assert "scope-catalog-teacher" not in scripts
     assert "teacher-distinguishment" not in scripts
     assert "learner-acceptance" not in scripts
     assert scripts["scope-stage3a-freeze"] == "scope_static.experiments.stage3.protocol_freeze:main"

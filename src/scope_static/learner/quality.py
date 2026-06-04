@@ -291,7 +291,6 @@ def format_sampled_quantum_error_quality_summary(result: dict[str, object]) -> s
         [
             "# Layer 3: Learner Noise Generation Quality",
             "",
-            f"- Legacy alias: `{dict(result.get('public_layer', {})).get('legacy_alias', 'PHYC3')}`",
             f"- Decision: `{result.get('decision')}`",
             f"- Contract passed: `{str(bool(result.get('contract_passed'))).lower()}`",
             f"- Prediction source: `{prediction_source.get('source_name', 'unknown')}`",

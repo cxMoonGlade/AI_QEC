@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import math
-from pathlib import Path
 import time
 from typing import Iterable
 
@@ -29,7 +28,6 @@ from .probe_contract import (
     EDGE_ORIENTATION_RULE,
     MIXED_BASIS_ACTIVE_PROBES,
     PHYC1_LEGACY_STAGE_NAME,
-    PHYC1_PREFLIGHT_STAGE_NAME,
     RZZ_DEPTH_SWEEP_DEPTHS,
     RZZ_DEPTH_SWEEP_PROBES,
     RZZ_ECHO_CONTRAST_PROBES,
@@ -44,7 +42,6 @@ from .probe_contract import (
     mechanism_counts,
     probe_names,
 )
-from .preflight import audit_cudaq_backend, write_backend_audit
 
 
 GATE_MECHANISM_IDS = set(IMPLEMENTED_MECHANISM_IDS).difference(set(READOUT_MECHANISM_IDS) | set(PREP_RESET_MECHANISM_IDS))
@@ -265,46 +262,6 @@ def build_default_oracle_mechanisms(config: dict[str, object] | None = None) -> 
             q = (readout_idx + int(cfg.get("balanced_batch_index", 0) or 0)) % n
             specs.append(MechanismSpec(mech, name, 1, dict(params.get(mech, {})), instruction="measure", qubits=(q,)))
     return sorted(specs, key=lambda spec: (_mechanism_sort_key(spec.mechanism_id), spec.qubits))
-
-
-def generate_catalog_teacher_dataset(
-    config: dict[str, object] | None = None,
-    *,
-    output_dir: str | Path = f"outputs/scope_static/{PHYC1_LEGACY_STAGE_NAME}",
-    preflight_dir: str | Path = f"outputs/scope_static/{PHYC1_PREFLIGHT_STAGE_NAME}",
-) -> dict[str, object]:
-    """Compatibility shim for legacy imports.
-
-    Layer1.P is the only public physical-process teacher path. This legacy
-    function keeps old callers working, but it no longer selects the retired
-    local-observable or bare full-circuit teacher directly.
-    """
-
-    cfg = _merged_config(config)
-    audit = audit_cudaq_backend(
-        backend=str(cfg.get("backend", "cudaq")),
-        require_gpu=bool(cfg.get("require_gpu", True)),
-        cudaq_target=str(cfg.get("cudaq_target", "nvidia")),
-        cudaq_target_options=str(cfg.get("cudaq_target_options", "fp32")),
-    )
-    write_backend_audit(audit, preflight_dir)
-    if not bool(audit.get("backend_usable")):
-        raise RuntimeError(f"{PHYC1_LEGACY_STAGE_NAME} requires a passing {PHYC1_PREFLIGHT_STAGE_NAME} backend audit")
-
-    from scope_static.data_preparation import generate_layer1p_teacher_dataset
-
-    cfg["backend"] = "cudaq"
-    summary = generate_layer1p_teacher_dataset(cfg, output_dir=output_dir)
-    summary["backend_audit_dir"] = str(preflight_dir)
-    summary["cudaq_backend"] = {
-        "target": audit.get("cudaq_target"),
-        "gpu_count": audit.get("cudaq_gpu_count"),
-        "tiny_cudaq_sample": audit.get("tiny_cudaq_sample"),
-    }
-    return summary
-
-
-generate_physical_teacher_dataset = generate_catalog_teacher_dataset
 
 
 def build_probe_circuits(config: dict[str, object] | None = None):

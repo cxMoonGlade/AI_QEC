@@ -25,14 +25,6 @@ Enabling a mechanism ID selects its catalog definition and parameters. There is
 no separate global `enable_cptp` switch. Physicality comes from the selected
 mechanism implementation.
 
-The legacy full-circuit CUDA-Q implementation remains as the underlying sampler
-used by data preparation. Public evidence should cite the teacher contract,
-not a bare legacy sampler artifact.
-
-Legacy public entrypoints, including `scope-catalog-teacher` and
-`scope_static.primitives.probe_catalog.generate_catalog_teacher_dataset`, now route
-through data preparation as compatibility shims.
-
 ## Current Claim
 
 Valid:

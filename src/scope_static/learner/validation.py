@@ -546,7 +546,6 @@ def format_phyc3c_validation_summary(result: dict[str, object]) -> str:
             "# Layer 3c Validation: Robustness, Leakage, and Protocol",
             "",
             f"- Layer: `{LEARNER_VALIDATION_STAGE.public_name}`",
-            f"- Legacy alias: `{LEARNER_VALIDATION_STAGE.legacy_alias}`",
             f"- Decision: `{result.get('decision')}`",
             f"- Robustness passed: `{str(bool(result.get('robustness_passed'))).lower()}`",
             f"- Non-leakage passed: `{str(bool(result.get('non_leakage_passed'))).lower()}`",

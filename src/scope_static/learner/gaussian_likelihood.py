@@ -673,7 +673,6 @@ def format_phyc3c_summary(result: dict[str, object]) -> str:
             "# Layer 3c: Distributional Gaussian Likelihood Head",
             "",
             f"- Layer: `{LEARNER_VALIDATION_STAGE.public_name}`",
-            f"- Legacy alias: `{LEARNER_VALIDATION_STAGE.legacy_alias}`",
             f"- Decision: `{result.get('decision')}`",
             f"- Primary mode: `{result.get('primary_mode')}`",
             f"- Primary head: `{result.get('primary_head')}`",

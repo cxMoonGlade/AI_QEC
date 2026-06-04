@@ -31,7 +31,7 @@ def run_teacher_physicality_audit_from_config(
     )
     summary = dict(result.get("summary", {}))
     print(
-        "Layer1.P teacher physicality audit complete\n"
+        "Layer1 preprocessing teacher-generator physicality audit complete\n"
         f"  decision={result.get('decision')}\n"
         f"  teacher_physicality_passed={summary.get('teacher_physicality_passed')}\n"
         f"  total_failures={summary.get('total_failures')}\n"
@@ -41,7 +41,7 @@ def run_teacher_physicality_audit_from_config(
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description="Run Layer1.P teacher CPTP/POVM physicality audit.")
+    parser = argparse.ArgumentParser(description="Run Layer1 preprocessing teacher-generator CPTP/POVM physicality audit.")
     parser.add_argument("--config", type=Path, default=Path("configs/scope_static/teacher_physicality_audit.yaml"))
     parser.add_argument("--teacher-dir", type=Path)
     parser.add_argument("--output-dir", type=Path)
