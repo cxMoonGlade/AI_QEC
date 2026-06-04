@@ -39,12 +39,34 @@ are not the real-data discovery assumption.
 
 ## Current Artifact
 
-The current implementation is emitted by Stage 3C because it consumes the same
-inputs: Stage 3A frozen `visible_features.npy`, Stage 3B.1 responsibilities, and
-controlled-catalog evaluator records.
+The current claim-bearing implementation is Stage 5B1b conditional property
+recovery over a fixed downstream assignment source. It consumes Stage 3A frozen
+`visible_features.npy`, Stage 3A.5 observability artifacts, Stage 3B1 diagnostic
+responsibilities, and the visible-only S3D4b postmerge assignment matrix.
+Controlled-catalog evaluator records are loaded only after the assignment source
+and property head are fixed.
+
+Current milestone artifact:
+
+```text
+outputs/scope_static/s5_medium_hard_allM_contract_teacher_20q_depth20_rzz_active_g20_strength_decorrelated_s1000/
+  S3D4b_overcomplete_merge_prune_audit/
+  S5B1b_conditional_property_recovery/
+```
+
+The S5B1b assignment source is:
+
+```yaml
+assignment_source: stage3d4b_postmerge
+assignment_path: .../S3D4b_overcomplete_merge_prune_audit/postmerge_assignments.npy
+property_head_model: conditional_visible_context_property_head
+```
 
 Primary artifact:
 
+- `metrics.json`
+- `s5b1_property_recovery_metrics.json`
+- `targeted_m6_m13_m18_m27_property_audit.json`
 - `s5_context_relative_mechanism_effect_audit.json`
 - `mechanism_taxonomy_contract_audit.json`
 - `mechanism_dimension_recovery_audit.json`
@@ -77,6 +99,23 @@ The artifact reports predicted-vs-oracle effect recovery:
 - `visible_strength.global_reference`: comparison-only global mean/scale view;
 - `oracle_parameter_strength`: evaluator-only numeric summaries of teacher
   parameters, for controlled-source interpretation only.
+
+Current controlled milestone status:
+
+- S3D4b decision: `stage3d4b_overcomplete_merge_prune_audit_passed`.
+- S3D4b claim decision: `stage3d4b_postmerge_claim_gate_passed`.
+- S3D4b postmerge exact BA/min-recall/ARI/NMI: `1.0 / 1.0 / 1.0 / 1.0`.
+- S5B1b decision: `stage5b1_property_recovery_passed`.
+- S5B1b assignment source audit: row-stochastic `stage3d4b_postmerge`,
+  `uses_mechanism_labels=false`, `uses_oracle_location_or_strength=false`.
+- S5B1b assignment quality gate: `claim_allowed=true`.
+- S5B1b family BA/min-recall/ARI/NMI: `1.0 / 1.0 / 1.0 / 1.0`.
+
+This milestone means the controlled full-circuit teacher-learner chain can
+recover the controlled catalog mechanism structure and its context-relative
+location/strength effects from the declared learner-visible surface. It does
+not mean true Google physical mechanism recovery, Google public F/M recovery,
+or learned CPTP/GKSL parameter recovery.
 
 ## Minimum Pass
 

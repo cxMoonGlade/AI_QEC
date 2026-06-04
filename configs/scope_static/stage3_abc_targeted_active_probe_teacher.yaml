@@ -20,6 +20,12 @@ data_preparation_teacher:
     circuit_depth: 20
     probe_set: rzz_active_minimal
     mechanism_set: [M6, M13, M22, M23]
+    mechanisms:
+      M13:
+        operation_axis: rx
+        epsilon_mean: 0.032
+        epsilon_span: 0.018
+        drift_visibility_scale: 5.0
     balanced_min_instances_per_mechanism: 5
     balanced_strength_variants: true
     balanced_strength_variant_strategy: decorrelated_latin

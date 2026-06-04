@@ -50,7 +50,7 @@ mechanism catalog + enabled mechanism set
 The current controlled Stage 3/5 route starts from the Layer1 preprocessing -
 teacher generator, freezes a learner-visible Stage 3A protocol, audits
 observability, trains S3B1 visible-only assignments, optionally promotes an
-S3D4b visible-only postmerge assignment source, then runs S5B1
+S3D4b visible-only postmerge assignment source, then runs S5B1/S5B1b
 context-relative property recovery.
 
 The code should use the responsibility packages above. New code should not add

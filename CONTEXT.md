@@ -66,6 +66,16 @@ This repository is currently centered on the SCOPE family of QEC noise-learning 
   heldout bootstrap, seed/split repeat, stronger statistical controls including
   the visible-surface dMLE-style marginal MLE comparator, and mechanism/source
   structure ablations. These audits never use Google mechanism labels.
+- **S5 controlled milestone**: the current repaired full-circuit allM/
+  decorrelated teacher chain with S3D4b visible-only postmerge assignments and
+  S5B1b conditional context-relative property recovery. It may claim controlled
+  catalog mechanism/effect recovery from the declared learner-visible surface;
+  it is not Google physical mechanism recovery.
+- **S4 repaired bridge smoke**: the current post-repair S4.0/S4.0.5 smoke
+  against the S5 controlled teacher and Google V2 schema. It proves the
+  learner-safe schema bridge exists, but currently reports
+  `bridge_surface_projection_aliasing`, so it is not a full S4 bridge-survival
+  pass.
 
 ## Claim Boundary
 
@@ -110,6 +120,12 @@ ground-truth mechanism partition. Stronger learned representations belong to
 S4 neural syndrome-response discovery. The S4 execution roadmap is
 `docs/STAGE4_ROADMAP.md`; its first gate is bridge-surface survival, not neural
 training.
+
+The current S5 controlled milestone is closed only for the controlled
+full-circuit catalog artifact: S3D4b postmerge assignments recover the 35 legacy
+catalog IDs under evaluator-only audit, and S5B1b recovers context-relative
+location/support and context-normalized strength/effect. This does not upgrade
+the Google claim boundary.
 
 S4.6 may use Google visible data to design source modes only through the declared
 design split, then score transfer only on heldout Google rows. Its final claim

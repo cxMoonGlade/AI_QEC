@@ -5,13 +5,15 @@ to build a **digital twin by discovery mechanism**: learn compact,
 auditable latent structure from QEC observations, then use that structure for
 generation, interpretation, transfer, drift, and decoder-facing tests.
 
-The package currently has four working surfaces:
+The package currently has five working surfaces:
 
 1. fixed-context DEM/Bernoulli learning;
 2. a controlled physical-mechanism catalog pipeline;
 3. Stage 3 no-oracle visible-structure discovery and replay, including a real
    Google hardware-data V2 visible surface;
-4. S5 context-relative mechanism-effect audits on controlled source data.
+4. S4 artifact-contract bridge diagnostics between controlled source data and
+   the Google-shaped visible surface;
+5. S5 context-relative mechanism-effect audits on controlled source data.
 
 ## Current Capabilities
 
@@ -100,6 +102,15 @@ Stage 4 is artifact-contract-first. The code now covers S4.0 through S4.6:
 bridge freeze, source ceiling, source pretrain, support/assignment diagnostics,
 frozen transfer, and Google-unit source expansion.
 
+Current repaired-bridge status: the S4.0 repaired smoke now builds a
+Stage-3A-compatible synthetic Google-shaped freeze from the current repaired
+full-circuit teacher, with 700 rows, 66 Google V2-compatible visible features,
+zero forbidden learner fields, and no evaluator labels in the learner-visible
+matrix. The matching S4.0.5 smoke returns
+`bridge_surface_projection_aliasing`: the Google-shaped projection is
+contract-compatible, but it collapses the controlled 35-mechanism catalog into
+an alias surface. This is a bridge diagnosis, not a neural-model release gate.
+
 S4.6 writes a Stage-3A-compatible source freeze at the
 `synthetic_public_syndrome_response_signature` unit plus split-clean transfer,
 control, and robustness-closeout audits. Robust-positive evidence still requires
@@ -114,6 +125,13 @@ catalog mechanisms. These audits are interpretation artifacts only: they do not
 feed learner training or model selection, and they do not claim Google physical
 mechanism or CPTP/GKSL parameter recovery.
 
+Current controlled milestone: the repaired full-circuit allM/decorrelated chain
+passes S3D4b visible-only postmerge assignment and S5B1b conditional property
+recovery. The claim-bearing source is `stage3d4b_postmerge`, not raw S3B1 by
+itself. On this controlled catalog artifact, evaluator-only audits report
+35-way postmerge mechanism recovery plus context-relative location and
+context-normalized strength/effect recovery.
+
 ## Current Limits
 
 The package does not currently provide:
@@ -123,6 +141,9 @@ The package does not currently provide:
 - a validated decoder-utility win from the discovered latent structure;
 - a validated drift-prediction result on heldout future calibration periods;
 - a validated cross-dataset transfer result across the four Google datasets;
+- a full S4 bridge-survival pass showing that the Google-shaped 66-feature
+  projection preserves the controlled 35-mechanism target; the current repaired
+  smoke documents projection aliasing;
 - a closed robust-positive S4.6 evidence claim until the paired-bootstrap,
   repeat, stronger-control, and ablation closeout artifacts pass on the intended
   heldout Google run;

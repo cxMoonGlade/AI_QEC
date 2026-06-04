@@ -163,6 +163,23 @@ Stage 4 wrappers are console scripts after an editable install. If a script is
 missing, rerun `conda run -n aiqec python -m pip install -e .` or use the module
 entrypoint.
 
+Use the repaired smoke configs first when checking the current S5 teacher
+against the Google V2 visible schema:
+
+```bash
+conda run -n aiqec scope-stage4-synthetic-freeze \
+  --config configs/scope_static/stage4_synthetic_google_surface_repaired_smoke.yaml
+
+conda run -n aiqec scope-stage4-source-ceiling \
+  --config configs/scope_static/stage4_source_ceiling_repaired_smoke.yaml
+```
+
+Current repaired-smoke interpretation: S4.0 passes the learner-safety/schema
+contract, but S4.0.5 reports `bridge_surface_projection_aliasing`. Treat this as
+a bridge-surface diagnosis, not a full S4 neural release gate. The full S4.0
+config can emit large artifacts; use it only after the smoke result and
+projection target are clear.
+
 ```bash
 conda run -n aiqec scope-stage4-synthetic-freeze \
   --config configs/scope_static/stage4_synthetic_google_surface_v1.yaml
@@ -339,7 +356,9 @@ Practical bottleneck order:
 The current controlled Stage 3/5 route uses the Layer1 preprocessing - teacher
 generator medium contract artifact. The blocking gate is teacher-generator
 physicality plus Stage 3 protocol freeze; S5 property recovery is an
-evaluator-side interpretation audit.
+evaluator-side interpretation audit. The claim-bearing S5 route uses the
+S3D4b visible-only postmerge assignment source plus S5B1b conditional property
+recovery; raw S3B1 remains a diagnostic assignment source by itself.
 
 ```bash
 conda run -n aiqec python -m scope_static.experiments.qec_noise_catalog.data_preparation_teacher \
@@ -357,8 +376,14 @@ conda run -n aiqec python -m scope_static.experiments.stage3.observability_ceili
 conda run -n aiqec python -m scope_static.experiments.stage3.discovery_model \
   --config configs/scope_static/stage3b1_discovery_model.yaml
 
+conda run -n aiqec python -m scope_static.experiments.stage3.k_stress_audit \
+  --config configs/scope_static/stage3d4_k_stress_audit.yaml
+
+conda run -n aiqec python -m scope_static.experiments.stage3.overcomplete_merge_prune_audit \
+  --config configs/scope_static/stage3d4b_overcomplete_merge_prune_audit.yaml
+
 conda run -n aiqec python -m scope_static.experiments.stage5.property_recovery \
-  --config configs/scope_static/stage5b1_property_recovery.yaml
+  --config configs/scope_static/stage5b1b_conditional_property_recovery.yaml
 ```
 
 Default artifact root:

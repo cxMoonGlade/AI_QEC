@@ -120,6 +120,30 @@ def test_m13_drift_overlay_has_row_level_visible_geometry_beyond_m6_rx_strength(
     assert not any(token in name.lower() for token in forbidden for name in table.feature_names)
 
 
+def test_m22_m23_axis_quadrature_proxy_is_visible_under_zx_probes() -> None:
+    records = [
+        _record("M22", 0, parameters={"epsilon": 0.022}, instruction="rzz"),
+        _record("M23", 0, parameters={"epsilon": 0.019}, instruction="rzz"),
+    ]
+
+    table = build_zx_visible_feature_table(records, shots=1000)
+    means = {label: _mean_map(table, label) for label in ("M22", "M23")}
+    forbidden = ("oracle", "mechanism", "teacher", "channel", "kraus", "ptm", "prototype", "omega", "family", "label")
+    feature = "derived__two_axis_quadrature_plus_xx_pair_transfer_proxy"
+
+    assert feature in table.feature_names
+    assert abs(means["M23"][feature] - means["M22"][feature]) > 1.0e-4
+    assert means["M22"]["derived__two_axis_quadrature_plus_any_transfer_flag"] == 0.0
+    assert means["M23"]["derived__two_axis_quadrature_plus_any_transfer_flag"] == 1.0
+    assert means["M23"]["derived__two_axis_quadrature_plus_support_pattern"] > means["M22"][
+        "derived__two_axis_quadrature_plus_support_pattern"
+    ]
+    assert means["M23"]["derived__two_axis_quadrature_plus_zx_xz_single_axis_loss_proxy"] > means["M22"][
+        "derived__two_axis_quadrature_plus_zx_xz_single_axis_loss_proxy"
+    ]
+    assert not any(token in name.lower() for token in forbidden for name in table.feature_names)
+
+
 def _record(
     label: str,
     group: int,

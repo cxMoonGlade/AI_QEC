@@ -99,6 +99,24 @@ def test_stage3b1_trains_visible_only_prototype_mixture_and_reports_quotient_met
     assert not (output / "targeted_pair_geometry_audit.json").exists()
 
 
+def test_stage3b1_raw_all_profile_keeps_axis_sensitive_two_qubit_raw_columns() -> None:
+    feature_names = [
+        "raw__two__prep_plusplus__r_2__meas_XX__P00",
+        "raw__two__prep_plusplus__r_2__meas_XX__se_XI",
+        "raw__two__prep_plusplus__r_2__meas_ZX__IX",
+        "derived__two_prep_00_r_1_ZZ_population_support_pattern",
+        "visible_metadata__instruction_rzz",
+    ]
+
+    audit = learner_input_mask_audit(feature_names, learner_input_profile="raw_all")
+
+    assert audit["learner_input_profile"] == "raw_all"
+    assert audit["selected_feature_names"] == feature_names[:3]
+    assert "raw__two__prep_plusplus__r_2__meas_XX__se_XI" in audit["selected_feature_names"]
+    assert "derived__two_prep_00_r_1_ZZ_population_support_pattern" in audit["dropped_feature_names"]
+    assert "visible_metadata__instruction_rzz" in audit["dropped_feature_names"]
+
+
 def test_stage3b1_exact_separable_fixture_recovers_visible_mechanism_structure(tmp_path: Path) -> None:
     _teacher, s3a, s3a5 = _prepare_artifacts(
         tmp_path,

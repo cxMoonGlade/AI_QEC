@@ -43,6 +43,57 @@ syndrome-response structure and audited source-to-Google prototype transfer. It
 must not claim true Google physical mechanism recovery, Google public F/M label
 recovery, or Google legacy catalog-ID recovery.
 
+## Current Bridge Status
+
+The repaired S4 smoke path has been refreshed against the current controlled
+full-circuit allM/decorrelated teacher:
+
+```text
+configs/scope_static/stage4_synthetic_google_surface_repaired_smoke.yaml
+configs/scope_static/stage4_source_ceiling_repaired_smoke.yaml
+```
+
+S4.0 repaired smoke output:
+
+```text
+outputs/scope_static/S4_bridge/S4_0_synthetic_google_shaped_freeze_repaired_smoke/S3A_protocol_freeze/
+```
+
+Observed S4.0 smoke status:
+
+- decision: `stage4_synthetic_bridge_freeze_passed`;
+- teacher source: current repaired full-circuit teacher under
+  `s5_medium_hard_allM_contract_teacher_20q_depth20_rzz_active_g20_strength_decorrelated_s1000`;
+- visible matrix: `700 x 66`, dtype `float64`;
+- Google V2 schema compatibility: passed, feature count `66`, mismatch count
+  `0`;
+- forbidden learner fields: `0`;
+- no evaluator labels, oracle fields, path/sample/context one-hot features in
+  the learner-visible matrix.
+
+S4.0.5 repaired smoke output:
+
+```text
+outputs/scope_static/S4_bridge/S4_0_5_source_surface_survival_audit_repaired_smoke/
+```
+
+Observed S4.0.5 smoke status:
+
+- decision: `bridge_surface_projection_aliasing`;
+- source visible ceiling ARI/NMI: `0.013656480801321156` /
+  `0.28127086610435836`;
+- quotient ceiling ARI/NMI: `0.013656480801321156` /
+  `0.28127086610435836`;
+- alias class count: `12`.
+
+Interpretation: the repaired bridge is now connected to the current teacher and
+passes the learner-safety/schema contract, but the current Google-shaped
+66-feature projection aliases too much of the controlled 35-mechanism structure.
+This blocks S4 neural mainline claims until the benchmark target is changed to a
+valid alias quotient or the visible bridge surface is strengthened. The older
+full S4.0 artifact is prior evidence from an older teacher path; it should not
+be cited as post-repair S4 evidence.
+
 ## Milestone Gates
 
 ### S4.0 Bridge Freeze
