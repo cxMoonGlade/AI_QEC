@@ -14,14 +14,15 @@ review: it is for executing cleanup, not only proposing refactors.
 Use these defaults unless the user says otherwise:
 
 - Scope: all current-core surfaces.
-- Deletion: delete obsolete code/docs by default after references and behavior
-  are checked.
+- Deletion: delete obsolete code/docs by default after references, behavior,
+  and current-contract content are checked.
 - Compatibility: migrate callers and remove shims. Preserve compatibility only
   when the user explicitly requires it or current tests/users still need it.
 - Docs: current-only, minimal, no historical explanation. History belongs in
   git, not in active docs.
-- Verification: reference scans plus targeted tests; run the full suite after
-  broad code moves or public-surface changes.
+- Verification: reference scans, targeted tests for touched surfaces, then the
+  repo's full test suite after cleanup. If the full suite cannot run, report
+  the exact blocker and do not present the cleanup as fully verified.
 
 ## Cleanup Intake
 
@@ -42,15 +43,16 @@ specify the cleanup level. If the user names the level or target, proceed.
    - migrate callers and remove shims
    - keep narrow shims temporarily
    - preserve public compatibility
-4. Verification budget?
-   - rg/import scan only
-   - targeted tests
-   - full suite
-   - artifact-level run
+4. Extra verification budget?
+   - full suite only
+   - full suite plus artifact-level run
+   - full suite plus selected performance smoke
+   - blocked full suite with explicit reason
 
 For AI_QEC-style cleanup, the recommended answer is: all current-core surfaces;
 delete obsolete code/docs by default; migrate callers and remove shims; use
-reference scans plus targeted tests, with full suite for code moves.
+reference scans plus targeted tests, then the full test suite before reporting
+the cleanup complete.
 
 ## Surface Checklist
 
@@ -100,6 +102,11 @@ Run this before editing:
 3. Prove whether each candidate is load-bearing.
    - Use `rg` or import scans before deleting or moving.
    - Check callers, tests, configs, docs, console scripts, and fixture paths.
+   - For docs, read enough content to classify the document. Low reference
+     count is not proof of obsolescence.
+   - Treat current implementation maps, teacher/learner contracts, artifact
+     schemas, claim boundaries, glossary material, and active runbook commands
+     as load-bearing documentation even when only one doc links to them.
    - If required behavior still exists only in the old path, migrate that
      behavior first.
 
@@ -123,6 +130,12 @@ Run this before editing:
    - Update only docs that describe the changed current core.
    - Keep AGENTS.md and CONTEXT.md focused on current terms, current package
      routes, and current claim boundaries.
+   - Prefer compressing or merging current-contract docs over deleting them.
+     If a doc is merged away, prove the destination now preserves the current
+     implementation map or contract content before deleting the source.
+   - Do not make a document deletable by first removing its only active
+     reference. Unlinking and deletion must be justified by the document's
+     content being obsolete or fully migrated.
    - Do not add prose about old names, old paths, or why history changed unless
      the user explicitly asks for a migration note.
    - Avoid relative-time wording such as "latest", "old", "new", "legacy",
@@ -131,8 +144,9 @@ Run this before editing:
 7. Verify.
    - Run targeted `rg` checks for removed names and moved paths.
    - Run import checks or focused tests for moved/merged code.
-   - Run full suite when cleanup touches public packages, console scripts,
-     broad configs, or shared helpers.
+   - Run the full project test suite after cleanup, even if focused tests pass.
+     Focused tests are a localization step; the full suite is the completion
+     gate.
    - For artifact-level contracts, run the smallest artifact-producing command
      that proves the current path still works.
 
@@ -153,8 +167,15 @@ Run this before editing:
 - Do not leave renamed aliases unless compatibility was explicitly requested.
 - Do not rename code without also scanning docs, configs, tests, and public
   entrypoints.
+- Do not delete current-contract documentation solely because it has few
+  references. Compress it, merge it with proof, or keep it.
+- Do not remove a doc's only reference and then treat the doc as unreferenced
+  evidence for deletion in the same cleanup pass.
 - Do not treat green tests as enough if stale public commands/configs/docs still
   advertise removed paths.
+- Do not finish an executed cleanup without running the full project test suite,
+  unless it is impossible; when impossible, report the exact blocker and
+  remaining risk.
 - Do not delete high-risk files, generated outputs, tracked artifact trees, or
   git history without explicit user approval.
 

@@ -5,8 +5,8 @@ from .acceptance import (
     audit_phyc3a_baseline,
     audit_phyc3b_visible_repair,
     audit_phyc3c_accepted_learner,
-    format_phyc3_canonical_acceptance_summary,
-    run_phyc3_canonical_acceptance,
+    format_layer3_acceptance_summary,
+    run_layer3_acceptance,
 )
 from .gaussian_likelihood import (
     HEADS,
@@ -69,7 +69,7 @@ __all__ = [
     "channel_vector",
     "deterministic_visible_ceiling_audit",
     "fit_gaussian_fold_model",
-    "format_phyc3_canonical_acceptance_summary",
+    "format_layer3_acceptance_summary",
     "format_phyc3_no_leakage_learner_recovery_summary",
     "format_phyc3b_summary",
     "format_phyc3c_summary",
@@ -80,7 +80,7 @@ __all__ = [
     "leakage_guardrail_audit_zx_visible",
     "non_leakage_audit",
     "protocol_validity_audit",
-    "run_phyc3_canonical_acceptance",
+    "run_layer3_acceptance",
     "run_phyc3_no_leakage_learner_recovery",
     "run_phyc3b_zx_visible_alias_breaking_probe_suite",
     "run_phyc3c_distributional_gaussian_likelihood_head",

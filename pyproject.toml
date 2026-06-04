@@ -19,7 +19,6 @@ cuda-extension = ["ninja"]
 
 [project.scripts]
 scope-static-toolbox = "scope_static.toolbox:main"
-scope-catalog-teacher = "scope_static.experiments.qec_noise_catalog.controlled_catalog_teacher:main"
 scope-data-preparation-teacher = "scope_static.experiments.qec_noise_catalog.data_preparation_teacher:main"
 scope-stage3a-freeze = "scope_static.experiments.stage3.protocol_freeze:main"
 scope-stage3a5-ceiling = "scope_static.experiments.stage3.observability_ceiling:main"

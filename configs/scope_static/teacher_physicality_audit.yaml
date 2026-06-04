@@ -1,5 +1,5 @@
 teacher_physicality_audit:
-  name: Layer1.P_teacher_physicality_audit
+  name: Layer1_preprocessing_teacher_physicality_audit
   teacher_dir: outputs/scope_static/s5_medium_hard_allM_contract_teacher_20q_depth20_rzz_active_g20_strength_decorrelated_s1000/S2D_PHYS1_teacher
   output_dir: outputs/scope_static/s5_medium_hard_allM_contract_teacher_20q_depth20_rzz_active_g20_strength_decorrelated_s1000/Layer1_teacher_physicality_audit
   tolerance_mode: strict

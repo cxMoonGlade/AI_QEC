@@ -29,13 +29,18 @@ It is organized as reusable tools rather than a single end-to-end claim.
 | --- | --- | --- |
 | `scope-static-toolbox` | manifest | Print the toolbox manifest and public catalog stage map. |
 | `scope-data-preparation-teacher` | data preparation | Generate a first-class physical-process teacher with pre-sampling CPTP/POVM checks and post-sampling physicality audit. |
-| `scope-catalog-teacher` | catalog teacher | Generate controlled-catalog teacher artifacts through the compatibility command. |
-| `teacher-distinguishment` | teacher | Verify that the declared teacher/catalog can self-distinguish generated mechanisms. |
-| `learner-acceptance` | learner | Select the accepted learner source and report classification, channel-distance, NLL, and MAE quality. |
+| `scope-teacher-physicality-audit` | Layer1 physicality | Run the Layer1 preprocessing teacher-generator physicality audit. |
 | `scope-stage3a-freeze` | Stage 3A: Dataset And Protocol Freeze | Freeze visible schema, split manifest, batch/context protocol, assignment unit, and forbidden-feature audit before discovery training. |
 | `scope-stage3a5-ceiling` | Stage 3A.5: Observability And Alias Ceiling | Compute pairwise visible distances, oracle-visible alias classes, exact-label ceiling, and quotient-label ceiling before discovery training. |
 | `scope-stage3b0-baselines` | Stage 3B.0: Non-Learned Clustering Baselines | Run visible-only k-means/GMM baselines and null controls with evaluator-only exact-label and quotient-label scoring. |
 | `scope-stage3b1-discovery` | Stage 3B.1: First Discovery Model | Train a visible-only prototype-mixture discovery model with learned diagonal covariance and evaluator-only exact/quotient scoring. |
+| `scope-stage3c-generator` | Stage 3C: Generator | Fit and score the heldout visible generator. |
+| `scope-stage3d1-assignment-shuffle` | Stage 3D.1 | Run assignment-shuffle generator audit. |
+| `scope-stage3d2-feature-scramble` | Stage 3D.2 | Run feature-scramble generator audit. |
+| `scope-stage3d3-context-shuffle` | Stage 3D.3 | Run context-shuffle protocol audit. |
+| `scope-stage3d4-k-stress` | Stage 3D.4 | Run K stress audit. |
+| `scope-stage3d4b-overcomplete-merge-prune` | Stage 3D.4b | Run visible-only overcomplete merge/prune audit. |
+| `scope-stage3-abc-observability-diagnostic` | Stage 3 ABC | Run diagnostic-only observability upper-bound checks. |
 | `scope-stage4-synthetic-freeze` | S4.0 Bridge Freeze | Build a synthetic Google-shaped Stage-3A-compatible source freeze. |
 | `scope-stage4-source-ceiling` | S4.0.5 Surface Survival | Audit mechanism/quotient survival with evaluator-only labels. |
 | `scope-stage4-source-pretrain` | S4.1 Source Pretrain | Train MLP and Attention-VQ source replay models from visible features. |
@@ -44,6 +49,11 @@ It is organized as reusable tools rather than a single end-to-end claim.
 | `scope-stage4-google-unit-source-expansion` | S4.6 Google-Unit Source | Build the Google-unit controlled source freeze plus transfer, controls, and robustness audits. |
 | `scope-stage4-google-transfer` | S4.2 Frozen Transfer | Run strict frozen source-to-Google transfer and controls. |
 | `scope-stage4-transfer-diagnostics` | S4.3 Transfer Diagnostics | Compare strict frozen transfer with frozen-codebook adapter diagnostics. |
+| `scope-stage5b1-property-recovery` | S5B1 Property Recovery | Run context-relative property recovery. |
+| `scope-stage5b1b-conditional-property-recovery` | S5B1b Conditional Recovery | Run conditional context-relative property recovery. |
+| `scope-google-s3-visible-cache-v2` | Google S3 V2 Cache | Build public syndrome-response cache. |
+| `scope-google-s3-visible-aggregate-v2` | Google S3 V2 Aggregate | Build aggregate visible rows. |
+| `scope-google-s3-visible-adapter-v2` | Google S3 V2 Adapter | Build Stage-3A-compatible visible surface. |
 
 Public-facing code should use `data_preparation`, `teacher`, and `learner`.
 

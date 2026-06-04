@@ -60,7 +60,7 @@ def run_catalog_pipeline(
     total_start = time.perf_counter()
 
     start = time.perf_counter()
-    teacher = _generate_catalog_teacher_dataset(
+    teacher = _generate_teacher_dataset(
         cfg,
         output_dir=paths.teacher_dir,
         preflight_dir=paths.preflight_dir,
@@ -235,7 +235,7 @@ def format_catalog_pipeline_summary(result: dict[str, object]) -> str:
     return "\n".join(lines)
 
 
-def _generate_catalog_teacher_dataset(*args, **kwargs):
+def _generate_teacher_dataset(*args, **kwargs):
     from scope_static.experiments.qec_noise_catalog.controlled_catalog_teacher import generate_controlled_catalog_teacher_dataset
 
     return generate_controlled_catalog_teacher_dataset(*args, **kwargs)

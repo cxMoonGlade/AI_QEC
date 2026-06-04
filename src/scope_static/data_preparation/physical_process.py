@@ -20,7 +20,7 @@ from scope_static.primitives.probe_catalog import _merged_config
 from .physicality_audit import run_teacher_physicality_audit
 
 
-STAGE_NAME = "Layer1.P_teacher"
+STAGE_NAME = "Layer1_preprocessing_teacher_generator"
 DEFAULT_OUTPUT_DIR = "outputs/scope_static/Layer1P_teacher"
 DEFAULT_AUDIT_SUBDIR = "Layer1_teacher_physicality_audit"
 DEFAULT_TOLERANCE_MODE = "strict"
@@ -40,12 +40,12 @@ def generate_layer1p_teacher_dataset(
     enforce_pre_sampling_contract: bool = True,
     enforce_post_sampling_physicality: bool = True,
 ) -> dict[str, object]:
-    """Generate a Layer1.P teacher with a blocking physical-process contract.
+    """Generate a Layer1 preprocessing teacher generator with a blocking physical-process contract.
 
-    Layer1.P is a teacher, not just an audit: it validates the declared local
-    CPTP/POVM mechanism modules before sampling, samples full-circuit CUDA-Q
-    observations, and then blocks the artifact if the generated observations
-    fail the Layer1.P physicality audit.
+    Layer1 preprocessing validates the declared local CPTP/POVM mechanism
+    modules before sampling, samples full-circuit CUDA-Q observations, and then
+    blocks the artifact if the generated observations fail the physicality
+    audit.
     """
 
     output = Path(output_dir)
@@ -54,7 +54,7 @@ def generate_layer1p_teacher_dataset(
     pre_sampling = build_layer1p_pre_sampling_contract(cfg)
     (output / "layer1p_pre_sampling_contract.json").write_text(json.dumps(_json_safe(pre_sampling), indent=2, sort_keys=True) + "\n")
     if enforce_pre_sampling_contract and not bool(pre_sampling.get("passed", False)):
-        raise ValueError("Layer1.P pre-sampling physical-process contract failed")
+        raise ValueError("Layer1 preprocessing pre-sampling physical-process contract failed")
 
     full_summary = generate_full_circuit_cudaq_teacher_dataset(cfg, output_dir=output)
     full_summary_path = output / "summary.json"
@@ -134,7 +134,7 @@ def generate_layer1p_teacher_dataset(
     }
     _write_outputs(output, result)
     if enforce_post_sampling_physicality and not bool(acceptance.get("passed", False)):
-        raise RuntimeError("Layer1.P generated teacher failed physicality acceptance")
+        raise RuntimeError("Layer1 preprocessing teacher generator failed physicality acceptance")
     return result
 
 
@@ -177,7 +177,7 @@ def build_layer1p_pre_sampling_contract(config: Mapping[str, object] | None = No
         "schema": "scope_static_layer1p_pre_sampling_contract_v1",
         "passed": bool(all(checks.values())),
         "checks": checks,
-        "contract_statement": "Layer1.P composes ideal circuit operations with declared local CPTP channels, valid stochastic readout maps embedded as POVMs, or declared computational-subspace surrogates, then samples the resulting observation distribution with CUDA-Q/Born-rule sampling.",
+        "contract_statement": "Layer1 preprocessing - teacher generator composes ideal circuit operations with declared local CPTP channels, valid stochastic readout maps embedded as POVMs, or declared computational-subspace surrogates, then samples the resulting observation distribution with CUDA-Q/Born-rule sampling.",
         "observation_distribution": "p_Theta(y | c) = Tr[M_y C_Theta(c)(rho_0)]",
         "mechanism_record_count": int(len(mechanisms)),
         "active_mechanism_count": int(len({spec.mechanism_id for spec in mechanisms})),
@@ -263,7 +263,7 @@ def format_layer1p_teacher_summary(result: Mapping[str, object]) -> str:
     contract = dict(result.get("layer1p_teacher_contract", {})) if isinstance(result.get("layer1p_teacher_contract", {}), dict) else {}
     return "\n".join(
         [
-            "# Layer1.P Teacher",
+            "# Layer1 preprocessing - teacher generator",
             "",
             f"- Decision: `{result.get('decision')}`",
             f"- Acceptance passed: `{str(bool(acceptance.get('passed', False))).lower()}`",
@@ -276,7 +276,7 @@ def format_layer1p_teacher_summary(result: Mapping[str, object]) -> str:
             "",
             "## Claim Boundary",
             "",
-            "Layer1.P is a teacher generator: it validates the declared local CPTP/POVM mechanism process before sampling, samples full-circuit CUDA-Q observations, and blocks the artifact when the post-sampling physicality audit fails. It does not claim that data are CPTP.",
+            "Layer1 preprocessing - teacher generator validates the declared local CPTP/POVM mechanism process before sampling, samples full-circuit CUDA-Q observations, and blocks the artifact when the post-sampling physicality audit fails. It does not claim that data are CPTP.",
             "",
         ]
     )

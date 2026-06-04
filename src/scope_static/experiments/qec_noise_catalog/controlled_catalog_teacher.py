@@ -14,8 +14,6 @@ def generate_controlled_catalog_teacher_dataset(
     output_dir: str | Path,
     preflight_dir: str | Path,
 ) -> dict[str, object]:
-    """Compatibility wrapper: public Layer 1 generation now uses Layer1.P."""
-
     cfg = dict(config or {})
     audit = audit_cudaq_backend(
         backend=str(cfg.get("backend", "cudaq")),
@@ -25,7 +23,7 @@ def generate_controlled_catalog_teacher_dataset(
     )
     write_backend_audit(audit, preflight_dir)
     if not bool(audit.get("backend_usable", False)):
-        raise RuntimeError("Layer1.P requires a passing CUDA-Q backend preflight")
+        raise RuntimeError("Layer1 preprocessing requires a passing CUDA-Q backend preflight")
     cfg["backend"] = "cudaq"
     result = generate_layer1p_teacher_dataset(cfg, output_dir=output_dir)
     result["backend_audit_dir"] = str(preflight_dir)
@@ -49,7 +47,7 @@ def run_controlled_catalog_teacher(
     preflight_output = Path(preflight_dir) if preflight_dir is not None else root / "S2D_PHYS0_preflight"
     result = generate_controlled_catalog_teacher_dataset(cfg, output_dir=teacher_output, preflight_dir=preflight_output)
     print(
-        "Layer1.P data preparation complete\n"
+        "Layer1 preprocessing - teacher generator complete\n"
         f"  output={teacher_output}\n"
         f"  mechanisms={dict(result.get('layer1p_teacher_contract', {})).get('num_mechanisms')}"
     )
@@ -67,7 +65,3 @@ def main(argv: list[str] | None = None) -> None:
 
 if __name__ == "__main__":
     main()
-
-
-generate_physical_teacher_dataset = generate_controlled_catalog_teacher_dataset
-run_s2d_physical_teacher = run_controlled_catalog_teacher

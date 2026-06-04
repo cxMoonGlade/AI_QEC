@@ -51,9 +51,6 @@ Learner generated-noise claims have two meanings:
 ```bash
 scope-static-toolbox
 scope-data-preparation-teacher
-scope-catalog-teacher
-teacher-distinguishment
-learner-acceptance
 ```
 
 See `docs/TOOLBOX.md` for install and command examples.

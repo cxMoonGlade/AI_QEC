@@ -37,7 +37,7 @@ def run_data_preparation_teacher_from_config(
     )
     contract = dict(result.get("layer1p_teacher_contract", {}))
     print(
-        "Layer1.P teacher generation complete\n"
+        "Layer1 preprocessing - teacher generator complete\n"
         f"  decision={result.get('decision')}\n"
         f"  mechanisms={contract.get('num_mechanisms')}\n"
         f"  total_failures={contract.get('total_failures')}\n"
@@ -47,7 +47,7 @@ def run_data_preparation_teacher_from_config(
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description="Generate a Layer1.P physical-process teacher dataset.")
+    parser = argparse.ArgumentParser(description="Generate a Layer1 preprocessing physical-process teacher dataset.")
     parser.add_argument("--config", type=Path, default=Path("configs/scope_static/data_preparation_teacher.yaml"))
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--audit-output-dir", type=Path)
@@ -69,10 +69,10 @@ def _load_config(config_path: str | Path | None) -> dict[str, object]:
     if data is None:
         return {}
     if not isinstance(data, dict):
-        raise ValueError("Layer1.P teacher config must be a mapping")
-    section = data.get("data_preparation_teacher", data.get("layer1p_teacher", data.get("s2d_physical", data)))
+        raise ValueError("Layer1 preprocessing teacher config must be a mapping")
+    section = data.get("data_preparation_teacher", data.get("s2d_physical", data))
     if not isinstance(section, dict):
-        raise ValueError("Layer1.P teacher config section must be a mapping")
+        raise ValueError("Layer1 preprocessing teacher config section must be a mapping")
     return dict(section)
 
 
@@ -94,6 +94,3 @@ def _teacher_config(cfg: dict[str, object]) -> dict[str, object]:
 
 if __name__ == "__main__":
     main()
-
-
-run_layer1p_teacher_from_config = run_data_preparation_teacher_from_config

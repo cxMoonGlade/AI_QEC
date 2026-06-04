@@ -17,7 +17,7 @@ ACCEPTED_SOURCE_NAME = "phyc3c_distributional_gaussian_likelihood_head"
 PRIMARY_HEAD = "PHYC3c_diagonal_gaussian"
 
 
-def run_phyc3_canonical_acceptance(
+def run_layer3_acceptance(
     *,
     phyc2_dir: str | Path,
     phyc3a_dir: str | Path,
@@ -691,7 +691,7 @@ def _distribution(values: list[float]) -> dict[str, float]:
     }
 
 
-def format_phyc3_canonical_acceptance_summary(result: dict[str, object]) -> str:
+def format_layer3_acceptance_summary(result: dict[str, object]) -> str:
     quality = dict(result.get("canonical_quality_metrics", {}))
     distances = dict(quality.get("predicted_channel_distance", {}))
     generation = dict(result.get("learner_generation_quality_metrics", {}))
@@ -703,7 +703,6 @@ def format_phyc3_canonical_acceptance_summary(result: dict[str, object]) -> str:
             "# Layer 3 Canonical Quality Acceptance",
             "",
             f"- Layer: `{dict(result.get('public_layer', {})).get('layer_name', LEARNER_VALIDATION_STAGE.public_name)}`",
-            f"- Legacy alias: `{dict(result.get('public_layer', {})).get('legacy_alias', 'PHYC3')}`",
             f"- Decision: `{result.get('decision')}`",
             f"- Contract passed: `{str(bool(result.get('contract_passed'))).lower()}`",
             f"- Canonical source: `{dict(result.get('canonical_prediction_source', {})).get('source_name', 'unknown')}`",
@@ -748,7 +747,7 @@ def _write_outputs(output: Path, result: dict[str, object]) -> None:
     }
     for name, payload in artifacts.items():
         (output / name).write_text(json.dumps(_json_safe(payload), indent=2, sort_keys=True) + "\n")
-    (output / "summary.md").write_text(format_phyc3_canonical_acceptance_summary(result))
+    (output / "summary.md").write_text(format_layer3_acceptance_summary(result))
 
 
 def _json_safe(value: object) -> object:

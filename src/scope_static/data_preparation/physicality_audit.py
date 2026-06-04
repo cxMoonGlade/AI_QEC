@@ -22,7 +22,7 @@ from scope_static.primitives.overlay_contract import OVERLAY_CONTRACT_MISSING_RE
 from scope_static.primitives.overlay_contract import overlay_contract_audit
 
 
-STAGE_NAME = "Layer1.P_teacher_physicality_audit"
+STAGE_NAME = "Layer1_preprocessing_teacher_physicality_audit"
 DEFAULT_OUTPUT_DIR = "outputs/scope_static/Layer1_teacher_physicality_audit"
 STRICT_TOLERANCE = 1.0e-10
 CUDA_FLOAT64_TOLERANCE = 1.0e-8
@@ -900,7 +900,7 @@ def format_teacher_physicality_summary(result: Mapping[str, object]) -> str:
     summary = dict(result.get("summary", {}))
     return "\n".join(
         [
-            "# Layer1.P: Teacher Physicality Audit",
+            "# Layer1 preprocessing - teacher generator physicality audit",
             "",
             f"- Decision: `{result.get('decision')}`",
             f"- Teacher physicality passed: `{str(bool(summary.get('teacher_physicality_passed', False))).lower()}`",

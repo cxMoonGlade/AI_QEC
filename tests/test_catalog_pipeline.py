@@ -160,6 +160,6 @@ def _patch_pipeline_adapters(monkeypatch, *, calls: list[str], phys2_ari: float,
             "comparisons": [],
         }
 
-    monkeypatch.setattr(pipeline_mod, "_generate_catalog_teacher_dataset", fake_teacher)
+    monkeypatch.setattr(pipeline_mod, "_generate_teacher_dataset", fake_teacher)
     monkeypatch.setattr(pipeline_mod, "_run_oracle_separability_audit", fake_phys2)
     monkeypatch.setattr(pipeline_mod, "_run_mechanism_observability_recovery", fake_phys3)

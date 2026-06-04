@@ -154,9 +154,8 @@ def run_phyc3_no_leakage_learner_recovery(
 def format_phyc3_no_leakage_learner_recovery_summary(result: dict[str, object]) -> str:
     return "\n".join(
         [
-            "# Layer 3: Learner Classification and Noise Generation",
+            "# Layer 3 learner",
             "",
-            f"- Legacy alias: `{dict(result.get('public_layer', {})).get('legacy_alias', 'PHYC3')}`",
             f"- Decision: `{result.get('decision')}`",
             f"- Contract passed: `{str(bool(result.get('contract_passed'))).lower()}`",
             f"- Balanced accuracy: `{float(result.get('balanced_accuracy', 0.0)):.4f}`",

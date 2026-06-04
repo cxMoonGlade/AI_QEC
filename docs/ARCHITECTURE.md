@@ -51,9 +51,7 @@ The current controlled Stage 3/5 route starts from the Layer1 preprocessing -
 teacher generator, freezes a learner-visible Stage 3A protocol, audits
 observability, trains S3B1 visible-only assignments, optionally promotes an
 S3D4b visible-only postmerge assignment source, then runs S5B1
-context-relative property recovery. See `docs/teacher_learner.md` for the
-teacher-generator, Layer 2 self-audit, Layer 3 learner, and discovery-learner
-implementation map.
+context-relative property recovery.
 
 The code should use the responsibility packages above. New code should not add
 flat modules under `src/scope_static/` or rebuild a broad `physical` package.
@@ -75,7 +73,6 @@ Preferred console scripts:
 
 ```text
 scope-static-toolbox
-scope-catalog-teacher
 scope-data-preparation-teacher
 scope-stage3a-freeze
 scope-stage3a5-ceiling
@@ -83,6 +80,11 @@ scope-stage3b0-baselines
 scope-stage3b1-discovery
 scope-stage3c-generator
 scope-stage3d1-assignment-shuffle
+scope-stage3d2-feature-scramble
+scope-stage3d3-context-shuffle
+scope-stage3d4-k-stress
+scope-stage3d4b-overcomplete-merge-prune
+scope-stage3-abc-observability-diagnostic
 scope-stage4-synthetic-freeze
 scope-stage4-source-ceiling
 scope-stage4-source-pretrain
@@ -132,38 +134,3 @@ validity is a property of the generating process.
 
 The current learner is not an arbitrary CPTP/GKSL channel learner by
 construction.
-
-+----------------------------------------------------------------------+<br>
-|                            I CHOOSE YOU!                             |<br>
-|                                                                      |<br>
-|             @@@@@                                                    |<br>
-|            @@@@#*                                              ..    |<br>
-|           .#####.                        ....@@@@@:         .*###.   |<br>
-|           *#####                 ..**#######@@@@@@:       *#######   |<br>
-|          .#####* ........  ..**#############@@@@:      .*#########*  |<br>
-|          *################################*::        *#############. |<br>
-|          *###########/@@\###########**...          .*################|<br>
-|         *###########|@@@|#######*               *###################.|<br>
-|        ./@@|#########\@@/#ooo#####.            *###################*.|<br>
-|        #|@@|#############oooooo###.         .*##################*.   |<br>
-|       oo###*oooooo######oooooo####*        *###############*.        |<br>
-|      ooo####oo    #######ooo#######.        *##########*..           |<br>
-|       oo#####*.   ##################.        .*######.               |<br>
-|        .#######**####################*         .#####*               |<br>
-|         .#############################.:       .*#####.              |<br>
-|  ..**##################################**   .*######**.              |<br>
-| .#########################################* .*####.                  |<br>
-| .##########################################*: .***.:                 |<br>
-|   ..**######################################**  :   :                |<br>
-|             ...*##############################*                      |<br>
-|                 ###############################*::                   |<br>
-|                 *###############################:                    |<br>
-|                 .###############################                     |<br>
-|                  *#############################.                     |<br>
-|                   .#########**.....***########*                      |<br>
-|                     ..**###               .####                      |<br>
-|                         *##                .*##.                     |<br>
-|                                               .                      |<br>
-|                                                                      |<br>
-|                               PIKACHU!                               |<br>
-+----------------------------------------------------------------------+<br>

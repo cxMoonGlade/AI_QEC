@@ -669,7 +669,6 @@ def format_phyc3b_summary(result: dict[str, object]) -> str:
             "# Layer 3b: Z/X Visible Alias-Breaking Probe Suite",
             "",
             f"- Layer: `{LEARNER_VALIDATION_STAGE.public_name}`",
-            f"- Legacy alias: `{LEARNER_VALIDATION_STAGE.legacy_alias}`",
             f"- Decision: `{result.get('decision')}`",
             f"- Main ceiling criterion passed: `{str(bool(result.get('main_success_criterion_passed'))).lower()}`",
             f"- Visible conflicts before: `{int(result.get('visible_signature_conflicts_before', 0))}`",
