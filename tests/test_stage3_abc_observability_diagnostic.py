@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from scope_static.mechanism_discovery.artifacts import matrix_digest
 from scope_static.mechanism_discovery.observability_abc_diagnostic import run_stage3_abc_observability_diagnostic
@@ -18,7 +19,7 @@ def test_stage3_abc_runs_current_surface_and_keeps_no_oracle_boundary(tmp_path: 
         stage3a_dir=s3a,
         teacher_dir=teacher,
         output_dir=tmp_path / "ABC",
-        target_groups=(("M6", "M13"), ("M22", "M23")),
+        target_groups=(("M6", "M13", "M22", "M23"),),
         feature_profiles=("raw_only",),
         vq_k_values=(4,),
         max_cv_folds=1,
@@ -33,9 +34,10 @@ def test_stage3_abc_runs_current_surface_and_keeps_no_oracle_boundary(tmp_path: 
     assert result["claim_boundary"]["b_representation_uses_evaluator_labels_for_fit"] is False
     assert result["abc_decision_audit"]["enhanced_probe_ran"] is False
     assert result["abc_decision_audit"]["enhanced_probe_skip_reason"] == "enhanced_stage3a_dir_not_provided"
-    supervised = result["supervised_upper_bound_audit"]["rows"]["M6_vs_M13"]["best"]
-    no_oracle = result["no_oracle_representation_audit"]["rows"]["M6_vs_M13"]["best"]
-    no_oracle_row = result["no_oracle_representation_audit"]["rows"]["M6_vs_M13"]
+    row_name = "M6_vs_M13_vs_M22_vs_M23"
+    supervised = result["supervised_upper_bound_audit"]["rows"][row_name]["best"]
+    no_oracle = result["no_oracle_representation_audit"]["rows"][row_name]["best"]
+    no_oracle_row = result["no_oracle_representation_audit"]["rows"][row_name]
     assert supervised["min_recall"] >= 0.9
     assert no_oracle_row["best_selection_rule"] == "min_visible_reconstruction_mse"
     assert "best_posthoc_diagnostic" in no_oracle_row
@@ -56,7 +58,7 @@ def test_stage3_abc_runs_current_surface_and_keeps_no_oracle_boundary(tmp_path: 
 
 
 def test_stage3_abc_enhanced_probe_records_improvement(tmp_path: Path) -> None:
-    labels = ["M22", "M23"] * 6
+    labels = ["M6", "M13", "M22", "M23"] * 3
     current = np.zeros((len(labels), 3), dtype=np.float64)
     current[:, 2] = np.linspace(0.0, 1.0, len(labels))
     enhanced = _separable_matrix(labels)
@@ -69,9 +71,9 @@ def test_stage3_abc_enhanced_probe_records_improvement(tmp_path: Path) -> None:
         enhanced_stage3a_dir=enhanced_s3a,
         enhanced_teacher_dir=enhanced_teacher,
         output_dir=tmp_path / "ABC",
-        target_groups=(("M22", "M23"),),
+        target_groups=(("M6", "M13", "M22", "M23"),),
         feature_profiles=("raw_only",),
-        vq_k_values=(2,),
+        vq_k_values=(4,),
         max_cv_folds=1,
         seed=1,
         mlp_epochs=5,
@@ -79,7 +81,7 @@ def test_stage3_abc_enhanced_probe_records_improvement(tmp_path: Path) -> None:
         pass_min_recall=0.9,
     )
 
-    row = result["abc_decision_audit"]["rows"]["M22_vs_M23"]
+    row = result["abc_decision_audit"]["rows"]["M6_vs_M13_vs_M22_vs_M23"]
     assert result["abc_decision_audit"]["enhanced_probe_ran"] is True
     assert row["current_supervised_min_recall"] < 0.9
     assert row["enhanced_supervised_min_recall"] >= 0.9
@@ -88,7 +90,7 @@ def test_stage3_abc_enhanced_probe_records_improvement(tmp_path: Path) -> None:
 
 
 def test_stage3_abc_enhanced_probe_requires_actual_improvement(tmp_path: Path) -> None:
-    labels = ["M22", "M23"] * 6
+    labels = ["M6", "M13", "M22", "M23"] * 3
     matrix = _separable_matrix(labels)
     current_teacher, current_s3a = _write_stage3a_fixture(tmp_path / "current", labels=labels, matrix=matrix)
     enhanced_teacher, enhanced_s3a = _write_stage3a_fixture(tmp_path / "enhanced", labels=labels, matrix=matrix)
@@ -99,9 +101,9 @@ def test_stage3_abc_enhanced_probe_requires_actual_improvement(tmp_path: Path) -
         enhanced_stage3a_dir=enhanced_s3a,
         enhanced_teacher_dir=enhanced_teacher,
         output_dir=tmp_path / "ABC",
-        target_groups=(("M22", "M23"),),
+        target_groups=(("M6", "M13", "M22", "M23"),),
         feature_profiles=("raw_only",),
-        vq_k_values=(2,),
+        vq_k_values=(4,),
         max_cv_folds=1,
         seed=1,
         mlp_epochs=5,
@@ -109,10 +111,31 @@ def test_stage3_abc_enhanced_probe_requires_actual_improvement(tmp_path: Path) -
         pass_min_recall=0.9,
     )
 
-    row = result["abc_decision_audit"]["rows"]["M22_vs_M23"]
+    row = result["abc_decision_audit"]["rows"]["M6_vs_M13_vs_M22_vs_M23"]
     assert row["current_supervised_min_recall"] >= 0.9
     assert row["enhanced_supervised_min_recall"] == row["current_supervised_min_recall"]
     assert row["enhanced_probe_improved"] is False
+
+
+def test_stage3_abc_rejects_pair_only_target_groups(tmp_path: Path) -> None:
+    labels = ["M6", "M13", "M22", "M23"] * 3
+    matrix = _separable_matrix(labels)
+    teacher, s3a = _write_stage3a_fixture(tmp_path / "current", labels=labels, matrix=matrix)
+
+    with pytest.raises(ValueError, match="pair-only target groups are forbidden"):
+        run_stage3_abc_observability_diagnostic(
+            stage3a_dir=s3a,
+            teacher_dir=teacher,
+            output_dir=tmp_path / "ABC",
+            target_groups=(("M22", "M23"),),
+            feature_profiles=("raw_only",),
+            vq_k_values=(4,),
+            max_cv_folds=1,
+            seed=0,
+            mlp_epochs=5,
+            mlp_hidden_dim=8,
+            pass_min_recall=0.9,
+        )
 
 
 def _write_stage3a_fixture(root: Path, *, labels: list[str], matrix: np.ndarray) -> tuple[Path, Path]:

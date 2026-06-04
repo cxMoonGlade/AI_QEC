@@ -27,10 +27,10 @@ This repository is currently centered on the SCOPE family of QEC noise-learning 
 - **GPU batched local-window exact adapter**: the C++/CUDA implementation of local-window exact likelihood that evaluates all prepared windows in one extension call and returns a first-order gradient for SCOPE-Static training.
 - **Evidence record**: one metrics row for a trained SCOPE-Static model, including likelihood source, compression audit, baseline metadata, and threshold inputs.
 - **Experiment plan**: the normalized SCOPE-Static run matrix compiled from YAML, including residual ranks, teacher cases, shot budgets, model names, backend choice, and output identity.
-- **Catalog pipeline**: the pre-release controlled-catalog workflow. `data_preparation`, `teacher`, and `learner` are the public code responsibilities. `PHYC1/PHYC2/PHYC3` remain legacy artifact aliases.
-- **Data Preparation (Prep)**: generates mechanism-catalog records, probe schedules, sampled observations, teacher config, sampling audits, and active probe manifests. Legacy alias: `PHYC1`.
-- **Teacher Self-Distinguishment (Teacher)**: asks whether the declared teacher/catalog can distinguish every generated mechanism from teacher-internal mechanism evidence. A pass establishes teacher/catalog identifiability; it is not a no-leakage learner claim. Legacy alias: `PHYC2`.
-- **Learner Classification and Noise Generation (Learner)**: consumes learner-visible observations to classify mechanisms and score generated noise/error quality with channel-distance, NLL, and MAE diagnostics. It must not consume teacher-self predictions or hidden/oracle feature inputs. Legacy alias: `PHYC3`.
+- **Catalog pipeline**: the pre-release controlled-catalog workflow. `data_preparation`, `teacher`, and `learner` are the public code responsibilities. The public layer names are Layer1 preprocessing - teacher generator, Layer 2 teacher self-audit, and Layer 3 learner.
+- **Layer1 preprocessing - teacher generator (`data_preparation`)**: generates mechanism-catalog records, probe schedules, sampled observations, teacher config, sampling audits, and active probe manifests.
+- **Layer 2 teacher self-audit (`teacher`)**: asks whether the declared teacher/catalog can distinguish every generated mechanism from teacher-internal mechanism evidence. A pass establishes teacher/catalog identifiability; it is not a no-leakage learner claim.
+- **Layer 3 learner (`learner`)**: consumes learner-visible observations to classify mechanisms and score generated noise/error quality with channel-distance, NLL, and MAE diagnostics. It must not consume teacher-self predictions or hidden/oracle feature inputs.
 - **Controlled-catalog mechanism labels**: legacy `M0`-`M34` IDs remain stable
   implementation/provenance IDs. Public semantic labels use `F0`-`Fn` for flat
   atomic targets and `M0`-`Mn` for non-flat family/dimension targets.
@@ -98,9 +98,9 @@ that recover and replay learner-visible noisy observation distributions without
 oracle leakage. Stage 3 is the next claim boundary: remove direct
 mechanism-label supervision and test whether latent mechanism structure can be
 inferred from visible observations alone. The catalog pipeline remains
-the pre-release validation surface for data preparation, teacher/catalog
-self-distinguishment, and no-leakage learner classification/visible-generation
-quality.
+the pre-release validation surface for Layer1 preprocessing - teacher
+generator, Layer 2 teacher self-audit, and Layer 3 learner
+classification/visible-generation quality.
 
 Stage 3's Google real-data closeout is bounded to no-oracle replay of public
 raw syndrome-response structure, not real physical mechanism recovery. The V2

@@ -96,7 +96,7 @@ MECHANISM_CONTRACTS: dict[str, dict[str, object]] = {
         "primary_flat_cluster_target": True,
         "current_visible_surface_flat_exact_claim_allowed": False,
         "current_visible_surface_claim_target": "family_axis_dimension_recovery",
-        "paired_observability_group": ["M6", "M13"],
+        "targeted_observability_group": ["M6", "M13", "M18", "M27"],
         "flat_exact_claim_blocker": (
             "M6 shares the RX coherent-control surface with drifted M13; current Stage 3/S5 "
             "Z/X-visible rows support family, location, strength, and axis diagnostics, not a "
@@ -153,7 +153,7 @@ MECHANISM_CONTRACTS: dict[str, dict[str, object]] = {
         "primary_flat_cluster_target": False,
         "current_visible_surface_flat_exact_claim_allowed": False,
         "current_visible_surface_claim_target": "context_conditioned_drift_recovery",
-        "paired_observability_group": ["M6", "M13"],
+        "targeted_observability_group": ["M6", "M13", "M18", "M27"],
         "row_level_visible_geometry": "random_unitary_drift_overlay_on_declared_operation_axis",
         "flat_exact_claim_blocker": "M13 is a multi-context drift-overlay target, not a single flat exact cluster target.",
     },
@@ -221,7 +221,7 @@ MECHANISM_CONTRACTS: dict[str, dict[str, object]] = {
         "primary_flat_cluster_target": True,
         "current_visible_surface_flat_exact_claim_allowed": False,
         "current_visible_surface_claim_target": "parasitic_axis_dimension_recovery",
-        "paired_observability_group": ["M22", "M23"],
+        "targeted_observability_group": ["M6", "M13", "M22", "M23"],
         "flat_exact_claim_blocker": (
             "M22/M23 require an axis-sensitive quadrature probe before current Stage 3/S5 "
             "Z/X-visible evidence may claim flat-exact XX-vs-YY separation."
@@ -235,7 +235,7 @@ MECHANISM_CONTRACTS: dict[str, dict[str, object]] = {
         "primary_flat_cluster_target": True,
         "current_visible_surface_flat_exact_claim_allowed": False,
         "current_visible_surface_claim_target": "parasitic_axis_dimension_recovery",
-        "paired_observability_group": ["M22", "M23"],
+        "targeted_observability_group": ["M6", "M13", "M22", "M23"],
         "flat_exact_claim_blocker": (
             "M22/M23 require an axis-sensitive quadrature probe before current Stage 3/S5 "
             "Z/X-visible evidence may claim flat-exact XX-vs-YY separation."

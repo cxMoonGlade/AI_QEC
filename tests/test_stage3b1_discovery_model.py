@@ -52,6 +52,9 @@ def test_stage3b1_trains_visible_only_prototype_mixture_and_reports_quotient_met
     assert result["context_dependent_mechanism_diagnostics"]["used_for_fit"] is False
     assert result["shortcut_correlation_audit"]["used_for_fit"] is False
     assert result["targeted_m6_m13_m18_m27_bleed_audit"]["used_for_model_selection"] is False
+    assert result["targeted_set_geometry_audit"]["used_for_fit"] is False
+    assert result["targeted_set_geometry_audit"]["used_for_model_selection"] is False
+    assert result["targeted_set_geometry_audit"]["target_groups"] == [["M6", "M13", "M22", "M23"]]
     assert result["learned_assignment_summary"]["row_stochastic"] is True
     assert result["learned_prototypes"]["prototype_count"] == result["learned_assignment_summary"]["selected_k"]
     assert result["acceptance_audit"]["checks"]["selected_model_chosen_by_visible_validation_objective"] is True
@@ -89,10 +92,11 @@ def test_stage3b1_trains_visible_only_prototype_mixture_and_reports_quotient_met
         "shortcut_correlation_audit.json",
         "targeted_bleed_audit.json",
         "targeted_m6_m13_m18_m27_bleed_audit.json",
-        "targeted_pair_geometry_audit.json",
+        "targeted_set_geometry_audit.json",
         "summary.md",
     ]:
         assert (output / name).exists()
+    assert not (output / "targeted_pair_geometry_audit.json").exists()
 
 
 def test_stage3b1_exact_separable_fixture_recovers_visible_mechanism_structure(tmp_path: Path) -> None:

@@ -1,7 +1,8 @@
 # Visible Response Surfaces
 
 This note explains how SCOPE uses learner-visible response surfaces in the
-controlled catalog/Layer1.P path and in the Google S3 V2 real-data path.
+controlled catalog/Layer1 preprocessing - teacher generator path and in the
+Google S3 V2 real-data path.
 It is a conceptual and implementation bridge: the "surface" is not a direct
 geometric surface of the quantum circuit. It is the visible distribution induced
 by probes, public context, sampled detector bits, and logical-observable bits.
@@ -127,7 +128,7 @@ It does not use row-level oracle labels for branch assignment.
 
 ## Controlled Classification And Discovery
 
-Stage 2 / PHYC3 is supervised catalog validation. The mechanism label may be
+Stage 2 / Layer 3 learner is supervised catalog validation. The mechanism label may be
 used as a training target and evaluator label, but not as an input feature. The
 main question is:
 
@@ -351,7 +352,7 @@ Google legacy catalog-ID recovery
 
 ## Controlled Vs Google Surface
 
-| Property | Controlled catalog / Layer1.P | Google S3 V2 |
+| Property | Controlled catalog / Layer1 preprocessing | Google S3 V2 |
 | --- | --- | --- |
 | Mechanisms | Declared catalog mechanisms exist | No true mechanism labels are available |
 | Probes | Chosen by the teacher protocol | Fixed by public Google experiment contexts |
@@ -363,9 +364,9 @@ Google legacy catalog-ID recovery
 
 The same "surface" intuition applies to both paths: visible response
 distributions can contain statistically meaningful shapes. The interpretation is
-different. In controlled catalog/Layer1.P runs, those shapes can be audited
-against known catalog mechanisms. In Google runs, those shapes can only be
-audited as public visible replay or transfer structure unless a separate,
+different. In controlled catalog/Layer1 preprocessing runs, those shapes can be
+audited against known catalog mechanisms. In Google runs, those shapes can only
+be audited as public visible replay or transfer structure unless a separate,
 credible ground-truth mechanism partition is introduced.
 
 ## S4.6 Google-Unit Source Surface

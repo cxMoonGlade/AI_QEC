@@ -45,18 +45,16 @@ It is organized as reusable tools rather than a single end-to-end claim.
 | `scope-stage4-google-transfer` | S4.2 Frozen Transfer | Run strict frozen source-to-Google transfer and controls. |
 | `scope-stage4-transfer-diagnostics` | S4.3 Transfer Diagnostics | Compare strict frozen transfer with frozen-codebook adapter diagnostics. |
 
-Historical artifact folders may still use `PHYC1/PHYC2/PHYC3` names for
-compatibility. Public-facing code should use `data_preparation`,
-`teacher`, and `learner`.
+Public-facing code should use `data_preparation`, `teacher`, and `learner`.
 
 ## Physicality Boundary
 
-Layer1.P physicality comes from implemented catalog mechanisms validated before
-sampling as unitary channels, Kraus channels, or classical readout assignment
-matrices, then checked again by a post-sampling physicality audit. Learner
-inherits catalog physicality only when it predicts/reuses a catalog mechanism;
-visible empirical replay is a visible-distribution model, not by itself a
-learned CPTP channel.
+Layer1 preprocessing - teacher generator physicality comes from implemented
+catalog mechanisms validated before sampling as unitary channels, Kraus
+channels, or classical readout assignment matrices, then checked again by a
+post-sampling physicality audit. Learner inherits catalog physicality only when
+it predicts/reuses a catalog mechanism; visible empirical replay is a
+visible-distribution model, not by itself a learned CPTP channel.
 
 The toolbox does not yet claim arbitrary CPTP/GKSL channel learning by
 construction. See `docs/PHYSICALITY.md`.
@@ -110,15 +108,15 @@ Data preparation also emits:
   class, declared channel dimension, unitarity, Kraus trace preservation,
   readout stochasticity, and parameter validity for every enabled mechanism
   record.
-- `Layer1_teacher_physicality_audit/`, the legacy-named post-sampling blocking audit.
+- `Layer1_teacher_physicality_audit/`, the post-sampling blocking audit.
 
-Teacher produces:
+Layer 2 teacher self-audit produces:
 
 - teacher self-distinguishment metrics;
 - BA, ARI, NMI, and min-recall gates;
 - coverage and no-learner-prediction audits.
 
-Learner produces:
+Layer 3 learner produces:
 
 - Z/X visible feature schema and deterministic visible ceiling;
 - no-leakage learner predictions;

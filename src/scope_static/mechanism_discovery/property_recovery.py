@@ -612,7 +612,7 @@ def targeted_property_recovery_audit(s5: dict[str, object], *, targets: tuple[st
             "current_visible_surface_flat_exact_claim_allowed": current_flat_exact_allowed,
             "current_visible_surface_claim_target": str(contract.get("current_visible_surface_claim_target", "flat_exact_recovery")),
             "flat_exact_claim_blocker": contract.get("flat_exact_claim_blocker"),
-            "paired_observability_group": list(contract.get("paired_observability_group", [])),
+            "targeted_observability_group": list(contract.get("targeted_observability_group", [])),
             "exact_scalar_passed": exact_passed,
             "location_passed": location_passed,
             "strength_passed": strength_passed,

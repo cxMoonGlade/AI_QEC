@@ -216,7 +216,7 @@ not hardware-calibrated frequency distributions.
 The full template is
 `configs/scope_static/layer1_user_defined_mechanisms.yaml`.
 
-Small user-defined Layer1.P run:
+Small user-defined Layer1 preprocessing - teacher generator run:
 
 ```bash
 scope-data-preparation-teacher \
@@ -232,20 +232,20 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.qec
   --run-local-inverse auto
 ```
 
-Layer1.P full-circuit CUDA-Q teacher:
+Layer1 preprocessing - teacher generator full-circuit CUDA-Q run:
 
 ```bash
 conda run -n aiqec scope-data-preparation-teacher \
   --config configs/scope_static/data_preparation_teacher.yaml
 ```
 
-Layer1.P produces mechanism records, probe schedules, sampled observations,
-teacher config, sampling audits, active probe manifests, a pre-sampling
-physical-process contract, and a post-sampling physicality audit. The older
-`scope-catalog-teacher` command remains as a compatibility alias, but it now routes
-through Layer1.P.
+Layer1 preprocessing - teacher generator produces mechanism records, probe
+schedules, sampled observations, teacher config, sampling audits, active probe
+manifests, a pre-sampling physical-process contract, and a post-sampling
+physicality audit. The `scope-catalog-teacher` command is a
+compatibility entry point for this Layer1 preprocessing path.
 
-Layer1.P teacher generation:
+Layer1 preprocessing - teacher generator:
 
 ```bash
 conda run -n aiqec scope-data-preparation-teacher \
@@ -259,14 +259,14 @@ conda run -n aiqec python -m scope_static.experiments.qec_noise_catalog.data_pre
   --config configs/scope_static/data_preparation_teacher.yaml
 ```
 
-Layer1.P is the first-class physical-process teacher. It validates the declared
-local CPTP/POVM mechanism contract before sampling, runs full-circuit CUDA-Q
-Born-rule sampling, then runs the post-sampling physicality audit as a blocking
-gate. It writes `layer1p_pre_sampling_contract.json`,
-`layer1p_teacher_contract.json`, `full_circuit_cudaq_summary.json`, and
-`Layer1_teacher_physicality_audit/`.
+Layer1 preprocessing - teacher generator is the first-class physical-process
+generator. It validates the declared local CPTP/POVM mechanism contract before
+sampling, runs full-circuit CUDA-Q Born-rule sampling, then runs the
+post-sampling physicality audit as a blocking gate. It writes
+`layer1p_pre_sampling_contract.json`, `layer1p_teacher_contract.json`,
+`full_circuit_cudaq_summary.json`, and `Layer1_teacher_physicality_audit/`.
 
-Layer1.P teacher physicality audit only:
+Layer1 preprocessing teacher-generator physicality audit only:
 
 ```bash
 conda run -n aiqec scope-teacher-physicality-audit \
@@ -285,7 +285,7 @@ This post-hoc audit checks the teacher's generating maps, not the data as
 tests, readout maps as stochastic matrices embedded into POVMs, reset/prep
 surrogates, leakage-surrogate bookkeeping, and empirical circuit output
 normalization. It writes a `Layer1_teacher_physicality_audit/` artifact bundle
-and is run automatically by the Layer1.P teacher generator.
+and is run automatically by the Layer1 preprocessing - teacher generator.
 
 ### Full-Circuit g30 Timing Reference
 
@@ -337,9 +337,9 @@ Practical bottleneck order:
 
 ## Function: Run Current Stage 3/5 Contract Teacher
 
-The current controlled Stage 3/5 route uses the Layer1.P medium contract
-teacher, not the older PHYC2/PHYC3 teacher-learner ladder. The blocking gate is
-teacher physicality plus Stage 3 protocol freeze; S5 property recovery is an
+The current controlled Stage 3/5 route uses the Layer1 preprocessing - teacher
+generator medium contract artifact. The blocking gate is teacher-generator
+physicality plus Stage 3 protocol freeze; S5 property recovery is an
 evaluator-side interpretation audit.
 
 ```bash
@@ -368,9 +368,9 @@ Default artifact root:
 outputs/scope_static/s5_medium_hard_allM_contract_teacher_20q_depth20_rzz_active_g20_strength_decorrelated_s1000/
 ```
 
-## Legacy Function: Audit Teacher Self-Distinguishment
+## Function: Run Layer 2 Teacher Self-Audit
 
-Teacher balanced audit:
+Layer 2 teacher balanced audit:
 
 ```bash
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.qec_noise_catalog.teacher_distinguishment \
@@ -382,9 +382,9 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.qec
 Teacher tests teacher/catalog self-distinguishability. It is not a learner
 success claim and must not emit canonical learner predictions.
 
-## Legacy Function: Run No-Leakage Learner Recovery
+## Function: Run Layer 3 No-Leakage Learner Recovery
 
-Learner legacy no-leakage recovery:
+Layer 3 no-leakage learner recovery:
 
 ```bash
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.qec_noise_catalog.learner_recovery \
