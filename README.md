@@ -40,9 +40,9 @@ CPTP/POVM/readout guardrail audits on the generating modules.
 The public responsibilities are:
 
 ```text
-data_preparation: Data Preparation (Prep)
-teacher: Teacher Self-Distinguishment (Teacher)
-learner: Learner Classification and Noise Generation (Learner)
+data_preparation: Layer1 preprocessing - teacher generator
+teacher: Layer 2 teacher self-audit
+learner: Layer 3 learner
 ```
 
 The already-run Stage 2 evidence supports this bounded claim: the system can

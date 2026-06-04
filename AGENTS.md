@@ -170,7 +170,8 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.qec
   --config configs/scope_static/s2d11b_m1_gate_branch_grouped_calibration_audit.yaml
 ```
 
-Run current Layer1.P medium contract teacher and Stage 3/5 chain:
+Run current Layer1 preprocessing - teacher generator medium contract artifact
+and Stage 3/5 chain:
 
 ```bash
 conda run -n aiqec python -m scope_static.experiments.qec_noise_catalog.data_preparation_teacher \
@@ -211,23 +212,22 @@ validation.
 
 ## Current Catalog Milestone Boundary
 
-The catalog pipeline uses responsibility-named packages. `PHYC1`, `PHYC2`, and
-`PHYC3` remain legacy artifact aliases in existing paths, schemas, and tests.
+The catalog pipeline uses responsibility-named packages and current layer names.
 
 ```text
 scope_static.primitives
   low-level channel, PTM, probe, CPTP/POVM, density-sim, and preflight support
 
 scope_static.data_preparation
-  legacy alias PHYC1; generates mechanism records, probe schedules,
-  sampled observations, teacher config, and sampling audits
+  Layer1 preprocessing - teacher generator; generates mechanism records, probe
+  schedules, sampled observations, teacher config, and sampling audits
 
 scope_static.teacher
-  legacy alias PHYC2; verifies teacher/catalog self-distinguishment with
+  Layer 2 teacher self-audit; verifies teacher/catalog self-distinguishment with
   BA, min recall, ARI, and NMI gates
 
 scope_static.learner
-  legacy alias PHYC3; consumes learner-visible grouped predictions, not
+  Layer 3 learner; consumes learner-visible grouped predictions, not
   teacher-self predictions, and reports classification plus generated
   noise/error quality including channel distance, NLL, and MAE
 
@@ -286,12 +286,11 @@ label recovery, Google legacy catalog-ID recovery, or CPTP/GKSL parameter
 learning.
 
 The `separability_v2` allM artifacts are strong Stage 2 separability evidence,
-not a Born-rule physical baseline. Older PHYC2/PHYC3 artifacts are compatibility
-evidence and must not be cited as the current Stage 3/5 claim path unless their
-source audits are rechecked and the claim is explicitly Stage 2. The current
-controlled Stage 3/5 path starts from the Layer1.P medium contract teacher,
-runs the blocking physicality audit, freezes the Stage 3 visible protocol, and
-uses S5 property heads only as evaluator-side interpretation. Legacy M11 /
+not a Born-rule physical baseline. Layer 2/Layer 3 artifacts are Stage 2
+evidence. The current controlled Stage 3/5 path starts from the Layer1
+preprocessing - teacher generator medium contract artifact, runs the blocking
+physicality audit, freezes the Stage 3 visible protocol, and uses S5 property
+heads only as evaluator-side interpretation. Legacy M11 /
 public M6 spectator crosstalk RZ/ZZ remains a contract-sensitive overlay
 mechanism; do not collapse it into a local Born diagnostic when making
 full-circuit claims.

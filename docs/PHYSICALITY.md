@@ -182,8 +182,8 @@ to `observations.npz`.
 
 ## Post-Sampling Physicality Audit
 
-After sampling, data preparation runs `Layer1.P_teacher_physicality_audit`. This audit
-checks:
+After sampling, Layer1 preprocessing - teacher generator runs the teacher
+physicality audit. This audit checks:
 
 - unitary residuals;
 - Kraus trace-preservation residuals;

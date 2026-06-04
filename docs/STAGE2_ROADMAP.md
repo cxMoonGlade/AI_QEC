@@ -38,12 +38,12 @@ inferred from visible observations alone.
 - The public catalog pipeline is responsibility named:
 
   ```text
-  data_preparation: Data Preparation (Prep)
-  teacher: Teacher Self-Distinguishment (Teacher)
-  learner: Learner Classification and Noise Generation (Learner)
+  data_preparation: Layer1 preprocessing - teacher generator
+  teacher: Layer 2 Teacher Self-Audit
+  learner: Layer 3 Learner
   ```
 
-- Teacher self-distinguishment can verify catalog separability.
+- Layer 2 teacher self-audit can verify catalog separability.
 - Z/X visible repair raised the learner-visible surface with a strict Z/X-only probe
   suite.
 - The distributional learner head established an accepted multi-context learner head on that visible

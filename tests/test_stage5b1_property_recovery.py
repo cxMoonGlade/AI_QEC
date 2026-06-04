@@ -252,6 +252,8 @@ def test_targeted_property_recovery_uses_surface_conditional_m6_contract() -> No
 
     assert audit["rows"]["M6"]["primary_flat_cluster_target"] is True
     assert audit["rows"]["M6"]["current_visible_surface_flat_exact_claim_allowed"] is False
+    assert "paired_observability_group" not in audit["rows"]["M6"]
+    assert audit["rows"]["M6"]["targeted_observability_group"] == ["M6", "M13", "M18", "M27"]
     assert audit["rows"]["M6"]["exact_scalar_passed"] is False
     assert audit["rows"]["M6"]["location_strength_passed"] is True
     assert audit["rows"]["M6"]["passed"] is True

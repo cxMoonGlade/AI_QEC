@@ -223,7 +223,12 @@ def test_mechanism_taxonomy_contract_marks_composite_targets_explicitly() -> Non
     assert mechanism_contract("M16")["base_family"] == "readout_spam"
     assert mechanism_contract("M6")["primary_flat_cluster_target"] is True
     assert mechanism_contract("M6")["current_visible_surface_flat_exact_claim_allowed"] is False
+    assert "paired_observability_group" not in mechanism_contract("M6")
+    assert len(mechanism_contract("M6")["targeted_observability_group"]) >= 3
     assert mechanism_contract("M22")["current_visible_surface_claim_target"] == "parasitic_axis_dimension_recovery"
+    assert "paired_observability_group" not in mechanism_contract("M22")
+    assert mechanism_contract("M22")["targeted_observability_group"] == ["M6", "M13", "M22", "M23"]
+    assert mechanism_contract("M23")["targeted_observability_group"] == ["M6", "M13", "M22", "M23"]
 
 
 def test_mechanism_spec_audit_dict_exposes_public_label_and_legacy_id() -> None:

@@ -363,7 +363,7 @@ def _mechanism_dimension_recovery_audit(
                     contract.get("current_visible_surface_claim_target", "flat_exact_recovery")
                 ),
                 "flat_exact_claim_blocker": contract.get("flat_exact_claim_blocker"),
-                "paired_observability_group": list(contract.get("paired_observability_group", [])),
+                "targeted_observability_group": list(contract.get("targeted_observability_group", [])),
                 "leaf_exact_effect_supported": bool(contract.get("leaf_exact_effect_supported", False)),
                 "declared_dimensions": list(contract.get("dimensions", [])),
                 "dimension_values": dimensions,

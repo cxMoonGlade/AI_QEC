@@ -26,7 +26,7 @@ from .protocol_freeze import DEFAULT_OUTPUT_DIR as DEFAULT_STAGE3A_DIR
 
 STAGE_NAME = "Stage3_ABC_observability_diagnostic"
 DEFAULT_OUTPUT_DIR = "outputs/scope_static/PHYC_STAGE3_discovery/S3ABC_observability_diagnostic"
-DEFAULT_TARGET_GROUPS = (("M6", "M13"), ("M22", "M23"), ("M6", "M13", "M22", "M23"))
+DEFAULT_TARGET_GROUPS = (("M6", "M13", "M22", "M23"),)
 DEFAULT_FEATURE_PROFILES = ("full_no_finite_shot_se", "raw_only")
 DEFAULT_VQ_K_VALUES = (35, 70)
 DEFAULT_MAX_CV_FOLDS = 5
@@ -54,7 +54,7 @@ def run_stage3_abc_observability_diagnostic(
     pass_min_recall: float = DEFAULT_PASS_MIN_RECALL,
     improvement_delta: float = DEFAULT_IMPROVEMENT_DELTA,
 ) -> dict[str, object]:
-    """Run A/B/C observability diagnostics for targeted Stage 3 mechanism pairs.
+    """Run A/B/C observability diagnostics for targeted Stage 3 mechanism sets.
 
     A is an evaluator-only supervised upper bound. B is a no-oracle visible-slot
     diagnostic; labels are loaded only after slot fitting for posthoc scoring. C
@@ -711,6 +711,10 @@ def _normalize_target_groups(groups: Sequence[Sequence[str]]) -> tuple[tuple[str
     out = []
     for group in groups:
         labels = tuple(str(value) for value in group if str(value))
+        if labels and len(labels) < 3:
+            raise ValueError(
+                "pair-only target groups are forbidden; use a targeted mechanism set with at least three labels"
+            )
         if labels:
             out.append(labels)
     if not out:
