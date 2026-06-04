@@ -148,13 +148,14 @@ MECHANISM_CONTRACTS: dict[str, dict[str, object]] = {
     "M13": {
         "contract_role": "context_conditioned_family",
         "base_family": "coherent_control_drift",
-        "dimensions": ["operation_axis", "drift_index", "drift_strength", "context_relative_location"],
+        "dimensions": ["operation_axis", "drift_index", "drift_strength", "drift_mixture_span", "context_relative_location"],
         "leaf_exact_effect_supported": True,
         "primary_flat_cluster_target": False,
         "current_visible_surface_flat_exact_claim_allowed": False,
         "current_visible_surface_claim_target": "context_conditioned_drift_recovery",
         "paired_observability_group": ["M6", "M13"],
-        "flat_exact_claim_blocker": "M13 is a multi-context drift target, not a single flat exact cluster target.",
+        "row_level_visible_geometry": "random_unitary_drift_overlay_on_declared_operation_axis",
+        "flat_exact_claim_blocker": "M13 is a multi-context drift-overlay target, not a single flat exact cluster target.",
     },
     "M14": {
         "contract_role": "operation_conditioned_family",

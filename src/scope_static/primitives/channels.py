@@ -12,6 +12,8 @@ from scope_static.primitives.mechanism_catalog import mechanism_label_namespace,
 
 
 Array = np.ndarray
+M13_DEFAULT_EPSILON_SPAN = 0.018
+M13_DEFAULT_DRIFT_VISIBILITY_SCALE = 5.0
 ROTATION_AXIS_ALIASES = {
     "x": "rx",
     "rx": "rx",
@@ -55,6 +57,8 @@ class MechanismSpec:
             overlay = _m11_overlay_payload_from_parameters(self.parameters, public_label=public_label)
             if overlay:
                 record.update(overlay)
+        if self.mechanism_id == "M13":
+            record.update(_m13_drift_overlay_payload_from_spec(self, public_label=public_label))
         return record
 
 
@@ -107,20 +111,36 @@ def mechanism_definition_contract(spec: MechanismSpec) -> dict[str, object]:
     if spec.mechanism_id == "M13":
         operation_axis = mechanism_operation_axis(spec)
         channel_axis = mechanism_error_axis(spec)
+        epsilon = _m13_epsilon(params)
+        epsilon_mean = _m13_epsilon_mean(params)
+        epsilon_span = _m13_epsilon_span(params)
+        scale = _m13_drift_visibility_scale(params)
+        effective_span = _m13_effective_drift_span(params)
+        offsets = _m13_drift_offsets(params)
+        weights = _m13_drift_weights(params, count=len(offsets))
         return {
             "mechanism_id": "M13",
             "formal_name": "drifted_coherent_overrotation",
-            "definition": "context-dependent coherent overrotation attached to the declared operation axis",
+            "definition": "context-dependent coherent overrotation attached to the declared operation axis, represented as a row-visible drift mixture",
+            "contract_role": "context_conditioned_family",
             "operation_axis": operation_axis,
             "channel_axis": channel_axis,
             "error_axis": channel_axis,
             "drift_parameter": "epsilon",
-            "epsilon": float(params.get("epsilon", params.get("epsilon_mean", 0.03))),
-            "epsilon_mean": float(params.get("epsilon_mean", params.get("epsilon", 0.03))),
-            "epsilon_span": float(params.get("epsilon_span", 0.0)),
+            "epsilon": epsilon,
+            "epsilon_mean": epsilon_mean,
+            "epsilon_span": epsilon_span,
+            "drift_visibility_scale": scale,
+            "effective_epsilon_span": effective_span,
+            "angle_offsets": [float(value) for value in offsets],
+            "mixture_weights": [float(value) for value in weights],
+            "channel_representation": "random_unitary_kraus_mixture" if effective_span > 0.0 else "unitary",
+            "drift_overlay_payload_present": bool(effective_span > 0.0),
+            "row_level_visible_geometry": "mean_rotation_plus_drift_mixture_curvature",
             "context_dependent": True,
             "operation_dependent": False,
             "single_context_exact_recovery_required": False,
+            "claims_standalone_flat_mechanism": False,
             "well_defined": True,
         }
     if spec.mechanism_id == "M14":
@@ -204,6 +224,46 @@ def _m11_overlay_payload_from_parameters(parameters: Mapping[str, object], *, pu
     return out
 
 
+def _m13_drift_overlay_payload_from_spec(spec: MechanismSpec, *, public_label: str) -> dict[str, object]:
+    params = dict(spec.parameters)
+    operation_axis = mechanism_operation_axis(spec)
+    channel_axis = mechanism_error_axis(spec)
+    epsilon = _m13_epsilon(params)
+    epsilon_mean = _m13_epsilon_mean(params)
+    epsilon_span = _m13_epsilon_span(params)
+    scale = _m13_drift_visibility_scale(params)
+    effective_span = _m13_effective_drift_span(params)
+    offsets = _m13_drift_offsets(params)
+    weights = _m13_drift_weights(params, count=len(offsets))
+    overlay = {
+        "present": bool(effective_span > 0.0),
+        "operation_axis": operation_axis,
+        "channel_axis": channel_axis,
+        "epsilon": epsilon,
+        "epsilon_mean": epsilon_mean,
+        "epsilon_span": epsilon_span,
+        "drift_visibility_scale": scale,
+        "effective_epsilon_span": effective_span,
+        "angle_offsets": [float(value) for value in offsets],
+        "mixture_weights": [float(value) for value in weights],
+        "channel_representation": "random_unitary_kraus_mixture" if effective_span > 0.0 else "unitary",
+    }
+    compact_overlay = {key: _json_container_value(value) for key, value in overlay.items() if value is not None}
+    return {
+        "contract_role": "context_conditioned_family",
+        "public_effect_family": "context_conditioned_drift",
+        "public_overlay_class": f"{public_label}_drift_overlay",
+        "nonflat_public_label": f"context_conditioned_drift_{public_label}",
+        "drift_overlay_present": bool(effective_span > 0.0),
+        "drift_overlay": compact_overlay,
+        "operation_axis": operation_axis,
+        "channel_axis": channel_axis,
+        "drift_strength": float(effective_span),
+        "claims_standalone_flat_mechanism": False,
+        "single_context_exact_recovery_required": False,
+    }
+
+
 def _first_present(values: Mapping[str, object], *keys: str) -> object | None:
     for key in keys:
         if values.get(key) is not None:
@@ -262,8 +322,17 @@ def mechanism_channel(spec: MechanismSpec) -> dict[str, object]:
         return {"kind": "kraus", "kraus": correlated_relaxation_kraus(float(params.get("gamma", 0.01)))}
     if mech == "M13":
         axis = mechanism_error_axis(spec)
-        angle = float(params.get("epsilon", params.get("epsilon_mean", 0.03)))
-        return {"kind": "unitary", "unitary": _axis_unitary(axis, angle), "definition_contract": mechanism_definition_contract(spec)}
+        angle = _m13_epsilon(params)
+        contract = mechanism_definition_contract(spec)
+        effective_span = float(contract.get("effective_epsilon_span", 0.0))
+        if effective_span <= 0.0:
+            return {"kind": "unitary", "unitary": _axis_unitary(axis, angle), "definition_contract": contract}
+        weights = [float(value) for value in contract.get("mixture_weights", [0.25, 0.5, 0.25])]  # type: ignore[arg-type]
+        return {
+            "kind": "kraus",
+            "kraus": drifted_axis_mixture_kraus(axis, epsilon=angle, effective_span=effective_span, weights=weights),
+            "definition_contract": contract,
+        }
     if mech == "M14":
         axis = mechanism_error_axis(spec)
         angle = float(params.get("epsilon", 0.028))
@@ -359,6 +428,32 @@ def _axis_unitary(axis: str, theta: float) -> Array:
     if text == "rz":
         return rz_unitary(float(theta))
     return rx_unitary(float(theta))
+
+
+def drifted_axis_mixture_kraus(
+    axis: str,
+    *,
+    epsilon: float,
+    effective_span: float,
+    weights: list[float] | tuple[float, ...] | None = None,
+) -> list[Array]:
+    span = abs(float(effective_span))
+    if span <= 0.0:
+        return [_axis_unitary(axis, float(epsilon))]
+    raw_weights = list(weights) if weights is not None else [0.25, 0.5, 0.25]
+    if len(raw_weights) != 3:
+        raw_weights = [0.25, 0.5, 0.25]
+    clean = [max(0.0, float(value)) for value in raw_weights]
+    total = sum(clean)
+    if total <= 0.0:
+        clean = [0.25, 0.5, 0.25]
+        total = 1.0
+    normalized = [value / total for value in clean]
+    offsets = (-span, 0.0, span)
+    return [
+        math.sqrt(weight) * _axis_unitary(axis, float(epsilon) + float(offset))
+        for weight, offset in zip(normalized, offsets)
+    ]
 
 
 def single_axis_rotation(theta: float, components: Mapping[str, float]) -> Array:
@@ -501,3 +596,56 @@ def _json_value(value: object) -> object:
         return float(value)  # type: ignore[arg-type]
     except (TypeError, ValueError):
         return str(value)
+
+
+def _json_container_value(value: object) -> object:
+    if isinstance(value, (list, tuple)):
+        return [_json_value(item) for item in value]
+    return _json_value(value)
+
+
+def _m13_epsilon(params: Mapping[str, object]) -> float:
+    return float(params.get("epsilon", params.get("epsilon_mean", 0.03)))
+
+
+def _m13_epsilon_mean(params: Mapping[str, object]) -> float:
+    return float(params.get("epsilon_mean", params.get("epsilon", 0.03)))
+
+
+def _m13_epsilon_span(params: Mapping[str, object]) -> float:
+    if params.get("epsilon_span") is not None:
+        return abs(float(params.get("epsilon_span")))
+    if params.get("drift_span") is not None:
+        return abs(float(params.get("drift_span")))
+    return M13_DEFAULT_EPSILON_SPAN
+
+
+def _m13_drift_visibility_scale(params: Mapping[str, object]) -> float:
+    if params.get("drift_visibility_scale") is None:
+        return M13_DEFAULT_DRIFT_VISIBILITY_SCALE
+    return max(0.0, float(params.get("drift_visibility_scale")))
+
+
+def _m13_effective_drift_span(params: Mapping[str, object]) -> float:
+    return float(_m13_epsilon_span(params) * _m13_drift_visibility_scale(params))
+
+
+def _m13_drift_offsets(params: Mapping[str, object]) -> tuple[float, ...]:
+    span = _m13_effective_drift_span(params)
+    if span <= 0.0:
+        return (0.0,)
+    return (-float(span), 0.0, float(span))
+
+
+def _m13_drift_weights(params: Mapping[str, object], *, count: int) -> tuple[float, ...]:
+    raw = params.get("drift_mixture_weights")
+    values: list[float] = []
+    if isinstance(raw, (list, tuple)):
+        values = [max(0.0, float(value)) for value in raw]
+    if len(values) != int(count) or sum(values) <= 0.0:
+        if int(count) == 1:
+            values = [1.0]
+        else:
+            values = [0.25, 0.5, 0.25]
+    total = sum(values)
+    return tuple(float(value / total) for value in values)

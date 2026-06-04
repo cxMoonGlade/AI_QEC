@@ -8,6 +8,7 @@ from scope_static.primitives.channels import (
     mechanism_channel,
     pauli_stochastic_kraus,
     readout_bias_matrix,
+    rx_unitary,
     rz_unitary,
     rzz_unitary,
 )
@@ -116,10 +117,42 @@ def test_m13_m14_contracts_are_mathematically_separated() -> None:
     m14_channel = mechanism_channel(m14)
 
     assert m13_channel["definition_contract"]["context_dependent"] is True
+    assert m13_channel["definition_contract"]["drift_overlay_payload_present"] is True
+    assert m13_channel["definition_contract"]["channel_representation"] == "random_unitary_kraus_mixture"
+    assert m13_channel["kind"] == "kraus"
     assert m14_channel["definition_contract"]["operation_dependent"] is True
     assert m14_channel["definition_contract"]["distinct_from_axis_overrotation"] is True
     assert np.allclose(m14_channel["unitary"], rz_unitary(0.028))
-    assert not np.allclose(m13_channel["unitary"], m14_channel["unitary"])
+    assert m13_channel["definition_contract"]["channel_axis"] != m14_channel["definition_contract"]["channel_axis"]
+
+
+def test_m13_drift_overlay_channel_is_not_plain_rx_at_row_level() -> None:
+    m13 = MechanismSpec(
+        "M13",
+        MECHANISM_NAMES["M13"],
+        1,
+        {
+            "operation_axis": "rx",
+            "epsilon": 0.035,
+            "epsilon_mean": 0.035,
+            "epsilon_span": 0.018,
+        },
+        instruction="rx",
+        qubits=(0,),
+    )
+
+    channel = mechanism_channel(m13)
+    kraus = [np.asarray(item, dtype=np.complex128) for item in channel["kraus"]]
+    effect = sum(op.conj().T @ op for op in kraus)
+    drift_ptm = ptm_from_kraus(kraus)
+    plain_ptm = ptm_from_unitary(rx_unitary(0.035))
+
+    assert channel["kind"] == "kraus"
+    assert len(kraus) == 3
+    assert np.allclose(effect, np.eye(2), atol=1e-12)
+    assert float(np.linalg.norm(drift_ptm - plain_ptm)) > 1.0e-4
+    assert channel["definition_contract"]["drift_overlay_payload_present"] is True
+    assert channel["definition_contract"]["single_context_exact_recovery_required"] is False
 
 
 def test_implemented_catalog_mechanisms_have_distinct_channel_fingerprints() -> None:

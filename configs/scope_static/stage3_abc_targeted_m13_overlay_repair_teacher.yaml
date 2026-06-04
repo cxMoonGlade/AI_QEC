@@ -1,0 +1,37 @@
+data_preparation_teacher:
+  name: stage3_abc_targeted_m13_overlay_repair_teacher
+  output_dir: outputs/scope_static/stage3_abc_targeted_m13_overlay_repair_scale5/S2D_PHYS1_teacher
+  tolerance_mode: strict
+  probability_tolerance: 1.0e-12
+  random_state_count: 4
+  enforce_pre_sampling_contract: true
+  enforce_post_sampling_physicality: true
+  teacher_config:
+    backend: cudaq
+    require_gpu: true
+    cudaq_target: nvidia
+    cudaq_target_options: fp32,mqpu
+    physical_teacher_model: full_circuit_cudaq
+    full_circuit_cudaq_rzz_implementation: exp_pauli
+    full_circuit_cudaq_noise_mode: hybrid
+    full_circuit_cudaq_progress_logging: true
+    full_circuit_cudaq_shot_batch_size: 1000
+    num_qubits: 20
+    circuit_depth: 20
+    probe_set: rzz_active_minimal
+    mechanism_set: [M6, M13, M22, M23]
+    mechanisms:
+      M13:
+        operation_axis: rx
+        epsilon_mean: 0.032
+        epsilon_span: 0.018
+        drift_visibility_scale: 5.0
+    balanced_min_instances_per_mechanism: 5
+    balanced_strength_variants: true
+    balanced_strength_variant_strategy: decorrelated_latin
+    balanced_strength_min_scale: 0.65
+    balanced_strength_max_scale: 1.35
+    multicircuit_teacher_batch: true
+    shots: 1000
+    seed: 37
+    theta: 0.18
