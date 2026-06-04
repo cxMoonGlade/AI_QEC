@@ -181,6 +181,58 @@ def test_stage3b1_config_wrapper_runs_from_yaml(tmp_path: Path) -> None:
     assert (output / "learned_prototypes.json").exists()
 
 
+def test_stage3b1_config_wrapper_preserves_no_oracle_k_prior_contract(tmp_path: Path) -> None:
+    _teacher, s3a, _s3a5 = _prepare_artifacts(
+        tmp_path,
+        [
+            ("M0", "M0"),
+            ("M4", "M4"),
+        ],
+    )
+    output = tmp_path / "configured_no_oracle"
+    config = tmp_path / "stage3b1_no_oracle.yaml"
+    config.write_text(
+        "\n".join(
+            [
+                "stage3b1_first_discovery_model:",
+                f"  stage3a_dir: {s3a}",
+                "  stage3a5_dir: null",
+                "  teacher_dir: null",
+                f"  output_dir: {output}",
+                "  seed: 3",
+                "  max_iter: 5",
+                "  evaluator_mode: no_oracle_labels",
+                "  k_values:",
+                "    - 2",
+                "  k_prior_contract:",
+                "    enabled: true",
+                "    source: controlled_s3_s5_allM_contract_teacher",
+                "    mechanism_count_prior: 35",
+                "    overcomplete_multiplier: 1.0",
+                "    role: catalog_cardinality_matched_no_oracle_design_prior",
+                "    uses_google_true_labels: false",
+                "    used_for_feature_construction: false",
+                "    used_for_oracle_scoring: false",
+            ]
+        )
+        + "\n"
+    )
+
+    result = run_stage3b1_discovery_model_from_config(config_path=config)
+
+    contract = result["k_selection_protocol"]["k_prior_contract"]
+    assert result["decision"] == "stage3b1_first_discovery_model_completed"
+    assert result["claim_boundary"]["oracle_label_metrics_skipped"] is True
+    assert result["claim_boundary"]["uses_external_k_prior_for_no_oracle_mode"] is True
+    assert result["claim_boundary"]["k_prior_contract"] == contract
+    assert result["claim_boundary"]["external_k_prior_used_for_feature_construction"] is False
+    assert result["claim_boundary"]["external_k_prior_used_for_oracle_scoring"] is False
+    assert contract["enabled"] is True
+    assert contract["mechanism_count_prior"] == 35
+    assert contract["uses_google_true_labels"] is False
+    assert result["config"]["k_prior_contract"] == contract
+
+
 def test_stage3b1_full_no_finite_shot_se_profile_excludes_se_columns() -> None:
     audit = learner_input_mask_audit(
         [

@@ -127,11 +127,20 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.wil
   --config configs/scope_static/google_s3_visible_aggregate_v2.yaml
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.s3_visible_adapter_v2 \
   --config configs/scope_static/google_s3_visible_adapter_v2.yaml
+conda run -n aiqec scope-stage3b1-discovery \
+  --config configs/scope_static/google_s3_visible_stage3b1_raw_multiview.yaml
+conda run -n aiqec scope-stage3c-generator \
+  --config configs/scope_static/google_s3_visible_stage3c_raw_multiview.yaml
 ```
 
 This path reads Google detection events and observable flips into a public
 precompute cache, builds aggregate syndrome-response summaries, and writes
-Stage 3A-compatible frozen visible artifacts:
+Stage 3A-compatible frozen visible artifacts. Google data has no true mechanism
+labels, so the B1/C model configs run in `no_oracle_labels` mode. The default
+Google V2 B1 config uses the controlled S3/S5 allM contract cardinality as a
+no-oracle design prior: fixed K=35, no Google true labels, no oracle scoring,
+and no feature construction from the prior. The K=70 config is an explicit
+overcomplete stress run.
 
 ```text
 outputs/google_static/google_s3_visible_surface_v2_cache/precompute_cache/
@@ -151,7 +160,32 @@ outputs/google_static/google_s3_visible_surface_v2/S3A_protocol_freeze/
   adequacy_report.json
   aggregate_cache_manifest.json
   metrics.json
+
+outputs/google_static/google_s3_visible_surface_v2/S3B1_raw_multiview_k35/
+  learned_assignments.npy
+  learner_input_mask_audit.json
+  metrics.json
+
+outputs/google_static/google_s3_visible_surface_v2/S3C_raw_multiview_k35_allfolds/
+  predicted_assignment_metrics.json
+  stratified_null_metrics.json
+  assignment_shuffle_audit.json
+  feature_scramble_audit.json
+  target_score_profile_report.json
+  metrics.json
 ```
+
+To run the overcomplete stress pair:
+
+```bash
+conda run -n aiqec scope-stage3b1-discovery \
+  --config configs/scope_static/google_s3_visible_stage3b1_raw_multiview_k70.yaml
+conda run -n aiqec scope-stage3c-generator \
+  --config configs/scope_static/google_s3_visible_stage3c_raw_multiview_k70.yaml
+```
+
+The old `k4_8_16_32` Google configs are kept only as legacy diagnostics and are
+not the recommended contract-matched Google V2 path.
 
 Current cache and aggregate configs use `num_workers: 8`. Their manifests report
 `parallelism`, `wallclock_by_block_seconds`, `wallclock_table`,

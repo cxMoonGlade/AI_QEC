@@ -571,6 +571,8 @@ Current Google Stage 3 closeout adapter:
 scope-google-s3-visible-cache-v2 --config configs/scope_static/google_s3_visible_cache_v2.yaml
 scope-google-s3-visible-aggregate-v2 --config configs/scope_static/google_s3_visible_aggregate_v2.yaml
 scope-google-s3-visible-adapter-v2 --config configs/scope_static/google_s3_visible_adapter_v2.yaml
+scope-stage3b1-discovery --config configs/scope_static/google_s3_visible_stage3b1_raw_multiview.yaml
+scope-stage3c-generator --config configs/scope_static/google_s3_visible_stage3c_raw_multiview.yaml
 ```
 
 Acceptance is artifact-contract only:
@@ -615,6 +617,18 @@ syndrome-response structure. Raw-target-only scoring beats global/mean-only,
 assignment-shuffle, feature-scramble, and public-stratified-null controls. This
 is not true physical mechanism recovery because Google data provide no hidden
 mechanism partition.
+
+Google provides no true mechanism labels. The teacher-learner route therefore
+uses Stage 3A frozen public syndrome-response signatures as the learner-visible
+surface, B1 learns latent prototype assignments in `no_oracle_labels` mode, and
+C scores whether those assignments replay heldout visible structure better than
+visible-only null controls.
+
+The current recommended Google V2 B1 contract is fixed K=35, matching the
+controlled S3/S5 allM catalog cardinality as a no-oracle design prior. That
+prior is not a Google label source: it is recorded in the artifact contract,
+must not be used for feature construction or oracle scoring, and should be
+reported separately from the K=70 overcomplete stress run.
 ```
 
 The next research stage is S4 neural syndrome-response discovery: use a neural

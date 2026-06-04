@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import time
 
 import numpy as np
 import yaml
@@ -83,6 +84,7 @@ def run_stage3c_prototype_generator_learning(
     oracle comparator.
     """
 
+    started = time.perf_counter()
     mode = _normalize_evaluator_mode(evaluator_mode)
     s3a = Path(stage3a_dir)
     s3a5 = Path(stage3a5_dir)
@@ -223,6 +225,7 @@ def run_stage3c_prototype_generator_learning(
         stage5b1_metrics=stage5b1_metrics,
         evaluator_mode=mode,
     )
+    stage3b1_k_prior_contract = _stage3b1_k_prior_contract(s3b1_metrics)
     result = {
         "schema": "scope_static_stage3c_prototype_generator_learning_v1",
         "stage": STAGE_NAME,
@@ -256,6 +259,7 @@ def run_stage3c_prototype_generator_learning(
             "mechanism_dimension_recovery_audit_skipped": mode == EVALUATOR_MODE_NO_ORACLE_LABELS,
             "claims_physical_parameter_recovery": False,
             "conditional_visible_replay_not_unconditional_future_prediction": True,
+            "stage3b1_k_prior_contract": stage3b1_k_prior_contract,
             "discovers_cptp_gksl_channels": False,
         },
         "config": {
@@ -273,10 +277,15 @@ def run_stage3c_prototype_generator_learning(
             "stage3d4b_dir": None if stage3d4b_dir is None else str(stage3d4b_dir),
             "stage5b1_dir": None if stage5b1_dir is None else str(stage5b1_dir),
         },
+        "wall_clock_seconds": float(time.perf_counter() - started),
         "visible_feature_matrix": feature_matrix,
         "feature_schema_match_audit": feature_match,
         "heldout_protocol": heldout_protocol_artifact(all_folds=all_folds, evaluated_folds=folds, max_cv_folds=max_cv_folds),
-        "assignment_source_audit": assignment_source_audit(s3b1_dir=s3b1, responsibilities=responsibilities),
+        "assignment_source_audit": assignment_source_audit(
+            s3b1_dir=s3b1,
+            responsibilities=responsibilities,
+            s3b1_metrics=s3b1_metrics,
+        ),
         "prototype_generation_metrics": prototype_metrics,
         "predicted_assignment_metrics": predicted,
         "oracle_assignment_comparator_metrics": oracle,
@@ -1259,16 +1268,54 @@ def _block_profiles_from_generation_metrics(metrics: dict[str, object]) -> dict[
     return {str(name): dict(value) for name, value in profiles.items() if isinstance(value, dict)}
 
 
-def assignment_source_audit(*, s3b1_dir: Path, responsibilities: np.ndarray) -> dict[str, object]:
+def assignment_source_audit(
+    *,
+    s3b1_dir: Path,
+    responsibilities: np.ndarray,
+    s3b1_metrics: dict[str, object] | None = None,
+) -> dict[str, object]:
+    metrics = {} if s3b1_metrics is None else dict(s3b1_metrics)
+    summary = dict(metrics.get("learned_assignment_summary", {})) if isinstance(metrics.get("learned_assignment_summary", {}), dict) else {}
+    k_protocol = dict(metrics.get("k_selection_protocol", {})) if isinstance(metrics.get("k_selection_protocol", {}), dict) else {}
     return {
         "schema": "scope_static_stage3c_assignment_source_audit_v1",
         "assignment_path": str(s3b1_dir / "learned_assignments.npy"),
         "source_stage": "Stage 3B.1",
         "row_count": int(responsibilities.shape[0]),
         "prototype_count": int(responsibilities.shape[1]) if responsibilities.ndim == 2 else 0,
+        "selected_k": None if summary.get("selected_k") is None else int(summary.get("selected_k")),
+        "selected_k_mode": None if summary.get("selected_k_mode") is None else str(summary.get("selected_k_mode")),
+        "k_selection_protocol": k_protocol,
+        "k_prior_contract": _stage3b1_k_prior_contract(metrics),
         "row_stochastic": bool(responsibilities.size == 0 or np.allclose(np.sum(responsibilities, axis=1), 1.0)),
         "uses_evaluator_labels": False,
         "assignment_is_visible_only_b1_output": True,
+    }
+
+
+def _stage3b1_k_prior_contract(s3b1_metrics: dict[str, object]) -> dict[str, object]:
+    protocol = dict(s3b1_metrics.get("k_selection_protocol", {})) if isinstance(s3b1_metrics.get("k_selection_protocol", {}), dict) else {}
+    contract = protocol.get("k_prior_contract")
+    if isinstance(contract, dict):
+        return dict(contract)
+    config = dict(s3b1_metrics.get("config", {})) if isinstance(s3b1_metrics.get("config", {}), dict) else {}
+    contract = config.get("k_prior_contract")
+    if isinstance(contract, dict):
+        return dict(contract)
+    boundary = dict(s3b1_metrics.get("claim_boundary", {})) if isinstance(s3b1_metrics.get("claim_boundary", {}), dict) else {}
+    contract = boundary.get("k_prior_contract")
+    if isinstance(contract, dict):
+        return dict(contract)
+    return {
+        "schema": "scope_static_stage3b1_k_prior_contract_v1",
+        "enabled": False,
+        "source": None,
+        "mechanism_count_prior": None,
+        "overcomplete_multiplier": None,
+        "role": "not_declared",
+        "uses_google_true_labels": False,
+        "used_for_feature_construction": False,
+        "used_for_oracle_scoring": False,
     }
 
 
@@ -2653,6 +2700,7 @@ def format_stage3c_summary(result: dict[str, object]) -> str:
             f"- Decision: `{result.get('decision')}`",
             f"- Acceptance passed: `{str(bool(acceptance.get('passed', False))).lower()}`",
             f"- Claim allowed: `{str(bool(claim_gate.get('claim_allowed', False))).lower()}`",
+            f"- Wall-clock seconds: `{_format_metric(result.get('wall_clock_seconds'))}`",
             f"- Primary generation likelihood metric: `{primary_metric}`",
             f"- Predicted-assignment primary NLL: `{_format_metric(predicted.get(primary_metric))}`",
             f"- Global-null primary NLL: `{_format_metric(global_null.get(primary_metric))}`",

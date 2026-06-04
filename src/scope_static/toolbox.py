@@ -165,6 +165,11 @@ def toolbox_manifest() -> dict[str, object]:
                 "module": "scope_static.experiments.stage4.transfer_diagnostics",
             },
             {
+                "name": "scope-stage4-baseline-registry",
+                "role": "Audit baseline coverage and external baseline clone status.",
+                "module": "scope_static.experiments.stage4.baseline_registry",
+            },
+            {
                 "name": "scope-stage5b1-property-recovery",
                 "role": "Run S5B1 context-relative property recovery.",
                 "module": "scope_static.experiments.stage5.property_recovery",
@@ -189,6 +194,11 @@ def toolbox_manifest() -> dict[str, object]:
                 "role": "Build Google real-data public syndrome-response signatures as a Stage 3A-compatible visible surface.",
                 "module": "scope_static.experiments.willow_data.s3_visible_adapter_v2",
             },
+            {
+                "name": "scope-google-d3d5-baselines",
+                "role": "Run raw Google D3/D5 baselines without SCOPE Layer 1/2/3 or the Google V2 adapter.",
+                "module": "scope_static.experiments.willow_data.d3d5_baselines",
+            },
         ],
         "primary_outputs": [
             "Layer1 preprocessing mechanism records, probe schedules, sampled observations, and sampling audits",
@@ -200,6 +210,7 @@ def toolbox_manifest() -> dict[str, object]:
             "Stage 3B.1 learned assignment matrix, visible prototypes, covariance parameters, heldout visible-generation metrics, and label-leakage audit",
             "Stage 3C heldout visible-generation metrics against predicted assignments, oracle comparators, global-null, and mean-only baselines",
             "Stage 3D assignment-shuffle, feature-scramble, context-shuffle, K-stress, and overcomplete merge/prune robustness audits",
+            "Raw Google D3/D5 baseline logical, syndrome-generation, likelihood/proxy, and no-label status metrics",
         ],
     }
 
