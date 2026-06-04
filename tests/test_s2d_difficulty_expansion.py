@@ -29,6 +29,16 @@ def test_difficulty_set_d_has_drifted_m13_strengths() -> None:
     assert len(m13) >= 2
     assert len({float(spec.parameters["epsilon"]) for spec in m13}) == len(m13)
     assert all(spec.instruction == "rx" for spec in m13)
+    for spec in m13:
+        audit = spec.audit_dict()
+        assert audit["contract_role"] == "context_conditioned_family"
+        assert audit["drift_overlay_present"] is True
+        assert audit["public_effect_family"] == "context_conditioned_drift"
+        assert audit["drift_overlay"]["present"] is True
+        assert audit["drift_overlay"]["operation_axis"] == "rx"
+        assert audit["drift_overlay"]["channel_axis"] == "rx"
+        assert float(audit["drift_overlay"]["epsilon_span"]) > 0.0
+        assert audit["claims_standalone_flat_mechanism"] is False
     assert m11
     assert all(bool(spec.parameters["spectator_overlay_present"]) for spec in m11)
     assert all(spec.parameters["base_mechanism"] for spec in m11)

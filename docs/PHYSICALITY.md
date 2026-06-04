@@ -158,8 +158,9 @@ used downstream.
 
 M13 and M14 are explicitly defined:
 
-- M13: context-dependent coherent overrotation attached to its declared
-  operation axis. Exact single-context recovery is not required.
+- M13: context-dependent coherent overrotation represented as a random-unitary
+  drift overlay on its declared operation axis. Exact single-context recovery is
+  not required.
 - M14: operation-dependent coherent error with a visible operation axis and a
   distinct error-generator axis. If the axes collapse to the same value, the
   Data-preparation pre-sampling contract fails.

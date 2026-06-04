@@ -35,6 +35,10 @@ _EXPORTS = {
         ".overcomplete_merge_prune_audit",
         "run_stage3d4b_overcomplete_merge_prune_audit_from_config",
     ),
+    "run_stage3_abc_observability_diagnostic_from_config": (
+        ".observability_abc_diagnostic",
+        "run_stage3_abc_observability_diagnostic_from_config",
+    ),
 }
 
 __all__ = list(_EXPORTS)

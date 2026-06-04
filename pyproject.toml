@@ -31,6 +31,7 @@ scope-stage3d2-feature-scramble = "scope_static.experiments.stage3.feature_scram
 scope-stage3d3-context-shuffle = "scope_static.experiments.stage3.context_shuffle_audit:main"
 scope-stage3d4-k-stress = "scope_static.experiments.stage3.k_stress_audit:main"
 scope-stage3d4b-overcomplete-merge-prune = "scope_static.experiments.stage3.overcomplete_merge_prune_audit:main"
+scope-stage3-abc-observability-diagnostic = "scope_static.experiments.stage3.observability_abc_diagnostic:main"
 scope-stage4-synthetic-freeze = "scope_static.experiments.stage4.synthetic_freeze:main"
 scope-stage4-source-ceiling = "scope_static.experiments.stage4.source_ceiling:main"
 scope-stage4-source-pretrain = "scope_static.experiments.stage4.source_pretrain:main"

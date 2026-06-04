@@ -120,6 +120,11 @@ def toolbox_manifest() -> dict[str, object]:
                 "module": "scope_static.experiments.stage3.overcomplete_merge_prune_audit",
             },
             {
+                "name": "scope-stage3-abc-observability-diagnostic",
+                "role": "Run diagnostic-only A/B/C observability upper-bound checks for targeted Stage 3 mechanisms.",
+                "module": "scope_static.experiments.stage3.observability_abc_diagnostic",
+            },
+            {
                 "name": "scope-google-s3-visible-cache-v2",
                 "role": "Precompute the read-only public cache for Google S3A V2 syndrome-response signatures.",
                 "module": "scope_static.experiments.willow_data.s3_visible_cache_v2",

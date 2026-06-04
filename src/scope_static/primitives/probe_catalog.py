@@ -9,7 +9,13 @@ from typing import Iterable
 import numpy as np
 
 from ..numerics import NUMERICAL_ZERO
-from scope_static.primitives.channels import MechanismSpec, canonical_single_qubit_axis, mechanism_error_axis, mechanism_operation_axis
+from scope_static.primitives.channels import (
+    M13_DEFAULT_DRIFT_VISIBILITY_SCALE,
+    MechanismSpec,
+    canonical_single_qubit_axis,
+    mechanism_error_axis,
+    mechanism_operation_axis,
+)
 from scope_static.primitives.mechanism_catalog import (
     IMPLEMENTED_MECHANISM_IDS,
     LEGACY_TO_CURRENT_MECHANISM_IDS,
@@ -133,7 +139,12 @@ def default_teacher_config() -> dict[str, object]:
             "M10": {"epsilon_x": 0.024, "epsilon_y": 0.017},
             "M11": {"epsilon": 0.025},
             "M12": {"gamma": 0.012},
-            "M13": {"operation_axis": "rx", "epsilon_mean": 0.032, "epsilon_span": 0.018},
+            "M13": {
+                "operation_axis": "rx",
+                "epsilon_mean": 0.032,
+                "epsilon_span": 0.018,
+                "drift_visibility_scale": M13_DEFAULT_DRIFT_VISIBILITY_SCALE,
+            },
             "M14": {"operation_axis": "rx", "error_axis": "rz", "epsilon": 0.028},
             "M15": {"eta": 0.02},
             "M16": {"p": 0.02},

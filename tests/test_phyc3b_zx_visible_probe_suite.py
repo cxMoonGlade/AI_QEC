@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import numpy as np
+
 from scope_static.primitives.mechanism_catalog import MECHANISM_NAMES
 from scope_static.learner import (
     ALIAS_PAIRS,
@@ -94,15 +96,45 @@ def test_phyc3b_alias_support_patterns_are_visible_under_zx_probes() -> None:
     assert means["M4"]["derived__single_prep_1_z_relaxation_proxy"] > means["M27"]["derived__single_prep_1_z_relaxation_proxy"]
 
 
-def _record(label: str, group: int) -> dict[str, object]:
+def test_m13_drift_overlay_has_row_level_visible_geometry_beyond_m6_rx_strength() -> None:
+    records = [
+        _record(
+            "M6",
+            0,
+            parameters={"epsilon": 0.035},
+            instruction="rx",
+        ),
+        _record(
+            "M13",
+            0,
+            parameters={"operation_axis": "rx", "epsilon": 0.035, "epsilon_mean": 0.035, "epsilon_span": 0.018},
+            instruction="rx",
+        ),
+    ]
+
+    table = build_zx_visible_feature_table(records, shots=1000)
+    distance = float(np.linalg.norm(table.expected_features[0] - table.expected_features[1]))
+    forbidden = ("oracle", "mechanism", "teacher", "channel", "kraus", "ptm", "prototype", "omega", "family", "label")
+
+    assert distance > 1.0e-4
+    assert not any(token in name.lower() for token in forbidden for name in table.feature_names)
+
+
+def _record(
+    label: str,
+    group: int,
+    *,
+    parameters: dict[str, object] | None = None,
+    instruction: str | None = None,
+) -> dict[str, object]:
     two_qubit = label in {"M8", "M9", "M10", "M12", "M21", "M22", "M23", "M28", "M29", "M30", "M31", "M32", "M33"}
     return {
         "oracle_label": label,
         "mechanism_id": label,
         "name": MECHANISM_NAMES[label],
         "num_qubits": 2 if two_qubit else 1,
-        "parameters": {},
-        "instruction": "rzz" if two_qubit else "id",
+        "parameters": dict(parameters or {}),
+        "instruction": instruction if instruction is not None else ("rzz" if two_qubit else "id"),
         "qubits": [0, 1] if two_qubit else [0],
         "circuit_id": int(group),
         "location_id": int(group),

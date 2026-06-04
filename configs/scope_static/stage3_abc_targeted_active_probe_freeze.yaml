@@ -1,0 +1,10 @@
+stage3a_protocol_freeze:
+  name: Stage3A_ABC_targeted_active_probe_freeze
+  teacher_dir: outputs/scope_static/stage3_abc_targeted_active_probe/S2D_PHYS1_teacher
+  output_dir: outputs/scope_static/stage3_abc_targeted_active_probe/S3A_protocol_freeze
+  shots: 1000
+  seed: 37
+  sampling_mode: expected
+  batch_size: 5
+  assignment_unit: mechanism_condition_instance
+  split_policy: context_grouped

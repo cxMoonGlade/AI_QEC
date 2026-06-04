@@ -3,6 +3,8 @@ from __future__ import annotations
 import numpy as np
 
 from scope_static.dem.metrics import adjusted_rand_index, normalized_mutual_info
+from scope_static.primitives.channels import M13_DEFAULT_DRIFT_VISIBILITY_SCALE
+from scope_static.primitives.channels import M13_DEFAULT_EPSILON_SPAN
 from scope_static.primitives.mechanism_catalog import CONTRACT_TYPED_DIMENSION_TARGET_IDS
 from scope_static.primitives.mechanism_catalog import CURRENT_VISIBLE_SURFACE_FLAT_EXACT_CLAIM_TARGET_IDS
 from scope_static.primitives.mechanism_catalog import NON_FLAT_PRIMARY_TARGET_IDS
@@ -602,6 +604,23 @@ def _mechanism_dimension_has_available_value(values: dict[str, object], name: st
 def _mechanism_dimension_value(record: dict[str, object], *, label: str, dimension: str, contract: dict[str, object]) -> object:
     if dimension in {"strength", "drift_strength", "custom_kraus_eta", "eta", "computational_subspace_survival"}:
         return _mechanism_strength_value(record, label=label)
+    if dimension == "drift_mixture_span":
+        direct = _record_nested_value(record, "drift_strength")
+        if direct is not None:
+            return direct
+        direct = _record_nested_value(record, "effective_epsilon_span")
+        if direct is not None:
+            return direct
+        params = _record_params(record)
+        epsilon_span = _as_finite_float(params.get("epsilon_span"))
+        scale = _as_finite_float(params.get("drift_visibility_scale"))
+        if epsilon_span is None and label == "M13":
+            epsilon_span = M13_DEFAULT_EPSILON_SPAN
+        if scale is None and label == "M13":
+            scale = M13_DEFAULT_DRIFT_VISIBILITY_SCALE
+        if epsilon_span is not None:
+            return float(abs(epsilon_span) * (scale if scale is not None else 1.0))
+        return "unknown"
     if dimension in {"context_relative_location", "context_relative_edge", "relative_location"}:
         location = dict(record.get("_context_relative_location", {})) if isinstance(record.get("_context_relative_location", {}), dict) else {}
         return location.get("location_bucket_in_context", location.get("location_fraction_in_context", "unknown"))
@@ -648,6 +667,9 @@ def _mechanism_dimension_value(record: dict[str, object], *, label: str, dimensi
 def _record_nested_value(record: dict[str, object], key: str) -> object | None:
     if record.get(key) is not None:
         return record.get(key)
+    drift = record.get("drift_overlay", {})
+    if isinstance(drift, dict) and drift.get(key) is not None:
+        return drift.get(key)
     overlay = record.get("spectator_overlay", {})
     if isinstance(overlay, dict) and overlay.get(key) is not None:
         return overlay.get(key)
