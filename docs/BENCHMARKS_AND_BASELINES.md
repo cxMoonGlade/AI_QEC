@@ -91,6 +91,12 @@ Acceptance target: heldout raw visible replay beats the strong public-field-only
 controls with paired bootstrap or split-repeat stability, without claiming
 mechanism recovery.
 
+Visible replay is a prerequisite, not the final operational use case. A model
+becomes useful as a mechanism-conditioned noise simulator only when its recovered
+structure supports counterfactual interventions: reducing or amplifying a
+mechanism, removing a noisy location, perturbing drift, generating rare failure
+cases, or ranking calibration/layout actions by predicted logical impact.
+
 ### B3 Published Surface-Code Hardware Datasets
 
 Use after B1/B2 are stable to compare against recognized public hardware
@@ -115,6 +121,17 @@ standard QEC baseline rather than only against internal replay scores.
 
 Use only after visible replay and bridge survival are stable. Decoder utility
 must report logical error per round or per cycle, not only representation replay.
+
+Target utility questions:
+
+- does a recovered mechanism field improve a decoder prior on held-out real
+  data?
+- do generated rare failure cases improve decoder robustness without degrading
+  ordinary-context performance?
+- do mechanism ablations predict which context, location, or mechanism family
+  most affects logical error?
+- does a drift forecast improve future-context decoding compared with fitting
+  only the already-observed distribution?
 
 Baseline order:
 

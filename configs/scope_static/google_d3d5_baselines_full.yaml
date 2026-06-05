@@ -1,0 +1,55 @@
+google_d3d5_baselines:
+  dataset_root: /home/cx/Document/google_72Q_surface_code_d3_d5_set1
+  dataset_name: google_72Q_surface_code_d3_d5_set1
+  output_dir: outputs/google_static/d3d5_baseline_suite_full
+  distances:
+    - 3
+    - 5
+  bases: null
+  rounds: null
+  max_leaves_per_distance_basis: null
+  max_shots_per_leaf: null
+  detector_limit: 64
+  train_fraction: 0.7
+  validation_fraction: 0.2
+  seed: 0
+  seeds:
+    - 0
+    - 1
+    - 2
+  selection_profile: full_data_minimum_upstream_helper
+  mixture_components: 4
+  max_iter: 200
+  torch_epochs: 200
+  torch_batch_size: 10000
+  gan_epochs: 200
+  rbm_steps: 200
+  autoregressive_steps: 200
+  external_repo_root: external/baselines
+  external_work_dir: outputs/google_static/external_baseline_work/full
+  qecgpt_network: made
+  qecgpt_depth: 3
+  qecgpt_width: 20
+  qecgpt_batch_size: 10000
+  qecgpt_lr: 0.001
+  qecgpt_device: cuda:0
+  rbm_hidden_units: null
+  rbm_learning_rate: 0.1
+  checkpoint_every_leaf_results: 25
+  baseline_keys:
+    - dem_physics_prior_matching_si1000
+    - rl_optimized_prior_matching
+    - harmony_si1000
+    - harmony_rl_optimized
+    - independent_detector
+    - pairwise_ising
+    - factor_graph_crf
+    - graphical_lasso
+    - bayesian_hierarchical
+    - bernoulli_mixture_em
+    - sparse_coding_dictionary
+    - causal_discovery_structure
+    - vae
+    - gan
+    - ebm_rbm_crbm
+    - autoregressive_generative

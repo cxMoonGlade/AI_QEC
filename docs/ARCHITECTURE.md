@@ -18,7 +18,9 @@ generic "physical" layers.
 src/scope_static/
   dem/                     Stage 1 DEM/Bernoulli implementation
   google/                  Google readers, inventory, and S3 visible surfaces/cache
-  primitives/              channel, PTM, probe, CPTP/POVM, and preflight support
+  primitives/              channel, PTM, probe, CPTP/POVM, preflight, + the
+                           differentiable CPTP substrate (diff_cptp_channel,
+                           diff_circuit_sim)
   data_preparation/        Layer1 preprocessing - teacher generator
   teacher/                Layer 2 teacher self-audit and visible-surface helpers
   learner/                Layer 3 learner recovery and visible replay quality
@@ -132,5 +134,11 @@ Kraus channels, classical stochastic readout maps embedded into POVMs, or
 related valid instruments. The data themselves are not CPTP; CPTP/POVM
 validity is a property of the generating process.
 
-The current learner is not an arbitrary CPTP/GKSL channel learner by
-construction.
+The established learner is not an arbitrary CPTP/GKSL channel learner by
+construction. As of 2026-06 an exact CPTP physical substrate is an active,
+prioritized build: `scope_static.primitives.diff_cptp_channel` (a
+CPTP-by-construction PhysDec channel decoder plus differentiable recovery) and
+`scope_static.primitives.diff_circuit_sim` (an exact differentiable n-qubit
+circuit-to-observation forward model, `p_Theta(y|c) = Tr[M_y C_Theta(c)(rho_0)]`).
+It is a small-scale capability substrate toward the SCOPE-Twin, not a validated
+twin; see `docs/SCOPE_TWIN.md`.

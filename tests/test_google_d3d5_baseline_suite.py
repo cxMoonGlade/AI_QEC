@@ -113,6 +113,24 @@ def test_google_d3d5_config_loader_parses_yaml_shape() -> None:
     assert cfg.max_shots_per_leaf == 128
 
 
+def test_google_d3d5_config_loader_accepts_full_data_nulls() -> None:
+    cfg = _config_from_mapping(
+        {
+            "distances": [3, 5],
+            "bases": None,
+            "rounds": None,
+            "max_leaves_per_distance_basis": None,
+            "max_shots_per_leaf": None,
+        }
+    )
+
+    assert cfg.distances == (3, 5)
+    assert cfg.bases is None
+    assert cfg.rounds is None
+    assert cfg.max_leaves_per_distance_basis is None
+    assert cfg.max_shots_per_leaf is None
+
+
 def test_scope_teacher_learner_adapter_reports_comparable_google_metrics() -> None:
     metrics = _run_scope_teacher_learner_latent_replay(
         x_train=[
@@ -164,6 +182,31 @@ def test_google_d3d5_leaf_selection_covers_each_configured_round(monkeypatch) ->
     )
 
     assert [leaf.rounds for leaf in selected] == [1, 10]
+
+
+def test_google_d3d5_leaf_selection_null_limit_returns_all_filtered_leaves(monkeypatch) -> None:
+    leaves = [
+        _fake_leaf(distance=3, basis="X", rounds=1, index=0),
+        _fake_leaf(distance=3, basis="X", rounds=1, index=1),
+        _fake_leaf(distance=5, basis="Z", rounds=25, index=0),
+    ]
+    monkeypatch.setattr("scope_static.google.baseline_suite.iter_google_leaves", lambda *_args, **_kwargs: leaves)
+
+    selected = _select_leaves(
+        BaselineSuiteConfig(
+            dataset_root=Path("/tmp/google"),
+            distances=(3, 5),
+            bases=None,
+            rounds=None,
+            max_leaves_per_distance_basis=None,
+        )
+    )
+
+    assert [leaf.context_id for leaf in selected] == [
+        "d3_X_r1_0",
+        "d3_X_r1_1",
+        "d5_Z_r25_0",
+    ]
 
 
 def _fake_leaf(*, distance: int, basis: str, rounds: int, index: int) -> GoogleLeaf:

@@ -41,8 +41,11 @@ Physicality boundary: Layer1 preprocessing - teacher generator is the
 first-class physical-process generator. It validates catalog definitions as
 unitary channels, Kraus channels, or classical readout assignment matrices
 before sampling and blocks failed artifacts with a post-sampling physicality
-audit. Learner is not yet an arbitrary CPTP/GKSL channel learner by
-construction.
+audit. The established learner is not yet an arbitrary CPTP/GKSL channel learner
+by construction; as of 2026-06 an exact CPTP physical substrate (SCOPE-Twin
+Layer 3/4, `scope_static.primitives.diff_cptp_channel` / `diff_circuit_sim`) is
+an active, prioritized small-scale build toward the interventional twin (see
+`docs/SCOPE_TWIN.md`).
 
 
 ## Response-Surface Intuition

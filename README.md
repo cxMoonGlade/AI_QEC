@@ -136,8 +136,13 @@ context-normalized strength/effect recovery.
 
 The package does not currently provide:
 
-- a learner that directly parameterizes and optimizes arbitrary CPTP/GKSL
-  channel families;
+- a *validated* learner-side CPTP/GKSL twin. An exact CPTP physical substrate
+  (SCOPE-Twin Layer 3/4: a CPTP-by-construction channel decoder
+  `scope_static.primitives.diff_cptp_channel` plus an exact differentiable
+  circuit-to-observation forward model `scope_static.primitives.diff_circuit_sim`)
+  is now an active, prioritized small-scale build, but it is a capability
+  substrate, not a validated twin: no counterfactual/decoder-utility/drift/
+  transfer result, and recovery remains up to the observational alias quotient;
 - a validated decoder-utility win from the discovered latent structure;
 - a validated drift-prediction result on heldout future calibration periods;
 - a validated cross-dataset transfer result across the four Google datasets;

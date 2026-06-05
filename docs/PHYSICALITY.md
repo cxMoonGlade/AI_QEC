@@ -45,6 +45,15 @@ Not claimed yet:
 - proof that every future user-supplied custom channel is physical without a
   per-run audit.
 
+As of 2026-06, an exact CPTP physical substrate (SCOPE-Twin Layer 3/4: a
+CPTP-by-construction channel decoder and an exact differentiable
+circuit-to-observation forward model, `scope_static.primitives.diff_cptp_channel`
+and `diff_circuit_sim`) is an active, prioritized small-scale build. It makes the
+learner-side channel parameterization CPTP-by-construction, but it does not yet
+change any claim above: there is no validated twin, no hardware-channel recovery,
+and no counterfactual result, and recovery remains up to the observational alias
+quotient.
+
 ## Data-Preparation Generation Contract
 
 Data preparation writes:

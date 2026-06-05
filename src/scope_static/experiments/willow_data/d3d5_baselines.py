@@ -121,13 +121,13 @@ def _config_from_mapping(cfg: dict[str, Any]) -> BaselineSuiteConfig:
         dataset_root=Path(cfg.get("dataset_root", default.dataset_root)),
         dataset_name=str(cfg.get("dataset_name", default.dataset_name)),
         output_dir=Path(cfg.get("output_dir", default.output_dir)),
-        distances=_tuple_int(cfg.get("distances", default.distances)),
-        bases=_tuple_str(cfg.get("bases", default.bases)),
-        rounds=_tuple_int(cfg.get("rounds", default.rounds)),
-        max_leaves_per_distance_basis=int(
+        distances=_tuple_int_or_none(cfg.get("distances", default.distances)),
+        bases=_tuple_str_or_none(cfg.get("bases", default.bases)),
+        rounds=_tuple_int_or_none(cfg.get("rounds", default.rounds)),
+        max_leaves_per_distance_basis=_optional_int(
             cfg.get("max_leaves_per_distance_basis", default.max_leaves_per_distance_basis)
         ),
-        max_shots_per_leaf=int(cfg.get("max_shots_per_leaf", default.max_shots_per_leaf)),
+        max_shots_per_leaf=_optional_int(cfg.get("max_shots_per_leaf", default.max_shots_per_leaf)),
         detector_limit=int(cfg.get("detector_limit", default.detector_limit)),
         train_fraction=float(cfg.get("train_fraction", default.train_fraction)),
         seed=int(cfg.get("seed", default.seed)),
@@ -141,6 +141,23 @@ def _config_from_mapping(cfg: dict[str, Any]) -> BaselineSuiteConfig:
         gan_epochs=_optional_int(cfg.get("gan_epochs", default.gan_epochs)),
         rbm_steps=_optional_int(cfg.get("rbm_steps", default.rbm_steps)),
         autoregressive_steps=_optional_int(cfg.get("autoregressive_steps", default.autoregressive_steps)),
+        external_repo_root=Path(cfg.get("external_repo_root", default.external_repo_root)),
+        external_work_dir=Path(cfg.get("external_work_dir", default.external_work_dir)),
+        qecgpt_network=str(cfg.get("qecgpt_network", default.qecgpt_network)),
+        qecgpt_depth=int(cfg.get("qecgpt_depth", default.qecgpt_depth)),
+        qecgpt_width=int(cfg.get("qecgpt_width", default.qecgpt_width)),
+        qecgpt_d_model=int(cfg.get("qecgpt_d_model", default.qecgpt_d_model)),
+        qecgpt_n_heads=int(cfg.get("qecgpt_n_heads", default.qecgpt_n_heads)),
+        qecgpt_d_ff=int(cfg.get("qecgpt_d_ff", default.qecgpt_d_ff)),
+        qecgpt_n_layers=int(cfg.get("qecgpt_n_layers", default.qecgpt_n_layers)),
+        qecgpt_batch_size=int(cfg.get("qecgpt_batch_size", default.qecgpt_batch_size)),
+        qecgpt_lr=float(cfg.get("qecgpt_lr", default.qecgpt_lr)),
+        qecgpt_device=str(cfg.get("qecgpt_device", default.qecgpt_device)),
+        rbm_hidden_units=_optional_int(cfg.get("rbm_hidden_units", default.rbm_hidden_units)),
+        rbm_learning_rate=float(cfg.get("rbm_learning_rate", default.rbm_learning_rate)),
+        checkpoint_every_leaf_results=_optional_int(
+            cfg.get("checkpoint_every_leaf_results", default.checkpoint_every_leaf_results)
+        ),
         baseline_keys=_tuple_str(cfg.get("baseline_keys", default.baseline_keys)),
     )
 
@@ -159,12 +176,24 @@ def _tuple_int(value: object) -> tuple[int, ...]:
     return (int(value),)
 
 
+def _tuple_int_or_none(value: object) -> tuple[int, ...] | None:
+    if value is None or value == "":
+        return None
+    return _tuple_int(value)
+
+
 def _tuple_str(value: object) -> tuple[str, ...]:
     if isinstance(value, str):
         return tuple(item.strip() for item in value.split(",") if item.strip())
     if isinstance(value, Iterable):
         return tuple(str(item) for item in value)
     return (str(value),)
+
+
+def _tuple_str_or_none(value: object) -> tuple[str, ...] | None:
+    if value is None or value == "":
+        return None
+    return _tuple_str(value)
 
 
 def _optional_int(value: object) -> int | None:
