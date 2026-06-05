@@ -16,12 +16,26 @@ stage-specific docs:
   selection rules.
 - `docs/error_mechanisms.md`: physical-error mechanism taxonomy and adoption map.
 - `docs/SCOPE_TWIN.md`: full SCOPE-Twin notation and future object contract.
+- `docs/IDENTIFIABILITY_AND_CRL_SURVEY.md`: survey of causal representation
+  learning and identifiable latent-variable tools applicable to the alias
+  quotient and counterfactual validity problems; includes action items and
+  full reference list.
+- `docs/papers/`: local PDF cache of the load-bearing identifiability /
+  finance-calibration / QEC-noise-learning references, with `README.md` index
+  mapping each paper to why it matters. Check here before web-searching.
 - `docs/adr/`: durable architecture and milestone-gating decisions.
 
 ## Current Scope
 
-The implemented package is `scope_static`. It is a fixed-context DEM/Bernoulli
-research stack, not a CPTP/GKSL physical-channel learner.
+The implemented package is `scope_static`. Its established learner is a
+fixed-context DEM/Bernoulli research stack, not a CPTP/GKSL physical-channel
+learner. As of 2026-06, an exact CPTP physical substrate (SCOPE-Twin Layer 3/4)
+is an active, prioritized build under `scope_static.primitives`
+(`diff_cptp_channel`, `diff_circuit_sim`): a CPTP-by-construction channel decoder
+plus an exact differentiable circuit-to-observation forward model at small scale
+(<= ~10 qubits, high precision). It is a capability substrate toward the
+interventional "noise simulator with knobs", not a validated twin; see
+`docs/SCOPE_TWIN.md` *Current Reprioritization*.
 
 Stage 1 DEM/Bernoulli implementation modules live under `scope_static.dem`.
 Google Set1 adapters live under `scope_static.google`. The root package should

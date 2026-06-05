@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 from collections import Counter, defaultdict
 from dataclasses import dataclass
+import importlib
 import json
 import math
 from pathlib import Path
+import sys
 import time
 from typing import Callable, Iterable
 
@@ -61,6 +64,11 @@ EXTERNAL_ADAPTER_REQUIRED_BASELINES = (
     "autoregressive_generative",
 )
 
+UPSTREAM_HELPER_BASELINES = (
+    "ebm_rbm_crbm",
+    "autoregressive_generative",
+)
+
 DECODER_BASELINES = {
     "dem_physics_prior_matching_si1000": "correlated_matching_decoder_with_si1000_prior",
     "rl_optimized_prior_matching": "correlated_matching_decoder_with_rl_optimized_prior",
@@ -76,11 +84,11 @@ class BaselineSuiteConfig:
     dataset_root: Path = DEFAULT_DATASET_ROOTS[DATASET_SURFACE_SET1]
     dataset_name: str = DATASET_SURFACE_SET1
     output_dir: Path = Path("outputs/google_static/d3d5_baseline_suite")
-    distances: tuple[int, ...] = (3, 5)
-    bases: tuple[str, ...] = ("X", "Z")
-    rounds: tuple[int, ...] = (1, 10)
-    max_leaves_per_distance_basis: int = 2
-    max_shots_per_leaf: int = 2048
+    distances: tuple[int, ...] | None = (3, 5)
+    bases: tuple[str, ...] | None = ("X", "Z")
+    rounds: tuple[int, ...] | None = (1, 10)
+    max_leaves_per_distance_basis: int | None = 2
+    max_shots_per_leaf: int | None = 2048
     detector_limit: int = 32
     train_fraction: float = 0.7
     seed: int = 0
@@ -94,6 +102,21 @@ class BaselineSuiteConfig:
     gan_epochs: int | None = None
     rbm_steps: int | None = None
     autoregressive_steps: int | None = None
+    external_repo_root: Path = Path("external/baselines")
+    external_work_dir: Path = Path("outputs/google_static/external_baseline_work")
+    qecgpt_network: str = "made"
+    qecgpt_depth: int = 3
+    qecgpt_width: int = 20
+    qecgpt_d_model: int = 128
+    qecgpt_n_heads: int = 4
+    qecgpt_d_ff: int = 512
+    qecgpt_n_layers: int = 2
+    qecgpt_batch_size: int = 10000
+    qecgpt_lr: float = 0.001
+    qecgpt_device: str = "cuda:0"
+    rbm_hidden_units: int | None = None
+    rbm_learning_rate: float = 0.1
+    checkpoint_every_leaf_results: int | None = 50
     baseline_keys: tuple[str, ...] = BASELINE_KEYS
 
 
@@ -103,21 +126,45 @@ def run_google_d3d5_baseline_suite(config: BaselineSuiteConfig | None = None) ->
     leaves = _select_leaves(cfg)
     if not leaves:
         raise ValueError("No Google D3/D5 leaves selected for baseline suite")
+    progress_path = _reset_progress_log(cfg)
+    _append_progress(
+        progress_path,
+        {
+            "event": "start",
+            "selected_leaf_count": int(len(leaves)),
+            "repeat_seed_count": int(len(cfg.seeds or (cfg.seed,))),
+            "baseline_keys": list(cfg.baseline_keys),
+        },
+    )
     leaf_results = []
     for repeat_index, repeat_seed in enumerate(cfg.seeds or (cfg.seed,)):
         rng = np.random.default_rng(int(repeat_seed))
         for leaf_idx, leaf in enumerate(leaves):
             leaf_seed = int(rng.integers(0, 2**31 - 1))
-            leaf_results.append(
-                _run_leaf_baselines(
-                    leaf,
-                    cfg=cfg,
-                    seed=leaf_seed,
-                    leaf_index=leaf_idx,
-                    repeat_seed=int(repeat_seed),
-                    repeat_index=int(repeat_index),
-                )
+            leaf_start = time.perf_counter()
+            result = _run_leaf_baselines(
+                leaf,
+                cfg=cfg,
+                seed=leaf_seed,
+                leaf_index=leaf_idx,
+                repeat_seed=int(repeat_seed),
+                repeat_index=int(repeat_index),
             )
+            leaf_results.append(result)
+            _append_progress(
+                progress_path,
+                {
+                    "event": "leaf_result",
+                    "repeat_index": int(repeat_index),
+                    "repeat_seed": int(repeat_seed),
+                    "leaf_index": int(leaf_idx),
+                    "context_id": leaf.context_id,
+                    "shots_loaded": int(result.get("shots_loaded", 0)),
+                    "wall_clock_seconds": float(time.perf_counter() - leaf_start),
+                    "completed_leaf_results": int(len(leaf_results)),
+                },
+            )
+            _maybe_write_partial_checkpoint(leaf_results, cfg, baseline_keys=cfg.baseline_keys)
     baseline_keys = tuple(key for key in cfg.baseline_keys if key in ALLOWED_BASELINE_KEYS)
     aggregate = _aggregate_leaf_results(leaf_results, baseline_keys=baseline_keys)
     result = {
@@ -165,6 +212,14 @@ def run_google_d3d5_baseline_suite(config: BaselineSuiteConfig | None = None) ->
         "wall_clock_seconds": float(time.perf_counter() - start),
     }
     _write_outputs(result, cfg.output_dir)
+    _append_progress(
+        progress_path,
+        {
+            "event": "complete",
+            "wall_clock_seconds": float(result["wall_clock_seconds"]),
+            "metrics_json": str(cfg.output_dir / "metrics.json"),
+        },
+    )
     return result
 
 
@@ -177,7 +232,8 @@ def _run_leaf_baselines(
     repeat_seed: int,
     repeat_index: int,
 ) -> dict[str, object]:
-    observations = load_google_observations(leaf, max_shots=int(cfg.max_shots_per_leaf)).astype(np.uint8)
+    max_shots = None if cfg.max_shots_per_leaf is None else int(cfg.max_shots_per_leaf)
+    observations = load_google_observations(leaf, max_shots=max_shots).astype(np.uint8)
     if observations.ndim != 2 or observations.shape[1] < 2:
         raise ValueError(f"Bad observation matrix for {leaf.context_id}: {observations.shape}")
     circuit = load_google_circuit(leaf)
@@ -230,10 +286,22 @@ def _run_leaf_baselines(
 
     requested_baselines = set(cfg.baseline_keys or BASELINE_KEYS)
     for key in EXTERNAL_ADAPTER_REQUIRED_BASELINES:
-        if key in requested_baselines:
+        if key in requested_baselines and key not in UPSTREAM_HELPER_BASELINES:
             baselines[key] = _external_adapter_missing_record(key)
 
     baseline_fns: dict[str, Callable[..., dict[str, object]]] = {
+        "independent_detector": lambda **kwargs: _run_upstream_dependency_probe("independent_detector", **kwargs),
+        "pairwise_ising": lambda **kwargs: _run_upstream_dependency_probe("pairwise_ising", **kwargs),
+        "factor_graph_crf": lambda **kwargs: _run_upstream_dependency_probe("factor_graph_crf", **kwargs),
+        "graphical_lasso": lambda **kwargs: _run_upstream_dependency_probe("graphical_lasso", **kwargs),
+        "bayesian_hierarchical": lambda **kwargs: _run_upstream_dependency_probe("bayesian_hierarchical", **kwargs),
+        "bernoulli_mixture_em": lambda **kwargs: _run_upstream_dependency_probe("bernoulli_mixture_em", **kwargs),
+        "sparse_coding_dictionary": lambda **kwargs: _run_upstream_dependency_probe("sparse_coding_dictionary", **kwargs),
+        "causal_discovery_structure": lambda **kwargs: _run_upstream_dependency_probe("causal_discovery_structure", **kwargs),
+        "vae": lambda **kwargs: _run_upstream_dependency_probe("vae", **kwargs),
+        "gan": lambda **kwargs: _run_upstream_dependency_probe("gan", **kwargs),
+        "ebm_rbm_crbm": _run_upstream_rbm,
+        "autoregressive_generative": _run_upstream_qecgpt_autoregressive,
         SCOPE_COMPARABLE_KEY: _run_scope_teacher_learner_latent_replay,
     }
     for offset, (key, fn) in enumerate((item for item in baseline_fns.items() if item[0] in requested_baselines), start=1):
@@ -471,6 +539,315 @@ def _registry_key_for_suite_key(key: str) -> str:
     return key
 
 
+def _run_upstream_dependency_probe(key: str, **kwargs: object) -> dict[str, object]:
+    cfg = kwargs["cfg"]
+    assert isinstance(cfg, BaselineSuiteConfig)
+    probes = _upstream_probe_specs(key, cfg)
+    notes = [
+        "Minimum helper ran only an upstream import/entrypoint compatibility probe; no local proxy model was fitted.",
+    ]
+    available = []
+    missing = []
+    for module_name, repo_path in probes:
+        ok, detail = _probe_module_available(module_name, repo_path)
+        row = {"module": module_name, "repo_path": str(repo_path), "detail": detail}
+        if ok:
+            available.append(row)
+        else:
+            missing.append(row)
+    status = "not_run_upstream_entrypoint_pending" if available else "not_run_upstream_dependency_missing"
+    try:
+        entry = baseline_entry(_registry_key_for_suite_key(key))
+        repos = [repo.to_dict() for repo in entry.external_repositories]
+    except KeyError:
+        repos = []
+    if available:
+        notes.append(
+            "Upstream module import is available, but this baseline still lacks a native Google D3/D5 training/evaluation entrypoint."
+        )
+    else:
+        notes.append("Upstream module import failed in the aiqec environment; install/build the cloned repository before scoring.")
+    record = _empty_metric_record(key, implementation_status=status, notes=notes)
+    record.update(
+        {
+            "baseline_family": key,
+            "runner_policy": "minimum_helper_no_local_model_proxy",
+            "external_repositories": repos,
+            "upstream_probe_available": available,
+            "upstream_probe_missing": missing,
+        }
+    )
+    return record
+
+
+def _upstream_probe_specs(key: str, cfg: BaselineSuiteConfig) -> list[tuple[str, Path]]:
+    root = Path(cfg.external_repo_root)
+    specs = {
+        "independent_detector": [("pomegranate", root / "pomegranate")],
+        "bernoulli_mixture_em": [("pomegranate", root / "pomegranate")],
+        "pairwise_ising": [("coniii", root / "coniii")],
+        "factor_graph_crf": [("pgmpy", root / "pgmpy")],
+        "graphical_lasso": [("gglasso", root / "GGLasso")],
+        "bayesian_hierarchical": [("pyro", root / "pyro")],
+        "vae": [("pyro", root / "pyro"), ("vae", root / "pytorch-examples")],
+        "sparse_coding_dictionary": [("prosper", root / "prosper")],
+        "causal_discovery_structure": [("causallearn", root / "causal-learn")],
+        "gan": [("models", root / "PyTorch-GAN")],
+    }
+    return list(specs.get(key, []))
+
+
+def _probe_module_available(module_name: str, repo_path: Path) -> tuple[bool, str]:
+    search_paths = [repo_path] if repo_path.exists() else []
+    if repo_path.name == "PyTorch-GAN":
+        search_paths.append(repo_path / "implementations")
+    if repo_path.name == "pytorch-examples":
+        search_paths.append(repo_path / "vae")
+    try:
+        with _temporary_sys_path(search_paths):
+            module = importlib.import_module(module_name)
+        return True, f"imported {getattr(module, '__file__', module_name)}"
+    except Exception as exc:
+        return False, f"{type(exc).__name__}: {exc}"
+
+
+def _run_upstream_rbm(**kwargs: object) -> dict[str, object]:
+    x_train, _y_train, x_test, y_test = _arrays(kwargs)
+    cfg = kwargs["cfg"]
+    assert isinstance(cfg, BaselineSuiteConfig)
+    seed = int(kwargs["seed"])
+    params = _baseline_params(kwargs)
+    repo_path = Path(cfg.external_repo_root) / "restricted-boltzmann-machines"
+    if not (repo_path / "rbm.py").is_file():
+        return _upstream_unavailable_record(
+            "ebm_rbm_crbm",
+            cfg=cfg,
+            status="not_run_upstream_repository_missing",
+            notes=[f"Missing upstream RBM file: {repo_path / 'rbm.py'}"],
+        )
+    if x_train.size == 0 or x_test.size == 0:
+        return _model_metric_record(
+            "ebm_rbm_crbm",
+            x_test=x_test,
+            y_test=y_test,
+            generated=np.zeros_like(x_test),
+            implementation_status="upstream_rbm_empty_data",
+            notes=["Empty train/test split; upstream RBM was not fitted."],
+        )
+    np.random.seed(seed)
+    with _temporary_sys_path([repo_path]):
+        from rbm import RBM  # type: ignore
+
+    hidden_units = int(params.get("hidden_units") or cfg.rbm_hidden_units or max(2, min(64, x_train.shape[1] // 2)))
+    epochs = int(params.get("epochs") or cfg.rbm_steps or cfg.max_iter)
+    learning_rate = float(params.get("learning_rate") or cfg.rbm_learning_rate)
+    rbm = RBM(num_visible=int(x_train.shape[1]), num_hidden=hidden_units)
+    rbm.debug_print = False
+    rbm.train(np.asarray(x_train, dtype=np.float64), max_epochs=max(1, epochs), learning_rate=learning_rate)
+    generated = np.asarray(rbm.daydream(int(x_test.shape[0])), dtype=np.float64)
+    generated = (generated >= 0.5).astype(np.float64)
+    return _model_metric_record(
+        "ebm_rbm_crbm",
+        x_test=x_test,
+        y_test=y_test,
+        generated=generated,
+        implementation_status="upstream_rbm_native_class_minimum_helper",
+        structural_summary={
+            "upstream_repository": "external/baselines/restricted-boltzmann-machines",
+            "upstream_entrypoint": "rbm.RBM.train/daydream",
+            "helper_scope": "Google selected-detector matrix conversion plus common metric normalization",
+            "hidden_units": int(hidden_units),
+            "epochs": int(epochs),
+            "learning_rate": float(learning_rate),
+            "uses_google_true_mechanism_labels": False,
+            "uses_observable_flips_for_detector_model": False,
+            "logical_p_l_status": "not_reported_not_a_decoder",
+        },
+        notes=[
+            "RBM helper imports and calls the cloned upstream RBM class; no local RBM equations are reimplemented.",
+            "RBM reports generated-syndrome moment/AUC metrics only; no exact normalized NLL is provided by this upstream implementation.",
+        ],
+    )
+
+
+def _run_upstream_qecgpt_autoregressive(**kwargs: object) -> dict[str, object]:
+    x_train, _y_train, x_test, y_test = _arrays(kwargs)
+    cfg = kwargs["cfg"]
+    assert isinstance(cfg, BaselineSuiteConfig)
+    seed = int(kwargs["seed"])
+    params = _baseline_params(kwargs)
+    repo_path = Path(cfg.external_repo_root) / "qecGPT"
+    qec_path = repo_path / "qec"
+    if not (qec_path / "module" / "MADE.py").is_file():
+        return _upstream_unavailable_record(
+            "autoregressive_generative",
+            cfg=cfg,
+            status="not_run_upstream_repository_missing",
+            notes=[f"Missing upstream qecGPT module: {qec_path / 'module' / 'MADE.py'}"],
+        )
+    if x_train.size == 0 or x_test.size == 0:
+        return _model_metric_record(
+            "autoregressive_generative",
+            x_test=x_test,
+            y_test=y_test,
+            generated=np.zeros_like(x_test),
+            implementation_status="upstream_qecgpt_empty_data",
+            notes=["Empty train/test split; qecGPT was not fitted."],
+        )
+    try:
+        return _fit_qecgpt_autoregressive(
+            x_train=x_train,
+            x_test=x_test,
+            y_test=y_test,
+            cfg=cfg,
+            params=params,
+            seed=seed,
+            qec_path=qec_path,
+        )
+    except Exception as exc:
+        return _upstream_unavailable_record(
+            "autoregressive_generative",
+            cfg=cfg,
+            status="failed_upstream_qecgpt_helper",
+            notes=[f"{type(exc).__name__}: {exc}"],
+        )
+
+
+def _fit_qecgpt_autoregressive(
+    *,
+    x_train: np.ndarray,
+    x_test: np.ndarray,
+    y_test: np.ndarray,
+    cfg: BaselineSuiteConfig,
+    params: dict[str, object],
+    seed: int,
+    qec_path: Path,
+) -> dict[str, object]:
+    import torch
+
+    with _temporary_sys_path([qec_path]):
+        from module import MADE, TraDE  # type: ignore
+
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+    device_name = str(params.get("device") or cfg.qecgpt_device)
+    if device_name.startswith("cuda") and not torch.cuda.is_available():
+        device_name = "cpu"
+    device = torch.device(device_name)
+    dtype = torch.float32
+    network = str(params.get("network") or cfg.qecgpt_network).lower()
+    epochs = int(params.get("epochs") or cfg.autoregressive_steps or cfg.torch_epochs)
+    batch_size = int(params.get("batch_size") or cfg.qecgpt_batch_size)
+    lr = float(params.get("learning_rate") or cfg.qecgpt_lr)
+    n_bits = int(x_train.shape[1])
+    if network == "trade":
+        model = TraDE(
+            n=n_bits,
+            d_model=int(params.get("d_model") or cfg.qecgpt_d_model),
+            n_heads=int(params.get("n_heads") or cfg.qecgpt_n_heads),
+            d_ff=int(params.get("d_ff") or cfg.qecgpt_d_ff),
+            n_layers=int(params.get("n_layers") or cfg.qecgpt_n_layers),
+            device=str(device),
+            dropout=0,
+        ).to(device).to(dtype)
+        train_tensor = torch.as_tensor(x_train, dtype=dtype, device=device)
+        test_tensor = torch.as_tensor(x_test, dtype=dtype, device=device)
+    else:
+        model = MADE(
+            n=n_bits,
+            depth=int(params.get("depth") or cfg.qecgpt_depth),
+            width=int(params.get("width") or cfg.qecgpt_width),
+            residual=False,
+        ).to(device).to(dtype)
+        train_tensor = torch.as_tensor(x_train * 2.0 - 1.0, dtype=dtype, device=device)
+        test_tensor = torch.as_tensor(x_test * 2.0 - 1.0, dtype=dtype, device=device)
+        network = "made"
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    n_train = int(train_tensor.shape[0])
+    batch_size = max(1, min(batch_size, n_train))
+    model.train()
+    for _epoch in range(max(1, epochs)):
+        idx = torch.randint(0, n_train, (batch_size,), device=device)
+        batch = train_tensor[idx]
+        loss = -torch.mean(model.log_prob(batch), dim=0)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+    model.eval()
+    with torch.no_grad():
+        nll = float((-model.log_prob(test_tensor)).mean().detach().cpu())
+        probs = model.forward(test_tensor).detach().cpu().numpy().astype(np.float64)
+        if network == "made":
+            samples = model.samples(int(x_test.shape[0]), n_bits, device=device, dtype=dtype)
+            generated = ((samples.detach().cpu().numpy().astype(np.float64) + 1.0) / 2.0)
+        else:
+            samples = model.samples(int(x_test.shape[0]))
+            generated = samples.detach().cpu().numpy().astype(np.float64)
+    generated = (generated >= 0.5).astype(np.float64)
+    return _model_metric_record(
+        "autoregressive_generative",
+        x_test=x_test,
+        y_test=y_test,
+        generated=generated,
+        detector_prob=probs,
+        syndrome_nll_per_shot=nll,
+        implementation_status="upstream_qecgpt_native_model_minimum_helper",
+        structural_summary={
+            "upstream_repository": "external/baselines/qecGPT",
+            "upstream_entrypoint": "qec.module.MADE/TraDE.log_prob/samples",
+            "helper_scope": "Google selected-detector matrix conversion, upstream training loop invocation, common metric normalization",
+            "network": network,
+            "epochs": int(epochs),
+            "batch_size": int(batch_size),
+            "learning_rate": float(lr),
+            "device": str(device),
+            "uses_google_true_mechanism_labels": False,
+            "uses_observable_flips_for_detector_model": False,
+            "logical_p_l_status": "not_reported_not_a_decoder",
+        },
+        notes=[
+            "qecGPT helper imports and trains the cloned upstream MADE/TraDE model class on Google detector bits.",
+            "This reports generative syndrome metrics only; qecGPT logical decoding scripts are not used because their public Google path is hard-coded to a different .01/layout contract.",
+        ],
+    )
+
+
+def _upstream_unavailable_record(
+    key: str,
+    *,
+    cfg: BaselineSuiteConfig,
+    status: str,
+    notes: list[str],
+) -> dict[str, object]:
+    try:
+        entry = baseline_entry(_registry_key_for_suite_key(key))
+        repos = [repo.to_dict() for repo in entry.external_repositories]
+    except KeyError:
+        repos = []
+    record = _empty_metric_record(key, implementation_status=status, notes=notes)
+    record.update(
+        {
+            "baseline_family": key,
+            "runner_policy": "minimum_helper_no_local_model_proxy",
+            "external_repositories": repos,
+            "external_repo_root": str(cfg.external_repo_root),
+        }
+    )
+    return record
+
+
+@contextmanager
+def _temporary_sys_path(paths: Iterable[Path]):
+    original = list(sys.path)
+    try:
+        for path in reversed([Path(item) for item in paths if Path(item).exists()]):
+            sys.path.insert(0, str(path))
+        yield
+    finally:
+        sys.path[:] = original
+
+
 def _run_scope_teacher_learner_latent_replay(**kwargs: object) -> dict[str, object]:
     x_train, y_train, x_test, y_test = _arrays(kwargs)
     cfg = kwargs["cfg"]
@@ -694,19 +1071,19 @@ def _decay_curve_distance(leaf_results: list[dict[str, object]], key: str) -> di
 def _baseline_candidate_policy(cfg: BaselineSuiteConfig) -> dict[str, object]:
     out = {}
     for key in (cfg.baseline_keys or BASELINE_KEYS):
-        if key in EXTERNAL_ADAPTER_REQUIRED_BASELINES:
+        if key in EXTERNAL_ADAPTER_REQUIRED_BASELINES and key not in UPSTREAM_HELPER_BASELINES:
             out[key] = {
-                "candidate_count": 0,
-                "source": ["external_cloned_upstream_adapter_required"],
+                "candidate_count": 1,
+                "source": ["minimum_upstream_probe_no_proxy_metrics"],
                 "compute_budget": {
                     "selection_profile": str(cfg.selection_profile),
                     "repeat_seed_count": int(len(cfg.seeds or (cfg.seed,))),
-                    "max_shots_per_leaf": int(cfg.max_shots_per_leaf),
+                    "max_shots_per_leaf": None if cfg.max_shots_per_leaf is None else int(cfg.max_shots_per_leaf),
                     "detector_limit": int(cfg.detector_limit),
-                    "status": "not_applicable_until_native_upstream_entrypoint_runs",
+                    "status": "probe_only_until_native_upstream_google_entrypoint_runs",
                 },
-                "candidates": [],
-                "run_policy": "not_run_until_native_upstream_entrypoint_runs",
+                "candidates": [{}],
+                "run_policy": "minimum_helper_records_upstream_dependency_or_entrypoint_status_without_local_proxy",
                 "external_repositories": _external_adapter_missing_record(key).get("external_repositories", []),
             }
             continue
@@ -725,6 +1102,37 @@ def _baseline_candidates(key: str, cfg: BaselineSuiteConfig) -> list[dict[str, o
     def row(params: dict[str, object], source: str) -> dict[str, object]:
         return {"params": params, "source": source}
 
+    if key == "ebm_rbm_crbm":
+        return [
+            row(
+                {
+                    "hidden_units": None if cfg.rbm_hidden_units is None else int(cfg.rbm_hidden_units),
+                    "epochs": int(cfg.rbm_steps or cfg.max_iter),
+                    "learning_rate": float(cfg.rbm_learning_rate),
+                },
+                "cloned_upstream_restricted_boltzmann_machines_rbm_class",
+            )
+        ]
+    if key == "autoregressive_generative":
+        params = {
+            "network": str(cfg.qecgpt_network),
+            "epochs": int(cfg.autoregressive_steps or cfg.torch_epochs),
+            "batch_size": int(cfg.qecgpt_batch_size),
+            "learning_rate": float(cfg.qecgpt_lr),
+            "device": str(cfg.qecgpt_device),
+        }
+        if str(cfg.qecgpt_network).lower() == "trade":
+            params.update(
+                {
+                    "d_model": int(cfg.qecgpt_d_model),
+                    "n_heads": int(cfg.qecgpt_n_heads),
+                    "d_ff": int(cfg.qecgpt_d_ff),
+                    "n_layers": int(cfg.qecgpt_n_layers),
+                }
+            )
+        else:
+            params.update({"depth": int(cfg.qecgpt_depth), "width": int(cfg.qecgpt_width)})
+        return [row(params, "cloned_upstream_qecgpt_made_trade_model_class")]
     if key in EXTERNAL_ADAPTER_REQUIRED_BASELINES:
         return []
     if key in DECODER_BASELINES:
@@ -761,9 +1169,10 @@ def _candidate_budget_summary(key: str, cfg: BaselineSuiteConfig) -> dict[str, o
         "selection_profile": str(cfg.selection_profile),
         "candidate_count": int(len(candidates)),
         "repeat_seed_count": int(len(cfg.seeds or (cfg.seed,))),
-        "max_shots_per_leaf": int(cfg.max_shots_per_leaf),
+        "max_shots_per_leaf": None if cfg.max_shots_per_leaf is None else int(cfg.max_shots_per_leaf),
         "detector_limit": int(cfg.detector_limit),
         "torch_batch_size": int(cfg.torch_batch_size),
+        "qecgpt_batch_size": int(cfg.qecgpt_batch_size),
         "epoch_values": sorted({int(p["epochs"]) for p in params if "epochs" in p}),
         "step_values": sorted({int(p["steps"]) for p in params if "steps" in p}),
     }
@@ -808,17 +1217,24 @@ def _selection_metric_digest(metrics: dict[str, object]) -> dict[str, object]:
 
 def _select_leaves(cfg: BaselineSuiteConfig) -> list[GoogleLeaf]:
     leaves = iter_google_leaves(cfg.dataset_root, cfg.dataset_name)
+    distances = None if cfg.distances is None else set(cfg.distances)
+    bases = None if cfg.bases is None else set(cfg.bases)
+    rounds = None if cfg.rounds is None else set(cfg.rounds)
     leaves = [
         leaf
         for leaf in leaves
-        if int(leaf.distance or -1) in set(cfg.distances)
-        and str(leaf.basis) in set(cfg.bases)
-        and int(leaf.rounds or -1) in set(cfg.rounds)
+        if (distances is None or int(leaf.distance or -1) in distances)
+        and (bases is None or str(leaf.basis) in bases)
+        and (rounds is None or int(leaf.rounds or -1) in rounds)
     ]
+    leaves = sorted(leaves, key=lambda row: (int(row.distance or -1), str(row.basis), int(row.rounds or -1), str(row.sample_id)))
+    if cfg.max_leaves_per_distance_basis is None:
+        return leaves
     selected: list[GoogleLeaf] = []
     counts: Counter[tuple[int, str, int]] = Counter()
-    per_round_limit = max(1, int(math.ceil(int(cfg.max_leaves_per_distance_basis) / max(len(set(cfg.rounds)), 1))))
-    for leaf in sorted(leaves, key=lambda row: (int(row.distance or -1), str(row.basis), int(row.rounds or -1), str(row.sample_id))):
+    observed_rounds = {int(leaf.rounds or -1) for leaf in leaves}
+    per_round_limit = max(1, int(math.ceil(int(cfg.max_leaves_per_distance_basis) / max(len(observed_rounds), 1))))
+    for leaf in leaves:
         key = (int(leaf.distance or -1), str(leaf.basis), int(leaf.rounds or -1))
         if counts[key] < per_round_limit:
             selected.append(leaf)
@@ -1046,11 +1462,13 @@ def _config_dict(cfg: BaselineSuiteConfig) -> dict[str, object]:
         "dataset_root": str(cfg.dataset_root),
         "dataset_name": cfg.dataset_name,
         "output_dir": str(cfg.output_dir),
-        "distances": list(cfg.distances),
-        "bases": list(cfg.bases),
-        "rounds": list(cfg.rounds),
-        "max_leaves_per_distance_basis": int(cfg.max_leaves_per_distance_basis),
-        "max_shots_per_leaf": int(cfg.max_shots_per_leaf),
+        "distances": None if cfg.distances is None else list(cfg.distances),
+        "bases": None if cfg.bases is None else list(cfg.bases),
+        "rounds": None if cfg.rounds is None else list(cfg.rounds),
+        "max_leaves_per_distance_basis": None
+        if cfg.max_leaves_per_distance_basis is None
+        else int(cfg.max_leaves_per_distance_basis),
+        "max_shots_per_leaf": None if cfg.max_shots_per_leaf is None else int(cfg.max_shots_per_leaf),
         "detector_limit": int(cfg.detector_limit),
         "train_fraction": float(cfg.train_fraction),
         "seed": int(cfg.seed),
@@ -1064,8 +1482,59 @@ def _config_dict(cfg: BaselineSuiteConfig) -> dict[str, object]:
         "gan_epochs": None if cfg.gan_epochs is None else int(cfg.gan_epochs),
         "rbm_steps": None if cfg.rbm_steps is None else int(cfg.rbm_steps),
         "autoregressive_steps": None if cfg.autoregressive_steps is None else int(cfg.autoregressive_steps),
+        "external_repo_root": str(cfg.external_repo_root),
+        "external_work_dir": str(cfg.external_work_dir),
+        "qecgpt_network": str(cfg.qecgpt_network),
+        "qecgpt_depth": int(cfg.qecgpt_depth),
+        "qecgpt_width": int(cfg.qecgpt_width),
+        "qecgpt_d_model": int(cfg.qecgpt_d_model),
+        "qecgpt_n_heads": int(cfg.qecgpt_n_heads),
+        "qecgpt_d_ff": int(cfg.qecgpt_d_ff),
+        "qecgpt_n_layers": int(cfg.qecgpt_n_layers),
+        "qecgpt_batch_size": int(cfg.qecgpt_batch_size),
+        "qecgpt_lr": float(cfg.qecgpt_lr),
+        "qecgpt_device": str(cfg.qecgpt_device),
+        "rbm_hidden_units": None if cfg.rbm_hidden_units is None else int(cfg.rbm_hidden_units),
+        "rbm_learning_rate": float(cfg.rbm_learning_rate),
+        "checkpoint_every_leaf_results": None
+        if cfg.checkpoint_every_leaf_results is None
+        else int(cfg.checkpoint_every_leaf_results),
         "baseline_keys": list(cfg.baseline_keys),
     }
+
+
+def _reset_progress_log(cfg: BaselineSuiteConfig) -> Path:
+    cfg.output_dir.mkdir(parents=True, exist_ok=True)
+    progress_path = cfg.output_dir / "progress.jsonl"
+    progress_path.write_text("", encoding="utf-8")
+    return progress_path
+
+
+def _append_progress(path: Path, row: dict[str, object]) -> None:
+    payload = {"time": time.strftime("%Y-%m-%dT%H:%M:%S%z"), **row}
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(payload, sort_keys=True) + "\n")
+
+
+def _maybe_write_partial_checkpoint(
+    leaf_results: list[dict[str, object]],
+    cfg: BaselineSuiteConfig,
+    *,
+    baseline_keys: tuple[str, ...],
+) -> None:
+    every = cfg.checkpoint_every_leaf_results
+    if every is None or every <= 0 or len(leaf_results) % int(every) != 0:
+        return
+    partial = {
+        "schema": "scope_static_google_d3d5_baseline_partial_checkpoint_v1",
+        "completed_leaf_result_count": int(len(leaf_results)),
+        "config": _config_dict(cfg),
+        "aggregate": _aggregate_leaf_results(leaf_results, baseline_keys=baseline_keys),
+    }
+    (cfg.output_dir / "partial_metrics.json").write_text(
+        json.dumps(partial, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
 
 
 def _write_outputs(result: dict[str, object], output_dir: Path) -> None:
