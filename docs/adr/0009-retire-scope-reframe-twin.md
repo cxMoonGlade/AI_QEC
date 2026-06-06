@@ -43,10 +43,11 @@ symmetry-compression, is the spine.
    - **manipulate** — channel-level `do()` knobs → ΔLER (finance: Greeks / hedging / scenario);
    - **predict** — drift / rare-failure / decoder-impact forecasting (finance: state-space / regime / multiscale SV).
 
-3. **Scope: framing + architecture, NOT a code rename.** The package identifier
-   `scope_static` (imports, console scripts, configs, tests) is retained as a
-   neutral, stable code handle — a mechanical rename would risk the full test
-   suite for zero scientific gain. "the twin" is the descriptive name until a new
+3. **Scope: framing + architecture, with one package-handle migration.** The
+   package identifier is `qec_twin` (imports, console scripts, configs, tests),
+   a neutral, stable code handle after the reframe. This is the one-time migration
+   away from the retired `scope_static` thesis handle; do not keep renaming the
+   package for narrative reasons. "the twin" is the descriptive name until a new
    one is chosen.
 
 4. **Symmetry.** No symmetry-compression as a named thesis or as an

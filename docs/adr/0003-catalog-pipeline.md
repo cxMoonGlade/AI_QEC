@@ -10,7 +10,7 @@ S2D catalog-validation experiments repeatedly run PHYS1 teacher generation, PHYS
 
 ## Decision
 
-Introduce `scope_static.catalog_pipeline` as a facade package for the
+Introduce `qec_twin.catalog_pipeline` as a facade package for the
 Catalog Pipeline. Current implementation modules live under
 `data_preparation`, `teacher`, `learner`, and
 `mechanism_observability`; low-level physical-process support lives under

@@ -7,8 +7,8 @@ Accepted.
 ## Context
 
 The exact CPTP physical substrate (SCOPE-Twin Layer 3 PhysDec + Layer 4 circuit
-likelihood) is built at small, exact scale (`scope_static.primitives.diff_cptp_channel`,
-`scope_static.primitives.diff_circuit_sim`). Three next directions were
+likelihood) is built at small, exact scale (`qec_twin.primitives.diff_cptp_channel`,
+`qec_twin.primitives.diff_circuit_sim`). Three next directions were
 considered for advancing toward the interventional "noise simulator with knobs":
 
 - **A** — build the Layer 2 orbit-compression field

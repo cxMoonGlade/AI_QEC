@@ -13,8 +13,8 @@ from __future__ import annotations
 import numpy as np
 import torch
 
-from scope_static.primitives.channels import amplitude_damping_kraus, rx_unitary
-from scope_static.primitives.diff_cptp_channel import (
+from qec_twin.forward.channels import amplitude_damping_kraus, rx_unitary
+from qec_twin.forward.cptp_channel import (
     CDTYPE,
     StinespringChannel,
     apply_kraus,

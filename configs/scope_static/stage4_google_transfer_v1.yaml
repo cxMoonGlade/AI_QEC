@@ -1,6 +1,0 @@
-stage4_google_transfer_v1:
-  source_pretrain_dir: outputs/scope_static/S4_bridge/S4_1_source_pretrain
-  google_stage3a_dir: outputs/google_static/google_s3_visible_surface_v2/S3A_protocol_freeze
-  output_dir: outputs/scope_static/S4_bridge/S4_2_frozen_google_transfer
-  transfer_mode: strict_frozen_transfer
-  seed: 0

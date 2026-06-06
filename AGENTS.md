@@ -19,7 +19,7 @@ capabilities over hardware-realistic noise:
 
 `teacher-learner` is the training mechanism; the finance analogy is the
 organizing principle. The decision record for this framing — and for retiring the
-earlier "SCOPE / Symmetry-Compressed Orbit-Physical Emulator" thesis and
+earlier orbit-symmetry-compression thesis and
 orbit-sharing as an identifiability lever — is **ADR 0009**. The current build is
 the small-scale exact-CPTP counterfactual loop (the "B path"): ADR 0006 (build
 order), 0007 (B validation methodology), 0008 (derivatives-calibration framing of
@@ -30,48 +30,45 @@ and scalability is a future selection criterion, not a now-decision (ADR 0009).
 ## Doc routing
 
 - `CONTEXT.md`: glossary and claim boundaries (read first).
-- `docs/ARCHITECTURE.md`: code architecture and module map.
-- `docs/RUNBOOK.md`: install, test, GPU, and the full experiment command set.
-- `docs/teacher_learner.md`: teacher / learner roles and the isolation contract.
+- `docs/ARCHITECTURE.md`: code architecture and module map.- `docs/teacher_learner.md`: teacher / learner roles and the isolation contract.
 - `docs/TWIN.md`: binding twin spec — object contract `p(y|c)=Tr[M_y C(c)(rho0)]`,
   the four capabilities, finance methodology, and reserved notation.
 - `docs/IDENTIFIABILITY_AND_CRL_SURVEY.md`: causal-representation-learning,
   identifiable-latent-variable, and finance tools for the alias-quotient and
   counterfactual-validity problems; action items + reference list.
 - `docs/papers/`: local PDF cache of the load-bearing references (index in
-  `README.md`). Check here before web-searching.
-- `docs/BENCHMARKS_AND_BASELINES.md`: benchmark ladder and baseline selection.
-- `docs/error_mechanisms.md`: physical-error mechanism taxonomy.
-- `docs/PHYSICALITY.md`: CPTP/readout implementation and claim boundary.
-- `docs/adr/`: durable decisions. Current spine is 0006 → 0009.
+  `README.md`). Check here before web-searching.- `docs/error_mechanisms.md`: physical-error mechanism taxonomy.- `docs/adr/`: durable decisions. Current spine is 0006 → 0009.
 
 ## Package and module rules
 
-The implemented package is `scope_static` — a stable code identifier retained by
-ADR 0009 (do NOT rename it; the name is a handle, not the thesis). New code goes
-in the responsibility package that owns it; do not add flat modules directly under
-`src/scope_static/` or rebuild a broad `scope_static.physical` package.
+The implemented package is `qec_twin`. New code goes in the responsibility package
+that owns it; do not add flat modules directly under `src/qec_twin/` or rebuild a
+broad `qec_twin.physical` package.
+
+Three tiers (flat packages; the tiering is documentation, not import paths). **Each
+module has a `README.md` bounding it — read it before adding code there.**
 
 ```
-scope_static.primitives       low-level channel/PTM/probe/CPTP/POVM/density-sim/preflight, plus the
-                              differentiable substrate (diff_cptp_channel, diff_circuit_sim, diff_rep_code)
-scope_static.dem              DEM/Bernoulli parity core
-scope_static.google           Google/Willow readers, inventory, S3 visible surface
-scope_static.data_preparation teacher generator (mechanism records, probes, sampled obs, audits)
-scope_static.teacher          teacher self-audit
-scope_static.learner          label-free learner: visible recovery + replay quality
-scope_static.identifiability  observational alias quotient + identifiability diagnostics
-scope_static.mechanism_observability  local inverse, typed SPAM/gate features, calibration
-scope_static.mechanism_discovery      latent assignment, prototype, transfer, robustness, effect audits
-scope_static.catalog_pipeline controlled-catalog orchestration
-scope_static.experiments      thin CLI/config wrappers, grouped by family: static/, qec_noise_catalog/,
-                              stage3/, stage4/, stage5/, willow_data/, scope_twin/
-scope_static.cuda             C++/CUDA exact DEM/window kernels
+# model — the four capabilities
+calibration/  [RECOVER]     label-free exact Born-NLL calibration
+understand/   [UNDERSTAND]  interpret recovered channel (placeholder)
+knobs/        [MANIPULATE]  channel-level do() -> ΔLER
+prediction/   [PREDICT]     drift / forecast (placeholder)
+# substrate
+forward/      exact differentiable forward; channels + cptp_channel + exact/ (density-matrix,
+              ⚠ feasibility-only <=~15q) + scalable/ (placeholder, >50q)
+mechanisms/   mechanism definitions + controlled teachers
+contexts/     probe-richness ladder C_cal(r) + probes
+decoder/      frozen-MWPM DEM substrate
+# non-core
+audit/        gating / bands / validity (evaluator-side)
+util/         placeholder for small helpers;  numerics.py = NUMERICAL_ZERO floor (root)
 ```
 
-Experiment wrappers stay grouped by family; do not add flat `run_*` modules under
-`scope_static.experiments`. The current B-path / twin work lives in
-`scope_static.experiments.scope_twin` and `scope_static.primitives.diff_*`.
+Full map + per-module scope: `docs/ARCHITECTURE.md`. The SCOPE / discovery /
+observability / catalog / Google / DEM-fault-logit program was removed (ADR 0009).
+⚠ `forward/exact` (density matrix) is feasibility-only — the 50+ qubit target needs
+the `forward/scalable` placeholder.
 
 ## Notation (keep aligned across code and docs)
 
@@ -85,7 +82,7 @@ Experiment wrappers stay grouped by family; do not add flat `run_*` modules unde
 
 ## Numerical floor policy
 
-Use `scope_static.numerics.NUMERICAL_ZERO == 1e-12` for floating numerical floors,
+Use `qec_twin.numerics.NUMERICAL_ZERO == 1e-12` for floating numerical floors,
 simulation thresholds, probability floors, and leftover/complement probabilities
 that would otherwise become exact `0.0`. This value survives square/cube
 operations in GPU float32. `NUMERICAL_FLOOR` is a descriptive alias only. Do not
@@ -125,8 +122,7 @@ conda run -n aiqec python -m pytest -q             # full suite
 
 Do not set `PYTHONPATH="$PWD/src"` on this WSL/CUDA setup; it can interfere with
 PyTorch CUDA/NVML discovery. If a console script is missing after code changes,
-reinstall editable or use the module entrypoint. See `docs/RUNBOOK.md` for the
-full command set.
+reinstall editable or use the module entrypoint.
 
 ## Claim discipline
 

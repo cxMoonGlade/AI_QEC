@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from scope_static.primitives.channels import (
+from qec_twin.forward.channels import (
     M13_DEFAULT_DRIFT_VISIBILITY_SCALE,
     MechanismSpec,
     amplitude_damping_kraus,
@@ -13,19 +13,19 @@ from scope_static.primitives.channels import (
     rz_unitary,
     rzz_unitary,
 )
-from scope_static.primitives.cptp_guardrail import audit_mechanism_physicality, build_cptp_guardrail_audit
-from scope_static.primitives.density_sim import apply_kraus, measurement_probabilities_z
-from scope_static.primitives.mechanism_catalog import IMPLEMENTED_MECHANISM_IDS, MECHANISM_NAMES, READOUT_MECHANISM_IDS, RZZ_FAMILY_IDS
-from scope_static.primitives.mechanism_catalog import CURRENT_VISIBLE_SURFACE_FLAT_EXACT_CLAIM_TARGET_IDS
-from scope_static.primitives.mechanism_catalog import MECHANISM_LEAF_EXACT_IDS, NON_FLAT_PRIMARY_TARGET_IDS, PRIMARY_FLAT_CLUSTER_TARGET_IDS
-from scope_static.primitives.mechanism_catalog import NON_FLAT_PUBLIC_LABELS, PRIMARY_FLAT_PUBLIC_LABELS
-from scope_static.primitives.mechanism_catalog import PUBLIC_LABEL_TO_LEGACY_MECHANISM_ID
-from scope_static.primitives.mechanism_catalog import SURFACE_CONDITIONAL_DIMENSION_TARGET_IDS
-from scope_static.primitives.mechanism_catalog import legacy_mechanism_id, mechanism_label_namespace, mechanism_public_label
-from scope_static.primitives.mechanism_catalog import mechanism_contract, mechanism_taxonomy_contract_audit
-from scope_static.primitives.ptm import channel_fingerprint, ptm_from_kraus, ptm_from_unitary, rzz_ptm_block_audit
-from scope_static.primitives.ptm import probe_response_fingerprint, rzz_type_feature_names, rzz_type_feature_vector
-from scope_static.primitives.probe_catalog import build_default_oracle_mechanisms
+from qec_twin.forward.cptp_guardrail import audit_mechanism_physicality, build_cptp_guardrail_audit
+from qec_twin.forward.exact.density_sim import apply_kraus, measurement_probabilities_z
+from qec_twin.mechanisms.catalog import IMPLEMENTED_MECHANISM_IDS, MECHANISM_NAMES, READOUT_MECHANISM_IDS, RZZ_FAMILY_IDS
+from qec_twin.mechanisms.catalog import CURRENT_VISIBLE_SURFACE_FLAT_EXACT_CLAIM_TARGET_IDS
+from qec_twin.mechanisms.catalog import MECHANISM_LEAF_EXACT_IDS, NON_FLAT_PRIMARY_TARGET_IDS, PRIMARY_FLAT_CLUSTER_TARGET_IDS
+from qec_twin.mechanisms.catalog import NON_FLAT_PUBLIC_LABELS, PRIMARY_FLAT_PUBLIC_LABELS
+from qec_twin.mechanisms.catalog import PUBLIC_LABEL_TO_LEGACY_MECHANISM_ID
+from qec_twin.mechanisms.catalog import SURFACE_CONDITIONAL_DIMENSION_TARGET_IDS
+from qec_twin.mechanisms.catalog import legacy_mechanism_id, mechanism_label_namespace, mechanism_public_label
+from qec_twin.mechanisms.catalog import mechanism_contract, mechanism_taxonomy_contract_audit
+from qec_twin.forward.ptm import channel_fingerprint, ptm_from_kraus, ptm_from_unitary, rzz_ptm_block_audit
+from qec_twin.forward.ptm import probe_response_fingerprint, rzz_type_feature_names, rzz_type_feature_vector
+from qec_twin.contexts.probe_catalog import build_default_oracle_mechanisms
 
 
 def test_amplitude_damping_preserves_trace_and_probabilities_normalize() -> None:
@@ -210,7 +210,7 @@ def test_mechanism_taxonomy_contract_marks_composite_targets_explicitly() -> Non
     audit = mechanism_taxonomy_contract_audit()
 
     assert audit["passed"] is True
-    assert audit["schema"] == "scope_static_mechanism_taxonomy_contract_audit_v2"
+    assert audit["schema"] == "qec_twin_mechanism_taxonomy_contract_audit_v2"
     assert audit["label_scheme"] == "flat_F_nonflat_M_v1"
     assert set(audit["contracts"]) == set(IMPLEMENTED_MECHANISM_IDS)
     assert "M11" not in MECHANISM_LEAF_EXACT_IDS
@@ -339,7 +339,7 @@ def test_cptp_guardrail_accepts_implemented_catalog_mechanisms() -> None:
 
     audit = build_cptp_guardrail_audit(specs)
 
-    assert audit["schema"] == "scope_static_layer1_cptp_guardrail_audit_v1"
+    assert audit["schema"] == "qec_twin_layer1_cptp_guardrail_audit_v1"
     assert audit["passed"] is True
     assert audit["num_failed_records"] == 0
     assert audit["num_mechanism_records"] == len(IMPLEMENTED_MECHANISM_IDS)

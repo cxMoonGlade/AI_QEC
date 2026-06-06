@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import torch
 
-from scope_static.primitives.diff_circuit_sim import (
+from qec_twin.forward.exact.circuit_sim import (
     amplitude_damping,
     apply_channel_local,
     apply_unitary,

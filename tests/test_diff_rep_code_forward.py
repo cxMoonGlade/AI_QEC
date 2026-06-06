@@ -1,7 +1,7 @@
 """B1: exact multi-round repetition-code forward model.
 
 Validates the trajectory-enumerated joint ``p(s, m)`` of
-:mod:`scope_static.primitives.diff_rep_code`:
+:mod:`qec_twin.forward.exact.rep_code`:
 
   * no noise  -> no detections, zero logical readout (the exact limit);
   * a deterministic data flip -> the exact syndrome its wiring must produce;
@@ -17,12 +17,12 @@ from __future__ import annotations
 
 import torch
 
-from scope_static.primitives.diff_circuit_sim import bit_flip, rx
-from scope_static.primitives.diff_cptp_channel import (
+from qec_twin.forward.exact.circuit_sim import bit_flip, rx
+from qec_twin.forward.cptp_channel import (
     StinespringChannel,
     pauli_transfer_matrix,
 )
-from scope_static.primitives.diff_rep_code import (
+from qec_twin.forward.exact.rep_code import (
     rep_code_qubits,
     simulate_rep_code_memory,
 )
@@ -155,7 +155,7 @@ def test_parity_backend_matches_ancilla_on_d3() -> None:
     # equivalent to the full ancilla register for noiseless syndrome extraction --
     # across Pauli, coherent, logical-prep, and basis-rotated cases. This is the
     # safety net for using the parity backend at larger distances.
-    from scope_static.experiments.scope_twin.mechanisms import coherent_overrotation_kraus
+    from qec_twin.mechanisms.teachers import coherent_overrotation_kraus
 
     coherent = coherent_overrotation_kraus(0.02, 0.6)
     cases = [

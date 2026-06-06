@@ -1,6 +1,6 @@
 # QEC Error-Mechanism Digital Twin
 
-`scope_static` is a QEC noise-learning research package. Its goal is a
+`qec_twin` is a QEC noise-learning research package. Its goal is a
 **teacher-learner digital twin of QEC error mechanisms**, structured like a
 quantitative-finance calibration/risk system, that can **recover**,
 **understand**, **manipulate**, and **predict** error mechanisms on
@@ -17,8 +17,8 @@ label-free channel calibration; model-uncertainty bands ≡ alias-induced knob
 bands; Greeks/hedging ≡ `do()` knobs; state-space/regime models ≡ drift. See
 `docs/IDENTIFIABILITY_AND_CRL_SURVEY.md` and `docs/adr/0008-finance-calibration-framing.md`.
 
-> The package name `scope_static` is a stable code identifier only. The earlier
-> "SCOPE / Symmetry-Compressed Orbit-Physical Emulator" thesis, and orbit-sharing
+> The package name `qec_twin` is a stable code identifier only. The earlier
+> orbit-symmetry-compression thesis, and orbit-sharing
 > as an identifiability lever, are retired — see `docs/adr/0009-retire-scope-reframe-twin.md`.
 
 ## Current state
@@ -37,25 +37,19 @@ This is a controlled, exact, small-scale capability result — **not** yet a
 validated real-hardware twin. No Google physical-mechanism, drift, transfer, or
 decoder-utility claim is made.
 
-### Supporting substrate
+### Substrate
 
-- **DEM/Bernoulli core** (`scope_static.dem`): `e_j ~ Bernoulli(p_j)`,
-  `y = A e mod 2`, `lambda_j = logit(p_j)` — parity maps, fault-logit models,
-  exact local-window likelihood, baselines, evidence records.
-- **Controlled physical-mechanism catalog** (`data_preparation` → `teacher` →
-  `learner`): generate teacher-declared noisy QEC observations from unitary/Kraus/
-  readout mechanisms (CPTP/POVM-audited), verify teacher/catalog separability, and
-  train label-free learners that recover and replay the learner-visible
-  distribution. Evaluator-only labels/channels/PTMs/teacher-IDs stay out of the
-  learner path.
-- **Differentiable CPTP substrate** (`scope_static.primitives.diff_cptp_channel`,
-  `diff_circuit_sim`, `diff_rep_code`): a CPTP-by-construction channel decoder plus
-  an exact differentiable circuit-to-observation forward model
-  `p(y|c) = Tr[M_y C(c)(rho0)]`.
-- **Google/Willow real data** (`scope_static.google`): a public syndrome-response
-  visible surface. The current real-data result is a bounded no-oracle visible
-  replay that beats global/mean-only, shuffle, scramble, and stratified-null
-  controls — not hardware mechanism recovery.
+- **Differentiable CPTP substrate** (`qec_twin.primitives`): a
+  CPTP-by-construction channel decoder (`diff_cptp_channel`) plus an exact
+  differentiable circuit-to-observation forward model (`diff_circuit_sim`,
+  `diff_rep_code`), `p(y|c) = Tr[M_y C(c)(rho0)]`, with the reusable mechanism and
+  probe catalog (`mechanism_catalog`, `probe_catalog`).
+- **Minimal DEM** (`qec_twin.dem`): parity map, fault graph, and stim-DEM
+  extraction — the frozen-MWPM-decoder path only.
+
+The B-path mainline is `qec_twin.experiments.twin` (calibration, `do()`
+knobs, validity curve, alias bands, gating). Everything else — the discovery /
+observability / catalog / Google program — was retired and removed (ADR 0009).
 
 ## Install
 
@@ -72,21 +66,17 @@ On the GPU workstation use the `aiqec` environment
 ## Use
 
 ```bash
-scope-static-toolbox        # print the toolbox manifest
-python -m pytest -q         # run the test suite
+python -m pytest -q tests/        # run the test suite (twin B-path + substrate)
 ```
 
-The teacher generator, catalog pipeline, Google V2 visible surface, and B-path
-twin experiments run via console scripts and `scope_static.experiments.*` modules
-— see `docs/RUNBOOK.md` for the full command set. Outputs are written under
-`outputs/`.
+The twin B-path is driven through `qec_twin.experiments.twin` and its
+tests under `tests/test_twin_*.py`; there are no standing console scripts.
 
 ## Docs
 
 - `CONTEXT.md` — glossary and claim boundaries.
 - `AGENTS.md` — main line, doc routing, and working rules.
 - `docs/ARCHITECTURE.md` — module map.
-- `docs/RUNBOOK.md` — install, test, GPU, and experiment commands.
 - `docs/teacher_learner.md` — teacher/learner roles and isolation contract.
 - `docs/TWIN.md` — binding twin spec: object contract, four capabilities, notation.
 - `docs/IDENTIFIABILITY_AND_CRL_SURVEY.md` + `docs/papers/` — the CRL/finance toolset.
