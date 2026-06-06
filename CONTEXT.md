@@ -11,13 +11,14 @@ capabilities: recover / understand / manipulate / predict.
 > names and "orbit field as identifiability lever" are historical; the catalog
 > symbol `omega(j)` survives only as **known teacher structure** (used silently
 > for compute/correctness), never as a thesis. `scope_static` stays as a neutral
-> code handle (not a rename). Spec: `docs/TWIN.md` (archived: `docs/SCOPE_TWIN.md`).
+> code handle (not a rename). Spec: `docs/TWIN.md` (the prior `docs/SCOPE_TWIN.md`
+> was removed; it remains in git history).
 
 ## Terms
 
-- **SCOPE-Twin**: the larger future model class that maps QEC circuit/control context into a physically constrained noise parameter field.
-- **SCOPE-Static**: the fixed-context DEM/Bernoulli path. Stage 1 uses known orbit labels; Stage 2 static discovery learns hidden sharing assignments.
-- **SCOPE-Static Discovery**: the Stage 2 fixed-context prototype that replaces the known orbit map with a learned assignment matrix `S[j, k]` over DEM-fault prototypes.
+- **The twin** (historical name "SCOPE-Twin", retired by ADR 0009): the teacher-learner, finance-structured QEC error-mechanism digital twin — a per-location CPTP channel field with the four capabilities (recover/understand/manipulate/predict). Spec: `docs/TWIN.md`.
+- **DEM/Bernoulli core** (fixed-context path): Stage 1 uses known orbit labels; Stage 2 static discovery learns hidden sharing assignments.
+- **DEM-fault discovery**: the Stage 2 fixed-context prototype that replaces the known orbit map with a learned assignment matrix `S[j, k]` over DEM-fault prototypes.
 - **DEM parity map**: a binary matrix `A in F_2^{B x M}` mapping Bernoulli DEM fault bits to observed detector/logical bits via `y = A e mod 2`.
 - **Fault activation vector**: `e in {0,1}^M`; `e_j ~ Bernoulli(p_j)` records whether effective DEM fault `j` occurred in one shot.
 - **Observation bits**: the concatenation of detector bits and logical observable bits. Their count is `B`.
@@ -27,7 +28,7 @@ capabilities: recover / understand / manipulate / predict.
 - **Orbit**: a known grouping of effective fault mechanisms used for hard sharing or soft feature sharing. Its count is `O`.
 - **Soft feature orbit field**: a compressed fault-logit field `lambda_j = alpha[omega(j)] + dot(beta[omega(j)], phi[j])`, where `phi[j]` is a fixed centered residual feature.
 - **Discovery assignment**: a learned row-stochastic matrix `S` or `Pi`. Do not call it `A`; `A` is reserved for the DEM parity map.
-- **Prototype count**: `K` is the number of discovered Stage 2 DEM-fault prototypes. `K_t` is reserved for later template-specific SCOPE-Discovery.
+- **Prototype count**: `K` is the number of discovered Stage 2 DEM-fault prototypes. `K_t` is reserved for later template-specific discovery.
 - **d_Q^DEM**: the Stage-1 quotient-aware logit distance over only DEM-preserving fault permutations.
 - **Window plan**: a reproducible set of observation-bit windows used by local exact likelihood training/evaluation, including builder config and audit metadata.
 - **Logical-aware window plan**: a window plan that includes the logical observable bit directly, especially through deduplicated logical fault-support windows, so local exact likelihood evidence tests detector-logical coupling rather than detector-local syndromes alone.
@@ -35,9 +36,9 @@ capabilities: recover / understand / manipulate / predict.
 - **Model-comparison effect sizes**: derived evidence fields that rescale excess window NLL into milli-nats per window, paired deltas versus the uncompressed `local` baseline, and diagnostic pseudo-likelihood deltas per shot. These make small but real local-window gaps readable; they do not change the training objective and are not global exact NLL claims.
 - **Likelihood objective**: a prepared training objective over the DEM parity map, such as global exact, detector-only exact, or local-window exact likelihood.
 - **Exact local-window parity likelihood**: the Stage-1 mathematical objective that evaluates the Bernoulli DEM parity model exactly on a prepared set of observation-bit windows. It consumes logits over effective DEM fault columns and is independent of orbit, discovery, Google schedule, or preprocessing choices. It does not choose the windows; detector/logical coverage belongs to the window plan and evidence audit.
-- **GPU batched local-window exact adapter**: the C++/CUDA implementation of local-window exact likelihood that evaluates all prepared windows in one extension call and returns a first-order gradient for SCOPE-Static training.
-- **Evidence record**: one metrics row for a trained SCOPE-Static model, including likelihood source, compression audit, baseline metadata, and threshold inputs.
-- **Experiment plan**: the normalized SCOPE-Static run matrix compiled from YAML, including residual ranks, teacher cases, shot budgets, model names, backend choice, and output identity.
+- **GPU batched local-window exact adapter**: the C++/CUDA implementation of local-window exact likelihood that evaluates all prepared windows in one extension call and returns a first-order gradient for fault-logit training.
+- **Evidence record**: one metrics row for a trained fault-logit model, including likelihood source, compression audit, baseline metadata, and threshold inputs.
+- **Experiment plan**: the normalized experiment run matrix compiled from YAML, including residual ranks, teacher cases, shot budgets, model names, backend choice, and output identity.
 - **Catalog pipeline**: the pre-release controlled-catalog workflow. `data_preparation`, `teacher`, and `learner` are the public code responsibilities. The public layer names are Layer1 preprocessing - teacher generator, Layer 2 teacher self-audit, and Layer 3 learner.
 - **Layer1 preprocessing - teacher generator (`data_preparation`)**: generates mechanism-catalog records, probe schedules, sampled observations, teacher config, sampling audits, and active probe manifests.
 - **Layer 2 teacher self-audit (`teacher`)**: asks whether the declared teacher/catalog can distinguish every generated mechanism from teacher-internal mechanism evidence. A pass establishes teacher/catalog identifiability; it is not a no-leakage learner claim.
@@ -51,12 +52,12 @@ capabilities: recover / understand / manipulate / predict.
 - **2+1 public program surface**: the pre-release toolbox has two supported capabilities plus one active research object: generate teacher-declared noisy QEC observations from a controlled physical-mechanism catalog; learn from learner-visible observations and replay similar visible noisy observation distributions; and, as the "+1", discover the latent mechanism quotient through Stage 3 discovery.
 - **Stage 3 discovery**: learning a latent mechanism quotient from observations, not predicting a provided mechanism label. The learner receives only visible noisy observations and approved visible features; evaluator-only labels, channels, PTMs, Kraus matrices, teacher IDs, and oracle prototypes are withheld from the learner path.
 - **Observational alias class**: a quotient class for mechanisms that induce indistinguishable or near-indistinguishable visible distributions. If `p(y | m_a) ~= p(y | m_b)` on the declared visible surface, the correct discovery output is `m_a ~_obs m_b`, not an arbitrary forced split.
-- **Physicality boundary**: data-preparation mechanism definitions are implemented as unitary channels, Kraus channels, or classical readout assignment matrices. Enabling a mechanism ID selects that catalog definition. The established learner does not yet learn an arbitrary CPTP/GKSL channel family by construction; as of 2026-06 an exact CPTP physical substrate (SCOPE-Twin Layer 3/4 — `scope_static.primitives.diff_cptp_channel` PhysDec channel decoder plus `diff_circuit_sim` exact circuit-to-observation forward model) is an active, prioritized small-scale build toward the mechanism-conditioned noise simulator with knobs, not a validated twin.
+- **Physicality boundary**: data-preparation mechanism definitions are implemented as unitary channels, Kraus channels, or classical readout assignment matrices. Enabling a mechanism ID selects that catalog definition. The established learner does not yet learn an arbitrary CPTP/GKSL channel family by construction; as of 2026-06 an exact CPTP physical substrate (the twin's channel substrate — `scope_static.primitives.diff_cptp_channel` PhysDec channel decoder plus `diff_circuit_sim`/`diff_rep_code` exact circuit-to-observation forward model) is an active small-scale build toward the mechanism-conditioned noise simulator with knobs, not a validated twin.
 - **CPTP guardrail audit**: the data-preparation artifact `cptp_guardrail_audit.json`; it checks complete-positivity representation class, channel dimension, unitary unitarity, Kraus trace preservation, readout stochasticity, and parameter validity for every enabled mechanism record.
 - **separability_v2**: the engineered local-observable sampled-response stress teacher. It is useful for separability and leakage-control evidence, but it is not a Born-rule physical baseline.
 - **Born-local**: an exact local Born-rule diagnostic where sampled local observations come from exact local Born probabilities for CPTP/readout mechanisms. It has effective depth one and is not the full-circuit teacher.
 - **full-circuit-cudaq**: the literal full n-qubit CUDA-Q teacher source at configured circuit depth.
-- **Six-axis physical generation problem**: the project-level SCOPE-Twin target. A physical constraint generation model is not validated merely by emitting CPTP/GKSL objects; it must hold simultaneously across generation fidelity, interpretability, decoder utility, cross-context generalization, drift prediction, and identifiability.
+- **Four capabilities** (the twin's success axes, ADR 0009 — replaces the retired six-axis "SCOPE-Twin physical generation" bar): **recover** (label-free calibration), **understand** (mechanism interpretation + honest alias/uncertainty bands), **manipulate** (channel-level `do()` → ΔLER), **predict** (drift / rare-failure / decoder-impact). Emitting CPTP/GKSL objects is necessary structure, not sufficient evidence; the bar is these four over hardware-realistic noise (`docs/TWIN.md`).
 - **Mechanism-conditioned noise simulator with knobs**: the ideal downstream use of successful mechanism recovery. If mechanisms, locations, and strengths are recovered accurately enough, the model should become a controllable QEC noise simulator: reduce or amplify a mechanism, move or remove a location, forecast drift, generate rare failure cases, and rank calibration or layout actions by predicted logical impact. This is a target use case, not a claim made by current Google visible-replay artifacts.
 - **Intervention unit (knob)**: there is a deliberate gap here. The **end-goal knob** — what an experimentalist would act on — is a specific hardware **location** `E_i` ("fix THIS qubit/gate/location"). With only observational identifiability, whether the per-location channel is resolved (vs only a mechanism **class**) is an identifiability question answered by **probe richness / the alias band** — not by tying parameters. (ADR 0009 retired the earlier orbit-field framing of this gap — `theta = rho(g)·vartheta_omega + U·z`, the "location residual `z`" — as an identifiability lever; orbit-sharing shrinks variance, not the observational alias.) Rule unchanged: do not present a class-level finding as a location-level instruction; report the per-location knob with its alias/uncertainty band (`docs/TWIN.md`, the Tier-0 band).
 - **do() / intervention**: a knob is realized as a parameterization-independent, channel-level transformation of the CPTP channel (`E_{i,t}`, the local channel `mathcal E` in `docs/TWIN.md`), not as an edit of a teacher-native parameter (`epsilon`/`gamma`/axis) — those are not functions of the channel alone, so they are ambiguous on a channel recovered only up to the observational alias quotient. Canonical do()s, in increasing alias-sensitivity: **remove** (`E -> I`, unambiguous), **scale strength** (generator `L -> k*L`, `E = exp(k*L)`; requires a declared log branch and a CPTP guardrail — see ADR 0007), **structural** (axis or coherent-vs-stochastic reweight). Counterfactual validity is scored on the observable consequence `Delta p(y)` of the same do() applied to the teacher's true channel and the twin's recovered channel — never by comparing channels directly.
@@ -96,11 +97,10 @@ capabilities: recover / understand / manipulate / predict.
 
 ## Claim Boundary
 
-The long-horizon problem for the project is the six-axis physical generation
-problem: prove that physically constrained generation is faithful, interpretable,
-useful to decoders, cross-context generalizing, drift-predictive, and
-identifiable at the same time. CPTP/GKSL parameterization is only one constraint
-mechanism, not the claim by itself.
+The long-horizon target is a twin that is simultaneously faithful, interpretable,
+useful to decoders, cross-context generalizing, drift-predictive, and identifiable
+— the four capabilities recover / understand / manipulate / predict (ADR 0009).
+CPTP/GKSL parameterization is one constraint mechanism, not the claim by itself.
 
 Operationally, the desired endpoint is not just a generator that reproduces
 syndrome samples. The desired endpoint is a mechanism-conditioned noise simulator
@@ -117,14 +117,14 @@ quotient-aware recovery, and controlled-catalog physical-mechanism observations.
 Data-preparation mechanisms are implemented as unitary/Kraus/readout
 definitions, but the established learner does not yet learn an arbitrary
 CPTP/GKSL channel family by construction. As of 2026-06 an exact CPTP physical
-substrate (SCOPE-Twin Layer 3/4, `scope_static.primitives.diff_cptp_channel` and
-`diff_circuit_sim`) is an active, prioritized small-scale build toward the
+substrate (the twin's channel substrate, `scope_static.primitives.diff_cptp_channel`,
+`diff_circuit_sim`, and `diff_rep_code`) is an active small-scale build toward the
 interventional twin; it is a capability substrate, not a validated twin, so the
 claims below still stand. The package does not claim unsupervised latent
 mechanism discovery, real-hardware ground-truth mechanism recovery, Born-rule
 likelihood, context-conditioned amortization, OOD transfer, temporal drift
-tracking, decoder utility, or a complete solution to the six-axis physical
-generation problem.
+tracking, decoder utility, or a complete validated twin across the four
+capabilities (recover / understand / manipulate / predict).
 
 Stage 2A static discovery is implemented as a synthetic-first identifiability
 path. It may claim latent assignment recovery only when synthetic teacher runs
@@ -147,10 +147,8 @@ Stage 3's Google real-data closeout is bounded to no-oracle replay of public
 raw syndrome-response structure, not real physical mechanism recovery. The V2
 surface beats global/mean-only, assignment-shuffle, feature-scramble, and public
 stratified-null controls on raw-target-only scoring; Google still provides no
-ground-truth mechanism partition. Stronger learned representations belong to
-S4 neural syndrome-response discovery. The S4 execution roadmap is
-`docs/STAGE4_ROADMAP.md`; its first gate is bridge-surface survival, not neural
-training.
+ground-truth mechanism partition. Stronger learned representations remain future work; the retired orbit-bridge
+"Stage 4" roadmap has been removed (ADR 0009).
 
 The current S5 controlled milestone is closed only for the controlled
 full-circuit catalog artifact: S3D4b postmerge assignments recover the 35 legacy

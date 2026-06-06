@@ -1,8 +1,8 @@
 # The Twin — A Teacher-Learner, Finance-Structured QEC Error-Mechanism Digital Twin
 
-This is the current binding spec for "the twin." It supersedes
-[`docs/SCOPE_TWIN.md`](SCOPE_TWIN.md) (archived), whose SCOPE / orbit-symmetry-
-compression thesis was retired by [ADR 0009](adr/0009-retire-scope-reframe-twin.md).
+This is the current binding spec for "the twin." It supersedes the retired
+SCOPE thesis (old `docs/SCOPE_TWIN.md`, removed — in git history), whose SCOPE /
+orbit-symmetry-compression thesis was retired by [ADR 0009](adr/0009-retire-scope-reframe-twin.md).
 ADR 0007 (B methodology) and ADR 0008 (finance framing) are the methodological core.
 
 "The twin" is the descriptive name until a new one is chosen. The code package
@@ -142,7 +142,7 @@ block-normalized score plus controls remains the Google V2 headline, not
 
 The retired SCOPE thesis (symmetry-compressed orbit-physical emulator, the L2
 orbit-compression field `θ = ρ(g)ϑ_ω + Uz`, the six-axis physical-generation bar)
-is preserved in [`docs/SCOPE_TWIN.md`](SCOPE_TWIN.md) for the record. Its
+is preserved in git history (the old `docs/SCOPE_TWIN.md` was removed). Its
 implementation substrate (DEM/Bernoulli core, controlled catalog, Stage-3 visible
 discovery, the exact CPTP primitives) remains valid; only the SCOPE wrapping was
 reframed.

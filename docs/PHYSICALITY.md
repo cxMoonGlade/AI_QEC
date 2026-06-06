@@ -45,7 +45,7 @@ Not claimed yet:
 - proof that every future user-supplied custom channel is physical without a
   per-run audit.
 
-As of 2026-06, an exact CPTP physical substrate (SCOPE-Twin Layer 3/4: a
+As of 2026-06, an exact CPTP physical substrate (the twin's CPTP substrate: a
 CPTP-by-construction channel decoder and an exact differentiable
 circuit-to-observation forward model, `scope_static.primitives.diff_cptp_channel`
 and `diff_circuit_sim`) is an active, prioritized small-scale build. It makes the

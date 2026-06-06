@@ -6,7 +6,7 @@ physical-channel learner.
 
 ## Core Notation
 
-For SCOPE-Static Stage 1 and Stage 2 discovery, the data model is the
+For the DEM/Bernoulli core (Stage 1 and Stage 2 discovery), the data model is the
 canonicalized DEM/Bernoulli parity model:
 
 ```text
@@ -42,10 +42,10 @@ first-class physical-process generator. It validates catalog definitions as
 unitary channels, Kraus channels, or classical readout assignment matrices
 before sampling and blocks failed artifacts with a post-sampling physicality
 audit. The established learner is not yet an arbitrary CPTP/GKSL channel learner
-by construction; as of 2026-06 an exact CPTP physical substrate (SCOPE-Twin
-Layer 3/4, `scope_static.primitives.diff_cptp_channel` / `diff_circuit_sim`) is
+by construction; as of 2026-06 an exact CPTP physical substrate (the twin's CPTP substrate,
+`scope_static.primitives.diff_cptp_channel` / `diff_circuit_sim`) is
 an active, prioritized small-scale build toward the interventional twin (see
-`docs/SCOPE_TWIN.md`).
+`docs/TWIN.md`).
 
 
 ## Response-Surface Intuition
@@ -89,7 +89,7 @@ A **teacher** is the source of reference truth for an experiment.
 
 Implemented forms:
 
-- SCOPE-Static: defines hidden `omega(j)`, teacher logits `lambda_j`, sampled
+- DEM/Bernoulli core: defines hidden `omega(j)`, teacher logits `lambda_j`, sampled
   faults `e_j ~ Bernoulli(p_j)`, and observations `y = A e mod 2`.
 - S2D catalog work: Layer1 preprocessing - teacher generator generates
   physical mechanism cases, Layer 2 teacher self-audit checks

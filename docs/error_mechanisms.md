@@ -1,13 +1,13 @@
 # Physical Error Mechanisms
 
-This note is the canonical mechanism taxonomy for the SCOPE-Static physical
-teacher work. It combines the implemented PHYS/PHYC mechanism IDs with the
-larger controlled-gate error library we want SCOPE-Twin to grow into.
+This note is the canonical mechanism taxonomy for the twin's physical teacher
+work. It combines the implemented PHYS/PHYC mechanism IDs with the larger
+controlled-gate error library we want the twin to grow into.
 
 For claim boundaries, use `CONTEXT.md` first: the implemented package is still
-a fixed-context SCOPE-Static research stack. The long-horizon target is the
-six-axis physical generation problem. CPTP/GKSL structure is one constraint
-mechanism, not the whole claim.
+a fixed-context DEM/Bernoulli research stack. The long-horizon target is the
+twin's four capabilities — recover / understand / manipulate / predict (ADR 0009).
+CPTP/GKSL structure is one constraint mechanism, not the whole claim.
 
 Physicality boundary: the catalog entries below are implemented as unitary
 channels, Kraus channels, or classical readout assignment matrices. Enabling a

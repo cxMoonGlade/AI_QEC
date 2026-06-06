@@ -130,4 +130,4 @@ market does not.
 
 Literature backing and per-paper relevance: `docs/papers/README.md`. Survey:
 `docs/IDENTIFIABILITY_AND_CRL_SURVEY.md`. Prior decisions: ADR 0006 (build order),
-ADR 0007 (B validation methodology). Object contract: `docs/SCOPE_TWIN.md`.
+ADR 0007 (B validation methodology). Object contract: `docs/TWIN.md`.

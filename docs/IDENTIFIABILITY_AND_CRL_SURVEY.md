@@ -1,8 +1,8 @@
-# Identifiability and Causal Representation Learning: Survey and Application to SCOPE-Twin
+# Identifiability and Causal Representation Learning: Survey and Application to the twin
 
 This note records a survey of tools from causal representation learning (CRL),
 identifiable latent-variable models, and quantitative finance that are directly
-applicable to the SCOPE-Twin alias quotient and counterfactual validity problems.
+applicable to the the twin alias quotient and counterfactual validity problems.
 It is a reference document, not a claim: none of the tools below have been
 validated on this codebase yet.
 
@@ -12,7 +12,7 @@ The observation that motivated this survey: the QEC noise-learning problem and t
 latent-factor identification problem in quantitative finance are structurally
 isomorphic. The precise correspondence is:
 
-| QEC (SCOPE-Twin) | Finance / CRL |
+| QEC (the twin) | Finance / CRL |
 |---|---|
 | Observational alias quotient: `p(y\|m_a) ≈ p(y\|m_b)` | Factor rotation indeterminacy: `Σ = L Lᵀ = (LR)(LR)ᵀ` |
 | DEM parity map `A ∈ F₂^{B×M}` (sparse, known) | Factor loading matrix (dense, unknown) |
@@ -22,7 +22,7 @@ isomorphic. The precise correspondence is:
 | Noise drift across calibration periods | Time-varying factor loadings / regime switching |
 | CUDA-Q teacher (exact controlled ground truth) | No analogue in pure finance |
 
-The last row is the critical asymmetry: unlike finance, SCOPE-Twin has a
+The last row is the critical asymmetry: unlike finance, the twin has a
 controlled teacher that enables direct counterfactual validation at small scale.
 This is the justification for the B path (ADR 0006) and makes the QEC setting
 more favorable than pure finance for closing the observational-vs-interventional
@@ -31,7 +31,7 @@ gap.
 The alias quotient problem belongs to the CRL literature. CRL has produced a body
 of rigorous identifiability results in the past five years that directly address
 the rotation / alias / indeterminacy problem. The sections below survey the most
-applicable results and their mapping to SCOPE-Twin.
+applicable results and their mapping to the twin.
 
 ## Applicable Tools
 
@@ -58,7 +58,7 @@ generating the same `p(y, u)` are related by component-wise monotone
 transformations and a permutation. This is the minimal unavoidable equivalence
 class for latent variable models.
 
-**Mapping to SCOPE-Twin.** The calibration contexts `r = 0..4` are the auxiliary
+**Mapping to the twin.** The calibration contexts `r = 0..4` are the auxiliary
 variable `u`. The noise mechanism strengths are the latent `z`. With `k = 1`
 sufficient statistic per mechanism and `5` distinct contexts, up to `n = 4`
 mechanisms are identifiable. Identifying `n` mechanisms requires `nk + 1` contexts.
@@ -90,7 +90,7 @@ and element-wise transformation if and only if each latent factor `zⱼ` has at
 least two **anchor features**: observed coordinates that load on `zⱼ` alone (zero
 loading from all other factors).
 
-**Mapping to SCOPE-Twin.** An anchor feature for mechanism `j` is a syndrome bit
+**Mapping to the twin.** An anchor feature for mechanism `j` is a syndrome bit
 `b` such that the DEM parity map column `A_{:,j}` has `A_{b,j} = 1` and
 `A_{b,j'} = 0` for all `j' ≠ j`. In other words, syndrome bit `b` fires only
 when mechanism `j` is active and no other mechanism can trigger it.
@@ -138,7 +138,7 @@ activates phase-sensitive mechanisms. The sparsity of these shifts across contex
 is precisely the MSS condition.
 
 UT-IGSP handles unknown intervention targets (which mechanisms each context
-perturbs) — the realistic case for SCOPE-Twin, since no context surgically isolates
+perturbs) — the realistic case for the twin, since no context surgically isolates
 a single mechanism. Applied to polarization vectors across contexts, it returns
 the interventional Markov equivalence class of the mechanism interaction graph.
 
@@ -159,7 +159,7 @@ latent factor influences only the observed coordinates physically reachable by
 that mechanism — achieves identifiability up to permutation when a graph
 connectivity criterion is satisfied.
 
-**Mapping to SCOPE-Twin.** The known DEM footprint of each mechanism (the set of
+**Mapping to the twin.** The known DEM footprint of each mechanism (the set of
 syndrome bits in column `j` of `A`) is the natural sparsity mask for the decoder.
 Regularizing `diff_cptp_channel`'s syndrome prediction to respect the known DEM
 structure is both physically motivated and provably sufficient for identifiability.
@@ -184,7 +184,7 @@ subsets `S` have an invariant conditional distribution `p(Y | X_S)` across
 environments. In the linear Gaussian case, invariance reduces to testing whether
 residuals are i.i.d. across environments.
 
-**Mapping to SCOPE-Twin.** The target `Y` is the logical error rate `P_L`; the
+**Mapping to the twin.** The target `Y` is the logical error rate `P_L`; the
 candidates are noise mechanism strengths `{m₁, …, m_M}`. ICP in mechanism space
 asks which mechanisms are causal parents of `P_L` with a conditional distribution
 that is invariant across calibration contexts.
@@ -223,7 +223,7 @@ The sliding-window Pauli drift estimator (arXiv:2511.09491) operates directly on
 syndrome data without prior decoding, provides analytically optimal window sizes,
 and handles multi-frequency drift in a single pass.
 
-**For SCOPE-Twin.** Replace the Ramsey/Hahn echo likelihood (from the IBM
+**For the twin.** Replace the Ramsey/Hahn echo likelihood (from the IBM
 calibration context) with the exact syndrome NLL from `diff_circuit_sim`. The
 sequential update structure is identical. The SMC-MCMC approach naturally handles
 abrupt jumps (volatile drift) that standard Kalman filters miss.
@@ -247,7 +247,7 @@ positivity). The neural HJM implementation enforces the constraint as a soft
 penalty rather than a hard projection — the same approach available for CPTP in
 the Pauli error rate parameterization.
 
-**Finance lesson for SCOPE-Twin.** Impose CPTP as a soft Choi-PSD penalty in the
+**Finance lesson for the twin.** Impose CPTP as a soft Choi-PSD penalty in the
 Pauli error rate parameterization during calibration, not as a hard projection
 after each gradient step. Hard projections on Stiefel manifolds (Kraus form)
 introduce gauge freedom; the Pauli rate parameterization (linear constraints) does
@@ -265,7 +265,7 @@ distributions are not point-identified from observational data alone, even with
 known causal structure and no hidden confounding. A model that perfectly fits all
 5 calibration-context syndrome distributions can still give wrong `do()` answers.
 
-**Implication for SCOPE-Twin.** This is the central risk formalized. Counterfactual
+**Implication for the twin.** This is the central risk formalized. Counterfactual
 validity cannot be established from observational equivalence alone. The CUDA-Q
 teacher is the only available path to empirical b-validity validation (ADR 0006).
 

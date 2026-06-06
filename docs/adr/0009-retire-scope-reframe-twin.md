@@ -83,7 +83,7 @@ symmetry-compression, is the spine.
 - **The implementation record stays valid.** The DEM/Bernoulli core, the
   controlled catalog, and the Stage-3/5 work remain the teacher-learner substrate;
   only their SCOPE-thesis wrapping is reframed.
-- **Doc/memory propagation required** (reframe, not delete): `docs/SCOPE_TWIN.md`
+- **Doc/memory propagation required** (reframe or remove): `docs/SCOPE_TWIN.md` (now removed; replaced by `docs/TWIN.md`)
   (the L2 orbit field + six-axis SCOPE thesis), `README.md`, `AGENTS.md`,
   `CONTEXT.md` (the knob-gap entry built on the orbit field), and the
   `qec-digital-twin-goal` memory (states the orbit field as "the identifiability

@@ -33,8 +33,8 @@ and scalability is a future selection criterion, not a now-decision (ADR 0009).
 - `docs/ARCHITECTURE.md`: code architecture and module map.
 - `docs/RUNBOOK.md`: install, test, GPU, and the full experiment command set.
 - `docs/teacher_learner.md`: teacher / learner roles and the isolation contract.
-- `docs/SCOPE_TWIN.md`: twin object contract `p(y|c)=Tr[M_y C(c)(rho0)]` and
-  reserved notation.
+- `docs/TWIN.md`: binding twin spec — object contract `p(y|c)=Tr[M_y C(c)(rho0)]`,
+  the four capabilities, finance methodology, and reserved notation.
 - `docs/IDENTIFIABILITY_AND_CRL_SURVEY.md`: causal-representation-learning,
   identifiable-latent-variable, and finance tools for the alias-quotient and
   counterfactual-validity problems; action items + reference list.

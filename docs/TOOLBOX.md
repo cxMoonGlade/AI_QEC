@@ -1,4 +1,4 @@
-# SCOPE-Static Toolbox
+# Toolbox
 
 `scope-static` is a pre-release toolbox for physical-mechanism QEC experiments.
 It is organized as reusable tools rather than a single end-to-end claim.
@@ -19,7 +19,7 @@ It is organized as reusable tools rather than a single end-to-end claim.
    inference.
 
 3. **The +1: discover the latent mechanism quotient.** Stage 3 removes direct
-   mechanism-label supervision and asks whether SCOPE-Discovery can learn the
+   mechanism-label supervision and asks whether the discovery path can learn the
    latent mechanism structure, assignments, prototypes, and observational alias
    classes from visible observations alone.
 
@@ -163,13 +163,7 @@ mechanism-label supervision and test whether latent mechanism structure can be
 inferred from visible observations alone.
 
 The toolbox does not yet claim real-hardware ground-truth mechanism recovery,
-arbitrary CPTP/GKSL channel learning by construction, complete SCOPE-Twin
-physical generation, decoder utility, drift prediction, or cross-context
-generalization.
+arbitrary CPTP/GKSL channel learning by construction, a complete validated twin,
+decoder utility, drift prediction, or cross-context generalization.
 
-Roadmaps:
-
-- `docs/STAGE2_ROADMAP.md`: closed Stage 2 validation record.
-- `docs/STAGE3_ROADMAP.md`: active Stage 3 discovery plan.
-- `docs/STAGE4_ROADMAP.md`: S4 bridge-survival, neural pretrain, and
-  frozen-transfer gates.
+Decisions and current spec: `docs/adr/` (spine 0006 → 0009) and `docs/TWIN.md`.

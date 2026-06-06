@@ -140,5 +140,5 @@ prioritized build: `scope_static.primitives.diff_cptp_channel` (a
 CPTP-by-construction PhysDec channel decoder plus differentiable recovery) and
 `scope_static.primitives.diff_circuit_sim` (an exact differentiable n-qubit
 circuit-to-observation forward model, `p_Theta(y|c) = Tr[M_y C_Theta(c)(rho_0)]`).
-It is a small-scale capability substrate toward the SCOPE-Twin, not a validated
-twin; see `docs/SCOPE_TWIN.md`.
+It is a small-scale capability substrate toward the twin, not a validated
+twin; see `docs/TWIN.md`.
