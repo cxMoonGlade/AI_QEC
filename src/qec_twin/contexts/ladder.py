@@ -4,7 +4,7 @@ from __future__ import annotations
 
 A *context* ``c`` is a runnable calibration/eval circuit -- here parameterized by
 (distance, rounds, logical-prep basis); richer levels (basis-rotated /
-coherent-sensitive probes) extend it later. ADR 0007 fixes the ladder structure
+coherent-sensitive probes) extend it later. ADR 0003 fixes the ladder structure
 ``r = 0..4`` (the same local channel slot reused across contexts so context
 diversity breaks the observational alias quotient); this module instantiates it
 for the repetition code and provides a held-out eval context disjoint from the
@@ -94,7 +94,7 @@ def _level_contexts(richness: int, distance: int) -> list[RepCodeContext]:
     """The *new* contexts introduced at ladder level ``richness`` (cumulative).
 
     The ladder climbs from Z-basis memory (blind to coherence) to coherence-
-    stressing and basis-rotated probes (ADR 0007 ``r=0..4``):
+    stressing and basis-rotated probes (ADR 0003 ``r=0..4``):
       r0  single ``|0_L>`` memory;
       r1  more rounds + both logical bases (still Z-basis);
       r2  repeated-storage probes (``RX(k theta)`` accumulation -- coherence stress);

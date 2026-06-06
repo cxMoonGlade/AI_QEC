@@ -1,10 +1,10 @@
-# ADR 0009: Retire the SCOPE Framing — Reframe as a Teacher-Learner, Finance-Structured Error-Mechanism Digital Twin
+# ADR 0005: Retire the SCOPE Framing — Reframe as a Teacher-Learner, Finance-Structured Error-Mechanism Digital Twin
 
 ## Status
 
 Accepted (2026-06-05). Supersedes the orbit-compression "A" step and the SCOPE
-thesis statement of ADR 0006; subsumes the orbit-sharing retirement. ADR 0007
-(B methodology) and ADR 0008 (finance framing) carry forward unchanged and become
+thesis statement of ADR 0002; subsumes the orbit-sharing retirement. ADR 0003
+(B methodology) and ADR 0004 (finance framing) carry forward unchanged and become
 the methodological core.
 
 ## Context
@@ -26,7 +26,7 @@ identifiability lever. Two findings retire it:
 
 The work has converged on a different organizing principle, load-bearing all
 session: the QEC mechanism-learning problem is structurally the
-quantitative-finance calibration/risk problem (ADR 0008). That analogy, not
+quantitative-finance calibration/risk problem (ADR 0004). That analogy, not
 symmetry-compression, is the spine.
 
 ## Decision
@@ -95,5 +95,5 @@ symmetry-compression, is the spine.
 
 ## References
 
-ADR 0006 (superseded "A"), 0007 (B methodology), 0008 (finance framing),
+ADR 0002 (superseded "A"), 0003 (B methodology), 0004 (finance framing),
 `docs/IDENTIFIABILITY_AND_CRL_SURVEY.md`, `docs/papers/`.

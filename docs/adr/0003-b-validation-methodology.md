@@ -1,14 +1,14 @@
-# ADR 0007: B Feasibility-Validation Methodology
+# ADR 0003: B Feasibility-Validation Methodology
 
 ## Status
 
-Accepted. The B5 deliverable here is refined by ADR 0008 (derivatives-calibration
+Accepted. The B5 deliverable here is refined by ADR 0004 (derivatives-calibration
 framing): calibrate-on-`r≤k`/predict-held-out-`r`, uncertainty bands, and a
 pre-registered negative-control failure mode.
 
 ## Context
 
-ADR 0006 builds B first: a controlled feasibility step asking whether a
+ADR 0002 builds B first: a controlled feasibility step asking whether a
 label-free CPTP twin can produce trustworthy counterfactual ("knob") answers,
 validated against controlled-teacher ground truth. The binding risk is that an
 observational fit identifies the channel field only up to the observational
@@ -19,7 +19,7 @@ correlations, as SI1000/DEM use) is inadequate here: those low-order moments are
 exactly what a stochastic Pauli channel reproduces, so moment matching
 Pauli-shadows the coherent/non-Clifford structure that is the whole point of the
 exact CPTP substrate. The toy is an exactly-simulable small repetition code
-(ADR 0006 / Q3).
+(ADR 0002 / Q3).
 
 ## Decision
 
@@ -85,7 +85,8 @@ label-free twin yields trustworthy, decoder-relevant knobs."
 - Tier-1 strength scaling `exp(k * Log(E))` is well-defined and CPTP only when
   `E` is infinitesimally divisible (principal log exists / small-noise) or is
   recovered as a GKSL generator (`k * L` is then valid by construction). Before
-  the GKSL PhysDec (ADR 0006 step A), B uses Tier 0 plus a CPTP-safe weakening
+  the GKSL PhysDec (deferred — the orbit-"A" step that originally carried it is
+  retired, ADR 0005), B uses Tier 0 plus a CPTP-safe weakening
   `(1-a) I + a E`, `a in [0, 1]`; full generator-scaling (incl. amplify `k > 1`)
   lands with the GKSL PhysDec. This is an additional motivation for the GKSL form.
 - The same observation-NLL plus probe-richness framing transfers to the real-data

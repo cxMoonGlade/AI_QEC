@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""D3 Tier 0 (ADR 0008): the closed-form Laplace ellipsoid alias/uncertainty band.
+"""D3 Tier 0 (ADR 0004): the closed-form Laplace ellipsoid alias/uncertainty band.
 
 This is the band *method* for the D3 phase: a single first-order, closed-form
 expression that is simultaneously the slack-coupling formula AND the D5a audit AND

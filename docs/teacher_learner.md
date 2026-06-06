@@ -6,7 +6,7 @@ In the twin (`docs/TWIN.md`), "teacher" and "learner" are:
   (`experiments.twin.mechanisms`): a small, exactly-simulable system (e.g. a
   coherent over-rotation rep-code teacher) whose true channels and true
   `do() -> ΔLER` are **known**. It is the counterfactual ground truth — the only
-  thing that can validate a knob, since calibration fit alone cannot (ADR 0006/0007).
+  thing that can validate a knob, since calibration fit alone cannot (ADR 0002/0003).
 - **Learner** — label-free calibration
   (`experiments.twin.calibration`): recovers the local CPTP channel field
   `E` by exact multi-context Born-rule observation-NLL over the probe-richness
@@ -36,5 +36,5 @@ survives only as the **frozen decoder** substrate (`dem.stim_dem`,
 
 The earlier catalog teacher/learner packages (`data_preparation`, `teacher`,
 `learner`) and the DEM fault-logit / discovery program were retired and removed
-(ADR 0009). The teacher-learner *method* — a controlled teacher for ground truth +
+(ADR 0005). The teacher-learner *method* — a controlled teacher for ground truth +
 a label-free learner — survives in the twin B-path.

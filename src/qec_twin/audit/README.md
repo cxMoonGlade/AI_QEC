@@ -12,4 +12,4 @@ ASSESS the four capability modules; they are not themselves a model capability
   held-out exotic) + negative controls (D2/D4).
 
 **Boundary.** Evaluator-only. May read teacher ground truth to *score* validity;
-never feeds the learner. Spec: ADR 0007 / 0008, `docs/TWIN.md`.
+never feeds the learner. Spec: ADR 0003 / 0004, `docs/TWIN.md`.

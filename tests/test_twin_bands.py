@@ -1,4 +1,4 @@
-"""D3 Tier 0 (ADR 0008): closed-form Laplace alias/uncertainty band.
+"""D3 Tier 0 (ADR 0004): closed-form Laplace alias/uncertainty band.
 
 The band ``(z/sqrt(N)) sqrt(g^T H^+ g)`` covers the controlled-teacher's true
 knob, shrinks with probe richness (the alias quotient collapsing, as a closed

@@ -13,7 +13,7 @@ Backends:
 - `exact/` — **density-matrix simulation. ⚠ FEASIBILITY-ONLY** (`2^n × 2^n`,
   unusable past ~15 qubits). Validates the B-path loop, then abandoned.
 - `scalable/` — **placeholder** for the >50-qubit backend (target noise circuits);
-  carrier deferred (ADR 0009).
+  carrier deferred (ADR 0005).
 
 **Boundary.** The channel object and the four capability modules do NOT depend on
 the backend — swapping `exact → scalable` is a backend replacement, not a rewrite.

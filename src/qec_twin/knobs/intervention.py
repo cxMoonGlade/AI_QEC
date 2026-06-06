@@ -3,12 +3,12 @@ from __future__ import annotations
 """B4: channel-level ``do()`` knobs, a frozen decoder, and the ``B_*`` scores.
 
 Interventions are parameterization-independent transforms of a *channel* (a Kraus
-stack), not edits to teacher parameters (ADR 0007 / the ``do()`` glossary):
+stack), not edits to teacher parameters (ADR 0003 / the ``do()`` glossary):
 
   * Tier 0 -- ``do(E_i -> I)`` (remove a location's noise), unambiguous;
   * Tier 1 -- ``do(E_i -> (1-a) I + a E_i)``, a CPTP-safe weakening (convex mix
     with the identity stays CPTP for any ``a in [0, 1]``). Full generator-scaling
-    ``exp(k Log E)`` with amplification waits for the GKSL PhysDec (ADR 0006 A).
+    ``exp(k Log E)`` with amplification waits for the GKSL PhysDec (deferred; ADR 0003).
 
 The decoder ``D`` is predeclared and frozen: a single MWPM matching built from the
 eval circuit's detector error model at a uniform nominal noise (so edge weights

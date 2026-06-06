@@ -14,9 +14,9 @@ Overview and method
 Exact density-matrix simulation at small ``n`` (<= ~10 qubits), prioritizing
 fidelity over scale. Local operators are embedded into the full register by
 Kronecker product with identity plus an axis permutation -- simple and exact at
-this scale. The index-contraction / DEM-with-coherent-corrections optimization
-for device scale (72-105 qubits) is the *next* L2 sub-step and is deliberately
-not done here.
+this scale. The optimization for device scale (72-105 qubits) is the *next* step —
+a scalable backend (``forward/scalable``; carrier deferred, ADR 0005) — and is
+deliberately not done here.
 
 Qubit ordering: qubit 0 is the most-significant tensor factor, so a basis index
 ``i`` encodes bit ``(i >> (n - 1 - q)) & 1`` for qubit ``q`` (matches

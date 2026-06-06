@@ -2,7 +2,7 @@ from __future__ import annotations
 
 """B5: counterfactual-validity-vs-probe-richness curve and negative controls.
 
-The deliverable of the B feasibility step (ADR 0007): for each probe richness
+The deliverable of the B feasibility step (ADR 0003): for each probe richness
 ``r``, calibrate the twin label-free on ``C_cal(r)`` and score how well its
 *counterfactual* (``do()``) predictions match the controlled teacher's *true*
 ones on a held-out eval circuit. The point the curve makes precise is the central
@@ -113,7 +113,7 @@ def validity_curve(
 
 
 # --------------------------------------------------------------------------- #
-# D2 (ADR 0008): calibrate-on-r<=k, predict held-out exotics                     #
+# D2 (ADR 0004): calibrate-on-r<=k, predict held-out exotics                     #
 # --------------------------------------------------------------------------- #
 def predict_held_out_curve(
     teacher_field,
@@ -128,7 +128,7 @@ def predict_held_out_curve(
     seed: int = 0,
     interventions=None,
 ) -> dict[str, object]:
-    """Finance "calibrate-on-vanilla / price-the-exotic" protocol (ADR 0008 D2).
+    """Finance "calibrate-on-vanilla / price-the-exotic" protocol (ADR 0004 D2).
 
     For each calibration richness ``k``: calibrate the twin label-free on
     ``C_cal(k)`` only, then *predict* two held-out targets it never calibrated on

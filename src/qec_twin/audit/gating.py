@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""D5 (ADR 0008): identifiability gating that predicts the validity curve.
+"""D5 (ADR 0004): identifiability gating that predicts the validity curve.
 
 The gating is NOT monolithically pre-D2. It splits:
 

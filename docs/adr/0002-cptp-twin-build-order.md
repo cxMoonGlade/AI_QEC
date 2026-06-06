@@ -1,8 +1,14 @@
-# ADR 0006: CPTP Twin Build Order — Validate the Counterfactual Loop First
+# ADR 0002: CPTP Twin Build Order — Validate the Counterfactual Loop First
 
 ## Status
 
-Accepted.
+Accepted — **superseded in part by [ADR 0005](0005-retire-scope-reframe-twin.md).**
+The **B-first** build order below stands and is validated. The **"A next" step** — the
+orbit-compression field / the SCOPE thesis that orbit-sharing shrinks the alias class —
+is **retired**: probe richness (data), not parameter sharing, broke the alias, and
+orbit/factor sharing is now a flexible scalability/regularization approximation, not an
+identifiability lever (ADR 0005). Read the A / `theta` / `vartheta` / Layer-2 language
+below (and the stale `qec_twin.primitives.*` paths) as historical.
 
 ## Context
 

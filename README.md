@@ -15,11 +15,11 @@ The organizing principle is the structural isomorphism between QEC mechanism
 learning and quantitative-finance calibration: vol-surface calibration ≡
 label-free channel calibration; model-uncertainty bands ≡ alias-induced knob
 bands; Greeks/hedging ≡ `do()` knobs; state-space/regime models ≡ drift. See
-`docs/IDENTIFIABILITY_AND_CRL_SURVEY.md` and `docs/adr/0008-finance-calibration-framing.md`.
+`docs/IDENTIFIABILITY_AND_CRL_SURVEY.md` and `docs/adr/0004-finance-calibration-framing.md`.
 
 > The package name `qec_twin` is a stable code identifier only. The earlier
 > orbit-symmetry-compression thesis, and orbit-sharing
-> as an identifiability lever, are retired — see `docs/adr/0009-retire-scope-reframe-twin.md`.
+> as an identifiability lever, are retired — see `docs/adr/0005-retire-scope-reframe-twin.md`.
 
 ## Current state
 
@@ -31,7 +31,7 @@ results — calibration recovers the teacher to machine precision; **probe richn
 breaks the observational alias** (out-of-basis exotic prediction error collapses
 ~10⁵× once basis-rotated probes enter calibration); the recovered knob matches the
 teacher's true ΔLER; moment-matched and shuffled-channel twins fail as
-pre-registered. See ADR 0006/0007/0008.
+pre-registered. See ADR 0002/0003/0004.
 
 This is a controlled, exact, small-scale capability result — **not** yet a
 validated real-hardware twin. No Google physical-mechanism, drift, transfer, or
@@ -39,17 +39,21 @@ decoder-utility claim is made.
 
 ### Substrate
 
-- **Differentiable CPTP substrate** (`qec_twin.primitives`): a
-  CPTP-by-construction channel decoder (`diff_cptp_channel`) plus an exact
-  differentiable circuit-to-observation forward model (`diff_circuit_sim`,
-  `diff_rep_code`), `p(y|c) = Tr[M_y C(c)(rho0)]`, with the reusable mechanism and
-  probe catalog (`mechanism_catalog`, `probe_catalog`).
-- **Minimal DEM** (`qec_twin.dem`): parity map, fault graph, and stim-DEM
-  extraction — the frozen-MWPM-decoder path only.
+- **Exact differentiable forward** (`qec_twin.forward`): a CPTP-by-construction
+  channel (`forward.cptp_channel`) plus an exact density-matrix
+  circuit-to-observation forward model (`forward.exact`),
+  `p(y|c) = Tr[M_y C(c)(rho0)]`. The density-matrix backend is feasibility-only
+  (≤~15 qubits); `forward.scalable` is the placeholder >50-qubit carrier (ADR 0005).
+  Mechanism definitions + controlled teachers live in `qec_twin.mechanisms`; the
+  probe-richness context ladder in `qec_twin.contexts`.
+- **Minimal DEM** (`qec_twin.decoder`): parity map (`DemParityMap`), fault graph
+  (`FaultGraph`), and stim-DEM extraction — the frozen-MWPM-decoder path only.
 
-The B-path mainline is `qec_twin.experiments.twin` (calibration, `do()`
-knobs, validity curve, alias bands, gating). Everything else — the discovery /
-observability / catalog / Google program — was retired and removed (ADR 0009).
+The B-path is the four capability modules over this substrate —
+`qec_twin.calibration` (recover) and `qec_twin.knobs` (channel-level `do()` → ΔLER),
+with evaluator-side gating / alias bands / validity curve in `qec_twin.audit`
+(`understand` and `prediction` are placeholders). Everything else — the discovery /
+observability / catalog / Google program — was retired and removed (ADR 0005).
 
 ## Install
 
@@ -69,8 +73,9 @@ On the GPU workstation use the `aiqec` environment
 python -m pytest -q tests/        # run the test suite (twin B-path + substrate)
 ```
 
-The twin B-path is driven through `qec_twin.experiments.twin` and its
-tests under `tests/test_twin_*.py`; there are no standing console scripts.
+The twin B-path is driven through the library — `qec_twin.calibration` / `knobs` /
+`audit` over `qec_twin.forward` — and its tests under `tests/test_twin_*.py`; there
+are no standing console scripts.
 
 ## Docs
 
@@ -80,4 +85,4 @@ tests under `tests/test_twin_*.py`; there are no standing console scripts.
 - `docs/teacher_learner.md` — teacher/learner roles and isolation contract.
 - `docs/TWIN.md` — binding twin spec: object contract, four capabilities, notation.
 - `docs/IDENTIFIABILITY_AND_CRL_SURVEY.md` + `docs/papers/` — the CRL/finance toolset.
-- `docs/adr/` — durable decisions (current spine 0006 → 0009).
+- `docs/adr/` — durable decisions (current spine 0002 → 0005).

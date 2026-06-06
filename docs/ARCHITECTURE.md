@@ -26,7 +26,7 @@ there is real cohesion (`forward/` backends).
 |---|---|
 | `forward/` | exact differentiable forward model (physics engine); backend-swappable |
 | `forward/exact/` | density-matrix backend — **⚠ FEASIBILITY-ONLY** (`2^n×2^n`, ≤~15q), abandoned after |
-| `forward/scalable/` | placeholder for the **>50-qubit** backend (carrier deferred, ADR 0009) |
+| `forward/scalable/` | placeholder for the **>50-qubit** backend (carrier deferred, ADR 0005) |
 | `mechanisms/` | noise-mechanism definitions + controlled teachers |
 | `contexts/` | probe-richness ladder `C_cal(r)` + probe definitions |
 | `decoder/` | frozen-MWPM DEM substrate (`parity_map`, `fault_graph`, `stim_dem`) |
@@ -60,6 +60,6 @@ backend-agnostic, so the swap is a backend replacement, not a rewrite.
 ## History
 
 The SCOPE thesis and the discovery / observability / catalog / Google /
-DEM-fault-logit program were retired and removed (ADR 0009): they solved a different
+DEM-fault-logit program were retired and removed (ADR 0005): they solved a different
 problem (mechanism clustering + visible replay) than the twin (channel calibration +
 counterfactual ΔLER). History is in git.

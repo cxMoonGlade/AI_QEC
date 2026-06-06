@@ -6,7 +6,7 @@ target hardware noise circuits exceed 50 qubits.
 
 **Status: placeholder** — no carrier chosen yet (candidates: tensor-network
 contraction, DEM-bulk + local coherent corrections, …). Scalability is a deferred
-selection criterion (ADR 0009).
+selection criterion (ADR 0005).
 
 **Contract.** Must satisfy the same `forward` contract `context c → p(s,m|c)` so
 that `calibration` / `knobs` / `understand` / `prediction` are unchanged when the

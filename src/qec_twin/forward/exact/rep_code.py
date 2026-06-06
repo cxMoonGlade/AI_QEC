@@ -11,7 +11,7 @@ CPTP noise (stochastic Pauli, non-Pauli, and coherent / non-Clifford alike).
 
 This is the smallest real QEC code that is exactly density-matrix simulable
 (distance 3 -> 5 qubits) and is the controlled toy for the B feasibility step
-(ADR 0006 / 0007 and project memory ``qec-digital-twin-goal``): label-free
+(ADR 0002 / 0003 and project memory ``qec-digital-twin-goal``): label-free
 calibration via exact observation-NLL, channel-level ``do()`` knobs, and
 counterfactual-validity scoring against controlled-teacher ground truth all run
 on this forward model.

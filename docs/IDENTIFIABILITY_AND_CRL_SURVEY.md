@@ -24,7 +24,7 @@ isomorphic. The precise correspondence is:
 
 The last row is the critical asymmetry: unlike finance, the twin has a
 controlled teacher that enables direct counterfactual validation at small scale.
-This is the justification for the B path (ADR 0006) and makes the QEC setting
+This is the justification for the B path (ADR 0002) and makes the QEC setting
 more favorable than pure finance for closing the observational-vs-interventional
 gap.
 
@@ -267,7 +267,7 @@ known causal structure and no hidden confounding. A model that perfectly fits al
 
 **Implication for the twin.** This is the central risk formalized. Counterfactual
 validity cannot be established from observational equivalence alone. The CUDA-Q
-teacher is the only available path to empirical b-validity validation (ADR 0006).
+teacher is the only available path to empirical b-validity validation (ADR 0002).
 
 **Partial identification alternative.** Rather than point-estimating `do(remove
 M7) → ΔP_L`, compute worst-case bounds using the Zhang-Bareinboim algorithm

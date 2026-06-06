@@ -1,11 +1,11 @@
 # The Twin — A Teacher-Learner, Finance-Structured QEC Error-Mechanism Digital Twin
 
 This is the current binding spec for "the twin." It supersedes an earlier
-orbit-symmetry-compression framing, retired by [ADR 0009](adr/0009-retire-scope-reframe-twin.md).
-ADR 0007 (B methodology) and ADR 0008 (finance framing) are the methodological core.
+orbit-symmetry-compression framing, retired by [ADR 0005](adr/0005-retire-scope-reframe-twin.md).
+ADR 0003 (B methodology) and ADR 0004 (finance framing) are the methodological core.
 
 "The twin" is the descriptive name until a new one is chosen. The code package
-identifier is `qec_twin`, a neutral, stable handle after the ADR 0009 reframe.
+identifier is `qec_twin`, a neutral, stable handle after the ADR 0005 reframe.
 
 ## What it is
 
@@ -15,7 +15,7 @@ answers **counterfactuals** — "if I change this mechanism, how does logical
 performance change?" — with **honest uncertainty**.
 
 The organizing principle is **not** symmetry compression. It is the structural
-identity (ADR 0008) between QEC mechanism calibration and the
+identity (ADR 0004) between QEC mechanism calibration and the
 quantitative-finance calibration/risk problem:
 
 > recovering a local noise-channel field `E` from syndrome statistics **is** the
@@ -47,7 +47,7 @@ p(y | c) = Tr[ M_y · C_E(c)(ρ0) ],     C_E(c) = ∏_q (E_q ∘ G_q)   (circuit
 
 No amortized context map `f_ψ(c)` and no scalability carrier are committed now —
 the main-line parameterization is chosen later against the four capabilities,
-with future scalability as one selection criterion (ADR 0009).
+with future scalability as one selection criterion (ADR 0005).
 
 ## The four capabilities
 
@@ -67,14 +67,14 @@ finance analogues), **not** a fixed architecture:
   matching. Low-order moments (detector marginals + pairwise) are exactly what a
   stochastic Pauli channel reproduces, so moment matching **Pauli-shadows** the
   coherent/non-Clifford structure (the finance "vanillas pin marginals, not
-  dynamics"). Moment matching is a negative control only. (ADR 0007.)
+  dynamics"). Moment matching is a negative control only. (ADR 0003.)
 - **Probe richness breaks the alias, not parameter-tying.** An observational fit
   pins `E` only up to the **observational alias quotient**; what shrinks it is
   *data* (a probe-richness ladder `C_cal(r)`: memory → multi-round/bases → active
   → basis-rotated → coherent-sensitive). Physical priors (CPTP, locality, known
   circuit) act as a Tikhonov *regularizer* — they shrink the parameter/variance
   space but do **not** break a genuine observational alias; parameter/orbit
-  sharing is retired as an identifiability claim (ADR 0009).
+  sharing is retired as an identifiability claim (ADR 0005).
 - **`do()` is a channel-level, parameterization-independent transform** (Tier 0:
   `E_i → I` remove; Tier 1: CPTP-safe weakening `(1-a)I + aE`), scored by ΔLER
   under a **predeclared, frozen decoder** `D`.
@@ -91,10 +91,13 @@ finance analogues), **not** a fixed architecture:
 
 ## Path and status
 
+> The gated roadmap — phase acceptance gates, strict invariants, and what stays
+> open — is [`docs/PLAN.md`](PLAN.md); this section stays the object-contract summary.
+
 **B (validate the loop on a controlled toy) → HARDEN (richer/correlated
 mechanisms, larger `d`, drift) → C (real Google 72Q/105Q).** Success axes =
 recover/understand/manipulate/predict. (The orbit-field "A" step is retired,
-ADR 0009.)
+ADR 0005.)
 
 - **B — done on an exact repetition-code toy.** Label-free calibration recovers a
   coherent over-rotation teacher (`calib_kl ≈ 0`); the `do()` knob matches the
@@ -120,7 +123,7 @@ ADR 0009.)
 |---|---|
 | `A` | DEM parity map `F_2^{B×M}` (fault→observation) — never for assignment |
 | `S` / `Π` | learned soft assignment matrix |
-| `ω(j)` | **known** teacher orbit/symmetry-class assignment of fault `j` — exploited silently as known structure for compute/correctness, **not** as an identifiability or parameter-economy thesis (ADR 0009) |
+| `ω(j)` | **known** teacher orbit/symmetry-class assignment of fault `j` — exploited silently as known structure for compute/correctness, **not** as an identifiability or parameter-economy thesis (ADR 0005) |
 | `λ_j` | Stage-1 fault logit `logit(p_j)` — never `ℓ_j` |
 | `m` | logical observable bit — never `o` |
 | `e` | latent DEM fault vector |
@@ -143,4 +146,4 @@ The earlier framing (an orbit-symmetry-compression thesis with an L2
 orbit-compression field `θ = ρ(g)ϑ_ω + Uz` and a six-axis bar) is preserved in
 git history. Its surviving substrate (the exact CPTP primitives and the minimal
 DEM frozen-decoder path) remains valid; the discovery / observability / catalog /
-Google program was removed (ADR 0009).
+Google program was removed (ADR 0005).

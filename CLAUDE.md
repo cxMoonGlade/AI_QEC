@@ -10,8 +10,8 @@ hardware error mechanisms. Binding spec: `docs/TWIN.md`.
 
 Path: **B (validate the counterfactual loop on a controlled rep-code toy — done) →
 harden (richer/correlated mechanisms, larger d, drift) → C (real Google)**. Spine:
-the finance↔QEC calibration isomorphism (ADR 0008), exact Born-rule observation-NLL
-calibration (ADR 0007), honest alias/uncertainty bands. Counterfactual validity is
+the finance↔QEC calibration isomorphism (ADR 0004), exact Born-rule observation-NLL
+calibration (ADR 0003), honest alias/uncertainty bands. Counterfactual validity is
 established only against controlled-teacher `do()` ground truth, never by calibration
 fit alone.
 
@@ -27,7 +27,10 @@ conda run -n aiqec python -c "import torch; print(torch.cuda.is_available())"  #
 Always scope pytest to `tests/`. Bare `pytest` from the repo root recurses into
 `external/` (gitignored vendored baseline/reference repos — not part of `qec_twin`).
 Do not set `PYTHONPATH="$PWD/src"`; use the editable install. There are no console
-scripts — the twin is driven through the library + `tests/`.
+scripts — the twin is driven through the library + `tests/`, which double as the
+executable spec: `test_twin_*` covers the four capabilities + audit/contexts/d5
+scaling; `test_diff_*` / `test_physical_channels` / `test_fault_graph` cover the
+forward + DEM substrate. Read the matching test first to see a capability end-to-end.
 
 ## Architecture
 
@@ -56,7 +59,7 @@ src/qec_twin/
 
 **Backend boundary:** `forward/exact` (density matrix) explodes past ~15 qubits — it
 is feasibility-only. The 50+ qubit target needs `forward/scalable` (placeholder,
-carrier deferred, ADR 0009). The channel object + the four capabilities are
+carrier deferred, ADR 0005). The channel object + the four capabilities are
 backend-agnostic, so swapping the backend is not a rewrite.
 
 ### Status
@@ -94,14 +97,16 @@ ground-truth channels / parameters / labels are evaluator-only — used by `audi
 `A` DEM parity map (never an assignment matrix); `E` the CPTP channel field;
 `lambda_j = logit(p_j)` (never `ell_j`); `m` logical observable (never `o`);
 `omega(j)` a known DEM grouping (symbol reservation, not an identifiability lever —
-ADR 0009).
+ADR 0005).
 
 ## Key reference documents
 
 - `docs/TWIN.md` — binding twin spec: object contract, four capabilities, methodology.
+- `docs/PLAN.md` — whole-project roadmap: phase gates (B → HARDEN → C), strict
+  physical/mathematical/aim↔object invariants, and what stays open.
 - `CONTEXT.md` — glossary and claim boundaries.
 - `AGENTS.md` — main line, doc routing, working rules.
 - `docs/ARCHITECTURE.md` — full module map (+ per-module READMEs).
 - `docs/teacher_learner.md` — teacher/learner roles + isolation contract.
 - `docs/IDENTIFIABILITY_AND_CRL_SURVEY.md` + `docs/papers/` — CRL/finance toolset and cached references.
-- `docs/adr/` — decisions; spine 0006 (build order) → 0007 (B methodology) → 0008 (finance framing) → 0009 (retire SCOPE / reframe).
+- `docs/adr/` — decisions; spine 0002 (build order) → 0003 (B methodology) → 0004 (finance framing) → 0005 (retire SCOPE / reframe).

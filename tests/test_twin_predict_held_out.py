@@ -1,4 +1,4 @@
-"""D2 (ADR 0008): calibrate-on-r<=k, predict the held-out coherent exotic.
+"""D2 (ADR 0004): calibrate-on-r<=k, predict the held-out coherent exotic.
 
 The finance vanilla->exotic protocol on the toy. The headline: the twin fits its
 calibration data at every richness (calib_kl ~ 0), the Z-basis do() knob is

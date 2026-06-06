@@ -5,11 +5,11 @@ This note is the canonical mechanism taxonomy for the surviving mechanism catalo
 kept for the twin's hardening step. It combines the implemented PHYS/PHYC mechanism
 IDs with the larger controlled-gate error library we want the twin to grow into.
 (The teacher-generation program that once consumed this catalog was retired and
-removed — ADR 0009.)
+removed — ADR 0005.)
 
 For claim boundaries, use `CONTEXT.md` first: the implemented package is still
 a fixed-context DEM/Bernoulli research stack. The long-horizon target is the
-twin's four capabilities — recover / understand / manipulate / predict (ADR 0009).
+twin's four capabilities — recover / understand / manipulate / predict (ADR 0005).
 CPTP/GKSL structure is one constraint mechanism, not the whole claim.
 
 Physicality boundary: the catalog entries below are implemented as unitary

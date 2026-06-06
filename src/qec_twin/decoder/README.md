@@ -10,5 +10,5 @@ knob or validity score.
 
 **Boundary.** A fixed MWPM reference substrate only — not a learned object, not the
 twin's recovered channel. Used by `knobs` (ΔLER) and `audit`. This is all that
-survives of the retired DEM/Bernoulli fault-logit program (ADR 0009).
+survives of the retired DEM/Bernoulli fault-logit program (ADR 0005).
 Spec: `docs/TWIN.md`.

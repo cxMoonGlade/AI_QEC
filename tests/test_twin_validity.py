@@ -98,7 +98,7 @@ def test_exact_nll_beats_shuffled_location_assignment(b5_run) -> None:
 
 
 def test_same_r_baseline_is_frozen(b5_run) -> None:
-    # FROZEN same-r regression baseline (ADR 0008 guardrail before D2). Pins the
+    # FROZEN same-r regression baseline (ADR 0004 guardrail before D2). Pins the
     # same-r headline numbers (calibrate-on-C_cal(r), eval do() on held-out memory;
     # steps=200, seed=0) so the D2 protocol change (calibrate-on-r<=k / predict-
     # held-out-higher-r) lands ALONGSIDE this path and cannot silently move it --

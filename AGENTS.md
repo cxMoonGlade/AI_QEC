@@ -20,12 +20,12 @@ capabilities over hardware-realistic noise:
 `teacher-learner` is the training mechanism; the finance analogy is the
 organizing principle. The decision record for this framing — and for retiring the
 earlier orbit-symmetry-compression thesis and
-orbit-sharing as an identifiability lever — is **ADR 0009**. The current build is
-the small-scale exact-CPTP counterfactual loop (the "B path"): ADR 0006 (build
-order), 0007 (B validation methodology), 0008 (derivatives-calibration framing of
+orbit-sharing as an identifiability lever — is **ADR 0005**. The current build is
+the small-scale exact-CPTP counterfactual loop (the "B path"): ADR 0002 (build
+order), 0003 (B validation methodology), 0004 (derivatives-calibration framing of
 B5). The main-line model **architecture is deliberately open**: the four
 capabilities are the spec, candidate parameterizations are judged against them,
-and scalability is a future selection criterion, not a now-decision (ADR 0009).
+and scalability is a future selection criterion, not a now-decision (ADR 0005).
 
 ## Doc routing
 
@@ -33,11 +33,13 @@ and scalability is a future selection criterion, not a now-decision (ADR 0009).
 - `docs/ARCHITECTURE.md`: code architecture and module map.- `docs/teacher_learner.md`: teacher / learner roles and the isolation contract.
 - `docs/TWIN.md`: binding twin spec — object contract `p(y|c)=Tr[M_y C(c)(rho0)]`,
   the four capabilities, finance methodology, and reserved notation.
+- `docs/PLAN.md`: whole-project roadmap — phase gates (B → HARDEN → C), strict
+  physical/mathematical/aim↔object invariants, and what stays open (ADR 0005).
 - `docs/IDENTIFIABILITY_AND_CRL_SURVEY.md`: causal-representation-learning,
   identifiable-latent-variable, and finance tools for the alias-quotient and
   counterfactual-validity problems; action items + reference list.
 - `docs/papers/`: local PDF cache of the load-bearing references (index in
-  `README.md`). Check here before web-searching.- `docs/error_mechanisms.md`: physical-error mechanism taxonomy.- `docs/adr/`: durable decisions. Current spine is 0006 → 0009.
+  `README.md`). Check here before web-searching.- `docs/error_mechanisms.md`: physical-error mechanism taxonomy.- `docs/adr/`: durable decisions. Current spine is 0002 → 0005.
 
 ## Package and module rules
 
@@ -66,7 +68,7 @@ util/         placeholder for small helpers;  numerics.py = NUMERICAL_ZERO floor
 ```
 
 Full map + per-module scope: `docs/ARCHITECTURE.md`. The SCOPE / discovery /
-observability / catalog / Google / DEM-fault-logit program was removed (ADR 0009).
+observability / catalog / Google / DEM-fault-logit program was removed (ADR 0005).
 ⚠ `forward/exact` (density matrix) is feasibility-only — the 50+ qubit target needs
 the `forward/scalable` placeholder.
 
@@ -77,7 +79,7 @@ the `forward/scalable` placeholder.
 - `lambda_j = logit(p_j)` — fault logit (never `ell_j`).
 - `S` or `Pi` — learned discovery assignment (never `A`).
 - `omega(j)` — a known DEM orbit (grouping) assignment; a symbol reservation only,
-  not an identifiability claim (ADR 0009).
+  not an identifiability claim (ADR 0005).
 - `m` — logical observable (never `o`).
 
 ## Numerical floor policy
@@ -132,11 +134,11 @@ reinstall editable or use the module entrypoint.
 - Identifiability is bounded by the observational alias quotient and by the
   learnable degrees of freedom of the observation map. **Report honest
   alias/uncertainty bands; never assume identifiability a parameter-tying prior
-  did not earn** (ADR 0009). Probe richness (data) is the demonstrated cure for
+  did not earn** (ADR 0005). Probe richness (data) is the demonstrated cure for
   observational alias, not parameter sharing.
 - Counterfactual validity is not established by calibration fit alone; it is
   validated against controlled-teacher `do()` ground truth at small scale
-  (ADR 0006/0007). On real Google data there is no realized counterfactual, so no
+  (ADR 0002/0003). On real Google data there is no realized counterfactual, so no
   Google physical-mechanism, public-label, Born-rule, or CPTP/GKSL-learning claim
   is made until the loop is validated and the real-data stage is reached.
 - Controlled catalog evidence (teacher generator → teacher self-audit → label-free

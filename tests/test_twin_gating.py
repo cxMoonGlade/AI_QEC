@@ -1,4 +1,4 @@
-"""D5 (ADR 0008): identifiability gating.
+"""D5 (ADR 0004): identifiability gating.
 
 D5a (DEM layer, genuinely first): the repetition code is anchor-degenerate (every
 detector is shared, so no fault is mechanism-identifiable from structure alone)

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 Recovers a per-location CPTP channel field by minimizing, over the calibration
 contexts ``C_cal(r)``, the exact Born-rule negative log-likelihood of the
-teacher's observations (ADR 0007). The twin sees only the joint distribution of
+teacher's observations (ADR 0003). The twin sees only the joint distribution of
 ``(s, m)`` -- detector events ``s`` and logical readout ``m`` -- never the
 teacher's mechanism labels, so the fit is label-free.
 
