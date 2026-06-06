@@ -1,9 +1,8 @@
 """Low-level primitives for quantum-process mechanisms and probe construction.
 
 This package contains low-level channel, PTM, density-simulation, CPTP/POVM
-audit, preflight, and probe-catalog helpers. Stage workflows live in
-``data_preparation``, ``teacher``, ``learner``,
-``mechanism_observability``, and ``mechanism_discovery``.
+audit, preflight, and probe-catalog helpers. These are the low-level substrate
+the twin (``experiments.scope_twin``) and the DEM core (``dem``) build on.
 """
 
 from .channels import (

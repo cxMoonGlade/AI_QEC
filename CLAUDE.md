@@ -24,12 +24,18 @@ All commands run inside the `aiqec` Conda environment:
 
 ```bash
 conda run -n aiqec python -m pip install -e .                  # install (editable)
-conda run -n aiqec python -m pytest -q                         # full suite
+conda run -n aiqec python -m pip install -e '.[cuda-extension]' # + ninja, for the JIT CUDA backend
+conda run -n aiqec python -m pytest -q tests/                  # full suite — scope to tests/ (see note)
 conda run -n aiqec python -m pytest -q tests/test_<name>.py    # single test file
 # Verify CUDA before GPU-heavy runs:
 conda run -n aiqec python -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0) if torch.cuda.is_available() else None)"
 scope-static-toolbox                                           # toolbox manifest
 ```
+
+Always scope pytest to `tests/`. Bare `pytest -q` from the repo root recurses into
+`external/` — ~480 vendored baseline/reference test files (pyro, Stim, PyMatching,
+pgmpy, …) whose collection hangs or errors. `external/` is gitignored and not part
+of `scope_static`; our suite is the ~450 tests under `tests/`.
 
 Do not set `PYTHONPATH="$PWD/src"` — it can interfere with PyTorch CUDA/NVML
 discovery; use the editable install. If console scripts are missing, reinstall.
@@ -68,8 +74,14 @@ mechanism_discovery/     latent assignment, prototype, transfer, robustness, eff
 catalog_pipeline/        controlled-catalog orchestration façade
 experiments/             thin CLI/config wrappers, grouped by family: static/, qec_noise_catalog/,
                          stage3/, stage4/, stage5/, willow_data/, scope_twin/ (the twin B-path)
-cuda/                    C++/CUDA exact DEM/window kernels
+cuda/                    C++/CUDA exact DEM/window kernels — optional, JIT-compiled at
+                         runtime via torch cpp_extension (+ninja); the pure-PyTorch path
+                         is the correctness oracle, so there is nothing to pre-build
 ```
+
+Repo layout beyond the package: `configs/` (run configs), `outputs/` (generated,
+gitignored), `docs/` (specs + ADRs), and `external/` (gitignored vendored baseline
+and reference repos — not imported by `scope_static`, excluded from our test scope).
 
 ### Isolation contract
 
