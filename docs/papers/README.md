@@ -61,3 +61,44 @@ curl -L --fail -o docs/papers/<descriptive_name>.pdf <pdf_url>
 arXiv PDFs: `https://arxiv.org/pdf/<id>`. Verify with
 `head -c4 docs/papers/<file>.pdf` returning `%PDF`. Then add a row above with the
 citation and the reason it earns a slot.
+
+---
+
+## Reference implementations (cloned locally)
+
+Reference code for the methods above is cloned under `external/reference_repos/`
+(full clones, **gitignored** — this manifest is the tracked source of truth;
+re-clone with the commands below). Each clone carries a `PROJECT_README.md`
+mapping it to its paper and to the ADR 0008 D-items.
+
+| Local dir | Paper | Upstream |
+|---|---|---|
+| `ivae/` | iVAE (1907.04809) | github.com/ilkhem/iVAE |
+| `sparse_vae/` | Sparse VAE (2110.10804) | github.com/gemoran/sparse-vae-code |
+| `mechanism_sparsity/` | Mechanism sparsity (2107.10098) | github.com/slachapelle/disentanglement_via_mechanism_sparsity |
+| `utigsp/` | UT-IGSP (1910.09007) | github.com/csquires/utigsp |
+| `nonlinear_icp/` | Nonlinear ICP (1706.08576, R) | github.com/christinaheinze/nonlinearICP-and-CondIndTests |
+| `robust_nsde/` | Robust neural SDEs (2007.04154) | github.com/msabvid/robust_nsde |
+| `dmle_qec/` | Differentiable MLE noise est. (2602.19722) | github.com/cxMoonGlade/DMLE-QEC |
+
+Re-clone all:
+
+```bash
+mkdir -p external/reference_repos
+git clone https://github.com/ilkhem/iVAE external/reference_repos/ivae
+git clone https://github.com/gemoran/sparse-vae-code external/reference_repos/sparse_vae
+git clone https://github.com/slachapelle/disentanglement_via_mechanism_sparsity external/reference_repos/mechanism_sparsity
+git clone https://github.com/csquires/utigsp external/reference_repos/utigsp
+git clone https://github.com/christinaheinze/nonlinearICP-and-CondIndTests external/reference_repos/nonlinear_icp
+git clone https://github.com/msabvid/robust_nsde external/reference_repos/robust_nsde
+git clone https://github.com/cxMoonGlade/DMLE-QEC external/reference_repos/dmle_qec
+```
+
+**QEC noise-learning code.** arXiv:2602.19722 (differentiable MLE noise
+estimation) is cloned as `dmle_qec/` (our repo cxMoonGlade/DMLE-QEC) — it is the
+closest external prior art to the B-path calibration, but Pauli/DEM-parameterized,
+so it serves as the ADR 0008 D4 Pauli-shadowing negative-control reference, not a
+coherent twin (see its `PROJECT_README.md`). arXiv:2504.14643 (DEM estimation from
+syndrome data) links no public repository as of June 2026; closest public tooling
+is Stim (already a dependency) and Sandia pyGSTi (`github.com/sandialabs/pyGSTi`,
+the Blume-Kohout/Young characterization lineage) — clone on request.

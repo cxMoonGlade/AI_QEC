@@ -89,6 +89,45 @@ def build_frozen_decoder(context: RepCodeContext, *, nominal_p: float = 0.05):
     return pymatching.Matching.from_detector_error_model(dem)
 
 
+def decoder_error_indicator(
+    forward: RepCodeForward, decoder, *, logical_reference: int = 0, floor: float = 1e-12
+) -> torch.Tensor:
+    """Per-branch ``[D(s_b) != actual_flip_b]`` as a fixed ``(B,)`` weight.
+
+    The frozen decoder maps each branch's (structural, theta-independent) syndrome
+    to a correction, so this indicator does not depend on the channel parameters
+    -- only the branch probabilities do. It therefore turns the LER into the
+    *differentiable* form ``sum_b err_b p_theta(b)`` (see ``differentiable_ler``),
+    which is what makes the Tier-0/1 alias bands exact and cheap.
+
+    Reachability: only branches with probability above ``floor`` at the current
+    state are decoded (the rest are physically negligible and may carry
+    non-matchable syndromes); their indicator is left 0. Evaluate at the
+    calibration optimum so the reachable set is fixed for the local band.
+    """
+    probs = forward.probs.detach().cpu()
+    reachable = (probs > floor).numpy()
+    indicator = torch.zeros_like(forward.probs)
+    if not reachable.any():
+        return indicator
+    detectors = forward.detector_events.round().to(torch.uint8).cpu().numpy()[reachable]
+    predicted = decoder.decode_batch(detectors).reshape(-1).astype(np.int64)
+    observable = forward.observable.round().to(torch.int64).cpu().numpy()[reachable]
+    actual_flip = (observable + int(logical_reference)) % 2
+    errors = torch.tensor((predicted != actual_flip).astype(float), dtype=forward.probs.dtype)
+    indicator[torch.tensor(reachable)] = errors
+    return indicator
+
+
+def differentiable_ler(forward: RepCodeForward, error_indicator: torch.Tensor) -> torch.Tensor:
+    """``LER(theta) = sum_b err_b p_theta(b)`` -- differentiable in the channel params.
+
+    ``error_indicator`` is the frozen ``decoder_error_indicator`` (precomputed at
+    the calibration optimum); only ``forward.probs`` carries the gradient.
+    """
+    return (error_indicator * forward.probs).sum()
+
+
 def logical_error_rate(
     forward: RepCodeForward, decoder, *, logical_reference: int = 0
 ) -> float:

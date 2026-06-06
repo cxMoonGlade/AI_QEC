@@ -150,6 +150,38 @@ def test_coherent_error_gives_valid_joint_and_differentiable_knob() -> None:
     assert abs(theta.grad.item()) > 1e-9
 
 
+def test_parity_backend_matches_ancilla_on_d3() -> None:
+    # The data-only parity backend (no ancilla, tractable at d5+) must be exactly
+    # equivalent to the full ancilla register for noiseless syndrome extraction --
+    # across Pauli, coherent, logical-prep, and basis-rotated cases. This is the
+    # safety net for using the parity backend at larger distances.
+    from scope_static.experiments.scope_twin.mechanisms import coherent_overrotation_kraus
+
+    coherent = coherent_overrotation_kraus(0.02, 0.6)
+    cases = [
+        dict(rounds=2),
+        dict(rounds=3, data_channel=bit_flip(0.08)),
+        dict(rounds=2, channel_field=lambda t, i: coherent),
+        dict(rounds=2, channel_field=lambda t, i: coherent, initial_flips=[0, 1, 2], pre_rotation=1.5708),
+    ]
+    for case in cases:
+        rounds = case.pop("rounds")
+        ancilla = simulate_rep_code_memory(3, rounds, backend="ancilla", **case)
+        parity = simulate_rep_code_memory(3, rounds, backend="parity", **case)
+        assert torch.allclose(ancilla.probs, parity.probs, atol=1e-12)
+        assert torch.allclose(ancilla.detector_marginals(), parity.detector_marginals(), atol=1e-12)
+        assert abs(ancilla.observable_marginal().item() - parity.observable_marginal().item()) < 1e-12
+
+
+def test_parity_backend_scales_to_distance_five() -> None:
+    # d5 is intractable for the ancilla register (2**9 x 2**9 per branch); the
+    # parity backend keeps a 2**5 data register and stays an exact distribution.
+    result = simulate_rep_code_memory(5, 2, backend="parity", data_channel=bit_flip(0.05))
+    assert result.measurement_record.shape[1] == 13  # K = R(d-1)+d
+    assert result.num_detectors == 12  # (R+1)(d-1); K = D+1 bijection holds at d5
+    assert abs(result.total_probability().item() - 1.0) < 1e-9
+
+
 def test_generic_non_pauli_channel_stays_a_valid_distribution() -> None:
     # A generic CPTP channel (random Stinespring) acts nontrivially on |0> and
     # is non-Pauli (off-diagonal PTM); the enumerated forward must remain an

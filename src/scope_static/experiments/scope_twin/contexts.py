@@ -154,3 +154,21 @@ def held_out_eval_context(*, distance: int = 3) -> RepCodeContext:
     validation in B4 always extrapolates beyond the calibrated circuits.
     """
     return RepCodeContext(distance, 4, 0, -1, "eval:R4-L0")
+
+
+def held_out_exotic_contexts(*, distance: int = 3) -> list[RepCodeContext]:
+    """The held-out coherent / phase-sensitive "exotics" for the D2 protocol.
+
+    The finance "exotic" priced from low-`r` "vanilla" calibration: basis-rotated
+    (``RY(pi/2)`` prep) and coherence-stressed (``repeats``) probes at a round
+    count (``4``) absent from the calibration ladder, so every level
+    ``C_cal(k)`` must *extrapolate* to them. Their observable distribution is
+    maximally sensitive to the coherent drift a Z-basis fit may Pauli-shadow, so
+    a low-`k` twin's worst-case prediction error over this set is where
+    Pauli-shadowing shows up out of basis (the D2 headline).
+    """
+    return [
+        RepCodeContext(distance, 4, 0, -1, "exotic:R4-ry", 1, _HALF_PI),
+        RepCodeContext(distance, 4, 0, -1, "exotic:R4-ry-k2", 2, _HALF_PI),
+        RepCodeContext(distance, 3, 0, -1, "exotic:R3-ry-k2", 2, _HALF_PI),
+    ]

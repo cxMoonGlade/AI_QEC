@@ -43,6 +43,7 @@ from scope_static.primitives.diff_circuit_sim import (
     apply_channel_local,
     apply_unitary,
     cx,
+    measure_parity_enumerate,
     measure_qubit_enumerate,
     pauli_x,
     ry,
@@ -135,7 +136,7 @@ def _detectors_and_observable(
     return detector_events, observable
 
 
-def _simulate(
+def _simulate_ancilla(
     distance: int,
     rounds: int,
     *,
@@ -145,7 +146,9 @@ def _simulate(
     pre_rotation: float,
     device: str | torch.device,
 ) -> RepCodeForward:
-    """Core exact forward. ``channel_field`` is ``None`` or a callable
+    """Core exact forward (ancilla backend: full ``2**(2d-1)`` data+ancilla register).
+
+    ``channel_field`` is ``None`` or a callable
     ``(round_t, data_index_i) -> (k, 2, 2) Kraus stack | None`` applied to data
     qubit ``i`` at the start of round ``t`` (the per-location storage mechanism;
     a constant callable recovers a shared channel, a learnable one is the B3
@@ -202,6 +205,81 @@ def _simulate(
     )
 
 
+def _simulate_parity(
+    distance: int,
+    rounds: int,
+    *,
+    channel_field,
+    initial_flips: list[int] | None,
+    repeats: int,
+    pre_rotation: float,
+    device: str | torch.device,
+) -> RepCodeForward:
+    """Core exact forward (parity backend: data-only ``2**d`` register, no ancilla).
+
+    Each stabilizer is measured as a direct ``Z_j Z_{j+1}`` parity projection on the
+    data register (exact when syndrome extraction is noiseless, i.e. for data-only
+    storage / coherent / correlated mechanisms). Produces the identical record
+    layout to :func:`_simulate_ancilla`, so detectors, observable, and the whole
+    downstream stack are unchanged -- but the register is ``2**d`` instead of
+    ``2**(2d-1)``, which is what makes ``d=5`` (and beyond) tractable.
+    """
+    n = int(distance)
+    nchecks = n - 1
+
+    rho = zero_state(n, device=device).unsqueeze(0)  # (1, 2**d, 2**d)
+    outcomes = torch.zeros((1, 0), dtype=RDTYPE, device=device)
+
+    if initial_flips:
+        for q in initial_flips:
+            rho = apply_unitary(rho, pauli_x(), [q], n)
+    if pre_rotation:
+        gate = ry(pre_rotation)
+        for q in range(n):
+            rho = apply_unitary(rho, gate, [q], n)
+
+    for t in range(int(rounds)):
+        if channel_field is not None:
+            for i in range(n):
+                kraus = channel_field(t, i)
+                if kraus is not None:
+                    for _ in range(int(repeats)):
+                        rho = apply_channel_local(rho, kraus, [i], n)
+        for j in range(nchecks):
+            rho, outcomes = measure_parity_enumerate(rho, outcomes, j, j + 1, n)
+
+    for i in range(n):
+        rho, outcomes = measure_qubit_enumerate(rho, outcomes, i, n, reset=False)
+
+    probs = torch.diagonal(rho, dim1=-2, dim2=-1).real.sum(-1)  # (B,)
+    detector_events, observable = _detectors_and_observable(outcomes, distance, rounds)
+    return RepCodeForward(
+        distance=int(distance),
+        rounds=int(rounds),
+        measurement_record=outcomes,
+        probs=probs,
+        detector_events=detector_events,
+        observable=observable,
+    )
+
+
+def _simulate(distance, rounds, *, backend, **kwargs) -> RepCodeForward:
+    """Dispatch to the ancilla or parity backend.
+
+    ``backend="auto"`` keeps the validated ancilla register for ``d <= 3`` (the
+    frozen small-scale path) and switches to the data-only parity register for
+    ``d >= 4`` (where the ancilla register would be intractable). The two are
+    exactly equivalent for noiseless syndrome extraction (checked on ``d=3``).
+    """
+    if backend == "auto":
+        backend = "ancilla" if int(distance) <= 3 else "parity"
+    if backend == "ancilla":
+        return _simulate_ancilla(distance, rounds, **kwargs)
+    if backend == "parity":
+        return _simulate_parity(distance, rounds, **kwargs)
+    raise ValueError(f"unknown backend {backend!r} (expected 'auto', 'ancilla', or 'parity')")
+
+
 def simulate_rep_code_memory(
     distance: int,
     rounds: int,
@@ -211,6 +289,7 @@ def simulate_rep_code_memory(
     initial_flips: list[int] | None = None,
     repeats: int = 1,
     pre_rotation: float = 0.0,
+    backend: str = "auto",
     device: str | torch.device = "cpu",
 ) -> RepCodeForward:
     """Exact-forward a distance-``d`` repetition-code memory experiment.
@@ -235,6 +314,7 @@ def simulate_rep_code_memory(
     return _simulate(
         distance,
         rounds,
+        backend=backend,
         channel_field=field,
         initial_flips=initial_flips,
         repeats=repeats,

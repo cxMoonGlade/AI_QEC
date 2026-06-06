@@ -95,3 +95,16 @@ def test_exact_nll_beats_shuffled_location_assignment(b5_run) -> None:
     controls = b5_run["controls"]
     assert controls["shuffled_B_LER"] > 1e-3
     assert controls["twin_B_LER"] < controls["shuffled_B_LER"] / 50
+
+
+def test_same_r_baseline_is_frozen(b5_run) -> None:
+    # FROZEN same-r regression baseline (ADR 0008 guardrail before D2). Pins the
+    # same-r headline numbers (calibrate-on-C_cal(r), eval do() on held-out memory;
+    # steps=200, seed=0) so the D2 protocol change (calibrate-on-r<=k / predict-
+    # held-out-higher-r) lands ALONGSIDE this path and cannot silently move it --
+    # number drift then attributes cleanly to protocol vs physics.
+    controls = b5_run["controls"]
+    assert b5_run["bler_r0"] == pytest.approx(2.709e-3, rel=0.15)
+    assert controls["twin_B_LER"] == pytest.approx(1.594e-5, rel=0.25)
+    assert controls["moment_matched_B_LER"] == pytest.approx(1.501e-2, rel=0.08)
+    assert controls["shuffled_B_LER"] == pytest.approx(2.396e-2, rel=0.12)

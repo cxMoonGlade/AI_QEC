@@ -1,3 +1,16 @@
+> **⚑ ARCHIVED (ADR 0009, 2026-06-05).** This document is the retired **SCOPE**
+> thesis (Symmetry-Compressed Orbit-Physical Emulator): the L2 orbit-compression
+> field `θ = ρ(g)ϑ_ω + Uz` as a claimed identifiability/parameter-economy lever,
+> and the six-axis physical-generation bar. It is **superseded by the current spec
+> [`docs/TWIN.md`](TWIN.md)** and kept only for historical record. Why retired: the
+> B-path obtained every identifiability win **without** any orbit field — what
+> broke the observational alias was **probe richness (data)**, not parameter-tying;
+> orbit-sharing shrinks variance, not a genuine observational alias. The
+> *implementation substrate* described below (DEM/Bernoulli core, controlled
+> catalog, Stage-3 visible discovery, the exact CPTP primitives) remains valid; the
+> notation `ω(j)` survives in `TWIN.md` only as **known teacher structure**, never
+> as a thesis. Do not cite this document's SCOPE/orbit framing as current.
+
 ### SCOPE-Twin: Symmetry-Compressed Orbit-Physical Emulator
 
 SCOPE-Twin is the long-horizon target: a digital twin built by discovering

@@ -21,10 +21,11 @@ Negative controls:
 
 import torch
 
-from scope_static.experiments.scope_twin.calibration import RepCodeTwin, calibrate
+from scope_static.experiments.scope_twin.calibration import RepCodeTwin, calibrate, joint_kl
 from scope_static.experiments.scope_twin.contexts import (
     RepCodeContext,
     calibration_contexts,
+    held_out_exotic_contexts,
     run_context,
 )
 from scope_static.experiments.scope_twin.intervention import (
@@ -109,6 +110,67 @@ def validity_curve(
         )
 
     return {"base_teacher_ler": base_teacher_ler, "curve": rows}
+
+
+# --------------------------------------------------------------------------- #
+# D2 (ADR 0008): calibrate-on-r<=k, predict held-out exotics                     #
+# --------------------------------------------------------------------------- #
+def predict_held_out_curve(
+    teacher_field,
+    *,
+    eval_context: RepCodeContext,
+    decoder,
+    exotic_contexts: list[RepCodeContext] | None = None,
+    distance: int = 3,
+    levels=(0, 1, 2, 3, 4),
+    num_kraus: int = 3,
+    steps: int = 300,
+    seed: int = 0,
+    interventions=None,
+) -> dict[str, object]:
+    """Finance "calibrate-on-vanilla / price-the-exotic" protocol (ADR 0008 D2).
+
+    For each calibration richness ``k``: calibrate the twin label-free on
+    ``C_cal(k)`` only, then *predict* two held-out targets it never calibrated on
+    -- the coherent/phase-sensitive exotic observables (worst-case KL over the
+    exotic set) and the ``do()``-``dLER`` on the memory eval. The headline is
+    prediction error vs ``k``: where it falls is where calibration richness first
+    suffices to extrapolate to the high-order counterfactual. Runs ALONGSIDE the
+    frozen same-`r` ``validity_curve`` (does not replace it).
+    """
+    if exotic_contexts is None:
+        exotic_contexts = held_out_exotic_contexts(distance=distance)
+    if interventions is None:
+        interventions = [(i, do_remove) for i in range(distance)]
+
+    teacher_exotics = [run_context(c, channel_field=teacher_field) for c in exotic_contexts]
+
+    rows = []
+    for k in levels:
+        result = calibrate_at_richness(
+            teacher_field, k, distance=distance, num_kraus=num_kraus, steps=steps, seed=seed
+        )
+        twin = result["twin"]
+        twin_field = twin.field()
+
+        with torch.no_grad():
+            exotic_errors = [
+                float(joint_kl(teacher, run_context(c, channel_field=twin_field)))
+                for c, teacher in zip(exotic_contexts, teacher_exotics)
+            ]
+        b_ler, _ = _aggregate_scores(teacher_field, twin, eval_context, decoder, interventions)
+
+        rows.append(
+            {
+                "k": k,
+                "calib_kl": float(result["total_kl"]),
+                "exotic_obs_error_max": max(exotic_errors),
+                "exotic_obs_errors": exotic_errors,
+                "B_LER_max": max(b_ler),
+            }
+        )
+
+    return {"curve": rows, "exotic_labels": [c.label for c in exotic_contexts]}
 
 
 # --------------------------------------------------------------------------- #

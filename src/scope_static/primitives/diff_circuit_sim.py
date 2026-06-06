@@ -148,6 +148,48 @@ def measure_qubit_enumerate(
     return rho_new, outcomes_new
 
 
+def project_parity(rho: torch.Tensor, qubit_a: int, qubit_b: int, outcome: int, n: int) -> torch.Tensor:
+    """Unnormalized projection onto the ``Z_a Z_b`` parity eigenspace ``== outcome``.
+
+    Models a noiseless stabilizer measurement of the two-qubit Z-parity directly on
+    the data register: ``Z_a Z_b`` has eigenvalue ``(-1)^(x_a ^ x_b)`` on basis state
+    ``|x>``, so the projector keeps the rows/columns whose ``x_a ^ x_b == outcome``.
+    Equivalent to the CX-ladder-into-ancilla-then-measure-and-reset sequence when
+    the syndrome extraction is noiseless, but stays in the ``2**(data)`` register
+    (no ancilla), which is what makes larger code distances tractable.
+    """
+    dim = 2 ** int(n)
+    idx = torch.arange(dim, device=rho.device)
+    bit_a = (idx >> (int(n) - 1 - int(qubit_a))) & 1
+    bit_b = (idx >> (int(n) - 1 - int(qubit_b))) & 1
+    keep = (bit_a ^ bit_b) == int(outcome)
+    mask = (keep[:, None] & keep[None, :]).to(rho.dtype)
+    return rho * mask
+
+
+def measure_parity_enumerate(
+    rho: torch.Tensor, outcomes: torch.Tensor, qubit_a: int, qubit_b: int, n: int
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Branch the enumerated trajectory set on a ``Z_a Z_b`` parity measurement.
+
+    Like :func:`measure_qubit_enumerate` but for a two-qubit Z-parity (a rep-code
+    stabilizer) measured directly on the data register; no reset, since there is no
+    ancilla to return to ``|0>``. The recorded bit is the parity outcome, matching
+    the ancilla backend's record column for that check.
+    """
+    rho0 = project_parity(rho, qubit_a, qubit_b, 0, n)
+    rho1 = project_parity(rho, qubit_a, qubit_b, 1, n)
+    rho_new = torch.cat([rho0, rho1], dim=0)
+    b = outcomes.shape[0]
+    col0 = torch.zeros((b, 1), dtype=outcomes.dtype, device=outcomes.device)
+    col1 = torch.ones((b, 1), dtype=outcomes.dtype, device=outcomes.device)
+    outcomes_new = torch.cat(
+        [torch.cat([outcomes, col0], dim=1), torch.cat([outcomes, col1], dim=1)],
+        dim=0,
+    )
+    return rho_new, outcomes_new
+
+
 # --------------------------------------------------------------------------- #
 # Small differentiable gate / channel builders (parameter-carrying)            #
 # --------------------------------------------------------------------------- #
