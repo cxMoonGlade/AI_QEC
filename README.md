@@ -85,4 +85,4 @@ are no standing console scripts.
 - `docs/teacher_learner.md` — teacher/learner roles and isolation contract.
 - `docs/TWIN.md` — binding twin spec: object contract, four capabilities, notation.
 - `docs/IDENTIFIABILITY_AND_CRL_SURVEY.md` + `docs/papers/` — the CRL/finance toolset.
-- `docs/adr/` — durable decisions (current spine 0002 → 0005).
+- `docs/adr/` — durable decisions (current spine 0002 → 0006).

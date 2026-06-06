@@ -2,7 +2,7 @@
 
 Binding roadmap for **the twin** (`qec_twin`). Division of labor:
 [`docs/TWIN.md`](TWIN.md) is the **object contract** (*what* the twin is); the
-[ADR spine](adr/) (0002→0005) records **decisions** (*why*); this file is the **path**
+[ADR spine](adr/) (0002→0006) records **decisions** (*why*); this file is the **path**
 (*how / when / how it falsifies*). It is **strict** on physics, mathematics, and the
 aim↔object map, and **deliberately open** on architecture/parameterization (ADR 0005).
 
@@ -238,7 +238,8 @@ criterion among others**:
 - [`docs/TWIN.md`](TWIN.md) — object contract `p(y|c)=Tr[M_y C(c)(ρ0)]`, the four
   capabilities, reserved notation.
 - [`docs/adr/`](adr/) — 0002 (build order) · 0003 (B methodology) · 0004 (finance
-  framing, D1–D5 + bands) · 0005 (retire SCOPE, architecture open).
+  framing, D1–D5 + bands) · 0005 (retire SCOPE, architecture open) · 0006 (channel-field
+  architecture: ratify object, scope support structure, defer carrier).
 - [`docs/IDENTIFIABILITY_AND_CRL_SURVEY.md`](IDENTIFIABILITY_AND_CRL_SURVEY.md) —
   finance ↔ QEC tools and the W1–W5 guardrails.
 - [`docs/error_mechanisms.md`](error_mechanisms.md) — physical mechanism taxonomy (the

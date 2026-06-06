@@ -109,4 +109,4 @@ ADR 0005).
 - `docs/ARCHITECTURE.md` — full module map (+ per-module READMEs).
 - `docs/teacher_learner.md` — teacher/learner roles + isolation contract.
 - `docs/IDENTIFIABILITY_AND_CRL_SURVEY.md` + `docs/papers/` — CRL/finance toolset and cached references.
-- `docs/adr/` — decisions; spine 0002 (build order) → 0003 (B methodology) → 0004 (finance framing) → 0005 (retire SCOPE / reframe).
+- `docs/adr/` — decisions; spine 0002 (build order) → 0003 (B methodology) → 0004 (finance framing) → 0005 (retire SCOPE / reframe) → 0006 (channel-field architecture).

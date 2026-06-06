@@ -39,7 +39,7 @@ and scalability is a future selection criterion, not a now-decision (ADR 0005).
   identifiable-latent-variable, and finance tools for the alias-quotient and
   counterfactual-validity problems; action items + reference list.
 - `docs/papers/`: local PDF cache of the load-bearing references (index in
-  `README.md`). Check here before web-searching.- `docs/error_mechanisms.md`: physical-error mechanism taxonomy.- `docs/adr/`: durable decisions. Current spine is 0002 → 0005.
+  `README.md`). Check here before web-searching.- `docs/error_mechanisms.md`: physical-error mechanism taxonomy.- `docs/adr/`: durable decisions. Current spine is 0002 → 0006.
 
 ## Package and module rules
 
