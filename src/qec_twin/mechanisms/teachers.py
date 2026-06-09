@@ -58,7 +58,12 @@ def mixed_mechanism_field(specs):
 
       ``("coherent", p, theta)``  -> ``BitFlip(p) . RX(theta)``      (Pauli + coherent)
       ``("damped", gamma, theta)`` -> ``AmpDamp(gamma) . RX(theta)``  (T1 + coherent, non-unital)
+      ``("pure_damp", gamma)``    -> ``AmpDamp(gamma)``              (pure non-unital, NO Pauli twirl)
       ``("pauli", p)``            -> ``BitFlip(p)``                  (pure stochastic Pauli)
+
+    ``pure_damp`` is the clean non-Pauli isolate (a unital/Pauli class provably cannot
+    represent it); it is invisible on ``|0_L>`` (the AmpDamp fixed point) so its decision
+    functional must use a ``|1_L>`` / superposition eval context.
 
     Spans the *visible* single-qubit mechanism taxonomy of the coherent-error /
     Lindbladian-learning frontier (coherent Hamiltonian + dissipative Kossakowski,
@@ -73,10 +78,12 @@ def mixed_mechanism_field(specs):
             kraus.append(coherent_overrotation_kraus(spec[1], spec[2]))
         elif kind == "damped":
             kraus.append(amplitude_damped_rotation_kraus(spec[1], spec[2]))
+        elif kind == "pure_damp":
+            kraus.append(amplitude_damping(spec[1]))
         elif kind == "pauli":
             kraus.append(bit_flip(spec[1]))
         else:
-            raise ValueError(f"unknown mechanism kind {kind!r} (coherent|damped|pauli)")
+            raise ValueError(f"unknown mechanism kind {kind!r} (coherent|damped|pure_damp|pauli)")
     return lambda t, i: kraus[i]
 
 

@@ -67,6 +67,33 @@ The same low-`r` Ê has a good fit (`calib_kl~0`), the **right** `do(E→I)` but
 **r=2** (accumulation) but the out-of-basis exotic collapses at **r=3** (basis-rotation) — two facets, two
 rungs; the exotic shadow penalty (~24×) is **not** the do-functional's ~942× (larger high-`r` floor).
 
+## 2026-06-09 — Decision-Regret Go/No-Go gate · TEST-BACKED floor (`tests/test_decision_regret_gate.py`)
+
+The in-distribution preview deciding **plan2.md vs the bounded plan**. Reframed onto existing machinery:
+the decision band is *coordinate-invariant*, so no GKSL learner is needed — `tier0_alias_band`'s
+`g^T H⁺ g` **is** the linear pushforward (plan2's phantom `decision_pushforward`). Gate teacher: loc0
+coherent / loc1 **pure AmpDamp** (non-Pauli isolate) / loc2 Pauli; engine = Kraus twin (`calib_KL`~1e-15).
+
+**Floor SECURED — Claim A (GO).** Engine vs the strongest Pauli steelman (teacher's exact-moment twirl),
+`do(E→I)` ΔLER on `|1_L>` (where dissipation is consequential):
+
+| source | true ΔLER | engine miss | twirl miss |
+|---|---|---|---|
+| loc1 **pure-damp** | −3.95e-2 | **2e-9** | **1.8e-2** (46% of true) |
+| loc0 coherent | −4.59e-2 | 2e-9 | 1.3e-2 |
+| loc2 Pauli | −2.54e-2 | 3e-10 | 3.5e-3 |
+
+Unital ⊉ non-unital (a theorem) → no Pauli correction closes the pure-damp gap, and it **projects**. The
+downside is floored: non-Pauli-capable calibration beats the field's Pauli/DEM standard.
+
+**P0 holds (winnable, not INCONCLUSIVE).** Steelman A (twirl) fooled on the dissipative source; steelman B
+(engine point) misses the coherent source's phase-sensitive `do()` ΔLER by **0.123 at r=1** (`calib_KL` at
+floor — hidden failure) and recovers by **r=2** (the H1 lift).
+
+**Ceiling — Claim B PENDING (the verdict).** band-width-vs-point-error slope≈1 awaits the
+finite-displacement band module (the linear `tier0` band overshoots / is unbounded on a true null). Target
+it must track: point-error **0.123 (r=1) → 8.7e-4 (r=2)**.
+
 ## 2026-06-09 — B-path counterfactual loop (exact rep-code toy) · `tests/test_twin_validity.py` + `tests/test_twin_intervention.py`
 
 Confirmed by a green run (16/16) on 2026-06-09. The coherent-teacher numbers are **pinned** by
