@@ -9,7 +9,7 @@ QEC error mechanisms that **recovers, understands, manipulates, and predicts**
 hardware error mechanisms. Binding spec: `docs/TWIN.md`.
 
 Path: **B (validate the counterfactual loop on a controlled rep-code toy — done) →
-harden (richer/correlated mechanisms, larger d, drift) → C (real Google)**. Spine:
+harden (in progress: richer/correlated mechanisms, larger d, drift) → C (real Google)**. Spine:
 the finance↔QEC calibration isomorphism (ADR 0004), exact Born-rule observation-NLL
 calibration (ADR 0003), honest alias/uncertainty bands. Counterfactual validity is
 established only against controlled-teacher `do()` ground truth, never by calibration
@@ -30,8 +30,11 @@ Always scope pytest to `tests/`. Bare `pytest` from the repo root recurses into
 Do not set `PYTHONPATH="$PWD/src"`; use the editable install. There are no console
 scripts — the twin is driven through the library + `tests/`, which double as the
 executable spec: `test_twin_*` covers the four capabilities + audit/contexts/d5
-scaling; `test_diff_*` / `test_physical_channels` / `test_fault_graph` cover the
-forward + DEM substrate. Read the matching test first to see a capability end-to-end.
+scaling; `test_twin_h*` are the HARDEN axes (H0 matched baseline, H1 coherent
+hidden-failure, H2 crosstalk — pre-registered skip-marked stubs);
+`test_decision_regret_gate` is the plan2 Go/No-Go gate; `test_diff_*` /
+`test_physical_channels` / `test_fault_graph` cover the forward + DEM substrate.
+Read the matching test first to see a capability end-to-end.
 
 ## Architecture
 
@@ -69,7 +72,17 @@ B path validated on the rep-code toy: label-free calibration recovers a coherent
 teacher (`calib_kl ≈ 0`); the `do()` knob matches the teacher's true ΔLER; negative
 controls fail as pre-registered (moment-matched ≈ 900×, shuffled ≈ 1400× worse);
 probe richness breaks the alias; Tier-0 bands cover truth and shrink with richness;
-d3→d5 holds. 63 tests pass. Next: hardening (richer/correlated mechanisms).
+d3→d5 holds.
+
+HARDEN underway: H0 (frozen moment-matched baseline) and H1 (coherent
+hidden-failure) landed. The decision-regret Go/No-Go gate (2026-06-09,
+`tests/test_decision_regret_gate.py`) banked the **Claim-A floor** — non-Pauli-capable
+calibration beats the field's Pauli/DEM standard on a dissipative source — and found
+the Claim-B decision band real but not cheaply computable (a local band never
+calibrates; earning it needs plan2's global continuation machinery, deferred). Next:
+H2 machinery — non-factorized (coherent ZZ crosstalk) teacher vs factorized learner,
+targeting the misspecification band `B_misspec`; pre-registered in
+`tests/test_twin_h2_crosstalk.py`. 87 tests collected (H2 stubs skip-marked).
 
 ### Isolation contract
 
@@ -111,6 +124,9 @@ ADR 0005).
   values in `docs/metric_results.md`.
 - `docs/PLAN.md` — whole-project roadmap: phase gates (B → HARDEN → C), strict
   physical/mathematical/aim↔object invariants, and what stays open.
+- `docs/plan2.md` — extended decision-regret / prioritization-engine plan (headline
+  object: decision regret, not parameter recovery); commitment to it is gated by
+  `tests/test_decision_regret_gate.py`.
 - `CONTEXT.md` — glossary and claim boundaries.
 - `AGENTS.md` — main line, doc routing, working rules.
 - `docs/ARCHITECTURE.md` — full module map (+ per-module READMEs).

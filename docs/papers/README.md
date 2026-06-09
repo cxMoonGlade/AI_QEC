@@ -5,6 +5,7 @@ counterfactual-validity work. Goal: avoid repeated web search. Each entry gives
 the citation, why it matters here, and which doc / action item it backs.
 
 Companion docs:
+- **`reading_notes/`** — one structured **reading note per PDF** (problem · method · key results · relevance to the twin · caveats); index at [`reading_notes/README.md`](reading_notes/README.md).
 - `docs/IDENTIFIABILITY_AND_CRL_SURVEY.md` — CRL / identifiable-latent-variable survey.
 - `docs/adr/0002-cptp-twin-build-order.md`, `docs/adr/0003-b-validation-methodology.md` — the B-path plan these references inform.
 
