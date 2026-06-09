@@ -90,9 +90,19 @@ downside is floored: non-Pauli-capable calibration beats the field's Pauli/DEM s
 (engine point) misses the coherent source's phase-sensitive `do()` ΔLER by **0.123 at r=1** (`calib_KL` at
 floor — hidden failure) and recovers by **r=2** (the H1 lift).
 
-**Ceiling — Claim B PENDING (the verdict).** band-width-vs-point-error slope≈1 awaits the
-finite-displacement band module (the linear `tier0` band overshoots / is unbounded on a true null). Target
-it must track: point-error **0.123 (r=1) → 8.7e-4 (r=2)**.
+**Ceiling — Claim B: VERDICT = the band is real but NOT cheaply earnable.** The decision-regret band is
+genuine (the identified set spans the **>0.1 regret** — point and truth both at `NLL_min`, 0.123 apart in
+F) but not cheaply computable: **no slack calibrates a local band** — overconfident at the real alias (r=1,
+never covers truth even at 40× slack) and vacuous at r=2/3 (half-width 20–56× the error). Local ascent
+can't traverse the curved / gauge-redundant identified set between the MLE point and truth; earning
+slope≈1 needs **global continuation machinery** (plan2's explicitly-deferred projected-ascent), not an
+afternoon.
+
+**Gate decision.** **Bank the Claim-A floor** — non-Pauli-capable calibration that beats the field's
+Pauli/DEM standard on a provable, decision-projecting representation gap; real, and bigger than the
+bounded plan. **Do NOT build plan2's superstructure** on an un-computed band. The continuation band is the
+genuine next investment *if* plan2 is pursued — and this gate priced that risk for an afternoon, exactly as
+designed.
 
 ## 2026-06-09 — B-path counterfactual loop (exact rep-code toy) · `tests/test_twin_validity.py` + `tests/test_twin_intervention.py`
 

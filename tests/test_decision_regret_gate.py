@@ -22,8 +22,18 @@ Results (run 2026-06-09): engine `calib_KL`~1e-15 (matched). Claim A -- on the p
 source, engine miss 2e-9 vs the exact-moment Pauli twirl's 1.8e-2 (46% of the true ΔLER);
 the non-unital gap projects. P0 -- twirl fooled on the dissipative source; the engine
 POINT misses the coherent source's phase-sensitive ΔLER by 0.123 at r=1 (calib_KL at
-floor) and recovers by r=2. Claim B (the band-vs-point-error slope) awaits the
-finite-displacement module -- the verdict-deciding test.
+floor) and recovers by r=2.
+
+CLAIM B VERDICT (explored this session). The decision-regret band is REAL -- the identified
+set spans the >0.1 regret (point and truth both at NLL_min, 0.123 apart in F) -- but it is
+NOT cheaply computable: NO slack calibrates a LOCAL band (overconfident at the real alias
+r=1, never covering; vacuous at r=2/3, slope 20-56x), because local ascent cannot traverse
+the curved / gauge-redundant identified set between the MLE point and truth. Earning slope~1
+needs GLOBAL continuation machinery (plan2's explicitly-deferred projected-ascent), not an
+afternoon. So the gate's signal: BANK THE CLAIM-A FLOOR (non-Pauli-capable calibration beats
+the field's Pauli/DEM standard -- real, and bigger than the bounded plan); do NOT build
+plan2's superstructure on an un-computed band. The continuation band is the genuine next
+investment IF plan2 is pursued -- and the gate just priced it for an afternoon.
 """
 
 from __future__ import annotations
@@ -125,10 +135,15 @@ def test_gng_claim_a_nonpauli_representation_projects(gate):
     assert abs(s["twirl"] - s["true"]) / abs(s["true"]) > 0.2       # ...and it projects (~46%)
 
 
-@pytest.mark.skip(reason="Claim B -- the verdict-deciding band-width-vs-point-error slope; "
-                         "awaits the finite-displacement band module (the linear tier0 band overshoots).")
-def test_gng_claim_b_bandwidth_tracks_point_error():
-    # Claim B (the ceiling / the bet): across sources x r, the engine's finite-displacement
-    # band-width tracks the GKSL-point error with slope ~ 1 (covers the miss, tight where
-    # the point is right). Coverage is tautological; the slope is the real test.
-    ...
+def test_gng_claim_b_regret_is_real_but_band_is_the_open_bet(gate):
+    # Claim B verdict. The engine POINT recovers the calibration joint (calib_KL~0) yet its
+    # phase-sensitive do() ΔLER differs from truth by >0.1: the identified set SPANS the
+    # regret (point and truth both at NLL_min), so a point is under-determined and a band is
+    # necessary -- it must span >=0.1 to be honest. FINDING (explored this session, /tmp
+    # scripts): no slack calibrates a LOCAL band -- overconfident at the real alias (r=1,
+    # never covers) and vacuous at r=2/3 (slope 20-56x); local ascent cannot traverse the
+    # curved/gauge-redundant identified set between point and truth. Earning slope~1 needs
+    # GLOBAL continuation machinery (plan2's deferred projected-ascent), not an afternoon.
+    # => Bank the Claim-A floor; do NOT build plan2's superstructure on an un-computed band.
+    assert gate["calib_kl"] < 1e-6                                          # point in the identified set
+    assert abs(gate["coh_ps"]["point"] - gate["coh_ps"]["true"]) > 0.1     # ...yet the regret is in it too
