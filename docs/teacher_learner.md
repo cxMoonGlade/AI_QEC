@@ -3,12 +3,12 @@
 In the twin (`docs/TWIN.md`), "teacher" and "learner" are:
 
 - **Teacher** — a controlled, known mechanism source
-  (`experiments.twin.mechanisms`): a small, exactly-simulable system (e.g. a
-  coherent over-rotation rep-code teacher) whose true channels and true
+  (`qec_twin.mechanisms`): a small, exactly-simulable system (e.g. a coherent
+  over-rotation or heterogeneous mixed-mechanism rep-code teacher) whose true channels and true
   `do() -> ΔLER` are **known**. It is the counterfactual ground truth — the only
   thing that can validate a knob, since calibration fit alone cannot (ADR 0002/0003).
 - **Learner** — label-free calibration
-  (`experiments.twin.calibration`): recovers the local CPTP channel field
+  (`qec_twin.calibration`): recovers the local CPTP channel field
   `E` by exact multi-context Born-rule observation-NLL over the probe-richness
   ladder `C_cal(r)`, seeing only observations `p(s,m | c)`.
 
@@ -29,8 +29,8 @@ p(y | c) = Tr[ M_y · C(c)(rho0) ],   C(c) = ∏_q (E_q ∘ G_q)
 ```
 
 A DEM parity model (`e_j ~ Bernoulli(p_j)`, `y = A e mod 2`, `A ∈ F_2^{B×M}`)
-survives only as the **frozen decoder** substrate (`dem.stim_dem`,
-`dem.fault_graph`), not as a learned object. Full notation: `docs/TWIN.md`.
+survives only as the **frozen decoder** substrate (`qec_twin.decoder.stim_dem`,
+`qec_twin.decoder.fault_graph`), not as a learned object. Full notation: `docs/TWIN.md`.
 
 ## History
 

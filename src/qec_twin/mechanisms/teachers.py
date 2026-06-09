@@ -12,7 +12,7 @@ moment-matched negative control.
 
 import torch
 
-from qec_twin.forward.exact.circuit_sim import bit_flip, rx
+from qec_twin.forward.exact.circuit_sim import amplitude_damping, bit_flip, rx
 from qec_twin.forward.cptp_channel import (
     pauli_transfer_matrix,
     single_qubit_paulis,
@@ -32,6 +32,51 @@ def coherent_overrotation_kraus(p: float, theta: float) -> torch.Tensor:
 def coherent_overrotation_field(rates, thetas):
     """Per-location coherent-over-rotation teacher field ``(t, i) -> Kraus``."""
     kraus = [coherent_overrotation_kraus(rates[i], thetas[i]) for i in range(len(rates))]
+    return lambda t, i: kraus[i]
+
+
+def amplitude_damped_rotation_kraus(gamma: float, theta: float) -> torch.Tensor:
+    """``AmplitudeDamp(gamma) . RX(theta)`` as a ``(2, 2, 2)`` Kraus stack.
+
+    A coherent over-rotation followed by T1 relaxation -- the dominant
+    superconducting-hardware pair (control error + amplitude damping). Non-unital,
+    so a strictly richer *matched* mechanism than the Pauli-twirlable
+    ``coherent_overrotation``; the ``RX`` populates ``|1>`` so the damping is
+    visible already on the ``|0_L>`` ground state. Kraus of the composition:
+    ``{A0 RX, A1 RX}`` (still 2 Kraus -> inside the ``num_kraus=2`` learner class).
+    """
+    u = rx(torch.tensor(float(theta), dtype=torch.float64))
+    a = amplitude_damping(gamma)
+    return torch.stack([a[0] @ u, a[1] @ u])
+
+
+def mixed_mechanism_field(specs):
+    """Heterogeneous per-location *matched* teacher -- the H0 richer baseline.
+
+    ``specs[i]`` selects data-location ``i``'s mechanism; each is <=2-Kraus so the
+    ``num_kraus=2`` learner class contains it (matched, no misspecification):
+
+      ``("coherent", p, theta)``  -> ``BitFlip(p) . RX(theta)``      (Pauli + coherent)
+      ``("damped", gamma, theta)`` -> ``AmpDamp(gamma) . RX(theta)``  (T1 + coherent, non-unital)
+      ``("pauli", p)``            -> ``BitFlip(p)``                  (pure stochastic Pauli)
+
+    Spans the *visible* single-qubit mechanism taxonomy of the coherent-error /
+    Lindbladian-learning frontier (coherent Hamiltonian + dissipative Kossakowski,
+    the GKSL ``(h, a)`` split). Z-type mechanisms (phase flip / dephasing) are
+    omitted: on this bit-flip rep code they are blind-sector and inconsequential.
+    Returns the field callable ``(t, i) -> Kraus``.
+    """
+    kraus = []
+    for spec in specs:
+        kind = spec[0]
+        if kind == "coherent":
+            kraus.append(coherent_overrotation_kraus(spec[1], spec[2]))
+        elif kind == "damped":
+            kraus.append(amplitude_damped_rotation_kraus(spec[1], spec[2]))
+        elif kind == "pauli":
+            kraus.append(bit_flip(spec[1]))
+        else:
+            raise ValueError(f"unknown mechanism kind {kind!r} (coherent|damped|pauli)")
     return lambda t, i: kraus[i]
 
 
