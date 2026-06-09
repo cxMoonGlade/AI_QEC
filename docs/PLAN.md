@@ -125,6 +125,11 @@ its approximation audited by the band (§1.2).
   Google physical-mechanism / Born-generation / CPTP-learning claim beyond the validated
   loop. Honest bands always. Numerical floor `NUMERICAL_ZERO = 1e-12` for floating floors
   only (never structural zeros).
+- **Metric discipline.** Every quantitative claim is scored by a **field-standard** metric via the
+  [`METRICS.md`](METRICS.md) ladder — a ledger metric → if none fits, the frontier-standard one (then
+  added to the ledger) → only if none exists, a metric explicitly flagged **project-defined**. No silent
+  non-standard stand-in; each metric's convention travels with its numbers. HARDEN's new axes (coherent
+  fidelity/diamond distance, leakage, drift) enter through this ladder, not by ad-hoc stand-in.
 
 ## 2. The aim↔object map (the four capabilities — STRICT)
 
@@ -237,6 +242,8 @@ criterion among others**:
 
 - [`docs/TWIN.md`](TWIN.md) — object contract `p(y|c)=Tr[M_y C(c)(ρ0)]`, the four
   capabilities, reserved notation.
+- [`docs/METRICS.md`](METRICS.md) — the metric ledger and the **forced standard-metric ladder**; every
+  score is named with its field reference and convention (numbers, dated, in `metric_results.md`).
 - [`docs/adr/`](adr/) — 0002 (build order) · 0003 (B methodology) · 0004 (finance
   framing, D1–D5 + bands) · 0005 (retire SCOPE, architecture open) · 0006 (channel-field
   architecture: ratify object, scope support structure, defer carrier).

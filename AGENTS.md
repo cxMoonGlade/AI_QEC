@@ -35,6 +35,9 @@ and scalability is a future selection criterion, not a now-decision (ADR 0005).
   the four capabilities, finance methodology, and reserved notation.
 - `docs/PLAN.md`: whole-project roadmap — phase gates (B → HARDEN → C), strict
   physical/mathematical/aim↔object invariants, and what stays open (ADR 0005).
+- `docs/METRICS.md`: the metric ledger and the **forced standard-metric ladder** — every score is
+  named with its field-standard reference and convention; new metrics go through ledger → frontier
+  research → flagged project-defined (dated numbers in `docs/metric_results.md`).
 - `docs/IDENTIFIABILITY_AND_CRL_SURVEY.md`: causal-representation-learning,
   identifiable-latent-variable, and finance tools for the alias-quotient and
   counterfactual-validity problems; action items + reference list.
@@ -145,3 +148,6 @@ reinstall editable or use the module entrypoint.
   learner → discovery/effect audits) is valid as the teacher-learner substrate.
   Keep it claim-bounded: it demonstrates controlled recovery/replay under the
   declared visible surface, not hardware physical-mechanism recovery.
+- Every quantitative claim is scored by a **field-standard** metric via `docs/METRICS.md` (forced
+  ladder: ledger → frontier research → explicitly flagged project-defined). No silent non-standard
+  stand-in; carry each metric's convention with its numbers.

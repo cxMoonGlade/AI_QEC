@@ -20,7 +20,8 @@ fit alone.
 ```bash
 conda run -n aiqec python -m pip install -e .                # install (editable)
 conda run -n aiqec python -m pytest -q tests/               # full suite
-conda run -n aiqec python -m pytest -q tests/test_<name>.py # single file
+conda run -n aiqec python -m pytest -q tests/test_<name>.py          # single file
+conda run -n aiqec python -m pytest -q tests/test_<name>.py::test_fn # single test
 conda run -n aiqec python -c "import torch; print(torch.cuda.is_available())"  # CUDA check
 ```
 
@@ -91,6 +92,10 @@ ground-truth channels / parameters / labels are evaluator-only — used by `audi
   physical-mechanism / Born-rule / CPTP-learning claim beyond the validated
   controlled loop until C is reached. Report honest bands; never assume
   identifiability that probe richness did not earn.
+- **Metric discipline:** score every quantitative claim with a field-standard metric via
+  `docs/METRICS.md`. Its ladder is forced — ledger metric → frontier-literature research → explicitly
+  flagged project-defined; never a silent non-standard stand-in, and carry each metric's convention
+  with its numbers. Unsure a metric is the standard? STOP and run the ladder first.
 
 ## Notation (`docs/TWIN.md` is the full contract)
 
@@ -102,6 +107,8 @@ ADR 0005).
 ## Key reference documents
 
 - `docs/TWIN.md` — binding twin spec: object contract, four capabilities, methodology.
+- `docs/METRICS.md` — metric ledger + the forced standard-metric ladder (governs every score); dated
+  values in `docs/metric_results.md`.
 - `docs/PLAN.md` — whole-project roadmap: phase gates (B → HARDEN → C), strict
   physical/mathematical/aim↔object invariants, and what stays open.
 - `CONTEXT.md` — glossary and claim boundaries.
