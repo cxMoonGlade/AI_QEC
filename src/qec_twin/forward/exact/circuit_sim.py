@@ -191,6 +191,87 @@ def project_parity(rho: torch.Tensor, qubit_a: int, qubit_b: int, outcome: int, 
     return rho * mask
 
 
+def dephase_parity(rho: torch.Tensor, qubit_a: int, qubit_b: int, n: int) -> torch.Tensor:
+    """Non-selective ``Z_a Z_b`` parity measurement: ``P_0 rho P_0 + P_1 rho P_1``.
+
+    The record-discarded (unconditional) state after a parity measurement -- the
+    coherence between the two parity eigenspaces is destroyed, populations and
+    within-sector coherences are untouched, and the trace is preserved. This is
+    the burn-in primitive for steady-state extraction (R2-lite M3): iterating
+    ``[channel layer; dephase_parity sweep]`` on a single unbranched ``rho``
+    converges to the stationary state of the syndrome-extraction round map
+    without enumerating measurement branches. Batch-aware over any leading
+    dimensions, like :func:`project_parity`.
+    """
+    return (
+        project_parity(rho, qubit_a, qubit_b, 0, n)
+        + project_parity(rho, qubit_a, qubit_b, 1, n)
+    )
+
+
+_PARITY_SWEEP_MASKS: dict[tuple[int, torch.dtype, torch.device], torch.Tensor] = {}
+
+
+def _parity_sweep_mask(n: int, dtype: torch.dtype, device: torch.device) -> torch.Tensor:
+    """Cached fused-sweep 0/1 mask ``M`` (see :func:`dephase_parity_sweep`),
+    per ``(n, dtype, device)`` -- the `_dev_const` pattern, keyed by size/dtype too."""
+    key = (int(n), dtype, torch.device(device))
+    cached = _PARITY_SWEEP_MASKS.get(key)
+    if cached is None:
+        nn = int(n)
+        idx = torch.arange(2 ** nn, device=key[2])
+        # bit q of basis index x is (x >> (n - 1 - q)) & 1 (qubit 0 = MSB; matches
+        # project_parity); par_j(x) = bit_j(x) ^ bit_{j+1}(x) for j = 0..n-2.
+        shifts = torch.arange(nn - 1, -1, -1, device=key[2])
+        bits = (idx[:, None] >> shifts[None, :]) & 1
+        pars = bits[:, :-1] ^ bits[:, 1:]
+        keep = (pars[:, None, :] == pars[None, :, :]).all(-1)
+        cached = keep.to(dtype)
+        _PARITY_SWEEP_MASKS[key] = cached
+    return cached
+
+
+def dephase_parity_sweep(rho: torch.Tensor, n: int) -> torch.Tensor:
+    """Fused adjacent-pair parity-dephase sweep: every ``dephase_parity(rho, j, j+1, n)``
+    for ``j = 0..n-2`` collapsed into ONE cached elementwise multiply.
+
+    Derivation (an exact identity, not an approximation). With the register's
+    bit convention (qubit 0 = most significant: bit ``q`` of basis index ``x``
+    is ``(x >> (n - 1 - q)) & 1``, exactly as :func:`project_parity` reads it),
+    let ``par_j(x) = bit_j(x) XOR bit_{j+1}(x)``. :func:`project_parity` is an
+    elementwise multiply by the 0/1 mask ``[par_j(x) = s][par_j(y) = s]``, so
+
+        ``dephase_parity(rho, j, j+1, n)[x, y]
+            = rho[x, y] * ([par_j(x)=0][par_j(y)=0] + [par_j(x)=1][par_j(y)=1])
+            = rho[x, y] * M_j[x, y]``,  ``M_j[x, y] = [par_j(x) == par_j(y)]``.
+
+    Elementwise 0/1 multiplies commute and compose, so the full sweep is one
+    multiply by ``M = prod_j M_j``: ``M[x, y] = 1`` iff ``x`` and ``y`` carry
+    identical full adjacent-parity (syndrome) vectors.
+
+    IEEE bit-exactness vs the sequential sweep. The mask is cached in ``rho``'s
+    own dtype (bool 0/1 -> ``0+0i`` / ``1+0i``), so the multiply is the exact
+    same complex-multiply op :func:`project_parity` already performs. Kept
+    (same-sector) entries: ``(a + bi)(1 + 0i) = (a - b*0) + (a*0 + b)i``, and
+    adding/subtracting a signed zero to a finite component is exact, so the
+    value is reproduced exactly; the sequential path additionally adds
+    ``rho[x, y] * (0 + 0i) = +-0 +- 0i``, also value-exact. Killed
+    (cross-sector) entries: both paths yield an exact complex zero -- only the
+    SIGN of that zero (``+-0.0``) may differ between paths, which ``==`` cannot
+    distinguish and which no downstream add / multiply / abs / sum can convert
+    into a value difference. Backward of a constant-mask multiply is the same
+    constant-mask multiply (no custom autograd), so gradients inherit the
+    identical argument. Replaces the ``n - 1`` per-round mask-build + two
+    multiplies + add of the sequential sweep with a single cached multiply --
+    the M3 burn-in loop is launch-bound on CUDA (R2-lite M3, pin P1h).
+    Batch-aware over any leading dimensions, like :func:`dephase_parity`.
+    """
+    if int(n) < 2:
+        return rho  # empty sweep: the sequential loop body never runs
+    mask = _parity_sweep_mask(int(n), rho.dtype, rho.device)
+    return rho * mask
+
+
 def measure_parity_enumerate(
     rho: torch.Tensor, outcomes: torch.Tensor, qubit_a: int, qubit_b: int, n: int
 ) -> tuple[torch.Tensor, torch.Tensor]:

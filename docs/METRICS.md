@@ -33,6 +33,26 @@ labeled "diamond norm" that was actually Bravyi `P_L`).
 standard is being skipped → run this ladder *before* producing the number. Identifiability / numerics
 claims additionally carry their evidential tier (certificate- vs numerics-grade vs flagged).
 
+## The epistemic-status declaration (standing rule, 2026-06-10)
+
+Every pre-registration declares, per quantitative item, which of THREE classes it belongs to —
+so nothing heuristic can later promote itself to "proven" (the rule generalizes the M1/M2
+retro-audit and the X1/X2 status rule, both recorded in `metric_results.md` 2026-06-10):
+
+- **(a) exact** — a theorem, algebraic identity, or zero-tolerance check (e.g. bit-for-bit
+  parity, XOR-bias product bounds, fiber-constant functional identities). Only these may serve
+  as premises, definitions, or derivation steps downstream.
+- **(b) prediction band** — a pre-registered falsifiable bet (fault-budget estimates, derived
+  central values, band widths). Needs registration-before-run, not proof; a miss is a finding
+  with its registered routing. Never citable later as an established fact.
+- **(c) heuristic gate / decision rule** — thresholds, significance conventions, margins,
+  eliminative-control verdicts, empirical design constants. Permitted roles: pre-registered
+  go/no-go gating, tripwires, design inputs whose downstream validity is independent (state the
+  independence). FORBIDDEN as a premise, definition, derivation step, error bound, or basis for
+  any conclusion; a needed bound must be derived independently.
+
+A registration item with an undeclared class defaults to (c) — the most restrictive reading.
+
 ## Conventions that apply throughout
 
 - **Exact, not sampled.** The forward enumerates the joint `p(s, m)` exactly, so every metric below is
@@ -167,7 +187,10 @@ are declared before fitting.
 | Band coverage (finite-sample) | hardware restatement of `prediction.drift.coverage_frequency` (`prediction/` not yet built; R2 pipeline, planned) | frequentist **coverage probability** of the forecast band, nominal vs realized, on held-out hardware slices (B-path ledger row above) | bootstrap CI; **Gate-B caveat travels**: per-window finite-shot estimation error must propagate into the forecast band (errors-in-variables / weighted regression) before any nominal-coverage claim; a pass leaves `predict` first-cut — neither Gate B nor H4 is satisfied on hardware data (ADR 0007 M5) |
 | Tier-0 alias band + abstain (hardware regime) | `audit.bands.tier0_alias_band`; abstain rule: R2 pipeline (planned) | the B-path **ΔLER alias band** (Manski/Cont; ledger above) + **abstain-when-within-band** (Manski/Stoye minimax-regret rule; ledger above), restated for hardware windows | finite-sample; **indicative, not certified-covering** — the decision-regret gate (2026-06-09) showed a local/linear band under-covers at curved aliases; this caveat travels with every band number and the abstain rule inherits it |
 | Held-out syndrome NLL | finite-sample form of `calibration.nll.joint_cross_entropy` | **held-out per-shot negative log-likelihood** `−(1/N) Σ_n log p(y_n)` — the finite-sample estimator whose population limit is the ledgered cross-entropy (Cover & Thomas 2006); the model-scoring objective of dMLE (arXiv:2602.19722) | per shot, nats; held-out split declared before fitting; bootstrap CI; compared on identical splits across models |
-| Window-closure leakage | R2-lite audit (planned) | ⚠ **project-defined / non-standard (ladder rung 3, flagged)** — fraction of total two-point correlation mass crossing a calibration-window boundary; gates whether windowed marginal calibration is sound on a given dataset | threshold pre-registered before any window fit (ADR 0007 M2); reported per window size; pending a standard-naming pass |
+| Window-closure leakage | `hardware.windows.window_closure_audit` | ⚠ **project-defined / non-standard (ladder rung 3, flagged) — HEURISTIC RISK-AUDIT GATE, NOT A THEOREM (binding status, 2026-06-10)**: fraction of two-point correlation mass crossing a calibration-window boundary. There is NO sufficiency result "X2 ≤ threshold ⇒ bounded marginal-calibration error" — the metric is blind to higher-order cross-cut dependence. **Permitted use: pre-registered go/no-go risk gating of window selections ONLY. Forbidden use: as a premise, definition, derivation step, error bound, or basis for any conclusion.** A future cross-cut residual bound must be derived independently | threshold pre-registered before any window fit (ADR 0007 M2); reported per window size; pending a standard-naming pass |
+| Local identifiability rank | `hardware.m3_report.run_p2_fisher` | **Fisher-information-matrix rank** — local identifiability ⇔ full-rank Fisher matrix (Rothenberg 1971, Econometrica 39; Cramér–Rao); `F = Jᵀ diag(1/p) J` for a categorical observation law | rank at a declared in-class point with a declared relative eigenvalue floor; eigen-split reported; a DOF *gate* run BEFORE any fit (M3 P2) |
+| Independent-edges budget deficit | `hardware.m3_report.run_p10` | ⚠ **project-defined / non-standard (ladder rung 3, flagged)** — but an EXACT theorem in-project (M3 pre-registration): the XOR-bias product `1−2f_i = Π_{e∋i}(1−2p_e)` plus `−ln(1−x) ≥ x` give `Σ_{e∋i} p_e ≤ −½·ln(1−2f_i)` for ANY independent-edges DEM; since Spitz Eq. 13 is exact on that model class, a positive deficit `Σ p̂_ij − (−½ln(1−2f̂))` certifies BY CONTRADICTION that the measured pij matrix + marginals are jointly unrealizable by independent edges (shared-cause / ≥3-detector mass). Summing only the measured Δ≤1 classes is conservative (subset of the bound's left side). Built from two ledgered inputs (Spitz-exact p_ij; detection fraction); only the composite naming is ours | per detector-round; class set declared; shot bootstrap σ; floor pre-registered. **Pooled-application caveat:** B(f)=−½ln(1−2f) is convex ⇒ class pooling carries a Jensen false-positive bias ≈ ½B″·var(f) ≈ 1.2e-4 at the measured f-heterogeneity — ~2% of the 2026-06-10 measured deficits, declared |
+| Round-repeat bunching ratio | `hardware.m3_report.run_p11` | ⚠ **project-defined naming (ladder rung 3, flagged)** — but an EXACT identity: for the stationary 2-state chain, `P(flip_t ∧ flip_{t+1}) / P(flip)² = (p01+p10)²/(4·p01·p10) = R` — i.e. R IS the consecutive-round pair-correlation of the flip point process, the discrete analog of photon-statistics `g⁽²⁾(0)` (hence "bunching"); ≥ 1 by AM-GM, = 1 iff p01 = p10; an i.i.d.-flip DEM is structurally pinned at 1. R is a function of the unordered pair {p01, p10} and ℤ₂-relabel invariant ⇒ FIBER-CONSTANT on the registered recoverable object (claimable without crossing the alias boundary). Standard-adjacent naming: burstiness / pair correlation — pending a standard-naming pass | plug-in Jensen positive-bias caveat travels (R̂ ≥ 1 by construction); σ from across-window spread; per basis, never pooled |
 
 ### References (hardware-data)
 - Spitz, Tarasinski, Beenakker, O'Brien (2018). *Adaptive weight estimator for quantum error correction*. arXiv:1712.02360 — the p_ij method.

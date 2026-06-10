@@ -418,15 +418,25 @@ excluding the affected positions (registered exclusion rule).
 | W3 | reported miss | end-window X1 ratio 0.41 / 0.44 < [0.5, 0.8] — ends *more* closed than predicted (conservative direction) |
 | W4 | reported miss + located spikes | interior X1 rel std 22.6% / 23.6% > 15%; X1 spikes at windows 5, 14 |
 
-**The located finding (observational; coordinates from the release metadata — no mechanism
-attribution):** every hot chain-long-range pair maps to a *small physical-grid separation*:
-chain (18,21) = meas qubits (5,7)↔(6,8), grid Δ=(1,1); chain (12,17) [di=5 top] = (4,6)↔(6,6),
-Δ=(2,0); chain (9,13) [di=4 top] = (3,5)↔(5,5), Δ=(2,0); chain (4,6) [di=2 top] = (5,1)↔(6,2),
-Δ=(1,1). **The snaking chain folds physical neighbours to chain distance 2–5 — the "long-range"
-tails are geometry-folded short-range couplings.** Back-edge consequences: (i) H2's correlated
-axis on real data is *physical-adjacency* pairs, not chain-adjacency — the family-widening
-direction; (ii) M3 window design on chain segments does not respect physical locality — the
-(18,21)-type cross terms are the windows' irreducible exterior unless treated geometry-aware.
+**The located finding — claim recalibrated (2026-06-09 user correction, recorded):** the snaking
+chain layout is **release documentation, not a finding** — the README states the code "was layed
+out on a square grid" with a `layout.png`, the metadata coordinates fully specify the fold, and
+our own dataset note (docs/.datasets/, written before this run) records both. That a snaking
+chain folds physical neighbours to chain distance 2–5 — and hence that chain-long-range
+correlation mass should concentrate on folded physically-adjacent pairs — was therefore a
+*derivable pre-run prediction that this pre-registration failed to derive*: a **theory-first
+intake miss** (the derivation did not consult the documented layout), recorded as such. What the
+measurement actually adds beyond the documented geometry: (i) the *localization anomaly* — the
+fold creates many physically-adjacent chain-distant pairs, yet ONE of them, chain (18,21) =
+meas (5,7)↔(6,8), carries 6.094/6.101 ≈ 63% of the whole di=3 family, ~15× the other folded
+pairs ((12,17)=(4,6)↔(6,6) at 0.72, (9,13)=(3,5)↔(5,5) at 0.63, (4,6)=(5,1)↔(6,2) at 2.0-2.9):
+geometry says which pairs *can* couple, not that exactly one is an order of magnitude hot;
+(ii) its **basis-independence to 0.1%**; (iii) the quantitative X1/X2 profile itself. Back-edge
+consequences stand, re-grounded: (a) H2's correlated axis on real data is *physical-adjacency*
+pairs (documented geometry + measured concentration); (b) M3 chain-segment windows do not respect
+physical locality — the (18,21)-type cross terms are the windows' irreducible exterior unless
+treated geometry-aware. Process lesson recorded: dataset documentation (incl. figures) is a
+mandatory derivation input for every R2 pre-registration.
 
 **Adjudication (per the registered routing, with one disclosed extension).** The W2 gate fails on
 the letter; the failure is a single located pair, pre-anticipated in *form* by W4's
@@ -435,6 +445,298 @@ disclosed here). Decision: **M3 proceeds on the 19 clean windows with margin-2**
 max X2 = 4.24% ≤ 5%); windows **15 and 19 are excluded-and-flagged** (their leakage profile is
 the back-edge artifact); the regression test pins the adjudicated state — the known-exception
 set {15, 19} and the (18,21) pair mass within ±30% — so any NEW hot window or pair fails loudly.
+
+## 2026-06-09 — R2-lite M3 PRE-REGISTRATION (window-level held-out syndrome NLL, d=29 rep code) · derived BEFORE build/run · three-agent independent-derivation panel, cross-checked
+
+Track B, ADR 0007 M3 (+ milestone addendum). Gate: held-out per-shot syndrome NLL of the
+window-calibrated twin strictly beats the naive SI1000 prior; reported vs the self-computed
+pij-DEM prior on the same split. Derived by one full-registration agent + two INDEPENDENT
+specialists (identifiability; NLL gaps); the two registered disagreements and their resolutions:
+(i) NLL-counting convention (disjoint-block vs Markov-chain family) — the disjoint-block family is
+registered, the chain-rescaled cross-anchor (~50–54 nats/shot) recorded; (ii) the twin-vs-pij sign
+(pij-favored +2.4 vs twin-favored +3.5) traced to the pij-arm construction — construction now
+PINNED, G3 registered two-sided. Dataset-documentation inputs consulted (M2 process rule). Claim
+scope: R2-lite only — no do(), no attribution; the factorized window twin at repeats=1-class
+hardware contexts sits in H2's theorem-backed dangerous cell, hence NLL-prediction claims only.
+
+**Frozen design.** Windows: the 19 clean interior 6-site windows ({15,19} excluded, M2). Forward =
+Candidate A (derived EXACT in the factorized class — locality theorem; Candidate B refuted: 69 GB,
+scores nothing the gate measures): exact d=5 parity-backend interior forward (2^5 register), the 4
+fully-interior detectors only, boundary detectors marginalized; cross-cut residual bounded by M2
+X2 ≤ 4.24%. Measurement layer: classical per-site readout flip q_j on recorded syndromes (quantum
+extraction noiseless — sector structure preserved); exact differentiable 2-bit/site convolution.
+Steady state: non-selective burn-in (new `dephase_parity` primitive; fixed-point pin
+‖ρ_B − Φ(ρ_B)‖₁ ≤ 1e-9, B=40 doubling ≤ 320) + 3 enumerated rounds (4096 branches, 67 MB).
+DECLARED class restrictions (priced, not hidden): atomic per-round extraction ⇒ diagonal classes
+(1,1,±1) ≡ 0 in the twin class (device: 2.55e-3 / 0.98e-3 X); same-site Δt≥2 tails out of class.
+Family F_blk: per window, joint of the 4 interior detectors on DISJOINT 2-layer blocks, starts
+t ∈ {80, 82, …, 998} (460 blocks, 3680 bits/shot/window; transient cut = M1-P6 ~70 + guard);
+composite marginal likelihood, declared (proper score; identical object for all arms); s-only;
+bases never pooled. Split: train = sample_00; held-out gate = samples_01..04 (4e5 shots);
+registered drift-isolated fallback = sample_00 second half (the NLL specialist's A8: cross-sample
+drift ≈ 0.27 nats/shot per 5% rate drift — both splits reported). Baselines, PINNED: naive = stim
+MC (1e5 shots, seed 20260609) of circuit_noisy_si1000.stim through the IDENTICAL extractor,
+KT-smoothed; pij-DEM = train-split Spitz-exact entries, layer-pooled [80,999], in-block edge set
+(dt=0: di≤3 incl. diagonals; dt=1: di≤2), clamp [0,½), mean-matching half-edges, exact 256-cell
+law (WHT product). Twin: 5 Stinespring channels + 4 q_logits/window (q claims = q^eff ONLY —
+reset/readout exact gauge), per-window independent fits (sharing adds no identifiability, ADR
+0005), LBFGS steps=300, seeds {0,1}, train selection. Paired shot bootstrap B=1000 seed 20260609.
+
+**Identifiability structure (independent derivation; binds the claim language).** The hardware
+context set is "r ≤ 1 forever" (no repeats/RY rung exists in this dataset) ⇒ the coherent fiber is
+EXACTLY aliased to all orders (cat-term ceiling ≲1e-5 nats corpus, estimated) — stronger than the
+toy's h⁴ null. Recoverable object per data qubit per basis: the **unordered diagonal-Markov pair
+{p01, p10}** — finer than the Pauli twirl by exactly the non-unital |δ| direction (the Claim-A
+floor direction SURVIVES on hardware: round-repeat bunching excess), coarser in all coherent
+directions; fiber band ≈ 0.22 diamond, FIBER-CONSTANT on every R2-lite functional (the claim
+boundary and the alias structure coincide). Exact gauges: reset/readout split (q^eff); per-qubit
+ℤ₂ value relabel (sign(δ) unobservable in bulk blocks); boundary q₀,q₅ structural nulls
+(excluded); edge δ₁,δ₅ absorbed into q̂₁,q̂₄. Edge-rate bias derived: f̂(edge) − f(true) ≈
++1.2e-3 one-sided (exterior crossing absorption) ⇒ f₁,f₅ are nuisance with a one-sided widened
+band; the cleanly-owned qubit is the central one. Predicted Fisher rank: 9 strong (f₁..f₅,
+q₁..q₄) both bases; +3 weak (|δ₂,₃,₄|, Fisher ∝ δ²) in the Z basis; X basis numerical rank 9
+(dephasing-symmetric δ≈0).
+
+**Derived fact registered (NLL specialist; measured-input-only).** Independent-edges BUDGET
+DEFICIT: any ≤2-detector independent-mechanism model obeys Σ_j p_ij ≤ −½·ln(1−2f) per detector;
+measured Δ≤1-class mass alone gives deficit ≥ 6.2e-3 (X) / ≥ 7.1e-3 (Z) per detector-round ⇒ the
+measured pij matrix and marginals are JOINTLY UNREALIZABLE by any independent-edges DEM; ≥10–20%
+of two-point mass is shared-cause / ≥3-detector structure. A new back-edge quantification, and the
+structural reason G3 is two-sided.
+
+**Predictions (gates vs reported as marked; X basis, Z in parentheses).**
+
+| # | Prediction | Threshold | Role |
+|---|---|---|---|
+| P1 | Machinery pins: (a) Pauli-slice = stim d=5 within 5 MC SE @1e6; (b) fixed-point ≤1e-9; (c) readout convolution vs enumeration ≤1e-12; (d) extractor pipeline-identity on sim events; (e) in-fiber EXACT flatness — iso-{p01,p10} member swap changes corpus NLL <1e-9 (control: rate-direction step moves it thousands of σ); (f) ℤ₂ swap invariance <1e-12 rel; (g) reset/readout gauge invariance; (h) execution-mode equality — torch.compile/CUDA-graph forward and K-way process-parallel fit execution reproduce the eager sequential block law ≤1e-12 and per-fit trajectories exactly (same seeds; parallelism is scheduling only, never math) | all | machinery gate — any failure ⇒ build bug, nothing downstream |
+| P2 | Fisher spectrum at the in-class naive point: rank ≥ 9 both bases (top-9 ≥ 99% trace); Z basis additionally shows the 3 weak δ directions (eigenvalue split reported); X basis numerical rank 9; coherence directions in the numerical null | rank ≥ 9 hard | DOF gate, run BEFORE any fit |
+| P3 | **M3 GATE**: per basis, 19-window aggregate held-out ΔNLL(naive − twin) > 0 at one-sided 99% paired-bootstrap; per-window margin ∈ [35, 160] central ≈55–60 (X) / [30, 150] ≈50–56 (Z) nats/shot (marginal-KL anchor 62.9 block-family / 68.1−13.9 chain cross-anchor; G4 resolution floor 0.20 ≪ 35); count of windows ≥ +30 reported (predict 19/19). Decomposition registered: the margin is ≈80–125% detector-marginal (5.13% vs 2.03%) — "twin beats naive" is CHEAP; the informative numbers are P4/P5/P10 | strict win at 99% | **gate** |
+| P4 | W_quiet (19 minus {16,17,18}): G3 = NLL_twin − NLL_pij ∈ **[−4, +6] central +1, TWO-SIDED** (panel disagreement registered: diagonal-blindness favors pij ≈ +2; budget-deficit infeasibility + δ-bunching favor twin; multi-point unknown [0.2, 3]). Three attribution instruments: (i) pij-minus-diagonal ablation (pij,nodiag − pij ∈ [1.0, 3.5]); (ii) bunching ratio (P11); (iii) the budget deficit (P10) | band, two-sided | reported — the honest headline |
+| P5 | Hot-pair windows: Δ_pij(17) > max over W_quiet, ∈ [+4, +13]; Δ_pij(16),(18) ∈ [+2.3, +4.5]; basis-independent ≤15% | bands | reported (located; H2 B_misspec on hardware) |
+| P6 | in-class SI1000 − naive-MC ∈ [0, +3] central +0.7 | band | reported |
+| P7 | q̂^eff ∈ [1.1, 1.8]e-2 (central 1.41e-2 X / 1.38e-2 Z); interior f̂ ∈ [0.9, 1.7]e-2 (central 1.26e-2 X / 1.17e-2 Z); edge f̂ − interior f̂ ≈ +1.2e-3 one-sided (sliding-window replicate check; explodes on {15,19} = positive control); shared-site q̂ replicates within max(10%, 5·SE) | bands | reported |
+| P8 | per-sample (01–04) NLL_twin range ≤ 2 nats/shot absent flagged bursts (MAD rule); drift-isolated fallback split reported alongside | band | reported; M5 feed; no coverage claim |
+| P9 | Alias report: stat bands O(1e-5) on (f, q^eff) projections; the coherent fiber reported as the EXACT hardware alias (0.22 diamond, fiber-constant on all R2-lite functionals); |δ| direction reported where resolved (Z-basis interior; the surviving Claim-A direction); abstain-when-within-band on any out-of-family functional; indicative-not-certified caveat travels | report | the registered alias statement |
+| P10 | Budget deficit on train AND held-out: Σ p̂_ij (Δ≤1 classes) − (−½ln(1−2f̂)) ≥ +5e-3 (X) / +6e-3 (Z) per detector-round, positive at ≥10σ | derived fact check | reported (back-edge quantification) |
+| P11 | Bunching asymmetry: Z-basis interior round-repeat excess ratio (p01+p10)²/(4·p01·p10) > 1 at ≥10σ; X-basis = 1 within 2σ; an i.i.d. DEM is structurally pinned at 1 | ordering hard, magnitude reported | reported (the twin's derived win channel; Claim-A on hardware) |
+
+NLL_twin sanity ∈ [550, 700] (X) / [540, 690] (Z) nats/shot/window.
+
+**Falsification routing.** P1/P2 fail ⇒ build bug, nothing downstream (P1e–g failures specifically
+⇒ phase leak / absolute-reference leak / family mis-cut — each pin names its bug). P3 fail ⇒
+re-verify pins + split bookkeeping (a ≥35-nat floor does not vanish physically); if genuine ⇒
+publish the negative + the REGISTERED alias analysis (ADR 0007 M3 fallback): Tier-0 machinery on
+the window forward + ADR 0004 probe-design guidance (which hardware-runnable circuits — repeated-
+storage sandwich, basis-rotated preps — close which nulls; guidance, not gate). P4 outside band
+high ⇒ class-resolved residual audit → back-edge (H3/H4 + ADR 0008 input). P4 low/reversed beyond
+−4 ⇒ audit the pij construction first; if sound, a multi-point-structure finding — re-derive,
+re-register. P5 miss ⇒ refine the located map. P10 deficit vanishes ⇒ the M1 class means were
+inflated by aggregation (audit pij pooling). P11 X-basis excess ⇒ non-dephasing-symmetric X-circuit
+noise — a finding. P6–P9 misses ⇒ findings, H0 precedent. Build: forward/exact/steady_state.py
+(+ dephase_parity), calibration/hardware_nll.py, hardware/{blocks,baselines,m3_report}.py,
+tests/test_hardware_m3_window_nll.py (skip-marked). Compute: ≈2–3 h on the RTX 5090 (76 fits;
+67 MB peak; the fused kernel's regime); CPU fallback ≤ 1 day.
+
+### M3 PRE-RUN ADJUDICATIONS (recorded 2026-06-09, build complete, BEFORE any run)
+
+Both derive-before-code items **confirm the registration**: (i) the readout kernel re-derived from
+the three-record preimage sum — P(e=00) = (1−q)³+q³ = 1−3q(1−q), P(01)=P(10)=P(11)=q(1−q); all
+non-identity WHT characters damped by the same (1−2q)², which also proves pin (g) exactly; (ii) the
+3-round-from-stationarity enumeration confirmed minimal-exact (a 2-layer block needs three records;
+r_{t−1} must be stationary-conditioned, which the non-selective burn-in provides exactly). Five
+build flags, adjudicated before the run phase (thresholds never retuned):
+
+1. **Burn-in init.** "Mixed-state init" = the closed-form per-qubit diagonal-stationary product
+   ⊗ diag(p10,p01)/(p01+p10). Derivation: from maximally-mixed the slowest diagonal mode decays as
+   (1−p01−p10)^B — 1e-9 at B≤320 is provably unreachable at device rates; the product init solves
+   the diagonal sector exactly (a single-qubit channel's diagonal block IS its transition matrix),
+   leaving only the 5th-order cat tail ≲1e-10. The fp pin (≤1e-9, B=40 doubling ≤320) is untouched.
+2. **P1e operationalized per shot** (460 blocks) with PHASE-completion fiber members (strictly
+   diagonal/antidiagonal Kraus ⇒ zero cat leak ⇒ exact flatness): float64 round-off alone exceeds
+   1e-9 on a ~6.4e7-nat corpus total, so the corpus-total reading is unsatisfiable as written. A
+   generic coherent member deviates at the registration's own cat-term ceiling (≲1e-5 nats corpus)
+   — reported, not gated.
+3. **P10-Z arithmetic flag.** The build's deficit formula reproduces the registered X value exactly
+   (6.23e-3 vs "≥6.2e-3" — implementation validated against the panel's arithmetic) but gives
+   Z ≈ 5.08e-3 from the same M1 class means, vs the registered Z floor 6e-3. Recorded BEFORE the
+   run: P10-Z may miss its floor as registered; if so it is scored as a miss and routed per the
+   registered arm (deficit shrinks ⇒ audit class-mean aggregation). The floor is NOT retuned. Note
+   the run pools layers [80,999] × interior chains 1–26 (registered transient cut), shifting values
+   slightly from full-grid M1 means.
+4. **In-class naive point pinned**: homogeneous f = q = 5.1e-3 (from the measured M1-P8 SI1000 MC
+   detection fraction 2.03% via 1−2p_det = (1−2f)²(1−2q)²), δ = 0 (X) / 0.1·f (Z). The P2 rank
+   statement is generic in any in-class point; the Z eigen-split is reported as found.
+5. **Minor operationalizations** (full list in the m3_report docstring): drift-isolated fallback
+   trains on sample_00's FIRST half only; P11 σ = across-window spread with the AM-GM/Jensen
+   positive-bias caveat; P5 basis-independence scored in the cross-basis test; the naive arm's
+   chunked stim sampling (seed 20260609, chunks of 10⁴) is pinned as part of the arm.
+
+6. **P1e control bump re-pinned at the derived scale (recorded after pins a–d + the P1e flatness
+   assertions PASSED, before any rerun; the flatness pin itself is untouched).** First run: swap
+   NLL/shot 1.02e-12 < 1e-9 ✓, law diff 1.7e-15 ✓ — exact flatness holds as registered. The
+   build's sensitivity CONTROL used an arbitrary bump 1e-3 and gate >100σ; measured 85σ. Derivation
+   (validated against that measurement): σ(b) = ½·b·√(N_blk·N_shots·I_rate) with I_rate ≈ 153.5
+   nats/block per unit² ⇒ σ(1e-3) = 84 ≈ 85 measured. The registered "thousands of σ" presupposes
+   a rate-scale step; re-pinned at b = 7e-3 (the device−naive rate gap P3 must resolve), predicted
+   σ ≈ 595, band [400, 800], code gate kept at >100σ (an order below center — fails only on real
+   insensitivity). Prediction written BEFORE the rerun.
+
+**Execution-mode note (P1h).** The K-way process-parallel fit layer shards (basis, window, seed)
+fits across worker processes; per-fit math, seeds, LBFGS trajectories, and the cache key format are
+untouched (scheduling only). P1(h) is verified by re-running a fit subset sequentially and
+comparing records bit-exactly before the parallel cache is accepted.
+
+7. **Execution-mode amendment (registered 2026-06-10, BEFORE any production fit; derived from
+   measured execution diagnostics, not from fit results).** Measurements on the RTX 5090/WSL2:
+   eager sequential GPU fit 70.5 s (post mask-fusion; was 77.0 s); 8 separate CUDA contexts
+   time-slice catastrophically (per-fit 11–14× slower — aggregate BELOW sequential); 4 threads in
+   one context are GIL-bound (aggregate 0.46× sequential); CUDA-graph capture of the registered
+   closure is infeasible — `torch.matrix_exp` performs a host copy during capture (build risk 1,
+   confirmed loudly by the equality-pin tests, never silently). Diagnosis: the closure is
+   host-dispatch-bound — ~215 per-(t,i) re-evaluations of the 5 TIME-SHARED channels' Kraus stacks
+   per closure. **Amendment:** the twin's channel field evaluates each channel's Kraus stack ONCE
+   per closure and reuses it across rounds — the `in_class_field` idiom every P1/P2 in-class
+   forward already uses. Derivation: forward law is provably BIT-exact (identical tensor values
+   into identical ops in identical order); the backward differs ONLY by re-association of the
+   per-round cotangent sum through the linear matrix_exp vjp — mathematically identical, float
+   ≤ ulp; disclosed consequence: trajectories are NOT claimed bit-equal to the naive per-(t,i)
+   closure (which never produced a production record). P1h's trajectory-exact clause binds
+   execution modes WITHIN the amended closure: process-parallel and CUDA-graph (static-Kraus-input)
+   modes must reproduce the amended sequential eager records bit-exactly. Pins gating the fleet:
+   (i) amended vs naive closure — law `torch.equal`, param gradients ≤1e-12 relative; (ii) if the
+   graph mode is used: graph vs amended-eager full-record bit-exact at the registered steps on one
+   real window per basis; (iii) the fleet P1h sequential-verify unchanged. All 84 production fits
+   run ONE uniform execution mode.
+
+### M3 RESULTS (run 2026-06-10, scored strictly against the 2026-06-09 pre-registration + pre-run adjudications)
+
+**VERDICT: the P3 gate PASSES in both bases.** Aggregate held-out ΔNLL(naive − twin) =
+**+56.21 nats/shot/window (X)** (paired-bootstrap q01 = 56.18, SE 0.013) and **+44.28 (Z)**
+(q01 = 44.26, SE 0.012) — strict win at one-sided 99%, margins enormous relative to the G4
+resolution floor (0.20). X lands dead-center in the registered band (central ≈55–60); Z sits
+slightly under its central ≈50–56. Per-window margins in band: 17/19 (X), 15/19 (Z); ≥ +30:
+18/19 (X; w14 = 28.7), 15/19 (Z; w11–w14 = 23.9–26.3) vs the predicted 19/19 — soft misses,
+reported. Twin NLL sanity band missed on the high-rate windows (train CE/block × 460 spans
+≈ 584–767 vs [550, 700]) — reported. As registered: this margin is ~80–125% detector-marginal —
+"twin beats naive" is the cheap part; the informative results are P4/P5/P10/P11 below.
+
+**Machinery (P1/P2, all green before any fit).** P1a–g passed (a: max |z| 3.18 ≤ 5 @1e6 shots;
+b: residual 0.0 at B=40 — the diagonal-stationary init derivation exact; c: 1.9e-16; d:
+bit-identical + NLL gap 8.4e-9; e: flatness 1.0e-12 < 1e-9 with the rate-step control at 554σ ∈
+the derived [400, 800] (adjudication 6); f: 2.8e-16; g: 6.9e-18), and re-passed with identical
+printed values on the mask-fused forward. P2 passed verbatim as predicted: X rank 9, top-9 =
+100.0000%, coherent directions at 1e-14; Z rank 12 = 9 strong + exactly the 3 weak |δ₂,₃,₄|
+directions (0.0175, 0.0174, 0.0174), rest at machine zero.
+
+**P1h / execution (the GPU acceleration story, all math-preserving).** (1) Parity-dephase sweep
+fused to one cached 0/1-mask multiply — IEEE bit-exact identity, 19 `==`-equality pins green
+(CPU+CUDA). (2) Amendment 7 (Kraus hoisted, once per closure): pin (i) law `torch.equal`, max
+relative grad gap 2.7e-13 (CPU) / 9.4e-13 (CUDA) ≤ 1e-12; kraus calls 5 vs 225 per closure.
+(3) Static-Kraus-input CUDA-graph capture (matrix_exp eager at the boundary — whole-closure
+capture is infeasible, measured and ledgered): pin (ii) full-record bit-exact at the registered
+300 steps on real windows in BOTH bases (X/w5: graph 9.6 s vs eager 18.1 s; Z/w5: 23.0 s vs
+48.4 s); unit pins (closure equality ×5 replays, 25-step trajectory, fallback) all `torch.equal`.
+(4) Fleet: **84/84 production fits, ONE uniform graph mode, zero fallbacks, 1327 s (22 min) on
+the RTX 5090, single CUDA context** (vs the registered ≈2–3 h estimate); every fit fp ≤ 3e-13 @
+exactly 40 rounds; P1h fleet verify 4/4 bit-exact (law max gap 0.00e+00). Measured execution
+pathologies that forced this design (ledgered in adjudication 7): multi-context GPU time-slicing
+(8 contexts SLOWER than sequential on WSL2), GIL-bound threading, matrix_exp host-sync. Per
+window, both seeds converge to CE identical at 6 decimals — seed-robust selection.
+
+**Scored predictions (measured / registered / verdict).**
+
+| # | Measured (X / Z) | Registered | Verdict |
+|---|---|---|---|
+| P3 | +56.21 q01 56.18 / +44.28 q01 44.26 | >0 at 99%; central 55–60 / 50–56 | **GATE PASS both** |
+| P4 G3 quiet | −2.00 [−2.01,−1.99] / −0.83 [−0.84,−0.82] | [−4,+6] two-sided, central +1 | in band ✓ (twin-favored side) |
+| P4 ablation | −1.02 / −0.07 | [+1.0,+3.5] | **reversed — finding** (diagonals don't help the pij arm) |
+| P5 hot G3 | 16:−10.6 17:−11.3 18:−4.9 / 16:−7.3 17:−7.1 18:−3.1 | +4..+13 (17), +2.3..+4.5 (16,18) | **reversed — finding** (twin beats pij MOST on hot windows) |
+| P6 | −1.00 / +2.54 | [0,+3] central +0.7 | X miss (sign) / Z ✓ |
+| P7 q̂^eff | 1.397e-2 (54% in band) / 1.401e-2 (49%) | [1.1,1.8]e-2 central ≈1.4e-2 | mean ✓ both — q̂ is the well-identified block |
+| P7 f̂ interior | 7.25e-2 (4% in band) / 6.48e-2 (9%) | [0.9,1.7]e-2 | **far out — δ-fiber expression, see findings** |
+| P7 edge−interior | −1.31e-2 / −5.6e-3 | +1.2e-3 one-sided | sign miss (absorbed into the same fiber effect) |
+| P8 range | 46.1 / 43.3 nats/shot | ≤ 2 absent bursts | **far out — strong inter-sample drift; M5 feed** |
+| P10 deficit | X 6.34e-3 train / 6.49e-3 held-out (526σ/1116σ); Z 4.06e-3 / 4.30e-3 (366σ/716σ) | ≥5e-3 X / ≥6e-3 Z at ≥10σ | X ✓; Z floor miss exactly as pre-flagged (adjudication 3), deficit decisively positive |
+| P11 bunching | X 5.27 ± 0.97 (4.4σ>1), δ′=0.82 / Z 5.39 ± 1.00 (4.4σ>1), δ′=0.77 | Z >1 at ≥10σ; X = 1 within 2σ | **Z direction ✓ at 4.4σ (<10σ); X EXCESS — finding** |
+
+**Findings (the milestone's real output — located misspecification directions, no mechanism
+attribution, registered routing applied).**
+
+1. **The pij independent-edges arm overshoots, worst where edges are strongest** (P5 reversed in
+   both bases; diagonal ablation ≈ neutral-to-negative; G3 quiet on the twin-favored side). This
+   is the registered budget-deficit consequence materializing: P10 proves the Spitz pij matrix and
+   marginals are JOINTLY UNREALIZABLE by any independent-edges DEM (deficit ≥ 4.1e-3–6.5e-3
+   per detector-round at 366–1116σ, both splits, both bases), so an arm that stuffs all measured
+   pair masses into independent edges over-correlates — and degrades most on the hot-pair windows
+   (16–18). The two-sided P4 registration anticipated exactly this fork; the deficit was its
+   registered structural reason. The P5 basis-independence sub-bet also missed (hot-window
+   |X−Z|/mean = 36–45% vs ≤15%): the overshoot magnitude is basis-dependent, consistent with
+   the deficit itself differing across bases (6.5e-3 X vs 4.3e-3 Z). Routing: located-map
+   refinement + H3/H4 input.
+2. **Basis-independent round-repeat bunching ≈ 5.3 (both bases, 4.4σ)** where the panel predicted
+   a Z-only T1-style asymmetry (≥10σ Z, ≈1 X). The twin absorbed a large bunching excess into
+   strongly asymmetric {p01, p10} pairs (δ′ ≈ 0.8) in BOTH bases. The X-basis excess routes per
+   the registration to "non-dephasing-symmetric X-circuit noise — a finding": a
+   basis-independent bunching mechanism (leakage-like / burst noise) is the natural reading —
+   recorded as a back-edge direction, not attributed. The P7 f̂ blowup (≈6.5–7.3e-2 vs the
+   ≈1.3e-2 symmetric-point prediction) is the SAME effect expressed along the X-basis δ-null
+   fiber (P2's own Fisher analysis: δ-Fisher ∝ δ² ⇒ the fit may slide along iso-law (δ, f̂)
+   directions). **P9 alias statement, applied honestly:** q̂^eff projections are tight and in
+   band (the well-earned block); per-qubit f̂ POINT VALUES are NOT fiber-resolved on this context
+   set — the resolved per-qubit functionals are the flip-rate/bunching pair, and we abstain on
+   f̂ point claims rather than report fiber-dependent numbers. Indicative-not-certified caveat
+   travels.
+3. **Strong inter-sample drift** (P8 ranges ≈ 43–46 nats/shot/window across samples 01–04,
+   far above the ≤2 prediction) — consistent with the dataset's documented drift; the registered
+   M5 (sample-indexed slices) is the designed consumer. No coverage claim was made or is made.
+   **The registered drift-isolated fallback corroborates the gate**: training on sample_00's
+   first half and scoring its second half gives aggregate ΔNLL(naive − twin) = +56.68 (q01
+   56.61, 18/19 ≥ +30) X / +46.34 (q01 46.27, 15/19) Z — within ~2 nats of the cross-sample
+   gate values, so the P3 margins are not a drift artifact (76 additional first-half graph-mode
+   fits, P1h verify bit-exact).
+4. Replicate spreads (P7 sliding-window shared-site q̂: worst 39%/61%) exceed the max(10%, 5·SE)
+   criterion — consistent with finding 3's drift plus the fiber effects; hot-control {15, 19}
+   deviations are elevated but no longer cleanly separated — the positive control is partially
+   degraded by the same drift. Reported as measured.
+
+**Claim discipline.** R2-lite NLL-prediction claims only: the window twin predicts held-out
+hardware syndrome statistics strictly better than the shipped SI1000 prior (gate) and on par
+with / better than the self-computed pij-DEM prior (reported, two-sided as registered); every
+q̂ is q^eff under the exact reset/readout gauge; no do()/counterfactual, no mechanism
+attribution, no Born/CPTP-learning claim on hardware. Fallback (drift-isolated first-half/
+second-half split) and the heavy pinned pytest suite run as the closing regression artifacts.
+
+**Epistemic-status audit of M1/M2 (recorded 2026-06-10, user-requested).** Classification of
+everything M1/M2 used, so nothing heuristic can silently promote itself to "proven":
+*(a) exact* — M1-P1 structure integers; M1-P2 bit-for-bit m2d parity; Spitz Eq. 13 exactness (a
+theorem on the independent-edges model class; a well-defined descriptive functional on device
+data); M2's within/crossing mass arithmetic. *(b) pre-registered heuristic prediction bands*
+(falsifiable bets, never proofs; misses = findings — handled as such): M1-P5–P9 fault-budget /
+triangulation estimates; C1a class bands; M2-W1's band width (its central 18% is arithmetic);
+W3/W4 bands (both missed, reported). *(c) heuristic decision rules — same epistemic type as
+X1/X2, same restriction applies (gate/tripwire roles only, never foundations):* the W2 "X2 ≤ 5%"
+threshold, margin-2 and trusted-interior choices; M1-P3's [3,7]% sanity band used as a gate
+(with its registered adjudication exit); M1-P4's significance conventions (10·SE support,
+max(1e-4, 5·SE) null, 1% exceedance); the C1 verdict "device mirror is physical" — an
+ELIMINATIVE inference (excludes the named grid-mapping artifact; P2 bit-exactness pins
+ingestion), not a theorem; M1-P6's empirical ~70-layer transient feeding the M2/M3 bulk cuts
+(design inputs; the M3 gate is invariant to them — every arm scores the identical family); the
+M2 adjudication's disclosed W4 X1→X2 extension; the regression tripwire constants (0.15 cap,
+±30% pair-mass pin). Audit verdict: apart from the corrected "bounded by X2" phrasing, no
+category-(c) item is used anywhere as a premise, definition, or derivation basis. **This
+three-way classification — (a) exact / (b) prediction band / (c) heuristic gate — is now a
+standing pre-registration requirement (METRICS.md "epistemic-status declaration"): every future
+registration declares each item's class up front; undeclared defaults to (c).**
+
+**Status rule recorded 2026-06-10 (user directive): window-closure X1/X2 is a heuristic
+risk-audit gate, NOT a theorem.** No sufficiency result links X2 to a marginal-calibration
+error bound (two-point-sector only; blind to higher-order cross-cut dependence). Its only
+permitted role is the pre-registered go/no-go gating it performed in M2; it must never serve
+as a premise, definition, derivation step, error bound, or basis for any future conclusion.
+Earlier shorthand ("cross-cut residual bounded by X2 ≤ 4.24%") is corrected in the
+non-frozen code docs; registration texts stay frozen with this note as the governing
+reading. Annotated in METRICS.md (row), `hardware/windows.py` (STATUS WARNING),
+`forward/exact/steady_state.py`, CLAUDE.md, and AGENTS.md.
 
 ### M1-C1 control RESULT
 

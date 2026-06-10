@@ -43,10 +43,12 @@ and scalability is a future selection criterion, not a now-decision (ADR 0005).
   counterfactual-validity problems; action items + reference list.
 - `docs/papers/`: local PDF cache of the load-bearing references (index in
   `README.md`). Check here before web-searching.
-- `docs/datasets/`: reading notes for the four local Google QEC datasets (Zenodo 13273331 family,
-  under `/home/cx/Document/`) — design, file formats, logicals, shipped decoder baselines, and
-  per-dataset relevance to the R2 rungs (ADR 0007); `_sources/` caches the CC-BY README originals.
-  Read the matching note before touching any hardware data.- `docs/error_mechanisms.md`: physical-error mechanism taxonomy.- `docs/adr/`: durable decisions. Current spine is 0002 → 0006.
+- `docs/.datasets/`: reading notes for the four local Google QEC datasets (Zenodo 13273331 family,
+  under `/home/cx/Document/`) — design, file formats, logicals, layout, shipped decoder baselines,
+  and per-dataset relevance to the R2 rungs (ADR 0007); `_sources/` caches the CC-BY README
+  originals (dot-prefixed ⇒ gitignored, local-only). Read the matching note — including
+  layout/figure facts — before touching any hardware data; dataset documentation is a mandatory
+  derivation input for every R2 pre-registration.- `docs/error_mechanisms.md`: physical-error mechanism taxonomy.- `docs/adr/`: durable decisions. Current spine is 0002 → 0006.
 
 ## Package and module rules
 
@@ -156,6 +158,13 @@ reinstall editable or use the module entrypoint.
 - Every quantitative claim is scored by a **field-standard** metric via `docs/METRICS.md` (forced
   ladder: ledger → frontier research → explicitly flagged project-defined). No silent non-standard
   stand-in; carry each metric's convention with its numbers.
+- **Epistemic-status declaration (2026-06-10).** Every pre-registration classifies each
+  quantitative item: **(a) exact** (theorem/identity — the only class usable as a premise or
+  derivation basis), **(b) prediction band** (falsifiable bet; miss = finding, never later cited
+  as fact), or **(c) heuristic gate/decision rule** (go/no-go gating and tripwires ONLY — never a
+  premise, definition, derivation step, error bound, or conclusion basis). Undeclared ⇒ (c).
+  Rule text: METRICS.md; binding instances: window-closure X1/X2 (`hardware/windows.py` STATUS
+  WARNING), the M1/M2 retro-audit (`metric_results.md` 2026-06-10).
 - **Theory first, runs verify (2026-06-09).** The mathematics/physics derivation — predicted
   direction, scaling, threshold — is written down *before* every code experiment (controlled or
   real-data); experiments verify derived predictions, never explore-then-rationalize. HARDEN's

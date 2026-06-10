@@ -11,6 +11,10 @@ coherence; ADR 0003).
   (`CoupledRepCodeTwin` = factorized + ONE learnable edge DOF `phi_hat`).
   A teacher's edge field is evaluator-only input to `calibrate` (it generates
   observations); the learner never receives it.
+- `hardware_nll.py` — R2-lite M3 window calibration (`WindowTwin` + exact readout
+  convolution + `calibrate_window`); consumes ONLY hardware block histograms.
+  `calibrate_window(graph_mode=...)` is execution-only — CUDA-graph replay of the
+  identical eager fit kernels (pin P1h), never a change to the math or the inputs.
 
 **Boundary.** This is the RECOVER capability only. It does not score validity
 (→ `audit`), apply knobs (→ `knobs`), or interpret mechanisms (→ `understand`).

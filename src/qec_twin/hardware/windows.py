@@ -6,6 +6,15 @@ site-pair masses over the bulk-layer block, then scores every sliding 6-site
 window: ``X1`` (naive closure = crossing/(within+crossing)) and ``X2`` (margin-2
 leakage = trusted-interior↔exterior mass over all mass touching the interior).
 Observations only — no decoding, no mechanism attribution (R2-lite claim scope).
+
+STATUS WARNING (binding, 2026-06-10 user directive; METRICS.md rung-3 row):
+``X1``/``X2`` are a HEURISTIC RISK-AUDIT GATE, not a theorem. There is NO
+sufficiency result of the form "X2 <= threshold => bounded marginal-calibration
+error" — the metric sees only the two-point sector and is blind to higher-order
+cross-cut dependence. Permitted use: pre-registered go/no-go risk gating of
+window selections (the M2 role). FORBIDDEN use: as a premise, definition,
+derivation step, error bound, or conclusion anywhere downstream. Any future
+result that needs a cross-cut residual BOUND must derive one independently.
 """
 from __future__ import annotations
 

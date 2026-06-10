@@ -88,13 +88,22 @@ pre-registered, then verified 6/6): the factorized-learner fork is rung-indexed 
 `B_misspec` is real and functional-indexed, **probe richness does not close the third band —
 one declared edge DOF does** (ADR 0006 verdict: edge slots required for φ-sensitive
 functionals; carrier feasibility study unblocked → ADR 0008). The decision-regret Go/No-Go
-gate banked the **Claim-A floor** and deferred plan2's band engine. **R2-lite M1 landed**
-(ADR 0007 Track B, `tests/test_hardware_m1_ingestion.py` + `qec_twin/hardware/`): first
-real-hardware contact on the local Google d=29 release — bit-exact m2d parity, detection
+gate banked the **Claim-A floor** and deferred plan2's band engine. **R2-lite M1+M2+M3
+landed** (ADR 0007 Track B, `qec_twin/hardware/` + `tests/test_hardware_*`): first
+real-hardware contact on the local Google d=29 release. M1 — bit-exact m2d parity, detection
 fractions in the derived band, three back-edge findings (device mirror-diagonal class ≈970×
-the SI1000 sim, long-range tails, early-layer transient). 99 tests (98 pass + 1 opt-in slow
-skip; hardware tests skip without `QEC_TWIN_HW_DATA`). Next: carrier study ∥ R2-lite M2;
-H3/H4 sequenced by the back-edge residuals.
+the SI1000 sim, long-range tails, early-layer transient). M2 — window closure adjudicated
+(single located grid-adjacent pair ⇒ 19 clean windows at margin 2). M3 (2026-06-10) — **the
+window twin beats the shipped SI1000 prior on held-out hardware syndrome NLL in both bases**
+(+56.2 X / +44.3 Z nats/shot/window at one-sided 99%; drift-isolated fallback corroborates);
+findings: pij independent-edges overshoot (the P10 budget-deficit consequence),
+basis-independent round-repeat bunching ≈5.3 (4.4σ), inter-sample drift (M5 feed). M3 GPU
+execution: static-Kraus-input CUDA graphs under the ledgered execution amendment — 84
+fits/22 min on one context, bit-exact vs eager at three pin levels
+(`hardware/m3_parallel.py`; model compute never falls back to CPU). 151 tests (150 pass +
+1 opt-in slow skip; hardware tests skip without `QEC_TWIN_HW_DATA`). Next: carrier study
+(ADR 0008) ∥ R2-lite M4; H3/H4 sequenced by the back-edge residuals (now including the
+bunching axis).
 
 ### Isolation contract
 
@@ -130,6 +139,15 @@ ground-truth channels / parameters / labels are evaluator-only — used by `audi
   `docs/METRICS.md`. Its ladder is forced — ledger metric → frontier-literature research → explicitly
   flagged project-defined; never a silent non-standard stand-in, and carry each metric's convention
   with its numbers. Unsure a metric is the standard? STOP and run the ladder first.
+- **Epistemic-status discipline (2026-06-10):** every pre-registration declares each quantitative
+  item as **(a) exact** (theorem/identity/zero-tolerance check — the only class allowed as a
+  premise or derivation basis), **(b) prediction band** (registered falsifiable bet; a miss is a
+  finding, never later citable as fact), or **(c) heuristic gate/decision rule** (thresholds,
+  significance conventions, eliminative controls, empirical design constants — go/no-go gating
+  and tripwires ONLY, never a premise, definition, derivation step, error bound, or basis for a
+  conclusion). Undeclared ⇒ defaults to (c). Full rule: METRICS.md "epistemic-status
+  declaration"; binding instances: window-closure X1/X2 (`hardware/windows.py` STATUS WARNING),
+  the M1/M2 retro-audit in `metric_results.md`.
 
 ## Notation (`docs/TWIN.md` is the full contract)
 
@@ -153,7 +171,9 @@ ADR 0005).
 - `docs/ARCHITECTURE.md` — full module map (+ per-module READMEs).
 - `docs/teacher_learner.md` — teacher/learner roles + isolation contract.
 - `docs/IDENTIFIABILITY_AND_CRL_SURVEY.md` + `docs/papers/` — CRL/finance toolset and cached references.
-- `docs/datasets/` — reading notes for the four local Google QEC datasets (R2 rungs, ADR 0007):
-  per-dataset design/formats/logicals/baselines + `_sources/` cached CC-BY originals. Read before
-  touching any hardware data.
+- `docs/.datasets/` — reading notes for the four local Google QEC datasets (R2 rungs, ADR 0007):
+  per-dataset design/formats/logicals/baselines + `_sources/` cached CC-BY originals
+  (dot-prefixed ⇒ gitignored, local-only). Read the matching note — including layout/figure
+  facts — before touching any hardware data; dataset documentation is a mandatory derivation
+  input for R2 pre-registrations.
 - `docs/adr/` — decisions; spine 0002 (build order) → 0003 (B methodology) → 0004 (finance framing) → 0005 (retire SCOPE / reframe) → 0006 (channel-field architecture) → 0007 (R2-lite published-data rung now ∥ H2; d=5/d=7 surface-code target → carrier study after H2; hardware-data metrics).

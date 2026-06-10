@@ -59,9 +59,21 @@ Per-call fused-GPU vs CPU reference (`outputs/scale_bench.py`):
 sequential LBFGS loop launch-bound; per-call wins do not survive the launch chain.
 **Device policy:** the d=3 toy stays CPU-default; cuda pays from n≈5 per-call and
 decisively at the R2-lite window sizes n=11–15 (M2/M3 — the next real workload) and
-any d≥5 simulation. Closing the toy gap needs GPU-2 (cross-context/φ-grid batching +
-CUDA graphs), recorded as the next kernel work item, pursued only if toy-scale wall
-time actually matters again.
+any d≥5 simulation. Re-measure note (2026-06-10): at the small benchmark shape
+(n=3, B=4096) fused and unfused-GPU sit within timing noise (0.9–1.5× across runs) —
+the benchmark test asserts only "not catastrophically slower" there; the n≥5 wins
+above are the kernel's claim.
+
+**GPU-2 landed for the M3 window fit (2026-06-10):** the launch-bound fit closure is
+solved by (i) the bit-exact parity-mask sweep fusion (`circuit_sim.dephase_parity_sweep`,
+pinned by `tests/test_steady_state_fusions.py`), (ii) the Kraus hoist (ledger
+amendment 7), and (iii) **static-Kraus-input CUDA-graph capture**
+(`calibration/hardware_nll.py`, `torch.matrix_exp` eager at the boundary — it
+host-syncs and cannot be captured): 84 production fits in 22 min on one context,
+bit-exact vs the amended eager reference at three pin levels
+(`tests/test_hardware_nll_graph_mode.py`, `outputs/m3_graph_realpin.py`, the fleet
+`--verify`). Measured anti-patterns, for the record: 8 CUDA contexts on WSL2
+time-slice BELOW sequential throughput; single-context threading is GIL-bound.
 
 ## Build
 

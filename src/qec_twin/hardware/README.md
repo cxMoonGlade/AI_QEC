@@ -18,6 +18,15 @@ directory holding the release folder).
 - `observations.py` — the label-free observation container handed to calibration (M3).
 - `m1_report.py` — M1 ingestion-parity scoring driver (gates P1–P4, side-bets P5–P9;
   pre-registration: `docs/metric_results.md` 2026-06-09).
+- `blocks.py` — M3 detector-block extraction (the F_blk family: disjoint 2-layer blocks,
+  pinned bit convention) + per-shot block NLL, streaming.
+- `baselines.py` — M3 pinned baseline arms: pij-DEM block model (layer-pooled Spitz-exact
+  edges + mean-matching half-edges, WHT law) and the KT-smoothed naive stim-MC arm.
+- `m3_report.py` — M3 window-NLL scoring driver (P1 machinery pins, P2 Fisher, the P3
+  gate, reported P4–P11; pre-registration: `docs/metric_results.md` 2026-06-09 M3).
+- `m3_parallel.py` — K-way process-parallel executor for the M3 fits (pin P1h:
+  scheduling only, never math; deterministic-algorithms mode + sequential re-fit
+  bit-exact comparison; populates the same fit cache `m3_report` consumes).
 
 **Isolation contract.** This module never imports from `qec_twin.mechanisms` (no
 teacher machinery on the hardware path). The release's `decoding_results/` artifacts
