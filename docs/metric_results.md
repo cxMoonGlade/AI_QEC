@@ -672,7 +672,12 @@ attribution, registered routing applied).**
    registered structural reason. The P5 basis-independence sub-bet also missed (hot-window
    |X−Z|/mean = 36–45% vs ≤15%): the overshoot magnitude is basis-dependent, consistent with
    the deficit itself differing across bases (6.5e-3 X vs 4.3e-3 Z). Routing: located-map
-   refinement + H3/H4 input.
+   refinement + H3/H4 input. **REVISED 2026-06-10 by the A1 control (see M3 ADDENDUM RESULTS):
+   the "overshoot" mechanism stated here is WRONG — the budget-rescale control found every
+   window's in-block edge set already budget-feasible (s_W = 1; the global P10 deficit does not
+   bind window-level constructions). The pij arm's deficiency is STRUCTURAL (the
+   shared-cause/bunching correlation kind is unrepresentable by independent edges), not excess
+   mass; the P10 deficit itself stands unchanged as a global unrealizability certificate.**
 2. **Basis-independent round-repeat bunching ≈ 5.3 (both bases, 4.4σ)** where the panel predicted
    a Z-only T1-style asymmetry (≥10σ Z, ≈1 X). The twin absorbed a large bunching excess into
    strongly asymmetric {p01, p10} pairs (δ′ ≈ 0.8) in BOTH bases. The X-basis excess routes per
@@ -737,6 +742,112 @@ Earlier shorthand ("cross-cut residual bounded by X2 ≤ 4.24%") is corrected in
 non-frozen code docs; registration texts stay frozen with this note as the governing
 reading. Annotated in METRICS.md (row), `hardware/windows.py` (STATUS WARNING),
 `forward/exact/steady_state.py`, CLAUDE.md, and AGENTS.md.
+
+### M3 ADDENDUM PRE-REGISTRATION (A1–A3, recorded 2026-06-10 BEFORE build/run) — the three M3 regrets, closed under the epistemic-status declaration
+
+First registration under the standing three-class rule: every item below carries its class —
+**(a) exact**, **(b) prediction band**, **(c) heuristic gate/decision rule** — and pinned arm
+constructions are declared designs. Fit machinery, splits, seeds, LBFGS hyperparameters, and the
+graph execution mode are UNCHANGED from M3 (amendment 7 governs); no M3 number is re-scored.
+
+**A1 — budget-rescaled pij control (regret 1: finding-1 attribution lacks its direct control).**
+*Construction (declared, pinned):* per window, shrink every in-block edge mass by ONE factor
+`s_W = min(1, min_i s*_i)` where `s*_i` is the unique root (bisection, monotone) of
+`Π_{e∋i}(1−2·s·p̂_e) = 1−2f̂_i` over the 8 block nodes — the minimal uniform shrinkage making the
+registered mean-matching half-edges feasible (≥0) at every node, i.e. the budget-consistent member
+of the same independent-edges family; then mean-match exactly as the pinned arm does. The budget
+algebra inside is **(a)** (the M3-P10 theorem); the uniform-per-window choice is the declared
+design. *Predictions:* (b) hot-window mechanism check — G3′(16,17,18) − G3(16,17,18) ≥ +2 nats
+(rescaling recovers ≥ half the hot handicap; one-sided); (b) quiet aggregate
+G3′ = NLL_twin − NLL_pij-rescaled ∈ [−2.5, +1.0] central −0.7 (X) / [−1.5, +1.0] central −0.4 (Z),
+two-sided; (b) the headline bet: G3′ quiet stays ≤ 0 (twin side) in BOTH bases — the bunching DOF
+(P11, R≈5.3) is structurally absent from ANY independent-edges law, rescaled or not.
+*Routing:* G3′ > 0 (rescaled pij beats the twin on quiet aggregate) ⇒ the M3 "beats pij-DEM"
+claim is RETRACTED to "beats the shipped prior and the standard (unrescaled) pij construction";
+the finding becomes "budget-consistent independent edges suffice on quiet windows" — re-derive
+before any further pij claims. Hot-window check fails (no improvement) ⇒ the overshoot attribution
+of finding 1 is wrong ⇒ re-audit the pij construction.
+
+**A2 — identified-coordinates re-report (regret 2: P7 banded non-fiber-constant coordinates).**
+*Identities, all (a) exact:* stationary flip rate `r = 2p01p10/(p01+p10)`; bunching
+`R = (p01+p10)²/(4p01p10)`; hence `f̂ ≡ (p01+p10)/2 = r·R` exactly — the P7 f̂ blowup factors
+EXACTLY into (identified flip rate) × (bunching). Detector-marginal unfolding (homogeneous
+in-class sector): `1−2f_det = (1−2r)²(1−2q)²`. *Derived re-anchor* (b): the ORIGINAL P7
+derivation unfolded the detection fraction assuming δ=0, where f̂ = r — its band was therefore a
+band on **r mislabeled as f̂**. Scored on r̂: interior per-qubit r̂ ∈ [0.9, 1.7]e-2 (the original
+band), re-derived centrals from measured (f_det, q̂): **1.27e-2 (X) / 1.20e-2 (Z)**; predict
+≥80% of interior r̂ entries in band (vs f̂'s 4%/9%). Edge−interior re-scored on r̂ (b): sign
+positive (the original absorption argument), magnitude reported. *Disclosure:* aggregate-level
+implications were visible pre-registration (mean-f̂/mean-R ≈ 1.38e-2 X / 1.20e-2 Z); the
+registered new content is the per-qubit/per-window distributions. *Standing craft rule (recorded):
+registration bands are declared on identified (fiber-constant) functionals, never on
+parameterization coordinates.*
+
+**A3 — bunching uncertainty upgrade (regret 3: across-window 4.4σ mixes heterogeneity with
+noise; R̂ ≥ 1 by construction makes sign tests vacuous — the claim must be a magnitude floor).**
+*New fits:* sample_00 SECOND half (split="second_half", 19 clean windows × 2 seeds × 2 bases = 76
+fits; identical registered machinery) — with the existing full and first-half fits this gives
+three R̂ estimates per window. *Predictions, all (b):* per-window central-qubit R̂ ∈ [2, 12] for
+every clean window, both bases, all three splits; min over windows/splits/bases R̂ ≥ 2 (the
+magnitude-floor claim replacing the σ language); split-half (first vs second) per-window relative
+gap median ≤ 30%, and ≪ the across-window spread (heterogeneity, not noise, dominates the 4.4σ
+denominator). *Routing:* any R̂ < 2 ⇒ the bunching claim weakens to the windows where it holds
+(located, reported); split-half gaps ≳ across-window spread ⇒ the across-window σ was the right
+denominator after all — the 4.4σ stands as the honest significance and the magnitude claim is
+withdrawn.
+
+*Compute (declared):* A2 is cache post-processing (seconds); A3 adds 76 graph-mode fits (~15–20
+min, single context); A1 adds per-basis law construction + ONE held-out streaming pass per basis.
+
+### M3 ADDENDUM RESULTS (run 2026-06-10, scored strictly against the A1–A3 registration; all three M3 regrets closed)
+
+**A1 — budget-rescale control: the most informative outcome — the rescale is a NO-OP (s_W = 1.0
+on every window, both bases).** The bisection found every window's IN-BLOCK edge set already
+budget-feasible: P10's deficit sums over ALL Δ≤1 neighbors of a site GLOBALLY, while a window
+model carries only the in-block subset (the mean-matching half-edges absorb the remainder) — the
+global theorem violation does not bind the window construction. Consequences, per the registered
+routing, in both directions: (i) hot mechanism check FAILS (G3′−G3 = 0.00 < +2, per-window and
+mean) ⇒ **the M3 finding-1 "overshoot" attribution is WRONG and is revised** (see the dated
+revision under M3 RESULTS): the pij arm's deficiency is STRUCTURAL — independent edges, even
+budget-feasible ones, cannot represent the shared-cause/bunching correlation kind — not
+quantitative excess mass. (ii) Quiet bands trivially in band (G3′ ≡ G3 = −2.00 X / −0.83 Z);
+headline bet HOLDS in both bases, and **the "beats pij-DEM" claim comes out STRENGTHENED**: the
+pinned arm IS the budget-feasible member of its family — no rescaled variant exists that could
+have done better. Runtime byte-identity anchor passed (pinned G3 quiet reproduced exactly;
+rebuild gate `np.array_equal` held). Newly visible located detail (reported): pij loses
+catastrophically on windows 8/9 (G3 −17.1/−16.2 X, −11.2/−11.2 Z) and wins mildly on 20/21
+(+2.9/+4.5 X, +3.0/+4.8 Z).
+
+**A2 — identified-coordinates re-report: P7's "catastrophic miss" was a COORDINATE ARTIFACT;
+the original predictions hold in the identified functionals.** Identity f̂ = r·R verified at
+2.5e-16 (class (a)). Interior r̂ in the original band [0.9, 1.7]e-2: **48/57 = 84.2% (X) /
+46/57 = 80.7% (Z) — PASS ≥80%** (the f̂ contrast: 3.5% / 8.8%); interior mean r̂ = 1.317e-2 (X)
+vs derived central 1.27e-2, 1.125e-2 (Z) vs 1.20e-2. **Edge − interior r̂ = +1.77e-3 (X) /
++2.46e-3 (Z) — the ORIGINAL absorption prediction's sign and magnitude scale (+1.2e-3,
+one-sided), which had failed in f̂ coordinates (−1.3e-2), PASSES on r̂ in both bases.** The
+standing craft rule (band identified, fiber-constant functionals) is hereby validated on data.
+
+**A3 — bunching uncertainty upgrade: heterogeneity confirmed real; the magnitude floor weakens
+to located windows per the registered routing.** (iii) Split-half replication is decisive:
+median per-window |R_first − R_second|/mean = **1.3% (X) / 2.6% (Z) ≪ 30%**; across-window
+spread 80.2%/81.1%; gap/spread = 0.016/0.032 — estimator noise is ~50× below window
+heterogeneity, so per-window R̂ is a stable per-window property (w8: 17.726/17.728/17.721
+across three splits) and the M3 across-window 4.4σ was heterogeneity-dominated as suspected.
+(i)/(ii) The [2,12] band breaks on BOTH sides and min = 1.000 FAILS the ≥2 floor ⇒ registered
+routing applies: **the bunching claim is located, not uniform** — R̂ ≥ 2 on 17/19 windows (X;
+exceptions w2 ≈ 1.97, w20 = 1.000) and 16/19 (Z; exceptions w14 ≈ 1.45, w20 = 1.000,
+w21 ≈ 1.12), split-stable. Located structure (reported, no attribution): **w20's central qubit
+shows NO bunching in either basis (R = 1.000, all six fits)**; w8 shows extreme bunching in
+both (≈17.7 X / ≈15.8 Z), with w9/w16/w17 at 9–12. *Exploratory note, flagged post-hoc (NOT a
+registered prediction; a candidate for the next registration):* per-window R̂ visibly co-varies
+with the per-window pij gap G3 (extreme-bunching windows 8/9/16/17 are exactly where pij loses
+worst; the no-bunching windows 20/21 are where pij wins) — consistent with bunching being the
+DOF independent edges lack, to be tested properly if pursued.
+
+**Net effect on M3:** regret 1 closed (control run; attribution corrected; claim strengthened);
+regret 2 closed (coordinate artifact proven; craft rule validated); regret 3 closed (σ
+methodology replaced by split-replicated located magnitudes). 236 fits in the cache, all
+graph-mode, P1h bit-exact throughout.
 
 ### M1-C1 control RESULT
 

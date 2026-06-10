@@ -19,6 +19,19 @@ naive arm: stim detector-sample MC of ``circuit_noisy_si1000.stim`` (1e5
 shots, seed 20260609) routed through the IDENTICAL grid/window/block extractor
 as the device data, Krichevsky-Trofimov smoothed ``(count + 1/2)/(N + 128)``
 to the 256-bin law.
+
+A1 budget-rescaled pij arm (``budget_rescale=True``; M3 ADDENDUM
+PRE-REGISTRATION, docs/metric_results.md): BEFORE mean-matching, every
+in-block edge mass is scaled by ONE per-window factor
+``s_W = min(1, min_i s*_i)``, where ``s*_i`` is the unique root in (0, 1] of
+``prod_{e ni i} (1 - 2 s p_e) = 1 - 2 f_i`` over the 8 block nodes (bisection
+to ``NUMERICAL_ZERO``; ``s*_i = 1`` when even ``s = 1`` keeps the product
+``>= 1 - 2 f_i``) -- the minimal uniform shrinkage making the registered
+mean-matching half-edges feasible (>= 0) at every node, i.e. the
+budget-consistent member of the SAME independent-edges family. Mean-matching
+then proceeds exactly as the pinned arm (feasibility is asserted loudly).
+``f_i`` is the same per-node pooled marginal the mean-matching uses. The
+default (flag-off) path is byte-identical to the pinned M3 arm.
 """
 
 from __future__ import annotations
@@ -187,15 +200,61 @@ def xor_fold_law(edge_p: dict, singles: np.ndarray) -> np.ndarray:
     return np.clip(law, 0.0, None)
 
 
+def _budget_shrink_factor(edge_p: dict, node_f: dict) -> tuple:
+    """A1 shrink factor ``(s_W, binding node, ((node, s*_i), ...))``.
+
+    ``s*_i`` is the unique root in (0, 1] of
+    ``prod_{e ni i} (1 - 2 s p_e) = 1 - 2 f_i`` (strictly decreasing in ``s``
+    wherever an incident ``p_e > 0``); a node where even ``s = 1`` keeps the
+    product ``>= 1 - 2 f_i`` never binds, so ``s*_i = 1`` there. Bisection to
+    interval width ``NUMERICAL_ZERO`` returns the FEASIBLE (lower) bracket
+    end, and the product uses the identical float form ``1 - 2 (s p)`` and the
+    identical edge iteration order as the mean-matching loop, so the returned
+    ``s_W = min(1, min_i s*_i)`` satisfies every node inequality as evaluated.
+    """
+
+    def product_at(s: float, incident: list) -> float:
+        prod = 1.0
+        for p in incident:
+            prod *= 1.0 - 2.0 * (s * p)
+        return prod
+
+    s_star: dict = {}
+    for node, f_node in node_f.items():
+        b = _node_bit(node)
+        incident = [
+            p for (n1, n2), p in edge_p.items() if _node_bit(n1) == b or _node_bit(n2) == b
+        ]
+        target = 1.0 - 2.0 * f_node
+        if product_at(1.0, incident) >= target:
+            s_star[node] = 1.0
+            continue
+        lo, hi = 0.0, 1.0  # invariant: product_at(lo) >= target > product_at(hi)
+        while hi - lo > NUMERICAL_ZERO:
+            mid = 0.5 * (lo + hi)
+            if product_at(mid, incident) >= target:
+                lo = mid
+            else:
+                hi = mid
+        s_star[node] = lo
+    s_w = min(1.0, min(s_star.values()))
+    binding = min(s_star, key=s_star.get) if s_w < 1.0 else None
+    return s_w, binding, tuple(s_star.items())
+
+
 @dataclass(frozen=True)
 class PijBlockModel:
     window: int
-    edge_p: dict  # (node1, node2) -> clamped pooled Spitz entry
+    edge_p: dict  # (node1, node2) -> clamped pooled Spitz entry (A1: scaled by s_w)
     singles: np.ndarray  # [8] mean-matching half-edges
     law: np.ndarray  # [256]
     drop_diagonal_edges: bool
     clipped_edges: tuple  # edges whose raw entry left [0, 1/2)
     clipped_singles: tuple  # nodes whose solved single left [0, 1/2)
+    budget_rescale: bool = False  # the A1 arm (M3 addendum registration)
+    s_w: float | None = None  # A1: uniform in-block shrink min(1, min_i s*_i)
+    s_w_node: tuple | None = None  # A1: binding node (k, layer); None when s_w == 1
+    s_star: tuple = ()  # A1: ((k, layer), s*_i) over the 8 block nodes
 
 
 def pij_block_model(
@@ -208,9 +267,16 @@ def pij_block_model(
     shot_slice=None,
     chunk_shots: int = 10_000,
     drop_diagonal_edges: bool = False,
+    budget_rescale: bool = False,
 ) -> PijBlockModel:
     """The PINNED pij arm for one window (``drop_diagonal_edges`` = the P4
-    attribution ablation: removes the ``dt=1, di>=1`` diagonal edges)."""
+    attribution ablation: removes the ``dt=1, di>=1`` diagonal edges).
+
+    ``budget_rescale`` = the A1 arm (M3 addendum registration, module
+    docstring): all in-block edge masses are scaled by the per-window uniform
+    ``s_W`` BEFORE the unchanged mean-matching, which is then feasible
+    (>= 0) at every node by construction -- violations raise loudly.
+    """
     if isinstance(moments_or_events, PooledBlockMoments):
         moments = moments_or_events
     else:
@@ -234,6 +300,20 @@ def pij_block_model(
             clipped_edges.append((n1, n2, raw))
         edge_p[(n1, n2)] = clamped
 
+    s_w = None
+    s_w_node = None
+    s_star: tuple = ()
+    if budget_rescale:
+        # f per node = the SAME pooled marginal the mean-matching below uses
+        # (layer-pooled, so both layers of interior site k share one value).
+        node_f = {
+            (k, layer): pooled_site_fraction(moments, int(chains[k]))
+            for k in range(NUM_INTERIOR_DETECTORS)
+            for layer in (0, 1)
+        }
+        s_w, s_w_node, s_star = _budget_shrink_factor(edge_p, node_f)
+        edge_p = {pair: s_w * p for pair, p in edge_p.items()}
+
     singles = np.zeros(2 * NUM_INTERIOR_DETECTORS, dtype=np.float64)
     clipped_singles = []
     for k in range(NUM_INTERIOR_DETECTORS):
@@ -245,6 +325,12 @@ def pij_block_model(
                 if _node_bit(n1) == b or _node_bit(n2) == b:
                     prod *= 1.0 - 2.0 * p
             raw = 0.5 * (1.0 - (1.0 - 2.0 * f_site) / prod)
+            if budget_rescale and raw < 0.0:
+                raise AssertionError(
+                    f"A1 budget rescale: infeasible half-edge {raw:.3e} at node "
+                    f"{(k, layer)} of window {window} despite s_W = {s_w!r} -- "
+                    "the registered shrink-factor construction is violated"
+                )
             clamped = float(np.clip(raw, 0.0, 0.5 - NUMERICAL_ZERO))
             if raw != clamped:
                 clipped_singles.append(((k, layer), raw))
@@ -258,6 +344,10 @@ def pij_block_model(
         drop_diagonal_edges=bool(drop_diagonal_edges),
         clipped_edges=tuple(clipped_edges),
         clipped_singles=tuple(clipped_singles),
+        budget_rescale=bool(budget_rescale),
+        s_w=s_w,
+        s_w_node=s_w_node,
+        s_star=s_star,
     )
 
 

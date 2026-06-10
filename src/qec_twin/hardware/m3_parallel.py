@@ -292,6 +292,11 @@ def main(argv=None) -> int:
                     paths.detection_events, grid.num_layers * grid.num_chains
                 )
                 shot_slice = (0, total // 2)
+            elif split == "second_half":
+                total = b8_io.num_shots_in_file(
+                    paths.detection_events, grid.num_layers * grid.num_chains
+                )
+                shot_slice = (total // 2, total)
             t0 = time.perf_counter()
             counts = blocks.block_histograms(
                 paths.detection_events, grid, windows, shot_slice=shot_slice

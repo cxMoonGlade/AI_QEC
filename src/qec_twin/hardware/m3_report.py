@@ -103,6 +103,14 @@ P10_SIGMA_MIN = 10.0
 P10_INTERIOR_CHAINS = (1, 26)  # inclusive; chain edges carry the one-sided bias
 NLL_SANITY = {"X": (550.0, 700.0), "Z": (540.0, 690.0)}
 
+# A1 budget-rescaled pij control -- registered prediction bands (docs/
+# metric_results.md, "M3 ADDENDUM PRE-REGISTRATION (A1-A3, recorded
+# 2026-06-10 BEFORE build/run)"); G3' = NLL_twin - NLL_pij_rescaled.
+A1_HOT_IMPROVEMENT_MIN = 2.0  # G3'(16,17,18) - G3(16,17,18) >= +2 nats, one-sided
+A1_QUIET_BAND = {"X": (-2.5, 1.0), "Z": (-1.5, 1.0)}  # two-sided
+A1_QUIET_CENTRAL = {"X": -0.7, "Z": -0.4}
+# headline bet: G3' quiet stays <= 0 (twin side) in BOTH bases.
+
 
 def _in_band(value: float, band) -> bool:
     return band[0] <= value <= band[1]
@@ -511,7 +519,7 @@ class FitRecord:
     basis: str
     window: int
     seed: int
-    split: str  # "full" | "first_half"
+    split: str  # "full" | "first_half" | "second_half"
     ce_per_block: float
     law: np.ndarray  # [256]
     q_eff: np.ndarray  # [4]
@@ -543,7 +551,8 @@ def fit_windows(
     """Fit every (window, seed); returns ``{"selected": {w: FitRecord}, "all": [...]}``.
 
     Train split = sample_00 (``split="first_half"`` = the drift-isolated
-    fallback's train half). Selection: per window, the seed with the lower
+    fallback's train half; ``split="second_half"`` = the A3 split-half arm,
+    M3 addendum registration). Selection: per window, the seed with the lower
     TRAIN cross-entropy (registered). ``cache_path`` stores finished fits so
     scoring sections can rerun without refitting.
     """
@@ -553,6 +562,9 @@ def fit_windows(
     if split == "first_half":
         total = b8_io.num_shots_in_file(paths.detection_events, grid.num_layers * grid.num_chains)
         shot_slice = (0, total // 2)
+    elif split == "second_half":
+        total = b8_io.num_shots_in_file(paths.detection_events, grid.num_layers * grid.num_chains)
+        shot_slice = (total // 2, total)
     histograms = blocks.block_histograms(
         paths.detection_events, grid, list(windows), shot_slice=shot_slice
     )
@@ -771,6 +783,89 @@ def run_p4_p5(basis: str, windows, per_shot: dict) -> dict:
         "hot_bands": P5_BAND,
         "hot_17_exceeds_quiet_max": hot.get(17) is not None and hot[17] > quiet_max,
         "quiet_max_g3": quiet_max,
+    }
+
+
+def run_a1(
+    ds: RepCodeD29,
+    basis: str,
+    windows,
+    fits: dict,
+    laws: np.ndarray,
+    *,
+    pij_index: int = MODELS.index("pij"),
+    train_shot_slice=None,
+    samples=HELDOUT_SAMPLES,
+    shot_slices: dict | None = None,
+    chunk_shots: int = 10_000,
+    verbose: bool = True,
+) -> dict:
+    """A1 (addendum): G3' = NLL_twin - NLL_pij_rescaled vs the pinned-arm G3.
+
+    The budget-rescaled pij law is built per window from the SAME pooled train
+    moments as the pinned arm -- guaranteed by rebuilding the pinned law from
+    these moments and requiring bit-equality with ``laws[pij_index]`` (the law
+    the main pass scored). One extra held-out streaming pass then scores
+    [twin, pij_pinned, pij_rescaled] together on identical patterns (the
+    paired-bootstrap input). Registered bands: ``A1_*`` constants above.
+    """
+    grid = m1_report.build_grid(ds, basis)
+    paths = ds.paths(basis, TRAIN_SAMPLE)
+    if verbose:
+        print(f"    A1 {basis}: budget-rescaled pij arm (train pooled moments)", flush=True)
+    moments = baselines.pooled_block_moments(
+        paths.detection_events, grid, shot_slice=train_shot_slice
+    )
+    a1_laws = np.zeros((3, len(windows), 256), dtype=np.float64)
+    s_w_table: dict = {}
+    s_w_node: dict = {}
+    for w_index, window in enumerate(windows):
+        pinned = baselines.pij_block_model(moments, grid, window)
+        if not np.array_equal(pinned.law, laws[pij_index, w_index]):
+            raise AssertionError(
+                f"A1 {basis}/w{window}: pinned pij law rebuilt from these moments differs "
+                "from the scored arm -- the rescaled arm would not share the pinned moments"
+            )
+        rescaled = baselines.pij_block_model(moments, grid, window, budget_rescale=True)
+        a1_laws[0, w_index] = fits["selected"][int(window)].law
+        a1_laws[1, w_index] = pinned.law
+        a1_laws[2, w_index] = rescaled.law
+        s_w_table[int(window)] = float(rescaled.s_w)
+        s_w_node[int(window)] = rescaled.s_w_node
+    per_shot = heldout_per_shot(
+        ds, basis, windows, a1_laws, samples=samples, shot_slices=shot_slices,
+        chunk_shots=chunk_shots, verbose=verbose,
+    )
+    pooled = np.concatenate([per_shot[s] for s in sorted(per_shot)], axis=0)
+    twin, pij_arm, rescaled_arm = pooled[:, 0, :], pooled[:, 1, :], pooled[:, 2, :]
+    g3 = twin - pij_arm
+    g3_prime = twin - rescaled_arm
+    index = {int(w): i for i, w in enumerate(windows)}
+    quiet_cols = [index[w] for w in W_QUIET if w in index]
+    quiet_boot = paired_bootstrap(g3_prime[:, quiet_cols].mean(axis=1))
+    per_window_g3 = {int(w): float(g3[:, i].mean()) for i, w in enumerate(windows)}
+    per_window_g3_prime = {int(w): float(g3_prime[:, i].mean()) for i, w in enumerate(windows)}
+    hot_improvement = {
+        w: per_window_g3_prime[w] - per_window_g3[w] for w in HOT_PAIR_WINDOWS if w in index
+    }
+    hot_mean = float(np.mean(list(hot_improvement.values()))) if hot_improvement else float("nan")
+    return {
+        "section": "A1",
+        "basis": basis,
+        "g3_prime_quiet": quiet_boot,
+        "quiet_band": A1_QUIET_BAND[basis],
+        "quiet_central": A1_QUIET_CENTRAL[basis],
+        "quiet_in_band": _in_band(quiet_boot["mean"], A1_QUIET_BAND[basis]),
+        "headline_twin_side": quiet_boot["mean"] <= 0.0,
+        "g3_quiet_mean": float(g3[:, quiet_cols].mean()),
+        "per_window_g3_prime": per_window_g3_prime,
+        "per_window_g3": per_window_g3,
+        "hot_improvement": hot_improvement,
+        "hot_improvement_mean": hot_mean,
+        "hot_each_ok": all(v >= A1_HOT_IMPROVEMENT_MIN for v in hot_improvement.values()),
+        "hot_mean_ok": hot_mean >= A1_HOT_IMPROVEMENT_MIN,
+        "s_w": s_w_table,
+        "s_w_binding_node": s_w_node,
     }
 
 
@@ -1009,6 +1104,8 @@ def main(argv=None) -> int:
     parser.add_argument("--skip-bunching", action="store_true", help="skip P11")
     parser.add_argument("--skip-hot-controls", action="store_true", help="skip {15,19} P7 control fits")
     parser.add_argument("--run-fallback", action="store_true", help="drift-isolated half-split (P8)")
+    parser.add_argument("--run-a1", action="store_true",
+                        help="A1 budget-rescaled pij control (M3 addendum registration)")
     parser.add_argument("--bases", nargs="+", default=["X", "Z"])
     parser.add_argument("--seeds", type=int, nargs="+", default=list(FIT_SEEDS))
     parser.add_argument("--steps", type=int, default=FIT_STEPS)
@@ -1043,8 +1140,10 @@ def main(argv=None) -> int:
                   f"top9 {row['top9_trace_share']:.4%}; eig[0,8,9,11,14] = "
                   f"{eig[0]:.3e} {eig[8]:.3e} {eig[9]:.3e} {eig[11]:.3e} {eig[14]:.3e}", flush=True)
 
-    needs_fits = not (args.skip_gate and args.skip_pij and args.skip_p6 and args.skip_params
-                      and args.skip_samples and args.skip_bunching)
+    needs_fits = args.run_a1 or not (args.skip_gate and args.skip_pij and args.skip_p6
+                                     and args.skip_params and args.skip_samples
+                                     and args.skip_bunching)
+    a1_results: dict = {}
     for basis in args.bases:
         if not needs_fits:
             break
@@ -1065,7 +1164,9 @@ def main(argv=None) -> int:
             ds, basis, CLEAN_WINDOWS, fits, device=device,
             max_burn_in=args.max_burn_in, fp_tol=args.fp_tol,
         )
-        per_shot = heldout_per_shot(ds, basis, CLEAN_WINDOWS, laws, chunk_shots=args.chunk_shots)
+        per_shot = None  # the 5-model held-out pass; A1 runs its own 3-model pass
+        if not (args.skip_gate and args.skip_pij and args.skip_p6 and args.skip_samples):
+            per_shot = heldout_per_shot(ds, basis, CLEAN_WINDOWS, laws, chunk_shots=args.chunk_shots)
 
         if not args.skip_gate:
             p3 = run_p3(basis, CLEAN_WINDOWS, per_shot)
@@ -1089,6 +1190,25 @@ def main(argv=None) -> int:
             print(f"== P5 {basis}: hot G3 {p4['hot_g3']} bands {p4['hot_bands']}; "
                   f"17 > quiet max ({p4['quiet_max_g3']:.2f}): {p4['hot_17_exceeds_quiet_max']}",
                   flush=True)
+
+        if args.run_a1:
+            a1 = run_a1(ds, basis, CLEAN_WINDOWS, fits, laws, chunk_shots=args.chunk_shots)
+            a1_results[basis] = a1
+            g3p = a1["g3_prime_quiet"]
+            print(f"\n== A1 {basis} (addendum): G3' quiet {g3p['mean']:.2f} "
+                  f"[{g3p['q025']:.2f}, {g3p['q975']:.2f}] in {a1['quiet_band']} "
+                  f"(central {a1['quiet_central']}): {a1['quiet_in_band']}; "
+                  f"G3' <= 0 (twin side): {a1['headline_twin_side']} "
+                  f"(pinned G3 quiet {a1['g3_quiet_mean']:.2f})", flush=True)
+            print(f"   hot G3' - G3 {{16,17,18}}: "
+                  f"{ {w: round(v, 2) for w, v in a1['hot_improvement'].items()} } "
+                  f">= +{A1_HOT_IMPROVEMENT_MIN:.0f} one-sided -- each: {a1['hot_each_ok']}, "
+                  f"mean {a1['hot_improvement_mean']:.2f}: {a1['hot_mean_ok']}", flush=True)
+            print(f"   per-window G3': "
+                  f"{ {w: round(v, 2) for w, v in a1['per_window_g3_prime'].items()} }",
+                  flush=True)
+            print(f"   s_W: { {w: round(v, 6) for w, v in a1['s_w'].items()} }", flush=True)
+            print(f"   s_W binding node: {a1['s_w_binding_node']}", flush=True)
 
         if not args.skip_p6:
             p6 = run_p6(basis, CLEAN_WINDOWS, per_shot)
@@ -1147,6 +1267,10 @@ def main(argv=None) -> int:
                 print(f"   {split}: {row['deficit']:.3e} (SE {row['se']:.1e}, "
                       f"{row['sigma']:.0f} sigma) >= {row['floor']:.0e} at >= 10 sigma: {row['ok']}",
                       flush=True)
+
+    if args.run_a1 and len(a1_results) >= 2:
+        both = all(r["headline_twin_side"] for r in a1_results.values())
+        print(f"\n== A1 headline bet: G3' quiet <= 0 (twin side) in BOTH bases: {both}", flush=True)
 
     return 0
 

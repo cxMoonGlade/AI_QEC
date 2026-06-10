@@ -96,8 +96,12 @@ the SI1000 sim, long-range tails, early-layer transient). M2 — window closure 
 (single located grid-adjacent pair ⇒ 19 clean windows at margin 2). M3 (2026-06-10) — **the
 window twin beats the shipped SI1000 prior on held-out hardware syndrome NLL in both bases**
 (+56.2 X / +44.3 Z nats/shot/window at one-sided 99%; drift-isolated fallback corroborates);
-findings: pij independent-edges overshoot (the P10 budget-deficit consequence),
-basis-independent round-repeat bunching ≈5.3 (4.4σ), inter-sample drift (M5 feed). M3 GPU
+findings (post-A1–A3 addendum, 2026-06-10): pij independent-edges deficiency is STRUCTURAL
+(bunching DOF unrepresentable; the budget-rescale control was a no-op — the global P10 deficit
+does not bind window constructions), located per-window bunching R̂ ∈ [1.0, 17.7] split-stable
+(≥2 on 17/19 X / 16/19 Z; w20 = 1.000 both bases), inter-sample drift (M5 feed); P7's f̂ miss
+was a coordinate artifact — predictions hold on the identified flip-rate r̂ (84%/81% in band,
+edge absorption sign correct). M3 GPU
 execution: static-Kraus-input CUDA graphs under the ledgered execution amendment — 84
 fits/22 min on one context, bit-exact vs eager at three pin levels
 (`hardware/m3_parallel.py`; model compute never falls back to CPU). 151 tests (150 pass +
