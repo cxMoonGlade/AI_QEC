@@ -2,7 +2,7 @@
 
 Binding roadmap for **the twin** (`qec_twin`). Division of labor:
 [`docs/TWIN.md`](TWIN.md) is the **object contract** (*what* the twin is); the
-[ADR spine](adr/) (0002→0006) records **decisions** (*why*); this file is the **path**
+[ADR spine](adr/) (0002→0007) records **decisions** (*why*); this file is the **path**
 (*how / when / how it falsifies*). It is **strict** on physics, mathematics, and the
 aim↔object map, and **deliberately open** on architecture/parameterization (ADR 0005).
 
@@ -376,6 +376,19 @@ if R2 lands the data *outside* the R1 family (§1.2), that is not a failure but 
 valuable output — **return to R1, widen the family *along the direction R2 exposed*, re-gate.**
 A ladder that can only climb will climb past its own family-conditioning; the down-rung is what
 keeps "calibrated across this family" from silently becoming "calibrated."
+
+**Amended by ADR 0007 (2026-06-09):** R2 splits into **R2-lite** (prediction-calibration +
+decoder-prior utility only, entered now in parallel with H2, on the local Google releases —
+rep-code d=29 windows first) and **R2-full** (the composed decision-regret protocol above,
+gates unchanged); the d=5/d=7 **surface-code** twin is the declared destination, putting the
+`forward/scalable` carrier feasibility study on the schedule (after H2 → ADR 0008). Two
+explicit deviations from this subsection's literal wording, both ADR-justified: decoder-prior
+utility *extends* "prediction-calibration only" while staying inside the W1 / §1.3 boundary
+(both arms re-decode the *same recorded shots* — no intervention, no counterfactual); and
+"entered now, in parallel with H2" is an exception to "each entered only when the prior's
+gate fires", for R2-lite's narrowed claim set only — R2-full keeps the original gating. Claim
+restrictions, milestones M1–M5, and pre-registered fallbacks live in
+[`adr/0007-r2-lite-published-data-and-surface-code-target.md`](adr/0007-r2-lite-published-data-and-surface-code-target.md).
 
 ### C — real Google 72Q/105Q · DEFERRED
 

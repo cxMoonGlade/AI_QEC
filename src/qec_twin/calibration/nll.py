@@ -31,6 +31,7 @@ from dataclasses import dataclass
 import torch
 
 from qec_twin.contexts.ladder import RepCodeContext, run_context
+from qec_twin.mechanisms.teachers import zz_coupling_kraus
 from qec_twin.numerics import NUMERICAL_ZERO
 from qec_twin.forward.cptp_channel import RDTYPE, StinespringChannel
 from qec_twin.forward.exact.rep_code import RepCodeForward
@@ -120,6 +121,48 @@ class RepCodeTwin:
     def field(self):
         return lambda t, i: self.channels[i].kraus()
 
+    def edge_field(self):
+        """Factorized model class: no edge channels (returns ``None``)."""
+        return None
+
+
+@dataclass
+class CoupledRepCodeTwin(RepCodeTwin):
+    """Non-factorized learner: ``RepCodeTwin`` + ONE real edge DOF ``phi_hat`` (H2).
+
+    The minimal ADR-0006 candidate-(b) escalation: the factorized per-location
+    channels plus a single learnable coherent coupling ``exp(-i phi_hat Z(x)Z)``
+    on the declared data ``pair`` -- so any closure of ``B_misspec`` is
+    attributable to that one DOF. ``phi_hat`` is a leaf in ``parameters()``.
+    """
+
+    phi_hat: torch.Tensor = None
+    pair: tuple[int, int] = (0, 1)
+
+    @classmethod
+    def random(
+        cls,
+        distance: int,
+        *,
+        num_kraus: int = 2,
+        seed: int = 0,
+        scale: float = 0.1,
+        device: str | torch.device = "cpu",
+        phi_init: float = 0.0,
+        pair: tuple[int, int] = (0, 1),
+    ) -> "CoupledRepCodeTwin":
+        base = RepCodeTwin.random(distance, num_kraus=num_kraus, seed=seed, scale=scale, device=device)
+        phi = torch.tensor(float(phi_init), dtype=RDTYPE, device=device, requires_grad=True)
+        return cls(distance=base.distance, channels=base.channels, phi_hat=phi, pair=tuple(pair))
+
+    def parameters(self) -> list[torch.Tensor]:
+        return super().parameters() + [self.phi_hat]
+
+    def edge_field(self):
+        pair = tuple(self.pair)
+        phi = self.phi_hat
+        return lambda t, e: zz_coupling_kraus(phi) if tuple(e) == pair else None
+
 
 # --------------------------------------------------------------------------- #
 # Calibration loop                                                              #
@@ -133,17 +176,35 @@ def calibrate(
     steps: int = 200,
     seed: int = 0,
     device: str | torch.device = "cpu",
+    teacher_edge_field=None,
+    twin_edge: bool = False,
+    twin_phi_init: float = 0.0,
+    twin_pair: tuple[int, int] = (0, 1),
 ) -> dict[str, object]:
     """Fit the twin to the teacher's observations across ``contexts`` by exact NLL.
 
     Teacher forwards are constant and precomputed; the twin's per-location
     channels are optimized (LBFGS, double precision) to minimize the summed
     cross-entropy. Returns the fitted twin plus calibration NLL/KL diagnostics.
+
+    ``teacher_edge_field`` (H2) is EVALUATOR-ONLY: it generates the teacher's
+    observation distributions and is never handed to the learner (isolation
+    contract -- the learner consumes only ``p(s,m|c)``). ``twin_edge`` selects the
+    learner class: ``False`` = factorized :class:`RepCodeTwin` (edge-free
+    forwards); ``True`` = :class:`CoupledRepCodeTwin` whose single ``phi_hat``
+    edge DOF starts at ``twin_phi_init`` on ``twin_pair``.
     """
     teacher_forwards = [
-        run_context(c, channel_field=teacher_field, device=device) for c in contexts
+        run_context(c, channel_field=teacher_field, edge_field=teacher_edge_field, device=device)
+        for c in contexts
     ]
-    twin = RepCodeTwin.random(distance, num_kraus=num_kraus, seed=seed, device=device)
+    if twin_edge:
+        twin = CoupledRepCodeTwin.random(
+            distance, num_kraus=num_kraus, seed=seed, device=device,
+            phi_init=twin_phi_init, pair=twin_pair,
+        )
+    else:
+        twin = RepCodeTwin.random(distance, num_kraus=num_kraus, seed=seed, device=device)
     optimizer = torch.optim.LBFGS(
         twin.parameters(),
         lr=1.0,
@@ -157,9 +218,10 @@ def calibrate(
     def closure() -> torch.Tensor:
         optimizer.zero_grad()
         field = twin.field()
+        edge = twin.edge_field()
         loss = torch.zeros((), dtype=RDTYPE, device=device)
         for context, teacher in zip(contexts, teacher_forwards):
-            twin_forward = run_context(context, channel_field=field, device=device)
+            twin_forward = run_context(context, channel_field=field, edge_field=edge, device=device)
             loss = loss + joint_cross_entropy(teacher, twin_forward)
         loss.backward()
         return loss
@@ -168,25 +230,35 @@ def calibrate(
 
     with torch.no_grad():
         field = twin.field()
+        edge = twin.edge_field()
         per_context_kl: dict[str, float] = {}
         total_nll = 0.0
         for context, teacher in zip(contexts, teacher_forwards):
-            twin_forward = run_context(context, channel_field=field, device=device)
+            twin_forward = run_context(context, channel_field=field, edge_field=edge, device=device)
             per_context_kl[context.label] = float(joint_kl(teacher, twin_forward))
             total_nll += float(joint_cross_entropy(teacher, twin_forward))
 
-    return {
+    result = {
         "twin": twin,
         "total_nll": total_nll,
         "total_kl": sum(per_context_kl.values()),
         "per_context_kl": per_context_kl,
         "teacher_forwards": teacher_forwards,
     }
+    if twin_edge:
+        result["phi_hat"] = float(twin.phi_hat.detach())
+    return result
 
 
-def evaluate_kl(twin: RepCodeTwin, teacher_field, context: RepCodeContext, *, device="cpu") -> float:
+def evaluate_kl(
+    twin: RepCodeTwin, teacher_field, context: RepCodeContext, *, teacher_edge_field=None, device="cpu"
+) -> float:
     """Held-out cross-context check: ``KL(p_teacher || p_twin)`` on ``context``."""
     with torch.no_grad():
-        teacher = run_context(context, channel_field=teacher_field, device=device)
-        twin_forward = run_context(context, channel_field=twin.field(), device=device)
+        teacher = run_context(
+            context, channel_field=teacher_field, edge_field=teacher_edge_field, device=device
+        )
+        twin_forward = run_context(
+            context, channel_field=twin.field(), edge_field=twin.edge_field(), device=device
+        )
         return float(joint_kl(teacher, twin_forward))

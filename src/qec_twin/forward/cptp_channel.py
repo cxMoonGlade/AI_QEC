@@ -59,6 +59,8 @@ def apply_kraus(rho: torch.Tensor, kraus: torch.Tensor) -> torch.Tensor:
     ``kraus`` is a ``(r, d, d)`` stack; ``rho`` is ``(d, d)`` or a batch
     ``(S, d, d)``. The result is Hermitianized to absorb round-off.
     """
+    if kraus.device != rho.device:
+        kraus = kraus.to(rho.device)
     kd = kraus.conj().transpose(-1, -2)
     if rho.dim() == 2:
         out = torch.einsum("eij,jk,ekl->il", kraus, rho, kd)

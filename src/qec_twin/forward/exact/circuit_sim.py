@@ -69,14 +69,38 @@ def embed_operator(op: torch.Tensor, targets, n: int) -> torch.Tensor:
 
 
 def apply_unitary(rho: torch.Tensor, unitary: torch.Tensor, targets, n: int) -> torch.Tensor:
+    if unitary.device != rho.device:
+        unitary = unitary.to(rho.device)
+    if rho.is_cuda and _accel_available():
+        from qec_twin.forward import accel
+
+        return accel.apply_channel_local_fused(rho, unitary.unsqueeze(0), targets, n)
     u = embed_operator(unitary, targets, n)
     return hermitianize(u @ rho @ u.conj().transpose(-1, -2))
 
 
 def apply_channel_local(rho: torch.Tensor, kraus: torch.Tensor, targets, n: int) -> torch.Tensor:
     """Apply a local CPTP channel (stack of ``k``-qubit Kraus ops) on ``targets``."""
+    if kraus.device != rho.device:
+        kraus = kraus.to(rho.device)
+    if rho.is_cuda and _accel_available():
+        from qec_twin.forward import accel
+
+        return accel.apply_channel_local_fused(rho, kraus, targets, n)
     embedded = torch.stack([embed_operator(k, targets, n) for k in kraus])
     return apply_kraus(rho, embedded)
+
+
+def _accel_available() -> bool:
+    global _ACCEL_OK
+    if _ACCEL_OK is None:
+        from qec_twin.forward import accel
+
+        _ACCEL_OK = accel.available()
+    return _ACCEL_OK
+
+
+_ACCEL_OK: bool | None = None
 
 
 # --------------------------------------------------------------------------- #
@@ -136,7 +160,7 @@ def measure_qubit_enumerate(
     rho0 = project_qubit(rho, qubit, 0, n)
     rho1 = project_qubit(rho, qubit, 1, n)
     if reset:
-        rho1 = apply_unitary(rho1, pauli_x(), [qubit], n)
+        rho1 = apply_unitary(rho1, pauli_x(rho1.device), [qubit], n)
     rho_new = torch.cat([rho0, rho1], dim=0)
     b = outcomes.shape[0]
     col0 = torch.zeros((b, 1), dtype=outcomes.dtype, device=outcomes.device)
@@ -193,6 +217,19 @@ def measure_parity_enumerate(
 # --------------------------------------------------------------------------- #
 # Small differentiable gate / channel builders (parameter-carrying)            #
 # --------------------------------------------------------------------------- #
+_CONST_CACHE: dict[tuple[str, torch.device], torch.Tensor] = {}
+
+
+def _dev_const(name: str, device, build) -> torch.Tensor:
+    """Per-device cache for the parameterless constant gates (cheap re-use)."""
+    key = (name, torch.device(device))
+    cached = _CONST_CACHE.get(key)
+    if cached is None:
+        cached = build().to(key[1])
+        _CONST_CACHE[key] = cached
+    return cached
+
+
 def rx(theta) -> torch.Tensor:
     t = torch.as_tensor(theta, dtype=RDTYPE)
     c = torch.cos(t / 2).to(CDTYPE)
@@ -207,14 +244,18 @@ def ry(theta) -> torch.Tensor:
     return torch.stack([torch.stack([c, -s]), torch.stack([s, c])])
 
 
-def cx() -> torch.Tensor:
-    return torch.tensor(
-        [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], dtype=CDTYPE
+def cx(device: str | torch.device = "cpu") -> torch.Tensor:
+    return _dev_const(
+        "cx",
+        device,
+        lambda: torch.tensor(
+            [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], dtype=CDTYPE
+        ),
     )
 
 
-def pauli_x() -> torch.Tensor:
-    return torch.tensor([[0, 1], [1, 0]], dtype=CDTYPE)
+def pauli_x(device: str | torch.device = "cpu") -> torch.Tensor:
+    return _dev_const("pauli_x", device, lambda: torch.tensor([[0, 1], [1, 0]], dtype=CDTYPE))
 
 
 def bit_flip(p) -> torch.Tensor:

@@ -30,6 +30,7 @@ there is real cohesion (`forward/` backends).
 | `mechanisms/` | noise-mechanism definitions + controlled teachers |
 | `contexts/` | probe-richness ladder `C_cal(r)` + probe definitions |
 | `decoder/` | frozen-MWPM DEM substrate (`parity_map`, `fault_graph`, `stim_dem`) |
+| `hardware/` | R2-lite published-data ingestion (ADR 0007): stim-native `.stim`/`.b8`/`.dem` in → label-free observations out |
 
 ### Non-core
 

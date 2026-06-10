@@ -14,6 +14,8 @@ import torch
 
 from qec_twin.forward.exact.circuit_sim import amplitude_damping, bit_flip, rx
 from qec_twin.forward.cptp_channel import (
+    CDTYPE,
+    RDTYPE,
     pauli_transfer_matrix,
     single_qubit_paulis,
 )
@@ -85,6 +87,45 @@ def mixed_mechanism_field(specs):
         else:
             raise ValueError(f"unknown mechanism kind {kind!r} (coherent|damped|pure_damp|pauli)")
     return lambda t, i: kraus[i]
+
+
+def zz_coupling_kraus(phi) -> torch.Tensor:
+    """``exp(-i phi Z(x)Z)`` as a ``(1, 4, 4)`` Kraus stack -- the H2 edge mechanism.
+
+    ``diag(e^{-i phi}, e^{i phi}, e^{i phi}, e^{-i phi})`` -- the frontier-standard
+    residual-ZZ crosstalk unitary on a data pair. Accepts a float or a real leaf
+    tensor (differentiable: the non-factorized learner's single edge DOF).
+    """
+    p = torch.as_tensor(phi, dtype=RDTYPE)
+    phase = torch.stack([-p, p, p, -p]).to(CDTYPE)
+    return torch.diag_embed(torch.exp(1j * phase)).unsqueeze(0)
+
+
+def correlated_dephasing_kraus(phi) -> torch.Tensor:
+    """Correlated dephasing ``{cos(phi) I_4, sin(phi) Z(x)Z}`` -- a ``(2, 4, 4)`` stack.
+
+    The exact two-qubit Pauli twirl of ``zz_coupling_kraus(phi)`` (rate
+    ``sin^2(phi)``) -- the correlated-STOCHASTIC crosstalk control (H2 fork).
+    """
+    p = torch.as_tensor(float(phi), dtype=RDTYPE)
+    eye = torch.eye(4, dtype=CDTYPE)
+    zz = torch.diag(torch.tensor([1.0, -1.0, -1.0, 1.0], dtype=CDTYPE))
+    return torch.stack([torch.cos(p).to(CDTYPE) * eye, torch.sin(p).to(CDTYPE) * zz])
+
+
+def coupled_mixed_teacher(specs, phi, pair=(0, 1)):
+    """H2 non-factorized teacher: the H0 mixed field + coherent ZZ crosstalk on ``pair``.
+
+    Returns ``(field, edge_field)`` with ``field = mixed_mechanism_field(specs)``
+    unchanged and ``edge_field`` the ``(t, (i, j)) -> Kraus | None`` callable
+    yielding ``exp(-i phi Z(x)Z)`` on the declared pair. Both are evaluator-owned
+    ground truth; the learner never receives the edge (isolation contract).
+    """
+    field = mixed_mechanism_field(specs)
+    coupling = zz_coupling_kraus(phi)
+    target = tuple(pair)
+    edge_field = lambda t, e: coupling if tuple(e) == target else None  # noqa: E731
+    return field, edge_field
 
 
 def pauli_twirl_kraus(kraus: torch.Tensor) -> torch.Tensor:

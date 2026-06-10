@@ -5,7 +5,9 @@ The "noise simulator with knobs": channel-level, parameterization-independent
 consequence ΔLER under a **frozen** decoder.
 
 - `intervention.py` — do() operators (Tier-0 remove `E→I`; Tier-1 CPTP-safe weaken
-  `(1-a)I + aE`) + ΔLER scoring (`B_LER` / `B_obs`).
+  `(1-a)I + aE`) + ΔLER scoring (`B_LER` / `B_obs`). Edge knobs (H2):
+  `intervene_edge_field` applies the same channel-level do() to a declared edge
+  (`do_remove` → `I_4`); a factorized side's edge knob is structurally 0.
 - `reference.py` — reference / nominal decoder + DEM setup.
 
 **Boundary.** Applies knobs and measures their effect. Does not calibrate

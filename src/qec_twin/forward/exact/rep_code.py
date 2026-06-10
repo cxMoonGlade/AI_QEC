@@ -136,6 +136,28 @@ def _detectors_and_observable(
     return detector_events, observable
 
 
+def _apply_noise_layer(rho, t, channel_field, edge_field, edges, data, distance, repeats, n):
+    """One round's noise: ``[ (prod_i E_i) ; (prod_e U_e) ]^repeats`` (H2 placement).
+
+    Interleaved at the *repeats* level: per pass, every location channel once, then
+    every declared edge channel once (``edge_field(t, (i, j)) -> (k, 4, 4) | None``
+    applied on data pair ``(i, j)``). With ``edge_field=None`` this is exactly the
+    pre-H2 per-location composition (disjoint-support local channels commute, so the
+    interleaved and the channel-nested orders are the same map)."""
+    for _ in range(int(repeats)):
+        if channel_field is not None:
+            for i in range(int(distance)):
+                kraus = channel_field(t, i)
+                if kraus is not None:
+                    rho = apply_channel_local(rho, kraus, [data[i]], n)
+        if edge_field is not None:
+            for pair in edges:
+                kraus = edge_field(t, pair)
+                if kraus is not None:
+                    rho = apply_channel_local(rho, kraus, [data[pair[0]], data[pair[1]]], n)
+    return rho
+
+
 def _simulate_ancilla(
     distance: int,
     rounds: int,
@@ -144,6 +166,8 @@ def _simulate_ancilla(
     initial_flips: list[int] | None,
     repeats: int,
     pre_rotation: float,
+    edge_field=None,
+    edges=((0, 1),),
     device: str | torch.device,
 ) -> RepCodeForward:
     """Core exact forward (ancilla backend: full ``2**(2d-1)`` data+ancilla register).
@@ -162,7 +186,13 @@ def _simulate_ancilla(
     channel acts on a superposition input, making its coherent (off-diagonal)
     action visible in the Z-basis syndrome. Both preserve the measurement
     structure, so the record -> (s, m) bijection and calibration machinery are
-    unchanged."""
+    unchanged.
+
+    ``edge_field`` (H2, ADR 0006 candidate (b)) is ``None`` or a callable
+    ``(round_t, (i, j)) -> (k, 4, 4) Kraus stack | None`` applied on the declared
+    data ``edges`` once per repeat, AFTER that pass's location channels -- the
+    declared per-round placement ``[ (prod_i E_i) ; U_edge ]^repeats`` then
+    extraction (first-order Trotter of an always-on coupling)."""
     data, anc, n = rep_code_qubits(distance)
     nchecks = int(distance) - 1
 
@@ -171,22 +201,17 @@ def _simulate_ancilla(
 
     if initial_flips:
         for q in initial_flips:
-            rho = apply_unitary(rho, pauli_x(), [data[q]], n)
+            rho = apply_unitary(rho, pauli_x(device), [data[q]], n)
     if pre_rotation:
         gate = ry(pre_rotation)
         for q in data:
             rho = apply_unitary(rho, gate, [q], n)
 
     for t in range(int(rounds)):
-        if channel_field is not None:
-            for i in range(int(distance)):
-                kraus = channel_field(t, i)
-                if kraus is not None:
-                    for _ in range(int(repeats)):
-                        rho = apply_channel_local(rho, kraus, [data[i]], n)
+        rho = _apply_noise_layer(rho, t, channel_field, edge_field, edges, data, distance, repeats, n)
         for j in range(nchecks):
-            rho = apply_unitary(rho, cx(), [data[j], anc[j]], n)
-            rho = apply_unitary(rho, cx(), [data[j + 1], anc[j]], n)
+            rho = apply_unitary(rho, cx(device), [data[j], anc[j]], n)
+            rho = apply_unitary(rho, cx(device), [data[j + 1], anc[j]], n)
         for j in range(nchecks):
             rho, outcomes = measure_qubit_enumerate(rho, outcomes, anc[j], n, reset=True)
 
@@ -213,6 +238,8 @@ def _simulate_parity(
     initial_flips: list[int] | None,
     repeats: int,
     pre_rotation: float,
+    edge_field=None,
+    edges=((0, 1),),
     device: str | torch.device,
 ) -> RepCodeForward:
     """Core exact forward (parity backend: data-only ``2**d`` register, no ancilla).
@@ -232,19 +259,15 @@ def _simulate_parity(
 
     if initial_flips:
         for q in initial_flips:
-            rho = apply_unitary(rho, pauli_x(), [q], n)
+            rho = apply_unitary(rho, pauli_x(device), [q], n)
     if pre_rotation:
         gate = ry(pre_rotation)
         for q in range(n):
             rho = apply_unitary(rho, gate, [q], n)
 
+    data = list(range(n))
     for t in range(int(rounds)):
-        if channel_field is not None:
-            for i in range(n):
-                kraus = channel_field(t, i)
-                if kraus is not None:
-                    for _ in range(int(repeats)):
-                        rho = apply_channel_local(rho, kraus, [i], n)
+        rho = _apply_noise_layer(rho, t, channel_field, edge_field, edges, data, n, repeats, n)
         for j in range(nchecks):
             rho, outcomes = measure_parity_enumerate(rho, outcomes, j, j + 1, n)
 
@@ -286,6 +309,8 @@ def simulate_rep_code_memory(
     *,
     data_channel: torch.Tensor | None = None,
     channel_field=None,
+    edge_field=None,
+    edges=((0, 1),),
     initial_flips: list[int] | None = None,
     repeats: int = 1,
     pre_rotation: float = 0.0,
@@ -294,16 +319,19 @@ def simulate_rep_code_memory(
 ) -> RepCodeForward:
     """Exact-forward a distance-``d`` repetition-code memory experiment.
 
-    Pass exactly one noise spec (or neither for the noiseless limit):
+    Pass exactly one local noise spec (or neither for the noiseless limit):
     ``data_channel`` is a single ``(k, 2, 2)`` Kraus stack shared across every
     data qubit and round; ``channel_field`` is a callable
     ``(round_t, data_index_i) -> (k, 2, 2) | None`` for per-location / per-round
-    channels (the B3 calibration target). Either may be Pauli, non-Pauli, or
-    coherent and may carry leaf parameters for gradients. ``initial_flips``
-    deterministically applies ``X`` to the listed data-qubit indices before
-    round 0 (``|1_L>`` prep / wiring checks). ``repeats`` and ``pre_rotation`` are
-    the B5 coherence-exposing probe knobs (see ``_simulate``). Returns the full
-    enumerated joint distribution; cost is ``2**K`` branches with
+    channels (the B3 calibration target). ``edge_field`` (H2) is a callable
+    ``(round_t, (i, j)) -> (k, 4, 4) | None`` over the declared data ``edges`` --
+    the non-factorized coupling slot, applied per repeat after the location pass
+    (``[ (prod_i E_i) ; U_edge ]^repeats`` then extraction). Any may be Pauli,
+    non-Pauli, or coherent and may carry leaf parameters for gradients.
+    ``initial_flips`` deterministically applies ``X`` to the listed data-qubit
+    indices before round 0 (``|1_L>`` prep / wiring checks). ``repeats`` and
+    ``pre_rotation`` are the B5 coherence-exposing probe knobs (see ``_simulate``).
+    Returns the full enumerated joint distribution; cost is ``2**K`` branches with
     ``K = rounds*(d-1) + d`` measurements, so keep ``d`` and ``rounds`` small.
     """
     if data_channel is not None and channel_field is not None:
@@ -316,6 +344,8 @@ def simulate_rep_code_memory(
         rounds,
         backend=backend,
         channel_field=field,
+        edge_field=edge_field,
+        edges=edges,
         initial_flips=initial_flips,
         repeats=repeats,
         pre_rotation=pre_rotation,

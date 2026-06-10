@@ -2,7 +2,10 @@
 
 Maps a context `c` and the local CPTP channel field `E` to the observation
 distribution `p(s,m|c) = Tr[M_y C(c)(rho0)]`. **Backend-swappable** behind this
-contract.
+contract. The field protocol carries per-location slots `(t, i) → Kraus` and,
+since H2 (ADR 0006 candidate (b)), declared edge slots `(t, (i, j)) → Kraus`
+(`edge_field`), applied per repeat after the location pass
+(`[ (∏_i E_i) ; U_edge ]^repeats` then extraction).
 
 Backend-agnostic channel object (top level — survives a backend swap):
 - `cptp_channel.py` — CPTP-by-construction parameterized channel (θ → Kraus).

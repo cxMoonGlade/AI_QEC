@@ -1,13 +1,17 @@
-# METRICS — the B-path metric ledger
+# METRICS — the metric ledger
 
-The canonical, **stable** definitions of every evaluation metric in the rep-code (B-path) twin:
-its standard field name, reference, and the convention carried with it. This file is the contract
-created under the **standard-metrics hard constraint** — use the field-standard metric for every
-evaluation, name it, and carry its convention. It exists so a metric can never again be reasoned
-about under a wrong label (the surface-code "diamond norm"→Bravyi-`P_L` slip).
+The canonical, **stable** definitions of every evaluation metric in the twin — three ledgers:
+the **B-path** (rep-code) ledger, the **identifiability** ledger, and the **hardware-data (R2)**
+ledger — each with its standard field name, reference, and the convention carried with it. This
+file is the contract created under the **standard-metrics hard constraint** — use the
+field-standard metric for every evaluation, name it, and carry its convention. It exists so a
+metric can never again be reasoned about under a wrong label (the surface-code "diamond
+norm"→Bravyi-`P_L` slip).
 
-**This file holds no run-specific numbers** (they go stale). Re-recorded headline values live, dated,
-in [metric_results.md](metric_results.md); the `tests/test_twin_*` suite is the live source of truth.
+**This file holds no run-specific numbers from our runs** (they go stale). Re-recorded headline
+values live, dated, in [metric_results.md](metric_results.md); the `tests/test_twin_*` suite is
+the live source of truth. Frozen *published* literature bars may appear in a Convention cell as
+context — marked as published, with their citation.
 
 ## The rule — metric choice is a forced ladder
 
@@ -33,7 +37,9 @@ claims additionally carry their evidential tier (certificate- vs numerics-grade 
 
 - **Exact, not sampled.** The forward enumerates the joint `p(s, m)` exactly, so every metric below is
   its **population** value (infinite-data limit), not an empirical estimate — except where a metric is
-  explicitly a finite-sample object (the calibration NLL; see below).
+  explicitly a finite-sample object (the calibration NLL; see below). *Scope:* this applies to the
+  B-path and identifiability tables; the hardware-data section declares its own finite-sample +
+  bootstrap-CI convention.
 - **Units:** information quantities in **nats** (natural log). LER / ΔLER are probabilities.
 - **Numerical floor:** `NUMERICAL_ZERO = 1e-12` for `log(0)` and reachable-branch masking (see
   `qec_twin.numerics`).
@@ -128,3 +134,48 @@ corrected-KL 8e-3…1.8e-1, `k≈2.2`, min Kossakowski eig at boundary; unconstr
 - Ivashkov, Romanov, Gong, Gu, Hu, Yelin (2026), *Ansatz-Free Learning of Lindbladian Dynamics In Situ*, arXiv:2603.05492 — short-time order structure; GKSL `(h,a)`.
 - *Quantum tomography protocols with positivity are compressed sensing protocols* (2015), arXiv:1502.00536 (authors: see arXiv) — positivity as an identifiability lever.
 - Murphy & van der Vaart (2000), *On profile likelihood*, JASA. Boyd & Vandenberghe (2004), *Convex Optimization* — SDP feasibility / duality.
+
+---
+
+## Hardware-data metrics (R2 — published-dataset rungs; ADR 0007)
+
+Added 2026-06-09 under the forced ladder — **rung 2** (frontier-standard, researched and
+ledgered *before* use) for the experiment/noise-model metrics, two **finite-sample hardware
+restatements** of already-ledgered B-path metrics (band coverage; Tier-0 alias band + abstain),
+and one **rung-3 flagged project-defined** metric (window-closure leakage). These score the
+R2-lite published-data work (ADR 0007): Google repetition-/surface-code releases (Zenodo
+13273331 family), windowed exact calibration, and the decoder-prior artifact.
+
+**Claim restriction (ADR 0007).** At R2-lite these metrics license **prediction-calibration
+and decoder-prior-utility statements only** — never `do()`/counterfactual, mechanism-
+attribution, Born-generation/CPTP-learning, or unscored "fits the device" adequacy claims
+(PLAN.md §1.3; TWIN.md). Residual structure is reported as a misspecification *direction*
+(the R2→R1 back-edge input), never an attributed mechanism.
+
+**Population-exact does NOT apply here.** The B-path convention ("every metric is its
+population value") holds only on the enumerated exact forward. On hardware shots every
+metric below is a **finite-sample estimate** and carries a bootstrap CI; held-out splits
+are declared before fitting.
+
+| Metric | Function | Standard name + reference | Convention |
+|---|---|---|---|
+| Logical error per round | R2 pipeline (planned) | **ε_d — logical error per round/cycle**, from the SPAM-absorbing decay fit `F(t) ≈ A₀(1−2ε_d)^t` (`A₀` = SPAM-absorbing amplitude — **not** the reserved DEM parity map `A`) (Google rep-code arXiv:2102.06132; surface code Nature s41586-022-05434-1; Willow arXiv:2408.13687) | per round, not per experiment; decoder named; fit window declared |
+| Error-suppression factor | R2 pipeline (planned) | **Λ = ε_d / ε_{d+2}** (Google arXiv:2102.06132; Willow published headline Λ = 2.14 ± 0.02, arXiv:2408.13687) | fitted across a distance ladder; below threshold ⇔ Λ > 1; carries the stationarity/unitality caveat of arXiv:2510.18847 (Λ fits mislead under drift/SPAM) |
+| Detection-event fraction | R2 pipeline (planned) | **average detector firing probability per round, per stabilizer weight** (Google Nature 2021/2023/2025 supplements) | decoder-free; per weight class; the first-line model-vs-device check, reported before any decoder-level claim |
+| DEM edge agreement | R2 pipeline (planned) | **p_ij correlation method** — Spitz Eq. 13 (exact): `p_ij = ½ − √(¼ − cov(x_i,x_j)/(1−2⟨x_i⊕x_j⟩))`; the common `cov(x_i,x_j)/((1−2⟨x_i⟩)(1−2⟨x_j⟩))` form is its leading-order small-`p` approximation (Spitz et al. arXiv:1712.02360; Google arXiv:2102.06132) | timelike/spacelike/spacetimelike edges split; matrix-vs-matrix comparison; **two-point only — structurally blind to hyperedges** (Takou–Brown arXiv:2504.20212), state this when using it as a baseline |
+| Decoder-prior utility | R2 pipeline (planned) | **%ΔLER under a frozen, named decoder from a model-informed prior vs a declared baseline prior** (Sivak et al. PRL 133, 150603; Cao et al. dMLE arXiv:2602.19722; Hockings et al. arXiv:2502.21044) | same decoder + same held-out shots for every prior; baselines named (naive calibration prior; p_ij prior); bootstrap CI. **Decoder-side comparison**: the DEM prior is the treatment arm, the decoder otherwise frozen — **not** the interventional ΔLER = LER(do)−LER(base) of the B-path ledger; licenses no `do()` claim. Published bars, baseline-tagged — dMLE up to 30.6(3)% (rep, vs correlation/pij prior) / 8.1(2)% (surface, vs RL prior; 4.9% vs pij); Sivak rep d=21 48% vs uninformative / 16% vs pij, surface d=5 10.6% vs uninformative / 3.3% vs pij |
+| Band coverage (finite-sample) | hardware restatement of `prediction.drift.coverage_frequency` (`prediction/` not yet built; R2 pipeline, planned) | frequentist **coverage probability** of the forecast band, nominal vs realized, on held-out hardware slices (B-path ledger row above) | bootstrap CI; **Gate-B caveat travels**: per-window finite-shot estimation error must propagate into the forecast band (errors-in-variables / weighted regression) before any nominal-coverage claim; a pass leaves `predict` first-cut — neither Gate B nor H4 is satisfied on hardware data (ADR 0007 M5) |
+| Tier-0 alias band + abstain (hardware regime) | `audit.bands.tier0_alias_band`; abstain rule: R2 pipeline (planned) | the B-path **ΔLER alias band** (Manski/Cont; ledger above) + **abstain-when-within-band** (Manski/Stoye minimax-regret rule; ledger above), restated for hardware windows | finite-sample; **indicative, not certified-covering** — the decision-regret gate (2026-06-09) showed a local/linear band under-covers at curved aliases; this caveat travels with every band number and the abstain rule inherits it |
+| Held-out syndrome NLL | finite-sample form of `calibration.nll.joint_cross_entropy` | **held-out per-shot negative log-likelihood** `−(1/N) Σ_n log p(y_n)` — the finite-sample estimator whose population limit is the ledgered cross-entropy (Cover & Thomas 2006); the model-scoring objective of dMLE (arXiv:2602.19722) | per shot, nats; held-out split declared before fitting; bootstrap CI; compared on identical splits across models |
+| Window-closure leakage | R2-lite audit (planned) | ⚠ **project-defined / non-standard (ladder rung 3, flagged)** — fraction of total two-point correlation mass crossing a calibration-window boundary; gates whether windowed marginal calibration is sound on a given dataset | threshold pre-registered before any window fit (ADR 0007 M2); reported per window size; pending a standard-naming pass |
+
+### References (hardware-data)
+- Spitz, Tarasinski, Beenakker, O'Brien (2018). *Adaptive weight estimator for quantum error correction*. arXiv:1712.02360 — the p_ij method.
+- Google Quantum AI (2021). *Exponential suppression of bit or phase errors with cyclic error correction*. Nature; arXiv:2102.06132 — ε_d, Λ, p_ij in practice.
+- Google Quantum AI (2023). *Suppressing quantum errors by scaling a surface code logical qubit*. Nature s41586-022-05434-1.
+- Google Quantum AI (2025). *Quantum error correction below the surface code threshold*. Nature s41586-024-08449-y; arXiv:2408.13687 — Willow; the released datasets.
+- Sivak et al. (2024). *Optimization of decoder priors for accurate quantum error correction*. PRL 133, 150603; arXiv:2406.02700.
+- Cao, Feng, Ye, Pan (2026). *Differentiable maximum likelihood noise estimation for quantum error correction*. arXiv:2602.19722 — held-out syndrome NLL + %ΔLER as the scoring pair; the closest prior art.
+- Hockings, Doherty, Harper (2025). *Improving error suppression with noise-aware decoding*. arXiv:2502.21044 — prior quality compounds with distance.
+- Takou & Brown (2025). *Estimating decoding graphs and hypergraphs of memory QEC experiments*. arXiv:2504.20212 — p_ij's hyperedge blindness (two-point edges largely suffice for rep/surface codes under bare-ancilla extraction, per the same paper).
+- Vezvaee et al. (2025). *Surface code scaling on heavy-hex superconducting quantum processors*. arXiv:2510.18847 — the Λ-fit stationarity caveat.

@@ -4,7 +4,9 @@ The calibration contexts `C_cal(r)`, `r = 0..4` (the probe-richness ladder), and
 the probe definitions that induce them. **Probe diversity — not parameter-tying —
 is the demonstrated cure for the observational alias quotient** (ADR 0005).
 
-- `ladder.py` — the `C_cal(r)` ladder + held-out exotic (phase-sensitive) contexts.
+- `ladder.py` — the `C_cal(r)` ladder + held-out exotic (phase-sensitive) contexts
+  and the H2 held-out sandwich eval (`eval:R4-k2`; no new rungs — the crosstalk
+  probes ARE the existing r=2/r=4 levels).
 - `probe_catalog.py`, `probe_contract.py`, `overlay_contract.py` — probe
   definitions and contracts.
 

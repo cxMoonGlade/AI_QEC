@@ -42,7 +42,11 @@ and scalability is a future selection criterion, not a now-decision (ADR 0005).
   identifiable-latent-variable, and finance tools for the alias-quotient and
   counterfactual-validity problems; action items + reference list.
 - `docs/papers/`: local PDF cache of the load-bearing references (index in
-  `README.md`). Check here before web-searching.- `docs/error_mechanisms.md`: physical-error mechanism taxonomy.- `docs/adr/`: durable decisions. Current spine is 0002 → 0006.
+  `README.md`). Check here before web-searching.
+- `docs/datasets/`: reading notes for the four local Google QEC datasets (Zenodo 13273331 family,
+  under `/home/cx/Document/`) — design, file formats, logicals, shipped decoder baselines, and
+  per-dataset relevance to the R2 rungs (ADR 0007); `_sources/` caches the CC-BY README originals.
+  Read the matching note before touching any hardware data.- `docs/error_mechanisms.md`: physical-error mechanism taxonomy.- `docs/adr/`: durable decisions. Current spine is 0002 → 0006.
 
 ## Package and module rules
 
@@ -151,3 +155,10 @@ reinstall editable or use the module entrypoint.
 - Every quantitative claim is scored by a **field-standard** metric via `docs/METRICS.md` (forced
   ladder: ledger → frontier research → explicitly flagged project-defined). No silent non-standard
   stand-in; carry each metric's convention with its numbers.
+- **Theory first, runs verify (2026-06-09).** The mathematics/physics derivation — predicted
+  direction, scaling, threshold — is written down *before* every code experiment (controlled or
+  real-data); experiments verify derived predictions, never explore-then-rationalize. HARDEN's
+  predict-before-measure gates are the template (PLAN.md §3; ADR 0007 extends it to R2-lite).
+- **Novelty is sequenced, not ceded (2026-06-09).** Deferred ambitions (Claim-B band engine,
+  composed prioritization engine, d=5/d=7 surface-code twin) keep recorded re-open triggers
+  (ADR 0007); the current gated cut completes before new ambitions open.

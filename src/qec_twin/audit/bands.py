@@ -38,8 +38,10 @@ from qec_twin.contexts.ladder import RepCodeContext, run_context
 from qec_twin.knobs.intervention import (
     decoder_error_indicator,
     differentiable_ler,
+    intervene_edge_field,
     intervene_field,
 )
+from qec_twin.mechanisms.teachers import zz_coupling_kraus
 from qec_twin.forward.cptp_channel import CDTYPE, RDTYPE
 
 
@@ -51,8 +53,15 @@ def _kraus_from_generator(real, imag, dim, num_kraus):
 
 
 def flatten_twin(twin: RepCodeTwin) -> torch.Tensor:
-    """Concatenate the twin's per-location (real, imag) generators into ``theta``."""
+    """Concatenate the twin's per-location (real, imag) generators into ``theta``.
+
+    A :class:`CoupledRepCodeTwin` appends its single ``phi_hat`` edge coordinate,
+    so the Tier-0 band includes the phi direction; the factorized path is unchanged.
+    """
     parts = [p.reshape(-1) for ch in twin.channels for p in (ch.real, ch.imag)]
+    phi = getattr(twin, "phi_hat", None)
+    if phi is not None:
+        parts.append(phi.reshape(1))
     return torch.cat(parts).detach()
 
 
@@ -70,12 +79,29 @@ def field_from_flat(theta: torch.Tensor, twin: RepCodeTwin):
     return lambda t, i: kraus_list[i]
 
 
+def edge_field_from_flat(theta: torch.Tensor, twin: RepCodeTwin):
+    """Rebuild the twin's edge field from the trailing ``phi_hat`` coordinate.
+
+    ``None`` for the factorized class (no edge slot); differentiable in ``theta``
+    for the coupled class, so band gradients/Hessians see the phi direction.
+    """
+    if getattr(twin, "phi_hat", None) is None:
+        return None
+    pair = tuple(twin.pair)
+    phi = theta[-1]
+    return lambda t, e: zz_coupling_kraus(phi) if tuple(e) == pair else None
+
+
 def _make_nll_fn(twin, contexts, teacher_forwards):
     def nll(theta: torch.Tensor) -> torch.Tensor:
         field = field_from_flat(theta, twin)
-        loss = torch.zeros((), dtype=RDTYPE)
+        edge = edge_field_from_flat(theta, twin)
+        loss = torch.zeros((), dtype=RDTYPE, device=theta.device)
         for context, teacher in zip(contexts, teacher_forwards):
-            loss = loss + joint_cross_entropy(teacher, run_context(context, channel_field=field))
+            loss = loss + joint_cross_entropy(
+                teacher,
+                run_context(context, channel_field=field, edge_field=edge, device=theta.device),
+            )
         return loss
 
     return nll
@@ -88,11 +114,12 @@ def tier0_alias_band(
     *,
     eval_context: RepCodeContext,
     decoder,
-    target_i: int,
+    target_i: int | None = None,
     intervention,
     shots: int,
     z: float = 1.0,
     tol: float = 1e-7,
+    target_edge=None,
 ) -> dict[str, object]:
     """Tier-0 band on the ``do()`` knob ``dLER`` at the calibration optimum.
 
@@ -100,13 +127,22 @@ def tier0_alias_band(
     1-sigma), the eigenspectrum split, and the epistemic alias weight of ``g`` in
     ``H``'s near-null space (non-zero -> a non-identifiable knob direction, the
     D5a deficiency surfaced).
+
+    With ``target_edge`` set (H2), the knob is the edge ``do()`` at that pair on
+    the twin's OWN edge slot: for the factorized class (no slot) the knob is
+    structurally 0 with a zero band -- the model-class overconfidence the
+    ``B_misspec`` comparison surfaces.
     """
     theta = flatten_twin(twin).requires_grad_(True)
 
     field = field_from_flat(theta, twin)
-    base = run_context(eval_context, channel_field=field)
-    do_field = intervene_field(field, target_i, intervention)
-    intervened = run_context(eval_context, channel_field=do_field)
+    edge = edge_field_from_flat(theta, twin)
+    base = run_context(eval_context, channel_field=field, edge_field=edge, device=theta.device)
+    if target_edge is not None:
+        do_field, do_edge = field, intervene_edge_field(edge, target_edge, intervention)
+    else:
+        do_field, do_edge = intervene_field(field, target_i, intervention), edge
+    intervened = run_context(eval_context, channel_field=do_field, edge_field=do_edge, device=theta.device)
 
     err_base = decoder_error_indicator(base, decoder, logical_reference=eval_context.logical)
     err_do = decoder_error_indicator(intervened, decoder, logical_reference=eval_context.logical)

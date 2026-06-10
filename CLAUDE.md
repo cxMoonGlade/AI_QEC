@@ -31,8 +31,9 @@ Do not set `PYTHONPATH="$PWD/src"`; use the editable install. There are no conso
 scripts — the twin is driven through the library + `tests/`, which double as the
 executable spec: `test_twin_*` covers the four capabilities + audit/contexts/d5
 scaling; `test_twin_h*` are the HARDEN axes (H0 matched baseline, H1 coherent
-hidden-failure, H2 crosstalk — pre-registered skip-marked stubs);
-`test_decision_regret_gate` is the plan2 Go/No-Go gate; `test_diff_*` /
+hidden-failure, H2 crosstalk — all run green); `test_decision_regret_gate` is the
+plan2 Go/No-Go gate; `test_hardware_m1_*` is the R2-lite published-data rung (skips
+without `QEC_TWIN_HW_DATA=/home/cx/Document`); `test_diff_*` /
 `test_physical_channels` / `test_fault_graph` cover the forward + DEM substrate.
 Read the matching test first to see a capability end-to-end.
 
@@ -66,6 +67,13 @@ is feasibility-only. The 50+ qubit target needs `forward/scalable` (placeholder,
 carrier deferred, ADR 0005). The channel object + the four capabilities are
 backend-agnostic, so swapping the backend is not a rewrite.
 
+**CUDA kernels:** repo-root `kernels/` (fused subsystem-Kraus apply; loader
+`forward/accel.py`, auto-routed on CUDA tensors, CPU fallback, `QEC_TWIN_NO_KERNELS=1`
+disables; correctness oracle `tests/test_kernels_fused_kraus.py`). Device policy
+(measured 2026-06-09, `kernels/README.md`): the d=3 toy stays **CPU-default** (the
+sequential LBFGS loop is launch-bound — cuda is 0.5× there); cuda pays per-call from
+n≈5 and decisively at R2-lite window sizes n=11–15 (102–405×).
+
 ### Status
 
 B path validated on the rep-code toy: label-free calibration recovers a coherent
@@ -74,15 +82,18 @@ controls fail as pre-registered (moment-matched ≈ 900×, shuffled ≈ 1400× w
 probe richness breaks the alias; Tier-0 bands cover truth and shrink with richness;
 d3→d5 holds.
 
-HARDEN underway: H0 (frozen moment-matched baseline) and H1 (coherent
-hidden-failure) landed. The decision-regret Go/No-Go gate (2026-06-09,
-`tests/test_decision_regret_gate.py`) banked the **Claim-A floor** — non-Pauli-capable
-calibration beats the field's Pauli/DEM standard on a dissipative source — and found
-the Claim-B decision band real but not cheaply computable (a local band never
-calibrates; earning it needs plan2's global continuation machinery, deferred). Next:
-H2 machinery — non-factorized (coherent ZZ crosstalk) teacher vs factorized learner,
-targeting the misspecification band `B_misspec`; pre-registered in
-`tests/test_twin_h2_crosstalk.py`. 87 tests collected (H2 stubs skip-marked).
+HARDEN: H0, H1 and **H2** landed (2026-06-09). H2 ran theory-first (three exact theorems
+pre-registered, then verified 6/6): the factorized-learner fork is rung-indexed (b)→(a),
+`B_misspec` is real and functional-indexed, **probe richness does not close the third band —
+one declared edge DOF does** (ADR 0006 verdict: edge slots required for φ-sensitive
+functionals; carrier feasibility study unblocked → ADR 0008). The decision-regret Go/No-Go
+gate banked the **Claim-A floor** and deferred plan2's band engine. **R2-lite M1 landed**
+(ADR 0007 Track B, `tests/test_hardware_m1_ingestion.py` + `qec_twin/hardware/`): first
+real-hardware contact on the local Google d=29 release — bit-exact m2d parity, detection
+fractions in the derived band, three back-edge findings (device mirror-diagonal class ≈970×
+the SI1000 sim, long-range tails, early-layer transient). 99 tests (98 pass + 1 opt-in slow
+skip; hardware tests skip without `QEC_TWIN_HW_DATA`). Next: carrier study ∥ R2-lite M2;
+H3/H4 sequenced by the back-edge residuals.
 
 ### Isolation contract
 
@@ -105,6 +116,15 @@ ground-truth channels / parameters / labels are evaluator-only — used by `audi
   physical-mechanism / Born-rule / CPTP-learning claim beyond the validated
   controlled loop until C is reached. Report honest bands; never assume
   identifiability that probe richness did not earn.
+- **Theory-first discipline:** the mathematics/physics derivation precedes every code
+  experiment — the predicted outcome (direction, scaling, threshold) is written down
+  before the run; experiments verify derived predictions, never explore-then-rationalize.
+  HARDEN's predict-before-measure gates are the template; the rule applies to all
+  experiments, including real-data (R2-lite) milestones.
+- **Sequencing discipline:** deferred novelty positions (Claim-B band engine, the
+  composed prioritization engine, the d=5/d=7 surface-code twin) are trigger-gated,
+  never dropped — but the current gated cut finishes before new ambitions open
+  (ADR 0007).
 - **Metric discipline:** score every quantitative claim with a field-standard metric via
   `docs/METRICS.md`. Its ladder is forced — ledger metric → frontier-literature research → explicitly
   flagged project-defined; never a silent non-standard stand-in, and carry each metric's convention
@@ -132,4 +152,7 @@ ADR 0005).
 - `docs/ARCHITECTURE.md` — full module map (+ per-module READMEs).
 - `docs/teacher_learner.md` — teacher/learner roles + isolation contract.
 - `docs/IDENTIFIABILITY_AND_CRL_SURVEY.md` + `docs/papers/` — CRL/finance toolset and cached references.
-- `docs/adr/` — decisions; spine 0002 (build order) → 0003 (B methodology) → 0004 (finance framing) → 0005 (retire SCOPE / reframe) → 0006 (channel-field architecture).
+- `docs/datasets/` — reading notes for the four local Google QEC datasets (R2 rungs, ADR 0007):
+  per-dataset design/formats/logicals/baselines + `_sources/` cached CC-BY originals. Read before
+  touching any hardware data.
+- `docs/adr/` — decisions; spine 0002 (build order) → 0003 (B methodology) → 0004 (finance framing) → 0005 (retire SCOPE / reframe) → 0006 (channel-field architecture) → 0007 (R2-lite published-data rung now ∥ H2; d=5/d=7 surface-code target → carrier study after H2; hardware-data metrics).

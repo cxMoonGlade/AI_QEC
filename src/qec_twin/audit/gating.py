@@ -30,11 +30,15 @@ quantitative prediction would give false confidence exactly on the coherent slic
 that is the target of B5.
 """
 
+import math
+
 import torch
 
 from qec_twin.decoder.stim_dem import extract_dem_data
-from qec_twin.contexts.ladder import calibration_contexts
+from qec_twin.calibration.nll import joint_kl
+from qec_twin.contexts.ladder import calibration_contexts, run_context
 from qec_twin.knobs.reference import stim_rep_code_circuit
+from qec_twin.mechanisms.teachers import correlated_dephasing_kraus
 from qec_twin.forward.cptp_channel import pauli_transfer_matrix
 
 
@@ -113,6 +117,81 @@ def has_coherent_drift(field, n_locations: int, *, tol: float = 1e-9) -> bool:
     return any(
         girsanov_split(field(0, i), tol=tol)["drift"] > tol for i in range(int(n_locations))
     )
+
+
+def edge_dof_gate(
+    field,
+    edge_field,
+    phi: float,
+    levels=(0, 1, 2, 3, 4),
+    *,
+    distance: int = 3,
+    slope_phis=(0.05, 0.1, 0.15),
+    pair=(0, 1),
+    kl_floor: float = 1e-12,
+) -> dict[str, object]:
+    """H2 W2 DOF gate (ADR 0006 Decision 3(i)) -- run BEFORE any calibration fit.
+
+    ``edge_field`` is the constructor ``phi -> ((t, (i, j)) -> Kraus | None)``.
+    Per probe rung ``r`` the gate scores the edge DOF's raw visibility on the
+    existing ladder with pure teacher forwards (no learner): the discrimination
+    ``KL(p_phi || p_0)`` summed over ``C_cal(r)`` at the reference ``phi``, and
+    its log-log slope in phi over ``slope_phis`` (H1's exponent recipe; ``None``
+    where the KL sits at the floor). ``increment[r]`` is the KL added by rung
+    ``r``'s new contexts (which rung carries the visibility).
+
+    ``a_proxy`` documents the W2 partiality of the DEM parity map ``A`` (T2): the
+    edge's Pauli twirl is correlated Z(x)Z dephasing -- blind-sector on a bit-flip
+    code, earned by an exact forward (``twirl_quiet_kl``: the twirl edge alone
+    leaves the richest Z-basis sandwich context at the noiseless joint), so ``A``
+    carries NO column for the edge -- zero stochastic edge DOF at every ``r``,
+    on top of the local-fault ``anchor_features`` / ``learnable_first_moment_dim``
+    audit.
+    """
+    phis = sorted(set(float(p) for p in slope_phis) | {float(phi)})
+    contexts = calibration_contexts(max(levels), distance=distance)
+    base_fwd = {c.label: run_context(c, channel_field=field) for c in contexts}
+    kl_by_phi = {
+        p: {
+            c.label: float(joint_kl(run_context(c, channel_field=field, edge_field=edge_field(p)), base_fwd[c.label]))
+            for c in contexts
+        }
+        for p in phis
+    }
+
+    per_rung: dict[int, dict[str, object]] = {}
+    prev_labels: set[str] = set()
+    for r in sorted(int(level) for level in levels):
+        labels = [c.label for c in calibration_contexts(r, distance=distance)]
+        kls = {p: sum(kl_by_phi[p][lab] for lab in labels) for p in phis}
+        increment = sum(kl_by_phi[float(phi)][lab] for lab in labels if lab not in prev_labels)
+        lo, hi = min(phis), max(phis)
+        slope = (
+            math.log(kls[hi] / kls[lo]) / math.log(hi / lo)
+            if kls[lo] > kl_floor and kls[hi] > kl_floor
+            else None
+        )
+        per_rung[r] = {"kl": kls[float(phi)], "kl_by_phi": kls, "increment": increment, "slope": slope}
+        prev_labels.update(labels)
+
+    # A-proxy (T2): the edge twirl flips no Z-basis detector -> no DEM column.
+    twirl = correlated_dephasing_kraus(float(phi))
+    twirl_edge = lambda t, e: twirl if tuple(e) == tuple(pair) else None  # noqa: E731
+    quiet_ctx = max(
+        (c for c in contexts if c.pre_rotation == 0.0), key=lambda c: (c.repeats, c.rounds)
+    )
+    twirl_quiet_kl = float(
+        joint_kl(run_context(quiet_ctx, edge_field=twirl_edge), run_context(quiet_ctx))
+    )
+    parity_map = rep_code_parity_map(distance, max(c.rounds for c in contexts))
+    a_proxy = {
+        **learnable_first_moment_dim(parity_map),
+        "num_identifiable": anchor_features(parity_map)["num_identifiable"],
+        "twirl_quiet_kl": twirl_quiet_kl,
+        "edge_stochastic_dof": 0 if twirl_quiet_kl <= 1e-10 else None,
+        "quiet_context": quiet_ctx.label,
+    }
+    return {"per_rung": per_rung, "a_proxy": a_proxy}
 
 
 def predict_exotic_drop_level(

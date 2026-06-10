@@ -60,15 +60,18 @@ def run_context(
     *,
     data_channel=None,
     channel_field=None,
+    edge_field=None,
     device: str | object = "cpu",
 ) -> RepCodeForward:
     """Exact-forward a context under a shared ``data_channel`` or a per-location
-    ``channel_field`` (the B3 calibration target). Returns the joint ``p(s, m)``."""
+    ``channel_field`` (the B3 calibration target), optionally with a non-factorized
+    ``edge_field`` (H2 coupling slot). Returns the joint ``p(s, m)``."""
     return simulate_rep_code_memory(
         context.distance,
         context.rounds,
         data_channel=data_channel,
         channel_field=channel_field,
+        edge_field=edge_field,
         initial_flips=context.initial_flips(),
         repeats=context.repeats,
         pre_rotation=context.pre_rotation,
@@ -154,6 +157,19 @@ def held_out_eval_context(*, distance: int = 3) -> RepCodeContext:
     validation in B4 always extrapolates beyond the calibrated circuits.
     """
     return RepCodeContext(distance, 4, 0, -1, "eval:R4-L0")
+
+
+def held_out_sandwich_context(*, distance: int = 3) -> RepCodeContext:
+    """The held-out repeated-storage "sandwich" memory eval (H2).
+
+    Same disjoint round count (``4``) as :func:`held_out_eval_context` but with
+    ``repeats=2``, so a per-round edge coupling sits INSIDE a storage sandwich
+    (visibility = drift x backdrop-coherence between extractions) instead of being
+    absorbed by the next extraction (the repeats=1 phi-blind theorem). NOT a new
+    calibration rung -- the crosstalk probes are the existing r=2/r=4 levels; the
+    phase-sensitive (signed) edge evals are :func:`held_out_exotic_contexts`.
+    """
+    return RepCodeContext(distance, 4, 0, -1, "eval:R4-k2", repeats=2)
 
 
 def held_out_exotic_contexts(*, distance: int = 3) -> list[RepCodeContext]:

@@ -2,7 +2,7 @@
 
 Binding roadmap for **the twin** (`qec_twin`). Division of labor:
 [`docs/TWIN.md`](TWIN.md) is the **object contract** (*what* the twin is); the
-[ADR spine](adr/) (0002→0006) records **decisions** (*why*); this file is the **path**
+[ADR spine](adr/) (0002→0007) records **decisions** (*why*); this file is the **path**
 (*how / when / how it falsifies*). It is **strict** on physics, mathematics, and the
 aim↔object map, and **deliberately open** on architecture/parameterization (ADR 0005).
 
@@ -78,7 +78,9 @@ its approximation audited by the band (§1.2).
   (qutrit leakage vs qubit learner; non-factorized crosstalk vs factorized learner).
   Report the three **separately, never summed** (not independent; LER is **non-monotone**
   — coherent interference + decoder non-monotonicity — so the UVM pointwise shortcut
-  fails, extremize **numerically**). `B_misspec` is measurable only against the
+  fails, extremize **numerically** — and the decision-regret gate found even this is *not cheap*:
+  on the toy a local / named-member evaluation **under-covers** the epistemic band, which needs
+  **global continuation**, not a single fiber endpoint). `B_misspec` is measurable only against the
   controlled teacher; on hardware it is only *bounded* via transfer. **Band width vs `r`**
   is the single most important plot.
 - **Hard theoretical guardrails** (survey W1–W5,
@@ -139,7 +141,7 @@ The spec is **four capabilities over hardware-realistic noise**, each reduced to
 | Capability | Object it acts on | Falsifiable success criterion | Math tool / guardrail | Finance analogue | Status |
 |---|---|---|---|---|---|
 | **recover** | the field `E` | `calib_kl ≈ 0` **and** held-out `p(s,m\|c)` match | Born-NLL inverse; anchor-feature identifiability | vol-surface calibration | **DONE** (toy) |
-| **understand** | learner-visible decomposition of `Ê` | a **quotient-level** split — coherent-sensitive vs stochastic directions, identifiable mechanism *families*, non-identifiable alias *classes* — **with** honest bands; teacher-mechanism alignment is evaluator-only (scoring, not a learner claim) | Girsanov split; ICP; Fisher / learnable-DOF | model-uncertainty / factor interpretation | placeholder |
+| **understand** | learner-visible decomposition of `Ê` | a **quotient-level** split — coherent-sensitive vs stochastic directions, identifiable mechanism *families*, non-identifiable alias *classes* — **with** honest bands; teacher-mechanism alignment is evaluator-only (scoring, not a learner claim) | Girsanov split; ICP; Fisher / learnable-DOF | model-uncertainty / factor interpretation | **partial** (toy): coherent-vs-stochastic Fisher-null split demonstrated (H0/H1 exponent witness, Kraus coords); no `understand` module yet |
 | **manipulate** | `do(Ê) → ΔLER` | `\|ΔLER_teacher − ΔLER_twin\|` within the reported band | counterfactual validity vs **W1** | Greeks / hedging / scenario | **DONE** (toy): Tier-0 + Tier-1 weakening; generator-scaling → GKSL |
 | **predict** | `E(t)` / rare events | held-out-time / regime ΔLER forecast within band | SMC-MCMC state-space | regime / multiscale stochastic-vol | placeholder |
 
@@ -155,15 +157,15 @@ is a (physical / mathematical / aim↔object) triple plus a falsification signal
 ### B — validate the counterfactual loop · DONE (exact rep-code toy)
 
 - **Shown.** Label-free calibration recovers a coherent over-rotation teacher
-  (`calib_kl ≈ 0`); the channel-level `do()` matches the teacher's true ΔLER (≈6e-9);
-  negative controls fail as pre-registered (moment-matched ≈900×, shuffled ≈1400×
-  worse); probe richness breaks the alias (out-of-basis exotic error collapses ~10⁵×
-  once basis-rotated probes enter); Tier-0 bands cover truth and shrink with richness;
-  d3→d5 holds (band even tightens).
+  (`calib_kl ≈ 0`); the channel-level `do()` matches the teacher's true ΔLER (knob error
+  `twin_B_LER = 1.594e-5` at `r=1`, `<1e-6` on the identifiable bit-flip teacher);
+  negative controls fail as pre-registered (moment-matched **≈942×**, shuffled **≈1503×**
+  worse — test-pinned); probe richness breaks the alias (`B_LER` falls `2.709e-3 → 1.594e-5`,
+  `r=0→1`); Tier-0 bands cover truth and shrink with richness; d3→d5 holds (band even tightens).
 - **Gate (passed).** *Physical*: exact Born-NLL on the non-Clifford forward, frozen `D`.
   *Mathematical*: alias band shrinks with `r`; controls fail per the Girsanov prediction.
   *Aim↔object*: recover + manipulate criteria met on the toy.
-- **Evidence.** 63 tests pass.
+- **Evidence.** 87 tests pass (B + H0/H1 + the decision-regret gate).
 - **Falsification (it survived).** Had the band failed to shrink with `r` on the
   controlled teacher, interventional validity would be unrecoverable → stop/redesign.
 
@@ -188,11 +190,40 @@ Beyond the current cut the later axes are **named, not yet specified** — **H3 
 `predict` exercise), **H5 larger `d`** (the backend-swap test) — each specified when
 reached, not before.
 
+- **Done so far (2026-06-09).** **H0** (`test_twin_h0_baseline`): frozen matched baseline,
+  `calib_KL ≈ 1e-14`, Tier-0 band covers every `do(E→I)` knob; the coherent alias is a real
+  `r=1` Fisher null (iso-marginal exponent `∝h⁴`) that does **not** project onto `do(E→I)`.
+  **H1** (`test_twin_h1_coherent`): the null lifts (exponent `4→2`) at the accumulation rung;
+  one Ê gives the right `do(E→I)` but the wrong phase-sensitive prediction (Pauli-shadow tie
+  ≈1.07); the null is backdrop-dependent (observation-map, factorized teacher) → motivates H2.
+  **H2** (`test_twin_h2_crosstalk`, 6/6): theory-first pre-registration (three exact theorems —
+  repeats=1 contexts are *exactly* φ-blind; the edge twirl has no DEM column; Z-basis contexts
+  are exactly even in φ) verified end-to-end; the fork is **rung-indexed (b)→(a)** (fit silent
+  at r≤1 by theorem, 12%-leaky at r=2–3, surfaces ×622 at r=4); `B_misspec` is real and
+  **functional-indexed** (zero on repeats=1 functionals, φ² + band-uncovered on sandwich
+  functionals, φ-linear on k2ry; the ZZ edge is *echo-protective* — removing it raises LER);
+  **probe richness does not close the third band; one declared edge DOF does** → ADR 0006
+  support-structure verdict: edge slots (b) REQUIRED for φ-sensitive functionals. **R2-lite M1**
+  (`test_hardware_m1_ingestion`, ADR 0007 Track B): first real-hardware contact — bit-exact m2d
+  parity on the Google d=29 release, detection fractions in the derived band (X 5.13% / Z 5.00%),
+  and three back-edge findings (a device mirror-diagonal class ≈970× the SI1000 sim, long-range
+  tails, an early-layer transient). Numbers in [`metric_results.md`](metric_results.md).
+- **Decision-regret gate** (plan2 go/no-go, `test_decision_regret_gate`). Ran before H2 to
+  decide whether to commit to the [`plan2.md`](plan2.md) prioritization engine. **Verdict: bank
+  the Claim-A floor** — non-Pauli-capable calibration beats the field's Pauli/DEM standard on a
+  dissipative source (the gap projects onto the decision) — and **defer plan2's engine**: its
+  calibrated decision band is real but **not cheaply computable** (no slack calibrates a local
+  band on the toy; earning it needs global continuation machinery). The bounded plan here is the
+  committed path; the non-Pauli floor is its banked headline.
 - **Sequencing.** Non-linear: **H0 freezes first** (the same-`r` baseline) before the
   predict-held-out-`r` step; the coherent half is co-built with it; the epistemic and
   statistical bands are coupled through the `slack` knob. Dependency structure: **ADR
-  0004 (D1–D5)**. *Current cut:* **H1→H2** (two-qubit correlated / crosstalk) — minimal
-  added structure on the existing qubit backend, maximal stress on Pauli-shadowing.
+  0004 (D1–D5)**. **H0/H1/H2 done** (above; H2's misspecification ablation delivers the
+  ADR 0006 support-structure verdict, which **unblocks the `forward/scalable` carrier
+  feasibility study** — ADR 0007 Decision 3 → ADR 0008). *Current cut:* the carrier study ∥
+  **R2-lite M2** (window-closure audit — the back-edge findings predict where closure fails);
+  **H3 (leakage) / H4 (drift)** are sequenced by the R2-lite residual directions per the
+  back-edge, not built blind.
 - **Gate (per row, triple).** *Physical*: the mechanism declared at its true realism
   level (qutrit leakage / non-factorized crosstalk), no silent Pauli approximation.
   *Mathematical*: the **prediction-error-vs-`k`** curve and the **split bands vs `r`**
@@ -208,17 +239,25 @@ reached, not before.
 ### C — real Google 72Q/105Q · DEFERRED
 
 - **Entry.** Only after the HARDEN gate passes.
-- **Hard boundary (W1 + ADR 0004).** Real hardware has **no realized counterfactual**, so
-  calibration fit can **never** validate a knob there. The only available validation is
-  **cross-config transfer** (d3→d5/d7, X↔Z, set1→set2, 72→105Q) = calibrate-on-liquid /
-  test-on-illiquid — exactly where finance flags well-fitting models still fail. This is
-  **transfer / scenario-prediction validation, not realized-`do()` validation**.
+- **Hard boundary (W1 + ADR 0004).** Real hardware has **no realized, mechanism-isolated
+  counterfactual**, so calibration fit can **never** validate a `do()` knob there. (Some
+  interventions *are* physically realizable — recalibrate a gate, change a pulse — but they
+  are **non-surgical** (they move coherent + stochastic + crosstalk together), are **not** the
+  channel-level `do(E→I)`, and stay **aliased** (W1) — so none can be tied to the twin's
+  per-source prediction.) The only available validation is **cross-config transfer**
+  (d3→d5/d7, X↔Z, set1→set2, 72→105Q) = calibrate-on-liquid / test-on-illiquid — exactly where
+  finance flags well-fitting models still fail. This is **transfer / scenario-prediction
+  validation, not realized-`do()` validation**.
 - **Headline & claim.** Report **cross-config transfer (scenario-prediction) error** —
   observed `p(s,m)`, LER, and scenario-shift direction on the held-out config — **plus
   the inherited controlled-system alias band** as a prior on every Google knob; *not* a
-  "counterfactual transfer error," since no hardware `do()` ground truth exists. The
-  claim stays bounded — no hardware physical-mechanism / Born-generation / CPTP-learning
-  claim is licensed by fit alone.
+  "counterfactual transfer error," since no hardware `do()` ground truth exists. **The
+  band-as-prior is family-conditional:** its covering guarantee transfers **only inside the
+  calibrated misspecification family**; if the hardware lands *outside* it (`B_misspec`,
+  out-of-class), the band is only a **transfer bound**, not a covering prior, and that
+  triggers the **R-ladder back-edge** (return to R1, widen the family along the exposed
+  direction, re-gate). The claim stays bounded — no hardware physical-mechanism /
+  Born-generation / CPTP-learning claim is licensed by fit alone.
 
 ## 4. What stays open (FLEXIBLE — selected later, against the four capabilities)
 
@@ -242,11 +281,16 @@ criterion among others**:
 
 - [`docs/TWIN.md`](TWIN.md) — object contract `p(y|c)=Tr[M_y C(c)(ρ0)]`, the four
   capabilities, reserved notation.
+- [`docs/plan2.md`](plan2.md) — the decision-regret / prioritization-engine extension of this
+  plan, **gated** by `tests/test_decision_regret_gate.py` (verdict: Claim-A floor banked, the
+  calibrated-band engine deferred — see §3 HARDEN).
 - [`docs/METRICS.md`](METRICS.md) — the metric ledger and the **forced standard-metric ladder**; every
   score is named with its field reference and convention (numbers, dated, in `metric_results.md`).
 - [`docs/adr/`](adr/) — 0002 (build order) · 0003 (B methodology) · 0004 (finance
   framing, D1–D5 + bands) · 0005 (retire SCOPE, architecture open) · 0006 (channel-field
-  architecture: ratify object, scope support structure, defer carrier).
+  architecture: ratify object, scope support structure, defer carrier) · 0007 (R2-lite
+  published-data rung now, in parallel with H2; d=5/d=7 surface-code target → carrier
+  feasibility study after H2; hardware-data metric ledger).
 - [`docs/IDENTIFIABILITY_AND_CRL_SURVEY.md`](IDENTIFIABILITY_AND_CRL_SURVEY.md) —
   finance ↔ QEC tools and the W1–W5 guardrails.
 - [`docs/error_mechanisms.md`](error_mechanisms.md) — physical mechanism taxonomy (the

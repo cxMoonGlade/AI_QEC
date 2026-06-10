@@ -71,6 +71,27 @@ def intervene_field(field, target_i: int, intervention):
     return new_field
 
 
+def intervene_edge_field(edge_field, pair, intervention):
+    """Return an edge field with ``intervention`` applied at edge ``pair`` (H2).
+
+    Channel-level like :func:`intervene_field`: Tier-0 ``do_remove`` on an edge
+    yields ``I_4`` (the edge-removal knob). A factorized field has no edge slot
+    (``edge_field is None``): the result stays ``None`` -- the factorized
+    learner's edge-knob prediction is structurally 0.
+    """
+    if edge_field is None:
+        return None
+    target = tuple(pair)
+
+    def new_edge(t: int, e):
+        kraus = edge_field(t, e)
+        if tuple(e) == target and kraus is not None:
+            return intervention(kraus)
+        return kraus
+
+    return new_edge
+
+
 # --------------------------------------------------------------------------- #
 # Frozen decoder + exact logical error rate                                     #
 # --------------------------------------------------------------------------- #
@@ -114,8 +135,10 @@ def decoder_error_indicator(
     predicted = decoder.decode_batch(detectors).reshape(-1).astype(np.int64)
     observable = forward.observable.round().to(torch.int64).cpu().numpy()[reachable]
     actual_flip = (observable + int(logical_reference)) % 2
-    errors = torch.tensor((predicted != actual_flip).astype(float), dtype=forward.probs.dtype)
-    indicator[torch.tensor(reachable)] = errors
+    errors = torch.tensor(
+        (predicted != actual_flip).astype(float), dtype=forward.probs.dtype, device=forward.probs.device
+    )
+    indicator[torch.tensor(reachable, device=forward.probs.device)] = errors
     return indicator
 
 
@@ -158,8 +181,8 @@ def logical_error_rate(
 # --------------------------------------------------------------------------- #
 # Counterfactual-validity scores                                                #
 # --------------------------------------------------------------------------- #
-def _ler_and_forward(field, context, decoder):
-    forward = run_context(context, channel_field=field)
+def _ler_and_forward(field, context, decoder, edge_field=None):
+    forward = run_context(context, channel_field=field, edge_field=edge_field)
     ler = logical_error_rate(forward, decoder, logical_reference=context.logical)
     return ler, forward
 
@@ -170,8 +193,11 @@ def field_counterfactual_scores(
     context: RepCodeContext,
     decoder,
     *,
-    target_i: int,
+    target_i: int | None = None,
     intervention,
+    teacher_edge_field=None,
+    twin_edge_field=None,
+    target_edge=None,
 ) -> dict[str, float]:
     """Score one ``do()`` at location ``target_i`` for ``other_field`` vs the teacher.
 
@@ -179,15 +205,34 @@ def field_counterfactual_scores(
     ``other_field`` (a calibrated twin field, or a negative-control field), exact-
     forwards both on the held-out ``context``, and returns the knob error ``B_LER``
     and observation-shift error ``B_obs`` plus the underlying base/do LERs.
+
+    H2 edges: base and ``do()`` forwards carry each side's OWN edge field
+    (``teacher_edge_field`` / ``twin_edge_field``). With ``target_edge`` set, the
+    intervention applies to that edge on both sides instead of a location -- a
+    factorized side (edge ``None``) then predicts a structurally-zero knob.
     """
     with torch.no_grad():
-        base_teacher_ler, base_teacher = _ler_and_forward(teacher_field, context, decoder)
-        base_other_ler, base_other = _ler_and_forward(other_field, context, decoder)
+        base_teacher_ler, base_teacher = _ler_and_forward(
+            teacher_field, context, decoder, edge_field=teacher_edge_field
+        )
+        base_other_ler, base_other = _ler_and_forward(
+            other_field, context, decoder, edge_field=twin_edge_field
+        )
 
-        do_teacher_field = intervene_field(teacher_field, target_i, intervention)
-        do_other_field = intervene_field(other_field, target_i, intervention)
-        do_teacher_ler, do_teacher = _ler_and_forward(do_teacher_field, context, decoder)
-        do_other_ler, do_other = _ler_and_forward(do_other_field, context, decoder)
+        do_teacher_field, do_teacher_edge = teacher_field, teacher_edge_field
+        do_other_field, do_other_edge = other_field, twin_edge_field
+        if target_edge is not None:
+            do_teacher_edge = intervene_edge_field(teacher_edge_field, target_edge, intervention)
+            do_other_edge = intervene_edge_field(twin_edge_field, target_edge, intervention)
+        else:
+            do_teacher_field = intervene_field(teacher_field, target_i, intervention)
+            do_other_field = intervene_field(other_field, target_i, intervention)
+        do_teacher_ler, do_teacher = _ler_and_forward(
+            do_teacher_field, context, decoder, edge_field=do_teacher_edge
+        )
+        do_other_ler, do_other = _ler_and_forward(
+            do_other_field, context, decoder, edge_field=do_other_edge
+        )
 
         dler_teacher = do_teacher_ler - base_teacher_ler
         dler_other = do_other_ler - base_other_ler
@@ -215,10 +260,22 @@ def counterfactual_scores(
     context: RepCodeContext,
     decoder,
     *,
-    target_i: int,
+    target_i: int | None = None,
     intervention,
+    teacher_edge_field=None,
+    twin_edge_field=None,
+    target_edge=None,
 ) -> dict[str, float]:
-    """``field_counterfactual_scores`` for a calibrated ``twin`` (uses ``twin.field()``)."""
+    """``field_counterfactual_scores`` for a calibrated ``twin`` (uses ``twin.field()``).
+
+    The twin's own edge defaults to ``twin.edge_field()`` (``None`` for the
+    factorized class); ``teacher_edge_field`` stays evaluator-only.
+    """
+    if twin_edge_field is None:
+        twin_edge_field = twin.edge_field()
     return field_counterfactual_scores(
-        teacher_field, twin.field(), context, decoder, target_i=target_i, intervention=intervention
+        teacher_field, twin.field(), context, decoder,
+        target_i=target_i, intervention=intervention,
+        teacher_edge_field=teacher_edge_field, twin_edge_field=twin_edge_field,
+        target_edge=target_edge,
     )
