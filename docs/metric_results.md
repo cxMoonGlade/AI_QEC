@@ -866,3 +866,309 @@ model (populated/mirror ≈ 2.6 (X) / 2.9 (Z), corroborating P7's side-bet miss)
 positive long-range tails in both the time (`(0,2..5,0)`) and space (`(2..5,0,0)`) families
 (99.98% positive share — the registered permitted-tail clause). These are the first R2-lite
 **back-edge outputs**: located misspecification directions, no mechanism attribution.
+
+### M4 PRE-REGISTRATION (decoder-prior utility; recorded 2026-06-10 BEFORE build/run)
+
+Panel A/B/C + reviewer adjudication archived in `docs/.reports/m4_panel/` (the reviewer verdict is
+the binding blueprint; this section is its registration-of-record). Every item carries its
+epistemic class — **(a) exact / (b) prediction band / (c) heuristic gate or declared design**;
+undeclared defaults to (c). **User ratifications recorded 2026-06-10:** (R1) decoding is
+evaluator-side tooling and runs on CPU under the GPU-first policy (frozen external evaluator,
+never trained/tuned/differentiated — same category as stim m2d in M1; all model compute stays
+GPU: zero new twin fits, P10 MC on GPU); (R2) the mechanical rung-rule constants (target 0.075,
+window [0.01, 0.30]); (R3) seed 20260610 for ALL new M4 randomness (frozen M3 fits keep their
+internal 20260609); (R4) dMLE arm conditionality (run-unmodified-or-drop) + the console entry
+point lands with M4 (ADR 0007 Decision 6).
+
+**S1 — design constants.**
+*Measured data facts (a), recorded pre-registration:* I-1 corpus XOR popcount
+(obs_flips_predicted ⊕ obs_flips_actual over all 100 samples × 2 bases, OBSERVABLE_INCLUDE(0) =
+final readout of the leftmost data qubit): **ZERO logical errors in 1e7 shots per basis** —
+the full d=29 chain is unscoreable for %ΔLER on this dataset at any confidence (the M4-C 0.04
+expected-event arithmetic, confirmed empirically); the gate is therefore registered on
+subsampled-distance instruments, decided NOW, not post-run. I-2 shipped RL `error_model.dem`:
+84,113 error instructions, arity {1: 2,004, 2: 82,109}, 0 decomposed (graphlike), 1,002
+L0-carrying, 252 distinct probabilities. I-3 shipped SI1000 circuit → `analyze_errors` exact:
+OK, 0 hyperedges, 86,115 errors (graphlike; `decompose_errors=True, flatten_loops=True`,
+assert higher-weight == 0). I-4 circuits ship unrolled (no REPEAT) — layer-resolved probability
+replacement is well-defined. Raw obs flip saturated at ~0.4977/0.4975 (M1-P9) — raw rate carries
+zero decoder information.
+*Decoder pin:* pymatching == 2.4.0 (pip wheel; hash recorded at build; the vendored pristine
+copy is the auditable binary-semantics reference, never built); `Matching.from_detector_error_model
+→ decode_batch` at upstream defaults, nothing changed; code-verified facts (a): no RNG in the
+decode path, weights quantized to 2^24 distinct values, parallel edges merged "independent",
+bit-exactness guaranteed only within one version (no cross-version tie guarantee). stim pinned
+per M1-P2. The decoder is identical and frozen across all arms.
+*Splits:* train = sample_00 (all construction, fits already frozen, pilot); held-out primaries =
+samples 05–09 (5e5 shots/basis), ONE pass, no re-entry; samples 01–04 = drift-continuity context
+only (design-contaminated — the per-window G3/R̂ pattern is known from M3); conditional extension
+= samples 10–14, at most once, baseline-only trigger (S8); escrow = samples 15–19 (the five
+lowest-numbered never-opened samples), the G2 void-and-rerun reserve.
+*Estimand (a):* per-shot logical error = XOR(decoder prediction, actual observable flip); LER =
+held-out mean at fixed T = 1000; %ΔLER(A vs B) = (L_B − L_A)/L_B, per basis, never pooled across
+bases. Every %ΔLER carries its protocol tuple (d′, T, p̂, c(ŝ)) with the compression identity
+c(s) = s·e^(−s)/(1−e^(−s)), s = 2ε̂T (a). Secondary per-round inversion ε̂ = ½(1−(1−2L)^(1/T))
+(a; stationarity caveat travels); registered abstain on ε̂ when p̂ > 0.45 (c).
+
+**S2 — instruments.** (i) *Gate/headline instrument:* full-chain sub-distance ladder with
+MAXIMAL DISJOINT partitions — d′=5: 5 positions, d′=7: 4, d′=9: 3, d′=11: 2, d′=13: 2,
+d′=15–21: 1 — named subchains with declared offsets recorded at composition freeze; the subchain
+covering the hot {15,19}/(18,21) region is flagged in advance and reported separately; the
+sliding-window position set is a secondary with design-effect disclosure. (ii) *Covariation /
+located instrument:* the 19 clean M3 windows as d=5 sub-repetition-codes (5 data + 4 interior
+measure columns; boundary measure columns dropped); observable = leftmost data qubit final
+readout XOR sweep reference (pinned by P1b; cross-check (a): recomputing the full-code observable
+this way reproduces `obs_flips_actual` bit-exactly); saturation guard at 0.45 (S7 regime pin).
+*Sub-chain projection (a):* keep DEM errors with ≥1 detector inside the sub-grid; a
+one-detector-outside error becomes a weight-1 boundary edge at the survivor with the same p;
+window restriction at the full window = identity (P1c).
+
+**S3 — pilot + mechanical rung selection.** TRAIN-ONLY pilot: sample_00, arms A1+A2 ONLY (the
+twin arm is never decoded in the pilot), full grid d′ ∈ {5,7,9,11,13,15,17,19,21} + the 19
+windows. Selection rule (c, constants ratified R2): **d′* = argmin_d′ |log10 L̄_pij,train(d′) −
+log10 0.075| subject to L̄ ∈ [0.01, 0.30]; ties → smaller d′.** Edge branches declared: all
+rungs > 0.30 ⇒ take the smallest-L̄ rung, flagged conditioning-limited; all < 0.01 ⇒ take the
+largest-L̄ rung, flagged power-starved. Pilot LERs are design inputs, in-sample, never quoted as
+performance numbers. Free deliverable: the measured Λ̂ ladder (ledgered row, stationarity caveat).
+Rationale recorded: all three fixed analytic anchors were REJECTED by the reviewer (the ε_29
+floor-contaminated chain and the window-rate chain disagree by ~4 orders at d′=15; Λ=8.4 is
+extrapolated ~5+ steps outside its regime) — picking analytically would be explore-then-rationalize
+in reverse; the pilot rule is mechanical and reads no twin numbers.
+
+**S4 — arms.** A1 naive = shipped `circuit_noisy_si1000.stim` → stim exact DEM (I-3 facts above),
+window/subchain-restricted by the pinned projection. A2 pij = self-computed Spitz-exact train
+estimates on the shared support S_W, clamp [1e-6, ½−1e-6] (c), mean-matching boundary half-edges
+(the M3 construction extended to the window graph). A3 twin-static = the S5 composition from
+FROZEN M3 train fits (zero new fits). A4 dMLE = vendored DMLE-QEC pristine at ITS recommended
+settings, per window, identical train split; conditional (c, ratified R4): dropped-with-
+documentation if it cannot run unmodified; ≤ 38 fits. A5 RL = shipped pathway, FULL code only
+(pipeline pin + context bar; window-restricting their prior would be our construction
+misattributed); ILLEGAL as input to any twin/pij arm path (FM8 legality table). *Secondaries,
+claim-separated:* A3b "Spitz-of-the-twin" (twin-model-implied two-point detector statistics —
+Markov pair ⇒ geometric (1−p01−p10)^dt same-site time correlations — pushed through the ledgered
+Spitz Eq. 13 inversion on S_W with twin-implied mean-matching boundaries: empirical-vs-model
+statistics through ONE estimator and ONE support). A3c two-pass temporal reweighting, WINDOW
+instrument only, never the gate — pass-1 static decode (`decode_to_edges_array`); pass-2: for
+every space edge (j,t) in the pass-1 correction set, reweight that qubit's space edges at t±1
+from r̂ to min(r̂·R̂, ½−ε), re-decode; exact identity P(flip_{t+1}|flip_t) = p01p10/r̂ = r̂R̂ (a);
+the ONLY arm carrying R̂ into decoding; built-in negative control: must do ~nothing on w20/w21.
+S_W support-extension diagnostic arm (mirror class added) = the G6 ablation secondary.
+**STRUCTURE FREEZE (c, key design):** all DEM arms share the SI1000 DEM (detectors,
+observable-flags) skeleton; arms differ ONLY in the probability column. Stated verbatim: no
+primary arm carries the mirror-diagonal class — purely-probability contrasts are the registered
+object; the mirror class lives in the ablation secondary.
+
+**S5 — twin→DEM composition (pinned; M4-B derivation).** Assignment: SPACE(j, bulk) ←
+r̂_j = 2p̂01p̂10/(p̂01+p̂10), the stationary MARGINAL flip probability (a); TIME(i, bulk) ← q̂eff_i
+(gauge-exact (a) — precisely the DEM-consumable combination); diagonals: twin class carries zero
+diagonal DOF (structure freeze supplies the skeleton; probability from the unowned-fill rule).
+f̂ = r̂·R̂ is NOT a marginal (it is exactly P(flip_{t+1}|flip_t)) and is never assigned to a
+static edge — the P7→A2 coordinate lesson, now a registered prohibition. *I-projection theorem
+(a):* among independent-per-layer Bernoulli flip processes, the I-projection of the stationary
+Markov pair is the product law with p_e = r̂ (KL-optimal static reduction); *MWPM sufficiency
+remark (a):* MWPM consumes only per-edge weights log((1−p)/p) — the projection preserves exactly
+the decoder's sufficient statistics and loses exactly what no static DEM can carry (T-A: R ≡ 1
+vs measured R̂ up to 17.7). THE STATIC ARM TESTS MARGINAL-ESTIMATION QUALITY, NOT THE BUNCHING
+DISCOVERY (that is A3c's job). *Aggregation:* MEDIAN over owning windows (c; systematics-dominated
+— replicate spreads 39–61% ≫ stat SEs; Fisher weighting would falsely promote certainty);
+ownership filter: data qubits at interior positions 2–4 only, measure qubits at interior
+detectors only. *Unowned cells* (chain ends, the {15,19} region, boundary measures, layers
+outside [80,999], diagonals, weight-1 boundaries): train-pij-derived values, layer-resolved
+outside the bulk window (the M1-P6 transient keeps its measured profile); NOT SI1000 fill
+(planting a known ~2.5× rate cliff would distort matching across the seam). KEY: twin arm and
+pij arm carry IDENTICAL values on ALL unowned cells ⇒ the ΔLER contrast is attributable to
+twin-owned cells BY CONSTRUCTION. *Composition acceptance pin (b):* composed per-site detector
+marginal within ±0.5% absolute of the train detection fraction (consistency identity (a):
+1−2f_det = (1−2r_j)(1−2r_{j+1})(1−2q_i)²; M3 means give ~5.21% vs measured 5.13%).
+
+**S6 — machinery pins P1a–P1i.** P1a m2d parity re-verified including all held-out samples
+(0 mismatched bytes, a). P1b our observable construction at window = full chain reproduces
+shipped `obs_flips_actual` bit-exactly (a). P1c DEM parse/serialize round-trip; window
+restriction at full window = identity (a). P1d pymatching determinism: two independent runs
+bit-identical (a). **P1e merged shipped-prediction pin:** pymatching 2.4.0 on the shipped RL
+`error_model.dem` vs shipped `obs_flips_predicted`, samples {00, 50, 99} × {X, Z}; target
+bit-exact; expected mismatch band [0, 1e-4]/sample (b); certification rule (c): bit-exact OR
+(mismatch ≤ 1e-3 AND tie-attributed via the weight-margin distribution, `return_weight=True`).
+Routing: mismatch > 1e-3 ⇒ halt + degeneracy audit (±1-ulp weight jitter re-decode, tie-rate
+census); tie-traced ⇒ documented, proceed (the design needs an internally frozen identical
+decoder, not upstream bit reproduction); reader/pipeline-traced ⇒ M4 FAIL branch. P1f
+cross-sample DEM hash audit (report). P1g pymatching vs the in-repo toy MWPM on enumerable toy
+DEMs (a, exact). P1h = the composition acceptance pin (S5). **P1i = the T-B consistency check
+(I-6), RUN 2026-06-10 pre-decode with both branches declared in advance:** measured per-site
+(pij_time − q̂eff) = 5.2e-4 (X) / 1.7e-4 (Z) vs predicted 2R̂r̂² = 2.07e-3 (X) / 1.64e-3 (Z) ⇒
+**the gap≈0 branch holds in both bases ⇒ headline central +1.5%** (the gap≈2R̂r̂² branch would
+have set +4%); per-window mirror mass vs R̂r̂²: qualitative covariation, not a quantitative
+identity (reported; the model-class flag on "mirror ≈ bunching shadow" stays). *Separate
+determinism guard:* ±1e-9 weight-jitter control per arm (pinned seed 20260610); decision flip
+rate ≥ 1/3 of a claimed Δp ⇒ that claim downgraded to (b).
+
+**S7 — predictions and gates (X / Z; exactly TWO primaries per basis).**
+- **PRIMARY 1, the ADR M4 GATE:** aggregate %ΔLER(twin vs naive), count-weighted pooled over the
+  d′* disjoint subchains, > 0 at one-sided 99% paired shot bootstrap (B = 1000, seed 20260610),
+  EACH basis. Per-rung band TABLE (b)+(c), declared BEFORE the pilot: d′ = 5–9: [+2, +30] central
+  +10 (X) / [+1, +25] central +8 (Z); d′ = 11–15: [+5, +35] central +15 (both); d′ = 17–21:
+  [+10, +45] central +25 (both). Derivation note (a) recorded: a uniform rescale of small edge
+  probabilities shifts every MWPM weight additively by −ln s and cannot reorder equal-cardinality
+  matchings — the naive arm's NLL deficit largely does NOT transfer; what transfers is relative
+  misstructure (M1 class ratios: space 5.9×, diag 4.8×, time 1.84×, mirror absent ~970×); bands
+  anchored on Sivak rep-d=21 (48% vs uninformative, 16% vs pij) and declared (b).
+- **PRIMARY 2, the HEADLINE:** %ΔLER(twin vs pij) two-sided ∈ [−10, +15] (X) / [−10, +12] (Z),
+  central +1.5% per the P1i gap≈0 branch (b). The DEM bottleneck may compress the bunching
+  advantage toward 0 — the compression is itself the measurement.
+- Covariation (G5, registered test of a post-hoc-flagged covariation, never "independent
+  confirmation"): partial Spearman ρ(%ΔLER_W(twin vs pij), R̂_W | r̂_W) ≥ 0.4, one-sided positive,
+  α = 0.01, per basis, samples 05–09 only; R̂_W/r̂_W frozen at the M3 full-split centrals; exact
+  permutation AND cyclic-shift nulls both reported (B = 1e4, seed 20260610); {w8, w20}
+  drop-sensitivity; no mechanism attribution. Companion (reported): A3c gain vs R̂_W.
+- Located signs (b): twin-vs-pij > 0 on windows {8, 9, 16, 17}; ≤ 0 on {20, 21}.
+- pij vs naive ∈ [+2, +25]% (b).
+- dMLE conditional (b): dMLE vs pij > 0 (their claim, our shots); twin vs dMLE ∈ [−10, +10]%
+  central 0, two-sided — the only licensed twin–dMLE head-to-head; the published 30.6% is a
+  protocol-tagged context bar only; "matched/beat dMLE" forbidden cross-protocol (G9).
+- A3c two-pass vs static (b): +[0, 8]% on high-R̂ windows; ~0 on w20/w21 (negative control).
+- Window regime pin (c): per-window pij-arm held-out LER ∈ [0.005, 0.45] for ≥ 16/19; windows
+  with L ≥ 0.45 excluded-and-flagged from %Δ aggregates and the covariation, count reported.
+- P10 predict-before-measure (b): per-window twin-arm held-out LER predicted by GPU MC from the
+  train-fitted twin model, recorded BEFORE the held-out pass; measured/predicted ∈ [0.5, 2] for
+  ≥ 75% of windows.
+- Drift (b): per-sample %ΔLER spread ∈ [2%, 40%]; M5 feed.
+- Full-code context (NOT a %Δ claim): corpus RL XOR count band [0, 10] per 1e5 shots.
+- **Reverse trap, pre-registered (b):** a small twin-vs-naive %ΔLER despite the +56/+44-nat NLL
+  blowout is NOT a failure — MWPM depends mostly on weight ratios; NLL does not map to LER and
+  no derivation exists. The registration says so here.
+
+**S8 — statistics.** The SHOT is the iid resampling unit (subchains and windows within a shot
+share bursts/drift — whole per-shot vectors are resampled; design effect reported). McNemar
+exact cross-check with discordant counts (n01, n10) reported per pair; discordance near its
+saturation bound ⇒ flagged conditioning-limited regardless of p. Dual permutation nulls for the
+covariation (above). Resolution floors recomputed from measured pilot baseline LERs.
+*Pre-registered conditional extension (anti-optional-stopping, c):* if the BASELINE-ONLY
+aggregate resolution floor exceeds half of the gate's central effect, held-out extends once to
+samples 10–14; the trigger script reads no twin numbers.
+
+**S9 — guards G1–G9 (adjudicated in M4-C, registration-binding).** G1 operating point: every
+%ΔLER carries (d′, T, p̂, c(ŝ)); measured p̂ outside the derived band ⇒ re-derive power before
+interpretation; p̂ > 0.45 ⇒ primary declared unpowered-as-registered (NOT "no utility"). G2
+one-shot composition: composition code hash + frozen M3 cache keys + fill/clamp/support tables
+pinned BEFORE any decode of samples 05+; ANY post-hoc edit (including "fixing an obvious bug"
+after a bad decode) voids the run ⇒ re-register on the escrow. G3 paired statistics as in S8.
+G4 determinism: P1e is the determinism floor (no %ΔLER claim below its LER impact); jitter
+control per arm; sim round-trip per arm (decode self-sampled shots from each arm's DEM ⇒ miss =
+pipeline bug, nothing downstream). G5 covariation as in S7. G6 support/seams: support census
+table (a) per arm; seam-discontinuity audit + seam-coordinate error tripwire confined to the
+stitched deliverable — primaries decode per-subchain DEMs, no seam crosses a primary; the
+support-ablation secondary carries the graph-richness question. G7 drift: per-sample %ΔLER +
+trend check; drift-isolated split corroboration. G8 multiplicity: exactly TWO primaries per
+basis; everything else reported-with-bands; RL legality table (RL trained on 1e4 sample_00
+shots — train-side, held-out decodes clean). G9 claim language: licensed template — "under
+frozen pymatching [ver], on held-out shots [samples], at the registered (d′, T) subsampled
+protocol, the twin-calibrated DEM prior yields decoded logical-error reduction X% [CI] vs
+[named baseline construction]; p̂ = …, c(ŝ) = …"; forbidden — "improves the hardware",
+unqualified "reduces the LER of the d=29 code", mechanism attribution, do()/counterfactual
+wording, "fits the device", cross-protocol "beats dMLE". Burst-shot MAD flag (with/without
+reported); floor/clamp policy + clamp-hit counts per arm; bases never pooled.
+
+**S10 — routing.** Pin failures ⇒ build bugs (P1e per its own two-way routing). GATE fail ⇒
+verify pins/splits; genuine ⇒ ADR fallback: publish the negative + the deliverables no
+competitor emits; diagnosis fork — twin-vs-pij ≈ 0 everywhere with P10 in band ⇒ "the
+independent-edges DEM-prior format is the bottleneck" (back-edge to ADR 0008 / H3, structural);
+P10 miss ⇒ "calibration wrong" direction; no rescue fitting either way. Headline < −10% ⇒ audit
+the composition first; if sound ⇒ model-implied statistics decode worse than empirical —
+re-derive, re-register. Covariation null with the M3 NLL structure intact ⇒ structural finding
+to ADR 0008 / H3 (bunching does not transfer through independent edges even via dt-tails).
+Regime pin: > ½ of windows saturated ⇒ re-register on wider sub-codes (d′ = 9/11 unions), NEW
+registration.
+
+**S11 — compute + build.** Model compute: ZERO new twin fits (frozen 236-fit M3 graph-mode
+cache); P10 MC on GPU (3.8e6 decode-equivalent samples + GPU sampling). Decoding: CPU,
+evaluator-side (ratified R1); fleet ≈ 1.4e8 window/subchain decodes (hours on 16 cores); 1e6
+full-code decodes (P1e + context); dMLE ≤ 38 fits conditional. Build artifacts:
+`qec_twin/hardware/dem_compose.py` (composition + arms + projection), `qec_twin/hardware/
+m4_report.py` (pilot, fleet, scoring, statistics, artifacts), `tests/test_hardware_m4_decoder_
+prior.py`; pymatching==2.4.0 as the optional extra `[hw]`; adaptors live in our tree only —
+baseline code never modified.
+
+**S12 — deliverables + order freeze.** Deliverables: per-window + per-rung twin `.dem` files +
+per-edge Tier-0 bands + abstain flags; the stitched full-chain hybrid DEM with disclosed fill +
+seam audit; the I-1 zero-event datum (ledgered); the Λ̂ ladder row; the single console entry
+point (lands with M4, ratified R4). **ORDER FREEZE: pins → composition freeze (G2 hashes) →
+train-only pilot → mechanical rung selection → P10 forecasts recorded → baseline-only floor
+check → ONE held-out pass (05–09) → scoring → artifacts.** No step reorders; the held-out pass
+happens exactly once.
+
+### ADR 0008 SEAM-TEST PRE-REGISTRATION (C3 prototype; recorded 2026-06-10 BEFORE build/run)
+
+The K1 discharge instrument for the C1 composed-carrier architecture (ADR 0008; panel + reviewer
+archive in `docs/.reports/adr0008_panel/`, the 13-item skeleton in `R2_c3prep_verdict.md` is the
+binding blueprint). Epistemic classes tagged throughout; undeclared defaults to (c). Scope notes
+recorded: the instrument is REP-CODE-SHAPED, so the K2-T1 footprint collapse does NOT apply to
+its teacher (sandwich/RY contexts violate the all-checks-measured-every-round premise, and K2-T1
+constrains identifiability from the law, never the evaluator-side teacher); D5's T-B member
+table is valid here (the R-MECH amendment affects surface-window instruments only); the L0
+spectator-qubit premise gap does not touch this instrument (no never-measured qubits in the
+strip). All results are controlled-teacher-scoped — no hardware claim of any kind issues from
+this test.
+
+1. **Instrument (c):** two-window repetition-code strip with one shared seam pair, total ≤ 13
+   qubits (DM oracle ≤ 1.1 GB; 15q = 17.2 GB wall — out); H2 context ladder r ≤ 4 including the
+   sandwich and k2ry probes; frozen in-repo MWPM (small-code scope — its registered domain);
+   tiling declared at freeze; two tilings = two registrations (tiling is family design, never a
+   fit knob).
+2. **Teachers (evaluator-only, computed by `forward/exact` ONLY):** (i) coherent seam edge
+   U_φ = exp(−iφ ZZ) ON the seam pair at the H2 placement; φ_ref = 0.1, regime [0.05, 0.15];
+   bias-injection control for the coherent teacher; (ii) bunching T-B member at r = 1.27e-2,
+   R = 5 — (p01, p10) = (6.7039e-3, 1.20296e-1), λ1 = 1 − p01 − p10 = 0.873; (iii) M3-scale
+   local backdrop. The carrier never evaluates the teacher side (isolation contract).
+3. **Composed-carrier arm:** window-exact CPTP factors + a DECLARED seam composition rule, never
+   commuted past extraction; W2-gated active slots; class manifest declared. The seam composition
+   is the ONLY approximation in the arm — tier-3 `B_misspec`, functional-indexed, never folded
+   into ε_log.
+4. **Pre-run predictions:** P-a (a) repeats=1 contexts are φ-blind: carrier-vs-oracle law gap
+   ≤ 1e-10; P-b (a) twirled control exactly zero + the sin²φ correlated rate visible; P-c (b)
+   **THE K1 MEASUREMENT** — seam residual on φ-sensitive functionals scales as φ² (sandwich) and
+   φ-linear (k2ry) if real seam mass exists, ~0 if the declared composition captures it; P-d (b)
+   carrier-recovered (r, R) in band on the bunching teacher.
+5. **Swap-gate triplet (anti-cancellation):** base p(s,m); do(U_φ → I₄) ΔLER under the frozen
+   decoder; Tier-0 band width — each scored vs `forward/exact` on ≥ 2 overlap instances; do()
+   acts on the channel field with the strip pushforward pinned ((a) map test; partial K5
+   discharge).
+6. **R_det pin (b):** fit the carrier on the R = 5 teacher; the carrier-law R_det computed from
+   a two-block marginal (no fit) must match in band WHILE calibration NLL sits at floor;
+   attribution lags k ≥ 2 only (record convention: this is a data-record-chain R_k — every R_k
+   in this registration declares its record per the D5↔K2 convention pin). Adopted optional pin:
+   the T3 triple — T-B predicts T₃ = R exactly (Skew_π(f) ≥ 0 restriction carried; the T-C
+   tie-breaker direction is reported, not gated).
+7. **Theorem-pin suite** — each pin labeled STRUCTURAL (numerical floor; violation = build bug)
+   vs EMERGENT (carried bound; violation = finding): H2-T1 blindness structural in-window,
+   EMERGENT across the seam (a measurement of composition error); H2-T2′ parity same split; T-A
+   Pauli-ablation R = 1 (structural); unital pin (structural); R1a′-class anti-unitary identity
+   (emergent unless proven on the strip); fixed-point ≤ 1e-9 (structural); normalization + zero
+   nonpositive probability (structural); D2 long-range null — its VIOLATION under the seam
+   teacher is the signal, not a bug; q^eff flatness with derived σ; D3 covariance equality
+   pinned once on the ablation arm.
+8. **G-NLL disposition:** items (iii)+(ii) → floor pins; (i) → the FAMILY-refinement gap,
+   re-scored under a seam-straddling re-tiling (the second K1 read); (iv) live: ε_log =
+   float64 round-off only; B_carrier = the measured seam residual, tier-3, functional-indexed;
+   items 2/3/9/16/17 N/A-with-reason recorded.
+9. **Determinism / R-GRAD:** checklist items 14 + 15 verbatim (P1h discipline; graph mode
+   bit-exact vs eager where used).
+10. **K1 falsifier semantics (the registered verdict space):** ESTABLISH-BAND — residual
+    nonzero but covered by a derivable functional-indexed band across the φ-regime ⇒ K1
+    discharged-by-band, the C3 perturbative cross-seam module triggers; ABSTAIN — residual real
+    but unbandable ⇒ registered abstain on seam-straddling φ-sensitive functionals,
+    window-limited fallback for cross-seam claims; KILL C1 — composition error contaminates
+    IN-WINDOW functionals or any structural pin breaks ⇒ ADR fallback; NULL — residual at floor
+    ⇒ no real seam mass at H2-regime φ, the C3 module is not triggered, K1 trivially discharged
+    with the regime scope carried.
+11. **Isolation / FM8:** legality table + provenance manifest; the W2/Fisher identifiability
+    gate runs BEFORE any fit; checklist item 32 — eigen-split stability across the two tilings.
+12. **Claim language:** checklist item 39 verbatim; every result controlled-teacher-scoped; no
+    hardware edge-coherence claim issues from this registration (K2 decision consequence stands
+    independently).
+13. **Compute (b):** oracle ≤ 1.1 GB; per-fit 9.6–23 s (M3 graph-mode anchor); ~100–200 fits ≈
+    1–2 h on a single CUDA context; total ≤ half a GPU-day. Model compute GPU-only.
+
+*Lemma schedule recorded with the freeze:* L0b spectator analysis (mechanical) + L1 footprint
+audit land before any HARDWARE band and before ADR 0008 status change; L2 (T-C latent gauge) and
+L3 (boundary-layer Fisher vs the measured r01–r250 ladder) gate the first surface-window
+registrations. None gate this seam test.

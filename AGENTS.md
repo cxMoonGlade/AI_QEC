@@ -158,6 +158,12 @@ reinstall editable or use the module entrypoint.
 - Every quantitative claim is scored by a **field-standard** metric via `docs/METRICS.md` (forced
   ladder: ledger → frontier research → explicitly flagged project-defined). No silent non-standard
   stand-in; carry each metric's convention with its numbers.
+- **Baseline discipline (2026-06-10).** Baselines come from `external/baselines/` (16 pristine
+  vendored repos: DMLE-QEC, PyMatching, Stim, fusion-blossom, qecGPT, pyro, pgmpy, …) and the
+  datasets' own shipped baselines (SI1000 circuits, RL-prior decoding artifacts). Run them
+  comprehensively, at their OWN recommended/default settings, and NEVER modify their code —
+  minimal adaptors/helpers only, in our tree (never patches under `external/`). Declare baseline
+  version/commit + settings with every number.
 - **Epistemic-status declaration (2026-06-10).** Every pre-registration classifies each
   quantitative item: **(a) exact** (theorem/identity — the only class usable as a premise or
   derivation basis), **(b) prediction band** (falsifiable bet; miss = finding, never later cited

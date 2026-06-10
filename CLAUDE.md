@@ -105,9 +105,15 @@ edge absorption sign correct). M3 GPU
 execution: static-Kraus-input CUDA graphs under the ledgered execution amendment — 84
 fits/22 min on one context, bit-exact vs eager at three pin levels
 (`hardware/m3_parallel.py`; model compute never falls back to CPU). 151 tests (150 pass +
-1 opt-in slow skip; hardware tests skip without `QEC_TWIN_HW_DATA`). Next: carrier study
-(ADR 0008) ∥ R2-lite M4; H3/H4 sequenced by the back-edge residuals (now including the
-bunching axis).
+1 opt-in slow skip; hardware tests skip without `QEC_TWIN_HW_DATA`). ADR 0008 carrier study:
+charter + C1/C2 theory panel DONE (2026-06-10) — verdict: the **C1 composed architecture**
+(DEM/HMM bulk + window-exact CPTP coherent corrections; dMLE-TN as bulk engine + mandatory
+baseline; perturbative cross-seam module trigger-gated) is conditionally admissible under
+K1–K5; the dMLE TN is inadmissible as carrier (no coherent slot; bunching pinned at R=1 —
+the sharp T-B theorem: only unital-diagonal iid fields are pinned, non-unital CPTP expresses
+R>1 free). Next: ADR 0008 C3 (seam-test prototype first, own pre-registration; 39-item
+checklist in `docs/.reports/adr0008_panel/`) ∥ R2-lite M4; H3/H4 sequenced by the bunching
+axis.
 
 ### Isolation contract
 
@@ -143,15 +149,28 @@ ground-truth channels / parameters / labels are evaluator-only — used by `audi
   `docs/METRICS.md`. Its ladder is forced — ledger metric → frontier-literature research → explicitly
   flagged project-defined; never a silent non-standard stand-in, and carry each metric's convention
   with its numbers. Unsure a metric is the standard? STOP and run the ladder first.
+- **Baseline discipline (2026-06-10):** `external/baselines/` holds 16 vendored upstream repos in
+  PRISTINE state (DMLE-QEC, PyMatching, Stim, fusion-blossom, qecGPT, pyro, pgmpy, pomegranate,
+  causal-learn, coniii, GGLasso, prosper, PyTorch-GAN, pytorch-examples, RBM, …), and the datasets
+  ship their own baselines (SI1000 circuits, RL-prior decoding artifacts). Future milestones run
+  baselines COMPREHENSIVELY from this pool, each at its OWN recommended/default settings.
+  **Never modify baseline code** — minimal adaptors/helpers only (I/O glue, format conversion),
+  living in OUR tree, never patches inside `external/`. Declare each baseline's version/commit and
+  settings alongside its numbers. (`external/` stays gitignored; keep pytest scoped to `tests/`.)
 - **Epistemic-status discipline (2026-06-10):** every pre-registration declares each quantitative
   item as **(a) exact** (theorem/identity/zero-tolerance check — the only class allowed as a
   premise or derivation basis), **(b) prediction band** (registered falsifiable bet; a miss is a
   finding, never later citable as fact), or **(c) heuristic gate/decision rule** (thresholds,
   significance conventions, eliminative controls, empirical design constants — go/no-go gating
   and tripwires ONLY, never a premise, definition, derivation step, error bound, or basis for a
-  conclusion). Undeclared ⇒ defaults to (c). Full rule: METRICS.md "epistemic-status
-  declaration"; binding instances: window-closure X1/X2 (`hardware/windows.py` STATUS WARNING),
-  the M1/M2 retro-audit in `metric_results.md`.
+  conclusion). Undeclared ⇒ defaults to (c). **Provisional-conclusion corollary (2026-06-10):
+  any conclusion without theorem-grade justification is PROVISIONAL — reportable and usable
+  for go/no-go gating, but NOTHING may be built on it (no definitions, derivations, designs,
+  or further conclusions take it as a premise); label provisional status explicitly. Every
+  milestone closes with a metric audit (all scores field-standard or rung-3 flagged) and a
+  rigor audit (every conclusion classified theorem-backed vs provisional).** Full rule:
+  METRICS.md "epistemic-status declaration"; binding instances: window-closure X1/X2
+  (`hardware/windows.py` STATUS WARNING), the M1/M2 retro-audit in `metric_results.md`.
 
 ## Notation (`docs/TWIN.md` is the full contract)
 
