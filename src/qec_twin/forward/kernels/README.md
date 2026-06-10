@@ -1,16 +1,19 @@
-# kernels/ — CUDA/C++ acceleration kernels
+# forward/kernels/ — CUDA/C++ acceleration kernels
 
-Custom CUDA kernels for the hot paths of the exact forward (`forward/exact`), per the
-GPU-first discipline (ADR 0001) and the 2026-06-09 user directive: everything runs on
-GPU where possible; repeated inner computations get fused CUDA kernels.
+Custom CUDA kernels for the hot paths of the exact forward
+(`src/qec_twin/forward/exact`), per the GPU-first discipline (ADR 0001) and the
+2026-06-09 user directive: everything runs on GPU where possible; repeated inner
+computations get fused CUDA kernels. They live beside `forward/accel.py` because
+they are acceleration assets for the forward backend, not a separate model module.
 
 ## Scope (bounding)
 
-- **In scope:** fused device kernels for inner-loop primitives that the profiled hot
-  path repeats thousands of times per calibration — subsystem Kraus/unitary
+- **In scope:** fused device kernels for inner-loop primitives that the profiled
+  hot path repeats thousands of times per calibration — subsystem Kraus/unitary
   application on batched density matrices, and (future) fused branch projection /
-  parity readout. Sources here are `.cu`/`.cpp` only; the Python side (JIT loading,
-  autograd wrapping, dispatch, CPU fallback) lives in `src/qec_twin/forward/accel.py`.
+  parity readout. Sources here are `.cu`/`.cpp` only; the Python side (JIT
+  loading, autograd wrapping, dispatch, CPU fallback) lives in
+  `src/qec_twin/forward/accel.py`.
 - **Out of scope:** any physics or claim logic. A kernel must be a bit-for-bit
   (`<= 1e-12`) drop-in for its reference torch implementation, enforced by
   `tests/test_kernels_fused_kraus.py` (forward equivalence + autograd gradcheck).

@@ -1,8 +1,9 @@
-"""Equivalence + gradcheck for the fused subsystem-Kraus CUDA kernel (kernels/).
+"""Equivalence + gradcheck for the fused subsystem-Kraus CUDA kernel.
 
 The kernel must be a <= 1e-12 drop-in for the reference
 ``apply_channel_local`` chain — forward values AND autograd (rho and Kraus
-gradients). Skips without CUDA / when the extension cannot build.
+gradients). The source lives in ``src/qec_twin/forward/kernels/``. Skips without
+CUDA / when the extension cannot build.
 """
 from __future__ import annotations
 

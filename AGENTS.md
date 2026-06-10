@@ -65,7 +65,8 @@ knobs/        [MANIPULATE]  channel-level do() -> ΔLER
 prediction/   [PREDICT]     drift / forecast (placeholder)
 # substrate
 forward/      exact differentiable forward; channels + cptp_channel + exact/ (density-matrix,
-              ⚠ feasibility-only <=~15q) + scalable/ (placeholder, >50q)
+              ⚠ feasibility-only <=~15q) + scalable/ (placeholder, >50q) +
+              kernels/ (package-local CUDA/C++ acceleration assets)
 mechanisms/   mechanism definitions + controlled teachers
 contexts/     probe-richness ladder C_cal(r) + probes
 decoder/      frozen-MWPM DEM substrate

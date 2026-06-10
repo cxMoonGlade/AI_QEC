@@ -24,7 +24,7 @@ there is real cohesion (`forward/` backends).
 
 | module | role |
 |---|---|
-| `forward/` | exact differentiable forward model (physics engine); backend-swappable |
+| `forward/` | exact differentiable forward model (physics engine); backend-swappable; owns package-local CUDA/C++ kernels in `forward/kernels/` |
 | `forward/exact/` | density-matrix backend — **⚠ FEASIBILITY-ONLY** (`2^n×2^n`, ≤~15q), abandoned after |
 | `forward/scalable/` | placeholder for the **>50-qubit** backend (carrier deferred, ADR 0005) |
 | `mechanisms/` | noise-mechanism definitions + controlled teachers |

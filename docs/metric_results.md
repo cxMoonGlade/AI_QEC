@@ -365,6 +365,50 @@ tails in both families (`(0,2..5,0)` time: 6.2e-4→4.5e-4; `(2..5,0,0)` space: 
 non-monotone at di=3); (3) the early-layer detection transient (P6). These feed M2's window-closure
 audit and the H2/H3 family-widening choice.
 
+## 2026-06-09 — R2-lite M2 PRE-REGISTRATION (window-closure audit, d=29 rep code) · derived BEFORE build/run
+
+Track B, ADR 0007 M2 (threshold revision recorded in the ADR 0007 milestone addendum). Decides
+whether windowed marginal calibration (M3) is sound, and with what overlap discipline. All masses
+are sums of the ledgered Spitz-exact `p_ij` entries over the **bulk-layer block** (t ∈ [2, 999];
+the M1-P6 early transient excluded by its registered rule), within the measured pair family
+`F = {Δt≤5 same site} ∪ {Δi≤5 same layer} ∪ {Δi≤2 × Δt≤2}`; mass outside `F` is bounded by the
+far-pair null (≈2e-6/pair, M1). Windows: contiguous 6-site (= 5 data + 6 measure = 11q) chain
+segments, all 23 sliding positions; interior windows have two boundaries, end windows one
+(reported separately). Bases never pooled.
+
+**Definitions (registered).** For window `W`: `within(W)` = Σ p_ij over pairs with both sites in
+`W`; `crossing(W)` = Σ over pairs with exactly one site in `W`. **X1 (naive closure)** =
+crossing/(within+crossing). For margin `m=2`: trusted interior `T(W)` = the 2 central sites;
+**X2 (margin-2 leakage)** = mass(T ↔ outside W) / mass(all pairs touching T).
+
+**Derivation (from the M1 X-basis class means; Z analogous, slightly lower).** Per-instance class
+means: same-site time stack 1.616e-2; sep-1 stack (space + both diagonals + (1,2,±1)) 1.661e-2;
+sep-2 stack 5.32e-4; sep-3 3.89e-4; sep-4 1.28e-4; sep-5 1.64e-4. Within(6 sites) ≈ 6×1.616e-2 +
+5×1.661e-2 + 4×5.32e-4 + 3×3.89e-4 + 2×1.28e-4 + 1.64e-4 ≈ 0.184. Crossing per boundary ≈
+1×1.661e-2 + 2×5.32e-4 + 3×3.89e-4 + 4×1.28e-4 + 5×1.64e-4 ≈ 2.02e-2 → interior X1 ≈
+4.04e-2/0.224 ≈ **18%** — dominated by the *boundary sep-1 stack*, i.e. by the device's 5.9×
+space-like excess. The original "<5% naive" guess is hereby corrected pre-run: a naive 6-site
+window is NOT closed on this device, and that is a *boundary-ownership* effect, not deep
+non-locality. Margin-2: T↔exterior per interior site ≈ (sep3+sep4+sep5 left) + (sep4+sep5 right)
+≈ 9.7e-4; X2 ≈ 1.95e-3 / ≈0.10 ≈ **1.9%** — deep leakage is small because the long-range tails
+(6e-4-scale) are two orders below the sep-1 stack.
+
+**Predictions (falsifiable; gates vs reported as marked).**
+
+| # | Prediction | Threshold | Role |
+|---|---|---|---|
+| W1 | Interior-window X1 ∈ **[14%, 22%]** (X), Z within [12%, 22%] | band | reported (registers the corrected naive picture) |
+| W2 | **X2 ≤ 5%** every interior window, both bases (point prediction ≈ 1.9% ± 1%) | hard gate | **the M2 closure gate**: margin-2 windowed calibration declared sound iff it holds |
+| W3 | X1 boundary (end) windows < interior X1 (one boundary fewer), ratio ≈ 0.5–0.8 | band | reported |
+| W4 | Window-position dependence of X1 is flat (rel. std over the 21 interior positions < 15%) except boundary effects — the chain is homogeneous | band | reported; a localized spike = a located defect/burst direction (back-edge input, no attribution) |
+
+**Falsification routing.** W2 fails (X2 > 5%) ⇒ margin-2 windowing is NOT sound ⇒ M3 on 6-site
+windows is blocked as designed: widen windows / increase margin and re-derive, or accelerate the
+ADR 0008 carrier (a TN carrier needs no windows) — the back-edge output is the measured leakage
+profile. W1 outside its band ⇒ the class-mean → window-mass accounting is wrong (arithmetic, not
+physics — fix the audit, re-run). W4 spike ⇒ report the located direction; M3 may proceed
+excluding the affected positions (registered exclusion rule).
+
 ### M1-C1 control RESULT
 
 **RESULT (run 2026-06-09, 1e5 sim shots/basis, seed 20260609) — C1 PASSES; device mirror is

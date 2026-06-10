@@ -1,7 +1,8 @@
-"""CUDA-kernel acceleration for the exact forward's inner loop (kernels/, ADR 0001).
+"""CUDA-kernel acceleration for the exact forward's inner loop (forward/kernels/, ADR 0001).
 
-JIT-loads the fused subsystem-Kraus kernel from the repo-root ``kernels/`` folder and
-wraps it in an autograd Function that is a drop-in for the reference
+JIT-loads the fused subsystem-Kraus kernel from the package-local
+``src/qec_twin/forward/kernels/`` folder and wraps it in an autograd Function that is
+a drop-in for the reference
 ``apply_channel_local`` chain (embed + ``apply_kraus`` + hermitianize):
 
 - forward: one fused CUDA kernel (raw sum) + hermitianize — bit-compatible with
@@ -29,7 +30,7 @@ _EXT_TRIED = False
 
 
 def _kernels_dir() -> Path:
-    return Path(__file__).resolve().parents[3] / "kernels"
+    return Path(__file__).resolve().parent / "kernels"
 
 
 def _load_ext():

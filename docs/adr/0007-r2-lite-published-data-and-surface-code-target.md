@@ -207,6 +207,21 @@ relaxed exactly once — a single entry point — when M4 lands, not before.
 - The d=5/d=7 surface-code destination is now written down, which makes the carrier
   question schedulable instead of indefinitely deferred.
 
+## Milestone status & derived revisions (2026-06-09 end-of-day addendum)
+
+Execution status after day one, with table revisions derived from what the runs taught
+(each revision is a pre-run correction for the next milestone, not a post-hoc edit of a
+finished one):
+
+| # | Status | Revision (and why) |
+|---|---|---|
+| M1 | **DONE** (`metric_results.md` M1 RESULTS; PASS, P4 adjudicated via the C1 artifact control) | As registered, M1's anchor moved from "published detection fraction" (none exists for the d=29 rep code) to bit-exact reproduction of the release's own derived data + a derived fraction band — both held. Back-edge outputs: device mirror-diagonal class (≈970× SI1000 sim), long-range tails (both families), early-layer transient. |
+| M2 | **NEXT** | The closure threshold is now **derived from M1's measured class means** instead of guessed: the naive crossing fraction for a 6-site window is *predicted ≈ 18%* (the boundary space-like pair alone is 1.26e-2 — the device's 5.9× excess class), so the original "<5% naive" strawman is corrected **before** the run; the registered gate moves to the margin-2 interior metric (see the M2 pre-registration in `metric_results.md`). Compute is now cheap: `forward/kernels/` gives 102–405× at window sizes. |
+| M3 | unchanged in structure | Computationally **unblocked** by `forward/kernels/` (an 11q forward: 1057 ms CPU → 10 ms fused-GPU); fixed hardware contexts (X/Z bases + sample index, no probe ladder) keep the wide-alias fallback registered in Decision 4; the early-layer transient (M1 P6) restricts calibration to the bulk-layer block. |
+| M4 | unchanged + two execution facts | The only shipped decoding pathway on d29 is the RL-prior MWPM → the published-checkable baseline is `XOR(obs_flips_predicted, obs_flips_actual)`; the pij-prior arm is self-computed (M1 pipeline already produces it). **New dependency decision to register with M4: pymatching** (the in-repo MWPM is small-code only). dMLE 30.6% bar unchanged. |
+| M5 | re-worded (already in Decision 4) | "Run-stamped" was wrong — the d29 release has **no timestamps** (100 sequentially indexed samples/basis); M5 slices by sample index. Gate-B constraint (errors-in-variables propagation before any nominal-coverage claim) stands. The richer drift data for later: `set1` (16 sequential experiments / 15 h) and `set2` (deliberately mixed calibration freshness) — surface code, windows only. |
+| — | **new parallel item** | **ADR 0008 carrier feasibility study**, unblocked by H2's support-structure verdict (Decision 3): runs in parallel with M2 — the new pair replacing the original "H2 ∥ M1/M2". |
+
 ## References
 
 - Local datasets: `/home/cx/Document/google_72Q_repetition_code_d29`,

@@ -67,12 +67,13 @@ is feasibility-only. The 50+ qubit target needs `forward/scalable` (placeholder,
 carrier deferred, ADR 0005). The channel object + the four capabilities are
 backend-agnostic, so swapping the backend is not a rewrite.
 
-**CUDA kernels:** repo-root `kernels/` (fused subsystem-Kraus apply; loader
-`forward/accel.py`, auto-routed on CUDA tensors, CPU fallback, `QEC_TWIN_NO_KERNELS=1`
-disables; correctness oracle `tests/test_kernels_fused_kraus.py`). Device policy
-(measured 2026-06-09, `kernels/README.md`): the d=3 toy stays **CPU-default** (the
-sequential LBFGS loop is launch-bound — cuda is 0.5× there); cuda pays per-call from
-n≈5 and decisively at R2-lite window sizes n=11–15 (102–405×).
+**CUDA kernels:** `src/qec_twin/forward/kernels/` (fused subsystem-Kraus apply;
+loader `forward/accel.py`, auto-routed on CUDA tensors, CPU fallback,
+`QEC_TWIN_NO_KERNELS=1` disables; correctness oracle
+`tests/test_kernels_fused_kraus.py`). Device policy (measured 2026-06-09,
+`src/qec_twin/forward/kernels/README.md`): the d=3 toy stays **CPU-default** (the
+sequential LBFGS loop is launch-bound — cuda is 0.5× there); cuda pays per-call
+from n≈5 and decisively at R2-lite window sizes n=11–15 (102–405×).
 
 ### Status
 
