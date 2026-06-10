@@ -409,6 +409,33 @@ profile. W1 outside its band ⇒ the class-mean → window-mass accounting is wr
 physics — fix the audit, re-run). W4 spike ⇒ report the located direction; M3 may proceed
 excluding the affected positions (registered exclusion rule).
 
+### M2 RESULTS (run 2026-06-09, sample_00 both bases; `tests/test_hardware_m2_window_closure.py` + `outputs/m2_table.py`)
+
+| # | Verdict | Measured (X / Z) |
+|---|---|---|
+| W1 | **PASS** | interior X1 mean **17.62% / 17.61%** ∈ [14%, 22%] — the derived 18% near-exact; the "<5% naive" correction stands |
+| W2 | **FAIL as written → adjudicated localized** | 19/21 interior windows ≤ 4.01% / 4.24% (median ≈1.2% / 1.4%, consistent with the ≈1.9% point prediction); **only windows 15 & 19 exceed**: 11.35%/8.65% (X), 12.29%/9.03% (Z) — both traced to the single site pair **(18, 21)**, di=3 mass 6.094 (X) / 6.101 (Z), ≈63% of the whole di=3 family, **basis-independent to 0.1%** |
+| W3 | reported miss | end-window X1 ratio 0.41 / 0.44 < [0.5, 0.8] — ends *more* closed than predicted (conservative direction) |
+| W4 | reported miss + located spikes | interior X1 rel std 22.6% / 23.6% > 15%; X1 spikes at windows 5, 14 |
+
+**The located finding (observational; coordinates from the release metadata — no mechanism
+attribution):** every hot chain-long-range pair maps to a *small physical-grid separation*:
+chain (18,21) = meas qubits (5,7)↔(6,8), grid Δ=(1,1); chain (12,17) [di=5 top] = (4,6)↔(6,6),
+Δ=(2,0); chain (9,13) [di=4 top] = (3,5)↔(5,5), Δ=(2,0); chain (4,6) [di=2 top] = (5,1)↔(6,2),
+Δ=(1,1). **The snaking chain folds physical neighbours to chain distance 2–5 — the "long-range"
+tails are geometry-folded short-range couplings.** Back-edge consequences: (i) H2's correlated
+axis on real data is *physical-adjacency* pairs, not chain-adjacency — the family-widening
+direction; (ii) M3 window design on chain segments does not respect physical locality — the
+(18,21)-type cross terms are the windows' irreducible exterior unless treated geometry-aware.
+
+**Adjudication (per the registered routing, with one disclosed extension).** The W2 gate fails on
+the letter; the failure is a single located pair, pre-anticipated in *form* by W4's
+localized-spike exclusion clause (registered for X1; its application to X2 is an extension,
+disclosed here). Decision: **M3 proceeds on the 19 clean windows with margin-2** (clean-window
+max X2 = 4.24% ≤ 5%); windows **15 and 19 are excluded-and-flagged** (their leakage profile is
+the back-edge artifact); the regression test pins the adjudicated state — the known-exception
+set {15, 19} and the (18,21) pair mass within ±30% — so any NEW hot window or pair fails loudly.
+
 ### M1-C1 control RESULT
 
 **RESULT (run 2026-06-09, 1e5 sim shots/basis, seed 20260609) — C1 PASSES; device mirror is

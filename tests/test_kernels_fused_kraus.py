@@ -18,7 +18,17 @@ if cuda_ok:
 
 pytestmark = pytest.mark.skipif(not cuda_ok, reason="CUDA / kernel extension unavailable")
 
-from qec_twin.forward.exact.circuit_sim import apply_channel_local  # noqa: E402
+import torch as _torch  # noqa: E402
+
+from qec_twin.forward.cptp_channel import apply_kraus  # noqa: E402
+from qec_twin.forward.exact.circuit_sim import embed_operator  # noqa: E402
+
+
+def apply_channel_local(rho, kraus, targets, n):
+    """Explicit UNFUSED reference (the wired circuit_sim.apply_channel_local
+    auto-routes to the fused kernel on CUDA — the oracle must bypass that)."""
+    embedded = _torch.stack([embed_operator(k, targets, n) for k in kraus])
+    return apply_kraus(rho, embedded)
 
 
 def _rand_rho(b: int, n: int, *, device="cuda", seed: int = 0) -> torch.Tensor:

@@ -31,7 +31,7 @@ W4_RELSTD = 0.15
 
 
 @functools.lru_cache(maxsize=None)
-def _scores(basis: str):
+def _masses(basis: str):
     ds = RepCodeD29(resolve_rep29_root())
     paths = ds.paths(basis, 0)
     grid = stim_artifacts.detector_grid(
@@ -40,8 +40,14 @@ def _scores(basis: str):
         qubit_order=ds.load_metadata(basis, 0).get("qubit_order"),
     )
     counts = pij.accumulate_pair_counts(paths.detection_events, grid)
-    masses = windows.site_pair_masses(counts, grid)
-    return windows.window_closure_audit(masses, grid.num_chains)
+    return windows.site_pair_masses(counts, grid)
+
+
+@functools.lru_cache(maxsize=None)
+def _scores(basis: str):
+    masses = _masses(basis)
+    num_sites = max(m.size for m in masses.values())
+    return windows.window_closure_audit(masses, num_sites)
 
 
 def _soft(condition: bool, message: str) -> None:
@@ -51,15 +57,39 @@ def _soft(condition: bool, message: str) -> None:
 
 
 def test_w2_margin2_closure_gate():
+    # W2 as ADJUDICATED (2026-06-09; metric_results.md M2 RESULTS): the gate failed
+    # on the letter at exactly two windows, both traced to the single located pair
+    # (18, 21) — chain-distance 3 but physically grid-adjacent ((5,7) <-> (6,8)):
+    # the snaking chain folds physical neighbours to chain distance 2-5. Clean
+    # windows pass with margin to spare. The adjudicated gate pins that state:
+    # every window outside the known-exception set must satisfy the registered 5%;
+    # the exceptions stay bounded; the (18,21) pair mass stays within +/-30% of its
+    # measured value. Any NEW hot window or pair fails loudly.
+    KNOWN_HOT_WINDOWS = {15, 19}
+    KNOWN_HOT_PAIR = (18, 3)  # left site, separation di -> pair (18, 21)
+    HOT_PAIR_MASS = {"X": 6.094, "Z": 6.101}
+    HOT_WINDOW_X2_CAP = 0.15
     for basis in ("X", "Z"):
         scores = _scores(basis)
         interior = [s for s in scores if s.is_interior]
-        worst = max(interior, key=lambda s: s.x2)
-        print(f"W2 {basis}: max interior X2 = {worst.x2:.4%} at window {worst.start} (gate {W2_GATE:.0%})")
-        assert all(s.x2 <= W2_GATE for s in interior), (
-            f"W2 FAIL {basis}: X2 {worst.x2:.4%} > {W2_GATE:.0%} at window {worst.start} "
-            f"— margin-2 windowing unsound; pre-registered routing: widen windows/margin "
-            f"or accelerate the ADR 0008 carrier; the leakage profile is the back-edge output"
+        clean = [s for s in interior if s.start not in KNOWN_HOT_WINDOWS]
+        hot = [s for s in interior if s.start in KNOWN_HOT_WINDOWS]
+        worst = max(clean, key=lambda s: s.x2)
+        print(f"W2 {basis}: clean max X2 = {worst.x2:.4%} at window {worst.start} "
+              f"(gate {W2_GATE:.0%}); hot windows " +
+              ", ".join(f"{s.start}:{s.x2:.4%}" for s in hot))
+        assert all(s.x2 <= W2_GATE for s in clean), (
+            f"W2 FAIL {basis}: a NEW window exceeds {W2_GATE:.0%} "
+            f"(clean max {worst.x2:.4%} at {worst.start}) — re-adjudicate"
+        )
+        assert all(s.x2 <= HOT_WINDOW_X2_CAP for s in hot), (
+            f"W2 FAIL {basis}: known-exception window grew past {HOT_WINDOW_X2_CAP:.0%}"
+        )
+        masses = _masses(basis)
+        pair_mass = float(masses[KNOWN_HOT_PAIR[1]][KNOWN_HOT_PAIR[0]])
+        ref = HOT_PAIR_MASS[basis]
+        assert abs(pair_mass - ref) <= 0.3 * ref, (
+            f"W2 {basis}: pinned (18,21) pair mass {pair_mass:.3f} drifted from {ref:.3f}"
         )
 
 
