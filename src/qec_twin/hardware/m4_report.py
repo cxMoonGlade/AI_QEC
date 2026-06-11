@@ -2756,12 +2756,17 @@ def _stage_heldout(args, state: M4State) -> int:
     extend = bool(state.payload("floor_check")["extend"])
     samples = heldout_samples(extend)
     src = composition_source_hashes(args.fit_cache)
-    state.begin_heldout(current_source_hashes=src, samples=samples)
+    # AMENDMENT ruling 21 (2026-06-11): the attempt record is persisted AFTER
+    # the train-side construction + guards and immediately BEFORE the first
+    # held-out read — every input to this block is sample-independent (train
+    # counts, frozen cache, DEM geometry), so a construction/guard failure can
+    # never consume the one pass again (two G4-class halts burned resets 15a/20).
     b1, b2 = _b1(), _b2()
     ds = _dataset()
     cache = _load_fit_cache(args.fit_cache)
     d_star = int(state.payload("select_rung")["selection"]["d_prime_star"])
     saved = []
+    per_basis_ctx: dict = {}
     for basis in args.bases:
         skel, grid, _dem = _skeleton_context(b1, ds, basis)
         counts = _train_counts(ds, basis, grid, chunk_shots=args.chunk_shots)
@@ -2772,6 +2777,11 @@ def _stage_heldout(args, state: M4State) -> int:
         subs: dict = {}
 
         def _add_unit(key: str, sub, unit_pair, columns: dict) -> None:
+            # ruling 21 / B-17: CANONICAL (chain, layer) coordinates on every
+            # emitted unit DEM — device (x, y, t) annotations silently mis-key
+            # the A3c geometry (10 distinct x over 28 chains; the crash
+            # reproduced train-side, zero held-out information).
+            sub = b1.with_grid_coordinates(sub, grid)
             dems, clamps = _arm_dems(b1, sub, columns)
             unit_dems[key] = dems
             clamp_rows[key] = clamps
@@ -2839,24 +2849,53 @@ def _stage_heldout(args, state: M4State) -> int:
             guards["jitter_flip_rate"][arm] = float(
                 b2.jitter_control(dem, probe_bits, eps=1e-9, seed=M4_SEED)
             )
+        # ruling 21: A3c geometry guard — TRAIN-side computable; every window
+        # unit's every arm DEM must key cleanly before the pass is committed.
+        geometry_failures = []
+        for ukey, dems in unit_dems.items():
+            if not str(ukey).startswith("window"):
+                continue
+            for arm, dem in dems.items():
+                try:
+                    b2.space_edge_geometry(dem)
+                except ValueError as exc:
+                    geometry_failures.append(f"{ukey}/{arm}: {exc}")
+        guards["a3c_geometry_failures"] = geometry_failures
+
         _dump_json(guards, state.dir / f"heldout_guards_{basis}.json")
         _dump_json(clamp_rows, state.dir / f"heldout_clamps_{basis}.json")  # G9
         if not all(g["passed"] for g in guards["sim_round_trip"].values()):
             print("G4 sim round-trip miss => pipeline bug, nothing downstream.")
             return 1
+        if geometry_failures:
+            print("A3c geometry guard miss => pipeline bug, nothing downstream:")
+            for line in geometry_failures:
+                print("  " + line)
+            return 1
+        per_basis_ctx[basis] = {
+            "units": units,
+            "unit_dems": unit_dems,
+            "rr": rr,
+            "bits_per_shot": bits_per_shot,
+        }
 
+    # every train-side guard passed for every basis — NOW commit the one pass
+    # (ruling 21: the attempt record sits immediately before the first read).
+    state.begin_heldout(current_source_hashes=src, samples=samples)
+    for basis in args.bases:
+        ctx = per_basis_ctx[basis]
         for sample in samples:
             errors = _decode_sample_errors(
                 b2,
                 ds,
                 basis,
                 sample,
-                units,
-                unit_dems,
-                bits_per_shot=bits_per_shot,
+                ctx["units"],
+                ctx["unit_dems"],
+                bits_per_shot=ctx["bits_per_shot"],
                 n_workers=args.workers,
                 chunk_shots=args.chunk_shots,
-                two_pass_rr=rr,  # A3c rides the window units only (never the gate)
+                two_pass_rr=ctx["rr"],  # A3c rides the window units only (never the gate)
                 allow_heldout=True,  # B2's held-out access contract: the ONE staged pass
             )
             arrays = {

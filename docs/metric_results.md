@@ -1360,6 +1360,25 @@ halt, BEFORE any held-out byte was read)
     is RE-PINNED to the post-correction source by the same sanctioned surgery, with the diff
     summary (the ruling-19 sane-bound lines only) recorded in the surgery log.
 
+21. **(2026-06-11, second held-out halt) A3c coordinate mis-key: proven train-side; attempt
+    reset #2 sanctioned; structural hardening.** The relaunched held-out pass crashed inside
+    the first sample's decode fleet: "two distinct space edges at qubit (2, 3) layer 0" —
+    the A3c geometry was keyed on the DEVICE (x, y, t) detector annotations (10 distinct x
+    over 28 chains) because the held-out glue emitted window DEMs WITHOUT the canonical
+    `with_grid_coordinates` swap — exactly the B-17 documented mis-key scenario, surfaced as
+    a loud collision. **Proof of zero held-out information** (recorded,
+    `outputs/m4_a3c_geometry_repro.py`): the identical ValueError reproduces from the
+    TRAIN-built window-1 DEM with no sample file in reach; with the canonical swap the
+    geometry succeeds. The exception text carries only DEM-structural metadata; no error
+    array, statistic, or file was produced (payload null). Attempt reset #2 sanctioned on
+    that proof. **Hardening (all train-side, no composition input touched):** (i) every
+    emitted unit DEM is canonicalized via `with_grid_coordinates` (ruling 15a's map);
+    (ii) a NEW A3c geometry guard runs over every window unit × arm DEM before the pass
+    commits; (iii) `begin_heldout` (the attempt record) MOVES to after ALL train-side
+    construction + guards for every basis, immediately before the first held-out read —
+    construction/guard failures can never again consume the pass. m4_report.py is not in
+    the G2 pinned source set (runner, not composition); no hash re-pin needed.
+
 #### SEAM-TEST PRE-RUN AMENDMENT 3 (execution amendment, registrar, 2026-06-10 — BEFORE any production stage; M3 amendment-7 precedent)
 
 Basis: the post-fix re-review (`build_R2_seam_postfix_review.md` item B) proved the
