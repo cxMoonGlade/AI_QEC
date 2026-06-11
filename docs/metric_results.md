@@ -1127,6 +1127,25 @@ per-site pin on the same order of interior sites (its per-site field differs fro
     fact, no band re-derivation, no composition edit (G2). Silently widening the code
     tolerance is FORBIDDEN; the freeze-stage acceptance runs on the TWIN column with A2
     reported alongside.
+15a. **(AMENDMENT 2, registrar, 2026-06-10 — recorded after the pilot stage CRASHED in DEM
+    construction, BEFORE any pilot LER existed; build-bug repair under S10, not a post-hoc
+    edit.)** The first full-stack pilot decode exposed a cross-module axis fork, settled by
+    measurement: the release observable (OBSERVABLE_INCLUDE(0) = rec[-1]) is **record index
+    28,056 = qubit 55 = the GRID CHAIN-MAX-side outer data qubit** (its flips = the measured
+    w1+L0 edges at det_to_chain = 27; the 2,002 decomposed slots are its consecutive-round
+    double-flips, each component L0-flagged); B2's record-position axis runs OPPOSITE to the
+    M1 grid chain axis (p = 28 − grid slot). **Ruling:** the S2 wording "leftmost data qubit
+    of the window" is operationally pinned by its own embedded (a) cross-check (full chain
+    reproduces obs_flips_actual bit-exactly) to the RELEASE-OBSERVABLE ENDPOINT TYPE; in grid
+    coordinates every unit's observable = its `data_hi`-side data qubit, resolved through the
+    measured qubit-id map (never a hardcoded reversal). Consequences: B1's sub-chain L0
+    remap = right-cut (data_hi) crossers, with source-L0 preservation exactly when
+    data_hi = 28; new (a) pin: every projected skeleton's L0 edges touch the data_hi column,
+    and the per-unit DEM-L0 qubit == B2's reference qubit. **State surgery sanctioned:** the
+    freeze and crashed-pilot stage records are reset and freeze RE-RUN to re-pin the fixed
+    sources' hashes — legal because no pilot LER, no twin held-out number, and no sample
+    beyond the registered pin set was ever produced/opened (P1e's {00,50,99} are
+    certification-only); the held-out-once clause and escrow are untouched.
 15. **Adjudications recorded with the same authority** (reviewer §C/§F, adopted): B1's
     decomposed-slot SI1000 passthrough ACCEPTED (all 2,002 slots are decomposed[w1+w1],
     never twin-ownable, value bit-identical across A1/A2/A3/A3b ⇒ contrast-neutral by the
@@ -1314,3 +1333,173 @@ component (RX) converts them to diagonal observables in later rounds. Ruling ref
     measurement is raised to **1e-1** — a catastrophe tripwire only (TV ~ O(1) = build bug),
     never a band; the measured 1.83e-2 worst case sits well inside. Declared (c), recorded
     here per the silent-constant rule.
+
+#### SEAM-TEST PRE-RUN AMENDMENT 3 (execution amendment, registrar, 2026-06-10 — BEFORE any production stage; M3 amendment-7 precedent)
+
+Basis: the post-fix re-review (`build_R2_seam_postfix_review.md` item B) proved the
+production oracle INFEASIBLE as monolithically coded (2^K branch DMs: 34.4 GB at R2, 35 TB
+at R4); the S1 fix round (R2-1) replaced the EVALUATION — never the law. Recorded terms:
+
+16. **Grouped oracle evaluator (execution only; the law's definition is untouched).**
+    (a)-exact ingredients: the whole-last-round diagonal readout identity (after the last
+    noise layer, the remaining parity projections + data readout are Z-diagonal — read off
+    the DM diagonal); the record↔code-pair GF(2) bijection (each grid cell receives exactly
+    ONE leaf ⇒ collision-free ⇒ bit-exact accumulation); a chunked DFS walk under a declared
+    resident-branch cap. **Bit-exactness pinned `torch.equal` against the monolithic path**
+    at (2,2)×5 contexts×5 arms×two caps, (3,3)-rounds-1 and (2,3) — made possible by pinning
+    the opt_einsum contraction path (the only re-association source, found and removed;
+    both evaluators run under the pinned path). Grouped laws carry the StripObservations
+    family directly (`measurement_record=None`; `window_records()` refuses loudly).
+17. **Declared (c) execution constants:** `ORACLE_LIVE_BRANCH_CAP = 512` (bounds RESIDENT
+    branches only — leaf count pinned == 2^(5(R−1)), never truncates);
+    `MONOLITHIC_ORACLE_MAX_BYTES = 64 MiB` (auto-routing threshold; every toy law stays
+    monolithic, the 16 pre-fix instrument tests unchanged). The window-marginal
+    splitter-route cross-check carries a DERIVED ≤7.0e-15 re-association bound; the joint
+    law carries NO allowance (bit-exact).
+18. **Measured production cost (CUDA, recorded 2026-06-10, per law, φ=0.15 coherent):**
+    R1 0.04 GB/<1 s; R2 0.10 GB/0.15 s; R3 1.02 GB/0.5 s; R4 2.10 GB/15.2 s; R4-k2
+    3.14 GB/28.9 s ⇒ ~200 production laws ≈ 15–30 GPU-min (inside the half-day envelope).
+    **Item-13 envelope reading:** the registered "oracle ≤ 1.1 GB" letter is the 13q DM
+    feasibility bound; the bounded evaluator's TOTAL working set (grid + DM transient +
+    observations materialization ≤ 3.2 GB at R4-k2) is recorded here and the item-13 (b)
+    row is scored against the letter HONESTLY at run close (a miss is a finding);
+    `live_branch_cap=256` is the declared pre-run lever, NOT exercised (no need at 32 GB
+    VRAM). The integration gate gains the `oracle_memory_probe` R4 probe (orchestrator).
+
+### ADR 0008 SEAM-TEST RESULTS (run 2026-06-11, scored strictly against the registration + amendments 1–3)
+
+*(Scored by the run-phase reviewer, `docs/.reports/adr0008_panel/run_R3_seam_results_review.md`;
+adopted verbatim by the registrar.)*
+
+**VERDICT: K1 first read = ABSTAIN (registered branch; class (c) routing).** The seam residual is
+REAL — carrier-vs-oracle strip TV on the φ-sensitive held-out functionals over the registered regime
+φ ∈ [0.05, 0.15]: sandwich 9.33e-4 → 2.68e-3, k2ry 3.16e-2 → 8.06e-2 — and UNBANDABLE this read: no
+derivation-cited functional-indexed band exists in the build (fit bands don't count; recorded, not
+assumed away), and the registered quadratic ansatz for the sandwich sector is itself falsified by the
+measured scaling (below), so no band of the registered derivation shape could have covered the regime.
+No structural pin broke (all 20+ STRUCTURAL rows at floor); no in-window contamination (max per-window
+quiet-context TV 2.80e-4 vs the 1e-3 (c) KILL gate — 3.6× headroom); residual ≫ the 1e-10 NULL floor.
+Precedence walk KILL → NULL → ESTABLISH-BAND → ABSTAIN lands on ABSTAIN. Consequences:
+**registered abstain on seam-straddling φ-sensitive functionals; window-limited fallback for
+cross-seam claims; the C3 perturbative cross-seam module is NOT triggered** (its trigger was
+ESTABLISH-BAND); **K1 remains OPEN** pending the second read — the seam-straddling re-tiling
+(G-NLL(i) + cross-tiling item 32), its own future registration, trigger-gated, never dropped. This run
+is FIRST-READ-ONLY (amendment ruling 5).
+
+**Machinery (all gates green before any fit; isolation intact).** Legality table + provenance manifest
+recorded (learner consumes observation tensors only; teachers evaluator-only via forward/exact;
+seeded inits 0/1 declared). W2/Fisher gate PASSED pre-fit on PSD score-Fisher spectra (E-4): edge DOF
+visible from probe rung 1 (per-rung KL 3.85e-10 → 4.58e-3 vs the 1e-9 floor), eigen-split stable at
+1e-7 across the declared k=3→k=4 refinement axis (item-32 first-read instantiation), null masses at
+float64 floor. 20 production fits (two-init robustness × 10 arms: backdrop, seam_twirled, tb_bunching,
+pauli_ablation, seam_bias, coherent φ-grid ×5), all CUDA, all converged to the (a) Gibbs family floor
+within fit KL ≤ 9.5e-3 (coherent arms: the residual IS the seam, see P-c) — bunching arm exactly at
+floor (KL −1.15e-12). Fit artifacts persisted; resume reloads bit-identically. The AMENDMENT-3 grouped
+oracle evaluator ran bit-exactness-pinned against the monolithic path (ruling 16).
+
+**Scored predictions (measured / registered / verdict; class carried).**
+
+| # | Measured | Registered | Verdict |
+|---|---|---|---|
+| P-a (a), ruling-11 form | rounds=1∧repeats=1 rows \|KL\| ≤ 2.8e-16 (3 rows); stochastic-backdrop any-rounds controls ≤ 2.1e-16 (2 rows) | ≤ 1e-10 | **PASS (a)** |
+| ruling-12 visibility (REPORTED feature) | coherent TV 1.26e-6 … 5.67e-3 (worst exotic:R4-ry); twirled ≤ 1.79e-4; ordering = toy's (ry amplifies; coherent ≫ twirled) | toy scale was 6.3e-5…1.83e-2 ((2,2), φ=0.15); ceiling (c) 0.1 | reported; tripwire false |
+| P-b (a/c) | twirl sign gap 0.0 exact; sin²φ rate gap 2.12e-3 visible | theorem-zero + rate visible | **PASS** |
+| P-c sandwich scaling (b) | **LINEAR, exponent 0.973** | quadratic | **(b) MISS — the headline finding** |
+| P-c k2ry scaling (b) | LINEAR, exponent 0.858 | φ-linear | HIT |
+| P-d (r, R) (b) | (0.0250775101, 2.9515137899) vs teacher-law truth (0.0250775118, 2.9515137828); Δ = (1.7e-9, 7.1e-9) | inside the derived Pinsker band (6.99e-8, 1.28e-4); transfer assumption FLAGGED | **IN BAND** (member reference (0.0127, 5.0) carried reference-only) |
+| Swap triplet, 2 overlap instances | base-law gaps 1.40e-3 / 5.86e-2 TV; do(U_φ→I₄) ΔLER gap 6.15e-4 / 3.23e-7 — Tier-0 band covers both; pushforward (a) map test 1.04e-13 / 4.49e-16 ≤ 1e-12, param-indep 0.0 | each scored vs forward/exact; (a) map test; partial K5 | **PASS** ((a) map test exact; coverage via alias weight — see findings) |
+| bias-injection control (item 35, (b)) | carrier move −1.66e-4/−9.62e-5 vs oracle-predicted −2.46e-4/−6.79e-5 (gap 8.0e-5) | moves by the oracle-predicted amount | direction correct both windows; magnitude same order — PROVISIONAL support (no recorded numeric band) |
+| R_det pin (b) | fit-free two-block R_k in band at every legal lag k = 2…6 (Δ ≤ 5.2e-8 ≪ band 1.28e-4) WHILE bunching NLL at the (a) floor (KL −1.15e-12 ≤ (c) 1e-6); lag-1 correctly attribution-illegal | in band while NLL at floor; k ≥ 2 only; data-record-chain convention declared | **HIT** |
+| T3 triple | 4.515229930 vs teacher-law truth 4.515229892 (Δ 3.8e-8); member reference 5.0 reference-only; T-C direction reported, not gated | T3 = R (Skew_π ≥ 0 carried) | **HIT** |
+| Theorem pins, STRUCTURAL | in-window H2-T1 −6.9e-19; T2′ 0.0; normalization ≤ 8.7e-13; nonpositive-prob count 0; fixed-point ≤ 2.54e-10 (≤ 1e-9); seam-reduction TP 6.3e-16; zero-seam exactness 4.4e-16; T-A R=1 6.0e-15; unital asym 0.0 (derived tol 2.9e-3 recorded); D3 covariance 1.0e-14; D2 factorized arms ≤ 1.5e-15 (a)-exact | every STRUCTURAL at floor (violation = KILL) | **ALL PASS** |
+| Theorem pins, EMERGENT | across-seam H2-T1 **4.42e-4** (carrier-vs-oracle repeats=1, φ_ref); across-seam T2′ **1.93e-4**; R1a′ ±φ k2ry 1.14e-1 signed sector (sandwich identity sector 0.0); D2 SIGNAL under seam-named arms 1.43e-5 → 1.25e-4 monotone over the φ-grid (twirled 5.4e-5, bias 8.1e-5) | findings/signal per rulings 4 + 8 | recorded findings (the seam-mass measurements) |
+| q_eff flatness | N/A-WITH-REASON (ruling 7: noiseless extraction, no readout DOF) | N/A allowed with reason | ✓ |
+| G-NLL | (ii)/(iii) floor pins 2.9e-13; (iv) ε_log = round-off only (≤ 5.8e-13, 22 rows) vs B_carrier 10 tier-3 functional-indexed records, two books never folded; 2/3/9/16/17 N/A-with-reason; **(i) OPEN registered obligation** (second K1 read) | item 8 | **PASS; (i) carried** |
+| Determinism item 15 (a) | single-mode eager-sequential = its own reference; closure + trajectory bit-equal; no downgrade, no silent widening | P1h verbatim | PASS |
+| Determinism item 14 (a) | gradcheck max **2.171e-10**; coherent cross-seed NLL spread **1.615e-6**; closure bit-equal ✓; bunching at-floor clause (E-3) ✓; Fisher ranks 7 (score) / 98 (exact backend) recorded | gradcheck ≤ 1e-10; seed-robust convergence (spread ≤ 1e-6) | **(a) MISS — the run's one (a)-row failure.** Tolerance-level (2.2× / 1.6×), physics pins untouched, not a K1-verdict input; item 14 NOT discharged — carried to the second-read registration (or a dated registrar tolerance adjudication), never widened retroactively. Cross-seed KLs agree ≤ 2.7e-5 ⇒ all reported residuals seed-stable at 3 s.f. |
+| Fit count (b) | 20 (+2 determinism) | ~100–200 | **(b) MISS LOW — expected and pre-ruled (ruling 10)** |
+| Compute envelope (b) | total ≈ 3.6 GPU-h (≤ half-day ✓), all model stages CUDA ✓; per-fit 188–1285 s vs the 9.6–23 s M3 graph anchor (single-mode eager arm — anchor doesn't transfer; wall-clock-only) | item 13 | envelope PASS; anchors miss on wall clock only |
+| Oracle memory vs the item-13 LETTER (b) | oracle-row stage peaks 11.3–14.4 GB | letter ≤ 1.1 GB; ruling 18: score the letter honestly at run close | **(b) MISS HIGH (~13×) — a finding.** The letter was the 13q monolithic-DM feasibility bound; ruling 18 already recorded the grouped evaluator's per-law working sets (≤ 3.2 GB at R4-k2); stage peaks aggregate many resident laws. No value impact — joint laws bit-exactness-pinned vs the monolithic path. Non-oracle peak 18.6 GB (swap_triplet) reported, not scored (E-6) |
+
+**Findings (located, controlled-teacher-scoped, NO mechanism attribution).**
+
+1. **Real seam mass at H2-regime φ, located and measured.** The across-seam EMERGENT reads: H2-T1
+   carrier-vs-oracle repeats=1 gap 4.42e-4 at φ_ref; T2′ composed-law φ-parity 1.93e-4; oracle-side
+   visibility up to 5.67e-3 TV (exotic ry probe); oracle D2 cross-window TV grows ≈ ×8.7 over a ×3 φ
+   ratio (≈ φ²). The declared mean-field seam composition does not capture this mass — exactly the
+   measurement the instrument was built to make.
+2. **The sandwich residual scales LINEARLY in φ (exponent 0.97), not quadratically** — the registered
+   (b) miss and the run's headline finding: a first-order seam term survives in the sandwich sector
+   under the declared composition. Both functionals are φ-linear (k2ry 0.86). Consequence carried into
+   the verdict: the natural quadratic perturbative band ansatz is contradicted, so the residual is
+   unbandable this read — reported as a composition-error direction, never attributed to a mechanism.
+   Per the epistemic-status rule this scaling classification is a finding, never later citable as fact.
+3. **Anti-cancellation confirmed at the decision functional:** the carrier's do(U_φ→I₄) ΔLER is ~0
+   where the teacher's true effect is +6.1e-4 (eval:R4-k2) — the seam residual does NOT cancel in
+   decisions; the Tier-0 band covers the gap only through its alias weight (1.59e-3), i.e. the band
+   machinery refuses to certify what the composition cannot see. The pushforward map test itself is
+   (a)-exact (≤ 1.04e-13; partial K5 discharge) — the do() plumbing is right; the abstain binds the
+   cross-seam prediction, not the knob.
+4. **The composed carrier reads the bunching DOF fit-free:** (r, R) and the R_k ladder (k = 2…6) and
+   T3 all inside derived bands vs the teacher-law truth while the calibration NLL sits at the Gibbs
+   floor — the run-level confirmation of the C1/C2 panel theorem (non-unital CPTP expresses R > 1
+   free; the dMLE-TN carrier could not).
+5. **Determinism item 14 missed at (a)** (gradcheck 2.171e-10 vs 1e-10; coherent cross-seed NLL spread
+   1.615e-6 vs 1e-6) — recorded as a finding; item 14 stands undischarged (see table row for
+   disposition); no reported number moves at its stated precision.
+6. **Compute (b) rows:** fits 20 vs ~100–200 (LOW, pre-ruled); oracle-row peak memory 11.3–14.4 GB vs
+   the 1.1 GB item-13 letter (HIGH, anticipated by ruling 18's recorded working sets) — both findings,
+   neither value-bearing.
+
+**Claim discipline (verbatim scope, registered item 12 / checklist 39).** Every quantitative result
+above is controlled-teacher-scoped: the teachers are evaluator-only constructions computed by
+forward/exact on the registered ≤ 13-qubit strip, and every score compares the composed-carrier arm
+against those controlled teachers over φ ∈ [0.05, 0.15]. No hardware claim of any kind issues from
+this registration; no edge-coherence statement about any device is made or implied (the K2 decision
+consequence stands independently). The R2-lite forbidden-claim boundary is carried verbatim until the
+C-entry gates: no do()/counterfactual/intervention claim about hardware, no mechanism attribution of
+any residual, no Born-generation/CPTP-learning/physical-mechanism claim about any device, no unscored
+adequacy language. This run is FIRST-READ-ONLY (ruling 5): G-NLL(i) (seam-straddling re-tiling — the
+second K1 read) and the cross-tiling item-32 gate remain OPEN registered obligations, trigger-gated
+and never dropped.
+
+**K1 / ADR-0008 routing consequence.** ABSTAIN ⇒ K1 NOT discharged on the first read; per the
+registered semantics: abstain on seam-straddling φ-sensitive functionals + **window-limited fallback
+for cross-seam claims** (in-window functionals stand on the validated machinery: contamination 3.6×
+under the KILL gate, every structural pin at floor, P-d/R_det/T3 recovery at exact grade); **the C3
+perturbative cross-seam module is NOT triggered**; **K1 stays OPEN pending the second-read
+re-tiling registration**. In-window admissibility unchanged (ADR 0008 status note updated to match).
+
+**Process notes (ledgered).** (1) One crash at stage 9 (theorem_pins): device-threading bug — a
+CPU-built seam Kraus stack met CUDA windows in an evaluator-side mirror arm; one-line mechanical fix
+in `composed_strip_law` (`src/qec_twin/forward/scalable/composed.py`, dated comment 2026-06-11);
+S2 suite re-passed 11/11; resume from the ledger with all completed stages cache-hit — **no fit
+re-ran** (persisted fit artifacts reload bit-identically). Evaluator-side only; no law definition
+touched. (2) The run's first ~2.5 h executed under CPU starvation from an orphan-process purge
+(per-fit ~10 min before, ~4 min after) — wall-clock ledger rows only, never values.
+
+**Metric audit (milestone closure).** Every reported score maps to a METRICS.md ledger row or is
+rung-3 flagged: NLL/cross-entropy + KL (Cover & Thomas rows; the NLL-floor identity is the (a) Gibbs
+form recorded in the run payload); TV distance (ledgered TV convention; carrier-vs-oracle strip TV
+stated with each number); LER/ΔLER under the frozen MWPM (Fowler row; do() convention carried);
+Tier-0 alias band (Manski/Cont row — indicative-not-certified caveat travels, and did its job in
+finding 3); Fisher rank/eigen-split (Rothenberg row; PSD score-Fisher object per E-4, recorded);
+R/R_k/T3 (⚠ rung-3 flagged ledger rows — exact identities with project naming; data-record-chain
+convention declared per row, D5↔K2 pin); Pinsker band (textbook inequality; the stationary-transfer
+assumption FLAGGED (b) in the payload); B_carrier/B_misspec (project-defined per ledger Notes,
+tier-3 functional-indexed, flagged); window-TV contamination (ruling-6 (c) gate — gating only). No
+silent non-standard stand-ins found by the run-phase review.
+
+**Rigor audit (milestone closure).** Theorem-backed: the P-a/P-b (a) rows, all STRUCTURAL pins, the
+pushforward (a) map test, the Gibbs-floor identity, the grouped-evaluator bit-exactness pin, the
+factorized-arm D2 exactness. Scored (b) bets: P-c scaling (sandwich MISS = finding; k2ry HIT), P-d /
+R_det / T3 (HITs), fit count (MISS LOW), oracle-memory letter (MISS HIGH), item-32 first-read
+stability (HIT) — every miss recorded as a finding, never later citable as fact. PROVISIONAL (gating
+or support only, NOTHING built on them): the Pinsker-transfer band assumption; the bias-injection
+directional pass (no recorded numeric band); the item-15 single-mode disposition; the linear-scaling
+classification (five-point log-log fit, no theorem); the W2 null-mass scale-down flag (floor-level
+read); the ABSTAIN routing itself (class (c) decision rule — it gates ADR 0008 status, it is not a
+premise). (c) constants used for go/no-go only: contamination 1e-3, at-floor 1e-6, visibility ceiling
+1e-1, eigen-split 1e-7, branch cap 512. Conclusion classes echoed per item; undeclared defaulted
+to (c). One (a)-row failure (determinism item 14) recorded and left OPEN — explicitly NOT discharged,
+nothing built on it.

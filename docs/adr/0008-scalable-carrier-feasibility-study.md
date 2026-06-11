@@ -6,7 +6,20 @@
 decision: the C1 composed architecture is CONDITIONALLY ADMISSIBLE under conditions K1–K5
 (§"C2 outcome" below); study continues at C3 (seam-test prototype first). Panel reports
 archived verbatim at `docs/.reports/adr0008_panel/` (T1 requirements, T2 candidates, T3
-adversarial, reviewer verdict in the session record).** The study's two unblocking
+adversarial, reviewer verdict in the session record).**
+
+**C3 seam test RUN COMPLETE (2026-06-11; results + audits in `docs/metric_results.md`
+"ADR 0008 SEAM-TEST RESULTS"). C1 composed architecture: conditionally admissible under
+K1–K5 — K1 first read ABSTAIN: real seam residual (sandwich 9.3e-4–2.7e-3, k2ry
+3.2e-2–8.1e-2 TV over φ ∈ [0.05, 0.15]; sandwich scaling LINEAR, the registered quadratic
+ansatz falsified), no derivation-cited band ⇒ registered abstain on seam-straddling
+φ-sensitive functionals with window-limited fallback; no structural break, no in-window
+contamination; the C3 perturbative module NOT triggered; K1 OPEN pending the
+seam-straddling re-tiling second read (own registration, trigger-gated). In-window
+admissibility unchanged (P-d/R_det/T3 recovery at exact grade; fit-free bunching readout
+confirmed the T-B theorem at run level). Determinism item 14 missed at (a)
+(tolerance-level; carried OPEN). L0b/L1–L3 lemmas still gate hardware bands and surface
+registrations as scheduled.** The study's two unblocking
 conditions (ADR 0006 Decision 4) are met: (i) the support-structure question is resolved on
 controlled teachers — H2's theorem-backed verdict is that **declared edge DOFs, not probe
 richness, close the φ-sensitive misspecification band**; (ii) the >15-qubit feasibility wall

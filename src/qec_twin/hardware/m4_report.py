@@ -418,16 +418,26 @@ def select_rung(pilot_ladder: Mapping[int, float]) -> dict:
     rows = []
     for d in sorted(int(k) for k in pilot_ladder):
         l_bar = float(pilot_ladder[d])
-        if not (l_bar > 0.0):
-            raise ValueError(f"pilot L_bar must be positive, got {l_bar} at d'={d}")
+        if l_bar < 0.0:
+            raise ValueError(f"pilot L_bar must be non-negative, got {l_bar} at d'={d}")
+        # MEASURED-ZERO cells (mechanical-fix note, 2026-06-11: the real pilot
+        # measured L_bar == 0 at d' >= 17 — zero decoded errors in 1e5 shots;
+        # the device beats the panel's analytic anchors, which is exactly why
+        # the rule is pilot-driven). A zero cell is INELIGIBLE by the registered
+        # rule (outside [0.01, 0.30]; argmin objective = +inf — it can never be
+        # selected) and sorts as the smallest L_bar in the edge branches. The
+        # registered rule text is untouched; raising here was a glue bug.
         rows.append(
             {
                 "d_prime": d,
                 "L_bar": l_bar,
-                "objective": abs(math.log10(l_bar) - target),
+                "objective": (abs(math.log10(l_bar) - target)
+                              if l_bar > 0.0 else float("inf")),
                 "in_window": RUNG_WINDOW[0] <= l_bar <= RUNG_WINDOW[1],
             }
         )
+    if all(r["L_bar"] == 0.0 for r in rows):
+        raise ValueError("every pilot rung measured zero errors — no rung is scoreable")
     feasible = [r for r in rows if r["in_window"]]
     if feasible:
         pick = min(feasible, key=lambda r: (r["objective"], r["d_prime"]))

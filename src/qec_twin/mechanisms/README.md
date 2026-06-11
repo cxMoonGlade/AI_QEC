@@ -11,6 +11,14 @@ counterfactual ground truth.
   KNOWN — the only counterfactual ground truth. Includes the H2 non-factorized
   teacher (`coupled_mixed_teacher`: H0 mixed field + coherent `exp(-i φ Z⊗Z)`
   edge) and its correlated-stochastic twirl control (`correlated_dephasing_kraus`).
+- `seam_teachers.py` — ADR 0008 C3 seam-test teachers (registration item 2;
+  evaluator-only; constants unchanged by SEAM-TEST PRE-RUN AMENDMENT 1): the
+  M3-scale iid local backdrop, the coherent seam edge `exp(-i φ Z⊗Z)` at the
+  H2 placement on the strip's UNCHECKED seam data pair (+ bias-injection
+  control), its Pauli-twirled correlated-dephasing control, the D5 T-B
+  bunching member (r = 1.27e-2, R = 5, λ1 = 0.873) and its T-A Pauli-ablation
+  (R = 1) variant — all exposing the same `SeamTeacher` equal-treatment
+  observation surface (D8); nothing depends on a seam check existing.
 
 **Boundary.** Defines mechanisms/teachers; does not calibrate or intervene.
 Channels are realized via `forward`. Spec: `docs/TWIN.md`.
