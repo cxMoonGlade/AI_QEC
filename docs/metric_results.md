@@ -1096,6 +1096,50 @@ train-only pilot → mechanical rung selection → P10 forecasts recorded → ba
 check → ONE held-out pass (05–09) → scoring → artifacts.** No step reorders; the held-out pass
 happens exactly once.
 
+#### M4 PRE-RUN AMENDMENT 1 (registrar adjudication, recorded 2026-06-10 BEFORE the pins stage)
+
+Basis: the M4 build-reviewer verdict (`docs/.reports/m4_panel/build_R_m4_review.md`, verdict
+APPROVE-WITH-CHANGES; §D is the binding diagnostic). The reviewer reproduced B1's P1h smoke
+bit-for-bit on sample_00 X and decomposed it: 6,382/28,056 sites outside ±0.5%; **transient ×
+boundary and bulk × boundary chains EXACT to ≤1.4e-16 / within pure layer fluctuation** (the
+mean-matching machinery is float-exact on real data); the misses are a **one-signed POSITIVE
+surplus (+4.5e-3 mean, max 2.13e-2) on 24.5% of bulk-interior sites**, where no mean-matching
+DOF exists and the structure freeze forbids adding singles. Controls discharge S10's
+verification obligation: pooled-convention rescoring still fails (6,039 — not a scope
+artifact); per-site fluctuation 0% above tol (the band is physically attainable); shot noise
+6.9e-4 ≪ deviations; zero clamp/clip hits (machinery sound). Diagnosis: pairwise-exact Spitz
+values over-compose the site marginal when correlated mechanisms share mass across classes —
+the registered M3 structural finding (bunching DOF unrepresentable by independent edges; the
+M4-B live channel: one consecutive-flip quadruple feeds time, diagonal AND space estimates
+simultaneously). Magnitude-consistency note is PROVISIONAL (flagged, nothing built on it).
+Registered prediction (recorded here, before the freeze): the twin arm will fail the literal
+per-site pin on the same order of interior sites (its per-site field differs from A2 by
+~≤1e-3). Ruling (the reviewer's proposed text, adopted verbatim):
+
+14. **P1h splits.** (i) STRUCTURAL build-bug component — gate: mean-matched
+    (weight-1-carrying) sites reproduce their registered target fraction to ≤1e-9; zero
+    negative/NaN marginals; the interior-site deviation field is one-signed positive with
+    max ≤ 3e-2 (catastrophe tripwire, (c)) — **the freeze HALTS only on this component**;
+    (ii) the registered ±0.5% per-site band, scored-and-reported per arm as the (b) bet it
+    is; the measured miss (A2: 6,382/28,056, mean interior surplus +4.5e-3; twin: to be
+    measured at freeze) is recorded as a REGISTERED FINDING (structural composed-marginal
+    surplus of the independent-edges format; M3 / ADR-0008-H3 back-edge), never citable as
+    fact, no band re-derivation, no composition edit (G2). Silently widening the code
+    tolerance is FORBIDDEN; the freeze-stage acceptance runs on the TWIN column with A2
+    reported alongside.
+15. **Adjudications recorded with the same authority** (reviewer §C/§F, adopted): B1's
+    decomposed-slot SI1000 passthrough ACCEPTED (all 2,002 slots are decomposed[w1+w1],
+    never twin-ownable, value bit-identical across A1/A2/A3/A3b ⇒ contrast-neutral by the
+    S5 attribution-by-construction property; census + rule disclosed in the freeze
+    manifest); the re-graphliked-survivor rule kept (sticky passthrough rejected — moot for
+    primaries); the {15,19} empty-forced-unowned ownership reading kept with
+    hot_region_disclosure; P1g's exact-enumeration reference decoder accepted; **P1e on
+    samples 50/99 is NOT held-out contamination** (decodes the SHIPPED model against
+    SHIPPED predictions only, a pre-registered mechanical certification set disjoint from
+    every analysis split); cyclic-shift-null semantics: the α = 0.01 gate binds the exact
+    permutation null; the cyclic null (min attainable p = 1/19) is a reported
+    confound-consistency check whose failure DEMOTES the claim (G5), never an α-gate.
+
 ### ADR 0008 SEAM-TEST PRE-REGISTRATION (C3 prototype; recorded 2026-06-10 BEFORE build/run)
 
 The K1 discharge instrument for the C1 composed-carrier architecture (ADR 0008; panel + reviewer
@@ -1172,3 +1216,101 @@ this test.
 audit land before any HARDWARE band and before ADR 0008 status change; L2 (T-C latent gauge) and
 L3 (boundary-layer Fisher vs the measured r01–r250 ladder) gate the first surface-window
 registrations. None gate this seam test.
+
+#### SEAM-TEST PRE-RUN AMENDMENT 1 (registrar adjudication, recorded 2026-06-10 BEFORE any production stage)
+
+Basis: the build-reviewer verdict (`docs/.reports/adr0008_panel/build_R_seam_review.md`,
+verdict **BLOCK** on three registration-underdetermination grounds). Two honest conservative
+readings of the frozen text instantiated **incompatible physical instruments** (S1:
+shared-check overlapping windows; S2: disjoint windows, seam pair unchecked); P-a's literal
+wording was not (a)-satisfiable; the two-tiling items were not implementable in a single
+build. No teacher constant, prediction band, pin label, or verdict semantic is re-derived by
+this amendment — all rulings are interpretive, recorded before any fit. Rulings:
+
+1. **Geometry (item 1).** The instrument IS the **disjoint two-window strip**: the windows
+   share the seam DATA pair across the seam (one qubit each side); NO check is measured on
+   the seam pair; extraction = per-window checks only. Forced jointly by (i) P-a's (a)-class
+   (under a shared check the φ-blind oracle joint does not factorize across windows, so a
+   product-class carrier can never reach 1e-10), (ii) well-posedness of the D2 long-range
+   null (disjoint sub-windows), (iii) the STRUCTURAL status of the zero-seam exactness pin,
+   (iv) clean φ-indexing of P-c. Item 1's "13q ≤ 1.1 GB / 15q = 17.2 GB" parenthetical is the
+   DM-feasibility justification of the cap, not a layout pin.
+2. **Scored family (items 3 / D8).** The strip joint law over per-window code-record pairs
+   (the `StripObservations` family), declared once here, scored identically by every arm.
+3. **Production size + accounting.** 7 data qubits total, windows (3,4), **12 instrument
+   qubits** (2D−2 disjoint-extraction accounting; inside the registered cap under both
+   accountings).
+4. **P-a wording (item 4).** P-a = the ORACLE-side φ-blindness theorem: oracle law(φ-edge)
+   vs law(no-edge) at repeats=1, gap ≤ 1e-10, class (a) — as built and verified by all three
+   builders. The carrier-vs-oracle repeats=1 gap is NOT an (a) pin (reviewer derivation: the
+   mean-field seam reduction dephases surviving window coherences at O(φ̂²), which the exact
+   oracle does not) — it is item 7's **EMERGENT across-seam H2-T1 measurement** and must be
+   wired and reported as such.
+5. **Two-tiling sequencing (items 8(i), 11/checklist-32).** This run is **FIRST-READ-ONLY**:
+   G-NLL(i) (family-refinement gap under a seam-straddling re-tiling — the second K1 read)
+   and cross-tiling item 32 are OPEN REGISTERED OBLIGATIONS (trigger-gated, never dropped;
+   the straddling tiling requires its own registration since it re-classes the zero-seam pin
+   to EMERGENT). For THIS run item 32 is instantiated on the declared available refinement
+   axis: the Tier-0 eigen-split stability cut at the cited 1e-7 tolerance on the single
+   declared tiling. The K1 verdict carries the "first-read-only" scope in its claim
+   paragraph.
+6. **item-10 `in_window_contamination` KILL trigger — now defined (class (c), gating only).**
+   Measured = the fitted carrier's per-window marginal-law total-variation gap vs the exact
+   teacher oracle on φ-blind quiet contexts (repeats=1, no φ-sensitive probe), max over
+   windows; trigger TRUE if > 1e-3 — the (c) constant anchored to the ledgered
+   informative-claim flip threshold (ADR 0008 C2 outcome: 2–4e-3 per block). Sanity floor:
+   the trigger level sits 7 orders above the zero-seam structural pin floor (1e-10).
+7. **q^eff flatness pin (item 7).** N/A-WITH-REASON on this instrument: the declared noise
+   class is noiseless-extraction — no readout-error DOF exists, the gauge functional has no
+   support. Recorded as N/A, never a runtime-derived threshold.
+8. **D2-null scoring (item 7, upgrade).** The null is scored on ORACLE laws. On factorized
+   (non-seam) teacher arms the in-class null is (a)-exact ⇒ a violation there is an oracle
+   build bug ⇒ STRUCTURAL; under the seam teacher its violation is THE SIGNAL (unchanged);
+   on the carrier's product law the null holds identically ⇒ carrier-side scoring is vacuous
+   and is not reported as evidence.
+9. **P-b stage encoding (item 4).** Registered "twirled control exactly zero" = the
+   φ-sign/coherence sensitivity of the twirled arm is theorem-zero WHILE the sin²φ
+   correlated rate is VISIBLE; the stage asserts blindness in the sign/coherence direction
+   AND visibility of the rate — never "twirl invisible vs the quiet law".
+10. **Process pins.** `outputs/seam_integration_check.py` must exit 0 (fully reconciled)
+    before `--reviewed` is honored (pre-run gate 0); the three seam suites green = gate 1;
+    marginals/pins production stages run on CUDA (model compute = laws/likelihoods); the
+    registered "~100–200 fits" (b) band is expected to miss LOW at the as-designed ~18–36
+    fits — scored honestly as a (b) miss if so; resume-across-fits must persist fit
+    artifacts (S3 fix). The teacher-arm naming for pins is declared: the carrier-side
+    Pauli-twirl ablation (S2 `pauli_twirl_kraus`) feeds the T-A structural pin; the
+    teacher-side R=1 matched-rate member (S1 `pauli_ablation_teacher`) feeds the D3
+    covariance pin and the bunching negative control.
+
+*Evidence recorded with this amendment (registrar-run):* integration check WIRING 21/21 PASS
+— including the new three-way S1→S2→S3 T-B identity (R_k, T3 agree ≤ 5.3e-15 rel) — and
+RECONCILE 0/33 (the enumerated blockers, exactly as the reviewer predicted); the three scoped
+suites 50/50 green in one run; `--reviewed` refusal verified (exit 2, no state created).
+
+#### SEAM-TEST PRE-RUN AMENDMENT 2 (registrar adjudication, recorded 2026-06-10 BEFORE any production stage)
+
+Basis: the S1 fix round's pre-measurement derivation (escalated registration-discrepancy
+flag, `tests/test_carrier_seam_instrument.py` module docstring + `build_S1_instrument.md`
+FIX ROUND), subsequently confirmed by the toy measurement. In the AMENDED disjoint geometry,
+ruling 4's blanket statement "repeats=1 contexts φ-blind ≤ 1e-10 (a)" over-reaches: with the
+seam pair UNCHECKED, in-window extraction leaves single-window-flip coherence pairs with
+unequal seam-pair parity alive; U_φ marks them (e^{∓2iφ}); the registered coherent backdrop
+component (RX) converts them to diagonal observables in later rounds. Ruling refinements:
+
+11. **P-a final form (item 4).** The (a)-class oracle-side theorem is: (i) ROUNDS=1
+    repeats=1 contexts are φ-blind, gap ≤ 1e-10 (the single edge application — Z⊗Z-diagonal
+    unitary or its twirl — is followed only by Z-diagonal operations, parity projections and
+    final Z readout, with which it commutes term-by-term); (ii) under a purely stochastic
+    (Pauli-Z-basis) backdrop, φ-blindness holds at ANY round count. Both pinned at 1e-10.
+12. **Multi-round repeats=1 oracle φ-gap = the instrument's seam-mass visibility (a
+    FEATURE, reported).** This is exactly item 7's EMERGENT across-seam H2-T1 mass, visible
+    on the oracle itself; it is what P-c's φ-sensitive functionals consume. Measured at the
+    (2,2) toy, φ = 0.15 (recorded): TV 6.3e-5 (R2-L0) … 1.83e-2 (exotic R4-ry, the
+    φ-amplifying probe); coherent-vs-twirled gaps differ (1.83e-2 vs 7.9e-3) — the
+    sign/coherence-sensitive component the carrier must reproduce or band. T2′ φ-parity
+    survives on pre_rotation=0 contexts (anti-unitary proof never references which parities
+    are measured).
+13. **Build-sanity ceiling (c).** The fix round's 1e-2 ceiling on the multi-round gap
+    measurement is raised to **1e-1** — a catastrophe tripwire only (TV ~ O(1) = build bug),
+    never a band; the measured 1.83e-2 worst case sits well inside. Declared (c), recorded
+    here per the silent-constant rule.

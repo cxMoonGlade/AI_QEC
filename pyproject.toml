@@ -16,6 +16,13 @@ dependencies = [
 
 [project.optional-dependencies]
 cuda-extension = ["ninja"]
+# M4 decoder pin (registration S1/S11): frozen evaluator-side decoder, CPU,
+# upstream defaults; wheel sha256 recorded in qec_twin/hardware/m4_decode.py.
+hw = ["pymatching==2.4.0"]
+
+[project.scripts]
+# Single console entry point, lands with M4 (ADR 0007 Decision 6, ratified R4).
+qec-twin-m4 = "qec_twin.hardware.m4_report:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
