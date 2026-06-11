@@ -56,6 +56,11 @@ def embed_operator(op: torch.Tensor, targets, n: int) -> torch.Tensor:
     targets = [int(q) for q in targets]
     k = len(targets)
     rest = int(n) - k
+    # Layout normalization (mechanical fix, 2026-06-11): einsum-built operators
+    # (e.g. the P1f X-conjugated Kraus on CUDA) can arrive as NON-CONTIGUOUS
+    # views; torch.kron's internal .view() then raises. contiguous() copies
+    # memory layout only — identical elements, no math change.
+    op = op.contiguous()
     if rest > 0:
         full = torch.kron(op, torch.eye(2 ** rest, dtype=CDTYPE, device=op.device))
     else:
