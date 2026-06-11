@@ -65,8 +65,15 @@ Registered design pins implemented here (epistemic classes per the registration)
 * Sub-chain projection (a, S2/P1c): keep errors with >= 1 detector inside the
   sub-grid; a one-detector-outside error becomes a weight-1 boundary edge at
   the surviving detector with the SAME probability; restriction at the full
-  chain is the identity. Sub-observable (M4-B 2.3): leftmost data qubit of the
-  sub-chain -- after projection, exactly the left-cut-crossing errors carry L0.
+  chain is the identity. Sub-observable (M4 PRE-RUN AMENDMENT 1 ruling 15a,
+  FIX ROUND 3 2026-06-10 -- supersedes the earlier "leftmost data qubit"
+  reading): the window observable is the ``data_hi``-side data qubit (the
+  release-observable endpoint type; measured: OBSERVABLE_INCLUDE(0) = record
+  28,056 = qubit 55 = the grid CHAIN-MAX-side outer data qubit, flips = the
+  w1+L0 edges at chain 27). Right edge unchanged => source L0 flags preserved
+  verbatim; right edge moved => source flags dropped and L0 = the SAME-LAYER
+  right-cut-crossing components (the data-qubit-``data_hi`` flips); after
+  projection every L0 edge touches ONLY the cut column ``data_hi - 1``.
 * Twin->DEM composition (S5): SPACE(j, bulk) <- r_hat_j = 2 p01 p10/(p01+p10)
   (the stationary MARGINAL flip probability (a)); TIME(i, bulk) <- q_eff_i
   (gauge-exact (a)); MEDIAN over owning windows (c); ownership filter = data
@@ -255,6 +262,15 @@ class Skeleton:
     ``with_probabilities`` (which returns the G9 ``ClampReport`` alongside
     the DEM); ``m4_decode.as_dem``'s ``.dem`` duck-type hook does not engage
     on skeleton objects.
+
+    WINDOW-OBSERVABLE CONVENTION (M4 PRE-RUN AMENDMENT 1 ruling 15a): the
+    observable of a (sub-)skeleton is its ``data_hi``-side data qubit (grid
+    coordinates; ``data_hi=None`` means the native full chain, whose right
+    data qubit is ``grid.num_chains``) -- the SAME endpoint type as the
+    release observable. ``obs``/``comps`` L0 flags always refer to THAT
+    qubit's final-readout flip; cross-module identity: B2's
+    ``m4_decode.unit_actual_observables`` resolves the same qubit through
+    the measured qubit-id map (``unit_grid_map``), never a hardcoded axis.
     """
 
     dets: tuple  # tuple[tuple[int, ...], ...] global detector ids, flattened, target order
@@ -643,17 +659,33 @@ def subchain_skeleton(skel: Skeleton, grid: DetectorGrid, data_lo: int, data_hi:
     is the instruction). Restriction at the full chain
     (``data_lo == skel.data_lo``, all chains inside) is the identity (P1c).
 
-    Sub-observable (M4-B 2.3(4)): leftmost data qubit ``data_lo`` final readout
-    XOR sweep reference. When the left edge moves (``data_lo > skel.data_lo``),
-    L0 is carried per-component by exactly the components crossing the left
-    cut (one detector at chain < ``data_lo``, one inside) -- on the
-    repetition-code matching graph these are precisely the
-    data-qubit-``data_lo`` mechanisms; all fully-inside components then carry
-    no observable. When the left edge is unchanged, surviving components keep
-    their original flags (the observable is the same physical bit); dropping
-    an observable-carrying component in that case would silently change the
-    observable and raises instead (never expected on the rep-code release --
-    L0 mechanisms live at the LEFT boundary, right-side cuts cannot drop them).
+    Sub-observable (M4 PRE-RUN AMENDMENT 1 ruling 15a, FIX ROUND 3
+    2026-06-10 -- supersedes the earlier "leftmost data qubit ``data_lo``"
+    reading, which crashed the first pilot on error #83): the window
+    observable is the ``data_hi``-SIDE data qubit's final readout XOR its
+    sweep reference -- the SAME endpoint type as the release observable
+    (measured on the d=29 release: OBSERVABLE_INCLUDE(0) = record 28,056 =
+    qubit 55 = the grid CHAIN-MAX-side outer data qubit; its flips = the
+    w1+L0 edges at chain 27, incl. the 2,002 decomposed[w1+w1] consecutive-
+    round double flips).
+
+    * Right edge UNCHANGED (``data_hi`` == the source skeleton's right data
+      qubit; the native full skeleton's is ``grid.num_chains``): the
+      observable is the same physical bit, so surviving components keep
+      their source L0 flags VERBATIM; dropping an observable-carrying
+      component then IS a structure violation and raises loudly (cannot
+      trigger on the rep-code release: its L0 mechanisms all live at the
+      chain-max column, inside every right-edge-preserving cut).
+    * Right edge MOVED (``data_hi`` < source right edge): source L0 flags
+      are DROPPED (they belong to the source observable, not this window's)
+      and L0 is re-derived per component: exactly the SAME-LAYER (space-
+      class) components crossing the right cut -- one detector at chain
+      ``data_hi - 1`` (in), one at chain >= ``data_hi`` (out) -- flip grid
+      slot ``data_hi`` an odd number of times, so they carry L0 as the
+      weight-1 boundary survivors at the cut column; time edges (cannot
+      cross a chain cut) and diagonals (cross-layer) never carry it.
+      Registered (a) pin: after projection every L0-carrying component
+      touches ONLY the ``data_hi`` cut column (chain ``data_hi - 1``).
 
     Coordinate convention (B-17): surviving detectors keep their SOURCE
     annotations UNCHANGED (the sub-DEM's ``detector(...)`` line is the device
@@ -672,7 +704,9 @@ def subchain_skeleton(skel: Skeleton, grid: DetectorGrid, data_lo: int, data_hi:
         )
     chain_lo, chain_hi = data_lo, data_hi - 1
     chain = grid.det_to_chain
-    preserve_obs = data_lo == skel.data_lo
+    layer = grid.det_to_layer
+    source_right = skel.data_hi if skel.data_hi is not None else grid.num_chains
+    preserve_obs = data_hi == source_right  # ruling 15a: the observable is data_hi-side
     new_dets: list = []
     new_obs: list = []
     new_comps: list = []
@@ -688,17 +722,23 @@ def subchain_skeleton(skel: Skeleton, grid: DetectorGrid, data_lo: int, data_hi:
             if not inside:
                 if preserve_obs and comp_obs:
                     raise ValueError(
-                        f"projection [{data_lo}, {data_hi}) drops an observable-"
-                        f"carrying component of error #{i} while the left edge is "
-                        "unchanged -- the sub-observable would silently change "
-                        "(unexpected on the rep-code release; finding, not a merge)"
+                        f"projection [{data_lo}, {data_hi}] drops an observable-"
+                        f"carrying component of error #{i} while the right edge is "
+                        "unchanged -- the sub-observable (ruling 15a: the data_hi-"
+                        "side data qubit) would silently change (unexpected on the "
+                        "rep-code release; finding, not a merge)"
                     )
                 continue
             if preserve_obs:
                 comp_obs_new = comp_obs
             else:
-                crosses_left = any(int(chain[int(d)]) < chain_lo for d in comp_dets)
-                comp_obs_new = (0,) if crosses_left else ()
+                # ruling 15a: window L0 = right-cut crossers, SPACE class only
+                # (a same-layer component spanning the cut flips grid slot
+                # data_hi exactly once; time edges cannot cross a chain cut;
+                # diagonals are cross-layer and never carry the flag)
+                crosses_right = any(int(chain[int(d)]) > chain_hi for d in comp_dets)
+                same_layer = len({int(layer[int(d)]) for d in comp_dets}) == 1
+                comp_obs_new = (0,) if (crosses_right and same_layer) else ()
             kept_comps.append((inside, comp_obs_new))
         if not kept_comps:
             continue

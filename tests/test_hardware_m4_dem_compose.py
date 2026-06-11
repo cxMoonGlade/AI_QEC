@@ -24,7 +24,11 @@ Toy coverage (hand-built DEMs/grids, no dataset needed):
     passthrough, ``with_grid_coordinates`` canonical (chain, layer) swap that
     satisfies B2's A3c ``space_edge_geometry`` contract (toy + hardware);
   - S2 projection: one-detector-outside -> weight-1 at the survivor with the
-    SAME p; sub-observable L0 carried by exactly the left-cut crossers;
+    SAME p; sub-observable per M4 PRE-RUN AMENDMENT 1 ruling 15a (FIX ROUND
+    observable axis): the data_hi-SIDE data qubit -- right edge unchanged =>
+    source L0 preserved verbatim (+ loud guard on dropped carriers); right
+    edge moved => L0 re-derived as the same-layer right-cut crossers
+    (diagonals never); (a) pin: L0 touches only the data_hi cut column;
   - S2 instruments: maximal disjoint partitions (registered counts) + advance
     hot-region flags;
   - S5: median-over-owners assignment (data interior positions {1,2,3} local,
@@ -83,16 +87,19 @@ def toy_dem_text(
     second_w1_at_chain0: bool = False,
 ) -> str:
     """Hand-built graphlike DEM on the complete toy grid: weight-1 boundary
-    columns (chain 0 carries L0), space (di=1), time (dt=1), one diagonal
-    orientation (+1) -- the SI1000 support shape."""
+    columns, space (di=1), time (dt=1), one diagonal orientation (+1) -- the
+    SI1000 support shape. RELEASE-LIKE observable (ruling 15a, FIX ROUND
+    observable axis): the CHAIN-MAX boundary column (chain ``chains - 1``,
+    the data_hi-side outer data qubit's flips) carries L0, mirroring the
+    measured d=29 release (w1+L0 at chain 27)."""
 
     c_max = chains - 1
     lines = []
     for l in range(layers):
-        lines.append(f"error({P_W1}) D{l * chains} L0")
+        lines.append(f"error({P_W1}) D{l * chains}")
         if second_w1_at_chain0:
             lines.append(f"error(0.05) D{l * chains}")
-        lines.append(f"error({P_W1}) D{l * chains + c_max}")
+        lines.append(f"error({P_W1}) D{l * chains + c_max} L0")
         for c in extra_w1_chains:
             lines.append(f"error(0.03) D{l * chains + c}")
     for l in range(layers):
@@ -336,6 +343,13 @@ def test_full_restriction_is_identity():
 
 
 def test_subchain_projection_crossers_and_observable():
+    """S2 projection + the ruling-15a sub-observable (FIX ROUND observable
+    axis): the window observable is the data_hi-SIDE data qubit, so L0 sits
+    on exactly the SAME-LAYER right-cut crossers (the data-qubit-``data_hi``
+    flips, weight-1 survivors at the cut column data_hi - 1); diagonals cross
+    but never carry it; left crossers never carry it; the source chain-max L0
+    edges (the data-10 observable's) are dropped with the moved right edge."""
+
     skel, grid, _ = toy_skeleton()
     sub = dc.subchain_skeleton(skel, grid, 2, 7)  # data 2..7 -> chains 2..6
     assert np.array_equal(
@@ -349,14 +363,52 @@ def test_subchain_projection_crossers_and_observable():
     # the SAME p travels with the crosser (a)
     for i in w1:
         assert sub.p[i] in (P_SPACE, P_DIAG)
-    # sub-observable: L0 on exactly the left-cut crossers (all at chain data_lo = 2)
+    # sub-observable (ruling 15a): L0 = the 8 space crossers at the data_hi=7
+    # cut (chains (6, 7), one per layer) -- weight-1 at the cut column 6
     flagged = [i for i in range(sub.num_errors) if sub.obs[i]]
-    assert flagged and all(sites[i].arity == 1 and sites[i].col == 2 for i in flagged)
-    assert len(flagged) == 8 + 7  # space (1,2) per layer + diag (1,l)->(2,l+1)
+    assert flagged and all(sites[i].arity == 1 and sites[i].col == 6 for i in flagged)
+    assert len(flagged) == 8, "space (6,7) per layer; diagonals NEVER carry L0"
+    assert all(sub.p[i] == P_SPACE for i in flagged), "the L0 carriers are space crossers"
+    # diag right-crossers survive at col 6 too but stay flagless
+    diag_right = [i for i in w1 if sites[i].col == 6 and sub.p[i] == P_DIAG]
+    assert len(diag_right) == 7 and all(not sub.obs[i] for i in diag_right)
     unflagged_w1_cols = {sites[i].col for i in w1 if not sub.obs[i]}
-    assert unflagged_w1_cols == {6}, "right crossers carry no observable"
-    # fully-inside errors carry no observable once the left edge moved
+    assert unflagged_w1_cols == {2, 6}, "left crossers + right diag crossers: no observable"
+    # fully-inside errors carry no observable
     assert all(not sub.obs[i] for i in range(sub.num_errors) if sites[i].arity == 2)
+    # the source chain-9 L0 column (data-10 observable) was dropped entirely
+    assert all(int(grid.det_to_chain[d]) <= 6 for dets in sub.dets for d in dets)
+
+
+def test_subchain_right_edge_preserved_keeps_source_observable():
+    """Ruling 15a case (i): when the right edge is unchanged the observable is
+    the same physical bit -- surviving components keep their source L0 flags
+    VERBATIM (incl. one-detector-outside survivors at the left cut), and L0
+    still touches only the chain-max column."""
+
+    skel, grid, _ = toy_skeleton()
+    sub = dc.subchain_skeleton(skel, grid, 4, TOY_CHAINS)  # data 4..10, chains 4..9
+    sites = dc.error_sites(sub, grid)
+    flagged = [i for i in range(sub.num_errors) if sub.obs[i]]
+    # the source chain-9 w1+L0 edges survive whole, flags verbatim
+    assert len(flagged) == TOY_LAYERS
+    assert all(sites[i].arity == 1 and sites[i].col == 9 for i in flagged)
+    assert all(sub.p[i] == P_W1 for i in flagged)
+    # left crossers became weight-1 survivors at chain 4 with NO flag
+    left_w1 = [i for i, s in enumerate(sites) if s.arity == 1 and s.col == 4]
+    assert left_w1 and all(not sub.obs[i] for i in left_w1)
+    # nested projection composes: cutting the right edge afterwards re-derives
+    # L0 at the new cut and drops the inherited chain-9 flags (case ii)
+    nested = dc.subchain_skeleton(sub, grid, 4, 8)  # data 4..8, chains 4..7
+    nsites = dc.error_sites(nested, grid)
+    nflagged = [i for i in range(nested.num_errors) if nested.obs[i]]
+    assert nflagged and all(
+        nsites[i].arity == 1 and nsites[i].col == 7 and nested.p[i] == P_SPACE
+        for i in nflagged
+    )
+    direct = dc.subchain_skeleton(skel, grid, 4, 8)
+    assert nested.dets == direct.dets and nested.obs == direct.obs
+    assert np.array_equal(nested.p, direct.p)
 
 
 def test_subchain_emission_pins_detector_count():
@@ -431,18 +483,23 @@ def test_decomposed_roundtrip_projection_and_arm_passthrough():
     and mean-matching site products that include decomposed incidence."""
 
     grid = toy_grid()
-    # two space-edge components in layer 3 (chains (2,3) + (5,6)), the left one
-    # carrying L0; plus a w1-component + space-component instruction whose w1
-    # component sits ON the chain-0 mean-matching site of layer 3
-    extra = ("error(0.015) D32 D33 L0 ^ D35 D36\n"
-             "error(0.011) D30 ^ D38 D39")
+    # two space-edge components in layer 3 (chains (2,3) + (5,6)); a
+    # w1-component + space-component instruction whose w1 component sits ON
+    # the chain-0 mean-matching site of layer 3; and a RELEASE-LIKE
+    # decomposed L0 carrier (ruling 15a): consecutive-layer w1+w1 at the
+    # chain-MAX column, each component L0-flagged (net flip 0) -- the
+    # measured structure of the d=29 release's 2,002 decomposed[w1+w1]
+    extra = ("error(0.015) D32 D33 ^ D35 D36\n"
+             "error(0.011) D30 ^ D38 D39\n"
+             "error(0.013) D39 L0 ^ D49 L0")
     dem = stim.DetectorErrorModel(toy_dem_text() + "\n" + extra)
     skel = dc.load_skeleton(dem, source="toy")
     n_base = 2 * TOY_LAYERS + 72 + 70 + 63
-    assert skel.num_errors == n_base + 2 and skel.num_decomposed == 2
-    assert skel.comps[-2] == (((32, 33), (0,)), ((35, 36), ()))
-    assert skel.comps[-1] == (((30,), ()), ((38, 39), ()))
-    assert skel.dets[-2] == (32, 33, 35, 36) and skel.obs[-2] == (0,)
+    assert skel.num_errors == n_base + 3 and skel.num_decomposed == 3
+    assert skel.comps[-3] == (((32, 33), ()), ((35, 36), ()))
+    assert skel.comps[-2] == (((30,), ()), ((38, 39), ()))
+    assert skel.comps[-1] == (((39,), (0,)), ((49,), (0,)))
+    assert skel.dets[-1] == (39, 49) and skel.obs[-1] == (0, 0)
 
     # byte-faithful emission: separators, component order, per-component L0
     emitted, clamp = dc.with_probabilities(skel, skel.p)
@@ -451,39 +508,61 @@ def test_decomposed_roundtrip_projection_and_arm_passthrough():
 
     # instruction-level sentinel + per-component classification + census label
     sites = dc.error_sites(skel, grid)
-    assert sites[-2].num_components == 2 and sites[-2].key is None
+    assert sites[-3].num_components == 2 and sites[-3].key is None
     csites = dc.component_sites(skel, grid)
-    assert [cs.key for cs in csites[-2]] == [(1, 0, 0), (1, 0, 0)]
-    assert csites[-1][0].arity == 1 and csites[-1][1].key == (1, 0, 0)
+    assert [cs.key for cs in csites[-3]] == [(1, 0, 0), (1, 0, 0)]
+    assert csites[-2][0].arity == 1 and csites[-2][1].key == (1, 0, 0)
+    assert [cs.arity for cs in csites[-1]] == [1, 1]
     census = dc.support_census({"toy": (skel, skel.p)}, grid=grid)["toy"]
     assert census["decomposed[space(di=1)+space(di=1)]"]["count"] == 1
     assert census["decomposed[space(di=1)+w1]"]["count"] == 1
+    assert census["decomposed[w1+w1]"]["count"] == 1  # the release-like L0 carrier
 
     # component-wise S2 (registered rule, applied per component):
-    # full restriction stays the bit-identity (P1c)
+    # full restriction stays the bit-identity (P1c), L0 flags included
     full = dc.subchain_skeleton(skel, grid, 0, TOY_CHAINS)
     assert full.dets == skel.dets and full.obs == skel.obs and full.comps == skel.comps
-    # one component entirely outside -> dropped; the survivor becomes the
-    # plain graphlike edge it now is (single component, no left-cut L0)
+    # right edge unchanged (ruling 15a case i): one component entirely
+    # outside -> dropped; the flagless survivor is the plain graphlike edge
+    # it has become; the chain-9 w1+w1 L0 carrier survives whole, flags kept
     sub = dc.subchain_skeleton(skel, grid, 4, TOY_CHAINS)  # chains 4..9
     j = int(np.flatnonzero(sub.p == 0.015)[0])
     assert sub.comps[j] == (((35, 36), ()),) and sub.obs[j] == ()
-    # one component loses one detector (weight-1 survivor + L0 at the left
-    # cut), the other survives whole -- same probability slot throughout
+    jl = int(np.flatnonzero(sub.p == 0.013)[0])
+    assert sub.comps[jl] == (((39,), (0,)), ((49,), (0,)))
+    # right edge moved (case ii): one component loses one detector (weight-1
+    # survivor at the LEFT cut, flagless -- the observable is data_hi-side),
+    # the other survives whole -- same probability slot throughout; the
+    # chain-9 L0 carrier drops silently WITH its source flags
     sub2 = dc.subchain_skeleton(skel, grid, 3, 8)  # chains 3..7
     j2 = sub2.dets.index((33, 35, 36))
-    assert sub2.comps[j2] == (((33,), (0,)), ((35, 36), ())) and sub2.p[j2] == 0.015
-    # all components gone => the instruction is dropped
+    assert sub2.comps[j2] == (((33,), ()), ((35, 36), ())) and sub2.p[j2] == 0.015
+    assert 0.013 not in sub2.p, "the source-observable carrier drops with the moved edge"
+    # space crossers at the data_hi=8 cut carry the re-derived L0
+    s2sites = dc.error_sites(sub2, grid)
+    flagged2 = [i for i in range(sub2.num_errors) if sub2.obs[i]]
+    assert flagged2 and all(
+        s2sites[i].arity == 1 and s2sites[i].col == 7 and sub2.p[i] == P_SPACE
+        for i in flagged2
+    )
+    # all components gone => the instruction is dropped (right edge unchanged;
+    # the dropped components carry no flags)
     sub3 = dc.subchain_skeleton(skel, grid, 7, TOY_CHAINS)  # chains 7..9
     assert 0.015 not in sub3.p
     j3 = int(np.flatnonzero(sub3.p == 0.011)[0])
     assert sub3.dets[j3] == (38, 39) and sub3.obs[j3] == ()
-    # dropping an observable-carrying component while the left edge is
-    # unchanged would silently change the observable -> loud failure
+    # GUARD (ruling 15a): dropping an observable-carrying component while the
+    # RIGHT edge is unchanged would silently change the observable -> loud
+    # failure (decomposed and single-component alike)
     with pytest.raises(ValueError, match="observable-carrying component"):
         dc.subchain_skeleton(
-            dc.load_skeleton(stim.DetectorErrorModel("error(0.1) D0 ^ D38 D39 L0")),
-            grid, 0, 8,
+            dc.load_skeleton(stim.DetectorErrorModel("error(0.1) D9 ^ D0 L0")),
+            grid, 2, TOY_CHAINS,
+        )
+    with pytest.raises(ValueError, match="observable-carrying component"):
+        dc.subchain_skeleton(
+            dc.load_skeleton(stim.DetectorErrorModel("error(0.1) D0 L0")),
+            grid, 2, TOY_CHAINS,
         )
 
     # arms: conservative passthrough -- decomposed slots carry the shipped
@@ -492,9 +571,9 @@ def test_decomposed_roundtrip_projection_and_arm_passthrough():
     pij, report = dc.arm_pij(
         counts, grid, skel, layer_lo=0, layer_hi=TOY_LAYERS - 1, return_report=True
     )
-    i_a, i_b = skel.num_errors - 2, skel.num_errors - 1
-    assert report["decomposed_passthrough"] == 2
-    assert pij[i_a] == 0.015 and pij[i_b] == 0.011
+    i_a, i_b, i_c = skel.num_errors - 3, skel.num_errors - 2, skel.num_errors - 1
+    assert report["decomposed_passthrough"] == 3
+    assert pij[i_a] == 0.015 and pij[i_b] == 0.011 and pij[i_c] == 0.013
     # mean-matching stays EXACT at the chain-0 site that carries the
     # decomposed w1 component (its factor enters the site product)
     composed = dc.composed_site_marginals(skel, pij)
@@ -505,14 +584,59 @@ def test_decomposed_roundtrip_projection_and_arm_passthrough():
     twin, table = dc.arm_twin_static(
         records, TOY_WINDOWS, grid, pij, skel=skel, layer_lo=0, layer_hi=TOY_LAYERS - 1
     )
-    assert table["unowned_census"]["decomposed"] == 2
-    assert twin[i_a] == pij[i_a] and twin[i_b] == pij[i_b]
+    assert table["unowned_census"]["decomposed"] == 3
+    assert twin[i_a] == pij[i_a] and twin[i_b] == pij[i_b] and twin[i_c] == pij[i_c]
     a3b, rep3 = dc.arm_spitz_of_twin(
         records, TOY_WINDOWS, grid, skel, pij_probs=pij,
         layer_lo=0, layer_hi=TOY_LAYERS - 1, return_report=True,
     )
-    assert rep3["decomposed_fallback_groups"] == 2
-    assert a3b[i_a] == pij[i_a] and a3b[i_b] == pij[i_b]
+    assert rep3["decomposed_fallback_groups"] == 3
+    assert a3b[i_a] == pij[i_a] and a3b[i_b] == pij[i_b] and a3b[i_c] == pij[i_c]
+
+
+def _expected_right_cut_l0(skel, grid, lo: int, hi: int) -> int:
+    """Independent re-derivation of the ruling-15a L0 census for a moved right
+    edge: source SAME-LAYER components with >= 1 detector inside chains
+    ``[lo, hi - 1]`` and >= 1 detector at chain >= ``hi`` (the data-qubit-
+    ``hi`` flips that survive as weight-1 boundary edges at the cut)."""
+
+    chain_of, layer_of = grid.det_to_chain, grid.det_to_layer
+    n = 0
+    for comps in skel.comps:
+        for comp_dets, _ in comps:
+            chains = [int(chain_of[int(d)]) for d in comp_dets]
+            if not any(lo <= c <= hi - 1 for c in chains):
+                continue
+            if not any(c > hi - 1 for c in chains):
+                continue
+            if len({int(layer_of[int(d)]) for d in comp_dets}) == 1:
+                n += 1
+    return n
+
+
+def test_projection_l0_column_pin_toy():
+    """(a) pin (ruling 15a): for EVERY projection, L0-carrying components are
+    weight-1 at the data_hi cut column (chain ``data_hi - 1``); the census
+    equals the independent right-cut re-derivation when the edge moved, and
+    the source (chain-max original) set when it did not."""
+
+    skel, grid, _ = toy_skeleton()
+    for lo, hi in [(0, 4), (2, 7), (3, 8), (5, 10), (0, 10), (4, 10)]:
+        sub = dc.subchain_skeleton(skel, grid, lo, hi)
+        csites = dc.component_sites(sub, grid)
+        cols = set()
+        n_l0 = 0
+        for i in range(sub.num_errors):
+            for (comp_dets, comp_obs), cs in zip(sub.comps[i], csites[i]):
+                if comp_obs:
+                    n_l0 += 1
+                    assert cs.arity == 1, f"[{lo},{hi}]: L0 carrier must be weight-1"
+                    cols.add(cs.col)
+        assert cols == {hi - 1}, f"[{lo},{hi}]: L0 touches ONLY the data_hi cut column"
+        if hi == TOY_CHAINS:
+            assert n_l0 == TOY_LAYERS, "right edge unchanged: the source L0 set verbatim"
+        else:
+            assert n_l0 == _expected_right_cut_l0(skel, grid, lo, hi) == TOY_LAYERS
 
 
 def test_disjoint_partitions_registered_counts_and_hot_flags():
@@ -1031,19 +1155,28 @@ def test_hw_window_projection_structure():
     csites = dc.component_sites(win, grid)
     flagged = [i for i in range(win.num_errors) if win.obs[i]]
     assert flagged, "the sub-observable cut produces L0 carriers"
-    # component-wise L0 rule: every L0-carrying COMPONENT is the weight-1
-    # left-cut survivor at chain 17 (a surviving decomposed instruction may
-    # carry the flag on one component while another component lives inside)
+    # component-wise L0 rule (FIX ROUND observable axis, ruling 15a): the
+    # window observable is data qubit 21 (the data_hi-side endpoint), so
+    # every L0-carrying COMPONENT is the weight-1 RIGHT-cut survivor at
+    # chain 20 (= data_hi - 1; the data-qubit-21 flip mechanisms)
+    n_l0_comps = 0
     for i in flagged:
         for (comp_dets, comp_obs), cs in zip(win.comps[i], csites[i]):
             if comp_obs:
-                assert cs.arity == 1 and cs.col == 17, (
-                    "L0 sits exactly on the left-cut crossers (data qubit 17 mechanisms)"
+                n_l0_comps += 1
+                assert cs.arity == 1 and cs.col == 20, (
+                    "L0 sits exactly on the right-cut crossers (data qubit 21 "
+                    "mechanisms; ruling 15a)"
                 )
+    # re-derived census under the right-cut rule: the source same-layer
+    # components crossing the 20|21 cut (the old left-cut rule's census is
+    # superseded; the count is measured-vs-projected, no magic constant)
+    expected_l0 = _expected_right_cut_l0(skel, grid, 17, 21)
+    assert n_l0_comps == expected_l0 and expected_l0 > 0
     n_flagged_single = sum(1 for i in flagged if len(win.comps[i]) == 1)
     print(f"window 16 projection: {win.num_errors} errors, {len(flagged)} L0 carriers "
-          f"({n_flagged_single} single-component), "
-          f"decomposed surviving {win.num_decomposed}, "
+          f"({n_flagged_single} single-component; re-derived right-cut census "
+          f"{expected_l0}), decomposed surviving {win.num_decomposed}, "
           f"w1 census {sum(1 for s in sites if s.arity == 1 and s.num_components == 1)}")
     # B-17 acceptance on the real window: device coords pass through; the
     # canonical (chain, layer) emission satisfies B2's A3c geometry contract
@@ -1063,6 +1196,103 @@ def test_hw_window_projection_structure():
     print(f"window 16 A3c geometry: {geo.num_space_edges} space-edge slots, "
           f"qubit keys {sorted(qkeys)}, "
           f"unclassified singles {geo.num_unclassified_singles}")
+
+
+@requires_hw
+def test_hw_projection_l0_pins_and_cross_module_identity():
+    """Ruling-15a (a) pins on the real DEM (M4 PRE-RUN AMENDMENT 1; the fix
+    for the pilot crash on error #83), registered window set
+    {(0,4), (12,16), (24,28), (16,20)}:
+
+    * every projected skeleton's L0-carrying component is weight-1 at the
+      data_hi cut column (chain ``data_hi - 1``);
+    * data_hi < 28: the L0 set == the independently re-derived same-layer
+      right-cut crossers (incl. (0,4) -- the projection that crashed the
+      pilot now drops error #83's full-chain L0 silently and re-derives);
+    * data_hi == 28: the source L0 set preserved VERBATIM (chain-27
+      originals; measured census 2,003 = 1,002 w1 + 1,001 decomposed[w1+w1]);
+    * cross-module identity: per unit the projected DEM's observable (data
+      qubit ``data_hi``) == B2's ``unit_actual_observables`` reference,
+      resolved through the measured ``unit_grid_map`` -- anchored by the
+      final-layer detector adjacency tying ``grid.det_to_chain`` to the
+      mapped records (the full grid-axis consistency measurement).
+    """
+
+    from qec_twin.hardware import dataset as ds_module, m4_decode
+    from qec_twin.hardware.stim_artifacts import load_circuit
+
+    ds, grid, dem = _hw()
+    skel = dc.load_skeleton(dem)
+    assert grid.chain_order_source == "metadata_qubit_order", (
+        "the grid chain axis and the ruling-15a map must share the qubit_order axis"
+    )
+    ideal = load_circuit(ds.paths("X", 0).circuit_ideal)
+    spec = m4_decode.unit_observable_spec(ideal)
+    gmap = m4_decode.unit_grid_map(
+        ideal, ds_module.metadata_qubit_order(ds.load_metadata("X", 0)), spec=spec
+    )
+    assert gmap.num_data == 29
+    assert gmap.slot_to_record[28] == gmap.anchor_record, "(a) anchor: slot 28 = release obs"
+
+    # grid-axis consistency (measured, 28/28): the final-layer detector at
+    # chain c connects exactly the mapped records of slots {c, c+1}
+    block = set(spec.data_records)
+    recs_per_det: list = []
+    n_meas = 0
+    for inst in ideal.flattened():
+        if inst.name in m4_decode._MEAS_BASIS:
+            n_meas += sum(1 for _ in inst.targets_copy())
+        elif inst.name == "DETECTOR":
+            recs: set = set()
+            for t in inst.targets_copy():
+                if t.is_measurement_record_target:
+                    recs ^= {n_meas + int(t.value)}
+            recs_per_det.append(recs)
+    checked = 0
+    for d, recs in enumerate(recs_per_det):
+        inter = recs & block
+        if len(inter) != 2:
+            continue
+        c = int(grid.det_to_chain[d])
+        assert inter == {gmap.slot_to_record[c], gmap.slot_to_record[c + 1]}, (
+            f"final-layer detector at chain {c} contradicts the slot->record map"
+        )
+        checked += 1
+    assert checked == 28, "all 28 final-layer adjacency detectors must be checked"
+
+    source_flagged = sorted(skel.comps[i] for i in range(skel.num_errors) if skel.obs[i])
+    for lo, hi in [(0, 4), (12, 16), (24, 28), (16, 20)]:
+        sub = dc.subchain_skeleton(skel, grid, lo, hi)
+        csites = dc.component_sites(sub, grid)
+        n_l0_comps = 0
+        for i in range(sub.num_errors):
+            for (comp_dets, comp_obs), cs in zip(sub.comps[i], csites[i]):
+                if comp_obs:
+                    n_l0_comps += 1
+                    assert cs.arity == 1 and cs.col == hi - 1, (
+                        f"unit ({lo}, {hi}): L0 must touch ONLY the data_hi cut "
+                        f"column {hi - 1} (ruling 15a)"
+                    )
+        ref_record = gmap.slot_to_record[hi]
+        ref_qubit = gmap.slot_to_qubit[hi]
+        if hi == 28:
+            flagged_idx = [i for i in range(sub.num_errors) if sub.obs[i]]
+            assert len(flagged_idx) == 2_003, "the measured release L0 census, verbatim"
+            assert sorted(sub.comps[i] for i in flagged_idx) == source_flagged, (
+                "right edge unchanged: the source L0 set preserved verbatim"
+            )
+            assert ref_record == gmap.anchor_record, (
+                "cross-module: the (24, 28) observable IS the release observable"
+            )
+        else:
+            expected = _expected_right_cut_l0(skel, grid, lo, hi)
+            assert n_l0_comps == expected and expected > 0
+            assert ref_record != gmap.anchor_record, (
+                f"cross-module: unit ({lo}, {hi}) references the mapped slot-{hi} "
+                "record, never the release anchor"
+            )
+        print(f"unit ({lo}, {hi}): {n_l0_comps} L0 components @ col {hi - 1}; "
+              f"B2 reference = record {ref_record} (qubit {ref_qubit})")
 
 
 @requires_hw

@@ -13,14 +13,20 @@ This module owns the decoder side ONLY:
     differentiated -- same category as stim m2d in M1).
   * S6 machinery pins P1a/P1b/P1d/P1e/P1f/P1g as parameterized runners (sample
     lists are ARGUMENTS; the build-phase smoke scope is sample_00 ONLY).
-  * S2 per-unit ACTUAL observables (reviewer change-list item 2):
-    ``unit_actual_observables`` -- per-shot actual observable bits for
-    (data_lo, data_hi) units (the unit's LEFTMOST data qubit's final
-    transversal readout XOR its sweep-bit reference, the registered S2
-    construction), generalizing the P1b full-chain machinery;
-    ``pin_p1b_units`` is the (a)-class full-chain cross-check. Samples 01-99
-    are structurally refused without the explicit ``allow_heldout`` flag
-    (held-out contract documented on the function).
+  * S2 per-unit ACTUAL observables (reviewer change-list item 2; observable
+    axis per M4 PRE-RUN AMENDMENT 1 ruling 15a): ``unit_actual_observables``
+    -- per-shot actual observable bits for (data_lo, data_hi) units IN GRID
+    COORDINATES (the B1/B3 subchain axis); the reference is the unit's
+    ``data_hi``-SIDE data qubit's final transversal readout XOR its
+    sweep-bit reference (the release-observable endpoint type; the earlier
+    "leftmost" reading is superseded), resolved through the MEASURED
+    qubit-identity map ``unit_grid_map`` (on the d=29 release the spec
+    position axis runs OPPOSITE to the grid chain axis, p = 28 - g --
+    measured, never hardcoded; (a) anchor runtime-asserted: full chain ->
+    the release anchor record). ``pin_p1b_units`` is the (a)-class
+    full-chain cross-check. Samples 01-99 are structurally refused without
+    the explicit ``allow_heldout`` flag (held-out contract documented on the
+    function).
   * G4 determinism guards: ``jitter_control`` (+/- 1e-9 weight jitter, pinned
     seed 20260610) and ``sim_round_trip`` (decode self-sampled shots from a
     DEM; a miss is a pipeline bug, nothing downstream);
@@ -428,11 +434,16 @@ def toy_chain_dem(
 ):
     """Repetition-code chain DEM with detector coords ``(chain, layer)``.
 
-    Detector id = layer * num_chains + chain. Left boundary edges (the leftmost
-    data qubit's column) carry L0 -- the registered window observable
-    convention (leftmost data qubit; M4B 2.3). ``p_left`` / ``p_right`` accept
-    a scalar or a per-layer sequence; ``p_space`` / ``p_time`` accept a scalar
-    or a callable ``(chain_index, layer) -> p``.
+    Detector id = layer * num_chains + chain. Left boundary edges (the
+    chain-MIN-side outer data qubit's column) carry L0 -- a GENERIC toy
+    observable placement for the decoder-side tests here (the frozen decoder
+    is observable-agnostic). NOTE (M4 PRE-RUN AMENDMENT 1 ruling 15a): the
+    registered WINDOW-observable convention for composed sub-chain DEMs is
+    the ``data_hi``-SIDE data qubit -- L0 on the data_hi cut column -- owned
+    by ``dem_compose.subchain_skeleton``; this builder's left-side L0 is NOT
+    that convention and is never fed to the window pipeline. ``p_left`` /
+    ``p_right`` accept a scalar or a per-layer sequence; ``p_space`` /
+    ``p_time`` accept a scalar or a callable ``(chain_index, layer) -> p``.
     """
 
     import stim
@@ -527,8 +538,11 @@ def observable_spec(circuit, *, observable_index: int = 0) -> ObservableSpec:
     """Parse OBSERVABLE_INCLUDE(k): absolute record indices of its targets and
     the sweep bits whose controlled Pauli anticommutes with each record's
     measurement basis (the deterministic reference frame). For the d=29
-    release this is exactly "final readout of the leftmost data qubit XOR its
-    sweep reference" (registered fact I-5)."""
+    release this is exactly "final readout of one outer data qubit XOR its
+    sweep reference" (registered fact I-5, whose "leftmost" wording is
+    superseded: the anchor is MEASURED to be the grid CHAIN-MAX-side outer
+    data qubit -- record 28,056 = qubit 55 = grid slot 28; M4 PRE-RUN
+    AMENDMENT 1 ruling 15a)."""
 
     meas_qubits: list[int] = []
     meas_bases: list[str] = []
@@ -617,8 +631,9 @@ def _compare_observable_construction(
 
 
 def pin_p1b(ds: RepCodeD29, basis: str, *, sample: int = 0, chunk_shots: int = 10_000) -> dict:
-    """P1b -- our observable construction (leftmost data qubit final readout
-    XOR sweep reference) at window == full chain reproduces shipped
+    """P1b -- our observable construction (the anchor data qubit's final
+    readout XOR sweep reference; the grid chain-MAX-side outer data qubit on
+    this release, ruling 15a) at window == full chain reproduces shipped
     ``obs_flips_actual`` bit-exactly. Circuit choice (ideal first, noisy
     fallback) is reported, never tuned -- the M1 P2 adjudication verbatim."""
 
@@ -666,8 +681,9 @@ class UnitObservableSpec:
     """Chain-ordered final-transversal-readout map extracted from a circuit.
 
     ``data_records[p]`` is the absolute measurement-record index of the final
-    transversal readout of the data qubit at CHAIN position ``p`` (0 = the
-    leftmost data qubit, the OBSERVABLE_INCLUDE anchor); ``sweep_refs[p]`` is
+    transversal readout of the data qubit at SPEC position ``p`` (0 = the
+    OBSERVABLE_INCLUDE anchor -- on the d=29 release the grid CHAIN-MAX-side
+    outer data qubit; see the AXIS WARNING below); ``sweep_refs[p]`` is
     that qubit's sweep-bit reference: the sweep bits whose sweep-controlled
     Pauli ANTICOMMUTES with its readout basis (XOR-folded with the
     observable's explicit sweep targets at position 0 -- exactly the P1b
@@ -679,6 +695,11 @@ class UnitObservableSpec:
     edges; the unique path through that graph, walked from the
     OBSERVABLE_INCLUDE anchor (which must be a degree-1 endpoint), is the
     chain order. Every structural violation raises -- never guessed.
+
+    AXIS WARNING (ruling 15a): this position axis is the SPEC walk order
+    (anchor-first) and on the d=29 release runs OPPOSITE to the M1 grid
+    chain axis (measured: p = 28 - grid slot). Grid-coordinate units resolve
+    through ``unit_grid_map``, never by equating p with the grid slot.
     """
 
     num_measurements: int
@@ -806,6 +827,126 @@ def unit_observable_spec(circuit, *, observable_index: int = 0) -> UnitObservabl
     )
 
 
+@dataclass(frozen=True)
+class UnitGridMap:
+    """Measured GRID-slot -> final-readout map (M4 PRE-RUN AMENDMENT 1 ruling
+    15a, the observable-axis adjudication).
+
+    Units arrive in GRID data-qubit coordinates (the B1/B3 convention: data
+    qubit g sits between detector chains g-1 and g; full chain = slots
+    0..28 on the d=29 release). ``UnitObservableSpec``'s position axis is the
+    SPEC walk order (anchor = position 0) and on this release runs OPPOSITE
+    to the grid chain axis (measured 2026-06-10: p = 28 - g, qubit 55 = slot
+    28 = the anchor; qubit 0 = slot 0) -- so every slot is resolved through
+    THIS measured qubit-identity map, never a hardcoded reversal.
+
+    ``slot_to_position[g]`` / ``slot_to_record[g]`` / ``slot_to_qubit[g]``
+    give the spec position / absolute measurement-record index / physical
+    qubit id of grid slot g's final transversal readout. Constructed by
+    ``unit_grid_map``, which runtime-asserts the (a) anchor: the chain-max
+    slot (``num_data - 1``) must resolve to the release anchor record
+    (== ``observable_spec(circuit).measurement_indices``)."""
+
+    num_data: int
+    slot_to_position: tuple[int, ...]
+    slot_to_record: tuple[int, ...]
+    slot_to_qubit: tuple[int, ...]
+    anchor_record: int
+
+
+def _xy(values) -> tuple:
+    """(x, y) site key of a coordinate tuple -- the ``detector_grid`` site
+    convention (first two values; shorter tuples pass through verbatim)."""
+
+    t = tuple(float(v) for v in values)
+    return t[:2] if len(t) >= 2 else t
+
+
+def unit_grid_map(circuit, qubit_order, *, spec: UnitObservableSpec | None = None) -> UnitGridMap:
+    """Build the measured grid-slot -> record-position map (ruling 15a).
+
+    Construction (measured, never assumed): the grid chain axis is defined by
+    the release metadata ``qubit_order`` (the same listing
+    ``stim_artifacts.detector_grid`` ranks measure chains by;
+    ``dataset.metadata_qubit_order`` extracts it). Each data qubit's (x, y)
+    site -- from the circuit's final qubit coordinates at the
+    ``unit_observable_spec`` readout qubits -- is matched against the parsed
+    ``qubit_order`` entries; the k-th data site appearing in ``qubit_order``
+    is grid slot k. Verified on the d=29 release (2026-06-10, both bases):
+    29/29 data sites matched, slot axis consistent with ``grid.det_to_chain``
+    via the final-layer detector adjacency (0/28 mismatches),
+    ``chain_order_source == "metadata_qubit_order"``.
+
+    RUNTIME ASSERT (the (a) anchor): the chain-max slot ``num_data - 1`` must
+    resolve to the release anchor record (== the parsed
+    ``OBSERVABLE_INCLUDE(0)`` record, ``observable_spec(circuit)``'s single
+    measurement index). A violation means the release observable is NOT the
+    chain-max-side endpoint and ruling 15a's operational pin no longer
+    applies -- raise loudly, never re-orient silently.
+    """
+
+    if spec is None:
+        spec = unit_observable_spec(circuit)
+    if not qubit_order:
+        raise ValueError(
+            "qubit_order metadata is required to resolve the grid axis "
+            "(ruling 15a: the grid-slot -> record map is MEASURED through the "
+            "release qubit listing, never assumed from record order)"
+        )
+    coords = circuit.get_final_qubit_coordinates()
+    site_to_position: dict = {}
+    for p in range(spec.num_data):
+        q = spec.data_qubits[p]
+        values = coords.get(q, ())
+        if not values:
+            raise ValueError(
+                f"data qubit {q} (spec position {p}) carries no qubit "
+                "coordinates -- the qubit-identity map cannot be measured"
+            )
+        site = _xy(values)
+        if site in site_to_position:
+            raise ValueError(f"two data qubits share the (x, y) site {site}")
+        site_to_position[site] = p
+
+    from qec_twin.hardware.stim_artifacts import _parse_spatial_entry
+
+    slot_positions: list[int] = []
+    seen: set = set()
+    for entry in qubit_order:
+        parsed = _parse_spatial_entry(entry)
+        if parsed is None:
+            continue
+        site = _xy(parsed)
+        if site in site_to_position and site not in seen:
+            seen.add(site)
+            slot_positions.append(site_to_position[site])
+    if len(slot_positions) != spec.num_data:
+        raise ValueError(
+            f"qubit_order matched {len(slot_positions)} of {spec.num_data} data-"
+            "qubit sites -- the grid axis cannot be measured from this metadata"
+        )
+
+    # (a) anchor: the chain-max slot must be the release observable's qubit
+    full_spec = observable_spec(circuit)
+    anchor_position = slot_positions[-1]
+    resolved = (spec.data_records[anchor_position],)
+    if anchor_position != 0 or resolved != full_spec.measurement_indices:
+        raise ValueError(
+            f"RULING-15a ANCHOR VIOLATION: the chain-max grid slot "
+            f"{spec.num_data - 1} resolves to spec position {anchor_position} "
+            f"(record {resolved}), not the release anchor record "
+            f"{full_spec.measurement_indices} -- the release observable is not "
+            "the chain-max-side endpoint on this circuit; halt and re-adjudicate"
+        )
+    return UnitGridMap(
+        num_data=spec.num_data,
+        slot_to_position=tuple(slot_positions),
+        slot_to_record=tuple(spec.data_records[p] for p in slot_positions),
+        slot_to_qubit=tuple(spec.data_qubits[p] for p in slot_positions),
+        anchor_record=int(spec.anchor_record),
+    )
+
+
 def _spec_circuit(paths) -> tuple[object, str]:
     """Ideal-first / noisy-fallback circuit choice for spec parsing (the M1 P2
     adjudication order; correctness is pinned by ``pin_p1b_units``, never by
@@ -843,9 +984,11 @@ def _validate_sample_access(sample: int, allow_heldout: bool) -> int:
 
 def _validate_units(units, num_data: int) -> list[tuple[int, int]]:
     """Units are ``(data_lo, data_hi)`` INCLUSIVE data-qubit index pairs in
-    B1's subchain/window convention: window w => ``(w + 1, w + 5)``; a d'
-    partition passes its ``(lo, hi)``; full chain => ``(0, num_data - 1)``.
-    Only ``data_lo`` selects the observable; ``data_hi`` is validated only."""
+    GRID coordinates -- B1's subchain/window convention (LOUD: grid slots,
+    NOT spec positions): window w => ``(w + 1, w + 5)``; a d' partition
+    passes its ``(lo, hi)``; full chain => ``(0, num_data - 1)``. Only
+    ``data_hi`` selects the observable (ruling 15a: the data_hi-side data
+    qubit); ``data_lo`` is validated only."""
 
     validated: list[tuple[int, int]] = []
     for unit in units:
@@ -884,11 +1027,19 @@ def unit_actual_observables(
     error-array source for every statistic).
 
     For each unit -- a ``(data_lo, data_hi)`` INCLUSIVE data-qubit subchain
-    or window in B1's convention (window w => ``(w+1, w+5)``; a d' partition
-    => its ``(lo, hi)``; full chain => ``(0, 28)`` on the d=29 release) --
-    returns the per-shot actual observable: the unit's LEFTMOST data qubit's
-    final transversal readout XOR its sweep-bit reference (the registered S2
-    construction). Class (a) anchor: at unit == full chain this reproduces
+    or window in GRID coordinates, B1/B3's convention (LOUD: grid slots, the
+    ``subchain_skeleton``/``partition_table`` axis -- NOT spec positions;
+    window w => ``(w+1, w+5)``; a d' partition => its ``(lo, hi)``; full
+    chain => ``(0, 28)`` on the d=29 release) -- returns the per-shot actual
+    observable per M4 PRE-RUN AMENDMENT 1 ruling 15a: the unit's
+    ``data_hi``-SIDE data qubit's final transversal readout XOR its
+    sweep-bit reference (the release-observable endpoint type; supersedes
+    the earlier "leftmost" reading). The grid slot is resolved to its record
+    through the MEASURED qubit-identity map (``unit_grid_map`` over the
+    release metadata ``qubit_order`` -- on this release the spec position
+    axis runs OPPOSITE to the grid chain axis, p = 28 - g; never hardcoded).
+    Class (a) anchor, runtime-asserted in the map builder: at unit == full
+    chain the reference is the release anchor record, so this reproduces
     shipped ``obs_flips_actual`` bit-exactly (``pin_p1b_units``; the P1b
     machinery generalized, the P1b path itself untouched).
 
@@ -896,7 +1047,8 @@ def unit_actual_observables(
     Efficiency: ONE chunk-streamed pass over ``measurements.b8`` plus one
     read of ``sweep_bits.b8`` per (basis, sample), vectorized over units and
     shots (per-chunk byte-column XORs, deduped across units sharing a
-    leftmost qubit) -- the ``pin_p1e`` streaming pattern.
+    reference qubit, i.e. the same ``data_hi``) -- the ``pin_p1e`` streaming
+    pattern.
 
     HELD-OUT CONTRACT: ``sample`` in 1..99 raises ValueError unless
     ``allow_heldout=True`` is passed explicitly; the staged M4 runner sets it
@@ -910,6 +1062,9 @@ def unit_actual_observables(
     circuit, _ = _spec_circuit(paths)
     spec = unit_observable_spec(circuit)
     validated = _validate_units(units, spec.num_data)
+    gmap = unit_grid_map(
+        circuit, dataset.metadata_qubit_order(ds.load_metadata(basis, sample)), spec=spec
+    )
 
     n_shots = b8_io.num_shots_in_file(paths.measurements, spec.num_measurements)
     out = np.empty((n_shots, len(validated)), dtype=np.uint8)
@@ -923,7 +1078,8 @@ def unit_actual_observables(
             f"shot count {n_shots}"
         )
     sweep_bytes = sweep_size // n_shots
-    positions = [lo for lo, _ in validated]
+    # ruling 15a: the reference is the data_hi-side qubit, via the measured map
+    positions = [gmap.slot_to_position[hi] for _, hi in validated]
     max_sweep = max((max(spec.sweep_refs[p], default=-1) for p in positions), default=-1)
     if max_sweep >= 8 * sweep_bytes:
         raise ValueError(
@@ -959,23 +1115,34 @@ def pin_p1b_units(
     chunk_shots: int = 10_000,
 ) -> dict:
     """P1b-units -- the (a)-class cross-check for ``unit_actual_observables``
-    (registered S2 cross-check, generalizing pin P1b):
+    (registered S2 cross-check, generalizing pin P1b; ruling-15a axis):
 
-    (i) the per-unit spec at chain position 0 is IDENTICAL to the registered
-        P1b full-chain spec (record index + sweep set) -- so the P1b
-        bit-exact pin transfers to the per-unit construction by identity;
-    (ii) the streamed unit construction at unit == full chain reproduces
-        shipped ``obs_flips_actual`` bit-exactly (one measurements pass).
+    (i) the per-unit spec at the ANCHOR position (spec position 0 = the
+        chain-MAX grid slot, runtime-asserted by ``unit_grid_map``) is
+        IDENTICAL to the registered P1b full-chain spec (record index +
+        sweep set) -- so the P1b bit-exact pin transfers to the per-unit
+        construction by identity;
+    (ii) the streamed unit construction at unit == full chain
+        (``data_hi = num_data - 1`` => the anchor reference, ruling 15a)
+        reproduces shipped ``obs_flips_actual`` bit-exactly (one
+        measurements pass) -- the existing 0/100,000 pin, unchanged by the
+        axis fix because the full-chain reference IS the anchor record.
 
-    ``extra_units`` are reported (mean, constancy) for plausibility, never
-    gated here. Build smoke scope: sample_00 ONLY (samples 01-99 are refused
-    structurally; the pin never passes ``allow_heldout``)."""
+    ``extra_units`` are reported (mean, constancy, the resolved
+    ``data_hi``-side reference record/qubit via the measured map, and
+    bit-identity with the full-chain column -- decisive for units sharing
+    ``data_hi`` with the full chain), never gated here. Build smoke scope:
+    sample_00 ONLY (samples 01-99 are refused structurally; the pin never
+    passes ``allow_heldout``)."""
 
     sample = _validate_sample_access(sample, allow_heldout=False)
     paths = ds.paths(basis, sample)
     circuit, circuit_used = _spec_circuit(paths)
     uspec = unit_observable_spec(circuit)
     p1b_spec = observable_spec(circuit)
+    gmap = unit_grid_map(
+        circuit, dataset.metadata_qubit_order(ds.load_metadata(basis, sample)), spec=uspec
+    )
     spec_match = (
         (uspec.data_records[0],) == p1b_spec.measurement_indices
         and uspec.sweep_refs[0] == p1b_spec.sweep_indices
@@ -994,11 +1161,15 @@ def pin_p1b_units(
     extra_rows = []
     for j, unit in enumerate(units[1:], start=1):
         col = arr[:, j]
+        hi = int(tuple(unit)[1])
         extra_rows.append(
             {
                 "unit": tuple(int(v) for v in unit),
                 "mean": float(col.mean()) if col.size else float("nan"),
                 "nonconstant": bool(col.size and col.min() != col.max()),
+                "reference_record": int(gmap.slot_to_record[hi]),
+                "reference_qubit": int(gmap.slot_to_qubit[hi]),
+                "identical_to_full": bool(np.array_equal(col, arr[:, 0])),
             }
         )
     return {
@@ -1011,6 +1182,8 @@ def pin_p1b_units(
         "spec_match": bool(spec_match),
         "anchor_record": uspec.anchor_record,
         "anchor_sweep_ref": uspec.sweep_refs[0],
+        "anchor_slot": uspec.num_data - 1,
+        "full_unit_reference_record": int(gmap.slot_to_record[uspec.num_data - 1]),
         "total_shots": int(arr.shape[0]),
         "mismatched_shots": int(diff.size),
         "first_mismatch_shot": int(diff[0]) if diff.size else None,
@@ -1890,6 +2063,8 @@ __all__ = [
     "observable_spec",
     "UnitObservableSpec",
     "unit_observable_spec",
+    "UnitGridMap",
+    "unit_grid_map",
     "unit_actual_observables",
     "P1eSampleResult",
     "jitter_control",

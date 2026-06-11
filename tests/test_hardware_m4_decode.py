@@ -23,12 +23,16 @@ Toy-scale coverage (no hardware data needed):
     sim_round_trip_check at BOTH scales -- toy-enumerable (exact (a) branch)
     and production (finite/sane/reproducible + second-seed binomial (c)
     branch), plus the sane-bounds tripwire firing on a degenerate DEM.
-  * S2 per-unit actual observables (FIX ROUND, reviewer item 2):
+  * S2 per-unit actual observables (FIX ROUND reviewer item 2 + FIX ROUND
+    observable axis, M4 PRE-RUN AMENDMENT 1 ruling 15a):
     unit_observable_spec chain-ordering on a scrambled-record toy circuit;
-    unit_actual_observables on synthetic b8 fixtures vs hand-computed XOR
-    references (multiple units incl. the full chain); pin_p1b_units
-    synthetic round-trip; the held-out refusal (samples 1-99 raise without
-    allow_heldout) and units validation.
+    unit_grid_map -- the MEASURED grid-slot -> record map on a release-like
+    toy whose qubit_order runs OPPOSITE to the spec walk (the measured d=29
+    orientation), incl. the loud (a) anchor guard; unit_actual_observables
+    on synthetic b8 fixtures vs hand-computed XOR references (units in GRID
+    coordinates, reference = the data_hi-side qubit; units sharing data_hi
+    share the column); pin_p1b_units synthetic round-trip; the held-out
+    refusal (samples 1-99 raise without allow_heldout) and units validation.
   * A3c two-pass: exact no-op at R-hat == 1 (negative control) and a
     decision-flipping effect at R-hat >> 1 on a synthetic burst DEM.
   * decode_fleet: process-parallel results bit-identical to serial decodes,
@@ -36,13 +40,15 @@ Toy-scale coverage (no hardware data needed):
 
 Hardware-gated coverage (skips without QEC_TWIN_HW_DATA), sample_00 ONLY:
   * P1a smoke: m2d parity via the literal M1 construction.
-  * P1b: our observable construction (leftmost data qubit final readout XOR
-    sweep reference) at window == full chain reproduces obs_flips_actual
-    bit-exactly (class a).
-  * P1b-units (FIX ROUND): unit_actual_observables full-chain unit ==
-    obs_flips_actual bit-exact (class a) + spec identity with the P1b
-    full-chain spec; a sub-unit (window 16: data 17..21) returns plausible
-    nonconstant bits.
+  * P1b: our observable construction (the anchor data qubit's final readout
+    XOR sweep reference; grid chain-MAX-side on this release, ruling 15a) at
+    window == full chain reproduces obs_flips_actual bit-exactly (class a).
+  * P1b-units (FIX ROUND; observable axis per ruling 15a):
+    unit_actual_observables full-chain unit == obs_flips_actual bit-exact
+    (class a) + spec identity with the P1b full-chain spec; orientation
+    pins -- sub-unit (24, 28) shares data_hi = 28 => column identical to the
+    full chain; sub-unit (0, 4) resolves to the mapped slot-4 record
+    (!= anchor).
   * P1e smoke: shipped RL DEM decoded by the frozen decoder vs shipped
     obs_flips_predicted -- mismatch fraction printed (certification rule and
     routing live in the registration; the build asserts only the outer 1e-3
@@ -284,15 +290,25 @@ def _toy_readout_circuit():
     come from the final-layer detectors + the observable anchor, never from
     record order. Sweep frame: CX (X Pauli, anticommutes with the Z readout)
     on each data qubit; one CZ on qubit 0 that COMMUTES and must be excluded.
+    QUBIT_COORDS feed the ruling-15a qubit-identity map (``unit_grid_map``).
 
     Record map: 0 = MR q1, 1 = MR q3, 2 = M q4, 3 = M q0, 4 = M q2.
-    Chain order (data position -> record): 0 -> 3 (q0), 1 -> 4 (q2), 2 -> 2 (q4).
+    SPEC order (anchor-first; position -> record): 0 -> 3 (q0), 1 -> 4 (q2),
+    2 -> 2 (q4). The synthetic metadata's qubit_order (``_write_synthetic_ds``)
+    runs the GRID axis OPPOSITE to the spec walk -- anchor q0 at the
+    chain-MAX slot, mimicking the measured d=29 release: grid slot -> qubit =
+    {0: q4, 1: q2, 2: q0(anchor)}.
     """
 
     import stim
 
     return stim.Circuit(
         """
+        QUBIT_COORDS(0, 0) 0
+        QUBIT_COORDS(1, 0) 1
+        QUBIT_COORDS(2, 0) 2
+        QUBIT_COORDS(3, 0) 3
+        QUBIT_COORDS(4, 0) 4
         CX sweep[0] 0 sweep[1] 2 sweep[2] 4
         CZ sweep[3] 0
         MR 1 3
@@ -304,15 +320,24 @@ def _toy_readout_circuit():
     )
 
 
+#: Synthetic-release grid axis (chain order, data + measure interleaved):
+#: anchor q0 at the chain-MAX end -- the measured d=29 orientation.
+_TOY_QUBIT_ORDER = [[4, 0], [3, 0], [2, 0], [1, 0], [0, 0]]
+
+
 def _write_synthetic_ds(tmp_path, n_shots: int = 257):
     """Fake RepCodeD29 tree (X/sample_00) around the toy readout circuit with
     random b8 fixtures; obs_flips_actual.b8 = the hand-derived full-chain
-    observable (record 3 XOR sweep bit 0)."""
+    observable (anchor record 3 XOR sweep bit 0); metadata.json carries the
+    qubit_order grid axis the ruling-15a map is measured from."""
+
+    import json
 
     root = tmp_path / "fake_d29"
     d = root / "X" / "sample_00"
     d.mkdir(parents=True)
     (d / "circuit_ideal.stim").write_text(str(_toy_readout_circuit()))
+    (d / "metadata.json").write_text(json.dumps({"qubit_order": _TOY_QUBIT_ORDER}))
     rng = np.random.default_rng(m4_decode.M4_SEED)
     meas = rng.integers(0, 2, size=(n_shots, 5)).astype(np.uint8)
     sweep = rng.integers(0, 2, size=(n_shots, 4)).astype(np.uint8)
@@ -327,7 +352,7 @@ def test_unit_observable_spec_toy_chain_ordering():
     spec = m4_decode.unit_observable_spec(_toy_readout_circuit())
     assert spec.num_measurements == 5
     assert spec.num_data == 3
-    assert spec.data_records == (3, 4, 2)  # structural order, NOT record order
+    assert spec.data_records == (3, 4, 2)  # structural SPEC order, NOT record order
     assert spec.data_qubits == (0, 2, 4)
     assert spec.data_bases == ("Z", "Z", "Z")
     # anticommutation filter: CX included per qubit; the commuting CZ excluded
@@ -335,26 +360,61 @@ def test_unit_observable_spec_toy_chain_ordering():
     assert spec.anchor_record == 3
 
 
+def test_unit_grid_map_reversal_and_anchor_guard():
+    """Ruling 15a map construction: the grid axis is MEASURED from qubit_order
+    (data-qubit coords matched in chain order); on the release-like toy the
+    spec position axis runs OPPOSITE to the grid axis; the (a) anchor assert
+    fires loudly whenever the chain-max slot is not the release observable."""
+
+    circuit = _toy_readout_circuit()
+    gmap = m4_decode.unit_grid_map(circuit, _TOY_QUBIT_ORDER)
+    assert gmap.num_data == 3
+    assert gmap.slot_to_position == (2, 1, 0)  # p = (num_data - 1) - g here
+    assert gmap.slot_to_qubit == (4, 2, 0)  # chain-max slot = the anchor qubit
+    assert gmap.slot_to_record == (2, 4, 3)
+    assert gmap.slot_to_record[gmap.num_data - 1] == gmap.anchor_record == 3
+    # anchor guard: a flipped grid axis (anchor at slot 0) must raise loudly
+    with pytest.raises(ValueError, match="ANCHOR VIOLATION"):
+        m4_decode.unit_grid_map(circuit, list(reversed(_TOY_QUBIT_ORDER)))
+    # the map is measured, never assumed: missing/incomplete metadata raises
+    with pytest.raises(ValueError, match="qubit_order"):
+        m4_decode.unit_grid_map(circuit, None)
+    with pytest.raises(ValueError, match="matched 2 of 3"):
+        m4_decode.unit_grid_map(circuit, _TOY_QUBIT_ORDER[:-1])
+
+
 def test_unit_actual_observables_synthetic_b8(tmp_path):
     ds, meas, sweep = _write_synthetic_ds(tmp_path)
-    units = [(0, 2), (1, 2), (0, 1)]  # full chain + sub-units sharing a leftmost
+    # GRID-coordinate units (ruling 15a): the reference is the data_hi-side
+    # data qubit -- slot 2 = q0 (anchor, record 3), slot 1 = q2 (record 4)
+    units = [(0, 2), (1, 2), (0, 1)]  # full chain + sub-units, two sharing data_hi
     arr = m4_decode.unit_actual_observables(ds, "X", 0, units, chunk_shots=64)
     assert arr.dtype == np.uint8 and arr.shape == (meas.shape[0], 3)
     # hand-computed XOR references (record map in _toy_readout_circuit):
-    assert np.array_equal(arr[:, 0], meas[:, 3] ^ sweep[:, 0])  # leftmost = q0
-    assert np.array_equal(arr[:, 1], meas[:, 4] ^ sweep[:, 1])  # leftmost = q2
-    assert np.array_equal(arr[:, 2], meas[:, 3] ^ sweep[:, 0])  # same leftmost as full
-    assert 0.0 < arr[:, 1].mean() < 1.0  # plausible nonconstant bits
+    assert np.array_equal(arr[:, 0], meas[:, 3] ^ sweep[:, 0])  # data_hi=2 -> q0 (anchor)
+    assert np.array_equal(arr[:, 1], meas[:, 3] ^ sweep[:, 0])  # data_hi=2 -> SAME reference
+    assert np.array_equal(arr[:, 2], meas[:, 4] ^ sweep[:, 1])  # data_hi=1 -> q2
+    assert np.array_equal(arr[:, 0], arr[:, 1]), "units sharing data_hi share the column"
+    assert 0.0 < arr[:, 2].mean() < 1.0  # plausible nonconstant bits
 
 
 def test_pin_p1b_units_synthetic_roundtrip(tmp_path):
     ds, _, _ = _write_synthetic_ds(tmp_path)
-    result = m4_decode.pin_p1b_units(ds, "X", extra_units=[(1, 2)], chunk_shots=50)
+    result = m4_decode.pin_p1b_units(ds, "X", extra_units=[(1, 2), (0, 1)], chunk_shots=50)
     assert result["passed"] and result["bit_exact"] and result["spec_match"]
     assert result["full_unit"] == (0, 2)
     assert result["mismatched_shots"] == 0
-    row = result["extra_units"][0]
-    assert row["unit"] == (1, 2) and row["nonconstant"]
+    assert result["full_unit_reference_record"] == result["anchor_record"] == 3
+    row_hi, row_lo = result["extra_units"]
+    # (1, 2) shares data_hi with the full chain => same reference, same bits
+    assert row_hi["unit"] == (1, 2)
+    assert row_hi["reference_record"] == result["anchor_record"]
+    assert row_hi["identical_to_full"]
+    # (0, 1) references grid slot 1 = q2 (record 4): mapped, != anchor
+    assert row_lo["unit"] == (0, 1) and row_lo["nonconstant"]
+    assert row_lo["reference_record"] == 4 and row_lo["reference_qubit"] == 2
+    assert row_lo["reference_record"] != result["anchor_record"]
+    assert not row_lo["identical_to_full"]
 
 
 def test_unit_actual_observables_heldout_refusal(tmp_path):
@@ -532,25 +592,34 @@ def test_hw_p1b_observable_bitexact_sample00():
 
 @requires_hw
 def test_hw_p1b_units_fullchain_crosscheck_sample00():
-    # FIX ROUND (reviewer item 2): (a)-class cross-check -- the per-unit
-    # construction at unit == full chain (0, 28) reproduces obs_flips_actual
-    # bit-exactly, and its position-0 spec is IDENTICAL to the P1b spec.
-    # Sub-unit (17, 21) = window 16's data qubits: plausible nonconstant bits.
+    # FIX ROUND (observable axis, ruling 15a): (a)-class cross-checks --
+    # (i) the full-chain unit (0, 28) reproduces obs_flips_actual bit-exactly
+    #     (data_hi = 28 resolves to the release anchor record through the
+    #     measured map -- the existing 0/100,000 pin, unchanged);
+    # (ii) ORIENTATION pin: sub-unit (24, 28) shares data_hi = 28 => the SAME
+    #      reference as the full chain => its column equals the full-chain
+    #      bits exactly (cheap, decisive);
+    # (iii) sub-unit (0, 4) references grid slot 4 -- the mapped record,
+    #       asserted != anchor and == unit_grid_map's resolution.
+    from qec_twin.hardware import dataset as ds_module, stim_artifacts
+
     ds = RepCodeD29.from_env()
     for basis in BASES:
-        result = m4_decode.pin_p1b_units(ds, basis, extra_units=[(17, 21)])
-        row = result["extra_units"][0]
+        result = m4_decode.pin_p1b_units(ds, basis, extra_units=[(24, 28), (0, 4)])
+        row_hi, row_lo = result["extra_units"]
         print(
             f"P1b-units {basis}/sample_00 via {result['circuit_used']}: "
             f"spec_match={result['spec_match']} bit_exact={result['bit_exact']} "
             f"mismatches={result['mismatched_shots']}/{result['total_shots']} "
             f"anchor=rec{result['anchor_record']} sweep_ref={result['anchor_sweep_ref']}; "
-            f"sub-unit {row['unit']}: mean={row['mean']:.4f} "
-            f"nonconstant={row['nonconstant']}"
+            f"(24,28): ref=rec{row_hi['reference_record']} "
+            f"identical_to_full={row_hi['identical_to_full']}; "
+            f"(0,4): ref=rec{row_lo['reference_record']} q{row_lo['reference_qubit']} "
+            f"mean={row_lo['mean']:.4f} nonconstant={row_lo['nonconstant']}"
         )
         assert result["num_data"] == 29 and result["full_unit"] == (0, 28)
         assert result["spec_match"], (
-            f"P1b-units {basis}/sample_00: per-unit position-0 spec diverges from "
+            f"P1b-units {basis}/sample_00: per-unit anchor spec diverges from "
             "the P1b full-chain spec"
         )
         assert result["bit_exact"], (
@@ -559,8 +628,24 @@ def test_hw_p1b_units_fullchain_crosscheck_sample00():
             f"(first at {result['first_mismatch_shot']})"
         )
         assert result["passed"]
-        assert row["nonconstant"], "window-16 sub-unit observable constant -- implausible"
-        assert 0.0 < row["mean"] < 1.0
+        assert result["full_unit_reference_record"] == result["anchor_record"]
+        # (ii) the data_hi = 28 sub-unit IS the release observable, bit-for-bit
+        assert row_hi["unit"] == (24, 28)
+        assert row_hi["reference_record"] == result["anchor_record"]
+        assert row_hi["identical_to_full"], (
+            "(24, 28) shares data_hi = 28 with the full chain -- its observable "
+            "column must equal the full-chain bits exactly (ruling 15a)"
+        )
+        # (iii) the data_hi = 4 sub-unit references the MAPPED slot-4 record
+        ideal = stim_artifacts.load_circuit(ds.paths(basis, 0).circuit_ideal)
+        gmap = m4_decode.unit_grid_map(
+            ideal, ds_module.metadata_qubit_order(ds.load_metadata(basis, 0))
+        )
+        assert row_lo["unit"] == (0, 4)
+        assert row_lo["reference_record"] == gmap.slot_to_record[4]
+        assert row_lo["reference_record"] != result["anchor_record"]
+        assert row_lo["nonconstant"], "slot-4 sub-unit observable constant -- implausible"
+        assert 0.0 < row_lo["mean"] < 1.0
 
 
 @requires_hw
