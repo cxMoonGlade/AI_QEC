@@ -1379,6 +1379,24 @@ halt, BEFORE any held-out byte was read)
     construction/guard failures can never again consume the pass. m4_report.py is not in
     the G2 pinned source set (runner, not composition); no hash re-pin needed.
 
+22. **(2026-06-11, third held-out halt — EXTERNAL infrastructure kill; attempt reset #3;
+    kill-surface hardening.)** Attempt #3 cleared every guard (G4 all arms incl. the
+    previously false-tripping saturated values; A3c geometry [] both bases — rulings 19/21
+    verified live) and entered the committed decode; ~30–45 min in, the ENTIRE VM-side
+    process tree died with zero output: kernel log shows a sustained dxg (GPU paravirt)
+    ioctl-failure storm — a Windows-side GPU/driver event — and the harness-side task
+    wrapper vanished without a completion event; the wsl_guard's relay-death watch then
+    reaped the decode tree exactly as designed (no orphans — the coupling worked, and
+    thereby propagated the infrastructure kill). Evidence of zero extraction: no npz file,
+    empty stdout, payload null; CUDA healthy again on a fresh context. Reset #3 sanctioned
+    (same zero-information basis as ruling 21). **Hardening:** (i) the held-out decode runs
+    with CUDA MASKED (`CUDA_VISIBLE_DEVICES=""`) — decoding is the ratified CPU evaluator;
+    the cache load gains `map_location="cpu"` (value-identical parameter reads) — no GPU
+    driver event can touch the pass; (ii) for THIS one-shot-credit command the guard's
+    relay-death watch is disabled (`WSL_GUARD_NO_RELAY_WATCH=1`, timeout-only self-expiry)
+    — a mortal Windows wrapper must not be a kill vector for the once-only pass; deliberate
+    stops (signal trap) still reap.
+
 #### SEAM-TEST PRE-RUN AMENDMENT 3 (execution amendment, registrar, 2026-06-10 — BEFORE any production stage; M3 amendment-7 precedent)
 
 Basis: the post-fix re-review (`build_R2_seam_postfix_review.md` item B) proved the

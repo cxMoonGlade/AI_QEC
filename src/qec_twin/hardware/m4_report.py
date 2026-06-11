@@ -1991,7 +1991,10 @@ def _load_fit_cache(path: str | Path) -> dict:
             f"frozen M3 fit cache not found: {path} (M4 consumes the frozen cache; "
             "zero new twin fits ever)"
         )
-    return torch.load(path, weights_only=False)
+    # map_location="cpu": value-identical (pure parameter reads); lets the
+    # CPU-only held-out decode run with CUDA masked (ruling 22 hardening —
+    # a GPU driver event killed attempt #3's CUDA-context-holding parent).
+    return torch.load(path, weights_only=False, map_location="cpu")
 
 
 def _unit_key(kind: str, *parts) -> str:
