@@ -1630,8 +1630,11 @@ SIM_ROUND_TRIP_RULE = {
     "production": (
         "exact enumeration unavailable (predicted_ler = NaN, declared); the "
         "G4 role is the PIPELINE check, all components (c): decoded LER on "
-        "self-sampled shots must be FINITE, sane (inside the open interval "
-        "sane_ler_bounds), bit-exactly reproducible across two independent "
+        "self-sampled shots must be FINITE, sane (inside (lo, hi + "
+        "z*sqrt(0.25/n_shots)] -- the saturation-aware upper edge of "
+        "AMENDMENT ruling 19: a saturated probe unit sits at binomial mean "
+        "~0.5, so the literal open 0.5 edge false-trips on a healthy "
+        "pipeline), bit-exactly reproducible across two independent "
         "sample+decode runs at the same seed, and consistent with the MC "
         "estimate from a second independent sampling seed within a "
         "two-sample binomial band; any failure = pipeline bug, nothing "
@@ -1737,10 +1740,18 @@ def sim_round_trip_check(dem, n_shots: int, seed: int = M4_SEED) -> SimRoundTrip
             )
     else:
         lo, hi = SIM_ROUND_TRIP_SANE_LER_BOUNDS
-        if not (np.isfinite(sim_ler) and lo < sim_ler < hi):
+        # AMENDMENT ruling 19 (2026-06-11): a SATURATED self-sampled probe unit
+        # has binomial mean ~ 0.5 - O(e^-s), so the literal open upper edge 0.5
+        # false-trips with probability ~ 1/2 on a healthy pipeline (measured:
+        # spitz_of_twin 0.50085 at 20k shots). The sane upper edge carries the
+        # declared z-sigma binomial allowance; NaN / negative / systematically
+        # >> 1/2 still trip.
+        hi_eff = hi + SIM_ROUND_TRIP_Z * float(np.sqrt(0.25 / max(int(n_shots), 1)))
+        if not (np.isfinite(sim_ler) and lo < sim_ler <= hi_eff):
             failures.append(
-                f"production sim_ler {sim_ler:.6g} outside the open sane interval "
-                f"({lo}, {hi})"
+                f"production sim_ler {sim_ler:.6g} outside the sane interval "
+                f"({lo}, {hi_eff:.6g}] (= {hi} + {SIM_ROUND_TRIP_Z}*sqrt(0.25/n); "
+                "AMENDMENT ruling 19)"
             )
     return SimRoundTripCheck(
         scale=scale,

@@ -1334,6 +1334,32 @@ component (RX) converts them to diagonal observables in later rounds. Ruling ref
     never a band; the measured 1.83e-2 worst case sits well inside. Declared (c), recorded
     here per the silent-constant rule.
 
+#### M4 PRE-RUN AMENDMENT 3 (registrar adjudication, recorded 2026-06-11 — after the G4 guard
+halt, BEFORE any held-out byte was read)
+
+19. **G4 sanity-bound correction ((c) guard constant; the miss was a guard mis-specification,
+    not a pipeline bug).** The held-out stage's G4 sim round-trip halted on the
+    `spitz_of_twin` arm: self-sampled probe-unit LER 0.50085 outside the open sane interval
+    (0, 0.5). Measured context: the probe unit (window 1, d=5 × 1002 layers, sampled at the
+    arm's own rates) is SATURATED by construction — binomial mean ≈ 0.4995, SE ≈ 0.0035 at
+    20k shots ⇒ the open-interval check fires with probability ≈ 45% on a healthy pipeline
+    (the registration's own regime pin anticipates saturation at L ≥ 0.45). The (a)-grade
+    pipeline components PASSED on all four arms (bit-exact reproducibility; dual-seed
+    binomial consistency). Correction: the production sane interval becomes
+    (0, 0.5 + z·√(0.25/n_shots)] with the already-declared z = 5 — at 20k shots an upper
+    edge of ≈ 0.5177; genuine insanity (NaN, negative, systematically ≫ ½) still trips.
+    Declared (c), recorded here per the silent-constant rule.
+20. **Held-out attempt reset sanctioned (ruling-15a precedent).** Source-verified: the G4
+    guard executes and returns BEFORE the held-out sample loop (m4_report.py heldout stage);
+    the guard consumed only DEM-self-sampled shots + a sample_00 TRAIN dets slice; the
+    persisted attempt record carries `payload: null` and zero held-out file access. No look
+    occurred — the anti-peeking clause's object is untouched. The attempt record is reset;
+    the next held-out entry is THE one pass. The G2 COMPOSITION freeze is NOT re-opened:
+    the sane-bound constant is a decode-side guard, not a composition input — dem_compose.py
+    and the frozen-cache hashes stay pinned unchanged; the freeze record's m4_decode.py hash
+    is RE-PINNED to the post-correction source by the same sanctioned surgery, with the diff
+    summary (the ruling-19 sane-bound lines only) recorded in the surgery log.
+
 #### SEAM-TEST PRE-RUN AMENDMENT 3 (execution amendment, registrar, 2026-06-10 — BEFORE any production stage; M3 amendment-7 precedent)
 
 Basis: the post-fix re-review (`build_R2_seam_postfix_review.md` item B) proved the
