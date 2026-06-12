@@ -98,6 +98,11 @@ VM 里可能还有上一会话的 ~4 个 python 残影进程。
 
 ## 4. M4 之后的待办队列（按底层优先）
 
+> **先读 `docs/PAPER1_STRATEGY.md`**（2026-06-11 对抗性审稿演习裁决）：M4 计分后
+> 论文一进入 4–6 周投稿窗口；RA-2（逐样本重校准 pij 控制）、RA-3（归因-或-排除
+> 测试）、RA-5（全码四方 NLL，含 shipped RL 先验——需注册增补）是投稿必需项，
+> 全部天级、机器在库；dMLE A4 臂要尽力跑通而非 drop。这些在 M5 之前做。
+
 1. **缝合第二读注册**（公开注册义务，触发门控）：缝跨 re-tiling——
    G-NLL(i) + 跨 tiling item-32 + determinism item 14 的重验
    （item 14 在首读 (a) 级 miss：gradcheck 2.171e-10 vs 1e-10、跨种子
