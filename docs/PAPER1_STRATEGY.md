@@ -1,86 +1,166 @@
-# 论文一发表策略（对抗性审稿演习裁决 + 合法对比构造，2026-06-11）
+# Paper-1 publication strategy (adversarial-referee verdict + legal-comparison constructions, 2026-06-11)
 
-> 来源：三方对抗演习（辩方/控方/裁决，全文存档于 `docs/.reports/paper_panel/`：
-> `advocate_case.md`、`prosecutor_case.md`、`adjudication.md`——所有引用经
-> `docs/metric_results.md` 逐条核验）。本文件是裁决的执行摘要 + 项目负责人
-> 确认的合法对比构造方案。两篇论文的总切分见末节。
+> Source: three-party adversarial exercise (advocate / prosecutor / adjudication, archived in
+> full under `docs/.reports/paper_panel/`: `advocate_case.md`, `prosecutor_case.md`,
+> `adjudication.md` — every citation verified line-by-line against `docs/metric_results.md`).
+> This file is the executive summary of the adjudication + the legal-comparison construction
+> plan confirmed by the project owner. The two-paper split is at the end.
 
-## 判决
+## Verdict
 
-**(ii) 补齐指名增项后足够发 *Quantum*；核心发现（bunching 链）不是自嗨，
-是论文最硬资产**——控方十证物先行文献扫荡后正式认输无法贬低：
+**(ii) Sufficient for *Quantum* once the named additions land; the core finding (the
+bunching chain) is not self-congratulation — it is the paper's hardest asset.** After a
+literature sweep, the prosecution's ten exhibits formally conceded it cannot be diminished:
 
-> 恒等式精确分解 f̂ ≡ r̂·R̂（2.5e-16）→ 逐窗 split-replicated bunching 谱
-> R̂ ∈ [1.000, 17.7]（split 噪声 1.3–2.6% vs 80% 窗间异质性；w8 =
-> 17.726/17.728/17.721 三切分；w20 = 1.000 全部六拟合）→ 三腿不可能性证书
-> （P10 366–1116σ 模型无关 + A1 s_W=1 无操作控制 + T-B 定理）→
-> held-out 验证的承载模型类。文献中无人交付过前三环。
+> exact identity decomposition f̂ ≡ r̂·R̂ (2.5e-16) → per-window split-replicated bunching
+> spectrum R̂ ∈ [1.000, 17.7] (split noise 1.3–2.6% vs 80% inter-window heterogeneity;
+> w8 = 17.726/17.728/17.721 across three splits; w20 = 1.000 across all six fits) →
+> three-leg impossibility certificate (P10 366–1116σ model-free + A1 s_W=1 no-op control +
+> the T-B theorem) → a held-out-validated carrier model class. Nobody in the literature
+> has delivered the first three links.
 
-**三条承重理由**：(1) 控方让步（上）；(2) 解码先验赛道不当头条也不需要
-（Sivak 16%/dMLE 30.6% 与我方数字互相之间协议不可比；似然终点有 Quantum
-先例——Wagner Quantum 6, 809 零数据纯理论版都过线；arXiv:2512.10814 的终点
-就是 held-out 似然）；(3) K2 是抬升非设限（C0 只杀 surface bulk 的静态非幺正
-载体；多滞后 R_k 在 surface 上 K2 自评 (a, claimable)；footprint 定理本身是
-新内容；surface 复制属论文二，永不做投稿门槛）。
+**Three load-bearing reasons:** (1) the prosecution's concession (above); (2) the
+decoder-prior track neither needs nor deserves the headline (Sivak 16% / dMLE 30.6% and our
+numbers are mutually protocol-incomparable; likelihood endpoints have *Quantum* precedent —
+Wagner, Quantum 6, 809 passed as pure theory with zero data; arXiv:2512.10814's endpoint is
+held-out likelihood); (3) K2 is an uplift, not a cap (C0 only kills static non-unital
+carriers in the surface BULK; multi-lag R_k on the surface is K2 self-assessed
+(a, claimable); the footprint theorem itself is new content; surface replication belongs to
+paper 2 and is never a submission gate).
 
-## 幸存的主张架构（强制头条顺序）
+## Surviving claim architecture (mandatory headline order)
 
-1. **头条：bunching 链**（谱 + 证书 + 承载模型类，located、复制稳定、
-   恒等式精确）；
-2. **辅证：似然端**——"twin ≥ 该家族预算可行最优的 pij，located"（+56/+44
-   nats vs SI1000 如实报告但自标 ~80–125% detector-marginal——"便宜的部分"）；
-3. **殿后：解码端诚实成本核算** + A3c/G5 机制性主张（无论 M4 正负号）；
-4. miss 台账以"可证伪方法论"框架呈现（P7→A2 解剖产出 craft rule 是展品
-   不是污点）；
-5. 范围句用 K2 定理逐字写 rep-code/surface 边界（裁决书内有成稿句）。
+1. **Headline: the bunching chain** (spectrum + certificate + carrier model class —
+   located, replication-stable, identity-exact);
+2. **Support: the likelihood end** — "twin ≥ the budget-feasible optimum of the pij family,
+   located" (+56/+44 nats vs SI1000 reported honestly but self-labeled ~80–125%
+   detector-marginal — "the cheap part");
+3. **Rearguard: the decode-end honest cost accounting** + the A3c/G5 mechanistic claims
+   (whatever M4's sign);
+4. The miss ledger presented as "falsifiable methodology" (the P7→A2 dissection yielding a
+   craft rule is an exhibit, not a stain);
+5. The scope sentence quotes the K2 theorem verbatim for the rep-code/surface boundary
+   (finished sentences exist in the adjudication).
 
-## 投稿必需项（RA）
+## Required additions for submission (RA)
 
-| # | 增项 | 翻转的反对 | 量级 |
+| # | Addition | Objection it flips | Effort |
 |---|---|---|---|
-| RA-1 | M4 落地按注册计分，**无论正负号都报告**（S10/反向陷阱保护零结果） | "没有解码端" | 在跑（WSL 会话） |
-| RA-2 | **逐样本重校准 pij 的 NLL 控制**（01–04/05–09） | 漂移泛化洞（辩方唯一认输项） | 天级，机器全在 |
-| RA-3 | **一个注册的归因-或-排除测试**（burst 旗 + 瞬态 + 双基独立性已有测量） | McEwen"早已归因并缓解" | 天级 |
-| RA-4 | 协议标记语境条表 + 强制头条顺序（见下"路径 3"升级版） | "从下方进入基准" | 写作层 |
-| RA-5 | **全码四方 NLL**（新增，见路径 2） | 把 Google 自家优化先验拉进同协议 | 天级 + 注册增补 |
+| RA-1 | Land M4, scored against the registration, **reported whatever the sign** (S10 / reverse-trap protects null results) | "no decode end" | running (WSL session) |
+| RA-2 | **Per-sample re-calibrated pij NLL control** (01–04 / 05–09) | the drift-generalization hole (the advocate's only conceded item) | ~a day, machinery exists |
+| RA-3 | **One registered attribution-or-exclusion test** (burst flag + transient + dual-basis independence already measured) | McEwen "already attributed and mitigated" | ~a day |
+| RA-4 | Protocol-tagged context-bar table + mandatory headline order (see the upgraded "Path 3") | "entering the benchmark from below" | writing-layer |
+| RA-5 | **Full-code four-way NLL** (new; see Path 2) | brings Google's own optimized prior into the same protocol | ~a day + registration addendum |
 
-**增强项**（非门槛）：dMLE A4 臂真跑而非 drop（= 路径 1，优先级最高的增强）、
-rep 记录多滞后 R_k、（可选）反向桥——twin 跑 dMLE 的实例协议。
+**Enhancements** (not gates): the dMLE mid-scale bracket (= the redirected Path 1, highest-
+priority enhancement; r≈101 short windows, multiple repeats, register-then-run), rep-record
+multi-lag R_k, (optional) the reverse bridge — the twin run on dMLE's instance protocol.
 
-## 合法对比的四条构造路径（项目负责人 2026-06-11 确认方向）
+## Four legal-comparison construction paths (owner-confirmed direction, 2026-06-11)
 
-要件：同数据、同切分、同解码器、同基线构造、同度量约定。
+Requirements: same data, same split, same decoder, same baseline construction, same metric
+conventions.
 
-1. **dMLE 同协议正面对决** = M4 A4 臂本职（同训练切分/同 held-out/同冻结
-   pymatching/同窗口单元；注册许可的唯一 head-to-head，带 [−10,+10]）。
-   唯一条件：A4 跑通而非 drop——I/O 适配器合法（在我方树内，原封基线）。
-2. **全码四方 NLL**（RA-5）：I-1 零事件只杀 LER 端不杀 NLL 端；在同一批
-   held-out shots、同一声明复合边际族上打分 {SI1000, 自算 pij, **shipped RL
-   先验**, twin 缝合混合 DEM} 四方 held-out NLL——把 Sivak 团队为这份数据
-   优化的 RL 先验拉到同杆秤（其主场全码）。需要：注册增补（先注册后跑）、
-   family-NLL 机器从窗口扩到全码（M3 机器流式扩展）、公平性脚注（RL 为解码
-   而非似然优化；但"该数据集最强 shipped 先验"地位无争议）。
-3. **协议换算框架**（RA-4 升级为方法学小贡献）：16%/30.6%/+1.5% 互相皆不可
-   比；我方持有精确换算恒等式（c(s)、ε̂ 反演、Λ̂ 阶梯）。做法：我方结果多
-   工作点 (d′,T) 并列报告（展示接近协议不变的 per-round ρ）+ 已发表数字在
-   声明假设下的换算语境表（标 context 非 claim）。
-4. **当基准的主人**：Sivak/dMLE 均未在该公开释放上交付可复现管线；我方有
-   位精确管线锚（0/600,000）、冻结种子/哈希、五臂协议、.dem+逐边带工件、
-   console 入口——框成"Willow rep-code 释放上首个协议钉死的可复现解码先验
-   基准"。此后他法要合法对比，进的是我方协议。零实验成本，框架句。
+1. **dMLE same-protocol head-to-head → MID-SCALE BRACKET** (owner redirect 2026-06-12; the
+   M4 A4 arm closes as its registered documented-drop — all three of their fitting engines
+   measured out: the PlanarNet n² law (≈51 GiB for a single shot), the exact path's own
+   ≥15-detector gate, the TN search-stage memory lottery (S ∈ {4011, 126, 63, 17.32} across
+   four runs; any safe budget buys 2–4 trials) + a fit protocol measuring ≈8.6 days/fit even
+   at r=101; full dossier `outputs/m4_a4_dmle_attempt_dossier.md`). Replacement: **register
+   a bracket BOTH methods can run — d′=5 × r≈101 short windows** (m=408; our probes
+   certified their TN path viable there: search 672 s passes their own S<30 gate at
+   S=15.32, GPU fit step ≈3 s per 100-shot mini). Same data, same train split, same frozen
+   pymatching, layer-restricted short-window units; multiple repeats (search-seed lottery +
+   fit-init seeds + windows); **registration addendum BEFORE any run** (prediction bands +
+   fairness clauses: declared pij warm init, declared NLL-plateau stopping rule as an
+   execution constant, per-repeat seed log); sequenced after the M4 close. G9's
+   cross-protocol language ban stands.
+2. **Full-code four-way NLL** (RA-5): the I-1 zero-event finding kills only the LER end,
+   not the NLL end; on the same held-out shots and the same declared composed-marginal
+   family, score four-way held-out NLL over {SI1000, self-computed pij, **the shipped RL
+   prior**, the twin's seam-composed DEM} — pulling the RL prior that Sivak's team optimized
+   for THIS dataset onto the same scale (their home turf, full code). Needs: a registration
+   addendum (register-then-run), the family-NLL machinery extended from windows to the full
+   code (streaming extension of the M3 machinery), and a fairness footnote (the RL prior was
+   optimized for decoding, not likelihood; its status as "the strongest shipped prior for
+   this dataset" is uncontested).
+3. **Protocol-conversion framework** (RA-4 upgraded into a small methodological
+   contribution): 16% / 30.6% / +1.5% are mutually incomparable; we hold the exact
+   conversion identities (c(s), ε̂ inversion, the Λ̂ ladder). Deliverable: our results
+   reported at multiple working points (d′, T) side by side (showing the near-protocol-
+   invariant per-round ρ) + a conversion-context table for published numbers under declared
+   assumptions (tagged context, never claims).
+4. **Own the benchmark**: neither Sivak nor dMLE shipped a reproducible pipeline on this
+   public release; we hold a bit-exact pipeline anchor (0/600,000), frozen seeds/hashes, a
+   five-arm protocol, .dem + per-edge-band artifacts, and a console entry — frame it as
+   "the first protocol-pinned reproducible decoder-prior benchmark on the Willow rep-code
+   release". Future methods that want a legal comparison enter OUR protocol. Zero
+   experimental cost; a framing sentence.
 
-**纪律**：路径 2/3 的新比较先写注册增补（预测带 + 公平条款）再跑。
+**Discipline:** any new comparison in Paths 2/3 (and the Path-1 bracket) writes its
+registration addendum (prediction bands + fairness clauses) BEFORE it runs.
 
-## 抢发时钟
+## The scooping clock
 
-**以月计**：arXiv:2512.10814（2025-12）已在同数据用同度量观察到我方证书
-对应的症状；dMLE 2026-02 在印。裁决：**M4 计分后 4–6 周内投稿；RA 补齐
-即挂 arXiv 占位**。
+**Measured in months**: arXiv:2512.10814 (2025-12) already observes, on the same data with
+the same metric, the symptom our certificate explains; dMLE has been in press since 2026-02.
+Adjudication: **submit within 4–6 weeks of M4 scoring; post the arXiv placeholder as soon as
+the RA list lands.**
 
-## 两篇论文总切分（此前已与负责人确认）
+## The two-paper split (previously confirmed with the owner)
 
-- **论文一（小，先发，本文件的对象）**：M1–M4 硬件弧，bunching 链领衔，
-  目标 *Quantum*。不放 do()、不放载体、不放 footprint 全理论。
-- **论文二（大，后发）**：M5 漂移 + surface 窗（L1–L3 门控）+ 组合载体 +
-  K2 footprint 定理 + 受控反事实环（do() 全弧）+ 缝合双读。理论骨架现在
-  即可动笔，实验腿按 ADR 0007/0008 序列补。
+- **Paper 1 (small, first, this file's subject)**: the M1–M4 hardware arc, bunching chain
+  in the lead, target *Quantum*. No do(), no carrier, no full footprint theory.
+- **Paper 2 (large, later)**: M5 drift + surface windows (L1–L3 gated) + the composed
+  carrier + the K2 footprint theorem + the controlled counterfactual loop (the full do()
+  arc) + the seam second read. The theory skeleton can be drafted now; the experimental legs
+  follow the ADR 0007/0008 sequence.
+
+## Future direction: real-time adaptive-prior / streaming monitor (Paper-2 `predict` capstone)
+
+> Owner question (2026-06-12): can this become real-time, given the model is already built
+> and only the live context window is new? Answer: YES at the ms–s adaptive-prior layer (NOT
+> the µs decode-loop layer — that is the FPGA-blossom domain, Riverlane/Google; we do not
+> compete there and do not need to). This is the natural online-ization of the `predict`
+> capability — a recorded future direction, trigger-gated, never a near-term gate.
+
+**Why it is feasible with what we already have.** The expensive object — the CPTP fit
+(~10–20 s GPU/window) — is OFFLINE; its product is STRUCTURE (which functionals are
+identifiable [the craft rule], where the gauge lives, how wide the bands are). The quantities
+a decoder actually consumes at run time are exactly the identified coordinates
+(r̂, R̂_k, q̂eff), and every one of them has a FIT-FREE closed-form estimator:
+- r̂, q̂eff = streaming pair-count accumulators + the Spitz-class identities (XOR + counters,
+  FPGA-friendly, O(1)/shot);
+- R̂_k = the seam test already DEMONSTRATED fit-free two-block-marginal readout at exact grade
+  on controlled truth (Δ ≤ 5e-8);
+- f̂ = r̂·R̂ and the rest are (a)-class closed forms.
+So: the offline twin answers "WHAT to measure, HOW, and to how many digits"; the online layer
+just counts inside a sliding window.
+
+**Why the time scales match.** Prior updates do not need µs — drift is a seconds/minutes/hours
+phenomenon (measured: 43–46 nats/shot/window inter-sample; set1 ships 16 sequential
+experiments over 15 h), TLS is minutes, leakage/cosmic-ray bursts are ms-scale EVENTS that
+need DETECTION not recalibration (the MAD burst-flag machinery already exists). A ms–s prior
+refresh suffices; the DEM-weight update is a log((1−p)/p) recompute + the A3c reweight rule —
+already-built machinery.
+
+**The one real physical cost (stated honestly).** Statistical latency. M3 pinned R̂ to
+1.3–2.6% with ~10⁵ shots/window; shrinking to ~10³ shots (tens-of-ms-scale streams) degrades
+R̂ precision ~×10 → ~15–25% — coarse for fine drift tracking but ample for burst detection
+(R̂ jumping 1 → 17). The precision–latency curve is itself a publishable figure.
+
+**Roadmap (≈ M5 + an online `predict` module; mostly already-done legs):**
+1. offline per-window identified-coordinate dictionary + fit-free estimator validation —
+   LARGELY DONE (A2/A3, the seam R_det readout);
+2. streaming estimators with a forgetting factor + change-point/burst detection (MAD flag
+   exists);
+3. prior-update rule → DEM weights / A3c two-pass parameters (machinery exists);
+4. latency–precision trade-off measured — **set1's 15 h of drift data is the purpose-built
+   testbed** (the M5 proper);
+5. an embedded-feasibility note (counters + a few flops — a natural FPGA side channel).
+
+**Differentiation.** Nobody has published a streaming identifiable-functional prior updater
+WITH honest uncertainty bands; Google itself only recalibrates pij between experiments. The
+project's identifiability theory answers the question an online system most fears — "is the
+quantity you are streaming actually identifiable, or a fiber artifact?" (the P7→A2 lesson,
+now load-bearing). This is the sharpest industry-differentiation cell of the toolkit goal.
