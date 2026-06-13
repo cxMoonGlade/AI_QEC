@@ -1849,3 +1849,24 @@ exclusions {9,10}/{9}. Conclusion classes echoed per row. No (c) item used as a 
 transfer through independent edges" is PROVISIONAL-but-decisive: reportable, go/no-go usable (it
 gates ADR 0008 priority up), but no definition/derivation/design takes it as a premise until the
 carrier study tests the mechanism. The M3 headline (bunching chain) stands independent of this null.
+
+---
+
+### CF-WR PRE-REGISTRATION (FROZEN 2026-06-14) — ledger stub
+
+**Full of-record registration moved to its own self-contained home: `docs/cf_wr/`**
+(README index → `registration.md` design, `P2_derivation.md` P2 (a)-basis). Indexed here as a frozen ledger
+entry; the immutable constants/bands/gates live of-record in `docs/cf_wr/registration.md`. **miss = finding.**
+
+- **Object (ADR 0008 C1).** Exact 2×2 windows + principled gluing reconstruct the exact global noise-channel
+  Choi state; routes M4's PROVISIONAL negative → GO (carrier path) or this-correlation-class PROVISIONAL
+  ceiling (NO-GO). sim/teacher-only; no hardware / held-out 05–09 / escrow 15–19.
+- **Frozen constants.** Teacher = 12q 2D non-unital T-B lattice toy (NOT surface-faithful), R̂∈{1,2,3,5.3,8,12}
+  (5.3 = M3 hardware-matched core), signed δ′ coordinate, seed 20260614, teacher sha256 pinned in
+  `outputs/cf_wr_teacher.py` pre-run. Co-primary AND-gate: D_Choi ≤ τ_D=0.5×√(I_nats) **and**
+  E_do(`knob_dler_error`) ≤ τ_E=0.1×|ΔLER_true|. Bound D_Choi^{G1} ≤ √(I_nats)=√(ln2·I_bits). c≡c_{G1}/c_{G0}<1
+  is **(b), decoupled from GO**. Three reviewer passes cleared it (2 physics errors + (a)/(b) mislabel + √2
+  constant + 2 arithmetic, all fixed).
+- **Reporting discipline.** Raw D_Choi(R̂)/ξ*/c lead; GO/NO-GO is a derived label; a 12q-toy GO does NOT
+  transfer to d5/d7 (bounded claim).
+- **Status.** Frozen; build (4 scripts, ≥3 agents each) pending. See `docs/cf_wr/README.md`.
