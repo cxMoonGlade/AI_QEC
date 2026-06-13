@@ -156,6 +156,19 @@ explore-then-rationalize.
 | M4 | Emit a twin-calibrated `.dem`; frozen pymatching yields statistically significant %ΔLER vs (a) naive prior (required to continue) and (b) pij prior (headline target; dMLE 30.6% is the published rep-code bar) | no ΔLER win over pij | report honestly alongside the deliverables no competitor emits — per-edge bands, abstain flags, drift trajectories, non-Pauli residual maps; the twin's differentiation shifts to the uncertainty + drift + (sim-validated) counterfactual legs |
 | M5 | Drift slice: sample-indexed per-window parameter trajectories; forecast next-slice NLL; **finite-sample band coverage with per-window estimation error propagated** (errors-in-variables / weighted regression — Gate B's requirement, pre-registered here; no nominal-coverage claim without it). A pass is "measured empirical coverage on hardware slices"; `predict` remains first-cut — **neither Gate B nor the H4 controlled-sim gate is satisfied by M5** | no resolvable drift signal or coverage miss | drop the H4-on-real-data claim; M1–M4 stand |
 
+**Outcomes as landed (full scores in `docs/metric_results.md`):** M1 ✅ (bit-exact ingestion
+parity), M2 ✅ (window closure adjudicated, 19 clean windows), M3 ✅ (held-out syndrome NLL gate
+PASSES both bases, +56/+44 nats; located bunching certificate). **M4 (2026-06-13) landed on its
+pre-registered fallback branch — "no ΔLER win over pij":** the gate REVERSED (both calibrated DEM
+priors decode ~40% WORSE than the shipped SI1000 prior; %ΔLER twin-vs-naive −40.3%/−40.7% vs the
++10% bet), the headline twin-vs-pij is in band at ≈0, and the covariation is NULL — the M3 syndrome
+advantage does NOT transfer to MWPM decoding through the independent-edges DEM (PROVISIONAL, no
+mechanism attribution; S10 routing). Exactly this row's fallback executes: report honestly + ship
+the deliverables no competitor emits (per-edge Tier-0 bands, abstain flags, per-window twin `.dem`s,
+stitched hybrid DEM + seam audit, drift trajectories), and the differentiation shifts to the carrier
+study + uncertainty/drift legs. A4 dMLE = documented-drop (redirected to a registered r≈101 bracket).
+The decode-end null is now the strongest LER-level motivation for the ADR 0008 composed carrier.
+
 **5. Ledger the industry metrics.** METRICS.md gains a hardware-data section (forced
 ladder: **rung 2** — frontier-standard, researched 2026-06-09 — for the
 experiment/noise-model metrics; **finite-sample hardware restatements** of two

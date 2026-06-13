@@ -1397,6 +1397,147 @@ halt, BEFORE any held-out byte was read)
     — a mortal Windows wrapper must not be a kill vector for the once-only pass; deliberate
     stops (signal trap) still reap.
 
+23. **(2026-06-11, fourth held-out halt — USER-DIRECTED termination for session migration;
+    attempt reset #4.)** Attempt #4 cleared every train-side guard a second live time (G4 all
+    four arms; A3c geometry `[]` both bases — `outputs/m4_state/heldout_guards_{X,Z}.json`,
+    the rulings-19/21 hardenings re-verified), persisted `begin_heldout`
+    (started 20260611T122429Z, after all train-side construction + guards per ruling 21(iii)),
+    and entered the committed decode; the user then MANUALLY terminated the prior session's
+    entire process tree to migrate execution off the Windows-side `wsl.exe` RPC boundary —
+    the kill surface behind ruling 22 — into a WSL-native session. Evidence of zero
+    extraction (re-verified in the native session BEFORE this ruling): zero
+    `heldout_*_s*.npz` statistic files, `payload: null`, `completed: null`, no score
+    artifact. Same zero-information basis as rulings 21/22 — no held-out statistic ever
+    existed to see; the anti-peeking clause's object is untouched. Reset #4 sanctioned; the
+    next held-out entry is THE one pass. **Execution change only (no source change):**
+    attempt #5 runs WSL-NATIVE — no RPC wrapper, no `wsl_guard` (the relay-watch kill vector
+    is moot under native process-tree semantics); the ruling-22 decode-side hardenings REMAIN
+    in force (CUDA masked via `CUDA_VISIBLE_DEVICES=""`; cache `map_location="cpu"`). No
+    pinned source touched; no hash re-pin; the G2 composition freeze stays closed.
+
+24. **(2026-06-11, recorded MID-PASS — execution-wrapper disarm; zero contact with the
+    committed pass.)** Attempt #5 entered the committed decode at 12:49:17Z with the relaunch
+    command's session-infra `timeout 10800` armed (set under the 1–2 h estimate). Measured
+    mid-flight (read-only `/proc` + CPU accounting; no process, source, or data touched): the
+    decode fleet's effective concurrency collapses to the first 4–5 spawn workers online — 16
+    workers spawn-import simultaneously, the import winners drain the chunksize-1 task queue,
+    late workers find it empty and idle for the pool's lifetime — so per-sample wall ≈ 2.5 h
+    and the first statistic file lands ≈ T+2.5 h, ≫ the 3 h wrapper. An armed wrapper would
+    have SIGTERMed the pass mid-sample-2 with one npz already on disk — a PARTIAL-extraction
+    kill, destroying the zero-information reset basis rulings 20–23 preserved. Adjudication:
+    the wrapper is SESSION INFRASTRUCTURE (the rulings-22/23 class: relay watch, RPC wrapper),
+    never a registered quantity; "a mortal wrapper must not be a kill vector for the once-only
+    pass" (ruling-22 language). Disarmed by SIGKILL to the `timeout` PID ALONE — SIGKILL is
+    unforwardable, whereas SIGTERM is trapped and FORWARDED by `timeout(1)` and would have
+    killed the child; the decode PID verified alive (reparented), stdout/tee channel intact,
+    `npz = 0` re-verified at disarm. The concurrency pathology is recorded as an EXECUTION
+    finding only (never a result): the registered pipeline is structurally sound and the pass
+    grinds to completion unmodified; any throughput fix belongs to a future registered cut,
+    never to this frozen pass. **[Same-day correction, ~13:30: the concurrency MECHANISM as
+    first written (spawn-import race starving the task queue) was WRONG — rchar/wchan
+    accounting shows every worker consumed tasks (1–2 × ~50 MB pickles each) and then parks
+    on the legitimately drained queue; the true cause is long-tailed JOB GRANULARITY
+    (two_pass ≈ 25 CPU-min and gate ≈ 9.6 CPU-min tails dominate the wall after ~2–3-min
+    static jobs clear 16-wide). The disarm decision is unaffected: measured per-sample wall
+    2 h 21 m (sample boundaries 08:10:12 / 10:31:10 / 12:53:29) ≫ the wrapper budget under
+    either mechanism. Score-stage-only fix prepared as ruling 25
+    (`outputs/m4_ruling25_proposal.md`, applied only after held-out completion).]**
+
+26. **(2026-06-12, fifth held-out halt — EXOGENOUS system OOM mid-pass with PARTIAL
+    statistics on disk; attempt reset → #6 under a determinism/bit-identity protocol;
+    concurrent-experiment prohibition.)** Attempt #5 had completed 7 of 10 (basis, sample)
+    units (X s05–s09, Z s05–s06; last npz 2026-06-11 22:49:01 local) when an
+    A4-preparation background job (the dMLE TN-route probe: cotengra contraction-path
+    search on a SYNTHETIC d=5 r=1001 instance — zero dataset contact) exploded host RAM;
+    WSL froze and was restarted twice by the user (~00:0x–00:33 local 06-12); the decode
+    died inside Z/s07 with its statistics IN MEMORY ONLY. Evidence: exactly 7 npz, every
+    mtime ≥ 1.7 h before the kill window (boundary-clean at sample granularity; no partial
+    file); `payload: null`, `completed: null`. **Departure from rulings 20–23: this is NOT
+    a zero-information reset — 7 statistic files exist.** Sanctioned instead on three
+    pillars: (i) EXOGENEITY — the kill chain (synthetic-probe RAM → OS death → user
+    restart) is independent of every held-out data value; no attempt-survival selection on
+    the data is possible; (ii) ZERO OBSERVATION — no agent or human ever loaded any npz
+    content (audit trail: the heartbeat watch globs filenames only; session access was
+    `ls` metadata and sha256 hashing only; the score stage never ran; no statistic was
+    computed from any held-out array); (iii) DETERMINISM — the decode is a fixed function
+    of the frozen DEMs and the sample bytes (deterministic MWPM, fixed chunking, no RNG):
+    re-evaluation can extract nothing new. **Protocol:** the 7 pre-crash files are
+    sha256-archived BEFORE surgery (`outputs/m4_state/ruling26_precrash_hashes.json`);
+    the stage is surgically re-opened and attempt #6 re-runs the REGISTERED runner
+    verbatim (full 10-unit pass — no resume path is invented); at completion the
+    re-decoded 7 units MUST be bit-identical to the archive (file sha256; declared
+    fallback if container metadata differs: per-member zip CRC table — both content-blind
+    in the adaptive sense). Identity ⇒ the incident converts into an end-to-end real-data
+    decode-determinism certificate; ANY mismatch ⇒ HALT + registrar escalation (the
+    determinism pillar — and with it this reset's basis — would be falsified).
+    **Hardening (as amended same-day by the project owner — budgeted concurrency, not
+    prohibition):** concurrent experiments during a committed pass are PERMITTED only
+    under a hard, enforced memory budget sized so the worst case cannot threaten the
+    pass: (i) every experiment runs under a tree-RSS watchdog (`outputs/memguard.py`,
+    no-root cgroup substitute: poll the process tree's resident set, SIGKILL the
+    EXPERIMENT at the declared cap — 20 GiB default against the 70 GiB VM with the
+    decode's ~12 GiB + OS headroom); (ii) GPU-side allocations in our harness scripts
+    declare `torch.cuda.set_per_process_memory_fraction` caps (the decode itself stays
+    CUDA-masked per ruling 22, so a GPU event cannot reach it); (iii) CPU niceness ≥ 10.
+    A guard kill is itself a measurement (documents the experiment's requirement),
+    never an incident. Banked before the amendment: the PlanarNet infeasibility
+    certificate (5-point measured power law k≈1.99 ⇒ single-shot ≈51 GiB > the 32 GiB
+    device; their own mini-batch lever cannot reach B=1) and the TN-route plan (their
+    sycamore real-data path loads `.dem` files directly). No pinned source touched; no
+    hash re-pin; the G2 composition freeze stays closed.
+
+27. **(2026-06-12, attempt #6 deliberately stopped at ZERO new statistics —
+    throughput-optimization reset directed by the project owner; ruling-25 slicing
+    extended to the held-out path; attempt #7.)** With the full pass rerunning under
+    ruling 26 anyway, the owner directed a throughput fix before re-grinding ~24 h.
+    Attempt #6 was stopped ~50 min into its FIRST unit's re-decode: zero new npz (all
+    7 files still carry their pre-crash mtimes and archived hashes), payload null —
+    the reset decision is DATA-BLIND by construction (no new statistic existed; the
+    old seven remain unobserved per the ruling-26 audit trail). Precedent: runner
+    edits between attempts (rulings 19–21 class; m4_report.py is NOT in the G2 pinned
+    set) + the ruling-26 archive making real-data bit-identity CHECKABLE. **Change
+    (runner-side only):** the prepared ruling-25 shot-slice splitting is wired into
+    the held-out call site as well and attempt #7 launches with `--slice-shots 20000`
+    (slice starts are multiples of chunk_shots = 10000): the long-tail jobs
+    (two_pass ≈ 25 CPU-min, gate ≈ 9.6 CPU-min) split into 5 shot-pieces each ⇒ tail
+    concurrency ~5 → ~16 on 12 cores ⇒ per-sample wall ≈ 2 h 20 m → ~1 h (estimate;
+    a miss is a schedule note, never a finding). Decode mathematics BIT-IDENTICAL
+    (chunk-aligned slice starts ⇒ worker-side decode chunks byte-identical; pieces
+    reassembled in shot order), enforced by TWO measured gates: (i) PRE-LAUNCH, the
+    train-data bench (`outputs/m4_ruling25_determinism_bench.py`, gate + window unit
+    incl. two_pass, full 100k shots) must PASS bit-equality; (ii) POST-RUN, the
+    ruling-26 sha256 audit of the 7 archived units now certifies determinism AND
+    slicing on real data — any mismatch HALTs and reverts to the unsliced runner.
+    G2 composition sources, S1–S12, the band tables, and every registered statistic
+    remain untouched. **[Execution addendum, 04:43: the 01:40 stop killed only the
+    WRAPPER — the pipeline's python ran in a different process group (`python | tee`
+    pgid ≠ outer bash pgid) and the harness exit-144 notification reinforced the
+    mis-read; the ghost decode ran 4 h 07 m under three-way core contention (vs the
+    bench + the A4 probes — fully explaining the bench's apparent 4× two_pass
+    anomaly) and was killed FOR REAL at 04:43 by its own pgid, verified by pid +
+    worker-pool death. Damage: ZERO — all 7 npz mtimes still pre-crash (the ghost
+    never completed its first sample; no file written, no statistic produced),
+    state.json surgery log intact, nothing observed. Ruling 27's zero-new-statistics
+    basis holds verbatim. Corrected stop protocol for any future kill: resolve the
+    DECODE python's own pgid (never the wrapper's), then verify by pid death AND
+    worker-pool death AND npz mtime freeze.]**
+
+28. **(2026-06-13, held-out pass #7 COMPLETE — the ruling-26 bit-identity certificate
+    DISCHARGED; (a)-exact.)** Attempt #7 (the sliced runner, ruling 25/27) completed all
+    10 (basis, sample) units at 06:55:13Z (`stages.heldout.completed`, d′\*=5, 10 files).
+    The mandatory ruling-26/27 post-run audit (`outputs/m4_ruling26_bit_audit.py`,
+    receipt `outputs/m4_state/ruling26_bit_audit.json`) re-hashed the 7 archived units
+    against `ruling26_precrash_hashes.json`: **7/7 sha256-IDENTICAL** (X s05–s09, Z s05–s06
+    — e.g. X_s05 9c9cb596…, Z_s06 96551050…). One identity discharges BOTH obligations the
+    incident raised: (i) an end-to-end real-data decode-DETERMINISM certificate — the same
+    frozen DEMs + sample bytes reproduce the identical error arrays across two attempts
+    (#5 unsliced / #7 sliced), a system OOM, two WSL restarts, and 4 days of wall clock;
+    (ii) the ruling-25/27 shot-slicing is OUTPUT-INVARIANT on real held-out data, not merely
+    on the train-data bench (which separately PASSED: 8 arrays bit-equal incl. two_pass,
+    2.90× — `outputs/m4_ruling25_determinism_bench.py`). Epistemic class **(a) exact**
+    (zero-tolerance sha256 identity). The throughput optimisation is thereby retired with
+    a stronger audit than the unsliced pass would have carried. Score proceeds.
+
 #### SEAM-TEST PRE-RUN AMENDMENT 3 (execution amendment, registrar, 2026-06-10 — BEFORE any production stage; M3 amendment-7 precedent)
 
 Basis: the post-fix re-review (`build_R2_seam_postfix_review.md` item B) proved the
@@ -1566,3 +1707,145 @@ premise). (c) constants used for go/no-go only: contamination 1e-3, at-floor 1e-
 1e-1, eigen-split 1e-7, branch cap 512. Conclusion classes echoed per item; undeclared defaulted
 to (c). One (a)-row failure (determinism item 14) recorded and left OPEN — explicitly NOT discharged,
 nothing built on it.
+
+### M4 RESULTS (run 2026-06-13, scored strictly against the 2026-06-10 pre-registration + amendments 1–3)
+
+*(One held-out pass, samples 05–09, both bases, d′\*=5, decoded under frozen pymatching==2.4.0 on
+the frozen M3 composition (G2 manifest `f63845ef…`); attempt #7, the ruling-25/27 sliced runner,
+bit-identity-certified against the pre-crash archive — ruling 28, (a)-exact. Scored table
+`outputs/m4_state/scored_table.json`; deliverables `outputs/m4_artifacts/`.)*
+
+**VERDICT: the ADR M4 GATE FAILS decisively in both bases; the HEADLINE prediction HOLDS (in band,
+≈ 0) in both bases.** Both empirically-calibrated DEM priors — the self-computed pij arm AND the M3
+twin — decode the held-out hardware ~**40% WORSE** than the shipped SI1000 circuit-level prior:
+%ΔLER(twin vs naive) = **−40.26%** (X, CI99 [−40.65, −39.86]) / **−40.73%** (Z, [−41.18, −40.27]),
+vs the registered gate band [+2,+30] central +10 (X) / [+1,+25] central +8 (Z) — the +10% bet
+reversed to −40% (a (b)-band miss = a FINDING, never citable as the bet's success). Internally
+coherent, NOT a sign artifact: the three pairwise comparisons close to <0.2 pp ((twin−pij) +
+(pij−naive) = −40.13 vs (twin−naive) −40.26, X), and McNemar is overwhelming (gate n01 naive-better
+253 404 vs n10 twin-better 105 481, p_one-sided ≈ 1.0, X). The **HEADLINE %ΔLER(twin vs pij) =
+−0.33%** (X, CI95 [−0.47, −0.18]) / **−0.60%** (Z, [−0.66, −0.53]) lands IN the registered two-sided
+band [−10,+15] / [−10,+12] (central +1.5%): twin ≈ pij at the decoder, exactly the pre-registered
+"the DEM bottleneck may compress the bunching advantage toward 0 — the compression is itself the
+measurement." **Pre-registered S10 routing fired (no rescue fitting either way):
+GATE_FAIL_CALIBRATION_DIRECTION (gate fail + P10 miss) + COVARIATION_NULL_STRUCTURAL, both bases.**
+Net reading (PROVISIONAL — no mechanism attribution; the registered "verify pins/splits first"
+obligation is discharged by the ruling-28 bit-identity certificate, all P1a–i pins green, the
+pairwise closure, and drift-context consistency): the M3 syndrome-NLL win (+56/+44 nats) and the
+located bunching certificate **do NOT transfer to MWPM decoding through the independent-edges DEM
+format** — the strongest possible LER-level back-edge to ADR 0008 (carrier study) and H3. This is
+the registered REARGUARD "honest decode-end cost accounting," not the paper's headline (the M3
+bunching chain, untouched).
+
+**Machinery (all gates green; isolation + determinism intact).** Order freeze honored end-to-end
+(pins → freeze → pilot → select_rung → p10_forecast → floor_check → ONE held-out pass → scoring →
+artifacts). G2 composition freeze never reopened (manifest `f63845ef…`, source hashes pinned). The
+held-out pass ran exactly once over 05–09 (escrow 15–19 never opened; 01–04 decoded only in scoring,
+post-pass, as design-contaminated context). Ruling-28 audit: the 7 pre-crash units re-decoded
+sha256-IDENTICAL — an end-to-end real-data decode-determinism certificate AND proof the ruling-25/27
+slicing is output-invariant. Operating point in band: d′=5, T=1000, p̂(naive) 0.147 (X)/0.143 (Z),
+c(ŝ) 0.836/0.841, ε̂ ≈ 1.7e-4; none unpowered (p̂ < 0.45). Burst-shot MAD flag: 0 shots flagged
+(both bases). A4 dMLE = documented-drop (run-unmodified-or-drop, ratified R4): none of the three
+upstream engines runs unmodified at the window instance within the hardware envelope
+(`outputs/m4_a4_dmle_attempt_dossier.md`); comparison redirected to a registered r≈101 mid-scale
+bracket post-M4 (owner 2026-06-12); G9 cross-protocol ban stands.
+
+**Scored predictions (measured X / Z; registered; verdict).**
+
+| # | Measured (X / Z) | Registered | Verdict |
+|---|---|---|---|
+| PRIMARY-1 GATE twin-vs-naive | −40.26% [−40.65,−39.86] / −40.73% [−41.18,−40.27] | >0 @ 99%; band [+2,+30] / [+1,+25] | **FAIL both — reversed; finding** |
+| PRIMARY-2 HEADLINE twin-vs-pij | −0.33% [−0.47,−0.18] / −0.60% [−0.66,−0.53] | two-sided [−10,+15] / [−10,+12], central +1.5% | **in band both ✓** (compression-to-0) |
+| pij vs naive | −39.80% / −39.89% | [+2,+25] | **miss both — finding** (calibrated < shipped) |
+| G5 covariation ρ(%Δ,R̂\|r̂) | −0.438 p_perm 0.955 / −0.016 p_perm 0.529 | ≥0.4 one-sided, α=0.01 | **null both → structural (S10)** |
+| located signs {8,9,16,17}>0,{20,21}≤0 | 2/6 / 4/6 | 6/6 | **miss** (controls {20,21} held; hot-window signs failed) |
+| P10 predict-before-measure | 26.3% / 36.8% in [0.5,2] | ≥75% | **miss both — finding** |
+| window regime pin | 17/19 (excl sat {9,10}) / 18/19 (excl {9}) | ≥16/19 in [0.005,0.45] | pass both ✓ |
+| drift spread (M5 feed) | 3.73% / 6.22% | [2,40]% | in band both ✓ |
+| A3c two-pass vs static (high-R) | +1.14% [q01 1.10] / +0.71% [q01 0.68] | +[0,8]%, ~0 on w20/w21 | **in band both ✓, sig @99%** (the one decode-side positive) |
+| A3b Spitz-of-twin (claim-sep) | twin−A3b +17.70 / +24.28; A3b−pij −22.31 / −32.44 | no band (CIs reported) | reported |
+| full-code RL XOR / 1e5 | 0 / 0 | [0,10] | in band both ✓ |
+| dMLE conditional | documented-drop | run-unmodified-or-drop (b) | dropped (evidence dossier) |
+| reverse trap | applies (NLL↛LER) | pre-registered (b) | noted — but −40% ≫ "small" |
+
+**Findings (the milestone's real output — located, no mechanism attribution, registered routing applied; PROVISIONAL).**
+
+1. **Both empirically-calibrated DEM priors decode ~40% worse than the shipped SI1000 prior**
+   (gate −40% both bases; pij-vs-naive −40% both bases; twin ≈ pij). Absolute held-out LER: naive
+   ≈ 0.147 (X)/0.143 (Z), pij ≈ twin ≈ 0.206/0.202. The pre-registered derivation note anticipated
+   that the naive arm's NLL deficit "largely does NOT transfer" because MWPM depends on weight
+   ratios, not absolute likelihoods; the OBSERVED effect is stronger — the calibrated weight
+   structure decodes actively worse, not merely neutrally. PROVISIONAL reading (routed, not
+   attributed): forcing the measured marginals/bunching into an independent-edges DEM distorts the
+   weight-ratio structure MWPM relies on, relative to SI1000's internally-consistent circuit-derived
+   ratios. The M3 P10 certificate (the pij matrix + marginals are JOINTLY UNREALIZABLE by
+   independent edges, 366–1116σ) is the registered structural reason this was a live fork. Routing
+   (S10, verbatim): "verify pins/splits" (discharged: ruling-28 bit-identity, pins green, closure,
+   drift consistency) → genuine → ADR fallback (publish the negative + the deliverables no
+   competitor emits).
+2. **The bunching advantage does NOT transfer to LER through the independent-edges format**
+   (HEADLINE twin-vs-pij in band at ≈0 both bases; G5 covariation NULL both bases, drop-stable;
+   located hot-window signs {8,9,16,17}>0 missed 4/4 in X and 2/4 in Z). The covariation-null +
+   intact-M3-NLL-structure combination routes (S10, verbatim) to "structural finding to ADR 0008 /
+   H3 (bunching does not transfer through independent edges even via dt-tails)." The twin's edge over
+   pij at the syndrome-statistics level (M3) is real but is COMPRESSED to zero at the decoder — "the
+   compression is itself the measurement." This is the registered diagnosis fork's structural arm,
+   now confirmed at the LER level: it is the direct experimental motivation for the ADR 0008 composed
+   coherent carrier (the independent-edges DEM cannot cash in the bunching knowledge).
+3. **P10 predict-before-measure missed in both bases** (26%/37% of windows with measured/predicted
+   ∈ [0.5,2] vs ≥75% required). The train-fitted GPU-MC twin forecast (recorded BEFORE the held-out
+   pass, sha-pinned) systematically mis-estimated absolute window LER. Routed (S10) to the
+   "calibration wrong direction" label; the absolute-LER MC calibration is a (b) miss = finding, NOT
+   a held-out-information leak (the forecast was frozen pre-pass). No mechanism attributed; recorded
+   for follow-up. Does not touch the relative (pairwise %Δ) comparisons, which are the primaries.
+4. **A3c two-pass is the single significant decode-side positive** (+1.14% X / +0.71% Z on high-R̂
+   windows, one-sided 99%, in the registered [0,8]% band; negative controls w20/w21 near-zero on Z;
+   X controls +0.23/+0.48% slightly above zero, reported). A model-implied two-pass correction
+   extracts a small but real LER gain on exactly the high-bunching windows — consistent with the
+   bunching being physically present and exploitable by a NON-independent-edges decode step, even as
+   the independent-edges DEM itself cannot carry it (findings 1–2). The cleanest forward pointer to
+   the carrier study.
+5. **Inter-sample drift in band** (per-sample %ΔLER spread 3.7% X / 6.2% Z ∈ [2,40]; OLS slopes
+   ≈ 0, no monotone trend). The drift-context samples 01–04 reproduce the held-out gate (−36 to
+   −40%) and headline (−0.2 to −0.8%) — the −40% gate is stable across samples, not a 05–09 artifact.
+   M5 (sample-indexed) is the registered consumer. No coverage claim.
+
+**Claim discipline (G9 template, applied; the negative stated plainly).** Under frozen
+pymatching==2.4.0, on held-out shots (samples 05–09), at the registered (d′=5, T=1000) subsampled
+protocol: the twin-calibrated DEM prior yields a decoded logical-error CHANGE of −40.3% (X, CI99
+[−40.65,−39.86], p̂=0.147, c(ŝ)=0.836) / −40.7% (Z, [−41.18,−40.27], p̂=0.143, c(ŝ)=0.841) vs the
+shipped SI1000 circuit-level prior — i.e. it does NOT reduce the held-out LER; the shipped prior
+decodes better. Against the self-computed pij prior the change is −0.33% (X) / −0.60% (Z) — twin and
+pij are indistinguishable at the decoder. FORBIDDEN and not made: "improves the hardware," "reduces
+the LER of the d=29 code," any mechanism attribution, do()/counterfactual wording, "fits the device,"
+cross-protocol "beats dMLE." The M3 NLL-prediction claims are untouched and not restated here; M4
+makes NO Born/CPTP-learning or counterfactual claim. The result is a clean, pre-registered NEGATIVE
+for decode utility + a structural back-edge — exactly the registered reverse-trap/S10 design (a null
+is reportable and was reported).
+
+**Metric audit (all field-standard or flagged).** %ΔLER = relative logical-error-rate change under
+a fixed decoder, the field-standard decoder-prior utility metric (Sivak/Google convention; sign +
+= improvement, carried with every number). Paired shot bootstrap (B=1000) + exact McNemar (n01,n10)
+on the shot as the iid unit (design effect 0.85–0.89 reported) — standard paired-classifier
+inference. Partial Spearman with dual permutation + cyclic-shift nulls (B=1e4) for covariation —
+standard. NLL (M3) and %ΔLER (M4) are deliberately distinct metrics; the reverse trap is the
+registered statement that they do not map. No non-standard stand-in. dMLE's published 30.6% remains a
+protocol-tagged context bar, never compared (G9).
+
+**Rigor audit (theorem-backed vs provisional).** **(a)-exact:** the ruling-28 bit-identity
+determinism + slicing-invariance certificate (sha256, zero tolerance); the pairwise-closure
+consistency check (<0.2 pp); the operating-point arithmetic; the order-freeze/G2-hash invariants;
+the I-1 zero-event RL-XOR datum. **(b) prediction-band outcomes (falsifiable bets; misses are
+findings, never later citable as fact):** the GATE (reversed, miss), HEADLINE (in band), pij-vs-naive
+(miss), located signs (miss), P10 (miss), drift (in band), A3c (in band), regime pin (pass),
+full-code context (in band) — each recorded as its bet's outcome. **PROVISIONAL (gating/support
+only, NOTHING built on them):** findings 1–2's "independent-edges DEM is the decoder bottleneck"
+reading (routed, not a theorem — no mechanism attribution; the (a) certificate proves determinism,
+NOT the structural cause); the P10-miss "calibration-direction" label (S10 routing class (c)); the
+A3c-as-carrier-pointer reading. **(c) gate/decision rules:** the 99%/α=0.01 conventions, the [0.5,2]
+P10 acceptance window, the regime-pin [0.005,0.45] gate, the burst-MAD flag, the saturation
+exclusions {9,10}/{9}. Conclusion classes echoed per row. No (c) item used as a premise. The verdict
+"the calibrated DEM priors do not improve held-out decoding and the bunching advantage does not
+transfer through independent edges" is PROVISIONAL-but-decisive: reportable, go/no-go usable (it
+gates ADR 0008 priority up), but no definition/derivation/design takes it as a premise until the
+carrier study tests the mechanism. The M3 headline (bunching chain) stands independent of this null.

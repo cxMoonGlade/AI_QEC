@@ -104,16 +104,34 @@ was a coordinate artifact — predictions hold on the identified flip-rate r̂ (
 edge absorption sign correct). M3 GPU
 execution: static-Kraus-input CUDA graphs under the ledgered execution amendment — 84
 fits/22 min on one context, bit-exact vs eager at three pin levels
-(`hardware/m3_parallel.py`; model compute never falls back to CPU). 151 tests (150 pass +
-1 opt-in slow skip; hardware tests skip without `QEC_TWIN_HW_DATA`). ADR 0008 carrier study:
-charter + C1/C2 theory panel DONE (2026-06-10) — verdict: the **C1 composed architecture**
+(`hardware/m3_parallel.py`; model compute never falls back to CPU). **R2-lite M4 (decoder-prior
+utility) LANDED (2026-06-13)** — the one held-out pass (samples 05–09, both bases, d′\*=5) under
+frozen pymatching on the frozen M3 composition; the gate REVERSED: both calibrated DEM priors
+(self-computed pij AND the M3 twin) decode the held-out ~**40% WORSE** than the shipped SI1000
+prior (%ΔLER twin-vs-naive −40.3% X / −40.7% Z vs the registered +10% bet — a (b) miss = finding),
+while the HEADLINE twin-vs-pij is IN BAND at ≈0 (−0.33%/−0.60%): **the M3 syndrome-NLL win and the
+bunching certificate do NOT transfer to MWPM decoding through the independent-edges DEM format**
+(covariation NULL both bases; S10 routing GATE_FAIL_CALIBRATION_DIRECTION + COVARIATION_NULL_STRUCTURAL;
+PROVISIONAL, no mechanism attribution). The one decode-side positive: A3c two-pass +1.1%/+0.7% on
+high-R̂ windows (sig @99%). This is the registered "honest decode-end cost accounting" (rearguard,
+not the paper headline) and the strongest LER-level back-edge to the ADR 0008 carrier study.
+Execution integrity: a held-out decode is a fixed function of the frozen DEMs + sample bytes — proven
+by the ruling-28 bit-identity certificate (7 units sha256-identical across two attempts, a system
+OOM, two restarts; same certificate validates the ruling-25/27 shot-slicing throughput fix). A4 dMLE
+= documented-drop (none of the three upstream engines runs unmodified at the window instance within
+the 32 GiB/70 GiB envelope; `outputs/m4_a4_dmle_attempt_dossier.md`); the dMLE comparison is
+redirected to a registered r≈101 mid-scale bracket post-M4. M4 amendment 3 = rulings 19–28
+(`docs/metric_results.md`). 151 tests (150 pass + 1 opt-in slow skip; hardware tests skip without
+`QEC_TWIN_HW_DATA`). ADR 0008 carrier study: charter + C1/C2 theory panel DONE (2026-06-10) +
+SEAM-TEST K1 first read ABSTAIN (2026-06-11) — verdict: the **C1 composed architecture**
 (DEM/HMM bulk + window-exact CPTP coherent corrections; dMLE-TN as bulk engine + mandatory
 baseline; perturbative cross-seam module trigger-gated) is conditionally admissible under
 K1–K5; the dMLE TN is inadmissible as carrier (no coherent slot; bunching pinned at R=1 —
 the sharp T-B theorem: only unital-diagonal iid fields are pinned, non-unital CPTP expresses
-R>1 free). Next: ADR 0008 C3 (seam-test prototype first, own pre-registration; 39-item
-checklist in `docs/.reports/adr0008_panel/`) ∥ R2-lite M4; H3/H4 sequenced by the bunching
-axis.
+R>1 free). Next (M4 now banks the LER-level motivation): ADR 0008 carrier (the independent-edges
+bottleneck is now measured at the decoder) ∥ M5 drift (sample-indexed; M3/M4 drift findings are the
+input) ∥ the seam second read; the dMLE r≈101 bracket (own registration); H3/H4 sequenced by the
+bunching axis.
 
 ### Isolation contract
 
@@ -171,6 +189,16 @@ ground-truth channels / parameters / labels are evaluator-only — used by `audi
   rigor audit (every conclusion classified theorem-backed vs provisional).** Full rule:
   METRICS.md "epistemic-status declaration"; binding instances: window-closure X1/X2
   (`hardware/windows.py` STATUS WARNING), the M1/M2 retro-audit in `metric_results.md`.
+- **Scripted-execution discipline (HARD CONSTRAINT, 2026-06-12):** every code run — process
+  control (kill/launch/verify), audits, surgeries, baseline probes, benches, ad-hoc analysis —
+  MUST be a committed script file (under `outputs/` for milestone-era work), never an inline
+  one-liner that runs project logic. Each script carries (a) precondition assertions, (b) printed
+  evidence of effects (pids/pgids/mtimes/hashes), (c) flushed output, (d) an
+  `if __name__ == "__main__"` guard whenever it touches multiprocessing (unguarded spawn re-exec
+  → nested-pool crash loop — the 2026-06-12 bench hang). The only inline-bash exception is
+  trivial read-only inspection (`ls`/`tail`/`pgrep`/`cat`) that runs no project logic. Rationale:
+  scripts are the debug/audit trail; the bench-hang night's failures were all inline-command
+  failures (silent pgid mis-kills, a `tail` pipe swallowing errors, sed-in-place edits).
 
 ## Notation (`docs/TWIN.md` is the full contract)
 

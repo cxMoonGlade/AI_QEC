@@ -2114,6 +2114,7 @@ def _decode_sample_errors(
     two_pass_rr: Mapping | None = None,
     allow_heldout: bool = False,
     max_batch_columns: int = 24_000,
+    shot_slice_shots: int | None = None,
 ) -> dict:
     """One (basis, sample) decode of every unit x arm against the REAL B2 fleet
     API (reviewer B-12): stream the packed full-width detection events ONCE
@@ -2139,40 +2140,61 @@ def _decode_sample_errors(
     )
     errors: dict = {}
 
+    # ruling 25 (execution-only, score-stage): optional shot-slice splitting of
+    # heavyweight DecodeJobs. None/0 => the registered single-job path,
+    # byte-identical to the pre-ruling code. Slice starts are multiples of
+    # chunk_shots, so every worker-side decode chunk covers the same shots as
+    # in the unsliced job (per-shot decoding is stateless across chunks);
+    # pieces are reassembled in shot order before the XOR — error arrays are
+    # bit-identical (bench: outputs/m4_ruling25_determinism_bench.py).
+    slice_shots = int(shot_slice_shots or 0)
+    if slice_shots and slice_shots % max(int(chunk_shots), 1):
+        raise ValueError("shot_slice_shots must be a multiple of chunk_shots")
+
     def _flush(batch) -> None:
         jobs: list = []
-        meta: list = []
+        meta: list = []  # (key, arm, col, piece_lo)
+        step = slice_shots if slice_shots else int(n_shots)
+        pieces = [(lo, min(lo + step, int(n_shots))) for lo in range(0, int(n_shots), step)]
         for key, det_ids, col in batch:
             bits = _unit_bits(packed, det_ids)
             packed_unit = b8_io.pack_bits(bits)
             del bits
+
+            def _emit(arm: str, dem_text: str, *, mode: str = "static", rr=None) -> None:
+                for lo, hi in pieces:
+                    jobs.append(
+                        b2.DecodeJob(
+                            job_id=f"{key}|{arm}" if not slice_shots else f"{key}|{arm}@{lo}",
+                            dem_text=dem_text,
+                            dets=packed_unit[lo:hi],
+                            chunk_shots=int(chunk_shots),
+                            mode=mode,
+                            rR_table=rr,
+                        )
+                    )
+                    meta.append((key, arm, col, lo))
+
             for arm, dem in unit_dems[key].items():
-                jobs.append(
-                    b2.DecodeJob(
-                        job_id=f"{key}|{arm}",
-                        dem_text=str(dem),
-                        dets=packed_unit,
-                        chunk_shots=int(chunk_shots),
-                    )
-                )
-                meta.append((key, arm, col))
+                _emit(arm, str(dem))
             if two_pass_rr is not None and key.startswith("window:"):
-                jobs.append(
-                    b2.DecodeJob(
-                        job_id=f"{key}|two_pass",
-                        dem_text=str(unit_dems[key]["twin"]),
-                        dets=packed_unit,
-                        chunk_shots=int(chunk_shots),
-                        mode="two_pass",
-                        rR_table=dict(two_pass_rr),
-                    )
+                _emit(
+                    "two_pass",
+                    str(unit_dems[key]["twin"]),
+                    mode="two_pass",
+                    rr=dict(two_pass_rr),
                 )
-                meta.append((key, "two_pass", col))
         results = b2.decode_fleet(jobs, n_workers=int(n_workers))
-        for job, (key, arm, col), res in zip(jobs, meta, results):
+        parts: dict = {}
+        for job, (key, arm, col, lo), res in zip(jobs, meta, results):
             if res.job_id != job.job_id:
                 raise RuntimeError("decode_fleet results misaligned with job order")
-            preds = np.asarray(res.preds, dtype=np.uint8).reshape(n_shots, -1)[:, 0]
+            parts.setdefault((key, arm, col), []).append(
+                (int(lo), np.asarray(res.preds, dtype=np.uint8))
+            )
+        for (key, arm, col), got in parts.items():
+            got.sort(key=lambda t: t[0])
+            preds = np.concatenate([p for _, p in got], axis=0).reshape(n_shots, -1)[:, 0]
             errors.setdefault(key, {})[arm] = (preds ^ actual[:, col]).astype(np.uint8)
 
     batch: list = []
@@ -2898,6 +2920,7 @@ def _stage_heldout(args, state: M4State) -> int:
                 bits_per_shot=ctx["bits_per_shot"],
                 n_workers=args.workers,
                 chunk_shots=args.chunk_shots,
+                shot_slice_shots=(int(getattr(args, "slice_shots", 0)) or None),
                 two_pass_rr=ctx["rr"],  # A3c rides the window units only (never the gate)
                 allow_heldout=True,  # B2's held-out access contract: the ONE staged pass
             )
@@ -2981,6 +3004,7 @@ def _decode_drift_context(args, state: M4State, d_star: int) -> dict:
                 bits_per_shot=grid.num_layers * grid.num_chains,
                 n_workers=args.workers,
                 chunk_shots=args.chunk_shots,
+                shot_slice_shots=(int(getattr(args, "slice_shots", 0)) or None),
                 # samples 01-04 are design-contaminated CONTEXT (S1) decoded
                 # strictly after the one held-out pass (module note 8) — the
                 # registered post-held-out exception to B2's held-out contract
@@ -3163,6 +3187,7 @@ def main(argv=None) -> int:
     parser.add_argument("--mc-shots", type=int, default=P10_MC_SHOTS)
     parser.add_argument("--chunk-shots", type=int, default=10_000)
     parser.add_argument("--workers", type=int, default=16)  # CPU decode fleet (ratified R1)
+    parser.add_argument("--slice-shots", type=int, default=0)  # ruling 25: 0 = off (registered)
     args = parser.parse_args(argv)
     state = M4State(args.state_dir)
     try:
