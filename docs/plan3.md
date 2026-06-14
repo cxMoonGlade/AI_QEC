@@ -31,7 +31,55 @@ survives every prior-art search — **the coherent channel slot + the validated 
 counterfactual + the honest negative** — is given a concrete, defensible identity here.
 
 
-## 1. The contribution (the wedge, given an identity)
+## 0.5 Tool-first reorientation (2026-06-14, owner) — NEAR-TERM PRIORITY
+
+**Build the TOOL, not the paper.** The paper's certified characterization (§1–§6 below) is **deferred,
+not dropped**; the near-term deliverable is a working, scalable, calibrated QEC-noise digital twin. The
+theory (`THEORY.md`, P2/P3/P4) is repurposed as the tool's **calibration + confidence machinery**, not a
+set of claims to freeze.
+
+**The architecture — "1+1":**
+- **Component A — recover-learner (white-box, exists).** Per-window CPTP Born-NLL fit, M3-validated on
+  real data. Small extension: also emit the overlap/seam marginals `ρ_BC` the merger needs.
+- **Component B — fusion-merger (black-box, new).** A GNN amortizing the **constructive shallow-circuit
+  covering** (2604.01197's (k+1)-layer local-recovery schedule), outputting the **full composed channel
+  field** with honest uncertainty bands. Black-box is fine — **trust comes from calibration, not
+  self-certification** (ADR 0008: a learned surrogate has no exactness class, so it never carries an (a)
+  premise; it carries a calibrated band instead).
+
+**Calibration + confidence machinery (the theory, repurposed — NOT certify-or-abstain):**
+- **Petz bound `√(I_nats)` = the CERTIFICATE** where Petz is feasible (small/controlled cases).
+- **Exact truth (CF-WR) = the VALIDATION HARNESS** — CF-WR's new role: calibrate the GNN-merger against
+  Petz/exact-truth, not deliver the paper's headline verdict.
+- **Honest uncertainty bands = the OUTPUT** — the tool gives "answer ± calibrated band," *not*
+  certify-or-abstain (the project's own bands style; rigor lives in the band, §1.3 PLAN.md).
+- **`ξ̂` (hardware Markov length) = the CONFIDENCE indicator** — high below threshold, degrading-with-warning
+  near it; a continuous health read, *not* a binary gate.
+- **Engine layering:** constructive rule (2604.01197 covering / GNN amortization) → certificate (Petz bound)
+  → uncertainty (band) → confidence (ξ̂). Petz is the *certificate*, not the *engine* (it is optimal-but-
+  expensive and does not scale; the constructive covering does).
+
+**What the tool delivers:** the four capabilities (recover / understand / manipulate (controlled) /
+predict) on the **full composed channel field** — calibrated, GPU-scalable (GNN amortization), with honest
+bands and a `ξ̂` confidence read.
+
+**Build order (near-term):**
+1. **`ξ̂` measurement** — the tool's confidence baseline; cheap; M3 d=29 syndrome record (**training
+   samples only — never held-out 05–09 / escrow 15–19**); spacetime-Markov-length diagnostic (2412.00193).
+2. **learner extension** — emit `ρ_BC` overlap marginals.
+3. **fusion engine v0** — the constructive covering + a first GNN amortization; calibrated on CF-WR exact
+   truth vs Petz; outputs full channel + bands.
+4. **pipeline on real surface data** — learner → fusion → global channel + bands; global held-out NLL vs
+   shipped baselines (set2 d3).
+
+**Discipline (relaxed for the tool, still honest):** validation-via-bands (not freeze/abstain); GPU-only
+model compute; scripted-execution; baselines pristine; isolation contract; honest uncertainty. The
+paper-certified core (Petz / sufficient-functional / ξ̂-below-threshold) stays available as a subset when
+the paper track resumes.
+
+---
+
+## 1. The contribution (the wedge, given an identity) — PAPER TRACK (deferred per §0.5)
 
 **Headline (STRICT):** *the small-window coherent twin + its composition limit, characterized
 against exact ground truth and real hardware.* This is a **characterization + honest-negative**
