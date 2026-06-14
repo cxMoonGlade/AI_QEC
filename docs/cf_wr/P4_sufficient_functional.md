@@ -87,7 +87,11 @@ operator**:
 
 > [2604.01197]: the available *positive* reconstruction guarantee is a **full-state trace-distance**
 > statement — reconstruct the global state/channel to `½‖·‖₁ ≤ τ`. (a, cited; this is the strong target
-> P4 deliberately weakens.)
+> P4 deliberately weakens.) **Scope (binding, governs every [2604.01197] mention below):** that
+> guarantee is **trivial-phase / per-window-scoped** — it covers the per-window shallow noise-channel-field
+> state, **NOT** the macroscopic below-threshold code state (which is out of its trivial-phase class; see
+> `THEORY.md` §8 + P3 §0.1). So the "full-state target P4 weakens" is the *per-window* full state; P4 does
+> **not** imply, and must not be read as implying, a macroscopic full-state guarantee.
 
 Both objects of these statements are the **entire** state/channel: KKB marginalizes/reconstructs the
 **global density operator**; the [2604.01197] guarantee certifies the **whole** channel in trace
