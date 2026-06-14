@@ -1,152 +1,152 @@
-# CF-WR 预注册草案 v2 —— 12q Teacher 窗口化重建可行性判决
+# CF-WR pre-registration draft v2 — 12q Teacher windowed-reconstruction feasibility verdict
 
-> 状态:**FROZEN 2026-06-14**(3 轮对抗 review 通过:R1/R2 BLOCK→修、R3 MINOR→修;of-record 桩在 `docs/metric_results.md`)。
-> **Pre-run Amendment 1(2026-06-14,build scout 发现 G1):** D_Choi 改 **per-seam reduced-block Choi 迹距离** —— 全 2²⁴ 信道 Choi 不可行,改每缝 ≤6q 支撑的 reduced-channel Choi 块(≤2¹² dim,feasible);**全局 2²⁴ 不材料化**,全局=缝聚合(=P4 L-标度);GO 门用 R̂≈5.3 处 per-seam 值对 per-seam √(I_nats) bound。**G2(无 2D 衬底):直接 build**(3×4 几何/2D detector map/线缝 glue/2D decoder 全新建,先建冻结 `cf_wr_geom` 契约)。
-> owner 三决定(2026-06-14):**(i) 直接 P2(2D 碎片)**;**(ii) D_Choi + E_do co-primary**;**(iii) G2(GNN-BP)纳入**。
-> v2 关键修正(reviewer-1):**①R̂ 旋钮改非unital CPTP(unital coherent ZZ 被 T-B 定理钉在 R=1,产不出 R̂>1)②P2 改系数比判据(Petz 残差是线性,非二次;K1 已证伪二次)③补量子 Markov 链精确恢复闸(替被砍的 1D Petz 正确性校准)④τ_D 重钉到 bound 之下 ⑤D_Choi 入 METRICS 台账 ⑥P4 弱化为符号+单调,移出 GO 门**。
-> 理论先行:§5 预测带在任何 run 前冻结;miss = finding,不事后加宽容差。
-
----
-
-## 0. 对象与问题(一句话)
-
-**精确局部窗(2×2)+ 有原则的粘合(Petz/BP),能否把精确全局噪声信道对象重建出来;在 bunching 强度 R̂(=非unital 关联)增长、2D 缝为线状时它在哪里崩——而 K1 的 ABSTAIN 墙,是粘合规则选错(mean-field)还是基本极限?**
-
-- **判决对象(信息侧)**:噪声信道场 E 的 **Choi 态** J(E)。
-- **能力侧对象**:经**冻结解码器**的 **do()-ΔLER**(沙盒内可验,§6 W1 注记)。
-- ADR 0008 **C1 载体可行性判决**:M4 的 PROVISIONAL 负结果 → **出路(GO)** 或 **此-teacher 关联类的 PROVISIONAL 天花板(NO-GO)**。无"白跑"分支。
+> Status: **FROZEN 2026-06-14** (3 rounds of adversarial review passed: R1/R2 BLOCK→fixed, R3 MINOR→fixed; of-record stub in `docs/metric_results.md`).
+> **Pre-run Amendment 1 (2026-06-14, build scout found G1):** D_Choi changed to **per-seam reduced-block Choi trace distance** — the full 2²⁴ channel Choi is infeasible, changed to per-seam reduced-channel Choi blocks on ≤6q support (≤2¹² dim, feasible); **the global 2²⁴ is never materialized**, global = seam aggregate (= P4 L-scaling); the GO gate uses the per-seam value at R̂≈5.3 against the per-seam √(I_nats) bound. **G2 (no 2D substrate): build directly** (3×4 geometry / 2D detector map / line-seam glue / 2D decoder all built from scratch, build the frozen `cf_wr_geom` contract first).
+> owner's three decisions (2026-06-14): **(i) go directly to P2 (2D fragments)**; **(ii) D_Choi + E_do co-primary**; **(iii) G2 (GNN-BP) included**.
+> v2 key corrections (reviewer-1): **① the R̂ knob changed to non-unital CPTP (unital coherent ZZ is pinned at R=1 by the T-B theorem, cannot produce R̂>1) ② P2 changed to a coefficient-ratio criterion (the Petz residual is linear, not quadratic; K1 already falsified quadratic) ③ added a quantum-Markov-chain exact-recovery gate (replacing the cut 1D Petz-correctness calibration) ④ τ_D re-pinned below the bound ⑤ D_Choi entered the METRICS ledger ⑥ P4 weakened to sign + monotone, moved out of the GO gate**.
+> Theory-first: the §5 prediction bands are frozen before any run; miss = finding, no widening of the tolerance after the fact.
 
 ---
 
-## 1. Teacher(直接 P2:2D,全精确,≤15q)
+## 0. Object and question (one sentence)
 
-### 几何(m8 修正:诚实重标)
-**没有任何 ≤15q 的精确-backend teacher 能是"完整 surface code"**——连 d3 旋转 surface 都是 17q > 15q 墙(数据集 note 已证)。故 teacher **重标为**:
+**Exact local windows (2×2) + principled gluing (Petz/BP) — can they reconstruct the exact global noise-channel object; where does it break as the bunching strength R̂ (= non-unital correlation) grows and the 2D seam becomes line-shaped — and is K1's ABSTAIN wall a wrong choice of gluing rule (mean-field) or a fundamental limit?**
 
-> **12q 二维最近邻格点 toy(3×4),带一条已定义逻辑串 + 完整 stabilizer 子集**——目的不是 surface-忠实,而是**复刻 surface 窗口化真正难的那部分:2D 连接性 + 线状缝 + O(L) boundary 惩罚**。
-
-冻结前在**注册文本里**钉死(非仅 code+hash):显式 stabilizer 清单、`OBSERVABLE_INCLUDE` 支撑、**断言逻辑距离 ≥2 且所有 check 完整(无悬挂半-plaquette)**——否则 LER/E_do 无定义。精确布局在 `cf_wr_teacher.py` 钉定 + sha256,且哈希 inline 进注册块(m11)。
-
-### 噪声场(M1 修正:R̂ 旋钮换非unital CPTP)
-全精确密度矩阵模拟,持有完整 J(E) 真值:
-1. **局部边际** —— 逐 qubit 单比特 CPTP,r̂ ≈ 0.013, q̂_eff ≈ 0.014(N2 plan 已签);
-2. **R̂ 旋钮(主)= 非unital 局部 CPTP 场**,沿**注册的 T-B 曲线**用 {p01,p10} 参数化(`D_package_derivations.md`:r≈0.013 处 R∈{2,5,17} 的 Kraus 成员已预算,R=5⇒(6.7039e-3, 1.20296e-1),上限 R≤1/(2r̂)≈39.4 覆盖全网格)。**绝不用 unital coherent ZZ**(T-B 定理:unital-diagonal iid 钉在 R=1,产不出 bunching)。非unital CPTP 非 Pauli ⇒ stim 做不了 ⇒ **仍需精确密度矩阵 backend**(实验存在理由保住)。
-3. **相干边旋钮 φ(R-EDGE slot)= co-primary 轴(amendment 2,owner 决定 b,2026-06-14)** —— 在**缝-穿越边**上施相干 `exp(−iφ Z⊗Z)`;**独立于 R̂、不携带 R̂**,但**与 R̂ 共构主场**:ρ 变非对角(真量子),**Petz 旋转被动用**——这正是密度矩阵 backend 区别于经典 DEM 窗口化的能力所在。**用既有 `forward/exact` backend(已对相干验过 H1)+ `apply_unitary`,不引入 CUDA-Q**(12q 用不上 scale 工具,且新后端会破坏 exactness 纪律;CUDA-Q 是 d5/d7 载体级考量,ADR 0008)。
-
-> **amendment 2 重定位(2026-06-14,owner b):** 之前 φ 设为次要——但主 R̂ 扫描**是经典的**(bit-flip 保持 ρ 对角,不动用 backend 量子能力),referee 会问"既然经典为何用密度矩阵机制"。故 **φ 升为 co-primary**:主重建测试在 (R̂, φ) 上,LER/E_do 改**全-DM Born 路径**(`measure_parity_enumerate`;相干破坏经典枚举捷径,非破坏 backend)。bunching(R̂)与 coherence(φ)仍**正交**,但**都进主场**;φ=0 行保留为经典对照。
+- **Verdict object (information side)**: the **Choi state** J(E) of the noise-channel field E.
+- **Capability-side object**: the **do()-ΔLER** through a **frozen decoder** (verifiable in the sandbox, §6 W1 note).
+- ADR 0008 **C1 carrier-feasibility verdict**: M4's PROVISIONAL negative result → **a way out (GO)** or **a PROVISIONAL ceiling for this-teacher's correlation class (NO-GO)**. No "ran for nothing" branch.
 
 ---
 
-## 2. 旋钮与强制控制
+## 1. Teacher (directly P2: 2D, fully exact, ≤15q)
 
-- **扫 R̂ ∈ {1, 2, 3, 5.3, 8, 12}**(经 {p01,p10} 沿 T-B 曲线实现;**用带符号的 asymmetry δ′=p10−p01 作微扰坐标**,两侧、δ′=0 为内点 —— 见推导 §3.2):**R̂=5.3 = 硬件匹配点(M3 P11),判决核心**;{8,12} 测崩溃尾;{2,3} 测单调方向。
-- **扫 φ ∈ {0, 0.05, 0.10, 0.15}(amendment 2,co-primary)** —— 缝-穿越边的相干 ZZ 角,覆盖 K1 seam-test 的 φ∈[0.05,0.15]:**主重建/GO 点 = (R̂≈5.3, φ*=0.10)**(硬件匹配 bunching + 代表性相干边);**R̂ 扫在 φ*=0.10**(测 bunching 崩溃),**φ 扫在 R̂≈5.3**(测 P2 系数:un-twirled 相干边领头阶 **O(φ)**,derivation §2.4 governs;G0 slope-1、Petz-vs-mean-field)。**φ=0 行 = 经典对照**(回原经典 bunching 扫)。LER/E_do 在 φ≠0 走全-DM Born 路径。
-- **do() 靶点 + eval context 钉死(C-1,为 τ_E 可复现)**:`do()` = 单边错误率 ×k(k、目标边、eval context 在 `cf_wr_teacher.py` 钉定 + inline);ΔLER_true 由冻结 teacher 算出 → τ_E 绝对数冻结时 inline。**实质性断言(防 E_do 退化成测噪声)**:所选 do() 必须满足 **|ΔLER_true| ≥ 5×地板**(否则 τ_E=0.1×|ΔLER_true| 退化);冻结前在 teacher 上验证此下限,不达标则换 do() 靶点(在所有臂运行前)。
-- **R̂=1 强制零控制 = unital 点**(p01=p10),与 P2.3 同一 context:D(R=1)=g(r)+g(q)≈−7.43e-4 是**边际项地板,非缝残差**(C-2);G1 重建误差必须 ≤ 地板(§4 S-impl)。显著超出边际地板 ⇒ 污染 ⇒ 作废重查,不进判决。
-- **seed = 20260614**。
+### Geometry (m8 correction: honest re-scale)
+**No exact-backend teacher with ≤15q can be a "complete surface code"** — even a d3 rotated surface is 17q > the 15q wall (the dataset note already proves it). Hence the teacher is **re-scaled to**:
+
+> **A 12q two-dimensional nearest-neighbor lattice toy (3×4), with one defined logical string + a complete stabilizer subset** — the goal is not surface-faithfulness, but to **replicate the genuinely hard part of windowing a surface: 2D connectivity + line-shaped seams + an O(L) boundary penalty**.
+
+Before freezing, pin down **in the registration text** (not only code+hash): the explicit stabilizer list, the `OBSERVABLE_INCLUDE` support, **and assert logical distance ≥2 with all checks complete (no dangling half-plaquette)** — otherwise LER/E_do is undefined. The exact layout is pinned in `cf_wr_teacher.py` + sha256, and the hash is inlined into the registration block (m11).
+
+### Noise field (M1 correction: R̂ knob switched to non-unital CPTP)
+Fully exact density-matrix simulation, holding the complete J(E) ground truth:
+1. **Local marginal** — per-qubit single-qubit CPTP, r̂ ≈ 0.013, q̂_eff ≈ 0.014 (signed off in the N2 plan);
+2. **R̂ knob (primary) = non-unital local CPTP field**, parameterized along the **registered T-B curve** by {p01,p10} (`D_package_derivations.md`: at r≈0.013, the Kraus members for R∈{2,5,17} are budgeted, R=5⇒(6.7039e-3, 1.20296e-1), the upper limit R≤1/(2r̂)≈39.4 covers the whole grid). **Never use unital coherent ZZ** (T-B theorem: unital-diagonal iid is pinned at R=1, cannot produce bunching). Non-unital CPTP is non-Pauli ⇒ stim cannot do it ⇒ **an exact density-matrix backend is still required** (the experiment's reason for existence is preserved).
+3. **Coherent-edge knob φ (R-EDGE slot) = co-primary axis (amendment 2, owner decision b, 2026-06-14)** — apply a coherent `exp(−iφ Z⊗Z)` on the **seam-crossing edges**; **independent of R̂, carries no R̂**, but **co-constructs the primary field with R̂**: ρ becomes off-diagonal (genuinely quantum), so **the Petz rotation is actually exercised** — this is exactly the capability that distinguishes the density-matrix backend from classical DEM windowing. **Use the existing `forward/exact` backend (already validated for coherence by H1) + `apply_unitary`, do not introduce CUDA-Q** (12q does not need the scale tooling, and a new backend would break the exactness discipline; CUDA-Q is a d5/d7 carrier-level consideration, ADR 0008).
+
+> **amendment 2 repositioning (2026-06-14, owner b):** φ was previously set as secondary — but the primary R̂ sweep **is classical** (a bit-flip keeps ρ diagonal, never exercising the backend's quantum capability), and a referee will ask "if it's classical, why use a density-matrix mechanism". Hence **φ is promoted to co-primary**: the primary reconstruction test is on (R̂, φ), and LER/E_do is changed to the **full-DM Born path** (`measure_parity_enumerate`; coherence breaks the classical-enumeration shortcut, it does not break the backend). bunching (R̂) and coherence (φ) remain **orthogonal**, but **both enter the primary field**; the φ=0 row is retained as the classical control.
 
 ---
 
-## 3. 粘合臂
+## 2. Knobs and forced controls
 
-| 臂 | 规则 | epistemic | 角色 |
+- **Sweep R̂ ∈ {1, 2, 3, 5.3, 8, 12}** (realized via {p01,p10} along the T-B curve; **use the signed asymmetry δ′=p10−p01 as the perturbation coordinate**, both sides, δ′=0 an interior point — see derivation §3.2): **R̂=5.3 = the hardware-matched point (M3 P11), the core of the verdict**; {8,12} probe the collapse tail; {2,3} probe the monotone direction.
+- **Sweep φ ∈ {0, 0.05, 0.10, 0.15} (amendment 2, co-primary)** — the coherent ZZ angle on the seam-crossing edges, covering K1 seam-test's φ∈[0.05,0.15]: **the primary reconstruction/GO point = (R̂≈5.3, φ*=0.10)** (hardware-matched bunching + a representative coherent edge); **the R̂ sweep is at φ*=0.10** (probing bunching collapse), **the φ sweep is at R̂≈5.3** (probing the P2 coefficient: the un-twirled coherent edge is leading-order **O(φ)**, derivation §2.4 governs; G0 slope-1, Petz-vs-mean-field). **The φ=0 row = the classical control** (reverts to the original classical bunching sweep). LER/E_do takes the full-DM Born path at φ≠0.
+- **do() target + eval context pinned (C-1, for τ_E reproducibility)**: `do()` = single-edge error rate ×k (k, target edge, eval context pinned in `cf_wr_teacher.py` + inlined); ΔLER_true is computed by the frozen teacher → τ_E's absolute number is inlined at freeze time. **Substantive assertion (to prevent E_do from degenerating into measuring noise)**: the chosen do() must satisfy **|ΔLER_true| ≥ 5×floor** (otherwise τ_E=0.1×|ΔLER_true| degenerates); verify this lower bound on the teacher before freezing, and if it is not met, switch the do() target (before running any arm).
+- **R̂=1 forced zero control = the unital point** (p01=p10), in the same context as P2.3: D(R=1)=g(r)+g(q)≈−7.43e-4 is **the marginal-term floor, not a seam residual** (C-2); the G1 reconstruction error must be ≤ the floor (§4 S-impl). A significant excess over the marginal floor ⇒ contamination ⇒ void and re-check, does not enter the verdict.
+- **seed = 20260614**.
+
+---
+
+## 3. Gluing arms
+
+| Arm | Rule | epistemic | Role |
 |---|---|---|---|
-| **G0** | mean-field/乘积粘合(= K1 `composed.py` 用法) | (c) | 零阶规则——被疑为 K1 artifact |
-| **G1** | **Petz 恢复映射**(JRSWW twirled 普适式,只依赖 ρ_BC),2D 边界-MPS 收缩 | (a) 构造 + (b) 误差界 | **理论最优,认证结果** |
-| **G2** | **GNN 学习化 BP**:detector graph message-passing,**初始化在 G1**、Markov-CMI 正则、**以 G1 为界**,只在与 G1 一致处采信 | (c) | 测"学习化 BP 能否同代价扛更多关联";不动 G1 认证地位 |
+| **G0** | mean-field/product gluing (= K1 `composed.py` usage) | (c) | zeroth-order rule — suspected K1 artifact |
+| **G1** | **Petz recovery map** (JRSWW twirled universal form, depends only on ρ_BC), 2D boundary-MPS contraction | (a) construction + (b) error bound | **theoretically optimal, certified result** |
+| **G2** | **GNN-learned BP**: detector-graph message-passing, **initialized at G1**, Markov-CMI regularized, **bounded by G1**, trusted only where consistent with G1 | (c) | tests "whether learned BP can withstand more correlation at the same cost"; does not touch G1's certified status |
 
-**白箱核心 = 逐窗精确 Born-NLL 拟合(LBFGS,≤4q 窗精确)+ G1 Petz 粘合。**
-**A(可选 warm-start)**:给逐窗 LBFGS 提初值;**(a) 闸(m7):逐窗拟合须 {cold init, A warm-start} 跨初值 bit-identical(≤地板),否则 A 悄移"精确"拟合,作废 A**。
-G2、A 全程标 (c),锚精确对象,绝不进 (a) 主干/前提(ADR 0008:学习型代理无 exactness class)。
+**White-box core = per-window exact Born-NLL fit (LBFGS, ≤4q windows exact) + G1 Petz gluing.**
+**A (optional warm-start)**: provides an initial value to the per-window LBFGS; **(a) gate (m7): the per-window fit must be bit-identical across initial values {cold init, A warm-start} (≤floor), otherwise A silently moves the "exact" fit, void A**.
+G2 and A are tagged (c) throughout, anchored to the exact object, never entering the (a) trunk/premise (ADR 0008: a learned proxy has no exactness class).
 
 ---
 
-## 4. 度量(M4+M5 修正)
+## 4. Metrics (M4+M5 corrections)
 
-### 入台账(M5,已做)
-- **D_Choi = per-seam reduced-block Choi–Jamiołkowski 迹距离**(amendment 1):**已增行** `docs/METRICS.md` Ledger(J_s=(I⊗E_s)|Ω⟩⟨Ω| 在每缝 ≤6q 支撑、Choi 块 ≤2¹² dim feasible、半迹范 ∈[0,1]、per-seam bound `√(I_nats)=√(ln2·I_bits)`);**全局 2²⁴ 信道 Choi 不材料化**,全局=缝聚合;
-- **E_do 不新造度量**:映射到**已在台账**的 `knob_dler_error = |ΔLER_twin−ΔLER_teacher|`(绝对 LER 单位,counterfactual-validity error)——这正是载体 do()-保真对照 teacher 真值的场标准度量;相对-% 仅作**flagged project-defined 次要描述**。
+### Entered into the ledger (M5, done)
+- **D_Choi = per-seam reduced-block Choi–Jamiołkowski trace distance** (amendment 1): **row already added** to `docs/METRICS.md` Ledger (J_s=(I⊗E_s)|Ω⟩⟨Ω| on each seam's ≤6q support, the Choi block ≤2¹² dim feasible, the half-trace-norm ∈[0,1], the per-seam bound `√(I_nats)=√(ln2·I_bits)`); **the full 2²⁴ channel Choi is never materialized**, global = seam aggregate;
+- **E_do does not create a new metric**: it maps to the **already-in-ledger** `knob_dler_error = |ΔLER_twin−ΔLER_teacher|` (absolute LER units, counterfactual-validity error) — this is exactly the field-standard metric for the carrier do()-fidelity against the teacher ground truth; the relative-% is only a **flagged project-defined secondary description**.
 
-### Co-primary(owner ii;M4:声明各自独立失败模 + 去 headline-S + τ_D 重钉)
-| 度量 | 对象 | 唯一捕捉的失败模 | 阈值(c) |
+### Co-primary (owner ii; M4: declare each one's independent failure mode + drop the headline-S + re-pin τ_D)
+| Metric | Object | The unique failure mode it captures | Threshold (c) |
 |---|---|---|---|
-| **D_Choi** = ½‖J_s−J_glue,s‖₁(**per-seam reduced block**,amendment 1) | reduced 信道 Choi 块(≤6q 支撑,≤2¹² dim) | **全信道重建误差,含解码器看不见的方向**(逐缝) | τ_D = **0.5 × √(I_nats)**(per-seam bound;**钉在 bound 之下** ⇒ 过 τ_D 蕴含 bound 成立);GO 用 R̂≈5.3 处 per-seam 值 |
-| **E_do** = `knob_dler_error` = \|ΔLER_glue(do)−ΔLER_true(do)\|(绝对 LER 单位,台账度量) | do()-ΔLER | **决策相关投影 = M4 传导 gap**(解码器对哪些 Choi 方向不敏感) | τ_E = **绝对常数,= 0.1×\|ΔLER_true\|** 其中 ΔLER_true 由**冻结 teacher**(evaluator-侧,§2 钉死 do() 靶点+eval context)算出,**冻结时 inline 成一个绝对数**(C-1:非 glue-run 数据,故可复现、非移动靶) |
+| **D_Choi** = ½‖J_s−J_glue,s‖₁ (**per-seam reduced block**, amendment 1) | the reduced-channel Choi block (≤6q support, ≤2¹² dim) | **the full-channel reconstruction error, including directions the decoder cannot see** (per-seam) | τ_D = **0.5 × √(I_nats)** (the per-seam bound; **pinned below the bound** ⇒ passing τ_D implies the bound holds); GO uses the per-seam value at R̂≈5.3 |
+| **E_do** = `knob_dler_error` = \|ΔLER_glue(do)−ΔLER_true(do)\| (absolute LER units, ledger metric) | do()-ΔLER | **the decision-relevant projection = the M4 transduction gap** (which Choi directions the decoder is insensitive to) | τ_E = **an absolute constant, = 0.1×\|ΔLER_true\|**, where ΔLER_true is computed by the **frozen teacher** (evaluator-side, with the do() target + eval context pinned in §2), **inlined as one absolute number at freeze time** (C-1: not glue-run data, hence reproducible, not a moving target) |
 
-- **为何两者都要(非冗余)**:E_do 是 J_glue 经 frozen 解码器的 pushforward,一般是 D_Choi 的函数;**唯在解码器对"粘合污染的特定 Choi 方向"不敏感处二者解耦**——这正是 **M4 的教训**(Choi/NLL 赢但 MWPM 独立边 DEM 看不见)。M4 是二者解耦的经验证据。
-- **GO = 两者各自独立达标(AND 门)**;**取消加权 headline S**(AND 门已是决策规则;跨不可通约单位求平均无决策作用且招"伪平权"批评)。
+- **Why both are needed (non-redundant)**: E_do is the pushforward of J_glue through the frozen decoder, generally a function of D_Choi; **the two decouple only where the decoder is insensitive to the "specific glue-contaminated Choi direction"** — which is exactly **M4's lesson** (Choi/NLL win but the MWPM independent-edges DEM cannot see it). M4 is the empirical evidence that the two decouple.
+- **GO = each one independently meets its threshold (AND gate)**; **drop the weighted headline S** (the AND gate is already the decision rule; averaging across incommensurable units has no decision effect and invites a "false equal-weighting" critique).
 
-### 次要(报告,不进 GO 门)
-I_bits(A:C\|B)=S(AB)+S(BC)−S(B)−S(ABC)(von Neumann,bit)——order parameter,精确;LER 绝对误差;syndrome KL/TV(对照 spacetime Markov length)。
+### Secondary (reported, not in the GO gate)
+I_bits(A:C\|B)=S(AB)+S(BC)−S(B)−S(ABC) (von Neumann, bits) — order parameter, exact; LER absolute error; syndrome KL/TV (against the spacetime Markov length).
 
-### Sanity 闸(M3 修正:补量子 Markov 链精确恢复闸)
-被砍的 1D 的"Petz 正确性"角色,旧两闸**在 Petz 机制上退化**(λ=0 时 Petz 退化为恒等、从不动用恢复旋转;全窗时无缝可粘)——bug 在二者皆隐形却腐蚀 2D 判决。补:
-- **S-markov(新,核心;C-4:显式构造已钉)**:一个**显式 ≤4q 量子 Markov 链点**,在 `cf_wr_teacher.py` 钉定,满足三断言:**(1) I(A:C\|B)=0 到地板**(Petz 定理 ⇒ G1 精确 D_Choi≤地板);**(2) D_Choi^{G0} ≥ 10×地板**(G0 product 必不精确 ⇒ 闸非空、不会放过 no-op Petz);**(3) ρ_BC 与 ρ_B⊗I_C 不对易**(动用量子旋转 ⇒ 抓得住 transposed/错序 Petz 实现 bug)。
-  - **worked baseline 实例(证 (1)+(2))**:3q 经典-Markov 混合 ρ_ABC=½(|000⟩⟨000|+|111⟩⟨111|)(A,B,C 序):给 B=b 则 A=C=b 确定 ⇒ I(A:C\|B)=0;但 ρ_AC=½(|00⟩⟨00|+|11⟩⟨11|)≠ρ_A⊗ρ_C ⇒ ρ_AC−ρ_A⊗ρ_C=diag(¼,−¼,−¼,¼)、迹范=1 ⇒ **D_Choi^{G0}=½‖·‖₁=½>0**(≥10×地板 ✓)。Petz 从 ρ_AB,ρ_BC 精确重建。
-  - **non-commuting 伴随(满足 (3),抓旋转 bug)**:在 A、C 上各施一固定共轭基局部幺正,使 ρ_BC 非对角 ⇒ 旋转-Petz 的 [·]^{(1±it)/2} 被真正动用。
-  **被砍 1D 的最小替代;冻结前必过三断言**。
-- **S-impl**:G1@R̂=1 的 D_Choi ≤ 1e-3(实现+零控制双用);
-- **S-trivial**:窗=全碎片 ⇒ D_Choi ≤ 地板(recover+score 恒等);
-- **S-monotone**:D_Choi 随 R̂ 单调非降。
-
----
-
-## 5. 理论先行预测带(跑前冻结,(b),miss=finding)
-
-- **P1**:G1 亚阈 D_Choi ∝ exp(−w/2ξ(R̂));拟 ξ(R̂) 确认对数线性 collapse。
-- **P2(核心赌注,M2 修正:系数比,非斜率;(a)-基础推导已完成 → `docs/cf_wr/P2_derivation.md`)**:
-  - **P2.1 (a)**:`D_Choi^{G0} = c_{G0}·λ + O(λ²)`,**slope 1**(band [0.90,1.10];K1 实测 0.973 retro-确认)。**定理化**:G0 product 约束丢的是**一阶连通关联** χ⁽¹⁾(非unital ⇒ χ⁽¹⁾≠0),c_{G0}=½‖χ⁽¹⁾‖₁。unital/twirled 点 ⇒ slope 2(parity)。
-  - **P2.2 (b) 独立结论(非 GO 前提)= 系数比**:`D_Choi^{G1}=c_{G1}·λ+O(λ²)`,赌注 **c≡c_{G1}/c_{G0} < 1(方向 c ≤ 0.5)**。**全 (b)**:B-1 裁定 `c<1` **不是 (a)-定理**——`‖χ−Petz(χ)‖₁<‖χ‖₁` 一般不成立(迹范非 aligned-subtractive;旋转-Petz 可 over-rotate;若 χ⁽¹⁾ 无 ρ_BC 支撑则 c=1)。**c≥1 = finding(Petz 不胜),c<1 = 支持 artifact 叙事,c≈0(G1 slope≈2)= bonus**。**与 GO 解耦**(§6):GO 不以 c<1 为前提。within-run 比较 ⇒ c 比单独 slope 稳健。**取消 v1 的"G1 斜率≥1.8"**(Petz O(λ²) 对非unital 界面不可证)。
-  - **P2.3 (a) pin**:unital 点(p01=p10)c_{G0},c_{G1} 一阶皆→0,残差 O(λ²)。违反=build bug。
-- **P3**:阈值 ξ(R̂*)/w = 1 ± 0.3;越过两臂皆崩。
-- **P4(2D,B-3 修正:at-most-linear,非严格线性、非 √L)**:G1 每缝 D_Choi 随 seam-length L **单调非降 + sub-additive 上界 O(L) (a)**;**线性为 (b) 中心**(指数 band [0.85,1.15])。**推导**:相邻 2×2 窗的缝 cell **共享角 qubit ⇒ 支撑相交 ⇒ 迹范 sub-additive**(`‖ΣAℓ‖₁≤Σ‖Aℓ‖₁`),故只能 ≤c·L 上界,不能断言 ∝L(角贡献或部分抵消 ⇒ 可 sub-linear);**√L 是涨落律,不适用 L₁ Choi 残差**。诚实 caveat:精确-DM oracle 只够 L∈{1,2,3},**仅 sign+monotone 可测**,L-指数 direction-only。**P4 不在 §6 GO 门**。**c(P2.2)对 L 一阶无关 ⇒ c<1 是稳健的 2D-可迁移结论**;绝对残差 L 律仅 direction-only。
-- **P5(G2)**:R̂≤5.3 时 \|D_Choi^{G2}−D_Choi^{G1}\| ≤ τ_agree;R̂≥8 可能延 reach(探索,非赌注)。
-- **零控制**:G1@R̂=1 ≤ 地板(=S-impl)。
+### Sanity gates (M3 correction: add a quantum-Markov-chain exact-recovery gate)
+The cut 1D's "Petz-correctness" role: the old two gates **degenerate on the Petz mechanism** (at λ=0 Petz degenerates to the identity, never exercising the recovery rotation; with full windows there is no seam to glue) — the bug is invisible in both yet corrupts the 2D verdict. Add:
+- **S-markov (new, core; C-4: the explicit construction is already pinned)**: one **explicit ≤4q quantum-Markov-chain point**, pinned in `cf_wr_teacher.py`, satisfying three assertions: **(1) I(A:C\|B)=0 to floor** (Petz theorem ⇒ G1 exact, D_Choi≤floor); **(2) D_Choi^{G0} ≥ 10×floor** (the G0 product must be inexact ⇒ the gate is non-empty, will not let a no-op Petz through); **(3) ρ_BC does not commute with ρ_B⊗I_C** (exercises the quantum rotation ⇒ catches transposed/wrong-order Petz-implementation bugs).
+  - **worked baseline instance (proving (1)+(2))**: a 3q classical-Markov mixture ρ_ABC=½(|000⟩⟨000|+|111⟩⟨111|) (in A,B,C order): given B=b then A=C=b deterministically ⇒ I(A:C\|B)=0; but ρ_AC=½(|00⟩⟨00|+|11⟩⟨11|)≠ρ_A⊗ρ_C ⇒ ρ_AC−ρ_A⊗ρ_C=diag(¼,−¼,−¼,¼), trace norm=1 ⇒ **D_Choi^{G0}=½‖·‖₁=½>0** (≥10×floor ✓). Petz reconstructs exactly from ρ_AB, ρ_BC.
+  - **non-commuting companion (satisfies (3), catches the rotation bug)**: apply a fixed conjugating-basis local unitary on each of A and C so that ρ_BC is off-diagonal ⇒ the rotated-Petz [·]^{(1±it)/2} is genuinely exercised.
+  **The minimal replacement for the cut 1D; must pass all three assertions before freezing**.
+- **S-impl**: D_Choi of G1@R̂=1 ≤ 1e-3 (doubles as implementation + zero control);
+- **S-trivial**: window = full fragment ⇒ D_Choi ≤ floor (recover+score identity);
+- **S-monotone**: D_Choi is monotone non-decreasing in R̂.
 
 ---
 
-## 6. GO / NO-GO(M4+m9+m10 修正)
+## 5. Theory-first prediction bands (frozen before the run, (b), miss=finding)
 
-**W1 注记(airtight)**:E_do 在**沙盒(teacher)内可验**——teacher 有可重跑真值,反事实可实现;它验**载体 do()-保真对照 teacher 真值**,**非**硬件 do() 主张(硬件 W1 阻断)。**本注册的任何数字、带、路由,一律不跨读到硬件**(对齐 K1 results 的 claim-scope 段)。
+- **P1**: sub-threshold G1 D_Choi ∝ exp(−w/2ξ(R̂)); fit ξ(R̂) to confirm the log-linear collapse.
+- **P2 (core bet, M2 correction: coefficient ratio, not slope; the (a)-basis derivation is complete → `docs/cf_wr/P2_derivation.md`)**:
+  - **P2.1 (a)**: `D_Choi^{G0} = c_{G0}·λ + O(λ²)`, **slope 1** (band [0.90,1.10]; K1 measured 0.973, retro-confirmed). **Theorized**: what the G0 product constraint drops is the **first-order connected correlation** χ⁽¹⁾ (non-unital ⇒ χ⁽¹⁾≠0), c_{G0}=½‖χ⁽¹⁾‖₁. unital/twirled point ⇒ slope 2 (parity).
+  - **P2.2 (b) independent conclusion (not a GO premise) = coefficient ratio**: `D_Choi^{G1}=c_{G1}·λ+O(λ²)`, the bet is **c≡c_{G1}/c_{G0} < 1 (direction c ≤ 0.5)**. **Fully (b)**: ruling B-1 holds that `c<1` is **not an (a)-theorem** — `‖χ−Petz(χ)‖₁<‖χ‖₁` does not hold in general (the trace norm is not aligned-subtractive; rotated-Petz can over-rotate; if χ⁽¹⁾ has no ρ_BC support then c=1). **c≥1 = finding (Petz does not win), c<1 = supports the artifact narrative, c≈0 (G1 slope≈2) = bonus**. **Decoupled from GO** (§6): GO does not take c<1 as a premise. A within-run comparison ⇒ c is more robust than either slope alone. **Drop v1's "G1 slope ≥1.8"** (Petz O(λ²) is not provable for a non-unital interface).
+  - **P2.3 (a) pin**: at the unital point (p01=p10) both c_{G0} and c_{G1} go to 0 at first order, residual O(λ²). A violation = build bug.
+- **P3**: threshold ξ(R̂*)/w = 1 ± 0.3; crossing it crashes both arms.
+- **P4 (2D, B-3 correction: at-most-linear, not strictly linear, not √L)**: G1 per-seam D_Choi is **monotone non-decreasing + sub-additively upper-bounded O(L) (a)** in seam-length L; **linear is the (b) centre** (exponent band [0.85,1.15]). **Derivation**: the seam cells of adjacent 2×2 windows **share a corner qubit ⇒ supports intersect ⇒ the trace norm is sub-additive** (`‖ΣAℓ‖₁≤Σ‖Aℓ‖₁`), so only a ≤c·L upper bound is possible, ∝L cannot be asserted (corner contributions may partly cancel ⇒ possibly sub-linear); **√L is a fluctuation law, not applicable to the L₁ Choi residual**. Honest caveat: the exact-DM oracle only reaches L∈{1,2,3}, so **only sign+monotone is measurable**, the L-exponent is direction-only. **P4 is not in the §6 GO gate**. **c (P2.2) is L-independent at first order ⇒ c<1 is a robust 2D-transferable conclusion**; the absolute-residual L-law is direction-only.
+- **P5 (G2)**: at R̂≤5.3, \|D_Choi^{G2}−D_Choi^{G1}\| ≤ τ_agree; at R̂≥8 it may extend the reach (exploration, not a bet).
+- **Zero control**: G1@R̂=1 ≤ floor (= S-impl).
 
-| 判决 | 条件(R̂≈5.3,G1) | 含义 |
+---
+
+## 6. GO / NO-GO (M4+m9+m10 corrections)
+
+**W1 note (airtight)**: E_do is **verifiable inside the sandbox (teacher)** — the teacher has a re-runnable ground truth, the counterfactual is realizable; it verifies the **carrier do()-fidelity against the teacher ground truth**, **not** a hardware do() claim (hardware W1 is blocked). **No number, band, or routing in this registration is ever cross-read to hardware** (aligned with the claim-scope section of K1 results).
+
+| Verdict | Condition (R̂≈5.3, G1) | Meaning |
 |---|---|---|
-| **GO(载体可行)** | D_Choi ≤ τ_D **且** E_do ≤ τ_E(R̂≈5.3,G1) —— **纯绝对重建质量,不含 c<1**(B-1:c<1 是 (b) 结果,非 (a) 前提,不进 GO 门) | **载体在硬件匹配关联处对着真值重建成功** ⇒ ADR 0008 C1 上马;dMLE-TN bulk + 窗精确 CPTP 缝槽路通。**若同时 P2.2 测得 c<1**(独立 (b) 结论)⇒ 进一步支持"M4 失败 = mean-field/独立边格式 artifact、K1 该用 Petz 重测";c<1 与 GO 解耦,各自报 |
-| **NO-GO(此-teacher 关联类的 PROVISIONAL 天花板)** | 即便 G1 Petz,R̂≈5.3 仍 D_Choi/E_do 超阈 | 窗口化救不了此关联类 ⇒ 须换可扩展表示(Tsim/LPDO)或接受格式天花板。**但**:**NO-GO 不是定理级**(M1 的 teacher 关联类有限、Petz-bug 风险须先经 S-markov 排除)——**它不抵 K1 二读、不把 M4 升成定理,只是又一个 (b)/(c) 级数据点** |
-| **MIXED** | Choi 与 do() 判据分歧 / 通过但崩溃尾过早 | 报 ξ* 与 boundary-penalty 标度,路由到"窗口化在 ξ<ξ* 有界可行" |
+| **GO (carrier feasible)** | D_Choi ≤ τ_D **and** E_do ≤ τ_E (R̂≈5.3, G1) — **pure absolute reconstruction quality, does not include c<1** (B-1: c<1 is a (b) result, not an (a) premise, does not enter the GO gate) | **the carrier reconstructs successfully against the ground truth at the hardware-matched correlation** ⇒ ADR 0008 C1 goes ahead; the dMLE-TN bulk + window-exact CPTP seam-slot path is open. **If P2.2 simultaneously measures c<1** (an independent (b) conclusion) ⇒ further supports "M4's failure = a mean-field/independent-edges-format artifact, K1 should re-measure with Petz"; c<1 and GO are decoupled, reported separately |
+| **NO-GO (a PROVISIONAL ceiling for this-teacher's correlation class)** | even with G1 Petz, at R̂≈5.3 D_Choi/E_do still exceeds the threshold | windowing cannot save this correlation class ⇒ must switch to a scalable representation (Tsim/LPDO) or accept a format ceiling. **But**: **NO-GO is not theorem-grade** (M1's teacher correlation class is finite, the Petz-bug risk must first be ruled out via S-markov) — **it does not override K1's second read, does not promote M4 to a theorem, it is just one more (b)/(c)-level data point** |
+| **MIXED** | the Choi and do() criteria disagree / pass but the collapse tail is too early | report ξ* and the boundary-penalty scaling, route to "windowing is bounded-feasible at ξ<ξ*" |
 
-**GO/NO-GO 默认 PROVISIONAL**,除非升级定理级;不在其上建定义/设计。
+**GO/NO-GO defaults to PROVISIONAL**, unless upgraded to theorem-grade; nothing is built on it (no definitions/designs).
 
-**报告纪律(防"好结果≠真能力",owner 2026-06-14):**
-- **原始数优先于门**:RESULTS 必须把 **绝对 D_Choi(R̂) 曲线、ξ*、c 的原始值**放最前;**GO/NO-GO 只是导出标签,不是头条数字**。
-- **τ_D 是松上界的一半**:√(I_nats) 是 upper bound、本身松,故"D_Choi ≤ τ_D"是**必要非充分**;报告须明说"过门"不等于"重建好",真正的质量看绝对 D_Choi 与 c。
-- **GO 的有界含义钉死**:12q toy 的 GO **只证"粘合机械+误差律在可验处正确"**,**不证 d5/d7 载体 work**(toy 缺长边界 O(L) 惩罚 + 缺真硬件的不可表征质量/model-class 失配);每个 GO 结论须带这句有界声明,不得跨读到规模或硬件。
-
----
-
-## 7. 可行性 / 成本
-
-12q 密度矩阵 2¹²×2¹² ~16.8M 复元;CMI/Petz 在 ≤4q 边际上是小线代 ⇒ **分钟级**;**纯 sim/teacher 侧,零真硬件、零 held-out(05–09)、零 escrow(15–19)触碰,exactness 全程保持**;GPU 跑精确演化+Choi(GPU-only 模型计算);65GB memguard;scripted-execution。
+**Reporting discipline (to prevent "a good result ≠ a real capability", owner 2026-06-14):**
+- **Raw numbers before the gate**: RESULTS must put the **absolute D_Choi(R̂) curve, ξ*, and the raw value of c** first; **GO/NO-GO is only a derived label, not the headline number**.
+- **τ_D is half of a loose upper bound**: √(I_nats) is an upper bound and itself loose, so "D_Choi ≤ τ_D" is **necessary not sufficient**; the report must state explicitly that "passing the gate" does not equal "reconstructs well", the genuine quality is read from the absolute D_Choi and c.
+- **The bounded meaning of GO is pinned**: a GO on the 12q toy **only proves "the gluing mechanics + error law are correct where verifiable"**, it **does not prove that the d5/d7 carrier works** (the toy lacks the long-boundary O(L) penalty + lacks real hardware's unrepresentable quality / model-class mismatch); every GO conclusion must carry this bounded statement, must not be cross-read to scale or hardware.
 
 ---
 
-## 8. 冻结 / 搭建序列(理论先行)
+## 7. Feasibility / cost
 
-1. **本 v2 → reviewer-2 pass**(只读;重审:T-B 旋钮参数化忠实性、Petz 残差领头阶推导是否写入、S-markov 闸的精确性、τ_D 是否真在 bound 之下、12q toy 的逻辑距离≥2、所有冻结常数 inline);
-2. **两件 (a) 基础已补**:(α) Petz 残差领头阶推导 = `docs/cf_wr/P2_derivation.md`(✓);(β) METRICS.md Choi-迹距离行已增 + E_do 映射到台账 `knob_dler_error`(✓);
-3. 折入 `docs/metric_results.md` 作 `### CF-WR PRE-REGISTRATION`(冻结,inline 全部 τ/比带/R̂网格/seed/teacher-sha256);
-4. **4 脚本各 ≥3 子代理 + reviewer,串行**:`cf_wr_{teacher,windows,glue,score}.py`(断言+证据打印+刷新+spawn `__main__` guard);
-5. 跑(seed 20260614,sim-only)→ `### CF-WR RESULTS` + metric 审计 + rigor 审计((a)/(b)/(c) 全标、theorem-backed vs PROVISIONAL)。
+12q density matrix 2¹²×2¹² ~16.8M complex elements; CMI/Petz on ≤4q marginals is small linear algebra ⇒ **minutes-scale**; **pure sim/teacher side, zero real hardware, zero held-out (05–09), zero escrow (15–19) touched, exactness preserved throughout**; GPU runs the exact evolution + Choi (GPU-only model compute); 65GB memguard; scripted-execution.
 
 ---
 
-## 9. 红线(违反任一即事故)
+## 8. Freeze / build sequence (theory-first)
 
-- **sim/teacher-only**:不碰真硬件、held-out 05–09、escrow 15–19;
-- **exactness 保持**:白箱核心=精确 Born-NLL + G1 Petz;G2/A 标 (c),锚精确对象,绝不进 (a) 主干/前提/推导基础;
-- **注册文本冻结**:τ_D=0.5×√CMI-bound、τ_E=10%、P2 系数比 c<1、R̂网格、seed、teacher 哈希全 inline 钉死;miss=finding,不事后加宽容差;
-- **R̂ 旋钮 = 非unital T-B CPTP**(绝不 unital coherent ZZ);**φ 相干旋钮独立、不携 R̂**;
-- **结论纪律**:GO/NO-GO 默认 PROVISIONAL;NO-GO 非定理级;
-- **理论先行**:§5 预测带 + Petz 领头阶推导在 run 前冻结;
-- **scripted-execution + 65GB memguard + GPU-only 模型计算**;
-- git:完成即提交(不 push、无 co-author)。
+1. **This v2 → reviewer-2 pass** (read-only; re-review: faithfulness of the T-B knob parameterization, whether the leading-order derivation of the Petz residual is written in, the exactness of the S-markov gate, whether τ_D is genuinely below the bound, the 12q toy's logical distance ≥2, all frozen constants inlined);
+2. **The two (a) bases are filled in**: (α) the leading-order derivation of the Petz residual = `docs/cf_wr/P2_derivation.md` (✓); (β) the METRICS.md Choi-trace-distance row is added + E_do is mapped to the ledger's `knob_dler_error` (✓);
+3. fold into `docs/metric_results.md` as `### CF-WR PRE-REGISTRATION` (frozen, inlining all τ / ratio bands / R̂ grid / seed / teacher-sha256);
+4. **4 scripts, each ≥3 sub-agents + reviewer, serial**: `cf_wr_{teacher,windows,glue,score}.py` (assertions + printed evidence + flush + spawn `__main__` guard);
+5. run (seed 20260614, sim-only) → `### CF-WR RESULTS` + metric audit + rigor audit (all (a)/(b)/(c) tagged, theorem-backed vs PROVISIONAL).
+
+---
+
+## 9. Red lines (a breach of any one is an incident)
+
+- **sim/teacher-only**: do not touch real hardware, held-out 05–09, escrow 15–19;
+- **exactness preserved**: white-box core = exact Born-NLL + G1 Petz; G2/A tagged (c), anchored to the exact object, never entering the (a) trunk/premise/derivation basis;
+- **registration text frozen**: τ_D=0.5×√CMI-bound, τ_E=10%, the P2 coefficient ratio c<1, the R̂ grid, the seed, the teacher hash all inlined and pinned; miss=finding, no widening of the tolerance after the fact;
+- **R̂ knob = non-unital T-B CPTP** (never unital coherent ZZ); **the φ coherent knob is independent, carries no R̂**;
+- **conclusion discipline**: GO/NO-GO defaults to PROVISIONAL; NO-GO is not theorem-grade;
+- **theory-first**: the §5 prediction bands + the Petz leading-order derivation are frozen before the run;
+- **scripted-execution + 65GB memguard + GPU-only model compute**;
+- git: commit on completion (no push, no co-author).

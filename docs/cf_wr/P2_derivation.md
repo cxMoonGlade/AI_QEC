@@ -1,58 +1,58 @@
-# CF-WR P2 (a)-basis —— 缝粘合 Choi-迹距离残差领头阶推导(G0 mean-field vs G1 Petz)
+# CF-WR P2 (a)-basis — Seam-gluing Choi trace-distance residual leading-order derivation (G0 mean-field vs G1 Petz)
 
-> 这是 `registration.md`(同目录)§5 P2 的 (a)-精确 / (b)-band 推导基础(reviewer-1 BLOCK-M2 要求:P2 不得断言,须有写下的推导)。
-> 由 opus 理论代理推导(2026-06-14),对照本地 `composed.py`(G0 实现)、`D_package_derivations.md`(T-B 非unital 成员)、`metric_results.md` SEAM-TEST(实测 G0 指数 0.973)、Fawzi–Renner 1410.0664 / JRSWW(PMC4841654)。
-> epistemic 图例:(a) 精确;(b) 推导得出的预测带;(c) 启发。每步标类,conjectural 处**加粗内联标注**。
+> This is the (a)-exact / (b)-band derivation basis for §5 P2 of `registration.md` (same directory) (reviewer-1 BLOCK-M2 requirement: P2 must not assert without a written derivation).
+> Derived by the opus theory agent (2026-06-14), cross-referenced against local `composed.py` (G0 implementation), `D_package_derivations.md` (T-B non-unital membership), `metric_results.md` SEAM-TEST (measured G0 exponent 0.973), Fawzi–Renner 1410.0664 / JRSWW (PMC4841654).
+> Epistemic legend: (a) exact; (b) derived prediction band; (c) heuristic. Each step is labeled; conjectural points are **bolded inline**.
 
-## 0. Reviewer-2 binding corrections(覆盖正文相应处,2026-06-14)
+## 0. Reviewer-2 binding corrections (override the corresponding body text, 2026-06-14)
 
-正文是工作推导;下列 5 条为**绑定覆盖**,以此为准:
+The body is the working derivation; the following 5 items are **binding overrides** and take precedence:
 
-- **[B-1] `c<1` 是 (b),非 (a)。** §3.4/§4 的"`c_{G1}<c_{G0}` 严格不等式 (a)"**降级为 (b)**:`‖χ⁽¹⁾−Petz(χ⁽¹⁾)‖₁<‖χ⁽¹⁾‖₁` 一般不成立(迹范非 aligned-subtractive;旋转-Petz 可 over-rotate 使某分量更差;若 χ⁽¹⁾ 无 ρ_BC 支撑则 c=1)。无 `δ>0` 下界定理。⇒ **c<1 是 (b) 赌注,且与 GO 解耦(不作 GO 前提)**。c≥1=finding。
-- **[B-5] bound 常数改 `√(I_nats)`。** 经 Fuchs–van de Graaf:`F²≥2^(−I_bits)=e^(−I_nats)`,`T²≤1−F²≤1−e^(−I_nats)≤I_nats` ⇒ **`D_Choi^{G1} ≤ √(I_nats)=√(ln2·I_bits)`**。正文/§3.1 的 `√(2ln2·I)` **多了 √2,作废**。τ_D 据此重算。
-- **[B-2] 微扰坐标用带符号 asymmetry δ′=p10−p01(两侧)。** CMI 二次性的"一阶导消"仅当 λ=0 是**内点最小**;R−1 是单侧(R≥1,AM–GM),会落在端点。改用 δ′(两侧、I 在 δ′ 偶 ⇒ δ′=0 内点)⇒ I=O(δ′²) 严格。**且此 bound-标度不 gate 任何判据**(实际残差是测的),非 load-bearing。
-- **[B-3] 2D:at-most-linear,非严格线性。** §5 (R-2D) 的"不交支撑 ⇒ ∝L"**对 2D 共角缝不成立**(相邻 2×2 窗共享角 qubit ⇒ 支撑相交 ⇒ 迹范 sub-additive)。改为 **单调 + O(L) 上界 (a),线性为 (b) 中心**。
-- **[B-4] c_{G0} 细化。** `composed.py` 的 G0 经条件 reduction **捕获了 marginal-shift sector**,丢的只是**未捕获的连通部分**:`c_{G0}=½‖χ⁽¹⁾_未捕获连通‖₁ ≤ ½‖χ⁽¹⁾‖₁`。slope-1 不变;0.973<1 记作 band [0.90,1.10] 内 + O(λ²) admixture,非精确确认。
+- **[B-1] `c<1` is (b), not (a).** The "`c_{G1}<c_{G0}` strict inequality (a)" in §3.4/§4 is **downgraded to (b)**: `‖χ⁽¹⁾−Petz(χ⁽¹⁾)‖₁<‖χ⁽¹⁾‖₁` does not hold in general (trace norm is not aligned-subtractive; a rotated Petz can over-rotate and worsen some components; if χ⁽¹⁾ has no ρ_BC support then c=1). There is no theorem giving a `δ>0` lower bound. ⇒ **c<1 is a (b) bet, and is decoupled from G0 (not a G0 premise)**. c≥1 = finding.
+- **[B-5] Bound constant changed to `√(I_nats)`.** Via Fuchs–van de Graaf: `F²≥2^(−I_bits)=e^(−I_nats)`, `T²≤1−F²≤1−e^(−I_nats)≤I_nats` ⇒ **`D_Choi^{G1} ≤ √(I_nats)=√(ln2·I_bits)`**. The `√(2ln2·I)` in the body/§3.1 **has an extra √2 and is void**.  τ_D should be recalculated accordingly.
+- **[B-2] Perturbative coordinate uses signed asymmetry δ′=p10−p01 (two-sided).** The "first-derivative cancellation" from the quadratic nature of CMI holds only when λ=0 is an **interior minimum**; R−1 is one-sided (R≥1, AM–GM) and will land at an endpoint. Switching to δ′ (two-sided; I is even in δ′ ⇒ δ′=0 is an interior point) ⇒ I=O(δ′²) strictly. **Moreover this bound-scaling does not gate any criterion** (the actual residual is measured), and is not load-bearing.
+- **[B-3] 2D: at-most-linear, not strictly linear.** The "disjoint support ⇒ ∝L" in §5 (R-2D) **does not hold for 2D shared-corner seams** (adjacent 2×2 windows share a corner qubit ⇒ supports intersect ⇒ trace norm is sub-additive). Revised to **monotone + O(L) upper bound (a), linearity as (b) center**.
+- **[B-4] c_{G0} refined.** The G0 in `composed.py`, via conditional reduction, **captures the marginal-shift sector**; what is lost is only the **uncaptured connected part**: `c_{G0}=½‖χ⁽¹⁾_uncaptured-connected‖₁ ≤ ½‖χ⁽¹⁾‖₁`. Slope 1 is unchanged; 0.973<1 is recorded as within band [0.90,1.10] + O(λ²) admixture, not an exact confirmation.
 
-## 1. setup
-- 对象 (a):J(E)=(I⊗E)|Ω⟩⟨Ω|;一条缝分 **A—B—C**(B=重叠/buffer);glue 只是 measured marginals {ρ_AB, ρ_BC} 的函数。
-- 微扰参量 (a):λ = 跨缝关联振幅。registered 旋钮 = **非unital 局部 CPTP** 沿 T-B 曲线(r=1.27e-2,R=5 成员 (p01,p10)=(6.7039e-3,0.120296);**非unital(p01≠p10)是携关联者**;unital 对称点 R=1)。相干伴随 teacher U_φ=exp(−iφZ⊗Z) 同框,λ↦φ。
-- 残差 (a):D_Choi^G(λ)=½‖ρ(λ)−glue_G(ρ_AB,ρ_BC)‖₁。
-- 关联展开 (a):ρ(λ)=ρ⁽⁰⁾+λρ⁽¹⁾+λ²ρ⁽²⁾+…;marginals 同展开。
-- **(S1, a) 关键输入**:非unital ⇒ 一阶项 ρ⁽¹⁾ 含**非零 O(λ) 的 A:C 连通(cumulant)关联** χ⁽¹⁾≠0。证:非unital 破坏 parity/twirl 对称,奇 sector 一阶不消。(对照:unital-diagonal 耦合 twirl 成 Z⊗Z dephasing,连通关联为偶,一阶消——T-A/unital pin。)
+## 1. Setup
+- Object (a): J(E)=(I⊗E)|Ω⟩⟨Ω|; a single seam partitioned as **A—B—C** (B = overlap/buffer); gluing is a function only of the measured marginals {ρ_AB, ρ_BC}.
+- Perturbation parameter (a): λ = amplitude of cross-seam correlations. Registered knob = **non-unital local CPTP** along the T-B curve (r=1.27e-2, R=5 member (p01,p10)=(6.7039e-3,0.120296)); **non-unital (p01≠p10) is what carries correlations**; unital symmetric point R=1). Coherent companion teacher U_φ=exp(−iφZ⊗Z) in the same frame, λ↦φ.
+- Residual (a): D_Choi^G(λ)=½‖ρ(λ)−glue_G(ρ_AB,ρ_BC)‖₁.
+- Correlation expansion (a): ρ(λ)=ρ⁽⁰⁾+λρ⁽¹⁾+λ²ρ⁽²⁾+…; marginals expanded similarly.
+- **(S1, a) Key input**: non-unital ⇒ the first-order term ρ⁽¹⁾ contains **nonzero O(λ) A:C connected (cumulant) correlations** χ⁽¹⁾≠0. Proof: non-unital breaks parity/twirl symmetry, so the odd sector does not cancel at first order. (Contrast: unital-diagonal coupling twirls to Z⊗Z dephasing, connected correlations are even, first order cancels — T-A/unital pin.)
 
-## 2. G0(mean-field/条件积)领头阶
-- G0 实现 (a, `composed.py:25–68`):**同步条件积(mean-field)**,strip 约束在 product manifold,seam 作用为对 partner branch-平均 marginal 的条件 reduction。**连通 A:C 关联恒为 0(product 约束,全阶)**。
-- 领头残差 (a 阶 / b 系数):G0 无法表示的就是连通部分 χ。χ(λ)=λχ⁽¹⁾+O(λ²),χ⁽¹⁾≠0(S1)。
-  **D_Choi^{G0}(λ)=c_{G0}·λ+O(λ²),c_{G0}=½‖χ⁽¹⁾‖₁>0 —— 线性,slope 1。**
-- 与 K1 实测一致 (a 事后):实测 sandwich 指数 **0.973**、k2ry 0.858 ≈ 1 —— 本推导预测 slope 1,并解释旧二次 ansatz 为何被证伪(它把丢掉的项误当 O(λ²) 自洽误差,漏了 product 约束丢的是**一阶**连通关联)。
-- 例外 (C0, a):**unital-diagonal/twirled 耦合 ⇒ χ⁽¹⁾=0 ⇒ D_Choi^{G0}=O(λ²)(slope 2)**。即"order = 领头连通关联的 parity"。非unital + un-twirled 相干 ∈ O(λ) 类。
-- mean-field 自洽误差 (a):O(λ²),subleading。
+## 2. G0 (mean-field / conditional product) leading order
+- G0 implementation (a, `composed.py:25–68`): **synchronized conditional product (mean-field)**, strip constrained to the product manifold; the seam acts as a conditional reduction onto the marginal averaged over the partner branch. **Connected A:C correlations are identically 0 (product constraint, all orders)**.
+- Leading residual (a order / b coefficient): what G0 cannot represent is exactly the connected part χ. χ(λ)=λχ⁽¹⁾+O(λ²), χ⁽¹⁾≠0 (S1).
+  **D_Choi^{G0}(λ)=c_{G0}·λ+O(λ²), c_{G0}=½‖χ⁽¹⁾‖₁>0 — linear, slope 1.**
+- Consistent with K1 measurement (a, post-hoc): measured sandwich exponent **0.973**, k2ry 0.858 ≈ 1 — this derivation predicts slope 1, and explains why the old quadratic ansatz was falsified (it mistook the dropped terms for O(λ²) self-consistent error, missing that the product constraint drops the **first-order** connected correlations).
+- Exception (C0, a): **unital-diagonal/twirled coupling ⇒ χ⁽¹⁾=0 ⇒ D_Choi^{G0}=O(λ²) (slope 2)**. In other words "order = parity of the leading connected correlation". Non-unital + un-twirled coherent ∈ O(λ) class.
+- Mean-field self-consistency error (a): O(λ²), subleading.
 
-## 3. G1(Petz)领头阶 —— crux
-- Petz 普适旋转映射 (a, JRSWW):R_{B→BC}(X_B)=∫dt β₀(t) ρ_BC^{(1+it)/2}(ρ_B^{−(1+it)/2}X_Bρ_B^{−(1−it)/2}⊗I_C)ρ_BC^{(1−it)/2},**只依赖 ρ_BC**。
-- bound (B1, a;常数见 §0 [B-5]):D_Choi^{G1} ≤ √(I_nats)=√(ln2·I_bits)(Fuchs–van de Graaf;**非 √(2ln2·I),已作废**)。
-- CMI 二阶 ⇒ bound 线性 (a):I(A:C|B)=κλ²+O(λ³)(非负+解析+Markov 点取 0 ⇒ 一阶导消 ⇒ 二次);故 √I∝λ,**bound 本身线性**,且**线性 upper bound 不能定 actual 残差是 λ 还是 λ²**。
-- 一阶展开 (a):glue_{G1}(λ)=R⁽⁰⁾(ρ_AB⁽⁰⁾)+λ[R⁽⁰⁾(ρ_AB⁽¹⁾)+R⁽¹⁾(ρ_AB⁽⁰⁾)]+O(λ²);Markov 点 R⁽⁰⁾(ρ_AB⁽⁰⁾)=ρ⁽⁰⁾(精确恢复)。一阶残差 Δ⁽¹⁾=ρ⁽¹⁾−[…]。
-  - marginal-shift 部分:Petz 复现 ρ_AB⁽¹⁾、ρ_BC⁽¹⁾ 两个 measured 移位 ⇒ **该 sector Δ⁽¹⁾=0**。
-  - 连通部分 χ⁽¹⁾:**(P-cond, a iff)** Δ⁽¹⁾=0(Petz 消一阶 ⇒ O(λ²))**当且仅当** χ⁽¹⁾ 由 ρ_BC 承载(B 屏蔽);否则一阶残差幸存(O(λ),系数更小)。
-- 非unital 情形 (a 结构 / b 系数):缝关联在 B–C 界面一轮内本地生成、经 ρ_AB/ρ_BC 传到 A ⇒ B-mediated。**但非unital 使 [ρ_BC,ρ_B⊗I_C]≠0,阻碍旋转-Petz 在一阶精确求逆**,故**一阶残差一般幸存**:
-  **D_Choi^{G1}=c_{G1}·λ+O(λ²),0≤c_{G1}<c_{G0} 严格。**
-- **§3.5 referee-proofing (a flag)**:干净 O(λ²) 须 χ⁽¹⁾ 恰好 Petz-可恢复(一阶严格 Markov),非unital 界面**不可证**。故**不注册 slope-difference(G0=1,G1=2)**,注册**系数比**。
+## 3. G1 (Petz) leading order — crux
+- Petz universal rotation map (a, JRSWW): R_{B→BC}(X_B)=∫dt β₀(t) ρ_BC^{(1+it)/2}(ρ_B^{−(1+it)/2}X_Bρ_B^{−(1−it)/2}⊗I_C)ρ_BC^{(1−it)/2}, **depends only on ρ_BC**.
+- Bound (B1, a; constant per §0 [B-5]): D_Choi^{G1} ≤ √(I_nats)=√(ln2·I_bits) (Fuchs–van de Graaf; **not √(2ln2·I), which is void**).
+- CMI second-order ⇒ bound linear (a): I(A:C|B)=κλ²+O(λ³) (non-negative + analytic + vanishes at Markov point ⇒ first derivative cancels ⇒ quadratic); hence √I∝λ, **the bound itself is linear**, and **a linear upper bound cannot determine whether the actual residual is λ or λ²**.
+- First-order expansion (a): glue_{G1}(λ)=R⁽⁰⁾(ρ_AB⁽⁰⁾)+λ[R⁽⁰⁾(ρ_AB⁽¹⁾)+R⁽¹⁾(ρ_AB⁽⁰⁾)]+O(λ²); at the Markov point R⁽⁰⁾(ρ_AB⁽⁰⁾)=ρ⁽⁰⁾ (exact recovery). First-order residual Δ⁽¹⁾=ρ⁽¹⁾−[…].
+  - Marginal-shift sector: Petz reproduces both measured shifts ρ_AB⁽¹⁾ and ρ_BC⁽¹⁾ ⇒ **Δ⁽¹⁾=0 in that sector**.
+  - Connected part χ⁽¹⁾: **(P-cond, a iff)** Δ⁽¹⁾=0 (Petz cancels at first order ⇒ O(λ²)) **if and only if** χ⁽¹⁾ is carried by ρ_BC (B screens); otherwise the first-order residual survives (O(λ), smaller coefficient).
+- Non-unital case (a structure / b coefficient): seam correlations are generated locally at the B–C interface within one round and transmitted to A via ρ_AB/ρ_BC ⇒ B-mediated. **However, non-unital causes [ρ_BC,ρ_B⊗I_C]≠0, which impedes the rotated Petz from exactly inverting at first order**, so **the first-order residual generally survives**:
+  **D_Choi^{G1}=c_{G1}·λ+O(λ²), 0≤c_{G1}<c_{G0} strictly.**
+- **§3.5 referee-proofing (a flag)**: a clean O(λ²) requires χ⁽¹⁾ to be exactly Petz-recoverable (first-order strict Markov), which **cannot be proven** for non-unital interfaces. Hence **no slope-difference is registered (G0=1, G1=2)**; only the **coefficient ratio** is registered.
 
 ## 4. FROZEN P2
-- **P2.1 (a)**:D_Choi^{G0}=c_{G0}λ+O(λ²),slope **1**(band [0.90,1.10];实测 0.973 retro-确认)。unital/twirled ⇒ slope **2**。
-- **P2.2 (b) registered discriminator**:D_Choi^{G1}=c_{G1}λ+O(λ²),**c≡c_{G1}/c_{G0}∈[0,1) 严格 (a),方向赌注 c ≤ 0.5 (b)**。c≥1 证伪(finding);c≈0(G1 slope 实测≈2)= **bonus** 确认更强 O(λ²) 子假设,不预设。within-run 比较(同 teacher/functional/grid,归一化抵消)⇒ c 比单独 slope 更稳。
-- **P2.3 (a) pin**:unital 点(p01=p10)c_{G0},c_{G1} 一阶皆 →0,残差 O(λ²)。违反=build bug。
+- **P2.1 (a)**: D_Choi^{G0}=c_{G0}λ+O(λ²), slope **1** (band [0.90,1.10]; measured 0.973 retro-confirms). Unital/twirled ⇒ slope **2**.
+- **P2.2 (b) registered discriminator**: D_Choi^{G1}=c_{G1}λ+O(λ²), **c≡c_{G1}/c_{G0}∈[0,1) strictly (a), directional bet c ≤ 0.5 (b)**. c≥1 falsifies (finding); c≈0 (G1 slope measured ≈2) = **bonus** confirmation of the stronger O(λ²) sub-hypothesis, not pre-assumed. Within-run comparison (same teacher/functional/grid, normalization cancels) ⇒ c is more robust than individual slopes alone.
+- **P2.3 (a) pin**: at the unital point (p01=p10), c_{G0} and c_{G1} both → 0 at first order, residual O(λ²). Violation = build bug.
 
-## 5. 2D seam-length L 标度(修正:线性 L,非 √L)
-- **(R-2D, a 正交支撑)**:局部场 ⇒ L 个界面 cell 的 χ⁽¹⁾_ℓ 支撑不交 ⇒ 迹范可加 ⇒ **D_Choi∝L 线性**。
-- **为何 L 非 √L (a)**:迹距离是算子直和的 L₁ 范,贡献按**幅度**相加(非 quadrature);√L 是**涨落/方差**律,不适用 L₁ Choi 残差。(度量依赖:若测 fidelity 或涨落 functional 的标准误,√L 才回来。)
-- **沿缝关联情形 (b)**:仍 ∝L,系数吸收 ξ。
-- **P2.4 (b)**:per-seam Choi 残差**单调增、渐近线性于 L**(指数 band [0.85,1.15],**非** [0.4,0.6])。诚实 caveat:精确-DM oracle 只够 L∈{1,2,3},**仅 sign+monotone 可测**,L-指数 direction-only(指数 miss=finding,不证伪 sign/monotone)。**c(P2.2)对 L 一阶无关 ⇒ c<1 是稳健 2D-可迁移判据**,绝对残差的 L 律仅 direction-only。
+## 5. 2D seam-length L scaling (correction: linear in L, not √L)
+- **(R-2D, a orthogonal support)**: local field ⇒ χ⁽¹⁾_ℓ supports of L interface cells are disjoint ⇒ trace norm is additive ⇒ **D_Choi∝L linear**.
+- **Why L not √L (a)**: trace distance is the L₁ norm of an operator direct sum; contributions add by **amplitude** (not in quadrature); √L is the **fluctuation/variance** law and does not apply to the L₁ Choi residual. (Metric-dependent: if measuring fidelity or the standard error of a fluctuation functional, √L returns.)
+- **Along-seam correlation case (b)**: still ∝L, coefficient absorbs ξ.
+- **P2.4 (b)**: per-seam Choi residual **monotonically increasing, asymptotically linear in L** (exponent band [0.85,1.15], **not** [0.4,0.6]). Honest caveat: the exact-DM oracle suffices only for L∈{1,2,3}, so **only sign+monotone is measurable**; the L-exponent is direction-only (exponent miss = finding, does not falsify sign/monotone). **c (P2.2) is first-order independent of L ⇒ c<1 is a robust 2D-transferable criterion**; the L-law for the absolute residual is direction-only.
 
-## 6. 一个 referee flag
-"CMI 在 λ 二阶"(§3.2)Fawzi–Renner/JRSWW **未明述**,本推导由 非负+解析+Markov 点取零 严格导出 —— 注册须作 **derived corollary** 引用,非papers 原话。
+## 6. A referee flag
+"CMI is second-order in λ" (§3.2) is **not explicitly stated** in Fawzi–Renner/JRSWW; this derivation obtains it rigorously from non-negativity + analyticity + vanishing at the Markov point — the registration must cite it as a **derived corollary**, not a verbatim paper claim.
 
-## 源
-Fawzi–Renner CMP 340(2015), [1410.0664](https://arxiv.org/abs/1410.0664);Sutter–Fawzi–Renner Proc.R.Soc.A 472(2016), [PMC4841654](https://pmc.ncbi.nlm.nih.gov/articles/PMC4841654/);本地 `composed.py`、`D_package_derivations.md` §D5、`T1_requirements.md`、`metric_results.md` SEAM-TEST(实测 0.973/0.858、证伪二次、φ² 跨窗质量 ×8.7/×3)。
+## Sources
+Fawzi–Renner CMP 340(2015), [1410.0664](https://arxiv.org/abs/1410.0664); Sutter–Fawzi–Renner Proc.R.Soc.A 472(2016), [PMC4841654](https://pmc.ncbi.nlm.nih.gov/articles/PMC4841654/); local `composed.py`, `D_package_derivations.md` §D5, `T1_requirements.md`, `metric_results.md` SEAM-TEST (measured 0.973/0.858, quadratic falsified, φ² cross-window quality ×8.7/×3).
