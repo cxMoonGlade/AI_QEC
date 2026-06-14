@@ -1,11 +1,10 @@
 # The Twin — A Teacher-Learner, Finance-Structured QEC Error-Mechanism Digital Twin
 
-This is the current binding spec for "the twin." It supersedes an earlier
-orbit-symmetry-compression framing, retired by [ADR 0005](adr/0005-retire-scope-reframe-twin.md).
+This is the current binding spec for "the twin."
 ADR 0003 (B methodology) and ADR 0004 (finance framing) are the methodological core.
 
-"The twin" is the descriptive name until a new one is chosen. The code package
-identifier is `qec_twin`, a neutral, stable handle after the ADR 0005 reframe.
+"The twin" is the descriptive name. The code package
+identifier is `qec_twin`, a neutral, stable handle.
 
 ## What it is
 
@@ -96,8 +95,7 @@ finance analogues), **not** a fixed architecture:
 
 **B (validate the loop on a controlled toy) → HARDEN (richer/correlated
 mechanisms, larger `d`, drift) → C (real Google 72Q/105Q).** Success axes =
-recover/understand/manipulate/predict. (The orbit-field "A" step is retired,
-ADR 0005.)
+recover/understand/manipulate/predict.
 
 - **B — done on an exact repetition-code toy.** Label-free calibration recovers a
   coherent over-rotation teacher (`calib_kl ≈ 0`); the `do()` knob matches the
@@ -123,7 +121,7 @@ ADR 0005.)
 |---|---|
 | `A` | DEM parity map `F_2^{B×M}` (fault→observation) — never for assignment |
 | `S` / `Π` | learned soft assignment matrix |
-| `ω(j)` | **known** teacher orbit/symmetry-class assignment of fault `j` — exploited silently as known structure for compute/correctness, **not** as an identifiability or parameter-economy thesis (ADR 0005) |
+| `ω(j)` | **known** teacher orbit/symmetry-class assignment of fault `j` — used as known structure for compute/correctness, never an identifiability lever |
 | `λ_j` | Stage-1 fault logit `logit(p_j)` — never `ℓ_j` |
 | `m` | logical observable bit — never `o` |
 | `e` | latent DEM fault vector |
@@ -139,11 +137,3 @@ legacy-catalog-ID, Born-rule-generation, or CPTP/GKSL-learning claim beyond the
 validated controlled loop until C is reached and earned. The `raw_target_only`
 block-normalized score plus controls remains the Google V2 headline, not
 `full_target` alone.
-
-## History
-
-The earlier framing (an orbit-symmetry-compression thesis with an L2
-orbit-compression field `θ = ρ(g)ϑ_ω + Uz` and a six-axis bar) is preserved in
-git history. Its surviving substrate (the exact CPTP primitives and the minimal
-DEM frozen-decoder path) remains valid; the discovery / observability / catalog /
-Google program was removed (ADR 0005).

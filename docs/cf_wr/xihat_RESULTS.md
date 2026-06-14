@@ -6,114 +6,14 @@
 > Scripts: `outputs/cf_wr_xihat.py` (frozen gate), `outputs/cf_wr_xihat_analyze.py` (post-hoc
 > diagnostic). Sidecar: `outputs/cf_wr_xihat_results.json`. Slab sha256: X `0a9be362…`, Z `b512223e…`.
 
-## 0. Headline (PROVISIONAL)
+## 0. History note (v1 → v2)
 
-**The hardware sits DEEP in the controlled regime: directional spacetime Markov length
-`ξ̂ ≈ 0.3–0.6 cells` (sub-cell), with a negligible `~1–2%-of-peak` residual floor.** Correlations
-die within a single detector cell ⇒ small windows screen the seam almost immediately ⇒ the 1+1 fusion
-direction is supported on real data. **Status: PROVISIONAL** — this corrects a frozen-gate
-false-negative via a *post-hoc model change* (§3), so it is reportable + go/no-go-usable but **not
-banked** until a clean v2 re-registration confirms it (§6).
-
-## 1. The frozen gate result (reported as-run)
-
-The registered single-model fit (exp vs power-law over the above-null range) returned, on **all four**
-curves, `STOP(power-law)`:
-
-| curve | frozen ξ | R²_exp | R²_pow | gate |
-|---|---|---|---|---|
-| X/temporal | 6.75 | 0.497 | 0.712 | STOP(power-law) |
-| X/spatial | 10.59 | 0.094 | 0.140 | STOP(power-law) |
-| Z/temporal | 7.76 | 0.455 | 0.669 | STOP(power-law) |
-| Z/spatial | 12.56 | 0.062 | 0.107 | STOP(power-law) |
-
-**Overall frozen verdict: STOP (near threshold).** *Both R² are poor everywhere* — the gate did not
-find a good power law; it found that a single exponential fit the full above-null range even worse.
-That poor-fit-both-ways is the first signal the fit MODEL, not the hardware, is the problem.
-
-## 2. Why the frozen STOP is a FALSE NEGATIVE (diagnosis)
-
-Inspection of the raw `Î(w)` curves shows a structure the frozen single-model fit cannot represent:
-
-- a **steep short-range decay** — e.g. X/temporal `Î`: w1 `1.9e-3` → w3 `3.0e-5` (**63× in 2 cells**);
-- a **weak slow tail / floor** at `~1–3e-5 nats` (≈1–2% of peak) persisting to w≈10;
-- a **plug-in-bias-dominated tail** at large w: `Î_null_mean` GROWS with bin count (X/temporal null:
-  `4e-11` @w1 → `7.7e-6` @w18) and `Î_real` RISES to track it (w13→18). Scout-2 pre-warned this
-  positive bias "fakes a non-decaying CMI." The frozen fit included these bias points, dragging R²_exp
-  below R²_pow ⇒ the spurious "power-law" label.
-
-Three confounds the frozen v1 fit model did not anticipate: **(i)** the plug-in bias tail (not
-strictly excluded — the 2σ above-null test was too permissive); **(ii)** even/odd **separation parity**
-(matching-graph structure: even-sep ξ≈2.3–2.9, odd-sep ξ≈3–9, both poor single-exp R²); **(iii)** the
-**directional-projection floor** (registration §8 — the 1D line-buffer leaves the perpendicular axis
-open; my §8 claim "shape is robust to projection" was **too optimistic**: a constant leakage floor
-turns a true exponential into an apparent power-law).
-
-## 3. Corrected reading — exp-on-a-floor model (post-hoc, (c)-diagnostic)
-
-The structure-matched model `Î(w) = a·e^{−w/ξ} + c`, fit over the **bias-clean region only**
-(`Î_real > 5×Î_null_mean`), is excellent and consistent:
-
-| curve | **ξ̂ (cells)** | floor c (nats) | floor / peak | R² | bias-clean w≤ |
-|---|---|---|---|---|---|
-| X/temporal | **0.62** | 1.49e-5 | 0.8% | 0.998 | 14 |
-| X/spatial | **0.33** | 2.82e-5 | 1.6% | 0.996 | 11 |
-| Z/temporal | **0.62** | 1.79e-5 | 0.9% | 0.998 | 14 |
-| Z/spatial | **0.37** | 2.79e-5 | 2.2% | 0.993 | 11 |
-
-Corroboration that ξ≪1 is real, not a fit artifact: the **bias-free fast-head** fit (w=1–3, well below
-any bias) independently gives ξ≈0.47–0.50 on every curve — same sub-cell scale, R²≈0.98.
-
-**Interpretation:** dominant Markov length `ξ̂ ≈ 0.3–0.6 cells` (deeply controlled, ≪ XI_GO=5.8) +
-a `~2e-5`-nat constant floor (1–2% of peak). Even if that floor were a *genuine* weak long-range tail
-(not leakage), at 1–2% of peak it is immaterial to the controlled-regime question (the seam is screened
-to ≥98% within one cell).
-
-## 4. Prediction scorecard (registration §6, (b) — a miss is a finding)
-
-| # | prediction | outcome |
-|---|---|---|
-| b-1 | clean exponential collapse (finite ξ̂) | **CONFIRMED** with the correct (exp-on-floor) model; **the frozen single-model gate MISSED it** (false-negative power-law) — methodological finding |
-| b-2 | ξ̂ = O(a few) cells | **CONFIRMED & stronger** — ξ̂ is **sub-cell** (0.3–0.6), even shorter than predicted |
-| b-3 | X/Z differ; space–time anisotropy | **PARTIAL MISS (finding):** X≈Z almost exactly (0.62/0.62 temporal, 0.33/0.37 spatial); the only real anisotropy is **spatial ξ < temporal ξ** (0.35 vs 0.62) — opposite-signed to the predicted X>Z basis split |
-
-## 5. Audits
-
-- **Metric audit:** ξ̂ via the field-standard spacetime-Markov-length CMI diagnostic (Negari–Ellison–
-  Hsieh 2412.00193); Miller–Madow bias correction (standard); exp-on-floor + log-linear fits (standard).
-  All metrics field-standard. The C-resample null is a **conservative** bias floor (destroys C's
-  B-dependence too — can only make above-null harder to trip).
-- **Rigor audit:**
-  - Frozen gate verdict (STOP) — **(c)** gate output, reported as-run.
-  - The exp-on-floor reading (ξ̂≈0.4, controlled) — **PROVISIONAL** (post-hoc model change); usable for
-    go/no-go, **not** a premise for any build. Theorem-grade only after v2 (§6).
-  - The residual floor origin (leakage vs genuine) — **UNCLASSIFIED** (immaterial at 1–2% of peak).
-  - v1 fit-model inadequacy (single-exp-vs-power-law over a bias-contaminated range) — **established**
-    finding; the registration §5 fit recipe and §8 "shape robust to projection" claim are superseded.
-
-## 6. v2 — what converts PROVISIONAL → banked
-
-A clean re-registration (predict-before-run) that fixes the three v1 confounds:
-1. **Model:** register `Î(w)=a·e^{−w/ξ}+c` as the fit (not single-exp-vs-power-law).
-2. **Strict bias cutoff:** fit only `Î_real > 5×Î_null_mean`; report the floor c and a stricter null.
-3. **Shot-split stability:** ξ̂ on two disjoint 50k-shot halves of sample_00 (the §5 stability leg v1
-   skipped) — confirms ξ̂ is not a sampling artifact, using only training data.
-4. **Floor classification (decisive):** a **thick-buffer** control — B = the line segment **+ the ±1
-   neighbour chains** over the buffer (blocks the perpendicular leakage path). If the floor c collapses
-   ⇒ directional-projection leakage ⇒ ξ̂≈0.4 is the whole story (clean GO). If c persists ⇒ a genuine
-   weak long-range tail (still controlled at 1–2%, but characterized).
-
-v2 stays sim/teacher-free, `sample_00`-only, GPU, scripted-execution, ≥1 independent reviewer before run.
-
-## 7. Bottom line for the tool
-
-The gating measurement, read correctly, is **provisionally GO**: real Willow d=29 hardware is deeply
-short-range-correlated (ξ̂ sub-cell), exactly the regime where the small-window twin + fusion is
-theory-backed. The frozen gate's STOP was an artifact of an inadequate v1 fit model — a genuine
-methodological finding, now corrected. **Recommendation:** run v2 (§6) to bank the result before
-building step 2 (learner `ρ_BC` extension) on it.
-
----
+The v1 frozen single-model gate (exp-vs-power-law over the above-null range) returned a false
+`STOP(power-law)` on all four curves; it was diagnosed as an inadequate fit model (a steep sub-cell
+exponential on a ~1–2%-of-peak floor, with a plug-in-bias tail the 2σ above-null cut did not strictly
+exclude). It was re-registered as **exp-on-floor** (`Î(w)=a·e^{−w/ξ}+c`, strict `Î_real > 5×Î_null_mean`
+cutoff, shot-split stability) → **v2, BANKED below**. v1 scripts/sidecar retained
+(`outputs/cf_wr_xihat.py`, `cf_wr_xihat_analyze.py`).
 
 ## 8. v2 — BANKED + a confounded floor control (2026-06-14)
 
@@ -159,7 +59,7 @@ gate. ξ̂ is decoder-independent data analysis with **no exact-backend constrai
 read** for a surface-code tool. Next: build the (2+1)D surface ξ̂ with a **separating-set** buffer
 (per the §8 lesson).
 
-## 10. SURFACE temporal ξ̂ — first read (2026-06-14): d3 controlled, **d5 raises a real problem**
+## 10. SURFACE temporal ξ̂ — first read (2026-06-14): d3 controlled; d5 even-branch long (later = DRIFT, §11–§12)
 
 Run `outputs/cf_wr_xihat_surface.py` (registration §12) + `..._analyze.py` (parity-split), RTX 5090,
 13 s, **`sample_00` only**, decoder-independent. Dataset `google_72Q_surface_code_d3_d5_set2`, r50.
@@ -180,8 +80,8 @@ Run `outputs/cf_wr_xihat_surface.py` (registration §12) + `..._analyze.py` (par
 2. **d5 surface has a LONG temporal Markov length: even-separation ξ ≈ 8.5 cells, a CLEAN exponential
    (R²=0.99), ~18× d3/rep-code.** The pooled single-model fit "fails" (R²≈0.5) only because d5
    superposes two scales (even-sep ξ≈8.5, odd-sep ξ≈2.3); the parity-split exposes a *real* long
-   even-branch — **not** an oscillation/noise artifact. **This is the first place the controlled-regime
-   read breaks** — and it is on the patch *closer to the real target*.
+   even-branch — **not** an oscillation/noise artifact. (Attributed to DRIFT, not a locality breakdown,
+   by §11–§12.)
 
 **Prediction scorecard (§12 b).** b-surf-1 (controlled O(1)): **PARTIAL** — holds for d3, **fails for
 d5** (ξ≈8.5). b-surf-2 (floor > rep-code 1–2%): **✓** (d3 6.4%, d5 higher). b-surf-3 (d5 ≥ d3): **✓,
@@ -195,15 +95,9 @@ d5-patch-specific, which weakly favors a real d5 effect or a per-patch-independe
 fairly homogeneous ξ, not a few outliers). **Provisional; needs a follow-up to separate.**
 
 **Rigor audit.** d3 controlled (ξ≈0.5) — measured, clean. d5 even-sep ξ≈8.5 — measured, clean
-(R²=0.99), **but cause UNRESOLVED ⇒ provisional**. Spatial ξ NOT yet measured (this is temporal only) —
-the spatial Markov length on d5 is the **real** windowing concern (a spatial ξ≈8.5 on a ~9-wide patch
-would forbid spatial windowing) and is the priority follow-up.
-
-**Implication for the tool.** The "hardware deeply controlled" read is **patch-dependent**: solid for
-rep-code + d3, **broken for d5**. Before the 1+1 fusion can claim the surface target, the d5 long
-correlation must be (a) attributed (size vs calibration vs heterogeneity) and (b) measured spatially.
-The honest status: **the surface gate is NOT a clean GO** — d3 passes, d5 flags a real correlation
-problem on the target-scale patch.
+(R²=0.99); cause is attributed downstream (the spatial measurement §11 + cross-sample check §12). Spatial
+ξ NOT yet measured here (this is temporal only) — the spatial Markov length on d5 is the priority
+follow-up (§11).
 
 ## 11. SURFACE SPATIAL ξ — the decisive windowing test (2026-06-14): **d5 windowing VIABLE**
 
@@ -244,8 +138,7 @@ cross-sample check resolves it). Both measures are decoder-independent, `sample_
 
 **Surface gate, updated.** For **spatial windowing** (what the tool needs): **GO on d3 and d5.** Open
 item: attribute the d5 temporal length (drift vs real) via the cross-sample check, and confirm temporal
-windowing tolerates ξ_t≈8.5 within the 50-round depth. The earlier "surface gate is not a clean GO"
-(§10) is **superseded** for the spatial question.
+windowing tolerates ξ_t≈8.5 within the 50-round depth.
 
 ## 12. CROSS-SAMPLE temporal ξ — the d5 long correlation is **DRIFT** (2026-06-14)
 
@@ -278,22 +171,6 @@ R²=1.0 / stale ξ≈8–22) — measured; the fresh-vs-stale split is the **cal
 (theorem-free but well-supported by the d3-stable control + the 64× bimodal spread). Allowlist red line
 honored (no held-out/escrow contact).
 
-## 13. ξ̂ INVESTIGATION — consolidated verdict
-
-| rung | result | status |
-|---|---|---|
-| rep-code d=29 (1+1)D | ξ̂≈0.4 cells, shot-split stable | **BANKED controlled** (§8) |
-| surface d3 spatial + temporal | ξ≈0.5–0.7 cells, all samples | **controlled** (§10, §11, §12) |
-| surface d5 **spatial** | ξ≈0.6 cells ≪ width 5 | **windowing VIABLE** (§11) |
-| surface d5 **temporal** | ξ≈0.4 fresh / 8–22 stale | **DRIFT**, controlled when fresh (§12) |
-
-**Bottom line for the tool.** On **well-calibrated** real surface code, the hardware is **fully in the
-controlled regime** — spatial ξ≈0.6 *and* temporal ξ≈0.4, both ≪ patch scale — exactly where the
-small-window twin + 1+1 fusion is theory-backed. The d5 "problem" was **calibration drift**, a
-**separable, characterizable axis** (and set2's stale samples are a ready-made drift testbed, the H4/M5
-lane). **The step-1 ξ̂ gate is GO on real surface code** (fresh calibration); drift handling is a known
-downstream concern, not a windowing blocker. Cleared to build step 2 (learner `ρ_BC` extension).
-
 ## 14. d3→d5→**d7** SCALING — windowing scales to the fault-tolerant target (2026-06-14, CAPSTONE)
 
 Run `outputs/cf_wr_xihat_d7.py` (registration §15), RTX 5090, 14 s, **Willow 105Q** d3/d5/d7
@@ -323,7 +200,7 @@ R²0.99–1.00, two measures agree), same device ⇒ **windowing-scales-to-d7 is
 ξ≈0.5 across d3/d5/d7 — measured, clean (R²1.0). The "105Q acquisitions are well-calibrated" reading —
 PROVISIONAL (no shipped labels; inferred from ξ + the §12 contrast). Decoder-independent throughout.
 
-## 15. ξ̂ INVESTIGATION — FINAL verdict (supersedes §13)
+## 15. ξ̂ INVESTIGATION — FINAL verdict
 
 | rung | spatial ξ | temporal ξ | status |
 |---|---|---|---|

@@ -2,9 +2,16 @@
 
 Binding roadmap for **the twin** (`qec_twin`). Division of labor:
 [`docs/TWIN.md`](TWIN.md) is the **object contract** (*what* the twin is); the
-[ADR spine](adr/) (0002→0007) records **decisions** (*why*); this file is the **path**
+[ADR spine](adr/) (0002→0008) records **decisions** (*why*); this file is the **path**
 (*how / when / how it falsifies*). It is **strict** on physics, mathematics, and the
 aim↔object map, and **deliberately open** on architecture/parameterization (ADR 0005).
+
+> **STATUS (2026-06-14).** H2 has since been built (see PLAN.md §3 / `metric_results.md`);
+> the "H2 … PRE-REGISTERED, not built", "Only H1 is built", and "H2/H3 rows below are
+> predicted, not observed" text below is the **original pre-registration**, retained as the
+> historical registration — it no longer reflects current status. The substantive
+> decision-regret content remains live (amended by Accepted ADR 0007, adjudicated by
+> `tests/test_decision_regret_gate.py`).
 
 **How to read it.** Each item is tagged **STRICT** (non-negotiable, phase-independent)
 or **FLEXIBLE** (chosen later, against the four capabilities). Every phase gate in §3 is
@@ -201,7 +208,8 @@ is a (physical / mathematical / aim↔object) triple plus a falsification signal
 - **Gate (passed).** *Physical*: exact Born-NLL on the non-Clifford forward, frozen `D`.
   *Mathematical*: alias band shrinks with `r`; controls fail per the Girsanov prediction.
   *Aim↔object*: recover + manipulate criteria met on the toy.
-- **Evidence.** 63 tests pass.
+- **Evidence (at the B gate).** 63 tests passed at this gate — the B-gate snapshot, not
+  the whole-project total (the current count lives in CLAUDE.md / `metric_results.md`).
 - **Falsification (it survived).** Had the band failed to shrink with `r` on the
   controlled teacher, interventional validity would be unrecoverable → stop/redesign.
 
@@ -430,7 +438,10 @@ criterion among others**:
   capabilities, reserved notation.
 - [`docs/adr/`](adr/) — 0002 (build order) · 0003 (B methodology) · 0004 (finance
   framing, D1–D5 + bands) · 0005 (retire SCOPE, architecture open) · 0006 (channel-field
-  architecture: ratify object, scope support structure, defer carrier).
+  architecture: ratify object, scope support structure, defer carrier) · 0007 (R2-lite
+  published-data rung in parallel with H2; d=5/d=7 surface-code target → carrier feasibility
+  study; **amends this plan** — Claim-A floor banked, calibrated-band engine deferred) · 0008
+  (scalable-carrier feasibility-study charter).
 - [`docs/IDENTIFIABILITY_AND_CRL_SURVEY.md`](IDENTIFIABILITY_AND_CRL_SURVEY.md) —
   finance ↔ QEC tools and the W1–W5 guardrails.
 - [`docs/error_mechanisms.md`](error_mechanisms.md) — physical mechanism taxonomy (the

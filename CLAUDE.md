@@ -121,7 +121,7 @@ OOM, two restarts; same certificate validates the ruling-25/27 shot-slicing thro
 = documented-drop (none of the three upstream engines runs unmodified at the window instance within
 the 32 GiB/70 GiB envelope; `outputs/m4_a4_dmle_attempt_dossier.md`); the dMLE comparison is
 redirected to a registered r≈101 mid-scale bracket post-M4. M4 amendment 3 = rulings 19–28
-(`docs/metric_results.md`). 151 tests (150 pass + 1 opt-in slow skip; hardware tests skip without
+(`docs/metric_results.md`). The suite is green (1 opt-in slow test skipped; hardware tests skip without
 `QEC_TWIN_HW_DATA`). ADR 0008 carrier study: charter + C1/C2 theory panel DONE (2026-06-10) +
 SEAM-TEST K1 first read ABSTAIN (2026-06-11) — verdict: the **C1 composed architecture**
 (DEM/HMM bulk + window-exact CPTP coherent corrections; dMLE-TN as bulk engine + mandatory
@@ -227,4 +227,4 @@ ADR 0005).
   (dot-prefixed ⇒ gitignored, local-only). Read the matching note — including layout/figure
   facts — before touching any hardware data; dataset documentation is a mandatory derivation
   input for R2 pre-registrations.
-- `docs/adr/` — decisions; spine 0002 (build order) → 0003 (B methodology) → 0004 (finance framing) → 0005 (retire SCOPE / reframe) → 0006 (channel-field architecture) → 0007 (R2-lite published-data rung now ∥ H2; d=5/d=7 surface-code target → carrier study after H2; hardware-data metrics).
+- `docs/adr/` — decisions; spine 0002 (build order) → 0003 (B methodology) → 0004 (finance framing) → 0005 (retire SCOPE / reframe) → 0006 (channel-field architecture) → 0007 (R2-lite published-data rung now ∥ H2; d=5/d=7 surface-code target → carrier study after H2; hardware-data metrics) → 0008 (scalable-carrier feasibility study; C1 composed architecture).

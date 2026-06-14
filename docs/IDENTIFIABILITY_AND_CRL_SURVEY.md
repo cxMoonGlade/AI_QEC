@@ -2,7 +2,7 @@
 
 This note records a survey of tools from causal representation learning (CRL),
 identifiable latent-variable models, and quantitative finance that are directly
-applicable to the the twin alias quotient and counterfactual validity problems.
+applicable to the twin alias quotient and counterfactual validity problems.
 It is a reference document, not a claim: none of the tools below have been
 validated on this codebase yet.
 
@@ -161,7 +161,7 @@ connectivity criterion is satisfied.
 
 **Mapping to the twin.** The known DEM footprint of each mechanism (the set of
 syndrome bits in column `j` of `A`) is the natural sparsity mask for the decoder.
-Regularizing `diff_cptp_channel`'s syndrome prediction to respect the known DEM
+Regularizing `forward.cptp_channel`'s syndrome prediction to respect the known DEM
 structure is both physically motivated and provably sufficient for identifiability.
 This turns a physical prior into an identification constraint without needing
 additional context variation.
@@ -224,7 +224,7 @@ syndrome data without prior decoding, provides analytically optimal window sizes
 and handles multi-frequency drift in a single pass.
 
 **For the twin.** Replace the Ramsey/Hahn echo likelihood (from the IBM
-calibration context) with the exact syndrome NLL from `diff_circuit_sim`. The
+calibration context) with the exact syndrome NLL from `forward/exact/circuit_sim`. The
 sequential update structure is identical. The SMC-MCMC approach naturally handles
 abrupt jumps (volatile drift) that standard Kalman filters miss.
 
@@ -336,7 +336,7 @@ subspace.
 | P0 | Check anchor bit condition for each of the 35 catalog mechanisms against the known DEM `A` | arXiv:2110.10804 |
 | P0 | Compute the learnable subspace from `A`; confirm which mechanisms are above the information-theoretic ceiling | arXiv:2601.22286 |
 | P1 | Apply iVAE at the polarization level; verify the invertibility condition for the sufficient statistics matrix with 5 contexts | arXiv:1907.04809 |
-| P1 | Add DEM-footprint-matching mechanism sparsity regularization to `diff_cptp_channel` decoder | arXiv:2107.10098 |
+| P1 | Add DEM-footprint-matching mechanism sparsity regularization to `forward.cptp_channel` decoder | arXiv:2107.10098 |
 | P2 | Implement Zhang-Bareinboim partial identification for `do()` query bounds before claiming point-identified counterfactuals | arXiv:2110.05690 |
 | P2 | Integrate sliding-window Pauli drift estimator for calibration period tracking | arXiv:2511.09491 |
 | P3 | Apply UT-IGSP / MSS to multi-context polarization vectors to orient the mechanism interaction graph | arXiv:1910.09007, arXiv:2206.02013 |

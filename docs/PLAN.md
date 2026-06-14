@@ -2,7 +2,7 @@
 
 Binding roadmap for **the twin** (`qec_twin`). Division of labor:
 [`docs/TWIN.md`](TWIN.md) is the **object contract** (*what* the twin is); the
-[ADR spine](adr/) (0002→0007) records **decisions** (*why*); this file is the **path**
+[ADR spine](adr/) (0002→0008) records **decisions** (*why*); this file is the **path**
 (*how / when / how it falsifies*). It is **strict** on physics, mathematics, and the
 aim↔object map, and **deliberately open** on architecture/parameterization (ADR 0005).
 
@@ -165,7 +165,9 @@ is a (physical / mathematical / aim↔object) triple plus a falsification signal
 - **Gate (passed).** *Physical*: exact Born-NLL on the non-Clifford forward, frozen `D`.
   *Mathematical*: alias band shrinks with `r`; controls fail per the Girsanov prediction.
   *Aim↔object*: recover + manipulate criteria met on the toy.
-- **Evidence.** 87 tests pass (B + H0/H1 + the decision-regret gate).
+- **Evidence (at the B gate).** 87 tests passed at this gate (B + H0/H1 + the
+  decision-regret gate); this is the B-gate snapshot, not the whole-project total
+  (the current count lives in CLAUDE.md / `metric_results.md`).
 - **Falsification (it survived).** Had the band failed to shrink with `r` on the
   controlled teacher, interventional validity would be unrecoverable → stop/redesign.
 
@@ -208,6 +210,10 @@ reached, not before.
   parity on the Google d=29 release, detection fractions in the derived band (X 5.13% / Z 5.00%),
   and three back-edge findings (a device mirror-diagonal class ≈970× the SI1000 sim, long-range
   tails, an early-layer transient). Numbers in [`metric_results.md`](metric_results.md).
+  *(M1 is the frozen horizon of this bullet, not the present frontier: the live R2-lite
+  frontier — M2 window closure, M3 syndrome-NLL, M4 decoder-prior utility, the CF-WR
+  window-covering work, and the ADR 0008 carrier study — is tracked in CLAUDE.md and
+  `metric_results.md`.)*
 - **Decision-regret gate** (plan2 go/no-go, `test_decision_regret_gate`). Ran before H2 to
   decide whether to commit to the [`plan2.md`](plan2.md) prioritization engine. **Verdict: bank
   the Claim-A floor** — non-Pauli-capable calibration beats the field's Pauli/DEM standard on a
@@ -290,7 +296,9 @@ criterion among others**:
   framing, D1–D5 + bands) · 0005 (retire SCOPE, architecture open) · 0006 (channel-field
   architecture: ratify object, scope support structure, defer carrier) · 0007 (R2-lite
   published-data rung now, in parallel with H2; d=5/d=7 surface-code target → carrier
-  feasibility study after H2; hardware-data metric ledger).
+  feasibility study after H2; hardware-data metric ledger) · 0008 (scalable-carrier
+  feasibility-study charter: the d=5/d=7 carrier decision question, candidates, and
+  seam-test process).
 - [`docs/IDENTIFIABILITY_AND_CRL_SURVEY.md`](IDENTIFIABILITY_AND_CRL_SURVEY.md) —
   finance ↔ QEC tools and the W1–W5 guardrails.
 - [`docs/error_mechanisms.md`](error_mechanisms.md) — physical mechanism taxonomy (the

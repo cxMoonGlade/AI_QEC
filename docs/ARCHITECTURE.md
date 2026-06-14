@@ -26,7 +26,7 @@ there is real cohesion (`forward/` backends).
 |---|---|
 | `forward/` | exact differentiable forward model (physics engine); backend-swappable; owns package-local CUDA/C++ kernels in `forward/kernels/` |
 | `forward/exact/` | density-matrix backend — **⚠ FEASIBILITY-ONLY** (`2^n×2^n`, ≤~15q), abandoned after |
-| `forward/scalable/` | placeholder for the **>50-qubit** backend (carrier deferred, ADR 0005) |
+| `forward/scalable/` | **>50-qubit** backend; first content = the ADR 0008 C1 composed-carrier seam-test arm (`composed.py` / `marginals.py` / `pins.py`); the d=5/d=7 bulk engine stays gated |
 | `mechanisms/` | noise-mechanism definitions + controlled teachers |
 | `contexts/` | probe-richness ladder `C_cal(r)` + probe definitions |
 | `decoder/` | frozen-MWPM DEM substrate (`parity_map`, `fault_graph`, `stim_dem`) |
@@ -54,13 +54,7 @@ context c            (contexts)
 
 `forward/exact` (density matrix) is `2^n × 2^n` → **feasibility-only**, unusable past
 ~15 qubits. The target is 50+ qubit noise circuits, so a **scalable backend**
-(`forward/scalable`, placeholder) replaces it once the B-path loop is validated. The
+(`forward/scalable`, whose first content is the ADR 0008 seam-test composed-carrier
+arm) replaces it once the B-path loop is validated. The
 channel object (`forward/cptp_channel`) and the four capabilities are
 backend-agnostic, so the swap is a backend replacement, not a rewrite.
-
-## History
-
-The SCOPE thesis and the discovery / observability / catalog / Google /
-DEM-fault-logit program were retired and removed (ADR 0005): they solved a different
-problem (mechanism clustering + visible replay) than the twin (channel calibration +
-counterfactual ΔLER). History is in git.

@@ -31,10 +31,3 @@ p(y | c) = Tr[ M_y · C(c)(rho0) ],   C(c) = ∏_q (E_q ∘ G_q)
 A DEM parity model (`e_j ~ Bernoulli(p_j)`, `y = A e mod 2`, `A ∈ F_2^{B×M}`)
 survives only as the **frozen decoder** substrate (`qec_twin.decoder.stim_dem`,
 `qec_twin.decoder.fault_graph`), not as a learned object. Full notation: `docs/TWIN.md`.
-
-## History
-
-The earlier catalog teacher/learner packages (`data_preparation`, `teacher`,
-`learner`) and the DEM fault-logit / discovery program were retired and removed
-(ADR 0005). The teacher-learner *method* — a controlled teacher for ground truth +
-a label-free learner — survives in the twin B-path.

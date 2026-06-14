@@ -139,18 +139,9 @@ only of `sample_00` detector events.
 
 ## 11. v2 AMENDMENT (2026-06-14, predict-before-run) — banks the v1 provisional read
 
-**Why.** The v1 frozen gate (`cf_wr_xihat.py`) returned STOP(power-law) on all four curves, but the
-post-hoc diagnostic (`cf_wr_xihat_analyze.py`, `xihat_RESULTS.md`) showed that verdict is a
-**false-negative of an inadequate single-exp-vs-power-law fit MODEL**: the real structure is a steep
-sub-cell exponential decay **on a ~1–2%-of-peak constant floor**, and the plug-in-bias tail (which the
-2σ above-null test did not strictly exclude) dragged the exponential R² below the power-law R². The
-corrected exp-on-floor read (ξ̂≈0.3–0.6 cells, R²≈0.997, 4-curve-consistent) is **PROVISIONAL** (a
-post-hoc model change). v2 re-registers the correct model **before the run** and adds the two genuinely
-new tests (stability + floor classification) that convert provisional → banked.
-
-**Three v1 confounds fixed.** (i) Fit MODEL: register `Î(w)=a·e^{−w/ξ}+c` (exp on a floor), not
-single-exp-vs-power-law. (ii) Strict bias cutoff: fit only `Î_real > 5·Î_null_mean` (replaces the 2σ
-test). (iii) Even/odd separation parity acknowledged (reported, not fit-through).
+**Why.** v1's single-exp-vs-power-law fit gave a false STOP; v2 registers exp-on-floor
+(`Î(w)=a·e^{−w/ξ}+c`) + a strict bias cutoff (`Î_real > 5·Î_null_mean`) + stability/floor tests (the
+confound autopsy is in `xihat_RESULTS.md`).
 
 **Two new tests.**
 - **Shot-split stability (a-scope robustness):** ξ̂ on two disjoint 50 000-shot halves of `sample_00`;

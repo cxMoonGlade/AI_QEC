@@ -1,14 +1,11 @@
 # Physical Error Mechanisms
 
-This note is the canonical mechanism taxonomy for the surviving mechanism catalog
-(`qec_twin.mechanisms.catalog` / `qec_twin.mechanisms.profiles`) — the salvage
-kept for the twin's hardening step. It combines the implemented PHYS/PHYC mechanism
-IDs with the larger controlled-gate error library we want the twin to grow into.
-(The teacher-generation program that once consumed this catalog was retired and
-removed — ADR 0005.)
+This note is the canonical mechanism taxonomy for `qec_twin.mechanisms`
+(`qec_twin.mechanisms.catalog` / `qec_twin.mechanisms.profiles`). It combines the
+implemented PHYS/PHYC mechanism IDs with the larger controlled-gate error library we
+want the twin to grow into.
 
-For claim boundaries, use `CONTEXT.md` first: the implemented package is still
-a fixed-context DEM/Bernoulli research stack. The long-horizon target is the
+For claim boundaries, use `CONTEXT.md` first. The long-horizon target is the
 twin's four capabilities — recover / understand / manipulate / predict (ADR 0005).
 CPTP/GKSL structure is one constraint mechanism, not the whole claim.
 
@@ -46,9 +43,7 @@ context role. The source taxonomy was cross-checked against:
 - Silicon-spin Toffoli-style gates under charge noise and crosstalk:
   <https://arxiv.org/abs/2305.13132>
 
-The Qiskit Aer source is cited as a public noise-taxonomy reference only. The
-repo direction is literal full-circuit CUDA-Q plus native math diagnostics, not
-Qiskit Aer or CUDA-QEC memory-circuit shortcuts.
+The Qiskit Aer source is cited as a public noise-taxonomy reference only.
 
 ## Controlled-Gate Noise Model
 

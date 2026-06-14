@@ -37,16 +37,16 @@ The body is the working derivation; the following 5 items are **binding override
   - Marginal-shift sector: Petz reproduces both measured shifts ρ_AB⁽¹⁾ and ρ_BC⁽¹⁾ ⇒ **Δ⁽¹⁾=0 in that sector**.
   - Connected part χ⁽¹⁾: **(P-cond, a iff)** Δ⁽¹⁾=0 (Petz cancels at first order ⇒ O(λ²)) **if and only if** χ⁽¹⁾ is carried by ρ_BC (B screens); otherwise the first-order residual survives (O(λ), smaller coefficient).
 - Non-unital case (a structure / b coefficient): seam correlations are generated locally at the B–C interface within one round and transmitted to A via ρ_AB/ρ_BC ⇒ B-mediated. **However, non-unital causes [ρ_BC,ρ_B⊗I_C]≠0, which impedes the rotated Petz from exactly inverting at first order**, so **the first-order residual generally survives**:
-  **D_Choi^{G1}=c_{G1}·λ+O(λ²), 0≤c_{G1}<c_{G0} strictly.**
+  **D_Choi^{G1}=c_{G1}·λ+O(λ²), 0≤c_{G1}<c_{G0} strictly.** (see §0 [B-1]: `c_{G1}<c_{G0}` downgraded to (b))
 - **§3.5 referee-proofing (a flag)**: a clean O(λ²) requires χ⁽¹⁾ to be exactly Petz-recoverable (first-order strict Markov), which **cannot be proven** for non-unital interfaces. Hence **no slope-difference is registered (G0=1, G1=2)**; only the **coefficient ratio** is registered.
 
 ## 4. FROZEN P2
 - **P2.1 (a)**: D_Choi^{G0}=c_{G0}λ+O(λ²), slope **1** (band [0.90,1.10]; measured 0.973 retro-confirms). Unital/twirled ⇒ slope **2**.
-- **P2.2 (b) registered discriminator**: D_Choi^{G1}=c_{G1}λ+O(λ²), **c≡c_{G1}/c_{G0}∈[0,1) strictly (a), directional bet c ≤ 0.5 (b)**. c≥1 falsifies (finding); c≈0 (G1 slope measured ≈2) = **bonus** confirmation of the stronger O(λ²) sub-hypothesis, not pre-assumed. Within-run comparison (same teacher/functional/grid, normalization cancels) ⇒ c is more robust than individual slopes alone.
+- **P2.2 (b) registered discriminator**: D_Choi^{G1}=c_{G1}λ+O(λ²), **c≡c_{G1}/c_{G0}∈[0,1) (b, per §0 [B-1]; not (a)), directional bet c ≤ 0.5 (b)**. c≥1 falsifies (finding); c≈0 (G1 slope measured ≈2) = **bonus** confirmation of the stronger O(λ²) sub-hypothesis, not pre-assumed. Within-run comparison (same teacher/functional/grid, normalization cancels) ⇒ c is more robust than individual slopes alone.
 - **P2.3 (a) pin**: at the unital point (p01=p10), c_{G0} and c_{G1} both → 0 at first order, residual O(λ²). Violation = build bug.
 
-## 5. 2D seam-length L scaling (correction: linear in L, not √L)
-- **(R-2D, a orthogonal support)**: local field ⇒ χ⁽¹⁾_ℓ supports of L interface cells are disjoint ⇒ trace norm is additive ⇒ **D_Choi∝L linear**.
+## 5. 2D seam-length L scaling (correction: linear in L, not √L) — superseded by §0 [B-3]: at-most-linear / sub-additive for shared-corner 2D seams
+- **(R-2D, a orthogonal support)**: local field ⇒ χ⁽¹⁾_ℓ supports of L interface cells are disjoint ⇒ trace norm is additive ⇒ **D_Choi∝L linear**. (superseded by §0 [B-3]: at-most-linear / sub-additive for shared-corner 2D seams)
 - **Why L not √L (a)**: trace distance is the L₁ norm of an operator direct sum; contributions add by **amplitude** (not in quadrature); √L is the **fluctuation/variance** law and does not apply to the L₁ Choi residual. (Metric-dependent: if measuring fidelity or the standard error of a fluctuation functional, √L returns.)
 - **Along-seam correlation case (b)**: still ∝L, coefficient absorbs ξ.
 - **P2.4 (b)**: per-seam Choi residual **monotonically increasing, asymptotically linear in L** (exponent band [0.85,1.15], **not** [0.4,0.6]). Honest caveat: the exact-DM oracle suffices only for L∈{1,2,3}, so **only sign+monotone is measurable**; the L-exponent is direction-only (exponent miss = finding, does not falsify sign/monotone). **c (P2.2) is first-order independent of L ⇒ c<1 is a robust 2D-transferable criterion**; the L-law for the absolute residual is direction-only.

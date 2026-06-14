@@ -1,51 +1,37 @@
-# Surface noise model — measured real structure + mechanism-based direction
+# Measured real d3 XZZX structure
 
-> The rotated-CSS toy is removed (it was a synthetic stand-in; the real code is XZZX). This records the
-> **measured real d3 XZZX structure** and the **mechanism-based** model direction grounded in the
-> documented catalog (`docs/error_mechanisms.md`). Plain reporting — measured facts only.
+> The measured noise structure of the real Google XZZX d3 surface code — the target the window-channel
+> noise model must reproduce. Plain reporting of measured facts.
 
-## 1. Measured real structure — `outputs/surface_d3_structure.py`
+## Measurement — `outputs/surface_d3_structure.py`
 
-Real set2 `d3_at_q5_5/X/r15` sample_00 (60k shots, decoder-independent; detection events + circuit only):
+Real set2 `d3_at_q5_5/X/r15`, sample_00 (60k shots, decoder-independent; detection events + circuit
+only):
 
-- detection ~6.3%/detector;
-- 2-body correlation sits **on the matching graph** (0 far/non-edge pairs above 5σ);
+- detection ≈ 6.3% / detector;
+- 2-body correlation sits **on the matching graph** (0 far / non-edge pairs above 5σ);
 - **device vs the shipped SI1000 sim: detection 2.4×, edge-pij 3.6×, 3-body cumulant 2×** — 467/600
-  matching-graph triangles carry a 3-body cumulant clearly above the `1/N` noise floor.
+  matching-graph triangles carry a 3-body cumulant above the `1/N` floor.
 
-So the real device is noisier, more correlated, and **higher-order beyond the sim**. (Self-correction:
-an earlier "overdispersion 2.29× = bunched" read was wrong — syndrome-weight variance is only a 2-point
-quantity; the honest test is measured-vs-model, above.) One instance; not a sweep.
+The real device is noisier, more correlated, and higher-order than the sim. One instance (single
+patch / basis / round / sample), not a sweep; the device-vs-sim gap may carry sample-calibration
+content.
 
-## 2. The 3-body is documented + implemented (not a discovery)
+Method: 2-body via `spitz_pij_exact` (Spitz Eq. 13, exact); 3-body via the matching-graph triangle
+cumulant. Syndrome-weight variance is a 2-point quantity, so it is not used as a higher-order measure;
+the higher-order read is the measured-vs-SI1000 3-body cumulant.
 
-The correlated/higher-order structure is the project's **documented mechanism catalog**
-(`docs/error_mechanisms.md`, 35 mechanisms M0–M34), implemented as channels in
-`src/qec_twin/forward/channels.py` (`mechanism_channel`) + `mechanisms/catalog.py`. The measured
-2-body/3-body is produced by the correlated/multi-qubit mechanisms — **M8** RZZ, **M9** 2q depolarizing,
-**M10** RXX/RYY, **M11** spectator crosstalk, **M12** correlated relaxation, **M21** conditional phase,
-**M22–M33** parasitic couplings, plus the G2/G3 families. (Doc path note: the catalog's
-`primitives/mechanism_catalog.py` reference is stale — code is at `forward/channels.py` +
-`mechanisms/catalog.py`.)
+## Implication for the model
 
-## 3. Model direction (registration §3)
+An independent-edges model is insufficient (real 2-body + 3-body; even the SI1000 sim under-predicts).
+The model must carry correlations and the higher magnitude — the **window-channel field** of weight-≤t
+mechanism compositions (`docs/cf_wr/window_covering_architecture.md`). The correlated/coherent ≤2-qubit
+mechanisms (M8/M9/M10/M11/M12/M21/M22–M33) produce this structure: a 2-qubit error flips several
+detectors, giving the measured hyperedge / 3-body cumulant content that an independent-edges DEM cannot
+represent.
 
-A **circuit-level noise model over the mechanism catalog** — correlated/coherent mechanisms attached to
-the real XZZX circuit's gates, strengths fit to the real syndrome data — NOT a generic per-qubit
-independent channel (the wrong model class, now retired). Honest challenge: coherent + multi-round +
-17-qubit circuit exceeds the exact backend / stim-Pauli scope; the build must state its approximation
-(windowed density-matrix segments / Pauli-twirl-plus-coherent-residue), not dodge into a toy.
+## Validation (real data — no synthetic ground truth)
 
-## 4. Errors corrected (this thread)
-
-- rotated-CSS toy → real XZZX (the real code is XZZX, 8/8 mixed stabilizers).
-- per-qubit independent model + synthetic independent-Pauli teacher → mechanism-based correlated model
-  (the real noise is correlated, per the catalog + the measurement).
-- "recovery validated / machine-exact / capstone" inflation → plain measured reporting.
-- single-round exact CPTP forward acknowledged as unable to fit real multi-round data.
-
-## 5. Status & next
-
-Structure measured (§1); model grounded in the mechanism catalog (§2–§3). **Next:** build the
-mechanism-based noise model on the real XZZX circuit, fit to real d3 syndrome data, validate by held-out
-NLL + the structure-residual (does it reproduce the measured detection / 2-body / 3-body).
+Held-out per-shot syndrome NLL + the structure-residual check (does the fitted model reproduce the
+measured detection / 2-body / 3-body). There is no exact channel ground truth on real data; claims are
+observation-fit + residual structure, with honest bands.

@@ -31,39 +31,8 @@
 
 ---
 
-## Reviewer-2 corrections (2026-06-14)
-
-The body below is the working derivation; the following **binding corrections** (reviewer + literature pass)
-override the corresponding passages and take precedence:
-
-- **[R2-1] κ box sign error (§2.3) — FIXED.** The displayed closed-form for κ had an **inverted overall
-  sign** (as written it evaluated to `κ ≈ −1.05`, contradicting the `κ≥0` statement two lines below and the
-  true value `½ I″(0) ≈ +1.05`). With `⟨X⟩_KMB = −d²S_X > 0`, the SSA combination is
-  `½ d²I = ½[−⟨AB⟩−⟨BC⟩+⟨B⟩+⟨ABC⟩]` (the global `+⟨ABC⟩` term dominates ⇒ POSITIVE). The box now displays the
-  correct sign and a "sign provenance" derivation. Magnitude/positivity/locality are sign-independent, so §3's
-  verdict is unaffected — but an **(a, EXACT)** formula cannot display the wrong sign.
-- **[R2-2] §1.1 inter-cell correction — FIXED.** The prose "Z anticommutes with the bit-flip X that
-  diagonalizes ρ_cl ⇒ [G,ρ_cl]≠0" was **FALSE for a single non-unital Choi cell**: `[Z⊗Z, J] = 0` exactly
-  (J's coherence lives in the `{|00⟩,|11⟩}` block where Z⊗Z=+1). χ⊥≠0 is rescued by the **INTER-CELL**
-  generator `G = Z_e⊗Z_{e'}` across **two** seam cells (for ρ_cl=J⊗J, `‖[Z_e Z_{e'}, ρ_cl]‖ ≈ 1.245 ≠ 0`,
-  χ⊥ purely off-diagonal). §1.1 + the S1 fact (§1.2) now state the correct inter-cell non-commutation.
-- **[R2-3] §3.4 Petz-route DOWNGRADE — FIXED.** The claim "order+locality of the coherent prefactor is (a)
-  via the Petz route, independent of the C1 remainder" was **WRONG**: Fawzi–Renner `I ≥ −2 log F` is the
-  **wrong direction** (it *lower*-bounds I; defeating the KKB obstruction needs an *upper* bound on I). So:
-  the **leading coefficient κ stays (a) via the KMB route**, but the **macroscopic escape** (locality of
-  `I(A:C|B)` at fixed φ for macroscopic |A|+|C|) is **(b)-conditional, gated by C1 and a NEW second gap C2**
-  (the uniform-in-|A|+|C| upper bound on I), and is **NOT** rescued to (a) by Petz. §3.4 rewritten honestly;
-  C2 propagated to §0, §3.3, §5, §6 (failure mode 3b), FROZEN P3.3, and the tri-state verdict.
-- **[R2-4] Novelty repositioned (§0.1 + header) — FIXED.** A literature check found the **conclusion**
-  (weak coherent perturbation of a classical-Markov state keeps CMI controlled with a local-not-volume
-  prefactor below threshold; collapse at threshold) is **already prior art**: **Sang–Hsieh [2404.07251]**
-  (PRL 134.070403) and **Zhang–Gopalakrishnan [2511.01976]**. The header + new **§0.1** now cite both as the
-  prior art establishing the conclusion, and frame P3's delta narrowly: **the explicit Kubo–Mori/BKM
-  entropy-Hessian coefficient κ for a COHERENT off-diagonal unitary edge** (the stability papers prove
-  finiteness via cluster expansion for INCOHERENT perturbations; they do not extract this κφ² coefficient —
-  the still-open sharp-constant piece). Added a citation-hygiene one-liner: **2604.01197 = Thm 11/13 (not
-  12/14), Fact 3 (not "Fact 5"), TRIVIAL PHASE ONLY** (macroscopic below-threshold code state out of scope;
-  escape applies to the per-window shallow-channel-field state).
+> **v2 (2026-06-14):** sign (§2.3), inter-cell non-commutation (§1.1), Petz-direction / C2 gap (§3.4),
+> and novelty positioning (§0.1) corrected; the body below reflects the corrected content.
 
 ---
 
@@ -322,10 +291,7 @@ sum of the four such forms** on (AB, BC, B, ABC), each evaluated with its **own*
 `d²S/dt²[ρ_X](X,X) = −⟨X,X⟩_KMB^{X} < 0` (§2.2 line: `−½ d²S = ½⟨·,·⟩_KMB`, so `⟨·⟩_KMB = −d²S > 0`).
 Since `I = S_{AB}+S_{BC}−S_B−S_{ABC}`, `½ d²I/dφ² = ½[d²S_{AB}+d²S_{BC}−d²S_B−d²S_{ABC}]
 = ½[−⟨AB⟩−⟨BC⟩+⟨B⟩+⟨ABC⟩]` — the **global `+⟨ABC⟩` term dominates** (it is the largest, full-support
-KMB form), so the alternating sum is **POSITIVE**, consistent with κ≥0. (The opposite sign convention —
-`+⟨AB⟩+⟨BC⟩−⟨B⟩−⟨ABC⟩` — would evaluate **negative**, `κ ≈ −½I″(0) ≈ −1.05`, contradicting κ≥0; that is the
-referee-corrected sign error. Magnitude/positivity/locality are sign-independent, so §3's verdict is
-unaffected; but an (a, EXACT) formula must display the correct overall sign.)
+KMB form), so the alternating sum is **POSITIVE**, consistent with κ≥0 (`+½ I″(0) ≈ +1.05`).
 
 where χ⊥^{X} = Tr_{∖X} χ⊥ are the reduced first-order variations. **κ ≥ 0 exactly** (the Hessian of I at a
 state is positive-semidefinite because I ≥ 0 attains its minimum 0 there — SSA; Lieb–Ruskai; the displayed

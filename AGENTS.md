@@ -27,10 +27,18 @@ B5). The main-line model **architecture is deliberately open**: the four
 capabilities are the spec, candidate parameterizations are judged against them,
 and scalability is a future selection criterion, not a now-decision (ADR 0005).
 
+**Current direction (forward pointer).** Work has since reoriented to the
+window-channel-field / tool-first program on the real Google data (the R2-lite
+`hardware/` rung, ADR 0007/0008 carrier study, and the CF-WR window-covering
+architecture). The frontier status lives in `CLAUDE.md` and
+`docs/metric_results.md`; the SCOPE-removal history below remains the accurate
+ADR-0005 decision record.
+
 ## Doc routing
 
 - `CONTEXT.md`: glossary and claim boundaries (read first).
-- `docs/ARCHITECTURE.md`: code architecture and module map.- `docs/teacher_learner.md`: teacher / learner roles and the isolation contract.
+- `docs/ARCHITECTURE.md`: code architecture and module map.
+- `docs/teacher_learner.md`: teacher / learner roles and the isolation contract.
 - `docs/TWIN.md`: binding twin spec — object contract `p(y|c)=Tr[M_y C(c)(rho0)]`,
   the four capabilities, finance methodology, and reserved notation.
 - `docs/PLAN.md`: whole-project roadmap — phase gates (B → HARDEN → C), strict
@@ -48,7 +56,9 @@ and scalability is a future selection criterion, not a now-decision (ADR 0005).
   and per-dataset relevance to the R2 rungs (ADR 0007); `_sources/` caches the CC-BY README
   originals (dot-prefixed ⇒ gitignored, local-only). Read the matching note — including
   layout/figure facts — before touching any hardware data; dataset documentation is a mandatory
-  derivation input for every R2 pre-registration.- `docs/error_mechanisms.md`: physical-error mechanism taxonomy.- `docs/adr/`: durable decisions. Current spine is 0002 → 0006.
+  derivation input for every R2 pre-registration.
+- `docs/error_mechanisms.md`: physical-error mechanism taxonomy.
+- `docs/adr/`: durable decisions. Current spine is 0002 → 0008.
 
 ## Package and module rules
 
@@ -72,6 +82,8 @@ forward/      exact differentiable forward; channels + cptp_channel + exact/ (de
 mechanisms/   mechanism definitions + controlled teachers
 contexts/     probe-richness ladder C_cal(r) + probes
 decoder/      frozen-MWPM DEM substrate
+hardware/     R2-lite real-data rung (Google d=29 release): b8_io, blocks,
+              dem_compose, windows, pij + m1/m3/m4 reports (ADR 0007)
 # non-core
 audit/        gating / bands / validity (evaluator-side)
 util/         placeholder for small helpers;  numerics.py = NUMERICAL_ZERO floor (root)
