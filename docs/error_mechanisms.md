@@ -1,7 +1,7 @@
 # Physical Error Mechanisms
 
 This note is the canonical mechanism taxonomy for the surviving mechanism catalog
-(`qec_twin.primitives.mechanism_catalog` / `mechanism_profiles`) — the salvage
+(`qec_twin.mechanisms.catalog` / `qec_twin.mechanisms.profiles`) — the salvage
 kept for the twin's hardening step. It combines the implemented PHYS/PHYC mechanism
 IDs with the larger controlled-gate error library we want the twin to grow into.
 (The teacher-generation program that once consumed this catalog was retired and
@@ -85,8 +85,8 @@ They must not be interpreted as the public semantic label namespace.
 
 ## Implemented Catalog
 
-Status: implemented in `src/qec_twin/primitives/mechanism_catalog.py` and
-channelized in `src/qec_twin/primitives/channels.py`.
+Status: implemented in `src/qec_twin/mechanisms/catalog.py` and
+channelized in `src/qec_twin/forward/channels.py`.
 
 The IDs are priority ordered by expected practical frequency/importance for
 near-term hardware-style experiments. This order defines the mechanism sets.
@@ -143,7 +143,7 @@ the same semantic kind. Stage 3/S5 should distinguish:
 - public `M*` labels: non-flat family/dimension targets.
 
 The current audit is pinned in
-`qec_twin.primitives.mechanism_catalog.MECHANISM_CONTRACTS`.
+`qec_twin.mechanisms.catalog.MECHANISM_CONTRACTS`.
 
 | Role | Legacy IDs | Public labels | S3/S5 interpretation |
 | --- | --- | --- | --- |
@@ -182,8 +182,8 @@ Balanced profiles test identifiability under equal support. Weighted profiles
 test robustness under realistic-ish QEC exposure imbalance.
 
 Current weighted profiles are resolved from
-`src/qec_twin/primitives/mechanism_profiles.py`, which imports the current
-legacy M0-M34 catalog names from `mechanism_catalog.py`. Do not hand-maintain
+`src/qec_twin/mechanisms/profiles.py`, which imports the current
+legacy M0-M34 catalog names from `mechanisms/catalog.py`. Do not hand-maintain
 stale legacy-ID parameter blocks in YAML.
 
 ```text
