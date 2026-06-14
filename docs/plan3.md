@@ -200,7 +200,7 @@ attainable* (above it is physically unreconstructable, not a rule deficiency).
 
 **The decisive empirical gate — `ξ̂` (do FIRST, cheap, uses existing M3 data).** Measure the hardware Markov
 length `ξ̂` from the M3 d=29 repeated-syndrome record via the spacetime-Markov-length diagnostic
-(Sang–Hsieh 2412.00193, decoder-independent). Finite/O(1) `ξ̂` with a clean `e^{−w/ξ̂}` collapse ⇒ the
+(Negari–Ellison–Hsieh 2412.00193, decoder-independent). Finite/O(1) `ξ̂` with a clean `e^{−w/ξ̂}` collapse ⇒ the
 hardware sits in the controlled regime ⇒ the whole direction is validated on real data **before any build**;
 no collapse ⇒ near threshold ⇒ stop. This converts the theory `(b)` into a verdict on existing data.
 
@@ -250,7 +250,7 @@ Plan 3 reuses every prior milestone as one continuous argument, not scattered re
 ## 7. Immediate execution order
 
 0. **`ξ̂` gate (do FIRST — cheap, decisive, uses existing M3 data):** measure the hardware Markov
-   length via the spacetime-Markov-length diagnostic (Sang–Hsieh 2412.00193) on the M3 d=29
+   length via the spacetime-Markov-length diagnostic (Negari–Ellison–Hsieh 2412.00193) on the M3 d=29
    repeated-syndrome record; finite/O(1) `ξ̂` with `e^{−w/ξ̂}` collapse validates the whole direction
    on real data before any build (the theory `(b)`→verdict step, §3 Theoretical backing).
 1. **Finish CF-WR** (controlled composition characterization) — teacher (φ co-primary) →

@@ -422,7 +422,7 @@ it is **empirical**, and is settled **cheaply, before any build**, on data alrea
 
 > **The ξ̂ gate (do FIRST; decoder-independent).** Measure the hardware **spacetime Markov length
 > `ξ̂`** from the M3 d=29 repeated-syndrome record via the spacetime-Markov-length diagnostic
-> (**Sang–Hsieh 2412.00193**). A finite / `O(1)` `ξ̂` with a clean `e^{−w/ξ̂}` collapse ⇒ the
+> (**Negari–Ellison–Hsieh 2412.00193**). A finite / `O(1)` `ξ̂` with a clean `e^{−w/ξ̂}` collapse ⇒ the
 > hardware sits in the **controlled regime** ⇒ the whole direction is validated on real data; **no
 > collapse** ⇒ near threshold ⇒ **stop**.
 
@@ -451,7 +451,7 @@ the cheapest decisive gate in the program (`plan3.md` §7, item 0).
 | **Petz (BKM/KMB metric)** | KMB inner product = relative-entropy Hessian, kernel `(log a−log b)/(a−b)` | §5 P3.2 — the local integral kernel that replaces the exp prefactor |
 | **Skoric / Tan / Cain** (windowed/modular decoding) | composing **decode decisions** across windows | §6 — the quadrant the `V_do`-only trap collapses into |
 | **2602.19722** (Pauli-TN / dMLE) + T-B theorem (ADR 0008) | Pauli windowing by bond dimension; iid Pauli/DEM fields pinned at `R=1` | §6 — the "Pauli state, no coherent slot" quadrant |
-| **Sang–Hsieh 2412.00193** | decoder-independent **spacetime Markov-length** diagnostic | §9 — the ξ̂ empirical bridge |
+| **Negari–Ellison–Hsieh 2412.00193** (Spacetime Markov length; mixed-state-phase fault-tolerance diagnostic) | decoder-independent **spacetime Markov-length** diagnostic (classical CMI of repeated syndromes) | §9 — the ξ̂ empirical bridge |
 
 **Our genuine deltas — flagged [OURS]:**
 
