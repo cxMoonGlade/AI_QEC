@@ -6,11 +6,24 @@
 > (Kuwahara–Kato–Brandão, [2407.05835](https://arxiv.org/abs/2407.05835)), which destroys the global
 > Markov property for macroscopic 2D fragments and makes quantum BP fail in 2D.
 >
+> **Where this sits in the literature (prior art for the CONCLUSION; novelty narrowed — read §0.1).** The
+> qualitative conclusion below — *a weak coherent perturbation of a classical-Markov state keeps CMI
+> controlled with a local (not volume) prefactor below threshold, and collapses at threshold* — is **already
+> established prior art**: Sang–Hsieh [arXiv:2404.07251](https://arxiv.org/abs/2404.07251) (PRL **134**,
+> 070403; finite Markov-length stability) and Zhang–Gopalakrishnan
+> [arXiv:2511.01976](https://arxiv.org/abs/2511.01976) (weak-decoherence Markov-length stability of
+> classical / commuting-Pauli states below an O(1) threshold). **P3 does NOT claim that conclusion as new.**
+> P3's own delta is narrow and explicit: the **closed-form Kubo–Mori/BKM entropy-Hessian coefficient κ for a
+> COHERENT off-diagonal (unitary) edge** — the stability papers prove finiteness via cluster expansion for
+> **incoherent** perturbations and do **not** extract this κφ² coefficient for a coherent unitary edge (that
+> sharp-constant piece is the still-open part). See §0.1.
+>
 > Derived by opus theory agent, 2026-06-13. Reuses `P2_derivation.md` (per-seam residual φ-expansion;
 > the C0 un-twirled coherent edge is **O(φ) linear**) and the classical composition-limit proof
 > (composition limit = decodability threshold, `w ≳ 2ξ·log(L/ε)`). Pillars cited, not claimed:
 > Fawzi–Renner [1410.0664], Sutter–Fawzi–Renner JRSWW (PMC4841654), KKB [2407.05835], the
-> Kubo–Mori–Bogoliubov (KMB) metric = Hessian of relative entropy.
+> Kubo–Mori–Bogoliubov (KMB) metric = Hessian of relative entropy; **prior art for the conclusion:**
+> Sang–Hsieh [2404.07251], Zhang–Gopalakrishnan [2511.01976].
 >
 > **epistemic legend:** (a) exact (theorem/identity/zero-tolerance); (b) derived prediction band
 > (miss = finding); (c) heuristic/gate. conjectural steps **bold-inline tagged**. Honest tri-state
@@ -18,9 +31,45 @@
 
 ---
 
+## Reviewer-2 corrections (2026-06-14)
+
+The body below is the working derivation; the following **binding corrections** (reviewer + literature pass)
+override the corresponding passages and take precedence:
+
+- **[R2-1] κ box sign error (§2.3) — FIXED.** The displayed closed-form for κ had an **inverted overall
+  sign** (as written it evaluated to `κ ≈ −1.05`, contradicting the `κ≥0` statement two lines below and the
+  true value `½ I″(0) ≈ +1.05`). With `⟨X⟩_KMB = −d²S_X > 0`, the SSA combination is
+  `½ d²I = ½[−⟨AB⟩−⟨BC⟩+⟨B⟩+⟨ABC⟩]` (the global `+⟨ABC⟩` term dominates ⇒ POSITIVE). The box now displays the
+  correct sign and a "sign provenance" derivation. Magnitude/positivity/locality are sign-independent, so §3's
+  verdict is unaffected — but an **(a, EXACT)** formula cannot display the wrong sign.
+- **[R2-2] §1.1 inter-cell correction — FIXED.** The prose "Z anticommutes with the bit-flip X that
+  diagonalizes ρ_cl ⇒ [G,ρ_cl]≠0" was **FALSE for a single non-unital Choi cell**: `[Z⊗Z, J] = 0` exactly
+  (J's coherence lives in the `{|00⟩,|11⟩}` block where Z⊗Z=+1). χ⊥≠0 is rescued by the **INTER-CELL**
+  generator `G = Z_e⊗Z_{e'}` across **two** seam cells (for ρ_cl=J⊗J, `‖[Z_e Z_{e'}, ρ_cl]‖ ≈ 1.245 ≠ 0`,
+  χ⊥ purely off-diagonal). §1.1 + the S1 fact (§1.2) now state the correct inter-cell non-commutation.
+- **[R2-3] §3.4 Petz-route DOWNGRADE — FIXED.** The claim "order+locality of the coherent prefactor is (a)
+  via the Petz route, independent of the C1 remainder" was **WRONG**: Fawzi–Renner `I ≥ −2 log F` is the
+  **wrong direction** (it *lower*-bounds I; defeating the KKB obstruction needs an *upper* bound on I). So:
+  the **leading coefficient κ stays (a) via the KMB route**, but the **macroscopic escape** (locality of
+  `I(A:C|B)` at fixed φ for macroscopic |A|+|C|) is **(b)-conditional, gated by C1 and a NEW second gap C2**
+  (the uniform-in-|A|+|C| upper bound on I), and is **NOT** rescued to (a) by Petz. §3.4 rewritten honestly;
+  C2 propagated to §0, §3.3, §5, §6 (failure mode 3b), FROZEN P3.3, and the tri-state verdict.
+- **[R2-4] Novelty repositioned (§0.1 + header) — FIXED.** A literature check found the **conclusion**
+  (weak coherent perturbation of a classical-Markov state keeps CMI controlled with a local-not-volume
+  prefactor below threshold; collapse at threshold) is **already prior art**: **Sang–Hsieh [2404.07251]**
+  (PRL 134.070403) and **Zhang–Gopalakrishnan [2511.01976]**. The header + new **§0.1** now cite both as the
+  prior art establishing the conclusion, and frame P3's delta narrowly: **the explicit Kubo–Mori/BKM
+  entropy-Hessian coefficient κ for a COHERENT off-diagonal unitary edge** (the stability papers prove
+  finiteness via cluster expansion for INCOHERENT perturbations; they do not extract this κφ² coefficient —
+  the still-open sharp-constant piece). Added a citation-hygiene one-liner: **2604.01197 = Thm 11/13 (not
+  12/14), Fact 3 (not "Fact 5"), TRIVIAL PHASE ONLY** (macroscopic below-threshold code state out of scope;
+  escape applies to the per-window shallow-channel-field state).
+
+---
+
 ## 0. Headline verdict (read first)
 
-**CONTROLLED — conditionally (b), with one exactly-named missing step.**
+**CONTROLLED — leading coefficient κ is (a); macroscopic escape is conditionally (b), with TWO exactly-named missing steps (C1, C2).**
 
 The leading coherent correction to the conditional mutual information about a classical-Markov bulk is
 
@@ -39,14 +88,17 @@ regime** of the relative entropy, where the Hessian is a **fixed local integral 
 perturbation therefore **provably evades the exp prefactor**, *to all finite orders in φ that the KMB
 Taylor series controls* (§3).
 
-The single step that keeps this **(b) not (a)**: the φ-series of I must be **uniformly convergent on the
-A–C separation**, i.e. the O(φ³) remainder must not smuggle the exp prefactor back via a φ-dependent
-radius of convergence that **shrinks** as |A|+|C| grows. I bound the remainder by the KMB regime's
-spectral floor (§3.4) and show the radius is set by `φ ≲ p_min`, **independent of |A|+|C|** — but the
-fully rigorous statement needs the third-order Fréchet remainder of −S to be controlled by the SAME local
-kernel, which I derive **at leading order only** (§3.4, the C1 missing step). Hence the verdict is a
-**registered (b) band with the exact gap named**, not a closed theorem. This is **strictly stronger** than
-the P2 per-seam result and **directly attacks** the coherent open problem.
+**Two named gaps keep the macroscopic statement (b) not (a).** The φ-series of I must be **uniformly
+convergent on the A–C separation**, i.e. the O(φ³) remainder must not smuggle the exp prefactor back via a
+φ-dependent radius of convergence that **shrinks** as |A|+|C| grows. I bound the remainder by the KMB
+regime's spectral floor (§3.4) and show the radius is set by `φ ≲ p_min`, **independent of |A|+|C|** — but
+the fully rigorous statement needs (C1) the third-order Fréchet remainder of −S controlled by the SAME local
+kernel (I derive it **at leading order only**, §3.3), and separately (C2) a uniform-in-|A|+|C| **UPPER** bound
+on `I(A:C|B)` at fixed φ for macroscopic regions — which the Fawzi–Renner recovery route **cannot** supply
+(it is a wrong-direction *lower* bound on I; §3.4). Hence the verdict is a **registered (b) band with the two
+exact gaps named** (C1, C2), not a closed theorem. The **leading coefficient κ is (a)** (KMB route, §2);
+only the **macroscopic escape at fixed φ** is the (b)-conditional, C1+C2-gated piece. This is **strictly
+stronger** than the P2 per-seam result and **directly attacks** the coherent open problem.
 
 **Relation to P2 (§4):** the per-seam residual being **O(φ) linear** (P2 C0) and the CMI being **O(φ²)
 quadratic** are **NOT contradictory and NOT the same statement** — one is a *trace-distance reconstruction
@@ -54,6 +106,40 @@ residual* (first-order-sensitive, odd), the other a *relative-entropy informatio
 The √-bound `D_Choi ≤ √(I_nats)` reconciles them exactly: `√(κ) φ` (CMI route) vs `c_G φ` (direct route),
 both **linear in φ**, both **L-additive with a local prefactor**. The CMI route therefore **certifies the
 P2 linear per-seam law carries no exp prefactor** — the coherent generalization of the classical limit.
+
+### 0.1 Novelty positioning — what is prior art, what is P3's delta
+
+**Prior art (the CONCLUSION is NOT claimed new).** That a weak perturbation of a classical-Markov /
+commuting-Pauli state keeps the conditional mutual information controlled with a **local (not volume)**
+prefactor **below an O(1) threshold**, and that this control **collapses at threshold**, is established in:
+
+- **Sang–Hsieh, [arXiv:2404.07251](https://arxiv.org/abs/2404.07251)** (PRL **134**, 070403) — **finite
+  Markov-length stability**: the conditional Markov length stays finite (CMI clusters) under weak perturbation
+  below a threshold, diverging at it.
+- **Zhang–Gopalakrishnan, [arXiv:2511.01976](https://arxiv.org/abs/2511.01976)** — **weak-decoherence
+  Markov-length stability** of classical / commuting-Pauli states below an **O(1) threshold** (the same
+  qualitative below-threshold-controlled / at-threshold-collapse picture P3's §5–§6 report).
+
+P3 **cites both as the prior art that establishes the qualitative conclusion** and does **not** re-claim it.
+
+**P3's delta (narrow, explicit, still open at the sharp constant).** The stability papers prove finiteness
+via **cluster expansion for INCOHERENT (decoherence/dephasing) perturbations**; they do **not** extract a
+closed-form leading **coefficient** for a **coherent unitary edge**. P3's contribution is exactly that
+coefficient:
+
+> **the explicit Kubo–Mori / BKM entropy-Hessian coefficient `κ = ½⟨χ⊥, K_cl χ⊥⟩_KMB` for a COHERENT
+> off-diagonal edge `U_φ = exp(−iφ Z_e⊗Z_{e'})` (an inter-cell unitary dressing), in closed divided-difference
+> form `κ = ½Σ_{a≠b}|G_{ab}|² σ̃(p_a,p_b)` (§2.3).**
+
+This is the **novel** piece, and the **sharp constant remains open** (the macroscopic-escape upgrade is gated
+by C1+C2, §3.3–§3.4). The qualitative "no exp prefactor below threshold" lands in the prior-art-established
+regime; the **coherent κφ² coefficient** is what P3 adds.
+
+**Citation hygiene (a one-liner, lest the macroscopic-escape scope be over-claimed).** When the trivial-phase
+clustering result of **2604.01197** is invoked, cite it correctly: it is **Thm 11/13 (NOT 12/14)** and
+**Fact 3 (NOT "Fact 5")**, and it covers the **TRIVIAL PHASE ONLY** — the macroscopic **below-threshold code
+state is OUT of its scope**. The escape it supports applies to the **per-window shallow-channel-field state**
+(the actual P3 object), not to the macroscopic code state; do not stretch 2604.01197 to the latter.
 
 ---
 
@@ -73,16 +159,30 @@ with G Hermitian, **supported only on the O(L) seam-crossing edge pairs** (call 
 knob. A non-unitary coherent CP edge adds a diagonal piece treated in §3.5; it does not change the prefactor
 verdict.)
 
-**Basis bookkeeping (a, the load-bearing non-commutation).** ρ_cl is the Choi state of the classical
-**non-unital bit-flip** bulk — an `{I, X}`-type channel. Its Choi `J = (I⊗E)|Ω⟩⟨Ω|` is **diagonal in the
-Bell basis** (equivalently, in the X-stabilizer basis of the doubled space), NOT in the Z-product basis. The
-coherent generator `G = Z⊗Z` is **diagonal in the Z basis**, hence **off-diagonal in ρ_cl's (Bell/X)
-eigenbasis**. Because the bit-flip Kraus operator X **anticommutes** with Z, **[G, ρ_cl] ≠ 0** — this is the
-exact statement that the un-twirled coherent ZZ edge is in P2's **C0 = O(λ) class** (`P2_derivation.md` §2:
-"non-unital + un-twirled coherent ∈ O(λ) class"; the twirled/dephased ZZ would commute and give χ⁽¹⁾=0,
-O(λ²) — that is the excluded case). So below, "off-diagonal" always means **off-diagonal in the
-ρ_cl-eigenbasis** (Bell/X), where Z⊗Z genuinely has off-diagonal matrix elements. This is what makes χ⊥ ≠ 0
-and is the entire physical reason the coherent sector is non-trivial.
+**Basis bookkeeping (a, the load-bearing non-commutation — INTER-CELL).** ρ_cl is the Choi state of the
+classical **non-unital bit-flip** bulk — an `{I, X}`-type channel. Each per-edge Choi cell
+`J = (I⊗E)|Ω⟩⟨Ω|` is **diagonal in the Bell basis** (equivalently, in the X-stabilizer basis of the doubled
+space), NOT in the Z-product basis; the non-unital bit-flip's surviving **coherence lives in the
+`{|00⟩,|11⟩}` (Φ⁺/Φ⁻) block**.
+
+> **⚠ The single-cell ZZ does NOT inject coherence — it commutes.** On a SINGLE Choi cell `[Z⊗Z, J] = 0`
+> **exactly**: J's coherent (off-diagonal) weight sits entirely in the `{|00⟩,|11⟩}` block, and there
+> `Z⊗Z = +1`, so Z⊗Z acts as the identity on the only block where J is non-classical and the commutator
+> vanishes. The naive "X anticommutes with Z ⇒ [G, ρ_cl]≠0" reasoning is a **non-sequitur** for one cell:
+> the bit-flip Kraus X acts on the *physical* leg, but the Choi J's coherence and Z⊗Z meet in the *doubled*
+> {|00⟩,|11⟩} sector where they commute.
+
+The non-commutation — and hence χ⊥ ≠ 0 — is rescued by the **INTER-CELL** generator, the registered form
+`G = Σ_{e∈seam} Z_e ⊗ Z_{e'}` with the two Pauli factors landing in **two distinct seam Choi cells** (edge e
+and its seam partner e'), NOT both inside one cell. For `ρ_cl = J ⊗ J` (two seam cells) the inter-cell ZZ
+**does not commute**: a direct evaluation gives `‖[Z_e ⊗ Z_{e'}, J ⊗ J]‖ ≈ 1.245 ≠ 0`, and the resulting
+χ⊥ = −i[G, ρ_cl] is **purely off-diagonal** in the (Bell⊗Bell) eigenbasis. This is the exact statement that
+the un-twirled coherent **inter-cell** ZZ edge is in P2's **C0 = O(λ) class** (`P2_derivation.md` §2:
+"non-unital + un-twirled coherent ∈ O(λ) class"; the **twirled/dephased** ZZ, or any single-cell ZZ, would
+commute and give χ⁽¹⁾=0, O(λ²) — those are the excluded cases). So below, "off-diagonal" always means
+**off-diagonal in the ρ_cl-eigenbasis** (Bell⊗Bell), where the inter-cell Z_e⊗Z_{e'} genuinely has
+off-diagonal matrix elements. This inter-cell non-commutation is the entire physical reason the coherent
+sector is non-trivial.
 
 ### 1.2 The φ-expansion of ρ (a)
 Expand the conjugation. With `U_φ = e^{−iφG}`, the Baker–Campbell–Hausdorff / Hadamard expansion gives
@@ -92,9 +192,10 @@ Expand the conjugation. With `U_φ = e^{−iφG}`, the Baker–Campbell–Hausdo
 > **ρ⁽²⁾ = −½ [G,[G,ρ_cl]] = −½ ad_G²(ρ_cl)   (a)**
 
 **Key structural fact (S1, a) — χ⊥ is off-diagonal in ρ_cl's eigenbasis and is nonzero.** Diagonalize
-ρ_cl = Σ_a p_a |a⟩⟨a| in its (Bell/X) eigenbasis (§1.1). G = Z⊗Z has matrix elements G_{ab} = ⟨a|G|b⟩ that
-are **off-diagonal** in this basis (Z anticommutes with the bit-flip X that diagonalizes ρ_cl). Then ρ⁽¹⁾ has
-the **purely off-diagonal** form
+ρ_cl = Σ_a p_a |a⟩⟨a| in its (Bell⊗Bell) eigenbasis (§1.1). The **inter-cell** generator
+G = Σ_e Z_e⊗Z_{e'} has matrix elements G_{ab} = ⟨a|G|b⟩ that are **off-diagonal** in this basis (the two Z
+factors straddle two distinct seam cells, so `[G, ρ_cl] ≠ 0`, `‖[G, J⊗J]‖ ≈ 1.245`; the single-cell ZZ would
+be diagonal and commute — §1.1). Then ρ⁽¹⁾ has the **purely off-diagonal** form
 
 > **ρ⁽¹⁾ = χ⊥ := −i[G, ρ_cl],  (χ⊥)_{ab} = −i G_{ab}(p_a − p_b),  (χ⊥)_{aa} = 0,  supported on 𝒮.   (a)**
 
@@ -214,12 +315,21 @@ So the global ABC second-order piece is `Σ_{a≠b}|G_{ab}|² σ(p_a,p_b)`, and 
 sum of the four such forms** on (AB, BC, B, ABC), each evaluated with its **own** reduced spectrum/eigenbasis:
 
 > **κ = ½ Hess_I[ρ_cl](χ⊥, χ⊥)
->     = ½ [ ⟨χ⊥^{AB},χ⊥^{AB}⟩_KMB^{AB} + ⟨χ⊥^{BC},χ⊥^{BC}⟩_KMB^{BC} − ⟨χ⊥^{B},χ⊥^{B}⟩_KMB^{B}
->           − ⟨χ⊥,χ⊥⟩_KMB^{ABC} ]   (a, EXACT)**
+>     = ½ [ −⟨χ⊥^{AB},χ⊥^{AB}⟩_KMB^{AB} − ⟨χ⊥^{BC},χ⊥^{BC}⟩_KMB^{BC} + ⟨χ⊥^{B},χ⊥^{B}⟩_KMB^{B}
+>           + ⟨χ⊥,χ⊥⟩_KMB^{ABC} ]   (a, EXACT)**
+
+**Sign provenance (a, the load-bearing bookkeeping).** Each KMB form is the **negative** entropy Hessian:
+`d²S/dt²[ρ_X](X,X) = −⟨X,X⟩_KMB^{X} < 0` (§2.2 line: `−½ d²S = ½⟨·,·⟩_KMB`, so `⟨·⟩_KMB = −d²S > 0`).
+Since `I = S_{AB}+S_{BC}−S_B−S_{ABC}`, `½ d²I/dφ² = ½[d²S_{AB}+d²S_{BC}−d²S_B−d²S_{ABC}]
+= ½[−⟨AB⟩−⟨BC⟩+⟨B⟩+⟨ABC⟩]` — the **global `+⟨ABC⟩` term dominates** (it is the largest, full-support
+KMB form), so the alternating sum is **POSITIVE**, consistent with κ≥0. (The opposite sign convention —
+`+⟨AB⟩+⟨BC⟩−⟨B⟩−⟨ABC⟩` — would evaluate **negative**, `κ ≈ −½I″(0) ≈ −1.05`, contradicting κ≥0; that is the
+referee-corrected sign error. Magnitude/positivity/locality are sign-independent, so §3's verdict is
+unaffected; but an (a, EXACT) formula must display the correct overall sign.)
 
 where χ⊥^{X} = Tr_{∖X} χ⊥ are the reduced first-order variations. **κ ≥ 0 exactly** (the Hessian of I at a
-state is positive-semidefinite because I ≥ 0 attains its minimum 0 there — SSA; Lieb–Ruskai). This is the
-**φ-leading CMI, exact**. Define σ̃ as the resulting **connected KMB kernel** (the alternating combination):
+state is positive-semidefinite because I ≥ 0 attains its minimum 0 there — SSA; Lieb–Ruskai; the displayed
+alternating sum evaluates to `+½ I″(0) ≈ +1.05 > 0`). This is the **φ-leading CMI, exact**. Define σ̃ as the resulting **connected KMB kernel** (the alternating combination):
 
 > **κ = ½ Σ_{(a,b): seam-connected, a≠b} |G_{ab}|² · σ̃(p_a, p_b),   σ̃ ≥ 0.   (a)**
 
@@ -324,23 +434,48 @@ global one. The third-order term involves a **triple** double-operator-integral 
 kernel `[p_a,p_b,p_c]` (second divided difference of `log`) is still **local in ρ_cl**, so **the structure
 holds** — but a *uniform* operator-norm bound on the **full** remainder, valid for **all** N and **all**
 fragment sizes simultaneously, is the standard hard step in matrix-perturbation theory (the Kato/DOI
-remainder). I derive the structure and the leading floor; the **uniform N-bound is the named missing step**.
+remainder). I derive the structure and the leading floor; the **uniform N-bound is the C1 missing step**.
 **Status: CONTROLLED (b) — radius `φ ≲ exp(−O(ξ))` independent of |A|+|C|, modulo the uniform
-higher-order DOI remainder bound (C1).**
+higher-order DOI remainder bound (C1); the macroscopic-escape statement carries a second gap C2 (§3.4).**
 
-### 3.4 Resummation alternative (a, makes the gap smaller)
-The remainder worry can be **side-stepped** without the uniform N-bound, by **not Taylor-expanding I at all**
-and instead bounding I directly via the **Fawzi–Renner route on the perturbed state**: `I(A:C|B)[ρ(φ)] ≥
-−2 log F(ρ(φ), R(ρ_AB(φ)))` (and the matching **upper** bound is what we want). The relevant fact is that
-the **rotated-Petz recovery map R depends only on ρ_BC(φ)** (JRSWW; cited in P2 §3). Because ρ_BC(φ) =
-U_φ ρ_BC,cl U_φ† with U_φ **seam-local**, the recovery map is a **seam-local perturbation of the exact
-classical recovery** (which is exact, residual 0, at φ=0). The recovery error is then an **O(φ) seam-local
-operator**, and its contribution to I is **O(φ²) with the L-additive local prefactor** — the **same κ**,
-now obtained **without** the entropy Taylor series, so **without the C1 remainder gap**. The cost: this gives
-the **right order and locality** but a **looser constant** (the Petz route is a one-sided bound, P2 B-1/§3.5).
-**So: order + locality of the prefactor = (a) via the Petz route; the sharp constant κ = (b) via the KMB
-Taylor route (C1 gap).** Either way the **exp prefactor is gone** — that conclusion does **not** depend on
-the C1 gap, only the **sharp constant** does.
+### 3.4 What the Petz route does and does NOT buy — (a) leading coefficient κ; (b)-conditional macroscopic escape
+A natural hope is to **side-step** the uniform N-bound by **not Taylor-expanding I at all** and instead
+bounding I directly via the **Fawzi–Renner route on the perturbed state**. **This does not work for the
+statement we need, because the Fawzi–Renner inequality points the WRONG WAY.** Fawzi–Renner [1410.0664] gives
+
+> `I(A:C|B)[ρ(φ)] ≥ −2 log F(ρ(φ), R(ρ_AB(φ)))`   (a, but a **LOWER** bound on I)
+
+— it **lower-bounds** I by the recovery infidelity. But what defeats the KKB obstruction is an **UPPER**
+bound on `I(A:C|B)` at fixed φ for **macroscopic |A|+|C|** (we must show I stays small/local; bounding it
+from *below* by a small number says nothing about whether it is large). So the Petz/recovery route **cannot**
+upgrade the macroscopic-escape statement to (a): a lower bound on I is the wrong-direction object.
+
+What the recovery picture **does** give is structural support for the **leading coefficient**: the
+rotated-Petz recovery map R depends only on ρ_BC(φ) (JRSWW; cited in P2 §3), and ρ_BC(φ) = U_φ ρ_BC,cl U_φ†
+with U_φ **seam-local**, so R is a seam-local perturbation of the exact classical recovery (residual 0 at
+φ=0). The recovery error is an **O(φ) seam-local operator** ⇒ its leading contribution is **O(φ²) with an
+L-additive local prefactor** — the **same order and locality as κ**. So the **locality of the coefficient κ**
+is (a), but it is established **via the KMB entropy-Hessian route (§2.2–§2.3)**, NOT via Petz; the Petz
+picture only corroborates the order/locality of the coefficient, and even there it is one-sided (P2 B-1/§3.5),
+not a sharp constant.
+
+**The honest split:**
+- **(a) — the leading coefficient κ.** `I = κφ² + O(φ³)` with κ = ½⟨χ⊥,·⟩_KMB ≥ 0 LOCAL/seam-supported,
+  exact by the KMB route (§2.2–§2.3). Petz corroborates its order+locality but does not establish it and
+  does not sharpen it.
+- **(b)-conditional — the macroscopic escape.** The statement that actually defeats the KKB exp prefactor —
+  *`I(A:C|B)[ρ(φ)]` stays local (no exp(Θ(|A|+|C|))) at FIXED φ as `|A|+|C| → macroscopic`* — is
+  **(b)-conditional, gated by the C1 remainder bound (§3.3)**, and is **NOT** additionally rescued to (a) by
+  Petz (the Fawzi–Renner bound is the wrong direction, as above). This is a **SECOND named gap, C2** (the
+  uniform-in-|A|+|C| UPPER bound on I beyond leading order), conceptually distinct from C1 (the uniform
+  higher-order DOI remainder of −S): C1 is the analytic/Taylor-control gap on the entropy expansion; C2 is the
+  information-theoretic gap that **no available upper-bounding tool** (neither the KMB Taylor truncation
+  without C1, nor the wrong-direction Petz lower bound) currently closes for macroscopic fragments.
+
+**So: leading coefficient κ = (a) via KMB; macroscopic escape (the defeat of the KKB prefactor at fixed φ,
+macroscopic |A|+|C|) = (b)-conditional, gated by C1 and separately by C2 (Petz does NOT rescue it to (a)).**
+The exp prefactor is **provably gone at leading order in φ and locally**; whether it stays gone at fixed φ for
+macroscopic regions is the (b) bet C1+C2 name — not an (a) theorem.
 
 ### 3.5 Non-unitary coherent edge (a, completeness)
 If the coherent seam edge is a non-unitary CP map (not pure conjugation), ρ⁽¹⁾ = χ⊥ + χ∥ has an extra
@@ -390,7 +525,7 @@ the classical composition limit**, which P2 alone does not give.
 
 ## 5. The perturbative coherent composition limit (b, if CONTROLLED) — window scaling and φ-regime
 
-Granting §3 (CONTROLLED, modulo the C1 remainder gap), the composition limit extends to the coherent sector
+Granting §3 (CONTROLLED, modulo the C1 + C2 gaps), the composition limit extends to the coherent sector
 as follows. The classical limit (proven) is: composition is faithful when the window/buffer width
 
 > `w ≳ 2ξ · log(L/ε)`   (classical, proven: composition limit = decodability threshold).
@@ -445,9 +580,17 @@ coherent small-window composition is faithful with a poly·L (NOT exp) prefactor
    DOI remainder (§3.3) is **not** closed here. If, contrary to the leading-order analysis, the higher-order
    terms carried a **fragment-size-dependent** growth (e.g. via a secular `n!·(|A|+|C|)` from nested
    commutators that the seam-locality argument fails to suppress), the exp prefactor could re-enter at finite
-   φ. I gave the **structural** reason it does not (every order is seam-local, three-or-more G's all on 𝒮) and
-   the **Petz-route** order+locality proof that does **not** use the series (§3.4) — but the **sharp uniform
-   constant** remains (b). **This is the single named missing step for a full theorem.**
+   φ. I gave the **structural** reason it does not (every order is seam-local, three-or-more G's all on 𝒮),
+   but the **sharp uniform constant** remains (b). **C1 is named missing step #1.**
+
+3b. **Wrong-direction information bound — the C2 gap (b).** The statement that actually defeats the KKB exp
+   prefactor is an **UPPER** bound on `I(A:C|B)` at fixed φ for **macroscopic** |A|+|C|. The Fawzi–Renner
+   recovery route `I ≥ −2 log F` is a **LOWER** bound on I (§3.4) — the wrong direction — so it **cannot**
+   close this; nor does any other available tool, absent C1. The Petz/recovery picture corroborates only the
+   **order+locality of the leading coefficient κ** (which is anyway (a) by the KMB route, §2), NOT the
+   macroscopic escape. **C2 is named missing step #2** (uniform-in-|A|+|C| upper bound on I beyond leading
+   order). Together C1 and C2 are the two exact gaps; the **leading coefficient κ is (a)**, only the
+   macroscopic escape is the (b)-conditional piece.
 
 4. **Degeneracy of ρ_cl (a, controlled).** If ρ_cl has exact eigenvalue degeneracies on 𝒮 (p_a = p_b for a
    seam-coupled pair), the kernel `k(p,p)=1/p` is finite (no blow-up) and `σ(p_a,p_b)→0` — degeneracy
@@ -485,6 +628,16 @@ coherent small-window composition is faithful with a poly·L (NOT exp) prefactor
   perturbation-theory exposition e.g. [arXiv:2106.05533](https://arxiv.org/pdf/2106.05533). **The local
   integral kernel that replaces the worst-case exp prefactor.**
 - **Strong subadditivity (I ≥ 0, the stationarity premise):** Lieb–Ruskai (1973).
+- **Prior art for the CONCLUSION (Markov-length stability below threshold — §0.1; cited, the conclusion is
+  NOT claimed new):** Sang, Hsieh — [arXiv:2404.07251](https://arxiv.org/abs/2404.07251) (PRL **134**, 070403),
+  finite conditional-Markov-length stability; Zhang, Gopalakrishnan —
+  [arXiv:2511.01976](https://arxiv.org/abs/2511.01976), weak-decoherence Markov-length stability of classical /
+  commuting-Pauli states below an O(1) threshold. **They establish the qualitative below-threshold-controlled /
+  at-threshold-collapse picture via cluster expansion for INCOHERENT perturbations; they do NOT extract the
+  coherent κφ² coefficient — that is P3's narrow delta.**
+- **Citation hygiene (2604.01197):** when its trivial-phase clustering is invoked, it is **Thm 11/13 (not
+  12/14)**, **Fact 3 (not "Fact 5")**, and **TRIVIAL PHASE ONLY** — the macroscopic below-threshold code state
+  is OUT of scope; the escape applies to the per-window shallow-channel-field state (§0.1).
 - **Local:** `P2_derivation.md` (per-seam C0 linear residual, the √-bridge, L-additivity); the
   composition-limit proof (`w ≳ 2ξ log(L/ε)`, classical sector); `D_package_derivations.md` §D5 (T-B theorem:
   the **non-unital** classical χ∥ companion of §3.5).
@@ -501,10 +654,14 @@ coherent small-window composition is faithful with a poly·L (NOT exp) prefactor
   riding the classical Markov screening of ρ_cl. Mechanism: KKB's exp is the cost of reconstructing the Markov
   reference from scratch; the perturbation is handed the reference (ρ_cl) and only pays its **local KMB
   curvature**.
-- **P3.3 (b, sharp constant / convergence):** the φ-series radius is `φ* ~ exp(−O(ξ))`, **independent of
-  |A|+|C|** — the controlled φ-window is set by ξ, **not** by code size. **(b)** because the **uniform
-  higher-order DOI remainder bound (C1)** is structural-but-not-closed; the **order + locality** are **(a)**
-  via the Petz route (§3.4), only the **sharp κ** is (b) via the KMB Taylor route.
+- **P3.3 (mixed — leading coefficient (a); macroscopic escape (b), C1+C2):** the **leading coefficient κ is
+  (a)** via the KMB entropy-Hessian route (§2.2–§2.3), LOCAL/seam-supported. The **macroscopic escape** (κ's
+  prefactor stays NON-exp at fixed φ as |A|+|C|→macroscopic; φ-series radius `φ* ~ exp(−O(ξ))` **independent
+  of |A|+|C|**, window set by ξ not code size) is **(b)-conditional**, gated by **two** named gaps: **(C1)**
+  the uniform higher-order DOI remainder bound on −S (§3.3, structural-but-not-closed), and **(C2)** a
+  uniform-in-|A|+|C| **UPPER** bound on I at fixed φ — which the Fawzi–Renner recovery route does **NOT**
+  supply (it is a wrong-direction *lower* bound on I; §3.4). The Petz route corroborates only the order+locality
+  of the **coefficient**, NOT the macroscopic escape, and does not rescue it to (a).
 - **P3.4 (b, the limit):** perturbative coherent composition limit `w ≳ 2ξ[log(L/ε) + log(√κ φ)]` — coherent
   edge costs at most an **additive `2ξ log(1/φ)`** window penalty; for small φ, **no extra width**.
 - **P3.5 (a, P2-reconciliation):** P2's **O(φ) linear** per-seam residual and P3's **O(φ²) quadratic** CMI are
@@ -516,6 +673,7 @@ coherent small-window composition is faithful with a poly·L (NOT exp) prefactor
   falsify** (if the measured global CMI / composed Choi residual grows **faster than φ²** or shows
   **fragment-size-dependent** prefactor, P3.2 is **refuted** = finding).
 
-**Tri-state verdict: CONTROLLED (small φ, below threshold) — at the (b) level with the C1 remainder bound as
-the single exact missing step; order+locality (a)-proven via Petz; INHERITS at large φ / at threshold
-(honestly bounded).**
+**Tri-state verdict: CONTROLLED (small φ, below threshold) — the leading coefficient κ is (a) (KMB route); the
+macroscopic escape is at the (b) level with TWO exact missing steps, C1 (uniform higher-order DOI remainder of
+−S) and C2 (uniform-in-|A|+|C| UPPER bound on I; the Fawzi–Renner recovery route is the wrong-direction lower
+bound and does NOT rescue this to (a)); INHERITS at large φ / at threshold (honestly bounded).**
