@@ -1,6 +1,7 @@
 # CF-WR 预注册草案 v2 —— 12q Teacher 窗口化重建可行性判决
 
-> 状态:**DRAFT v2**(吸收 reviewer-1 的 BLOCK 裁决:2 BLOCK + 4 MAJOR + 6 MINOR 全部并入;待 reviewer-2 复审 → 折入 `docs/metric_results.md` 冻结)。
+> 状态:**FROZEN 2026-06-14**(3 轮对抗 review 通过:R1/R2 BLOCK→修、R3 MINOR→修;of-record 桩在 `docs/metric_results.md`)。
+> **Pre-run Amendment 1(2026-06-14,build scout 发现 G1):** D_Choi 改 **per-seam reduced-block Choi 迹距离** —— 全 2²⁴ 信道 Choi 不可行,改每缝 ≤6q 支撑的 reduced-channel Choi 块(≤2¹² dim,feasible);**全局 2²⁴ 不材料化**,全局=缝聚合(=P4 L-标度);GO 门用 R̂≈5.3 处 per-seam 值对 per-seam √(I_nats) bound。**G2(无 2D 衬底):直接 build**(3×4 几何/2D detector map/线缝 glue/2D decoder 全新建,先建冻结 `cf_wr_geom` 契约)。
 > owner 三决定(2026-06-14):**(i) 直接 P2(2D 碎片)**;**(ii) D_Choi + E_do co-primary**;**(iii) G2(GNN-BP)纳入**。
 > v2 关键修正(reviewer-1):**①R̂ 旋钮改非unital CPTP(unital coherent ZZ 被 T-B 定理钉在 R=1,产不出 R̂>1)②P2 改系数比判据(Petz 残差是线性,非二次;K1 已证伪二次)③补量子 Markov 链精确恢复闸(替被砍的 1D Petz 正确性校准)④τ_D 重钉到 bound 之下 ⑤D_Choi 入 METRICS 台账 ⑥P4 弱化为符号+单调,移出 GO 门**。
 > 理论先行:§5 预测带在任何 run 前冻结;miss = finding,不事后加宽容差。
@@ -62,13 +63,13 @@ G2、A 全程标 (c),锚精确对象,绝不进 (a) 主干/前提(ADR 0008:学习
 ## 4. 度量(M4+M5 修正)
 
 ### 入台账(M5,已做)
-- **D_Choi = Choi–Jamiołkowski 迹距离**:**已增行** `docs/METRICS.md` Ledger(J=(I⊗E)|Ω⟩⟨Ω|、半迹范 ∈[0,1]、JRSWW+Fuchs–van de Graaf bound `√(I_nats)=√(ln2·I_bits)`,B-5 修正);
+- **D_Choi = per-seam reduced-block Choi–Jamiołkowski 迹距离**(amendment 1):**已增行** `docs/METRICS.md` Ledger(J_s=(I⊗E_s)|Ω⟩⟨Ω| 在每缝 ≤6q 支撑、Choi 块 ≤2¹² dim feasible、半迹范 ∈[0,1]、per-seam bound `√(I_nats)=√(ln2·I_bits)`);**全局 2²⁴ 信道 Choi 不材料化**,全局=缝聚合;
 - **E_do 不新造度量**:映射到**已在台账**的 `knob_dler_error = |ΔLER_twin−ΔLER_teacher|`(绝对 LER 单位,counterfactual-validity error)——这正是载体 do()-保真对照 teacher 真值的场标准度量;相对-% 仅作**flagged project-defined 次要描述**。
 
 ### Co-primary(owner ii;M4:声明各自独立失败模 + 去 headline-S + τ_D 重钉)
 | 度量 | 对象 | 唯一捕捉的失败模 | 阈值(c) |
 |---|---|---|---|
-| **D_Choi** = ½‖J(E)−J_glue‖₁ | Choi 态 | **全信道重建误差,含解码器看不见的方向** | τ_D = **0.5 × √(I_nats)**(bound = `√(I_nats)=√(ln2·I_bits)`,B-5 修正的 √2;**钉在 bound 之下** ⇒ 过 τ_D 蕴含 bound 成立) |
+| **D_Choi** = ½‖J_s−J_glue,s‖₁(**per-seam reduced block**,amendment 1) | reduced 信道 Choi 块(≤6q 支撑,≤2¹² dim) | **全信道重建误差,含解码器看不见的方向**(逐缝) | τ_D = **0.5 × √(I_nats)**(per-seam bound;**钉在 bound 之下** ⇒ 过 τ_D 蕴含 bound 成立);GO 用 R̂≈5.3 处 per-seam 值 |
 | **E_do** = `knob_dler_error` = \|ΔLER_glue(do)−ΔLER_true(do)\|(绝对 LER 单位,台账度量) | do()-ΔLER | **决策相关投影 = M4 传导 gap**(解码器对哪些 Choi 方向不敏感) | τ_E = **绝对常数,= 0.1×\|ΔLER_true\|** 其中 ΔLER_true 由**冻结 teacher**(evaluator-侧,§2 钉死 do() 靶点+eval context)算出,**冻结时 inline 成一个绝对数**(C-1:非 glue-run 数据,故可复现、非移动靶) |
 
 - **为何两者都要(非冗余)**:E_do 是 J_glue 经 frozen 解码器的 pushforward,一般是 D_Choi 的函数;**唯在解码器对"粘合污染的特定 Choi 方向"不敏感处二者解耦**——这正是 **M4 的教训**(Choi/NLL 赢但 MWPM 独立边 DEM 看不见)。M4 是二者解耦的经验证据。

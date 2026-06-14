@@ -1869,4 +1869,9 @@ entry; the immutable constants/bands/gates live of-record in `docs/cf_wr/registr
   constant + 2 arithmetic, all fixed).
 - **Reporting discipline.** Raw D_Choi(R̂)/ξ*/c lead; GO/NO-GO is a derived label; a 12q-toy GO does NOT
   transfer to d5/d7 (bounded claim).
-- **Status.** Frozen; build (4 scripts, ≥3 agents each) pending. See `docs/cf_wr/README.md`.
+- **Pre-run amendment 1 (2026-06-14, build scout).** D_Choi computed **per-seam on reduced-channel Choi
+  blocks** (≤6q support, ≤2¹² dim) — the global 2²⁴ channel Choi is infeasible and never materialized;
+  global = seam aggregate (= P4 L-scaling); GO uses the per-seam value at R̂≈5.3. Scout also found **no 2D
+  substrate exists** (all 1D rep-code) → the build constructs it (frozen `cf_wr_geom` 2D-geometry contract first).
+- **Status.** Frozen (amend 1); build in progress (4 scripts + 2D geometry contract, ≥3 agents each).
+  See `docs/cf_wr/README.md`.
