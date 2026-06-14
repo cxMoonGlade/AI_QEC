@@ -31,15 +31,16 @@
 全精确密度矩阵模拟,持有完整 J(E) 真值:
 1. **局部边际** —— 逐 qubit 单比特 CPTP,r̂ ≈ 0.013, q̂_eff ≈ 0.014(N2 plan 已签);
 2. **R̂ 旋钮(主)= 非unital 局部 CPTP 场**,沿**注册的 T-B 曲线**用 {p01,p10} 参数化(`D_package_derivations.md`:r≈0.013 处 R∈{2,5,17} 的 Kraus 成员已预算,R=5⇒(6.7039e-3, 1.20296e-1),上限 R≤1/(2r̂)≈39.4 覆盖全网格)。**绝不用 unital coherent ZZ**(T-B 定理:unital-diagonal iid 钉在 R=1,产不出 bunching)。非unital CPTP 非 Pauli ⇒ stim 做不了 ⇒ **仍需精确密度矩阵 backend**(实验存在理由保住)。
-3. **可选相干边旋钮 φ(R-EDGE slot)** —— 独立于 R̂,**显式不携带 R̂**;仅用于测"相干修正的粘合"(载体的 coherent-correction 槽)。默认关;开时单独扫、单独报。
+3. **相干边旋钮 φ(R-EDGE slot)= co-primary 轴(amendment 2,owner 决定 b,2026-06-14)** —— 在**缝-穿越边**上施相干 `exp(−iφ Z⊗Z)`;**独立于 R̂、不携带 R̂**,但**与 R̂ 共构主场**:ρ 变非对角(真量子),**Petz 旋转被动用**——这正是密度矩阵 backend 区别于经典 DEM 窗口化的能力所在。**用既有 `forward/exact` backend(已对相干验过 H1)+ `apply_unitary`,不引入 CUDA-Q**(12q 用不上 scale 工具,且新后端会破坏 exactness 纪律;CUDA-Q 是 d5/d7 载体级考量,ADR 0008)。
 
-> v2 澄清:**bunching(R̂,非unital)与 coherence(φ,非 Pauli)是两根独立轴**。M4 关心的是 bunching 传导,故主判据走 R̂;φ 是次要的相干-槽探针。
+> **amendment 2 重定位(2026-06-14,owner b):** 之前 φ 设为次要——但主 R̂ 扫描**是经典的**(bit-flip 保持 ρ 对角,不动用 backend 量子能力),referee 会问"既然经典为何用密度矩阵机制"。故 **φ 升为 co-primary**:主重建测试在 (R̂, φ) 上,LER/E_do 改**全-DM Born 路径**(`measure_parity_enumerate`;相干破坏经典枚举捷径,非破坏 backend)。bunching(R̂)与 coherence(φ)仍**正交**,但**都进主场**;φ=0 行保留为经典对照。
 
 ---
 
 ## 2. 旋钮与强制控制
 
 - **扫 R̂ ∈ {1, 2, 3, 5.3, 8, 12}**(经 {p01,p10} 沿 T-B 曲线实现;**用带符号的 asymmetry δ′=p10−p01 作微扰坐标**,两侧、δ′=0 为内点 —— 见推导 §3.2):**R̂=5.3 = 硬件匹配点(M3 P11),判决核心**;{8,12} 测崩溃尾;{2,3} 测单调方向。
+- **扫 φ ∈ {0, 0.05, 0.10, 0.15}(amendment 2,co-primary)** —— 缝-穿越边的相干 ZZ 角,覆盖 K1 seam-test 的 φ∈[0.05,0.15]:**主重建/GO 点 = (R̂≈5.3, φ*=0.10)**(硬件匹配 bunching + 代表性相干边);**R̂ 扫在 φ*=0.10**(测 bunching 崩溃),**φ 扫在 R̂≈5.3**(测 P2 系数:un-twirled 相干边领头阶 **O(φ)**,derivation §2.4 governs;G0 slope-1、Petz-vs-mean-field)。**φ=0 行 = 经典对照**(回原经典 bunching 扫)。LER/E_do 在 φ≠0 走全-DM Born 路径。
 - **do() 靶点 + eval context 钉死(C-1,为 τ_E 可复现)**:`do()` = 单边错误率 ×k(k、目标边、eval context 在 `cf_wr_teacher.py` 钉定 + inline);ΔLER_true 由冻结 teacher 算出 → τ_E 绝对数冻结时 inline。**实质性断言(防 E_do 退化成测噪声)**:所选 do() 必须满足 **|ΔLER_true| ≥ 5×地板**(否则 τ_E=0.1×|ΔLER_true| 退化);冻结前在 teacher 上验证此下限,不达标则换 do() 靶点(在所有臂运行前)。
 - **R̂=1 强制零控制 = unital 点**(p01=p10),与 P2.3 同一 context:D(R=1)=g(r)+g(q)≈−7.43e-4 是**边际项地板,非缝残差**(C-2);G1 重建误差必须 ≤ 地板(§4 S-impl)。显著超出边际地板 ⇒ 污染 ⇒ 作废重查,不进判决。
 - **seed = 20260614**。

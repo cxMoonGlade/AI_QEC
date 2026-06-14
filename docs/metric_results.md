@@ -1873,5 +1873,11 @@ entry; the immutable constants/bands/gates live of-record in `docs/cf_wr/registr
   blocks** (≤6q support, ≤2¹² dim) — the global 2²⁴ channel Choi is infeasible and never materialized;
   global = seam aggregate (= P4 L-scaling); GO uses the per-seam value at R̂≈5.3. Scout also found **no 2D
   substrate exists** (all 1D rep-code) → the build constructs it (frozen `cf_wr_geom` 2D-geometry contract first).
-- **Status.** Frozen (amend 1); build in progress (4 scripts + 2D geometry contract, ≥3 agents each).
-  See `docs/cf_wr/README.md`.
+- **Pre-run amendment 2 (2026-06-14, owner).** The coherent-edge knob **φ promoted optional → co-primary**:
+  the main R̂ scan alone is classical (bit-flip keeps ρ diagonal, doesn't exercise the DM backend's quantum
+  power). Main reconstruction/GO point now **(R̂≈5.3, φ*=0.10)**; φ∈{0,0.05,0.10,0.15} scanned at R̂≈5.3 for
+  the P2 coefficient (un-twirled coherent edge is O(φ), derivation §2.4); LER/E_do via full-DM Born path at φ≠0.
+  **No CUDA-Q** — the existing `forward/exact` backend (validated for coherence, H1) handles φ via `apply_unitary`;
+  CUDA-Q is a d5/d7 carrier-scale tool (ADR 0008), wrong for a 12q feasibility test.
+- **Status.** Frozen (amend 1+2); build in progress. Phase-1 geometry (`cf_wr_geom`, sha256 4c2abf…) +
+  phase-2 teacher (`cf_wr_teacher`, sha256 03d110… — being reworked for φ co-primary) landed. See `docs/cf_wr/README.md`.
