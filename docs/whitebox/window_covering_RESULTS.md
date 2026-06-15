@@ -73,7 +73,7 @@ d7 circuit is nearest-neighbour) but encoded the wrong method.
    only 27%; a pairwise-only treatment would miss most of the structure. Yet **all 79177 error terms
    are window-native** (b3: 0 non-containable; max spatial diameter 3.162 ≤ window). The 3×3 covering
    captures the complete SI1000 lightcone. The SI1000 long-range/GNN budget is **0 terms**; real
-   hardware long-range is bounded separately by `ξ̂ ≈ 0.7` ([`xihat_RESULTS.md`](xihat_RESULTS.md)).
+   hardware long-range is bounded separately by `ξ̂ ≈ 0.7` ([`xihat_RESULTS.md`](../cf_wr/xihat_RESULTS.md)).
 
 ## 4. The detector-weight ceiling — triple-verified (max = 4, zero ≥ 5)
 

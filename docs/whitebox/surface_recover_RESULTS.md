@@ -1,11 +1,15 @@
-# Measured real d3 XZZX structure
+# Measured real d3 XZZX structure (72Q set2 — legacy reference)
 
-> The measured noise structure of the real Google XZZX d3 surface code — the target the window-channel
-> noise model must reproduce. Plain reporting of measured facts.
+> The measured noise structure of a real Google XZZX d3 surface code. **Dataset note (2026-06-15):**
+> this was measured on the **72Q** `surface_code_d3_d5_set2` device (`d3_at_q5_5`), a **different device**
+> from the **105Q** `d3_d5_d7` live front. After the 2026-06-15 redirect the white-box is unified on the
+> 105Q nine `d3_at_q*` patches (D1); these 72Q numbers are kept as a **legacy motivating reference**
+> (independent-edges insufficient), and the analogous structure on the 105Q d3 patches is the first
+> step-3 re-measurement. Plain reporting of measured facts.
 
 ## Measurement — `outputs/surface_d3_structure.py`
 
-Real set2 `d3_at_q5_5/X/r15`, sample_00 (60k shots, decoder-independent; detection events + circuit
+Real 72Q set2 `d3_at_q5_5/X/r15`, sample_00 (60k shots, decoder-independent; detection events + circuit
 only):
 
 - detection ≈ 6.3% / detector;
@@ -25,7 +29,7 @@ the higher-order read is the measured-vs-SI1000 3-body cumulant.
 
 An independent-edges model is insufficient (real 2-body + 3-body; even the SI1000 sim under-predicts).
 The model must carry correlations and the higher magnitude — the **window-channel field** of weight-≤t
-mechanism compositions (`docs/cf_wr/window_covering_architecture.md`). The correlated/coherent ≤2-qubit
+mechanism compositions ([`window_covering_architecture.md`](window_covering_architecture.md)). The correlated/coherent ≤2-qubit
 mechanisms (M8/M9/M10/M11/M12/M21/M22–M33) produce this structure: a 2-qubit error flips several
 detectors, giving the measured hyperedge / 3-body cumulant content that an independent-edges DEM cannot
 represent.
