@@ -125,3 +125,23 @@ Cleared to **step-2 `WindowChannel`** (mainline; the overcomplete coherent non-P
 mechanism dictionary + arity-general composition + `ρ_BC` + PTM coherence budget + CPTP self-checks),
 which consumes the slot inventory (§5) and feeds step-3 single-window recover on the nine real d3
 window twins (§3.1).
+
+## 8. Cross-check — structural facts are distance/basis/rounds-invariant (20 sets)
+
+To confirm the §2–§4 facts are not specific to d7/X/r90, the structural checks were swept over **20
+sets = {d5_at_q6_5, d7_at_q6_7} × {X, Z} × {r10, r50, r90, r150, r250}**
+(`outputs/covering_xcheck_sweep.py`, reusing the validated step-1 functions; sidecar
+`covering_xcheck_sweep_results.json`). **20/20 PASS.** Invariant across all 20:
+
+- **max DEM detector-weight = 4, zero weight ≥ 5** (the XZZX-bulk check-degree ceiling).
+- **all noise generators ≤ 2q** — checked directly on the noisy circuit's noise instructions; the
+  only ops present are `DEPOLARIZE1` (1q idle), `DEPOLARIZE2` (2q CZ), `M(p)` (measurement flip),
+  `X_ERROR` (reset). No 3q+ generator at any distance/basis/round.
+- **covering complete** (0 uncovered connected weight-≤t), **every DEM error window-native**
+  (non-containable = 0), **support weights ∈ {2,4}**, **interior degree = 8**.
+
+Distance-dependent counts (structure scales, facts hold): d5 = 54 qubits (25 data + 24 measure + 5
+idle ancilla), d7 = 101 (49 + 48 + 4); 3×3 windows (size ≤ 9) at both. Error-term counts scale with
+rounds (d7 r10 8137 → r250 221257); X vs Z differ by 2 terms (a small basis asymmetry) with
+identical structure. **Conclusion: the step-1 facts are structural (XZZX bulk + SI1000 ≤2q noise),
+not instance-specific.**
