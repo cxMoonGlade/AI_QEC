@@ -9,6 +9,10 @@ twin — and the one open problem — composition** — and **explicitly retires
 that were falsified, scooped, or W1/scale-blocked. It moves nothing inside the claim
 boundary; it chooses *which* validated work becomes the contribution.
 
+**Live front (2026-06-14):** the **real Google Willow XZZX `d7_at_q6_7` window-covering coherent channel
+field**; the `ξ̂` gate is **BANKED GO** (real surface d3→d7), so the build is cleared. §0.5 carries the
+reorientation + converged design decisions; §7 carries the build order.
+
 **How to read it.** Items are **STRICT** (non-negotiable) or **FLEXIBLE** (chosen later).
 The two problem-gates in §3–§4 are each a **triple — physical / mathematical / aim↔object
 — plus a falsification signal**, in the `plan2.md` style. §1 is the explicit retire-list;
@@ -21,8 +25,9 @@ nothing retired may be silently re-pursued.
 The twin's **validated strength is the small exact-backend window**: it recovers
 (label-free exact Born-NLL), manipulates (`do()`→ΔLER, controlled), and predicts on
 windows, and on **real Willow d=29 rep-code it beats the shipped SI1000 prior on held-out
-syndrome NLL** (M3, +56.2 X / +44.3 Z nats/shot/window). The **one open problem is
-composition**: how to stitch small-window twins into a faithful global representation.
+syndrome NLL** (M3, +56.2 X / +44.3 Z nats/shot/window); the windowing premise is now **confirmed on
+the real surface device** (`ξ̂` spatial ≈ 0.7 / temporal ≈ 0.5, flat d3→d7, BANKED GO). The **one open
+problem is composition**: how to stitch small-window twins into a faithful global representation.
 Plan 3 makes the contribution the **honest characterization of this** — (1) *where small
 coherent-window twins recover faithfully on real data*, and (2) *where and how they compose
 into the whole, on GPU, against exact ground truth and real data* — **not** a beat-SOTA
@@ -31,51 +36,166 @@ survives every prior-art search — **the coherent channel slot + the validated 
 counterfactual + the honest negative** — is given a concrete, defensible identity here.
 
 
-## 0.5 Tool-first reorientation (2026-06-14, owner) — NEAR-TERM PRIORITY
+## 0.5 Tool-first reorientation + the live front (2026-06-14) — NEAR-TERM PRIORITY
 
-**Build the TOOL, not the paper.** The paper's certified characterization (§1–§6 below) is **deferred,
-not dropped**; the near-term deliverable is a working, scalable, calibrated QEC-noise digital twin. The
-theory (`THEORY.md`, P2/P3/P4) is repurposed as the tool's **calibration + confidence machinery**, not a
-set of claims to freeze.
+**Build the TOOL, not the paper.** The paper's certified characterization (§1–§6) is **deferred, not
+dropped**; the near-term deliverable is a working, scalable, calibrated QEC-noise digital twin. The theory
+(`THEORY.md`, P2/P3/P4) is repurposed as the tool's **calibration + confidence machinery**, not a set of
+claims to freeze.
 
-**The architecture — "1+1":**
-- **Component A — recover-learner (white-box, exists).** Per-window CPTP Born-NLL fit, M3-validated on
-  real data. Small extension: also emit the overlap/seam marginals `ρ_BC` the merger needs.
-- **Component B — fusion-merger (black-box, new).** A GNN amortizing the **constructive shallow-circuit
-  covering** (2604.01197's (k+1)-layer local-recovery schedule), outputting the **full composed channel
-  field** with honest uncertainty bands. Black-box is fine — **trust comes from calibration, not
-  self-certification** (ADR 0008: a learned surrogate has no exactness class, so it never carries an (a)
-  premise; it carries a calibrated band instead).
+**The live front is the real XZZX surface code.** The mainline target is the **window-covering coherent
+channel field on the real Google Willow XZZX `d7_at_q6_7` patch**
+(`docs/cf_wr/window_covering_architecture.md`, `surface_recover_registration.md`). The `ξ̂` confidence gate
+is **BANKED GO** — hardware spatial `ξ ≈ 0.7`, temporal `ξ ≈ 0.5`, flat across d3→d5→d7 on Willow 105Q,
+both ≪ patch width (`xihat_RESULTS.md` §14–§15) — so the window build is cleared on real data at the
+fault-tolerant target before any window is built. M3 (d=29 rep-code NLL win) and the CF-WR 12q toy are
+**banked evidence**, not the live build.
 
-**Calibration + confidence machinery (the theory, repurposed — NOT certify-or-abstain):**
+### 0.5.1 The four corrections (STRICT, load-bearing)
+
+Bound every step below; none may be silently relaxed.
+
+1. **Adjacency = circuit-derived, never geometric.** Which data qubits couple — carry 2q mechanisms,
+   define the covering — is fixed by the circuit's 2q gates + error-propagation lightcone + crosstalk,
+   captured by the **DEM**, never by coordinate distance. (The real d7 circuit is nearest-neighbour, so
+   geometry ≈ circuit here, but that is a coincidence to be *proven*, not assumed.)
+2. **Never collapse to Pauli.** The density matrix is carried precisely to host **coherent non-Pauli /
+   non-Clifford** channels (RZZ, parasitic couplings, over-rotation). Collapsing to a "Pauli rate" =
+   reverting to the DEM = the M4 failure mode = the whole point lost. The model **always represents
+   coherence**; identifiability constrains what may be *claimed* (a band), never what may be *represented*.
+   The mechanism dictionary is **coherent-non-Pauli-first**.
+3. **Mechanism selection = identifiability-driven, not hand-picked.** No "core set." The full ≤2q catalog
+   is an **overcomplete dictionary** (the hypothesis space); the identifiable subset is fixed by the
+   **data** (Fisher rank / probe richness) and reported as identified vs aliased + band. Earned, never
+   assumed (the alias-quotient discipline, ADR 0005).
+4. **Residual ≠ mechanism-correct — two independent gaps.** (a) model-class gap (held-out residual /
+   `B_misspec`): can the model fit the observations; (b) identifiability/alias gap: a zero residual can
+   still leave mechanisms aliased. A small residual does **not** prove the mechanism is right. **Report
+   both axes** — held-out observational sufficiency (NLL) + alias structure (Fisher rank + per-mechanism
+   alias band). Unseparable ⇒ report the alias class, never a false attribution. Mechanism *separation* is
+   scored only on a **controlled teacher** (with ground truth); real data reports only sufficiency + alias
+   bands, never mechanism ground truth.
+
+### 0.5.2 The window covering (construction + verified facts) — STRICT geometry
+
+Detail: `docs/cf_wr/window_covering_architecture.md`. Plan-level facts:
+
+- **Model = a field of window channels.** Each window = the radius-1 ball in the share-a-stabilizer graph
+  = the **3×3 data block (≤9 data qubits)**; one window per data qubit ⇒ a **complete covering** (every
+  connected weight-≤t configuration is native to ≥1 window; t = ⌊(d−1)/2⌋ = 3 at d7). Each window is a
+  multi-qubit CPTP map on its ≤9-qubit density matrix (2^≤9, exact backend).
+- **Window ⟺ d3-patch.** The dataset ships its patches nested on one 105Q device; an interior d7 window is
+  exactly a d3-patch footprint — **verified**: the d7 window centred at data (6,7) has data == the
+  standalone `d3_at_q6_7` patch `data_qubit_coords`, exactly. The **nine shipped d3 patches are nine
+  real-hardware window twins** (9 locations × 2 bases × round levels), each with its own circuit + data.
+- **Verified circuit facts** (real `d7_at_q6_7` `circuit_ideal.stim`): `num_qubits = 101` = 49 data + 48
+  measure + 4 idle boundary ancilla; device is 105Q (4 device qubits unused). Roles are read from the
+  circuit (`M` = measure, sweep-CX init = data), never from coordinates.
+
+### 0.5.3 The architecture — "1+1"
+
+- **Component A — recover-learner (white-box).** Per-window CPTP Born-NLL fit (M3-validated machinery,
+  `calibration/hardware_nll.py`), extended to the multi-qubit window channel; emits the recovered channel +
+  the overlap/seam marginals `ρ_BC` the merger needs.
+- **Component B — fusion-merger (black-box, new, deferred).** A GNN amortizing the covering's bounded
+  consistency-merge (2604.01197's (k+1)-layer local-recovery schedule on the trivial-phase channel field),
+  outputting the full composed field with honest bands. Black-box trust comes from **calibration, not
+  self-certification** (ADR 0008: a learned surrogate has no exactness class, so it carries a calibrated
+  band, never an (a) premise). Long-range (graph-distance >1, disconnected) correlations the windows
+  structurally cannot see are the GNN's job; their budget is measured in step-1 (§7).
+
+### 0.5.4 White-box recovery methodology
+
+- **Parameters live on the FIELD, indexed by support-tuple** (1q@data, 2q@circuit-adjacent pairs,
+  3q@connected triples — 3q deferred-but-ready). Each mechanism has one canonical home window ⇒
+  **deduplicated by construction**; the 49 overlapping windows are evaluation units, shared parameters
+  tied (not duplicated).
+- **Per-window stabilizer taxonomy (STRICT three-way):** **full-in** (support ⊆ the 9 window data),
+  **seam/cross-boundary** (support intersects the window but reaches outside — *not* d3 boundary checks),
+  **external** (support disjoint). An interior d7 window has only **~4 full-in** weight-4 plaquettes (not
+  8) + ~8 seam stabilizers.
+- **The seam is load-bearing for recovery, not only for chains.** The full-in observations (~4 detectors)
+  are underdetermined for the window's mechanism dictionary, so fully recovering even within-window
+  mechanisms requires the seam stabilizers (which couple neighbours). This is *why* cross-window
+  composition is the hard core.
+- **d3-first build path.** Rung 3a: recover on the **nine real d3 patches** (full 8-stabilizer
+  observation, no seam) — the clean real-data recovery + identifiability rung. Rung 3b: the 40 d7-interior
+  windows (full-in underdetermined ⇒ seam-coupled joint estimation). (d3-run vs d7-run are separate
+  acquisitions — dictionary/identifiability structure transfers; absolute values are drift-affected;
+  reported separately.)
+- **Forward.** Multi-round window-local coherent spacetime marginal: window data + ancilla evolved exactly
+  across rounds with per-round ancilla measure/reset (each shot = one projector trajectory; coherence
+  retained), within the exact-backend wall; register size measured on the real data.
+
+### 0.5.5 Representation invariants (STRICT)
+
+- **Source of truth = coherent Kraus / Stinespring** (mechanism-strength parameterization): CPTP /
+  non-Pauli / non-Clifford **by construction**. The model body is always this.
+- **PTM / Choi = derived lenses** computed from the Kraus model (interconvertible by reshuffle):
+  composition (PTM product), CP check (Choi PSD), TP check (PTM first row), and the **coherence budget =
+  PTM off-diagonal mass = exactly what a Pauli/DEM export discards** (band-tracked, itself a reportable
+  result).
+- **Never diagonal-truncate the PTM in the model** — that is the Pauli twirl = DEM = the forbidden
+  collapse (correction 2); diagonal-truncation appears only as the lossy downstream export to a Pauli
+  decoder. PTM off-diagonal mass above threshold (when mechanisms are coherent) is a **checkable red-line
+  assertion** that coherence was not silently twirled.
+
+### 0.5.6 The seam-confirmation gate (deferred to a measurement)
+
+Whether the white-box must *confirm* coherent composition at the seam — vs leaving the seam to the GNN +
+held-out NLL — is **gated on a measurement**, because syndrome-NLL cannot by itself certify coherence (the
+coherent channel is aliased with Pauli at the syndrome-statistics level; two-gap, correction 4). Sequence:
+(1) bank per-window white-box recovery on the real d3 patches (no seam); (2) measure the **coherence
+budget** (PTM off-diagonal mass on recovered windows — does coherence survive real multi-round data?);
+(3) only if coherence is non-negligible **and** claimed → build a white-box seam **certificate** (CPTP +
+`ρ_BC`-consistency + cross-seam PTM off-diagonal) as the GNN's anchor; else leave the seam to GNN + NLL
+(Pauli-level). External evidence locates the coherent value in the **correlated / cross-window** regime
+(Darmawan 2403.08706: local small-θ coherence → Pauli-adapted near-optimal; Harper 2605.29514: coherent
+crosstalk raises LER) — so the coherence-survival measurement targets cross-seam / correlated coherence,
+not local within-window coherence.
+
+### 0.5.7 Carrier candidates (ADR 0008) — three by decomposition axis
+
+Beyond the ≤14q exact-density-matrix window wall, the scalable coherence-preserving **forward** has three
+candidate engines, each scaling on a different sparsity resource:
+- **exact-window** (ours) — scales on **short correlation length** (ξ ≈ 0.7, *measured*); exact within
+  window, seam at the boundary.
+- **stabilizer-TN** (Harper 2605.29514) — scales on **sparse magic** (few/weak non-Clifford insertions);
+  whole-code, exact within stabilizer rank; forward-only (no learning).
+- **tensornet-mps** (CUDA-Q / cuTensorNet) — scales on **low entanglement** (bond dimension); pure-state +
+  trajectory only (no mixed-state/MPDO, no autodiff through truncation); needs a bond-dimension pilot on a
+  2D coherent patch before adoption.
+
+Which holds is empirical (which sparsity the real noise has) — to be measured, not assumed. **CUDA-Q is
+closed for the window forward** (verified, CUDA-Q 0.14 / cuQuantum 26.03): no GPU exact-density-matrix
+*circuit* backend (only CPU `density-matrix-cpu`); no differentiation w.r.t. channel-strength parameters on
+the matching backend; the GPU path (`cudaq.dynamics` / cuDensityMat) is Lindblad-only with **no
+coherent-Kraus slot** and no mid-circuit measure/reset (another instance of the ADR 0008 "no coherent
+slot" pattern). The existing differentiable GPU torch density-matrix backend (`forward/exact` +
+`cptp_channel` + `kernels`, M3 CUDA graphs) wins for the window. `cudaq-qec` decoders are potential
+evaluator/baselines only.
+
+### 0.5.8 Calibration + confidence machinery (the theory, repurposed — NOT certify-or-abstain)
+
 - **Petz bound `√(I_nats)` = the CERTIFICATE** where Petz is feasible (small/controlled cases).
-- **Exact truth (CF-WR) = the VALIDATION HARNESS** — CF-WR's new role: calibrate the GNN-merger against
-  Petz/exact-truth, not deliver the paper's headline verdict.
-- **Honest uncertainty bands = the OUTPUT** — the tool gives "answer ± calibrated band," *not*
-  certify-or-abstain (the project's own bands style; rigor lives in the band, §1.3 PLAN.md).
-- **`ξ̂` (hardware Markov length) = the CONFIDENCE indicator** — high below threshold, degrading-with-warning
-  near it; a continuous health read, *not* a binary gate.
-- **Engine layering:** constructive rule (2604.01197 covering / GNN amortization) → certificate (Petz bound)
-  → uncertainty (band) → confidence (ξ̂). Petz is the *certificate*, not the *engine* (it is optimal-but-
-  expensive and does not scale; the constructive covering does).
+- **Exact truth (CF-WR) = the VALIDATION HARNESS** — calibrate the GNN-merger against Petz/exact-truth,
+  not deliver the paper's headline verdict.
+- **Honest uncertainty bands = the OUTPUT** — "answer ± calibrated band," *not* certify-or-abstain (rigor
+  lives in the band, §1.3 PLAN.md).
+- **`ξ̂` (hardware Markov length) = the CONFIDENCE indicator — BANKED GO** on real d3→d7 (above); a
+  continuous health read, high below threshold, degrading-with-warning near it.
+- **Engine layering:** constructive covering / GNN amortization → certificate (Petz bound) → uncertainty
+  (band) → confidence (ξ̂). Petz is the *certificate*, not the *engine* (optimal-but-expensive, does not
+  scale; the covering does).
 
 **What the tool delivers:** the four capabilities (recover / understand / manipulate (controlled) /
-predict) on the **full composed channel field** — calibrated, GPU-scalable (GNN amortization), with honest
-bands and a `ξ̂` confidence read.
-
-**Build order (near-term):**
-1. **`ξ̂` measurement** — the tool's confidence baseline; cheap; M3 d=29 syndrome record (**training
-   samples only — never held-out 05–09 / escrow 15–19**); spacetime-Markov-length diagnostic (2412.00193).
-2. **learner extension** — emit `ρ_BC` overlap marginals.
-3. **fusion engine v0** — the constructive covering + a first GNN amortization; calibrated on CF-WR exact
-   truth vs Petz; outputs full channel + bands.
-4. **pipeline on real surface data** — learner → fusion → global channel + bands; global held-out NLL vs
-   shipped baselines (set2 d3).
+predict) on the **full composed channel field** — calibrated, GPU-scalable, with honest bands and a `ξ̂`
+confidence read.
 
 **Discipline (relaxed for the tool, still honest):** validation-via-bands (not freeze/abstain); GPU-only
-model compute; scripted-execution; baselines pristine; isolation contract; honest uncertainty. The
-paper-certified core (Petz / sufficient-functional / ξ̂-below-threshold) stays available as a subset when
-the paper track resumes.
+model compute; scripted-execution; baselines pristine; isolation contract; honest uncertainty; plus the
+four corrections (§0.5.1) and representation invariants (§0.5.5). Build order: §7. The paper-certified core
+(Petz / sufficient-functional / ξ̂) stays available as a subset when the paper track resumes.
 
 ---
 
@@ -94,6 +214,8 @@ it works and where it breaks."
 | TN contraction (BSV, dMLE 2602.19722) | Pauli windowing by bond dimension | we carry a *coherent slot* the Pauli TN structurally cannot (T-B theorem) |
 | Markov-length/CMI, BP, quantum BP (Hsieh, Kuwahara, Leifer-Poulin) | the composition *theory/tool* | we *apply* it to a coherent-channel twin and *measure the threshold* against exact truth |
 | dMLE / Ahmed 2208.00812 / SparseMAP / Berthet / 2601.00242 | the training/diff machinery | adopted as cited tools; not our claim |
+| Coherent-crosstalk simulation (Harper 2605.29514) | hybrid stabilizer-TN *forward* sim (magic-rank decomposition, whole-code) | we *learn* a coherent window field from real syndromes (inverse, not forward); spatial covering, not magic-rank |
+| Decoder adaptation to local noise (Darmawan 2403.08706) | near-optimal TN decoder + selective mischaracterization, *local* noise only | we carry *correlated* (bunching) coherent structure his locality excludes; we learn the model, not adapt a decoder to a known one |
 
 ---
 
@@ -103,12 +225,15 @@ it works and where it breaks."
 
 - **BANKED:** **M3** — real Willow d=29 rep-code, window twin beats shipped SI1000 on held-out
   syndrome NLL (+56.2 X / +44.3 Z, one-sided 99%). The 1D-rep-code real-data win exists.
-- **REMAINING — R2-lite-b (surface extension):** validate the window twin on **real
-  surface-code d3 windows** — dataset **set2** (`google_72Q_surface_code_d3_d5_set2`), the only
-  release shipping **pij + uninformative + RL × 3 decoders** as baselines. Score **held-out
-  per-shot syndrome NLL** vs the shipped baselines on the d3 plaquette/boundary windows;
-  isolate coherent-structure recovery where the data permits (flag where randomized-compiling
-  twirls it away). FLEXIBLE: which d3 patches / round levels, fixed at pre-registration.
+- **LIVE — real XZZX windows (105Q d3/d7):** validate the window twin on the **real Google Willow
+  XZZX patches** (`google_105Q_surface_code_d3_d5_d7`). Rung 3a: the **nine shipped d3 patches** (full
+  8-stabilizer observation = nine real-hardware window twins, both bases, round levels) — clean held-out
+  per-shot syndrome NLL + Fisher identifiability, no seam. Rung 3b: the d7-interior windows (full-in
+  underdetermined ⇒ seam-coupled). Score held-out NLL; report coherent structure as observational
+  sufficiency + alias band (correction 4), never mechanism attribution on real data. Baselines: the
+  shipped SI1000 / RL / Harmony / Libra arms (evaluator-only). FLEXIBLE: which d3 patches / round levels,
+  fixed at pre-registration. (set2 72Q d3 remains a secondary rung with its pij/uninformative arms.)
+  Detail: `window_covering_architecture.md`, `surface_recover_registration.md`.
 
 **Gate P1 (triple + falsification):**
 - *Physical:* the window twin is the exact Born-NLL on real surface syndromes (not moments).
@@ -198,11 +323,14 @@ macroscopic below-threshold code state. **All controlled bounds collapse at the 
 (ξ→∞)** — the project's predicted R̂∈{5–8} crash. The limit being "= the threshold" is the *maximum
 attainable* (above it is physically unreconstructable, not a rule deficiency).
 
-**The decisive empirical gate — `ξ̂` (do FIRST, cheap, uses existing M3 data).** Measure the hardware Markov
-length `ξ̂` from the M3 d=29 repeated-syndrome record via the spacetime-Markov-length diagnostic
-(Negari–Ellison–Hsieh 2412.00193, decoder-independent). Finite/O(1) `ξ̂` with a clean `e^{−w/ξ̂}` collapse ⇒ the
-hardware sits in the controlled regime ⇒ the whole direction is validated on real data **before any build**;
-no collapse ⇒ near threshold ⇒ stop. This converts the theory `(b)` into a verdict on existing data.
+**The decisive empirical gate — `ξ̂` — RESOLVED, BANKED GO (2026-06-14).** Measured via the
+spacetime-Markov-length diagnostic (Negari–Ellison–Hsieh 2412.00193, decoder-independent), first on the M3
+d=29 rep-code (temporal `ξ ≈ 0.4`) and then on the **real surface device**: spatial `ξ ≈ 0.7`, temporal
+`ξ ≈ 0.5`, **flat across d3→d5→d7** on Willow 105Q, all ≪ patch width, clean `e^{−w/ξ}`-on-floor collapse
+(`docs/cf_wr/xihat_RESULTS.md` §14–§15). The hardware sits in the controlled regime; windowing scales to
+the fault-tolerant target ⇒ the whole direction is validated on real data **before the window build**. The
+one anomaly (72Q-set2-d5 long temporal `ξ`) is calibration drift (separable axis). The theory `(b)` is now
+a real-data verdict: **GO**.
 
 ---
 
@@ -231,6 +359,12 @@ scoopable than a SOTA claim**. The project's value does not hinge on a positive.
   controlled (CF-WR) lane; no hardware `do()` (§1.4).
 - **Cite-don't-claim** the borrowed tools (§2 table); the metric ladder ([METRICS.md](METRICS.md))
   governs every score.
+- **The four corrections (STRICT, §0.5.1):** circuit-derived adjacency; never collapse to Pauli;
+  identifiability-driven mechanism selection (overcomplete dictionary + Fisher); residual ≠
+  mechanism-correct (two-gap reporting).
+- **Representation invariants (STRICT, §0.5.5):** Kraus/Stinespring source-of-truth (CPTP/non-Pauli/
+  non-Clifford by construction); PTM/Choi derived lenses; PTM off-diagonal = coherence budget = what the
+  Pauli/DEM export discards; never diagonal-truncate the PTM in the model.
 
 ---
 
@@ -239,28 +373,47 @@ scoopable than a SOTA claim**. The project's value does not hinge on a positive.
 Plan 3 reuses every prior milestone as one continuous argument, not scattered results:
 
 > **B-path** (window counterfactual validated against teacher truth) → **M3** (window NLL win on
-> real hardware) → **M4** (naive independent-edge composition fails to transfer = the negative)
-> → **CF-WR** (principled composition — G0/G1/**G-graph** — judged against exact 12q truth) →
-> **ADR 0008** (carrier) → **R2-lite-b + real-data composition** (the strength + the gluing on
-> real surface data) → **Plan 3** = the characterization that ties them into one defensible,
+> real hardware) → **M4** (naive independent-edge composition fails to transfer = the negative) →
+> **`ξ̂` BANKED GO** (real surface d3→d7 controlled, windowing scales) → **window covering** (real XZZX
+> d7, circuit-derived, window ⟺ d3-patch) → **`WindowChannel`** (coherent non-Pauli dictionary + PTM
+> coherence budget) → **single-window recover** (real d3 patches first) → **CF-WR / seam** (principled
+> composition — G0/G1/**G-graph** — against exact 12q truth, gated on the coherence-survival measurement)
+> → **ADR 0008** (carrier) → **Plan 3** = the characterization that ties them into one defensible,
 > unscoopable contribution: *the small-window coherent twin and its composition limit.*
 
 ---
 
-## 7. Immediate execution order
+## 7. Immediate execution order (build order, on the real XZZX d7 covering)
 
-0. **`ξ̂` gate (do FIRST — cheap, decisive, uses existing M3 data):** measure the hardware Markov
-   length via the spacetime-Markov-length diagnostic (Negari–Ellison–Hsieh 2412.00193) on the M3 d=29
-   repeated-syndrome record; finite/O(1) `ξ̂` with `e^{−w/ξ̂}` collapse validates the whole direction
-   on real data before any build (the theory `(b)`→verdict step, §3 Theoretical backing).
-1. **Finish CF-WR** (controlled composition characterization) — teacher (φ co-primary) →
-   windows → glue (now G0/G1/**G-graph**) → score; GO/NO-GO on the 12q exact truth.
-2. **Add G-graph to the CF-WR registration** as the third composition arm (factor-graph BP /
-   GNN learned-BP anchored to G1), scored against exact truth alongside G0/G1 — a documented
-   pre-run amendment.
-3. **R2-lite-b** (Problem 1 surface extension): set2 d3 window-twin held-out NLL vs shipped
-   pij/uninformative/RL.
-4. **Real-data composition** (Problem 2 real side): compose the set2 d3 window twins via the
-   CF-WR-validated rule; global held-out NLL.
+All on GPU; all theory-first pre-registered (predictions written before each run); both outcomes publish.
+Detail: `docs/cf_wr/window_covering_architecture.md`.
 
-All on GPU; all theory-first pre-registered; both outcomes publish.
+**0. `ξ̂` gate — DONE (BANKED GO).** Real surface d3→d7 controlled (§0.5, §3); build cleared.
+
+**1. Covering schedule (step-1, `outputs/`, non-mainline).** Build the covering from the **parsed circuit /
+DEM**, not geometry (correction 1): circuit roles (data/measure/ancilla) from the `M`/sweep-CX
+instructions; stabilizer supports from the CZ gates; share-a-stabilizer adjacency → 3×3 windows; multi-body
+completeness (connected weight-≤3 ⊆ windows); window-membership cross-check vs the nine shipped d3 patches;
+full-in/seam/external stabilizer classification; multi-body DEM lightcone = the measured long-range budget
+(a gate input, not a band); mechanism slot inventory (1q/2q/3q candidate placements = the overcomplete
+dictionary dimension feeding step-3 Fisher). Theory-first predictions registered before the run.
+
+**2. `WindowChannel` (step-2, MAINLINE — requires full user confirmation before commit).** The overcomplete
+coherent non-Pauli / non-Clifford mechanism dictionary (torch port of `forward/channels.py` builders),
+arity-general composition/embedding (1q/2q/3q slots; true-3q deferred-but-ready), `ρ_BC` extraction, the PTM
+coherence-budget output (§0.5.5), CPTP self-checks. Suggested placement: `forward/mechanisms_torch.py` +
+`forward/window_channel.py`.
+
+**3. Single-window recover (step-3).** Rung 3a: fit the dictionary on the nine real d3 patches (full
+observation) → held-out syndrome NLL sufficiency + Fisher identifiability + per-mechanism alias band
+(two-gap, correction 4); mechanism *separation* validated only on a controlled teacher. Rung 3b: d7-interior
+windows via seam-coupled estimation. Measure the coherence budget (PTM off-diagonal) → feeds the
+seam-confirmation gate (§0.5.6).
+
+**4. Composition / seam (step-4, gated).** White-box Petz / `ρ_BC` anchor (G1) + black-box GNN (G-graph),
+bounded by the covering, calibrated against CF-WR exact truth; built only if the coherence-survival
+measurement justifies a white-box seam certificate (§0.5.6). Long-range (disconnected) correlations = the
+GNN's measured budget from step-1.
+
+The CF-WR controlled lane (G0/G1/G-graph on the 12q exact toy) and the carrier study (ADR 0008, §0.5.7)
+proceed in parallel as the validation harness, not the live front.
