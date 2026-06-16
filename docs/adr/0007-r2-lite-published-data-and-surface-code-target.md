@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted (2026-06-09). Amends the rung ladder of [`plan2.md`](../plan2.md) §3 (R2 splits
+Accepted (2026-06-09). Amends the rung ladder of [`plan2.md`](../_archive/plan2.md) §3 (R2 splits
 into **R2-lite / R2-full**) and **schedules** the `forward/scalable` carrier feasibility
 study (it does not choose the carrier — that is ADR 0008's job). Extends
 [`METRICS.md`](../METRICS.md) with the hardware-data ledger. Does **not** move the claim

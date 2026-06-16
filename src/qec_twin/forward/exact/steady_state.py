@@ -11,6 +11,14 @@ TWO-POINT cross-cut mass was risk-audited by M2's X2 <= 4.24% -- a heuristic
 go/no-go gate, NOT a residual bound: no theorem bounds the marginal-calibration
 error from X2; see hardware/windows.py STATUS WARNING).
 
+Scope (rep-code-parity-specific -- NOT a general surface-code forward): this
+backend models a 1D code measured by direct data-register ``Z_a Z_b`` parity
+checks (:func:`measure_parity_enumerate`, no ancilla). It cannot represent
+ancilla-mediated weight-4 mixed-Pauli (XZZX) stabilizers or the interleaved 1q
+syndrome-extraction gates, so it is NOT a surface-code-block syndrome forward; a
+d3+ surface block needs a new ancilla-projector Born likelihood (see
+docs/whitebox/d3_whitebox_recover_design.md section 2.1), not this module.
+
 Construction (derived; the run verifies, never explores)
 --------------------------------------------------------
 The device's bulk detector at (site j, layer t) is the consecutive-round record

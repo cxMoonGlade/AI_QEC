@@ -90,8 +90,9 @@ finance analogues), **not** a fixed architecture:
 
 ## Path and status
 
-> The gated roadmap — phase acceptance gates, strict invariants, and what stays
-> open — is [`docs/PLAN.md`](PLAN.md); this section stays the object-contract summary.
+> The live roadmap is [`docs/plan3.md`](plan3.md); the gated roadmap — phase
+> acceptance gates, strict invariants, and what stays open — is the archived
+> [`docs/_archive/PLAN.md`](_archive/PLAN.md); this section stays the object-contract summary.
 
 **B (validate the loop on a controlled toy) → HARDEN (richer/correlated
 mechanisms, larger `d`, drift) → C (real Google 72Q/105Q).** Success axes =

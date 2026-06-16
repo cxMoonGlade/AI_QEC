@@ -27,13 +27,6 @@ B5). The main-line model **architecture is deliberately open**: the four
 capabilities are the spec, candidate parameterizations are judged against them,
 and scalability is a future selection criterion, not a now-decision (ADR 0005).
 
-**Current direction (forward pointer).** Work has since reoriented to the
-window-channel-field / tool-first program on the real Google data (the R2-lite
-`hardware/` rung, ADR 0007/0008 carrier study, and the CF-WR window-covering
-architecture). The frontier status lives in `CLAUDE.md` and
-`docs/metric_results.md`; the SCOPE-removal history below remains the accurate
-ADR-0005 decision record.
-
 ## Doc routing
 
 - `CONTEXT.md`: glossary and claim boundaries (read first).
@@ -41,7 +34,7 @@ ADR-0005 decision record.
 - `docs/teacher_learner.md`: teacher / learner roles and the isolation contract.
 - `docs/TWIN.md`: binding twin spec — object contract `p(y|c)=Tr[M_y C(c)(rho0)]`,
   the four capabilities, finance methodology, and reserved notation.
-- `docs/PLAN.md`: whole-project roadmap — phase gates (B → HARDEN → C), strict
+- `docs/_archive/PLAN.md` (archived; live plan = `docs/plan3.md`): whole-project roadmap — phase gates (B → HARDEN → C), strict
   physical/mathematical/aim↔object invariants, and what stays open (ADR 0005).
 - `docs/METRICS.md`: the metric ledger and the **forced standard-metric ladder** — every score is
   named with its field-standard reference and convention; new metrics go through ledger → frontier

@@ -1,8 +1,10 @@
+> **ARCHIVED 2026-06-15.** Superseded as the live roadmap by [../plan3.md](../plan3.md); kept for its methodology/invariants + decision history.
+
 # The Twin — Project Plan
 
 Binding roadmap for **the twin** (`qec_twin`). Division of labor:
-[`docs/TWIN.md`](TWIN.md) is the **object contract** (*what* the twin is); the
-[ADR spine](adr/) (0002→0008) records **decisions** (*why*); this file is the **path**
+[`docs/TWIN.md`](../TWIN.md) is the **object contract** (*what* the twin is); the
+[ADR spine](../adr/) (0002→0008) records **decisions** (*why*); this file is the **path**
 (*how / when / how it falsifies*). It is **strict** on physics, mathematics, and the
 aim↔object map, and **deliberately open** on architecture/parameterization (ADR 0005).
 
@@ -84,7 +86,7 @@ its approximation audited by the band (§1.2).
   controlled teacher; on hardware it is only *bounded* via transfer. **Band width vs `r`**
   is the single most important plot.
 - **Hard theoretical guardrails** (survey W1–W5,
-  [`IDENTIFIABILITY_AND_CRL_SURVEY.md`](IDENTIFIABILITY_AND_CRL_SURVEY.md)):
+  [`IDENTIFIABILITY_AND_CRL_SURVEY.md`](../IDENTIFIABILITY_AND_CRL_SURVEY.md)):
   - **W1** counterfactual non-identifiability — observational ≠ interventional
     equivalence; a knob is validated only against realized ground truth.
   - **W2** learnable-degrees-of-freedom ceiling — the observation map has finite
@@ -128,7 +130,7 @@ its approximation audited by the band (§1.2).
   loop. Honest bands always. Numerical floor `NUMERICAL_ZERO = 1e-12` for floating floors
   only (never structural zeros).
 - **Metric discipline.** Every quantitative claim is scored by a **field-standard** metric via the
-  [`METRICS.md`](METRICS.md) ladder — a ledger metric → if none fits, the frontier-standard one (then
+  [`METRICS.md`](../METRICS.md) ladder — a ledger metric → if none fits, the frontier-standard one (then
   added to the ledger) → only if none exists, a metric explicitly flagged **project-defined**. No silent
   non-standard stand-in; each metric's convention travels with its numbers. HARDEN's new axes (coherent
   fidelity/diamond distance, leakage, drift) enter through this ladder, not by ad-hoc stand-in.
@@ -209,7 +211,7 @@ reached, not before.
   (`test_hardware_m1_ingestion`, ADR 0007 Track B): first real-hardware contact — bit-exact m2d
   parity on the Google d=29 release, detection fractions in the derived band (X 5.13% / Z 5.00%),
   and three back-edge findings (a device mirror-diagonal class ≈970× the SI1000 sim, long-range
-  tails, an early-layer transient). Numbers in [`metric_results.md`](metric_results.md).
+  tails, an early-layer transient). Numbers in [`metric_results.md`](../metric_results.md).
   *(M1 is the frozen horizon of this bullet, not the present frontier: the live R2-lite
   frontier — M2 window closure, M3 syndrome-NLL, M4 decoder-prior utility, the CF-WR
   window-covering work, and the ADR 0008 carrier study — is tracked in CLAUDE.md and
@@ -285,22 +287,22 @@ criterion among others**:
 
 ## 5. Cross-references
 
-- [`docs/TWIN.md`](TWIN.md) — object contract `p(y|c)=Tr[M_y C(c)(ρ0)]`, the four
+- [`docs/TWIN.md`](../TWIN.md) — object contract `p(y|c)=Tr[M_y C(c)(ρ0)]`, the four
   capabilities, reserved notation.
 - [`docs/plan2.md`](plan2.md) — the decision-regret / prioritization-engine extension of this
   plan, **gated** by `tests/test_decision_regret_gate.py` (verdict: Claim-A floor banked, the
   calibrated-band engine deferred — see §3 HARDEN).
-- [`docs/METRICS.md`](METRICS.md) — the metric ledger and the **forced standard-metric ladder**; every
+- [`docs/METRICS.md`](../METRICS.md) — the metric ledger and the **forced standard-metric ladder**; every
   score is named with its field reference and convention (numbers, dated, in `metric_results.md`).
-- [`docs/adr/`](adr/) — 0002 (build order) · 0003 (B methodology) · 0004 (finance
+- [`docs/adr/`](../adr/) — 0002 (build order) · 0003 (B methodology) · 0004 (finance
   framing, D1–D5 + bands) · 0005 (retire SCOPE, architecture open) · 0006 (channel-field
   architecture: ratify object, scope support structure, defer carrier) · 0007 (R2-lite
   published-data rung now, in parallel with H2; d=5/d=7 surface-code target → carrier
   feasibility study after H2; hardware-data metric ledger) · 0008 (scalable-carrier
   feasibility-study charter: the d=5/d=7 carrier decision question, candidates, and
   seam-test process).
-- [`docs/IDENTIFIABILITY_AND_CRL_SURVEY.md`](IDENTIFIABILITY_AND_CRL_SURVEY.md) —
+- [`docs/IDENTIFIABILITY_AND_CRL_SURVEY.md`](../IDENTIFIABILITY_AND_CRL_SURVEY.md) —
   finance ↔ QEC tools and the W1–W5 guardrails.
-- [`docs/error_mechanisms.md`](error_mechanisms.md) — physical mechanism taxonomy (the
+- [`docs/error_mechanisms.md`](../error_mechanisms.md) — physical mechanism taxonomy (the
   HARDEN richness axis).
-- [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) — module map and the backend boundary.
+- [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md) — module map and the backend boundary.

@@ -1,3 +1,5 @@
+> **ARCHIVED 2026-06-15.** Legacy 72Q measured structure (different device); the 105Q d3 re-measurement is step-3. Kept as a motivating reference.
+
 # Measured real d3 XZZX structure (72Q set2 — legacy reference)
 
 > The measured noise structure of a real Google XZZX d3 surface code. **Dataset note (2026-06-15):**
@@ -29,7 +31,7 @@ the higher-order read is the measured-vs-SI1000 3-body cumulant.
 
 An independent-edges model is insufficient (real 2-body + 3-body; even the SI1000 sim under-predicts).
 The model must carry correlations and the higher magnitude — the **window-channel field** of weight-≤t
-mechanism compositions ([`window_covering_architecture.md`](window_covering_architecture.md)). The correlated/coherent ≤2-qubit
+mechanism compositions ([`window_covering_architecture.md`](../whitebox/window_covering_architecture.md)). The correlated/coherent ≤2-qubit
 mechanisms (M8/M9/M10/M11/M12/M21/M22–M33) produce this structure: a 2-qubit error flips several
 detectors, giving the measured hyperedge / 3-body cumulant content that an independent-edges DEM cannot
 represent.

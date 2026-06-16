@@ -2,8 +2,8 @@
 
 Redirected mainline for **the twin** (`qec_twin`), 2026-06-14. Division of labor unchanged:
 [`docs/TWIN.md`](TWIN.md) is the **object contract**; the [ADR spine](adr/) records
-**decisions**; [`PLAN.md`](PLAN.md) is the whole-project **path** (B→HARDEN→C);
-[`plan2.md`](plan2.md) is the decision-regret extension. **This file narrows the project's
+**decisions**; the archived [`PLAN.md`](_archive/PLAN.md) is the whole-project **path** (B→HARDEN→C);
+the archived [`plan2.md`](_archive/plan2.md) is the decision-regret extension. **This file narrows the project's
 *identity and headline* to its validated strength — the small (≤15q) exact-backend window
 twin — and the one open problem — composition** — and **explicitly retires** the ambitions
 that were falsified, scooped, or W1/scale-blocked. It moves nothing inside the claim
@@ -45,8 +45,8 @@ claims to freeze.
 
 **The live front is the real XZZX surface code.** The mainline target is the **window-covering coherent
 channel field on the real Google Willow XZZX `d7_at_q6_7` patch**
-(`docs/cf_wr/window_covering_architecture.md`, `surface_recover_registration.md`). The `ξ̂` confidence gate
-is **BANKED GO** — hardware spatial `ξ ≈ 0.7`, temporal `ξ ≈ 0.5`, flat across d3→d5→d7 on Willow 105Q,
+(`docs/whitebox/window_covering_architecture.md`, `surface_recover_registration.md`). The `ξ̂` confidence gate
+is **BANKED GO** — hardware spatial `ξ ≈ 0.7`, temporal `ξ ≈ 0.5`, flat across d3/d5/d7 on Willow 105Q,
 both ≪ patch width (`xihat_RESULTS.md` §14–§15) — so the window build is cleared on real data at the
 fault-tolerant target before any window is built. M3 (d=29 rep-code NLL win) and the CF-WR 12q toy are
 **banked evidence**, not the live build.
@@ -78,7 +78,7 @@ Bound every step below; none may be silently relaxed.
 
 ### 0.5.2 The window covering (construction + verified facts) — STRICT geometry
 
-Detail: `docs/cf_wr/window_covering_architecture.md`. Plan-level facts:
+Detail: `docs/whitebox/window_covering_architecture.md`. Plan-level facts:
 
 - **Model = a field of window channels.** Each window = the radius-1 ball in the share-a-stabilizer graph
   = the **3×3 data block (≤9 data qubits)**; one window per data qubit ⇒ a **complete covering** (every
@@ -118,14 +118,22 @@ Detail: `docs/cf_wr/window_covering_architecture.md`. Plan-level facts:
   are underdetermined for the window's mechanism dictionary, so fully recovering even within-window
   mechanisms requires the seam stabilizers (which couple neighbours). This is *why* cross-window
   composition is the hard core.
-- **d3-first build path.** Rung 3a: recover on the **nine real d3 patches** (full 8-stabilizer
-  observation, no seam) — the clean real-data recovery + identifiability rung. Rung 3b: the 40 d7-interior
-  windows (full-in underdetermined ⇒ seam-coupled joint estimation). (d3-run vs d7-run are separate
-  acquisitions — dictionary/identifiability structure transfers; absolute values are drift-affected;
-  reported separately.)
-- **Forward.** Multi-round window-local coherent spacetime marginal: window data + ancilla evolved exactly
-  across rounds with per-round ancilla measure/reset (each shot = one projector trajectory; coherence
-  retained), within the exact-backend wall; register size measured on the real data.
+- **d3-first build path. CURRENT ACTIVE SCOPE (2026-06-15): rung 3a only — the d3 single-window
+  white-box; rung 3b (d7 seam-coupled) and step-4 cross-window composition are DEFERRED (trigger-gated,
+  not dropped — re-open when d3 recovery + the coherence-survival measurement justify the seam).** Rung
+  3a: recover on the **nine real d3 patches** (full 8-stabilizer observation, no seam) — the clean
+  real-data recovery + identifiability rung. Rung 3b: the 40 d7-interior windows (full-in underdetermined
+  ⇒ seam-coupled joint estimation). (d3-run vs d7-run are separate acquisitions; per **D2** each scale is
+  fit from its OWN data — only the dictionary/identifiability *structure* is portable, absolute values
+  are drift-affected and reported separately.)
+- **Forward (D3).** Multi-round window-local coherent spacetime marginal. **Runtime forward = dense
+  ≤13q surface-block ancilla-projector Born likelihood**, fit by a **block-marginal composite
+  likelihood** (`ℓ(θ) = Σ_j log P_θ(σ_{T_j})`): evolve data + block ancilla (9 data + ≤4 ancilla,
+  ≤13q) through the faithful round to the pre-measure state, enumerate the ≤4 ancilla projectors +
+  readout flip, record `P_θ(σ_{T_j})` per block. The dense `WindowChannel` is the engine and
+  correctness oracle. The full d3 faithful register (17q = 275 GB) is never run whole; blocks stay
+  ≤13q, GPU-feasible. (The 9q data-register + per-stabilizer instrument approach was tried and
+  falsified — retired.) Detail: `docs/whitebox/d3_whitebox_recover_design.md`.
 
 ### 0.5.5 Representation invariants (STRICT)
 
@@ -326,7 +334,7 @@ attainable* (above it is physically unreconstructable, not a rule deficiency).
 **The decisive empirical gate — `ξ̂` — RESOLVED, BANKED GO (2026-06-14).** Measured via the
 spacetime-Markov-length diagnostic (Negari–Ellison–Hsieh 2412.00193, decoder-independent), first on the M3
 d=29 rep-code (temporal `ξ ≈ 0.4`) and then on the **real surface device**: spatial `ξ ≈ 0.7`, temporal
-`ξ ≈ 0.5`, **flat across d3→d5→d7** on Willow 105Q, all ≪ patch width, clean `e^{−w/ξ}`-on-floor collapse
+`ξ ≈ 0.5`, **flat across d3/d5/d7** on Willow 105Q, all ≪ patch width, clean `e^{−w/ξ}`-on-floor collapse
 (`docs/cf_wr/xihat_RESULTS.md` §14–§15). The hardware sits in the controlled regime; windowing scales to
 the fault-tolerant target ⇒ the whole direction is validated on real data **before the window build**. The
 one anomaly (72Q-set2-d5 long temporal `ξ`) is calibration drift (separable axis). The theory `(b)` is now
@@ -386,7 +394,7 @@ Plan 3 reuses every prior milestone as one continuous argument, not scattered re
 ## 7. Immediate execution order (build order, on the real XZZX d7 covering)
 
 All on GPU; all theory-first pre-registered (predictions written before each run); both outcomes publish.
-Detail: `docs/cf_wr/window_covering_architecture.md`.
+Detail: `docs/whitebox/window_covering_architecture.md`.
 
 **0. `ξ̂` gate — DONE (BANKED GO).** Real surface d3→d7 controlled (§0.5, §3); build cleared.
 

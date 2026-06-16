@@ -8,9 +8,9 @@
 1. **Model = a FIELD of WINDOW channels.** Each channel = one window's noise, a multi-qubit CPTP map on
    the window's data qubits. This replaces the per-qubit factorized field (one independent single-qubit
    channel per data qubit), which structurally cannot carry correlated multi-qubit noise. **Runtime
-   representation (D3):** this data-qubit CPTP map is materialised as a **9q data register +
-   per-stabilizer measurement instruments** (ancilla traced out analytically), NOT a data+ancilla
-   register — see Multi-round forward below + [`window_instrument_derivation.md`](window_instrument_derivation.md).
+   forward (D3):** the forward is the **dense ≤13q surface-block ancilla-projector Born likelihood**,
+   fit by a **block-marginal composite likelihood**; the dense `WindowChannel` is the engine/oracle
+   — see Multi-round forward below and [`d3_whitebox_recover_design.md`](d3_whitebox_recover_design.md).
 
 2. **Window content = a weight-≤t MECHANISM composition** from the catalog (`docs/error_mechanisms.md`,
    M0–M34; operators in `forward/channels.py`): the correlated/coherent mechanisms (M8 RZZ, M9 2q-depol,
@@ -36,7 +36,9 @@
    consistency-merge** over overlapping windows, not an unbounded reconstruction of cross-boundary
    chains. Bigger windows do not remove cross-boundary chains (there is always a boundary); a complete
    covering does. The schedule is generated from the **parsed stabilizer supports** of the real circuit
-   (build-order step 1).
+   (build-order step 1). The covering choice is **footprint-feasibility** until `ρ_ss(θ)` and the
+   composite Fisher `H` are in hand, then **Fisher-optimal** (maximise `rank(H)` at the nominal θ) —
+   see [`d3_whitebox_recover_design.md`](d3_whitebox_recover_design.md) §11.3.
 
 5. **Fusion = white-box recover + BLACK-BOX GNN composition.** Recover fits each window channel; the GNN
    composes them over the covering. The GNN is a **first-class tool** (the scalable GPU realization of
@@ -57,35 +59,46 @@
    consistency-merge, but it stays the hardest link. The architecture in one line: **fidelity** = native
    coherence inside each window; **correctness** = the covering makes the fusion bounded and verifiable.
 
-## Multi-round forward (D3: 9q data register + per-stabilizer instruments)
+## Multi-round forward (D3: dense ≤13q surface-block ancilla-projector Born likelihood)
 
 The window channel is single-round; real data is multi-round on a measured, evolving state. The forward
 fits the coherent window channels to real multi-round detector data via **window-local coherent
 spacetime marginals**.
 
-**Runtime representation (D3 redirect, 2026-06-15).** The materialised register is the window's
-**9 data qubits** (`ρ_data`, 9q = 4.2 MB); the ancilla are NOT carried explicitly — each internal
-stabilizer's readout is a **per-stabilizer measurement instrument** with the ancilla traced out
-analytically (each observed shot = one projector trajectory on `ρ_data`; coherence retained). This
-keeps the runtime register at 9q instead of the infeasible data+ancilla object (a d3 patch's full
-data+ancilla = 17q = 275 GB). The faithful data+ancilla circuit is retained only as a numerical
-**oracle**, run as a progressive d3 sub-system (≤13q) to validate the instrument equivalence
-(PENDING; construction + caveats in
-[`window_instrument_derivation.md`](window_instrument_derivation.md)). The register size and cost are
-measured on the real data, not assumed.
+**Runtime forward (D3).** The forward is the **dense ≤13q surface-block ancilla-projector Born
+likelihood**: evolve the data + block ancilla (9 data + ≤4 ancilla, ≤13q) through the faithful round
+on the dense oracle to the pre-measure state, enumerate the ≤4 ancilla measurements as
+computational-basis projectors + reset in faithful circuit order, record `P_θ(σ_{T_j})` per block;
+fit by the **block-marginal composite likelihood** `ℓ(θ) = Σ_j log P_θ(σ_{T_j})` over held-out
+shots. The dense `WindowChannel` is the engine and correctness oracle. The full d3 faithful register
+(17q = 275 GB) is never run whole; blocks stay ≤13q, GPU-feasible on the 5090. (A 9q data-register +
+per-stabilizer measurement instrument approach was tried and falsified — retired. See
+[`d3_whitebox_recover_design.md`](d3_whitebox_recover_design.md) for the full design.) The register
+size and cost are measured on the real data, not assumed.
 
-## Scale mapping — white-box / black-box by code distance (D1)
+**Input state — `ρ_ss(θ)`, not the t=0 boundary.** The forward is evaluated on the **θ-dependent
+stationary state `ρ_ss(θ) = fixed point of N_θ`**, the syndrome-averaged data channel for one noisy
+round, found by power iteration on ≤13q and differentiable in θ. Two inputs are ruled out: the t=0
+boundary `|+⟩⁹` is not a codeword (its mixed-XZZX syndrome expectation is exactly zero ⇒ the syndrome
+is uniform ⇒ the Fisher is rank-deficient, most mechanisms unidentifiable), and the θ-independent ideal
+`ρ_code` drops the accumulated coherent sensitivity `dρ_ss/dθ` (the cross-round build-up of coherent
+error that the white-box exists to recover). See [`d3_whitebox_recover_design.md`](d3_whitebox_recover_design.md)
+§2.0 for the derivation.
 
-The white-box / black-box split maps to the dataset's three distance rungs:
+## Scale mapping — d3 → d7 → d5 (D1)
+
+The white-box / black-box split maps to the dataset's three distance rungs, but the execution order is
+**d3 → d7 → d5**: first certify the clean single-window white-box, then attack the real seam at d7, then
+use d5 as the intermediate-scale validation / interpolation rung.
 
 | Rung | Distance | Dataset object | Description | Build step |
 |---|---|---|---|---|
 | White-box capability | **d=3** | 9 standalone `d3_at_q*` patches (`d3_at_q2_7, q4_5, q4_9, q6_3, q6_7, q6_11, q8_5, q8_9, q10_7`) | 9 data + 8 XZZX stabilizers, all internal, no seam, fully observed = clean single-window twins. step-1 a7/b6 verified all nine. Fit reports held-out syndrome NLL + identifiability (Fisher rank) + per-mechanism alias band. | step-3 |
-| Intermediate rung | **d=5** | 4 patches | Between d3 and d7; structural checks (20/20 cross-check) confirmed same facts hold. | step-3 (after d3) |
 | Black-box capability | **d=7** | `d7_at_q6_7` (49 windows + real seam) | The black-box (GNN + Petz) composes per-window channels into a globally consistent, coherence-preserving field; validated by held-out syndrome NLL and %ΔLER under a frozen decoder. | step-4 |
+| Intermediate validation | **d=5** | 4 patches | Post-d7 sanity / interpolation rung; structural checks (20/20 cross-check) confirmed same facts hold. | step-5 (after d7) |
 
 This realises Decision 5 (white-box recover + black-box GNN composition) and build order step-3/4
-across the dataset's d3→d5→d7 scales.
+with d5 retained as a post-d7 validation rung rather than a gate before d7.
 
 ## Own-data-per-scale principle (D2)
 
@@ -108,8 +121,9 @@ clean (black-box composition error, not white-box transfer error).
    centered on each data qubit + the computational completeness check.
 2. **`WindowChannel`** — the multi-qubit mechanism-composed CPTP channel + reduced-block / `ρ_BC`
    extraction.
-3. **Single-window recover on real XZZX** — fit the window channel to real hardware syndrome data,
-   starting with the 9 standalone d3 patches (fully-observed window twins, no seam), then the d5
-   intermediate rung.
+3. **Single-window recover on real XZZX** — fit the window channel to the 9 standalone d3 patches
+   (fully-observed window twins, no seam).
 4. **Composition** — white-box Petz anchor + black-box GNN, bounded by the covering; validated on
    d7 (49 windows + real seam).
+5. **d5 validation** — rerun the own-data-per-scale checks on d5 as the intermediate-scale sanity /
+   interpolation rung after d7.

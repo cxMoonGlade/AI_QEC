@@ -203,3 +203,40 @@ are declared before fitting.
 - Hockings, Doherty, Harper (2025). *Improving error suppression with noise-aware decoding*. arXiv:2502.21044 — prior quality compounds with distance.
 - Takou & Brown (2025). *Estimating decoding graphs and hypergraphs of memory QEC experiments*. arXiv:2504.20212 — p_ij's hyperedge blindness (two-point edges largely suffice for rep/surface codes under bare-ancilla extraction, per the same paper).
 - Vezvaee et al. (2025). *Surface code scaling on heavy-hex superconducting quantum processors*. arXiv:2510.18847 — the Λ-fit stationarity caveat.
+
+---
+
+## d3 white-box recover metrics (single-window composite likelihood; ADR 0007 / `whitebox/d3_whitebox_recover_design.md`)
+
+Added 2026-06-15 under the forced ladder, **up front at the design/pre-registration stage** (before
+any d3 result), for the d3 single-window white-box recover. The d3 forward is a surface-block
+ancilla-projector Born likelihood; the fit maximises a **block-marginal composite likelihood** with
+**Godambe (sandwich) standard errors**. **Most scores REUSE rows already above** and are not
+re-listed: held-out syndrome NLL (finite-sample `calibration.nll.joint_cross_entropy`); KL / TV;
+Choi/trace distance; **Fisher-information rank** (`hardware.m3_report.run_p2_fisher` / identifiability
+table; Rothenberg 1971); **detection-event fraction**; **DEM p_ij** = the within-block 2-body
+structure (Spitz); **round-repeat bunching ratio R̂** (`run_p11`, already ⚠ rung-3 — the d3 design's
+*within-window* R̂ is this metric, validated by a trajectory forward; the **long-range** R̂ is out of
+d3 scope, → the d7 black-box). New rows:
+
+| Metric | Function | Standard name + reference | Convention |
+|---|---|---|---|
+| Composite (block-marginal) likelihood | the d3 recover FIT objective | **composite / pseudo-likelihood** `ℓ(θ) = Σ_j w_j log P_θ(σ_{T_j})` over ≤4-stabilizer blocks (Lindsay 1988; Varin, Reid & Firth 2011) — a consistent M-estimator when the block marginals are jointly informative about θ | `w_j ≡ 1` (all-blocks composite); each `P_θ(σ_{T_j})` is the EXACT dense-oracle block marginal; held-out, nats/shot/block; population limit = the ledgered cross-entropy NLL applied per block. **Captures within-block (≤4-stab) correlation only**; long-range correlation (R̂) is structurally outside it (= the independent-edges-DEM boundary) |
+| Composite-likelihood identifiability + bands | composite Fisher `H` + Godambe sandwich `G = H J⁻¹ H` | **Godambe (sandwich) information** for the composite-likelihood estimator (Godambe 1960; Varin-Reid-Firth 2011 §4); identifiability = rank/null of `H` (Fisher-rank standard, Rothenberg 1971) | `H = Σ_j Σ_σ P_θ(σ_{T_j}) [∂_θ log P][∂_θ log P]^T` (composite sensitivity); `J` = inter-block variability via block-bootstrap; **bands use `G`, NOT `H⁻¹`** (a pseudo-likelihood loses efficiency, `H⁻¹` mis-sizes them); `rank(H_composite) ≤ rank(H_joint)` ⇒ the alias ledger is a **conservative sufficiency lower bound**; until `J` is estimated, band widths are tagged **(c)-heuristic** |
+| Coherence budget = **Pauli-twirl distance** (+ unitarity) | `forward.window_diagnostics` (twirl-distance; the off-diagonal-PTM mass is now a deprecated internal proxy) | **rung-2 field-standard** (switched 2026-06-15 from the rung-3 off-diagonal-mass proxy). The **Pauli-twirl distance** `½‖J(E) − J(T(E))‖₁` — the Choi trace distance between the channel `E` and its Pauli-twirl `T(E)` (the PTM with off-diagonal zeroed) — is EXACTLY the coherence a Pauli/DEM export discards (the PTA approximation error; trace distance = optimal distinguishability, Nielsen & Chuang 2010 §9; PTA = Harper 2605.29514; **reuses the ledgered `D_Choi` machinery**). Reported alongside the **unitarity** `u(E)` scalar coherence-of-noise measure (Wallman et al. 2015). The earlier off-diagonal Frobenius mass is the Hilbert–Schmidt norm of the same `E − T(E)` difference — a non-operational proxy, **replaced** by this trace-norm/operational standard. | per-mechanism + total; complex128; `T(E)` = PTM off-diagonal zeroed; the d3 (b)-prediction is "small" (Darmawan); the twirl here is only the metric's reference channel (the MODEL is never twirled — correction 2). **Forbidden as a premise / derivation basis.** Mainline `window_diagnostics` impl of trace-distance/unitarity is a build / commit-gate item |
+
+**Verification-vs-claim metric note (binding, from the adversarial-self-verification lesson).** The
+A-vs-B forward cross-check (`outputs/d3_born_crosscheck.py`) reports the **total-variation distance**
+`½‖A − B‖₁` (the field-standard distance between the two distributions) as the primary agreement
+metric, with `max|A−B|` (L∞) kept only as a strict machine-agreement diagnostic (two INDEPENDENT
+computations of the SAME `P_θ(σ)`). Comparing DISTINCT distributions (model vs data, model vs baseline)
+always uses the ledgered **NLL / KL / TV** — never the element-wise max (that masked the 9q-instrument's
+14.4 % data-trace-distance failure). The structure-residual's 3-body term is the **connected 3-point
+cumulant** (standard; hyperedge analog per Takou–Brown 2504.20212, ledgered).
+
+### References (d3 recover)
+- Lindsay, B.G. (1988). *Composite likelihood methods*. Contemporary Mathematics 80, 221–239 — the foundational composite/pseudo-likelihood reference.
+- Varin, C., Reid, N., Firth, D. (2011). *An overview of composite likelihood methods*. Statistica Sinica 21, 5–42 — the standard review (consistency, Godambe sandwich §4).
+- Godambe, V.P. (1960). *An optimum property of regular maximum likelihood estimation*. Ann. Math. Statist. 31, 1208–1211 — Godambe (sandwich) information / estimating equations.
+- Greenbaum, D. (2015). *Introduction to quantum gate set tomography*. arXiv:1509.02921 — the Pauli-transfer-matrix representation.
+- Wallman, Granade, Harper, Flammia (2015). *Estimating the coherence of noise*. New J. Phys. 17, 113020; arXiv:1503.07865 — unitarity, the frontier-standard coherence-of-noise measure.

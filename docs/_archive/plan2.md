@@ -1,8 +1,10 @@
+> **ARCHIVED 2026-06-15.** Decision-regret pre-registration; the verdict now lives in [../plan3.md](../plan3.md). Kept as the registered decision reasoning.
+
 # The Twin — Project Plan
 
 Binding roadmap for **the twin** (`qec_twin`). Division of labor:
-[`docs/TWIN.md`](TWIN.md) is the **object contract** (*what* the twin is); the
-[ADR spine](adr/) (0002→0008) records **decisions** (*why*); this file is the **path**
+[`docs/TWIN.md`](../TWIN.md) is the **object contract** (*what* the twin is); the
+[ADR spine](../adr/) (0002→0008) records **decisions** (*why*); this file is the **path**
 (*how / when / how it falsifies*). It is **strict** on physics, mathematics, and the
 aim↔object map, and **deliberately open** on architecture/parameterization (ADR 0005).
 
@@ -110,7 +112,7 @@ its approximation audited by the band (§1.2).
   scored answer. **Band width vs `r`**
   is the single most important plot.
 - **Hard theoretical guardrails** (survey W1–W5,
-  [`IDENTIFIABILITY_AND_CRL_SURVEY.md`](IDENTIFIABILITY_AND_CRL_SURVEY.md)):
+  [`IDENTIFIABILITY_AND_CRL_SURVEY.md`](../IDENTIFIABILITY_AND_CRL_SURVEY.md)):
   - **W1** counterfactual non-identifiability — observational ≠ interventional
     equivalence; a knob is validated only against realized ground truth.
   - **W2** learnable-degrees-of-freedom ceiling — the observation map has finite
@@ -396,7 +398,7 @@ utility *extends* "prediction-calibration only" while staying inside the W1 / §
 "entered now, in parallel with H2" is an exception to "each entered only when the prior's
 gate fires", for R2-lite's narrowed claim set only — R2-full keeps the original gating. Claim
 restrictions, milestones M1–M5, and pre-registered fallbacks live in
-[`adr/0007-r2-lite-published-data-and-surface-code-target.md`](adr/0007-r2-lite-published-data-and-surface-code-target.md).
+[`adr/0007-r2-lite-published-data-and-surface-code-target.md`](../adr/0007-r2-lite-published-data-and-surface-code-target.md).
 
 ### C — real Google 72Q/105Q · DEFERRED
 
@@ -434,16 +436,16 @@ criterion among others**:
 
 ## 5. Cross-references
 
-- [`docs/TWIN.md`](TWIN.md) — object contract `p(y|c)=Tr[M_y C(c)(ρ0)]`, the four
+- [`docs/TWIN.md`](../TWIN.md) — object contract `p(y|c)=Tr[M_y C(c)(ρ0)]`, the four
   capabilities, reserved notation.
-- [`docs/adr/`](adr/) — 0002 (build order) · 0003 (B methodology) · 0004 (finance
+- [`docs/adr/`](../adr/) — 0002 (build order) · 0003 (B methodology) · 0004 (finance
   framing, D1–D5 + bands) · 0005 (retire SCOPE, architecture open) · 0006 (channel-field
   architecture: ratify object, scope support structure, defer carrier) · 0007 (R2-lite
   published-data rung in parallel with H2; d=5/d=7 surface-code target → carrier feasibility
   study; **amends this plan** — Claim-A floor banked, calibrated-band engine deferred) · 0008
   (scalable-carrier feasibility-study charter).
-- [`docs/IDENTIFIABILITY_AND_CRL_SURVEY.md`](IDENTIFIABILITY_AND_CRL_SURVEY.md) —
+- [`docs/IDENTIFIABILITY_AND_CRL_SURVEY.md`](../IDENTIFIABILITY_AND_CRL_SURVEY.md) —
   finance ↔ QEC tools and the W1–W5 guardrails.
-- [`docs/error_mechanisms.md`](error_mechanisms.md) — physical mechanism taxonomy (the
+- [`docs/error_mechanisms.md`](../error_mechanisms.md) — physical mechanism taxonomy (the
   HARDEN richness axis).
-- [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) — module map and the backend boundary.
+- [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md) — module map and the backend boundary.

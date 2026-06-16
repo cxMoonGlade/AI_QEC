@@ -6,7 +6,7 @@ T1 `AmpDamp.RX`, stochastic Pauli `BitFlip`), every location <=2-Kraus so the
 `num_kraus=2` learner class contains it -- is calibrated at *fixed* richness r=1
 and frozen as the reference every later HARDEN axis compares against.
 
-Pre-registered (derived BEFORE running; see docs/PLAN.md H0):
+Pre-registered (derived BEFORE running; see docs/_archive/PLAN.md H0):
 
   1. calib_KL -> floor. Matched class => the joint is exactly representable, so
      exact observation-NLL recovers it to the numerical floor, cross-context and
@@ -28,7 +28,7 @@ NOT appear -- all three `alias_weight`s sit at the floor (~9.4e-7, <0.2% of the
 statistical band). Diagnosis (under-derivation, not a bug): the RX-phase IS
 unresolved at r=1, but `do(E->I)` removes the whole channel, so its gradient is
 phase-insensitive -- the coherent alias does not *project* onto this knob (an
-alias matters iff it projects onto the do() functional; docs/PLAN.md
+alias matters iff it projects onto the do() functional; docs/_archive/PLAN.md
 decision-regret). The coherent-vs-stochastic split therefore belongs to a
 phase-sensitive functional / out-of-basis exotic prediction (H1), not to do(E->I)
 at H0. Test (3) is rewritten to the corrected finding. EARNED (Fisher-null check,

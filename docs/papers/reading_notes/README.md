@@ -66,3 +66,20 @@ effect bands · Gierjatowicz's `(inf,sup) E_Q[Ψ]` — all the alias band on ΔL
 | [coherent_robust_pauli_2307.08741](coherent_robust_pauli_2307.08741.md) | Characterize the **coherent part robustly to Pauli** = the **Girsanov split on hardware** (off-diagonal PTM, no Pauli term, Eq. 4); echo probe; 2-qubit coherent + drift = harden axes. |
 | [fail_fast_rare_events_2511.15177](fail_fast_rare_events_2511.15177.md) | Rare-event toolkit (`P(q)=T{f}(q)` failure-spectrum, min-weight fails, splitting) = the **`predict`** axis + the frozen-decoder ΔLER substrate; **coherent tails unhandled = the twin's wedge**. |
 | [lindbladian_learning_insitu_2603.05492](lindbladian_learning_insitu_2603.05492.md) | **Ansatz-free Lindbladian learning** (H + dissipator in `(h,a)`) = the twin's GKSL `recover` form; **`t` vs `t²` = Girsanov split in time**; "steady states don't identify the generator" = the observational alias as a theorem. |
+
+## External landscape — decoder baselines & coherent noise (not cached; first-pass digest, 2026-06-14)
+
+Four user-supplied papers positioning the M3/M4 + plan3 work against the
+coherent-noise-physics and neural-decoder frontiers. **Digest tier** — built from
+sub-agent digests (paper-1 abstract verified directly); numbers must be re-checked
+against the PDFs before entering any registration or the paper. Bilingual overview
+hub + four standalone English peer-review notes (the hub keeps the CN/EN synthesis;
+the deep notes are English, corpus-aligned).
+
+| Note | One-line takeaway |
+|---|---|
+| [2026-06-14_coherent_noise_and_neural_decoders](2026-06-14_coherent_noise_and_neural_decoders.md) (hub, CN/EN) | Two clusters — **coherent/correlated noise has QEC-level consequence** (1+2) vs **efficient Mamba decoders on a static Pauli DEM** (3+4, both Sycamore). Our wedge sits in the gap: learn a coherent-capable structured noise object from real syndromes (M3 NLL win) + honest decode cost (M4 −40%) + drift (unbuilt headline) + bands. Map + cross-paper synthesis + citation guidance. |
+| [harper_nonclifford_crosstalk_surface_2605.29514](harper_nonclifford_crosstalk_surface_2605.29514.md) | Hybrid **stabilizer-TN** sim of **coherent** crosstalk: raises LER, lowers threshold, spatial distribution matters — coherent-wedge physics backing + a coherence-preserving carrier-engine reference (ADR 0008). ✓ **full-text read 2026-06-15** — method (Clifford `C` + error-carrying MPS, χ_max=32, Schmidt-decay), θ≈10⁻³, threshold ~0.8%, forward-only/PTA-decode verified. |
+| [darmawan_decoder_adaptation_local_noise_2403.08706](darmawan_decoder_adaptation_local_noise_2403.08706.md) | PRA. Near-optimal PEPS/TEBD oracle + **selective mischaracterization**: **few critical parameters** dominate; Pauli-adapted decoder near-optimal **only** for uncorrelated/small-θ → the closest anchor to M4, and the M3↔M4 bridge (bunching breaks his locality). |
+| [sparse_mamba_decoder_2605.17156](sparse_mamba_decoder_2605.17156.md) | **Sparse Mamba** O(k) defect-centric decoder on Sycamore/SI1000; decoder-accuracy foil (XEB→DEM oracle = the independent-edges DEM M4 found lossy) + Component-B amortization precedent. |
+| [scalable_neural_decoder_realtime_2510.22724](scalable_neural_decoder_realtime_2510.22724.md) | **Mamba O(d²)** vs Transformer O(d⁴); latency→effective-threshold honest accounting (echoes M4 rearguard). Near-duplicate positioning to paper 3; same orthogonal wedge. |

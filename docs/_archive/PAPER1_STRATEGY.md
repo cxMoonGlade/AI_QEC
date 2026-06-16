@@ -1,3 +1,5 @@
+> **ARCHIVED 2026-06-15.** Adversarial-panel publication-strategy verdict (2026-06-11); some predictions are pre-run / superseded. Kept as decision audit-trail.
+
 # Paper-1 publication strategy (adversarial-referee verdict + legal-comparison constructions, 2026-06-11)
 
 > Source: three-party adversarial exercise (advocate / prosecutor / adjudication, archived in
@@ -27,6 +29,52 @@ held-out likelihood); (3) K2 is an uplift, not a cap (C0 only kills static non-u
 carriers in the surface BULK; multi-lag R_k on the surface is K2 self-assessed
 (a, claimable); the footprint theorem itself is new content; surface replication belongs to
 paper 2 and is never a submission gate).
+
+## Post-M4 conclusion (2026-06-13): de-confounding landed + the decode-end ROI axes
+
+M4 closed in its pre-registered fallback (RA-1 done): calibrated independent-edge DEM priors decode
+~40% worse than SI1000 (both bases); twin≈pij. De-confounding (3-voice + reviewer ×2; archive
+`docs/.reports/m4_deconf_panel/VERIFICATION_ARCHIVE.md`): **structural-dominant ~70–75%, PROVISIONAL**
+(the decisive controlled-sim N1/N2 test is designed — registration v2 pending 4 §A4 integrity fixes
+before freeze — not yet run).
+
+**Advantage layering — where the twin has an edge, and where it does not:**
+
+| Layer | Advantage | Evidence |
+|---|---|---|
+| Syndrome likelihood (NLL) | DEMONSTRATED, strong | M3 +56 X / +44 Z nats/shot/window (held-out, 99%; self-labeled ~80–125% detector-marginal — "the cheap part", §2) |
+| Mechanism recovery / understanding | DEMONSTRATED, literature-unique | bunching spectrum R̂∈[1.0,17.7] + impossibility certificate (366–1116σ) + f̂≡r̂·R̂ |
+| Decode LER, independent-edge DEM prior | **NO — closed by M4** | GATE −40%; structural, not calibration-fixable (b-global excluded) |
+| Decode LER, correlation-aware carrier | **ONE live path, small + to-be-bet** | A3c +1.14%/+0.71% on high-R̂ windows (the only decode-side positive) |
+
+The twin's demonstrated advantage lives at the **likelihood + mechanism** layers (Paper-1 headline,
+intact) — not the drop-in-decoder layer.
+
+**The decode-end ROI correction (BINDING — N1 and N2 are ORTHOGONAL; do not conflate):**
+- **N2 (calibration axis):** the −40% (cal vs SI1000) asks whether the empirical-marginal deficit is
+  level (fixable) or ratio (structural). Current evidence makes it **~70–75%-LIKELY structural** — but
+  that is a *hypothesis confidence*, NOT a magnitude: how much of the −40% is ratio vs level is exactly
+  what N2 MEASURES (unknown until the run — do NOT multiply the confidence by the gap to manufacture a
+  number). If structural, the deficit is the **calibration TAX of empirical independent-edge priors** —
+  a reason NOT to use them, avoided for FREE by the circuit prior / oracle-LER. **It is NOT a carrier prize.**
+- **N1 (carrier-value axis):** can a correlation-aware decode beat the **format-optimal static prior
+  `oracle-LER`** (the LER-optimal static prior over the registered search family, designed to sit
+  at/above SI1000 — the search must be CONFIRMED to dominate SI1000, not assumed by construction)? This
+  is the carrier's ONLY legitimate, calibration-independent ROI.
+- **Consequence:** the carrier is NOT "chasing the −40% to match SI1000." oracle-LER already sits
+  at/above SI1000; the carrier must win **above** oracle-LER. Current N1 evidence = **A3c ≈ +1%**
+  (two-pass vs its own static base); LEG-3 quantifies how N1 grows with R̂ (is +1% a floor or a
+  ceiling?). Realistic carrier prize: **~+1% to ~+3% (the registered LEG-3 band; N1 (a)-band
+  +[0.5,5]%), NOT 40%.**
+- **Financing hazard (record):** never use the N2 calibration tax (whatever its measured size) to
+  justify the carrier — that is N2 money, recoverable only by abandoning empirical independent-edge
+  priors, not by a carrier. The honest carrier-ROI argument rests on N1 ALONE: one +1% seed + a curve
+  to run. (Do NOT manufacture a magnitude by multiplying the ~75% confidence by the 40% gap.)
+
+**Provisional dependency:** "the carrier is the decode-end's only live path" holds IF N2 confirms
+structural; if the de-confounding returns N2→0 (calibration-level, ~25–30% odds), the simpler path of
+de-biasing the marginal estimator reopens. Both gated on the controlled-sim N1/N2 experiment; no
+decode-end claim is built on this until that test runs.
 
 ## Surviving claim architecture (mandatory headline order)
 

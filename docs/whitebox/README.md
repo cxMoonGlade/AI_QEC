@@ -6,16 +6,20 @@
 > stay in [`../cf_wr/`](../cf_wr/). Whole-project live front: [`../plan3.md`](../plan3.md). Binding
 > object contract: [`../TWIN.md`](../TWIN.md).
 >
-> **Scale structure (D1):** the white-box **validation rung is d=3** (9 standalone `d3_at_q*`
-> patches — 9 data + 8 stabilizers, no seam, fully observed = clean single-window twins); **d=5**
-> (4 patches) is the intermediate rung; black-box composition / seam is validated on **d=7**
-> (49 windows + real seam). Each scale fits its white-box from its **own** data — no cross-scale
-> parameter transfer (D2).
+> **Scale / execution structure (D1):** the active order is **d3 → d7 → d5**. The white-box
+> validation rung is **d=3** (9 standalone `d3_at_q*` patches — 9 data + 8 stabilizers, no seam,
+> fully observed = clean single-window twins); black-box composition / seam is the **d=7** rung
+> (49 windows + real seam); **d=5** (4 patches) is the post-d7 intermediate-scale validation /
+> sanity rung. Each scale fits its white-box from its **own** data — no cross-scale
+> parameter transfer (D2). **Current active scope (2026-06-15): the d3 single-window white-box
+> (step-3); d7 cross-window / seam composition is deferred — trigger-gated, not dropped.**
 
 ## What it is (model type)
 
 A **white-box, physically-parameterised, locally-exact, coherence-preserving generative noise model**
-of the device — fit to passive syndrome observations by Born-rule maximum likelihood; structured as a
+of the device — fit to passive syndrome observations by Born-rule maximum likelihood on the **stationary
+multi-round likelihood `ρ_ss(θ)`** (the θ-dependent fixed point of the noisy syndrome-extraction round;
+see [`d3_whitebox_recover_design.md`](d3_whitebox_recover_design.md) §2.0); structured as a
 tied **field of local CPTP window-channel factors** over a circuit-derived covering; **partially
 identifiable** (recovered up to the observational alias class, with honest bands). It is a **coherent
 generalisation of the DEM** (DEM = the diagonal-PTM / Pauli special case), reached by the **inverse**
@@ -29,9 +33,10 @@ problem (data → model), unlike forward simulators or decoders. With `do()` (de
 | [`window_covering_architecture.md`](window_covering_architecture.md) | design spine — the window covering + 1+1 (white-box recover + black-box GNN) |
 | [`window_covering_RESULTS.md`](window_covering_RESULTS.md) | **step-1 evidence** — circuit-derived covering on real d7 (VERDICT PASS) + 20/20 cross-check |
 | [`window_channel_spec.md`](window_channel_spec.md) | **step-2 build spec** — `WindowChannel` (dictionary + object + tests; locked decisions + §10 interface contract) |
-| [`window_instrument_derivation.md`](window_instrument_derivation.md) | **step-2 representation derivation** — the 9q data register + per-stabilizer measurement instrument (D3); equivalence proposition (PENDING) + caveats + oracle-validation plan |
+| [`d3_whitebox_recover_design.md`](d3_whitebox_recover_design.md) | **THE live d3 white-box recover design** — forward + composite likelihood + Godambe bands + §11 certification/black-box interface |
+| [`stabilizer_tn_carrier_design.md`](stabilizer_tn_carrier_design.md) | **d5/d7 carrier scaling study, deferred** — Option B non-viable per Spike A; Option A the open candidate |
 | [`surface_recover_registration.md`](surface_recover_registration.md) | the white-box recover registration (real XZZX) |
-| [`surface_recover_RESULTS.md`](surface_recover_RESULTS.md) | measured structure (device vs SI1000) the model must carry |
+| [`surface_recover_RESULTS.md`](../_archive/surface_recover_RESULTS.md) | measured structure (device vs SI1000) the model must carry |
 
 Related, in [`../cf_wr/`](../cf_wr/): `xihat_RESULTS.md` (the `ξ̂` gate — BANKED GO, real d3→d7),
 `THEORY.md` + `P2/P3/P4` (CF-WR composition/seam theory), `registration.md`.
@@ -54,15 +59,14 @@ Related, in [`../cf_wr/`](../cf_wr/): `xihat_RESULTS.md` (the `ξ̂` gate — BA
 - **complex128 on GPU** (GPU-only for all model compute — no `device="cpu"`, no `cuda-if-available`
   fallback).
 - **Dictionary = full 1q + full 2q (overcomplete); 3q ready-but-OFF** (residual-triggered).
-- **Register representation (D3 redirect):** the runtime white-box object is a **9q data register**
-  (`ρ_data`, `4^9 × 16 B = 4.2 MB`) + **per-stabilizer measurement instruments** (ancilla traced out
-  analytically). The oracle is the **same d3 patch run as a progressive faithful sub-system** (9 data
-  + 1 ancilla = 10q per stabilizer; 9 data + k≤4 ancilla ≤ 13q for circuit-order sub-sets); the full
-  d3 faithful register (17q = `4^17 × 16 B ≈ 275 GB`, 65536× the 9q object) is never run whole — that
-  cost is why the runtime cannot be the faithful register. (d7 cross-window, 13q = 1.07 GB / 256×, is
-  deferred.) The 9q instrument's equivalence to the oracle is **PENDING numerical validation**
-  (epistemic (b) prediction; see
-  [`window_instrument_derivation.md`](window_instrument_derivation.md) for construction + caveats).
+- **Runtime forward (D3):** the runtime forward is the **dense ≤13q surface-block ancilla-projector
+  Born likelihood** — evolve the data + block ancilla through the faithful round on the dense oracle to
+  the pre-measure state, enumerate the ≤4 ancilla projectors (computational-basis Born outcomes) +
+  readout flip, producing `P_θ(σ_{T_j})` per block; fit by a **block-marginal composite likelihood**
+  (`ℓ(θ) = Σ_j log P_θ(σ_{T_j})`). The dense `WindowChannel` is the engine and correctness oracle.
+  The 9q data-register + per-stabilizer instrument approach was tried and retired. See [`d3_whitebox_recover_design.md`](d3_whitebox_recover_design.md) for
+  the full forward spec, composite likelihood, Godambe bands, and §11 certification/black-box
+  interface.
 - **GPU-only (HARD)** — all model compute (9q forward / instruments / gradients) on cuda; no
   `device="cpu"`, no `cuda-if-available` fallback.
 
@@ -71,9 +75,10 @@ Related, in [`../cf_wr/`](../cf_wr/): `xihat_RESULTS.md` (the `ξ̂` gate — BA
 | Step | What | Status |
 |---|---|---|
 | 1 | covering schedule (circuit-derived) | **DONE** — VERDICT PASS, committed; 20/20 cross-check (d5/d7 × X/Z × 5 rounds) |
-| 2 | faithful `WindowChannel` oracle engine (GPU) | **DONE (oracle drafted)** — GPU-only + register bound implemented and tested (Run A: 15 passed, 1 skipped); faithful oracle code drafted, **mainline commit deferred** (lands with the 9q instrument). Redirect (D3): the runtime object is the **9q instrument**; the faithful circuit is the **oracle**, run on the **d3 patch as a progressive sub-system** (10q per stabilizer / ≤13q sub-sets; full 17q never run whole). Equivalence PENDING numerical validation |
-| 3 | white-box recover on real XZZX — **d3-first** (D1) | next — fit the window channel to the 9 standalone d3 patches (9 data + 8 stabilizers, no seam, fully observed = clean window twins); each patch fit uses its own d3 data (D2); report held-out syndrome NLL + Fisher rank + alias band; then d5 intermediate rung |
-| 4 | black-box composition / seam — **d7** (D1) | gated on step-3 d3/d5 recovery; coherence-survival gate — CF-WR / Petz / GNN; each d7 window fit uses d7's own data (D2); composes already-fitted window channels, does not import d3 params |
+| 2 | faithful `WindowChannel` oracle engine (GPU) | **DONE (oracle drafted)** — GPU-only + register bound implemented and tested (Run A: 15 passed, 1 skipped); faithful oracle code drafted, **mainline commit deferred** (lands with step-3). The runtime forward is the **dense ≤13q surface-block ancilla-projector Born likelihood** fit by a **block-marginal composite likelihood**; `WindowChannel` is the engine/oracle. (The 9q data-register + per-stabilizer instrument approach was falsified and is retired.) |
+| 3 | white-box recover on real XZZX — **d3** (D1) | next — starts from the **stationary-likelihood root** (`ρ_ss(θ)`, sub-component #0) before the covering/fit; fit the window channel to the 9 standalone d3 patches (9 data + 8 stabilizers, no seam, fully observed = clean window twins); each patch fit uses its own d3 data (D2); report held-out syndrome NLL + Fisher rank + alias band |
+| 4 | black-box composition / seam — **d7** (D1) | after d3; coherence-survival gate — CF-WR / Petz / GNN; each d7 window fit uses d7's own data (D2); composes already-fitted window channels, does not import d3 params |
+| 5 | intermediate-scale validation — **d5** (D1) | after d7; uses d5's own data (D2) as the post-d7 sanity / interpolation rung, not a prerequisite for entering d7 |
 
 ## Representation invariants
 

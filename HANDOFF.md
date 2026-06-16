@@ -42,7 +42,7 @@ DEM 格式传导到 MWPM 解码**（covariation 两基皆 null）。这是 **PRO
 3. `outputs/m4_state/scored_table.json` —— 全部逐行原始数字（gitignored，本地在）。
 4. `outputs/m4_a4_dmle_attempt_dossier.md` —— A4 dMLE documented-drop 全证据 + r≈101
    bracket 改向方案。
-5. `docs/PAPER1_STRATEGY.md` —— rearguard 框架、四条合法对比路径、抢发时钟。
+5. `docs/_archive/PAPER1_STRATEGY.md` —— rearguard 框架、四条合法对比路径、抢发时钟。
 6. `docs/adr/0008-scalable-carrier-feasibility-study.md` + `docs/.reports/adr0008_panel/`
    —— **载体研究**（C1 组合架构：DEM/HMM bulk + 窗精确 CPTP 相干修正）；M4 现在是它
    的 LER 级动机。`K2_alias_quotient.md` / `T3_adversarial.md` 关 T-B 定理。
