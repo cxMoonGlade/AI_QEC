@@ -209,20 +209,27 @@ are declared before fitting.
 ## d3 white-box recover metrics (single-window composite likelihood; ADR 0007 / `whitebox/d3_whitebox_recover_design.md`)
 
 Added 2026-06-15 under the forced ladder, **up front at the design/pre-registration stage** (before
-any d3 result), for the d3 single-window white-box recover. The d3 forward is a surface-block
-ancilla-projector Born likelihood; the fit maximises a **block-marginal composite likelihood** with
-**Godambe (sandwich) standard errors**. **Most scores REUSE rows already above** and are not
-re-listed: held-out syndrome NLL (finite-sample `calibration.nll.joint_cross_entropy`); KL / TV;
-Choi/trace distance; **Fisher-information rank** (`hardware.m3_report.run_p2_fisher` / identifiability
-table; Rothenberg 1971); **detection-event fraction**; **DEM p_ij** = the within-block 2-body
-structure (Spitz); **round-repeat bunching ratio R̂** (`run_p11`, already ⚠ rung-3 — the d3 design's
-*within-window* R̂ is this metric, validated by a trajectory forward; the **long-range** R̂ is out of
-d3 scope, → the d7 black-box). New rows:
+any d3 result), for the d3 single-window white-box recover. **(v5 objective re-thread, 2026-06-16:** the
+d3 forward is the **syndrome-conditioned multi-round detector-record likelihood** `P_θ(record)` on real
+`detection_events.b8` — the earlier unconditional single-round / syndrome-averaged-stationary object was
+degenerate for the unital SI1000 prior (`ρ_ss=I/16` exactly, Fisher rank 1; GPU-reproduced + reviewed,
+now the negative control). The metrics below are **UNCHANGED in standardness** — `rank(H)` of a
+multi-round record likelihood is the same Rothenberg-1971 FIM object, just over the record space; the
+composite is now per-window over the multi-round record, not the single-round syndrome.) The fit
+maximises a **per-window composite likelihood** over the multi-round detector record with **Godambe
+(sandwich) standard errors**. **Most scores REUSE rows already above** and are not re-listed: held-out
+**detector-record** NLL (finite-sample `calibration.nll.joint_cross_entropy`, now over the multi-round
+record); KL / TV; Choi/trace distance; **Fisher-information rank** (`hardware.m3_report.run_p2_fisher` /
+identifiability table; Rothenberg 1971); **detection-event fraction** (per-round, on the detector
+record); **DEM p_ij** = the within-window 2-body **+ across-round** structure (Spitz 1712.02360 — the
+across-round form is native to the multi-round record); **round-repeat bunching ratio R̂** (`run_p11`,
+already ⚠ rung-3 — the d3 design's *within-window* R̂ is this metric, validated by a trajectory forward;
+the **long-range** R̂ is out of d3 scope, → the d7 black-box). New rows:
 
 | Metric | Function | Standard name + reference | Convention |
 |---|---|---|---|
-| Composite (block-marginal) likelihood | the d3 recover FIT objective | **composite / pseudo-likelihood** `ℓ(θ) = Σ_j w_j log P_θ(σ_{T_j})` over ≤4-stabilizer blocks (Lindsay 1988; Varin, Reid & Firth 2011) — a consistent M-estimator when the block marginals are jointly informative about θ | `w_j ≡ 1` (all-blocks composite); each `P_θ(σ_{T_j})` is the EXACT dense-oracle block marginal; held-out, nats/shot/block; population limit = the ledgered cross-entropy NLL applied per block. **Captures within-block (≤4-stab) correlation only**; long-range correlation (R̂) is structurally outside it (= the independent-edges-DEM boundary) |
-| Composite-likelihood identifiability + bands | composite Fisher `H` + Godambe sandwich `G = H J⁻¹ H` | **Godambe (sandwich) information** for the composite-likelihood estimator (Godambe 1960; Varin-Reid-Firth 2011 §4); identifiability = rank/null of `H` (Fisher-rank standard, Rothenberg 1971) | `H = Σ_j Σ_σ P_θ(σ_{T_j}) [∂_θ log P][∂_θ log P]^T` (composite sensitivity); `J` = inter-block variability via block-bootstrap; **bands use `G`, NOT `H⁻¹`** (a pseudo-likelihood loses efficiency, `H⁻¹` mis-sizes them); `rank(H_composite) ≤ rank(H_joint)` ⇒ the alias ledger is a **conservative sufficiency lower bound**; until `J` is estimated, band widths are tagged **(c)-heuristic** |
+| Composite (block-marginal) likelihood | the d3 recover FIT objective | **composite / pseudo-likelihood** `ℓ(θ) = Σ_j w_j log P_θ(record_j)` over the per-window multi-round detector records (Lindsay 1988; Varin, Reid & Firth 2011) — a consistent M-estimator when the per-window records are jointly informative about θ | `w_j ≡ 1` (all-blocks composite); each `P_θ(record_j)` is the EXACT dense-oracle R-round record-conditioned likelihood (project→renormalize→reset per round, log-domain); held-out, nats/shot/window; population limit = the ledgered cross-entropy NLL applied per window. **Captures within-window correlation only**; long-range correlation (R̂) is structurally outside it (= the independent-edges-DEM boundary) |
+| Composite-likelihood identifiability + bands | composite Fisher `H` + Godambe sandwich `G = H J⁻¹ H` | **Godambe (sandwich) information** for the composite-likelihood estimator (Godambe 1960; Varin-Reid-Firth 2011 §4); identifiability = rank/null of `H` (Fisher-rank standard, Rothenberg 1971) | `H = Σ_j E_{record_j}[(∂_θ log P_θ(record_j))(∂_θ log P_θ(record_j))^T]` (composite sensitivity over the multi-round record; exact-enumerable at small R, Monte-Carlo at R=90); `J` = inter-block variability via block-bootstrap; **bands use `G`, NOT `H⁻¹`** (a pseudo-likelihood loses efficiency, `H⁻¹` mis-sizes them); `rank(H_composite) ≤ rank(H_joint)` ⇒ the alias ledger is a **conservative sufficiency lower bound**; until `J` is estimated, band widths are tagged **(c)-heuristic** |
 | Coherence budget = **Pauli-twirl distance** (+ unitarity) | `forward.window_diagnostics` (twirl-distance; the off-diagonal-PTM mass is now a deprecated internal proxy) | **rung-2 field-standard** (switched 2026-06-15 from the rung-3 off-diagonal-mass proxy). The **Pauli-twirl distance** `½‖J(E) − J(T(E))‖₁` — the Choi trace distance between the channel `E` and its Pauli-twirl `T(E)` (the PTM with off-diagonal zeroed) — is EXACTLY the coherence a Pauli/DEM export discards (the PTA approximation error; trace distance = optimal distinguishability, Nielsen & Chuang 2010 §9; PTA = Harper 2605.29514; **reuses the ledgered `D_Choi` machinery**). Reported alongside the **unitarity** `u(E)` scalar coherence-of-noise measure (Wallman et al. 2015). The earlier off-diagonal Frobenius mass is the Hilbert–Schmidt norm of the same `E − T(E)` difference — a non-operational proxy, **replaced** by this trace-norm/operational standard. | per-mechanism + total; complex128; `T(E)` = PTM off-diagonal zeroed; the d3 (b)-prediction is "small" (Darmawan); the twirl here is only the metric's reference channel (the MODEL is never twirled — correction 2). **Forbidden as a premise / derivation basis.** Mainline `window_diagnostics` impl of trace-distance/unitarity is a build / commit-gate item |
 
 **Verification-vs-claim metric note (binding, from the adversarial-self-verification lesson).** The

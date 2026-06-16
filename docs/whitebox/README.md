@@ -6,25 +6,34 @@
 > stay in [`../cf_wr/`](../cf_wr/). Whole-project live front: [`../plan3.md`](../plan3.md). Binding
 > object contract: [`../TWIN.md`](../TWIN.md).
 >
-> **Scale / execution structure (D1):** the active order is **d3 → d7 → d5**. The white-box
-> validation rung is **d=3** (9 standalone `d3_at_q*` patches — 9 data + 8 stabilizers, no seam,
-> fully observed = clean single-window twins); black-box composition / seam is the **d=7** rung
-> (49 windows + real seam); **d=5** (4 patches) is the post-d7 intermediate-scale validation /
-> sanity rung. Each scale fits its white-box from its **own** data — no cross-scale
-> parameter transfer (D2). **Current active scope (2026-06-15): the d3 single-window white-box
-> (step-3); d7 cross-window / seam composition is deferred — trigger-gated, not dropped.**
+> **Scale / execution structure (D1):** the active order is **d3 → d7 → d5**. The white-box is a
+> **2×2 (4 data) faithful window** at every distance; ancilla cannot be eliminated because noise lives
+> on the data⊗ancilla entangled state before measurement. **Measured register: 4 data + 2 full-in
+> ancilla = 6q at d3 (≤6q across all scales, never 8q — (a)-exact, `outputs/covering_2x2.py`).** The
+> **black-box GNN composes overlapping 2×2 windows via cross-window data-consistency over shared data
+> (overlap ≤4) + the long-range/cross-window correlations (residual budget)** from d3 onward — **no
+> seam-only stabilizers at the 2×2 scale** (every stabilizer is full-in ≥1 window — d3 8/8, d5 24/24,
+> d7 48/48; (a)-exact, `outputs/covering_2x2.py`). The d=3 rung runs both the per-window white-box fit
+> (per-window identifiability ceiling = 2 syndrome bits/window (d3)) and the first black-box
+> composition; **d=7** validates composition at scale (49 windows + real seam); **d=5** (4 patches) is
+> the post-d7 intermediate-scale validation / sanity rung. Each scale fits its white-box from its
+> **own** data — no cross-scale parameter transfer (D2). **Current active scope (2026-06-15): the
+> d3 white-box + black-box composition (step-3/4); d7 seam extension is trigger-gated, not dropped.**
 
 ## What it is (model type)
 
 A **white-box, physically-parameterised, locally-exact, coherence-preserving generative noise model**
-of the device — fit to passive syndrome observations by Born-rule maximum likelihood on the **stationary
-multi-round likelihood `ρ_ss(θ)`** (the θ-dependent fixed point of the noisy syndrome-extraction round;
-see [`d3_whitebox_recover_design.md`](d3_whitebox_recover_design.md) §2.0); structured as a
-tied **field of local CPTP window-channel factors** over a circuit-derived covering; **partially
-identifiable** (recovered up to the observational alias class, with honest bands). It is a **coherent
-generalisation of the DEM** (DEM = the diagonal-PTM / Pauli special case), reached by the **inverse**
-problem (data → model), unlike forward simulators or decoders. With `do()` (deferred) it becomes a
-**structural causal model** of the error mechanisms.
+of the device — fit to passive syndrome observations by Born-rule maximum likelihood on the
+**syndrome-conditioned multi-round detector-record likelihood** on the real device data (the R-round
+record-conditioned forward; see [`d3_whitebox_recover_design.md`](d3_whitebox_recover_design.md) §2.0);
+structured as a
+tied **field of local CPTP window-channel factors** over a circuit-derived covering of **2×2 (4 data)
+faithful windows** (4 data + 2 full-in ancilla = 6q at d3; ≤6q across all scales, never 8q — measured,
+`outputs/covering_2x2.py`); **partially identifiable** (recovered up to the observational alias class,
+with honest bands; per-window identifiability ceiling = 2 syndrome bits/window at d3). It is a
+**coherent generalisation of the DEM** (DEM = the diagonal-PTM / Pauli special case), reached by the
+**inverse** problem (data → model), unlike forward simulators or decoders. With `do()` (deferred) it
+becomes a **structural causal model** of the error mechanisms.
 
 ## Documents (this folder)
 
@@ -59,15 +68,18 @@ Related, in [`../cf_wr/`](../cf_wr/): `xihat_RESULTS.md` (the `ξ̂` gate — BA
 - **complex128 on GPU** (GPU-only for all model compute — no `device="cpu"`, no `cuda-if-available`
   fallback).
 - **Dictionary = full 1q + full 2q (overcomplete); 3q ready-but-OFF** (residual-triggered).
-- **Runtime forward (D3):** the runtime forward is the **dense ≤13q surface-block ancilla-projector
-  Born likelihood** — evolve the data + block ancilla through the faithful round on the dense oracle to
-  the pre-measure state, enumerate the ≤4 ancilla projectors (computational-basis Born outcomes) +
-  readout flip, producing `P_θ(σ_{T_j})` per block; fit by a **block-marginal composite likelihood**
-  (`ℓ(θ) = Σ_j log P_θ(σ_{T_j})`). The dense `WindowChannel` is the engine and correctness oracle.
-  The 9q data-register + per-stabilizer instrument approach was tried and retired. See [`d3_whitebox_recover_design.md`](d3_whitebox_recover_design.md) for
-  the full forward spec, composite likelihood, Godambe bands, and §11 certification/black-box
-  interface.
-- **GPU-only (HARD)** — all model compute (9q forward / instruments / gradients) on cuda; no
+- **Runtime forward (D3):** the runtime forward is the **syndrome-conditioned multi-round
+  detector-record likelihood** on the 6q 2×2 window (4 data + 2 full-in ancilla = 6q at d3; ≤6q across
+  all scales, never 8q — measured, `outputs/covering_2x2.py`) — from the real reset boundary, propagate
+  `R = 90` rounds with the recorded ancilla outcomes (per round: noisy gates → project on the record →
+  renormalize → reset; the single-round projector core called R times), accumulating `log P_θ(record)`
+  in the log domain; fit by a **composite likelihood** over windows on the real non-unital
+  `detection_events.b8`. The dense `WindowChannel` is the engine and correctness oracle. (The
+  unconditional stationary `ρ_ss(θ)` is degenerate for the unital SI1000 prior — `rank(H)=1` — and is
+  kept only as the negative control; the 9q data-register + per-stabilizer instrument approach was tried
+  and retired.) See [`d3_whitebox_recover_design.md`](d3_whitebox_recover_design.md) for the full forward
+  spec, composite likelihood, Godambe bands, and §11 certification/black-box interface.
+- **GPU-only (HARD)** — all model compute (6q forward / instruments / gradients) on cuda; no
   `device="cpu"`, no `cuda-if-available` fallback.
 
 ## Build order + status
@@ -75,9 +87,9 @@ Related, in [`../cf_wr/`](../cf_wr/): `xihat_RESULTS.md` (the `ξ̂` gate — BA
 | Step | What | Status |
 |---|---|---|
 | 1 | covering schedule (circuit-derived) | **DONE** — VERDICT PASS, committed; 20/20 cross-check (d5/d7 × X/Z × 5 rounds) |
-| 2 | faithful `WindowChannel` oracle engine (GPU) | **DONE (oracle drafted)** — GPU-only + register bound implemented and tested (Run A: 15 passed, 1 skipped); faithful oracle code drafted, **mainline commit deferred** (lands with step-3). The runtime forward is the **dense ≤13q surface-block ancilla-projector Born likelihood** fit by a **block-marginal composite likelihood**; `WindowChannel` is the engine/oracle. (The 9q data-register + per-stabilizer instrument approach was falsified and is retired.) |
-| 3 | white-box recover on real XZZX — **d3** (D1) | next — starts from the **stationary-likelihood root** (`ρ_ss(θ)`, sub-component #0) before the covering/fit; fit the window channel to the 9 standalone d3 patches (9 data + 8 stabilizers, no seam, fully observed = clean window twins); each patch fit uses its own d3 data (D2); report held-out syndrome NLL + Fisher rank + alias band |
-| 4 | black-box composition / seam — **d7** (D1) | after d3; coherence-survival gate — CF-WR / Petz / GNN; each d7 window fit uses d7's own data (D2); composes already-fitted window channels, does not import d3 params |
+| 2 | faithful `WindowChannel` oracle engine (GPU) | **DONE (oracle drafted)** — GPU-only + register bound implemented and tested (Run A: 15 passed, 1 skipped); faithful oracle code drafted, **mainline commit deferred** (lands with step-3). The runtime forward is the **conditioned multi-round detector-record likelihood** on the 6q (d3; ≤6q all scales, never 8q — measured, `outputs/covering_2x2.py`) 2×2 window, fit by a **composite likelihood** on real `detection_events.b8`; `WindowChannel` is the engine/oracle. (The 9q data-register + per-stabilizer instrument approach was falsified and is retired.) |
+| 3 | white-box recover on real XZZX — **d3 2×2 windows** (D1) | next — starts from the **conditioned multi-round detector-record root** (sub-component #0; the unconditional `ρ_ss(θ)` is degenerate for the unital prior — negative control); fit the 2×2 window channel (6q faithful, d3; per-window identifiability ceiling = 2 syndrome bits/window) to each d3 patch; each patch fit uses its own d3 data (D2); report held-out syndrome NLL + Fisher rank + alias band |
+| 4 | black-box composition — **d3 first, then d7** (D1) | from d3: GNN composes overlapping 2×2 windows **via cross-window data-consistency over shared data (overlap ≤4) + long-range/cross-window correlations (residual budget)**; **no seam-only stabilizers** (every stabilizer is full-in ≥1 window — (a)-exact, `outputs/covering_2x2.py`); coherence-survival gate — CF-WR / Petz / GNN; d7 extends composition at scale; each rung uses its own data (D2); composes already-fitted window channels, does not import d3 params |
 | 5 | intermediate-scale validation — **d5** (D1) | after d7; uses d5's own data (D2) as the post-d7 sanity / interpolation rung, not a prerequisite for entering d7 |
 
 ## Representation invariants

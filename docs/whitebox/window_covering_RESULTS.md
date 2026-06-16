@@ -10,6 +10,12 @@
 > verification). Sidecar: `outputs/window_covering_results.json`.
 > Registration / spec: [`window_covering_architecture.md`](window_covering_architecture.md),
 > [`surface_recover_registration.md`](surface_recover_registration.md). VERDICT: **PASS**.
+>
+> **Superseded for the live architecture (2026-06-15):** this is the step-1 RESULTS for the original
+> **3×3 (9-data) covering**. The white-box window is now **2×2 (4 data)** — see `outputs/covering_2x2.py`
+> (per-window 6q; **0 seam-only stabilizers** at the 2×2 scale, refuting b5's ~8-seam 3×3 finding). The
+> circuit-structure facts here (footprint equality, adjacency, the 20/20 cross-check) carry over; the
+> 3×3-window-specific bands (e.g. b5 seam counts) are the 3×3 framing. Kept as the 3×3 step-1 audit record.
 
 ## 0. What this is
 

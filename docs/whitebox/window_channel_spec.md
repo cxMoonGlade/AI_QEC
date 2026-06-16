@@ -1,7 +1,8 @@
 # WindowChannel — build spec (step-2, mainline)
 
 > Specification for the window-channel object on the real XZZX surface code — white-box rung = d3
-> (the standalone d3 patches; the d7 covering is deferred to the black-box). step-1 PASS:
+> (each patch covered by overlapping 2×2 windows; the black-box composes them **from d3**, and the d7
+> seam covering extends it). step-1 PASS:
 > [`window_covering_RESULTS.md`](window_covering_RESULTS.md). Mainline code under
 > `src/qec_twin/forward/`; **commit-gated** (user confirms before commit). Decisions below are
 > LOCKED (owner, 2026-06-14; D1/D3 redirect 2026-06-15). Build via ≥3 disjoint implementer agents +
@@ -9,27 +10,36 @@
 
 ## 0. Locked decisions
 
-**D1 — White-box scope = the d3 patch (9 data + 8 stabilizers).** The white-box object covers only
-mechanisms that live entirely inside one window; cross-window (seam) composition is the black-box's
-job. Mapped to the dataset, the white-box **validation rung is d=3**: the nine standalone
-`d3_at_q*` patches (`d3_at_q2_7, q4_5, q4_9, q6_3, q6_7, q6_11, q8_5, q8_9, q10_7`), each = 9 data +
-8 XZZX stabilizers, all internal, no seam, fully observed — a clean single-window twin (step-1
-RESULTS §3.1: each d7 interior window equals its standalone d3 patch). The d7 covering (49 windows +
-seam) is the black-box rung. The execution order is **d3 → d7 → d5**: d5 (4 patches) is the post-d7
+**D1 — White-box scope = the 2×2 (4 data) window + its full-in stabilizer(s).** The white-box object
+covers only mechanisms that live entirely inside one 2×2 window; cross-window composition is the
+black-box's job. Ancilla cannot be eliminated: noise lives on the data⊗ancilla entangled state before
+measurement, so the faithful window is 4 data + in-window ancilla. **Measured register: 4 data + 2
+full-in ancilla = 6q at d3 (≤6q across all scales, never 8q — (a)-exact, `outputs/covering_2x2.py`).**
+Mapped to the dataset, the white-box **validation rung is d=3**: the nine standalone `d3_at_q*` patches
+(`d3_at_q2_7, q4_5, q4_9, q6_3, q6_7, q6_11, q8_5, q8_9, q10_7`), each covered by overlapping 2×2
+windows. **No seam-only stabilizers exist at the 2×2 scale** (every stabilizer is full-in ≥1 window —
+d3 8/8; (a)-exact, `outputs/covering_2x2.py`). The d3 rung runs both the per-window white-box fit
+(per-window identifiability ceiling = 2 syndrome bits/window (d3)) and the first black-box composition
+(GNN composes overlapping 2×2 windows via cross-window data-consistency over shared data from d3 onward).
+The execution
+order is **d3 → d7 → d5**: d5 (4 patches) is the post-d7
 intermediate-scale validation / interpolation rung, not a prerequisite before the d7 seam. This spec
-builds the per-window white-box object; the d3 patch IS the 3×3 window, standalone.
+builds the per-window white-box object (generic over window data + ancilla, supports any 2×2 window).
 
-**D3 — Runtime forward = dense ≤13q surface-block ancilla-projector Born likelihood, fit by a
-block-marginal composite likelihood; `WindowChannel` is the engine and correctness oracle.** The
-runtime forward evolves the data + block ancilla (9 data + ≤4 ancilla, ≤13q) through the faithful
-round to the pre-measure state, enumerates the ≤4 ancilla measurements as computational-basis
-projectors + reset in faithful circuit order, and records the Born outcome probabilities
-`P_θ(σ_{T_j})` per block; the recover objective is the composite log-likelihood
-`ℓ(θ) = Σ_j log P_θ(σ_{T_j})` over held-out shots. The dense `WindowChannel` (generic over window
-data + ancilla) is the engine for this forward and the correctness oracle. The full d3 faithful
-register (17q = 275 GB) is never run whole; the oracle operates as a progressive sub-system of ≤13q
-(9 data + ≤4 ancilla), GPU-feasible on the 5090. d7 cross-window is deferred. (A 9q data-register + per-stabilizer measurement instrument approach was
-tried and retired.)
+**D3 — Runtime forward = syndrome-conditioned multi-round detector-record likelihood (6q 2×2 window;
+d3; ≤6q all scales, never 8q — measured, `outputs/covering_2x2.py`), fit by a composite likelihood on
+real `detection_events.b8`; `WindowChannel` is the engine and correctness oracle.** From the real reset
+boundary, the runtime forward propagates `R = 90` rounds with the **recorded** ancilla outcomes (per
+round: noisy gates → project the ancilla on its recorded outcome → renormalize → reset, in faithful
+circuit order; the verified single-round projector core called R times), accumulating `log P_θ(record)`
+per window in the log domain (boundary rounds prep/readout modeled distinctly); the recover objective is
+the composite log-likelihood `ℓ(θ) = Σ_j log P_θ(record_j)` over held-out shots. The unconditional
+stationary state `ρ_ss(θ)` is retired as the input (degenerate for the unital SI1000 prior — `ρ_ss=I/16`,
+`rank(H)=1`; the negative control — see
+[`d3_whitebox_recover_design.md`](d3_whitebox_recover_design.md) §2.0). The dense `WindowChannel`
+(generic over window data + ancilla) is the engine for this forward and the correctness oracle. d7
+cross-window is deferred. (A 9q data-register + per-stabilizer measurement instrument approach was tried
+and retired.)
 
 The decisions below describe the oracle/engine and the shared mechanism/precision/build disciplines.
 
@@ -39,13 +49,13 @@ The decisions below describe the oracle/engine and the shared mechanism/precisio
    their ancilla (the 4 CZ layers, H, the DD X/Y, measure/reset), and insert **learnable mechanism
    channels at the real noise locations** (post-gate, idle, pre-measure), evolved in circuit order.
    Rationale: a canonical-order abstraction is a toy that, once reused as a foundation, cannot be
-   debugged (prior lesson; see [[feedback-no-toy-models-real-target]]). The runtime 9q instrument
-   (D3) is this same faithful circuit with the ancilla traced out per round (equivalence pending);
-   it inherits the faithful circuit-order composition on the shared 9q data register. This aligns
+   debugged (prior lesson; see [[feedback-no-toy-models-real-target]]). The runtime forward
+   (D3) is this same faithful circuit on the 2×2 window (6q: 4 data + 2 full-in ancilla), the ancilla
+   measured per round; it inherits the faithful circuit-order composition. This aligns
    step-2 with the step-3 multi-round forward (same window-local circuit, R rounds) by construction.
-2. **Precision = complex128 on GPU** (matches `cptp_channel.py`). The runtime 9q `ρ_data` is
-   `4^9 × 16 B = 4.2 MB`; the faithful d3 oracle sub-system is 2^≤13 (9 data + 1 ancilla = 10q =
-   16 MB per stabilizer; ≤13q = ≤1 GB for circuit-order sub-sets), GPU-feasible on a 5090.
+2. **Precision = complex128 on GPU** (matches `cptp_channel.py`). The faithful 2×2 window register
+   is 4 data + 2 full-in ancilla = 6q at d3 (≤6q all scales, never 8q — measured,
+   `outputs/covering_2x2.py`; `2^6 × 2^6 × 16 B = 64 kB`), GPU-feasible on a 5090.
 3. **Dictionary scope = full 1q + full 2q now (overcomplete); 3q ready-but-OFF.** 3q primitives are
    objectively redundant under decision 1 (the ≤2q dictionary composed in circuit order already
    generates 3-body correlations via fault propagation; a 3q primitive aliases with those and has no
@@ -94,23 +104,19 @@ construction. Coherent-non-Pauli/non-Clifford first (correction 2).
   step-1) + θ, build the window-local single-round noisy circuit: ideal gates in circuit order with a
   learnable mechanism channel inserted at each noise location.
 - **Embedding**: reuse `forward/exact/circuit_sim.py` `embed_operator` / `apply_channel_local`
-  (arity-general) to act a k-qubit mechanism on the **9q data register** (`2^9` state space,
-  `4^9` density-matrix space). Under D3 a mechanism's support is the data qubits it touches; the
-  instrument reduction (tracing the ancilla per stabilizer) keeps the acted-on space at the 9 data
-  qubits, so this is consistent with the register bound below — both the embedding target and the
-  materialised register are the 9 data qubits (no data+ancilla register at runtime). In the faithful
-  oracle the same embedding additionally targets the in-window ancilla.
+  (arity-general) to act a k-qubit mechanism on the **2×2 window register** (4 data + 2 full-in
+  ancilla = 6q at d3; ≤6q all scales, never 8q — measured, `outputs/covering_2x2.py`). The faithful
+  oracle evolves data and ancilla jointly in circuit order, consistent with the 6q register bound below.
 - **Evolution**: `apply_kraus` (from `cptp_channel.py`, device-aware, differentiable) in circuit
   order → the single-round window density-matrix map.
 - **`ρ_BC`**: partial trace of the window state to an overlap region (the seam anchor, step-4). Add a
   torch partial-trace helper if `forward/exact` lacks one.
-- **Register bound (memory, HARD) — ≤13q surface block**: the forward operates on 9 data + ≤4
-  ancilla (≤13q, `≤ 2^13 × 2^13` density-matrix space, complex128). The oracle / engine
-  (`WindowChannel`) is run as a **progressive d3 sub-system** (9 data + k≤4 ancilla ≤ 13q, one block
-  at a time), never the full d3 faithful register (17q = `4^17 × 16 B = 275 GB` — infeasible). The
-  d7 interior window's 13q = `1.07 GB` / `256×` is the analogous ratio for the deferred cross-window
-  stage. The full data + ALL-touching-ancilla register (~23 q) is infeasible anywhere and is FORBIDDEN.
-  - Assert each block ≤ 13q and GPU-memory headroom before running; never OOM.
+- **Register bound (memory, HARD) — 6q per 2×2 window (d3; ≤6q all scales, never 8q — measured,
+  `outputs/covering_2x2.py`)**: the forward operates on 4 data + 2 full-in ancilla (6q at d3;
+  complex128), GPU-feasible on the 5090. The oracle / engine (`WindowChannel`) is run one 2×2 window
+  at a time; the full data + ALL-touching-ancilla register is infeasible and is FORBIDDEN.
+  - Assert each window register ≤ 6q (d3; ≤6q all scales) and GPU-memory headroom before running;
+    never OOM.
 - **GPU-only (HARD gate)**: all model compute (the forward `apply`, CPTP/eigvalsh, gradients, tests)
   runs on **cuda** — `device` defaults to cuda and tests require cuda (assert `torch.cuda.is_available()`,
   raise otherwise; NO `cuda if available else cpu` fallback). Any `device="cpu"` in model-compute code
@@ -209,11 +215,11 @@ angle, non-unitary CPTP builders use `p = torch.sigmoid(theta)`. Registries mirr
 - `partial_trace(rho: Tensor, keep: list[int], n: int) -> Tensor`  # keep `keep` (order preserved), trace the rest
 
 **`forward/window_channel.py`** — the object. `WindowChannel` is both the runtime engine (for the
-≤13q surface-block Born likelihood forward, D3) and the correctness oracle. The signatures below are
-the frozen contract.
+faithful 6q (d3; ≤6q all scales, never 8q — measured, `outputs/covering_2x2.py`) 2×2-window Born
+likelihood forward, D3) and the correctness oracle. The signatures below are the frozen contract.
 - `class WindowChannel`:
   - `__init__(self, window_data: list[int], ancilla: list[int], round_schedule, placement, *, device=None)` — builds the learnable θ leaves from `placement` (faithful, tied per (type, support-tuple)).
-  - `apply(self, rho: Tensor) -> Tensor` — faithful single-round window map (Kraus composition in circuit order on the data+in-window-ancilla register); serves as both the engine for the ≤13q block forward and as the correctness oracle.
+  - `apply(self, rho: Tensor) -> Tensor` — faithful single-round window map (Kraus composition in circuit order on the data+2-full-in-ancilla = 6q register (d3; ≤6q all scales)); serves as both the engine for the 6q 2×2-window forward and as the correctness oracle.
   - `rho_bc(self, rho: Tensor, overlap_data: list[int]) -> Tensor` — reduced state on the overlap.
   - `coherence_budget(self) -> dict` — per-mechanism + total PTM off-diagonal mass.
   - `parameters(self) -> list[Tensor]` — the θ leaves (for the step-3 fit).

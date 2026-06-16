@@ -1,5 +1,14 @@
 # ChatGPT Pro research brief: can the d5/d7 white-box carrier be made differentiable?
 
+> **SUPERSEDED SNAPSHOT (2026-06-15).** This brief predates the v4 2×2 pivot and the v5 objective
+> re-thread: it still describes a **3×3 (9-data) / ≤13q** window and the unconditional stationary input
+> `rho_ss(theta)`. The live architecture is a **2×2 (6q) faithful window** and the d3 forward is the
+> **syndrome-conditioned multi-round detector-record likelihood** on real data (`rho_ss` is degenerate
+> for the unital prior — kept only as the negative control). The brief's actual subject — whether the
+> **deferred d5/d7 carrier** can be made differentiable — is unchanged and tracked in
+> [`stabilizer_tn_carrier_design.md`](stabilizer_tn_carrier_design.md); the d3 baseline section here is
+> stale context only. Kept as a point-in-time consult artifact, not current design.
+
 > Purpose: this document is meant to be pasted into ChatGPT Pro, together with the Harper paper/note if
 > possible. The goal is an adversarial research assessment of whether the deferred d5/d7 white-box
 > carrier can supply useful gradients, or whether the grey-box architecture must settle for
