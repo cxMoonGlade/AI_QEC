@@ -22,7 +22,7 @@ def _reset_cudaq_target_if_available() -> None:
 
 def _skip_unless_cudaq_smoke_enabled() -> None:
     if os.environ.get("AIQEC_RUN_CUDAQ_SMOKE") != "1":
-        pytest.skip("set AIQEC_RUN_CUDAQ_SMOKE=1 to run CUDA-Q Layer1.P smoke")
+        pytest.skip("set AIQEC_RUN_CUDAQ_SMOKE=1 to run CUDA-Q Layer1 preprocessing smoke")
 
 
 def test_layer1p_teacher_generates_first_class_physical_teacher(tmp_path: Path) -> None:
@@ -33,7 +33,7 @@ def test_layer1p_teacher_generates_first_class_physical_teacher(tmp_path: Path) 
     result = generate_layer1p_teacher_dataset(_small_config(), output_dir=output)
 
     assert result["decision"] == "layer1p_teacher_generated"
-    assert result["stage"] == "Layer1.P_teacher"
+    assert result["stage"] == "Layer1_preprocessing_teacher_generator"
     assert result["claim_boundary"]["is_teacher_generator_not_posthoc_only_audit"] is True
     assert result["claim_boundary"]["pre_sampling_cptp_povm_contract_enforced"] is True
     assert result["pre_sampling_contract"]["passed"] is True
@@ -44,7 +44,7 @@ def test_layer1p_teacher_generates_first_class_physical_teacher(tmp_path: Path) 
     assert result["teacher_physicality_audit"]["decision"] == "teacher_physicality_passed"
 
     summary = json.loads((output / "summary.json").read_text())
-    assert summary["stage"] == "Layer1.P_teacher"
+    assert summary["stage"] == "Layer1_preprocessing_teacher_generator"
     assert (output / "full_circuit_cudaq_summary.json").exists()
     assert (output / "layer1p_teacher_contract.json").exists()
     assert (output / "layer1p_pre_sampling_contract.json").exists()

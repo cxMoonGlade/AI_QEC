@@ -1,8 +1,9 @@
 """Data preparation physical-process generator interface.
 
-Layer1.P is the public data-preparation physical-process generator. The CUDA-Q sampler and
-physicality audit live behind this package so callers import the Layer 1
-interface instead of scattered generator modules.
+Layer1 preprocessing - teacher generator is the public physical-process
+generator. The CUDA-Q sampler and physicality audit live behind this package so
+callers import the data-preparation interface instead of scattered generator
+modules.
 """
 
 from .full_circuit_cudaq import generate_full_circuit_cudaq_teacher_dataset

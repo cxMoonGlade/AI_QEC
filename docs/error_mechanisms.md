@@ -67,6 +67,19 @@ This is why the implemented catalog separates local stochastic Pauli,
 two-qubit depolarizing, coherent RZZ, parasitic two-qubit Hamiltonians,
 conditional phase, correlated relaxation, and spectator crosstalk.
 
+## Label Scheme
+
+New controlled-catalog runs use two public semantic label namespaces:
+
+- `F0`-`Fn`: flat, atomic visible-effect targets. These may be used as exact
+  controlled-catalog evaluator clusters when the surface supports them.
+- `M0`-`Mn`: non-flat mechanism/family targets. These require family plus
+  context-relative dimension recovery, not a single flat cluster claim.
+
+The historical `M0`-`M34` IDs remain implementation-stable
+`legacy_catalog_id` values so old configs, artifacts, and tests can still load.
+They must not be interpreted as the public semantic label namespace.
+
 ## Implemented Catalog
 
 Status: implemented in `src/scope_static/primitives/mechanism_catalog.py` and
@@ -75,43 +88,73 @@ channelized in `src/scope_static/primitives/channels.py`.
 The IDs are priority ordered by expected practical frequency/importance for
 near-term hardware-style experiments. This order defines the mechanism sets.
 
-| ID | Name | Implemented object | Physical family |
+| Legacy ID | Public label | Name | Implemented object | Physical family |
+| --- | --- | --- | --- | --- |
+| M0 | M0 | `local_stochastic_pauli_gate_error` | 1q stochastic Pauli Kraus channel with X/Y/Z rates | local Pauli/process noise |
+| M1 | M1 | `readout_0_to_1_bias` | asymmetric assignment matrix | readout/SPAM |
+| M2 | M2 | `readout_1_to_0_bias` | asymmetric assignment matrix | readout/SPAM |
+| M3 | M3 | `readout_symmetric_assignment_noise` | symmetric assignment matrix | readout/SPAM |
+| M4 | F0 | `amplitude_damping_gate_error` | 1q amplitude-damping Kraus channel | T1-like relaxation |
+| M5 | F1 | `idle_dephasing_or_relaxation_error` | 1q idle Z/phase-noise Kraus channel | idle T2/T1 surrogate |
+| M6 | F2 | `coherent_rx_overrotation` | 1q `RX(epsilon)` coherent unitary | coherent control error |
+| M7 | F3 | `coherent_rz_overrotation` | 1q `RZ(epsilon)` coherent unitary | coherent phase/control error |
+| M8 | F4 | `coherent_rzz_overrotation` | 2q `RZZ(epsilon)` coherent unitary | entangling-angle error |
+| M9 | M4 | `two_qubit_depolarizing_after_rzz` | 2q depolarizing Kraus channel over 15 non-identity Paulis | coarse correlated Pauli noise |
+| M10 | M5 | `coherent_rxx_ryy_perturbation` | composed `RXX(eps_x)` and `RYY(eps_y)` unitary | parasitic XX/YY coupling |
+| M11 | M6 | `spectator_crosstalk_rz_or_zz` | spectator overlay family, not a flat mutually exclusive mechanism | spectator crosstalk |
+| M12 | F5 | `correlated_two_qubit_relaxation` | 2q non-unital correlated relaxation Kraus channel | correlated relaxation |
+| M13 | M7 | `drifted_coherent_overrotation` | context-varying 1q coherent overrotation represented as a random-unitary drift overlay on the declared operation axis | slow calibration drift |
+| M14 | M8 | `operation_dependent_error` | 1q coherent error generator attached to a visible operation axis; default `operation_axis=rx`, `error_axis=rz` | operation-context error |
+| M15 | M9 | `hard_non_pauli_kraus_gate_error` | non-Pauli custom Kraus channel | hard non-Pauli CPTP stress case |
+| M16 | M10 | `measurement_context_bias` | context-shaped readout assignment matrix | context-conditioned readout |
+| M17 | F6 | `reset_to_1_bias` | reset-to-state Kraus channel | reset/preparation bias |
+| M18 | M11 | `prep_axis_or_reset_asymmetry_bias` | prep/reset coherent asymmetry unitary | preparation-axis bias |
+| M19 | M12 | `weak_type4_ptm_mixing` | weak mixed Pauli/coherent Kraus channel | weak non-Pauli PTM mixing |
+| M20 | F7 | `coherent_ry_overrotation` | 1q `RY(epsilon)` coherent unitary | coherent Y-axis control error |
+| M21 | F8 | `conditional_phase_branch_error` | 2q controlled-phase branch unitary | conditional phase error |
+| M22 | F9 | `coherent_cxx_parasitic_coupling` | 2q `exp(-i epsilon XX/2)` unitary | parasitic XX coupling |
+| M23 | F10 | `coherent_cyy_parasitic_coupling` | 2q `exp(-i epsilon YY/2)` unitary | parasitic YY coupling |
+| M24 | F11 | `thermal_excitation_gate_error` | 1q excitation Kraus channel | finite-temperature/T1-up error |
+| M25 | F12 | `stochastic_bit_flip_gate_error` | 1q X-only stochastic Pauli channel | bit-flip process noise |
+| M26 | F13 | `stochastic_y_gate_error` | 1q Y-only stochastic Pauli channel | Y-axis process noise |
+| M27 | M13 | `coherent_h_axis_overrotation` | 1q rotation about normalized X+Z axis | diagonal control-axis error |
+| M28 | F14 | `coherent_xy_parasitic_coupling` | 2q `exp(-i epsilon XY/2)` unitary | parasitic mixed coupling |
+| M29 | F15 | `coherent_zx_parasitic_coupling` | 2q `exp(-i epsilon ZX/2)` unitary | cross-resonance-like ZX residue |
+| M30 | F16 | `coherent_zy_parasitic_coupling` | 2q `exp(-i epsilon ZY/2)` unitary | mixed ZY residue |
+| M31 | F17 | `coherent_xz_parasitic_coupling` | 2q `exp(-i epsilon XZ/2)` unitary | mixed XZ residue |
+| M32 | F18 | `coherent_yz_parasitic_coupling` | 2q `exp(-i epsilon YZ/2)` unitary | mixed YZ residue |
+| M33 | F19 | `coherent_yx_parasitic_coupling` | 2q `exp(-i epsilon YX/2)` unitary | mixed YX residue |
+| M34 | M14 | `leakage_relaxation_surrogate` | computational-subspace leakage-relaxation surrogate Kraus channel | leakage surrogate |
+
+## Contract-Role Audit
+
+The legacy `M0`-`M34` IDs are implemented catalog leaves, but they are not all
+the same semantic kind. Stage 3/S5 should distinguish:
+
+- `leaf_exact_effect_supported`: the current controlled teacher can still emit
+  and audit this implementation leaf when the assignment is already correct.
+- `primary_flat_cluster_target`: the implementation leaf maps to a public
+  `F*` label. Some `F*` leaves are still surface-conditional on the current
+  Z/X-visible Stage 3/S5 surface and must be claimed through dimension/property
+  recovery until a stronger probe exposes the flat exact split.
+- public `M*` labels: non-flat family/dimension targets.
+
+The current audit is pinned in
+`scope_static.primitives.mechanism_catalog.MECHANISM_CONTRACTS`.
+
+| Role | Legacy IDs | Public labels | S3/S5 interpretation |
 | --- | --- | --- | --- |
-| M0 | `local_stochastic_pauli_gate_error` | 1q stochastic Pauli Kraus channel with X/Y/Z rates | local Pauli/process noise |
-| M1 | `readout_0_to_1_bias` | asymmetric assignment matrix | readout/SPAM |
-| M2 | `readout_1_to_0_bias` | asymmetric assignment matrix | readout/SPAM |
-| M3 | `readout_symmetric_assignment_noise` | symmetric assignment matrix | readout/SPAM |
-| M4 | `amplitude_damping_gate_error` | 1q amplitude-damping Kraus channel | T1-like relaxation |
-| M5 | `idle_dephasing_or_relaxation_error` | 1q idle Z/phase-noise Kraus channel | idle T2/T1 surrogate |
-| M6 | `coherent_rx_overrotation` | 1q `RX(epsilon)` coherent unitary | coherent control error |
-| M7 | `coherent_rz_overrotation` | 1q `RZ(epsilon)` coherent unitary | coherent phase/control error |
-| M8 | `coherent_rzz_overrotation` | 2q `RZZ(epsilon)` coherent unitary | entangling-angle error |
-| M9 | `two_qubit_depolarizing_after_rzz` | 2q depolarizing Kraus channel over 15 non-identity Paulis | coarse correlated Pauli noise |
-| M10 | `coherent_rxx_ryy_perturbation` | composed `RXX(eps_x)` and `RYY(eps_y)` unitary | parasitic XX/YY coupling |
-| M11 | `spectator_crosstalk_rz_or_zz` | explicit spectator placeholder, currently outside Born-local | spectator crosstalk |
-| M12 | `correlated_two_qubit_relaxation` | 2q non-unital correlated relaxation Kraus channel | correlated relaxation |
-| M13 | `drifted_coherent_overrotation` | context-varying 1q coherent overrotation on the declared operation axis | slow calibration drift |
-| M14 | `operation_dependent_error` | 1q coherent error generator attached to a visible operation axis; default `operation_axis=rx`, `error_axis=rz` | operation-context error |
-| M15 | `hard_non_pauli_kraus_gate_error` | non-Pauli custom Kraus channel | hard non-Pauli CPTP stress case |
-| M16 | `measurement_context_bias` | context-shaped readout assignment matrix | context-conditioned readout |
-| M17 | `reset_to_1_bias` | reset-to-state Kraus channel | reset/preparation bias |
-| M18 | `prep_axis_or_reset_asymmetry_bias` | prep/reset coherent asymmetry unitary | preparation-axis bias |
-| M19 | `weak_type4_ptm_mixing` | weak mixed Pauli/coherent Kraus channel | weak non-Pauli PTM mixing |
-| M20 | `coherent_ry_overrotation` | 1q `RY(epsilon)` coherent unitary | coherent Y-axis control error |
-| M21 | `conditional_phase_branch_error` | 2q controlled-phase branch unitary | conditional phase error |
-| M22 | `coherent_cxx_parasitic_coupling` | 2q `exp(-i epsilon XX/2)` unitary | parasitic XX coupling |
-| M23 | `coherent_cyy_parasitic_coupling` | 2q `exp(-i epsilon YY/2)` unitary | parasitic YY coupling |
-| M24 | `thermal_excitation_gate_error` | 1q excitation Kraus channel | finite-temperature/T1-up error |
-| M25 | `stochastic_bit_flip_gate_error` | 1q X-only stochastic Pauli channel | bit-flip process noise |
-| M26 | `stochastic_y_gate_error` | 1q Y-only stochastic Pauli channel | Y-axis process noise |
-| M27 | `coherent_h_axis_overrotation` | 1q rotation about normalized X+Z axis | diagonal control-axis error |
-| M28 | `coherent_xy_parasitic_coupling` | 2q `exp(-i epsilon XY/2)` unitary | parasitic mixed coupling |
-| M29 | `coherent_zx_parasitic_coupling` | 2q `exp(-i epsilon ZX/2)` unitary | cross-resonance-like ZX residue |
-| M30 | `coherent_zy_parasitic_coupling` | 2q `exp(-i epsilon ZY/2)` unitary | mixed ZY residue |
-| M31 | `coherent_xz_parasitic_coupling` | 2q `exp(-i epsilon XZ/2)` unitary | mixed XZ residue |
-| M32 | `coherent_yz_parasitic_coupling` | 2q `exp(-i epsilon YZ/2)` unitary | mixed YZ residue |
-| M33 | `coherent_yx_parasitic_coupling` | 2q `exp(-i epsilon YX/2)` unitary | mixed YX residue |
-| M34 | `leakage_relaxation_surrogate` | computational-subspace leakage-relaxation surrogate Kraus channel | leakage surrogate |
+| Primary flat cluster targets | M4, M5, M6, M7, M8, M12, M17, M20, M21, M22, M23, M24, M25, M26, M28, M29, M30, M31, M32, M33 | F0-F19 | Exact `F*` clusters are acceptable controlled-catalog evaluator targets only when the current visible surface declares flat-exact claims allowed; otherwise S5 requires dimension/property recovery. |
+| Surface-conditional flat targets | M6, M22, M23 | F2, F9, F10 | These remain public `F*` leaves, but current Z/X-visible Stage 3/S5 evidence does not claim flat-exact separation. M6/M13 diagnostics run inside the M6/M13/M18/M27 targeted set; M22/M23 diagnostics run inside the M6/M13/M22/M23 targeted set and need an axis-sensitive quadrature probe for flat XX-vs-YY separation. |
+| Aggregate or direction-slice families | M0, M1, M2, M3 | M0-M3 | Prefer family plus axis/direction/mixture recovery over treating the broad leaf as an atomic physical mechanism. |
+| Coarse or coherent mixture families | M9, M10, M27 | M4, M5, M13 | Do not interpret a single flat cluster as full mechanism recovery unless the Pauli/axis mixture dimensions are also audited. |
+| Context- or operation-conditioned families | M13, M14, M16, M18 | M7, M8, M10, M11 | Recover base family plus operation/context, location, and strength dimensions; exact-label recall alone is not enough. |
+| Surrogate or stress families | M15, M19, M34 | M9, M12, M14 | Useful controlled stress leaves, but not standalone physical mechanism claims. |
+| Overlay family | M11 | M6 | Must be handled as `base_mechanism + spectator_overlay(...)`, not as a flat exact mechanism. |
+
+This audit does not remove existing IDs. It narrows the claim: legacy exact-ID
+metrics are evaluator-only diagnostics, public `F*` labels are the flat
+cluster targets, and public `M*` labels require family/dimension recovery.
 
 ## Mechanism Sets
 
@@ -119,15 +162,16 @@ Because we found 35 distinct implementable mechanisms, set C remains the top
 25 rather than being reduced to 20.
 
 ```text
-set_A: M0-M9      top 10 frequency/importance mechanisms
-set_B: M0-M14     top 15 frequency/importance mechanisms
-set_C: M0-M24     top 25 frequency/importance mechanisms
-set_D: M0-M34     all implemented mechanisms
-allM:  M0-M34     alias for set_D
+set_A: legacy M0-M9      top 10 frequency/importance mechanisms
+set_B: legacy M0-M14     top 15 frequency/importance mechanisms
+set_C: legacy M0-M24     top 25 frequency/importance mechanisms
+set_D: legacy M0-M34     all implemented mechanisms
+allM:  legacy M0-M34     alias for set_D
 ```
 
-`allM` and `set_D` are intentionally the same current universe. Future labels
-should extend `set_D/allM`, not silently overload existing IDs.
+`allM` and `set_D` are intentionally the same current legacy-ID universe.
+Future labels should extend the public F/M mapping, not silently overload
+existing legacy IDs.
 
 ## Weighted Profiles
 
@@ -136,12 +180,12 @@ test robustness under realistic-ish QEC exposure imbalance.
 
 Current weighted profiles are resolved from
 `src/scope_static/primitives/mechanism_profiles.py`, which imports the current
-M0-M34 catalog names from `mechanism_catalog.py`. Do not hand-maintain stale
-M-ID parameter blocks in YAML.
+legacy M0-M34 catalog names from `mechanism_catalog.py`. Do not hand-maintain
+stale legacy-ID parameter blocks in YAML.
 
 ```text
 weighted_realistic_v1:
-  exposure-weighted superconducting-QEC synthetic prior over M0-M34
+  exposure-weighted superconducting-QEC synthetic prior over legacy M0-M34
 
 weighted_discovery_floor_v1:
   same prior, but with a support floor so rare/high-impact mechanisms remain visible
@@ -165,50 +209,64 @@ Born-local samples exact local probabilities:
 rho_probe -> ideal local operation/context -> mechanism channel/readout -> POVM
 ```
 
-Current Stage 2E.1 support is all implemented mechanisms except M11:
+Current Stage 2E.1 support is all implemented legacy mechanisms except legacy
+M11:
 
 ```text
-supported:   M0-M10, M12-M34
-unsupported: M11 spectator_crosstalk_rz_or_zz
+supported:   legacy M0-M10, M12-M34
+unsupported: legacy M11 / public M6 spectator_crosstalk_rz_or_zz
 ```
 
-M11 remains outside Born-local until the spectator contract states:
+Legacy M11 / public M6 is a spectator-crosstalk overlay family, not a
+standalone mechanism class. Use it as:
 
 ```text
-victim qubit
-aggressor operation or edge
-observable support: RZ-on-victim, ZZ-on-pair, XX/YY-like parasitic term, or other
-timing relation to the active gate layer
+observed_effect =
+  base_mechanism
+  + spectator_overlay(victim, aggressor, axis, timing, strength)
+```
+
+It remains outside Born-local until the spectator contract states:
+
+```text
+base_mechanism: RZZ, RZ, readout_bias, reset_bias, idle, leakage-like, ...
+spectator_overlay_present
+victim_relative_location
+aggressor_relative_location
+coupling_axis: RZ, ZZ, readout_bias, reset_bias, ...
+timing_context: same_cycle, prev_cycle, shot_block_drift, ...
+strength
 ```
 
 ## Renumbering Map
 
 Historical M0-M19 artifacts remain valid as historical evidence, but new runs
-use the M0-M34 catalog above. The compatibility layer maps old config keys when
-it detects legacy mechanism parameter blocks.
+use the legacy M0-M34 catalog plus the public F/M labels above. The
+compatibility layer maps old config keys when it detects pre-M0-M34 mechanism
+parameter blocks.
 
-| Legacy ID | Current ID | Current name |
-| --- | --- | --- |
-| old M0 | M0 | `local_stochastic_pauli_gate_error` |
-| old M1 | M8 | `coherent_rzz_overrotation` |
-| old M2 | M6 | `coherent_rx_overrotation` |
-| old M3 | M7 | `coherent_rz_overrotation` |
-| old M4 | M4 | `amplitude_damping_gate_error` |
-| old M5 | M15 | `hard_non_pauli_kraus_gate_error` |
-| old M6 | M9 | `two_qubit_depolarizing_after_rzz` |
-| old M7 | M10 | `coherent_rxx_ryy_perturbation` |
-| old M8 | M11 | `spectator_crosstalk_rz_or_zz` |
-| old M9 | M12 | `correlated_two_qubit_relaxation` |
-| old M10 | M13 | `drifted_coherent_overrotation` |
-| old M11 | M5 | `idle_dephasing_or_relaxation_error` |
-| old M12 | M14 | `operation_dependent_error` |
-| old M13 | M1 | `readout_0_to_1_bias` |
-| old M14 | M2 | `readout_1_to_0_bias` |
-| old M15 | M3 | `readout_symmetric_assignment_noise` |
-| old M16 | M16 | `measurement_context_bias` |
-| old M17 | M17 | `reset_to_1_bias` |
-| old M18 | M18 | `prep_axis_or_reset_asymmetry_bias` |
-| old M19 | M19 | `weak_type4_ptm_mixing` |
+| Pre-M0-M34 ID | Current legacy ID | Public label | Current name |
+| --- | --- | --- | --- |
+| old M0 | M0 | M0 | `local_stochastic_pauli_gate_error` |
+| old M1 | M8 | F4 | `coherent_rzz_overrotation` |
+| old M2 | M6 | F2 | `coherent_rx_overrotation` |
+| old M3 | M7 | F3 | `coherent_rz_overrotation` |
+| old M4 | M4 | F0 | `amplitude_damping_gate_error` |
+| old M5 | M15 | M9 | `hard_non_pauli_kraus_gate_error` |
+| old M6 | M9 | M4 | `two_qubit_depolarizing_after_rzz` |
+| old M7 | M10 | M5 | `coherent_rxx_ryy_perturbation` |
+| old M8 | M11 | M6 | `spectator_crosstalk_rz_or_zz` |
+| old M9 | M12 | F5 | `correlated_two_qubit_relaxation` |
+| old M10 | M13 | M7 | `drifted_coherent_overrotation` |
+| old M11 | M5 | F1 | `idle_dephasing_or_relaxation_error` |
+| old M12 | M14 | M8 | `operation_dependent_error` |
+| old M13 | M1 | M1 | `readout_0_to_1_bias` |
+| old M14 | M2 | M2 | `readout_1_to_0_bias` |
+| old M15 | M3 | M3 | `readout_symmetric_assignment_noise` |
+| old M16 | M16 | M10 | `measurement_context_bias` |
+| old M17 | M17 | F6 | `reset_to_1_bias` |
+| old M18 | M18 | M11 | `prep_axis_or_reset_asymmetry_bias` |
+| old M19 | M19 | M12 | `weak_type4_ptm_mixing` |
 
 ## Effective Local Depth
 
@@ -239,7 +297,7 @@ it applies.
 The implemented 2q catalog covers a useful subset of the mature two-qubit
 library:
 
-| Family | Meaning | Implemented IDs |
+| Family | Meaning | Implemented legacy IDs |
 | --- | --- | --- |
 | G2_LOCAL_PAULI | one participant receives a local Pauli fault | M0 plus M25/M26 as 1q channels |
 | G2_CORRELATED_PAULI | two participants receive a joint Pauli fault | future grouped Pauli extension |
@@ -248,8 +306,8 @@ library:
 | G2_PARASITIC_COUPLING | unwanted two-qubit Hamiltonian term | M10, M22-M23, M28-M33 |
 | G2_T1_T2_DURING_GATE | relaxation/dephasing during the pulse | M4, M5, M12, M24 |
 | G2_LEAKAGE | state leaves computational subspace | M34 surrogate |
-| G2_SPECTATOR_CROSSTALK | nearby idle/active qubit changes the gate | M11 placeholder |
-| G2_SLOW_DRIFT | parameter changes over time/location | M13 |
+| G2_SPECTATOR_CROSSTALK | nearby idle/active qubit changes the gate | legacy M11 / public M6 overlay contract |
+| G2_SLOW_DRIFT | parameter changes over time/location | legacy M13 / public M7 |
 
 The 2q Pauli basis has `4^2 - 1 = 15` non-identity errors:
 
@@ -287,15 +345,16 @@ Do not model all 63 independently at first. Group them:
 | G3_LEAKAGE_CASCADE | leaked qubit corrupts other participants | leaked ancilla/control spreads error |
 | G3_CONTEXT_CROSSTALK | external spectator or pulse affects the 3q gate | context-dependent phase/noise |
 
-These are not public `M*` labels yet. Add them only after a probe family and a
+These are not public F/M labels yet. Add them only after a probe family and a
 learner-visible observable family exist.
 
 ## Adoption Rules
 
-1. Public `M*` labels must map to implemented, distinct channel/readout/context
-   objects.
-2. Add public labels only when the local teacher, PHYC2 features, and docs can
+1. Public `F*` labels are flat atomic visible-effect targets.
+2. Public `M*` labels are non-flat mechanism/family targets and require
+   dimension recovery.
+3. Add public labels only when the local teacher, PHYC2 features, and docs can
    explain the difference without oracle-only templates.
-3. Keep `allM` as all implemented mechanisms.
-4. Treat historical M0-M19 artifacts as pre-renumbering evidence unless their
-   teacher config explicitly records the new M0-M34 catalog.
+4. Keep `allM` as the implemented legacy-ID universe.
+5. Treat historical M0-M19 artifacts as pre-renumbering evidence unless their
+   teacher config explicitly records the current legacy M0-M34 catalog.

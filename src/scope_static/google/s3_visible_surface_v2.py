@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 import hashlib
@@ -23,7 +24,7 @@ from scope_static.google.s3_visible_cache_v2 import (
     GoogleS3V2CachedContext,
     load_google_s3_visible_cache_v2,
 )
-from scope_static.google.s3_visible_surface import (
+from scope_static.google.s3_visible_common import (
     DEFAULT_DATASET_NAME,
     DEFAULT_DATASET_ROOT,
     DEFAULT_SPLIT_POLICY,
@@ -574,6 +575,7 @@ def write_google_s3_visible_aggregate_cache_v2(
     round_bands: Iterable[str] = DEFAULT_ROUND_BANDS,
     region_families: Iterable[str] = DEFAULT_REGION_FAMILIES,
     max_contexts: int | None = None,
+    num_workers: int | None = None,
 ) -> dict[str, object]:
     """Precompute V2 per-context public syndrome-response aggregate rows."""
 
@@ -591,25 +593,27 @@ def write_google_s3_visible_aggregate_cache_v2(
     wallclock_by_block: dict[str, float] = _zero_wallclock_blocks()
     skipped_units: list[dict[str, object]] = []
     unit_count = 0
+    worker_count = _resolve_aggregate_worker_count(num_workers, context_count=len(cached_contexts))
     started = time.perf_counter()
-    for context in cached_contexts:
-        context_started = time.perf_counter()
-        rows, unit_rows, detector_means, logical_means, selected_counts, context_timing, context_skipped = _aggregate_context_rows(
-            context,
-            round_bands=bands,
-            region_families=regions,
-        )
-        for key, value in context_timing.items():
+    payloads = _compute_aggregate_context_payloads(
+        cached_contexts,
+        round_bands=bands,
+        region_families=regions,
+        num_workers=worker_count,
+    )
+    for payload in payloads:
+        for key, value in dict(payload["wallclock_by_block_seconds"]).items():
             wallclock_by_block[key] = wallclock_by_block.get(key, 0.0) + float(value)
-        skipped_units.extend(context_skipped)
+        skipped_units.extend(list(payload["skipped_units"]))
+        context = payload["context"]
         arrays_name = f"aggregates/aggregate_{context.cache_context_id}.npz"
         metadata_name = f"aggregates/aggregate_{context.cache_context_id}.json"
         np.savez_compressed(
             root / arrays_name,
-            feature_rows=np.asarray(rows, dtype=np.float64),
-            detector_rate_means=np.asarray(detector_means, dtype=np.float64),
-            logical_rate_means=np.asarray(logical_means, dtype=np.float64),
-            selected_detector_counts=np.asarray(selected_counts, dtype=np.float64),
+            feature_rows=np.asarray(payload["feature_rows"], dtype=np.float64),
+            detector_rate_means=np.asarray(payload["detector_rate_means"], dtype=np.float64),
+            logical_rate_means=np.asarray(payload["logical_rate_means"], dtype=np.float64),
+            selected_detector_counts=np.asarray(payload["selected_detector_counts"], dtype=np.float64),
         )
         metadata = {
             "schema": "scope_static_google_s3a_v2_aggregate_context_v1",
@@ -620,12 +624,14 @@ def write_google_s3_visible_aggregate_cache_v2(
             "distance": context.distance,
             "rounds": context.rounds,
             "patch_public_geometry_class": context.patch_public_geometry_class,
-            "unit_count": int(len(unit_rows)),
-            "unit_rows": unit_rows,
-            "wallclock_by_block_seconds": {key: float(value) for key, value in sorted(context_timing.items())},
-            "slowest_block": _slowest_block(context_timing),
-            "context_wallclock_seconds": float(time.perf_counter() - context_started),
-            "skipped_units": context_skipped,
+            "unit_count": int(len(payload["unit_rows"])),
+            "unit_rows": list(payload["unit_rows"]),
+            "wallclock_by_block_seconds": {
+                key: float(value) for key, value in sorted(dict(payload["wallclock_by_block_seconds"]).items())
+            },
+            "slowest_block": _slowest_block(dict(payload["wallclock_by_block_seconds"])),
+            "context_wallclock_seconds": float(payload["context_wallclock_seconds"]),
+            "skipped_units": list(payload["skipped_units"]),
         }
         (root / metadata_name).write_text(json.dumps(_json_safe(metadata), indent=2, sort_keys=True) + "\n", encoding="utf-8")
         aggregate_contexts.append(
@@ -633,12 +639,12 @@ def write_google_s3_visible_aggregate_cache_v2(
                 "cache_context_id": context.cache_context_id,
                 "arrays_path": arrays_name,
                 "metadata_path": metadata_name,
-                "unit_count": int(len(unit_rows)),
+                "unit_count": int(len(payload["unit_rows"])),
                 "context_wallclock_seconds": float(metadata["context_wallclock_seconds"]),
                 "slowest_block": metadata["slowest_block"],
             }
         )
-        unit_count += int(len(unit_rows))
+        unit_count += int(len(payload["unit_rows"]))
 
     wallclock_by_block["metadata_schema_writeout"] = wallclock_by_block.get("metadata_schema_writeout", 0.0)
     total_wallclock = float(time.perf_counter() - started)
@@ -654,6 +660,14 @@ def write_google_s3_visible_aggregate_cache_v2(
         "feature_names_sha256": _text_digest("\n".join(FEATURE_NAMES)),
         "context_count": int(len(cached_contexts)),
         "unit_count": int(unit_count),
+        "num_workers": int(worker_count),
+        "parallelism": {
+            "mode": "threaded_context_aggregation" if worker_count > 1 else "serial_context_aggregation",
+            "num_workers": int(worker_count),
+            "deterministic_manifest_order": True,
+            "wallclock_by_block_seconds_semantics": "sum_of_per_context_block_wallclock_seconds",
+            "note": "With num_workers > 1, summed block wall-clock seconds can exceed total_wallclock_seconds.",
+        },
         "aggregate_contexts": aggregate_contexts,
         "skipped_units": skipped_units,
         "wallclock_by_block_seconds": {key: float(value) for key, value in sorted(wallclock_by_block.items())},
@@ -718,11 +732,76 @@ def forbidden_feature_audit_google_v2(feature_names: Iterable[str]) -> dict[str,
             "path one-hot",
             "sample_id one-hot",
             "decoder correctness as learner target",
-            "catalog M label",
+            "public F/M mechanism label",
+            "legacy catalog ID",
             "true hidden mechanism label",
             "oracle PTM/Kraus/channel",
         ],
         "note": "Public dataset/region family names may appear in protocol metadata, but not as surrogate identity features.",
+    }
+
+
+def _resolve_aggregate_worker_count(num_workers: int | None, *, context_count: int) -> int:
+    if context_count <= 0:
+        return 1
+    if num_workers is None:
+        return 1
+    resolved = int(num_workers)
+    if resolved <= 0:
+        raise ValueError("num_workers must be positive when provided")
+    return min(resolved, int(context_count))
+
+
+def _compute_aggregate_context_payloads(
+    contexts: list[GoogleS3V2CachedContext],
+    *,
+    round_bands: tuple[str, ...],
+    region_families: tuple[str, ...],
+    num_workers: int,
+) -> list[dict[str, object]]:
+    if num_workers <= 1 or len(contexts) <= 1:
+        return [
+            _aggregate_context_payload(context, round_bands=round_bands, region_families=region_families)
+            for context in contexts
+        ]
+    payloads: list[dict[str, object] | None] = [None] * len(contexts)
+    with ThreadPoolExecutor(max_workers=int(num_workers)) as executor:
+        futures = {
+            executor.submit(
+                _aggregate_context_payload,
+                context,
+                round_bands=round_bands,
+                region_families=region_families,
+            ): idx
+            for idx, context in enumerate(contexts)
+        }
+        for future in as_completed(futures):
+            payloads[futures[future]] = future.result()
+    return [payload for payload in payloads if payload is not None]
+
+
+def _aggregate_context_payload(
+    context: GoogleS3V2CachedContext,
+    *,
+    round_bands: tuple[str, ...],
+    region_families: tuple[str, ...],
+) -> dict[str, object]:
+    context_started = time.perf_counter()
+    rows, unit_rows, detector_means, logical_means, selected_counts, context_timing, context_skipped = _aggregate_context_rows(
+        context,
+        round_bands=round_bands,
+        region_families=region_families,
+    )
+    return {
+        "context": context,
+        "feature_rows": rows,
+        "unit_rows": unit_rows,
+        "detector_rate_means": detector_means,
+        "logical_rate_means": logical_means,
+        "selected_detector_counts": selected_counts,
+        "wallclock_by_block_seconds": context_timing,
+        "context_wallclock_seconds": float(time.perf_counter() - context_started),
+        "skipped_units": context_skipped,
     }
 
 
@@ -733,10 +812,10 @@ def _aggregate_context_rows(
     region_families: tuple[str, ...],
 ) -> tuple[np.ndarray, list[dict[str, object]], list[float], list[float], list[int], dict[str, float], list[dict[str, object]]]:
     observations = context.observations
-    detectors = np.asarray(context.detection_events, dtype=np.float64)
-    observables = np.asarray(context.obs_flips_actual, dtype=np.float64)
+    detectors = np.asarray(context.detection_events, dtype=bool)
+    observables = np.asarray(context.obs_flips_actual, dtype=bool)
     detector_rates = np.mean(detectors, axis=0) if detectors.size else np.zeros(0, dtype=np.float64)
-    detector_variances = np.mean(detectors * detectors, axis=0) - detector_rates * detector_rates if detectors.size else np.zeros(0, dtype=np.float64)
+    detector_variances = detector_rates * (1.0 - detector_rates) if detectors.size else np.zeros(0, dtype=np.float64)
     public_context = _PublicSignatureContext(
         dataset_name=context.dataset_name,
         dataset_family=context.dataset_family,
@@ -1056,10 +1135,10 @@ def _signature_feature_row_with_timing(
     region_family: str,
     shotblocks: tuple[tuple[int, int], ...],
 ) -> tuple[np.ndarray, dict[str, float], dict[str, float]]:
-    detectors = np.asarray(observations[:, :detector_count], dtype=np.float64)
-    observables = np.asarray(observations[:, detector_count : detector_count + observable_count], dtype=np.float64)
+    detectors = np.asarray(observations[:, :detector_count], dtype=bool)
+    observables = np.asarray(observations[:, detector_count : detector_count + observable_count], dtype=bool)
     detector_rates = np.mean(detectors, axis=0) if detectors.size else np.zeros(0, dtype=np.float64)
-    detector_variances = np.mean(detectors * detectors, axis=0) - detector_rates * detector_rates if detectors.size else np.zeros(0, dtype=np.float64)
+    detector_variances = detector_rates * (1.0 - detector_rates) if detectors.size else np.zeros(0, dtype=np.float64)
     return _signature_feature_row_from_arrays_with_timing(
         observations,
         detectors=detectors,
@@ -1250,20 +1329,20 @@ def _logical_coupling_features(detectors: np.ndarray, observables: np.ndarray, *
     if not selected or observables.size == 0:
         return [0.0] * len(LOGICAL_COUPLING_FEATURE_NAMES)
     selected_arr = np.asarray(selected, dtype=np.int64)
-    x = np.asarray(detectors[:, selected_arr], dtype=np.float64)
+    x = np.asarray(detectors[:, selected_arr], dtype=bool)
     x_rate = np.mean(x, axis=0)
-    x_var = np.mean(x * x, axis=0) - x_rate * x_rate
+    x_var = x_rate * (1.0 - x_rate)
     covs: list[np.ndarray] = []
     corrs: list[np.ndarray] = []
     diffs: list[np.ndarray] = []
     for obs_idx in range(observables.shape[1]):
-        y = np.asarray(observables[:, obs_idx], dtype=np.float64)
+        y = np.asarray(observables[:, obs_idx], dtype=bool)
         y_rate = float(np.mean(y))
-        y_var = float(np.mean(y * y) - y_rate * y_rate)
-        cov = np.mean(x * y[:, None], axis=0) - x_rate * y_rate
+        y_var = y_rate * (1.0 - y_rate)
+        cov = np.mean(np.logical_and(x, y[:, None]), axis=0) - x_rate * y_rate
         denom = np.sqrt(np.maximum(x_var * y_var, 0.0))
         corr = np.divide(cov, denom, out=np.zeros_like(cov), where=denom > 0.0)
-        mask_one = y >= 0.5
+        mask_one = y
         mask_zero = ~mask_one
         if bool(np.any(mask_one)) and bool(np.any(mask_zero)):
             diff = np.mean(x[mask_one], axis=0) - np.mean(x[mask_zero], axis=0)
@@ -1300,7 +1379,7 @@ def _stability_features(
     logical_block_rates: list[float] = []
     selected_arr = np.asarray(selected, dtype=np.int64)
     for start, stop in shotblocks:
-        block = np.asarray(observations[start:stop], dtype=np.float64)
+        block = observations[start:stop]
         det = block[:, selected_arr] if selected_arr.size else np.zeros((block.shape[0], 0), dtype=np.float64)
         obs = block[:, detector_count:]
         detector_block_rates.append(float(np.mean(det)) if det.size else 0.0)
@@ -1602,7 +1681,7 @@ def _batch_context_schema(*, split_policy: str, row_count: int) -> dict[str, obj
         "protocol_only_fields": ["j", "fold", "train_validation_test_split", "public_fields", "unit_id_internal_only"],
         "evaluator_only_fields": [
             "optional_decoder_facing_proxy_metrics",
-            "optional_local_full_baseline_metrics",
+            "optional_reference_baseline_metrics",
             "optional_dmle_qec_baseline_metrics",
         ],
         "forbidden_learner_fields": [
@@ -1806,16 +1885,38 @@ def _nearest_neighbor_pairs(selected: list[int], coords: dict[int, tuple[float, 
     if len(padded) < 2:
         ordered = sorted(selected)
         return [(left, right) for left, right in zip(ordered, ordered[1:])]
-    distances = []
-    for left_idx, left in enumerate(sorted(padded)):
-        for right in sorted(padded)[left_idx + 1 :]:
-            distance = max(abs(a - b) for a, b in zip(padded[left], padded[right]))
-            if distance > 0.0:
-                distances.append((distance, left, right))
-    if not distances:
+    ordered = sorted(padded)
+    coord_arr = np.asarray([padded[idx] for idx in ordered], dtype=np.float64)
+    if coord_arr.shape[0] < 2:
         return []
-    min_distance = min(item[0] for item in distances)
-    return [(left, right) for distance, left, right in distances if math.isclose(distance, min_distance) or distance <= min_distance * 1.5]
+    min_distance = math.inf
+    block_size = 512
+    n = int(coord_arr.shape[0])
+    col_indices = np.arange(n, dtype=np.int64)
+    for start in range(0, n, block_size):
+        stop = min(start + block_size, n)
+        row_indices = np.arange(start, stop, dtype=np.int64)[:, None]
+        distances = np.max(np.abs(coord_arr[start:stop, None, :] - coord_arr[None, :, :]), axis=2)
+        distances = np.where((col_indices[None, :] > row_indices) & (distances > 0.0), distances, np.inf)
+        local = float(np.min(distances))
+        if local < min_distance:
+            min_distance = local
+    if not math.isfinite(min_distance):
+        return []
+    threshold = min_distance * 1.5
+    pairs: list[tuple[int, int]] = []
+    for start in range(0, n, block_size):
+        stop = min(start + block_size, n)
+        row_indices = np.arange(start, stop, dtype=np.int64)[:, None]
+        distances = np.max(np.abs(coord_arr[start:stop, None, :] - coord_arr[None, :, :]), axis=2)
+        mask = (
+            (col_indices[None, :] > row_indices)
+            & (distances > 0.0)
+            & (np.isclose(distances, min_distance) | (distances <= threshold))
+        )
+        left_rows, right_cols = np.nonzero(mask)
+        pairs.extend((int(ordered[start + left]), int(ordered[right])) for left, right in zip(left_rows, right_cols))
+    return pairs
 
 
 def _temporal_pairs(selected: list[int], coords: dict[int, tuple[float, ...]]) -> list[tuple[int, int]]:
@@ -1859,7 +1960,10 @@ def _pair_cov_corr(
         chunk = pair_arr[start : start + 1024]
         left = chunk[:, 0]
         right = chunk[:, 1]
-        xy_mean = np.mean(detectors[:, left] * detectors[:, right], axis=0)
+        if detectors.dtype == np.bool_:
+            xy_mean = np.mean(np.logical_and(detectors[:, left], detectors[:, right]), axis=0)
+        else:
+            xy_mean = np.mean(detectors[:, left] * detectors[:, right], axis=0)
         cov = xy_mean - rates[left] * rates[right]
         denom = np.sqrt(np.maximum(variances[left] * variances[right], 0.0))
         corr = np.divide(cov, denom, out=np.zeros_like(cov), where=denom > 0.0)

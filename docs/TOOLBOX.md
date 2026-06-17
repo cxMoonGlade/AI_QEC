@@ -29,26 +29,42 @@ It is organized as reusable tools rather than a single end-to-end claim.
 | --- | --- | --- |
 | `scope-static-toolbox` | manifest | Print the toolbox manifest and public catalog stage map. |
 | `scope-data-preparation-teacher` | data preparation | Generate a first-class physical-process teacher with pre-sampling CPTP/POVM checks and post-sampling physicality audit. |
-| `scope-catalog-teacher` | catalog teacher | Generate controlled-catalog teacher artifacts through the compatibility command. |
-| `teacher-distinguishment` | teacher | Verify that the declared teacher/catalog can self-distinguish generated mechanisms. |
-| `learner-acceptance` | learner | Select the accepted learner source and report classification, channel-distance, NLL, and MAE quality. |
+| `scope-teacher-physicality-audit` | Layer1 physicality | Run the Layer1 preprocessing teacher-generator physicality audit. |
 | `scope-stage3a-freeze` | Stage 3A: Dataset And Protocol Freeze | Freeze visible schema, split manifest, batch/context protocol, assignment unit, and forbidden-feature audit before discovery training. |
 | `scope-stage3a5-ceiling` | Stage 3A.5: Observability And Alias Ceiling | Compute pairwise visible distances, oracle-visible alias classes, exact-label ceiling, and quotient-label ceiling before discovery training. |
 | `scope-stage3b0-baselines` | Stage 3B.0: Non-Learned Clustering Baselines | Run visible-only k-means/GMM baselines and null controls with evaluator-only exact-label and quotient-label scoring. |
 | `scope-stage3b1-discovery` | Stage 3B.1: First Discovery Model | Train a visible-only prototype-mixture discovery model with learned diagonal covariance and evaluator-only exact/quotient scoring. |
+| `scope-stage3c-generator` | Stage 3C: Generator | Fit and score the heldout visible generator. |
+| `scope-stage3d1-assignment-shuffle` | Stage 3D.1 | Run assignment-shuffle generator audit. |
+| `scope-stage3d2-feature-scramble` | Stage 3D.2 | Run feature-scramble generator audit. |
+| `scope-stage3d3-context-shuffle` | Stage 3D.3 | Run context-shuffle protocol audit. |
+| `scope-stage3d4-k-stress` | Stage 3D.4 | Run K stress audit. |
+| `scope-stage3d4b-overcomplete-merge-prune` | Stage 3D.4b | Run visible-only overcomplete merge/prune audit. |
+| `scope-stage3-abc-observability-diagnostic` | Stage 3 ABC | Run diagnostic-only observability upper-bound checks. |
+| `scope-stage4-synthetic-freeze` | S4.0 Bridge Freeze | Build a synthetic Google-shaped Stage-3A-compatible source freeze. |
+| `scope-stage4-source-ceiling` | S4.0.5 Surface Survival | Audit mechanism/quotient survival with evaluator-only labels. |
+| `scope-stage4-source-pretrain` | S4.1 Source Pretrain | Train MLP and Attention-VQ source replay models from visible features. |
+| `scope-stage4-support-audit` | S4.4 Support Audit | Audit source/Google support overlap before transfer claims. |
+| `scope-stage4-assignment-geometry` | S4.5 Assignment Geometry | Repair and audit source/Google assignment support geometry. |
+| `scope-stage4-google-unit-source-expansion` | S4.6 Google-Unit Source | Build the Google-unit controlled source freeze plus transfer, controls, and robustness audits. |
+| `scope-stage4-google-transfer` | S4.2 Frozen Transfer | Run strict frozen source-to-Google transfer and controls. |
+| `scope-stage4-transfer-diagnostics` | S4.3 Transfer Diagnostics | Compare strict frozen transfer with frozen-codebook adapter diagnostics. |
+| `scope-stage5b1-property-recovery` | S5B1 Property Recovery | Run context-relative property recovery. |
+| `scope-stage5b1b-conditional-property-recovery` | S5B1b Conditional Recovery | Run conditional context-relative property recovery. |
+| `scope-google-s3-visible-cache-v2` | Google S3 V2 Cache | Build public syndrome-response cache. |
+| `scope-google-s3-visible-aggregate-v2` | Google S3 V2 Aggregate | Build aggregate visible rows. |
+| `scope-google-s3-visible-adapter-v2` | Google S3 V2 Adapter | Build Stage-3A-compatible visible surface. |
 
-Historical artifact folders may still use `PHYC1/PHYC2/PHYC3` names for
-compatibility. Public-facing code should use `data_preparation`,
-`teacher`, and `learner`.
+Public-facing code should use `data_preparation`, `teacher`, and `learner`.
 
 ## Physicality Boundary
 
-Layer1.P physicality comes from implemented catalog mechanisms validated before
-sampling as unitary channels, Kraus channels, or classical readout assignment
-matrices, then checked again by a post-sampling physicality audit. Learner
-inherits catalog physicality only when it predicts/reuses a catalog mechanism;
-visible empirical replay is a visible-distribution model, not by itself a
-learned CPTP channel.
+Layer1 preprocessing - teacher generator physicality comes from implemented
+catalog mechanisms validated before sampling as unitary channels, Kraus
+channels, or classical readout assignment matrices, then checked again by a
+post-sampling physicality audit. Learner inherits catalog physicality only when
+it predicts/reuses a catalog mechanism; visible empirical replay is a
+visible-distribution model, not by itself a learned CPTP channel.
 
 The toolbox does not yet claim arbitrary CPTP/GKSL channel learning by
 construction. See `docs/PHYSICALITY.md`.
@@ -73,20 +89,6 @@ Machine-readable manifest:
 
 ```bash
 scope-static-toolbox --json
-```
-
-Run the current canonical learner acceptance artifact:
-
-```bash
-learner-acceptance \
-  --config configs/scope_static/learner_acceptance.yaml
-```
-
-Equivalent module form:
-
-```bash
-python -m scope_static.experiments.qec_noise_catalog.learner_acceptance \
-  --config configs/scope_static/learner_acceptance.yaml
 ```
 
 Generate a user-defined noisy mechanism dataset:
@@ -116,15 +118,15 @@ Data preparation also emits:
   class, declared channel dimension, unitarity, Kraus trace preservation,
   readout stochasticity, and parameter validity for every enabled mechanism
   record.
-- `Layer1_teacher_physicality_audit/`, the legacy-named post-sampling blocking audit.
+- `Layer1_teacher_physicality_audit/`, the post-sampling blocking audit.
 
-Teacher produces:
+Layer 2 teacher self-audit produces:
 
 - teacher self-distinguishment metrics;
 - BA, ARI, NMI, and min-recall gates;
 - coverage and no-learner-prediction audits.
 
-Learner produces:
+Layer 3 learner produces:
 
 - Z/X visible feature schema and deterministic visible ceiling;
 - no-leakage learner predictions;
@@ -141,6 +143,14 @@ Stage 3 discovery scaffolding produces:
   quotient metrics, and model-selection leakage audits.
 - Stage 3B.1 learned assignment matrix, visible prototypes, covariance
   parameters, heldout visible-generation metrics, and label-leakage audits.
+
+Stage 4 bridge/transfer scaffolding produces:
+
+- S4.0 bridge freeze and schema/leakage audits;
+- S4.0.5 source ceiling and projection alias audits;
+- S4.1 source MLP/Attention-VQ pretrain artifacts;
+- S4.6 Google-unit source freeze, controls, transfer reports, and robustness
+  closeout reports.
 
 ## Current Pre-Release Boundary
 
@@ -161,3 +171,5 @@ Roadmaps:
 
 - `docs/STAGE2_ROADMAP.md`: closed Stage 2 validation record.
 - `docs/STAGE3_ROADMAP.md`: active Stage 3 discovery plan.
+- `docs/STAGE4_ROADMAP.md`: S4 bridge-survival, neural pretrain, and
+  frozen-transfer gates.

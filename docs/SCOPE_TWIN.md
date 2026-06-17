@@ -9,6 +9,12 @@ The current code does not implement the full amortized physical parameter-field
 object below. It implements the SCOPE-Static, controlled-catalog, and Stage 3
 visible-discovery pieces that form the evidence ladder toward this target.
 
+As of 2026-06, the exact CPTP physical substrate — Layer 3 (PhysDec) and Layer 4
+(circuit-level likelihood) below — is an active, prioritized build (see *Current
+Reprioritization* just before *Contributions*), pulled ahead of the visible
+neural-discovery ordering because the operational target is the interventional
+noise simulator with mechanism knobs.
+
 ##### Notation and Object Contract
 
 This contract is part of the model specification. Before running or interpreting new
@@ -791,6 +797,39 @@ simultaneously along six axes:
 CPTP/GKSL constraints are therefore necessary physical structure for this
 contract, but they are not sufficient evidence for the SCOPE-Twin claim.
 
+##### Operational Target: A Noise Simulator With Mechanism Knobs
+
+The ideal endpoint is not merely a generator that produces samples similar to
+held-out syndrome data. Under the target assumption that mechanisms, locations,
+and strengths are recovered accurately, SCOPE-Twin should act as a controllable
+QEC noise simulator with mechanism-level knobs.
+
+In that setting, the recovered object can support questions such as:
+
+- What happens to visible syndrome statistics and logical error if a specific
+  mechanism is reduced, amplified, or removed?
+- Which physical location, gate family, patch, basis, or drift component is the
+  current bottleneck for logical performance?
+- Which rare but decoder-relevant failure modes should be generated for
+  augmentation or stress testing?
+- Which calibration, layout, schedule, or probe change should be tried first
+  because the model predicts the largest downstream improvement?
+- How will a decoder or decoder prior behave under forecast drift rather than
+  only under the distribution already observed?
+
+This makes the intended artifact a noise-engineering tool rather than only a
+distributional replay model. NLL, first-moment MAE, covariance Frobenius
+distance, and two-sample tests remain useful fidelity checks, but they are not
+the final use case. Their engineering value appears when the learned mechanism
+field supports counterfactual interventions, decoder-facing utility tests,
+drift forecasts, and action ranking.
+
+This target should also discipline claim wording. A Google visible-surface model
+that replays public syndrome-response statistics may be strong evidence for
+distributional fidelity on that surface, but it is not by itself evidence that
+Google physical mechanisms, locations, strengths, decoder utility, or drift
+control have been recovered.
+
 ##### Current Implementation Bridge
 
 The implemented repository currently covers three pieces of the SCOPE-Twin
@@ -842,14 +881,47 @@ evidence ladder.
    \(\Theta_\psi(c)\), not a physical channel decoder, and not a decoder-utility
    or drift-prediction result.
 
-The next implementation stage is **S4 neural syndrome-response discovery**:
-learn a neural representation over \(x^{\mathrm{vis}}_\xi\) with an auditable
-prototype or VQ bottleneck \(\Pi_{\xi k}\), preserve the no-oracle and
-no-surrogate-ID controls from Stage 3, and require raw-target-only plus
-block-normalized improvements over the Stage 3 prototype mixture. S4 remains a
-visible-observation discovery stage unless and until its latent variables are
-connected to a physical decoder \(\mathrm{PhysDec}_t\) and circuit-level
-observation distribution \(p_{\Theta}(y\mid c)\).
+One discovery track is **S4 neural syndrome-response discovery** (in parallel,
+and now prioritized, is the exact CPTP physical substrate of *Current
+Reprioritization* below): learn a neural representation over
+\(x^{\mathrm{vis}}_\xi\) with an auditable prototype or VQ bottleneck
+\(\Pi_{\xi k}\), preserve the no-oracle and no-surrogate-ID controls from
+Stage 3, and require raw-target-only plus block-normalized improvements over the
+Stage 3 prototype mixture. S4 remains a visible-observation discovery stage
+unless and until its latent variables are connected to a physical decoder
+\(\mathrm{PhysDec}_t\) and circuit-level observation distribution
+\(p_{\Theta}(y\mid c)\).
+
+##### Current Reprioritization (2026-06): Exact CPTP Substrate First
+
+The written ladder above reaches the physical channel decoder (Layer 3) and the
+circuit-level observation likelihood (Layer 4) only after visible neural
+discovery is stable. That ordering is reprioritized: because the operational
+target is the interventional noise simulator with mechanism knobs, the **exact
+CPTP physical substrate is being built now**, in high-precision small-scale
+(\(\le\sim 10\) qubit) form, in parallel with rather than after the visible
+discovery track.
+
+Built and tested:
+
+- \(\mathrm{PhysDec}_t\) in Kraus/Stinespring form: a CPTP-by-construction
+  channel decoder \(\theta\mapsto\mathcal E\in\mathrm{CPTP}\) with differentiable
+  recovery (`scope_static.primitives.diff_cptp_channel`). Because it is
+  CPTP-by-construction, \(R_{\mathrm{phys}}\) is omitted.
+- the Layer 4 forward map \(\mathcal C_\Theta(c)=\prod_q(\mathcal E_q\circ
+  \mathcal G_q)\) and the exact likelihood \(p_\Theta(y\mid c)=\operatorname{Tr}
+  [M_y\,\mathcal C_\Theta(c)(\rho_0)]\) for non-Clifford gates and non-Pauli
+  channels (`scope_static.primitives.diff_circuit_sim`).
+
+Not yet built and not yet claimed: the Layer 2 orbit-compression field
+\(\theta_{i,t}=\rho_t(g_{i\leftarrow\omega})\vartheta_{\omega,t}+U_{\omega,t}
+z_{i,t}\); the GKSL form of \(\mathrm{PhysDec}\); the multi-round mid-circuit
+measurement instrument likelihood; the amortized context map
+\(f_\psi:c\mapsto\Theta_\psi(c)\); and, critically, any counterfactual,
+decoder-utility, drift, or cross-context result. This is a capability substrate,
+not a validated twin: recovery is still only up to the observational alias
+quotient, and interventional (knob) validity is unproven, since observational
+equivalence need not be interventional equivalence.
 
 ##### Contributions
 
@@ -1175,8 +1247,12 @@ $$
 
 ### Later Stage: Amortized Physical SCOPE-Twin
 
-Only after the visible neural discovery stage is stable should the project move
-to the amortized physical field:
+The exact CPTP substrate (PhysDec plus fixed-context circuit likelihood) is being
+built now; see *Current Reprioritization*. What remains genuinely later is the
+**amortized context map** \(f_\psi:c\mapsto\Theta_\psi(c)\): only after the
+visible neural discovery stage is stable should the project combine amortized
+context-conditioning with latent quotient discovery into the amortized physical
+field:
 
 $$
 f_\psi:c\mapsto\Theta_\psi(c).

@@ -124,7 +124,7 @@ def generate_full_circuit_cudaq_teacher_dataset(
     if bool(cfg.get("layer1p_teacher_contract_required", False)) and not (
         bool(static_artifacts["cptp_guardrail_passed"]) and bool(static_artifacts["mechanism_definition_audit_passed"])
     ):
-        raise RuntimeError("Layer1.P teacher contract failed before sampling")
+        raise RuntimeError("Layer1 preprocessing teacher-generator contract failed before sampling")
 
     shot_batch_size = _shot_batch_size(cfg, shots=shots, num_qubits=n, circuit_depth=depth)
     verbose = bool(cfg.get("full_circuit_cudaq_progress_logging", True))

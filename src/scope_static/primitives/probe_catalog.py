@@ -1,14 +1,20 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
+import math
 import time
 from typing import Iterable
 
 import numpy as np
 
 from ..numerics import NUMERICAL_ZERO
-from scope_static.primitives.channels import MechanismSpec, canonical_single_qubit_axis, mechanism_error_axis, mechanism_operation_axis
+from scope_static.primitives.channels import (
+    M13_DEFAULT_DRIFT_VISIBILITY_SCALE,
+    MechanismSpec,
+    canonical_single_qubit_axis,
+    mechanism_error_axis,
+    mechanism_operation_axis,
+)
 from scope_static.primitives.mechanism_catalog import (
     IMPLEMENTED_MECHANISM_IDS,
     LEGACY_TO_CURRENT_MECHANISM_IDS,
@@ -22,7 +28,6 @@ from .probe_contract import (
     EDGE_ORIENTATION_RULE,
     MIXED_BASIS_ACTIVE_PROBES,
     PHYC1_LEGACY_STAGE_NAME,
-    PHYC1_PREFLIGHT_STAGE_NAME,
     RZZ_DEPTH_SWEEP_DEPTHS,
     RZZ_DEPTH_SWEEP_PROBES,
     RZZ_ECHO_CONTRAST_PROBES,
@@ -37,7 +42,6 @@ from .probe_contract import (
     mechanism_counts,
     probe_names,
 )
-from .preflight import audit_cudaq_backend, write_backend_audit
 
 
 GATE_MECHANISM_IDS = set(IMPLEMENTED_MECHANISM_IDS).difference(set(READOUT_MECHANISM_IDS) | set(PREP_RESET_MECHANISM_IDS))
@@ -132,7 +136,12 @@ def default_teacher_config() -> dict[str, object]:
             "M10": {"epsilon_x": 0.024, "epsilon_y": 0.017},
             "M11": {"epsilon": 0.025},
             "M12": {"gamma": 0.012},
-            "M13": {"operation_axis": "rx", "epsilon_mean": 0.032, "epsilon_span": 0.018},
+            "M13": {
+                "operation_axis": "rx",
+                "epsilon_mean": 0.032,
+                "epsilon_span": 0.018,
+                "drift_visibility_scale": M13_DEFAULT_DRIFT_VISIBILITY_SCALE,
+            },
             "M14": {"operation_axis": "rx", "error_axis": "rz", "epsilon": 0.028},
             "M15": {"eta": 0.02},
             "M16": {"p": 0.02},
@@ -178,7 +187,17 @@ def build_default_oracle_mechanisms(config: dict[str, object] | None = None) -> 
     if "M7" in enabled:
         specs.append(MechanismSpec("M7", MECHANISM_NAMES["M7"], 1, dict(params.get("M7", {})), instruction="rz", qubits=(single_targets["M7"],)))
     if "M11" in enabled:
-        specs.append(MechanismSpec("M11", MECHANISM_NAMES["M11"], 1, dict(params.get("M11", {})), instruction="id", qubits=(single_targets["M11"],)))
+        m11_target = single_targets["M11"]
+        specs.append(
+            MechanismSpec(
+                "M11",
+                MECHANISM_NAMES["M11"],
+                1,
+                _m11_spectator_overlay_parameters(dict(params.get("M11", {})), circuit_id=0, target=m11_target, num_qubits=n),
+                instruction="id",
+                qubits=(m11_target,),
+            )
+        )
     if "M13" in enabled:
         drift = dict(params.get("M13", {}))
         instruction = _operation_instruction_from_params(drift, default="rx")
@@ -243,46 +262,6 @@ def build_default_oracle_mechanisms(config: dict[str, object] | None = None) -> 
             q = (readout_idx + int(cfg.get("balanced_batch_index", 0) or 0)) % n
             specs.append(MechanismSpec(mech, name, 1, dict(params.get(mech, {})), instruction="measure", qubits=(q,)))
     return sorted(specs, key=lambda spec: (_mechanism_sort_key(spec.mechanism_id), spec.qubits))
-
-
-def generate_catalog_teacher_dataset(
-    config: dict[str, object] | None = None,
-    *,
-    output_dir: str | Path = f"outputs/scope_static/{PHYC1_LEGACY_STAGE_NAME}",
-    preflight_dir: str | Path = f"outputs/scope_static/{PHYC1_PREFLIGHT_STAGE_NAME}",
-) -> dict[str, object]:
-    """Compatibility shim for legacy imports.
-
-    Layer1.P is the only public physical-process teacher path. This legacy
-    function keeps old callers working, but it no longer selects the retired
-    local-observable or bare full-circuit teacher directly.
-    """
-
-    cfg = _merged_config(config)
-    audit = audit_cudaq_backend(
-        backend=str(cfg.get("backend", "cudaq")),
-        require_gpu=bool(cfg.get("require_gpu", True)),
-        cudaq_target=str(cfg.get("cudaq_target", "nvidia")),
-        cudaq_target_options=str(cfg.get("cudaq_target_options", "fp32")),
-    )
-    write_backend_audit(audit, preflight_dir)
-    if not bool(audit.get("backend_usable")):
-        raise RuntimeError(f"{PHYC1_LEGACY_STAGE_NAME} requires a passing {PHYC1_PREFLIGHT_STAGE_NAME} backend audit")
-
-    from scope_static.data_preparation import generate_layer1p_teacher_dataset
-
-    cfg["backend"] = "cudaq"
-    summary = generate_layer1p_teacher_dataset(cfg, output_dir=output_dir)
-    summary["backend_audit_dir"] = str(preflight_dir)
-    summary["cudaq_backend"] = {
-        "target": audit.get("cudaq_target"),
-        "gpu_count": audit.get("cudaq_gpu_count"),
-        "tiny_cudaq_sample": audit.get("tiny_cudaq_sample"),
-    }
-    return summary
-
-
-generate_physical_teacher_dataset = generate_catalog_teacher_dataset
 
 
 def build_probe_circuits(config: dict[str, object] | None = None):
@@ -1261,6 +1240,169 @@ def _balanced_repetitions(config: dict[str, object]) -> int:
     return max(1, int(config.get("balanced_min_instances_per_mechanism", 3)))
 
 
+BALANCED_STRENGTH_PARAMETER_NAMES = (
+    "p",
+    "p_x",
+    "p_y",
+    "p_z",
+    "p0_to_1",
+    "p1_to_0",
+    "gamma",
+    "gamma_up",
+    "eta",
+    "epsilon",
+    "epsilon_x",
+    "epsilon_y",
+    "strength",
+    "spectator_strength",
+)
+
+
+def _balanced_strength_variants_enabled(config: dict[str, object]) -> bool:
+    return bool(config.get("balanced_strength_variants", False))
+
+
+def _balanced_strength_variant_strategy(config: dict[str, object]) -> str:
+    return str(config.get("balanced_strength_variant_strategy", "monotone")).strip().lower()
+
+
+def _balanced_strength_context_correlation(*, repetitions: int, stride: int, offset: int) -> float:
+    if int(repetitions) <= 2:
+        return 1.0
+    context_ranks = np.arange(int(repetitions), dtype=float)
+    strength_ranks = np.asarray([(idx * int(stride) + int(offset)) % int(repetitions) for idx in range(int(repetitions))], dtype=float)
+    return abs(float(np.corrcoef(context_ranks, strength_ranks)[0, 1]))
+
+
+def _balanced_strength_decorrelated_offset(
+    config: dict[str, object],
+    *,
+    repetitions: int,
+    stride: int,
+    mechanism_id: str,
+    location_period: int | None = None,
+    location_offset: int = 0,
+) -> int:
+    max_corr = float(config.get("balanced_strength_max_context_corr", 0.05))
+    scored: list[tuple[float, float, float, int]] = []
+    for offset in range(int(repetitions)):
+        context_corr = _balanced_strength_context_correlation(repetitions=repetitions, stride=stride, offset=offset)
+        location_corr = 0.0
+        if location_period is not None and int(location_period) > 2:
+            locations = np.asarray(
+                [(int(location_offset) + idx) % int(location_period) for idx in range(int(repetitions))], dtype=float
+            )
+            strength_ranks = np.asarray(
+                [(idx * int(stride) + int(offset)) % int(repetitions) for idx in range(int(repetitions))], dtype=float
+            )
+            location_corr = abs(float(np.corrcoef(locations, strength_ranks)[0, 1]))
+        scored.append((max(context_corr, location_corr), context_corr, location_corr, offset))
+    scored = sorted(scored, key=lambda item: (item[0], item[1], item[2], item[3]))
+    eligible = [item for item in scored if item[0] <= max_corr]
+    if not eligible:
+        eligible = scored[:1]
+    return int(eligible[_mechanism_sort_key(str(mechanism_id)) % len(eligible)][3])
+
+
+def _balanced_strength_rank(
+    config: dict[str, object],
+    *,
+    circuit_id: int,
+    mechanism_id: str,
+    location_period: int | None = None,
+    location_offset: int = 0,
+) -> int:
+    repetitions = _balanced_repetitions(config)
+    if repetitions <= 1:
+        return 0
+    base_rank = int(circuit_id) % repetitions
+    strategy = _balanced_strength_variant_strategy(config)
+    if strategy in {"monotone", "linear", "context_monotone"}:
+        return base_rank
+    if strategy in {"decorrelated_latin", "latin", "mechanism_latin_square"}:
+        stride = int(config.get("balanced_strength_decorrelation_stride", 0) or 0)
+        if stride <= 0:
+            stride = max(1, repetitions // 2 - 1)
+        while math.gcd(stride, repetitions) != 1:
+            stride += 1
+        offset = _balanced_strength_decorrelated_offset(
+            config,
+            repetitions=repetitions,
+            stride=stride,
+            mechanism_id=str(mechanism_id),
+            location_period=location_period,
+            location_offset=location_offset,
+        )
+        return (base_rank * stride + offset) % repetitions
+    raise ValueError(
+        "balanced_strength_variant_strategy must be one of "
+        "'monotone' or 'decorrelated_latin'"
+    )
+
+
+def _balanced_strength_scale(
+    config: dict[str, object],
+    *,
+    circuit_id: int,
+    mechanism_id: str,
+    location_period: int | None = None,
+    location_offset: int = 0,
+) -> float:
+    repetitions = _balanced_repetitions(config)
+    if repetitions <= 1:
+        return 1.0
+    low = float(config.get("balanced_strength_min_scale", 0.65))
+    high = float(config.get("balanced_strength_max_scale", 1.35))
+    if high < low:
+        low, high = high, low
+    rank = _balanced_strength_rank(
+        config,
+        circuit_id=circuit_id,
+        mechanism_id=mechanism_id,
+        location_period=location_period,
+        location_offset=location_offset,
+    )
+    fraction = float(rank) / float(repetitions - 1)
+    return low + (high - low) * fraction
+
+
+def _apply_balanced_strength_variant(
+    params: dict[str, object],
+    *,
+    config: dict[str, object],
+    circuit_id: int,
+    mechanism_id: str,
+    location_period: int | None = None,
+    location_offset: int = 0,
+) -> dict[str, object]:
+    if not _balanced_strength_variants_enabled(config):
+        return dict(params)
+    scale = _balanced_strength_scale(
+        config,
+        circuit_id=circuit_id,
+        mechanism_id=mechanism_id,
+        location_period=location_period,
+        location_offset=location_offset,
+    )
+    out = dict(params)
+    scaled_values: list[float] = []
+    for key in BALANCED_STRENGTH_PARAMETER_NAMES:
+        if key not in out or isinstance(out.get(key), bool):
+            continue
+        try:
+            value = float(out[key])  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            continue
+        scaled = value * scale
+        if key.startswith("p") or key.startswith("gamma") or key == "eta":
+            scaled = min(max(scaled, 0.0), 1.0)
+        out[key] = scaled
+        scaled_values.append(abs(float(scaled)))
+    if scaled_values and "strength" not in out:
+        out["strength"] = max(scaled_values)
+    return out
+
+
 def _circuit_depth(config: dict[str, object]) -> int:
     return circuit_depth(config)
 
@@ -1319,12 +1461,31 @@ def _build_balanced_oracle_mechanism_batch(config: dict[str, object], *, circuit
         if mech not in enabled:
             continue
         local_params = dict(params.get(mech, {}))
+        target_qubit = (int(target) + offset) % n
+        location_offset = int(target) % n
         if mech == "M13":
             epsilons = _drift_epsilons(local_params, _balanced_repetitions(config))
-            local_params["epsilon"] = epsilons[int(circuit_id) % len(epsilons)]
+            epsilon_rank = _balanced_strength_rank(
+                config,
+                circuit_id=circuit_id,
+                mechanism_id=mech,
+                location_period=n,
+                location_offset=location_offset,
+            )
+            local_params["epsilon"] = epsilons[epsilon_rank % len(epsilons)]
             instruction = _operation_instruction_from_params(local_params, default="rx")
         if mech == "M14":
             instruction = _operation_instruction_from_params(local_params, default="rx")
+        if mech == "M11":
+            local_params = _m11_spectator_overlay_parameters(local_params, circuit_id=circuit_id, target=target_qubit, num_qubits=n)
+        local_params = _apply_balanced_strength_variant(
+            local_params,
+            config=config,
+            circuit_id=circuit_id,
+            mechanism_id=mech,
+            location_period=n,
+            location_offset=location_offset,
+        )
         specs.append(
             MechanismSpec(
                 mech,
@@ -1332,7 +1493,7 @@ def _build_balanced_oracle_mechanism_batch(config: dict[str, object], *, circuit
                 1,
                 local_params,
                 instruction=instruction,
-                qubits=((int(target) + offset) % n,),
+                qubits=(target_qubit,),
                 circuit_id=circuit_id,
             )
         )
@@ -1356,12 +1517,21 @@ def _build_balanced_oracle_mechanism_batch(config: dict[str, object], *, circuit
         if mech not in enabled:
             continue
         left = (int(base_left) + pair_offset) % max(1, n - 1)
+        location_period = max(1, n - 1)
+        local_params = _apply_balanced_strength_variant(
+            dict(params.get(mech, {})),
+            config=config,
+            circuit_id=circuit_id,
+            mechanism_id=mech,
+            location_period=location_period,
+            location_offset=int(base_left) % location_period,
+        )
         specs.append(
             MechanismSpec(
                 mech,
                 name,
                 2,
-                dict(params.get(mech, {})),
+                local_params,
                 instruction="rzz",
                 qubits=(left, left + 1),
                 circuit_id=circuit_id,
@@ -1376,7 +1546,15 @@ def _build_balanced_oracle_mechanism_batch(config: dict[str, object], *, circuit
     )):
         if mech in enabled:
             q = (readout_idx + offset) % n
-            specs.append(MechanismSpec(mech, name, 1, dict(params.get(mech, {})), instruction="measure", qubits=(q,), circuit_id=circuit_id))
+            local_params = _apply_balanced_strength_variant(
+                dict(params.get(mech, {})),
+                config=config,
+                circuit_id=circuit_id,
+                mechanism_id=mech,
+                location_period=n,
+                location_offset=readout_idx % n,
+            )
+            specs.append(MechanismSpec(mech, name, 1, local_params, instruction="measure", qubits=(q,), circuit_id=circuit_id))
     return sorted(specs, key=lambda spec: (_mechanism_sort_key(spec.mechanism_id), spec.qubits))
 
 
@@ -1403,6 +1581,34 @@ def _single_targets(num_qubits: int) -> dict[str, int]:
         "M34": 14,
     }
     return {key: min(max(0, value), n - 1) for key, value in requested.items()}
+
+
+def _m11_spectator_overlay_parameters(base: dict[str, object], *, circuit_id: int, target: int, num_qubits: int) -> dict[str, object]:
+    params = dict(base)
+    idx = int(circuit_id) % 4
+    base_mechanisms = ("M8", "M7", "M1", "M17")
+    coupling_axes = ("ZZ", "RZ", "readout_bias", "reset_bias")
+    timing_contexts = ("same_cycle", "prev_cycle", "same_cycle", "shot_block_drift")
+    victim_locations = ("edge", "qubit_id", "detector", "qubit_id")
+    aggressor_locations = ("adjacent_gate", "previous_cycle_edge", "same_cycle_qubit", "shot_block")
+    strength = float(params.get("strength", params.get("spectator_strength", params.get("epsilon", 0.02))))
+    n = max(1, int(num_qubits))
+    params.update(
+        {
+            "spectator_overlay_present": True,
+            "base_mechanism": base_mechanisms[idx],
+            "victim_relative_location": victim_locations[idx],
+            "aggressor_relative_location": aggressor_locations[idx],
+            "coupling_axis": coupling_axes[idx],
+            "timing_context": timing_contexts[idx],
+            "strength": strength,
+            "spectator_strength": strength,
+            "victim_qubit": int(target) % n,
+            "aggressor_qubit": (int(target) + 1 + idx) % n,
+            "claims_standalone_flat_mechanism": False,
+        }
+    )
+    return params
 
 
 def _operation_instruction_from_params(parameters: dict[str, object], *, default: str = "rx") -> str:

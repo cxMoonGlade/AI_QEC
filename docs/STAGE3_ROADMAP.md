@@ -56,24 +56,45 @@ Stage 3 starts from the accepted learner visible surface:
 - X-prepared states for phase/coherence observability;
 - no Y-basis preparation;
 - no Y-basis measurement;
-- multi-context batches for drifted mechanisms such as M13;
+- multi-context batches for drifted mechanisms such as legacy M13 / public M7;
 - raw time-sequence features retained before derived summaries;
 - learner-visible operation/instruction context metadata from a fixed public
   instruction alphabet. This is circuit context, not a mechanism label or
   mechanism-instance surrogate ID.
 
-M13 is not a single-context mechanism-recovery target. It is a
-context-dependent latent-drift recovery target. Single-context failure is not a
-Stage 3 failure by itself; multi-context recovery is the intended test.
-When an overcomplete discovery model splits M13 into pure context/drift
+Legacy M13 / public M7 is not a single-context mechanism-recovery target. It is
+a context-dependent latent-drift recovery target. Single-context failure is not
+a Stage 3 failure by itself; multi-context recovery is the intended test.
+When an overcomplete discovery model splits legacy M13 / public M7 into pure
+context/drift
 submodes, exact one-cluster label recall may be low even though the mechanism
-family is not confused with other mechanisms. Reports must distinguish exact
-label recall from evaluator-only M13 pure-submode recall.
+family is not confused with other mechanisms. Reports must distinguish legacy
+exact-ID recall from evaluator-only drift-submode recall.
 
-M14 is the paired operation-dependent control target. Its contract separates
-the visible operation axis from the error-generator axis: the first Stage 3
-catalog uses an `rx` operation site with an `rz` coherent error generator, so
-M14 is not another fixed `rx` overrotation.
+Legacy M6 / public F2 remains a flat RX-overrotation leaf, but the current
+Z/X-visible Stage 3 surface must not claim its flat-exact separation from
+legacy M13/public M7 when the visible geometry supports only coherent-control
+family plus drift/location/strength dimensions. Legacy M22-M23 / public F9-F10
+are likewise surface-conditional flat parasitic-coupling leaves until an
+axis-sensitive quadrature probe exposes XX-vs-YY separation.
+Targeted diagnostics for these cases must use mechanism sets with at least
+three labels; pair-only M6/M13 or M22/M23 diagnostics are not an accepted
+claim or repair path.
+
+Legacy M14 / public M8 is the operation-dependent control target. Its
+contract separates the visible operation axis from the error-generator axis:
+the first Stage 3 catalog uses an `rx` operation site with an `rz` coherent
+error generator, so it is not another fixed `rx` overrotation.
+
+The broader catalog is contract-typed in
+`scope_static.primitives.mechanism_catalog.MECHANISM_CONTRACTS`. Historical
+`M0`-`M34` values are `legacy_catalog_id` fields. Public semantic labels use
+`F0`-`Fn` for flat atomic targets and `M0`-`Mn` for non-flat
+family/dimension targets. Legacy exact-ID metrics remain useful evaluator-only
+diagnostics, but primary flat-cluster claims are allowed only for public `F*`
+labels whose legacy contracts have `primary_flat_cluster_target=true`.
+Aggregate, context-conditioned, operation-conditioned, mixture, surrogate, and
+overlay roles must be interpreted as family-plus-dimension recovery targets.
 
 Allowed learner inputs:
 
@@ -169,7 +190,8 @@ Deliverables:
 Acceptance:
 
 - exact-label Stage 3 claims are allowed only when the visible ceiling separates
-  the mechanisms;
+  the mechanisms and the mechanism contract allows a primary flat-cluster
+  target;
 - otherwise the target is quotient recovery, not exact mechanism recovery;
 - alias classes are fixed before model training and treated as evaluator-only
   ceiling information.
@@ -283,7 +305,8 @@ Artifacts:
 
 Later candidates:
 
-- contrastive context-consistency objective for M13/multi-context drift;
+- contrastive context-consistency objective for legacy M13 / public M7
+  multi-context drift;
 - local-inverse representation clustering.
 
 Acceptance:
@@ -302,6 +325,26 @@ The first implementation is conditional visible replay: fold-local generators
 are fit on Stage 3A train folds from frozen `visible_features.npy` and Stage
 3B.1 `learned_assignments.npy`, then scored on validation+test heldout rows.
 This is not an unconditional future-context prediction claim.
+
+For controlled-catalog runs, Stage 3C also emits the current S5 interpretation
+artifact, `s5_context_relative_mechanism_effect_audit.json`. S5 is a separate
+effect-audit claim layer: it reports evaluator-only context-conditioned
+error likelihood over context-relative cells and context-normalized visible
+strength after fitting, compares predicted effects against oracle evaluator
+effects on controlled teachers, and does not feed training or model selection.
+S5 "location" is therefore a likelihood/support claim conditioned on
+public/probe context, not absolute physical-coordinate recovery.
+Controlled S5 teachers must not make `context_id`, context-relative location,
+and mechanism strength the same hidden variable; context is the way to discover
+mechanism properties, not a property to balance as if real data were context
+balanced.
+Legacy `M11` / public `M6` spectator crosstalk is treated as a base-mechanism
+plus spectator-overlay family in S5, not as a required flat exact cluster.
+Stage 3C/S5 also writes `mechanism_taxonomy_contract_audit.json` and
+`mechanism_dimension_recovery_audit.json`. Acceptance uses
+`contract_typed_recovery_metrics`: public `F*` atomic flat targets require
+exact recovery, public `M*` non-flat targets require family/dimension recovery,
+and legacy M11/public M6 requires overlay signature recovery when present.
 
 Metrics:
 
@@ -324,13 +367,13 @@ Acceptance:
   oracle records and does not use mechanism labels, channels, PTMs, Kraus
   matrices, teacher IDs, or oracle prototypes.
 
-### Layer1.P: Physical Teacher Gate
+### Layer1 Preprocessing - Teacher Generator Physicality Gate
 
 Before Stage 3D robustness is cited as physical-teacher evidence, the teacher
-artifact should be generated by the first-class `Layer1.P_teacher` path. This
-path validates the local CPTP/POVM mechanism contract before sampling, runs
-full-circuit CUDA-Q Born-rule sampling, and then runs
-`Layer1.P_teacher_physicality_audit` as a blocking post-sampling gate.
+artifact should be generated by the first-class Layer1 preprocessing - teacher
+generator path. This path validates the local CPTP/POVM mechanism contract
+before sampling, runs full-circuit CUDA-Q Born-rule sampling, and then runs the
+teacher physicality audit as a blocking post-sampling gate.
 
 Acceptance:
 
@@ -361,7 +404,7 @@ Implementation order:
 4. `S3D.4` K undercomplete/exact/overcomplete stress;
 5. `S3D.5` finite-shot sensitivity;
 6. `S3D.6` seed/fold stability;
-7. `S3D.7` M13/M14 targeted robustness;
+7. `S3D.7` legacy M13/public M7 and legacy M14/public M8 targeted robustness;
 8. `S3D.8` covariance-floor / likelihood-degeneracy audit.
 
 The first control is the assignment-shuffle generator audit:
@@ -491,7 +534,8 @@ Purpose:
 Acceptance:
 
 - accepted result survives seed/fold changes;
-- M13 is only expected to be fully recoverable in multi-context mode;
+- legacy M13 / public M7 is only expected to be fully recoverable in
+  multi-context mode;
 - observational aliases are reported as quotient classes, not forced labels;
 - S3D.1 passes before S3C replay is described as assignment-structure
   dependent;
@@ -527,6 +571,8 @@ Current Google Stage 3 closeout adapter:
 scope-google-s3-visible-cache-v2 --config configs/scope_static/google_s3_visible_cache_v2.yaml
 scope-google-s3-visible-aggregate-v2 --config configs/scope_static/google_s3_visible_aggregate_v2.yaml
 scope-google-s3-visible-adapter-v2 --config configs/scope_static/google_s3_visible_adapter_v2.yaml
+scope-stage3b1-discovery --config configs/scope_static/google_s3_visible_stage3b1_raw_multiview.yaml
+scope-stage3c-generator --config configs/scope_static/google_s3_visible_stage3c_raw_multiview.yaml
 ```
 
 Acceptance is artifact-contract only:
@@ -561,8 +607,7 @@ outputs/google_static/google_s3_visible_surface_v2/S3A_protocol_freeze/
   probe_schedule_manifest.json
 ```
 
-Historical Google DEM-proxy scorecards are archived separately and are not the
-current Google Stage 3 path.
+Superseded Google DEM-proxy scorecards are not the current Google Stage 3 path.
 
 Stage 3 Google V2 closeout claim:
 
@@ -572,6 +617,18 @@ syndrome-response structure. Raw-target-only scoring beats global/mean-only,
 assignment-shuffle, feature-scramble, and public-stratified-null controls. This
 is not true physical mechanism recovery because Google data provide no hidden
 mechanism partition.
+
+Google provides no true mechanism labels. The teacher-learner route therefore
+uses Stage 3A frozen public syndrome-response signatures as the learner-visible
+surface, B1 learns latent prototype assignments in `no_oracle_labels` mode, and
+C scores whether those assignments replay heldout visible structure better than
+visible-only null controls.
+
+The current recommended Google V2 B1 contract is fixed K=35, matching the
+controlled S3/S5 allM catalog cardinality as a no-oracle design prior. That
+prior is not a Google label source: it is recorded in the artifact contract,
+must not be used for feature construction or oracle scoring, and should be
+reported separately from the K=70 overcomplete stress run.
 ```
 
 The next research stage is S4 neural syndrome-response discovery: use a neural
@@ -630,10 +687,15 @@ catalog physicality audit present for catalog-mechanism replay
 
 ## Discovery Artifact Bundle
 
-The first Stage 3 implementation should write one reviewable artifact tree:
+The current controlled Stage 3 implementation writes one reviewable artifact
+tree rooted at the medium Layer1 preprocessing - teacher generator allM
+contract artifact:
 
 ```text
-outputs/PHYC_STAGE3_discovery/
+outputs/scope_static/s5_medium_hard_allM_contract_teacher_20q_depth20_rzz_active_g20_strength_decorrelated_s1000/
+  S2D_PHYS1_teacher/
+  Layer1_teacher_physicality_audit/
+  S3A_protocol_freeze/
   config.yaml
   visible_feature_schema.json
   visible_feature_matrix.json

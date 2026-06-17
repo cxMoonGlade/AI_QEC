@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+from collections import Counter
 from pathlib import Path
 
 import numpy as np
 import yaml
 
 from google_s3_fixture import write_tiny_google_s3_dataset
+from scope_static.google.inventory import DATASET_SURFACE_SET1, GoogleLeaf
+import scope_static.google.s3_visible_common as s3_visible_common
 from scope_static.experiments.willow_data.s3_visible_cache_v2 import run_google_s3_visible_cache_v2_from_config
 from scope_static.experiments.willow_data.s3_visible_aggregate_v2 import run_google_s3_visible_aggregate_v2_from_config
 from scope_static.google.s3_visible_cache_v2 import (
@@ -39,8 +42,14 @@ def test_google_s3_visible_cache_v2_writes_public_precompute_artifacts(tmp_path:
     assert manifest["decision"] == "google_s3_visible_cache_v2_passed"
     assert manifest["schema_version"] == "scope_static_google_s3a_v2_public_precompute_cache_v1"
     assert manifest["context_count"] == 3
+    assert manifest["selection_policy"]["strategy"] == "hierarchical_round_robin_by_public_distance_basis_then_rounds"
+    assert manifest["distance_counts"] == {"3": 3}
     assert manifest["shot_count"] == 12
     assert manifest["detector_count"] == 1
+    assert manifest["num_workers"] == 1
+    assert manifest["parallelism"]["mode"] == "serial_context_precompute"
+    assert manifest["total_wallclock_seconds"] >= 0.0
+    assert manifest["wallclock_table"]
     assert manifest["forbidden_feature_audit"]["passed"] is True
     assert loaded["config_hash"] == manifest["config_hash"]
     assert len(contexts) == 3
@@ -48,6 +57,15 @@ def test_google_s3_visible_cache_v2_writes_public_precompute_artifacts(tmp_path:
     assert contexts[0].obs_flips_actual.shape == (4, 1)
     assert contexts[0].round_band_memberships
     assert contexts[0].region_memberships
+    assert loaded["contexts"][0]["slowest_block"]["cache_block"] in {
+        "cache_writeout",
+        "circuit_load",
+        "dem_support",
+        "detector_geometry",
+        "observation_load_slice",
+        "public_memberships",
+        "source_file_manifest_hash",
+    }
 
     for name in [
         "cache_manifest.json",
@@ -57,6 +75,110 @@ def test_google_s3_visible_cache_v2_writes_public_precompute_artifacts(tmp_path:
         "summary.md",
     ]:
         assert (cache / name).exists()
+
+
+def test_google_s3_visible_context_selection_balances_public_context_fields(monkeypatch) -> None:
+    leaves = [
+        _fake_leaf(distance=distance, basis=basis, rounds=rounds, index=index)
+        for distance in (3, 5)
+        for basis in ("X", "Z")
+        for rounds in (1, 10)
+        for index in range(4)
+    ]
+    monkeypatch.setattr(s3_visible_common, "iter_google_leaves", lambda *_args, **_kwargs: leaves)
+
+    selected = s3_visible_common._select_contexts(
+        Path("/tmp/google"),
+        dataset_name=DATASET_SURFACE_SET1,
+        max_contexts=8,
+        basis=None,
+        distance=None,
+        rounds=None,
+    )
+
+    assert len(selected) == 8
+    assert Counter(leaf.distance for leaf in selected) == {3: 4, 5: 4}
+    assert Counter(leaf.basis for leaf in selected) == {"X": 4, "Z": 4}
+    assert Counter(leaf.rounds for leaf in selected) == {1: 4, 10: 4}
+    assert {
+        (leaf.distance, leaf.basis, leaf.rounds)
+        for leaf in selected
+    } == {
+        (distance, basis, rounds)
+        for distance in (3, 5)
+        for basis in ("X", "Z")
+        for rounds in (1, 10)
+    }
+
+
+def test_google_s3_visible_cache_v2_parallel_matches_serial(tmp_path: Path) -> None:
+    root = write_tiny_google_s3_dataset(tmp_path, contexts=4)
+    serial_cache = tmp_path / "cache_v2_serial"
+    parallel_cache = tmp_path / "cache_v2_parallel"
+    kwargs = {
+        "max_contexts": 4,
+        "round_bands": ("early", "mid", "late"),
+        "region_families": ("boundary_adjacent", "logical_support_neighborhood", "full_patch"),
+        "shotblocks_per_context": 2,
+        "shotblock_size": 2,
+        "min_shotblock_size": 2,
+        "hash_source_files": False,
+    }
+
+    serial = write_google_s3_visible_cache_v2(
+        dataset_root=root,
+        cache_dir=serial_cache,
+        num_workers=1,
+        **kwargs,
+    )
+    parallel = write_google_s3_visible_cache_v2(
+        dataset_root=root,
+        cache_dir=parallel_cache,
+        num_workers=2,
+        **kwargs,
+    )
+    serial_contexts, _serial_manifest = load_google_s3_visible_cache_v2(serial_cache)
+    parallel_contexts, _parallel_manifest = load_google_s3_visible_cache_v2(parallel_cache)
+
+    assert parallel["decision"] == "google_s3_visible_cache_v2_passed"
+    assert parallel["num_workers"] == 2
+    assert parallel["parallelism"]["mode"] == "process_context_precompute"
+    assert [row["cache_context_id"] for row in serial["contexts"]] == [
+        row["cache_context_id"] for row in parallel["contexts"]
+    ]
+    assert len(serial_contexts) == len(parallel_contexts)
+    for left, right in zip(serial_contexts, parallel_contexts):
+        assert left.cache_context_id == right.cache_context_id
+        assert np.array_equal(left.detection_events, right.detection_events)
+        assert np.array_equal(left.obs_flips_actual, right.obs_flips_actual)
+        assert left.region_memberships == right.region_memberships
+        assert left.round_band_memberships == right.round_band_memberships
+
+
+def _fake_leaf(*, distance: int, basis: str, rounds: int, index: int) -> GoogleLeaf:
+    path = Path(f"/tmp/google/d{distance}/{basis}/r{rounds}/{index}")
+    return GoogleLeaf(
+        dataset_name=DATASET_SURFACE_SET1,
+        dataset_family="surface_code",
+        root=Path("/tmp/google"),
+        path=path,
+        context_id=f"d{distance}_{basis}_r{rounds}_{index}",
+        sample_id=f"sample_{index:02d}",
+        sample_index=index,
+        patch_id=f"d{distance}_patch",
+        basis=basis,
+        distance=distance,
+        rounds=rounds,
+        rounds_label=f"r{rounds:02d}",
+        shots=4,
+        circuit_ideal=path / "circuit_ideal.stim",
+        circuit_noisy_si1000=path / "circuit_noisy_si1000.stim",
+        measurements=path / "measurements.b8",
+        sweep_bits=path / "sweep_bits.b8",
+        detection_events=path / "detection_events.b8",
+        obs_flips_actual=path / "obs_flips_actual.b8",
+        metadata=path / "metadata.json",
+    )
 
 
 def test_google_s3_visible_surface_v2_consumes_cache_without_source_root(tmp_path: Path) -> None:
@@ -146,6 +268,53 @@ def test_google_s3_visible_surface_v2_consumes_aggregate_cache(tmp_path: Path) -
     assert np.allclose(direct_matrix, aggregate_matrix)
 
 
+def test_google_s3_visible_aggregate_v2_parallel_matches_serial(tmp_path: Path) -> None:
+    root = write_tiny_google_s3_dataset(tmp_path, contexts=4)
+    cache = tmp_path / "cache_v2"
+    kwargs = {
+        "max_contexts": 4,
+        "round_bands": ("early", "mid", "late"),
+        "region_families": ("boundary_adjacent", "logical_support_neighborhood", "full_patch"),
+        "shotblocks_per_context": 2,
+        "shotblock_size": 2,
+        "min_shotblock_size": 2,
+    }
+    write_google_s3_visible_cache_v2(
+        dataset_root=root,
+        cache_dir=cache,
+        hash_source_files=False,
+        **kwargs,
+    )
+
+    serial = write_google_s3_visible_aggregate_cache_v2(
+        cache_dir=cache,
+        round_bands=kwargs["round_bands"],
+        region_families=kwargs["region_families"],
+        num_workers=1,
+    )
+    serial_rows = {
+        str(row["cache_context_id"]): np.load(cache / str(row["arrays_path"]))["feature_rows"].copy()
+        for row in serial["aggregate_contexts"]
+    }
+    parallel = write_google_s3_visible_aggregate_cache_v2(
+        cache_dir=cache,
+        round_bands=kwargs["round_bands"],
+        region_families=kwargs["region_families"],
+        num_workers=2,
+    )
+
+    assert parallel["decision"] == "google_s3_visible_aggregate_cache_v2_passed"
+    assert parallel["num_workers"] == 2
+    assert parallel["parallelism"]["mode"] == "threaded_context_aggregation"
+    assert [row["cache_context_id"] for row in serial["aggregate_contexts"]] == [
+        row["cache_context_id"] for row in parallel["aggregate_contexts"]
+    ]
+    for row in parallel["aggregate_contexts"]:
+        context_id = str(row["cache_context_id"])
+        parallel_rows = np.load(cache / str(row["arrays_path"]))["feature_rows"]
+        assert np.allclose(serial_rows[context_id], parallel_rows, rtol=1e-12, atol=1e-12)
+
+
 def test_google_s3_visible_cache_v2_config_wrapper(tmp_path: Path) -> None:
     root = write_tiny_google_s3_dataset(tmp_path, contexts=3)
     cache = tmp_path / "configured_cache_v2"
@@ -163,6 +332,7 @@ def test_google_s3_visible_cache_v2_config_wrapper(tmp_path: Path) -> None:
                     "shotblock_size": 2,
                     "min_shotblock_size": 2,
                     "hash_source_files": False,
+                    "num_workers": 2,
                 }
             },
             sort_keys=False,
@@ -173,6 +343,7 @@ def test_google_s3_visible_cache_v2_config_wrapper(tmp_path: Path) -> None:
     result = run_google_s3_visible_cache_v2_from_config(config_path=config)
 
     assert result["decision"] == "google_s3_visible_cache_v2_passed"
+    assert result["num_workers"] == 2
     assert (cache / "cache_manifest.json").exists()
 
 
@@ -208,6 +379,7 @@ def test_google_s3_visible_aggregate_v2_config_wrapper(tmp_path: Path) -> None:
                     "cache_dir": str(cache),
                     "round_bands": ["early", "mid", "late"],
                     "region_families": ["boundary_adjacent", "logical_support_neighborhood", "full_patch"],
+                    "num_workers": 2,
                 }
             },
             sort_keys=False,
@@ -218,4 +390,5 @@ def test_google_s3_visible_aggregate_v2_config_wrapper(tmp_path: Path) -> None:
     result = run_google_s3_visible_aggregate_v2_from_config(config_path=aggregate_config)
 
     assert result["decision"] == "google_s3_visible_aggregate_cache_v2_passed"
+    assert result["num_workers"] == 2
     assert (cache / "aggregates" / "aggregate_manifest.json").exists()

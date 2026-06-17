@@ -4,18 +4,18 @@ import json
 import math
 from pathlib import Path
 
-from scope_static.learner import run_phyc3_canonical_acceptance
+from scope_static.learner import run_layer3_acceptance
 from scope_static.experiments.qec_noise_catalog.learner_acceptance import run_learner_acceptance_from_config
 
 
-def test_phyc3_canonical_acceptance_selects_phyc3c_and_writes_quality(tmp_path: Path) -> None:
+def test_layer3_acceptance_selects_distributional_head_and_writes_quality(tmp_path: Path) -> None:
     paths = _write_acceptance_fixture(tmp_path)
 
-    result = run_phyc3_canonical_acceptance(**paths, output_dir=tmp_path / "PHYC3_canonical")
+    result = run_layer3_acceptance(**paths, output_dir=tmp_path / "Layer3_canonical")
 
     assert result["stage"] == "PHYC3_canonical_quality_acceptance"
-    assert result["public_layer"]["stage_name"] == "Learner Classification and Noise Generation (Learner)"
-    assert result["public_layer"]["legacy_alias"] == "PHYC3"
+    assert result["public_layer"]["stage_name"] == "Layer 3 learner"
+    assert "legacy_alias" not in result["public_layer"]
     assert [row["stage_index"] for row in result["public_layer_stack"]] == [1, 2, 3]
     assert result["contract_passed"] is True
     assert result["decision"] == "phyc3_canonical_quality_accepted"
@@ -41,30 +41,30 @@ def test_phyc3_canonical_acceptance_selects_phyc3c_and_writes_quality(tmp_path: 
         "rejected_sources.json",
         "canonical_prediction_source.json",
     ]:
-        assert (tmp_path / "PHYC3_canonical" / name).exists()
+        assert (tmp_path / "Layer3_canonical" / name).exists()
 
 
-def test_phyc3_canonical_acceptance_rejects_phyc2_that_emits_learner_predictions(tmp_path: Path) -> None:
+def test_layer3_acceptance_rejects_layer2_that_emits_learner_predictions(tmp_path: Path) -> None:
     paths = _write_acceptance_fixture(tmp_path)
     phyc2_metrics = json.loads((paths["phyc2_dir"] / "metrics.json").read_text())
     phyc2_metrics["phyc2_emits_learner_grouped_predictions"] = True
     phyc2_metrics["sampled_observation_learner_diagnostic"] = {"legacy": True}
     (paths["phyc2_dir"] / "metrics.json").write_text(json.dumps(phyc2_metrics))
 
-    result = run_phyc3_canonical_acceptance(**paths, output_dir=tmp_path / "PHYC3_canonical_bad")
+    result = run_layer3_acceptance(**paths, output_dir=tmp_path / "Layer3_canonical_bad")
 
     assert result["contract_passed"] is False
     assert result["phyc2_teacher_self_audit"]["checks"]["phyc2_emits_no_learner_predictions"] is False
     assert result["phyc2_teacher_self_audit"]["checks"]["phyc2_has_no_legacy_learner_diagnostic"] is False
 
 
-def test_phyc3_canonical_acceptance_requires_phyc3c_multi_context_protocol(tmp_path: Path) -> None:
+def test_layer3_acceptance_requires_distributional_multi_context_protocol(tmp_path: Path) -> None:
     paths = _write_acceptance_fixture(tmp_path)
     phyc3c_metrics = json.loads((paths["phyc3c_dir"] / "metrics.json").read_text())
     phyc3c_metrics["primary_mode"] = "single_realization"
     (paths["phyc3c_dir"] / "metrics.json").write_text(json.dumps(phyc3c_metrics))
 
-    result = run_phyc3_canonical_acceptance(**paths, output_dir=tmp_path / "PHYC3_canonical_single")
+    result = run_layer3_acceptance(**paths, output_dir=tmp_path / "Layer3_canonical_single")
 
     assert result["contract_passed"] is False
     assert result["phyc3c_accepted_learner_audit"]["checks"]["primary_mode_is_multi_context"] is False
@@ -89,7 +89,7 @@ def test_layer3_canonical_acceptance_config_alias(tmp_path: Path) -> None:
     result = run_learner_acceptance_from_config(config_path=config_path)
 
     assert result["contract_passed"] is True
-    assert result["public_layer"]["layer_short_name"] == "Learner"
+    assert result["public_layer"]["layer_short_name"] == "Layer3"
 
 
 def _write_acceptance_fixture(tmp_path: Path) -> dict[str, Path]:

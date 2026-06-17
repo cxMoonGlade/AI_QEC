@@ -1,0 +1,22 @@
+google_d3d5_baselines:
+  dataset_root: /home/cx/Document/google_72Q_surface_code_d3_d5_set1
+  dataset_name: google_72Q_surface_code_d3_d5_set1
+  output_dir: outputs/google_static/d3d5_baseline_suite
+  distances:
+    - 3
+    - 5
+  bases:
+    - X
+    - Z
+  rounds:
+    - 1
+    - 10
+  max_leaves_per_distance_basis: 2
+  max_shots_per_leaf: 2048
+  detector_limit: 32
+  train_fraction: 0.7
+  seed: 0
+  mixture_components: 4
+  max_iter: 20
+  torch_epochs: 12
+  torch_batch_size: 256

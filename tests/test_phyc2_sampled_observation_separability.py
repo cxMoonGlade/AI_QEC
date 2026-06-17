@@ -232,6 +232,6 @@ def test_phyc2_summary_names_teacher_self_only() -> None:
         }
     )
 
-    assert "# Layer 2: Teacher Self-Distinguishment (Teacher)" in summary
-    assert "Legacy alias: `PHYC2`" in summary
+    assert "# Layer 2 teacher self-audit" in summary
+    assert "Legacy alias" not in summary
     assert "Sampled-Observation Learner Diagnostic" not in summary

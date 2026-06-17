@@ -25,14 +25,6 @@ Enabling a mechanism ID selects its catalog definition and parameters. There is
 no separate global `enable_cptp` switch. Physicality comes from the selected
 mechanism implementation.
 
-The legacy full-circuit CUDA-Q implementation remains as the underlying sampler
-used by data preparation. Public evidence should cite the teacher contract,
-not a bare legacy sampler artifact.
-
-Legacy public entrypoints, including `scope-catalog-teacher` and
-`scope_static.primitives.probe_catalog.generate_catalog_teacher_dataset`, now route
-through data preparation as compatibility shims.
-
 ## Current Claim
 
 Valid:
@@ -52,6 +44,15 @@ Not claimed yet:
 - hardware CPTP/GST/GKSL learning;
 - proof that every future user-supplied custom channel is physical without a
   per-run audit.
+
+As of 2026-06, an exact CPTP physical substrate (SCOPE-Twin Layer 3/4: a
+CPTP-by-construction channel decoder and an exact differentiable
+circuit-to-observation forward model, `scope_static.primitives.diff_cptp_channel`
+and `diff_circuit_sim`) is an active, prioritized small-scale build. It makes the
+learner-side channel parameterization CPTP-by-construction, but it does not yet
+change any claim above: there is no validated twin, no hardware-channel recovery,
+and no counterfactual result, and recovery remains up to the observational alias
+quotient.
 
 ## Data-Preparation Generation Contract
 
@@ -158,8 +159,9 @@ used downstream.
 
 M13 and M14 are explicitly defined:
 
-- M13: context-dependent coherent overrotation attached to its declared
-  operation axis. Exact single-context recovery is not required.
+- M13: context-dependent coherent overrotation represented as a random-unitary
+  drift overlay on its declared operation axis. Exact single-context recovery is
+  not required.
 - M14: operation-dependent coherent error with a visible operation axis and a
   distinct error-generator axis. If the axes collapse to the same value, the
   Data-preparation pre-sampling contract fails.
@@ -181,8 +183,8 @@ to `observations.npz`.
 
 ## Post-Sampling Physicality Audit
 
-After sampling, data preparation runs `Layer1.P_teacher_physicality_audit`. This audit
-checks:
+After sampling, Layer1 preprocessing - teacher generator runs the teacher
+physicality audit. This audit checks:
 
 - unitary residuals;
 - Kraus trace-preservation residuals;

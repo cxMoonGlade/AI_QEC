@@ -1726,7 +1726,7 @@ inspired by https://github.com/muhos/QuaSARQ
 
 Status: implemented.
 
-The PHYC1/PHYC2/PHYC3 path is exposed through the Catalog Pipeline
+The Layer1/Layer 2/Layer 3 path is exposed through the Catalog Pipeline
 facade:
 
 ```text
@@ -1734,37 +1734,35 @@ scope_static.catalog_pipeline.run_catalog_pipeline
 scope_static.experiments.qec_noise_catalog.catalog_pipeline
 ```
 
-The pipeline keeps existing legacy stage artifacts where needed, but the claim
-vocabulary is:
+The claim vocabulary is:
 
 ```text
-PHYC1:
+Layer1 preprocessing - teacher generator:
   physical teacher generation from the declared teacher contract
 
-PHYC2:
-  teacher self-distinguishment from teacher-internal mechanism evidence
+Layer 2 teacher self-audit:
+  teacher self-audit from teacher-internal mechanism evidence
 
-PHYC3:
+Layer 3 learner:
   no-leakage learner recovery plus quantum/readout error quality from
   learner-visible grouped predictions
 ```
 
-PHYC2 is exposed through
+Layer 2 is exposed through
 `scope_static.experiments.qec_noise_catalog.teacher_distinguishment` as a
-companion audit for PHYC1 teacher artifacts. The runner keeps its historical
-name for compatibility, but the primary PHYC2 gate is teacher
-self-distinguishment: a teacher passes only when it can separate every generated
-mechanism with BA, min recall, ARI, and NMI all equal to `1.0`. PHYC2 does not
-emit learner grouped predictions. If grouped predictions are produced from
-learner-visible sampled observations, they belong to PHYC3 learner recovery.
+companion audit for Layer1 preprocessing teacher artifacts. The Layer 2 gate is
+teacher self-audit: a teacher passes only when it can separate every generated
+mechanism with BA, min recall, ARI, and NMI all equal to `1.0`. Layer 2 does
+not emit learner grouped predictions. If grouped predictions are produced from
+learner-visible sampled observations, they belong to Layer 3 learner recovery.
 Exact PTMs, exact channel fingerprints, teacher-self signatures, oracle
 mechanism IDs, and oracle labels remain evaluator-only and cannot be learner
 feature inputs.
 
-PHYC2 has two support variants:
+Layer 2 has two support variants:
 
 ```text
-PHYC2-balanced:
+Layer2-balanced:
   Question: can the teacher self-distinguish every enabled mechanism?
   Use: teacher-identifiability gate.
   Support contract: equal record support per mechanism class.
@@ -1807,7 +1805,15 @@ A six-batch balanced allM run has recall steps of `1/6 = 0.1667`, so it is a
 useful smoke/stress artifact but still low support. Serious balanced
 separability runs should increase per-mechanism support when memory permits.
 
-Current PHYC2-balanced allM evidence uses the local-observable Torch CUDA
+The following PHYC2/PHYC3 local-observable runs are retained as historical
+Stage 2 catalog-separability evidence. They are not the current Stage 3/5 claim
+path. Current controlled Stage 3/5 evidence starts from:
+
+```text
+outputs/scope_static/s5_medium_hard_allM_contract_teacher_20q_depth20_rzz_active_g20_strength_decorrelated_s1000/
+```
+
+Historical PHYC2-balanced allM evidence used the local-observable Torch CUDA
 teacher with `local_observable_response_model: separability_v2` and
 `balanced_min_instances_per_mechanism: 30`:
 
@@ -1849,17 +1855,17 @@ features learner-visible.
 Each PHYS1 local-observable teacher artifact also writes
 `self_distinguishability_preflight.json`, which reports expected-response
 pairwise margins for readout aliases, RZZ aliases, and historically low-margin
-mechanism pairs before running PHYC2.
+targeted mechanism sets before running Layer 2.
 
-PHYC3 learner recovery reports `PHYC3.slot_only_leakage_control` style leakage
+Layer 3 learner recovery reports `PHYC3.slot_only_leakage_control` style leakage
 controls. These grouped controls use only observation-slot metadata, original
 `physical_qubits`, probe block ids, and layout/slot metadata. They exclude
 sampled bits, sampled response statistics, pair correlations, local-inverse
 features, exact PTMs, mechanism ids, and oracle labels. High slot-only balanced
-accuracy means the remap/layout is encoding mechanism identity and the PHYC3
+accuracy means the remap/layout is encoding mechanism identity and the Layer 3
 learner result should not be trusted.
 
-The data-preparation teachers support PHYC2-weighted data generation through
+The data-preparation teachers support Layer 2 weighted data generation through
 catalog-resolved `mechanism_weight_profile` names or explicit
 `mechanism_instance_counts`. Use `weighted_realistic_v1` for realistic-ish
 superconducting-QEC exposure imbalance and `weighted_discovery_floor_v1` when
@@ -1891,18 +1897,18 @@ oracle mechanism channel. It must reject teacher-self
 predictions as learner evidence.
 
 ```text
-PHYC2:
+Layer 2 teacher self-audit:
   Can the teacher self-distinguish every generated mechanism?
 
-PHYC3 learner recovery:
+Layer 3 learner recovery:
   Can sampled observations classify the mechanism without hidden/oracle leakage?
 
-PHYC3 error quality:
+Layer 3 error quality:
   If the no-leakage learner predicts a mechanism, does that prediction produce
   a close quantum/readout error object?
 ```
 
-Current PHYC3 weighted allM evidence:
+Historical PHYC3 weighted allM evidence:
 
 ```text
 outputs/scope_static/local_observable_gpu_allM_30q_depth30_weighted_v2_slot_remap/PHYC3_quantum_error_quality/
@@ -1922,14 +1928,9 @@ not proof that sampled observations came from Born-rule circuit physics.
 The public pre-release code responsibilities are:
 
 ```text
-data_preparation: Data Preparation (Prep)
-  legacy alias: PHYC1
-
-teacher: Teacher Self-Distinguishment (Teacher)
-  legacy alias: PHYC2
-
-learner: Learner Classification and Noise Generation (Learner)
-  legacy alias: PHYC3
+data_preparation: Layer1 preprocessing - teacher generator
+teacher: Layer 2 teacher self-audit
+learner: Layer 3 learner
 ```
 
 Data preparation writes the mechanism records, probe schedules, observations, and
@@ -2073,10 +2074,10 @@ now removes direct mechanism-label supervision to test latent mechanism
 structure recovery from the same learner-visible observation surface.
 
 The Born-local S2E.1 learner test is artifact-backed: it should consume an
-existing PHYC3 learner-recovery `metrics.json` plus the linked PHYC1 teacher
-metadata and write a separate S2E.1 report. Existing `separability_v2` learner
-outputs can be used as negative controls, but they do not satisfy the
-full-circuit source gate.
+existing Layer 3 learner-recovery `metrics.json` plus the linked Layer1
+preprocessing teacher metadata and write a separate S2E.1 report. Existing
+`separability_v2` learner outputs can be used as negative controls, but they do
+not satisfy the full-circuit source gate.
 
 The legacy PHYS2 oracle-fingerprint audit remains useful as a ceiling: it says
 whether the mechanism family is in principle distinguishable. It does not prove
@@ -2107,12 +2108,12 @@ Named mechanism sets:
 set_A: M0-M9
 set_B: M0-M14
 set_C: M0-M24
-set_D: M0-M34
-allM:  M0-M34
+set_D: legacy M0-M34
+allM:  legacy M0-M34
 ```
 
-Historical M0-M19 artifacts produced before the M0-M34 migration retain their
-old labels and should be treated as pre-taxonomy-migration results.
+Historical M0-M19 artifacts produced before the legacy M0-M34 migration retain
+their old labels and should be treated as pre-taxonomy-migration results.
 
 ### S2D.11_typed_gate_readout_prep_invariant_learner
 
@@ -2337,8 +2338,9 @@ leakage guardrails pass
 
 Interpretation: S2D.11b converts the S2D.11 strong partial into a pass. The
 remaining S2D.11 failure was gate-branch M1 calibration, not a readout/prep
-branch failure and not a missing-probe result. In current M0-M34 labels this is
-the M8 RZZ gate branch; the artifact name predates renumbering.
+branch failure and not a missing-probe result. In current legacy M0-M34 labels
+this is the legacy M8 / public F4 RZZ gate branch; the artifact name predates
+renumbering.
 
 Primary verdict rules:
 
@@ -2754,8 +2756,8 @@ scope-google-s3-visible-aggregate-v2 --config configs/scope_static/google_s3_vis
 scope-google-s3-visible-adapter-v2 --config configs/scope_static/google_s3_visible_adapter_v2.yaml
 ```
 
-The old Google DEM/static discovery runner is archived as a historical
-DEM-proxy diagnostic and is not the current Google Stage 3 path.
+The old Google DEM/static discovery runner has been removed from the active
+package and is not the current Google Stage 3 path.
 
 Google discovery records must report:
 
@@ -2767,8 +2769,7 @@ Google discovery records must report:
 
 ### Google S3 V2 Visible Surface Adapter
 
-Historical Google DEM-proxy diagnostics are archived separately. The current
-Google path builds a Stage 3 learner-visible surface from real Google
+The current Google path builds a Stage 3 learner-visible surface from real Google
 detection events and observable flips:
 
 ```bash

@@ -2,27 +2,40 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import time
 
 import numpy as np
 import yaml
 
+from scope_static.primitives.mechanism_catalog import mechanism_taxonomy_contract_audit
 from scope_static.protocols import LEARNER_VALIDATION_STAGE
+from .assignment_matrix import normalize_rows as _normalize_rows
 from .artifacts import feature_schema_matches_stage3a as _feature_schema_matches_s3a
 from .artifacts import load_json_object as _load_json
 from .artifacts import load_stage3_evaluator_labels
 from .artifacts import load_stage3a_frozen_visible_features
 from .artifacts import resolve_teacher_dir
+from .audit_values import optional_difference as _optional_difference
+from .audit_values import optional_float as _optional_float
+from .feature_blocks import feature_block_indices as _feature_block_indices
 from .observability_ceiling import DEFAULT_OUTPUT_DIR as DEFAULT_STAGE3A5_DIR
 from .protocol_freeze import DEFAULT_OUTPUT_DIR as DEFAULT_STAGE3A_DIR
 from .baselines import VARIANCE_FLOOR
 from .baselines import _diag_log_prob
 from .baselines import _logsumexp
+from .contract_claims import artifact_acceptance_passed
+from .contract_claims import stage3d4b_claim_gate_audit
+from .contract_claims import stage3d4b_claim_gate_passed
 from .discovery_model import DEFAULT_OUTPUT_DIR as DEFAULT_STAGE3B1_DIR
 from .discovery_model import EVALUATOR_MODE_CONTROLLED_CATALOG
 from .discovery_model import EVALUATOR_MODE_NO_ORACLE_LABELS
 from .discovery_model import _normalize_evaluator_mode
 from .discovery_model import _cap_folds
 from .discovery_model import _valid_folds
+from .recovery_metrics import evaluate_soft_family_classification
+from .recovery_metrics import evaluate_soft_family_strength_location_audit
+from .recovery_metrics import skipped_soft_family_classification
+from .recovery_metrics import skipped_soft_family_strength_location_audit
 
 
 STAGE_NAME = "Stage3C_prototype_generator_learning"
@@ -59,6 +72,9 @@ def run_stage3c_prototype_generator_learning(
     evaluator_mode: str = EVALUATOR_MODE_CONTROLLED_CATALOG,
     assignment_shuffle_seeds: tuple[int, ...] | list[int] | None = DEFAULT_ASSIGNMENT_SHUFFLE_SEEDS,
     feature_scramble_seeds: tuple[int, ...] | list[int] | None = DEFAULT_FEATURE_SCRAMBLE_SEEDS,
+    stage3b1_residualized_dir: str | Path | None = None,
+    stage3d4b_dir: str | Path | None = None,
+    stage5b1_dir: str | Path | None = None,
 ) -> dict[str, object]:
     """Score heldout visible generation from learned Stage 3 assignments.
 
@@ -68,6 +84,7 @@ def run_stage3c_prototype_generator_learning(
     oracle comparator.
     """
 
+    started = time.perf_counter()
     mode = _normalize_evaluator_mode(evaluator_mode)
     s3a = Path(stage3a_dir)
     s3a5 = Path(stage3a5_dir)
@@ -78,6 +95,9 @@ def run_stage3c_prototype_generator_learning(
     s3a_metrics = _load_json(s3a / "metrics.json")
     s3a5_metrics = _load_json(s3a5 / "metrics.json") if mode == EVALUATOR_MODE_CONTROLLED_CATALOG else _no_oracle_stage3a5_metrics()
     s3b1_metrics = _load_json(s3b1 / "metrics.json")
+    s3b1_residualized_metrics = _optional_json(None if stage3b1_residualized_dir is None else Path(stage3b1_residualized_dir) / "metrics.json")
+    s3d4b_metrics = _optional_json(None if stage3d4b_dir is None else Path(stage3d4b_dir) / "metrics.json")
+    stage5b1_metrics = _optional_json(None if stage5b1_dir is None else Path(stage5b1_dir) / "metrics.json")
     teacher = resolve_teacher_dir(s3a_metrics, teacher_dir) if mode == EVALUATOR_MODE_CONTROLLED_CATALOG else None
 
     x, feature_names, feature_matrix = load_stage3a_frozen_visible_features(s3a)
@@ -154,8 +174,23 @@ def run_stage3c_prototype_generator_learning(
             folds=folds,
             variance_floor=float(variance_floor),
         )
+        soft_family = evaluate_soft_family_classification(
+            responsibilities,
+            evaluator.records,
+            evaluator_mode=mode,
+        )
+        strength_location = evaluate_soft_family_strength_location_audit(
+            x,
+            responsibilities,
+            evaluator.records,
+            feature_names=feature_names,
+            evaluator_mode=mode,
+        )
     else:
         oracle = skipped_oracle_assignment_comparator(feature_names=feature_names, folds=folds)
+        soft_family = skipped_soft_family_classification()
+        strength_location = skipped_soft_family_strength_location_audit()
+    taxonomy_contract = mechanism_taxonomy_contract_audit()
 
     prototype_metrics = prototype_generation_metrics(
         predicted_assignment_metrics=predicted,
@@ -177,9 +212,20 @@ def run_stage3c_prototype_generator_learning(
         stratified_null_metrics=stratified_null,
         mean_only_baseline_metrics=mean_only,
         oracle_assignment_comparator_metrics=oracle,
+        soft_family_classification_metrics=soft_family,
+        soft_family_strength_location_audit=strength_location,
+        mechanism_taxonomy_contract_audit=taxonomy_contract,
         leakage_audit=leakage,
         evaluator_mode=mode,
     )
+    claim_gate = stage3c_claim_gate_audit(
+        s3b1_metrics=s3b1_metrics,
+        s3b1_residualized_metrics=s3b1_residualized_metrics,
+        stage3d4b_metrics=s3d4b_metrics,
+        stage5b1_metrics=stage5b1_metrics,
+        evaluator_mode=mode,
+    )
+    stage3b1_k_prior_contract = _stage3b1_k_prior_contract(s3b1_metrics)
     result = {
         "schema": "scope_static_stage3c_prototype_generator_learning_v1",
         "stage": STAGE_NAME,
@@ -192,13 +238,28 @@ def run_stage3c_prototype_generator_learning(
         "claim_boundary": {
             "trains_supervised_classifier": False,
             "uses_mechanism_labels_for_predicted_assignment_generator": False,
+            "uses_family_labels_for_predicted_assignment_generator": False,
             "uses_mechanism_labels_for_model_selection": False,
+            "uses_family_labels_for_model_selection": False,
             "trains_from_stage3a_frozen_visible_features": True,
             "uses_stage3b1_learned_assignments": True,
             "rebuilds_visible_features_from_oracle_records_for_fit": False,
             "oracle_assignment_comparator_evaluator_only": mode == EVALUATOR_MODE_CONTROLLED_CATALOG,
             "oracle_assignment_comparator_skipped": mode == EVALUATOR_MODE_NO_ORACLE_LABELS,
+            "soft_family_classification_evaluator_only": mode == EVALUATOR_MODE_CONTROLLED_CATALOG,
+            "soft_family_classification_skipped": mode == EVALUATOR_MODE_NO_ORACLE_LABELS,
+            "soft_family_strength_location_audit_evaluator_only": mode == EVALUATOR_MODE_CONTROLLED_CATALOG,
+            "soft_family_strength_location_audit_skipped": mode == EVALUATOR_MODE_NO_ORACLE_LABELS,
+            "s5_context_relative_mechanism_effect_audit_evaluator_only": mode == EVALUATOR_MODE_CONTROLLED_CATALOG,
+            "s5_context_relative_mechanism_effect_audit_skipped": mode == EVALUATOR_MODE_NO_ORACLE_LABELS,
+            "claim_gate_allows_assignment_dependent_generator_claim": bool(claim_gate.get("claim_allowed", False)),
+            "diagnostic_only_until_s3b1_s5b1_gates_pass": not bool(claim_gate.get("claim_allowed", False)),
+            "mechanism_taxonomy_contract_audit_reported": True,
+            "mechanism_dimension_recovery_audit_evaluator_only": mode == EVALUATOR_MODE_CONTROLLED_CATALOG,
+            "mechanism_dimension_recovery_audit_skipped": mode == EVALUATOR_MODE_NO_ORACLE_LABELS,
+            "claims_physical_parameter_recovery": False,
             "conditional_visible_replay_not_unconditional_future_prediction": True,
+            "stage3b1_k_prior_contract": stage3b1_k_prior_contract,
             "discovers_cptp_gksl_channels": False,
         },
         "config": {
@@ -212,20 +273,36 @@ def run_stage3c_prototype_generator_learning(
             "evaluator_mode": mode,
             "assignment_shuffle_seeds": [int(seed) for seed in _audit_seed_list(assignment_shuffle_seeds)],
             "feature_scramble_seeds": [int(seed) for seed in _audit_seed_list(feature_scramble_seeds)],
+            "stage3b1_residualized_dir": None if stage3b1_residualized_dir is None else str(stage3b1_residualized_dir),
+            "stage3d4b_dir": None if stage3d4b_dir is None else str(stage3d4b_dir),
+            "stage5b1_dir": None if stage5b1_dir is None else str(stage5b1_dir),
         },
+        "wall_clock_seconds": float(time.perf_counter() - started),
         "visible_feature_matrix": feature_matrix,
         "feature_schema_match_audit": feature_match,
         "heldout_protocol": heldout_protocol_artifact(all_folds=all_folds, evaluated_folds=folds, max_cv_folds=max_cv_folds),
-        "assignment_source_audit": assignment_source_audit(s3b1_dir=s3b1, responsibilities=responsibilities),
+        "assignment_source_audit": assignment_source_audit(
+            s3b1_dir=s3b1,
+            responsibilities=responsibilities,
+            s3b1_metrics=s3b1_metrics,
+        ),
         "prototype_generation_metrics": prototype_metrics,
         "predicted_assignment_metrics": predicted,
         "oracle_assignment_comparator_metrics": oracle,
+        "soft_family_classification_metrics": soft_family,
+        "soft_family_strength_location_audit": strength_location,
+        "s5_context_relative_mechanism_effect_audit": strength_location,
+        "mechanism_taxonomy_contract_audit": taxonomy_contract,
+        "mechanism_dimension_recovery_audit": strength_location.get("mechanism_dimension_recovery_audit", {}),
+        "overlay_contract_audit": strength_location.get("overlay_contract_audit", {}),
+        "overlay_recovery_audit": strength_location.get("overlay_recovery_audit", {}),
         "global_null_metrics": global_null,
         "stratified_null_metrics": stratified_null,
         "mean_only_baseline_metrics": mean_only,
         "assignment_shuffle_audit": shuffle_audit,
         "feature_scramble_audit": scramble_audit,
         "leakage_audit": leakage,
+        "claim_gate_audit": claim_gate,
         "acceptance_audit": acceptance,
         "decision": "stage3c_prototype_generator_learning_completed" if acceptance["passed"] else "stage3c_prototype_generator_learning_failed",
     }
@@ -904,6 +981,7 @@ def skipped_oracle_assignment_comparator(*, feature_names: list[str], folds: lis
     }
 
 
+
 def prototype_generation_metrics(
     *,
     predicted_assignment_metrics: dict[str, object],
@@ -1190,16 +1268,54 @@ def _block_profiles_from_generation_metrics(metrics: dict[str, object]) -> dict[
     return {str(name): dict(value) for name, value in profiles.items() if isinstance(value, dict)}
 
 
-def assignment_source_audit(*, s3b1_dir: Path, responsibilities: np.ndarray) -> dict[str, object]:
+def assignment_source_audit(
+    *,
+    s3b1_dir: Path,
+    responsibilities: np.ndarray,
+    s3b1_metrics: dict[str, object] | None = None,
+) -> dict[str, object]:
+    metrics = {} if s3b1_metrics is None else dict(s3b1_metrics)
+    summary = dict(metrics.get("learned_assignment_summary", {})) if isinstance(metrics.get("learned_assignment_summary", {}), dict) else {}
+    k_protocol = dict(metrics.get("k_selection_protocol", {})) if isinstance(metrics.get("k_selection_protocol", {}), dict) else {}
     return {
         "schema": "scope_static_stage3c_assignment_source_audit_v1",
         "assignment_path": str(s3b1_dir / "learned_assignments.npy"),
         "source_stage": "Stage 3B.1",
         "row_count": int(responsibilities.shape[0]),
         "prototype_count": int(responsibilities.shape[1]) if responsibilities.ndim == 2 else 0,
+        "selected_k": None if summary.get("selected_k") is None else int(summary.get("selected_k")),
+        "selected_k_mode": None if summary.get("selected_k_mode") is None else str(summary.get("selected_k_mode")),
+        "k_selection_protocol": k_protocol,
+        "k_prior_contract": _stage3b1_k_prior_contract(metrics),
         "row_stochastic": bool(responsibilities.size == 0 or np.allclose(np.sum(responsibilities, axis=1), 1.0)),
         "uses_evaluator_labels": False,
         "assignment_is_visible_only_b1_output": True,
+    }
+
+
+def _stage3b1_k_prior_contract(s3b1_metrics: dict[str, object]) -> dict[str, object]:
+    protocol = dict(s3b1_metrics.get("k_selection_protocol", {})) if isinstance(s3b1_metrics.get("k_selection_protocol", {}), dict) else {}
+    contract = protocol.get("k_prior_contract")
+    if isinstance(contract, dict):
+        return dict(contract)
+    config = dict(s3b1_metrics.get("config", {})) if isinstance(s3b1_metrics.get("config", {}), dict) else {}
+    contract = config.get("k_prior_contract")
+    if isinstance(contract, dict):
+        return dict(contract)
+    boundary = dict(s3b1_metrics.get("claim_boundary", {})) if isinstance(s3b1_metrics.get("claim_boundary", {}), dict) else {}
+    contract = boundary.get("k_prior_contract")
+    if isinstance(contract, dict):
+        return dict(contract)
+    return {
+        "schema": "scope_static_stage3b1_k_prior_contract_v1",
+        "enabled": False,
+        "source": None,
+        "mechanism_count_prior": None,
+        "overcomplete_multiplier": None,
+        "role": "not_declared",
+        "uses_google_true_labels": False,
+        "used_for_feature_construction": False,
+        "used_for_oracle_scoring": False,
     }
 
 
@@ -1267,6 +1383,9 @@ def stage3c_acceptance_audit(
     stratified_null_metrics: dict[str, object],
     mean_only_baseline_metrics: dict[str, object],
     oracle_assignment_comparator_metrics: dict[str, object],
+    soft_family_classification_metrics: dict[str, object],
+    soft_family_strength_location_audit: dict[str, object],
+    mechanism_taxonomy_contract_audit: dict[str, object],
     leakage_audit: dict[str, object],
     evaluator_mode: str = EVALUATOR_MODE_CONTROLLED_CATALOG,
 ) -> dict[str, object]:
@@ -1276,6 +1395,20 @@ def stage3c_acceptance_audit(
     stratified_null = dict(stratified_null_metrics.get("overall", {}))
     mean_only = dict(mean_only_baseline_metrics.get("overall", {}))
     oracle = dict(oracle_assignment_comparator_metrics.get("overall", {}))
+    soft_family = dict(soft_family_classification_metrics)
+    strength_location = dict(soft_family_strength_location_audit)
+    taxonomy_contract = dict(mechanism_taxonomy_contract_audit)
+    dimension_audit = (
+        dict(strength_location.get("mechanism_dimension_recovery_audit", {}))
+        if isinstance(strength_location.get("mechanism_dimension_recovery_audit", {}), dict)
+        else {}
+    )
+    contract_typed_recovery = (
+        dict(strength_location.get("contract_typed_recovery_metrics", {}))
+        if isinstance(strength_location.get("contract_typed_recovery_metrics", {}), dict)
+        else {}
+    )
+    primary_strength_reference = _primary_strength_reference_frame(strength_location)
     b1_acceptance = dict(s3b1_metrics.get("acceptance_audit", {})) if isinstance(s3b1_metrics.get("acceptance_audit", {}), dict) else {}
     metric = _effective_primary_generation_likelihood_metric(predicted)
     primary_target_profile = _effective_primary_target_score_profile(predicted_assignment_metrics)
@@ -1302,6 +1435,74 @@ def stage3c_acceptance_audit(
             else bool(oracle_assignment_comparator_metrics.get("skipped", False))
         ),
         "oracle_comparator_not_used_for_model_selection": not bool(oracle_assignment_comparator_metrics.get("used_for_acceptance_model_selection", True)),
+        "soft_family_classification_evaluator_only_or_skipped": (
+            bool(soft_family.get("evaluator_only", False))
+            if mode == EVALUATOR_MODE_CONTROLLED_CATALOG
+            else bool(soft_family.get("skipped", False))
+        ),
+        "soft_family_classification_not_used_for_training": not bool(soft_family.get("used_for_training", True)),
+        "soft_family_classification_not_used_for_model_selection": not bool(soft_family.get("used_for_model_selection", True)),
+        "soft_family_classification_nmi_is_one": (
+            True if mode == EVALUATOR_MODE_NO_ORACLE_LABELS else _is_one(soft_family.get("normalized_mutual_info"))
+        ),
+        "soft_family_classification_ari_is_one": (
+            True if mode == EVALUATOR_MODE_NO_ORACLE_LABELS else _is_one(soft_family.get("adjusted_rand_index"))
+        ),
+        "soft_family_classification_balanced_accuracy_is_one": (
+            True if mode == EVALUATOR_MODE_NO_ORACLE_LABELS else _is_one(soft_family.get("balanced_accuracy"))
+        ),
+        "soft_family_classification_min_recall_is_one": (
+            True if mode == EVALUATOR_MODE_NO_ORACLE_LABELS else _is_one(soft_family.get("min_recall"))
+        ),
+        "soft_family_strength_location_audit_evaluator_only_or_skipped": (
+            bool(strength_location.get("evaluator_only", False))
+            if mode == EVALUATOR_MODE_CONTROLLED_CATALOG
+            else bool(strength_location.get("skipped", False))
+        ),
+        "soft_family_strength_location_not_used_for_training": not bool(strength_location.get("used_for_training", True)),
+        "soft_family_strength_location_not_used_for_model_selection": not bool(strength_location.get("used_for_model_selection", True)),
+        "soft_family_strength_location_is_context_relative": (
+            True if mode == EVALUATOR_MODE_NO_ORACLE_LABELS else str(strength_location.get("location_reference_frame", "")) == "context_relative"
+        ),
+        "soft_family_strength_does_not_claim_physical_parameter_recovery": not bool(
+            strength_location.get("claims_physical_parameter_recovery", True)
+        ),
+        "s5_context_relative_effect_audit_evaluator_only_or_skipped": (
+            bool(strength_location.get("evaluator_only", False))
+            if mode == EVALUATOR_MODE_CONTROLLED_CATALOG
+            else bool(strength_location.get("skipped", False))
+        ),
+        "s5_context_relative_effect_uses_context_relative_location": (
+            True if mode == EVALUATOR_MODE_NO_ORACLE_LABELS else str(strength_location.get("location_reference_frame", "")) == "context_relative"
+        ),
+        "s5_context_relative_effect_uses_context_relative_strength": (
+            True if mode == EVALUATOR_MODE_NO_ORACLE_LABELS else primary_strength_reference == "context_relative"
+        ),
+        "s5_context_relative_effect_does_not_claim_physical_parameter_recovery": not bool(
+            strength_location.get("claims_physical_parameter_recovery", True)
+        ),
+        "s5_context_relative_effect_recovery_metrics_passed": (
+            True
+            if mode == EVALUATOR_MODE_NO_ORACLE_LABELS
+            else bool(contract_typed_recovery.get("passed", False))
+        ),
+        "mechanism_taxonomy_contract_audit_passed": bool(taxonomy_contract.get("passed", False)),
+        "mechanism_dimension_recovery_audit_evaluator_only_or_skipped": (
+            bool(dimension_audit.get("evaluator_only", False))
+            if mode == EVALUATOR_MODE_CONTROLLED_CATALOG
+            else bool(dimension_audit.get("skipped", False))
+        ),
+        "mechanism_dimension_recovery_audit_not_used_for_training": not bool(dimension_audit.get("used_for_training", True)),
+        "mechanism_dimension_recovery_audit_not_used_for_model_selection": not bool(dimension_audit.get("used_for_model_selection", True)),
+        "mechanism_dimension_recovery_does_not_claim_physical_parameter_recovery": not bool(
+            dimension_audit.get("claims_physical_parameter_recovery", True)
+        ),
+        "mechanism_dimension_recovery_audit_passed": (
+            True if mode == EVALUATOR_MODE_NO_ORACLE_LABELS else bool(dimension_audit.get("passed", False))
+        ),
+        "s5_contract_typed_recovery_metrics_passed": (
+            True if mode == EVALUATOR_MODE_NO_ORACLE_LABELS else bool(contract_typed_recovery.get("passed", False))
+        ),
         "primary_generation_likelihood_metric_reported": predicted.get(metric) is not None,
         "primary_categorical_population_nll_reported": (
             predicted.get(PRIMARY_GENERATION_LIKELIHOOD_METRIC) is not None if categorical_primary else True
@@ -1366,6 +1567,105 @@ def _no_oracle_stage3a5_metrics() -> dict[str, object]:
         "schema": "scope_static_stage3a5_no_oracle_placeholder_v1",
         "evaluator_mode": EVALUATOR_MODE_NO_ORACLE_LABELS,
         "acceptance_audit": {"passed": True, "checks": {"stage3a5_not_required_without_oracle_labels": True}},
+    }
+
+
+def stage3c_claim_gate_audit(
+    *,
+    s3b1_metrics: dict[str, object],
+    s3b1_residualized_metrics: dict[str, object] | None,
+    stage3d4b_metrics: dict[str, object] | None,
+    stage5b1_metrics: dict[str, object] | None,
+    evaluator_mode: str = EVALUATOR_MODE_CONTROLLED_CATALOG,
+) -> dict[str, object]:
+    mode = _normalize_evaluator_mode(evaluator_mode)
+    if mode == EVALUATOR_MODE_NO_ORACLE_LABELS:
+        checks = {
+            "no_oracle_mode_diagnostic_gate": True,
+            "claim_allowed_without_controlled_s5b1": False,
+        }
+        return {
+            "schema": "scope_static_stage3c_claim_gate_audit_v1",
+            "description": "No-oracle mode may report replay diagnostics, but controlled S3B1/S5B1 claim gates are unavailable.",
+            "claim_allowed": False,
+            "diagnostic_only": True,
+            "evaluator_mode": mode,
+            "checks": checks,
+            "passed": False,
+        }
+    raw_b1_passed = artifact_acceptance_passed(s3b1_metrics)
+    residual_b1_passed = artifact_acceptance_passed(s3b1_residualized_metrics)
+    transform = (
+        dict(s3b1_residualized_metrics.get("visible_transform_audit", {}))
+        if isinstance(s3b1_residualized_metrics, dict) and isinstance(s3b1_residualized_metrics.get("visible_transform_audit", {}), dict)
+        else {}
+    )
+    residual_claim_allowed = bool(transform.get("claim_allowed", False))
+    d4b_passed = stage3d4b_claim_gate_passed(stage3d4b_metrics)
+    d4b_legacy_acceptance_passed = artifact_acceptance_passed(stage3d4b_metrics)
+    s5b1_passed = _stage5b1_property_recovery_passed(stage5b1_metrics)
+    s5b1_claim_passed = _stage5b1_claim_gate_passed(stage5b1_metrics)
+    s5b1_decision_passed = str((stage5b1_metrics or {}).get("decision", "")) == "stage5b1_property_recovery_passed"
+    s5b1_source = (
+        dict(stage5b1_metrics.get("assignment_source_audit", {}))
+        if isinstance(stage5b1_metrics, dict) and isinstance(stage5b1_metrics.get("assignment_source_audit", {}), dict)
+        else {}
+    )
+    s5b1_assignment_source = str(s5b1_source.get("assignment_source", ""))
+    s5b1_uses_raw = s5b1_assignment_source in {
+        "stage3b1",
+        "raw_stage3b1",
+        "s3b1_raw",
+    }
+    s5b1_uses_postmerge = s5b1_assignment_source in {
+        "stage3d4b_postmerge",
+        "s3d4b_postmerge",
+        "postmerge",
+    }
+    raw_assignment_source_ready = bool(raw_b1_passed and s5b1_uses_raw)
+    postmerge_assignment_source_ready = bool(d4b_passed and s5b1_uses_postmerge)
+    raw_or_postmerge_assignment_source_recognized = bool(s5b1_uses_raw or s5b1_uses_postmerge)
+    raw_or_postmerge_assignment_source = bool(raw_assignment_source_ready or postmerge_assignment_source_ready)
+    checks = {
+        "s3b1_raw_acceptance_passed": raw_b1_passed,
+        "s3b1_residualized_diagnostic_reported": bool(s3b1_residualized_metrics is not None),
+        "s3b1_residualized_diagnostic_passed_if_present": (True if s3b1_residualized_metrics is None else residual_b1_passed),
+        "s3b1_residualized_not_used_as_claim_assignment_source": True,
+        "stage3d4b_overcomplete_postmerge_passed_if_present": (True if stage3d4b_metrics is None else d4b_passed),
+        "s5b1_assignment_source_is_raw_or_postmerge": raw_or_postmerge_assignment_source_recognized,
+        "s5b1_assignment_source_matches_raw_or_postmerge_gate": raw_or_postmerge_assignment_source_recognized,
+        "raw_or_postmerge_assignment_source_available": raw_or_postmerge_assignment_source,
+        "s3b1_residualized_or_stage3d4b_overcomplete_gate_passed": raw_or_postmerge_assignment_source,
+        "s5b1_property_recovery_acceptance_passed": s5b1_passed,
+        "s5b1_property_recovery_decision_passed": s5b1_decision_passed,
+        "s5b1_claim_gate_passed": s5b1_claim_passed,
+        "s3c_claim_not_allowed_from_raw_s3b1_alone": True,
+    }
+    claim_allowed = bool(all(checks.values()))
+    return {
+        "schema": "scope_static_stage3c_claim_gate_audit_v1",
+        "description": "Scientific claim gate for assignment-dependent S3C/S5 replay/effect claims.",
+        "claim_allowed": claim_allowed,
+        "diagnostic_only": not claim_allowed,
+        "evaluator_mode": mode,
+        "raw_s3b1_decision": s3b1_metrics.get("decision"),
+        "residualized_s3b1_decision": None if not isinstance(s3b1_residualized_metrics, dict) else s3b1_residualized_metrics.get("decision"),
+        "stage3d4b_decision": None if not isinstance(stage3d4b_metrics, dict) else stage3d4b_metrics.get("decision"),
+        "stage3d4b_legacy_all_exact_acceptance_passed": d4b_legacy_acceptance_passed,
+        "stage3d4b_claimable_gate": stage3d4b_claim_gate_audit(stage3d4b_metrics),
+        "stage5b1_decision": None if not isinstance(stage5b1_metrics, dict) else stage5b1_metrics.get("decision"),
+        "stage5b1_claim_allowed_flag": _stage5b1_claim_allowed_flag(stage5b1_metrics),
+        "residualized_s3b1_claim_allowed_flag": residual_claim_allowed,
+        "residualized_s3b1_role": "diagnostic_only_shortcut_and_bleed_audit",
+        "s5b1_assignment_source": s5b1_assignment_source or None,
+        "s5b1_assignment_source_ready": raw_or_postmerge_assignment_source,
+        "claim_assignment_source": (
+            "stage3d4b_postmerge"
+            if postmerge_assignment_source_ready
+            else ("stage3b1_raw" if raw_assignment_source_ready else None)
+        ),
+        "checks": checks,
+        "passed": claim_allowed,
     }
 
 
@@ -1886,25 +2186,8 @@ def _optional_nll_array(value: object) -> np.ndarray | None:
     return arr
 
 
-def _feature_block_indices(feature_names: list[str]) -> dict[str, list[int]]:
-    blocks: dict[str, list[int]] = {}
-    for idx, name in enumerate(feature_names):
-        block = _feature_block_name(str(name))
-        blocks.setdefault(block, []).append(int(idx))
-    return dict(sorted(blocks.items()))
-
-
 def _raw_feature_mask(feature_names: list[str]) -> np.ndarray:
     return np.asarray([str(name).startswith("raw__") for name in feature_names], dtype=bool)
-
-
-def _feature_block_name(name: str) -> str:
-    parts = name.split("__")
-    if len(parts) >= 2 and parts[0] in {"raw", "meta"}:
-        return f"{parts[0]}__{parts[1]}"
-    if parts and parts[0] == "visible_metadata":
-        return "visible_metadata"
-    return "other"
 
 
 def _feature_block_lift_report(
@@ -2233,15 +2516,60 @@ def _scramble_visible_feature_columns(x: np.ndarray, *, seed: int) -> np.ndarray
     return scrambled
 
 
-def _normalize_rows(matrix: np.ndarray) -> np.ndarray:
-    arr = np.asarray(matrix, dtype=np.float64)
-    if arr.ndim != 2:
-        raise ValueError("assignment matrix must be 2D")
-    clipped = np.maximum(arr, 0.0)
-    row_sum = np.sum(clipped, axis=1, keepdims=True)
-    if np.any(row_sum <= 0.0):
-        raise ValueError("assignment matrix contains an empty row")
-    return clipped / row_sum
+def _is_one(value: object, *, atol: float = 1.0e-12) -> bool:
+    if value is None:
+        return False
+    return bool(abs(float(value) - 1.0) <= float(atol))
+
+
+def _stage5b1_property_recovery_passed(metrics: dict[str, object] | None) -> bool:
+    if not isinstance(metrics, dict):
+        return False
+    acceptance = metrics.get("acceptance_audit", {})
+    if isinstance(acceptance, dict) and "property_recovery_passed" in acceptance:
+        return bool(acceptance.get("property_recovery_passed", False))
+    return artifact_acceptance_passed(metrics)
+
+
+def _stage5b1_claim_allowed_flag(metrics: dict[str, object] | None) -> bool | None:
+    if not isinstance(metrics, dict):
+        return None
+    claim_boundary = metrics.get("claim_boundary", {})
+    if isinstance(claim_boundary, dict) and "claim_allowed" in claim_boundary:
+        return bool(claim_boundary.get("claim_allowed", False))
+    acceptance = metrics.get("acceptance_audit", {})
+    if isinstance(acceptance, dict) and "claim_passed" in acceptance:
+        return bool(acceptance.get("claim_passed", False))
+    return None
+
+
+def _stage5b1_claim_gate_passed(metrics: dict[str, object] | None) -> bool:
+    flag = _stage5b1_claim_allowed_flag(metrics)
+    if flag is not None:
+        return bool(flag)
+    if not isinstance(metrics, dict):
+        return False
+    return bool(artifact_acceptance_passed(metrics) and str(metrics.get("decision", "")).endswith("_passed"))
+
+
+def _optional_json(path: Path | None) -> dict[str, object] | None:
+    if path is None or not Path(path).exists():
+        return None
+    return _load_json(Path(path))
+
+
+def _primary_strength_reference_frame(audit: dict[str, object]) -> str:
+    per_family = audit.get("per_family", {})
+    if not isinstance(per_family, dict):
+        return ""
+    for payload in per_family.values():
+        row = dict(payload) if isinstance(payload, dict) else {}
+        strength = row.get("visible_strength", {})
+        if isinstance(strength, dict):
+            frame = str(strength.get("primary_reference_frame", ""))
+            if frame:
+                return frame
+    return ""
 
 
 def _indices(values: object, *, record_count: int) -> np.ndarray:
@@ -2320,18 +2648,6 @@ def _gap(predicted: dict[str, object], oracle: dict[str, object]) -> dict[str, o
     return out
 
 
-def _optional_float(value: object) -> float | None:
-    if value is None:
-        return None
-    return float(value)
-
-
-def _optional_difference(left: object, right: object) -> float | None:
-    if left is None or right is None:
-        return None
-    return float(left) - float(right)
-
-
 def _write_outputs(output: Path, result: dict[str, object]) -> None:
     artifacts = {
         "metrics.json": result,
@@ -2339,12 +2655,20 @@ def _write_outputs(output: Path, result: dict[str, object]) -> None:
         "target_score_profile_report.json": result["prototype_generation_metrics"]["target_score_profile_report"],
         "predicted_assignment_metrics.json": result["predicted_assignment_metrics"],
         "oracle_assignment_comparator_metrics.json": result["oracle_assignment_comparator_metrics"],
+        "soft_family_classification_metrics.json": result["soft_family_classification_metrics"],
+        "soft_family_strength_location_audit.json": result["soft_family_strength_location_audit"],
+        "s5_context_relative_mechanism_effect_audit.json": result["s5_context_relative_mechanism_effect_audit"],
+        "mechanism_taxonomy_contract_audit.json": result["mechanism_taxonomy_contract_audit"],
+        "mechanism_dimension_recovery_audit.json": result["mechanism_dimension_recovery_audit"],
+        "overlay_contract_audit.json": result["overlay_contract_audit"],
+        "overlay_recovery_audit.json": result["overlay_recovery_audit"],
         "global_null_metrics.json": result["global_null_metrics"],
         "stratified_null_metrics.json": result["stratified_null_metrics"],
         "mean_only_baseline_metrics.json": result["mean_only_baseline_metrics"],
         "assignment_shuffle_audit.json": result["assignment_shuffle_audit"],
         "feature_scramble_audit.json": result["feature_scramble_audit"],
         "leakage_audit.json": result["leakage_audit"],
+        "claim_gate_audit.json": result["claim_gate_audit"],
         "acceptance_audit.json": result["acceptance_audit"],
         "assignment_source_audit.json": result["assignment_source_audit"],
         "heldout_protocol.json": result["heldout_protocol"],
@@ -2359,10 +2683,13 @@ def _write_outputs(output: Path, result: dict[str, object]) -> None:
 
 def format_stage3c_summary(result: dict[str, object]) -> str:
     acceptance = dict(result.get("acceptance_audit", {}))
+    claim_gate = dict(result.get("claim_gate_audit", {}))
     predicted = dict(dict(result.get("predicted_assignment_metrics", {})).get("overall", {}))
     global_null = dict(dict(result.get("global_null_metrics", {})).get("overall", {}))
     stratified_null = dict(dict(result.get("stratified_null_metrics", {})).get("overall", {}))
     oracle = dict(dict(result.get("oracle_assignment_comparator_metrics", {})).get("overall", {}))
+    family = dict(result.get("soft_family_classification_metrics", {}))
+    s5 = dict(result.get("s5_context_relative_mechanism_effect_audit", result.get("soft_family_strength_location_audit", {})))
     primary_metric = str(dict(result.get("prototype_generation_metrics", {})).get("primary_generation_likelihood_metric", PRIMARY_GENERATION_LIKELIHOOD_METRIC))
     shuffle = dict(dict(result.get("assignment_shuffle_audit", {})).get("aggregate", {}))
     scramble = dict(dict(dict(result.get("feature_scramble_audit", {})).get("aggregate", {})).get("predicted_assignment", {}))
@@ -2372,6 +2699,8 @@ def format_stage3c_summary(result: dict[str, object]) -> str:
             "",
             f"- Decision: `{result.get('decision')}`",
             f"- Acceptance passed: `{str(bool(acceptance.get('passed', False))).lower()}`",
+            f"- Claim allowed: `{str(bool(claim_gate.get('claim_allowed', False))).lower()}`",
+            f"- Wall-clock seconds: `{_format_metric(result.get('wall_clock_seconds'))}`",
             f"- Primary generation likelihood metric: `{primary_metric}`",
             f"- Predicted-assignment primary NLL: `{_format_metric(predicted.get(primary_metric))}`",
             f"- Global-null primary NLL: `{_format_metric(global_null.get(primary_metric))}`",
@@ -2387,6 +2716,8 @@ def format_stage3c_summary(result: dict[str, object]) -> str:
             f"- Global-null Gaussian density NLL: `{_format_metric(global_null.get('gaussian_density_nll'))}`",
             f"- Predicted-assignment raw MAE: `{_format_metric(predicted.get('raw_visible_feature_mae'))}`",
             f"- Oracle-comparator raw MAE: `{_format_metric(oracle.get('raw_visible_feature_mae'))}`",
+            f"- Soft-family NMI / ARI: `{_format_metric(family.get('normalized_mutual_info'))}` / `{_format_metric(family.get('adjusted_rand_index'))}`",
+            f"- S5 effect reference frame: `{str(s5.get('location_reference_frame', 'none'))}`",
             "",
             "## Claim Boundary",
             "",

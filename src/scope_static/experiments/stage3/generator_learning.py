@@ -27,6 +27,9 @@ def run_stage3c_generator_learning_from_config(
     evaluator_mode: str | None = None,
     assignment_shuffle_seeds: list[int] | None = None,
     feature_scramble_seeds: list[int] | None = None,
+    stage3b1_residualized_dir: str | Path | None = None,
+    stage3d4b_dir: str | Path | None = None,
+    stage5b1_dir: str | Path | None = None,
 ) -> dict[str, object]:
     cfg = _load_config(config_path)
     s3a = Path(stage3a_dir) if stage3a_dir is not None else Path(str(cfg.get("stage3a_dir", DEFAULT_STAGE3A_DIR)))
@@ -44,6 +47,9 @@ def run_stage3c_generator_learning_from_config(
         evaluator_mode=str(evaluator_mode if evaluator_mode is not None else cfg.get("evaluator_mode", EVALUATOR_MODE_CONTROLLED_CATALOG)),
         assignment_shuffle_seeds=assignment_shuffle_seeds if assignment_shuffle_seeds is not None else _int_list(cfg.get("assignment_shuffle_seeds", [0])),
         feature_scramble_seeds=feature_scramble_seeds if feature_scramble_seeds is not None else _int_list(cfg.get("feature_scramble_seeds", [0])),
+        stage3b1_residualized_dir=stage3b1_residualized_dir if stage3b1_residualized_dir is not None else cfg.get("stage3b1_residualized_dir"),
+        stage3d4b_dir=stage3d4b_dir if stage3d4b_dir is not None else cfg.get("stage3d4b_dir"),
+        stage5b1_dir=stage5b1_dir if stage5b1_dir is not None else cfg.get("stage5b1_dir"),
     )
     predicted = dict(dict(result.get("predicted_assignment_metrics", {})).get("overall", {}))
     print(
@@ -67,6 +73,9 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--evaluator-mode")
     parser.add_argument("--assignment-shuffle-seeds")
     parser.add_argument("--feature-scramble-seeds")
+    parser.add_argument("--stage3b1-residualized-dir", type=Path)
+    parser.add_argument("--stage3d4b-dir", type=Path)
+    parser.add_argument("--stage5b1-dir", type=Path)
     args = parser.parse_args(argv)
     run_stage3c_generator_learning_from_config(
         config_path=args.config,
@@ -78,6 +87,9 @@ def main(argv: list[str] | None = None) -> None:
         evaluator_mode=args.evaluator_mode,
         assignment_shuffle_seeds=_csv_ints(args.assignment_shuffle_seeds),
         feature_scramble_seeds=_csv_ints(args.feature_scramble_seeds),
+        stage3b1_residualized_dir=args.stage3b1_residualized_dir,
+        stage3d4b_dir=args.stage3d4b_dir,
+        stage5b1_dir=args.stage5b1_dir,
     )
 
 

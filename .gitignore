@@ -8,6 +8,11 @@ outputs/**/prepared_cache/
 
 # Generated experiment outputs and large data artifacts
 outputs/
+external/baselines/
+
+# Cached reference PDFs (the docs/papers/README.md index IS tracked; PDFs are a
+# local cache, fetch via the curl recipe in that README)
+docs/papers/*.pdf
 
 # Packaging/build artifacts
 *.egg-info

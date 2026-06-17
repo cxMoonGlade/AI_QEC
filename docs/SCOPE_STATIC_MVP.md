@@ -118,9 +118,8 @@ This prevents rank-soft runs from being described as compressed when `O(1+r) >= 
 ## S1.6/S1.7 Google DEM Diagnostics
 
 The old Google DEM/static preprocessing-ablation runner, logical-aware window
-runner, and summarizer are archived with the Google DEM-proxy diagnostic stack
-under `scope_static.archive.experiments.google_gdisc15`. They remain historical
-evidence only; they are not the current Google real-data teacher-learner path.
+runner, and summarizer have been removed from the active package. They are not
+the current Google real-data path.
 
 The active Google path keeps the read-only Set1 data readers and builds a frozen
 Stage 3 V2 public syndrome-response surface through cache and aggregate stages:

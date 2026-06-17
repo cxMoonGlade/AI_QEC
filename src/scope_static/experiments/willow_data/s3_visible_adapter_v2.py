@@ -8,7 +8,7 @@ from typing import Any, Iterable
 
 import yaml
 
-from scope_static.google.s3_visible_surface import (
+from scope_static.google.s3_visible_common import (
     DEFAULT_DATASET_NAME,
     DEFAULT_DATASET_ROOT,
     DEFAULT_SPLIT_POLICY,
@@ -148,7 +148,7 @@ def _load_config(config_path: Path | None) -> dict[str, Any]:
         return {}
     if not isinstance(data, dict):
         raise ValueError("Google S3 visible adapter V2 config must be a mapping")
-    section = data.get("google_s3_visible_adapter_v2", data.get("google_s3_visible_adapter", data))
+    section = data.get("google_s3_visible_adapter_v2", data)
     if not isinstance(section, dict):
         raise ValueError("google_s3_visible_adapter_v2 config section must be a mapping")
     return dict(section)

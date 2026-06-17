@@ -114,7 +114,7 @@ def test_legacy_physical_teacher_import_routes_to_layer1p(monkeypatch: pytest.Mo
 
     def fake_layer1p_teacher_dataset(config: dict[str, object], *, output_dir: str | Path) -> dict[str, object]:
         return {
-            "stage": "Layer1.P_teacher",
+            "stage": "Layer1_preprocessing_teacher_generator",
             "teacher_model": "layer1p_full_circuit_cudaq",
             "received_backend": config.get("backend"),
             "received_output_dir": str(output_dir),
@@ -130,7 +130,7 @@ def test_legacy_physical_teacher_import_routes_to_layer1p(monkeypatch: pytest.Mo
         preflight_dir=tmp_path / "preflight",
     )
 
-    assert result["stage"] == "Layer1.P_teacher"
+    assert result["stage"] == "Layer1_preprocessing_teacher_generator"
     assert result["teacher_model"] == "layer1p_full_circuit_cudaq"
     assert result["received_backend"] == "cudaq"
     assert result["cudaq_backend"]["target"] == "fake-target"
@@ -164,7 +164,7 @@ def test_s2d_teacher_generation_writes_full_circuit_artifact_when_cuda_available
     )
 
     assert result["teacher_model"] == "layer1p_full_circuit_cudaq"
-    assert result["stage"] == "Layer1.P_teacher"
+    assert result["stage"] == "Layer1_preprocessing_teacher_generator"
     assert result["acceptance_audit"]["passed"] is True
     assert result["effective_circuit_depth"] == 1
     assert result["cudaq_backend"]["target"] is not None

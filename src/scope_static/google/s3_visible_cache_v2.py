@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+from collections import Counter
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass
 import hashlib
 import json
 import math
 import os
 from pathlib import Path
+import time
 from typing import Iterable
 
 import numpy as np
@@ -17,7 +20,7 @@ from scope_static.google.inventory import (
     load_google_circuit,
     load_google_observations,
 )
-from scope_static.google.s3_visible_surface import (
+from scope_static.google.s3_visible_common import (
     DEFAULT_DATASET_NAME,
     DEFAULT_DATASET_ROOT,
     DEFAULT_SPLIT_POLICY,
@@ -109,6 +112,7 @@ def write_google_s3_visible_cache_v2(
     seed: int = 0,
     split_policy: str = DEFAULT_SPLIT_POLICY,
     hash_source_files: bool = True,
+    num_workers: int | None = None,
 ) -> dict[str, object]:
     if int(max_contexts) <= 0:
         raise ValueError("max_contexts must be positive")
@@ -148,6 +152,7 @@ def write_google_s3_visible_cache_v2(
         "seed": int(seed),
         "split_policy": str(split_policy),
         "hash_source_files": bool(hash_source_files),
+        "num_workers": None if num_workers is None else int(num_workers),
     }
     config_hash = _stable_hash({key: value for key, value in config.items() if key != "cache_dir"})
     leaves = _select_contexts(
@@ -164,29 +169,43 @@ def write_google_s3_visible_cache_v2(
     total_shots = 0
     detector_counts: list[int] = []
     observable_counts: list[int] = []
-    for context_index, leaf in enumerate(leaves):
-        cached = _precompute_context(
-            leaf,
-            cache_context_id=f"cache_context_{context_index:06d}",
-            dem_source=str(dem_source),
-            round_bands=bands,
-            region_families=regions,
-            shotblocks_per_context=int(shotblocks_per_context),
-            shotblock_size=int(shotblock_size),
-            min_shotblock_size=int(minimum_block),
-            max_shots_per_context=max_signature_shots,
-        )
+    wallclock_by_block = _zero_cache_wallclock_blocks()
+    worker_count = _resolve_cache_worker_count(num_workers, context_count=len(leaves))
+    started = time.perf_counter()
+    payloads = _compute_cache_context_payloads(
+        leaves,
+        dem_source=str(dem_source),
+        round_bands=bands,
+        region_families=regions,
+        shotblocks_per_context=int(shotblocks_per_context),
+        shotblock_size=int(shotblock_size),
+        min_shotblock_size=int(minimum_block),
+        max_shots_per_context=max_signature_shots,
+        hash_source_files=bool(hash_source_files),
+        num_workers=worker_count,
+    )
+    for payload in payloads:
+        cached = payload["cached_context"]
         arrays_name = f"contexts/{cached.cache_context_id}.npz"
         metadata_name = f"contexts/{cached.cache_context_id}.json"
+        write_started = time.perf_counter()
         np.savez_compressed(
             output / arrays_name,
             detection_events=np.asarray(cached.detection_events, dtype=np.bool_),
             obs_flips_actual=np.asarray(cached.obs_flips_actual, dtype=np.bool_),
         )
+        context_timing = dict(payload["wallclock_by_block_seconds"])
+        context_timing["cache_writeout"] = float(time.perf_counter() - write_started)
+        metadata = _cached_context_metadata(cached)
+        metadata["wallclock_by_block_seconds"] = {key: float(value) for key, value in sorted(context_timing.items())}
+        metadata["context_wallclock_seconds"] = float(payload["context_wallclock_seconds"]) + float(context_timing["cache_writeout"])
+        metadata["slowest_block"] = _slowest_cache_block(context_timing)
         (output / metadata_name).write_text(
-            json.dumps(_json_safe(_cached_context_metadata(cached)), indent=2, sort_keys=True) + "\n",
+            json.dumps(_json_safe(metadata), indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
+        for key, value in context_timing.items():
+            wallclock_by_block[key] = wallclock_by_block.get(key, 0.0) + float(value)
         context_row = {
             "cache_context_id": cached.cache_context_id,
             "arrays_path": arrays_name,
@@ -203,13 +222,16 @@ def write_google_s3_visible_cache_v2(
             "region_family_counts": {key: int(len(value)) for key, value in sorted(cached.region_memberships.items())},
             "round_band_counts": {key: int(len(value)) for key, value in sorted(cached.round_band_memberships.items())},
             "shotblock_count": int(len(cached.shotblocks)),
+            "context_wallclock_seconds": float(metadata["context_wallclock_seconds"]),
+            "slowest_block": metadata["slowest_block"],
         }
         contexts.append(context_row)
-        source_rows.append(_source_file_row(leaf, cached.cache_context_id, dem_source=str(dem_source), hash_files=bool(hash_source_files)))
+        source_rows.append(dict(payload["source_file_row"]))
         total_shots += int(cached.shot_count)
         detector_counts.append(int(cached.detector_count))
         observable_counts.append(int(cached.observable_count))
 
+    total_wallclock = float(time.perf_counter() - started)
     source_manifest = {
         "schema": "scope_static_google_s3a_v2_source_file_manifest_v1",
         "cache_schema_version": CACHE_SCHEMA_VERSION,
@@ -229,12 +251,37 @@ def write_google_s3_visible_cache_v2(
         "forbidden_feature_audit_path": "forbidden_feature_audit.json",
         "config": config,
         "context_count": int(len(contexts)),
+        "selection_policy": {
+            "strategy": "hierarchical_round_robin_by_public_distance_basis_then_rounds",
+            "max_contexts": int(max_contexts),
+            "filtered_basis": None if basis is None else str(basis),
+            "filtered_distance": None if distance is None else int(distance),
+            "filtered_rounds": None if rounds is None else int(rounds),
+        },
+        "basis_counts": dict(sorted(Counter(str(row.get("basis")) for row in contexts).items())),
+        "distance_counts": dict(sorted(Counter(str(row.get("distance")) for row in contexts).items())),
+        "rounds_counts": dict(sorted(Counter(str(row.get("rounds")) for row in contexts).items())),
         "shot_count": int(total_shots),
         "detector_count": _single_or_range(detector_counts),
         "detector_count_range": _count_range(detector_counts),
         "observable_count": _single_or_range(observable_counts),
         "observable_count_range": _count_range(observable_counts),
         "contexts": contexts,
+        "num_workers": int(worker_count),
+        "parallelism": {
+            "mode": "process_context_precompute" if worker_count > 1 else "serial_context_precompute",
+            "num_workers": int(worker_count),
+            "deterministic_manifest_order": True,
+            "wallclock_by_block_seconds_semantics": "sum_of_per_context_block_wallclock_seconds",
+            "note": "With num_workers > 1, summed per-context block wall-clock seconds can exceed total_wallclock_seconds.",
+        },
+        "wallclock_by_block_seconds": {key: float(value) for key, value in sorted(wallclock_by_block.items())},
+        "wallclock_table": [
+            {"cache_block": key, "seconds": float(value)}
+            for key, value in sorted(wallclock_by_block.items(), key=lambda item: item[0])
+        ],
+        "slowest_block": _slowest_cache_block(wallclock_by_block),
+        "total_wallclock_seconds": total_wallclock,
         "public_precompute_contents": [
             "per-context detection_events slices",
             "per-context obs_flips_actual slices",
@@ -312,6 +359,9 @@ def format_google_s3_visible_cache_v2_summary(manifest: dict[str, object]) -> st
             f"- Schema version: `{manifest.get('schema_version')}`",
             f"- Config hash: `{manifest.get('config_hash')}`",
             f"- Contexts: `{int(manifest.get('context_count', 0))}`",
+            f"- Distance counts: `{manifest.get('distance_counts', {})}`",
+            f"- Basis counts: `{manifest.get('basis_counts', {})}`",
+            f"- Round counts: `{manifest.get('rounds_counts', {})}`",
             f"- Shots cached: `{int(manifest.get('shot_count', 0))}`",
             f"- Detector count: `{manifest.get('detector_count')}`",
             "",
@@ -319,6 +369,124 @@ def format_google_s3_visible_cache_v2_summary(manifest: dict[str, object]) -> st
             "",
         ]
     )
+
+
+def _zero_cache_wallclock_blocks() -> dict[str, float]:
+    return {
+        "circuit_load": 0.0,
+        "observation_load_slice": 0.0,
+        "detector_geometry": 0.0,
+        "dem_support": 0.0,
+        "public_memberships": 0.0,
+        "source_file_manifest_hash": 0.0,
+        "cache_writeout": 0.0,
+    }
+
+
+def _slowest_cache_block(timings: dict[str, float]) -> dict[str, object]:
+    if not timings:
+        return {"cache_block": None, "seconds": 0.0}
+    name, seconds = max(timings.items(), key=lambda item: float(item[1]))
+    return {"cache_block": str(name), "seconds": float(seconds)}
+
+
+def _resolve_cache_worker_count(num_workers: int | None, *, context_count: int) -> int:
+    if context_count <= 0:
+        return 1
+    if num_workers is None:
+        return 1
+    resolved = int(num_workers)
+    if resolved <= 0:
+        raise ValueError("num_workers must be positive when provided")
+    return min(resolved, int(context_count))
+
+
+def _compute_cache_context_payloads(
+    leaves: list[GoogleLeaf],
+    *,
+    dem_source: str,
+    round_bands: tuple[str, ...],
+    region_families: tuple[str, ...],
+    shotblocks_per_context: int,
+    shotblock_size: int,
+    min_shotblock_size: int,
+    max_shots_per_context: int | None,
+    hash_source_files: bool,
+    num_workers: int,
+) -> list[dict[str, object]]:
+    if num_workers <= 1 or len(leaves) <= 1:
+        return [
+            _cache_context_payload(
+                index,
+                leaf,
+                dem_source=dem_source,
+                round_bands=round_bands,
+                region_families=region_families,
+                shotblocks_per_context=shotblocks_per_context,
+                shotblock_size=shotblock_size,
+                min_shotblock_size=min_shotblock_size,
+                max_shots_per_context=max_shots_per_context,
+                hash_source_files=hash_source_files,
+            )
+            for index, leaf in enumerate(leaves)
+        ]
+    payloads: list[dict[str, object] | None] = [None] * len(leaves)
+    with ProcessPoolExecutor(max_workers=int(num_workers)) as executor:
+        futures = {
+            executor.submit(
+                _cache_context_payload,
+                index,
+                leaf,
+                dem_source=dem_source,
+                round_bands=round_bands,
+                region_families=region_families,
+                shotblocks_per_context=shotblocks_per_context,
+                shotblock_size=shotblock_size,
+                min_shotblock_size=min_shotblock_size,
+                max_shots_per_context=max_shots_per_context,
+                hash_source_files=hash_source_files,
+            ): index
+            for index, leaf in enumerate(leaves)
+        }
+        for future in as_completed(futures):
+            payloads[futures[future]] = future.result()
+    return [payload for payload in payloads if payload is not None]
+
+
+def _cache_context_payload(
+    context_index: int,
+    leaf: GoogleLeaf,
+    *,
+    dem_source: str,
+    round_bands: tuple[str, ...],
+    region_families: tuple[str, ...],
+    shotblocks_per_context: int,
+    shotblock_size: int,
+    min_shotblock_size: int,
+    max_shots_per_context: int | None,
+    hash_source_files: bool,
+) -> dict[str, object]:
+    context_started = time.perf_counter()
+    cached, timings = _precompute_context_with_timing(
+        leaf,
+        cache_context_id=f"cache_context_{int(context_index):06d}",
+        dem_source=dem_source,
+        round_bands=round_bands,
+        region_families=region_families,
+        shotblocks_per_context=shotblocks_per_context,
+        shotblock_size=shotblock_size,
+        min_shotblock_size=min_shotblock_size,
+        max_shots_per_context=max_shots_per_context,
+    )
+    source_started = time.perf_counter()
+    source_file_row = _source_file_row(leaf, cached.cache_context_id, dem_source=dem_source, hash_files=hash_source_files)
+    timings["source_file_manifest_hash"] = float(time.perf_counter() - source_started)
+    return {
+        "cached_context": cached,
+        "source_file_row": source_file_row,
+        "wallclock_by_block_seconds": timings,
+        "context_wallclock_seconds": float(time.perf_counter() - context_started),
+    }
 
 
 def _precompute_context(
@@ -333,17 +501,59 @@ def _precompute_context(
     min_shotblock_size: int,
     max_shots_per_context: int | None,
 ) -> GoogleS3V2CachedContext:
+    cached, _timing = _precompute_context_with_timing(
+        leaf,
+        cache_context_id=cache_context_id,
+        dem_source=dem_source,
+        round_bands=round_bands,
+        region_families=region_families,
+        shotblocks_per_context=shotblocks_per_context,
+        shotblock_size=shotblock_size,
+        min_shotblock_size=min_shotblock_size,
+        max_shots_per_context=max_shots_per_context,
+    )
+    return cached
+
+
+def _precompute_context_with_timing(
+    leaf: GoogleLeaf,
+    *,
+    cache_context_id: str,
+    dem_source: str,
+    round_bands: tuple[str, ...],
+    region_families: tuple[str, ...],
+    shotblocks_per_context: int,
+    shotblock_size: int,
+    min_shotblock_size: int,
+    max_shots_per_context: int | None,
+) -> tuple[GoogleS3V2CachedContext, dict[str, float]]:
+    timings = _zero_cache_wallclock_blocks()
+    started = time.perf_counter()
     circuit = load_google_circuit(leaf)
+    timings["circuit_load"] = float(time.perf_counter() - started)
     detector_count = int(circuit.num_detectors)
     observable_count = int(circuit.num_observables)
+    started = time.perf_counter()
     observations = load_google_observations(leaf)
     if max_shots_per_context is not None:
         observations = observations[: int(max_shots_per_context)]
     detectors = np.ascontiguousarray(observations[:, :detector_count], dtype=np.bool_)
     observables = np.ascontiguousarray(observations[:, detector_count : detector_count + observable_count], dtype=np.bool_)
+    timings["observation_load_slice"] = float(time.perf_counter() - started)
+    started = time.perf_counter()
     coords = _detector_coords(circuit, detector_count)
     boundary = _boundary_detectors(coords)
+    patch_public_geometry_class = _patch_public_geometry_class(
+        leaf,
+        coords=coords,
+        detector_count=detector_count,
+        observable_count=observable_count,
+    )
+    timings["detector_geometry"] = float(time.perf_counter() - started)
+    started = time.perf_counter()
     logical_support, dem_summary = _logical_support_detectors_and_summary(leaf, dem_source=str(dem_source), detector_count=detector_count)
+    timings["dem_support"] = float(time.perf_counter() - started)
+    started = time.perf_counter()
     region_memberships = {
         region: _detectors_for_region(
             region,
@@ -366,19 +576,15 @@ def _precompute_context(
             min_shotblock_size=int(min_shotblock_size),
         )
     )
-    return GoogleS3V2CachedContext(
+    timings["public_memberships"] = float(time.perf_counter() - started)
+    cached = GoogleS3V2CachedContext(
         cache_context_id=str(cache_context_id),
         dataset_name=str(leaf.dataset_name),
         dataset_family=str(leaf.dataset_family),
         basis=str(leaf.basis),
         distance=None if leaf.distance is None else int(leaf.distance),
         rounds=None if leaf.rounds is None else int(leaf.rounds),
-        patch_public_geometry_class=_patch_public_geometry_class(
-            leaf,
-            coords=coords,
-            detector_count=detector_count,
-            observable_count=observable_count,
-        ),
+        patch_public_geometry_class=patch_public_geometry_class,
         detector_count=detector_count,
         observable_count=observable_count,
         shot_count=int(detectors.shape[0]),
@@ -392,6 +598,7 @@ def _precompute_context(
         shotblocks=shotblocks,
         dem_public_support_summary=dem_summary,
     )
+    return cached, timings
 
 
 def _cached_context_metadata(cached: GoogleS3V2CachedContext) -> dict[str, object]:

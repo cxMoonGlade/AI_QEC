@@ -30,18 +30,20 @@ inferred from visible observations alone.
 
 ## What Stage 2 Proved
 
-- The implemented physical catalog uses stable `M0-M34` mechanism IDs.
+- The implemented physical catalog uses stable legacy `M0-M34` mechanism IDs;
+  current semantic labels are public `F*` flat targets and public `M*`
+  non-flat targets.
 - Data-preparation mechanism definitions are catalog unitary/Kraus/readout objects, not
   arbitrary learned CPTP/GKSL channels.
 - The public catalog pipeline is responsibility named:
 
   ```text
-  data_preparation: Data Preparation (Prep)
-  teacher: Teacher Self-Distinguishment (Teacher)
-  learner: Learner Classification and Noise Generation (Learner)
+  data_preparation: Layer1 preprocessing - teacher generator
+  teacher: Layer 2 Teacher Self-Audit
+  learner: Layer 3 Learner
   ```
 
-- Teacher self-distinguishment can verify catalog separability.
+- Layer 2 teacher self-audit can verify catalog separability.
 - Z/X visible repair raised the learner-visible surface with a strict Z/X-only probe
   suite.
 - The distributional learner head established an accepted multi-context learner head on that visible
@@ -83,15 +85,9 @@ docs/TOOLBOX.md
 docs/SCOPE_STATIC_DISC.md
 ```
 
-Historical implementation modules from superseded Stage 2 learner-limit, RZZ
-probe-design, and Born-local gate attempts are archived under:
-
-```text
-src/scope_static/archive/
-```
-
-Compatibility wrappers remain for selected old experiment modules, but current
-code should import from the responsibility-named packages.
+Superseded Stage 2 learner-limit, RZZ probe-design, and Born-local support code
+has been promoted into the responsibility-named packages where it is still part
+of the tested contract, or removed from the active tree otherwise.
 
 ## Stage 2 Artifact Rules
 

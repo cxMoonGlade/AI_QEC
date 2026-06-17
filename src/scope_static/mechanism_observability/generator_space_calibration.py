@@ -34,7 +34,15 @@ VARIANT_ORDER = (
     "edge_circuit_residualized_coordinates",
     "ideal_schedule_residualized_coordinates",
 )
-FORBIDDEN_FEATURE_TOKENS = ("oracle_label", "mechanism_id", "exact_ptm", "teacher_channel", "oracle_fingerprint")
+FORBIDDEN_FEATURE_TOKENS = (
+    "oracle_label",
+    "mechanism_id",
+    "public_label",
+    "legacy_catalog_id",
+    "exact_ptm",
+    "teacher_channel",
+    "oracle_fingerprint",
+)
 
 
 @dataclass(frozen=True)

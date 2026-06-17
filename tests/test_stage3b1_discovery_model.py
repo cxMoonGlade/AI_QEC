@@ -13,6 +13,7 @@ from scope_static.mechanism_discovery.discovery_model import (
     _context_balanced_hard_assignments,
     _fit_context_balanced_prototype_mixture,
     context_dependent_mechanism_diagnostics,
+    learner_input_mask_audit,
     run_stage3b1_first_discovery_model,
 )
 
@@ -39,6 +40,8 @@ def test_stage3b1_trains_visible_only_prototype_mixture_and_reports_quotient_met
     assert result["learner_input_mask_audit"]["learner_input_profile"] == "full"
     assert result["learner_input_mask_audit"]["training_matrix_for_assignment"] == "masked view of Stage 3A frozen visible_features.npy"
     assert result["learner_input_mask_audit"]["generation_target_matrix"] == "full Stage 3A frozen visible_features.npy"
+    assert result["visible_transform_audit"]["visible_transform"] == "raw"
+    assert result["visible_transform_audit"]["claim_allowed"] is True
     assert result["visible_feature_weighting"]["uses_visible_operation_context"] is True
     assert result["visible_feature_weighting"]["operation_context_weight"] == 2.0
     assert result["model_selection_audit"]["validation_visible_nll_used_for_selection"] is True
@@ -47,6 +50,11 @@ def test_stage3b1_trains_visible_only_prototype_mixture_and_reports_quotient_met
     assert result["assignment_hardening_audit"]["row_stochastic"] is True
     assert result["label_permutation_audit"]["cluster_label_matching_used_only_for_reporting"] is True
     assert result["context_dependent_mechanism_diagnostics"]["used_for_fit"] is False
+    assert result["shortcut_correlation_audit"]["used_for_fit"] is False
+    assert result["targeted_m6_m13_m18_m27_bleed_audit"]["used_for_model_selection"] is False
+    assert result["targeted_set_geometry_audit"]["used_for_fit"] is False
+    assert result["targeted_set_geometry_audit"]["used_for_model_selection"] is False
+    assert result["targeted_set_geometry_audit"]["target_groups"] == [["M6", "M13", "M22", "M23"]]
     assert result["learned_assignment_summary"]["row_stochastic"] is True
     assert result["learned_prototypes"]["prototype_count"] == result["learned_assignment_summary"]["selected_k"]
     assert result["acceptance_audit"]["checks"]["selected_model_chosen_by_visible_validation_objective"] is True
@@ -62,6 +70,7 @@ def test_stage3b1_trains_visible_only_prototype_mixture_and_reports_quotient_met
     for name in [
         "metrics.json",
         "candidate_selection.json",
+        "assignment_visible_features.npy",
         "learned_assignments.npy",
         "learned_covariances.npy",
         "model_parameters.npz",
@@ -77,11 +86,35 @@ def test_stage3b1_trains_visible_only_prototype_mixture_and_reports_quotient_met
         "acceptance_audit.json",
         "feature_schema_match_audit.json",
         "learner_input_mask_audit.json",
+        "visible_transform_audit.json",
         "visible_feature_matrix.json",
         "visible_feature_weighting.json",
+        "shortcut_correlation_audit.json",
+        "targeted_bleed_audit.json",
+        "targeted_m6_m13_m18_m27_bleed_audit.json",
+        "targeted_set_geometry_audit.json",
         "summary.md",
     ]:
         assert (output / name).exists()
+    assert not (output / "targeted_pair_geometry_audit.json").exists()
+
+
+def test_stage3b1_raw_all_profile_keeps_axis_sensitive_two_qubit_raw_columns() -> None:
+    feature_names = [
+        "raw__two__prep_plusplus__r_2__meas_XX__P00",
+        "raw__two__prep_plusplus__r_2__meas_XX__se_XI",
+        "raw__two__prep_plusplus__r_2__meas_ZX__IX",
+        "derived__two_prep_00_r_1_ZZ_population_support_pattern",
+        "visible_metadata__instruction_rzz",
+    ]
+
+    audit = learner_input_mask_audit(feature_names, learner_input_profile="raw_all")
+
+    assert audit["learner_input_profile"] == "raw_all"
+    assert audit["selected_feature_names"] == feature_names[:3]
+    assert "raw__two__prep_plusplus__r_2__meas_XX__se_XI" in audit["selected_feature_names"]
+    assert "derived__two_prep_00_r_1_ZZ_population_support_pattern" in audit["dropped_feature_names"]
+    assert "visible_metadata__instruction_rzz" in audit["dropped_feature_names"]
 
 
 def test_stage3b1_exact_separable_fixture_recovers_visible_mechanism_structure(tmp_path: Path) -> None:
@@ -146,6 +179,140 @@ def test_stage3b1_config_wrapper_runs_from_yaml(tmp_path: Path) -> None:
 
     assert result["decision"] == "stage3b1_first_discovery_model_completed"
     assert (output / "learned_prototypes.json").exists()
+
+
+def test_stage3b1_config_wrapper_preserves_no_oracle_k_prior_contract(tmp_path: Path) -> None:
+    _teacher, s3a, _s3a5 = _prepare_artifacts(
+        tmp_path,
+        [
+            ("M0", "M0"),
+            ("M4", "M4"),
+        ],
+    )
+    output = tmp_path / "configured_no_oracle"
+    config = tmp_path / "stage3b1_no_oracle.yaml"
+    config.write_text(
+        "\n".join(
+            [
+                "stage3b1_first_discovery_model:",
+                f"  stage3a_dir: {s3a}",
+                "  stage3a5_dir: null",
+                "  teacher_dir: null",
+                f"  output_dir: {output}",
+                "  seed: 3",
+                "  max_iter: 5",
+                "  evaluator_mode: no_oracle_labels",
+                "  k_values:",
+                "    - 2",
+                "  k_prior_contract:",
+                "    enabled: true",
+                "    source: controlled_s3_s5_allM_contract_teacher",
+                "    mechanism_count_prior: 35",
+                "    overcomplete_multiplier: 1.0",
+                "    role: catalog_cardinality_matched_no_oracle_design_prior",
+                "    uses_google_true_labels: false",
+                "    used_for_feature_construction: false",
+                "    used_for_oracle_scoring: false",
+            ]
+        )
+        + "\n"
+    )
+
+    result = run_stage3b1_discovery_model_from_config(config_path=config)
+
+    contract = result["k_selection_protocol"]["k_prior_contract"]
+    assert result["decision"] == "stage3b1_first_discovery_model_completed"
+    assert result["claim_boundary"]["oracle_label_metrics_skipped"] is True
+    assert result["claim_boundary"]["uses_external_k_prior_for_no_oracle_mode"] is True
+    assert result["claim_boundary"]["k_prior_contract"] == contract
+    assert result["claim_boundary"]["external_k_prior_used_for_feature_construction"] is False
+    assert result["claim_boundary"]["external_k_prior_used_for_oracle_scoring"] is False
+    assert contract["enabled"] is True
+    assert contract["mechanism_count_prior"] == 35
+    assert contract["uses_google_true_labels"] is False
+    assert result["config"]["k_prior_contract"] == contract
+
+
+def test_stage3b1_full_no_finite_shot_se_profile_excludes_se_columns() -> None:
+    audit = learner_input_mask_audit(
+        [
+            "raw__single__prep_0__r_1__meas_Z__P0",
+            "raw__single__prep_0__r_1__meas_Z__se_P0",
+            "derived__single__prep_0__meas_Z__P0__first_diff_r_1_to_2",
+            "visible_metadata__instruction_rx",
+        ],
+        learner_input_profile="full_no_finite_shot_se",
+    )
+
+    assert audit["learner_input_profile"] == "full_no_finite_shot_se"
+    assert audit["selected_feature_names"] == [
+        "raw__single__prep_0__r_1__meas_Z__P0",
+        "derived__single__prep_0__meas_Z__P0__first_diff_r_1_to_2",
+        "visible_metadata__instruction_rx",
+    ]
+    assert audit["selected_feature_kind_counts"]["raw_finite_shot_se"] == 0
+    assert audit["dropped_feature_names"] == ["raw__single__prep_0__r_1__meas_Z__se_P0"]
+
+
+def test_stage3b1_public_context_residualized_transform_is_local_to_s3b1(tmp_path: Path) -> None:
+    _teacher, s3a, s3a5 = _prepare_artifacts(
+        tmp_path,
+        [
+            ("M0", "M0"),
+            ("M4", "M4"),
+            ("M8", "M8"),
+        ],
+    )
+    before = np.load(s3a / "visible_features.npy").copy()
+    output = tmp_path / "S3B1_residualized"
+
+    result = run_stage3b1_first_discovery_model(
+        stage3a_dir=s3a,
+        stage3a5_dir=s3a5,
+        output_dir=output,
+        max_iter=5,
+        visible_transform="public_context_residualized",
+    )
+
+    after = np.load(s3a / "visible_features.npy")
+    transformed = np.load(output / "assignment_visible_features.npy")
+    audit = result["visible_transform_audit"]
+    assert np.allclose(before, after)
+    assert transformed.shape[0] == before.shape[0]
+    assert audit["visible_transform"] == "public_context_residualized"
+    assert audit["claim_allowed"] is True
+    assert audit["uses_evaluator_records"] is False
+    assert audit["fit_audit"]["fit_train_fold_only"] is True
+    assert audit["writes_transformed_matrix_only_in_s3b1_output"] is True
+    assert result["claim_boundary"]["visible_transform_claim_allowed"] is True
+
+
+def test_stage3b1_oracle_nuisance_residualized_transform_is_diagnostic_only(tmp_path: Path) -> None:
+    _teacher, s3a, s3a5 = _prepare_artifacts(
+        tmp_path,
+        [
+            ("M6", "M6"),
+            ("M13", "M13"),
+        ],
+    )
+
+    result = run_stage3b1_first_discovery_model(
+        stage3a_dir=s3a,
+        stage3a5_dir=s3a5,
+        output_dir=tmp_path / "S3B1_oracle_residualized",
+        max_iter=5,
+        visible_transform="oracle_nuisance_residualized_diagnostic",
+    )
+
+    audit = result["visible_transform_audit"]
+    assert audit["visible_transform"] == "oracle_nuisance_residualized_diagnostic"
+    assert audit["claim_allowed"] is False
+    assert audit["diagnostic_only"] is True
+    assert audit["uses_evaluator_records"] is True
+    assert audit["uses_mechanism_labels"] is False
+    assert result["claim_boundary"]["visible_transform_claim_allowed"] is False
+    assert result["shortcut_correlation_audit"]["metrics"]["assignment_context_nmi"] >= 0.0
+    assert "M6" in result["targeted_m6_m13_m18_m27_bleed_audit"]["rows"]
 
 
 def test_stage3b1_context_balanced_candidate_tracks_one_instance_per_context() -> None:

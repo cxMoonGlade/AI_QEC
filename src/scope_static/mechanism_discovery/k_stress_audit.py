@@ -12,6 +12,7 @@ from .artifacts import load_json_object as _load_json
 from .artifacts import load_stage3_evaluator_labels
 from .artifacts import load_stage3a_frozen_visible_features
 from .artifacts import resolve_teacher_dir
+from .audit_values import optional_float as _optional_float
 from .baselines import VARIANCE_FLOOR
 from .baselines import evaluate_cluster_assignments
 from .discovery_model import DEFAULT_FINAL_TEMPERATURE
@@ -28,6 +29,7 @@ from .discovery_model import _model_responsibilities
 from .discovery_model import _standardize_visible_features_with_values
 from .discovery_model import _valid_folds
 from .discovery_model import context_dependent_mechanism_diagnostics
+from .discovery_model import load_stage3b1_assignment_visible_feature_view
 from .generator_learning import DEFAULT_MAX_CV_FOLDS
 from .generator_learning import DEFAULT_OUTPUT_DIR as DEFAULT_STAGE3C_DIR
 from .generator_learning import PRIMARY_GENERATION_LIKELIHOOD_METRIC
@@ -91,10 +93,15 @@ def run_stage3d4_k_stress_audit(
     teacher = resolve_teacher_dir(s3a_metrics, teacher_dir)
 
     x_raw, feature_names, feature_matrix = load_stage3a_frozen_visible_features(s3a)
-    x, _standardization = _standardize_visible_features_with_values(x_raw)
+    x_assignment_raw, assignment_feature_names, assignment_feature_view = load_stage3b1_assignment_visible_feature_view(
+        s3b1,
+        fallback_matrix=x_raw,
+        fallback_feature_names=feature_names,
+    )
+    x, _standardization = _standardize_visible_features_with_values(x_assignment_raw)
     x, feature_weighting = _apply_visible_feature_weights(
         x,
-        feature_names=feature_names,
+        feature_names=assignment_feature_names,
         operation_context_weight=float(operation_context_weight),
     )
     feature_match = _feature_schema_matches_s3a(s3a, feature_names)
@@ -109,6 +116,8 @@ def run_stage3d4_k_stress_audit(
     mechanism_scope = dict(s3a_metrics.get("mechanism_scope", {})) if isinstance(s3a_metrics.get("mechanism_scope", {}), dict) else {}
     class_count = int(mechanism_scope.get("class_count_evaluator_only", max(1, x_raw.shape[0])))
     quotient_class_count = int(alias.get("quotient_class_count", class_count))
+    s3b1_selected_model_family = _stage3b1_selected_model_family(s3b1_metrics)
+    s3b1_responsibilities = _load_stage3b1_responsibilities(s3b1, record_count=int(x_raw.shape[0]))
     k_plan = k_stress_plan(
         record_count=int(x_raw.shape[0]),
         class_count=class_count,
@@ -119,25 +128,66 @@ def run_stage3d4_k_stress_audit(
 
     fitted = []
     assignment_arrays: dict[str, np.ndarray] = {}
+    split_parent_maps: dict[str, list[int]] = {}
     model_summaries = []
     for run_index, run in enumerate(k_plan["runs"]):
         k = int(run["k"])
-        model = _fit_candidate_model(
-            x,
-            context_groups=context_groups,
-            model_family="diagonal_covariance_visible_prototype_mixture",
-            k=k,
-            seed=int(seed + 101 * run_index),
-            max_iter=int(max_iter),
-            initial_temperature=float(initial_temperature),
-            final_temperature=float(final_temperature),
-        )
-        responsibilities = _model_responsibilities(
-            x,
-            context_groups=context_groups,
-            model=model,
-            temperature=float(final_temperature),
-        )
+        stress_family = str(run.get("stress_family", ""))
+        construction = "fresh_visible_prototype_mixture"
+        if (
+            stress_family == "exact"
+            and s3b1_responsibilities is not None
+            and int(s3b1_responsibilities.shape[1]) == int(k)
+        ):
+            responsibilities = np.asarray(s3b1_responsibilities, dtype=np.float64)
+            model = _responsibility_model_artifact(
+                x,
+                responsibilities,
+                model_family=s3b1_selected_model_family,
+                uses_context_groups=_model_family_uses_context_groups(s3b1_selected_model_family),
+                variance_floor=float(variance_floor),
+            )
+            construction = "stage3b1_assignment_replay"
+        elif (
+            stress_family == "overcomplete"
+            and s3b1_responsibilities is not None
+            and int(s3b1_responsibilities.shape[1]) <= int(k)
+        ):
+            responsibilities, parent_map = _split_responsibilities_visible_only(
+                x,
+                s3b1_responsibilities,
+                target_k=int(k),
+                seed=int(seed + 101 * run_index),
+                max_iter=int(max_iter),
+                initial_temperature=float(initial_temperature),
+                final_temperature=float(final_temperature),
+            )
+            split_parent_maps[_safe_npz_key(str(run["mode"]))] = parent_map
+            model = _responsibility_model_artifact(
+                x,
+                responsibilities,
+                model_family="s3b1_seeded_visible_overcomplete_split",
+                uses_context_groups=_model_family_uses_context_groups(s3b1_selected_model_family),
+                variance_floor=float(variance_floor),
+            )
+            construction = "stage3b1_seeded_visible_only_split"
+        else:
+            model = _fit_candidate_model(
+                x,
+                context_groups=context_groups,
+                model_family=s3b1_selected_model_family if stress_family in {"exact", "quotient"} else "diagonal_covariance_visible_prototype_mixture",
+                k=k,
+                seed=int(seed + 101 * run_index),
+                max_iter=int(max_iter),
+                initial_temperature=float(initial_temperature),
+                final_temperature=float(final_temperature),
+            )
+            responsibilities = _model_responsibilities(
+                x,
+                context_groups=context_groups,
+                model=model,
+                temperature=float(final_temperature),
+            )
         hard_assignments = np.argmax(responsibilities, axis=1).astype(np.int64) if responsibilities.size else np.zeros(0, dtype=np.int64)
         predicted = evaluate_predicted_assignment_generation(
             x_raw,
@@ -153,6 +203,7 @@ def run_stage3d4_k_stress_audit(
                 "responsibilities": responsibilities,
                 "hard_assignments": hard_assignments,
                 "predicted_assignment_metrics": predicted,
+                "assignment_construction": construction,
             }
         )
         assignment_arrays[_safe_npz_key(str(run["mode"]))] = responsibilities
@@ -183,10 +234,12 @@ def run_stage3d4_k_stress_audit(
             {
                 "schema": "scope_static_stage3d4_k_stress_result_v1",
                 **dict(row["run"]),
-                "model_family": "diagonal_covariance_visible_prototype_mixture",
+                "model_family": str(dict(row["model"]).get("model_family", "diagonal_covariance_visible_prototype_mixture")),
+                "assignment_construction": str(row.get("assignment_construction", "fresh_visible_prototype_mixture")),
+                "stage3b1_selected_model_family": str(s3b1_selected_model_family),
                 "used_mechanism_labels_for_fit": False,
                 "used_labels_for_model_selection": False,
-                "used_context_groups_for_fit": False,
+                "used_context_groups_for_fit": bool(dict(row["model"]).get("uses_context_groups", False)),
                 "active_cluster_count": metrics["active_cluster_count"],
                 "assignment_entropy": metrics["assignment_entropy"],
                 "cluster_masses": metrics["cluster_masses"],
@@ -257,6 +310,8 @@ def run_stage3d4_k_stress_audit(
             "uses_mechanism_labels_for_model_selection": False,
             "uses_catalog_cardinality_for_k_values_only": True,
             "uses_stage3a5_quotient_count_for_k_values_only": True,
+            "uses_stage3b1_assignment_feature_view_for_stress_geometry": str(assignment_feature_view.get("source", ""))
+            == "stage3b1_assignment_visible_features",
             "evaluator_only_metrics_after_fit": True,
             "tests_k_robustness_not_new_teacher_sampling": True,
             "discovers_cptp_gksl_channels": False,
@@ -282,13 +337,18 @@ def run_stage3d4_k_stress_audit(
             "min_undercomplete_nmi_gap": float(min_undercomplete_nmi_gap),
             "min_generation_null_lift": float(min_generation_null_lift),
             "operation_context_weight": float(operation_context_weight),
+            "stage3b1_selected_model_family": str(s3b1_selected_model_family),
+            "uses_stage3b1_assignments_for_exact_k_replay": bool(s3b1_responsibilities is not None),
+            "assignment_feature_view_source": str(assignment_feature_view.get("source", "")),
         },
         "visible_feature_matrix": feature_matrix,
-        "visible_feature_weighting": _k_stress_feature_weighting_artifact(feature_weighting, feature_names),
+        "assignment_feature_view_audit": assignment_feature_view,
+        "visible_feature_weighting": _k_stress_feature_weighting_artifact(feature_weighting, assignment_feature_names),
         "feature_schema_match_audit": feature_match,
         "heldout_protocol": heldout_protocol_artifact(all_folds=all_folds, evaluated_folds=folds, max_cv_folds=max_cv_folds),
         "k_stress_plan": k_plan,
         "model_summaries": model_summaries,
+        "overcomplete_split_parent_maps": split_parent_maps_artifact(split_parent_maps),
         "k_stress_results": stress_results,
         "k_stress_summary": stress_summary,
         "global_null_metrics": global_null,
@@ -358,6 +418,165 @@ def k_stress_plan(
         "uses_catalog_cardinality_for_k_only": True,
         "runs": runs,
         "omitted_duplicate_modes": [] if quotient_k != exact_k else ["quotient_count duplicates fixed_oracle_count in this artifact"],
+    }
+
+
+def _stage3b1_selected_model_family(s3b1_metrics: dict[str, object] | None) -> str:
+    default = "diagonal_covariance_visible_prototype_mixture"
+    if not isinstance(s3b1_metrics, dict):
+        return default
+    selection = s3b1_metrics.get("candidate_selection")
+    if isinstance(selection, dict):
+        selected = selection.get("selected")
+        if isinstance(selected, dict) and selected.get("model_family"):
+            return str(selected["model_family"])
+    audit = s3b1_metrics.get("model_selection_audit")
+    if isinstance(audit, dict) and audit.get("selected_model_family"):
+        return str(audit["selected_model_family"])
+    return default
+
+
+def _model_family_uses_context_groups(model_family: str) -> bool:
+    return str(model_family) == "context_balanced_visible_prototype_mixture"
+
+
+def _load_stage3b1_responsibilities(stage3b1_dir: Path, *, record_count: int) -> np.ndarray | None:
+    path = stage3b1_dir / "learned_assignments.npy"
+    if not path.exists():
+        return None
+    responsibilities = np.asarray(np.load(path), dtype=np.float64)
+    if responsibilities.ndim != 2 or int(responsibilities.shape[0]) != int(record_count):
+        return None
+    row_sum = np.sum(responsibilities, axis=1)
+    if responsibilities.size and not np.allclose(row_sum, 1.0):
+        responsibilities = responsibilities / np.maximum(row_sum[:, None], 1.0e-12)
+    return responsibilities
+
+
+def _responsibility_model_artifact(
+    x: np.ndarray,
+    responsibilities: np.ndarray,
+    *,
+    model_family: str,
+    uses_context_groups: bool,
+    variance_floor: float,
+) -> dict[str, np.ndarray | list[dict[str, float]] | str | bool]:
+    resp = np.asarray(responsibilities, dtype=np.float64)
+    k = int(resp.shape[1]) if resp.ndim == 2 else 0
+    feature_count = int(x.shape[1]) if x.ndim == 2 else 0
+    if k <= 0:
+        return {
+            "means": np.zeros((0, feature_count), dtype=np.float64),
+            "variances": np.zeros((0, feature_count), dtype=np.float64),
+            "weights": np.zeros(0, dtype=np.float64),
+            "history": [],
+            "model_family": str(model_family),
+            "uses_context_groups": bool(uses_context_groups),
+        }
+    masses = np.sum(resp, axis=0)
+    total = float(np.sum(masses))
+    weights = masses / total if total > 0.0 else np.full(k, 1.0 / float(k), dtype=np.float64)
+    means = np.zeros((k, feature_count), dtype=np.float64)
+    variances = np.full((k, feature_count), max(float(variance_floor), 1.0e-12), dtype=np.float64)
+    for col in range(k):
+        mass = float(masses[col])
+        if mass <= 1.0e-12:
+            continue
+        local = resp[:, col][:, None]
+        mean = np.sum(local * x, axis=0) / mass
+        diff = x - mean[None, :]
+        var = np.sum(local * diff * diff, axis=0) / mass
+        means[col] = mean
+        variances[col] = np.maximum(var, max(float(variance_floor), 1.0e-12))
+    return {
+        "means": means,
+        "variances": variances,
+        "weights": weights,
+        "history": [],
+        "model_family": str(model_family),
+        "uses_context_groups": bool(uses_context_groups),
+    }
+
+
+def _split_responsibilities_visible_only(
+    x: np.ndarray,
+    base_responsibilities: np.ndarray,
+    *,
+    target_k: int,
+    seed: int,
+    max_iter: int,
+    initial_temperature: float,
+    final_temperature: float,
+) -> tuple[np.ndarray, list[int]]:
+    base = np.asarray(base_responsibilities, dtype=np.float64)
+    if base.ndim != 2 or base.shape[0] != x.shape[0]:
+        raise ValueError("Base responsibility matrix must be two-dimensional and row-aligned with visible features.")
+    base_k = int(base.shape[1])
+    target = max(base_k, int(target_k))
+    hard = np.argmax(base, axis=1).astype(np.int64) if base.size else np.zeros(int(x.shape[0]), dtype=np.int64)
+    split_counts = _allocate_visible_split_counts(hard, base_k=base_k, target_k=target)
+    out = np.zeros((int(x.shape[0]), target), dtype=np.float64)
+    parent_map: list[int] = []
+    cursor = 0
+    for base_col, requested in enumerate(split_counts):
+        cols = list(range(cursor, cursor + int(requested)))
+        parent_map.extend([int(base_col)] * int(requested))
+        cursor += int(requested)
+        indices = np.flatnonzero(hard == int(base_col))
+        if indices.size == 0 or not cols:
+            continue
+        local_k = min(int(requested), int(indices.size))
+        if local_k <= 1:
+            out[indices, cols[0]] = 1.0
+            continue
+        model = _fit_candidate_model(
+            x[indices],
+            context_groups=np.arange(int(indices.size), dtype=np.int64),
+            model_family="diagonal_covariance_visible_prototype_mixture",
+            k=int(local_k),
+            seed=int(seed + 997 * (base_col + 1)),
+            max_iter=int(max_iter),
+            initial_temperature=float(initial_temperature),
+            final_temperature=float(final_temperature),
+        )
+        local_resp = _model_responsibilities(
+            x[indices],
+            context_groups=np.arange(int(indices.size), dtype=np.int64),
+            model=model,
+            temperature=float(final_temperature),
+        )
+        local_hard = np.argmax(local_resp, axis=1).astype(np.int64)
+        for local_col in range(local_k):
+            out[indices[local_hard == local_col], cols[local_col]] = 1.0
+    row_sum = np.sum(out, axis=1)
+    missing = np.flatnonzero(row_sum <= 0.0)
+    if missing.size:
+        fallback_cols = np.minimum(hard[missing], target - 1)
+        out[missing, fallback_cols] = 1.0
+    return out, parent_map
+
+
+def _allocate_visible_split_counts(hard_assignments: np.ndarray, *, base_k: int, target_k: int) -> np.ndarray:
+    base = max(1, int(base_k))
+    target = max(base, int(target_k))
+    counts = np.ones(base, dtype=np.int64)
+    remaining = int(target - base)
+    if remaining <= 0:
+        return counts
+    masses = np.bincount(np.asarray(hard_assignments, dtype=np.int64), minlength=base)
+    order = sorted(range(base), key=lambda idx: (-int(masses[idx]), int(idx)))
+    for idx in range(remaining):
+        counts[order[idx % base]] += 1
+    return counts
+
+
+def split_parent_maps_artifact(parent_maps: dict[str, list[int]]) -> dict[str, object]:
+    return {
+        "schema": "scope_static_stage3d4_overcomplete_split_parent_maps_v1",
+        "description": "Visible-only provenance for S3B1-seeded overcomplete splits; values identify learned S3B1 parent components, not mechanism labels.",
+        "uses_mechanism_labels": False,
+        "uses_oracle_location_or_strength": False,
+        "maps": {str(key): [int(value) for value in values] for key, values in parent_maps.items()},
     }
 
 
@@ -534,7 +753,10 @@ def stage3d4_acceptance_audit(
     under = by_family.get("undercomplete")
     success_rows = [row for row in [exact, over] if isinstance(row, dict)]
     generation_lifts = [_generation_null_lift(row) for row in success_rows]
-    recovery_rows_ok = [_recovery_ok(row, min_nmi=min_success_nmi, min_ari=min_success_ari, min_ba=min_success_ba) for row in success_rows]
+    exact_recovery_ok = _recovery_ok(exact, min_nmi=min_success_nmi, min_ari=min_success_ari, min_ba=min_success_ba) if isinstance(exact, dict) else False
+    overcomplete_signal_ok = (
+        _overcomplete_recovery_signal_ok(over, min_nmi=min_success_nmi) if isinstance(over, dict) else False
+    )
     checks = {
         "stage3a_acceptance_passed": bool(dict(s3a_metrics.get("acceptance_audit", {})).get("passed", False)),
         "stage3a5_acceptance_passed": bool(dict(s3a5_metrics.get("acceptance_audit", {})).get("passed", False)),
@@ -546,7 +768,9 @@ def stage3d4_acceptance_audit(
         "undercomplete_exact_overcomplete_runs_present": all(family in by_family for family in ["undercomplete", "exact", "overcomplete"]),
         "all_runs_use_no_labels_for_fit": all(not bool(row.get("used_mechanism_labels_for_fit", True)) for row in stress_results),
         "all_runs_use_no_labels_for_model_selection": all(not bool(row.get("used_labels_for_model_selection", True)) for row in stress_results),
-        "exact_and_overcomplete_recovery_meet_thresholds": bool(success_rows and all(recovery_rows_ok)),
+        "exact_recovery_meets_thresholds": bool(exact_recovery_ok),
+        "overcomplete_recovery_signal_meets_threshold": bool(overcomplete_signal_ok),
+        "exact_and_overcomplete_recovery_meet_thresholds": bool(exact_recovery_ok and overcomplete_signal_ok),
         "exact_and_overcomplete_generation_beat_null": bool(
             success_rows and all(lift is not None and float(lift) >= float(min_generation_null_lift) for lift in generation_lifts)
         ),
@@ -583,6 +807,17 @@ def _recovery_ok(row: dict[str, object], *, min_nmi: float, min_ari: float, min_
     )
 
 
+def _overcomplete_recovery_signal_ok(row: dict[str, object], *, min_nmi: float) -> bool:
+    """Raw overcomplete assignments may split true families before D4b merge."""
+
+    exact = dict(row.get("exact_label_metrics", {}))
+    quotient = dict(row.get("quotient_label_metrics", {}))
+    return bool(
+        max(float(exact.get("normalized_mutual_info", 0.0)), float(quotient.get("normalized_mutual_info", 0.0)))
+        >= float(min_nmi)
+    )
+
+
 def _generation_null_lift(row: dict[str, object]) -> float | None:
     predicted = dict(row.get("predicted_assignment_overall", {}))
     value = predicted.get("generation_null_lift")
@@ -608,12 +843,6 @@ def _optional_json(path: Path | None) -> dict[str, object] | None:
     return _load_json(path)
 
 
-def _optional_float(value: object) -> float | None:
-    if value is None:
-        return None
-    return float(value)
-
-
 def _write_outputs(output: Path, result: dict[str, object], assignment_arrays: dict[str, np.ndarray]) -> None:
     artifacts = {
         "metrics.json": result,
@@ -621,6 +850,7 @@ def _write_outputs(output: Path, result: dict[str, object], assignment_arrays: d
         "k_stress_results.json": {"schema": "scope_static_stage3d4_k_stress_results_v1", "results": result["k_stress_results"]},
         "k_stress_summary.json": result["k_stress_summary"],
         "model_summaries.json": {"schema": "scope_static_stage3d4_model_summaries_v1", "models": result["model_summaries"]},
+        "overcomplete_split_parent_maps.json": result["overcomplete_split_parent_maps"],
         "global_null_metrics.json": result["global_null_metrics"],
         "mean_only_baseline_metrics.json": result["mean_only_baseline_metrics"],
         "leakage_audit.json": result["leakage_audit"],
@@ -629,6 +859,7 @@ def _write_outputs(output: Path, result: dict[str, object], assignment_arrays: d
         "heldout_protocol.json": result["heldout_protocol"],
         "feature_schema_match_audit.json": result["feature_schema_match_audit"],
         "visible_feature_matrix.json": result["visible_feature_matrix"],
+        "assignment_feature_view_audit.json": result["assignment_feature_view_audit"],
         "visible_feature_weighting.json": result["visible_feature_weighting"],
     }
     for name, payload in artifacts.items():

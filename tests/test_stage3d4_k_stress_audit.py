@@ -7,6 +7,7 @@ from scope_static.experiments.stage3.k_stress_audit import run_stage3d4_k_stress
 from scope_static.mechanism_discovery.discovery_model import run_stage3b1_first_discovery_model
 from scope_static.mechanism_discovery.generator_learning import run_stage3c_prototype_generator_learning
 from scope_static.mechanism_discovery.k_stress_audit import run_stage3d4_k_stress_audit
+from scope_static.mechanism_discovery.k_stress_audit import stage3d4_acceptance_audit
 from scope_static.mechanism_discovery.observability_ceiling import run_stage3a5_observability_alias_ceiling
 from scope_static.mechanism_discovery.protocol_freeze import run_stage3a_dataset_protocol_freeze
 from scope_static.primitives.mechanism_catalog import MECHANISM_NAMES
@@ -39,7 +40,9 @@ def test_stage3d4_k_stress_reports_under_exact_overcomplete_runs(tmp_path: Path)
     assert result["decision"] == "stage3d4_k_stress_audit_passed"
     assert result["claim_boundary"]["uses_mechanism_labels_for_fit"] is False
     assert result["claim_boundary"]["uses_catalog_cardinality_for_k_values_only"] is True
+    assert result["claim_boundary"]["uses_stage3b1_assignment_feature_view_for_stress_geometry"] is True
     assert result["visible_feature_matrix"]["loaded_from_stage3a_artifact"] is True
+    assert result["assignment_feature_view_audit"]["source"] == "stage3b1_assignment_visible_features"
     assert result["visible_feature_weighting"]["uses_visible_operation_context"] is True
     assert result["feature_schema_match_audit"]["passed"] is True
     assert result["leakage_audit"]["passed"] is True
@@ -67,11 +70,51 @@ def test_stage3d4_k_stress_reports_under_exact_overcomplete_runs(tmp_path: Path)
         "leakage_audit.json",
         "s3c_reference_audit.json",
         "acceptance_audit.json",
+        "assignment_feature_view_audit.json",
         "visible_feature_weighting.json",
         "learned_assignments_by_k.npz",
         "summary.md",
     ]:
         assert (output / name).exists()
+
+
+def test_stage3d4_inherits_stage3b1_context_balanced_assignment_family(tmp_path: Path) -> None:
+    _teacher, s3a, s3a5, s3b1, _s3c = _prepare_artifacts(
+        tmp_path,
+        [
+            ("M0", "M0"),
+            ("M4", "M4"),
+            ("M8", "M8"),
+        ],
+        run_s3c=False,
+    )
+    metrics_path = s3b1 / "metrics.json"
+    metrics = json.loads(metrics_path.read_text())
+    metrics.setdefault("candidate_selection", {}).setdefault("selected", {})[
+        "model_family"
+    ] = "context_balanced_visible_prototype_mixture"
+    metrics_path.write_text(json.dumps(metrics, indent=2, sort_keys=True) + "\n")
+
+    result = run_stage3d4_k_stress_audit(
+        stage3a_dir=s3a,
+        stage3a5_dir=s3a5,
+        stage3b1_dir=s3b1,
+        stage3c_dir=None,
+        output_dir=tmp_path / "S3D4",
+        max_iter=8,
+        min_success_nmi=0.0,
+        min_success_ari=0.0,
+        min_success_ba=0.0,
+        min_undercomplete_nmi_gap=0.0,
+    )
+
+    by_mode = {row["mode"]: row for row in result["k_stress_results"]}
+    assert by_mode["fixed_oracle_count"]["model_family"] == "context_balanced_visible_prototype_mixture"
+    assert by_mode["fixed_oracle_count"]["assignment_construction"] == "stage3b1_assignment_replay"
+    assert by_mode["fixed_oracle_count"]["used_context_groups_for_fit"] is True
+    assert by_mode["overcomplete_2x"]["model_family"] == "s3b1_seeded_visible_overcomplete_split"
+    assert by_mode["overcomplete_2x"]["assignment_construction"] == "stage3b1_seeded_visible_only_split"
+    assert by_mode["overcomplete_2x"]["used_context_groups_for_fit"] is True
 
 
 def test_stage3d4_config_wrapper_runs_from_yaml(tmp_path: Path) -> None:
@@ -141,6 +184,59 @@ def test_stage3d4_rejects_impossible_success_threshold(tmp_path: Path) -> None:
     assert result["acceptance_audit"]["checks"]["exact_and_overcomplete_recovery_meet_thresholds"] is False
 
 
+def test_stage3d4_accepts_overcomplete_split_before_d4b_merge() -> None:
+    exact = _stress_result(
+        "exact",
+        k=35,
+        nmi=1.0,
+        ari=1.0,
+        ba=1.0,
+        min_recall=1.0,
+        generation_lift=0.5,
+    )
+    overcomplete = _stress_result(
+        "overcomplete",
+        k=70,
+        nmi=0.92,
+        ari=0.6,
+        ba=0.54,
+        min_recall=0.5,
+        generation_lift=0.5,
+    )
+    undercomplete = _stress_result(
+        "undercomplete",
+        k=17,
+        nmi=0.7,
+        ari=0.2,
+        ba=0.3,
+        min_recall=0.0,
+        generation_lift=0.5,
+    )
+
+    audit = stage3d4_acceptance_audit(
+        s3a_metrics={"acceptance_audit": {"passed": True}},
+        s3a5_metrics={"acceptance_audit": {"passed": True}},
+        s3b1_metrics={"acceptance_audit": {"passed": True}},
+        feature_match={"passed": True},
+        feature_matrix={"loaded_from_stage3a_artifact": True},
+        k_plan={"quotient_class_count_from_stage3a5": 35},
+        stress_results=[undercomplete, exact, overcomplete],
+        stress_summary={"undercomplete_nmi_gap": 0.3},
+        leakage_audit={"passed": True},
+        s3c_reference_audit={"passed": True},
+        min_success_nmi=0.9,
+        min_success_ari=0.85,
+        min_success_ba=0.85,
+        min_undercomplete_nmi_gap=0.05,
+        min_generation_null_lift=1.0e-6,
+    )
+
+    assert audit["passed"] is True
+    assert audit["checks"]["exact_recovery_meets_thresholds"] is True
+    assert audit["checks"]["overcomplete_recovery_signal_meets_threshold"] is True
+    assert audit["checks"]["exact_and_overcomplete_recovery_meet_thresholds"] is True
+
+
 def _prepare_artifacts(
     tmp_path: Path,
     label_specs: list[tuple[str, str]],
@@ -165,6 +261,33 @@ def _prepare_artifacts(
         run_stage3c_prototype_generator_learning(stage3a_dir=s3a, stage3a5_dir=s3a5, stage3b1_dir=s3b1, output_dir=s3c)
         return teacher, s3a, s3a5, s3b1, s3c
     return teacher, s3a, s3a5, s3b1, None
+
+
+def _stress_result(
+    stress_family: str,
+    *,
+    k: int,
+    nmi: float,
+    ari: float,
+    ba: float,
+    min_recall: float,
+    generation_lift: float,
+) -> dict[str, object]:
+    label_metrics = {
+        "adjusted_rand_index": float(ari),
+        "balanced_accuracy_after_label_matching": float(ba),
+        "min_recall_after_label_matching": float(min_recall),
+        "normalized_mutual_info": float(nmi),
+    }
+    return {
+        "stress_family": stress_family,
+        "k": int(k),
+        "used_mechanism_labels_for_fit": False,
+        "used_labels_for_model_selection": False,
+        "exact_label_metrics": label_metrics,
+        "quotient_label_metrics": dict(label_metrics),
+        "predicted_assignment_overall": {"generation_null_lift": float(generation_lift)},
+    }
 
 
 def _record(label: str, mechanism_id: str, group: int) -> dict[str, object]:

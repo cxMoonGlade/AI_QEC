@@ -15,11 +15,14 @@ from scope_static.primitives.cptp_guardrail import PROBABILITY_PARAMETER_NAMES
 from scope_static.primitives.cptp_guardrail import audit_mechanism_physicality
 from scope_static.primitives.cptp_guardrail import mechanism_spec_from_record
 from scope_static.protocols import DATA_PREPARATION_STAGE
+from scope_static.primitives.mechanism_catalog import IMPLEMENTED_MECHANISM_IDS
 from scope_static.primitives.mechanism_catalog import PREP_RESET_MECHANISM_IDS
 from scope_static.primitives.mechanism_catalog import READOUT_MECHANISM_IDS
+from scope_static.primitives.overlay_contract import OVERLAY_CONTRACT_MISSING_REASON
+from scope_static.primitives.overlay_contract import overlay_contract_audit
 
 
-STAGE_NAME = "Layer1.P_teacher_physicality_audit"
+STAGE_NAME = "Layer1_preprocessing_teacher_physicality_audit"
 DEFAULT_OUTPUT_DIR = "outputs/scope_static/Layer1_teacher_physicality_audit"
 STRICT_TOLERANCE = 1.0e-10
 CUDA_FLOAT64_TOLERANCE = 1.0e-8
@@ -28,6 +31,21 @@ PROBABILITY_FLOOR_TOLERANCE = 1.0e-12
 LEAKAGE_MECHANISM_IDS = {"M34"}
 AXIS_PARAMETER_NAMES = {"axis", "operation_axis", "error_axis", "channel_axis"}
 ALLOWED_AXIS_VALUES = {"x", "y", "z", "rx", "ry", "rz"}
+OVERLAY_CATEGORICAL_PARAMETER_VALUES = {
+    "base_mechanism": {
+        *IMPLEMENTED_MECHANISM_IDS,
+        "RZ",
+        "RZZ",
+        "idle",
+        "leakage-like",
+        "readout_bias",
+        "reset_bias",
+    },
+    "victim_relative_location": {"detector", "edge", "qubit_id"},
+    "aggressor_relative_location": {"adjacent_gate", "previous_cycle_edge", "same_cycle_qubit", "shot_block"},
+    "coupling_axis": {"RZ", "ZZ", "readout_bias", "reset_bias"},
+    "timing_context": {"prev_cycle", "same_cycle", "shot_block_drift"},
+}
 
 
 def run_teacher_physicality_audit(
@@ -67,16 +85,18 @@ def run_teacher_physicality_audit(
     reset_prep_audit = _reset_prep_audit(local_records, tolerance=tol)
     leakage_audit = _leakage_space_audit(local_records)
     parameter_audit = mechanism_parameter_ranges(local_records)
+    overlay_audit = overlay_contract_audit(records, fail_on_missing_overlay_payload=True)
     circuit_probability = circuit_probability_audit(teacher, probability_tolerance=float(probability_tolerance))
     sampling = sampling_audit(teacher, circuit_probability)
     manifest = mechanism_catalog_manifest(records, local_records)
     representation = channel_representation_manifest(local_records)
-    failures = failure_cases(local_records, circuit_probability, leakage_audit, parameter_audit)
+    failures = failure_cases(local_records, circuit_probability, leakage_audit, parameter_audit, overlay_audit)
     summary = physicality_summary(
         local_records=local_records,
         circuit_probability=circuit_probability,
         leakage_audit=leakage_audit,
         parameter_audit=parameter_audit,
+        overlay_contract_audit=overlay_audit,
         failures=failures,
     )
     acceptance = teacher_physicality_acceptance(
@@ -90,6 +110,7 @@ def run_teacher_physicality_audit(
         leakage_audit=leakage_audit,
         circuit_probability=circuit_probability,
         parameter_audit=parameter_audit,
+        overlay_contract_audit=overlay_audit,
     )
     summary["teacher_physicality_passed"] = bool(acceptance["teacher_physicality_passed"])
 
@@ -117,6 +138,7 @@ def run_teacher_physicality_audit(
         },
         "mechanism_catalog_manifest": manifest,
         "mechanism_parameter_ranges": parameter_audit,
+        "overlay_contract_audit": overlay_audit,
         "channel_representation_manifest": representation,
         "unitary_audit": unitary_audit,
         "kraus_audit": kraus_audit,
@@ -266,6 +288,13 @@ def mechanism_parameter_range_record(spec: MechanismSpec, *, probability_toleran
             if value not in ALLOWED_AXIS_VALUES:
                 invalid.append({"parameter": name, "value": value, "reason": "outside_declared_axis_enum"})
             continue
+        if name in OVERLAY_CATEGORICAL_PARAMETER_VALUES:
+            value = str(raw_value).strip()
+            allowed = sorted(OVERLAY_CATEGORICAL_PARAMETER_VALUES[name])
+            checked.append({"parameter": name, "value": value, "range_family": "categorical_enum", "allowed": allowed})
+            if value not in OVERLAY_CATEGORICAL_PARAMETER_VALUES[name]:
+                invalid.append({"parameter": name, "value": value, "reason": "outside_declared_categorical_enum"})
+            continue
         try:
             value = float(raw_value)  # type: ignore[arg-type]
         except (TypeError, ValueError):
@@ -400,6 +429,7 @@ def physicality_summary(
     circuit_probability: Mapping[str, object],
     leakage_audit: Mapping[str, object],
     parameter_audit: Mapping[str, object],
+    overlay_contract_audit: Mapping[str, object],
     failures: Mapping[str, object],
 ) -> dict[str, object]:
     return {
@@ -422,6 +452,9 @@ def physicality_summary(
         "silent_renormalization_used": bool(leakage_audit.get("silent_renormalization_used", False)),
         "leakage_unaccounted_mass": float(leakage_audit.get("max_leakage_unaccounted_mass", 0.0)),
         "mechanism_parameter_ranges_passed": bool(parameter_audit.get("passed", False)),
+        "overlay_contract_payload_complete": bool(overlay_contract_audit.get("passed", False)),
+        "overlay_records_checked": int(overlay_contract_audit.get("num_overlay_records", 0) or 0),
+        "overlay_records_missing_payload": int(overlay_contract_audit.get("num_overlay_records_missing_payload", 0) or 0),
         "teacher_physicality_passed": False,
     }
 
@@ -438,6 +471,7 @@ def teacher_physicality_acceptance(
     leakage_audit: Mapping[str, object],
     circuit_probability: Mapping[str, object],
     parameter_audit: Mapping[str, object],
+    overlay_contract_audit: Mapping[str, object],
 ) -> dict[str, object]:
     checks = {
         "all_local_quantum_channels_cptp_within_tolerance": bool(choi_audit.get("passed", False)),
@@ -447,6 +481,7 @@ def teacher_physicality_acceptance(
         "povm_or_instrument_modules_valid": bool(povm_audit.get("passed", False)),
         "reset_prep_modules_valid": bool(reset_prep_audit.get("passed", False)),
         "all_circuit_output_distributions_valid": bool(circuit_probability.get("all_probability_distributions_valid", False)),
+        "overlay_contract_payload_complete": bool(overlay_contract_audit.get("passed", False)),
         "no_silent_projection_or_renormalization": not bool(leakage_audit.get("silent_renormalization_used", True)),
         "leakage_unaccounted_mass_zero": float(leakage_audit.get("max_leakage_unaccounted_mass", 0.0)) <= PROBABILITY_FLOOR_TOLERANCE,
         "all_mechanism_parameter_ranges_audited": bool(parameter_audit.get("passed", False)),
@@ -464,6 +499,7 @@ def failure_cases(
     circuit_probability: Mapping[str, object],
     leakage_audit: Mapping[str, object],
     parameter_audit: Mapping[str, object],
+    overlay_contract_audit: Mapping[str, object],
 ) -> dict[str, object]:
     mechanism_failures = [
         {
@@ -483,6 +519,8 @@ def failure_cases(
         global_failures.append({"artifact": "leakage_space_audit", "reason": "silent_renormalization_used"})
     if not bool(parameter_audit.get("passed", False)):
         global_failures.append({"artifact": "mechanism_parameter_ranges", "reason": "invalid_parameter_range"})
+    if not bool(overlay_contract_audit.get("passed", False)):
+        global_failures.append({"artifact": "overlay_contract_audit", "reason": OVERLAY_CONTRACT_MISSING_REASON})
     return {
         "schema": "scope_static_layer1p_teacher_physicality_failure_cases_v1",
         "mechanism_failure_count": int(len(mechanism_failures)),
@@ -822,6 +860,7 @@ def _write_outputs(output: Path, result: Mapping[str, object]) -> None:
         "leakage_space_audit.json": result["leakage_space_audit"],
         "circuit_probability_audit.json": result["circuit_probability_audit"],
         "sampling_audit.json": result["sampling_audit"],
+        "overlay_contract_audit.json": result["overlay_contract_audit"],
         "failure_cases.json": result["failure_cases"],
         "acceptance_audit.json": result["acceptance_audit"],
     }
@@ -861,7 +900,7 @@ def format_teacher_physicality_summary(result: Mapping[str, object]) -> str:
     summary = dict(result.get("summary", {}))
     return "\n".join(
         [
-            "# Layer1.P: Teacher Physicality Audit",
+            "# Layer1 preprocessing - teacher generator physicality audit",
             "",
             f"- Decision: `{result.get('decision')}`",
             f"- Teacher physicality passed: `{str(bool(summary.get('teacher_physicality_passed', False))).lower()}`",
@@ -869,6 +908,7 @@ def format_teacher_physicality_summary(result: Mapping[str, object]) -> str:
             f"- Channel instances checked: `{summary.get('total_channel_instances_checked')}`",
             f"- Contexts checked: `{summary.get('total_contexts_checked')}`",
             f"- Total failures: `{summary.get('total_failures')}`",
+            f"- Overlay records missing payload: `{summary.get('overlay_records_missing_payload', 0)}`",
             f"- Min Choi eigenvalue: `{float(summary.get('min_choi_eigenvalue', 0.0)):.6e}`",
             f"- Max TP defect: `{float(summary.get('max_tp_defect', 0.0)):.6e}`",
             f"- Max probability sum defect: `{float(summary.get('max_probability_sum_defect', 0.0)):.6e}`",

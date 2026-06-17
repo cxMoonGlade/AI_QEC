@@ -17,6 +17,7 @@ from scope_static.data_preparation.local_observable_teacher import (
 )
 from scope_static.teacher import run_sampled_observation_separability_audit
 from scope_static.primitives.probe_catalog import _probe_names
+from scope_static.primitives.overlay_contract import overlay_contract_audit
 from scope_static.mechanism_observability.typed_spam_gate_invariant import _location_features
 
 
@@ -168,6 +169,29 @@ def test_local_observable_records_support_weighted_mechanism_instance_counts() -
     assert repetitions == 5
     assert sampling_contract == "weighted"
     assert counts == {"M0": 5, "M8": 2}
+
+
+def test_local_observable_records_include_m11_overlay_payload() -> None:
+    cfg = {
+        "mechanism_set": ["M11"],
+        "num_qubits": 20,
+        "probe_set": "base",
+        "balanced_min_instances_per_mechanism": 4,
+        "balanced_strength_variants": True,
+    }
+
+    records, repetitions, sampling_contract = _build_local_observable_records(cfg)
+    audit = overlay_contract_audit(records)
+
+    assert repetitions == 4
+    assert sampling_contract == "balanced"
+    assert audit["passed"] is True
+    assert audit["num_overlay_records"] == 4
+    assert audit["num_overlay_records_missing_payload"] == 0
+    assert {record["base_mechanism"] for record in records} == {"M8", "M7", "M1", "M17"}
+    assert all(record["spectator_overlay"]["present"] is True for record in records)
+    assert all(record["spectator_overlay"]["base_mechanism"] == record["base_mechanism"] for record in records)
+    assert all(record["claims_standalone_flat_mechanism"] is False for record in records)
 
 
 def test_slot_remapped_location_features_neutralize_synthetic_geometry() -> None:

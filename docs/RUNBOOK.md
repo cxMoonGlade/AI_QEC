@@ -127,11 +127,20 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.wil
   --config configs/scope_static/google_s3_visible_aggregate_v2.yaml
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.willow_data.s3_visible_adapter_v2 \
   --config configs/scope_static/google_s3_visible_adapter_v2.yaml
+conda run -n aiqec scope-stage3b1-discovery \
+  --config configs/scope_static/google_s3_visible_stage3b1_raw_multiview.yaml
+conda run -n aiqec scope-stage3c-generator \
+  --config configs/scope_static/google_s3_visible_stage3c_raw_multiview.yaml
 ```
 
 This path reads Google detection events and observable flips into a public
 precompute cache, builds aggregate syndrome-response summaries, and writes
-Stage 3A-compatible frozen visible artifacts:
+Stage 3A-compatible frozen visible artifacts. Google data has no true mechanism
+labels, so the B1/C model configs run in `no_oracle_labels` mode. The default
+Google V2 B1 config uses the controlled S3/S5 allM contract cardinality as a
+no-oracle design prior: fixed K=35, no Google true labels, no oracle scoring,
+and no feature construction from the prior. The K=70 config is an explicit
+overcomplete stress run.
 
 ```text
 outputs/google_static/google_s3_visible_surface_v2_cache/precompute_cache/
@@ -151,16 +160,94 @@ outputs/google_static/google_s3_visible_surface_v2/S3A_protocol_freeze/
   adequacy_report.json
   aggregate_cache_manifest.json
   metrics.json
+
+outputs/google_static/google_s3_visible_surface_v2/S3B1_raw_multiview_k35/
+  learned_assignments.npy
+  learner_input_mask_audit.json
+  metrics.json
+
+outputs/google_static/google_s3_visible_surface_v2/S3C_raw_multiview_k35_allfolds/
+  predicted_assignment_metrics.json
+  stratified_null_metrics.json
+  assignment_shuffle_audit.json
+  feature_scramble_audit.json
+  target_score_profile_report.json
+  metrics.json
 ```
 
-The V1 fixed-window adapter remains available for regression comparison:
+To run the overcomplete stress pair:
 
 ```bash
-scope-google-s3-visible-adapter --config configs/scope_static/google_s3_visible_adapter_v1.yaml
+conda run -n aiqec scope-stage3b1-discovery \
+  --config configs/scope_static/google_s3_visible_stage3b1_raw_multiview_k70.yaml
+conda run -n aiqec scope-stage3c-generator \
+  --config configs/scope_static/google_s3_visible_stage3c_raw_multiview_k70.yaml
 ```
 
-Historical Google DEM-proxy diagnostics are archived under
-`docs/archive/google_gdisc15.md`.
+The old `k4_8_16_32` Google configs are kept only as legacy diagnostics and are
+not the recommended contract-matched Google V2 path.
+
+Current cache and aggregate configs use `num_workers: 8`. Their manifests report
+`parallelism`, `wallclock_by_block_seconds`, `wallclock_table`,
+`slowest_block`, and `total_wallclock_seconds`.
+
+## Function: Run Stage 4 Bridge And Transfer
+
+Stage 4 wrappers are console scripts after an editable install. If a script is
+missing, rerun `conda run -n aiqec python -m pip install -e .` or use the module
+entrypoint.
+
+Use the repaired smoke configs first when checking the current S5 teacher
+against the Google V2 visible schema:
+
+```bash
+conda run -n aiqec scope-stage4-synthetic-freeze \
+  --config configs/scope_static/stage4_synthetic_google_surface_repaired_smoke.yaml
+
+conda run -n aiqec scope-stage4-source-ceiling \
+  --config configs/scope_static/stage4_source_ceiling_repaired_smoke.yaml
+```
+
+Current repaired-smoke interpretation: S4.0 passes the learner-safety/schema
+contract, but S4.0.5 reports `bridge_surface_projection_aliasing`. Treat this as
+a bridge-surface diagnosis, not a full S4 neural release gate. The full S4.0
+config can emit large artifacts; use it only after the smoke result and
+projection target are clear.
+
+```bash
+conda run -n aiqec scope-stage4-synthetic-freeze \
+  --config configs/scope_static/stage4_synthetic_google_surface_v1.yaml
+
+conda run -n aiqec scope-stage4-source-ceiling \
+  --config configs/scope_static/stage4_source_ceiling_v1.yaml
+
+conda run -n aiqec scope-stage4-source-pretrain \
+  --config configs/scope_static/stage4_source_pretrain_v1.yaml
+
+conda run -n aiqec scope-stage4-google-unit-source-expansion \
+  --config configs/scope_static/stage4_google_unit_source_expansion_v1.yaml
+```
+
+Equivalent S4.6 module command:
+
+```bash
+conda run -n aiqec python -m scope_static.experiments.stage4.google_unit_source_expansion \
+  --config configs/scope_static/stage4_google_unit_source_expansion_v1.yaml
+```
+
+S4.6 writes the synthetic source freeze under `S3A_protocol_freeze/` and keeps
+downstream diagnostics in the parent run directory. Robustness closeout artifacts:
+
+```text
+paired_bootstrap_report.json
+seed_split_repeat_report.json
+stronger_statistical_controls_report.json
+mechanism_source_structure_ablation_report.json
+robustness_closeout_report.json
+```
+
+Historical Google DEM-proxy diagnostics were removed from the active tree; the
+current Google path is the Stage 3 V2 public syndrome-response surface.
 
 ## Function: Generate Physical-Mechanism Data
 
@@ -180,7 +267,7 @@ not hardware-calibrated frequency distributions.
 The full template is
 `configs/scope_static/layer1_user_defined_mechanisms.yaml`.
 
-Small user-defined Layer1.P run:
+Small user-defined Layer1 preprocessing - teacher generator run:
 
 ```bash
 scope-data-preparation-teacher \
@@ -196,20 +283,19 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.qec
   --run-local-inverse auto
 ```
 
-Layer1.P full-circuit CUDA-Q teacher:
+Layer1 preprocessing - teacher generator full-circuit CUDA-Q run:
 
 ```bash
 conda run -n aiqec scope-data-preparation-teacher \
   --config configs/scope_static/data_preparation_teacher.yaml
 ```
 
-Layer1.P produces mechanism records, probe schedules, sampled observations,
-teacher config, sampling audits, active probe manifests, a pre-sampling
-physical-process contract, and a post-sampling physicality audit. The older
-`scope-catalog-teacher` command remains as a compatibility alias, but it now routes
-through Layer1.P.
+Layer1 preprocessing - teacher generator produces mechanism records, probe
+schedules, sampled observations, teacher config, sampling audits, active probe
+manifests, a pre-sampling physical-process contract, and a post-sampling
+physicality audit.
 
-Layer1.P teacher generation:
+Layer1 preprocessing - teacher generator:
 
 ```bash
 conda run -n aiqec scope-data-preparation-teacher \
@@ -223,14 +309,14 @@ conda run -n aiqec python -m scope_static.experiments.qec_noise_catalog.data_pre
   --config configs/scope_static/data_preparation_teacher.yaml
 ```
 
-Layer1.P is the first-class physical-process teacher. It validates the declared
-local CPTP/POVM mechanism contract before sampling, runs full-circuit CUDA-Q
-Born-rule sampling, then runs the post-sampling physicality audit as a blocking
-gate. It writes `layer1p_pre_sampling_contract.json`,
-`layer1p_teacher_contract.json`, `full_circuit_cudaq_summary.json`, and
-`Layer1_teacher_physicality_audit/`.
+Layer1 preprocessing - teacher generator is the first-class physical-process
+generator. It validates the declared local CPTP/POVM mechanism contract before
+sampling, runs full-circuit CUDA-Q Born-rule sampling, then runs the
+post-sampling physicality audit as a blocking gate. It writes
+`layer1p_pre_sampling_contract.json`, `layer1p_teacher_contract.json`,
+`full_circuit_cudaq_summary.json`, and `Layer1_teacher_physicality_audit/`.
 
-Layer1.P teacher physicality audit only:
+Layer1 preprocessing teacher-generator physicality audit only:
 
 ```bash
 conda run -n aiqec scope-teacher-physicality-audit \
@@ -249,7 +335,7 @@ This post-hoc audit checks the teacher's generating maps, not the data as
 tests, readout maps as stochastic matrices embedded into POVMs, reset/prep
 surrogates, leakage-surrogate bookkeeping, and empirical circuit output
 normalization. It writes a `Layer1_teacher_physicality_audit/` artifact bundle
-and is run automatically by the Layer1.P teacher generator.
+and is run automatically by the Layer1 preprocessing - teacher generator.
 
 ### Full-Circuit g30 Timing Reference
 
@@ -299,9 +385,50 @@ Practical bottleneck order:
 3. S3B.1 candidate/model sweep
 ```
 
-## Function: Audit Teacher Self-Distinguishment
+## Function: Run Current Stage 3/5 Contract Teacher
 
-Teacher balanced audit:
+The current controlled Stage 3/5 route uses the Layer1 preprocessing - teacher
+generator medium contract artifact. The blocking gate is teacher-generator
+physicality plus Stage 3 protocol freeze; S5 property recovery is an
+evaluator-side interpretation audit. The claim-bearing S5 route uses the
+S3D4b visible-only postmerge assignment source plus S5B1b conditional property
+recovery; raw S3B1 remains a diagnostic assignment source by itself.
+
+```bash
+conda run -n aiqec python -m scope_static.experiments.qec_noise_catalog.data_preparation_teacher \
+  --config configs/scope_static/s5_medium_hard_allM_contract_teacher_20q_depth20_g20.yaml
+
+conda run -n aiqec python -m scope_static.experiments.qec_noise_catalog.teacher_physicality_audit \
+  --config configs/scope_static/teacher_physicality_audit.yaml
+
+conda run -n aiqec python -m scope_static.experiments.stage3.protocol_freeze \
+  --config configs/scope_static/stage3a_protocol_freeze.yaml
+
+conda run -n aiqec python -m scope_static.experiments.stage3.observability_ceiling \
+  --config configs/scope_static/stage3a5_observability_ceiling.yaml
+
+conda run -n aiqec python -m scope_static.experiments.stage3.discovery_model \
+  --config configs/scope_static/stage3b1_discovery_model.yaml
+
+conda run -n aiqec python -m scope_static.experiments.stage3.k_stress_audit \
+  --config configs/scope_static/stage3d4_k_stress_audit.yaml
+
+conda run -n aiqec python -m scope_static.experiments.stage3.overcomplete_merge_prune_audit \
+  --config configs/scope_static/stage3d4b_overcomplete_merge_prune_audit.yaml
+
+conda run -n aiqec python -m scope_static.experiments.stage5.property_recovery \
+  --config configs/scope_static/stage5b1b_conditional_property_recovery.yaml
+```
+
+Default artifact root:
+
+```text
+outputs/scope_static/s5_medium_hard_allM_contract_teacher_20q_depth20_rzz_active_g20_strength_decorrelated_s1000/
+```
+
+## Function: Run Layer 2 Teacher Self-Audit
+
+Layer 2 teacher balanced audit:
 
 ```bash
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.qec_noise_catalog.teacher_distinguishment \
@@ -313,9 +440,9 @@ conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.qec
 Teacher tests teacher/catalog self-distinguishability. It is not a learner
 success claim and must not emit canonical learner predictions.
 
-## Function: Run No-Leakage Learner Recovery
+## Function: Run Layer 3 No-Leakage Learner Recovery
 
-Learner legacy no-leakage recovery:
+Layer 3 no-leakage learner recovery:
 
 ```bash
 conda run --no-capture-output -n aiqec python -u -m scope_static.experiments.qec_noise_catalog.learner_recovery \
@@ -340,25 +467,6 @@ matrices, exact PTMs, oracle prototypes, and hidden parameters.
 Learner generated-noise language must distinguish two cases: catalog-mechanism
 replay inherits the catalog mechanism definition, while empirical visible replay
 is a visible-distribution model and is not by itself a learned CPTP channel.
-
-## Function: Run Canonical Learner Acceptance
-
-```bash
-conda run -n aiqec learner-acceptance \
-  --config configs/scope_static/learner_acceptance.yaml
-```
-
-Equivalent module form:
-
-```bash
-conda run -n aiqec python -m scope_static.experiments.qec_noise_catalog.learner_acceptance \
-  --config configs/scope_static/learner_acceptance.yaml
-```
-
-The canonical resolver selects `phyc3c_distributional_gaussian_likelihood_head`
-only after teacher, visible repair, distributional learner, and
-validation gates pass. It rejects teacher-self predictions, legacy grouped
-predictions, and the old visible-surface baseline as canonical learner evidence.
 
 ## Function: Run Stage 3A Protocol Freeze
 
@@ -481,6 +589,13 @@ NLL is retained as a secondary continuous-density diagnostic. It writes
 `acceptance_audit.json`. Oracle-label prototypes are evaluator-only
 comparators; they are not used for predicted-assignment fitting or model
 selection.
+
+For controlled-catalog runs, Stage 3C also emits the current S5 artifact:
+`s5_context_relative_mechanism_effect_audit.json`. It reports evaluator-only
+predicted-vs-oracle family/exact-mechanism effect recovery using
+context-relative location and context-normalized visible strength. The
+compatibility alias `soft_family_strength_location_audit.json` is written with
+the same payload.
 
 ## Function: Run Stage 3D.1 Assignment-Shuffle Generator Audit
 

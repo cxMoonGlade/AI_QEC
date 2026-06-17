@@ -10,3 +10,4 @@ google_s3_visible_aggregate_v2:
     - logical_support_neighborhood
     - interior_chain
     - full_patch
+  num_workers: 8

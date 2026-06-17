@@ -273,9 +273,8 @@ def format_sampled_observation_separability_summary(result: dict[str, object]) -
     if not isinstance(diagnostic, dict):
         diagnostic = {}
     lines = [
-        "# Layer 2: Teacher Self-Distinguishment (Teacher)",
+        "# Layer 2 teacher self-audit",
         "",
-        f"- Legacy alias: `{dict(result.get('public_layer', {})).get('legacy_alias', 'PHYC2')}`",
         f"- Primary role: `{dict(result.get('contract', {})).get('primary_role', TEACHER_VALIDATION_STAGE.public_name) if isinstance(result.get('contract', {}), dict) else TEACHER_VALIDATION_STAGE.public_name}`",
         f"- Contract variant: `{result.get('contract_variant', 'balanced')}`",
         f"- Decision: `{result.get('decision')}`",

@@ -9,6 +9,7 @@ from scope_static.mechanism_discovery.generator_learning import DEFAULT_MAX_CV_F
 from scope_static.mechanism_discovery.k_stress_audit import DEFAULT_OUTPUT_DIR as DEFAULT_STAGE3D4_DIR
 from scope_static.mechanism_discovery.observability_ceiling import DEFAULT_OUTPUT_DIR as DEFAULT_STAGE3A5_DIR
 from scope_static.mechanism_discovery.overcomplete_merge_prune_audit import (
+    DEFAULT_CONTEXT_RESIDUAL_PROFILE_VETO_THRESHOLD,
     DEFAULT_MAX_GENERATION_NLL_INCREASE,
     DEFAULT_MAX_MICROCLUSTER_FRACTION,
     DEFAULT_MAX_MICROCLUSTER_SUPPORT,
@@ -32,6 +33,7 @@ def run_stage3d4b_overcomplete_merge_prune_audit_from_config(
     stage3d4_dir: str | Path | None = None,
     output_dir: str | Path | None = None,
     assignment_key: str | None = None,
+    context_residual_profile_veto_threshold: float | None = None,
 ) -> dict[str, object]:
     cfg = _load_config(config_path)
     s3a = Path(stage3a_dir) if stage3a_dir is not None else Path(str(cfg.get("stage3a_dir", DEFAULT_STAGE3A_DIR)))
@@ -55,6 +57,18 @@ def run_stage3d4b_overcomplete_merge_prune_audit_from_config(
         min_postmerge_ba=float(cfg.get("min_postmerge_ba", DEFAULT_MIN_POSTMERGE_BA)),
         min_postmerge_min_recall=float(cfg.get("min_postmerge_min_recall", DEFAULT_MIN_POSTMERGE_MIN_RECALL)),
         max_generation_nll_increase=float(cfg.get("max_generation_nll_increase", DEFAULT_MAX_GENERATION_NLL_INCREASE)),
+        context_residual_profile_veto_threshold=(
+            None
+            if (
+                context_residual_profile_veto_threshold is None
+                and cfg.get("context_residual_profile_veto_threshold", DEFAULT_CONTEXT_RESIDUAL_PROFILE_VETO_THRESHOLD) is None
+            )
+            else float(
+                context_residual_profile_veto_threshold
+                if context_residual_profile_veto_threshold is not None
+                else cfg.get("context_residual_profile_veto_threshold", DEFAULT_CONTEXT_RESIDUAL_PROFILE_VETO_THRESHOLD)
+            )
+        ),
     )
     metrics = dict(result.get("postmerge_metrics", {}))
     post = dict(metrics.get("postmerge_exact_metrics", {}))
@@ -81,6 +95,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--assignment-key", type=str)
     parser.add_argument("--overcomplete-assignment-key", type=str)
+    parser.add_argument("--context-residual-profile-veto-threshold", type=float)
     args = parser.parse_args(argv)
     run_stage3d4b_overcomplete_merge_prune_audit_from_config(
         config_path=args.config,
@@ -89,6 +104,7 @@ def main(argv: list[str] | None = None) -> None:
         stage3d4_dir=args.stage3d4_dir,
         output_dir=args.output_dir,
         assignment_key=args.assignment_key or args.overcomplete_assignment_key,
+        context_residual_profile_veto_threshold=args.context_residual_profile_veto_threshold,
     )
 
 

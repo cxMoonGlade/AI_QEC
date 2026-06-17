@@ -39,13 +39,6 @@ from .inventory import (
     set1_leaf_from_google_leaf,
     write_google_inventory_artifacts,
 )
-from .s3_visible_surface import (
-    DEFAULT_OUTPUT_DIR as DEFAULT_GOOGLE_S3_VISIBLE_OUTPUT_DIR,
-    STAGE_NAME as GOOGLE_S3_VISIBLE_STAGE_NAME,
-    forbidden_feature_audit_google,
-    format_google_s3_visible_surface_summary,
-    write_google_s3_visible_surface,
-)
 from .s3_visible_cache_v2 import (
     DEFAULT_CACHE_DIR as DEFAULT_GOOGLE_S3_VISIBLE_V2_CACHE_DIR,
     GoogleS3V2CachedContext,
@@ -91,13 +84,11 @@ __all__ = [
     "DATASET_SURFACE_SET2",
     "DECODER_ALIASES",
     "DEFAULT_DATASET_ROOTS",
-    "DEFAULT_GOOGLE_S3_VISIBLE_OUTPUT_DIR",
     "DEFAULT_GOOGLE_S3_VISIBLE_V2_CACHE_DIR",
     "DEFAULT_GOOGLE_S3_VISIBLE_V2_OUTPUT_DIR",
     "EXPECTED_DECODER_PATHWAYS",
     "EXPECTED_LEAF_COUNTS",
     "FORBIDDEN_TRUE_LABELS",
-    "GOOGLE_S3_VISIBLE_STAGE_NAME",
     "GOOGLE_S3_VISIBLE_V2_STAGE_NAME",
     "GoogleDecoderPathway",
     "GoogleDemData",
@@ -114,10 +105,8 @@ __all__ = [
     "decoder_pathways_for_leaf",
     "extract_dem_proxy_labels",
     "find_google_set1_leaf",
-    "forbidden_feature_audit_google",
     "forbidden_cache_audit_google_v2",
     "forbidden_feature_audit_google_v2",
-    "format_google_s3_visible_surface_summary",
     "format_google_s3_visible_surface_v2_summary",
     "fit_cluster_mean_logits",
     "google_context_id",
@@ -150,6 +139,5 @@ __all__ = [
     "write_google_inventory_artifacts",
     "write_google_s3_visible_cache_v2",
     "write_google_s3_visible_aggregate_cache_v2",
-    "write_google_s3_visible_surface",
     "write_google_s3_visible_surface_v2",
 ]

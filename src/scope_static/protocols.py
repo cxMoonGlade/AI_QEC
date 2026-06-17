@@ -8,13 +8,12 @@ class CatalogProtocolStage:
     index: int
     title: str
     short_name: str
-    legacy_alias: str
     role: str
     produces: tuple[str, ...]
 
     @property
     def public_name(self) -> str:
-        return f"{self.title} ({self.short_name})"
+        return self.title
 
     def metadata(self, *, artifact_stage: str | None = None, substage: str | None = None) -> dict[str, object]:
         return {
@@ -25,7 +24,6 @@ class CatalogProtocolStage:
             "layer_index": int(self.index),
             "layer_name": self.public_name,
             "layer_short_name": self.short_name,
-            "legacy_alias": self.legacy_alias,
             "artifact_stage": artifact_stage,
             "substage": substage,
             "role": self.role,
@@ -35,9 +33,8 @@ class CatalogProtocolStage:
 
 DATA_PREPARATION_STAGE = CatalogProtocolStage(
     index=1,
-    title="Data Preparation",
-    short_name="Prep",
-    legacy_alias="PHYC1",
+    title="Layer1 preprocessing - teacher generator",
+    short_name="Layer1",
     role="Generate mechanism-catalog records, probe schedules, sampled observations, and teacher metadata.",
     produces=(
         "oracle_mechanisms.json",
@@ -50,9 +47,8 @@ DATA_PREPARATION_STAGE = CatalogProtocolStage(
 
 TEACHER_VALIDATION_STAGE = CatalogProtocolStage(
     index=2,
-    title="Teacher Self-Distinguishment",
-    short_name="Teacher",
-    legacy_alias="PHYC2",
+    title="Layer 2 teacher self-audit",
+    short_name="Layer2",
     role="Audit whether the declared teacher/catalog can self-distinguish every generated mechanism.",
     produces=(
         "teacher_self_distinguishment metrics",
@@ -63,9 +59,8 @@ TEACHER_VALIDATION_STAGE = CatalogProtocolStage(
 
 LEARNER_VALIDATION_STAGE = CatalogProtocolStage(
     index=3,
-    title="Learner Classification and Noise Generation",
-    short_name="Learner",
-    legacy_alias="PHYC3",
+    title="Layer 3 learner",
+    short_name="Layer3",
     role="Recover mechanisms from learner-visible observations and score generated noise/error quality without hidden feature leakage.",
     produces=(
         "visible feature schema",
@@ -81,11 +76,3 @@ CATALOG_VALIDATION_STAGES = (DATA_PREPARATION_STAGE, TEACHER_VALIDATION_STAGE, L
 
 def catalog_validation_stage_metadata() -> list[dict[str, object]]:
     return [stage.metadata() for stage in CATALOG_VALIDATION_STAGES]
-
-
-PhysicalMechanismLayer = CatalogProtocolStage
-LAYER1_PREP = DATA_PREPARATION_STAGE
-LAYER2_TEACHER = TEACHER_VALIDATION_STAGE
-LAYER3_LEARNER = LEARNER_VALIDATION_STAGE
-PHYSICAL_MECHANISM_LAYERS = CATALOG_VALIDATION_STAGES
-layer_stack_metadata = catalog_validation_stage_metadata

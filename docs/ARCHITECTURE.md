@@ -18,15 +18,16 @@ generic "physical" layers.
 src/scope_static/
   dem/                     Stage 1 DEM/Bernoulli implementation
   google/                  Google readers, inventory, and S3 visible surfaces/cache
-  primitives/              channel, PTM, probe, CPTP/POVM, and preflight support
-  data_preparation/        controlled-catalog teacher generation
-  teacher/                teacher self-distinguishment and visible-surface helpers
-  learner/                no-leakage learner recovery and visible replay quality
+  primitives/              channel, PTM, probe, CPTP/POVM, preflight, + the
+                           differentiable CPTP substrate (diff_cptp_channel,
+                           diff_circuit_sim)
+  data_preparation/        Layer1 preprocessing - teacher generator
+  teacher/                Layer 2 teacher self-audit and visible-surface helpers
+  learner/                Layer 3 learner recovery and visible replay quality
   mechanism_observability/ S2D observability, calibration, and typed learner audits
-  mechanism_discovery/     Stage 3 latent mechanism discovery artifacts and models
+  mechanism_discovery/     Stage 3/4 discovery, Stage 5 property recovery, bridge, transfer, and robustness artifacts
   catalog_pipeline/       controlled-catalog orchestration
   experiments/             thin CLI/config wrappers grouped by experiment family
-  archive/                 historical research-stage modules with compatibility wrappers
   cuda/                    C++/CUDA exact DEM/window kernels
 ```
 
@@ -42,19 +43,17 @@ The current pre-release catalog validation flow is:
 
 ```text
 mechanism catalog + enabled mechanism set
--> data_preparation: probe schedule, mechanism records, sampled observations
--> teacher: teacher/catalog self-distinguishability
--> learner: no-leakage learner recovery and visible-generation quality
+-> data_preparation: Layer1 preprocessing - teacher generator
+-> teacher: Layer 2 teacher/catalog self-audit
+-> learner: Layer 3 no-leakage recovery and visible-generation quality
 -> mechanism_discovery: unsupervised latent quotient discovery
 ```
 
-Legacy artifact aliases remain:
-
-```text
-PHYC1 -> data_preparation
-PHYC2 -> teacher
-PHYC3 -> learner
-```
+The current controlled Stage 3/5 route starts from the Layer1 preprocessing -
+teacher generator, freezes a learner-visible Stage 3A protocol, audits
+observability, trains S3B1 visible-only assignments, optionally promotes an
+S3D4b visible-only postmerge assignment source, then runs S5B1/S5B1b
+context-relative property recovery.
 
 The code should use the responsibility packages above. New code should not add
 flat modules under `src/scope_static/` or rebuild a broad `physical` package.
@@ -68,23 +67,36 @@ experiments/static/            DEM and Stage 2 static-discovery commands
 experiments/willow_data/       Google/Willow inventory, GPU diagnostics, S3 cache, and visible adapters
 experiments/qec_noise_catalog/ catalog teacher, validation, observability commands
 experiments/stage3/            Stage 3A through Stage 3D commands
+experiments/stage4/            S4 bridge, source, transfer, and Google-unit commands
+experiments/stage5/            S5 context-relative property-recovery commands
 ```
 
 Preferred console scripts:
 
 ```text
 scope-static-toolbox
-scope-catalog-teacher
 scope-data-preparation-teacher
-teacher-distinguishment
-learner-acceptance
 scope-stage3a-freeze
 scope-stage3a5-ceiling
 scope-stage3b0-baselines
 scope-stage3b1-discovery
 scope-stage3c-generator
 scope-stage3d1-assignment-shuffle
-scope-google-s3-visible-adapter
+scope-stage3d2-feature-scramble
+scope-stage3d3-context-shuffle
+scope-stage3d4-k-stress
+scope-stage3d4b-overcomplete-merge-prune
+scope-stage3-abc-observability-diagnostic
+scope-stage4-synthetic-freeze
+scope-stage4-source-ceiling
+scope-stage4-source-pretrain
+scope-stage4-support-audit
+scope-stage4-assignment-geometry
+scope-stage4-google-unit-source-expansion
+scope-stage4-google-transfer
+scope-stage4-transfer-diagnostics
+scope-stage5b1-property-recovery
+scope-stage5b1b-conditional-property-recovery
 scope-google-s3-visible-cache-v2
 scope-google-s3-visible-aggregate-v2
 scope-google-s3-visible-adapter-v2
@@ -109,48 +121,24 @@ then an aggregate cache, then frozen Stage 3A visible features. It supports a
 no-oracle external replay claim over raw syndrome-response blocks, not true
 hardware mechanism recovery.
 
+Stage 4 extends the same artifact discipline. S4.6 builds a Google-unit
+synthetic source surface from controlled-catalog mixtures and Google design-split
+visible modes, then reports transfer only on heldout Google rows. Robustness
+closeout is an audit layer, not a physical-channel claim.
+
 ## Physicality Boundary
 
-The data-preparation teacher samples observations from catalog mechanisms whose
-underlying local modules are audited as unitary channels, Kraus channels,
-classical stochastic readout maps embedded into POVMs, or related valid
-instruments. The data themselves are not CPTP; CPTP/POVM validity is a property
-of the generating process.
+Layer1 preprocessing - teacher generator samples observations from catalog
+mechanisms whose underlying local modules are audited as unitary channels,
+Kraus channels, classical stochastic readout maps embedded into POVMs, or
+related valid instruments. The data themselves are not CPTP; CPTP/POVM
+validity is a property of the generating process.
 
-The current learner is not an arbitrary CPTP/GKSL channel learner by
-construction.
-
-+----------------------------------------------------------------------+<br>
-|                            I CHOOSE YOU!                             |<br>
-|                                                                      |<br>
-|             @@@@@                                                    |<br>
-|            @@@@#*                                              ..    |<br>
-|           .#####.                        ....@@@@@:         .*###.   |<br>
-|           *#####                 ..**#######@@@@@@:       *#######   |<br>
-|          .#####* ........  ..**#############@@@@:      .*#########*  |<br>
-|          *################################*::        *#############. |<br>
-|          *###########/@@\###########**...          .*################|<br>
-|         *###########|@@@|#######*               *###################.|<br>
-|        ./@@|#########\@@/#ooo#####.            *###################*.|<br>
-|        #|@@|#############oooooo###.         .*##################*.   |<br>
-|       oo###*oooooo######oooooo####*        *###############*.        |<br>
-|      ooo####oo    #######ooo#######.        *##########*..           |<br>
-|       oo#####*.   ##################.        .*######.               |<br>
-|        .#######**####################*         .#####*               |<br>
-|         .#############################.:       .*#####.              |<br>
-|  ..**##################################**   .*######**.              |<br>
-| .#########################################* .*####.                  |<br>
-| .##########################################*: .***.:                 |<br>
-|   ..**######################################**  :   :                |<br>
-|             ...*##############################*                      |<br>
-|                 ###############################*::                   |<br>
-|                 *###############################:                    |<br>
-|                 .###############################                     |<br>
-|                  *#############################.                     |<br>
-|                   .#########**.....***########*                      |<br>
-|                     ..**###               .####                      |<br>
-|                         *##                .*##.                     |<br>
-|                                               .                      |<br>
-|                                                                      |<br>
-|                               PIKACHU!                               |<br>
-+----------------------------------------------------------------------+<br>
+The established learner is not an arbitrary CPTP/GKSL channel learner by
+construction. As of 2026-06 an exact CPTP physical substrate is an active,
+prioritized build: `scope_static.primitives.diff_cptp_channel` (a
+CPTP-by-construction PhysDec channel decoder plus differentiable recovery) and
+`scope_static.primitives.diff_circuit_sim` (an exact differentiable n-qubit
+circuit-to-observation forward model, `p_Theta(y|c) = Tr[M_y C_Theta(c)(rho_0)]`).
+It is a small-scale capability substrate toward the SCOPE-Twin, not a validated
+twin; see `docs/SCOPE_TWIN.md`.

@@ -112,6 +112,83 @@ def test_stage3a_rejects_mechanism_surrogate_instruction_context(tmp_path: Path)
     assert audit["checks"]["operation_context_matches_public_instruction_field"] is False
 
 
+def test_m11_missing_overlay_payload_fails_teacher_or_stage3a(tmp_path: Path) -> None:
+    teacher = tmp_path / "S2D_PHYC1_teacher"
+    teacher.mkdir()
+    records = [_record("M11", group) for group in range(3)]
+    for record in records:
+        record["num_qubits"] = 2
+        record["instruction"] = "rzz"
+        record["qubits"] = [0, 1]
+        record["parameters"] = {"epsilon": 0.025, "strength": 0.025}
+    (teacher / "oracle_mechanisms.json").write_text(json.dumps({"mechanisms": records}, indent=2) + "\n")
+
+    result = run_stage3a_dataset_protocol_freeze(
+        teacher_dir=teacher,
+        output_dir=tmp_path / "out",
+        shots=1000,
+        batch_size=2,
+    )
+
+    assert result["decision"] == "stage3a_protocol_freeze_failed"
+    overlay = result["overlay_contract_audit"]
+    assert overlay["passed"] is False
+    assert overlay["num_overlay_records_missing_payload"] == 3
+    assert "M11_overlay_contract_missing" in overlay["failure_kinds"]
+    assert result["acceptance_audit"]["checks"]["overlay_contract_payload_complete"] is False
+
+
+def test_overlay_payload_evaluator_only_not_in_visible_schema(tmp_path: Path) -> None:
+    teacher = tmp_path / "S2D_PHYC1_teacher"
+    teacher.mkdir()
+    records = [_record("M11", group) for group in range(3)]
+    for idx, record in enumerate(records):
+        record["num_qubits"] = 2
+        record["instruction"] = "rzz"
+        record["qubits"] = [idx, idx + 1]
+        record["parameters"] = {"epsilon": 0.025 + 0.001 * idx, "spectator_strength": 0.003 + 0.001 * idx}
+        record["spectator_overlay_present"] = True
+        record["spectator_overlay"] = {
+            "present": True,
+            "base_mechanism": "M8",
+            "victim_relative_location": "edge",
+            "aggressor_relative_location": "adjacent_gate",
+            "coupling_axis": "ZZ",
+            "timing_context": "same_cycle",
+            "spectator_strength": 0.003 + 0.001 * idx,
+        }
+        record["base_mechanism"] = "M8"
+        record["victim_relative_location"] = "edge"
+        record["aggressor_relative_location"] = "adjacent_gate"
+        record["coupling_axis"] = "ZZ"
+        record["timing_context"] = "same_cycle"
+    (teacher / "oracle_mechanisms.json").write_text(json.dumps({"mechanisms": records}, indent=2) + "\n")
+
+    result = run_stage3a_dataset_protocol_freeze(
+        teacher_dir=teacher,
+        output_dir=tmp_path / "out",
+        shots=1000,
+        batch_size=2,
+    )
+
+    assert result["decision"] == "stage3a_protocol_freeze_passed"
+    assert result["overlay_contract_audit"]["passed"] is True
+    feature_names = [str(row["name"]) for row in result["visible_feature_schema"]["features"]]
+    forbidden_overlay_tokens = [
+        "spectator_overlay",
+        "base_mechanism",
+        "victim_relative_location",
+        "aggressor_relative_location",
+        "coupling_axis",
+        "timing_context",
+        "spectator_strength",
+    ]
+    assert not any(token in name for token in forbidden_overlay_tokens for name in feature_names)
+    evaluator_fields = set(result["batch_context_schema"]["evaluator_only_fields"])
+    assert "victim_relative_location" in evaluator_fields
+    assert "spectator_strength" in evaluator_fields
+
+
 def test_stage3a_config_wrapper_runs_from_yaml(tmp_path: Path) -> None:
     teacher = tmp_path / "S2D_PHYC1_teacher"
     teacher.mkdir()
@@ -152,7 +229,7 @@ def test_stage3a_rejects_single_shot_assignment_unit(tmp_path: Path) -> None:
 
 
 def _record(label: str, group: int) -> dict[str, object]:
-    two_qubit = label in {"M8", "M9", "M10", "M12", "M21", "M22", "M23", "M28", "M29", "M30", "M31", "M32", "M33"}
+    two_qubit = label in {"M8", "M9", "M10", "M11", "M12", "M21", "M22", "M23", "M28", "M29", "M30", "M31", "M32", "M33"}
     return {
         "oracle_label": label,
         "mechanism_id": label,

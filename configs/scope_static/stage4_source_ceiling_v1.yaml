@@ -1,0 +1,5 @@
+stage4_source_ceiling_v1:
+  stage4_source_dir: outputs/scope_static/S4_bridge/S4_0_synthetic_google_shaped_freeze/S3A_protocol_freeze
+  output_dir: outputs/scope_static/S4_bridge/S4_0_5_source_surface_survival_audit
+  seed: 0
+  max_iter: 30

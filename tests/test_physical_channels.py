@@ -3,19 +3,29 @@ from __future__ import annotations
 import numpy as np
 
 from scope_static.primitives.channels import (
+    M13_DEFAULT_DRIFT_VISIBILITY_SCALE,
     MechanismSpec,
     amplitude_damping_kraus,
     mechanism_channel,
     pauli_stochastic_kraus,
     readout_bias_matrix,
+    rx_unitary,
     rz_unitary,
     rzz_unitary,
 )
 from scope_static.primitives.cptp_guardrail import audit_mechanism_physicality, build_cptp_guardrail_audit
 from scope_static.primitives.density_sim import apply_kraus, measurement_probabilities_z
 from scope_static.primitives.mechanism_catalog import IMPLEMENTED_MECHANISM_IDS, MECHANISM_NAMES, READOUT_MECHANISM_IDS, RZZ_FAMILY_IDS
+from scope_static.primitives.mechanism_catalog import CURRENT_VISIBLE_SURFACE_FLAT_EXACT_CLAIM_TARGET_IDS
+from scope_static.primitives.mechanism_catalog import MECHANISM_LEAF_EXACT_IDS, NON_FLAT_PRIMARY_TARGET_IDS, PRIMARY_FLAT_CLUSTER_TARGET_IDS
+from scope_static.primitives.mechanism_catalog import NON_FLAT_PUBLIC_LABELS, PRIMARY_FLAT_PUBLIC_LABELS
+from scope_static.primitives.mechanism_catalog import PUBLIC_LABEL_TO_LEGACY_MECHANISM_ID
+from scope_static.primitives.mechanism_catalog import SURFACE_CONDITIONAL_DIMENSION_TARGET_IDS
+from scope_static.primitives.mechanism_catalog import legacy_mechanism_id, mechanism_label_namespace, mechanism_public_label
+from scope_static.primitives.mechanism_catalog import mechanism_contract, mechanism_taxonomy_contract_audit
 from scope_static.primitives.ptm import channel_fingerprint, ptm_from_kraus, ptm_from_unitary, rzz_ptm_block_audit
 from scope_static.primitives.ptm import probe_response_fingerprint, rzz_type_feature_names, rzz_type_feature_vector
+from scope_static.primitives.probe_catalog import build_default_oracle_mechanisms
 
 
 def test_amplitude_damping_preserves_trace_and_probabilities_normalize() -> None:
@@ -109,10 +119,65 @@ def test_m13_m14_contracts_are_mathematically_separated() -> None:
     m14_channel = mechanism_channel(m14)
 
     assert m13_channel["definition_contract"]["context_dependent"] is True
+    assert m13_channel["definition_contract"]["drift_overlay_payload_present"] is True
+    assert m13_channel["definition_contract"]["channel_representation"] == "random_unitary_kraus_mixture"
+    assert m13_channel["kind"] == "kraus"
     assert m14_channel["definition_contract"]["operation_dependent"] is True
     assert m14_channel["definition_contract"]["distinct_from_axis_overrotation"] is True
     assert np.allclose(m14_channel["unitary"], rz_unitary(0.028))
-    assert not np.allclose(m13_channel["unitary"], m14_channel["unitary"])
+    assert m13_channel["definition_contract"]["channel_axis"] != m14_channel["definition_contract"]["channel_axis"]
+
+
+def test_m13_drift_overlay_channel_is_not_plain_rx_at_row_level() -> None:
+    m13 = MechanismSpec(
+        "M13",
+        MECHANISM_NAMES["M13"],
+        1,
+        {
+            "operation_axis": "rx",
+            "epsilon": 0.035,
+            "epsilon_mean": 0.035,
+            "epsilon_span": 0.018,
+        },
+        instruction="rx",
+        qubits=(0,),
+    )
+
+    channel = mechanism_channel(m13)
+    kraus = [np.asarray(item, dtype=np.complex128) for item in channel["kraus"]]
+    effect = sum(op.conj().T @ op for op in kraus)
+    drift_ptm = ptm_from_kraus(kraus)
+    plain_ptm = ptm_from_unitary(rx_unitary(0.035))
+
+    assert channel["kind"] == "kraus"
+    assert len(kraus) == 3
+    assert np.allclose(effect, np.eye(2), atol=1e-12)
+    assert float(np.linalg.norm(drift_ptm - plain_ptm)) > 1.0e-4
+    assert channel["definition_contract"]["drift_overlay_payload_present"] is True
+    assert channel["definition_contract"]["single_context_exact_recovery_required"] is False
+
+
+def test_balanced_m13_records_serialize_drift_overlay_payload() -> None:
+    specs = build_default_oracle_mechanisms(
+        {
+            "num_qubits": 20,
+            "mechanism_set": ["M13"],
+            "balanced_min_instances_per_mechanism": 3,
+            "multicircuit_teacher_batch": True,
+            "balanced_strength_variants": True,
+            "balanced_strength_variant_strategy": "decorrelated_latin",
+        }
+    )
+
+    assert len(specs) == 3
+    for spec in specs:
+        record = spec.audit_dict()
+
+        assert spec.parameters["drift_visibility_scale"] == M13_DEFAULT_DRIFT_VISIBILITY_SCALE
+        assert record["parameters"]["drift_visibility_scale"] == M13_DEFAULT_DRIFT_VISIBILITY_SCALE
+        assert record["drift_overlay_present"] is True
+        assert record["drift_overlay"]["drift_visibility_scale"] == M13_DEFAULT_DRIFT_VISIBILITY_SCALE
+        assert record["claims_standalone_flat_mechanism"] is False
 
 
 def test_implemented_catalog_mechanisms_have_distinct_channel_fingerprints() -> None:
@@ -139,6 +204,121 @@ def test_implemented_catalog_mechanisms_have_distinct_channel_fingerprints() -> 
     for left_idx, left in enumerate(IMPLEMENTED_MECHANISM_IDS):
         for right in IMPLEMENTED_MECHANISM_IDS[left_idx + 1 :]:
             assert float(np.linalg.norm(fingerprints[left] - fingerprints[right])) > 1e-6
+
+
+def test_mechanism_taxonomy_contract_marks_composite_targets_explicitly() -> None:
+    audit = mechanism_taxonomy_contract_audit()
+
+    assert audit["passed"] is True
+    assert audit["schema"] == "scope_static_mechanism_taxonomy_contract_audit_v2"
+    assert audit["label_scheme"] == "flat_F_nonflat_M_v1"
+    assert set(audit["contracts"]) == set(IMPLEMENTED_MECHANISM_IDS)
+    assert "M11" not in MECHANISM_LEAF_EXACT_IDS
+    assert "M11" in NON_FLAT_PRIMARY_TARGET_IDS
+    assert set(PRIMARY_FLAT_CLUSTER_TARGET_IDS) < set(IMPLEMENTED_MECHANISM_IDS)
+    assert set(PRIMARY_FLAT_CLUSTER_TARGET_IDS) <= set(MECHANISM_LEAF_EXACT_IDS)
+    assert {"M6", "M22", "M23"} <= set(SURFACE_CONDITIONAL_DIMENSION_TARGET_IDS)
+    assert not {"M6", "M22", "M23"} & set(CURRENT_VISIBLE_SURFACE_FLAT_EXACT_CLAIM_TARGET_IDS)
+    assert set(audit["surface_conditional_dimension_target_ids"]) == set(SURFACE_CONDITIONAL_DIMENSION_TARGET_IDS)
+    assert set(audit["current_visible_surface_flat_exact_claim_target_ids"]) == set(CURRENT_VISIBLE_SURFACE_FLAT_EXACT_CLAIM_TARGET_IDS)
+    assert list(PRIMARY_FLAT_PUBLIC_LABELS) == [f"F{idx}" for idx in range(len(PRIMARY_FLAT_CLUSTER_TARGET_IDS))]
+    assert list(NON_FLAT_PUBLIC_LABELS) == [f"M{idx}" for idx in range(len(NON_FLAT_PRIMARY_TARGET_IDS))]
+    assert len(PUBLIC_LABEL_TO_LEGACY_MECHANISM_ID) == len(IMPLEMENTED_MECHANISM_IDS)
+    assert len(set(PUBLIC_LABEL_TO_LEGACY_MECHANISM_ID)) == len(IMPLEMENTED_MECHANISM_IDS)
+    for mechanism_id in PRIMARY_FLAT_CLUSTER_TARGET_IDS:
+        public_label = mechanism_public_label(mechanism_id)
+        assert public_label.startswith("F")
+        assert mechanism_label_namespace(mechanism_id) == "flat"
+        assert legacy_mechanism_id(public_label) == mechanism_id
+        assert mechanism_contract(mechanism_id)["public_label"] == public_label
+        assert mechanism_contract(mechanism_id)["legacy_catalog_id"] == mechanism_id
+    for mechanism_id in NON_FLAT_PRIMARY_TARGET_IDS:
+        public_label = mechanism_public_label(mechanism_id)
+        assert public_label.startswith("M")
+        assert mechanism_label_namespace(mechanism_id) == "non_flat"
+        assert legacy_mechanism_id(public_label) == mechanism_id
+        assert mechanism_contract(mechanism_id)["public_label"] == public_label
+    for mechanism_id in ["M0", "M1", "M2", "M3", "M9", "M10", "M13", "M14", "M15", "M16", "M18", "M19", "M27", "M34"]:
+        assert mechanism_id in NON_FLAT_PRIMARY_TARGET_IDS
+        assert mechanism_contract(mechanism_id)["primary_flat_cluster_target"] is False
+    assert mechanism_contract("M11")["contract_role"] == "overlay_family"
+    assert mechanism_contract("M11")["leaf_exact_effect_supported"] is False
+    assert mechanism_contract("M11")["public_label"].startswith("M")
+    assert mechanism_contract("M13")["contract_role"] == "context_conditioned_family"
+    assert mechanism_contract("M16")["base_family"] == "readout_spam"
+    assert mechanism_contract("M6")["primary_flat_cluster_target"] is True
+    assert mechanism_contract("M6")["current_visible_surface_flat_exact_claim_allowed"] is False
+    assert "paired_observability_group" not in mechanism_contract("M6")
+    assert len(mechanism_contract("M6")["targeted_observability_group"]) >= 3
+    assert mechanism_contract("M22")["current_visible_surface_claim_target"] == "parasitic_axis_dimension_recovery"
+    assert "paired_observability_group" not in mechanism_contract("M22")
+    assert mechanism_contract("M22")["targeted_observability_group"] == ["M6", "M13", "M22", "M23"]
+    assert mechanism_contract("M23")["targeted_observability_group"] == ["M6", "M13", "M22", "M23"]
+
+
+def test_mechanism_spec_audit_dict_exposes_public_label_and_legacy_id() -> None:
+    flat = MechanismSpec("M8", MECHANISM_NAMES["M8"], 2, {"epsilon": 0.04}, instruction="rzz", qubits=(0, 1))
+    non_flat = MechanismSpec(
+        "M11",
+        MECHANISM_NAMES["M11"],
+        2,
+        {
+            "epsilon": 0.02,
+            "spectator_overlay_present": True,
+            "base_mechanism": "M8",
+            "victim_relative_location": "edge",
+            "aggressor_relative_location": "adjacent_gate",
+            "coupling_axis": "ZZ",
+            "timing_context": "same_cycle",
+            "spectator_strength": 0.02,
+            "victim_qubit": 1,
+            "aggressor_qubit": 2,
+            "claims_standalone_flat_mechanism": False,
+        },
+        instruction="rzz",
+        qubits=(1, 2),
+    )
+
+    flat_audit = flat.audit_dict()
+    non_flat_audit = non_flat.audit_dict()
+
+    assert flat_audit["legacy_catalog_id"] == "M8"
+    assert flat_audit["mechanism_id"] == "M8"
+    assert flat_audit["public_label"].startswith("F")
+    assert flat_audit["label_namespace"] == "flat"
+    assert non_flat_audit["legacy_catalog_id"] == "M11"
+    assert non_flat_audit["mechanism_id"] == "M11"
+    assert non_flat_audit["public_label"].startswith("M")
+    assert non_flat_audit["label_namespace"] == "non_flat"
+    assert non_flat_audit["contract_role"] == "overlay_family"
+    assert non_flat_audit["public_effect_family"] == "spectator_overlay"
+    assert str(non_flat_audit["public_overlay_class"]).endswith("_overlay")
+    assert str(non_flat_audit["nonflat_public_label"]).startswith("spectator_overlay_")
+    assert non_flat_audit["spectator_overlay_present"] is True
+    assert non_flat_audit["base_mechanism"] == "M8"
+    assert non_flat_audit["victim_relative_location"] == "edge"
+    assert non_flat_audit["aggressor_relative_location"] == "adjacent_gate"
+    assert non_flat_audit["coupling_axis"] == "ZZ"
+    assert non_flat_audit["timing_context"] == "same_cycle"
+    assert non_flat_audit["spectator_strength"] == 0.02
+    assert non_flat_audit["spectator_overlay"]["present"] is True
+    assert non_flat_audit["spectator_overlay"]["base_mechanism"] == "M8"
+
+
+def test_carrier_surrogate_claim_boundary() -> None:
+    m11 = MechanismSpec("M11", MECHANISM_NAMES["M11"], 2, {"epsilon": 0.02}, instruction="rzz", qubits=(1, 2))
+
+    channel = mechanism_channel(m11)
+    contract = channel["definition_contract"]
+
+    assert channel["kind"] == "unitary"
+    assert np.allclose(channel["unitary"], rzz_unitary(0.02))
+    assert contract["contract_role"] == "overlay_family"
+    assert contract["sampling_surrogate"]["carrier_channel"] == "rzz_unitary"
+    assert contract["sampling_surrogate"]["claims_exact_physical_overlay_channel"] is False
+    assert contract["sampling_surrogate"]["claims_standalone_flat_mechanism"] is False
+    assert contract["leaf_exact_effect_supported"] is False
+    assert contract["primary_flat_cluster_target"] is False
 
 
 def test_cptp_guardrail_accepts_implemented_catalog_mechanisms() -> None:

@@ -3,9 +3,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import numpy as np
 import yaml
 
 from scope_static.experiments.qec_noise_catalog import s2d_difficulty_expansion as mod
+from scope_static.primitives.overlay_contract import overlay_contract_audit
 from scope_static.primitives.probe_catalog import build_default_oracle_mechanisms, build_probe_basis_manifest, build_probe_circuits
 
 
@@ -22,13 +24,38 @@ def test_difficulty_profiles_and_mechanism_sets_are_configurable() -> None:
 def test_difficulty_set_d_has_drifted_m13_strengths() -> None:
     specs = build_default_oracle_mechanisms({"mechanism_set": "set_D", "num_qubits": 40})
     m13 = [spec for spec in specs if spec.mechanism_id == "M13"]
+    m11 = [spec for spec in specs if spec.mechanism_id == "M11"]
 
     assert len(m13) >= 2
     assert len({float(spec.parameters["epsilon"]) for spec in m13}) == len(m13)
     assert all(spec.instruction == "rx" for spec in m13)
+    for spec in m13:
+        audit = spec.audit_dict()
+        assert audit["contract_role"] == "context_conditioned_family"
+        assert audit["drift_overlay_present"] is True
+        assert audit["public_effect_family"] == "context_conditioned_drift"
+        assert audit["drift_overlay"]["present"] is True
+        assert audit["drift_overlay"]["operation_axis"] == "rx"
+        assert audit["drift_overlay"]["channel_axis"] == "rx"
+        assert float(audit["drift_overlay"]["epsilon_span"]) > 0.0
+        assert audit["claims_standalone_flat_mechanism"] is False
+    assert m11
+    assert all(bool(spec.parameters["spectator_overlay_present"]) for spec in m11)
+    assert all(spec.parameters["base_mechanism"] for spec in m11)
+    assert all(spec.parameters["victim_relative_location"] for spec in m11)
+    assert all(spec.parameters["aggressor_relative_location"] for spec in m11)
+    assert all(spec.parameters["coupling_axis"] for spec in m11)
+    assert all(spec.parameters["timing_context"] for spec in m11)
+    assert all(spec.parameters["claims_standalone_flat_mechanism"] is False for spec in m11)
     assert {f"M{idx}" for idx in range(35)} <= {
         spec.mechanism_id for spec in specs
     }
+    for spec in specs:
+        audit = spec.audit_dict()
+        assert audit["legacy_catalog_id"] == spec.mechanism_id
+        assert audit["mechanism_id"] == spec.mechanism_id
+        assert str(audit["public_label"]).startswith("F" if audit["label_namespace"] == "flat" else "M")
+        assert audit["label_namespace"] in {"flat", "non_flat"}
 
 
 def test_balanced_multicircuit_profiles_have_minimum_mechanism_instances() -> None:
@@ -42,6 +69,98 @@ def test_balanced_multicircuit_profiles_have_minimum_mechanism_instances() -> No
         assert len({spec.circuit_id for spec in specs}) == 3
         assert all(spec.probe_indices for spec in specs)
     assert {f"M{idx}" for idx in range(35)} == set(counts)
+
+
+def test_balanced_strength_variants_cover_every_mechanism() -> None:
+    specs = build_default_oracle_mechanisms(
+        {
+            "num_qubits": 20,
+            "mechanism_set": "allM",
+            "balanced_min_instances_per_mechanism": 20,
+            "multicircuit_teacher_batch": True,
+            "balanced_strength_variants": True,
+            "balanced_strength_min_scale": 0.65,
+            "balanced_strength_max_scale": 1.35,
+        }
+    )
+
+    by_mechanism: dict[str, list[float]] = {}
+    for spec in specs:
+        by_mechanism.setdefault(spec.mechanism_id, []).append(_primary_strength(spec.parameters))
+
+    assert set(by_mechanism) == {f"M{idx}" for idx in range(35)}
+    for mechanism_id, values in by_mechanism.items():
+        assert len(values) == 20, mechanism_id
+        assert len({round(value, 12) for value in values}) == 20, mechanism_id
+
+
+def test_balanced_teacher_serializes_m11_overlay_payload_in_records() -> None:
+    specs = build_default_oracle_mechanisms(
+        {
+            "num_qubits": 20,
+            "mechanism_set": "allM",
+            "balanced_min_instances_per_mechanism": 4,
+            "multicircuit_teacher_batch": True,
+            "balanced_strength_variants": True,
+        }
+    )
+    records = [{"location_id": idx, **spec.audit_dict(), "oracle_label": spec.mechanism_id} for idx, spec in enumerate(specs)]
+    m11 = [record for record in records if record["mechanism_id"] == "M11"]
+
+    assert len(m11) == 4
+    audit = overlay_contract_audit(m11)
+    assert audit["passed"] is True
+    assert audit["num_overlay_records"] == 4
+    assert audit["num_overlay_records_missing_payload"] == 0
+    for record in m11:
+        assert record["spectator_overlay_present"] is True
+        assert record["contract_role"] == "overlay_family"
+        assert record["overlay_family"] == "spectator_crosstalk"
+        assert record["public_effect_family"] == "spectator_overlay"
+        assert str(record["public_overlay_class"]).endswith("_overlay")
+        assert str(record["nonflat_public_label"]).startswith("spectator_overlay_")
+        assert record["base_mechanism"] in {"M8", "M7", "M1", "M17"}
+        assert record["victim_relative_location"] in {"edge", "qubit_id", "detector"}
+        assert record["aggressor_relative_location"] in {"adjacent_gate", "previous_cycle_edge", "same_cycle_qubit", "shot_block"}
+        assert record["coupling_axis"] in {"ZZ", "RZ", "readout_bias", "reset_bias"}
+        assert record["timing_context"] in {"same_cycle", "prev_cycle", "shot_block_drift"}
+        assert float(record["spectator_strength"]) > 0.0
+        assert record["spectator_overlay"]["present"] is True
+        assert record["spectator_overlay"]["base_mechanism"] == record["base_mechanism"]
+
+
+def test_balanced_strength_variants_can_decouple_context_and_strength() -> None:
+    specs = build_default_oracle_mechanisms(
+        {
+            "num_qubits": 20,
+            "mechanism_set": "allM",
+            "balanced_min_instances_per_mechanism": 20,
+            "multicircuit_teacher_batch": True,
+            "balanced_strength_variants": True,
+            "balanced_strength_variant_strategy": "decorrelated_latin",
+            "balanced_strength_min_scale": 0.65,
+            "balanced_strength_max_scale": 1.35,
+        }
+    )
+
+    by_mechanism: dict[str, list[tuple[int, int, float]]] = {}
+    for spec in specs:
+        by_mechanism.setdefault(spec.mechanism_id, []).append(
+            (int(spec.circuit_id or 0), int(spec.qubits[0] if spec.qubits else 0), _primary_strength(spec.parameters))
+        )
+
+    for mechanism_id, rows in by_mechanism.items():
+        strengths = [row[2] for row in rows]
+        assert len(rows) == 20, mechanism_id
+        assert len({round(value, 12) for value in strengths}) == 20, mechanism_id
+
+    for mechanism_id in ("M6", "M13", "M18"):
+        rows = sorted(by_mechanism[mechanism_id])
+        circuit_ids = np.asarray([row[0] for row in rows], dtype=float)
+        relative_locations = np.asarray([row[1] for row in rows], dtype=float)
+        strengths = np.asarray([row[2] for row in rows], dtype=float)
+        assert abs(float(np.corrcoef(circuit_ids, strengths)[0, 1])) < 0.1, mechanism_id
+        assert abs(float(np.corrcoef(relative_locations, strengths)[0, 1])) < 0.1, mechanism_id
 
 
 def test_circuit_depth_is_visible_probe_metadata() -> None:
@@ -165,3 +284,10 @@ def test_difficulty_runner_writes_aggregate_artifacts_without_oracle_selection(t
     metrics = json.loads((out / "phys5_setB" / "metrics.json").read_text())
     assert "prediction_metrics" in metrics["PHYS3"]
     assert metrics["num_qubits"] == 5
+
+
+def _primary_strength(parameters: dict[str, object]) -> float:
+    for key in ("epsilon", "p", "p_z", "gamma", "gamma_up", "eta", "strength", "epsilon_x", "epsilon_y", "p_x"):
+        if key in parameters:
+            return float(parameters[key])
+    raise AssertionError(f"record has no primary strength parameter: {parameters}")

@@ -1,0 +1,19 @@
+stage3_abc_observability_diagnostic:
+  name: Stage3_ABC_observability_diagnostic
+  stage3a_dir: outputs/scope_static/s5_medium_hard_allM_contract_teacher_20q_depth20_rzz_active_g20_strength_decorrelated_s1000/S3A_protocol_freeze
+  teacher_dir: outputs/scope_static/s5_medium_hard_allM_contract_teacher_20q_depth20_rzz_active_g20_strength_decorrelated_s1000/S2D_PHYS1_teacher
+  output_dir: outputs/scope_static/s5_medium_hard_allM_contract_teacher_20q_depth20_rzz_active_g20_strength_decorrelated_s1000/S3ABC_observability_diagnostic
+  enhanced_stage3a_dir: outputs/scope_static/s5_medium_hard_allM_contract_teacher_20q_depth20_rzz_minimal_intervention_g20_strength_decorrelated_s1000/S3A_protocol_freeze
+  enhanced_teacher_dir: outputs/scope_static/s5_medium_hard_allM_contract_teacher_20q_depth20_rzz_minimal_intervention_g20_strength_decorrelated_s1000/S2D_PHYS1_teacher
+  target_groups:
+    - [M6, M13, M22, M23]
+  feature_profiles:
+    - full_no_finite_shot_se
+    - raw_only
+  vq_k_values: [35, 70]
+  max_cv_folds: 5
+  seed: 0
+  mlp_epochs: 120
+  mlp_hidden_dim: 64
+  pass_min_recall: 0.95
+  improvement_delta: 0.05

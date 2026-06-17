@@ -5,7 +5,7 @@ from pathlib import Path
 
 import yaml
 
-from scope_static.learner import run_phyc3_canonical_acceptance
+from scope_static.learner import run_layer3_acceptance
 
 
 def run_learner_acceptance_from_config(
@@ -19,7 +19,7 @@ def run_learner_acceptance_from_config(
         if output_dir is not None
         else Path(str(cfg.get("output_dir", "outputs/scope_static/PHYC3_canonical_quality_acceptance")))
     )
-    result = run_phyc3_canonical_acceptance(
+    result = run_layer3_acceptance(
         phyc2_dir=Path(str(cfg["phyc2_dir"])),
         phyc3a_dir=Path(str(cfg["phyc3a_dir"])),
         phyc3b_dir=Path(str(cfg["phyc3b_dir"])),
@@ -32,7 +32,7 @@ def run_learner_acceptance_from_config(
         max_worst_predicted_channel_distance=float(cfg.get("max_worst_predicted_channel_distance", 0.005)),
     )
     print(
-        "Layer 3 canonical quality acceptance complete (legacy PHYC3)\n"
+        "Layer 3 canonical quality acceptance complete\n"
         f"  decision={result.get('decision')}\n"
         f"  passed={bool(result.get('contract_passed'))}\n"
         f"  canonical_source={dict(result.get('canonical_prediction_source', {})).get('source_name', 'unknown')}\n"
@@ -44,7 +44,7 @@ def run_learner_acceptance_from_config(
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Run Layer 3 canonical quality acceptance resolver.")
-    parser.add_argument("--config", type=Path, default=Path("configs/scope_static/learner_acceptance.yaml"))
+    parser.add_argument("--config", type=Path)
     parser.add_argument("--output-dir", type=Path)
     args = parser.parse_args(argv)
     run_learner_acceptance_from_config(config_path=args.config, output_dir=args.output_dir)
@@ -65,7 +65,7 @@ def _load_config(config_path: str | Path | None) -> dict[str, object]:
         "learner_acceptance",
         data.get(
             "learner_canonical_acceptance",
-            data.get("layer3_canonical_acceptance", data.get("phyc3_canonical_acceptance", data)),
+            data.get("layer3_canonical_acceptance", data),
         ),
     )
     if not isinstance(section, dict):
@@ -75,7 +75,3 @@ def _load_config(config_path: str | Path | None) -> dict[str, object]:
 
 if __name__ == "__main__":
     main()
-
-
-run_learner_canonical_acceptance_from_config = run_learner_acceptance_from_config
-run_phyc3_canonical_acceptance_from_config = run_learner_acceptance_from_config
