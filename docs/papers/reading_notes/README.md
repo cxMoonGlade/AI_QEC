@@ -1,6 +1,6 @@
 # Reading Notes — Cached Reference Papers (deep peer-review)
 
-One **deep, peer-review-grade** note per cached PDF in `docs/papers/` (22 total),
+One **deep, peer-review-grade** note per cached PDF in `docs/papers/`,
 produced with the `academic-paper-review` skill from a **full read** of each paper
 (methods, key equations/theorems, results, assumptions, limitations) — not the
 abstract. Each note has: metadata · executive summary · **contributions
@@ -56,6 +56,18 @@ effect bands · Gierjatowicz's `(inf,sup) E_Q[Ψ]` — all the alias band on ΔL
 | [qec_dem_estimation_syndrome_2504.14643](qec_dem_estimation_syndrome_2504.14643.md) | The **moment-matching DEM baseline = the negative control** (Pauli-shadows coherence; "degeneracy" = the in-domain alias). |
 | [qec_coherent_errors_dem_2510.23797](qec_coherent_errors_dem_2510.23797.md) | Coherent errors as DEM **interference + hyperedges**; Pauli-twirl underestimates LER — **the coherent "drift" slice** the twin targets (W5). |
 | [qec_differentiable_mle_noise_2602.19722](qec_differentiable_mle_noise_2602.19722.md) | **dMLE**: exact differentiable syndrome-NLL calibration — closest external prior art; the Pauli/DEM **Pauli-shadowing negative-control reference** (D4). |
+| [chamberland_ai_predecoder_surface_code_2604.12841](chamberland_ai_predecoder_surface_code_2604.12841.md) | **NVIDIA AI pre-decoder + noise-learning** (sim-only, GB300/FP8): 3D-CNN pre-decoder cuts syndrome density → 3–3.5× end-to-end speedup with no LER regression vs *uncorrelated* matching; a 2D-CNN→GAP→MLP **noise-learning net** regresses syndrome stats → 25 circuit params through a **distance-independent, differentiable 18-edge/43-hyperedge** DEM parameterization (Stim-verified). = the **supervised** mirror of our label-free `hypergraph_dem` NLL; their "true DEM is a *lower bound* on uncorrelated-matching LER" **is** our exact-inverse rule. Adopt the parameterization; differentiate via explicit bands + exact TN-MLD; attack their open low-p/rare-event regime. |
+
+## Bayes-TN posterior decoders and noise posteriors
+
+| Note | One-line takeaway |
+|---|---|
+| [bayes_tn_qec_posterior_models_overview](bayes_tn_qec_posterior_models_overview.md) | Five-paper map: Bayes-TN means `P(logical/channel | syndrome, noise)` plus `P(noise parameters | syndrome history)`, not pairwise edge fitting. |
+| [ferris_poulin_tensor_networks_qec_1312.4578](ferris_poulin_tensor_networks_qec_1312.4578.md) | Foundational equivalence: QEC decoding is a TN contraction; useful as terminology, not the surface-code baseline. |
+| [bravyi_suchara_vargo_mld_surface_code_1405.4883](bravyi_suchara_vargo_mld_surface_code_1405.4883.md) | Canonical surface-code Bayes-TN decoder: compute logical coset probabilities `P(m | s, theta)` by MPS/TN contraction. |
+| [darmawan_poulin_realistic_noise_1607.06460](darmawan_poulin_realistic_noise_1607.06460.md) | Non-Pauli TN forward/decoder carrier: compute syndrome-conditioned logical channels under arbitrary local CPTP noise. |
+| [darmawan_poulin_linear_time_decoder_1801.01879](darmawan_poulin_linear_time_decoder_1801.01879.md) | Practical non-Pauli/correlated Bayes-TN decoder: approximate logical channel, choose correction, `O(N D^3 chi^3)`. |
+| [kobori_todo_bayesian_noise_parameters_2406.08981](kobori_todo_bayesian_noise_parameters_2406.08981.md) | Closest prior art for our Layer-1 Bayes layer: TN likelihood inside MCMC/SMC gives `P(theta | syndrome history)` and drift tracking. |
 
 ## Surface-code / coherent-error / harden-frontier
 

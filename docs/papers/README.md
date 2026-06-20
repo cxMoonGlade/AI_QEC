@@ -51,6 +51,20 @@ five papers carry that analogy.
 | `qec_coherent_errors_dem_2510.23797.pdf` | *Estimating and decoding coherent errors of QEC experiments with detector error models* (arXiv:2510.23797, 2025). | Coherent errors as DEM hyperedges / interference in syndrome fire rates → why `r=4` phase-sensitive probes are required. The "drift" subspace of the Girsanov reframe; the exact slice B5 must attack (survey W5). |
 | `qec_differentiable_mle_noise_2602.19722.pdf` | *Differentiable Maximum Likelihood Noise Estimation for Quantum Error Correction* (arXiv:2602.19722, 2026). | Differentiable MLE of noise from syndromes — **directly parallel to `forward/exact/circuit_sim` / `recover_channel` NLL calibration**. Closest external prior art; benchmark the B-path calibration against it. |
 
+## Bayes-TN QEC posterior models
+
+These five papers define the Bayes-TN spine: posterior decoding over logical classes
+or logical channels, plus Bayesian posterior inference over noise parameters from
+syndrome histories. They are cached under `bayes_tn/`.
+
+| File | Citation | Why it matters |
+|---|---|---|
+| `bayes_tn/ferris_poulin_tensor_networks_qec_1312.4578.pdf` | Ferris & Poulin (2014), *Tensor Networks and Quantum Error Correction* (arXiv:1312.4578). | Foundational equivalence: QEC decoding is a TN contraction. Use for terminology, not as the surface-code performance baseline. |
+| `bayes_tn/bravyi_suchara_vargo_mld_surface_code_1405.4883.pdf` | Bravyi, Suchara & Vargo (2014), *Efficient Algorithms for Maximum Likelihood Decoding in the Surface Code* (arXiv:1405.4883). | Canonical Bayes-TN surface-code decoder: compute logical coset probabilities `P(m | s, theta)` by exact/MPS TN contraction. |
+| `bayes_tn/darmawan_poulin_realistic_noise_1607.06460.pdf` | Darmawan & Poulin (2017), *Tensor-Network Simulations of the Surface Code under Realistic Noise* (arXiv:1607.06460). | Non-Pauli TN forward/decoder carrier: arbitrary local CPTP noise and syndrome-conditioned logical channels. |
+| `bayes_tn/darmawan_poulin_linear_time_decoder_1801.01879.pdf` | Darmawan & Poulin (2018), *Linear-time General Decoding Algorithm for the Surface Code* (arXiv:1801.01879). | Practical non-Pauli/correlated Bayes-TN decoder: approximate logical channel then choose the correction. |
+| `bayes_tn/kobori_todo_bayesian_noise_parameters_2406.08981.pdf` | Kobori & Todo (2025), *Bayesian inference of general noise-model parameters from the syndrome statistics of surface codes* (arXiv:2406.08981). | Closest prior art for our Layer-1 Bayes layer: TN likelihood inside MCMC/SMC gives `P(theta | syndrome history)` and drift tracking. |
+
 ---
 
 ## How to add a paper

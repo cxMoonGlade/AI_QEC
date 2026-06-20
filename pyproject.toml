@@ -9,6 +9,7 @@ description = "Teacher-learner, finance-structured QEC error-mechanism digital t
 requires-python = ">=3.10"
 dependencies = [
     "numpy",
+    "opt_einsum",
     "PyYAML",
     "stim",
     "torch",

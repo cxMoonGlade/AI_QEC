@@ -247,3 +247,29 @@ cumulant** (standard; hyperedge analog per Takou–Brown 2504.20212, ledgered).
 - Godambe, V.P. (1960). *An optimum property of regular maximum likelihood estimation*. Ann. Math. Statist. 31, 1208–1211 — Godambe (sandwich) information / estimating equations.
 - Greenbaum, D. (2015). *Introduction to quantum gate set tomography*. arXiv:1509.02921 — the Pauli-transfer-matrix representation.
 - Wallman, Granade, Harper, Flammia (2015). *Estimating the coherence of noise*. New J. Phys. 17, 113020; arXiv:1503.07865 — unitarity, the frontier-standard coherence-of-noise measure.
+
+---
+
+## Decoding-floor + residual-spectrum metrics (ADR 0007; `outputs/decoding_floor_*`)
+
+Added 2026-06-17 under the forced ladder, for the syndrome-decoding **information floor** and the **Walsh
+residual spectrum** (what correlation structure real syndromes carry beyond a declared bulk). **Metric-audit
+outcome (the standard-metrics gate for this milestone): the substrate metrics are field-standard and MOST are
+already ledgered above** — `%ΔLER` (Decoder-prior utility), Held-out syndrome NLL, Spitz `p_ij`, ε_d,
+detection-event fraction, round-repeat bunching R̂, Independent-edges budget deficit, Fisher/Godambe. The only
+NEW field-standard rows are the **floor** and the **parity-character spectrum** (below). The **MRG** (below) is
+a rung-3 project-defined decision gate, not a figure of merit; the field-standard scoring of whether found
+structure *matters* for decoding is **`%ΔLER` (Decoder-prior utility) + Held-out syndrome NLL** (both above),
+scored on a **FITTED** model (a differentiable TN trained by NLL), not a preset DEM.
+Finite-sample + bootstrap-CI convention (hardware regime); held-out splits declared before fitting.
+
+| Metric | Function | Standard name + reference | Convention |
+|---|---|---|---|
+| Syndrome-decoding floor (Bayes-optimal LER) | `outputs/phase0_floor_controls.py` (R=1 exact); derivation `outputs/decoding_floor_derivation.md` | **rung-2 field-standard.** Bayes error of the optimal (MAP) syndrome decoder: `LER* = ½(1 − ‖π₀P₀ − π₁P₁‖₁) = ½(1 − TV(P(s∣m0),P(s∣m1)))` at symmetric prior — the information-theoretic floor no syndrome-only decoder beats (Bayes risk: Cover & Thomas 2006; `P_e=½(1−TV)`: Nielsen arXiv:1401.4788; optimal/ML surface-code decoding context: Bravyi–Suchara–Vargo arXiv:1405.4883, DKLP quant-ph/0110143). Derivation cold-reviewed; the *model-free-floor-on-hardware* framing is the novel application, the metric itself is standard. | per-shot LER at fixed R; **exact only at R=1** (256-cell plug-in `Σ_s min(c₀,c₁)/N`, downward-biased ⇒ bias-corrected bootstrap + cross-fit bracket + dual CI); large-R = a **sandwich** (upper = best held-out decoder LER w/ Clopper–Pearson + selection correction; lower = Bhattacharyya, **vacuous at R≳3, stated**). Score = **gap-to-optimum vs a named decoder**; per-round form via ε_d (above) |
+| Minimum-resolvable-gap (MRG) | `outputs/phase0_floor_controls.py` | ⚠ **project-defined / non-standard (ladder rung 3, flagged) — (c) DECISION GATE.** Bracket width [bias-corrected … cross-fit] used as the floor's resolution; gap-to-optimum < MRG ⇒ verdict UNDECIDED (fail-safe). Permitted: go/no-go resolvability gating only. FORBIDDEN as a premise, bound, or basis for a conclusion | per (basis, R); reported with the floor; pending a standard-naming pass |
+| Walsh / parity-character residual spectrum | `outputs/phase3_residual_spectrum.py` | **rung-2 field-standard.** `m_S = E[(−1)^{Σ_{i∈S} s_i}]` — parity-character (Walsh–Hadamard) coefficients on the Boolean cube (standard harmonic analysis). The **|S|=2 sector IS the ledgered Spitz `p_ij`** (DEM edge agreement, above); the residual vs the marginal-matched independent model is the **connected cumulant**, and the irreducible **|S|≥3 connected (Ursell) cumulant IS the ledgered hyperedge analog** (Takou–Brown arXiv:2504.20212; connected-3-point-cumulant note above). Departure-from-bulk detected by **BH–Yekutieli FDR** (arbitrary dependence; Benjamini–Yekutieli 2001) on a shot-bootstrap residual SE. Same family as the ledgered **Independent-edges budget deficit** (`run_p10`). | per candidate set S; residual `r_ind = m_emp − Π_{i∈S}(1−2p_i)`; bulk-residual MUST use the connected cumulant (marginal-free) NOT the raw Walsh residual (the bulk's ~2× marginal miscalibration contaminates the latter); class-conditional `m_S^{(m)}` difference is the **LER-relevance axis — a necessary-not-sufficient marginal proxy** (judged via `%ΔLER` on a FITTED model, never asserted) |
+### References (decoding-floor + residual-spectrum)
+- Nielsen, F. (2014). *Generalized Bhattacharyya and Chernoff upper bounds on Bayes error using quasi-arithmetic means*. Pattern Recognition Letters 42, 25–34; arXiv:1401.4788 — `P_e = ½(1−TV)`.
+- Bravyi, Suchara, Vargo (2014), arXiv:1405.4883; Dennis, Kitaev, Landahl, Preskill (2002), quant-ph/0110143 — optimal/ML surface-code decoding.
+- Benjamini, Y. & Yekutieli, D. (2001). *The control of the false discovery rate under dependency*. Ann. Statist. 29(4), 1165–1188 — BH–Yekutieli FDR (arbitrary dependence).
+- (Cover & Thomas 2006; Spitz 1712.02360; Takou–Brown 2504.20212; Sivak 2406.02700; Cao/dMLE 2602.19722 — already cited above.)
