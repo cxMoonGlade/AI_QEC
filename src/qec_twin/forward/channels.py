@@ -494,12 +494,53 @@ def amplitude_damping_kraus(gamma: float) -> list[Array]:
 
 
 def phase_damping_kraus(gamma_phi: float) -> list[Array]:
+    """Pauli-Z dephasing, parameterized by the Z-error PROBABILITY ``gamma_phi``
+    (NOT the canonical phase-damping rate lambda).
+
+    Kraus {sqrt(1-g) I, sqrt(g) Z}: rho -> (1-g) rho + g Z rho Z, contracting the
+    Bloch x,y components by (1-2g). A valid, standard Pauli dephasing channel, but
+    its argument is a Z-flip probability: it equals ``phase_damping_canonical_kraus``
+    with lambda = 4 g (1 - g) for g <= 1/2 (for g > 1/2 they differ by a coherence
+    sign, as (1-2g) < 0). For PHYSICAL T1/T2 modeling use ``thermal_relaxation_kraus``
+    (which honors 1/T2 = 1/(2 T1) + 1/Tphi).
+    """
     g = probability_floor(float(gamma_phi))
     paulis = _single_qubit_paulis()
     return [
         math.sqrt(positive_floor(1.0 - g)) * paulis["I"],
         math.sqrt(g) * paulis["Z"],
     ]
+
+
+def phase_damping_canonical_kraus(lam: float) -> list[Array]:
+    """Canonical phase-damping channel (Nielsen & Chuang), rate ``lam`` in [0,1]:
+    K0 = diag(1, sqrt(1-lam)), K1 = diag(0, sqrt(lam)). Populations unchanged;
+    off-diagonal coherence contracted by sqrt(1-lam)."""
+    l = probability_floor(float(lam))
+    return [
+        np.array([[1.0, 0.0], [0.0, math.sqrt(positive_floor(1.0 - l))]], dtype=np.complex128),
+        np.array([[0.0, 0.0], [0.0, math.sqrt(l)]], dtype=np.complex128),
+    ]
+
+
+def thermal_relaxation_kraus(t: float, t1: float, t2: float) -> list[Array]:
+    """Canonical zero-temperature T1/T2 thermal-relaxation channel over gate time
+    ``t`` (the standard thermal_relaxation_error). Amplitude damping with
+    gamma = 1 - exp(-t/T1) composed with canonical phase damping with
+    lambda_phi = 1 - exp(-2 t / Tphi), where 1/Tphi = 1/T2 - 1/(2 T1). Requires the
+    physical bound T2 <= 2 T1. Exact map: rho00 -> rho00 + gamma rho11,
+    rho11 -> (1-gamma) rho11, rho01 -> exp(-t/T2) rho01."""
+    t_, t1_, t2_ = float(t), float(t1), float(t2)
+    if not (t1_ > 0.0 and t2_ > 0.0):
+        raise ValueError(f"T1, T2 must be positive (T1={t1_}, T2={t2_})")
+    if t2_ > 2.0 * t1_ + 1e-12:
+        raise ValueError(f"unphysical T2 > 2 T1 (T2={t2_}, T1={t1_})")
+    gamma = 1.0 - math.exp(-t_ / t1_)
+    inv_tphi = 1.0 / t2_ - 1.0 / (2.0 * t1_)
+    lam_phi = 1.0 - math.exp(-2.0 * t_ * inv_tphi) if inv_tphi > 0.0 else 0.0
+    ad = amplitude_damping_kraus(gamma)
+    pd = phase_damping_canonical_kraus(lam_phi)
+    return [p @ a for a in ad for p in pd]  # rho -> PD(AD(rho)); exact thermal map
 
 
 def thermal_excitation_kraus(gamma_up: float) -> list[Array]:
