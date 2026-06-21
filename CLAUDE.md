@@ -145,6 +145,20 @@ ground-truth channels / parameters / labels are evaluator-only — used by `audi
   trivial read-only inspection (`ls`/`tail`/`pgrep`/`cat`) that runs no project logic. Rationale:
   scripts are the debug/audit trail; the bench-hang night's failures were all inline-command
   failures (silent pgid mis-kills, a `tail` pipe swallowing errors, sed-in-place edits).
+- **Faithfulness protocol (anti-toy, HARD CONSTRAINT, 2026-06-20):** every load-bearing model /
+  faithfulness claim follows `docs/FAITHFULNESS_PROTOCOL.md`. Root cause of every toy we hit =
+  **circular verification** (checked against a reference sharing its own blind spot — lumped-vs-lumped
+  oracle, "our own qutip", R=1-where-the-instrument-is-inert). Three mandatory rules: **(I)** verify
+  against ground truth INDEPENDENT of the implementation (raw artifact / closed-form theorem /
+  from-scratch reconstruction) — a check vs the engine's own oracle is NOT certification; **(II)** a
+  constraint ledger of the physical theorems the model must satisfy + a falsifying test each, written
+  BEFORE building (apply every physical gate the real circuit contains; information–disturbance;
+  Clifford/detector-invariant ≠ dynamics-invariant; CPTP+symmetries; read raw inputs end-to-end;
+  underdetermined⇒bracket); **(III)** declare + BOUND every simplification (epistemic class + error vs
+  faithful; unbounded = STOP). Enforced as required deliverables (ledger + independent ground-truth
+  check + bounded-simplification list, by the builder, before "done") + a from-scratch adversarial
+  red-team + baked into every agent brief. Unlimited token budget; **slow is fast** — front-loaded
+  rigor ≪ the 10× debug later.
 
 ## Notation (`docs/TWIN.md` is the full contract)
 
