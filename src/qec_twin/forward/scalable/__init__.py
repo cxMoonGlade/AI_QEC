@@ -45,6 +45,12 @@ from qec_twin.forward.scalable.hypergraph_dem import (
     phase3_supports_from_json,
 )
 from qec_twin.forward.scalable.marginals import r_det_lag, t3_triple
+from qec_twin.forward.scalable.mps_forward import (
+    MpsLeakageForward,
+    MpsTruncationLedger,
+    exact_chi,
+    snake_order_from_coords,
+)
 from qec_twin.forward.scalable.sv_sampler import (
     SV_ARM_CODE,
     SV_ARMS,
@@ -77,6 +83,13 @@ from qec_twin.forward.scalable.pins import (
     seam_reduction_tp_pin,
     unital_diagonal_pin,
     zero_seam_exactness_pin,
+)
+from qec_twin.forward.scalable.seam import (
+    assert_leak_absent_from_dem,
+    build_matched_pauli_dem,
+    g2_positive_control,
+    inspect_raw_detectors,
+    teacher_shots_to_events,
 )
 
 __all__ = [
@@ -117,6 +130,10 @@ __all__ = [
     "phase3_supports_from_json",
     "r_det_lag",
     "t3_triple",
+    "MpsLeakageForward",
+    "MpsTruncationLedger",
+    "exact_chi",
+    "snake_order_from_coords",
     "SV_ARM_CODE",
     "SV_ARMS",
     "SV_GATE_IDS",
@@ -146,4 +163,9 @@ __all__ = [
     "seam_reduction_tp_pin",
     "unital_diagonal_pin",
     "zero_seam_exactness_pin",
+    "assert_leak_absent_from_dem",
+    "build_matched_pauli_dem",
+    "g2_positive_control",
+    "inspect_raw_detectors",
+    "teacher_shots_to_events",
 ]

@@ -49,6 +49,14 @@ ledger (append every new pit; blood-bought):**
    read the whole artifact.
 6. **Underdetermined ⇒ bracket, don't freeze.** A quantity not fixed by the data/POVM → register a bracket of
    valid arms + report sensitivity; default = "representative," never "physical truth."
+7. **Estimator convergence — no down-biased plug-ins.** Any sampled estimator must be convergence-checked: if it
+   DRIFTS with N it is not converged ⇒ biased. Specifically, an in-sample Bayes-floor plug-in
+   (`Σ_s min(P̂(s,f=0),P̂(s,f=1))` / `½(1−TV̂)`) in the under-sampled regime (`2^(8R) ≫ N`, high collision rate) is
+   **down-biased — it RISES with N** — which **inflates `gap-to-Bayes` and manufactures a FALSE not-capped**
+   (the ⑦ R=5 NOT-CAPPED artifact, 2026-06-21; the prior-program "floor lives at large R" pit). At large R use a
+   held-out / cross-fit / exact-sub-register floor, never the in-sample plug-in at face value; report the
+   `[honest, in-sample]` bracket. "A down-biased floor makes the verdict conservative" is BACKWARDS for
+   not-capped — it makes it easier (a false positive).
 
 ### Rule III — Declare + BOUND every simplification
 No undeclared model reduction. Each lump / pin / truncation / phenomenological substitution: (a) declared in the
