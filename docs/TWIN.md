@@ -1,7 +1,8 @@
-# The Twin — A Teacher-Learner, Finance-Structured QEC Error-Mechanism Digital Twin
+# The Twin — A Teacher-Learner, Causal-Model QEC Error-Mechanism Digital Twin
 
 This is the current binding spec for "the twin."
-ADR 0003 (B methodology) and ADR 0004 (finance framing) are the methodological core.
+ADR 0003 (B methodology) is the methodological core. (ADR 0004's quantitative-finance
+framing is retired as decorative — 2026-06-22; its methodology survives independently, below.)
 
 "The twin" is the descriptive name. The code package
 identifier is `qec_twin`, a neutral, stable handle.
@@ -13,13 +14,16 @@ teacher-learner method, that both **reproduces** observed syndrome/logical data 
 answers **counterfactuals** — "if I change this mechanism, how does logical
 performance change?" — with **honest uncertainty**.
 
-The organizing principle is **not** symmetry compression. It is the structural
-identity (ADR 0004) between QEC mechanism calibration and the
-quantitative-finance calibration/risk problem:
+The organizing principle is **not** symmetry compression. The twin is a **causal
+model** of the device noise: the circuit/DEM is the causal graph, the per-location
+mechanisms are its structural equations, and a channel-level `do()` is a Pearl
+intervention. Calibration is an **ill-posed inverse problem**:
 
-> recovering a local noise-channel field `E` from syndrome statistics **is** the
-> same ill-posed inverse problem as recovering a volatility surface from option
-> prices. Thirty years of quant-finance tooling for its failure modes applies.
+> recovering a local noise-channel field `E` from syndrome statistics is
+> observationally underdetermined, so the load-bearing discipline is
+> identifiability + honest bands (which mechanisms the data fixes, and where it
+> cannot), with counterfactual validity established only against controlled-teacher
+> `do()` ground truth.
 
 ## The object
 
@@ -50,23 +54,23 @@ with future scalability as one selection criterion (ADR 0005).
 
 ## The four capabilities
 
-The spec is these four capabilities over hardware-realistic noise (with their
-finance analogues), **not** a fixed architecture:
+The spec is these four capabilities over hardware-realistic noise, **not** a fixed
+architecture:
 
-| Capability | QEC | Finance analogue |
-|---|---|---|
-| **recover** | label-free calibration of `E` from `p(s,m\|c)` (exact Born-rule observation-NLL) | volatility-surface calibration |
-| **understand** | mechanism interpretation + honest alias/uncertainty bands | model-uncertainty / factor interpretation |
-| **manipulate** | channel-level `do()` knobs → ΔLER | Greeks / hedging / scenario stress |
-| **predict** | drift / rare-failure / decoder-impact forecasting | state-space / regime / multiscale stochastic-vol |
+| Capability | QEC |
+|---|---|
+| **recover** | label-free calibration of `E` from `p(s,m\|c)` (exact Born-rule observation-NLL) |
+| **understand** | mechanism interpretation + honest alias/uncertainty bands |
+| **manipulate** | channel-level `do()` knobs → ΔLER |
+| **predict** | drift / rare-failure / decoder-impact forecasting |
 
-## Methodology (the finance spine)
+## Methodology (the calibration / causal spine)
 
 - **Calibration = exact multi-context Born-rule observation-NLL**, not moment
   matching. Low-order moments (detector marginals + pairwise) are exactly what a
   stochastic Pauli channel reproduces, so moment matching **Pauli-shadows** the
-  coherent/non-Clifford structure (the finance "vanillas pin marginals, not
-  dynamics"). Moment matching is a negative control only. (ADR 0003.)
+  coherent/non-Clifford structure (low-order moments pin marginals, not the
+  underlying dynamics). Moment matching is a negative control only. (ADR 0003.)
 - **Probe richness breaks the alias, not parameter-tying.** An observational fit
   pins `E` only up to the **observational alias quotient**; what shrinks it is
   *data* (a probe-richness ladder `C_cal(r)`: memory → multi-round/bases → active
@@ -78,14 +82,14 @@ finance analogues), **not** a fixed architecture:
   `E_i → I` remove; Tier 1: CPTP-safe weakening `(1-a)I + aE`), scored by ΔLER
   under a **predeclared, frozen decoder** `D`.
 - **Honest uncertainty bands.** Report a band, not a point: the range of ΔLER over
-  the calibration-consistent model set `{E : NLL ≤ NLL_min + slack}` (finance
-  model-uncertainty / UVM). Tier-0 closed form: `band = (z/√N)·√(gᵀ H⁺ g)` with
+  the calibration-consistent model set `{E : NLL ≤ NLL_min + slack}` (model
+  uncertainty over the calibration-consistent set). Tier-0 closed form: `band = (z/√N)·√(gᵀ H⁺ g)` with
   `g = ∇ΔLER`, `H = ∇²NLL`; the finite-shot scale enters as `1/√N`, and `g`'s
   weight in `H`'s near-null space is the epistemic alias (the learnable-DOF
   deficiency surfaced on the knob).
 - **Counterfactuals are never validated by calibration fit alone** — they are
-  validated against a **controlled teacher** whose true mechanisms are known
-  (finance: P&L backtest of a hedge). This is the only counterfactual ground truth
+  validated against a **controlled teacher** whose true mechanisms are known (the
+  realized-intervention ground truth). This is the only counterfactual ground truth
   and bounds what real-data (C) can claim.
 
 ## Path and status

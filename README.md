@@ -1,21 +1,22 @@
 # QEC Error-Mechanism Digital Twin
 
 `qec_twin` is a QEC noise-learning research package. Its goal is a
-**teacher-learner digital twin of QEC error mechanisms**, structured like a
-quantitative-finance calibration/risk system, that can **recover**,
-**understand**, **manipulate**, and **predict** error mechanisms on
-hardware-realistic noise:
+**teacher-learner digital twin of QEC error mechanisms** — a validated causal
+model of the device noise (the twin as a structural causal model; `do()` = Pearl
+intervention) — that can **recover**, **understand**, **manipulate**, and
+**predict** error mechanisms on hardware-realistic noise:
 
 - **recover** — label-free calibration of mechanisms from observations;
 - **understand** — interpret them, with honest uncertainty / alias bands;
 - **manipulate** — channel-level `do()` knobs that predict ΔLER;
 - **predict** — drift, rare-failure, and decoder-impact forecasting.
 
-The organizing principle is the structural isomorphism between QEC mechanism
-learning and quantitative-finance calibration: vol-surface calibration ≡
-label-free channel calibration; model-uncertainty bands ≡ alias-induced knob
-bands; Greeks/hedging ≡ `do()` knobs; state-space/regime models ≡ drift. See
-`docs/IDENTIFIABILITY_AND_CRL_SURVEY.md` and `docs/adr/0004-finance-calibration-framing.md`.
+The organizing principle is the **causal model**: the circuit/DEM is the causal
+graph, the mechanisms are its structural equations, and a channel-level `do()` is a
+Pearl intervention whose ΔLER is validated against controlled-teacher ground truth —
+never by calibration fit alone. Calibration is an ill-posed inverse problem, so
+identifiability and honest bands (which mechanisms the data fixes, and where it
+cannot) are central. See `docs/IDENTIFIABILITY_AND_CRL_SURVEY.md`.
 
 > The package name `qec_twin` is a stable code identifier only. The earlier
 > orbit-symmetry-compression thesis, and orbit-sharing
@@ -84,5 +85,5 @@ are no standing console scripts.
 - `docs/ARCHITECTURE.md` — module map.
 - `docs/teacher_learner.md` — teacher/learner roles and isolation contract.
 - `docs/TWIN.md` — binding twin spec: object contract, four capabilities, notation.
-- `docs/IDENTIFIABILITY_AND_CRL_SURVEY.md` + `docs/papers/` — the CRL/finance toolset.
-- `docs/adr/` — durable decisions (current spine 0002 → 0006).
+- `docs/IDENTIFIABILITY_AND_CRL_SURVEY.md` + `docs/papers/` — the CRL / identifiability toolset.
+- `docs/adr/` — durable decisions (current spine 0001 → 0010).

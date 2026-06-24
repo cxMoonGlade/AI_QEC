@@ -789,6 +789,292 @@ class QutritDM:
         return p0, p1
 
     # ----------------------------------------------------------------------- #
+    # Multi-round EXACT record oracle (Axis-A independent ground truth; §7.2)  #
+    # ----------------------------------------------------------------------- #
+    def record_oracle(
+        self,
+        stabs: list[dict[int, str]],
+        round_pre,
+        round_post=None,
+        *,
+        R: int = 1,
+        b=None,
+        arm: str = "A",
+        diagonal_z: bool = False,
+        prune: float = NUMERICAL_ZERO,
+    ) -> dict:
+        r"""EXACT multi-round (syndrome-history, logical) record oracle on the d3 qutrit DM.
+
+        The implementation-independent KNOWN-TRUTH oracle the scalable MCWF carrier
+        (``forward/scalable`` SV-MC / MPS) is validated against (the Axis-A teacher
+        pre-registration ``docs/twin_validation/axisA_teacher_prereg.md`` §7.1/§7.2). It
+        evolves the codestate ``rho`` (already set by :meth:`init_logical` / :meth:`set_state`)
+        through ``R`` circuit-faithful rounds, applying per round the caller-supplied
+        MECHANISM and enumerating the stabilizer syndromes by the EXACT density-matrix
+        Lüders-instrument branch sum (the same recursion as :meth:`syndrome_distribution`,
+        carried ACROSS rounds with the post-measurement, unnormalized branch state). It is
+        mechanism-agnostic: the teacher's actual per-round op-schedule (rx over-rotation →
+        per-qutrit H/X/LEAK within-cycle stream, then the post-M Y echo) is injected through
+        the callbacks, so the oracle's record matches the teacher's emitted surface bit-for-bit
+        (the seam, below) without this engine importing any mechanism.
+
+        Per round ``r`` (0-indexed):
+          1. ``round_pre(self, r)`` — apply that round's PRE-measurement mechanism on the
+             CURRENT (possibly post-measurement, unnormalized) branch state IN PLACE
+             (gates via :meth:`apply_gate`, single-qutrit channels via :meth:`apply_channel`).
+             This is the caller's faithful within-cycle stream (model §2). It MUST mutate
+             ``self.rho`` and return ``None``.
+          2. enumerate the ``len(stabs)`` stabilizers' joint syndrome via the existing
+             :meth:`project_stabilizer` branch logic (the diagonal ``E_s`` Lüders update,
+             ``E_0 + E_1 = I`` so the two children's traces sum to the parent's — exact, no
+             probability lost), keeping each child's UN-normalized post-measurement state for
+             the next round.
+          3. ``round_post(self, r)`` — the POST-measurement frame (the transversal Y echo for
+             an interior round; DROPPED on the terminal round ``r == R-1``). ``None`` (default)
+             applies nothing. Applied on each surviving syndrome branch (so the next round's
+             mechanism sees the post-M state, as the carrier does).
+        After the final round the logical readout :meth:`logical_distribution` splits each
+        terminal branch into ``(p0, p1)``.
+
+        SEAM / record convention (matches ``forward/scalable/seam.py:teacher_shots_to_events``
+        + the kernel emission). The per-round raw syndrome bits ``s[r, j]`` are the joint-parity
+        POVM outcomes (this method's branch labels), round-major then ``stabs``-order. The
+        emitted DETECTORS are folded ``det[0, j] = s[0, j]`` (first round raw),
+        ``det[r, j] = s[r, j] XOR s[r-1, j]`` for ``r >= 1`` (interior round-to-round XOR). The
+        observable is the single logical flip ``parity(terminal logical readout) XOR m`` — and
+        because the caller prepares ``|m>_L`` (so the readout splits to ``(p0, p1)`` about the
+        ``(-1)^m`` logical sector) and the post-M Y echoes flip the parity by
+        ``(R-1)*|logical_supp| mod 2``, the oracle reports the readout split directly; the
+        caller maps it to the flip convention (the teacher's ``run_teacher``).
+
+        ┌─ THE BOUND (declared exactly as §7.2; memory, prevent-toy honesty) ────────────────┐
+        │  The full 9-data-qutrit DM is ``3^9 x 3^9 x 16 B = 6.2 GB / copy``. The exact record │
+        │  enumeration recurses to depth ``len(stabs)*R`` with a state COPY per branch level.  │
+        │  Therefore:                                                                          │
+        │   * ``return_joint=True`` path (R == 1): the FULL exact joint ``P(s, f)`` over all    │
+        │     ``2^len(stabs)`` syndromes x 2 logical IS returned (the gold-standard GT). At the │
+        │     full 9q register the depth-8 enumeration peaks at ~``8 x 6.2 = 50 GB`` of live    │
+        │     DM copies; on a 32 GB card this is delivered at a FEASIBLE sub-register (and the  │
+        │     9q R=1 surface is cross-checked against the carrier on the moments) — the script  │
+        │     measures and reports the exact feasible register, never silently truncates.      │
+        │   * R >= 2: the full ``2^(8R)`` joint is memory-infeasible (R=2 full joint ≈ 100 GB;  │
+        │     and the depth-``8R`` copy stack alone is ``16 x 6.2 = 100 GB`` at 9q). So at      │
+        │     R >= 2 this returns the exact per-detector MARGINALS + round-to-round (per-stab   │
+        │     consecutive-round) detector CORRELATIONS + same-round cross-detector (SPATIAL)    │
+        │     correlations — the very moments an iid-Pauli foil cannot match — accumulated over │
+        │     the pruned branch tree, NOT the full joint. The carrier (a ``3^9`` state vector ≈ │
+        │     0.3 MB) is the scalable sampler certified against exactly these moments.          │
+        │  ``prune`` (default ``NUMERICAL_ZERO = 1e-12``) drops branches whose running trace    │
+        │  (joint probability so far) is below it; the dropped probability mass is RETURNED in  │
+        │  ``dropped_mass`` so the simplification is bounded, not silent. UNBOUNDED ⇒ STOP.     │
+        └────────────────────────────────────────────────────────────────────────────────────┘
+
+        Parameters
+        ----------
+        stabs : list of stabilizer ``paulis`` dicts (``{site -> 'X'|'Z'}``), the per-round
+            stabilizer set (same every round — the d3 XZZX geometry).
+        round_pre : callable ``(eng, r) -> None`` applying round ``r``'s PRE-measure mechanism
+            in place on ``eng.rho``.
+        round_post : callable ``(eng, r) -> None`` or ``None``; the POST-measure frame for
+            interior rounds. The oracle calls it only for ``r < R-1`` (terminal round drops it),
+            so the caller need not branch on ``r`` for the Y-drop. ``None`` ⇒ no post-M frame.
+        R : number of rounds (``>= 1``).
+        b, arm, diagonal_z : forwarded to :meth:`project_stabilizer` (the swept leaked-readout
+            bias, the measurement-instrument arm, the pure-Z mode) — the SAME measurement
+            semantics the carrier samples, so the oracle is the Gate-4 ground truth.
+        prune : branch trace floor (see the bound). ``0.0`` disables pruning (exact, but no
+            zero-branch shortcut).
+
+        Returns
+        -------
+        For R == 1 (``kind == "full_joint"``)::
+
+            {"kind": "full_joint", "R": 1, "n_stab": len(stabs),
+             "joint": {(s_tuple, f): prob},            # 2^n_stab syndromes x f in {0,1}
+             "syndrome": {s_tuple: P(s)},              # logical-marginal P(s)
+             "logical": (P(f=0), P(f=1)),
+             "detectors": {s_tuple: P(det)},           # R=1 det == raw s (identity fold)
+             "total_mass": sum of joint, "dropped_mass": pruned probability}
+
+        For R >= 2 (``kind == "moments"``)::
+
+            {"kind": "moments", "R": R, "n_stab": len(stabs),
+             "det_marg": ndarray[R*n_stab],            # E[det_{r,j}]
+             "rr_corr": ndarray[R-1, n_stab],          # connected corr(det_{r,j}, det_{r+1,j})
+             "spatial_corr": ndarray[R, n_stab, n_stab],  # same-round connected cov, normalized
+             "flip_rate": P(logical flip == 1 under the folded readout),
+             "total_mass": traversed probability, "dropped_mass": pruned probability}
+
+        Both keep the existing ``arm``/``b``/``diagonal_z`` semantics so the moments line up
+        with the carrier's emission (Gate-4 logic, two independent implementations).
+        """
+        if R < 1:
+            raise ValueError(f"R must be >= 1 (got {R})")
+        n_stab = len(stabs)
+        base = self.rho.clone()
+        prune = float(prune)
+
+        # accumulators -----------------------------------------------------------------
+        # Over the pruned branch tree we accumulate the first + pairwise SECOND moments of the
+        # emitted DETECTOR bits ``det[r,j]`` directly (NOT the raw syndrome bits): each terminal
+        # leaf is a SINGLE deterministic point in detector space (det is a fixed GF(2)-linear
+        # fold of that leaf's raw syndrome history — det[0,j]=s[0,j], det[r,j]=s[r,j]^s[r-1,j]),
+        # so accumulating ``path_p * det`` and ``path_p * outer(det, det)`` gives the EXACT
+        # detector marginals E[det] and the EXACT pairwise detector second moments E[det det]
+        # over the full distribution — with NO higher-moment problem and NO full joint stored
+        # (the moments are weighted sums over leaves, accumulated as we go; §7.2). The connected
+        # detector correlation corr(det_a, det_b) = (E[det_a det_b] - E[det_a]E[det_b]) / sqrt(
+        # Var det_a Var det_b) is then exact; it is IDENTICALLY ZERO for any independent-bit-flip
+        # foil (which factorizes across (round, stab)), so a nonzero value is exactly the
+        # temporal/spatial structure the iid model misses.
+        tot_bits = R * n_stab
+
+        def _fold_detectors(svec) -> torch.Tensor:
+            """The emitted detector vector (length tot_bits, round-major) for one leaf's raw
+            syndrome history svec: det[0,j]=s[0,j]; det[r,j]=s[r,j] XOR s[r-1,j] (the seam fold,
+            matching ``forward/scalable/seam.py:teacher_shots_to_events``)."""
+            s = torch.tensor(svec, dtype=torch.uint8, device=self.device).reshape(R, n_stab)
+            d = torch.empty((R, n_stab), dtype=torch.uint8, device=self.device)
+            d[0] = s[0]
+            if R > 1:
+                d[1:] = s[1:] ^ s[:-1]
+            return d.reshape(tot_bits).to(RDTYPE)
+
+        sum1 = torch.zeros(tot_bits, dtype=RDTYPE, device=self.device)        # E[det]
+        sum2 = torch.zeros((tot_bits, tot_bits), dtype=RDTYPE, device=self.device)  # E[det det]
+        flip_sum = [0.0]          # E[logical flip == 1] (folded readout); list for closure write
+        total_mass = [0.0]
+        dropped_mass = [0.0]
+        full_joint: dict[tuple, float] = {}   # only populated for R == 1
+
+        def _emit_leaf(svec: list[int], rho_leaf: torch.Tensor, path_p: float) -> None:
+            """A terminal branch: record its syndrome history svec (length tot_bits, the raw
+            s[r,j] round-major) with un-normalized leaf state rho_leaf (trace == path_p), into
+            the detector moment accumulators and (R==1) the full joint."""
+            total_mass[0] += path_p
+            # logical readout split on the (terminal) leaf state. logical_distribution
+            # internally normalizes by Tr, returning (p0, p1) with p0+p1≈1; the JOINT readout
+            # mass is path_p * (p0, p1).
+            self.rho = rho_leaf
+            p0, p1 = self.logical_distribution()
+            # contribution to E[flip==1]: path_p * p1 (flip == the logical readout bit here;
+            # the caller folds in m + the Y-echo offset — a deterministic relabel that does not
+            # change the RATE of flips, so flip_rate is reported on the readout bit directly).
+            flip_sum[0] += path_p * p1
+            dv = _fold_detectors(svec)
+            sum1.add_(path_p * dv)
+            sum2.add_(path_p * torch.outer(dv, dv))
+            if R == 1:
+                key = tuple(int(x) for x in svec)
+                full_joint[(key, 0)] = full_joint.get((key, 0), 0.0) + path_p * p0
+                full_joint[(key, 1)] = full_joint.get((key, 1), 0.0) + path_p * p1
+
+        def _measure_round(rho_in: torch.Tensor, r: int, svec: list[int], path_p: float) -> None:
+            """Enumerate round r's n_stab-stabilizer syndrome on rho_in (the post-round_pre
+            state), recursing into the next round / leaf. Depth-first with eager release so
+            only O(n_stab) live DM copies exist per active path (the §7.2 copy bound). The
+            per-round raw bit s[r,k]=outcome is written into the shared svec slot
+            ``r*n_stab + k`` on descent and restored on backtrack."""
+
+            def sdesc_slots(rho_s: torch.Tensor, k: int, p_so_far: float) -> None:
+                if k == n_stab:
+                    if p_so_far <= prune:
+                        dropped_mass[0] += p_so_far
+                        return
+                    if r == R - 1:
+                        _emit_leaf(svec, rho_s, p_so_far)
+                        return
+                    self.rho = rho_s
+                    if round_post is not None:
+                        round_post(self, r)
+                    round_pre(self, r + 1)
+                    _measure_round(self.rho, r + 1, svec, p_so_far)
+                    return
+                slot = r * n_stab + k
+                for outcome in (0, 1):
+                    self.rho = rho_s.clone()
+                    self.project_stabilizer(stabs[k], outcome, b, arm, diagonal_z=diagonal_z)
+                    child = self.rho
+                    p_child = float(torch.diagonal(child).real.sum())
+                    if p_child <= prune:
+                        dropped_mass[0] += p_child
+                        continue
+                    svec[slot] = outcome
+                    sdesc_slots(child, k + 1, p_child)
+                    svec[slot] = 0  # restore (depth-first backtrack)
+
+            sdesc_slots(rho_in, 0, path_p)
+
+        # drive: round 0 pre-measure mechanism on the codestate, then the round recursion.
+        svec0 = [0] * tot_bits
+        self.rho = base.clone()
+        round_pre(self, 0)
+        _measure_round(self.rho, 0, svec0, 1.0)
+        self.rho = base  # restore the parent codestate (the oracle is read-only on rho)
+
+        if R == 1:
+            syndrome: dict[tuple, float] = {}
+            for (s_key, _f), p in full_joint.items():
+                syndrome[s_key] = syndrome.get(s_key, 0.0) + p
+            p1 = float(flip_sum[0])
+            p0 = float(total_mass[0] - flip_sum[0])
+            return {
+                "kind": "full_joint", "R": 1, "n_stab": n_stab,
+                "joint": full_joint,
+                "syndrome": syndrome,
+                "logical": (p0, p1),
+                "detectors": dict(syndrome),  # R=1: detector == raw syndrome (identity fold)
+                "total_mass": float(total_mass[0]),
+                "dropped_mass": float(dropped_mass[0]),
+            }
+
+        # R >= 2: the DETECTOR moments are exact from the accumulated detector first/second
+        # moments (each leaf is a single deterministic detector point — see the accumulator note;
+        # NO higher-moment problem, NO full joint stored).
+        tm = float(total_mass[0])
+        if tm <= NUMERICAL_ZERO:
+            raise RuntimeError("record_oracle: all branch mass pruned (no realized record)")
+        e1 = (sum1 / tm).reshape(R, n_stab)                 # E[det_{r,j}]
+        e2 = (sum2 / tm).reshape(R, n_stab, R, n_stab)      # E[det_{r,j} det_{r',j'}]
+        det_marg = e1.clone()                               # exact detector marginals
+
+        def _conn_corr(r, j, rp, jp):
+            """Exact connected (Pearson) correlation of two DETECTOR bits. For {0,1} bits the
+            variance is E[d] - E[d]^2; IDENTICALLY ZERO for an independent-bit-flip foil."""
+            ea = e1[r, j]
+            eb = e1[rp, jp]
+            cov = e2[r, j, rp, jp] - ea * eb
+            va = ea - ea * ea
+            vb = eb - eb * eb
+            denom = torch.sqrt(torch.clamp(va * vb, min=0.0))
+            if float(denom) <= NUMERICAL_ZERO:
+                return torch.zeros((), dtype=RDTYPE, device=self.device)
+            return cov / denom
+
+        # round-to-round (same stabilizer, consecutive rounds) detector correlation.
+        rr_corr = torch.zeros((R - 1, n_stab), dtype=RDTYPE, device=self.device)
+        for r in range(R - 1):
+            for j in range(n_stab):
+                rr_corr[r, j] = _conn_corr(r, j, r + 1, j)
+
+        # same-round cross-detector (spatial) correlation (different stabilizers, same round).
+        spatial_corr = torch.zeros((R, n_stab, n_stab), dtype=RDTYPE, device=self.device)
+        for r in range(R):
+            for j in range(n_stab):
+                for jp in range(n_stab):
+                    spatial_corr[r, j, jp] = _conn_corr(r, j, r, jp)
+
+        return {
+            "kind": "moments", "R": R, "n_stab": n_stab,
+            "det_marg": det_marg.reshape(R * n_stab).detach().cpu().numpy(),
+            "rr_corr": rr_corr.detach().cpu().numpy(),
+            "spatial_corr": spatial_corr.detach().cpu().numpy(),
+            "flip_rate": float(flip_sum[0] / tm),
+            "total_mass": tm,
+            "dropped_mass": float(dropped_mass[0]),
+        }
+
+    # ----------------------------------------------------------------------- #
     # Diagnostics                                                             #
     # ----------------------------------------------------------------------- #
     def trace(self) -> float:

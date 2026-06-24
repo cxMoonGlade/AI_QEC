@@ -25,6 +25,19 @@ capabilities: recover / understand / manipulate / predict.
 - **Probe richness (r) / calibration ladder `C_cal(r)`**: the ordered family of calibration contexts B calibrates over, growing from `r=0` (a single repetition-memory circuit) through multiple rounds/bases (`r=1`), active/enhanced local probes (`r=2`), Clifford sandwiches/basis-rotated probes (`r=3`), to `r=4` (coherent/non-Clifford-sensitive, phase-sensitive probes). The same local channel slot is reused across all of them so context diversity breaks the observational alias quotient. B reports counterfactual validity as a function of `r`.
 - **Pauli-shadowing**: the loss of coherent/non-Clifford channel information that occurs when calibration fits only low-order moments (detector marginals and pairwise correlations) — which a stochastic Pauli channel already reproduces — instead of the full observation likelihood `p(s, m | c)`. Avoided by calibrating on exact Born-rule observation-NLL; moment matching is therefore a negative-control baseline, not the calibration target.
 - **Numerical floor**: floating numerical floors, thresholds, and probability leftovers use `qec_twin.numerics.NUMERICAL_ZERO == 1e-12` instead of exact `0.0`. This value survives square/cube operations in GPU float32. It does not apply to structural zeros such as Pauli matrix entries, bit values, integer indices, counts, labels, or genuinely absent artifacts.
+- **Controlled teacher**: a sim-only noise model with KNOWN, evaluator-only ground truth (the CPTP
+  channel field + the recorded mechanism parameters / Kraus) that emits records; the object the twin
+  is validated against. The d3 XZZX leakage teacher is the current instance (`mechanisms`, the
+  `outputs/teacher_prereg` builders).
+- **Ground-truth anchor**: an INDEPENDENT, exact-or-declared-reduction reference for a record
+  statistic — the d3 density-matrix oracle (`forward/exact/qutrit_dm`), a stim Clifford slice, or a
+  closed-form identity (`mechanisms/seam_teachers` T-B chain, `hardware/dem_compose` `markov_flip_cov`,
+  WG rates) — against which a teacher / carrier is certified. INDEPENDENT means a route that does NOT
+  share the carrier's implementation (anti-circular: a check vs the engine's own oracle is not an
+  anchor).
+- **Certification (certify)**: scoring a controlled teacher's (or the carrier's) emitted records
+  against the ground-truth anchors → an epistemic ledger (per (anchor, statistic): value, band, class
+  (a)/(b)/(c), verdict), with first-class negative controls. Evaluator-only (`audit/certify`).
 
 ## Claim Boundary
 

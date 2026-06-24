@@ -2,6 +2,16 @@
 
 ## Status
 
+> ⚠ **RETIRED / EXPIRED (2026-06-22).** The quantitative-finance / derivatives-calibration
+> *framing* adopted in this ADR is **retired as decorative** — an early-twin idea that carried
+> no load-bearing method and no longer guides the project. The program's spine is now the
+> **validated causal model** (the twin as a structural causal model; `do()` = Pearl
+> intervention); see `CLAUDE.md` (Main line), `docs/TWIN.md`, and `docs/plan3.md`. This ADR is
+> kept **unchanged** as a historical record: its still-valid *methodology* — calibration as an
+> ill-posed inverse problem regularized toward a prior; observational ≠ interventional
+> equivalence; counterfactuals never validated by fit alone; the bands / D1–D5 deliverable
+> discipline — survives independently of the finance vocabulary.
+
 Accepted (2026-06-05). Refines — does not overturn — ADR 0003's B5 deliverable.
 
 ## Context

@@ -292,6 +292,66 @@ def teacher_shots_to_events(packed: np.ndarray, n_stab: int, R: int) -> tuple[np
 
 
 # =========================================================================== #
+# G2-soft — teacher soft/level terminal emission → decoder inputs (D2)         #
+# =========================================================================== #
+def teacher_soft_shots_to_events(
+    packed: np.ndarray, n_stab: int, R: int, *,
+    terminal_levels: np.ndarray | None = None,
+    terminal_iq: np.ndarray | None = None,
+) -> dict[str, np.ndarray]:
+    """G2-soft (D2 terminal-soft contract §2): the teacher's HARD packed buffer + the terminal
+    soft/level side channels → the decoder/floor inputs, with the HARD detector path BYTE-IDENTICAL
+    to :func:`teacher_shots_to_events` (the ⑦ hard seam).
+
+    The terminal-soft carrier (``mps_forward.sample(..., mode='hard3'|'soft')``) emits, per shot:
+      * the SAME packed buffer ⑦ does — the ``R*n_stab`` per-round HARD syndrome bits + the
+        trailing ``logical_flip`` byte (the per-round syndrome is the joint-parity POVM, UNCHANGED
+        by the terminal mode; L-soft-8); plus
+      * the per-data-qubit terminal LEVELS ``k_bar`` (hard3; ``shotset.diag['terminal_levels']``,
+        ``(N, n_data)`` uint8) AND/OR the per-data-qubit terminal IQ ``z`` (soft;
+        ``shotset.diag['terminal_iq']``, ``(N, n_data, 2)`` float64).
+
+    This returns the bundle the D3 soft floor / D4 soft decoder consume:
+      * ``detection_events`` ``(N, R*n_stab)`` uint8 — the HARD syndrome detectors, formed by the
+        IDENTICAL first-round-raw + interior-round-XOR fold as the ⑦ hard seam (delegated to
+        :func:`teacher_shots_to_events`, so it is byte-identical by construction — regression-safe);
+      * ``obs_flips`` ``(N,)`` uint8 — the trailing-byte logical flip (== ⑦; in hard3/soft this is
+        the level-path flip, equal to ⑦'s F1 flip IN DISTRIBUTION, L-soft-1);
+      * ``terminal_levels`` ``(N, n_data)`` uint8 (present iff supplied) — the hard-3 leakage flag;
+      * ``terminal_iq`` ``(N, n_data, 2)`` float64 (present iff supplied) — the soft IQ.
+
+    The HARD detector + obs_flips legs are computed ONLY from ``packed`` (the ⑦ statistic), so a
+    soft/hard3 run decodes at the floor exactly as ⑦ does on the same seed (the gap/floor are
+    well-defined on the SAME emitted hard statistic). The soft/level arrays are an ADDITIVE
+    terminal channel the soft floor/decoder marginalize/grade; they NEVER alter the hard detectors.
+
+    Anti-toy (L-soft-8): because the hard legs are delegated to the unmodified ⑦ seam, a perturbed
+    syndrome fold / dropped echo upstream trips the byte-identical regression in the smoke check
+    (`outputs/teacher_prereg/d2b_soft_integration_smoke.py`) and `g2_positive_control`.
+    """
+    det, obs = teacher_shots_to_events(packed, n_stab, R)
+    out: dict[str, np.ndarray] = {"detection_events": det, "obs_flips": obs}
+    N = det.shape[0]
+    if terminal_levels is not None:
+        lv = np.ascontiguousarray(terminal_levels).astype(np.uint8)
+        if lv.shape[0] != N:
+            raise ValueError(f"terminal_levels shot-count {lv.shape[0]} != packed shots {N}")
+        if lv.ndim != 2:
+            raise ValueError(f"terminal_levels must be (N, n_data); got shape {lv.shape}")
+        if lv.size and (int(lv.max()) > 2):
+            raise ValueError("terminal_levels must be in {0,1,2}")
+        out["terminal_levels"] = lv
+    if terminal_iq is not None:
+        zq = np.ascontiguousarray(terminal_iq).astype(np.float64)
+        if zq.shape[0] != N:
+            raise ValueError(f"terminal_iq shot-count {zq.shape[0]} != packed shots {N}")
+        if zq.ndim != 3 or zq.shape[-1] != 2:
+            raise ValueError(f"terminal_iq must be (N, n_data, 2); got shape {zq.shape}")
+        out["terminal_iq"] = zq
+    return out
+
+
+# =========================================================================== #
 # Ledger (v) — the G2-seam deterministic positive control                      #
 # =========================================================================== #
 def g2_positive_control() -> dict:

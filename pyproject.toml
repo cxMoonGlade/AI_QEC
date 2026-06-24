@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "qec-twin"
 version = "0.1.0"
-description = "Teacher-learner, finance-structured QEC error-mechanism digital twin — the B-path calibration/intervention substrate (qec_twin is a stable code identifier; see docs/TWIN.md)"
+description = "Teacher-learner QEC error-mechanism digital twin — a validated causal model (do() = Pearl intervention); the B-path calibration/intervention substrate (qec_twin is a stable code identifier; see docs/TWIN.md)"
 requires-python = ">=3.10"
 dependencies = [
     "numpy",

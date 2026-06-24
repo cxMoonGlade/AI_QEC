@@ -61,7 +61,7 @@ src/ commit-gate: STAGED, awaiting confirmation (mainline-code commit gate).
 """
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import torch
@@ -81,9 +81,37 @@ from qec_twin.forward.scalable.sv_sampler import (
 )
 from qec_twin.numerics import NUMERICAL_ZERO
 
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    from qec_twin.forward.scalable.soft_readout import SoftReadoutModel
+
 CDTYPE = torch.complex128
 RDTYPE = torch.float64
 PHYS = 3  # qutrit physical dimension
+
+
+# --------------------------------------------------------------------------- #
+# Terminal-readout result (D2 soft-emission contract §2): the per-shot terminal #
+# emission the three modes produce. ``flip`` (all modes) is the logical flip    #
+# ``parity(bit(k_bar) over the logical support) XOR m`` (== ⑦'s in hard2 and in #
+# DISTRIBUTION on the level path); ``levels`` (hard3/soft) the per-data-qutrit   #
+# realized level k_bar in {0,1,2} (ENGINE order q=0..n-1); ``iq`` (soft) the     #
+# per-data-qutrit IQ point z (n_data,2) float64 from the soft emitter.           #
+# --------------------------------------------------------------------------- #
+@dataclass
+class TerminalReadout:
+    """One shot's terminal-readout emission (the three D2 modes; see _terminal_readout).
+
+    ``flip`` int 0/1; ``bits`` a length-``n_data`` list of the per-data-qutrit COMPUTATIONAL bit
+    (engine order; ALL modes — ⑦'s F1 bit in hard2, ``bit(k_bar)`` on the level path); ``levels`` a
+    length-``n_data`` list of k_bar in {0,1,2} (engine order; ``None`` for hard2); ``iq`` a
+    ``(n_data, 2)`` cuda float64 tensor (soft only; ``None`` otherwise). ``bits`` is the
+    L-soft-1 per-qubit statistic (⑦'s F1 bit-marginal vs the level-path hardened bit-marginal).
+    """
+
+    flip: int
+    bits: "list[int] | None" = None
+    levels: "list[int] | None" = None
+    iq: "torch.Tensor | None" = None
 
 #: Default exact-grade bond cap: 3^ceil(L/2) is the largest Schmidt rank a qutrit MPS of
 #: length L can carry, so chi >= 3^ceil(L/2) is EXACT (zero truncation). For d3 (L=9) that
@@ -242,6 +270,85 @@ def _arm_d2(arm: str, b: float) -> float:
     raise ValueError(f"unknown measurement arm {arm!r} (expected A, C, B1 or B2)")
 
 
+#: Largest ``n_data`` for which the dense ``3^n`` codestate lift (``_mps_from_statevector``) is
+#: built; above this the DIRECT MPS codestate (``build_codestate_mps_direct``) is used (d5=25,
+#: d7=49 cannot be built densely). 3^12 ≈ 0.5M amplitudes (8.5 MB) is the dense-feasible ceiling.
+DENSE_CODESTATE_MAX = 12
+
+#: Bond cap for the DIRECT codestate build. The codestate is a stabilizer state; on the FULL-SQUARE
+#: Google patches the bond grows as 2^(2*distance) (d3=64=2^6, d5=1024=2^10 -- MEASURED), built at
+#: ``min(exact_chi, CODESTATE_CHI_CAP)`` so it starts EXACT (eps_cut 0), SEPARATELY from the (smaller)
+#: dynamics bond ``chi``. d5 (2^10) is exact + feasible under this cap. ⚠ FULL-SQUARE d7's codestate
+#: is 2^14=16384 > this cap -> it would truncate BELOW rank (the L2 "codestate exact" leg FAILS at
+#: full-square d7 by construction), AND a bond-16384 MPS over 49 sites (~630 GB) is INFEASIBLE: this
+#: is exactly the ADR-0010 "single MPS chi~exp(d), dead at d7" regime. FULL-SQUARE d7 is NOT a target;
+#: d7 needs the THIN-STRIP geometry (ADR-0010's actual phasing: chi small + constant in d). (A better
+#: site ordering than the current snake -- which empirically gives 2x the minimal boundary -- could
+#: lower the constant but not the exponent.)
+CODESTATE_CHI_CAP = 8192
+
+
+def _pauli_string_operator(kinds: "list[str]", device, dtype=CDTYPE) -> torch.Tensor:
+    """``∏_q P_q`` as a dense ``(3^w, 3^w)`` operator (kron, site-0 = MSB), each ``P_q`` the engine
+    single-qutrit Pauli (:func:`_qutrit_gate`; |2> inert) -- the SAME convention the dense
+    ``QutritDM._codestate_vector`` stabilizer/logical projectors use, so the direct MPS codestate
+    matches the dense codestate bit-for-bit (validated, p8)."""
+    g = None
+    for kind in kinds:
+        P = _qutrit_gate(str(kind).upper(), device, dtype=dtype)
+        g = P if g is None else torch.kron(g, P)
+    return g
+
+
+def _eigenspace_projector(kinds: "list[str]", eigen: int, device, dtype=CDTYPE) -> torch.Tensor:
+    """``(I + eigen·∏P_q)/2`` -- the ``eigen``-eigenspace projector of a single-type Pauli string,
+    dense on the ``w``-site support (``w <= 4`` -> <= 81x81)."""
+    g = _pauli_string_operator(kinds, device, dtype=dtype)
+    eye = torch.eye(g.shape[0], dtype=dtype, device=device)
+    return (eye + float(eigen) * g) * 0.5
+
+
+def _with_gesvd_svd(method):
+    """Decorator: run ``method`` with cuda ``torch.linalg.svd`` routed through the gesvd (QR) driver.
+
+    quimb's MPS-truncation SVDs hit cusolver's DEFAULT driver (gesvdj/auto), which is SLOWER than the
+    explicit gesvd driver and can hard-error (CUSOLVER_STATUS_INVALID_VALUE) on the NEAR-DEGENERATE
+    (stabilizer-flat) Schmidt spectra the MCWF trajectory produces -- the "failed to converge" ->
+    slow-accurate-fallback storm. The SVD speedup is SIZE-DEPENDENT: ~5-11x at the d5-relevant
+    192-768 matrix sizes, up to ~21x on larger/very-degenerate matrices (measured,
+    ``outputs/teacher_prereg/p9c_svd_bench.py``); per-shot this cut d5 chi=64 ~222 -> ~104 s/shot
+    (the RESIDUAL is quimb gate_nonlocal per-op overhead + the serial per-shot loop, NOT the SVD --
+    so d5/d7 PRODUCTION scale is INFEASIBLE without the deferred batched-shot/SVD work).
+    gesvd (QR) is robust + fast. The swap is
+    SCOPED to the wrapped call (restored in ``finally``) so torch's global default is untouched
+    elsewhere; single-threaded (the per-shot trajectory loop) so the global swap is safe here.
+    ``driver=`` is cuda-only -> CPU tensors fall through unchanged."""
+    import functools
+    import os
+
+    @functools.wraps(method)
+    def _wrapped(*args, **kwargs):
+        # QEC_MPS_SVD_DRIVER overrides the driver (default 'gesvd'); 'default'/'cusolver'/'off' leaves
+        # torch's default (used by the Q5 gesvd-vs-default record-invariance A/B; production = gesvd).
+        drv = os.environ.get("QEC_MPS_SVD_DRIVER", "gesvd").lower()
+        if drv in ("default", "cusolver", "off", ""):
+            return method(*args, **kwargs)
+        orig = torch.linalg.svd
+
+        def _svd(A, full_matrices=True, *, driver=None, out=None):
+            if getattr(A, "is_cuda", False) and driver is None:
+                driver = drv
+            return orig(A, full_matrices=full_matrices, driver=driver, out=out)
+
+        torch.linalg.svd = _svd
+        try:
+            return method(*args, **kwargs)
+        finally:
+            torch.linalg.svd = orig
+
+    return _wrapped
+
+
 # --------------------------------------------------------------------------- #
 # The MCWF-on-MPS forward backend                                             #
 # --------------------------------------------------------------------------- #
@@ -295,6 +402,105 @@ class MpsLeakageForward:
         mps.apply_to_arrays(lambda x: torch.as_tensor(x, dtype=CDTYPE, device=self.device))
         return mps
 
+    def build_codestate_mps_direct(self, sched: "XZZXSchedule", m: int, chi: int,
+                                   order: "tuple[int, ...]", eng_to_mps: "dict[int, int]"):
+        """Build ``|m>_L`` DIRECTLY as a snake-ordered MPS -- NO dense ``3^n`` intermediate (the
+        d5/d7 scale unblock; the dense ``_mps_from_statevector(build_codestate(...))`` path is
+        d3-only). Mirrors the EXACT dense formula (``QutritDM._codestate_vector``) bit-for-bit:
+
+            |m>_L  ∝  ( ∏_g (I+g)/2 ) · ( I + (-1)^m Z_L )/2 · |+...+>
+
+        seed |+...+> a bond-1 product MPS; each ≤4-site projector ``(I+eigen·∏P_q)/2`` applied via
+        the validated ``gate_(where, contract='nonlocal', max_bond=chi)`` (the ``_apply_sqrt_Es``
+        path), supports snake-mapped. A surface-code codestate is a qubit stabilizer state embedded
+        in qutrits -> Schmidt rank 2^(boundary) (d3 bond 64, d5 bond 1024), so it is EXACT at a
+        feasible ``chi`` (eps_cut 0). VALIDATED exact vs the independent dense codestate at d3 +
+        structurally (<S_g>=+1, <Z_L>=(-1)^m, AND ``leak_mass``=0 -- TOGETHER a complete cert on the
+        FULL 3^n space; <S>=+1 ALONE is complete only on {0,1}^n since the |2>-inert stabiliser Paulis
+        make every |2>-containing state a +1 eigenstate) at d3 AND real d5
+        (``outputs/teacher_prereg/p8_mps_codestate_direct.py``).
+
+        Returns ``(mps, evidence)`` -- ``evidence`` carries the structural <S>/<L> residuals (the
+        ``code_evidence`` :meth:`sample` records; NO dense state is built to check it) + the
+        codestate's own truncation (``codestate_eps_cut``: 0 iff ``chi`` >= the codestate bond)."""
+        n = int(sched.n_data)
+        exact_grade = exact_chi(n)
+        cs_worst_cut = 0.0
+        # seed |+...+> : |0>^n product MPS (bond 1) -> H on every site (the dense seed H^n|0>).
+        z0 = np.zeros(PHYS, dtype=np.complex128)
+        z0[0] = 1.0
+        mps = self._qtn.MPS_product_state([z0] * n)
+        mps.apply_to_arrays(lambda x: torch.as_tensor(x, dtype=CDTYPE, device=self.device))
+        H = _qutrit_gate("H", self.device)
+        for site in range(n):  # product seed -> snake order irrelevant for the uniform |+...+>
+            self._apply_gate(mps, H, site)
+
+        def _project(kinds, supp_eng, eigen):
+            nonlocal cs_worst_cut
+            G = _eigenspace_projector(list(kinds), int(eigen), self.device)
+            where = tuple(int(eng_to_mps[int(q)]) for q in supp_eng)
+            if int(chi) >= exact_grade:  # no truncation possible -> skip the (costly) reference apply
+                mps.gate_(G, where=where, contract="nonlocal", max_bond=int(chi), cutoff=0.0)
+                self._renormalize(mps)
+                return
+            ref = mps.copy()
+            ref.gate_(G, where=where, contract="nonlocal", max_bond=exact_grade, cutoff=0.0)
+            # LOW-1 guard (review): the discarded-weight is only correct if the exact-grade reference
+            # is GENUINELY exact (not itself truncated). A w<=4 projector grows the rank by <= 3^4, so
+            # the reference bond stays far below exact_grade -- assert it (else norm_exact under-reports).
+            assert max(ref.bond_sizes()) < exact_grade, \
+                f"reference apply saturated max_bond=exact_grade={exact_grade} -> norm_exact truncated"
+            ne = self._norm_sq(ref)
+            mps.gate_(G, where=where, contract="nonlocal", max_bond=int(chi), cutoff=0.0)
+            nt = self._norm_sq(mps)
+            self._renormalize(mps, norm_sq=nt)
+            disc = max(0.0, (ne - nt) / ne) if ne > NUMERICAL_ZERO else 0.0
+            cs_worst_cut = max(cs_worst_cut, disc)
+
+        for stab in sched.stabilizers:
+            supp_eng = sorted(stab.paulis.keys())
+            kinds = [stab.paulis[q] for q in supp_eng]
+            if len({str(k).upper() for k in kinds}) != 1:
+                raise ValueError(f"stabilizer not single-type (X or Z): {dict(stab.paulis)}")
+            _project(kinds, supp_eng, +1)
+        log_eng = sorted(sched.logical.keys())
+        _project(["Z"] * len(log_eng), log_eng, (-1) ** int(m))
+
+        # STRUCTURAL evidence (the complete cert for a pure normalized MPS; no dense state built):
+        # <S_g> = +1 ∀g and <Z_L> = (-1)^m  <=>  the MPS IS |m>_L.
+        den = self._norm_sq(mps)
+        worst_S = 0.0
+        for stab in sched.stabilizers:
+            supp_eng = sorted(stab.paulis.keys())
+            g = _pauli_string_operator([stab.paulis[q] for q in supp_eng], self.device)
+            ket = mps.copy()
+            ket.gate_(g, where=tuple(int(eng_to_mps[int(q)]) for q in supp_eng), contract="nonlocal")
+            sg = complex((mps.H & ket).contract(all)) / den if den > NUMERICAL_ZERO else 0.0
+            worst_S = max(worst_S, abs(sg - 1.0))
+        zket = mps.copy()
+        zket.gate_(_pauli_string_operator(["Z"] * len(log_eng), self.device),
+                   where=tuple(int(eng_to_mps[int(q)]) for q in log_eng), contract="nonlocal")
+        zl = complex((mps.H & zket).contract(all)) / den if den > NUMERICAL_ZERO else 0.0
+        target = float((-1) ** int(m))
+        # |2>-mass on the codestate. The stabilizers/logical are |2>-INERT Paulis, so EVERY
+        # |2>-containing state is a +1 eigenstate of all of them -> <S_g>=+1 ∧ <Z_L>=(-1)^m alone
+        # does NOT witness |2> contamination (it is a complete cert ONLY on the {0,1}^n subspace).
+        # The construction seeds from H^n|0> (zero |2> mass) and |2>-inert projectors never inject
+        # |2>, so the codestate provably has 0 |2> mass -- but we VERIFY that premise here (it is the
+        # missing leg that makes <S>/<Z_L> a complete certification of |m>_L on the FULL 3^n space).
+        leak_mass = float(sum(self._site_population(mps, st, 2) for st in range(n)))
+        evidence = {
+            "construction": "direct_mps_projector",
+            "worst_S_residual": float(worst_S),
+            "logical_expectation": float(zl.real),
+            "logical_target": target,
+            "worst_L_residual": float(abs(zl - target)),
+            "leak_mass": leak_mass,  # total <|2>> population; 0 <=> zero |2> support (HIGH-1 premise)
+            "max_bond": int(max(mps.bond_sizes())) if n > 1 else 1,
+            "codestate_eps_cut": float(cs_worst_cut),
+        }
+        return mps, evidence
+
     @staticmethod
     def _norm_sq(mps) -> float:
         """``<psi|psi>`` (real) of a quimb MPS via a cuda contraction."""
@@ -317,11 +523,8 @@ class MpsLeakageForward:
         population on one MPS site (used for the MCWF leak branch norms + arm-C leak flags)."""
         proj = torch.zeros((PHYS, PHYS), dtype=CDTYPE, device=self.device)
         proj[int(level), int(level)] = 1.0
-        ket = mps.copy()
-        ket.gate_(proj, where=int(mps_site), contract=True)
-        num = float((mps.H & ket).contract(all).real)
-        den = self._norm_sq(mps)
-        return num / den if den > NUMERICAL_ZERO else 0.0
+        # local canonical expectation (NOT a full-chain overlap) -- 1-site projector population.
+        return float(mps.local_expectation_canonical(proj, int(mps_site), normalized=True).real)
 
     def _parity_expectation(self, mps, supp_sites: list[int], d2: float) -> float:
         """``<psi| prod_q D_q |psi> / <psi|psi>`` for the diagonal parity string
@@ -332,13 +535,14 @@ class MpsLeakageForward:
         This is the ``<P>`` the kernel reduces (``measure_stab_block``) to get
         ``p(s=0) = 1/2 (1 + <P>)``.
         """
+        # <prod_q D_q> via quimb's CANONICAL-form local expectation over the (<=4-site) support --
+        # local, NOT the full-chain overlap the old code did (the measure was ~51% of the wall, p10).
         Dq = torch.diag(torch.tensor([1.0, -1.0, float(d2)], dtype=CDTYPE, device=self.device))
-        ket = mps.copy()
-        for s in supp_sites:
-            ket.gate_(Dq, where=int(s), contract=True)
-        num = float((mps.H & ket).contract(all).real)
-        den = self._norm_sq(mps)
-        return num / den if den > NUMERICAL_ZERO else 0.0
+        G = None
+        for _ in supp_sites:
+            G = Dq if G is None else torch.kron(G, Dq)
+        return float(mps.local_expectation_canonical(
+            G, tuple(int(s) for s in supp_sites), normalized=True).real)
 
     # ----------------------------------------------------------------------- #
     # Trajectory steps (exact MPS lift of the kernel's __device__ routines)    #
@@ -354,15 +558,23 @@ class MpsLeakageForward:
         ``sum_k p_k = <psi|psi>``), then ``psi <- K_k psi / sqrt(p_k)``. ONE uniform ``u``
         consumed (Section-5 order). A 1-site Kraus cannot grow the bond -> exact, no truncation.
 
-        ``p_k`` is read by overlap with the bra of ``K_k`` applied to a ket copy (no dense
-        ``3^n`` state). The selected branch is applied in place + renormalized.
+        ``p_k`` is read from the 1-site REDUCED DENSITY MATRIX (ONE local contraction), NOT n_kraus
+        full-chain overlaps: since ``K_k`` is single-site, ``p_k = ||K_k psi||^2 = <psi|K_k^dag K_k|
+        psi> = Tr[K_k^dag K_k rho_i]`` with ``rho_i = Tr_{j!=i}|psi><psi|`` the 1-site RDM (trace =
+        <psi|psi>, so the p_k are the SAME unnormalized branch norms). This was the dominant per-shot
+        cost (p10 profile: the leak was ~70% of the wall, ~441 ms/call, doing n_kraus full 25-site
+        contractions at the codestate bond); the RDM is one contraction + trivial 3x3 traces.
         """
-        den = self._norm_sq(mps)
-        pk = []
-        for K in kraus:
-            ket = mps.copy()
-            ket.gate_(K, where=int(mps_site), contract=True)
-            pk.append(self._norm_sq(ket))  # ||K psi||^2
+        # p_k = ||K_k psi||^2 = <psi| K_k^dag K_k |psi> via quimb's CANONICAL-form local expectation
+        # (normalized=False -> the UNNORMALIZED <psi|op|psi>, matching the old branch norms exactly).
+        # The shared ``info`` dict caches the orthogonality center across the n_kraus calls so the MPS
+        # is canonicalized to the site ONCE -> the expectation is LOCAL, NOT the n_kraus full 25-site
+        # overlaps the old code did at the codestate bond (p10 profile: the leak was ~70% of the wall).
+        site = int(mps_site)
+        info: dict = {}
+        pk = [float(mps.local_expectation_canonical(
+                    K.conj().transpose(-1, -2) @ K, site, normalized=False, info=info).real)
+              for K in kraus]
         tot = float(sum(pk))
         target = float(u) * tot
         cum = 0.0
@@ -489,48 +701,155 @@ class MpsLeakageForward:
     def _terminal_readout(
         self, mps, log_sites: list[int], log_isx: list[int], n_data: int,
         b_eff: float, m: int, u_draws: list[float],
-    ) -> int:
+        *, mode: str = "hard2", soft_model: "SoftReadoutModel | None" = None,
+        gen: "np.random.Generator | None" = None, b_bit: float | None = None,
+    ) -> "TerminalReadout":
         """The terminal transversal data readout (lift of ``terminal_readout_block``).
 
-        Rotate logical X-supports to Z; then for every data qutrit (MPS-site order matching the
-        kernel's ``q=0..n-1`` ENGINE order -> mapped through the snake), sample its computational
-        bit with the biased-``b`` POVM ``F1=|1><1|+b|2><2|`` (``P(bit=1)=<F1>``) and collapse
-        with ``sqrt(F_bit)`` (``|2>`` kept at ``sqrt(b_eff)`` / ``sqrt(1-b_eff)``, NOT full
-        weight). The logical flip is ``parity(sampled bits over the logical support) XOR m``.
-        One uniform per data qutrit (Section-5 terminal draw order, engine-qutrit order).
+        Three modes (D2 soft-emission contract §2; the WITHIN-CYCLE path is UNTOUCHED — the
+        terminal is the LAST op, post-state discarded, so there is no backaction; L-soft-4 is
+        satisfied by construction):
+
+        * ``mode='hard2'`` (DEFAULT — ⑦'s biased-bit terminal, byte-identical). For every data
+          qutrit (ENGINE order ``q=0..n-1`` -> MPS site via the snake) sample its computational
+          bit with the biased-``b`` POVM ``F1=|1><1|+b|2><2|`` (``P(bit=1)=<F1>``) using ONE
+          uniform ``u_draws[q]`` and collapse ``sqrt(F_bit)``. The flip is ``parity(bit over the
+          logical support) XOR m``. This is the EXACT ⑦ path: it consumes the SAME ``n_data``
+          uniforms in the SAME engine order, so on a matched seed the syndrome record + the flip
+          are bit-for-bit identical to the unmodified carrier (L-soft-8).
+        * ``mode in {'hard3','soft'}`` (the FAITHFUL level path). Realize each data qutrit's LEVEL
+          ``k_bar in {0,1,2}`` by the 3-OUTCOME PROJECTIVE measurement
+          ``{|0><0|,|1><1|,|2><2|}`` — Born-sample ``k_bar`` from the current MPS level
+          populations ``(p0,p1,p2)`` using ONE uniform ``u_draws[q]`` (engine order), then
+          collapse ``|k_bar><k_bar|``. Both F1 and (projective-then-bit) are DIAGONAL in the
+          level basis, so the joint OUTCOME distribution depends only on ``diag(rho)`` and
+          ``bit(k_bar)`` (0->0, 1->1, 2->Bernoulli(b)) reproduces F1's joint bit distribution
+          EXACTLY (this is why L-soft-1 holds: hard-2-via-level == ⑦'s F1 terminal in
+          distribution). ``hard3`` reports the per-qutrit levels ``k_bar``; ``soft`` additionally
+          emits the per-qutrit IQ ``z = soft_model.draw_iq(levels, gen)`` (consuming the SAME
+          ``gen``, AFTER all level draws — see the explicit draw order below). The flip label is
+          still computed from ``bit(k_bar)`` for bookkeeping (the decoder/floor recompute it from
+          ``k_bar``/``z``).
+
+        RNG DRAW ORDER (the seam/floor seed-matching contract — C and D3 depend on this):
+          1. the LEVEL/bit draws: ``n_data`` uniforms, ENGINE-qutrit order ``q=0..n-1`` (one per
+             qutrit). ``hard2`` reads them from ``u_draws`` (== ⑦'s pre-drawn ``u_term``);
+             ``hard3``/``soft`` ALSO read them from ``u_draws`` (the caller pre-draws the SAME
+             ``n_data`` uniforms in the SAME order, so the level path and the hard-2 path consume
+             the host stream identically up to the terminal — L-soft-8 byte-identity of the
+             syndrome record holds regardless, the syndrome draws all precede the terminal).
+          2. ``soft`` ONLY: ONE additional batched IQ draw ``soft_model.draw_iq(levels, gen)``
+             over the ``(n_data,)`` realized levels -> ``(n_data, 2)`` standard-normals from
+             ``gen``, consumed AFTER step 1. The level realization is therefore IDENTICAL between
+             ``hard3`` and ``soft`` on a matched seed (the IQ draw is downstream, additive output).
+
+        Returns a :class:`TerminalReadout` carrying the flip (all modes) + the per-qutrit
+        ``levels`` (hard3/soft, engine order) + ``iq`` (soft, engine order).
         """
+        mode = str(mode)
+        if mode not in ("hard2", "hard3", "soft"):
+            raise ValueError(f"_terminal_readout mode must be hard2/hard3/soft (got {mode!r})")
+        if mode == "soft" and soft_model is None:
+            raise ValueError("mode='soft' requires a soft_model (the SoftReadoutModel emitter)")
+        if mode == "soft" and gen is None:
+            raise ValueError("mode='soft' requires gen (the per-shot numpy Generator for draw_iq)")
+        # the bit-bias used to map a realized |2> to a computational bit (Bernoulli(b)) on the
+        # level path; defaults to b_eff so hard-2-via-level reproduces the F1=diag(0,1,b_eff)
+        # terminal. (b_eff is 0.5 under the 'half' readout convention, else the run's b.)
+        b_for_bit = float(b_eff) if b_bit is None else float(b_bit)
+
         H = _qutrit_gate("H", self.device)
         x_log = [log_sites[j] for j in range(len(log_sites)) if int(log_isx[j]) == 1]
         for s in x_log:
             self._apply_gate(mps, H, s)
 
         qbit: dict[int, int] = {}
+        levels: list[int] = [0] * int(n_data)  # engine-qutrit order q=0..n-1
         # the draw order is ENGINE-qutrit order q=0..n-1; map each to its MPS site below.
         for q in range(int(n_data)):
             mps_site = self._eng_to_mps[q]
-            # P(bit=1) = <F1>, F1 diag weight [t==1] + b_eff*[t==2]
-            F1 = torch.diag(torch.tensor([0.0, 1.0, float(b_eff)], dtype=CDTYPE, device=self.device))
-            ket = mps.copy()
-            ket.gate_(F1, where=int(mps_site), contract=True)
-            w1 = float((mps.H & ket).contract(all).real)
-            wt = self._norm_sq(mps)
-            p1 = (w1 / wt) if wt > NUMERICAL_ZERO else 0.5
-            bit = 1 if (float(u_draws[q]) < p1) else 0
-            qbit[q] = bit
-            # collapse sqrt(F_bit): {0,1} trit matching bit -> 1, other {0,1} -> 0, |2| ->
-            # sqrt(b_eff) (bit 1) / sqrt(1-b_eff) (bit 0).
-            if bit == 1:
-                diag = torch.tensor([0.0, 1.0, float(b_eff) ** 0.5], dtype=CDTYPE, device=self.device)
+            u = float(u_draws[q])
+            if mode == "hard2":
+                # ⑦'s biased-bit POVM F1=diag(0,1,b_eff); P(bit=1)=<F1>. ONE uniform -> bit.
+                F1 = torch.diag(torch.tensor([0.0, 1.0, float(b_eff)], dtype=CDTYPE,
+                                             device=self.device))
+                ket = mps.copy()
+                ket.gate_(F1, where=int(mps_site), contract=True)
+                w1 = float((mps.H & ket).contract(all).real)
+                wt = self._norm_sq(mps)
+                p1 = (w1 / wt) if wt > NUMERICAL_ZERO else 0.5
+                bit = 1 if (u < p1) else 0
+                qbit[q] = bit
+                # collapse sqrt(F_bit): {0,1} trit matching bit -> 1, other {0,1} -> 0, |2| ->
+                # sqrt(b_eff) (bit 1) / sqrt(1-b_eff) (bit 0).
+                if bit == 1:
+                    diag = torch.tensor([0.0, 1.0, float(b_eff) ** 0.5], dtype=CDTYPE,
+                                        device=self.device)
+                else:
+                    diag = torch.tensor([1.0, 0.0, (1.0 - float(b_eff)) ** 0.5], dtype=CDTYPE,
+                                        device=self.device)
+                mps.gate_(torch.diag(diag), where=int(mps_site), contract=True)
+                self._renormalize(mps)
             else:
-                diag = torch.tensor([1.0, 0.0, (1.0 - float(b_eff)) ** 0.5], dtype=CDTYPE, device=self.device)
-            mps.gate_(torch.diag(diag), where=int(mps_site), contract=True)
-            self._renormalize(mps)
+                # FAITHFUL 3-outcome projective level read: Born-sample k_bar from (p0,p1,p2),
+                # collapse |k_bar><k_bar|. ONE uniform -> level (engine order).
+                wt = self._norm_sq(mps)
+                p = [0.0, 0.0, 0.0]
+                for lev in (0, 1, 2):
+                    p[lev] = self._site_population(mps, mps_site, lev)  # <|lev><lev|>/<psi|psi>
+                # Born-sample by the cumulative populations (renormalized defensively).
+                tot = float(p[0] + p[1] + p[2])
+                if tot <= NUMERICAL_ZERO:
+                    kbar = 0
+                else:
+                    target = u * tot
+                    cum = 0.0
+                    kbar = 2
+                    for lev in (0, 1, 2):
+                        cum += p[lev]
+                        if target < cum:
+                            kbar = lev
+                            break
+                levels[q] = int(kbar)
+                # collapse onto the realized level (|k_bar><k_bar|).
+                proj = torch.zeros((PHYS, PHYS), dtype=CDTYPE, device=self.device)
+                proj[kbar, kbar] = 1.0
+                mps.gate_(proj, where=int(mps_site), contract=True)
+                self._renormalize(mps)
+                # bit(k_bar): 0->0, 1->1, 2->Bernoulli(b_for_bit). The |2> bit is drawn from the
+                # SAME host stream so the level path's bit distribution == F1's (L-soft-1). The
+                # extra |2| draw is consumed ONLY when k_bar==2 (rare), keeping the common-case
+                # one-draw-per-qutrit order aligned with hard-2; the |2| sub-draw uses gen when
+                # provided (soft) else a deterministic split of u (hard3 standalone).
+                if kbar == 2:
+                    if gen is not None:
+                        u2 = float(gen.random())
+                    else:
+                        # hard3 without gen: split the level uniform's residual within the |2>
+                        # mass to a [0,1) bit uniform (deterministic, reproducible).
+                        lo = float(p[0] + p[1]) / tot if tot > NUMERICAL_ZERO else 0.0
+                        u2 = (u - lo) / max(p[2] / tot, NUMERICAL_ZERO) if tot > NUMERICAL_ZERO else 0.5
+                        u2 = min(max(u2, 0.0), 1.0)
+                    qbit[q] = 1 if (u2 < b_for_bit) else 0
+                else:
+                    qbit[q] = int(kbar)  # 0->0, 1->1
 
         parity = 0
         # logical support is given in ENGINE positions; XOR the sampled engine-qutrit bits.
         for q in self._log_eng_support:
             parity ^= (qbit[q] & 1)
-        return int((parity ^ (int(m) & 1)) & 1)
+        flip = int((parity ^ (int(m) & 1)) & 1)
+
+        iq = None
+        if mode == "soft":
+            # ONE batched IQ draw over the realized levels (engine order), consuming gen AFTER
+            # all level draws (the documented order). draw_iq returns (n_data, 2) float64 cuda.
+            lev_t = torch.as_tensor(levels, dtype=torch.long, device=self.device)
+            iq = soft_model.draw_iq(lev_t, gen)  # (n_data, 2)
+
+        lev_out = None if mode == "hard2" else list(levels)
+        bits_out = [int(qbit[q]) for q in range(int(n_data))]  # engine-order per-qutrit bit (all modes)
+        return TerminalReadout(flip=flip, bits=bits_out, levels=lev_out, iq=iq)
 
     # ----------------------------------------------------------------------- #
     # One trajectory (the lift of sv_traj_wc_kernel)                          #
@@ -541,9 +860,13 @@ class MpsLeakageForward:
         stab_len: np.ndarray, log_sites_eng: list[int], log_isx: list[int],
         arm: str, b: float, b_eff: float, m: int, chi: int, n_data: int, R: int,
         rng: np.random.Generator, ledger: MpsTruncationLedger,
-    ) -> tuple[list[int], int, float]:
-        """Evolve ONE pure-MPS trajectory; return (syndrome bits round-major, logical_flip,
-        shot_discarded_total). The RNG draw order mirrors ``sv_traj_wc_kernel`` Section-5."""
+        *, mode: str = "hard2", soft_model: "SoftReadoutModel | None" = None,
+    ) -> "tuple[list[int], TerminalReadout, float]":
+        """Evolve ONE pure-MPS trajectory; return (syndrome bits round-major, TerminalReadout,
+        shot_discarded_total). The RNG draw order mirrors ``sv_traj_wc_kernel`` Section-5; the
+        WITHIN-CYCLE path (leak/gate/measure draws) is IDENTICAL for all terminal modes (the
+        terminal is the LAST op), so on a matched seed the syndrome record is byte-identical
+        across modes (L-soft-8). ``mode``/``soft_model`` only change the terminal emission."""
         mps = codestate_mps.copy()
         d2 = _arm_d2(arm, b)
         round_op_ptr = marsh.round_op_ptr.detach().cpu().numpy()
@@ -591,17 +914,26 @@ class MpsLeakageForward:
                     u = float(rng.random())
                     self._leak_sample(mps, leak_kraus, mps_site, u)
 
-        # terminal readout draws (engine-qutrit order q=0..n-1)
+        # terminal readout draws (engine-qutrit order q=0..n-1): ONE level/bit uniform per data
+        # qutrit, drawn from the SAME host stream as ⑦ (so the level path and the hard-2 path
+        # consume the stream identically up to the terminal; the syndrome record is byte-identical
+        # across modes — L-soft-8). For soft, the IQ draw (one batched draw_iq over the realized
+        # levels) consumes ``rng`` AFTER these, inside _terminal_readout (the documented order).
         u_term = [float(rng.random()) for _ in range(int(n_data))]
-        flip = self._terminal_readout(mps, log_sites_eng, log_isx, n_data, b_eff, m, u_term)
-        return syndrome_bits, int(flip), float(shot_discarded)
+        term = self._terminal_readout(
+            mps, log_sites_eng, log_isx, n_data, b_eff, m, u_term,
+            mode=mode, soft_model=soft_model, gen=rng)
+        return syndrome_bits, term, float(shot_discarded)
 
     # ----------------------------------------------------------------------- #
     # The public sampler                                                      #
     # ----------------------------------------------------------------------- #
+    @_with_gesvd_svd
     def sample(
         self, spec: RunSpec, *, sched: XZZXSchedule | None = None, chi: int | None = None,
         materialize: bool = True, snake: bool = True,
+        mode: str = "hard2", soft_model: "SoftReadoutModel | None" = None,
+        codestate_mode: str = "auto",
     ) -> tuple[ShotSet, MpsTruncationLedger]:
         """Run an MCWF-on-MPS forward job: parse -> marshal -> codestate -> N trajectories ->
         ShotSet (byte-identical to the dense backend) + the truncation ledger.
@@ -618,7 +950,24 @@ class MpsLeakageForward:
         ``chi`` is the bond cap (default exact-grade ``3^ceil(L/2)`` -> zero truncation,
         the C8 anchor). ``snake`` selects the boustrophedon site order (ADR 0010 Decision-4);
         exactness is order-independent at full ``chi``. GPU-only; ``complex128``.
+
+        TERMINAL MODE (D2 soft-emission contract §2). ``mode in {'hard2','hard3','soft'}`` selects
+        the terminal-readout emission (see :meth:`_terminal_readout`): ``hard2`` (default) is ⑦'s
+        biased-bit terminal (the packed ShotFlip + syndrome are byte-identical to the unmodified
+        carrier on a matched seed); ``hard3`` ALSO returns the per-data-qutrit realized levels
+        ``k_bar`` (a ``(N, n_data)`` uint8 array in ``shotset.diag['terminal_levels']``); ``soft``
+        ALSO returns the per-data-qutrit IQ ``z`` (a ``(N, n_data, 2)`` float64 array in
+        ``shotset.diag['terminal_iq']``) drawn via ``soft_model.draw_iq``. In ALL modes the packed
+        buffer (the HARD syndrome record + the logical flip) is byte-identical (L-soft-8): the
+        within-cycle path is untouched and the level path's logical flip equals ⑦'s in
+        distribution (hard-2-via-level == F1; L-soft-1). ``soft`` requires ``soft_model`` (a
+        :class:`~qec_twin.forward.scalable.soft_readout.SoftReadoutModel`).
         """
+        mode = str(mode)
+        if mode not in ("hard2", "hard3", "soft"):
+            raise ValueError(f"sample mode must be hard2/hard3/soft (got {mode!r})")
+        if mode == "soft" and soft_model is None:
+            raise ValueError("mode='soft' requires soft_model (a SoftReadoutModel)")
         if not torch.cuda.is_available():
             raise RuntimeError("GPU-only contract: CUDA must be available for the MCWF-MPS forward")
         sched = self._host.parse(spec) if sched is None else sched
@@ -629,10 +978,12 @@ class MpsLeakageForward:
                 "sched.with_within_cycle_streams(parse_within_cycle_streams(r10_circuit)) -- "
                 "the r01-geometry + r10-interior split (model §1).")
 
+        if str(codestate_mode) not in ("auto", "dense", "direct"):
+            raise ValueError(f"codestate_mode must be auto/dense/direct (got {codestate_mode!r})")
+
         leak_t, _leak_ev = self._host.build_within_cycle_leak(spec)  # CPTP + compose asserted (C1)
         leak_kraus = [leak_t[k] for k in range(leak_t.shape[0])]
         marsh = self._host.marshal_within_cycle(sched, leak_t, R=spec.R)
-        codestate, code_evidence = self._host.build_codestate(sched, spec.m)  # <S>/<L> asserted
 
         n_data = int(marsh.n_data)
         R = int(marsh.R)
@@ -645,7 +996,22 @@ class MpsLeakageForward:
         chi_eff = int(chi) if chi is not None else exact_chi(n_data)
         ledger = MpsTruncationLedger(chi=chi_eff)
 
-        codestate_mps = self._mps_from_statevector(codestate, order)
+        # codestate |m>_L. 'auto' -> the dense lift for n_data <= DENSE_CODESTATE_MAX (the
+        # p7d/8e-validated d3 path, kept for regression safety) and the DIRECT MPS construction
+        # above it (d5=25 / d7=49 cannot be built densely); 'dense'/'direct' force a path (the d3
+        # integration anchor forces 'direct'). The direct construction is EXACT vs the dense
+        # codestate at d3 (p8), so 'auto' is observationally identical on the validated d3 path.
+        use_direct = (str(codestate_mode) == "direct" or
+                      (str(codestate_mode) == "auto" and n_data > DENSE_CODESTATE_MAX))
+        if use_direct:
+            # build the codestate EXACT (its 2^boundary bond), separate from the dynamics chi_eff —
+            # the trajectory then truncates it at chi_eff like the dense path does.
+            cs_chi = min(exact_chi(n_data), CODESTATE_CHI_CAP)
+            codestate_mps, code_evidence = self.build_codestate_mps_direct(
+                sched, spec.m, cs_chi, order, self._eng_to_mps)
+        else:
+            codestate, code_evidence = self._host.build_codestate(sched, spec.m)  # <S>/<L> asserted
+            codestate_mps = self._mps_from_statevector(codestate, order)
 
         # gate table (engine SV_GATE_IDS) -> the (3,3) cuda unitaries (mirrors the kernel table).
         from qec_twin.forward.scalable.sv_sampler import SV_GATE_NAMES
@@ -662,17 +1028,29 @@ class MpsLeakageForward:
         N = int(spec.N)
         syndromes = np.zeros((N, n_stab * R), dtype=np.uint8)
         flips = np.zeros((N,), dtype=np.uint8)
+        # terminal side channels. ``term_bits`` (ALL modes) is the per-data-qutrit computational
+        # bit (⑦'s F1 bit in hard2; bit(k_bar) on the level path) — the L-soft-1 per-qubit marginal.
+        term_bits = np.zeros((N, n_data), dtype=np.uint8)
+        term_levels = np.zeros((N, n_data), dtype=np.uint8) if mode in ("hard3", "soft") else None
+        term_iq = np.zeros((N, n_data, 2), dtype=np.float64) if mode == "soft" else None
 
         for shot in range(N):
             # per-shot RNG keyed by (base_seed, shot) -- a wave-layout-independent stream
-            # (the host-side analog of the kernel's per-shot Philox keying).
+            # (the host-side analog of the kernel's per-shot Philox keying). The SAME key drives
+            # all terminal modes, so the syndrome record is byte-identical across modes (L-soft-8).
             rng = np.random.default_rng((int(spec.base_seed), shot))
-            bits, flip, shot_disc = self._run_trajectory(
+            bits, term, shot_disc = self._run_trajectory(
                 codestate_mps, marsh, leak_kraus, gate_table, stab_supp, stab_isx, stab_len,
                 log_sites_eng, log_isx, str(spec.arm).upper(), float(spec.b), b_eff,
-                int(spec.m), chi_eff, n_data, R, rng, ledger)
+                int(spec.m), chi_eff, n_data, R, rng, ledger,
+                mode=mode, soft_model=soft_model)
             syndromes[shot, :] = np.asarray(bits, dtype=np.uint8)
-            flips[shot] = np.uint8(flip)
+            flips[shot] = np.uint8(term.flip)
+            term_bits[shot, :] = np.asarray(term.bits, dtype=np.uint8)
+            if term_levels is not None:
+                term_levels[shot, :] = np.asarray(term.levels, dtype=np.uint8)
+            if term_iq is not None:
+                term_iq[shot, :, :] = term.iq.detach().cpu().numpy()
             ledger.record_shot_total(shot_disc)
 
         packed = self._host.pack_shots(syndromes, flips)
@@ -686,6 +1064,14 @@ class MpsLeakageForward:
         header["mps_snake_order"] = list(order)
         header["mps_truncation_ledger"] = ledger.report()
         header["codestate_check"] = code_evidence
+        # D2 terminal-readout mode provenance. The packed buffer is byte-identical across modes;
+        # hard3/soft carry the per-data-qutrit level / IQ side channels in shotset.diag.
+        header["terminal_mode"] = mode
+        if mode in ("hard3", "soft"):
+            header["terminal_levels_shape"] = [int(N), int(n_data)]
+        if mode == "soft":
+            header["terminal_iq_shape"] = [int(N), int(n_data), 2]
+            header["soft_model"] = soft_model.realized()  # the grounded geometry + round-trip cert
 
         bits_per_shot = self._host.syndrome_bits_per_shot(n_stab, R)
         out_path = None
@@ -700,13 +1086,19 @@ class MpsLeakageForward:
             with open(out_path, "wb") as fh:
                 fh.write(np.ascontiguousarray(packed).tobytes())
 
+        diag: dict[str, Any] = {"mps_truncation": ledger.report(), "terminal_mode": mode,
+                                "terminal_bits": term_bits}  # (N, n_data) uint8 per-qubit bit (all modes)
+        if term_levels is not None:
+            diag["terminal_levels"] = term_levels       # (N, n_data) uint8, engine order
+        if term_iq is not None:
+            diag["terminal_iq"] = term_iq               # (N, n_data, 2) float64, engine order
         shotset = ShotSet(
             header=header,
             path=out_path,
             header_path=header_path,
             n_shots=N,
             syndrome_bits_per_shot=bits_per_shot,
-            diag={"mps_truncation": ledger.report()},
+            diag=diag,
             shots=(packed if materialize else None),
         )
         return shotset, ledger

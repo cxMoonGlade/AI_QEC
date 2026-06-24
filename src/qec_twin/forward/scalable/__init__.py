@@ -91,6 +91,10 @@ from qec_twin.forward.scalable.seam import (
     inspect_raw_detectors,
     teacher_shots_to_events,
 )
+from qec_twin.forward.scalable.soft_readout import (
+    P22_CAP,
+    SoftReadoutModel,
+)
 
 __all__ = [
     "CarrierManifest",
@@ -168,4 +172,6 @@ __all__ = [
     "g2_positive_control",
     "inspect_raw_detectors",
     "teacher_shots_to_events",
+    "P22_CAP",
+    "SoftReadoutModel",
 ]
