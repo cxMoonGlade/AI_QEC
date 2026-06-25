@@ -265,6 +265,7 @@ class QutritDM:
             raise RuntimeError(f"logical |{m}>_L preparation collapsed to zero norm")
         psi = psi / nrm.to(self.dtype)
         self.rho = torch.outer(psi, psi.conj())
+        self._logical_m = m  # remembered so record_oracle can fold m into the logical-ERROR rate
 
     def _codestate_vector(self, m: int) -> torch.Tensor:
         """Pure-state ``|m>_L`` via stabilizer + logical-Z projection of a seed.
@@ -802,6 +803,8 @@ class QutritDM:
         arm: str = "A",
         diagonal_z: bool = False,
         prune: float = NUMERICAL_ZERO,
+        m: int | None = None,
+        frame_offset: int | None = None,
     ) -> dict:
         r"""EXACT multi-round (syndrome-history, logical) record oracle on the d3 qutrit DM.
 
@@ -841,11 +844,31 @@ class QutritDM:
         POVM outcomes (this method's branch labels), round-major then ``stabs``-order. The
         emitted DETECTORS are folded ``det[0, j] = s[0, j]`` (first round raw),
         ``det[r, j] = s[r, j] XOR s[r-1, j]`` for ``r >= 1`` (interior round-to-round XOR). The
-        observable is the single logical flip ``parity(terminal logical readout) XOR m`` — and
-        because the caller prepares ``|m>_L`` (so the readout splits to ``(p0, p1)`` about the
-        ``(-1)^m`` logical sector) and the post-M Y echoes flip the parity by
-        ``(R-1)*|logical_supp| mod 2``, the oracle reports the readout split directly; the
-        caller maps it to the flip convention (the teacher's ``run_teacher``).
+        observable is the single logical flip ``parity(terminal logical readout) XOR m``. The raw
+        terminal readout physically carries the interior post-measure echoes, which flip the logical
+        parity by a DETERMINISTIC ``frame_offset``. This engine MEASURES that offset (no black box at
+        the controlled stage) — replaying the interior ``round_post`` frames on the NOISELESS prepared
+        codestate and reading the logical sector (see :meth:`_logical_error_rate`) — so it is correct
+        for ANY frame Pauli type (a COMMUTING Z echo -> 0; an anticommuting Y/X echo -> the parity
+        flip), and REFUSES (raises) rather than guess if the frame is not a clean deterministic echo.
+        For the standard transversal echo this equals ``(R-1)*|logical_supp| mod 2`` — the value the
+        teacher's :func:`noiseless_smoke` runs the noiseless circuit and ASSERTS. The LOGICAL-ERROR
+        rate is ``P(readout XOR m XOR frame_offset == 1)``: at EVERY R (R==1 included) the oracle folds
+        the prepared ``m`` (remembered from :meth:`init_logical`, or the ``m`` arg) and the measured
+        offset into ``flip_rate`` (the true error rate, 0 in the noiseless case for any R — PROVIDED
+        ``round_pre`` carries no NET deterministic logical flip, the DD-refocusing condition the teacher
+        satisfies and which the ``round_post``-only measurement assumes; a ``round_pre`` that
+        deterministically flips the logical must pass ``frame_offset``), and ALSO returns the raw
+        ``readout_one_rate = P(readout == 1)`` + the ``echo_frame_offset`` used. Folding a constant DOES
+        complement the rate when ``m XOR frame_offset == 1`` (e.g. even R with odd ``|supp|``, or
+        ``m == 1``) — the earlier "deterministic relabel does not change the rate" was wrong; reporting
+        the raw split AS the error rate was the latent even-R / m==1 bug. NOTE ``flip_rate`` is the LER
+        (offset REMOVED); it is NOT the carrier/teacher emitted ``obs`` (which bakes the offset IN,
+        unremoved — :func:`noiseless_smoke` asserts noiseless ``obs == frame_offset``), so a consumer
+        comparing an ``obs.mean()`` to ``flip_rate`` must first remove the SAME offset. Under
+        ``prune>0`` ``flip_rate`` is conditional on branch survival (normalized by ``total_mass``,
+        bounded by ``dropped_mass``).
+        ``frame_offset`` overrides the measurement entirely.
 
         ┌─ THE BOUND (declared exactly as §7.2; memory, prevent-toy honesty) ────────────────┐
         │  The full 9-data-qutrit DM is ``3^9 x 3^9 x 16 B = 6.2 GB / copy``. The exact record │
@@ -892,8 +915,10 @@ class QutritDM:
             {"kind": "full_joint", "R": 1, "n_stab": len(stabs),
              "joint": {(s_tuple, f): prob},            # 2^n_stab syndromes x f in {0,1}
              "syndrome": {s_tuple: P(s)},              # logical-marginal P(s)
-             "logical": (P(f=0), P(f=1)),
+             "logical": (P(f=0), P(f=1)),              # the RAW readout distribution (wiring checks)
              "detectors": {s_tuple: P(det)},           # R=1 det == raw s (identity fold)
+             "flip_rate": LOGICAL-ERROR rate P(readout XOR m == 1) (R=1: frame_offset == 0),
+             "readout_one_rate": raw P(readout == 1), "echo_frame_offset": 0, "m": m,
              "total_mass": sum of joint, "dropped_mass": pruned probability}
 
         For R >= 2 (``kind == "moments"``)::
@@ -902,7 +927,9 @@ class QutritDM:
              "det_marg": ndarray[R*n_stab],            # E[det_{r,j}]
              "rr_corr": ndarray[R-1, n_stab],          # connected corr(det_{r,j}, det_{r+1,j})
              "spatial_corr": ndarray[R, n_stab, n_stab],  # same-round connected cov, normalized
-             "flip_rate": P(logical flip == 1 under the folded readout),
+             "flip_rate": LOGICAL-ERROR rate P(readout XOR m XOR frame_offset == 1) (noiseless -> 0),
+             "readout_one_rate": raw P(readout == 1) (the un-folded split),
+             "echo_frame_offset": frame_offset (the deterministic echo offset folded), "m": m,
              "total_mass": traversed probability, "dropped_mass": pruned probability}
 
         Both keep the existing ``arm``/``b``/``diagonal_z`` semantics so the moments line up
@@ -957,9 +984,10 @@ class QutritDM:
             # mass is path_p * (p0, p1).
             self.rho = rho_leaf
             p0, p1 = self.logical_distribution()
-            # contribution to E[flip==1]: path_p * p1 (flip == the logical readout bit here;
-            # the caller folds in m + the Y-echo offset — a deterministic relabel that does not
-            # change the RATE of flips, so flip_rate is reported on the readout bit directly).
+            # accumulate the RAW readout-1 mass path_p * p1 = P(readout == 1). The logical-ERROR
+            # fold (XOR m XOR frame_offset) is a GLOBAL deterministic relabel, applied ONCE at the
+            # return — and it DOES complement the rate when m XOR frame_offset == 1 (so it cannot be
+            # folded leaf-wise into "the readout bit directly"; that was the latent even-R bug).
             flip_sum[0] += path_p * p1
             dv = _fold_detectors(svec)
             sum1.add_(path_p * dv)
@@ -1018,12 +1046,23 @@ class QutritDM:
                 syndrome[s_key] = syndrome.get(s_key, 0.0) + p
             p1 = float(flip_sum[0])
             p0 = float(total_mass[0] - flip_sum[0])
+            tm1 = float(total_mass[0])
+            m_eff = int(getattr(self, "_logical_m", 0) if m is None else m) & 1
+            raw1 = p1 / tm1 if tm1 > NUMERICAL_ZERO else 0.0
+            # R=1 has NO interior round so frame_offset == 0; flip_rate folds m only (the true LER).
+            # The raw readout split stays in "logical" (the readout DISTRIBUTION the wiring checks use).
+            ler1, fo1 = self._logical_error_rate(base=base, round_post=round_post, R=1, m_eff=m_eff,
+                                                 raw_readout_one=raw1, frame_offset=frame_offset)
             return {
                 "kind": "full_joint", "R": 1, "n_stab": n_stab,
                 "joint": full_joint,
                 "syndrome": syndrome,
                 "logical": (p0, p1),
                 "detectors": dict(syndrome),  # R=1: detector == raw syndrome (identity fold)
+                "flip_rate": ler1,
+                "readout_one_rate": raw1,
+                "echo_frame_offset": fo1,
+                "m": m_eff,
                 "total_mass": float(total_mass[0]),
                 "dropped_mass": float(dropped_mass[0]),
             }
@@ -1064,15 +1103,60 @@ class QutritDM:
                 for jp in range(n_stab):
                     spatial_corr[r, j, jp] = _conn_corr(r, j, r, jp)
 
+        # the LOGICAL-ERROR rate: fold the prepared m + the deterministic interior-frame offset into
+        # the raw readout-1 rate (see _logical_error_rate — the offset is MEASURED, not assumed).
+        m_eff = int(getattr(self, "_logical_m", 0) if m is None else m) & 1
+        raw_readout_one = float(flip_sum[0] / tm)
+        ler, fo = self._logical_error_rate(base=base, round_post=round_post, R=R, m_eff=m_eff,
+                                           raw_readout_one=raw_readout_one, frame_offset=frame_offset)
         return {
             "kind": "moments", "R": R, "n_stab": n_stab,
             "det_marg": det_marg.reshape(R * n_stab).detach().cpu().numpy(),
             "rr_corr": rr_corr.detach().cpu().numpy(),
             "spatial_corr": spatial_corr.detach().cpu().numpy(),
-            "flip_rate": float(flip_sum[0] / tm),
+            "flip_rate": ler,
+            "readout_one_rate": raw_readout_one,
+            "echo_frame_offset": fo,
+            "m": m_eff,
             "total_mass": tm,
             "dropped_mass": float(dropped_mass[0]),
         }
+
+    def _logical_error_rate(self, *, base, round_post, R: int, m_eff: int,
+                            raw_readout_one: float, frame_offset: int | None):
+        """Fold the prepared ``m`` + the deterministic interior-frame offset into the raw readout-1
+        rate to get the LOGICAL-ERROR rate (0 in the noiseless case for ANY R). Returns ``(ler, fo)``.
+
+        The offset ``fo`` is MEASURED, not assumed: it is what the interior ``round_post`` frames do to
+        the NOISELESS prepared codestate (clone ``base``, apply the R-1 interior frames, read the
+        logical) — correct for ANY frame (a Z echo that COMMUTES with the logical gives 0; a Y/X echo
+        that anticommutes gives the parity flip), not just an assumed transversal echo. A frame that
+        does NOT leave the logical in a DETERMINISTIC sector (``|p0-p1| < 1`` — e.g. a stochastic/leaky
+        post-frame) is REFUSED (raises) rather than silently guessed; pass an explicit ``frame_offset``
+        there. This still assumes ``round_pre`` carries no NET deterministic logical flip (true for
+        refocusing DD echoes — the teacher's ``noiseless_smoke`` validates the total). ``frame_offset``
+        overrides the measurement entirely."""
+        if frame_offset is not None:
+            fo = int(frame_offset) & 1
+        elif round_post is None or R < 2:
+            fo = 0  # no interior frame -> no deterministic offset
+        else:
+            ref = base.clone()
+            self.rho = ref
+            for r in range(R - 1):  # interior rounds carry the post-frame (terminal drops it)
+                round_post(self, r)
+            p0r, p1r = self.logical_distribution()
+            self.rho = base  # restore (the oracle is read-only on rho)
+            # a clean Clifford echo leaves |p0-p1| = 1 - O(R*1e-15); 1e-9 rejects any genuinely
+            # non-deterministic frame while tolerating only FP accumulation (not 1e-6-level slack).
+            if abs(p0r - p1r) < 1.0 - 1e-9:
+                raise RuntimeError(
+                    f"record_oracle: round_post does not leave the noiseless codestate in a "
+                    f"DETERMINISTIC logical sector (|p0-p1|={abs(p0r - p1r):.2e} < 1) — it is not a "
+                    f"clean deterministic echo; pass frame_offset explicitly")
+            fo = (0 if p0r >= p1r else 1) ^ m_eff
+        ler = raw_readout_one if (m_eff ^ fo) == 0 else 1.0 - raw_readout_one
+        return ler, fo
 
     # ----------------------------------------------------------------------- #
     # Diagnostics                                                             #

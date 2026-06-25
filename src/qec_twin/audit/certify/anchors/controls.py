@@ -14,7 +14,8 @@ from dataclasses import replace
 from qec_twin.audit.certify.core import compare
 from qec_twin.audit.certify.types import LedgerRow, Statistic, Verdict
 
-_GEOM = (Statistic.FULL_JOINT, Statistic.SYNDROME_DIST, Statistic.DETECTOR_MARG)
+_GEOM = (Statistic.FULL_JOINT, Statistic.SYNDROME_DIST, Statistic.DETECTOR_MARG,
+         Statistic.RR_CORR, Statistic.SPATIAL_CORR)
 
 
 class CorruptStabControl:

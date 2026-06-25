@@ -64,6 +64,12 @@ remain exact-checkable against the d3 qutrit DM.
 ## 5. Next steps (gated)
 
 1. extend the built teacher to the full Pauli + non-Pauli + correlated mix (above);
+   **STATUS 2026-06-24: batch-1 (①②③④ single-site) BUILT + certify-GREEN at R=1 `DETECTOR_MARG`**
+   (`outputs/teacher_prereg/twin_xzzx_teacher_fullmix.py`; `_certify_fullmix.log`). The remaining work
+   is sequenced as **WS1** (certify the R≥2 ③④ misspecification MOMENTS vs the independent DM GT; retire
+   the sub-register full-joint; the Y-echo LER convention is already fixed at the oracle level —
+   `record_oracle._logical_error_rate`) → **WS2** (⑤ spatial/temporal) → **WS3** (0c gate). WS1 is
+   pre-registered theory-first in **`ws1_moments_certification_prereg.md`**.
 2. **0c hardened gate** — the syndrome-vs-terminal-data chain-rule split (so the gate self-certifies
    WHICH observation surface carries EACH mechanism's signal) + fix the Y-echo LER convention;
 3. independent un-led review of THIS teacher design;

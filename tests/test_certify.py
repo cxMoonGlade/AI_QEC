@@ -293,9 +293,123 @@ def test_dm_anchor_capability_is_oom_safe():
     # FULL_JOINT on a small sub-register: feasible (tiny DM).
     assert dm.capability(Statistic.FULL_JOINT, sub_R1).feasible
 
-    # documented independence (anti-circular) + answers the right statistics.
+    # documented independence (anti-circular) + answers the right statistics. WS1 wired the R>=2
+    # MOMENTS (RR_CORR / SPATIAL_CORR) into the DM anchor, so they ARE now in answers().
     assert "DIFFERENT object" in dm.independence
-    assert Statistic.DETECTOR_MARG in dm.answers() and Statistic.RR_CORR not in dm.answers()
+    assert Statistic.DETECTOR_MARG in dm.answers()
+    assert Statistic.RR_CORR in dm.answers() and Statistic.SPATIAL_CORR in dm.answers()
+
+
+# ======================================================================= #
+# Step 3b — WS1: the DM MOMENTS anchor (RR_CORR / SPATIAL_CORR) capability   #
+# + emitted shapes + the shared reduction (PURE; no GPU — card mocked).      #
+# ======================================================================= #
+def test_dm_anchor_moments_capability_is_oom_safe():
+    from qec_twin.audit.certify.anchors import DMOracleAnchor
+
+    dm = DMOracleAnchor(card_bytes=32 * 1024**3)  # mock a 32 GB card -> capability is pure, no GPU
+    full9_R2 = Regime(R=2, register="full", n_active=9, n_stab=8)
+    full9_R1 = Regime(R=1, register="full", n_active=9, n_stab=8)
+    sub_R2 = Regime(R=2, register="subregister", n_active=4, n_stab=2, sites=(0, 2, 5, 7))
+
+    # RR_CORR / SPATIAL_CORR @ full-9q R=2: INFEASIBLE — the moments path's peak live memory is the
+    # depth-(n_stab*R) clone stack (~100 GB at full-9q R=2; pruning shrinks breadth, NOT the depth), so
+    # it gates on depth*copy exactly like FULL_JOINT and routes the scale to the carrier-MCWF. The DM
+    # moments GT therefore lives on a SMALL VALID sub-code (sub_R2), where depth*copy fits the budget.
+    for stat in (Statistic.RR_CORR, Statistic.SPATIAL_CORR):
+        cap = dm.capability(stat, full9_R2)
+        assert not cap.feasible and "carrier-MCWF" in cap.reason  # route the scale to the carrier
+        assert cap.mem_bytes_estimate is not None and cap.mem_bytes_estimate > 4e10  # declared depth bound
+        # FEASIBLE on a small valid sub-code (the DM-for-anchor register).
+        cap_sub = dm.capability(stat, sub_R2)
+        assert cap_sub.feasible and cap_sub.exactness is Exactness.EXACT and cap_sub.epistemic_class == "a"
+        # the moments need R>=2: at R=1 there is no round-to-round / realized second moment -> infeasible.
+        cap1 = dm.capability(stat, full9_R1)
+        assert not cap1.feasible and "R>=2" in cap1.reason
+
+    # the feasibility branch HAS TEETH (not vacuously True): no GPU budget (card_bytes=0) -> infeasible,
+    # and a card too small for the full-9q depth stack -> infeasible with a budget reason.
+    dm0 = DMOracleAnchor(card_bytes=0)
+    assert not dm0.capability(Statistic.RR_CORR, sub_R2).feasible
+    tiny = DMOracleAnchor(card_bytes=1 * 1024**3)  # 1 GB card: the full-9q depth stack won't fit
+    cap_tiny = tiny.capability(Statistic.SPATIAL_CORR, full9_R2)
+    assert not cap_tiny.feasible and "budget" in cap_tiny.reason
+
+
+def test_emitted_spatial_corr_shape_and_foil_zero():
+    from qec_twin.audit.certify.core import emitted_statistic
+
+    rng = np.random.default_rng(1)
+    n, R, n_stab = 4000, 3, 4
+    # an INDEPENDENT-bit-flip foil: every (round, stab) detector iid -> RR_CORR and SPATIAL_CORR are
+    # IDENTICALLY ~0 (they factorize across (round, stab)) -> the statistic's prevent-toy property.
+    det = (rng.random((n, R, n_stab)) < 0.3).astype(np.uint8).reshape(n, R * n_stab)
+    reg = Regime(R=R, n_stab=n_stab)
+    sp = emitted_statistic({"det": det, "obs": np.zeros(n, np.uint8)}, Statistic.SPATIAL_CORR, reg)
+    assert sp.shape == (R,)                      # per-round, length R (mirrors RR_CORR's R-1)
+    assert float(np.max(np.abs(sp))) < 0.05      # the foil is correlation-free (teeth preserved)
+    rr = emitted_statistic({"det": det, "obs": np.zeros(n, np.uint8)}, Statistic.RR_CORR, reg)
+    assert rr.shape == (R - 1,)
+    assert float(np.max(np.abs(rr))) < 0.05
+
+
+def test_emitted_spatial_corr_detects_correlation_and_matches_from_scratch():
+    from qec_twin.audit.certify.core import emitted_statistic
+
+    rng = np.random.default_rng(2)
+    n, R, n_stab = 60000, 2, 2
+    # build a CORRELATED same-round pair (stab 1 = stab 0 XOR a little noise) -> SPATIAL_CORR != 0
+    # (the reduction must DISCRIMINATE — not collapse to a constant).
+    s0 = (rng.random((n, R)) < 0.3).astype(np.uint8)
+    noise = (rng.random((n, R)) < 0.1).astype(np.uint8)
+    s1 = (s0 ^ noise).astype(np.uint8)
+    det = np.stack([s0[:, 0], s1[:, 0], s0[:, 1], s1[:, 1]], axis=1)  # (n, R*n_stab) round-major
+    reg = Regime(R=R, n_stab=n_stab)
+    sp = emitted_statistic({"det": det, "obs": np.zeros(n, np.uint8)}, Statistic.SPATIAL_CORR, reg)
+    assert sp.shape == (R,)
+    assert float(sp[0]) > 0.1  # a genuine same-round correlation is detected (not collapsed)
+    # from-scratch: round 0 off-diagonal mean of |corr| over the 2x2 = |corr(det0, det1)| (one pair).
+    from_scratch = abs(np.corrcoef(det[:, 0].astype(float), det[:, 1].astype(float))[0, 1])
+    assert abs(float(sp[0]) - from_scratch) < 1e-9
+
+
+def test_shared_moment_reductions_match_emitted_and_dm_shapes():
+    # the apples-to-apples GUARANTEE: the DM anchor reduces its (R-1,n_stab) rr_corr / (R,n_stab,n_stab)
+    # spatial_corr through the SAME core helpers the emitted side uses, so the shapes/semantics cannot
+    # drift. Here we exercise the helpers directly on a synthetic SIGNED matrix (the DM record_oracle
+    # output shape) and confirm the reduced shape + the off-diagonal/abs semantics.
+    from qec_twin.audit.certify.core import reduce_rr_corr, reduce_spatial_corr
+
+    R, n_stab = 3, 4
+    rng = np.random.default_rng(3)
+    rr2d = rng.uniform(-1, 1, size=(R - 1, n_stab))
+    rr = reduce_rr_corr(rr2d)
+    assert rr.shape == (R - 1,)
+    assert np.allclose(rr, np.abs(rr2d).mean(axis=1))  # mean over j of |.|
+
+    sp3d = rng.uniform(-1, 1, size=(R, n_stab, n_stab))
+    for r in range(R):  # diagonal = the trivial self-correlation 1 (must be EXCLUDED by the reduction)
+        np.fill_diagonal(sp3d[r], 1.0)
+    sp = reduce_spatial_corr(sp3d)
+    assert sp.shape == (R,)
+    off = ~np.eye(n_stab, dtype=bool)
+    assert np.allclose(sp, np.abs(sp3d)[:, off].mean(axis=1))  # off-diagonal mean of |.| (diag excluded)
+    # the diagonal-1 must NOT leak into the value (else the reduction is a constant collapse, not teeth)
+    assert float(np.max(sp)) < 1.0
+
+    # R==1 edge: no round-to-round -> rr is [0.0]; spatial with n_stab<2 -> per-round 0 (no off-diag pair).
+    assert np.array_equal(reduce_rr_corr(np.zeros((0, n_stab))), np.array([0.0]))
+    assert np.array_equal(reduce_spatial_corr(np.zeros((2, 1, 1))), np.zeros(2))
+
+
+def test_corrupt_stab_control_guards_the_moments():
+    from qec_twin.audit.certify.anchors import CorruptStabControl
+
+    # WS1: the corrupt-stabilizer control must now GUARD the moments anchors (so an inert control on a
+    # moments cell forces FAIL, per the core roll-up). Before WS1 it guarded only the geometry stats.
+    ctrl = CorruptStabControl(stab=1)
+    assert ctrl.guards(Statistic.RR_CORR) and ctrl.guards(Statistic.SPATIAL_CORR)
+    assert ctrl.guards(Statistic.DETECTOR_MARG)  # the existing geometry guards still hold
 
 
 # ======================================================================= #
@@ -330,6 +444,30 @@ def test_stim_anchor_capability_and_emit_kind():
         assert cap.feasible and cap.exactness is Exactness.STATISTICAL and cap.epistemic_class == "b"
     assert "SEPARATE Clifford simulator" in st.independence
     assert Statistic.SYNDROME_DIST in st.answers()
+    # the feasibility branch HAS teeth (not vacuously True): a statistic stim does NOT answer
+    # (round-to-round leakage correlation — Clifford-blind) is NOT feasible.
+    assert Statistic.RR_CORR not in st.answers()
+    assert not st.capability(Statistic.RR_CORR, Regime(R=2, n_stab=8)).feasible
+
+
+def test_exact_anchor_with_nonzero_band_is_rejected():
+    # the EXACT => band==0 contract (_assert_anchor_value) must have TEETH — an anchor declaring EXACT
+    # yet returning a nonzero band is a violation and must RAISE, never silently pass. The review found
+    # this invariant was never exercised by the suite (dormant); this exercises both legs.
+    import pytest
+
+    from qec_twin.audit.certify.core import _assert_anchor_value
+
+    class _NamedAnchor:
+        name = "bad_exact"
+
+    legal = AnchorValue(Statistic.DETECTOR_MARG, Regime(R=1, n_stab=8), np.array([0.1]),
+                        Exactness.EXACT, 0.0, "a", {})
+    _assert_anchor_value(legal, _NamedAnchor())  # EXACT with band==0 is fine (no raise)
+    illegal = AnchorValue(Statistic.DETECTOR_MARG, Regime(R=1, n_stab=8), np.array([0.1]),
+                          Exactness.EXACT, 0.5, "a", {})  # EXACT but band=0.5 — illegal
+    with pytest.raises(ValueError):
+        _assert_anchor_value(illegal, _NamedAnchor())
 
 
 # ======================================================================= #
@@ -350,27 +488,60 @@ def test_rr_corr_machinery_matches_from_scratch():
     assert abs(float(emitted[0]) - from_scratch) < 1e-9  # the rr_corr machinery is correct
 
 
-def test_closed_form_anchor_predicts_two_state_markov_rr_corr():
+def test_closed_form_anchor_predicts_transient_two_state_markov_rr_corr():
+    # The record chain is PREPARED in |0>, so the measured two-state chain is TRANSIENT — the earlier
+    # anchor predicted the STATIONARY limit (markov_flip_cov) and disagreed with the engine (5b). This
+    # pins the corrected anchor with THREE non-circular checks + a positive control that the bug is now
+    # caught. None of them assumes stationarity (the shared blind spot that made 5a circular).
+    import itertools
+
     from qec_twin.audit.certify.anchors import ClosedFormAnchor
 
-    a, b = 0.1, 0.2
+    a, b = 0.08, 0.20
+    R = 6
     cf = ClosedFormAnchor(p01=a, p10=b, exact_single_qubit=True)
     assert cf.emit_kind() == "nonunital_slice"
     assert cf.answers() == frozenset({Statistic.RR_CORR})
-    assert cf.capability(Statistic.RR_CORR, Regime(R=2, n_stab=1)).exactness is Exactness.EXACT
+    assert cf.capability(Statistic.RR_CORR, Regime(R=R, n_stab=1)).exactness is Exactness.EXACT
     assert not cf.capability(Statistic.RR_CORR, Regime(R=1, n_stab=1)).feasible  # R=1: no round-to-round
 
-    # from-scratch two-state Markov detector flip-flip Pearson correlation (the independent identity):
-    # E[d_r d_{r+1}] = p01 p10, E[d_r] = r = 2 p01 p10 /(p01+p10), Var = r(1-r).
-    r = 2 * a * b / (a + b)
-    corr_exact = abs((a * b - r * r) / (r * (1 - r)))
-    assert abs(cf.predict() - corr_exact) < 1e-9  # the markov_flip_cov-based prediction == the closed form
+    seq = cf._exact_rr_corr(R)  # the anchor's GROUND TRUTH (exact local triple-joint propagation)
+    assert seq.shape == (R - 1,)
+
+    # (i) INDEPENDENT from-scratch GT — a DIFFERENT method (full 2^R path enumeration, not the local
+    #     triple-joint), s_{-1}=0. A coding bug in one would not be replicated in the other.
+    T = np.array([[1 - a, a], [b, 1 - b]])
+    paths = list(itertools.product((0, 1), repeat=R))
+    probs = np.array([np.prod([T[(p[k - 1] if k else 0), p[k]] for k in range(R)]) for p in paths])
+    assert abs(probs.sum() - 1.0) < 1e-12
+    S = np.array(paths)
+    s_prev = np.concatenate([np.zeros((len(paths), 1), int), S[:, :-1]], axis=1)  # s_{-1}=0
+    D = (S ^ s_prev).astype(float)  # detectors d_r = s_{r-1} XOR s_r (d_0 = s_0)
+    scratch = []
+    for r in range(R - 1):
+        x, y = D[:, r], D[:, r + 1]
+        ex, ey, exy = (probs * x).sum(), (probs * y).sum(), (probs * x * y).sum()
+        vx, vy = ex * (1 - ex), ey * (1 - ey)
+        scratch.append(abs((exy - ex * ey) / np.sqrt(vx * vy)) if vx > 1e-12 and vy > 1e-12 else 0.0)
+    assert np.max(np.abs(seq - np.array(scratch))) < 1e-12  # exact GT == independent full-path enumeration
+
+    # (ii) the analytic flip-flip identity (E[d_r d_{r+1}] = p01 p10) matches the enumeration (r>=1).
+    assert np.max(np.abs(cf.predict_sequence(R) - seq[1:])) < 1e-12
+
+    # (iii) TRANSIENT, not stationary: the flip-flip correlation DECREASES toward — and stays above —
+    #       the stationary value at finite R. POSITIVE CONTROL: the OLD stationary form is WRONG here,
+    #       so the stationary-vs-transient bug would now fail loudly.
+    flip = seq[1:]
+    assert np.all(np.diff(flip) < 0)
+    r_stat = 2 * a * b / (a + b)
+    corr_stat = abs((a * b - r_stat * r_stat) / (r_stat * (1 - r_stat)))  # the OLD (stationary) value
+    assert corr_stat < flip.min() - 0.01  # every transient entry exceeds the stationary limit by >0.01
 
     # d3 mode (default): an honest (b) prediction with a band — NOT inflated to exact.
     cf_d3 = ClosedFormAnchor(p01=a, p10=b)
-    av = cf_d3.answer(None, Statistic.RR_CORR, Regime(R=2, n_stab=8))
+    av = cf_d3.answer(None, Statistic.RR_CORR, Regime(R=R, n_stab=8))
     assert av.epistemic_class == "b" and av.exactness is Exactness.STATISTICAL and av.band > 0
-    assert "no simulator" in cf_d3.independence
+    assert av.value.shape == (R - 1,) and "no simulator" in cf_d3.independence
 
 
 # ======================================================================= #

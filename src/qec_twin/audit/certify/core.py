@@ -60,22 +60,86 @@ def emitted_statistic(records: dict, statistic: Statistic, regime: Regime):
     if statistic is Statistic.DETECTOR_MARG:
         return np.concatenate([det.mean(axis=0), [float(obs.mean())]])
     if statistic is Statistic.RR_CORR:
-        # the mean |connected round-to-round Pearson correlation| corr(det_{r,j}, det_{r+1,j}) over all
-        # (r, j) with nonzero variance — IDENTICALLY 0 for any independent-bit-flip foil (it factorizes
-        # across (round, stab)). Graduates ``twin_xzzx_teacher._mean_rr_corr``.
+        # the PER-ROUND |connected round-to-round Pearson correlation| corr(det_{r,j}, det_{r+1,j}),
+        # averaged over stabs j, as a sequence over r = 0..R-2. The per-round shape (not a single
+        # global mean) is what distinguishes a TRANSIENT chain from its stationary limit — the step-5b
+        # correction; collapsing to one scalar hid the stationary-vs-transient bug. Still IDENTICALLY 0
+        # (every round) for any independent-bit-flip foil (it factorizes across (round, stab)). At R=2
+        # the sequence is length 1. Graduates ``twin_xzzx_teacher._mean_rr_corr``.
+        # The full SIGNED (R-1, n_stab) Pearson matrix is built here (0 for a zero-variance entry — the
+        # SAME convention the DM ``_conn_corr`` uses) and reduced by the SHARED ``reduce_rr_corr`` so
+        # the emitted side and the DM anchor cannot drift (apples-to-apples; WS1 prereg §6).
         R = int(regime.R)
         n_stab = int(regime.n_stab or (det.shape[1] // max(R, 1)))
         d = det.reshape(n, R, n_stab).astype(np.float64)
-        corrs = []
+        rr2d = np.zeros((max(R - 1, 1), n_stab), dtype=np.float64)
         for r in range(R - 1):
             for j in range(n_stab):
-                a = d[:, r, j]
-                b = d[:, r + 1, j]
-                va, vb = a.var(), b.var()
-                if va > 1e-12 and vb > 1e-12:
-                    corrs.append(abs(float(np.mean((a - a.mean()) * (b - b.mean())) / np.sqrt(va * vb))))
-        return np.array([float(np.mean(corrs)) if corrs else 0.0])
+                rr2d[r, j] = _pearson_bits(d[:, r, j], d[:, r + 1, j])
+        return reduce_rr_corr(rr2d) if R > 1 else np.array([0.0], dtype=np.float64)
+    if statistic is Statistic.SPATIAL_CORR:
+        # the PER-ROUND mean over OFF-DIAGONAL same-round stab pairs of |connected Pearson corr(
+        # det_{r,j}, det_{r,j'})|, length R — the spatial mirror of the RR_CORR reduction. The full
+        # SIGNED (R, n_stab, n_stab) Pearson matrix is built (diagonal = self-correlation; 0 for a
+        # zero-variance entry — the DM convention) and reduced by the SHARED ``reduce_spatial_corr``.
+        # IDENTICALLY 0 for any independent-bit-flip foil (it factorizes across (round, stab)).
+        R = int(regime.R)
+        n_stab = int(regime.n_stab or (det.shape[1] // max(R, 1)))
+        d = det.reshape(n, R, n_stab).astype(np.float64)
+        sp3d = np.zeros((R, n_stab, n_stab), dtype=np.float64)
+        for r in range(R):
+            for j in range(n_stab):
+                for jp in range(n_stab):
+                    sp3d[r, j, jp] = _pearson_bits(d[:, r, j], d[:, r, jp])
+        return reduce_spatial_corr(sp3d)
     raise NotImplementedError(f"emitted_statistic for {statistic} arrives with its anchor adapter")
+
+
+# --------------------------------------------------------------------------- #
+# the SHARED moment reductions (one home — emitted side AND the DM anchor call #
+# these, so the apples-to-apples shapes/semantics cannot drift; WS1 §6)        #
+# --------------------------------------------------------------------------- #
+def _pearson_bits(a: np.ndarray, b: np.ndarray) -> float:
+    """The connected (Pearson) correlation of two {0,1} sample columns; 0 for a zero-variance column
+    (the SAME convention the DM ``record_oracle._conn_corr`` uses, so a from-records reduction and the
+    DM moments reduce identically). For {0,1} bits Var = E[d] - E[d]^2."""
+    va, vb = float(a.var()), float(b.var())
+    if va <= 1e-12 or vb <= 1e-12:
+        return 0.0
+    return float(np.mean((a - a.mean()) * (b - b.mean())) / np.sqrt(va * vb))
+
+
+def reduce_rr_corr(rr2d) -> np.ndarray:
+    """Reduce a SIGNED round-to-round correlation matrix ``rr2d`` (shape ``(R-1, n_stab)``, the DM
+    ``record_oracle`` ``rr_corr`` OR the emitted per-(r,j) Pearson matrix) to the per-round sequence
+    ``mean_j |rr2d[r,j]|`` of length ``R-1``. The ONE reduction both the DM anchor and the emitted
+    side use (so the compared shapes match exactly). Length-0 (R==1) -> ``[0.0]`` (no round-to-round).
+    Discriminating (not a constant collapse): a single nonzero (r,j) moves its round's value; and it is
+    IDENTICALLY 0 only when every entry is 0 (the independent-bit-flip foil), preserving the teeth."""
+    a = np.abs(np.asarray(rr2d, dtype=np.float64))
+    if a.ndim != 2:
+        raise ValueError(f"reduce_rr_corr expects a 2-D (R-1, n_stab) matrix, got shape {a.shape}")
+    if a.shape[0] == 0:
+        return np.array([0.0], dtype=np.float64)
+    return a.mean(axis=1)
+
+
+def reduce_spatial_corr(sp3d) -> np.ndarray:
+    """Reduce a SIGNED same-round cross-detector matrix ``sp3d`` (shape ``(R, n_stab, n_stab)``, the DM
+    ``record_oracle`` ``spatial_corr`` OR the emitted per-(r,j,j') Pearson matrix) to the per-round
+    sequence ``mean_{j != j'} |sp3d[r,j,j']|`` of length ``R`` — the OFF-DIAGONAL mean (the diagonal is
+    the trivial self-correlation 1 and is EXCLUDED so the reduction can discriminate; a constant
+    diagonal would otherwise dominate). Mirrors ``reduce_rr_corr``. IDENTICALLY 0 for the
+    independent-bit-flip foil (all off-diagonal entries 0), preserving the teeth. n_stab<2 -> 0 per
+    round (no off-diagonal pair)."""
+    a = np.abs(np.asarray(sp3d, dtype=np.float64))
+    if a.ndim != 3 or a.shape[1] != a.shape[2]:
+        raise ValueError(f"reduce_spatial_corr expects (R, n_stab, n_stab), got shape {a.shape}")
+    R, n_stab, _ = a.shape
+    if n_stab < 2:
+        return np.zeros(R, dtype=np.float64)
+    off = ~np.eye(n_stab, dtype=bool)
+    return a[:, off].mean(axis=1)
 
 
 # --------------------------------------------------------------------------- #
@@ -190,8 +254,17 @@ def certify_cells(teacher: ControlledTeacher, cells, anchors, controls, *, N: in
                 # the stim anchor's WIRING check: the teacher's bit-flip Clifford slice
                 # (theta=0, gamma=0, X_ERROR(p_x)) — the SAME geometry + seam fold the full mix uses.
                 emit_cache[key] = teacher.emit_clifford_slice(regime, p_x=anchor.p_x, m=m, N=N, seed=seed)
-            else:
+            elif kind == "full":
                 emit_cache[key] = teacher.emit(regime, m=m, N=N, seed=seed)
+            else:
+                # an anchor declares an emit_kind the teacher has no source for (e.g. the closed-form
+                # anchor's "nonunital_slice"): FAIL LOUD. Silently falling back to teacher.emit() would
+                # compare the anchor's isolated-slice prediction against the FULL-mix records (the
+                # degenerate-amp-damp footgun the review caught) — a silent toy. Wire the slice or use
+                # a standalone check (the closed-form anchor is validated by certify_closed_form_5b.py).
+                raise NotImplementedError(
+                    f"emit_kind {kind!r} (anchor {anchor.name!r}) has no teacher emit path in "
+                    f"certify_cells; wire teacher.emit_{kind}() or run the anchor's standalone check")
         return emitted_statistic(emit_cache[key], statistic, regime)
 
     for statistic, regime in cells:
