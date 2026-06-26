@@ -42,7 +42,8 @@ class CorruptStabControl:
         _, _, verdict, _ = compare(statistic, ctx.emitted, corrupt_av, N=ctx.N)
         fired = verdict is Verdict.FAIL
         return LedgerRow(ctx.anchor.name, statistic, 1.0 if fired else 0.0, None, "c",
-                         Verdict.CONTROL, {"fired": fired, "name": self.name, "stab": self._stab})
+                         Verdict.CONTROL,
+                         {"fired": fired, "applicable": True, "name": self.name, "stab": self._stab})
 
 
 class ShuffleControl:
@@ -60,10 +61,18 @@ class ShuffleControl:
 
     def run(self, ctx, statistic, regime, *, N=None):
         shuffled = _shuffle_value(ctx.anchor_value)
+        # a roll that leaves the value ~unchanged (a symmetric / flat / length-1 ground truth) cannot
+        # perturb -> the control is INAPPLICABLE here. Mark it so the roll-up does not count a
+        # structurally-inert shuffle as a FAILED falsifier (a spurious FAIL); the cell's anti-vacuity
+        # coverage check then still demands a real, firing control (an inapplicable one buys no PASS).
+        if _value_close(shuffled.value, ctx.anchor_value.value):
+            return LedgerRow(ctx.anchor.name, statistic, 0.0, None, "c", Verdict.CONTROL,
+                             {"fired": False, "applicable": False, "name": self.name,
+                              "reason": "shuffle is ~identity on this symmetric/flat value"})
         _, _, verdict, _ = compare(statistic, ctx.emitted, shuffled, N=ctx.N)
         fired = verdict is Verdict.FAIL
         return LedgerRow(ctx.anchor.name, statistic, 1.0 if fired else 0.0, None, "c",
-                         Verdict.CONTROL, {"fired": fired, "name": self.name})
+                         Verdict.CONTROL, {"fired": fired, "applicable": True, "name": self.name})
 
 
 def _shuffle_value(av):
@@ -74,3 +83,15 @@ def _shuffle_value(av):
         vals = [val[k] for k in keys]
         return replace(av, value={k: vals[(i + 1) % len(vals)] for i, k in enumerate(keys)})
     return replace(av, value=np.roll(np.asarray(val), 1))
+
+
+def _value_close(a, b, *, tol: float = 1e-12) -> bool:
+    """True if a shuffled ground-truth value is ~identical to the original — so the roll could not
+    perturb (a symmetric / flat / length-1 distribution or array). Handles BOTH the dict-distribution
+    and the ndarray statistic the two ``_shuffle_value`` branches produce."""
+    if isinstance(a, dict) and isinstance(b, dict):
+        return all(abs(float(a.get(k, 0.0)) - float(b.get(k, 0.0))) <= tol for k in set(a) | set(b))
+    if isinstance(a, dict) or isinstance(b, dict):
+        return False
+    aa, bb = np.asarray(a, dtype=float), np.asarray(b, dtype=float)
+    return aa.shape == bb.shape and bool(np.all(np.abs(aa - bb) <= tol))

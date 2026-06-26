@@ -322,3 +322,159 @@ def test_real_engine_on_real_geometry_subregister():
     p1 = eng.syndrome_distribution(sub_stabs, leaked)
     assert abs(sum(p0.values()) - 1.0) < 1e-9 and abs(sum(p1.values()) - 1.0) < 1e-9
     assert -1e-9 <= floor.bayes_floor(p0, p1) <= 0.5 + 1e-9
+
+
+# --------------------------------------------------------------------------- #
+# Two-site CPTP apply (WS2-B1; the coherent-ZZ crosstalk GT machinery)         #
+# --------------------------------------------------------------------------- #
+# ``QutritDM.apply_channel_2site`` applies a (9,9) two-qutrit channel on a possibly
+# non-adjacent pair via a single two-site superoperator contraction (no dense 3^n embed).
+# These cases certify it against an INDEPENDENT from-scratch dense embed (kron + axis
+# permute -- a different code path than the engine einsum) + the product-channel reduction
+# + the WS2 (5a) ZZ-unitary edge. Full sweep (incl. the negative controls) lives in
+# ``outputs/teacher_prereg/ws2_two_site_apply_check.py``; this is the committed-suite slice.
+
+
+def _embed_2site_ref(op9, i, j, n):
+    """Dense 3^n x 3^n embed of a (9,9) two-qutrit op on sites (i, j) -- INDEPENDENT path.
+
+    Kron the (9,9) op (pair index 3*t_i + t_j, i = high pair-trit) with I on the other n-2
+    qutrits, then permute the two operator axes into the physical site slots (qutrit 0 = MSF).
+    Written from scratch here (no call into the engine's embedding helpers) so the test is a
+    non-circular cross-check of ``apply_channel_2site``.
+    """
+    op9 = op9.to(torch.complex128)
+    rest = n - 2
+    if rest > 0:
+        full = torch.kron(op9, torch.eye(3 ** rest, dtype=torch.complex128, device=op9.device))
+    else:
+        full = op9
+    other = [q for q in range(n) if q not in (i, j)]
+    current = [i, j] + other
+    perm_row = [current.index(q) for q in range(n)]
+    perm = perm_row + [n + a for a in perm_row]
+    D = 3 ** n
+    return full.reshape([3] * (2 * n)).permute(*perm).contiguous().reshape(D, D)
+
+
+def _rand_cptp_kraus(rng, dim, n_kraus, dev):
+    """A random CPTP Kraus set (n_kraus, dim, dim) via Stinespring/QR (sum_k K^dag K = I)."""
+    a = torch.tensor(
+        rng.standard_normal((dim * n_kraus, dim)) + 1j * rng.standard_normal((dim * n_kraus, dim)),
+        dtype=torch.complex128, device=dev,
+    )
+    v, _ = torch.linalg.qr(a)
+    return v.reshape(n_kraus, dim, dim).contiguous()
+
+
+def _rand_rho_t(rng, D, dev):
+    m = torch.tensor(
+        rng.standard_normal((D, D)) + 1j * rng.standard_normal((D, D)), dtype=torch.complex128, device=dev
+    )
+    rho = m @ m.conj().transpose(-1, -2)
+    return rho / torch.trace(rho).real
+
+
+@requires_cuda
+def test_apply_channel_2site_matches_dense_embed():
+    """(i) apply_channel_2site == sum_k embed_2site(K) @ rho @ embed^dag, to <1e-12.
+
+    Random CPTP 2-qutrit Kraus sets on random PSD trace-1 rho, over n in {3,4,5} and pairs
+    that are adjacent, non-adjacent, AND reversed (i>j -> the swap path). The dense embed is a
+    from-scratch independent algorithm (kron+permute), so agreement is non-circular.
+    """
+    from qec_twin.forward.cptp_channel import apply_kraus as dense_apply_kraus
+    from qec_twin.forward.exact.qutrit_dm import QutritDM
+
+    rng = np.random.default_rng(7)
+    worst = 0.0
+    for n in (3, 4, 5):
+        D = 3 ** n
+        pairs = [(0, 1), (1, 0), (0, n - 1), (n - 1, 0)]
+        if n >= 4:
+            pairs += [(1, n - 1), (n - 1, 1)]
+        for (i, j) in pairs:
+            for r in (1, 2, 4):
+                kraus9 = _rand_cptp_kraus(rng, 9, r, "cuda")
+                rho = _rand_rho_t(rng, D, "cuda")
+                eng = QutritDM(n, device="cuda")
+                eng.set_state(rho.clone())
+                eng.apply_channel_2site(kraus9, i, j)
+                embedded = torch.stack([_embed_2site_ref(kraus9[k], i, j, n) for k in range(r)])
+                ref = dense_apply_kraus(rho, embedded)
+                ref = 0.5 * (ref + ref.conj().transpose(-1, -2))
+                worst = max(worst, float((eng.rho - ref).abs().max()))
+    assert worst < 1e-12, worst
+
+
+@requires_cuda
+def test_apply_channel_2site_product_reduction():
+    """(iii) (K_i (x) K_j) via apply_channel_2site == apply_channel(K_i,i) then (K_j,j), <1e-12.
+
+    Covers an adjacent, a non-adjacent, and a reversed (i>j) pair.
+    """
+    from qec_twin.forward.exact.qutrit_dm import QutritDM
+
+    rng = np.random.default_rng(11)
+    worst = 0.0
+    for n in (3, 4, 5):
+        D = 3 ** n
+        pairs = [(0, 1), (0, n - 1)]
+        if n >= 4:
+            pairs.append((n - 1, 1))
+        for (i, j) in pairs:
+            ki = _rand_cptp_kraus(rng, 3, 2, "cuda")
+            kj = _rand_cptp_kraus(rng, 3, 3, "cuda")
+            prod = torch.stack([torch.kron(ki[a], kj[b]) for a in range(ki.shape[0]) for b in range(kj.shape[0])])
+            rho = _rand_rho_t(rng, D, "cuda")
+            engA = QutritDM(n, device="cuda")
+            engA.set_state(rho.clone())
+            engA.apply_channel_2site(prod, i, j)
+            engB = QutritDM(n, device="cuda")
+            engB.set_state(rho.clone())
+            engB.apply_channel(ki, i)
+            engB.apply_channel(kj, j)
+            worst = max(worst, float((engA.rho - engB.rho).abs().max()))
+    assert worst < 1e-12, worst
+
+
+@requires_cuda
+def test_apply_channel_2site_zz_unitary_cptp():
+    """The WS2 (5a) edge U_phi = exp(-i phi Z(x)Z) on {0,1}^2 is CPTP through apply_channel_2site.
+
+    diag(e^{-i phi}, e^{i phi}, e^{i phi}, e^{-i phi}) on the comp pair (Harper / zz_coupling_kraus),
+    identity on |2>-touching levels, as a (9,9) 1-Kraus unitary. Trace/Hermiticity/PSD preserved,
+    swept phi from the grounded 1e-3 up to the H2 0.05..0.15 bracket. Also checks the embedded
+    (9,9) is unitary (independent sanity) and that phi=0 acts as the identity channel.
+    """
+    from qec_twin.forward.exact.qutrit_dm import QutritDM
+
+    def zz9(phi, dev):
+        u = torch.eye(9, dtype=torch.complex128, device=dev)
+        idx = {(0, 0): 0, (0, 1): 1, (1, 0): 3, (1, 1): 4}
+        phase = {(0, 0): -phi, (0, 1): phi, (1, 0): phi, (1, 1): -phi}
+        for key, p in phase.items():
+            u[idx[key], idx[key]] = np.exp(1j * p)
+        return u.reshape(1, 9, 9)
+
+    rng = np.random.default_rng(13)
+    n = 4
+    rho = _rand_rho_t(rng, 3 ** n, "cuda")
+    for phi in (1e-3, 0.05, 0.10, 0.15):
+        u = zz9(phi, "cuda")
+        # embedded (9,9) is unitary
+        uu = u[0].conj().transpose(-1, -2) @ u[0]
+        assert float((uu - torch.eye(9, dtype=torch.complex128, device="cuda")).abs().max()) < 1e-12
+        eng = QutritDM(n, device="cuda")
+        eng.set_state(rho.clone())
+        eng.apply_channel_2site(u, 0, 1)
+        out = eng.rho
+        assert abs(float(torch.trace(out).real) - 1.0) < 1e-12
+        assert float((out - out.conj().transpose(-1, -2)).abs().max()) < 1e-12
+        eig = torch.linalg.eigvalsh(0.5 * (out + out.conj().transpose(-1, -2)))
+        assert float(eig.min().real) > -1e-10
+    # phi = 0 -> identity channel (no change to rho)
+    eng0 = QutritDM(n, device="cuda")
+    eng0.set_state(rho.clone())
+    eng0.apply_channel_2site(zz9(0.0, "cuda"), 0, 1)
+    assert float((eng0.rho - rho).abs().max()) < 1e-12

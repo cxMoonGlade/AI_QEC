@@ -45,6 +45,8 @@ driven through the library + `tests/`, which double as the executable spec:
 - `test_qutrit_dm_exact` / `test_carrier_seam_*` / `test_seam` / `test_soft_readout` /
   `test_bayes_floor` / `test_hypergraph_dem_tn_d3_surface` — the scalable-carrier +
   non-Pauli/leakage frontier (ADR 0008/0010).
+- `test_certify` — the `audit/certify` ground-truth certification seam (Anchor/Control
+  ports, OOM-as-routing, controls-non-optional roll-up; carrier↔DM↔closed-form).
 Read the matching test first to see a capability end-to-end.
 
 ## Architecture
@@ -74,6 +76,9 @@ src/qec_twin/
   # non-core
   audit/        gating (identifiability) / bands (uncertainty) / validity (curve)
                 + bayes_floor (model-free decoding-floor oracle)
+                + certify (score a controlled teacher vs INDEPENDENT exact/declared
+                anchors — DM-oracle/stim-slice/closed-form ports; OOM-as-routing is
+                data; controls non-optional; anti-circular — the carrier↔DM seam)
   util/         placeholder for small helpers
   numerics.py   NUMERICAL_ZERO floor
 ```

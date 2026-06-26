@@ -1,5 +1,11 @@
 # Full-text note — Miao, McEwen et al. (Google Quantum AI), *Overcoming Leakage in Scalable Quantum Error Correction*
 
+> **⚠️ CORRECTION (2026-06-25, ar5iv-verified + deep-research wf_dc2e46de):** SI S1 reads
+> `g_{|21⟩–|12⟩} = 2g` (**NOT √2 g**) and `g_{|30⟩–|21⟩} = √3 g`, so `g_eff = −g_{|21⟩–|12⟩}·g_{|30⟩–|21⟩}/η
+> = −2√3 g²/η`, `P_t = sin²(g_eff·t)`. Any "√2 g" written below is a transcription slip from the first read —
+> **use 2g**. Transport fractions re-confirmed against ar5iv: **|30⟩↔|12⟩ ≈ 18–19%**, **|31⟩↔|22⟩ ≈ 58–61%**
+> (the |30-12 / |31-22 labels are correct).
+
 > Provenance: full-text read from the PDF
 > `docs/papers/miao_overcoming_leakage_scalable_2211.04728.pdf` (owner-password-only
 > encryption — opens for `pdftotext -layout` / `pdftoppm` but not the Read tool; text

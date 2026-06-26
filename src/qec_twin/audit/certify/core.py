@@ -282,10 +282,19 @@ def certify_cells(teacher: ControlledTeacher, cells, anchors, controls, *, N: in
         emitted = _emitted(anchor, statistic, regime)
         # controls FIRST (the invariant): perturb → re-measure → must fire
         ctx = MeasureCtx(anchor, statistic, regime, N, emitted, av, teacher=teacher)
+        cell_controls: list[LedgerRow] = []
         for ctrl in controls:
             if ctrl.guards(statistic):
-                control_rows.append(ctrl.run(ctx, statistic, regime, N=N))
+                cr = ctrl.run(ctx, statistic, regime, N=N)
+                control_rows.append(cr)
+                cell_controls.append(cr)
         value, band, verdict, detail = compare(statistic, emitted, av, N=N)
+        # anti-vacuity, made STRUCTURAL (types.py: "a certification with no falsifier is rejected"):
+        # record THIS cell's control coverage so _rollup can reject a teeth-less PASS — a scored row
+        # needs >=1 APPLICABLE control that FIRED, else the cell is uncertified (no falsifier).
+        n_fired = sum(1 for c in cell_controls
+                      if c.detail.get("applicable", True) and c.detail.get("fired", False))
+        detail = {**detail, "n_controls": len(cell_controls), "n_controls_fired": n_fired}
         rows.append(LedgerRow(anchor.name, statistic, value, band, av.epistemic_class, verdict, detail))
 
     return CertReport(_rollup(rows, control_rows), tuple(rows), tuple(control_rows), routing,
@@ -293,9 +302,17 @@ def certify_cells(teacher: ControlledTeacher, cells, anchors, controls, *, N: in
 
 
 def _assert_anchor_value(av: AnchorValue, anchor: Anchor) -> None:
-    """The port's EXACTNESS-DECLARED contract: an EXACT anchor returns band 0 (no undeclared band)."""
+    """The port's EXACTNESS-DECLARED contract: an EXACT anchor returns band 0 (no undeclared band),
+    AND the epistemic class is consistent with the exactness — class 'a' (exact-grade) requires EXACT.
+    A class-'a' STATISTICAL value would be rolled up as an EXACT pass (PASS, not PASS_PROVISIONAL) — a
+    sampled result inflated to 'exact' (violating the no-inflation invariant); reject it on ingest."""
     if av.exactness is Exactness.EXACT and av.band != 0.0:
         raise ValueError(f"EXACT anchor '{anchor.name}' returned band={av.band} != 0 (undeclared band)")
+    if av.epistemic_class == "a" and av.exactness is not Exactness.EXACT:
+        raise ValueError(
+            f"anchor '{anchor.name}' value is epistemic class 'a' (exact-grade) but exactness="
+            f"{av.exactness.value} != EXACT — a statistical result mislabeled 'a' is rolled up as an "
+            f"EXACT PASS (inflation). Declare class 'b' for a STATISTICAL value.")
 
 
 def _rkey(regime: Regime) -> tuple:
@@ -304,14 +321,23 @@ def _rkey(regime: Regime) -> tuple:
 
 def _rollup(rows, controls) -> Verdict:
     """The verdict roll-up — the genuine-check teeth made structural."""
-    # an inert control (one that did NOT fire) forces FAIL — a vacuous check cannot pass.
-    if any(not c.detail.get("fired", False) for c in controls):
+    # an APPLICABLE control that RAN but did NOT fire forces FAIL — a vacuous check cannot pass. A
+    # control that marked itself INAPPLICABLE (e.g. a shuffle that is identity on a symmetric value)
+    # is skipped here: it could not perturb, so it is not a FAILED falsifier — but it also buys no
+    # PASS, because the per-cell coverage check below still demands a real, firing control.
+    if any(not c.detail.get("fired", False) for c in controls if c.detail.get("applicable", True)):
         return Verdict.FAIL
     if any(r.verdict is Verdict.FAIL for r in rows):
         return Verdict.FAIL
     if any(r.verdict is Verdict.UNANCHORED for r in rows):
         return Verdict.FINDING  # an honest gap (reportable), NOT a PASS
     if not rows:
+        return Verdict.FINDING
+    # ANTI-VACUITY made STRUCTURAL (the types.py invariant: "a certification with no falsifier is
+    # rejected"): a SCORED, anchored, passing row needs >=1 control that FIRED. A passing row with no
+    # working falsifier is UNCERTIFIED -> FINDING, never PASS — this closes the `any([]) == False`
+    # empty-controls / all-inapplicable hole (a teeth-less PASS was the subsystem's reason-to-exist bug).
+    if any(r.detail.get("n_controls_fired", 0) < 1 for r in rows if r.verdict is Verdict.PASS):
         return Verdict.FINDING
     # PASS only if EVERY row is an EXACT pass; any statistical pass -> PASS_PROVISIONAL (no inflation).
     all_exact = all(r.epistemic_class == "a" for r in rows)

@@ -110,7 +110,13 @@ class DMOracleAnchor:
                                   "the moments (round-to-round / spatial detector correlation) need "
                                   "R>=2; at R=1 there is no round-to-round or realized-distribution "
                                   "second moment", "a", None)
-            depth = max(1, int(regime.n_stab or 0)) * int(regime.R)
+            if regime.n_stab is None:
+                return Capability(statistic, Exactness.EXACT, False,
+                                  "n_stab unknown for this regime — cannot bound the depth-(n_stab*R) "
+                                  "clone stack; refusing (a None n_stab under-counts depth to R and "
+                                  "would falsely pass the feasibility gate -> an OOM at answer time)",
+                                  "a", None)
+            depth = max(1, int(regime.n_stab)) * int(regime.R)
             need = depth * copy  # peak live = the depth-first clone stack (not a 2-copy path)
             ok = budget > 0 and need <= budget  # budget==0 (no CUDA / card unknown) => infeasible
             reason = "" if ok else (
@@ -121,7 +127,12 @@ class DMOracleAnchor:
             return Capability(statistic, Exactness.EXACT, ok, reason, "a", need)
 
         # FULL_JOINT / SYNDROME_DIST — the depth-(n_stab*R) enumeration copy stack
-        depth = max(1, int(regime.n_stab or 0)) * int(regime.R)
+        if regime.n_stab is None:
+            return Capability(statistic, Exactness.EXACT, False,
+                              "n_stab unknown for this regime — cannot bound the depth-(n_stab*R) "
+                              "enumeration stack; refusing (a None n_stab under-counts depth and would "
+                              "falsely pass the feasibility gate -> an OOM at answer time)", "a", None)
+        depth = max(1, int(regime.n_stab)) * int(regime.R)
         need = depth * copy
         ok = budget > 0 and need <= budget  # budget==0 (no CUDA / card unknown) => infeasible, not OOM
         reason = "" if ok else (

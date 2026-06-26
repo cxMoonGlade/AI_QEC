@@ -566,3 +566,88 @@ def test_certify_teacher_facade_merges_and_rolls_up():
     except ValueError:
         raised = True
     assert raised
+
+
+# ======================================================================= #
+# Anti-vacuity + feasibility-gate regressions (the R3 commit-gate review)  #
+# A scored cell with no FIRED falsifier is FINDING, never a teeth-less     #
+# PASS; a class-'a' STATISTICAL value and an n_stab=None feasibility gate  #
+# are rejected; a degenerate shuffle is INAPPLICABLE, not a spurious FAIL. #
+# ======================================================================= #
+def test_empty_controls_does_not_pass():
+    # the anti-vacuity invariant made STRUCTURAL: a matching, feasible, EXACT cell with NO control
+    # (controls=[]) is NOT a PASS — it has no falsifier that could fail, so it is UNCERTIFIED ->
+    # FINDING. (Before the fix, `any([]) == False` let this through as a teeth-less PASS — the bug.)
+    rep = certify_cells(FakeTeacher(_JOINT), [(Statistic.FULL_JOINT, _REG)],
+                        [InMemoryAnchor(_JOINT)], [], N=20000)
+    assert rep.row("in_memory", Statistic.FULL_JOINT).verdict is Verdict.PASS  # the data matches...
+    assert rep.verdict is Verdict.FINDING, rep.summary()  # ...but with no falsifier it is uncertified
+
+
+def test_nonguarding_control_does_not_pass():
+    # a control that does NOT guard the cell's statistic attaches NO control row -> same as controls=[]
+    # -> the cell is uncertified (FINDING), never a PASS. (Closes the all-non-guarding variant.)
+    class _NonGuarding:
+        name = "nonguarding"
+
+        def guards(self, statistic):
+            return False
+
+        def expect(self):
+            return "must_fail"
+
+        def run(self, ctx, statistic, regime, *, N=None):  # never called (guards is False)
+            raise AssertionError("a non-guarding control must not be run")
+
+    rep = certify_cells(FakeTeacher(_JOINT), [(Statistic.FULL_JOINT, _REG)],
+                        [InMemoryAnchor(_JOINT)], [_NonGuarding()], N=20000)
+    assert rep.verdict is Verdict.FINDING, rep.summary()
+
+
+def test_class_a_statistical_value_is_rejected():
+    # the class<->exactness consistency leg of _assert_anchor_value: a class-'a' (exact-grade) value
+    # that is actually STATISTICAL would be rolled up as an EXACT PASS (inflation) — it must RAISE.
+    import pytest
+
+    from qec_twin.audit.certify.core import _assert_anchor_value
+
+    class _NamedAnchor:
+        name = "mislabeled"
+
+    legal = AnchorValue(Statistic.DETECTOR_MARG, Regime(R=1, n_stab=8), np.array([0.1]),
+                        Exactness.STATISTICAL, 0.01, "b", {})  # honestly class 'b' (no raise)
+    _assert_anchor_value(legal, _NamedAnchor())
+    illegal = AnchorValue(Statistic.DETECTOR_MARG, Regime(R=1, n_stab=8), np.array([0.1]),
+                          Exactness.STATISTICAL, 0.01, "a", {})  # STATISTICAL mislabeled 'a' -> raise
+    with pytest.raises(ValueError):
+        _assert_anchor_value(illegal, _NamedAnchor())
+
+
+def test_dm_anchor_nstab_none_is_infeasible():
+    # the feasibility gate must REFUSE a regime with n_stab=None: it cannot bound the depth-(n_stab*R)
+    # clone stack, and a None under-counts depth to R and would falsely pass the gate -> an OOM at
+    # answer time. Pure capability arithmetic (mock card -> no GPU).
+    from qec_twin.audit.certify.anchors import DMOracleAnchor
+
+    dm = DMOracleAnchor(card_bytes=32 * 1024**3)
+    none_R1 = Regime(R=1, register="subregister", n_active=2, n_stab=None)
+    none_R2 = Regime(R=2, register="subregister", n_active=2, n_stab=None)
+    set_R1 = Regime(R=1, register="subregister", n_active=2, n_stab=1)  # same size, n_stab declared
+    assert not dm.capability(Statistic.FULL_JOINT, none_R1).feasible
+    assert not dm.capability(Statistic.RR_CORR, none_R2).feasible
+    assert dm.capability(Statistic.FULL_JOINT, set_R1).feasible  # the size is fine; only None is refused
+
+
+def test_shuffle_control_inapplicable_on_symmetric_value():
+    # the real ShuffleControl on a FLAT/symmetric ground truth: np.roll is the identity, so the control
+    # cannot perturb. It must mark itself INAPPLICABLE (not a FAILED falsifier -> no spurious FAIL); the
+    # cell then has no working control -> FINDING (uncertified), never a PASS or a FAIL.
+    from qec_twin.audit.certify.anchors.controls import ShuffleControl as RealShuffleControl
+
+    flat = {0: 0.25, 1: 0.25, 2: 0.25, 3: 0.25}
+    rep = certify_cells(FakeTeacher(flat), [(Statistic.FULL_JOINT, _REG)],
+                        [InMemoryAnchor(flat)], [RealShuffleControl()], N=20000)
+    assert rep.row("in_memory", Statistic.FULL_JOINT).verdict is Verdict.PASS  # data matches
+    shuf = rep.controls[0]
+    assert shuf.detail.get("applicable") is False  # the degenerate shuffle marked itself inapplicable
+    assert rep.verdict is Verdict.FINDING, rep.summary()  # no spurious FAIL; uncertified for lack of teeth
