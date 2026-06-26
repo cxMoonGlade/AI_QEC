@@ -23,8 +23,13 @@ mechanism + B_misspec concept.
 ### ⑤a SPATIAL crosstalk (two-qutrit)
 - **Coherent ZZ (primary, Harper).** `U_φ = exp(-iφ Z⊗Z) = diag(e^{-iφ},e^{iφ},e^{iφ},e^{-iφ})` on
   **CZ-adjacent data pairs** (derived from the parsed XZZX schedule — the data pairs sharing an ancilla /
-  a CZ layer). REUSE `zz_coupling_kraus(φ)`. φ DECLARED + SWEPT: grounded `φ≈1e-3` (Harper J_ZZ·t_g) up to
-  the H2 regime `φ∈[0.05,0.15]` (a larger, more-visible bracket; report the band).
+  a CZ layer). REUSE `zz_coupling_kraus(φ)`. φ = ζ̄·t_g (the conditional cross-Kerr phase). **φ bracket
+  UPDATED 2026-06-26 (frontier sweep, `pettersson_fors_zz_coupling_comprehensive_2408.15402`):** modern
+  tunable-coupler residual ZZ is ζ ≈ 100 Hz–1 kHz (<100 Hz coupler-off) ⇒ **`φ ∈ [1.6e-5, 1.6e-4]`** (t_g≈25 ns),
+  with the coherence-limited threshold ζ̄<2π·100 kHz (Pettersson Fors Eq.9) ⇒ **`φ≈1.6e-2` as the "where ZZ
+  starts to matter" upper edge**. The OLD bracket `φ∈[1e-3,0.15]` (ζ≈6 kHz–1 MHz) is RETIRED — its upper end
+  (0.05–0.15) is STRONG-ZZ / near-CZ (between the 100 kHz threshold and the 5 MHz CZ value), NOT residual
+  crosstalk; keep it only as a flagged fixed-coupling-era / deliberately-amplified visible probe. SWEPT.
 - **Stochastic comparator (Harper PTA).** `{cosφ·I₄, sinφ·Z⊗Z}` (Pauli-twirl, rate `sin²φ`). REUSE
   `correlated_dephasing_kraus(φ)`. The "same-PTA, different-coherent-distribution" pair (Harper §V.B) is the
   optional distribution-matters control.

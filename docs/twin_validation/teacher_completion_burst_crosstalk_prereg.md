@@ -197,3 +197,33 @@ the pattern (a finding).
   + asserts + printed evidence + `__main__` guard — `feedback-scripted-execution`); mainline (any
   `src/qec_twin/` change, e.g. a readout-emitter correlated-assignment hook or an op-conditioning gate) is
   COMMIT-GATED on the user (`feedback-confirm-mainline-before-commit`); this pre-reg lands before any code.
+
+## 8. FRONTIER MAGNITUDE UPDATE (2026-06-26) — the crosstalk grounding was fixed-coupling-era (5+ yr old)
+User correction ("why are the crosstalk papers all 5+ years old?"). A 2023–2026 frontier-literature sweep
+(deep-research-equivalent: manual WebSearch+Fetch; the deep-research workflow harness errored) + 精读 of three
+new committed reading notes shows the crosstalk **FORMS are still valid** but the **MAGNITUDES are stale**
+because modern hardware uses **tunable couplers** (the single biggest 2018→2026 change). The teacher's channels
+are physically parameterized + SWEPT, so these are **declarative bracket updates, NOT rebuilds**.
+- **⑤a ZZ (`pettersson_fors_zz_coupling_comprehensive_2408.15402`, 2024 + measured residual `[2505.22276]`):**
+  FORM EXACT (Eq.3 cross-Kerr ζ; Eq.6 `U=diag(1,1,1,e^{-iφ})`, **φ=ζ̄·t_g** = our `exp(-iφ ZZ)`). MAGNITUDE
+  **STALE ~100–1000×**: modern residual ζ<1 kHz (<100 Hz coupler-off) vs the coherence-limited threshold
+  ζ̄<2π·100 kHz (Eq.9). **φ bracket `1e-3..0.15` → `1.6e-5..1.6e-4`** (residual), `1.6e-2` = the matters-edge;
+  retire 0.05–0.15 as strong-ZZ/near-CZ (NOT residual). [updated in `ws2_spatial_crosstalk_prereg.md` §1.]
+- **READOUT (`xiong_multiplexed_readout_purcell_2509.11822`, 2025 + `[2505.00674]` MIST, 2026):** FORM VALID
+  (`Γφ~χ²n̄/κ` dispersive dephasing + classical 2×2 assignment). MAGNITUDE **STALE ~50×**: modern protected
+  cross-fidelity ≈0.02% (n̄≈5e-4) vs Heinsoo's <1%. **`pm`/spectator-deph bracket `≲1%` → `2e-4..1e-3`**
+  (modern protected → unprotected upper edge). **NEW SUB-AXIS to add — readout-induced LEAKAGE (MIST /
+  ionization):** the readout drive excites the qubit to |2⟩+ at a critical n̄ (offset-charge dependent; Fechant
+  2505.00674); Xiong measures ℒ↑≈0.08%/100 ns ⇒ a readout-conditioned `|1⟩→|2⟩` leak (~1e-3, SWEPT) that
+  **connects READOUT to the ④ leakage axis** (reuse the QuTiP WG-leak, readout-power-conditioned).
+- **DRIVE (`song_microwave_crosstalk_planar_2606.02440`, ETH 2026 + IQM `[2603.11018]`):** FORM (off-resonant-
+  Rabi spectator effect) VALID; magnitude **roughly IN-RANGE** (least-stale): `c ∈ [0.01, 0.1]` (cross-drive
+  ratio X = −40..−20 dB, Song-measured) — keep, but re-ground in Song's measured X (not Sarovar's illustrative
+  1e-2) + the post-frequency-planning residual (IQM 99.96%). **SOURCE understanding UPDATED**: not pure spectral
+  spillover — capacitive + PACKAGE-MEDIATED cavity tail (−2.7 dB/mm, dominates at distance) + crossover; Sarovar's
+  distance-scaling is insufficient on intermediate-scale chips.
+- **Action items (deferred — the user chose the report + notes first):** patch the QuTiP param-mapping defaults
+  to these brackets (`_phi_to_J` to the ⑤a φ residual; the readout `deph`/`pm` bracket; the drive `c` re-grounded)
+  in `outputs/teacher_prereg/{qutip_teacher_source,tc_readout_teacher,tc_drive_teacher}.py`; add the readout-
+  induced-leakage sub-axis (a readout-power-conditioned WG-leak). Each is a SWEPT bracket update + a declared
+  re-grounding, not a channel rebuild. Epistemic class (b) bands throughout.
