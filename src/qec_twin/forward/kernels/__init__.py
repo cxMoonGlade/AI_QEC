@@ -8,4 +8,11 @@ use; their Python loaders live beside them:
 * ``sv_traj_d3.cu`` + :mod:`sv_traj_d3_loader` — the P4a state-vector MCWF
   leakage-teacher trajectory kernel (block-per-trajectory; exposes the §7
   ``sv_traj_d3`` host call).
+* ``qutrit_mcwf_ops.cu`` + :mod:`qutrit_mcwf_ops_loader` — generic qutrit
+  statevector MCWF primitives for the simulator frontend carrier: 1/2/3-qubit
+  gates on the computational subspace, multi-controlled phase, one-site
+  finite-Kraus branch sampling, fused all-sites one-Kraus-family sampling, and
+  the native cached-op-stream runner used by ``NativeOpStreamMcwfExecutor``.
+  The runner includes an exact adjacent-X-layer permutation lowering and an
+  experimental one-CUDA-block-per-trajectory executor kernel.
 """
