@@ -20,6 +20,11 @@ cuda-extension = ["ninja"]
 # M4 decoder pin (registration S1/S11): frozen evaluator-side decoder, CPU,
 # upstream defaults; wheel sha256 recorded in qec_twin/hardware/m4_decode.py.
 hw = ["pymatching==2.4.0"]
+# INDEPENDENT-oracle test deps. tests/test_joint_lindbladian.py validates the joint-Lindbladian
+# assembler against QuTiP + scipy (NOT the module's own code — faithfulness protocol rule I); the
+# qutip_* gtchecks already use them. Declared so a bare `pytest` does not silently SKIP the oracle
+# tests and "pass" with zero coverage (the skip when missing is loud — NOT a release basis).
+test = ["qutip", "scipy"]
 
 [project.scripts]
 # Single console entry point, lands with M4 (ADR 0007 Decision 6, ratified R4).

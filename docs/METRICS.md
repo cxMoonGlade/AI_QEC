@@ -273,3 +273,19 @@ Finite-sample + bootstrap-CI convention (hardware regime); held-out splits decla
 - Bravyi, Suchara, Vargo (2014), arXiv:1405.4883; Dennis, Kitaev, Landahl, Preskill (2002), quant-ph/0110143 — optimal/ML surface-code decoding.
 - Benjamini, Y. & Yekutieli, D. (2001). *The control of the false discovery rate under dependency*. Ann. Statist. 29(4), 1165–1188 — BH–Yekutieli FDR (arbitrary dependence).
 - (Cover & Thomas 2006; Spitz 1712.02360; Takou–Brown 2504.20212; Sivak 2406.02700; Cao/dMLE 2602.19722 — already cited above.)
+
+## Forward-fidelity / coupling metrics (QEC-coupling simulator; `forward/joint_lindbladian`, ADR 0008-adjacent)
+
+Added 2026-06-26 under the forced ladder (theory-first, BEFORE the G2 gate design — the metric is the
+field standard, NOT a project stand-in). For the **Axis-1 joint-Lindbladian composed-vs-joint fidelity**
+(how faithfully a within-substep JOINT propagation differs from a naive composition `E_1∘E_2∘…`): the
+field-standard channel-distinguishability measure.
+
+| Metric | Function | Standard name + reference | Convention |
+|---|---|---|---|
+| Composed-vs-joint channel infidelity | `forward/joint_lindbladian.composed_vs_joint_infidelity` (exact channel) + `…_infidelity_leading` (BCH leading) | **rung-1/2 field-standard.** **Process (entanglement) infidelity `1−F_e`** between two CPTP channels — `F_e` = Uhlmann fidelity of the trace-normalised **Choi states** `J = (1/d)Σ_{pq}E(\|p⟩⟨q\|)⊗\|p⟩⟨q\|` (Schumacher, *Phys. Rev. A* **54**, 2614 (1996); Nielsen, *Phys. Lett. A* **303**, 249 (2002) for the `F_avg` relation). Same Choi/process-fidelity convention as the `qutip_*_channels` gtchecks. | **Leading order (a)-exact:** for a coherent error `V=exp(−iG)`, `G=(i/2)[H_A,H_B]dt²` (Hermitian), traceless ⇒ `1−F_e ≈ Tr(G²)/d = ‖G‖²_F/d` (**/d, NOT /d²** — a v1 `/d²` doc error was caught + corrected). Avg-gate infidelity (RB-standard): `1−F_avg = d/(d+1)·(1−F_e) ≈ ‖G‖²_F/(d+1)`. Worst-case/FT: diamond norm (Kitaev) — reported only if needed. Exact-zero (commuting) control witnessed by `‖[L_A,L_B]‖_F ≤ NUMERICAL_ZERO` (structural, expm-free) + the superoperator Frobenius distance `‖S_composed−S_joint‖_F ≤ 1e-10` (the torch-c128 `matrix_exp` floor, declared (c)). The sharp tests are the **power laws** (`dt²`/`dt⁴`/`ζ²`), which are metric-constant-independent. |
+
+### References (forward-fidelity)
+- Schumacher, B. (1996). *Sending entanglement through noisy quantum channels*. Phys. Rev. A 54, 2614 — entanglement (process) fidelity `F_e`.
+- Nielsen, M. A. (2002). *A simple formula for the average gate fidelity of a quantum dynamical operation*. Phys. Lett. A 303, 249 — `F_avg = (d·F_e + 1)/(d+1)`.
+- Kitaev, A. Yu. (1997). *Quantum computations: algorithms and error correction*. Russ. Math. Surv. 52, 1191 — diamond norm (worst-case, FT thresholds).
