@@ -232,8 +232,18 @@ def axis1_mcwf_mps_state_record_execution_manifest(
         initial_levels=levels,
         leaked_readout_b=readout_b,
     )
-    acceptance = _restricted_acceptance_policy(
+    from qec_twin.simulator.axis1_mcwf_dense_certification import (
+        dense_jointL_record_certification,
+        restricted_acceptance_policy,
+    )
+
+    certification = dense_jointL_record_certification(
+        schedule, execution, program, device=dev
+    )
+    acceptance = restricted_acceptance_policy(
         execution=execution,
+        certification=certification,
+        program=program,
         rng_seed=rng_seed,
         trajectory_count=int(trajectory_count),
     )
