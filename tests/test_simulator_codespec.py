@@ -216,4 +216,9 @@ def _insert_after_first_round(circuit: CircuitIR, op: GateOp) -> CircuitIR:
         "targets": list(op.targets),
         "args": list(op.args),
     }
-    return CircuitIR(circuit.num_qubits, tuple(steps), metadata=metadata)
+    return CircuitIR(
+        circuit.num_qubits,
+        tuple(steps),
+        metadata=metadata,
+        _allow_noise_steps=True,
+    )

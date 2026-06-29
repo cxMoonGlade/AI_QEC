@@ -8,8 +8,8 @@ protocol's rule I). Formalizes the adversarial reviewer's checks as the conventi
 harness; this is the unit oracle).
 
 The module is GPU-only (``_require_cuda`` refuses CPU, no fallback — the memory rule), so
-the whole module SKIPS without CUDA and runs on the RTX-5090 workstation. QuTiP/scipy also
-skip if unavailable.
+collection FAILS without CUDA instead of producing a skip-green release signal. QuTiP/scipy
+are independent-oracle dependencies and also fail collection if unavailable.
 
 Run:  conda run -n aiqec python -m pytest -q tests/test_joint_lindbladian.py
 """
@@ -19,31 +19,22 @@ import pytest
 import torch
 
 cuda_ok = torch.cuda.is_available()
+if not cuda_ok:
+    pytest.fail(
+        "joint_lindbladian oracle tests are GPU-gated; CUDA-MISSING is NOT A RELEASE BASIS",
+        pytrace=False,
+    )
 try:
     import qutip as qt  # noqa: F401
     import numpy as np
     from scipy.linalg import expm as _scipy_expm
-    deps_ok = True
-except Exception:  # pragma: no cover - environment guard
-    deps_ok = False
-
-# TWO distinct, grep-able skip reasons (fix 3 — no silent zero-coverage pass):
-#  * CUDA skip = the GENUINE GPU requirement (the module is GPU-only, _require_cuda refuses CPU).
-#  * qutip/scipy skip = the INDEPENDENT-ORACLE deps. If THESE are missing the oracle tests are
-#    NOT exercised and this is explicitly NOT A RELEASE BASIS — the release runner greps for the
-#    "ORACLE-DEPS-MISSING (NOT A RELEASE BASIS)" marker to refuse a green run that skipped them.
-#    Declared in pyproject [project.optional-dependencies] `test = ["qutip", "scipy"]`.
-pytestmark = [
-    pytest.mark.skipif(
-        not cuda_ok,
-        reason="joint_lindbladian is GPU-only (CUDA required; RTX-5090 workstation)",
-    ),
-    pytest.mark.skipif(
-        not deps_ok,
-        reason="ORACLE-DEPS-MISSING (NOT A RELEASE BASIS): install qutip + scipy "
-               "(pip install -e '.[test]') to run the independent-oracle joint_lindbladian tests",
-    ),
-]
+except Exception as exc:  # pragma: no cover - environment guard
+    pytest.fail(
+        "ORACLE-DEPS-MISSING (NOT A RELEASE BASIS): install qutip + scipy "
+        "(pip install -e '.[test]') to run the independent-oracle joint_lindbladian tests; "
+        f"import error={type(exc).__name__}: {exc}",
+        pytrace=False,
+    )
 
 from qec_twin.numerics import NUMERICAL_ZERO  # noqa: E402
 from qec_twin.forward.joint_lindbladian import (  # noqa: E402
@@ -84,7 +75,7 @@ def _ops_numpy():
 
 
 # physically-motivated scales (rad/ns; 1 us = 1000 ns) — same as the G2 gate.
-ZETA = 2.0 * np.pi * 0.37e-3 if deps_ok else 0.0   # ZZ
+ZETA = 2.0 * np.pi * 0.37e-3   # ZZ
 GAMMA_PHI = 1.0 / 30000.0                           # T2
 GAMMA_1 = 1.0 / 30000.0                             # T1
 

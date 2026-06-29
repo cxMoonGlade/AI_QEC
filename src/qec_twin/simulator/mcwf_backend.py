@@ -17,7 +17,9 @@ import torch
 CDTYPE = torch.complex128
 RDTYPE = torch.float64
 MAX_DENSE_MCWF_QUTRITS = 12
+MAX_DENSE_QUDIT_MCWF_DIM = 3**12
 QUTRIT_MCWF_CONVENTION = "base3_most_significant_q0_left_to_right"
+QUDIT_MCWF_CONVENTION = "mixed_radix_most_significant_site0_left_to_right"
 
 
 @dataclass(frozen=True)
@@ -30,6 +32,223 @@ class QutritMcwfMeasurementBatch:
     @property
     def shots(self) -> int:
         return int(sum(self.qutrit_counts.values()))
+
+
+class DenseQuditMcwfBackend:
+    """Batched dense-state MCWF carrier for arbitrary local Hilbert dimensions.
+
+    This is the dimension-polymorphic correctness core. It supports qubit,
+    qutrit, ququart, and mixed-dimension local Hilbert spaces through
+    ``local_dims``. It deliberately does not know about Stim, DEM, leakage labels,
+    or a decoder; physics adapters provide local operators and Kraus families.
+    """
+
+    convention: str = QUDIT_MCWF_CONVENTION
+
+    def __init__(
+        self,
+        local_dims: Sequence[int],
+        *,
+        seed: int = 0,
+        device: str | torch.device = "cuda",
+        dtype: torch.dtype = CDTYPE,
+    ) -> None:
+        dims = tuple(int(dim) for dim in local_dims)
+        if not dims:
+            raise ValueError("local_dims must be non-empty")
+        if any(dim < 2 for dim in dims):
+            raise ValueError(f"local_dims entries must be >= 2, got {dims!r}")
+        dim = math.prod(dims)
+        if dim > MAX_DENSE_QUDIT_MCWF_DIM:
+            raise ValueError(
+                "dense qudit MCWF backend dimension cap exceeded: "
+                f"dim={dim} cap={MAX_DENSE_QUDIT_MCWF_DIM}"
+            )
+        self.local_dims = dims
+        self.num_sites = len(dims)
+        self.dim = int(dim)
+        self.device = torch.device(device)
+        if self.device.type != "cuda":
+            raise ValueError("DenseQuditMcwfBackend is GPU-only; CPU execution is intentionally unsupported")
+        if not torch.cuda.is_available():
+            raise RuntimeError(
+                "DenseQuditMcwfBackend requested CUDA but torch.cuda.is_available() is false; "
+                "fix CUDA visibility before running MCWF trajectories"
+            )
+        self.dtype = dtype
+        self.generator = torch.Generator(device=self.device)
+        self.generator.manual_seed(int(seed))
+
+    def basis_state(
+        self,
+        batch_size: int,
+        levels: str | Sequence[int] | None = None,
+    ) -> torch.Tensor:
+        """Return a batched computational-basis state for ``local_dims``."""
+
+        b = int(batch_size)
+        if b <= 0:
+            raise ValueError("batch_size must be positive")
+        digits = self.normalize_levels(levels)
+        index = self.index_from_digits(digits)
+        psi = torch.zeros((b, self.dim), dtype=self.dtype, device=self.device)
+        psi[:, index] = 1.0
+        return psi
+
+    def apply_operator(
+        self,
+        psi: torch.Tensor,
+        operator: torch.Tensor,
+        sites: Sequence[int],
+    ) -> torch.Tensor:
+        """Apply an arbitrary local operator on the ordered ``sites`` subsystem."""
+
+        self._validate_state(psi)
+        target_sites = self._validate_sites(sites)
+        target_dim = math.prod(self.local_dims[site] for site in target_sites)
+        op = torch.as_tensor(operator, dtype=self.dtype, device=self.device)
+        if op.shape != (target_dim, target_dim):
+            raise ValueError(
+                f"operator for sites {target_sites!r} must have shape "
+                f"{(target_dim, target_dim)}, got {tuple(op.shape)}"
+            )
+        permuted, order = self._target_rest_view(psi, target_sites)
+        out = torch.einsum("ab,Bbr->Bar", op, permuted)
+        return self._restore_target_rest_view(out, order, psi.shape[0])
+
+    def apply_kraus(
+        self,
+        psi: torch.Tensor,
+        kraus: torch.Tensor,
+        sites: Sequence[int],
+    ) -> torch.Tensor:
+        """Sample and apply one Kraus branch by the Born rule for each trajectory."""
+
+        self._validate_state(psi)
+        target_sites = self._validate_sites(sites)
+        target_dim = math.prod(self.local_dims[site] for site in target_sites)
+        k_ops = torch.as_tensor(kraus, dtype=self.dtype, device=self.device)
+        if k_ops.ndim != 3 or k_ops.shape[1:] != (target_dim, target_dim):
+            raise ValueError(
+                f"kraus for sites {target_sites!r} must have shape "
+                f"(rank, {target_dim}, {target_dim}), got {tuple(k_ops.shape)}"
+            )
+        phis = torch.stack(
+            [self.apply_operator(psi, k_ops[k], target_sites) for k in range(k_ops.shape[0])],
+            dim=0,
+        )
+        norms2 = (phis.conj() * phis).real.sum(dim=2).transpose(0, 1)
+        totals = norms2.sum(dim=1, keepdim=True)
+        if bool((totals <= 0.0).any().detach().cpu().item()):
+            raise ValueError("cannot sample a Kraus family with zero total Born weight")
+        probs = norms2 / totals
+        rand = torch.rand((psi.shape[0], 1), dtype=RDTYPE, device=self.device, generator=self.generator)
+        cdf = torch.cumsum(probs, dim=1)
+        sel = (rand > cdf).sum(dim=1).clamp_max(k_ops.shape[0] - 1)
+        chosen = phis[sel, torch.arange(psi.shape[0], device=self.device), :]
+        norm = torch.linalg.vector_norm(chosen, dim=1, keepdim=True).clamp_min(1e-300).to(self.dtype)
+        return chosen / norm
+
+    def measure_sites(
+        self,
+        psi: torch.Tensor,
+        sites: Sequence[int],
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Sample computational-basis outcomes and return ``(outcomes, collapsed)``."""
+
+        self._validate_state(psi)
+        target_sites = self._validate_sites(sites)
+        target_dims = tuple(self.local_dims[site] for site in target_sites)
+        permuted, order = self._target_rest_view(psi, target_sites)
+        probs = (permuted.conj() * permuted).real.sum(dim=2)
+        probs = probs / probs.sum(dim=1, keepdim=True).clamp_min(1e-300)
+        sel = torch.multinomial(probs, num_samples=1, replacement=True, generator=self.generator).squeeze(1)
+        rows = torch.arange(psi.shape[0], device=self.device)
+        selected = permuted[rows, sel, :]
+        norm = torch.linalg.vector_norm(selected, dim=1, keepdim=True).clamp_min(1e-300).to(self.dtype)
+        collapsed = torch.zeros_like(permuted)
+        collapsed[rows, sel, :] = selected / norm
+        return (
+            mixed_radix_digits_from_indices_t(sel, dims=target_dims),
+            self._restore_target_rest_view(collapsed, order, psi.shape[0]),
+        )
+
+    def probabilities(self, psi: torch.Tensor) -> torch.Tensor:
+        self._validate_state(psi)
+        probs = (psi.conj() * psi).real
+        return probs / probs.sum(dim=1, keepdim=True).clamp_min(1e-300)
+
+    def normalize_levels(self, levels: str | Sequence[int] | None) -> tuple[int, ...]:
+        if levels is None:
+            return tuple(0 for _ in self.local_dims)
+        if isinstance(levels, str):
+            raw = tuple(int(ch) for ch in levels.strip())
+        else:
+            raw = tuple(int(x) for x in levels)
+        if len(raw) != self.num_sites:
+            raise ValueError(f"levels must have length {self.num_sites}")
+        for value, dim in zip(raw, self.local_dims, strict=True):
+            if value < 0 or value >= dim:
+                raise ValueError(f"level {value} outside local dimension {dim}")
+        return raw
+
+    def index_from_digits(self, digits: Sequence[int]) -> int:
+        levels = tuple(int(x) for x in digits)
+        if len(levels) != self.num_sites:
+            raise ValueError(f"digits must have length {self.num_sites}")
+        out = 0
+        for site, value in enumerate(levels):
+            dim = self.local_dims[site]
+            if value < 0 or value >= dim:
+                raise ValueError(f"digit {value} outside local dimension {dim}")
+            place = math.prod(self.local_dims[site + 1 :])
+            out += int(value) * int(place)
+        return int(out)
+
+    def digits_from_indices(self, indices: torch.Tensor) -> torch.Tensor:
+        return mixed_radix_digits_from_indices_t(indices, dims=self.local_dims)
+
+    def _validate_sites(self, sites: Sequence[int]) -> tuple[int, ...]:
+        out = tuple(int(site) for site in sites)
+        if not out:
+            raise ValueError("sites must be non-empty")
+        if len(set(out)) != len(out):
+            raise ValueError(f"sites must be unique, got {out!r}")
+        for site in out:
+            if site < 0 or site >= self.num_sites:
+                raise ValueError(f"site {site} outside [0, {self.num_sites})")
+        return out
+
+    def _validate_state(self, psi: torch.Tensor) -> None:
+        if psi.ndim != 2 or psi.shape[1] != self.dim:
+            raise ValueError(f"state must have shape (batch, {self.dim}), got {tuple(psi.shape)}")
+        if psi.device.type != self.device.type or (
+            self.device.index is not None and psi.device.index != self.device.index
+        ):
+            raise ValueError(f"state device {psi.device} does not match backend device {self.device}")
+
+    def _target_rest_view(
+        self,
+        psi: torch.Tensor,
+        sites: tuple[int, ...],
+    ) -> tuple[torch.Tensor, list[int]]:
+        rest = [site for site in range(self.num_sites) if site not in sites]
+        order = list(sites) + rest
+        view = psi.reshape(psi.shape[0], *self.local_dims)
+        permuted = view.permute(0, *[1 + site for site in order])
+        target_dim = math.prod(self.local_dims[site] for site in sites)
+        return permuted.reshape(psi.shape[0], int(target_dim), -1), order
+
+    def _restore_target_rest_view(
+        self,
+        permuted: torch.Tensor,
+        order: list[int],
+        batch_size: int,
+    ) -> torch.Tensor:
+        ordered_dims = [self.local_dims[site] for site in order]
+        restored = permuted.reshape(int(batch_size), *ordered_dims)
+        inv_perm = [0] + [1 + order.index(site) for site in range(self.num_sites)]
+        return restored.permute(*inv_perm).reshape(int(batch_size), self.dim)
 
 
 class DenseQutritMcwfBackend:
@@ -396,6 +615,23 @@ def digits_from_indices_t(indices: torch.Tensor, *, n: int, q: int) -> torch.Ten
     for site in range(int(n)):
         place = int(q) ** (int(n) - 1 - site)
         cols.append(((indices // place) % int(q)).to(torch.long))
+    return torch.stack(cols, dim=1)
+
+
+def mixed_radix_digits_from_indices_t(
+    indices: torch.Tensor,
+    *,
+    dims: Sequence[int],
+) -> torch.Tensor:
+    local_dims = tuple(int(dim) for dim in dims)
+    if not local_dims:
+        raise ValueError("dims must be non-empty")
+    if any(dim < 2 for dim in local_dims):
+        raise ValueError(f"dims entries must be >= 2, got {local_dims!r}")
+    cols = []
+    for site, dim in enumerate(local_dims):
+        place = math.prod(local_dims[site + 1 :])
+        cols.append(((indices // int(place)) % int(dim)).to(torch.long))
     return torch.stack(cols, dim=1)
 
 

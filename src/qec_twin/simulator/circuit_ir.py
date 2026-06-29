@@ -8,10 +8,22 @@ gates, ticks, measurements, detector definitions, and logical observables. Analo
 joint-L / leakage truth is attached later as sidecar truth, not encoded here.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import InitVar, dataclass, field
 from typing import Sequence
 
-from qec_twin.simulator.metadata_guard import validate_public_metadata
+from qec_twin.simulator.metadata_guard import (
+    AXIS1_STATIC_ZZ_CALIBRATIONS_METADATA_KEY,
+    AXIS1_STATIC_ZZ_COUPLINGS_METADATA_KEY,
+    axis1_static_zz_calibrations_to_manifest,
+    normalize_axis1_static_zz_calibrations,
+    normalize_axis1_static_zz_couplings,
+    validate_public_metadata,
+)
+from qec_twin.simulator.axis1_context import (
+    AXIS1_LOCAL_LINDBLAD_CONTEXT_METADATA_KEY,
+    Axis1LocalLindbladContextSpec,
+    normalize_axis1_local_lindblad_context,
+)
 
 _RECORD_AFFECTING_GATE_NAMES = {
     "M",
@@ -28,6 +40,7 @@ _RECORD_AFFECTING_GATE_NAMES = {
 }
 
 _SOURCE_NOISE_GATE_NAMES = {
+    "CORRELATED_ERROR",
     "DEPOLARIZE1",
     "DEPOLARIZE2",
     "E",
@@ -42,7 +55,6 @@ _SOURCE_NOISE_GATE_NAMES = {
     "Y_ERROR",
     "Z_ERROR",
 }
-
 
 @dataclass(frozen=True)
 class GateOp:
@@ -76,11 +88,13 @@ class MeasureOp:
     name: str
     targets: tuple[int, ...]
     keys: tuple[str, ...]
+    args: tuple[float, ...] = ()
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "name", str(self.name).upper())
         object.__setattr__(self, "targets", tuple(int(t) for t in self.targets))
         object.__setattr__(self, "keys", tuple(str(k) for k in self.keys))
+        object.__setattr__(self, "args", tuple(float(a) for a in self.args))
 
 
 @dataclass(frozen=True)
@@ -121,8 +135,9 @@ class CircuitIR:
     num_qubits: int
     steps: tuple[CircuitStep, ...]
     metadata: dict = field(default_factory=dict)
+    _allow_noise_steps: InitVar[bool] = False
 
-    def __post_init__(self) -> None:
+    def __post_init__(self, _allow_noise_steps: bool) -> None:
         object.__setattr__(self, "num_qubits", int(self.num_qubits))
         object.__setattr__(self, "steps", tuple(self.steps))
         object.__setattr__(
@@ -132,7 +147,7 @@ class CircuitIR:
         )
         if self.num_qubits <= 0:
             raise ValueError("num_qubits must be positive")
-        allow_noise_steps = "noise_projection" in self.metadata
+        allow_noise_steps = bool(_allow_noise_steps)
 
         keys_seen: set[str] = set()
         detector_names: set[str] = set()
@@ -255,10 +270,15 @@ class CircuitBuilder:
     def y(self, targets: int | Sequence[int]) -> "CircuitBuilder":
         return self.gate("Y", targets)
 
-    def idle(self, targets: int | Sequence[int]) -> "CircuitBuilder":
+    def idle(
+        self,
+        targets: int | Sequence[int],
+        *,
+        duration_ns: float | None = None,
+    ) -> "CircuitBuilder":
         """Insert an explicit Stim identity/idle instruction."""
 
-        return self.gate("I", targets)
+        return self.gate("I", targets, args=None if duration_ns is None else float(duration_ns))
 
     def cz(self, targets: Sequence[int]) -> "CircuitBuilder":
         t = _as_targets(targets)
@@ -282,6 +302,7 @@ class CircuitBuilder:
         key: str | Sequence[str],
         basis: str = "Z",
         reset: bool = False,
+        duration_ns: float | None = None,
     ) -> "CircuitBuilder":
         targets = _as_targets(target)
         if isinstance(key, str):
@@ -302,7 +323,8 @@ class CircuitBuilder:
             name = "MR" if reset else "M"
         else:
             name = f"MR{basis}" if reset else f"M{basis}"
-        self._steps.append(MeasureOp(name, targets, keys))
+        args = () if duration_ns is None else (float(duration_ns),)
+        self._steps.append(MeasureOp(name, targets, keys, args))
         return self
 
     def detector(
@@ -327,6 +349,49 @@ class CircuitBuilder:
         keys = tuple(str(k) for k in xor)
         self._require_known_keys(keys)
         self._steps.append(ObservableDef(str(name), keys, int(index)))
+        return self
+
+    def declare_static_zz_couplings(
+        self,
+        edges: Sequence[Sequence[int]],
+        *,
+        zeta_rad_per_ns_by_edge: dict | Sequence[dict] | None = None,
+    ) -> "CircuitBuilder":
+        """Declare public static-ZZ device/schedule edges for Axis-1 lowering."""
+
+        normalized = normalize_axis1_static_zz_couplings(
+            edges,
+            num_qubits=self.num_qubits,
+            label="CircuitBuilder.declare_static_zz_couplings",
+        )
+        self._metadata[AXIS1_STATIC_ZZ_COUPLINGS_METADATA_KEY] = [
+            list(edge) for edge in normalized
+        ]
+        calibrations = normalize_axis1_static_zz_calibrations(
+            zeta_rad_per_ns_by_edge,
+            num_qubits=self.num_qubits,
+            declared_edges=normalized,
+            label="CircuitBuilder.declare_static_zz_couplings.zeta_rad_per_ns_by_edge",
+        )
+        if calibrations:
+            self._metadata[AXIS1_STATIC_ZZ_CALIBRATIONS_METADATA_KEY] = (
+                axis1_static_zz_calibrations_to_manifest(calibrations)
+            )
+        else:
+            self._metadata.pop(AXIS1_STATIC_ZZ_CALIBRATIONS_METADATA_KEY, None)
+        return self
+
+    def declare_axis1_local_lindblad_context(
+        self,
+        context: Axis1LocalLindbladContextSpec | dict,
+    ) -> "CircuitBuilder":
+        """Declare public Axis-1 Markovian context for joint-L lowering."""
+
+        spec = normalize_axis1_local_lindblad_context(context)
+        if spec.is_trivial:
+            self._metadata.pop(AXIS1_LOCAL_LINDBLAD_CONTEXT_METADATA_KEY, None)
+        else:
+            self._metadata[AXIS1_LOCAL_LINDBLAD_CONTEXT_METADATA_KEY] = spec.to_manifest()
         return self
 
     def build(self) -> CircuitIR:

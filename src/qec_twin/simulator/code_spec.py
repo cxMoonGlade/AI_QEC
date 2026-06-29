@@ -12,7 +12,14 @@ from dataclasses import dataclass, field
 import re
 from typing import Iterable
 
-from qec_twin.simulator.metadata_guard import validate_public_metadata
+from qec_twin.simulator.metadata_guard import (
+    AXIS1_STATIC_ZZ_CALIBRATIONS_METADATA_KEY,
+    AXIS1_STATIC_ZZ_COUPLINGS_METADATA_KEY,
+    axis1_static_zz_calibrations_to_manifest,
+    normalize_axis1_static_zz_calibrations,
+    normalize_axis1_static_zz_couplings,
+    validate_public_metadata,
+)
 from qec_twin.simulator.operation import OperationSet, as_operation_set, default_memory_operations
 
 _PAULI_BASES = {"X", "Y", "Z"}
@@ -113,6 +120,54 @@ class LogicalObservableSpec:
             "name": self.name,
             "index": self.index,
             "terms": [t.to_manifest() for t in self.terms],
+        }
+
+
+@dataclass(frozen=True)
+class Axis1StaticZZDeviceSpec:
+    """Public static-ZZ device/schedule edges for Axis-1 schedule lowering."""
+
+    edges: tuple[tuple[int, int], ...]
+    num_qubits: int | None = None
+    zeta_rad_per_ns_by_edge: dict | tuple = ()
+
+    def __post_init__(self) -> None:
+        nq = None if self.num_qubits is None else int(self.num_qubits)
+        edges = normalize_axis1_static_zz_couplings(
+            self.edges,
+            num_qubits=nq,
+            label="Axis1StaticZZDeviceSpec.edges",
+        )
+        calibrations = normalize_axis1_static_zz_calibrations(
+            self.zeta_rad_per_ns_by_edge,
+            num_qubits=nq,
+            declared_edges=edges,
+            label="Axis1StaticZZDeviceSpec.zeta_rad_per_ns_by_edge",
+        )
+        object.__setattr__(self, "edges", edges)
+        object.__setattr__(self, "num_qubits", nq)
+        object.__setattr__(self, "zeta_rad_per_ns_by_edge", calibrations)
+
+    def to_metadata(self) -> dict:
+        metadata = {
+            AXIS1_STATIC_ZZ_COUPLINGS_METADATA_KEY: [list(edge) for edge in self.edges]
+        }
+        if self.zeta_rad_per_ns_by_edge:
+            metadata[AXIS1_STATIC_ZZ_CALIBRATIONS_METADATA_KEY] = (
+                axis1_static_zz_calibrations_to_manifest(self.zeta_rad_per_ns_by_edge)
+            )
+        return metadata
+
+    def to_manifest(self) -> dict:
+        return {
+            "metadata_key": AXIS1_STATIC_ZZ_COUPLINGS_METADATA_KEY,
+            "edges": [list(edge) for edge in self.edges],
+            "calibrations": axis1_static_zz_calibrations_to_manifest(
+                self.zeta_rad_per_ns_by_edge
+            ),
+            "num_qubits": self.num_qubits,
+            "visibility": "public_schedule_metadata_no_mechanism_truth",
+            "representability": "axis1_static_zz_device_edges_and_public_calibrations_not_operator_truth",
         }
 
 

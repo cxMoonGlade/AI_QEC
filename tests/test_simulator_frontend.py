@@ -201,6 +201,14 @@ def test_noise_probability_validation_rejects_invalid_values():
 def test_source_embedded_noise_instruction_is_not_noiseless_circuitir():
     with pytest.raises(ValueError, match="source-embedded noise instruction"):
         CircuitIR(num_qubits=1, steps=(GateOp("X_ERROR", (0,), (0.25,)),))
+    with pytest.raises(ValueError, match="source-embedded noise instruction"):
+        CircuitIR(
+            num_qubits=1,
+            steps=(GateOp("X_ERROR", (0,), (0.25,)),),
+            metadata={"noise_projection": {"type": "forged_public_metadata"}},
+        )
+    with pytest.raises(ValueError, match="source-embedded noise instruction"):
+        CircuitIR(num_qubits=1, steps=(GateOp("CORRELATED_ERROR", (0,), (0.25,)),))
 
 
 def test_optional_unmatched_targeted_rule_records_zero_matches():

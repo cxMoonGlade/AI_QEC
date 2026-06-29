@@ -28,6 +28,8 @@ class ArtifactPaths:
     sample_summary_noisy: Path
     theory_prediction: Path
     decoder_results: Path
+    source_timeline: Path
+    source_timeline_binding: Path
     manifest: Path
 
 
@@ -47,6 +49,8 @@ def artifact_paths(out_dir: str | Path) -> ArtifactPaths:
         sample_summary_noisy=root / "sample_summary_noisy.json",
         theory_prediction=root / "theory_prediction.json",
         decoder_results=root / "decoder_results.json",
+        source_timeline=root / "source_timeline.npz",
+        source_timeline_binding=root / "source_timeline_binding.json",
         manifest=root / "manifest.json",
     )
 

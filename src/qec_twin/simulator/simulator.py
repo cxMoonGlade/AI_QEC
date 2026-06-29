@@ -14,6 +14,7 @@ from pathlib import Path
 import numpy as np
 
 from qec_twin.hardware import b8_io, m4_decode
+from qec_twin.mechanisms.source_process import SourceTimeline
 from qec_twin.simulator import stim_io
 from qec_twin.simulator.artifacts import (
     ArtifactPaths,
@@ -26,7 +27,14 @@ from qec_twin.simulator.artifacts import (
 )
 from qec_twin.simulator.circuit_ir import CircuitIR
 from qec_twin.simulator.noise_spec import FrontendNoiseSpec
-from qec_twin.simulator.record_schema import b8_manifest_entry
+from qec_twin.simulator.record_schema import b8_manifest_entry, validate_evaluator_sidecars
+from qec_twin.simulator.source_sidecar import (
+    SourceTimelineBinding,
+    build_source_timeline_binding_manifest,
+    load_source_timeline_from_manifest,
+    source_binding_public_stub,
+    write_source_timeline_sidecar,
+)
 from qec_twin.simulator.stim_source import (
     CircuitIRSource,
     CircuitSource,
@@ -77,6 +85,11 @@ class SimulationResult:
             artifact_key="obs_flips_predicted",
         )
 
+    def load_source_timeline(self) -> SourceTimeline:
+        """Read the evaluator-only source timeline sidecar for this run."""
+
+        return load_source_timeline_from_manifest(self.paths.out_dir, self.manifest)
+
 
 class Simulator:
     """Small frontend facade for Stim-compatible QEC simulator artifacts."""
@@ -100,15 +113,30 @@ class Simulator:
         shots: int,
         out_dir: str | Path,
         noise: FrontendNoiseSpec | None = None,
+        source_timeline: SourceTimeline | None = None,
+        source_binding: SourceTimelineBinding | None = None,
         seed: int = 0,
         decoder: str = "pymatching",
     ) -> SimulationResult:
         """Run the Stim-compatible frontend and write standard simulator artifacts."""
 
-        if int(shots) <= 0:
-            raise ValueError("shots must be positive")
+        shot_count = _require_positive_int("shots", shots)
         if decoder != "pymatching":
             raise ValueError("only decoder='pymatching' is implemented in the frontend slice")
+        paths = artifact_paths(out_dir)
+        paths.out_dir.mkdir(parents=True, exist_ok=True)
+        clear_known_artifacts(paths)
+
+        noise_source_timeline = getattr(noise, "source_timeline", None)
+        if noise_source_timeline is not None:
+            if source_timeline is not None and source_timeline.to_manifest() != noise_source_timeline.to_manifest():
+                raise ValueError("noise source_timeline and run source_timeline do not match")
+            source_timeline = noise_source_timeline
+        noise_source_binding = getattr(noise, "source_binding", None)
+        if noise_source_binding is not None:
+            if source_binding is not None and source_binding != noise_source_binding:
+                raise ValueError("noise source_binding and run source_binding do not match")
+            source_binding = noise_source_binding
 
         compiled = self.source.compile(noise)
         ideal_circuit = compiled.ideal_circuit
@@ -116,18 +144,32 @@ class Simulator:
         schema = compiled.record_schema
         if schema is None:  # pragma: no cover - CompiledCircuit validation sets this
             raise ValueError("compiled circuit is missing record_schema")
-
-        paths = artifact_paths(out_dir)
-        paths.out_dir.mkdir(parents=True, exist_ok=True)
-        clear_known_artifacts(paths)
+        source_projection_audit = getattr(compiled, "source_projection_audit", None)
+        source_projection_status = (
+            source_projection_audit.get("execution_status")
+            if isinstance(source_projection_audit, dict)
+            else None
+        )
+        source_binding_manifest = None
+        source_binding_stub = None
+        if source_timeline is not None:
+            source_binding_manifest = build_source_timeline_binding_manifest(
+                source_timeline,
+                binding=source_binding,
+                compiled_metadata=compiled.metadata,
+                shots=shot_count,
+                execution_status=source_projection_status,
+                projection_audit=source_projection_audit,
+            )
+            source_binding_stub = source_binding_public_stub(source_binding_manifest)
 
         dem = stim_io.detector_error_model(noisy_circuit, decompose_errors=True)
 
         ideal_det, ideal_obs = stim_io.sample_detector_records(
-            ideal_circuit, shots=int(shots), seed=int(seed)
+            ideal_circuit, shots=shot_count, seed=int(seed)
         )
         noisy_det, noisy_obs = stim_io.sample_detector_records(
-            noisy_circuit, shots=int(shots), seed=int(seed)
+            noisy_circuit, shots=shot_count, seed=int(seed)
         )
 
         preds = m4_decode.decode_dem(dem, noisy_det)
@@ -166,6 +208,21 @@ class Simulator:
         write_json(paths.theory_prediction, theory_prediction)
         write_json(paths.decoder_results, decoder_results)
 
+        evaluator_sidecars = list(compiled.evaluator_sidecars)
+        source_artifacts = None
+        if source_timeline is not None:
+            source_artifacts, source_sidecar, source_binding_manifest, source_binding_stub = write_source_timeline_sidecar(
+                source_timeline,
+                paths,
+                binding=source_binding,
+                compiled_metadata=compiled.metadata,
+                shots=shot_count,
+                execution_status=source_projection_status,
+                projection_audit=source_projection_audit,
+            )
+            evaluator_sidecars.append(source_sidecar)
+        evaluator_sidecars = list(validate_evaluator_sidecars(tuple(evaluator_sidecars)))
+
         artifacts = {
             "circuit_ideal": _file_entry(paths.circuit_ideal),
             "circuit_noisy_pauli": _file_entry(paths.circuit_noisy_pauli),
@@ -180,12 +237,14 @@ class Simulator:
             "theory_prediction": _file_entry(paths.theory_prediction),
             "decoder_results": _file_entry(paths.decoder_results),
         }
+        if source_artifacts is not None:
+            artifacts.update(source_artifacts)
         manifest = {
             "schema": "qec_twin.simulator_frontend.v1",
             "backend": compiled.backend,
             "representability": compiled.representability,
             "source_type": compiled.source_type,
-            "shots": int(shots),
+            "shots": shot_count,
             "seed": int(seed),
             "decoder": decoder,
             "decoder_provenance": m4_decode.pymatching_provenance(),
@@ -196,7 +255,8 @@ class Simulator:
             "record_schema": schema.to_manifest(),
             "circuit_metadata": dict(compiled.metadata),
             "noise": compiled.noise_manifest,
-            "evaluator_sidecars": list(compiled.evaluator_sidecars),
+            "evaluator_sidecars": evaluator_sidecars,
+            "source_binding": source_binding_stub,
             "artifacts": artifacts,
         }
         write_json(paths.manifest, manifest)
@@ -215,6 +275,8 @@ class Simulator:
         *,
         shots: int,
         out_dir: str | Path,
+        source_timeline: SourceTimeline | None = None,
+        source_binding: SourceTimelineBinding | None = None,
         seed: int = 0,
         decoder: str = "pymatching",
     ) -> SimulationResult:
@@ -226,7 +288,15 @@ class Simulator:
                 "run_noiseless requires the source to compile to identical ideal/noisy circuits "
                 "with no noise manifest; use run(noise=None) for pre-noised sources"
             )
-        return Simulator(compiled).run(shots=shots, out_dir=out_dir, noise=None, seed=seed, decoder=decoder)
+        return Simulator(compiled).run(
+            shots=shots,
+            out_dir=out_dir,
+            noise=None,
+            source_timeline=source_timeline,
+            source_binding=source_binding,
+            seed=seed,
+            decoder=decoder,
+        )
 
 
 def simulate_noiseless(
@@ -234,6 +304,8 @@ def simulate_noiseless(
     *,
     shots: int,
     out_dir: str | Path,
+    source_timeline: SourceTimeline | None = None,
+    source_binding: SourceTimelineBinding | None = None,
     seed: int = 0,
     decoder: str = "pymatching",
 ) -> SimulationResult:
@@ -242,6 +314,8 @@ def simulate_noiseless(
     return Simulator(circuit).run_noiseless(
         shots=shots,
         out_dir=out_dir,
+        source_timeline=source_timeline,
+        source_binding=source_binding,
         seed=seed,
         decoder=decoder,
     )
@@ -316,3 +390,17 @@ def _b8_entry(path, bits_per_shot: int) -> dict:
     if path is not None:
         entry["sha256"] = file_sha256(path)
     return entry
+
+
+def _require_positive_int(name: str, value: int) -> int:
+    if isinstance(value, bool) or isinstance(value, (str, bytes)):
+        raise ValueError(f"{name} must be a positive integer, got {value!r}")
+    if isinstance(value, (int, np.integer)):
+        out = int(value)
+    elif isinstance(value, (float, np.floating)) and float(value).is_integer():
+        out = int(value)
+    else:
+        raise ValueError(f"{name} must be a positive integer, got {value!r}")
+    if out <= 0:
+        raise ValueError(f"{name} must be a positive integer, got {value!r}")
+    return out

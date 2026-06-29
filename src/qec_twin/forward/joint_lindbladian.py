@@ -49,14 +49,16 @@ CHOI CONVENTION (matches `superop_to_truncated_kraus_1q` exactly)
 -----------------------------------------------------------------
 `Choi(E) = Sigma_{p,q} E(|p><q|) (x) |p><q|`  (a (D^2, D^2) PSD matrix). Hermitian-
 symmetrise, eigendecompose; Kraus `K_k = sqrt(w_k) * V[:,k].reshape(D, D)` (C/row-
-major reshape, matching the in-tree convention) for every eigenvalue
-`w_k > NUMERICAL_ZERO`. Because `S = expm(L*dt)` for a GKSL `L` is CPTP, the Choi is
-PSD and `Sigma_k K_k^dag K_k = I` already; we drop the structural-zero eigenvalues
-(< NUMERICAL_ZERO) and (defensively) complete any trace-preservation defect with an
-identity-sink term, exactly as the validated 1q path does. Process fidelity is the
-Choi-STATE fidelity of the two channels' (trace-normalised) Choi matrices — the SAME
-Choi/process-fidelity convention the project's `qutip_*` gtchecks use, so G2 is
-consistent with the channel-oracle checks.
+major reshape, matching the in-tree convention) for every positive eigenvalue by
+default. Because `S = expm(L*dt)` for a GKSL `L` is CPTP, the Choi is PSD and
+`Sigma_k K_k^dag K_k = I` already; negative round-off eigenvalues are ignored and
+any trace-preservation defect is defensively completed with an identity-sink term,
+exactly as the validated 1q path does. Callers may request positive-eigenvalue
+rank pruning with `tol > 0`, but the public Axis-1 evidence path defaults to
+lossless positive-eigenvalue retention. Process fidelity is the Choi-STATE fidelity
+of the two channels' (trace-normalised) Choi matrices — the SAME Choi/process-
+fidelity convention the project's `qutip_*` gtchecks use, so G2 is consistent with
+the channel-oracle checks.
 
 GPU-ONLY (memory rule). `device="cuda"`, `torch.linalg.matrix_exp`, complex128, NO
 CPU fallback (fix launch-bound paths, never `cuda if available else cpu`). torch is
@@ -186,7 +188,7 @@ def _apply_superop_to_dyad(S, i, j, D):
     return col.reshape(D, D).transpose(-1, -2).clone()
 
 
-def superop_to_kraus(S, *, device="cuda", tol: float = NUMERICAL_ZERO,
+def superop_to_kraus(S, *, device="cuda", tol: float = 0.0,
                      completion: str = "identity_sink"):
     r"""Choi-eigendecompose the column-stacked superoperator ``S`` (``(D^2, D^2)``)
     into a CPTP Kraus stack ``(k, D, D)``.
@@ -194,11 +196,14 @@ def superop_to_kraus(S, *, device="cuda", tol: float = NUMERICAL_ZERO,
     Choi convention (matches `superop_to_truncated_kraus_1q`):
         Choi = Sigma_{p,q} E(|p><q|) (x) |p><q|   (PSD for a CPTP E).
     Eigendecompose the Hermitian-symmetrised Choi; keep eigenpairs with eigenvalue
-    ``> tol`` (drop the structural zeros); Kraus ``K = sqrt(w) * V[:,k].reshape(D, D)``
-    (C/row-major reshape, the in-tree convention). For a true GKSL ``expm`` the map is
-    already trace-preserving; ``identity_sink`` (re-)injects any residual TP defect to
-    the top level so the returned stack is exactly CPTP. ``renormalize`` returns the raw
-    (trace-non-increasing) Kraus instead.
+    ``> tol``. The default ``tol=0`` preserves every positive Choi eigenvalue so the
+    dense Axis-1 evidence path does not silently drop rare Kraus branches below the
+    project-wide numerical floor. Positive-eigenvalue rank pruning is available by
+    passing ``tol > 0`` explicitly. Kraus ``K = sqrt(w) * V[:,k].reshape(D, D)``
+    (C/row-major reshape, the in-tree convention). For a true GKSL ``expm`` the map
+    is already trace-preserving; ``identity_sink`` (re-)injects any residual TP defect
+    to the top level so the returned stack is exactly CPTP. ``renormalize`` returns
+    the raw (trace-non-increasing) Kraus instead.
 
     Returns ``(kraus_stack, tp_residual, dropped_mass)``.
     """
@@ -224,7 +229,15 @@ def superop_to_kraus(S, *, device="cuda", tol: float = NUMERICAL_ZERO,
             choi = choi + torch.kron(Epq.contiguous(), epq.contiguous())
 
     choi = 0.5 * (choi + choi.conj().transpose(-1, -2))
-    w, V = torch.linalg.eigh(choi)
+    try:
+        w, V = torch.linalg.eigh(choi)
+    except RuntimeError as exc:
+        if "linalg.eigh" not in str(exc):
+            raise
+        # CUDA Hermitian eigensolve can fail to converge for valid, highly
+        # degenerate PSD Choi matrices at the dense 5q carrier size. SVD stays
+        # on the GPU and gives the same decomposition for PSD Choi evidence.
+        V, w, _ = torch.linalg.svd(choi)
 
     kraus = []
     dropped_mass = 0.0
@@ -271,14 +284,16 @@ def superop_to_kraus(S, *, device="cuda", tol: float = NUMERICAL_ZERO,
 # public API                                                                   #
 # --------------------------------------------------------------------------- #
 def assemble_substep_channel(H_list, c_list, dt, *, device="cuda",
-                             completion: str = "identity_sink"):
+                             completion: str = "identity_sink",
+                             choi_eigenvalue_tol: float = 0.0):
     r"""The Axis-1 JOINT within-substep channel as a CPTP Kraus stack ``(k, D, D)``.
 
     Assembles ALL active mechanisms into ONE Liouvillian
     ``L = -i[Sigma_i H_i, .] + Sigma_k D[c_k]`` (column-stacking convention) and
     propagates ONCE: ``S = expm(L*dt)`` (a single ``torch.linalg.matrix_exp`` on cuda,
     complex128), then Choi-eigendecomposes ``S`` -> CPTP Kraus (identity-sink
-    completion, eigenvalues < NUMERICAL_ZERO dropped).
+    completion by default, every positive Choi eigenvalue retained unless
+    ``choi_eigenvalue_tol > 0`` is explicitly requested).
 
     The within-substep cross-terms ``[H_i, H_j]`` are retained EXACTLY (the joint
     propagation), which is what a naive `composed_substep_channel` chain drops.
@@ -289,19 +304,29 @@ def assemble_substep_channel(H_list, c_list, dt, *, device="cuda",
       dt       : substep duration (ns); validated finite + > 0.
       device   : cuda (GPU-only, no CPU fallback).
       completion : "identity_sink" (default, CPTP) or "renormalize" (raw).
+      choi_eigenvalue_tol : positive-eigenvalue pruning threshold. The default
+        ``0.0`` is the lossless evidence path; use ``NUMERICAL_ZERO`` only for an
+        explicitly rank-pruned diagnostic.
 
     Returns the Kraus stack tensor ``(k, D, D)`` complex128 on ``device``.
 
-    The Choi->Kraus trace-preservation residual and the dropped (sub-tolerance) Choi mass are
-    SURFACED via a loud ``RuntimeWarning`` if they exceed ``1e-8`` / ``NUMERICAL_ZERO`` — a
-    non-CPTP / lossy result (e.g. a bad generator or a numerically pathological dt) is never
-    swallowed silently. For a valid GKSL ``expm`` both are ~machine-zero.
+    The Choi->Kraus trace-preservation residual and any intentionally pruned positive
+    Choi mass are SURFACED via a loud ``RuntimeWarning`` if they exceed ``1e-8`` /
+    ``NUMERICAL_ZERO`` — a non-CPTP / lossy result (e.g. a bad generator, a numerically
+    pathological dt, or an explicit pruning threshold) is never swallowed silently. For
+    a valid GKSL ``expm`` under the default lossless positive-eigenvalue policy both are
+    ~machine-zero.
     """
     import warnings
 
     L = liouvillian_superop(H_list, c_list, device=device)
     S = _superop_expm(L, dt, device=device)
-    kraus, tp_resid, dropped = superop_to_kraus(S, device=device, completion=completion)
+    kraus, tp_resid, dropped = superop_to_kraus(
+        S,
+        device=device,
+        tol=float(choi_eigenvalue_tol),
+        completion=completion,
+    )
     if tp_resid > 1e-8:
         warnings.warn(
             f"assemble_substep_channel: trace-preservation residual {tp_resid:.3e} > 1e-8 — "
@@ -312,7 +337,8 @@ def assemble_substep_channel(H_list, c_list, dt, *, device="cuda",
     if dropped > NUMERICAL_ZERO:
         warnings.warn(
             f"assemble_substep_channel: dropped Choi mass {dropped:.3e} > NUMERICAL_ZERO — "
-            f"sub-tolerance eigenvalues were discarded (lossy channel reconstruction).",
+            f"positive Choi eigenvalues were pruned by choi_eigenvalue_tol "
+            f"(lossy channel reconstruction).",
             RuntimeWarning,
             stacklevel=2,
         )

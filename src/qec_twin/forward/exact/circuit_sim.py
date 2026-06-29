@@ -88,7 +88,7 @@ def apply_channel_local(rho: torch.Tensor, kraus: torch.Tensor, targets, n: int)
     """Apply a local CPTP channel (stack of ``k``-qubit Kraus ops) on ``targets``."""
     if kraus.device != rho.device:
         kraus = kraus.to(rho.device)
-    if rho.is_cuda and _accel_available():
+    if rho.is_cuda and len(tuple(targets)) <= 4 and _accel_available():
         from qec_twin.forward import accel
 
         return accel.apply_channel_local_fused(rho, kraus, targets, n)

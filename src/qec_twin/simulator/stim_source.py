@@ -16,7 +16,11 @@ from typing import Protocol, runtime_checkable
 from qec_twin.simulator import stim_io
 from qec_twin.simulator.circuit_ir import CircuitIR
 from qec_twin.simulator.metadata_guard import validate_public_metadata
-from qec_twin.simulator.noise_spec import FrontendNoiseSpec, apply_stim_pauli_noise
+from qec_twin.simulator.noise_spec import (
+    SOURCE_PROJECTION_AUDIT_METADATA_KEY,
+    FrontendNoiseSpec,
+    apply_stim_pauli_noise,
+)
 from qec_twin.simulator.record_schema import (
     RecordSchema,
     require_frontend_representability,
@@ -39,6 +43,7 @@ class CompiledCircuit:
     noise_manifest: dict | None = None
     record_schema: RecordSchema | None = None
     evaluator_sidecars: tuple[dict, ...] = ()
+    source_projection_audit: dict | None = None
 
     def __post_init__(self) -> None:
         require_frontend_representability(
@@ -82,6 +87,11 @@ class CompiledCircuit:
             "evaluator_sidecars",
             validate_evaluator_sidecars(tuple(self.evaluator_sidecars)),
         )
+        if self.source_projection_audit is not None:
+            audit = dict(self.source_projection_audit)
+            if audit.get("visibility") != "evaluator_only":
+                raise ValueError("source_projection_audit must be visibility='evaluator_only'")
+            object.__setattr__(self, "source_projection_audit", audit)
 
 
 @runtime_checkable
@@ -105,6 +115,7 @@ class CircuitIRSource:
         noise_manifest = None
         if noise is not None:
             noise_manifest = dict(noisy_ir.metadata.get("noise_projection", noise.to_manifest()))
+        source_projection_audit = noisy_ir.metadata.get(SOURCE_PROJECTION_AUDIT_METADATA_KEY)
         return CompiledCircuit(
             ideal_circuit=ideal_circuit,
             noisy_circuit=noisy_circuit,
@@ -112,6 +123,7 @@ class CircuitIRSource:
             source_type="circuit_ir",
             noise_manifest=noise_manifest,
             record_schema=RecordSchema.from_circuit_ir(self.circuit, noisy_circuit),
+            source_projection_audit=source_projection_audit,
         )
 
 

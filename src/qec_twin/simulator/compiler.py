@@ -4,6 +4,11 @@ from __future__ import annotations
 
 from qec_twin.simulator.circuit_ir import CircuitBuilder, CircuitIR
 from qec_twin.simulator.code_spec import CodeSpec, PauliTerm
+from qec_twin.simulator.axis1_context import AXIS1_LOCAL_LINDBLAD_CONTEXT_METADATA_KEY
+from qec_twin.simulator.metadata_guard import (
+    AXIS1_STATIC_ZZ_CALIBRATIONS_METADATA_KEY,
+    AXIS1_STATIC_ZZ_COUPLINGS_METADATA_KEY,
+)
 from qec_twin.simulator.noise_spec import FrontendNoiseSpec
 from qec_twin.simulator.record_layout import (
     build_repeated_memory_record_layout,
@@ -44,6 +49,20 @@ def compile_code_spec(
             "qubit_coords": _qubit_coords(spec),
         },
     )
+    if (
+        AXIS1_STATIC_ZZ_COUPLINGS_METADATA_KEY in spec.metadata
+        or AXIS1_STATIC_ZZ_CALIBRATIONS_METADATA_KEY in spec.metadata
+    ):
+        builder.declare_static_zz_couplings(
+            spec.metadata.get(AXIS1_STATIC_ZZ_COUPLINGS_METADATA_KEY, ()),
+            zeta_rad_per_ns_by_edge=spec.metadata.get(
+                AXIS1_STATIC_ZZ_CALIBRATIONS_METADATA_KEY
+            ),
+        )
+    if AXIS1_LOCAL_LINDBLAD_CONTEXT_METADATA_KEY in spec.metadata:
+        builder.declare_axis1_local_lindblad_context(
+            spec.metadata[AXIS1_LOCAL_LINDBLAD_CONTEXT_METADATA_KEY]
+        )
     for round_index in range(spec.rounds):
         for check in spec.checks:
             _measure_check(builder, check, round_index=round_index)

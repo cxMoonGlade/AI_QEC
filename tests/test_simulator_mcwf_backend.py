@@ -10,6 +10,7 @@ requires_cuda = pytest.mark.skipif(
 
 from qec_twin.simulator.mcwf_backend import (  # noqa: E402
     CDTYPE,
+    DenseQuditMcwfBackend,
     DenseQutritMcwfBackend,
     qutrit_index_from_digits,
 )
@@ -20,6 +21,97 @@ from qec_twin.simulator.mcwf_executor import (  # noqa: E402
     NativeOpStreamMcwfExecutor,
 )
 from qec_twin.simulator.mcwf_program import CompiledMcwfProgram, all_ones_phase, h, kraus_all_sites, x  # noqa: E402
+
+
+@requires_cuda
+def test_dense_qudit_mcwf_backend_supports_qubit_hilbert_space():
+    backend = DenseQuditMcwfBackend((2,), seed=101, device="cuda")
+    inv = 2.0**-0.5
+    h_gate = torch.tensor(
+        [[inv, inv], [inv, -inv]],
+        dtype=CDTYPE,
+        device=backend.device,
+    )
+
+    psi = backend.basis_state(3, [0])
+    out = backend.apply_operator(psi, h_gate, [0])
+    probs = backend.probabilities(out)
+
+    assert backend.local_dims == (2,)
+    assert backend.dim == 2
+    assert torch.allclose(
+        probs,
+        torch.full((3, 2), 0.5, dtype=probs.dtype, device=backend.device),
+        atol=1e-12,
+        rtol=1e-12,
+    )
+
+
+@requires_cuda
+def test_dense_qudit_mcwf_backend_supports_qutrit_leakage_level():
+    backend = DenseQuditMcwfBackend((3,), seed=102, device="cuda")
+    leak_12 = torch.eye(3, dtype=CDTYPE, device=backend.device)
+    leak_12[1, 1] = 0.0
+    leak_12[2, 2] = 0.0
+    leak_12[2, 1] = 1.0
+    leak_12[1, 2] = 1.0
+
+    psi = backend.basis_state(4, [1])
+    out = backend.apply_operator(psi, leak_12, [0])
+    probs = backend.probabilities(out)
+
+    assert backend.index_from_digits([2]) == 2
+    assert torch.allclose(
+        probs[:, 2],
+        torch.ones(4, dtype=probs.dtype, device=backend.device),
+        atol=1e-12,
+        rtol=1e-12,
+    )
+    assert torch.allclose(
+        probs[:, 1],
+        torch.zeros(4, dtype=probs.dtype, device=backend.device),
+        atol=1e-12,
+        rtol=1e-12,
+    )
+
+
+@requires_cuda
+def test_dense_qudit_mcwf_backend_supports_ququart_level_and_measurement():
+    backend = DenseQuditMcwfBackend((4,), seed=103, device="cuda")
+    phase3 = torch.diag(
+        torch.tensor([1.0, 1.0, 1.0, -1.0], dtype=CDTYPE, device=backend.device)
+    )
+
+    psi = backend.basis_state(5, [3])
+    out = backend.apply_operator(psi, phase3, [0])
+    outcomes, collapsed = backend.measure_sites(out, [0])
+
+    assert backend.local_dims == (4,)
+    assert torch.equal(outcomes, torch.full((5, 1), 3, dtype=torch.long, device=backend.device))
+    assert torch.allclose(collapsed, -psi, atol=1e-12, rtol=1e-12)
+
+
+@requires_cuda
+def test_dense_qudit_mcwf_backend_samples_kraus_on_mixed_local_dimensions():
+    backend = DenseQuditMcwfBackend((2, 4), seed=104, device="cuda")
+    promote = torch.eye(4, dtype=CDTYPE, device=backend.device)
+    promote[1, 1] = 0.0
+    promote[3, 3] = 0.0
+    promote[3, 1] = 1.0
+    promote[1, 3] = 1.0
+
+    psi = backend.basis_state(6, [1, 1])
+    out = backend.apply_kraus(psi, promote.unsqueeze(0), [1])
+    probs = backend.probabilities(out)
+    target_index = backend.index_from_digits([1, 3])
+
+    assert backend.local_dims == (2, 4)
+    assert torch.allclose(
+        probs[:, target_index],
+        torch.ones(6, dtype=probs.dtype, device=backend.device),
+        atol=1e-12,
+        rtol=1e-12,
+    )
 
 
 @requires_cuda
