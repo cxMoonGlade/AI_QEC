@@ -1,11 +1,81 @@
 from __future__ import annotations
 
-"""Dense qutrit/ququart certification for Axis-1 leakage lowering.
+"""De-circularized dense certification for Axis-1 two-site leakage Hamiltonians (W-C fix).
 
-This module certifies registered MCWF/MPS leakage carrier terms against small
-dense independent oracles. It is a verification surface only: it does not emit a
-dense channel payload, does not replace the computational-subspace evidence
-path, and does not add a scored metric.
+DROP-IN REPLACEMENT for the two-site half of
+``src/qec_twin/simulator/axis1_qutrit_leakage_certification.py``. Author-only candidate;
+Claude integrates. CPU self-tests are fine; the production gate stays GPU-only.
+
+-------------------------------------------------------------------------------
+THE BUG (W-C, round-1, all four models flagged; GLM both-wrong falsifier)
+-------------------------------------------------------------------------------
+The shipped ``axis1_two_site_leakage_hamiltonian_certification_manifest``:
+  (1) imports ``_hamiltonian_group_gates`` FROM the carrier module under test and certifies
+      the carrier's OWN lowered group gate -- the verifier and the verified are the same
+      lowering path; and
+  (2) builds its "independent" oracle (``_independent_two_site_hamiltonian_term``) from the
+      BYTE-EQUAL level dict ``_TWO_SITE_TRANSPORT_LEVELS``, the same ``level0*d1+level1``
+      index convention, the same symmetric-H structure, and the same ``expm(-iHdt)`` kernel.
+Its ONLY negative control is ``wrong_unit`` (a scalar rescale), which never probes the
+level pairing. Therefore a SHARED wrong physics map (e.g. a transposed/wrong level pair) is
+mirrored on both sides and passes with diff = 0 -- the certificate certifies nothing about
+the physics map. (FAITHFULNESS_PROTOCOL.md root cause: circular verification.)
+
+-------------------------------------------------------------------------------
+THE FIX (proven in outputs/axis1_review/agentic_v2/opus/r2_two_site_leakage_decircularized.py,
+GPU run RTX 5090: all families 0.00 vs hand-typed ref, wrong-level/sign-flip controls 2.79/2.05)
+-------------------------------------------------------------------------------
+FAITHFULNESS_PROTOCOL Rule I -- verify against ground truth INDEPENDENT of the implementation:
+
+  * The reference level maps are HAND-TYPED HERE from the literature-grounded prereg, NOT
+    imported from the carrier. Anchors (read into committed reading notes):
+      - Wood-Gambetta 1704.03081 (leakage operator / channel definitions),
+        docs/papers/reading_notes/wood_gambetta_leakage_characterization_1704.03081.md
+      - Varbanov 2002.07119 (|11><02| seepage, |12><21| mobility, conditional leaked-neighbor
+        phase), docs/papers/reading_notes/varbanov_leakage_detection_surface_2002.07119.md
+      - Miao 2211.04728 (|30><12|, |31><22| two-/single-photon transport, phi~0.65pi),
+        docs/papers/reading_notes/miao_overcoming_leakage_scalable_2211.04728.md
+  * The reference Hamiltonian is built by a FROM-SCRATCH ket-bra constructor
+    (``_ref_two_site_ketbra``) on a fresh index map -- it shares NO helper, NO level dict, and
+    NO lift/cluster code with the carrier.
+  * The carrier side calls ONLY ``_hamiltonian_matrix_for_term`` (the per-term operator builder
+    that IS the W-C bug surface). The lowered group gate is reconstructed IN THIS MODULE by a
+    fresh single-support cluster sum (the certified slice is by construction a single same-support
+    two-site cluster, so the sum is a plain operator add -- no ``_hamiltonian_group_gates`` import,
+    no ``_lift_hamiltonian_to_cluster`` import). The W-A connected-cluster lowering is a SEPARATE,
+    independently-tested concern (finish-plan Step 1/3); this cert isolates the W-C physics map.
+  * NEGATIVE CONTROLS the round-1 cert lacked (level-discriminating, per family):
+      - transport families: a WRONG-LEVEL reference (perturb the left ordered-pair level) must
+        DISAGREE with the carrier (>= 1e-3). The exchange families are SYMMETRIC under
+        (left<->right) swap, so a transposed-ordered-pair control would be inert -- the wrong
+        control is therefore a wrong LEVEL, not a transpose.
+      - conditional-phase families: a SIGN-FLIP reference (negate the Z imprint) must DISAGREE
+        (>= 1e-3); these are not symmetric in the +/- sign assignment.
+    The legacy ``wrong_unit`` (scalar-rescale) control is RETAINED as a second, weaker control.
+
+-------------------------------------------------------------------------------
+METRIC (standard, structural witness; docs/METRICS.md)
+-------------------------------------------------------------------------------
+Max-abs / Frobenius operator distance of the two-site unitary ``exp(-i H dt)`` and of the
+generator ``H`` over the declared local dims. (a)-class EXACT operator identities
+(zero-tolerance, ~1e-12); the numeric gate is the (c)-class go/no-go threshold.
+
+-------------------------------------------------------------------------------
+PRE-REGISTERED PREDICTIONS (before integration; epistemic class in brackets)
+-------------------------------------------------------------------------------
+  Q1 [a exact]: for EVERY two-site leakage family the carrier per-term operator EQUALS the
+     hand-typed literature reference: ||H_carrier - H_ref||_F <= 1e-12 and
+     ||U_carrier - U_ref||_F <= 1e-10. A miss is a CARRIER PHYSICS BUG (the finding the circular
+     cert could never surface).
+  Q2 [a exact, the level-discriminating control round-1 lacked]: every wrong-physics reference
+     (wrong-level for transport, sign-flip for conditional-phase) DISAGREES with the carrier:
+     ||U_carrier - U_wrong||_F >= 1e-3.
+  Q3 [a exact]: every carrier generator is Hermitian: ||H - H^dag||_F <= 1e-12.
+  Q4 [a exact]: the carrier lowered group gate (reconstructed in-cert from the per-term builder)
+     EQUALS the independent hand-typed cluster gate: ||U_lowered - U_ref_cluster||_F <= 1e-10.
+     (Cluster sum = CTRL/ZZ + leakage on the single shared support; the CTRL/ZZ block is itself
+     hand-typed, so the cluster reference imports no carrier physics.)
+  PASS [c gate]: Q1 and Q2 and Q3 and Q4 for all certified families.
 """
 
 import hashlib
@@ -27,7 +97,12 @@ from qec_twin.simulator.axis1_channel_evidence import (
     _validate_schedule_for_axis1_channel_evidence,
 )
 from qec_twin.simulator.axis1_context import axis1_local_lindblad_context_from_schedule
-from qec_twin.simulator.axis1_mcwf_mps_execution import _hamiltonian_group_gates
+
+# IMPORTANT (W-C de-circularization): we import ONLY the carrier's PER-TERM operator builder
+# (the object under test). We do NOT import ``_hamiltonian_group_gates`` (the lowering path that
+# was both verifier and verified) and we do NOT import any level dict / lift helper. A grep for
+# ``_hamiltonian_group_gates`` in this module returns nothing -- that is the acceptance gate.
+from qec_twin.simulator.axis1_mcwf_mps_execution import _hamiltonian_matrix_for_term
 from qec_twin.simulator.axis1_state_evidence import _require_cuda_device
 
 
@@ -45,19 +120,45 @@ AXIS1_TWO_SITE_LEAKAGE_HAMILTONIAN_CERTIFICATION_REPRESENTABILITY = (
 )
 _SUPEROP_DIFF_GATE = 2.0e-12
 _UNITARY_DIFF_GATE = 2.0e-12
+# Independent-reference operator-identity gate (a-class exact, witnessed numerically): the carrier
+# per-term operator and the hand-typed literature reference are the SAME matrix up to fp roundoff.
+_INDEPENDENT_REFERENCE_DIFF_GATE = 1.0e-10
 _WRONG_UNIT_CONTROL_MIN = 1.0e-6
-_TWO_SITE_TRANSPORT_LEVELS = {
-    "LEAK_EXCHANGE_11_02": ((1, 1), (0, 2)),
-    "LEAK_MOBILITY_12_21": ((1, 2), (2, 1)),
-    "LEAK_TRANSPORT_30_12": ((3, 0), (1, 2)),
-    "LEAK_TRANSPORT_31_22": ((3, 1), (2, 2)),
-}
+# Level-discriminating control gate (the control round-1 W-C lacked): a wrong-level / sign-flip
+# reference must produce a genuinely different gate.
+_WRONG_PHYSICS_CONTROL_MIN = 1.0e-3
+
+# Conditional-phase families (kept for slice classification / payload introspection).
 _TWO_SITE_CONDITIONAL_PHASE_FAMILIES = frozenset(
     {"LEAK_COND_PHASE_LEFT2_RIGHTZ", "LEAK_COND_PHASE_LEFTZ_RIGHT2"}
 )
-_TWO_SITE_CERTIFIABLE_FAMILIES = frozenset(_TWO_SITE_TRANSPORT_LEVELS) | (
-    _TWO_SITE_CONDITIONAL_PHASE_FAMILIES
-)
+
+# -----------------------------------------------------------------------------------------------
+# HAND-TYPED, LITERATURE-GROUNDED reference level maps. These are typed HERE from the prereg --
+# they are NOT imported from the carrier (that import is exactly the W-C circularity). A divergence
+# between this table and the carrier's private ``_TWO_SITE_LEAKAGE_HAMILTONIAN_LEVELS`` is a finding,
+# not a bug in this module.
+# -----------------------------------------------------------------------------------------------
+# Ordered transport pairs (level_left, level_right) <-> (level_left', level_right'); coherent
+# excitation-number-conserving exchange  H = coeff * (|p><p'| + |p'><p|).
+_REF_TRANSPORT_PAIRS: dict[str, tuple[tuple[int, int], tuple[int, int]]] = {
+    "LEAK_EXCHANGE_11_02": ((1, 1), (0, 2)),   # Varbanov 2002.07119  |11> <-> |02|
+    "LEAK_MOBILITY_12_21": ((1, 2), (2, 1)),   # Varbanov mobility    |12> <-> |21|
+    "LEAK_TRANSPORT_30_12": ((3, 0), (1, 2)),  # Miao 2211.04728      |30> <-> |12| (ququart)
+    "LEAK_TRANSPORT_31_22": ((3, 1), (2, 2)),  # Miao 2211.04728      |31> <-> |22| (ququart)
+}
+# Conditional leaked-neighbor phase: a leaked level (2) on one site imprints +/- coeff (a Z) on the
+# neighbor's |0>/|1> (Miao phi~0.65pi; Varbanov phi_L). Diagonal, sign-asymmetric.
+_REF_COND_PHASE: dict[str, dict[tuple[int, int], float]] = {
+    "LEAK_COND_PHASE_LEFT2_RIGHTZ": {(2, 0): +1.0, (2, 1): -1.0},
+    "LEAK_COND_PHASE_LEFTZ_RIGHT2": {(0, 2): +1.0, (1, 2): -1.0},
+}
+_REF_TWO_SITE_LEAKAGE_FAMILIES = frozenset(_REF_TRANSPORT_PAIRS) | frozenset(_REF_COND_PHASE)
+# Non-leakage two-site control Hamiltonians the lowered cluster may also contain. The diagonal
+# CZ/ZZ generator is hand-typed here (|11><11| coefficient) so the cluster reference imports no
+# carrier physics; CTRL_CZ uses coefficient pi/dt (so exp(-i dt H) = diag(1,1,1,-1) on the
+# computational 2x2 block), matching the standard CZ convention.
+_TWO_SITE_DIAGONAL_CONTROL_FAMILIES = frozenset({"CTRL_CZ", "ZZ", "FSIM_PHASE"})
 
 
 def axis1_qutrit_leakage_oracle_certification_manifest(
@@ -67,15 +168,10 @@ def axis1_qutrit_leakage_oracle_certification_manifest(
     superop_diff_gate: float = _SUPEROP_DIFF_GATE,
     wrong_unit_control_min: float = _WRONG_UNIT_CONTROL_MIN,
 ) -> dict[str, Any]:
-    """Certify one-site qutrit leakage lowering against `leakage_channel_super`.
+    """Certify one-site qutrit leakage lowering against ``leakage_channel_super``.
 
-    Public Axis-1 leakage context supplies per-ns generator parameters. The dense
-    Wood-Gambetta oracle consumes dimensionless unit-time parameters, so the
-    certified conversion is explicit:
-
-    ``theta = leak_exchange_12_rad_per_ns * dt_ns``,
-    ``g_seep = leak_seep_21_per_ns * dt_ns``, and
-    ``g_heat = leak_heat_12_per_ns * dt_ns``.
+    Unchanged from the shipped one-site cert (already non-circular: the oracle is the
+    independent ``leakage_channel_super``). Carried here so the module stays a drop-in.
     """
 
     dev = _require_cuda_device(device)
@@ -201,16 +297,18 @@ def axis1_two_site_leakage_hamiltonian_certification_manifest(
     *,
     local_dims: tuple[int, ...] | list[int] | None = None,
     device: str = "cuda",
-    unitary_diff_gate: float = _UNITARY_DIFF_GATE,
+    unitary_diff_gate: float = _INDEPENDENT_REFERENCE_DIFF_GATE,
     wrong_unit_control_min: float = _WRONG_UNIT_CONTROL_MIN,
+    wrong_physics_control_min: float = _WRONG_PHYSICS_CONTROL_MIN,
 ) -> dict[str, Any]:
-    """Certify two-site leakage Hamiltonian lowering against a dense oracle.
+    """Certify two-site leakage Hamiltonian lowering against an INDEPENDENT hand-typed oracle.
 
-    The certified object is the same-support Hamiltonian block consumed by the
-    fixed-microstep MCWF/MPS path. The dense oracle is a separately constructed
-    two-site matrix exponential over the declared local dimensions. This is a
-    code-correctness gate, not channel evidence, not a DEM/decoder artifact, and
-    not a metric.
+    De-circularized (W-C fix): the certified objects are the carrier PER-TERM operators (built by
+    ``_hamiltonian_matrix_for_term``) AND the in-cert reconstruction of the lowered group gate. The
+    reference is HAND-TYPED from the leakage literature here, not imported from the carrier; and the
+    lowered group gate is rebuilt in this module (single same-support cluster sum), so NO
+    ``_hamiltonian_group_gates`` import is involved. Code-correctness gate only -- not channel
+    evidence, not a DEM/decoder artifact, not a metric.
     """
 
     dev = _require_cuda_device(device)
@@ -229,50 +327,75 @@ def axis1_two_site_leakage_hamiltonian_certification_manifest(
     )
     substep, support, terms = _two_site_hamiltonian_slice(program)
     dt_ns = _positive_dt_ns(substep)
+    d0 = int(dims[support[0]])
+    d1 = int(dims[support[1]])
 
-    groups = _hamiltonian_group_gates(
-        substep,
-        dt_ns=dt_ns,
-        local_dims=dims,
-        device=dev,
-    )
-    matching_groups = [
-        group for group in groups if tuple(int(q) for q in group["support"]) == support
+    leakage_terms = [
+        term for term in terms if str(term["operator_family"]).upper().startswith("LEAK_")
     ]
-    if len(matching_groups) != 1:
-        raise ValueError(
-            "two-site leakage certification requires exactly one lowered "
-            f"Hamiltonian group on support {support!r}"
+    if not leakage_terms:
+        raise ValueError("two-site leakage certification found no LEAK_ Hamiltonian terms")
+
+    # ---- (1) PER-FAMILY operator certification: carrier op vs hand-typed reference. ----
+    # This is the W-C bug surface. The carrier op comes from `_hamiltonian_matrix_for_term`
+    # (under test); the reference comes from the hand-typed table + fresh ket-bra constructor.
+    family_reports: list[dict[str, Any]] = []
+    family_pass = True
+    family_op_diffs: list[float] = []
+    family_control_diffs: list[float] = []
+    for term in leakage_terms:
+        report = _certify_leakage_family_operator(
+            term,
+            dims=(d0, d1),
+            dt_ns=dt_ns,
+            wrong_physics_control_min=float(wrong_physics_control_min),
+            independent_reference_diff_gate=float(_INDEPENDENT_REFERENCE_DIFF_GATE),
+            device=dev,
         )
-    lowered_gate = torch.as_tensor(
-        matching_groups[0]["gate"],
-        dtype=torch.complex128,
-        device=dev,
-    )
-    oracle_gate = _independent_two_site_hamiltonian_gate(
+        family_reports.append(report)
+        family_pass = family_pass and bool(report["passed"])
+        family_op_diffs.append(float(report["max_abs_unitary_diff"]))
+        family_control_diffs.append(float(report["wrong_physics_control"]["max_abs_unitary_diff"]))
+
+    # ---- (2) LOWERED GROUP GATE certification, reconstructed in-cert (no grouping import). ----
+    # The certified slice is by construction a single same-support two-site cluster (see
+    # `_two_site_hamiltonian_slice`: one leakage support; all H-terms on that exact support), so the
+    # connected-cluster lowering reduces to a plain operator sum on the shared support. We rebuild it
+    # HERE from the per-term carrier operators and exponentiate once -- this is independent of
+    # `_hamiltonian_group_gates`, yet certifies the same realized two-site gate the MCWF/MPS path uses.
+    lowered_gate, carrier_families = _reconstruct_lowered_group_gate(
         terms,
         support=support,
-        local_dims=dims,
+        dims=(d0, d1),
+        dt_ns=dt_ns,
+        device=dev,
+    )
+    ref_cluster_gate = _independent_reference_cluster_gate(
+        terms,
+        support=support,
+        dims=(d0, d1),
         dt_ns=dt_ns,
         device=dev,
         wrong_unit_for_leakage=False,
     )
-    wrong_gate = _independent_two_site_hamiltonian_gate(
+    wrong_unit_cluster_gate = _independent_reference_cluster_gate(
         terms,
         support=support,
-        local_dims=dims,
+        dims=(d0, d1),
         dt_ns=dt_ns,
         device=dev,
         wrong_unit_for_leakage=True,
     )
-    diff = float(torch.max(torch.abs(lowered_gate - oracle_gate)).item())
-    wrong_diff = float(torch.max(torch.abs(lowered_gate - wrong_gate)).item())
-    gate = float(unitary_diff_gate)
+    cluster_diff = float(torch.max(torch.abs(lowered_gate - ref_cluster_gate)).item())
+    wrong_unit_diff = float(torch.max(torch.abs(lowered_gate - wrong_unit_cluster_gate)).item())
+
+    cluster_gate = float(unitary_diff_gate)
     control_min = float(wrong_unit_control_min)
-    passed = bool(diff <= gate and wrong_diff >= control_min)
-    leakage_terms = [
-        term for term in terms if str(term["operator_family"]).upper().startswith("LEAK_")
-    ]
+    cluster_pass = bool(cluster_diff <= cluster_gate)
+    wrong_unit_pass = bool(wrong_unit_diff >= control_min)
+    passed = bool(family_pass and cluster_pass and wrong_unit_pass)
+
+    lowered_group_family = "H_CLUSTER[" + "+".join(carrier_families) + "]"
     payload: dict[str, Any] = {
         "schema": AXIS1_TWO_SITE_LEAKAGE_HAMILTONIAN_CERTIFICATION_SCHEMA,
         "source_kind": schedule.source_kind,
@@ -302,8 +425,26 @@ def axis1_two_site_leakage_hamiltonian_certification_manifest(
             "leakage_term_families": [
                 str(term["operator_family"]) for term in leakage_terms
             ],
-            "lowered_group_family": str(
-                matching_groups[0]["term"]["operator_family"]
+            "lowered_group_family": lowered_group_family,
+        },
+        "independence": {
+            "reference_origin": "hand_typed_literature_grounded_in_module",
+            "reference_anchors": [
+                "Wood-Gambetta 1704.03081",
+                "Varbanov 2002.07119",
+                "Miao 2211.04728",
+            ],
+            "imports_hamiltonian_group_gates": False,
+            "imports_carrier_level_dict": False,
+            "carrier_object_under_test": (
+                "qec_twin.simulator.axis1_mcwf_mps_execution._hamiltonian_matrix_for_term"
+            ),
+            "lowered_gate_reconstruction": (
+                "in_module_single_same_support_cluster_sum_then_matrix_exp"
+            ),
+            "decircularization_note": (
+                "reference level maps + cluster sum are independent of the carrier; a shared "
+                "wrong level map can no longer pass (round-1 W-C blind spot closed)"
             ),
         },
         "parameter_conversion": {
@@ -313,26 +454,58 @@ def axis1_two_site_leakage_hamiltonian_certification_manifest(
             ),
             "epistemic_class": "a/c",
         },
-        "oracle_comparison": {
-            "reference": "independent_dense_two_site_hamiltonian_matrix_exp",
-            "lowered_generator": "mcwf_mps_connected_support_cluster_group_gate",
-            "max_abs_unitary_diff": diff,
-            "max_abs_unitary_diff_gate": gate,
-            "gate_role": "heuristic_certification_gate_not_metric",
-            "passed": bool(diff <= gate),
+        "per_family_oracle_certification": {
+            "reference": "hand_typed_literature_two_site_ketbra_reference",
+            "carrier_operator": (
+                "qec_twin.simulator.axis1_mcwf_mps_execution._hamiltonian_matrix_for_term"
+            ),
+            "independent_reference_diff_gate": float(_INDEPENDENT_REFERENCE_DIFF_GATE),
+            "wrong_physics_control_min": float(wrong_physics_control_min),
+            "max_abs_unitary_diff": (max(family_op_diffs) if family_op_diffs else 0.0),
+            "min_wrong_physics_control_diff": (
+                min(family_control_diffs) if family_control_diffs else 0.0
+            ),
+            "passed": bool(family_pass),
             "comparison_outcome_is_metric": False,
             "epistemic_class": "a/c",
+            "families": family_reports,
+        },
+        "oracle_comparison": {
+            "reference": "independent_hand_typed_two_site_cluster_gate",
+            "lowered_generator": (
+                "in_cert_single_support_cluster_sum_of_carrier_per_term_operators"
+            ),
+            "max_abs_unitary_diff": cluster_diff,
+            "max_abs_unitary_diff_gate": cluster_gate,
+            "gate_role": "heuristic_certification_gate_not_metric",
+            "passed": bool(cluster_pass),
+            "comparison_outcome_is_metric": False,
+            "epistemic_class": "a/c",
+        },
+        "wrong_physics_negative_control": {
+            "role": "level_discriminating_negative_control_not_metric",
+            "wrong_policy": (
+                "wrong_level_for_transport_or_sign_flip_for_conditional_phase_per_family"
+            ),
+            "min_abs_unitary_diff": (
+                min(family_control_diffs) if family_control_diffs else 0.0
+            ),
+            "min_expected_diff": float(wrong_physics_control_min),
+            "passed": bool(family_pass),
+            "comparison_outcome_is_metric": False,
+            "epistemic_class": "c",
         },
         "wrong_unit_negative_control": {
             "role": "negative_control_not_metric",
             "wrong_policy": "treat_public_leakage_rate_as_dimensionless_angle",
-            "max_abs_unitary_diff": wrong_diff,
+            "max_abs_unitary_diff": wrong_unit_diff,
             "min_expected_diff": control_min,
-            "passed": bool(wrong_diff >= control_min),
+            "passed": bool(wrong_unit_pass),
             "comparison_outcome_is_metric": False,
             "epistemic_class": "c",
         },
         "claims_dense_two_site_leakage_oracle_certification": True,
+        "claims_independent_two_site_leakage_oracle_certification": True,
         "claims_dense_channel_payload": False,
         "claims_dense_channel_evidence": False,
         "claims_exact_continuous_time_mcwf": False,
@@ -351,7 +524,9 @@ def axis1_two_site_leakage_hamiltonian_certification_manifest(
         "epistemic_classes": {
             "operator_mapping": "a",
             "per_ns_to_gate_angle_conversion": "a",
+            "independent_reference_operator_identity": "a",
             "numeric_unitary_gate": "c",
+            "wrong_physics_negative_control": "c",
             "wrong_unit_negative_control": "c",
         },
     }
@@ -359,7 +534,291 @@ def axis1_two_site_leakage_hamiltonian_certification_manifest(
     return payload
 
 
-def _one_site_leakage_slice(program: dict[str, Any]) -> tuple[dict[str, Any], int, tuple[dict[str, Any], ...]]:
+# ----------------------------------------------------------------------------------------------
+# Independent (hand-typed, no shared carrier code) reference machinery.
+# ----------------------------------------------------------------------------------------------
+def _ref_two_site_ketbra(
+    a: tuple[int, int],
+    b: tuple[int, int],
+    *,
+    dims: tuple[int, int],
+    device: str,
+) -> torch.Tensor:
+    """|a><b| on (d0 x d1) with index = level0*d1 + level1; a,b are (level0, level1) tuples.
+
+    Fresh from-scratch constructor -- shares NO helper with the carrier. The ``level0*d1+level1``
+    convention is the standard qubit-0-major kron order, asserted here for the reference; the
+    point of the cert is that the carrier must INDEPENDENTLY produce the same matrix.
+    """
+    d0, d1 = int(dims[0]), int(dims[1])
+    D = d0 * d1
+    out = torch.zeros((D, D), dtype=torch.complex128, device=device)
+    out[a[0] * d1 + a[1], b[0] * d1 + b[1]] = 1.0
+    return out
+
+
+def _ref_transport_hamiltonian(
+    family: str,
+    *,
+    coefficient: float,
+    dims: tuple[int, int],
+    device: str,
+    pairs_override: tuple[tuple[int, int], tuple[int, int]] | None = None,
+) -> torch.Tensor:
+    pairs = pairs_override if pairs_override is not None else _REF_TRANSPORT_PAIRS[family]
+    left, right = pairs
+    _require_ref_level(left, dims=dims, family=family)
+    _require_ref_level(right, dims=dims, family=family)
+    return float(coefficient) * (
+        _ref_two_site_ketbra(left, right, dims=dims, device=device)
+        + _ref_two_site_ketbra(right, left, dims=dims, device=device)
+    )
+
+
+def _ref_conditional_phase_hamiltonian(
+    family: str,
+    *,
+    coefficient: float,
+    dims: tuple[int, int],
+    device: str,
+    sign_flip: bool = False,
+) -> torch.Tensor:
+    d0, d1 = int(dims[0]), int(dims[1])
+    out = torch.zeros((d0 * d1, d0 * d1), dtype=torch.complex128, device=device)
+    for (level0, level1), sign in _REF_COND_PHASE[family].items():
+        _require_ref_level((level0, level1), dims=dims, family=family)
+        s = -sign if sign_flip else sign
+        out[level0 * d1 + level1, level0 * d1 + level1] = float(coefficient) * float(s)
+    return out
+
+
+def _ref_diagonal_control_hamiltonian(
+    family: str,
+    *,
+    coefficient: float,
+    dims: tuple[int, int],
+    device: str,
+) -> torch.Tensor:
+    """Hand-typed diagonal CZ/ZZ generator: H = coeff * |11><11| (the |1>x|1> level).
+
+    For CTRL_CZ the carrier passes coefficient = pi/dt, so exp(-i dt H) imprints exp(-i pi) = -1 on
+    |11> -- the standard CZ. Typed here so the cluster reference imports no carrier physics.
+    """
+    d0, d1 = int(dims[0]), int(dims[1])
+    if d0 < 2 or d1 < 2:
+        raise ValueError(f"{family} reference requires local_dims >= 2, got {dims!r}")
+    out = torch.zeros((d0 * d1, d0 * d1), dtype=torch.complex128, device=device)
+    out[1 * d1 + 1, 1 * d1 + 1] = float(coefficient)
+    return out
+
+
+def _require_ref_level(
+    level: tuple[int, int],
+    *,
+    dims: tuple[int, int],
+    family: str,
+) -> None:
+    d0, d1 = int(dims[0]), int(dims[1])
+    if not (0 <= int(level[0]) < d0 and 0 <= int(level[1]) < d1):
+        raise ValueError(
+            f"{family} reference level {level!r} outside local_dims {dims!r}"
+        )
+
+
+def _reference_hamiltonian_for_term(
+    term: dict[str, Any],
+    *,
+    dims: tuple[int, int],
+    device: str,
+) -> torch.Tensor:
+    """Hand-typed reference Hamiltonian for a single carrier term (leakage or diagonal control).
+
+    The term's ``coefficient`` is used as-is; the wrong-unit control is applied by the caller
+    (``_independent_reference_cluster_gate``) by rescaling the coefficient before this call.
+    """
+    family = str(term["operator_family"]).upper()
+    coefficient = float(term["coefficient"])
+    if family in _REF_TRANSPORT_PAIRS:
+        return _ref_transport_hamiltonian(
+            family, coefficient=coefficient, dims=dims, device=device
+        )
+    if family in _REF_COND_PHASE:
+        return _ref_conditional_phase_hamiltonian(
+            family, coefficient=coefficient, dims=dims, device=device
+        )
+    if family in _TWO_SITE_DIAGONAL_CONTROL_FAMILIES:
+        return _ref_diagonal_control_hamiltonian(
+            family, coefficient=coefficient, dims=dims, device=device
+        )
+    raise ValueError(
+        f"unsupported two-site reference Hamiltonian family {family!r}"
+    )
+
+
+def _certify_leakage_family_operator(
+    term: dict[str, Any],
+    *,
+    dims: tuple[int, int],
+    dt_ns: float,
+    wrong_physics_control_min: float,
+    independent_reference_diff_gate: float,
+    device: str,
+) -> dict[str, Any]:
+    """Carrier per-term operator vs hand-typed reference + a level-discriminating control."""
+    family = str(term["operator_family"]).upper()
+    coefficient = float(term["coefficient"])
+
+    carrier_h = _hamiltonian_matrix_for_term(
+        term, support=(0, 1), local_dims=dims, device=device
+    )
+    ref_h = _reference_hamiltonian_for_term(term, dims=dims, device=device)
+
+    hermiticity = float(
+        torch.linalg.matrix_norm(
+            carrier_h - carrier_h.conj().transpose(-1, -2)
+        ).item()
+    )
+    op_diff = float(torch.linalg.matrix_norm(carrier_h - ref_h).item())
+    carrier_u = _matrix_exp_gate(carrier_h, dt_ns)
+    ref_u = _matrix_exp_gate(ref_h, dt_ns)
+    unitary_diff = float(torch.linalg.matrix_norm(carrier_u - ref_u).item())
+
+    # Level-discriminating control (the control round-1 W-C lacked).
+    if family in _REF_TRANSPORT_PAIRS:
+        control_kind = "wrong_level"
+        wrong_h = _ref_transport_hamiltonian(
+            family,
+            coefficient=coefficient,
+            dims=dims,
+            device=device,
+            pairs_override=_wrong_level_pairs(family),
+        )
+    elif family in _REF_COND_PHASE:
+        control_kind = "sign_flip"
+        wrong_h = _ref_conditional_phase_hamiltonian(
+            family,
+            coefficient=coefficient,
+            dims=dims,
+            device=device,
+            sign_flip=True,
+        )
+    else:
+        raise ValueError(f"no level-discriminating control for family {family!r}")
+    wrong_u = _matrix_exp_gate(wrong_h, dt_ns)
+    control_diff = float(torch.linalg.matrix_norm(carrier_u - wrong_u).item())
+
+    op_pass = bool(op_diff <= independent_reference_diff_gate)
+    unitary_pass = bool(unitary_diff <= independent_reference_diff_gate)
+    hermitian_pass = bool(hermiticity <= _UNITARY_DIFF_GATE)
+    control_pass = bool(control_diff >= float(wrong_physics_control_min))
+    passed = bool(op_pass and unitary_pass and hermitian_pass and control_pass)
+    return {
+        "operator_family": family,
+        "coefficient": coefficient,
+        "max_abs_generator_diff": op_diff,
+        "max_abs_unitary_diff": unitary_diff,
+        "hermiticity_residual": hermiticity,
+        "independent_reference_diff_gate": float(independent_reference_diff_gate),
+        "generator_matches_reference": op_pass,
+        "unitary_matches_reference": unitary_pass,
+        "hermitian": hermitian_pass,
+        "wrong_physics_control": {
+            "control_kind": control_kind,
+            "max_abs_unitary_diff": control_diff,
+            "min_expected_diff": float(wrong_physics_control_min),
+            "passed": control_pass,
+        },
+        "passed": passed,
+        "comparison_outcome_is_metric": False,
+    }
+
+
+def _wrong_level_pairs(
+    family: str,
+) -> tuple[tuple[int, int], tuple[int, int]]:
+    """A genuinely different transport level map: perturb the left pair's leading level by +/-1.
+
+    Stays in-range (decrement if > 0 else increment) so the reference is well-formed but WRONG.
+    Transport exchange is (left<->right)-symmetric, so a transposed ordered pair would be inert --
+    hence we perturb a LEVEL, not the ordering.
+    """
+    left, right = _REF_TRANSPORT_PAIRS[family]
+    if int(left[0]) > 0:
+        bad_left0 = int(left[0]) - 1
+    else:
+        bad_left0 = int(left[0]) + 1
+    return ((bad_left0, int(left[1])), right)
+
+
+def _reconstruct_lowered_group_gate(
+    terms: tuple[dict[str, Any], ...],
+    *,
+    support: tuple[int, int],
+    dims: tuple[int, int],
+    dt_ns: float,
+    device: str,
+) -> tuple[torch.Tensor, list[str]]:
+    """Rebuild the carrier's lowered two-site gate WITHOUT importing the grouping path.
+
+    The certified slice is a single same-support two-site cluster (guaranteed by
+    `_two_site_hamiltonian_slice`), so the connected-cluster lowering reduces to summing each
+    per-term carrier operator on the shared support and exponentiating once. We Hermitize the sum
+    (as the carrier's grouping does) and exponentiate -- this reproduces the realized gate while
+    importing only the per-term operator builder under test.
+    """
+    d0, d1 = int(dims[0]), int(dims[1])
+    h_cluster = torch.zeros((d0 * d1, d0 * d1), dtype=torch.complex128, device=device)
+    families: list[str] = []
+    for term in terms:
+        term_support = tuple(int(q) for q in term.get("support", ()))
+        if term_support != tuple(int(q) for q in support):
+            raise ValueError(
+                "in-cert lowered-gate reconstruction requires every Hamiltonian term on the "
+                f"single certified support {support!r}, got {term_support!r}"
+            )
+        h_cluster = h_cluster + _hamiltonian_matrix_for_term(
+            term, support=(0, 1), local_dims=dims, device=device
+        )
+        families.append(str(term["operator_family"]).upper())
+    h_cluster = 0.5 * (h_cluster + h_cluster.conj().transpose(-1, -2))
+    return _matrix_exp_gate(h_cluster, dt_ns), families
+
+
+def _independent_reference_cluster_gate(
+    terms: tuple[dict[str, Any], ...],
+    *,
+    support: tuple[int, int],
+    dims: tuple[int, int],
+    dt_ns: float,
+    device: str,
+    wrong_unit_for_leakage: bool,
+) -> torch.Tensor:
+    """Hand-typed reference for the full lowered cluster gate (leakage + diagonal controls)."""
+    d0, d1 = int(dims[0]), int(dims[1])
+    h_cluster = torch.zeros((d0 * d1, d0 * d1), dtype=torch.complex128, device=device)
+    for term in terms:
+        family = str(term["operator_family"]).upper()
+        coefficient = float(term["coefficient"])
+        if wrong_unit_for_leakage and family in _REF_TWO_SITE_LEAKAGE_FAMILIES:
+            coefficient = coefficient / float(dt_ns)
+        proxy = {"operator_family": family, "coefficient": coefficient}
+        h_cluster = h_cluster + _reference_hamiltonian_for_term(
+            proxy, dims=(d0, d1), device=device
+        )
+    h_cluster = 0.5 * (h_cluster + h_cluster.conj().transpose(-1, -2))
+    return _matrix_exp_gate(h_cluster, dt_ns)
+
+
+def _matrix_exp_gate(hamiltonian: torch.Tensor, dt_ns: float) -> torch.Tensor:
+    return torch.linalg.matrix_exp((-1.0j * float(dt_ns)) * hamiltonian)
+
+
+# ----------------------------------------------------------------------------------------------
+# Slice + parameter helpers (carried from the shipped cert; one-site path is unchanged).
+# ----------------------------------------------------------------------------------------------
+def _one_site_leakage_slice(
+    program: dict[str, Any],
+) -> tuple[dict[str, Any], int, tuple[dict[str, Any], ...]]:
     leakage_steps: list[tuple[dict[str, Any], tuple[dict[str, Any], ...]]] = []
     for substep in program["program"]["substeps"]:
         terms = tuple(
@@ -498,7 +957,7 @@ def _two_site_hamiltonian_slice(
             term
             for term in substep.get("terms", ())
             if str(term.get("operator_family", "")).upper()
-            in _TWO_SITE_CERTIFIABLE_FAMILIES
+            in _REF_TWO_SITE_LEAKAGE_FAMILIES
             and abs(float(term.get("coefficient", 0.0))) > 0.0
         )
         if not leakage_terms:
@@ -528,93 +987,6 @@ def _two_site_hamiltonian_slice(
             "two-site substep"
         )
     return candidates[0]
-
-
-def _independent_two_site_hamiltonian_gate(
-    terms: tuple[dict[str, Any], ...],
-    *,
-    support: tuple[int, int],
-    local_dims: tuple[int, ...],
-    dt_ns: float,
-    device: str,
-    wrong_unit_for_leakage: bool,
-) -> torch.Tensor:
-    d0 = int(local_dims[support[0]])
-    d1 = int(local_dims[support[1]])
-    hamiltonian = torch.zeros((d0 * d1, d0 * d1), dtype=torch.complex128, device=device)
-    for term in terms:
-        family = str(term["operator_family"]).upper()
-        coefficient = float(term["coefficient"])
-        if wrong_unit_for_leakage and family in _TWO_SITE_CERTIFIABLE_FAMILIES:
-            coefficient = coefficient / float(dt_ns)
-        hamiltonian = hamiltonian + _independent_two_site_hamiltonian_term(
-            family,
-            coefficient=coefficient,
-            dims=(d0, d1),
-            device=device,
-        )
-    return torch.linalg.matrix_exp((-1.0j * float(dt_ns)) * hamiltonian)
-
-
-def _independent_two_site_hamiltonian_term(
-    family: str,
-    *,
-    coefficient: float,
-    dims: tuple[int, int],
-    device: str,
-) -> torch.Tensor:
-    family = str(family).upper()
-    d0, d1 = int(dims[0]), int(dims[1])
-    out = torch.zeros((d0 * d1, d0 * d1), dtype=torch.complex128, device=device)
-    if family == "CTRL_CZ":
-        out[1 * d1 + 1, 1 * d1 + 1] = float(coefficient)
-        return out
-    if family in {"ZZ", "FSIM_PHASE"}:
-        out[1 * d1 + 1, 1 * d1 + 1] = float(coefficient)
-        return out
-    if family in _TWO_SITE_TRANSPORT_LEVELS:
-        left, right = _TWO_SITE_TRANSPORT_LEVELS[family]
-        left_index = _require_two_site_level(left, dims=(d0, d1), family=family)
-        right_index = _require_two_site_level(right, dims=(d0, d1), family=family)
-        if left_index == right_index:
-            raise ValueError(f"{family} needs distinct levels")
-        out[left_index, right_index] = float(coefficient)
-        out[right_index, left_index] = float(coefficient)
-        return out
-    if family == "LEAK_COND_PHASE_LEFT2_RIGHTZ":
-        if d0 < 3:
-            raise ValueError(
-                "LEAK_COND_PHASE_LEFT2_RIGHTZ requires left local_dim >= 3"
-            )
-        out[2 * d1 + 0, 2 * d1 + 0] = float(coefficient)
-        out[2 * d1 + 1, 2 * d1 + 1] = -float(coefficient)
-        return out
-    if family == "LEAK_COND_PHASE_LEFTZ_RIGHT2":
-        if d1 < 3:
-            raise ValueError(
-                "LEAK_COND_PHASE_LEFTZ_RIGHT2 requires right local_dim >= 3"
-            )
-        out[0 * d1 + 2, 0 * d1 + 2] = float(coefficient)
-        out[1 * d1 + 2, 1 * d1 + 2] = -float(coefficient)
-        return out
-    raise ValueError(
-        f"unsupported two-site leakage certification Hamiltonian family {family!r}"
-    )
-
-
-def _require_two_site_level(
-    level: tuple[int, int],
-    *,
-    dims: tuple[int, int],
-    family: str,
-) -> int:
-    left, right = int(level[0]), int(level[1])
-    d0, d1 = int(dims[0]), int(dims[1])
-    if left < 0 or left >= d0 or right < 0 or right >= d1:
-        raise ValueError(
-            f"{family} references level {level!r} outside local_dims {dims!r}"
-        )
-    return left * d1 + right
 
 
 __all__ = [
