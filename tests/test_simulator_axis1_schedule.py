@@ -1897,8 +1897,10 @@ def test_axis1_mcwf_mps_contract_declares_dimension_polymorphic_carrier_without_
         "qec_twin.simulator.axis1_mcwf_mps_state_record_contract.v1"
     )
     assert contract["backend_contract"] == AXIS1_MCWF_MPS_CONTRACT_BACKEND_CONTRACT
-    assert contract["verdict"] == "pass"
-    assert contract["passed"] is True
+    # W-J de-overload: a contract-only surface (no execution) must not claim verdict:"pass"/passed.
+    assert contract["verdict"] == "contract_only"
+    assert contract["passed"] is False
+    assert contract["contract_valid"] is True
     assert contract["backend_executed"] is False
     assert contract["mcwf_mps_backend_executed"] is False
     assert contract["carrier_program"]["backend_contract"] == "mcwf_mps_state_record"
