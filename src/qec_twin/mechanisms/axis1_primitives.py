@@ -15,6 +15,27 @@ from typing import Any, Sequence
 AXIS1_PRIMITIVE_SCHEMA = "qec_twin.mechanisms.Axis1PrimitiveBundle.v1"
 AXIS1_PRIMITIVE_REGISTRY_SCHEMA = "qec_twin.mechanisms.Axis1PrimitiveRegistry.v1"
 AXIS1_TWO_QUBIT_LOCAL_REGISTRY_ID = "axis1_two_qubit_local_primitives_v1"
+
+# Coherent Pauli-tensor families (Step 8): over-rotation + parasitic + crosstalk
+ONE_SITE_COHERENT_FAMILIES = frozenset({"COH_RX", "COH_RY", "COH_RZ", "COH_H"})
+TWO_SITE_COHERENT_FAMILIES = frozenset(
+    {
+        "COH_XX_YY",
+        "COH_XX",
+        "COH_YY",
+        "COH_XY",
+        "COH_ZX",
+        "COH_ZY",
+        "COH_XZ",
+        "COH_YZ",
+        "COH_YX",
+    }
+)
+CROSSTALK_COHERENT_FAMILIES = frozenset({"COH_CROSSTALK_ZZ"})
+COHERENT_PAULI_FAMILIES = (
+    ONE_SITE_COHERENT_FAMILIES | TWO_SITE_COHERENT_FAMILIES | CROSSTALK_COHERENT_FAMILIES
+)
+
 SUPPORTED_AXIS1_PRIMITIVES = frozenset(
     {
         "DR",
@@ -30,6 +51,7 @@ SUPPORTED_AXIS1_PRIMITIVES = frozenset(
         "FSIM_SWAP",
         "FSIM_PHASE",
     }
+    | COHERENT_PAULI_FAMILIES
 )
 
 

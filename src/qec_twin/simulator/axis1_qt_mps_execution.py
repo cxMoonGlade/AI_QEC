@@ -2014,6 +2014,24 @@ def _is_supported_hamiltonian_term(term: dict[str, Any]) -> bool:
     support = tuple(term["support"])
     if family in {"ZZ", "FSIM_PHASE"} and len(support) == 2:
         return True
+    if family.startswith("COH_"):
+        # Coherent families: 1-site for over-rotation, 2-site for parasitic/crosstalk
+        if len(support) == 1 and family in {"COH_RX", "COH_RY", "COH_RZ", "COH_H"}:
+            return True
+        if len(support) == 2 and family in {
+            "COH_XX_YY",
+            "COH_XX",
+            "COH_YY",
+            "COH_XY",
+            "COH_ZX",
+            "COH_ZY",
+            "COH_XZ",
+            "COH_YZ",
+            "COH_YX",
+            "COH_CROSSTALK_ZZ",
+        }:
+            return True
+        return False
     if not family.startswith("CTRL_"):
         return False
     gate = family.removeprefix("CTRL_")

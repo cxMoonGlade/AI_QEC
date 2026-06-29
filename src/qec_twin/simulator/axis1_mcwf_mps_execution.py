@@ -71,6 +71,28 @@ _TWO_SITE_CONDITIONAL_PHASE_FAMILIES = frozenset(
 )
 _LEAKAGE_COLLAPSE_FAMILIES = frozenset({"LEAK_SEEP_21", "LEAK_HEAT_12"})
 
+# --------------------------------------------------------------------------- #
+# Coherent Pauli-tensor families (Step 8): over-rotation + parasitic + crosstalk
+# --------------------------------------------------------------------------- #
+ONE_SITE_COHERENT_FAMILIES = frozenset({"COH_RX", "COH_RY", "COH_RZ", "COH_H"})
+TWO_SITE_COHERENT_FAMILIES = frozenset(
+    {
+        "COH_XX_YY",
+        "COH_XX",
+        "COH_YY",
+        "COH_XY",
+        "COH_ZX",
+        "COH_ZY",
+        "COH_XZ",
+        "COH_YZ",
+        "COH_YX",
+    }
+)
+CROSSTALK_COHERENT_FAMILIES = frozenset({"COH_CROSSTALK_ZZ"})
+COHERENT_PAULI_FAMILIES = (
+    ONE_SITE_COHERENT_FAMILIES | TWO_SITE_COHERENT_FAMILIES | CROSSTALK_COHERENT_FAMILIES
+)
+
 
 def axis1_mcwf_mps_state_record_execution_manifest(
     schedule: SubstepSchedule,
@@ -909,6 +931,14 @@ def _hamiltonian_matrix_for_term(
             family=family,
             device=device,
         )
+    if family in COHERENT_PAULI_FAMILIES:
+        return _embed_coherent_generator(
+            family,
+            coefficient=coefficient,
+            support=support,
+            local_dims=local_dims,
+            device=device,
+        )
     raise ValueError(f"unsupported MCWF Hamiltonian family {family!r}")
 
 
@@ -960,6 +990,115 @@ def _zz_hamiltonian_matrix(
     out = torch.zeros((d0 * d1, d0 * d1), dtype=torch.complex128, device=device)
     out[1 * d1 + 1, 1 * d1 + 1] = float(coefficient)
     return out
+
+
+def _pauli_2level(axis: str, *, device: str) -> torch.Tensor:
+    """Return the 2x2 Pauli operator for axis in {X, Y, Z, H} on device."""
+    cdt = torch.complex128
+    a = str(axis).upper()
+    if a == "X":
+        return torch.tensor([[0.0, 1.0], [1.0, 0.0]], dtype=cdt, device=device)
+    if a == "Y":
+        return torch.tensor([[0.0, -1.0j], [1.0j, 0.0]], dtype=cdt, device=device)
+    if a == "Z":
+        return torch.tensor([[1.0, 0.0], [0.0, -1.0]], dtype=cdt, device=device)
+    if a == "H":
+        inv = 1.0 / math.sqrt(2.0)
+        return inv * torch.tensor([[1.0, 1.0], [1.0, -1.0]], dtype=cdt, device=device)
+    raise ValueError(f"unsupported coherent Pauli axis {axis!r}")
+
+
+def _coherent_family_generator(family: str, *, coefficient: float, device: str) -> torch.Tensor:
+    """Return the Hermitian Pauli-tensor generator H for a coherent family on the
+    PURE computational subspace (2x2 for 1-site, 4x4 for 2-site)."""
+    fam = str(family).upper()
+    coeff = float(coefficient)
+    cdt = torch.complex128
+    # Mapping from 1q family names to Pauli axes
+    _ONE_Q_FAMILY_TO_AXIS = {
+        "COH_RX": "X",
+        "COH_RY": "Y",
+        "COH_RZ": "Z",
+        "COH_H": "H",
+    }
+    if fam in ONE_SITE_COHERENT_FAMILIES:
+        axis = _ONE_Q_FAMILY_TO_AXIS[fam]
+        P = _pauli_2level(axis, device=device)
+        return (0.5 * coeff) * P
+    pairs: tuple[tuple[str, str], ...] = ()
+    if fam in TWO_SITE_COHERENT_FAMILIES:
+        pairs = (
+            (("X", "X"),)
+            if fam == "COH_XX"
+            else (("Y", "Y"),)
+            if fam == "COH_YY"
+            else (("X", "Y"),)
+            if fam == "COH_XY"
+            else (("Z", "X"),)
+            if fam == "COH_ZX"
+            else (("Z", "Y"),)
+            if fam == "COH_ZY"
+            else (("X", "Z"),)
+            if fam == "COH_XZ"
+            else (("Y", "Z"),)
+            if fam == "COH_YZ"
+            else (("Y", "X"),)
+            if fam == "COH_YX"
+            else (("X", "X"), ("Y", "Y"))
+        )
+    elif fam in CROSSTALK_COHERENT_FAMILIES:
+        pairs = (("Z", "Z"),)
+    out = torch.zeros((4, 4), dtype=cdt, device=device)
+    for left_axis, right_axis in pairs:
+        Pl = _pauli_2level(left_axis, device=device)
+        Pr = _pauli_2level(right_axis, device=device)
+        out = out + torch.kron(Pl.contiguous(), Pr.contiguous())
+    return (0.25 * coeff) * out
+
+
+def _embed_coherent_generator(
+    family: str,
+    *,
+    coefficient: float,
+    support: tuple[int, ...],
+    local_dims: tuple[int, ...],
+    device: str,
+) -> torch.Tensor:
+    """Embed the Pauli-tensor generator into the term's support Hilbert space using
+    the actual local_dims (qubit/qutrit/...)."""
+    fam = str(family).upper()
+    coeff = float(coefficient)
+    cdt = torch.complex128
+    if fam in ONE_SITE_COHERENT_FAMILIES:
+        if len(support) != 1:
+            raise ValueError(f"{fam} requires one-site support, got {support!r}")
+        dim = int(local_dims[support[0]])
+        if dim < 2:
+            raise ValueError(f"{fam} requires local_dim >= 2, got {dim}")
+        gen2 = _coherent_family_generator(fam, coefficient=coeff, device=device)
+        out = torch.zeros((dim, dim), dtype=cdt, device=device)
+        out[:2, :2] = gen2
+        return out
+    if fam in TWO_SITE_COHERENT_FAMILIES or fam in CROSSTALK_COHERENT_FAMILIES:
+        if len(support) != 2:
+            raise ValueError(f"{fam} requires two-site support, got {support!r}")
+        d0 = int(local_dims[support[0]])
+        d1 = int(local_dims[support[1]])
+        if d0 < 2 or d1 < 2:
+            raise ValueError(f"{fam} requires both local_dims >= 2, got ({d0}, {d1})")
+        gen4 = _coherent_family_generator(fam, coefficient=coeff, device=device)
+        out = torch.zeros((d0 * d1, d0 * d1), dtype=cdt, device=device)
+        for left_in in (0, 1):
+            for right_in in (0, 1):
+                col = left_in * d1 + right_in
+                qcol = left_in * 2 + right_in
+                for left_out in (0, 1):
+                    for right_out in (0, 1):
+                        row = left_out * d1 + right_out
+                        qrow = left_out * 2 + right_out
+                        out[row, col] = gen4[qrow, qcol]
+        return out
+    raise ValueError(f"unsupported coherent family {family!r}")
 
 
 def _one_site_level_exchange_hamiltonian(
