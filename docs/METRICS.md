@@ -289,3 +289,33 @@ field-standard channel-distinguishability measure.
 - Schumacher, B. (1996). *Sending entanglement through noisy quantum channels*. Phys. Rev. A 54, 2614 — entanglement (process) fidelity `F_e`.
 - Nielsen, M. A. (2002). *A simple formula for the average gate fidelity of a quantum dynamical operation*. Phys. Lett. A 303, 249 — `F_avg = (d·F_e + 1)/(d+1)`.
 - Kitaev, A. Yu. (1997). *Quantum computations: algorithms and error correction*. Russ. Math. Surv. 52, 1191 — diamond norm (worst-case, FT thresholds).
+
+---
+
+## Source-layer non-Markovianity metrics (coupled-teacher WEDGE; ADR 0010-adjacent)
+
+Added 2026-07-01 under the forced ladder — **rung-2 field-standard** (frontier-researched + 精读 BEFORE
+use) for the coupled (correlated + non-Markovian) error teacher's **source/wedge layer**. Chosen because
+the QEC-facing "coherence-sensitive ΔLER" is a self-contradictory phrase (LER is coherence-blind, per the
+`tn_decoders_process_tensor_nonmarkovian_2412.13739` note + the 3 architecture reviews); the wedge is a
+**LAYERED** claim — this source layer (does the process break CP-divisibility / show information backflow)
+→ the channel layer (Pauli-twirl distance + unitarity + `D_Choi`/`1−F_e` vs the best Markov model, all
+LEDGERED above) → the decoder layer (`%ΔLER` decoder-prior utility + held-out NLL on a PT-aware-vs-Markov
+decoder on the SAME process, LEDGERED above). These two rows are the canonical non-Markovianity measures;
+they QUANTIFY the wedge but are **not** by themselves decode-relevance — that is the decoder layer.
+
+**Epistemic class.** The metric DEFINITIONS are (a) (theorem-grade functionals). A measured `N(Φ)`/`I`
+value on a given process is a **measurement** (report with its convention); a *predicted* wedge magnitude
+in a pre-registration is a (b) band. A nonzero source-layer wedge is NECESSARY-not-sufficient for a
+decode-relevant result (the sufficiency is the decoder layer) — so a wedge value may NOT be used as a
+premise for a decoding claim.
+
+| Metric | Function | Standard name + reference | Convention |
+|---|---|---|---|
+| Non-Markovianity — trace-distance backflow | source/wedge layer (planned; the pilot's `\|ρ\|`-revival amplitude is its dephasing instance) | **BLP measure** `N(Φ)=max_{ρ1,2(0)} ∫_{σ>0} σ(t)dt`, `σ(t)=d/dt D(ρ1(t),ρ2(t))`, `D=½tr\|ρ1−ρ2\|` (Breuer–Laine–Piilo, PRL 103, 210401 (2009), arXiv:0908.0238; review Rivas–Huelga–Plenio, RPP 77, 094001 (2014), arXiv:1405.0303) | dimensionless (trace-distance units ∈[0,1], summed over `σ>0` intervals, Eq. 12); **max over initial pairs** — for PURE DEPHASING the optimum is the **σx eigenstates** (`a=0,\|b\|=1`) so `D(t)=`coherence factor `=exp(−Γ_R(t))` and `N(Φ)=`Σ of `\|ρ\|`-revival amplitudes (= the pilot's "true trough→peak amp", 0.024 @γ=0.15). Any observed growth is a **lower bound + sufficient witness**; model-free / tomography-friendly |
+| Non-Markovianity — CP-divisibility breaking | source/wedge layer (planned; the pilot's ΔΓ dip is its dephasing instance) | **RHP measure** `I=∫₀^∞ g(t)dt`, `g(t)=lim_{ε→0+}[f_NCP(t+ε,t)−1]/ε`, `f_NCP=‖(E(t+ε,t)⊗1)\|Φ⟩⟨Φ\|‖_1` (Choi non-CP of the intermediate map); normalized `D_NM=I/(I+1)` (Rivas–Huelga–Plenio, PRL 105, 050403 (2010), arXiv:0911.4270; review arXiv:1405.0303) | dimensionless; needs the reconstructed intermediate map `E(t+ε,t)=E(t+ε,0)E(t,0)^{-1}` (invertibility caveat), reusing the ledgered `D_Choi` machinery. **PURE DEPHASING closed form** (Eq. 4): `I=−2∫_{γ(t)<0}γ(t)dt` = twice the area of the TCL rate below zero = 2× the pilot's ΔΓ dip (`γ(t)∝Γ_R'(t)=∫₀ᵗReC(τ)dτ`; 0.14 @γ=0.15). **RHP (CP-divisibility) is strictly FINER than BLP** (P-divisibility/backflow); report BOTH and state which is claimed — they coincide for the pilot's single-Lorentzian pure dephasing, can differ on the matrix-BCF / non-dephasing case |
+
+### References (source-layer non-Markovianity)
+- Breuer, H.-P., Laine, E.-M., Piilo, J. (2009). *Measure for the degree of non-Markovian behavior of quantum processes in open systems*. PRL 103, 210401; arXiv:0908.0238 — the BLP trace-distance / information-backflow measure. (精读: `docs/papers/reading_notes/blp_nonmarkovianity_measure_0908.0238.md`.)
+- Rivas, Á., Huelga, S. F., Plenio, M. B. (2010). *Entanglement and non-Markovianity of quantum evolutions*. PRL 105, 050403; arXiv:0911.4270 — the RHP CP-divisibility measure. (精读: `docs/papers/reading_notes/rhp_nonmarkovianity_measure_0911.4270.md`.)
+- Rivas, Á., Huelga, S. F., Plenio, M. B. (2014). *Quantum non-Markovianity: characterization, quantification and detection*. Rep. Prog. Phys. 77, 094001; arXiv:1405.0303 — the comprehensive review (BLP vs RHP relations, P- vs CP-divisibility).
