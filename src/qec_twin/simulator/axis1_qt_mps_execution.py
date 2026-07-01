@@ -2016,18 +2016,13 @@ def _is_supported_hamiltonian_term(term: dict[str, Any]) -> bool:
         return True
     if family.startswith("COH_"):
         # Coherent families: 1-site for over-rotation, 2-site for parasitic/crosstalk
-        if len(support) == 1 and family in {"COH_RX", "COH_RY", "COH_RZ", "COH_H"}:
+        if len(support) == 1 and family in {"COH_RX", "COH_RY", "COH_RZ"}:
             return True
         if len(support) == 2 and family in {
             "COH_XX_YY",
             "COH_XX",
             "COH_YY",
-            "COH_XY",
             "COH_ZX",
-            "COH_ZY",
-            "COH_XZ",
-            "COH_YZ",
-            "COH_YX",
             "COH_CROSSTALK_ZZ",
         }:
             return True
@@ -2062,6 +2057,16 @@ def _apply_hamiltonian_terms(
             continue
         family = str(term["operator_family"]).upper()
         support = tuple(int(q) for q in term["support"])
+        # Fail-closed (2026-06-30, 5-model review glm PT1, confirmed at runtime): this qt verification
+        # executor lowers only ZZ/FSIM_PHASE/CTRL_*. Coherent COH_* families have NO apply branch here,
+        # so accepting them (via _is_supported_hamiltonian_term) and falling through SILENTLY DROPS
+        # their evolution. Reject loudly rather than drop. (The MCWF carrier lowers COH_* via the
+        # connected-cluster join; the qt path does not yet.)
+        if family.startswith("COH_"):
+            raise ValueError(
+                f"qt executor cannot lower coherent family {family!r}: no COH_* apply path on the qt "
+                "verification executor (would silently drop). Use the MCWF carrier for coherent terms."
+            )
         if family in {"ZZ", "FSIM_PHASE"}:
             phase = np.exp(-1j * float(term["coefficient"]) * dt)
             gate = torch.diag(

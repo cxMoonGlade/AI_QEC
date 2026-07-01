@@ -2099,6 +2099,11 @@ def test_axis1_mcwf_mps_execution_runs_qutrit_seepage_jump_from_public_context()
         leaked_readout_b=1.0,
         trajectory_count=4,
         rng_seed=678,
+        # leak_seep_21=1.0/ns over dt=2 ns is an artificially high rate (gamma*dt=2) chosen to FORCE a
+        # deterministic seepage jump for this structural (jump-family/level-record) test; the first-order
+        # step is intentionally coarse (mass residual ~1.0), so the CPTP mass-residual guardrail is
+        # disabled here. Channel fidelity in this regime is covered by cert_m12_phaseB_convergence.py.
+        mass_residual_budget=None,
     )
 
     assert manifest["verdict"] == "pass"
@@ -2167,6 +2172,11 @@ def test_axis1_mcwf_mps_same_substep_leakage_static_zz_and_local_collapse_joint_
         leaked_readout_b=1.0,
         trajectory_count=3,
         rng_seed=890,
+        # leak_seep_21=1.0/ns over dt=2 ns (gamma*dt=2) is an artificially high rate to FORCE a
+        # deterministic seepage jump for this same-substep structural manifest test; the first-order step
+        # is intentionally coarse, so the CPTP mass-residual guardrail is disabled here (a jump-structure
+        # test, not a fidelity test — fidelity is covered by cert_m12_phaseB_convergence.py).
+        mass_residual_budget=None,
     )
 
     assert manifest["verdict"] == "pass"
