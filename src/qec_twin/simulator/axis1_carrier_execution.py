@@ -69,12 +69,24 @@ AXIS1_CARRIER_MCWF_MPS_CONTRACT_ONLY_REPRESENTABILITY = (
 AXIS1_CARRIER_MCWF_MPS_CONTRACT_ONLY_BACKEND_CONTRACT = (
     AXIS1_CARRIER_MCWF_MPS_EXECUTION_BACKEND_CONTRACT
 )
+AXIS1_CARRIER_AUTO_BACKEND_CONTRACT = "auto"
+AXIS1_CARRIER_AUTO_EXECUTION_SCHEMA = "qec_twin.simulator.axis1_carrier_auto_routed_execution.v1"
+# Conservative fraction of FREE VRAM the dense record probe's PROJECTED PEAK is allowed to occupy
+# before the auto-router routes to the memory-bounded MCWF/MPS backend instead. 0.25 matches the
+# window_channel register guard (_RHO_MEM_FRACTION) and leaves headroom for allocator fragmentation
+# and autograd/transient buffers beyond the projection.
+AXIS1_CARRIER_DENSE_VRAM_SAFETY_FRACTION = 0.25
+# Transient multiplier on the resident branch-batch peak: the record path builds a torch.stack copy
+# of the per-branch results plus per-branch project_qubit intermediates, so the instantaneous peak
+# exceeds the resident (2^m, 2^n, 2^n) batch. 2x is a deliberate over-estimate (fails toward MCWF).
+AXIS1_CARRIER_DENSE_RECORD_TRANSIENT_FACTOR = 2.0
 AXIS1_CARRIER_ALLOWED_EXECUTION_BACKEND_CONTRACTS = frozenset(
     {
         AXIS1_CARRIER_EXECUTION_BACKEND_CONTRACT,
         AXIS1_CARRIER_MCWF_MPS_EXECUTION_BACKEND_CONTRACT,
         AXIS1_CARRIER_QUTIP_RESTRICTED_EXECUTION_BACKEND_CONTRACT,
         AXIS1_CARRIER_QT_MPS_RESTRICTED_EXECUTION_BACKEND_CONTRACT,
+        AXIS1_CARRIER_AUTO_BACKEND_CONTRACT,
     }
 )
 
@@ -100,6 +112,13 @@ def axis1_carrier_execution_manifest(
     backend_options = dict(execution_backend_options or {})
     if backend not in AXIS1_CARRIER_ALLOWED_EXECUTION_BACKEND_CONTRACTS:
         raise ValueError(f"unsupported Axis-1 carrier execution backend {backend!r}")
+    if backend == AXIS1_CARRIER_AUTO_BACKEND_CONTRACT:
+        return _axis1_auto_routed_execution_manifest(
+            schedule,
+            device=device,
+            instrument_spec=instrument_spec,
+            execution_backend_options=backend_options,
+        )
     if backend == AXIS1_CARRIER_QT_MPS_RESTRICTED_EXECUTION_BACKEND_CONTRACT:
         return _axis1_qt_mps_restricted_execution_manifest(
             schedule,
@@ -218,6 +237,190 @@ def axis1_carrier_execution_manifest(
             "payload, no DEM/decoder semantics, no Axis-2 source timeline, no "
             "scalable QT/MPS backend claim"
         ),
+    }
+    payload["content_hash"] = _stable_payload_hash(payload)
+    return payload
+
+
+def _count_measured_qubits(schedule: SubstepSchedule) -> int:
+    """Total measured qubits across the schedule — the dense record branch exponent.
+
+    The dense record enumerator holds a BATCH of measurement branches and doubles
+    the batch on every measured qubit (``measure_qubit_enumerate`` returns the
+    stacked outcome-0/outcome-1 blocks, ``forward/exact/circuit_sim.py``), with no
+    pruning in that path. So the resident branch count is ``2 ** (this count)``.
+    """
+
+    total = 0
+    for substep in schedule.substeps:
+        if substep.kind != "measurement":
+            continue
+        for op in substep.operations:
+            total += len(getattr(op, "measurement_keys", ()) or ())
+    return total
+
+
+def _project_dense_record_vram_bytes(schedule: SubstepSchedule) -> float:
+    """Project the dense joint-L record-probe PEAK VRAM need (bytes).
+
+    The dense record path does NOT hold a single ``(2**n, 2**n)`` density matrix —
+    it holds ``2**m`` of them stacked along a branch axis, where ``m`` is the total
+    number of measured qubits (each measurement doubles the resident batch; no
+    pruning). The peak is therefore ``2**m * 4**n * 16`` bytes, with a transient
+    multiplier for the ``torch.stack`` copy + per-branch projection intermediates.
+
+    Modelling the branch factor is the load-bearing correction: a bare ``4**n``
+    projection is a LOWER bound on the real need, and routing-to-dense on a lower
+    bound is UNSAFE (it admits dense for schedules whose branch-inflated peak then
+    OOMs). This projection is an over-estimate, so it fails TOWARD MCWF.
+    """
+
+    n = int(schedule.num_qubits)
+    m = _count_measured_qubits(schedule)
+    return (
+        AXIS1_CARRIER_DENSE_RECORD_TRANSIENT_FACTOR
+        * (2.0**m)
+        * (4.0**n)
+        * 16.0
+    )
+
+
+def _available_vram_bytes(device: str) -> float:
+    """Free VRAM (bytes) on the CUDA device, via the same probe window_channel uses."""
+
+    import torch
+
+    free_bytes, _total = torch.cuda.mem_get_info(device)
+    return float(free_bytes)
+
+
+def _select_dense_or_mcwf(
+    schedule: SubstepSchedule,
+    device: str,
+    program: dict[str, Any],
+) -> tuple[str, dict[str, Any]]:
+    """Route dense vs MCWF: dense only if it fits VRAM AND is under the structural caps.
+
+    The VRAM trigger is the user-requested rule — if the projected dense need
+    exceeds the safety fraction of currently-free VRAM, route to MCWF. The qubit
+    cap and ``requires_scalable_backend`` are kept as additional structural
+    backstops, all of which fail TOWARD the memory-bounded backend (anti-OOM).
+    """
+
+    n = int(schedule.num_qubits)
+    measured_qubits = _count_measured_qubits(schedule)
+    projected = _project_dense_record_vram_bytes(schedule)
+    free = _available_vram_bytes(device)
+    budget = AXIS1_CARRIER_DENSE_VRAM_SAFETY_FRACTION * free
+    requires_scalable = bool(program.get("requires_scalable_backend"))
+    over_qubit_cap = n > AXIS1_STATE_MAX_EXACT_QUBITS
+    over_vram = projected > budget
+    use_dense = (not requires_scalable) and (not over_qubit_cap) and (not over_vram)
+    chosen = (
+        AXIS1_CARRIER_EXECUTION_BACKEND_CONTRACT
+        if use_dense
+        else AXIS1_CARRIER_MCWF_MPS_EXECUTION_BACKEND_CONTRACT
+    )
+    reasons: list[str] = []
+    if requires_scalable:
+        reasons.append("requires_scalable_backend")
+    if over_qubit_cap:
+        reasons.append(f"num_qubits>{AXIS1_STATE_MAX_EXACT_QUBITS}")
+    if over_vram:
+        reasons.append("projected_dense_vram_exceeds_safety_budget")
+    decision = {
+        "schema": "qec_twin.simulator.axis1_carrier_auto_routing_decision.v2",
+        "num_qubits": n,
+        "measured_qubits": measured_qubits,
+        "branch_factor_log2": measured_qubits,
+        "dense_record_transient_factor": AXIS1_CARRIER_DENSE_RECORD_TRANSIENT_FACTOR,
+        "projected_dense_vram_bytes": projected,
+        "projected_dense_vram_gib": projected / (1024.0**3),
+        "free_vram_bytes": free,
+        "free_vram_gib": free / (1024.0**3),
+        "safety_fraction": AXIS1_CARRIER_DENSE_VRAM_SAFETY_FRACTION,
+        "dense_vram_budget_bytes": budget,
+        "dense_vram_budget_gib": budget / (1024.0**3),
+        "requires_scalable_backend": requires_scalable,
+        "over_qubit_cap": over_qubit_cap,
+        "over_vram_budget": over_vram,
+        "use_dense": use_dense,
+        "resolved_backend_contract": chosen,
+        "route_reasons": reasons if reasons else ["dense_fits_vram_and_under_caps"],
+        "projection_semantics": (
+            "dense record peak = transient_factor * 2^(measured_qubits) * (2^n,2^n) "
+            "complex128 * 16 bytes; the 2^(measured_qubits) branch batch is the "
+            "load-bearing term and this projection over-estimates it, so routing "
+            "fails TOWARD the memory-bounded MCWF backend"
+        ),
+    }
+    return chosen, decision
+
+
+def _axis1_auto_routed_execution_manifest(
+    schedule: SubstepSchedule,
+    *,
+    device: str,
+    instrument_spec: Axis1ReadoutResetInstrumentSpec | None,
+    execution_backend_options: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """VRAM-aware auto-router: pick dense vs MCWF, delegate, wrap with the decision.
+
+    On over-cap / over-VRAM it routes to the memory-bounded MCWF/MPS backend
+    instead of failing closed. Two caller inputs are incompatible with that
+    routing and are rejected UP FRONT with a clear message rather than failing
+    deep inside the chosen backend: (1) an ``instrument_spec`` (readout/reset
+    noise) is dense-only — MCWF does not implement it; (2) MCWF-tuning
+    ``execution_backend_options`` are meaningless for the dense backend (which
+    rejects any options), so they are forwarded ONLY when MCWF is chosen.
+    """
+
+    dev = _require_cuda_device(device)
+    program = axis1_carrier_program_manifest(schedule)
+    chosen, decision = _select_dense_or_mcwf(schedule, dev, program)
+    options = dict(execution_backend_options or {})
+    routes_to_mcwf = chosen == AXIS1_CARRIER_MCWF_MPS_EXECUTION_BACKEND_CONTRACT
+    if routes_to_mcwf and instrument_spec is not None:
+        raise ValueError(
+            "auto routing selected the MCWF/MPS backend "
+            f"(reasons={decision['route_reasons']}) but an Axis1ReadoutResetInstrumentSpec "
+            "was supplied; the readout/reset instrument is dense-only. Request "
+            f"{AXIS1_CARRIER_EXECUTION_BACKEND_CONTRACT!r} explicitly for the small-N "
+            "instrument path, or drop the instrument_spec for the scalable backend."
+        )
+    if options and not routes_to_mcwf:
+        raise ValueError(
+            "auto routing selected the dense backend "
+            f"(reasons={decision['route_reasons']}) but execution_backend_options "
+            f"{sorted(options)} were supplied; those tune the MCWF/MPS backend and the "
+            "dense probe accepts none. Drop the options, or force the scalable backend."
+        )
+    inner = axis1_carrier_execution_manifest(
+        schedule,
+        device=dev,
+        instrument_spec=instrument_spec,
+        execution_backend_contract=chosen,
+        execution_backend_options=options if routes_to_mcwf else None,
+    )
+    payload: dict[str, Any] = {
+        "schema": AXIS1_CARRIER_AUTO_EXECUTION_SCHEMA,
+        "source_kind": schedule.source_kind,
+        "source_hash": schedule.source_hash,
+        "gpu_required": True,
+        "device": dev,
+        "requested_backend_contract": AXIS1_CARRIER_AUTO_BACKEND_CONTRACT,
+        "resolved_backend_contract": chosen,
+        "auto_routing": decision,
+        "verdict": inner.get("verdict"),
+        "passed": bool(inner.get("passed")),
+        "blocked_reason": inner.get("blocked_reason"),
+        "execution": inner,
+        "scored_quantity_policy": (
+            "VRAM-aware backend router; no new scored quantity; the delegated "
+            "backend keeps its own representability and evidence"
+        ),
+        "claims_dense_channel_evidence": False,
+        "claims_axis2_source_timeline": False,
     }
     payload["content_hash"] = _stable_payload_hash(payload)
     return payload
@@ -918,6 +1121,10 @@ def _stable_payload_hash(payload: dict[str, Any]) -> str:
 
 __all__ = [
     "AXIS1_CARRIER_ALLOWED_EXECUTION_BACKEND_CONTRACTS",
+    "AXIS1_CARRIER_AUTO_BACKEND_CONTRACT",
+    "AXIS1_CARRIER_AUTO_EXECUTION_SCHEMA",
+    "AXIS1_CARRIER_DENSE_RECORD_TRANSIENT_FACTOR",
+    "AXIS1_CARRIER_DENSE_VRAM_SAFETY_FRACTION",
     "AXIS1_CARRIER_EXECUTION_BACKEND_CONTRACT",
     "AXIS1_CARRIER_MCWF_MPS_EXECUTION_BACKEND_CONTRACT",
     "AXIS1_CARRIER_MCWF_MPS_EXECUTION_REPRESENTABILITY",
