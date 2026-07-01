@@ -14,6 +14,10 @@ external/reference_repos/
 # Cached reference PDFs (the docs/papers/README.md index IS tracked; PDFs are a
 # local cache, fetch via the curl recipe in that README)
 docs/papers/*
+# ...but the 精读 reading notes ARE the theory-first deliverable and MUST track
+# (previously required `git add -f`; this negation lets them commit cleanly).
+!docs/papers/reading_notes/
+!docs/papers/reading_notes/**
 *.txt
 
 # Packaging/build artifacts
@@ -24,3 +28,4 @@ dist/
 # Local environments and editor state
 .*/
 skills-lock.json
+.chroma_notes/
