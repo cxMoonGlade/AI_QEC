@@ -1,3 +1,9 @@
+## Provenance
+
+- **Source:** arXiv:2510.23797, fetched 2026-06-30
+- **Reading method:** FULL-TEXT read (精读) via arXiv HTML — all sections, equations, and appendices
+- **Status:** complete full-text close-read
+
 # Deep review — Takou & Brown, Estimating and Decoding Coherent Errors of QEC Experiments with Detector Error Models
 
 > Deep reading note (academic-paper-review format; full read Secs. II–IV, Figs. 1–7).

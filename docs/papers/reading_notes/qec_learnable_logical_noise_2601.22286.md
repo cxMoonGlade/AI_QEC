@@ -1,3 +1,9 @@
+## Provenance
+
+- **Source:** arXiv:2601.22286, fetched 2026-06-30
+- **Reading method:** FULL-TEXT read (精读) via arXiv HTML — all sections, equations, and appendices
+- **Status:** complete full-text close-read
+
 # Deep review — Zheng et al., Efficient Learning of Logical Noise from Syndrome Data
 
 > Deep reading note (academic-paper-review format; full read of main text Secs. I–IV

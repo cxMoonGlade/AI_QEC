@@ -1,5 +1,12 @@
 # Deep review — Perry, von Kügelgen & Schölkopf, Causal Discovery in Heterogeneous Environments Under the Sparse Mechanism Shift Hypothesis
 
+## Provenance
+
+- **Source:** arXiv:2206.02013 (full PDF, open access), fetched 2026-06-30; NeurIPS 2022 (Advances in Neural Information Processing Systems 35)
+- **Reading method:** FULL-TEXT read (精读) of the arXiv PDF — Secs. 1-3 (CGM/multi-environment setup, augmented-CGM + environment node, soft-intervention and SMS assumptions, Mechanism-Shift-Score / pairwise-vs-pooled identifiability) in full; Secs. 4-6 at result level
+- **Status:** complete full-text close-read
+- **Note:** The cache filename `mooij2022_*` is a **misnomer** — the paper is by Perry et al. 2022 (not Mooij). The filename is left as-is for consistency.
+
 > Deep reading note (academic-paper-review format; full read Secs. 1–3 incl. the CGM/
 > multi-environment setup, the augmented-CGM + environment node, the soft-intervention
 > and SMS assumptions Eqs. 2.3–2.4, and the Mechanism-Shift-Score / pairwise-vs-pooled

@@ -1,5 +1,11 @@
 # Deep review — Bravyi, Englbrecht, König & Peard, Correcting Coherent Errors with Surface Codes
 
+## Provenance
+
+- **Source:** arXiv:1710.02270 [https://arxiv.org/abs/1710.02270](https://arxiv.org/abs/1710.02270), fetched 2026-06-30
+- **Reading method:** ABSTRACT read via arXiv abstract page (HTML full-text not available on arXiv HTML server — returned HTTP 404)
+- **Status:** abstract read (full-text HTML unavailable; original reading note based on full paper PDF)
+
 > Deep reading note (academic-paper-review format; full read Secs. I–III + the
 > storage/prep results and thresholds; the Majorana/FLO encoding (C4-code, link
 > operators, Lemmas 1–3) and Algorithms A/B read in detail). **Relevance to the

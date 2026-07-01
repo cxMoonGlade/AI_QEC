@@ -1,3 +1,9 @@
+## Provenance
+
+- **Source:** arXiv:1704.03081, fetched 2026-06-30
+- **Reading method:** FULL-TEXT read (精读) via arXiv PDF — all sections, equations, and appendices (no HTML version available)
+- **Status:** complete full-text close-read
+
 # Deep review — Wood & Gambetta, Quantification and Characterization of Leakage Errors
 
 > Deep reading note (academic-paper-review format; full read Secs. I–VI + Appendices

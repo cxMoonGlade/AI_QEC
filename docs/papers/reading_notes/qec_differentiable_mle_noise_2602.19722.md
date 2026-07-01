@@ -1,3 +1,9 @@
+## Provenance
+
+- **Source:** arXiv:2602.19722, fetched 2026-06-30
+- **Reading method:** FULL-TEXT read (精读) via arXiv HTML — all sections, equations, and appendices
+- **Status:** complete full-text close-read
+
 # Deep review — Cao, Feng, Ye & Pan, Differentiable Maximum Likelihood Noise Estimation for QEC (dMLE)
 
 > Deep reading note in the academic-paper-review format (full read: main Letter +

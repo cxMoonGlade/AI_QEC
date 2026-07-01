@@ -1,3 +1,9 @@
+## Provenance
+
+- **Source:** arXiv:2301.09031, fetched 2026-06-30
+- **Reading method:** FULL-TEXT read (精读) via arXiv PDF — all sections, equations, and appendices (no HTML version available)
+- **Status:** complete full-text close-read
+
 # Deep review — Nasr-Esfahany & Kıcıman, Counterfactual (Non-)identifiability of Learned Structural Causal Models
 
 > Deep reading note (academic-paper-review format; full read Secs. 1–5 incl. the SCM/DSCM

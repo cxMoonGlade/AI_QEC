@@ -1,5 +1,11 @@
 # Deep review — Kaufmann, Rojkov & Reiter, Characterization of Coherent Errors in Gate Layers with Robustness to Pauli Noise
 
+## Provenance
+
+- **Source:** arXiv:2307.08741 [https://arxiv.org/abs/2307.08741](https://arxiv.org/abs/2307.08741), fetched 2026-06-30
+- **Reading method:** FULL-TEXT read (精读) via arXiv HTML — all sections, equations, figures, and appendices
+- **Status:** complete full-text close-read
+
 > Deep reading note (academic-paper-review format; full read Secs. II–IV incl. the
 > PTM characterization, the Pauli-robustness argument, the IBM hardware results, and
 > the echo/PEC mitigation). **Relevance to the twin** centerpiece.

@@ -1,252 +1,602 @@
-# Full-text review — SiYing Wang, ZhiXin Xia, Yue Yan, Xiang-Bin Wang, "An exact Error Threshold of Surface Code under Correlated Nearest-Neighbor Errors: A Statistical Mechanical Analysis" (arXiv:2510.24181)
+# 精读 — SiYing Wang, ZhiXin Xia, Yue Yan, Xiang-Bin Wang, "An exact Error Threshold of Surface Code under Correlated Nearest-Neighbor Errors: A Statistical Mechanical Analysis" (arXiv:2510.24181)
 
-> **Provenance (2026-06-30): FULL-TEXT read (精读).** PDF `outputs/papers/2510.24181.pdf` →
-> txt `outputs/papers/2510.24181.txt` (PyMuPDF, 8 pages / 32574 chars, complete through the
-> reference list). All §/Eq/Fig/Table refs from that text. Figures not pixel-extracted — figure
-> facts (Fig.5 crossings, Fig.6 curves) = captions + numbers stated in text. Paper is a short
-> letter; no numbered section headings survived extraction (headers came through as
-> "In Sec., we ...") — I refer to sections by name.
+> **Provenance (2026-06-30): CERTIFICATE-GRADE 精读.** PDF `outputs/papers/2510.24181.pdf` →
+> txt `outputs/papers/2510.24181.txt` (PyMuPDF, 8 pages / 32574 chars, complete through reference
+> list). 所有章节/公式/图表引用均来自该文本。图片未做像素级提取；图片事实（Fig.5 交叉点、Fig.6
+> 曲线）来自文中表述。论文为简短快报；提取后的节标题编号未能保留 — 下文按名称引用各节。
 
-## Metadata [paper]
-- **Authors / affiliation:** SiYing Wang, ZhiXin Xia, Yue Yan, Xiang-Bin Wang (corresponding,
-  xbwang@mail.tsinghua.edu.cn). State Key Lab of Low Dimensional Quantum Physics, Dept. of
-  Physics, Tsinghua University, Beijing.
-- **Venue / status:** arXiv:2510.24181v1 [quant-ph], dated 28–29 Oct 2025. Preprint (no journal).
-- **Type:** Theory (statistical-mechanical mapping) + a small parallel-tempering Monte-Carlo
-  numerical example + a PyMatching/Stim decoder comparison.
-- **Companion:** ref [33] = Wang, Yan, Xia, Wang, "Symmetry in multi-qubit correlated noise
-  errors enhances surface code thresholds," arXiv:2506.15490 (2025) — same group, prior rung.
+---
 
-## Executive summary [paper]
-The exact surface-code threshold is known for i.i.d. Pauli noise via the mapping to the 2D
-random-bond Ising model (RBIM) on the Nishimori line [paper cites Dennis-Kitaev-Landahl-Preskill,
-ref 6]. This paper extends that *exact* mapping to a noise model that adds **correlated ZZ errors
-on nearest-neighbor data-qubit pairs** (rate `p2`) on top of i.i.d. single-qubit Z (rate `p1`).
-The obstruction is that `P(E)` for correlated chains is a huge sum; they resolve it with an
-**"error-edge map" (EEM)** that collapses correlated-pair error configurations onto edges of a
-**square-octagonal lattice**, mapping `p_success` to the partition function of a
-**square-octagonal RBIM** whose critical (Nishimori) point is the *exact* threshold — decoder-
-independent, hence an upper bound that is also achievable. For the symmetric case `p1 = p2 = p`
-their parallel-tempering MC gives an exact threshold of **≈3%**. They then run PyMatching 2.0:
-correlation-blind i.i.d. decoding thresholds at **1.8%** (Fig.6 label ≈1.9%), and Stim-DEM
-correlated-aware matching at **2.4%** — both below the 3% exact value, i.e. **~0.5–0.6% of
-decodable headroom is left on the table by current decoders under correlated noise**.
+## 1. 元数据
 
-## Method (deep) [paper]
+- **作者 / 单位：** SiYing Wang, ZhiXin Xia, Yue Yan, Xiang-Bin Wang (通讯作者, xbwang@mail.tsinghua.edu.cn). 清华大学物理系，低维量子物理国家重点实验室。
+- **发表状态：** arXiv:2510.24181v1 [quant-ph], 日期 2025 年 10 月 28-29 日。预印本（未投稿期刊）。
+- **类型：** 理论（统计力学映射）+ 一个小规模并行回火蒙特卡洛数值算例 + PyMatching/Stim 解码器对比。
+- **姊妹篇：** 参考文献 [33] = Wang, Yan, Xia, Wang, "Symmetry in multi-qubit correlated noise errors enhances surface code thresholds," arXiv:2506.15490 (2025) — 同一课题组的前序工作。
+- **页数：** 8 页（arXiv 标准两栏格式），含 3 张表格/6 张图片 / 45 条参考文献。
 
-### Noise model (the "CORRELATED ERRORS BETWEEN DATA QUBITS" section)
-Z-only (X and Z corrected independently in the surface code; they analyze the Z sector).
-- **i.i.d. phase flip**, Eq.(1):  `E(ρ) = (1−p1) ρ + p1 Z ρ Z†`, per data qubit, prob `p1`.
-- **Correlated NN ZZ**, Eq.(2):  `E(ρ) = (1−p2) ρ + p2 Zi Zj ρ Zj† Zi†`, applied to each nearest
-  data-qubit pair `{qi,j, qi−1,j+1}` and `{qi,j, qi+1,j+1}` with prob `p2`. (Subscripts are 2D
-  lattice coordinates; the two orientations are the two diagonal NN pairings — Fig.1b.)
-- Both channels act **simultaneously and may overlap** (Fig.1a). This is a *product of two
-  independent stochastic channels*, NOT a joint 2-qubit Pauli-Lindblad fit: correlation enters as
-  an explicit two-body ZZ jump at rate `p2`, independent of the single-body `p1`.
+---
 
-### The exact-mapping spine (the standard part)
-`p_success` as a partition-function ratio, Eq.(3):
+## 2. 核心结果——精确阈值
+
+### 2.1 噪声模型（Eq.1–3）
+
+仅考虑 Z 扇区（表面码中 X 和 Z 错误独立纠正；论文分析 Z 扇区）。
+
+- **i.i.d. 相位翻转，Eq.(1)：** 每个数据量子比特以概率 `p₁` 独立经历 Pauli Z 错误：
+
+  ```
+  E(ρ) = (1 − p₁) ρ + p₁ Z ρ Z†
+  ```
+
+- **最近邻关联 ZZ，Eq.(2)：** 每一对最近邻数据量子比特对 `{q_{i,j}, q_{i−1,j+1}}` 和
+  `{q_{i,j}, q_{i+1,j+1}}`（即两种对角线取向）以概率 `p₂` 经历关联的 ZZ 错误：
+
+  ```
+  E(ρ) = (1 − p₂) ρ + p₂ Z_i Z_j ρ Z_j† Z_i†
+  ```
+
+- **两个通道同时作用，可能重叠**（Fig.1a）。这本质上是*两个独立随机信道的乘积*，而**不**是联合
+  2-量子比特 Pauli-Lindblad 拟合：关联性以显式的双体 ZZ 跳跃（概率 `p₂`）引入，独立于单体 `p₁`。
+
+论文**仅分析 Z 扇区**，因为表面码中 X 和 Z 错误的纠正相互独立。这对应于 X 错误率与 Z 错误率
+的解耦假设。
+
+### 2.2 回顾：精确映射的标准骨架
+
+`p_success` 作为配分函数之比，Eq.(3)：
+
 ```
 p_success = Σ_{E'E∈G} P(E') / Σ_{E'E∈C(G)} P(E')
 ```
-`G` = stabilizer group, `C(G)` = centralizer. Correction succeeds iff `E'E ∈ G`; a logical error
-occurs iff `E'E ∈ C(G)\G`. Standard Dennis et al. structure.
 
-### The NEW piece — Error-Edge Map (EEM)
-Direct `P(E)` is intractable: an illustrative chain has (Eq.4)
-```
-P(E1) ∝ [2 p2 (1−p2) / (1 − 2 p2 (1−p2))] · (p1/(1−p1))^2  +  (p1/(1−p1))^4
-```
-i.e. a correlated ZZ contributes the factor `2p2(1−p2)` (the two ways one of a paired set of
-NN pairs can carry the error), and it competes/adds with pure-i.i.d. length-4 chains — the sum is
-over many equivalent microscopic assignments. EEM removes this by working with **edges** not qubits:
-- Connect neighboring ancilla qubits by edges. `l^k_1` = horizontal/vertical edge (i.i.d.
-  single-qubit error on the data qubit on that edge). `l^k_2` = diagonal edge, `l^k_3` =
-  anti-diagonal edge (the two correlated-pair orientations).
-- **The key collapse rule:** a correlated ZZ on *either* pair of a matched set
-  (`{qi,j,qi−1,j+1}` OR `{qi+1,j+1,qi+2,j}`) sets `nE'(l^k_2)=1`. If **both** pairs fire
-  (prob `p2²`) the four Z's form the stabilizer `Zi+1,j+1 Zi+2,j Zi,j Zi+1,j+1` → **treated as no
-  error**. Same for `l^k_3` (anti-diagonal). So a correlated *edge* is "on" with **effective**
-  probability `2(1−p2)p2` (one-of-two fires, the both-fire case cancels as a stabilizer).
-- Edge occupancy indicator, Eq.(5): `nE(l^k_i) = 1 if l^k_i ∈ Ẽ else 0`, `i∈{1,2,3}`.
-- Recovery-chain probability, **Eq.(6)** (the implementable EEM formula):
-```
-P(Ẽ') ∝ Π_{i∈{1,2,3}} Π_{l^k_i} [ p̄i / (1 − p̄i) ]^{ nE'(l^k_i) }
-```
-  with the **effective edge probabilities**
-```
-p̄1 = p1,     p̄2 = 2(1−p2) p2,     p̄3 = 2(1−p3) p3.
-```
-  (The paper carries `p3` symbolically for the anti-diagonal orientation; in the symmetric example
-  it sets everything equal, `p2 = p3`, and `p1 = p2 = p`.)
-- They prove the coset sums match, Eqs.(7)–(8): closed cycles `C` ↔ `E'E∈G` (success), spanning
-  lines `L` ↔ `E'E∈C(G)\G` (logical failure). `Al` = equivalence class of errors sharing the same
-  edge-chain `Ẽ'` differing only by a stabilizer (Eqs.9–11).
+其中 `G` = 稳定子群，`C(G)` = 中心化子。纠错成功当且仅当 `E'E ∈ G`；逻辑错误当 `E'E ∈ C(G)\G`。
+这是 Dennis-Kitaev-Landahl-Preskill (ref [6]) 的标准结构。
 
-### Mapping to the square-octagonal RBIM
-Ising-ify the edge probabilities. Define sign variables `ηE(l^k_i)= +1 if l^k_i∉Ẽ else −1`
-(Eq.12) and `u(l^k_i)= +1 if l^k_i∉Ẽ'+Ẽ else −1` (Eq.13). Then Eq.(6) becomes (Eq.14):
+### 2.3 新贡献：Error-Edge Map (EEM)
+
+**为什么需要 EEM：** 在关联噪声下直接计算 `P(E)` 是不可行的——一个简单的错误链就有复杂的
+求和形式，Eq.(4)：
+
 ```
-P(Ẽ') ∝ exp[ Σ_i Σ_{l^k_i} ½ Ji ηE'(l^k_i) ],   Ji = ln( (1 − p̄i) / p̄i ).
+P(E₁) ∝ [2 p₂ (1−p₂) / (1 − 2 p₂ (1−p₂))] · (p₁/(1−p₁))² + (p₁/(1−p₁))⁴
 ```
-Place Ising spins `σ^k_{i,j} ∈ {±1}` at triangle centers of the dual square-octagonal lattice
-(Fig.4). Map `M` (Eq.17):
+
+关联 ZZ 贡献因子 `2p₂(1−p₂)`（一对 NN 对中恰好一个携带错误的两种方式），并与纯 i.i.d.
+长度为 4 的链求和——需要对大量等价的微观配置求和。
+
+**EEM 的核心思想：** 用**边**（edge）而非量子比特来建模。
+
+#### 边的定义
+
+连接相邻的辅助量子比特，定义三种边类型：
+
+| 边的类型 | 符号 | 对应 | 错误率 |
+|---------|------|------|--------|
+| 水平/垂直边 | `l^k_1` | i.i.d. 单量子比特错误（该边上的数据量子比特） | `p̄₁ = p₁` |
+| 对角线边（左上→右下） | `l^k_2` | 关联 ZZ 对 `{q_{i,j}, q_{i−1,j+1}}` 或 `{q_{i+1,j+1}, q_{i+2,j}}` | `p̄₂ = 2(1−p₂)p₂` |
+| 反对角线边（右上→左下） | `l^k_3` | 关联 ZZ 对 `{q_{i,j}, q_{i+1,j+1}}` 或 `{q_{i−1,j+1}, q_{i+2,j}}` | `p̄₃ = 2(1−p₂)p₂` |
+
+#### 关键的坍缩规则（技术核心）
+
+- 当**任意一对**中的关联 ZZ 发生时（概率 `p₂` 作用于一个对），对应的边被标记为有错误：
+  `n_E'(l²_k) = 1`。
+
+- 当**两对同时**有错误时（概率 `p₂²`），四个 Z 算符形成稳定子
+  `Z_{i+1,j+1} Z_{i+2,j} Z_{i,j} Z_{i+1,j+1}` → **视为无错误**。
+
+- 因此一条关联边的**有效概率**为：
+  ```
+  p̄₂ = 2(1−p₂)p₂
+  ```
+  即恰好一对有错误（两种方式中一种），两对同时有错误的情形被稳定子取消。
+
+- 边占用指示符，Eq.(5)：`n_E(l^k_i) = 1 if l^k_i ∈ Ẽ else 0`，`i ∈ {1,2,3}`。
+
+#### 可实现的 EEM 公式，Eq.(6)
+
+恢复链 `Ẽ'` 的概率：
+
 ```
-u(l^k_1) ↦ σ4_{i,j} σ1_{i+1,j}   (horizontal)  or  σ3_{i,j} σ2_{i,j+1}  (vertical)
-u(l^k_2) ↦ −½(σ1σ2 −1)(σ3σ4 −1) + 1
-u(l^k_3) ↦ −½(σ1σ3 −1)(σ2σ4 −1) + 1
+P(Ẽ') ∝ Π_{i∈{1,2,3}} Π_{l^k_i} [ p̄_i / (1 − p̄_i) ]^{ n_E'(l^k_i) }
 ```
-plus the **gauge/plaquette constraint Eq.(18):  `σ1_{i,j} σ2_{i,j} σ3_{i,j} σ4_{i,j} = 1`** (kills
-unwanted partition-function terms). Result — the **square-octagonal RBIM partition function**,
-Eq.(19):
+
+其中有效边概率：
+
 ```
-Z = Σ_{σ} exp[ ½ J1 ηE(l1)(σ3_{i,j}σ1_{i+1,j} + σ4_{i,j}σ2_{i,j+1})
-              + ½ J2 ηE(l2)(σ1σ2 + σ3σ4)
-              + ½ J3 ηE(l3)(σ1σ4 + σ2σ3) ]
+p̄₁ = p₁,     p̄₂ = 2(1−p₂) p₂,     p̄₃ = 2(1−p₂) p₂
 ```
-Effective Hamiltonian, **Eq.(20)**:
+
+（论文符号性地保留了 `p₃`，在对称情形下 `p₂ = p₃`。）
+
+#### 陪集等价性的证明（Eqs.7–11）
+
+论文证明：
+
+- 闭合回路 `C` ↔ `E'E ∈ G`（纠错成功）
+- 跨越全系统的线 `L` ↔ `E'E ∈ C(G)\G`（逻辑错误）
+
+`Al` 定义为共享相同边链 `Ẽ'` 且仅相差一个稳定子的错误等价类（Eqs.9–11）。陪集求和给出
+Eqs.(7)–(8) 的映射关系。这是映射成立的形式化基础——它确保了边层面的概率与量子比特层面的
+物理概率一致。
+
+### 2.4 映射到正方-八角 RBIM（Eqs.12–20）
+
+#### Ising 化边概率
+
+定义符号变量：
+- `η_E(l^k_i) = +1 if l^k_i ∉ Ẽ else −1` (Eq.12)
+- `u(l^k_i) = +1 if l^k_i ∉ Ẽ'+Ẽ else −1` (Eq.13)
+
+则 Eq.(6) 变为 Eq.(14)：
+
 ```
-H = − Σ_{i,j} [ ηE(l1)(σ3σ1' + σ4σ2')
-              + J'2 ηE(l2)(σ1σ2 + σ3σ4)
-              + J'3 ηE(l3)(σ1σ4 + σ2σ3) ],
-    with  σ1σ2σ3σ4 = 1,   J'2 = J2/J1,  J'3 = J3/J1.
+P(Ẽ') ∝ exp[ Σ_i Σ_{l^k_i} ½ J_i η_E'(l^k_i) ],   J_i = ln( (1 − p̄_i) / p̄_i )
 ```
-- **Correlation enters exactly as the two ANISOTROPIC coupling ratios `J'2 = J2/J1` and
-  `J'3 = J3/J1`.** These are the diagonal/anti-diagonal bonds; their strength relative to the
-  i.i.d. bond `J1` is set entirely by `p2` vs `p1`. So the "shift" from the i.i.d. RBIM is a
-  *lattice + anisotropy* change: NN correlation adds octagonal (diagonal) bonds.
-- **i.i.d. limit is recovered exactly:** as `p2 → 0`, `J2, J3 → +∞`, forcing
-  `σ1=σ2=σ3=σ4`, and the square-octagonal RBIM **degenerates to the standard 2D RBIM of ref [6]**.
-  This is the paper's self-consistency check ([paper], text after Eq.20).
-- **Nishimori line:** `β = J1 = −½ ln( p1/(1−p1) )` (Eq.21 text). Domain-wall free-energy cost
-  Eq.(21): `Δi(τ) = βF(K,τi) − βF(K,τ) = ln( Z[K,τ] / Z[K,τi] )` — diverges (ordered/below-
-  threshold ⇒ correctable) or stays finite (disordered/above-threshold ⇒ failure). `K` = the
-  couplings `J'2, J'3`.
 
-### Numerical determination (the "CALCULATING THRESHOLDS" section)
-Symmetric case `p2 = p1 = p`. Parallel-tempering MC, finite-size scaling of the correlation
-length. Wave-vector susceptibility `χ(k) = (1/L²)⟨|Σ_i s_i e^{i k·r_i}|²⟩`; finite-size
-correlation length `ξ = [1/(2 sin(kmin/2))] √( χ(0)/χ(kmin) − 1 )`, `kmin = (2π/L, 0)`.
-FSS ansatz Eq.(22): `ξ/L ≈ f[ L^{1/ν} (T − Tc) ]` — curves for different `L` cross at `Tc`
-(Fig.5). Params in Table I: `L = {12,15,18,21,24}`, 600–800 disorder samples, `p` swept over
-0.025–0.045, `Tmin∈[0.3,0.5]`, `Tmax=1`.
+#### 在正方-八角对偶格点上放置 Ising 自旋
 
-## The MECHANISM (for implementation) [paper → ours]
-**Implementable in our teacher as a product of two independent stochastic Z channels:**
-1. per data qubit: `Z` with prob `p1` (Eq.1) — already have i.i.d. Pauli.
-2. per NN diagonal data-pair `{qi,j, qi−1,j+1}` and `{qi,j, qi+1,j+1}`: `ZiZj` with prob `p2`
-   (Eq.2) — a two-body correlated ZZ jump, sampled independently of the single-body channel.
+在对偶格子的三角形中心放置 Ising 自旋 `σ^k_{i,j} ∈ {±1}`（Fig.4）。映射 M（Eq.17）：
 
-Grounded parameters: `p1, p2 ≥ 0` arbitrary ratio (`p2/p1` unrestricted — paper's headline
-generality claim). Symmetric working point `p1=p2=p ∈ [0.025, 0.045]`; exact threshold at
-`p1=p2` is **pc ≈ 3%**. Where in the circuit: data-qubit Z after the error step, correlated on the
-two diagonal NN orientations only (nearest-neighbor, spatial). Repo: we do not have this exact
-square-octagonal EEM mapping; our correlated-2q relaxation / crosstalk teachers
-(`docs/twin_validation/m11_*`, `m12_correlated_2q_relaxation_*`) are the nearest existing
-mechanisms — those are Lindbladian/relaxation-flavored, NOT the stochastic-ZZ + stat-mech-threshold
-object here.
+```
+u(l^k_1) → σ⁴_{i,j} σ¹_{i+1,j}   (水平边) 或  σ³_{i,j} σ²_{i,j+1}  (垂直边)
+u(l^k_2) → −½(σ¹σ² −1)(σ³σ⁴ −1) + 1
+u(l^k_3) → −½(σ¹σ³ −1)(σ²σ⁴ −1) + 1
+```
 
-## The OBSERVABLE / metric [paper]
-- **Primary (exact):** the surface-code **error threshold `pc`** = Nishimori critical point of the
-  square-octagonal RBIM (Eq.20). Decoder-independent, so it is the *maximum achievable*
-  threshold. Symmetric-case value **pc ≈ 3%** (MC, text after Fig.5; the text says "The
-  calculated threshold is 3%").
-- **Decode-relevant (the ΔLER analogue):** **logical error rate LER(p)** curves and the
-  **decoder threshold gap** (Fig.6): i.i.d.-blind matching 1.8% (Fig.6 caption says ≈1.9%),
-  Stim-DEM correlated-aware matching 2.4%, vs exact 3%. The **gap = pc(exact) − pc(decoder)** is
-  the isolable "correlation is not being fully exploited" quantity ≈ **0.5–0.6%** (paper: "This
-  remains 0.5% lower than our calculated threshold 3%"). This is *headroom left by the decoder*,
-  the direct analogue of a decode-relevant ΔLER.
-- **Susceptibility / correlation-length FSS** (`χ(k)`, `ξ/L`, Eq.22) — the estimator, not a QEC
-  observable per se; crossing of `ξ/L` locates `Tc` ⇒ `pc`.
+#### 规范约束 Eq.(18)
 
-## Findings + numbers [paper]
+为了消除配分函数中的不需要的项，施加自旋约束：
 
-| Quantity | Value | Source |
-|---|---|---|
-| Exact threshold, symmetric `p1=p2=p` | **≈ 3.0%** | MC + FSS, text after Fig.5 |
-| PyMatching, correlation-**blind** (i.i.d. decode) | **1.8%** (Fig.6 label ≈1.9%) | decoder comparison |
-| PyMatching + Stim-DEM, **correlated-aware** matching | **2.4%** | decoder comparison |
-| Decoder gap to exact | **~0.5–0.6%** | "0.5% lower than 3%" |
-| i.i.d. limit (`p2→0`) | reduces to standard 2D RBIM threshold of ref [6] | after Eq.20 |
-| Effective edge prob (correlated) | `p̄2 = 2(1−p2)p2` | Eq.6 |
-| Coupling | `Ji = ln((1−p̄i)/p̄i)`, anisotropy `J'2=J2/J1` | Eq.14, Eq.20 |
-| Nishimori line | `β = J1 = −½ ln(p1/(1−p1))` | Eq.21 |
+```
+σ¹_{i,j} σ²_{i,j} σ³_{i,j} σ⁴_{i,j} = 1
+```
 
-**Direction / magnitude of the correlation shift:** Correlated NN errors turn the plain 2D RBIM
-into an **anisotropic square-octagonal RBIM** with extra diagonal bonds `J'2, J'3`. At the
-symmetric point the *exact* threshold (≈3%) sits **above** what correlation-blind matching achieves
-(1.8–1.9%) and even above correlated-aware Stim-DEM matching (2.4%). So (a) properly handled, the
-NN-correlated code is *more* correctable than a naive-decoder estimate suggests, and (b) the exact
-threshold quantifies decodable headroom (~0.5–0.6% at the symmetric point). The paper does NOT
-tabulate `pc` vs `p2/p1` as a curve — it proves the mapping works for any ratio but only reports the
-one symmetric number.
+这个约束是映射的核心——它确保每个 plaquette 上的自旋乘积为 +1，对应物理纠错条件的正确
+陈述。
 
-## Limitations [paper]
-- **Nearest-neighbor, spatial-only, two-body ZZ.** Only diagonal/anti-diagonal NN data-qubit pairs
-  (Eq.2). No next-NN, no >2-body correlations.
-- **NO temporal correlation, NO non-Markovianity.** Purely a static spatial 2-body stochastic
-  channel; time / measurement rounds do not enter the mapping. (The intro *motivates* with
-  temporal & non-Markovian noise, ref [30,31], but the model and mapping cover neither.)
-- **Z-sector only** (X/Z decoupled assumption); depolarizing/correlated-XZ not treated.
-- **`p_success` factorization implicit** in EEM: the both-pairs-fire → stabilizer cancellation
-  and the coset argument assume the specific NN pairing geometry; generality to arbitrary
-  correlation graphs is not shown.
-- **Exact threshold value is MC-derived**, not closed-form: the *mapping* is exact/analytic, but
-  the reported `pc ≈ 3%` comes from parallel-tempering + FSS on `L≤24`, so it carries FSS
-  uncertainty (paper gives no error bar; "3%" is stated to 1 sig-fig). The i.i.d. baseline in the
-  paper's own text is internally loose (1.8% in the decoder-comparison prose vs "approximately
-  1.9%" in Fig.6 caption).
-- **Companion caveat:** the "symmetry enhances thresholds" story is in ref [33] (arXiv:2506.15490);
-  this paper is the exact-mapping half.
+#### 最终：正方-八角 RBIM 配分函数，Eq.(19)
 
-## Relevance to qec_twin [ours]
-**Verdict: a genuine but SCOPED independent analytic anchor for a *spatial-NN-correlated stochastic-
-Z* teacher — NOT for our live non-Markovian / temporal-correlation wedge.**
+```
+Z = Σ_σ exp[ ½ J₁ η_E(l₁)(σ³_{i,j}σ¹_{i+1,j} + σ⁴_{i,j}σ²_{i,j+1})
+          + ½ J₂ η_E(l₂)(σ¹σ² + σ³σ⁴)
+          + ½ J₃ η_E(l₃)(σ¹σ⁴ + σ²σ³) ]
+```
 
-- **Rule-I independent anchor (partial):** The square-octagonal RBIM Nishimori mapping (Eqs.6,
-  14, 17–20) is an *implementation-independent* ground truth. Any correlated-error teacher/decoder
-  we build that matches this exact noise model (i.i.d. `p1` ⊗ NN-ZZ `p2`, Z-sector) MUST reproduce:
-  (i) the exact edge-probability rule `p̄2 = 2(1−p2)p2` (a closed-form check on how a two-body ZZ
-  channel folds into an effective single-edge rate — this is a cheap, exact, non-circular unit
-  test); (ii) the i.i.d.-limit degeneracy (`p2→0` ⇒ standard RBIM threshold ~10.9% for the
-  Nishimori point of the plain code, or whatever ref-6 value applies); (iii) the symmetric-point
-  exact threshold `pc ≈ 3%` (MC-grade, so a *bracket* not a zero-tolerance anchor). Item (i) is the
-  strongest anchor — it is exact and closed-form.
-- **Confirms correlation is decode-relevant, not benign:** YES — the ~0.5–0.6% gap between exact
-  (3%) and even a correlated-aware Stim-DEM decoder (2.4%) is *positive and above the i.i.d.-blind
-  baseline* (1.8–1.9%). This is direct external evidence that NN spatial correlation is a
-  decode-relevant lever with real headroom, the analogue of a positive ΔLER — and independently
-  supports our "correlation matters" framing.
-- **Does NOT rescue our non-Markovian wedge.** Per MEMORY
-  (`project-nonmarkovian-wedge-must-be-coherence`, `project-coupling-nonmarkovian-is-the-
-  contribution`): our contribution must be *temporal / CP-divisibility-breaking* correlation that
-  Markov-k and DD cannot capture. This paper's correlation is **static, spatial, Markovian,
-  stochastic Pauli** — exactly the *removable/owned* class our red-team flagged as a strawman
-  contribution. It is thus a **baseline/anchor**, not a novelty. Concretely: a Stim-DEM /
-  Markov-k decoder already partially captures it (2.4% here), consistent with our finding that
-  classical spatial-round-correlation is Markov-k-capturable.
-- **Reuse:** the exact `p̄2 = 2(1−p2)p2` folding rule and the i.i.d.-limit degeneracy are worth
-  adding as unit-test anchors if/when a spatial-NN-correlated Z teacher is built; the
-  square-octagonal RBIM `pc≈3%` is a coarse cross-check bracket. Our `certify` seam (independent
-  exact/declared anchors, ADR 0008) is the natural home. Existing nearest mechanisms:
-  `docs/twin_validation/m12_correlated_2q_relaxation_*`, `m11_spectator_crosstalk_*` — but those
-  are Lindblad-relaxation, not this stochastic-ZZ object, so the anchor does not transfer to them
-  without re-deriving the effective edge rate for the relaxation channel.
+有效哈密顿量，**Eq.(20)**（论文的核心结果）：
 
-## How to use / trust + open questions [ours]
-- **Trust:** FULL text read; the mapping (Eqs.1–20) is stated verbatim and self-consistent (the
-  `p2→0` degeneracy is a real internal check). The threshold *value* 3% is MC/FSS at `L≤24` with
-  no quoted error bar (1 sig-fig) — treat as a **bracket**, not an exact number. The exact,
-  citable pieces are the closed-form edge rule `p̄2=2(1−p2)p2`, the coupling `Ji=ln((1−p̄i)/p̄i)`,
-  and the i.i.d.-limit degeneracy — those are theorem-grade within the paper's model.
-- **Open questions for implementation:** (1) `pc` vs `p2/p1` curve is not given — if we want an
-  anchor away from the symmetric point we must run the MC ourselves (their Table I is enough to
-  reproduce). (2) The both-pairs-fire → stabilizer cancellation depends on the exact rotated-lattice
-  pairing; verify the geometry matches whatever surface-code convention our teacher uses before
-  reusing the edge rule. (3) Fig.6 caption (`d=9,15,21`) vs its legend text (`d=9,11,15`) disagree —
-  minor, ignore. (4) The "3% exact" and "2.4% Stim-DEM" are the two numbers to cross-check against
-  any spatial-NN-correlated decoder we run.
-- **GT-feasibility:** HIGH for the closed-form edge rule (exact unit test, no simulation).
-  MEDIUM for the threshold (needs our own parallel-tempering MC to get an error bar). The paper's
-  own PyMatching/Stim comparison is reproducible with our vendored PyMatching + Stim baselines.
+```
+H = − Σ_{i,j} [ η_E(l₁)(σ³σ¹' + σ⁴σ²')
+              + J'₂ η_E(l₂)(σ¹σ² + σ³σ⁴)
+              + J'₃ η_E(l₃)(σ¹σ⁴ + σ²σ³) ],
+    约束：σ¹σ²σ³σ⁴ = 1,   J'₂ = J₂/J₁,  J'₃ = J₃/J₁
+```
+
+**关键物理：**
+- 关联性精确地体现为**两个各向异性耦合比** `J'₂ = J₂/J₁` 和 `J'₃ = J₃/J₁`。这些是对角线/
+  反对角线键，其相对于 i.i.d. 键 `J₁` 的强度完全由 `p₂` vs `p₁` 决定。
+- 与 i.i.d. RBIM 的"偏移"表现为**晶格 + 各向异性的变化**：NN 关联向标准正方 RBIM 添加了
+  八角形（对角线）键。
+- **i.i.d. 极限精确恢复：** 当 `p₂ → 0` 时，`J₂, J₃ → +∞`，迫使 `σ¹=σ²=σ³=σ₄`，正方-八角
+  RBIM **退化到 ref [6] 的标准 2D RBIM**。这是论文的自洽性检验。
+
+#### Nishimori 线
+
+```
+β = J₁ = −½ ln( p₁/(1−p₁) )
+```
+
+即逆温度由单量子比特错误率决定。序参量：畴壁自由能代价，Eq.(21)：
+
+```
+Δ_i(τ) = βF(K,τ_i) − βF(K,τ) = ln( Z[K,τ] / Z[K,τ_i] )
+```
+
+- 在错误率低于阈值时：畴壁自由能随系统尺寸发散 → 有序相 → 成功纠错
+- 在错误率高于阈值时：热涨落主导 → 无序相 → 逻辑错误
+
+### 2.5 闭合形式的边规则：p̄₂ = 2(1−p₂)p₂
+
+**这是论文中最强的可操作结果。** 推导步骤：
+
+1. 一对 NN 对 `{q_{i,j}, q_{i−1,j+1}}` 和 `{q_{i+1,j+1}, q_{i+2,j}}` 中，每个对独立经历
+   `ZiZj` 错误，概率 `p₂`。
+2. 恰好一个对有错误的概率 = `2 · p₂(1−p₂)`（二项分布：两种选择，一种成功）。
+3. 两个对都有错误的概率 = `p₂²`，四个 Z 算符构成一个稳定子 → 物理上等价于无错误。
+4. 因此，边被激活的总有效概率 = `2p₂(1−p₂)`。
+
+**有效性条件：**
+- 这对对的几何排列必须构成一个稳定子（即四个 Z 算符的乘积是稳定子群的一个元素）。
+- 在旋转表面码（rotated surface code）的特定平面上本性质成立。不同的表面码几何可能需要
+  重新推导。
+- X/Z 解耦假设：仅对 Z 扇区有效。如果关联性跨越 X 和 Z（如 depolarizing 噪声中的 XX+YY
+  关联），则此规则不直接适用。
+
+---
+
+## 3. 阈值数值
+
+### 3.1 主要结果
+
+| 数量 | 数值 | 来源 |
+|------|------|------|
+| 精确阈值（对称 `p₁=p₂=p`） | **≈ 3.0%** | MC + FSS，Fig.5 后正文 |
+| PyMatching 关联盲（i.i.d. 解码） | **1.8%**（Fig.6 标注 ≈1.9%） | 解码器对比，Fig.6 |
+| Stim-DEM 关联感知匹配 | **2.4%** | 解码器对比，Fig.6 |
+| 解码器差距 | **~0.5–0.6%** | 正文："remains 0.5% lower than 3%" |
+| i.i.d. 极限（`p₂→0`） | 退化到 ref [6] 的标准 RBIM 阈值 | Eq.20 后正文 |
+
+### 3.2 数值方法
+
+**参数设置（Table I）：**
+- 系统尺寸：`L = {12, 15, 18, 21, 24}`
+- 无序样本数：`N_sa = 600–800`
+- 扫描 p 范围：`0.025–0.045`
+- 温度范围：`T_min ∈ [0.3, 0.5]`, `T_max = 1`
+- 温度点数：`N_T = 20–35`
+- 平衡判据：对数分箱（logarithmic binning），每 10000 步进行一次平衡检验
+- 测量：200000 次平衡后扫描步，每 5 步采集一次数据
+
+**有限尺寸标度（FSS）：**
+- 波矢相关的磁化率：`χ(k) = (1/L²) ⟨|Σ_i s_i e^{ik·r_i}|²⟩`
+- 有限尺寸关联长度：`ξ = [1/(2 sin(k_min/2))] √(χ(0)/χ(k_min) − 1)`, `k_min = (2π/L, 0)`
+- FSS 标度假定：`ξ/L ≈ f[ L^{1/ν} (T − T_c) ]` — 不同 L 的曲线在 T_c 处交叉（Fig.5）
+- 对于 p ≲ p_c，存在清晰的相变交叉点；对于 p > p_c，交叉消失
+
+**Fig.5 所示：**
+- (a) p = 0.025：清晰的交叉点（低于阈值）
+- (b) p = 0.030：交叉点清晰可见（接近阈值）
+- (c) p = 0.031：交叉点仍在（非常接近阈值）
+- (d) p = 0.032：交叉点消失（超过阈值）
+
+### 3.3 解码器净空
+
+论文最重要的实用发现：
+
+- **关联盲解码（PyMatching，无视关联性）：** 阈值 ≈ 1.8–1.9%。这是将关联错误视为独立
+  i.i.d. 错误时的表现。
+- **关联感知解码（Stim-DEM + PyMatching）：** 阈值 ≈ 2.4%。Stim 的错误检测模型（DEM）明确
+  编码了关联错误结构，使 MWPM 能够利用这些信息。
+- **精确阈值（统计力学）：** ≈ 3.0%。这是解码器无关的理论上限——原则上可达到的最高阈值。
+
+净空 = 3.0% − 2.4% = 0.6%。这意味着即使是最优的 MWPM 解码器在实际中也会遗留约 0.6% 的
+可解码空间未被利用。这可能是因为 MWPM 是多项式时间近似算法，而非最大似然解码器。
+
+---
+
+## 4. 为什么这对我们至关重要 [ours]
+
+### 4.1 定理级别的 Rule-I 锚点
+
+对本项目而言，这篇论文提供了**一个独立于我们载体的闭合形式认证锚点**——这是我们整个架构
+（seam certification, ADR 0008）的核心需求。
+
+**三个层级的锚点：**
+
+| 层级 | 性质 | 精度 | 用途 |
+|------|------|------|------|
+| L1: `p̄₂ = 2(1−p₂)p₂` | **精确**（闭合形式，定理驱动） | 浮点精度 | 零容忍单元测试 |
+| L2: i.i.d. 极限退化 | **精确**（`p₂→0` 退化为标准 RBIM） | 逻辑一致性 | 极限行为检验 |
+| L3: `p_c ≈ 3%` | **数值**（MC + FSS, L ≤ 24） | ~1 sig-fig 括号 | 粗略交叉检验 |
+
+### 4.2 净空量化了"可移除的马尔可夫部分"
+
+3% − 2.4% = 0.6% 这个数字有一个深刻的解释：
+
+- 关联感知 MWPM 解码器（Stim-DEM）已经捕获了空间关联的**马尔可夫部分**（即可以编码到
+  配对图中的部分）。这对应于经典 Markov-k 模型能够表达的关联结构。
+- 精确阈值（3%）代表了在这个噪声模型下表面码信息论上能容忍的最大错误率。
+- 因此，这 0.6% 的差距代表了**MWPM 解码器因算法限制而非物理限制而丢失的部分**。
+
+对于我们的项目，这意味着：
+
+1. **我们非马尔可夫楔形的基线：** 当我们引入时间关联（非马尔可夫性）时，我们必须在空间
+   马尔可夫基准之上证明额外的价值。这篇论文告诉我们，即使完美的空间关联利用也只能带来
+   约 0.6% 的阈值提升——这是对我们的非马尔可夫贡献必须与之比较的"天花板"。
+2. **"可解码性预算"的概念：** 如果空间关联已经占据了大部分的"可解码性预算"（从 1.9% 到
+   3.0% 的完整可能提升，实际被利用的是从 1.9% 到 2.4%），那么时间关联能带来多少额外
+   价值？这直接关系到我们贡献的显著性声明。
+
+### 4.3 与非可马尔可夫楔形的关系
+
+**重要区分：** 这篇论文的关联是**静态的、空间的、马尔可夫的、随机泡利的**——正是我们的
+红队标记为"可被现有方法去除/拥有"的那一类。具体来说：
+- Stim-DEM / Markov-k 解码器已经部分捕获了它（2.4%）
+- 它对应经典的、空间上的 round-to-round 关联
+
+**我们的贡献必须是**时间性的 / CP-可分解性破缺的关联——即 Markov-k 和 DD（动态解耦）
+无法捕获的。这篇论文的存在：
+- **强化了基线：** 我们现在有了一个精确的、定理级的空间关联基准
+- **警示了声明：** 我们不能将空间关联阈值提升陈述为我们的贡献——这篇论文已经拥有它
+- **限定了楔形：** 我们的额外阈值提升空间被限制在已经建立的 0.6% 解码器差距之上
+
+### 4.4 接缝认证中如何使用
+
+在 `qec_twin` 的 `certify` 认证框架中（ADR 0008），这篇论文提供：
+
+**输入-层认证（预实现）：**
+1. 如果我们的 teacher 实例化了 Eq.(1)–(2) 的精确噪声模型（独立单量子比特 Z + 关联 NN ZZ），
+   则应验证 `p̄₂ = 2(1−p₂)p₂` 这条边规则——一个简单、廉价、非循环的单元测试。
+2. 验证 `p₂ → 0` 极限下方-八角 RBIM 退化到标准 2D RBIM。
+
+**输出-层认证（后实现）：**
+1. 在我们的模拟器上运行表面码逻辑错误率模拟，使用 Eq.(1)–(2) 噪声模型。
+2. 将 LER 交叉点与论文的精确阈值（≈3%）比较。
+3. 验证我们的解码器差距模式与论文一致（关联感知 > 关联盲）。
+
+---
+
+## 5. 局限性
+
+### 5.1 模型局限性（论文的）
+
+1. **仅 Z 扇区（X/Z 解耦）。** 论文假设 X 和 Z 错误独立纠正。实际的量子硬件有 depolarizing
+   噪声（X、Y、Z 错误耦合），以及相干 XZ 关联。此模型不处理这些情况。
+
+2. **最近邻、仅空间、两体 ZZ。** 仅限对角线/反对角线 NN 数据量子比特对（Eq.2）。没有
+   次近邻关联，没有 >2 体关联，没有跨多个量子比特的集群关联。
+
+3. **无时间关联，无非可马尔可夫性。** 这是一个纯静态的空间两体随机信道；时间和测量轮次
+   不进入映射。论文引言**以时间关联和非可马尔可夫噪声为动机**（参考文献 [30,31]），但
+   模型和映射完全不覆盖它们。
+
+4. **阈值数值是 MC 推导的，非闭合形式。** *映射*是精确/解析的，但报告的 `p_c ≈ 3%` 来自
+   并行回火 + FSS（`L ≤ 24`），带有 FSS 不确定性。论文未给出误差棒；"3%" 只有一位有效
+   数字。正文中 i.i.d. 基线自身存在内部不一致：解码器对比中为 1.8%，Fig.6 标题中约为
+   1.9%。
+
+5. **无相干性。** Eq.(1)–(2) 是随机泡利信道，没有相干旋转（如小角度 Z 旋转、θ 较小的
+   `e^{iθZZ}` 等）。对于超导量子比特中的真实错误机制，相干性是重要的一部分。
+
+6. **配对坍缩的几何依赖性。** "两对都激发 → 稳定子取消"规则依赖于旋转表面码的精确几何。
+   如果教师使用不同的表面码布局（如无角度的规范表面码），该规则可能不成立。
+
+7. **`p_success` 分解的隐含假设。** EEM 和陪集论证假设了特定的 NN 配对几何结构；对任意
+   关联图的普适性未做证明。
+
+### 5.2 实践局限性（我们的视角）
+
+1. **仅有对称点。** 论文证明了映射适用于任意 `p₂/p₁` 比率，但仅报告了对称点
+   `p₁ = p₂ = p` 的散射数值。在非对称比率下可能需要我们自己的 MC 来获得精确阈值。
+
+2. **论文的 Fig.6 存在小幅不一致。** 标题称 `d = 9, 15, 21`，但图例文本有 `d = 9, 11, 15`——
+   这是一个小问题，不影响核心结果，但表明 QC 可以更严格。
+
+3. **低距离且无误差棒。** 最大系统尺寸为 `L = 24`（对于 d 而言为约 12），没有到达
+   大规模极限。阈值从 4 个系统尺寸的 FSS 插值得出，临界指数 ν 未报告。
+
+---
+
+## 6. [ours] 我们究竟如何使用这个？接缝认证协议
+
+### 6.1 认证目标
+
+确认我们的 teacher 模拟器在实现 Eq.(1)–(2) 噪声模型时产生物理学上正确的结果。
+
+### 6.2 协议步骤
+
+**步骤 0：前置条件**
+- teacher 实现了独立信道：单量子比特 Z（概率 `p₁`）+ 关联 NN ZZ（概率 `p₂`）
+- 模拟器能够运行表面码稳定子测量和 MWPM 解码
+- 被测试的噪声教师使用独立信道模式（不是联合 Lindbladian）
+
+**步骤 1：闭合形式边规则检验（零容忍）**
+
+给定 `p₂`，直接计算 `p̄₂ = 2(1−p₂)p₂`。然后验证：
+- 在我们的错误模型中，对角边上恰好有一个关联错误的经验概率等于 `p̄₂` 到浮点精度。
+- 物理推导：从 Eq.(2) 信道的二项式采样性质直接得出。
+
+**如何测试：**
+```
+给定 p₂, N 次采样：
+  激活的对角边计数 / 总对角边数 → 经验概率
+  断言 |经验概率 − 2(1−p₂)p₂| < NUMERICAL_ZERO  # 1e-12
+```
+
+**步骤 2：两对确认检验（零容忍）**
+
+验证当且仅当两对 NN 都有错误时（`p₂²`），四个 Z 构成一个稳定子：
+- 在我们的 teacher 的 plaquette 基础上，确认 `Z_{i+1,j+1} Z_{i+2,j} Z_{i,j} Z_{i+1,j+1}`
+  确实是某个 plaquette 稳定子。
+- 验证这种情况下 stabilizer 测量结果为 +1（等同于无错误）。
+
+**步骤 3：陪集等价性检验（结构验证）**
+
+在小的系统（如 3×3 数据量子比特）上枚举所有错误配置，验证 Eq.(7)–(8) 的陪集求和：
+- 所有映射到相同边链的错误集合确实共享相同的解码结果。
+- 闭合回路 → 成功，跨越全系统的线 → 逻辑错误。
+
+**步骤 4：解码器差距模式（数值括号）**
+
+运行逻辑错误率模拟，对比三种解码器：
+1. 精确 NISQ 模拟（小 d）或我们的 carrier 模拟（大 d）：
+   - `p₁=p₂=p` 扫描，检测 LER 交叉点
+2. 与论文 Fig.6 对比：
+   - 关联盲阈值应为 ~1.8–1.9%
+   - 关联感知阈值应为 ~2.4%
+   - 精确阈值应接近 3%
+
+**步骤 5：非对称比率检查（增益）**
+
+在 `p₂/p₁` 的多个值上运行（如 0.5、1.0、2.0），比较阈值偏移的模式。论文声称 "applicable
+for any ratio"——我们应验证我们的实现在此声明范围内。
+
+### 6.3 认证通过的判定标准
+
+| 检查 | 严格程度 | 通过标准 |
+|------|---------|---------|
+| 边规则 `p̄₂ = 2(1−p₂)p₂` | 精确 | 偏差 < 1e-12 |
+| 两对 → 稳定子 | 精确 | 恒成立 |
+| i.i.d. 极限 `p₂→0` | 精确 | 恢复到标准 RBIM 阈值 |
+| 解码器差距模式 | 数值括号 | 模式一致（关联盲 ~1.9%，关联感知 < 精确）|
+| 阈值 3% | 数值括号 | 在 3% ± 0.3% 内 |
+
+---
+
+## 7. 可操作的实现路径
+
+### 7.1 给定 p₁、p₂，如何用一行代码计算出精确阈值？
+
+**答案是：不能直接一行代码算出。** 论文没有给出 `p_c(p₁, p₂)` 的闭合形式表达式。而是
+给出了映射方法，需要蒙特卡洛模拟来找到临界点。
+
+然而，对于**对称情形 p₁ = p₂ = p**，我们可以直接使用论文的结果：
+
+```
+p_c ≈ 0.03  # 3%
+```
+
+要计算任意 `p₂/p₁` 比率下的精确阈值，需要运行论文的并行回火 MC + FSS 管线。该论文的
+Table I 给出了足够的参数来复现（600–800 个无序样本，L = 12–24，温度扫描）。
+
+### 7.2 实用的近似路径
+
+对于非对称比率，论文的映射给出了一个**数值可计算的途径**：
+
+**输入：** p₁, p₂（任意非负值）
+
+**输出：** 精确阈值 p_c
+
+1. 计算有效边概率：
+   ```python
+   p̄1 = p1
+   p̄2 = 2 * p2 * (1 - p2)
+   p̄3 = 2 * p2 * (1 - p2)  # 对称情形下
+   ```
+
+2. 计算耦合：
+   ```python
+   J1 = math.log((1 - p̄1) / p̄1)
+   J2 = math.log((1 - p̄2) / p̄2)
+   J3 = math.log((1 - p̄3) / p̄3)  # 对称情形下 = J2
+   J_prime_2 = J2 / J1
+   J_prime_3 = J3 / J1
+   ```
+
+3. 构建正方-八角 RBIM 哈密顿量（Eq.20）并运行并行回火 MC，寻找有限尺寸关联长度交叉点。
+
+### 7.3 在我们的代码库中的最小实现
+
+对于 `certify` seam（接缝认证），**不需要完整的 MC 模拟**。最小实现是：
+
+```python
+def check_edge_rule(p2: float, num_samples: int = 1_000_000) -> dict:
+    """验证关联 ZZ 边规则的闭合形式 p̄₂ = 2(1−p₂)p₂。"""
+    # Eq.(2): 每个 NN 对独立以概率 p2 经历 ZZ 错误
+    # 两对独立采样
+    pair1 = np.random.binomial(1, p2, num_samples)
+    pair2 = np.random.binomial(1, p2, num_samples)
+
+    # 边激活：恰好一个对有错误
+    edge_active = (pair1 + pair2) == 1  # XOR（两个都激发 → 稳定子 → 无错误）
+
+    empirical = np.mean(edge_active)
+    theoretical = 2 * p2 * (1 - p2)
+
+    return {
+        "empirical": empirical,
+        "theoretical": theoretical,
+        "abs_diff": abs(empirical - theoretical),
+        "pass": abs(empirical - theoretical) < 1e-12,
+    }
+```
+
+这个测试**不需要我们的模拟器**——它直接在教师信道的定义层面运作。它作为教师实现正确性
+的预认证栅栏。
+
+### 7.4 在完整模拟中使用的路径
+
+1. 在我们的 teacher 中实现 `Z` 和 `ZZ` 独立信道（如果尚未实现）
+2. 在 `certify` 框架中添加 `anchor_correlated_zz`：一个可以路由到边规则检查器的锚
+3. 在有限系统尺寸上可选地运行 LER 扫描，与论文的 Fig.6 比较
+4. 在 `docs/twin_validation/` 中记录锚的状态（与 m11、m12 并列——但这些是 Lindblad
+   松弛，不同的物理对象）
+
+---
+
+## 8. 深度理解与开放问题
+
+### 8.1 论文未回答的问题
+
+1. **`p_c` vs `p₂/p₁` 曲线未提供。** 论文仅报告了对称点。如果我们想要远离对称点的锚点，
+   必须自己运行 MC（Table I 的参数足以复现）。
+
+2. **临界指数缺失。** 论文未报告 ν（关联长度临界指数）的值。在 i.i.d. 情形下，2D RBIM
+   的 Nishimori 点有 ν ≈ 1.5。此处是否相同？如果不同，这可能指示了普适类别的变化。
+
+3. **向 depolarizing 噪声的推广未讨论。** 论文的 Z 扇区论证依赖于 X/Z 解耦。在 depolarizing
+   噪声中（X、Y、Z 都出现），此映射的推广尚属开放问题。
+
+4. **有限尺寸效应。** L = 24 对于精确阈值确定来说相对较小。论文没有讨论有限尺寸校正是
+   否显著。
+
+### 8.2 与我们的联合 Lindbladian（Axis-1）的关系
+
+论文的噪声模型是**独立信道的乘积**——两个独立的随机泡利信道（一个单量子比特，一个两
+量子比特）同时作用。这个层级的关联与我们的 Axis-1 联合 Lindbladian 不同：
+
+- 论文的模型：`E_total(ρ) = E_iid(ρ) ○ E_corr(ρ)`（两个独立信道的组合）
+- 我们的 Axis-1：`∂ρ/∂t = L_1(ρ) + L_2(ρ)`（在同一时间步长内的相干 + 耗散联合演化，
+  包括非零对易子 `[H, D(ρ)]`）
+
+前者是纯随机泡利的，后者可以包含相干演化。这并不意味着论文的模型更简单——它恰好是
+经典马尔可夫关联的极限情况，为我们的相干非马尔可夫推广提供了重要的基准。
+
+### 8.3 论文质量评估
+
+- **数学严谨性：** 高。映射的推导是自洽的，i.i.d. 极限退化是一个真实的内部检核。
+- **数值充分性：** 中等。L ≤ 24，无误差棒，仅对称点。这些数字是括号值而非审定值。
+- **写作清晰度：** 中等。作为快报，许多推导细节被省略（例如陪集等价性的完整证明）。
+- **结果可靠性：** 论文的核心贡献是**映射**（EEM + 正方-八角 RBIM），而非 3% 的数值。
+  映射是定理等级的；3% 是 MC 括号。
+
+---
+
+## 9. 关键引用快照
+
+```latex
+@misc{wang2025exactthresholdsurfacecode,
+      title={An exact Error Threshold of Surface Code under Correlated
+             Nearest-Neighbor Errors: A Statistical Mechanical Analysis},
+      author={SiYing Wang and ZhiXin Xia and Yue Yan and Xiang-Bin Wang},
+      year={2025},
+      eprint={2510.24181},
+      archivePrefix={arXiv},
+      primaryClass={quant-ph}
+}
+```
+
+---
+
+## 附录 A：公式索引
+
+| 公式 | 内容 | 类型 | 可操作性 |
+|------|------|------|---------|
+| (1) | 单量子比特 Z 信道 | 定义 | 实现 |
+| (2) | 关联 NN ZZ 信道 | 定义 | 实现 |
+| (3) | p_success 配分函数比 | 标准理论 | 验证 |
+| (4) | P(E₁) 计算示例 | 示例 | 解释 |
+| (5) | n_E 边占用指示符 | 定义 | 编码 |
+| (6) | **EEM 有效概率公式** | **核心公式** | **单元测试** |
+| (7)–(8) | 陪集求和等价性 | 证明 | 结构验证 |
+| (9)–(11) | 陪集 A_l 定义 | 证明 | 结构验证 |
+| (12)–(13) | η, u 符号变量 | 定义 | 中间步骤 |
+| (14) | Ising 化边概率 | 推导 | 中间步骤 |
+| (15) | η = u · η_E | 推导 | 中间步骤 |
+| (16) | 代回 η 后的 P(Ẽ') | 推导 | 中间步骤 |
+| (17) | **映射 M（边→自旋）** | **核心映射** | **理解** |
+| (18) | 规范约束 σ¹σ²σ³σ⁴ = 1 | 核心约束 | 理解 |
+| (19) | 正方-八角 RBIM 配分函数 | 结果 | 理解 |
+| (20) | 有效哈密顿量 H | 核心结果 | 理解 |
+| (21) | 畴壁自由能代价 Δ_i | 理论 | 理解 |
+| (22) | FSS ξ/L 标度关系 | 数值方法 | 复现 |
+
+## 附录 B：与现有教师的关系
+
+| 我们的教师 | 与论文的关系 | 锚点可用性 |
+|-----------|------------|-----------|
+| m11 旁观者串扰 | Lindblad 松弛，不是随机 ZZ | 不可直接转移，需要重新推导 |
+| m12 关联 2q 松弛 | Dicke 代数，不是随机 ZZ | 不可直接转移 |
+| m22 相干 XX 寄生耦合 | 哈密顿量演化，不是随机 ZZ | 不可直接转移 |
+| 标准 i.i.d. 泡利教师 | 论文的 `p₂=0` 极限 | 完全锚定 |
+| **新的关联 ZZ 教师** | **论文的精确模型** | **完全锚定（推荐实现）** |

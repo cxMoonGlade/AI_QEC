@@ -1,3 +1,9 @@
+## Provenance
+
+- **Source:** arXiv:2603.05492, fetched 2026-06-30
+- **Reading method:** FULL-TEXT read (精读) via arXiv HTML — all sections, equations, and appendices
+- **Status:** complete full-text close-read
+
 # Deep review — Ivashkov, Romanov, Gong, Gu, Hu & Yelin, Ansatz-Free Learning of Lindbladian Dynamics In Situ
 
 > Deep reading note (academic-paper-review format; full read Secs. I–III incl. the

@@ -1,5 +1,11 @@
 # Deep review — Beverland, Carroll, Cross & Yoder, Fail Fast: Techniques to Probe Rare Events in Quantum Error Correction
 
+## Provenance
+
+- **Source:** arXiv:2511.15177 [https://arxiv.org/abs/2511.15177](https://arxiv.org/abs/2511.15177), fetched 2026-06-30
+- **Reading method:** FULL-TEXT read (精读) via arXiv HTML — all sections, equations, figures, and appendices
+- **Status:** complete full-text close-read
+
 > Deep reading note (academic-paper-review format; full read Secs. 1–2 incl. the
 > `(H,A,C)` formalism, the failure-spectrum transform Eqs. 1–2, the onset-weight
 > definition, and the three techniques' overviews; Secs. 3–6 + appendices at the

@@ -1,5 +1,11 @@
 # Deep review — Squires, Wang & Uhler, Permutation-Based Causal Structure Learning with Unknown Intervention Targets (UT-IGSP)
 
+## Provenance
+
+- **Source:** arXiv:1910.09007 (full PDF, open access), fetched 2026-06-30; UAI 2020, PMLR 124:1039-1048 (also available via MIT DSpace: https://dspace.mit.edu/handle/1721.1/143913)
+- **Reading method:** FULL-TEXT read (精读) of the arXiv PDF — Secs. 1-3 (causal-DAG/I-MEC setup, perfect-vs-imperfect interventions, I-Markov invariance, JCI framework, unknown-target identifiability, Assumption 1) in full; Sec. 4 algorithm + Secs. 5-6 experiments at result level
+- **Status:** complete full-text close-read
+
 > Deep reading note (academic-paper-review format; full read Secs. 1–3 incl. the causal-DAG
 > /I-MEC setup, perfect-vs-imperfect interventions, the I-Markov invariance Eqs. 1–2, the JCI
 > framework, the unknown-target identifiability result, and Assumption 1 + its necessity;

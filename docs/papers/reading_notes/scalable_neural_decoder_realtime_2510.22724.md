@@ -1,3 +1,9 @@
+## Provenance
+
+- **Source:** arXiv:2510.22724, fetched 2026-06-30
+- **Reading method:** FULL-TEXT read (精读) via arXiv HTML — all sections, equations, and appendices
+- **Status:** complete full-text close-read
+
 # Deep review — Lee, Hur & Park, Scalable Neural Decoders for Practical Real-Time Quantum Error Correction
 
 > **Digest-tier note.** Built 2026-06-14 from a sub-agent digest of the arXiv HTML (v1);

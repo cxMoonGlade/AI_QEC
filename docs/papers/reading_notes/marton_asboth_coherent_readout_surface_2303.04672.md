@@ -1,3 +1,9 @@
+## Provenance
+
+- **Source:** arXiv:2303.04672, fetched 2026-06-30
+- **Reading method:** FULL-TEXT read (精读) via arXiv HTML — all sections, equations, and appendices
+- **Status:** complete full-text close-read
+
 # Deep review — Márton & Asbóth, Coherent Errors and Readout Errors in the Surface Code
 
 > Deep reading note (academic-paper-review format; full read Secs. 2–4 incl. both

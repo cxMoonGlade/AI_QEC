@@ -2,6 +2,8 @@
 
 > **Provenance (2026-06-25): 精读 of main text pp.1-6** (model + benchmarking + conclusions); SI pp.7-20
 > (the 5-parameter control model + numerics) skimmed. PDF→txt `outputs/papers/2001.08343.txt` (20 pp).
+> Published **Phys. Rev. Lett. 125, 120504 (2020)**, **DOI 10.1103/PhysRevLett.125.120504** (verified
+> against the arXiv abstract page 2026-06-30).
 > Google AI Quantum, 2020. The **coherent two-qubit-gate-error (fSim) crosstalk form** for the
 > teacher-completion (the "coherent XX/YY/ZX beyond ZZ" taxonomy item). Sibling crosstalk notes:
 > `harper_nonclifford_crosstalk_surface_2605.29514` (⑤a ZZ), pending Sarovar/Heinsoo/Gao.

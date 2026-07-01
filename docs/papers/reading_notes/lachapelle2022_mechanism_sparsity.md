@@ -1,5 +1,11 @@
 # Deep review — Lachapelle et al., Disentanglement via Mechanism Sparsity Regularization: A New Principle for Nonlinear ICA
 
+## Provenance
+
+- **Source:** arXiv:2107.10098 (full PDF, open access), fetched 2026-06-30; CLeaR 2022, PMLR 140:428-484 (proceedings at https://proceedings.mlr.press/v177/lachapelle22a.html)
+- **Reading method:** FULL-TEXT read (精读) of the arXiv PDF — Secs. 1-2 (latent dynamical model, exponential-family conditional, binary-mask causal graph, equivalence definitions, mechanism-sparsity theorem) in full; Secs. 3-4 at result level
+- **Status:** complete full-text close-read
+
 > Deep reading note (academic-paper-review format; full read Secs. 1–2 incl. the latent
 > dynamical model, the exponential-family conditional Eq. 2, the binary-mask causal graph
 > Eq. 3, the equivalence definitions, and the mechanism-sparsity identifiability theorem;

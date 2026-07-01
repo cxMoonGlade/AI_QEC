@@ -1,5 +1,11 @@
 # Deep review — Cont, Model Uncertainty and Its Impact on the Pricing of Derivative Instruments
 
+## Provenance
+
+- **Source:** HAL open archive (halshs-00002695, preprint PDF), fetched 2026-06-30; published as *Mathematical Finance* 16(3):519-547, 2006, DOI: 10.1111/j.1467-9965.2006.00281.x
+- **Reading method:** FULL-TEXT read (精读) of the HAL preprint PDF — Secs. 1-4 (axiomatic framework, coherent measure, uncertain-vol example) in full; Secs. 5-6 (convex measure, examples) at result level
+- **Status:** complete full-text close-read
+
 > Deep reading note (academic-paper-review format; full read Secs. 1–4 incl. the
 > axiomatic framework + the coherent measure + the uncertain-vol example; Secs. 5–6
 > convex-measure version + examples read at the result level). **Relevance to the

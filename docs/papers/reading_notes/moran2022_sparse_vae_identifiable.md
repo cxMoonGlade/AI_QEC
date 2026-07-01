@@ -1,5 +1,11 @@
 # Deep review — Moran, Sridhar, Wang & Blei, Identifiable Deep Generative Models via Sparse Decoding (Sparse VAE)
 
+## Provenance
+
+- **Source:** arXiv:2110.10804 (full PDF, open access), fetched 2026-06-30; TMLR 2023 (Transactions on Machine Learning Research, Volume 2022/2023), OpenReview: https://openreview.net/forum?id=vd0onGWZbE
+- **Reading method:** FULL-TEXT read (精读) of the arXiv PDF — Secs. 1-2 (sparse DGM, Spike-and-Slab-Lasso prior, sparse-VAE algorithm, anchor-feature identifiability result, positioning vs iVAE/ICA) in full; Secs. 3-5 at result level
+- **Status:** complete full-text close-read
+
 > Deep reading note (academic-paper-review format; full read Secs. 1–2 incl. the sparse DGM
 > Eq. 1, the Spike-and-Slab-Lasso prior Eqs. 2–4, the sparse-VAE algorithm, and the
 > anchor-feature identifiability result + its positioning vs iVAE/ICA; Secs. 3–5 at the

@@ -1,5 +1,11 @@
 # Deep review — Khemakhem et al., Variational Autoencoders and Nonlinear ICA: A Unifying Framework (iVAE)
 
+## Provenance
+
+- **Source:** arXiv:1907.04809 (full PDF, open access), fetched 2026-06-30; AISTATS 2020, PMLR 108:2207-2217 (proceedings at https://proceedings.mlr.press/v108/khemakhem20a.html)
+- **Reading method:** FULL-TEXT read (精读) of the arXiv PDF — Secs. 1-4 (model, identifiability theorems, equivalence classes, consistency) in full; Sec. 5 experiments at result level
+- **Status:** complete full-text close-read
+
 > Deep reading note (academic-paper-review format; full read Secs. 1–4 incl. the
 > model, the identifiability theorems and equivalence classes, and the consistency
 > result; Sec. 5 experiments at the result level). **Relevance to the twin**

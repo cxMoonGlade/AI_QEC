@@ -17,7 +17,8 @@ real MIT/Lincoln device parameter table.
 ## Metadata [paper]
 - Authors: Y. Sung et al. (17 authors), MIT Research Lab of Electronics / Dept. EECS / Dept. Physics + MIT
   Lincoln Laboratory.
-- Venue / status: arXiv:2011.01261 (Nov 2020; v3 18 Jun 2021). Published Phys. Rev. X 11, 021058 (2021).
+- Venue / status: arXiv:2011.01261 (Nov 2020; v3 18 Jun 2021). Published Phys. Rev. X 11, 021058 (2021),
+  **DOI 10.1103/PhysRevX.11.021058** (verified against the arXiv abstract page 2026-06-30).
 - Type: **experiment** (superconducting transmon device) + supporting theory (beyond-dispersive coupler model).
 
 ## Executive summary [paper]

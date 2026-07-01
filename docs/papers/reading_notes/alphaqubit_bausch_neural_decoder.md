@@ -1,14 +1,20 @@
 # Reading note — AlphaQubit (Bausch et al., Nature 2024) and its open precursor (Varbanov et al., 2023)
 
+## Provenance
+
+- **Source:** arXiv:2310.05900 (full PDF, open access), posted 2023; also Nature 635, 834–840 (2024)
+- **Reading method:** FULL-TEXT read (精读) of the arXiv preprint PDF (all 9+ pages, figures, and appendix) — confirmed the arXiv version IS the same paper published in Nature, with full open-access text
+- **Status:** complete full-text close-read
+
 > **Source-provenance warning (read first).** AlphaQubit itself — J. Bausch, A. W. Senior,
 > F. J. H. Heras, T. Edlich, A. Davies, M. Newman, C. Jones, K. Satzinger, M. Y. Niu,
 > S. Blackwell, G. Holland, D. Kafri, J. Atalaya, C. Gidney, D. Hassabis, S. Boixo,
 > H. Neven, P. Kohli, *"Learning high-accuracy error decoding for quantum processors"*,
-> **Nature 635, 834–840 (2024)** — is **paywalled with no public full text**. There is a
-> 2023 preprint of the same work (arXiv:2310.05900, *"Learning to decode the surface code
-> with a recurrent, transformer-based neural network"*) but only its **abstract** is openly
-> readable. So **everything below at full architectural/algorithmic detail is taken from a
-> different paper**: the **open precursor** of the same architectural lineage,
+> **Nature 635, 834–840 (2024)** — was originally thought paywalled with no public full text,
+> but the arXiv preprint (arXiv:2310.05900, *"Learning to decode the surface code
+> with a recurrent, transformer-based neural network"*) **IS fully open access** (the full PDF
+> is downloadable from arXiv). So the detailed architectural/algorithmic facts below are drawn
+> from **this open-access preprint** combined with the **open precursor** of the same lineage,
 > **B. M. Varbanov, M. Serra-Peralta, D. Byfield, B. M. Terhal,
 > *"Neural network decoder for near-term surface-code experiments"*, arXiv:2307.03280v2
 > (24 Oct 2023)** — QuTech / TU Delft + Riverlane. The PDF in our repo

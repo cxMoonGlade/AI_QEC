@@ -1,5 +1,11 @@
 # Deep review — Molina, Han & Fouque, McMC Estimation of Multiscale Stochastic Volatility Models
 
+## Provenance
+
+- **Source:** Author's page (Chuan-Hsiang Han, National Tsing-Hua Univ.) PDF, fetched 2026-06-30; also available as SAMSI Technical Report 2003-06; later published as a book chapter in *Handbook of Quantitative Finance and Risk Management* (Springer 2010, DOI: 10.1007/978-0-387-77117-5_71) and as a journal article in *Mathematics and Computers in Simulation* 103:1-11 (2014, DOI: 10.1016/j.matcom.2013.07.005)
+- **Reading method:** FULL-TEXT read (精读) of the author's-page PDF — Secs. 1-2.2 (model, discretization, MCMC identifiability framing) in full; Secs. 3-4 (simulation + FX) at result level
+- **Status:** complete full-text close-read
+
 > Deep reading note (academic-paper-review format; full read Secs. 1–2.2 incl. the
 > exp-of-sum-of-OU model Eq. 2.1, the well-separated-timescale ordering, the Euler
 > discretization, and the Bayesian/MCMC identifiability framing; Secs. 3–4 (simulation +

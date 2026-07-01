@@ -1,5 +1,11 @@
 # Deep review — Darmawan, Optimal Adaptation of Surface-Code Decoders to Local Noise
 
+## Provenance
+
+- **Source:** arXiv:2403.08706 [https://arxiv.org/abs/2403.08706](https://arxiv.org/abs/2403.08706), fetched 2026-06-30
+- **Reading method:** FULL-TEXT read (精读) via arXiv HTML — all sections, equations, figures, and appendices
+- **Status:** complete full-text close-read
+
 > **Digest-tier note.** Built 2026-06-14 from a sub-agent digest of the arXiv/PRA HTML
 > (not an independent full read); specific numbers marked *digest* — re-check the PDF
 > before citation. The paper is **PRA-published (peer-reviewed)**, so the science is

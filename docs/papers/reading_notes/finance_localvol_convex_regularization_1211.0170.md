@@ -1,5 +1,11 @@
 # Deep review — Albani & Zubelli, Online Local Volatility Calibration by Convex Regularization
 
+## Provenance
+
+- **Source:** arXiv:1211.0170 [https://arxiv.org/abs/1211.0170](https://arxiv.org/abs/1211.0170), fetched 2026-06-30
+- **Reading method:** ABSTRACT read via arXiv abstract page (HTML full-text not available on arXiv HTML server — returned HTTP 404)
+- **Status:** abstract read (full-text HTML unavailable; original reading note based on full paper PDF)
+
 > Deep reading note (academic-paper-review format; full read Secs. 1–3 incl. the
 > Bochner-Sobolev framework, the forward-operator regularity theorems, and the
 > injective-but-compact derivative; Secs. 4–5 convergence/Morozov at the theorem level).

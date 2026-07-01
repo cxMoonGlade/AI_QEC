@@ -14,8 +14,11 @@
 > raw text (`�` ↦ `×`, `−`, `→`, `Λ`, `π`, `δ`, `ψ`, `θ`) was reconstructed against the
 > rendered figures.
 > arXiv:2211.04728v1 [quant-ph], 9 Nov 2022 (dated Nov 10, 2022). Published as
-> **Nature 638, 920–926 (2023)** ("Overcoming leakage in quantum error correction"); the
-> arXiv title carries "scalable." Data: Zenodo `10.5281/zenodo.7302032`.
+> **Nature Physics 19, 1780–1786 (2023), DOI 10.1038/s41567-023-02226-w** ("Overcoming leakage in
+> quantum error correction"); the arXiv title carries "scalable." Data: Zenodo `10.5281/zenodo.7302032`.
+> **CITATION FIX (2026-06-30):** the prior "Nature 638, 920–926 (2023)" here was WRONG — it conflated
+> this Miao leakage paper with the *Willow* paper (Nature 638, 920–926 (2025), arXiv:2408.13687).
+> Verified correct via ADS bibcode 2023NatPh..19.1780M + the journal DOI.
 
 ---
 

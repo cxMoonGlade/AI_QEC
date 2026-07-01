@@ -1,3 +1,9 @@
+## Provenance
+
+- **Source:** arXiv:2601.21472, fetched 2026-06-30
+- **Reading method:** FULL-TEXT read (精读) via arXiv HTML — all sections, equations, and appendices
+- **Status:** complete full-text close-read
+
 # Deep review — Xiao et al., In-situ Benchmarking of Fault-Tolerant Quantum Circuits. I. Clifford Circuits
 
 > Deep reading note (academic-paper-review format; full read Secs. I–III + Fig. 2;

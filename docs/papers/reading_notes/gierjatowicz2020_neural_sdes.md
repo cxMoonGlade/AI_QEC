@@ -1,5 +1,12 @@
 # Deep review — Gierjatowicz, Sabate-Vidales, Šiška, Szpruch & Žurič, Robust Pricing and Hedging via Neural SDEs
 
+## Provenance
+
+- **Source:** arXiv:2007.04154 (full PDF, open access), fetched 2026-06-30; also on SSRN (ID 3646241)
+- **Reading method:** FULL-TEXT read (精读) of the arXiv PDF — Secs. 1-1.2 (model-uncertainty framing, neural-SDE definition, calibration, Girsanov change of measure) in full; later sections/experiments at result level
+- **Status:** complete full-text close-read
+- **Note:** This paper was NOT published in NeurIPS 2020 proceedings despite the filename convention. It is an arXiv + SSRN preprint only. The filename is a misnomer left for consistency.
+
 > Deep reading note (academic-paper-review format; full read Secs. 1–1.2 incl. the model-
 > uncertainty framing, the neural-SDE definition Eq. 1.1–1.2, the calibration objective, the
 > Knightian-uncertainty price interval, and the P↔Q Girsanov change of measure Eq. 1.3;

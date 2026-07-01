@@ -1,5 +1,11 @@
 # Deep review — Heinze-Deml, Peters & Meinshausen, Invariant Causal Prediction for Nonlinear Models
 
+## Provenance
+
+- **Source:** arXiv:1706.08576 (full PDF, open access), fetched 2026-06-30; published in *Journal of Causal Inference* 6(2), 2018, DOI: 10.1515/jci-2017-0016 (open access via De Gruyter)
+- **Reading method:** FULL-TEXT read (精读) of the arXiv PDF — Secs. 1-2 (SCM/intervention setup, invariance principle, invariant-residual test, defining sets, bands, prediction-under-intervention) in full; Secs. 3-5 + fertility application at result level
+- **Status:** complete full-text close-read
+
 > Deep reading note (academic-paper-review format; full read Secs. 1–2 incl. the SCM/
 > intervention setup, the invariance principle, the invariant-residual-distribution test,
 > defining sets, confidence bands, and prediction-under-intervention; Secs. 3–5 + the

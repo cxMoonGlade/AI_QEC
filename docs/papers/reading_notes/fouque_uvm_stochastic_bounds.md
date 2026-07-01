@@ -1,5 +1,11 @@
 # Deep review — Fouque & Ning, Uncertain Volatility Models with Stochastic Bounds
 
+## Provenance
+
+- **Source:** arXiv:1702.05036 (full PDF, open access), fetched 2026-06-30; published as *SIAM Journal on Financial Mathematics* 9(4):1175-1207 (2018), DOI: 10.1137/17M1116908
+- **Reading method:** FULL-TEXT read (精读) of the arXiv PDF — Secs. 1-2 (BSB derivation, convergence theorem, bang-bang/zero-set structure) in full; Secs. 3-4 (proof + numerics) at result level
+- **Status:** complete full-text close-read
+
 > Deep reading note (academic-paper-review format; full read Secs. 1–2 incl. the BSB
 > derivation, the convergence theorem, and the bang-bang/zero-set structure; Secs. 3–4
 > proof + numerics at the result level). **Relevance to the twin** centerpiece.
