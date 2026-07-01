@@ -112,6 +112,12 @@ _NORMALIZATION_INVARIANT_GATE = 1.0e-12
 # hundred (the brief's "<= a few hundred"); 3^5 = 243 fits, 3^6 = 729 does not. The leakage
 # fixtures are 1-2 sites of dim 3-4 (total dim <= 9), all densely checkable.
 _DENSE_CHANNEL_MAX_DIM = 256
+# Qubit count above which the INDEPENDENT dense Born record oracle
+# (axis1_measurement_record_evidence_manifest) is forbidden: it builds an exact 2^N density
+# matrix and is itself capped at 8 qubits (axis1_record_evidence._validate_record_evidence_
+# schedule). A run above this cap (e.g. the d3 q17 XZZX schedule) is a RESTRICTED over-cap
+# execution, NOT a failure -- routed honestly without ever building a 2^N DM.
+_RECORD_EVIDENCE_QUBIT_CAP = 8
 
 
 # --------------------------------------------------------------------------- #
@@ -404,6 +410,31 @@ def _certify_record_path(
     """
     carrier_records = [list(r) for r in execution.get("measurement_records", ())]
     carrier_probs = [float(x) for x in execution.get("record_probabilities", ())]
+
+    # Honest over-cap routing: the INDEPENDENT dense Born record oracle
+    # (axis1_measurement_record_evidence_manifest) builds an exact 2^N density matrix and is
+    # capped at AXIS1_RECORD_EVIDENCE_QUBIT_CAP qubits. A genuinely-over-cap run (e.g. the
+    # d3 q17 XZZX schedule) is NOT a failure and must NOT attempt a 2^N DM build: return the
+    # over-cap reason so the acceptance policy treats it as a RESTRICTED over-cap execution
+    # (mirrors the level path's level_checkable_program_too_large_to_densely_check). This is
+    # checked BEFORE the oracle call so no 2^17 DM is ever constructed.
+    # NOTE (belt-and-suspenders): for any measurement-bearing schedule the execution always
+    # records level tuples, so certification routes to the LEVEL path FIRST, where the
+    # pre-existing _DENSE_CHANNEL_MAX_DIM (256) guard in _dense_jointL_level_distribution is
+    # what actually caps q17 (before rho0 is allocated). This record-path guard is the
+    # backstop for the (currently unreachable) no-level-records case, not the q17 hot path.
+    num_sites = len(execution.get("local_dims", ()))
+    if _oracle_record_probabilities is None and num_sites > _RECORD_EVIDENCE_QUBIT_CAP:
+        return {
+            "executed": False,
+            "passed": False,
+            "passed_gross": False,
+            "reason": "record_checkable_program_too_large_to_densely_check",
+            "num_sites": int(num_sites),
+            "record_evidence_qubit_cap": int(_RECORD_EVIDENCE_QUBIT_CAP),
+            "comparison_outcome_is_metric": False,
+            "epistemic_class": "c",
+        }
 
     if _oracle_record_probabilities is None:
         try:
@@ -799,6 +830,7 @@ def _dense_certification_status(certification: dict[str, Any]) -> str:
     if reason in {
         "channel_checkable_substep_too_large_to_densely_check",
         "level_checkable_program_too_large_to_densely_check",
+        "record_checkable_program_too_large_to_densely_check",
     }:
         return "skipped_overcap_dense_fallback_forbidden"
     return f"not_executed:{reason}"
@@ -1190,7 +1222,10 @@ def _dense_jointL_level_distribution(
     from qec_twin.simulator.axis1_mcwf_mps_contract import (
         AXIS1_MCWF_MPS_CONTRACT_BACKEND_CONTRACT,
     )
-    from qec_twin.simulator.axis1_mcwf_mps_execution import _measurement_boundary, _reset_basis
+    from qec_twin.simulator.axis1_mcwf_mps_execution import (
+        _aggregating_measurement_boundary,
+        _reset_basis,
+    )
 
     local_dims = tuple(int(d) for d in execution["local_dims"])
     initial_levels = tuple(int(x) for x in execution["initial_levels"])
@@ -1263,8 +1298,13 @@ def _dense_jointL_level_distribution(
             continue
 
         if kind == "measurement":
-            boundary = _measurement_boundary(substep)
+            # Aggregate ALL operation_records (multi-record terminal readout, mixed X/Z
+            # basis) into ordered targets + per-target bases -- mirrors the carrier's
+            # _aggregating_measurement_boundary. This oracle is INDEPENDENT of the sampler:
+            # the H rotation below is rebuilt from scratch in numpy, never imported.
+            boundary = _aggregating_measurement_boundary(substep)
             targets = [int(q) for q in boundary["measurement_targets"]]
+            target_bases = [str(b).upper() for b in boundary["measurement_bases"]]
             # Post-measurement reset (the carrier's reset_after_measurement, Z-basis only):
             # after recording level l at the target, the conditioned site |l> -> |0> via the
             # carrier's reset operator |0><l| (see _apply_measurement_reset_if_requested_
@@ -1279,8 +1319,26 @@ def _dense_jointL_level_distribution(
                 raise _ChannelNotDenseCheckable(
                     "level_oracle_measurement_reset_supports_z_basis_only"
                 )
-            for target in targets:
+            for target, target_basis in zip(targets, target_bases, strict=True):
+                if target_basis not in {"X", "Z"}:
+                    raise _ChannelNotDenseCheckable(
+                        "level_oracle_measurement_supports_x_or_z_basis_only"
+                    )
                 dim_s = int(local_dims[target])
+                if target_basis == "X":
+                    # Independent numpy H = (1/sqrt2)[[1,1],[1,-1]] on the {|0>,|1>} block,
+                    # identity on leaked levels: rotate the X-target into the Z eigenbasis
+                    # before the Z-level projection below (no rotate-back; terminal readout).
+                    Hloc = np.eye(dim_s, dtype=np.complex128)
+                    inv = 1.0 / np.sqrt(2.0)
+                    Hloc[0, 0] = inv
+                    Hloc[0, 1] = inv
+                    Hloc[1, 0] = inv
+                    Hloc[1, 1] = -inv
+                    Hf = lift_fn(Hloc, (int(target),))
+                    branches = [
+                        (Hf @ rho @ Hf.conj().T, prefix, w) for rho, prefix, w in branches
+                    ]
                 next_branches = []
                 for rho, prefix, w in branches:
                     for level in range(dim_s):

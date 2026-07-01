@@ -74,24 +74,38 @@ _LEAKAGE_COLLAPSE_FAMILIES = frozenset({"LEAK_SEEP_21", "LEAK_HEAT_12"})
 # --------------------------------------------------------------------------- #
 # Coherent Pauli-tensor families (Step 8): over-rotation + parasitic + crosstalk
 # --------------------------------------------------------------------------- #
-ONE_SITE_COHERENT_FAMILIES = frozenset({"COH_RX", "COH_RY", "COH_RZ", "COH_H"})
+ONE_SITE_COHERENT_FAMILIES = frozenset({"COH_RX", "COH_RY", "COH_RZ"})
 TWO_SITE_COHERENT_FAMILIES = frozenset(
     {
         "COH_XX_YY",
         "COH_XX",
         "COH_YY",
-        "COH_XY",
         "COH_ZX",
-        "COH_ZY",
-        "COH_XZ",
-        "COH_YZ",
-        "COH_YX",
     }
 )
 CROSSTALK_COHERENT_FAMILIES = frozenset({"COH_CROSSTALK_ZZ"})
 COHERENT_PAULI_FAMILIES = (
     ONE_SITE_COHERENT_FAMILIES | TWO_SITE_COHERENT_FAMILIES | CROSSTALK_COHERENT_FAMILIES
 )
+
+# Two-site joint (collective/Dicke) collapse families (M12 Phase-B). Distinguished from the one-site
+# collapse families (T1/T1_UP/T2/RD/LEAK_*) so the support-arity preflight can fail closed on a
+# mis-supported request instead of deferring the error to the operator builder at runtime.
+TWO_SITE_COLLAPSE_FAMILIES = frozenset({"CORR_RELAX"})
+
+# First-order MCWF no-jump truncation (K0 = I - 1/2 c^dag c dt) does not preserve probability: the
+# per-microstep mass residual is 1/4 dt^2 <(sum_k c_k^dag c_k)^2> = O(dt^2). At gamma*dt ~ 1 with too
+# few microsteps the step is grossly non-CPTP (|11> probability mass -> 2.0 for CORR_RELAX at
+# g=0.05, dt=20, microstep_count=1 — M12 Phase-B 5-model review; quantified in
+# outputs/twin_validation/cert_m12_phaseB_convergence.py). This (c)-class heuristic tripwire (a
+# go/no-go gate, NOT a premise or error bound) fail-closes when the state-independent worst-case
+# per-microstep bound 1/4 dt_micro^2 (sum_k ||c_k^dag c_k||_op)^2 exceeds the budget; because that
+# bound dominates the runtime residual, passing the preflight guarantees the runtime residual stays
+# within budget. The measured convergence law (1-F_e ~ 4x per microstep doubling) makes the required
+# microstep_count computable and it is reported in the fail-closed payload. Pass
+# mass_residual_budget=None to disable for a deliberate convergence study (the only sanctioned use of
+# the grossly-truncated single-microstep regime).
+_MCWF_FIRST_ORDER_MASS_RESIDUAL_BUDGET = 0.1
 
 
 def axis1_mcwf_mps_state_record_execution_manifest(
@@ -106,12 +120,18 @@ def axis1_mcwf_mps_state_record_execution_manifest(
     rng_seed: int | None = None,
     initial_levels: Sequence[int] | None = None,
     leaked_readout_b: float = 1.0,
+    mass_residual_budget: float | None = _MCWF_FIRST_ORDER_MASS_RESIDUAL_BUDGET,
 ) -> dict[str, Any]:
     """Execute the first fixed-microstep MCWF/MPS Axis-1 slice.
 
     The implementation samples at most one collapse jump per microstep from the
     substep's collapse list. It is a finite-step quantum-jump approximation to
     the summed same-substep generator, not dense joint-L channel evidence.
+
+    ``mass_residual_budget`` fail-closes (verdict ``"fail"``) before execution when the first-order
+    no-jump truncation is grossly non-CPTP at the requested ``microstep_count`` (the worst-case
+    per-microstep probability-mass residual bound exceeds the budget); the fail payload reports the
+    required ``microstep_count``. Pass ``None`` to disable for a deliberate convergence study.
     """
 
     dev = _require_cuda_device(device)
@@ -152,6 +172,9 @@ def axis1_mcwf_mps_state_record_execution_manifest(
         "local_hilbert_space": dict(contract["local_hilbert_space"]),
         "max_bond": None if max_bond is None else int(max_bond),
         "microstep_count": int(microstep_count),
+        "mass_residual_budget": (
+            None if mass_residual_budget is None else float(mass_residual_budget)
+        ),
         "finite_step_order": step_order,
         "trajectory_count": int(trajectory_count),
         "rng_seed": None if rng_seed is None else int(rng_seed),
@@ -240,6 +263,38 @@ def axis1_mcwf_mps_state_record_execution_manifest(
         }
         payload["content_hash"] = _stable_payload_hash(payload)
         return payload
+
+    if mass_residual_budget is not None:
+        residual_blocks = _first_order_mass_residual_blocks(
+            program,
+            local_dims=dims,
+            microstep_count=int(microstep_count),
+            device=dev,
+            budget=float(mass_residual_budget),
+        )
+        if residual_blocks:
+            payload = {
+                **base,
+                "verdict": "fail",
+                "passed": False,
+                "mcwf_mps_backend_executed": False,
+                "blocked_reason": residual_blocks[0]["reason"],
+                "blocked_substeps": residual_blocks,
+                "mps_execution": None,
+                "restricted_acceptance_policy": _blocked_acceptance_policy(
+                    blocked_reason=residual_blocks[0]["reason"],
+                    rng_seed=rng_seed,
+                    trajectory_count=int(trajectory_count),
+                ),
+                "scope": (
+                    "fixed-microstep MCWF/MPS execution failed closed: the first-order no-jump "
+                    "truncation is grossly non-CPTP at this microstep_count (raise microstep_count "
+                    "to required_microstep_count, or pass mass_residual_budget=None to override for "
+                    "a deliberate convergence study)"
+                ),
+            }
+            payload["content_hash"] = _stable_payload_hash(payload)
+            return payload
 
     execution = _execute_sampled_mcwf_program(
         program,
@@ -404,13 +459,14 @@ def _execute_sampled_mcwf_program(
                 )
             if str(substep["substep_kind"]) != "measurement":
                 continue
-            boundary = _measurement_boundary(substep)
+            boundary = _aggregating_measurement_boundary(substep)
             if trajectory_index == 0:
                 measurement_keys.extend(boundary["measurement_keys"])
                 measurement_targets.extend(boundary["measurement_targets"])
             outcome_levels, outcome_bits, state = _sample_measurement_multilevel(
                 state,
                 targets=boundary["measurement_targets"],
+                bases=boundary["measurement_bases"],
                 local_dims=local_dims,
                 device=device,
                 generator=generator,
@@ -499,7 +555,9 @@ def _execute_sampled_mcwf_program(
                 if microstep_mass_residuals
                 else 0.0
             ),
-            "probability_mass_residual_gate_role": "diagnostic_not_metric",
+            "probability_mass_residual_gate_role": (
+                "diagnostic_runtime_crosscheck_of_preflight_mass_residual_gate"
+            ),
             "epistemic_class": "c",
         },
         "exact_joint_generator_claim": False,
@@ -1009,8 +1067,53 @@ def _pauli_2level(axis: str, *, device: str) -> torch.Tensor:
 
 
 def _coherent_family_generator(family: str, *, coefficient: float, device: str) -> torch.Tensor:
-    """Return the Hermitian Pauli-tensor generator H for a coherent family on the
-    PURE computational subspace (2x2 for 1-site, 4x4 for 2-site)."""
+    r"""Return the Hermitian Pauli-tensor generator H for a coherent family on the
+    PURE computational subspace (2x2 for 1-site, 4x4 for 2-site).
+
+    DERIVATION (notation per docs/TWIN.md / docs/METRICS.md):
+
+    M6 coherent_rx_overrotation (COH_RX) — the canonical 1-site example:
+      H_M6 = (coeff / 2) * X,    X = [[0,1],[1,0]]  (Nielsen & Chuang Eq. 2.1)
+      Convention: R_x(theta) = exp(-i theta X/2) so that eps = coeff * dt_ns is the
+      over-rotation angle in radians  (N&C Eq. 4.4-4.7).
+      Mechanism ground: Kaufmann-Rojkov-Reiter arXiv:2307.08741 Eq. 2
+        H_theta = sum_k theta_k P_k;  the single-qubit theta_X X term IS M6 (COH_RX).
+      Error gate: U_M6 = exp(-i H_M6 dt) = RX(eps),  eps = coeff * dt_ns.
+      Leading 1-F_e: sin^2(eps/2) = eps^2/4 + O(eps^4)  (METRICS.md /d convention, d=2).
+
+    For two-site families (COH_XX, COH_YY, ..., COH_XX_YY):
+      H = (coeff / 4) * sum_{(P,Q) in pairs} (P (x) Q)
+      where (x) is the tensor product of 2x2 Pauli operators; the 1/4 = (1/2)^2
+      preserves the R_{PQ}(eps)-convention for two-qubit coherent over-rotations.
+
+    M22 coherent_cxx_parasitic_coupling (COH_XX) — 2-site derivation:
+      H_M22 = (coeff / 4) * (X (x) X),   X = [[0,1],[1,0]]  (Nielsen & Chuang Eq. 2.1)
+      factor 1/4 = (1/2)^2: two-qubit over-rotation convention
+        R_{PQ}(eps_cat) = exp(-i (eps_cat/2)(P (x) Q))
+        carrier eps = coeff * dt_ns is the per-tensor angle; catalog eps_cat = eps/2
+        (error_mechanisms.md line 113 "exp(-i eps XX/2)").
+      Mechanism ground:
+        - Pure X(x)X as canonical su(4) non-local Cartan axis: Zhang-Vala-Sastry-Whaley
+          arXiv:quant-ph/0209120 Eq. 7 (p = span of 9 Pauli-tensor basis elements),
+          Eq. 10 (Cartan a = {XX, YY, ZZ}), Eq. 11/16 (canonical form).
+        - Pure XX gate written explicitly: Kraus-Cirac arXiv:quant-ph/0011050 Eq. 24
+          U_d = e^{-i alpha S_x} = cos(a)*1 - i*sin(a)*(sigma_x (x) sigma_x).
+        - Device-physical transverse interaction: Geller-Martinis arXiv:1405.1915 Eq. 57
+          delta_H = g * sigma_x (x) sigma_x  (gmon/Xmon tunable-coupler).
+      (X(x)X)^2 = I4,  Tr(X(x)X) = 0,  eigenvalues +/-1 each x2.
+      Error gate: U_M22 = exp(-i H_M22 dt) = cos(eps/4)*I4 - i*sin(eps/4)*(X(x)X),
+                  eps = coeff * dt_ns.
+      EXACT 1-F_e (d=4): 1 - |Tr(U_M22)/4|^2 = sin^2(eps/4).
+        (Nielsen arXiv:quant-ph/0205035 Eq. 16; Tr(X(x)X)=0 so Tr(U)=4*cos(eps/4).)
+      LEADING 1-F_e: ||(eps/4)(X(x)X)||_F^2 / 4 = eps^2/16 + O(eps^4).
+
+    For crosstalk families (COH_CROSSTALK_ZZ):
+      H = (coeff / 4) * (Z (x) Z)  — the Z-Z parasitic coupling generator.
+
+    The generator is embedded into the full local_dims space (qubit/qutrit/ququart)
+    by ``_embed_coherent_generator``, which pads with the zero generator on leaked
+    levels >= 2 (identity on those levels — no leakage drive from Pauli over-rotation).
+    """
     fam = str(family).upper()
     coeff = float(coefficient)
     cdt = torch.complex128
@@ -1019,7 +1122,6 @@ def _coherent_family_generator(family: str, *, coefficient: float, device: str) 
         "COH_RX": "X",
         "COH_RY": "Y",
         "COH_RZ": "Z",
-        "COH_H": "H",
     }
     if fam in ONE_SITE_COHERENT_FAMILIES:
         axis = _ONE_Q_FAMILY_TO_AXIS[fam]
@@ -1032,18 +1134,8 @@ def _coherent_family_generator(family: str, *, coefficient: float, device: str) 
             if fam == "COH_XX"
             else (("Y", "Y"),)
             if fam == "COH_YY"
-            else (("X", "Y"),)
-            if fam == "COH_XY"
             else (("Z", "X"),)
             if fam == "COH_ZX"
-            else (("Z", "Y"),)
-            if fam == "COH_ZY"
-            else (("X", "Z"),)
-            if fam == "COH_XZ"
-            else (("Y", "Z"),)
-            if fam == "COH_YZ"
-            else (("Y", "X"),)
-            if fam == "COH_YX"
             else (("X", "X"), ("Y", "Y"))
         )
     elif fam in CROSSTALK_COHERENT_FAMILIES:
@@ -1287,16 +1379,26 @@ def _sample_joint_jump_or_nojump(
     nojump = mps.copy()
     for term in collapse_terms:
         support = tuple(int(q) for q in term["support"])
-        nojump.gate_(
-            _nojump_first_order_kraus(
-                term,
-                dt_ns,
-                local_dim=local_dims[support[0]],
-                device=device,
-            ),
-            where=support[0],
-            contract=True,
-        )
+        if len(support) == 1:
+            nojump.gate_(
+                _nojump_first_order_kraus(
+                    term,
+                    dt_ns,
+                    local_dim=local_dims[support[0]],
+                    device=device,
+                ),
+                where=support[0],
+                contract=True,
+            )
+        else:  # 2-site joint collapse (M12 Phase-B): apply on the joint support
+            nojump.gate_(
+                _joint_nojump_first_order_kraus(
+                    term, dt_ns, support, local_dims=local_dims, device=device
+                ),
+                where=support,
+                contract="auto-mps",
+                max_bond=None,
+            )
     p0 = _norm_sq(nojump)
     if p0 > 1.0e-15:
         candidates.append(nojump)
@@ -1306,12 +1408,21 @@ def _sample_joint_jump_or_nojump(
     for term in collapse_terms:
         support = tuple(int(q) for q in term["support"])
         jump = mps.copy()
-        jump.gate_(
-            (float(dt_ns) ** 0.5)
-            * _collapse_operator(term, local_dim=local_dims[support[0]], device=device),
-            where=support[0],
-            contract=True,
-        )
+        if len(support) == 1:
+            jump.gate_(
+                (float(dt_ns) ** 0.5)
+                * _collapse_operator(term, local_dim=local_dims[support[0]], device=device),
+                where=support[0],
+                contract=True,
+            )
+        else:  # 2-site joint collapse (M12 Phase-B)
+            jump.gate_(
+                (float(dt_ns) ** 0.5)
+                * _joint_collapse_operator(term, support, local_dims=local_dims, device=device),
+                where=support,
+                contract="auto-mps",
+                max_bond=None,
+            )
         p = _norm_sq(jump)
         if p <= 1.0e-15:
             continue
@@ -1376,6 +1487,58 @@ def _nojump_first_order_kraus(
 ) -> torch.Tensor:
     c = _collapse_operator(term, local_dim=local_dim, device=device)
     ident = torch.eye(int(local_dim), dtype=torch.complex128, device=device)
+    return ident - 0.5 * float(dt_ns) * (c.conj().transpose(-1, -2) @ c)
+
+
+def _joint_collapse_operator(
+    term: dict[str, Any],
+    support: tuple[int, ...],
+    *,
+    local_dims: tuple[int, ...],
+    device: str,
+) -> torch.Tensor:
+    """2-site JOINT (collective/Dicke) collapse operator (M12 Phase-B).
+
+    CORR_RELAX = correlated_two_qubit_relaxation: ``c = coeff * (sigma^- (x) I + I (x) sigma^-)``,
+    ``coeff = sqrt(gamma_corr)``, ``sigma^- = |0><1|`` on the computational {0,1} block, ZERO on leaked
+    levels >= 2 (same embed discipline as the coherent two-site families). Built on the
+    ``(d_i * d_j)`` joint Hilbert space of ``support=(i, j)`` in the carrier's qubit-0-major kron order.
+    Grounded in M12 Phase-A (`cert_m12_correlated_relaxation.py`) — the channel this trajectory seam
+    must reproduce under Monte-Carlo.
+    """
+    family = str(term["operator_family"]).upper()
+    coeff = float(term["coefficient"])
+    if len(support) != 2:
+        raise ValueError(f"two-site collapse {family!r} requires two-site support, got {support!r}")
+    cdt = torch.complex128
+    di = int(local_dims[support[0]])
+    dj = int(local_dims[support[1]])
+    if family == "CORR_RELAX":
+        sm_i = torch.zeros((di, di), dtype=cdt, device=device)
+        sm_i[0, 1] = 1.0  # |0><1| on site i (computational block; zero on leaked levels >= 2)
+        sm_j = torch.zeros((dj, dj), dtype=cdt, device=device)
+        sm_j[0, 1] = 1.0
+        eye_i = torch.eye(di, dtype=cdt, device=device)
+        eye_j = torch.eye(dj, dtype=cdt, device=device)
+        return coeff * (
+            torch.kron(sm_i.contiguous(), eye_j.contiguous())
+            + torch.kron(eye_i.contiguous(), sm_j.contiguous())
+        )
+    raise ValueError(f"unsupported MCWF two-site collapse family {family!r}")
+
+
+def _joint_nojump_first_order_kraus(
+    term: dict[str, Any],
+    dt_ns: float,
+    support: tuple[int, ...],
+    *,
+    local_dims: tuple[int, ...],
+    device: str,
+) -> torch.Tensor:
+    """2-site first-order no-jump Kraus ``I - 1/2 c^dag c dt`` for a joint collapse (M12 Phase-B)."""
+    c = _joint_collapse_operator(term, support, local_dims=local_dims, device=device)
+    d = int(c.shape[0])
+    ident = torch.eye(d, dtype=torch.complex128, device=device)
     return ident - 0.5 * float(dt_ns) * (c.conj().transpose(-1, -2) @ c)
 
 
@@ -1492,10 +1655,67 @@ def _two_site_level_exchange_gate(
     return out
 
 
+_SUPPORTED_MCWF_MEASUREMENT_BASES = ("X", "Z")
+
+
+def _aggregating_measurement_boundary(substep: dict[str, Any]) -> dict[str, Any]:
+    """Aggregate ALL operation_records of a measurement substep into a single ordered
+    boundary: ``measurement_keys``, ``measurement_targets``, and per-target
+    ``measurement_bases`` (in operation/record then per-record-target order).
+
+    This is the multi-record generalisation of the shared single-record
+    ``_measurement_boundary`` (``axis1_qt_mps_execution._measurement_boundary``), used by
+    the MCWF execute loop and the dense certification. The shared single-record helper is
+    left untouched so the qt_mps callers keep their byte-identical single-record contract.
+
+    Distinct-qubit measurements within a terminal readout substep commute, so the
+    per-target rotate-then-sample sequence the MCWF sampler applies in this order is exact.
+    """
+    keys: list[str] = []
+    targets: list[int] = []
+    bases: list[str] = []
+    for op in substep.get("operation_records", ()):
+        op_keys = [str(key) for key in op.get("measurement_keys", ())]
+        op_targets = [int(q) for q in op.get("targets", ())]
+        if len(op_keys) != len(op_targets):
+            raise ValueError(
+                "measurement operation keys do not match targets in aggregating boundary: "
+                f"keys={op_keys!r} targets={op_targets!r}"
+            )
+        basis = str(op.get("basis", "Z")).upper()
+        keys.extend(op_keys)
+        targets.extend(op_targets)
+        bases.extend([basis] * len(op_targets))
+    return {
+        "measurement_keys": keys,
+        "measurement_targets": targets,
+        "measurement_bases": bases,
+    }
+
+
+def _x_basis_rotation_local(local_dim: int, *, device: str) -> torch.Tensor:
+    """The Hadamard X<->Z basis rotation embedded in the local (qudit) space: the 2x2
+    H = (1/sqrt2)[[1,1],[1,-1]] on the computational {|0>,|1>} block and identity on every
+    leaked level >= 2 (a basis rotation must NOT touch leaked populations). Applying H then
+    Z-projecting is equivalent to projecting onto the X eigenbasis on the qubit block.
+    """
+    dim = int(local_dim)
+    if dim < 2:
+        raise ValueError(f"X-basis rotation requires local_dim >= 2, got {dim}")
+    inv = 1.0 / math.sqrt(2.0)
+    out = torch.eye(dim, dtype=torch.complex128, device=device)
+    out[0, 0] = inv
+    out[0, 1] = inv
+    out[1, 0] = inv
+    out[1, 1] = -inv
+    return out
+
+
 def _sample_measurement_multilevel(
     mps,
     *,
     targets: Sequence[int],
+    bases: Sequence[str] | None = None,
     local_dims: tuple[int, ...],
     device: str,
     generator: torch.Generator,
@@ -1504,7 +1724,31 @@ def _sample_measurement_multilevel(
     state = mps
     levels: list[int] = []
     bits: list[int] = []
-    for target in tuple(int(q) for q in targets):
+    target_tuple = tuple(int(q) for q in targets)
+    if bases is None:
+        basis_tuple: tuple[str, ...] = tuple("Z" for _ in target_tuple)
+    else:
+        basis_tuple = tuple(str(b).upper() for b in bases)
+    if len(basis_tuple) != len(target_tuple):
+        raise ValueError(
+            f"measurement bases {basis_tuple!r} do not match targets {target_tuple!r}"
+        )
+    for target, basis in zip(target_tuple, basis_tuple, strict=True):
+        if basis not in _SUPPORTED_MCWF_MEASUREMENT_BASES:
+            raise ValueError(
+                "MCWF/MPS multi-record measurement supports only X/Z bases (bounded "
+                f"d3/5q slice); got basis {basis!r}"
+            )
+        if basis == "X":
+            # Terminal measurement: rotate the X-target site into the Z eigenbasis with H
+            # (no rotate-back needed). Distinct-qubit targets commute, so doing this per
+            # target in sequence before its own Z-level sampling is exact.
+            state = state.copy()
+            state.gate_(
+                _x_basis_rotation_local(local_dims[target], device=device),
+                where=int(target),
+                contract=True,
+            )
         level, state = _sample_one_site_level(
             state,
             site=target,
@@ -1689,6 +1933,11 @@ def _apply_measurement_reset_if_requested_multilevel(
         raise ValueError(
             "MCWF/MPS multilevel measurement reset supports Pauli measurement basis only"
         )
+    # Asymmetry note (single-record reset-after-measurement only; the d3/5q terminal readout
+    # has reset_after=None so this path is inert there): the carrier accepts X/Y reset here,
+    # but the dense LEVEL oracle only CERTIFIES Z-basis post-measurement reset (it raises
+    # level_oracle_measurement_reset_supports_z_basis_only otherwise). So an X/Y reset-after
+    # run EXECUTES but comes back honestly uncertified (executed=False) -- never a false pass.
     targets = tuple(int(q) for q in op.get("targets", ()))
     state = mps
     for site, level in zip(targets, outcome_levels, strict=True):
@@ -1757,6 +2006,68 @@ def _exact_mixed_dim_bond_sufficient(local_dims: tuple[int, ...]) -> int:
     return int(out)
 
 
+def _first_order_mass_residual_blocks(
+    program: dict[str, Any],
+    *,
+    local_dims: tuple[int, ...],
+    microstep_count: int,
+    device: str,
+    budget: float,
+) -> list[dict[str, Any]]:
+    """Deterministic preflight against a grossly non-CPTP first-order MCWF step.
+
+    The no-jump Kraus ``K0 = I - 1/2 c^dag c dt`` leaks probability mass; the per-microstep residual
+    is ``1/4 dt^2 <(sum_k c_k^dag c_k)^2>``. Its state-independent worst case is bounded by
+    ``1/4 dt_micro^2 (sum_k ||c_k^dag c_k||_op)^2`` (operator norm; embedding preserves it, so the
+    per-operator norms can be summed on each operator's own small support). When that bound exceeds
+    ``budget`` the requested ``microstep_count`` is too coarse; return a blocked-substep entry that
+    reports the minimum ``microstep_count`` that resolves it. Empty when every MCWF substep is within
+    budget. The same operator builders the sampler uses are called here, so the bound matches the
+    execution path exactly.
+    """
+    out: list[dict[str, Any]] = []
+    m = int(microstep_count)
+    for substep_index, substep in enumerate(program["program"]["substeps"]):
+        collapse_terms = [
+            term
+            for term in substep.get("terms", ())
+            if str(term["kind"]) == "collapse" and abs(float(term.get("coefficient", 0.0))) > 0.0
+        ]
+        if not collapse_terms:
+            continue
+        dt_sub = float(substep["dt_ns"])
+        dt_micro = dt_sub / float(m)
+        norm_sum = 0.0
+        for term in collapse_terms:
+            support = tuple(int(q) for q in term["support"])
+            if len(support) == 1:
+                c = _collapse_operator(term, local_dim=local_dims[support[0]], device=device)
+            else:
+                c = _joint_collapse_operator(term, support, local_dims=local_dims, device=device)
+            cdc = c.conj().transpose(-1, -2) @ c
+            norm_sum += float(torch.linalg.eigvalsh(cdc).max().real)
+        if norm_sum <= 0.0:
+            continue
+        bound = 0.25 * (dt_micro ** 2) * (norm_sum ** 2)
+        if bound > float(budget):
+            required = int(math.ceil(dt_sub * norm_sum / (2.0 * float(budget) ** 0.5)))
+            out.append(
+                {
+                    "substep_index": int(substep_index),
+                    "substep_kind": str(substep.get("substep_kind", "")),
+                    "reason": (
+                        "mcwf_first_order_mass_residual_exceeds_budget:"
+                        f"{bound:.3e}>{float(budget):.3e}"
+                    ),
+                    "first_order_mass_residual_bound": float(bound),
+                    "mass_residual_budget": float(budget),
+                    "microstep_count": m,
+                    "required_microstep_count": int(max(required, m + 1)),
+                }
+            )
+    return out
+
+
 def _unsupported_substeps(
     program: dict[str, Any],
     *,
@@ -1814,8 +2125,18 @@ def _unsupported_substeps(
                 "RD",
                 "LEAK_SEEP_21",
                 "LEAK_HEAT_12",
+                "CORR_RELAX",  # M12 Phase-B: 2-site joint (collective/Dicke) collapse
             }:
                 out.append(_unsupported(substep, f"unsupported_mcwf_collapse_family:{family}"))
+                break
+            if (
+                term_kind == "collapse"
+                and family in TWO_SITE_COLLAPSE_FAMILIES
+                and len(support) != 2
+            ):
+                out.append(
+                    _unsupported(substep, f"two_site_collapse_requires_two_site_support:{family}")
+                )
                 break
             if (
                 term_kind == "hamiltonian"
@@ -1835,11 +2156,20 @@ def _unsupported_substeps(
                 break
         if kind == "measurement":
             records = list(substep.get("operation_records", ()))
-            if len(records) != 1:
-                out.append(_unsupported(substep, "mcwf_mps_measurement_requires_one_operation_record"))
-                continue
-            if str(records[0].get("basis", "Z")).upper() != "Z":
-                out.append(_unsupported(substep, "mcwf_mps_first_slice_supports_z_measurement_only"))
+            # Multi-record terminal readout (e.g. the d3 XZZX 9-qubit data readout in mixed
+            # X/Z basis) is supported: every operation_record may carry its own basis, and
+            # distinct-qubit targets commute. Only X and Z are in this bounded slice;
+            # anything else (Y, ...) fails closed.
+            for record in records:
+                basis = str(record.get("basis", "Z")).upper()
+                if basis not in _SUPPORTED_MCWF_MEASUREMENT_BASES:
+                    out.append(
+                        _unsupported(
+                            substep,
+                            "mcwf_mps_measurement_supports_x_or_z_basis_only",
+                        )
+                    )
+                    break
         if kind == "reset":
             for op in substep.get("operation_records", ()):
                 if _reset_basis(str(op.get("name", ""))) is None:
