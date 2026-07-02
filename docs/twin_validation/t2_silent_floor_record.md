@@ -44,6 +44,23 @@ engine (T-B); independent route = per-φ exact conditional amplitudes + Monte-Ca
 - **S6 (independent route):** graded-sum F vs conditional-amplitude MC (N=4e5 φ-samples × 3
   seeds, p's=0): agreement within 3 MC-σ, and MC-σ/F < 2%.
 
-## Results (appended after the run)
+## Amendment A-T2-1 (2026-07-02, after run 1 — registered S1b FALSIFIED; leading law CORRECTED;
+committed before the rerun)
 
-*(pending — run follows the registration commit)*
+**Run-1: 15/16 PASS; S1b (n=2 law 1+2ρ²) FAILED at rel err 0.327** — and the failure pattern
+diagnoses the root cause exactly: at ρ=1, R=2 the machine gives ratio 4 vs predicted 3. The
+same-round-only assumption in F2 was WRONG: collective-flip amplitudes at different rounds are
+indistinguishable by every detector and add COHERENTLY before squaring. **Corrected F2:
+F → 4^{−n} E[(Σ_r Π_q θ_{q,r})²]** — diagonal = hafnian rate terms (the old law); off-diagonal =
+cross-round interference: vanishes for ODD n at zero temporal correlation (odd Gaussian moments —
+why the n=3 curve 1+6ρ²+8ρ³ converged untouched, rel err 9.9e-3 ~ σ²), survives for EVEN n
+(n=2 block-diag: 1+(R+1)ρ² — R=2 gives 4 at ρ=1 ✓ matches the falsification exactly) and for any
+n with temporal correlation. **New physics content: the silent floor is a coherent accumulation
+across rounds — a rate-based/factorized simulator produces the diagonal only; the floor's
+R-growth at fixed per-round statistics (S1c: n=2, R=3 → 1+4ρ²) is the falsifiable signature.**
+Bets amended: S1b → corrected law; S1c added (R-scaling). n=3 curve, metric theorem (F3),
+S2–S6: unchanged, already green in run 1.
+
+## Results (appended after the rerun)
+
+*(pending)*
