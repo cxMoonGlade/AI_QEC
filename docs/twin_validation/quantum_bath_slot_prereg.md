@@ -205,6 +205,64 @@ at the record layer (the win-win outcome of handoff §3/§5 — mirror of Cox≈
 bare lag-1 detector autocorrelation as a non-Markovianity witness (Kam §IV.C insufficiency, per the
 Gao note's caveat); raw-BCF RMSE (⚠ diagnostic only).
 
+### 5.1 Amendment A-M2-1 (2026-07-02, after the first G-Q1b run; gate re-derivation, BEFORE rerun)
+
+**Finding:** the first M2 run failed the inherited G-Q1b gate: engine-vs-oracle gap 7.565e-3 > 5e-3 —
+and rerunning `pilot3_relaxation_block_vs_unitary.py` shows the SAME 7.565e-3 with a verdict line that
+prints **CHECK, not CERTIFIED**: pilot-3's 2-Lorentzian gate was never met, and the handoff's "reuse
+pilot-3 anchors" carried that un-noticed. Decomposition (measured): engine vs exact closed form =
+7.2e-16 (dense expm) / 2.1e-8 (qutip mesolve — and engine ≡ mesolve independently); oracle (N=400,
+band [1e-3, 4]) vs the SAME closed form on the single-Lorentzian anchor = **5.269e-3** — the gap is
+the ORACLE's discretization + band-truncation floor, not an engine error. Cause: Lorentzian tails are
+fat (cumulative tail ≈ λ/(π·distance)); at the pilot regime (Ω/λ ≈ 5–7) ~5% of the full-line weight
+sits at ω < 0, outside the positive-frequency oracle band, while the pseudomode/JC-closed-form object
+is the FULL-LINE Lorentzian (exponential BCF).
+
+**Revised G-Q1b (registered before the rerun):**
+1. **Extended full-line oracle** — unitary discretization on a band SYMMETRIC about the peak centroid
+   (leading Lamb-shift tail contributions cancel by odd symmetry), halfwidth 8, N-ladder
+   {400, 800, 1600}. Predictions: single-anchor |ext-oracle − closed form| ≤ 5e-4 at N=1600
+   ((b)-band); CRASH gates: anchor ≤ 1e-3; 2-Lorentzian |engine − ext-oracle(1600)| ≤ 1e-3;
+   gap(1600) ≤ gap(400) (convergence direction). This compares like objects — the exponential-BCF
+   model — so the gate can be tight.
+2. The positive-band gap (≈ 7.6e-3 in the pilot regime) is RECLASSIFIED as the measured **Rule-III
+   representation bound** of the full-line pseudomode model vs a positive-frequency physical bath —
+   declared, and NEGLIGIBLE at grounded parameters: ω_TLS/λ ≈ 2π·3.48 GHz / 1.25 µs⁻¹ ≈ 1.7e4 ⇒
+   ω < 0 tail weight ≈ 1/(π·1.7e4) ≈ 1.9e-5 (S8, added to §7).
+3. The oracle-floor-referenced sanity print (gap ≤ 2× measured floor) is kept as a (c) diagnostic,
+   no longer the headline gate.
+
+### 5.2 Amendment A-M2-2 (2026-07-02, after the first full M2 run; the Lamb-phase trap CAUGHT in our
+own arm — imitator-class implementation completion, predictions registered BEFORE rerun)
+
+**Findings of run 1 (all crash gates passed; band verdicts):**
+- Resonant point (δ=0): D_Choi = 0.4165 ± 0.0003 (3 seeds) — **IN band** [0.2866, 0.5732], at 1.45×
+  the unitality floor ⇒ a measured coherence-sector unforgeability EXCESS beyond non-unitality in the
+  strong-coupling regime (the classical Gaussian field cannot mimic vacuum-Rabi coherence dynamics
+  even at matched BCF). Kept as a (b)-verdict, PROVISIONAL.
+- Detuned point (δ = 2π·50 MHz): D_Choi = 0.2756 vs band [0.0063, 0.0126] — **MISS ×22 (finding)**.
+  Decomposition: the quantum arm's vacuum (Lamb-type) dispersive shift χ_q ≈ g²/(2δ) = 0.565 rad/µs
+  ⇒ deterministic Rz(≈0.37 rad) over the window; D_Choi(Rz(0.37), 1) ≈ 0.27 matches the measurement.
+  **This is exactly the handoff-§5 Lamb-phase trap, caught in OUR OWN arm:** the §1 imitator class
+  includes arbitrary deterministic control, but the run-1 arm implementation never exercised it — the
+  measured 0.2756 overstates the class-wedge by conflating the control-absorbable deterministic phase
+  with the unforgeable dissipative asymmetry.
+
+**Fix (class-implementation completion, NOT a re-fit):** add deterministic-control absorption to the
+classical arm — minimize D_Choi over a post-rotation Rz(φ) (the compilation of a constant σ_z drift;
+grid + refine). Limitation declared: mid-evolution control is compiled as a post-rotation, exact for
+the commuting deterministic drift at leading order; the residual after optimization is the honest
+class-wedge estimate at this order.
+
+**Registered predictions for run 2 ((b), before execution):**
+1. Detuned point post-control: |φ_opt| ∈ [0.1, 1.0] rad; D_Choi drops to ∈ [|t_q|/2, 2·|t_q|] =
+   [0.0063, 0.0253] (band widened ×2 at the top: the dispersive-regime coherence residual need not
+   sit at the floor).
+2. Resonant point post-control: φ_opt ≈ 0 and D_Choi unchanged within 3 SE (no deterministic shift
+   mismatch on resonance — evidence the absorption is not a blanket fudge).
+3. The unitality lower bound still binds after ANY control (unital ∘ unitary = unital): consistency
+   crash-gate D ≥ |t_q|/2 − 5·SE unchanged.
+
 ## 6. Independent ground truth (Rule I, non-circular)
 
 1. **JC-with-loss closed form** (different mathematics: 2nd-order ODE, no GKSL solver) — pilot-3.
@@ -231,6 +289,7 @@ Gao note's caveat); raw-BCF RMSE (⚠ diagnostic only).
 | S5 | RWA/JC (counter-rotating dropped) | (a)-boundable | O((g/ω_q)²) ≈ 4e-7 — negligible, stated |
 | S6 | Clean frequency-band split: 1/f dephasing = classical slot; GHz exchange = quantum slot | (c) | the budget-table §4 hierarchy (βℏω per band); cross-band leakage none at GKSL order; the SPLIT ITSELF is the paper's boundary object |
 | S7 | Qubit time-stepping under the classical transverse field (non-commuting) | (c) | step-halving convergence assert (error printed; gate ≤ 1e-8 on the channel) |
+| S8 | Pseudomode = FULL-LINE Lorentzian (exponential BCF) vs positive-frequency physical bath | (c) | measured 7.6e-3 on P_e in the pilot regime (Ω/λ ≈ 5, A-M2-1); at grounded parameters ω_TLS/λ ≈ 1.7e4 ⇒ tail weight ≈ 1.9e-5 — negligible where we operate |
 
 ## 8. Epistemic status (METRICS-ladder summary)
 
