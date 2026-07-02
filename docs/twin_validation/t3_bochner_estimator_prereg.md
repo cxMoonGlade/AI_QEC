@@ -208,6 +208,15 @@ band-containment, not accuracy (bands admit the w = 0 straw at z ≈ 2.0; off-di
     (R2 probe C: round-translation misassignments are invisible to every teacher gate) — it
     stays zero-tolerance and blocking.
 
+**A-T3-1 addendum 2 (2026-07-03, after v4 run 2 — G-STRAW fixed 3/3 (5.91/3.27/4.30), ztruth/χ²
+green, but P1b seed-27 coverage failed marginally at worst-z 3.51: the honest narrower bands
+now RESOLVE the estimator's finite-sample curvature bias (|bias| ~1.1–1.7e-2 consistent across
+seeds while χ² stays in-band ⇒ parameter-map bias, not moment misfit). Registered fix = the
+STANDARD remedy, applied to the estimator itself (hardware inherits it): the reported point
+estimate per functional is the bootstrap-bias-corrected 2·f(θ̂) − mean_boot(f), and the coverage
+gate uses the BASIC bootstrap interval [2f(θ̂) − q_hi, 2f(θ̂) − q_lo] at the same 99.7% level
+(bias-robust; equally standard). Criteria level unchanged; committed before the rerun.**
+
 **A-T3-1 addendum (2026-07-03, after v4 run 1; criteria unchanged, instrument statistics
 aligned to the hardware operating point).** v4 run 1: every accuracy/consistency gate PASSED
 (P1a fitted-dressing exact tier at 1e-14 incl. the lag-2 kind; P1b percentile coverage 3/3
