@@ -195,6 +195,42 @@ the quantum-bath slot remains core scope with these measured numbers; the struct
 is the methodology spine. **M3 proceeds unchanged** (Branch-B scoring emphasis: D_comb vs the
 matched-BCF classical null at the code layer + the record-layer characterization).
 
+## 9. Amendment A-P1 (2026-07-02, USER-CAUGHT novelty & theory-first challenge — accepted in full;
+downgrades §8's interpretive language)
+
+**The challenge (accepted):** the probe's OBSERVABLE layer was not theory-first'd — the mechanism
+(M1) and channel objects (M2) were grounded, but the probe's registered predictions and kill
+criteria were derived from scratch where standing literature exists. Receipts: two of four
+registered predictions were falsified by the run itself in ways the literature predicts — P4's
+sign (anti-bunching / sub-Poissonian jump statistics: Carmichael; Plenio–Knight) and P2's criterion
+(unital = random-unitary on qubits: Tregub; Kümmerer–Maassen; classical simulability of qubit
+channels: Crow & Joynt, PRA 89, 042123 (2014)). P1's physical content is the qubit-as-quantum-noise-
+spectrometer concept (Schoelkopf et al. 2003; Clerk et al., RMP 82, 1155 (2010)): absorption/emission
+asymmetry probes S(ω) vs S(−ω). The record-classicality concept space is held by Milz et al.,
+"When Is a Non-Markovian Quantum Process Classical?" (PRX 2020; Kolmogorov consistency) and the
+Smirne–Huelga–Plenio line — the reading the handoff assigned to direction-1 positioning and this
+prereg deferred to "Branch A debt" was in fact due BEFORE any interpretive claim.
+
+**Consequences:**
+1. §8's "two-component decomposition is a REPORTABLE structure" is DOWNGRADED to: an INTERNAL
+   branch-decider characterization, prima facie an instance of known physics (component (i) =
+   the unital-simulability boundary; component (ii) = spectral-asymmetry detection); any paper
+   language must cite the owners and may claim at most the QEC-stabilizer-record instantiation +
+   machine-matched-null methodology — and only if an A9-style adjudication (independent search +
+   精读, principal-verified quotes) finds that specific gap open.
+2. The BRANCH B decision STANDS and is STRENGTHENED: the prior art occupies direction-1's theorem
+   space, independently confirming that the theorem-hunt headline is dead. The paper headline
+   (#2 exact silent-floor functional + #3 Bochner inverse + the structure lemma) does not rest on
+   any probe claim.
+3. READING DEBT NOW DUE (before any paper prose touches these topics): Crow–Joynt PRA 89, 042123;
+   Schoelkopf et al. 2003 + Clerk et al. RMP 82, 1155 (spectrometer formalism); Milz et al. PRX 2020
+   + a Smirne–Huelga–Plenio representative; waiting-time/anti-bunching canon (Carmichael).
+   All paper attributions above are as USER-FLAGGED + general knowledge — to be 精读-verified
+   before entering any committed claim.
+4. Standing-rule sharpening (also to memory): theory-first must cover the OBSERVABLE layer and
+   every registered KILL CRITERION — check against (i) the field's literature for that observable
+   and (ii) the project's own standing theorems (P2 contradicted our own M2 γ/2 floor).
+
 ## 7. Run plan
 
 One committed script `outputs/cgf_probe_v1.py` (asserts, printed evidence, flushed; no
