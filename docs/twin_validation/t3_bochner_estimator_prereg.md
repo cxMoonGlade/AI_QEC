@@ -142,3 +142,68 @@ hardware-artifact claim. Explicitly NOT claimed: device mechanism attribution ("
 noise IS this kernel"), any decoding improvement, any do()/counterfactual statement, Born/CPTP
 learning on hardware. [PROVISIONAL] positioning per the adjudication stands; un-led review
 before any reliance on the results.
+
+## Amendment A-T3-1 (2026-07-03, after the 4-way un-led review — R2 Fable statistics, R3 Opus
+compliance, R4 Opus code; findings in `outputs/review2_{estimator,compliance,code}_findings.md`.
+Committed BEFORE the v4 gate rerun and before any hardware fit.)
+
+**Root finding (R2, exact; independently measured by R4):** the v1–v3 implementation SPLIT the
+registered single per-check nuisance η_κ = (1−2p_{M,κ})²(1−2p_Z)² into separate (η, β) — an
+UNDECLARED model change that creates an EXACT continuous degeneracy: every registered moment has
+the form dress·β^{2W}·e^{−ΣV/2}·(C-factor), so m(d+δ·1, w, η, β e^{δ/2}) ≡ m(d, w, η, β)
+(Jacobian rank 11/12; fitted-dressing exact tier reaches residual 2.2e-16 with ΔΣ up to 5e-2 —
+the registered 1e-6 gate FAILS at zero residual; the committed P1a pass relied on freezing
+dressings at truth, itself unregistered — R3 M-2). Consequently the committed P1b certified
+band-containment, not accuracy (bands admit the w = 0 straw at z ≈ 2.0; off-diagonal bands
+49–102% of truth; correlation functionals biased up to +108%), and the bands themselves were
+~2× inflated by an independent-Gaussian redraw model against moments with max|corr| = 0.664
+(R2; prereg S5's own Godambe caveat, ignored by the implementation).
+
+**Amended estimator + gate (v4 spec; criteria strengthened, none weakened):**
+1. **Nuisance model reverted to the REGISTERED single η_κ per check** (no separate β). The
+   residual p_Z-power mismatch across moment kinds (β² vs β⁴ patterns a single η cannot absorb)
+   is part of the declared model-class error (S1); on the teacher it is bounded by construction
+   (printed). Equivalently the V-offset direction is now identified; any remaining flat
+   direction must be DECLARED as gauge and only ridge-invariant functionals gated.
+2. **Exact tier rerun with dressings FITTED** (the hardware configuration): gate = all
+   ridge-invariant fitted-window functionals (all C(Δq,Δt) entries; V differences; and V levels
+   iff no declared gauge remains) ≤ 1e-6 at machine-exact moments. The frozen-dressing variant
+   is kept only as a diagnostic.
+3. **Bootstrap corrected:** moment redraws from the estimated FULL moment covariance (shot-level
+   jackknife/bootstrap), INDEPENDENT redraw seeds per outer seed, ≥100 draws, PERCENTILE
+   intervals (active-constraint pileup; R2 finding 7).
+4. **New gates (free power, R2 8a):** ztruth (sampler-vs-formula) ≤ 4 over the moment set;
+   fit χ² within its dof band; **straw-null control: the w = 0 (zero-correlation) kernel must
+   FAIL the P1b gate** (else the gate has no certifying power — the alive control for the gate
+   itself).
+5. **Coverage extension (R3 M-3/M-4, R2 4a–c):** exact-tier defs extended to include a lag-2
+   (η²-dressing) moment — engine-checking the lag≥2 dressing rule (probe A showed P1a was blind
+   to it); sampled tier extended to R = 10 with same-check lags 1..8 and |Δq| ≤ 4 matching the
+   registered hardware moment set; registered ranges updated accordingly (R ≤ 10 replaces
+   "R=3..4"; the v1–v3 R = 6 is retro-declared here).
+6. **Bias reporting:** mean(hat) − truth per functional printed alongside z (R4: band-masked
+   bias up to +108% must be visible, not implied).
+7. **P2 relabeled:** structural setup check, reported, NOT counted as an accuracy gate.
+8. **Under-specification closures (R3 M-5, R2 5) — pinned before any hardware fit:**
+   (i) hardware grid PINNED: ω ∈ {0, π/4, π/2, 3π/4, π} × ρ ∈ {0.05, 0.35, 0.65} (15
+   components, w ≥ 0); (ii) P4 split = even/odd shot index within each sample, no seed freedom;
+   unfitted-moment prediction rule for BOTH arms = plug the fitted/inverted kernel into the SAME
+   closed forms (the unconstrained arm's kernel = moment-wise inversion on fitted windows,
+   ZERO-extended beyond — declared, its extrapolation weakness is the point of P4); "weighted
+   residual" = mean of (Δ/SE)² over the class; the order-3 statistic = E[(−1)^{D_{κ,r}+D_{κ,r+1}+D_{κ,r+2}}]
+   for interior κ; (iii) P3 denominator = all fitted 2×2 window blocks (per class, per
+   subsample); violation = any of {implied V < 0, |implied corr| > 1, non-PSD window block};
+   (iv) P5 re-based on ridge-invariant functionals; statistic = |Δ_s(functional)| vs
+   √2 × (pooled per-sample SE) with BH-FDR across functionals (direction-only (b) as before);
+   (v) bootstrap draw counts (≥100) + all seeds fixed: hardware fit seeds {101, 102, 103},
+   redraw base seeds {2000+s}.
+9. **Record corrections (R3 B-1/M-1, R4):** the prereg (ef99910) was committed before the runs;
+   the SCRIPT and logs are outputs/ local audit artifacts per repo policy (outputs/ is
+   deliberately gitignored) — the gate record's "script committed ef99910" wording is corrected
+   in the record; P1 splits into P1a (a)-exact and P1b (b)-band (the composite "(a)" tag above
+   is superseded); the §7 phrase "validated ... at the identifiability boundary" is narrowed to
+   "validated for in-class recovery of ridge-invariant functionals on known-truth teachers" until
+   the sign/gauge canonicalization content is actually exercised.
+10. **Standing lesson adopted:** the dual-route Spitz agreement gate on hardware is LOAD-BEARING
+    (R2 probe C: round-translation misassignments are invisible to every teacher gate) — it
+    stays zero-tolerance and blocking.

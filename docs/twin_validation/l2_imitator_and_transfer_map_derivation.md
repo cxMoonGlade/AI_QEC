@@ -129,5 +129,55 @@ Q3's check, landing free in the same runs (same record protocol, one extra arm p
    premises; all wedge claims carry the imitator-class name.
 
 *Zero-compute deliverable; no runs. All (a) items are short derivations reproduced above; (b)/(c)
-items are declared for M3 registration. Un-led review of this doc rides with the M3 prereg review
-(nothing here is relied on before that).*
+items are declared for M3 registration.*
+
+## Amendment A-L2-1 (2026-07-03, after the un-led Fable review — 4 MAJOR findings accepted in
+full; supersedes the flagged statements above; reviewer evidence `outputs/review2_l2_findings.md`
++ probe `outputs/review2_l2_p3_check.py`)
+
+1. **Matching prescription REDEFINED (kills the O(g⁴) confound).** L2 matching = **exact
+   per-window kernel matching**: a = P(e→g), b = P(g→e) over one τ_m window matched to the
+   quantum unit's true window kernel (measurable/computable; realizable as exp(τQ) whenever
+   a+b < 1). TCL2 rates are downgraded to interpretation. Reason (reviewer, verified): the
+   mode-reset JC record IS exactly a 2-state Markov chain at any (g, κ), but its kernel equals
+   exp(τ_m Q_TCL2) only to O(g²) — TCL2-matching leaves an O(g⁴) mismatch, the SAME order as the
+   memory signal. Under kernel matching, Thm L2-1's Cor. (i)/(ii) and the Markov-point crash-gate
+   null become true identities; under TCL2 matching they are approximations and the null can fire
+   spuriously. M3 registers the null on the kernel-matched arm.
+2. **Differencing attribution DEMOTED.** Cor. (iii)/§3(iii): theorems ground CONTAINMENT only
+   (L2 carries the non-unital fixed point; L1 cannot). The subtraction Δ(q,L1) − Δ(q,L2)
+   isolates the non-unitality component only under additivity — which is Q3's MEASURED check,
+   not a theorem (and L1/L2 differ additionally in temporal class: Gaussian field vs telegraph).
+   Register as "theorem-grounded containment + measured additivity".
+3. **Prop L2-3 REGIME-CONDITIONED (and partially reversed — good news for M3).** The derivation
+   above computes the TRUE-flip statistic (sign correct universally, excess = b(b−a)/(a+b) < 0).
+   The P4 companion conditions on an OBSERVED flip: with assignment noise the observed-flip
+   excess flips POSITIVE in the sticky regime (a,b ≪ p_M: excess → (1−2p_M)(π_e − p_M);
+   reviewer-verified exactly), and at the probe's N̄ = 0 point the matched L2a is degenerate
+   (p_M = 0 ⇒ conditioning event has probability 0; p_M > 0 ⇒ excess = p_M(2p_M−1) < 0 with
+   magnitude ≤ p_M) ⇒ **the measured quantum −4.06e-2 is unreachable by matched L2a unless
+   p_M ≥ 4.4e-2 — P4 RETAINS magnitude-level q-vs-L2a discriminating power at N̄ = 0.**
+   "P4 = L1-only discriminator" is replaced by: P4 sign kills L1; P4 magnitude vs L2a is a live
+   (b)-band instrument in the flip-dominated/N̄=0 regimes, dead in the sticky regime. (The
+   N̄→0 "→0 while stays" contrast in the old derivation was broken — both vanish at Θ(γ↑),
+   ratio → Γ/2γ↓; negativity follows from b < a alone.)
+4. **Hypotheses STATED.** Thm L2-1/L2-2 require **[H, Π_z] = 0** (pointer-diagonal Hamiltonian —
+   Lamb/Stark σ_z fine; any transverse drive breaks diagonal-sector autonomy and the theorems)
+   and **classification-only measurement noise** (i.i.d. record flips, no back-action,
+   post-state = true-outcome pointer state). The JC-elimination setting satisfies both; M3
+   inherits them as declared preconditions. Ancilla-mediated partial-collapse readout is outside
+   the theorem (declarable separately if needed).
+5. **Minor corrections:** §1 Q/π ordering fixed — in the (e,g) ordering Q = [[−γ↓, γ↑],[γ↓, −γ↑]],
+   π = (γ↑, γ↓)/Γ; §3(i) chaining reads D_rec ≤ D_comb ≤ Σ_r (per-window channel distances);
+   the "factor-2 coherence mismatch" of Thm L2-2(i) is LIFT-DEPENDENT (no-jump-branch lift
+   e^{−Γt}; GKSL jump-operator lift Γ/2; incoherent embedding ∞) — tag (c), cite M2's exact
+   theorem for the channel-level statement; "directional ratio (N̄+1)/(N̄+½)" = γ↓/(Γ/2)
+   (not detailed balance) — named explicitly.
+6. **Upgrade (reviewer positive finding):** the §3(i) no-go is SELF-WITNESSED — Thm L2-2's own
+   construction exhibits model pairs with channel distance ≥ the γ/2 floor and record distance
+   exactly 0, so "no record lower bound from channel floors" is a theorem with an explicit
+   witness, not a direction observation.
+
+Checklist §4 items 2, 3, 4(first clause), 5 are superseded accordingly. Reviewer verdict:
+all four results CORRECT(-WITH-HYPOTHESIS-GAP) in their intended domain; document
+SOUND-WITH-FIXES; fixes = this amendment.
