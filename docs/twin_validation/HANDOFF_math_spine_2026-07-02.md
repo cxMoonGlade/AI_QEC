@@ -180,12 +180,19 @@ a836a25, 1b86b5d + records):**
   **A-T2-2 S7 dressed-MC anchor (p_Z/p_M/p_F independently exercised): z = 0.72/0.28/1.18
   GREEN.** B + #2 are now review-cleared for M3-prereg reliance.
 
-**Next session order:** T-#3 (Bochner-constrained estimator + LOCAL real-Google demo — own
-prereg + registered bands FIRST; dataset notes `docs/.datasets/` mandatory pre-read; baselines
-Blume-Kohout/Young + Bhardwaj + note Takou 2606.11496; A8 estimation-never-decoding) → T-M3
-prereg (ALL inputs now in hand: state-confirmation §5 + L2 doc §4 checklist + review-cleared
-B/#2 theorems; the L2-differencing instrument replaces the c₂-pin). Paper assembly interleaves
-(tex header PENDING block updates + Thesis/Contributions wiring for the landed B/#2 sections).
+**T-#3 progress (2026-07-02/03, continued same arc):** prereg COMMITTED (ef99910 —
+`t3_bochner_estimator_prereg.md`: Bochner = nonneg spectral weights, PSD by construction;
+forward model = the review-cleared T-B laws; d29 X-basis target; R2-lite claim boundaries;
+P1–P5 registered) → d29 dataset note pre-read done → **P1/P2 teacher-recovery gate PASSED**
+(b5f5120, `t3_teacher_gate_record.md`: forward map ≡ engine 4.4e-16; independent Born-sampler
+tier 3/3 seeds worst z ≤ 1.47; PSD structural; saturated-sigmoid nuisance lesson documented).
+**Next session order:** `outputs/t3_hw_moments.py` (streaming b8 extraction, X samples 00–04,
+bulk layers 100–900, interior checks, DUAL-ROUTE gate vs in-repo Spitz-exact pij BEFORE any
+fit) → `outputs/t3_fit_real.py` (P3 physicality contrast / P4 held-out / P5 drift, bands
+pre-registered) → un-led review of T-#3 results → T-M3 prereg (ALL inputs in hand:
+state-confirmation §5 + L2 doc §4 checklist + review-cleared B/#2; the L2-differencing
+instrument replaces the c₂-pin). Paper assembly interleaves (tex header PENDING updates +
+Thesis/Contributions wiring for the landed B/#2 sections).
 
 **Agent-ops lesson (this session):** heavy monolithic math-review briefs STALL general-purpose
 subagents (two stalls: 55 min and ~8 min zero-tool-call reasoning loops); the working recipe =
