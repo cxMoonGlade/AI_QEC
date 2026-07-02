@@ -81,8 +81,15 @@ the mid-circuit measurement to exist.
 - P2 (measurement switch): terminal-only variant (evolve R·τ_m, single measurement): Δ_term must
   satisfy the KILL criterion; theory ((a)-level, controllability): the restricted imitator with
   one pre-measurement U achieves the single-time distribution exactly up to MC noise.
-- P3 (coupling power law): log|Δ| vs log g over g ∈ {g₀/4, g₀/2, g₀, 2g₀}: single clean power,
-  registered slope 4 ± 0.5.
+- P3 (coupling power law): log|Δ| vs log g over g ∈ {g₀/4, g₀/2, g₀, 2g₀}: a SINGLE clean power
+  law; registered slope band [1.6, 4.5]. (Pre-run amendment, 2026-07-02, before any execution: the
+  first sketch registered 4 ± 0.5 from the conditional-re-absorption sector alone; a second
+  derivation pass found a competing O(g²) sector — pathwise 2×2-unitary transition symmetry
+  |V_01| = |V_10| holds for the imitator, but the JOINT record breaks it via occupation
+  reweighting (selection), admitting classical direction structure at O(g²) and quantum excess at
+  the same order. Two candidate leading exponents {2, 4} are therefore declared; the EXPONENT is a
+  measured characterization, and cleanliness = single-power fit quality. The branch decision rides
+  on the kill switches, not on the exponent value.)
 - P4 (direction sign): the quantum arm's conditional re-absorption excess is POSITIVE (emission
   stored ⇒ enhanced return) at N̄ = 0.
 
