@@ -231,6 +231,157 @@ prereg deferred to "Branch A debt" was in fact due BEFORE any interpretive claim
    every registered KILL CRITERION — check against (i) the field's literature for that observable
    and (ii) the project's own standing theorems (P2 contradicted our own M2 γ/2 floor).
 
+## 9.1 Amendment A-P1-READ (2026-07-02, the reading debt PAID — 5 papers 精读'd, D1/D2/D3 adjudicated)
+
+The A-P1 reading debt of §9.3 is discharged. Five load-bearing papers were downloaded, converted, and
+full-text close-read; five committed reading notes landed. arXiv ids VERIFIED before download (never
+cited from the flagged ids alone); every quote below spot-verified against the extracted txt by the
+principal (line numbers are `outputs/papers/<id>.txt` lines). Two papers (Crow–Joynt, Milz) were read in
+FULL by the principal directly; the other three were drafted by delegated 精读 and the principal
+verbatim-verified their load-bearing quotes against the raw txt.
+
+**Reading notes (committed):**
+- `docs/papers/reading_notes/crow_joynt_classical_simulation_quantum_noise_1309.6383.md` (PRA 89, 042123)
+- `docs/papers/reading_notes/schoelkopf_qubits_spectrometers_quantum_noise_cond-mat-0210247.md`
+- `docs/papers/reading_notes/clerk_quantum_noise_measurement_amplification_0810.4729.md` (RMP 82, 1155)
+- `docs/papers/reading_notes/milz_when_nonmarkovian_process_classical_1907.05807.md` (PRX 10, 041049)
+- `docs/papers/reading_notes/plenio_knight_quantum_jump_dissipative_quant-ph-9702007.md` (RMP 70, 101)
+
+### D1 — Attribution verification (the §9 receipts table, per-item verdict)
+
+**P1 → Schoelkopf/Clerk (qubit-as-spectrometer; absorption/emission asymmetry probes S(ω) vs S(−ω)):
+VERBATIM-CONFIRMED.**
+- Schoelkopf cond-mat/0210247: excitation reads S(−ω), relaxation reads S(+ω); "the detailed balance
+  condition is p_e Γ↓ = p_g Γ↑" [txt:724]; steady-state "P = tanh(ℏω01/2kBT)" [txt:865]; at T=0 only the
+  emission side survives — "there remains noise at positive frequencies … from zero-point motion" [txt:456].
+- Clerk 0810.4729: non-symmetrized S[ω]=∫dt e^{iωt}⟨F(t)F(0)⟩ (Eq. 2.1); detailed balance
+  S[+ω01]=e^{βℏω01}S[−ω01] (Eq. 2.7); Γ_up=(A²/ℏ²)S[−ω01], Γ_down=(A²/ℏ²)S[+ω01] (Eq. 2.6); the quantum
+  discriminator verbatim — a "strictly classical noise source, ⟨F(τ)F(0)⟩ would be real" ⇒ S(−ω)=S(+ω)
+  [txt:7677].
+- Our probe's asymmetry knob A = tanh(βℏω/2) = 1/(2N̄+1), and the asymmetry-kill sweep that travels the
+  classical limit A→0, ARE this concept + KMS detailed balance. **Owned — cite, do not claim.**
+
+**P2 → (was "Tregub/Kümmerer–Maassen + Crow–Joynt"): CORRECTED. Crow–Joynt CONFIRMED; the theorem source
+is Landau–Streater, NOT Tregub/Kümmerer–Maassen.**
+- Crow–Joynt 1309.6383 (title: "Classical simulation of quantum dephasing and depolarizing noise"):
+  proves classical random-unitary simulability of single-qubit DEPHASING (defined by [H_S,H_SB]=0, the
+  eigenstate-preserving side) and DEPOLARIZING only; and states the non-unital obstruction QUALITATIVELY —
+  a cooled qubit's population shift is an affine (non-unital) term "which is not zero" for the quantum map
+  while the classical map has T^(Cl)_i0=δ_i0, so this "physical process cannot be mimicked by classical
+  external noise in the sense of random unitary evolution" [txt:320-335]; conclusion: classical simulation
+  fails "when the decoherence comes from randomness in the population" [txt:1524-1527]. CONFIRMED.
+- CORRECTION: Crow–Joynt cite the underlying unital/positive-map result to **Landau & Streater**, PRA/Lin.
+  Alg. Appl. 193, 107 (1993) [their ref 6] and Helm–Strunz for one-qubit existence [refs 5,7]. **Tregub and
+  Kümmerer–Maassen are NOT cited by Crow–Joynt, and we have not 精读'd them ⇒ they are STRUCK from the
+  citing set** (unread; not the source in hand). The "unital qubit channel = mixture of unitaries (random
+  unitary)" theorem is attributed to Landau–Streater (secondary citation via Crow–Joynt; a direct 精读 of
+  Landau–Streater is a small deferred debt IF that theorem ever becomes load-bearing in prose).
+- Consequence for ② below: Crow–Joynt/Landau–Streater own the QUALITATIVE non-unital obstruction; neither
+  quantifies a γ/2-type floor.
+
+**P4 → anti-bunching canon (Carmichael; Plenio–Knight): VERBATIM-CONFIRMED.**
+- Plenio–Knight quant-ph/9702007: on detected emission the two-level atom is "reset back to its ground
+  state on photodetection" [txt:1063] (also [txt:1016]) ⇒ zero re-emission rate at zero delay, rising only
+  as it re-excites — "for short times τ we expect to see anti-bunching" [txt:597]; the jump record is
+  sub-Poissonian, "for a sub-Poissonian field (∆n)² < ⟨n⟩" [txt:699], Mandel Q<0. This IS the P4 physics
+  (after an e→g emission the conditional flip rate DROPS = emission anti-bunching). **Owned.** Caveat (in
+  the note): the clean reset-to-|g⟩ is a two-level/V-system result; it applies because our data qubit is a
+  TLS, and must not be silently extended to multi-level/leakage.
+
+**Record classicality → Milz/SHP (Kolmogorov consistency): CONFIRMED as FRAMEWORK owner, with a boundary.**
+- Milz 1907.05807 (Egloff, Taranto, Theurer, Plenio, Smirne, Huelga — i.e. the SHP line is co-authored
+  here, one paper covers both): K-classical ⇔ the multi-time outcome distribution satisfies the Kolmogorov
+  consistency conditions (Def. 1, Eq. 9, marginalize an intermediate outcome ⇒ lower-order distribution);
+  measurement setting = sequential sharp projective measurement of the SAME fixed observable (Fig. 1);
+  coherence-absence is necessary but NOT sufficient; genuinely-quantum (KCC-violating for all instruments)
+  processes exist "only in the presence of (quantum) memory" [txt:3256-3258]. CONFIRMED as owner of the
+  temporal-classicality concept + the coherence-not-sufficient fact.
+- BOUNDARY (decisive for ⑤): Milz has ZERO QEC content — exhaustive term search returns 0 matches for
+  stabilizer / syndrome / error-correction / quantum-error / surface-code; "Pauli" appears only naming the
+  σ_z/σ_x of a single-qubit toy. Milz owns the DEFINITION, not any QEC-record instantiation.
+
+### D2 — A9-style gap adjudication (the five probe statements; (a) owned-cite / (b) folklore-unquantified /
+(c) apparently-open). Verdict bias: prefer OWNED. Result: only ⑤ is (c), and only in a narrow conjunction.
+
+- **① Asymmetry switch kills the modulation component (measured A^(1.4–1.8)):** **(a) owned-cite.** The
+  physics — spectral asymmetry A=tanh(βℏω/2) is the quantum signature, classical limit A→0 kills it — is
+  Schoelkopf/Clerk detailed balance (D1-P1). The specific superlinear exponent A^(1.4–1.8) is a **(b)**
+  internal measured band (a miss-would-be-a-finding number, never citable-as-fact), NOT a contribution.
+- **② Measurement-off survives = unital floor (with our γ/2 saturation constant):** split verdict.
+  The QUALITATIVE claim (T1/relaxation non-unital ⇒ NOT representable by classical field + arbitrary
+  deterministic control, since control keeps the arm inside unital = random-unitary) is **(a) owned-cite**:
+  Crow–Joynt affine-obstruction + Landau–Streater unital-qubit theorem, and it restates our own M2 §4
+  unitality theorem. The QUANTIFIED constant — D_Choi(AD(γ), best-unital) = γ/2 — is **(b)
+  folklore-unquantified**: an elementary convex-geometry computation, found stated in none of the read
+  sources; compute-and-state it, cite the qualitative owners, do NOT claim the constant as novel. **Not
+  (c)-open** in any contribution sense.
+- **③ Two-component record-wedge decomposition (channel-non-unitality ⊕ measurement-modulated asymmetry):**
+  **(b)/owned-composite.** Component (i) = the unital-simulability boundary (Crow–Joynt/Landau–Streater);
+  component (ii) = spectral-asymmetry detection (Schoelkopf/Clerk). The decomposition is an INSTANCE of two
+  known physics pieces (as A-P1 already downgraded); reportable, cite both owners, no standalone novelty.
+- **④ P4 sign contrast (quantum negative / anti-bunching vs classical common-cause positive):** **(a)
+  owned.** Quantum side = Plenio–Knight/Carmichael anti-bunching / sub-Poissonian (D1-P4); classical
+  common-cause positive clustering is elementary. A reportable finding, not a novelty.
+- **⑤ QEC-stabilizer-record + mid-circuit-measurement + machine-matched-null classicality instantiation:**
+  **(c) apparently-open — the sole residual gap, narrowly.** The framework (Kolmogorov-consistency temporal
+  classicality) is owned (Milz/SHP); generic classicality-via-KCC with non-Markovian signatures is owned
+  (Milz; also the very recent generic-two-level arXiv:2601.01122); non-Markovianity OF QEC syndrome/logical
+  records is studied but DECODING-oriented (arXiv:2509.16887, 2512.08893), not a classicality test. The
+  specific conjunction below is instantiated in NONE of the read/searched literature. Per the "prefer
+  owned" rule the open claim is confined to that exact conjunction; every component is individually owned.
+
+  **Residual-gap statement (precise wording, since (c)):** *"Instantiating the Milz–Egloff–Taranto–
+  Theurer–Plenio–Smirne–Huelga temporal-process-classicality criterion (Kolmogorov consistency of the
+  multi-time outcome distribution) on the STABILIZER-SYNDROME record of a QEC circuit whose data qubit(s)
+  are coupled to a near-resonant quantum bath — testing record classicality against an EXPLICIT
+  bath-parameter (βℏω, g, κ) boundary, with a machine-matched-null (matched-marginal HMM surrogate)
+  separating genuine quantum-memory measurement-back-action from the circuit's own parity+measurement HMM
+  memory."* This is NOT a theorem-hunt headline (Branch B already killed direction-1 as headline); it is at
+  most a methodological-instantiation claim, it MUST cite all component owners, and it is A8-compliant
+  (record statistics, not decoding — the SIMULATOR-not-decoder rule). It remains win-win: if the
+  machine-matched-null shows no separable quantum-memory KCC excess at code-realistic rates, that is a
+  reportable classical-forgeability BOUND, not a failure.
+
+**Gap summary:** four of five probe statements are OWNED (①②-qual ③ ④) or folklore-unquantified
+(②-constant); one (⑤) is apparently-open only in the narrow QEC-stabilizer-record ∧ explicit-boundary ∧
+machine-matched-null conjunction. This CONFIRMS and discharges the A-P1 condition (§9.1: "may claim at
+most the QEC-stabilizer-record instantiation + machine-matched-null methodology — and only if an A9-style
+adjudication finds that specific gap open"): it does, narrowly. The Branch B decision STANDS and is
+independently re-confirmed (direction-1's theorem space is occupied by the owners above).
+
+### D3 — M3 observable-layer grounding (literature-anointed observables + criteria; the M3-prereg input)
+
+For the M3 unit (2 data + 1 anc + 1 mode; `D_comb` + record layer), the field-standard observables, each
+with its owner and predicted direction (quantum-bath arm vs matched-BCF classical-field arm at fixed
+marginals). Metric discipline: ledger rows only (D_Choi / D_comb / record stats with machine-matched
+nulls, A7); no LER/DEM/decoder in the validity chain (A8; SIMULATOR-not-decoder).
+
+1. **Channel-layer non-unitality / random-unitary-representability** [Crow–Joynt 1309.6383;
+   Landau–Streater]. Observable: the affine (non-unital) part of the block Choi/transfer matrix — the
+   Bloch-fixed-point shift. Criterion: quantum arm carries a nonzero affine term (∼γ/2 scale); classical
+   arm has EXACTLY zero (T^(Cl)_i0=δ_i0). Predicted: D_Choi(quantum, best-random-unitary) ≥ the γ/2 floor.
+   (a)-exact channel witness.
+2. **Spectral-asymmetry / detailed-balance (FDT) witness** [Schoelkopf cond-mat/0210247; Clerk 0810.4729].
+   Observable: up/down rate ratio Γ↑/Γ↓ = e^{−βℏω} and steady-state polarization P_ss = tanh(βℏω/2).
+   Criterion: quantum arm asymmetric (KMS), classical matched-BCF arm symmetric (Γ↑=Γ↓, P_ss=0); the
+   βℏω→0 sweep must send the wedge→0. Predicted leading form: wedge ∝ tanh(βℏω/2). (a)/(b).
+3. **Temporal-classicality / Kolmogorov-consistency test on the syndrome record** [Milz 1907.05807].
+   Observable: the multi-time joint syndrome-outcome distribution P_n(x_n,…,x_1) and its KCC residual
+   Σ_{x_j}P_n − P_{n−1} (Eq. 9). Criterion: classical-field arm satisfies KCC (record admits an underlying
+   classical process); quantum-bath arm VIOLATES it — but only via measurement-back-action on the
+   conditioned mode (Milz: genuine-quantumness requires quantum memory; our σ_z stabilizer record is
+   exactly Milz's fixed-single-observable setting). Reference is NOT zero: subtract the machine-matched
+   (parity+measurement HMM) null KCC residual (A7). Direction-only (b).
+4. **Waiting-time / anti-bunching record statistic** [Plenio–Knight quant-ph/9702007; Carmichael].
+   Observable: the direction-resolved conditional lag-1 flip excess / waiting-time distribution of the
+   syndrome-flip record; Mandel Q. Criterion: quantum arm NEGATIVE excess (anti-bunching, Q<0) at N̄=0
+   (emission resets to |g⟩, re-excitation suppressed); classical common-cause arm POSITIVE clustering
+   (Q>0). TLS-grade regime (clean reset holds for the two-level data qubit). (a) sign witness.
+5. **Non-Markovianity backflow witness (BLP)** [ledgered; Milz frames the memory requirement]. Observable:
+   BLP trace-distance backflow / population revival on the mode-conditioned data qubit. Criterion: quantum
+   arm backflow>0 underdamped (g≳κ/4), →0 overdamped/motional-narrowing control; classical arm none.
+   Direction-only (b) (= M2 G-Q5 lifted to the block).
+
 ## 7. Run plan
 
 One committed script `outputs/cgf_probe_v1.py` (asserts, printed evidence, flushed; no
