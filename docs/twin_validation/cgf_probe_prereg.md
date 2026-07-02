@@ -46,10 +46,15 @@ record x⃗ = (x_1..x_R).
   verdict logic: a switch that fails to kill Δ triggers the CLASS-WIDENING check (richer control:
   mid-interval rotations) BEFORE any MESSY declaration (§4 order of operations).
 
-**Matching (χ-pinned):** the classical field's correlator = the symmetrized quantum-mode BCF at
-each sweep point: ⟨z(t)z̄(0)⟩ = g²(N̄+½)e^{−λ|t|} (rotating frame, λ = κ/2). The asymmetry sweep
-varies N̄ AT PINNED SYMMETRIZED WEIGHT g²(N̄+½) = const (the χ-pinning discipline): the classical
-arm is then IDENTICAL across the sweep; only the quantum arm's asymmetry A = 1/(2N̄+1) varies.
+**Matching (χ-pinned; CORRECTED per A-M2-3 before any probe run):** the classical coupling is
+**H_cl = w(t)σ⁺ + w̄(t)σ⁻ (no ½ prefactor)** with ⟨w(t)w̄(0)⟩ = g²(N̄+½)e^{−λ|t|}, ⟨ww⟩ = 0 —
+the direct c-number replacement of the quantum H_int = σ⁺B + σ⁻B† at the symmetrized mode
+correlator. (The M2 run-2 arm carried a spurious ½ ⇒ ¼ power — the un-led review's BLOCKER;
+the reinstated rate gate below guards it here.) The asymmetry sweep varies N̄ AT PINNED
+SYMMETRIZED WEIGHT g²(N̄+½) = const (the χ-pinning discipline): the classical arm is then
+IDENTICAL across the sweep; only the quantum arm's asymmetry A = 1/(2N̄+1) varies.
+**Reinstated integrity gate (anti-¼-power):** measured classical-arm flip intensity vs the
+quantum arm's at the base point — ratio ∈ [0.9, 1.1] CRASH gate.
 
 **Base operating point (declared, weak-coupling perturbative regime):** τ_m = 0.2 µs; κ = 2.5 µs⁻¹
 (κτ_m = 0.5 — mode memory spans a few rounds); g₀ = 2π·0.25 MHz (g₀τ_m ≈ 0.31 rad); N̄ = 0;

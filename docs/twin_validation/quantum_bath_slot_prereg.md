@@ -263,6 +263,68 @@ class-wedge estimate at this order.
 3. The unitality lower bound still binds after ANY control (unital ∘ unitary = unital): consistency
    crash-gate D ≥ |t_q|/2 − 5·SE unchanged.
 
+### 5.3 Amendment A-M2-3 (2026-07-02, after the un-led adversarial review; verdict on run 2:
+UNSOUND as an M2 close-out — engine half sound, dual-arm wedge mismeasured. Committed BEFORE the
+v3 rerun; supersedes run-2's wedge numbers and the A-M2-2 quantitative diagnosis.)
+
+**Review findings accepted in full** (reviewer artifacts: `outputs/review_m2_classical_match.py`,
+`outputs/review_m2_rate_fix.py`, both with the reviewer's own pre-registered side-bets):
+
+1. **BLOCKER — the imitator arm was coupled at HALF amplitude (¼ power).** The coded
+   `H_cl = ½(wσ⁺+w̄σ⁻)` with ⟨ww̄⟩ = g²(N̄+½)e^{−λ|t|} delivers quadrature power ¼ of the quantum
+   symmetrized quadrature correlator (JC in quadratures: σ⁺B+σ⁻B† = ½(σ_xX̂+σ_yŶ),
+   S_XX = S_YY = g²(2N̄+1)e^{−λ|t|}). Four-way evidence: TCL2 rates (coded g²/2λ vs quantum 2g²/λ,
+   simulated ratio 4.005); the corrected arm's channel equals the S1a-registered E_SYM object to
+   4.7e-4 while the coded arm sits 6.7e-2 from it; the run-2 detuned φ_opt = 0.557 decomposes
+   exactly as (quantum dispersive −0.742) − (coded-arm Stark −0.185). **The §1 matching
+   prescription is CORRECTED to: `H_cl = wσ⁺ + w̄σ⁻` (no ½), ⟨w(t)w̄(0)⟩ = g²(N̄+½)e^{−λ|t|},
+   ⟨ww⟩ = 0** (equivalently keep the ½ and quadruple the variance). The same correction applies to
+   `cgf_probe_prereg.md` §1 and `outputs/cgf_probe_v1.py` (amended in the same commit).
+2. **The dropped gate is REINSTATED and hardened (G-Q3-rate):** measured classical-arm z-relaxation
+   rate vs (i) the finite-window TCL2 prediction (±15% (b)-band, weak-coupling corrections
+   declared) and (ii) the QUANTUM arm's measured rate — **ratio ∈ [0.9, 1.1] CRASH gate** (this is
+   the anti-finding-1 gate: the ¼-power bug reads ratio ≈ 4).
+3. **S7 halving bound corrected by amendment** (was an underived 1e-8; the script had silently
+   gated at 5e-5): stepping is O(dt²); v3 runs dt = 5e-4 with declared bound **≤ 2e-5** on ‖ΔJ‖
+   (measured evidence to be printed; impact argument: ≥ 300× below the smallest reported wedge
+   object). Silent-loosening acknowledged as a discipline violation.
+4. **A-M2-1 convergence axes registered properly** (were only in a code comment): N-axis =
+   plateau test |gap(1600) − gap(400)| ≤ 1e-5 (a large drop = under-resolution, must fail);
+   halfwidth axis = genuine convergence (hw 4→8 must shrink the anchor error ≥ 2×).
+5. **A-M2-2 arithmetic corrected:** transition dispersive shift χ = g²δ/(λ²+δ²) ≈ g²/δ =
+   1.131 rad/µs (not g²/2δ); window phase 0.744 rad (not 0.373); D_Choi(Rz(φ), 1) = |sin(φ/2)|.
+   Run-2's "prediction hit" (φ_opt ∈ [0.1, 1.0]) is VOIDED as an artifact of the amplitude bug
+   (two errors compounding to match). With the corrected arm the deterministic phases nearly
+   auto-align: **registered v3 prediction: detuned φ_opt ∈ [0, 0.15] rad.**
+6. **Registration hygiene corrections:** the original flat-band arithmetic reads [2.4e-3, 9.7e-3]
+   (×/÷2 around 4.83e-3) — the printed 1.9e-2 upper edge was a slip; the resonant post-control
+   band is [|t_q|/2, |t_q|] (the ×2 widening was registered for the detuned point only); prereg §0's
+   "pilot-3 all three anchors PASS" was an unverified reuse claim (pilot-3's own verdict printed
+   CHECK) — corrected here. Two structurally-vacuous-as-run gates are LABELED: the nmax 4→5 gate
+   cannot fail at N̄ = 0 (single-excitation structure; becomes real at N̄ > 0); G-Q2 pins only the
+   KMS ratio γ↑/γ↓ (the overall scale is pinned by G-Q1a).
+7. **Commit-before-run tightened:** run-2's amendments were committed after its log (file-mtime
+   ordering only). This amendment IS committed before the v3 rerun; that ordering is the standing
+   rule from here on.
+
+**The two wedge objects are now DEFINED separately (the reviewer's reframing, adopted):**
+- **D_matched** — distance to the corrected matched-BCF arm (+ deterministic control): the
+  physical-attribution statement ("a classical field with the same symmetrized statistics cannot
+  imitate this channel").
+- **D_class** — the classical-representability distance: min over the imitator CLASS. Estimated
+  from above by optimizing over an amplitude-scale ladder s ∈ {0.5, 0.75, 1.0, 1.25} × control
+  (any class member observed is an upper bound — run-2's ¼-power arm at the detuned point,
+  D = 0.00732, is such a member and STANDS as data); bounded from below by the unitality-floor
+  theorem. **Bracket-reporting rule: D_class ∈ [|t_q|/2, min observed].**
+
+**Registered v3 bands ((b); the reviewer's corrected-arm measurements are prior evidence — cited,
+not re-derived blind):** resonant D_matched ∈ [0.29, 0.57] (expect ≈ 0.434, excess over floor
+≈ 1.5×); detuned D_matched ∈ [0.05, 0.10] (expect ≈ 0.071 — the matched classical arm's
+intensity fluctuations over-dephase relative to the vacuum mode's dispersive channel: at N̄ = 0
+the vacuum has no photon-number noise, a SECOND unforgeability direction, registered);
+detuned D_class bracket expected ≈ [0.0063, 0.0073] (×1.16 floor); resonant D_class upper end
+from the s-ladder (registered direction: interior minimum in s at the detuned point, s* < 1).
+
 ## 6. Independent ground truth (Rule I, non-circular)
 
 1. **JC-with-loss closed form** (different mathematics: 2nd-order ODE, no GKSL solver) — pilot-3.
