@@ -140,6 +140,19 @@ KILL criterion at a switch point: |Δ| ≤ max(3·SE_MC, 0.05·|Δ_base|).
 - Zeno sanity: at g → 0 both arms give x⃗ ≡ initial-state record; Δ(g=0) = 0 to MC noise (null
   control — must pass, else instrument bug).
 
+### 6.1 Numerics mechanics (registered before the results run was read; all (c)-class)
+
+- **GPU-RK4 route** for quantum trees with dim > 64 (zvode-CPU replaced): stability bound
+  λ_max = κ(2N̄+1)(n_max+1) with safety λ·dt = 0.35 (the first attempt omitted the thermal-excitation
+  channel and went unstable at λ·dt = 1.79 — nan, caught by the halving gate); cross-validated
+  against the exact expm route at N̄ = 0.5 to 1.67e-15 (CRASH gate 1e-8); first-segment halving
+  ≤ 1e-9 per tree; level-batched (same-level branches are independent).
+- **Mixed-precision optimizer**: the imitator search runs in c64/f32 batched over independent
+  (point, seed) slices (loss = sum of independent slices ⇒ elementwise Adam ≡ separate runs);
+  justification: MC statistical noise per record-probability entry (~5e-4 at N = 4e5) is ~500× the
+  f32 accumulation error. The REPORTED Δ/TV are re-evaluated in c128 at θ*; the |Δ_c64 − Δ_c128|
+  gap is printed as evidence. The quantum arm and every structural gate stay c128.
+
 ## 7. Run plan
 
 One committed script `outputs/cgf_probe_v1.py` (asserts, printed evidence, flushed; no
