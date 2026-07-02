@@ -54,7 +54,13 @@ the reinstated rate gate below guards it here.) The asymmetry sweep varies N̄ A
 SYMMETRIZED WEIGHT g²(N̄+½) = const (the χ-pinning discipline): the classical arm is then
 IDENTICAL across the sweep; only the quantum arm's asymmetry A = 1/(2N̄+1) varies.
 **Reinstated integrity gate (anti-¼-power):** measured classical-arm flip intensity vs the
-quantum arm's at the base point — ratio ∈ [0.9, 1.1] CRASH gate.
+quantum arm's at the base point — ratio ∈ [0.9, 1.1] CRASH gate. **Gate-object clarification
+(registered before the results run was read):** "flip intensity" = the DIRECTION-SUMMED round-1
+flip probability (the matched/symmetrized object; implemented gate band [0.8, 1.25] allowing
+4th-order corrections). The DIRECTIONAL e→g ratio is registered physics, not a bug axis:
+quantum ∝ (N̄+1) vs classical (N̄+½) per direction ⇒ expected ≈ 2 at N̄ = 0 — reported as a
+companion statistic (the tanh knob's marginal cousin; first sighting: measured 2.0026 on the
+run that fired the mis-implemented directional gate).
 
 **Base operating point (declared, weak-coupling perturbative regime):** τ_m = 0.2 µs; κ = 2.5 µs⁻¹
 (κτ_m = 0.5 — mode memory spans a few rounds); g₀ = 2π·0.25 MHz (g₀τ_m ≈ 0.31 rad); N̄ = 0;
