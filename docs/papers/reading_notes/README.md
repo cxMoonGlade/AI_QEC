@@ -79,6 +79,33 @@ effect bands · Gierjatowicz's `(inf,sup) E_Q[Ψ]` — all the alias band on ΔL
 | [fail_fast_rare_events_2511.15177](fail_fast_rare_events_2511.15177.md) | Rare-event toolkit (`P(q)=T{f}(q)` failure-spectrum, min-weight fails, splitting) = the **`predict`** axis + the frozen-decoder ΔLER substrate; **coherent tails unhandled = the twin's wedge**. |
 | [lindbladian_learning_insitu_2603.05492](lindbladian_learning_insitu_2603.05492.md) | **Ansatz-free Lindbladian learning** (H + dissipator in `(h,a)`) = the twin's GKSL `recover` form; **`t` vs `t²` = Girsanov split in time**; "steady states don't identify the generator" = the observational alias as a theorem. |
 
+## Simulator source budgets / bath-spectrum anchors
+
+| Note | One-line takeaway |
+|---|---|
+| [google_suppressing_errors_budget_2207.06431](google_suppressing_errors_budget_2207.06431.md) | Sycamore 72Q Table III budget: data-idle row is **19.2%** and is explicitly post-DD low-frequency-flux-noise dephasing; detector-event scale is ~0.10–0.19 per stabilizer/round. |
+| [google_below_threshold_error_budget_2408.13687](google_below_threshold_error_budget_2408.13687.md) | Willow-era Table S4 budget: data idle ~20%, local CZ/SQ/readout/reset ~63%, CZ-related rows ~57%; **68/89 µs coherence is 105Q, not the 72Q Table-S4 budget device**. |
+| [bylander_flux_noise_spectroscopy_1101.4707](bylander_flux_noise_spectroscopy_1101.4707.md) | Flux-qubit DD spectroscopy source for **1/f^0.9** shape over ~0.2–20 MHz; amplitude is device-specific and only bracket/design-prior for Google transmons. |
+
+## Quantum-noise / record-classicality probes
+
+| Note | One-line takeaway |
+|---|---|
+| [crow_joynt_classical_simulation_quantum_noise_1309.6383](crow_joynt_classical_simulation_quantum_noise_1309.6383.md) | Pure dephasing admits an exact random-unitary / classical-field simulation, while affine population-moving channels such as relaxation do not; this is the channel-layer classical-representability boundary. |
+| [schoelkopf_qubits_spectrometers_quantum_noise_cond-mat-0210247](schoelkopf_qubits_spectrometers_quantum_noise_cond-mat-0210247.md) | Qubit-as-spectrometer canon: excitation samples negative-frequency noise, relaxation samples positive-frequency noise; detailed balance fixes the asymmetry in equilibrium. |
+| [clerk_quantum_noise_measurement_amplification_0810.4729](clerk_quantum_noise_measurement_amplification_0810.4729.md) | RMP-level quantum-noise reference: non-symmetrized spectral density, frequency asymmetry, detailed balance, and TLS/oscillator spectrum-analyzer Golden-Rule rates. |
+| [milz_when_nonmarkovian_process_classical_1907.05807](milz_when_nonmarkovian_process_classical_1907.05807.md) | Temporal process classicality = Kolmogorov consistency of sequential measurement records; owns the framework, not a QEC-specific instantiation. |
+| [plenio_knight_quantum_jump_dissipative_quant-ph-9702007](plenio_knight_quantum_jump_dissipative_quant-ph-9702007.md) | Quantum-jump / MCWF canon: no-jump survival, reset after detection, waiting-time distributions, and anti-bunching / sub-Poissonian record statistics. |
+| [budini_environment_nonclassicality_dissipative_2305.16136](budini_environment_nonclassicality_dissipative_2305.16136.md) | Map-level non-classicality quantifier: `Q_t=1` for unital maps (a **quantified departure-from-unitality**), dual-propagator only — operational/record definition flagged **open**; no γ/2, no additive g⁴ split. Bone A floor owner at the **channel/map** level. |
+| [paz_silva_multiqubit_gaussian_quantum_noise_1609.01792](paz_silva_multiqubit_gaussian_quantum_noise_1609.01792.md) | Names S⁻ the **"quantum spectrum"** (non-zero only when the bath is quantum) + full multiqubit Gaussian cross-spectrum identifiability — but via **active control** (filter functions + tomography), 2nd-order-in-coupling, **not** passive detector records. Bone A asymmetry + Bone B continuous-Σ owner (active-control only). |
+| [artag_complementary_quantum_classical_records_2605.15882](artag_complementary_quantum_classical_records_2605.15882.md) | Coherence-vs-which-path complementarity **V²+D²=1** in the *environment*, driven by conditioning + Darwinism; N̄ only smooths. A **different axis** from Bone A's N̄-driven measurement-record floor — does not pre-empt. |
+| [maity_kolmogorov_classicality_signatures_2601.01122](maity_kolmogorov_classicality_signatures_2601.01122.md) | KCC-violation classicality quantifier: a **single scalar** (Eq.2) with a **multiplicative** factorization (Eq.18), manufactured by measuring *off* the pointer basis (opposite of a surviving floor); zero QEC. Does not pre-empt Bone A's additive floor⊕modulated decomposition. |
+| [gicev_syndrome_error_structure_2310.12448](gicev_syndrome_error_structure_2310.12448.md) | Real IBM QEC syndrome correlations via the Chen-et-al. **signed** p_ij covariance ratio (negatives representable, ±diverging colorbar); reports only positive/excess structure, no sign-based quantum-vs-classical discriminator. **Corrects the "p_ij≥0 by construction" premise** for Bone C. |
+| [bath_statistics_tagging_1907.04704](bath_statistics_tagging_1907.04704.md) | Discriminates **boson vs fermion** baths (both quantum) via single-time state-distinguishability (Helstrom / quantum Chernoff), no QEC — a weak, different-observable competitor to Bone C's detection-record-sign discriminator. |
+| [vonlupke_two_qubit_spatiotemporal_noise_spectroscopy_1912.04982](vonlupke_two_qubit_spatiotemporal_noise_spectroscopy_1912.04982.md) | Two-qubit spatiotemporal cross-spectrum spectroscopy on **isolated** qubits (spin-locking + tomography); physicality is **emergent (Huber-loss robust M-estimation), not a PSD/Bochner constraint**, and **not** from QEC data. Closest Bone #3 prior art; does not pre-empt. |
+| [regev_closed_form_ler_surface_2605.03054](regev_closed_form_ler_surface_2605.03054.md) | Closed-form surface-code LER for **i.i.d./single-global-mode** noise (combinatorial power-law, not a Gaussian-characteristic-function sum); no covariance interpolant, no ∂(floor)/∂f metric. Bone #2 interpolant survives. |
+| [remm_syndrome_correlation_decoding_2502.17722](remm_syndrome_correlation_decoding_2502.17722.md) | Estimates **discrete independent Bernoulli error-event** probabilities (one per unique syndrome signature) by inverting detector-moment correlations (generalizes Spitz); degenerate events lumped, **no continuous-Σ identifiability/gauge map**. Bone B sliver survives. |
+
 ## External landscape — decoder baselines & coherent noise (not cached; first-pass digest, 2026-06-14)
 
 Four user-supplied papers positioning the M3/M4 + plan3 work against the
