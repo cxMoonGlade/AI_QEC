@@ -71,3 +71,30 @@ SUPERSEDES this record's headline reading:
   M3 null; differencing demoted to containment + measured additivity; P4 regime-conditioned
   (retains magnitude-level q-vs-L2a power at N̄=0 — an M3 gain); [H,Π_z]=0 +
   classification-only-noise hypotheses stated.
+
+## v4 FINAL — ALL GATES PASS (2026-07-03; logs `t3_teacher_validation_v4{,b,c}.log`;
+hardware extraction RE-UNLOCKED under the amended gate)
+
+Three-iteration trail, every amendment committed BEFORE its rerun, no criterion level lowered:
+- **v4 run 1 (N=2e5):** all accuracy gates green; **G-STRAW failed 2/3** (2.32/2.82) — the new
+  power control correctly reported that 2e5 teacher shots cannot 3σ-exclude the zero-correlation
+  straw. Addendum 1: teacher N aligned to the hardware-subset equivalent 5e5.
+- **v4 run 2 (N=5e5):** STRAW fixed 3/3 (5.91/3.27/4.30); **seed-27 coverage failed marginally
+  (3.51)** — the honest covariance-correct bands now RESOLVE the estimator's finite-sample
+  curvature bias (cross-seed-consistent |bias| ~1.1–1.7e-2 with χ² in-band = parameter-map bias,
+  not misfit). Addendum 2: bootstrap bias-corrected point estimate + BASIC bootstrap CI
+  (recentering, not widening; hardware estimator inherits both).
+- **v4 run 3 (FINAL): ALL PASS.** P1a fitted-dressing exact tier ≤1e-14 (C entries 1.0e-14,
+  V-differences 8.2e-16, μ 5.6e-16, d-offset ≡ δz to 1.2e-14; forward map ≡ engine 3.3e-16 over
+  12 moments INCLUDING the lag-2/μ² kind). P1b 3/3 seeds basic-CI coverage (worst std-z
+  2.75/2.24/3.26, bias-corrected worst |bias| 1.1–1.4e-2 printed); G-ztruth 2.54/1.38/2.82 ≤ 4;
+  G-χ² 27.1/6.6/25.7 vs dof 18; **G-STRAW 5.91/3.27/4.30 > 3** (the gate has certified power at
+  hardware statistics); μ̂ errors ≤ 0.0032.
+- **Carried caveats (honest):** seed-27's most curvature-exposed functional sits at std-z 3.26
+  (inside the basic CI = the registered criterion; first-order bias correction only) — hardware
+  runs inherit the bias correction AND print per-functional coverage detail; the d-level carries
+  the DECLARED +δz p_Z-absorption offset (V-levels gauge-shifted; V-differences and all C
+  entries clean); teacher power is conservative vs hardware's additional ~800-layer pooling.
+
+**Next: `outputs/t3_hw_moments.py`** (dual-route Spitz gate — load-bearing per R2 probe C) →
+`t3_fit_real.py` per the pinned P3/P4/P5 (grid, splits, seeds all fixed in A-T3-1 §8).
