@@ -153,6 +153,48 @@ KILL criterion at a switch point: |Δ| ≤ max(3·SE_MC, 0.05·|Δ_base|).
   f32 accumulation error. The REPORTED Δ/TV are re-evaluated in c128 at θ*; the |Δ_c64 − Δ_c128|
   gap is printed as evidence. The quantum arm and every structural gate stay c128.
 
+## 8. RESULTS + BRANCH DECISION (2026-07-02, run complete; log `outputs/logs/cgf_probe_v1.log`,
+data `outputs/_cgf_probe_v1.npz`; all integrity gates passed: cross-val 1.67e-15, rate gate 1.0013
+with directional companion 2.0026 vs 2.0, halving 4.54e-7, precision evidence |Δ_c64−Δ_c128| = 1.9e-7)
+
+- **Power precondition PASS:** Δ_base = 1.9166e-2 ± 2.7e-5 (≥ 10·SE); KILL threshold 9.58e-4.
+- **P1 asymmetry switch: KILLED** — Δ/Δ_base over A = {1, .833, .5, .2, .048}:
+  {1, 0.732, 0.291, 0.084, 0.013}; the N̄ = 10 point (2.48e-4 ± 1.4e-5) is far under threshold.
+  Measured scaling is SUPERLINEAR, Δ ∝ A^(1.4–1.8) — richer than the conjectured A¹ product form.
+- **P2 measurement-off switch: SURVIVES (Δ_term = 0.1718) — and the registered criterion is
+  hereby documented as MIS-REGISTERED (a theory error in this prereg, caught by the data):** the
+  §3 claim "deterministic control forges any single-time statistic" is FALSE for an ensemble — the
+  control is deterministic across paths, so it acts on the path-AVERAGED (mixed, unital-reachable)
+  state; the quantum arm's dissipative purification toward |g⟩ exceeds any random-unitary
+  ensemble's reachable populations. The terminal wedge is bounded below by the channel-level
+  non-unitality gap — **our own M2 γ/2-theorem applied at the terminal readout**. The registered
+  class-widening step is therefore THEOREM-MOOT: any deterministic-control widening keeps the arm
+  inside (unitary ∘ random-unitary ∘ unitary) = unital, and the floor stands. (Proof replaces the
+  compute step; recorded here per the §4 order of operations.) Additionally Δ_term (0.172) ≫
+  Δ_record (0.019): mid-circuit measurements Zeno-pin both arms and SHRINK the wedge — the
+  measurement-off variant changes the dynamical regime rather than isolating back-action; the
+  conjectured factorization does not describe this operating point.
+- **P3 power law: slope 3.622 ∈ [1.6, 4.5] but NOT CLEAN** (max fit deviation 17.6% > 10%):
+  local slopes 3.90 / 3.74 / 3.19 — ≈ g⁴ at small g (the conditional-re-absorption candidate),
+  saturating at g = 2g₀ (gτ_m = 0.63, perturbative-regime edge, declared).
+- **P4 companion: direction MISS (finding):** quantum conditional flip excess = −4.06e-2
+  (registered positive), classical-opt = +3.30e-3. Physics: at N̄ = 0, after an e→g emission the
+  qubit sits in g where flips (re-excitation) are rare — the absolute conditional flip rate drops
+  (emission anti-bunching), dominating the mode-conditional re-absorption enhancement the
+  registration reasoned from. The classical arm shows the common-cause POSITIVE clustering.
+  Both signs are informative record-layer structure.
+
+**REGISTERED CRITERION ⇒ MESSY ⇒ BRANCH B** (per §4: a switch survived + power not clean).
+Consequences (handoff §5, adopted): direction-1 is demoted to a MEASURED characterization —
+and the probe delivered more than a bound: a two-component decomposition of the record wedge,
+(i) a theorem-pinned channel-non-unitality component (measurement-independent; the M2 object,
+0.172 at terminal-only) and (ii) a measurement-modulated asymmetry component (killed as
+A^(1.4–1.8) → 0, growing ≈ g⁴ in the perturbative regime). Headline shifts to #2 (exact
+silent-floor functional) + #3 (Bochner-type physicality inverse + local-real-data demo);
+the quantum-bath slot remains core scope with these measured numbers; the structure lemma (#4)
+is the methodology spine. **M3 proceeds unchanged** (Branch-B scoring emphasis: D_comb vs the
+matched-BCF classical null at the code layer + the record-layer characterization).
+
 ## 7. Run plan
 
 One committed script `outputs/cgf_probe_v1.py` (asserts, printed evidence, flushed; no
