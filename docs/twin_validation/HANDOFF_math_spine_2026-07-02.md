@@ -1,0 +1,156 @@
+# HANDOFF — math spine (post-ratification), 2026-07-02 (session close)
+
+**For the next session. Self-contained: read this + `CLAUDE.md` + memory index; everything else is
+linked. SUPERSEDES `HANDOFF_coupling_simulator_2026-07-02.md` §5 (its bones are adjudicated and the
+work order below is user-ratified 2026-07-02); that file's §1–§4/§6 remain valid background.**
+
+## 0. Mission (user-ratified 2026-07-02)
+
+Paper = the coupling error simulator (SIMULATOR, not decoder — A8). **Math spine = #2 + #3 + B.**
+**Ratified work order: B theorem → #2 functional → #3 estimator + real-data demo → M3 prereg+run —
+with T-L2 (the non-unital classical imitator definition, zero-compute derivation) running IN
+PARALLEL from day one.** Identity sentence (proposed, consistent with adjudication): generalize the
+learnable-vs-gauge duality from discrete Pauli channels under active control (Chen/Zheng) to a
+continuous spatiotemporal Σ under PASSIVE stabilizer-record observation — identifiability theorem
+(B) + exact floors (#2) + Bochner-physical estimation demonstrated on real Google detector data
+(#3). Bone A = certification METHODOLOGY (not theorem); Bone C = narrow phenomenological
+discriminator (signed-p_ij reframe mandatory); Frame D = organizing frame, cite Chen/Zheng
+precedent.
+
+## 1. Where everything is
+
+| Asset | Path |
+|---|---|
+| THIS handoff (current) | `docs/twin_validation/HANDOFF_math_spine_2026-07-02.md` |
+| Previous handoff (background §1–§4/§6) | `docs/twin_validation/HANDOFF_coupling_simulator_2026-07-02.md` |
+| Novelty-ownership adjudication (5 bones + corrections + negative-coverage log) | `docs/twin_validation/novelty_ownership_adjudication_2026-07-02.md` |
+| State-confirmation audit (AGREE/DISAGREE + T3 violations + Q1–Q4 + M3 readiness) | `docs/twin_validation/post_adjudication_state_confirmation_2026-07-02.md` |
+| Quantum-bath M1 prereg + A-M2-1/2/3 amendments | `docs/twin_validation/quantum_bath_slot_prereg.md` |
+| CGF probe prereg + results §8 + A-P1 §9 + reading-debt §9.1 | `docs/twin_validation/cgf_probe_prereg.md` |
+| Constitution (A1–A9) | `docs/twin_validation/B_syndrome_shot_bridge_prereg.md` §8 |
+| Metric ledger (D_Choi / D_comb / BLP / RHP rows) | `docs/METRICS.md` |
+| Paper draft (Thesis + Contributions now Branch-B; header = epistemic ledger; GITIGNORED) | `docs/coupling_simulator_intro_draft.tex` |
+| Structure lemma (proved, in-draft) | tex `\label{sec:structure-lemma}` |
+| M2 v3 dual-arm script + log + npz | `outputs/quantum_bath_m2_dual_arm.py`, `outputs/logs/quantum_bath_m2_dual_arm_v3.log`, `outputs/_m2_quantum_bath_dual_arm_v3.npz` |
+| Un-led M2 review artifacts (reviewer's own scripts) | `outputs/review_m2_classical_match.py`, `outputs/review_m2_rate_fix.py` |
+| CGF probe script + log + npz | `outputs/cgf_probe_v1.py`, `outputs/logs/cgf_probe_v1.log`, `outputs/_cgf_probe_v1.npz` |
+| Tier-0 comb machinery (the lemma's numerical anchor) | `outputs/step4_v2b_tier0_comb_distance.py` |
+| Silent-flip scissors (=#2's measured instance) | `outputs/step4_v2b_tier1_silent_flips.py` |
+| Reading notes (incl. this round's 14: A-P1 5 + adjudication 9) | `docs/papers/reading_notes/` |
+| Real Google data (for #3 demo) | `QEC_TWIN_HW_DATA=/home/cx/Document`; ingestion `src/qec_twin/hardware/`; dataset notes `docs/.datasets/` |
+| Session commits (this arc) | bc3b605, c7d8b48, a54304f, 2a12243, 1390674, c7abebd, 52ad01a, a7038a2, 4efc4b7, 4076afb, 8927b66 |
+
+## 2. Evidence state (all committed-script printed numbers)
+
+- **M1**: quantum slot = T1 sub-share of data-idle row, s_T1 ∈ [0.25, 0.67] rep 0.4 (⇒ ~5–13% of
+  budget); (a)-floor: DD does not refocus T1. TLS brackets from Gao.
+- **M2 v3 (un-led-review-cleared; run-2's ¼-power BLOCKER fixed via A-M2-3, reviewer's numbers
+  reproduced to 5 decimals):** engine 7.2e-16 (JC closed form) / 5.0e-5 (full-line unitary oracle)
+  / KMS 3.3e-16; G-Q3-rate 0.9983; **D_matched: resonant 0.43364(21) = ×1.51 floor; dispersive
+  0.07064(11) = ×11 floor, φ_opt = 0.053; D_class brackets: detuned [0.00632, 0.00734], resonant
+  [0.2866, 0.4165]**; γ/2 floor exactly saturated at the Markov point (4.829466e-3, dev 0.0).
+- **CGF probe (branch decider; internals, cite-don't-claim per A-P1):** Δ_base = 1.9166e-2(2.7e-5);
+  asymmetry sweep Δ/Δ_base = 1 / 0.732 / 0.291 / 0.084 / 0.013 at A = 1/0.833/0.5/0.2/0.048
+  (local exponents 1.71/1.80/1.35/1.31 — constant power REJECTED, pure A+A² also rejected);
+  Δ_term = 0.1718 (theorem-forced survival — different protocol, NEVER the in-protocol floor);
+  power ladder local slopes 3.90/3.74/3.19 (no g² visible down to g₀/4); P4: −4.06e-2 (q) vs
+  +3.30e-3 (cl). Gates: GPU-RK4 cross-val 1.67e-15; rate gate 1.0013 (directional 2.0026 vs 2.0 =
+  registered physics); c64-search/c128-report gap 1.9e-7.
+- **Adjudication verdicts [PROVISIONAL]:** A = PARTIALLY OWNED (methodology sliver survives);
+  C = OPEN-narrow (signed-p_ij reframe); B = PARTIALLY OWNED (continuous-Σ × passive-moments
+  unowned); #2 = OPEN (interpolant + ∂/∂f); #3 = OPEN (PSD-constrained × QEC-data conjunction
+  empty; von Lüpke = Huber-emergent, not constrained). Independent Brave cross-check: all three
+  OPEN survive. Corrections: p_ij SIGNED; 2310.12448 = Gicev–Hollenberg–Usman.
+- **State-confirmation (8927b66):** D1's "theorem-vacuous" JUSTIFICATION corrected (contractivity
+  gives NO comb lower bound; measured fold-attenuation ~O(10²) at g₀/4); Q1 = M2 imitator
+  UNITAL-ONLY ⇒ L2 needs new definition; Q2 = P3 slope measured on TOTAL wedge, c₂-pin needs a
+  channel→record transfer map; Q3 = additivity unverifiable from existing outputs (3 blockers),
+  lands free in M3's L2 instrument; Q4 = needs smaller-A or L2 instrument.
+
+## 3. THE TASKS (ratified order; specs)
+
+**T0 — hygiene (first commit of the next session; wordings are pre-approved in the
+state-confirmation doc §3):** apply V1/V8 (tex), V2/V3 (memory), A-M1-1 amendment for V4/V5
+(quantum_bath_slot_prereg §4 + §5 attribution: Landau–Streater via Crow–Joynt; Budini quantified
+map-level; ours = γ/2 constant (folklore-grade) + QEC instantiation); optional V6/V7 pointers.
+
+**T-B — the identifiability/gauge theorem (headline #1).** Object: which functionals of a
+continuous spacetime Gaussian covariance Σ are identifiable from which ORDER of passive detector
+(syndrome-difference) moments, and which are provably gauge-invisible. Base case = the structure
+lemma (single-leg marginals ↔ diag(Σ); off-diagonals enter only ≥2-detector moments). Positioning:
+lift Chen 2206.06362 / Zheng 2601.22286 (discrete-Pauli learnable-vs-gauge) to continuous Σ;
+Remm 2502.17722 = the discrete moment-estimator boundary; Paz-Silva/von Lüpke = active-control
+prior art. ⚠ theory-first check: a Chen 2206.06362 精读 note may NOT exist in-repo (Zheng's does)
+— verify; if absent, 精读 BEFORE writing B's positioning. Deliverable: theorem statement + proof
+LaTeX + an (a)-exact numerical verification script against the tier-0 comb machinery.
+
+**T-L2 (PARALLEL, zero-compute).** Define the non-unital classical rate imitator: a classical
+jump/reset record-law with (γ↓, γ↑) matched to the quantum rates; derive its matching theorem
+(exactly what it can/cannot match — populations yes, what of coherence-sector/record statistics);
+derive the channel-floor → record-CGF transfer map (Q2's missing piece; else declare floating-c₂
++ γ/2-scaling check). These two derivations de-risk the whole M3 prereg.
+
+**T-#2 — the exact interpolating silent-floor functional.** From the structure lemma: silent-run
+probability = finite Fourier sum of Gaussian CFs for ARBITRARY Σ; derive the general closed form +
+∂(floor)/∂f|₀ (the device metric). Verify: Clader endpoints (cite, never claim the moment law) +
+the measured 15.9× d=3 instance (`step4_v2b_tier1`) + tier-0 comb numerics. Cite Regev 2605.03054
+as nearest (i.i.d./global-only). Deliverable: LaTeX + verification script.
+
+**T-#3 — Bochner-constrained estimation + real-data demo (Branch-B insurance).** PSD/Bochner-
+CONSTRAINED estimator of Σ from detector moments (the constraint in the estimator, not emergent);
+demo on the LOCAL real Google detector data (hardware/ ingestion; dataset notes are mandatory
+pre-reading). Baselines: the operational estimators (Blume-Kohout/Young p_ij, Bhardwaj, + note
+Takou 2606.11496 from the Brave check). A8: estimation, NEVER decoding. Biggest piece; needs its
+own prereg with registered bands before any fit is read.
+
+**T-M3 — prereg then run (after B and #2 land; full spec = state-confirmation §5).** Musts:
+imitator ladder L1/L2/L3 (L1 = fold-attenuation measurement, expected-positive (b), NOT
+theorem-vacuous); L2-differencing as primary component separator; g-ladder extended below g₀/4 with
+MC-power planning + dual registered operating points (avoid gτ = 0.63); N̄-scan total-kill;
+additivity check (free in the L2 instrument); QUANTUM unit's memoryless-null construction declared
+(structure lemma does NOT cover it); theorem inventory (γ/2 channel-only, contractivity direction,
+B-R collider, unraveling equivalence, pinned-χ non-separability); A-P1-READ D3 five observables
+(non-unital affine term [CJ/L-S]; detailed-balance FDT [Schoelkopf/Clerk]; KCC residual [Milz];
+waiting-time/Mandel-Q [Plenio-Knight]; BLP backflow [ledgered]); P4 as (b)-direction with
+signed-p_ij framing; A4 effect-size registration from M2-v3 actuals + probe attenuation; full
+record-distribution persistence in npz.
+
+**Paper assembly (interleave):** figures (all results are console tables), Methodology
+"pseudomode engine retained" sentence + Experiments "Honest boundaries" rewrite (per tex header
+REWRITE STATUS), abstract/discussion, repro package.
+
+## 4. Rules that bit us (cumulative; do not relearn)
+
+- **Cite-don't-claim fence:** every claim near the five bones carries its owner citation; the
+  negative-coverage log is [PROVISIONAL] positioning, never a premise. p_ij is SIGNED.
+- **Observable-layer theory-first:** registered predictions/kill-criteria need their OWN
+  literature pass + a check against the project's standing theorems (P2 contradicted our own γ/2
+  floor; P4's sign was canon). Probe outputs need A9-style adjudication BEFORE claim language.
+- **Anchor verdicts + oracle floors:** rerun/read a reused anchor's verdict line FIRST (pilot-3
+  printed CHECK); an oracle gates an engine only after its own floor is measured vs an exact
+  referee; gate revisions = documented amendments (never silent).
+- **Kill-criteria vs class definitions:** the imitator class INCLUDES deterministic control —
+  implement it before quoting a wedge (the Lamb-phase trap fired twice: A-M2-2, and ¼-power via
+  the dropped rate gate). Rate gates compare DIRECTION-SUMMED intensity; directional ratio
+  (N̄+1)/(N̄+½) is physics, not a bug.
+- **No comb lower bounds from channel theorems** (contractivity direction); fold-attenuation is
+  measured ~O(10²) — expected-positive (b) claims only.
+- **Numerics:** GPU-RK4 stability λ_max = κ(2N̄+1)(n_max+1), λ·dt = 0.7 OK (nan at 1.79);
+  c64-search/c128-report with printed gap; level-batch trees; tree cache (`outputs/_cgf_tree_cache/`,
+  CACHE_VER); section timestamps; fp64-GEMM is the wall for dim-340 c128 trees (~3e15 flops) —
+  Krylov expm-multiply is the contingency; zvode "Excess work" → nsteps + dense tlist; halving
+  gates on the OBJECT USED (record law, weak error), per-path strong error is diagnostic.
+- **Env/process:** WSL `/home/cx/miniconda3/envs/aiqec/bin/python` via `wsl -d ubuntu-f bash -lc
+  '...'`; LITERAL paths (`$VAR`/`$(...)` die in the quote chain); `;` not `&&`; ONE compute job at
+  a time (live desktop, 70 GB; mesolve dim ≤ 600 + printed Liouvillian budget); scripted execution
+  (committed scripts, asserts, printed evidence, flush); ≥3 seeds; prereg commit BEFORE run;
+  un-led review before relying on any new load-bearing result; src/qec_twin promotion commit-gated.
+- **Docs in English; 精读 with verbatim short-ASCII quote verification; metric ledger only
+  (RMSE ⚠ diagnostic).**
+
+## 5. Parked (trigger-gated, not lost)
+
+B4′ surface-mix scissors bet (17q); CZ coherent-ZZ slot; f hardware grounding (von Lüpke as
+source); Cox sampler d≥5; half-silent spectrum; λ=0.04 tail (starred); Tier-2 frozen-decoder demo
+(A8 instrument-only); Bone #5 monotone-information inequality (parked per original §5); direct
+Landau–Streater 精读 (small debt, only if the theorem becomes load-bearing in prose).
