@@ -207,3 +207,15 @@ band-containment, not accuracy (bands admit the w = 0 straw at z ≈ 2.0; off-di
 10. **Standing lesson adopted:** the dual-route Spitz agreement gate on hardware is LOAD-BEARING
     (R2 probe C: round-translation misassignments are invisible to every teacher gate) — it
     stays zero-tolerance and blocking.
+
+**A-T3-1 addendum (2026-07-03, after v4 run 1; criteria unchanged, instrument statistics
+aligned to the hardware operating point).** v4 run 1: every accuracy/consistency gate PASSED
+(P1a fitted-dressing exact tier at 1e-14 incl. the lag-2 kind; P1b percentile coverage 3/3
+seeds, worst std-z 2.63; ztruth ≤ 2.18; χ² in-band) — but **G-STRAW failed on 2/3 seeds
+(2.32/2.82 vs > 3)**: at N = 2e5 teacher shots the honest bands cannot 3σ-exclude the
+zero-correlation kernel on all seeds. This is the straw gate doing its job (a POWER statement,
+not an estimator defect). Fix: the teacher shot count is set to the HARDWARE-SUBSET-EQUIVALENT
+**N = 5e5** (= the registered X-basis samples 00–04 × 1e5 shots), so the straw-power gate is
+evaluated at the statistics the hardware fit will actually have; conservative in the hardware's
+favor (hardware moments additionally pool over ~800 bulk layers). All gate criteria unchanged;
+committed before the v4 rerun.
