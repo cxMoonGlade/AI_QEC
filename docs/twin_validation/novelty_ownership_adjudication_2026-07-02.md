@@ -163,6 +163,34 @@ competitors named above. They are provisional (documented coverage, not exhausti
 
 ---
 
+## Independent cross-check of the OPEN verdicts (Brave Search API, 2026-07-02)
+
+Re-ran the three OPEN slivers (#2, #3, C) through an **independent** search channel (Brave Search
+API; committed probe `outputs/brave_confirm_open_verdicts.py`, queries phrased in the
+**prove-ownership** direction so an owner would surface if one existed). Result: **all three OPEN
+verdicts survive.** No owner of any OPEN sliver appeared; the only new-to-this-doc hits are
+additional *operational* estimators that reinforce, not overturn, the verdicts:
+
+- **#3 (physicality-constrained estimation from QEC data):** the closest new hits are two more
+  **operational** QEC noise estimators — Takou, Benito, Vezvaee, Lidar & Brown, "Logical error
+  estimation from syndrome data of surface-code experiments" (arXiv:2606.11496), and a Bayesian
+  syndrome-statistics inference (PRA, doi 10.1103/wg5h-spy6). Full-abstract check of 2606.11496:
+  it estimates **DEM event probabilities + decoder priors**, with **no** PSD/Bochner/physicality
+  constraint. The SDP hits are all optimal-**recovery** SDPs (Fletcher-Shor-Win; Audenaert-De
+  Moor), a different use. The constrained side of the intersection stays **empty**.
+- **#2 (interpolating Gaussian-covariance functional + ∂/∂f):** top hits are Regev 2605.03054
+  (i.i.d./global, already read) and Wang 2510.24181 (stat-mech *threshold* under NN-correlated
+  errors, not a closed-form interpolating failure functional over arbitrary Σ). No
+  Gaussian-characteristic-function interpolant and no ∂(floor)/∂f metric surfaced.
+- **C (sign discriminator in QEC records):** hits are Gicev 2310.12448 (biased/inhomogeneous,
+  not sign-based), bath-tagging 1907.04704 (boson/fermion), and 2603.18231 (radiation-induced
+  correlated noise = **positive/burst**, joint sensing+decoding). No negative/anti-bunched
+  detection-correlation-as-quantum-signature and no sign-based quantum-vs-classical discriminator
+  in QEC records appeared. `[PROVISIONAL]` — a second independent channel agreeing raises
+  confidence but is still documented coverage, not a non-existence proof.
+
+---
+
 ## Corrections logged this round (adversarial findings that alter positioning)
 
 1. **`[C]` p_ij is signed, not ≥0.** The Chen-et-al. detector-correlation coefficient used across
