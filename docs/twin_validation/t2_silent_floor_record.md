@@ -61,6 +61,26 @@ R-growth at fixed per-round statistics (S1c: n=2, R=3 → 1+4ρ²) is the falsif
 Bets amended: S1b → corrected law; S1c added (R-scaling). n=3 curve, metric theorem (F3),
 S2–S6: unchanged, already green in run 1.
 
-## Results (appended after the rerun)
+## Results (final; logs `outputs/logs/t2_silent_floor_verify.log`, `_v2.log`)
 
-*(pending)*
+**ALL CHECKS PASS (17/17 after A-T2-1).**
+
+- **S1 n=3 curve → 1+6ρ²+8ρ³:** σ-ladder rel err 1.35e-1 → 3.8e-2 → 9.9e-3 (~σ² convergence,
+  monotone gates PASS); ρ ∈ {−0.4…1} all in-gate at σ=0.1.
+- **S2 endpoint:** ρ=1 ratio = 14.852 at σ=0.1 (→ 15, Clader limit — cited); measured tier-1
+  instance ×15.9 (finite noise, seam, OU) quoted from the committed log.
+- **S1b/S1c interference law (A-T2-1):** n=2 R=2 → 1+3ρ² (rel err 5.0e-3); n=2 R=3 → 1+4ρ²
+  (rel err 5.9e-3) — the coherent R-growth signature certified.
+- **S3 metric theorem:** odd-part log₂-slope 3.0001 (clean) / 3.0001 (dressed); even-part 1.9991 /
+  1.9992; coefficients 7.940 → 8, 5.970 → 6. **∂F/∂f|₀ = 0 confirmed exact at finite σ, dressed
+  and undressed** — the honest metric is second-order + the f³ triangle.
+- **S4 gauge:** admissible suffix re-signing rel 1.7e-13; non-admissible ALIVE 7.5e-3.
+- **S5 temporal:** cross-round block ALIVE 3.7e-3.
+- **S6 independent route:** conditional-amplitude MC (3 seeds, N=4e5, rel-se 0.8%): z = 0.30 /
+  1.10 / 1.32 — the graded-sum functional confirmed by different mathematics.
+
+**Status:** T-#2 deliverable complete — exact functional + coherently-summed leading law +
+metric theorem in tex `sec:silent-floor`, machine-certified, one registered law falsified and
+corrected via documented amendment (A-T2-1) that ADDED physics (cross-round coherent
+accumulation; rate-based simulators give the diagonal only). **Un-led adversarial review required
+before M3/paper reliance** (same standing rule as T-B). [PROVISIONAL] positioning stands.
