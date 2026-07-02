@@ -145,6 +145,8 @@ CGF probe's asymmetry-kill sweep travels exactly this knob.
   composition and convex mixing). Amplitude damping at βℏω ≫ 1 is maximally NON-unital
   (I/2 ↦ I/2 + (γ/2)|0⟩⟨0|-shift). Unital channels fix I/2. ⇒ **T1 relaxation is EXACTLY classically
   unrepresentable at the channel level — for every coupling strength, not asymptotically.**
+  (A-M1-1 attribution: qualitative obstruction: Landau–Streater via Crow–Joynt; quantified
+  map-level: Budini; our addition = the γ/2 constant (folklore-grade) + the QEC instantiation.)
   Symmetrizing the BCF is therefore not an approximation here; it changes the fixed point
   (relaxation → saturation). FORBIDDEN as a modeling step for this slot.
 - **(a) The boundary this sharpens (Layden):** eigenstate-preserving coupling (H_E = Σ g_j Z_j,
@@ -165,6 +167,28 @@ CGF probe's asymmetry-kill sweep travels exactly this knob.
   (marginal × conditional product) — **the exact registered exponent is fixed by a leading-order
   derivation IN THE PROBE PREREG, before the probe run** (task #3; probe criterion doc =
   `docs/twin_validation/cgf_probe_prereg.md`, to be written before execution).
+
+### 4.1 Amendment A-M1-1 (2026-07-02, post-adjudication Bone-A attribution duty; wordings
+pre-approved in `post_adjudication_state_confirmation_2026-07-02.md` §3, user-ratified)
+
+The §4 theorem block and the §5 wedge language predate the novelty-ownership adjudication
+(`novelty_ownership_adjudication_2026-07-02.md`, Bone A = PARTIALLY OWNED). Attribution duty
+applied, measured numbers untouched:
+
+- **Ownership of the §4 theorem's ingredients:** the qualitative obstruction (classical/random-
+  unitary ⇒ unital; non-unital ⇒ classically unrepresentable) is owned by **Landau–Streater
+  (LAA 193, 1993), via Crow–Joynt (PRA 89, 042123)**; the quantified map-level departure-from-
+  unitality indicator is owned by **Budini (PRA 108, 042203)**. **Our addition = the γ/2 constant
+  (folklore-grade elementary corollary) + the QEC instantiation** (the T1-slot closed-form device
+  metric and its saturation measurement). The theorem stays (a)-exact; only its novelty framing
+  changes.
+- **"Unforgeable/classically-unforgeable" language is SOFTENED to "classical-boundary"** at the
+  four §5 loci (marked "A-M1-1" inline): the decisive comparison (§5 M3 block), the resonant
+  coherence-sector excess (A-M2-2 finding 1), the dispersive asymmetry (A-M2-2 finding 2), and
+  the vacuum photon-number-noise direction (A-M2-3 registered bands). Asymmetry-physics owners:
+  Schoelkopf/Clerk (spectrometer detailed balance), Paz-Silva (quantum spectrum S⁻).
+- All adjudication verdicts are [PROVISIONAL] positioning conclusions — cite-don't-claim gates on
+  wording, never premises.
 
 ## 5. Predicted observables (class (b) bands; ledger metrics only) + falsifiers
 
@@ -195,7 +219,7 @@ CGF probe's asymmetry-kill sweep travels exactly this knob.
 **M3 (comb/record layer; bands registered at M3-prereg time from M2 actuals — A4 discipline):**
 D_Choi block cert of the embedded unit (2 data + 1 anc + 1 mode, exact-DM dim ≤ 64 reference) →
 `D_comb` vs (i) the memoryless machine-matched null AND (ii) the matched-BCF classical-field null
-(the decisive classically-unforgeable comparison) → record layer with machine-matched nulls
+(the decisive classical-boundary comparison; A-M1-1) → record layer with machine-matched nulls
 (A7 rule; matched-marginal surrogates for conditional stats; pairwise lag ≥ 2 artifact-clean).
 Registered now, direction-only (b): D_comb(quantum, classical-null) > 0 with the measurement-off
 variant ≈ 0; if instead it is ≈ 0 at code-realistic rates ⇒ REPORTABLE classical-forgeability bound
@@ -237,16 +261,17 @@ own arm — imitator-class implementation completion, predictions registered BEF
 
 **Findings of run 1 (all crash gates passed; band verdicts):**
 - Resonant point (δ=0): D_Choi = 0.4165 ± 0.0003 (3 seeds) — **IN band** [0.2866, 0.5732], at 1.45×
-  the unitality floor ⇒ a measured coherence-sector unforgeability EXCESS beyond non-unitality in the
-  strong-coupling regime (the classical Gaussian field cannot mimic vacuum-Rabi coherence dynamics
-  even at matched BCF). Kept as a (b)-verdict, PROVISIONAL.
+  the unitality floor ⇒ a measured coherence-sector classical-boundary EXCESS beyond non-unitality
+  in the strong-coupling regime (A-M1-1; the matched classical Gaussian field did not mimic
+  vacuum-Rabi coherence dynamics at matched BCF). Kept as a (b)-verdict, PROVISIONAL.
 - Detuned point (δ = 2π·50 MHz): D_Choi = 0.2756 vs band [0.0063, 0.0126] — **MISS ×22 (finding)**.
   Decomposition: the quantum arm's vacuum (Lamb-type) dispersive shift χ_q ≈ g²/(2δ) = 0.565 rad/µs
   ⇒ deterministic Rz(≈0.37 rad) over the window; D_Choi(Rz(0.37), 1) ≈ 0.27 matches the measurement.
   **This is exactly the handoff-§5 Lamb-phase trap, caught in OUR OWN arm:** the §1 imitator class
   includes arbitrary deterministic control, but the run-1 arm implementation never exercised it — the
   measured 0.2756 overstates the class-wedge by conflating the control-absorbable deterministic phase
-  with the unforgeable dissipative asymmetry.
+  with the classical-boundary dissipative asymmetry (asymmetry physics owned: Schoelkopf/Clerk,
+  Paz-Silva; A-M1-1).
 
 **Fix (class-implementation completion, NOT a re-fit):** add deterministic-control absorption to the
 classical arm — minimize D_Choi over a post-rotation Rz(φ) (the compilation of a constant σ_z drift;
@@ -321,7 +346,7 @@ v3 rerun; supersedes run-2's wedge numbers and the A-M2-2 quantitative diagnosis
 not re-derived blind):** resonant D_matched ∈ [0.29, 0.57] (expect ≈ 0.434, excess over floor
 ≈ 1.5×); detuned D_matched ∈ [0.05, 0.10] (expect ≈ 0.071 — the matched classical arm's
 intensity fluctuations over-dephase relative to the vacuum mode's dispersive channel: at N̄ = 0
-the vacuum has no photon-number noise, a SECOND unforgeability direction, registered);
+the vacuum has no photon-number noise, a SECOND classical-boundary direction, registered; A-M1-1);
 detuned D_class bracket expected ≈ [0.0063, 0.0073] (×1.16 floor); resonant D_class upper end
 from the s-ladder (registered direction: interior minimum in s at the detuned point, s* < 1).
 

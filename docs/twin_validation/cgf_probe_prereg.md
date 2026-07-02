@@ -186,7 +186,8 @@ with directional companion 2.0026 vs 2.0, halving 4.54e-7, precision evidence |�
 
 **REGISTERED CRITERION ⇒ MESSY ⇒ BRANCH B** (per §4: a switch survived + power not clean).
 Consequences (handoff §5, adopted): direction-1 is demoted to a MEASURED characterization —
-and the probe delivered more than a bound: a two-component decomposition of the record wedge,
+and the probe delivered more than a bound (superseded by §9: decomposition = the surviving
+methodology sliver, ingredients owned per adjudication): a two-component decomposition of the record wedge,
 (i) a theorem-pinned channel-non-unitality component (measurement-independent; the M2 object,
 0.172 at terminal-only) and (ii) a measurement-modulated asymmetry component (killed as
 A^(1.4–1.8) → 0, growing ≈ g⁴ in the perturbative regime). Headline shifts to #2 (exact
