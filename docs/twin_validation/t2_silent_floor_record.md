@@ -82,5 +82,26 @@ S2–S6: unchanged, already green in run 1.
 **Status:** T-#2 deliverable complete — exact functional + coherently-summed leading law +
 metric theorem in tex `sec:silent-floor`, machine-certified, one registered law falsified and
 corrected via documented amendment (A-T2-1) that ADDED physics (cross-round coherent
-accumulation; rate-based simulators give the diagonal only). **Un-led adversarial review required
-before M3/paper reliance** (same standing rule as T-B). [PROVISIONAL] positioning stands.
+accumulation; rate-based simulators give the diagonal only). [PROVISIONAL] positioning stands.
+
+## Un-led review verdict + Amendment A-T2-2 (2026-07-02, review-driven; committed before the S7 rerun)
+
+**Un-led adversarial review (independent agent; scratch trail `outputs/review_tb_t2_findings.md`,
+bug artifact `outputs/review_tb_t2_bugtest.py`): (B) sec:silent-floor = SOUND-WITH-FIXES.**
+Every core result independently rederived and CONFIRMED: exact functional (Walsh inversion),
+n=2 law 1+(R+1)ρ² (reviewer's own Isserlis: E[(Σm_r)²] = σ⁴R[1+(R+1)ρ²]), n=3 curve 1+6ρ²+8ρ³
+(15 = 1 within + 6 pair + 8 triangle pairings), odd-n interference vanishing, ∂F/∂f|₀ = 0
+(reviewer supplied a MORE ROBUST proof via Theorem-1 invariance + 2ⁿ-pattern averaging — adopted
+into the tex), and the silent-event definition proved EXACTLY equivalent to the tier-1 measured
+object (det0+seam fold ⟺ {m̄=0, x=1⃗}). Reviewer's deliberate-bug run: exponent −0.5→−0.55
+passes S1–S5 and is caught ONLY by S6 (z = 37–41, loud exit) — confirming S6 is the genuine
+independent anchor and exposing the hole that the DRESSING factors were never independently
+exercised.
+
+**Fixes applied:** (tex) eq:hafnian-law now states its zero-dressing hypothesis; the metric
+theorem states pinned per-qubit BLOCKS and uses the stronger Theorem-1-invariance proof;
+(script) stale pre-amendment S1b line in the docstring corrected (review NOTE 6).
+**A-T2-2 (new registered bet, committed before the rerun): S7 — independent state-vector MC
+route on the DRESSED machine** (p_Z as π-flips, p_M via true-syndrome-sequence weighting, p_F
+via readout-flip weighting; 3 seeds, N=4e5): agreement with the graded engine within 3 MC-σ and
+rel-se < 2%. This closes review finding 1's dressing hole at the T-#2 anchor.

@@ -128,7 +128,26 @@ not gated).
 
 **Status:** T-B deliverable complete — theorem + proofs in tex `sec:ident-gauge`, (a)-exact
 machine verification green, one registered sub-claim falsified and repaired via a documented
-amendment (A-TB-1) that STRENGTHENED the gauge theorem. **Un-led adversarial review still
-required before any M3-prereg kill criterion or paper claim RELIES on these results**
-(standing rule); until then the theorems are review-pending in-hand results, the [O] item is
-open, and the [PROVISIONAL] positioning tags stand.
+amendment (A-TB-1) that STRENGTHENED the gauge theorem. The [O] item (PAIR1 corank-6 structure)
+stays open; [PROVISIONAL] positioning tags stand.
+
+## Un-led review verdict (2026-07-02; fixes applied same day)
+
+**Un-led adversarial review (independent agent; scratch trail `outputs/review_tb_t2_findings.md`):
+(A) sec:ident-gauge = SOUND-WITH-FIXES.** All rederived items CONFIRMED: probe-map identity +
+support determinism (incl. T(â) ≥ 0), re-signing gauge theorem (every commutation checked:
+background channel, assignment noise, both exits, arbitrary first leg), order-1 law end-to-end
+(incl. dressing powers; quieting generalizes to any w by Jensen), Prop-3 erasure mechanism
+(coset symmetrization), locality/reach ladder, Prop 4 + rank certificates log-consistent and
+honestly hedged.
+
+**Findings + fixes applied:** (MAJOR, methodology) the tb script's "two independent routes"
+claim was overstated — machine and theorem sides share the graded-CF algebra; the reviewer's
+deliberate-bug run proved the class passes tb entirely and is caught only by the t2 MC anchor
+(z ≈ 37–41). Fix: tb docstring independence-scope correction (points at t2 S6/S7 as the
+independent anchor) + the new S7 dressed-MC anchor in t2 (see t2 record A-T2-2) closing the
+p_Z/p_F dressing hole. (MINOR) Theorem-1 proof was terse at the boundary-absorption step — the
+second X^v is absorbed because the post-measurement state lies in the recorded syndrome sector
+where X^v acts as a scalar; sentence added to the tex (this is exactly why increments must be
+V_S-valued at round boundaries). (NOTE) "36 checks" bookkeeping corrected to 38 (equalities +
+7 ALIVE + 5 rank gates); norm assert documented as a coding tripwire only (Σ-weight-blind).
