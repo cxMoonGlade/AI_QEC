@@ -125,7 +125,10 @@ KILL criterion at a switch point: |Δ| ≤ max(3·SE_MC, 0.05·|Δ_base|).
 ## 6. Falsifiers / integrity gates (CRASH class)
 
 - Engine/imitator certs inherited from M2 must pass on the probe's parameter points (rerun of the
-  thermal fixed point at each N̄; unitality per seed; halving on the probe τ_m).
+  thermal fixed point at each N̄; unitality per seed; halving on the probe τ_m). **Halving-object
+  clarification (registered before the results run was read; A-M2-1-lesson applied):** the halving
+  bound is on the RECORD LAW (path-averaged probabilities, weak error ~dt², gate max|ΔP| ≤ 5e-6);
+  the per-path max|ΔU| is a strong-order (~dt, tail-path-dominated) diagnostic, printed not gated.
 - Consistency: P_q, P_cl^opt are probability vectors to 1e-10; quantum-arm branch probabilities
   sum to 1; classical-arm path-average moment check (G2-style) per seed.
 - Zeno sanity: at g → 0 both arms give x⃗ ≡ initial-state record; Δ(g=0) = 0 to MC noise (null
