@@ -70,6 +70,32 @@ Constants p_M=0.011, p_F=0.007, p_Z=0.0034 all nonzero (dressing exercised).
 - **Route consistency**: dense record-law route vs memory-lean char-direct route agree on a
   PAIR2 character (two implementations, one number).
 
-## Results (appended after the run)
+## Amendment A-TB-1 (2026-07-02, after run 1 — a registered sub-claim FALSIFIED by the machine;
+theorem STRENGTHENED; documented before the rerun)
 
-*(pending — run follows the registration commit)*
+**Run-1 verdict: 1 FAILURE out of 30 checks — `V4 lag-1 relative sign VISIBLE (PAIR1)`: the
+machine gives |dW| = 0.00e+00 exactly** (all other checks passed at 1e-16-scale; log
+`outputs/logs/tb_ident_gauge_verify.log`). My Prop-3 sub-claim (single-stabilizer unit preserves
+lag-1 relative signs, sinh-visible) was WRONG: the interior h-sum weights the aligned flips
+±uniformly, so the lag-1 moment is cosh-factorized (even) too.
+
+**Root cause + corrected theorem (rederived, then re-verified):** the true gauge group is LARGER
+than the registered per-qubit (constant-pattern) group. **Theorem 1 (amended): any leg-wise sign
+pattern ε with consecutive-leg increments in V̂_S = {(−1)^v : v ∈ V_S} (first leg arbitrary) is an
+exact record gauge** — proof: insert X^v X^v = I at a round boundary and push one X^v through the
+suffix (commutes with every X-type machine element, re-signs the suffix legs, dies at exit; the
+global pattern dies at the |+⟩^n entry too). Consequences: (i) suffix flips erase temporal
+relative signs at ANY lag — the run-1 "erasure" observations (lag-2 blindness, PAIR2 lag-1
+erasure, AND the falsified PAIR1 lag-1 claim) are all instances; (ii) the surviving order-2
+content is an exact even law (PAIR1 lag-1): W = (1−2p_M)²(1−2p_Z)⁴ · 2^{−2} Σ_a
+e^{−½aᵀ(B₁+B₂)a} cosh(aᵀΣ_× a) — registered as a new (a)-exact bet; (iii) identifiable sign
+content = ε-invariants only (within-window qubit-loop products; |·|-combinations across legs).
+Tex Theorem-1/Prop-3 rewritten accordingly with an honesty note. Amended bets: V3b (general
+gauge: admissible patterns invariant, non-admissible increments ALIVE), V4 flipped (lag-1 PAIR1
+sign-blind + magnitude-ALIVE + the cosh-factorized law), nullspace diagnostic added for the
+PAIR1-full rank-15/21 deficiency (conjecture: cross-block even-combination structure; diagnostic,
+not gated).
+
+## Results (appended after the rerun)
+
+*(pending — rerun follows this amendment commit)*
