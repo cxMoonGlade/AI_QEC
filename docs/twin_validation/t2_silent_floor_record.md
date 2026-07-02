@@ -105,3 +105,9 @@ theorem states pinned per-qubit BLOCKS and uses the stronger Theorem-1-invarianc
 route on the DRESSED machine** (p_Z as π-flips, p_M via true-syndrome-sequence weighting, p_F
 via readout-flip weighting; 3 seeds, N=4e5): agreement with the graded engine within 3 MC-σ and
 rel-se < 2%. This closes review finding 1's dressing hole at the T-#2 anchor.
+
+**S7 RESULT (log `t2_silent_floor_verify_v3.log`): ALL PASS — z = 0.72 / 0.28 / 1.18 (3 seeds),
+rel-se 0.9%, engine F = 7.7206e-05 vs MC 7.67–7.81e-05.** Full suite 20/20 green. With the
+review verdicts (both sections SOUND-WITH-FIXES, fixes applied) T-B and T-#2 are now
+**review-cleared for M3-prereg reliance**; [PROVISIONAL] positioning tags and the [O] corank-6
+item remain as stated.

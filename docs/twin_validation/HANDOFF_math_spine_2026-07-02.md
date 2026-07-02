@@ -148,6 +148,51 @@ REWRITE STATUS), abstract/discussion, repro package.
 - **Docs in English; 精读 with verbatim short-ASCII quote verification; metric ledger only
   (RMSE ⚠ diagnostic).**
 
+## 4.5 SESSION 2 CLOSE (2026-07-02, math-spine execution — T0/B/#2/L2 DONE + review-cleared)
+
+**Landed (commits 1f9314b, f26802e, 72285b3, 9999ebb, 4167832, a3e03c2, 094a8fa, 92d438f,
+a836a25, 1b86b5d + records):**
+- **T0** hygiene per §3 pre-approved wordings (A-M1-1 in quantum_bath_slot_prereg §4.1; V1/V8
+  tex; V2/V3/V7 memory; V6 pointer).
+- **T-B** (tex `sec:ident-gauge` + `tb_ident_gauge_theorem_record.md`): Chen 2206.06362 精读'd
+  (note committed — was absent); probe calculus (deterministic support paths); re-signing gauge
+  group (increment-admissible ε — STRENGTHENED after run-1 falsified a lag-1-visible sub-claim,
+  A-TB-1); order-1 hypercube/cosh law (analytic quieter-scissors + O(C²) dilution mechanism);
+  order-2 cosh-factorized law; window locality + order↔reach ladder; rank certificates
+  (PAIR2+readout FULL 21/21; syndrome-only count-limited; PAIR1-full corank-6 with Σ-DEPENDENT
+  null = [O] open). 38 checks green.
+- **T-#2** (tex `sec:silent-floor` + `t2_silent_floor_record.md`): exact arbitrary-Σ CF-sum
+  functional; leading law CORRECTED by machine falsification (A-T2-1) to the coherently-summed
+  moment law E[(Σ_r Π_q θ)²] — interference term = new separation vs rate-based simulators
+  (n=2: 1+(R+1)ρ² certified R=2/3; n=3 curve 1+6ρ²+8ρ³, endpoint 15 = 1+6+8 Clader-cited);
+  METRIC THEOREM ∂F/∂f|₀ = 0 exact (gauge corollary) ⇒ honest metric = ∂²F/∂f² (6) + f³
+  triangle (8). 20/20 green incl. independent MC anchors.
+- **T-L2** (`l2_imitator_and_transfer_map_derivation.md`): L2a/L2b PDMP definition; Thm L2-1
+  EXACT record equivalence at the Markov point (L2-differencing theorem-grounded; quantum
+  memoryless-null ≡ L2a; built-in crash-gate null); Thm L2-2 coherence inert on Z-record;
+  Prop L2-3 P4 = L1-ONLY discriminator; transfer-map no-go ⇒ c₂ FLOATS + γ/2-scaling check.
+  Register-ready M3 checklist deltas in §4.
+- **Un-led review (independent agent; trail `outputs/review_tb_t2_findings.md`): (A) and (B)
+  both SOUND-WITH-FIXES; all theorems independently rederived + confirmed** (reviewer supplied
+  a stronger ∂F/∂f|₀ proof — adopted; proved the functional's event ≡ tier-1's measured object).
+  MAJOR methodology fix applied: tb's independence claim overstated (reviewer's deliberate-bug
+  run passes S1–S5, caught only by the MC anchor at z≈40) → tb docstring scope correction +
+  **A-T2-2 S7 dressed-MC anchor (p_Z/p_M/p_F independently exercised): z = 0.72/0.28/1.18
+  GREEN.** B + #2 are now review-cleared for M3-prereg reliance.
+
+**Next session order:** T-#3 (Bochner-constrained estimator + LOCAL real-Google demo — own
+prereg + registered bands FIRST; dataset notes `docs/.datasets/` mandatory pre-read; baselines
+Blume-Kohout/Young + Bhardwaj + note Takou 2606.11496; A8 estimation-never-decoding) → T-M3
+prereg (ALL inputs now in hand: state-confirmation §5 + L2 doc §4 checklist + review-cleared
+B/#2 theorems; the L2-differencing instrument replaces the c₂-pin). Paper assembly interleaves
+(tex header PENDING block updates + Thesis/Contributions wiring for the landed B/#2 sections).
+
+**Agent-ops lesson (this session):** heavy monolithic math-review briefs STALL general-purpose
+subagents (two stalls: 55 min and ~8 min zero-tool-call reasoning loops); the working recipe =
+reduced numbered scope + MANDATORY incremental scratch-file appends after every step +
+time-boxes; a killed agent can be RESUMED with context intact (SendMessage) — resume beats
+relaunch once reading cost is paid.
+
 ## 5. Parked (trigger-gated, not lost)
 
 B4′ surface-mix scissors bet (17q); CZ coherent-ZZ slot; f hardware grounding (von Lüpke as
