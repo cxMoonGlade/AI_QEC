@@ -1,0 +1,75 @@
+# T-B record — the identifiability/gauge theorem for passive detector moments (2026-07-02)
+
+**Tracked record for the headline-#1 deliverable** (HANDOFF_math_spine §3 T-B). The full theorem
+statements + proofs live in the (gitignored, local-only) paper draft
+`docs/coupling_simulator_intro_draft.tex`, section `sec:ident-gauge` ("The identifiability–gauge
+theorem: what passive detector moments reveal, and provably conceal, about a continuous noise
+covariance"), inserted after `sec:structure-lemma`. The verification script is
+`outputs/tb_ident_gauge_verify.py` (gitignored outputs/ per repo convention; script + log are the
+local audit trail). This tracked doc records: the theorem inventory, the epistemic classes, the
+registered (a)-exact verification bets (BEFORE the run), and the run results (appended after).
+
+## Positioning (cite-don't-claim; adjudication B.1 [PROVISIONAL] no-owner)
+
+Lift of the discrete-Pauli learnable-vs-gauge duality (Chen 2206.06362 — 精读 note
+`chen_learnability_pauli_noise_2206.06362.md`; Zheng 2601.22286) to a **continuous spacetime
+Gaussian covariance Σ read by PASSIVE stabilizer detectors**. Remm 2502.17722 = the discrete
+detector-moment estimator boundary; Paz-Silva 1609.01792 / von Lüpke 1912.04982 = continuous-Σ via
+ACTIVE control. The duality concept is cited, never claimed; the continuous-Σ × passive-moment map
+is the contribution. All ownership positioning [PROVISIONAL].
+
+## Setting
+
+The structure-lemma machine: n data qubits, X-type stabilizer group S (support group
+V_S ≤ F₂^n), R rounds; per round: classical Gaussian Z-phases φ (joint covariance Σ over nR legs)
+→ background Z (p_Z) → stabilizer parity measurement (assignment flip p_M) + reset; entry
+|+⟩⟨+|^⊗n; exit = trace (syndrome-only) or transversal X readout (flip p_F). Access class =
+PASSIVE: the fixed machine's record (m, x) only — no mid-circuit control, no design freedom.
+
+## Theorem inventory (epistemic classes)
+
+| # | Statement (tex paragraph) | Class |
+|---|---|---|
+| R0 | Continuum→Gram reduction: the record law depends on the continuum kernel only through the nR×nR window Gram matrix Σ; sub-window/out-of-band structure is concealed before any circuit algebra | (a) proven |
+| LA | Probe calculus: every Walsh character W(u,χ) of the record = dressing × Σ over grade paths with DETERMINISTIC supports σ_r(u,χ) = χ ⊕ ⊕_{r'≥r} supp(g_{u_r'}), of nonneg machine coefficients × Gaussian CF evaluations e^{−½âᵀΣâ}. Passive analog of Chen App-D completeness | (a) proven |
+| C1 | Window locality + order↔reach ladder: a moment sees only Σ-entries inside its windows; detector moments = closed bounded windows (exactly stationary/local); bare-m characters = entry-anchored (parity-walk nonstationarity, exact); rep-code spatial reach of order-j = qubit distance j | (a) proven |
+| T1 | Universal sign gauge: Σ ↦ S_W Σ S_W (per-qubit re-signing, all legs) leaves the ENTIRE record invariant, all orders, both exits (X_W-conjugation symmetry). Identifiable sign content = loop products only (continuous analog of cycle space; per-qubit signs = cut-space analog). Broken by active control — the passive/active boundary | (a) proven |
+| T2 | Order-1 law: E[(−1)^D] = (1−2p_M)²(1−2p_Z)^w · 2^{−w} Σ_{a∈{±1}^w} e^{−½aᵀΣ_win a} (hypercube-averaged CF; w=2 → cosh). Consequences: (a) sign blindness at order 1; (b) cosh ≥ 1 ⇒ detection rate DECREASES under within-window covariance of either sign — the quieter-scissors direction is analytic, and O(C²) explains the record-layer s²-dilution arithmetic | (a) proven |
+| P3 | Order-2: lag-≥2 same-stabilizer pairs are cross-window sign-blind (coefficients factorize uniform); lag-1 contiguous pairs: relative-sign visibility is machine-specific — V_S restricted to the window support = {00,11} (single-stabilizer unit) preserves it (sinh visible), = all four patterns with uniform count (repetition-code interior) ERASES it exactly (measurement-induced erasure). Counting argument: #{h ∈ S: h flips pattern δ on the window} uniform ⇔ erasure | (a) proven (counting), [C] certified |
+| P4 | Syndrome-only concealment: χ=0 windows live in V_S; logical-coset windows (the silent-floor functional) open only at readout. Whether syndrome-window closure determines the logical-window CF VALUE = machine-specific completeness (rank certificate; open in general) | (a) + [C] + [O] |
+| RC | Finite-instance rank certificates on the tier-0 units (analytic Jacobian of all characters w.r.t. Sym(nR)) | [C] computed |
+
+Honest deltas kept in the statement: (i) unlearnability is relative to the DECLARED passive
+access class (Chen's quantifies over all experiments — active); (ii) gauge exhibits VALID
+covariances (congruences preserve PSD); (iii) finite-R moment COUNT can bind before the form-span
+does (rank ≤ #characters − 1) — ranks are reported, never assumed.
+
+## Registered verification bets ((a)-exact; committed BEFORE the run; every invariance paired with an ALIVE control)
+
+Script: `outputs/tb_ident_gauge_verify.py`. Machine side = brute-force record law (grade-path
+enumeration over the tier-0 graded round pieces; entry/readout contracted; norm asserted = 1).
+Theorem side = the closed forms above. Tolerances: equality 1e-12, invariance 1e-13, ALIVE > 1e-8.
+Units: PAIR1 (1 stab / 2 qubits, R=3,4), PAIR2 (2 stabs / 3 qubits, R=2 dense; R=3 char-direct).
+Constants p_M=0.011, p_F=0.007, p_Z=0.0034 all nonzero (dressing exercised).
+
+- **V1** order-1 law exact: interior detector (window = leg 1 block) on PAIR1 + both PAIR2
+  stabilizers × 3 random PSD Σ each; boundary detector (leg-0 window, single (1−2p_M) dressing).
+- **V2** locality: outside-window perturbations (leg 2 cross + leg 0 diag) move the detector
+  moment by exactly 0; inside-window perturbation moves it (ALIVE).
+- **V3** sign gauge: full character table invariant under S_W Σ S_W for every nonempty qubit
+  subset W (PAIR1 R=3, R=4; PAIR2 R=2); converse ALIVE: a single cross-entry sign flip (not a
+  gauge element) moves some character.
+- **V4** temporal-sign ladder: lag-2 same-stab pair (PAIR1 R=4, windows legs 1&3) invariant under
+  cross-window block sign flip + magnitude-ALIVE; lag-1 contiguous pair (windows legs 1&2):
+  PAIR1 moves under interior relative-sign flip; PAIR2 interior (R=3, char-direct) exactly
+  erased + magnitude-ALIVE.
+- **V5** rank certificates: registered (a)-parts only — (i) the syndrome-only Jacobian null space
+  CONTAINS the per-leg (V_q − V_q′) diagonal directions (proven: all syndrome-only windows carry
+  both support qubits, a² ≡ 1 on support); (ii) a-priori bound rank ≤ min(#chars−1, dim Sym).
+  Ranks themselves are REPORTED (finite-character binding is real; no unproven rank is gated).
+- **Route consistency**: dense record-law route vs memory-lean char-direct route agree on a
+  PAIR2 character (two implementations, one number).
+
+## Results (appended after the run)
+
+*(pending — run follows the registration commit)*
