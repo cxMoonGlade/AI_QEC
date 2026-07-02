@@ -96,6 +96,39 @@ sign-blind + magnitude-ALIVE + the cosh-factorized law), nullspace diagnostic ad
 PAIR1-full rank-15/21 deficiency (conjecture: cross-block even-combination structure; diagnostic,
 not gated).
 
-## Results (appended after the rerun)
+## Results (final; logs `outputs/logs/tb_ident_gauge_verify.log` … `_v4.log`)
 
-*(pending — rerun follows this amendment commit)*
+**ALL CHECKS PASS (36 checks; every equality at 1e-16-scale, every ALIVE control fired).**
+
+- **Route consistency:** dense record-law route vs char-direct route: |Δ| = 1.1e-16.
+- **V1 order-1 hypercube law:** 12/12 exact (both units, both stabilizers, interior + boundary,
+  3 random PSD Σ each, dressings exercised): max |W − pred| = 5.6e-16.
+- **V2 locality:** outside-window |ΔW| = 0.0 exactly; inside-window ALIVE 3.3e-3.
+- **V3 constant-pattern gauge:** all qubit subsets, PAIR1 R=3/R=4 + PAIR2 R=2: max |ΔW| ≤ 2.2e-16;
+  converse ALIVE (single cross-entry flip): 5.5e-5.
+- **V3b general re-signing gauge (A-TB-1):** suffix flips (v = 11; 011; 101), mid-block, composed
+  global×suffix: all ≤ 2.2e-16; non-admissible increments (01 on PAIR1; 001 on PAIR2) ALIVE
+  (8.4e-3 / 7.0e-5).
+- **V4 temporal ladder (amended):** lag-2 and lag-1 cross-window sign flips both EXACTLY blind
+  (0.0) with magnitude-ALIVE controls (6.9e-5 / 1.1e-4 / 3.1e-4); PAIR2 interior erasure exact
+  (1.1e-16); **new order-2 cosh-factorized law exact (1.1e-16)**.
+- **V5 rank certificates (analytic Jacobian, generic PSD Σ):**
+  - PAIR1 R=3 full (readout): rank **15 / 21** (#chars 32; sv gap 2.6e12).
+  - PAIR1 R=3 syndrome-only: rank **7 / 21** = #chars−1 (count-limited); per-leg (V_q−V_q′) null
+    containment residual 9.5e-15 ((a)-predicted ✓).
+  - PAIR2 R=2 full (readout): rank **21 / 21 = FULL** (sv gap ∞) — the dense unit with readout has
+    NO linear blind spot at generic Σ; only the discrete re-signing quotient remains.
+  - PAIR2 R=2 syndrome-only: rank **15 / 21** = #chars−1 (count-limited).
+- **[O] OPEN item (diagnosed, falsified candidate, reported not gated):** the PAIR1-full corank-6
+  null structure. Candidate "per-cross-block (A,B-only) differences" FALSIFIED (containment
+  residual 0.98 despite the dimension coincidence 6). Second-Σ diagnostic: principal-angle cosines
+  [0.969, 0.848, 0.700, 0.495, 0.438, 0.096] ⇒ the null space is **Σ-dependent** — a corank-6
+  distribution, not a fixed linear gauge subspace; consistent with the record factoring through a
+  locally 15-dimensional sufficient statistic. Closed form OPEN.
+
+**Status:** T-B deliverable complete — theorem + proofs in tex `sec:ident-gauge`, (a)-exact
+machine verification green, one registered sub-claim falsified and repaired via a documented
+amendment (A-TB-1) that STRENGTHENED the gauge theorem. **Un-led adversarial review still
+required before any M3-prereg kill criterion or paper claim RELIES on these results**
+(standing rule); until then the theorems are review-pending in-hand results, the [O] item is
+open, and the [PROVISIONAL] positioning tags stand.
