@@ -22,22 +22,32 @@ lives in the record documents by design, kept out of the proofs). Standard resul
 with in-line proofs where short; the ledger below names their canonical sources for
 readability — none of these citations is load-bearing beyond the in-line arguments.
 
-**Standard-results ledger (canonical citations; naming, not load-bearing):**
-- Walsh/Fourier completeness on the Boolean cube (Step 1.1) — standard Boolean harmonic
-  analysis (O'Donnell, *Analysis of Boolean Functions*, CUP 2014, ch. 1).
-- Character expansion of finite-abelian-group projectors (Step 1.3) — standard character
-  theory (any finite-group text; e.g. Serre, *Linear Representations of Finite Groups*).
-- Stabilizer formalism / syndrome projectors (§0) — Gottesman, quant-ph/9705052.
-- Gaussian characteristic function (Step 0.4) — standard probability.
-- Isserlis/Wick pairing theorem (Step 4.4) — Isserlis, Biometrika 12, 134 (1918).
-- GKSL generators (§5) — Gorini–Kossakowski–Sudarshan, J. Math. Phys. 17, 821 (1976);
-  Lindblad, Commun. Math. Phys. 48, 119 (1976).
-- Data-processing/contraction of trace distance under CPTP maps (Step 5.3) — Nielsen & Chuang
-  2010, §9 (already ledgered in METRICS.md).
-- The Markov imbedding problem, general context (Step 5.1 proves the 2-state case
-  self-containedly) — Kingman, Z. Wahrscheinlichkeitstheorie 1, 14 (1962).
-- Physical grounding of the Gaussian-dephasing model class — see Step 0.α (Schoelkopf,
-  Clerk, Bylander; machine precedent 2401.04530).
+**Standard-results ledger (naming, not load-bearing — every use is proved in-line).
+Citation-recency policy (user-set, standing): pre-2022 citations ONLY for genuinely
+foundational sources (the naming origin of a theorem/formalism, or a standard textbook) or
+where the field has no newer literature; each pre-2022 entry below carries its
+justification.**
+- Walsh/Fourier completeness on the Boolean cube (Step 1.1) — O'Donnell, *Analysis of
+  Boolean Functions*, CUP 2014 *(textbook; foundational-exempt)*.
+- Character expansion of finite-abelian-group projectors (Step 1.3) — elementary character
+  theory; proved by direct verification in-line, no citation needed.
+- Stabilizer formalism / syndrome projectors (§0) — Gottesman, quant-ph/9705052
+  *(the formalism's naming origin; foundational-exempt)*.
+- Gaussian characteristic function (Step 0.4) — standard probability, no citation needed.
+- Isserlis/Wick pairing theorem (Step 4.4) — Isserlis, Biometrika 12, 134 (1918)
+  *(theorem's naming origin; foundational-exempt; the 15-pairing enumeration is done
+  explicitly in-line anyway)*.
+- GKSL generators (§5) — Gorini–Kossakowski–Sudarshan (1976); Lindblad (1976)
+  *(the generators' naming origin; foundational-exempt)*.
+- Data-processing/contraction of trace distance under CPTP maps (Step 5.3) — Nielsen &
+  Chuang, 2010 ed. *(standard textbook, already ledgered in METRICS.md;
+  foundational-exempt)*.
+- The Markov imbedding problem (Step 5.1): the 2-state case is proved self-containedly
+  in-line — NO external citation carried (the general problem has an active modern
+  literature; per the recency policy we cite none rather than a 1962 origin we do not rely
+  on).
+- Physical grounding of the Gaussian-dephasing model class — see Step 0.α (foundational
+  reviews + the 2024/2026 recent anchors listed there).
 The only external result USED AS INPUT to a claim (rather than proved in-line) is the Clader
 endpoint comparison in Step 4.4 — and it is a consistency CONTACT, cited never claimed; the
 1+6ρ²+8ρ³ curve is derived independently above it.
@@ -75,10 +85,15 @@ implementations are identical, which is why the samplers use π-flips.
 precedent, what is novel; added per the penetration audit).**
 - *Components with standard provenance:* Gaussian dephasing by a classical field is the
   standard weak-coupling noise model of the qubit-spectroscopy canon (many weak fluctuators →
-  CLT → Gaussian: Schoelkopf cond-mat/0210247, Clerk RMP 0810.4729 — notes in-repo; measured
-  近-Gaussian 1/f flux noise: Bylander 1101.4707, note in-repo). Stabilizer parity measurement
-  + reset is standard QEC. Classical-Gaussian dephasing is EXACTLY random-unitary (the A6
-  carrier declaration, B_syndrome prereg) — no quantum bath is being approximated away.
+  CLT → Gaussian: Schoelkopf cond-mat/0210247 and Clerk RMP 0810.4729 — foundational reviews,
+  recency-policy-exempt as the canon's naming sources, notes in-repo). RECENT measured
+  anchors (post-2022, preferred per the citation-recency policy): spatially CORRELATED
+  low-frequency noise measured across Si spin qubits — Rojas-Arias 2603.03051 (2026, note
+  in-repo); device-level noise budgets on the 105Q platform — Google 2408.13687 (2024, note
+  in-repo). (The classic single-qubit 1/f flux-noise measurement Bylander 1101.4707 is kept
+  only as the historical origin, note in-repo.) Stabilizer parity measurement + reset is
+  standard QEC. Classical-Gaussian dephasing is EXACTLY random-unitary (the A6 carrier
+  declaration, B_syndrome prereg) — no quantum bath is being approximated away.
 - *Machine precedent:* dephasing noise inside repeated-stabilizer-measurement circuits has a
   direct literature instance — 2401.04530 (quasistatic phase damping in stabilizer circuits;
   精读 note in-repo) — which however treats the UNCORRELATED/quasistatic case and declares
