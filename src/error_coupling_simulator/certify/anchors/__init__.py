@@ -9,10 +9,10 @@ These are the production anchors/controls. The in-memory anchor used to test the
 ``tests/`` (a known-law fixture, never a real ground-truth route).
 """
 
-from qec_twin.audit.certify.anchors.closed_form import ClosedFormAnchor
-from qec_twin.audit.certify.anchors.controls import CorruptStabControl, ShuffleControl
-from qec_twin.audit.certify.anchors.dm_oracle import DMOracleAnchor
-from qec_twin.audit.certify.anchors.stim_clifford import StimCliffordAnchor
+from .closed_form import ClosedFormAnchor
+from .controls import CorruptStabControl, ShuffleControl
+from .dm_oracle import DMOracleAnchor
+from .stim_clifford import StimCliffordAnchor
 
 __all__ = ["DMOracleAnchor", "StimCliffordAnchor", "ClosedFormAnchor",
            "CorruptStabControl", "ShuffleControl"]

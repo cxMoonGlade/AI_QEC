@@ -34,8 +34,8 @@ the teacher's EXACT mechanism. GPU-only model-compute (CLAUDE.md): the DM lives 
 import numpy as np
 import torch
 
-from qec_twin.audit.certify.core import reduce_rr_corr, reduce_spatial_corr
-from qec_twin.audit.certify.types import AnchorValue, Capability, Exactness, Regime, Statistic
+from ..core import reduce_rr_corr, reduce_spatial_corr
+from ..types import AnchorValue, Capability, Exactness, Regime, Statistic
 
 _CDTYPE = torch.complex128
 _ANSWERS = frozenset({Statistic.DETECTOR_MARG, Statistic.FULL_JOINT, Statistic.SYNDROME_DIST,
@@ -146,7 +146,7 @@ class DMOracleAnchor:
     # ----------------------------------------------------------------- #
     def answer(self, teacher, statistic: Statistic, regime: Regime, *, N=None, generator=None,
                corrupt=None) -> AnchorValue:
-        from qec_twin.forward.exact.qutrit_dm import QutritDM
+        from ...carrier.exact.qutrit_dm import QutritDM
 
         sched = teacher.sched
         stabs = sched.stab_paulis()

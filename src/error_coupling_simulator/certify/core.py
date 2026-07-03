@@ -24,7 +24,7 @@ GENUINE CHECKS (do-not-fail-to-a-toy — made structural in ``_rollup``):
 
 import numpy as np
 
-from qec_twin.audit.certify.types import (
+from .types import (
     Anchor,
     AnchorValue,
     CertReport,

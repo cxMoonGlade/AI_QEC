@@ -27,8 +27,6 @@
 
   "qec_twin": {"status": "ACTIVE", "note": "package root — numerics.NUMERICAL_ZERO floor + package glue"},
   "qec_twin/audit": {"status": "ACTIVE", "note": "evaluator-side gating (identifiability) / bands (uncertainty) / validity (curve) + bayes_floor decoding-floor oracle + certify"},
-  "qec_twin/audit/certify": {"status": "ACTIVE", "note": "the carrier<->DM certification seam: {det,obs} record schema, Anchor/Control independent-GT ports, ControlledTeacher protocol, scoring (certify_cells). MIGRATION target: -> error_coupling_simulator/certify (P4)"},
-  "qec_twin/audit/certify/anchors": {"status": "ACTIVE", "note": "independent-ground-truth anchor ports (DM-oracle / stim-slice / closed-form); anti-circular referees"},
   "qec_twin/calibration": {"status": "ACTIVE", "note": "[RECOVER] label-free exact Born-NLL calibration; consumes observations ONLY (isolation contract) — the LEARNER path, must NOT import the teacher/simulator"},
   "qec_twin/contexts": {"status": "ACTIVE", "note": "probe-richness ladder C_cal(r) + probes"},
   "qec_twin/decoder": {"status": "ACTIVE", "note": "frozen-MWPM DEM substrate (evaluator-side; DEM/decoder/LER stays OUT of the validity chain — feedback-simulator-not-decoder)"},
@@ -47,5 +45,7 @@
   "error_coupling_simulator/oracles": {"status": "ACTIVE", "note": "P1-landed: independent QuTiP-derived {H,c} channel primitives (single_qubit/two_qubit/leakage/opensystem) — evaluator-only FORMAL oracles"},
   "error_coupling_simulator/carrier": {"status": "ACTIVE", "note": "P2-landing: forward propagation. joint_lindbladian (Axis-1 assembler) + cptp_channel + channels moved here; the old qec_twin.forward.{joint_lindbladian,cptp_channel,channels} are re-export SHIMS. accel/kernels (CUDA) still to move."},
   "error_coupling_simulator/carrier/exact": {"status": "ACTIVE", "note": "P2: exact DM backend (feasibility-only <=~15q). qutrit_dm + circuit_sim moved here; old qec_twin.forward.exact.{qutrit_dm,circuit_sim} are SHIMS. rep_code/xzzx_parser land with frontend/mechanisms phases."},
-  "error_coupling_simulator/carrier/kernels": {"status": "ACTIVE", "note": "P2-COMPLETE: fused CUDA/C++ kernels (.cu/.cpp + loaders). accel + kernels moved here (they stay siblings so accel._kernels_dir() resolves); old qec_twin.forward.{accel,kernels} are SHIMS (kernels shim sys.modules-aliases the loader submodules). Compile-verified: test_kernels_fused_kraus/vmap pass from here. Needs the aiqec env bin on PATH so torch finds ninja."}
+  "error_coupling_simulator/carrier/kernels": {"status": "ACTIVE", "note": "P2-COMPLETE: fused CUDA/C++ kernels (.cu/.cpp + loaders). accel + kernels moved here (they stay siblings so accel._kernels_dir() resolves); old qec_twin.forward.{accel,kernels} are SHIMS (kernels shim sys.modules-aliases the loader submodules). Compile-verified: test_kernels_fused_kraus/vmap pass from here. Needs the aiqec env bin on PATH so torch finds ninja."},
+  "error_coupling_simulator/certify": {"status": "ACTIVE", "note": "P4-landed: the teacher-certification seam (record schema, ControlledTeacher protocol, certify_cells scoring, Anchor/Control ports). Old qec_twin.audit.certify is a shim package (sys.modules-aliases the submodules). Only qutrit_dm dep (-> ...carrier.exact); no learner consumer. The decoder + R2 hardware stay in qec_twin (NOT moved)."},
+  "error_coupling_simulator/certify/anchors": {"status": "ACTIVE", "note": "P4: independent-ground-truth anchor ports (DM-oracle / stim-clifford / closed-form / controls) — anti-circular referees."}
 }

@@ -39,7 +39,7 @@ at R≥2). Pure / host-side (a 3×3 stochastic propagation).
 
 import numpy as np
 
-from qec_twin.audit.certify.types import AnchorValue, Capability, Exactness, Regime, Statistic
+from ..types import AnchorValue, Capability, Exactness, Regime, Statistic
 
 
 class ClosedFormAnchor:

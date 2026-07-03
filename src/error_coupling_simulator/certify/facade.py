@@ -14,9 +14,9 @@ both run — they don't compete; the OOM routing is per-anchor (the DM skips R�
 closed-form carry the scale, opt-in). Statistical (stim) rows give PASS_PROVISIONAL, never PASS.
 """
 
-from qec_twin.audit.certify.anchors import CorruptStabControl, DMOracleAnchor, StimCliffordAnchor
-from qec_twin.audit.certify.core import _rollup, certify_cells
-from qec_twin.audit.certify.types import CertReport, Regime, Statistic
+from .anchors import CorruptStabControl, DMOracleAnchor, StimCliffordAnchor
+from .core import _rollup, certify_cells
+from .types import CertReport, Regime, Statistic
 
 #: The ``level`` grids — (statistic, R) checks + the shot budget. SMOKE for CI, STANDARD the default,
 #: DEEP for the orchestrator's high-N run.

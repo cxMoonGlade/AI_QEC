@@ -16,7 +16,7 @@ empirical dist; band ~ C/sqrt(N), class (b)). stim is Clifford-cheap (host-side)
 
 import numpy as np
 
-from qec_twin.audit.certify.types import AnchorValue, Capability, Exactness, Regime, Statistic
+from ..types import AnchorValue, Capability, Exactness, Regime, Statistic
 
 _ANSWERS = frozenset({Statistic.SYNDROME_DIST, Statistic.DETECTOR_MARG, Statistic.FULL_JOINT})
 
@@ -47,7 +47,7 @@ class StimCliffordAnchor:
 
     def answer(self, teacher, statistic: Statistic, regime: Regime,
                *, N=None, generator=None, corrupt=None) -> AnchorValue:
-        from qec_twin.audit.certify.core import emitted_statistic
+        from ..core import emitted_statistic
 
         n = int(N or 200_000)
         corrupt_stab = corrupt.get("stab") if corrupt else None
