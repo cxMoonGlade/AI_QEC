@@ -650,6 +650,17 @@ Representability boundary:
   `.b8` detector/logical sample carriers were sampled from the exact Axis-1
   record distribution. It is still not a `.dem`, not decoder integration, and
   not a Stim-Pauli model.
+- `representability="axis1_jointL_source_coupled_record_samples_evaluator_truth"`
+  is the `mechanisms.coupled_teachers.CoupledCycleTeacher` emit class: R-round
+  `{det,obs}` records sampled from the exact Axis-1 record distribution under a
+  shared memory-ful source (`OneOverFDriftSource`/`RTNSource`) fanned out per QEC
+  cycle into per-round `Axis1PrimitiveParams` via the injected
+  `params_for_substep` callback. The source trajectory, `Theta(z_t)` params, and
+  per-substep channel field are evaluator-only truth (reachable via `.truth` /
+  `CertReport.truth`, never in the emitted payload). It is still not a `.dem`,
+  not decoder integration, and not a Stim-Pauli model; the non-Markovian content
+  is classical parameter memory (see `nonmarkovian_memory_carrier_scope.md`), not
+  a CP-divisibility-breaking quantum-memory claim.
 - Future analog/source/leakage backends must attach evaluator-only truth
   sidecars and declare a distinct representability class in the manifest.
 - `source_binding` in the frontend manifest is an evaluator-side alignment

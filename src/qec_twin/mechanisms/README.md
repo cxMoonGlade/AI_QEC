@@ -22,6 +22,17 @@ counterfactual ground truth.
   edge) and its correlated-stochastic twirl control (`correlated_dephasing_kraus`).
 - `source_coupling.py` — Axis-2 `Theta(z_t)` fan-out: one shared source draw
   conditions multiple mechanism parameters in the same cycle/substep.
+- `coupled_teachers.py` — `CoupledCycleTeacher`, the evaluator-only
+  `audit.certify.ControlledTeacher` for slice-1: one shared memory-ful source
+  trajectory `z_t` (Axis-2) is fanned out per QEC cycle into per-round
+  `Axis1PrimitiveParams` and emitted as real R-round `{det,obs}` records through
+  the sealed dense Axis-1 record path (`axis1_measurement_record_evidence_manifest`
+  with the injected `params_for_substep` callback). `emit` returns `{det,obs}`
+  ONLY; source/params/channel truth is evaluator-only. `.markovian_baseline()`
+  (independent per-field permutation, matched marginals) and `.off_source()`
+  (zero-amplitude source) are the G6 control arms. Imported directly
+  (`qec_twin.mechanisms.coupled_teachers`), NOT re-exported from the package
+  `__init__` (it imports `qec_twin.simulator`, which would close an import cycle).
 - `source_process.py` — Axis-2 explicit cross-cycle source timelines
   (`RTNSource`, `OneOverFDriftSource`, `PhaseBurstSource`,
   `TemporalStormSPPSource`) plus exact timeline replay, row-preserving
