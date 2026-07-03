@@ -104,7 +104,11 @@ propagation — is nonnegative; no signed cancellations exist because Step 1.3 r
 (ii) A detector D_{κ,r} = m_{κ,r} ⊕ m_{κ,r+1} probes u_r = u_{r+1} = e_κ; the backward XOR
 telescopes: σ_j = γ(g_κ) for j = r+1 ONLY, 0 elsewhere — **a single-leg window on the check's
 support**. XOR-ing detector sets XORs their windows. Bulk detector moments are therefore
-exactly local AND exactly stationary (the window block is the only Σ-dependence).
+exactly LOCAL, and the functional FORM is translation-covariant (the same function of the
+window block, applied at each position). ⚠ EQUALITY of expectations across r is NOT part of
+the theorem — it additionally requires the window blocks to be equal, i.e. a STATIONARY Σ
+(model/data assumption: the teacher truths are stationary by construction; on hardware it is
+the prereg-S2 declared simplification, gated by the detection-stats layer-flatness check).
 (iii) A bare m-character (u at one round, no partner) has σ_j = γ(g_u) for ALL j ≤ r — an
 entry-anchored window: the parity-walk nonstationarity, exact.
 (iv) Reach: probing the product of j consecutive rep-code checks gives
@@ -119,7 +123,8 @@ the moment by exactly 0; inside moves it) — log v4: 0.00e+00 / 3.31e-03.
 ## 2. The re-signing gauge theorem (T-B Theorem 1, amended form)
 
 **Claim.** Let ε ∈ {±1}^{n×R} be leg-wise signs whose consecutive-round increments are
-stabilizer supports: ε_{·,r+1} ⊙ ε_{·,r} ∈ V̂_S := {(−1)^v : v ∈ V_S}, first row arbitrary.
+stabilizer supports: ε_{·,r+1} ⊙ ε_{·,r} ∈ V̂_S := {(−1)^v : v ∈ V_S}, the first ROUND's
+(global) pattern arbitrary.
 Then Σ and E_ε Σ E_ε produce identical records (all W(u,χ), all orders, both exits, any
 p_Z/p_M/p_F).
 
@@ -137,8 +142,11 @@ Insert X^v X^v = I immediately after the round-b measurement. Push the RIGHT X^v
 suffix: it commutes with every X-type machine element, re-signs every suffix dephasing leg on
 supp v (as in 2.2), and dies at the exit (trace is conjugation-invariant; X-readout projectors
 invariant). The LEFT X^v must be absorbed AT the boundary: immediately after the round-b
-measurement the state lies inside the recorded syndrome sector — the joint eigenspace of the
-stabilizer group — on which X^v = X^{γ(h_v)} for h_v ∈ 𝒮 acts as the SCALAR (−1)^{s_b·idx(h_v)}.
+measurement the quantum state lies inside the TRUE syndrome sector (the recorded bit may
+differ by the p_M flip — irrelevant: the flip is classical and the absorption acts on the
+state) — the joint eigenspace of the stabilizer group — on which X^v = X^{γ(h_v)} for
+h_v ∈ 𝒮 acts as the SCALAR (−1)^{s_b·idx(h_v)} (s_b = the TRUE syndrome; the value is
+immaterial since a modulus-1 scalar conjugates away).
 Conjugation by a scalar is the identity. **This is exactly why increments must sit at round
 boundaries (only there is the state sector-pure) and lie in V_S (only stabilizer strings act as
 scalars).** Net: record(φ) = record(ε ⊙ φ) pathwise.
@@ -216,11 +224,15 @@ aligned-flip cosh of Step 3.6.
 ## 4. T-#2: the silent-floor functional
 
 **Step 4.1 (the event = one record point).** Silent-and-flip = {all m = 0} ∧ {terminal seam
-quiet} ∧ {obs = 1}. Terminal seam quiet ⇔ recomputed syndrome of the recorded x is 0 ⇔ x ∈
-{all-zeros, all-ones}; obs = parity of x = 1 then forces x = all-ones. So the event is the
-single record outcome (m̄ = 0, x = 1⃗) — and this matches the tier-1 measured fold convention
-exactly (det0 = m₁; body XOR; seam) — prove the three ⇔'s yourself; they are bijective XOR
-re-encodings.
+quiet} ∧ {logical flipped}. Terminal seam quiet ⇔ recomputed syndrome of the recorded x is 0
+⇔ x ∈ {all-zeros, all-ones}. Within that set, the logical-flip label is REPRESENTATIVE-
+INDEPENDENT: x = all-ones flips every logical representative (X̄ ≃ X_q mod 𝒮 for each q), so
+flip ⇔ x = all-ones — for EVERY n. (⚠ the "obs = full parity of x" reading is the odd-n /
+tier-1 d=3 convention only; for even n the full product ∏_q X_q is a STABILIZER, its parity on
+all-ones is 0 — use the representative-independent flip label, which is exactly what the
+scripts compute: Pr[m̄ = 0, x = 1⃗].) So the event is the single record outcome
+(m̄ = 0, x = 1⃗), matching the tier-1 fold convention (det0 = m₁; body XOR; seam) — prove the
+⇔'s yourself; they are bijective XOR re-encodings.
 
 **Step 4.2 (exact functional by Walsh inversion).**
   F(Σ) = Pr[m̄=0, x=1⃗] = 2^{−kR−n} Σ_{u,χ} (−1)^{χ·1⃗} W(u, χ),
@@ -233,8 +245,8 @@ Z-rotation must flip; any PARTIAL flip changes some check's parity ⇒ detected 
 the silent event; verify: a single-qubit flip anticommutes with its two neighboring checks).
 Crucially, no detector distinguishes WHICH round a collective flip occurred in ⇒ the R
 amplitudes add COHERENTLY before squaring:
-  F = 4^{−n} E[(Σ_{r} ∏_q θ_{q,r})²] (1 + O(Σ)) = 4^{−n} Σ_{r,r'} E[m_r m_{r'}],
-m_r := ∏_q θ_{q,r}.
+  F = 4^{−n} E[(Σ_{r} ∏_q θ_{q,r})²] · (1 + O(Σ)) = 4^{−n} Σ_{r,r'} E[m_r m_{r'}] · (1 + O(Σ)),
+m_r := ∏_q θ_{q,r}  (both equalities leading-order; the exact object stays Step 4.2's sum).
 
 > **TRAP 2 (falsified by run 1 of the T-#2 verification).** First registered law: F ≈
 > 4^{−n} Σ_r E[∏_q θ²_{q,r}] (diagonal only). The machine gave ratio 4 at (n=2, R=2, ρ=1) vs
@@ -275,9 +287,12 @@ coefficients 7.940 / 5.970; S6/S7 independent MC z ≤ 1.32.
 Hamiltonian) and classification-only measurement noise. Then for a GKSL unit with only σ±
 dissipators: on diagonal inputs, ρ̇_ee = −γ↓ρ_ee + γ↑ρ_gg (coherences never source populations
 — check the σ_x-drive counterexample: ṗ_e ⊃ −Ω Im ρ_eg ≠ 0, which is WHY the hypothesis is
-needed). Post-measurement states are pointer states ⇒ the record is a 2-state Markov chain
-with kernel T(τ_m) = exp(τ_m Q), Q (e,g-ordered, column-stochastic generator) =
+needed). Post-measurement states are pointer states ⇒ the TRUE pointer-state process is a 2-state
+Markov chain with kernel T(τ_m) = exp(τ_m Q), Q (e,g-ordered, column-stochastic generator) =
 [[−γ↓, γ↑],[γ↓, −γ↑]], π = (γ↑, γ↓)/Γ, Γ = γ↓+γ↑ — identical to the classical telegraph.
+With p_M > 0 the OBSERVED record is that chain seen through i.i.d. binary-symmetric emission —
+an HMM, not itself Markov (the Step-5.2 observed-flip statistics are computed on exactly this
+HMM).
 Kernel entries: a := P(e→g) = (γ↓/Γ)u, b := P(g→e) = (γ↑/Γ)u, u = 1 − e^{−Γτ_m}.
 Embeddability: a + b = u < 1 always; conversely any 2×2 stochastic kernel with a+b<1 is
 exp(τQ) (Γτ = −ln(1−a−b)) — necessary and sufficient (det T = 1−a−b > 0).
@@ -309,7 +324,8 @@ floor, Z-record distance exactly 0). ∎
 
 ---
 
-## 6. Estimator identities (T-#3, the v4/v5/v6 chain)
+## 6. Estimator identities (T-#3: the v4/v5 chain + the R-POOL/v6 REGISTRATION — v6 has no
+record yet; binding state = v5 STOP)
 
 **Step 6.1 (the p_Z-absorption identity).** Every registered moment kind's â has ALL window
 legs graded (hypercube over {±1}^w — no zero coordinates inside a window). So the background
@@ -336,11 +352,18 @@ multi-μ moments are the strongest ridge-breakers). Work the power-counting tabl
 > The registered response is a statistics upgrade (R-POOL: r-position pooling, exact by the
 > Step-1.7 stationarity), not a criterion change.
 
-**Step 6.3 (R-POOL basis).** By Step 1.7(ii), every admissible r-position of a moment class
-measures the SAME functional (exact bulk stationarity). Pooling per shot (mean over positions
-of (1−2·parity)) changes only the noise: expectations unchanged, shot-level covariance exact
+**Step 6.3 (R-POOL basis — stated with the correct epistemic split).** By Step 1.7(ii), every
+admissible r-position of a moment class measures the same functional FORM of its own window
+block ((a), theorem). EQUAL expectations across positions additionally require stationary Σ:
+(a)-given-construction on the teacher (the truths are built stationary); on hardware it is the
+prereg-S2 declared stationarity simplification — the detection-stats layer-flatness check is
+therefore LOAD-BEARING for hardware pooling. Pooling per shot (mean over positions of
+(1−2·parity)) then changes only the noise: expectations unchanged, shot-level covariance exact
 via np.cov on pooled per-shot values. Teacher R = 12 position counts: o1: 11; lag ℓ: 11−ℓ;
 xdist: 11; x1: 10.
+**STATUS (do not over-read):** R-POOL is REGISTERED (7f608f3) and the v6 gate is its own
+pending record — the binding T-#3 state remains the v5 STOP (hardware LOCKED) until a v6
+verdict lands in `t3_teacher_gate_record.md`. Nothing in this §6 is v6 evidence.
 
 ---
 
@@ -360,6 +383,7 @@ xdist: 11; x1: 10.
 | 5.2 | L2-3 formulas | exact-Fraction enumeration all PASS | outputs/review3_am_l2_checks.py |
 | 6.1 | absorption identity | 3.33e-16 at a non-truth point | v4/v5 P1a |
 | 6.2 | old ridge / new rank | rank 11/12 (residual 3.3e-16) / 11/11 | review3_v4m_jac + v5 |
+| 6.3 | v6 (R-POOL) verdict | **PENDING — no committed record yet** | t3_teacher_gate_record.md (future section) |
 
 Reviewer-side independent re-derivations (the most granular step-by-step trails, worth reading
 AFTER your own attempt): `outputs/review_tb_t2_findings.md` (round 2, theorems),

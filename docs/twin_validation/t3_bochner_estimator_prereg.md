@@ -233,10 +233,16 @@ to χ² and under-covered by both bootstrap interval types. Mechanism (R5-diagno
 moment noise along the weak w₀/w₁-split Jacobian direction reaches the boundary basin.
 
 **Redesign (priority axis, user-ratified): r-POSITION POOLING per moment class.**
-- **(a)-grade basis:** by the T-B window-locality theorem (review-cleared; machine-verified
-  V2), bulk detector-moment expectations are EXACTLY r-independent — every admissible position
-  of a class measures the same functional. Pooling is therefore a pure statistics upgrade:
-  forward model, parameters, and moment-class count (29) unchanged; dof unchanged (18).
+- **(a)-grade basis** *[ERRATUM 2026-07-03, user-caught, wording-only — gate criteria and all
+  registered numbers untouched (the zero-amendment budget binds criteria, not justification
+  prose): the theorem gives LOCALITY + translation-covariance of the functional FORM; EQUAL
+  expectations across r additionally require STATIONARY Σ — (a)-given-construction on the
+  teacher (truths built stationary); on HARDWARE it is the §5 S2 declared stationarity
+  simplification, so the detection-stats layer-flatness check is LOAD-BEARING for hardware
+  pooling]*: by the T-B window-locality theorem (review-cleared; machine-verified V2), every
+  admissible position of a class measures the same functional form of its window block; under
+  the stationarity condition above the expectations coincide and pooling is a pure statistics
+  upgrade: forward model, parameters, and moment-class count (29) unchanged; dof unchanged (18).
 - **Pooled statistic:** per shot, X̄_i = mean over the admissible r-positions of (1 − 2·parity)
   for class i; moments = shot-means of X̄; the FULL shot-level covariance of the pooled vector
   via np.cov exactly as before (cross-position within-shot correlations handled exactly at the
