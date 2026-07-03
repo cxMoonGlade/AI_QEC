@@ -45,6 +45,25 @@ productionizes `nm_source`; `mechanisms/source_coupling.py` already productioniz
 `qutip_teacher_source`. In the package these become ONE `source/` layer — reconcile, don't copy a
 third time.
 
+**ARCHITECTURE DECISION (user, 2026-07-03) — "the package owns the physics core."** A dependency
+scan showed the moved forward substrate is SHARED, not simulator-exclusive:
+`cptp_channel` (audit+calibration+contexts+hardware — it is literally the learner-side CPTP kernel),
+`channels`/`catalog` (contexts=learner probe ladder), `exact.circuit_sim` (contexts+hardware),
+`exact.qutrit_dm` (audit). The user ratified: **keep this shared forward PHYSICS CORE inside
+`error_coupling_simulator`; `qec_twin` (learner/twin app: calibration, contexts, audit, hardware)
+depends on it via the shims.** So the package = **forward physics core + the coupling simulator**;
+`qec_twin` is the downstream learner/application. (Naming caveat: the package now owns the general
+physics core, so `error_coupling_simulator` is a slightly narrow name — rename is cheap, deferred.)
+
+**SCOPE REFINEMENT (what does NOT move — it is NOT the physics core):** the **decoder + R2 real-data
+hardware** stay in `qec_twin`. `hardware/m4_decode` (+ `b8_io`) drag in the whole R2 ingestion
+subsystem (`dataset`, `m1_report`, `stim_artifacts`) and are the frozen decoder + real Google data
+path — **evaluator/real-data side, per the standing "SIMULATOR ≠ decoder; DEM/decoder/LER never in
+the validity chain" rule.** The package's gates import the frozen decoder cross-package from
+`qec_twin.hardware.m4_decode` when needed. So the earlier plan's `decode/` folder is DROPPED.
+`audit/certify` (the teacher-certification seam — used only by simulator/teacher + tests, no learner
+consumer) DOES move (P4).
+
 **Packaging:** `pyproject.toml` uses `packages.find where=["src"]`, so `src/error_coupling_simulator/`
 with an `__init__.py` is auto-discovered + importable as `error_coupling_simulator` immediately — no
 pyproject change to be importable. A true separate DISTRIBUTABLE (own `pyproject`, `qec_twin` no
@@ -95,8 +114,11 @@ src/error_coupling_simulator/
 - **P3 — mechanisms** (`axis1_primitives,qutrit_teachers,catalog,seam_teachers,source_process,
   source_coupling` → `source/`+`mechanisms/`+`oracles/teacher_source`; consolidate the source dupes),
   shims at old paths. `tests/test_source_*` green.
-- **P4 — certify + decode** (`audit/certify/*` → `certify/`; `hardware/{m4_decode,b8_io}` → `decode/`),
-  shims. `tests/test_certify` green.
+- **P4 — certify ONLY** (`audit/certify/*` → `certify/`), shims. `decode/` DROPPED (see SCOPE
+  REFINEMENT — the decoder + R2 hardware stay in qec_twin; gates import decode_dem cross-package).
+  `tests/test_certify` green.
+
+**STATUS: P1 ✅ (6ddfcb5), P2 ✅ (9d6b70c/384ada4/6354a51), P3 ✅ (2cb8cdd). Next = P4 (certify).**
 - **P5 — frontend + teacher** (`simulator/*` → `frontend/`; `coupled_teachers` → `teachers/`), shims.
   `tests/test_simulator_*` + `tests/test_coupled_cycle_teacher` green.
 - **P6 — quantum_bath extraction** (pull the pseudomode-embedding core out of the pilot run scripts
