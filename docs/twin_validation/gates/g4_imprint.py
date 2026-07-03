@@ -39,6 +39,7 @@ from pathlib import Path
 import numpy as np
 
 from _gate_common import (  # noqa: E402
+    _REPO_ROOT,
     ConfigError,
     assert_fixture_consistency,
     build_regime,
@@ -62,6 +63,8 @@ BOOT_B = 200
 BOOT_SEED = 777
 Z_MARGINAL = 3.0        # (c) P-G4-3 gate threshold
 CORRQEC_URL = "github.com/jkfids/corrqec"
+CORRQEC_COMMIT = "a62e765614b5db51620467b51695b66fd14749e3"  # (declared vendored commit; F5)
+CORRQEC_DEFAULT_ROOT = "external/baselines/corrqec"          # vendored, gitignored (F5)
 
 
 # =========================================================================== #
@@ -281,36 +284,86 @@ def marginal_rate_check(shared, markov, colmap, n_stab, spt: int) -> dict:
 # =========================================================================== #
 # P-G4-4 corrqec cross-check (contract §H Pauli-layer scope; DEFERRED if absent)#
 # =========================================================================== #
+def _corrqec_git_commit(root: Path) -> str | None:
+    """Best-effort HEAD of the vendored corrqec (read-only); None if git/./git unavailable."""
+
+    import subprocess
+
+    try:
+        out = subprocess.run(["git", "-C", str(root), "rev-parse", "HEAD"],
+                             capture_output=True, text=True, timeout=10)
+        if out.returncode == 0:
+            return out.stdout.strip()
+    except Exception:
+        pass
+    head = root / ".git" / "HEAD"
+    try:
+        ref = head.read_text(encoding="utf-8").strip()
+        if ref.startswith("ref:"):
+            ref_path = root / ".git" / ref.split(" ", 1)[1].strip()
+            return ref_path.read_text(encoding="utf-8").strip()
+        return ref
+    except Exception:
+        return None
+
+
 def corrqec_crosscheck(corrqec_root, meas_shared_pooled_rate: float) -> dict:
     """P-G4-4 (b/c). corrqec is the registered EXTERNAL generation reference (contract §H:
-    Pauli/temporal-mask layer ONLY; it can NEVER verify the analog joint-L teacher). NOT vendored
-    => `corrqec_crosscheck: "DEFERRED(not vendored)"` (does NOT fail the gate). NEVER simulated by
-    our own generator (anti-circular). When the orchestrator vendors github.com/jkfids/corrqec
-    pristine and provides the root, the §H-scoped 2-moment match runs; adapter mismatches are
-    reported as DEFERRED(adapter-mismatch: ...) with the discovered package structure printed."""
+    Pauli/temporal-mask layer ONLY; it can NEVER verify the analog joint-L teacher). NEVER simulated
+    by our own generator (anti-circular). DEFERRED never fails the gate.
 
-    if not corrqec_root:
-        return {"status": "DEFERRED(not vendored)", "scope": "contract-H Pauli/temporal-mask only",
+    F5 (2026-07-03): corrqec IS now vendored at ``external/baselines/corrqec`` @ CORRQEC_COMMIT
+    (pristine, gitignored). This wires ``--corrqec-root`` to it: resolve the root (default to the
+    vendored path), verify the declared commit, and DISCOVER the temporal-mask API — the syndrome-
+    measurement models ``LongTimePairM{Exp,Poly}(A, p, n)`` in
+    ``src/noisemodel/long_time_pair_m.py`` (stim ``FlipSimulator.broadcast_pauli_errors`` on
+    syndrome qubits per round with a two-time ``interaction_func``; ``calc_marginals_per_round``
+    gives the matched-marginal independent circuit). The full §H-scoped 2-moment comparison
+    (generate corrqec temporal-pair records at (A,p,n) inverted to match our shared arm's per-round
+    measurement flip rate + lag-1 Spitz p_ij, then test lag-2..4 within |z|<3, NEVER vs our
+    generator) is a GROUNDED next step but requires a theory-first read of corrqec's
+    ``interaction_func`` -> lag-1 inversion + a reading note (anti-toy: no snippet-assembled
+    comparison); DEFERRED to that dedicated adapter pass. Reported honestly with the discovered API.
+    """
+
+    root = Path(corrqec_root) if corrqec_root else None
+    if root is None:
+        return {"status": "DEFERRED(root-not-supplied)", "scope": "contract-H Pauli/temporal-mask only",
                 "url": CORRQEC_URL, "gates": False,
-                "note": "corrqec absent from external/baselines (verified); never simulated by our "
-                        "own generator (anti-circular). Pass --corrqec-root to enable."}
-    root = Path(corrqec_root)
+                "note": f"pass --corrqec-root (default vendored path {CORRQEC_DEFAULT_ROOT!r})."}
     if not root.exists():
         return {"status": f"DEFERRED(corrqec-root-missing: {root})", "gates": False,
-                "scope": "contract-H Pauli/temporal-mask only"}
-    # Discover the package structure without importing project logic that could fail loudly here.
-    discovered = sorted(str(p.relative_to(root)) for p in root.glob("*") if p.is_dir())[:20]
-    # The pristine-adapter path is intentionally not auto-run in this authoring lane: the exact
-    # temporal-mask API of corrqec is vendored+declared by the orchestrator. Report DEFERRED with
-    # the discovered structure so the orchestrator wires the §H-scoped 2-moment (det rate + lag-1
-    # p_ij matched, lag-2..4 tested within |z|<3) match against corrqec's generator, NEVER ours.
-    return {"status": "DEFERRED(adapter-pending: orchestrator wires the pristine corrqec temporal-"
-                       "mask generator; this lane never simulates it)",
-            "scope": "contract-H Pauli/temporal-mask only", "corrqec_root": str(root),
-            "discovered_top_level": discovered, "gates": False,
-            "shared_pooled_delta_rate_to_match": float(meas_shared_pooled_rate),
-            "planned_match": "det rate + lag-1 Spitz p_ij matched (2 moments); lag-2..4 tested "
-                             "within |z|<3 each (b) — NEVER vs our own generator"}
+                "scope": "contract-H Pauli/temporal-mask only", "url": CORRQEC_URL}
+    # verify the declared vendored commit (best-effort; anti-circular provenance).
+    head = _corrqec_git_commit(root)
+    commit_ok = (head == CORRQEC_COMMIT) if head else None
+    # discover the temporal-mask (Pauli-layer) noise-model API — files, not an import (avoids the
+    # `src`-namespace collision + running corrqec deps in this lane).
+    nm = root / "src" / "noisemodel"
+    temporal_mask_models = sorted(p.name for p in nm.glob("long_time_*.py")) if nm.exists() else []
+    m_variant_present = (nm / "long_time_pair_m.py").exists() and (nm / "long_time_streak_m.py").exists()
+    return {
+        "status": "DEFERRED(adapter-grounded: root wired + API discovered; full 2-moment comparison "
+                  "needs a theory-first interaction_func->lag-1 inversion + reading note)",
+        "scope": "contract-H Pauli/temporal-mask (syndrome X_ERROR) layer ONLY — NEVER the analog "
+                 "joint-L teacher (that is G2 + channel oracles)",
+        "corrqec_root": str(root), "url": CORRQEC_URL,
+        "declared_commit": CORRQEC_COMMIT, "observed_commit": head, "commit_verified": commit_ok,
+        "discovered_temporal_mask_models": temporal_mask_models,
+        "syndrome_measurement_variant_present": bool(m_variant_present),
+        "api": {"model": "LongTimePairM{Exp,Poly}(A, p, n)",
+                "module": "src/noisemodel/long_time_pair_m.py",
+                "mechanism": "stim FlipSimulator.broadcast_pauli_errors(X, mask) on syndrome qubits "
+                             "per round; two-time interaction_func; calc_marginals_per_round for the "
+                             "matched-marginal independent circuit"},
+        "gates": False,
+        "shared_pooled_delta_rate_to_match": float(meas_shared_pooled_rate),
+        "planned_match": "sample corrqec LongTimePairM records with (A,p,n) inverted to match our "
+                         "shared arm's per-round measurement flip rate + lag-1 Spitz p_ij (2 "
+                         "moments); test lag-2..4 Spitz p_ij within |z|<3 each (b). NEVER vs our own "
+                         "generator (anti-circular). Blocker: interaction_func->lag-1 inversion needs "
+                         "a theory-first read of long_time_pair.py + a reading note (anti-toy).",
+    }
 
 
 # =========================================================================== #
@@ -347,6 +400,11 @@ def main(argv=None) -> int:
     m = int(cfg.get("m", 0))
     seeds = cfg.get("seeds", {})
     corrqec_root = args.corrqec_root or cfg.get("corrqec_root")
+    if not corrqec_root:
+        # F5: wire the vendored corrqec by default (external/baselines/corrqec, gitignored).
+        default_root = _REPO_ROOT / CORRQEC_DEFAULT_ROOT
+        if default_root.exists():
+            corrqec_root = str(default_root)
 
     teacher = construct_teacher(cfg)
     regime = build_regime(cfg, teacher)
@@ -430,8 +488,9 @@ def main(argv=None) -> int:
         "decode_delta_LER": decode_delta_class,
         "P_G4_2_per_detector_residuals": "GENUINE-reported (unbarred; a correlation-blind foil, "
                                          "not a fit — never gates)",
-        "P_G4_4_corrqec": "DEFERRED (external reference not vendored; never our own generator — "
-                          "anti-circular contract §H)",
+        "P_G4_4_corrqec": "DEFERRED-grounded (vendored @ a62e7656 + root wired + temporal-mask API "
+                          "discovered; full 2-moment comparison deferred to a theory-first adapter "
+                          "pass; NEVER our own generator — anti-circular contract §H)",
         "matched_dem_construction": "GENUINE (public geometry + empirical pooled rate only; the "
                                     "construction hash pins it — a truth-fed DEM changes the hash, L7)",
     }

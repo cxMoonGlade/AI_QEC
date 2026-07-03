@@ -13,6 +13,8 @@ isolation is structural, not statistical.
                    label field in the LIVE dict, re-emit at the same seed -> byte-identical.
               (iii) relabel-hook probe: exercise a documented relabel/clone hook if present,
                     else SKIPPED(no-relabel-hook). A-G7-1: records exactly which forms ran.
+              (iv, F7) last_emit snapshot: mutate truth['last_emit'] then re-access .truth ->
+                    the fresh copy must be unaffected (the deepcopy is not a live reference).
   P-G7-3 (a): isinstance(teacher, ControlledTeacher) (runtime-checkable); .truth is a dict property
               reachable evaluator-side only; CertReport.truth is the only cert-side conduit.
   P-G7-4 (a): static import scan — NO module under src/qec_twin/calibration/ or hardware/ imports
@@ -20,7 +22,7 @@ isolation is structural, not statistical.
               legitimately imports mechanisms.axis1_primitives) with the printed reason.
   Cheat-twin: SKIPPED(optional diagnostic per contract G7 — not a gate) row.
 
-Verdict: PASS <=> P-G7-1 AND P-G7-2(i,ii) AND P-G7-3 AND P-G7-4.
+Verdict: PASS <=> P-G7-1 AND P-G7-2(i,ii,iv) AND P-G7-3 AND P-G7-4.
 
 SCRIPTED-EXECUTION: committed, __main__-guarded; preconditions + printed evidence + flush;
 emits g7_isolation.json. GPU-only where the teacher touches cuda (emit at N=64 is cheap).
@@ -161,12 +163,55 @@ def check_truth_scramble(teacher, regime, *, m: int, n: int, seed: int) -> dict:
         teacher.__dict__.update(saved)
     det_id = bool(np.array_equal(np.asarray(base["det"]), np.asarray(after["det"])))
     obs_id = bool(np.array_equal(np.asarray(base["obs"]), np.asarray(after["obs"])))
+    # F7 honesty (scrutinize-vacuous-checks): report the coverage. Form 1 (truth property VIEW)
+    # cannot affect emit BY CONSTRUCTION — teacher.truth rebuilds a fresh dict each access, so the
+    # scrambled view is discarded and never reaches emit; it is a structural non-leak, not a
+    # falsifiable behaviour test. Form 2 (instance __dict__) is the falsifiable probe, but for a
+    # well-isolated teacher emit reads NO instance label strings and the frozen dataclass fields
+    # (_source/_config/_spec) are not recursed, so it scrambles few fields (n_scrambled_attr). The
+    # invariance holding is genuine evidence of isolation but the probe has LOW coverage.
+    form2 = next((f for f in forms_ran if f["form"] == "scramble_instance_dict_label_strings"), None)
+    n_form2 = int(form2["fields"]) if form2 else 0
+    coverage = "GENUINE" if n_form2 >= 3 else "GENUINE-LOW-COVERAGE"
     return {"forms_ran": forms_ran, "det_byte_identical_after_scramble": det_id,
             "obs_byte_identical_after_scramble": obs_id, "pass": bool(det_id and obs_id),
             "protected_operational_keys": sorted(_PROTECTED_STRING_KEYS),
+            "form2_scrambled_fields": n_form2, "coverage_class": coverage,
             "note": "scrambling string LABELS (not the numeric mechanism fields, not the protected "
                     "operational strings) must not move the records; a label-reading emit would "
-                    "break here (red-team R4)"}
+                    "break here (red-team R4). Form 1 is a by-construction non-leak (fresh-dict "
+                    "property); form 2 is the falsifiable probe but low-coverage for this teacher "
+                    "(emit reads no instance label strings) — the pass is real isolation, weak power."}
+
+
+def check_last_emit_snapshot(teacher, regime, *, m: int, n: int, seed: int) -> dict:
+    """(iv, F7) truth['last_emit'] must be a SNAPSHOT (deep copy): an evaluator mutating it must not
+    reach the teacher's internal `_last_emit`, and two `.truth` accesses must not share the mutable
+    reference. C1 now reads truth['last_emit']['params_manifest_sample'], so this isolation matters.
+
+    Emits once to populate `_last_emit`, grabs truth['last_emit'], mutates the evaluator's copy, then
+    re-accesses `.truth` and asserts the fresh copy is unaffected (proves the deepcopy at
+    coupled_teachers.py:truth). A live-reference bug would leak the mutation into the next access."""
+
+    teacher.emit(regime, m=int(m), N=int(n), seed=int(seed))  # populate _last_emit
+    t1 = teacher.truth
+    le1 = t1.get("last_emit")
+    if not isinstance(le1, dict):
+        return {"status": "SKIPPED(last_emit-not-dict-after-emit)", "last_emit_type": str(type(le1)),
+                "pass": True, "note": "no last_emit dict to probe (teacher may not record one)"}
+    le1["__g7_mutation_probe__"] = "__MUTATED__"
+    original_seed = le1.get("seed")
+    if isinstance(original_seed, int):
+        le1["seed"] = -999_999
+    t2 = teacher.truth
+    le2 = t2.get("last_emit") or {}
+    fresh_object = bool(le1 is not le2)
+    unaffected = bool("__g7_mutation_probe__" not in le2 and le2.get("seed") != -999_999)
+    return {"fresh_object_each_access": fresh_object,
+            "internal_state_unaffected_by_mutation": unaffected,
+            "pass": bool(fresh_object and unaffected),
+            "note": "truth['last_emit'] is a deepcopy snapshot; mutating the evaluator's copy must "
+                    "not reach the teacher's _last_emit nor the next .truth access (F7)"}
 
 
 def check_relabel_hook(teacher, regime, *, m: int, n: int, seed: int) -> dict:
@@ -293,6 +338,12 @@ def main(argv=None) -> int:
     p2iii = check_relabel_hook(teacher, regime, m=m, n=n_g7, seed=seed)
     print(f"[P-G7-2(iii)] relabel hook: {p2iii['status']}", flush=True)
 
+    p2iv = check_last_emit_snapshot(teacher, regime, m=m, n=n_g7, seed=seed)
+    print(f"[P-G7-2(iv)] last_emit snapshot (F7): fresh_each_access="
+          f"{p2iv.get('fresh_object_each_access')} unaffected_by_mutation="
+          f"{p2iv.get('internal_state_unaffected_by_mutation')} -> "
+          f"{'PASS' if p2iv['pass'] else 'FAIL'}", flush=True)
+
     p3 = check_protocol(teacher)
     print(f"[P-G7-3] isinstance(ControlledTeacher)={p3['isinstance_ControlledTeacher']} "
           f"truth_is_dict={p3['truth_is_dict']} truth_has_records={p3['truth_carries_record_arrays']} "
@@ -302,13 +353,20 @@ def main(argv=None) -> int:
     print(f"[P-G7-4] import scan calibration+hardware: scanned={p4['scanned_counts']} "
           f"violations={p4['violations']} -> {'PASS' if p4['pass'] else 'FAIL'}", flush=True)
 
-    verdict = "PASS" if (p1["pass"] and p2i["pass"] and p2ii["pass"] and p3["pass"] and p4["pass"]) else "FAIL"
+    verdict = "PASS" if (p1["pass"] and p2i["pass"] and p2ii["pass"] and p2iv["pass"]
+                         and p3["pass"] and p4["pass"]) else "FAIL"
 
     check_class = {
         "P_G7_1_payload_surface": "GENUINE (a rich manifest leak fails — red-team R4)",
         "P_G7_2i_determinism": "GENUINE (same seed must reproduce byte-identical records — C-8)",
-        "P_G7_2ii_truth_scramble": "GENUINE (a label-reading emit moves the records after scramble)",
+        "P_G7_2ii_truth_scramble": (
+            f"{p2ii['coverage_class']} (form1 = by-construction non-leak via fresh-dict truth "
+            f"property; form2 scrambled {p2ii['form2_scrambled_fields']} instance label strings — "
+            "the invariance is real isolation, but weak power when emit reads no labels; F7)"),
         "P_G7_2iii_relabel_hook": "GENUINE if a hook exists, else SKIPPED(no-relabel-hook) (visible)",
+        "P_G7_2iv_last_emit_snapshot": "GENUINE (a live-reference truth['last_emit'] would leak the "
+                                       "evaluator's mutation into the next .truth access / teacher "
+                                       "state — the F7 deepcopy must prevent it)",
         "P_G7_3_protocol": "GENUINE (runtime-checkable protocol + truth-carries-no-records)",
         "P_G7_4_import_scan": "GENUINE (a mechanisms import in calibration/hardware fails the "
                               "isolation contract; simulator/ excluded with reason)",
@@ -325,6 +383,7 @@ def main(argv=None) -> int:
         "P_G7_2i_determinism": p2i,
         "P_G7_2ii_truth_scramble": p2ii,
         "P_G7_2iii_relabel_hook": p2iii,
+        "P_G7_2iv_last_emit_snapshot": p2iv,
         "P_G7_3_protocol": p3,
         "P_G7_4_import_scan": p4,
         "cheat_twin": {"status": "SKIPPED(optional diagnostic per contract G7 — not a gate)"},

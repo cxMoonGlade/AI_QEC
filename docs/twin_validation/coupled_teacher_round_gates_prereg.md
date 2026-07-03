@@ -303,82 +303,136 @@ Small/zero deltas are FINDINGS, not failures.
 
 ---
 
-## 5. G6 — coupling-ablation ON RECORDS (the Axis-2 anti-toy core)
+## 5. G6 — record-level coupling FAITHFULNESS REPORT (Axis-2; re-registered 2026-07-03)
 
 Script `gates/g6_ablation.py`; evidence `gates/g6_ablation.json`. Three arms at N_run
 (= N\* or `g6_n_override` ≤ 1e6): shared (101) / markovian (202) / off (303).
 
-### 5.1 Registered statistics (declared BEFORE the run)
+**RE-REGISTRATION NOTICE (amendment G6-A1, §10; done BEFORE any G6 run — predict-before-measure).**
+The original §5 (pass/fail discriminative gate on the raw Spitz-p_ij / count-autocov z-scores) was
+proven — from committed constants, before any run — to be unsatisfiable on a *correct* teacher.
+Derivation + committed-constant evidence:
+`docs/twin_validation/g6_null_model_rederivation_2026-07-03.md` +
+`outputs/twin_validation/g6_null_feasibility_from_constants.py` (run 2026-07-03, `python-exit=0`).
+The four proven facts (all reproduced from committed constants, the a-class one with a from-scratch
+i.i.d.-bit self-check):
 
-- **S1 — cross-cycle detector correlation, the LEDGERED Spitz p_ij** (METRICS.md DEM-edge
-  row, exact Eq. 13 form):
-  `p̂_ij = ½ − √(¼ − cov(x_i,x_j)/(1 − 2⟨x_i⊕x_j⟩))`
-  for timelike detector pairs (i,j) = (delta(c,r), delta(c,r+ℓ)), ℓ ∈ {1,2,3,4}, pooled
-  mean over r and checks c (per-pair values retained in JSON). Validity domain enforced:
-  denominator > 0 and √-argument ≥ 0; invalid pairs flagged + excluded + counted.
-  Two-point-only hyperedge blindness stated (Takou–Brown, ledger convention).
+1. **(a-exact) The delta stream is MA(1).** `D_{c,r} = m_{c,r-1} ⊕ m_{c,r}` shares the measured
+   bit `m_{c,r}` with `D_{c,r+1}` (`record_layout.py:110-135`). Under i.i.d. rounds (the `off` arm)
+   the pooled Spitz **`p_ij(lag1) = μ = p_ro + p_rs − 2 p_ro p_rs = 0.0149`** (NOT 0), and
+   `p_ij(lag ≥ 2) = 0` exactly. So §5.4-old "Off ≈ 0 exactly" is FALSE and the old C3/C4
+   "flat (|z|<3)" clauses read `|z| ≈ 15` at N=1e6 — unsatisfiable.
+2. **(b) A trajectory-mean-instrument common-mode** ≈ `8.7e-5` sits at ALL lags in BOTH `shared`
+   and `markovian` (permutation-invariant), ~10³× the memory signal; it cancels only in the
+   difference.
+3. **(c) The markovian permutation is EXCHANGEABLE, not independent:** at R=12 it retains
+   `0.727` of the shared lag-1 covariance — the old C3 two-clause test is jointly strained.
+4. **(d) The genuine memory discriminator (shared vs markovian) is second-order** in the small
+   γφ-only per-round rate modulation (ζ record-dead, readout/reset at trajectory mean), giving
+   `N_detect ∈ [1.1e10, 1.2e15]` across `τ_eff ∈ [50,1000] ns` — `≫ 1e6` by 4–9 orders.
+
+The sub-floor record imprint of **mild 1/f** is a **FAITHFUL property, not a failure** (consistent
+with G0-v1, H2's `ζ+γφ = Kam Class 0`, the build-contract G4/G6→faithfulness reframe, and the
+scope that the classical 1/f slice is scaffolding while the contribution is the coherence sector).
+G6 is therefore re-registered as a **faithfulness report**: reproduce the derived record structure
++ honestly report the sub-detectable memory imprint. No clause requires the infeasible memory
+discrimination; the memory magnitude never gates (as with G4's ΔLER).
+
+### 5.1 Registered statistics (unchanged definitions; declared null values added)
+
+- **S1 — the LEDGERED Spitz p_ij** (METRICS.md DEM-edge row, exact Eq. 13):
+  `p̂_ij = ½ − √(¼ − cov(x_i,x_j)/(1 − 2⟨x_i⊕x_j⟩))` for timelike pairs
+  (i,j) = (delta(c,r), delta(c,r+ℓ)), ℓ ∈ {1..4}, pooled over r and checks c (per-pair retained).
+  Validity domain enforced (denom > 0, √-arg ≥ 0; invalid flagged+excluded+counted). Two-point
+  hyperedge blindness stated (Takou–Brown). **Declared null (a):** off-arm `p_ij(lag1) = μ_c`
+  (Z-check `= p_instr = 0.0149`; X-check `= p_instr + O(0.5 γφ_base τ_eff)`), `p_ij(lag ≥ 2) = 0`.
 - **S2 — lag-ℓ autocovariance of per-round detector counts:** D_r = Σ_c x_{c,r};
-  ĉ_ℓ = mean over r of Cov_shots(D_r, D_{r+ℓ}) (per-(r,ℓ) shot-covariance averaged over r —
-  robust to round inhomogeneity), ℓ ∈ {1..4}.
-- **S3 — cross-mechanism record statistic (registered expectation ≈ 0):**
-  r3 = Pearson_shots(Σ_r D_r, obs). WHY this is the ζ-witness: the det stream is carried by
-  γφ; obs (Z on an idle data qubit) is dephasing-invariant (a) and could co-move with det
-  only through a ζ-mediated channel (record-dead, G0-v1: TV 4.3e-11) or a per-round-varying
-  readout/reset instrument (excluded by the slice-1 trajectory-mean scoping). Confirming
-  r3 ≈ 0 is a GENUINE faithfulness check of that scoping (a per-round instrument leak or a
-  live-ζ bug would move it). Degenerate handling: Var(obs) = 0 ⇒ r3 := 0 + flag
-  `degenerate_obs_constant` (reported).
-- SEs: §2.4 trajectory-cluster bootstrap (B=200, seed 777). Primary lag = 1 (single test —
-  no multiplicity correction needed); lags 2..4 reported.
+  ĉ_ℓ = mean over r of Cov_shots(D_r, D_{r+ℓ}), ℓ ∈ {1..4}. **Declared null (a/b):** off-arm
+  ĉ_1 ≠ 0 (MA(1)), ĉ_{ℓ≥2} = 0; shared & markovian carry the common-mode `≈ 8.7e-5` at all lags.
+- **S3 — cross-mechanism r3 = Pearson_shots(Σ_r D_r, obs)** (the ζ-witness): obs (Z on an idle data
+  qubit) is dephasing-invariant (a) and could co-move with the γφ-carried det stream only through
+  a ζ-mediated channel (record-dead, G0-v1) or a per-round-varying readout/reset instrument
+  (excluded by trajectory-mean scoping) ⇒ registered ≈ 0 all arms. Degenerate: Var(obs)=0 ⇒
+  r3 := 0 + flag `degenerate_obs_constant`.
+- SEs: §2.4 trajectory-cluster bootstrap (B=200, seed 777). Primary lag = 1; lags 2..4 reported.
 
-### 5.2 Registered PASS conditions (all (c) gates on (b) expectations)
+### 5.2 Registered predictions + PASS conditions (report, not discriminate)
 
-- **C1 — R1 positive control (red-team R1; params must actually vary).** From evaluator
-  truth: (i) per-cycle γφ varies across rounds (spread > 0) for ≥ 90% of ≥ min(N,256)
-  inspected shots; (ii) `cross_mechanism_correlation(zz_zeta_radns, gamma_phi_per_ns)`
-  ≥ 0.9 on a shared-arm truth trajectory (both fields are monotone maps of one z ⇒ near 1).
-  **STATED ASSUMPTION A-G6-1:** truth key spellings for {per-shot z trajectories, per-cycle
-  params} are resolved by a declared candidate list; unresolvable ⇒ loud FAIL printing
-  `sorted(truth.keys())`.
-- **C2 — shared arm shows structure:** z(S1@lag1) ≥ 3 OR z(S2@lag1) ≥ 3.
-- **C3 — independent kills it:** on the markovian arm |z(S1@lag1)| < 3 AND |z(S2@lag1)| < 3,
-  AND the shared-minus-markovian difference of the C2-passing statistic has z ≥ 3.
-- **C4 — off collapses:** on the off arm |z(S1@lag1)| < 3 AND |z(S2@lag1)| < 3. (The off
-  arm's detector RATE stays at the base-γφ level — the collapse claim is about CORRELATION
-  structure, not rate; stated.)
-- **C5 — ζ-witness:** |z(r3)| < 3 in ALL three arms (or degenerate-flagged).
-- **P1 — pipeline null stub (in-script negative control):** synthetic i.i.d. Bernoulli det
-  records at the shared arm's per-(c,r) marginals (numpy, seeded) run through the SAME
-  statistic pipeline must read |z| < 3 — the pipeline must not manufacture correlation.
-- **P2 — pipeline planted-correlation stub (in-script positive control):** synthetic
-  records with a per-shot common rate multiplier exp(g), g ~ N(0, 0.5²) (c constant, sized
-  to be comfortably detectable) must read z ≥ 5 — the pipeline must be able to detect.
-  P1/P2 make the g6 machinery self-falsifying (a deliberately shared-free teacher stub and
-  a deliberately correlated one).
+Feasible, GENUINE checks (each has a falsifiable regime + an independent reference):
 
-PASS ⇔ C1 ∧ C2 ∧ C3 ∧ C4 ∧ C5 ∧ P1 ∧ P2.
+- **R-G6-A (a-exact) — off-arm MA(1) closed form.** off `p_ij(lag1)` matches the declared per-check
+  `μ_c` within 3·SE (Z-check to `p_instr = 0.0149`; X-check to `p_instr + O(0.5 γφ_base τ_eff)`),
+  AND off `S1/S2(lag ≥ 2)` consistent with 0 within 3·SE. Independent reference: the closed form
+  (derivation §2) + the from-scratch i.i.d.-bit self-check. **Replaces the old C4.** A wiring bug
+  (wrong fold / non-independent rounds) breaks it.
+- **R-G6-B (a-exact) — MA(1) 1-dependence.** off `|z(S2@lag1)| ≥ 3` (nonzero lag-1) AND off
+  `S2(lag ≥ 2)` consistent with 0 — the moving-average signature.
+- **R-G6-C (b) — common-mode equality.** `shared` and `markovian` agree at lag ≥ 2 within 3·SE_diff
+  (permutation-invariance of the ≈ 8.7e-5 common-mode). Genuine check that `markovian_baseline`
+  preserves marginals + common-mode; a mis-built control diverges. **Replaces the old C3's
+  "markovian flat" intent.**
+- **R-G6-D (b) — REPORTED sub-detectability, NEVER gated.** The shared−markovian memory
+  autocovariance (S2 difference at lag ≥ 2) is reported with its cluster-bootstrap SE alongside the
+  derived `N_detect ∈ [1.1e10, 1.2e15]` (τ bracket). Expectation: consistent with 0 at N ≤ 1e6 (the
+  faithful sub-floor). A surprise |z| ≥ 3 here at N ≤ 1e6 would be a FINDING (reported, not a fail —
+  it would mean the imprint is larger than the second-order derivation predicts).
+- **C1 (kept) — R1 positive control.** From truth: per-cycle γφ varies across rounds (spread > 0)
+  for ≥ 90% of the exposed param-sample shots, AND `cross_mechanism_correlation(zz_zeta_radns,
+  gamma_phi_per_ns) ≥ 0.9` on a shared-arm truth trajectory. **A-G6-1:** truth key spellings from a
+  declared candidate list; unresolvable ⇒ loud FAIL printing `sorted(truth.keys())`. Independent of
+  the record-N problem (reads the fan-out, not the records).
+- **C5 (kept) — ζ-witness.** |z(r3)| < 3 in ALL three arms (or degenerate-flagged).
+- **P1 (FIXED) — pipeline null.** Synthetic i.i.d. **measured bits** `~ Bernoulli` at the shared
+  arm's per-(c,r) implied bit rate, XORed into deltas (reproducing the MA(1) floor), run through the
+  SAME pipeline: the shared−off **difference** at lag 1 and all lag ≥ 2 z-scores must read `|z| < 3`
+  — the pipeline must not manufacture correlation ABOVE the MA(1) floor. (The old P1 drew i.i.d.
+  *delta* bits — the wrong null; it missed the whole MA(1) structure.)
+- **P2 (RELABELED) — common-mode sensitivity control.** The planted per-shot common-rate multiplier
+  `exp(g), g ~ N(0, 0.5²)` IS a common-mode; P2 confirms the pipeline detects a common-mode latent
+  (`|z| ≥ 5`). Declared: this validates common-mode sensitivity, NOT memory discrimination.
+- **P3 (NEW) — planted-MEMORY positive control.** Synthetic records with an AR(1)-correlated
+  per-round rate at an INFLATED amplitude (c constant, sized detectable), compared to its
+  per-round permutation via the shared−markovian **difference** statistic: `|z| ≥ 5`. Validates that
+  the difference machinery CAN detect memory when the amplitude is large enough — then §5.3 notes
+  the real teacher's amplitude is sub-floor. Falsifies a difference statistic that is blind to
+  memory by construction.
 
-### 5.3 Power note (honest)
+**Verdict rule (c):** PASS ⇔ R-G6-A ∧ R-G6-B ∧ R-G6-C ∧ C1 ∧ C5 ∧ P1 ∧ P2 ∧ P3 ∧ (the §8.2 L6
+independent-GT lag-1 algebraic-identity check, a-exact). R-G6-C is CONDITIONAL — it gates only when
+the common-mode is detected in the shared arm (S2 lag≥2 |z| ≥ 3); when the common-mode is
+sub-detected at the chosen N it is VACUOUS-power (reported, does not block PASS). R-G6-D is REPORTED
+(never flips the verdict). No clause requires the infeasible memory discrimination; the memory
+imprint magnitude never gates.
 
-N\* was sized by G0-v2 for the FULL record-distribution TV (the sup over statistics); a
-specific coarse statistic (S1/S2) can carry less power. Registered consequence: a C2 miss
-with all controls passing does NOT immediately mean no-signal; the single registered
-amendment (§10) is a one-time re-run at N_run = 1e6 (the FEASIBLE_N cap). Still flat ⇒
-registered FINDING ("structure not detectable at cap") and G6 FAIL.
+### 5.3 Feasibility note (the honest finding — REPORTED, class b)
 
-### 5.4 Registered expectations per arm (b)
+The memory discriminator was sized before the run (derivation §6): `N_detect ∈ [1.1e10, 1.2e15]`
+(conservative, single pooled statistic) across `τ_eff ∈ [50, 1000] ns`; even the OPTIMISTIC corner
+(pool all lag-1 pairs, `τ = 1000 ns`) bottoms at `~2.4e8`, still ≥240× the 1e6 cap (you would need
+an unphysical `τ_eff ≈ 3000 ns` to reach ~3e6). ≫ the cap by 2–9 orders — because matched marginals
+force the discriminator to second order and mild 1/f makes it tiny, while a permutation-invariant
+common-mode (≈ 8.7e-5, ~10³× larger) cancels only in the difference. Independently reconciled by an
+un-led adversarial re-derivation (`N ∈ [2.4e8, 6e10]`, its optimistic-pooled bracket). This is the registered FINDING: **the
+record-level cross-cycle memory imprint of the slice-1 mild-1/f source is sub-detectable at feasible
+N — a faithful property.** The coupling is certified at the CHANNEL level (G2) and in the source
+truth; it is NOT claimed to be record-discriminable at this amplitude. (The old §5.3 "one-time re-run
+at 1e6" amendment path is retired — subsumed by this reframe; G6's single amendment is this
+re-registration.)
 
-Shared: S1@lag1 > 0 (source memory across cycles; 1/f autocorrelation over t_cycle) —
-detectable at z ≥ 3 given §5.3. Markovian: S1/S2 ≈ 0 (the per-field permutation destroys
-BOTH the field autocorrelation and same-cycle cross-mech coupling — stated: this baseline
-kills memory, which is what "independent" means here). Off: S1/S2 ≈ 0 exactly (constant
-params ⇒ i.i.d. rounds up to the fixed channel). S3 ≈ 0 everywhere.
+### 5.4 Registered expectations per arm (a/b) — CORRECTED
+
+- **Off:** `p_ij(lag1) = μ ≈ 0.0149` (structural MA(1), a-exact), `p_ij / S2 (lag ≥ 2) = 0` exact;
+  S3 ≈ 0.
+- **Markovian:** MA(1) `μ` at lag 1 + the common-mode ≈ 8.7e-5 at all lags; retains ≈ 0.73 of the
+  shared lag-1 excess covariance at R=12 (exchangeable, not independent); S3 ≈ 0.
+- **Shared:** MA(1) `μ` + common-mode + a **decaying** memory autocovariance (γφ² lags 1–4 ≈
+  `5.6e-12, 2.6e-12, 6.7e-13, ~0`) — the right SHAPE (present only in shared), sub-floor AMPLITUDE
+  on records; S3 ≈ 0.
 
 ### 5.5 Printed diagnostics
 
-Pooled delta-detector rate q̂ per arm; pileup fraction proxy q̂/2 (probability a
-second flip cancels inside one inter-measurement window — parity saturation; heuristic
-diagnostic, class (c)); n_traj, S, cluster count.
+Pooled delta-detector rate q̂ per arm; pileup fraction proxy q̂/2 (parity-saturation heuristic,
+class (c)); n_traj, S, cluster count; the derived `N_detect` bracket; the common-mode estimate.
 
 ---
 
@@ -442,9 +496,9 @@ Script `gates/run_gates.py`; evidence `gates/g8_runner.json`; runner
 | L5 | No check may share the engine with its referee | G0-v2 from-scratch GT + its drop-a-layer negative control (trips if vacuous) |
 | L6 | Spitz p_ij validity domain (denominator > 0, √-arg ≥ 0) | g6 flags + excludes + counts invalid pairs; direct-covariance cross-check on one arm |
 | L7 | DEM decode is correlation-blind (no teacher truth in the DEM) | g4 builds the DEM from public geometry + record-empirical pooled rate only; a truth-fed DEM would break the declared construction hash |
-| L8 | Ablation arms must differ where registered and ONLY there (marginals preserved) | P-G4-3 marginal z-test; g6 C3/C4 |
+| L8 | Ablation arms must differ where registered and ONLY there (marginals preserved) | P-G4-3 marginal z-test; g6 R-G6-A/B (off MA(1) floor) + R-G6-C (common-mode equality shared≈markov) |
 | L9 | Params must actually vary per round (dead-override toy, R1) | g6 C1 positive control |
-| L10 | The statistic pipeline itself must detect planted correlation and stay silent on none | g6 P1/P2 stubs |
+| L10 | The statistic pipeline must detect planted correlation (common-mode P2 + memory P3) and stay silent above the MA(1) floor on the correct null (i.i.d. measured bits → deltas, P1-fixed) | g6 P1/P2/P3 stubs |
 | L11 | Cluster structure of batched shots must enter the SEs | §2.4 cluster bootstrap; preconditions fail if n_traj < 2000 |
 
 ### 8.2 Independent ground-truth checks (rule I; one per part)
@@ -488,20 +542,38 @@ Script `gates/run_gates.py`; evidence `gates/g8_runner.json`; runner
 | P-G4-1 | b | ΔLER ∈ 0 ± 3·SE | FINDING (report only) |
 | P-G4-2 | a/c | pooled matched-rate identity; per-det residuals reported | report |
 | P-G4-3 | b | shared-vs-markov pooled det-rate \|z\| < 3 | gate FAIL |
-| P-G4-4 | b/c | corrqec §H-scoped agreement or DEFERRED | FAIL only on a RUN mismatch |
+| P-G4-4 | b/c | corrqec §H-scoped agreement or DEFERRED (the RUN comparison is NOT yet implemented — vendored+wired+API-discovered but the interaction_func→lag-1 inversion needs a theory-first reading note; `gates:False` is permanent until then, so the "RUN mismatch" branch is currently unreachable, by design) | FAIL only on a RUN mismatch |
 | P-G4-5 | a | DEM/detector-width structural | gate FAIL |
 | P-G5-1 | c | Markov-k convergence by k=6 else REJECTED | gate FAIL |
 | P-G5-2 | b | converged k\* ≤ 4 | FINDING |
 | P-G5-3 | a | NLL(k\*) ≤ NLL(0) + 3·SE | gate FAIL |
+| G6 R-A | a | off p_ij(lag1)=μ_c (0.0149); lag≥2=0 | gate FAIL |
+| G6 R-B | a | MA(1): off S2(lag1)≠0, S2(lag≥2)=0 | gate FAIL |
+| G6 R-C | b | common-mode equality shared≈markov (lag≥2) — CONDITIONAL (gates only if common-mode detected in shared; else VACUOUS-power, reported) | gate FAIL (when gated) |
+| G6 R-D | b | memory sub-detectable at N≤1e6 (derived N≥1.1e10) | REPORTED (never gates) |
 | G6 C1 | c | params vary + cross-mech corr ≥ 0.9 | gate FAIL |
-| G6 C2 | c | shared z ≥ 3 (S1 or S2, lag 1) | amendment path §5.3 then FAIL |
-| G6 C3 | c | markov flat + difference z ≥ 3 | gate FAIL |
-| G6 C4 | c | off flat | gate FAIL |
 | G6 C5 | b/c | r3 ≈ 0 all arms | gate FAIL |
-| G6 P1/P2 | c | pipeline null silent / planted detected | gate FAIL (pipeline) |
+| G6 P1 | c | pipeline null (i.i.d. bits→deltas) silent above MA(1) | gate FAIL |
+| G6 P2/P3 | c | common-mode detected / planted-memory detected | gate FAIL (pipeline) |
 | P-G7-1..4 | a | payload/scramble/protocol/import-scan | gate FAIL |
 | G8 | c | runner object complete; G1/G3a/G3b SKIPPED-visible | gate FAIL |
 
 ## 10. Amendment log
 
-(empty — one amendment max per gate; log date + gate + reason + what changed here.)
+- **G6-A1 (2026-07-03, pre-run, Track B / reviewer F1) — G6 re-registered from a pass/fail
+  discriminative gate to a FAITHFULNESS REPORT.** *Reason:* the original §5 conditions (raw Spitz-p_ij
+  / count-autocov z-scores discriminating shared vs markovian vs off) were proven, from committed
+  constants BEFORE any G6 run, to be unsatisfiable on a correct teacher — the delta stream is MA(1)
+  (off `p_ij(lag1)=μ=0.0149`, not 0; C3/C4 "flat" clauses read `|z|≈15` at N=1e6), a permutation-
+  invariant common-mode ≈ 8.7e-5 dominates and cancels only in the difference, the markovian
+  permutation is exchangeable (retains ~73% of the lag-1 covariance at R=12), and the genuine memory
+  discriminator is second-order with `N_detect ∈ [1.1e10, 1.2e15] ≫ 1e6`. *What changed:* §5.1 adds
+  the declared closed-form nulls; §5.2 replaces C2/C3/C4 with R-G6-A (off MA(1) closed form),
+  R-G6-B (1-dependence), R-G6-C (common-mode equality), R-G6-D (reported sub-detectability, never
+  gates), keeps C1/C5, fixes P1 (i.i.d. measured bits → deltas, not i.i.d. delta bits), relabels P2
+  (common-mode sensitivity), adds P3 (planted-memory positive control); §5.3 records the
+  sub-detectability FINDING and retires the "re-run at 1e6" path; §5.4 corrects the per-arm
+  expectations; §9 rows updated. Derivation:
+  `docs/twin_validation/g6_null_model_rederivation_2026-07-03.md`; committed-constant evidence:
+  `outputs/twin_validation/g6_null_feasibility_from_constants.py` (`python-exit=0`). This CONSUMES
+  G6's single amendment (§0 budget); a second amendment demand on G6 = a registered FINDING + STOP.

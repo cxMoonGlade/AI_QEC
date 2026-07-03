@@ -65,6 +65,39 @@ def build_axis1_codespec_frontend_spec(*, rounds: int = 2) -> CodeSpec:
     )
 
 
+def build_axis1_codespec_4q_frontend_spec(*, rounds: int = 2) -> CodeSpec:
+    """Build the registered 4q coupled-teacher variant (prereg §1.1): 3 data + 1 X-check ancilla.
+
+    Drops the ``z1`` Z-check (and ancilla 4) of the 5q fixture; keeps the ``x0`` X-check (X on
+    data 0 via ancilla 3, the same superposition-bearing static-ZZ edge (0,3)) and the
+    ``logical_z2`` Z-logical on data 2. Data qubit 1 sits in NO check and NO observable, so it
+    gets no final measurement (grounded via ``record_layout.final_measurements``): finals =
+    ``{q0: X, q2: Z}``. Hence measured bits ``M(R) = R`` (one ancilla read per round) ``+ 2``
+    finals ``= R + 2`` (n_stab = 1). Registered as a SEPARATE curve — no silent fixture swap.
+    """
+
+    return CodeSpec(
+        name="axis1_codespec_4q_frontend",
+        num_qubits=4,
+        data_qubits=(
+            CodeQubit(0, "data", (0.0,)),
+            CodeQubit(1, "data", (1.0,)),
+            CodeQubit(2, "data", (2.0,)),
+        ),
+        ancilla_qubits=(
+            CodeQubit(3, "ancilla", (0.0, 0.5)),
+        ),
+        checks=(
+            StabilizerCheck("x0", 3, (PauliTerm(0, "X"),), (0.0, 0.5)),
+        ),
+        logical_observables=(
+            LogicalObservableSpec("logical_z2", (PauliTerm(2, "Z"),), index=0),
+        ),
+        rounds=int(rounds),
+        metadata={"fixture": "axis1_codespec_4q_frontend", "encoded_distance_certified": False},
+    )
+
+
 def build_axis1_codespec_frontend_schedule(*, rounds: int = 2) -> SubstepSchedule:
     """Compile the CodeSpec fixture into a sealed Axis-1 substep schedule."""
 
@@ -171,6 +204,7 @@ if __name__ == "__main__":
 
 __all__ = [
     "Axis1CodeSpecRecordRunnerResult",
+    "build_axis1_codespec_4q_frontend_spec",
     "build_axis1_codespec_frontend_schedule",
     "build_axis1_codespec_frontend_spec",
     "main",

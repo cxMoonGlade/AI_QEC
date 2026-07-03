@@ -86,10 +86,19 @@ C-8  Reproducibility. Same ``(regime, m, N, seed)`` => byte-identical
      ``test_emit_reproducible``.
 C-9  Ablation arms. ``markovian_baseline()`` preserves each one-field
      marginal (per-field permutations of the SAME trajectory,
-     ``independent_baseline_trajectory_to_params``) while destroying
-     same-cycle cross-mechanism and cross-cycle alignment; ``off_source()``
-     collapses the fan-out to the constant Theta(0) point. Falsifiers:
-     ``test_markovian_baseline_marginals_and_decorrelation``,
+     ``independent_baseline_trajectory_to_params``) while destroying the
+     temporal ORDER (hence the cross-cycle 1/f autocorrelation) and the
+     same-cycle cross-mechanism alignment; ``off_source()`` collapses the
+     fan-out to the constant Theta(0) point. NOTE (corrected 2026-07-03 with
+     prereg §5 re-registration): the per-field permutation is EXCHANGEABLE,
+     not independent — at finite R the markovian arm RETAINS most of the
+     shared arm's shot-pooled lag-1 record covariance (the permutation-
+     invariant trajectory-mean-instrument common-mode plus a small
+     -Var/(R-1) exchangeable term; ~0.73 of the shared lag-1 covariance at
+     R=12). The two arms differ only in the second-order cross-cycle MEMORY
+     residue, which is sub-floor on records at feasible N (see
+     ``docs/twin_validation/g6_null_model_rederivation_2026-07-03.md``).
+     Falsifiers: ``test_markovian_baseline_marginals_and_decorrelation``,
      ``test_off_source_constant_params``.
 C-10 Independent ground truth (faithfulness rule I). Emitted record
      statistics are checked against closed forms derived OUTSIDE this module
@@ -123,9 +132,19 @@ S-1  Trajectory-mean readout/reset instrument. ``readout_flip_p`` /
      variation (single-slot instrument limitation; design §4 per-round
      caveat, user-resolved 2026-06-30). Bound: the suppressed per-round
      logit-modulation at |x|<=3 is |dp| <= p*(exp(0.40*3)-1) ~ 2.3*p per
-     round about a p ~ 1e-2 base; the MEAN is preserved exactly, and the
-     suppressed variation is round-local (no cross-cycle memory is added or
-     removed). Per-round instruments are a later slice.
+     round about a p ~ 1e-2 base; the per-trajectory MEAN is preserved
+     exactly, so NO within-shot cross-cycle memory is added or removed by this
+     simplification. CORRECTION (2026-07-03): the trajectory mean itself VARIES
+     shot-to-shot (each shot draws its own trajectory), so pooling over shots
+     the instrument injects a permutation-INVARIANT common-mode covariance
+     (~8.7e-5 per check, at ALL lags) into the record statistics — identical
+     in the shared and markovian arms (it depends only on the trajectory mean),
+     hence it cancels in the shared-minus-markovian difference but is NOT
+     ~0 in either arm's raw statistic. This is why the record-level MA(1) floor
+     (off-arm Spitz p_ij(lag1) = p_ro + p_rs - 2 p_ro p_rs ~ 0.0149, not 0) and
+     the common-mode dominate the raw lag-1/lag-2 z-scores; see
+     ``docs/twin_validation/g6_null_model_rederivation_2026-07-03.md`` and the
+     re-registered prereg §5. Per-round instruments are a later slice.
 S-2  ``channels()`` at the mean-source point. The reported per-substep CPTP
      field is assembled at Theta(0) (z = E[z] = 0 for the symmetric RTN-sum
      sources), NOT the mean of per-shot channels. Jensen gap: for +/-1
@@ -158,6 +177,7 @@ S-6  Small table cache. Identical (per-round params, instrument) keys reuse
      enumeration; exactness unchanged). Bounded to the 4 most recent keys.
 """
 
+import copy
 import dataclasses
 import hashlib
 import math
@@ -193,7 +213,10 @@ from qec_twin.simulator.axis1_channel_evidence import (
     _axis1_static_zz_calibrations_for_schedule,
     _nominal_positive_dt,
 )
-from qec_twin.simulator.axis1_codespec_runner import build_axis1_codespec_frontend_spec
+from qec_twin.simulator.axis1_codespec_runner import (
+    build_axis1_codespec_4q_frontend_spec,
+    build_axis1_codespec_frontend_spec,
+)
 from qec_twin.simulator.axis1_context import Axis1LocalLindbladContextSpec
 from qec_twin.simulator.axis1_record_evidence import (
     Axis1ReadoutResetInstrumentSpec,
@@ -234,7 +257,11 @@ DEFAULT_STATIC_ZZ_EDGE = (0, 3)
 _ROUND_KEY_RE = re.compile(r"^round(\d+):")
 _FINAL_KEY_RE = re.compile(r"^final:q(\d+):[XYZ]$")
 _TABLE_CACHE_MAX = 4
-_TRUTH_PARAMS_SAMPLE_TRAJECTORIES = 1
+#: F4 (2026-07-03): widened from 1 to 32 so C1's per-round-spread fraction has real power (a single
+#: frozen 1/f trajectory, P~2e-4, no longer forces frac_spread=0 -> false FAIL). Records 32
+#: trajectories' per-cycle params in truth (evaluator-only); the instrument/source-binding sample
+#: stays at the first trajectory only.
+_TRUTH_PARAMS_SAMPLE_TRAJECTORIES = 32
 _TRUTH_SEED_SAMPLE = 8
 
 
@@ -398,24 +425,17 @@ def trajectory_mean_instrument(
     )
 
 
-def default_coupled_code_spec(
-    rounds: int,
-    config: SourceCouplingConfig | None = None,
-) -> CodeSpec:
-    """The slice-1 coupled fixture: the 5q mixed-basis CodeSpec + Theta(0) baseline.
+def _wrap_coupled_code_spec(base: CodeSpec, cfg: SourceCouplingConfig) -> CodeSpec:
+    """Add the coupled-fixture metadata to a frontend CodeSpec (shared by the 5q + 4q variants).
 
-    Extends ``build_axis1_codespec_frontend_spec`` with (a) the
-    superposition-bearing static-ZZ edge (0,3) WITHOUT a per-edge calibration
-    (so the per-round ``zeta_rad_per_ns`` from the injected callable is what
-    lowers on it — S-4) and (b) an ``Axis1LocalLindbladContextSpec`` baseline
-    pinned to the Theta(0) fan-out point (zeta and gamma_phi at z=0). The
-    context pin makes the no-callable schedule-global path physically
+    (a) the superposition-bearing static-ZZ edge (0,3) WITHOUT a per-edge calibration (so the
+    per-round ``zeta_rad_per_ns`` from the injected callable is what lowers on it — S-4) and (b) an
+    ``Axis1LocalLindbladContextSpec`` baseline pinned to the Theta(0) fan-out point (zeta and
+    gamma_phi at z=0). The context pin makes the no-callable schedule-global path physically
     identical to the off-source arm — the construction-independence control
     ``test_off_source_matches_plain_manifest`` relies on this identity.
     """
 
-    cfg = config or default_source_coupling_config()
-    base = build_axis1_codespec_frontend_spec(rounds=int(rounds))
     theta0 = source_to_params(0.0, cfg)
     metadata = dict(base.metadata)
     metadata.update(
@@ -431,6 +451,45 @@ def default_coupled_code_spec(
         ).to_metadata()
     )
     return dataclasses.replace(base, metadata=metadata)
+
+
+def default_coupled_code_spec(
+    rounds: int,
+    config: SourceCouplingConfig | None = None,
+) -> CodeSpec:
+    """The slice-1 coupled fixture: the 5q mixed-basis CodeSpec (x0 + z1) + Theta(0) baseline.
+
+    3 data + 2 ancilla; checks x0 (X on data 0) + z1 (Z on data 1); logical_z2 (Z on data 2);
+    n_stab = 2, measured bits M(R) = 2R + 3. See :func:`_wrap_coupled_code_spec` for the added
+    static-ZZ edge + Theta(0) context.
+    """
+
+    cfg = config or default_source_coupling_config()
+    return _wrap_coupled_code_spec(build_axis1_codespec_frontend_spec(rounds=int(rounds)), cfg)
+
+
+def default_coupled_code_spec_4q(
+    rounds: int,
+    config: SourceCouplingConfig | None = None,
+) -> CodeSpec:
+    """The registered 4q coupled fixture (prereg §1.1): drop z1 -> single X-check x0.
+
+    3 data + 1 ancilla; check x0 only (same static-ZZ edge (0,3)); logical_z2 (Z on data 2);
+    data qubit 1 in no check/observable -> no final measurement; n_stab = 1, measured bits
+    M(R) = R + 2. Reachable by name so a JSON ``teacher_kwargs = {"rounds": R, "fixture": "4q"}``
+    can construct it through the gate config seam (F2). Same Theta(0) baseline wrapping as the 5q.
+    """
+
+    cfg = config or default_source_coupling_config()
+    return _wrap_coupled_code_spec(build_axis1_codespec_4q_frontend_spec(rounds=int(rounds)), cfg)
+
+
+#: JSON-reachable fixture selector -> default coupled CodeSpec builder (F2). ``code_spec_builder``
+#: (a callable) still overrides this when provided; ``fixture`` picks the default when it is None.
+_COUPLED_FIXTURE_BUILDERS: dict[str, Callable[[int, SourceCouplingConfig | None], CodeSpec]] = {
+    "5q": default_coupled_code_spec,
+    "4q": default_coupled_code_spec_4q,
+}
 
 
 def _derived_seed(base_seed: int, trajectory: int, purpose: str) -> int:
@@ -469,6 +528,7 @@ class CoupledCycleTeacher:
         shots_per_trajectory: int = 1,
         device: str = "cuda",
         code_spec_builder: Callable[[int], CodeSpec] | None = None,
+        fixture: str = "5q",
         coupling_arm: str = "shared",
     ) -> None:
         self._rounds = int(rounds)
@@ -500,9 +560,16 @@ class CoupledCycleTeacher:
                 "CoupledCycleTeacher is GPU-only (repo device policy); pass "
                 f"device='cuda', got {device!r}"
             )
+        self._fixture = str(fixture)
+        if self._fixture not in _COUPLED_FIXTURE_BUILDERS:
+            raise ValueError(
+                f"unknown fixture {fixture!r}; expected one of "
+                f"{sorted(_COUPLED_FIXTURE_BUILDERS)} (or pass an explicit code_spec_builder)"
+            )
         self._code_spec_builder = code_spec_builder
         if code_spec_builder is None:
-            self._spec = default_coupled_code_spec(self._rounds, self._config)
+            # F2: JSON-reachable fixture selector -> default coupled CodeSpec builder.
+            self._spec = _COUPLED_FIXTURE_BUILDERS[self._fixture](self._rounds, self._config)
         else:
             self._spec = code_spec_builder(self._rounds)
         if int(self._spec.rounds) != self._rounds:
@@ -569,6 +636,7 @@ class CoupledCycleTeacher:
             "visibility": "evaluator_only",
             "representability": COUPLED_TEACHER_REPRESENTABILITY,
             "coupling_arm": self._arm,
+            "fixture": self._fixture,
             "source": source_manifest,
             "source_memoryful_whitelist": [
                 cls.__name__ for cls in MEMORYFUL_SHARED_SOURCES
@@ -658,7 +726,10 @@ class CoupledCycleTeacher:
                 "terminal_round_clamp_policy": "c",
                 "table_cache_memoization": "a",
             },
-            "last_emit": self._last_emit,
+            # F7: a SNAPSHOT (deep copy), never a live reference to the mutable bookkeeping dict —
+            # an evaluator holding truth must not see it mutate on the next emit, nor be able to
+            # mutate the teacher's internal state through it.
+            "last_emit": copy.deepcopy(self._last_emit),
         }
         return truth
 
@@ -737,6 +808,8 @@ class CoupledCycleTeacher:
                         "per_cycle": [p.to_manifest() for p in params_cycles],
                     }
                 )
+            if j == 0:
+                # the instrument / source-binding sample is a single representative (first trajectory).
                 truth_record["instrument_manifest_sample"] = instrument.to_manifest()
                 truth_record["source_binding"] = (
                     build_source_timeline_binding_manifest(
@@ -844,6 +917,7 @@ class CoupledCycleTeacher:
             shots_per_trajectory=self._shots_per_trajectory,
             device=self._device,
             code_spec_builder=self._code_spec_builder,
+            fixture=self._fixture,
             coupling_arm="independent",
         )
 
@@ -867,6 +941,7 @@ class CoupledCycleTeacher:
             shots_per_trajectory=self._shots_per_trajectory,
             device=self._device,
             code_spec_builder=self._code_spec_builder,
+            fixture=self._fixture,
             coupling_arm="off",
         )
 
@@ -1061,6 +1136,7 @@ __all__ = [
     "MEMORYFUL_SHARED_SOURCES",
     "CoupledCycleTeacher",
     "default_coupled_code_spec",
+    "default_coupled_code_spec_4q",
     "derive_round_map_for_substep_schedule",
     "params_for_substep_from_round_map",
     "per_round_axis1_params",

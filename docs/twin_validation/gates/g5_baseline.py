@@ -208,9 +208,21 @@ def _nll_kstar_se(cube: np.ndarray, clusters: list[np.ndarray], k_star: int) -> 
 # =========================================================================== #
 # statistic deltas per comparator (Spitz p_ij + count autocov, lags 1..n_lags) #
 # =========================================================================== #
+def _se_diff(se_a: float, se_b: float) -> float:
+    """SE of a difference of two INDEPENDENT estimates: sqrt(se_a^2 + se_b^2) (nan-safe)."""
+
+    return float(np.sqrt(np.nan_to_num(se_a, nan=0.0) ** 2 + np.nan_to_num(se_b, nan=0.0) ** 2))
+
+
 def statistic_deltas(cube_comp: np.ndarray, cube_shared: np.ndarray, n_lags: int, spt: int) -> dict:
     """Comparator-minus-shared deltas of Spitz p_ij + count autocovariance at lags 1..n_lags,
-    each with a cluster-bootstrap SE + z (§4). Comparator sample n = shared N (seeded)."""
+    each with a cluster-bootstrap SE + z (§4). Comparator sample n = shared N (seeded).
+
+    F8: the difference z uses SE_diff = sqrt(se_comparator^2 + se_shared^2). The shared arm's p_ij /
+    autocov is itself a bootstrap ESTIMATE with its own SE (not an exact constant), so omitting it
+    understates SE_diff by up to sqrt(2) and overstates |z|. Both arms are independent samples
+    (fresh draws / distinct seeds), so the variances add.
+    """
 
     out = {"s1_delta": {}, "s2_delta": {}}
     for lag in range(1, int(n_lags) + 1):
@@ -218,16 +230,24 @@ def statistic_deltas(cube_comp: np.ndarray, cube_shared: np.ndarray, n_lags: int
         p_shar = spitz_p_ij(cube_shared, lag)["pooled_p_ij"]
         boot_c = cluster_bootstrap_se(lambda idx, L=lag: spitz_p_ij(cube_comp[idx], L)["pooled_p_ij"],
                                       cube_comp.shape[0], spt, B=BOOT_B, seed=BOOT_SEED)
+        boot_s = cluster_bootstrap_se(lambda idx, L=lag: spitz_p_ij(cube_shared[idx], L)["pooled_p_ij"],
+                                      cube_shared.shape[0], spt, B=BOOT_B, seed=BOOT_SEED + 1)
         d1 = p_comp - p_shar
+        se1 = _se_diff(boot_c["se"], boot_s["se"])
         out["s1_delta"][f"lag{lag}"] = {"comparator_p_ij": p_comp, "shared_p_ij": p_shar,
-                                        "delta": d1, "se": boot_c["se"], "z": zscore(d1, boot_c["se"])}
+                                        "delta": d1, "se_comparator": boot_c["se"],
+                                        "se_shared": boot_s["se"], "se": se1, "z": zscore(d1, se1)}
         c_comp = s2_count_autocov(cube_comp, lag)
         c_shar = s2_count_autocov(cube_shared, lag)
         boot_c2 = cluster_bootstrap_se(lambda idx, L=lag: s2_count_autocov(cube_comp[idx], L),
                                        cube_comp.shape[0], spt, B=BOOT_B, seed=BOOT_SEED)
+        boot_s2 = cluster_bootstrap_se(lambda idx, L=lag: s2_count_autocov(cube_shared[idx], L),
+                                       cube_shared.shape[0], spt, B=BOOT_B, seed=BOOT_SEED + 1)
         d2 = c_comp - c_shar
+        se2 = _se_diff(boot_c2["se"], boot_s2["se"])
         out["s2_delta"][f"lag{lag}"] = {"comparator_autocov": c_comp, "shared_autocov": c_shar,
-                                        "delta": d2, "se": boot_c2["se"], "z": zscore(d2, boot_c2["se"])}
+                                        "delta": d2, "se_comparator": boot_c2["se"],
+                                        "se_shared": boot_s2["se"], "se": se2, "z": zscore(d2, se2)}
     return out
 
 
