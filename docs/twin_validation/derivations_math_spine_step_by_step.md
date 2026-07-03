@@ -1,7 +1,8 @@
 # Step-by-step derivations — the math-spine theorems (T-B, T-#2, T-L2, estimator identities)
 
 **Purpose: a self-contained derivation trail complete enough to re-derive every result by hand.**
-Written 2026-07-03 after the three review rounds; every statement here is the REVIEWED form
+Written 2026-07-02, finalized 2026-07-03 after the three review rounds + a user re-derivation
+review (all findings folded in); every statement here is the REVIEWED form
 (amendments folded in). TRAP boxes mark the three places where a first derivation was falsified
 by the machine — try deriving past them before reading the resolution. Numerical checkpoints
 reference the committed verification scripts. This tracked file also mirrors the (gitignored)
@@ -61,12 +62,18 @@ distribution is determined by all parities W(u, χ) = E[(−1)^{Σ_r u_r·m_r + 
 
 **Step 1.2 (assignment noise dresses and de-noises).** For one recorded bit,
 Σ_{m}(−1)^{um} Pr[m|s] = (1−p_M)(−1)^{us} + p_M(−1)^{u(s⊕1)} = (1−2p_M)^{u}(−1)^{us}.
-Product over probed bits: W = ∏_{r}(1−2p_M)^{|u_r|} · (1−2p_F)^{|χ|} · W^{true}, where W^{true}
-uses TRUE syndromes/readout. From here work with true bits.
+Product over probed bits: W = dress(u, χ) · W^{true}, with the DEFINITION (used opaquely as
+"dress" from here on):
+  **dress(u, χ) := ∏_{r} ∏_{κ: (u_r)_κ = 1} (1−2p_{M,κ}) · ∏_{q: χ_q = 1} (1−2p_F)**
+(per-check-resolved p_M; collapses to (1−2p_M)^{Σ_r|u_r|}(1−2p_F)^{|χ|} at uniform rates).
+W^{true} uses TRUE syndromes/readout. From here work with true bits.
 
-**Step 1.3 (the character-summed round map C_u).** The syndrome-s projector is
-P_s = 2^{−k} Σ_{h∈𝒮} (−1)^{s·idx(h)} h, idx(h) ∈ F₂ᵏ the generator-exponent vector (finite
-abelian group character expansion; verify: apply both sides to a stabilizer eigenstate).
+**Step 1.3 (the character-summed round map C_u).** First the missing definition: 𝒮 is an
+elementary abelian 2-group with generator basis {g_κ}, so every h ∈ 𝒮 is uniquely
+h = ∏_κ g_κ^{c_κ} with c ∈ F₂ᵏ; **idx: 𝒮 → F₂ᵏ, idx(h) := c** — a group isomorphism
+(idx(hh') = idx(h) ⊕ idx(h'); inverse u ↦ g_u := ∏_κ g_κ^{u_κ}). The syndrome-s projector is
+P_s = 2^{−k} Σ_{h∈𝒮} (−1)^{s·idx(h)} h (finite abelian character expansion; verify: apply
+both sides to a stabilizer eigenstate).
 Then
   C_u(ρ) := Σ_s (−1)^{u·s} P_s ρ P_s
           = 4^{−k} Σ_{h,h'} [Σ_s (−1)^{s·(u ⊕ idx h ⊕ idx h')}] h ρ h'
@@ -78,20 +85,32 @@ Unprobed round (u = 0): C_0(ρ) = 2^{−k} Σ_h hρh.
 **Step 1.4 (support propagation under X^a ρ X^b).** X^a|i⟩⟨j|X^b = |i⊕a⟩⟨j⊕b|; new support
 = (i⊕a) ⊕ (j⊕b) = supp ⊕ (a⊕b). For C_u terms: a = γ(h), b = γ(h g_u) = γ(h) ⊕ γ(g_u) ⇒
 **every term shifts the support by exactly γ(g_u)** (h drops out of the support algebra).
-Sign propagation (needed later): for q ∉ supp-change, a'_q = (−1)^{h_q} a_q (both sides
-flipped together); for q where the support toggles 0→±1, the new sign is set by the resident
-diagonal byte; where ±1→0 the coordinate closes. The h-sum therefore averages SIGNS but never
-moves SUPPORTS.
+*Sign propagation — explicit formulas (supplementary: NOT needed for support determinism;
+needed only if you re-derive coefficient symmetrizations like Step 3.6).* Write e := γ(h),
+e' := γ(h g_u); the new grade of X^e|i⟩⟨j|X^{e'} at qubit q, from a'_q = ½(z_q(j⊕e') −
+z_q(i⊕e)) with z_q(i⊕e) = z_q(i)(−1)^{e_q}:
+  • e_q = e'_q (support unchanged at q): a'_q = (−1)^{e_q} a_q;
+  • e_q ≠ e'_q and a_q = 0 (z_q(i) = z_q(j) =: z): a'_q = z·(−1)^{e'_q} (support opens; the
+    sign is set by the resident diagonal byte z — this is where diagonal bytes enter);
+  • e_q ≠ e'_q and a_q = ±1 (z_q(j) = −z_q(i)): a'_q = 0 (support closes).
+The h-sum therefore averages SIGNS but never moves SUPPORTS.
 
-**Step 1.5 (exit rules).** Trace: Tr|i⟩⟨j| = δ_{ij} ⇒ selects final support 0.
-Readout character: Σ_x (−1)^{χ·x}|x⟩⟨x| = X^χ (verify on one qubit: |+⟩⟨+| − |−⟩⟨−| = X),
-and Tr[X^χ |i⟩⟨j|] = δ_{j, i⊕χ} ⇒ selects final support χ. With p_F: dressed by (1−2p_F)^{|χ|}
-(Step 1.2 applied to readout bits).
+**Step 1.5 (exit rules).** Trace (this IS exit E0 of Step 0 — syndrome-only access; all
+χ = 0 statements below are its instances): Tr|i⟩⟨j| = δ_{ij} ⇒ selects final support 0.
+Readout character (exit E1): Σ_x (−1)^{χ·x}|x⟩⟨x| = X^χ (verify on one qubit:
+|+⟩⟨+| − |−⟩⟨−| = X), and Tr[X^χ |i⟩⟨j|] = δ_{j, i⊕χ} ⇒ selects final support χ. With p_F:
+dressed by (1−2p_F)^{|χ|} (Step 1.2 applied to readout bits).
 
-**Step 1.6 (support-path determinism).** A round is M_{a_r} then C_{u_r}. Grade a_r can be
-selected only from what arrives; the arriving support after round r−1 is σ_{r−1} ⊕ γ(g_{u_{r−1}}).
-Recurse BACKWARD from the exit condition σ_R ⊕ γ(g_{u_R}) = χ:
-  **σ_r(u, χ) = χ ⊕ ⊕_{r' ≥ r} γ(g_{u_{r'}}).**
+**Step 1.6 (support-path determinism).** A round is M_{a_r} then C_{u_r}. Write σ_r :=
+supp(a_r). Grade a_r can be selected only from what arrives, and Step 1.4 says C_{u_r} shifts
+every support by exactly γ(g_{u_r}); hence the FORWARD constraint
+  σ_{r+1} = σ_r ⊕ γ(g_{u_r})     (r = 1..R−1),
+and the EXIT constraint (Step 1.5) σ_R ⊕ γ(g_{u_R}) = χ. Solve backward by induction:
+base case σ_R = χ ⊕ γ(g_{u_R}); inductive step: given σ_{r+1} = χ ⊕ ⊕_{r'≥r+1} γ(g_{u_{r'}}),
+the forward constraint (XOR-invert it: σ_r = σ_{r+1} ⊕ γ(g_{u_r})) gives
+σ_r = χ ⊕ ⊕_{r'≥r} γ(g_{u_{r'}}). Hence for all r:
+  **σ_r(u, χ) = χ ⊕ ⊕_{r' ≥ r} γ(g_{u_{r'}})** — one deterministic support per round; only
+the SIGNS on σ_r remain summation variables.
 The entry imposes NO constraint (|+⟩⟨+|^{⊗n} = 2^{−n} Σ_{ij}|i⟩⟨j| contains every grade with
 coefficient 2^{−n} > 0). Conclusion:
   W(u, χ) = (dress) · Σ_{â: supp(a_r) = σ_r ∀r} T(â) (1−2p_Z)^{#graded legs} e^{−½âᵀΣâ},
@@ -194,8 +213,9 @@ B = the window-leg block on supp γ (w = |γ|; rep code w = 2 gives
 (1−2p_M)²(1−2p_Z)² e^{−(V_q+V_{q'})/2} cosh C_{qq'}).
 
 **Step 3.4 (sanity by an independent 2-qubit computation).** |++⟩ →(phases)→ each qubit
-cos(φ/2)|+⟩ − i sin(φ/2)|−⟩; odd-parity probability = cos²(φ_q/2)sin²(φ_{q'}/2) +
-sin²cos² (orthogonal targets ⇒ no interference) = ½ − ½cos φ_q cos φ_{q'};
+cos(φ/2)|+⟩ − i sin(φ/2)|−⟩; odd-parity probability = cos²(φ_q/2)·sin²(φ_{q'}/2) +
+sin²(φ_q/2)·cos²(φ_{q'}/2) (the |+−⟩ and |−+⟩ targets are orthogonal ⇒ no interference)
+= ½ − ½cos φ_q cos φ_{q'};
 E[cos a cos b] = ½[e^{−½(V_a+V_b+2C)} + e^{−½(V_a+V_b−2C)}] = e^{−(V_a+V_b)/2}cosh C. Matches.
 
 **Step 3.5 (consequences).** cosh ≥ 1 ⇒ within-window covariance of EITHER sign RAISES
@@ -208,7 +228,8 @@ probes at r and r+2, the middle cancels ⇒ dressing (1−2p_M)² only). Interio
 a₂ = ±a₁ uniformly (Trap 1) ⇒
   W = (1−2p_M)²(1−2p_Z)⁴ · ¼ Σ_{a∈{±1}²} e^{−½aᵀ(B₁+B₂)a} cosh(aᵀ Σ_× a),
 and expanding the two a-classes: cosh(A+B̃) + cosh(A−B̃) = 2 cosh A cosh B̃ with
-A = Σ^×_{qq} + Σ^×_{q'q'}, B̃ = Σ^×_{qq'} + Σ^×_{q'q}. Lag ≥ 2: two disjoint windows, the
+A = (Σ_×)_{qq} + (Σ_×)_{q'q'}, B̃ = (Σ_×)_{qq'} + (Σ_×)_{q'q} (Σ_× = the cross-window BLOCK;
+(Σ_×)_{··} its elements — the earlier Σ^×_{qq} superscript overloaded the block name). Lag ≥ 2: two disjoint windows, the
 diagonal segment between them factorizes the coefficients ⇒ doubly-uniform hypercube average
 (same evenness). Checkpoint: V4 order-2 law 1.11e-16.
 
@@ -239,14 +260,33 @@ scripts compute: Pr[m̄ = 0, x = 1⃗].) So the event is the single record outco
 and each W is a Lemma-A CF sum ⇒ **F is a finite Fourier sum of Gaussian characteristic
 functions with machine coefficients, for arbitrary Σ** — the interpolating functional.
 
-**Step 4.3 (leading order — derive the amplitude, then the moment).** At zero dressing and
-small Σ: a single round's collective flip has amplitude ∏_q(−i sin(θ_{q,r}/2)) (each qubit's
-Z-rotation must flip; any PARTIAL flip changes some check's parity ⇒ detected ⇒ excluded from
-the silent event; verify: a single-qubit flip anticommutes with its two neighboring checks).
-Crucially, no detector distinguishes WHICH round a collective flip occurred in ⇒ the R
-amplitudes add COHERENTLY before squaring:
-  F = 4^{−n} E[(Σ_{r} ∏_q θ_{q,r})²] · (1 + O(Σ)) = 4^{−n} Σ_{r,r'} E[m_r m_{r'}] · (1 + O(Σ)),
-m_r := ∏_q θ_{q,r}  (both equalities leading-order; the exact object stays Step 4.2's sum).
+**Step 4.3 (leading order — derive the amplitude, then the moment).** Work at zero dressing;
+the expansion parameter is ‖Σ‖ (equivalently σ² := max_ℓ Σ_ℓℓ — Σ is a matrix, not a scalar;
+every CF exponent obeys |½âᵀΣâ| ≤ ½‖Σ‖·|â|², so "small noise" = small ‖Σ‖).
+
+*Which flip patterns are silent (complete statement, any n ≥ 2).* A Z-flip pattern on qubit
+subset S is syndrome-silent iff Z^S commutes with every check X_κX_{κ+1} iff |S ∩ {κ, κ+1}|
+is even for every κ. On a connected chain this forces S ∈ {∅, ALL}: walking κ = 0..n−2, each
+constraint propagates membership (q ∈ S ⇔ q+1 ∈ S). So the only silent flip is the COLLECTIVE
+one — boundary qubits included (they have one neighboring check, which suffices; the earlier
+"two neighboring checks" phrasing was interior-only and wrong for n = 2).
+
+*Why the R round-amplitudes add coherently DESPITE the intermediate projections (the step the
+first write-up skipped).* Let L := ∏_q Z_q (the collective-flip operator). L commutes with
+every check: |supp L ∩ supp(X_κX_{κ+1})| = 2, even ⇒ [L, X_κX_{κ+1}] = 0 ⇒ [L, P_s] = 0 for
+every syndrome projector. Expand each round's rotation to first order:
+∏_q e^{−iθ_{q,r}Z_q/2} = 1 − (i/2)Σ_q θ_{q,r}Z_q + … ; the silent-postselected chain
+⟨x=1⃗| P₀ U_R P₀ U_{R−1} ⋯ P₀ U_1 |+⟩^{⊗n} keeps, at leading order in the flip sector, the
+terms with exactly ONE full L insertion: (−i/2)ⁿ m_r · L placed at round r, m_r := ∏_q θ_{q,r}
+(the product of the n single-qubit first-order terms of round r; all partial patterns are
+killed by the P₀'s per the paragraph above). Because [L, P₀] = 0, every P₀ acts IDENTICALLY on
+the flipped and unflipped components — the projections neither block nor mark the round of the
+insertion ("no detector distinguishes the round" is the informal shadow of this commutator).
+Hence the postselected flip amplitude is (−i/2)ⁿ Σ_r m_r · ⟨x=1⃗|L|+⟩^{⊗n}-type — a COHERENT
+sum over rounds — and
+  F = 4^{−n} E[(Σ_{r} m_r)²] · (1 + O(‖Σ‖)) = 4^{−n} Σ_{r,r'} E[m_r m_{r'}] · (1 + O(‖Σ‖))
+(both equalities are leading-order in ‖Σ‖; the exact functional remains Step 4.2's finite
+Fourier sum — this step only extracts its lowest-order term).
 
 > **TRAP 2 (falsified by run 1 of the T-#2 verification).** First registered law: F ≈
 > 4^{−n} Σ_r E[∏_q θ²_{q,r}] (diagonal only). The machine gave ratio 4 at (n=2, R=2, ρ=1) vs
@@ -259,8 +299,9 @@ within-round correlation ρ: enumerate the 15 pairings of 6 legs — 1 pairing p
 itself's partner (σ⁶ term ×1... do it properly): classes are (i) all three pairs within the
 same variable: (θ₁θ₁)(θ₂θ₂)(θ₃θ₃) → σ⁶, 1 way; (ii) one variable self-paired, other four legs
 cross-paired: 3 variables × 2 cross-pairings = 6 ways → σ²·(ρσ²)² = ρ²σ⁶; (iii) all cross:
-8 ways → (ρσ²)³ = ρ³σ⁶. Total E = σ⁶(1 + 6ρ² + 8ρ³); ρ = 1 gives 15 = 5!! (the Clader endpoint,
-cited never claimed). So F(ρ)/F(0) → 1 + 6ρ² + 8ρ³.
+8 ways → (ρσ²)³ = ρ³σ⁶. Total E = σ⁶(1 + 6ρ² + 8ρ³); ρ = 1 gives 15 = 5!! (double factorial:
+5·3·1 = 15 — the total pairing count of 6 legs; the Clader endpoint, cited never claimed).
+So F(ρ)/F(0) → 1 + 6ρ² + 8ρ³.
 
 **Step 4.5 (the n = 2 interference law).** E[(Σ_r m_r)²] = Σ_r E[m_r²] + Σ_{r≠r'}E[m_r]E[m_{r'}]
 (block-diagonal Σ) = R·σ⁴(1+2ρ²) + R(R−1)(ρσ²)² ⇒ ratio 1 + 2ρ² + (R−1)ρ² = **1 + (R+1)ρ²**
@@ -294,8 +335,15 @@ With p_M > 0 the OBSERVED record is that chain seen through i.i.d. binary-symmet
 an HMM, not itself Markov (the Step-5.2 observed-flip statistics are computed on exactly this
 HMM).
 Kernel entries: a := P(e→g) = (γ↓/Γ)u, b := P(g→e) = (γ↑/Γ)u, u = 1 − e^{−Γτ_m}.
-Embeddability: a + b = u < 1 always; conversely any 2×2 stochastic kernel with a+b<1 is
-exp(τQ) (Γτ = −ln(1−a−b)) — necessary and sufficient (det T = 1−a−b > 0).
+*Embeddability, both directions (self-contained; 2-state case of the Markov-embedding
+problem).* Forward: a + b = u < 1 always. Converse: let T = [[1−a, b],[a, 1−b]] (columns =
+from-states), 0 < a + b < 1. T − I has rank 1 and satisfies (T−I)² = −(a+b)(T−I) (multiply it
+out), so exp(s(T−I)) = I + [(1−e^{−s(a+b)})/(a+b)](T−I) for any s (sum the series using the
+quadratic relation). Choose s = −ln(1−a−b)/(a+b) > 0: then 1 − e^{−s(a+b)} = a+b and
+exp(s(T−I)) = T. Q := s(T−I) is a valid generator (off-diagonals sb, sa ≥ 0; columns sum to
+0) ⇒ T = exp(Q) with Q of the telegraph form. Necessity of a+b < 1: det T = 1−a−b, while
+det exp(τQ) = e^{τ·tr Q} > 0 — a kernel with a+b ≥ 1 has det ≤ 0 and cannot be any exp(τQ).
+∎ (a+b = u < 1 also shows the quantum window kernel is ALWAYS embeddable.)
 AMENDMENT (A-L2-1 item 1): the M3 null must be matched to the exact window KERNEL (a,b), not
 to TCL2 rates — the mode-reset JC record is exactly Markov at any (g,κ), but its kernel equals
 exp(τ_m Q_TCL2) only to O(g²); the O(g⁴) gap is the signal order.
@@ -304,14 +352,30 @@ exp(τ_m Q_TCL2) only to O(g²); the O(g⁴) gap is the signal order.
 (i) TRUE-flip conditioning: after an observed TRUE e→g flip the state is g; conditional next-
 window flip = b; unconditional flip = π_e a + π_g b = 2ab/(a+b); excess = b − 2ab/(a+b) =
 b(b−a)/(a+b) < 0 ⇔ b < a ⇔ γ↑ < γ↓ (thermal). Ratio at N̄→0: cond/unc → (a+b)/2a = Γ/2γ↓.
-(ii) OBSERVED-flip conditioning with p_M (the amended statistic): build the 2×2×2 joint of
-(true state r, recorded flip) — the conditioning event mixes true flips with noise flips.
-Sticky regime a, b ≪ p_M: the record is dominated by noise flips on a frozen state; work the
-limit: excess → (1−2p_M)(π_e − p_M), POSITIVE iff π_e > p_M (the amended condition).
+(ii) OBSERVED-flip conditioning with p_M (the amended statistic) — full sticky-limit
+derivation (a, b ≪ p_M, write p := p_M; the chain is FROZEN over three consecutive samples:
+z_{t−1} = z_t = z_{t+1} = z with z = e w.p. π_e, z = g w.p. π_g; records r_s = z ⊕ ε_s,
+ε_s i.i.d. Bernoulli(p)):
+  • Conditioning event = observed DOWN flip, i.e. the LABELS (r_{t−1}, r_t) = (e, g).
+    Given z = e: needs (ε_{t−1}, ε_t) = (0, 1) → (1−p)p. Given z = g: needs (1, 0) → p(1−p).
+    EQUAL likelihoods ⇒ the posterior over the frozen state is still π (the conditioning does
+    not update z — the first nontrivial step).
+  • Next observed flip (either direction) = {r_{t+1} ≠ r_t = g} = {r_{t+1} = e}.
+    Given z = e (and ε_t = 1 from the conditioning): r_{t+1} = e ⇔ ε_{t+1} = 0 → prob 1−p.
+    Given z = g (ε_t = 0): r_{t+1} = e ⇔ ε_{t+1} = 1 → prob p.
+    ⇒ conditional flip prob = π_e(1−p) + π_g p = p + π_e(1−2p).
+  • Unconditional observed-flip prob (frozen chain) = P(ε_{s} ≠ ε_{s+1}) = 2p(1−p).
+  • Excess = [p + π_e(1−2p)] − 2p(1−p) = π_e(1−2p) − p(1−2p) = **(1−2p)(π_e − p)** —
+    POSITIVE iff π_e > p_M (and p_M < ½). ∎
+(The exact finite-(a,b) statistic interpolates between this and (i); R6 verified the limit
+numerically to 6e-6 on an ε-ladder. Note the two ingredients that make it work: the
+direction-RESOLVED conditioning leaves the z-posterior at π, and the next-flip statistic is
+direction-SUMMED.)
 (iii) N̄ = 0 (γ↑ = 0, absorbing g): p_M = 0 ⇒ conditioning event has probability 0 (0/0);
 p_M > 0 ⇒ excess = p_M(2p_M − 1), independent of a — derive it: the chain is absorbed in g,
 flips are pure noise, two consecutive noise-flip records anti-correlate.
-(iv) Threshold: |p_M(1−2p_M)| ≥ 0.0406 ⇔ 2p² − p + 0.0406 ≤ 0 ⇔ p ≥ (1−√(1−0.3248))/4 =
+(iv) Threshold: |p_M(1−2p_M)| ≥ 0.0406 ⇔ 2p² − p + 0.0406 ≤ 0 (valid because p_M ∈ [0, ½]
+makes p_M(1−2p_M) ≥ 0, so the absolute value drops) ⇔ p ≥ (1−√(1−0.3248))/4 =
 **4.4574e-2** (solve the quadratic; the 4.4e-2 first printed was an under-converged iterate).
 Consequence: the measured quantum −4.06e-2 is unreachable by matched L2a below that p_M — P4
 keeps magnitude-level power vs L2a at N̄=0.
@@ -324,15 +388,21 @@ floor, Z-record distance exactly 0). ∎
 
 ---
 
-## 6. Estimator identities (T-#3: the v4/v5 chain + the R-POOL/v6 REGISTRATION — v6 has no
-record yet; binding state = v5 STOP)
+## 6. Estimator identities (T-#3)
 
 **Step 6.1 (the p_Z-absorption identity).** Every registered moment kind's â has ALL window
 legs graded (hypercube over {±1}^w — no zero coordinates inside a window). So the background
 factor is (1−2p_Z)^{L}, L = total graded legs, while a uniform diagonal shift d_q → d_q + δz
 multiplies each hypercube term by e^{−L·δz/2}. Setting δz = −2 ln(1−2p_Z) makes them EQUAL ⇒
 p_Z is exactly a uniform V-level shift inside the model class (a DECLARED gauge on V-levels;
-V-differences and all C entries clean). Verify the leg counts per kind: o1: 2; same lag-1: 4;
+V-differences and all C entries clean).
+*Reconciliation with the prereg §1 nuisance (B1 of the user review):* §1 registered ONE
+composite η_κ = (1−2p_{M,κ})²(1−2p_Z)² per check. That composite is consistent only for the
+2-leg kinds; across kinds the p_Z power tracks LEG count while the p_M power tracks PROBE
+count (they differ at lag-1: μ¹ but 4 legs), so no single per-check factor can carry both.
+The resolution IS this identity: split η_κ = μ_κ · (1−2p_Z)², keep **μ_κ = (1−2p_{M,κ})² as
+the fitted nuisance**, and let the (1−2p_Z)^L part ride in d as the +δz gauge — exactly
+equivalent parametrizations, related by d ↔ d + δz·1. The prereg §1 bracket points here. Verify the leg counts per kind: o1: 2; same lag-1: 4;
 same lag ≥ 2: 4; xdist: 2 (middle probed checks add μ factors but the support telescopes —
 no extra graded legs); x1: 4.
 
@@ -371,15 +441,15 @@ verdict lands in `t3_teacher_gate_record.md`. Nothing in this §6 is v6 evidence
 
 | Step | Quantity | Committed value | Script/log |
 |---|---|---|---|
-| 1.6/1.7 | outside-window perturbation | exactly 0 (inside: 3.3e-3) | tb V2, v4 log |
+| 1.6/1.7 | outside-window perturbation | 0.00e+00 in float64 (theorem-forced; gate tol 1e-13; inside ALIVE: 3.3e-3) | tb V2, v4 log |
 | 2 | gauge invariance, all patterns | ≤ 2.2e-16; non-admissible 8.4e-3 | tb V3/V3b |
 | 3.3 | order-1 law | ≤ 5.6e-16 (12 configs) | tb V1 |
 | 3.6 | order-2 cosh law | 1.11e-16 | tb V4 |
 | 3.7 | PAIR2 lag-1 erasure | 1.11e-16 | tb V4 |
 | 4.4 | n=3 curve err @σ=0.1 | 9.9e-3 (~σ²); ρ=1 → 14.85 | t2 S1/S2 |
-| 4.5 | 1+(R+1)ρ² | 5.0e-3 / 5.9e-3 (R=2/3) | t2 S1b/S1c |
+| 4.5 | 1+(R+1)ρ² | rel err 5.0e-3 / 5.9e-3 (R=2/3) | t2 S1b/S1c |
 | 4.6 | odd/even slopes; coeffs | 3.0001 / 1.9991; 7.940 / 5.970 | t2 S3 |
-| 4.2 | independent MC (clean/dressed) | z ≤ 1.32 / ≤ 1.18 | t2 S6/S7 |
+| 4.2 | independent MC (clean/dressed) | z ≤ 1.32 / ≤ 1.18 | t2 record: checks S6/S7 |
 | 5.2 | L2-3 formulas | exact-Fraction enumeration all PASS | outputs/review3_am_l2_checks.py |
 | 6.1 | absorption identity | 3.33e-16 at a non-truth point | v4/v5 P1a |
 | 6.2 | old ridge / new rank | rank 11/12 (residual 3.3e-16) / 11/11 | review3_v4m_jac + v5 |
