@@ -14,6 +14,34 @@ records `tb_ident_gauge_theorem_record.md`, `t2_silent_floor_record.md`,
 (+A-T3-1, addenda, R-POOL); scripts `outputs/tb_ident_gauge_verify.py`,
 `t2_silent_floor_verify.py`, `t3_teacher_validation_v4/v5.py`.
 
+**Citation policy of this document (made explicit per the citation-existence audit).** This is
+a self-contained DERIVATION notebook: uncited nontrivial claims in the body are ORIGINAL
+derivations of this project, and their support is the in-line proof plus the §7 machine
+checkpoints — zero external citation is their correct state (external ownership/positioning
+lives in the record documents by design, kept out of the proofs). Standard results are used
+with in-line proofs where short; the ledger below names their canonical sources for
+readability — none of these citations is load-bearing beyond the in-line arguments.
+
+**Standard-results ledger (canonical citations; naming, not load-bearing):**
+- Walsh/Fourier completeness on the Boolean cube (Step 1.1) — standard Boolean harmonic
+  analysis (O'Donnell, *Analysis of Boolean Functions*, CUP 2014, ch. 1).
+- Character expansion of finite-abelian-group projectors (Step 1.3) — standard character
+  theory (any finite-group text; e.g. Serre, *Linear Representations of Finite Groups*).
+- Stabilizer formalism / syndrome projectors (§0) — Gottesman, quant-ph/9705052.
+- Gaussian characteristic function (Step 0.4) — standard probability.
+- Isserlis/Wick pairing theorem (Step 4.4) — Isserlis, Biometrika 12, 134 (1918).
+- GKSL generators (§5) — Gorini–Kossakowski–Sudarshan, J. Math. Phys. 17, 821 (1976);
+  Lindblad, Commun. Math. Phys. 48, 119 (1976).
+- Data-processing/contraction of trace distance under CPTP maps (Step 5.3) — Nielsen & Chuang
+  2010, §9 (already ledgered in METRICS.md).
+- The Markov imbedding problem, general context (Step 5.1 proves the 2-state case
+  self-containedly) — Kingman, Z. Wahrscheinlichkeitstheorie 1, 14 (1962).
+- Physical grounding of the Gaussian-dephasing model class — see Step 0.α (Schoelkopf,
+  Clerk, Bylander; machine precedent 2401.04530).
+The only external result USED AS INPUT to a claim (rather than proved in-line) is the Clader
+endpoint comparison in Step 4.4 — and it is a consistency CONTACT, cited never claimed; the
+1+6ρ²+8ρ³ curve is derived independently above it.
+
 ---
 
 ## 0. The machine and the notation
