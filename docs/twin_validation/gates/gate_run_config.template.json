@@ -1,0 +1,17 @@
+{
+  "_note": "template — orchestrator writes gate_run_config.json from G0-v2's chosen triple",
+  "schema": "qec_twin.gates.coupled_teacher_gate_run_config.v1",
+  "fixture": "PENDING_G0V2",
+  "R_star": 0,
+  "N_star": 0,
+  "shots_per_trajectory": 1,
+  "m": 0,
+  "seeds": {"shared": 101, "markovian": 202, "off": 303},
+  "teacher_factory": "qec_twin.mechanisms.coupled_teachers:CoupledCycleTeacher",
+  "teacher_kwargs": {},
+  "corrqec_root": null,
+  "n_lags": 4,
+  "bootstrap": {"B": 200, "seed": 777},
+  "g6_n_override": null,
+  "g7_n": 64
+}
