@@ -196,12 +196,27 @@ xdist multi-μ moments = strongest ridge-breakers), but v4 run-3 = deterministic
 addendum-2 diagnosis contradicted by its own bootstrap → **A-T3-1 addendum 3 FINAL (c6fcb50):
 v5 gate = fresh seeds {37,47,57}, JOINT rank-matched Mahalanobis coverage+straw at 99.7%,
 2000 draws, both intervals reported-not-gating + pileup fraction, grids/pins closed, AMENDMENT
-BUDGET exhausted (v5 failure = finding + STOP).** v5 result: see `t3_teacher_gate_record.md`
-final section (the binding state). **Next order:** (if v5 green) `t3_hw_moments.py` (DUAL-ROUTE
-Spitz gate — load-bearing per R2 probe C) → `t3_fit_real.py` (P3/P4/P5 as pinned in A-T3-1 §8 +
-addendum 3) → un-led review of T-#3 results → T-M3 prereg. Reviewer meta-findings adopted:
-straw-null power controls at target statistics; no criterion re-selection on realized data;
-amendment budgets in every prereg from now on.
+BUDGET exhausted (v5 failure = finding + STOP).** **v5 VERDICT: GATE FAILED (66f179f) — seed 47
+joint T = 46.28 > 21.85 (37/57 pass at 16.8/8.5); failing realization: w-pileup 28.3%,
+kernel-sector error 6.3e-2 INVISIBLE to χ² (8.9 in-band), both interval types miss 10/18,
+μ/d exact. REGISTERED FINDING (never citable as validated): boundary-pileup fragility at ~1/3
+hardware-equivalent realizations. STOP honored; hardware LOCKED.**
+**REDESIGN REGISTERED (R-POOL, prereg section "REDESIGN REGISTRATION R-POOL — the v6 gate",
+user-ratified priority):** r-position pooling per moment class — (a)-basis = T-B bulk
+stationarity (expectations exactly r-independent, V2-verified) ⇒ pure statistics upgrade,
+forward model/dof unchanged; teacher R=12 with pinned per-class position counts; pooled
+per-shot statistic + exact shot-level covariance; same joint-criterion FORM, FRESH seeds
+{67,77,87}; bets b1 (SE shrink ≥1.8× on ℓ≤3 classes) / b2 (pileup < 5% all seeds) / b3
+(coverage 3/3 + straw power); **ZERO-amendment budget — v6 failure ⇒ the registered fallback
+axis (grid/parametrization redesign) under a fresh prereg.**
+**Next order:** implement `outputs/t3_teacher_validation_v6.py` (v5 machinery + pooled
+parity_matrix + R=12 + new seeds; run under pipefail) → v6 verdict → (if green) hardware
+UNLOCK: `t3_hw_moments.py` (DUAL-ROUTE Spitz gate — load-bearing per R2 probe C; hardware
+moments are ALREADY pooled — form now matches) → `t3_fit_real.py` (P3/P4/P5 as pinned) →
+un-led review of T-#3 results → T-M3 prereg (read A-L2-1, not the L2 §4 originals). Reviewer
+meta-rules standing: straw-null power controls at target statistics; no criterion re-selection
+on realized data; amendment budgets in every prereg; print pileup fraction always; χ²-in-band
+≠ parameter accuracy; pipefail on every tee'd run.
 
 **Agent-ops lesson (this session):** heavy monolithic math-review briefs STALL general-purpose
 subagents (two stalls: 55 min and ~8 min zero-tool-call reasoning loops); the working recipe =

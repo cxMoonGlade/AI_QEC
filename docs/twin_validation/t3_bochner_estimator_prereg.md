@@ -222,6 +222,46 @@ band-containment, not accuracy (bands admit the w = 0 straw at z ≈ 2.0; off-di
     (R2 probe C: round-translation misassignments are invisible to every teacher gate) — it
     stays zero-tolerance and blocking.
 
+## REDESIGN REGISTRATION R-POOL — the v6 gate (2026-07-03, AFTER the v5 STOP; this is a NEW
+gate registration per the exhausted-budget rule, not an amendment of the failed one. Committed
+BEFORE any v6 code.)
+
+**What the v5 failure established (the registered finding):** at single-r-position teacher
+moments and hardware-equivalent N, ~1/3 of data realizations pull the fit into the w ≥ 0
+boundary (pileup 28.3% on the failing seed), producing kernel-sector errors (6.3e-2) invisible
+to χ² and under-covered by both bootstrap interval types. Mechanism (R5-diagnosed, v5-confirmed):
+moment noise along the weak w₀/w₁-split Jacobian direction reaches the boundary basin.
+
+**Redesign (priority axis, user-ratified): r-POSITION POOLING per moment class.**
+- **(a)-grade basis:** by the T-B window-locality theorem (review-cleared; machine-verified
+  V2), bulk detector-moment expectations are EXACTLY r-independent — every admissible position
+  of a class measures the same functional. Pooling is therefore a pure statistics upgrade:
+  forward model, parameters, and moment-class count (29) unchanged; dof unchanged (18).
+- **Pooled statistic:** per shot, X̄_i = mean over the admissible r-positions of (1 − 2·parity)
+  for class i; moments = shot-means of X̄; the FULL shot-level covariance of the pooled vector
+  via np.cov exactly as before (cross-position within-shot correlations handled exactly at the
+  shot level — no independence assumption).
+- **Teacher R = 12** (was 10) so long-lag classes pool too. Admissible positions (pinned):
+  o1: r ∈ 0..R−2 (11); same-lag ℓ: r ∈ 0..R−2−ℓ (ℓ=1: 10, ℓ=2: 9, ℓ=3: 8, ℓ=5: 6, ℓ=8: 3);
+  xdist: r ∈ 0..R−2 (11); x1: r ∈ 0..R−3 (10). Position counts printed per class.
+- **Hardware alignment:** the hardware fit pools bulk layers 100–900 by construction — v6 makes
+  the teacher statistic match the hardware statistic in FORM (the previous "conservative"
+  mismatch is removed).
+
+**v6 gate (same criterion FORM as v5 — joint rank-matched Mahalanobis coverage + straw at
+99.7%, ztruth ≤ 4, χ² in dof ± 4√(2dof), 2000 draws, both intervals + pileup reported-not-
+gating) with FRESH seeds {67, 77, 87}; N = 5e5; redraw streams 3000+seed.**
+- **Registered bets:** (b1) pooled SEs shrink by ≥ 1.8× on the ℓ ≤ 3 kernel-informative classes
+  vs the v5 single-position SEs (effective-gain factor printed per class); (b2) w-pileup < 5%
+  on ALL seeds; (b3) joint coverage passes 3/3 AND straw retains power (T_straw > threshold).
+- **Budget: ZERO criterion amendments for v6.** Any v6 failure ⇒ the registered FALLBACK axis
+  (grid/parametrization redesign away from the w₀/w₁ weak direction — e.g., orthogonalized
+  spectral components or a boundary-aware profile) under its own fresh prereg; r-pooling then
+  stays as an ingredient, not the fix.
+- Implementation notes (declared): parity_matrix generalizes to per-shot position means
+  (values in [−1,1], no longer ±1 — the ±1 assert is replaced by a range assert); everything
+  else (fit, bootstrap, joint tests) byte-identical to the v5 machinery; run under pipefail.
+
 **A-T3-1 addendum 3 — FINAL (2026-07-03, after the second 4-way un-led review R5–R8; supersedes
 addendum 2's interval choice WITH the pileup rationale answered; committed BEFORE the v5 run.
 AMENDMENT BUDGET: this is the LAST criterion amendment of the teacher gate — any v5 failure is a
