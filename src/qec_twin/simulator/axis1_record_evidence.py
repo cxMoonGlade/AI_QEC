@@ -8,13 +8,17 @@ density matrix and returns exact measurement, detector, and logical-observable
 record arrays when the schedule carries public XOR wiring. X/Y boundaries are
 handled by exact basis rotations around the Z enumerator. It can also sample
 `.b8` record carriers, but still does not write DEM or decoder artifacts.
+An optional ``params_for_substep`` callable overrides the schedule-global
+Axis-1 primitive params once per selected substep (the per-round param seam a
+coupled teacher drives); the emitter never derives round indices itself, and
+the default ``None`` path is byte-identical to the schedule-global read.
 """
 
 from dataclasses import dataclass
 import hashlib
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from qec_twin.forward.cptp_channel import RDTYPE
 from qec_twin.forward.exact.circuit_sim import (
@@ -25,8 +29,12 @@ from qec_twin.forward.exact.circuit_sim import (
     project_qubit,
     zero_state,
 )
-from qec_twin.mechanisms.axis1_primitives import default_axis1_primitive_registry
+from qec_twin.mechanisms.axis1_primitives import (
+    Axis1PrimitiveParams,
+    default_axis1_primitive_registry,
+)
 from qec_twin.simulator.analog_schedule import (
+    AnalogSubstepIR,
     COMPILER_SCHEDULE_SEAL_SCHEMA,
     SubstepOperation,
     SubstepSchedule,
@@ -175,10 +183,30 @@ def axis1_measurement_record_evidence_manifest(
     *,
     device: str = "cuda",
     instrument_spec: Axis1ReadoutResetInstrumentSpec | None = None,
+    params_for_substep: Callable[[AnalogSubstepIR], Axis1PrimitiveParams] | None = None,
 ) -> dict[str, Any]:
-    """Return exact measurement-record evidence for a small-N local schedule."""
+    """Return exact measurement-record evidence for a small-N local schedule.
+
+    ``params_for_substep`` optionally overrides the single schedule-global
+    Axis-1 primitive-params read: it is called exactly once for each substep
+    that carries selected joint channels (schedule order, before that substep's
+    selections are assembled) and must return the ``Axis1PrimitiveParams`` used
+    for every selection in that substep. The emitter stays agnostic to HOW a
+    round index is derived — the callable owns that
+    (``AnalogSubstepIR.round_index`` is compiler-hardcoded ``None``; derive
+    rounds from ``tick_index`` or measurement-key prefixes instead). Substeps
+    without selected channels (barriers, resets, measurements without explicit
+    durations) are never resolved. Default ``None`` keeps the manifest
+    byte-identical to the schedule-global path: the ``params_resolution`` key
+    is added only when a callable is supplied.
+    """
 
     _validate_record_evidence_schedule(schedule, device=device)
+    if params_for_substep is not None and not callable(params_for_substep):
+        raise TypeError(
+            "params_for_substep must be a callable substep -> Axis1PrimitiveParams "
+            f"or None; got {type(params_for_substep).__name__}"
+        )
     instrument = instrument_spec or Axis1ReadoutResetInstrumentSpec()
     selection_plan = build_axis1_schedule_selection_plan(schedule)
     selection_partition = axis1_selection_layers_in_schedule_order(
@@ -195,6 +223,7 @@ def axis1_measurement_record_evidence_manifest(
         selection_layers,
         device=device,
         instrument_spec=instrument,
+        params_for_substep=params_for_substep,
     )
     coverage = _coverage_manifest(schedule, selection_plan)
     probability_residual_passed = record_evidence["total_probability_residual"] <= 1.0e-8
@@ -230,6 +259,10 @@ def axis1_measurement_record_evidence_manifest(
         "probability_residual_passed": probability_residual_passed,
         "passed": passed,
     }
+    # Added ONLY when a callable is supplied so the default-None payload (and its
+    # content_hash / freeze guards) stays byte-identical to the schedule-global path.
+    if params_for_substep is not None:
+        payload["params_resolution"] = "per_substep_callable"
     payload["content_hash"] = _stable_payload_hash(payload)
     return payload
 
@@ -274,11 +307,15 @@ def write_axis1_measurement_record_samples(
     seed: int = 0,
     device: str = "cuda",
     instrument_spec: Axis1ReadoutResetInstrumentSpec | None = None,
+    params_for_substep: Callable[[AnalogSubstepIR], Axis1PrimitiveParams] | None = None,
 ) -> Axis1MeasurementRecordSampleResult:
     """Sample Axis-1 detector/logical records on CUDA and write `.b8` carriers.
 
     This writer intentionally does not write `.stim`, `.dem`, or decoder outputs:
     the selected joint-L records are not a Stim-Pauli/DEM model.
+    ``params_for_substep`` is threaded into the exact record-evidence manifest
+    (see `axis1_measurement_record_evidence_manifest`); sampling itself is
+    params-independent.
     """
 
     import numpy as np
@@ -296,6 +333,7 @@ def write_axis1_measurement_record_samples(
         schedule,
         device=dev,
         instrument_spec=instrument_spec,
+        params_for_substep=params_for_substep,
     )
     record = exact["record_evidence"]
     probabilities = torch.tensor(record["record_probabilities"], dtype=torch.float64, device=dev)
@@ -495,6 +533,7 @@ def _enumerate_measurement_records(
     *,
     device: str,
     instrument_spec: Axis1ReadoutResetInstrumentSpec,
+    params_for_substep: Callable[[AnalogSubstepIR], Axis1PrimitiveParams] | None = None,
 ) -> dict[str, Any]:
     import torch
 
@@ -513,6 +552,14 @@ def _enumerate_measurement_records(
     for substep in schedule.substeps:
         layer = selection_layers_by_substep.get(substep.substep_id)
         if layer is not None:
+            # Resolved exactly ONCE per substep (never per selection): every
+            # selection in a substep shares the substep's tick/round, so a single
+            # resolution is exact for per-round variation (ledger S1).
+            step_params = (
+                params
+                if params_for_substep is None
+                else _resolve_substep_params(params_for_substep, substep)
+            )
             layer_index = len(applied_layers)
             layer_steps: list[str] = []
             for selection in layer:
@@ -520,7 +567,7 @@ def _enumerate_measurement_records(
                 assembled = _assemble_selection_joint_channel(
                     selection,
                     dt_ns=dt,
-                    params=params,
+                    params=step_params,
                     device=dev,
                     static_zz_calibrations=static_zz_calibrations,
                 )
@@ -719,6 +766,26 @@ def _enumerate_measurement_records(
             "b8_non_emission": "a",
         },
     }
+
+
+def _resolve_substep_params(
+    params_for_substep: Callable[[AnalogSubstepIR], Axis1PrimitiveParams],
+    substep: AnalogSubstepIR,
+) -> Axis1PrimitiveParams:
+    """Resolve injected per-substep params; fail loudly on a wrong return type.
+
+    The callable owns round derivation (``AnalogSubstepIR.round_index`` is
+    compiler-hardcoded ``None`` — key off ``tick_index`` or measurement-key
+    prefixes, never that dead field).
+    """
+
+    resolved = params_for_substep(substep)
+    if not isinstance(resolved, Axis1PrimitiveParams):
+        raise TypeError(
+            "params_for_substep must return Axis1PrimitiveParams for substep "
+            f"{substep.substep_id!r}; got {type(resolved).__name__}"
+        )
+    return resolved
 
 
 def _measure_operation(
