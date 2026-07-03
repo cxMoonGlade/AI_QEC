@@ -208,6 +208,56 @@ band-containment, not accuracy (bands admit the w = 0 straw at z ≈ 2.0; off-di
     (R2 probe C: round-translation misassignments are invisible to every teacher gate) — it
     stays zero-tolerance and blocking.
 
+**A-T3-1 addendum 3 — FINAL (2026-07-03, after the second 4-way un-led review R5–R8; supersedes
+addendum 2's interval choice WITH the pileup rationale answered; committed BEFORE the v5 run.
+AMENDMENT BUDGET: this is the LAST criterion amendment of the teacher gate — any v5 failure is a
+reported finding and a STOP (back to moment-set design); no further criterion edits.)**
+
+Review verdicts driving this: R5 — v4 run 3 was a deterministic re-scoring of run 2 (same
+seeds; zero fresh randomness); the addendum-2 bias-correction mechanism explained ~7% of the
+miss (the flip came from reflecting heavily skewed, w≥0-pileup bootstrap distributions); the
+per-functional 3σ-all-functionals criterion at n=300 attains only 99.1% and false-fails a
+PERFECT estimator ~20–40%/run over 54 correlated tests. R6 — addendum 2 contradicted item 3's
+registered percentile rationale; basic endpoints can exit the feasible region under pileup;
+≥100 draws cannot support 99.7% endpoints; the pinned grid was not implementable as written.
+Both: forward model + identifiability PROVEN (p_Z absorption exact; rank 11/11; the joint
+Mahalanobis straw test agrees with both prior verdicts: reject C=0 at ~4.7σ at N=5e5, correctly
+insufficient at 2e5).
+
+**v5 gate (fresh evidence under a fixed, multiplicity-correct criterion):**
+1. **Fresh sampler seeds {37, 47, 57}** (R5 F1 — the deciding evidence must carry fresh
+   randomness).
+2. **Coverage gate = per-seed joint rank-matched Mahalanobis test** on the functional vector
+   (bootstrap covariance, rank-truncated SVD pseudo-inverse at σ > 1e-9·σ_max):
+   T = (f̂_corr − f_true)ᵀ Ĉ⁺ (f̂_corr − f_true) ≤ χ²_rank at 99.7% — the multiplicity-correct
+   replacement for max-over-54 per-functional tests (R5 F3). Per-functional intervals are
+   REPORTED (both percentile and basic, with the bootstrap pileup fraction per functional) but
+   do NOT gate — the percentile-vs-basic calibration question is thereby mooted for gating and
+   both views stay visible (R6 F3 resolved with the rationale answered: under pileup neither
+   per-functional interval is trusted as a 3σ gate; the joint test with rank truncation is).
+3. **Straw gate = the same joint test at C=0**: T_straw > χ²_rank at 99.7% (R5 verified this
+   form agrees with the committed per-functional verdicts at both N).
+4. **Bootstrap draws = 2000** (pinned NUMBER, not a floor; R6 — 3σ endpoints need ~2000),
+   redraw stream seed = 3000 + seed_value (s = the sampler seed VALUE; semantics pinned).
+5. **Grid/profile pinned (R6 F1):** g_k(Δq; ρ) = ρ^{|Δq|} exactly (the form in the committed
+   scripts); teacher grid = [(0.0, 0.55), (1.1, 0.05)] as committed; hardware grid = the 15
+   (ω, ρ) pairs of §8(i) with the SAME ρ^{|Δq|} form; §1's "delta" profile mention is
+   SUPERSEDED (no delta component; the diag(d_q) term is the local part).
+6. **Remaining pins (R6 F2):** P5 BH-FDR level q = 0.05; Δ_s = consecutive-sample difference;
+   pooled SE = √(SE_s² + SE_{s+1}²); χ² band = dof ± 4√(2·dof) (explicit); order-3 statistic
+   r-range = interior rounds 3..R−3, κ interior; P3 subsample draws = 3 per N-rung with seeds
+   4000+rung; P4 SEs from the TRAIN half; teacher seeds hereby registered (v4 used {7,17,27};
+   v5 uses {37,47,57}); note: for 2×2 window blocks {V<0, |corr|>1} ⇔ non-PSD (redundant
+   listing collapsed).
+7. **Power-content statement (into the record):** a v5 PASS certifies — exact-tier identity +
+   identifiability + JOINT functional-vector consistency at 99.7% + joint zero-kernel exclusion;
+   it does NOT certify per-functional accuracy beyond the reported intervals (R5 F3 wording
+   adopted).
+8. **A-L2-1 errata (R6):** the P4 threshold constant is exactly 4.4574e-2 (the printed 4.4e-2
+   was the under-converged iterate; conclusion unchanged and strengthened); the sticky-regime
+   positive-sign statement additionally requires π_e > p_M (the limit formula itself is exact);
+   Q/π stated in the column-stochastic convention; the lift list read as RATES (Γ, Γ/2, ∞).
+
 **A-T3-1 addendum 2 (2026-07-03, after v4 run 2 — G-STRAW fixed 3/3 (5.91/3.27/4.30), ztruth/χ²
 green, but P1b seed-27 coverage failed marginally at worst-z 3.51: the honest narrower bands
 now RESOLVE the estimator's finite-sample curvature bias (|bias| ~1.1–1.7e-2 consistent across
