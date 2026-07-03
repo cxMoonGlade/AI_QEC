@@ -14,13 +14,53 @@ records `tb_ident_gauge_theorem_record.md`, `t2_silent_floor_record.md`,
 (+A-T3-1, addenda, R-POOL); scripts `outputs/tb_ident_gauge_verify.py`,
 `t2_silent_floor_verify.py`, `t3_teacher_validation_v4/v5.py`.
 
-**Citation policy of this document (made explicit per the citation-existence audit).** This is
-a self-contained DERIVATION notebook: uncited nontrivial claims in the body are ORIGINAL
-derivations of this project, and their support is the in-line proof plus the §7 machine
-checkpoints — zero external citation is their correct state (external ownership/positioning
-lives in the record documents by design, kept out of the proofs). Standard results are used
-with in-line proofs where short; the ledger below names their canonical sources for
-readability — none of these citations is load-bearing beyond the in-line arguments.
+**Citation policy + CLAIM TAXONOMY (rewritten per the user's originality audit — "~29 original
+derivations" was inflation; the honest original-result count is EIGHT).** This is a
+self-contained DERIVATION notebook. Every nontrivial claim belongs to exactly one tier:
+
+**Tier P — PRE-EXISTING in-repo machinery (not this round's content):** the grading calculus
+(§0 Steps 0.1–0.4, facts F1/F2) and the comb closed form are the STRUCTURE LEMMA's machinery,
+proved in earlier project work (tex `sec:structure-lemma`); restated here for
+self-containedness only.
+
+**Tier O — ORIGINAL RESULTS (the complete list; everything not listed here claims NO
+discovery):**
+  O1. The probe-calculus reduction package (Lemma A, §1): every record functional = a
+      nonnegative mixture of Gaussian-CF evaluations on DETERMINISTIC support paths, with the
+      window-locality / detector-stationarity(-of-form) / order↔reach corollaries.
+  O2. The re-signing gauge theorem (§2): the increment-admissible leg-wise sign group is an
+      exact all-order record gauge.
+  O3. The order-1 hypercube law + the quieting corollary (§3.1–3.5).
+  O4. The order-2 cosh-factorized law + machine-specific sign erasure by coset counting
+      (§3.6–3.7).
+  O5. The exact silent-floor functional for arbitrary Σ (§4.1–4.2).
+  O6. The coherent-interference leading law (§4.3–4.5): [L, P_s] = 0 coherent round-summation,
+      the 1+6ρ²+8ρ³ curve, the 1+(R+1)ρ² R-growth separation vs rate-based simulators.
+  O7. The metric theorem ∂F/∂f|₀ = 0 (§4.6).
+  O8. The L2 instrument pair (§5): kernel-matched record equivalence at the Markov point +
+      the P4 observed-flip regime map (sticky sign flip, N̄=0 noise bound, the 4.4574e-2
+      threshold).
+
+**Tier R — ROUTINE derivations by standard techniques (original only in assembly; NO discovery
+claimed):** assignment-noise dressing (1.2), the character resummation mechanics (1.3), the
+support/sign propagation algebra (1.4), the backward-recursion bookkeeping (1.6), PSD
+congruences, hypercube/cosh identities, the frozen-chain conditional arithmetic inside §5.2,
+the TCL2-gap order counting, Thm L2-2 (the Z-record never reads coherence — a scope guard,
+near-trivial), the transfer no-go direction + its self-witness remark (§5.3, standard
+data-processing reasoning), and ALL of §6 (p_Z-absorption exponent identity, ridge
+power-counting, R-POOL pooling statistics — correctness facts about OUR estimator, elementary
+technique).
+
+**Tier X — REPRODUCED known results (re-proved in-line for self-containedness):** the 2-state
+Markov embeddability (5.1), the Isserlis pairing enumeration (4.4), the 2-qubit parity
+computation (3.4).
+
+Support for Tier O = the in-line proofs + the §7 machine checkpoints; external
+ownership/positioning lives in the record documents ([PROVISIONAL], adjudication-bounded).
+Note: the record documents' "theorem inventories" enumerate STATEMENTS per document, not
+original-claim counts — the paper's claim budget is the EIGHT items above. The ledger below
+names canonical sources of the standard results for readability — none is load-bearing beyond
+the in-line arguments.
 
 **Standard-results ledger (naming, not load-bearing — every use is proved in-line).
 Citation-recency policy (user-set, standing): pre-2022 citations ONLY for genuinely
