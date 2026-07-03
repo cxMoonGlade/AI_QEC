@@ -123,8 +123,8 @@ SCREENING ✅ — "keep the package lean" pass: removed the 7 unused scratch-ori
 (source/nm_* + oracles/*, no tracked importer — re-home at P6) and split cptp_channel (the learner
 recovery loop recover_channel/IC → `qec_twin/calibration/cptp_recovery.py`; shared DM ops +
 StinespringChannel + PTM stay in carrier). P5 ✅ (P5a `1f64a69` teachers.py, P5b `87d1297`
-frontend, P5c `286880b` coupled_cycle). Next: P6 is DEFERRED (see below); P7 (de-shim) is a
-standing user decision. Handoff: `HANDOFF_refactor_2026-07-03.md`.**
+frontend, P5c `286880b` coupled_cycle). P6 + P7 (de-shim) + rename all DEFERRED (user decision
+2026-07-03: keep the shim layer for now). Handoff: `HANDOFF_refactor_2026-07-03.md`.**
 - **P5 — frontend + teacher ✅ DONE.** `simulator/*` (45 files) → `frontend/` (pkgutil sys.modules-alias
   shim); `mechanisms/coupled_teachers` → `teachers/coupled_cycle.py`; `mechanisms/teachers.py` (B5 Kraus
   builders, physics-core) → `mechanisms/teachers.py` (fixed the last package→qec_twin back-edge in
@@ -140,10 +140,12 @@ standing user decision. Handoff: `HANDOFF_refactor_2026-07-03.md`.**
   teacher. Extracting it now would pull unused code into the package (violates the "keep the package
   lean" SCREENING DISCIPLINE, rule d). Re-home it — together with the P1-removed nm_*/oracles primitives —
   WHEN the quantum-bath teacher is actually built and wires them.
-- **P7 — flip + de-shim: STANDING USER DECISION (not started).** Migrating all importers to the new
-  package paths + removing the shims is a whole-tree sweep; whether to do it now vs keep the shim layer
-  is a deliberate call left to the user. Optional P8 — split to a separate distributable with its own
-  `pyproject`.
+- **P7 — flip + de-shim: DEFERRED (user decision 2026-07-03 — KEEP the shim layer for now; not started).**
+  Migrating all importers to the new package paths + removing the shims is a whole-tree sweep with no urgent
+  payoff (the shims work at exact baseline parity), and the package still imports `qec_twin.hardware` for the
+  decoder, so it is not a standalone distributable regardless. Best done as a dedicated pass when finalizing
+  the boundary for release. **RENAME also DEFERRED** (user decision 2026-07-03 — do it together with P7/P8 to
+  avoid a second import-path churn). Optional P8 — split to a separate distributable with its own `pyproject`.
 
 **Verification per phase:** `python -m py_compile` → package import smoke → the affected `tests/`
 subset → (at phase end) full `tests/` regression, via committed runners (pipefail + tee +

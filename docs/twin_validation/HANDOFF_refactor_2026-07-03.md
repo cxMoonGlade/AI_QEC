@@ -101,12 +101,14 @@ python in a script file (parens in inline `python -c` break the outer shell).
   Extracting it now would pull unused code in (violates the "keep the package lean" SCREENING DISCIPLINE,
   rule d). Re-home it — with the P1-removed `nm_*`/`oracles` primitives — WHEN the quantum-bath teacher
   is built and wires them.
-- **P7 — flip + de-shim + optional split: STANDING USER DECISION (not started).** Migrating all importers
-  to the package paths + removing the shims is a whole-tree sweep; keep-shims vs de-shim is a deliberate
-  call reserved for the user. NOTE the two pre-existing P2/P3 package→qec_twin back-edges still routed via
-  shims (`carrier/channels.py` → `qec_twin.mechanisms.catalog`; `carrier/exact/circuit_sim.py` →
-  `qec_twin.forward.accel`) — clean these in P7. Optional P8 — split to a separate distributable with its
-  own `pyproject` (only once the qec_twin↔package boundary is clean; the package still imports
+- **P7 — flip + de-shim + optional split: DEFERRED (user decision 2026-07-03 — KEEP the shim layer for now;
+  not started).** Migrating all importers to the package paths + removing the shims is a whole-tree sweep
+  with no urgent payoff (shims work at exact baseline parity). NOTE the two pre-existing P2/P3
+  package→qec_twin back-edges still routed via shims (`carrier/channels.py` → `qec_twin.mechanisms.catalog`;
+  `carrier/exact/circuit_sim.py` → `qec_twin.forward.accel`) — clean these when P7 is eventually done. The
+  package RENAME (error_coupling_simulator is narrow) is likewise DEFERRED to that pass. Optional P8 — split
+  to a separate distributable with its own `pyproject` (only once the qec_twin↔package boundary is clean;
+  the package still imports
   `qec_twin.hardware` for the decoder).
 
 ## 5. Pointers / open items
