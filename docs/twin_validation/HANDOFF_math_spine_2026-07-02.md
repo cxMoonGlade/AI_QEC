@@ -238,6 +238,30 @@ reduced numbered scope + MANDATORY incremental scratch-file appends after every 
 time-boxes; a killed agent can be RESUMED with context intact (SendMessage) — resume beats
 relaunch once reading cost is paid.
 
+## 4.6 READING DEBT (user-caught coverage gap, 2026-07-03 — MANDATORY before paper-positioning
+text is finalized)
+
+1. **arXiv:2511.16772** (Montañà-López/Elben/Choi/Trivedi — learning non-Markovian Gaussian
+   noise in many-body simulators) — **精读 MANDATORY**: nearest neighbor to B/#3; the
+   adjudication's learnability axis MISSED it (Nov 2025 < search date). B/#3 no-owner verdicts
+   HELD PENDING (marked in tb record). Deltas to verify in the 精读: access model
+   (designed prep+Clifford+product-measure vs our passive records), PSD-constraint absence,
+   gauge/blind-spot absence, QEC-data absence.
+2. arXiv:2601.02160 (Xu/Vadimov/Stockburger/Ankerhold 2026 — unified review of non-Markovian
+   simulation methods) — engine-landscape related work for the tex Methodology (recency-policy
+   preferred anchor); body-read.
+3. arXiv:2401.17255 (Li/Yan et al., DQME-SQ dissipaton-embedded QME, universal Gaussian
+   environments) — engine-landscape related work (competing exact framework to the pseudomode
+   embedding); body-read.
+4. arXiv:2502.05408 (learning/optimizing non-Gaussian correlated noise, digitally controlled
+   qubits — surfaced incidentally) — active-control non-Gaussian learning; check against the
+   Gaussianity-scope statement; body-read.
+5. IEEE 10240942 — UNIDENTIFIED (paywall, no accessible index); user to supply title/arXiv
+   mirror, then same treatment.
+LESSON (search design): the 6-axis adjudication search had no "simulation-methods/review" axis
+and its learnability axis under-covered late-2025 postings — future ownership searches add an
+explicit engine-methods axis + a recency sweep of the last 12 months.
+
 ## 5. Parked (trigger-gated, not lost)
 
 B4′ surface-mix scissors bet (17q); CZ coherent-ZZ slot; f hardware grounding (von Lüpke as

@@ -26,6 +26,19 @@ error-event probabilities from syndrome correlations, no inversion correspondenc
 concept is cited, never claimed; the continuous-Σ × passive-moment map is the contribution.
 All ownership positioning [PROVISIONAL].
 
+**⚠ COVERAGE GAP (user-caught 2026-07-03; positioning HELD PENDING a 精读):**
+arXiv:2511.16772 (Montañà-López, Elben, Choi, Trivedi, Nov 2025 — "Efficiently learning
+non-Markovian noise in many-body quantum simulators") was MISSED by the adjudication's
+6-axis search despite predating it. Abstract-level assessment: Gaussian-assumption learning of
+quantum+classical non-Markovian noise on geometrically local lattices, log-N sample
+complexity — the nearest neighbor yet to the B/#3 conjunction. Apparent deltas (abstract
+only): access = DESIGNED experiments (product-state prep + single-qubit-Clifford layer +
+product-observable measurement), not passive stabilizer records; no QEC detector data; a
+positive learnability protocol, not a gauge/blind-spot characterization; PSD-constraint
+status unknown. On its face it does not own B.1 or #3.1 — but the no-owner verdicts for
+B/#3 are HELD PENDING a full 精读 of this paper (mandatory before any paper-positioning text
+is finalized).
+
 ## Setting
 
 The structure-lemma machine: n data qubits, X-type stabilizer group S (support group
