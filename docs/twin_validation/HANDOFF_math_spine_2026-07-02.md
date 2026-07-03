@@ -242,16 +242,32 @@ R4-9 moment-set re-scope trail note filed; R4-10 M1-substrate dependency explici
 pooled χ² is null-typical at 1–3, only the band's upper edge means anything; R4-7 closed
 form is ≥2-check-chains only). Annotations in the gate record; v6 chain is now
 review-cleared for M3 reliance.** **Next order (PRIORITY RATIFIED by user 2026-07-03:
-"能把这个simulator做出来 这是第一优先级" — BUILD outranks everything): mainline = the
-`qec_coupling_simulator_build_contract.md` FIRST-PHASE VERTICAL SLICE (Section E; all H1–H5
-resolved w/ preregs, H6/H7 process defaults): G1 real-schedule parse + G2 joint-Lindbladian
-assembler FIRST (ZZ×T2 exact-zero two-witness control + DR×ZZ band 1−F_e ∈ [6e-4, 3e-3]
-dt² / [4e-4, 4e-3] fixed-Ω), then source fan-out Θ + CoupledCycleTeacher + {det,obs} emit +
-G4–G8; new modules = forward/joint_lindbladian.py, mechanisms/source_coupling.py,
-mechanisms/coupled_teachers.py (+ tracked gates/ suite); H6 commit-gate = module-by-module
-with separate-lane reviewer, user confirms every src/qec_twin/ commit. T-M3 prereg stays
-QUEUED (content unchanged, read A-L2-1) but yields mainline to the build; the estimator's
-real-data demo stays PARKED until simulator validation.** Reviewer meta-rules standing:
+"能把这个simulator做出来 这是第一优先级" — BUILD outranks everything). ⚠ STATE CORRECTION
+(2026-07-03, repo-verified — the 2026-06-26 build contract's "NOT YET EARNED" list is
+STALE): the axis1 line (src/qec_twin/simulator/, ~50 files, Jun 27–30) already built
+forward/joint_lindbladian.py (G2 gate PASS, tracked docs/twin_validation/gates/
+g2_jointL.json: ZZ×T2 commutator exactly 0.0 + channel 2.5e-11; DR×ZZ 1−F_e in-band),
+mechanisms/{axis1_primitives,source_coupling,source_process}.py, the frontend stack
+(CircuitIR/CodeSpec/XZZX compiler/Stim import/sealed SubstepSchedule/.b8 record sampling
+from the exact Axis-1 record distribution), MCWF dense cert + QT/MPS restricted carriers,
+and the FULL within-substep coupling cert (`axis1_coupling_status.md` A: six heterogeneous
+mechanisms, from-scratch scipy GT 2.42e-15, pairwise effect-size table, ALL PASS).
+**Mainline = what remains** (per `axis1_coupling_status.md` B + the
+`project-coupled-cycle-teacher-build-state` memory, reviewer-adjudicated 06-30):
+(1) `mechanisms/coupled_teachers.py::CoupledCycleTeacher` via Path A-corrected — inject an
+optional `params_for_substep(substep)` callable into the dense emitter
+(`axis1_record_evidence.py`, default None = byte-identical freeze regression); teacher owns
+round-index derivation (round_index is a DEAD field — derive from barrier/measurement-key
+prefixes); slice-1 coupling rides on ζ×γφ only; G0 pre-build effect-size gate (record
+imprint above shot noise) + emit-returns-{det,obs}-only + compiler-seal assert + memory-ful
+source; (2) record-level gates G4–G8 (gates/ has only g2); (3) the NON-MARKOVIAN memory
+carrier (axis1 status B: the actual contribution, NOT built — Axis-2/Axis-3 bath-memory
+source on top of source_coupling + the Phase-B joint-collapse seam). Read
+`HANDOFF_coupling_simulator_2026-07-02.md` + `axis1_coupling_status.md` +
+`src/qec_twin/simulator/README.md` BEFORE the old build contract. H6 commit-gate =
+module-by-module with separate-lane reviewer, user confirms every src/qec_twin/ commit.
+T-M3 prereg stays QUEUED (content unchanged, read A-L2-1) but yields mainline to the
+build; the estimator's real-data demo stays PARKED until simulator validation.** Reviewer meta-rules standing:
 straw-null power controls at target statistics; no criterion re-selection on realized data;
 amendment budgets in every prereg; print pileup fraction always; χ²-in-band ≠ parameter
 accuracy; pipefail on every tee'd run.
