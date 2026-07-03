@@ -238,26 +238,33 @@ reduced numbered scope + MANDATORY incremental scratch-file appends after every 
 time-boxes; a killed agent can be RESUMED with context intact (SendMessage) — resume beats
 relaunch once reading cost is paid.
 
-## 4.6 READING DEBT (user-caught coverage gap, 2026-07-03 — MANDATORY before paper-positioning
-text is finalized)
+## 4.6 READING DEBT — PAID 2026-07-03 (items 1–4; item 5 awaits user input)
 
-1. **arXiv:2511.16772** (Montañà-López/Elben/Choi/Trivedi — learning non-Markovian Gaussian
-   noise in many-body simulators) — **精读 MANDATORY**: nearest neighbor to B/#3; the
-   adjudication's learnability axis MISSED it (Nov 2025 < search date). B/#3 no-owner verdicts
-   HELD PENDING (marked in tb record). Deltas to verify in the 精读: access model
-   (designed prep+Clifford+product-measure vs our passive records), PSD-constraint absence,
-   gauge/blind-spot absence, QEC-data absence.
-2. arXiv:2601.02160 (Xu/Vadimov/Stockburger/Ankerhold 2026 — unified review of non-Markovian
-   simulation methods) — engine-landscape related work for the tex Methodology (recency-policy
-   preferred anchor); body-read.
-3. arXiv:2401.17255 (Li/Yan et al., DQME-SQ dissipaton-embedded QME, universal Gaussian
-   environments) — engine-landscape related work (competing exact framework to the pseudomode
-   embedding); body-read.
-4. arXiv:2502.05408 (learning/optimizing non-Gaussian correlated noise, digitally controlled
-   qubits — surfaced incidentally) — active-control non-Gaussian learning; check against the
-   Gaussianity-scope statement; body-read.
+1. **arXiv:2511.16772 — 精读 DONE, HELD-PENDING RESOLVED.** Note:
+   `docs/papers/reading_notes/montanalopez_nonmarkovian_learning_manybody_2511.16772.md`.
+   All four deltas VERIFIED in text (access = designed ρ_S/W-layer/observables/time-traces,
+   no mid-circuit measurement; objects = t=0 kernel Taylor data / quasistatic Σ_ab; NO
+   PSD/Bochner constraint, NO gauge/unlearnability content, NO QEC content — full-text
+   keyword sweeps, hits only in bibliography). **B.1 and #3.1 no-owner verdicts STAND**
+   (tb record COVERAGE GAP section rewritten to RESOLVED). New duties: cite as third
+   positioning corner (Chen/Zheng/Montañà-López); add to #3 baseline table (unconstrained
+   comparator); Step 0.α anchor (their Eq. 6 ≡ classical Gaussian Hamiltonian noise); one
+   queued derivation check — does the schedule's own Clifford layer act as an involuntary W
+   (their Im[K_cc] mechanism) before freezing "invisible" language in the draft.
+2. arXiv:2601.02160 — body-read DONE:
+   `docs/papers/reading_notes/xu_ankerhold_qdmess_nonmarkovian_review_2601.02160.md`
+   (QD-MESS umbrella = recency-preferred engine-landscape anchor; their mode-space
+   invariance = ENGINE-side representation gauge, distinct from our record gauge).
+3. arXiv:2401.17255 — body-read DONE:
+   `docs/papers/reading_notes/li_yan_dqme_sq_quantum_simulation_2401.17255.md`
+   (DQME-SQ second-quantized dissipaton embedding, quantum-circuit substrate; landscape
+   only, zero ownership contact).
+4. arXiv:2502.05408 — body-read DONE:
+   `docs/papers/reading_notes/dong_nongaussian_digital_qns_2502.05408.md`
+   (non-Gaussian digital-control QNS; active pole, verdicts unaffected; cite as the
+   recent cost-of-lifting-Gaussianity endpoint in the Step 0.α boundedness discussion).
 5. IEEE 10240942 — UNIDENTIFIED (paywall, no accessible index); user to supply title/arXiv
-   mirror, then same treatment.
+   mirror, then same treatment. STILL OPEN.
 LESSON (search design): the 6-axis adjudication search had no "simulation-methods/review" axis
 and its learnability axis under-covered late-2025 postings — future ownership searches add an
 explicit engine-methods axis + a recency sweep of the last 12 months.

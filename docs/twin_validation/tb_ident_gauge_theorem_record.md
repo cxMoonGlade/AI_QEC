@@ -26,18 +26,28 @@ error-event probabilities from syndrome correlations, no inversion correspondenc
 concept is cited, never claimed; the continuous-Σ × passive-moment map is the contribution.
 All ownership positioning [PROVISIONAL].
 
-**⚠ COVERAGE GAP (user-caught 2026-07-03; positioning HELD PENDING a 精读):**
-arXiv:2511.16772 (Montañà-López, Elben, Choi, Trivedi, Nov 2025 — "Efficiently learning
-non-Markovian noise in many-body quantum simulators") was MISSED by the adjudication's
-6-axis search despite predating it. Abstract-level assessment: Gaussian-assumption learning of
-quantum+classical non-Markovian noise on geometrically local lattices, log-N sample
-complexity — the nearest neighbor yet to the B/#3 conjunction. Apparent deltas (abstract
-only): access = DESIGNED experiments (product-state prep + single-qubit-Clifford layer +
-product-observable measurement), not passive stabilizer records; no QEC detector data; a
-positive learnability protocol, not a gauge/blind-spot characterization; PSD-constraint
-status unknown. On its face it does not own B.1 or #3.1 — but the no-owner verdicts for
-B/#3 are HELD PENDING a full 精读 of this paper (mandatory before any paper-positioning text
-is finalized).
+**✔ COVERAGE GAP RESOLVED (精读 completed 2026-07-03; verdicts STAND):**
+arXiv:2511.16772 (Montañà-López, Elben, Choi, Trivedi, Nov 2025) was missed by the
+adjudication's 6-axis search; the mandatory 精读 is done —
+`docs/papers/reading_notes/montanalopez_nonmarkovian_learning_manybody_2511.16772.md`.
+Text-grounded findings: access = ACTIVE designed experiments (chosen product ρ_S +
+mid-evolution single-qubit-Clifford layer W + chosen product observables + short-time
+time-traces, ONE terminal measurement per shot — no mid-circuit measurements); objects =
+kernel Taylor data K^(m)_ab(0) (Prop 1) / quasistatic coefficient covariance Σ_ab incl.
+all-to-all (Prop 2); estimators = unconstrained entrywise sup-norm (NO PSD/Bochner
+constraint — 0 body hits); NO gauge/unlearnability content (0 hits); NO QEC content (all
+syndrome/stabilizer/EC hits are bibliography lines). **B.1 no-owner verdict STANDS** —
+they answer "what CAN designed experiments learn," never "what is provably invisible to
+one fixed passive machine's record moments"; their own finding that Im[K_cc] is invisible
+at W=1 and restored by inserting W is a published instance of
+access-class-determines-visibility that CONCRETIZES our thesis. **#3.1 no-owner verdict
+STANDS** — no PSD-constrained estimation, no QEC data; they join #3's baseline table as
+the unconstrained many-body Gaussian-kernel comparator. Positioning duty: cite as the
+third corner alongside Chen (discrete Pauli/active/duality) and Zheng (syndrome
+N&S/Pauli): continuous Gaussian kernels/active/positive protocols — the continuous-Σ ×
+passive-fixed-record × gauge-characterization conjunction remains NO OWNER. One
+derivation-level check queued before freezing "invisible" language in the draft: whether
+the schedule's own Cliffords act as an involuntary W (see note, Open (i)).
 
 ## Setting
 
