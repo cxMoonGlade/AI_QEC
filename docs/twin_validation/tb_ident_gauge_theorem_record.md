@@ -45,9 +45,17 @@ STANDS** — no PSD-constrained estimation, no QEC data; they join #3's baseline
 the unconstrained many-body Gaussian-kernel comparator. Positioning duty: cite as the
 third corner alongside Chen (discrete Pauli/active/duality) and Zheng (syndrome
 N&S/Pauli): continuous Gaussian kernels/active/positive protocols — the continuous-Σ ×
-passive-fixed-record × gauge-characterization conjunction remains NO OWNER. One
-derivation-level check queued before freezing "invisible" language in the draft: whether
-the schedule's own Cliffords act as an involuntary W (see note, Open (i)).
+passive-fixed-record × gauge-characterization conjunction remains NO OWNER. The queued
+involuntary-W derivation check is **RESOLVED (2026-07-03,
+`involuntary_w_check_2026-07-03.md`, 16/16 gates):** the schedule's own operations CANNOT
+mimic their Case-3 W even partially at linear order — **Prop IW-1** (realness/parity
+symmetry) forces the passive record to be EVEN in the commutator (Im-K) sector;
+outcome-discarded moments are EXACTLY classical (cosh law, machine-verified ≤ 1.3e−13);
+the only quantum imprint is quadratic (W₁₂ ≈ −8κ², cross-window commutator integrals,
+outcome-resolved cross moments only). Their Case-3 W = S·H is COMPLEX — design freedom
+buys exactly the complex structure linear commutator access requires; real passive
+machines provably cannot. "Invisible" language survives with the class × access × order
+scope made explicit; registered v1 bet P2 was falsified and repaired stronger (A-IW-1).
 
 ## Setting
 

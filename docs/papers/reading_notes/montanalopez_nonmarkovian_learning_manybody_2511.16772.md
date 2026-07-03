@@ -157,11 +157,14 @@ model and question type remain unclaimed**:
   keyword sweeps + line-by-line reading of the load-bearing sections.
 - **Use:** (i) mandatory citation in the B positioning paragraph (third corner) and in the
   #3 baseline table; (ii) Step 0.α anchor; (iii) Eq. 7 ansatz cross-ref in T-#3 prereg.
-- **Open (for us):** (i) does their W-layer trick have ANY passive analog inside a stabilizer
-  schedule (the code's own Cliffords as an involuntary W)? — if yes, some Im-kernel
-  components our gauge theorem declares invisible at order k might become visible at higher
-  moment order through the schedule's internal gates; worth one derivation-level check
-  before freezing the "invisible" language in the paper draft; (ii) their e^{O(M² log M)}
+- **Open (for us):** (i) ~~does their W-layer trick have ANY passive analog inside a
+  stabilizer schedule?~~ **RESOLVED 2026-07-03**
+  (`docs/twin_validation/involuntary_w_check_2026-07-03.md`, 16/16 gates): NO linear
+  passive analog exists — Prop IW-1 (realness/parity) forces passive records to be EVEN in
+  the commutator sector; outcome-discarded moments are exactly classical; quantum imprint =
+  quadratic (≈ −8κ²) in outcome-resolved cross moments only. Their Case-3 W = S·H being
+  COMPLEX is exactly what escapes the obstruction — cite as the active/passive boundary in
+  matrix-realness form; (ii) their e^{O(M² log M)}
   wall suggests short-time Taylor access and our long-window integrated access are
   COMPLEMENTARY data channels — a fusion estimator is a plausible future rung, not current
   scope.

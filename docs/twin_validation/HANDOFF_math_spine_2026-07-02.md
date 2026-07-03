@@ -7,20 +7,15 @@ work order below is user-ratified 2026-07-02); that file's §1–§4/§6 remain 
 ## 0. Mission (user-ratified 2026-07-02)
 
 Paper = the coupling error simulator (SIMULATOR, not decoder — A8). **Math spine = #2 + #3 + B.**
-**Ratified work order: B theorem → #2 functional → #3 estimator + real-data demo → M3 prereg+run —
+**Ratified work order: B theorem → #2 functional → #3 recovery identities → M3 prereg+run —
 with T-L2 (the non-unital classical imitator definition, zero-compute derivation) running IN
-PARALLEL from day one.** Identity sentence (proposed, consistent with adjudication): generalize the
-learnable-vs-gauge duality from discrete Pauli channels under active control (Chen/Zheng) to a
-continuous spatiotemporal Σ under PASSIVE stabilizer-record observation — identifiability theorem
-(B) + exact floors (#2) + Bochner-physical estimation demonstrated on real Google detector data
-(#3). *[PRECISION NOTE 2026-07-03 (penetration audit; the ratified sentence above is kept
-verbatim, this note governs its READING): "generalize the duality" = transport the QUESTION AND
-PROGRAM to a DISJOINT noise class (Chen/Zheng govern stochastic Pauli; coherent errors outside
-their formalism) — an analogy, not an inheritance; the continuous full dichotomy is one-sided
-(gauge + reduction proven; completeness per-instance-certified, [O] open in general). Binding
-precise wording: derivations doc "Relationship to Chen/Zheng" + tb record positioning.]* Bone A = certification METHODOLOGY (not theorem); Bone C = narrow phenomenological
-discriminator (signed-p_ij reframe mandatory); Frame D = organizing frame, cite Chen/Zheng
-precedent.
+PARALLEL from day one.** Identity sentence (proposed, consistent with adjudication):
+characterize the mathematical structure of the coupling simulator's observable record —
+identifiability theorem (B) + exact closed-form functionals (#2) + recovery-machinery
+identifiability constraints (#3). Real hardware data enters ONLY as a simulator validation
+target (does the simulator produce records matching the device?), not as a direct estimation
+substrate in the current phase. Estimator demonstration on real data is a downstream milestone
+gated by simulator validation.
 
 ## 1. Where everything is
 
@@ -101,12 +96,14 @@ probability = finite Fourier sum of Gaussian CFs for ARBITRARY Σ; derive the ge
 the measured 15.9× d=3 instance (`step4_v2b_tier1`) + tier-0 comb numerics. Cite Regev 2605.03054
 as nearest (i.i.d./global-only). Deliverable: LaTeX + verification script.
 
-**T-#3 — Bochner-constrained estimation + real-data demo (Branch-B insurance).** PSD/Bochner-
-CONSTRAINED estimator of Σ from detector moments (the constraint in the estimator, not emergent);
-demo on the LOCAL real Google detector data (hardware/ ingestion; dataset notes are mandatory
-pre-reading). Baselines: the operational estimators (Blume-Kohout/Young p_ij, Bhardwaj, + note
-Takou 2606.11496 from the Brave check). A8: estimation, NEVER decoding. Biggest piece; needs its
-own prereg with registered bands before any fit is read.
+**T-#3 — recovery-machinery identifiability constraints (downstream; needed only AFTER simulator
+validation).** PSD/Bochner-CONSTRAINED recovery of Σ from detector moments (the constraint in the
+estimator, not emergent); demo on real Google detector data is a future milestone gated by
+simulator validation — the current phase establishes the identifiability structure (p_Z
+absorption gauge, ridge rank, R-POOL pooling correctness). Baselines: the operational estimators
+(Blume-Kohout/Young p_ij, Bhardwaj, + note Takou 2606.11496 from the Brave check). A8:
+estimation, NEVER decoding. Biggest piece; needs its own prereg with registered bands before any
+fit is read.
 
 **T-M3 — prereg then run (after B and #2 land; full spec = state-confirmation §5).** Musts:
 imitator ladder L1/L2/L3 (L1 = fold-attenuation measurement, expected-positive (b), NOT
@@ -248,9 +245,16 @@ relaunch once reading cost is paid.
    keyword sweeps, hits only in bibliography). **B.1 and #3.1 no-owner verdicts STAND**
    (tb record COVERAGE GAP section rewritten to RESOLVED). New duties: cite as third
    positioning corner (Chen/Zheng/Montañà-López); add to #3 baseline table (unconstrained
-   comparator); Step 0.α anchor (their Eq. 6 ≡ classical Gaussian Hamiltonian noise); one
-   queued derivation check — does the schedule's own Clifford layer act as an involuntary W
-   (their Im[K_cc] mechanism) before freezing "invisible" language in the draft.
+   comparator); Step 0.α anchor (their Eq. 6 ≡ classical Gaussian Hamiltonian noise). The
+   queued involuntary-W derivation check is **RESOLVED (2026-07-03,
+   `involuntary_w_check_2026-07-03.md`, prereg → registered-P2 miss → A-IW-1 → 16/16
+   gates):** Prop IW-1 = passive records are EVEN in the commutator (Im-K) sector
+   (realness/parity theorem, exact machine nulls 0.0e+00); outcome-discarded moments are
+   EXACTLY classical (cosh law, ≤ 1.3e−13 at all g); the quantum imprint is quadratic
+   (W₁₂ ≈ −8κ², cross-window commutator integrals) and lives only in outcome-resolved
+   cross moments; their Case-3 W = S·H is COMPLEX = precisely the structure a real passive
+   machine lacks. "Invisible" language SAFE with the class × access × order scope explicit;
+   draft duties in that doc §6.
 2. arXiv:2601.02160 — body-read DONE:
    `docs/papers/reading_notes/xu_ankerhold_qdmess_nonmarkovian_review_2601.02160.md`
    (QD-MESS umbrella = recency-preferred engine-landscape anchor; their mode-space
