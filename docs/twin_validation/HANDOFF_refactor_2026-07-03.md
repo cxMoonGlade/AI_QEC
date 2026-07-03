@@ -24,10 +24,20 @@ slightly narrow name — rename is cheap, deferred; don't block on it.
 | P3 | `2cb8cdd` | `source/{process,coupling}` + `mechanisms/{catalog,axis1_primitives,qutrit_teachers,seam_teachers}` |
 | P4 | `03662d2` | `certify/{core,types,facade,anchors/*}` |
 | decision | `074abc1` | migration-doc: the ratified scope above |
+| screening | `f34a5a5` | REMOVED 7 unused scratch modules (source/nm_* + oracles/* — no importer, re-home at P6); SPLIT cptp_channel (learner recovery loop → `qec_twin/calibration/cptp_recovery.py`; shared DM ops/StinespringChannel/PTM stay) |
 
-**`qec_twin` is untouched except each moved module's old path is now a thin SHIM** (re-export
-redirect). No duplicated implementation in tracked src (P1's outputs/ copies are the only dup, and
-that's gitignored frozen legacy).
+**Lean package now** = `carrier/{accel,channels,cptp_channel,joint_lindbladian,exact/*,kernels/*}` +
+`certify/{...}` + `mechanisms/{axis1_primitives,catalog,qutrit_teachers,seam_teachers}` + `numerics` +
+`source/{coupling,process}`. **`qec_twin` is untouched except**: each moved module's old path is a thin
+SHIM (re-export redirect), AND the screening added `qec_twin/calibration/cptp_recovery.py` (the learner
+recovery loop split out of cptp_channel). No duplicated implementation in tracked src.
+
+**SCREENING DISCIPLINE (apply to every P5+ candidate, ratified 2026-07-03):** before moving a module in,
+grep who imports it. (a) simulator/frontend/teacher/gate-needed → move. (b) SHARED forward physics core
+(cptp DM ops / channels / catalog / exact — used by learner too) → already in the package, STAYS (the
+"package owns the physics core" decision). (c) learner-ONLY functions mixed into a shared file → SPLIT
+them back to `qec_twin` (like cptp's recover_channel). (d) NO current simulator importer (unused/future
+machinery) → do NOT pull it in. Keep the package to exactly what the simulator needs.
 
 ## 2. The proven recipe (every move followed it — no bugs)
 
