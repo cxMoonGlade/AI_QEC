@@ -43,6 +43,28 @@ eigenvalue (1−p_Z) + p_Z(−1)^{a_q} per qubit = 1 on a_q = 0 and (1−2p_Z) o
 Equivalently: a π-phase flip w.p. p_Z (E[e^{iπ b a}] = (1−p_Z) + p_Z(−1)^a) — the two
 implementations are identical, which is why the samplers use π-flips.
 
+**Step 0.α (model provenance + the Gaussianity assumption — what is standard, what is
+precedent, what is novel; added per the penetration audit).**
+- *Components with standard provenance:* Gaussian dephasing by a classical field is the
+  standard weak-coupling noise model of the qubit-spectroscopy canon (many weak fluctuators →
+  CLT → Gaussian: Schoelkopf cond-mat/0210247, Clerk RMP 0810.4729 — notes in-repo; measured
+  近-Gaussian 1/f flux noise: Bylander 1101.4707, note in-repo). Stabilizer parity measurement
+  + reset is standard QEC. Classical-Gaussian dephasing is EXACTLY random-unitary (the A6
+  carrier declaration, B_syndrome prereg) — no quantum bath is being approximated away.
+- *Machine precedent:* dephasing noise inside repeated-stabilizer-measurement circuits has a
+  direct literature instance — 2401.04530 (quasistatic phase damping in stabilizer circuits;
+  精读 note in-repo) — which however treats the UNCORRELATED/quasistatic case and declares
+  spatио-temporally correlated noise "beyond the scope" (verbatim, note line 195).
+- *Novel to this work (the assembly + the question):* the general-covariance field
+  (arbitrary Σ across qubits AND rounds) driving that machine, READ ONLY through passive
+  detector moments, and the identifiability/gauge question asked of it. No cited paper
+  contains this combination (adjudication B.1 negative-coverage log; [PROVISIONAL]).
+- *Scope boundary:* Gaussianity is an ASSUMPTION of the model class, not a theorem —
+  non-Gaussian noise (single strong TLS/telegraph, RTN bursts) is explicitly OUT OF SCOPE of
+  every Σ-statement here (on hardware this is part of the declared S1 model class; note the
+  L2b imitator is itself a telegraph — the non-Gaussian object appears in this program only on
+  the imitator side).
+
 **Step 0.4 (grade decomposition of one round).** Write M_a = the projector onto grade-a matrix
 units. Expanding the joint Gaussian average of a product of per-round phases over the R rounds:
 E_φ[∏_r e^{iφ_r·a_r}] = exp(−½ âᵀΣâ), â = (a_1..a_R) ∈ {−1,0,1}^{nR} — the multivariate
@@ -179,6 +201,38 @@ gauge-erased; (b) a single cross-entry sign flip is NOT in the group (group elem
 ≥4-entry patterns) ⇒ must move some moment (alive control).
 Checkpoint: V3/V3b (gauge ≤ 2.2e-16 incl. composed patterns; non-admissible increments move
 8.4e-3 / 7.0e-5).
+
+**Relationship to Chen 2206.06362 / Zheng 2601.22286 — the PRECISE statement (per the
+penetration audit; supersedes any "lift of the duality" shorthand in earlier prose).**
+What is analogous, and what is NOT:
+- *Structural analogy (legitimate):* both programs ask "which noise functionals does the
+  record pin, and which transformations are gauge", both exhibit the gauge as EXPLICIT
+  physical transformations, and both have a completeness REDUCTION (their App-D
+  "any outcome probability = polynomial in fidelities" ↔ our Lemma A "any record functional =
+  nonneg mixture of CF evaluations on deterministic windows").
+- *Delta 1 — DISJOINT noise classes, not a generalization:* Chen/Zheng govern stochastic
+  PAULI noise; Zheng's own scope note (their W1) places coherent errors OUTSIDE their
+  formalism — and our machine is coherent-per-realization classical Gaussian dephasing. There
+  is NO mathematical inheritance: neither theorem specializes to the other. The honest verb is
+  "transport the QUESTION and the gauge-vs-learnable program to a disjoint noise class", not
+  "lift the theorem".
+- *Delta 2 — access classes differ:* their unlearnability quantifies over ALL experiments
+  (active design freedom); ours is relative to ONE fixed passive machine — weaker access,
+  hence our gauge statements are conditional on the declared access class.
+- *Delta 3 — completeness is ONE-SIDED here:* Chen Thm 4 proves the full dichotomy
+  (learnable ⊕ gauge = everything). We prove the gauge side (Theorem 1) and the reduction
+  (Lemma A), and certify completeness only per FINITE INSTANCE (rank certificates; e.g. the
+  PAIR1 corank-6 Σ-dependent null shows the continuous analog of the full dichotomy is
+  genuinely open — tagged [O]). A general "everything E-invariant and window-supported is
+  learnable" theorem does NOT exist yet.
+Related positioning precision: Remm 2502.17722 estimates DISCRETE Bernoulli error-event
+probabilities from syndrome correlations — a different object class from our continuous Σ
+(same instrument family, no inversion-formula correspondence); Regev 2605.03054 is the
+nearest closed form FOUND IN THE SEARCH (a coverage statement, not a metric claim) and is
+structurally different (combinatorial path-count LER for i.i.d.+global-mode surface code vs
+our Gaussian-CF Fourier sum for the rep-code silent floor). Landau–Streater is cited only
+VIA Crow–Joynt (deliberate: never cite unread papers; the direct 精读 is a parked debt,
+HANDOFF §5).
 
 > **TRAP 1 (falsified by run 1 of the T-B verification).** First registered claim: "for the
 > single-stabilizer unit, lag-1 relative signs are PRESERVED (sinh-visible)." The machine gave

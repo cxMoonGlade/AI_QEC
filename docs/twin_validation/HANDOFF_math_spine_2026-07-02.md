@@ -13,7 +13,12 @@ PARALLEL from day one.** Identity sentence (proposed, consistent with adjudicati
 learnable-vs-gauge duality from discrete Pauli channels under active control (Chen/Zheng) to a
 continuous spatiotemporal Σ under PASSIVE stabilizer-record observation — identifiability theorem
 (B) + exact floors (#2) + Bochner-physical estimation demonstrated on real Google detector data
-(#3). Bone A = certification METHODOLOGY (not theorem); Bone C = narrow phenomenological
+(#3). *[PRECISION NOTE 2026-07-03 (penetration audit; the ratified sentence above is kept
+verbatim, this note governs its READING): "generalize the duality" = transport the QUESTION AND
+PROGRAM to a DISJOINT noise class (Chen/Zheng govern stochastic Pauli; coherent errors outside
+their formalism) — an analogy, not an inheritance; the continuous full dichotomy is one-sided
+(gauge + reduction proven; completeness per-instance-certified, [O] open in general). Binding
+precise wording: derivations doc "Relationship to Chen/Zheng" + tb record positioning.]* Bone A = certification METHODOLOGY (not theorem); Bone C = narrow phenomenological
 discriminator (signed-p_ij reframe mandatory); Frame D = organizing frame, cite Chen/Zheng
 precedent.
 

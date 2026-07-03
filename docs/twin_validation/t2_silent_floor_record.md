@@ -8,9 +8,13 @@ probe calculus (`sec:ident-gauge`, record `tb_ident_gauge_theorem_record.md`).
 ## Positioning (cite-don't-claim; adjudication #2.1 [PROVISIONAL] no-owner)
 
 Clader 2101.11631 owns the binary fixed-marginal Gaussian-moment endpoints incl. the literal
-15 = (2d−1)!! (精读 note committed); Regev 2605.03054 owns the nearest closed form (i.i.d. Pauli +
-one global Bernoulli mode; no interpolation parameter, no derivative metric). Ours = the
-arbitrary-Σ interpolating functional (finite Gaussian-CF Fourier sum) + the metric structure.
+15 = (2d−1)!! (精读 note committed); Regev 2605.03054 = the nearest closed form FOUND IN THE
+SEARCH (a coverage statement, not a metric claim — penetration-audit precision 2026-07-03: it
+is structurally a combinatorial path-count LER for i.i.d. Pauli + one global Bernoulli mode on
+a surface code, a different object from our Gaussian-CF Fourier sum for the rep-code silent
+floor; our contribution is the interpolating-Σ structure, not a refinement of theirs; no
+interpolation parameter, no derivative metric there). Ours = the arbitrary-Σ interpolating
+functional (finite Gaussian-CF Fourier sum) + the metric structure.
 
 ## Results claimed (epistemic classes)
 

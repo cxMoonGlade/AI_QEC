@@ -11,12 +11,20 @@ registered (a)-exact verification bets (BEFORE the run), and the run results (ap
 
 ## Positioning (cite-don't-claim; adjudication B.1 [PROVISIONAL] no-owner)
 
-Lift of the discrete-Pauli learnable-vs-gauge duality (Chen 2206.06362 — 精读 note
+Transport of the learnable-vs-gauge QUESTION AND PROGRAM (Chen 2206.06362 — 精读 note
 `chen_learnability_pauli_noise_2206.06362.md`; Zheng 2601.22286) to a **continuous spacetime
-Gaussian covariance Σ read by PASSIVE stabilizer detectors**. Remm 2502.17722 = the discrete
-detector-moment estimator boundary; Paz-Silva 1609.01792 / von Lüpke 1912.04982 = continuous-Σ via
-ACTIVE control. The duality concept is cited, never claimed; the continuous-Σ × passive-moment map
-is the contribution. All ownership positioning [PROVISIONAL].
+Gaussian covariance Σ read by PASSIVE stabilizer detectors**. ⚠ PRECISION (penetration audit,
+2026-07-03; supersedes "lift of the duality" shorthand): this is an ANALOGY, not an inheritance —
+(1) noise classes are DISJOINT (Chen/Zheng = stochastic Pauli; coherent errors outside their
+formalism by their own scope notes; ours = coherent-per-realization Gaussian dephasing);
+(2) access classes differ (their all-experiments/active vs our one-fixed-passive-machine);
+(3) completeness is ONE-SIDED here: gauge group proven + Lemma-A reduction proven; the full
+learnable⊕gauge dichotomy is certified per finite instance only and is [O] open in general
+(PAIR1 corank-6 Σ-dependent null). Remm 2502.17722 = a DIFFERENT OBJECT CLASS (discrete Bernoulli
+error-event probabilities from syndrome correlations, no inversion correspondence to continuous
+Σ); Paz-Silva 1609.01792 / von Lüpke 1912.04982 = continuous-Σ via ACTIVE control. The duality
+concept is cited, never claimed; the continuous-Σ × passive-moment map is the contribution.
+All ownership positioning [PROVISIONAL].
 
 ## Setting
 
