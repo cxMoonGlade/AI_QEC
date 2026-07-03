@@ -13,7 +13,9 @@
   - Functional recovery (V_q^total + C(Δq,Δt) over the fitted windows): **max|ΔΣ| = 1.37e-14**
     (gate ≤ 1e-6), residual 2.2e-16.
 - **P1b (sampled tier, n=5 chain, R=6, INDEPENDENT state-vector Born sampler, p_M per-check +
-  p_Z π-flips, 2e5 shots × 3 seeds; η_κ and β fitted):** functional recovery within 3×
+  p_Z π-flips, 2e5 shots × 3 seeds; η_κ and β fitted):** *[⚠ SUPERSEDED — the η/β split was the
+  A-T3-1 root-cause defect (exact ridge); these numbers are the v3 band-containment result the
+  review overturned; binding results = v4/v5 sections below]* functional recovery within 3×
   parametric-bootstrap bands, **all seeds — worst z = 1.47 / 1.16 / 1.02**; sampler-vs-formula
   truth max-z 2.64/1.35/2.43 (normal for a 20-moment max statistic); η̂ errors ≤ 0.004,
   β̂ errors ≤ 0.0046 and seed-varying (healthy).
@@ -33,6 +35,9 @@
   1.9e-4); tightened xtol/ftol/gtol to machine scale → 1.37e-14.
 
 ## Status + next
+> **⚠ SUPERSEDED — see "SUPERSEDED IN PART" and "v4 FINAL" below, then the v5 section (the
+> binding state). The "unlocked" below is the PRE-REVIEW v3 claim, retracted and later
+> re-established under the amended gate.**
 
 Per prereg §6: **hardware moment extraction unlocked** — next scripts (fresh session):
 `outputs/t3_hw_moments.py` (streaming b8 extraction, X basis samples 00–04, bulk layers

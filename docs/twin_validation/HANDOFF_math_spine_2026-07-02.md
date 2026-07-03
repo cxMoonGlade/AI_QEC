@@ -105,7 +105,9 @@ own prereg with registered bands before any fit is read.
 
 **T-M3 — prereg then run (after B and #2 land; full spec = state-confirmation §5).** Musts:
 imitator ladder L1/L2/L3 (L1 = fold-attenuation measurement, expected-positive (b), NOT
-theorem-vacuous); L2-differencing as primary component separator; g-ladder extended below g₀/4 with
+theorem-vacuous); L2-differencing as primary component separator *[per A-L2-1: differencing =
+theorem-grounded CONTAINMENT + MEASURED additivity, and the L2 null must be KERNEL-matched]*;
+g-ladder extended below g₀/4 with
 MC-power planning + dual registered operating points (avoid gτ = 0.63); N̄-scan total-kill;
 additivity check (free in the L2 instrument); QUANTUM unit's memoryless-null construction declared
 (structure lemma does NOT cover it); theorem inventory (γ/2 channel-only, contractivity direction,
@@ -168,10 +170,13 @@ a836a25, 1b86b5d + records):**
   METRIC THEOREM ∂F/∂f|₀ = 0 exact (gauge corollary) ⇒ honest metric = ∂²F/∂f² (6) + f³
   triangle (8). 20/20 green incl. independent MC anchors.
 - **T-L2** (`l2_imitator_and_transfer_map_derivation.md`): L2a/L2b PDMP definition; Thm L2-1
-  EXACT record equivalence at the Markov point (L2-differencing theorem-grounded; quantum
-  memoryless-null ≡ L2a; built-in crash-gate null); Thm L2-2 coherence inert on Z-record;
-  Prop L2-3 P4 = L1-ONLY discriminator; transfer-map no-go ⇒ c₂ FLOATS + γ/2-scaling check.
-  Register-ready M3 checklist deltas in §4.
+  EXACT record equivalence at the Markov point; Thm L2-2 coherence inert on Z-record;
+  transfer-map no-go ⇒ c₂ FLOATS + γ/2-scaling check. **⚠ AMENDED BY A-L2-1 (in-doc, binding
+  for M3): matching = per-window KERNEL matching (TCL2 = interpretation; O(g⁴) confound);
+  differencing = containment (theorem) + additivity (MEASURED, Q3); P4 is NOT L1-only — sign
+  kills L1, magnitude is a live (b)-instrument vs L2a at N̄=0 (threshold p_M ≥ 4.4574e-2);
+  [H,Π_z]=0 + classification-only-noise hypotheses stated.** §4 checklist superseded per
+  A-L2-1; M3 registration must read A-L2-1, not the §4 originals.
 - **Un-led review (independent agent; trail `outputs/review_tb_t2_findings.md`): (A) and (B)
   both SOUND-WITH-FIXES; all theorems independently rederived + confirmed** (reviewer supplied
   a stronger ∂F/∂f|₀ proof — adopted; proved the functional's event ≡ tier-1's measured object).
@@ -180,19 +185,23 @@ a836a25, 1b86b5d + records):**
   **A-T2-2 S7 dressed-MC anchor (p_Z/p_M/p_F independently exercised): z = 0.72/0.28/1.18
   GREEN.** B + #2 are now review-cleared for M3-prereg reliance.
 
-**T-#3 progress (2026-07-02/03, continued same arc):** prereg COMMITTED (ef99910 —
-`t3_bochner_estimator_prereg.md`: Bochner = nonneg spectral weights, PSD by construction;
-forward model = the review-cleared T-B laws; d29 X-basis target; R2-lite claim boundaries;
-P1–P5 registered) → d29 dataset note pre-read done → **P1/P2 teacher-recovery gate PASSED**
-(b5f5120, `t3_teacher_gate_record.md`: forward map ≡ engine 4.4e-16; independent Born-sampler
-tier 3/3 seeds worst z ≤ 1.47; PSD structural; saturated-sigmoid nuisance lesson documented).
-**Next session order:** `outputs/t3_hw_moments.py` (streaming b8 extraction, X samples 00–04,
-bulk layers 100–900, interior checks, DUAL-ROUTE gate vs in-repo Spitz-exact pij BEFORE any
-fit) → `outputs/t3_fit_real.py` (P3 physicality contrast / P4 held-out / P5 drift, bands
-pre-registered) → un-led review of T-#3 results → T-M3 prereg (ALL inputs in hand:
-state-confirmation §5 + L2 doc §4 checklist + review-cleared B/#2; the L2-differencing
-instrument replaces the c₂-pin). Paper assembly interleaves (tex header PENDING updates +
-Thesis/Contributions wiring for the landed B/#2 sections).
+**T-#3 progress (2026-07-02/03; REWRITTEN 07-03 after TWO un-led review rounds — the earlier
+version of this block cited the overturned v3 pass):** prereg ef99910 → v3 teacher gate
+"passed" (b5f5120) → **4-way review round 2 (95a3b38) OVERTURNED the v3 reading** (undeclared
+η/β split = exact rank-11/12 ridge; band-containment not accuracy; bands 2× inflated;
+hardware-unlock RETRACTED) → A-T3-1 + addenda 1–2, v4 gate green (3b6d801) → **4-way review
+round 3 (R5–R8)**: forward model + identifiability PROVEN (p_Z-absorption exact; rank 11/11;
+xdist multi-μ moments = strongest ridge-breakers), but v4 run-3 = deterministic re-scoring
+(zero fresh randomness), per-functional gate false-fails perfect estimators 20–40%/run,
+addendum-2 diagnosis contradicted by its own bootstrap → **A-T3-1 addendum 3 FINAL (c6fcb50):
+v5 gate = fresh seeds {37,47,57}, JOINT rank-matched Mahalanobis coverage+straw at 99.7%,
+2000 draws, both intervals reported-not-gating + pileup fraction, grids/pins closed, AMENDMENT
+BUDGET exhausted (v5 failure = finding + STOP).** v5 result: see `t3_teacher_gate_record.md`
+final section (the binding state). **Next order:** (if v5 green) `t3_hw_moments.py` (DUAL-ROUTE
+Spitz gate — load-bearing per R2 probe C) → `t3_fit_real.py` (P3/P4/P5 as pinned in A-T3-1 §8 +
+addendum 3) → un-led review of T-#3 results → T-M3 prereg. Reviewer meta-findings adopted:
+straw-null power controls at target statistics; no criterion re-selection on realized data;
+amendment budgets in every prereg from now on.
 
 **Agent-ops lesson (this session):** heavy monolithic math-review briefs STALL general-purpose
 subagents (two stalls: 55 min and ~8 min zero-tool-call reasoning loops); the working recipe =

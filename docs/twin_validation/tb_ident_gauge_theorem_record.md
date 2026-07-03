@@ -98,7 +98,8 @@ not gated).
 
 ## Results (final; logs `outputs/logs/tb_ident_gauge_verify.log` … `_v4.log`)
 
-**ALL CHECKS PASS (36 checks; every equality at 1e-16-scale, every ALIVE control fired).**
+**ALL CHECKS PASS (38 checks — machine-precision equalities + 7 fired ALIVE controls + 5 rank
+gates; count corrected per the review NOTE below, original "36" wording superseded).**
 
 - **Route consistency:** dense record-law route vs char-direct route: |Δ| = 1.1e-16.
 - **V1 order-1 hypercube law:** 12/12 exact (both units, both stabilizers, interior + boundary,

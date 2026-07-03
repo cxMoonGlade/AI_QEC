@@ -47,9 +47,12 @@ lag-∞ factorization limit).
 **The Bochner constraint (the contribution).** Parametrize the stationary part literally by
 Bochner: C(Δq, Δt) = Σ_k w_k cos(ω_k·Δt) g_k(Δq) with **w_k ≥ 0** on a declared
 frequency/spatial-profile grid (g_k = declared nonneg-definite spatial profiles: delta,
-exponential-decay family). Every iterate of the estimator is a valid PSD kernel BY
-CONSTRUCTION — physicality is a hard constraint, not an emergent property. (Plus V_q ≥ 0,
-η_κ ∈ (0,1].)
+exponential-decay family *[SUPERSEDED by addendum 3 item 5: g_k(Δq;ρ) = ρ^{|Δq|} exactly, NO
+delta component — diag(d_q) is the local part; grids pinned there]*). Every iterate of the
+estimator is a valid PSD kernel BY CONSTRUCTION — physicality is a hard constraint, not an
+emergent property. (Plus V_q ≥ 0, η_κ ∈ (0,1] *[implementation note per A-T3-1 item 1: the
+SINGLE per-check nuisance is binding — the v1–v3 η/β split was the defect; p_Z rides in d as
+the declared +δz V-level gauge]*.)
 
 **Fit.** Weighted least squares on the registered moment set (order-1 detector marginals +
 order-2 pair moments in the pre-registered pij pair classes: same-check lag 1..8, spatial
@@ -66,15 +69,24 @@ decoder-free (A8).
 
 ## 3. Predicted behavior (falsifiable) + epistemic classes
 
-- **P1 (a)-exact, teacher validation (Rule I gate — runs FIRST):** on the verified graded
+> **⚠ SUPERSEDED IN PART BY A-T3-1 + ADDENDA 1–3 (below, binding).** A top-to-bottom executor
+> must NOT implement this section as written: P1's label splits into P1a (a)-exact + P1b
+> (b)-band; R extends to ≤10; the band machinery is replaced (full-covariance bootstrap, 2000
+> draws, JOINT rank-matched Mahalanobis coverage + straw gates, per-functional intervals
+> reported-not-gating); ztruth/χ²/STRAW gates added; P2 is reported-not-gating; P3/P4/P5 pins
+> live in A-T3-1 §8. Read A-T3-1 + addenda FIRST; this section remains for the registration
+> trail.
+
+- **P1 (a)-exact, teacher validation (Rule I gate — runs FIRST):** *[label superseded: P1a
+  (a)-exact / P1b (b)-band; R≤10; gates per addendum 3]* on the verified graded
   engine (the T-B/T-#2 Machine, n=3..5 chain, R=3..4) with KNOWN Σ drawn INSIDE the model
   class: the constrained estimator recovers all gauge-invariant fitted-window functionals
   within 3× the moment-SE-propagated bands, and the recovery is exact (≤1e-6) in the
   noiseless-moment limit. Sign content: only loop invariants recovered (per T-B); the reported
   representative is canonicalized (declared gauge fixing: nonneg nearest-neighbor row).
   FALSIFIER: any gauge-invariant functional outside 3σ at exact moments ⇒ estimator bug, STOP.
-- **P2 (a)-structural:** the constrained estimate is PSD at every iterate incl. the reported
-  one (machine-checkable, zero tolerance).
+- **P2 (a)-structural:** *[reported-not-gating per A-T3-1 item 7]* the constrained estimate is
+  PSD at every iterate incl. the reported one (machine-checkable, zero tolerance).
 - **P3 (b)-band, the physicality contrast:** on finite-shot subsamples (N_shots ladder
   1e3/1e4/1e5), the UNCONSTRAINED plug-in inversion of the same moment set (the operational
   baseline: invert the cosh/window laws moment-by-moment, Spitz-style) produces
@@ -91,9 +103,11 @@ decoder-free (A8).
   or equal (band: ratio ≤ 1.0 +0.3/−0.5) — the constraint acts as physical regularization.
   Both outcomes reportable; a large in-class LOSS (>1.5×) is a model-class misspecification
   finding (misspecification-direction language, R2-lite).
-- **P5 (b)-direction, drift axis:** re-fit per sequential sample (00–09): fitted kernel
+- **P5 (b)-direction, drift axis:** *[re-based + pinned in A-T3-1 §8(iv) + addendum 3 item 6:
+  ridge-invariant functionals, Δ_s = consecutive-sample difference vs √(SE_s²+SE_{s+1}²),
+  BH-FDR q=0.05]* re-fit per sequential sample (00–09): fitted kernel
   parameters move smoothly (sample-to-sample change < the cross-sample band) — direction-only;
-  magnitude reported.
+  magnitude reported. *(P3/P4 execution pins likewise live in A-T3-1 §8(ii)–(iii).)*
 
 ## 4. Independent ground truth (Rule I, non-circular)
 

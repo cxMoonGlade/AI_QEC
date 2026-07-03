@@ -157,6 +157,10 @@ full; supersedes the flagged statements above; reviewer evidence `outputs/review
    (p_M = 0 ⇒ conditioning event has probability 0; p_M > 0 ⇒ excess = p_M(2p_M−1) < 0 with
    magnitude ≤ p_M) ⇒ **the measured quantum −4.06e-2 is unreachable by matched L2a unless
    p_M ≥ 4.4e-2 — P4 RETAINS magnitude-level q-vs-L2a discriminating power at N̄ = 0.**
+   *[Errata per review round 3 (R6), registered in A-T3-1 addendum 3 item 8: exact threshold
+   = 4.4574e-2 (the 4.4e-2 was an under-converged iterate; conclusion strengthened); the
+   sticky-regime POSITIVE sign additionally requires π_e > p_M (the limit formula itself is
+   exact); Q/π in the column-stochastic convention; the lift list read as RATES (Γ, Γ/2, ∞).]*
    "P4 = L1-only discriminator" is replaced by: P4 sign kills L1; P4 magnitude vs L2a is a live
    (b)-band instrument in the flip-dominated/N̄=0 regimes, dead in the sticky regime. (The
    N̄→0 "→0 while stays" contrast in the old derivation was broken — both vanish at Θ(γ↑),
