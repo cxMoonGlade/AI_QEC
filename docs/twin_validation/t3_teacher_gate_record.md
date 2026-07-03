@@ -236,3 +236,53 @@ identifiability structure (p_Z-absorption gauge, ridge rank 11/11, R-POOL poolin
 + the v6 joint-coverage machinery) — is ESTABLISHED by the v4→v6 chain and its review rounds;
 the hardware estimator demo is PARKED (downstream, gated by simulator validation). Un-led
 review of the v6 chain + extraction gate before M3 reliance (standing rule).
+
+## UN-LED REVIEW 4 VERDICTS + POST-REVIEW ANNOTATIONS (2026-07-03; findings + evidence
+scripts: `outputs/review4_v6_extraction_findings.md`, `outputs/review4_step{3,4,5}_*.py`)
+
+**A1 — v6 R-POOL teacher gate: SOUND (no fixes; ALL-PASS stands).** Reviewer independently:
+diff-verified the v5 inheritance + every pin; recomputed all thresholds (χ²₇ = 21.8464, χ²₂ =
+11.8290 incl. an analytic route); verified the (a)-grade pooling basis on the engine at
+non-registered parameters (r-independence spread EXACTLY 0.0e+00, two machine sizes) **with a
+powered falsifying control** (a non-stationary Σ breaks the equality at the predicted round —
+the stationarity qualifier is load-bearing); validated the b1 semantics (single-position SE
+R-independence 0.3% systematic vs the 2.07-vs-1.8 margin). Redesign mechanism visible in data
+(R4-6): straw 26–35 → 712–793, pileup 28.3% → 0.0%, worst kernel error 6.3e-2 → ≤ 7.5e-3.
+**A2 — hardware extraction + dual-route gate: SOUND-WITH-FIXES (the PASS is valid; the fixes
+gate RELIANCE, not the run).** Route B git-verified unmodified M1-era module; three genuinely
+different arithmetic encodings; integer-exact agreement; cache ties to gated totals at 1.45e-14.
+
+Annotations (per the review's recommended notes; no criterion or result changed):
+- **R4-5 (A1 note):** the G-χ² tripwire's χ²₁₈ calibration does not survive pooling — v6's
+  logged 2.7/1.0/1.5 are null-TYPICAL for the pooled statistic (reviewer's null-draw fits:
+  pooled null χ² mean 2.84, p95 5.26; diagonal weights ignore the stronger pooled cross-class
+  correlation, max |offdiag corr| 0.925). Registered FORM implemented exactly; only the upper
+  edge of the band carries meaning under pooling.
+- **R4-1 (A1 wording):** the v6 header's "expectations are exactly r-independent" holds FOR
+  THIS TEACHER because Σ is stationary by construction; the stationarity qualifier is
+  load-bearing in general (reviewer's control).
+- **R4-7 (A1 scope):** the hyp2/hyp22 closed form does NOT extend to the degenerate
+  single-check chain (nq=2 gap 2.06e-3 vs machine-eps at nq≥3); quote the law for ≥2-check
+  chains only. No v6 impact (nq = 3/5).
+- **R4-8 (A2, MAJOR — RELIANCE PRECONDITION for any future un-parking of the hardware fit):**
+  the S2 layer-flatness check is print-only yet load-bearing for hardware pooling, and the
+  printed spreads (2.21–3.00%, ~10× binomial SE; layer systematic ~1.3e-3 in moment units vs
+  pooled class SEs ~3e-5) mean pooled hardware moments are **layer-AVERAGES, not stationary
+  moments, at ~40× the statistical resolution** (Jensen-gap residual ~1e-4 ≈ a few SE even for
+  the best stationary model). BEFORE any milestone relies on the pooled hardware moments:
+  register a quantitative flatness criterion OR re-declare the estimand as layer-averaged bulk
+  moments with the Jensen-gap bound in S1's misspecification budget.
+- **R4-9 (A2, registration-trail note):** the extraction's FIT moment set re-scoped the §1 set
+  at implementation time — §1's lag-2 cross classes (and wider-spatial lag-1) DROPPED
+  (conservative: restrict to teacher-validated kinds); same-lag 4/6/7 and the x1 MINUS
+  orientation ADDED by kind-level induction (validated KIND at interpolated lags; kernel even
+  in dt). This note is that trail entry; any future fit prereg must carry the choice explicitly.
+- **R4-10 (A2):** the dual-route gate covers extraction ARITHMETIC only; bit-order / grid /
+  round-translation integrity rests on the M1 artifacts (bit-exact m2d P2 incl. full-corpus
+  variant; DEM-support P4) — keep that dependency explicit wherever "dual-route PASS" is cited.
+- **R4-11 (A2):** the P3 subsample seed pin "{4000+rung}" was implemented as 4000 + rung INDEX
+  (4000/4001/4002; declared in-script, memberships cached) — recorded as the adopted reading
+  (the sibling redraw pin uses VALUE semantics).
+- **R4-12 (A2):** the float covariance/SE path is single-route (means retro-verified to
+  1.45e-14 against gated totals; covariance not) — add an np.cov cross-check to any future fit
+  preflight.

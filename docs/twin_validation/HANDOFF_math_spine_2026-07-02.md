@@ -232,12 +232,20 @@ estimator demo = downstream, gated). Retained [PROVISIONAL] products: χ² = 716
 PERSISTENTLY infeasible for the Gaussian-dephasing class up to n=2.5e5** (r̂ = m_same/o1² ≥ 1
 feasibility theorem fails on-data) = the simulator-target characterization; w-pileup ~58%
 on hardware; ⚠ P4 ran with a κ-pooled baseline instead of the pinned moment-wise inversion —
-disclosed in the record, P4/P5 NOT citable. **Next order (re-scoped): un-led review of the
-v6 chain + extraction gate → T-M3 prereg (read A-L2-1, not the L2 §4 originals); the
-estimator's real-data demo stays PARKED until simulator validation.** Reviewer meta-rules
-standing: straw-null power controls at target statistics; no criterion re-selection on
-realized data; amendment budgets in every prereg; print pileup fraction always; χ²-in-band
-≠ parameter accuracy; pipefail on every tee'd run.
+disclosed in the record, P4/P5 NOT citable. **UN-LED REVIEW 4 DONE (2026-07-03,
+`outputs/review4_v6_extraction_findings.md`): A1 v6 gate = SOUND (thresholds independently
+recomputed; (a)-pooling basis verified with a POWERED falsifying control; ALL-PASS stands);
+A2 extraction = SOUND-WITH-FIXES (PASS valid; fixes gate RELIANCE: R4-8 MAJOR — pooled
+hardware moments are layer-AVERAGES at ~40× the pooled SE, so before ANY un-parking of the
+hardware fit: register a flatness criterion OR re-declare the estimand + Jensen-gap in S1;
+R4-9 moment-set re-scope trail note filed; R4-10 M1-substrate dependency explicit; R4-5
+pooled χ² is null-typical at 1–3, only the band's upper edge means anything; R4-7 closed
+form is ≥2-check-chains only). Annotations in the gate record; v6 chain is now
+review-cleared for M3 reliance.** **Next order (re-scoped): T-M3 prereg (read A-L2-1, not
+the L2 §4 originals); the estimator's real-data demo stays PARKED until simulator
+validation.** Reviewer meta-rules standing: straw-null power controls at target statistics;
+no criterion re-selection on realized data; amendment budgets in every prereg; print pileup
+fraction always; χ²-in-band ≠ parameter accuracy; pipefail on every tee'd run.
 
 **Agent-ops lesson (this session):** heavy monolithic math-review briefs STALL general-purpose
 subagents (two stalls: 55 min and ~8 min zero-tool-call reasoning loops); the working recipe =
