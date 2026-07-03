@@ -241,11 +241,20 @@ hardware fit: register a flatness criterion OR re-declare the estimand + Jensen-
 R4-9 moment-set re-scope trail note filed; R4-10 M1-substrate dependency explicit; R4-5
 pooled χ² is null-typical at 1–3, only the band's upper edge means anything; R4-7 closed
 form is ≥2-check-chains only). Annotations in the gate record; v6 chain is now
-review-cleared for M3 reliance.** **Next order (re-scoped): T-M3 prereg (read A-L2-1, not
-the L2 §4 originals); the estimator's real-data demo stays PARKED until simulator
-validation.** Reviewer meta-rules standing: straw-null power controls at target statistics;
-no criterion re-selection on realized data; amendment budgets in every prereg; print pileup
-fraction always; χ²-in-band ≠ parameter accuracy; pipefail on every tee'd run.
+review-cleared for M3 reliance.** **Next order (PRIORITY RATIFIED by user 2026-07-03:
+"能把这个simulator做出来 这是第一优先级" — BUILD outranks everything): mainline = the
+`qec_coupling_simulator_build_contract.md` FIRST-PHASE VERTICAL SLICE (Section E; all H1–H5
+resolved w/ preregs, H6/H7 process defaults): G1 real-schedule parse + G2 joint-Lindbladian
+assembler FIRST (ZZ×T2 exact-zero two-witness control + DR×ZZ band 1−F_e ∈ [6e-4, 3e-3]
+dt² / [4e-4, 4e-3] fixed-Ω), then source fan-out Θ + CoupledCycleTeacher + {det,obs} emit +
+G4–G8; new modules = forward/joint_lindbladian.py, mechanisms/source_coupling.py,
+mechanisms/coupled_teachers.py (+ tracked gates/ suite); H6 commit-gate = module-by-module
+with separate-lane reviewer, user confirms every src/qec_twin/ commit. T-M3 prereg stays
+QUEUED (content unchanged, read A-L2-1) but yields mainline to the build; the estimator's
+real-data demo stays PARKED until simulator validation.** Reviewer meta-rules standing:
+straw-null power controls at target statistics; no criterion re-selection on realized data;
+amendment budgets in every prereg; print pileup fraction always; χ²-in-band ≠ parameter
+accuracy; pipefail on every tee'd run.
 
 **Agent-ops lesson (this session):** heavy monolithic math-review briefs STALL general-purpose
 subagents (two stalls: 55 min and ~8 min zero-tool-call reasoning loops); the working recipe =
@@ -290,6 +299,46 @@ relaunch once reading cost is paid.
 LESSON (search design): the 6-axis adjudication search had no "simulation-methods/review" axis
 and its learnability axis under-covered late-2025 postings — future ownership searches add an
 explicit engine-methods axis + a recency sweep of the last 12 months.
+
+## 4.7 USER-ROUND CORPUS TRIAGE (2026-07-03) — verdicts + PAPER-PHASE duties (NOT mainline;
+priority ratification: build > positioning)
+
+User ran their own search round (README 9→14 sections, 110 entries), catching a June-2026
+cluster all prior sweeps missed. Triage against the load-bearing claims (notes are
+精读-grade in-repo):
+- **B.1 STANDS, two "first" claims DEMOTED:** Chu 2606.00433 (Jiang group) = continuous
+  1-param gauge R(t) + uniqueness theorem + physicality-bounded GAUGE BANDS on repeated-MCM
+  records, 60q hardware — methodologically point-for-point our pattern; we can no longer
+  write "first continuous gauge in a record setting" or "first physicality-band reporting".
+  Surviving deltas: object (Σ ∈ Sym⁺(nR), structured gauge GROUP + dimension counts vs one
+  scalar t), machine (multi-qubit stabilizer parity detectors vs 1q MCM strings), noise
+  class (continuous Gaussian field vs 8 classical HMM probabilities). Their gauge = the
+  classic 2-state-HMM similarity gauge → new dialect axis (HMM identifiability, Petrie/
+  Ito-Amari line; Burke-Rosenblatt already in bib).
+- **Lee 2606.05664:** detectors = Wilson loops = gauge-invariant = learnable DOF (discrete
+  Pauli/Clifford; maps to Chen's PTG). DUTY: cite at our "loop products = identifiable sign
+  content" sentence + explicit disambiguation of the two senses of "gauge" (lattice-gauge
+  redundancy group vs identifiability gauge).
+- **Cheng 2606.29638 (Jun 30!):** MCM insertion BREAKS the Chen gauge (|δ| MCMs = cost);
+  no post-MCM residual-gauge characterization (their W2); their open problems #1/#2 point
+  directly at our territory. DUTY: 4th data point in the access-relativity statement;
+  their binomial flip diagnostic = adaptable non-Markovianity test for stabilizer rounds
+  (build-phase idea, not claim-relevant).
+- **#2 untouched** (nothing in corpus touches arbitrary-Σ closed-form silent-floor).
+  **#3 STANDS-NARROWED:** Chu bands = mandatory methodology precedent; GLE 2402.11705
+  body-read queued (constraint type?); PMME 2510.12894 / Quiroz 39q join the active-pole
+  baseline rows. **Wedge REINFORCED:** Shao 2606.00474 c=1 no-contraction theorem =
+  supporting citation; TJM/cTJM Pauli-only = contrast; 2507.08713 ("QEC Markovianizes
+  noise") = counter-narrative to treat honestly in the wedge-magnitude discussion.
+- **Positioning posture (ratified direction):** from "creating a methodology" to
+  "completing the unoccupied corner of a rapidly-forming picture" — four corners: Chen
+  (discrete/active/duality) · Chu (continuous scalar gauge/MCM records/physicality bands) ·
+  Lee (detector=loop=learnable, discrete) · Montañà-López (continuous kernels/designed
+  access/positive protocols) → ours = continuous Σ × passive stabilizer machine × gauge
+  group + dimension counts + closed forms. ALL of this = PAPER-PHASE maintenance; no
+  further search rounds as mainline; search-design lesson extended (new axes: MCM/
+  instrument characterization, lattice-gauge/spacetime-code, classical HMM identifiability;
+  acceptance test = naive-query robustness).
 
 ## 5. Parked (trigger-gated, not lost)
 
