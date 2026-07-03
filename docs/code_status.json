@@ -8,12 +8,12 @@
       "outputs/cgf_probe_*.py",
       "outputs/involuntary_w_*.py"
     ],
-    "FROZEN LEGACY — wedge + source machinery (re-homed to error_coupling_simulator/source/)": [
+    "FUTURE (P6) — wedge + source machinery, LOCAL-ONLY (removed from the package in the 2026-07-03 screening; re-home when the quantum-bath teacher wires them)": [
       "outputs/teacher_prereg/nm_source*.py",
       "outputs/teacher_prereg/nm_divisibility*.py",
       "outputs/teacher_prereg/nm_wedge*.py"
     ],
-    "FROZEN LEGACY — oracle channels (re-homed to error_coupling_simulator/oracles/)": [
+    "FUTURE (P6) — oracle channels, LOCAL-ONLY (removed from the package in the 2026-07-03 screening; re-home when teachers need independent oracle certification)": [
       "outputs/teacher_prereg/qutip_*channel*.py",
       "outputs/teacher_prereg/qutip_teacher_source*.py"
     ],
@@ -40,9 +40,8 @@
   "qec_twin/simulator": {"status": "ACTIVE", "note": "user-facing frontend: CircuitIR/CodeSpec/XZZX compiler, Stim import, sealed SubstepSchedule, .b8 record sampling; + the axis1 carrier-execution paths (dense joint-L probe / MCWF-MPS / QT-MPS / qutip-cuquantum) and the axis1_record_evidence dense {det,obs} emitter. MIGRATION target: -> error_coupling_simulator/frontend (P5)"},
 
   "error_coupling_simulator": {"status": "ACTIVE", "note": "NEW standalone releasable package (MIGRATION in progress, docs/error_coupling_simulator_MIGRATION.md). Consolidates the coupling-error simulator from qec_twin + gitignored outputs/. No physical ground truth — teachers = specified noise models, oracles = FORMAL bug-catchers."},
-  "error_coupling_simulator/source": {"status": "ACTIVE", "note": "Axis-2 source layer: P1 = nonmarkovian/divisibility/wedge (low-level RTN/1f + RHP/BLP + coherence-wedge); P3 = process (productionized SourceTimeline) + coupling (Theta fan-out). Later cleanup: reconcile process<->nonmarkovian into one coherent API."},
+  "error_coupling_simulator/source": {"status": "ACTIVE", "note": "Axis-2 source layer (P3): process (productionized SourceTimeline) + coupling (Theta fan-out) — what the teacher actually consumes. The lower-level wedge machinery (nm_*) + the qutip oracles were REMOVED in the 2026-07-03 SCREENING (nothing wires them yet); they re-home at P6 (quantum-bath teacher). Keep the package lean."},
   "error_coupling_simulator/mechanisms": {"status": "ACTIVE", "note": "P3-landed: mechanism primitives + controlled teachers — catalog, axis1_primitives (leaf), qutrit_teachers, seam_teachers. Old qec_twin.mechanisms.* are SHIMS. seam_teachers still imports qec_twin.mechanisms.teachers cross-package (teachers.py not yet moved)."},
-  "error_coupling_simulator/oracles": {"status": "ACTIVE", "note": "P1-landed: independent QuTiP-derived {H,c} channel primitives (single_qubit/two_qubit/leakage/opensystem) — evaluator-only FORMAL oracles"},
   "error_coupling_simulator/carrier": {"status": "ACTIVE", "note": "P2-landing: forward propagation. joint_lindbladian (Axis-1 assembler) + cptp_channel + channels moved here; the old qec_twin.forward.{joint_lindbladian,cptp_channel,channels} are re-export SHIMS. accel/kernels (CUDA) still to move."},
   "error_coupling_simulator/carrier/exact": {"status": "ACTIVE", "note": "P2: exact DM backend (feasibility-only <=~15q). qutrit_dm + circuit_sim moved here; old qec_twin.forward.exact.{qutrit_dm,circuit_sim} are SHIMS. rep_code/xzzx_parser land with frontend/mechanisms phases."},
   "error_coupling_simulator/carrier/kernels": {"status": "ACTIVE", "note": "P2-COMPLETE: fused CUDA/C++ kernels (.cu/.cpp + loaders). accel + kernels moved here (they stay siblings so accel._kernels_dir() resolves); old qec_twin.forward.{accel,kernels} are SHIMS (kernels shim sys.modules-aliases the loader submodules). Compile-verified: test_kernels_fused_kraus/vmap pass from here. Needs the aiqec env bin on PATH so torch finds ninja."},

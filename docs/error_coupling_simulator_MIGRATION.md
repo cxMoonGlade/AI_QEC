@@ -119,7 +119,11 @@ src/error_coupling_simulator/
   `tests/test_certify` green.
 
 **STATUS: P1 ✅ (6ddfcb5), P2 ✅ (9d6b70c/384ada4/6354a51), P3 ✅ (2cb8cdd), P4 ✅ (03662d2).
-Next = P5 (frontend simulator/* + teachers/). Handoff: `HANDOFF_refactor_2026-07-03.md`.**
+SCREENING ✅ — "keep the package lean" pass: removed the 7 unused scratch-origin modules
+(source/nm_* + oracles/*, no tracked importer — re-home at P6) and split cptp_channel (the learner
+recovery loop recover_channel/IC → `qec_twin/calibration/cptp_recovery.py`; shared DM ops +
+StinespringChannel + PTM stay in carrier). Next = P5 (frontend simulator/* + teachers/). Handoff:
+`HANDOFF_refactor_2026-07-03.md`.**
 - **P5 — frontend + teacher** (`simulator/*` → `frontend/`; `coupled_teachers` → `teachers/`), shims.
   `tests/test_simulator_*` + `tests/test_coupled_cycle_teacher` green.
 - **P6 — quantum_bath extraction** (pull the pseudomode-embedding core out of the pilot run scripts

@@ -14,12 +14,12 @@ import numpy as np
 import torch
 
 from qec_twin.forward.channels import amplitude_damping_kraus, rx_unitary
+from qec_twin.calibration.cptp_recovery import recover_channel
 from qec_twin.forward.cptp_channel import (
     CDTYPE,
     StinespringChannel,
     apply_kraus,
     pauli_transfer_matrix,
-    recover_channel,
     tp_residual,
 )
 
