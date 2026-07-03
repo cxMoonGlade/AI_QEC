@@ -221,13 +221,23 @@ NOT per-functional accuracy); V-levels stay +δz-gauge-shifted; v5 finding stand
 single-position statistic. Ops note: run scripts through a committed bash runner —
 PowerShell→wsl.exe pre-expands `$?` through an outer bash layer (exit evidence must be
 captured in-log by the runner; `run_t3_teacher_validation_v6.sh` is the template).
-**Next order:** hardware: `t3_hw_moments.py` (DUAL-ROUTE Spitz gate — load-bearing per R2
-probe C; hardware moments are ALREADY pooled — form now matches) → `t3_fit_real.py` (P3/P4/P5
-as pinned in A-T3-1 §8 + addendum 3 item 6) → un-led review of T-#3 results → T-M3 prereg
-(read A-L2-1, not the L2 §4 originals). Reviewer meta-rules standing: straw-null power
-controls at target statistics; no criterion re-selection on realized data; amendment budgets
-in every prereg; print pileup fraction always; χ²-in-band ≠ parameter accuracy; pipefail on
-every tee'd run.
+**Hardware chain (2026-07-03, then RE-SCOPED — gate-record final section = binding):**
+extraction `t3_hw_moments.py` ran and its **DUAL-ROUTE gate PASSED integer-exact** (route A ==
+unmodified M1-validated pij module on 249 overlap columns, every sample; == flat-gather
+arithmetic on all 634 columns; cache `outputs/_t3_moments_x00_09.npz`, 634 pooled classes,
+S2 bulk profile spread 2.2–3.0% printed). The fit `t3_fit_real.py` was **TERMINATED mid-P5 by
+user decision under the re-scoped mission §0** (hardware = simulator-validation target;
+estimator demo = downstream, gated). Retained [PROVISIONAL] products: χ² = 716 307/dof 312
+(model-class miss ~0.1% relative at 20–40σ pooled precision) + **~28/384 window blocks
+PERSISTENTLY infeasible for the Gaussian-dephasing class up to n=2.5e5** (r̂ = m_same/o1² ≥ 1
+feasibility theorem fails on-data) = the simulator-target characterization; w-pileup ~58%
+on hardware; ⚠ P4 ran with a κ-pooled baseline instead of the pinned moment-wise inversion —
+disclosed in the record, P4/P5 NOT citable. **Next order (re-scoped): un-led review of the
+v6 chain + extraction gate → T-M3 prereg (read A-L2-1, not the L2 §4 originals); the
+estimator's real-data demo stays PARKED until simulator validation.** Reviewer meta-rules
+standing: straw-null power controls at target statistics; no criterion re-selection on
+realized data; amendment budgets in every prereg; print pileup fraction always; χ²-in-band
+≠ parameter accuracy; pipefail on every tee'd run.
 
 **Agent-ops lesson (this session):** heavy monolithic math-review briefs STALL general-purpose
 subagents (two stalls: 55 min and ~8 min zero-tool-call reasoning loops); the working recipe =

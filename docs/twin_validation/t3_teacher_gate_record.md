@@ -189,3 +189,50 @@ vs the in-repo Spitz-exact pij module — zero-tolerance, BLOCKING** (load-beari
 C: it is the only protection absolute round/layer indexing gets) → `outputs/t3_fit_real.py`
 (P3/P4/P5 exactly as pinned in A-T3-1 §8 + addendum 3 item 6). Un-led review of the T-#3
 results before any reliance (standing rule).
+
+## HARDWARE EXTRACTION PASS + FIT RUN TERMINATED PER MISSION RE-SCOPE (2026-07-03)
+
+**Extraction (`outputs/t3_hw_moments.py`, log `t3_hw_moments.log`, 931 s, python-exit=0):
+DUAL-ROUTE GATE PASS, integer-exact.** X basis, samples 00–09 validated (structure integers +
+metadata); detector grid 1002×28 from `metadata_qubit_order`, sha-identical across all 10
+samples. 634 pooled classes (384 fit: o1 28 / same ℓ1–8 224 / xdist j1–3 78 / x1± 54;
+held-out: same ℓ9–16 224 / order-3 interior-κ 26), bulk layers 100–900, per-class pinned
+position counts asserted. Route A (slice-XOR) == route B (UNMODIFIED M1-validated pij module)
+on 249 overlap columns, **max|A−B| = 0 on every sample**; route A == route B′ (flat-gather
+integer-parity, different arithmetic path) on **all 634 columns, max|A−B′| = 0** (full
+sample_00). S2 reporting: bulk detection fraction ≈ 5.0–5.2%, per-layer relative spread
+2.2–3.0% (≈ 20× the per-layer binomial SE — real, bounded non-stationarity; declared (c)).
+Cache `outputs/_t3_moments_x00_09.npz` (37.8 MB; fit_even/odd n = 250 000 each; per-sample
+n = 100 000; P3 memberships + seeds persisted).
+
+**Fit run (`outputs/t3_fit_real.py`, log `t3_fit_real.log`): TERMINATED mid-P5 (after sample
+00) on 2026-07-03 by user decision under the RE-SCOPED mission** (HANDOFF §0: hardware data =
+simulator-validation target only; the real-data estimator demonstration is a downstream
+milestone gated by simulator validation). Termination was scope-driven, NOT results-driven.
+Results npz intentionally not written (end-of-run write); the log is the audit artifact.
+**Nothing below is citable as a registered P3/P4/P5 outcome; all [PROVISIONAL] reporting:**
+- Implementation gates GREEN: vectorized forward ≡ reference loop 2.78e-16 (634 kinds);
+  batched-FD vs scipy-FD Jacobian routes land on the identical minimum (Δθ 2.3e-8).
+- **χ² = 716 307.5 vs dof 312** on the even-half fit: the pooled moment precision (~4e-5)
+  resolves a ~0.1%-relative model-class miss at 20–40σ per moment. Misspecification-direction
+  language (S1/R2-lite); bootstrap intervals are sampling-only, conditional on the model class.
+- **P3-style finding (the run's genuine product):** the unconstrained baseline's feasibility
+  violations sit at 7.55% (N=1e3, > the registered 5%) but stay at **7.29% up to n = 2.5e5 —
+  ~28/384 window blocks are PERSISTENTLY infeasible** for the Gaussian-dephasing class (the
+  dressing-free r̂ = m_same/o1² ≥ 1 feasibility theorem fails on-data): the device's detector
+  moments genuinely leave the model class in a specific direction. This characterization (plus
+  the moment tables) is the retained **simulator-target asset** under the new mission.
+- Bootstrap w-pileup ≈ 58% on all 3 streams (most of the 15 grid components at w = 0 on real
+  data); fitted temporal kernel is ω=π-dominated (alternating-sign C(0,ℓ)); C-functional signs
+  carry the re-signing-gauge caveat (canonicalization never implemented — R2 scope note).
+- ⚠ **P4 IMPLEMENTATION DEVIATION (found in self-review, disclosed):** the unconstrained arm's
+  kernel was pooled across κ (stationary-kernel baseline) instead of the pinned per-moment
+  ("moment-wise") inversion of A-T3-1 §8(ii) — the printed P4 ratios (0.001 in-class / 0.138
+  unfitted) reflect that deviation and are NOT the registered comparison. Any future rerun must
+  fix the baseline to per-κ moment-wise inversion first. P5: 1/10 samples only, no drift claims.
+
+**Standing state of T-#3 under the re-scoped mission:** the CURRENT-phase deliverable —
+identifiability structure (p_Z-absorption gauge, ridge rank 11/11, R-POOL pooling correctness
++ the v6 joint-coverage machinery) — is ESTABLISHED by the v4→v6 chain and its review rounds;
+the hardware estimator demo is PARKED (downstream, gated by simulator validation). Un-led
+review of the v6 chain + extraction gate before M3 reliance (standing rule).
