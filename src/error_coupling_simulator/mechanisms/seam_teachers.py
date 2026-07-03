@@ -74,7 +74,7 @@ from typing import Any, Callable
 import torch
 
 from ..carrier.cptp_channel import CDTYPE
-from qec_twin.mechanisms.teachers import (
+from .teachers import (
     coherent_overrotation_kraus,
     correlated_dephasing_kraus,
     zz_coupling_kraus,
