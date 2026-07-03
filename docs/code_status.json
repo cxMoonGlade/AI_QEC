@@ -34,7 +34,6 @@
   "qec_twin/decoder": {"status": "ACTIVE", "note": "frozen-MWPM DEM substrate (evaluator-side; DEM/decoder/LER stays OUT of the validity chain — feedback-simulator-not-decoder)"},
   "qec_twin/forward": {"status": "ACTIVE", "note": "exact differentiable forward: cptp_channel + channels + window_channel + joint_lindbladian (Axis-1 assembler, G2-certified). MIGRATION target: -> error_coupling_simulator/carrier (P2)"},
   "qec_twin/forward/exact": {"status": "ACTIVE", "note": "density-matrix backend — FEASIBILITY-ONLY (<=~15q); the 50+q target is forward/scalable"},
-  "qec_twin/forward/kernels": {"status": "ACTIVE", "note": "fused CUDA subsystem-Kraus kernels; auto-routed on cuda tensors, CPU fallback, QEC_TWIN_NO_KERNELS=1 disables"},
   "qec_twin/forward/scalable": {"status": "ACTIVE", "note": "the 50+q CARRIER (no longer a placeholder): C1 composed (DEM/HMM bulk + window-exact CPTP + declared seam) + non-Pauli leakage MCWF-on-MPS; ADR 0008/0010"},
   "qec_twin/hardware": {"status": "ACTIVE", "note": "R2-lite real-Google ingestion + M1-M4 drivers; observations-only isolation; needs QEC_TWIN_HW_DATA=/home/cx/Document"},
   "qec_twin/knobs": {"status": "ACTIVE", "note": "[MANIPULATE] channel-level do() -> DeltaLER (parameterization-independent transforms, scored under a frozen decoder)"},
@@ -46,5 +45,6 @@
   "error_coupling_simulator/source": {"status": "ACTIVE", "note": "P1-landed: Axis-2 memory-ful sources (nonmarkovian) + RHP/BLP CP-divisibility (divisibility) + coherence-wedge (wedge) — the P2 wedge observable. Consolidate w/ qec_twin/mechanisms/source_process later (P3)"},
   "error_coupling_simulator/oracles": {"status": "ACTIVE", "note": "P1-landed: independent QuTiP-derived {H,c} channel primitives (single_qubit/two_qubit/leakage/opensystem) — evaluator-only FORMAL oracles"},
   "error_coupling_simulator/carrier": {"status": "ACTIVE", "note": "P2-landing: forward propagation. joint_lindbladian (Axis-1 assembler) + cptp_channel + channels moved here; the old qec_twin.forward.{joint_lindbladian,cptp_channel,channels} are re-export SHIMS. accel/kernels (CUDA) still to move."},
-  "error_coupling_simulator/carrier/exact": {"status": "ACTIVE", "note": "P2: exact DM backend (feasibility-only <=~15q). qutrit_dm + circuit_sim moved here; old qec_twin.forward.exact.{qutrit_dm,circuit_sim} are SHIMS. rep_code/xzzx_parser land with frontend/mechanisms phases."}
+  "error_coupling_simulator/carrier/exact": {"status": "ACTIVE", "note": "P2: exact DM backend (feasibility-only <=~15q). qutrit_dm + circuit_sim moved here; old qec_twin.forward.exact.{qutrit_dm,circuit_sim} are SHIMS. rep_code/xzzx_parser land with frontend/mechanisms phases."},
+  "error_coupling_simulator/carrier/kernels": {"status": "ACTIVE", "note": "P2-COMPLETE: fused CUDA/C++ kernels (.cu/.cpp + loaders). accel + kernels moved here (they stay siblings so accel._kernels_dir() resolves); old qec_twin.forward.{accel,kernels} are SHIMS (kernels shim sys.modules-aliases the loader submodules). Compile-verified: test_kernels_fused_kraus/vmap pass from here. Needs the aiqec env bin on PATH so torch finds ninja."}
 }
