@@ -18,8 +18,10 @@
   PENDING this 精读. This note resolves them.
 
 ## Metadata
-- **Authors.** Jan Montañà-López, Andreas Elben, Soonwon Choi, Rahul Trivedi
-  (MPQ Garching / Caltech / MIT / TU Munich orbit).
+- **Authors.** Jordi A. Montañà-López, Andreas Elben, Joonhee Choi, Rahul Trivedi
+  (MPQ Garching + U Washington / PSI + ETHZ-PSI hub / Stanford / MPQ). *(Corrected
+  2026-07-03 against the cached first page — the note's first version misnamed two authors
+  from memory; per the no-fabricated-authors rule, all four verified verbatim.)*
 - **Venue.** arXiv preprint, Nov 2025 (v1); no journal ref yet at fetch date.
 - **Type.** Rigorous learning theory (protocol + sample-complexity theorems) for many-body
   open systems beyond Born–Markov; numerics on pseudomode models. No hardware data.

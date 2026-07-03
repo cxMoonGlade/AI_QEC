@@ -1,6 +1,18 @@
 # Pre-registration — T-#3: Bochner-constrained spatiotemporal kernel estimation from real
 QEC detector records (2026-07-02)
 
+**⚠ PROJECT-PHASE BANNER (2026-07-03, user mission edit — governs the READING of this whole
+prereg; the registered text below is preserved verbatim per registration rules):** the
+project's current mission is the coupling error SIMULATOR; real hardware data enters ONLY as
+a simulator validation target. The real-data estimation demo this prereg registers is a
+DOWNSTREAM milestone, gated on simulator validation (HANDOFF §0 + T-#3 retitled
+"recovery-machinery identifiability constraints"). What remains CURRENT-phase from this doc:
+the identifiability structure (p_Z-absorption gauge, ridge rank, R-POOL pooling correctness)
+and the teacher-based gates (v5/v6) — these prove the recovery machinery well-posed on
+simulator outputs. The hardware extraction steps (`t3_hw_moments.py` → `t3_fit_real.py`)
+execute only when the downstream phase opens; "hardware UNLOCKED" in the v6 verdict means
+the GATE no longer blocks, not that the phase is scheduled now.
+
 **The Branch-B "theory + hardware artifact" deliverable** (HANDOFF_math_spine §3 T-#3;
 adjudication #3.1 [PROVISIONAL] no-owner: physicality-CONSTRAINED estimation × QEC-record data).
 Committed BEFORE any estimator code is written or any fit is read (A4/commit-before-run).

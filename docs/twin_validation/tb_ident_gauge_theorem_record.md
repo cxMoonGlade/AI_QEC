@@ -26,6 +26,25 @@ error-event probabilities from syndrome correlations, no inversion correspondenc
 concept is cited, never claimed; the continuous-Σ × passive-moment map is the contribution.
 All ownership positioning [PROVISIONAL].
 
+**WHY the passive record is the right access class (project grounding, 2026-07-03 — the
+motivation is NOT "learn from hardware without calibration"; that framing is retired per the
+user's mission edit, HANDOFF §0):** the record (m, x) is (i) the object the coupling simulator
+EMITS (teacher contract: emit-returns-{det,obs}-only), (ii) the only object simulator-vs-device
+VALIDATION compares — so the gauge theorem is the SEMANTICS of validation: it states exactly
+what record matching can pin down (gauge-invariant functionals) and what no record comparison
+can ever separate (the gauge orbit); (iii) the definition domain of every wedge claim (a
+coupling effect that is gauge-equivalent or record-invisible is a 伪命题 — the closed-form
+functionals are the observability calculus that makes "our simulator differs from any
+factorized simulator" a precise record-level statement); and (iv) the data type a running
+error-corrected device produces in bulk (downstream/industry rationale only — one line, not a
+current novelty pillar). Access-relativity of gauge (the three-layer statement, in the tex
+positioning remark): designed access can dissolve protocol-relative blind spots
+(Montañà-López's Im[K_cc] via the W layer); even the FULL active class retains gauge for
+discrete Pauli (Chen's cut space — so "active ⇒ no gauge" is FALSE and must never be written);
+the fixed passive machine has the largest, structured gauge, and Prop IW-1 pins the boundary
+(the access-buying gate S·H is complex; real passive machines are provably even in the
+commutator sector).
+
 **✔ COVERAGE GAP RESOLVED (精读 completed 2026-07-03; verdicts STAND):**
 arXiv:2511.16772 (Montañà-López, Elben, Choi, Trivedi, Nov 2025) was missed by the
 adjudication's 6-axis search; the mandatory 精读 is done —
