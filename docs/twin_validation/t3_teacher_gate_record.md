@@ -134,3 +134,58 @@ reported):
   statistic than the teacher's single-position moments; grid/parametrization redesign away from
   the boundary-degenerate w₀/w₁-split direction; boundary-aware inference). A NEW registered
   gate (fresh prereg section, fresh seeds) is required after the redesign.
+
+## v6 R-POOL — ALL GATES PASS, ALL THREE REGISTERED BETS PASS (2026-07-03; run completed
+2026-07-02T23:04:39 PT; log `t3_teacher_validation_v6.log`; hardware extraction UNLOCKED per
+the R-POOL registration — the BINDING state of T-#3)
+
+Registration: prereg section "REDESIGN REGISTRATION R-POOL — the v6 gate" (7f608f3, committed
+BEFORE any v6 code; **ZERO-amendment budget — no criterion was touched, no rerun was needed:
+one run, one verdict**). Script `outputs/t3_teacher_validation_v6.py` = the v5 machinery
+line-by-line with ONLY the registered redesign (per-shot class statistic = mean of (1−2·parity)
+over the pinned admissible r-positions, position counts asserted against the pinned table;
+R = 12; FRESH seeds {67, 77, 87}; N = 5e5; 2000 draws; redraw streams 3000+seed; [−1,1] range
+assert). Runner `outputs/run_t3_teacher_validation_v6.sh` (pipefail + PIPESTATUS captured
+in-log: `python-exit=0`; rationale documented in the runner — the PowerShell→wsl.exe quote
+chain pre-expands `$?` through an outer bash layer, so exit evidence must live in a script).
+
+- **P1a exact tier: PASS unchanged** (forward map ≡ engine 3.33e-16 over 12 moments incl.
+  lag-2; C entries 1.00e-14; V-differences 8.19e-16; μ 5.55e-16; d-offset ≡ δz to 1.20e-14).
+- **P1b joint rank-matched Mahalanobis coverage: 3/3 PASS** — T = 5.57 / 4.65 / 6.70 vs
+  χ²₇@99.7% = 21.85 (seeds 67 / 77 / 87).
+- **G-ztruth 1.76 / 2.05 / 1.50 ≤ 4. G-χ² 2.7 / 1.0 / 1.5 vs dof 18, band ±24** — in-band;
+  χ² sits LOW because pooled classes are strongly positively cross-correlated under the
+  diagonal weighting (expected for the pooled statistic; the χ² tripwire is (c)-class).
+- **G-STRAW 711.9 / 714.3 / 793.0 > χ²₂@99.7% = 11.83** — pooling multiplied the joint
+  zero-kernel exclusion power ~25× (v5: 26.1–35.1).
+- **Registered bets — item by item, all PASS:**
+  - **b1 PASS** (pooled-SE shrink ≥ 1.8× on the 12 same-lag ℓ≤3 classes, all seeds): per-seed
+    min gain **2.08 / 2.07 / 2.07**; per-class gains ℓ=1 ≈ 2.36–2.40, ℓ=2 ≈ 2.10–2.14,
+    ℓ=3 ≈ 2.07–2.11 (context: o1 ≈ 2.96–3.03, xdist ≈ 2.76–2.89, x1 ≈ 2.59–2.62; out-of-scope
+    ℓ=5 ≈ 2.1, ℓ=8 ≈ 1.6 — the 3-position class, as anticipated at registration).
+  - **b2 PASS** (w-pileup < 5% on ALL seeds): **0.0% / 0.0% / 0.0%** over 2000 draws/seed
+    (0 events ⇒ rule-of-three 95% upper bound ≈ 0.15%/seed). The v5 failure MECHANISM
+    (moment noise reaching the w ≥ 0 boundary along the weak w₀/w₁ direction) is removed at
+    pooled statistics, not merely made rarer.
+  - **b3 PASS** (≡ the gate): coverage 3/3 + straw 3/3.
+- **Diagnostics:** per-functional interval misses **0/18 percentile AND 0/18 basic on every
+  seed**; worst |f_corr − truth| = 6.05e-3 / 7.46e-3 / 3.88e-3 (v5 failing realization:
+  6.29e-2); μ̂ errors ≤ 4e-4; d-offset spread ≤ 1.1e-3 vs δz = 1.40e-2. P2 (reported): min
+  eig +6.19e-2, PSD by construction. Runtime 801 s (no boundary-slowed fits — v5 took 1461 s).
+
+**Power content of this PASS (addendum-3 item 7 wording, binding):** exact-tier identity +
+identifiability + JOINT functional-vector consistency at 99.7% + joint zero-kernel exclusion,
+at the pooled-statistic power; it does NOT certify per-functional accuracy beyond the reported
+intervals. **Carried caveats:** V-LEVELS remain gauge-shifted by the declared +δz p_Z
+absorption (hardware claims stay V-difference + C-entry only); teacher power remains
+conservative vs hardware (~800 pooled bulk layers vs the teacher's ≤ 11 positions); the v5
+registered finding (single-position boundary-pileup fragility at ~1/3 realizations) STANDS as
+a finding about the single-position statistic — v6 changed the statistic under a new
+registration, never the criterion.
+
+**Next (hardware, per prereg §6):** `outputs/t3_hw_moments.py` — streaming b8 extraction
+(X basis, samples 00–04 fit / 00–09 for P5, bulk layers 100–900), **DUAL-ROUTE agreement gate
+vs the in-repo Spitz-exact pij module — zero-tolerance, BLOCKING** (load-bearing per R2 probe
+C: it is the only protection absolute round/layer indexing gets) → `outputs/t3_fit_real.py`
+(P3/P4/P5 exactly as pinned in A-T3-1 §8 + addendum 3 item 6). Un-led review of the T-#3
+results before any reliance (standing rule).

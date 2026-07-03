@@ -209,14 +209,23 @@ per-shot statistic + exact shot-level covariance; same joint-criterion FORM, FRE
 {67,77,87}; bets b1 (SE shrink ≥1.8× on ℓ≤3 classes) / b2 (pileup < 5% all seeds) / b3
 (coverage 3/3 + straw power); **ZERO-amendment budget — v6 failure ⇒ the registered fallback
 axis (grid/parametrization redesign) under a fresh prereg.**
-**Next order:** implement `outputs/t3_teacher_validation_v6.py` (v5 machinery + pooled
-parity_matrix + R=12 + new seeds; run under pipefail) → v6 verdict → (if green) hardware
-UNLOCK: `t3_hw_moments.py` (DUAL-ROUTE Spitz gate — load-bearing per R2 probe C; hardware
-moments are ALREADY pooled — form now matches) → `t3_fit_real.py` (P3/P4/P5 as pinned) →
-un-led review of T-#3 results → T-M3 prereg (read A-L2-1, not the L2 §4 originals). Reviewer
-meta-rules standing: straw-null power controls at target statistics; no criterion re-selection
-on realized data; amendment budgets in every prereg; print pileup fraction always; χ²-in-band
-≠ parameter accuracy; pipefail on every tee'd run.
+**v6 VERDICT (2026-07-03, run 2026-07-02T23:04 PT): ALL GATES PASS + ALL THREE BETS PASS,
+zero amendments, one run one verdict (gate-record v6 section = binding).** Joint coverage
+T = 5.57/4.65/6.70 ≤ 21.85; straw 712/714/793 (~25× v5 power); **w-pileup 0.0%/0.0%/0.0%**
+(v5 mechanism REMOVED at pooled statistics); b1 min gain 2.08/2.07/2.07 ≥ 1.8; interval
+misses 0/18 both types all seeds; worst |f_corr−truth| ≤ 7.5e-3; P1a unchanged 1e-14.
+**Hardware extraction UNLOCKED.** Power content per addendum-3 item 7 (joint consistency,
+NOT per-functional accuracy); V-levels stay +δz-gauge-shifted; v5 finding stands for the
+single-position statistic. Ops note: run scripts through a committed bash runner —
+PowerShell→wsl.exe pre-expands `$?` through an outer bash layer (exit evidence must be
+captured in-log by the runner; `run_t3_teacher_validation_v6.sh` is the template).
+**Next order:** hardware: `t3_hw_moments.py` (DUAL-ROUTE Spitz gate — load-bearing per R2
+probe C; hardware moments are ALREADY pooled — form now matches) → `t3_fit_real.py` (P3/P4/P5
+as pinned in A-T3-1 §8 + addendum 3 item 6) → un-led review of T-#3 results → T-M3 prereg
+(read A-L2-1, not the L2 §4 originals). Reviewer meta-rules standing: straw-null power
+controls at target statistics; no criterion re-selection on realized data; amendment budgets
+in every prereg; print pileup fraction always; χ²-in-band ≠ parameter accuracy; pipefail on
+every tee'd run.
 
 **Agent-ops lesson (this session):** heavy monolithic math-review briefs STALL general-purpose
 subagents (two stalls: 55 min and ~8 min zero-tool-call reasoning loops); the working recipe =
