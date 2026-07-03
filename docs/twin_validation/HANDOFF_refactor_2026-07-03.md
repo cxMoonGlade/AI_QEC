@@ -72,23 +72,42 @@ python in a script file (parens in inline `python -c` break the outer shell).
 
 ## 4. Remaining phases
 
-- **P5 — frontend + teacher (the BIG one).** `simulator/*` (~50 modules, 193 internal imports — highly
-  cohesive, move as ONE batch) → `frontend/`; `mechanisms/coupled_teachers` → `teachers/`; also move
-  `mechanisms/teachers.py` (seam_teachers depends on it cross-package) + `mechanisms/profiles.py` if
-  in scope. FIRST do a full dependency grounding like P2–P4 (grep each simulator module's
-  `from qec_twin.*` imports + who imports `qec_twin.simulator.*`), and a shared-vs-exclusive check
-  (simulator is the frontend — expect exclusive, but VERIFY no learner/contexts consumes it). Then one
-  big cp + relative-import sweep (sed on the COPIES only, verify-grep after) + a subpackage shim that
-  sys.modules-aliases the ~50 submodules. Verify with `test_simulator_*` (many) + the gates.
-  ⚠ Watch: `simulator/*` imports the moved carrier/mechanisms/certify — those are now package-relative
-  targets (`..carrier`, `..mechanisms`, `..certify`), NOT `qec_twin.*`.
-- **P6 — quantum_bath extraction.** The pseudomode-embedding physics lives INSIDE run scripts
-  (`outputs/coupled_pseudomode_pilot_v1_n2.py`, `outputs/quantum_bath_m2_dual_arm.py`) — EXTRACT the
-  reusable core into `quantum_bath/`, don't file-move. Local-only scripts stay frozen.
-- **P7 — flip + de-shim + optional split.** Migrate importers to the package paths, delete the shims,
-  run the FULL suite, then (optional) split to a separate distributable with its own `pyproject`
-  (only after the qec_twin↔package boundary is clean; the package will still `import qec_twin.hardware`
-  for the decoder unless that's addressed).
+- **P5 — frontend + teacher: ✅ DONE (P5a `1f64a69`, P5b `87d1297`, P5c `286880b`).** Executed exactly
+  as the recipe prescribes.
+  - **P5a** `mechanisms/teachers.py` (B5 Kraus/field builders — physics-core, used by seam_teachers AND
+    the learner) → `error_coupling_simulator/mechanisms/teachers.py`; `seam_teachers` now imports the
+    in-package `.teachers` (REMOVED the last package→qec_twin back-edge). 85 targeted tests green.
+  - **P5b** `simulator/*` (45 files) → `frontend/`. One cp + import-line-scoped sed; a census guard
+    proved the sed touched only import lines (256 `qec_twin.simulator` occurrences → 83 after, 0 on
+    import lines; the 83 remaining are the `"qec_twin.simulator.*.v1"` schema STRING TAGS, preserved
+    byte-exact). Old `qec_twin.simulator` is a **pkgutil shim** that `sys.modules`-aliases all 44
+    frontend submodules + re-exports the public API. `qec_twin.hardware` (b8_io/m4_decode) stays
+    absolute (decoder-facing, not moved). 345 tests green (only the 5 pre-existing source_projection
+    reds remain — see §5). README.md moved with the code.
+  - **P5c** `mechanisms/coupled_teachers.py` → `teachers/coupled_cycle.py` (+ `teachers/__init__`
+    public API). Fully package-internal (`..mechanisms`/`..source`/`..frontend`). 24 tests green; the
+    g4 gate imports cleanly through the shims.
+  - **`mechanisms/profiles.py` STAYED** in qec_twin — learner-only (sole consumer: `contexts/probe_catalog`;
+    no simulator/teacher/gate importer). Screening rule (d): do not pull learner-only code into the package.
+  - Verification: import-smoke (new-path ↔ shim same-object, both `from X import sub` and `import X.sub`
+    forms) + targeted pytest per phase + a full-suite regression at EXACT baseline parity (1019 passed /
+    49 skipped / 6 failed both before and after; the 6 reds identical — 5 metadata_guard source_projection
+    + 1 window_channel GPU-mem flake, both unrelated). CODE_MAP drift clean
+    after each commit; `code_status.json` updated (frontend + teachers added, qec_twin/simulator entry
+    removed, qec_twin/mechanisms → shim-layer).
+- **P6 — quantum_bath extraction: DEFERRED (not done — intentional).** The pseudomode-embedding physics
+  still lives inside the local-only pilot scripts (`outputs/coupled_pseudomode_pilot_v1_n2.py`,
+  `outputs/quantum_bath_m2_dual_arm.py`), the future machine for the not-yet-built quantum-bath teacher.
+  Extracting it now would pull unused code in (violates the "keep the package lean" SCREENING DISCIPLINE,
+  rule d). Re-home it — with the P1-removed `nm_*`/`oracles` primitives — WHEN the quantum-bath teacher
+  is built and wires them.
+- **P7 — flip + de-shim + optional split: STANDING USER DECISION (not started).** Migrating all importers
+  to the package paths + removing the shims is a whole-tree sweep; keep-shims vs de-shim is a deliberate
+  call reserved for the user. NOTE the two pre-existing P2/P3 package→qec_twin back-edges still routed via
+  shims (`carrier/channels.py` → `qec_twin.mechanisms.catalog`; `carrier/exact/circuit_sim.py` →
+  `qec_twin.forward.accel`) — clean these in P7. Optional P8 — split to a separate distributable with its
+  own `pyproject` (only once the qec_twin↔package boundary is clean; the package still imports
+  `qec_twin.hardware` for the decoder).
 
 ## 5. Pointers / open items
 

@@ -122,14 +122,28 @@ src/error_coupling_simulator/
 SCREENING ✅ — "keep the package lean" pass: removed the 7 unused scratch-origin modules
 (source/nm_* + oracles/*, no tracked importer — re-home at P6) and split cptp_channel (the learner
 recovery loop recover_channel/IC → `qec_twin/calibration/cptp_recovery.py`; shared DM ops +
-StinespringChannel + PTM stay in carrier). Next = P5 (frontend simulator/* + teachers/). Handoff:
-`HANDOFF_refactor_2026-07-03.md`.**
-- **P5 — frontend + teacher** (`simulator/*` → `frontend/`; `coupled_teachers` → `teachers/`), shims.
-  `tests/test_simulator_*` + `tests/test_coupled_cycle_teacher` green.
-- **P6 — quantum_bath extraction** (pull the pseudomode-embedding core out of the pilot run scripts
-  into `quantum_bath/`; the run scripts stay in scratch, frozen).
-- **P7 — flip + de-shim** (migrate all importers to the new package paths, remove the shims, run the
-  FULL suite). Optional P8 — split to a separate distributable with its own `pyproject`.
+StinespringChannel + PTM stay in carrier). P5 ✅ (P5a `1f64a69` teachers.py, P5b `87d1297`
+frontend, P5c `286880b` coupled_cycle). Next: P6 is DEFERRED (see below); P7 (de-shim) is a
+standing user decision. Handoff: `HANDOFF_refactor_2026-07-03.md`.**
+- **P5 — frontend + teacher ✅ DONE.** `simulator/*` (45 files) → `frontend/` (pkgutil sys.modules-alias
+  shim); `mechanisms/coupled_teachers` → `teachers/coupled_cycle.py`; `mechanisms/teachers.py` (B5 Kraus
+  builders, physics-core) → `mechanisms/teachers.py` (fixed the last package→qec_twin back-edge in
+  seam_teachers). `mechanisms/profiles.py` STAYS (learner-only — sole consumer is contexts/probe_catalog;
+  screening rule d). All shims serve qec_twin. Verified: import-smoke same-object (all 3 phases) +
+  targeted pytest (85 + 345 + 24 passed) + full-suite regression at EXACT baseline parity —
+  1019 passed / 49 skipped / 6 failed both before and after, the 6 reds identical (5 pre-existing
+  test_simulator_source_projection metadata_guard + 1 test_window_channel GPU-mem-contention flake,
+  both unrelated to the refactor). Zero new failures; behaviorally a pure relocation.
+- **P6 — quantum_bath extraction: DEFERRED (not done this pass).** The pseudomode-embedding physics
+  still lives INSIDE the local-only pilot run scripts (`outputs/coupled_pseudomode_pilot_v1_n2.py`,
+  `outputs/quantum_bath_m2_dual_arm.py`), which are the future machine for the not-yet-built quantum-bath
+  teacher. Extracting it now would pull unused code into the package (violates the "keep the package
+  lean" SCREENING DISCIPLINE, rule d). Re-home it — together with the P1-removed nm_*/oracles primitives —
+  WHEN the quantum-bath teacher is actually built and wires them.
+- **P7 — flip + de-shim: STANDING USER DECISION (not started).** Migrating all importers to the new
+  package paths + removing the shims is a whole-tree sweep; whether to do it now vs keep the shim layer
+  is a deliberate call left to the user. Optional P8 — split to a separate distributable with its own
+  `pyproject`.
 
 **Verification per phase:** `python -m py_compile` → package import smoke → the affected `tests/`
 subset → (at phase end) full `tests/` regression, via committed runners (pipefail + tee +
