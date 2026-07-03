@@ -1,0 +1,19 @@
+{
+  "_schema": "qec_twin.code_status.v1 — hand-maintained status overlay for tools/gen_code_map.py. Keys = package paths relative to src/qec_twin (or a module path for a per-module override). status in {ACTIVE, PLACEHOLDER, ARCHIVED, TOOLING}. gen_code_map.py DRIFT-CHECKS this against the code: add an entry when a new package appears, remove one when a package is deleted (both are flagged in CODE_MAP.md's DRIFT CHECK).",
+  "": {"status": "ACTIVE", "note": "package root — numerics.NUMERICAL_ZERO floor + package glue"},
+  "audit": {"status": "ACTIVE", "note": "evaluator-side gating (identifiability) / bands (uncertainty) / validity (curve) + bayes_floor decoding-floor oracle + certify"},
+  "audit/certify": {"status": "ACTIVE", "note": "the carrier<->DM certification seam: {det,obs} record schema, Anchor/Control independent-GT ports, ControlledTeacher protocol, scoring (certify_cells)"},
+  "audit/certify/anchors": {"status": "ACTIVE", "note": "independent-ground-truth anchor ports (DM-oracle / stim-slice / closed-form); anti-circular referees"},
+  "calibration": {"status": "ACTIVE", "note": "[RECOVER] label-free exact Born-NLL calibration; consumes observations ONLY (isolation contract)"},
+  "contexts": {"status": "ACTIVE", "note": "probe-richness ladder C_cal(r) + probes"},
+  "decoder": {"status": "ACTIVE", "note": "frozen-MWPM DEM substrate (evaluator-side; DEM/decoder/LER stays OUT of the validity chain — feedback-simulator-not-decoder)"},
+  "forward": {"status": "ACTIVE", "note": "exact differentiable forward: cptp_channel + channels + window_channel + joint_lindbladian (Axis-1 within-substep assembler, G2-certified)"},
+  "forward/exact": {"status": "ACTIVE", "note": "density-matrix backend — FEASIBILITY-ONLY (<=~15q); the 50+q target is forward/scalable"},
+  "forward/kernels": {"status": "ACTIVE", "note": "fused CUDA subsystem-Kraus kernels; auto-routed on cuda tensors, CPU fallback, QEC_TWIN_NO_KERNELS=1 disables"},
+  "forward/scalable": {"status": "ACTIVE", "note": "the 50+q CARRIER (no longer a placeholder): C1 composed (DEM/HMM bulk + window-exact CPTP + declared seam) + non-Pauli leakage MCWF-on-MPS; ADR 0008/0010"},
+  "hardware": {"status": "ACTIVE", "note": "R2-lite real-Google ingestion + M1-M4 drivers; observations-only isolation; needs QEC_TWIN_HW_DATA=/home/cx/Document"},
+  "knobs": {"status": "ACTIVE", "note": "[MANIPULATE] channel-level do() -> DeltaLER (parameterization-independent transforms, scored under a frozen decoder)"},
+  "mechanisms": {"status": "ACTIVE", "note": "mechanism defs + controlled teachers: catalog, axis1_primitives, source_coupling/source_process (Axis-2 memory-ful source + Theta fan-out), coupled_teachers (CoupledCycleTeacher, 2026-07-03), qutrit/seam teachers"},
+  "rag": {"status": "TOOLING", "note": "hybrid vector-keyword store over the docs/papers reading notes (NoteStore, build_index, query); infrastructure, NOT twin logic"},
+  "simulator": {"status": "ACTIVE", "note": "user-facing frontend: CircuitIR/CodeSpec/XZZX compiler, Stim import, sealed SubstepSchedule, .b8 record sampling; + the axis1 carrier-execution paths (dense joint-L probe / MCWF-MPS / QT-MPS / qutip-cuquantum) and the axis1_record_evidence dense {det,obs} emitter"}
+}
