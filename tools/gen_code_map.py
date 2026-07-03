@@ -32,7 +32,10 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
-SRC = REPO / "src" / "qec_twin"
+# Walk ALL top-level packages under src/ (qec_twin AND error_coupling_simulator, ...), so the map
+# covers the whole tree. Package keys are fully-qualified relative to src/ (e.g. "qec_twin/forward",
+# "error_coupling_simulator/source"). This is what stops the map from missing a whole package.
+SRC = REPO / "src"
 STATUS_PATH = REPO / "docs" / "code_status.json"
 MAP_PATH = REPO / "docs" / "CODE_MAP.md"
 GATES_DIR = REPO / "docs" / "twin_validation" / "gates"
@@ -145,8 +148,45 @@ def _committed_hash() -> str | None:
     return None
 
 
+def _render_local_index(local_index: dict) -> list[str]:
+    """Curated LOCAL-ONLY (gitignored outputs/) working-code clusters. The globs are hand-maintained
+    + stable; the FILES matching them are auto-discovered here, so new nm_*/cert_*/quantum_bath_*
+    appear without editing the config. These files are NOT committed and NOT in the drift hash."""
+    lines: list[str] = []
+    if not local_index:
+        return lines
+    lines.append("## LOCAL-ONLY working code — gitignored `outputs/` (NOT committed; on the build "
+                 "workstation only; re-run certs to confirm — they are not assumed)")
+    lines.append("> Curated clusters (globs in `docs/code_status.json` `_local_index`); files "
+                 "auto-discovered. This is where the P2 quantum-bath infrastructure lives — READ HERE "
+                 "before assuming it is unbuilt.")
+    lines.append("")
+    for heading, globs in local_index.items():
+        if heading.startswith("_"):
+            continue
+        matched: set[Path] = set()
+        for g in globs:
+            for p in REPO.glob(g):
+                if p.suffix == ".py" and "__pycache__" not in p.parts:
+                    matched.add(p)
+        if not matched:
+            lines.append(f"### {heading}")
+            lines.append("- ⚠ (no files match the configured globs — patterns stale or code moved?)")
+            lines.append("")
+            continue
+        lines.append(f"### {heading}")
+        for p in sorted(matched):
+            facts = _module_facts(p)
+            rel = p.relative_to(REPO).as_posix()
+            lines.append(f"- **`{rel}`** ({facts['loc']} LOC) — {facts['doc'] or '(no docstring)'}")
+        lines.append("")
+    return lines
+
+
 def build_map() -> tuple[str, dict]:
-    status = {k: v for k, v in _load_status().items() if not k.startswith("_")}
+    raw_status = _load_status()
+    local_index = raw_status.get("_local_index", {})
+    status = {k: v for k, v in raw_status.items() if not k.startswith("_")}
     pkgs = _packages()
     tree_hash = _src_tree_hash()
     head = _git_head()
@@ -155,10 +195,15 @@ def build_map() -> tuple[str, dict]:
     status_keys = set(status.keys())
     pkg_set = set(pkgs)
     missing_status = sorted(pkg_set - status_keys)                 # in code, no status entry
-    # a status key is valid if it names an existing package OR an existing module path.
+    # a status key is valid if it names an existing package, an existing module path, OR an ANCESTOR
+    # namespace of some package (a dir whose only content is __init__ + subpackages, e.g. the
+    # top-level `error_coupling_simulator`, has no direct module but is a real package).
     module_paths = {py.relative_to(SRC).as_posix() for _, py in _iter_modules()}
-    stale_status = sorted(k for k in status_keys
-                          if k not in pkg_set and k not in module_paths)
+    stale_status = sorted(
+        k for k in status_keys
+        if k not in pkg_set and k not in module_paths
+        and not any(p == k or p.startswith(k + "/") for p in pkg_set)
+    )
 
     n_mod = n_cls = n_fn = 0
     lines: list[str] = []
@@ -227,9 +272,11 @@ def build_map() -> tuple[str, dict]:
                              f"{_module_facts(g)['doc'] or '(no docstring)'}")
             lines.append("")
 
+    lines.extend(_render_local_index(local_index))
+
     lines.append("---")
     lines.append(f"_inventory: {len(pkgs)} packages, {n_mod} modules, {n_cls} public classes, "
-                 f"{n_fn} public functions._")
+                 f"{n_fn} public functions (committed `src/qec_twin`) + curated local-only clusters above._")
     lines.append("")
 
     summary = {"packages": len(pkgs), "modules": n_mod, "classes": n_cls, "funcs": n_fn,
