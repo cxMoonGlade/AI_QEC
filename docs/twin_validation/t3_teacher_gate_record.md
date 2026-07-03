@@ -103,3 +103,34 @@ Three-iteration trail, every amendment committed BEFORE its rerun, no criterion 
 
 **Next: `outputs/t3_hw_moments.py`** (dual-route Spitz gate — load-bearing per R2 probe C) →
 `t3_fit_real.py` per the pinned P3/P4/P5 (grid, splits, seeds all fixed in A-T3-1 §8).
+
+## v5 FINAL VERDICT — GATE FAILED; AMENDMENT BUDGET EXHAUSTED; STOP (2026-07-03;
+log `t3_teacher_validation_v5.log`; the BINDING state of T-#3)
+
+Under the pre-committed addendum-3 criterion (fresh seeds {37,47,57}, joint rank-matched
+Mahalanobis coverage at 99.7%, 2000 covariance-correct draws, both intervals + pileup
+reported):
+
+- **P1a exact tier: PASS unchanged** (forward map ≡ engine 3.3e-16; C/V-diff/μ recovery
+  ≤ 1.2e-14; p_Z-absorption identity exact) — the forward model and identifiability stand
+  (review-PROVEN, rank 11/11).
+- **P1b: seed 37 PASS (T=16.83), seed 57 PASS (T=8.53; 0/18 interval misses), seed 47 FAIL
+  (T=46.28 > χ²₇@99.7% = 21.85).** Diagnostics on the failing realization: w-pileup 28.3%
+  (vs 0.9%/0.1%), BOTH interval types miss 10/18 functionals, worst |f_corr − truth| = 6.29e-2
+  (~2× the largest C truth) — while χ² = 8.9 (in-band; the moment fit is FINE) and μ̂/d-offset
+  errors stay at 8e-4/3.3e-3. G-ztruth and G-STRAW pass on all seeds (straw T 35.1/30.4/26.1 —
+  the gate has power; the sampler matches the formula).
+- **The FINDING (registered miss, per the epistemic rules a reportable result, never later
+  citable as "validated"):** the Bochner-constrained estimator at the pinned two-component grid
+  has a data-realization-dependent fragility — when the sampled moments pull the fit into the
+  w ≥ 0 boundary (pileup regime), the KERNEL-sector point estimates acquire errors invisible at
+  the moment level (in-band χ²) and both bootstrap interval types under-cover. Frequency at
+  hardware-equivalent statistics: 1/3 fresh seeds. This is exactly the weak-direction/boundary
+  mechanism the round-3 review (R5 F2) diagnosed on the v4b data.
+- **Consequence (per the pre-committed amendment budget): STOP.** No further criterion edits.
+  Hardware extraction stays LOCKED. The estimator/moment-set DESIGN must change before any new
+  gate registration (candidate axes for the next prereg round, NOT decided here: r-position
+  pooling per moment class — the hardware fit pools ~800 bulk layers, a fundamentally richer
+  statistic than the teacher's single-position moments; grid/parametrization redesign away from
+  the boundary-degenerate w₀/w₁-split direction; boundary-aware inference). A NEW registered
+  gate (fresh prereg section, fresh seeds) is required after the redesign.
