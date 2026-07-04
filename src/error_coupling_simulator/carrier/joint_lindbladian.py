@@ -188,6 +188,19 @@ def _apply_superop_to_dyad(S, i, j, D):
     return col.reshape(D, D).transpose(-1, -2).clone()
 
 
+def _robust_eigh(M):
+    """Hermitian eigendecomposition with a CPU-LAPACK fallback. cuSOLVER's Hermitian eigensolve can
+    fail to converge (error code 2) on highly-degenerate PSD matrices at the dense 5q carrier size;
+    CPU LAPACK is robust. Returns (w, V) on M's device (a genuine failure re-raises from the CPU path)."""
+    import torch
+
+    try:
+        return torch.linalg.eigh(M)
+    except RuntimeError:
+        w, V = torch.linalg.eigh(M.detach().to("cpu"))
+        return w.to(M.device), V.to(M.device)
+
+
 def superop_to_kraus(S, *, device="cuda", tol: float = 0.0,
                      completion: str = "identity_sink"):
     r"""Choi-eigendecompose the column-stacked superoperator ``S`` (``(D^2, D^2)``)
@@ -219,63 +232,55 @@ def superop_to_kraus(S, *, device="cuda", tol: float = 0.0,
     if D * D != S.shape[0]:
         raise ValueError(f"superop dim {tuple(S.shape)} is not a perfect-square (D^2,D^2)")
 
-    # Build the Choi matrix Sigma_{p,q} E(|p><q|) (x) |p><q|.
-    choi = torch.zeros((D * D, D * D), dtype=torch.complex128, device=dev)
-    for p in range(D):
-        for qd in range(D):
-            Epq = _apply_superop_to_dyad(S, p, qd, D)  # (D, D); unvec'd column => may be non-contiguous
-            epq = torch.zeros((D, D), dtype=torch.complex128, device=dev)
-            epq[p, qd] = 1.0
-            choi = choi + torch.kron(Epq.contiguous(), epq.contiguous())
-
+    # Build the Choi matrix Sigma_{p,q} E(|p><q|) (x) |p><q|. The Choi-Jamiolkowski map is a pure
+    # REINDEXING of the column-stacking superop, NOT a D^2 python loop of krons:
+    #   Choi[a*D+p, b*D+q] = S[b*D+a, q*D+p]  <=>  S.reshape(D,D,D,D)[b,a,q,p] permuted to [a,p,b,q].
+    # Verified bit-exact vs the former p,q loop for D=2..8 (outputs/twin_validation/choi_vectorize_verify.py).
+    choi = S.reshape(D, D, D, D).permute(1, 3, 0, 2).reshape(D * D, D * D).contiguous()
     choi = 0.5 * (choi + choi.conj().transpose(-1, -2))
-    try:
-        w, V = torch.linalg.eigh(choi)
-    except RuntimeError as exc:
-        if "linalg.eigh" not in str(exc):
-            raise
-        # CUDA Hermitian eigensolve can fail to converge for valid, highly
-        # degenerate PSD Choi matrices at the dense 5q carrier size. SVD stays
-        # on the GPU and gives the same decomposition for PSD Choi evidence.
-        V, w, _ = torch.linalg.svd(choi)
+    w, V = _robust_eigh(choi)
 
-    kraus = []
-    dropped_mass = 0.0
-    for k in range(w.shape[0]):
-        wk = float(w[k].real)
-        if wk > float(tol):
-            Kk = (wk ** 0.5) * V[:, k].reshape(D, D)  # C/row-major reshape (in-tree convention)
-            kraus.append(Kk)
-        elif wk > 0.0:
-            dropped_mass += wk
+    # Kraus_k = sqrt(w_k) * V[:,k].reshape(D, D), for eigenvalues w_k > tol. Vectorized (no python loop
+    # over the D^2 eigenpairs): scale each eigen-column by sqrt(w_k), fold columns->rows->(D, D). Same
+    # ascending-eigenvalue order as the former loop; verified bit-equivalent in
+    # outputs/twin_validation/superop_kraus_vectorize_verify.py.
+    wr = w.real
+    tolf = float(tol)
+    keep = wr > tolf
+    sqrtw = wr.clamp(min=0.0).sqrt().to(V.dtype)                    # (D^2,)
+    kraus_all = (V * sqrtw.unsqueeze(0)).transpose(0, 1).reshape(w.shape[0], D, D)  # C/row-major (in-tree)
+    kraus_stack = kraus_all[keep].contiguous()                     # (k, D, D)
+    dropped_mass = float(wr[(~keep) & (wr > 0.0)].sum())
 
     eye = torch.eye(D, dtype=torch.complex128, device=dev)
-    if kraus:
-        SKK = sum(K.conj().transpose(-1, -2) @ K for K in kraus)
-    else:
-        SKK = torch.zeros((D, D), dtype=torch.complex128, device=dev)
+    # SKK = Sigma_k K_k^dag K_k  (batched; == I for an exactly-CPTP map)
+    SKK = (torch.einsum("kij,kil->jl", kraus_stack.conj(), kraus_stack)
+           if kraus_stack.shape[0] else torch.zeros((D, D), dtype=torch.complex128, device=dev))
 
     if completion == "renormalize":
         tp_residual = float(torch.max(torch.abs(SKK - eye)))
-        return torch.stack(kraus) if kraus else torch.zeros((0, D, D), dtype=torch.complex128, device=dev), tp_residual, float(dropped_mass)
+        return kraus_stack, tp_residual, float(dropped_mass)
 
     if completion == "identity_sink":
         defect = eye - SKK
         defect = 0.5 * (defect + defect.conj().transpose(-1, -2))
-        dw, dV = torch.linalg.eigh(defect)
+        dw, dV = _robust_eigh(defect)
         top = D - 1
-        comp = []
-        for k in range(dw.shape[0]):
-            dwk = float(dw[k].real)
-            if dwk > float(tol):
-                src = dV[:, k]
-                Kc = torch.zeros((D, D), dtype=torch.complex128, device=dev)
-                Kc[top, :] = (dwk ** 0.5) * src.conj()  # leaked TP-defect mass -> top level
-                comp.append(Kc)
-        full = kraus + comp
-        SKK2 = sum(K.conj().transpose(-1, -2) @ K for K in full)
+        dwr = dw.real
+        dkeep = dwr > tolf
+        if bool(dkeep.any()):
+            dsqrt = dwr.clamp(min=0.0).sqrt().to(dV.dtype)          # (D,)
+            # comp_k has a single non-zero row `top` = sqrt(dw_k) * dV[:,k]^*  (leaked TP-defect -> top level)
+            rows = (dV * dsqrt.unsqueeze(0)).transpose(0, 1)[dkeep].conj()  # (nc, D)
+            comp = torch.zeros((rows.shape[0], D, D), dtype=torch.complex128, device=dev)
+            comp[:, top, :] = rows
+            full = torch.cat([kraus_stack, comp], dim=0)
+        else:
+            full = kraus_stack
+        SKK2 = (torch.einsum("kij,kil->jl", full.conj(), full)
+                if full.shape[0] else torch.zeros((D, D), dtype=torch.complex128, device=dev))
         tp_residual = float(torch.max(torch.abs(SKK2 - eye)))
-        return torch.stack(full), tp_residual, float(dropped_mass)
+        return full, tp_residual, float(dropped_mass)
 
     raise ValueError(f"unknown completion {completion!r}")
 
@@ -343,6 +348,506 @@ def assemble_substep_channel(H_list, c_list, dt, *, device="cuda",
             stacklevel=2,
         )
     return kraus
+
+
+def assemble_substep_channels_batched(items, *, device="cuda", completion: str = "identity_sink",
+                                      choi_eigenvalue_tol: float = 0.0):
+    r"""BATCHED ``assemble_substep_channel`` — one batched ``matrix_exp`` + one batched Choi ``eigh``
+    over ALL substeps, instead of a per-substep sequential build. Same math per item as
+    ``assemble_substep_channel`` (verified in outputs/twin_validation/batched_substep_channel_verify.py).
+
+    ``items`` is a sequence of ``(H_list, c_list, dt)`` with a UNIFORM window dimension ``D`` (the dense
+    Axis-1 manifest builds all substeps on the same window). Returns a list of Kraus stacks ``(k_b, D, D)``,
+    one per item, in input order. The heavy linalg (the D^2 x D^2 ``matrix_exp`` and Choi ``eigh``) is
+    folded into a single batched call each; only the variable-rank Kraus filtering + identity-sink
+    completion stay per-item (cheap indexing/reshape, no per-item heavy linalg — the defect ``eigh`` is
+    also batched).
+    """
+    import torch
+
+    dev = _require_cuda(device)
+    items = list(items)
+    if not items:
+        return []
+
+    # Per-item Liouvillian (cheap kron sums) + validated dt; stacked for the batched propagation.
+    Ls, dts = [], []
+    for H_list, c_list, dt in items:
+        Ls.append(liouvillian_superop(H_list, c_list, device=dev))
+        dts.append(_validate_dt(dt))
+    D2 = int(Ls[0].shape[-1])
+    D = int(round(D2 ** 0.5))
+    if D * D != D2:
+        raise ValueError(f"Liouvillian dim {D2} is not a perfect square")
+    for L in Ls:
+        if int(L.shape[-1]) != D2:
+            raise ValueError("assemble_substep_channels_batched requires a UNIFORM window dimension across items")
+    Lstack = torch.stack(Ls)                                                     # (B, D^2, D^2)
+    dt_t = torch.tensor(dts, dtype=torch.complex128, device=dev)                 # (B,)
+    B = Lstack.shape[0]
+
+    # ONE batched matrix_exp: S_b = expm(L_b * dt_b).
+    Sstack = torch.linalg.matrix_exp(Lstack * dt_t[:, None, None])               # (B, D^2, D^2)
+
+    # ONE batched Choi (reshape/permute, per superop_to_kraus) + ONE batched Hermitian eigh.
+    choi = Sstack.reshape(B, D, D, D, D).permute(0, 2, 4, 1, 3).reshape(B, D2, D2).contiguous()
+    choi = 0.5 * (choi + choi.conj().transpose(-1, -2))
+    w, V = _robust_eigh(choi)                                                    # (B, D^2), (B, D^2, D^2)
+
+    tolf = float(choi_eigenvalue_tol)
+    eye = torch.eye(D, dtype=torch.complex128, device=dev)
+    kraus_list, SKKs = [], []
+    for b in range(B):
+        wr = w[b].real
+        keep = wr > tolf
+        sqrtw = wr.clamp(min=0.0).sqrt().to(V.dtype)
+        kall = (V[b] * sqrtw.unsqueeze(0)).transpose(0, 1).reshape(D2, D, D)
+        kb = kall[keep].contiguous()
+        kraus_list.append(kb)
+        SKKs.append(torch.einsum("kij,kil->jl", kb.conj(), kb) if kb.shape[0]
+                    else torch.zeros((D, D), dtype=torch.complex128, device=dev))
+
+    if completion == "renormalize":
+        return kraus_list
+    if completion != "identity_sink":
+        raise ValueError(f"unknown completion {completion!r}")
+
+    # identity_sink: batched defect eigh over the B (D x D) TP defects.
+    defect = eye.unsqueeze(0) - torch.stack(SKKs)                                # (B, D, D)
+    defect = 0.5 * (defect + defect.conj().transpose(-1, -2))
+    dw, dV = _robust_eigh(defect)                                               # (B, D), (B, D, D)
+    top = D - 1
+    full_list = []
+    for b in range(B):
+        dwr = dw[b].real
+        dkeep = dwr > tolf
+        if bool(dkeep.any()):
+            dsqrt = dwr.clamp(min=0.0).sqrt().to(dV.dtype)
+            rows = (dV[b] * dsqrt.unsqueeze(0)).transpose(0, 1)[dkeep].conj()    # (nc, D)
+            comp = torch.zeros((rows.shape[0], D, D), dtype=torch.complex128, device=dev)
+            comp[:, top, :] = rows
+            full_list.append(torch.cat([kraus_list[b], comp], dim=0))
+        else:
+            full_list.append(kraus_list[b])
+    return full_list
+
+
+# --------------------------------------------------------------------------- #
+# EXACT coupling-component factorization of the substep channel                #
+# (SPEC docs/twin_validation/SPEC_substep_coupling_factorization_2026-07-04.md)#
+# --------------------------------------------------------------------------- #
+# WHY THIS IS EXACT (not an approximation). For a substep,
+#   L = -i[Sigma_i H_i, .] + Sigma_k D[c_k].
+# Partition the window qubits into disjoint blocks {B_m} so EVERY individual
+# operator (each H_i, each c_k) has its qubit support inside a single block.
+# Then L = Sigma_m L_{B_m} with L_{B_m} acting only on B_m (x) I elsewhere.
+# Disjoint-support superoperators commute, so expm(L) = Prod_m expm(L_{B_m}) =
+# (x)_m E_{B_m}. Applying it to rho = applying each block channel to its own
+# qubits (they commute). No full-window Kraus is ever formed. The blocks are the
+# CONNECTED COMPONENTS of the graph with an edge (a,b) whenever some single H_i
+# or c_k acts non-trivially on both a and b. This mirrors the union-find /
+# support diagnostic in outputs/twin_validation/step2_substep_support_diag.py.
+
+_SUPPORT_TOL = 1e-9  # absolute; dephasing c ~ sqrt(gamma) can be ~0.03, so no relative tol (SPEC 4.3).
+
+
+def _nq_from_D(D: int) -> int:
+    """Number of qubits for a window dimension D = 2^nq (exact, raises if not a power of two)."""
+    nq = int(D).bit_length() - 1
+    if (1 << nq) != int(D):
+        raise ValueError(f"window dimension {D} is not a power of two (2^nq)")
+    return nq
+
+
+def operator_support(A, nq, *, tol: float = _SUPPORT_TOL):
+    r"""The set of qubits on which the (2^nq x 2^nq) operator ``A`` acts NON-trivially
+    (big-endian qubit order: qubit 0 is the most-significant tensor factor, matching
+    `circuit_sim.embed_operator` and `liouvillian_superop`).
+
+    ``A`` is trivial on qubit ``q`` iff it factors as ``B (x) I_q``. Reshape ``A`` to
+    ``[2]*2nq`` with row axis ``q`` and col axis ``nq+q``; trivial on ``q`` iff the
+    off-diagonal blocks ``(iq=0,jq=1)`` and ``(iq=1,jq=0)`` are ~0 AND the diagonal
+    blocks ``(0,0)`` and ``(1,1)`` are equal — all to ABSOLUTE tolerance ``tol`` (a
+    relative tol would miss weak dephasing couplings ``c ~ sqrt(gamma) ~ 0.03``).
+    Returns a sorted tuple of non-trivial qubit indices. Same test as
+    `step2_substep_support_diag.acts_nontrivially_on`.
+    """
+    import torch
+
+    At = torch.as_tensor(A, dtype=torch.complex128).reshape([2] * (2 * nq))
+    sup = []
+    for q in range(nq):
+        rax, cax = q, nq + q
+        d00 = At.select(cax, 0).select(rax, 0)
+        d11 = At.select(cax, 1).select(rax, 1)
+        o01 = At.select(cax, 1).select(rax, 0)
+        o10 = At.select(cax, 0).select(rax, 1)
+        off = max(float(o01.abs().max()), float(o10.abs().max()))
+        diag_gap = float((d00 - d11).abs().max())
+        if (off > tol) or (diag_gap > tol):
+            sup.append(q)
+    return tuple(sup)
+
+
+# Below this a per-qubit non-triviality MEASURE is a genuine machine/structural zero (these operators are
+# built from exact algebra, so an identity factor reads ~1e-16); a measure in [floor, _SUPPORT_TOL) is a
+# real-but-weak coupling the absolute support tolerance cannot classify -> factorization is NOT certifiably
+# exact and must fall back to the full-window channel (P1 fail-safe, SPEC ledger item 4).
+_FACTORIZE_SAFE_FLOOR = NUMERICAL_ZERO  # 1e-12
+
+
+def _has_ambiguous_support(A, nq, *, tol: float = _SUPPORT_TOL, floor: float = _FACTORIZE_SAFE_FLOOR):
+    """True iff operator ``A`` (2^nq x 2^nq) has ANY qubit whose non-triviality measure
+    (max of the off-diagonal-block magnitude and the diagonal-block gap, same measure as
+    `operator_support`) falls in the ambiguous band ``[floor, tol)`` — a coupling too weak for
+    `operator_support` to flag yet too strong to be a machine zero. Its presence means the coupling
+    graph (and hence the factorization) cannot be certified exact; the caller must use the full-window
+    channel instead of silently dropping the coupling.
+    """
+    import torch
+
+    At = torch.as_tensor(A, dtype=torch.complex128).reshape([2] * (2 * nq))
+    for q in range(nq):
+        rax, cax = q, nq + q
+        d00 = At.select(cax, 0).select(rax, 0)
+        d11 = At.select(cax, 1).select(rax, 1)
+        o01 = At.select(cax, 1).select(rax, 0)
+        o10 = At.select(cax, 0).select(rax, 1)
+        measure = max(float(o01.abs().max()), float(o10.abs().max()), float((d00 - d11).abs().max()))
+        if floor <= measure < tol:
+            return True
+    return False
+
+
+def _connected_components(nq, edges):
+    """Connected components (union-find) over qubits ``0..nq-1`` given coupling ``edges``;
+    isolated qubits become singletons. Returns a list of sorted qubit tuples in
+    ascending-first-qubit order (deterministic). Same logic as
+    `step2_substep_support_diag._components`.
+    """
+    parent = list(range(nq))
+
+    def find(a):
+        while parent[a] != a:
+            parent[a] = parent[parent[a]]
+            a = parent[a]
+        return a
+
+    for i, j in edges:
+        parent[find(i)] = find(j)
+    comps: dict[int, list] = {}
+    for q in range(nq):
+        comps.setdefault(find(q), []).append(q)
+    out = [tuple(sorted(c)) for c in comps.values()]
+    out.sort(key=lambda c: c[0])
+    return out
+
+
+def restrict_operator_to_component(A, comp, nq, *, tol: float = _SUPPORT_TOL):
+    r"""Restrict an operator ``A`` (2^nq x 2^nq) whose support is contained in the qubit
+    set ``comp`` to the ``(2^|comp| x 2^|comp|)`` operator ``A_C`` on that subspace
+    (big-endian qubit order). Permute so ``comp`` qubits come first (in ascending
+    order), reshape to ``(2^|C|, 2^|rest|, 2^|C|, 2^|rest|)``, and take
+    ``A_C = A_perm[:, 0, :, 0]``.
+
+    GUARD (mandatory, SPEC 4.4): reconstruct ``A_C (x) I_{2^|rest|}`` (un-permuted back
+    to the original layout) and assert ``max|reconstruct - A| < tol``. A failure means a
+    mis-assigned operator whose support crosses the component — raise, never silently
+    proceed.
+    """
+    import torch
+
+    A = torch.as_tensor(A, dtype=torch.complex128)
+    comp = tuple(sorted(int(q) for q in comp))
+    C = len(comp)
+    rest_qubits = [q for q in range(nq) if q not in comp]
+    R = len(rest_qubits)
+    if C + R != nq:
+        raise ValueError(f"component {comp} not a subset of window qubits 0..{nq - 1}")
+
+    # Bring the component qubits to the front (both row and column axes). The reshaped tensor
+    # has axes [row_0..row_{nq-1}, col_0..col_{nq-1}] in NATURAL qubit order; we want the output
+    # layout [comp rows, rest rows, comp cols, rest cols]. torch.permute maps output axis i to
+    # input axis perm[i], so perm's row part is exactly `new_order` (the original qubit index for
+    # each output row axis) and its col part is `nq + new_order`.
+    new_order = list(comp) + rest_qubits                # output position -> original qubit
+    perm = new_order + [nq + q for q in new_order]
+    At = A.reshape([2] * (2 * nq)).permute(*perm).contiguous()
+    A_perm = At.reshape(2 ** C, 2 ** R, 2 ** C, 2 ** R)
+    A_C = A_perm[:, 0, :, 0].contiguous()
+
+    # GUARD: A must equal A_C (x) I_R exactly (up to tol) in the permuted layout.
+    eyeR = torch.eye(2 ** R, dtype=torch.complex128, device=A.device)
+    recon_perm = torch.kron(A_C.contiguous(), eyeR)  # (2^C * 2^R, 2^C * 2^R), component-first layout
+    resid = float((recon_perm - At.reshape(2 ** nq, 2 ** nq)).abs().max())
+    if resid > tol:
+        raise ValueError(
+            f"restrict_operator_to_component: operator support crosses component {comp} "
+            f"(reconstruction residual {resid:.3e} > {tol:.1e}); the operator was mis-assigned "
+            f"(its support is not contained in the component)."
+        )
+    return A_C
+
+
+def _coupling_components(H_list, c_list, nq, *, tol: float = _SUPPORT_TOL):
+    """Coupling graph -> connected components, plus each operator's support and its
+    assigned component index.
+
+    An edge ``(a, b)`` is added whenever any SINGLE H-term or c-op acts non-trivially on
+    BOTH ``a`` and ``b`` (single-qubit terms add no edge). Returns
+    ``(components, h_support, c_support)`` where ``components`` is the list of sorted
+    qubit tuples and ``*_support`` are the per-operator support tuples (so callers do not
+    recompute the support test).
+    """
+    edges = []
+    h_support = [operator_support(h, nq, tol=tol) for h in H_list]
+    c_support = [operator_support(c, nq, tol=tol) for c in c_list]
+    for s in list(h_support) + list(c_support):
+        for a in range(len(s)):
+            for b in range(a + 1, len(s)):
+                edges.append((s[a], s[b]))
+    components = _connected_components(nq, edges)
+    return components, h_support, c_support
+
+
+def assemble_substep_channel_factored(H_list, c_list, dt, *, device="cuda",
+                                      completion: str = "identity_sink",
+                                      choi_eigenvalue_tol: float = 0.0):
+    r"""EXACT coupling-component factorization of the Axis-1 joint substep channel.
+
+    Instead of one full-window ``expm(L*dt)`` + Choi ``eigh`` at ``D = 2^nq``, build the
+    channel over the CONNECTED COMPONENTS of the substep's 2-qubit coupling graph. Each
+    component's channel is assembled at its own small dimension ``2^|B_m|`` via the SAME
+    ``liouvillian_superop -> matrix_exp -> superop_to_kraus`` path (identical convention as
+    `assemble_substep_channel`), then applied to its own qubits. Because disjoint-support
+    Lindbladians commute, ``expm(Sigma_m L_{B_m}) = (x)_m E_{B_m}`` EXACTLY (error bound:
+    machine-zero — this is an identity, not an approximation).
+
+    Returns a list of ``(local_qubits, comp_kraus)`` in ascending-first-qubit order:
+      - ``local_qubits``: sorted window-local qubit indices (subset of ``0..nq-1``) of the
+        component (big-endian order — local qubit ``local_qubits[i]`` is the caller's
+        window-local index; the apply loop maps it to the global qubit via
+        ``selection.participant[local_qubits[i]]``).
+      - ``comp_kraus``: ``(k_m, 2^|B_m|, 2^|B_m|)`` complex128 CPTP Kraus for that block.
+
+    FALLBACK (correctness over speed): if the substep is a SINGLE component spanning all
+    ``nq`` qubits, or if ``QEC_TWIN_NO_FACTORIZE=1`` is set in the environment, return
+    ``[(tuple(range(nq)), assemble_substep_channel(H_list, c_list, dt, ...))]`` — bit-for-bit
+    the current full-window path. This is the A/B knob for the byte-identical records gate.
+    """
+    import os
+
+    import torch
+
+    dev = _require_cuda(device)
+    H_list = list(H_list)
+    c_list = list(c_list)
+    ops = H_list + c_list
+    if not ops:
+        raise ValueError("assemble_substep_channel_factored: need at least one H or c operator")
+    D = int(torch.as_tensor(ops[0]).shape[-1])
+    nq = _nq_from_D(D)
+
+    def _full_window():
+        kraus = assemble_substep_channel(
+            H_list, c_list, dt, device=dev,
+            completion=completion, choi_eigenvalue_tol=float(choi_eigenvalue_tol),
+        )
+        return [(tuple(range(nq)), kraus)]
+
+    # Env override: force the exact current full-window path (the A/B fallback).
+    if os.environ.get("QEC_TWIN_NO_FACTORIZE") == "1":
+        return _full_window()
+
+    # P1 fail-safe (SPEC ledger item 4): if ANY operator carries a coupling too weak for the absolute
+    # support tolerance to classify (a measure in [_FACTORIZE_SAFE_FLOOR, _SUPPORT_TOL)), the coupling
+    # graph cannot be certified exact -- a genuine weak coupling could be silently dropped, breaking the
+    # tensor-product identity. Fall back to the EXACT full-window channel (correctness over the speed win).
+    if any(_has_ambiguous_support(op, nq) for op in ops):
+        return _full_window()
+
+    components, h_support, c_support = _coupling_components(H_list, c_list, nq)
+
+    # Single full-window component => no factorization win; take the exact full path.
+    if len(components) == 1 and len(components[0]) == nq:
+        return _full_window()
+
+    # Assign each operator to the (unique) component containing its support, restrict it,
+    # and build that component's channel.
+    def _component_index(support):
+        # A supported operator lands in the component whose qubit set contains ALL of its
+        # support qubits. An empty-support (identity) operator is dropped (contributes
+        # nothing to L); the block still exists because its qubit carries some operator.
+        for idx, comp in enumerate(components):
+            if all(q in comp for q in support):
+                return idx
+        raise ValueError(
+            f"operator support {support} is not contained in any single component "
+            f"{components}; the coupling graph is inconsistent (a support edge is missing)."
+        )
+
+    per_comp_H: list[list] = [[] for _ in components]
+    per_comp_c: list[list] = [[] for _ in components]
+    for Hi, sup in zip(H_list, h_support):
+        if not sup:
+            continue  # identity Hamiltonian: no contribution to L (skip)
+        idx = _component_index(sup)
+        per_comp_H[idx].append(restrict_operator_to_component(Hi, components[idx], nq))
+    for ck, sup in zip(c_list, c_support):
+        if not sup:
+            continue  # identity collapse op: no contribution to L (skip)
+        idx = _component_index(sup)
+        per_comp_c[idx].append(restrict_operator_to_component(ck, components[idx], nq))
+
+    out: list = []
+    for comp, Hc, cc in zip(components, per_comp_H, per_comp_c):
+        if not Hc and not cc:
+            # A component with NO non-identity operator (a truly idle qubit with no dephasing/drive)
+            # does not arise for the real teacher's substeps — every window qubit that appears
+            # carries >= 1 single-qubit collapse op (measured decomposition e.g. [[0,3],[1],[2],[4]]).
+            # If it ever does, the EXACT full-window channel is the identity on that block (expm(0)=I),
+            # so we emit the 1-Kraus identity (matching the full-window path bit-for-bit) rather than
+            # crash emit; a loud warning surfaces the unexpected structure. This preserves the
+            # byte-identical-records gate under the QEC_TWIN_NO_FACTORIZE A/B test.
+            import warnings
+
+            warnings.warn(
+                f"assemble_substep_channel_factored: component {comp} has no non-identity operator "
+                f"(idle qubit block); emitting the exact 1-Kraus identity channel (matches the "
+                f"full-window path). This is unexpected for a real substep — check the schedule.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+            Dc = 2 ** len(comp)
+            eye = torch.eye(Dc, dtype=torch.complex128, device=dev).unsqueeze(0)
+            out.append((tuple(comp), eye))
+            continue
+        comp_kraus = assemble_substep_channel(
+            Hc, cc, dt, device=dev,
+            completion=completion, choi_eigenvalue_tol=float(choi_eigenvalue_tol),
+        )
+        out.append((tuple(comp), comp_kraus))
+    return out
+
+
+def assemble_substep_channels_factored_batched(items, *, device="cuda",
+                                               completion: str = "identity_sink",
+                                               choi_eigenvalue_tol: float = 0.0):
+    r"""Optional thin speed layer over `assemble_substep_channel_factored` for a SEQUENCE of
+    substeps: group ALL components (across all substeps) BY DIMENSION and run ONE batched
+    ``matrix_exp`` + Choi ``eigh`` per D-group (reusing `assemble_substep_channels_batched`,
+    which requires a uniform D — hence the group-by-D).
+
+    ``items`` is a sequence of ``(H_list, c_list, dt)``. Returns a list parallel to ``items``,
+    each entry the SAME ``list[(local_qubits, comp_kraus)]`` that
+    `assemble_substep_channel_factored` returns for that item — so it is a drop-in for the
+    per-item loop. The result is EXACT and, per component, gauge-equivalent to the per-item
+    build (same channel; raw Kraus differ only by the eigen-gauge, which is irrelevant to the
+    applied channel — verified for the batched builder in batched_substep_channel_verify.py).
+
+    Correctness note: the env flag / single-full-window fallback of the per-item builder is
+    honored here too (those items fall back to the full-window `assemble_substep_channel` and
+    are NOT batched, so they stay bit-for-bit the current path).
+    """
+    import os
+
+    import torch
+
+    dev = _require_cuda(device)
+    items = list(items)
+    if not items:
+        return []
+    force_full = os.environ.get("QEC_TWIN_NO_FACTORIZE") == "1"
+
+    # Plan the components for every item; collect the small (H_C, c_C, dt) builds to batch.
+    # A "slot" records where each component's kraus goes: (item_index, out_position).
+    plans: list[list] = [None] * len(items)          # per item: list of (local_qubits, kraus-or-None)
+    batch_items: dict[int, list] = {}                # D -> list of (H_C, c_C, dt)
+    batch_slots: dict[int, list] = {}               # D -> list of (item_index, out_position)
+    for i, (H_list, c_list, dt) in enumerate(items):
+        H_list = list(H_list)
+        c_list = list(c_list)
+        ops = H_list + c_list
+        if not ops:
+            raise ValueError("assemble_substep_channels_factored_batched: item has no operators")
+        D = int(torch.as_tensor(ops[0]).shape[-1])
+        nq = _nq_from_D(D)
+
+        full_window = force_full
+        components = h_support = c_support = None
+        if not full_window:
+            components, h_support, c_support = _coupling_components(H_list, c_list, nq)
+            if len(components) == 1 and len(components[0]) == nq:
+                full_window = True
+
+        if full_window:
+            # Not batched: exact current full-window path (bit-for-bit).
+            kraus = assemble_substep_channel(
+                H_list, c_list, dt, device=dev,
+                completion=completion, choi_eigenvalue_tol=float(choi_eigenvalue_tol),
+            )
+            plans[i] = [(tuple(range(nq)), kraus)]
+            continue
+
+        # Assign + restrict operators per component; queue each block's small build.
+        def _component_index(support, comps=components):
+            for idx, comp in enumerate(comps):
+                if all(q in comp for q in support):
+                    return idx
+            raise ValueError(
+                f"operator support {support} not contained in any component {comps}"
+            )
+
+        per_comp_H: list[list] = [[] for _ in components]
+        per_comp_c: list[list] = [[] for _ in components]
+        for Hi, sup in zip(H_list, h_support):
+            if not sup:
+                continue
+            idx = _component_index(sup)
+            per_comp_H[idx].append(restrict_operator_to_component(Hi, components[idx], nq))
+        for ck, sup in zip(c_list, c_support):
+            if not sup:
+                continue
+            idx = _component_index(sup)
+            per_comp_c[idx].append(restrict_operator_to_component(ck, components[idx], nq))
+
+        item_plan: list = []
+        for pos, (comp, Hc, cc) in enumerate(zip(components, per_comp_H, per_comp_c)):
+            if not Hc and not cc:
+                # Idle-qubit block: exact identity channel (matches full-window path; see the
+                # per-item builder). Filled immediately (not batched) with the 1-Kraus identity.
+                import warnings
+
+                warnings.warn(
+                    f"assemble_substep_channels_factored_batched: component {comp} has no "
+                    f"non-identity operator; emitting the exact 1-Kraus identity channel.",
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
+                Dc = 2 ** len(comp)
+                eye = torch.eye(Dc, dtype=torch.complex128, device=dev).unsqueeze(0)
+                item_plan.append([tuple(comp), eye])
+                continue
+            Dc = 2 ** len(comp)
+            item_plan.append([tuple(comp), None])  # kraus filled after the batched build
+            batch_items.setdefault(Dc, []).append((Hc, cc, dt))
+            batch_slots.setdefault(Dc, []).append((i, pos))
+        plans[i] = item_plan
+
+    # One batched matrix_exp + Choi eigh per dimension group.
+    for Dc, group in batch_items.items():
+        kraus_list = assemble_substep_channels_batched(
+            group, device=dev, completion=completion,
+            choi_eigenvalue_tol=float(choi_eigenvalue_tol),
+        )
+        for (item_index, out_position), kb in zip(batch_slots[Dc], kraus_list):
+            plans[item_index][out_position][1] = kb
+
+    # Freeze each item plan to the (local_qubits, comp_kraus) tuple contract.
+    out: list = []
+    for item_plan in plans:
+        out.append([(tuple(lq), kr) for (lq, kr) in item_plan])
+    return out
 
 
 def _joint_superop(H_list, c_list, dt, *, device="cuda"):
@@ -522,6 +1027,28 @@ def _choi_state_from_kraus(kraus, *, device="cuda"):
     return J / tr
 
 
+def _choi_state_from_superop(S, *, device="cuda"):
+    r"""Trace-normalised Choi STATE ``J/Tr J`` of a channel given its column-stacking SUPEROPERATOR ``S``
+    (``(D^2, D^2)``), in the SAME Choi convention as `_choi_state_from_kraus`
+    (``J = Sigma_{p,q} E(|p><q|) (x) |p><q|``), but built DIRECTLY from the channel — a gauge-invariant
+    channel property — instead of via a Kraus decomposition. This avoids the spurious near-zero Kraus that
+    a lossless (``tol=0``) Choi-eigendecomposition injects for a (near-)unitary channel; those inject an
+    ``O(1e-8)``-amplitude roundoff basis whose Uhlmann ``sqrt`` amplifies representation noise to the ~1e-8
+    estimator floor (Schumacher/Nielsen note, GT-feasibility line). The Choi-Jamiolkowski map is the pure
+    reindexing ``J[a*D+p, b*D+q] = S[b*D+a, q*D+p]`` (verified bit-exact in choi_vectorize_verify.py).
+    """
+    import torch
+
+    dev = _require_cuda(device)
+    S = torch.as_tensor(S, dtype=torch.complex128, device=dev)
+    D = int(round(S.shape[0] ** 0.5))
+    if D * D != S.shape[0]:
+        raise ValueError(f"superop dim {tuple(S.shape)} is not a perfect-square (D^2, D^2)")
+    J = S.reshape(D, D, D, D).permute(1, 3, 0, 2).reshape(D * D, D * D).contiguous()
+    J = 0.5 * (J + J.conj().transpose(-1, -2))
+    return J / torch.trace(J).real
+
+
 def _state_fidelity(rho, sigma, *, device="cuda"):
     r"""Uhlmann state fidelity ``F(rho, sigma) = ( Tr sqrt( sqrt(rho) sigma sqrt(rho) ) )^2``
     between two PSD trace-1 matrices, via eigendecomposition (matrix square roots).
@@ -565,10 +1092,15 @@ def composed_vs_joint_infidelity(H_list, c_list, dt, *, device="cuda"):
     The Uhlmann estimator can return ``F_pro`` a hair above 1 (sqrt/eigh round-off);
     we return ``max(0, 1 - F_pro)`` so the infidelity is non-negative.
     """
-    joint = assemble_substep_channel(H_list, c_list, dt, device=device)
-    composed = composed_substep_channel(H_list, c_list, dt, device=device)
-    J_joint = _choi_state_from_kraus(joint, device=device)
-    J_comp = _choi_state_from_kraus(composed, device=device)
+    # Build the two Choi STATES directly from the channel SUPEROPERATORS (gauge-invariant), NOT from a
+    # tol=0 Kraus decomposition: for a (near-)unitary channel the lossless Kraus set carries spurious
+    # ~1e-8-amplitude roundoff operators whose Uhlmann sqrt amplifies representation noise to the ~1e-8
+    # estimator floor (the documented floor; Schumacher/Nielsen note). The superop-Choi is the exact
+    # channel property F_e(E_1,E_2)=F_Uhlmann(J_1/d, J_2/d) and removes that implementation-artifact floor.
+    S_joint = _joint_superop(H_list, c_list, dt, device=device)
+    S_comp = _composed_superop(H_list, c_list, dt, device=device)
+    J_joint = _choi_state_from_superop(S_joint, device=device)
+    J_comp = _choi_state_from_superop(S_comp, device=device)
     F_pro = _state_fidelity(J_joint, J_comp, device=device)
     return float(max(0.0, 1.0 - F_pro))
 

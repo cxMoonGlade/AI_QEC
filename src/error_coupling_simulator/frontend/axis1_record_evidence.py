@@ -571,13 +571,24 @@ def _enumerate_measurement_records(
                     device=dev,
                     static_zz_calibrations=static_zz_calibrations,
                 )
-                kraus = assembled.kraus
-                rho = _apply_channel_to_branches(
-                    rho,
-                    kraus,
-                    selection.participant,
-                    schedule.num_qubits,
-                )
+                # EXACT coupling-component factorization (SPEC 2026-07-04): apply each
+                # connected-component block channel to its OWN qubits. Because disjoint-support
+                # Lindbladians commute, this equals the full-window joint channel EXACTLY
+                # (tensor-product identity). `selection.participant[q]` maps a window-local
+                # qubit index q (big-endian, the same ordering the operators use) to its global
+                # qubit; `_apply_channel_to_branches` embeds the small block Kraus on those
+                # targets. Under QEC_TWIN_NO_FACTORIZE=1 / a single full-window component,
+                # `components` is one full-window entry and this is bit-for-bit the old path.
+                num_kraus_total = 0
+                for local_qubits, comp_kraus in assembled.components:
+                    targets = tuple(selection.participant[q] for q in local_qubits)
+                    rho = _apply_channel_to_branches(
+                        rho,
+                        comp_kraus,
+                        targets,
+                        schedule.num_qubits,
+                    )
+                    num_kraus_total += int(comp_kraus.shape[0])
                 layer_steps.append(selection.selection_id)
                 applied_steps.append(
                     {
@@ -611,8 +622,23 @@ def _enumerate_measurement_records(
                                 record.name for record in assembled.ideal_controls.records
                             ],
                             "contains_serialized_channel_payload": False,
-                            "num_kraus": int(kraus.shape[0]),
-                            "dimension": int(kraus.shape[-1]),
+                            # Factored channel: `dimension` is the full window dim (unchanged
+                            # meaning), `num_kraus` is the total across the applied component
+                            # blocks, and the exact per-component decomposition is reported for
+                            # audit. The applied channel is mathematically identical (tensor
+                            # product over commuting coupling components).
+                            "num_kraus": int(num_kraus_total),
+                            "dimension": int(2 ** schedule.num_qubits),
+                            "factorization": "coupling_component_tensor_product_exact",
+                            "component_local_qubits": [
+                                list(lq) for lq, _ in assembled.components
+                            ],
+                            "component_dimensions": [
+                                int(ck.shape[-1]) for _, ck in assembled.components
+                            ],
+                            "component_num_kraus": [
+                                int(ck.shape[0]) for _, ck in assembled.components
+                            ],
                         },
                     }
                 )

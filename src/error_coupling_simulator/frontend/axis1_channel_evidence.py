@@ -16,7 +16,10 @@ import math
 from pathlib import Path
 from typing import Any
 
-from ..carrier.joint_lindbladian import assemble_substep_channel
+from ..carrier.joint_lindbladian import (
+    assemble_substep_channel,
+    assemble_substep_channels_factored_batched,
+)
 from ..mechanisms.axis1_primitives import (
     Axis1PrimitiveBundle,
     Axis1PrimitiveParams,
@@ -158,11 +161,25 @@ class Axis1SubstepChannelEvidenceResult:
 
 @dataclass(frozen=True)
 class Axis1AssembledSelectionChannel:
-    """One selection lowered to controls, primitive mechanisms, and a joint channel."""
+    """One selection lowered to controls, primitive mechanisms, and a joint channel.
 
-    kraus: Any
+    The joint substep channel is carried in the EXACT coupling-component-factored form
+    ``components`` (a list of ``(window_local_qubits, comp_kraus)`` in ascending-first-qubit
+    order — see `assemble_substep_channel_factored`). The apply loop consumes ``components``
+    directly (applying each block's Kraus to its own qubits, which is exact because disjoint-
+    support Lindbladians commute). ``kraus`` remains available as the equivalent FULL-WINDOW
+    channel for the diagnostic channel/state-evidence paths and `CoupledCycleTeacher.channels`;
+    it is assembled lazily (on first access) from the stored generators, so the hot record path
+    never pays the full-window ``expm`` + Choi ``eigh`` it eliminated. When
+    ``QEC_TWIN_NO_FACTORIZE=1`` (or a genuine single full-window component), ``components`` is a
+    single ``(range(nq), full_window_kraus)`` entry and ``kraus`` returns that same tensor.
+    """
+
+    components: Any
     primitive_bundle: Any
     ideal_controls: Any
+    _dt_ns: float
+    _device: str
 
     @property
     def H_list(self) -> tuple[Any, ...]:
@@ -171,6 +188,24 @@ class Axis1AssembledSelectionChannel:
     @property
     def c_list(self) -> tuple[Any, ...]:
         return tuple(self.primitive_bundle.c_list)
+
+    @property
+    def kraus(self) -> Any:
+        """The equivalent FULL-WINDOW Kraus channel (diagnostic / non-hot-path consumers).
+
+        If ``components`` is the single full-window entry (fallback or a genuinely
+        full-window substep), returns that tensor with no rebuild. Otherwise assembles the
+        full-window channel once via `assemble_substep_channel` on the stored generators —
+        the SAME math the components factor exactly, just not factored. Callers on the record
+        hot path must use ``components`` (never ``kraus``) so the factorization win is realized.
+        """
+        comps = self.components
+        if len(comps) == 1:
+            local_qubits, comp_kraus = comps[0]
+            return comp_kraus
+        return assemble_substep_channel(
+            list(self.H_list), list(self.c_list), self._dt_ns, device=self._device,
+        )
 
 
 @dataclass(frozen=True)
@@ -507,11 +542,28 @@ def _assemble_selection_joint_channel(
     )
     H_list = tuple(ideal_controls.H_list) + tuple(primitive_bundle.H_list)
     c_list = tuple(primitive_bundle.c_list)
-    kraus = assemble_substep_channel(H_list, c_list, dt_ns, device=device)
+    # EXACT coupling-component factorization (SPEC 2026-07-04): the joint substep channel is
+    # the tensor product over the connected components of the 2-qubit coupling graph, built at
+    # small per-component dimension instead of one full-window expm + Choi eigh. Honors
+    # QEC_TWIN_NO_FACTORIZE=1 (and the single-full-window case) as the exact current path.
+    #
+    # THIN BATCH LAYER (measured 2026-07-04): the per-component builds are launch-bound (many tiny
+    # sequential matrix_exp/eigh on 4x4/16x16), 88% of the per-manifest cost. Grouping this selection's
+    # components BY DIMENSION into one batched matrix_exp+eigh per D-group (`assemble_substep_channels_
+    # factored_batched` on a single item) is EXACT (verified gauge-invariant equal to the per-item loop,
+    # <=2.1e-15; outputs/twin_validation/factored_batch_options_probe.py) and byte-identical on records
+    # (G-records). It is a 1-line swap with NO apply-loop restructure — the low-risk half of the batching
+    # win (~11% of the channel-build cost); the whole-manifest cross-substep batch (~20%) was declined to
+    # keep the correctness-critical apply loop untouched (coordinator: correct+simple > slightly faster).
+    components = assemble_substep_channels_factored_batched(
+        [(H_list, c_list, dt_ns)], device=device
+    )[0]
     return Axis1AssembledSelectionChannel(
-        kraus=kraus,
+        components=components,
         primitive_bundle=primitive_bundle,
         ideal_controls=ideal_controls,
+        _dt_ns=float(dt_ns),
+        _device=str(device),
     )
 
 
