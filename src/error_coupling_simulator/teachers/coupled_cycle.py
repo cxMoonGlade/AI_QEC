@@ -187,6 +187,7 @@ from typing import Any, Callable, Mapping, Sequence
 import numpy as np
 
 from ..mechanisms.axis1_primitives import Axis1PrimitiveParams
+from ..numerics import NUMERICAL_ZERO
 from ..source.coupling import (
     CoupledMechanismParams,
     SourceCouplingConfig,
@@ -1018,11 +1019,21 @@ class CoupledCycleTeacher:
                 f"fan-out returned {len(params_cycles)} cycles for a "
                 f"{self._rounds}-round schedule"
             )
-        z = timeline.payload_series("z_radns")
-        non_constant = np.unique(z).size >= 2
-        sensitivity_live = (
-            abs(float(self._config.gamma_phi_sensitivity)) > 0.0
-        )
+        z = np.asarray(timeline.payload_series("z_radns"), dtype=np.float64)
+        sens = abs(float(self._config.gamma_phi_sensitivity))
+        sensitivity_live = sens > 0.0
+        # "Non-constant" must mean z varies by MORE than the gamma_phi fan-out can resolve into distinct
+        # float64 values: a z whose range is only ~ULP-scale legitimately fans out to a single gamma_phi
+        # float (a DEGENERATE trajectory — arises once in ~1000s of realizations — not dead plumbing). The
+        # bare np.unique(z).size >= 2 false-trips on such trajectories (red-team R1 false positive). Gate on
+        # the map's own scale: two z values give distinct gamma_phi only when |dz| exceeds
+        # ~(z_scale/sensitivity) * NUMERICAL_ZERO; below that the guard would demand a resolution the float
+        # gamma_phi cannot carry. Genuine dead plumbing (z varies meaningfully, gamma_phi still uniform)
+        # still raises.
+        z_ptp = float(z.max() - z.min()) if z.size else 0.0
+        z_scale = abs(float(self._config.z_scale_radns))
+        z_resolution = (z_scale / sens) * NUMERICAL_ZERO if sens > 0.0 else float("inf")
+        non_constant = z_ptp > z_resolution
         if non_constant and sensitivity_live:
             gammas = {float(p.gamma_phi_per_ns) for p in params_cycles}
             if len(gammas) < 2:
