@@ -166,6 +166,12 @@ def _assert_register_bound(n_qubits: int, device: torch.device) -> None:
             "data + ALL-touching-ancilla register (~25 q) is forbidden, not a thing to instantiate."
         )
     rho_bytes = (4.0 ** n_qubits) * 16.0  # complex128 dense (2**n, 2**n)
+    # Release torch's caching-allocator reserve first: mem_get_info reports reserved-but-unallocated cache
+    # as NOT free, so under cache pressure from prior work (e.g. a full test run) even a tiny register is
+    # spuriously refused ("0.000 GB free"). empty_cache returns that reusable cache to the driver so the
+    # free reading reflects the TRUE available memory; the "never OOM" guarantee is preserved (the check
+    # still gates the real driver-free pool that the subsequent allocation draws from).
+    torch.cuda.empty_cache()
     free_bytes, _total = torch.cuda.mem_get_info(device)
     if rho_bytes > _RHO_MEM_FRACTION * free_bytes:
         raise MemoryError(

@@ -53,6 +53,16 @@ _RESERVED_METADATA_EXACT_KEYS = (
     "si1000",
 )
 
+# `_source_projection_evaluator_audit` is a DECLARED evaluator-only audit that rides in the TRANSIENT noisy
+# CircuitIR's metadata as an internal transport (noise_spec.py sets it; stim_source.py extracts it) and is
+# surfaced ONLY through a separate evaluator-only field (CompiledCircuit.source_projection_audit,
+# visibility='evaluator_only'). The learner-visible CompiledCircuit.metadata uses the clean pre-projection
+# circuit and never carries it (tests/test_simulator_source_projection asserts `source_timeline` is absent
+# from the learner manifest). The public-metadata guard therefore SKIPS this subtree — it is not
+# learner-visible truth. (Must match noise_spec.SOURCE_PROJECTION_AUDIT_METADATA_KEY /
+# analog_schedule._SOURCE_PROJECTION_AUDIT_METADATA_KEY.)
+_EVALUATOR_ONLY_AUDIT_KEYS = frozenset({"_source_projection_evaluator_audit"})
+
 
 def validate_public_metadata(metadata: dict[str, Any] | None, *, label: str = "metadata") -> dict:
     """Return a copied public metadata dict after rejecting evaluator-truth keys."""
@@ -223,6 +233,9 @@ def _validate_keys(value: Any, *, path: str) -> None:
     if isinstance(value, dict):
         for raw_key, item in value.items():
             key = str(raw_key)
+            if key in _EVALUATOR_ONLY_AUDIT_KEYS:
+                # Declared evaluator-only audit transport; never learner-visible (see constant above).
+                continue
             normalized = key.lower().replace("-", "_").replace(" ", "_")
             if normalized in _RESERVED_METADATA_EXACT_KEYS:
                 raise ValueError(
