@@ -22,6 +22,7 @@ from typing import Any, Callable
 
 from ..carrier.cptp_channel import RDTYPE
 from ..carrier.exact.circuit_sim import (
+    _accel_available,
     apply_channel_local,
     apply_unitary,
     measure_qubit_enumerate,
@@ -1012,6 +1013,14 @@ def _apply_channel_to_branches(rho, kraus, targets, num_qubits: int):
     import torch
 
     if rho.dim() == 2:
+        return apply_channel_local(rho, kraus, targets, num_qubits)
+    # rho is (B, D, D) — a batch of record branches. The fused CUDA kernel ABSORBS the leading batch dim in
+    # ONE call (verified byte-identical to the per-branch loop, 43x faster, in
+    # outputs/twin_validation/batched_branch_apply_verify.py) — so a single call replaces the python loop of
+    # B tiny custom-op dispatches (the R>=5 hot spot). Fall back to the per-branch loop only when the fused
+    # kernel is NOT the route (CPU / QEC_TWIN_NO_KERNELS / targets>4): the unfused apply_kraus path is not
+    # written for a batched rho.
+    if rho.is_cuda and len(tuple(targets)) <= 4 and _accel_available():
         return apply_channel_local(rho, kraus, targets, num_qubits)
     branches = [
         apply_channel_local(rho[index], kraus, targets, num_qubits)
