@@ -140,6 +140,19 @@ NON-unitary 1-site forms (Kraus gather, projectors, terminal collapse) REQUIRE c
    degenerate regime (class (c) guard); serial-comparison gates fence that regime out and a
    batched-only gate leg covers it; the serial fix is chip task_9f0687fe (serial arm untouched
    in this phase per contract).
+   v6 STATUS (2026-07-06, chip task_9f0687fe executed): the serial guard is FIXED —
+   `_terminal_readout` reads the level populations only when the pre-read norm
+   `wt > NUMERICAL_ZERO` (bit-identical on any live state: the same normalized reads + arithmetic;
+   the degenerate leg lands on the written `kbar=0`/`bit=0` path, no NaN). The declared divergence
+   is RESOLVED — serial and batched share the degenerate semantics. Gate =
+   `tests/test_mps_terminal_degenerate_guard.py` via `outputs/twin_validation/
+   hard3_degenerate_guard_run.sh`: the pre-fix RED run reproduced the predicted fall-through
+   EXACTLY (levels=[2,2,2,2], bits=[1,1,1,1]; log `logs/hard3_degenerate_guard_prefix_red.log`),
+   post-fix 3/3 PASS and the G-OP gates 22/22 re-PASS (live-state serial-referee bit-identity
+   holds). The registry's serial line numbers above are the PRE-fix layout (the fix inserts 7
+   lines after 799 — the written guard now sits at 809-810). The serial-comparison degenerate
+   fence + the batched-only leg can be replaced by a shared-leg gate at the next gate revision
+   (not re-run in this chip).
    ARM-C COMPOSITION (v2, normative = serial lines 617-630): per support site SEQUENTIALLY in support
    order — read `p2` = the NORMALIZED 1-site population of the CURRENT (already partially projected)
    state (serial `_site_population`, line 527, `normalized=True`; it coincides with the unnormalized

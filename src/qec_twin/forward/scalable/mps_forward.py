@@ -795,8 +795,15 @@ class MpsLeakageForward:
                 # collapse |k_bar><k_bar|. ONE uniform -> level (engine order).
                 wt = self._norm_sq(mps)
                 p = [0.0, 0.0, 0.0]
-                for lev in (0, 1, 2):
-                    p[lev] = self._site_population(mps, mps_site, lev)  # <|lev><lev|>/<psi|psi>
+                # populations only on a live state: the quimb normalized read divides by
+                # the trace UNCONDITIONALLY, so a zero-norm state (an annihilated branch)
+                # yields NaN populations that shadow the tot-guard below (NaN <=
+                # NUMERICAL_ZERO is False -> kbar falls through to 2). Skipping the read
+                # keeps p = 0 -> tot = 0 -> kbar = 0, the batched arm's normative
+                # degenerate semantics (per-shot mask, no NaN).
+                if wt > NUMERICAL_ZERO:
+                    for lev in (0, 1, 2):
+                        p[lev] = self._site_population(mps, mps_site, lev)  # <|lev><lev|>/<psi|psi>
                 # Born-sample by the cumulative populations (renormalized defensively).
                 tot = float(p[0] + p[1] + p[2])
                 if tot <= NUMERICAL_ZERO:
