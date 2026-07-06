@@ -14,8 +14,8 @@ each `→P1:` item is the remaining work to move the row to *bounded*.
 | 4 | MCWF/MPS leakage carrier (W-B acceptance) | dense joint-L oracle (independent expm construction) + no-op anti-circular control | STRICT 1−F_e ≤1e-6, record/level TV ≤1e-6 (window dim ≤256); no-op carrier REJECTED (TV=1) | 3^5=243 window; d3 full = GROSS tier (TV ≤0.2, CI-capped) | partially — →P1: shrink the d3 GROSS tier or tile-decompose to STRICT windows |
 | 5 | SeamTeacher family (tb_markov/backdrop/coherent seam) | D5 closed-form record-chain functionals | ≤1e-12 rel (r 1e-6, R 1e-4, T3 1e-9) (`test_carrier_seam_instrument`) | strip (2,2)=6q law; production (3,4) registered | **bounded** (registered strip) |
 | 6 | B5 teachers (overrotation/damped-rotation/ZZ/corr-dephasing) | analytic Kraus defs + stim cross-check (marginals atol 0.01) | parity-path identity 1e-12; stim marginals 0.01 | rep-code d=5 (9q, R=2 exact) | partially — →P1: tighten the stim cross-check tier or declare it structural-only |
-| 7 | RTNSource (telegraph latent) | exact telegraph closed forms (flip prob, autocov) | exact (pytest.approx); byte-replayable | timeline (no register); 5q fixture | partially — →P1: PSD-level check vs declared Lorentzian |
-| 8 | OneOverFDriftSource (RTN-sum 1/f) | analytic Lorentzian-sum PSD (structural checks only today) | psd>0, monotonic ends (structural) + G6 rederivation cross-ref | timeline; 5q/d3_repz fixture R~12 | partially — →P1: quantitative PSD/autocov tolerance test |
+| 7 | RTNSource (telegraph latent) | exact telegraph closed forms + **sampled-trajectory pooled autocov (P1-b, `tests/test_source_closed_forms.py`)** | parameter forms exact; **P1-b: lags 1–5 \|z\| ≤ 0.30 vs A²e^(−2γl) at ~0.1–0.5% relative SE (M=3000×T=100, 5σ gate); γ-doubled negative control z=80–113; lag-0 = structural identity asserted exact (rtol 1e-12)** | timeline; 5q/d3_repz fixtures | **bounded** (timeline level; register deployment separate) |
+| 8 | OneOverFDriftSource (RTN-sum 1/f) | analytic Lorentzian-sum autocov + **sampled-trajectory pooled autocov (P1-b)** | **P1-b: lags 1–5 \|z\| ≤ 1.4 vs Σv_k²e^(−2γ_k l) (~0.9% relative SE); γ-doubled negative control z ≥ 14.9 every lag; C(0)=A² exact (v_k=A/√K confirmed as declared)** + G6 rederivation cross-ref | timeline; 5q/d3_repz fixture R~12 | **bounded** (timeline level) |
 | 9 | PhaseBurstSource | none today | property tests only | timeline, 3-site | **UNBOUNDED** — not accepted as a shared arm (teacher whitelist enforces); →P1 or park |
 | 10 | TemporalStormSPPSource (2-state HMM) | exact 2-state Markov closed forms | stationary/corr-length exact; empirical vs marginal atol 0.02 | timeline, 8000 cycles | partially — →P1: record-level liveness once wired to a fixture |
 | 11 | Θ fan-out (shared latent → params) | closed-form algebraic identities (inverse maps rel 1e-12) | exact identities | parameter map; 5q fixture | **bounded** (as a map; physics anchoring of constants stays class (c) declared) |
@@ -59,7 +59,10 @@ z12-column one carries obs≈0.97 (its closure-cancelling partner is exactly the
 The declared L0 geometry rule is therefore incomplete for `delta:z12:round(R-1)` at double-fault order — bounded
 at ~1.5e-4 mass; refinement optional. B2 in band: DE(spt=200)=1.64–1.78 (SE ×1.33).
 
-**Aggregate honest picture (updated 2026-07-06):** 7/15 bounded (rows 3, 14 promoted by P1-c/P1-a), 7/15 partially,
-1 UNBOUNDED (PhaseBurst — correctly fenced off the shared arm by the teacher whitelist). No row is silently unbounded-but-load-bearing; the two P0-introduced declared-not-yet-
+**Aggregate honest picture (updated 2026-07-06, end of the P1 session slice):** **9/15 bounded** (rows 3, 7, 8, 14
+promoted this session by P1-c/P1-b/P1-a), 5/15 partially (rows 1, 4, 6, 10, 15 — rows 1/4 parked with fences named,
+row 6 declared structural-only, rows 10/15 next-slice items), 1 UNBOUNDED (PhaseBurst — correctly fenced off the
+shared arm by the teacher whitelist). P1-b test file `tests/test_source_closed_forms.py` (6 tests, 26 green with the
+existing suite) awaits mainline-commit confirmation. No row is silently unbounded-but-load-bearing; the two P0-introduced declared-not-yet-
 bounded items are row 14's L0 rule + clustered-SE convention. **P1 exit criterion:** every load-bearing row bounded
 or explicitly parked with its fence named; the table lands in the README/positioning doc as the coverage artifact.
