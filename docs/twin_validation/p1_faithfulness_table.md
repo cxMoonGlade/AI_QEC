@@ -10,7 +10,7 @@ each `→P1:` item is the remaining work to move the row to *bounded*.
 |---|---|---|---|---|---|
 | 1 | Mechanism catalog M0–M34 (Pauli/readout/damping/coherent) | hand-typed operator refs (8 coherent mechs) + analytic Kraus | operator ≤1e-12, unitary ≤1e-10, 1−F_e ≤1e-6; wrong-axis controls ≥1e-3 (`test_m6…m22` tier) | 1–2q channel objects; deployed on d3-XZZX 17q | partially — →P1: bound the DEPLOYED-register composition, not just the 1–2q object |
 | 2 | Axis-1 joint-Lindbladian assembler (ZZ/T1/T2 coupled substep) | QuTiP + scipy Liouvillian/expm (3 independent refs) | superop <1e-13, Kraus TP ≤1e-12 (`test_joint_lindbladian`) | 5q dense substep (D=32) | **bounded** |
-| 3 | QutritLeakageTeacher (WG coherent |1⟩↔|2⟩ + seep/heat) | hand-typed literature H refs + closed-form `leakage_channel_super` | H ≤1e-12, U ≤1e-10, superop ≤2e-12; wrong-physics controls ≥1e-3 (`axis1_qutrit_leakage_certification`) | 1–2 site channel; deployed d3-XZZX 17-site MCWF | partially — →P1: end-to-end d3 RECORD bound vs DM oracle beyond R=1 sub-register (cf. residual-② C2/C4) |
+| 3 | QutritLeakageTeacher (WG coherent |1⟩↔|2⟩ + seep/heat) | hand-typed literature H refs + closed-form `leakage_channel_super` + **full-9q exact DM (P1-c)** | channel: H ≤1e-12, superop ≤2e-12, controls ≥1e-3; **record (P1-c 2026-07-06): full-9q R=1 wc-kernel marginals vs the SEQUENTIAL-measurement DM null, all 8 detectors z ≤ 2.54 @ N=1e6 (GATE PASS, `p1c_full9q_record_bound.py` hash f2cb1d5f…); multi-round R∈{2,3} = Gate-4 verdict cited (`p4a_verify_wc_gate4_ladder.py`)** | **d3 full register (9 qutrits), record level** | **bounded** (d3 record leg; logical entry report-only w/ declared POVM/backaction mismatches) |
 | 4 | MCWF/MPS leakage carrier (W-B acceptance) | dense joint-L oracle (independent expm construction) + no-op anti-circular control | STRICT 1−F_e ≤1e-6, record/level TV ≤1e-6 (window dim ≤256); no-op carrier REJECTED (TV=1) | 3^5=243 window; d3 full = GROSS tier (TV ≤0.2, CI-capped) | partially — →P1: shrink the d3 GROSS tier or tile-decompose to STRICT windows |
 | 5 | SeamTeacher family (tb_markov/backdrop/coherent seam) | D5 closed-form record-chain functionals | ≤1e-12 rel (r 1e-6, R 1e-4, T3 1e-9) (`test_carrier_seam_instrument`) | strip (2,2)=6q law; production (3,4) registered | **bounded** (registered strip) |
 | 6 | B5 teachers (overrotation/damped-rotation/ZZ/corr-dephasing) | analytic Kraus defs + stim cross-check (marginals atol 0.01) | parity-path identity 1e-12; stim marginals 0.01 | rep-code d=5 (9q, R=2 exact) | partially — →P1: tighten the stim cross-check tier or declare it structural-only |
@@ -45,7 +45,15 @@ each `→P1:` item is the remaining work to move the row to *bounded*.
   register plumbing); row 4 (W-B GROSS→STRICT tiling) is a standalone engineering item — both stay declared-partial,
   never silently promoted.
 
-**Aggregate honest picture:** 5/15 bounded, 9/15 partially, 1 UNBOUNDED (PhaseBurst — correctly fenced off the shared
-arm by the teacher whitelist). No row is silently unbounded-but-load-bearing; the two P0-introduced declared-not-yet-
+**P1-c outcome note (2026-07-06):** the pre-run review's D1 was empirically vindicated — the ISOLATED per-detector
+DM marginal (the residual-② probe flow AND `dm_oracle.py`'s DETECTOR_MARG answer semantics) differs from the
+SEQUENTIAL-measurement marginal the kernel actually samples by up to **2.1e-4** (zero on detectors with no
+non-commuting predecessors; leaked-sector non-commutativity at b=0.9). Gating against the isolated null would have
+false-failed ≥3 detectors at 4.7–6.6σ. ⇒ the `dm_oracle` anchor's DETECTOR_MARG semantics need either the
+sequential computation or a loud declaration (certify-seam follow-up chip). Also recorded: 4 of the 8 real-patch
+stabilizers are pure-Z boundary checks.
+
+**Aggregate honest picture (updated 2026-07-06):** 6/15 bounded (row 3 promoted by P1-c), 8/15 partially,
+1 UNBOUNDED (PhaseBurst — correctly fenced off the shared arm by the teacher whitelist). No row is silently unbounded-but-load-bearing; the two P0-introduced declared-not-yet-
 bounded items are row 14's L0 rule + clustered-SE convention. **P1 exit criterion:** every load-bearing row bounded
 or explicitly parked with its fence named; the table lands in the README/positioning doc as the coverage artifact.
