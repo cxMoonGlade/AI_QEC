@@ -289,3 +289,28 @@ never a "truncation-free" property.
   (declared; asserted in gate harnesses; production op streams that leave it are OPT2-2's
   statistical-gate territory).
 - No c64 arm, no rank-adaptive shapes, no driver/RunSpec seam in this phase (OPT2-2).
+
+## OPT2-1 OUTCOMES (2026-07-06 gate run — `opt2_1_op_gates_run.sh`, RTX 5090)
+- **G-OP-1..7: 22/22 PASS** (log `outputs/twin_validation/logs/opt2_1_op_gates.log`;
+  module sha d4fed5d0…, tests sha 328793b2…; 8.2 s GPU). The registered ALL-pass
+  prediction HELD for the module: every equivalence/sampling/ledger criterion at both
+  chi grades, no knife-edge re-draws adjudicated, discarded == 0.0 literal at exact grade.
+- **One registered miss, HARNESS-side (a finding, recorded):** the first run failed both
+  G-OP-3 tests inside `_gop3_engineered_case` — the orthonormal families `Au`/`Cu` were
+  redrawn PER column j, breaking the staggered-pairing orthogonality the phi'_j design
+  rests on (generic overlap ~0.25); the harness's own anti-vacuous QR-pin assert caught
+  it before any referee comparison (the assert-your-preconditions pattern paying off).
+  Fix: hoist the families out of the loop + a unit-trace assert on each designed
+  spectrum. No module change; re-run green.
+- **Build-review findings (8 confirmed / 1 refuted, 3-lens un-led + adversarial verify)
+  all resolved pre-run:** trunc-grade state builder rank budget (operator-Schmidt-rank
+  9, rebuilt as disjoint blocks), Choi-eigh-ascending branch targeting (weight-ranked
+  `_pick_branches`), sigma-conditioning fence wired into every Gram-routing harness,
+  batched-eigh dispatch witness at the module's [B,6,6] shapes, hard3 batched-only
+  degenerate leg (serial NaN-shadow — chip task_9f0687fe), window-spread fence
+  `_MAX_WINDOW_SPREAD=8`, honest collision docstring, CODE_MAP + scalable README.
+- Design-contract convergence: 4 adversarial passes, blockers 6 -> 2 -> 1 -> 0, all
+  fixes contract-level before any code ran on the GPU.
+- NEXT: OPT2-2 (batched trajectory driver @ d3 exact grade, RunSpec/sched/ShotSet
+  drop-in seam; statistical gates vs the serial arm; throughput gate >= the anchored
+  10-100x band).
