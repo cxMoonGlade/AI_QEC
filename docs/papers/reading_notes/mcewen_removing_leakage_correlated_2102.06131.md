@@ -9,6 +9,14 @@
 > (2021)**, "Removing leakage-induced correlated errors in superconducting quantum
 > error correction." Manuscript dated 29 September 2020.
 
+> **[ours] reframed 2026-07-06** — the decoder-oriented framing below ('sim-only
+> teacher / decoding headroom above MWPM') is SUPERSEDED by the
+> simulator-forward-generation framing: validity = faithfulness vs an independent
+> qutrit oracle + anti-toy discriminability of the record from a matched Markov/DEM
+> null; decoder/LER = downstream use. Leakage's space-time-correlated signature =
+> the notion-2 record object (notion-3 is closed). See
+> docs/twin_validation/HANDOFF_static_simulator_notion2_2026-07-06.md.
+
 ---
 
 ## 1. Metadata
@@ -81,12 +89,18 @@ because it destroys quantum information. Applying it:
 - improves logical suppression Λ_bit from 1.98 → 2.80 and stabilises it in ~10
   rounds (Fig. 6).
 
-For **our program** this is a primary empirical reference for what the leakage
-signal *looks like in syndrome data* — the structure a non-Pauli teacher must
-reproduce (a decaying-tail correlated-error process with a hopping channel) and the
-structure a leakage-aware decoder can exploit. It also supplies a closed-form,
-calibration-free **`pij` estimator from detection-event correlations** (Eq. 1) that
-is directly usable as a diagnostic and as decoder-edge weights.
+For **our program** this is the primary empirical reference for what the leakage
+signal *looks like in the record {det,obs}* — the space-time-correlated structure
+the **simulator must faithfully generate**: a decaying-tail correlated-error
+process with a hopping channel. In the current framing leakage is the strongest
+**non-Markovian, NON-DEM-reducible notion-2 SOURCE** — its persistence + transport
++ correlated-detection tail are exactly the record features a matched
+CP-divisible/Markov/best-Pauli-DEM null *cannot forge* (anti-toy legitimacy,
+Guardrail B). It also supplies a closed-form, calibration-free **`pij` estimator
+from detection-event correlations** (Eq. 1), usable as a record-level diagnostic
+(one of the correlation instruments the simulator's output is characterised with,
+NOT a decoder-weight recipe here). The reset gate the paper introduces is, to us, a
+**source-realism knob** (mitigated vs unmitigated record), not a decoder result.
 
 ---
 
@@ -380,107 +394,128 @@ and in the absence of correlations ϵ should be exponentially suppressed,
 
 ## 5. Useful for our project (concrete, with page/eq refs)
 
-Our program: a **sim-only** teacher generates realistic-noise surface-code
-**syndrome** data to train a decoder; noise must be **non-Pauli** (T1/T2, leakage
-|1⟩→|2⟩ + seepage, soft IQ readout); the non-Pauli signal is decoding headroom
-above Pauli decoders (MWPM/TN-MLD/RL-prior). This paper is a primary **empirical
-specification of the leakage signal** that the teacher must reproduce and the
-decoder must exploit.
+Our program: the **error-coupling SIMULATOR**, a faithful **forward generator** of
+QEC records {det,obs}. Noise is **non-Pauli** (T1/T2, leakage |1⟩→|2⟩ + seepage,
+soft IQ readout). Validity has two legs and neither is a decoder: **(i) faithfulness**
+— the generated record matches an INDEPENDENT oracle (exact qutrit density-matrix /
+from-scratch / closed form), with every simplification declared and bounded
+(`docs/FAITHFULNESS_PROTOCOL.md`); **(ii) anti-toy legitimacy** — the leakage
+feature is *distinguishable* from a matched CP-divisible / Markov-k / best-Pauli-DEM
+null (Guardrail B). This paper is the primary **empirical specification of the
+leakage record** the simulator must generate faithfully — and it supplies the exact
+correlation phenomenology (persistence, hopping, correlated-detection tail,
+long-range off-diagonal `pij`) that a matched Markov/DEM null must fail to
+reproduce. Leakage = the strongest non-Markovian, non-DEM-reducible **notion-2
+SOURCE** (notion-3 is closed as a protocol boundary,
+`docs/twin_validation/notion3_protocol_boundary_closure.md`; the passive record is
+classical / Pauli / notion-2).
 
-**(a) Canonical leakage model + how to bound it.**
+**(a) Canonical leakage source + the empirical targets the record must reproduce.**
 - **Per-round rate-equation model for leakage population** is given explicitly:
   Eq. S1–S2, `P|2⟩(k) = p∞(1 − e^(−Γk)) + p0 e^(−Γk)`, `Γ = γ↑ + γ↓`,
-  `p∞ = γ↑/Γ`. This is the minimal teacher knob set: a **leakage (excitation)
+  `p∞ = γ↑/Γ`. This is the minimal source parameter set: a **leakage (excitation)
   rate γ↑** and a **seepage (decay) rate γ↓** per stabilizer round, distinct for
-  data vs measure qubits. **Use the measured values directly** as realistic teacher
+  data vs measure qubits. **Use the measured values directly** as realistic source
   parameters (Table S1): no-reset γ↑ ≈ 0.09–0.11%/round, γ↓ ≈ 8–9%/round, p∞ ≈
   1–1.3%; with reset γ↓ jumps (22% data, ~328% effective measure). These are the
-  order-of-magnitude targets for a faithful sim.
-- **The dominant non-Pauli structural facts the teacher MUST encode** (these are
-  *not* captured by any per-round Pauli channel):
+  order-of-magnitude **empirical targets** the generated record must reproduce
+  (bounded vs the exact qutrit-DM oracle, leg (i)); the no-reset vs with-reset pair
+  is the source-realism knob (mitigated vs unmitigated).
+- **The dominant non-Pauli, non-DEM-reducible structural facts the record MUST show**
+  (these are *not* reproducible by any matched per-round Pauli/DEM null — leg (ii)):
   1. **Persistence / long lifetime.** Leakage decays on an energy-relaxation
      timescale, so it produces a **tail of detection events decaying over many
      rounds** (pg 4, Fig. 4) — a *temporal* correlation, not an i.i.d. per-round
-     flip. γ↓ ≈ 8–9%/round ⇒ a leaked qubit survives ~10 rounds.
+     flip. γ↓ ≈ 8–9%/round ⇒ a leaked qubit survives ~10 rounds. This multi-round
+     memory is exactly what a Markov-k null cannot forge.
   2. **Mobility / transport.** A |2⟩ on a data qubit **hops to |3⟩ on a neighbouring
      measure qubit** through the CZ |21⟩↔|03⟩ resonance (pg 4) — a *spatial*
-     correlation channel between qubits. The teacher needs an inter-qubit leakage-
-     transport term tied to the two-qubit gate, not just on-site leakage.
+     correlation channel between qubits. The simulator's source needs an inter-qubit
+     leakage-transport term tied to the two-qubit gate, not just on-site leakage.
   3. **Measurement-induced leakage.** Readout itself excites |2⟩ (measure qubits
-     leak *more* than data qubits, Fig. 3) — leakage source must sit on the readout
-     operation, not only on gates.
+     leak *more* than data qubits, Fig. 3) — the leakage source must sit on the
+     readout operation, not only on gates.
   4. **Random readout when leaked.** A leaked measure qubit gives detection-event
-     fraction **0.5** (random outcome) (pg 4, Fig. 4a) — the natural soft-readout
-     coupling: leakage manifests in the *measurement* channel.
-- **Bounding an approximation.** The paper gives **semi-classical, closed-form
-  bounds** for the coherent leakage dynamics (Landau–Zener): swap diabatic error
-  `P_D^(s) ≪ exp[−(2πg)² t_swap/Δf]`, hold decay `exp(−κ t_hold)`, return
-  `P_D^(r) = exp[−(2πg)²/ν_r]` (pg 2). If our teacher uses a **classical
-  population-flow (Pauli + leakage-population) approximation** instead of a full
-  qutrit/coherent sim, these are exactly the formulas that bound the error of
-  ignoring coherence in the swap/return — and Fig. S3 quantifies the residual
-  decomposition into computational (P1) vs leakage (P2+P3), telling us how much of
-  the channel is in-basis (Pauli-correctable) vs genuinely leaked.
+     fraction **0.5** (random outcome) (pg 4, Fig. 4a) — leakage manifests in the
+     *measurement* channel, which the simulator emits as an additional faithful
+     soft/erasure output (see (c)).
+- **Bounding a simplification (leg (i), FAITHFULNESS_PROTOCOL rule III).** The paper
+  gives **semi-classical, closed-form bounds** for the coherent leakage dynamics
+  (Landau–Zener): swap diabatic error `P_D^(s) ≪ exp[−(2πg)² t_swap/Δf]`, hold decay
+  `exp(−κ t_hold)`, return `P_D^(r) = exp[−(2πg)²/ν_r]` (pg 2). If the simulator uses
+  a **classical population-flow (Pauli + leakage-population) approximation** instead
+  of a full qutrit/coherent generator, these are exactly the formulas that bound the
+  error of ignoring coherence in the swap/return — the declared, bounded
+  simplification the protocol requires (unbounded ⇒ STOP). Fig. S3 quantifies the
+  residual decomposition into computational (P1) vs leakage (P2+P3), telling us how
+  much of the channel is in-basis (Pauli-representable) vs genuinely leaked — i.e.
+  how much of the record is DEM-reducible vs the non-DEM-reducible signature the
+  simulator exists to generate.
 
-**(b) How to simulate leakage at scale.**
-- The model is a **classical Markov rate process** on the leakage population
+**(b) How to generate the leakage record at scale.**
+- The paper's model is a **classical Markov rate process** on the leakage population
   (Eq. S1–S2) plus a **transport rule** on the two-qubit gate (|21⟩↔|03⟩,
   pg 4). This is cheap and scalable: it does **not** require a full qutrit density-
-  matrix sim. A **Pauli + leakage-flag** stochastic simulator (each qubit carries a
-  leaked/not-leaked classical flag that (i) is set by gate/readout with rate γ↑,
-  (ii) clears with rate γ↓ per round, (iii) can transfer to a neighbour through a
-  two-qubit gate, and (iv) forces a random/biased measurement outcome while set)
-  reproduces all four signatures above and is Clifford-compatible (stabilizer-
-  simulator-friendly), so it scales to large d. The validated-approximation question
-  ("qutrit sim or validated approximation") is answered in our favour: the *observed*
-  phenomenology (tail + transport + random-readout) is a population-level effect that
-  a classical leakage-flag model captures, and the paper's own theory matches data at
-  the population level (Fig. 2d/e, Fig. 3). The coherent fringes (Fig. 2b) are a
-  reset-calibration artefact, not part of the code-level error process.
+  matrix sim to *run*. A **Pauli + leakage-flag** stochastic generator (each qubit
+  carries a leaked/not-leaked classical flag that (i) is set by gate/readout with
+  rate γ↑, (ii) clears with rate γ↓ per round, (iii) can transfer to a neighbour
+  through a two-qubit gate, and (iv) forces a random/biased measurement outcome while
+  set) reproduces all four signatures above and is Clifford-compatible (stabilizer-
+  simulator-friendly), so it scales to large d. **Caveat (leg (i)):** this
+  population-flow generator is a *declared simplification*, so its record must still
+  be checked against the exact qutrit-DM oracle and the gap bounded — the paper's own
+  population-level theory-matches-data (Fig. 2d/e, Fig. 3) is supporting evidence but
+  is NOT an independent certification (it is the paper's own model vs its own data).
+  The coherent fringes (Fig. 2b) are a reset-calibration artefact, not part of the
+  code-level record. **Anti-toy discriminability (leg (ii))** is separate and
+  mandatory: the generated record's tail + transport + long-range `pij` must be shown
+  to survive against a matched Markov-k / best-Pauli-DEM null.
 
-**(c) Neural decoder + soft/leakage input — what the signal looks like.**
+**(c) Record observables + the soft/erasure output channel — what the signal looks like.**
 - **The `pij` estimator (Eq. 1)** is a drop-in, calibration-free way to turn
-  detection-event statistics into pairwise error-process probabilities — usable both
-  as **decoder edge weights** (the paper feeds `pij` into MWPM, pg 6) and as a
-  **diagnostic the decoder/teacher can be scored against**. Critically, **leakage
-  shows up as long-range off-diagonal `pij` entries (>10 rounds)** (Fig. 5): a
-  decoder that only consumes near-diagonal weights is **leaving headroom on the
-  table** — this is precisely our "non-Pauli signal = decoding headroom above Pauli
-  decoders" thesis, demonstrated on real hardware. A neural decoder that ingests the
-  **full space-time syndrome volume** (rather than a matching graph with local
-  weights) can in principle capture the long-range leakage correlations that MWPM-
-  with-`pij` only partially absorbs.
-- **Soft/leakage readout input** is concretely realisable: Fig. S4 is an **IQ
-  scatter** separating |0⟩,|1⟩ from leakage; a decoder fed **analog IQ** (or a
-  3-way soft label including a "leaked" class) has strictly more information than a
-  hard 0/1 syndrome — the detection-event-fraction-0.5 signature (pg 4) is exactly
-  the information a hard binarisation destroys. This supports building the teacher's
-  readout channel to emit soft/leakage-aware observations and the decoder to consume
-  them.
+  detection-event statistics into pairwise error-process probabilities. To us it is a
+  **record-level correlation instrument** — a simulator-internal diagnostic the
+  generated record is characterised with (and against which a matched null is scored),
+  *not* a decoder-weight recipe. Critically, **leakage shows up as long-range
+  off-diagonal `pij` entries (>10 rounds)** (Fig. 5): those long-range bands are the
+  concrete notion-2 record object the simulator must generate faithfully and a matched
+  Markov/best-Pauli-DEM null must *fail* to reproduce (leg (ii)). (`pij` is only a
+  pairwise summary; the fuller instruments are multi-time / process-tensor — see §6.)
+- **A soft/leakage readout output** is concretely realisable: Fig. S4 is an **IQ
+  scatter** separating |0⟩,|1⟩ from leakage; a record that carries **analog IQ** (or
+  a 3-way soft label including a "leaked" class) holds strictly more information than
+  a hard 0/1 syndrome — the detection-event-fraction-0.5 signature (pg 4) is exactly
+  the information a hard binarisation destroys. This supports the simulator emitting a
+  **soft/erasure output channel** (`soft_readout.py`) as an *additional faithful
+  output* — a richer record, not a decoder feature and not part of the validity chain.
 - **The checkerboard/odd-even control (Fig. S5, Supplement §IV)** is a useful
-  *negative* control for our pipeline: the X-echo schedule produces a known,
+  *negative* control for the simulator: the X-echo schedule produces a known,
   near-diagonal, odd-positive/even-negative correlation from plain energy
-  relaxation. Our teacher should reproduce it, and our `pij`-based diagnostics must
-  *not* mistake it for leakage; it is the baseline against which the long-range
-  leakage tails are defined.
-- **Decoder-gain framing.** The paper's headline metric — **Λ_bit 1.98 → 2.80** and
-  faster stabilisation from removing time-correlated leakage (Fig. 6) — is the same
-  axis we score on (%ΔLER / suppression). It quantifies *how much* correlated
-  leakage costs in logical performance (here, the difference between a code that
-  barely scales and one that scales meaningfully), i.e. an upper bound on the
-  headroom a leakage-aware decoder competes for **if it must remove the leakage
-  by decoding rather than by hardware reset**.
+  relaxation. The simulator should reproduce it, and the `pij`-based instruments must
+  *not* mistake it for leakage; it is precisely a **matched near-diagonal null** — the
+  baseline against which the long-range leakage tails (the non-DEM-reducible feature)
+  are *defined* and shown discriminable.
+- **Downstream-use framing (NOT validity).** The paper's headline metric — **Λ_bit
+  1.98 → 2.80** and faster stabilisation from removing time-correlated leakage (Fig.
+  6) — quantifies *how much* correlated leakage costs in logical performance (here,
+  the difference between a code that barely scales and one that scales meaningfully).
+  For us **LER / suppression is a downstream PRODUCT of the simulated record**
+  (`docs/METRICS.md`), never in the validity chain: it tells us the *stakes* of
+  faithfully modelling leakage, and the no-reset/with-reset pair is the source-realism
+  knob whose effect the simulator's record must reproduce — it is not a bar a decoder
+  must beat.
 
-**Direct reuse checklist for the teacher/decoder:**
-1. Leakage rate process: Eq. S1–S2 with Table S1 values (γ↑, γ↓ per round, data vs
-   measure).
-2. Transport channel: CZ |21⟩↔|03⟩ resonance (pg 4) → neighbour-hopping rule.
-3. Measurement coupling: leaked measure qubit → random/biased readout (DEF 0.5,
-   pg 4); soft IQ readout per Fig. S4.
-4. Signatures to validate against: detection-event **tail** decaying over rounds
+**Direct reuse checklist for the simulator (source + record + validity legs):**
+1. Leakage rate process (source): Eq. S1–S2 with Table S1 values (γ↑, γ↓ per round,
+   data vs measure).
+2. Transport channel (source): CZ |21⟩↔|03⟩ resonance (pg 4) → neighbour-hopping rule.
+3. Measurement coupling (record output): leaked measure qubit → random/biased readout
+   (DEF 0.5, pg 4); soft IQ readout per Fig. S4 → `soft_readout.py`.
+4. Record signatures to generate faithfully (leg (i)) AND show a matched Markov/DEM
+   null cannot forge (leg (ii)): detection-event **tail** decaying over rounds
    (Fig. 4); long-range off-diagonal **`pij`** > 10 rounds (Fig. 5); odd-even
-   **checkerboard** control (Fig. S5).
-5. `pij` extraction: Eq. 1 (label-free, from detection-event moments).
+   **checkerboard** matched-null control (Fig. S5).
+5. `pij` record instrument: Eq. 1 (label-free, from detection-event moments).
 
 ---
 
@@ -491,44 +526,52 @@ decoder must exploit.
   surface code." The qualitative leakage phenomenology (lifetime, transport, tail,
   `pij` structure) should carry over to the surface code, but the **specific
   geometry of correlations** (which detectors a leaked qubit flips, the staggered-CZ
-  adjacency) is 1D-specific. Our surface-code teacher must re-derive the spatial
+  adjacency) is 1D-specific. The surface-code simulator must re-derive the spatial
   correlation graph for the 2D layout; only the *mechanism* transfers, not the
   matrix.
-- **Reset is a hardware intervention, not a decoding result.** The paper's primary
-  deliverable (the reset gate) **removes** leakage at the hardware level; our program
-  is the opposite — we keep the leakage in the data as **decoding headroom**. The
-  paper's value to us is the **"no-reset"** characterisation (the *signal*), not the
-  reset gate itself. The reset-gate physics (§3.1, Fig. S1–S2, Landau–Zener bounds)
-  is hardware-engineering detail largely orthogonal to a sim-only decoder program.
+- **Reset is a hardware intervention.** The paper's primary deliverable (the reset
+  gate) **removes** leakage at the hardware level. To the simulator this is a
+  **source-realism knob**: the "no-reset" and "with-reset" characterisations are two
+  source settings (unmitigated vs mitigated) whose *records* the simulator must be
+  able to reproduce — the value is the record phenomenology in both, not the reset
+  gate as an engineering artefact. The reset-gate physics (§3.1, Fig. S1–S2,
+  Landau–Zener bounds) is hardware-engineering detail largely orthogonal to a
+  forward-generator program (it enters only as a bounded simplification, §5(a)).
 - **No qutrit/Lindblad microscopic error model is published here.** The leakage
   model is a **population rate equation** (Eq. S1–S2) plus a verbal transport
-  mechanism; there is **no per-gate Kraus / qutrit channel** with which to build a
-  first-principles simulator. We get rates and signatures, not a calibrated channel.
-  (For canonical leakage Kraus channels / qutrit sims, we need other references —
-  e.g. Wood–Gambetta, Varbanov ref [27], or a Pauli+leakage simulator framework.)
-- **Decoder is plain MWPM with `pij` weights** (pg 6) — a **weak** baseline by our
-  current bar (recall: Google's shipped corrMatch/harmony + RL-optimised prior
-  already capture most correlation gains; per project memory, the contribution bar is
-  beating the *shipped frontier*, not MWPM). The paper does **not** demonstrate a
-  leakage-aware *decoder* — it removes leakage upstream and then decodes with a
-  standard matcher. So it does **not** establish that a leakage-aware decoder beats a
-  strong Pauli baseline; it only establishes that the leakage signal **exists and is
-  large**.
+  mechanism; there is **no per-gate Kraus / qutrit channel** published. So this paper
+  gives the *empirical record targets* (rates + signatures) but **not** the
+  independent oracle: leg-(i) faithfulness must be checked against an exact qutrit-DM
+  channel we build/derive elsewhere, NOT against this paper's rate fit (that would be
+  circular per `docs/FAITHFULNESS_PROTOCOL.md` rule I). (For canonical leakage Kraus
+  channels / qutrit sims, we need other references — e.g. Wood–Gambetta, Varbanov
+  ref [27], or a Pauli+leakage simulator framework.)
+- **Its own decoder is plain MWPM with `pij` weights** (pg 6) — irrelevant to us,
+  because our validity chain contains **no decoder**. The paper removes leakage
+  upstream and then decodes with a standard matcher; it does **not** demonstrate a
+  leakage-aware decoder, and we do not need it to. What it *does* establish — and all
+  we take — is that the leakage record signal **exists and is large** on real
+  hardware; whether any decoder can exploit it is downstream use (`docs/METRICS.md`),
+  not a claim this note supports.
 - **Soft readout is used only for leakage discrimination at calibration**
-  (Fig. S4), not as a decoder input. The IQ data is collected to *measure* leakage
-  populations and the readout floor (by heralding), not fed to the matcher. The
-  soft-input decoding idea is *enabled* by this hardware but **not done here**.
+  (Fig. S4), not as a record output here. The IQ data is collected to *measure*
+  leakage populations and the readout floor (by heralding). The soft/erasure output
+  channel it *enables* (`soft_readout.py`) is a simulator output we build, but is
+  **not done in this paper**.
 - **`pij` model assumes pair-flips.** Eq. 1 explicitly models detection events as
   arising from processes that flip **pairs** of measurements. Leakage actually
   produces **higher-order / many-round** correlations (the tail), which the pairwise
-  `pij` only approximates. This is itself the headroom argument — but it means the
-  `pij` matrix is a *lossy* summary of the leakage signal; a faithful teacher/decoder
-  should not treat `pij` as the complete description.
+  `pij` only approximates. Consequence for us: `pij` is a *lossy* record instrument —
+  the RIGHT observable for the non-Markovian notion-2 signature is a direct
+  multi-time / process-tensor correlation, not a pairwise (or matched-marginal)
+  summary that cancels the structure we care about. The simulator must not treat
+  `pij` as the complete description of the leakage record.
 - **Heavy postselection of "events."** ~0.8% of realisations are removed as
   anomalous high-detection "events" (Supplement §V) whose origin is "in preparation."
-  These are exactly the rare correlated bursts a robust decoder might need to handle;
-  the published logical numbers are *after* removing them, so they are an optimistic
-  view of correlated-error handling.
+  These are exactly the rare correlated bursts a faithful simulator should *generate*
+  (they are part of the real record), yet the published logical numbers are *after*
+  removing them — so the paper's clean numbers understate the correlated-error content
+  a faithful forward generator must reproduce.
 - **Dated calibration constants.** All hardware numbers (g ≈ 120 MHz, η ≈ 200 MHz,
   κ ≈ 1/45 ns, idle 6.09 GHz, resonator 4.665 GHz, readout floor 0.2%) are
   specific to this 2020 Sycamore device. They are good order-of-magnitude anchors for

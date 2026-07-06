@@ -20,6 +20,8 @@
 > this Miao leakage paper with the *Willow* paper (Nature 638, 920–926 (2025), arXiv:2408.13687).
 > Verified correct via ADS bibcode 2023NatPh..19.1780M + the journal DOI.
 
+> **[ours] reframed 2026-07-06** — the decoder-oriented framing below ('sim-only teacher / decoding headroom above MWPM') is SUPERSEDED by the simulator-forward-generation framing: validity = faithfulness vs an independent qutrit oracle + anti-toy discriminability of the record from a matched Markov/DEM null; decoder/LER = downstream use. Leakage = the strongest non-Markovian, non-DEM-reducible notion-2 source (notion-3 is closed). See docs/twin_validation/HANDOFF_static_simulator_notion2_2026-07-06.md.
+
 ---
 
 ## 1. Metadata
@@ -47,8 +49,12 @@
   measured on the same Sycamore family that produced our R2 datasets**. It supplies the
   physical leakage mechanism, the per-cycle/steady-state rates, the gate-level transport and
   phase numbers, and the **detector-/correlation-level fingerprint** (rising detection
-  probability + non-local `pij` time correlations) that a SIM-ONLY non-Pauli teacher must
-  reproduce to generate realistic leakage-bearing surface-code syndromes.
+  probability + non-local `pij` time correlations) — the **empirical spec the simulator's
+  leakage SOURCE must reproduce faithfully** when it forward-generates the record `{det,obs}`.
+  Leakage is the strongest non-Markovian, **non-DEM-reducible notion-2** source in our
+  program; its faithfulness is scored against an INDEPENDENT qutrit-DM oracle, and its record
+  legitimacy against a matched Markov/DEM null (notion-3 is closed as a protocol boundary,
+  `docs/twin_validation/notion3_protocol_boundary_closure.md`).
 
 **One-sentence takeaway.** Leakage is a long-lived (`T1` of `|2⟩` ≳ 10 cycles), gate-mobile,
 high-decomposed-weight error that *accumulates and correlates in space-time* — and the paper
@@ -88,8 +94,11 @@ remove it everywhere, every cycle — and **after removal, Pauli simulations are
 
 For our program: this paper is the **canonical, hardware-anchored leakage spec** — model,
 rates, transport matrix, phase error, and the **detector-level effects** (rising detection
-probability + non-local time correlations) we need our SIM-ONLY teacher to reproduce so that
-non-Pauli leakage signal becomes decoding headroom above Pauli decoders.
+probability + non-local time correlations) the **simulator's leakage source must reproduce
+for FAITHFUL forward generation** of the record `{det,obs}`. Leakage is the genuinely
+non-Markovian, **non-DEM-reducible notion-2 source** whose record a matched Markov/DEM null
+cannot forge — that anti-toy discriminability, together with faithfulness bounded vs the
+exact qutrit-DM oracle, is the validity we care about; decoder/LER is downstream product use.
 
 ---
 
@@ -349,23 +358,28 @@ raw modified-Ramsey traces (sinusoidal fits) yielding the 0.65π phase, over 20 
 
 ## 5. **USEFUL FOR OUR PROJECT** (concrete, with page/eq refs)
 
-Our program needs a **SIM-ONLY teacher** that emits realistic-noise surface-code **syndrome**
-data with **non-Pauli** structure (so a neural/soft decoder can find headroom above
-MWPM/TN-MLD/RL-prior Pauli decoders). This paper is the **hardware-anchored leakage spec**
-for that teacher. Mapping to our three needs (a) canonical leakage model + approximation
-bound, (b) scalable simulation, (c) neural-decoder input:
+Our program is the **error-coupling SIMULATOR**: a faithful FORWARD GENERATOR of the record
+`{det,obs}` for surface-code cycles, whose validity is (i) **FAITHFULNESS** — the generated
+record bounded against an INDEPENDENT oracle (exact qutrit-DM / from-scratch / closed form) —
+and (ii) **ANTI-TOY LEGITIMACY** — the leakage feature DISTINGUISHABLE from a matched
+CP-divisible / Markov-`k` / best-Pauli-DEM null. This paper is the **hardware-anchored leakage
+spec** the simulator's leakage source must reproduce. Mapping to our three needs (a) canonical
+leakage model + bounded simplification, (b) scalable faithful generation, (c) the faithful
+OUTPUT channels the record must carry:
 
-### 5.1 (a) Canonical leakage model + the rates to reproduce
+### 5.1 (a) Canonical leakage model + the rates the source must reproduce
 
-The teacher must carry leakage as **its own degree of freedom** (qutrit/`|2⟩`-aware, not a
-Pauli twirl), with these *measured* knobs:
+The simulator must carry leakage as **its own degree of freedom** (qutrit/`|2⟩`-aware, not a
+Pauli twirl), with these *measured* rates as the targets its forward-generated record must
+reproduce (each bounded vs the exact qutrit-DM oracle, per `docs/FAITHFULNESS_PROTOCOL.md`):
 
 - **Per-cycle leakage generation rate ≈ 5×10⁻³** (Fig. 3c, p. 4). This is the *source* term
   per qubit per cycle — the single most important scalar for "how much leakage exists."
 - **Leakage lifetime: decay constant ~4.4 cycles** for injected `|2⟩` (Fig. 1c, p. 2);
-  underlying `T₁(|2⟩) ≳ 10 cycles`. → in the teacher, `|2⟩` must **persist across multiple
-  rounds** (this is what makes leakage *temporally* correlated; a single-round Pauli channel
-  cannot reproduce it).
+  underlying `T₁(|2⟩) ≳ 10 cycles`. → in the simulator, `|2⟩` must **persist across multiple
+  rounds** — this multi-round persistence is what makes the generated record *temporally*
+  correlated (notion-2 memory); a single-round Pauli/Markov channel cannot forge it, which is
+  precisely the anti-toy discriminability we test for.
 - **Steady-state populations to match the regime you simulate** (Fig. 3a): No-reset ~5%
   data/~3% measure (the "do-nothing" worst case); **DQLR ~1×10⁻³ data / <1×10⁻⁴ measure**
   (the "removed" best case). Intrinsic device leakage **~4×10⁻³/round** (Fig. 5c, p. 6).
@@ -373,33 +387,39 @@ Pauli twirl), with these *measured* knobs:
   - `|30⟩↔|12⟩`: **~18–19%** population transfer,
   - `|31⟩↔|22⟩`: **~58–61%** population transfer,
   with the two-photon effective-coupling form `P_t = sin²(g_eff t)`, `g_eff = −√2 g · √3 g/η`
-  (SI S1, p. 11). → the teacher's two-qubit gate must include a **level-mixing stochastic map
-  conditioned on the neighbour's leakage state**, not just a Pauli error.
+  (SI S1, p. 11). → the simulator's two-qubit gate must include a **level-mixing stochastic map
+  conditioned on the neighbour's leakage state**, not just a Pauli error — this neighbour
+  conditioning is the mechanism that makes the generated record spatially non-DEM-factorizable.
 - **Leakage phase error: ~0.65π coherent phase** imprinted on a computational qubit by a CZ
-  to a `|2⟩` neighbour (Fig. 2e, p. 3). → a **coherent, neighbour-conditioned `Z`-rotation**
-  — the cleanest "non-Pauli signal that a Pauli decoder cannot see correctly."
+  to a `|2⟩` neighbour (Fig. 2e, p. 3). → a **coherent, neighbour-conditioned `Z`-rotation** —
+  a per-gate non-Pauli action the source must reproduce; it is a channel a best-Pauli-DEM null
+  cannot match, contributing to the record's anti-toy discriminability.
 
-**Bounding an approximation (our deliverable (a)).** The paper's own headline result *is*
-the approximation bound: **after DQLR, "leakage ≈ Pauli"** — Fig. 4a curves coincide and
-Fig. 5c gives `1/Λ_{5/7} ≈ 111·P_L + 0.2` (R²=0.983), i.e. leakage acts as a *linear,
-uncorrelated* source once it is removed every cycle. **Operational corollary for us:** a
-Pauli-twirled approximation of leakage is only valid in the *fully-removed* regime; in the
-**No-reset / partial-removal regime the residual is genuinely non-Pauli and correlated**
-(Figs. 4a, S7) — *that gap is exactly our decoding headroom*. So the teacher should be run in
-the **partial- or no-removal regime** to manufacture the non-Pauli signal, and the
-DQLR/Pauli-equivalence result is the *control* proving the signal vanishes when leakage is
-gone. Also note the paper itself **slightly under-estimates** leakage-induced error even in
-simulation (p. 6) — a built-in caveat that within-cycle leakage dynamics are hard to capture
-exactly; our teacher inherits the same caveat.
+**Bounding the simplification (our deliverable (a)).** The paper's own headline result *is*
+the bound on when a Pauli/DEM approximation is faithful: **after DQLR, "leakage ≈ Pauli"** —
+Fig. 4a curves coincide and Fig. 5c gives `1/Λ_{5/7} ≈ 111·P_L + 0.2` (R²=0.983), i.e. leakage
+acts as a *linear, uncorrelated* source once it is removed every cycle. **Operational corollary
+for us:** a Pauli-twirled/Markov approximation of leakage is faithful only in the *fully-removed*
+regime; in the **No-reset / partial-removal regime the residual is genuinely non-Pauli and
+correlated** (Figs. 4a, S7) — *that gap is exactly the notion-2, non-DEM-reducible signal our
+simulator's record must carry and that a matched Markov/DEM null cannot forge*. So the simulator
+should be run in the **partial- or no-removal regime** to generate that non-Pauli record, and
+the DQLR/Pauli-equivalence result is the built-in **anti-toy control** proving the discriminable
+signal vanishes when leakage is gone (the null-collapse endpoint of the matched-null test). Also
+note the paper itself **slightly under-estimates** leakage-induced error even in simulation
+(p. 6) — a built-in caveat that within-cycle leakage dynamics are hard to capture exactly; this
+is a declared, bounded simplification our simulator inherits (`docs/FAITHFULNESS_PROTOCOL.md`).
 
-### 5.2 (b) How to simulate leakage at scale
+### 5.2 (b) How to faithfully generate leakage at scale
 
 - **Use a Kraus-operator simulation with explicit `|2⟩` (and ideally `|3⟩`) levels** that
   includes (i) leakage transport, (ii) leakage phase errors, (iii) the removal operation —
   this is exactly the method the paper used for d=5/d=7 (SI S6, p. 14; method ref [17]).
   Their baseline carries **zero intrinsic leakage** and injects leakage as a controlled knob
-  (`θ_L = 2 sin⁻¹√(2P_L)`, p. 5) — a **clean teacher design pattern**: a tunable leakage-rate
-  dial on top of a Pauli baseline, with a `0%`-injection control.
+  (`θ_L = 2 sin⁻¹√(2P_L)`, p. 5) — a **clean forward-generator design pattern**: a tunable
+  leakage-rate dial on top of a Pauli baseline, with a `0%`-injection control (which doubles as
+  the matched-null endpoint for anti-toy discriminability). The generated record on this qutrit
+  path is what gets bounded against the exact qutrit-DM oracle for faithfulness.
 - **Adopt Table S1 (p. 15) verbatim as a starting baseline error model** for the Pauli
   substrate (1q 2×10⁻⁴, CZ 1×10⁻³, readout+reset 1×10⁻², idle-relax 3×10⁻³, DD-idle 1×10⁻³,
   `T₁=T₂=75 µs`, gate times 15/25 ns, RO+reset 300 ns). Under **baseline discipline** these
@@ -409,79 +429,91 @@ exactly; our teacher inherits the same caveat.
   Fig. 5b inset) — a concrete, reproducible insertion point for a leakage knob in a
   surface-code circuit.
 - **Scale validation target:** at d=3 leakage reaches all 17 qubits (Fig. S4); the spatial
-  spread is *local-per-gate but global-over-cycles*, so a scalable teacher only needs the
-  **per-gate transport map + multi-round persistence**, and the global correlation emerges —
-  no need for a hand-coded long-range kernel.
+  spread is *local-per-gate but global-over-cycles*, so a scalable simulator only needs the
+  **per-gate transport map + multi-round persistence**, and the global correlation of the
+  generated record emerges — no need for a hand-coded long-range kernel.
 
-### 5.3 (c) Neural decoder + soft/leakage input — what the teacher must *expose*
+### 5.3 (c) The faithful OUTPUT channels the generated record must carry
 
-The decoder-facing point: leakage's value to us is the **detector-level structure** a Pauli
-decoder mis-models. The teacher must reproduce, and the decoder must be *given access to*,
-these signatures:
+Leakage's value to us is the **detector-level structure** a Pauli/Markov null cannot forge.
+The simulator must reproduce these signatures in the record `{det,obs}` it forward-generates
+(faithfulness bounded vs the qutrit oracle), and expose the additional non-Pauli output
+channels below; whether a *downstream* decoder can exploit them is product use, not validity:
 
 1. **Rising / elevated detection probability** (Fig. 5a, S6): weight-4 detection climbs under
-   No-reset and sits at ~18% under DQLR; weight-2 at ~11%. A leakage-aware teacher should
-   reproduce the **time-dependence** of detection probability (a Pauli iid model gives a flat
-   detection probability — the *rise* is the leakage tell).
+   No-reset and sits at ~18% under DQLR; weight-2 at ~11%. A leakage-aware simulator should
+   reproduce the **time-dependence** of detection probability (a Pauli/Markov iid record gives
+   a flat detection probability — the *rise* is a leakage tell a matched null cannot forge).
 2. **Non-local time correlations `p̄_{t,t'}` at `|t−t'| > 1`** (SI S7, Fig. S7; eqs. S6–S7,
-   p. 16). This is the **single cleanest non-Pauli observable**: with iid Pauli, `p̄_{t,t'}=0`
-   for `|t−t'|>1` by construction; leakage forces it nonzero (No-reset >1% out to large
-   distance; MLR ~1% @ dist-2, >0.1% @ dist-10; DQLR ~0.2% @ dist-2). → **A decoder that
-   ingests multi-round syndrome context (long-time edges) can exploit what a per-round
-   matching graph throws away.** Our differentiable-DEM / hypergraph route (`hypergraph_dem`)
-   that supports **long-range time hyperedges** is the natural beneficiary; a TN/GNN decoder
-   that sees several rounds at once is the natural architecture.
+   p. 16). This is the **single cleanest non-Pauli, notion-2 observable**: with iid Pauli,
+   `p̄_{t,t'}=0` for `|t−t'|>1` by construction; leakage forces it nonzero (No-reset >1% out to
+   large distance; MLR ~1% @ dist-2, >0.1% @ dist-10; DQLR ~0.2% @ dist-2). → **the multi-round
+   memory in the generated record is exactly what a matched Markov-`k`/best-Pauli-DEM null
+   cannot reproduce** — the core anti-toy discriminability signal, measured directly on the
+   record (no decoder in the validity chain). It is the same non-DEM-reducible structure our
+   differentiable-DEM / hypergraph route (`hypergraph_dem`) with **long-range time hyperedges**
+   is built to express as an OUTPUT.
 3. **A leakage-flag / soft channel.** The paper *resolves `|2⟩` directly* by truncate-and-
    measure (Figs. 1c, 3) — i.e. leakage **is measurable** as a third outcome. For our SOFT
-   READOUT axis, this motivates a teacher whose **measurement emits more than a hard bit**: a
-   `|2⟩`-population (or analog-IQ proxy) the decoder can read as a leakage indicator. Even a
-   1-bit "leakage detected" side-channel (cf. leakage-detection refs [29]) is non-Pauli input
-   the decoder can condition on.
+   READOUT axis this motivates a simulator whose **measurement emits more than a hard bit**: a
+   `|2⟩`-population (or analog-IQ proxy) leakage indicator. This is an **additional faithful
+   OUTPUT channel** the record carries (`soft_readout.py`), not part of the validity chain; a
+   1-bit "leakage detected" side-channel (cf. leakage-detection refs [29]) is likewise a
+   non-Pauli output the generated record can expose.
 4. **Space-correlated, neighbour-conditioned errors** (the CZ phase ~0.65π and transport):
-   detections will come in **spatially adjacent clusters tied to a leaked qubit's footprint**
-   — the decoder benefits from spatial context (CNN/GNN over the patch), and the teacher must
-   make the error *conditional on a latent per-qubit leakage state*, which is what creates the
-   correlation that a Pauli DEM cannot factorize.
+   detections come in **spatially adjacent clusters tied to a leaked qubit's footprint** — the
+   simulator must make the error *conditional on a latent per-qubit leakage state*, which is
+   what makes the generated record spatially non-DEM-factorizable (a Pauli DEM null cannot
+   factorize it — again anti-toy legitimacy, scored on the record).
 
 **Net framing for us.** This paper supplies the **physics + rates + detector fingerprint** of
-the dominant non-Pauli error; our contribution is *not* to re-derive leakage removal (Google
-did) but to **leave leakage partially un-removed in a SIM-ONLY teacher and show a
-leakage/soft-aware neural decoder extracts the `p̄_{t,t'}>1` and detection-rise structure as
-%ΔLER above the best Pauli decoders** — with DQLR-style full removal (leakage≈Pauli, Fig. 4a)
-as the *null control* where the headroom must vanish.
+the dominant non-Pauli, non-DEM-reducible notion-2 error; our contribution is *not* to
+re-derive leakage removal (Google did) but to build the simulator that **forward-generates a
+leakage-bearing record faithful to the exact qutrit-DM oracle and demonstrably discriminable
+from a matched Markov/DEM null** (the `p̄_{t,t'}>1` and detection-rise structure), with
+DQLR-style full removal (leakage≈Pauli, Fig. 4a) as the **null-collapse control** where that
+discriminability must vanish. LER is the downstream product of that record (`docs/METRICS.md`),
+not a validity criterion.
 
 ---
 
 ## 6. Limitations / what does NOT apply
 
-- **It is a removal paper, not a decoding paper.** The contribution is the **DQLR
+- **It is a removal paper, not a forward-generator.** The contribution is the **DQLR
   operation** + characterization; there is **no decoder, no learned model, no soft-information
-  decoding** here. We borrow the *forward physics*, not any inference method. The implicit
-  message ("after DQLR, Pauli sims suffice") is *anti*-headroom — it says when leakage is well
-  handled, there's nothing non-Pauli left to decode. Our headroom lives in the **un-removed**
-  regime, which this paper deliberately engineers *away*.
-- **No syndrome-level decoder benchmarks.** Logical performance is reported as raw logical
-  error probability / detection probability / `Λ` — there is **no MWPM-vs-X comparison**, no
-  per-leaf decoding numbers, nothing to plug straight into our %ΔLER-vs-floor ledger. We must
-  generate syndromes from our own teacher and decode them ourselves.
+  decoding** here. We borrow the *forward physics* — the leakage model, rates, and detector
+  fingerprint the simulator's source must reproduce — not any inference method. The implicit
+  message ("after DQLR, Pauli sims suffice") is the *bound on faithful simplification*: when
+  leakage is fully removed there is no non-Pauli, non-DEM-reducible structure left in the
+  record, so a matched Markov/DEM null and the generated record coincide. The discriminable
+  notion-2 signal lives in the **un-removed** regime, which this paper engineers *away* — so we
+  run the simulator there and use the DQLR endpoint as the null-collapse control.
+- **No record-level or decoder benchmarks to reuse.** Logical performance is reported as raw
+  logical error probability / detection probability / `Λ` — there is **no MWPM-vs-X comparison**,
+  no per-leaf numbers. That is fine: LER/decoder numbers are downstream product, not our
+  validity chain. What we take is the *record-level* fingerprint (detection probability,
+  `p̄_{t,t'}`), which we must generate from our own simulator and score against the qutrit-DM
+  oracle + a matched null; the paper supplies the targets, not the scored artifact.
 - **d=5/d=7 results are simulation, not hardware** (Fig. 5c, SI S6). The on-hardware codes
   are only **d=3 surface** and **d=21 bit-flip**. The `Λ_{5/7} ≈ 7.2` and `1/Λ ≈ 111 P_L+0.2`
   numbers are from the **Table S1 hypothetical device**, *not* a measured large surface code.
   Treat them as **prediction-band**, not measured fact, in our epistemic-status ledger.
 - **Hardware-specific transport numbers.** The `P_t` transport (18%/61%) and the 0.65π phase
   are **Sycamore diabatic-CZ specific** (p. 3) — they depend on the gate type, length, and
-  effective inter-level coupling, "not normally calibrated." Our teacher should treat them as
-  **representative parameters to sweep**, not universal constants; a different gate set (or
-  the iSWAP-like gates in some datasets) would have different leakage transport.
+  effective inter-level coupling, "not normally calibrated." Our simulator should treat them as
+  **representative parameters to sweep** (a declared, bounded simplification), not universal
+  constants; a different gate set (or the iSWAP-like gates in some datasets) would have
+  different leakage transport.
 - **Within-cycle leakage dynamics under-captured.** The authors flag (p. 6, and SI) that even
   their leakage-aware simulation **under-estimates** leakage-induced logical error, because
   leakage motion *inside* a single cycle is hard to model — explicitly named as future work.
-  Any teacher we build inherits this: matching *steady-state* and *cross-cycle* statistics is
-  achievable; perfectly matching *intra-cycle* leakage is not, on this paper's own evidence.
+  Any simulator we build inherits this as a **declared, bounded simplification**
+  (`docs/FAITHFULNESS_PROTOCOL.md`): matching *steady-state* and *cross-cycle* record statistics
+  is achievable; perfectly matching *intra-cycle* leakage is not, on this paper's own evidence.
 - **No `|3⟩+` quantitative budget.** The model is dominated by `|2⟩`; `|3⟩` enters via the
   transport resonances (`|30⟩`, `|31⟩`) and there are hints of `|42⟩↔|33⟩`, but the paper
-  does not give a full higher-level population budget. A faithful sim may need `|3⟩` for the
-  two-photon transport channel, but quantitative `|3⟩`/`|4⟩` rates are not tabulated here.
+  does not give a full higher-level population budget. A faithful simulator may need `|3⟩` for
+  the two-photon transport channel, but quantitative `|3⟩`/`|4⟩` rates are not tabulated here.
 - **`P₀` and fit offsets are non-physical** (SI S5): the offset power law's `P₀` is explicitly
   *not* an intrinsic-error claim — do not lift fit constants as physical rates. The reusable
   physical scalars are the directly-measured ones (§5.1), not the curve-fit parameters.
@@ -526,10 +558,14 @@ as the *null control* where the headroom must vanish.
   method (none here); large-distance *measured* surface-code numbers (d=5/d=7 are simulation);
   universal transport constants (Sycamore-CZ specific); intra-cycle leakage as a solved
   modelling problem (authors flag it open).
-- **Open questions it sets up for us:** (i) build the SIM-ONLY qutrit/Kraus teacher to
-  Table S1 + the §5.1 leakage knobs, run it **without** DQLR, and confirm it reproduces the
-  **non-local `p̄_{t,t'}>1`** and **detection-rise** signatures (the falsifiable target);
-  (ii) measure the **%ΔLER** a leakage/soft-aware neural or TN/GNN decoder gains over
-  MWPM/TN-MLD/RL-prior on those syndromes; (iii) use **DQLR-equivalent full removal** (Fig. 4a
-  collapse) as the **null control** where that gain must go to zero — the clean
-  positive/negative-control pair our verification discipline requires.
+- **Open questions it sets up for us:** (i) build the qutrit/Kraus **leakage source** to
+  Table S1 + the §5.1 rates, run it **without** DQLR, and confirm the forward-generated record
+  reproduces the **non-local `p̄_{t,t'}>1`** and **detection-rise** signatures **within a bound
+  vs the exact qutrit-DM oracle** (the FAITHFULNESS target); (ii) show that record is
+  **discriminable from a matched Markov-`k`/best-Pauli-DEM null** on those same record-level
+  observables (the ANTI-TOY legitimacy target — measured on the record, no decoder in the
+  chain); (iii) use **DQLR-equivalent full removal** (Fig. 4a collapse) as the
+  **null-collapse control** where that discriminability must go to zero — the clean
+  positive/negative-control pair our verification discipline requires. Decoder %ΔLER, if
+  computed, is downstream product use of the validated record (`docs/METRICS.md`), not a
+  validity criterion.

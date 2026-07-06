@@ -4,13 +4,18 @@
 - **Reading method:** FULL-TEXT read (精读) via arXiv PDF — all sections, equations, and appendices (no HTML version available)
 - **Status:** complete full-text close-read
 
+> **[ours] reframed 2026-07-06** — the decoder-oriented framing below ('sim-only teacher / decoding headroom above MWPM') is SUPERSEDED by the simulator-forward-generation framing: validity = faithfulness vs an independent qutrit oracle + anti-toy discriminability of the record from a matched Markov/DEM null; decoder/LER = downstream use. This paper = a hardware-metrology reference for realistic leakage rates the simulator's source must reproduce (notion-3 is closed). See docs/twin_validation/HANDOFF_static_simulator_notion2_2026-07-06.md.
+
 # Deep review — Wood & Gambetta, Quantification and Characterization of Leakage Errors
 
 > Deep reading note (academic-paper-review format; full read Secs. I–VI + Appendices
 > A–E, Figs. 1–6). This is the **canonical leakage-metric paper** — the source of the
 > leakage rate `L1`, seepage rate `L2`, coherence-of-leakage `C_L`, and the bounds that
-> let us **define and bound a leakage-approximation error against an exact qutrit
-> reference**. **Relevance to our SIM-only non-Pauli teacher** is the centerpiece. The
+> let us **bound a leakage-approximation error against an exact qutrit reference**.
+> **[ours]** its role is as the **hardware-metrology source for the realistic leakage /
+> seepage rates the simulator's leakage SOURCE must reproduce faithfully** — the measured
+> `(L_1, L_2)` are generation targets the produced record must match (bounded vs the exact
+> qutrit-DM oracle), NOT the twin's "recover/characterize" capability (out of scope). The
 > superoperator / Lindblad algebra I take as correct (standard open-systems lineage),
 > not re-derived.
 
@@ -50,19 +55,22 @@ unitary `|1⟩↔|2⟩` Rabi leakage, simple dissipative, and thermal-relaxation
 closed-form `L_1, L_2`, including the **qutrit thermal** result
 `L_1 ≈ κ n̄ Δt`, `L_2 ≈ 2(1+n̄)κΔt/d_2` ⇒ `L_2 ≫ L_1` at low `n̄` (Eqs. 78–79).
 
-The relevance to us is direct and load-bearing. (a) **Canonical model:** our
-`|1⟩→|2⟩` leakage + seepage teacher is exactly their unitary-leakage (Eqs. 55–58) and
-dissipative-leakage (Eqs. 70–73, 74–79) models, parameterized by the *same* two rates
-`L_1, L_2` plus a coherence axis `C_L`. (b) **Bounding an approximation:** their
+**[ours]** the relevance to us is direct and load-bearing. (a) **Canonical model:** the
+simulator's `|1⟩→|2⟩` leakage + seepage SOURCE is exactly their unitary-leakage (Eqs. 55–58)
+and dissipative-leakage (Eqs. 70–73, 74–79) models, parameterized by the *same* two rates
+`L_1, L_2` plus a coherence axis `C_L` — so the paper's measured rates set the values the
+generated record must reproduce. (b) **Bounding a simplification (faithfulness):** their
 **leakage-accumulation model** (Lemma 1) gives the exact `L(E_L^m(ρ))` for the
 depolarizing (incoherent) extension, and **Fig. 4** quantifies the error of the
 incoherent (Pauli/leakage-reset) approximation against the exact unitary qutrit — *this
-is the template for our "leakage-approximation error vs exact qutrit reference."* The
-coherence-of-leakage 1-norm `‖P_C(ρ)‖_1` and Props. 1–2 are the **metric** in which that
-error is honest. (c) **Additivity:** Lemma 2 (Eq. 69) says unitary and dissipative
-leakage rates are **additive to second order in Δt** when the dissipators are pure
-ladder operators — the discretization lemma that lets a Trotterized leakage teacher
-compose `T1/T2 + control-leakage` per gate slice without cross-terms to leading order.
+is the template for the declare-and-bound-every-simplification requirement
+(docs/FAITHFULNESS_PROTOCOL.md): the coherent block the simplification discards, bounded
+vs the exact qutrit-DM oracle.* The coherence-of-leakage 1-norm `‖P_C(ρ)‖_1` and Props. 1–2
+are the **metric** in which that discarded-coherence bound is honest. (c) **Additivity:**
+Lemma 2 (Eq. 69) says unitary and dissipative leakage rates are **additive to second order
+in Δt** when the dissipators are pure ladder operators — the discretization lemma that lets
+a Trotterized leakage SOURCE compose `T1/T2 + control-leakage` per gate slice without
+cross-terms to leading order.
 
 ## Main contribution + core method (full technical detail)
 
@@ -245,39 +253,47 @@ approximation discards**.
 
 ## **Useful for our project**
 
-Our program: a **SIM-only teacher** generates realistic-noise surface-code **syndrome**
-data with **non-Pauli** mechanisms (`T1/T2`, **leakage `|1⟩→|2⟩` + seepage**, soft IQ
-readout) to train a decoder; the headroom over Pauli decoders (MWPM / TN-MLD / Google
-RL-prior) is the non-Pauli signal. This paper is the **canonical leakage model** and, more
-than any other we hold, supplies (a) the model + parameterization, (b) the error metric
-for bounding an approximation, and (c) the additivity result that licenses a Trotterized
-teacher. Concretely:
+**[ours]** our program: an **error-coupling SIMULATOR** faithfully GENERATES the record
+`{det, obs}` from realistic-noise surface-code cycles with **non-Pauli** mechanisms (`T1/T2`,
+**leakage `|1⟩→|2⟩` + seepage**, soft IQ readout). Leakage is a genuinely **non-Markovian,
+NON-DEM-reducible notion-2 SOURCE** — the strongest such source we carry — whose record a
+matched Markov/DEM (best-Pauli) null cannot forge (anti-toy legitimacy), and whose faithfulness
+is scored vs an INDEPENDENT exact qutrit-DM oracle. This paper is the **canonical leakage
+model** and, more than any other we hold, supplies (a) the model + parameterization, (b) the
+metric for bounding the simplification error of an approximate source vs the exact qutrit
+reference, and (c) the additivity result that licenses a Trotterized generation slice.
+(LER / decoder headroom is a DOWNSTREAM PRODUCT of the generated record — docs/METRICS.md —
+never part of the validity chain.) Concretely:
 
-1. **The leakage teacher's parameters and definitions are this paper's (Eqs. 1–2, 55–58,
+1. **The leakage source's parameters and definitions are this paper's (Eqs. 1–2, 55–58,
    70–79).** Parameterize the SIM leakage channel by the **two rates** `(L_1, L_2)` — never
    one combined rate (Sec. II, p. 3 is explicit that `L_1+L_2` is insufficient and a
-   misnomer). For a transmon-faithful surface-code teacher:
+   misnomer). These are the hardware-measured rates the generated record must reproduce.
+   For a transmon-faithful surface-code source:
    - **Control/coherent leakage** = the **unitary-leakage** model (Eqs. 55–58):
      `|1⟩↔|2⟩` exchange with `L_j = (1/d_j)sin²(t/2)`, generating **oscillating** leakage
-     and nonzero coherence `C_L = |sin t|` (Eq. 59). This is the **dominant non-Pauli signal**
-     the prompt targets and the part Pauli/erasure decoders cannot see.
+     and nonzero coherence `C_L = |sin t|` (Eq. 59). This is the **strongest non-Markovian,
+     non-DEM-reducible signature** the source imprints on the record — the part a matched
+     Markov/DEM (best-Pauli) null cannot forge.
    - **Thermal/incoherent leakage** = the **photon-loss / thermal-relaxation** model
      (Eqs. 74–79): `L_1 ≈ κ n̄ Δt`, `L_2 ≈ 2(1+n̄)κΔt/d_2`, with **`L_2 ≫ L_1`** at the
      transmon `n̄ ∈ [10^{-2},10^{-1}]` (Fig. 6). Our canonical `T1/T2` Kraus channels are the
      *in-subspace* part; this is the *leakage* part. The qutrit truncation `d_2 = 1` at low
      `n̄` is sanctioned in-text (p. 13) — i.e. **one extra `|2⟩` level per data qubit is the
      paper-endorsed minimal leakage sim**.
-   - **Per-qubit / multi-subspace bookkeeping** (Eqs. 80–89): the surface-code teacher needs
+   - **Per-qubit / multi-subspace bookkeeping** (Eqs. 80–89): the surface-code source needs
      leakage rates *per data qubit* (and cross-qubit `Y_3` if modeled); Sec. V D gives the
      exact `L_1 = Σ_j L_{1Y_j}` decomposition. (Caveat: Sec. V D explicitly *ignores direct
      interactions between leakage subspaces* — see Limitations.)
 
-2. **Bounding our leakage-approximation error against an exact qutrit reference — the
-   central methodological deliverable.** Any scalable leakage sim that is *not* a full
-   qutrit density-matrix evolution (e.g. a **Pauli-twirled / leakage-as-erasure-reset /
-   DLM** approximation, which is what lets leakage drop into a Stim-style or DEM carrier)
-   discards exactly the **CLS** part of the channel (`P_I E P_C + P_C E P_I + P_C E P_C`,
-   Eq. 35). This paper gives **both** the right reference object and the right metric:
+2. **Bounding the simplification error of an approximate leakage source vs the exact qutrit
+   oracle — the central FAITHFULNESS deliverable (docs/FAITHFULNESS_PROTOCOL.md).** Any
+   scalable leakage source that is *not* a full qutrit density-matrix evolution (e.g. a
+   **Pauli-twirled / leakage-as-erasure-reset / DLM** approximation, which is what lets
+   leakage drop into a Stim-style or DEM carrier) discards exactly the **CLS** part of the
+   channel (`P_I E P_C + P_C E P_I + P_C E P_C`, Eq. 35); the generated record must be
+   certified against the INDEPENDENT exact qutrit-DM oracle, with that discarded coherence
+   declared and bounded. This paper gives **both** the right reference object and the right metric:
    - **Reference object:** the exact unitary/Lindblad qutrit channel (Eqs. 56, 64, 67–68),
      and its **leakage-accumulation trajectory** `L(E^m(ρ))` (Lemma 1 / Eqs. 57, 62, 71–73).
    - **Approximation:** its **DLE/DLM** incoherent projection (Eqs. 44, 46; constructed by
@@ -287,71 +303,81 @@ teacher. Concretely:
      **certified bound** `‖our_approx − exact‖` controlled by
      `C_L(ρ) ≤ 2√(p_l(1−p_l))` (Prop. 1) at the state level and
      `C_{Lj}(E) ≤ 2√(L_j(1−L_j))` (Prop. 2) at the channel level. **These two inequalities
-     are the "how to bound an approximation's error vs an exact reference" the prompt asks
-     for:** the worst-case coherence our incoherent leakage sim throws away is `≤ 2√(L_j(1−L_j))`,
+     are the "bound the simplification error of an approximate source vs the exact qutrit
+     reference" the faithfulness protocol demands:** the worst-case coherence an incoherent
+     leakage source throws away is `≤ 2√(L_j(1−L_j))`,
      which is *small when the leakage rate is small* (`~2√L_j` for `L_j ≪ 1`) — exactly the
      transmon regime (`L_1 ~ 10^{-3}`–`10^{-5}`, Fig. 1). **Fig. 4 is the empirical version**
      of this bound: it shows precisely how far the depolarized approximation deviates from
      the exact coherent accumulation as a function of residual coherence `p`. We should
-     report our leakage-teacher approximation error in **`C_L` / `C_{Lj}` units** and cite
+     report the leakage SOURCE's simplification error in **`C_L` / `C_{Lj}` units** and cite
      Props. 1–2 as the tightness certificate (saturated for pure states, so it is a real
      worst case, not loose).
 
-3. **Lemma 2 (Eq. 69) licenses a Trotterized leakage teacher.** A circuit-level surface-code
-   sim composes, per gate slice, an always-on dissipative `T1/T2`-leakage with a control
-   unitary-leakage. Lemma 2 proves these **leakage/seepage rates add to second order in `Δt`**
-   when the dissipators are ladder operators (which `D[a], D[a†]` are). So for a fine enough
-   slice we may **sum** the thermal `L_1 ≈ κn̄Δt` and the control `L_1 ≈ ½sin²(Δt/2)` without a
-   cross-term to leading order — the discretization that keeps a per-slice leakage teacher
-   tractable and its error `O(Δt²)`-controlled. (This is the leakage analogue of standard
-   Trotter error, here proved *for the leakage rates specifically*.)
+3. **Lemma 2 (Eq. 69) licenses a Trotterized leakage generation slice.** A circuit-level
+   surface-code simulator composes, per gate slice, an always-on dissipative `T1/T2`-leakage
+   with a control unitary-leakage. Lemma 2 proves these **leakage/seepage rates add to second
+   order in `Δt`** when the dissipators are ladder operators (which `D[a], D[a†]` are). So for
+   a fine enough slice we may **sum** the thermal `L_1 ≈ κn̄Δt` and the control
+   `L_1 ≈ ½sin²(Δt/2)` without a cross-term to leading order — the discretization that keeps a
+   per-slice leakage generation step tractable and its simplification error `O(Δt²)`-bounded.
+   (This is the leakage analogue of standard Trotter error, here proved *for the leakage rates
+   specifically*.)
 
-4. **The decoder-input / soft-info connection.** The prompt asks for "the neural-decoder
-   architecture + soft-info/leakage input." This paper does **not** build a decoder — it is
-   a *characterization* paper. What it *does* give the decoder side: (i) the **leakage-induced
-   phase error**, not the leakage rate, is the dominant logical effect (Fig. 1, Sec. III A,
-   Sec. VI) — so a leakage-aware decoder's payoff is in catching that **coherent phase**
-   signature, which on syndrome data shows as the **oscillation** fingerprint (Fig. 3 `p_{Π1}`,
-   Fig. 4); (ii) a **measurement-leakage model** `Σ_j M_j = (1−q_1)Π_1 + q_2 Π_2` (Eq. A29)
-   — the analogue of our soft-readout channel, with leakage during the 5 µs acquisition window
-   (Sec. III A) as a concrete leakage-at-measurement mechanism to include. The *architecture*
-   (GNN/Transformer with soft-info/leakage input) must come from the neural-decoder papers in
-   the library (Bausch, scalable-neural-decoder, Pattison soft-information); this paper
-   supplies the **physics of the input channel**, not the network.
+4. **The record's output-channel physics (soft-info / erasure as a FAITHFUL OUTPUT, not
+   validity).** This paper does **not** build a decoder — it is a *characterization* paper.
+   What it fixes for the record the simulator emits: (i) the **leakage-induced phase error**,
+   not the leakage rate, is the dominant logical effect (Fig. 1, Sec. III A, Sec. VI) — so the
+   record's most informative leakage feature is that **coherent phase** signature, which shows
+   as the **oscillation** fingerprint (Fig. 3 `p_{Π1}`, Fig. 4); a matched Markov/DEM null,
+   which is phase-blind, cannot reproduce it. (ii) A **measurement-leakage model**
+   `Σ_j M_j = (1−q_1)Π_1 + q_2 Π_2` (Eq. A29) — the analogue of the simulator's soft-readout /
+   erasure OUTPUT channel, with leakage during the 5 µs acquisition window (Sec. III A) as a
+   concrete leakage-at-measurement mechanism the generated `obs` must include. Soft-info /
+   erasure flags are a **faithful OUTPUT channel of the record**, not part of the validity
+   chain; how any downstream decoder consumes them (architecture from Bausch,
+   scalable-neural-decoder, Pattison soft-information) is out of scope for the simulator —
+   this paper supplies the **physics of the emitted channel**, not the network.
 
-5. **A clean, in-domain `do()`-knob and a calibration sanity check.** The `L_1:L_2` ratio is
-   mechanism-diagnostic (erasure `L_2=0`; thermal `L_2≫L_1`; unital `d_1L_1=d_2L_2`) — a
-   ready-made set of **controlled-teacher mechanisms** to `do()` between (e.g. "increase
-   control-leakage `L_1` vs increase thermal seepage `L_2`," measure `ΔLER`). And the
-   transmon LRB simulation (Sec. III A: `δ/2π=−300 MHz`, `κ=10 kHz`, `n̄=0.01`, 5 µs readout,
-   8–30 ns pulses) is a **concrete, literature-anchored parameter set** for a realistic
-   leakage teacher, with `(L_1, L_2, F)` values read directly off Figs. 1, 6.
+5. **Distinct source regimes for anti-toy discriminability, and a realistic parameter set.**
+   The `L_1:L_2` ratio is mechanism-diagnostic (erasure `L_2=0`; thermal `L_2≫L_1`; unital
+   `d_1L_1=d_2L_2`) — a ready-made family of **distinct controlled source regimes** whose
+   records the simulator can generate and whose separation from a matched Markov/DEM null is
+   the anti-toy legitimacy test (a coherent-leakage regime vs an erasure/thermal regime the
+   null could forge). And the transmon LRB simulation (Sec. III A: `δ/2π=−300 MHz`,
+   `κ=10 kHz`, `n̄=0.01`, 5 µs readout, 8–30 ns pulses) is a **concrete, literature-anchored
+   parameter set** of realistic rates the simulator's leakage source must reproduce, with
+   `(L_1, L_2, F)` values read directly off Figs. 1, 6. (`ΔLER` between regimes is a
+   DOWNSTREAM product — docs/METRICS.md — not a validity criterion; do() / controlled-teacher
+   intervention is the twin capability and is out of scope.)
 
 ## Limitations / what does NOT apply
 
-- **W1 — it is a *characterization* framework, not a code/decoder simulation.** No surface
+- **W1 — it is a *characterization* framework, not a code/record simulation.** No surface
   code, no DEM, no logical error rate, no decoder appears. It defines and measures
   *single-gate* leakage `(L_1, L_2, F)` and their coherence; the *propagation* of leakage
-  through QEC rounds, its effect on syndromes/`LER`, and any decoder must be supplied by us
-  (and by the QEC-leakage papers: Suchara–Cross–Gambetta 1410.8562, Fowler 1308.6642,
-  Miao 2211.04728, McEwen 2102.06131, the leakage-TN sim 2308.08186). This paper is the
-  **model and metric layer**, not the **simulation-at-scale** layer.
+  through QEC rounds and its imprint on the generated record `{det, obs}` must be supplied by
+  the simulator (and grounded in the QEC-leakage papers: Suchara–Cross–Gambetta 1410.8562,
+  Fowler 1308.6642, Miao 2211.04728, McEwen 2102.06131, the leakage-TN sim 2308.08186). This
+  paper is the **model and metric layer** (the rates to reproduce + the coherence-bound
+  metric), not the **record-generation-at-scale** layer.
 - **W2 — the bounds are *bounds*, and the metrics are mostly incoherent.** `L_1, L_2, F` are
   blind to coherence by construction (Sec. IV opening); coherence is captured only by `C_L,
   C_{L1}, C_{L2}`, which **cannot be measured from `X_1` alone** (the whole point of Props.
-  1–2 is to *bound* the unmeasurable coherence by the measurable rates). For our SIM teacher
-  this is fine (we have the full qutrit state, so we can compute `C_L` exactly, not just
-  bound it), but it means LRB-style *estimation* of our teacher's coherence is impossible —
-  the coherence is a *simulator-internal* quantity, used to *score* the approximation, never
-  recoverable from syndrome-only data. (Consistent with the project memo that coherence is
-  not identifiable from syndrome-only data.)
-- **W3 — Assumption 4 (full leakage-subspace depolarization) is exactly the regime where our
-  *coherent* signal lives.** The clean single-exponential LRB model holds **only when the
-  Clifford twirl also depolarizes `X_2`** (Eq. A16). When it doesn't (strong/coherent
-  leakage), non-Markovian **oscillations** appear (Figs. 3, 4) and LRB *overestimates* the
-  rates. So LRB is a poor estimator precisely in the coherent-leakage regime — again fine for
-  us (we don't estimate; we simulate and score), but a warning that any "fit `L_1, L_2` from
-  data" pipeline inherits this bias.
+  1–2 is to *bound* the unmeasurable coherence by the measurable rates). For the simulator
+  this is fine (it has the full qutrit state, so `C_L` can be computed exactly against the
+  qutrit-DM oracle, not just bounded) — the coherence is a *simulator-internal faithfulness
+  instrument* used to *score* a simplification, never a quantity the simulator claims to
+  recover from the passive record. (Consistent with the project boundary that coherence is
+  not identifiable from the passive syndrome record, and that recovery is out of scope.)
+- **W3 — Assumption 4 (full leakage-subspace depolarization) is exactly the regime where the
+  *coherent* non-Markovian signature lives.** The clean single-exponential LRB model holds
+  **only when the Clifford twirl also depolarizes `X_2`** (Eq. A16). When it doesn't
+  (strong/coherent leakage), non-Markovian **oscillations** appear (Figs. 3, 4) and LRB
+  *overestimates* the rates. So LRB is a poor estimator precisely in the coherent-leakage
+  regime — irrelevant to the simulator (which generates and scores against the oracle, never
+  estimates rates from the record), but a warning that any "fit `L_1, L_2` from data" pipeline
+  inherits this bias.
 - **W4 — single-mode, weak-anharmonicity, single ladder structure.** The dissipative results
   (Lemma 2, thermal) assume **pure ladder operators** `A_{±k}` and a single anharmonic-oscillator
   mode; the additivity (Eq. 69) is **second-order in `Δt`** only. Strong leakage, non-ladder
@@ -362,7 +388,8 @@ teacher. Concretely:
 - **W5 — the worked numbers are single-qubit transmon-specific.** Figs. 1–6 (DRAG pulses,
   `δ/2π=−300 MHz`, `κ=10 kHz`, `n̄=0.01`) are calibration anchors, not surface-code data; the
   `1–2 orders` `L_1 < 1−F` gap and `L_2≫L_1` are transmon facts, not universal. Use them to
-  *seed* the teacher's parameters, not as target `LER` numbers.
+  *seed* the leakage source's rates, not as target `LER` numbers (`LER` is a downstream
+  product of the record, not a faithfulness target).
 
 ## How to use / trust + open questions
 - **Trust:** high as the **canonical leakage-metric definition** (`L_1, L_2, C_L`, Props.
@@ -372,17 +399,20 @@ teacher. Concretely:
   to their stated second order. Carry W2/W3 (incoherent metrics; LRB bias under coherence)
   and W4 (single-mode, ladder, second-order) as scope.
 - **Open questions for us:**
-  (i) **Define our leakage-approximation error in `C_L`/`C_{Lj}` units** and certify it
-  with Props. 1–2 (report worst-case coherence discarded `≤ 2√(L_j(1−L_j))`), with **Fig. 4**
-  as the empirical comparison template — the concrete "bound vs exact qutrit reference"
-  deliverable.
-  (ii) **Adopt `(L_1, L_2)` as the leakage-teacher parameterization** (never `L_1+L_2`),
-  seeded by the transmon numbers (Sec. III A, Figs. 1, 6), with one `|2⟩` level per data
-  qubit (qutrit truncation, p. 13) as the minimal sim and Sec. V D for per-qubit rates.
-  (iii) **Use Lemma 2 to justify a Trotterized `T1/T2`-leakage + control-leakage teacher**
-  (additive rates per slice to `O(Δt²)`), and decide the slice `Δt` from the additivity
+  (i) **Bound the leakage source's simplification error in `C_L`/`C_{Lj}` units** and certify
+  it with Props. 1–2 (report worst-case coherence discarded `≤ 2√(L_j(1−L_j))`), with **Fig. 4**
+  as the empirical comparison template — the concrete "bound the simplification vs the exact
+  qutrit-DM oracle" faithfulness deliverable (docs/FAITHFULNESS_PROTOCOL.md).
+  (ii) **Adopt `(L_1, L_2)` as the leakage-source parameterization** (never `L_1+L_2`),
+  seeded by the transmon numbers (Sec. III A, Figs. 1, 6) as the rates the generated record
+  must reproduce, with one `|2⟩` level per data qubit (qutrit truncation, p. 13) as the minimal
+  sim and Sec. V D for per-qubit rates.
+  (iii) **Use Lemma 2 to justify a Trotterized `T1/T2`-leakage + control-leakage generation
+  slice** (additive rates per slice to `O(Δt²)`), and decide the slice `Δt` from the additivity
   error budget.
-  (iv) **Pair this with a QEC-scale leakage propagation/decoder paper** (Suchara 1410.8562,
+  (iv) **Pair this with a QEC-scale leakage-propagation paper** (Suchara 1410.8562,
   Miao 2211.04728, leakage-TN 2308.08186, Pattison soft-info 2107.13589) for the parts this
-  paper does not cover: leakage through rounds, syndrome signatures, and the neural decoder's
-  soft-info/leakage input head.
+  paper does not cover: leakage through rounds and its record signatures, and — as a matched
+  Markov/DEM null for the anti-toy discriminability test — whether that record is forgeable.
+  (How any downstream decoder consumes the soft-info / leakage output is out of scope for the
+  simulator.)
