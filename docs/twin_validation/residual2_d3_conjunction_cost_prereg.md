@@ -58,6 +58,30 @@ Envelope ② is CONFIRMED iff: C1 generates 1024 d3 records within its band (or 
 timeout at declared memory AND C3 confirms free coupling (ratio in band + liveness). Any single miss ⇒ the
 due-diligence ② table is edited to the measured numbers (finding, not failure of the run) and the P2 plan re-costed.
 
+## AMENDMENT v2 (2026-07-06, BEFORE the first run — pre-run adversarial review findings)
+A single un-led reviewer verified the script against the engine sources and found the original C2 plan unsafe and two
+evidence-corrupting mismatches. Registered corrections (the ORIGINAL bands above stay registered; their misses are
+findings):
+- **C2 is STAGED (the run-blocker fix).** The reviewer's allocation analysis: `QutritDM.apply_channel` (einsum
+  temporaries) + `hermitianize` hold ~5 live full-DM copies during X-support rotations ⇒ true full-9q peak ≈ 23–29
+  GiB, NOT the 2×5.77 GiB the `dm_oracle.py` capability gate declares — **the original P-C2a band [11.5, 15] GiB is
+  arithmetically unreachable, and its miss is itself the finding that `dm_oracle`'s 2-copy estimate undercounts.**
+  Staged protocol: (A) measure the empirical peak/copy multiplier `k_n` on n=7 and n=8 sub-registers (copies 0.077 /
+  0.69 GiB ⇒ peaks ≤ ~3.5 GiB, safe); **P-C2d (b): k ∈ [3, 6]**. (B) attempt full-9q ONLY if `k_max × 5.77 GiB ≤ 24
+  GiB`, under `torch.cuda.set_per_process_memory_fraction(0.8)` with `OutOfMemoryError` caught as data (desktop
+  protected either way); skip-or-OOM = FINDING (full-9q DETECTOR_MARG infeasible at the true multiplier ⇒
+  due-diligence ② and the `dm_oracle` capability gate both need correcting — flagged for a later src fix).
+- **C1a: kernel JIT warmup excluded from the timed region** (an N=1 warmup sample precedes t0); throughput measured
+  at BOTH R=schedule-default (the originally registered cell) and R=4 (the P0-comparable cell), reported as shots/min
+  + shots·rounds/min. Both band edges now flag findings (the original "outside band either way" reading governs).
+- **C3's round body is a DECLARED PROXY** (5× single-site `apply_channel`, no within-cycle stream replay/measurement)
+  — smaller denominator than the registered `apply_within_cycle_round` seam, i.e. CONSERVATIVE AGAINST the
+  free-coupling claim (rebuild overhead is a larger fraction of a cheaper round). Ratio band unchanged; reps
+  interleaved (const/varied alternating) against clock drift; x_r drawn from `RTNSource` signs as originally named.
+- Minor evidence fixes: per-arm incremental JSON dumps; `r10` metadata in the precondition gate; `n_stab` derived
+  from the parsed schedule; C2 phase timestamps synchronized. Reviewer cost note (registered expectation): C2 wall
+  likely UNDER the [1, 30] min lower edge — trips as a registered miss/finding, not a bug.
+
 ## Script skeleton (scripted-execution discipline)
 One committed script, content_hash + git head + versions printed; per-arm timings/VRAM via
 `torch.cuda.max_memory_allocated`; preconditions: CUDA present, no other GPU job (user-confirmed), r01 dataset paths
