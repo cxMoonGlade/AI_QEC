@@ -21,7 +21,7 @@ each `→P1:` item is the remaining work to move the row to *bounded*.
 | 11 | Θ fan-out (shared latent → params) | closed-form algebraic identities (inverse maps rel 1e-12) | exact identities | parameter map; 5q fixture | **bounded** (as a map; physics anchoring of constants stays class (c) declared) |
 | 12 | quantum_bath GKSL shared-bath carrier | 6 Rule-I GT checks (factorization/extraction/indep-boson/emission-ODE/crow_joynt) + OQuPy independent K (~5%) | 1e-10…1e-6 per check | 2 data + 2 ancilla + 1 mode (exact DM, CPU) | **bounded** (feasibility scale) |
 | 13 | Readout/reset instrument (MA(1)) | a-exact closed form μ=0.0149, p_ij(lag1)=μ, lag≥2=0 | exact + from-scratch cross-check; P0 P5 band ±20% live | 5q/d3_repz records R~12 | **bounded** |
-| 14 | `records_to_dem` reduction (P0, NEW) | planted-parameter record law (exact odd-parity residual discriminated from 1st-order, gap 1.44e-2 ≫ 4e-3 tol) | planted recovery ≤4e-3; pymatching roundtrip >0.999 | 8-detector d3 fixtures | partially — →P1: bound the **declared L0 rule** + the **clustered-SE deviation** vs the exact record law (both declared, neither bounded yet) |
+| 14 | `records_to_dem` reduction (P0, NEW) | planted-parameter record law + **the teacher's EXACT enumerated record law (P1-a, `p1a_dem_reduction_bounds.py` hash 8d0032ee…)** | planted recovery ≤4e-3; roundtrip >0.999; **P1-a MEASURED bounds (d3_repz R=4, Θ(0)+64 trajectories): L0 misattribution ≤2.0e-2 on final:z12; isolated-eps ≤2e-2 on all no-L0 columns EXCEPT `delta:z12:round(R-1)` where eps≈0.97 — a pure DOUBLE-fault class (last-round ancilla × q2-final, closures cancel) the declared rule misses at mass ~1.5e-4; clustered-SE design effect DE(spt=200)=1.64–1.78 ⇒ SE understatement ×1.33** | 8-detector d3 fixtures, exact law | **bounded** (numbers above ARE the declared bound; L0-rule refinement — add the last-round delta column — optional, ~1.5e-4 mass-weighted) |
 | 15 | `CoupledCycleTeacher` end-to-end {det,obs} | composite: joint-L (row 2) + C-10 closed-form rates + off-source identity atol 1e-14 | z1 rate closed form; x0 γφ-response band; emit byte-reproducible | d3_repz/5q (5q dense) R~12 | partially — →P1: single end-to-end record-law bound vs an independent enumeration at small R |
 
 ## P1 execution plan (session 2026-07-06/07 — registered before the runs)
@@ -53,7 +53,13 @@ false-failed ≥3 detectors at 4.7–6.6σ. ⇒ the `dm_oracle` anchor's DETECTO
 sequential computation or a loud declaration (certify-seam follow-up chip). Also recorded: 4 of the 8 real-patch
 stabilizers are pure-Z boundary checks.
 
-**Aggregate honest picture (updated 2026-07-06):** 6/15 bounded (row 3 promoted by P1-c), 8/15 partially,
+**P1-a outcome note (2026-07-06):** the registered eps ≤ 5e-3 band MISSED on 4 columns — the miss is the finding:
+isolated last-round-delta patterns are pure DOUBLE-fault classes (single faults cannot produce them), and the
+z12-column one carries obs≈0.97 (its closure-cancelling partner is exactly the obs-flipping q2-final readout).
+The declared L0 geometry rule is therefore incomplete for `delta:z12:round(R-1)` at double-fault order — bounded
+at ~1.5e-4 mass; refinement optional. B2 in band: DE(spt=200)=1.64–1.78 (SE ×1.33).
+
+**Aggregate honest picture (updated 2026-07-06):** 7/15 bounded (rows 3, 14 promoted by P1-c/P1-a), 7/15 partially,
 1 UNBOUNDED (PhaseBurst — correctly fenced off the shared arm by the teacher whitelist). No row is silently unbounded-but-load-bearing; the two P0-introduced declared-not-yet-
 bounded items are row 14's L0 rule + clustered-SE convention. **P1 exit criterion:** every load-bearing row bounded
 or explicitly parked with its fence named; the table lands in the README/positioning doc as the coverage artifact.
