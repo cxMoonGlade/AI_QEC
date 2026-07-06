@@ -277,10 +277,18 @@ def test_dm_anchor_capability_is_oom_safe():
     full9_R2 = Regime(R=2, register="full", n_active=9, n_stab=8)
     sub_R1 = Regime(R=1, register="subregister", n_active=3, n_stab=2)
 
-    # DETECTOR_MARG @ R=1 full-9q: feasible (~12.4 GB single-stab projection) — the batch-1 GT path.
+    # DETECTOR_MARG @ R=1 full-9q on a 32 GB card @ safety 0.5: INFEASIBLE — the accounting was
+    # CORRECTED 2026-07-06 (residual-②): the projection loop's live set is rho1 + working clone +
+    # apply output (+ tiles), declared 4 copies ~ 24.8 GB > the 17.2 GB half-card budget. (The old
+    # 2-copy "~12.4 GB feasible" claim was falsified by measurement: the pre-fix path peaked at
+    # k=5.44 copies and would have OOMed the cell it declared feasible.)
     cap = dm.capability(Statistic.DETECTOR_MARG, full9_R1)
-    assert cap.feasible and cap.exactness is Exactness.EXACT and cap.epistemic_class == "a"
-    assert 1.0e10 < cap.mem_bytes_estimate < 1.6e10  # ~12.4 GB live
+    assert not cap.feasible and cap.exactness is Exactness.EXACT and cap.epistemic_class == "a"
+    assert 2.2e10 < cap.mem_bytes_estimate < 2.6e10  # 4 copies ~ 24.8 GB live
+    assert "budget" in cap.reason
+    # ... and FEASIBLE on a card whose half-budget covers the corrected live set (64 GB -> 32 GB).
+    dm_big = DMOracleAnchor(card_bytes=64 * 1024**3)
+    assert dm_big.capability(Statistic.DETECTOR_MARG, full9_R1).feasible
     # DETECTOR_MARG @ R>=2: NOT via projection (needs the moments path) -> infeasible, with a reason.
     cap2 = dm.capability(Statistic.DETECTOR_MARG, full9_R2)
     assert not cap2.feasible and "moments" in cap2.reason

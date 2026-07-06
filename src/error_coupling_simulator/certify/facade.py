@@ -10,8 +10,16 @@ hand-rolled per-script cross-check (the ~950-line ``twin_xzzx_teacher_fullmix.ma
 ledger of ``twin_dm_record_oracle_check``) to a call.
 
 The DM and stim anchors certify DIFFERENT teacher VIEWS (the full mechanism vs the Clifford slice), so
-both run — they don't compete; the OOM routing is per-anchor (the DM skips R≥2 full-9q; the carrier /
-closed-form carry the scale, opt-in). Statistical (stim) rows give PASS_PROVISIONAL, never PASS.
+both run — they don't compete; the OOM routing is per-anchor. Statistical (stim) rows give
+PASS_PROVISIONAL, never PASS.
+
+MEMORY ACCOUNTING CORRECTED 2026-07-06 (residual-②): the DM anchor's DETECTOR_MARG cell now declares
+its TRUE live set (4 conservative copies ≈ 24.8 GB at full-9q — the old 2-copy ~12.4 GB claim would
+have OOMed). Consequence on a 32 GB card at the default ``safety=0.5``: EVERY full-register grid cell
+is DM-infeasible, so the ledger is stim-only and the verdict caps at PASS_PROVISIONAL — an HONEST gap,
+loudly different from the previous silently-false "exact" rows. The measured lean peak (~3.3 copies
+≈ 20 GB) does fit a dedicated 32 GB card: pass ``dm_safety=0.78`` (or your own anchor) to enable the
+full-9q exact leg DELIBERATELY; sub-register cells via ``cells=`` remain the conservative route.
 """
 
 from .anchors import CorruptStabControl, DMOracleAnchor, StimCliffordAnchor
@@ -29,20 +37,24 @@ _LEVELS = {
 
 
 def certify_teacher(teacher, *, level: str = "standard", anchors=None, controls=None,
-                    device: str = "cuda", N: int | None = None, seed: int = 0, cells=None) -> CertReport:
+                    device: str = "cuda", N: int | None = None, seed: int = 0, cells=None,
+                    dm_safety: float | None = None) -> CertReport:
     """Certify a controlled teacher against the auto-routed independent ground-truth anchors → one
     epistemic ledger + a single verdict.
 
     ``level`` ∈ {smoke, standard, deep} selects the (statistic, R) grid + the shot budget. ``anchors``
     defaults to ``[DMOracleAnchor, StimCliffordAnchor]`` (the closed-form sidecar is opt-in — it needs
     a non-degenerate non-unital Markov pair). ``controls`` defaults to the corrupt-stabilizer control.
-    ``cells`` overrides the level grid (for tests / bespoke plans)."""
+    ``cells`` overrides the level grid (for tests / bespoke plans). ``dm_safety`` overrides the DM
+    anchor's card-budget fraction (default 0.5) — the DELIBERATE opt-in for the full-9q exact leg on a
+    32 GB card (see the module docstring; ignored when ``anchors`` is supplied explicitly)."""
     if level not in _LEVELS:
         raise ValueError(f"unknown level {level!r}; choose from {sorted(_LEVELS)}")
     plan = _LEVELS[level]
     n_eff = int(N or plan["N"])
     if anchors is None:
-        anchors = [DMOracleAnchor(device=device), StimCliffordAnchor()]
+        dm_kwargs = {} if dm_safety is None else {"safety": float(dm_safety)}
+        anchors = [DMOracleAnchor(device=device, **dm_kwargs), StimCliffordAnchor()]
     if controls is None:
         controls = [CorruptStabControl(stab=1)]
     check_list = cells if cells is not None else [(s, _regime(teacher, R)) for (s, R) in plan["checks"]]

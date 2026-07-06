@@ -115,7 +115,24 @@ RTX 5090 31.8 GiB, torch 2.12.0+cu130. Registered-prediction scorecard:
   accommodates this; the capability gate + (possibly) an in-place/chunked apply path need a src fix (flagged as a
   separate task).
 
-**Envelope verdict after ②:** d3 generation usable at ~5×10⁴ shots/min (SV) / ~1 s/shot (MPS exact-χ); coupling
-parameterization free in absolute terms; the exact-DM oracle leg is **sub-register (n ≤ 8) today** — the
-due-diligence ② table is edited accordingly (full-9q exact-DM as stated there was based on the undercounting
-capability estimate).
+**Envelope verdict after ② (superseded same day — see POST-FIX below):** d3 generation usable at ~5×10⁴ shots/min
+(SV) / ~1 s/shot (MPS exact-χ); coupling parameterization free in absolute terms; the exact-DM oracle leg was
+**sub-register (n ≤ 8)** at the pre-fix multiplier.
+
+## POST-FIX RE-RUN (2026-07-06, same day — after the memory-lean QutritDM apply path landed)
+The k≈5 finding was root-caused (apply_channel einsum temporaries + out-of-place hermitianize + dense
+`embed_operator_q` vector ops + eager constructor DM) and fixed (chunked apply into a preallocated output above
+`_CHUNK_MIN_DIM`, blockwise in-place hermitianize, local-contraction vector ops, lazy rho; 62-test falsifier suite +
+review panel, 13 findings fixed). Same probe script re-run (git `85c2c63`, log
+`outputs/twin_validation/logs/residual2_d3_conjunction_cost.log`):
+- **C2 stage B UNLOCKED and PASSED: full-9q exact-DM DETECTOR_MARG R=1 DEMONSTRATED — peak 18.92 GiB, wall 0.18 min
+  (~11 s)** on the 32 GB card (alloc-fraction 0.8 guard; stage-A k = 3.74/3.32 at n=7/8, projected 21.6 ≤ 24 GiB).
+  The original P-C2a [11.5, 15] GiB band (2-copy-based) still missed — the honest full-9q number is ~19 GiB ≈ 3.3
+  copies; the `dm_oracle` capability now declares a conservative 4×copy ≈ 24.8 GiB with an explicit
+  `dm_safety` opt-in for this card (default stays conservative).
+- **C1a side effect: 670,839 shots/min at R=1 (13× the pre-fix run) at 0.63 GiB VRAM (was 17.35)** — the codestate
+  build no longer materializes dense DM-scale embeds (time AND memory were the same three tensors).
+- C1b MPS 0.81 s/shot; C3 ratio 1.23 under unconditional chunking → the small-DM fast path (`_CHUNK_MIN_DIM`) was
+  added the same day (n=5 proxy round restored to the single-contraction path; both branches equivalence-gated).
+- **Final envelope (due-diligence ② updated): d3 = exact carrier at ~10⁵–10⁶ shot-rounds/min + full-register exact-DM
+  oracle at ~19 GiB/11 s (deliberate-budget), sub-register oracle ms-scale; coupling parameterization free.**

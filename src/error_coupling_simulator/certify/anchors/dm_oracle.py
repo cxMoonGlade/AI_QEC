@@ -11,8 +11,17 @@ genuine check, not a check vs the engine's own oracle (anti-circular).
 The capability descriptor encodes the DM feasibility wall as DATA (do-not-OOM — the core checks it
 BEFORE ``answer``, so the infeasible density matrix is never allocated):
   * ``DETECTOR_MARG`` at R=1 — per-detector ``P(s_j=1)`` via a SINGLE-stabilizer projection of the
-    one-round-evolved rho (the reviewer-validated full-9q approach; ~2 DM copies, NO enumeration) +
-    the logical-flip rate. Feasible at full-9q R=1 (~12 GB) on a 32 GB card.
+    one-round-evolved rho (NO enumeration) + the logical-flip rate. MEMORY ACCOUNTING CORRECTED
+    2026-07-06 (residual-② measured the real multiplier): the loop's live set is the held
+    ``rho1`` + the working clone + the apply-path output (+ tile temporaries) — ``~3+eps`` DM
+    copies AFTER the memory-lean ``apply_channel`` fix (it was ~5 copies before; measured
+    k=5.05–5.44 at n=7/8), declared here as a conservative ``_DETECTOR_MARG_COPIES = 4``. At
+    full-9q that is ~24.8 GB — INFEASIBLE under the default ``safety=0.5`` budget of a 32 GB
+    card, so the router reports the cell UNANCHORED there (an honest gap, not a silent PASS;
+    the certify facade's level grid is all full-register DETECTOR_MARG, so on such a card the
+    DM leg needs an EXPLICIT caller choice). The true lean peak (~3.3 copies ≈ 20 GB) DOES fit
+    the card physically — a caller who accepts the headroom may pass
+    ``DMOracleAnchor(safety=0.78)`` (or larger) to enable the cell deliberately.
   * ``FULL_JOINT`` / ``SYNDROME_DIST`` — ``record_oracle``'s depth-(n_stab·R) enumeration that STORES
     the full joint: feasible at a small register or R=1 small; INFEASIBLE (``feasible=False``) at R=1
     full-9q (~50 GB) and R≥2 full-9q (~100 GB) — the core then routes the scale to the carrier-MCWF.
@@ -51,6 +60,19 @@ _ANSWERS = frozenset({Statistic.DETECTOR_MARG, Statistic.FULL_JOINT, Statistic.S
 #: contract, conservative by design (a capability descriptor must never claim feasible for a cell that
 #: might OOM). ``dropped_mass`` is still reported per run so the prune simplification is bounded.
 _MOMENTS = frozenset({Statistic.RR_CORR, Statistic.SPATIAL_CORR})
+#: DETECTOR_MARG live-copy multiplier (CORRECTED 2026-07-06). The answer loop holds rho1 +
+#: the working clone + the apply-path output, plus chunk/tile temporaries from the memory-lean
+#: ``apply_channel`` (residual-② measured the PRE-fix path at k=5.05–5.44; the lean path's
+#: structural live set is ~3+eps, INCLUDING the X-kind logical readout after the redundant
+#: clone in ``logical_distribution`` was removed the same day). Declared conservatively at 4 —
+#: a capability descriptor must never claim feasible for a cell that might OOM (the 2*copy
+#: value this replaces did exactly that: it declared full-9q feasible at ~12 GB while the true
+#: pre-fix peak projected to 31 GB). DECLARED LIMITATION: this bound covers the SINGLE-SITE
+#: apply path (all lowering the shipped d3 schedules use). A ``DMReplayable`` teacher whose
+#: ``round_pre`` applies TWO-site channels goes through the still-unchunked
+#: ``apply_channel_2site`` (~4.5 copies transient) and is NOT bounded by this descriptor —
+#: budget such teachers separately (follow-up: chunk the 2site path).
+_DETECTOR_MARG_COPIES = 4
 
 
 class DMOracleAnchor:
@@ -90,7 +112,7 @@ class DMOracleAnchor:
                 return Capability(statistic, Exactness.EXACT, False,
                                   "R>=2 detector marginals need the moments path (RR_CORR), not "
                                   "single-stab projection", "a", None)
-            need = 2 * copy  # rho1 + the projected clone
+            need = _DETECTOR_MARG_COPIES * copy  # rho1 + working clone + apply output + tiles
             ok = budget > 0 and need <= budget  # budget==0 (no CUDA / card unknown) => infeasible, not OOM
             reason = "" if ok else (
                 "no GPU budget known (card_bytes=0; the DM oracle needs CUDA)" if budget == 0

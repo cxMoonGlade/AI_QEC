@@ -240,6 +240,61 @@ def resolve_readout_bias(b) -> float:
     return bval
 
 
+#: Memory-lean apply constants (2026-07-06, residual-② fix; class (c) PERFORMANCE knobs —
+#: exactness is unaffected: chunking slices FREE axes only, never a contraction sum (the
+#: per-element (b,e) sum is complete within its chunk; BLAS-internal summation order may
+#: differ — equivalence enforced to <=1e-13, not bit-identity); falsifiers in
+#: tests/test_qutrit_dm_memlean.py). Measured pre-fix peak was ~5 live DM copies during an
+#: X-support projection (einsum permute/bmm/reshape temporaries + out-of-place hermitianize);
+#: post-fix the apply path holds input + output + chunk/tile-sized temporaries only.
+_APPLY_CHANNEL_CHUNKS = 8
+_HERMITIANIZE_BLOCK = 4096
+#: Below this DM dimension the single-contraction path runs instead (2026-07-06 follow-up:
+#: at n=5 the chunk loop's fixed per-call overhead made the proxy round ~5.5x slower while
+#: the ~5 small copies it avoids are only a few hundred MB — harmless). 2187 = 3^7: qutrit
+#: n<=6 and ququart n<=5 take the fast path; every DM-scale register (3^7+, 4^6+) is chunked.
+_CHUNK_MIN_DIM = 2187
+
+
+def _chunk_slices(size: int, n_chunks: int):
+    """Contiguous slice cover of ``range(size)`` in ``<= n_chunks`` pieces."""
+    n_chunks = max(1, min(int(n_chunks), int(size)))
+    step = (int(size) + n_chunks - 1) // n_chunks
+    for start in range(0, int(size), step):
+        yield slice(start, min(start + step, int(size)))
+
+
+def hermitianize_inplace_blocked(t: torch.Tensor, block: int = _HERMITIANIZE_BLOCK) -> torch.Tensor:
+    """``t -> 0.5 * (t + t^dag)`` IN PLACE, tile-pair-wise (peak extra memory = one tile).
+
+    Elementwise identical arithmetic to ``cptp_channel.hermitianize`` (each entry becomes
+    ``0.5*(t[i,j] + conj(t[j,i]))``) without materializing the full ``t^dag`` sum output —
+    the memory-lean form for DM-scale matrices (a full-size temporary is 5.77 GiB at
+    ``3**9``). Falsifier: ``tests/test_qutrit_dm_memlean.py::test_hermitianize_blocked``.
+    """
+    d = int(t.shape[0])
+    # Keep at least a ~4x4 tile grid: a single whole-matrix "tile" would reintroduce the
+    # full-size temporaries this function exists to avoid (the n=7/8 dims are BELOW the
+    # absolute default block — caught by the 2026-07-06 bisect: dim 2187 degenerated to one
+    # block and the peak stayed at the pre-fix multiplier).
+    block = max(1, min(int(block), (d + 3) // 4))
+    for i0 in range(0, d, block):
+        i1 = min(i0 + block, d)
+        for j0 in range(i0, d, block):
+            j1 = min(j0 + block, d)
+            a = t[i0:i1, j0:j1]
+            if i0 == j0:
+                # aliasing-safe single tile temp: add allocates once, mul_ is in place
+                blk = a.add(a.mH).mul_(0.5)
+                a.copy_(blk)
+            else:
+                b = t[j0:j1, i0:i1]
+                blk = a.add(b.mH).mul_(0.5)
+                a.copy_(blk)
+                b.copy_(blk.mH)
+    return t
+
+
 class _QuditDM:
     """Exact ``q**n_data x q**n_data`` data-register density matrix (local dim ``q``).
 
@@ -266,12 +321,25 @@ class _QuditDM:
         self.device = torch.device(device)
         self.dtype = dtype
         self.dim = self.q ** self.n
-        # rho lives here; init_logical / a manual set_state must fill it.
-        self.rho: torch.Tensor = torch.zeros((self.dim, self.dim), dtype=self.dtype, device=self.device)
+        # rho lives here (LAZY since 2026-07-06: the constructor no longer eagerly
+        # allocates the q^n x q^n zeros — vector-only uses such as SvSampler.build_codestate
+        # were paying a 5.77 GiB DM at n=9 they never touched; first ACCESS materializes the
+        # same all-zero matrix, so every reader sees the historical behavior unchanged).
+        self._rho: torch.Tensor | None = None
         # optional code geometry (set by the harness)
         self._stabilizers: list[dict[int, str]] | None = None
         self._logical_x: dict[int, str] | None = None
         self._logical_z: dict[int, str] | None = None
+
+    @property
+    def rho(self) -> torch.Tensor:
+        if self._rho is None:
+            self._rho = torch.zeros((self.dim, self.dim), dtype=self.dtype, device=self.device)
+        return self._rho
+
+    @rho.setter
+    def rho(self, value: torch.Tensor) -> None:
+        self._rho = value
 
     # ----------------------------------------------------------------------- #
     # Local single-qudit operators (dim-aware versions of the module helpers)  #
@@ -382,13 +450,22 @@ class _QuditDM:
 
     def apply_channel(self, kraus, site: int) -> None:
         """Apply a single-qudit CPTP channel on ``site``: ``rho -> sum_k K_k rho K_k^dag``,
-        via the SITE SUPEROPERATOR in ONE contraction (NOT a per-Kraus loop).
+        via the SITE SUPEROPERATOR contracted CHUNK-WISE into a preallocated output.
 
         ``S[a,c,b,e] = sum_k K_k[a,b] conj(K_k[c,e])`` (a tiny ``q x q x q x q``) is contracted
-        on the site's ket/bra factors of ``rho`` -- so the ``r`` Kraus collapse into a single
-        pass with peak ~2x rho, instead of summing ``r`` separate dense terms. Identical math to
+        on the site's ket/bra factors of ``rho`` -- the ``r`` Kraus collapse into a single pass.
+        MEMORY-LEAN FORM (2026-07-06, residual-② fix): the contraction is evaluated in
+        ``_APPLY_CHANNEL_CHUNKS`` slices of the LARGER FREE axis (ket-left or bra-right), each
+        written into a preallocated output, and the hermitian symmetrization runs tile-pair-wise
+        in place — peak live memory = input + output + chunk/tile temporaries (~2+eps DM copies),
+        instead of the ~5 copies the single whole-DM einsum + out-of-place hermitianize held
+        (measured k=5.05-5.44 at n=7/8, residual-② 2026-07-06). Chunking slices FREE axes only —
+        the (b, e) contraction sum is complete within each chunk, no partial sums are formed
+        across chunks (BLAS-internal summation order may still differ; the equivalence gate
+        enforces <=1e-13 agreement, not bit-identity). Identical math to
         ``cptp_channel.apply_kraus(rho, stack(embed_operator_q(k)))`` (proven equivalent in
-        check_subsystem_apply_equiv.py for q=3; the same contraction algebra for q=4).
+        check_subsystem_apply_equiv.py for q=3; the same contraction algebra for q=4); the
+        chunked==unchunked falsifier is ``tests/test_qutrit_dm_memlean.py``.
         """
         q = self.q
         d = self.dim
@@ -398,9 +475,25 @@ class _QuditDM:
             raise ValueError(f"each single-qudit Kraus must be ({q}, {q}), got {tuple(ks.shape[-2:])}")
         sop = torch.einsum("kab,kce->acbe", ks, ks.conj())  # (q,q,q,q) site superoperator
         # rho (d,d) -> (left, b, right, left, e, right); contract S on the site ket(b)/bra(e) axes
-        t = torch.einsum("acbe,lbrLeR->larLcR", sop,
-                         self.rho.reshape(left, q, right, left, q, right)).reshape(d, d)
-        self.rho = hermitianize(t)
+        rho6 = self.rho.reshape(left, q, right, left, q, right)
+        if d < _CHUNK_MIN_DIM:
+            # small-register fast path: the handful of whole-DM temporaries are a few
+            # hundred MB at most here, while the chunk loop's fixed per-call overhead
+            # dominated (measured 2026-07-06: the n=5 proxy round went 2.09 -> 11.6 ms
+            # under unconditional chunking). Identical math either way.
+            t = torch.einsum("acbe,lbrLeR->larLcR", sop, rho6).reshape(d, d)
+            self.rho = hermitianize(t)
+            return
+        out = torch.empty((d, d), dtype=self.dtype, device=self.device)
+        out6 = out.reshape(left, q, right, left, q, right)
+        if left >= right:
+            for sl in _chunk_slices(left, _APPLY_CHANNEL_CHUNKS):
+                out6[sl] = torch.einsum("acbe,lbrLeR->larLcR", sop, rho6[sl])
+        else:
+            for sl in _chunk_slices(right, _APPLY_CHANNEL_CHUNKS):
+                out6[..., sl] = torch.einsum("acbe,lbrLeR->larLcR", sop, rho6[..., sl])
+        hermitianize_inplace_blocked(out)
+        self.rho = out
 
     def apply_channel_2site(self, kraus, site_i: int, site_j: int) -> None:
         """Apply a TWO-qudit CPTP channel on ``(site_i, site_j)``:
@@ -839,20 +932,28 @@ class _QuditDM:
         else:
             op = {0: "X"}  # trivial: read qudit 0
 
-        rho = self.rho
-        tr = torch.diagonal(rho).real.sum()
+        tr = torch.diagonal(self.rho).real.sum()
         if tr.real <= NUMERICAL_ZERO:
             return 0.0, 0.0
-        rho = rho / tr.to(self.dtype)
 
-        # rotate X-type logical support into the Z basis to read its parity
+        # rotate X-type logical support into the Z basis to read its parity.
+        # MEMORY-LEAN (2026-07-06): normalization moved onto the DIAGONAL VECTOR
+        # (diagonal(rho/tr) == diagonal(rho)/tr elementwise-exactly), and the working
+        # copy is made only when an X rotation is actually needed — the previous
+        # normalize-then-clone held 2 extra DM copies at n=9.
         x_sites = [s for s, p in op.items() if str(p).upper() == "X"]
-        saved = self.rho
-        self.rho = rho.clone()
-        for s in x_sites:
-            self.apply_gate(self._hadamard(), s)
-        diag = torch.diagonal(self.rho).real
-        self.rho = saved  # restore (read-only operation)
+        if x_sites:
+            # No working clone: apply_gate -> apply_channel is strictly OUT-OF-PLACE
+            # (fresh output tensor, input never mutated), so rotating "in place" on the
+            # alias leaves `saved` untouched — the previous clone was redundant and
+            # pushed the X-logical readout to 4 live DM copies (2026-07-06 review).
+            saved = self.rho
+            for s in x_sites:
+                self.apply_gate(self._hadamard(), s)
+            diag = torch.diagonal(self.rho).real / tr
+            self.rho = saved  # restore (read-only operation)
+        else:
+            diag = torch.diagonal(self.rho).real / tr
 
         idx = torch.arange(self.dim, device=self.device)
         parity = torch.zeros(self.dim, dtype=torch.long, device=self.device)
@@ -1105,8 +1206,22 @@ class _QuditDM:
     # Internal: operator-on-state-vector helpers (for codestate prep / projn) #
     # ----------------------------------------------------------------------- #
     def _apply_op_vector(self, psi: torch.Tensor, op: torch.Tensor, site: int) -> torch.Tensor:
-        full = embed_operator_q(op.to(self.dtype), site, self.n, self.q, device=self.device)
-        return full @ psi
+        """``psi -> op_site @ psi`` by contracting the ``(q, q)`` op on the site factor ONLY.
+
+        MEMORY-LEAN FORM (2026-07-06, residual-② fix): the previous dense
+        ``embed_operator_q`` materialized the full ``q^n x q^n`` operator (5.77 GiB at
+        ``3**9``, plus a second copy inside kron/permute) for every single-site vector op —
+        the source of the measured 17.35 GiB ``build_codestate`` peak. The local contraction
+        is mathematically identical (same identity as :func:`apply_local_op_q`, vector form)
+        and allocates only ``q^n``-vector temporaries. Falsifier:
+        ``tests/test_qutrit_dm_memlean.py::test_apply_op_vector_matches_dense_embed``.
+        """
+        site = int(site)
+        q = self.q
+        left, right = q ** site, q ** (self.n - 1 - site)
+        op = op.to(self.dtype).to(self.device).contiguous()
+        out = torch.einsum("ab,lbr->lar", op, psi.reshape(left, q, right))
+        return out.reshape(-1)
 
     def _single_qudit_pauli(self, kind: str) -> torch.Tensor:
         """``X`` or ``Z`` on the computational ``{0,1}`` subspace (identity on leaked levels)."""

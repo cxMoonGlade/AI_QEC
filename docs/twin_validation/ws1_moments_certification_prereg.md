@@ -58,8 +58,14 @@ formally retired.
 
 ### 1.3 The corrected GT surface (decision, user-confirmed)
 **Retire** the arbitrary-truncation sub-register full-joint as a GT. The certified GT surface for WS1 is:
-- **R=1:** full-register `DETECTOR_MARG` (single-stab projection, ~12.4 GB, feasible, GREEN) — the
-  well-specified marginal floor (the part the iid learner fits).
+- **R=1:** full-register `DETECTOR_MARG` (single-stab projection) — the well-specified marginal floor
+  (the part the iid learner fits). **AMENDED 2026-07-06 (residual-② measured accounting):** the
+  "~12.4 GB, feasible" figure here used the 2-copy estimate that residual-② falsified (true pre-fix
+  peak ≈ 5.2 copies ≈ 31 GB; post-memory-lean-fix ≈ 3.3 copies ≈ 20 GB). The capability now declares
+  4×copy ≈ 24.8 GB ⇒ on the 32 GB workstation at the default `safety=0.5` this cell is DM-INFEASIBLE
+  and needs the explicit opt-in (`certify_teacher(..., dm_safety=0.78)` / `DMOracleAnchor(safety=…)`)
+  or a larger card; the GREEN result recorded below predates the correction and stands as a
+  *statistical* fact about the values, not as a feasibility claim under the default budget.
 - **R≥2 (CORRECTED 2026-06-24 — the earlier "full-9q feasible via pruning" was WRONG):** the DM moments
   (`det_marg` + `rr_corr` + `spatial_corr`) are computed by `record_oracle`'s depth-`(n_stab·R)`
   enumeration whose **peak live memory is the depth-`(n_stab·R)` clone stack** (one DM clone per
