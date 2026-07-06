@@ -87,3 +87,35 @@ One committed script, content_hash + git head + versions printed; per-arm timing
 `torch.cuda.max_memory_allocated`; preconditions: CUDA present, no other GPU job (user-confirmed), r01 dataset paths
 resolve; results json `outputs/twin_validation/residual2_d3_conjunction_cost_result.json`; GATE name
 `RESIDUAL2_ENVELOPE_D3`. Estimated total GPU time: C1 ≈ minutes, C2 ≤ 45 min cap, C3 ≈ minutes.
+
+---
+
+## OUTCOMES (2026-07-06 run — GATE: FINDINGS; exit 0, no crash/OOM/timeout)
+Script content_hash `1a27513f…13012a`, git `8bfa21c`, log `outputs/twin_validation/logs/residual2_d3_conjunction_cost.log`,
+RTX 5090 31.8 GiB, torch 2.12.0+cu130. Registered-prediction scorecard:
+- **P-C1a MISS (fast direction ×5):** SV kernel **51,363 shots/min** at R=1 / 44,913 at R=4 (179,652 shot-rounds/min);
+  JIT warmup 40.4 s excluded as amended. "Usable generation" holds overwhelmingly.
+- **P-C1c MISS:** C1a VRAM peak **17.35 GiB** (both R cells; ≈ 3 × the 5.77 GiB DM copy) — the `sample()` host path
+  (codestate build) transiently materializes DM-scale temporaries although `build_codestate`'s docstring claims
+  "no DM ever materialized at full scale". Doc-vs-reality gap; flagged with the dm_oracle item below.
+- **P-C1b MISS (fast):** MPS **0.98 s/shot** at exact χ=243 (anchor said ~2 s/shot).
+- **P-C3a MISS, cause understood & registered in v2:** ratio **2.053** — the declared PROXY round is so cheap
+  (2.09 ms) that the 0.63 ms/round Kraus rebuild doubles it (the v2 amendment predicted the proxy is conservative
+  against the claim). The ABSOLUTE numbers carry the envelope conclusion: **P-C3b PASS (rebuild 0.63 ms < 10 ms)**,
+  **P-C3c PASS (liveness 4.76e-4 > 1e-12)**; rebuild is ~1e-3 relative to a real carrier round (SV batch-round
+  ~0.3 s; DM n=8 round 0.6 s) ⇒ **parameter-modulated coupling is free where it matters**. Caveat recorded: the
+  seeded RTN draw came out all-same-sign ([0.063]×3), so within-trajectory round-to-round variation was absent this
+  draw; the rebuild-per-round cost (the measured quantity) executed regardless.
+- **P-C2d PASS:** empirical peak/copy multiplier **k = 5.44 (n=7) / 5.05 (n=8)** — squarely in the registered [3, 6]
+  band and matching the review's ~5-live-copy allocation analysis.
+- **P-C2e / P-C2a:** full-9q attempt **SKIPPED by the staged gate** (projected k_max × 5.77 = **31.4 GiB > 24 GiB
+  budget**). ⇒ THE load-bearing finding: **full-9q DETECTOR_MARG R=1 is NOT feasible on a 32 GiB card at the true
+  multiplier; `dm_oracle.py`'s 2-copy capability estimate (≈11.5 GiB) undercounts by ~2.7×.** The sub-register DM
+  oracle is fast and cheap (n=8: 0.6 s, 3.24 GiB peak) — the certify DM-for-anchor / carrier-for-scale split already
+  accommodates this; the capability gate + (possibly) an in-place/chunked apply path need a src fix (flagged as a
+  separate task).
+
+**Envelope verdict after ②:** d3 generation usable at ~5×10⁴ shots/min (SV) / ~1 s/shot (MPS exact-χ); coupling
+parameterization free in absolute terms; the exact-DM oracle leg is **sub-register (n ≤ 8) today** — the
+due-diligence ② table is edited accordingly (full-9q exact-DM as stated there was based on the undercounting
+capability estimate).

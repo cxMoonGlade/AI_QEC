@@ -76,15 +76,19 @@ is classical). So the envelope is set entirely by the leakage carrier:
 
 | scale | leakage carrier | conjunction status |
 |---|---|---|
-| **d3** (9 data qutrits) | exact SV `3^9 = 19683` fits; exact qutrit-DM `3^9` (5.77 GiB) = the independent oracle | **USABLE, exact + oracle-bounded** |
-| **d5** (25 data qutrits) | SV `3^25 = 13.5 TB` DEAD; **MPS bond-truncated** (`mps_forward.py`, `max_bond=χ`, per-stabilizer projection) → thin/approximate, bounded on d3 tiles vs the qutrit-DM oracle | **USABLE (thin/approx, oracle-bounded on tiles)** |
+| **d3** (9 data qutrits) | exact SV `3^9 = 19683` fits (**measured 2026-07-06: 51,363 shots/min SV kernel; MPS exact-χ 0.98 s/shot**); exact qutrit-DM oracle = **SUB-REGISTER n ≤ 8** (n=8: 0.6 s, 3.24 GiB peak) — ~~full-9q DM (5.77 GiB)~~ **CORRECTED: full-9q DETECTOR_MARG needs ≈ k×5.77 GiB with measured k≈5.2 (apply-path temporaries) = 31.4 GiB > a 32 GiB card; the `dm_oracle` 2-copy estimate undercounted ~2.7×** (residual-② run, prereg OUTCOMES) | **USABLE, exact-carrier + oracle-bounded on sub-register tiles (the certify DM-for-anchor / carrier-for-scale split as designed)** |
+| **d5** (25 data qutrits) | SV `3^25 = 13.5 TB` DEAD; **MPS bond-truncated** (`mps_forward.py`, `max_bond=χ`, per-stabilizer projection) → thin/approximate, bounded on ≤8-qutrit tiles vs the qutrit-DM oracle | **USABLE (thin/approx, oracle-bounded on tiles)** |
 | **d7+** (full) | 1D-MPS bond → 2^{O(d)} wall; **PEPS / boundary-MPS** the known extension (Darmawan 2308.08186's method — ADOPTABLE, not built) | deferred (known path) |
 
-**② VERDICT: PASS with a scoped envelope.** The conjunction is **deliverable and USABLE at d3 (exact) and d5
-(MPS-truncated, oracle-bounded on tiles)** — exactly the range where decoders/thresholds are benchmarked. Full-d5+
-hits the leakage-qutrit wall — the **same wall every competitor hits** — and the extension is a *known* method
-(adopt Darmawan's PEPS/boundary-MPS). The classical couplings (non-Markov temporal + shared-latent) add **zero** scale
-cost, so keeping the *coupling* is free; only the *leakage level count* sets the wall.
+**② VERDICT: PASS with a scoped envelope (numbers now MEASURED — residual ② 2026-07-06,
+`residual2_d3_conjunction_cost_prereg.md` OUTCOMES).** The conjunction is **deliverable and USABLE at d3 (exact
+carrier, sub-register-exact oracle) and d5 (MPS-truncated, oracle-bounded on tiles)** — exactly the range where
+decoders/thresholds are benchmarked. Generation cost is a non-issue (5×10⁴ shots/min). Full-d5+ hits the
+leakage-qutrit wall — the **same wall every competitor hits** — and the extension is a *known* method (adopt
+Darmawan's PEPS/boundary-MPS). The classical couplings (non-Markov temporal + shared-latent) add **zero** scale cost
+(measured: 0.63 ms/round Kraus rebuild, ~1e-3 of a real carrier round), so keeping the *coupling* is free; only the
+*leakage level count* sets the wall. One oracle-leg correction stands: exact-DM comparisons run on sub-registers
+(n ≤ 8) — full-9q exact-DM record laws await a memory-lean apply path (src fix flagged).
 
 ## Overall verdict — CONDITIONAL GREEN
 - **① unowned (provisional, moderate confidence)** — the conjunction-as-a-usable-tool is plausibly open.
