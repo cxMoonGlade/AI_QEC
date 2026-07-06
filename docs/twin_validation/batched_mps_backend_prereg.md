@@ -131,6 +131,15 @@ NON-unitary 1-site forms (Kraus gather, projectors, terminal collapse) REQUIRE c
    b_for_bit` strict (824-833), consumed ONLY when `kbar == 2`; `_renormalize` skips scaling at
    `ns <= NUMERICAL_ZERO` (513-515). Batched implementations realize every guard as a PER-SHOT MASK
    (a degenerate shot must never poison or divide-by-zero the batch).
+   v5 FINDING (build review, 2026-07-06): the serial hard3 guard at 802-803 is NaN-SHADOWED DEAD
+   CODE in its only reachable regime — `_site_population` (527) is a quimb normalized read that
+   divides by trace unconditionally, so an exactly-zero-norm state gives NaN populations, `NaN <=
+   NUMERICAL_ZERO` is False, the loop falls through to `kbar=2`, and the sub-draw's NaN-guard
+   branches emit `bit=(0.5 < b)`. The BATCHED normative semantics = the WRITTEN guard (`tot <=
+   NUMERICAL_ZERO => kbar=0`, per-shot mask, no NaN) — a DECLARED intentional divergence on the
+   degenerate regime (class (c) guard); serial-comparison gates fence that regime out and a
+   batched-only gate leg covers it; the serial fix is chip task_9f0687fe (serial arm untouched
+   in this phase per contract).
    ARM-C COMPOSITION (v2, normative = serial lines 617-630): per support site SEQUENTIALLY in support
    order — read `p2` = the NORMALIZED 1-site population of the CURRENT (already partially projected)
    state (serial `_site_population`, line 527, `normalized=True`; it coincides with the unnormalized
@@ -202,7 +211,13 @@ never a "truncation-free" property.
   sqrt(E_s) window op whose post-gate rank exceeds a truncating cap): the WINDOW-CONTAINING leg
   (Born-stab composition) runs at the EXACT grade only; the truncation-free 1-site compositions
   (kraus_sample_, hard2/hard3 terminal incl. the registry guards, arm-C leak-flag) run at BOTH
-  grades. KNIFE-EDGE GUARD (v2): the harness asserts every drawn comparison has margin
+  grades. v5 branch-coverage wording: the leak Kraus are Choi-eigh ASCENDING (channels.py
+  _super_to_kraus), so the no-jump branch is the LAST index; targeted legs select branches by pk
+  MAGNITUDE (argmax = no-jump, plus the second-largest, hittability-asserted as a precondition),
+  never by literal index; the serial `fallback K-1` clamp is a defensive fp guard unreachable by
+  mid-range `u` — verified by construction (min over an empty hit set), deliberately not exercised
+  with real draws. The hard3 degenerate (zero-norm) leg is BATCHED-ONLY per the v5 registry
+  finding (serial referee NaN-shadowed there). KNIFE-EDGE GUARD (v2): the harness asserts every drawn comparison has margin
   `|u*tot - cumsum_k| > 1e-9` — generalized (v3) to `|u - p| > 1e-9` for the direct-threshold draws
   (`u < p0`, `u < p1`, `u < p2`, `u2 < b_for_bit`; a one-term cumsum) — and re-draws `u` on
   violation (the two arms compute probabilities via different reduction orders, agreeing to
@@ -225,8 +240,16 @@ never a "truncation-free" property.
   `sqrt(lambda)` of the Gram spectrum (v3; a lambda-ratio reading would square the declared
   validity domain). Harness also asserts Gram-path eigh quality per call:
   `||U^H U - I||_max <= 1e-12` and the eigh residual (torch batched-eigh routing is
-  version-dependent; OPT2-0 measured throughput only). A miss on any criterion is a FINDING to
-  adjudicate, never a silent tolerance bump.
+  version-dependent; OPT2-0 measured throughput only). v5: the eigh-quality witness is a
+  harness-level re-derivation at the module's ACTUAL shapes and batching (a batched
+  `[B, m, m]` eigh on the same device/dtype — batched and single eigensolves dispatch through
+  DIFFERENT cuSOLVER kernels, so an unbatched re-derivation cannot witness the module's path;
+  internal factors are not exposed). v5 conditioning-fence scope: the sigma-units fence is
+  asserted in EVERY harness whose run Gram-routes a split (the trunc-grade state builders and
+  the G-OP-5 chi_lo arm, restricted to the structural rank of the constructed state), not only
+  G-OP-3 — an unlucky-seed conditioning drift must fail as a clean PRECONDITION, never as an
+  unattributed gate miss. A miss on any criterion is a FINDING to adjudicate, never a silent
+  tolerance bump.
 - **G-OP-4 (batch independence, <=1e-12):** B heterogeneous states through every batched op ==
   each state alone at B=1; compared at the DENSE-RECONSTRUCTION level (site tensors are
   gauge/dispatch-dependent, the state is not) — no cross-shot leakage (THE batch-correctness gate).
@@ -248,6 +271,12 @@ never a "truncation-free" property.
 ### D-5 Declared bounds / scope fences  [v2]
 - Window-blob memory `B * chi_l * 3^w_win * chi_r * 16` bytes: trivial at d3 gates; at d5 production
   the op chunks over B if needed (OPT2-3 concern — declared, not silently deferred).
+- v5 (build review): the identity-extended DENSE window operator is a SECOND memory term
+  `(3^spread)^2 * 16` bytes with `spread = max(sites)-min(sites)+1` — B-independent, so B-chunking
+  cannot bound it, and the serial referee has no analog (quimb nonlocal works on support legs).
+  Fenced in-module at `spread <= 8` (ValueError past it); a support-leg / diagonal-fast-path
+  `local_expectation` for the parity-read hot path on gapped snake supports is REGISTERED OPT2-2
+  territory (the window APPLY's diagonal forms already avoid the dense term).
 - LAMBDA-UNITS REGISTRY (red-team A-11; Gram eigenvalues are sigma^2 — NUMERICAL_ZERO=1e-12 in
   lambda units means sigma~1e-6, six orders above the gates): (i) the eigenvalue clamp is
   `max(lambda, 0)` — NEGATIVES-ONLY, no positive floor; (ii) padding/rank decisions are STRUCTURAL
