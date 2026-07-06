@@ -92,17 +92,22 @@ tie-or-lose bet unaffected); this doc owns the scaling line.
 (the serial arm stays UNTOUCHED; quimb appears only in the equivalence TESTS as the reference arm).
 Torch/cuda/complex128 only. Tests: `tests/test_batched_mps_ops.py` (`requires_cuda` skip convention).
 
-### D-1 Representation (fixed shapes — the batch-shots invariant)
+### D-1 Representation (fixed shapes — the batch-shots invariant)  [v2 2026-07-06 post red-team]
 `BatchedMps`: `n` site tensors, site `k` = `[B, cap_{k-1}, 3, cap_k]` (boundary caps = 1), where
 `cap_k = min(3^(k+1), 3^(n-k-1), chi)` for internal cut `k = 0..n-2`. Tensors are ZERO-PADDED to cap
-shapes at all times (padded bond channels carry exactly 0 amplitude — the represented state is
-unchanged; class (a) identity). Structural fact (assert in code): `cap_k <= 3*cap_{k-1}` and
-`cap_{k-1} <= 3*cap_k` always, so reduced batched QR at cap shapes returns exactly cap-shaped factors
-— shapes NEVER change during a run (uniform kernels, the Doi batch-shots pattern).
-An explicit orthogonality-`center` invariant is tracked: sites `< center` left-isometric, `> center`
-right-isometric (up to zero padding); local reads (RDM/expectations) are valid only at/around the
-center — every read canonicalizes first (batched QR sweeps; right sweep via QR of the
-conjugate-transposed matrix).
+shapes at all times. PADDING/ISOMETRY CONVENTION (pinned; red-team A-1): the invariant is precisely
+(i) the CENTER tensor and every absorbed R/M factor carry exact-zero padded channels (this is what
+keeps the represented state unchanged — class (a) identity), (ii) isometry factors are isometric ON
+THE UNPADDED SUBSPACE (reduced QR of a rank-deficient padded matrix returns arbitrary orthonormal
+completions in padded columns — they multiply zero rows of R, harmless), (iii) factor columns
+produced by the Gram path beyond the computed rank are EXPLICITLY ZEROED (partial isometry). Code
+asserts target (i)+(iii), never literal full isometry. Structural fact (assert in code):
+`cap_k <= 3*cap_{k-1}` and `cap_{k-1} <= 3*cap_k` always, so reduced batched QR at cap shapes
+returns cap-shaped factors — shapes NEVER change during a run (uniform kernels, Doi batch-shots).
+An explicit orthogonality-`center` invariant is tracked; EVERY op declares its center pre/post
+condition (the D-2 center table) — reads AND the window op canonicalize first; the per-shot
+NON-unitary 1-site forms (Kraus gather, projectors, terminal collapse) REQUIRE center == site
+(enforced by canonicalizing, not by trusting the caller).
 
 ### D-2 Op set + exact semantics (each op names its serial referee)
 1. `bond_caps(n, chi)`; `from_dense(psi[B,3^n])` (exact sequential split; ASSERTS rank <= caps —
@@ -116,55 +121,116 @@ conjugate-transposed matrix).
 5. `kraus_sample_(kraus[K,3,3], site, u[B]) -> (sel[B], pk[B,K])` — `pk = Tr[K^H K rho]` from the RDM;
    selection = the serial cumulative rule EXACTLY: first `k` with `u*tot <= cumsum_k`, fallback `K-1`;
    gather selected Kraus per shot; apply; renormalize by `pk[b,sel]`. Referee: `_leak_sample`
-   (bit-level match on a shared `u`). NOTE the tie-break asymmetry across serial ops: `_leak_sample`
-   uses `<=`, the Born/hard2/leak-flag samples use strict `<` — compositions in tests/driver must
-   reproduce each op's own convention (registered here so it is never "harmonized" silently).
+   (bit-level match on a shared `u`).
+   TIE-BREAK/GUARD REGISTRY (v2, complete — never "harmonized" silently; serial lines cited):
+   `_leak_sample` cumulative `<=` (line 583); Born-stab strict `u < p0` (634); arm-C leak-flag strict
+   `u < p2` (622); hard2 strict `u < p1` (781) with `wt <= NUMERICAL_ZERO => p1 = 0.5` (780); hard3
+   cumulative STRICT `target < cum` with fallback `kbar=2` (805-812) and `tot <= NUMERICAL_ZERO =>
+   kbar=0` (802-803); hard3 `|2>`->bit sub-draw: `gen.random()` if gen else the deterministic residual
+   split `u2 = clamp((u - (p0+p1)/tot)/max(p2/tot, NUMERICAL_ZERO), 0, 1)`, `bit = 1 iff u2 <
+   b_for_bit` strict (824-833), consumed ONLY when `kbar == 2`; `_renormalize` skips scaling at
+   `ns <= NUMERICAL_ZERO` (513-515). Batched implementations realize every guard as a PER-SHOT MASK
+   (a degenerate shot must never poison or divide-by-zero the batch).
+   ARM-C COMPOSITION (v2, normative = serial lines 617-630): per support site SEQUENTIALLY in support
+   order — read `p2` of the CURRENT (already partially projected) state, flag strict `u < p2`,
+   project `diag(0,0,1)`/`diag(1,1,0)`, renormalize per site — one uniform per site, later sites
+   conditioned on earlier projections, all BEFORE the parity read (which is normalized).
 6. `local_expectation(G[3^w,3^w], sites, normalized=True) -> [B]` — `w <= 4`; NON-CONTIGUOUS support
    handled by IDENTITY-EXTENDED window (G interleaved with `I` on gap sites — exact, class (a));
-   window blob `[B, chi_l, 3^w_win, chi_r]` sandwich. Referee: `_parity_expectation`/`_site_population`.
+   window blob `[B, chi_l, 3^w_win, chi_r]` sandwich. LEG ORDER (v2): G's legs correspond to `sites`
+   IN THE GIVEN ORDER (the serial/quimb `where` convention); the implementation permutes them
+   internally to ascending window order before identity-extension. Referee:
+   `_parity_expectation`/`_site_population`.
 7. `apply_window_recompress_(G, sites, diagonal: bool) -> (discarded[B], branch_weight[B])` — merge
    the (identity-extended) window into a blob, apply G (diagonal fast path: elementwise scale of the
-   3^w axis; else matmul), re-split LEFT->RIGHT via **Gram + batched-eigh** (hermitize `A A^H`; eigh
-   ascending; keep the TOP `cap` eigenpairs; zero-pad `U` columns if rank < cap; `M <- U^H A`),
-   renormalize to unit norm, return per-shot discarded weight + the pre-renormalization norm^2
-   (the branch weight callers need). Referee: `_apply_sqrt_Es` / codestate `_project`.
+   3^w axis, guarded by an assert that G's off-diagonal mass is EXACTLY 0 — structural, not floored;
+   else matmul), re-split LEFT->RIGHT with the v2 SPLIT ROUTING RULE:
+   * per split, cap arithmetic decides (class (a), batch-uniform): if `cap_j >= min(m, n_cols)` for
+     the split matrix `A[B, m, n_cols]` (no truncation is structurally possible — at EXACT grade this
+     holds at EVERY split since `min(m, n_cols) = min(3^(j+1), 3^(n-j-1)) = cap_j`), route **batched
+     reduced QR** (backward-stable, no conditioning exposure; discard set structurally EMPTY);
+   * else route **Gram + batched-eigh** (hermitize `A A^H`; eigh ascending; keep TOP `cap_j`
+     eigenpairs; clamp `max(lambda, 0)` — NEGATIVES-ONLY, no positive floor; zero-pad `U` columns
+     beyond the structural rank bound — decided by CAP ARITHMETIC, never a numerical-rank threshold
+     on computed lambdas; `M <- U^H A`).
+   Renormalize to unit norm internally. `branch_weight` (v2 pinned) = the POST-truncation,
+   PRE-renormalization norm^2 (== the serial `nt`, lines 692-694; == `Tr[E_s rho] * <psi|psi>` only
+   at exact grade). CENTER TABLE (v2): precondition center canonicalized to the window's leftmost
+   site (the op does this itself); postcondition center = the window's RIGHTMOST site. Unitary 1-site
+   apply: center unchanged, valid anywhere. Non-unitary 1-site apply / RDM / kraus_sample_ /
+   expectations: the op canonicalizes to the site first; center = that site afterwards.
+   Referee: `_apply_sqrt_Es` / codestate `_project`.
 
-### D-3 Discarded-weight book (declared)
-Batched book per op = `1 - prod_j (1 - dropped_mass_fraction at split j)` over the `w-1` splits (each
-split's dropped fraction = discarded-eigenvalue mass / total — the Schmidt identity, class (a) per
-cut). The serial book measures the SAME quantity as an end-to-end norm gap vs a full-chi reference
-apply. The two books coincide when <= 1 split truncates (in particular BOTH are structurally 0 at
-exact grade); with multiple truncating splits they are order-dependent per-cut books of the same
-class-(a) family — the equivalence gates compare them only in the zero-truncation regime, and the
-truncating-case gate (G-OP-3) compares physics (fidelity/overlap), not book internals.
+### D-3 Discarded-weight book (declared)  [v2]
+QR-routed splits (cap arithmetic proves no truncation possible) contribute the LITERAL 0.0 —
+structural, DEFINED, never a numerical test on computed lambdas (the batched analog of the serial
+`chi >= exact_chi` fast path, lines 679-686; resolves the red-team G-OP-6 blocker: computed
+zero-eigenvalues are O(n*eps) floats, a measured book would report ~1e-13, the STRUCTURAL book
+reports 0.0). Gram-routed splits contribute their dropped-eigenvalue mass fraction (the Schmidt
+identity, class (a) per cut); batched book per op = `1 - prod_j (1 - dropped_j)`. The serial book
+measures the same quantity as an end-to-end norm gap vs a full-chi reference apply. The two books
+coincide (class (a)) when EXACTLY <= 1 split truncates — G-OP-3 is registered ONLY in that regime;
+multi-split truncation equivalence is explicitly OPT2-2/3 STATISTICAL territory, never a book
+comparison.
 
-### D-4 Registered gates (the test suite = the gate; predict-before-measure: ALL pass; a miss = finding)
-- **G-OP-1 (exact, <=1e-12):** every op, DENSE-reconstruction elementwise match vs the serial quimb
-  op, at BOTH chi grades, on random states whose Schmidt rank <= chi (so truncation is structurally
-  zero and the op is a deterministic linear map — no gauge/phase freedom is expected; ANY phase
-  discrepancy is a bug, not gauge, and fails the gate).
+### D-4 Registered gates (the test suite = the gate; predict-before-measure: ALL pass; a miss = finding)  [v2]
+- **G-OP-1 (exact, ABSOLUTE elementwise <=1e-12 on unit-norm states):** every op,
+  DENSE-reconstruction match vs the serial quimb op, on random states whose Schmidt rank <= chi at
+  every cut (no gauge/phase freedom expected; ANY phase discrepancy is a bug and fails the gate).
+  v2 scope fences: (a) the WINDOW op's G-OP-1 leg runs at the EXACT grade only (post-gate rank can
+  exceed a truncating cap by the operator Schmidt rank of G — both arms would truncate by different
+  algorithms; truncating-grade window coverage is G-OP-3's, and this routing is REGISTERED); all
+  other ops run at BOTH grades. (b) One case uses a permutation-ASYMMETRIC G on a NON-MONOTONIC
+  `sites` tuple (every production operator is permutation-symmetric — a leg-order bug is otherwise
+  invisible). (c) One case invokes the window op and kraus_sample_ with the center deliberately FAR
+  from the target (certifies the canonicalize-first contract, not just fresh canonical states).
 - **G-OP-2 (sampling, exact):** shared `u` stream => IDENTICAL selected branches/bits AND <=1e-12
   post-state match (both grades; covers kraus_sample_, Born-stab composition, hard2/hard3 terminal
-  composition, arm-C leak-flag composition).
-- **G-OP-3 (truncating consistency, class (c) threshold):** a genuinely truncating window apply on a
-  random state with a REGISTERED retained/discarded spectral gap (>=1e-3): arms agree on discarded
-  weight to |Δeps| <= 1e-10 and on the post-state overlap `1 - |<psi_q|psi_b>|^2 <= 1e-10`. Rationale
-  (class (a) backdrop): the truncated state depends on the retained SUBSPACE, not on individual
-  eigenvector rotations, so agreement is governed by the gap, not by Gram's kappa^2. A miss here is a
-  FINDING to adjudicate (sequential-split order difference), never a silent tolerance bump.
+  composition incl. the registry guards, arm-C leak-flag composition). KNIFE-EDGE GUARD (v2): the
+  harness asserts every drawn comparison has margin `|u*tot - cumsum_k| > 1e-9` and re-draws `u`
+  on violation (the two arms compute probabilities via different reduction orders, agreeing to
+  ~1e-15..1e-13; a within-margin flip is a REGISTERED non-failure, adjudicated — mirrors OPT2-2's
+  "bit-identity DIAGNOSTIC ONLY", never a silent tolerance bump; padded-vs-tight / batch-size
+  kernel-selection nondeterminism is absorbed by this margin).
+- **G-OP-3 (truncating consistency, class (c) thresholds):** a truncating window apply engineered to
+  truncate at EXACTLY ONE declared split (zero truncation at all other cuts — the regime where D-3's
+  two books are class-(a) identical), with the REGISTERED spectral gap defined as the ABSOLUTE
+  difference between the smallest retained and largest discarded eigenvalue of the NORMALIZED
+  (unit-trace) Gram spectrum at that split, gap >= 1e-3, AND a retained-spectrum conditioning fence
+  `sigma_min(retained)/sigma_max >= 1e-3` asserted in the harness (the declared validity domain of
+  the Gram path; Gram eigenvector error scales ~ eps*lambda_max/gap — the retained SUBSPACE, hence
+  the truncated state, is gap-governed, not kappa^2-governed). Criteria: |Δeps| <= 1e-10 (valid at
+  the d3 test dims; dim-dependence declared) and post-state overlap deficit
+  `1 - |<psi_q|psi_b>|^2 <= 1e-10`. Plus one FLAT-SPECTRUM case with the degenerate block ENTIRELY
+  retained (degeneracy straddling the cap is ill-posed for any algorithm — excluded by
+  construction and declared). Harness also asserts Gram-path eigh quality per call:
+  `||U^H U - I||_max <= 1e-12` and the eigh residual (torch batched-eigh routing is
+  version-dependent; OPT2-0 measured throughput only). A miss on any criterion is a FINDING to
+  adjudicate, never a silent tolerance bump.
 - **G-OP-4 (batch independence, <=1e-12):** B heterogeneous states through every batched op ==
-  each state alone at B=1 (no cross-shot leakage — THE batch-correctness gate).
-- **G-OP-5 (padding invariance, <=1e-12):** zero-padded caps vs tight bonds: identical dense state +
-  identical sampled outcomes.
-- **G-OP-6 (ledger):** exact grade => discarded == 0 exactly (structural).
+  each state alone at B=1; compared at the DENSE-RECONSTRUCTION level (site tensors are
+  gauge/dispatch-dependent, the state is not) — no cross-shot leakage (THE batch-correctness gate).
+- **G-OP-5 (padding invariance, <=1e-12):** exact-grade caps vs a LARGER chi (different padding):
+  identical dense state + identical sampled outcomes (knife-edge guard applies).
+- **G-OP-6 (ledger, structural):** exact grade => discarded == 0.0 LITERALLY (the D-3 v2 structural
+  book: every split QR-routed, discard set empty by cap arithmetic — `==`, not approx).
 - **G-OP-7 (micro-sequence):** on a small chain, the composed sequence gate -> leak-Kraus ->
   stabilizer-measure (H, parity read, sqrt(E_s), H back) -> terminal readout, driven by ONE shared
-  u-stream, matches the serial arm bit-for-bit + <=1e-12 in state. (The FULL d3 trajectory /
-  statistical gates are OPT2-2, not here.)
+  u-stream, matches the serial arm bit-for-bit (knife-edge guard applies) + <=1e-12 in state.
+  (The FULL d3 trajectory / statistical gates are OPT2-2, not here.)
 
-### D-5 Declared bounds / scope fences
+### D-5 Declared bounds / scope fences  [v2]
 - Window-blob memory `B * chi_l * 3^w_win * chi_r * 16` bytes: trivial at d3 gates; at d5 production
   the op chunks over B if needed (OPT2-3 concern — declared, not silently deferred).
-- Gram kappa^2: retained-subspace argument above; the NUMERICAL_ZERO floor applies to eigenvalue
-  clamps (`max(lambda, 0)`), never to structural zeros.
+- LAMBDA-UNITS REGISTRY (red-team A-11; Gram eigenvalues are sigma^2 — NUMERICAL_ZERO=1e-12 in
+  lambda units means sigma~1e-6, six orders above the gates): (i) the eigenvalue clamp is
+  `max(lambda, 0)` — NEGATIVES-ONLY, no positive floor; (ii) padding/rank decisions are STRUCTURAL
+  cap arithmetic, never a numerical-rank threshold on computed lambdas (a threshold rank would also
+  be batch-heterogeneous, breaking D-1 fixed shapes and G-OP-4); (iii) `from_dense`'s rank assert is
+  a class-(c) CONSTRUCTOR GUARD with its threshold declared in lambda units: dropped-mass fraction
+  <= 1e-12 per split (sensitivity sigma ~ 1e-6, documented in the docstring; gate test states carry
+  O(1) Schmidt values, far from the boundary).
+- Gram-path validity domain: retained-spectrum conditioning `sigma_min(retained)/sigma_max >= 1e-3`
+  (declared; asserted in gate harnesses; production op streams that leave it are OPT2-2's
+  statistical-gate territory).
 - No c64 arm, no rank-adaptive shapes, no driver/RunSpec seam in this phase (OPT2-2).
