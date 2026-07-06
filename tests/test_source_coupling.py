@@ -50,6 +50,10 @@ def test_source_to_params_shared_draw_fans_out_to_all_declared_hooks():
         "readout",
         "reset",
         "cz",
+        # P2-i (2026-07-06): the Theta->leakage hooks (inert at the default
+        # config; gates in tests/test_p2_theta_leakage.py).
+        "wg_theta",
+        "wg_seep",
     }
     assert len(set(dict(p1.source_draws_radns).values())) == 1
     assert p0.zz_phi_rad == pytest.approx(cfg.zz.base_phi_rad, rel=1e-12)

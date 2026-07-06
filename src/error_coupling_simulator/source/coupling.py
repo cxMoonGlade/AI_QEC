@@ -27,6 +27,13 @@ _SOURCE_KEYS = (
     "readout",
     "reset",
     "cz",
+    # P2-i (2026-07-06): the Theta->leakage seam. Literature-grounded FORM (a TLS defect's
+    # slow 1/f modulation of the affected qubit's error rates — Gao 2605.23385: S(w) ~ 1/f^1.05
+    # over ten decades, T1 jumps + low-frequency dephasing; the reading note's "teacher recipe"
+    # models the TLS footprint exactly as a slow latent modulating rates). The AMPLITUDES stay
+    # class (c) swept brackets — no published TLS->(theta, g_seep) transfer function is claimed.
+    "wg_theta",
+    "wg_seep",
 )
 
 
@@ -108,6 +115,16 @@ class SourceCouplingConfig:
     reset_flip_sensitivity: float = 0.35
     cz_depol_base_p: float = 2.0e-3
     cz_depol_sensitivity: float = 0.30
+    # P2-i Theta->leakage fields (Wood-Gambetta coherent |1><->|2| angle + seep jump rate).
+    # DEFAULTS ARE FULLY INERT (base 0 AND sensitivity 0 => the fan-out emits 0 and no
+    # existing consumer's behavior changes); the P2-iv teacher passes its physical cell
+    # (e.g. theta = calibrate_theta_for_wg_l1(5e-3), g_seep = 0.09 per McEwen 2102.06131)
+    # explicitly. Both use the positive-rate exp map (theta > 0 is an angle magnitude; the
+    # WG L1 ~ sin^2(theta)/2 rate then inherits ~2x the relative modulation). Class (c).
+    wg_theta_base_rad: float = 0.0
+    wg_theta_sensitivity: float = 0.0
+    wg_g_seep_base: float = 0.0
+    wg_g_seep_sensitivity: float = 0.0
     schema: str = "qec_twin.mechanisms.SourceCouplingConfig.v1"
 
     def __post_init__(self) -> None:
@@ -129,8 +146,12 @@ class SourceCouplingConfig:
             "readout_flip_sensitivity",
             "reset_flip_sensitivity",
             "cz_depol_sensitivity",
+            "wg_theta_sensitivity",
+            "wg_g_seep_sensitivity",
         ):
             _require_finite(name, getattr(self, name))
+        _require_nonnegative("wg_theta_base_rad", self.wg_theta_base_rad)
+        _require_nonnegative("wg_g_seep_base", self.wg_g_seep_base)
 
     def to_manifest(self) -> dict:
         return {
@@ -155,6 +176,10 @@ class SourceCouplingConfig:
             "reset_flip_sensitivity": float(self.reset_flip_sensitivity),
             "cz_depol_base_p": float(self.cz_depol_base_p),
             "cz_depol_sensitivity": float(self.cz_depol_sensitivity),
+            "wg_theta_base_rad": float(self.wg_theta_base_rad),
+            "wg_theta_sensitivity": float(self.wg_theta_sensitivity),
+            "wg_g_seep_base": float(self.wg_g_seep_base),
+            "wg_g_seep_sensitivity": float(self.wg_g_seep_sensitivity),
         }
 
 
@@ -175,6 +200,10 @@ class CoupledMechanismParams:
     readout_flip_p: float
     reset_flip_p: float
     cz_depol_p: float
+    # P2-i Theta->leakage outputs (0.0 = the inert default; defaults keep every
+    # pre-P2 direct constructor valid).
+    wg_theta_rad: float = 0.0
+    wg_g_seep: float = 0.0
     coupling_mode: Literal["shared", "independent"] = "shared"
     schema: str = "qec_twin.mechanisms.CoupledMechanismParams.v1"
 
@@ -201,6 +230,8 @@ class CoupledMechanismParams:
             "readout_flip_p": float(self.readout_flip_p),
             "reset_flip_p": float(self.reset_flip_p),
             "cz_depol_p": float(self.cz_depol_p),
+            "wg_theta_rad": float(self.wg_theta_rad),
+            "wg_g_seep": float(self.wg_g_seep),
         }
 
 
@@ -376,6 +407,34 @@ def _drift_to_T2(
     return drift_to_t2(z_t_radns, config)
 
 
+def leakage_from_drift(
+    theta_z_radns: float,
+    seep_z_radns: float,
+    config: SourceCouplingConfig | None = None,
+) -> tuple[float, float]:
+    """Map source drift draws to the per-cycle WG leakage cell ``(theta_rad, g_seep)``.
+
+    P2-i (prereg ``p2_conjunction_wiring_prereg.md``). FORM grounded in the TLS
+    literature (Gao 2605.23385: a defect's 1/f^1.05 spectrum slowly modulates the
+    affected qubit's error rates — the reading note's teacher recipe), spelled as
+    the same positive-rate exp map the gamma_phi fan-out uses; AMPLITUDES are
+    class-(c) swept brackets (no published TLS->(theta, g_seep) transfer function
+    is claimed). Inert at the default config (base 0, sensitivity 0 -> (0, 0));
+    ``Theta(0)`` returns the configured bases exactly (the off-source identity).
+    """
+
+    cfg = config or default_source_coupling_config()
+    x_theta = _require_finite("theta_z_radns", theta_z_radns) / float(cfg.z_scale_radns)
+    x_seep = _require_finite("seep_z_radns", seep_z_radns) / float(cfg.z_scale_radns)
+    theta = _modulate_positive_rate(
+        cfg.wg_theta_base_rad, x_theta, cfg.wg_theta_sensitivity, name="wg_theta_rad"
+    )
+    g_seep = _modulate_positive_rate(
+        cfg.wg_g_seep_base, x_seep, cfg.wg_g_seep_sensitivity, name="wg_g_seep"
+    )
+    return theta, g_seep
+
+
 def _params_from_draws(
     draws_radns: dict[str, float],
     cfg: SourceCouplingConfig,
@@ -386,6 +445,7 @@ def _params_from_draws(
     x = {key: draws[key] / float(cfg.z_scale_radns) for key in _SOURCE_KEYS}
     zz_phi, zz_zeta = zz_phi_from_frequency_drift(draws["zz"], cfg)
     gamma_phi, tphi_ns = drift_to_t2(draws["gamma_phi"], cfg)
+    wg_theta, wg_g_seep = leakage_from_drift(draws["wg_theta"], draws["wg_seep"], cfg)
     drive_omega = _modulate_positive_rate(
         cfg.drive_omega_base_radns,
         x["drive"],
@@ -426,6 +486,8 @@ def _params_from_draws(
             cfg.cz_depol_sensitivity,
             name="cz_depol_p",
         ),
+        wg_theta_rad=wg_theta,
+        wg_g_seep=wg_g_seep,
         coupling_mode=coupling_mode,
     )
 
@@ -504,6 +566,7 @@ __all__ = [
     "drift_to_t2",
     "exchange_j_from_phi",
     "independent_baseline_trajectory_to_params",
+    "leakage_from_drift",
     "parameter_series",
     "source_to_params",
     "static_zz_zeta",
