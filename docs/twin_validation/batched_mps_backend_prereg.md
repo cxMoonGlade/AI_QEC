@@ -63,6 +63,24 @@ P-OPT2, now literature-grounded on the six in-repo notes: `patti_ptsbe_2504.1629
   is NOT sufficient (shared quimb-lineage blind spots); the DM record_oracle sub-register seam + stim/closed-form
   anchors + CorruptStab/Shuffle controls are non-optional (FAITHFULNESS_PROTOCOL; the Gate-4 lesson).
 
+## OPT2-0 OUTCOMES (2026-07-06 run — `opt2_0_decomposition_spike.py` hash 0179decb…, RTX 5090, torch 2.12/cu130)
+- **S-1 CONFIRMED:** `torch.linalg.svd` is batch-LOOPED at every relevant size/driver (gain ~1.0×; per-item
+  gesvd 51 ms / default 232 ms at n=243) ⇒ SVD stays out of the hot path entirely.
+- **S-3 = THE LEVER:** batched `eigh` is genuinely batch-parallel — **18.7× gain at n=192 (0.32 ms/item),
+  13.1× at n=243 (0.54 ms/item), 4.0–5.8× at 512–729 (2.9–7.4 ms/item)** ⇒ **Gram + batched-eigh replaces SVD**
+  for recompression at BOTH d3 and d5. Gram's κ² cost is benign for truncation (the tail we discard is what
+  underflows; discarded-weight ledger tail below ~1e-14 in σ declared at the NUMERICAL_ZERO floor).
+- **S-2 partial:** batched QR gains only 1.5–1.8× (n≤243), but its ABSOLUTE cost (2.8–4.4 ms/item) is 12–18×
+  under gesvd — the d3 exact-grade fallback stands, Gram+eigh preferred everywhere.
+- **S-4:** no driver hard-errors on stabilizer-flat spectra on this stack (the old cusolver failure did not
+  reproduce); gesvd is 15–30× faster than default/gesvdj on flat spectra — reconfirmed for any residual SVD use.
+- **S-5:** batched c128 GEMM at **1.54–1.72 TFLOP/s ≈ the FP64 ceiling** — the trivially-batched ~60–80 ops/round
+  will run at speed-of-light.
+- **ANCHORED BANDS (replace the §2 pre-spike estimates):** d3 batched ≈ **10–100× serial** (the pre-spike
+  100–300× optimistic end is retired: eigh/QR per-item is ms-scale, not µs; recompression ≈ 8×(Gram GEMM +
+  0.5 ms eigh)/round dominates); d5 ≈ **100–300× serial** (2.9–7.4 ms/item eigh vs the catastrophic 104 s/shot
+  serial baseline — the win is largest exactly at the scale that needs it). OPT2-2/3 gates use these bands.
+
 ## 3. Disciplines
 Every phase src needs user commit confirmation; committed scripts + runners (aiqec bin on PATH); GPU serial;
 un-led review before every gate run; CODE_MAP regen per src change. TJM prereg stays on file (its registered
