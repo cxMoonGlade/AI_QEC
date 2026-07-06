@@ -24,6 +24,27 @@ each `→P1:` item is the remaining work to move the row to *bounded*.
 | 14 | `records_to_dem` reduction (P0, NEW) | planted-parameter record law (exact odd-parity residual discriminated from 1st-order, gap 1.44e-2 ≫ 4e-3 tol) | planted recovery ≤4e-3; pymatching roundtrip >0.999 | 8-detector d3 fixtures | partially — →P1: bound the **declared L0 rule** + the **clustered-SE deviation** vs the exact record law (both declared, neither bounded yet) |
 | 15 | `CoupledCycleTeacher` end-to-end {det,obs} | composite: joint-L (row 2) + C-10 closed-form rates + off-source identity atol 1e-14 | z1 rate closed form; x0 γφ-response band; emit byte-reproducible | d3_repz/5q (5q dense) R~12 | partially — →P1: single end-to-end record-law bound vs an independent enumeration at small R |
 
+## P1 execution plan (session 2026-07-06/07 — registered before the runs)
+- **P1-c (rows 3+15 flagship): full-9q R=1 record bound, wc-kernel vs exact DM.** The memory-lean oracle
+  (`e8cee30`) demonstrated full-9q DETECTOR_MARG at 18.9 GiB/11 s — certify the SV within-cycle kernel's sampled
+  record against it: per-detector marginal z ≤ 4 at N=1e6 (b), TVD reported; the LOGICAL entry is REPORT-ONLY
+  (declared semantic mismatch: DM `logical_distribution` splits leaked mass evenly vs the kernel's biased-b terminal
+  POVM — class (c) caveat, proper terminal-POVM DM leg is a follow-up). MODEL MATCHING is load-bearing: the kernel
+  arm is `sv_traj_d3_wc` (within-cycle; driven per `p4a_verify_wc_gate4_ladder.py::kernel_hist`), NEVER the lumped
+  `sample()` path, because the DM probe runs the within-cycle model. Existing Gate-4 verdict (TV(SV-MC, DM) at
+  R∈{2,3}, 4 arms, 1/√N + positive controls, `p4a_verify_wc_gate4_ladder.py`) is CITED for the multi-round leg —
+  reused anchors get their verdict read, not re-run.
+- **P1-a (row 14, the P0 debts):** bound the declared L0 rule (exact P(obs=1 | single-detector fault class) from the
+  dense record law — the d3_repz exact tables) + the clustered-SE design effect (exact between-trajectory variance
+  from sampled per-trajectory exact laws) → numbers into the `records_to_dem` diagnostics defaults.
+- **P1-b (rows 7/8/10):** quantitative PSD/autocov closed-form tolerance tests for RTN / OneOverF / TemporalStormSPP
+  (CPU unit tests vs the declared Lorentzian(-sum) / 2-state-Markov forms).
+- **Row 6:** declare the stim cross-check tier structural-only (doc edit). **Row 9 (PhaseBurst):** PARKED — fence =
+  the teacher whitelist rejects it as a shared arm (`MEMORYFUL_SHARED_SOURCES`); unparked only with its own oracle.
+- **Rows 1/4 PARKED with fences named:** row 1 (deployed-register composition bound) waits for P2's wiring (same
+  register plumbing); row 4 (W-B GROSS→STRICT tiling) is a standalone engineering item — both stay declared-partial,
+  never silently promoted.
+
 **Aggregate honest picture:** 5/15 bounded, 9/15 partially, 1 UNBOUNDED (PhaseBurst — correctly fenced off the shared
 arm by the teacher whitelist). No row is silently unbounded-but-load-bearing; the two P0-introduced declared-not-yet-
 bounded items are row 14's L0 rule + clustered-SE convention. **P1 exit criterion:** every load-bearing row bounded
