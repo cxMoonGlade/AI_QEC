@@ -132,9 +132,11 @@ NON-unitary 1-site forms (Kraus gather, projectors, terminal collapse) REQUIRE c
    `ns <= NUMERICAL_ZERO` (513-515). Batched implementations realize every guard as a PER-SHOT MASK
    (a degenerate shot must never poison or divide-by-zero the batch).
    ARM-C COMPOSITION (v2, normative = serial lines 617-630): per support site SEQUENTIALLY in support
-   order — read `p2` of the CURRENT (already partially projected) state, flag strict `u < p2`,
-   project `diag(0,0,1)`/`diag(1,1,0)`, renormalize per site — one uniform per site, later sites
-   conditioned on earlier projections, all BEFORE the parity read (which is normalized).
+   order — read `p2` = the NORMALIZED 1-site population of the CURRENT (already partially projected)
+   state (serial `_site_population`, line 527, `normalized=True`; it coincides with the unnormalized
+   read only because the state is renormalized per site — the convention is pinned, not implicit),
+   flag strict `u < p2`, project `diag(0,0,1)`/`diag(1,1,0)`, renormalize per site — one uniform per
+   site, later sites conditioned on earlier projections, all BEFORE the parity read (normalized).
 6. `local_expectation(G[3^w,3^w], sites, normalized=True) -> [B]` — `w <= 4`; NON-CONTIGUOUS support
    handled by IDENTITY-EXTENDED window (G interleaved with `I` on gap sites — exact, class (a));
    window blob `[B, chi_l, 3^w_win, chi_r]` sandwich. LEG ORDER (v2): G's legs correspond to `sites`
@@ -144,7 +146,12 @@ NON-unitary 1-site forms (Kraus gather, projectors, terminal collapse) REQUIRE c
 7. `apply_window_recompress_(G, sites, diagonal: bool) -> (discarded[B], branch_weight[B])` — merge
    the (identity-extended) window into a blob, apply G (diagonal fast path: elementwise scale of the
    3^w axis, guarded by an assert that G's off-diagonal mass is EXACTLY 0 — structural, not floored;
-   else matmul), re-split LEFT->RIGHT with the v2 SPLIT ROUTING RULE:
+   else matmul). G FORMS (v4, red-team pass 3): shared `[3^w,3^w]`, OR the PER-SHOT DIAGONAL form
+   `d[B,3^w]` — the diagonal gather analog of apply_1site_'s `[B,3,3]`, required because the
+   Born-stab composition's sqrt(E_s) is a per-shot-VALUED diagonal (sbit sampled per shot; serial
+   lines 666-676); off-diagonal assert / center table / discarded[B] / branch_weight[B] semantics
+   unchanged; a per-shot NON-diagonal window form is deliberately UNREGISTERED (nothing needs it).
+   Re-split LEFT->RIGHT with the v2 SPLIT ROUTING RULE:
    * per split, cap arithmetic decides (class (a), batch-uniform): if `cap_j >= min(m, n_cols)` for
      the split matrix `A[B, m, n_cols]` (no truncation is structurally possible — at EXACT grade this
      holds at EVERY split since `min(m, n_cols) = min(3^(j+1), 3^(n-j-1)) = cap_j`), route **batched
@@ -175,7 +182,9 @@ identity, class (a) per cut); batched book per op = `1 - prod_j (1 - dropped_j)`
 measures the same quantity as an end-to-end norm gap vs a full-chi reference apply. The two books
 coincide (class (a)) when EXACTLY <= 1 split truncates — G-OP-3 is registered ONLY in that regime;
 multi-split truncation equivalence is explicitly OPT2-2/3 STATISTICAL territory, never a book
-comparison.
+comparison. v4 note: binding-cap-but-rank-fenced runs (the G-OP-5 chi_lo arm) route Gram and report
+O(eps) computed book entries, NOT 0.0 — the structural 0.0 is a QR-ROUTE property (cap arithmetic),
+never a "truncation-free" property.
 
 ### D-4 Registered gates (the test suite = the gate; predict-before-measure: ALL pass; a miss = finding)  [v2]
 - **G-OP-1 (exact, ABSOLUTE elementwise <=1e-12 on unit-norm states):** every op,
@@ -204,7 +213,8 @@ comparison.
   truncate at EXACTLY ONE declared split (zero truncation at all other cuts — the regime where D-3's
   two books are class-(a) identical), with the REGISTERED spectral gap defined as the ABSOLUTE
   difference between the smallest retained and largest discarded eigenvalue of the NORMALIZED
-  (unit-trace) Gram spectrum at that split, gap >= 1e-3, AND a retained-spectrum conditioning fence
+  (unit-trace) Gram spectrum at that split, gap >= 1e-3 (LAMBDA units, unit-trace spectrum — v4
+  inline tag; the conditioning fence below is in SIGMA units), AND a retained-spectrum conditioning fence
   `sigma_min(retained)/sigma_max >= 1e-3` asserted in the harness (the declared validity domain of
   the Gram path; Gram eigenvector error scales ~ eps*lambda_max/gap — the retained SUBSPACE, hence
   the truncated state, is gap-governed, not kappa^2-governed). Criteria: |Δeps| <= 1e-10 (valid at
