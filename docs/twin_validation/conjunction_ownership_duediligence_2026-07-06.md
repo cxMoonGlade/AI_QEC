@@ -36,8 +36,28 @@ Searched (no owner of the triple-as-a-tool found): RAG精读 notes — Quiroz 24
 time-invariant-PT 2603.06840, silicon-spin-NM 2507.08713, Giarmatzi 2308.00750, RB-forecasting 2312.06062, SPP
 2603.05474, Darmawan 2308.08186, Kam 2410.23779; web (prove-ownership phrasing) ×4; fetches — Deltakit GitHub, QuEra
 Tsim, Quiroz abstract. **NOT searched:** patents (beyond one crosstalk-analysis patent glimpsed), vendor
-unreleased/internal roadmaps, non-English literature, the full Quiroz PDF (leakage-in-extended-Hilbert-space unresolved
-at abstract level — a residual check).
+unreleased/internal roadmaps, non-English literature. ~~the full Quiroz PDF (leakage-in-extended-Hilbert-space
+unresolved at abstract level — a residual check)~~ **RESOLVED 2026-07-06, full-text close-read — see below.**
+
+### Residual check ① RESOLVED (2026-07-06): full-Quiroz leakage question — NO leakage anywhere in the model
+Full-text close-read of arXiv 2412.16092 v1 (Oda, Schultz, Norris, Shehab & Quiroz, "Sparse Non-Markovian Noise
+Modeling of Transmon-Based Multi-Qubit Operations"; note
+`docs/papers/reading_notes/quiroz_nonmarkovian_crosstalk_2412.16092.md`, cached PDF
+`docs/papers/2412.16092_sparse_nonmarkovian_transmon.pdf`):
+- **The "extended Hilbert space" is qubits-only** — `H = H_D ⊗ H_Sp ⊗ H_TLS` (data ⊗ spectator qubits ⊗ TLSs), with
+  "TLSs are defined on a computational basis {|0⟩_TLS, |1⟩_TLS}" treated "as an effective qubit that couples to the
+  main qubit via a static ZZ interaction" (Sec. II, II C, IV B 1). An exhaustive text scan finds **zero** occurrences
+  of leakage / qutrit / |2⟩ / anharmonic / higher-level. Temporal correlations are **classical** stochastic variables
+  ("System operators couple to stochastic, time-dependent, variables as opposed to additional quantum degrees of
+  freedom", Sec. I).
+- **No QEC records:** QEC appears only as a background citation; validation = characterization suite / RB / CPMG /
+  ECR / 4-qubit DD / 2-qubit VQE. Zero hits for syndrome / detector / surface code / repetition code.
+- **No released tool:** no code/data-availability statement, no repo link (one uncited "mezze" mention, App. G).
+- ⇒ **Ownership-ledger conclusion UNCHANGED and STRENGTHENED:** Quiroz owns {classical-temporal non-Markov + ZZ
+  crosstalk} as a gate-noise characterization model (39q characterized, ≤4q dynamics demos) — it does **not** touch
+  the leakage axis at all (not even in-model), does not generate QEC records, and ships no tool. Risk #1 (Quiroz
+  extends to leakage + QEC generation) remains a *future-motion* risk only; nothing in the paper is positioned there
+  today.
 
 ### ① Risks (honest)
 1. **Quiroz is the nearest threat and is productizable** — non-Markov+crosstalk, real IBM, oracle-validated, PRX

@@ -41,7 +41,9 @@ ONE first user/use-case before scaling effort.
 
 ## Build plan (phased; each phase has a check)
 - **P0 — interop spike (unblocks "usable"):** `emit → Stim circuit / DEM` for a d3 record; decode it with PyMatching.
-  Check: a round-trips through the standard stack.
+  Check: a round-trips through the standard stack. **✅ DONE 2026-07-06 — GATE P0_INTEROP_ROUNDTRIP PASS
+  (`p0_interop_spike_notes.md`): d3 rep-code arm decodes at z=18 improvement; 6/6 injection wiring checks; honest
+  cost ~1.2 s/trajectory-manifest at R=4. Residual ① (Quiroz leakage) also resolved — no leakage in 2412.16092.**
 - **P1 — faithfulness table:** fill the mechanism×oracle×bound table for the CURRENT mechanisms at d3 (bounded vs
   qutrit-DM / closed forms). Check: every cell bounded; unbounded ⇒ STOP.
 - **P2 — the conjunction @ d3 (core deliverable):** one call = latent (non-Markov) → Θ (shared-latent) → qutrit
