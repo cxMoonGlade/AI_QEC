@@ -123,8 +123,8 @@ NON-unitary 1-site forms (Kraus gather, projectors, terminal collapse) REQUIRE c
    gather selected Kraus per shot; apply; renormalize by `pk[b,sel]`. Referee: `_leak_sample`
    (bit-level match on a shared `u`).
    TIE-BREAK/GUARD REGISTRY (v2, complete — never "harmonized" silently; serial lines cited):
-   `_leak_sample` cumulative `<=` (line 583); Born-stab strict `u < p0` (634); arm-C leak-flag strict
-   `u < p2` (622); hard2 strict `u < p1` (781) with `wt <= NUMERICAL_ZERO => p1 = 0.5` (780); hard3
+   `_leak_sample` cumulative `<=` (line 584); Born-stab strict `u < p0` (634); arm-C leak-flag strict
+   `u < p2` (623); hard2 strict `u < p1` (781) with `wt <= NUMERICAL_ZERO => p1 = 0.5` (780); hard3
    cumulative STRICT `target < cum` with fallback `kbar=2` (805-812) and `tot <= NUMERICAL_ZERO =>
    kbar=0` (802-803); hard3 `|2>`->bit sub-draw: `gen.random()` if gen else the deterministic residual
    split `u2 = clamp((u - (p0+p1)/tot)/max(p2/tot, NUMERICAL_ZERO), 0, 1)`, `bit = 1 iff u2 <
@@ -155,10 +155,14 @@ NON-unitary 1-site forms (Kraus gather, projectors, terminal collapse) REQUIRE c
      on computed lambdas; `M <- U^H A`).
    Renormalize to unit norm internally. `branch_weight` (v2 pinned) = the POST-truncation,
    PRE-renormalization norm^2 (== the serial `nt`, lines 692-694; == `Tr[E_s rho] * <psi|psi>` only
-   at exact grade). CENTER TABLE (v2): precondition center canonicalized to the window's leftmost
-   site (the op does this itself); postcondition center = the window's RIGHTMOST site. Unitary 1-site
-   apply: center unchanged, valid anywhere. Non-unitary 1-site apply / RDM / kraus_sample_ /
-   expectations: the op canonicalizes to the site first; center = that site afterwards.
+   at exact grade). CENTER TABLE (v2; v3 pins): precondition center canonicalized to the window's
+   leftmost site (the op does this itself); postcondition center = the window's RIGHTMOST site.
+   Unitary 1-site apply: center unchanged, valid anywhere — the shared `[3,3]` form of apply_1site_
+   is REQUIRED unitary (asserted `||U^H U - I||_max <= 1e-12`, class (c) guard); the per-shot
+   `[B,3,3]` form is ALWAYS treated as non-unitary (canonicalize to the site first; center = site) —
+   the invariant never depends on call-site discipline (v3, red-team). RDM / kraus_sample_: center =
+   the site. Multi-site local_expectation (v3 pin): canonicalize to the window's LEFTMOST site
+   (matching the window op's precondition); center = that site afterwards.
    Referee: `_apply_sqrt_Es` / codestate `_project`.
 
 ### D-3 Discarded-weight book (declared)  [v2]
@@ -185,10 +189,14 @@ comparison.
   invisible). (c) One case invokes the window op and kraus_sample_ with the center deliberately FAR
   from the target (certifies the canonicalize-first contract, not just fresh canonical states).
 - **G-OP-2 (sampling, exact):** shared `u` stream => IDENTICAL selected branches/bits AND <=1e-12
-  post-state match (both grades; covers kraus_sample_, Born-stab composition, hard2/hard3 terminal
-  composition incl. the registry guards, arm-C leak-flag composition). KNIFE-EDGE GUARD (v2): the
-  harness asserts every drawn comparison has margin `|u*tot - cumsum_k| > 1e-9` and re-draws `u`
-  on violation (the two arms compute probabilities via different reduction orders, agreeing to
+  post-state match. v3 grade fence (mirrors G-OP-1(a); the Born-stab composition contains the
+  sqrt(E_s) window op whose post-gate rank exceeds a truncating cap): the WINDOW-CONTAINING leg
+  (Born-stab composition) runs at the EXACT grade only; the truncation-free 1-site compositions
+  (kraus_sample_, hard2/hard3 terminal incl. the registry guards, arm-C leak-flag) run at BOTH
+  grades. KNIFE-EDGE GUARD (v2): the harness asserts every drawn comparison has margin
+  `|u*tot - cumsum_k| > 1e-9` — generalized (v3) to `|u - p| > 1e-9` for the direct-threshold draws
+  (`u < p0`, `u < p1`, `u < p2`, `u2 < b_for_bit`; a one-term cumsum) — and re-draws `u` on
+  violation (the two arms compute probabilities via different reduction orders, agreeing to
   ~1e-15..1e-13; a within-margin flip is a REGISTERED non-failure, adjudicated — mirrors OPT2-2's
   "bit-identity DIAGNOSTIC ONLY", never a silent tolerance bump; padded-vs-tight / batch-size
   kernel-selection nondeterminism is absorbed by this margin).
@@ -203,21 +211,29 @@ comparison.
   the d3 test dims; dim-dependence declared) and post-state overlap deficit
   `1 - |<psi_q|psi_b>|^2 <= 1e-10`. Plus one FLAT-SPECTRUM case with the degenerate block ENTIRELY
   retained (degeneracy straddling the cap is ill-posed for any algorithm — excluded by
-  construction and declared). Harness also asserts Gram-path eigh quality per call:
+  construction and declared). The conditioning fence's ratio is taken in SIGMA units, i.e. on
+  `sqrt(lambda)` of the Gram spectrum (v3; a lambda-ratio reading would square the declared
+  validity domain). Harness also asserts Gram-path eigh quality per call:
   `||U^H U - I||_max <= 1e-12` and the eigh residual (torch batched-eigh routing is
   version-dependent; OPT2-0 measured throughput only). A miss on any criterion is a FINDING to
   adjudicate, never a silent tolerance bump.
 - **G-OP-4 (batch independence, <=1e-12):** B heterogeneous states through every batched op ==
   each state alone at B=1; compared at the DENSE-RECONSTRUCTION level (site tensors are
   gauge/dispatch-dependent, the state is not) — no cross-shot leakage (THE batch-correctness gate).
-- **G-OP-5 (padding invariance, <=1e-12):** exact-grade caps vs a LARGER chi (different padding):
-  identical dense state + identical sampled outcomes (knife-edge guard applies).
+- **G-OP-5 (padding invariance, <=1e-12):** v3 re-registration (the v2 wording was VACUOUS: for any
+  `chi >= exact grade` the D-1 cap formula yields byte-identical cap tuples — the gate compared a
+  run to itself). The two arms are `chi_lo < exact_chi` (the chi term BINDS at interior cuts — caps
+  genuinely differ) vs `chi_hi >= exact_chi`, on an ENGINEERED state whose Schmidt rank — including
+  the post-gate rank through every op the gate drives — stays <= the chi_lo caps at every cut, so
+  BOTH runs are truncation-free but differently padded: identical dense state + identical sampled
+  outcomes is then a legitimate exact expectation (knife-edge guard applies). This is the gate that
+  guards the D-1 padding mechanism (junk leakage through padded channels, padded-vs-tight kernels).
 - **G-OP-6 (ledger, structural):** exact grade => discarded == 0.0 LITERALLY (the D-3 v2 structural
   book: every split QR-routed, discard set empty by cap arithmetic — `==`, not approx).
-- **G-OP-7 (micro-sequence):** on a small chain, the composed sequence gate -> leak-Kraus ->
-  stabilizer-measure (H, parity read, sqrt(E_s), H back) -> terminal readout, driven by ONE shared
-  u-stream, matches the serial arm bit-for-bit (knife-edge guard applies) + <=1e-12 in state.
-  (The FULL d3 trajectory / statistical gates are OPT2-2, not here.)
+- **G-OP-7 (micro-sequence, EXACT grade — v3 pin; it contains sqrt(E_s)):** on a small chain, the
+  composed sequence gate -> leak-Kraus -> stabilizer-measure (H, parity read, sqrt(E_s), H back) ->
+  terminal readout, driven by ONE shared u-stream, matches the serial arm bit-for-bit (knife-edge
+  guard applies) + <=1e-12 in state. (The FULL d3 trajectory / statistical gates are OPT2-2.)
 
 ### D-5 Declared bounds / scope fences  [v2]
 - Window-blob memory `B * chi_l * 3^w_win * chi_r * 16` bytes: trivial at d3 gates; at d5 production
