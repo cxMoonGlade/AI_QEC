@@ -227,7 +227,14 @@ from ..frontend.axis1_selection import (
     axis1_selection_layers_in_schedule_order,
     build_axis1_schedule_selection_plan,
 )
-from ..frontend.code_spec import Axis1StaticZZDeviceSpec, CodeSpec
+from ..frontend.code_spec import (
+    Axis1StaticZZDeviceSpec,
+    CodeQubit,
+    CodeSpec,
+    LogicalObservableSpec,
+    PauliTerm,
+    StabilizerCheck,
+)
 from ..frontend.source_sidecar import (
     SourceTimelineBinding,
     build_source_timeline_binding_manifest,
@@ -485,11 +492,77 @@ def default_coupled_code_spec_4q(
     return _wrap_coupled_code_spec(build_axis1_codespec_4q_frontend_spec(rounds=int(rounds)), cfg)
 
 
+def default_coupled_code_spec_d3_repz(
+    rounds: int,
+    config: SourceCouplingConfig | None = None,
+) -> CodeSpec:
+    """The P0 genuine-decode fixture: a distance-3 bit-flip repetition code.
+
+    3 data (0,1,2) + 2 ancilla (3: z01, 4: z12); weight-2 Z checks Z0Z1 / Z1Z2;
+    logical_z2 (Z on data 2, the chain end). M(R) = 2R + 3 measured bits — the
+    SAME enumeration cost as the 5q fixture (S-5 unchanged). Unlike the 5q
+    fixture (whose logical_z2 is structurally disconnected from both weight-1
+    checks), the logical-flipping fault class here fires a detector, so an
+    MWPM decode of the emitted record is non-vacuous.
+
+    DECLARED slice-1 fault-class map (P0 interop scope; the C-10a Z-diagonal
+    argument applies to every chain — reviewed 2026-07-06):
+    - gamma_phi / zeta are record-DEAD in this all-Z geometry; gamma_1 is
+      inert on the |0...0> prep; gamma_up is held at the schedule baseline 0.
+      There is NO data-X fault class in slice 1 — the record's error content
+      is entirely the readout/reset instrument.
+    - Per-round ancilla flip p = p_rs + p_ro - 2 p_rs p_ro; interior deltas
+      fire at ~2p(1-p). A ROUND-0 ancilla flip fires ONLY delta:<check>:round1
+      (the layout has no round-0 anchor detector) and does NOT flip the
+      observable — so delta-column boundary classes carry NO logical
+      attachment under slice-1 noise.
+    - The ONLY observable-flipping fault class is the final:q2:Z data-readout
+      flip, which fires the final:z12 closure -> the declared L0 rule for this
+      fixture+noise is exactly {final:z12}. (Geometrically an in-round X on q2
+      WOULD populate delta:z12 boundaries with L0, but that class has
+      probability 0 in slice 1 — the L0 rule is a reduction of the RECORD's
+      fault mix, not of the code geometry.)
+    This fixture exercises the interop/decode path on instrument noise — it is
+    NOT a coupling-visibility arm; the coupling-visible demo geometry is P3's
+    job. Same Theta(0) baseline wrapping as the other fixtures (the static-ZZ
+    edge (0,3) is inert here — declared).
+    """
+
+    cfg = config or default_source_coupling_config()
+    spec = CodeSpec(
+        name="d3_repz_coupled_fixture",
+        num_qubits=5,
+        data_qubits=(
+            CodeQubit(0, "data", (0.0,)),
+            CodeQubit(1, "data", (2.0,)),
+            CodeQubit(2, "data", (4.0,)),
+        ),
+        ancilla_qubits=(
+            CodeQubit(3, "ancilla", (1.0,)),
+            CodeQubit(4, "ancilla", (3.0,)),
+        ),
+        checks=(
+            StabilizerCheck(
+                "z01", 3, (PauliTerm(0, "Z"), PauliTerm(1, "Z")), coords=(1.0,)
+            ),
+            StabilizerCheck(
+                "z12", 4, (PauliTerm(1, "Z"), PauliTerm(2, "Z")), coords=(3.0,)
+            ),
+        ),
+        logical_observables=(
+            LogicalObservableSpec("logical_z2", (PauliTerm(2, "Z"),)),
+        ),
+        rounds=int(rounds),
+    )
+    return _wrap_coupled_code_spec(spec, cfg)
+
+
 #: JSON-reachable fixture selector -> default coupled CodeSpec builder (F2). ``code_spec_builder``
 #: (a callable) still overrides this when provided; ``fixture`` picks the default when it is None.
 _COUPLED_FIXTURE_BUILDERS: dict[str, Callable[[int, SourceCouplingConfig | None], CodeSpec]] = {
     "5q": default_coupled_code_spec,
     "4q": default_coupled_code_spec_4q,
+    "d3_repz": default_coupled_code_spec_d3_repz,
 }
 
 
@@ -881,6 +954,92 @@ class CoupledCycleTeacher:
                 )
         return tuple(rows)
 
+    def export_stim_circuit(self) -> tuple[Any, dict]:
+        """P0 interop: the SAME compiled fixture as an ideal-geometry stim circuit.
+
+        Recompiles ``self._spec`` through the same frontend compiler (a pure,
+        deterministic function of the spec) and converts the ``CircuitIR`` via
+        ``frontend.stim_io.circuit_to_stim``. The stim circuit is the ideal
+        Clifford skeleton of the fixture — detectors and the logical observable
+        in the record-layout declaration order, so its detector index ``k`` IS
+        column ``k`` of the emitted ``det`` surface. DECLARED: the Axis-1
+        analog (Lindblad) noise is NOT representable in this circuit; the
+        decoder-facing noise summary is the separate
+        ``frontend.interop.records_to_dem`` reduction of the emitted records.
+
+        The export is a separate read-only surface — the ``emit`` payload
+        stays exactly ``{"det","obs"}`` (C-3 untouched). Layout identity
+        against the teacher's emitted surface is ASSERTED here (names, order,
+        counts), never assumed.
+        """
+
+        from ..frontend.compiler import compile_code_spec
+        from ..frontend.stim_io import circuit_to_stim, counts
+
+        circuit_ir = compile_code_spec(self._spec)
+        layout = circuit_ir.metadata["record_layout"]
+        det_names = tuple(str(d["name"]) for d in layout["detectors"])
+        obs_names = tuple(str(o["name"]) for o in layout["observables"])
+        meas_keys = tuple(
+            str(r["key"]) for r in layout["round_measurements"]
+        ) + tuple(str(f["key"]) for f in layout["final_data"])
+        if det_names != self._detector_names:
+            raise RuntimeError(
+                "export/emit detector layout mismatch: recompiled circuit "
+                f"declares {det_names[:4]}... vs teacher {self._detector_names[:4]}..."
+            )
+        if obs_names != self._observable_names:
+            raise RuntimeError(
+                f"export/emit observable mismatch: {obs_names} vs "
+                f"{self._observable_names}"
+            )
+        if meas_keys != self._measurement_keys:
+            raise RuntimeError(
+                "export/emit measurement-key mismatch between the recompiled "
+                "circuit and the sealed schedule"
+            )
+        stim_circuit = circuit_to_stim(circuit_ir)
+        stim_counts = counts(stim_circuit)
+        if stim_counts.num_detectors != self._rounds * self._n_stab:
+            raise RuntimeError(
+                f"stim circuit has {stim_counts.num_detectors} detectors, "
+                f"expected rounds*n_stab = {self._rounds * self._n_stab}"
+            )
+        if stim_counts.num_observables != 1:
+            raise RuntimeError(
+                f"stim circuit has {stim_counts.num_observables} observables, "
+                "expected exactly 1"
+            )
+        if stim_counts.num_measurements != len(self._measurement_keys):
+            raise RuntimeError(
+                f"stim circuit has {stim_counts.num_measurements} measurements, "
+                f"expected {len(self._measurement_keys)}"
+            )
+        manifest = {
+            "schema": f"{COUPLED_TEACHER_SCHEMA}.stim_export.v1",
+            "fixture": self._fixture,
+            "code_spec_name": str(self._spec.name),
+            "rounds": self._rounds,
+            "n_stab": self._n_stab,
+            "num_qubits": int(stim_counts.num_qubits),
+            "num_detectors": int(stim_counts.num_detectors),
+            "num_observables": int(stim_counts.num_observables),
+            "num_measurements": int(stim_counts.num_measurements),
+            "detector_names": list(det_names),
+            "observable_names": list(obs_names),
+            "measurement_keys": list(meas_keys),
+            "det_column_semantics": (
+                "stim detector index k == emitted det column k "
+                "(record-layout declaration order)"
+            ),
+            "noise_representability": (
+                "ideal Clifford geometry only; Axis-1 analog noise is not "
+                "representable in the stim circuit (declared); decoder-facing "
+                "noise summary = frontend.interop.records_to_dem"
+            ),
+        }
+        return stim_circuit, manifest
+
     def emit_clifford_slice(
         self, regime: Any, *, p_x: float, m: int, N: int, seed: int
     ) -> dict:
@@ -1148,6 +1307,7 @@ __all__ = [
     "CoupledCycleTeacher",
     "default_coupled_code_spec",
     "default_coupled_code_spec_4q",
+    "default_coupled_code_spec_d3_repz",
     "derive_round_map_for_substep_schedule",
     "params_for_substep_from_round_map",
     "per_round_axis1_params",
