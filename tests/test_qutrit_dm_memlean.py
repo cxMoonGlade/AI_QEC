@@ -253,6 +253,12 @@ def test_detector_marg_loop_peak_below_3p5_copies(logical_kind):
     kraus = [torch.eye(q, dtype=CDTYPE) * (0.99 ** 0.5),
              torch.eye(q, dtype=CDTYPE) * (0.01 ** 0.5)]
     torch.cuda.empty_cache()
+    # DELTA measurement (the L-7 pattern below), NOT the absolute peak: in a full-suite
+    # run the ~600 earlier CUDA tests leave standing allocations (module globals, sticky
+    # cuBLAS workspaces) that an absolute peak silently charges to THIS test — measured
+    # 2026-07-06: [Z]/[X] false-failed in the full suite while green solo/paired (the
+    # 3.5 - ~3.3 margin is only ~15 MB). ``base`` isolates the test's own footprint.
+    base = torch.cuda.memory_allocated()
     torch.cuda.reset_peak_memory_stats()
     for s in range(n):
         eng.apply_channel(kraus, s)
@@ -262,7 +268,7 @@ def test_detector_marg_loop_peak_below_3p5_copies(logical_kind):
         eng.project_stabilizer(stab, 1, 0.9, "A")
     eng.rho = rho1.clone()
     eng.logical_distribution()
-    peak = torch.cuda.max_memory_allocated()
+    peak = torch.cuda.max_memory_allocated() - base
     k = (peak - _WORKSPACE_ALLOWANCE) / copy_bytes
     # Structural live set: rho1 + working + apply output (+ chunk/tile temporaries)
     # ~3.3 copies. Pre-fix measured 5.44 — 3.5 above the allowance falsifies both
