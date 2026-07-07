@@ -68,6 +68,7 @@ import torch
 
 from qec_twin.forward.exact.xzzx_parser import XZZXSchedule
 from qec_twin.forward.scalable.sv_sampler import (
+    CPTP_TOL,
     SV_ARM_CODE,
     SV_ARMS,
     SV_GATE_IDS,
@@ -862,7 +863,7 @@ class MpsLeakageForward:
     # One trajectory (the lift of sv_traj_wc_kernel)                          #
     # ----------------------------------------------------------------------- #
     def _run_trajectory(
-        self, codestate_mps, marsh: WithinCycleMarshalled, leak_kraus: list[torch.Tensor],
+        self, codestate_mps, marsh: WithinCycleMarshalled, leak_by_round: "list[list[torch.Tensor]]",
         gate_table: dict[int, torch.Tensor], stab_supp: np.ndarray, stab_isx: np.ndarray,
         stab_len: np.ndarray, log_sites_eng: list[int], log_isx: list[int],
         arm: str, b: float, b_eff: float, m: int, chi: int, n_data: int, R: int,
@@ -873,7 +874,15 @@ class MpsLeakageForward:
         shot_discarded_total). The RNG draw order mirrors ``sv_traj_wc_kernel`` Section-5; the
         WITHIN-CYCLE path (leak/gate/measure draws) is IDENTICAL for all terminal modes (the
         terminal is the LAST op), so on a matched seed the syndrome record is byte-identical
-        across modes (L-soft-8). ``mode``/``soft_model`` only change the terminal emission."""
+        across modes (L-soft-8). ``mode``/``soft_model`` only change the terminal emission.
+
+        ``leak_by_round`` (P2-ii; prereg ``p2_conjunction_wiring_prereg.md`` §1 API pin) is the
+        PER-ROUND leak-slice sequence: round ``r``'s WC_OP_LEAK ops Kraus-sample from
+        ``leak_by_round[r]`` — BOTH the PRE-measure and the POST-measure segment of round ``r``
+        (registered convention; today's post segments carry only the transversal Y, so the post
+        leg is dormant but pinned). A single-set caller passes the SAME list for every round
+        (``[base] * R``): the op stream, draw order, and record are then byte-identical to the
+        static arm (gate P2-ii (a))."""
         mps = codestate_mps.copy()
         d2 = _arm_d2(arm, b)
         round_op_ptr = marsh.round_op_ptr.detach().cpu().numpy()
@@ -884,6 +893,7 @@ class MpsLeakageForward:
         shot_discarded = 0.0
 
         for r in range(int(R)):
+            leak_kraus_r = leak_by_round[r]  # round r's slice table (P2-ii per-round seam)
             # PRE-measure op segment (GATE / LEAK), CSR order -- draws consumed as walked.
             pre0, pre1 = int(round_op_ptr[2 * r]), int(round_op_ptr[2 * r + 1])
             for t in range(pre0, pre1):
@@ -893,7 +903,7 @@ class MpsLeakageForward:
                     self._apply_gate(mps, gate_table[int(op_uid[t])], mps_site)
                 elif int(op_kind[t]) == WC_OP_LEAK:
                     u = float(rng.random())
-                    self._leak_sample(mps, leak_kraus, mps_site, u)
+                    self._leak_sample(mps, leak_kraus_r, mps_site, u)
                 else:
                     raise AssertionError(f"unknown op_kind {int(op_kind[t])} at op {t}")
             # measure all stabilizers (schedule order); X-supports rotated to Z inside.
@@ -919,7 +929,7 @@ class MpsLeakageForward:
                     self._apply_gate(mps, gate_table[int(op_uid[t])], mps_site)
                 elif int(op_kind[t]) == WC_OP_LEAK:
                     u = float(rng.random())
-                    self._leak_sample(mps, leak_kraus, mps_site, u)
+                    self._leak_sample(mps, leak_kraus_r, mps_site, u)
 
         # terminal readout draws (engine-qutrit order q=0..n-1): ONE level/bit uniform per data
         # qutrit, drawn from the SAME host stream as ⑦ (so the level path and the hard-2 path
@@ -941,6 +951,7 @@ class MpsLeakageForward:
         materialize: bool = True, snake: bool = True,
         mode: str = "hard2", soft_model: "SoftReadoutModel | None" = None,
         codestate_mode: str = "auto",
+        leak_slices: "list[torch.Tensor] | tuple[torch.Tensor, ...] | None" = None,
     ) -> tuple[ShotSet, MpsTruncationLedger]:
         """Run an MCWF-on-MPS forward job: parse -> marshal -> codestate -> N trajectories ->
         ShotSet (byte-identical to the dense backend) + the truncation ledger.
@@ -969,6 +980,20 @@ class MpsLeakageForward:
         within-cycle path is untouched and the level path's logical flip equals ⑦'s in
         distribution (hard-2-via-level == F1; L-soft-1). ``soft`` requires ``soft_model`` (a
         :class:`~qec_twin.forward.scalable.soft_readout.SoftReadoutModel`).
+
+        PER-ROUND LEAK (P2-ii; prereg ``p2_conjunction_wiring_prereg.md`` §1 API pin).
+        ``leak_slices=None`` (default) is TODAY's static arm — the spec-built ``exp(L/4)`` slice
+        drives every round; the PACKED record + terminal side channels are byte-identical to the
+        pre-P2-ii carrier (gate P2-ii (a); the header gains the provenance fields below). Else a
+        length-``R`` sequence of per-round ``(n_kraus, 3, 3)`` slice tables: round ``r``'s LEAK
+        ops sample from ``leak_slices[r]``. Each table is CPTP-ASSERTED at entry
+        (``SvSampler.cptp_residual < CPTP_TOL`` — the C1 discipline: the carrier never trusts
+        caller tables). Building the tables FROM the Θ fan-out (``theta_wg(t)``/``g_seep(t)``)
+        is the CALLER's job — the carrier stays a data consumer. The CSR marshal is
+        content-independent for leak (``op_uid=0``), so marshalling is unchanged;
+        ``marsh.leak_kraus`` is not consumed by this arm (``_run_trajectory`` takes its leak
+        argument explicitly). Header provenance: ``leak_slices_mode`` (``static``/``per_round``)
+        + ``leak_slices_sha256`` over the stacked tables in the per-round mode.
         """
         mode = str(mode)
         if mode not in ("hard2", "hard3", "soft"):
@@ -989,11 +1014,45 @@ class MpsLeakageForward:
             raise ValueError(f"codestate_mode must be auto/dense/direct (got {codestate_mode!r})")
 
         leak_t, _leak_ev = self._host.build_within_cycle_leak(spec)  # CPTP + compose asserted (C1)
-        leak_kraus = [leak_t[k] for k in range(leak_t.shape[0])]
         marsh = self._host.marshal_within_cycle(sched, leak_t, R=spec.R)
 
         n_data = int(marsh.n_data)
         R = int(marsh.R)
+
+        # P2-ii per-round leak seam (prereg §1 API pin). None -> the static arm: ONE base table
+        # shared by every round ([base] * R -- the identical object, so the op stream, draw order
+        # and record are byte-identical to the pre-P2-ii carrier, gate P2-ii (a)). Else one
+        # CPTP-asserted table per round (the carrier never trusts caller tables -- C1).
+        leak_slices_sha: str | None = None
+        if leak_slices is None:
+            base_kraus = [leak_t[k] for k in range(leak_t.shape[0])]
+            leak_by_round: list[list[torch.Tensor]] = [base_kraus] * R
+        else:
+            if len(leak_slices) != R:
+                raise ValueError(
+                    f"leak_slices must carry one (n_kraus, 3, 3) table per round: got "
+                    f"{len(leak_slices)} tables for R={R}")
+            tables: list[torch.Tensor] = []
+            for r_i, t in enumerate(leak_slices):
+                tt = torch.as_tensor(t, dtype=CDTYPE, device=self.device).contiguous()
+                if tt.dim() != 3 or tt.shape[1:] != (PHYS, PHYS):
+                    raise ValueError(
+                        f"leak_slices[{r_i}] must be (n_kraus, 3, 3) (got {tuple(tt.shape)})")
+                resid = self._host.cptp_residual(tt)
+                if resid >= CPTP_TOL:
+                    raise AssertionError(
+                        f"leak_slices[{r_i}] CPTP residual {resid:.3e} >= {CPTP_TOL:.0e} "
+                        f"(the C1 discipline: per-round tables are asserted, never trusted)")
+                tables.append(tt)
+            leak_by_round = [[t[k] for k in range(t.shape[0])] for t in tables]
+            import hashlib
+            h = hashlib.sha256()
+            for t in tables:
+                # shape framing: without it, differing per-round n_kraus re-chunkings of the
+                # same byte stream would collide (the hash exists to disambiguate provenance).
+                h.update(repr(tuple(t.shape)).encode())
+                h.update(t.detach().cpu().numpy().tobytes())
+            leak_slices_sha = h.hexdigest()
         # site ordering (snake or identity); build the engine<->mps maps.
         order = snake_order_from_coords(sched.data_coords) if snake else tuple(range(n_data))
         self._mps_order = order
@@ -1047,7 +1106,7 @@ class MpsLeakageForward:
             # all terminal modes, so the syndrome record is byte-identical across modes (L-soft-8).
             rng = np.random.default_rng((int(spec.base_seed), shot))
             bits, term, shot_disc = self._run_trajectory(
-                codestate_mps, marsh, leak_kraus, gate_table, stab_supp, stab_isx, stab_len,
+                codestate_mps, marsh, leak_by_round, gate_table, stab_supp, stab_isx, stab_len,
                 log_sites_eng, log_isx, str(spec.arm).upper(), float(spec.b), b_eff,
                 int(spec.m), chi_eff, n_data, R, rng, ledger,
                 mode=mode, soft_model=soft_model)
@@ -1066,6 +1125,10 @@ class MpsLeakageForward:
         marsh_lumped = self._host.marshal_schedule(sched, R=spec.R)
         header = self._host.build_header(spec, marsh_lumped, sched)
         header["backend"] = "mps_mcwf/quimb"
+        # P2-ii provenance: which leak arm produced this record (+ a content hash per-round).
+        header["leak_slices_mode"] = "static" if leak_slices is None else "per_round"
+        if leak_slices_sha is not None:
+            header["leak_slices_sha256"] = leak_slices_sha
         header["mps_chi"] = int(chi_eff)
         header["mps_chi_exact_grade"] = int(exact_chi(n_data))
         header["mps_snake_order"] = list(order)
