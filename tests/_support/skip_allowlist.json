@@ -1,0 +1,266 @@
+{
+  "_comment": [
+    "REGISTERED skip set for the FULL suite on the full-dataset GPU box",
+    "(Side B (iii) of the two-sided per-unit standard,",
+    "docs/twin_validation/api_hardening_ownership_design.md).",
+    "Any skip in a full-suite junitxml that is NOT in this list is an audit",
+    "FAILURE (the hasattr/importorskip escape-hatch killer: a silently",
+    "skipping gate reports green while testing nothing).",
+    "Legitimate NEW skips are added ONLY by editing this file in the SAME",
+    "reviewed commit that introduces them -- never by auto-regeneration.",
+    "Audited by outputs/twin_validation/skip_audit.py (runner:",
+    "outputs/twin_validation/skip_audit_run.sh); skip identity is",
+    "(classname, name); 'reason' is provenance, drift warns but never fails."
+  ],
+  "generated_from": "outputs/twin_validation/logs/full_suite_wave1.xml",
+  "generated_by": "outputs/twin_validation/skip_audit.py --emit-allowlist",
+  "n_testcases_in_source_run": 1181,
+  "n_skips": 49,
+  "skips": [
+    {
+      "classname": "tests.test_hardware_m1_ingestion",
+      "name": "test_p1_structure_counts",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m1_ingestion",
+      "name": "test_p2_m2d_bitexact_parity",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m1_ingestion",
+      "name": "test_p2_m2d_bitexact_parity_full_corpus",
+      "reason": "whole-corpus parity is slow (set QEC_TWIN_HW_SLOW=1)"
+    },
+    {
+      "classname": "tests.test_hardware_m1_ingestion",
+      "name": "test_p3_detection_fraction_band",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m1_ingestion",
+      "name": "test_p4_pij_support_parity",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m1_ingestion",
+      "name": "test_p5_basis_ordering_reported",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m1_ingestion",
+      "name": "test_p6_layer_profile_reported",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m1_ingestion",
+      "name": "test_p7_pij_class_means_reported",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m1_ingestion",
+      "name": "test_p8_si1000_mc_detection_fraction_reported",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m1_ingestion",
+      "name": "test_p9_obs_flip_mean_reported",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m2_window_closure",
+      "name": "test_w1_w3_w4_reported",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m2_window_closure",
+      "name": "test_w2_margin2_closure_gate",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m3_window_nll",
+      "name": "test_p10_budget_deficit_reported",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m3_window_nll",
+      "name": "test_p11_bunching_reported",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m3_window_nll",
+      "name": "test_p1a_stim_pauli_slice",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m3_window_nll",
+      "name": "test_p1b_fixed_point",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m3_window_nll",
+      "name": "test_p1c_readout_convolution_vs_enumeration",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m3_window_nll",
+      "name": "test_p1d_extractor_pipeline_identity",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m3_window_nll",
+      "name": "test_p1e_in_fiber_flatness",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m3_window_nll",
+      "name": "test_p1f_z2_swap_invariance",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m3_window_nll",
+      "name": "test_p1g_reset_readout_gauge",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m3_window_nll",
+      "name": "test_p2_fisher_rank",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m3_window_nll",
+      "name": "test_p3_gate",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m3_window_nll",
+      "name": "test_p4_p5_pij_comparison_reported",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m3_window_nll",
+      "name": "test_p6_in_class_vs_naive_reported",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m3_window_nll",
+      "name": "test_p7_parameter_bands_reported",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m3_window_nll",
+      "name": "test_p8_per_sample_stability_reported",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m4_decode",
+      "name": "test_hw_p1a_m2d_parity_smoke_sample00",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m4_decode",
+      "name": "test_hw_p1b_observable_bitexact_sample00",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m4_decode",
+      "name": "test_hw_p1b_units_fullchain_crosscheck_sample00",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m4_decode",
+      "name": "test_hw_p1e_shipped_prediction_smoke_sample00",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m4_decode",
+      "name": "test_hw_p1f_dem_hash_audit_sample00",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m4_decoder_prior",
+      "name": "test_hw_frozen_covariates_match_m3_findings",
+      "reason": "frozen M3 fit cache absent (outputs/m3_fit_cache.pt)"
+    },
+    {
+      "classname": "tests.test_hardware_m4_decoder_prior",
+      "name": "test_hw_tier0_bands_from_frozen_cache",
+      "reason": "frozen M3 fit cache absent (outputs/m3_fit_cache.pt)"
+    },
+    {
+      "classname": "tests.test_hardware_m4_decoder_prior",
+      "name": "test_hw_train_sample_artifacts_exist",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m4_dem_compose",
+      "name": "test_hw_full_restriction_identity_and_roundtrip",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m4_dem_compose",
+      "name": "test_hw_pij_arm_acceptance_smoke",
+      "reason": "streaming sample_00 pij pass is opt-in (QEC_TWIN_M4_HEAVY=1)"
+    },
+    {
+      "classname": "tests.test_hardware_m4_dem_compose",
+      "name": "test_hw_projection_l0_pins_and_cross_module_identity",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m4_dem_compose",
+      "name": "test_hw_si1000_skeleton_facts",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m4_dem_compose",
+      "name": "test_hw_twin_arm_from_frozen_cache_smoke",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m4_dem_compose",
+      "name": "test_hw_two_pass_table_from_frozen_cache",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_hardware_m4_dem_compose",
+      "name": "test_hw_window_projection_structure",
+      "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
+    },
+    {
+      "classname": "tests.test_simulator_axis1_schedule",
+      "name": "test_axis1_qutip_cuquantum_state_probe_executes_over_cap_static_idle_zero_state",
+      "reason": "qutip-cuquantum density state probe is an explicit slow GPU gate"
+    },
+    {
+      "classname": "tests.test_window_channel",
+      "name": "test_cptp_composed_window_map_is_cptp",
+      "reason": "real d7 circuit absent (set QEC_TWIN_HW_DATA); window-construction checks need it (no toy models)"
+    },
+    {
+      "classname": "tests.test_window_channel",
+      "name": "test_fault_injection_uses_error_channel_not_gate",
+      "reason": "real d7 circuit absent (set QEC_TWIN_HW_DATA); window-construction checks need it (no toy models)"
+    },
+    {
+      "classname": "tests.test_window_channel",
+      "name": "test_gradient_sensitivity_matches_finite_difference",
+      "reason": "real d7 circuit absent (set QEC_TWIN_HW_DATA); window-construction checks need it (no toy models)"
+    },
+    {
+      "classname": "tests.test_window_channel",
+      "name": "test_interior_window_register_memory_bound",
+      "reason": "real d7 circuit absent (set QEC_TWIN_HW_DATA); window-construction checks need it (no toy models)"
+    },
+    {
+      "classname": "tests.test_window_channel",
+      "name": "test_placement_counts_match_sidecar",
+      "reason": "real d7 circuit absent (set QEC_TWIN_HW_DATA); window-construction checks need it (no toy models)"
+    },
+    {
+      "classname": "tests.test_window_channel",
+      "name": "test_rho_bc_matches_bruteforce_partial_trace",
+      "reason": "real d7 circuit absent (set QEC_TWIN_HW_DATA); window-construction checks need it (no toy models)"
+    }
+  ]
+}

@@ -68,13 +68,29 @@ Discriminator patterns (the reusable answers): byte-level positive controls
 equality), sabotage variants (swapped enumeration, reversed tables), unit tags in
 names, masked-environment probes, heterogeneous-batch vs B=1 replays.
 
+## Two-sided verification (contract: "TWO-SIDED PER-UNIT EXTENSION")
+
+- **Side A (should-fail-must-fail)**: `tests/test_gate_soundness_matrix.py` — the
+  per-unit MUTANT × GATE soundness matrix; every hardened unit's registered gate is
+  DEMONSTRATED to fail under a surgical sabotage of that unit.
+- **Side B (should-pass-must-pass-robustly)**: `fixtures.assert_with_margin` (a pass
+  within `min_margin`, default 10x, of its threshold raises with the greppable
+  `EVIL-MARGINAL (class c): ` prefix — the 1.181e-12-vs-1e-12 lesson) +
+  `skip_allowlist.json` (the REGISTERED full-suite skip set; audited per wave against
+  the run's junitxml by `outputs/twin_validation/skip_audit.py` via
+  `outputs/twin_validation/skip_audit_run.sh`: any unregistered skip or any suite
+  failure carrying `PRECONDITION (class c` = audit FAILURE, exit 1).
+
 ## What lives here
 
 - `fixtures.py` — `require_precondition` (the greppable class-(c) prefix),
   `assert_control_trips` (the anti-vacuous control shape; bespoke broken inputs stay
-  local), `random_cptp_kraus` / `random_density_matrix` (one builder each, backend +
+  local), `assert_with_margin` (Side-B margin discipline, `EVIL-MARGINAL (class c): `
+  prefix), `random_cptp_kraus` / `random_density_matrix` (one builder each, backend +
   return-shape flags, internal 1e-12 asserts), `load_outputs_module` (importlib shim
   for committed `outputs/` scripts).
+- `skip_allowlist.json` — the registered full-suite skip set (Side B (iii)); new
+  skips are added ONLY by editing it in the same reviewed commit that introduces them.
 - `test_support_selftest.py` — the meta-tests: the infrastructure defends itself
-  (prefix verbatim, double-negative killer, sabotaged-CPTP demonstration, mask-hook
-  unknown-name fail-loud).
+  (prefix verbatim, double-negative killer, margin-discipline three-outcome
+  demonstration, sabotaged-CPTP demonstration, mask-hook unknown-name fail-loud).
