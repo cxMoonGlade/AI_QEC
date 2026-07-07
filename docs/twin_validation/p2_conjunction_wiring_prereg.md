@@ -77,6 +77,25 @@ physical cell exactly (the off-source identity).
 - Constants (c): fixture = real d3 XZZX cell (theta WG_L1=5e-3 calibrated, g_seep=0.09 base, b=0.9, arm A);
   modulation bracket ±30% logit/linear (swept, not pinned); N per gate registered in the phase scripts.
 
+## P2-ii PHASE-1 OUTCOMES (2026-07-06 — the seam + gate (a); gates (b)/(c) are the next phase)
+- **Gate (a) + guards + discriminators: 5/5 PASS** (`p2ii_gate_a_run.sh`, 23.4 s GPU; log with file
+  shas): single-set byte identity (packed record + terminal bits + ledger), C1 entry guards
+  (count/shape/CPTP), per-round provenance sha (content-derived, order-sensitive, shape-framed),
+  the R=1 INJECTION positive control (hi-table into the lo spec == the hi static run BYTE-identical,
+  != the lo static run), and the R=2 ROUND-INDEX discriminator (EXACT round-0 prefix identity
+  [lo,hi]==[lo,lo] / [hi,lo]==[hi,hi] + full-record inequality set).
+- **Two findings, both caught BEFORE they could corrupt evidence (recorded):**
+  (i) un-led pre-run review: the original gate file was BLIND to an inert/misindexed seam (identical
+  tables in gate (a); guards raise pre-trajectory; the smoke asserted only provenance) — a
+  constant-table or `[r-1]` bug would have passed everything and surfaced only in the expensive
+  gate-(b) statistics. Fixed with the two deterministic discriminators above (5/5 review catch rate
+  this arc). (ii) first gate run: the engineered CPTP violation (scale `leak[0]` by 1.01) measured
+  residual 1.181e-12 — a HAIR above CPTP_TOL=1e-12 (leak[0] is the SMALLEST Choi branch, weight
+  ~1e-10; the review's F2 direction, magnitude even more extreme) — an evil-marginal test caught by
+  its own precondition assert; fixed to scale the DOMINANT branch `leak[-1]` (residual ~2e-2).
+- Review minors adopted: `CPTP_TOL` imported (no hardcoded 1e-12); sha shape-framing; `_R10_META`
+  in the skip guard; rank-stability precondition; honest header-provenance docstring wording.
+
 ## 3. Disciplines
 Src per phase needs user confirmation before commit (P2-i..iv are `src/` work); every run a committed script +
 runner (aiqec-bin PATH for kernel JIT); GPU serial; CODE_MAP regen per src change; un-led review before每个 GPU
