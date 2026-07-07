@@ -780,7 +780,97 @@ correct default); the two genuinely user-facing knobs are flagged for confirmati
    restoring `monkeypatch` context) — reaches the real line, CPU, cheap. Adopted;
    the mutation is fixture-scoped and restored.
 
-⚑ USER-FACING #2 (sequencing): Wave-2 src + equivalence gates are CORRECT (just not
-complete-coverage); recommend landing them now and adding Wave-2.6 unit tests as the
-immediate next increment (each layer independently regressable), vs holding the
-Wave-2 commit until 2.6 lands. User's call.
+⚑ USER-FACING #2 (sequencing): RESOLVED 2026-07-07 — land Wave-2 + 2.5 + 2.6 (+ the
+L1/L2/L3 layers below) ALL TOGETHER once green; nothing commits until the whole
+coverage push is done.
+
+## 11. v2 red-team dispositions (2026-07-07: 2 blockers + 3 amendments, all adopted)
+
+- **BL-1 (leak_slice_table line 335 makes 100% branch unreachable):** the `if as_list:`
+  at 335 is reachable ONLY after the GPU `build_within_cycle_leak` call, so no CPU unit
+  test enters it, and it was NOT in the exemption list → gate exits 1 forever. FIX: add
+  335 to `leak_slice_table`'s `exempt_lines` with the same reason as 336/337
+  (GPU-only-reachable; both if-legs covered by the requires_cuda integration gate
+  `test_leak_slice_table_matches_sv_sampler`). Symmetric with the already-exempt 336/337.
+- **BL-2 (defensive-assert branches are structurally unreachable at 100% — the L1
+  necessity proof):** `random_density_matrix`'s inline trace/hermiticity asserts
+  (209-214) CANNOT fire for any legitimate input (the construction is Hermitian+PSD+
+  unit-trace by algebra), so their raise-side branch is unreachable AND unexempted. This
+  is not a one-off — it is the GENERAL shape of a defensive assert (an
+  `assert-never-fires` guard against internal bugs). Resolution establishes the standing
+  **DEFENSIVE-ASSERT RULE** (§12.1): extract the checks into a module-private
+  `_assert_density(rho, tol)` mirroring `_assert_cptp`, so (a) the meta-test trips it
+  with a sabotaged rho (the KILLER — proves the assert has teeth) and (b) the unit's L1
+  property test proves the LEGITIMATE path never needs it (the invariant always holds).
+  The branch is then a registered `defensive_assert` exemption whose reason cites BOTH
+  the trip-meta-test and the property-test — never a bare skip.
+- **AM-1 (§5.1 fallback description wrong):** the `_leak_sample` fallback leg (660->665)
+  is NOT reached by `u=1.0` or `1.0-eps` (both hit the last-k break inside the loop). It
+  needs `u` slightly ABOVE 1.0 OR a crafted `pk` whose sequential fl-cumsum undershoots
+  `tot` at `u=1.0`. §10.3's "crafted pk where fl-cumsum undershoots" is the correct
+  recipe; §5.1's boundary bullet is amended to match.
+- **AM-2 (§10.3 stub under-specified):** the CPU stub `mps` must also provide no-op
+  `gate_(...)` and `multiply_(...)` (called by `_leak_sample`→`_renormalize` after
+  selection), and `kraus` must be long enough that `kraus[sel]` indexes at `sel=K-1`.
+  Named so a literal builder does not hit AttributeError.
+- **AM-3 (registry under-population games the gate):** `wave2_6_coverage_targets.json`
+  MUST enumerate ALL in-scope units with pinned line ranges; an in-scope unit absent
+  from the registry is a HARD AUDIT ERROR (not a silent 0-enforcement exemption). The
+  audit fails loudly on any enumerated-but-unregistered unit.
+
+## 12. FULL-COVERAGE PROGRAM — L0+L1+L2+L3 over the releasable package (user directive
+## 2026-07-07: "能做到更全面的覆盖吗" → L0+L1+L2+L3, scope = the whole
+## `error_coupling_simulator` release package)
+
+Structural line/branch coverage (L0) is necessary but NOT sufficient — it proves every
+line ran, not that every behavior is correct (a 100%-covered test with weak asserts is
+still a mirage). Three more layers make coverage genuinely complete:
+
+### 12.1 L1 — Property-based testing (Hypothesis) + the DEFENSIVE-ASSERT RULE
+The project's faithfulness protocol IS a set of invariants; L1 encodes them as
+properties and lets Hypothesis generate thousands of inputs + shrink to a minimal
+counterexample (the cure for the "hand-picked 'random' input that was secretly the
+identity" failure mode). Per-invariant properties (each a Hypothesis test over generated
+inputs): CPTP (`sum K^H K = I` for every `random_cptp_kraus` draw), density
+(Hermitian+PSD+unit-trace for `random_density_matrix`), byte round-trip
+(pack→unpack→pack identity; `to_det_obs` vs the layout transcription), cap monotonicity
+(`bond_caps`: `cap_k <= 3·cap_{k-1}` etc.), preset validation (a generated in-range
+config constructs; a generated out-of-range value on any field raises), margin
+monotonicity (`assert_with_margin`). **DEFENSIVE-ASSERT RULE (standing):** an
+`assert-never-fires` guard is covered NOT by structural reachability but by the pair
+(extracted `_assert_*` seam tripped in a meta-test with sabotaged input) + (property
+test proving the legitimate path preserves the invariant); the structural branch is a
+registered `defensive_assert` exemption citing both.
+
+### 12.2 L2 — Mutation testing (mutmut) on CPU-pure modules
+`coverage% ran` → `mutation kill-rate` is the objective test-quality metric (it catches
+100%-covered-but-weak-assert tests — the automated, exhaustive form of the hand-written
+Side-A matrix). Scope: CPU-PURE modules only (numerics, packing, cap arithmetic,
+validation, fixtures, closed-form source maths) — GPU/quimb paths are excluded (mutation
+runs are too expensive there and their physics is covered by the independent-referee
+equivalence gates). Registered target: a per-module kill-rate floor (proposed ≥90%,
+survivors triaged — each surviving mutant is either killed by a new test or registered
+as an equivalent-mutant exemption with reason). Committed runner + a survivors registry
+json, same shape as the coverage/skip audits.
+
+### 12.3 L3 — Scope = the whole releasable package
+Extend L0+L1 (and L2 where CPU-pure) from the 19 Wave-2 units to EVERY public unit of
+`error_coupling_simulator` (the release package). This needs a unit inventory first (a
+read-only sweep enumerating public units per module + classifying CPU-pure vs
+GPU/quimb-bound). GPU-bound units keep structural coverage + hand KILLERs + their
+existing independent-referee equivalence gates (the faithfulness spine); CPU-pure units
+get the full L0+L1+L2 treatment.
+
+### 12.4 Execution program (pilot → package; all lands in ONE final commit set)
+- **Stage A (pilot):** the 19 Wave-2 units at L0 + L1 (this validates the coverage gate
+  mechanism, the defensive-assert rule, and the Hypothesis harness on a known surface).
+- **Stage B:** L2 mutation on the pilot's CPU-pure modules.
+- **Stage C (inventory):** enumerate the whole release package's public units (read-only
+  agent) → the L3 work-list, CPU-pure vs GPU-bound classified.
+- **Stage D:** roll L0+L1 across the package work-list, batch by module; GPU-bound units
+  get structural+KILLER+equivalence only.
+- **Stage E:** L2 mutation across the package's CPU-pure modules; final coverage +
+  mutation + skip audits all green; then the whole Wave-2..2.6 + L1/L2/L3 set is
+  presented for ONE commit confirmation.
+Each stage: committed runner + audit, full-suite regression, un-led review before any
+gate run; nothing commits until Stage E is green.
