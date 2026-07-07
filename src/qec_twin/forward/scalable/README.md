@@ -93,6 +93,20 @@ Self-validation (BUILD phase, NOT the full rung-1 cert — that is 8e):
 ~1e-16) + C6 MCWF-exactness (ensemble `P(s)` vs exact dense DM). GPU-only; tiny systems
 (a heavy full-9q DM job runs concurrently; the full-9q rung-1 certification is 8e).
 
+### The batched-MPS sibling arm (OPT2, scaling line)
+
+`batched_mps.py` is the **quimb-free batched op core** for the batch-shots lift of the
+serial per-shot loop above (the OPT2 scaling line; prereg + registered gates:
+`docs/twin_validation/batched_mps_backend_prereg.md`, "OPT2-1 DESIGN"). Every site tensor
+carries a leading batch dim `[B, cap_{k-1}, 3, cap_k]` at ZERO-PADDED FIXED cap shapes
+(`bond_caps`; uniform kernels — the Doi batch-shots pattern; our op stream is
+shot-independent, divergence lives in operator VALUES only). Recompression routes per
+split by cap arithmetic: batched reduced **QR** where no truncation is structurally
+possible (exact grade: every split; discarded ≡ 0.0 literally), **Gram + batched-eigh**
+otherwise (the OPT2-0 measured lever). The SERIAL arm (`mps_forward.py`) is the referee,
+never modified; per-op ≤1e-12 equivalence gates live in `tests/test_batched_mps_ops.py`
+(G-OP-1..7). The trajectory DRIVER (RunSpec→ShotSet seam) is OPT2-2, not in this module.
+
 ## The teacher output → decoder-input seam (ADR 0010)
 
 `seam.py` is the **teacher's output contract** — the single host-side adaptor that turns the
