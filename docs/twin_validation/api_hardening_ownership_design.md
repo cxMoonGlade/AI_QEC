@@ -174,3 +174,26 @@ that still passes me?"** — then add the discriminator that kills it. Concretel
   heterogeneous-batch vs B=1 replays.
 - Optional lever: automated mutation testing (mutmut-class) on CPU-pure modules (cap arithmetic,
   packing, guards); GPU paths use hand-authored KILLERs.
+
+### TWO-SIDED PER-UNIT EXTENSION (user directive 2026-07-07: "不该通过的报通过, 该通过的报
+### 不通过/skip, 逐unit进行测试" — false POSITIVES and false NEGATIVES, unit by unit)
+
+- **Side A — soundness matrix (should-fail-must-fail), PER UNIT:** for every public unit of the
+  hardened API surface, a MUTANT × GATE matrix: inject a specific sabotage (monkeypatch the unit —
+  e.g. to_det_obs -> transposed layout; _leak_sample tie-break -> strict `<`; syndrome_prefix_bytes
+  -> raw byte slice; bond_caps -> off-by-one; leak_by_round -> constant index; preset knob swap) and
+  assert the corresponding gate FAILS (AssertionError), parametrized over the whole matrix — not
+  spot checks. Home: `tests/test_gate_soundness_matrix.py` (gates callable as plain functions).
+- **Side B — liveness / anti-false-alarm (should-pass-must-pass-robustly):**
+  (i) MARGIN discipline: tolerance-bearing gate asserts route through `assert_with_margin(value,
+  tol, min_margin=10.0)` (tests/_support) — a pass within 10x of its threshold is EVIL-MARGINAL and
+  reported/failed as a precondition (the measured 1.181e-12-vs-1e-12 lesson, now structural);
+  (ii) preconditions must NEVER fire in the committed suite (they are re-seed guidance for
+  development; a firing precondition in CI = a failed gate, visible by the greppable prefix);
+  (iii) SKIP ALLOWLIST: the full-suite junitxml skip set must EQUAL the registered allowlist
+  (file -> count + reason, `tests/_support/skip_allowlist.json`); ANY unregistered skip = audit
+  failure — this closes the hasattr/importorskip escape-hatch class suite-wide, not just in
+  reviewed files. Audit home: a committed script parsing the junitxml (run per wave gate).
+- Scope now: the Wave-2 units (A1 experiments facade, A2 ShotSet accessors, A3 seams) + the P2-ii
+  leak_slices seam. The batched-MPS op core's matrix (22 gates, its own review-verified KILLERs)
+  is REGISTERED as an OPT2-2 entry gate rather than duplicated here.
