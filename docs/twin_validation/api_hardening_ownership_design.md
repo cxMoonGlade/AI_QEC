@@ -2,6 +2,24 @@
 
 Synthesized from the three inventories against `docs/CODE_MAP.md` (error_coupling_simulator = releasable target, qec_twin.forward.exact/scalable not yet migrated; xzzx_parser slated to move "with frontend/mechanisms phases") and the CLAUDE.md module-placement + faithfulness rules.
 
+## WAVE OUTCOMES (backfilled as waves land)
+
+- **Wave 1 (committed 9fec9ce):** conftest + `_support` package + 7 preamble migrations. Full suite
+  1181/0/49 (junitxml); per-file pass counts identical for all 7; +15 selftests; Rule-II mask probe
+  23/23 PASS. Declared strictening (3-file→4-file `_HAS_DATA`) + memlean cuda-else-cpu→hard-skip.
+- **Wave 2 (A1/A2/A3) + Wave 2.5 (two-sided verification): AWAITING USER COMMIT CONFIRMATION.**
+  Gate results on-box (RTX 5090): Wave-2 gates 14/14 (`test_shotset_records` 6 + `test_frontend_experiments` 8);
+  **byte-identity proven** — pre-change baseline captured at 9fec9ce via a git worktree + PYTHONPATH
+  override with printed `__file__` evidence, packed/terminal-bits/ledger hashes IDENTICAL to the working
+  tree (the A3 `_leak_sample`-returns-index / `attach_layout` / `mps_from_statevector` refactor is a
+  proven pure addition). Side-A mutation matrix 13/13 (every mutant defeats its gate). Side-B 20/20
+  selftests incl. the EVIL-MARGINAL detector. Full suite **1213/0/49**; skip audit PASS (0 added / 0
+  removed / 0 reason-drift / 0 preconditions-fired). Un-led 2-lens review found 15, verified 14 real /
+  1 refuted, all fixed pre-first-run; the AM-3 transpose KILLER self-caught TWICE (all-zero cold-cell
+  record → precondition fired; then a "random asymmetric" pattern that was secretly identity+swap →
+  by-construction assert fired) — the devious standard working as designed.
+  Remaining waves (B1 sequential-null anchor, D1/D2 runners, D3 migration) unstarted.
+
 ## Ownership table
 
 | # | New/owning module | What moves in | Source copies to migrate | Referees + independence constraints | Consumers after migration | Phase | Risk notes |
