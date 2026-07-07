@@ -37,6 +37,21 @@ physical cell exactly (the off-source identity).
   Gate-4 1/√N rate; (c) liveness control — varied-vs-constant arms differ beyond MC error where the modulation
   amplitude says they must (predict the effect size from the slice-channel derivative BEFORE the run); (d) per-arm
   truncation ledgers.
+  API DESIGN PIN (2026-07-06, before code; grounded in the verified seams): `sample(...,
+  leak_slices: Sequence[Tensor] | None = None)` — `None` = today's path (BYTE-identical, the gate-(a)
+  object); else length-R sequence of `(n_kraus, 3, 3)` per-round slice tables, each CPTP-asserted at
+  sample entry (`SvSampler.cptp_residual < CPTP_TOL` — the C1 discipline; the carrier never trusts
+  caller tables). The CSR marshal is CONTENT-independent for leak (`_emit_leak` records `op_uid=0`;
+  verified sv_sampler.py:958-959), so marshalling is UNCHANGED; `marsh.leak_kraus` is NOT consumed by
+  the MPS arm (`_run_trajectory` takes its leak argument explicitly) — documented, not silently relied
+  on. `_run_trajectory`'s leak parameter becomes per-round (`leak_by_round[r]`, the existing round
+  loop); the POST-measure segment of round r uses round r's table (a registered convention — today's
+  post segments contain only the transversal Y, no leak ops, so the convention is dormant but pinned).
+  Building per-round tables FROM Θ (theta_wg(t)/g_seep(t) draws) is the CALLER's job (gate scripts,
+  later the P2-iv teacher) — the carrier stays a data consumer (backend-agnostic seam). ShotSet header
+  provenance: `leak_slices_mode` = `static`/`per_round` + a sha256 over the stacked per-round tables.
+  T0 referee needs NO src change: the gate script hands `apply_within_cycle_round` a per-round marsh
+  (CSR identical, only `leak_kraus` differs).
 - **P2-iii — T2 kernel leak-stack (src: `.cu` + loader + marshal).** Gates: (a) single-set stack == today's kernel
   BIT-identical (same seeds, byte-compare packed shots); (b) varied-stack kernel vs the T1 MPS arm at matched
   model/seeds-independent statistics (two-implementation cross-check, the Gate-4 pattern); (c) throughput report
