@@ -60,6 +60,7 @@ is a committed script under ``outputs/teacher_prereg/`` (scripted-execution HARD
 src/ commit-gate: STAGED, awaiting confirmation (mainline-code commit gate).
 """
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
@@ -351,6 +352,40 @@ def _with_gesvd_svd(method):
 
 
 # --------------------------------------------------------------------------- #
+# Dense statevector <-> MPS lift (public form; ownership contract row A3)      #
+# --------------------------------------------------------------------------- #
+# CONVENTION: site-0-MSB (engine qutrit p = p-th most-significant tensor factor)
+def mps_from_statevector(psi: torch.Tensor, order: tuple[int, ...], device):
+    """Build a site-ordered qutrit MPS from a dense ``3^n`` ENGINE-basis state vector.
+
+    The module-level public form of :meth:`MpsLeakageForward._mps_from_statevector`
+    (which delegates here -- behavior-identical: same quimb calls, same convention).
+
+    ``psi`` is in the ENGINE basis -- site-0-MSB: engine qutrit ``p`` is the ``p``-th
+    MOST-significant tensor factor of the ``3^n`` vector; quimb ``from_dense`` with
+    ``dims=[3]*n`` uses the SAME row-major / site-0-MSB convention (verified against
+    the engine index map). ``order[k] = engine_position`` placed at MPS site ``k``
+    (the snake permutation); the dense tensor is transposed into site order BEFORE the
+    MPS factorization so MPS site ``k`` carries engine qutrit ``order[k]``.
+    ``from_dense`` is EXACT (full Schmidt rank), so this is a zero-truncation lift
+    (the C8 anchor). All arrays land on ``device`` as torch complex128. Lazy quimb
+    import (mirrors the class's lazy import; the module imports without quimb).
+    """
+    import quimb.tensor as qtn  # lazy: keep the module importable without quimb
+
+    n = len(order)
+    psi_t = psi.reshape([PHYS] * n)
+    # transpose engine axes -> site axes: site k reads engine axis order[k].
+    psi_snake = psi_t.permute(*order).contiguous().reshape(-1)
+    arr = psi_snake.detach().cpu().numpy()
+    # CONVENTION: site-0-MSB -- from_dense(dims=[3]*n) reads arr row-major, so tensor
+    # factor 0 (engine qutrit order[0]) is the most-significant axis.
+    mps = qtn.MatrixProductState.from_dense(arr, dims=[PHYS] * n)
+    mps.apply_to_arrays(lambda x: torch.as_tensor(x, dtype=CDTYPE, device=device))
+    return mps
+
+
+# --------------------------------------------------------------------------- #
 # The MCWF-on-MPS forward backend                                             #
 # --------------------------------------------------------------------------- #
 class MpsLeakageForward:
@@ -386,22 +421,53 @@ class MpsLeakageForward:
     def _mps_from_statevector(self, psi: torch.Tensor, order: tuple[int, ...]):
         """Build a snake-ordered qutrit MPS from a dense ``3^n`` engine state vector.
 
-        ``psi`` is in the ENGINE basis (qutrit ``p`` = the ``p``-th most-significant tensor
-        factor; quimb ``from_dense`` with ``dims=[3]*n`` uses the SAME row-major / site-0-MSB
-        convention -- verified against the engine index map). ``order[k] = engine_position``
-        placed at MPS site ``k`` (the snake permutation); the dense tensor is transposed into
-        snake-site order BEFORE the MPS factorization so MPS site ``k`` carries engine qutrit
-        ``order[k]``. ``from_dense`` is EXACT (full Schmidt rank), so this is a zero-truncation
-        lift (the C8 anchor). All arrays are moved to torch cuda complex128.
+        Delegates to the module-level public form :func:`mps_from_statevector`
+        (behavior-identical refactor: same quimb calls, same site-0-MSB convention;
+        see the convention anchor there). ``order[k] = engine_position`` placed at MPS
+        site ``k`` (the snake permutation). ``from_dense`` is EXACT (full Schmidt
+        rank), so this is a zero-truncation lift (the C8 anchor). All arrays are moved
+        to torch cuda complex128 on ``self.device``.
         """
-        n = len(order)
-        psi_t = psi.reshape([PHYS] * n)
-        # transpose engine axes -> snake-site axes: site k reads engine axis order[k].
-        psi_snake = psi_t.permute(*order).contiguous().reshape(-1)
-        arr = psi_snake.detach().cpu().numpy()
-        mps = self._qtn.MatrixProductState.from_dense(arr, dims=[PHYS] * n)
-        mps.apply_to_arrays(lambda x: torch.as_tensor(x, dtype=CDTYPE, device=self.device))
-        return mps
+        return mps_from_statevector(psi, order, self.device)
+
+    def attach_layout(self, order: tuple[int, ...], logical_support: list[int]) -> None:
+        """Bind the engine<->MPS site maps + logical support for direct method use.
+
+        Sets ``_mps_order`` (MPS site ``k`` carries engine qutrit ``order[k]``),
+        ``_eng_to_mps`` (engine position -> MPS site), and ``_log_eng_support`` (the
+        logical observable's engine-position support) EXACTLY as :meth:`sample` does
+        (:meth:`sample` routes through this method -- behavior-identical refactor,
+        row A3). Call it before driving the trajectory/measurement methods directly
+        (referee-side harness use: ``_run_trajectory`` / ``_measure_stabilizer`` /
+        ``_terminal_readout`` all read these maps). ``order`` must be a permutation of
+        ``0..len(order)-1`` (the snake or identity site order); ``logical_support``
+        is the engine-position list (e.g. ``marsh.log_supp`` as ints).
+
+        DIRECTION CONVENTION (site->engine): ``order[k]`` = the engine position
+        carried at MPS site ``k``; ``_eng_to_mps`` is its INVERSE (engine position
+        -> MPS site). NON-identity example::
+
+            order = (2, 0, 1)   # MPS site 0 carries engine qutrit 2, site 1 -> 0, site 2 -> 1
+            _eng_to_mps == {2: 0, 0: 1, 1: 2}
+
+        ``order`` must be a SEQUENCE. A ``Mapping`` (e.g. the ``eng_to_mps`` dict) is
+        REJECTED with :class:`TypeError`: iterating a dict yields its KEYS only, so a
+        total eng->mps dict would always pass the permutation check while silently
+        reinterpreting key INSERTION ORDER as the site->engine order (K-6 hazard).
+        """
+        if isinstance(order, Mapping):
+            raise TypeError(
+                "order must be a sequence with order[k] = engine position at MPS "
+                "site k (site->engine); got a Mapping — pass the ORDER TUPLE, not "
+                "the eng_to_mps dict")
+        order_t = tuple(int(x) for x in order)
+        if sorted(order_t) != list(range(len(order_t))):
+            raise ValueError(
+                f"attach_layout: order must be a permutation of 0..{len(order_t) - 1} "
+                f"(got {order!r})")
+        self._mps_order = order_t
+        self._eng_to_mps = {eng: site for site, eng in enumerate(order_t)}
+        self._log_eng_support = [int(x) for x in logical_support]
 
     def build_codestate_mps_direct(self, sched: "XZZXSchedule", m: int, chi: int,
                                    order: "tuple[int, ...]", eng_to_mps: "dict[int, int]"):
@@ -553,11 +619,22 @@ class MpsLeakageForward:
         the bond). The MPS lift of ``apply_gate_block``."""
         mps.gate_(U, where=int(mps_site), contract=True)
 
-    def _leak_sample(self, mps, kraus: list[torch.Tensor], mps_site: int, u: float) -> None:
+    def _leak_sample(self, mps, kraus: list[torch.Tensor], mps_site: int, u: float) -> int:
         """MCWF Kraus-sample the leak slice on ``mps_site`` (the MPS lift of
         ``leakage_sample_block``): branch ``k`` w.p. ``p_k = ||K_k psi||^2`` (CPTP =>
         ``sum_k p_k = <psi|psi>``), then ``psi <- K_k psi / sqrt(p_k)``. ONE uniform ``u``
         consumed (Section-5 order). A 1-site Kraus cannot grow the bond -> exact, no truncation.
+
+        RETURNS the selected branch index ``sel`` (int) -- a PURE addition (row A3):
+        draws, selection, application, and renormalization are byte-identical to the
+        pre-return code; only the already-computed index is surfaced (for referee-side
+        harnesses; kills the ``_cumsel`` replica + its silent tie-break-drift trap).
+        TIE-BREAK REGISTRY (``docs/twin_validation/batched_mps_backend_prereg.md``
+        v2/v5, cited verbatim -- binding at this return-value definition): the selected
+        branch is the FIRST ``k`` satisfying ``u * tot <= cumsum_k`` (NON-STRICT
+        ``<=``; the strict-vs-nonstrict split is registered -- a ``<`` drift is the
+        K-3 bug class), with fallback ``K - 1`` when float accumulation leaves no
+        ``k`` satisfying it.
 
         ``p_k`` is read from the 1-site REDUCED DENSITY MATRIX (ONE local contraction), NOT n_kraus
         full-chain overlaps: since ``K_k`` is single-site, ``p_k = ||K_k psi||^2 = <psi|K_k^dag K_k|
@@ -587,6 +664,7 @@ class MpsLeakageForward:
                 break
         mps.gate_(kraus[sel], where=int(mps_site), contract=True)
         self._renormalize(mps, norm_sq=pk[sel])
+        return int(sel)
 
     def _measure_stabilizer(
         self, mps, supp_sites: list[int], isx: list[int], d2: float, u_outcome: float,
@@ -1053,11 +1131,10 @@ class MpsLeakageForward:
                 h.update(repr(tuple(t.shape)).encode())
                 h.update(t.detach().cpu().numpy().tobytes())
             leak_slices_sha = h.hexdigest()
-        # site ordering (snake or identity); build the engine<->mps maps.
+        # site ordering (snake or identity); bind the engine<->mps maps + logical
+        # support via the public seam (attach_layout -- behavior-identical refactor).
         order = snake_order_from_coords(sched.data_coords) if snake else tuple(range(n_data))
-        self._mps_order = order
-        self._eng_to_mps = {eng: site for site, eng in enumerate(order)}
-        self._log_eng_support = [int(x) for x in marsh.log_supp.detach().cpu().numpy().tolist()]
+        self.attach_layout(order, marsh.log_supp.detach().cpu().numpy().tolist())
 
         chi_eff = int(chi) if chi is not None else exact_chi(n_data)
         ledger = MpsTruncationLedger(chi=chi_eff)
@@ -1077,6 +1154,7 @@ class MpsLeakageForward:
                 sched, spec.m, cs_chi, order, self._eng_to_mps)
         else:
             codestate, code_evidence = self._host.build_codestate(sched, spec.m)  # <S>/<L> asserted
+            # CONVENTION: site-0-MSB (engine qutrit p = p-th most-significant tensor factor)
             codestate_mps = self._mps_from_statevector(codestate, order)
 
         # gate table (engine SV_GATE_IDS) -> the (3,3) cuda unitaries (mirrors the kernel table).
@@ -1188,6 +1266,9 @@ class MpsLeakageForward:
         order = snake_order_from_coords(sched.data_coords) if snake else tuple(range(sched.n_data))
         codestate, _ = self._host.build_codestate(sched, spec.m)
         mps = self._mps_from_statevector(codestate, order)
+        # CONVENTION: site-0-MSB (engine qutrit p = p-th most-significant tensor factor)
+        # -- to_dense() re-emits row-major over the SITE order; the permute below maps
+        # site axes back to engine axes, restoring the engine site-0-MSB vector.
         dense_snake = torch.as_tensor(mps.to_dense(), dtype=CDTYPE, device=self.device).reshape(
             [PHYS] * sched.n_data)
         # invert the snake permutation: engine axis e sits at snake site order.index(e).

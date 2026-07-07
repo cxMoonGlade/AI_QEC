@@ -467,6 +467,23 @@ Current slice:
   as symbolic `CuOperator(..., mode=site, hilbert_dims=(3,)*n)` terms. This path
   is a safety/oracle integration seam for continuous `H + c_ops` MCWF, not the
   production 12-qutrit gate-level Grover carrier.
+- d3 XZZX experiment presets (`experiments.py`): the product facade over the
+  shipped Google `d3_at_q6_7` patch and the within-cycle leakage carriers.
+  `load_xzzx_d3(...)` parses the r01 geometry (`verify=True`) and, by default,
+  attaches the r10 interior within-cycle streams (the explicit
+  r01-geometry + r10-streams provenance split). The dataset root resolves as
+  `dataset_root` argument > `QEC_TWIN_D3_DATA` env var > the parser default; a
+  missing root or file raises `FileNotFoundError` naming the path — never a
+  silent fallback to the default root. `ExperimentPreset` is a frozen,
+  registered configuration (a *preset*) with NO silent physics defaults; the
+  two theta conventions are DISTINCT registered presets:
+  `PRESET_LEAK_THETA_0P30` (raw angle, `theta_rad=0.30`) and
+  `PRESET_LEAK_WG_L1_5E3` (`theta` calibrated to `WG_L1 = 5e-3` via
+  `calibrate_theta_for_wg_l1`). `run_spec_from_preset(...)` builds the engine
+  `RunSpec` with explicit `n_shots`/`n_rounds`/`seed`, and
+  `leak_slice_table(...)` returns the per-CZ `exp(L/4)` Kraus table through
+  `SvSampler.build_within_cycle_leak` (its embedded CPTP `< 1e-12` and
+  composition `< 1e-12` preconditions stay asserted inside the facade path).
 
 Representability boundary:
 
@@ -788,6 +805,27 @@ idle interval needs a trailing `builder.tick()`.
 Leakage, analog joint-L coupling, and shared-source non-Markovian noise attach
 through backend-specific truth sidecars / carriers, not by laundering them into
 this Pauli insertion layer.
+
+d3 XZZX experiment-preset quickstart:
+
+```python
+from error_coupling_simulator.frontend.experiments import (
+    PRESET_LEAK_WG_L1_5E3,
+    leak_slice_table,
+    load_xzzx_d3,
+    run_spec_from_preset,
+)
+
+# r01 geometry + r10 interior streams; QEC_TWIN_D3_DATA overrides the dataset root.
+sched = load_xzzx_d3()
+spec = run_spec_from_preset(PRESET_LEAK_WG_L1_5E3, n_shots=1024, n_rounds=2, seed=0)
+leak = leak_slice_table(PRESET_LEAK_WG_L1_5E3, device="cuda")  # (n_kraus, 3, 3), CPTP-asserted
+```
+
+The resulting `spec`/`sched` pair drives the within-cycle carriers directly
+(e.g. `MpsLeakageForward(device="cuda").sample(spec, sched=sched)`); presets are
+frozen registered configurations — new knob combinations are new named presets,
+never edits of an existing one.
 
 CUDA-Q Grover quickstart:
 

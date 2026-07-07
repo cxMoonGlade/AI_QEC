@@ -427,6 +427,98 @@ class ShotSet:
     diag: dict[str, Any] = field(default_factory=dict)
     shots: np.ndarray | None = None
 
+    # ----------------------------------------------------------------------- #
+    # Record accessors (ownership contract row A2: to_det_obs / packed_bytes / #
+    # syndrome_prefix_bytes)                                                   #
+    # ----------------------------------------------------------------------- #
+    def _require_shots(self, method: str) -> np.ndarray:
+        """The materialized packed buffer, or a clear error (never a silent None)."""
+        if self.shots is None:
+            raise ValueError(
+                f"ShotSet.{method}: shots is None (the run was not materialized). "
+                f"Re-run with materialize=True or load the packed buffer from "
+                f"path={self.path}.")
+        return self.shots
+
+    def _header_geometry(self) -> tuple[int, int]:
+        """``(n_stab, R)`` from the self-describing header, or a clear error."""
+        missing = [k for k in ("n_stab", "R") if k not in self.header]
+        if missing:
+            raise KeyError(
+                f"ShotSet header lacks {missing} (need both 'n_stab' and 'R' to "
+                f"decode the packed buffer; header format "
+                f"{self.header.get('format', '<absent>')!r}).")
+        return int(self.header["n_stab"]), int(self.header["R"])
+
+    def to_det_obs(self) -> dict[str, np.ndarray]:
+        """Certify-ready unpack: ``{"det": (N, R*n_stab) uint8, "obs": (N,) uint8}``.
+
+        Decodes the packed buffer via :meth:`SvSampler.unpack_shots` (the single
+        inverse of :meth:`SvSampler.pack_shots`), with ``n_stab``/``R`` read from
+        ``self.header`` (raises ``KeyError`` if absent, ``ValueError`` if
+        ``shots is None`` -- never a silent guess). ROUND-MAJOR layout, pinned by the
+        header's ``syndrome_layout`` text: "shot_major: shot_id outer, then round,
+        then stab (round-major, LSB-first packbits); logical_flip in the trailing
+        byte (value 0/1)" -- i.e. ``det[i, r * n_stab + s]`` is shot ``i``, round
+        ``r``, stabilizer ``s``, and ``obs[i]`` is the sampled terminal logical flip
+        (relative to the prepared ``m``, never ``m`` itself).
+
+        AM-3 (contract): before any consumer deletes its hand-rolled unpack+reshape,
+        it gates once that this method equals the hand-roll on a committed seeded
+        ShotSet (round-major layout pinned).
+        """
+        packed = self._require_shots("to_det_obs")
+        n_stab, R = self._header_geometry()
+        det, obs = SvSampler.unpack_shots(packed, n_stab, R)
+        return {"det": det, "obs": obs}
+
+    def packed_bytes(self) -> bytes:
+        """The packed shot buffer as raw bytes -- the CANONICAL byte-compare surface.
+
+        Byte-identity claims between two runs (dense kernel vs MPS carrier; static vs
+        per-round leak arm; pre/post-refactor regressions) compare THIS value: the
+        contiguous shot-major packed buffer exactly as streamed to disk
+        (``out_stride = ceil(R*n_stab/8) + 1`` bytes/shot; see
+        :meth:`SvSampler.pack_shots`). Raises if ``shots`` was not materialized.
+        """
+        return np.ascontiguousarray(self._require_shots("packed_bytes")).tobytes()
+
+    def syndrome_prefix_bytes(self, n_rounds: int) -> bytes:
+        """The first ``n_rounds`` rounds' syndrome bits of EVERY shot, as bytes.
+
+        The prefix-identity comparison surface (e.g. round-0-block EXACT equality
+        between two arms): per shot, the leading ``n_rounds * n_stab`` syndrome bits
+        (round-major, header-pinned layout) packed LSB-first, shots concatenated in
+        shot order. ``n_rounds`` is explicit (N-4); it must satisfy
+        ``0 <= n_rounds <= R`` (``n_rounds == R`` covers all syndrome bits but never
+        the trailing logical-flip byte).
+
+        BIT-EXACT boundary handling: bits-per-round ``= n_stab`` comes from the
+        header. When the prefix ends mid-byte (``n_rounds * n_stab`` not a multiple
+        of 8), the prefix is extracted by UNPACK + truncate-at-the-round-boundary +
+        REPACK (:meth:`SvSampler.unpack_shots` then LSB-first ``packbits``; the final
+        byte's tail bits are zero-padded) -- NOT by raw byte slicing, which would leak
+        round ``n_rounds``'s bits sharing the boundary byte. When the boundary IS
+        byte-aligned the raw per-shot byte slice is returned directly (identical to
+        the unpack+repack result, cheaper).
+        """
+        packed = self._require_shots("syndrome_prefix_bytes")
+        n_stab, R = self._header_geometry()
+        n_rounds = int(n_rounds)
+        if not 0 <= n_rounds <= R:
+            raise ValueError(
+                f"n_rounds must be in [0, R={R}] (got {n_rounds})")
+        prefix_bits = n_rounds * n_stab
+        if prefix_bits == 0:
+            return b""
+        if prefix_bits % 8 == 0:
+            # byte-aligned round boundary: the per-shot leading bytes ARE the prefix
+            # (LSB-first packing fills bytes in bit order, so no foreign bits leak in).
+            return np.ascontiguousarray(packed[:, : prefix_bits // 8]).tobytes()
+        syn, _flip = SvSampler.unpack_shots(packed, n_stab, R)
+        prefix = np.packbits(syn[:, :prefix_bits], axis=1, bitorder="little")
+        return np.ascontiguousarray(prefix).tobytes()
+
 
 # --------------------------------------------------------------------------- #
 # Lazy / guarded kernel loader (Agent K owns the real one)                     #
@@ -790,7 +882,33 @@ class SvSampler:
 
     @staticmethod
     def cptp_residual(kraus: torch.Tensor) -> float:
-        """``max|sum_k K_k^dag K_k - I|`` for a ``(n_kraus, d, d)`` stack (the §3 check)."""
+        """``max|sum_k K_k^dag K_k - I|`` for a ``(n_kraus, d, d)`` stack (the §3 check).
+
+        BL-1 PAIR doctrine (binding; v2 review dispositions of
+        ``docs/twin_validation/api_hardening_ownership_design.md``).
+        This is the ARM-SIDE precondition check:
+        the arm's own build + entry guards route HERE (:meth:`build_leakage_kraus`,
+        :meth:`build_within_cycle_leak`, and ``mps_forward.MpsLeakageForward.sample``'s
+        per-round ``leak_slices`` entry guard). The AUDIT-SIDE cert implementation is
+        ``qec_twin.audit.floor_backend.cptp_residual`` -- every cert gate (e.g.
+        L-soft-6) must route THERE, never here. The two implementations remain
+        INDEPENDENT FOREVER and must never be aliased, merged, or re-exported as one:
+        a single shared implementation would let one conjugation bug pass both the
+        precondition and the cert gate (FAITHFULNESS_PROTOCOL Rule I -- a check vs the
+        arm's own residual function is not certification).
+
+        Tolerance conventions (AM-8; THREE distinct constants, never interchangeable):
+
+        * ``CPTP_TOL = 1e-12`` -- the (a)-class build/entry GATE this residual is
+          compared against (a faithful channel must be CPTP below it);
+        * ``1e-8`` -- the ENGINEERED-VIOLATION precondition floor: a harness-side
+          sabotaged/control input must violate CPTP by MORE than 1e-8 to count as a
+          valid non-vacuous control (a knife-edge violation just above the gate --
+          the measured 1.181e-12 class -- is a K-4 trap, not a control);
+        * ``1e-9`` -- ``floor_backend.cptp_residual``'s documented build tolerance
+          ("a faithful leak slice is CPTP to < 1e-9"): the audit side's documented
+          expectation of faithful inputs, not a gate constant here.
+        """
         d = kraus.shape[-1]
         acc = torch.einsum("kab,kac->bc", kraus.conj(), kraus)
         eye = torch.eye(d, dtype=acc.dtype, device=acc.device)
