@@ -48,3 +48,94 @@ Synthesized from the three inventories against `docs/CODE_MAP.md` (error_couplin
 7. **Wave 7 — D3 migration wave**, file-by-file, full suite after each; scripts migrate opportunistically (new scripts mandatorily), never retro-editing committed result jsons.
 
 Throughout: the full pytest suite (`conda run -n aiqec python -m pytest -q tests/`) is the net after every wave; byte-identity wherever a packed buffer, serial sample, or prior result json exists; no wave builds on an unconfirmed src change.
+
+## Ratified decisions (user, 2026-07-07)
+
+All seven open decisions resolved as recommended: (1) cell facade in `error_coupling_simulator/frontend`;
+(2) extend `dm_oracle` with a MANDATORY-explicit `semantics=` parameter (no default); (3) `_gate_common`
+extended in place; (4) script-bytes = the canonical content hash, the notion3 sidecar becomes opt-in;
+(5) the statevector reference lives under `tests/_support/`, outputs scripts import it via an explicit
+sys.path insert (evaluator tooling, not product); (6) A2/A3 land as ONE reviewed diff with one user
+confirmation; (7) dataset-root env var = `QEC_TWIN_D3_DATA`.
+
+## NAMING STANDARD (user directive 2026-07-07: "we are building a TOOLKIT" — names must be
+## standard-vocabulary and self-explanatory to an external user, not project shorthand)
+
+Principles (binding for every NEW public name in this pass; existing internals rename only when touched):
+- **N-1 Glossary consistency.** One public vocabulary across modules/docstrings/docs, aligned with the
+  certify seam's already-public terms: *reference* (a from-scratch or independent implementation used
+  for comparison — replaces the internal "referee"/"GT"), *anchor* / *control* (the certify ports),
+  *preset* (a named, registered experiment configuration — replaces the internal "cell"),
+  *backend under test* (replaces "arm") , *gate* (a registered pass/fail check; defined once in the
+  test-support README). Internal docs may keep the old shorthand; APIs may not.
+- **N-2 No history in names.** Phase/finding codenames (p1c, opt2, gop3, FIX-5) never appear in an API
+  name — they live in docstrings ("promoted from the P1-c script"), commit messages, and preregs.
+- **N-3 Expandable abbreviations.** Any abbreviation in a public name must be standard (MPS, DEM, CPTP)
+  or expanded in the name itself (`statevector_reference`, not `sv_mcwf_gt`; `wood_gambetta_*` spelled
+  out at first use in the docstring).
+- **N-4 Units/conventions in ambiguous parameter names** (the lambda-vs-sigma lesson): `theta_rad`,
+  `gap_lambda`, `ratio_sigma`, `n_rounds` — never a bare `gap`/`ratio`/`R` in NEW public signatures.
+- **N-5 Underscore only for genuinely-private.** `tests/_support/` keeps its underscore (pytest
+  collection convention); module and function names inside are clean.
+
+Rename table (design-table v1 name -> product name):
+
+| Entry | v1 proposal | Product name | Notes |
+|---|---|---|---|
+| A1 module | `frontend/d3_cell.py` | **`frontend/experiments.py`** | loads schedules + builds run specs + noise tables |
+| A1 loader | `load_d3_schedule` | **`load_xzzx_d3()`** | returns the parsed schedule with interior streams attached |
+| A1 registry | `CellSpec` / `RAW_THETA_030` / `WG_L1_5E3` | **`ExperimentPreset`** / `PRESET_LEAK_THETA_0P30` / `PRESET_LEAK_WG_L1_5E3` | presets are frozen + named; no silent defaults |
+| A1 leak builder | `build_leak_table` | **`leak_slice_table()`** | returns the stacked `(n_kraus, 3, 3)` table; list form via a flag |
+| A2 records | `ShotSet.det_obs()` | **`ShotSet.to_det_obs()`** | matches the registered `{"det","obs"}` payload keys (C-3) |
+| A2 bytes | `packed_bytes` / `syndrome_prefix_bytes` | **`packed_bytes()`** / **`syndrome_prefix_bytes(n_rounds)`** | explicit rounds argument (N-4) |
+| A3 loader | `mps_from_dense` | **`mps_from_statevector()`** | mirrors the existing `_mps_from_statevector` semantics |
+| A3 priming | `prime_for_terminal_readout` | **`attach_layout(order, logical_support)`** | says what it does, not why a test needs it |
+| B1 param | `semantics=` | **`measurement_semantics="isolated"\|"sequential"`** | mandatory, no default |
+| B2 module | `tests/_support/batched_discriminators.py` | **`tests/_support/state_builders.py`** + **`tests/_support/sampling_guards.py`** | states (Haar/low-rank blocks/engineered spectra) vs guards (knife-edge margins, weight-ranked branch selection, sigma conditioning fence) |
+| B3 module | `tests/_support/serial_referee.py` | **`tests/_support/mps_serial_reference.py`** | "reference", names the backend it references |
+| B4 module | `tests/_support/sv_mcwf_gt.py` | **`tests/_support/statevector_reference.py`** | N-3 |
+| C2 helper | `precondition(...)` | **`require_precondition(cond, msg, remedy=...)`** | greppable prefix unchanged |
+| D1 runner | `outputs/twin_validation/_run_gate.sh` | **`outputs/twin_validation/run_gate.sh`** | user-invoked tool, no leading underscore |
+| D2 module | `_gate_common.py` | keep filename (existing) | public helpers get clear names (`script_evidence`, `binomial_z(p_hat, p_null, n_shots)`) |
+
+Plus: a short **GLOSSARY section in the test-support README** (reference/anchor/control/preset/gate/
+backend-under-test) written in Wave 1 so every later wave names against it.
+
+## v2 REVIEW DISPOSITIONS (un-led adversarial review 2026-07-07: 3 blockers + 8 amendments, ALL adopted)
+
+- **BL-1 (Rule-I referee collapse):** A2's cptp_residual consolidation is RESCINDED as written. The
+  contract declares a canonical PAIR: `SvSampler.cptp_residual` (arm-side: the arm's own build/entry
+  preconditions) and `floor_backend.cptp_residual` (audit-side: every cert gate, e.g. L-soft-6) remain
+  independent implementations FOREVER; only same-side duplicates collapse; each caller's side is
+  registered in the docstring. A single shared implementation would let one conjugation bug pass both
+  the precondition and the cert gate.
+- **BL-2 (runner trackability):** `git check-ignore` confirms nothing under `outputs/` can be tracked.
+  The generic runner moves to **`tools/run_gate.sh`** (tracked, beside gen_code_map.py); outputs/
+  runners become 2-line wrappers calling it.
+- **BL-3 (semantics routing unenforced):** Wave 4 gains the DISCRIMINATING gate: the P1c-6
+  false-failing detectors must go GREEN under `measurement_semantics="sequential"` AND still TRIP
+  under `"isolated"` at the recorded 4.7-6.6 sigma; every certify grid cell REGISTERS its semantics
+  value (no mechanical all-isolated migration).
+- AM-1: the semantics value is carried as an EXPLICIT field threaded through the grid/check definition
+  (exact mechanism fixed in the Wave-4 mini-design); migration surface = core.py, facade.py,
+  tests/test_certify.py.
+- AM-2: Wave 1's gate gains a Rule-II falsifying probe — collect the suite with `_R10_META` masked
+  (via `QEC_TWIN_D3_DATA` pointing at a partial copy) and assert EXACTLY the intended test set skips;
+  memlean's cuda-else-cpu -> hard-skip conversion is DECLARED a behavior change (GPU-only house rule).
+- AM-3: one-time gate BEFORE any consumer deletes its hand-roll: `ShotSet.to_det_obs()` equals the
+  existing hand-rolled unpack+reshape on a committed seeded ShotSet (round-major layout pinned).
+- AM-4: `test_mps_terminal_degenerate_guard.py` is marked ARM-UNDER-TEST for mps_forward — its
+  `_qmps_product`/`_fwd` loaders stay "deliberately local" (join the NOT-centralized list); only
+  soft_readout-style exemption logic applies.
+- AM-5: `_cumsel` deletion is amended — ONE hand-computed tie-break conformance micro-test on the A3
+  return value survives (the prereg registry keeps an executable transcription outside the arm).
+- AM-6: B1's geometry/streams arrive AS DATA (facade/teacher-supplied WithinCycleMarshalled), never by
+  importing sv_sampler from dm_oracle; the Wave-3 import-ban test EXTENDS to B1.
+- AM-7 text fixes: Wave 6 is ALSO a GPU wave (p1a asserts CUDA) with the 1e-9 pin convention named;
+  `_cumsel` removed from B2's move-in list (dead by sequencing); Wave-3's grep target is
+  `statevector_reference` and runs at Wave 5; p2/soft_readout port their CELL-RITUAL parts in Wave 2
+  and their remaining support parts in Wave 7; open decisions are all resolved (see Ratified
+  decisions) so no deadlines needed.
+- AM-8: the tolerance-constant registry carries all THREE conventions: `CPTP_TOL=1e-12` (gate),
+  `1e-8` (engineered-violation precondition floor), and floor_backend's documented `1e-9` build
+  tolerance (retire the phrase or name the constant — decided at Wave-2 diff time).
