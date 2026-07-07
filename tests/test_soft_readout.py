@@ -34,22 +34,17 @@ from __future__ import annotations
 import math
 
 import numpy as np
-import pytest
 import torch
 
 from qec_twin.forward.exact import xzzx_parser as xp
 
-_HAS_CUDA = torch.cuda.is_available()
+# Skip gates + canonical constants from tests/conftest.py (Wave 1, contract C1).
+# DECLARED strictening (C1 risk note): the old local _HAS_DATA here checked 3 files
+# (no r10 metadata); the canonical probe requires ALL FOUR -- a partial patch now skips.
+from conftest import CDTYPE, DEVICE, PHYS, RDTYPE, requires_cuda, requires_data
+
 _R01_CIRC, _R01_META = xp.default_r01_paths()
 _R10_CIRC, _R10_META = xp.default_r10_paths()
-_HAS_DATA = _R01_CIRC.is_file() and _R01_META.is_file() and _R10_CIRC.is_file()
-
-requires_cuda = pytest.mark.skipif(not _HAS_CUDA, reason="GPU-only model compute (soft emitter / carrier)")
-requires_data = pytest.mark.skipif(not _HAS_DATA, reason="shipped d3_at_q6_7 r01/r10 patch absent")
-
-DEVICE = "cuda"
-RDTYPE = torch.float64
-CDTYPE = torch.complex128
 
 # the representative PHYSICAL readout cell (D1 §3.1/§3.2)
 P_M, B_BIAS, P22_TARGET = 0.01, 0.9, 0.87
@@ -108,14 +103,11 @@ def _physical_problem(theta: float, R: int, b: float, arm: str = "A"):
     return sched, leak_kraus
 
 
-_PHYS = 3
-
-
 def _qutrit_gate_local(name, dev):
     """A single-qutrit FRAME gate (3,3) on {0,1}, |2> inert -- WRITTEN FROM SCRATCH here (NOT
     imported from qutrit_dm / mps_forward) so the SV-MCWF GT shares no gate code with the path
     under test (H X H = Z on {0,1})."""
-    m = torch.zeros((_PHYS, _PHYS), dtype=CDTYPE, device=dev)
+    m = torch.zeros((PHYS, PHYS), dtype=CDTYPE, device=dev)
     nm = str(name).upper()
     if nm == "H":
         inv2 = 1.0 / math.sqrt(2.0)
@@ -133,8 +125,8 @@ def _svb_apply_1q(psi, op, site, n):
     """psi <- (op on `site`) psi for a BATCHED state psi (B, 3^n). From scratch: einsum on the
     site axis (qutrit 0 = most-significant factor). All B trajectories in one vectorized op."""
     B = psi.shape[0]
-    left, right = _PHYS ** site, _PHYS ** (n - 1 - site)
-    t = psi.reshape(B, left, _PHYS, right)
+    left, right = PHYS ** site, PHYS ** (n - 1 - site)
+    t = psi.reshape(B, left, PHYS, right)
     t = torch.einsum("ab,Blbr->Blar", op, t)
     return t.reshape(B, -1)
 
@@ -145,12 +137,12 @@ def _arm_d2(arm, b):
 
 
 def _svb_parity_vec(d2, supp_sites, n, dev):
-    dim = _PHYS ** n
+    dim = PHYS ** n
     idx = torch.arange(dim, device=dev)
     prodv = torch.ones(dim, dtype=RDTYPE, device=dev)
     dvals = torch.tensor([1.0, -1.0, float(d2)], dtype=RDTYPE, device=dev)
     for s in supp_sites:
-        prodv = prodv * dvals[(idx // (_PHYS ** (n - 1 - int(s)))) % _PHYS]
+        prodv = prodv * dvals[(idx // (PHYS ** (n - 1 - int(s)))) % PHYS]
     return prodv
 
 
@@ -170,9 +162,9 @@ def _sv_mcwf_terminal_level_marginals(streams, stabs, stab_isx, logical, logical
     leak_t = torch.stack([k.to(CDTYPE).to(dev) for k in leak_kraus])
     nK = leak_t.shape[0]
     gen = torch.Generator(device=dev); gen.manual_seed(int(seed))
-    dim = _PHYS ** n
+    dim = PHYS ** n
     idx = torch.arange(dim, device=dev)
-    trit_of = {q: ((idx // (_PHYS ** (n - 1 - q))) % _PHYS) for q in range(n)}
+    trit_of = {q: ((idx // (PHYS ** (n - 1 - q))) % PHYS) for q in range(n)}
     par_of = {si: _svb_parity_vec(d2, list(supp.keys()), n, dev) for si, supp in enumerate(stabs)}
     psi0 = codestate_psi.reshape(-1).to(CDTYPE)
     acc = torch.zeros((n, 3), dtype=RDTYPE, device=dev)
@@ -390,7 +382,7 @@ def test_lsoft1_bit_marginal_matches_svmcwf_gt_and_bbit_control_trips():
     # GT self-control: at leak=0 the SV-MCWF terminal must show NO |2> (no |2> source).
     lvl0 = _sv_mcwf_terminal_level_marginals(
         streams, stabs, stab_isx, logical, logical_kind,
-        [torch.eye(_PHYS, dtype=CDTYPE, device=torch.device(DEVICE))], codestate_psi,
+        [torch.eye(PHYS, dtype=CDTYPE, device=torch.device(DEVICE))], codestate_psi,
         n_data, B_BIAS, arm, R, N_traj=120, seed=1)
     assert float(lvl0[:, 2].max()) < 1e-9, "L-soft-1 GT self-control: SV-MCWF fabricates |2> at leak=0"
 

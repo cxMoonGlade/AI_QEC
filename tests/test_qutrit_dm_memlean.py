@@ -29,8 +29,11 @@ entry checks against a reference INDEPENDENT of the code under test:
        ``embed_operator_q`` path would allocate >= 2 copies — the 17.35 GiB
        build_codestate gap this rewrite closed).
 
-GPU-marked tests skip without CUDA; the equivalence tests run on cuda when
-available (falling back to CPU tensors on machines without it).
+GPU-marked tests skip without CUDA. DECLARED behavior change (Wave 1, contract C1 +
+AM-2, GPU-only house rule): the engine-device equivalence tests (L-1 + the unitary
+round-trip) were previously cuda-else-cpu; the CPU fallback is REMOVED -- they are now
+``requires_cuda`` hard skips. The explicit ``device="cpu"`` reference/bookkeeping tests
+(L-2/L-3/L-6 + the logical_distribution value checks) are unchanged and run everywhere.
 """
 
 import numpy as np
@@ -47,10 +50,8 @@ from error_coupling_simulator.carrier.exact.qutrit_dm import (
     hermitianize_inplace_blocked,
 )
 
-_HAS_CUDA = torch.cuda.is_available()
-requires_cuda = pytest.mark.skipif(not _HAS_CUDA, reason="GPU memory falsifier")
-
-CDTYPE = torch.complex128
+# Skip gate + canonical constants from tests/conftest.py (Wave 1, contract C1).
+from conftest import CDTYPE, DEVICE, requires_cuda
 
 
 def _random_cptp_kraus(q: int, n_kraus: int, rng: np.random.Generator) -> list[torch.Tensor]:
@@ -67,12 +68,12 @@ def _random_mixed_rho(dim: int, rng: np.random.Generator) -> torch.Tensor:
     return torch.tensor(rho, dtype=CDTYPE)
 
 
-_DEV = "cuda" if _HAS_CUDA else "cpu"
-
-
 def _engine(cls, n: int, rho: torch.Tensor):
-    eng = cls(n, device=_DEV)
-    eng.rho = rho.clone().to(_DEV)
+    # DECLARED behavior change (contract C1/AM-2): was `_DEV = "cuda" if cuda else
+    # "cpu"` -- the CPU fallback is removed (GPU-only house rule: hard skip via
+    # requires_cuda on every consumer, never CPU fallback).
+    eng = cls(n, device=DEVICE)
+    eng.rho = rho.clone().to(DEVICE)
     return eng
 
 
@@ -98,6 +99,7 @@ def test_hermitianize_blocked(dim, block):
 # --------------------------------------------------------------------------- #
 # L-1 — chunked apply_channel equivalence (two independent references)         #
 # --------------------------------------------------------------------------- #
+@requires_cuda  # declared behavior change: engine-device test, CPU fallback removed
 @pytest.mark.parametrize("force_chunked", [False, True])
 @pytest.mark.parametrize("cls,n", [(QutritDM, 2), (QutritDM, 3), (QutritDM, 4), (QuquartDM, 3)])
 def test_apply_channel_matches_independent_paths(cls, n, force_chunked, monkeypatch):
@@ -134,6 +136,7 @@ def test_apply_channel_matches_independent_paths(cls, n, force_chunked, monkeypa
         assert float((got - ref_b).abs().max()) < 1e-13, f"site {site} vs from-scratch einsum"
 
 
+@requires_cuda  # declared behavior change: engine-device test, CPU fallback removed
 def test_apply_gate_unitary_roundtrip():
     """H then H on any site is the identity (chunked path, unitary special case)."""
     n, cls = 3, QutritDM

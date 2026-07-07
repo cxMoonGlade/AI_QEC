@@ -23,17 +23,12 @@ import torch
 
 from qec_twin.forward.exact import xzzx_parser as xp
 
-_HAS_CUDA = torch.cuda.is_available()
+# Skip gates + canonical constants from tests/conftest.py (Wave 1, contract C1: the ONE
+# strict 4-file _HAS_DATA -- this file's local probe was already the strict variant).
+from conftest import CDTYPE, DEVICE, requires_cuda, requires_data
+
 _R01_CIRC, _R01_META = xp.default_r01_paths()
 _R10_CIRC, _R10_META = xp.default_r10_paths()
-_HAS_DATA = (_R01_CIRC.is_file() and _R01_META.is_file()
-             and _R10_CIRC.is_file() and _R10_META.is_file())
-
-requires_cuda = pytest.mark.skipif(not _HAS_CUDA, reason="GPU-only model compute (MPS carrier)")
-requires_data = pytest.mark.skipif(not _HAS_DATA, reason="shipped d3_at_q6_7 r01/r10 patch absent")
-
-DEVICE = "cuda"
-CDTYPE = torch.complex128
 
 # a plain physical cell (gate (a) certifies CODE-PATH identity, not a physics claim;
 # the value only needs to be a valid, leak-active point of the registered sweep).

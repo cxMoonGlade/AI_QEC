@@ -43,28 +43,25 @@ _spec.loader.exec_module(floor)
 
 TOL = 1e-12
 
-_DATASET = Path(
-    "/home/cx/Document/google_105Q_surface_code_d3_d5_d7/google_105Q_surface_code_d3_d5_d7"
-)
+# Skip gates from tests/conftest.py (Wave 1, contract C1): SAME d3_at_q6_7 patch, so
+# the canonical strict 4-file requires_data replaces the local r01-only requires_r01
+# (DECLARED strictening, C1 risk note: a partial patch with r01 but no r10 now skips)
+# and the canonical requires_cuda replaces the local try/except probe. The dead
+# hardcoded absolute _DATASET path is deleted.
+from conftest import requires_cuda, requires_data
+
 _R01_CIRC, _R01_META = xp.default_r01_paths()
-_HAS_R01 = _R01_CIRC.is_file() and _R01_META.is_file()
 
-try:
+try:  # torch stays name-bound for the cuda-gated bodies; the PROBE lives in conftest
     import torch
-
-    _HAS_CUDA = torch.cuda.is_available()
 except Exception:  # noqa: BLE001
     torch = None
-    _HAS_CUDA = False
-
-requires_r01 = pytest.mark.skipif(not _HAS_R01, reason="shipped d3_at_q6_7 r01 patch not present")
-requires_cuda = pytest.mark.skipif(not _HAS_CUDA, reason="GPU-only: CUDA not available")
 
 
 # --------------------------------------------------------------------------- #
 # Parser                                                                       #
 # --------------------------------------------------------------------------- #
-@requires_r01
+@requires_data
 def test_parser_r01_structure():
     """The real r01 patch parses to the textbook XZZX d3 structure (positions 0..8)."""
     sch = xp.parse_xzzx_circuit(_R01_CIRC, _R01_META, verify=True)
@@ -91,7 +88,7 @@ def test_parser_r01_structure():
     assert sch.data_init_x == frozenset()
 
 
-@requires_r01
+@requires_data
 def test_parser_stabilizer_weights_and_data_map():
     """Stabilizer weights (2 boundary / 4 bulk) + the circuit-id<->position map."""
     sch = xp.parse_xzzx_circuit(_R01_CIRC, _R01_META, verify=True)
@@ -105,7 +102,7 @@ def test_parser_stabilizer_weights_and_data_map():
     assert op[0] == "stab" and isinstance(op[1], dict) and isinstance(op[2], int)
 
 
-@requires_r01
+@requires_data
 def test_parser_verify_catches_broken_support():
     """The built-in cross-check rejects a tampered stabilizer support (positive control).
 
@@ -283,7 +280,7 @@ def test_real_engine_p2ii_equals_qubit_path():
 
 
 @requires_cuda
-@requires_r01
+@requires_data
 def test_real_engine_on_real_geometry_subregister():
     """The harness drives the real engine + real teacher on REAL XZZX stabilizers (feasible).
 

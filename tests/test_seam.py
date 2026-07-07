@@ -21,9 +21,7 @@ frozen evaluator tooling). No teacher GPU model-compute happens here.
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
-from qec_twin.forward.exact import xzzx_parser as xp
 from qec_twin.forward.scalable.seam import (
     assert_leak_absent_from_dem,
     build_matched_pauli_dem,
@@ -33,12 +31,10 @@ from qec_twin.forward.scalable.seam import (
 )
 from qec_twin.forward.scalable.sv_sampler import SvSampler
 
-_R01_CIRC, _R01_META = xp.default_r01_paths()
-_R10_CIRC, _R10_META = xp.default_r10_paths()
-_HAS_DATA = _R01_CIRC.is_file() and _R01_META.is_file() and _R10_CIRC.is_file()
-
-requires_data = pytest.mark.skipif(
-    not _HAS_DATA, reason="shipped d3_at_q6_7 r01/r10 patch absent")
+# Skip gate from tests/conftest.py (Wave 1, contract C1). DECLARED strictening (C1 risk
+# note): the old local probe checked 3 files (no r10 metadata); the canonical probe
+# requires ALL FOUR -- a partial patch now skips the dataset legs.
+from conftest import requires_data
 
 
 # =========================================================================== #

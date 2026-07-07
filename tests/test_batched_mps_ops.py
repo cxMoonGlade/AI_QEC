@@ -80,14 +80,10 @@ from qec_twin.forward.scalable.mps_forward import (
 from qec_twin.forward.scalable.sv_sampler import leak_slice_kraus_torch
 from qec_twin.numerics import NUMERICAL_ZERO
 
-_HAS_CUDA = torch.cuda.is_available()
-requires_cuda = pytest.mark.skipif(not _HAS_CUDA, reason="GPU-only model compute (batched-MPS op core)")
-pytestmark = [requires_cuda]
+# Skip gate + canonical constants from tests/conftest.py (Wave 1, contract C1).
+from conftest import CDTYPE, DEVICE, PHYS, RDTYPE, requires_cuda
 
-DEVICE = "cuda"
-CDTYPE = torch.complex128
-RDTYPE = torch.float64
-PHYS = 3
+pytestmark = [requires_cuda]
 
 TOL = 1.0e-12       # G-OP-1/2/4/5 absolute elementwise state tolerance (unit-norm states)
 _MARGIN = 1.0e-9    # the registered knife-edge margin (v2 G-OP-2)

@@ -29,19 +29,20 @@ qtn = pytest.importorskip("quimb.tensor")
 from qec_twin.forward.scalable.mps_forward import MpsLeakageForward
 from qec_twin.numerics import NUMERICAL_ZERO
 
-_HAS_CUDA = torch.cuda.is_available()
-requires_cuda = pytest.mark.skipif(not _HAS_CUDA, reason="GPU-only model compute")
-pytestmark = [requires_cuda]
+# Skip gate + canonical constants from tests/conftest.py (Wave 1, contract C1).
+from conftest import CDTYPE, DEVICE, PHYS, requires_cuda
 
-DEVICE = "cuda"
-CDTYPE = torch.complex128
-PHYS = 3
+pytestmark = [requires_cuda]
 
 N = 4                 # qutrits (never the full d3 9-chain; keep it at GPU-seconds)
 LOG_SUPPORT = [0, 1]  # engine positions of the logical support (identity site order)
 B_EFF = 0.9           # readout bias: the pre-fix degenerate leg emitted bit=(0.5<0.9)=1
 
 
+# AM-4 (api_hardening_ownership_design.md, v2 REVIEW DISPOSITIONS): this file is
+# ARM-UNDER-TEST for mps_forward -- its `_qmps_product`/`_fwd` loaders are deliberately
+# local (referees mps_forward; must not import mps_forward loaders or batched_mps).
+# Do NOT migrate them to shared test support.
 def _fwd() -> MpsLeakageForward:
     # __init__ only stores the device (quimb import lazy) -> the REAL serial method is
     # driven directly, same discipline as tests/test_batched_mps_ops.py; _eng_to_mps /
