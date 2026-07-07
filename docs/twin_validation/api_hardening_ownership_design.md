@@ -139,3 +139,38 @@ backend-under-test) written in Wave 1 so every later wave names against it.
 - AM-8: the tolerance-constant registry carries all THREE conventions: `CPTP_TOL=1e-12` (gate),
   `1e-8` (engineered-violation precondition floor), and floor_backend's documented `1e-9` build
   tolerance (retire the phrase or name the constant — decided at Wave-2 diff time).
+
+## DEVIOUS-TEST STANDARD (user directive 2026-07-07: "要做更阴险的单元测试" — binding for every
+## NEW test in this pass and after)
+
+Design question every test must answer BEFORE it is done: **"what is the most devious implementation
+that still passes me?"** — then add the discriminator that kills it. Concretely:
+
+- **KILLER requirement.** Every load-bearing assert ships at least one KILLER: a deliberately
+  sabotaged input/implementation variant DEMONSTRATED to trip that assert (the
+  `assert_control_trips` shape). A check that has never been shown to fail is unproven
+  (scrutinize-vacuous-checks discipline, now mandatory per-assert, not per-review).
+- **Meta-tests for test infrastructure.** Everything in `tests/_support/` gets its own self-test
+  module: `require_precondition` shown to raise with the greppable prefix; `assert_control_trips`
+  shown to FAIL when the control does NOT trip (the double-negative killer); `random_cptp_kraus`'s
+  internal CPTP assert shown to trip on a sabotaged build. The probe/mask machinery defends itself:
+  an UNKNOWN mask name in `QEC_TWIN_D3_MASK` raises loudly (a typo silently masking nothing = a
+  vacuous probe).
+- **The K-catalog** (every entry is a REAL bug class caught in the 2026-07-06/07 arc; new tests
+  check themselves against it and name which classes they defend):
+  K-1 inert seam / dead parameter (the P2-ii caller-table-ignored trap) · K-2 misindexing
+  (off-by-one, Python negative-index wraparound, reversed order) · K-3 tie-break/comparison drift
+  (`<=` vs `<`, first-vs-last, argmax-on-bool) · K-4 evil-marginal thresholds (engineered violation
+  landing a hair above the gate: the measured 1.181e-12 vs CPTP_TOL=1e-12) · K-5 self-comparison
+  vacuity (identical cap tuples; engine-vs-own-oracle) · K-6 symmetry blindness
+  (permutation-symmetric operators hiding leg-order bugs; sign-blind observables) · K-7
+  degenerate-input shadowing (NaN-swallowed guards; zero-norm batch poisoning) · K-8
+  convention/gauge drift (MSB/site-order/lambda-vs-sigma units) · K-9 cross-shot/batch
+  contamination (gather misalignment) · K-10 measurement-isolation contamination (absolute peaks
+  counting other tests' standing allocations).
+- **Discriminator patterns** (the reusable answers): byte-level positive controls (injection ==
+  equivalent static run), prefix-identity checks (round-0 block EXACT equality), sabotage variants
+  (swapped enumeration, reversed tables), unit tags in names, masked-environment probes,
+  heterogeneous-batch vs B=1 replays.
+- Optional lever: automated mutation testing (mutmut-class) on CPU-pure modules (cap arithmetic,
+  packing, guards); GPU paths use hand-authored KILLERs.
