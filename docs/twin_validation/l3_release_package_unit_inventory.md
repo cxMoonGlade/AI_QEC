@@ -408,7 +408,19 @@ Confirmed CPU-pure: imports numpy only (0 `device=`, no torch tensor constructio
 |---|---|---|---|---|---|
 | `ScheduleTemplate` (`__post_init__` + accessors),`repeated_memory_schedule`,`repeated_memory_schedule_manifest`,`canonical_schedule_name`,`resolve_schedule_template` | schedule template + resolution | C | manifest match; canonical name | VAL (canonical raise) | none direct |
 
-### `frontend/stim_io.py` — cov 19% · 7 units (7 C) — Stim adapters (CPU)
+### `frontend/stim_io.py` — **DONE (D23)** · L0 100/100 (7 units) · L2 kill 0.938 — Stim adapters (CPU)
+> Stage-D `stage_d_stim_io_targets` — `tests/test_stim_io_units.py`. Authoritative gate PASS (7/7 stmt+branch 100%,
+> reconcile 7 = 7 registered + 0 out_of_scope; `StimCounts` is a method-less frozen dataclass → 0 units; 0 exemptions).
+> Authoritative mutation 150/160 = **0.9375**. `circuit_to_stim` pinned op-by-op vs an independent expectation (idle-with-
+> duration correctly rejected — stim `I` takes no parens arg); `counts`/DEM/write→load `tmp_path` round-trips; seeded
+> `sample_detector_records`. 10 residuals all genuine-equivalent (verified): `circuit_to_stim` uppercase→lowercase
+> instruction strings ×4 (stim normalizes names — empirically `append("tick")==append("TICK")`); `measurement_count`
+> `0`→`1` (rec offset `index−count` is invariant under a uniform +1 shift); **`_record_targets` `offset>=0` guard ×3
+> (dead — line 47 assigns a key's index BEFORE line 48 increments `count`, and line 64 guarantees the key was measured
+> earlier, so `offset = key_index − count ≤ −1` always; even a same-step key gives −1 → the `>=0` forward-ref guard never
+> fires)**; `sample_detector_records` `dtype=np.bool_`→None ×2 (stim's sampler already returns `np.bool_`). src-cleanup
+> candidates (redundant defense-in-depth behind `CircuitIR.__post_init__`, not edited): the dead `_record_targets`
+> `offset>=0` guard + the `# pragma: no cover` `circuit_to_stim` `else: raise TypeError` arm.
 | unit | contract | class | invariants | DA | existing test |
 |---|---|---|---|---|---|
 | `StimCounts`,`circuit_to_stim`,`load_stim_circuit`,`write_stim_circuit`,`write_detector_error_model`,`detector_error_model`,`counts`,`sample_detector_records` | CircuitIR↔Stim + DEM + sampling | C | rec-target consistency; **round-trip** str(circuit) parseable; det/obs count correct | VAL (unknown-key, offset bounds) | test_circuit_ir_exports_* |
