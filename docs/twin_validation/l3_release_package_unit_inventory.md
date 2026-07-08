@@ -244,7 +244,20 @@ Confirmed CPU-pure: imports numpy only (0 `device=`, no torch tensor constructio
 |---|---|---|---|---|---|
 | `GateOp`,`Tick`,`MeasureOp`,`DetectorDef`,`ObservableDef`,`CircuitIR` (`__post_init__` + accessors),`CircuitBuilder.gate/measure/detector/observable/*` | IR dataclasses + ergonomic builder | C | schema round-trip; key↔target bijection; measure-before-detect; name uniqueness | VAL (extensive) | test_circuit_ir_exports_* |
 
-### `frontend/code_spec.py` — cov 20% · 11 units (11 C) — syndrome-code specs
+### `frontend/code_spec.py` — **DONE (D17)** · L0 100/100 (17 units) · L2 kill 0.939 — syndrome-code specs
+> Stage-D `stage_d_code_spec_targets` — `tests/test_code_spec_units.py`. Authoritative gate PASS (17/17 stmt+branch
+> 100%, reconcile 17 = 11 named + 6 `__post_init__`; 0 out_of_scope, 0 exemptions). Load-bearing: `commute` pinned vs
+> an independent SYMPLECTIC recompute (14-case truth table + Hypothesis + single-factor-flip discriminator); the
+> `CodeSpec` index partitions + `_pauli_vector` GF(2) span check pinned; every validation raise tripped through every
+> route. Authoritative mutation 93/99 = **0.9394**. The builder itself probed + killed the `_pairs` order mutant (via
+> a 3-check spec) and the `_pauli_vector` Y-set mutants (via span specs). 6 residual survivors all independently
+> re-verified genuine-equivalent: `commute` `anti-=1≡+=1` (parity `anti%2==0`, Python `-n%2==n%2`);
+> `_pauli_vector` `=1≡^=1` ×2 (both call sites gate on `_require_unique_term_qubits` → each index written ≤once);
+> `_pauli_vector` `^=2≡^=1` ×2 (GF(2)-{0,2} isomorphism — `_binary_row_rank` uses ONLY `any()`/truthiness/`^`, no
+> `%2`/`&1`, and x/z columns never mix, so 2 behaves as 1); `_binary_row_rank` empty-guard `return 0→1` (DOUBLY
+> unreachable — CodeSpec line 213 forces ≥1 check + StabilizerCheck line 86 forces ≥1 term/check, so `check_vectors`
+> is never empty-or-all-zero). NB the builder's `mutmut_5` reasoning missed the empty-LIST trigger; coordinator found
+> the real safety is line 213 (conclusion holds). No src-cleanup candidates.
 | unit | contract | class | invariants | DA | existing test |
 |---|---|---|---|---|---|
 | `CodeQubit`,`PauliTerm`,`StabilizerCheck`,`LogicalObservableSpec`,`Axis1StaticZZDeviceSpec`,`CodeSpec` (`__post_init__`) | code-spec dataclasses | C | qubit coverage; stabilizer commutativity; logical anti-commute; rounds≥2 | VAL (extensive) | test_simulator_codespec, test_codespec_rejects_* |
