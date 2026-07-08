@@ -372,7 +372,20 @@ Confirmed CPU-pure: imports numpy only (0 `device=`, no torch tensor constructio
 |---|---|---|---|---|---|
 | `RoundMeasurementRecord`,`DetectorLayoutRecord`,`FinalDataRecord`,`ObservableLayoutRecord`,`RecordLayout` (+ `to_manifest`),`build_repeated_memory_record_layout`,`final_measurements`,`check_key`,`delta_detector_name`,`final_detector_name`,`final_key` | frozen layout dataclasses + name/key builders | C | schema/manifest round-trip; name-format stability; key uniqueness | no | none direct |
 
-### `frontend/record_schema.py` — cov 35% · 10 units (10 C)
+### `frontend/record_schema.py` — **DONE (D20)** · L0 100/100 (10 units) · L2 kill 1.000 — record schema + evaluator-sidecar validation
+> Stage-D `stage_d_record_schema_targets` — `tests/test_record_schema_units.py`. Authoritative gate PASS (10/10
+> stmt+branch 100%, reconcile 10 = 10 registered + 0 out_of_scope; CPU-pure, no `__post_init__` dunders; 0 exemptions).
+> Authoritative mutation 67/67 = **1.0000 — the second PERFECT-kill Stage-D batch** (0 survivors, after D16 record_layout).
+> Uses the new shared `canonical_stim_circuit`/`canonical_circuit_ir` fixtures + `assert_raises_exact`. Every guard tripped
+> through EVERY route (probed, not asserted): `require_frontend_representability` backend-vs-representability arcs each
+> exact-message; `validate_evaluator_sidecars` `"name" not in item or "path" not in item` probed on BOTH operands
+> independently (kills the `or`→`and`) + the isolation-contract `evaluator_only` visibility guard (explicit + missing-key
+> `.get` default route); `require_stim_circuit` type guard probed with str AND a non-str non-Sequence int; `from_circuit_ir`
+> `!=` count-vs-name mismatch exercised both ways (counts-from-stim vs names-from-IR discriminated); `b8_manifest_entry`
+> `(bits+7)//8` arithmetic killed by exact dicts at bits∈{1,8,10} + a Hypothesis property vs `math.ceil(bits/8)`.
+> NB (fixture note, not acted on): `canonical_circuit_ir()`'s `idle(duration_ns=50)` emits a stim `I` with a parens arg
+> that `stim_io.circuit_to_stim` can't round-trip — the batch pairs the canonical IR with a hand-built stim circuit (the
+> honest `from_circuit_ir(CircuitIR, stim.Circuit)` contract), not a derived one.
 | unit | contract | class | invariants | DA | existing test |
 |---|---|---|---|---|---|
 | `RecordSchema` (+ from_stim/from_circuit_ir + accessors),`require_frontend_representability`,`require_stim_circuit`,`require_matching_schemas`,`validate_evaluator_sidecars`,`b8_manifest_entry` | schema + guards | C | count consistency; packed-bytes = ⌈bits/8⌉; sidecar visibility=evaluator_only | VAL (type/membership/mismatch) | none direct |
