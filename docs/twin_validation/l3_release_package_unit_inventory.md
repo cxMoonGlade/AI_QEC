@@ -402,7 +402,28 @@ Confirmed CPU-pure: imports numpy only (0 `device=`, no torch tensor constructio
 |---|---|---|---|---|---|
 | `Axis1LocalLindbladContextSpec` (`__post_init__` + 4 accessors),`normalize_axis1_local_lindblad_context`,`axis1_local_lindblad_context_from_schedule`,`axis1_contextual_primitive_names`,`axis1_contextual_fsim_residual_primitives` | Markovian context metadata | C | rates≥0/finite; schema version pin | VAL | implicit (axis1_bridge/selection) |
 
-### `frontend/axis1_selection.py` — cov 13% · 12 units (12 C)
+### `frontend/axis1_selection.py` — **DONE (D19)** · L0 100/100 (15 units) · L2 kill 0.978 — axis-1 selection layer
+> Stage-D `stage_d_axis1_selection_targets` — `tests/test_axis1_selection_units.py`. Authoritative gate PASS (15/15
+> stmt+branch 100%, reconcile 15 = 12 named + 3 `__post_init__`; 0 out_of_scope; 2 `defensive_assert` exemptions —
+> `Axis1MechanismSelection.__post_init__` L153/154 + L181/182 dead edge/support guards, probed). Value-pins on the
+> plan builders + the schedule-order partition + the participant/disjoint guards. Authoritative mutation 1679/1717 =
+> **0.9779**. **This batch first hit 0.8637 (below bar) — a STRUCTURAL ceiling from 189 `.upper()`-masked case-swap
+> equivalents** (the `_generic_*` selection helpers pass ALL-CAPS `primitive_names`/`mechanism_pair`/... literals that
+> `Axis1MechanismSelection.__post_init__` re-`.upper()`d; a mutmut `"ZZ"`→`"zz"` was normalized back → unkillable).
+> Adversarial-reachability review (a 4-skeptic workflow + the builder's own 42-diff pass) also caught **11 real gaps**
+> the first pass mis-classified as equivalent (cluster-max-support `max_support=None`→TypeError ×4; ordered-helper
+> repeated-endpoint raise reachable via the un-capped frontend two-qubit path; `sorted(key=None)` reorder since
+> `SubstepSchedule` constrains order_index not substep_id string order; `_static_pairs_within_support` endpoint;
+> odd-over-cap idle index; support==5 `>`→`>=`). **RESOLUTION (user option A): dropped the redundant
+> `__post_init__.upper()`** on the 4 fields (verified: every construction site — the two selection helpers +
+> `axis1_carrier_program.py:775` — passes ALL-CAPS, so the normalization was a no-op; str() coercion kept). The 189
+> un-masked case-swaps were then killed by the EXISTING exact-case `to_manifest`/battery pins (no new pins needed);
+> downstream 276 axis1 tests pass (no consumer relied on the uppercasing). 38 residuals all genuine-equivalent
+> (`continue`→`break` on single-iteration branches; getattr defaults on always-present `SubstepSchedule` attrs;
+> callee-`.upper()`-normalized `_has_two_qubit_gate` arg; `_normal_pair` `a<b`→`a<=b` preempted by its own `a==b`
+> raise; both-empty/defensive `or`→`and` guards — each empirically byte-identical). LESSON: an unusually large
+> callee-normalized-case equivalent fraction (>10%) can structurally cap a batch below 0.90; the honest fix is to
+> de-dup the redundant normalization (un-mask), not a bar override.
 | unit | contract | class | invariants | DA | existing test |
 |---|---|---|---|---|---|
 | `Axis1MechanismSelection`,`Axis1MechanismSelectionPlan`,`Axis1SelectionLayer` (`__post_init__` + accessors),`axis1_selection_layers_in_schedule_order`,`flatten_axis1_selection_layers`,`axis1_selection_partition_manifest`,`build_axis1_g2_selection_plan`,`build_axis1_schedule_selection_plan` | selection plans from schedule metadata | C | row_kind∈SUPPORTED; substep coverage; manifest schema | VAL | test_simulator_axis1_schedule, test_axis1_connected_cluster_join |
