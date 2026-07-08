@@ -45,7 +45,15 @@ torch-less module.
 ## Conventions (the rules that keep tests honest)
 - **faithfulness API** `tests/_support/faithfulness.py`: `assert_discriminates(prop, real, wrong)`
   (KILLER-as-a-method), `assert_pins(actual, independent_recompute)` (pin the VALUE vs an INDEPENDENT
-  reimplementation — cures the `sum-of-abs≥0` tautology), structural `assert_cptp/unitary/density/…`.
+  reimplementation — cures the `sum-of-abs≥0` tautology), `assert_raises_exact(exc, msg, call)` (trip a
+  raising guard with the EXACT message — kills the XX-wrap/case/`None` message mutants a substring
+  `pytest.raises(match=)` leaves surviving; 9 batches re-rolled a private `_raises_exact` before this),
+  structural `assert_cptp/unitary/density/…`.
+- **canonical INPUT fixtures** `tests/_support/fixtures.py`: `canonical_rep_code_spec` /
+  `canonical_mixed_code_spec` / `canonical_circuit_ir` / `canonical_sealed_schedule` /
+  `canonical_stim_circuit` — deterministic VALID inputs to FEED units under test (INPUTS, not
+  references — an independent recompute that referees a module's OWN output stays LOCAL). Import these
+  instead of re-deriving a rep-code CodeSpec / CircuitIR / compiled SubstepSchedule / stim circuit per batch.
 - **DEFENSIVE-ASSERT / dead branch**: an unreachable guard is covered by (extract `_assert_*` seam +
   trip it) + (property proving the legit path). NEVER exempt a branch as "unreachable" without probing
   float underflow / invalid inputs first (the gksl finding).

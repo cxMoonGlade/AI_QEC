@@ -316,6 +316,38 @@ def test_canonical_markers_reflect_probes():
 
 
 # --------------------------------------------------------------------------- #
+# (e) canonical code/circuit/schedule/stim INPUT fixtures (valid + fresh)     #
+# --------------------------------------------------------------------------- #
+def test_canonical_rep_code_spec_is_valid_and_fresh():
+    spec = fixtures.canonical_rep_code_spec(rounds=4)
+    # a valid CodeSpec (its own __post_init__ ran without raising) with the declared shape
+    assert spec.rounds == 4 and len(spec.checks) == 2 and len(spec.logical_observables) == 1
+    assert spec.num_qubits == 5
+    # fresh each call -> a test cannot mutate a shared instance out from under another
+    assert fixtures.canonical_rep_code_spec() is not fixtures.canonical_rep_code_spec()
+
+
+def test_canonical_mixed_spec_and_circuit_ir_construct():
+    mix = fixtures.canonical_mixed_code_spec()
+    assert len(mix.checks) == 2 and len(mix.logical_observables) == 1  # x0 + z1 -> all kinds
+    cir = fixtures.canonical_circuit_ir()
+    assert len(cir.steps) == 6  # H, CX, TICK, R, idle, MR (all six substep kinds)
+
+
+def test_canonical_sealed_schedule_passes_the_compiler_seal():
+    from error_coupling_simulator.frontend.analog_schedule import (
+        has_valid_compiler_schedule_seal)
+    assert has_valid_compiler_schedule_seal(fixtures.canonical_sealed_schedule())
+    assert has_valid_compiler_schedule_seal(fixtures.canonical_sealed_schedule(from_spec=False))
+
+
+def test_canonical_stim_circuit_imports_and_is_nonempty():
+    stim = pytest.importorskip("stim")
+    c = fixtures.canonical_stim_circuit()
+    assert isinstance(c, stim.Circuit) and len(c) == 6
+
+
+# --------------------------------------------------------------------------- #
 # load_outputs_module                                                          #
 # --------------------------------------------------------------------------- #
 def test_load_outputs_module_missing_file_is_loud_precondition():

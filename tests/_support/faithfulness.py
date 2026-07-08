@@ -140,6 +140,39 @@ def assert_pins(actual, reference, *, atol: float = TOL, rtol: float = 0.0,
         f"(max|Δ|={float(np.max(np.abs(a - r))):.2e}, atol={atol:.1e}, rtol={rtol:.1e})")
 
 
+def assert_raises_exact(exc_type, message: str, call: Callable, *, label: str = "guard"):
+    """Assert ``call()`` raises ``exc_type`` with ``str(exc)`` EXACTLY equal to ``message``.
+
+    The EXACT-message check is the whole point (and why a bare ``pytest.raises(match=...)``
+    is not enough): mutmut's string mutations (``"foo"`` -> ``"XXfooXX"`` / ``"FOO"``) and a
+    ``raise ValueError(None)`` mutant all PASS a substring ``match=`` yet FAIL exact equality
+    -- so a raising validation guard tested with this helper KILLS its message-content mutants,
+    which a substring test leaves surviving (the recurring D11-D19 finding; 9 batches re-rolled
+    a private ``_raises_exact`` for exactly this). Trip the guard through EVERY input route that
+    reaches it -- 100% branch coverage of the guard is NOT the same as every routing INTO it
+    being exercised (the D18 M13 channel_axis-route lesson). A wrong exception type or no raise
+    fails loudly. Returns the caught exception for any further assertion.
+    """
+    try:
+        call()
+    except exc_type as exc:
+        got = str(exc)
+        if got != message:
+            raise AssertionError(
+                f"{label}: raised {exc_type.__name__} but its message is not the pinned string "
+                f"(a message-content mutant would survive a substring match here)\n"
+                f"  expected == {message!r}\n  got      == {got!r}") from None
+        return exc
+    except Exception as exc:  # noqa: BLE001 -- wrong type is a real failure, surface it loudly
+        raise AssertionError(
+            f"{label}: expected {exc_type.__name__} with message {message!r}, "
+            f"but raised {type(exc).__name__}: {exc}") from None
+    raise AssertionError(
+        f"{label}: expected {exc_type.__name__} with message {message!r}, but nothing was raised "
+        f"(the guard/route is not reached -- probe a reaching input; check the PUBLIC entry points, "
+        f"not just the internal path)")
+
+
 # --------------------------------------------------------------------------- #
 # shared builders (deterministic; a seed makes them reproducible)             #
 # --------------------------------------------------------------------------- #

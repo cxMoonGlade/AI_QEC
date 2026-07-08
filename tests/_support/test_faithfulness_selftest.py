@@ -70,3 +70,27 @@ def test_builders_have_expected_entanglement_structure():
     assert abs(bell[0, 3] - 0.5) < 1e-12 and abs(prod[0, 3]) < 1e-12
     j = F.valid_joint_distribution([(0, 0), (0, 1), (1, 0), (1, 1)], seed=3)
     F.assert_prob_dist(j)
+
+
+# --- assert_raises_exact: kills message-content mutants a substring match misses ------ #
+def test_assert_raises_exact_passes_on_exact_message_and_returns_exc():
+    exc = F.assert_raises_exact(
+        ValueError, "boom", lambda: (_ for _ in ()).throw(ValueError("boom")))
+    assert isinstance(exc, ValueError) and str(exc) == "boom"
+
+
+def test_assert_raises_exact_fails_on_message_mismatch():
+    # a case-flip / XX-wrap / trailing-char mutant PASSES a substring match= but MUST fail here
+    # (that is the whole reason this helper exists over pytest.raises(match=...)).
+    for bad in ("BOOM", "XXboomXX", "boom!"):
+        with pytest.raises(AssertionError, match="message is not the pinned string"):
+            F.assert_raises_exact(
+                ValueError, "boom", lambda b=bad: (_ for _ in ()).throw(ValueError(b)))
+
+
+def test_assert_raises_exact_fails_on_wrong_type_and_on_no_raise():
+    with pytest.raises(AssertionError, match="but raised KeyError"):
+        F.assert_raises_exact(
+            ValueError, "boom", lambda: (_ for _ in ()).throw(KeyError("boom")))
+    with pytest.raises(AssertionError, match="nothing was raised"):
+        F.assert_raises_exact(ValueError, "boom", lambda: None)

@@ -19,6 +19,10 @@ Contents:
     each (backend + return-shape flags), CPTP/trace asserted internally at 1e-12.
     Random INPUT generation is not a reference -- safe to centralize.
   * ``load_outputs_module`` -- importlib shim for committed scripts under ``outputs/``.
+  * ``canonical_rep_code_spec`` / ``canonical_mixed_code_spec`` / ``canonical_circuit_ir`` /
+    ``canonical_sealed_schedule`` / ``canonical_stim_circuit`` -- deterministic VALID INPUT
+    fixtures (INPUTS, not references) the schema/compiler batches previously re-derived per
+    file; import these instead of re-rolling a rep-code CodeSpec / CircuitIR / schedule.
 
 Self-tested by ``tests/_support/test_support_selftest.py`` (meta-tests: the DEVIOUS-TEST
 STANDARD's "test infrastructure defends itself" requirement).
@@ -255,3 +259,91 @@ def load_outputs_module(relpath: str):
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
+
+
+# --------------------------------------------------------------------------- #
+# Canonical code / circuit / schedule / stim INPUT fixtures                    #
+# --------------------------------------------------------------------------- #
+# Deterministic VALID inputs to FEED the units under test. These are INPUTS, not
+# references -- like ``random_cptp_kraus`` they carry no independence constraint, so they
+# are safe to centralize (an independent RECOMPUTE that referees a specific module's
+# OUTPUT stays LOCAL per contract C2). Every schema/compiler batch (D15-D19) re-derived a
+# near-identical ``_valid_rep_spec`` / ``_rep_spec`` / ``_mixed_spec`` / ``_rich_circuit``;
+# these are the shared canonical versions so later batches ``import`` instead of re-rolling.
+# Lazy imports keep this module's import-time deps minimal (numpy + optional torch) for the
+# many tests that use only the helpers above. Frozen dataclasses => each call is fresh+safe.
+
+def canonical_rep_code_spec(rounds: int = 3):
+    """A clean d=3 Z-memory repetition ``CodeSpec`` (5 qubits): checks z0=Z0Z1 (anc3),
+    z1=Z1Z2 (anc4); logical LZ=Z0. The minimal valid all-Z spec (schema / record-layout /
+    code-spec batches). ``rounds`` >= 2 (the detector-delta requirement)."""
+    from error_coupling_simulator.frontend.code_spec import (
+        CodeSpec, CodeQubit, PauliTerm, StabilizerCheck, LogicalObservableSpec)
+    return CodeSpec(
+        name="rep3z", num_qubits=5,
+        data_qubits=(CodeQubit(0, "data", (0.0,)), CodeQubit(1, "data", (1.0,)),
+                     CodeQubit(2, "data", (2.0,))),
+        ancilla_qubits=(CodeQubit(3, "ancilla"), CodeQubit(4, "ancilla")),
+        checks=(StabilizerCheck("z0", 3, (PauliTerm(0, "Z"), PauliTerm(1, "Z")), (0.5,)),
+                StabilizerCheck("z1", 4, (PauliTerm(1, "Z"), PauliTerm(2, "Z")), (1.5,))),
+        logical_observables=(LogicalObservableSpec("LZ", (PauliTerm(0, "Z"),), index=0),),
+        rounds=int(rounds))
+
+
+def canonical_mixed_code_spec(rounds: int = 2):
+    """A d=3 mixed X/Z memory ``CodeSpec`` so the compiler emits ALL substep kinds
+    (H / CX / reset / measurement / barrier): check x0=X0 (anc3), z1=Z1 (anc4); logical
+    logical_z2=Z2. Use when a batch needs a compiled schedule exercising every kind."""
+    from error_coupling_simulator.frontend.code_spec import (
+        CodeSpec, CodeQubit, PauliTerm, StabilizerCheck, LogicalObservableSpec)
+    return CodeSpec(
+        name="axis1_mixed", num_qubits=5,
+        data_qubits=(CodeQubit(0, "data", (0.0,)), CodeQubit(1, "data", (1.0,)),
+                     CodeQubit(2, "data", (2.0,))),
+        ancilla_qubits=(CodeQubit(3, "ancilla", (0.0, 0.5)),
+                        CodeQubit(4, "ancilla", (1.0, 0.5))),
+        checks=(StabilizerCheck("x0", 3, (PauliTerm(0, "X"),), (0.0, 0.5)),
+                StabilizerCheck("z1", 4, (PauliTerm(1, "Z"),), (1.0, 0.5))),
+        logical_observables=(LogicalObservableSpec("logical_z2", (PauliTerm(2, "Z"),), index=0),),
+        rounds=int(rounds))
+
+
+def canonical_circuit_ir():
+    """A curated 3-qubit ``CircuitIR`` exercising all six substep kinds in schedule order:
+    H0 -> CX(1,2) -> TICK -> R2 -> idle(0,1 @50ns) -> MR0."""
+    from error_coupling_simulator.frontend.circuit_ir import CircuitBuilder
+    b = CircuitBuilder(num_qubits=3)
+    b.h(0)
+    b.cx((1, 2))
+    b.tick()
+    b.reset(2)
+    b.idle((0, 1), duration_ns=50.0)
+    b.measure((0,), key="m0", reset=True)
+    return b.build()
+
+
+def canonical_sealed_schedule(*, from_spec: bool = True):
+    """A SEALED ``SubstepSchedule`` (passes ``has_valid_compiler_schedule_seal``) built via
+    the code-spec compiler from :func:`canonical_mixed_code_spec` (``from_spec=True``) or via
+    the circuit-IR compiler from :func:`canonical_circuit_ir` (``from_spec=False``). Use as a
+    valid schedule INPUT (e.g. for the axis-1 selection / bridge units); do NOT use it as a
+    reference for the compiler's OWN output (that would be circular -- keep such recomputes local)."""
+    from error_coupling_simulator.frontend.analog_schedule import (
+        compile_code_spec_to_substep_schedule, circuit_ir_to_substep_schedule)
+    if from_spec:
+        return compile_code_spec_to_substep_schedule(canonical_mixed_code_spec())
+    return circuit_ir_to_substep_schedule(canonical_circuit_ir())
+
+
+def canonical_stim_circuit():
+    """A small valid ``stim.Circuit`` (QUBIT_COORDS + H + CX + M + a DETECTOR) for the stim
+    importer / adapter units. Lazy-imports stim (not a hard dependency of this module)."""
+    import stim
+    c = stim.Circuit()
+    c.append("QUBIT_COORDS", [0], [0.0, 0.0])
+    c.append("QUBIT_COORDS", [1], [1.0, 0.0])
+    c.append("H", [0])
+    c.append("CX", [0, 1])
+    c.append("M", [0, 1])
+    c.append("DETECTOR", [stim.target_rec(-1), stim.target_rec(-2)])
+    return c
