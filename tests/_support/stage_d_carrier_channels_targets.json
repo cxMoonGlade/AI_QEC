@@ -119,7 +119,7 @@
     {"group": "carrier_channels", "module": "src/error_coupling_simulator/carrier/channels.py", "unit": "drifted_axis_mixture_kraus", "qualname": "drifted_axis_mixture_kraus", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
     {"group": "carrier_channels", "module": "src/error_coupling_simulator/carrier/channels.py", "unit": "single_axis_rotation", "qualname": "single_axis_rotation", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
     {"group": "carrier_channels", "module": "src/error_coupling_simulator/carrier/channels.py", "unit": "pauli_stochastic_kraus", "qualname": "pauli_stochastic_kraus", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": [
-      {"kind": "line", "selector": {"type": "line", "line": 483, "stmt_kind": "branch"},
+      {"kind": "line", "selector": {"type": "line", "line": 481, "stmt_kind": "branch"},
        "reason": "`if p >= NUMERICAL_ZERO:` after p = probability_floor(...) which returns >= 1e-12 = NUMERICAL_ZERO for ANY input, so the False arc (skip the X/Y/Z Kraus append) is unreachable with valid inputs -- the floor guarantees p >= NZ. PROBED: the boundary test pins that even a ZERO input Pauli probability still yields its sqrt(1e-12) Kraus (the append fires); the mutant `>=`->`>` would drop it and is killed there. src-cleanup candidate (dead guard given the floor).",
        "covered_by": ["tests/test_carrier_channels_units.py::test_L0_pauli_stochastic_floor_keeps_all_three_paulis"]}
     ]},

@@ -303,7 +303,7 @@ def parameter_series(params: Iterable[CoupledMechanismParams], field: str) -> np
         if not hasattr(p, field):
             raise AttributeError(f"CoupledMechanismParams has no field {field!r}")
         values.append(float(getattr(p, field)))
-    return np.asarray(values, dtype=np.float64)
+    return np.asarray(values)
 
 
 def cross_mechanism_correlation(

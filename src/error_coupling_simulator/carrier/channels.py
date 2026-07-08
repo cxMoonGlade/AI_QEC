@@ -77,11 +77,9 @@ def mechanism_operation_axis(spec: MechanismSpec) -> str:
     if spec.mechanism_id == "M14":
         return canonical_single_qubit_axis(
             params.get("operation_axis", params.get("instruction", params.get("axis", default))),
-            default="rx",
         )
     return canonical_single_qubit_axis(
         params.get("operation_axis", params.get("axis", default)),
-        default="rx",
     )
 
 
