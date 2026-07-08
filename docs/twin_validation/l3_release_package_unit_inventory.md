@@ -228,7 +228,18 @@ Confirmed CPU-pure: imports numpy only (0 `device=`, no torch tensor constructio
 | `file_sha256` | sha256 of file or None | C | hash stability | no | none direct |
 | `record_summary` | JSON-safe det/obs summary | C | marginal normalization | VAL (dtype/ndim) | none direct |
 
-### `frontend/circuit_ir.py` — cov 26% · 18 units (18 C) — keyed circuit IR
+### `frontend/circuit_ir.py` — **DONE (D15)** · L0 100/100 (23 units) · L2 kill 0.952 — keyed circuit IR
+> Stage-D `stage_d_circuit_ir_targets` — `tests/test_circuit_ir_units.py`. Authoritative gate PASS (23/23
+> stmt+branch 100%, reconcile 23 = 18 named + 5 `__post_init__`; 0 out_of_scope, 0 exemptions). Value-pins on the
+> CircuitBuilder fluent chain → built CircuitIR, the name properties (`measurement_keys`/`detector_names`/
+> `observable_names`) vs independent extraction, and the axis-1 context declarations. Authoritative mutation
+> 218/229 = **0.9520**. The builder probed + KILLED every reachability-class mutant itself (the `t>=nq`→`t>nq`
+> boundary, the `observable(index=0)` default, and 16 `declare_static_zz_couplings` route mutants via sabotaged-edge
+> exact-message tests) — so all 11 residual survivors are the single safest class: gate/measure name CASE mutations
+> (`"H"`→`"h"`, `"MR"`→`"mr"`, default `basis="Z"`→`"z"`) re-uppercased by `GateOp`/`MeasureOp.__post_init__`
+> `str(name).upper()` (verified lines 73/97) → byte-identical name, genuinely unkillable. src-cleanup candidate
+> (deferred, mainline): the redundant double-normalization (`CircuitBuilder.gate` `.upper()` + `GateOp.__post_init__`
+> `.upper()`).
 | unit | contract | class | invariants | DA | existing test |
 |---|---|---|---|---|---|
 | `GateOp`,`Tick`,`MeasureOp`,`DetectorDef`,`ObservableDef`,`CircuitIR` (`__post_init__` + accessors),`CircuitBuilder.gate/measure/detector/observable/*` | IR dataclasses + ergonomic builder | C | schema round-trip; key↔target bijection; measure-before-detect; name uniqueness | VAL (extensive) | test_circuit_ir_exports_* |
