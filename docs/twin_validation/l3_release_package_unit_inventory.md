@@ -37,8 +37,8 @@ and proposes the Stage-D batch order.
 | `carrier/` | 4 | 62 | 36 | 23 | 3 | 6–36% | ~47 |
 | `carrier/exact/` | 2 | 47 | 4 | 43 | 0 | 16–19% | ~45 |
 | `carrier/kernels/` | 2 | 10 | 4 | 6 | 0 | **0%** | 0 (indirect) |
-| `certify/` | 3 | 25 | 22 | 0 | 3 | **0%** | ~11 (test_certify) |
-| `certify/anchors/` | 4 | 18 | 12 | 4 | 2 | **0%** | ~6 (test_certify) |
+| `certify/` | 3 | 25 | 22 | 0 | 3 | **DONE** L0 100/100 · L2 0.945 | test_certify_core_units (D4) + test_certify |
+| `certify/anchors/` | 4 | 18 | 12 | 4 | 2 | **DONE** L0 100/100 · L2 0.927 (1 gpu oos) | test_certify_anchors_units (D5) + test_certify |
 | `frontend/` | 46 | 320 | ~215 | ~55 | ~50 | 0–84% | ~120 |
 | `mechanisms/` | 5 | 43 | 32 | 7 | 4 | 0–71% | ~30 |
 | `quantum_bath/` | 7 | 44 | 44 | 0 | 0 | **0%** | ~20 (test_quantum_bath) |

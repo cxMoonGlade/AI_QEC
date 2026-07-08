@@ -62,16 +62,19 @@ torch-less module.
 |---|---|---|---|---|---|---|
 | `wave2_6_coverage_targets` | frontend/experiments, forward/scalable/{sv_sampler,mps_forward}, _support/fixtures | test_experiments/shotset/mps_seams_units + _support selftest | 19 | 100/100 | 95.4% | committed |
 | `stage_d_coverage_targets` | quantum_bath/observables | test_quantum_bath_observables_units | 7 | 100/100 | 90.6% | committed (39caa28) |
-| `stage_d_carrier_targets` | quantum_bath/carrier | test_quantum_bath_carrier_units | 9 | 100/100 | 97.3% | pending commit |
-| `stage_d_gksl_crowjoynt_targets` | quantum_bath/{gksl,crow_joynt} | test_quantum_bath_gksl_crowjoynt_units | 8 | 100/100 | 95.7% | pending commit |
-| `stage_d_groundtruth_nulls_targets` | quantum_bath/{ground_truth,nulls} | test_quantum_bath_groundtruth_nulls_units | 12 | 100/100 | 92.7% | pending commit |
-| `stage_d_memwitness_targets` | quantum_bath/memory_witness | test_quantum_bath_memwitness_units | 4 | 100/100 | 91.7% | pending commit |
+| `stage_d_carrier_targets` | quantum_bath/carrier | test_quantum_bath_carrier_units | 9 | 100/100 | 97.3% | committed |
+| `stage_d_gksl_crowjoynt_targets` | quantum_bath/{gksl,crow_joynt} | test_quantum_bath_gksl_crowjoynt_units | 8 | 100/100 | 95.7% | committed |
+| `stage_d_groundtruth_nulls_targets` | quantum_bath/{ground_truth,nulls} | test_quantum_bath_groundtruth_nulls_units | 12 | 100/100 | 92.7% | committed |
+| `stage_d_memwitness_targets` | quantum_bath/memory_witness | test_quantum_bath_memwitness_units | 4 | 100/100 | 91.7% | committed |
+| `stage_d_certify_core_targets` | certify/{core,facade,types} | test_certify_core_units | 25 | 100/100 | 94.5% | pending commit |
+| `stage_d_certify_anchors_targets` | certify/anchors/{closed_form,controls,dm_oracle,stim_clifford} | test_certify_anchors_units | 17 (+1 gpu oos) | 100/100 | 92.7% | pending commit |
 
-**Milestone:** the whole `quantum_bath` package (40 units, 7 modules) is covered — the 4 entropic /
-negativity-backflow WITNESSES (`entropic_memory_witness_single`/`_two_qubit`, `negativity`,
-`von_neumann_entropy`) were RETRACTED + RETIRED 2026-07-07 (removed from the package → `retired/`;
-the genuine Backer `quantum_memory_witness` C#<C witness stays). Next: `certify` (D4/D5),
-then source/frontend/mechanisms (D6–D20). Full work-list: `docs/twin_validation/l3_release_package_unit_inventory.md`.
+**Milestone:** `quantum_bath` (40 units, 7 modules) + `certify` (42 units, 7 modules; `DMOracleAnchor.answer`
+is the sole GPU `out_of_scope`) are covered at L0 100/100 + L2 ≥0.90. The quantum_bath entropic/negativity-
+backflow WITNESSES were RETRACTED + RETIRED 2026-07-07 (→ `retired/`). certify's mutation gaps were the
+value-discrimination lesson: the builders hit 100% coverage at ~0.75 kill, a fix pass added ledger/boundary
+value-pins → 0.945/0.927 (residuals are empirically-verified equivalents). Next: `source`/`frontend`/
+`mechanisms`/`teachers` (D6–D20). Full work-list: `docs/twin_validation/l3_release_package_unit_inventory.md`.
 
 ## Offloading heavy mutation (spark)
 Very expensive-dynamics batches can offload the full mutation to the `ssh spark` compute node
