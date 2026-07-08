@@ -211,7 +211,27 @@ Confirmed CPU-pure: imports numpy only (0 `device=`, no torch tensor constructio
 | `StimCliffordAnchor.emit_kind`,`answers`,`capability` | scope/feasibility (statistical, any R) | C | class 'b'; band~C/√N; mem=0 | no | test_certify |
 | `StimCliffordAnchor.answer` | N-shot Clifford bit-flip slice via stim → statistic | C | band=6/√N; matches emitted shape | no | test_certify |
 
-### `frontend/analog_schedule.py` — cov 17% · 12 units (12 C) — schedule metadata (no tensors by design)
+### `frontend/analog_schedule.py` — **DONE (D18)** · L0 100/100 (17 units) · L2 kill 0.961 — schedule compilers + seal
+> Stage-D `stage_d_analog_schedule_targets` — `tests/test_analog_schedule_units.py`. Authoritative gate PASS (17/17
+> stmt+branch 100%, reconcile 17 = 12 named + 5 `__post_init__`; 0 out_of_scope, 0 exemptions). Compilers pinned vs
+> independent schedule-structure recompute; the process-lifetime HMAC seal tripped through the genuine unsealed +
+> tampered routes. Authoritative mutation 1120/1166 = **0.9605** (after fixes; the initial build was 0.9117).
+> **THE definitive cautionary tale for adversarial residual review.** The initial build mis-classified ~57 KILLABLE
+> mutants as "equivalent" on ONE systemic error: assuming only the internal `compile_code_spec_to_substep_schedule`
+> path is reachable. But the PUBLIC entry points `circuit_ir_to_substep_schedule`/`stim_circuit_to_substep_schedule`
+> (both in `__all__`) accept ARBITRARY CircuitIR/stim input, and `validate_public_metadata` neither reserves
+> `code_spec`/`role`/`coords` nor recurses into `_source_projection_evaluator_audit` subtrees. A 7-skeptic
+> adversarial workflow (each writing+running its own refutation probe) found 6 of 7 claimed-dead classes KILLABLE —
+> most seriously the **isolation-contract axis-2-leak guard** (`_find_axis2_source_metadata_path` + `_reject`),
+> untested against a NESTED `_source_projection_evaluator_audit` key that slips all three earlier guards. Plus
+> `_qubit_metadata` role/coords (public code_spec metadata), stim `_stim_record_keys` #14 + importer #91/#142-145,
+> dead-defensive TypeErrors (direct-call), `has_valid` `or→and` (non-str signature), and — caught by the coordinator
+> AFTER the fix — the `_qubit_metadata` outer-guard `or→and` at a non-Sequence non-str value (`data_qubits: 5`
+> → `for entry in 5` TypeError). All fixed. 46 residuals verified equivalent (self-consistent seal/verify pair ×12;
+> stim 7-of-12 dead [REPEAT via `.name`, 0-arg OBSERVABLE rejected by stim, no-gate-args]; `_stable_hash`/`_jsonable`
+> sort-masked; getattr-on-always-present; None-default caught by the `isinstance(_, Sequence)` guard; static-ZZ
+> None≡empty). src-cleanup candidates: the REPEAT-guard is stim-version-defensive-dead; the defensive TypeErrors are
+> unreachable via the public compilers (covered by direct-call).
 | unit | contract | class | invariants | DA | existing test |
 |---|---|---|---|---|---|
 | `DurationBracket`,`DurationPolicy`,`SubstepOperation`,`AnalogSubstepIR`,`SubstepSchedule` (`__post_init__`) | frozen schedule IR dataclasses | C | low<high; one-kind-per-substep; seal validity | VAL | test_simulator_axis1_schedule |
