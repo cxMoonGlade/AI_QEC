@@ -423,7 +423,18 @@ Confirmed CPU-pure: imports numpy only (0 `device=`, no torch tensor constructio
 |---|---|---|---|---|---|
 | `XZZXCodeSpec`,`make_xzzx_3x3_compiler_smoke_spec` | XZZX code-spec factory | C | commutativity (via CodeSpec) | VAL (NotImplemented for unsupported layout) | test_xzzx_codespec_* |
 
-### `frontend/axis1_context.py` — cov 29% · 9 units (9 C)
+### `frontend/axis1_context.py` — **DONE (D22)** · L0 100/100 (10 units) · L2 kill 0.992 — axis-1 local-Lindblad context spec
+> Stage-D `stage_d_axis1_context_targets` — `tests/test_axis1_context_units.py`. Authoritative gate PASS (10/10
+> stmt+branch 100%, reconcile 10 = 9 named + 1 `__post_init__`; 0 out_of_scope; 0 exemptions). Authoritative mutation
+> 126/127 = **0.9921**. `to_axis1_primitive_params` fan-out pinned field-by-field vs an independent recompute (None→defaults
+> vs value→spec) + a wrong-coefficient discriminator; per-conjunct `is_trivial` / per-disjunct `include_leakage` batteries
+> kill every `and`↔`or`/comparator mutant; every `__post_init__` (thermal/fsim/epistemic) + `_nonnegative_finite`/`_finite`
+> guard tripped with EXACT messages at its discriminating boundary; the 7 `payload.pop` manifest-key mutants killed via a
+> full round-trip `normalize(spec.to_manifest())==spec` (a stray key → `TypeError` at `**payload`); schema-key strings
+> hardcoded (not imported) so a mutated module constant fails the pin. 1 residual genuine-equivalent (verified):
+> `axis1_local_lindblad_context_from_schedule` `getattr(schedule, "...", {})`→`None` — `normalize_axis1_local_lindblad_context`
+> maps BOTH `None` and `{}` to the default spec (line 245 `if raw in (None, {}, ())`), and the default is read only when the
+> attr is absent → no input distinguishes them. src-cleanup candidate (`{}`↔`None`), not edited.
 | unit | contract | class | invariants | DA | existing test |
 |---|---|---|---|---|---|
 | `Axis1LocalLindbladContextSpec` (`__post_init__` + 4 accessors),`normalize_axis1_local_lindblad_context`,`axis1_local_lindblad_context_from_schedule`,`axis1_contextual_primitive_names`,`axis1_contextual_fsim_residual_primitives` | Markovian context metadata | C | rates≥0/finite; schema version pin | VAL | implicit (axis1_bridge/selection) |
