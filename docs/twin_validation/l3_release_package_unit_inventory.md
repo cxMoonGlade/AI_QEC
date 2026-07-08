@@ -530,7 +530,17 @@ Confirmed CPU-pure: imports numpy only (0 `device=`, no torch tensor constructio
 |---|---|---|---|---|---|
 | `SourceTimeline` (+ 8 methods: series/ablation/manifest/save/load npz),`SourceProcess`,`RTNSource` (+ sample/props),`OneOverFDriftSource` (+ sample/props/analytic_psd),`PhaseBurstSource` (+sample),`TemporalStormSPPSource` (+sample/from_fixed_marginal/props/empirical_*),`timeline_to_coupled_params`,`timeline_to_site_coupled_params`,`lag_autocorrelation` | source processes + timeline persistence | C | autocorr=exp(−2γlag); PSD≥0; transition rows sum 1; sha256 round-trip; permutation-exact ablation | VAL (extensive; save/load sha256) | test_source_process, test_source_closed_forms |
 
-### `teachers/coupled_cycle.py` — cov **0%** (not imported in Wave-2 run) · 18 units (12 C, 1 G, 5 M)
+### `teachers/coupled_cycle.py` — **DONE (D10)** · L0 100/100 (17 units) · L2 kill 0.964 · 18 units (17 in-scope + 1 gpu oos)
+> Stage-D `stage_d_coupled_cycle_targets` — `tests/test_coupled_cycle_units.py`. Authoritative gate PASS
+> (17/17 stmt+branch 100%, reconcile 18 = 17 registered + 1 out_of_scope, 0 exemptions). Authoritative
+> mutation 1085/1125 = **0.9644** (tested-only 0.9464). `CoupledCycleTeacher.emit` is the sole
+> `out_of_scope=gpu_bound` (torch multinomial MC on cuda; lazy `import torch` passes the anti-lie check;
+> the CPU-prefix seal/regime/m=0/N≥1 validation IS mutation-covered). `__init__` is not an AST-reconciled
+> public unit (dunder) but its CPU logic is exercised + mutation-covered on every construction. 40 residual
+> survivors all classified genuine-equivalent (defensive-guard message text on compiler-internal invariants;
+> dead `.get(k,())` defaults with always-present keys; GPU-only `_table_cache`; `_derived_seed` byteorder
+> ≡Py3.12-default & utf-8 codec-normalize; `consumer_name` diagnostic-only; PauliTerm basis
+> uppercase-normalized; dataclass-default kwargs; device-string not surfaced in `truth`).
 | unit | contract | class | invariants | DA | existing test |
 |---|---|---|---|---|---|
 | `derive_round_map_for_substep_schedule`,`params_for_substep_from_round_map`,`per_round_axis1_params`,`trajectory_mean_instrument`,`default_coupled_code_spec`,`default_coupled_code_spec_4q`,`default_coupled_code_spec_d3_repz`,`CoupledCycleTeacher.sched`,`CoupledCycleTeacher.truth`,`CoupledCycleTeacher.export_stim_circuit` | round-map derivation + fixtures + sealed props | C | round-map three-witness cross-validation; deep-copy truth; det/obs layout identity | VAL (9+ raises; C-1 seal; C-12 m=0) | test_coupled_cycle_teacher (exists but not in Wave-2 .coverage) |

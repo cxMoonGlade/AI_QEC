@@ -71,14 +71,18 @@ torch-less module.
 | `stage_d_interop_targets` | frontend/interop | test_interop_units | 3 | 100/100 | 95.2% | committed |
 | `stage_d_axis1_evidence_guard_targets` | frontend/axis1_evidence_guard | test_axis1_evidence_guard_units | 3 | 100/100 | 97.7% | committed |
 | `stage_d_seam_teachers_targets` | mechanisms/seam_teachers | test_seam_teachers_units | 11 | 100/100 | 99.1% | committed |
-| `stage_d_axis1_runners_targets` | frontend/{axis1_codespec_runner,axis1_g2_runner} | test_axis1_runners_units | 8 | 100/100 | 98.0% | pending commit |
+| `stage_d_axis1_runners_targets` | frontend/{axis1_codespec_runner,axis1_g2_runner} | test_axis1_runners_units | 8 | 100/100 | 98.0% | committed (513d4de) |
+| `stage_d_coupled_cycle_targets` | teachers/coupled_cycle | test_coupled_cycle_units | 17 (+1 gpu oos) | 100/100 | 96.4% | pending commit |
 
 **Milestone:** `quantum_bath` (40 units, 7 modules) + `certify` (42 units, 7 modules; `DMOracleAnchor.answer`
 is the sole GPU `out_of_scope`) are covered at L0 100/100 + L2 ≥0.90. The quantum_bath entropic/negativity-
 backflow WITNESSES were RETRACTED + RETIRED 2026-07-07 (→ `retired/`). certify's mutation gaps were the
 value-discrimination lesson: the builders hit 100% coverage at ~0.75 kill, a fix pass added ledger/boundary
-value-pins → 0.945/0.927 (residuals are empirically-verified equivalents). Next: `source`/`frontend`/
-`mechanisms`/`teachers` (D6–D20). Full work-list: `docs/twin_validation/l3_release_package_unit_inventory.md`.
+value-pins → 0.945/0.927 (residuals are empirically-verified equivalents). The **D6–D10 CPU-pure tier is
+complete**: interop (0.952), axis1_evidence_guard (0.977), seam_teachers (0.991), axis1_runners (0.980),
+coupled_cycle (0.964; the `CoupledCycleTeacher.emit` GPU MC-sampler is the sole `out_of_scope`, mirroring
+certify_anchors' `DMOracleAnchor.answer`). Next: `source/process.py` (D11, Tier-2), then the remaining
+`source`/`frontend`/`mechanisms` (D12–D20). Full work-list: `docs/twin_validation/l3_release_package_unit_inventory.md`.
 
 ## Offloading heavy mutation (spark)
 Very expensive-dynamics batches can offload the full mutation to the `ssh spark` compute node
