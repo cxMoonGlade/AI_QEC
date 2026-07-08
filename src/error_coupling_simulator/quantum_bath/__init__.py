@@ -18,12 +18,8 @@ from .gksl import build_shared_bath_liouvillian
 from .memory_witness import (
     concurrence,
     concurrence_of_assistance,
-    entropic_memory_witness_single,
-    entropic_memory_witness_two_qubit,
     jc_reduced_choi,
-    negativity,
     quantum_memory_witness,
-    von_neumann_entropy,
 )
 from .ground_truth import (
     extraction_gt_check,
@@ -68,13 +64,10 @@ __all__ = [
     "concurrence",
     "concurrence_of_assistance",
     "jc_reduced_choi",
-    # BACKFLOW / NON-MARKOVIANITY witnesses (Control 3b) -- RETRACTED as quantum-memory (2026-07-06, Control 0b):
-    # a bare negativity revival drops Backer's classical bound '#' => witnesses MEMORY not quantumness (2601.18822).
-    # Kept as non-Markovianity/backflow diagnostics only. von_neumann_entropy = diagnostic.
-    "von_neumann_entropy",
-    "negativity",
-    "entropic_memory_witness_single",
-    "entropic_memory_witness_two_qubit",
+    # NB (2026-07-07): the BACKFLOW / NON-MARKOVIANITY witnesses (entropic_memory_witness_single/_two_qubit)
+    # + their machinery (negativity, von_neumann_entropy) were RETRACTED as quantum-memory witnesses
+    # (2026-07-06, Control 0b: a bare revival drops Backer's classical bound '#', forgeable by classical RTN
+    # dephasing -- 2601.18822, 1608.05970) and RETIRED from the package (record: retired/quantum_bath/).
     # crow_joynt classical-field null
     "field_null_point",
     "gamma_unit_closed",

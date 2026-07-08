@@ -107,26 +107,6 @@ def test_backer_witness_finite_gamma_memory_is_genuinely_quantum():
     assert qb.concurrence_of_assistance(bell) == pytest.approx(1.0, abs=1e-9)
 
 
-def test_negativity_backflow_witness_is_nonmarkovianity_single_and_two_qubit():
-    # Control 3b -- the negativity-revival = entanglement BACKFLOW = RHP NON-MARKOVIANITY witness. *** RETRACTED as
-    # a quantum-memory witness (2026-07-06, Control 0b): a bare revival drops Backer's classical bound '#' and is
-    # forged by classical RTN dephasing (2601.18822). These asserts check the BACKFLOW detector fires underdamped /
-    # silent Markovian (correct as a non-Markovianity diagnostic) -- they do NOT certify quantum memory. ***
-    # (a) negativity of a Bell state = 0.5 (sanity). (b) single-qubit backflow fires underdamped (gamma=0.15),
-    # silent Markovian (gamma=50). (c) the FULL 2-qubit shared bath (r=1) has backflow at gamma=0.15, silent
-    # Markovian, larger than single-qubit (collective enhancement). All = non-Markovianity, NOT quantum memory.
-    import numpy as np
-    bell = 0.5 * np.array([[1, 0, 0, 1], [0, 0, 0, 0], [0, 0, 0, 0], [1, 0, 0, 1]], dtype=complex)
-    assert qb.negativity(bell, 2) == pytest.approx(0.5, abs=1e-9)
-    s_phys = qb.entropic_memory_witness_single(0.35, 0.15, ZETA, TAU, 12)
-    s_mark = qb.entropic_memory_witness_single(0.35, 50.0, ZETA, TAU, 12)
-    assert s_phys["quantum_memory_required"] is True and s_mark["quantum_memory_required"] is False
-    q_phys = qb.entropic_memory_witness_two_qubit(0.35, 0.15, ZETA, TAU, 12, r=1.0)
-    q_mark = qb.entropic_memory_witness_two_qubit(0.35, 50.0, ZETA, TAU, 12, r=1.0)
-    assert q_phys["quantum_memory_required"] is True and q_mark["quantum_memory_required"] is False
-    assert q_phys["negativity_revival"] > s_phys["negativity_revival"]     # collective enhancement (Fanchini)
-
-
 def test_qrt_null_memory_vanishes_in_markovian_limit():
     # Luppi 2605.06427 Eq.24: dual_point_qrt = same model, mode reset to vacuum each round (no cross-round
     # memory). eps_QRT = TV(exact, QRT) = Phi_memory. Prediction (Luppi): Phi_memory -> 0 as gamma -> infinity.

@@ -36,6 +36,9 @@ REPO = Path(__file__).resolve().parents[1]
 # covers the whole tree. Package keys are fully-qualified relative to src/ (e.g. "qec_twin/forward",
 # "error_coupling_simulator/source"). This is what stops the map from missing a whole package.
 SRC = REPO / "src"
+TOOLS = REPO / "tools"          # dev tooling (not shipped): gen_code_map, sync_obsidian, ...
+TESTS_HARNESS = REPO / "tests" / "harness"   # the test/coverage harness lives WITH the tests (proc/gpu_pool/gate/mutation)
+_ROOTS = (SRC, TOOLS, TESTS_HARNESS)
 STATUS_PATH = REPO / "docs" / "code_status.json"
 MAP_PATH = REPO / "docs" / "CODE_MAP.md"
 GATES_DIR = REPO / "docs" / "twin_validation" / "gates"
@@ -93,16 +96,55 @@ def _module_facts(py: Path) -> dict:
     return {"loc": loc, "doc": doc, "classes": classes, "funcs": funcs}
 
 
+def _owning_root(py: Path) -> Path:
+    """Which scan root (src/ or tools/) contains ``py``."""
+    for r in _ROOTS:
+        try:
+            py.relative_to(r)
+            return r
+        except ValueError:
+            continue
+    return SRC
+
+
+def _pkg_key(py: Path) -> str:
+    """Package key for a module. src keys stay relative to src/ (UNCHANGED, e.g.
+    'qec_twin/forward'); tools keys are prefixed by the root name ('tools', 'tools/harness') so the
+    two roots never collide and existing src keys / code_status.json entries are untouched."""
+    root = _owning_root(py)
+    rel = py.parent.relative_to(root).as_posix()
+    rel = "" if rel == "." else rel
+    if root is SRC:
+        return rel
+    base = root.relative_to(REPO).as_posix()  # 'tools' or 'tests/harness'
+    return base if not rel else f"{base}/{rel}"
+
+
+def _mod_relpath(py: Path) -> str:
+    """Per-module path key (for module-level status overrides + stale-status checks): src modules
+    are relative to src/ ('qec_twin/forward/foo.py'); tools modules to the repo ('tools/harness/foo.py')."""
+    root = _owning_root(py)
+    return py.relative_to(SRC if root is SRC else REPO).as_posix()
+
+
+def _pkg_dir(pkg: str) -> Path:
+    """Directory for a package key (README lookup). Tools keys ('tools', 'tools/...') live under the
+    repo root; src keys under src/."""
+    if not pkg:
+        return SRC
+    repo_rooted = pkg in ("tools", "tests/harness") or pkg.startswith(("tools/", "tests/harness/"))
+    return (REPO / pkg) if repo_rooted else (SRC / pkg)
+
+
 def _iter_modules():
-    """Yield (package_rel, module_path) for every non-dunder .py under src/qec_twin."""
-    for py in sorted(SRC.rglob("*.py")):
-        if "__pycache__" in py.parts:
+    """Yield (package_key, module_path) for every non-dunder .py under src/ AND dev tools/."""
+    for root in _ROOTS:
+        if not root.is_dir():
             continue
-        if py.name == "__init__.py":
-            continue
-        pkg_rel = py.parent.relative_to(SRC).as_posix()
-        pkg_rel = "" if pkg_rel == "." else pkg_rel
-        yield pkg_rel, py
+        for py in sorted(root.rglob("*.py")):
+            if "__pycache__" in py.parts or py.name == "__init__.py":
+                continue
+            yield _pkg_key(py), py
 
 
 def _packages() -> list[str]:
@@ -198,7 +240,7 @@ def build_map() -> tuple[str, dict]:
     # a status key is valid if it names an existing package, an existing module path, OR an ANCESTOR
     # namespace of some package (a dir whose only content is __init__ + subpackages, e.g. the
     # top-level `error_coupling_simulator`, has no direct module but is a real package).
-    module_paths = {py.relative_to(SRC).as_posix() for _, py in _iter_modules()}
+    module_paths = {_mod_relpath(py) for _, py in _iter_modules()}
     stale_status = sorted(
         k for k in status_keys
         if k not in pkg_set and k not in module_paths
@@ -207,7 +249,7 @@ def build_map() -> tuple[str, dict]:
 
     n_mod = n_cls = n_fn = 0
     lines: list[str] = []
-    lines.append("# CODE_MAP — `src/qec_twin` inventory (GENERATED — do not hand-edit)")
+    lines.append("# CODE_MAP — `src/` + dev `tools/` inventory (GENERATED — do not hand-edit)")
     lines.append("")
     lines.append(f"{_HASH_MARKER} {tree_hash} -->")
     lines.append(f"- **src-tree sha256:** `{tree_hash}`  •  **git HEAD:** `{head}`")
@@ -241,7 +283,7 @@ def build_map() -> tuple[str, dict]:
         st = status.get(pkg, {})
         st_tag = st.get("status", "—")
         st_note = st.get("note", "")
-        readme = _readme_first_line((SRC / pkg) if pkg else SRC)
+        readme = _readme_first_line(_pkg_dir(pkg))
         lines.append(f"## `{label}/`  —  **[{st_tag}]**")
         if st_note:
             lines.append(f"> {st_note}")
@@ -253,7 +295,7 @@ def build_map() -> tuple[str, dict]:
             n_mod += 1
             n_cls += len(facts["classes"])
             n_fn += len(facts["funcs"])
-            mod_status = status.get(py.relative_to(SRC).as_posix())
+            mod_status = status.get(_mod_relpath(py))
             tag = f" **[{mod_status['status']}]**" if mod_status else ""
             lines.append(f"- **`{py.name}`** ({facts['loc']} LOC){tag} — {facts['doc'] or '(no docstring)'}")
             if facts["classes"]:
@@ -276,7 +318,7 @@ def build_map() -> tuple[str, dict]:
 
     lines.append("---")
     lines.append(f"_inventory: {len(pkgs)} packages, {n_mod} modules, {n_cls} public classes, "
-                 f"{n_fn} public functions (committed `src/qec_twin`) + curated local-only clusters above._")
+                 f"{n_fn} public functions (committed `src/` + dev `tools/`) + curated local-only clusters above._")
     lines.append("")
 
     summary = {"packages": len(pkgs), "modules": n_mod, "classes": n_cls, "funcs": n_fn,

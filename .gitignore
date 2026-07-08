@@ -34,3 +34,7 @@ skills-lock.json
 # mutmut L2 sandbox (regenerated per run)
 mutants/
 .mutmut-cache
+
+# Retired code attic (untracked, local-only record of explicitly RETIRED /
+# retracted units removed from the reachable package -- see retired/README.md).
+retired/

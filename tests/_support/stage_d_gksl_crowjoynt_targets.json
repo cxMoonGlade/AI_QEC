@@ -1,0 +1,118 @@
+{
+  "_comment": [
+    "STAGE-D per-batch coverage registry -- batch 'gksl_crowjoynt' of the full-coverage",
+    "program (docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4; work-list",
+    "docs/twin_validation/l3_release_package_unit_inventory.md). Run via",
+    "tests/harness/gate.py <this file> (L0+L1; calls tests/harness/coverage_audit.py) and",
+    "tests/harness/mutation.py <this file> (L2).",
+    "",
+    "Covers the two shared-bath carrier PRIMITIVE modules (both CPU-pure numpy/scipy; NO",
+    "torch, NO quimb, NO cuda -- so everything is IN SCOPE; out_of_scope is empty):",
+    "  * quantum_bath/gksl.py       -- boson_ops, build_shared_bath_liouvillian, round_superop",
+    "  * quantum_bath/crow_joynt.py -- gamma_unit_closed, sigma_offdiag_closed, build_sigma,",
+    "                                  field_null_dual_P_all, field_null_point",
+    "",
+    "ZERO exemptions. Every unit reaches 100% statement + 100% branch over the tracked branch",
+    "surface with NO named exemption. Several units are straight-line or comprehension-only, so",
+    "coverage.py --branch tracks NO branch arc for them (0/0 -> 1.0, coverage.py's empty",
+    "convention): build_shared_bath_liouvillian, round_superop, gamma_unit_closed,",
+    "sigma_offdiag_closed, field_null_point are straight-line; field_null_dual_P_all's",
+    "P_all/P_skip dict-comprehensions score 0/0 (its for-loop arcs ARE tracked and covered).",
+    "boson_ops (for-loop, nmax>=2 body + nmax==1 empty) and build_sigma (r==s / r!=s ternary)",
+    "have REAL branch arcs, both covered with real inputs (no underflow/invalid-input branch was",
+    "found that a real input could not reach). _gamma_of_t is PRIVATE (leading underscore) and",
+    "therefore not a public unit -- it is exercised as the numerical cross-check of",
+    "gamma_unit_closed but carries no coverage target.",
+    "",
+    "NB (review-lesson F1): both modules are CPU-pure -- gksl imports only math/numpy/scipy,",
+    "crow_joynt only math/numpy/scipy + sibling package modules -- so NOTHING can be parked as",
+    "gpu_bound/quimb_bound (the structural _module_imports guard would refute it). No",
+    "out_of_scope entries."
+  ],
+  "contract": "docs/twin_validation/wave2_6_unit_test_contract.md",
+  "default_target": {"statement": 1.0, "branch": 1.0},
+  "covered_by_test_files": [
+    "tests/test_quantum_bath_gksl_crowjoynt_units.py"
+  ],
+  "reconcile_modules": [
+    "src/error_coupling_simulator/quantum_bath/gksl.py",
+    "src/error_coupling_simulator/quantum_bath/crow_joynt.py"
+  ],
+  "out_of_scope": {},
+  "canonical_units": [
+    "boson_ops",
+    "build_shared_bath_liouvillian",
+    "round_superop",
+    "gamma_unit_closed",
+    "sigma_offdiag_closed",
+    "build_sigma",
+    "field_null_dual_P_all",
+    "field_null_point"
+  ],
+  "units": [
+    {
+      "group": "gksl_crowjoynt",
+      "module": "src/error_coupling_simulator/quantum_bath/gksl.py",
+      "unit": "boson_ops",
+      "qualname": "boson_ops",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "gksl_crowjoynt",
+      "module": "src/error_coupling_simulator/quantum_bath/gksl.py",
+      "unit": "build_shared_bath_liouvillian",
+      "qualname": "build_shared_bath_liouvillian",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "gksl_crowjoynt",
+      "module": "src/error_coupling_simulator/quantum_bath/gksl.py",
+      "unit": "round_superop",
+      "qualname": "round_superop",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "gksl_crowjoynt",
+      "module": "src/error_coupling_simulator/quantum_bath/crow_joynt.py",
+      "unit": "gamma_unit_closed",
+      "qualname": "gamma_unit_closed",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "gksl_crowjoynt",
+      "module": "src/error_coupling_simulator/quantum_bath/crow_joynt.py",
+      "unit": "sigma_offdiag_closed",
+      "qualname": "sigma_offdiag_closed",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "gksl_crowjoynt",
+      "module": "src/error_coupling_simulator/quantum_bath/crow_joynt.py",
+      "unit": "build_sigma",
+      "qualname": "build_sigma",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "gksl_crowjoynt",
+      "module": "src/error_coupling_simulator/quantum_bath/crow_joynt.py",
+      "unit": "field_null_dual_P_all",
+      "qualname": "field_null_dual_P_all",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "gksl_crowjoynt",
+      "module": "src/error_coupling_simulator/quantum_bath/crow_joynt.py",
+      "unit": "field_null_point",
+      "qualname": "field_null_point",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    }
+  ]
+}

@@ -1,0 +1,124 @@
+{
+  "_comment": [
+    "STAGE-D per-batch coverage registry (carrier batch) for the full-coverage program",
+    "(docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4). Same AST-derived,",
+    "anti-stale schema as tests/_support/stage_d_coverage_targets.json (D1). Run via",
+    "tests/harness/gate.py <this file> (L0+L1; calls tests/harness/coverage_audit.py) and",
+    "tests/harness/mutation.py <this file> (L2).",
+    "",
+    "MODULE: quantum_bath/carrier.py -- the dual-ancilla dual-axis EXACT-DM carrier for the",
+    "shared-bath (pseudomode) simulator (9 CPU-pure public units: 4-qubit parity gates + an",
+    "exact reduced-idle GKSL apply + ancilla-mediated instruments + the exact 3-round",
+    "dual-axis record points and their QRT/reduced-map null). Pure numpy/math/scipy",
+    "(device-agnostic; no torch, no quimb, no cuda) -- EVERYTHING is in scope; out_of_scope",
+    "is EMPTY (a CPU-pure module cannot park a unit as gpu_bound/quimb_bound: the audit's",
+    "_module_imports check would structurally refute it).",
+    "",
+    "NO EXEMPTIONS. Every public unit reaches 100% statement + 100% branch. Branch surface:",
+    "cnot4 has a real for-loop + `if bits[control]==1` (BOTH arcs covered by one 16-state",
+    "call); dual_extract / quantum_dual_P_all / quantum_dual_P_all_qrt have real for-loops",
+    "(enter+exit arcs covered by one call). The other five units are straight-line OR carry",
+    "only a bare `assert` (dual_point/dual_point_qrt) -- coverage.py emits NO branch arc for",
+    "a bare assert (verified empirically), so those score branch 0/0 (nothing to miss). The",
+    "assert's False arc is a raise unreachable with valid inputs (norm==1 is a",
+    "trace-preservation theorem of the instrument) AND carries no coverage obligation -- so",
+    "no defensive-assert exemption is needed (D1 finding-2 probed: the underflow/invalid",
+    "probe is moot because there is no tracked arc to reach)."
+  ],
+  "contract": "docs/twin_validation/wave2_6_unit_test_contract.md",
+  "default_target": {"statement": 1.0, "branch": 1.0},
+  "covered_by_test_files": [
+    "tests/test_quantum_bath_carrier_units.py"
+  ],
+  "reconcile_modules": [
+    "src/error_coupling_simulator/quantum_bath/carrier.py"
+  ],
+  "out_of_scope": {},
+  "canonical_units": [
+    "cnot4",
+    "z_parity_unitary_4q",
+    "x_parity_unitary_4q",
+    "apply_idle_reduced",
+    "dual_extract",
+    "quantum_dual_P_all",
+    "dual_point",
+    "quantum_dual_P_all_qrt",
+    "dual_point_qrt"
+  ],
+  "units": [
+    {
+      "group": "carrier",
+      "module": "src/error_coupling_simulator/quantum_bath/carrier.py",
+      "unit": "cnot4",
+      "qualname": "cnot4",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "carrier",
+      "module": "src/error_coupling_simulator/quantum_bath/carrier.py",
+      "unit": "z_parity_unitary_4q",
+      "qualname": "z_parity_unitary_4q",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "carrier",
+      "module": "src/error_coupling_simulator/quantum_bath/carrier.py",
+      "unit": "x_parity_unitary_4q",
+      "qualname": "x_parity_unitary_4q",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "carrier",
+      "module": "src/error_coupling_simulator/quantum_bath/carrier.py",
+      "unit": "apply_idle_reduced",
+      "qualname": "apply_idle_reduced",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "carrier",
+      "module": "src/error_coupling_simulator/quantum_bath/carrier.py",
+      "unit": "dual_extract",
+      "qualname": "dual_extract",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "carrier",
+      "module": "src/error_coupling_simulator/quantum_bath/carrier.py",
+      "unit": "quantum_dual_P_all",
+      "qualname": "quantum_dual_P_all",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "carrier",
+      "module": "src/error_coupling_simulator/quantum_bath/carrier.py",
+      "unit": "dual_point",
+      "qualname": "dual_point",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": [],
+      "note": "The `assert abs(norm-1.0)<1e-8` is a plain covered statement on every passing call; coverage.py models no branch arc for a bare assert, so dual_point scores branch 0/0 with NO exemption. The assert's False arc (norm!=1) is unreachable with valid inputs (norm==1 is a trace-preservation theorem of the projected+reset instrument) -- and there is no tracked arc to reach anyway. test_KILLER_dual_point_norm_would_fail_for_dropped_leaf_variant shows the assert is not vacuous."
+    },
+    {
+      "group": "carrier",
+      "module": "src/error_coupling_simulator/quantum_bath/carrier.py",
+      "unit": "quantum_dual_P_all_qrt",
+      "qualname": "quantum_dual_P_all_qrt",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "carrier",
+      "module": "src/error_coupling_simulator/quantum_bath/carrier.py",
+      "unit": "dual_point_qrt",
+      "qualname": "dual_point_qrt",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": [],
+      "note": "Same as dual_point: bare `assert` => branch 0/0, no exemption; the False arc is a trace-preservation-guaranteed unreachable raise with no tracked coverage obligation."
+    }
+  ]
+}

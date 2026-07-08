@@ -504,11 +504,11 @@ Confirmed CPU-pure: imports numpy only (0 `device=`, no torch tensor constructio
 |---|---|---|---|---|---|
 | `full_superop_bytes`,`factorization_check`,`extraction_gt_check`,`two_qubit_indep_boson_gt`,`sigma_minus_emission_gt`,`no_bath_sanity` | independent-GT check computations | C | worst_err→0; K/CMI≈0 (no-bath) | yes (random-rho / hardcoded-state asserts) | test_quantum_bath |
 
-### `quantum_bath/memory_witness.py` — cov **0%** · 8 units (8 C) — Backer witness (exact-DM)
+### `quantum_bath/memory_witness.py` — **DONE** · 4 LIVE units (4 C) — Backer C#<C witness (exact-DM)
 | unit | contract | class | invariants | DA | existing test |
 |---|---|---|---|---|---|
-| `jc_reduced_choi`,`concurrence`,`concurrence_of_assistance`,`quantum_memory_witness`,`von_neumann_entropy`,`negativity`,`entropic_memory_witness_single`,`entropic_memory_witness_two_qubit` | Choi-state witnesses (Backer Thm 1) | C | Choi trace-1 Hermitian; C∈[0,1]; N,S≥0 | yes (norm≈1) | test_quantum_bath |
-*(NOTE: `entropic_memory_witness_*` are RETRACTED-as-witness 2026-07-06 — kept as diagnostics. Test them as diagnostics, do not assert a witness claim.)*
+| `jc_reduced_choi`,`concurrence`,`concurrence_of_assistance`,`quantum_memory_witness` | Backer Thm 1 quantum-memory witness (C♯(t₁)<C(t₂)) + its Choi / Wootters primitives | C | Choi trace-1 Hermitian PSD; C∈[0,1]; `jc_reduced_choi` & the C/C♯ curves == the INDEPENDENT damped-JC AD-Choi oracle | yes | test_quantum_bath_memwitness_units (L0 100/100, L2 0.917) |
+*(RETIRED 2026-07-07 → `retired/quantum_bath/`: `entropic_memory_witness_single`/`_two_qubit`, `negativity`, `von_neumann_entropy`, `_revival_fire`, `_two_qubit_*` — the entropic / negativity-BACKFLOW witnesses were RETRACTED-as-quantum-memory 2026-07-06 (a bare revival = RHP non-Markovianity, forgeable by classical RTN dephasing) and REMOVED from the reachable package. Batch scope = the 4 LIVE units.)*
 
 ### `quantum_bath/nulls.py` — cov **0%** · 6 units (6 C) — incoherent-AD null family
 | unit | contract | class | invariants | DA | existing test |

@@ -136,8 +136,9 @@ that a stochastic-Pauli baseline cannot reproduce ([[project-cpdiv-notion-hierar
   validity.
 - **`quantum_bath/` module**: retained as **forward-simulation infrastructure** — it generates the coherent + σ⁻/
   non-unital shared-bath physics faithfully (the simulator's actual job). The `entropic_memory_witness_*` /
-  `_revival_fire` functions are kept as **non-Markovianity / backflow diagnostics only** (docstrings + banner already
-  mark them RETRACTED-as-quantum-memory).
+  `_revival_fire` / `negativity` / `von_neumann_entropy` functions (RETRACTED-as-quantum-memory 2026-07-06) were
+  **RETIRED 2026-07-07** — removed from the reachable package (record: `retired/quantum_bath/`), a bare backflow
+  revival being non-Markovianity, not quantum memory. The genuine `quantum_memory_witness` (C♯<C) stays.
 - The record-distance distinguishability (min-TV 0.037–0.19 vs incoherent nulls): valid, but re-labeled as
   **non-Markovianity + collective structure (notion-2)**, not quantum memory.
 
