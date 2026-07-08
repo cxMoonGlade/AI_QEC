@@ -254,7 +254,7 @@ class CircuitBuilder:
         args: float | Sequence[float] | None = None,
     ) -> "CircuitBuilder":
         self._validate_targets(_as_targets(targets))
-        self._steps.append(GateOp(str(name).upper(), _as_targets(targets), _as_args(args)))
+        self._steps.append(GateOp(name, _as_targets(targets), _as_args(args)))
         return self
 
     def tick(self) -> "CircuitBuilder":

@@ -702,11 +702,11 @@ def test_L0_mechanism_operation_axis_paths():
     # "rx" != "ry", so this kills the axis-fallback-default mutation in the M14 branch.
     assert mechanism_operation_axis(_spec("M14", instruction="ry")) == "ry"
     # EXPLICIT-None value: MechanismSpec has NO __post_init__ so parameters={"operation_axis": None}
-    # is constructible; params.get returns None (key PRESENT -> the fallback is NOT taken) -> value=None
-    # -> the `canonical_single_qubit_axis(..., default="rx")` default arg is LIVE. instruction="rz"
-    # gives a DIFFERENT fall-through ("rz"), so asserting "rx" proves the default="rx" arg (not the
-    # fall-through) is used -> kills the default="XXrxXX" WRAP + default=None mutants on BOTH the
-    # non-M14 and M14 branches. (The default="RX" CASE mutant stays equivalent -- canonical .lower()s.)
+    # is constructible; params.get returns None (key PRESENT -> the fallback is NOT taken) -> value=None.
+    # mechanism_operation_axis forwards that None to canonical_single_qubit_axis, whose OWN signature
+    # default "rx" then applies (the op-axis call no longer passes a redundant default="rx"). instruction
+    # ="rz" gives a DIFFERENT fall-through ("rz"), so asserting "rx" pins that the None-value path resolves
+    # via canonical's own default, not the instruction fall-through, on BOTH the non-M14 and M14 branches.
     assert mechanism_operation_axis(_spec("M1", {"operation_axis": None}, instruction="rz")) == "rx"
     assert mechanism_operation_axis(_spec("M14", {"operation_axis": None}, instruction="rz")) == "rx"
 

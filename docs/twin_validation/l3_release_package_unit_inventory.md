@@ -80,25 +80,29 @@ exemptions).
 | `positive_floor` | floor a float away from exact 0 | C | idempotence on ≥floor; output ≥ NUMERICAL_ZERO | no | implicit (imported by coupling/channels) |
 | `probability_floor` | floor a prob away from 0, cap at 1 | C | output ∈ [floor, 1]; normalization | no | implicit |
 
-### `carrier/channels.py` — **DONE (D13)** · L0 100/100 (32 units) · L2 kill 0.968 — quantum-channel library, numpy+scipy, no torch
+### `carrier/channels.py` — **DONE (D13)** · L0 100/100 (32 units) · L2 kill 0.969 — quantum-channel library, numpy+scipy, no torch
 > Stage-D `stage_d_carrier_channels_targets` — `tests/test_carrier_channels_units.py`. Authoritative gate PASS
 > (32/32 stmt+branch 100%, reconcile 32 = 32 registered + 0 out_of_scope; CPU-pure numpy/scipy). 1
 > `defensive_assert` exemption: `pauli_stochastic_kraus` `if p >= NUMERICAL_ZERO` False-branch is unreachable
 > because `probability_floor(x)=min(1.0,max(1e-12,x)) ∈ [1e-12,1.0]` always (verified). The CENTRAL discipline:
 > `assert_cptp`/`assert_unitary` are VACUOUS alone, so every channel/unitary carries an independent closed-form
 > value-pin (rotations vs `scipy.expm(-iθ/2·P)`, Kraus vs textbook sets, leakage superop vs a from-scratch
-> Lindbladian). Authoritative mutation 2271/2347 = **0.9676**.
+> Lindbladian). Authoritative mutation 2265/2337 = **0.9692** (2271/2347 = 0.9676 before the
+> normalization-consolidation cleanup dropped the two redundant `mechanism_operation_axis` `default="rx"`
+> args — they equalled `canonical_single_qubit_axis`'s own default — retiring 4 equivalent survivors + 6
+> killed sites; the load-bearing `default="rz"` / `default=operation_axis` args are kept).
 > **Cautionary tale — adversarial residual review caught TWO real gaps the builder mis-classified as equivalent
 > (12 mutants), both = reachability ASSERTED not PROBED:** (1) `canonical_single_qubit_axis(default=…)` is LIVE at
 > `value=None` (reachable via an explicit-None param on the unvalidated `MechanismSpec` — probed: returns the
 > default, and the `"rx"`→`"XXrxXX"` wrap-mutant raises) — the wrap default-arg mutants were killable, not
 > equivalent; (2) the M13 `channel_axis != operation_axis` raise (line 98) was tripped only via the explicit
 > `error_axis` route, so the 6 `channel_axis`-fallback mutants that suppress the raise survived — a raising guard
-> must be tripped through EVERY input route that reaches it. Both fixed (+12 kills, 0.9625→0.9676). 76 residual
+> must be tripped through EVERY input route that reaches it. Both fixed (+12 kills, 0.9625→0.9676). 72 residual
 > survivors all verified genuine-equivalent (case normalized by callee `.upper()`/`.lower()`; contract `.get`
 > defaults on always-present M13-literal keys; measure-zero float boundaries; numpy dtype/order defaults;
-> shape-on-square; dead-init overwritten; default-equals-canonical's-own-default; channel_axis-absent routes that
-> resolve to operation_axis; `sqrt(0)` zero-jump at g=0).
+> shape-on-square; dead-init overwritten; channel_axis-absent routes that
+> resolve to operation_axis; `sqrt(0)` zero-jump at g=0). [The `default="rx"`-equals-canonical's-own-default
+> class was retired by the normalization cleanup that removed those redundant args.]
 Confirmed CPU-pure: imports numpy only (0 `device=`, no torch tensor construction).
 | unit | contract | class | invariants | DA | existing test |
 |---|---|---|---|---|---|
@@ -248,18 +252,19 @@ Confirmed CPU-pure: imports numpy only (0 `device=`, no torch tensor constructio
 | `file_sha256` | sha256 of file or None | C | hash stability | no | none direct |
 | `record_summary` | JSON-safe det/obs summary | C | marginal normalization | VAL (dtype/ndim) | none direct |
 
-### `frontend/circuit_ir.py` — **DONE (D15)** · L0 100/100 (23 units) · L2 kill 0.952 — keyed circuit IR
+### `frontend/circuit_ir.py` — **DONE (D15)** · L0 100/100 (23 units) · L2 kill 0.956 — keyed circuit IR
 > Stage-D `stage_d_circuit_ir_targets` — `tests/test_circuit_ir_units.py`. Authoritative gate PASS (23/23
 > stmt+branch 100%, reconcile 23 = 18 named + 5 `__post_init__`; 0 out_of_scope, 0 exemptions). Value-pins on the
 > CircuitBuilder fluent chain → built CircuitIR, the name properties (`measurement_keys`/`detector_names`/
 > `observable_names`) vs independent extraction, and the axis-1 context declarations. Authoritative mutation
-> 218/229 = **0.9520**. The builder probed + KILLED every reachability-class mutant itself (the `t>=nq`→`t>nq`
-> boundary, the `observable(index=0)` default, and 16 `declare_static_zz_couplings` route mutants via sabotaged-edge
-> exact-message tests) — so all 11 residual survivors are the single safest class: gate/measure name CASE mutations
+> 217/227 = **0.9559** (218/229 = 0.9520 before the normalization-consolidation cleanup removed the redundant
+> builder-side `CircuitBuilder.gate` `str(name).upper()`, retiring its 2 mutation sites). The builder probed +
+> KILLED every reachability-class mutant itself (the `t>=nq`→`t>nq` boundary, the `observable(index=0)` default,
+> and 16 `declare_static_zz_couplings` route mutants via sabotaged-edge exact-message tests) — so all 10 residual
+> survivors are the single safest class: gate/measure name CASE mutations on the always-uppercase string LITERALS
 > (`"H"`→`"h"`, `"MR"`→`"mr"`, default `basis="Z"`→`"z"`) re-uppercased by `GateOp`/`MeasureOp.__post_init__`
-> `str(name).upper()` (verified lines 73/97) → byte-identical name, genuinely unkillable. src-cleanup candidate
-> (deferred, mainline): the redundant double-normalization (`CircuitBuilder.gate` `.upper()` + `GateOp.__post_init__`
-> `.upper()`).
+> `str(name).upper()` (verified lines 73/97) → byte-identical name, genuinely unkillable. `__post_init__` is now the
+> SOLE normalization owner — the redundant builder-side `.upper()` was removed (src-cleanup landed).
 | unit | contract | class | invariants | DA | existing test |
 |---|---|---|---|---|---|
 | `GateOp`,`Tick`,`MeasureOp`,`DetectorDef`,`ObservableDef`,`CircuitIR` (`__post_init__` + accessors),`CircuitBuilder.gate/measure/detector/observable/*` | IR dataclasses + ergonomic builder | C | schema round-trip; key↔target bijection; measure-before-detect; name uniqueness | VAL (extensive) | test_circuit_ir_exports_* |
@@ -606,31 +611,34 @@ Confirmed CPU-pure: imports numpy only (0 `device=`, no torch tensor constructio
 |---|---|---|---|---|---|
 | `K_stat_joint`,`project_axis`,`K_stat_binary`,`M_mem_stat`,`exact_cmi_bits`,`tv_distance`,`record_distance` | K / M_mem / CMI / TV record statistics | C | K,M_mem≥0; TV,record_dist∈[0,1]; project-axis marginal | no | test_quantum_bath |
 
-### `source/coupling.py` — **DONE (D12)** · L0 100/100 (20 units) · L2 kill 0.982 — Theta fan-out closed-form maths
+### `source/coupling.py` — **DONE (D12)** · L0 100/100 (20 units) · L2 kill 0.985 — Theta fan-out closed-form maths
 > Stage-D `stage_d_source_coupling_targets` — `tests/test_source_coupling_units.py`. Authoritative gate PASS
 > (20/20 stmt+branch 100%, reconcile 20 = 20 registered + 0 out_of_scope; the 18 named units + 2
 > `__post_init__` = 20). CPU-pure numpy → zero gpu_bound, 0 exemptions (every guard is reachable: static_zz
 > singular via D=±α; exchange_j via α=0 and phi<0; every `__post_init__` validator via sabotaged args).
 > Independent value-pins on the closed-form physics (static_zz ζ, exchange_j↔φ round-trip, drift→T2,
-> leakage_from_drift, cross_mechanism_correlation vs np.corrcoef). Authoritative mutation 593/604 = **0.9818**
-> (2nd-highest Stage-D after seam_teachers). 11 residual survivors all genuine-equivalent (7 measure-zero float
-> boundaries `<=NUMERICAL_ZERO`↔`<` / `<-NZ`↔`<=`; 3 numpy dtype-copy defaults `np.array` copy=True / redundant
-> `dtype=np.float64`; 1 sigmoid-saturation clamp `min(60.0,y)`↔`min(61.0,y)` — both past the float64 saturation
-> point ~37 so sigmoid==1.0 either way). src-cleanup candidate (deferred, mainline): `parameter_series` redundant
-> `dtype=np.float64` (values already float via `float(getattr(...))`).
+> leakage_from_drift, cross_mechanism_correlation vs np.corrcoef). Authoritative mutation 592/601 = **0.9850**
+> (593/604 = 0.9818 before the normalization-consolidation cleanup; 2nd-highest Stage-D after seam_teachers). 9
+> residual survivors all genuine-equivalent (7 measure-zero float boundaries `<=NUMERICAL_ZERO`↔`<` / `<-NZ`↔`<=`;
+> 1 numpy dtype-copy default `np.array` copy=True; 1 sigmoid-saturation clamp `min(60.0,y)`↔`min(61.0,y)` — both
+> past the float64 saturation point ~37 so sigmoid==1.0 either way). The `parameter_series` redundant
+> `dtype=np.float64` (values already float via `float(getattr(...))`) was removed as a src-cleanup — retiring 2
+> survivors + 1 killed site (604→601).
 | unit | contract | class | invariants | DA | existing test |
 |---|---|---|---|---|---|
 | `StaticZZCalibration`,`SourceCouplingConfig`,`CoupledMechanismParams` (`__post_init__` + accessors),`default_source_coupling_config`,`source_to_params`,`trajectory_to_params`,`independent_baseline_trajectory_to_params`,`parameter_series`,`cross_mechanism_correlation`,`static_zz_zeta`,`exchange_j_from_phi`,`zz_phi_from_frequency_drift`,`drift_to_t2`,`leakage_from_drift` | shared-source parameter fan-out | C | rate≥0/prob∈[0,1] after modulation; correlation∈[−1,1]; permutation-exact ablation | VAL (finiteness/positivity guards) | test_source_coupling, test_source_closed_forms |
 
-### `source/process.py` — **DONE (D11)** · L0 100/100 (33 units) · L2 kill 0.950 — RTN/1-over-f/burst/storm time-series
+### `source/process.py` — **DONE (D11)** · L0 100/100 (33 units) · L2 kill 0.957 — RTN/1-over-f/burst/storm time-series
 > Stage-D `stage_d_source_process_targets` — `tests/test_source_process_units.py`. Authoritative gate PASS
 > (33/33 stmt+branch 100%, reconcile 33 = 33 registered + 0 out_of_scope; the AST reconcile keeps the 28
 > named units + 5 `__post_init__` dunders = 33). CPU-pure numpy → zero gpu_bound, every unit genuinely
-> CPU-tested. Authoritative mutation 603/635 = **0.9496**. **First Stage-D batch with `defensive_assert`
-> exemptions** (2, same unit): `TemporalStormSPPSource.from_fixed_marginal` lines 521-522 `if pi1 >= 1.0:
-> raise` is provably dead — `_validate_probability("storm_probability", allow_zero=False)` already raises on
-> `v >= 1.0` (line 945), so `pi1 < 1.0` is guaranteed by line 521; covered_by a test proving rejection at the
-> earlier validator (probed per the F2 rule, not assumed). 32 residual survivors all genuine-equivalent
+> CPU-tested. Authoritative mutation 602/629 = **0.9571** (603/635 = 0.9496 before the normalization-consolidation
+> cleanup). This was the FIRST Stage-D batch to surface an audit-validated `defensive_assert` exemption — the
+> `TemporalStormSPPSource.from_fixed_marginal` `if pi1 >= 1.0: raise` guard was provably dead
+> (`_validate_probability("storm_probability", allow_zero=False)` already rejects `v >= 1.0`, so `pi1 < 1.0` is
+> guaranteed) — but that dead guard, its exemption, AND the dead init `_layout_coordinates`
+> `coords = np.zeros((site_count,0))` (overwritten in both branches) were REMOVED as redundant-validation cleanups,
+> so the batch now carries **0 exemptions**. 27 residual survivors all genuine-equivalent
 > (numpy dtype/copy defaults `np.dtype(None)==float64` / `np.array` default copy=True / int→float promotion;
 > measure-zero float boundaries `>1e-12`↔`>=`, `<=NUMERICAL_ZERO`↔`<`, uniform `<x`↔`<=`; utf-8 codec
 > normalization; `integers(0,n)`≡`integers(n)`; argsort sort-kind with strictly-unique keys; reshape single

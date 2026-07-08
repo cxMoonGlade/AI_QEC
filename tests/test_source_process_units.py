@@ -880,10 +880,10 @@ def test_L0_from_fixed_marginal_holds_marginal_and_reconstructs():
     assert slow.correlation_length_cycles > src.correlation_length_cycles
 
 
-def test_L0_from_fixed_marginal_storm_probability_ge_one_rejected_before_dead_guard():
-    """storm_probability>=1 is rejected by _validate_probability(allow_zero=False) BEFORE the
-    redundant ``if pi1 >= 1.0`` guard runs -- this PROVES that guard's raise (process.py line 522)
-    is structurally unreachable (the registered exemption for its stmt/branch arc points here)."""
+def test_L0_from_fixed_marginal_storm_probability_ge_one_rejected():
+    """storm_probability>=1 is rejected by _validate_probability(allow_zero=False), which requires
+    (0, 1) and is now the SOLE owner of that bound -- the previously-redundant downstream
+    ``if pi1 >= 1.0`` guard (structurally unreachable given this validator) was removed as dead code."""
     _raises_exact(ValueError, "storm_probability must be in (0, 1), got 1.0",
                   lambda: TemporalStormSPPSource.from_fixed_marginal(
                       marginal=(0.25, 0.25, 0.25, 0.25), q_storm=(0.25, 0.25, 0.25, 0.25),

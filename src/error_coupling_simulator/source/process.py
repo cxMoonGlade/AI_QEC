@@ -518,8 +518,7 @@ class TemporalStormSPPSource(SourceProcess):
         q1 = _validate_distribution("q_storm", q_storm)
         pi1 = _validate_probability("storm_probability", storm_probability, allow_zero=False)
         xi = _require_positive("correlation_length_cycles", correlation_length_cycles)
-        if pi1 >= 1.0:
-            raise ValueError("storm_probability must be < 1")
+        # pi1 in (0, 1) is guaranteed by _validate_probability(allow_zero=False) above, so 1 - pi1 > 0.
         q0 = tuple((p_i - pi1 * q_i) / (1.0 - pi1) for p_i, q_i in zip(p, q1, strict=True))
         _validate_distribution("implied q_calm", q0)
         s = 1.0 - math.exp(-1.0 / xi)
@@ -809,7 +808,6 @@ def _layout_coordinates(layout: Any, site_count: int) -> np.ndarray | None:
             raw = metadata.get("qubit_coords", metadata.get("coordinates", metadata.get("coords")))
     if raw is None:
         return None
-    coords = np.zeros((site_count, 0), dtype=np.float64)
     if isinstance(raw, Mapping):
         ordered: list[Sequence[float]] = []
         for i in range(site_count):

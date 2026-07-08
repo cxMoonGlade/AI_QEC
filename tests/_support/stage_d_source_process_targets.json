@@ -119,14 +119,7 @@
     {"group": "source_process", "module": "src/error_coupling_simulator/source/process.py", "unit": "PhaseBurstSource.__post_init__", "qualname": "PhaseBurstSource.__post_init__", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
     {"group": "source_process", "module": "src/error_coupling_simulator/source/process.py", "unit": "PhaseBurstSource.sample", "qualname": "PhaseBurstSource.sample", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
     {"group": "source_process", "module": "src/error_coupling_simulator/source/process.py", "unit": "TemporalStormSPPSource.__post_init__", "qualname": "TemporalStormSPPSource.__post_init__", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
-    {"group": "source_process", "module": "src/error_coupling_simulator/source/process.py", "unit": "TemporalStormSPPSource.from_fixed_marginal", "qualname": "TemporalStormSPPSource.from_fixed_marginal", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": [
-      {"kind": "line", "selector": {"type": "line", "line": 522, "stmt_kind": "raise"},
-       "covered_by": ["tests/test_source_process_units.py::test_L0_from_fixed_marginal_storm_probability_ge_one_rejected_before_dead_guard"],
-       "reason": "DEAD defensive guard: `if pi1 >= 1.0: raise` -- pi1 = _validate_probability('storm_probability', .., allow_zero=False) already rejects any value >= 1.0 (it requires (0,1)), so this raise (line 522) is structurally unreachable. The covered_by test proves storm_probability=1.0 raises at _validate_probability, never at this guard."},
-      {"kind": "line", "selector": {"type": "line", "line": 521, "stmt_kind": "branch"},
-       "covered_by": ["tests/test_source_process_units.py::test_L0_from_fixed_marginal_storm_probability_ge_one_rejected_before_dead_guard"],
-       "reason": "The `if pi1 >= 1.0:` decision (line 521) can only take its False arc: pi1 in (0,1) by the prior _validate_probability(allow_zero=False). Its True arc into line 522 is unreachable, so the branch arc is exempt alongside its raise."}
-    ]},
+    {"group": "source_process", "module": "src/error_coupling_simulator/source/process.py", "unit": "TemporalStormSPPSource.from_fixed_marginal", "qualname": "TemporalStormSPPSource.from_fixed_marginal", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
     {"group": "source_process", "module": "src/error_coupling_simulator/source/process.py", "unit": "TemporalStormSPPSource.transition_matrix", "qualname": "TemporalStormSPPSource.transition_matrix", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
     {"group": "source_process", "module": "src/error_coupling_simulator/source/process.py", "unit": "TemporalStormSPPSource.stationary_distribution", "qualname": "TemporalStormSPPSource.stationary_distribution", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
     {"group": "source_process", "module": "src/error_coupling_simulator/source/process.py", "unit": "TemporalStormSPPSource.correlation_length_cycles", "qualname": "TemporalStormSPPSource.correlation_length_cycles", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},

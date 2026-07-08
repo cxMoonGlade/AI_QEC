@@ -73,11 +73,11 @@ torch-less module.
 | `stage_d_seam_teachers_targets` | mechanisms/seam_teachers | test_seam_teachers_units | 11 | 100/100 | 99.1% | committed |
 | `stage_d_axis1_runners_targets` | frontend/{axis1_codespec_runner,axis1_g2_runner} | test_axis1_runners_units | 8 | 100/100 | 98.0% | committed (513d4de) |
 | `stage_d_coupled_cycle_targets` | teachers/coupled_cycle | test_coupled_cycle_units | 17 (+1 gpu oos) | 100/100 | 96.4% | committed (9639e75) |
-| `stage_d_source_process_targets` | source/process | test_source_process_units | 33 | 100/100 | 95.0% | committed (a3812ea) |
-| `stage_d_source_coupling_targets` | source/coupling | test_source_coupling_units | 20 | 100/100 | 98.2% | committed (3684974) |
-| `stage_d_carrier_channels_targets` | carrier/channels | test_carrier_channels_units | 32 | 100/100 | 96.8% | committed (3fcc8b4) |
+| `stage_d_source_process_targets` | source/process | test_source_process_units | 33 | 100/100 | 95.7% | committed (a3812ea) + norm-cleanup |
+| `stage_d_source_coupling_targets` | source/coupling | test_source_coupling_units | 20 | 100/100 | 98.5% | committed (3684974) + norm-cleanup |
+| `stage_d_carrier_channels_targets` | carrier/channels | test_carrier_channels_units | 32 | 100/100 | 96.9% | committed (3fcc8b4) + norm-cleanup |
 | `stage_d_noise_spec_targets` | frontend/noise_spec | test_noise_spec_units | 25 | 100/100 | 96.3% | committed (854d848) |
-| `stage_d_circuit_ir_targets` | frontend/circuit_ir | test_circuit_ir_units | 23 | 100/100 | 95.2% | committed (4f7cac8) |
+| `stage_d_circuit_ir_targets` | frontend/circuit_ir | test_circuit_ir_units | 23 | 100/100 | 95.6% | committed (4f7cac8) + norm-cleanup |
 | `stage_d_record_layout_targets` | frontend/record_layout | test_record_layout_units | 14 | 100/100 | 100.0% | committed (2b1ca53) |
 | `stage_d_code_spec_targets` | frontend/code_spec | test_code_spec_units | 17 | 100/100 | 93.9% | committed (286f878) |
 | `stage_d_analog_schedule_targets` | frontend/analog_schedule | test_analog_schedule_units | 17 | 100/100 | 96.1% | pending commit |
@@ -90,11 +90,12 @@ value-pins → 0.945/0.927 (residuals are empirically-verified equivalents). The
 complete**: interop (0.952), axis1_evidence_guard (0.977), seam_teachers (0.991), axis1_runners (0.980),
 coupled_cycle (0.964; the `CoupledCycleTeacher.emit` GPU MC-sampler is the sole `out_of_scope`, mirroring
 certify_anchors' `DMOracleAnchor.answer`). **D11 opens Tier-2** (low-coverage, large-surface CPU-pure):
-`source/process.py` (33 units incl. 5 `__post_init__`, kill 0.950; the FIRST Stage-D batch to carry
-audit-validated `defensive_assert` exemptions — the `from_fixed_marginal` `pi1>=1.0` guard is provably dead
-because `_validate_probability(allow_zero=False)` already rejects `>=1.0`; probed, not assumed).
-`source/coupling.py` (D12, 20 units, kill 0.982, 0 exemptions). `carrier/channels.py` (D13, 32 units, the
-quantum-channel library, kill 0.968) — this batch is the cautionary tale for **adversarial residual review**:
+`source/process.py` (33 units incl. 5 `__post_init__`, kill 0.957, 0 exemptions; the `from_fixed_marginal`
+`pi1>=1.0` guard — provably dead because `_validate_probability(allow_zero=False)` already rejects `>=1.0`,
+initially carried as an audit-validated `defensive_assert` exemption — was REMOVED as a redundant-validation
+cleanup, retiring that exemption + its dead-init sibling `_layout_coordinates` `np.zeros((n,0))`).
+`source/coupling.py` (D12, 20 units, kill 0.985, 0 exemptions). `carrier/channels.py` (D13, 32 units, the
+quantum-channel library, kill 0.969) — this batch is the cautionary tale for **adversarial residual review**:
 authoritative-verify caught TWO real gaps the builder had mis-classified as "equivalent" (12 mutants), both the
 same failure mode — a default arg / branch-into-a-raising-guard whose reachability was ASSERTED, not PROBED.
 (1) `canonical_single_qubit_axis(default=…)` is live when `value=None`, reachable via an explicit-None param on
