@@ -525,7 +525,21 @@ Confirmed CPU-pure: imports numpy only (0 `device=`, no torch tensor constructio
 |---|---|---|---|---|---|
 | `StaticZZCalibration`,`SourceCouplingConfig`,`CoupledMechanismParams` (`__post_init__` + accessors),`default_source_coupling_config`,`source_to_params`,`trajectory_to_params`,`independent_baseline_trajectory_to_params`,`parameter_series`,`cross_mechanism_correlation`,`static_zz_zeta`,`exchange_j_from_phi`,`zz_phi_from_frequency_drift`,`drift_to_t2`,`leakage_from_drift` | shared-source parameter fan-out | C | rate≥0/prob∈[0,1] after modulation; correlation∈[−1,1]; permutation-exact ablation | VAL (finiteness/positivity guards) | test_source_coupling, test_source_closed_forms |
 
-### `source/process.py` — cov 17% · 28 units (28 C) — RTN/1-over-f/burst/storm time-series
+### `source/process.py` — **DONE (D11)** · L0 100/100 (33 units) · L2 kill 0.950 — RTN/1-over-f/burst/storm time-series
+> Stage-D `stage_d_source_process_targets` — `tests/test_source_process_units.py`. Authoritative gate PASS
+> (33/33 stmt+branch 100%, reconcile 33 = 33 registered + 0 out_of_scope; the AST reconcile keeps the 28
+> named units + 5 `__post_init__` dunders = 33). CPU-pure numpy → zero gpu_bound, every unit genuinely
+> CPU-tested. Authoritative mutation 603/635 = **0.9496**. **First Stage-D batch with `defensive_assert`
+> exemptions** (2, same unit): `TemporalStormSPPSource.from_fixed_marginal` lines 521-522 `if pi1 >= 1.0:
+> raise` is provably dead — `_validate_probability("storm_probability", allow_zero=False)` already raises on
+> `v >= 1.0` (line 945), so `pi1 < 1.0` is guaranteed by line 521; covered_by a test proving rejection at the
+> earlier validator (probed per the F2 rule, not assumed). 32 residual survivors all genuine-equivalent
+> (numpy dtype/copy defaults `np.dtype(None)==float64` / `np.array` default copy=True / int→float promotion;
+> measure-zero float boundaries `>1e-12`↔`>=`, `<=NUMERICAL_ZERO`↔`<`, uniform `<x`↔`<=`; utf-8 codec
+> normalization; `integers(0,n)`≡`integers(n)`; argsort sort-kind with strictly-unique keys; reshape single
+> negative dim infers). Two minor src-cleanup candidates surfaced (deferred, mainline): dead init
+> `_layout_coordinates` line 812 `coords = np.zeros((site_count,0))` (overwritten in both branches) + the
+> redundant `pi1>=1.0` defensive guard.
 | unit | contract | class | invariants | DA | existing test |
 |---|---|---|---|---|---|
 | `SourceTimeline` (+ 8 methods: series/ablation/manifest/save/load npz),`SourceProcess`,`RTNSource` (+ sample/props),`OneOverFDriftSource` (+ sample/props/analytic_psd),`PhaseBurstSource` (+sample),`TemporalStormSPPSource` (+sample/from_fixed_marginal/props/empirical_*),`timeline_to_coupled_params`,`timeline_to_site_coupled_params`,`lag_autocorrelation` | source processes + timeline persistence | C | autocorr=exp(−2γlag); PSD≥0; transition rows sum 1; sha256 round-trip; permutation-exact ablation | VAL (extensive; save/load sha256) | test_source_process, test_source_closed_forms |
