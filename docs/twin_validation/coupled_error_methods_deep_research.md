@@ -18,9 +18,12 @@ The full-2D + non-Markovian regime is a genuine open frontier.
    2026)]`. A Block-Lanczos map turns a **SHARED non-Markovian bath coupling multiple emitters** into a
    quasi-1D **ladder whose width = number of coupled emitters** — spatial correlation kept as **long-range
    chain couplings / ladder width**, NOT factored. Cross-correlated ("crossed") baths handled by a
-   frequency-dependent T-TEDOPA (HEOM cannot). **Doubles as an independent exact oracle.** CAVEAT: shown
-   ≤6 emitters, bounded excitation, bond D≤20; ladder width grows with #coupled sites → **small-scale
-   oracle, not a full-2D carrier.** Matches our collective-Lindblad (shared-bath-across-qubits) requirement.
+   frequency-dependent T-TEDOPA (HEOM cannot). **Doubles as a quasi-exact small-patch oracle** for the
+   coupled/non-Markovian regime within its constraints. CAVEAT: shown ≤6 emitters, bounded excitation,
+   bond D≤20; **excitation-number conservation (the basis of its efficiency) collapses under projective
+   syndrome measurement + reset (QEC wrapper — unverified)**; ladder width grows with #coupled sites →
+   **small-scale oracle, not a full-2D carrier.** Matches our collective-Lindblad (shared-bath-across-qubits)
+   requirement for the ≤6-qubit patch regime.
 2. **Collisional tensor-network exact solver** `[arXiv:2202.04697 (Filippov & Luchnikov, PRA 105 062410)]`.
    EXACT for a **generally-correlated structured reservoir** — both classical/quantum bath correlations AND
    non-Markovian memory (derives a time-convolution ME linking memory to the bath correlation function).
@@ -56,10 +59,12 @@ process-tensor bridge; re-read against the above.
 
 ## What this means for us (the actionable synthesis)
 
-1. **The independent-oracle problem is SOLVABLE** — and that is the biggest win. Chain-mapping (2407.10140)
-   and the collisional TN (2202.04697) give an **exact small-scale oracle for the coupled/non-Markovian
-   case** — exactly the anti-circular independent GT the whole field lacks (QMCtwin *concedes* none exists
-   at its scale). This is a genuine methodological contribution, not just a tool.
+1. **The independent-oracle problem is ADDRESSABLE in bounded regimes** — and that is the biggest win. Chain-mapping (2407.10140)
+   gives a quasi-exact small-oracle for the coupled/non-Markovian case **within its excitation-conservation +
+   ≤6-emitter regime**; the collisional TN (2202.04697) gives an exact oracle for **within-bath** correlation
+   (not cross-qubit shared-bath). Together they cover complementary pieces — but neither is a full solution
+   for our cross-qubit shared-bath problem at QEC scale. **The remaining gap (shared-bath cross-qubit
+   non-Markovian oracle) is the genuine methodological contribution.**
 2. **The architecture is a COMPOSITION, not one method:** a **process-tensor / chain-mapping carrier** for
    the shared bath + spatial correlation, a **MZ/GLE learned memory kernel** for the temporal 1/f/TLS memory
    (the a-priori-bounded piece), a **2D geometry carrier** (PEPS/boundary-MPS — the open frontier) — each

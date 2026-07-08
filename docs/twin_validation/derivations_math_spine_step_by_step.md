@@ -1,4 +1,4 @@
-# Step-by-step derivations — the math-spine theorems (T-B, T-#2, T-L2, estimator identities)
+# Step-by-step derivations — the math-spine theorems (T-B, T-#2, T-L2, T-#3 identities)
 
 **Purpose: a self-contained derivation trail complete enough to re-derive every result by hand.**
 Written 2026-07-02, finalized 2026-07-03 after the three review rounds + a user re-derivation
@@ -7,6 +7,61 @@ review (all findings folded in); every statement here is the REVIEWED form
 by the machine — try deriving past them before reading the resolution. Numerical checkpoints
 reference the committed verification scripts. This tracked file also mirrors the (gitignored)
 tex proofs, removing the single-point-of-failure.
+
+**Why the passive detector record is the correct access model (2026-07-03, replacing the old
+"learning from real QEC data" motivation — which was wrong for the current phase).**
+
+It is NOT an estimation-strategy choice. It is the simulator's I/O contract. The object we build
+(`CoupledCycleTeacher`, HANDOFF §0) emits `{det, obs}` — the fixed stabilizer machine's passive
+record stream — by construction. Validation (G4: "source imprint on REAL QEC records"; "does the
+simulator's record match the device's record?") is defined on this same object. The access model
+is the deliverable's output type. A simulator paper's mathematics MUST be about the structure of
+its output. Real hardware data enters ONLY as the validation target.
+
+**Every piece of the math spine bears weight for the simulator mission as follows.**
+
+**R1 — Gauge theorem = the semantics theorem for validation (what "validated" can mean).**
+Theorem 1 proves that physically distinct Σ (different noise configurations) produce verbatim-
+identical record laws. Therefore record matching pins the simulator's noise model to a gauge
+ORBIT at best, never to a point inside it. Without this theorem, the validation phase either
+overclaims ("record match ⇒ noise model correct" — false), debugs gauge differences as bugs
+(wasted effort), or accepts record-invisible mismatches as success (dangerous). This is a
+validation-semantics theorem, not a learning theorem — and validation is exactly the role
+real data has in the current phase (new §0 above).
+
+**R2 — Closed-form functionals = the simulator's independent ground-truth oracles.**
+The anti-toy faithfulness protocol (Rule I) demands verification against ground truth
+INDEPENDENT of the implementation. The probe calculus / F(Σ) / cosh laws are already deployed
+in this role: S7 Monte-Carlo cross-checks, tier-0 comb machinery, teacher-gate correctness
+(R-POOL v6 pooling validity), and the classical-arm analytic formula in last night's IW-1
+check. This half of the math spine's value is independent of who accesses the data.
+
+**R3 — Wedge observability calculus = the language for the paper's central claim.**
+The paper's thesis is "coupling / non-Markovianity matters." Matters FOR WHAT? The answer must
+be the record (LER, detection statistics, decoder inputs all live there). A coupling effect that
+exists in Σ-space but is gauge-equivalent or record-invisible is exactly the kind of false
+proposition the OWNED/removable filter must kill. The closed-form functionals translate "we
+preserve coupling" into "our record differs from any factorized simulator's record by THIS
+amount on THESE functionals" — the referee-proof wedge statement. IW-1 is a new instance of the
+same calculus: it upper-bounds the classical-Σ simulator's mismatch on the quantum commutator
+sector (quadratically suppressed, visible only in outcome-resolved cross-moments) — a
+simulator-faithfulness theorem, not a learning theorem.
+
+**R4 — Downstream / ecosystem motivation (one sentence; no current-phase novelty weight).**
+Operating QEC hardware produces passive streams in bulk; the eventual twin deployment loop
+consumes them. This is a展望 statement, not a pillar of the current contribution.
+
+**Relationship to the nearest prior art under this framing.**
+Montañà-López et al. (2511.16772, 精读 note in-repo) learn Gaussian-environment kernel
+derivatives via ACTIVE experiment design (choose initial states, insert mid-evolution Clifford
+layer W, pick measurement times and product observables). Their protocol is an estimation
+algorithm with sample-complexity guarantees — it is NOT a simulator, emits no detector records,
+characterizes no gauge structure, and contains no closed-form record functionals. The two works
+share only the Gaussian-noise premise. Under the old "learning from passive data" motivation
+this appeared as direct prior art; under the current framing (simulator whose output type IS
+passive records) it is adjacent but non-overlapping: it anchors the Gaussian-model-class
+provenance (Prop 2, ensemble Hamiltonian) and provides the unconstrained-entrywise-Σ̂ baseline
+for §6's constrained recovery — it does not pre-occupy any of R1–R4.
 
 Cross-references: tex `sec:structure-lemma`, `sec:ident-gauge`, `sec:silent-floor` (local);
 records `tb_ident_gauge_theorem_record.md`, `t2_silent_floor_record.md`,
@@ -48,8 +103,8 @@ congruences, hypercube/cosh identities, the frozen-chain conditional arithmetic 
 the TCL2-gap order counting, Thm L2-2 (the Z-record never reads coherence — a scope guard,
 near-trivial), the transfer no-go direction + its self-witness remark (§5.3, standard
 data-processing reasoning), and ALL of §6 (p_Z-absorption exponent identity, ridge
-power-counting, R-POOL pooling statistics — correctness facts about OUR estimator, elementary
-technique).
+power-counting, R-POOL pooling statistics — correctness facts about the downstream recovery
+machinery, elementary technique; needed only AFTER simulator validation, not current-phase).
 
 **Tier X — REPRODUCED known results (re-proved in-line for self-containedness):** the 2-state
 Markov embeddability (5.1), the Isserlis pairing enumeration (4.4), the 2-qubit parity

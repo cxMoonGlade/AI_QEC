@@ -38,11 +38,18 @@ Represent a **shared non-Markovian bath** causing **correlated dephasing across 
   coherence-sensitively, via the PT-aware ML decoder `[2412.13739]`.
 
 ## 3. Independent ground truth (NON-CIRCULAR, Rule I)
-Both are method-DISTINCT from the pseudomode-Lindblad carrier → no shared blind spot:
+Both are method-DISTINCT from the pseudomode-Lindblad carrier:
 - **ACE / process-tensor** `[2405.19319]` — collective coupling `Â=Σⱼ Oⱼ` in one PT-MPO (path-integral,
-  C++), non-Markovian-native; exercises the collective bath directly (its runtime success IS its verification).
+  C++); exercises the collective bath directly (its runtime success IS its verification). **Caveat:**
+  collective-Â = spin-boson = **Gaussian** (like the carrier) — independence is method-level (path-integral
+  vs MPS), not assumption-level. Its demonstrated collective-dissipation is **Markovian** (flat J);
+  fully-non-Markovian collective emission is undemonstrated (ACE note open question #4).
+  `add_single_mode` non-Gaussian = independent-anharmonic-mode, NOT shared-bath. **[CORRECTED 2026-07-01 —
+  the original "non-Markovian-native" + "no shared blind spot" was over-stated; see audit.]**
 - **Closed-form `C(t)`/`J(ω)`** `[2602.21430 Eq. 33 GT; 2509.19685 Eq. 40–45]` — the analytic BCF the
   pseudomode must reproduce (a `(a)`-class algebraic check on `C^c(t)=g†e^{-iKt}g`).
+- **⚠ Shared blind-spot disclosure:** independence is method-level within the GAUSSIAN regime. Non-Gaussian
+  shared-bath physics = shared blind spot of carrier AND oracles — must be explicitly bracketed.
 
 ## 4. Predicted behavior (FALSIFIABLE BETS — a miss is a finding)
 - **(b) Mode count.** `N` scales `polylog(T/ε)` on our QEC-relevant BCF **IFF** the SDP feasibility condition

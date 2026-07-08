@@ -35,9 +35,12 @@ independent exact oracle. Load-bearing papers still need my personal 精读-veri
 **TEMPORAL-MEMORY closure:**
 - **GLE kernel-learning `[2402.11705]`.** The **only a-priori-bounded** route (Thm 4.2: kernel error linearly
   bounded by correlation-function error, computable constant). Bounded for **Lorentzian/TLS** memory; **voids
-  for a hard 1/f power-law** (branch cut) — but **1/f *is* a TLS/Lorentzian ensemble, so a finite Lorentzian
-  pseudomode bank is both physically faithful AND in the bounded regime.** Complex modes preserve the
-  **coherence-revival** (our non-Markovian wedge). Single-qubit temporal only (spatial/matrix = future work).
+  for a hard 1/f power-law** (branch cut). A **finite Lorentzian pseudomode bank** approximates the TLS
+  ensemble component and IS in the bounded regime for the exponential-envelope part; the **hard 1/f tail
+  is UNBOUNDED** (empirical fit or bracket, not a theorem). This is the GLE note's own open question #2 —
+  "Lorentzian-sum approximates 1/f while keeping a finite bound" is **unverified**, not settled.
+  Complex modes preserve the **coherence-revival** (our non-Markovian wedge). Single-qubit temporal only
+  (spatial/matrix = future work).
 - **Mori-Zwanzig `[1611.03311]`** — the derived-closure FRAMEWORK; classical (no CPTP), so not a direct
   recipe, but its finite-memory→auxiliary-ODE bank is the **classical twin of a pseudomode unraveling**.
 - **NZ ⇔ influence-functional `[2312.13233]`** — memory-kernel and process-tensor are **exactly
@@ -52,18 +55,39 @@ independent exact oracle. Load-bearing papers still need my personal 精读-veri
 
 ## The architecture that emerges (a COMPOSITION — no single paper has it)
 
+> ⚠ **[SUPERSEDED in part by the RECENT-LITERATURE UPDATE §below (2025–2026).]** The composition
+> framing (pseudomodes-on-2D-iPEPO, oracle-validated) as "no single paper has it" was written
+> **before** the second 精读 pass revealed that the core coupled-Lindblad-pseudomode method is
+> already published (`[2506.10308, PRL 2026]`). The architecture decomposition logic (pseudomode
+> memory + 2D carrier + few-qubit oracle + PT decoder + threshold baseline) remains correct; the
+> **novelty** has narrowed to the QEC application + oracle-certified adaptation + decoder/observable
+> evaluation + 2D composition stress-test. The pseudomode shared-bath method itself is cited
+> infrastructure, not the invention. **Read the recent-literature update below as the authoritative
+> contribution statement.**
+
 1. **Carrier = 2D iPEPO (tePEPO family)** — right geometry, area-law, relieves the 1D `2^(2d)` wall. Markovian. `[2512.01781]`
 2. **Memory = pseudomodes** — represent the shared 1/f/TLS source as a **finite bank of Lorentzian
    pseudomodes** (= the physical TLS ensemble = the *bounded* regime of `[2402.11705]`). A **shared** pseudomode
    coupled to multiple qubits carries the CORRELATED, non-Markovian dephasing + collective dissipation.
-   Embedding → the enlarged (qubits + pseudomodes) system is **Markovian** → runs on the iPEPO carrier AND our
-   existing MCWF engine. This is the "carry the source explicitly" line. `[1611.03311, 2512.01781]`
+   Embedding → the enlarged (qubits + pseudomodes) system is **Markovian** → runs on the iPEPO carrier AND a
+   **new dense-GKSL engine** (the existing per-site MCWF has no shared-bath representation — the n=2 pilot
+   confirmed a new engine was required; MPS/TDVP is the scale path). This is the "carry the source explicitly" line. `[1611.03311, 2512.01781]`
 3. **Oracle = ACE (primary) + chain-mapping + T-TEDOPA** — few-qubit **independent exact GT** for the coupled
    non-Markovian regime; validate the pseudomode-truncated carrier at ≤~6 qubits. This is the anti-circular
    certification **the field concedes it lacks** (QMCtwin). `[2405.19319, 2407.10140, 2606.30569]`
 4. **Observable = coherence-sensitive** — the signal lives in `|ρ_nm|` / coherence-revival, not raw syndrome
    populations `[2606.30569]` — consistent with our earlier finding (the cross-cycle-syndrome-correlation
    observable was a Kam-benign strawman; coherence is twirled out of the syndrome stream).
+
+   > **⚠ Metric-layer split (per critical review finding #5 + `METRICS.md` ladder).** "Coherence-sensitive
+   > ΔLER" bundles three distinct layers that must be ledgered separately (see
+   > `coupled_teacher_rate_and_observable_grounding.md` for the full grounding):
+   > 1. **Source layer:** BCF reproduction, RHP/BLP `ΔN`/`ΔI`, coherence revival, CP-divisibility breaking.
+   > 2. **Channel/process layer:** process tensor / Choi distance, CD diagnostic (caveat: not a strict
+   >    probability), diamond distance (field-standard, not yet run).
+   > 3. **Decoder layer:** strict LER, `ΔLER = LER(Markov decoder on SAME process) − LER(PT decoder on SAME
+   >    process)`. LER is coherence-blind by definition; coherence sensitivity lives at source + channel
+   >    layers. The `METRICS.md` ladder must be run before committing to a headline metric.
 
 ## The genuine open frontier = our contribution
 The composition **pseudomodes-on-2D-iPEPO, oracle-validated** is in **no single paper** — the memory-kernel↔PT
@@ -81,6 +105,32 @@ correlated non-Markovian QEC noise) is a standalone methodological contribution.
   (rule III) simplification whose error surfaces in coherence `[2606.30569]`.
 - Chain-mapping/T-TEDOPA oracles are **bosonic/Gaussian** — a discrete-TLS 1/f source needs a Lorentzian/pseudomode
   bridge to use them; ACE (non-Gaussian) is the more general oracle.
+- **(c) ⚠ SHARED GAUSSIAN BLIND SPOT — independence is method-level only.** The carrier (pseudomode = Gaussian)
+  AND all three oracles (ACE collective-Â = spin-boson Gaussian, chain-mapping = bosonic, T-TEDOPA =
+  Gaussian/harmonic) share the **Gaussian-bath assumption** (bath fully characterized by the 2-point BCF).
+  Independence is method-level (path-integral vs MPS vs chain-mapping — genuinely different mathematical
+  families) but NOT assumption-level. **Non-Gaussian / discrete-TLS telegraph-saturation regime = shared
+  blind spot of carrier AND all oracles** — must be explicitly bracketed or given a different oracle.
+  ACE's `add_single_mode` non-Gaussian capability is an independent-anharmonic-mode construction, NOT the
+  collective-Â shared-bath construction, so it cannot serve as a non-Gaussian shared-bath oracle.
+
+## Constraint ledger (Rule II — theorems + falsifiers; template: `n3n4_prereg` §6)
+
+Per `FAITHFULNESS_PROTOCOL.md` Rule II: every load-bearing faithfulness claim must ship a constraint
+ledger BEFORE building. The synthesis itself is a design doc, not a build — the ledger below is the
+**minimum set** any build derived from this architecture must satisfy. Each item must have a falsifying
+test that FAILS LOUDLY on violation.
+
+| # | Constraint | Falsifier |
+|---|---|---|
+| L1 | CPTP on enlarged space: H=H†, Γ≥0 (un-truncated generator) | `min eig(ρ(t)) < −1e-8` at any t |
+| L2 | Matrix BCF exact by construction: `C^c(t)=g†e^{−iKt}g` = target `C_{ij}` | per-entry residual > 1e-10 |
+| L3 | Reduced ρ_S(t) matches INDEPENDENT oracle (closed-form / ACE) to declared tolerance | disagreement > 1e-3 not from declared truncation |
+| L4 | Coherence-revival wedge survives pseudomode truncation (N ≳ 3–4) | revival flattens at small N → report N needed |
+| L5 | RWA-breaking n_max stays bounded under QEC gates | n_max > declared bound at required accuracy |
+| L6 | Non-Markovian wedge is CORRELATION-attributable: ΔN = N(coupled) − N(factorized) > 0 | ΔN ≈ 0 ⇒ only diagonal non-Markovianity |
+| L7 | Motional-narrowing positive control: wedge vanishes for non-oscillatory BCF | nonzero ΔN/ΔI in non-oscillatory limit |
+| L8 | Oracle independence is METHOD-level within Gaussian regime | non-Gaussian shared-bath physics = explicitly bracketed, not certified |
 
 ## RECENT-LITERATURE UPDATE (2025–2026) — the core method is PUBLISHED (de-risks the plan)
 
@@ -89,7 +139,9 @@ carrier + the multi-qubit shared-bath assembler I framed as "our novel step" are
 
 - **Coupled-Lindblad-Pseudomode `[2506.10308, PRL 136 090403, 2026]` — THE memory carrier + shared-bath
   assembler.** The enlarged (qubits ⊗ N pseudomodes) evolution is an **exact CPTP GKSL channel, no memory
-  kernel** (Eq. 2) → runs as-is on our MCWF / 2D-iPEPO carrier (pseudomodes = truncated-Fock bosonic sites).
+  kernel** (Eq. 2) — **(a) exact for the UN-TRUNCATED generator**; what actually runs is the
+  **Fock-truncated** (c)-class version (the truncation preserves CPTP form but is a declared
+  simplification per Rule III; the n=2 pilot measured the convergence).
   **SM §S2 does the multi-qubit shared bath**: coupling generalizes to a matrix `g∈C^{N×n}`, `Ĥ_SA=Σⱼ Ŝⱼ Âⱼ`,
   **matrix-valued BCF** → one pseudomode set couples to multiple qubits = **cross-qubit correlated noise**.
   **polylog(T/ε)** mode count + a **convex SDP** construction (no non-convex fit). Conditional on SDP
