@@ -17,8 +17,9 @@
     "EVERY public unit is CPU-PURE and IN-SCOPE for full L0+L1+L2 -- out_of_scope is therefore {} (the",
     "AST reconcile refuses any gpu_bound claim on a torch-less module).",
     "",
-    "THIRTY-TWO public units (AST reconcile: every top-level public def + every public method of a",
-    "top-level class; MechanismSpec has no __post_init__, so its sole public unit is audit_dict):",
+    "THIRTY-THREE public units (AST reconcile: every top-level public def + every public method of a",
+    "top-level class; the load-bearing __post_init__ dunder is kept, so MechanismSpec contributes TWO",
+    "units -- __post_init__ (construction contract) + audit_dict):",
     "  * 31 module functions: canonical_single_qubit_axis, mechanism_operation_axis,",
     "    mechanism_error_axis, mechanism_definition_contract, mechanism_channel, rzz_unitary, rx_unitary,",
     "    ry_unitary, rz_unitary, rxx_unitary, ryy_unitary, rxx_ryy_unitary, controlled_phase_error_unitary,",
@@ -27,7 +28,9 @@
     "    thermal_excitation_kraus, reset_to_state_kraus, leakage_relaxation_surrogate_kraus,",
     "    leakage_channel_super, leakage_kraus, custom_non_pauli_kraus, two_qubit_depolarizing_kraus,",
     "    correlated_relaxation_kraus, weak_type4_mixing_kraus, readout_bias_matrix, two_pauli_rotation.",
-    "  * MechanismSpec.audit_dict (the only public method of the frozen dataclass).",
+    "  * MechanismSpec.__post_init__ (construction-contract validator: non-empty id, positive",
+    "    num_qubits, Mapping parameters, present axis params non-None + a valid rotation axis) +",
+    "    MechanismSpec.audit_dict (the two public methods of the frozen dataclass).",
     "",
     "THE CENTRAL RULE for this batch. assert_cptp/assert_unitary/assert_row_stochastic are NECESSARY but",
     "VACUOUS as the ONLY check -- a physically WRONG channel is very often still CPTP (sum K^H K = I) and",
@@ -68,6 +71,7 @@
   ],
   "out_of_scope": {},
   "canonical_units": [
+    "MechanismSpec.__post_init__",
     "MechanismSpec.audit_dict",
     "canonical_single_qubit_axis",
     "mechanism_operation_axis",
@@ -102,6 +106,7 @@
     "two_pauli_rotation"
   ],
   "units": [
+    {"group": "carrier_channels", "module": "src/error_coupling_simulator/carrier/channels.py", "unit": "MechanismSpec.__post_init__", "qualname": "MechanismSpec.__post_init__", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
     {"group": "carrier_channels", "module": "src/error_coupling_simulator/carrier/channels.py", "unit": "MechanismSpec.audit_dict", "qualname": "MechanismSpec.audit_dict", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
     {"group": "carrier_channels", "module": "src/error_coupling_simulator/carrier/channels.py", "unit": "canonical_single_qubit_axis", "qualname": "canonical_single_qubit_axis", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
     {"group": "carrier_channels", "module": "src/error_coupling_simulator/carrier/channels.py", "unit": "mechanism_operation_axis", "qualname": "mechanism_operation_axis", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
@@ -119,7 +124,7 @@
     {"group": "carrier_channels", "module": "src/error_coupling_simulator/carrier/channels.py", "unit": "drifted_axis_mixture_kraus", "qualname": "drifted_axis_mixture_kraus", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
     {"group": "carrier_channels", "module": "src/error_coupling_simulator/carrier/channels.py", "unit": "single_axis_rotation", "qualname": "single_axis_rotation", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
     {"group": "carrier_channels", "module": "src/error_coupling_simulator/carrier/channels.py", "unit": "pauli_stochastic_kraus", "qualname": "pauli_stochastic_kraus", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": [
-      {"kind": "line", "selector": {"type": "line", "line": 481, "stmt_kind": "branch"},
+      {"kind": "line", "selector": {"type": "line", "line": 505, "stmt_kind": "branch"},
        "reason": "`if p >= NUMERICAL_ZERO:` after p = probability_floor(...) which returns >= 1e-12 = NUMERICAL_ZERO for ANY input, so the False arc (skip the X/Y/Z Kraus append) is unreachable with valid inputs -- the floor guarantees p >= NZ. PROBED: the boundary test pins that even a ZERO input Pauli probability still yields its sqrt(1e-12) Kraus (the append fires); the mutant `>=`->`>` would drop it and is killed there. src-cleanup candidate (dead guard given the floor).",
        "covered_by": ["tests/test_carrier_channels_units.py::test_L0_pauli_stochastic_floor_keeps_all_three_paulis"]}
     ]},

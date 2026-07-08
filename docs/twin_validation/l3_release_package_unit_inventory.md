@@ -80,17 +80,18 @@ exemptions).
 | `positive_floor` | floor a float away from exact 0 | C | idempotence on ≥floor; output ≥ NUMERICAL_ZERO | no | implicit (imported by coupling/channels) |
 | `probability_floor` | floor a prob away from 0, cap at 1 | C | output ∈ [floor, 1]; normalization | no | implicit |
 
-### `carrier/channels.py` — **DONE (D13)** · L0 100/100 (32 units) · L2 kill 0.969 — quantum-channel library, numpy+scipy, no torch
+### `carrier/channels.py` — **DONE (D13)** · L0 100/100 (33 units) · L2 kill 0.968 — quantum-channel library, numpy+scipy, no torch
 > Stage-D `stage_d_carrier_channels_targets` — `tests/test_carrier_channels_units.py`. Authoritative gate PASS
-> (32/32 stmt+branch 100%, reconcile 32 = 32 registered + 0 out_of_scope; CPU-pure numpy/scipy). 1
+> (33/33 stmt+branch 100%, reconcile 33 = 33 registered + 0 out_of_scope; CPU-pure numpy/scipy). 1
 > `defensive_assert` exemption: `pauli_stochastic_kraus` `if p >= NUMERICAL_ZERO` False-branch is unreachable
 > because `probability_floor(x)=min(1.0,max(1e-12,x)) ∈ [1e-12,1.0]` always (verified). The CENTRAL discipline:
 > `assert_cptp`/`assert_unitary` are VACUOUS alone, so every channel/unitary carries an independent closed-form
 > value-pin (rotations vs `scipy.expm(-iθ/2·P)`, Kraus vs textbook sets, leakage superop vs a from-scratch
-> Lindbladian). Authoritative mutation 2265/2337 = **0.9692** (2271/2347 = 0.9676 before the
-> normalization-consolidation cleanup dropped the two redundant `mechanism_operation_axis` `default="rx"`
-> args — they equalled `canonical_single_qubit_axis`'s own default — retiring 4 equivalent survivors + 6
-> killed sites; the load-bearing `default="rz"` / `default=operation_axis` args are kept).
+> Lindbladian). Authoritative mutation 2263/2337 = **0.9683** — this batch integrates BOTH later src changes: the
+> normalization-consolidation cleanup (dropped the two redundant `mechanism_operation_axis` `default="rx"` args
+> that equalled `canonical_single_qubit_axis`'s own default; the load-bearing `default="rz"` /
+> `default=operation_axis` args are kept) AND the `MechanismSpec.__post_init__` construction-contract validation
+> (+1 unit → 33). (Original standalone D13 was 2271/2347 = 0.9676.)
 > **Cautionary tale — adversarial residual review caught TWO real gaps the builder mis-classified as equivalent
 > (12 mutants), both = reachability ASSERTED not PROBED:** (1) `canonical_single_qubit_axis(default=…)` is LIVE at
 > `value=None` (reachable via an explicit-None param on the unvalidated `MechanismSpec` — probed: returns the
@@ -100,12 +101,21 @@ exemptions).
 > must be tripped through EVERY input route that reaches it. Both fixed (+12 kills, 0.9625→0.9676). 72 residual
 > survivors all verified genuine-equivalent (case normalized by callee `.upper()`/`.lower()`; contract `.get`
 > defaults on always-present M13-literal keys; measure-zero float boundaries; numpy dtype/order defaults;
-> shape-on-square; dead-init overwritten; channel_axis-absent routes that
-> resolve to operation_axis; `sqrt(0)` zero-jump at g=0). [The `default="rx"`-equals-canonical's-own-default
-> class was retired by the normalization cleanup that removed those redundant args.]
+> shape-on-square; dead-init overwritten; channel_axis-absent routes that resolve to operation_axis; `sqrt(0)`
+> zero-jump at g=0). [The `default="rx"`-equals-canonical's-own-default class was retired by the normalization
+> cleanup that removed those redundant args.]
+> **`MechanismSpec.__post_init__` construction contract:** `MechanismSpec` now validates at construction (non-empty
+> id, positive num_qubits, `Mapping` params, and present axis params `operation_axis`/`error_axis`/`channel_axis`/`axis`
+> non-None + a valid rotation axis via `canonical_single_qubit_axis`). This makes the finding-(1) explicit-None param
+> UNCONSTRUCTIBLE, so the two D13 tests that tripped the None route are converted to assert construction now raises;
+> the M14 op-axis `default="rx"` stays killable via the still-unconstrained `params['instruction']` None route
+> (rerouted test). `MechanismSpec.__post_init__` is a class **method**, so mutmut (module-level functions only here —
+> `MechanismSpec.audit_dict` likewise carries 0 L2 mutants) generates none for it; its correctness is pinned by 100%
+> L0/L1 stmt+branch coverage + exact-message construction asserts.
 Confirmed CPU-pure: imports numpy only (0 `device=`, no torch tensor construction).
 | unit | contract | class | invariants | DA | existing test |
 |---|---|---|---|---|---|
+| `MechanismSpec.__post_init__` | construction contract: non-empty id, positive num_qubits, `Mapping` params, present axis params non-None + valid rotation axis | C | reject malformed specs at construction | VAL | test_carrier_channels_units |
 | `MechanismSpec.audit_dict` | serialize spec → audit dict | C | manifest round-trip | no | test_physical_channels |
 | `canonical_single_qubit_axis` | normalize axis string → {rx,ry,rz} | C | idempotence | VAL | test_physical_channels |
 | `mechanism_operation_axis` / `mechanism_error_axis` | extract/validate op & error axis | C | determinism | VAL | test_physical_channels |

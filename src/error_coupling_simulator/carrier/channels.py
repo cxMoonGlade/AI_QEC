@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 import math
-from typing import Mapping
 
 import numpy as np
 
@@ -36,6 +36,30 @@ class MechanismSpec:
     qubits: tuple[int, ...] = ()
     circuit_id: int = 0
     probe_indices: tuple[int, ...] = ()
+
+    def __post_init__(self) -> None:
+        """Enforce the construction contract for a mechanism spec.
+
+        A spec is a physical mechanism attached to a teacher location, so it must carry a
+        non-empty mechanism id, act on at least one qubit, and hold its parameters in a
+        Mapping. In addition, the single-qubit axis parameters this module reads off the
+        spec (``operation_axis``/``error_axis``/``channel_axis``/``axis``) must, when
+        present, name a real rotation axis -- a present-but-``None`` axis is rejected here
+        so the downstream axis resolvers never fall back to their default arg on an
+        explicit ``None`` (which would silently substitute ``rx`` for a caller mistake).
+        """
+        if not isinstance(self.mechanism_id, str) or not self.mechanism_id:
+            raise ValueError("MechanismSpec.mechanism_id must be a non-empty string")
+        if self.num_qubits < 1:
+            raise ValueError("MechanismSpec.num_qubits must be a positive integer")
+        if not isinstance(self.parameters, Mapping):
+            raise ValueError("MechanismSpec.parameters must be a Mapping")
+        for axis_key in ("operation_axis", "error_axis", "channel_axis", "axis"):
+            if axis_key in self.parameters:
+                axis_value = self.parameters[axis_key]
+                if axis_value is None:
+                    raise ValueError(f"MechanismSpec.parameters[{axis_key!r}] axis must not be None")
+                canonical_single_qubit_axis(axis_value)
 
     def audit_dict(self) -> dict[str, object]:
         public_label = mechanism_public_label(self.mechanism_id)

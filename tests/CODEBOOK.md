@@ -83,7 +83,7 @@ torch-less module.
 | `stage_d_coupled_cycle_targets` | teachers/coupled_cycle | test_coupled_cycle_units | 17 (+1 gpu oos) | 100/100 | 96.4% | committed (9639e75) |
 | `stage_d_source_process_targets` | source/process | test_source_process_units | 33 | 100/100 | 95.7% | committed (a3812ea) + norm-cleanup |
 | `stage_d_source_coupling_targets` | source/coupling | test_source_coupling_units | 20 | 100/100 | 98.5% | committed (3684974) + norm-cleanup |
-| `stage_d_carrier_channels_targets` | carrier/channels | test_carrier_channels_units | 32 | 100/100 | 96.9% | committed (3fcc8b4) + norm-cleanup |
+| `stage_d_carrier_channels_targets` | carrier/channels | test_carrier_channels_units | 33 | 100/100 | 96.8% | committed (3fcc8b4) + norm-cleanup + `__post_init__` contract |
 | `stage_d_noise_spec_targets` | frontend/noise_spec | test_noise_spec_units | 25 | 100/100 | 96.3% | committed (854d848) |
 | `stage_d_circuit_ir_targets` | frontend/circuit_ir | test_circuit_ir_units | 23 | 100/100 | 95.6% | committed (4f7cac8) + norm-cleanup |
 | `stage_d_record_layout_targets` | frontend/record_layout | test_record_layout_units | 14 | 100/100 | 100.0% | committed (2b1ca53) |
@@ -102,8 +102,9 @@ certify_anchors' `DMOracleAnchor.answer`). **D11 opens Tier-2** (low-coverage, l
 `pi1>=1.0` guard — provably dead because `_validate_probability(allow_zero=False)` already rejects `>=1.0`,
 initially carried as an audit-validated `defensive_assert` exemption — was REMOVED as a redundant-validation
 cleanup, retiring that exemption + its dead-init sibling `_layout_coordinates` `np.zeros((n,0))`).
-`source/coupling.py` (D12, 20 units, kill 0.985, 0 exemptions). `carrier/channels.py` (D13, 32 units, the
-quantum-channel library, kill 0.969) — this batch is the cautionary tale for **adversarial residual review**:
+`source/coupling.py` (D12, 20 units, kill 0.985, 0 exemptions). `carrier/channels.py` (D13, 33 units incl. the
+new `MechanismSpec.__post_init__` construction-contract validation, the quantum-channel library, kill 0.968)
+— this batch is the cautionary tale for **adversarial residual review**:
 authoritative-verify caught TWO real gaps the builder had mis-classified as "equivalent" (12 mutants), both the
 same failure mode — a default arg / branch-into-a-raising-guard whose reachability was ASSERTED, not PROBED.
 (1) `canonical_single_qubit_axis(default=…)` is live when `value=None`, reachable via an explicit-None param on
@@ -111,7 +112,16 @@ an unvalidated `MechanismSpec`; (2) the M13 `channel_axis != operation_axis` rai
 explicit `error_axis` route, never the `channel_axis` fallback route. LESSON (now standing): before calling a
 default-arg / default-branch mutant "equivalent", PROBE a reachable input (explicit-None value / absent-key
 no-fallback); and a raising validation guard must be tripped through EVERY input route that reaches it (100%
-branch coverage of the guard ≠ every routing into it exercised). Next: frontend IR/schema/stim clusters,
+branch coverage of the guard ≠ every routing into it exercised). FOLLOW-UP (`__post_init__` construction
+contract, +1 unit → 33): `MechanismSpec` now validates at construction (non-empty id, positive num_qubits,
+`Mapping` params, and present axis params `operation_axis`/`error_axis`/`channel_axis`/`axis` non-None + a valid
+rotation axis), so the finding-(1) explicit-None route is now REJECTED at construction. That makes the non-M14
+`mechanism_operation_axis` and M13 `mechanism_error_axis` `default=` args genuinely DEAD (their fallback chains
+bottom out at a validated axis / the instruction default, never None) — 4 mutants reclassified killable→equivalent
+(76→80 survivors, 0.9676→0.9659). The M14 op-axis `default="rx"` stays killable via the still-unconstrained
+`params['instruction']` None route. (`__post_init__`, like `audit_dict`, is a class method → not mutated by mutmut
+here, so it carries no L2 mutants; its correctness is pinned by 100% L0/L1 branch coverage + exact-message asserts.)
+Next: frontend IR/schema/stim clusters,
 `mechanisms`, `numerics` as D14–D20. Full work-list: `docs/twin_validation/l3_release_package_unit_inventory.md`.
 
 ## Offloading heavy mutation (spark)
