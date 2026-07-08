@@ -309,7 +309,17 @@ Confirmed CPU-pure: imports numpy only (0 `device=`, no torch tensor constructio
 |---|---|---|---|---|---|
 | `OperationSpec`,`OperationSet` (`__post_init__`),`canonical_operation_name`,`default_memory_operations`,`as_operation_set` | named op set + canonicalization | C | name∈ALLOWED; uniqueness | VAL | none direct |
 
-### `frontend/record_layout.py` — cov 51% · 14 units (14 C) — record-layout schema
+### `frontend/record_layout.py` — **DONE (D16)** · L0 100/100 (14 units) · L2 kill 1.000 — record-layout schema
+> Stage-D `stage_d_record_layout_targets` — `tests/test_record_layout_units.py`. Authoritative gate PASS (14/14
+> stmt+branch 100%, reconcile 14 = 14 registered + 0 out_of_scope; no `__post_init__` dunders — plain frozen record
+> carriers; 0 exemptions). Authoritative mutation 145/145 = **1.0000 — the first PERFECT-kill Stage-D batch** (0
+> survivors). A pure string-schema module has no float/dtype/normalization surface to spawn equivalents, so exact
+> pins kill everything: the 4 record-key/name formatters (`check_key`/`delta_detector_name`/`final_detector_name`/
+> `final_key`) pinned to exact strings vs independent f-string recomputes + wrong-format discriminators;
+> `build_repeated_memory_record_layout` pinned by a from-scratch record reconstruction (+ a rounds=2 delta-loop
+> boundary); `final_measurements`'s `_add_final_measurement` incompatible-basis raise tripped through BOTH routes
+> (check-terms + logical-terms loops) with exact messages, and both the first-insert and same-basis-merge arcs
+> exercised. No src-cleanup candidates.
 | unit | contract | class | invariants | DA | existing test |
 |---|---|---|---|---|---|
 | `RoundMeasurementRecord`,`DetectorLayoutRecord`,`FinalDataRecord`,`ObservableLayoutRecord`,`RecordLayout` (+ `to_manifest`),`build_repeated_memory_record_layout`,`final_measurements`,`check_key`,`delta_detector_name`,`final_detector_name`,`final_key` | frozen layout dataclasses + name/key builders | C | schema/manifest round-trip; name-format stability; key uniqueness | no | none direct |
