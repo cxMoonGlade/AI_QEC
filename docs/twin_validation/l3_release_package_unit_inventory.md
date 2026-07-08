@@ -474,7 +474,7 @@ Confirmed CPU-pure: imports numpy only (0 `device=`, no torch tensor constructio
 | `calibrate_theta_for_wg_l1`,`leaked_map`,`leaked_map_params` | bisection calib + leaked-readout map (pure math) | C | theta∈[0,π/2] monotone; b∈[0,1] | VAL (target range, b∈[0,1]) | test_p2_theta_leakage |
 | `wg_rates`,`coherence_of_leakage`,`leakage_kraus_torch`,`qutrit_leakage_teacher`,`qutrit_leakage_teacher_heterogeneous` (+ `QutritLeakageTeacher`) | WG rates/coherence + cuda Kraus + teacher factories | G | WG_L1∈(0,0.5); C_L≥0 (=0 iff θ=0); CPTP | no (delegate) | test_p2_theta_leakage, test_simulator_qutrit_leakage |
 
-### `mechanisms/seam_teachers.py` — cov **0%** · 11 units (11 C) — device-agnostic torch (CPU-runnable)
+### `mechanisms/seam_teachers.py` — **DONE** (D8: L0 100/100 · L2 0.991) · 11 units (11 C) — device-agnostic torch (CPU-runnable)
 | unit | contract | class | invariants | DA | existing test |
 |---|---|---|---|---|---|
 | `tb_markov_kraus`,`tb_record_chain_stats`,`tb_member_from_rate_and_ratio`,`backdrop_kraus`,`backdrop_teacher`,`coherent_seam_teacher`,`bias_injected_coherent_teacher`,`twirled_seam_teacher`,`tb_bunching_teacher`,`pauli_ablation_teacher`,`seam_teacher_arms` (+ `SeamTeacher`) | ADR-0008 seam teacher arms | C (small torch, device-agnostic) | CPTP; non-unital; record-chain identities | VAL (ratio>1 for sqrt) | test_carrier_seam_* (NOT in Wave-2 .coverage → shows 0%) |
