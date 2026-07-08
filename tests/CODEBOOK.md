@@ -73,7 +73,8 @@ torch-less module.
 | `stage_d_seam_teachers_targets` | mechanisms/seam_teachers | test_seam_teachers_units | 11 | 100/100 | 99.1% | committed |
 | `stage_d_axis1_runners_targets` | frontend/{axis1_codespec_runner,axis1_g2_runner} | test_axis1_runners_units | 8 | 100/100 | 98.0% | committed (513d4de) |
 | `stage_d_coupled_cycle_targets` | teachers/coupled_cycle | test_coupled_cycle_units | 17 (+1 gpu oos) | 100/100 | 96.4% | committed (9639e75) |
-| `stage_d_source_process_targets` | source/process | test_source_process_units | 33 | 100/100 | 95.0% | pending commit |
+| `stage_d_source_process_targets` | source/process | test_source_process_units | 33 | 100/100 | 95.0% | committed (a3812ea) |
+| `stage_d_source_coupling_targets` | source/coupling | test_source_coupling_units | 20 | 100/100 | 98.2% | pending commit |
 
 **Milestone:** `quantum_bath` (40 units, 7 modules) + `certify` (42 units, 7 modules; `DMOracleAnchor.answer`
 is the sole GPU `out_of_scope`) are covered at L0 100/100 + L2 ≥0.90. The quantum_bath entropic/negativity-

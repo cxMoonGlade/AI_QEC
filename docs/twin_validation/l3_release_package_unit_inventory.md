@@ -520,7 +520,18 @@ Confirmed CPU-pure: imports numpy only (0 `device=`, no torch tensor constructio
 |---|---|---|---|---|---|
 | `K_stat_joint`,`project_axis`,`K_stat_binary`,`M_mem_stat`,`exact_cmi_bits`,`tv_distance`,`record_distance` | K / M_mem / CMI / TV record statistics | C | K,M_mem≥0; TV,record_dist∈[0,1]; project-axis marginal | no | test_quantum_bath |
 
-### `source/coupling.py` — cov 32% · 18 units (18 C) — Theta fan-out closed-form maths
+### `source/coupling.py` — **DONE (D12)** · L0 100/100 (20 units) · L2 kill 0.982 — Theta fan-out closed-form maths
+> Stage-D `stage_d_source_coupling_targets` — `tests/test_source_coupling_units.py`. Authoritative gate PASS
+> (20/20 stmt+branch 100%, reconcile 20 = 20 registered + 0 out_of_scope; the 18 named units + 2
+> `__post_init__` = 20). CPU-pure numpy → zero gpu_bound, 0 exemptions (every guard is reachable: static_zz
+> singular via D=±α; exchange_j via α=0 and phi<0; every `__post_init__` validator via sabotaged args).
+> Independent value-pins on the closed-form physics (static_zz ζ, exchange_j↔φ round-trip, drift→T2,
+> leakage_from_drift, cross_mechanism_correlation vs np.corrcoef). Authoritative mutation 593/604 = **0.9818**
+> (2nd-highest Stage-D after seam_teachers). 11 residual survivors all genuine-equivalent (7 measure-zero float
+> boundaries `<=NUMERICAL_ZERO`↔`<` / `<-NZ`↔`<=`; 3 numpy dtype-copy defaults `np.array` copy=True / redundant
+> `dtype=np.float64`; 1 sigmoid-saturation clamp `min(60.0,y)`↔`min(61.0,y)` — both past the float64 saturation
+> point ~37 so sigmoid==1.0 either way). src-cleanup candidate (deferred, mainline): `parameter_series` redundant
+> `dtype=np.float64` (values already float via `float(getattr(...))`).
 | unit | contract | class | invariants | DA | existing test |
 |---|---|---|---|---|---|
 | `StaticZZCalibration`,`SourceCouplingConfig`,`CoupledMechanismParams` (`__post_init__` + accessors),`default_source_coupling_config`,`source_to_params`,`trajectory_to_params`,`independent_baseline_trajectory_to_params`,`parameter_series`,`cross_mechanism_correlation`,`static_zz_zeta`,`exchange_j_from_phi`,`zz_phi_from_frequency_drift`,`drift_to_t2`,`leakage_from_drift` | shared-source parameter fan-out | C | rate≥0/prob∈[0,1] after modulation; correlation∈[−1,1]; permutation-exact ablation | VAL (finiteness/positivity guards) | test_source_coupling, test_source_closed_forms |
