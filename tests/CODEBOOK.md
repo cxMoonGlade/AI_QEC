@@ -68,7 +68,8 @@ torch-less module.
 | `stage_d_memwitness_targets` | quantum_bath/memory_witness | test_quantum_bath_memwitness_units | 4 | 100/100 | 91.7% | committed |
 | `stage_d_certify_core_targets` | certify/{core,facade,types} | test_certify_core_units | 25 | 100/100 | 94.5% | committed |
 | `stage_d_certify_anchors_targets` | certify/anchors/{closed_form,controls,dm_oracle,stim_clifford} | test_certify_anchors_units | 17 (+1 gpu oos) | 100/100 | 92.7% | committed |
-| `stage_d_interop_targets` | frontend/interop | test_interop_units | 3 | 100/100 | 95.2% | pending commit |
+| `stage_d_interop_targets` | frontend/interop | test_interop_units | 3 | 100/100 | 95.2% | committed |
+| `stage_d_axis1_evidence_guard_targets` | frontend/axis1_evidence_guard | test_axis1_evidence_guard_units | 3 | 100/100 | 97.7% | pending commit |
 
 **Milestone:** `quantum_bath` (40 units, 7 modules) + `certify` (42 units, 7 modules; `DMOracleAnchor.answer`
 is the sole GPU `out_of_scope`) are covered at L0 100/100 + L2 ≥0.90. The quantum_bath entropic/negativity-

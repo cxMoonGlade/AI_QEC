@@ -311,7 +311,7 @@ Confirmed CPU-pure: imports numpy only (0 `device=`, no torch tensor constructio
 |---|---|---|---|---|---|
 | `Axis1CarrierTerm`,`Axis1CarrierSubstep`,`Axis1CarrierProgram` (`__post_init__` + accessors),`axis1_carrier_program_manifest` | carrier IR dataclasses + manifest | C | kind∈{ham,collapse,instrument,boundary}; JSON-safe | VAL | implicit (execution tests) |
 
-### `frontend/axis1_evidence_guard.py` — cov **0%** · 3 units (3 C)
+### `frontend/axis1_evidence_guard.py` — **DONE** (D7: L0 100/100 · L2 0.977) · 3 units (3 C)
 | unit | contract | class | invariants | DA | existing test |
 |---|---|---|---|---|---|
 | `manifest_is_executed`,`validate_axis1_evidence_manifest`,`axis1_contract_verdict` | output-side claim-scan + verdict de-overload | C | no forbidden claims_*=True; verdict matches execution | VAL (hard raise on forbidden True) | test_axis1_evidence_guard |

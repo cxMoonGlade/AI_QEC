@@ -1,0 +1,91 @@
+{
+  "_comment": [
+    "STAGE-D per-batch coverage registry -- batch 'axis1_evidence_guard'",
+    "(docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4; full-coverage program).",
+    "Run via tests/harness/gate.py <this file> (L0+L1; calls tests/harness/coverage_audit.py) and",
+    "tests/harness/mutation.py <this file> (L2).",
+    "",
+    "MODULE: frontend/axis1_evidence_guard.py -- the OUTPUT-side claim-scan + verdict de-overload",
+    "(finish-plan step6_a). The OUTPUT mirror of the isolation contract: keeps the simulator from",
+    "EMITTING an Axis-1 *_evidence / *_certification manifest that (W-E) overclaims (asserts an exact",
+    "channel / PTM / Kraus / teacher-ID / source-timeline / DEM / production result it did not",
+    "produce) or (W-J) labels a non-executed contract surface as a passing run. CPU-PURE -- string /",
+    "dict structure inspection only; imports collections.abc + typing, NEITHER torch NOR quimb =>",
+    "FULL treatment (L0 100% stmt+branch, L1 Hypothesis property, L2 mutmut >= 0.90).",
+    "",
+    "THREE LIVE public units (the AST reconcile of frontend/axis1_evidence_guard.py's top-level",
+    "public defs; matches the l3 inventory row 'frontend/axis1_evidence_guard.py -- 3 units (3 C)'):",
+    "  manifest_is_executed          -- the executed-predicate: a top-level *_executed:True (truthy),",
+    "                                   an honest claims_*_execution True anywhere, OR a nested",
+    "                                   certification block executed:True (strict bool) with a",
+    "                                   backend_contract/evidence_schema/evidence_content_hash",
+    "                                   qualifier. Real for/if branches on all three paths.",
+    "  validate_axis1_evidence_manifest -- the W-E + W-J pre-write gate: (W-E.1) no forbidden",
+    "                                   claims_* family key True anywhere; (W-E.2) present-and-False",
+    "                                   discipline on evidence/certification schemas; (W-J) verdict",
+    "                                   'pass' reserved for EXECUTED evidence. TypeError on non-Mapping;",
+    "                                   ValueError on non-bool claim / overclaim / missing-present /",
+    "                                   mislabeled verdict; returns a shallow COPY, never mutating.",
+    "  axis1_contract_verdict        -- the tiny de-overloading helper: invalid -> 'fail'; executed",
+    "                                   (backend OR oracle) + valid -> 'pass'; valid non-executed ->",
+    "                                   'contract_only'.",
+    "",
+    "DISCRIMINATION (the prior-batch value-vs-shape lesson: certify hit 100% coverage at ~0.75 kill",
+    "by asserting verdicts/shapes, not VALUES). Every load-bearing guard here is proved with",
+    "assert_discriminates (HOLDS for the real object, FAILS for a named sabotage) AND the load-bearing",
+    "POLICY CONSTANTS are value-pinned against an INDEPENDENT hard-coded expected copy: the exact",
+    "FORBIDDEN_CLAIM_FAMILIES tuple (order + spelling -- kills every family-string mutation, incl.",
+    "the axis2_source_timeline entry that is behaviorally subsumed by 'source_timeline'), the exact",
+    "HONEST_EXECUTION_CLAIMS frozenset, the _EVIDENCE_SCHEMA_TOKENS tuple, and the three VERDICT_*",
+    "constants. Each forbidden family, each honest claim, and each schema token also has a BEHAVIORAL",
+    "parametrized case (a True overclaim rejected / an honest execution accepted / a token schema",
+    "requiring present-and-False), and manifest_is_executed is pinned to an INDEPENDENT from-scratch",
+    "re-implementation of the executed predicate over Hypothesis-random manifests.",
+    "",
+    "The module's PRIVATE helpers (_normalize_key, _forbidden_family_for, _walk, _iter_nested_mappings,",
+    "_is_evidence_or_certification_schema) and its module-level constants are not public units => not",
+    "reconciled/scored, but are exercised + mutation-covered via the public units and value-pinned",
+    "directly (dash/space/upper key-normalization variants; nested-list overclaim sub_path; the",
+    "nested-oracle qualifier keys)."
+  ],
+  "contract": "docs/twin_validation/wave2_6_unit_test_contract.md",
+  "default_target": {"statement": 1.0, "branch": 1.0},
+  "covered_by_test_files": [
+    "tests/test_axis1_evidence_guard_units.py"
+  ],
+  "reconcile_modules": [
+    "src/error_coupling_simulator/frontend/axis1_evidence_guard.py"
+  ],
+  "out_of_scope": {},
+  "canonical_units": [
+    "manifest_is_executed",
+    "validate_axis1_evidence_manifest",
+    "axis1_contract_verdict"
+  ],
+  "units": [
+    {
+      "group": "axis1_evidence_guard",
+      "module": "src/error_coupling_simulator/frontend/axis1_evidence_guard.py",
+      "unit": "manifest_is_executed",
+      "qualname": "manifest_is_executed",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "axis1_evidence_guard",
+      "module": "src/error_coupling_simulator/frontend/axis1_evidence_guard.py",
+      "unit": "validate_axis1_evidence_manifest",
+      "qualname": "validate_axis1_evidence_manifest",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "axis1_evidence_guard",
+      "module": "src/error_coupling_simulator/frontend/axis1_evidence_guard.py",
+      "unit": "axis1_contract_verdict",
+      "qualname": "axis1_contract_verdict",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    }
+  ]
+}
