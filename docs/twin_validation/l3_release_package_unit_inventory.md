@@ -273,7 +273,21 @@ Confirmed CPU-pure: imports numpy only (0 `device=`, no torch tensor constructio
 |---|---|---|---|---|---|
 | `no_noise`,`depolarizing_noise`,`targeted_noise` (+ `Noise` facade) | build noise specs | C | prob normalization (delegated) | no | test_simulator_noise_module |
 
-### `frontend/noise_spec.py` — cov 16% · 20 units (20 C) — **fully CPU-pure** (Stim Pauli logic, no torch)
+### `frontend/noise_spec.py` — **DONE (D14)** · L0 100/100 (25 units) · L2 kill 0.963 — Stim-Pauli noise spec, CPU-pure
+> Stage-D `stage_d_noise_spec_targets` — `tests/test_noise_spec_units.py`. Authoritative gate PASS (25/25
+> stmt+branch 100%, reconcile 25 = 20 named + 5 `__post_init__`; 0 out_of_scope, 0 exemptions). Value-pins on
+> `SourceStimPauliRule.probability_for`, the manifests, and the isolation contract (`to_public_manifest` does NOT
+> leak the evaluator-only fields `to_evaluator_manifest` carries); raising guards tripped through every route.
+> Authoritative mutation 1077/1118 = **0.9633**. Builder correctly applied the D13 reachability lessons (probed
+> default-arg reachability + `is True/False` identity pins + tripped every guard route; 141→41 survivors). 41
+> residual survivors all verified genuine-equivalent (coordinator independently confirmed the three highest-weight
+> reachability/normalization classes): 14 `NoiseBuilder` CASE (normalized by `StimNoiseRule.__post_init__`
+> `.lower()`/`.upper()` on position/match_kind/noise/measure_name), 6 `_rule_matches_measurement` dead first-alias
+> element (unreachable after the exact-name check), 2 `or`↔`and` (the `position=="during" ⇔ match_kind=="idle"`
+> biconditional is `__post_init__`-enforced so the operands always share a truth value), 9 `zip(strict=True)`
+> equal-length-by-construction, 3 GateOp `.upper()`-normalized names, 2 float-wrapped dtype, 5
+> `_source_rule_as_stim_rule` (unused require_match / pre-validated p). src-cleanup candidates (deferred, mainline):
+> redundant `"M"/"MX"/"MY"` alias-set entries; the `# pragma: no cover` matched_step-None guard.
 | unit | contract | class | invariants | DA | existing test |
 |---|---|---|---|---|---|
 | `StimPauliNoiseSpec`,`StimNoiseRule`,`TargetedStimNoiseSpec`,`SourceStimPauliRule`,`SourceStimPauliProjectionSpec` (`__post_init__` + methods),`NoiseBuilder.*`,`apply_stim_pauli_noise` | Stim/Pauli noise projection specs + builder | C | prob∈[0,1]; record-schema preserved; rule position/match legality | VAL (extensive) | test_simulator_noise_module, test_pauli_noise_* |
