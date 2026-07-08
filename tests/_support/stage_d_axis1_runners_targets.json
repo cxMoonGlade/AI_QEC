@@ -1,0 +1,148 @@
+{
+  "_comment": [
+    "STAGE-D per-batch coverage registry -- batch 'axis1_runners' (D9)",
+    "(docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4; full-coverage program).",
+    "Run via tests/harness/gate.py <this file> (L0+L1; calls tests/harness/coverage_audit.py) and",
+    "tests/harness/mutation.py <this file> (L2).",
+    "",
+    "MODULES: frontend/axis1_codespec_runner.py + frontend/axis1_g2_runner.py -- the two",
+    "reproducible CPU fixture builders that construct the frontend CodeSpec / G2 substep schedules",
+    "and drive their (GPU) record/evidence emitters + freeze guards. NEITHER module imports torch",
+    "nor quimb: they are pure orchestration over the compiler (analog_schedule / code_spec /",
+    "circuit_ir) plus a call out to the GPU evidence writers in axis1_record_evidence / axis1_bridge.",
+    "The AST reconcile refuses a gpu_bound out_of_scope claim on a torch-less module, so out_of_scope",
+    "is EMPTY and every public unit is registered + CPU-testable.",
+    "",
+    "EIGHT public units (AST-derived; the frozen dataclasses Axis1CodeSpecRecordRunnerResult /",
+    "Axis1G2RunnerResult declare no methods => they are NOT units):",
+    "  codespec_runner (5): build_axis1_codespec_frontend_spec, build_axis1_codespec_4q_frontend_spec,",
+    "                       build_axis1_codespec_frontend_schedule (all straight-line CodeSpec/",
+    "                       schedule construction, branch 0/0), run_axis1_codespec_record_fixture (a",
+    "                       write_freeze IfExp arc), main (parse_args IfExp + validate_freeze If +",
+    "                       summary-freeze IfExp + passed-return IfExp).",
+    "  g2_runner (3):       build_axis1_g2_frontend_schedule (straight-line), run_axis1_g2_frontend_fixture",
+    "                       (write_freeze IfExp), main (same four-branch surface as codespec main).",
+    "  Both modules define a top-level `main`; the two units carry distinct `unit` labels",
+    "  (axis1_codespec_runner.main / axis1_g2_runner.main) but qualname='main' scored against each",
+    "  unit's OWN module tree (no collision -- one main per file).",
+    "",
+    "GPU-CALLEE SEAM (why CPU-testable). run_*/main call write_axis1_measurement_record_evidence /",
+    "write_axis1_g2_evidence, which route into _require_cuda_device (real CUDA; device='cpu' raises",
+    "'GPU-only'). The units' OWN bodies are pure orchestration; the GPU work lives in a DIFFERENT",
+    "(non-reconciled) module, so the record/evidence writer + freeze + run_* fixture are monkeypatched",
+    "at the runner-module boundary and every runner-body branch runs on CPU. The build_*_spec /",
+    "build_*_schedule compilers run REAL on CPU (no GPU).",
+    "",
+    "DISCRIMINATION (the value-vs-shape lesson). Every construction is PINNED against an INDEPENDENT",
+    "recompute from the fixture inputs (not the module's own builder): the 5q/4q CodeSpec fields",
+    "(name, num_qubits, data/ancilla indices+coords, check ancilla+Pauli terms, logical index+term,",
+    "rounds, metadata), the compiled schedule's measurement_keys / detectors / observables recomputed",
+    "round-by-round, the deterministic record_layout_hash + source_hash (sha256 identity -- class-a",
+    "exact -- catches every metadata/qubit/gate mutation incl. the g2 static-ZZ edge + H/CZ targets),",
+    "and main's summary dict recomputed field-by-field from a distinct-valued fake manifest (key-swap",
+    "mutants differ). assert_discriminates shows the round-count pin fails on a dropped/added round and",
+    "the layout pin fails on the 4q vs 5q spec.",
+    "",
+    "The frozen-dataclass result containers + module __all__ are pinned (assert set(__all__)) but are",
+    "not scored units; they are exercised via the run_*/main units.",
+    "",
+    "L2 MUTATION (mutmut, local, default 15x timeout): 639 mutants, 626 killed => kill_rate 0.9797",
+    "PASS. The 13 residual survivors are ALL genuine EQUIVALENT mutants, each backed by a specific",
+    "language/library normalization (no reachable behavioral difference, so unkillable):",
+    "  - PauliTerm basis 'X'->'x' / 'Z'->'z' (5): PauliTerm.__post_init__ upcases via str(basis).upper()",
+    "    -> identical spec/schedule/hash.",
+    "  - LogicalObservableSpec(..) index=0 dropped (2): index:int=0 is the field default -> identical.",
+    "  - argparse ArgumentParser(description=None) (2): the module docstring is NOT __doc__ (the",
+    "    `from __future__ import annotations` line precedes it), so __doc__ is None and description is",
+    "    already None either way.",
+    "  - --rounds type=int -> None / type=int dropped (2): main re-wraps with int(args.rounds) and",
+    "    default=2 is already int -> identical resolved rounds.",
+    "  - --validate-freeze default=None dropped (2): argparse defaults an unspecified optional to None."
+  ],
+  "contract": "docs/twin_validation/wave2_6_unit_test_contract.md",
+  "default_target": {"statement": 1.0, "branch": 1.0},
+  "covered_by_test_files": [
+    "tests/test_axis1_runners_units.py"
+  ],
+  "reconcile_modules": [
+    "src/error_coupling_simulator/frontend/axis1_codespec_runner.py",
+    "src/error_coupling_simulator/frontend/axis1_g2_runner.py"
+  ],
+  "out_of_scope": {},
+  "canonical_units": [
+    "build_axis1_codespec_frontend_spec",
+    "build_axis1_codespec_4q_frontend_spec",
+    "build_axis1_codespec_frontend_schedule",
+    "run_axis1_codespec_record_fixture",
+    "axis1_codespec_runner.main",
+    "build_axis1_g2_frontend_schedule",
+    "run_axis1_g2_frontend_fixture",
+    "axis1_g2_runner.main"
+  ],
+  "units": [
+    {
+      "group": "codespec_runner",
+      "module": "src/error_coupling_simulator/frontend/axis1_codespec_runner.py",
+      "unit": "build_axis1_codespec_frontend_spec",
+      "qualname": "build_axis1_codespec_frontend_spec",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "codespec_runner",
+      "module": "src/error_coupling_simulator/frontend/axis1_codespec_runner.py",
+      "unit": "build_axis1_codespec_4q_frontend_spec",
+      "qualname": "build_axis1_codespec_4q_frontend_spec",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "codespec_runner",
+      "module": "src/error_coupling_simulator/frontend/axis1_codespec_runner.py",
+      "unit": "build_axis1_codespec_frontend_schedule",
+      "qualname": "build_axis1_codespec_frontend_schedule",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "codespec_runner",
+      "module": "src/error_coupling_simulator/frontend/axis1_codespec_runner.py",
+      "unit": "run_axis1_codespec_record_fixture",
+      "qualname": "run_axis1_codespec_record_fixture",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "codespec_runner",
+      "module": "src/error_coupling_simulator/frontend/axis1_codespec_runner.py",
+      "unit": "axis1_codespec_runner.main",
+      "qualname": "main",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "g2_runner",
+      "module": "src/error_coupling_simulator/frontend/axis1_g2_runner.py",
+      "unit": "build_axis1_g2_frontend_schedule",
+      "qualname": "build_axis1_g2_frontend_schedule",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "g2_runner",
+      "module": "src/error_coupling_simulator/frontend/axis1_g2_runner.py",
+      "unit": "run_axis1_g2_frontend_fixture",
+      "qualname": "run_axis1_g2_frontend_fixture",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "g2_runner",
+      "module": "src/error_coupling_simulator/frontend/axis1_g2_runner.py",
+      "unit": "axis1_g2_runner.main",
+      "qualname": "main",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    }
+  ]
+}

@@ -316,13 +316,13 @@ Confirmed CPU-pure: imports numpy only (0 `device=`, no torch tensor constructio
 |---|---|---|---|---|---|
 | `manifest_is_executed`,`validate_axis1_evidence_manifest`,`axis1_contract_verdict` | output-side claim-scan + verdict de-overload | C | no forbidden claims_*=True; verdict matches execution | VAL (hard raise on forbidden True) | test_axis1_evidence_guard |
 
-### `frontend/axis1_codespec_runner.py` — cov **0%** · 5 units (5 C) — fixture builders + `main`
+### `frontend/axis1_codespec_runner.py` — **DONE** (D9: L0 100/100 · L2 0.980) · 5 units (5 C) — fixture builders + `main`
 | unit | contract | class | invariants | DA | existing test |
 |---|---|---|---|---|---|
 | `Axis1CodeSpecRecordRunnerResult`,`build_axis1_codespec_frontend_spec`,`build_axis1_codespec_4q_frontend_spec`,`build_axis1_codespec_frontend_schedule` | 5q/4q CodeSpec + schedule fixtures | C | valid CodeSpec; fixed layout | no | test_simulator_codespec (some) |
 | `run_axis1_codespec_record_fixture`,`main` | run fixture end-to-end / CLI | M (CPU build + GPU record emit) | manifest+freeze | no | none direct |
 
-### `frontend/axis1_g2_runner.py` — cov **0%** · 3 units (2 C, 1 M)
+### `frontend/axis1_g2_runner.py` — **DONE** (D9: L0 100/100 · L2 0.980) · 3 units (2 C, 1 M)
 | unit | contract | class | invariants | DA | existing test |
 |---|---|---|---|---|---|
 | `Axis1G2RunnerResult`,`build_axis1_g2_frontend_schedule` | G2 result + 2q CZ schedule fixture | C | valid schedule | no | test_simulator_axis1_schedule |
