@@ -1,0 +1,82 @@
+{
+  "_comment": [
+    "STAGE-D per-batch coverage registry -- batch 'interop'",
+    "(docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4; full-coverage program).",
+    "Run via tests/harness/gate.py <this file> (L0+L1; calls tests/harness/coverage_audit.py) and",
+    "tests/harness/mutation.py <this file> (L2).",
+    "",
+    "MODULE: frontend/interop.py -- the evaluator-side {det,obs} -> matchable",
+    "stim.DetectorErrorModel plumbing: the exact Spitz Eq.13 pairwise p_ij + odd-parity",
+    "boundary-residual product identity reduction (records_to_dem), a PyMatching MWPM adaptor",
+    "(decode_records), and a deterministic stim fault-injection utility (insert_op_after_tick).",
+    "CPU-PURE (stim + pymatching + qec_twin.hardware.pij; imports NEITHER torch NOR quimb) =>",
+    "FULL treatment (L0 100% stmt+branch, L1 property, L2 mutmut).",
+    "",
+    "THREE LIVE public units, all with real for/if branch surface:",
+    "  records_to_dem       -- 6 ValueError guards; kept-edge loop body vs 0-edge loop; the",
+    "                          edge_factor<=NUMERICAL_ZERO clamp; the p_raw<=NUMERICAL_ZERO skip",
+    "                          vs the p_raw<-pair_floor_abs 'negative_residual' clamp; the",
+    "                          boundary logical True/False ternary; the p>_MAX_EDGE_P pair clamp",
+    "                          and the p_raw>_MAX_EDGE_P boundary clamp; the non-finite p_ij mask.",
+    "  decode_records       -- ndim / logical_index<0 / num_detectors / li>=n_obs guards + the",
+    "                          predicted.ndim==1 reshape arc + the shape[1]!=n_obs guard.",
+    "  insert_op_after_tick -- tick out of [0,total]; t==0 insert-before vs t>=1 insert-after;",
+    "                          the TICK-match and seen==t both arcs.",
+    "",
+    "DISCRIMINATION (the prior-batch value-vs-shape lesson): every load-bearing assert PINS a",
+    "VALUE against an INDEPENDENT from-scratch Spitz recompute (_spitz_ref -- NOT the module's",
+    "spitz_pij_exact) or the EXACT odd-parity boundary identity, or asserts DISCRIMINATION",
+    "(assert_discriminates: floor bracket, _MAX_EDGE_P clamp, logical_index column selection,",
+    "insert-after-tick off-by-one). Deterministic exact-count population cubes (no sampling) make",
+    "every pin exact to 1e-12.",
+    "",
+    "DEFENSIVE-ASSERT / SEAM. PyMatching's decode_batch always returns 2-D (N, n_obs) (measured:",
+    "stim 1.16 / pymatching 2.4), so the predicted.ndim==1 reshape arc and the shape[1]!=n_obs",
+    "guard are unreachable through the real backend; they are covered by tripping the guard via a",
+    "monkeypatched pymatching.Matching backend seam (the sanctioned extract/trip-the-seam route),",
+    "paired with the legit 2-D path property (test_L1_decode_output_contract).",
+    "",
+    "The module's public constants (DEFAULT_PAIR_FLOOR_ABS, DEFAULT_PAIR_FLOOR_SIGMA) and the",
+    "private _MAX_EDGE_P are not defs => not public units; they are exercised via the unit pins."
+  ],
+  "contract": "docs/twin_validation/wave2_6_unit_test_contract.md",
+  "default_target": {"statement": 1.0, "branch": 1.0},
+  "covered_by_test_files": [
+    "tests/test_interop_units.py"
+  ],
+  "reconcile_modules": [
+    "src/error_coupling_simulator/frontend/interop.py"
+  ],
+  "out_of_scope": {},
+  "canonical_units": [
+    "records_to_dem",
+    "decode_records",
+    "insert_op_after_tick"
+  ],
+  "units": [
+    {
+      "group": "interop",
+      "module": "src/error_coupling_simulator/frontend/interop.py",
+      "unit": "records_to_dem",
+      "qualname": "records_to_dem",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "interop",
+      "module": "src/error_coupling_simulator/frontend/interop.py",
+      "unit": "decode_records",
+      "qualname": "decode_records",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "interop",
+      "module": "src/error_coupling_simulator/frontend/interop.py",
+      "unit": "insert_op_after_tick",
+      "qualname": "insert_op_after_tick",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    }
+  ]
+}

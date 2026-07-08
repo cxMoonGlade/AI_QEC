@@ -236,7 +236,7 @@ Confirmed CPU-pure: imports numpy only (0 `device=`, no torch tensor constructio
 | `leak_slice_table` | per-CZ leak Kraus table (preset OR RunSpec arm) | M (CPU TypeError route + GPU SvSampler builder) | CPTP residual<1e-12; composition identity | VAL (TypeError) | test_frontend_experiments (requires_cuda) |
 *(This module + `ShotSet` accessors + `mps_forward` seams are the Wave-2/2.6 pilot — already fully specified in the parent contract §3–5; L3 does NOT re-scope them.)*
 
-### `frontend/interop.py` — cov **0%** · 3 units (3 C) — **fully CPU-pure** (stim + PyMatching, no torch)
+### `frontend/interop.py` — **DONE** (D6: L0 100/100 · L2 0.952) · 3 units (3 C) — **fully CPU-pure** (stim + PyMatching, no torch)
 | unit | contract | class | invariants | DA | existing test |
 |---|---|---|---|---|---|
 | `records_to_dem` | reduce (det) cube → matchable stim DEM via exact Spitz p_ij | C | DEM round-trip; p_ij∈[0,0.5); boundary-residual identity | VAL (extensive shape/bounds) | test_p0_interop |
