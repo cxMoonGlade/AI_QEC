@@ -320,7 +320,20 @@ Confirmed CPU-pure: imports numpy only (0 `device=`, no torch tensor constructio
 | `decode_records` | MWPM-decode det vs DEM (PyMatching, CPU) | C | output shape (N,); logical_index bounds | VAL (ndim, index) | test_p0_interop |
 | `insert_op_after_tick` | inject deterministic fault at a TICK | C | tick bounds; stim frame semantics | VAL (tick bounds) | none direct |
 
-### `frontend/metadata_guard.py` — cov 9% · 4 units (4 C) — learner-visibility guards
+### `frontend/metadata_guard.py` — **DONE (D21)** · L0 100/100 (4 units) · L2 kill 0.990 — isolation-contract public-metadata guard
+> Stage-D `stage_d_metadata_guard_targets` — `tests/test_metadata_guard_units.py`. Authoritative gate PASS (4/4
+> stmt+branch 100%, reconcile 4 = 4 registered + 0 out_of_scope; CPU-pure; 0 exemptions). Authoritative mutation
+> 286/289 = **0.9896**. Tested at the NEWLY-HARDENED state (commit 9db34a7, the theory-fix closing the D18 axis-2-leak
+> finding): `_validate_keys` now recurses FAIL-CLOSED. The isolation-contract KILLERs: clean metadata returns a shallow
+> COPY (`== input`, `is not input`); all 8 `_RESERVED_METADATA_EXACT_KEYS` + 31 `_RESERVED_METADATA_KEY_PARTS`
+> rejected one-per-call with EXACT messages keyed off INDEPENDENT hardcoded lists (a mutated src constant stops matching
+> → pin fails → killed); `.lower()`/`.replace('-','_')`/`.replace(' ','_')` killed by upper/hyphen/space variants; the
+> top-level `_source_projection_evaluator_audit` transport ALLOWED only under `allow_evaluator_audit_transport=True`,
+> rejected by default; **THE D18 FIX: a NESTED audit key (in a sub-dict AND in a list element) carrying axis-2 truth is
+> now REJECTED fail-closed** (exact "cannot nest"), `assert_discriminates`d vs clean-nested controls, not rescued by
+> `allow=True` (root-only). 3 residuals all genuine-equivalent (verified): `normalize_axis1_static_zz_couplings`
+> `a<b`→`a<=b` (preempted by the a==b duplicate-endpoint raise two lines earlier); `_validate_keys` `is_root=False`→`None`
+> ×2 (is_root read only in truthiness `if is_root`/`if is_root and` — never `is/== False` — so None≡False).
 | unit | contract | class | invariants | DA | existing test |
 |---|---|---|---|---|---|
 | `validate_public_metadata` | reject evaluator-truth keys, copy | C | learner-visible key legality (isolation contract) | VAL (reserved-key raise) | test_simulator_codespec (metadata) |

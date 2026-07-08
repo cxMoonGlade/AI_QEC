@@ -90,7 +90,8 @@ torch-less module.
 | `stage_d_code_spec_targets` | frontend/code_spec | test_code_spec_units | 17 | 100/100 | 93.9% | committed (286f878) |
 | `stage_d_analog_schedule_targets` | frontend/analog_schedule | test_analog_schedule_units | 17 | 100/100 | 96.1% | committed (f38439a) + axis-2 guard (9db34a7) |
 | `stage_d_axis1_selection_targets` | frontend/axis1_selection | test_axis1_selection_units | 15 | 100/100 | 97.8% | committed (7ca896d) + `.upper()` de-dup |
-| `stage_d_record_schema_targets` | frontend/record_schema | test_record_schema_units | 10 | 100/100 | 100.0% | pending commit |
+| `stage_d_record_schema_targets` | frontend/record_schema | test_record_schema_units | 10 | 100/100 | 100.0% | committed (961861d) |
+| `stage_d_metadata_guard_targets` | frontend/metadata_guard | test_metadata_guard_units | 4 | 100/100 | 99.0% | pending commit |
 
 **Milestone:** `quantum_bath` (40 units, 7 modules) + `certify` (42 units, 7 modules; `DMOracleAnchor.answer`
 is the sole GPU `out_of_scope`) are covered at L0 100/100 + L2 ≥0.90. The quantum_bath entropic/negativity-
