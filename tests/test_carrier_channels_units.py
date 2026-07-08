@@ -1,5 +1,5 @@
 """Stage-D batch ``carrier_channels`` -- per-unit L0+L1+L2 coverage of
-``error_coupling_simulator.carrier.channels`` (32 CPU-pure public units; pure numpy + scipy,
+``error_coupling_simulator.carrier.channels`` (33 CPU-pure public units; pure numpy + scipy,
 no torch, no quimb, so out_of_scope is empty).
 
 Full-coverage program (docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4;
@@ -701,14 +701,22 @@ def test_L0_mechanism_operation_axis_paths():
     # instruction) is load-bearing; a mutated `params.get("axis", None)` falls to canonical's own
     # "rx" != "ry", so this kills the axis-fallback-default mutation in the M14 branch.
     assert mechanism_operation_axis(_spec("M14", instruction="ry")) == "ry"
-    # EXPLICIT-None value: MechanismSpec has NO __post_init__ so parameters={"operation_axis": None}
-    # is constructible; params.get returns None (key PRESENT -> the fallback is NOT taken) -> value=None
-    # -> the `canonical_single_qubit_axis(..., default="rx")` default arg is LIVE. instruction="rz"
-    # gives a DIFFERENT fall-through ("rz"), so asserting "rx" proves the default="rx" arg (not the
-    # fall-through) is used -> kills the default="XXrxXX" WRAP + default=None mutants on BOTH the
-    # non-M14 and M14 branches. (The default="RX" CASE mutant stays equivalent -- canonical .lower()s.)
-    assert mechanism_operation_axis(_spec("M1", {"operation_axis": None}, instruction="rz")) == "rx"
-    assert mechanism_operation_axis(_spec("M14", {"operation_axis": None}, instruction="rz")) == "rx"
+    # EXPLICIT-None axis value: `MechanismSpec.__post_init__` now REJECTS a present-but-None axis
+    # param, so `parameters={"operation_axis": None}` is no longer constructible. The `value is None`
+    # path into the non-M14 `canonical_single_qubit_axis(..., default="rx")` is therefore UNREACHABLE
+    # (its fallback chain bottoms out at the instruction default, a valid string), so that call-site
+    # default arg is now DEAD CODE -- registered genuine-equivalent (see stage_d targets + D13 notes).
+    with pytest.raises(ValueError) as e_op_none:
+        _spec("M1", {"operation_axis": None})
+    assert str(e_op_none.value) == "MechanismSpec.parameters['operation_axis'] axis must not be None"
+    with pytest.raises(ValueError):
+        _spec("M14", {"operation_axis": None})
+    # The M14 operation-axis branch ALSO consults a NON-axis `params['instruction']` key, which
+    # __post_init__ does NOT constrain -- so value=None is STILL reachable there via an explicit-None
+    # `instruction` param, keeping that branch's default="rx" arg LIVE and killable. The `instruction`
+    # ATTRIBUTE "rz" gives a distinct "rz" fall-through, so asserting "rx" proves the default="rx" arg
+    # (not the fall-through) is used -> kills the default="XXrxXX" WRAP + default=None mutants.
+    assert mechanism_operation_axis(_spec("M14", {"instruction": None}, instruction="rz")) == "rx"
 
 
 def test_L0_mechanism_error_axis_paths_and_m13_guard():
@@ -720,12 +728,14 @@ def test_L0_mechanism_error_axis_paths_and_m13_guard():
     assert mechanism_error_axis(_spec("M6", {"operation_axis": "ry"})) == "ry"
     # M13: channel axis must MATCH operation axis (default) -> returns it
     assert mechanism_error_axis(_spec("M13", {"operation_axis": "rx"})) == "rx"
-    # M13 EXPLICIT error_axis=None with a NON-rx operation_axis: value=None -> the
-    # `canonical_single_qubit_axis(..., default=operation_axis)` arg is LIVE (returns operation_axis).
-    # operation_axis="rz" so a mutated default is observable: default=None -> canonical(None,None) raises;
-    # default REMOVED -> canonical's own "rx" != "rz" -> the `requested != operation` guard raises.
-    # Either way the call raises while orig returns "rz", so this kills the M13 default-arg mutants.
-    assert mechanism_error_axis(_spec("M13", {"operation_axis": "rz", "error_axis": None})) == "rz"
+    # M13 EXPLICIT error_axis=None: __post_init__ now REJECTS it at construction (error_axis is a
+    # constrained axis param), so the `value is None` path into the M13 error-axis
+    # `canonical_single_qubit_axis(..., default=operation_axis)` is UNREACHABLE (the error_axis/
+    # channel_axis fallback chain bottoms out at operation_axis, a valid string) -- that default arg is
+    # now DEAD CODE. operation_axis="rz" is validated first (a real axis), then error_axis=None raises:
+    with pytest.raises(ValueError) as e_err_none:
+        _spec("M13", {"operation_axis": "rz", "error_axis": None})
+    assert str(e_err_none.value) == "MechanismSpec.parameters['error_axis'] axis must not be None"
     # M13: a MISMATCHED channel axis raises with the exact message -- via the EXPLICIT error_axis route
     with pytest.raises(ValueError) as e:
         mechanism_error_axis(_spec("M13", {"operation_axis": "rx", "error_axis": "rz"}))
@@ -738,6 +748,58 @@ def test_L0_mechanism_error_axis_paths_and_m13_guard():
     with pytest.raises(ValueError) as e2:
         mechanism_error_axis(_spec("M13", {"operation_axis": "rz", "channel_axis": "rx"}))
     assert str(e2.value) == "M13 drifted coherent overrotation requires channel axis to match operation_axis"
+
+
+# =========================================================================== #
+# MechanismSpec.__post_init__ -- the construction contract (non-empty id,      #
+# positive num_qubits, Mapping parameters, present axis params non-None+valid) #
+# =========================================================================== #
+def test_L0_mechanism_spec_post_init_accepts_valid_and_case_insensitive_axes():
+    # a fully-valid spec constructs -- exercises the FALSE arc of every guard. Axis params are
+    # validated via canonical_single_qubit_axis, so aliases/case/whitespace are accepted exactly like
+    # the downstream resolvers (a spec that constructs here must resolve there without surprise).
+    MechanismSpec("M6", "name", 1, {"operation_axis": "ry"})
+    MechanismSpec("M14", "name", 1, {"operation_axis": "RX", "error_axis": " z ", "axis": "x"})
+    MechanismSpec("M13", "name", 1, {"channel_axis": "rz", "operation_axis": "rz"})
+    # NO axis params -> every `axis_key in parameters` takes its FALSE arc, loop body never runs
+    MechanismSpec("M0", "name", 1, {"p": 0.02})
+
+
+def test_KILLER_mechanism_spec_post_init_rejects_bad_id_num_qubits_parameters():
+    # mechanism_id must be a NON-EMPTY STRING: empty string AND a non-str both raise (empty exercises
+    # `not self.mechanism_id`; non-str exercises `not isinstance(..., str)` -> together they kill the
+    # `or`->`and` and the drop-either-operand mutants).
+    with pytest.raises(ValueError) as e_empty:
+        MechanismSpec("", "name", 1)
+    assert str(e_empty.value) == "MechanismSpec.mechanism_id must be a non-empty string"
+    with pytest.raises(ValueError) as e_nonstr:
+        MechanismSpec(5, "name", 1)                                  # type: ignore[arg-type]
+    assert str(e_nonstr.value) == "MechanismSpec.mechanism_id must be a non-empty string"
+    # num_qubits must be POSITIVE: 0 raises (kills the `< 1` lower-boundary mutants; the many nq=1/nq=2
+    # constructions elsewhere kill the `<=`/upper mutants by constructing where the mutant would raise).
+    with pytest.raises(ValueError) as e_nq:
+        MechanismSpec("M6", "name", 0)
+    assert str(e_nq.value) == "MechanismSpec.num_qubits must be a positive integer"
+    # parameters must be a MAPPING: a list of pairs is rejected (kills the `not isinstance(..,Mapping)`)
+    with pytest.raises(ValueError) as e_map:
+        MechanismSpec("M6", "name", 1, [("operation_axis", "rx")])   # type: ignore[arg-type]
+    assert str(e_map.value) == "MechanismSpec.parameters must be a Mapping"
+
+
+def test_KILLER_mechanism_spec_post_init_rejects_none_and_invalid_axis_every_key():
+    # a present-but-None value on EVERY constrained axis key raises -- exercised per key so a mutated
+    # tuple element (a wrapped key would silently drop OUT of the loop and let the None through) is
+    # killed on each of the four keys. Exact per-key message pinned.
+    for key in ("operation_axis", "error_axis", "channel_axis", "axis"):
+        with pytest.raises(ValueError) as e:
+            MechanismSpec("M6", "name", 1, {key: None})
+        assert str(e.value) == f"MechanismSpec.parameters[{key!r}] axis must not be None"
+    # a present-but-INVALID (non-None) axis is rejected via canonical_single_qubit_axis -- kills a
+    # dropped canonical() call or an `in`->`not in` on the membership test (the `is None` guard alone
+    # would let "spin" pass). The raise message is canonical's own contract message.
+    with pytest.raises(ValueError) as e_bad:
+        MechanismSpec("M6", "name", 1, {"operation_axis": "spin"})
+    assert str(e_bad.value) == "single-qubit rotation axis must be one of x/rx, y/ry, or z/rz"
 
 
 # =========================================================================== #
