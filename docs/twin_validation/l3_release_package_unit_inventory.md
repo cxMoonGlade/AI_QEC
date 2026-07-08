@@ -80,7 +80,25 @@ exemptions).
 | `positive_floor` | floor a float away from exact 0 | C | idempotence on ≥floor; output ≥ NUMERICAL_ZERO | no | implicit (imported by coupling/channels) |
 | `probability_floor` | floor a prob away from 0, cap at 1 | C | output ∈ [floor, 1]; normalization | no | implicit |
 
-### `carrier/channels.py` — cov 20% · 32 units (31 C, 2 M via scipy.expm) — **numpy-only, no torch**
+### `carrier/channels.py` — **DONE (D13)** · L0 100/100 (32 units) · L2 kill 0.968 — quantum-channel library, numpy+scipy, no torch
+> Stage-D `stage_d_carrier_channels_targets` — `tests/test_carrier_channels_units.py`. Authoritative gate PASS
+> (32/32 stmt+branch 100%, reconcile 32 = 32 registered + 0 out_of_scope; CPU-pure numpy/scipy). 1
+> `defensive_assert` exemption: `pauli_stochastic_kraus` `if p >= NUMERICAL_ZERO` False-branch is unreachable
+> because `probability_floor(x)=min(1.0,max(1e-12,x)) ∈ [1e-12,1.0]` always (verified). The CENTRAL discipline:
+> `assert_cptp`/`assert_unitary` are VACUOUS alone, so every channel/unitary carries an independent closed-form
+> value-pin (rotations vs `scipy.expm(-iθ/2·P)`, Kraus vs textbook sets, leakage superop vs a from-scratch
+> Lindbladian). Authoritative mutation 2271/2347 = **0.9676**.
+> **Cautionary tale — adversarial residual review caught TWO real gaps the builder mis-classified as equivalent
+> (12 mutants), both = reachability ASSERTED not PROBED:** (1) `canonical_single_qubit_axis(default=…)` is LIVE at
+> `value=None` (reachable via an explicit-None param on the unvalidated `MechanismSpec` — probed: returns the
+> default, and the `"rx"`→`"XXrxXX"` wrap-mutant raises) — the wrap default-arg mutants were killable, not
+> equivalent; (2) the M13 `channel_axis != operation_axis` raise (line 98) was tripped only via the explicit
+> `error_axis` route, so the 6 `channel_axis`-fallback mutants that suppress the raise survived — a raising guard
+> must be tripped through EVERY input route that reaches it. Both fixed (+12 kills, 0.9625→0.9676). 76 residual
+> survivors all verified genuine-equivalent (case normalized by callee `.upper()`/`.lower()`; contract `.get`
+> defaults on always-present M13-literal keys; measure-zero float boundaries; numpy dtype/order defaults;
+> shape-on-square; dead-init overwritten; default-equals-canonical's-own-default; channel_axis-absent routes that
+> resolve to operation_axis; `sqrt(0)` zero-jump at g=0).
 Confirmed CPU-pure: imports numpy only (0 `device=`, no torch tensor construction).
 | unit | contract | class | invariants | DA | existing test |
 |---|---|---|---|---|---|

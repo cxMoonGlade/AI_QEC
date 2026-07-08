@@ -74,7 +74,8 @@ torch-less module.
 | `stage_d_axis1_runners_targets` | frontend/{axis1_codespec_runner,axis1_g2_runner} | test_axis1_runners_units | 8 | 100/100 | 98.0% | committed (513d4de) |
 | `stage_d_coupled_cycle_targets` | teachers/coupled_cycle | test_coupled_cycle_units | 17 (+1 gpu oos) | 100/100 | 96.4% | committed (9639e75) |
 | `stage_d_source_process_targets` | source/process | test_source_process_units | 33 | 100/100 | 95.0% | committed (a3812ea) |
-| `stage_d_source_coupling_targets` | source/coupling | test_source_coupling_units | 20 | 100/100 | 98.2% | pending commit |
+| `stage_d_source_coupling_targets` | source/coupling | test_source_coupling_units | 20 | 100/100 | 98.2% | committed (3684974) |
+| `stage_d_carrier_channels_targets` | carrier/channels | test_carrier_channels_units | 32 | 100/100 | 96.8% | pending commit |
 
 **Milestone:** `quantum_bath` (40 units, 7 modules) + `certify` (42 units, 7 modules; `DMOracleAnchor.answer`
 is the sole GPU `out_of_scope`) are covered at L0 100/100 + L2 ≥0.90. The quantum_bath entropic/negativity-
@@ -86,9 +87,18 @@ coupled_cycle (0.964; the `CoupledCycleTeacher.emit` GPU MC-sampler is the sole 
 certify_anchors' `DMOracleAnchor.answer`). **D11 opens Tier-2** (low-coverage, large-surface CPU-pure):
 `source/process.py` (33 units incl. 5 `__post_init__`, kill 0.950; the FIRST Stage-D batch to carry
 audit-validated `defensive_assert` exemptions — the `from_fixed_marginal` `pi1>=1.0` guard is provably dead
-because `_validate_probability(allow_zero=False)` already rejects `>=1.0`; probed, not assumed). Next:
-the rest of Tier-2 (`source/coupling`, `carrier/channels`, frontend IR/schema/stim clusters, `mechanisms`,
-`numerics`) as D12–D20. Full work-list: `docs/twin_validation/l3_release_package_unit_inventory.md`.
+because `_validate_probability(allow_zero=False)` already rejects `>=1.0`; probed, not assumed).
+`source/coupling.py` (D12, 20 units, kill 0.982, 0 exemptions). `carrier/channels.py` (D13, 32 units, the
+quantum-channel library, kill 0.968) — this batch is the cautionary tale for **adversarial residual review**:
+authoritative-verify caught TWO real gaps the builder had mis-classified as "equivalent" (12 mutants), both the
+same failure mode — a default arg / branch-into-a-raising-guard whose reachability was ASSERTED, not PROBED.
+(1) `canonical_single_qubit_axis(default=…)` is live when `value=None`, reachable via an explicit-None param on
+an unvalidated `MechanismSpec`; (2) the M13 `channel_axis != operation_axis` raise was tested only via the
+explicit `error_axis` route, never the `channel_axis` fallback route. LESSON (now standing): before calling a
+default-arg / default-branch mutant "equivalent", PROBE a reachable input (explicit-None value / absent-key
+no-fallback); and a raising validation guard must be tripped through EVERY input route that reaches it (100%
+branch coverage of the guard ≠ every routing into it exercised). Next: frontend IR/schema/stim clusters,
+`mechanisms`, `numerics` as D14–D20. Full work-list: `docs/twin_validation/l3_release_package_unit_inventory.md`.
 
 ## Offloading heavy mutation (spark)
 Very expensive-dynamics batches can offload the full mutation to the `ssh spark` compute node
