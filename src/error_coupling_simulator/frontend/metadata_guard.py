@@ -54,21 +54,44 @@ _RESERVED_METADATA_EXACT_KEYS = (
 )
 
 # `_source_projection_evaluator_audit` is a DECLARED evaluator-only audit that rides in the TRANSIENT noisy
-# CircuitIR's metadata as an internal transport (noise_spec.py sets it; stim_source.py extracts it) and is
-# surfaced ONLY through a separate evaluator-only field (CompiledCircuit.source_projection_audit,
-# visibility='evaluator_only'). The learner-visible CompiledCircuit.metadata uses the clean pre-projection
-# circuit and never carries it (tests/test_simulator_source_projection asserts `source_timeline` is absent
-# from the learner manifest). The public-metadata guard therefore SKIPS this subtree — it is not
-# learner-visible truth. (Must match noise_spec.SOURCE_PROJECTION_AUDIT_METADATA_KEY /
-# analog_schedule._SOURCE_PROJECTION_AUDIT_METADATA_KEY.)
+# CircuitIR's metadata as an internal transport (noise_spec.py sets it AT THE METADATA ROOT; stim_source.py
+# extracts it from the root) and is surfaced ONLY through a separate evaluator-only field
+# (CompiledCircuit.source_projection_audit, visibility='evaluator_only'). The learner-visible
+# CompiledCircuit.metadata uses the clean pre-projection circuit and never carries it
+# (tests/test_simulator_source_projection asserts `source_timeline` is absent from the learner manifest).
+#
+# FAIL-CLOSED: by DEFAULT the guard REJECTS this key at EVERY position (top level and nested). It is skipped
+# ONLY when the caller explicitly opts in via `allow_evaluator_audit_transport=True`, which is passed by the
+# SINGLE internal construction that legitimately carries it: the transient noisy CircuitIR (gated by
+# `_allow_noise_steps`, see circuit_ir.py). Every learner-visible boundary — CompiledCircuit, OperationSpec,
+# CodeSpec, and any user-built CircuitIR — uses the default and therefore rejects the key. This closes a
+# guard-bypass: without it, wrapping ANY reserved Axis-2 key under a TOP-LEVEL audit key would smuggle it
+# verbatim into the stored learner-visible metadata (copied into CompiledCircuit.metadata and serialized
+# into the run manifest at simulator.py `circuit_metadata`, entirely outside the schedule compiler's reject
+# guard). It also aligns this data boundary with the schedule compiler, which rejects a top-level audit key
+# outright (analog_schedule._reject_projected_or_noisy_circuit) and recurses for nested Axis-2 truth
+# (analog_schedule._find_axis2_source_metadata_path). (Must match
+# noise_spec.SOURCE_PROJECTION_AUDIT_METADATA_KEY / analog_schedule._SOURCE_PROJECTION_AUDIT_METADATA_KEY.)
 _EVALUATOR_ONLY_AUDIT_KEYS = frozenset({"_source_projection_evaluator_audit"})
 
 
-def validate_public_metadata(metadata: dict[str, Any] | None, *, label: str = "metadata") -> dict:
-    """Return a copied public metadata dict after rejecting evaluator-truth keys."""
+def validate_public_metadata(
+    metadata: dict[str, Any] | None,
+    *,
+    label: str = "metadata",
+    allow_evaluator_audit_transport: bool = False,
+) -> dict:
+    """Return a copied public metadata dict after rejecting evaluator-truth keys.
+
+    ``allow_evaluator_audit_transport`` is an INTERNAL opt-in (default False = fail-closed):
+    only the transient noisy ``CircuitIR`` produced by the noise pipeline sets it True (gated
+    by ``_allow_noise_steps``) so its declared TOP-LEVEL ``_source_projection_evaluator_audit``
+    transport survives. Every learner-visible boundary uses the default and rejects that key at
+    every position. See ``_EVALUATOR_ONLY_AUDIT_KEYS`` above.
+    """
 
     copied = dict(metadata or {})
-    _validate_keys(copied, path=label)
+    _validate_keys(copied, path=label, allow_audit_transport=bool(allow_evaluator_audit_transport))
     return copied
 
 
@@ -229,13 +252,39 @@ def _parse_static_zz_edge_key(raw_edge: Any, *, label: str) -> tuple[int, int]:
     raise ValueError(f"{label} mapping key {raw_edge!r} must encode two qubits")
 
 
-def _validate_keys(value: Any, *, path: str) -> None:
+def _validate_keys(
+    value: Any, *, path: str, is_root: bool = True, allow_audit_transport: bool = False
+) -> None:
     if isinstance(value, dict):
         for raw_key, item in value.items():
             key = str(raw_key)
             if key in _EVALUATOR_ONLY_AUDIT_KEYS:
-                # Declared evaluator-only audit transport; never learner-visible (see constant above).
-                continue
+                if is_root and allow_audit_transport:
+                    # Declared evaluator-only audit transport on the INTERNAL transient noisy CircuitIR
+                    # (the only construction that opts in via _allow_noise_steps). Skip its subtree — it
+                    # legitimately carries source truth and is extracted into the evaluator-only
+                    # CompiledCircuit.source_projection_audit before any learner sees it (see constant).
+                    continue
+                if is_root:
+                    # Top level on a LEARNER-VISIBLE object (default, fail-closed). The audit key is an
+                    # internal source-projection transport, never learner metadata. Rejecting it closes
+                    # the guard-bypass where a top-level audit key smuggles any wrapped Axis-2 key into
+                    # the stored metadata / run manifest, outside the schedule compiler's reject guard.
+                    raise ValueError(
+                        "learner-visible metadata cannot carry the evaluator-only audit transport; "
+                        f"reserved key {path}.{key!s} is an internal source-projection transport "
+                        "(permitted only on the transient noisy CircuitIR), not learner-visible "
+                        "metadata. Use evaluator_sidecars with visibility='evaluator_only'."
+                    )
+                # A NESTED audit key is never the declared (top-level-only) transport. Reject it so a
+                # reserved Axis-2 key cannot hide under an audit subtree and survive into the STORED
+                # learner-visible metadata. Aligns this boundary's depth scope with the schedule
+                # compiler's analog_schedule._find_axis2_source_metadata_path full recursion.
+                raise ValueError(
+                    "learner-visible metadata cannot nest the evaluator-only audit transport; "
+                    f"reserved key {path}.{key!s} is permitted only at the top level of the transient "
+                    "noisy CircuitIR. Use evaluator_sidecars with visibility='evaluator_only'."
+                )
             normalized = key.lower().replace("-", "_").replace(" ", "_")
             if normalized in _RESERVED_METADATA_EXACT_KEYS:
                 raise ValueError(
@@ -250,7 +299,8 @@ def _validate_keys(value: Any, *, path: str) -> None:
                         f"reserved key {path}.{key!s} matches {reserved!r}. "
                         "Use evaluator_sidecars with visibility='evaluator_only'."
                     )
-            _validate_keys(item, path=f"{path}.{key}")
+            # Nested subtrees are never the declared transport: recurse fail-closed (audit rejected).
+            _validate_keys(item, path=f"{path}.{key}", is_root=False)
     elif isinstance(value, (list, tuple)):
         for i, item in enumerate(value):
-            _validate_keys(item, path=f"{path}[{i}]")
+            _validate_keys(item, path=f"{path}[{i}]", is_root=False)

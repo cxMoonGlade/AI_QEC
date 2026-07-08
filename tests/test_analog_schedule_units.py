@@ -33,13 +33,21 @@ TAMPERED route (a wrong non-empty signature drives the ``hmac.compare_digest`` a
 h3_h5_duration_policy()``) are each exercised BOTH ways with the explicit value PINNED as
 used. The ``_find_axis2_source_metadata_path`` arm of ``_reject_projected_or_noisy_circuit``
 is DEAD-DEFENSIVE (probed): ``CircuitIR.__post_init__``'s ``validate_public_metadata``
-already rejects every axis-2 source key, so no route reaches the extractor with such a
-circuit -- the test proves the earlier guard fires.
+rejects every axis-2 source key at the data boundary. The isolation-contract fix makes the
+``_source_projection_evaluator_audit`` transport FAIL-CLOSED -- the audit key is rejected at
+EVERY position on learner-visible objects (both the TOP-LEVEL guard-bypass and a key hidden
+under a NESTED audit subtree), skipped only under the internal ``_allow_noise_steps`` opt-in
+(see ``test_L0_validate_public_metadata_audit_transport_fail_closed`` and
+``test_L0_circuit_ir_toplevel_audit_transport_gated_by_allow_noise_steps``) -- so no route
+reaches the extractor with a constructed circuit. The compiler backstops
+(top-level audit + ``_find_axis2`` recursion) are pinned by a DIRECT probe on unvalidated
+stub metadata (``test_L0_find_axis2_source_metadata_path_direct``).
 """
 from __future__ import annotations
 
 import hashlib
 import json
+from types import SimpleNamespace
 
 import pytest
 from hypothesis import given, settings
@@ -66,6 +74,8 @@ from error_coupling_simulator.frontend.analog_schedule import (
     _operation_from_step,
     _step_manifest,
     _stim_circuit_to_circuit_ir,
+    _find_axis2_source_metadata_path,
+    _reject_projected_or_noisy_circuit,
 )
 from error_coupling_simulator.frontend.circuit_ir import (
     CircuitBuilder,
@@ -79,6 +89,7 @@ from error_coupling_simulator.frontend.circuit_ir import (
 from error_coupling_simulator.frontend.metadata_guard import (
     AXIS1_STATIC_ZZ_CALIBRATIONS_METADATA_KEY,
     AXIS1_STATIC_ZZ_COUPLINGS_METADATA_KEY,
+    validate_public_metadata,
 )
 from error_coupling_simulator.frontend.code_spec import (
     CodeQubit,
@@ -712,13 +723,20 @@ def test_L0_circuit_ir_reject_projected_or_noisy():
         lambda: circuit_ir_to_substep_schedule(CircuitIR(
             num_qubits=2, steps=(GateOp("H", (0,)),),
             metadata={"noise_projection": "stim_pauli"})))
-    # source-projection evaluator audit
+    # source-projection evaluator audit: the DATA BOUNDARY now rejects a TOP-LEVEL audit key at
+    # CONSTRUCTION (it is an internal transport, not learner metadata), so this input never
+    # reaches the compiler's own top-level audit backstop (analog_schedule.py:1065). That
+    # backstop is pinned directly on unvalidated metadata in
+    # test_L0_find_axis2_source_metadata_path_direct.
     _raises_exact(
         ValueError,
-        "Source projection evaluator audit cannot be used as Axis-1 schedule metadata",
-        lambda: circuit_ir_to_substep_schedule(CircuitIR(
+        "learner-visible metadata cannot carry the evaluator-only audit transport; reserved "
+        "key CircuitIR.metadata._source_projection_evaluator_audit is an internal source-"
+        "projection transport (permitted only on the transient noisy CircuitIR), not "
+        "learner-visible metadata. Use evaluator_sidecars with visibility='evaluator_only'.",
+        lambda: CircuitIR(
             num_qubits=2, steps=(GateOp("H", (0,)),),
-            metadata={"_source_projection_evaluator_audit": {"x": 1}})))
+            metadata={"_source_projection_evaluator_audit": {"x": 1}}))
 
 
 def test_L0_circuit_ir_axis2_source_key_is_rejected_by_earlier_guard():
@@ -1347,42 +1365,201 @@ def test_L0_compile_coordless_qubits_metadata():
 
 # =========================================================================== #
 # L2 REINFORCEMENT (round 2) -- the PUBLIC entry points circuit_ir_to_* and     #
-# stim_circuit_to_* accept ARBITRARY CircuitIR / stim.Circuit input, so the     #
-# guards I previously mis-classified "dead" ARE reachable. These pin them.      #
+# stim_circuit_to_* accept ARBITRARY CircuitIR / stim.Circuit input. The D18     #
+# adversarial-mutation review found that an Axis-2 source key NESTED under a      #
+# ``_source_projection_evaluator_audit`` subtree slipped the DATA BOUNDARY        #
+# (``validate_public_metadata`` skipped the audit subtree at EVERY depth) and     #
+# survived into the stored learner-visible metadata -- caught only later by the   #
+# schedule compiler, which a non-compiler consumer (simulator run manifest)       #
+# bypasses. A follow-up review found the TOP-LEVEL sibling: any top-level audit   #
+# key smuggled wrapped Axis-2 truth into the run manifest the same way. The       #
+# isolation-contract fix is FAIL-CLOSED: the audit key is rejected at EVERY       #
+# position on learner-visible objects and skipped only under the internal opt-in  #
+# (the transient noisy CircuitIR, gated by _allow_noise_steps). Both routes are   #
+# now closed at CONSTRUCTION (see                                                 #
+# ``test_L0_validate_public_metadata_audit_transport_fail_closed`` and            #
+# ``test_L0_circuit_ir_toplevel_audit_transport_gated_by_allow_noise_steps``), so #
+# the schedule compiler's audit/``_find_axis2`` guards are again defense-in-depth #
+# -- pinned by a DIRECT probe rather than through an (unreachable) compile path.  #
 # =========================================================================== #
 def test_L0_reject_nested_axis2_source_leak():
-    """ISOLATION-CONTRACT guard. ``validate_public_metadata`` SKIPS (does not recurse into)
-    a ``_source_projection_evaluator_audit`` subtree, and the reject guard's audit check is
-    TOP-LEVEL only -- so an axis-2 source key NESTED under an audit subtree slips both earlier
-    guards and must be caught by ``_find_axis2_source_metadata_path``'s full recursion. A
-    dashed key (``source-process``) exercises the ``.replace("-","_")`` normalization; a
-    list-nested spaced key (``source timeline``) exercises the list-recursion arm + the
-    ``.replace(" ","_")`` normalization. The EXACT found-path in the message is pinned so the
-    path-format / normalization / recursion mutants die."""
-    # dict-recursion arm, dashed axis-2 key.
+    """ISOLATION-CONTRACT guard, boundary-scope fix. A ``_source_projection_evaluator_audit``
+    key NESTED under another key is NOT the declared (top-level-only) transport, so the DATA
+    BOUNDARY (``CircuitIR.__post_init__`` -> ``validate_public_metadata``) now rejects it at
+    CONSTRUCTION -- BEFORE ``circuit_ir_to_substep_schedule`` runs -- closing the leak that
+    previously reached the stored metadata. Both a dict-nested and a list-nested audit
+    placement are rejected at the audit key itself; the EXACT boundary message + found path is
+    pinned so the depth-scope / path-format mutants die. (The compiler backstop for a
+    TOP-LEVEL audit key is pinned separately in ``test_L0_circuit_ir_reject_projected_or_noisy``.)"""
+    # dict-nested audit key -> rejected at the boundary during CircuitIR construction.
+    _raises_exact(
+        ValueError,
+        "learner-visible metadata cannot nest the evaluator-only audit transport; reserved "
+        "key CircuitIR.metadata.foo._source_projection_evaluator_audit is permitted only at "
+        "the top level of the transient noisy CircuitIR. Use evaluator_sidecars with "
+        "visibility='evaluator_only'.",
+        lambda: CircuitIR(
+            num_qubits=1, steps=(),
+            metadata={"foo": {"_source_projection_evaluator_audit":
+                              {"source-process": "LEAK"}}}))
+    # list-nested audit key (value is a list) -> also rejected at the audit key itself.
+    _raises_exact(
+        ValueError,
+        "learner-visible metadata cannot nest the evaluator-only audit transport; reserved "
+        "key CircuitIR.metadata.wrap._source_projection_evaluator_audit is permitted only at "
+        "the top level of the transient noisy CircuitIR. Use evaluator_sidecars with "
+        "visibility='evaluator_only'.",
+        lambda: CircuitIR(
+            num_qubits=1, steps=(),
+            metadata={"wrap": {"_source_projection_evaluator_audit":
+                               [{"ok": 1}, {"source timeline": [0.0, 1.0]}]}}))
+    # CLEAN control: a nested non-axis-2 subtree constructs + compiles with NO raise (kills
+    # the reject-inversion mutant that would over-reject a benign nested dict).
+    ok = circuit_ir_to_substep_schedule(CircuitIR(
+        num_qubits=1, steps=(), metadata={"schedule": {"name": "x"}}))
+    assert ok.source_kind == "circuit_ir"
+
+
+def test_L0_circuit_ir_toplevel_audit_transport_gated_by_allow_noise_steps():
+    """ISOLATION-CONTRACT, FAIL-CLOSED wiring. ``CircuitIR.__post_init__`` passes
+    ``allow_evaluator_audit_transport=bool(_allow_noise_steps)`` to the boundary guard, so ONLY
+    the internal transient noisy circuit may carry the top-level audit transport. A public/user
+    circuit (default ``_allow_noise_steps=False``) REJECTS a top-level audit key at construction
+    -- closing the guard-bypass that would otherwise smuggle wrapped Axis-2 truth into the run
+    manifest (simulator.py `circuit_metadata`). Pins the circuit_ir.py -> metadata_guard wiring."""
+    # public/user circuit: top-level audit REJECTED at construction.
+    _raises_exact(
+        ValueError,
+        "learner-visible metadata cannot carry the evaluator-only audit transport; reserved "
+        "key CircuitIR.metadata._source_projection_evaluator_audit is an internal source-"
+        "projection transport (permitted only on the transient noisy CircuitIR), not "
+        "learner-visible metadata. Use evaluator_sidecars with visibility='evaluator_only'.",
+        lambda: CircuitIR(num_qubits=1, steps=(GateOp("H", (0,)),),
+                          metadata={"_source_projection_evaluator_audit": {"source_process": "x"}}))
+    # internal transient noisy circuit (_allow_noise_steps=True): transport carried verbatim.
+    ir = CircuitIR(num_qubits=1, steps=(GateOp("H", (0,)),),
+                   metadata={"_source_projection_evaluator_audit": {"source_process": "x"}},
+                   _allow_noise_steps=True)
+    assert ir.metadata["_source_projection_evaluator_audit"] == {"source_process": "x"}
+    # ...but even the internal circuit must not NEST the transport (top-level only).
+    _raises_exact(
+        ValueError,
+        "learner-visible metadata cannot nest the evaluator-only audit transport; reserved "
+        "key CircuitIR.metadata.foo._source_projection_evaluator_audit is permitted only at "
+        "the top level of the transient noisy CircuitIR. Use evaluator_sidecars with "
+        "visibility='evaluator_only'.",
+        lambda: CircuitIR(num_qubits=1, steps=(GateOp("H", (0,)),),
+                          metadata={"foo": {"_source_projection_evaluator_audit":
+                                            {"source_process": "x"}}},
+                          _allow_noise_steps=True))
+
+
+def test_L0_validate_public_metadata_audit_transport_fail_closed():
+    """ISOLATION-CONTRACT data boundary (the fix). The declared
+    ``_source_projection_evaluator_audit`` transport is FAIL-CLOSED: ``validate_public_metadata``
+    rejects it at EVERY position by DEFAULT (learner-visible objects) and skips it ONLY at the
+    TOP LEVEL under the internal opt-in ``allow_evaluator_audit_transport=True`` (the transient
+    noisy CircuitIR, gated by _allow_noise_steps). This closes the top-level guard-bypass where a
+    top-level audit key would smuggle any wrapped Axis-2 key into the stored learner-visible
+    metadata (copied into CompiledCircuit.metadata, serialized into the run manifest, outside the
+    schedule compiler's reject guard). Exercises the boundary DIRECTLY, not via the compile path."""
+    # --- DEFAULT (learner-visible) rejects the audit key at EVERY position --------------------
+    # top level -> the internal-transport rejection.
+    _raises_exact(
+        ValueError,
+        "learner-visible metadata cannot carry the evaluator-only audit transport; reserved "
+        "key CircuitIR.metadata._source_projection_evaluator_audit is an internal source-"
+        "projection transport (permitted only on the transient noisy CircuitIR), not "
+        "learner-visible metadata. Use evaluator_sidecars with visibility='evaluator_only'.",
+        lambda: validate_public_metadata(
+            {"_source_projection_evaluator_audit": {"source_process": "LEAK"}},
+            label="CircuitIR.metadata"))
+    # nested (dict) shielding a reserved key -> the nested rejection.
+    _raises_exact(
+        ValueError,
+        "learner-visible metadata cannot nest the evaluator-only audit transport; reserved "
+        "key CircuitIR.metadata.foo._source_projection_evaluator_audit is permitted only at "
+        "the top level of the transient noisy CircuitIR. Use evaluator_sidecars with "
+        "visibility='evaluator_only'.",
+        lambda: validate_public_metadata(
+            {"foo": {"_source_projection_evaluator_audit": {"source_process": "LEAK"}}},
+            label="CircuitIR.metadata"))
+    # nested audit with a CLEAN subtree is still rejected (misplaced transport, not content).
+    _raises_exact(
+        ValueError,
+        "learner-visible metadata cannot nest the evaluator-only audit transport; reserved "
+        "key CircuitIR.metadata.wrap._source_projection_evaluator_audit is permitted only at "
+        "the top level of the transient noisy CircuitIR. Use evaluator_sidecars with "
+        "visibility='evaluator_only'.",
+        lambda: validate_public_metadata(
+            {"wrap": {"_source_projection_evaluator_audit": {"harmless": 1}}},
+            label="CircuitIR.metadata"))
+    # a bare top-level reserved key is still rejected (control; unchanged reserved-key path).
+    _raises_exact(
+        ValueError,
+        "learner-visible metadata cannot contain evaluator truth; reserved key "
+        "CircuitIR.metadata.source_process matches 'source_process'. "
+        "Use evaluator_sidecars with visibility='evaluator_only'.",
+        lambda: validate_public_metadata({"source_process": {"x": 1}},
+                                         label="CircuitIR.metadata"))
+    # --- INTERNAL opt-in: the TOP-LEVEL transport survives, even carrying source_* truth -------
+    payload = {"_source_projection_evaluator_audit":
+               {"source_process": "audit", "source_timeline": [0.0]}}
+    assert validate_public_metadata(
+        dict(payload), label="CircuitIR.metadata",
+        allow_evaluator_audit_transport=True) == payload
+    # ...but the opt-in is TOP-LEVEL ONLY: a nested audit key is rejected even under the flag.
+    _raises_exact(
+        ValueError,
+        "learner-visible metadata cannot nest the evaluator-only audit transport; reserved "
+        "key CircuitIR.metadata.foo._source_projection_evaluator_audit is permitted only at "
+        "the top level of the transient noisy CircuitIR. Use evaluator_sidecars with "
+        "visibility='evaluator_only'.",
+        lambda: validate_public_metadata(
+            {"foo": {"_source_projection_evaluator_audit": {"source_process": "LEAK"}}},
+            label="CircuitIR.metadata", allow_evaluator_audit_transport=True))
+
+
+def test_L0_find_axis2_source_metadata_path_direct():
+    """DEFENSE-IN-DEPTH PROBE. Since the boundary fix rejects a nested audit key at
+    construction, no constructed ``CircuitIR`` can carry an audit-shielded Axis-2 key into
+    ``_reject_projected_or_noisy_circuit``, so ``_find_axis2_source_metadata_path`` is
+    unreachable via the public compile path. It stays as a load-bearing backstop, so its
+    recursion arms are pinned here by DIRECT calls on raw dicts/lists: the dict-recursion arm
+    with a dashed key (``.replace("-","_")``), the list-recursion arm with a spaced key at a
+    specific index (``.replace(" ","_")``), the first-match short-circuit under a non-default
+    path label, and the None-return on clean trees. ``_reject_projected_or_noisy_circuit``
+    still raises when handed such a (hand-built, unvalidated) dict via ``circuit.metadata``."""
+    # dict-recursion arm, dashed axis-2 key, exact found-path.
+    assert _find_axis2_source_metadata_path(
+        {"foo": {"bar": {"source-process": "LEAK"}}}
+    ) == "CircuitIR.metadata.foo.bar.source-process"
+    # list-recursion arm, spaced axis-2 key at list index 1, exact found-path.
+    assert _find_axis2_source_metadata_path(
+        {"wrap": [{"ok": 1}, {"source timeline": [0.0, 1.0]}]}
+    ) == "CircuitIR.metadata.wrap[1].source timeline"
+    # first-match short-circuit + non-default path label.
+    assert _find_axis2_source_metadata_path({"source_binding": 1}, path="X") == "X.source_binding"
+    # CLEAN: nested non-axis-2 dict / list return None (no fabricated leak).
+    assert _find_axis2_source_metadata_path({"schedule": {"name": "x"}}) is None
+    assert _find_axis2_source_metadata_path([{"ok": 1}, {"deep": {"clean": 2}}]) is None
+    # Backstops still fire if unvalidated metadata ever reaches the compiler guard: hand stub
+    # circuits (bypassing CircuitIR.__post_init__ validation) with an audit key. (1) A TOP-LEVEL
+    # audit key trips the compiler's own audit check (analog_schedule.py:1065). (2) A NESTED
+    # audit subtree hiding an Axis-2 key misses the top-level check and is caught by the
+    # recursion; the EXACT compiler message + integrated found-path are pinned.
+    _raises_exact(
+        ValueError,
+        "Source projection evaluator audit cannot be used as Axis-1 schedule metadata",
+        lambda: _reject_projected_or_noisy_circuit(SimpleNamespace(
+            metadata={"_source_projection_evaluator_audit": {"x": 1}})))
     _raises_exact(
         ValueError,
         "Axis-1 SubstepSchedule metadata cannot contain Axis-2 source truth; found "
         "CircuitIR.metadata.foo._source_projection_evaluator_audit.source-process",
-        lambda: circuit_ir_to_substep_schedule(CircuitIR(
-            num_qubits=1, steps=(),
+        lambda: _reject_projected_or_noisy_circuit(SimpleNamespace(
             metadata={"foo": {"_source_projection_evaluator_audit":
                               {"source-process": "LEAK"}}})))
-    # list-recursion arm, spaced axis-2 key at list index 1.
-    _raises_exact(
-        ValueError,
-        "Axis-1 SubstepSchedule metadata cannot contain Axis-2 source truth; found "
-        "CircuitIR.metadata.wrap._source_projection_evaluator_audit[1].source timeline",
-        lambda: circuit_ir_to_substep_schedule(CircuitIR(
-            num_qubits=1, steps=(),
-            metadata={"wrap": {"_source_projection_evaluator_audit":
-                               [{"ok": 1}, {"source timeline": [0.0, 1.0]}]}})))
-    # CLEAN control: a nested non-axis-2 subtree returns None -> NO raise (kills the reject
-    # inversion + the `source_path = None` / `_find_axis2(None)` mutants that would suppress
-    # or fabricate a leak).
-    ok = circuit_ir_to_substep_schedule(CircuitIR(
-        num_qubits=1, steps=(), metadata={"schedule": {"name": "x"}}))
-    assert ok.source_kind == "circuit_ir"
 
 
 def _codespec_schedule(cs_meta, *, num_qubits=6):

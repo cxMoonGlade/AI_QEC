@@ -143,7 +143,14 @@ class CircuitIR:
         object.__setattr__(
             self,
             "metadata",
-            validate_public_metadata(self.metadata, label="CircuitIR.metadata"),
+            validate_public_metadata(
+                self.metadata,
+                label="CircuitIR.metadata",
+                # Only the INTERNAL transient noisy CircuitIR (the noise pipeline sets
+                # _allow_noise_steps=True) may carry the top-level _source_projection_evaluator_audit
+                # transport; a public/user circuit (default False) rejects it. See metadata_guard.
+                allow_evaluator_audit_transport=bool(_allow_noise_steps),
+            ),
         )
         if self.num_qubits <= 0:
             raise ValueError("num_qubits must be positive")
