@@ -491,24 +491,18 @@ class _Stab:
         self.paulis = paulis
 
 
-class _Frame:
-    def __init__(self, pre_measure=()):
-        self.pre_measure = pre_measure
-
-
 class _Sched:
-    """A minimal duck-typed schedule: one ZZ stabilizer on two data qubits, logical Z0, no X echo."""
+    """A minimal duck-typed schedule: one ZZ stabilizer on two data qubits, logical Z0."""
 
-    def __init__(self, *, x_echo=False):
+    def __init__(self):
         self.n_data = 2
         self.stabilizers = [_Stab({0: "Z", 1: "Z"})]
         self.logical = {0: "Z"}
-        self.per_round_data_frame = (_Frame((("X", (0, 1)),)),) if x_echo else ()
 
 
 class _StimTeacher:
-    def __init__(self, *, x_echo=False):
-        self.sched = _Sched(x_echo=x_echo)
+    def __init__(self):
+        self.sched = _Sched()
         self.truth = {}
 
 
@@ -599,18 +593,19 @@ def test_stim_answer_seam_xor_killer():
                          label="stim seam-XOR detector")
 
 
-def test_stim_answer_corrupt_and_echo_paths():
-    # exercise answer's corrupt ternary + the x_echo branch of the slice builder (private helper),
-    # asserting the emitted surface has the right shape/band (not an analytic pin).
+def test_stim_answer_corrupt_and_marg_and_m1_paths():
+    # exercise answer's corrupt ternary + the DETECTOR_MARG surface + the slice builder's m==1
+    # logical-|1> prep branch, asserting the emitted shape/band (not an analytic pin). The transversal
+    # X/Y DD echoes are intentionally absent from the Clifford slice (frame-invariant; see the anchor
+    # module docstring) -> there is no echo branch to cover here.
     reg = Regime(R=2, n_stab=1, n_active=2)
     av_corrupt = StimCliffordAnchor(p_x=0.1).answer(_StimTeacher(), Statistic.SYNDROME_DIST, reg,
                                                     N=4000, corrupt={"stab": 0})
     assert av_corrupt.provenance["corrupt_stab"] == 0
-    av_echo = StimCliffordAnchor(p_x=0.1).answer(_StimTeacher(x_echo=True), Statistic.DETECTOR_MARG,
-                                                 reg, N=4000)
-    assert np.asarray(av_echo.value).shape == (reg.R * reg.n_stab + 1,)  # per-detector + flip rate
-    # directly cover the private slice builder's m==1 prep branch + the r<R-1 echo branch.
-    det, obs = _stim_slice_records(_Sched(x_echo=True), 0.1, reg, m=1, N=2000, seed=1, corrupt_stab=None)
+    av_marg = StimCliffordAnchor(p_x=0.1).answer(_StimTeacher(), Statistic.DETECTOR_MARG, reg, N=4000)
+    assert np.asarray(av_marg.value).shape == (reg.R * reg.n_stab + 1,)  # per-detector + flip rate
+    # directly cover the private slice builder's m==1 logical-|1> prep branch.
+    det, obs = _stim_slice_records(_Sched(), 0.1, reg, m=1, N=2000, seed=1, corrupt_stab=None)
     assert det.shape == (2000, reg.R * 1) and obs.shape == (2000,)
 
 
