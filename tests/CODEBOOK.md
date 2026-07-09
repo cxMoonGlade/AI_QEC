@@ -94,7 +94,8 @@ torch-less module.
 | `stage_d_metadata_guard_targets` | frontend/metadata_guard | test_metadata_guard_units | 4 | 100/100 | 99.0% | committed (4179435) |
 | `stage_d_axis1_context_targets` | frontend/axis1_context | test_axis1_context_units | 10 | 100/100 | 99.2% | committed (967e5a0) |
 | `stage_d_stim_io_targets` | frontend/stim_io | test_stim_io_units | 7 | 100/100 | 93.8% | committed (e754d3c) |
-| `stage_d_operation_targets` | frontend/operation | test_operation_units | 9 | 100/100 | 87.0% | pending commit — bar 0.86 (20/20 killable killed; 3 canonicalization-equivalent survivors) |
+| `stage_d_operation_targets` | frontend/operation | test_operation_units | 9 | 100/100 | 87.0% | committed (0d81d67) — bar 0.86 (20/20 killable killed; 3 canonicalization-equivalent survivors) |
+| `stage_d_schedule_targets` | frontend/schedule | test_schedule_units | 7 | 100/100 | 97.0% | pending commit — 2 dead-branch coverage exemptions (forward-compat singleton-name guards) |
 
 **Milestone:** `quantum_bath` (40 units, 7 modules) + `certify` (42 units, 7 modules; `DMOracleAnchor.answer`
 is the sole GPU `out_of_scope`) are covered at L0 100/100 + L2 ≥0.90. The quantum_bath entropic/negativity-

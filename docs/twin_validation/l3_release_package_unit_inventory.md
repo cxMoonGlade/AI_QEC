@@ -411,10 +411,20 @@ Confirmed CPU-pure: imports numpy only (0 `device=`, no torch tensor constructio
 |---|---|---|---|---|---|
 | `RecordSchema` (+ from_stim/from_circuit_ir + accessors),`require_frontend_representability`,`require_stim_circuit`,`require_matching_schemas`,`validate_evaluator_sidecars`,`b8_manifest_entry` | schema + guards | C | count consistency; packed-bytes = ⌈bits/8⌉; sidecar visibility=evaluator_only | VAL (type/membership/mismatch) | none direct |
 
-### `frontend/schedule.py` — cov 32% · 6 units (6 C)
-| unit | contract | class | invariants | DA | existing test |
-|---|---|---|---|---|---|
-| `ScheduleTemplate` (`__post_init__` + accessors),`repeated_memory_schedule`,`repeated_memory_schedule_manifest`,`canonical_schedule_name`,`resolve_schedule_template` | schedule template + resolution | C | manifest match; canonical name | VAL (canonical raise) | none direct |
+### `frontend/schedule.py` — **DONE (D26)** · L0 100/100 (7 units) · L2 kill 0.970 — schedule template + resolution
+> Stage-D `stage_d_schedule_targets` — `tests/test_schedule_units.py`. Authoritative gate PASS (7/7 stmt+branch
+> 100%, reconcile 7 = 7 registered + 0 out_of_scope — torch-less module; 2 dead-branch COVERAGE exemptions,
+> exemption_errors=0). Authoritative mutation 32/33 = **0.9697**, killable-kill-rate 32/32 = 100% — no bar override.
+> The sole survivor (`resolve_schedule_template` mutmut_6 = `raise AssertionError(None)` on the dead fall-through)
+> is a GENUINE EQUIVALENT: `canonical_schedule_name` (line 92) returns only `"repeated_memory_v1"` or raises, so
+> `resolve_schedule_template`'s line-103 `==` is always True → line 105 is unreachable and its message mutant is
+> behaviorally invisible (verified vs the `mutants/` tree). The two exemptions ((i) `__post_init__` line-46
+> False-arc, (ii) `resolve_schedule_template` lines 103/105) are the SAME structural deadness — forward-compat
+> guards for a hypothetical second template, dead only because the singleton canonical-name check precedes them;
+> their COMPARISON mutants stay killable (they divert the always-True path), so these are coverage-only, not
+> mutation gaps. NOTE: `canonical_schedule_name` does `.strip()` WITHOUT `.lower()` (unlike D24's
+> `canonical_operation_name`), so uppercase case-swaps of the name literal are killable — no canonicalization
+> ceiling here.
 
 ### `frontend/stim_io.py` — **DONE (D23)** · L0 100/100 (7 units) · L2 kill 0.938 — Stim adapters (CPU)
 > Stage-D `stage_d_stim_io_targets` — `tests/test_stim_io_units.py`. Authoritative gate PASS (7/7 stmt+branch 100%,
