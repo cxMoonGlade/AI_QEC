@@ -252,15 +252,18 @@ Confirmed CPU-pure: imports numpy only (0 `device=`, no torch tensor constructio
 | `h3_h5_duration_policy`,`compile_code_spec_to_substep_schedule`,`circuit_ir_to_substep_schedule`,`stim_circuit_to_substep_schedule` | compilers → SubstepSchedule (+ HMAC seal) | C | metadata aggregation; seal injection | VAL | test_simulator_axis1_schedule/codespec |
 | `has_valid_compiler_schedule_seal`,`require_compiler_schedule_seal` | HMAC seal check / enforce | C | seal round-trip | yes (require_ raises) | test_simulator_axis1_schedule |
 
-### `frontend/artifacts.py` — cov 31% · 7 units (7 C) — artifact writers
-| unit | contract | class | invariants | DA | existing test |
-|---|---|---|---|---|---|
-| `ArtifactPaths`,`artifact_paths` | structured artifact paths | C | path round-trip | no | none direct |
-| `write_b8`,`write_b8_optional` | pack bool→Stim .b8 | C | **byte round-trip** (b8 pack/unpack) | VAL (shape/ndim) | none direct |
-| `write_json` | JSON w/ sorted keys | C | JSON parse round-trip; sort-determinism | no | none direct |
-| `clear_known_artifacts` | remove artifact files | C | idempotence (missing_ok) | no | none direct |
-| `file_sha256` | sha256 of file or None | C | hash stability | no | none direct |
-| `record_summary` | JSON-safe det/obs summary | C | marginal normalization | VAL (dtype/ndim) | none direct |
+### `frontend/artifacts.py` — **DONE (D27)** · L0 100/100 (7 units) · L2 kill 0.981 — on-disk artifact writers + summaries
+> Stage-D `stage_d_artifacts_targets` — `tests/test_artifacts_units.py`. Authoritative gate PASS (7/7 stmt+branch
+> 100%, reconcile 7 = 7 registered + 0 out_of_scope — torch-less; `ArtifactPaths` frozen dataclass has no methods so
+> contributes no units; `_jsonable` private, pinned through `write_json`'s six type arms; 0 exemptions). Authoritative
+> mutation 205/209 = **0.9809**, killable-kill-rate 100% — no bar override. All 4 residuals live in `file_sha256`'s
+> chunked-hashing loop and are proven mechanical equivalents (verified vs the `mutants/` tree): mutmut_14 `read(None)`
+> (whole-file read → identical SHA digest), mutmut_16/17 chunk-size variants (`1025*1024` / `1024*1025` → SHA-256 is
+> chunk-size-invariant), mutmut_10 sentinel `b""`→`None` (a GENUINE infinite loop — `f.read()` never returns `None`
+> — non-termination, unkillable without a timeout test we do not write). The sibling killable sentinel mutant
+> (`b""`→`b"XXXX"`) WAS killed by hashing a file whose content is exactly `b"XXXX"` (iter stops before the first
+> update → empty-vs-real digest). File I/O tested via `tmp_path`; `record_summary` dtype/copy mutants killed by
+> bool-clamped marginals on non-0/1 integer records.
 
 ### `frontend/circuit_ir.py` — **DONE (D15)** · L0 100/100 (23 units) · L2 kill 0.956 — keyed circuit IR
 > Stage-D `stage_d_circuit_ir_targets` — `tests/test_circuit_ir_units.py`. Authoritative gate PASS (23/23
