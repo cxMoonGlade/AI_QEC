@@ -365,10 +365,18 @@ Confirmed CPU-pure: imports numpy only (0 `device=`, no torch tensor constructio
 | `StimPauliNoiseSpec`,`StimNoiseRule`,`TargetedStimNoiseSpec`,`SourceStimPauliRule`,`SourceStimPauliProjectionSpec` (`__post_init__` + methods),`NoiseBuilder.*`,`apply_stim_pauli_noise` | Stim/Pauli noise projection specs + builder | C | prob∈[0,1]; record-schema preserved; rule position/match legality | VAL (extensive) | test_simulator_noise_module, test_pauli_noise_* |
 *(Correction to intake: `SourceStimPauliProjectionSpec` is CPU-pure — the module imports NO torch/cuda; payload access is numpy on evaluator-side arrays.)*
 
-### `frontend/operation.py` — cov 39% · 7 units (7 C)
-| unit | contract | class | invariants | DA | existing test |
-|---|---|---|---|---|---|
-| `OperationSpec`,`OperationSet` (`__post_init__`),`canonical_operation_name`,`default_memory_operations`,`as_operation_set` | named op set + canonicalization | C | name∈ALLOWED; uniqueness | VAL | none direct |
+### `frontend/operation.py` — **DONE (D24)** · L0 100/100 (9 units) · L2 kill 0.870 (bar 0.86) — named-op vocabulary + canonicalization
+> Stage-D `stage_d_operation_targets` — `tests/test_operation_units.py`. Authoritative gate PASS (9/9 stmt+branch
+> 100%, reconcile 9 = 9 registered + 0 out_of_scope — torch-less module, every unit CPU-pure incl. both
+> `__post_init__` dunders; 0 exemptions). Authoritative mutation 20/23 = 0.8696, **bar overridden to 0.86** in the
+> registry `harness.mutation_gate` block: **20/20 KILLABLE mutants killed (100%)**. The 3 survivors are mutmut 3.6.0
+> UPPERCASE case-swaps of `default_memory_operations`' own canonical INPUT literals (`'prep0'->'PREP0'` etc.),
+> byte-identical after `canonical_operation_name`'s `.strip().lower()` (verified vs the `mutants/` tree) — GENUINE
+> EQUIVALENTS of a LEGITIMATE public canonicalization contract (case-insensitive names + `_ALIASES` + `require()`
+> canonicalizes its args), documented not de-duped (cf. D14; unlike D19's incidental `.upper()`). This also
+> corrected a false builder claim in the registry `_comment` ("mutmut wraps as `XX<s>XX` not a case-swap … no
+> masked fraction") — mutmut 3.6.0 emits BOTH operators. **Standing criterion recorded:** incidental-redundant
+> normalization → de-dup (D19); legitimate canonicalization contract → bar-override + document (D24).
 
 ### `frontend/record_layout.py` — **DONE (D16)** · L0 100/100 (14 units) · L2 kill 1.000 — record-layout schema
 > Stage-D `stage_d_record_layout_targets` — `tests/test_record_layout_units.py`. Authoritative gate PASS (14/14
