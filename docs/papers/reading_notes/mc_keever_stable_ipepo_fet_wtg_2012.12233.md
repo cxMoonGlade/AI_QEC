@@ -8,6 +8,18 @@
 > Full Environment Truncation and Weighted Trace Gauge for 2D open quantum lattice mixed states.
 > The companion Evenbly (2018) paper [68] introduced FET/WTG for closed-system iPEPS; this paper adapts them
 > to mixed states (iPEPO / Lindblad dynamics).
+>
+> **Second full-text verification pass (2026-07-09, pre-engine-build):** re-read the original end-to-end.
+> All load-bearing claims confirmed (Eq. 9 fidelity; Appendix B Υ_jl construction + Rayleigh quotient;
+> Appendix C R_m = P·B⁻¹ / generalized-eigenvalue solve; Eq. 13 ε_t < 1e-6 steady-state criterion;
+> Eq. E1 S_cycle on (σ⊗σ)Υ with the ⪆1e-3 Evenbly threshold; ε_D' = 1e-8, CTMRG/FET tol 1e-10;
+> Table I numbers; ~10× SU gap; O(χ³_hs D⁶) CTMRG SVD as the leading cost; Foss-Feig exact referee via
+> QuantumOptics.jl). Four implementation-relevant details ADDED in this revision: (i) the density matrix
+> is vectorized COLUMN-BY-COLUMN (the superoperator convention behind Eqs. 5–6); (ii) the mixed-state
+> fidelity Eq. 9 is the Wang–Yu–Yi ALTERNATIVE fidelity [their ref 78, Phys. Lett. A 373, 58 (2008)] —
+> NOT the Uhlmann fidelity; (iii) the dissipative-Ising benchmark's jump operator is
+> L_j = √γ·½(σ^y_j − i·σ^z_j) (needed to reproduce their exact-solvable line as an engine cross-check);
+> (iv) venue: published as PRX 11, 021035 (2021) (this note reads the v1 preprint text).
 
 ## Metadata [paper]
 

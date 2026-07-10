@@ -9,6 +9,16 @@
 > **failure modes of the SU-iPEPO algorithm** — the exact method we are considering for 2D open-system
 > simulation. The findings are sobering: near dissipative critical points, increasing bond dimension
 > can make the algorithm **less stable**, not more accurate.
+>
+> **Second full-text verification pass (2026-07-09, pre-engine-build):** re-read the original
+> end-to-end. All load-bearing claims of this note confirmed verbatim (ε_Λ Eq. 3; D=3,4-pass/D=5,6-fail
+> at J_y=1.5; D=12-pass/D=14,15-fail at J_y=1.2; κ≥5.2; J_y threshold 1.33/1.32; CTM-independence;
+> "spurious steady states" p.8; >128 GB CTM at D=15; github.com/The-iPEPO-Project/iPEPO). Three
+> details ADDED in this revision (previously missing): (i) the steady-state STOP RULE is per-bond —
+> ε_Λ < ε required for EACH Λ ∈ {Λ[U,D,R,L]} (App. A.2, after Eq. 3); Fig. 2 plots the Λ[U] one;
+> (ii) they GRADUALLY DECREASE δt during a run to shrink Trotter error at fixed cost (App. A.2);
+> (iii) venue: later published as SciPost Phys. Core 4, 005 (2021) (this note reads the v2 submission
+> text).
 
 ## Metadata [paper]
 - **Authors / affiliation:** D. Kilda (Caltech, corresponding), A. Biella (Paris-Saclay / College de France),
@@ -65,7 +75,11 @@ epsilon_Lambda = |Lambda_n - Lambda_{n-1}|_max / (delta_t * |Lambda_n|_max)
 ```
 where Lambda_n are the diagonal bond matrices at timestep n. For a steady state, epsilon_Lambda
 should approach zero (or machine precision). **Noisy oscillations that persist indefinitely** signal
-failure to converge.
+failure to converge. **Precise stop rule (App. A.2, added 2026-07-09):** a steady state is declared
+only when epsilon_Lambda < epsilon holds for EACH of the four bond matrices Lambda in
+{Lambda[U], Lambda[D], Lambda[R], Lambda[L]} separately — a per-bond spectrum-stationarity
+criterion (Fig. 2 shows the Lambda[U] trace). They also gradually DECREASE the timestep delta_t
+during a run to reduce Trotter error while keeping cost low.
 
 ### The model (dissipative XYZ, Eqs. 1-2)
 

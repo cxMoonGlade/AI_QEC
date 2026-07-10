@@ -3,6 +3,13 @@
 > **Provenance (2026-07-09): FULL-TEXT read (精读).** PDF (arXiv:2107.06635v1, 14 Jul 2021) →
 > `outputs/papers/pepo_survey/2107.06635.txt` (PyMuPDF, 11 pages / 1109 lines). All §/Eq/Fig/Table refs from that text.
 >
+> **Second full-text verification pass (2026-07-09, pre-engine-build):** re-read the original end-to-end
+> against this note. All load-bearing claims confirmed; fixes applied in this revision: metric-space
+> dimension corrected to (Dr)² (was D²×D²), the "D ceiling ≈12–14" reclassified as an [ours] inference
+> (not paper content), the tilted-iteration optimization detail (Fig. 5 caption) and the FTU zero-mode
+> warm-up (SVDU stage to β=0.1, Ref. 62) added, NN-environment wording fixed (six neighboring TENSORS,
+> exactly contracted — the six-λ-bond environment is SU's, Eq. 1).
+>
 > **ID/title verified.** arXiv:2107.06635 IS the paper: Dziarmaga, PRB 104, 094411 (2021). Title matches "Time evolution of an infinite projected entangled pair state: a neighborhood tensor update." The method is explicitly named **neighborhood tensor update (NTU)**.
 
 ## Metadata [paper]
@@ -21,13 +28,15 @@ The paper introduces the **neighborhood tensor update (NTU)**, an intermediate t
 
 **SU (Simple Update, described as context):** Inserts diagonal bond tensors `lambda_i` on all bonds (the "nearest tensor environment"), giving a metric `g_SU = 1_d otimes 1_d otimes prod_j lambda_j` (Eq. 1) where j runs over the six bonds emanating from the NN pair. The weights give different directions different importance. Cost O(D^5). **Caveat**: requires inversion of `lambda_i -> lambda_i^{-1}` after every gate, which can be problematic.
 
-**NTU — the core method (SSII, Fig. 4):** The environment is the **nearest-neighbor tensor cluster**: the two central sites plus their six adjacent bond tensors (four vertical/horizontal neighbors), shown in Fig. 3(b) and Fig. 4. This cluster is contracted exactly through these steps (Fig. 4a-d):
+**NTU — the core method (SSII, Fig. 4):** The environment is the **nearest-neighbor tensor cluster**: the two central sites plus the SIX neighboring iPEPS TENSORS surrounding the pair (3 external neighbors per site on the square lattice), shown in Fig. 3(b) and Fig. 4. (Contrast SU, whose environment is the six diagonal λ BOND tensors, Eq. 1 — NTU contracts the actual neighbor tensors, exactly.) This cluster is contracted exactly through these steps (Fig. 4a-d):
 1. Define **double iPEPS tensors** by contracting pairs of corresponding external bra and ket indices.
 2. Define **edge double tensors** by contracting pairs of corresponding external bra/ket indices of boundary tensors.
 3. Define **double isometries**.
 4. Assemble the metric g from these components (Fig. 4d,e).
 
-The contraction yields a metric `g` of size `(D^2 x D^2)` that is:
+The contraction yields a metric `g` acting on the **(Dr)²-dimensional product space** of the enlarged
+bond pair (paper ln 188: "all directions in the (Dr)²-dimensional space"; i.e. g is (Dr)²×(Dr)², NOT
+D²×D² — corrected 2026-07-09 second pass) that is:
 - **Hermitian** by construction (bra/ket symmetry)
 - **Non-negative** (positive semi-definite) down to machine precision
 - **Exact** — no CTMRG truncation/approximation
@@ -41,7 +50,7 @@ Cost: O(D^8) for the optimal contraction sequence. But this consists solely of m
 M_A = pinv(g_A) J_A   (Eq. 4, for fixed M_B)
 M_B = pinv(g_B) J_B   (for fixed M_A)
 ```
-Iterated to convergence `-> M_A -> M_B ->` (Eq. 5). The pseudo-inverse tolerance is dynamically adjusted. Thanks to the exactness of g in NTU, the optimal tolerance is close to machine precision. After convergence, a final SVD `M_A M_B^T = U_A S U_B^T` and balanced absorption `M_A' = U_A S^{1/2}`, `M_B'^T = S^{1/2} U_B^T` ensures symmetric truncation.
+Iterated to convergence `-> M_A -> M_B ->` (Eq. 5). The pseudo-inverse tolerance is dynamically adjusted. Thanks to the exactness of g in NTU, the optimal tolerance is close to machine precision. After convergence, a final SVD `M_A M_B^T = U_A S U_B^T` and balanced absorption `M_A' = U_A S^{1/2}`, `M_B'^T = S^{1/2} U_B^T` ensures symmetric truncation. **Implementation detail (Fig. 5 caption, added 2026-07-09 second pass): the ITERATION itself is NOT symmetric — before optimizing w.r.t. M_A the matrices are "tilted" as `M_A = U_A S`, `M_B^T = U_B^T` (all singular weight on the side being optimized), and vice versa for M_B [per Evenbly, Ref. 86]; only the FINAL absorption is balanced S^{1/2}/S^{1/2}.**
 
 **FTU (Full Tensor Update, SSII, Fig. 3a):** Same formalism as NTU but the environment is the **infinite** iPEPS (via approximate CTMRG). Cost O(D^{10}-D^{12}) with approximate, non-Hermitian metric. Serves mainly as a benchmark in this paper. Distinct from standard FU in using the same reduced-tensor decomposition (isometries Q_{A,B} + reduced matrices R_{A,B}) as NTU/SVDU.
 
@@ -98,7 +107,7 @@ SVDU < SU < NTU < FTU ≈ FU
 - **Critical temperature extraction (Tables I-II, Fig. 12):** NTU yields Tc estimates consistent with QMC and FU, albeit with wider error bars and overestimated exponent `1/(beta delta)`.
 
 ## Limitations [paper]
-- **NTU cost O(D^8) is still formal-scaling heavy** — though parallelizable, D > ~14 becomes prohibitive. Dziarmaga notes (ln 891-893) that NTU's slower convergence with D vs FTU is partially offset by its ability to reach higher D due to better stability, but the absolute D ceiling is around 12-14.
+- **NTU cost O(D^8) is still formal-scaling heavy.** [ours — corrected 2026-07-09: the paper states NO absolute D ceiling; it DEMONSTRATES D=12 (real-time) and D=9 (thermal) and argues (ln 892-896) that NTU's stability/efficiency lets it reach HIGHER D than FU precisely to compensate its slower per-D convergence. The "ceiling ≈12-14" of the earlier note revision was an inference from the demonstrated range + the SU-D=14-impractical remark (ln 629-631, which is about SU, from Ref. 55 data), not paper content.]
 - **Sudden-crash risk for FTU** (real-time evolution, ln 493-494) is not present in NTU.
 - **SVDU shows non-monotonic convergence** (accuracy degrading for D > 6, Fig. 10a) — a caution for anyone using Frobenius-norm truncation without environment weighting.
 - **Trotter error O(dt^2)** from the second-order Suzuki-Trotter decomposition is standard and not addressed.
@@ -213,7 +222,7 @@ NTU's sweet spot: **moderate correlation lengths (xi <= 20) at moderate bond dim
 - `r` = rank of the Trotter gate (the dimension of the index connecting G_A and G_B in Fig. 2a)
 - `eta` = expansion factor after gate application: `D -> D * r` (pure state) or `D -> D * eta` (tePEPO, eta = FSA bond dim)
 - `chi` = environmental bond dimension for CTMRG (used in expectation value calculation, set to `4D` in their simulations)
-- `g` = metric tensor from NN-cluster contraction (size D^2 x D^2)
+- `g` = metric tensor from NN-cluster contraction (a metric on the (Dr)²-dim enlarged-bond product space)
 - `g_A`, `J_A` = reduced metric and source term for M_A optimization (Fig. 5b,c)
 - `epsilon` = truncation error (Eq. 2): `(M_A M_B^T - R_A R_B^T)^\dagger g (M_A M_B^T - R_A R_B^T)`
 - `R_A, R_B` = reduced matrices after QR decomposition (Fig. 2b)

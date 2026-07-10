@@ -9,6 +9,17 @@
 > projected entangled pair state: a gradient tensor update in the tangent space" by
 > Jacek Dziarmaga (Jagiellonian University). Published PRB 106, 014304 (2022). Method
 > is named "gradient tensor update (GTU)" (Sec. II, ln 87). No mismatch.
+>
+> **Second full-text verification pass (2026-07-09, pre-engine-build):** re-read the original
+> end-to-end. All load-bearing claims confirmed (Eqs. 1–9; SVDU→NTU→GTU Eq. 8; reduced-tensor
+> metric D²d×D²d; +20–30% past NTU with NTU itself dropping the error "several times" from SVDU;
+> KZ τ_Q = 12.8 at D=3, 3–4× past plain NTU, exponent 0.37 vs exact 0.386; hx=2hc: GTU D=6 >2×
+> the FU-D=8 evolution time; hx=hc: "somewhat longer"). Three details ADDED: (i) the GTU stage's
+> registered truncation-error STOPPING thresholds are 1−O > 2e-6 (hx=2hc) and 5e-6 (hx=hc)
+> (Fig. 7 caption) — a concrete overlap-based stopping-rule precedent; (ii) the NTU initialization
+> inside GTU uses clusters LARGER than the original NTU paper's (Fig. 2 caption: "the NTU clusters
+> in the bottom are larger than in Ref. 74"); (iii) the "GTU D=8 goes even further" row in the
+> findings table is a FIGURE-read (Fig. 4) — the text itself demonstrates only the D=6 claims.
 
 ## Metadata [paper]
 - **Author / affiliation.** Jacek Dziarmaga -- Institute of Theoretical Physics, Jagiellonian University, Krakow, Poland (`dziarmaga@th.if.uj.edu.pl`).

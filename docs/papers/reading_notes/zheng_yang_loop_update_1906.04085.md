@@ -7,6 +7,13 @@
 > **ID/title verified.** The user brief named the target "Loop Update (LU) intermediate between SU and FU."
 > arXiv:1906.04085 IS that paper: the title above, the method is "loop update" (§I, ln 84-86), and it
 > treats cyclic optimal truncation on a 4-site plaquette loop for iPEPS imaginary-time evolution.
+>
+> **Second full-text verification pass (2026-07-09, pre-engine-build):** re-read the original end-to-end.
+> All load-bearing claims confirmed (the four truncation options with costs O(D⁶χ⁶)/O(D⁷χ⁷d²)/O(D⁵χ³d)/
+> FET; FLU environment O(D⁶χ³) with χ>D²; Heisenberg E_LU=−0.334377 vs E_SU=−0.334247 at D=6;
+> S_cycle 0.0124→0.0105 / 0.0256→0.0235; the FLU hc/β table). **Explicitly confirmed: the paper contains
+> NO ξ-validity-range number anywhere** — the "ξ~5" figure circulating in the repo's truncation-ladder
+> tables is a repo-internal heuristic, not from this paper (matches the prereg's (c)-flag).
 
 ## Metadata [paper]
 - **Authors / affiliation:** Yi Zheng and Shuo Yang (corresponding `shuoyang@tsinghua.edu.cn`), State Key Laboratory of Low-Dimensional Quantum Physics and Department of Physics, Tsinghua University, Beijing, China.

@@ -8,6 +8,22 @@
 > provide a blueprint for sampling from PEPO density matrices on a 2D lattice? Specifically,
 > can their generalized tensor network contraction / sampling approach be adapted to our
 > PEPO density matrix (mixed-state) sampling for QEC syndrome extraction?
+>
+> **Second full-text verification pass (2026-07-09, pre-engine-build):** re-read the original
+> end-to-end. All load-bearing claims confirmed (ε_i Eq. 1 / f Eq. 2; BP error Eq. 3–4 with
+> O(Nχ⁶) full / O(Nχ^{z+1}k) Krylov cost; sampling costs O(Nχ⁵R³)+O(nNχ⁴R³) at z=4; reverse-pass
+> norm cache; p/q = unbiased norm estimator Eq. 5; KLD Eq. 6; importance sampling Eq. 9; LUCJ
+> f=0.996/0.999 @χ=1000, R=1 exact for 4Fe-4S, R=5/KLD<1e-3 for N2; Willow R~75 @L=15/χ=20;
+> >35× GPU). **PRECISION CORRECTION:** this note previously said "All calculations use 32-bit
+> floating point precision" globally — the fp32 statement is the **Fig. 5 WALLTIME-BENCHMARK
+> caption only** (the >35× GPU timing numbers); the wavefunction memory quotes (96 MB @χ=50
+> heavy-hex; 8 GB @χ~300; 13 GB @χ~50 Willow) are explicitly "double precision complex numbers
+> in each tensor" (main text). Two implementation details ADDED: (i) gate application = gauge the
+> two-site region with the SQUARE ROOT of the incoming BP message tensors, apply the gate, SVD,
+> then un-gauge with the inverse square roots (appendix, Fig. 8d); (ii) p(x) is obtained EITHER
+> as the square of the final MPS-MPS contraction when R_x is large enough, OR by an independent
+> separate contraction of ⟨x|ψ⟩ (main text uses boundary dimension 2χ for this verification) —
+> the separate-verification route scales better than raising R_x inside the sampler.
 
 ## Metadata [paper]
 - **Authors:** Manuel S. Rudolph (EPFL; Flatiron pre-doc; 2024 Google PhD Fellow) and Joseph Tindall (Flatiron Institute, Center for Computational Quantum Physics)
@@ -84,7 +100,7 @@ This metric is computable in `O(N_qubits * chi^6)` (full spectrum) or `O(N_qubit
 
 ### GPU implementation (§III, Fig. 5)
 
-The boundary MPS approach is dominated by **tensor contractions and QR decompositions** — operations that benefit maximally from GPU hardware. The paper reports **>35x speedup** on Nvidia RTX A6000 vs Intel Xeon Gold CPU for both norm-network contraction and per-sample generation. All calculations use **32-bit floating point precision**.
+The boundary MPS approach is dominated by **tensor contractions and QR decompositions** — operations that benefit maximally from GPU hardware. The paper reports **>35x speedup** on Nvidia RTX A6000 vs Intel Xeon Gold (6244) CPU for both norm-network contraction and per-sample generation. **Precision (corrected 2026-07-09): the Fig. 5 walltime benchmarks are in 32-bit floating point (its caption); the wavefunction storage figures quoted in the main text are double-precision complex.** The fp32 GPU timing numbers therefore do NOT transfer as-is to a complex128 engine.
 
 The GPU speedup enables:
 - Contracting a 105-qubit Willow PEPS (chi=20) with R=75 in tractable walltime (Fig. 5)

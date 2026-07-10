@@ -9,6 +9,17 @@
 > "Efficient Simulation of Leakage Errors in Quantum Error Correcting Codes Using Tensor Network Methods."
 > Published in New Journal of Physics (2025). The method is **MPS-based** (not PEPS/PEPO), applied to
 > 1D repetition codes and a **thin 3xd surface code** (not full dxd).
+>
+> **Second full-text verification pass (2026-07-09, pre-engine-build):** re-read the original end-to-end.
+> ZERO defects found — every load-bearing claim of this note matches the original verbatim: the noise-model
+> equations (Eqs. 1–10), the χ=4/8/16 logical-state bonds with MPO lengths 6/10/14 for 3×d/5×d/7×d, the
+> 1e-6/1e-4 truncation thresholds, bond-saturation + d-independence (d≳50), the GTA overestimate
+> ">3× in the MLR case" (main text, Fig. 8), the low-γ non-monotonic mechanism + "cannot be obtained from
+> simulations of small-scale systems", the thin-code threshold-disappearance + "anticipate... standard d×d"
+> statements, the d≥5 SVD-bottleneck + GPU/cluster future-work quote, the "beyond MPS... PEPS and isoTNS"
+> future-work quote, and the reference identities (Miao = ref [6] = 2211.04728; Willow = ref [7] =
+> 2408.13687; Darmawan–Poulin = ref [17] = the PRL). The "GTA gap persists across all reset strategies"
+> row remains a figure-read (Fig. 8), consistent with the text's MLR-case statement.
 
 ## Metadata [paper]
 
