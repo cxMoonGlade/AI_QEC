@@ -1,11 +1,15 @@
 # Rung-1 PEPO Engine — Build Contract (contract-first; binding for builders A1–A4)
 
-Status: CONTRACT **v4.2**, 2026-07-10 — through THREE contract red-team rounds (blocker
+Status: CONTRACT **v4.3**, 2026-07-10 — through THREE contract red-team rounds (blocker
 trajectory 3 → 1 → 1 → 0) PLUS the Stage-4 build review (3 lenses + per-finding adversarial
 refuters: 3 BLOCKERs + 5 MAJORs CONFIRMED in the built code, 0 refuted — fixes specified in
-the v4.2 amendments inline below, marked "v4.2"). Governing registration:
-`pepo_d5d7_carrier_prereg.md` **v2.4** (gates G1.1–G1.9, ledger C1–C10, simplifications
-S1–S11, rung-0 outcomes). This document
+the v4.2 amendments inline below, marked "v4.2") PLUS the v4.3 FIRST-EXECUTION amendments
+(see the "v4.3 — FIRST-EXECUTION AMENDMENTS + FINDINGS" section at the end: the NTU
+metric-cluster byte wall + its engine fixes, and the REGISTERED FINDING that the G1.1
+selective sampling arm's per-bond-D design is falsified at d3 — adjudication OPEN).
+Governing registration:
+`pepo_d5d7_carrier_prereg.md` **v2.5** (gates G1.1–G1.9, ledger C1–C10, simplifications
+S1–S11, rung-0 + G1.9-pre outcomes). This document
 pins IMPLEMENTATION semantics: representation, invariants, the op↔referee registry, gate
 protocols, and scope fences. Committed BEFORE any implementation code. A miss at a gate is a
 finding to adjudicate, never a silent tolerance bump.
@@ -225,3 +229,65 @@ numerics-GPU / devious-vacuity) + independent refute-verification of every findi
 BEFORE the first GPU run. Stage-5: committed runners, sha256 + PIPESTATUS discipline.
 Stage-6: KILLER variants per load-bearing assert. Stage-7: OUTCOMES backfilled here + into
 the prereg; CODE_MAP regenerated; README added.
+
+## v4.3 — FIRST-EXECUTION AMENDMENTS + FINDINGS (2026-07-10, Stage-5 first pytest run)
+
+The first execution of the suite (48/51) surfaced one harness assumption, one
+instrument-vacuity catch, and two ENGINE-LEVEL discoveries. All evidence:
+`outputs/nonpauli_teacher/logs/pepo_rung1_pytest_first.log`, `..._rerun3.log`, and the
+instrumented probe `pepo_rung1_probe_born_smoke_cuda_err.py` (+ its log; engine-only, no
+referee in-process — anti-circular).
+
+**AMENDMENT 1 (engine, landed): the NTU metric-cluster byte wall + env bounding.** The
+§3 `nonselective_round` byte budget counted SITE-TENSOR storage only. The metric cluster
+of `_cluster_metric` DOUBLES every internal bond; with the stab TT growing the whole
+path at once (deviation from literature-NTU's two-site-gate setting where neighbors are
+always at D), a core site carrying (9, 25, 64) legs yields ket⊗bra intermediates of
+(25·64·64)² ≈ 1.7e10 elements (~168 GB) — byte-infeasible regardless of contraction
+order. Measured: 3/3 deterministic `CUDA driver error: device not ready` at ~20-GiB
+allocation attempts (WSL2 allocation-time driver refusal; context stays alive). Fixes
+(class (c) design rules with (a) ledger, all landed in `dynamics.py`/`sampler.py`):
+(i) TWO-PASS within-round truncation — pass 1 = `svd_precut_bond` (plain local SVD gauge
+cut, the LOCAL Frobenius optimum; ledger `op='svd_precut'` with `discarded`) bounds every
+grown path bond to 4·D_cap; pass 2 = the registered NTU refinement to D_cap;
+(ii) METRIC-COPY ENV BOUNDING — `_cluster_metric` gauge-cuts every internal cluster bond
+> D_cap to D_cap ON THE CLUSTER COPY (state untouched; restores the literature-NTU
+"cluster sees neighbors at D" premise; ledger fields `env_gauge_cuts` /
+`env_gauge_discarded_max` on every ntu entry); (iii) the g4 contraction path pinned
+`optimize="greedy"` (deterministic; no cotengra random hyper-sampling). The driver
+failure is CURED (the killer (1,4) metric completes). The rung-0 metric unit is
+unaffected (env bounding inactive at unit dims).
+
+**AMENDMENT 2 (harness/tests, landed):** (i) the letter-swap killer assumed both X and Z
+present in the w4 stab — the real patch's w4 stab is single-letter; replaced by a
+one-site letter FLIP (same sabotage class). (ii) FINDING: every compiled-circuit
+primitive is a REAL superoperator in the fused basis (H/X real; Y⊗Ȳ real; √E_s real;
+the within-cycle leak Kraus measured real — evolved max|Im| ≈ 3e-23), so
+circuit-reachable ρ is real-symmetric and the transposed-fused-leg sabotage is INVISIBLE
+on any in-circuit prep; the killer now injects a synthetic complex-phase unitary Kraus
+diag(1, e^{iπ/4}, 1) through the PUBLIC LEAK seam on BOTH engine and referee (a valid
+instrument check). Both re-ran green.
+
+**REGISTERED FINDING F-SEL-1 (adjudication OPEN — do not build on this): the G1.1
+selective sampling arm's per-bond-D design is FALSIFIED at d3.** Instrumented
+engine-only evidence: (a) with a rank-revealed (gauge-clean) codestate
+([4×6,16×6] → [1,4×9,16×2] — two bonds genuinely need 16), the √E_s Born-branch
+insertion spectra at D_cap=16 discard 0.43–0.70 of squared-sigma weight at multiple
+bonds → post-branch trace collapses (−62; C3_STOP — the witness working as designed);
+(b) at D_cap=64 the same truncations are LOSSLESS (discarded ~1e-31) but the measured
+exact rank keeps GROWING with applied stabs (25 → 64 → 81 = 3⁴ observed within ONE
+round) — flat stabilizer-like spectra with growing rank admit NO faithful fixed
+per-bond D; (c) the metric cluster re-explodes when the env bound scales with D_cap.
+PHYSICS: a selective Born branch of a near-stabilizer ρ is a projected stabilizer state
+— flat spectra persist under collapse; the d3 feasibility's χ(1e-6)=16 was a GLOBAL
+single-cut number and never constrained per-bond ranks. The NONSELECTIVE record law is
+UNAFFECTED (mixing steepens spectra — the truncating nonselective integration test
+passes at D=8 vs the exact referee at its registered smoke bar). Candidate
+re-derivations for the sampling arm (NOT chosen here — user adjudication): (i)
+re-register the arm at higher/adaptive D with measured trace/discarded tripwires;
+(ii) reintroduce ANCILLA sites for the sampling arm (single-site measurements,
+Darmawan–Poulin-style boundary conditional sampling — reopens the S10/C10 compilation
+scope fence); (iii) demote G1.1 to a characterization and carry the record-law evidence
+on G1.2 (nonselective) + terminal_readout_obs (which samples WITHOUT collapse via caps).
+Until adjudicated: the born smoke + C3 sampling-path tests document the finding (not a
+green bar), and no gate run consumes `born_sample_round`.
