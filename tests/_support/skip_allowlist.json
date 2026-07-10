@@ -18,6 +18,11 @@
   "n_skips": 49,
   "skips": [
     {
+      "classname": "tests.test_pepo_rung1.TestIntegrationTier",
+      "name": "test_born_sample_round_smoke",
+      "reason": "F-SEL-1 (pepo rung-1 contract v4.3, USER-adjudicated option C, 2026-07-10): selective sampling arm demoted; engine E1-verified faithful; revisit on the loop-update probe"
+    },
+    {
       "classname": "tests.test_hardware_m1_ingestion",
       "name": "test_p1_structure_counts",
       "reason": "R2-lite d29 dataset absent (set QEC_TWIN_HW_DATA)"
