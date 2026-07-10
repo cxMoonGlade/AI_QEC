@@ -351,3 +351,29 @@ regauge exists in this geometry; the ancilla-explicit rebuild (F-SEL-1 path (B),
 Manabe 2308.08186 + Darmawan–Poulin 1607.06460 anchors) is the standing candidate
 architecture. G1.3/G1.4/G1.6/G1.7 gate runs are PAUSED pending the strategic
 adjudication (G1.8 stays relevant — oracle-side, carrier-independent).
+
+**F-SEL-1 (A)-PROBE OUTCOME (2026-07-10, loop-closed bond-rank spectra — the terminal
+discriminator; log `pepo_rung1_probe_loop_rank.log`, N=80 random-cap draws, both
+groupings):** on the E2-fixpoint state (4 forced-0 stabs, D=64 lossless, engine
+E1-verified):
+- ALL six fat bonds have FULL loop-closed numerical rank (25/25, 64/64) ⇒ **a lossless
+  regauge to 16 does not exist in this geometry — option (A) as an exactness rescue is
+  CLOSED.**
+- BUT the loop-closed WEIGHT structure splits the bonds in two classes: FOUR of six
+  (B0_1, B0_2, B1_4, B2_4) are 16-effective — weight beyond rank 16 is only
+  3e-6…4e-3 loop-closed (vs the 0.43–0.70 the LOCAL pair-insertion spectrum charged) —
+  i.e. loop-aware (FET-class) truncation would cut them at 1e-3-grade cost where
+  NTU/pair-SVD pays O(1); TWO bonds (B1_3, B4_6 — the freshest-grown path bonds) are
+  GENUINELY heavy: weight beyond 16 = 0.29–0.58, flat through k=24 — no truncation
+  scheme at D=16 can carry them.
+- CONSEQUENCE: even a full loop-update/FET build cannot rescue the compiled geometry at
+  D=16 (it would fix 4 bonds and still lose O(1) on the other two). Adjudication per
+  the (C)+(A-probe) decision tree: **the compiled-geometry carrier is CLOSED for the
+  sampling arm and for record-law-at-bar; the ancilla-explicit rebuild (path (B),
+  anchors Manabe 2308.08186 + Darmawan–Poulin 1607.06460, novelty positioning per the
+  F-SEL-1 adjudication note: the conjunction multi-round × leakage × coupled records ×
+  oracle-bounded certification, never "PEPS added to Manabe") is the REGISTERED next
+  architecture — a new contract-build cycle.** The loop-closed two-class spectrum datum
+  is carried forward as design input: the heavy bonds are the FRESHLY-GROWN ones,
+  consistent with the mechanism reading (the compiled weight-4 POVM concentrates
+  circuit-distributed correlations; the ancilla-explicit geometry never forms them).
