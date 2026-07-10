@@ -291,3 +291,32 @@ scope fence); (iii) demote G1.1 to a characterization and carry the record-law e
 on G1.2 (nonselective) + terminal_readout_obs (which samples WITHOUT collapse via caps).
 Until adjudicated: the born smoke + C3 sampling-path tests document the finding (not a
 green bar), and no gate run consumes `born_sample_round`.
+
+**F-SEL-1 UPDATE (2026-07-10, theory-fix pass — user-prompted; probe
+`pepo_rung1_probe_fsel1_theoryfix.py` + log):** the original F-SEL-1 wording tripped
+theory-fix wires 1/3/5/6 (theorem tension with constant-D stabilizer PEPS; engine-only
+evidence with no independent GT; gauge-dependent per-bond rank read; unreviewed same-day
+code + self-approved conclusion). Discriminating probe outcomes:
+**E1 (anti-circular) — THE ENGINE IS EXONERATED**: forced-outcome-0 branch chains at
+D_cap=64, engine vs exact QutritDM dense equality **1e-15/1e-16 through 4 stabs**
+(branch traces equal to 7 digits incl. 9.391482e-04) — the v4.3 write-back path is
+faithful; the D=16 trace collapse was REAL truncation error, not a code defect.
+**E2 — pair-sweep-irreducible rank**: iterated rank-reveal gauge sweeps to fixpoint
+leave three bonds at TRUE local rank 64 (lossless ledger) — loop-trapped redundancy
+(the PEPS loop problem; cf. the loop-update reading note, arXiv:1906.04085).
+**E3 — standard global tooling FAILS**: quimb `compress_all` at max_bond ∈ {16,25,32},
+with and without `gauge_all_simple` pre-conditioning, yields dense-diff 5e-4–7e-3
+against a referee element scale of 2.8e-5 (relative error ~20–250×).
+**Corrected wire-1 reading**: the branch state carries non-Clifford deformations
+(b=0.9 non-projector √E_s + leakage transport), so the constant-D stabilizer-PEPS
+theorem does NOT guarantee a bond-16 gauge; its existence is OPEN.
+**F-SEL-1 final form (registered, provisional-conclusion rules apply):** the selective
+per-bond-D sampling arm is infeasible at d3 UNDER THE CURRENT AND STANDARD TRUNCATION
+TOOLKIT (local pair SVD + NTU + compress_all/simple gauging); the engine implementation
+is verified faithful; whether any small-bond gauge exists is open (a loop-update-class
+method could answer it). Adjudication paths, properly grounded: (A) loop-update gauge
+reduction probe/build (1906.04085); (B) ancilla-based sampling arm (D–P single-site
+conditional sampling; reopens S10/C10); (C) demote G1.1 to characterization and carry
+record-law evidence on G1.2 (nonselective — referee-verified at D=8) +
+`terminal_readout_obs` (samples without collapse), with (B) registered as the
+trigger-gated redesign. The nonselective record law remains UNAFFECTED throughout.
