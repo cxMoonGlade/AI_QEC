@@ -1,11 +1,20 @@
 # Rung-1 PEPO Engine — Build Contract (contract-first; binding for builders A1–A4)
 
-Status: CONTRACT **v2**, 2026-07-09 — post-red-team revision (3 un-led breakers; 3 BLOCKERs +
-13 amendments folded; v1 in git history). Governing registration: `pepo_d5d7_carrier_prereg.md`
-v2.2 (gates G1.1–G1.9, ledger C1–C10, simplifications S1–S11, rung-0 outcomes). This document
+Status: CONTRACT **v4**, 2026-07-09 — through THREE red-team rounds (blocker trajectory
+3 → 1 → 1(self-inflicted by the v3 gap-rule edit) → 0; v1–v3 in git history). Governing
+registration: `pepo_d5d7_carrier_prereg.md` **v2.4** (gates G1.1–G1.9, ledger C1–C10,
+simplifications S1–S11, rung-0 outcomes). This document
 pins IMPLEMENTATION semantics: representation, invariants, the op↔referee registry, gate
 protocols, and scope fences. Committed BEFORE any implementation code. A miss at a gate is a
 finding to adjudicate, never a silent tolerance bump.
+
+**Red-team OUTCOMES (v3→v4, round 3, one fresh convergence checker):** the round-2 obs-law
+closure VERIFIED leg-by-leg at the seams (incl. the off-support F₀+F₁=I marginal argument —
+"3 sites only" vs "all 9 + parity over 3" are the same distribution, not two-implementable);
+ONE new blocker was self-inflicted by the v3 gap-rule "total order" (k* ≫ D_cap always won ⇒
+G1.3 would read ~50–566, the frozen rank_full datum) — fixed to the window-bound rule above;
+stale "B ≤ 2" in §4 removed; F₀/F₁ pinned by formula; version strings + the prereg C3/S9/G1.9
+band synced (prereg → v2.4); C3 witness re-tied to the measured G1.9 bar.
 
 **Red-team OUTCOMES (v2→v3, round 2, two fresh breakers):** ONE residual blocker — the v2
 obs-law pin was still two-implementable on the SUPPORT/BASIS axis (fixed below: parity over the
@@ -99,9 +108,9 @@ top of the test file.
 | `apply_postmeasure(state, streams, terminal)` [A2] | F1: post-M `Y` per position; terminal skips; **raise set matches the referee EXACTLY: post-M `X`/`H`/`LEAK` raise, any OTHER unknown post-M token is silently ignored (v2 fix — the referee does NOT raise on arbitrary tokens; a raises-on-unknown killer would split engine vs referee)** | `QutritDM.apply_within_cycle_postmeasure`, same bar |
 | `stab_channel_tt(paulis, outcome, b, arm)` [A2] | The EXACT NUMERIC TT of the diagonal fused-leg superoperator of √E_s·(·)·√E_s over the support: build the 3^w diagonal e_i from the F2 formula, take √, form the fused diagonal √e_i·√e_j, TT-decompose EXACTLY (SVD; candidate values with σ ≤ 1e-12·σ₁ dropped) along the plaquette path; **assert TT bond rank == the DERIVED bound (2·min(w_L,w_R)+1)² at each bond, VALID FOR arm∈{A,C} AND b∉{0, 0.5, 1} ONLY (v3 domain pin: at b=0.5 the product classes collapse — w=4 mid-bond ≤ 9; at b∈{0,1}/B1/B2 → 4; outside the domain the assert is rank ≤ the domain bound, not ==) — (9, 25, 9) for w=4, (9) for w=2 at the p1c cell b=0.9, the registered evidence point (v2 B1 fix: the v1 "≤10" forgot the ket⊗bra squaring; rank 25 verified numerically, σ₂₅≈5.8e-6)**; measured ranks logged. X-supports: sandwich with single-site H superops (F2), NOT folded into the TT | `QutritDM.project_stabilizer(..., diagonal_z=False)` — d3 dense equality of one full stabilizer update on random ρ, 1e-12; the b/arm table of `_povm_diag_weight` is the normative formula (arm A default, b from the p1c cell = 0.9) |
 | `nonselective_round(state, stabs, …)` [A2] | F3 loop: per stab, branch-sum ρ → √E_0ρ√E_0 + √E_1ρ√E_1 then truncate; stabs in the SAME order as `sched.stabilizers`. **Bond budget (v2, re-derived at rank 25): the support-path transient bond reaches (r₀+r₁)·D ≤ 50·D mid-plaquette before truncation — trivial at d3 tensor sizes, but the budget line in every gate script uses 50·D, not 20·D** | R-gate reference loop semantics; gate-level: G1.2/G1.3 vs the frozen JSONs |
-| `ntu_truncate(state, bond, D_cap)` [A2] | The rung-0 seed: NTU metric (rows = BRA insertion, F6) + pinv optimization loop; **per-bond truncation target = D_cap (CAP_BINDING at per-bond NTU truncations is NORMAL operation, logged not flagged — v2: the gap rule was never measured per-bond)**. The GAP RULE applies to GLOBAL spectrum reads (G1.3/G1.6) and ledger effective-rank reporting ONLY, pinned as a TOTAL deterministic order (v3 fix): candidate set = {k ≤ D_cap : σ_{k+1} > 1e-12·σ₁} ∪ {k* = the last index with σ_{k*} > 1e-12·σ₁, assigned ratio = ∞}; among candidates with ratio σ_k/σ_{k+1} ≥ 10 (∞ qualifies), pick the LARGEST such k — so an exact-zero tail always yields the last-nonzero rank, and interior-gap-vs-zero-tail conflicts resolve to the LARGER k uniformly; no qualifying ratio ⇒ effective rank = D_cap + CAP_BINDING log; winning ratio always logged | rung-0 unit (metric); gate-level G1.3 (gap rank == 16 at d3) |
+| `ntu_truncate(state, bond, D_cap)` [A2] | The rung-0 seed: NTU metric (rows = BRA insertion, F6) + pinv optimization loop; **per-bond truncation target = D_cap (CAP_BINDING at per-bond NTU truncations is NORMAL operation, logged not flagged — v2: the gap rule was never measured per-bond)**. The GAP RULE applies to GLOBAL spectrum reads (G1.3/G1.6) and ledger effective-rank reporting ONLY, pinned (v4 fix — the v3 "total order" let the last-nonzero index k* ≫ D_cap always win, so a correct engine read ~50–566 instead of 16 at G1.3; round-3 catch): **candidates = k ≤ D_cap with ratio(k) = σ_k/σ_{k+1}, where ratio(k) := ∞ when σ_{k+1} ≤ 1e-12·σ₁; qualifying = ratio(k) ≥ 10; pick the LARGEST qualifying k ≤ D_cap; none qualifying ⇒ effective rank = D_cap + CAP_BINDING log** — the window k ≤ D_cap binds everything, ∞-ratios arise only inside it, both fallback clauses are live; winning ratio always logged | rung-0 unit (metric); gate-level G1.3 (gap rank == 16 at d3) |
 | `norm_cache(state)` / `expect_site_caps(state, caps)` [A3] | Rudolph–Tindall reverse-pass boundary-MPS over grid columns (one-site fitting, dim R_n), cached once per state; **caps = GENERAL single-site fused operators (length-81 fused superop-diag or 3×3 site operators lifted to the fused leg) — NOT diagonal-only (v2 fix: the X-support E_s needs H-conjugated M_q, a full 3×3). E_s expectation pinned as the two-term decomposition Tr(E_s ρ) = ½Tr(ρ) + ½(−1)^s Tr(ρ·⊗_q M_q), M_q = diag(1,−1,1−2b) on Z sites and H·diag(1,−1,1−2b)·H on X sites** | d3: dense Tr(ρ·Π) equality 1e-10; convergence-in-R_n logged |
-| `born_sample_round(state, stabs, rng)` [A3] | Per stab sequentially: q = Tr(E_s ρ)/Tr(ρ) via site caps; sample; SELECTIVE update √E_s branch + renormalize ledger; emit detector bits per `seam.py` d3 conventions (det(0,j)=s(0,j); det(r,j)=s(r,j)⊕s(r−1,j)). **obs law PINNED (v2 B3 + v3 support/basis fix, BOTH sides): obs = parity over the LOGICAL SUPPORT ONLY (`sched.logical` — weight-3 at d3, NEVER all data sites) of the per-site biased-b terminal readout, XOR m; each X-flagged logical site (`log_supp_isx`, the sv_sampler "the logical readout keeps its OWN X-rotation" convention) is H-CONJUGATED before the diagonal F₀/F₁ POVM. The engine samples exactly this; the ORACLE composes exactly this (new A4 deliverable: biased-b terminal-readout composition on the dense terminal ρ_{s\|m} — H-rotate the X-flagged logical sites, apply the per-site diagonal F₀/F₁ with b-weighted leaked rows on the logical support, take the parity marginal, XOR m; the stock `logical_sector_traces` 50/50 split is FORBIDDEN as the G1.1 referee — its divergence is documented in p7e's own docstring)** | d3 G1.1: per-sampled-record exact probability via `DMPathEvaluator.reevolve_onto_records` (defined in `qec_twin/audit/floor_backend.py`; p7e re-exports) on RAW s-records — **the det→s inversion s(r,j) = XOR_{r'≤r} det(r',j) is applied before the referee call (pinned); memory (v3 fix): chunk B = 1 ONLY — `_apply_channel_batched` holds ≥3 live (B,3⁹,3⁹) c128 copies, so B=2 peaks ≥34.6 GiB > the 32-GiB card (B=1 ≈ 17–25 GiB, measured-safe)** — plus the A4 biased-b obs composition; z ≤ 4 |
+| `born_sample_round(state, stabs, rng)` [A3] | Per stab sequentially: q = Tr(E_s ρ)/Tr(ρ) via site caps; sample; SELECTIVE update √E_s branch + renormalize ledger; emit detector bits per `seam.py` d3 conventions (det(0,j)=s(0,j); det(r,j)=s(r,j)⊕s(r−1,j)). **obs law PINNED (v2 B3 + v3 support/basis fix, BOTH sides): obs = parity over the LOGICAL SUPPORT ONLY (`sched.logical` — weight-3 at d3, NEVER all data sites) of the per-site biased-b terminal readout, XOR m; each X-flagged logical site (`log_supp_isx`, the sv_sampler "the logical readout keeps its OWN X-rotation" convention) is H-CONJUGATED before the diagonal F₀/F₁ POVM, **with the per-site effects pinned BY FORMULA (v4 — reference alone allowed a coherent double-swap): F₁ = \|1⟩⟨1\| + b·\|2⟩⟨2\|, F₀ = \|0⟩⟨0\| + (1−b)·\|2⟩⟨2\| (F₀+F₁=I; F₀−F₁ = diag(1,−1,1−2b), consistent with F2)**. The engine samples exactly this; the ORACLE composes exactly this (new A4 deliverable: biased-b terminal-readout composition on the dense terminal ρ_{s\|m} — H-rotate the X-flagged logical sites, apply the per-site diagonal F₀/F₁ with b-weighted leaked rows on the logical support, take the parity marginal, XOR m; the stock `logical_sector_traces` 50/50 split is FORBIDDEN as the G1.1 referee — its divergence is documented in p7e's own docstring)** | d3 G1.1: per-sampled-record exact probability via `DMPathEvaluator.reevolve_onto_records` (defined in `qec_twin/audit/floor_backend.py`; p7e re-exports) on RAW s-records — **the det→s inversion s(r,j) = XOR_{r'≤r} det(r',j) is applied before the referee call (pinned); memory (v3 fix): chunk B = 1 ONLY — `_apply_channel_batched` holds ≥3 live (B,3⁹,3⁹) c128 copies, so B=2 peaks ≥34.6 GiB > the 32-GiB card (B=1 ≈ 17–25 GiB, measured-safe)** — plus the A4 biased-b obs composition; z ≤ 4 |
 | latent conditioning [A3, G1.6 only] | Per-sample latent draw OUTSIDE the TN; per-round Pauli superop insertion per arm; χ(mix)=χ(arm) check | X2b d3 evidence pattern (`pepo_xi_correlation_length_d3.py` X2b arm) |
 
 **Units table**: b ∈ [0,1] probability; discarded weight + ε levels are SQUARED-σ scale;
@@ -112,7 +121,8 @@ squared norm (F6 quadratic form); gap-cut ratio is on UNSQUARED σ_k.
 
 - **G1.0 (pre-gate, A1)** dense d3 codestate == oracle for m=0 AND m=1 (1e-12 max-abs).
 - **G1.1** N=1e6 sampled {det,obs} records @ d3, R=3, p1c cell; per-record exact probability
-  via `DMPathEvaluator.reevolve_onto_records` (det→s inversion pinned in §3; chunk B ≤ 2) +
+  via `DMPathEvaluator.reevolve_onto_records` (det→s inversion pinned in §3; chunk B = 1
+  ONLY per §3 — v4 fix, the stale "≤ 2" here contradicted §3 and OOMs the card) +
   the A4 biased-b obs composition (§3 — the 50/50 split is FORBIDDEN as referee); multinomial
   z ≤ 4 on the top-64 record classes + tail-mass bucket. **χ_b sub-gate (v2, arms pinned v3):
   R_n = the norm-pass boundary dim, R_x = the sample-pass dim, set equal per arm; the z ≤ 4
@@ -178,9 +188,11 @@ squared norm (F6 quadratic form); gap-cut ratio is on UNSQUARED σ_k.
   feeding the LPDO decision, never a silent bump. The same run ALSO dumps the per-round
   straight-cut spectra + the ℓ²-normalized Δσ series (freezing the G1.4 reference — v3;
   no committed artifact currently holds the spectra).** The sampler's negativity witness
-  fires on a sign-flip sabotage (unchanged). **C3 witness normalization pinned (v3):
-  cumulative negative mass = Σ_shots max(0, −q_raw)/Tr(ρ) accumulated over a run; STOP at
-  > 1e-4.**
+  fires on a sign-flip sabotage (unchanged). **C3 witness re-pinned (v4 — the v3 cumulative
+  Σ over 1e6 shots implied an average per-shot bar of 1e-10, inconsistent with the G1.9
+  λ_min scale a correct engine carries): (i) any SINGLE raw Born weight
+  q_raw < −(10× the G1.9 bar) ⇒ STOP; (ii) the per-shot MEAN of max(0, −q_raw)/Tr(ρ)
+  > the G1.9 bar ⇒ STOP; both logged every run.**
 
 ## 5. Scope fences (rung-1)
 
