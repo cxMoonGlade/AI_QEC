@@ -12,6 +12,44 @@ sampling arm.
 
 ---
 
+## 0. CORRECTION BANNER (2026-07-10, after reading the actual carrier code)
+
+**The title "ancilla-explicit rebuild" over-emphasizes ancilla. The PRIMARY axis is
+SINGLE-WIRE (pure-state trajectory) vs DOUBLED-WIRE (density-matrix), and the repo ALREADY
+HAS the single-wire d3 sampling arm.** Corrected facts (verified in the source, not
+memory):
+
+- **`sv_sampler.py` is a DENSE state-vector MCWF sampler — NOT a tensor network, NOT PEPS.**
+  It carries the full 3ⁿ amplitude state (d3 3⁹ fits; d5 3²⁵ = 13.5 TB is dead). Its role
+  is the d3 dense REFERENCE + the shared infrastructure (schedule marshalling, WG leakage
+  Kraus `leak_slice_kraus_torch`, codestate builder, ShotSet packing). An earlier draft of
+  this handoff wrongly lumped it with the MPS carrier — that was an error the reader caught.
+- **`mps_forward.py` IS the single-wire MPS trajectory carrier** (its header: "the exact
+  MPS lift of the project's dense MCWF and of Manabe-Suzuki-Darmawan arXiv:2308.08186").
+  Qutrit MPS (phys_dim=3, quimb torch-cuda-c128), WG Kraus-sampled, stabilizers
+  Born-sampled + `√E_s`-collapsed + truncated at `max_bond=χ`. It is **certified bit-for-
+  bit vs the dense engine at full χ** (the C8 anchor). **This — not a from-scratch build —
+  is the d3 sampling arm, and it works.**
+- **The decisive nuance:** `mps_forward` applies the SAME compiled `√E_s` stabilizer POVM
+  (ancilla compiled away) that the failed DM-PEPO used. The ONLY difference is single-wire
+  (MPS) vs doubled-wire (DM-PEPO). Single-wire → the compiled parity stays bond-2-ish and
+  truncatable; doubled-wire → the ket⊗bra squares it to the flat rank-64 that killed
+  F-SEL-1/F-REC-1. **So the primary fix is single-wire, NOT ancilla-explicit.** Ancilla-
+  explicit (2-site CZ + single-site measurement) is a SECONDARY lever for the 2D bond that
+  `mps_forward` does not use and has not been shown to REQUIRE.
+- **Where the real frontier is:** `mps_forward` is d3-exact + thin-strip-general, but full
+  d×d hits the snake MPS's χ^W wall (same as Manabe). At d5 thin-strip its per-shot bond
+  already reaches χ≈64–222 (~104 s/shot; the code notes full-square d5/d7 production is
+  "INFEASIBLE without the deferred batched-shot/SVD work" — the bottleneck is quimb
+  `gate_nonlocal` per-op overhead + the serial per-shot loop, not the SVD). **The 2D
+  frontier needs a single-wire 2D ansatz (pure-state PEPS trajectories) — the corrected
+  RUNG-B — NOT the doubled-wire DM-PEPO we just closed.**
+
+Read §3.1/§3.3 with these corrections; the §2 doubled-wire mechanism and the §4 literature
+basis are unaffected (they already point to single-wire pure-state trajectories).
+
+---
+
 ## 1. CURRENT STATE (what is settled, what is committed)
 
 **The compiled-geometry 2D density-matrix PEPO carrier is CLOSED.** It was built,
@@ -139,16 +177,19 @@ Three candidate representations, with the literature verdict:
 
 | Representation | What it is | Positivity | Repo infra | Verdict for the SAMPLING arm |
 |---|---|---|---|---|
-| **Pure-state trajectory MPS/PEPS** (Manabe) | state-vector of (d_q=3, χ); density matrix NOT carried, stochastic Kraus sampling per trajectory; a **trajectory IS a record sample** by construction | N/A (pure states) | **EXISTS** — `qec_twin/forward/scalable/{mps_forward,sv_sampler}` already does qutrit MCWF-on-MPS | **PRIMARY.** Ancilla-explicit, single-site collapse bond-inert, matches the task semantics (sample records, don't build ρ), reuses GPU machinery |
+| **Pure-state trajectory MPS** (Manabe) | qutrit MPS (phys_dim=3, χ); density matrix NOT carried, stochastic Kraus sampling per trajectory; a **trajectory IS a record sample** by construction | N/A (pure states, PSD by construction) | **ALREADY BUILT + CERTIFIED at d3** — `qec_twin/forward/scalable/mps_forward.py` IS this (the Manabe lift; bit-for-bit vs the dense engine). NOTE: `sv_sampler.py` is the DENSE state-vector reference + infra, NOT the MPS carrier | **PRIMARY, and it EXISTS.** Single-wire ⇒ the compiled `√E_s` stays truncatable (no doubled-wire squaring). d3-exact, thin-strip d5 (χ≈64–222/shot). The frontier is full d×d (snake χ^W wall → needs a 2D single-wire ansatz) |
 | **LPDO / LPTN** (Werner ρ=XX†) | locally-purified: physical + bond + Kraus indices; positivity STRUCTURAL; Theorem-7 trace-norm error bound | guaranteed by construction | none | deferred: heavier (bond + Kraus dims), 1D core needs snake/strip for 2D; the fallback IF pure-state trajectory sampling variance is intractable |
 | **Density-matrix PEPO** (what failed) | fused d²=9 leg, single-layer Tr(ρΠ) | not guaranteed (the C3 problem) | the closed engine | RETAINED only as the record-law/oracle substrate at small scale; NOT the sampling carrier |
 
-**Decision: the sampling arm is a pure-state trajectory carrier (Manabe-class).** The
-density matrix is never formed; each Monte-Carlo trajectory (unitary gates + sampled
-Kraus + single-site measurements) yields one syndrome+leakage record. This is the lightest
-slice, reuses existing repo GPU MPS machinery, and its representation cannot hit the
-F-SEL-1/F-REC-1 negative-trace failure (there is no truncated ρ to go non-PSD). The
-record-law marginals come from the empirical trajectory ensemble, not a DM contraction.
+**Decision: the sampling arm is a pure-state trajectory carrier (Manabe-class) — and at
+d3 it ALREADY EXISTS as `mps_forward.py`.** The density matrix is never formed; each
+Monte-Carlo trajectory (unitary gates + sampled Kraus + √E_s-collapse) yields one
+syndrome+leakage record. Its representation cannot hit the F-SEL-1/F-REC-1 negative-trace
+failure (no truncated ρ to go non-PSD; the trajectory sum is PSD by construction, TJM
+2501.17913). Record-law marginals come from the empirical trajectory ensemble, not a DM
+contraction. The DM-PEPO was a PARALLEL doubled-wire attempt at the SAME job; its failure
+is the doubled-wire lesson, and `mps_forward` (single-wire, SAME compiled √E_s) is the
+standing proof single-wire works at d3.
 
 ### 3.2 Geometry decision
 
@@ -169,12 +210,15 @@ record-law marginals come from the empirical trajectory ensemble, not a DM contr
 
 ### 3.3 Rung sequencing (low-risk-first)
 
-- **RUNG-A (fast, low-risk — DO FIRST): d3 ancilla-explicit trajectory MPS sampler.**
-  Restore ancilla, snake-MPS, sample {det, obs} records, certify against our EXISTING
-  exact QutritDM referee (the same 1e-15 oracle that E1-exonerated the old engine). This
-  ALONE recovers the sampling arm and validates the whole approach at minimal cost.
-  Manabe's own open-question 3 recommends exactly this ("replicate the thin-strip results
-  as a validation step before moving to full 2D"). Reuses `sv_sampler` machinery.
+- **RUNG-A (mostly DONE — VERIFY, don't rebuild): d3 single-wire trajectory MPS sampler
+  = `mps_forward.py`.** This carrier already exists and is certified bit-for-bit vs the
+  dense engine at full χ. The work is to CONFIRM it emits the {det, obs} record objects the
+  sampling arm needs and to run its certification against the exact QutritDM referee (the
+  1e-15 oracle that E1-exonerated the DM-PEPO) as the standing sampling-arm gate — NOT to
+  build a new sampler. Open sub-question: `mps_forward` uses the compiled `√E_s` (ancilla
+  compiled); does that suffice, or does ancilla-explicit lower the d5 thin-strip bond
+  (χ≈64–222)? That is a MEASUREMENT, not a rebuild. Manabe's open-Q3 recommends exactly
+  this d3-first validation.
 - **RUNG-B (the real contribution): d5/d7 2D pure-state PEPS + boundary sampling.**
   Registered bet (predict-before-measure): does the 2D bond SATURATE with rounds (area
   law in circuit time)? Anchors: Manabe's 1D/quasi-1D saturation (Fig. 6) + D-P's 2D
@@ -279,14 +323,14 @@ Clifford-parity part only; it is a diagnosis confirmation, not itself the fix.)
    full fix.)
 3. **G1.8 opportunistic run** (carrier-independent, GPU-free window) → the S11 rung-2
    window-embedding bound. Runner + measured-bar wiring are ready.
-4. **RUNG-A registration** (theory-first + contract-build): the d3 ancilla-explicit
-   trajectory MPS sampler. Read `qec_twin/forward/scalable/{mps_forward,sv_sampler}` FIRST
-   (the reuse target — it is ALREADY the TJM single-site-slice class per 2501.17913); the
-   real 17-qutrit circuit is in `xzzx_parser` (ancilla info is there — S10 compiled it
-   out, the rebuild reads it back in). Certify {det,obs} records vs the exact QutritDM
-   referee (the same 1e-15 oracle that E1-exonerated the old engine). Anti-toy guards
-   from the survey: the joint-generator no-split rule (jaschke Appendix A) and the
-   purity ≠ trajectory-average arm-consistency check.
+4. **RUNG-A verification** (NOT a from-scratch build): read `mps_forward.py` (the existing
+   single-wire MPS trajectory carrier, certified vs the dense engine) + `sv_sampler.py`
+   (the DENSE reference + shared infra: marshalling, WG Kraus, codestate, ShotSet) FIRST.
+   Confirm `mps_forward` emits the {det,obs} record objects the sampling arm needs; run its
+   certification vs the exact QutritDM referee as the standing sampling-arm gate. Measure
+   whether the compiled √E_s vs ancilla-explicit changes the d5 thin-strip bond. Anti-toy
+   guards from the survey: joint-generator no-split (jaschke App. A); purity ≠ trajectory-
+   average arm-consistency.
 5. **RUNG-B**: d5/d7 2D pure-state PEPS + boundary sampling (Rudolph–Tindall engine); run
    the ε_l loop-correlation risk check FIRST; register the bond-saturation bet.
 6. **RUNG-C**: coupled/correlated records (the mainline payload; Kam 2603.05474
