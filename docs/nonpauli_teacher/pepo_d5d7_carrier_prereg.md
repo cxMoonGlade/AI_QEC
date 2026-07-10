@@ -393,6 +393,52 @@ trip.
 
 ---
 
+## Appendix — RUNG-0 OUTCOMES (2026-07-09, adjudicated; scripts + logs + JSONs under
+## `outputs/nonpauli_teacher/pepo_rung0_*`)
+
+All four §6.8 deliverables landed; every run un-led-reviewed BEFORE execution (3
+reviewers; 1 BLOCKER + 3 MAJORs caught pre-run: an 11.3-TB open-tensor referee OOM at
+d_phys=9, a statevector survival bar sitting INSIDE the 2^-25 signal scale (~74%
+spurious-abort odds), the d*_bond ceiling mislabeled as the need, and a missing
+logical-no-fallback/symplectic guard — all fixed pre-run).
+
+- **(iii) n_cross — RP1_ALL_HIT, the P2 bet basis is now COUNTED + MEASURED, not
+  hypothesized.** On all SIX real Google patches (`xzzx_parser`, never a textbook
+  layout): bisection n_cross = d−1 exactly — d3_at_q6_7: 2; d5_at_q4_7/q6_5/q6_9/q8_7:
+  4 (all four); d7_at_q6_7: 6. ⇒ K_gap(d5)=256, K_gap(d7)=4096 (codestate operator
+  rank; P2's central bet CONFIRMED as registered, band unchanged). Verification
+  triangle all-green: V1 brute-force subgroup enumeration (d3, every cut), V2 exact
+  GPU statevector Schmidt rank (d3 AND all four d5 patches: rank 16 = 2⁴ measured),
+  V3 the frozen §1 anchor (4^n_cross == 16). Guards all-green: G1 symplectic
+  commutation (every generator pair, every patch), G2 stim-flow re-verification of the
+  logical on the raw circuit (no parser fallback fired), G3 S(A)==S(B) at every cut.
+  Structural datum: s_t = 2·n_cross at EVERY straight cut on every patch (each
+  independent crossing generator carries one redundant partner).
+- **(iv) d*_bond — the §6.4 D-sweep is pinned to D ∈ {2, 4, 8, 16}.** Counted both
+  ends of the bracket: perbond_FLOOR = 4^(n_cross/s_t) = 2.000 at every bisection
+  (below the ≤4 expectation) and dstar_bond_CEILING = 4^m_max = 16 with m_max = 2 on
+  every patch (RP2 HIT). The registered {⌈d*/2⌉, d*, 2d*, 4d*} formula instantiates
+  as the floor-to-ceiling sweep {2, 4, 8, 16}.
+- **(ii) NTU-metric unit — NTU_METRIC_UNIT_PASS.** Structured Fig.-4 assembly ==
+  monolithic dense einsum at ~5e-16 rel (bars 1e-11) at BOTH d_phys=2 and d_phys=9;
+  Hermitian ~1e-16; PSD; quadratic form == closed dense norm ~4e-16; pinv step reduces
+  ε and matches dense ~2e-16; the parallel-bond mis-wire trip variant fires (3-6e-2).
+  **FINDING (the registered check demonstrating its own teeth):** the FIRST run's C4
+  caught a metric ROW-CONVENTION bug the un-led review had passed — with rows = the
+  KET insertion, ε = v†gv is off by Re(v₁*v₂g₁₂) vs Re(v₁v₂*g₁₂) (measured rel 0.199);
+  the metric's rows must be the BRA insertion. The engine seed carries the fixed
+  convention (g[(IJ),(ij)] = ⟨cluster(IJ)|cluster(ij)⟩).
+- **(i) substrate — DECISION ((c)): quimb-2D as the tensor HOST.** Evidence: quimb
+  1.14.0 ships PEPS/PEPO/TensorNetwork2D with `contract_boundary_from*` plumbing (E1);
+  a 2×2 PEPS norm contraction PRESERVES torch-cuda-complex128 backing end-to-end (E2
+  PASS — no silent numpy cast); the 1D engine coexists against the same quimb (E3).
+  The NTU metric + the one-site boundary-MPS fitting remain CUSTOM modules on top
+  (as registered — the host provides containers/contraction only).
+
+Consequence: rung 0 is CLOSED; no registered band or gate moved (P2/P8 confirmed as
+written). Next = rung 1, the PEPO engine build (§7 gates G1.1–G1.9; /contract-build;
+src placement proposal `error_coupling_simulator/carrier/pepo/`, commit-gated).
+
 ## Appendix — REVIEW OUTCOMES (v1 → v2, 2026-07-09)
 
 Un-led adversarial review of v1: 3 independent reviewers (identical un-led briefs: problem + goal +
