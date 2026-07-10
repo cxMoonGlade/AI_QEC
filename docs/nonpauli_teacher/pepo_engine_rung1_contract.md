@@ -320,3 +320,14 @@ conditional sampling; reopens S10/C10); (C) demote G1.1 to characterization and 
 record-law evidence on G1.2 (nonselective — referee-verified at D=8) +
 `terminal_readout_obs` (samples without collapse), with (B) registered as the
 trigger-gated redesign. The nonselective record law remains UNAFFECTED throughout.
+
+**F-SEL-1 ADJUDICATION (2026-07-10, USER — option (C)+(A-probe)):** for rung-1, G1.1 is
+DEMOTED to a characterization (the F-SEL-1 report; no green-gate claim); the record-law
+evidence is carried by G1.2 (nonselective — referee-verified) + `terminal_readout_obs`
+(collapse-free caps sampling). In PARALLEL, a single loop-update probe (arXiv:1906.04085)
+tests whether loop-aware gauge reduction dissolves the loop-trapped rank-64 losslessly —
+if YES the sampling arm is revived as built; if NO the ancilla-based sampling arm
+redesign ((B), S10/C10 reopen) is registered TRIGGER-GATED (sequencing discipline:
+deferred, never dropped). The suite's selective-path tests (`test_born_sample_round_smoke`
+and any assert consuming `born_sample_round` output as a green bar) are converted to
+xfail/skip carrying the F-SEL-1 reference — a REGISTERED skip, not a silent one.
