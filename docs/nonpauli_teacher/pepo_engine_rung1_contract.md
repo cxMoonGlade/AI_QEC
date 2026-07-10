@@ -331,3 +331,23 @@ redesign ((B), S10/C10 reopen) is registered TRIGGER-GATED (sequencing disciplin
 deferred, never dropped). The suite's selective-path tests (`test_born_sample_round_smoke`
 and any assert consuming `born_sample_round` output as a green bar) are converted to
 xfail/skip carrying the F-SEL-1 reference — a REGISTERED skip, not a silent one.
+
+**REGISTERED FINDING F-REC-1 (2026-07-10, G1.2 first execution, USER-adjudicated early
+stop at R=4/10):** the nonselective record law at per-bond D_cap=16 MISSES the G1.2
+gate by two orders of magnitude. Evidence (log
+`pepo_rung1_g12_seqnull_marginals_d3.earlystop-20260710.log`, rounds R=1..4, production
+site-cap path, all F8 replication preconditions green): sequential-null marginals go
+NEGATIVE (p_j(stab 5) = −3.6e-3 at R=2, persisting −3.3e-3/−2.9e-3 at R=3/4) on
+~1e-3-scale marginals; per-round ntu discarded_max 6.5e-2 → 4.4e-3; the registered bar
+allows |dp| ~ 1.3e-5-grade (z=4, N=1e6) so dp/bar ≈ 25–40 ≫ the 0.1 gate. The remaining
+6 rounds were adjudicated redundant (scripted early-stop kill, precondition-asserted;
+partial table = the finding evidence). READING: this is the prereg's DECLARED S1
+optimistic-single-cut-proxy risk materializing — global χ(1e-6)=16 (the frozen (a)-grade
+feasibility datum) does NOT bound per-bond truncatability; same root cause as F-SEL-1,
+now measured on the NONSELECTIVE arm too. CONSEQUENCE: the compiled-geometry DM-PEPO at
+fixed per-bond D=16 carries NEITHER the sampling arm (F-SEL-1) NOR the record law at
+bar (F-REC-1) at d3. The loop-rank probe (in flight) settles whether any lossless
+regauge exists in this geometry; the ancilla-explicit rebuild (F-SEL-1 path (B),
+Manabe 2308.08186 + Darmawan–Poulin 1607.06460 anchors) is the standing candidate
+architecture. G1.3/G1.4/G1.6/G1.7 gate runs are PAUSED pending the strategic
+adjudication (G1.8 stays relevant — oracle-side, carrier-independent).
