@@ -815,3 +815,66 @@ marginal only.
    memory RESUME updated.
 5. RUNG-C remains GATED on WP1; RUNG-A (mps_forward verification) stays demoted to
    confirmatory and may run opportunistically; G1.8 opportunistic (GPU-idle).
+
+---
+
+## §9 OUTCOMES BACKFILL (Stage-7 close-the-loop, 2026-07-10)
+
+### (2b-i) d3 STATE-LEVEL — GATE-GREEN ✅
+Build: `carrier/peps/` (state / stab_tt / contraction / trajectory / sampling_maps /
+diagnostics / __init__ + README) + `tests/test_peps_spike.py`. Committed (this contract
+first, then src+tests engine — user-confirmed; CODE_MAP regenerated + code_status ACTIVE
+entry). Built via the full contract-first pipeline (grounding → 3 red-team rounds to zero
+blockers → disjoint builders → Stage-4 un-led review → gates).
+- **Stage-4 un-led review** (4 lenses + adversarial verify; 8 findings, 7 confirmed 1
+  refuted): **ENGINE = zero correctness defects.** The refuted finding (d5 double-layer fit
+  "2 tensors per ROW tag → silently wrong") was killed via quimb 1.14.0 source
+  (multi-tensor-per-site is first-class + raises loudly on malformed groups). 3 fixed
+  (test-adapter reconciliation + 1 module ledger enrich): forced-Kraus adapter (dropped the
+  wrong-order `apply_site_op`), `_truncate_dcap` → module `truncate_bond_dcap` + the module
+  now emits `exact_rank` in the `_policy_cut` ledger, SW2 lossless dead asserts.
+- **Stage-5 GPU gates**: SW0-SW6 + eps_l known-answers = **28/28 PASS, 0 failed / skipped /
+  errors** on the real `d3_at_q6_7` patch (RTX 5090, ~18 s; junitxml-counted). Evidence:
+  `outputs/nonpauli_teacher/peps_spike_gates_d3_run.sh` + `.junit.xml` (gitignored, local).
+  First run had 4 fails, ALL test-harness (not engine): eps_l `_eps_loop_stats` didn't parse
+  the `{per_loop:[...]}` dict; conj-killer's unconjugated self-overlap `n2_sab ≈ 0` degenerate
+  (→ normalize by the true norm); ledger-image killer needed `exact_rank > 8` unreachable at
+  single-wire low rank (→ teeth moved to `total_discarded`, `D_cap < exact_rank`). All fixed,
+  re-run 28/28.
+- **CERTIFIES:** SW0 codestate `|ψ⟩⟨ψ|` == `QutritDM.init_logical(m)` @ 1e-12 (both m);
+  SW1 per-op mirrored equality; SW2-slice lossless; SW3 TT ranks (3,5,3)/(3) @ b=0.9
+  (**WP3 confirmed**); SW5 sampling maps == mps_forward; ALL SW6 killers demonstrated to trip;
+  **eps_l 2×2 vs an INDEPENDENT dense eigendecomposition @ 1e-10** (the loop-TM instrument
+  validated).
+
+### (2b-i) RECORD-LEVEL — NOT YET RUN (script-owned)
+SW4 (`DMPathEvaluator.reevolve_onto_records` record-law, B=1, g11 A4 obs) + SW5 (cross-carrier
+byte-identity vs `mps_forward` at `exact_chi`) — the two script-owned gates. NOT written;
+**HELD** pending the YAQS-reuse decision below.
+
+### DEFERRED d5-arm (2b-ii) items (Stage-4; NOT d3-gate blockers)
+- **#1** norm-cache rebuild per read → d5 SW8 per-round perf; thread a `NormCache`.
+- **#3** eps_l BP not exercised by the 2×2 pytest (all edges are loop edges) — a 3×3
+  BP-into-loops smoke was added to the import-check; the full fix is the §6.3(iii) evolved-d3
+  independent-dense-reference. **YAQS is a candidate independent referee here** (below).
+- **#4** boundary-MPS route has no d3 validation (d3 gates use the exact route) — add a
+  boundary-vs-exact agreement check at d3.
+
+### YAQS reuse assessment (external/yaqs, MQT YAQS v0.6.0, MIT) — see
+`docs/nonpauli_teacher/yaqs_reuse_assessment_2026-07-10.md`
+YAQS = the reference TJM implementation (SF12's grounding). **Strictly 1D MPS/MPO — NO
+2D/PEPS** (RUNG-B is unique), **NO QEC syndrome circuits** (mid-circuit measure raises),
+memory subsystem single-qubit-probe + Hamiltonian-backend. BUT qutrit/leakage is real in the
+analog path, and it has **an exact Lindblad ME + dense MCWF backend sharing no truncation
+code** = a legitimate anti-circular independent GT. Verdicts: independent-GT for
+mps_forward/RUNG-A + deferred #4 = **REUSABLE-VIA-ADAPTOR** (express √E_s as Lindblad+dt;
+CPU referee); RUNG-C memory (CMI/QMI Markov-order + operational-memory-SVD) = **REFERENCE-ONLY**
+(lift the formulas, not the single-qubit pipeline); digital QEC sim = **NOT-APPLICABLE**.
+
+### ★ NEXT-SESSION DECISION POINT
+Before SW4/SW5 or the d5 crux, decide the YAQS integration: (a) use YAQS exact-Lindblad/
+qutrit-MCWF as the anti-circular independent GT for RUNG-A (verify `mps_forward`) + the
+deferred #4 — cheap FAITHFULNESS-protocol win; (b) lift YAQS's CMI/QMI + operational-memory
+metric definitions for RUNG-C rather than building from scratch. The **2D PEPS d5 crux (WP1
+bond saturation) stays ours** (YAQS gives no 2D). Then: SW4/SW5 (finish 2b-i record-level) →
+the deferred d5-arm prereqs → 2b-ii d5 crux (the make-or-break bet).

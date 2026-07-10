@@ -1,5 +1,21 @@
 # HANDOFF — ancilla-explicit sampling-arm rebuild (2026-07-10)
 
+> ## ★ PROGRESS BANNER (2026-07-10, later — READ THIS FIRST, the body below is the PRE-BUILD plan)
+> The single-wire 2D PEPS spike this doc plans **HAS BEEN BUILT and d3-CERTIFIED.**
+> - **Contract REGISTERED:** `docs/nonpauli_teacher/peps_singlewire_spike_contract.md`
+>   v1.0 (3 red-team rounds to zero blockers). **Outcomes are backfilled in its §9.**
+> - **Engine BUILT + COMMITTED:** `src/error_coupling_simulator/carrier/peps/` (single-wire
+>   qutrit 2D PEPS: state / stab_tt / contraction / trajectory / sampling_maps / diagnostics)
+>   + `tests/test_peps_spike.py`. Stage-4 un-led review = ZERO engine correctness defects.
+> - **d3 (2b-i) STATE-LEVEL GATE-GREEN:** SW0-SW6 + eps_l known-answers = **28/28** vs the
+>   exact QutritDM referee (@1e-12) on the real `d3_at_q6_7` patch.
+> - **YAQS (external/yaqs) assessed:** `docs/nonpauli_teacher/yaqs_reuse_assessment_2026-07-10.md`
+>   — the TJM reference impl; 1D-only (no 2D/PEPS — RUNG-B stays ours), but a reusable
+>   anti-circular independent GT (exact Lindblad/qutrit-MCWF) + RUNG-C metric formulas.
+> - **NEXT:** the YAQS-integration decision → SW4/SW5 (finish 2b-i record-level) → the
+>   deferred d5-arm prereqs → **2b-ii d5 crux (WP1 bond saturation — the make-or-break bet).**
+>   Full live state: contract §9 + memory `project-peps-spike-build-state.md`.
+
 Resume brief for the surface-code TN carrier line after the **compiled-geometry
 DM-PEPO carrier was closed as a findings package** (rung-1 first execution, 2026-07-10).
 This doc is the entry point: current state → why the compiled carrier failed → the
