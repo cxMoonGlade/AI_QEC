@@ -3,6 +3,54 @@
 Status: DESIGN (design-first, pre-build). 2026-06-23. Mainline code commit-gated.
 
 ---
+## ✅ FEASIBILITY OUTCOMES (2026-07-09) — the §2/§correction(4) central question ANSWERED at d3
+
+Three committed exact-DM measurements (`outputs/nonpauli_teacher/pepo_*_d3.py` + runners + logs
++ result jsons; every script un-led-reviewed pre-run — the reviews caught 5 blockers including a
+float32 `1-eps` rounding that had silently corrupted the first run's chi(1e-8) column):
+
+1. **R-gate — D_rho(R) SATURATES (`pepo_feasibility_drho_vs_round_d3.py`, VERDICT
+   SATURATE_FEASIBLE).** The exact d3 rho evolved through R=1..10 within-cycle rounds
+   (real leakage cell WG_L1=5e-3/g_seep=0.09/b=0.9 + NON-selective sequential Lueders channel)
+   keeps the operator-Schmidt bond across the straight column cut at **chi(1e-6)=16, FLAT over
+   10 rounds** (= the codestate's own operator rank: 2 crossing stabilizers → (2²)²); purity
+   decays monotonically 0.991→0.915 (mechanism live); corrected chi(1e-8)≈50-53 (16 codestate
+   values + spectral gap + ~35 tail components ≤1e-7 weight). Multi-round + leakage does NOT
+   grow the PEPO bond — D-P's single-round feasibility extends along R.
+2. **Record-gate — the eps map (`pepo_record_error_vs_eps_d3.py`, VERDICT RECORD_FEASIBLE,
+   bond budget chi~16 at eps*=1e-3).** Per-round operator-Schmidt truncation at the cut
+   (Hermitize + trace-renorm, error compounding across rounds) vs the exact sequential-null
+   detector marginals: eps∈{1e-3,1e-4,1e-6} all truncate at the SAME chi=16 (the spectral gap)
+   with max dp=6.65e-6 = **dp/bar=0.017 (60× margin) at N=1e6, z=4**; eps=1e-8 (chi~52) passes
+   at dp/bar=0.039. FINDING: cutting AT the spectral gap beats cutting deeper into the tail
+   (the gap-cut projects onto a round-stable subspace; the mid-tail cut keeps round-rotating
+   noise directions) — the engine should truncate at the gap, not at a fixed eps. Declared:
+   single-cut per-round truncation = OPTIMISTIC proxy (lower bound on engine error); the PASS
+   eps is a NECESSARY bond budget, the engine's own gate is the sufficient check (§7 rung 1).
+3. **xi-gate — the truncation-algorithm selector (`pepo_xi_correlation_length_d3.py`,
+   adjudicated ITRSU_VIABLE_NTU_MARGIN).** Connected-correlator fits on the evolved state
+   (lattice-spacing units, dynamic signal floor, ≥3-distinct-distance guard): dynamical
+   **xi(Zq)=0.48, xi(n2)=0.18** — far below the itrSU validity bound xi≲2 (tePEPO), with NTU's
+   xi~20 (Dziarmaga 2107.06635) a 40× margin. The Xq arm's automated NO_FIT is adjudicated
+   (a)-exact BENIGN: its constant 2-pairs/1-distance/cmax=1.0 signal is EXACTLY the two
+   weight-2 X-type boundary stabilizers (s1=X0X2, s6=X6X8, <XX>=1 structural, all other pairs
+   <1e-4) — codestate structure the bond-16 PEPO carries exactly, not a decaying correlation.
+   X2a mixture-algebra identity ~2e-16; **X2b: chi(mix)=chi(lo)=chi(hi)=16 every round — the
+   global classical latent is BOND-FREE** (even stronger than the registered subadditivity),
+   confirming the classical shared latent is SAMPLED or carried at zero bond cost; the unsolved
+   PEPO+non-Markovian seam applies only to the parked QUANTUM-bath line.
+
+**Consequences for the build:** the density-matrix PEPO route is GREEN at d3 (bounded D_rho,
+bond-16 record-faithful with 60× margin, ultra-short-range correlations). Engine defaults:
+**NTU truncation from the start** (Dziarmaga verdict; itrSU would suffice at d3 but NTU is the
+10×-margin choice), truncate at the SPECTRAL GAP, classical latent via per-sample conditioning.
+**Registered engine-build gates (Kilda 2012.03095):** the eps_Lambda convergence diagnostic +
+the D=3..6 non-monotonicity sweep on OUR model + independent-oracle certification (never
+D-sweep alone). **Scope caveats unchanged:** d-scaling (chi_b ~ D_rho^d ≲ 2^d) is an
+EXTRAPOLATION — the d5 tile is rung 2; chi_b itself is measurable only inside the engine.
+---
+
+---
 ## ⚠ SUPERSEDING CORRECTION (2026-06-24) — read before the body below
 
 The body (§1–§8) frames the engine as a **pure-state PEPS + MCWF**. That is WRONG for the full

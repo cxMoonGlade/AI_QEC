@@ -327,3 +327,327 @@ never a "truncation-free" property.
 - NEXT: OPT2-2 (batched trajectory driver @ d3 exact grade, RunSpec/sched/ShotSet
   drop-in seam; statistical gates vs the serial arm; throughput gate >= the anchored
   10-100x band).
+
+## OPT2-2 DESIGN — build contract (2026-07-09, written BEFORE code; theory-first)
+
+**Module:** `src/qec_twin/forward/scalable/batched_mps_forward.py` — a NEW sibling class
+`BatchedMpsLeakageForward` composing the OPT2-1 `batched_mps.BatchedMps` op core into the
+end-to-end `RunSpec/sched → (ShotSet, MpsTruncationLedger)` seam. The serial arm
+`mps_forward.MpsLeakageForward` is the REFEREE and stays UNTOUCHED (same discipline as
+OPT2-1's sibling-module rule). Torch/cuda/complex128 only. Tests:
+`tests/test_batched_mps_forward.py` (`requires_cuda` + `requires_data`).
+
+**GROUNDED SEAMS (Stage-0 verified 2026-07-09 — the design rests on these, cited by named
+convention, not line numbers):**
+- The serial trajectory control flow is `MpsLeakageForward._run_trajectory`: per round
+  `[PRE-seg: GATE (no draw) / LEAK (1 u each)] → [each stabilizer in schedule order:
+  (arm-C only: slen leak-flag u's) + 1 Born u_out] → [POST-seg: transversal Y (no draw)]`,
+  then terminal `[n_data u's, engine order q=0..n-1]`. This is the "Section-5 draw order".
+- Per-shot RNG derivation (VERIFIED, `MpsLeakageForward.sample`): `rng =
+  np.random.default_rng((base_seed, shot))`. The batched arm MUST mirror this per-shot key.
+- OPT2-1 supplies every primitive: `apply_1site_` (GATE), `kraus_sample_` (LEAK — the
+  `_leak_sample` referee, cumulative `<=`), `site_rdm`, `local_expectation` (parity read),
+  `apply_window_recompress_` (the `sqrt(E_s)` blob — the `_apply_sqrt_Es` referee),
+  `canonicalize_`/`renormalize_`. OPT2-2 writes NO new op primitive; a discovered gap is a
+  contract amendment, not a silent driver-local op.
+- ShotSet pack/header + the leak_slices entry-guard/provenance are REUSED verbatim from the
+  serial `sample` (`SvSampler.pack_shots`, `cptp_residual`, the `leak_slices_mode`/`_sha256`
+  header) so gate harnesses are shared and the record schema is identical.
+
+**REUSED-VERBATIM host seams (independence rule: shared LIBRARY, never a re-derivation of the
+referee's blind-spot logic — forbid re-implementing any of these in the driver):**
+`SvSampler.{marshal_within_cycle, build_within_cycle_leak, cptp_residual, pack_shots, the
+ShotSet header build}`; module `{_qutrit_gate (the gate_table = {SV_GATE_IDS[name]:
+_qutrit_gate(name)}), _arm_d2, snake_order_from_coords, attach_layout/_eng_to_mps,
+build_codestate, mps_from_statevector (the SV→quimb-MPS lift — the d3 codestate path, red-team
+v2 N3), MpsTruncationLedger}`. The driver WALKS the same `marsh` CSR and indexes every op
+through `_eng_to_mps` — it does not re-derive geometry, gates, or the leak table. (Snake order
+is order-independent at exact grade ⇒ not correctness-load-bearing, but reuse it for χ-efficiency
+parity.)
+
+**PRECONDITIONS the builder's gate asserts BEFORE any comparison (red-team v2 — verify, don't
+assume):** (i) the d3 arm-A logical is **Z-type** ⇒ `marsh.log_supp_isx` is ALL-ZERO ⇒ the
+terminal `x_log` X-logical rotation is EMPTY/dormant at d3 (so the D2-2 x_log clause is a
+FORWARD-scope fix, unexercised by the d3 gates — see D2-2 note); (ii) the certified comparison
+runs serial and batched on the SAME codestate CONSTRUCTION (N3): at the d3 default the serial arm
+is `codestate_mode='auto'` ⇒ `build_codestate` DENSE statevector ⇒ `mps_from_statevector` (NOT
+`build_codestate_mps_direct`, a different algorithm whose ~1e-13 rounding would inflate the
+G-D2-4 whitelist) — the batched arm lifts the SAME dense codestate → `broadcast_from_quimb`.
+
+**G-D2-0 PRECONDITION — VERIFIED (`opt2_2_d3_spread_check.py`, CPU, git d8d9697, 2026-07-09):**
+the OPT2-1 window ops fence `spread = max(mps_site)-min(mps_site)+1 <= _MAX_WINDOW_SPREAD=8`.
+The REAL d3 XZZX snake geometry has worst stabilizer spread **6** (≤ 8 ⇒ the D2-2 window-op
+route NEVER raises at d3); worst dense window operator `(3^6)^2·16 = 8.5 MB` (shared across
+shots, transient), per-shot window blob `B·chi_l·3^6·chi_r·16 ≈ 322 MB @ B=1024` (state ≈ 2.9
+GB, P-B3) — feasible on the 32 GB card. Only STABILIZER supports are windowed; the logical flip
+is per-qutrit (spread 1). The diagonal fast path (`3^spread·16 B`) is an OPT2-3 throughput lever,
+NOT required for d3 feasibility.
+
+### D2-1 Representation + batch invariants (reuse OPT2-1 D-1)
+`BatchedMps` state `[B, cap_{k-1}, 3, cap_k]`, zero-padded to fixed caps, orthogonality
+`center` tracked. Codestate broadcast (N3-pinned): at the d3 default build the codestate the
+SAME way the serial comparison arm does — `build_codestate` DENSE statevector → `mps_from_
+statevector` (a quimb MPS), NOT `build_codestate_mps_direct` (a different construction whose
+~1e-13 diff would inflate the G-D2-4 whitelist) — then `broadcast_from_quimb(cs, B)` so every
+shot starts BYTE-identical to serial. EVERY driver op declares its center pre/postcondition
+(the D-2 table): LEAK/Born/terminal 1-site collapses REQUIRE center==site (the driver
+canonicalizes, never trusts); the window `sqrt(E_s)` apply canonicalizes to its support.
+
+### D2-2 The trajectory driver (batched mirror of `_run_trajectory`)
+The batch axis is **B (shots), NEVER the qutrit/round/op axis** — those stay sequential exactly
+as in the referee. Codestate: build ONCE the SAME way as serial (d3 default: `build_codestate`
+dense → `mps_from_statevector`, `<S>`/`<L>` asserted; N3) → `broadcast_from_quimb(cs, B)` so
+every shot starts BYTE-identical. The driver runs `ceil(N/B)` chunks (D2-4), each chunk a batched
+pass over ≤ B shots with the GLOBAL per-shot key. `b_eff =
+0.5 if readout_conv=='half' else spec.b`; **the stabilizer weight is `d2 = _arm_d2(spec.arm,
+spec.b)` using the RAW `spec.b` (NOT `b_eff` — `b_eff` is TERMINAL-ONLY; the per-site parity
+operator is `diag(1,-1,d2)` mapping |0>→+1,|1>→−1,|2>→d2, and `sqrt(E_s)` uses the same `d2`).**
+One batched pass over all B shots (NOT a shot loop). Per round r:
+1. **PRE-seg** walk the marshalled CSR `[round_op_ptr[2r], round_op_ptr[2r+1])` in order:
+   `WC_OP_GATE → apply_1site_(U, site)` (shared `[3,3]`); `WC_OP_LEAK → kraus_sample_(
+   leak_by_round[r], site, u[B])` (`u[B]` = the op's per-shot draw vector, D2-4).
+2. **Stabilizers** (schedule order): rotate X-supports to Z (`apply_1site_` H); parity read
+   `<P>[B]` via `local_expectation(diag(1,-1,d2)^⊗supp, support, normalized=True)` (spread ≤ 6,
+   G-D2-0); `p0[b] = ½(1+<P>[b])`; `sbit[b] = 0 if u_out[b] < p0[b] else 1` (STRICT `<` —
+   Born-stab, PER-SHOT MASK); **build the per-shot `sqrt(E_s)` diagonal VERBATIM from
+   `_apply_sqrt_Es`**: `es = ½(1 + (−1)^{sbit[b]}·∏_q d_levels[t_q])` over the 3^w support trits
+   with `d_levels=[1,−1,d2]` and **support[0] = MSB leg order**, then `sqrt(clamp(es, min=0))`
+   (negatives-only clamp — class-(c) guard against sqrt-of-NaN); apply the per-shot diagonal via
+   `apply_window_recompress_` at `max_bond=chi` (exact grade ⇒ discarded ≡ 0); **fold the [B]
+   discarded into the ledger B-fold** (`record_cut` B times per stabilizer — see D2-3 ledger
+   pin); rotate X-supports back. Append the B-vector of bits to the round-major record.
+3. **POST-seg** walk the CSR `[round_op_ptr[2r+1], round_op_ptr[2r+2])` **exactly like PRE**
+   (`WC_OP_GATE → apply_1site_`, `WC_OP_LEAK → kraus_sample_` consuming one `u[B]` as walked).
+   Today's d3 POST carries only the transversal Y (no LEAK), but the walk MUST be general — a
+   hard-coded "Y, no draws" would desync the RNG stream if a POST LEAK ever appears.
+Then **terminal (hard2)**:
+- **first rotate the X-type LOGICAL support to Z** (mirrors `_terminal_readout`'s `x_log`
+  pre-rotation, NO rotate-back). **DORMANT AT d3 (red-team v2 N2):** the d3 arm-A logical is
+  Z-type ⇒ `marsh.log_supp_isx` is all-zero ⇒ `x_log` is EMPTY in BOTH arms, so this clause is a
+  FORWARD-scope (d5/X-memory) fix, unexercised by the d3 gates (asserted precondition, GROUNDED
+  SEAMS). **Byte-identity caveat when it goes live:** the referee applies `x_log` H at the raw
+  ENGINE position used DIRECTLY as the quimb site (`_terminal_readout` passes `log_sites_eng`
+  UNMAPPED to `_apply_gate`, unlike the per-q bit loop which maps via `_eng_to_mps`) — likely a
+  latent serial snake bug. To preserve G-D2-4 byte-identity the batched arm MUST reproduce the
+  referee's EXACT indexing (engine-as-site) rather than the "correct" `_eng_to_mps` mapping, OR
+  the serial bug is fixed in lockstep under its own chip. Pin this before x_log unparks.
+- **SEQUENTIAL over q** (engine order 0..n-1), collapse-conditioned — vectorize the B axis ONLY,
+  NEVER over q (the post-syndrome data qutrits are entangled; reading all q from one pre-collapse
+  state draws the flip from the wrong, marginal-independent law): for each q, `w1[B] =
+  local_expectation(F1, [site], normalized=False)` with `F1=diag(0,1,b_eff)`, `wt[B]=norm_sq()`;
+  `p1[b] = w1[b]/wt[b]` where `wt[b] > NUMERICAL_ZERO` else `0.5` (the driver's OWN per-shot
+  `where`-mask — do NOT delegate to `local_expectation(normalized=True)`, whose degenerate branch
+  returns ~0, not 0.5); `bit[b] = 1 if u_term_q[b] < p1[b] else 0` (STRICT `<`); collapse the
+  per-shot `sqrt(F_bit)` via `apply_1site_([B,3,3])`: `bit=1 → diag(0,1,√b_eff)`, `bit=0 →
+  diag(1,0,√(1−b_eff))` (F0 = I−F1, so |2> keeps `√(1−b_eff)`); then `renormalize_()` after each
+  collapse (bits are ratio-invariant, but the norm-health witness + the degenerate mask depend on
+  it — mirrors `_terminal_readout` line 871).
+- Flip[b] = parity(bit over the logical engine support) XOR m. Pack → ShotSet + ledger (schema
+  identical to serial).
+
+### D2-3 Tie-break registry OWNED by OPT2-2 (realized as PER-SHOT MASKS; never harmonized)
+Cited by named convention (the serial referee is `mps_forward`; the OPT2-1 registry mirrors
+the same tags):
+- **leak-sample** cumulative `<=`, fallback `K-1` — delegated to `kraus_sample_` (OPT2-1;
+  bit-level match on shared `u`).
+- **Born-stab** `sbit = 0 iff u_out < p0`, STRICT `<` — driver, per-shot mask.
+- **hard2 terminal** `bit = 1 iff u < p1`, STRICT `<`, with `wt ≤ NUMERICAL_ZERO ⇒ p1 = 0.5`
+  (the driver's OWN `where`-mask on `w1/wt`, NOT `local_expectation(normalized=True)`).
+- **sqrt(E_s) build** `sqrt(clamp(es, min=0))` (negatives-only clamp before sqrt) — driver.
+- **renormalize** skip at `ns ≤ NUMERICAL_ZERO` — delegated to OPT2-1 `_scale_center_` mask.
+- **DEGENERATE-SHOT DIVERGENCE — declared DEAD-IN-REGIME + delegated (red-team v2 B6/N5).**
+  Reachability audit (arm-A/hard2/exact/CPTP): `kraus_sample_` selects a `pk>0` branch (never a
+  zero-weight one); Born-stab collapses to `p0` or `1−p0` (>0 for the selected outcome); the
+  terminal `sqrt(F_bit)` keeps `|0>`/`|2>` weight (`√(1−b_eff)`). ⇒ **no shot is annihilated on
+  the TYPICAL (non-knife-edge) path**; a mask is reachable ONLY at a measure-zero leak knife-edge
+  (`|u·tot−cumsum|<ε`, prob `~O(N·K·ε)`), whose shots are whitelisted+adjudicated (D2-4). So the
+  masks are exercised only at those whitelisted knife-edges (NOT strictly dead — reconciles the
+  D2-4 leak-knife-edge clause). Correctness of the masks is therefore DELEGATED to the OPT2-1
+  op-core gates
+  (`_scale_center_`/`local_expectation` degenerate branches, `batched_mps` tests) that DID
+  exercise them — the driver need not re-certify a reachable path it has none of. Declared
+  batched-normative (vs the serial quimb `normalized=True` NaN path): the driver's own
+  `wt≤NUMERICAL_ZERO ⇒ p1=0.5` mask + the op-core `ns≤NUMERICAL_ZERO` skip. The **Born-stab `p0`
+  degenerate** path is delegated ENTIRELY to OPT2-1's `local_expectation` gate (no driver leg —
+  it is unreachable in-regime). The **terminal `p1`** path gets ONE white-box no-NaN smoke
+  (G-D2-8) that constructs an artificial zero-norm shot — a robustness check, not a reachable-path
+  certification.
+- **Ledger folding (schema-parity pin):** the serial ledger calls `record_cut` once PER
+  stabilizer PER shot and `record_shot_total` once per shot, so `report()` has
+  `n_truncating_ops = N·R·n_stab`, `n_shots = N`. The batched driver, running `ceil(N/B)` chunks
+  of `Bc` shots (`Bc = discarded.numel() ≤ B`, the LAST chunk partial — N=1e6 is NOT divisible by
+  B=1024), MUST fold by the ACTUAL chunk count `Bc`, NOT a fixed `B` (red-team v3): per stabilizer
+  increment `n_truncating_ops += Bc`, `sum += discarded.sum()`, `worst = max(worst,
+  discarded.max())`, and `record_shot_total` `Bc` times per chunk. Summed over chunks this
+  REPRODUCES the serial `n_truncating_ops = N·R·n_stab`, `n_shots = N` — a fixed-`B` fold
+  over-counts the partial last chunk and FAILS G-D2-3.
+- **DEFERRED, out of THIS phase (scope fence):** arm-C leak-flag `u < p2` and hard3/soft level
+  path. CORRECTED rationale (red-team lens-2): arm-C's draw COUNT is schedule-FIXED (`slen` per
+  stab, shot-independent) — the real obstacle is the per-shot CONDITIONAL leak-flag PROJECTION
+  chain (each support site projects |2> vs {0,1} and renormalizes, later sites conditioned on
+  earlier projections) + the `p2` read on the partially-projected state; hard3/soft additionally
+  has a GENUINELY shot-variable `|2>→bit` sub-draw fired only when `kbar==2`. Both unpark as
+  OPT2-2b after the arm-A/hard2 core is certified. The driver RAISES `NotImplementedError` on
+  `arm != 'A'` or `mode != 'hard2'` (never a silent wrong answer).
+
+### D2-4 Batched RNG (matched physics — bit-identity is a BLOCKING gate, not diagnostic)
+**B vs N (chunk loop — red-team v2 blocker N1).** `B` is the MEMORY/throughput chunk (P-B3:
+B=1024 ⇒ state ≈ 2.9 GB); `N` is the STATISTICAL sample (G-D2-2: N=1e6). N=1e6 states = ~2.8 TB
+⇒ INFEASIBLE in one pass, so the driver runs `ceil(N/B)` chunks of ≤ B shots. **The per-shot key
+is GLOBAL, not batch-local:** for a chunk covering global shots `[off, off+Bc)`, `gens[j] =
+default_rng((base_seed, off + j))` (`j = 0..Bc-1`) — IDENTICAL to the serial key
+`default_rng((base_seed, shot))` at `shot = off+j`. Keying by `b in range(B)` per chunk (the
+naive form) makes chunk 2 REUSE streams 0..B-1 ⇒ shots 1024..2047 byte-identical to 0..1023 ⇒
+duplicated streams ⇒ marginal variance under-counted ~ceil(N/B)× ⇒ G-D2-2 z massively inflated:
+a formula-faithful builder produces WRONG physics. Draw `u[Bc]` at each Section-5 draw-point as
+one scalar `gens[j].random()` from EACH per-shot generator, in the SAME draw order (leak →
+per-stab Born → terminal). NOT a single shared generator drawing size-B blocks; NOT a permuted
+order. CPU draw cost is negligible vs GPU.
+
+**Correction to the §1 OPT2-2 line: bit-identity is a BLOCKING gate (G-D2-4), not diagnostic.**
+Rationale: every MARGINAL/schema gate is exchangeability-invariant — it passes a driver with a
+WRONG seed, a permuted draw order, a single shared generator, or a shot-permuted/joint-scrambled
+record. The ONLY construction that certifies the per-shot key + the Section-5 order + the joint
+record structure + the logical flip + the per-round leak index is matched-seed byte-identity vs
+serial (exactly OPT2-1 G-OP-2). At d3 exact grade both arms are exact and start from the SAME
+codestate, so identical bits → identical collapses → the arms stay fp-synchronized (~1e-13); the
+EXPECTED number of knife-edge flips over `N~1e3–1e4` is `~N·K·ε ~ 1e-7` ⇒ **the happy path is
+EXACT byte-identity** (whitelist essentially empty).
+- **Knife-edge whitelist (pinned):** a shot may legitimately differ ONLY if some drawn comparison
+  was within `ε = 1e-9` (OPT2-1 G-OP-2's constant) of its boundary — for a DIRECT threshold
+  (`|u − p0|` Born, `|u − p1|` terminal) OR the LEAK CUMULATIVE selection
+  (`|u·tot − cumsum_k| < ε`, the `_leak_sample` form — a leak knife-edge, which can also route the
+  shot into the declared degenerate divergence, and would false-fail a Born/terminal-only
+  whitelist). `|whitelist|` must be `~O(N·K·ε)` (tiny); a diff OUTSIDE it FAILS.
+- **Adjudication instrument (pinned — so "knife-edge vs bug" is decidable; red-team v3):** the
+  referee ops return only aggregates (`_measure_stabilizer→(sbit,discarded)`,
+  `_terminal_readout→(flip,bits,…)`, `_leak_sample→sel`) — NO per-draw `p`. So on ANY diff, a
+  committed debug harness INDEPENDENTLY RE-DERIVES the per-draw margin at `B=1` for the diverging
+  shot (NOT "logging via the referee"): Born `p0` by rotate-then-`_parity_expectation` on the
+  reconstructed pre-measure state, terminal `p1` via `w1/wt`, leak `cumsum_k` via recomputed
+  `Tr[K†K ρ]` — classifying each drawn comparison by the ε test (`|u−p|<ε` or `|u·tot−cumsum|<ε`).
+  This is a harness-side computation (allowed — it does not touch the compared serial logic; if
+  serial per-draw exposure is ever wanted, add it as a class-(a) PURE-ADDITION return under its
+  own chip, like `_leak_sample`'s `sel`). The gate HARD-FAILS if the predicate cannot be evaluated
+  for a diff (never silently whitelist). The DM law is only the independent MARGINAL cross-check
+  (G-D2-2), not the per-shot conditional.
+This is G-D2-4 below.
+
+### D2-5 Scope fences (builders may NOT drift past these)
+- **d3 EXACT grade only** (`chi ≥ exact_chi`, discarded ≡ 0). d5 / fixed-χ / truncation
+  statistics = OPT2-3, OUT.
+- **arm A + hard2 terminal** = the certified core (the P2-conjunction / p1c path). arm C,
+  hard3, soft = DEFERRED (D2-3), driver raises.
+- **No new op primitives** (compose OPT2-1); **serial arm untouched**; **no c64**.
+- **Certified-run cell MUST exercise `b_eff ≠ spec.b`** (a NON-vacuity fence for the d2-vs-b_eff
+  split, D2-2/B2): the gates run at least one cell with `spec.b ≠ 0.5` AND `readout_conv='half'`
+  (so `b_eff=0.5 ≠ spec.b`) — else a builder threading `b_eff` into `_arm_d2` passes invisibly.
+  The p1c physical cell (`spec.b=0.9`, `readout_conv='biased_b'` ⇒ `b_eff=0.9=spec.b`) does NOT
+  exercise the split on its own; add the `half` cell. **This `half` cell MUST be one of the cells
+  compared under G-D2-4 (byte-identity vs serial, raw b) OR G-D2-2 (z vs the DM, raw b)** — NOT
+  only under G-D2-3/health or G-D2-6/throughput, else the fence is vacuous (red-team v2).
+
+### D2-6 Registered gates (predict-before-measure: ALL pass; a miss is a finding)
+The gate design LESSON from the red-team: marginal/schema gates are exchangeability-invariant
+(they certify neither the seed/order nor the joint record). The load-bearing certifier is the
+BLOCKING byte-identity gate (G-D2-4); the marginal gate certifies PHYSICS against an INDEPENDENT
+oracle (G-D2-2, not vs serial — shared quimb lineage, P-B4).
+
+- **G-D2-0 (a, PRECONDITION — PASSED 2026-07-09).** Worst d3 snake stabilizer spread = 6 ≤ 8
+  (`opt2_2_d3_spread_check.py`); the window-op route is valid + feasible at d3. (See GROUNDED
+  SEAMS.)
+- **G-D2-4 (a, BLOCKING — the central certifier) — matched-seed byte-identity vs SERIAL.** Run
+  `R=1`, AND **`R≥3` with ≥3 PAIRWISE-DISTINCT, NON-PERIODIC per-round tables** (ideally the
+  actual P2 Θ-fan-out sequence — red-team v2 N4: a two-table `[A,B]` R=2 leg is passed by a
+  DEVIOUS periodic index `leak_by_round[r%2]` or `min(r,1)` that byte-matches at R≤2 yet
+  mis-feeds the non-periodic per-round tables the downstream P2 CMI/G² consumes; R≥3 with a third
+  distinct table breaks any periodic/clamped/reversed/off-by-one index). This leg kills: wrong
+  seed, permuted draw order, single shared generator, ANY wrong per-round-leak index, a
+  shot-permuted or joint-scrambled record, and any flip-only divergence — all of which pass every
+  marginal gate. Pass = the packed syndrome+flip buffer AND `terminal_bits` are byte-identical to
+  serial up to the D2-4 pinned knife-edge whitelist (direct `|u−p|<ε` OR leak-cumulative
+  `|u·tot−cumsum|<ε`, `ε=1e-9`); `|whitelist| ~ O(N·K·ε)` (expected ~0); a diff OUTSIDE it FAILS,
+  adjudicated by the D2-4 B=1 per-draw instrument. The R≥3 leg's tables MUST pass the G-D2-5
+  RoundSwap control (below) so the leg is provably non-vacuous. Small-N (`N~1e3–1e4`) suffices.
+- **G-D2-2 (a, statistical vs the INDEPENDENT DM oracle) — physics correctness.** Full-9q `R=1`
+  arm-A/hard2 batched detector marginals vs the EXACT sequential-null DM law (the
+  `p1c_full9q_record_bound.py` machinery — NEVER the isolated `dm_oracle.py` DETECTOR_MARG):
+  one-sample `z_j = |p̂_j − p_j^DM| / sqrt(p_j^DM(1−p_j^DM)/N) ≤ Z_GATE` per detector, with the
+  Bonferroni-adjusted `Z_GATE` over the `n_stab·R` detector family (registered `N=1e6`, `Z_GATE=4`
+  ⇒ family FPR calibrated). The DM law is exact (no seed), so this certifies the PHYSICS
+  independent of the serial arm's quimb lineage (P-B4). (This SUPERSEDES the deleted two-arm
+  batched-vs-serial z-test, which was statistically invalid on matched-seed PAIRED data —
+  red-team lens-2; byte-identity vs serial is now G-D2-4's job.)
+- **G-D2-8 (a, WHITE-BOX no-NaN smoke — robustness, not a reachable-path cert).** The terminal
+  degenerate path is DEAD-IN-REGIME (D2-3 reachability audit), so this is a robustness smoke:
+  construct an artificial zero-norm shot in a small batch and call the driver's terminal step
+  WHITE-BOX — assert **`p1=0.5` DIRECTLY** (the internal quantity; a black-box `bit` cannot
+  distinguish `p1=0.5` from a buggy `p1=0` when the injected `u≥0.5`, so pin the injected terminal
+  `u<0.5` and assert `bit=1` as the black-box fallback) and **no NaN anywhere in the batch state**.
+  The Born-stab `p0` degenerate path is NOT given a driver leg (unreachable in-regime; delegated
+  to OPT2-1's `local_expectation` gate — D2-3).
+- **G-D2-3 (health, NOT correctness) — norm + ledger.** `norm_drift ~ 0`; ledger `report()`
+  reproduces serial (`n_truncating_ops = N·R·n_stab`, `n_shots = N` — D2-3 folding pin).
+  `discarded ≡ 0` at exact grade is a HEALTH witness only (definitionally 0 for any impl,
+  including an inert stub — recompression correctness is exercised via the STATE that G-D2-4
+  byte-matches, and at truncating grade is OPT2-3 territory).
+- **G-D2-5 (controls, non-optional P-B4) — anti-vacuity.** Each control is DEMONSTRATED to trip
+  its gate (else the gate is vacuous): CorruptStab (corrupted support) + Shuffle (permuted
+  schedule) MUST break G-D2-2 AND G-D2-4; CorruptLogicalSupport MUST break the flip (in G-D2-4's
+  buffer + G-D2-flip); **RoundSwap/RoundReverse/RoundConstant** (permute/freeze the per-round
+  leak-table sequence — red-team v2 N4/B5) MUST break G-D2-4's byte-identity buffer, PROVING the
+  R≥3 leg's tables are observably non-equivalent (a swapped/frozen index changes the record). A
+  control that does NOT trip its gate ⇒ the tables/cell are too similar ⇒ re-pick before relying
+  on the leg.
+- **G-D2-flip (a, statistical) — the logical flip.** The flip is already inside G-D2-4's
+  byte-identity buffer; additionally assert the batched per-shot flip-rate matches the DM
+  biased-b reference `z ≤ 4` at `N=1e6` (the flip is the load-bearing PRODUCT; this catches a
+  wrong `m`, a mis-mapped `_log_eng_support`, or a terminal collapse on the wrong site — NOT the
+  x_log rotation, which is dormant at d3 (Z-logical, D2-2 note); the CorruptLogicalSupport control
+  keeps it anti-vacuous).
+- **G-D2-6 (b) — throughput.** batched shots/min at `B=1024` vs serial `s/shot`, warmup
+  excluded. PASS = **≥ 10× (the OPT2-0 anchored band FLOOR)**; `≥ 50×` is a stretch NOTE, not the
+  bar (a correct impl landing at 15–40×, squarely inside the registered 10–100× band, must not
+  FAIL — red-team lens-5). Report shots/min + the ratio; a sub-10× result is a finding
+  adjudicated against the OPT2-0 recompression-cost model.
+
+### D2-7 Predictions (class (b)/(c), before any run)
+- P-D2a: G-D2-2 + G-D2-flip pass (`z ≤ 4` vs the DM oracle at N=1e6, Bonferroni over the
+  detector family).
+- P-D2b: G-D2-4 byte-identity holds — the batched record equals serial EXCEPT a knife-edge
+  whitelist of cardinality `~O(N·K·ε)` (small; each adjudicated), at BOTH R=1 and R≥2 distinct
+  tables.
+- P-D2c: throughput lands in the OPT2-0 anchored band 10–100× serial (~8–100 ms/shot; the P-B1
+  1–5 ms/shot pre-spike optimism is retired). PASS ≥ 10×.
+- P-D2d: G-D2-8 degenerate leg — `p1=0.5`, `bit=(u<0.5)`, no NaN, masks fire.
+A miss on any = finding, adjudicated, never a silent tolerance bump.
+
+### D2-8 Build org (heavy ⇒ contract-first adversarial pipeline)
+Red-team the contract to ZERO blockers (Stage 2). Then disjoint-ownership builders: A =
+`batched_mps_forward.py` (the driver); B = `test_batched_mps_forward.py` (the gates, written
+against THIS contract, cannot see A). Un-led multi-lens review (correctness/conventions;
+numerics/GPU per-shot-mask; vacuity/devious) → adversarial verify each finding → fix → GPU
+gates (serial, orchestrator-run). src commit waits for explicit user confirmation.
+
+### OPT2-2 CONTRACT RED-TEAM OUTCOMES (2026-07-09 — converged to ZERO blockers)
+Three adversarial passes (Workflow, opus/high, un-led lenses reading the referee + op-core in
+full), **blockers 8 → 2 → 0**:
+- **Pass 1 (5 lenses):** 8 blockers — terminal x_log rotation omitted (B1); stabilizer `d2`
+  raw-`spec.b` vs `b_eff` unpinned (B2); terminal per-q loop must stay sequential (B3);
+  seed/draw-order/joint-record certified by nothing — bit-identity was diagnostic-only (B4);
+  per-round leak index certified by nothing (B5); annihilation masks dead in the gate regime
+  (B6); hard2 `p1` degenerate route (B7); invalid two-arm binomial se on paired data (B8). All
+  8 closed as contract edits; `+11` amendments adopted.
+- **Pass 2 (3 lenses, closure-refutation + new-blocker hunt):** B2/B3/B7/B8 CLOSED; found **2 NEW
+  blockers the pass-1 edits introduced** — per-shot RNG keyed `range(B)` breaks under `N≫B`
+  chunking (N1); the R=2 `[A,B]` leg is passed by a periodic index (N4). Both closed
+  (global-key chunk loop; R≥3 non-periodic tables + RoundSwap control), plus N2/N3 + B4/B5/B6
+  residuals tightened.
+- **Pass 3 (2 lenses, round-2 closure + new-blocker):** N1/N2/N3/N4/B2/B6 all CLOSED, **ZERO new
+  blockers**; 3 closing amendments (B4 adjudication = independent B=1 re-derivation not
+  referee-hook logging; D2-3 "dead code" → "exercised only at whitelisted knife-edges"; ledger
+  fold uses the chunk count `Bc`, not `B`).
+- **Structural preconditions VERIFIED on-box (CPU, `opt2_2_d3_spread_check.py`):** worst d3 snake
+  stabilizer spread **6 ≤ 8** (window-op route valid + feasible); d3 arm-A logical **Z-type**,
+  `log_supp_isx=[0,0,0]` ⇒ x_log dormant at d3.
+Ready for Stage 3 (disjoint-ownership build) pending user src-confirmation.

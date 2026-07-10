@@ -314,6 +314,53 @@ Optimize: ① TensorCircuit-NG: trace once → XLA fuse → zero Python loop
 | [spam_robust_noise_spectroscopy_2402.12361](spam_robust_noise_spectroscopy_2402.12361.md) | SPAM-robust multi-axis noise spectroscopy; non-Markovian qubit dynamics from microscopic noise models. |
 | [gle_memory_kernel_learning_apriori_2402.11705](gle_memory_kernel_learning_apriori_2402.11705.md) | GLE memory kernel learning with a-priori physical constraints. |
 
+## PEPO (Projected Entangled Pair Operator) — 2D open-system TN carrier (2026-07-09 sweep)
+
+Fifteen foundational and cutting-edge papers covering the full PEPO literature:
+origin iPEPO, stable algorithms (FET/WTG), truncation methods (NTU/GTU/LU), QEC
+applications, simplified constructions, non-Markovian process-tensor connections,
+and GPU-compatible contraction. **Synthesized map:** `outputs/papers/pepo_survey/PEPO_COMPREHENSIVE_MAP.md`.
+
+### Foundation — iPEPO origin + stable algorithms
+
+| Note | One-line takeaway |
+|---|---|
+| [kshetri_weimer_orus_origin_ipepo_1612.00656](kshetri_weimer_orus_origin_ipepo_1612.00656.md) | **Origin iPEPO** (Nat. Commun. 2017): parallelism between imaginary-time ground-state evolution and real-time Lindblad steady-state evolution; simple-update truncation, CTM contraction. SU is uncontrolled in 2D — FET/WTG fixes this. |
+| [mc_keever_stable_ipepo_fet_wtg_2012.12233](mc_keever_stable_ipepo_fet_wtg_2012.12233.md) | **FET+WTG (PRX 2021):** the stable iPEPO algorithm. FET constructs bond environment Υ_jl from Hilbert-Schmidt effective environment; WTG cycle entropy S_cycle threshold ~10⁻³ decides SU vs FET. 10× lower trace distance vs SU. Complementary to tePEPO's FSA+Gaussian long-range. |
+| [kilda_ipepo_stability_2012.03095](kilda_ipepo_stability_2012.03095.md) | **iPEPO stability (SciPost 2021):** near dissipative critical points (J_y≲1.32 for XYZ), SU-iPEPO becomes UNSTABLE. D does NOT help monotonically (D=12 works, D=14 fails). εΛ diagnostic. Most actionable: upgrade to FET before committing to 2D carrier. |
+
+### Truncation methods (截断) — from SU to GTU
+
+| Note | One-line takeaway |
+|---|---|
+| [dziarmaga_ntu_truncation_2107.06635](dziarmaga_ntu_truncation_2107.06635.md) | **NTU (PRB 2021):** bridge between SU and FU. Exact NN-environment contraction → Hermitian non-negative metric → guaranteed stability. ξ~20 at O(D⁸) parallel cost. Demonstrated on thermal-state iPEPO (density matrices). **Direct drop-in replacement for itrSU in tePEPO — ~10× ξ gain.** |
+| [dziarmaga_gtu_truncation_2205.11067](dziarmaga_gtu_truncation_2205.11067.md) | **GTU (PRB 2022):** direct overlap maximization in iPEPS tangent space via CTMRG Gramm-Schmidt gradient. SVDU→NTU→GTU 3-stage pipeline. ξ~30+. Extension to PEPO mixed states formally straightforward but costlier. Correct formalism, not drop-in ready. |
+| [zheng_yang_loop_update_1906.04085](zheng_yang_loop_update_1906.04085.md) | **Loop Update:** cyclic optimal truncation on 4-site plaquette as MPS with PBC → canonicalization → FET. SU error ~40% larger than LU at D=6. Transfers directly to PEPO geometry; candidate drop-in for itrSU truncation step. |
+
+### PEPO constructions — simplified + cluster expansion
+
+| Note | One-line takeaway |
+|---|---|
+| [orourke_chan_simplified_pepo_1911.04592](orourke_chan_simplified_pepo_1911.04592.md) | **gMPO reformulation (PRB 2020):** PEPO → sequential bipartition MPO-like operators; on-the-fly expectation values. 20–60× over PEPOs for finite-range, ~600× for long-range. Gaussian basis technique for isotropic spatial correlations. |
+| [vanhecke_cluster_expansion_pepo_1912.10512](vanhecke_cluster_expansion_pepo_1912.10512.md) | **Cluster expansion PEPO (PRA 2021):** organizes exp(t Σ h_i) by connected-cluster size → infinite-order exact per cluster. Preserves ALL symmetries. Large timestep δt=2.1 achievable. **CPTP not guaranteed** (inclusion-exclusion can create negative Choi eigenvalues). |
+
+### QEC applications — PEPO for surface codes + decoding
+
+| Note | One-line takeaway |
+|---|---|
+| [manabe_suzuki_darmawan_leakage_tn_2308.08186](manabe_suzuki_darmawan_leakage_tn_2308.08186.md) | **Leakage TN thin strip (NJP 2025):** MPS-based, 3×d strip ONLY — SVD bottleneck at d≥5 even on thin strip. Area-law-in-time saturation = encouraging for 2D-PEPO path. Explicitly calls for PEPS/isoTNS for full d×d. |
+| [liao_heisenberg_pepo_2308.03082](liao_heisenberg_pepo_2308.03082.md) | **Heisenberg-picture PEPO:** χ=2 matches MPO χ=1024 via operator compression + 2D geometry. 127-qubit exact result in 3s CPU. Near-Clifford (near-identity) noise is similarly compressible. Cannot directly handle CPTP channels but near-unitary coherent errors stay efficient. |
+| [piveteau_tn_decoding_2310.10722](piveteau_tn_decoding_2310.10722.md) | **TN decoding beyond 2D (PRX Quantum 2024):** PEPS sweeping + SU for 3D codes. Snaking procedure compresses circuit-level noise into cubic lattice. Assumes known noise models — incompatible with twin's recovery goal. |
+| [rudolph_tindall_gpu_peps_2507.11424](rudolph_tindall_gpu_peps_2507.11424.md) | **GPU PEPS sampling:** generalized boundary MPS contraction for ANY planar topology. 35×+ GPU speedup. Heavy-hex (IBM) vs Willow (rotated-square) loop correlation divergence. Maps to PEPO contraction but: no mixed-state demo, no mid-circuit measurement, noiseless-only. |
+
+### Non-Markovian bridge — TEMPO, process tensor, process trees
+
+| Note | One-line takeaway |
+|---|---|
+| [strathearn_tempo_1802.03160](strathearn_tempo_1802.03160.md) | **TEMPO (Nat. Commun. 2018):** influence functional→temporal MPO; SVD compression. K=200 steps (10× over QUAPI). 1D temporal axis. **Spatial PEPO + temporal TEMPO = 3D TN — the central architectural open problem.** |
+| [jorgensen_pollock_pt_tempo_1902.00315](jorgensen_pollock_pt_tempo_1902.00315.md) | **PT-TEMPO (PRL 2019):** process tensor unifies influence functional; LOCAL boundary → 1–2 orders speedup. Temporal MPO per site, but outer bond dim scales as d^{2N} for N qubits. **Oracle tier** for small-window forward model, not full carrier. |
+| [dowling_process_trees_2312.04624](dowling_process_trees_2312.04624.md) | **Process trees (PRX 2024):** tree-geometry process tensor via 2D TRG from Feynman-Vernon IF. Polynomial temporal decay. 2–60× fewer parameters than MPO near phase transitions. **Single-qubit temporal only** — not spatial. Complementary to iPEPO, not a replacement. |
+
 ## External landscape — decoder baselines & coherent noise (not cached; first-pass digest, 2026-06-14)
 
 Four user-supplied papers positioning the M3/M4 + plan3 work against the
