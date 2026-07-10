@@ -233,6 +233,13 @@ standing proof single-wire works at d3.
   the validated carrier — the actual project mainline (notion-2 record memory), which the
   sampling arm exists to serve.
 
+**SEQUENCING NOTE (2026-07-10, user-directed):** RUNG-B's bond-saturation bet is the CRUX
+and is promoted to the immediate next test (§5 action #2), ahead of the RUNG-A
+verification, because it is the one unproven question the entire d5/d7 goal depends on
+("test the riskiest assumption first"). It runs as a two-stage feasibility SPIKE (d3
+correctness vs the exact referee → d5 bond-saturation measurement), reusing the closed
+DM-PEPO's layout/boundary-MPS/loop-rank machinery switched to single-wire.
+
 ### 3.4 Scope-fence reopening (process note)
 
 The ancilla-explicit rebuild REOPENS the S10/C10 compilation scope fence — this was
@@ -312,29 +319,46 @@ Clifford-parity part only; it is a diagnosis confirmation, not itself the fix.)
 
 ---
 
-## 5. CONCRETE NEXT ACTIONS (in order)
+## 5. CONCRETE NEXT ACTIONS (reprioritized 2026-07-10 — test the riskiest assumption first)
+
+**The CRUX is the RUNG-B bond-saturation bet, and it is now the primary next test**
+(user-directed 2026-07-10). Rationale: whether the whole d5/d7 goal is achievable hinges
+on ONE unproven question — does a SINGLE-WIRE 2D PEPS bond stay bounded under multi-round
+noisy evolution? Everything else (mps_forward verification, the cTJM probe) mostly
+confirms what we already know. So the 2D feasibility spike is promoted above RUNG-A.
 
 1. **(DONE) Literature survey folded into §4b** — the load-bearing basis is registered.
-2. **cTJM bond-2 diagnosis probe (cheap, ~1 script):** confirm the doubled-wire
-   diagnosis by inserting the stabilizer Pauli-parity as a bond-2 MPO (cTJM 2607.01323
-   §IV.3) on the OLD DM geometry vs the rank-25 path-TT, measure the bond. Reuses the
-   committed engine + the exact referee. Near-zero cost, de-risks the representation
-   choice. (Diagnosis only — the biased-b `√E_s` needs the trajectory picture for the
-   full fix.)
-3. **G1.8 opportunistic run** (carrier-independent, GPU-free window) → the S11 rung-2
-   window-embedding bound. Runner + measured-bar wiring are ready.
-4. **RUNG-A verification** (NOT a from-scratch build): read `mps_forward.py` (the existing
-   single-wire MPS trajectory carrier, certified vs the dense engine) + `sv_sampler.py`
-   (the DENSE reference + shared infra: marshalling, WG Kraus, codestate, ShotSet) FIRST.
-   Confirm `mps_forward` emits the {det,obs} record objects the sampling arm needs; run its
-   certification vs the exact QutritDM referee as the standing sampling-arm gate. Measure
-   whether the compiled √E_s vs ancilla-explicit changes the d5 thin-strip bond. Anti-toy
-   guards from the survey: joint-generator no-split (jaschke App. A); purity ≠ trajectory-
-   average arm-consistency.
-5. **RUNG-B**: d5/d7 2D pure-state PEPS + boundary sampling (Rudolph–Tindall engine); run
-   the ε_l loop-correlation risk check FIRST; register the bond-saturation bet.
+2. **★ RUNG-B FEASIBILITY SPIKE — the crux, DO NEXT (this is a SPIKE, not a 1-script
+   probe).** Build a MINIMAL single-wire 2D PEPS forward (reuse the closed DM-PEPO's
+   layout / plaquette-path / boundary-MPS / loop-rank-probe machinery, switched from
+   doubled-wire to single-wire pure state). Two stages:
+   - **(2b-i) d3 correctness:** d3 codestate as a single-wire 2D PEPS (D-P bond-2 face
+     tensors, 9 sites), evolve a few noisy rounds, CERTIFY {det,obs} records vs the exact
+     QutritDM referee (1e-15). Confirms the single-wire 2D representation + evolution +
+     boundary sampling is FAITHFUL. Cheap.
+   - **(2b-ii) d5 scaling — THE BET:** same on d5, measure whether the PEPS per-edge bond
+     D SATURATES as rounds increase (predict-before-measure: registered band) + the
+     Rudolph–Tindall ε_l loop-correlation cost (2507.11424 Eq. 3-4) on our rotated-square
+     patch (their R~75-at-L=15 caution says this could be expensive). A saturating bond =
+     GO for the full 2D carrier; a growing bond = the PEPS direction needs a rethink
+     (LPDO? accept thin-strip-only? different geometry) — a finding, not a silent retreat.
+   Predict-before-measure: register the saturation band + the ε_l expectation BEFORE the
+   run. This spike ANSWERS the make-or-break question at minimal build cost.
+3. **cTJM bond-2 diagnosis probe (cheap, ~1 script, opportunistic):** confirm the
+   doubled-wire diagnosis by inserting the stabilizer Pauli-parity as a bond-2 MPO (cTJM
+   2607.01323 §IV.3) on the OLD DM geometry vs the rank-25 path-TT. Near-zero cost, but
+   it only CONFIRMS a diagnosis we already trust — do it when convenient, not before #2.
+4. **G1.8 opportunistic run** (carrier-independent, GPU-free window) → the S11 rung-2
+   window-embedding bound. Runner + measured-bar wiring ready; run whenever the GPU is idle.
+5. **RUNG-A verification** (low-risk, confirmatory — can run after or alongside #2): read
+   `mps_forward.py` (the existing single-wire MPS trajectory carrier, certified vs the
+   dense engine) + `sv_sampler.py` (DENSE reference + shared infra). Confirm `mps_forward`
+   emits the {det,obs} record objects the sampling arm needs; run its certification vs the
+   exact QutritDM referee as the standing sampling-arm gate. Anti-toy guards: joint-
+   generator no-split (jaschke App. A); purity ≠ trajectory-average arm-consistency.
 6. **RUNG-C**: coupled/correlated records (the mainline payload; Kam 2603.05474
-   process-comb construction for the correlated-noise trajectory distribution).
+   process-comb construction for the correlated-noise trajectory distribution) — GATED on
+   #2 succeeding (no point building the payload carrier if 2D bond does not saturate).
 
 **Standing constraints (unchanged):** GPU-only model compute, GPU serial (user's live
 desktop, no concurrent jobs); scripted-execution discipline; un-led review + theory-fix
