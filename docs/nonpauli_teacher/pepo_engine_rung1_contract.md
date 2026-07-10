@@ -1,10 +1,20 @@
 # Rung-1 PEPO Engine — Build Contract (contract-first; binding for builders A1–A4)
 
-Status: CONTRACT v1, 2026-07-09. Governing registration: `pepo_d5d7_carrier_prereg.md` v2.2
-(gates G1.1–G1.9, ledger C1–C10, simplifications S1–S11, rung-0 outcomes). This document pins
-IMPLEMENTATION semantics: representation, invariants, the op↔referee registry, gate protocols,
-and scope fences. Committed BEFORE any implementation code. A miss at a gate is a finding to
-adjudicate, never a silent tolerance bump.
+Status: CONTRACT **v2**, 2026-07-09 — post-red-team revision (3 un-led breakers; 3 BLOCKERs +
+13 amendments folded; v1 in git history). Governing registration: `pepo_d5d7_carrier_prereg.md`
+v2.2 (gates G1.1–G1.9, ledger C1–C10, simplifications S1–S11, rung-0 outcomes). This document
+pins IMPLEMENTATION semantics: representation, invariants, the op↔referee registry, gate
+protocols, and scope fences. Committed BEFORE any implementation code. A miss at a gate is a
+finding to adjudicate, never a silent tolerance bump.
+
+**Red-team OUTCOMES (v1→v2, all three breakers convergent):** (B1) the v1 "TT rank ≤ 10"
+assert was FALSE — the exact fused-leg TT of the weight-4 stabilizer channel at b=0.9 has bond
+ranks (9, 25, 9), = (2·min(w_L,w_R)+1)² per bond (the v1 figure forgot the ket⊗bra squaring);
+(B2) the v1 "Δσ ≤ 1e-3" plateau was refuted by the frozen exact spectra themselves (~4.2e-3/round
+scale drift from healthy purity decay; ℓ²-normalized shape drift ~4e-5) — the gate now runs on
+the NORMALIZED spectrum; (B3) the v1 G1.1 obs law was double-sided-unpinned (engine biased-b vs
+referee 50/50 leaked split, divergence ~4e-3 vs a ~2e-3 band; the referee's own docstring
+documents it) — the obs law is now pinned on both sides with a new A4 oracle deliverable.
 
 ## 0. Verified structural facts (Stage-0 ledger — each checked in the named seam, 2026-07-09)
 
@@ -44,8 +54,15 @@ top of the test file.
   qutrit, physical leg = the FUSED d²=9 vectorized index (ket⊗bra, ROW-MAJOR vec: fused index
   k = 3·t_ket + t_bra — pinned; every superoperator uses this convention), virtual bonds on
   the (u,v) grid edges. Tensors torch-cuda-complex128 ALWAYS (S8; assert at construction).
-- **Grid**: u=(x+y)/2, v=(x−y)/2 from `sched.data_coords`, integrality/uniqueness/d×d-ness
-  ASSERTED (F5). Site tags `Q{pos}` keyed by ENGINE position (the streams/stab key space).
+- **Grid (v2 fix — the raw transform gives HALF-integers on the real patch)**:
+  u' = (x+y)/2 − min, v' = (x−y)/2 − min from `sched.data_coords`; integrality/uniqueness/
+  d×d-ness asserted ON (u',v') ∈ {0..d−1}². Site tags `Q{pos}` keyed by ENGINE position (the
+  streams/stab key space). NOTE (v2): the FROZEN referee cut A=[0,1,2] (x ≤ 5) is a STAIRCASE
+  in (u',v') — {(0,0),(0,1),(1,0)} — NOT a grid column; every frozen number (16-flat, dp/bar
+  table, X2b χ) is defined at THAT site list. All G1.3/G1.4/G1.6 reads use the explicit site
+  list A=[0,1,2] | B=[3..8], never "a grid column".
+- **d-genericity (v2)**: layout.py code is d-generic; rung-1 EVIDENCE is d3-only (the test
+  builder writes d3 tests only; d5/d7 codestate checks are rung-2 scope).
 - **No global gauge/canonical form is tracked** (2D has none — Kilda App. A.1); the ONLY
   tracked bond metadata is the per-bond dimension + the truncation LEDGER: per-truncation
   discarded weight (squared-σ scale — UNITS: discarded = Σ_cut σ_k² / Σσ², the same squared
@@ -66,14 +83,14 @@ top of the test file.
 
 | Op (module) | Semantics (pinned) | Referee (equivalence target) |
 |---|---|---|
-| `build_codestate(sched, m)` [layout] | ∏_g (I+g)/2 · logical-projector · \|0…0⟩-analog as W-tensor chains (D-P construction: per check ONE chain, one inter-column bond, bond 2 state / 4 operator fused); qutrit-embedded (\|2⟩ row zero); built directly as the FUSED-leg PEPO of ρ = \|m⟩⟨m\| | d3: dense reconstruction == `QutritDM.init_logical(m)`.rho, max-abs ≤ 1e-12 (G1.3 pre-check); all d: structural exacts ⟨S_g⟩=+1, ⟨Z_L⟩=(−1)^m, \|2⟩-mass=0 via sampler caps (C5) |
+| `build_codestate(sched, m)` [layout] | ∏_g (I+g)/2 · logical-sector projector applied to the **H^⊗n-SPREAD seed (the oracle's `_codestate_vector` convention — v2 fix: a literal \|0…0⟩ seed can be EXACTLY annihilated in the m=1 sector; nonzero-norm ASSERTED for BOTH m)** as W-tensor chains (D-P construction: per check ONE chain, one inter-column bond, bond 2 state / 4 operator fused); qutrit-embedded (\|2⟩ row zero); built directly as the FUSED-leg PEPO of ρ = \|m⟩⟨m\| | d3: dense reconstruction == `QutritDM.init_logical(m)`.rho for **m = 0 AND m = 1**, max-abs ≤ 1e-12 (G1.0); d-generic code, d3-only evidence: structural exacts ⟨S_g⟩=+1, ⟨Z_L⟩=(−1)^m, \|2⟩-mass=0 via sampler caps (C5) |
 | `apply_token_stream(state, streams, leak_kraus)` [A2] | F1 semantics VERBATIM: per position, tokens in order, stop at `M`; `H`→qutrit Hadamard superop, `X`→X superop, `LEAK`→Kraus-sum superop Σ_k (K_k ⊗ K̄_k) on the fused leg; `Y` ignored pre-M; unknown token raises. Single-site: NO bond change (assert) | `QutritDM.apply_within_cycle_premeasure` — d3 dense equality per token type on random small states (unit gate, 1e-12) |
-| `apply_postmeasure(state, streams, terminal)` [A2] | F1: post-M `Y` per position; terminal skips; non-Y post-M token raises | `QutritDM.apply_within_cycle_postmeasure`, same bar |
-| `stab_channel_tt(paulis, outcome, b, arm)` [A2] | The EXACT NUMERIC TT of the diagonal fused-leg superoperator of √E_s·(·)·√E_s over the support: build the 3^w diagonal e_i from the F2 formula (w = weight ≤ 4 → ≤ 81 entries), take √, form the fused diagonal √e_i·√e_j (9^w entries, w≤4 → ≤ 6561), TT-decompose EXACTLY (SVD, zero-tol NUMERICAL_ZERO) along the plaquette path; assert TT rank ≤ 10 per bond (measured, logged). X-supports: sandwich with single-site H superops (F2), NOT folded into the TT | `QutritDM.project_stabilizer(..., diagonal_z=False)` — d3 dense equality of one full stabilizer update on random ρ, 1e-12; the b/arm table of `_povm_diag_weight` is the normative formula (arm A default, b from the p1c cell = 0.9) |
-| `nonselective_round(state, stabs, …)` [A2] | F3 loop: per stab, branch-sum ρ → √E_0ρ√E_0 + √E_1ρ√E_1 (PEPO add = bond-double on the support path) then NTU gap-cut truncate; stabs in the SAME order as `sched.stabilizers` | R-gate reference loop semantics; gate-level: G1.2/G1.3 vs the frozen JSONs |
-| `ntu_truncate(state, bond, D_cap)` [A2] | The rung-0 seed: NTU metric (rows = BRA insertion, F6), pinv optimization loop, GAP-CUT selection (cut at the largest spectral-gap ratio ≥ the registered gap-detection rule: cut index = argmax σ_k/σ_{k+1} within k ≤ D_cap, tie→smaller k; if no ratio ≥ 10, fall back to D_cap and log CAP_BINDING) — the gap rule is pinned HERE to stop drift | rung-0 unit (metric); gate-level G1.3 (gap rank == 16 at d3) |
-| `norm_cache(state)` / `expect_diag_caps(state, caps)` [A3] | Rudolph–Tindall reverse-pass boundary-MPS over grid columns (one-site fitting, dim R_n), cached once per state; Tr(ρ·⊗diag-caps) via capped physical legs (trace-cap = Σ_k fused (k,k)) | d3: dense Tr(ρ·Π) equality 1e-10; convergence-in-R_n logged |
-| `born_sample_round(state, stabs, rng)` [A3] | Per stab sequentially: q = Tr(E_s ρ)/Tr(ρ) via caps; sample; SELECTIVE update √E_s branch + renormalize ledger; emit detector bits per the SAME detector convention as the 1D engine (`seam.py` d3 conventions) | d3 G1.1: per-sampled-record exact probability from the DM oracle path propagation (`p7e_carrier_cert_common.DMPathEvaluator` reuse), z ≤ 4 |
+| `apply_postmeasure(state, streams, terminal)` [A2] | F1: post-M `Y` per position; terminal skips; **raise set matches the referee EXACTLY: post-M `X`/`H`/`LEAK` raise, any OTHER unknown post-M token is silently ignored (v2 fix — the referee does NOT raise on arbitrary tokens; a raises-on-unknown killer would split engine vs referee)** | `QutritDM.apply_within_cycle_postmeasure`, same bar |
+| `stab_channel_tt(paulis, outcome, b, arm)` [A2] | The EXACT NUMERIC TT of the diagonal fused-leg superoperator of √E_s·(·)·√E_s over the support: build the 3^w diagonal e_i from the F2 formula, take √, form the fused diagonal √e_i·√e_j, TT-decompose EXACTLY (SVD; candidate values with σ ≤ 1e-12·σ₁ dropped) along the plaquette path; **assert TT bond rank == the DERIVED bound (2·min(w_L,w_R)+1)² at each bond — (9, 25, 9) for w=4, (9) for w=2 at b∉{0,1} (v2 B1 fix: the v1 "≤10" forgot the ket⊗bra squaring; rank 25 verified numerically, σ₂₅≈5.8e-6 — no tolerance rescues a smaller bound)**; measured ranks logged. X-supports: sandwich with single-site H superops (F2), NOT folded into the TT | `QutritDM.project_stabilizer(..., diagonal_z=False)` — d3 dense equality of one full stabilizer update on random ρ, 1e-12; the b/arm table of `_povm_diag_weight` is the normative formula (arm A default, b from the p1c cell = 0.9) |
+| `nonselective_round(state, stabs, …)` [A2] | F3 loop: per stab, branch-sum ρ → √E_0ρ√E_0 + √E_1ρ√E_1 then truncate; stabs in the SAME order as `sched.stabilizers`. **Bond budget (v2, re-derived at rank 25): the support-path transient bond reaches (r₀+r₁)·D ≤ 50·D mid-plaquette before truncation — trivial at d3 tensor sizes, but the budget line in every gate script uses 50·D, not 20·D** | R-gate reference loop semantics; gate-level: G1.2/G1.3 vs the frozen JSONs |
+| `ntu_truncate(state, bond, D_cap)` [A2] | The rung-0 seed: NTU metric (rows = BRA insertion, F6) + pinv optimization loop; **per-bond truncation target = D_cap (CAP_BINDING at per-bond NTU truncations is NORMAL operation, logged not flagged — v2: the gap rule was never measured per-bond)**. The GAP RULE applies to GLOBAL spectrum reads (G1.3/G1.6) and ledger effective-rank reporting ONLY, pinned: candidates k ≤ D_cap with σ_{k+1} > 1e-12·σ₁ (trailing exact zeros ⇒ gap at the last nonzero); among candidates with ratio σ_k/σ_{k+1} ≥ 10, pick the LARGEST such k (matches the frozen ε-tail behavior: χ=16 is the LAST large gap before the tail); no qualifying ratio ⇒ effective rank = D_cap + CAP_BINDING log; winning ratio always logged | rung-0 unit (metric); gate-level G1.3 (gap rank == 16 at d3) |
+| `norm_cache(state)` / `expect_site_caps(state, caps)` [A3] | Rudolph–Tindall reverse-pass boundary-MPS over grid columns (one-site fitting, dim R_n), cached once per state; **caps = GENERAL single-site fused operators (length-81 fused superop-diag or 3×3 site operators lifted to the fused leg) — NOT diagonal-only (v2 fix: the X-support E_s needs H-conjugated M_q, a full 3×3). E_s expectation pinned as the two-term decomposition Tr(E_s ρ) = ½Tr(ρ) + ½(−1)^s Tr(ρ·⊗_q M_q), M_q = diag(1,−1,1−2b) on Z sites and H·diag(1,−1,1−2b)·H on X sites** | d3: dense Tr(ρ·Π) equality 1e-10; convergence-in-R_n logged |
+| `born_sample_round(state, stabs, rng)` [A3] | Per stab sequentially: q = Tr(E_s ρ)/Tr(ρ) via site caps; sample; SELECTIVE update √E_s branch + renormalize ledger; emit detector bits per `seam.py` d3 conventions (det(0,j)=s(0,j); det(r,j)=s(r,j)⊕s(r−1,j)). **obs law PINNED (v2 B3 fix, BOTH sides): obs = parity of the per-site biased-b terminal data readout XOR m — the engine samples it; the ORACLE composes the SAME law exactly (new A4 deliverable: a biased-b terminal-readout composition on the dense terminal ρ_{s\|m} — per-site diagonal readout POVM F₀/F₁ with the b-weighted leaked rows, then the parity marginal; the stock `logical_sector_traces` 50/50 split is FORBIDDEN as the G1.1 referee — its divergence is documented in p7e's own docstring)** | d3 G1.1: per-sampled-record exact probability via `DMPathEvaluator.reevolve_onto_records` (defined in `qec_twin/audit/floor_backend.py`; p7e re-exports) on RAW s-records — **the det→s inversion s(r,j) = XOR_{r'≤r} det(r',j) is applied before the referee call (pinned); memory: each record handle is (3⁹,3⁹) ≈ 5.77 GiB → chunk B ≤ 2** — plus the A4 biased-b obs composition; z ≤ 4 |
 | latent conditioning [A3, G1.6 only] | Per-sample latent draw OUTSIDE the TN; per-round Pauli superop insertion per arm; χ(mix)=χ(arm) check | X2b d3 evidence pattern (`pepo_xi_correlation_length_d3.py` X2b arm) |
 
 **Units table**: b ∈ [0,1] probability; discarded weight + ε levels are SQUARED-σ scale;
@@ -82,27 +99,56 @@ squared norm (F6 quadratic form); gap-cut ratio is on UNSQUARED σ_k.
 
 ## 4. Registered gate protocols (predictions: ALL PASS; tolerances pinned)
 
-- **G1.0 (pre-gate, A1)** dense d3 codestate == oracle (1e-12 max-abs).
+- **G1.0 (pre-gate, A1)** dense d3 codestate == oracle for m=0 AND m=1 (1e-12 max-abs).
 - **G1.1** N=1e6 sampled {det,obs} records @ d3, R=3, p1c cell; per-record exact probability
-  via DMPathEvaluator; multinomial z ≤ 4 on the top-64 record classes + tail-mass bucket.
+  via `DMPathEvaluator.reevolve_onto_records` (det→s inversion pinned in §3; chunk B ≤ 2) +
+  the A4 biased-b obs composition (§3 — the 50/50 split is FORBIDDEN as referee); multinomial
+  z ≤ 4 on the top-64 record classes + tail-mass bucket. **χ_b sub-gate (v2): the run repeats
+  at capped R_n = R_x ∈ {4, 16} with the S2 discarded/p-q/KLD ledger live — the truncated
+  contraction path must be exercised at the only rung with an oracle; an exact-χ_b-only pass
+  does not certify S2.**
 - **G1.2** sequential-null detector marginals, R=10 == frozen F8 table: engine worst
-  dp/bar ≤ 0.1 (bar convention above).
-- **G1.3** engine gap rank at the straight d3 bisection == 16 EXACTLY at every round 1..10.
-- **G1.4** Δσ (straight-cut kept spectrum, zero-padded, R≤2 excluded) plateaus ≤ 1e-3;
+  dp/bar ≤ 0.1 (bar convention above). **Engine marginals MUST come through the production
+  site-cap path (A3); the d3 dense reconstruction is the cross-check, never the source (v2).**
+- **G1.3** engine gap rank at the FROZEN cut (explicit site list A=[0,1,2] | B=[3..8], §2)
+  == 16 at every round 1..10, **evaluated at the D_cap=16 arm via dense d3 reconstruction +
+  straight-cut operator SVD + the pinned gap rule (§3), with the headroom criterion: kept
+  rank < 0.5× the cut ceiling (16⁴ — trivially satisfied) and the ≥10 gap ratio SHOWN. The
+  D=2 arm's rank read is INCONCLUSIVE-BY-DESIGN (cut ceiling 2⁴ = 16 — cap-saturated) and is
+  never cited as a G1.3 pass (v2 anti-vacuity fix).**
+- **G1.4** Δσ on the **ℓ²-NORMALIZED (shape) spectrum σ/‖σ‖₂ (v2 B2 fix: the un-normalized
+  spectrum drifts ~4.2e-3/round from healthy purity decay — the frozen referee's own data;
+  normalized drift ~4e-5)** at the frozen cut, zero-padded, R≤2 excluded: plateaus ≤ 1e-3;
   discarded-weight plateau; D-sweep {2,4,8,16}: oracle distance monotone non-increasing in D
   (Kilda-pattern destabilization ⇒ STOP finding).
 - **G1.5** controls DEMONSTRATED to trip: CorruptStab (wrong support) breaks G1.0/G1.2;
   Shuffle (permuted schedule) breaks G1.2; identical-arms guard in every two-arm compare;
   each C1–C10 broken-variant fires (test-builder owns the sabotage variants, K-catalog
   discipline).
-- **G1.6** χ(mix) == χ(arm) per round (latent bond-free), d3.
-- **G1.7** in-engine ξ re-measure (the ξ-gate instrument, NO_FIT policy per prereg P4):
-  ξ(Zq) ∈ [0.2,0.8], ξ(n2) ∈ [0.1,0.5].
-- **G1.8** window-embedding mismatch calibration: embedded 2×3/3×2 windows of d3 vs
-  stand-alone tiles, both via the DENSE oracle (this is an ORACLE-side deliverable — no PEPO
-  code in the loop; its output is the S11 bound number).
-- **G1.9** positivity: min-eig of the dense-reconstructed truncated ρ (d3) within
-  \|λ_min\| ≤ 1e-6; the sampler's negativity witness fires on a sign-flip sabotage.
+- **G1.6** χ(mix) == χ(arm) per round (latent bond-free), d3 — **χ read = the gap rank of the
+  dense-reconstructed ρ at the frozen §2 cut, the SAME instrument as G1.3 (v2: an engine-side
+  per-bond-dim read is a different, cap-confounded quantity).**
+- **G1.7** in-engine ξ re-measure (the ξ-gate instrument): ξ(Zq) ∈ [0.2,0.8] on fitted rounds;
+  ξ(n2) ∈ [0.1,0.5] **on the instrument's fitted rounds R ≥ 2 (v2: the frozen instrument
+  itself yields n2 NO_FIT at R=1 — zero signal before noise builds). NO_FIT policy amended
+  NOW, not post-hoc: (i) the codestate boundary-stabilizer structural class (prereg P4) and
+  (ii) the BELOW-FLOOR-SIGNAL class (cmax < the registered signal floor ⇒ that round is
+  excluded from the fit, logged) are acceptable; any OTHER NO_FIT ⇒ STOP.**
+- **G1.8** window-embedding mismatch calibration (ORACLE-side deliverable, no PEPO code):
+  embedded 2×3/3×2 windows of d3 vs stand-alone tiles, both via the DENSE oracle, **tile
+  DEFINITION PINNED (v2): tile sites = the window's data sites; tile stabilizers = the d3
+  stabilizers whose support lies FULLY inside the window (straddling stabs DROPPED — the
+  declared restriction rule); schedule = the same within-cycle streams restricted to the
+  window sites; open boundary (no environment operator); p1c cell; BOTH m sectors. The S11
+  bound = the measured embedded-vs-tile sequential-null marginal discrepancy under exactly
+  this declared treatment.**
+- **G1.9** positivity: min-eig of the dense-reconstructed truncated ρ (d3); **bar SET BY
+  MEASUREMENT, not guessed (v2: the v1 1e-6 was un-derived and ~20–500× below the Weyl scale
+  of the frozen discarded weights √(2.5e-7·0.92) ≈ 4.8e-4). PRE-BUILD TASK G1.9-pre
+  (orchestrator, before builders start): rerun the frozen single-cut proxy machinery
+  (`pepo_record_error_vs_eps_d3.py` gap-cut arm) with one `eigvalsh` per round and RECORD
+  λ_min(R); the G1.9 bar = 10× the worst measured \|λ_min\|, registered here on completion.**
+  The sampler's negativity witness fires on a sign-flip sabotage (unchanged).
 
 ## 5. Scope fences (rung-1)
 
