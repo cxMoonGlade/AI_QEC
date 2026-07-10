@@ -275,12 +275,16 @@ trip.
 4. **Stability gates — Kilda-DERIVED, adapted to our object (v2 fix: Kilda's ε_Λ is a Vidal-form SU
    steady-state diagnostic; our evolution is a finite-R decohering transient with no NESS and NTU
    has no Λ bond weights — the literal transplant is not evaluable).** Registered adaptations:
-   (i) **bond-spectrum stationarity** Δσ(R) = ‖σ_R − σ_{R−1}‖_∞ / ‖σ_R‖_∞ on the kept
-   STRAIGHT-CUT gap spectra (convention, registered: sorted descending, the shorter spectrum
-   zero-padded when the kept rank changes between rounds; the per-bond analogue is logged as a
-   diagnostic but the GATE quantity is the straight-cut spectrum), logged every round; registered
-   expectation: Δσ plateaus ≤ 1e-3 after the ~2-round transient (rounds R ≤ 2 are excluded from the
-   plateau gate); persistent growth or oscillation of Δσ ⇒ the Kilda instability pattern ⇒ STOP.
+   (i) **bond-spectrum stationarity** Δσ(R) = ‖σ̂_R − σ̂_{R−1}‖_∞ on the **ℓ²-NORMALIZED**
+   kept STRAIGHT-CUT gap spectra σ̂ = σ/‖σ‖₂ (convention AMENDED v2.3, pre-build, by the rung-1
+   contract red-team round 2: the un-normalized convention is refuted by the frozen exact
+   dynamics itself — healthy purity decay drifts the raw spectrum ~4.2e-3/round with no plateau,
+   so the raw-Δσ gate would fire the Kilda STOP on correct physics; the normalized shape drift
+   is ~4e-5. Sorted descending, the shorter spectrum zero-padded when the kept rank changes;
+   the per-bond analogue is logged as a diagnostic but the GATE quantity is the straight-cut
+   spectrum), logged every round; registered expectation: Δσ plateaus ≤ 1e-3 after the ~2-round
+   transient (rounds R ≤ 2 are excluded as gate reads); persistent growth or oscillation of Δσ
+   ⇒ the Kilda instability pattern ⇒ STOP.
    (Textual ancestor, verified against the Kilda original 2026-07-09: their own steady-state STOP
    rule is per-bond Λ-spectrum stationarity required for EACH of the four bond matrices Λ[U,D,R,L]
    separately (their App. A.2) — Δσ is the finite-transient analogue of exactly that criterion);
