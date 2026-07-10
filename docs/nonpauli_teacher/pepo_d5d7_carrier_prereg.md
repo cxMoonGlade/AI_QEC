@@ -1,12 +1,13 @@
 # d5/d7 2D Density-Matrix PEPO Carrier — Pre-Registration (theory-first, LITERATURE-GROUNDED)
 
-Status: PRE-REGISTRATION **v2.4**, 2026-07-09. Predictions written BEFORE the engine build and
+Status: PRE-REGISTRATION **v2.5**, 2026-07-10. Predictions written BEFORE the engine build and
 BEFORE any rung-1/2 run; a miss is a finding, not a re-fit. v2 = the post-un-led-review revision
 (4 independent reviewers, 2 BLOCKERs + 9 MAJORs folded — REVIEW OUTCOMES appendix; v1 in git
 history); v2.1 = original-text verification refinements; v2.2 = the rung-0 outcomes appendix;
 v2.3/v2.4 = PRE-BUILD amendments from the rung-1 contract red-team (the §6.4(i) Δσ convention
 normalized; the C3/S9/G1.9 negativity band re-based on the G1.9-pre measurement — each amendment
-recorded inline with its reason; no gate had run when they landed). Companion design: `2d_peps_leakage_forward_DESIGN.md` (the ✅ FEASIBILITY OUTCOMES
+recorded inline with its reason; no gate had run when they landed); v2.5 = the G1.9-PRE OUTCOME
+appendix (measured bar registered; P2 boundary-grade finding recorded). Companion design: `2d_peps_leakage_forward_DESIGN.md` (the ✅ FEASIBILITY OUTCOMES
 header + the 2026-06-24 superseding correction are binding; the pure-state §3 body is superseded).
 Resume brief: `HANDOFF_pepo_d5d7_resume_2026-07-09.md`.
 
@@ -140,7 +141,7 @@ counts — no vacuous checks.
 |---|---|---|
 | C1 | trace(ρ) = 1 after every channel + truncation (up to the logged trace_shift ledger) | per-round trace print; trip variant: skip trace-renorm |
 | C2 | Hermiticity ρ = ρ† | max-abs asymmetry ≤ 1e-12 post-Hermitize; trip variant: drop Hermitize |
-| C3 | **Positivity ρ ⪰ 0 / no negative Born probabilities** (NOT guaranteed by NTU/gap-cut — NTU's Hermitian-non-negative guarantee is about the METRIC, not the state; Hermitize+trace-renorm restores C2 only; the known LPDO carrier-transition trap) | d3: min-eigenvalue of the truncated ρ vs oracle (measurable at 3⁹), (b)-band **= the G1.9 bar SET BY THE G1.9-pre MEASUREMENT: max(10× the measured single-cut-proxy \|λ_min\|, 4.8e-4 Weyl floor) — v2.4 amendment; the earlier 1e-6 was un-derived and ~20–500× below the Weyl scale √(discarded·purity) of the frozen ledger**; runtime witness (d3+d5): any SINGLE raw Born weight < −(10× the G1.9 bar) ⇒ **STOP**; per-shot MEAN negative mass > the G1.9 bar ⇒ **STOP**; both logged; trip variant: inject a sign-flipped truncation component and show the witness fires |
+| C3 | **Positivity ρ ⪰ 0 / no negative Born probabilities** (NOT guaranteed by NTU/gap-cut — NTU's Hermitian-non-negative guarantee is about the METRIC, not the state; Hermitize+trace-renorm restores C2 only; the known LPDO carrier-transition trap) | d3: min-eigenvalue of the truncated ρ vs oracle (measurable at 3⁹), (b)-band **= the G1.9 bar SET BY THE G1.9-pre MEASUREMENT: max(10× the measured single-cut-proxy \|λ_min\|, 4.8e-4 Weyl floor) — v2.4 amendment; the earlier 1e-6 was un-derived and ~20–500× below the Weyl scale √(discarded·purity) of the frozen ledger**; runtime witness (d3+d5): any SINGLE raw Born weight < −(10× the G1.9 bar) ⇒ **STOP**; per-shot MEAN negative mass > the G1.9 bar ⇒ **STOP**; both logged; trip variant: inject a sign-flipped truncation component and show the witness fires. **MEASURED 2026-07-10: THE G1.9 BAR = 4.8e-4 (Weyl floor binds — worst single-cut-proxy \|λ_min\| = 1.385e-16 at R=2, 10× = 1.4e-15; λ_min > 0 from R=5). `outputs/nonpauli_teacher/pepo_rung1_g19pre_result.json`, replication PASS; see the G1.9-PRE OUTCOME appendix.** |
 | C4 | CPTP of every applied channel (Kraus completeness ∑K†K = I to 1e-12) | assert per channel build; trip variant: drop a Kraus element |
 | C5 | Stabilizer symmetry pre-noise: ⟨S_g⟩=+1 ∀g, ⟨Z_L⟩=(−1)^m, \|2⟩-mass=0 | (a) zero-tolerance on the built codestate; trip variant: corrupt one projector |
 | C6 | \|2⟩-mass under LRU-const: per-round leakage population consistent with the WG cell values (`qutrit_teachers` reference) | compare vs teacher closed-form per round; trip variant: double θ |
@@ -445,6 +446,35 @@ logical-no-fallback/symplectic guard — all fixed pre-run).
 Consequence: rung 0 is CLOSED; no registered band or gate moved (P2/P8 confirmed as
 written). Next = rung 1, the PEPO engine build (§7 gates G1.1–G1.9; /contract-build;
 src placement proposal `error_coupling_simulator/carrier/pepo/`, commit-gated).
+
+## Appendix — G1.9-PRE OUTCOME (2026-07-10, adjudicated; script + log + JSON under
+## `outputs/nonpauli_teacher/pepo_rung1_g19pre_*`)
+
+The registered PRE-BUILD measurement (contract §4 G1.9-pre; the ε=1e-3 arm of the frozen
+single-cut proxy `pepo_record_error_vs_eps_d3.py`, R_MAX=10, one CPU `eigvalsh` per round):
+
+- **P3 replication: PASS** — χ/round == frozen 16-flat, max|Δmarginal| = 0.00e+00 (tol 1e-9),
+  worst dp/bar 0.016660 == frozen. The proxy environment reproduces exactly.
+- **O1 (the deliverable): THE G1.9 BAR = 4.800e-4 — the Weyl floor binds.** Worst measured
+  \|λ_min\| = 1.385e-16 (R=2), so 10×\|λ_min\| = 1.4e-15 ≪ 4.8e-4. λ_min turns POSITIVE from
+  R=5 and grows (+3.4e-24 at R=10): truncation negativity dies as mixing accumulates
+  (purity 0.991 → 0.915 over R=1..10). The Hermitized one-cut proxy is ≈PSD exactly as the
+  v3 floor amendment anticipated. Bar class (b); consumed by every rung-1 gate runner via
+  the result JSON (`g19_bar.valid` asserted, no silent Weyl-floor fallback).
+- **P1: PASS** (\|λ_min\| ≤ 4.8e-4 at every R, ~12 orders of margin).
+- **P2: boundary-grade MISS = FINDING (recorded, band not re-fit):** the kept-spectrum
+  ℓ²-normalized Δσ plateau over gate reads R≥3 maxes at **1.239e-4**, above the registered
+  "~1e-4-grade" (b)-expectation by 1.24×, monotonically growing R5→R10 (7.0e-5 → 1.24e-4) —
+  not a plateau in the strict sense. Within the G1.4 gate bar 1e-3 at 8× headroom; the G1.4
+  engine read (round-to-round, same convention) adjudicates the gate. The same JSON freezes
+  the G1.4 reference spectra + Δσ series (top-64 + tail weight per round).
+- **Run-1 harness incident (class c, not a measurement defect):** the first run WEDGED at
+  R=7 — VRAM 32076/32607 MiB held, GPU ~idle, no progress ~40 min (WSL2 VRAM-exhaustion
+  crawl; measured peak of the healthy run = 30.5 GiB, i.e. the first run sat exactly at the
+  edge). Scripted kill (`pepo_rung1_g19pre_kill_wedged_20260710.sh`, precondition-asserted);
+  harness fixes: dense-DM alias `del` + post-loop `empty_cache` + `expandable_segments`
+  allocator (runner env). Numerically inert — PROVEN: R=1..6 of the wedged run are
+  bit-identical to the healthy run (archived log `*.wedged-20260710.log`).
 
 ## Appendix — REVIEW OUTCOMES (v1 → v2, 2026-07-09)
 
