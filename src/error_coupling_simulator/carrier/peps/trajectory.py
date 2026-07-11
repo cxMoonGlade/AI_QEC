@@ -74,6 +74,7 @@ from .contraction import (
     chib_doubling_delta,
     cross_route_q1,
     expect_double_layer,
+    norm_cache,
     norm_read,
     terminal_collapse_diag,
     terminal_effect_pair,
@@ -388,6 +389,15 @@ def leak_sample(state: PepsState, kraus: list, pos: int, u: float, *,
     assert resid <= CPTP_TOL, (
         f"prereg-C4: Kraus completeness violated (max|sum K^dag K - I| = {resid:.3e})")
 
+    # M1 (norm-cache threading): the RDM read is the SINGLE read on this
+    # (unmutated) snapshot; own its cache here so ``apply_site_op`` below leaves
+    # it stale (a stale NormCache is the caller's bug — the local var is dropped
+    # on return). Boundary route only: R_n is None is the d3 exact route — cache
+    # stays None and ``site_rdm`` takes the exact full-double-layer path
+    # (INVARIANT: byte-identical d3). Building the cache here vs. letting
+    # ``site_rdm`` build it internally is the SAME single reverse sweep.
+    if cache is None and R_n is not None:
+        cache = norm_cache(state, R_n, fit_seed)
     rdm = site_rdm(state, int(pos), cache=cache, R_n=R_n, fit_seed=fit_seed)
     pk = [float(torch.einsum("ab,ba->", K.conj().mT @ K, rdm).real) for K in ks]
     tot = float(sum(pk))
@@ -420,14 +430,32 @@ def sample_stab(state: PepsState, paulis: dict, u: float, b: float, arm: str,
       7. renormalize to unit norm + the renorm ledger entry.
     """
     paulis = {int(k): str(v).upper() for k, v in paulis.items()}
-    N, M, p0 = born_read_stab(state, paulis, b, arm, R_n=R_n, R_x=R_x,
-                              fit_seed=fit_seed)
+    # M1 (norm-cache threading): ONE reverse-pass NormCache per PRE-branch
+    # snapshot, shared by the N and M legs of the single ``born_read_stab`` AND
+    # the §6.2 instruments (cross_route / chib) — all read the SAME unmutated
+    # state. The norm right-environments are op-agnostic (identity columns beyond
+    # the op support), so a norm cache at R_n serves BOTH the N read and the M
+    # read whenever R_x == R_n (the SW8 cell: R_n == R_x == chi_b); otherwise the
+    # M leg gets its own cache at R_x. INVARIANT: R_n is None is the d3 exact
+    # route — cache_n/cache_x stay None, every read takes the exact
+    # full-double-layer path, so the d3 gates are byte-identical.
+    cache_n = norm_cache(state, R_n, fit_seed) if R_n is not None else None
+    if R_x is None:
+        cache_x = None
+    elif R_n is not None and int(R_x) == int(R_n):
+        cache_x = cache_n
+    else:
+        cache_x = norm_cache(state, R_x, fit_seed)
+    N, M, p0 = born_read_stab(state, paulis, b, arm, cache_n=cache_n, cache_x=cache_x,
+                              R_n=R_n, R_x=R_x, fit_seed=fit_seed)
     if cross_route:
-        state.ledger.append(cross_route_q1(state, paulis, b, arm, R_n=R_n, R_x=R_x,
-                                           fit_seed=fit_seed))
+        state.ledger.append(cross_route_q1(state, paulis, b, arm,
+                                           cache_n=cache_n, cache_x=cache_x,
+                                           R_n=R_n, R_x=R_x, fit_seed=fit_seed))
     if chib_chi_b is not None:
         state.ledger.append(chib_doubling_delta(state, paulis, b, arm,
-                                                int(chib_chi_b), fit_seed=fit_seed))
+                                                int(chib_chi_b), cache=cache_n,
+                                                fit_seed=fit_seed))
 
     sbit = sbit_from_uniform(u, p0)  # STRICT < (SF11; single source: sampling_maps)
 
@@ -493,11 +521,20 @@ def terminal_readout(state: PepsState, log_sites: list, log_isx: list, n_data: i
     _f0, f1 = terminal_effect_pair(b_eff, dev)
     bits: list[int] = []
     for q in range(int(n_data)):
-        den = norm_read(state, R_n=R_n, fit_seed=fit_seed)
+        # M1 (norm-cache threading): ``den`` (the norm) and ``num1`` (the site-q
+        # F1 caps read) are BOTH on the current PRE-collapse snapshot — one
+        # reverse-pass cache serves both. The ``apply_site_op`` collapse below
+        # mutates the state, so the cache is dropped (a stale NormCache is the
+        # caller's bug) and the post-collapse ``norm_read`` rebuilds. INVARIANT:
+        # R_n is None is the d3 exact route — cache stays None, both reads take
+        # the exact full-double-layer path (byte-identical d3).
+        cache = norm_cache(state, R_n, fit_seed) if R_n is not None else None
+        den = norm_read(state, cache=cache, R_n=R_n, fit_seed=fit_seed)
         if not den > NUMERICAL_ZERO:
             raise RuntimeError(
                 f"terminal_readout: nonpositive trace {den:.6e} at qutrit {q}")
-        num1 = expect_double_layer(state, {q: f1}, R_n=R_n, fit_seed=fit_seed).real
+        num1 = expect_double_layer(state, {q: f1}, cache=cache, R_n=R_n,
+                                   fit_seed=fit_seed).real
         p1 = min(1.0, max(0.0, num1 / den))
         bit = terminal_bit_from_uniform(u_draws[q], p1)  # bit=1 iff u<p1 (single source)
         apply_site_op(state, q, terminal_collapse_diag(bit, b_eff, dev))

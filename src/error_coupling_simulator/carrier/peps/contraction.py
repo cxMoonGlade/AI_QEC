@@ -384,15 +384,22 @@ def branch_norm_sq(state: PepsState, stab_tt: SingleWireStabTT, *,
 
 
 def cross_route_q1(state: PepsState, paulis: dict, b: float, arm: str, *,
+                   cache_n: NormCache | None = None, cache_x: NormCache | None = None,
                    R_n: int | None = None, R_x: int | None = None,
                    fit_seed: int = 0) -> dict:
     """The §6.2 cross-route residual on one Born read: ``q1`` by (i) the caps
     two-term route ``1/2 N - 1/2 M`` and (ii) the branch-norm route
     ``||sqrt(E_1) psi||^2``; residual ``|q1_caps - q1_norm| / N``. Returns the
     ledger-ready entry (the SW8 "ledgers close" condition checks these against
-    the §6.2 floor table — d3: <= 1e-10 every read; d5 in-run: <= 1e-6)."""
-    N, M, _p0 = born_read_stab(state, paulis, b, arm, R_n=R_n, R_x=R_x,
-                               fit_seed=fit_seed)
+    the §6.2 floor table — d3: <= 1e-10 every read; d5 in-run: <= 1e-6).
+
+    M1 (norm-cache threading): the caps two-term leg reads the SAME unmutated
+    snapshot as the caller's ``born_read_stab``, so the caller's ``cache_n`` /
+    ``cache_x`` are valid here and are passed straight through. The branch-norm
+    leg CANNOT take a cache — :func:`branch_norm_sq` grows a COPY of the state
+    (its own docstring), so any snapshot cache would be stale on it."""
+    N, M, _p0 = born_read_stab(state, paulis, b, arm, cache_n=cache_n, cache_x=cache_x,
+                               R_n=R_n, R_x=R_x, fit_seed=fit_seed)
     q1_caps = 0.5 * N - 0.5 * M
     tt = stab_tt_singlewire(paulis, 1, b, arm, state.layout, state.device)
     q1_norm = branch_norm_sq(state, tt, R_n=R_n, fit_seed=fit_seed)
@@ -407,14 +414,28 @@ def cross_route_q1(state: PepsState, paulis: dict, b: float, arm: str, *,
 
 
 def chib_doubling_delta(state: PepsState, paulis: dict, b: float, arm: str,
-                        chi_b: int, *, fit_seed: int = 0) -> dict:
+                        chi_b: int, *, cache: NormCache | None = None,
+                        fit_seed: int = 0) -> dict:
     """The §6.2 chi_b-doubling delta ``|M(chi_b) - M(2 chi_b)| / N`` — a
     CONSISTENCY estimator, not an error bound (RT2: a false plateau is possible;
-    the evolved-probe R-sweep leg mitigates). Returns the ledger-ready entry."""
+    the evolved-probe R-sweep leg mitigates). Returns the ledger-ready entry.
+
+    M1 (norm-cache threading): all three reads are on the SAME unmutated
+    snapshot. The chi_b leg reuses the caller's snapshot ``cache`` ONLY when its
+    boundary dim matches chi_b (else it builds its own); the 2*chi_b legs
+    legitimately need their OWN boundary dim (RT2 — a different chi_b), and a
+    SINGLE fresh cache at 2*chi_b serves BOTH the M and N reads there (the norm
+    right-environments are op-agnostic — identity columns beyond the op support).
+    Byte-identical to the un-cached form (same seed/state ⇒ same reverse sweep),
+    trading the 3 uncached reverse sweeps for at most 2."""
     ops = stab_site_ops(paulis, b, arm, torch.device(state.device))
-    m_lo = expect_double_layer(state, ops, R_n=int(chi_b), fit_seed=fit_seed).real
-    m_hi = expect_double_layer(state, ops, R_n=2 * int(chi_b), fit_seed=fit_seed).real
-    n_hi = expect_double_layer(state, {}, R_n=2 * int(chi_b), fit_seed=fit_seed).real
+    chi_b = int(chi_b)
+    cache_lo = (cache if (cache is not None and int(cache.R_n) == chi_b)
+                else norm_cache(state, chi_b, fit_seed))
+    cache_hi = norm_cache(state, 2 * chi_b, fit_seed)
+    m_lo = expect_double_layer(state, ops, cache=cache_lo, fit_seed=fit_seed).real
+    m_hi = expect_double_layer(state, ops, cache=cache_hi, fit_seed=fit_seed).real
+    n_hi = expect_double_layer(state, {}, cache=cache_hi, fit_seed=fit_seed).real
     if not n_hi > NUMERICAL_ZERO:
         raise RuntimeError(f"chib_doubling_delta: nonpositive norm {n_hi:.6e}")
     return {
