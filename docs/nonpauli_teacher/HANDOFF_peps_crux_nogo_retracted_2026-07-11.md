@@ -1,3 +1,12 @@
+> # ⛔ SUPERSEDED (2026-07-11 later same day) — the crux is now RESOLVED.
+> Read **[`CRUX_RESOLVED_bond_is_gauge_artifact_2026-07-11.md`](CRUX_RESOLVED_bond_is_gauge_artifact_2026-07-11.md)** instead.
+> The discriminating tests below WERE run: the per-edge bond growth is a **truncation-gauge
+> representation artifact, NOT physics** — the carrier's true bipartition entropy `S_A` is
+> **BOUNDED** (2–4 ebits, confirmed exact+anti-circular at d3 leakage-off, d5 leakage-off, d3
+> leakage-on). The single-wire 2D PEPS carrier is **FEASIBLE**; the fix is an environment-optimal
+> (FET/loop) truncator. The "PROVISIONAL / build on neither arm" verdict below is CLOSED. This
+> file is kept for the reasoning-chain history only.
+
 # HANDOFF — d5 PEPS crux: the pilot No-Go is RETRACTED (theory-fix), run the discriminating test next (2026-07-11)
 
 > ## ★ READ THIS FIRST (the 60-second brief)

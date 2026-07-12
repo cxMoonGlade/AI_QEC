@@ -52,6 +52,7 @@ negligible, i.e. everywhere below the window boundary).
 GPU-only, complex128 (SW-S8); referee-independent (local gate table, D4).
 """
 
+import os
 from dataclasses import dataclass
 
 import numpy as np
@@ -121,22 +122,27 @@ class BondAbortError(RuntimeError):
 @dataclass(frozen=True)
 class TruncationPolicy:
     """The declared-per-run truncation arm (contract §2: dynamic-eps or D_cap;
-    plus the SW2 LOSSLESS arm).
+    plus the SW2 LOSSLESS arm; plus the Stage-2a environment-aware ``fet_env``
+    arm).
 
     ``mode``: ``"dynamic_eps"`` (§6.1 — requires ``eps_spike``), ``"d_cap"``
-    (the parent two-pass at a fixed integer target — requires ``D_cap``), or
+    (the parent two-pass at a fixed integer target — requires ``D_cap``),
     ``"lossless"`` (SW2: no cut below the exact local rank — the
-    ``sigma > 1e-12 sigma_1`` count; a zero-drop gauge compression only).
-    ``W_max`` is the §6.1 precut cap (dynamic arm only).
+    ``sigma > 1e-12 sigma_1`` count; a zero-drop gauge compression only), or
+    ``"fet_env"`` (the environment-optimal truncator — requires ``eps_fid``;
+    ``fet_stage2_src_contract`` §3: a strict pass-1 NO-OP + the whole
+    per-bond-sequential FET truncation in pass 2, via :mod:`.fet`). ``W_max``
+    is the §6.1 precut cap (dynamic arm only).
     """
 
     mode: str
     eps_spike: float | None = None
     D_cap: int | None = None
     W_max: int = W_MAX_DEFAULT
+    eps_fid: float | None = None
 
     def __post_init__(self) -> None:
-        if self.mode not in ("dynamic_eps", "d_cap", "lossless"):
+        if self.mode not in ("dynamic_eps", "d_cap", "lossless", "fet_env"):
             raise ValueError(f"unknown truncation mode {self.mode!r}")
         if self.mode == "dynamic_eps":
             if self.eps_spike is None or not float(self.eps_spike) > 0.0:
@@ -145,6 +151,10 @@ class TruncationPolicy:
                 raise ValueError(f"W_max must be >= 1 (got {self.W_max})")
         if self.mode == "d_cap" and (self.D_cap is None or int(self.D_cap) < 1):
             raise ValueError(f"d_cap requires D_cap >= 1 (got {self.D_cap})")
+        if self.mode == "fet_env" and (self.eps_fid is None or not float(self.eps_fid) > 0.0):
+            # fet_env does NOT require eps_spike (contract §3): its pass-1 is a
+            # strict NO-OP, so it never reads the dynamic-eps window budget.
+            raise ValueError(f"fet_env requires eps_fid > 0 (got {self.eps_fid})")
 
 
 def _insertion_spectrum(state: PepsState, bond: str) -> torch.Tensor:
@@ -226,6 +236,15 @@ def _policy_precut(state: PepsState, bond: str, policy: TruncationPolicy) -> dic
             entry = svd_precut_bond(state, bond, cap4)
             rec["precut_discarded"] = float(entry["discarded"])
         return rec
+    if policy.mode == "fet_env":
+        # RT-F1 (fet_stage2_src_contract §3): pass-1 is a STRICT NO-OP for
+        # fet_env — leave the bond at FULL dim so pass-2's `gamma_TN` reads the
+        # UN-pre-truncated environment. `rec` already carries EXACTLY the keys
+        # `_policy_cut`'s summary reads (precut_discarded=0.0, r_dyn=None,
+        # width=None, window_binding=False, exact_rank); no `svd_precut_bond`
+        # runs. Placed BEFORE the dynamic_eps tail so fet_env never reaches
+        # `float(policy.eps_spike)` (= `float(None)` -> TypeError).
+        return rec
 
     # dynamic_eps (§6.1)
     eps = float(policy.eps_spike)
@@ -277,7 +296,38 @@ def _policy_cut(state: PepsState, bond: str, policy: TruncationPolicy,
                 rec: dict) -> dict:
     """Pass 2 of :func:`truncate_bond_policy` on one bond + the per-bond summary
     ledger entry (``op='policy_truncate'``; ``total_discarded`` = precut +
-    policy-cut squared-sigma relative tails — the §6.1 invariant read)."""
+    policy-cut squared-sigma relative tails — the §6.1 invariant read).
+
+    For the ``fet_env`` mode (fet_stage2_src_contract §3, RT-F2) this does the
+    WHOLE truncation, PER-BOND SEQUENTIAL on the CURRENT (post-prior-write)
+    state, and ledgers ``op='fet_truncate'`` — see the early-return branch."""
+    if policy.mode == "fet_env":
+        # RT-F2: build Γ on the state left by the PRIOR bond's write-back (the
+        # sweep order is fixed + load-bearing — each Γ reflects already-truncated
+        # neighbours). `fet` is imported LAZILY here to avoid the fet<->trajectory
+        # import cycle (fet imports `_exact_rank`/`_insertion_spectrum` from this
+        # module at load time). fet_env is a slow diagnostic mode (contract §5 F8):
+        # `gamma_TN` recomputes a full double-layer contraction per bond — it runs
+        # ONCE inside `env_optimal_rank`, which returns the achieved env-fidelity
+        # so we DON'T rebuild `Gamma` here just to re-score the ledger (F1: no
+        # double `gamma_TN` per bond).
+        from .fet import apply_fet_truncation, env_optimal_rank
+        dim_in = int(state.tn.ind_size(bond))
+        env_rank, U, Vh, fid_g = env_optimal_rank(state, bond, float(policy.eps_fid))
+        apply_fet_truncation(state, bond, U, Vh)
+        summary = {
+            "op": "fet_truncate",
+            "mode": policy.mode,
+            "bond": str(bond),
+            "dim_in": int(dim_in),
+            "dim_out": int(state.tn.ind_size(bond)),
+            "exact_rank": rec.get("exact_rank"),
+            "env_rank": int(env_rank),
+            "Fid_gamma": float(fid_g),  # contract §3's Fid_Γ (ASCII ledger key)
+            "eps_fid": float(policy.eps_fid),
+        }
+        state.ledger.append(summary)
+        return summary
     ntu_disc = 0.0
     kept_target = None
     if policy.mode == "d_cap":
@@ -475,10 +525,44 @@ def sample_stab(state: PepsState, paulis: dict, u: float, b: float, arm: str,
         for bond in path_bonds:
             dim = int(state.tn.ind_size(bond))
             if dim > int(d_abort):  # EXCEEDS: D_abort itself is processed (RT3-F6)
-                raise BondAbortError(
+                # TRIAGE (2026-07-11, UNCOMMITTED diagnostic — inert unless
+                # PEPS_SW8_TRIAGE_SPECTRUM=1, so the d3 gates stay byte-identical):
+                # the abort fires on the PRE-truncation grown dim (S0 product rank),
+                # so the physical (post-eps-truncation) bond is never observed. Read
+                # it here directly and OOM-SAFELY — the dynamic-policy KEPT RANK IS
+                # exactly ``_rank_for_tail(_insertion_spectrum(bond), eps)`` (the NTU
+                # metric only refines VALUES within that rank, never the rank), a
+                # PLAIN local SVD of each grown path bond's pair insertion with NO
+                # cluster metric. Attach to the exception; the runner harvests it.
+                triage = None
+                if (os.environ.get("PEPS_SW8_TRIAGE_SPECTRUM") == "1"
+                        and policy.mode == "dynamic_eps"):
+                    eps_s = float(policy.eps_spike)
+                    triage = []
+                    for pb in path_bonds:
+                        S = _insertion_spectrum(state, pb)
+                        ssq = (S * S).real
+                        tot = float(ssq.sum())
+                        epr = int(_rank_for_tail(S, eps_s))
+                        ntop = min(64, int(ssq.numel()))
+                        triage.append({
+                            "bond": str(pb),
+                            "dim_in": int(state.tn.ind_size(pb)),
+                            "exact_rank": int(_exact_rank(S)),
+                            "eps_spike": eps_s,
+                            "eps_rank": epr,
+                            "discarded_at_eps_rank": (
+                                float(ssq[epr:].sum()) / tot if tot > 0.0 else None),
+                            "sigma_sq_rel_top": (
+                                [float(x) for x in (ssq[:ntop] / tot).tolist()]
+                                if tot > 0.0 else []),
+                        })
+                err = BondAbortError(
                     f"D_abort={int(d_abort)}: grown bond {bond!r} dim {dim} exceeds "
                     f"the registered abort (pre-metric check, §6.1)",
                     bond=bond, dim=dim, profile=bond_profile(state))
+                err.triage_spectrum = triage
+                raise err
 
     truncate_path_bonds(state, path_bonds, policy)
 
