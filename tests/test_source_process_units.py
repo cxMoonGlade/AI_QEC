@@ -561,9 +561,13 @@ def test_L0_rtn_sample_replayable_and_amplitude_pin():
     assert set(np.unique(a.payload_series("z_radns"))) <= {-A, A}
     # FULL metadata VALUE-PIN (independent) -- kills every key/value mutation
     md = a.metadata
-    assert set(md) == {"source", "amplitude_radns", "gamma_per_cycle", "flip_probability",
+    assert set(md) == {"source", "value_provenance", "amplitude_radns", "gamma_per_cycle", "flip_probability",
                        "autocorr_base", "layout_site_count"}
     assert md["source"] == "RTNSource"
+    assert md["value_provenance"] == {
+        "parameter_values": "project-design",
+        "claims_hardware_calibration": False,
+    }
     assert md["amplitude_radns"] == pytest.approx(A) and md["gamma_per_cycle"] == pytest.approx(g)
     assert md["flip_probability"] == pytest.approx(_indep_flip_prob(g))
     assert md["autocorr_base"] == pytest.approx(_indep_autocorr_base(g))
@@ -660,10 +664,14 @@ def test_L0_one_over_f_sample_shapes_and_matmul_pin():
     np.testing.assert_array_equal(tl.payload_series("z_radns"),
                                   src.sample(seed=11, n_cycles=80).payload_series("z_radns"))
     md = tl.metadata
-    assert set(md) == {"source", "amplitude_radns", "n_fluctuators", "gamma_min_per_cycle",
+    assert set(md) == {"source", "value_provenance", "amplitude_radns", "n_fluctuators", "gamma_min_per_cycle",
                        "gamma_max_per_cycle", "gammas_per_cycle", "amplitudes_radns",
                        "layout_site_count"}
     assert md["source"] == "OneOverFDriftSource" and md["n_fluctuators"] == 4
+    assert md["value_provenance"] == {
+        "parameter_values": "project-design",
+        "claims_hardware_calibration": False,
+    }
     np.testing.assert_allclose(md["gammas_per_cycle"], _indep_geomspace(0.01, 0.3, 4), rtol=1e-12)
     np.testing.assert_allclose(md["amplitudes_radns"], _indep_amps(src))
     assert md["layout_site_count"] == 1

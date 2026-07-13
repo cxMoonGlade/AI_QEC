@@ -274,6 +274,10 @@ class RTNSource(SourceProcess):
             latent={"rtn_state": states},
             metadata={
                 "source": "RTNSource",
+                "value_provenance": {
+                    "parameter_values": "project-design",
+                    "claims_hardware_calibration": False,
+                },
                 "amplitude_radns": float(self.amplitude_radns),
                 "gamma_per_cycle": float(self.gamma_per_cycle),
                 "flip_probability": self.flip_probability,
@@ -346,6 +350,10 @@ class OneOverFDriftSource(SourceProcess):
             latent={"rtn_states": states},
             metadata={
                 "source": "OneOverFDriftSource",
+                "value_provenance": {
+                    "parameter_values": "project-design",
+                    "claims_hardware_calibration": False,
+                },
                 "amplitude_radns": float(self.amplitude_radns),
                 "n_fluctuators": int(self.n_fluctuators),
                 "gamma_min_per_cycle": float(self.gamma_min_per_cycle),
