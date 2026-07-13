@@ -13,18 +13,26 @@ THE TWO THETA CONVENTIONS ARE TWO DISTINCT PRESETS (never a merged default):
 
 * :data:`PRESET_LEAK_THETA_0P30` -- the RAW-ANGLE convention: the Wood-Gambetta
   coherent |1><->|2> exchange angle ``theta_rad`` is pinned directly (0.30 rad).
-* :data:`PRESET_LEAK_WG_L1_5E3` -- the RATE-CALIBRATED convention: ``theta_rad`` is
-  SOLVED so the exact WG per-cycle leak rate ``WG_L1`` hits the registered target
-  (5.0e-3, the Miao-grounded cell) via
+* :data:`PRESET_LEAK_WG_L1_5E3` -- the MODEL-RATE-SOLVED convention: ``theta_rad`` is
+  SOLVED so the exact project WG channel's per-cycle leak rate ``WG_L1`` hits the
+  registered target (5.0e-3, a single-paper magnitude anchor from Miao) via
   :func:`~error_coupling_simulator.mechanisms.qutrit_teachers.calibrate_theta_for_wg_l1`
-  (monotone bisection on the exact channel rate; also re-exported as
+  (a legacy-named monotone model-rate solver, NOT device calibration; also re-exported as
   ``qec_twin.mechanisms.qutrit_teachers.calibrate_theta_for_wg_l1``).
+
+Neither preset is a paper-validated physical cell. ``theta_rad=0.30``, ``g_heat=0``,
+``b_bias=0.9``, arm A, and ``biased_b`` are registered project choices;
+``WG_L1=5e-3`` and ``g_seep=0.09`` are separate Miao/McEwen scale anchors from
+different devices/protocols. Their composition is a synthetic benchmark. In
+particular, ``b_bias=0.9`` is one registered synthetic nuisance point, not a measured
+readout magnitude; physical conclusions must bracket the exported
+``LEAKED_READOUT_BIAS_SWEEP = (0.5, 0.75, 1.0)``.
 
 Exactly ONE of ``theta_rad`` / ``wg_l1_target`` is set on any preset (validated);
 :func:`resolve_theta` maps either convention to the operative angle.
 
 DATASET RESOLUTION (K-vacuity rule). :func:`load_xzzx_d3` / :func:`run_spec_from_preset`
-resolve the shipped Google ``d3_at_q6_7`` patch through
+resolve the shipped Google ``d3_at_q6_7`` patch as a GEOMETRY/SCHEDULE source only through
 ``qec_twin.forward.exact.xzzx_parser.default_r01_paths`` / ``default_r10_paths``
 (layout: ``<root>/<patch>/<basis>/<r01|r10>/{circuit_ideal.stim, metadata.json}``).
 Root precedence: the ``dataset_root`` argument > the ``QEC_TWIN_D3_DATA`` env var
@@ -44,11 +52,15 @@ the NAMING STANDARD (N-1..N-5) and the ratified rename table (``load_xzzx_d3`` /
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+from copy import deepcopy
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from error_coupling_simulator.mechanisms.qutrit_teachers import calibrate_theta_for_wg_l1
+from error_coupling_simulator.mechanisms.qutrit_teachers import (
+    LEAKED_READOUT_BIAS_SWEEP,
+    calibrate_theta_for_wg_l1,
+)
 from qec_twin.forward.exact import xzzx_parser as _xp
 from qec_twin.forward.scalable.sv_sampler import (
     SV_ARMS,
@@ -63,6 +75,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
 
 __all__ = [
     "ExperimentPreset",
+    "LEAKED_READOUT_BIAS_SWEEP",
     "PRESET_LEAK_THETA_0P30",
     "PRESET_LEAK_WG_L1_5E3",
     "leak_slice_table",
@@ -145,7 +158,7 @@ def load_xzzx_d3(dataset_root: "str | Path | None" = None, *,
                  with_interior_streams: bool = True) -> "XZZXSchedule":
     """Parse the shipped Google d3 XZZX schedule: r01 geometry (+ r10 interior streams).
 
-    Provenance is the explicit two-source split (model §1): the r01 instance supplies
+    Provenance is the explicit two-file-role split (model §1): the r01 instance supplies
     the VERIFIED code geometry (``parse_xzzx_circuit(verify=True)``: 17 qubits /
     8 detectors, two-method stabilizer self-check), and -- when
     ``with_interior_streams=True`` (default) -- the MULTI-ROUND r10 instance supplies
@@ -155,6 +168,10 @@ def load_xzzx_d3(dataset_root: "str | Path | None" = None, *,
     them). The within-cycle carriers (``SvSampler.marshal_within_cycle``,
     ``MpsLeakageForward.sample``) REQUIRE the streams; pass
     ``with_interior_streams=False`` only for geometry-only consumers.
+
+    These Google assets supply geometry and schedule/token streams only. This facade
+    does not consume their measurement records or SI1000 noisy circuit and does not
+    infer, fit, or validate any preset noise coordinate from them.
 
     ``dataset_root`` overrides the dataset location (argument > ``QEC_TWIN_D3_DATA``
     env var > the parser default); a missing root/file raises
@@ -174,7 +191,7 @@ class ExperimentPreset:
     """A named, frozen, REGISTERED experiment configuration (GLOSSARY: *preset*).
 
     Exactly ONE of ``theta_rad`` / ``wg_l1_target`` is set (validated): the two theta
-    conventions -- raw-angle vs rate-calibrated -- are DISTINCT presets, never merged
+    conventions -- raw-angle vs model-rate-solved -- are DISTINCT presets, never merged
     into one default. All physics knobs are REQUIRED (no silent physics defaults, the
     registered-sweep rule): ``g_seep`` / ``g_heat`` (WG dissipative seep/heat rates),
     ``b_bias`` (leaked-readout bias ``b`` in [0, 1]), ``arm`` (measurement-instrument
@@ -183,7 +200,13 @@ class ExperimentPreset:
 
     Units / conventions (N-4): ``theta_rad`` is the WG coherent |1><->|2> exchange
     angle in RADIANS; ``wg_l1_target`` is the per-cycle WG_L1 leak probability the
-    angle is calibrated to (dimensionless, in (0, 0.5)).
+    angle is numerically solved to hit inside the project channel (dimensionless, in
+    (0, 0.5)); this is not device calibration.
+
+    ``provenance_manifest`` is optional for caller-defined presets to preserve the
+    existing constructor API. Every module-registered preset carries a JSON-safe v1
+    manifest with per-field provenance and claim scope. It is excluded from equality
+    and hashing so auditable metadata does not change preset identity semantics.
     """
 
     name: str
@@ -194,6 +217,8 @@ class ExperimentPreset:
     b_bias: float
     arm: str
     readout_conv: str
+    provenance_manifest: "dict[str, object] | None" = field(
+        default=None, compare=False, hash=False, repr=False)
 
     def __post_init__(self) -> None:
         if not str(self.name):
@@ -225,15 +250,155 @@ class ExperimentPreset:
                 f"{SV_READOUT_CONVENTIONS} (got {self.readout_conv!r})")
 
 
-#: RAW-ANGLE convention: theta pinned directly at 0.30 rad (the p2-era registered leak
-#: cell: g_seep 0.09 / b 0.9 / arm A / biased-b terminal readout).
-PRESET_LEAK_THETA_0P30 = ExperimentPreset(
+def _registered_qutrit_preset(*, name: str, theta_rad: "float | None" = None,
+                              wg_l1_target: "float | None" = None,
+                              g_seep: float, g_heat: float, b_bias: float,
+                              arm: str, readout_conv: str) -> ExperimentPreset:
+    """Build one registered synthetic preset and its JSON-safe provenance manifest."""
+    values: "dict[str, object]" = {
+        "name": name,
+        "theta_rad": theta_rad,
+        "wg_l1_target": wg_l1_target,
+        "g_seep": g_seep,
+        "g_heat": g_heat,
+        "b_bias": b_bias,
+        "arm": arm,
+        "readout_conv": readout_conv,
+    }
+
+    def entry(field_name: str, *, provenance_kind: str, source_kind: str, claim_scope: str,
+              literature_references: "list[dict[str, object]] | None" = None,
+              **extra: object) -> "dict[str, object]":
+        return {
+            "value": values[field_name],
+            "provenance_kind": provenance_kind,
+            "source_kind": source_kind,
+            "claim_scope": claim_scope,
+            "literature_references": literature_references or [],
+            "device_calibrated": False,
+            **extra,
+        }
+
+    miao_l1 = {
+        "source": "Miao et al., Overcoming leakage in quantum error correction",
+        "publication": "Nature Physics 19 (2023)",
+        "identifier": "arXiv:2211.04728",
+        "doi": "10.1038/s41567-023-02226-w",
+        "exact_locator": "Fig. 3c",
+        "reported_value": "approximately 5e-3 leakage generated per cycle",
+        "device_protocol_scope": "reported DQLR surface-code experiment only",
+        "transformation_to_field": "identity magnitude anchor for wg_l1_target",
+        "supports_only": (
+            "approximately 5e-3 leakage generated per cycle in the reported "
+            "device/protocol"),
+    }
+    mcewen_seep = {
+        "source": (
+            "McEwen et al., Removing leakage-induced correlated errors in "
+            "superconducting quantum error correction"),
+        "publication": "Nature Communications 12 (2021)",
+        "identifier": "arXiv:2102.06131",
+        "doi": "10.1038/s41467-021-21982-y",
+        "exact_locator": "Supplementary Table S1",
+        "reported_value": "8.1-9.1 percent per-round no-reset gamma_down scale",
+        "device_protocol_scope": "reported bit-flip-code experiment only",
+        "transformation_to_field": (
+            "cross-device approximate magnitude mapping to project g_seep; not a fit"),
+        "supports_only": (
+            "approximately 8.1-9.1 percent per-round no-reset seepage scale in "
+            "the reported bit-flip-code protocol"),
+    }
+    fields = {
+        "name": entry(
+            "name", provenance_kind="project-design", source_kind="project_registration",
+            claim_scope="identifier_only"),
+        "theta_rad": entry(
+            "theta_rad",
+            provenance_kind="project-design",
+            source_kind=("project_design_point" if theta_rad is not None
+                         else "not_applicable_model_rate_coordinate"),
+            claim_scope=("synthetic_raw_angle_only" if theta_rad is not None
+                         else "not_applicable"),
+            magnitude_supported_by_literature=False),
+        "wg_l1_target": entry(
+            "wg_l1_target",
+            provenance_kind=("paper-measured" if wg_l1_target is not None
+                             else "project-design"),
+            source_kind=("single_paper_magnitude_anchor" if wg_l1_target is not None
+                         else "not_applicable_raw_angle_coordinate"),
+            claim_scope=("reported_device_protocol_scale_only"
+                         if wg_l1_target is not None else "not_applicable"),
+            literature_references=([miao_l1] if wg_l1_target is not None else []),
+            whole_project_channel_supported=False),
+        "g_seep": entry(
+            "g_seep", provenance_kind="calibrated-to-paper",
+            source_kind="cross_device_scale_anchor",
+            claim_scope="project_channel_coordinate_near_reported_seepage_scale_only",
+            literature_references=[mcewen_seep],
+            direct_parameter_fit=False),
+        "g_heat": entry(
+            "g_heat", provenance_kind="project-design",
+            source_kind="project_ablation_choice",
+            claim_scope="synthetic_no_heating_simplification_only"),
+        "b_bias": entry(
+            "b_bias", provenance_kind="project-design",
+            source_kind="registered_synthetic_nuisance_point",
+            claim_scope="synthetic_nuisance_sweep_point_only",
+            literature_references=[],
+            magnitude_supported_by_literature=False,
+            required_sweep=list(LEAKED_READOUT_BIAS_SWEEP)),
+        "arm": entry(
+            "arm", provenance_kind="project-design",
+            source_kind="project_instrument_choice",
+            claim_scope="synthetic_measurement_instrument_only"),
+        "readout_conv": entry(
+            "readout_conv", provenance_kind="project-design",
+            source_kind="project_readout_convention",
+            claim_scope="synthetic_terminal_readout_convention_only"),
+    }
+    manifest: "dict[str, object]" = {
+        "schema": "error_coupling_simulator.ExperimentPreset.provenance.v1",
+        "preset_name": name,
+        "whole_preset": {
+            "provenance_kind": "project-design",
+            "claim_scope": "registered_synthetic_cross_source_benchmark_only",
+            "device_calibrated": False,
+            "physical_cell_validated_by_literature": False,
+            "direct_whole_cell_literature_support_count": 0,
+            "reason": (
+                "separate papers anchor separate scales; no source validates "
+                "their composition with project-only coordinates"),
+        },
+        "fields": fields,
+        "required_leaked_readout_bias_sweep": list(LEAKED_READOUT_BIAS_SWEEP),
+        "dataset_source": {
+            "asset": "Google d3_at_q6_7 X patch",
+            "provenance_kind": "dataset-measured",
+            "claim_scope": "geometry_and_schedule_only",
+            "files_used": ["circuit_ideal.stim", "metadata.json"],
+            "supplies_physical_noise_parameters": False,
+            "uses_measurements_b8": False,
+            "uses_circuit_noisy_si1000": False,
+        },
+    }
+    return ExperimentPreset(
+        name=name, theta_rad=theta_rad, wg_l1_target=wg_l1_target,
+        g_seep=g_seep, g_heat=g_heat, b_bias=b_bias, arm=arm,
+        readout_conv=readout_conv, provenance_manifest=manifest)
+
+
+#: RAW-ANGLE convention: 0.30 rad is a registered synthetic strong-angle point.
+#: The remaining coordinates are explicit project/cross-source choices recorded in
+#: ``provenance_manifest``; together they are not a paper-validated physical cell.
+PRESET_LEAK_THETA_0P30 = _registered_qutrit_preset(
     name="leak_theta_0p30", theta_rad=0.30, g_seep=0.09, g_heat=0.0,
     b_bias=0.9, arm="A", readout_conv="biased_b")
 
-#: RATE-CALIBRATED convention: theta solved for WG_L1 == 5.0e-3 (the Miao-grounded
-#: physical leak cell of test_soft_readout) at the SAME other knobs.
-PRESET_LEAK_WG_L1_5E3 = ExperimentPreset(
+#: MODEL-RATE-SOLVED convention: 5.0e-3 is a Miao magnitude anchor, while 0.09
+#: separately uses a McEwen seepage-scale anchor. The other coordinates, including
+#: b=0.9, are project choices. This cross-source composition is a synthetic benchmark,
+#: not a device-calibrated or literature-validated physical cell.
+PRESET_LEAK_WG_L1_5E3 = _registered_qutrit_preset(
     name="leak_wg_l1_5e3", wg_l1_target=5.0e-3, g_seep=0.09, g_heat=0.0,
     b_bias=0.9, arm="A", readout_conv="biased_b")
 
@@ -241,11 +406,13 @@ PRESET_LEAK_WG_L1_5E3 = ExperimentPreset(
 def resolve_theta(preset: ExperimentPreset) -> float:
     """The operative WG exchange angle (radians) for a preset.
 
-    Raw-angle convention: returns the pinned ``theta_rad``. Rate-calibrated
+    Raw-angle convention: returns the pinned ``theta_rad``. Model-rate-solved
     convention: returns ``calibrate_theta_for_wg_l1(wg_l1_target, g_seep=...,
     g_heat=...)`` -- the monotone bisection on the EXACT WG channel rate (the same
     import + call shape the L-soft gates use), so the preset's ``g_seep``/``g_heat``
-    participate in the calibration exactly as registered.
+    participate exactly as registered. Despite the legacy helper name, this solves a
+    project-model coordinate; it does not calibrate a device or validate the composed
+    preset as a physical cell.
     """
     if preset.theta_rad is not None:
         return float(preset.theta_rad)
@@ -261,19 +428,57 @@ def run_spec_from_preset(preset: ExperimentPreset, *, n_shots: int, n_rounds: in
 
     Every run-shape knob is an EXPLICIT keyword (``n_shots``/``n_rounds``/``seed``;
     ``m`` is the prepared logical); every physics knob comes from the preset (theta
-    resolved via :func:`resolve_theta` -- the wg_l1 form is calibrated here); the
+    resolved via :func:`resolve_theta` -- the wg_l1 form is model-rate-solved here); the
     circuit/metadata paths are the resolved shipped r01 instance (the R>1 engine
     reuses the r01 geometry -- attach the r10 interior streams via
     :func:`load_xzzx_d3` when driving a within-cycle carrier). No hidden knobs:
     ``dtype`` is pinned to the engine default ``"c128"``; everything else is
-    validated by ``RunSpec.__post_init__``.
+    validated by ``RunSpec.__post_init__``. The Google r01 paths supply geometry and
+    schedule only; no preset noise coordinate is inferred from those assets.
     """
     files = _dataset_files(dataset_root)
+    theta = resolve_theta(preset)
+    if preset.provenance_manifest is None:
+        numerical_provenance: "dict[str, object]" = {
+            "schema": "error_coupling_simulator.run_numerical_provenance.v1",
+            "status": "missing",
+            "claim_scope": "implementation_only",
+            "reason": "caller-defined preset supplied no value-level provenance manifest",
+        }
+    else:
+        numerical_provenance = deepcopy(preset.provenance_manifest)
+        numerical_provenance["status"] = "complete_for_registered_preset"
+    numerical_provenance["run_binding"] = {
+        "resolved_theta_rad": {
+            "value": theta,
+            "provenance_kind": (
+                "project-design" if preset.theta_rad is not None
+                else "calibrated-to-paper"),
+            "transformation": (
+                "identity_from_registered_theta_rad"
+                if preset.theta_rad is not None
+                else "project_WG_channel_bisection_to_registered_wg_l1_target"),
+            "claims_device_calibration": False,
+        },
+        "dataset_files": {
+            "circuit": str(files["r01_circ"]),
+            "metadata": str(files["r01_meta"]),
+            "claim_scope": "geometry_and_schedule_only",
+            "supplies_physical_noise_parameters": False,
+        },
+        "run_shape": {
+            "n_shots": int(n_shots),
+            "n_rounds": int(n_rounds),
+            "seed": int(seed),
+            "logical_input_m": int(m),
+            "provenance_kind": "project-design",
+        },
+    }
     return RunSpec(
         circuit_path=files["r01_circ"],
         metadata_path=files["r01_meta"],
         m=int(m),
-        theta=resolve_theta(preset),
+        theta=theta,
         g_seep=float(preset.g_seep),
         g_heat=float(preset.g_heat),
         arm=str(preset.arm),
@@ -283,6 +488,7 @@ def run_spec_from_preset(preset: ExperimentPreset, *, n_shots: int, n_rounds: in
         base_seed=int(seed),
         R=int(n_rounds),
         dtype="c128",
+        numerical_provenance=numerical_provenance,
     )
 
 

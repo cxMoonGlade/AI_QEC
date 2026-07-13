@@ -39,12 +39,17 @@ _SOURCE_KEYS = (
 
 @dataclass(frozen=True)
 class StaticZZCalibration:
-    """Grounded static-ZZ calibration constants for the frequency-drift fan-out.
+    """Static-ZZ reference constants for the frequency-drift fan-out.
 
     Units follow the existing qutip-source adaptor convention: frequencies are
     angular rad/ns after conversion, gate time is ns, and ``phi = zeta*t_gate/4``.
     ``base_phi_rad`` is used to infer the fixed exchange ``J`` at the base
     detuning; subsequent source draws shift the detuning and recompute ``zeta``.
+
+    The class name is retained for API compatibility. Its built-in values are
+    project-design defaults, not a device calibration, and this type stores no
+    paper/dataset locator that could establish one. Callers may replace the numbers,
+    but must record external calibration provenance in the enclosing run manifest.
     """
 
     omega_a_ghz: float = 6.0
@@ -80,6 +85,11 @@ class StaticZZCalibration:
 
     def to_manifest(self) -> dict:
         return {
+            "value_provenance": {
+                "built_in_defaults": "project-design",
+                "instance_source_locator": None,
+                "claims_device_calibration": False,
+            },
             "omega_a_ghz": float(self.omega_a_ghz),
             "omega_b_ghz": float(self.omega_b_ghz),
             "alpha_mhz": float(self.alpha_mhz),

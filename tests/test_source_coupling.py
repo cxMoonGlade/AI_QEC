@@ -117,6 +117,7 @@ def test_source_coupling_manifest_declares_epistemic_classes_and_params_are_seri
 
     assert cfg_manifest["epistemic_class"]["static_zz_formula"] == "a"
     assert cfg_manifest["epistemic_class"]["constants_and_sensitivities"] == "c"
+    assert cfg_manifest["zz"]["value_provenance"]["claims_device_calibration"] is False
     assert param_manifest["schema"] == "qec_twin.mechanisms.CoupledMechanismParams.v1"
     assert param_manifest["source_draws_radns"]["zz"] == pytest.approx(1e-5)
     assert math.isfinite(param_manifest["gamma_phi_per_ns"])

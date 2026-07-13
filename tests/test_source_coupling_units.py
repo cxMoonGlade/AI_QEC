@@ -570,8 +570,13 @@ def test_L0_static_zz_calibration_to_manifest_all_keys_distinct():
     zz = StaticZZCalibration(omega_a_ghz=6.2, omega_b_ghz=6.1, alpha_mhz=-250.0, t_gate_ns=30.0,
                              base_phi_rad=1.7e-4)
     m = zz.to_manifest()
-    assert set(m) == {"omega_a_ghz", "omega_b_ghz", "alpha_mhz", "t_gate_ns", "base_phi_rad",
+    assert set(m) == {"value_provenance", "omega_a_ghz", "omega_b_ghz", "alpha_mhz", "t_gate_ns", "base_phi_rad",
                       "base_delta_radns", "alpha_radns", "exchange_j_radns"}
+    assert m["value_provenance"] == {
+        "built_in_defaults": "project-design",
+        "instance_source_locator": None,
+        "claims_device_calibration": False,
+    }
     assert m["omega_a_ghz"] == 6.2 and m["omega_b_ghz"] == 6.1 and m["alpha_mhz"] == -250.0
     assert m["t_gate_ns"] == 30.0 and m["base_phi_rad"] == 1.7e-4
     assert_pins(m["base_delta_radns"], zz.base_delta_radns, rtol=1e-12, atol=0.0, label="m base_delta")

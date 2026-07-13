@@ -46,9 +46,10 @@ from conftest import CDTYPE, DEVICE, PHYS, RDTYPE, requires_cuda, requires_data
 _R01_CIRC, _R01_META = xp.default_r01_paths()
 _R10_CIRC, _R10_META = xp.default_r10_paths()
 
-# the representative PHYSICAL readout cell (D1 §3.1/§3.2)
+# representative project readout fixture (D1 §3.1/§3.2); b=.9 is synthetic, not fitted
 P_M, B_BIAS, P22_TARGET = 0.01, 0.9, 0.87
-# the physical leak cell (D1 §3.3): WG_L1 target 5e-3 (Miao), g_seep 0.09 (McEwen WG_L2)
+# cross-source synthetic leak fixture (D1 §3.3): Miao anchors WG_L1 scale, while
+# McEwen separately anchors the seepage scale; no paper validates this composed cell
 WG_L1_TARGET, G_SEEP, G_HEAT = 5.0e-3, 0.09, 0.0
 
 

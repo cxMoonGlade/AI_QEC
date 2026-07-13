@@ -40,6 +40,8 @@ CPU/GPU (§3, per unit):
 from __future__ import annotations
 
 import dataclasses
+import json
+from types import SimpleNamespace
 
 import pytest
 
@@ -48,6 +50,7 @@ from qec_twin.forward.scalable.sv_sampler import (
     SV_ARMS,
     SV_READOUT_CONVENTIONS,
     RunSpec,
+    SvSampler,
 )
 
 # Wave-1 canon: markers/constants from tests/conftest.py (contract C1), guard helpers
@@ -63,6 +66,7 @@ from hypothesis import strategies as st
 from error_coupling_simulator.frontend import experiments
 from error_coupling_simulator.frontend.experiments import (
     ExperimentPreset,
+    LEAKED_READOUT_BIAS_SWEEP,
     PRESET_LEAK_THETA_0P30,
     PRESET_LEAK_WG_L1_5E3,
     _dataset_files,
@@ -368,7 +372,7 @@ def test_experiment_preset_valid_raw_angle_constructs():
 
 
 def test_experiment_preset_valid_wg_rate_constructs():
-    """§3.3 NORMAL: a rate-calibrated preset (wg_l1_target set, theta_rad None)
+    """§3.3 NORMAL: a model-rate-solved preset (wg_l1_target set, theta_rad None)
     constructs. The second passing anchor."""
     p = _mk_preset(wg_l1_target=_WG_L1_TARGET)
     assert p.wg_l1_target == _WG_L1_TARGET and p.theta_rad is None
@@ -549,7 +553,7 @@ def test_preset_leak_theta_0p30_value_pins():
 
 def test_preset_leak_wg_l1_5e3_value_pins():
     """§3.4 (K-8): ``PRESET_LEAK_WG_L1_5E3`` -- EXACT ``==`` on every field. Same other
-    knobs as the RAW preset; the ONLY difference is the rate-calibrated convention
+    knobs as the RAW preset; the ONLY difference is the model-rate-solved convention
     (wg_l1_target set, theta_rad None)."""
     p = PRESET_LEAK_WG_L1_5E3
     assert p.name == "leak_wg_l1_5e3"
@@ -562,6 +566,89 @@ def test_preset_leak_wg_l1_5e3_value_pins():
     assert p.readout_conv == "biased_b"
 
 
+def test_registered_preset_provenance_is_json_safe_and_field_complete():
+    """Per-field provenance is machine-readable without promoting a physical cell."""
+    expected_fields = {
+        "name", "theta_rad", "wg_l1_target", "g_seep", "g_heat", "b_bias",
+        "arm", "readout_conv",
+    }
+    for preset in (PRESET_LEAK_THETA_0P30, PRESET_LEAK_WG_L1_5E3):
+        manifest = preset.provenance_manifest
+        assert manifest is not None
+        json.dumps(manifest, sort_keys=True)
+        assert manifest["schema"] == \
+            "error_coupling_simulator.ExperimentPreset.provenance.v1"
+        whole = manifest["whole_preset"]
+        assert whole["claim_scope"] == \
+            "registered_synthetic_cross_source_benchmark_only"
+        assert whole["device_calibrated"] is False
+        assert whole["physical_cell_validated_by_literature"] is False
+        assert whole["direct_whole_cell_literature_support_count"] == 0
+
+        fields = manifest["fields"]
+        assert set(fields) == expected_fields
+        for field_name in expected_fields:
+            assert fields[field_name]["value"] == getattr(preset, field_name)
+            assert fields[field_name]["device_calibrated"] is False
+            assert "claim_scope" in fields[field_name]
+            assert "source_kind" in fields[field_name]
+            assert isinstance(fields[field_name]["literature_references"], list)
+            assert fields[field_name]["provenance_kind"] in {
+                "paper-measured", "paper-derived", "dataset-measured",
+                "calibrated-to-paper", "project-design", "convenience-default",
+                "numerical-only",
+            }
+
+        dataset = manifest["dataset_source"]
+        assert dataset["claim_scope"] == "geometry_and_schedule_only"
+        assert dataset["supplies_physical_noise_parameters"] is False
+        assert dataset["uses_measurements_b8"] is False
+        assert dataset["uses_circuit_noisy_si1000"] is False
+
+
+def test_registered_b_0p9_is_synthetic_point_and_sweep_is_exposed():
+    """b=.9 has no magnitude support and cannot replace the registered bracket."""
+    assert LEAKED_READOUT_BIAS_SWEEP == (0.5, 0.75, 1.0)
+    for preset in (PRESET_LEAK_THETA_0P30, PRESET_LEAK_WG_L1_5E3):
+        manifest = preset.provenance_manifest
+        assert manifest is not None
+        b_field = manifest["fields"]["b_bias"]
+        assert b_field["value"] == 0.9
+        assert b_field["source_kind"] == "registered_synthetic_nuisance_point"
+        assert b_field["claim_scope"] == "synthetic_nuisance_sweep_point_only"
+        assert b_field["magnitude_supported_by_literature"] is False
+        assert b_field["literature_references"] == []
+        assert b_field["required_sweep"] == [0.5, 0.75, 1.0]
+        assert manifest["required_leaked_readout_bias_sweep"] == [0.5, 0.75, 1.0]
+
+
+def test_wg_preset_sources_are_atomic_not_whole_cell_support():
+    """Miao and McEwen anchor separate fields; neither validates the composition."""
+    manifest = PRESET_LEAK_WG_L1_5E3.provenance_manifest
+    assert manifest is not None
+    fields = manifest["fields"]
+    l1 = fields["wg_l1_target"]
+    seep = fields["g_seep"]
+    assert l1["source_kind"] == "single_paper_magnitude_anchor"
+    assert l1["provenance_kind"] == "paper-measured"
+    assert l1["claim_scope"] == "reported_device_protocol_scale_only"
+    assert [ref["identifier"] for ref in l1["literature_references"]] == [
+        "arXiv:2211.04728"]
+    assert l1["literature_references"][0]["exact_locator"] == "Fig. 3c"
+    assert l1["literature_references"][0]["doi"] == "10.1038/s41567-023-02226-w"
+    assert l1["whole_project_channel_supported"] is False
+    assert seep["source_kind"] == "cross_device_scale_anchor"
+    assert seep["provenance_kind"] == "calibrated-to-paper"
+    assert seep["claim_scope"] == \
+        "project_channel_coordinate_near_reported_seepage_scale_only"
+    assert [ref["identifier"] for ref in seep["literature_references"]] == [
+        "arXiv:2102.06131"]
+    assert seep["literature_references"][0]["exact_locator"] == "Supplementary Table S1"
+    assert seep["literature_references"][0]["doi"] == "10.1038/s41467-021-21982-y"
+    assert seep["direct_parameter_fit"] is False
+    assert manifest["whole_preset"]["direct_whole_cell_literature_support_count"] == 0
+
+
 # =========================================================================== #
 # §3.5  resolve_theta(preset)                                                  #
 # =========================================================================== #
@@ -572,8 +659,8 @@ def test_resolve_theta_raw_angle_passthrough():
     assert resolve_theta(p) == _THETA_RAW
 
 
-def test_resolve_theta_wg_rate_calibrates():
-    """§3.5 NORMAL (wg branch, K-1): a rate-calibrated preset returns
+def test_resolve_theta_wg_rate_solves_model_coordinate():
+    """§3.5 NORMAL (wg branch, K-1): a model-rate-solved preset returns
     ``calibrate_theta_for_wg_l1(wg_l1_target, g_seep=, g_heat=)`` at the preset's rates
     -- and it must DIFFER from the raw cell / zero (a dead passthrough is killed).
 
@@ -626,11 +713,22 @@ def test_run_spec_from_preset_raw_passthrough():
     assert rs.g_seep == _G_SEEP and rs.b == _B_BIAS and rs.arm == _ARM \
         and rs.readout_conv == _READOUT_CONV, "physics knobs did not carry (K-1)"
     assert rs.dtype == "c128", f"dtype not pinned to c128 (got {rs.dtype!r})"
+    provenance = rs.numerical_provenance
+    assert provenance is not None
+    assert provenance["status"] == "complete_for_registered_preset"
+    assert provenance["run_binding"]["resolved_theta_rad"] == {
+        "value": _THETA_RAW,
+        "provenance_kind": "project-design",
+        "transformation": "identity_from_registered_theta_rad",
+        "claims_device_calibration": False,
+    }
+    assert provenance["run_binding"]["dataset_files"][
+        "supplies_physical_noise_parameters"] is False
 
 
 @requires_data
-def test_run_spec_from_preset_wg_calibrates_here():
-    """§3.6 NORMAL (wg): the WG preset's theta is CALIBRATED at run-spec build time.
+def test_run_spec_from_preset_wg_solves_model_coordinate_here():
+    """§3.6 NORMAL (wg): the WG preset's theta is model-rate-solved at build time.
     Defends K-1 (the wg resolve is live inside ``run_spec_from_preset``)."""
     from error_coupling_simulator.mechanisms.qutrit_teachers import (
         calibrate_theta_for_wg_l1,
@@ -640,6 +738,12 @@ def test_run_spec_from_preset_wg_calibrates_here():
     assert abs(rs.theta - expected) <= 1e-12
     assert rs.theta > 0.0 and abs(rs.theta - _THETA_RAW) > 1e-3, \
         "wg run-spec theta equals the raw cell / zero (dead resolve, K-1)"
+    provenance = rs.numerical_provenance
+    assert provenance is not None
+    resolved = provenance["run_binding"]["resolved_theta_rad"]
+    assert resolved["value"] == pytest.approx(expected)
+    assert resolved["provenance_kind"] == "calibrated-to-paper"
+    assert resolved["claims_device_calibration"] is False
 
 
 @requires_data
@@ -664,6 +768,57 @@ def test_run_spec_from_preset_propagates_bogus_root(tmp_path):
         run_spec_from_preset(PRESET_LEAK_THETA_0P30, n_shots=1, n_rounds=1, seed=0,
                              dataset_root=bogus)
     assert str(bogus) in str(ei.value)
+
+
+def test_custom_preset_without_provenance_fails_closed_to_implementation_only(monkeypatch):
+    """Missing value provenance remains runnable but cannot acquire a physical claim."""
+    monkeypatch.setattr(
+        experiments,
+        "_dataset_files",
+        lambda _root: {
+            "r01_circ": xp.DEFAULT_DATASET_ROOT / "synthetic_circuit.stim",
+            "r01_meta": xp.DEFAULT_DATASET_ROOT / "synthetic_metadata.json",
+        },
+    )
+    custom = ExperimentPreset(
+        name="custom_unregistered",
+        theta_rad=0.1,
+        g_seep=0.0,
+        g_heat=0.0,
+        b_bias=0.5,
+        arm="A",
+        readout_conv="biased_b",
+    )
+    spec = run_spec_from_preset(custom, n_shots=2, n_rounds=3, seed=4)
+    provenance = spec.numerical_provenance
+    assert provenance is not None
+    assert provenance["status"] == "missing"
+    assert provenance["claim_scope"] == "implementation_only"
+    assert provenance["run_binding"]["dataset_files"]["claim_scope"] == \
+        "geometry_and_schedule_only"
+
+
+def test_run_spec_numerical_provenance_is_json_safe_and_enters_shot_header():
+    """The auditable preset ledger must survive the final shot-header emission seam."""
+    with pytest.raises(ValueError, match="numerical_provenance must be JSON-safe"):
+        RunSpec(circuit_path="unused.stim", numerical_provenance={"bad": {1, 2}})
+
+    ledger = {
+        "status": "complete_for_registered_preset",
+        "dataset_source": {"claim_scope": "geometry_and_schedule_only"},
+    }
+    spec = RunSpec(circuit_path="unused.stim", N=2, R=3, numerical_provenance=ledger)
+    marsh = SimpleNamespace(
+        n_data=4,
+        n_stab=2,
+        R=3,
+        log_supp=SimpleNamespace(tolist=lambda: [0, 2]),
+    )
+    sched = SimpleNamespace(logical_kind="Z")
+    host = object.__new__(SvSampler)
+    header = host.build_header(spec, marsh, sched)
+    assert header["numerical_provenance"] == ledger
+    assert header["numerical_provenance"] is ledger
 
 
 # =========================================================================== #

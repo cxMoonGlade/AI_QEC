@@ -227,6 +227,10 @@ class RunSpec:
     dtype: str = "c128"
     # output (the packed shot buffer + the §6 header are written alongside)
     out_path: str | Path | None = None
+    # Optional value-level provenance supplied by a registered experiment facade.
+    # It is copied verbatim into the emitted shot header. Absence means the run is
+    # implementation-only; it must never be inferred to be device-calibrated.
+    numerical_provenance: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
         if int(self.m) not in (0, 1):
@@ -241,6 +245,11 @@ class RunSpec:
             raise ValueError(f"readout bias b must be in [0,1] (got {self.b})")
         if int(self.N) < 1 or int(self.W) < 1:
             raise ValueError("N and W must be >= 1")
+        if self.numerical_provenance is not None:
+            try:
+                json.dumps(self.numerical_provenance, sort_keys=True)
+            except (TypeError, ValueError) as exc:
+                raise ValueError("numerical_provenance must be JSON-safe") from exc
 
 
 #: Arm name → kernel int code (§4; Agent K's loader: 0:A, 1:C, 2:B1, 3:B2).
@@ -1281,7 +1290,7 @@ class SvSampler:
         (``ceil(R*n_stab/8) + 1``: the syndrome bytes + the trailing logical-flip byte).
         """
         bits = self.syndrome_bits_per_shot(marsh.n_stab, marsh.R)
-        return {
+        header = {
             "format": "p4a_sv_mc_shots/v1",
             "n_data": marsh.n_data,
             "n_stab": marsh.n_stab,
@@ -1309,6 +1318,9 @@ class SvSampler:
             "source_circuit": str(spec.circuit_path),
             "gate_ids": dict(SV_GATE_IDS),
         }
+        if spec.numerical_provenance is not None:
+            header["numerical_provenance"] = spec.numerical_provenance
+        return header
 
     @staticmethod
     def pack_shots(syndromes: np.ndarray, logical_flips: np.ndarray) -> np.ndarray:
