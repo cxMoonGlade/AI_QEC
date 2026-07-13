@@ -1,5 +1,10 @@
 # HANDOFF — M4 负向结果分析交接（2026-06-13）
 
+> **历史交接，不是当前项目状态（2026-07-13 审计）。** 本文冻结的是旧 M4 分支及当时的
+> 路径/命令/决策；其中若干链接与 ADR 编号已经退役。当前入口以 [`CLAUDE.md`](CLAUDE.md)、
+> [`docs/SIMULATOR.md`](docs/SIMULATOR.md)、[`CONTEXT.md`](CONTEXT.md) 和 ADR 0008–0011
+> 为准。不要从本文推断当前 production carrier 已闭合，也不要直接执行本文旧 next step。
+
 > 读者：接手的 Claude。M4 已完整关账并提交（git `28e2d65`，未 push）。本文件交接
 > **M4 负向结果的科学分析与去向决策**——这不是 debug 任务，M4 没有崩，它产出了一个
 > 干净、决定性、预注册的**负向结果**。读完先读 `CLAUDE.md`，再按 §2 顺序读。

@@ -1,5 +1,14 @@
 # Source Coupling Fan-Out Preregistration
 
+> **Historical implementation preregistration; superseded as a production bridge status
+> (2026-07-13).** The old `src/qec_twin/...` path and the single ten-field fan-out described below
+> are not the current package contract. The live code has separate source/fan-out components and
+> carrier objects, but the source-to-full-record production bridge remains `OPEN / CODE_BLOCKED`.
+> Use
+> [`production_rtn_and_leakage_bridge_split_literature_closure_2026-07-13.md`](production_rtn_and_leakage_bridge_split_literature_closure_2026-07-13.md)
+> and [`../SIMULATOR.md`](../SIMULATOR.md) for the current A/B split and claim boundary. The
+> parameter values below remain project design choices unless independently sourced.
+
 **Status:** implementation prereg for `src/qec_twin/mechanisms/source_coupling.py`.
 This is the Axis-2 parameter fan-out layer `Theta(z_t)` from the coupling
 simulator contract. It is not a record-level G4/G6 result by itself.

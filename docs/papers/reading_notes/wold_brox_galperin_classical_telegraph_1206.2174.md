@@ -3,8 +3,8 @@
 > **Provenance (2026-07-13): FULL-TEXT read (精读).** arXiv v1 PDF downloaded from
 > `https://arxiv.org/pdf/1206.2174`, SHA-256
 > `53a3d7c7bde2a95decb8eb2f04d1e37e78bb4cbb619b9b4dd3b3c6cdfe1c6a72`, 7 pages; text
-> extracted with `pdftotext -layout` for navigation. PDF page 3 was rendered and visually inspected
-> for Eqs. (9), (10), and (12).
+> extracted with `pdftotext -layout` for navigation. PDF pages 3 and 4 were rendered and visually
+> inspected for Eqs. (9), (10), and (12).
 
 ## Metadata [paper]
 
@@ -30,11 +30,11 @@ instrument bridge; Bergli et al. closes the former, while the latter remains mis
 
 | symbol | meaning and domain | assumptions | source location |
 |---|---|---|---|
-| `xi_+`, `xi_-` | classical fluctuator values with `xi_-=-xi_+` | symmetric amplitudes | Sec. III, PDF p. 3 |
+| `xi_+`, `xi_-` | classical fluctuator values with `xi_-=-xi_+` | symmetric amplitudes | Sec. III, PDF pp. 3–4 |
 | `Gamma_-+`, `Gamma_+-` | directional transition rates | may be unequal | Sec. III, Eq. (9), PDF p. 3 |
-| `Gamma` | `Gamma_-+ + Gamma_+-` | population relaxation rate | Eq. (10), PDF p. 3 |
-| `D(t)` | qubit coherence decay factor | symmetric RTN, pure dephasing | Eq. (12), PDF p. 3 |
-| `mu` | `sqrt(1-(2 xi/Gamma)^2)` | real in weak regime, imaginary in strong regime | Eq. (12), PDF p. 3 |
+| `Gamma` | `Gamma_-+ + Gamma_+-` | population relaxation rate | Eq. (10), PDF p. 4 |
+| `D(t)` | qubit coherence decay factor | symmetric RTN, pure dephasing | Eq. (12), PDF p. 4 |
+| `mu` | `sqrt(1-(2 xi/Gamma)^2)` | real in weak regime, imaginary in strong regime | Eq. (12), PDF p. 4 |
 
 For symmetric switching `Gamma_-+=Gamma_+-=gamma`, hence `Gamma=2 gamma`. This is exactly the
 conversion needed to compare Eq. (12) with Bergli et al. Eq. (35).
@@ -107,9 +107,9 @@ that interpretation for the current class.
 
 | input | transformation | assumption | output | exact source location | replay status |
 |---|---|---|---|---|---|
-| directional rates | sum | classical two-state chain | `Gamma` | Eq. (10), PDF p. 3 | matched |
-| symmetric rates | set each direction to `gamma` | high-temperature/symmetric RTN | `Gamma=2 gamma` | Eqs. (9)–(10), PDF p. 3 | matched |
-| `Gamma, xi` | Eq. (12) substitution | pure dephasing | exact single-factor coherence | Eq. (12), PDF p. 3 | matched |
+| directional rates | sum | classical two-state chain | `Gamma` | Eq. (10), PDF p. 4 | matched |
+| symmetric rates | set each direction to `gamma` | high-temperature/symmetric RTN | `Gamma=2 gamma` | Eq. (9), PDF p. 3; Eq. (10), PDF p. 4 | matched |
+| `Gamma, xi` | Eq. (12) substitution | pure dephasing | exact single-factor coherence | Eq. (12), PDF p. 4 | matched |
 | project fan-out | infer production channel | not supplied | production reduced map | no paper location | unsupported |
 
 ## Relevance to QEC Twin [ours]
@@ -123,4 +123,3 @@ free-induction diagnostic equals the production QEC channel.
 Full text and the equation page were visually checked. The convention and one-factor rows are
 closed. Multi-RTN factorization is covered by Bergli et al.; production-channel and record bridges
 remain missing.
-

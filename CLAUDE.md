@@ -4,11 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Main line
 
-`error_coupling_simulator` builds **a faithful, GPU-first simulator of QEC error
+`error_coupling_simulator` builds toward **a faithful, GPU-first simulator of QEC error
 mechanisms** — coupling, leakage, and other non-Pauli / memory-ful noise. It takes a QEC
 circuit (rotated surface code / **XZZX**) plus a **specified noise process** and produces
-the **multi-time syndrome RECORD** (`.b8` / `.dem`); metrics are instruments on the record,
-never the object. **Binding spec: `docs/SIMULATOR.md`** (object contract, boundary, carrier
+the **multi-time syndrome RECORD** (`.b8` shot data / joint shot law); a `.dem` is an optional
+decoder-facing reduction, not the record itself. Metrics are instruments on the record, never
+the object. **Binding spec: `docs/SIMULATOR.md`** (object contract, boundary, carrier
 ladder, disciplines — read it first).
 
 Active package: **`src/error_coupling_simulator/`** (importable directly). The live frontier
@@ -18,6 +19,22 @@ deletion are suspended by the 2026-07-13 literature closure. Working line: `docs
 Two noise axes: **Axis-1** within-substep joint-Lindbladian coupling; **Axis-2** notion-2
 classical multi-time record memory. Non-Pauli spans both: **leakage / drift / crosstalk /
 burst**.
+
+**Current production-bridge gate (2026-07-13): OPEN / `CODE_BLOCKED`.** The implemented
+source-conditioned dense-qubit process (Charter A) and the static data-qutrit XZZX process
+(Charter B) are two disconnected implementation islands; the old
+`RTN → ten-field Θ → quarter-slice leakage → XZZX record` object does not exist. No recorded
+published source closes either complete bridge, so neither supports preregistration or new
+claim-bearing experiment code. Binding audit:
+`docs/twin_validation/production_rtn_and_leakage_bridge_split_literature_closure_2026-07-13.md`.
+
+**Current live verification (2026-07-13): NOT full-suite green.**
+`conda run -n aiqec python -m pytest -q tests/` produced `2560 passed, 169 skipped,
+9 failed, 56 warnings`, then exited 139 after a segmentation fault. Eight failures are one
+`qutip 5.3.0` / repo-local `qutip-cuquantum` read-only-`_dims` compatibility cluster; the ninth
+is a reproducible H2 crosstalk gate miss (`KL=8.158934e-8 > 1e-8`). Treat the post-summary
+native crash as separately unresolved, not automatically benign. Exact commands, reruns, and
+claim implications are frozen in the binding audit's §5.4.
 
 ## Commands
 
@@ -38,29 +55,29 @@ harness) double as the executable spec — read the matching test first to see a
 end-to-end.
 
 **Local reference tooling** (RAG + KG are the basis of the `theory-first` / `theory-fix` skills):
-- RAG (literature search): `python -m qec_twin.rag.store --query "<q>"` (~2230 chunks over `docs/papers/reading_notes/`)
+- RAG (literature search): `python -m qec_twin.rag.store --query "<q>"` (~2400 chunks over `docs/papers/reading_notes/`; rebuild after note changes)
 - KG (knowledge graph): `python outputs/knowledge_graph/kg_query.py`
 - Code map: `docs/CODE_MAP.md` (regenerate `python tools/gen_code_map.py`)
 
 ## Architecture
 
 GPU-first; target workstation ≥ RTX 5090 CUDA (CPU-only results are not evidence of a
-GPU-path failure). **Every module under `src/error_coupling_simulator/` has a `README.md`
-bounding it**; full map in `docs/ARCHITECTURE.md` + `docs/CODE_MAP.md`.
+GPU-path failure). Read an owning module's `README.md` when present; not every top-level package
+currently has one, so the complete inventory is `docs/ARCHITECTURE.md` + `docs/CODE_MAP.md`.
 
 ```
 src/error_coupling_simulator/
   source/       Axis-2 notion-2 classical multi-time sources (1/f bath, RTN) + wedge observable
-  oracles/      independent QuTiP-derived channel primitives (FORMAL bug-catchers, evaluator-only)
   carrier/      forward propagation:
                 joint_lindbladian (Axis-1 assembler) + cptp_channel + channels + kernels/ (CUDA)
-                exact/     density matrix ⚠ feasibility-only ≤~15q — the CERTIFICATION ORACLE
+                exact/     dense DM ⚠ feasibility-only: ~15 qubits by memory; current qutrit d3=9 sites (~5.77 GiB)
                 peps/      ACTIVE — the full-d×d 2D-PEPS carrier + FET truncation frontier
                 pepo/      CLOSED — doubled-wire DM-PEPO
   mechanisms/   mechanism primitives + catalog + seam_teachers  (non-Pauli: leakage/drift/crosstalk/burst)
-  teachers/     the controlled noise processes (coupled_cycle)  (→ noise_processes/, rename pending)
+  noise_processes/  controlled generative processes (coupled_cycle; evaluator-only truth)
+  quantum_bath/ feasibility-only pseudomode-enlarged GKSL research carrier
   frontend/     CircuitIR / CodeSpec / compiler / schedule / carriers / emit → Simulator.run(...)
-  certify/      certification seam: score a noise process vs INDEPENDENT anchors (anti-circular)
+  certify/      certification seam + independent formal anchors (anti-circular, evaluator-only)
   numerics.py   NUMERICAL_ZERO floor
 ```
 
@@ -68,9 +85,11 @@ src/error_coupling_simulator/
 (`qec_twin.rag`) and R2 decoder (`qec_twin.hardware.m4_decode`); it is being pulled out of
 `src/` into an archive, with symlinks kept at the old import paths.
 
-**Carrier ladder / backend boundary:** exact DM (≤~15q, the oracle) → MPS MCWF thin-strip
-(`quimb`; χ constant in d) → **2D PEPS full `d×d`** (the active carrier — a 1D MPS is
-geometry-incompatible for the full square, `χ~2^{2d}`). **Record faithfulness is the open
+**Carrier ladder / backend boundary:** exact DM (qubits and qutrits have different ceilings; the
+current qutrit d3 oracle is 9 sites) → MPS MCWF thin-strip (`quimb`; bounded χ is only a target at
+fixed strip width/depth/noise regime/accuracy) → **2D PEPS full `d×d`** (the active carrier — a
+1D MPS can require `χ=2^{Θ(d)}` across a square-code cut in the worst/project-estimate regime).
+**Record faithfulness is the open
 acceptance criterion**, not an established property (ADR 0011): gate on the full syndrome
 record, never on the carrier bond / state fidelity alone. The
 channel object stays backend-agnostic, so swapping the carrier is not a rewrite. Detail:
@@ -149,6 +168,8 @@ decoder-facing detector-error-model reduction, never the object.
 - `docs/FAITHFULNESS_PROTOCOL.md` — the anti-toy faithfulness protocol.
 - `docs/NUMERICAL_PROVENANCE.md` — value-level source ledger and the one-source/two-source /
   cross-device compatibility rule.
+- `docs/twin_validation/HANDOFF_literature_closure_and_status_2026-07-13.md` — current
+  cross-session resume record; begin here after reading this file and the binding spec.
 - `docs/nonpauli_teacher/` — the live PEPS/FET carrier line + handoffs (current work).
 - `docs/ARCHITECTURE.md` — full module map (+ per-module READMEs); `docs/CODE_MAP.md` —
   generated `src/` inventory.

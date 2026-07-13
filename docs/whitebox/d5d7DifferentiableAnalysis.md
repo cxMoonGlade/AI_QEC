@@ -1,8 +1,14 @@
 # d5 与 d7 白盒载体的可微性评估
 
+> **历史设计分析，非当前 binding 状态（2026-07-13 审计）。** 本文保留了旧会话的
+> `cite` / `filecite` 内部引用 token，它们不是可复查的持久引文；任何 load-bearing
+> 论文结论必须回到 `docs/papers/reading_notes/` 重新核验。当前生产门、截断门和 qubit/qutrit
+> dense 上限分别以 [`../SIMULATOR.md`](../SIMULATOR.md)、ADR 0011 与
+> [`../NUMERICAL_PROVENANCE.md`](../NUMERICAL_PROVENANCE.md) 为准。
+
 ## 执行结论
 
-**结论：条件可行，但不应把“端到端精确可微”设为 d5/d7 白盒载体的成败标准。** 更可信的目标，是把 Harper 风格的纯态 stabilizer–TN 载体做成一个**可验证的局部响应引擎**：对连续相干参数走 pathwise 或 tangent propagation，对任何随参数变化的离散 Kraus / 测量分支补上 likelihood-ratio（score-function）项，并尽可能把最终或中间测量做 Rao–Blackwell 化，最后把得到的 Jacobian / Greeks 连同方差与截断偏差带一起导出给 GNN。Harper 论文已经证明了 `|ψ⟩ = C|MPS⟩` 这种“Clifford 主干在 `C`、非 Clifford 残差在 MPS、测量把残差塌缩回 Clifford frame”的前向 carrier 在表面码 coherent crosstalk 上是可扩展的，且 `χ_max = 32` 足以支撑其 d≤9 前向实验；但 Harper 自身是**前向仿真**而不是**逆向校准/可微推断**，这正是你这里未解决、也是研究价值最高的缺口。fileciteturn0file0 fileciteturn0file1
+**结论：条件可行，但不应把“端到端精确可微”设为 d5/d7 白盒载体的成败标准。** 更可信的目标，是把 Harper 风格的纯态 stabilizer–TN 载体做成一个**可验证的局部响应引擎**：对连续相干参数走 pathwise 或 tangent propagation，对任何随参数变化的离散 Kraus / 测量分支补上 likelihood-ratio（score-function）项，并尽可能把最终或中间测量做 Rao–Blackwell 化，最后把得到的 Jacobian / Greeks 连同方差与截断偏差带一起导出给 GNN。Harper 在其特定 coherent-crosstalk 模型和 `d≤9` 数值实验中展示了 `|ψ⟩ = C|MPS⟩` 前向表征，并对 `χ_max=32` 做了模型内经验收敛；这不是一般可扩展性定理，更不闭合本项目的完整记录或截断误差。Harper 自身是**前向仿真**而不是**逆向校准/可微推断**，这正是这里未解决的缺口。fileciteturn0file0 fileciteturn0file1
 
 **prediction：** 在 d3 密集 oracle 已就位、d5/d7 又受限于单卡 32 GB / 内存 60 GB 的前提下，最有希望成功的路线不是“对完整 d7 syndrome likelihood 做干净的端到端 autograd”，而是“对局部 block/composite likelihood 做混合梯度估计 + 对 GNN 输出 provenance-tagged response object”。若 spike 结果正常，这条路线足以支持白盒参数恢复、识别/不可识别方向判定、局部 seam overlap 状态导出，以及有限维 counterfactual sensitivity；但若要求在 d7 全图上稳定、低方差地给出精确 `∇_θ log P_θ(s)`，我判断**风险偏高**。Harper 的前向结果、可微张量网络文献、以及近期可微量子轨迹工作都支持“局部响应对象”这一更保守也更可信的目标。fileciteturn0file0 citeturn12view0turn13view0
 
@@ -41,11 +47,11 @@ w_\theta(s\mid\tau)\nabla_\theta \log q_\theta(\tau)+\nabla_\theta w_\theta(s\mi
 | **Pauli baseline + coherent correction / influence function / quasiprobability 校正** | 某些 observable 可 **exact**，但对 likelihood 本身不直接 | 低到中 | 可能很高，受 channel robustness 控制 | 中 | 中 | **适合做对照，不宜做主 carrier** |
 | **局部纯化 TN / LPDO** | 正性与 trace-norm 误差控制是 **exact** 优点 | 压缩后仍有偏差 | 低到中 | 比纯态轨迹更重 | 高 | **可做中期备选，不适合 MVP** |
 | **确定性 MPDO/MPO + 激进压缩** | 满 bond 时对 mixed-state likelihood 最干净，属 **exact** | 压缩偏差难控；正性问题突出 | 低 | 当前看差 | 高 | **当前应降级** |
-| **对 <=13q dense oracle 训练 surrogate / neural ratio / neural score** | 近似器本身只是 **prediction/heuristic** | 中 | 低 | 推理快，但外推差 | 中到高 | **只做辅助手段，不替代白盒** |
+| **对历史 dense-qubit `≤13`-qubit oracle 训练 surrogate / neural ratio / neural score** | 近似器本身只是 **prediction/heuristic** | 中 | 低 | 推理快，但外推差 | 中到高 | **只做辅助手段，不替代白盒；qutrit ceiling 另算** |
 | **仅在 d3 做隐式微分/精确梯度，d7 只给 stop-gradient 特征** | d3 局部是 **exact**，d7 为 **heuristic** | 低 | 低 | 工程最稳 | 低到中 | **项目层面最稳妥的 fallback** |
 | **d3 精确梯度 + d7 近似 response bands 的混合方案** | 综合上是 **prediction**，但最可落地 | 低到中 | 中 | 很好 | 中 | **我最推荐的项目策略** |
 
-Harper 载体之所以成为首选，不是因为它已经证明了“可微推断”，而是因为它已经证明了“**可扩展的前向表征**”：Clifford bulk 放进 `C`，相干残差放进 MPS，并且过强截断会把逻辑误差率往下偏，这个“lower-bound”行为至少给了你一个可解释的偏差方向。相反，确定性 mixed-state 路线在 open-system 文献里长期受到 MPDO 正性检查 NP-hard、局部截断破坏正定性、以及 mixedness 直接把 bond 推高的限制；LPDO 通过 purification 保住正性与 trace-norm 误差控制，但资源增长依旧是它的核心代价。fileciteturn0file0 citeturn17view0turn13view2turn13view3
+Harper 载体值得作为候选，不是因为它已经证明了“可微推断”或一般可扩展性，而是因为它在自己的有限模型/距离/`χ` 范围内展示了可用的前向表征：Clifford bulk 放进 `C`，相干残差放进 MPS。其过强截断下的逻辑误差率向下偏是该实验设置中的观察，**不是一般 lower-bound 定理或可迁移的偏差方向**。相反，确定性 mixed-state 路线在 open-system 文献里长期受到 MPDO 正性检查 NP-hard、局部截断破坏正定性、以及 mixedness 直接把 bond 推高的限制；LPDO 通过 purification 保住正性与 trace-norm 误差控制，但资源增长依旧是它的核心代价。fileciteturn0file0 citeturn17view0turn13view2turn13view3
 
 **prediction：** 若你的内部 Spike A 所见“framed MPDO 在真实 13q d3 子系统上已到 `χ≈162`”有代表性，那么确定性 MPDO/MPO 路线在你给出的单卡预算下应视为**暂时不可行**；即使 forward 勉强可跑，其反向图和压缩偏差校验也大概率不在“几小时而非几周”的窗口内。与之相比，纯态轨迹 carrier 把 mixedness 变成 sampling overhead，把 memory blow-up 改写为 variance problem；对于你这个项目，这是更好管理的失败模式。LPDO 可以保留为中期探索，因为它的正性和误差控制确实有理论吸引力，但不是当前最小可行路线。citeturn13view2turn13view3turn17view0
 
@@ -112,17 +118,17 @@ U_t(\theta)=\sum_a c_a(\theta)\,\widetilde P_a,
 
 ## 截断与可微性的处理
 
-**exact：** SVD 截断是 d5/d7 carrier 的第二个硬问题。Harper 的前向结果已经说明：在他们的 surface-code coherent crosstalk 实验里，Schmidt 值快速衰减，`χ_max=32` 就能给出收敛的逻辑错误率趋势；但若截断太激进，逻辑错误率会被系统性压低，因而结果更像 lower bound。这个结论对 forward observable 已成立；对 gradient，只会更敏感。可微张量网络文献也把“稳定地穿过 SVD / tensor decomposition 求导”明确列为关键技术难点；而近期关于 truncacted SVD 导数的专门技术报告，以及机器学习里关于 duplicated singular values 导致 SVD 反传不稳定的工作，都说明“硬 top-χ + 近简并奇异值”是已知雷区。fileciteturn0file0 citeturn12view0turn12view8turn15academia0
+**exact：** SVD 截断是 d5/d7 carrier 的第二个硬问题。Harper 在其 surface-code coherent-crosstalk 实验里观察到 Schmidt 值快速衰减，并以 `χ_max=32` 得到经验收敛的逻辑错误率趋势；过强截断在那些测试点造成向下偏差，但这不构成普遍 lower bound。对 gradient 还需要独立验证，不能从 forward 趋势推得偏差方向。可微张量网络文献也把“稳定地穿过 SVD / tensor decomposition 求导”明确列为关键技术难点；而近期关于 truncacted SVD 导数的专门技术报告，以及机器学习里关于 duplicated singular values 导致 SVD 反传不稳定的工作，都说明“硬 top-χ + 近简并奇异值”是已知雷区。fileciteturn0file0 citeturn12view0turn12view8turn15academia0
 
 **exact：** “forward 看起来收敛”并**不**推出“gradient 也收敛”。最简单的反例思路是：某条被截断掉的 tail 方向对概率质量的贡献是 `O(ε)`，所以 forward observable 的差异很小；但若该方向的参数敏感度是 `O(1)`，甚至在近简并点附近被局部条件数放大，那么 `∇_θ` 的误差可以保持在 `O(1)` 量级。也就是说，**梯度截断偏差会先于 forward 偏差暴露**。这正是为什么你不能沿用 Harper 那种“只看逻辑错误率收敛”的判据。这里的验证指标必须把 gradient angle、relative norm error、以及 sign stability 单独拿出来。这个判断与 TDVP 文献对 fixed-rank tangent-space 投影的强调是同方向的：只要你把固定秩 MPS 视为流形，真正稳定的“反向规则”不是随手截掉奇异方向，而是对 tangent space 做受控投影。citeturn13view4turn13view5
 
-**heuristic：** 我建议把 truncation policy 分成两个层次。前向生产路径使用**固定 canonical gauge + 固定 `χ_fwd` + 确定性 top-χ**，保证 carrier 是可重复和可审计的；而梯度/诊断路径额外维护一个**更宽的 `χ_back ≥ χ_fwd`** 或者使用**软谱滤波**，例如对奇异值乘以平滑权重 `g_\tau(\sigma)`，再把 `τ→0` 当作验证极限。这样做的目的不是追求数学上无偏，而是给你一个**可测的偏差–方差旋钮**。在此框架下，straight-through 截断只适合做非常早期的工程排雷，不适合当科学结果；stop-gradient on truncation 只适合做 ablation，不适合输出给 GNN 的物理响应；随机化 SVD 若要用，必须把随机性也纳入轨迹分布并做 seed-固定的 CRN 诊断，否则你会把截断噪声和物理响应混在一起。citeturn12view8turn15academia0turn6academia1
+**heuristic：** 可把 truncation policy 分成两个**待检验候选**：前向诊断路径尝试固定 canonical gauge、固定 `χ_fwd` 与确定性 top-χ；梯度诊断路径再比较更宽的 `χ_back ≥ χ_fwd` 或软谱滤波。任何一条在成为 production path 前都必须通过 ADR 0011 的完整记录门，不能仅凭可重复性或局部谱收敛获准。straight-through 截断只适合早期工程排雷，不适合当科学结果；stop-gradient on truncation 只适合做 ablation，不适合输出给 GNN 的物理响应；随机化 SVD 若要用，必须把随机性也纳入轨迹分布并做 seed-固定的 CRN 诊断，否则会把截断噪声和物理响应混在一起。citeturn12view8turn15academia0turn6academia1
 
 **prediction：** 若 spike 发现“forward NLL 与 `P(s)` 在 `χ=16` 或 `32` 已基本收敛，但 gradient 方向在相邻 `χ` 间仍频繁翻转”，就应立即判定：**当前 truncation 规则不适合作为可微白盒的科学接口**。这时最稳妥的退路不是继续逼 autograd，而是切换到 CRN 有限差分 / SPSA 生成 response object，因为这些方法至少把截断偏差留在 forward oracle 层，而不是再叠一层不透明的 backward 偏差。
 
 ## 验证与脉冲实验
 
-这些 spike 应全部先在 `<=13q` dense oracle 上做，因为那是你唯一能同时拿到“真 forward + 真 autograd + 精确 finite difference”的地方。Harper 解决的是前向可扩展性，不是反向正确性；而最近可微量子轨迹与可微张量网络论文给出的教训都一致：**先把 estimator correctness 与 truncation bias 钉死，再谈大规模。** fileciteturn0file0 citeturn12view0turn13view0
+这些 spike 应先在历史设计所指的 `≤13`-**qubit** dense oracle 上做；qutrit oracle 的实际上限不同（当前 d3 是 9 qutrits）。只有在可达 dense 对象上才能同时拿到 exact forward、autograd 与 finite difference。Harper 解决的是模型内前向仿真，不是反向正确性；应先钉死 estimator correctness 与 truncation bias，再谈大规模。fileciteturn0file0 citeturn12view0turn13view0
 
 | Spike | 测什么 | 通过门槛 | 不通过意味着什么 |
 |---|---|---|---|
@@ -169,7 +175,7 @@ Response_w = {
 }
 ```
 
-**exact：** 必须尽量“准确定义”的部分有四类。第一，`objective_spec_w`，因为 GNN 需要知道白盒到底拟合了什么，不然不同窗口不可比。第二，`identified_mask_w`、`null_space_basis_w`、`fisher_rank_w`，因为这决定了哪些方向可以被物理解释，哪些方向只能留给黑盒吸收。第三，`provenance_w`，因为一旦 Jacobian 来自轨迹估计器或 FD，它的统计性质必须显式暴露。第四，在 d3 或任何 `<=13q` dense 可达窗口上，凡是能由密集 oracle 精确输出的局部响应，都应标成“exact-dense”。citeturn11academia1turn11academia3
+**exact：** 必须尽量“准确定义”的部分有四类。第一，`objective_spec_w`，因为 GNN 需要知道白盒到底拟合了什么，不然不同窗口不可比。第二，`identified_mask_w`、`null_space_basis_w`、`fisher_rank_w`，因为这决定了哪些方向可以被物理解释，哪些方向只能留给黑盒吸收。第三，`provenance_w`，因为一旦 Jacobian 来自轨迹估计器或 FD，它的统计性质必须显式暴露。第四，在 d3 或任何 dense 可达窗口上，只有被独立 exact oracle 覆盖的局部响应才可标成“exact-dense”；历史 `≤13q` 数字仅指 qubit 设计，不适用于 qutrit DM。citeturn11academia1turn11academia3
 
 **prediction：** 可以接受估计的部分，是 `rho_BC_w`、局部 score、Greeks、coherence / residual budgets。这里的关键不是追求“无偏到最后一位”，而是**把 bias proxy 与 variance band 同时输出**。例如对某一物理方向 `v`，你导出的不应只是 `v^T J_w`，而应是  
 \[
@@ -183,7 +189,7 @@ Response_w = {
 
 **应立即降级或放弃“可微 carrier”叙事的红旗**很明确。第一，dense oracle 上 gradient sign 在不同 seed 或不同 `χ` 下频繁翻转。第二，forward NLL 看似收敛，但 gradient angle 长期不收敛。第三，加入 Rao–Blackwellization 以后，方差仍随 syndrome 罕见度急剧爆炸，导致实际 wall-clock 下 `∇ log P` 完全不可用。第四，CRN finite difference / SPSA 在相同预算下持续优于混合估计器，那就说明你的“可微化”并没有带来工程收益。第五，identified subspace 本身跨 batch 不稳定，这说明根本瓶颈在可识别性，不在 carrier。第六，d7 pilot 需要的 `χ`、轨迹数、或缓存状态超出“单夜可跑完”的门槛，此时就应接受“d7 只输出 stop-gradient 特征与 response bands”的项目现实。citeturn12view0turn13view0turn13view2turn17view0
 
-建议优先检查的参考文献与关键词如下。Harper 2026 给出你要用的前向 carrier 直觉与 truncation 经验；Liao 等 2019 给出“固定图张量网络是可微程序”的系统框架；Haegeman 等 2014 给出把固定秩 MPS 演化写成 tangent-space projector 的思路；Werner 等 2014 与 Godinez-Ramirez 等 2024/2026 给出 LPDO 的正性与误差控制及其资源瓶颈；Heinrich 与 Magorsch 2026 说明 score-function 可以确实穿过量子轨迹的离散跳变；Hakkaku 等 2021 给出 coherent QEC 的无偏 quasiprobability 基线；Bravyi 等 2018 则提醒你：大码距处相干物理噪声往往会被逻辑层面有效 Pauli 化，因此白盒响应对象应聚焦**局部窗口与 seam 级别**，而不是幻想全图都保留高保真 coherent sensitivity。关于离散梯度降方差，可看 Rao–Blackwellized straight-through 文献；关于 simulated likelihood 不可得时的近似比率/score，可看 neural ratio / neural score estimation。fileciteturn0file0 citeturn12view0turn13view4turn13view2turn17view0turn13view0turn16view0turn16view2turn13view8turn20academia0turn12view7
+建议优先检查的参考文献与关键词如下。Harper 2026 给出你要用的前向 carrier 直觉与 truncation 经验；Liao 等 2019 给出“固定图张量网络是可微程序”的系统框架；Haegeman 等 2014 给出把固定秩 MPS 演化写成 tangent-space projector 的思路；Werner 等 2014 与 Godinez-Ramirez 等 2024/2026 给出 LPDO 的正性与误差控制及其资源瓶颈；Heinrich 与 Magorsch 2026 说明 score-function 可以确实穿过量子轨迹的离散跳变；Hakkaku 等 2021 给出 coherent QEC 的无偏 quasiprobability 基线。Bravyi 等 2018 的准确边界更窄：在均匀单轴相干 storage noise 与理想 syndrome extraction 下，syndrome-conditioned logical angles 在大 `d` 趋向 Pauli 角；但有限 `d`、阈下的逻辑误差仍可被 Pauli twirl 显著低估。它不能授权删除物理相干 carrier，也不能证明 full record 或 seam response 已经 Pauli 化。因而“局部窗口 + seam”仍是待验证的架构分解，而不是由大 `d` washout 推出的定理。关于离散梯度降方差，可看 Rao–Blackwellized straight-through 文献；关于 simulated likelihood 不可得时的近似比率/score，可看 neural ratio / neural score estimation。fileciteturn0file0 citeturn12view0turn13view4turn13view2turn17view0turn13view0turn16view0turn16view2turn13view8turn20academia0turn12view7
 
 **最终判断可压缩成一句话：**  
 **Option A 可以做成“足够可微”的 inference 载体，但这个“足够”应定义为“能导出经 dense oracle 验证过的局部 response object”，而不是“能在 d7 全图上对真实 marginal likelihood 做稳定、低方差、硬截断下的端到端 autograd”。** 如果前述 spikes 过关，就继续；如果不过关，就不要把项目绑死在可微白盒上，而应转向“d3 精确梯度 + d7 provenance-tagged response bands + stop-gradient GNN fusion”的混合架构。

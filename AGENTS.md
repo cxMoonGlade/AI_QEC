@@ -17,6 +17,8 @@ were copied here.
   module's README before adding code there (do not add flat modules under `src/error_coupling_simulator/`).
 - **`docs/METRICS.md`** — metric ledger + the forced standard-metric ladder;
   **`docs/FAITHFULNESS_PROTOCOL.md`** — the anti-toy protocol.
+- **`docs/NUMERICAL_PROVENANCE.md`** — value-level paper/data/design provenance and the
+  cross-paper-composite boundary; read before a claim-bearing run.
 - **`docs/nonpauli_teacher/`** — the live PEPS/FET carrier line + handoffs (current work).
 - **`docs/adr/`** — live decisions (0008 → 0011).
 - **`docs/.datasets/`** — reading notes for the local Google QEC datasets (a mandatory derivation

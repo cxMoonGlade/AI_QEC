@@ -3,7 +3,8 @@
 Provenance: FULL-TEXT read (all 11 pages) of the extracted plaintext at
 `outputs/papers/1309.6383.txt`. Every load-bearing claim below carries a short verbatim ASCII
 quote and its `===== PAGE N =====` marker. Ligatures (ﬀ/ﬁ) and hyphen line-breaks in the source
-were avoided by quoting clean ASCII fragments only.
+were avoided by quoting clean ASCII fragments only. PDF p. 4 was rendered and visually inspected
+on 2026-07-13 for the constructive single-qubit dephasing theorem and Eqs. (11)–(15).
 
 ---
 

@@ -53,11 +53,20 @@ external oracle exists above the d3 exact-DM referee) — reportable and gate-us
 Does the emitted multi-time syndrome record match an INDEPENDENT reference distribution? Scored at
 d3 vs the exact-DM oracle; the RECORD is what feasibility gates on (ADR 0011).
 
+**Record-coordinate guard (binding).** The product coordinate called `detectors` is the temporal
+detector-event fold of raw syndrome bits, not whatever an accessor happens to label `det`:
+`d[0,j]=s[0,j]` and `d[r,j]=s[r,j] XOR s[r-1,j]` for `r>=1`. A raw-syndrome array may be scored only
+when it is explicitly labeled as such. `R=1` cannot test this distinction, so every detector-semantic
+gate needs an `R>=2` positive and negative control. If the same complete bijective `s↔d` push-forward
+is applied to both exact joint laws, population TV/KL and exact-law NLL are invariant. Detector
+marginals, DEF, `p_ij`, lag/CMI/Markov-order summaries, DEMs/decoders, one-sided folds, and restricted
+factorized model families are not generally invariant and must use the declared coordinate.
+
 | Metric | Formula | Standard name + reference | Class | Convention |
 |---|---|---|---|---|
 | Syndrome-distribution total-variation | `½‖p − q‖₁` over the record support | **total-variation distance** (Nielsen & Chuang 2010 §9; `P_e = ½(1−TV)` Bayes link, Nielsen arXiv:1401.4788) | (a) at exact enumeration; (b) finite-sample | over the joint `(detectors, obs)`; a standard probability distance adopted as the **project's d3 certification metric** — the 2026-07-13 literature audit did not find a universal QEC full-record-TV standard; never use element-wise `max` |
 | Record relative entropy | `KL(p_ref ‖ p_carrier) = H(p_ref,p_carrier) − H(p_ref) ≥ 0` | **relative entropy / KL** (Cover & Thomas 2006) | (a) population / (b) finite-sample | nats; `KL→0` iff the population record laws agree; project certification choice, not established universal QEC simulator practice |
-| Held-out per-shot syndrome NLL | `−(1/N) Σ_n log p(y_n)` | **held-out negative log-likelihood** — the dMLE model-scoring objective (Cao et al. arXiv:2602.19722; population limit = cross-entropy, Cover & Thomas 2006) | (b) | only for a normalized generator of `P(record)`; decoder BCE/NLL for `P(logical|record)` is a different object; project certification choice |
+| Held-out per-shot syndrome NLL | `−(1/N) Σ_n log p(y_n)` | **held-out negative log-likelihood** — the dMLE model-scoring objective (Cao et al. arXiv:2602.19722; population limit = cross-entropy, Cover & Thomas 2006) | (b) | only for a normalized generator of `P(record)`; decoder BCE/NLL for `P(logical given record)` is a different object; project certification choice |
 
 **Verification-vs-claim guard (binding).** Comparing two INDEPENDENT computations of the *same*
 `P(record)` (a cross-check) may report `max|A−B|` (L∞) as a machine-agreement diagnostic; comparing
@@ -94,9 +103,9 @@ Channel-level cross-checks of the carrier against the exact-DM / from-scratch or
 
 | Metric | Formula | Standard name + reference | Class | Convention |
 |---|---|---|---|---|
-| Process (entanglement) infidelity | `1 − F_e`, `F_e` = Uhlmann fidelity of the trace-normalized **Choi states** | **entanglement/process fidelity** (Schumacher PRA 54, 2614 (1996); Nielsen Phys. Lett. A 303, 249 (2002) for `F_avg`) | (a) leading-order (`1−F_e ≈ ‖G‖²_F/d` for coherent `V=e^{−iG}`); (b) finite-χ | Choi built from the superoperator (gauge-invariant); the intrinsic Uhlmann floor ~1e-8; use the commutator/superop-distance control for a machine-exact witness |
+| Process (entanglement) infidelity | `1 − F_e`, `F_e` = Uhlmann fidelity of the trace-normalized **Choi states** | **entanglement/process fidelity** (Schumacher PRA 54, 2614 (1996); Nielsen Phys. Lett. A 303, 249 (2002) for `F_avg`) | (a) leading-order (`1−F_e ≈ ‖G₀‖²_F/d` for coherent `V=e^{−iG}`, with `G₀=G−Tr(G)I/d` removing global phase); (b) finite-χ | Choi built from the superoperator (gauge-invariant); the intrinsic Uhlmann floor ~1e-8; use the commutator/superop-distance control for a machine-exact witness |
 | Normalized-Choi-state trace distance | `½‖J − J'‖₁` on a seam-neighborhood reduced block | trace distance between outputs for the fixed maximally-entangled Choi input (Choi 1975; Jamiołkowski 1972) | (a)/(b) | project channel diagnostic/lower bound; **not** general optimal channel distinguishability, which is governed by the diamond norm; per-seam block only (global `2^{2n}` Choi infeasible) |
-| Pauli-twirl distance | `½‖J(E) − J(𝒯(E))‖₁`, `𝒯(E)` = PTM off-diagonal zeroed | **the PTA / DEM approximation error** = coherence a Pauli/DEM export discards (trace distance, N&C §9; twirl-underestimate, Bravyi et al. arXiv:1710.02270; Harper) | (a) definition / (b) magnitude | reported with the **unitarity** `u(E)` coherence-of-noise scalar (Wallman et al. arXiv:1503.07865); the MODEL is never twirled — this is the metric's reference channel only |
+| Pauli-twirl distance | `½‖J(E) − J(𝒯(E))‖₁`, `𝒯(E)` = PTM off-diagonal zeroed | **the PTA / DEM approximation error** = non-Pauli PTM structure discarded by the twirl, including coherent cross-axis terms and non-unital affine translations (trace distance, N&C §9; twirl-underestimate, Bravyi et al. arXiv:1710.02270; Harper) | (a) definition / (b) magnitude | reported with the **unitarity** `u(E)` coherence-of-noise scalar (Wallman et al. arXiv:1503.07865), which covers only one aspect of the removed structure; the MODEL is never twirled — this is the metric's reference channel only |
 | Outcome-augmented comb-Choi trace distance | `½‖J(T_R^A) − J(T_R^B)‖₁` on normalized comb Choi states | fixed-Choi representation diagnostic (Chiribella–D'Ariano–Perinotti PRA 80, 022339 (2009); Pollock et al. PRA 97, 012127 (2018)) | (a)/(b) | `Σ_m Tr J_m=1`; not the general optimal adaptive process-discrimination distance, which requires a strategy/comb norm over admissible testers |
 
 ---
@@ -104,8 +113,9 @@ Channel-level cross-checks of the carrier against the exact-DM / from-scratch or
 ## 4. Axis-2 notion-2 multi-time record memory
 
 Does the passive record carry the SPECIFIED classical multi-time memory, distinguishable from a
-genuinely-Markov null? A **discriminability instrument, never a parameter-recovery learner** (fitting
-θ from the record is the active-QNS access class, out of scope; `docs/SIMULATOR.md`).
+genuinely-Markov null? This is a **discriminability instrument, not a parameter-recovery learner**.
+Fitting `θ` from the same fixed passive record is passive parameter recovery; it is active tester
+access only when the instrument/intervention family is varied (`docs/SIMULATOR.md`).
 
 | Metric | Formula | Standard name + reference | Class | Convention |
 |---|---|---|---|---|
@@ -117,8 +127,8 @@ genuinely-Markov null? A **discriminability instrument, never a parameter-recove
 
 | Metric | Formula | Standard name + reference | Class | Convention |
 |---|---|---|---|---|
-| Backflow | `N(Φ)=max ∫_{σ>0}σ(t)dt`, `σ=d/dt·½‖ρ₁−ρ₂‖₁` | **BLP trace-distance measure** (Breuer–Laine–Piilo PRL 103, 210401 (2009), arXiv:0908.0238) | (a) definition / (b) value | property/witness of a reduced dynamical-map family; classical random fields can produce it (Lo Franco et al., PRA 85, 032318; Cialdi et al., PRA 100, 052104), so it is not a quantum-bath certificate |
-| CP-indivisibility | `I=∫g(t)dt`, `g` from the intermediate-map Choi non-CP; `D_NM=I/(I+1)` | **RHP measure** (Rivas–Huelga–Plenio PRL 105, 050403 (2010), arXiv:0911.4270) | (a) definition / (b) value | RHP and BLP are distinct; report which is claimed. The positive-exponential-covariance **Gaussian surrogate** is CP-divisible by project algebra. Two explicitly declared free-induction lifts of the finite-RTN defaults have exact BLP backflow (`finite_rtn_exact_cpdiv_result_2026-07-13.md`), but neither lift is the production `z -> Theta` QEC channel. A stochastic source alone has no reduced-map status, and neither a diagnostic value nor record CMI transfers to the production path without a proved channel/instrument bridge |
+| Backflow | `N(Φ)=max ∫_{σ>0}σ(t)dt`, `σ=d/dt·½‖ρ₁−ρ₂‖₁` | **BLP trace-distance measure** (Breuer–Laine–Piilo PRL 103, 210401 (2009), arXiv:0908.0238) | (a) definition / (b) value | property/witness of a reduced dynamical-map family; `N>0` witnesses nondivisibility, but `N=0` does not imply general CP-divisibility. Classical random fields can produce backflow (Lo Franco et al., PRA 85, 032318; Cialdi et al., PRA 100, 052104), so it is not a quantum-bath certificate |
+| CP-indivisibility | `I=∫g(t)dt`, `g` from the intermediate-map Choi non-CP; `D_NM=I/(I+1)` | **RHP measure** (Rivas–Huelga–Plenio PRL 105, 050403 (2010), arXiv:0911.4270) | (a) definition / (b) value | RHP and BLP are distinct; report which is claimed. The literature target is the fixed-data-register, outcome-discarded unconditional map at common post-reset cycle boundaries, using one input-independent source law and one average over each complete correlated history; the growing record tape remains notion-2. Current production's whole-horizon trajectory-mean reset policy does not instantiate a causal cross-horizon family. For noninvertible maps, do not use an ordinary/pseudo-inverse or support-only test: discrete RHP-style divisibility requires a full-data-space CPTP factor satisfying the composition equation. Cycle-sampled BLP is only a witness/lower bound, and no sampled revival does not imply divisibility. The positive-exponential-covariance **Gaussian surrogate** is CP-divisible by project algebra. Two explicitly declared free-induction lifts of the finite-RTN defaults have exact BLP backflow (`finite_rtn_exact_cpdiv_result_2026-07-13.md`), but neither lift is the production `z -> Theta` QEC channel. A stochastic source alone has no reduced-map status, and neither a diagnostic value nor record CMI transfers to the production path without a proved channel/instrument bridge |
 
 ### 4b. notion-3 — quantum process memory/backaction (active access boundary)
 

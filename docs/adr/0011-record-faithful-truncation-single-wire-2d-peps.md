@@ -25,9 +25,9 @@ registered prediction band, not theorem-grade.
 - **ADR 0010 is superseded on two points that were written for the wrong geometry / wrong instrument.**
   ADR 0010 §Decision-4 registered the leakage scaling forward as a **thin-strip (w×d) MCWF-MPS snake**
   and **deferred full `d×d` as a research risk**. But the actual d5/d7 target is the **full `d×d` rotated
-  surface code**, whose 2D geometry a 1D MPS cannot carry: snaking the full square into a 1D chain hits
-  a bond wall `χ ~ 2^{2d}` ([[project-fulld-1dmps-wall-and-2dpeps]]) — MPS is **geometry-incompatible**
-  with the full surface code. The doubled-wire **DM-PEPO** carrier was also **closed/archived**
+  surface code**, whose 2D geometry can force a 1D snake to `χ=2^{Θ(d)}` across a square-code cut
+  in the worst/project-estimate regime; this is a scaling risk rather than a universal exact formula
+  ([binding carrier boundary](../SIMULATOR.md)). The doubled-wire **DM-PEPO** carrier was also **closed/archived**
   (F-SEL-1/F-REC-1: the compiled weight-4 √Eₛ POVM concentrates onto fresh path bonds via ket⊗bra
   squaring). The **single-wire 2D PEPS** pure-state trajectory carrier is the **survivor**, deliberately
   started as the full-`d×d` fix (`peps_singlewire_spike_contract`; d3 gates 28/28 green, committed). So
@@ -56,10 +56,14 @@ registered prediction band, not theorem-grade.
   `|α|²P(·|unleaked)+|β|²P(·|leaked)`; the `C_L` off-diagonal never enters a syndrome-bit probability.
   (iii) **LRU/DQLR** resets `|2⟩` each cycle, dephasing the `|1⟩–|2⟩` coherence between rounds → a diagonal
   population flag. A flag is notion-2 only if it induces multi-time dependence in the record. (iv)
-  **theorem-grade** — Behrends–Beri 2412.21055 (PRX Quantum): for any
-  nonzero incoherent component the logical-noise coherence is **exponentially suppressed in code distance d**,
-  so the tail is exp-small exactly at the d5/d7 the carrier targets. Corroborating: pauli_channels_from_syndrome
-  (correlated-Pauli reachable, coherent-non-Pauli not), STA 2312.10277, QMCtwin 2606.19848.
+  **bounded adjacent evidence, corrected 2026-07-13** — Behrends–Béri 2412.21055
+  (PRX Quantum) reports numerical plus phenomenological exponential suppression of a
+  **syndrome-conditioned logical-channel coherence** with code distance for a local independent
+  single-qubit X-error product channel whenever an incoherent component is present. It is not a
+  theorem about qutrit leakage, a noisy repeated-extraction record, physical 2D PEPS entanglement,
+  or truncation error; it therefore does not imply that the d5/d7 coherent leakage tail is
+  exponentially small. The `pauli_channels_from_syndrome`, STA 2312.10277, and QMCtwin 2606.19848
+  sources likewise address different bounded objects rather than supplying that missing bridge.
   The earlier inference that this fixes all leakage record content to notion-2 is retracted:
   coherent leakage is first a channel→instrument→record reachability question, not a
   memory-taxonomy result.
@@ -68,11 +72,13 @@ registered prediction band, not theorem-grade.
 
 1. **The full-`d×d` surface-code leakage scaling forward carrier = the single-wire 2D PEPS**
    (pure-state MCWF trajectory; dim-3 physical leg; per-round leakage Kraus). MPS is retained ONLY for
-   genuine thin strips (ADR 0010's w×d regime, where χ is small/constant in d); **MPS-on-full-`d×d` and
+   genuine thin strips (ADR 0010's w×d regime, where bounded χ is conditional on fixed width,
+   evolution depth/noise regime, and accuracy); **MPS-on-full-`d×d` and
    the DM-PEPO are CLOSED** (geometry wall / path-bond concentration). ADR 0010's MCWF-exactness,
    LRU leakage model, LPDO floor, and certification ladder are UNCHANGED.
 2. **Leakage stays the per-round-independent local Kraus flavor, applied on the carrier's qutrit legs**
-   (ADR 0010 §Decision-2/-3, [[project-leakage-lru-const-memory-notion2shadow]]). At d3 this is the fast
+   (ADR 0010 §Decision-2/-3; current reachability boundary in the
+   [literature closure](../nonpauli_teacher/coherent_leakage_longrange_truncation_literature_closure_2026-07-13.md)). At d3 this is the fast
    dense SV kernel (`sv_traj_d3` loader); at d5/d7, where no dense state exists, the SAME per-round Kraus
    is applied on the PEPS legs. Per-round independence means this source is not notion-2 by itself.
    Whether its coherent tail is passive-record-reachable is **open and schedule/model dependent**
@@ -113,7 +119,10 @@ registered prediction band, not theorem-grade.
   tail-dropped / classical-flag SV-kernel record —
   and score their **full joint `(detectors,obs)` record law** with exact-enumeration TV/KL where
   feasible, plus held-out generative NLL and frozen-decoder LER as separate rungs. CMI and selected
-  detector/pair moments are diagnostics, not substitutes for distributional equality. The instrument
+  detector/pair moments are diagnostics, not substitutes for distributional equality. The record
+  coordinate must be verified at `R>=2`: raw syndrome `s` is folded into detector events
+  `d[0]=s[0]`, `d[r]=s[r] XOR s[r-1]`, with a positive control and a deliberately unfurled/scrambled
+  negative control ([metric guard](../METRICS.md)). The instrument
   must include or independently validate the physical ancilla/CZ/measurement dynamics, via a committed script (asserts
   + printed evidence + `__main__` guard). **PASS** licenses dropping the tail only for that frozen
   channel, schedule, metric ladder, and accuracy band; it is not a universal theorem and does not by
@@ -126,14 +135,15 @@ registered prediction band, not theorem-grade.
 
 ## Alternatives considered (rejected, with reason)
 
-- **MPS on the full `d×d` surface code** — 1D snake of the 2D square hits `χ~2^{2d}`; geometry-incompatible
-  ([[project-fulld-1dmps-wall-and-2dpeps]]). Retained only for thin strips.
+- **MPS on the full `d×d` surface code** — a 1D snake can require `χ=2^{Θ(d)}` across a
+  square-code cut in the worst/project-estimate regime; retained only for thin strips unless a
+  target-regime convergence study proves otherwise.
 - **Doubled-wire DM-PEPO** — compiled weight-4 √Eₛ POVM concentrates onto fresh path bonds via ket⊗bra
   squaring (F-SEL-1/F-REC-1); closed/archived.
 - **Hold or drop the coherent leakage tail** — unresolved until the frozen record bridge closes; neither
   bond growth nor an `L1/L2`-matched custom-moment result decides the physical carrier requirement.
 - **Gate feasibility on the per-edge bond (`bond=4`, ZMT f-gap, state fidelity)** — a gauge-dependent moving
-  artifact, not the product's validity target; the RECORD is ([[feedback-gate-on-record-not-carrier-artifact]]).
+  artifact, not the product's validity target; the record gate above is the validity target.
 
 ## Consequences / open risks (honest)
 
@@ -155,8 +165,11 @@ registered prediction band, not theorem-grade.
 The leak-on R1 value `S_A=2.000000369882518` versus baseline `2.0` is an **(a)-exact local artifact
 fact**; all six requested R4 trajectories aborted after R1. It is neither an exact equality nor a
 record theorem.
-Behrends–Beri exponential suppression has different scope; which-branch/LRU arguments are
-schedule/model assumptions. Leakage=per-round-independent Kraus is **(a/b)** only for the frozen model.
+Behrends–Béri supplies published numerical + phenomenological evidence for logical-coherence
+suppression in its X-only product-channel model, not a theorem or a leakage/record/truncation bridge;
+which-branch/LRU arguments are schedule/model assumptions. “Leakage is a per-round-independent
+Kraus draw” is class **(a)** only as a frozen model definition; its finite-sample record effect is a
+separate class **(b)** quantity and is currently open.
 Record-faithful truncation remains an **open (b) prediction**.
 Carrier/geometry/truncation-criterion **decisions** and thresholds **(c)** gates. All d5/d7 distributional
 results **PROVISIONAL**. Supersedes ADR 0010 §Decision-4 (geometry/full-2D) and adds Decisions 3–5;

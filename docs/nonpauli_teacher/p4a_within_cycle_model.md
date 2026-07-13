@@ -29,11 +29,11 @@
 | Per-qubit ordered gate+CZ stream (§1, §2) | **(a) exact** | verbatim from the raw circuit; interior rounds 1..8 byte-identical |
 | 4 CZ layers/round; mid-X between CZ2–CZ3; post-M Y; terminal drops Y; first folds init-H | **(a) exact** | stim parse, asserted |
 | Per-coordinate CZ-leak geometry is reuse-stable r01↔r10 (same patch) | **(a) exact** | coordinate-keyed comparison, 9/9 nCZ identical |
-| `exp(L/4)` per-CZ-layer slice; 4 slices compose to the full-cycle WG channel | **(a) exact** | `‖exp(L) − (exp(L/4))⁴‖ < 1e-12`; qutip oracle `2.6e-9` |
+| `exp(L/4)` slice algebra; siting one slice at every touched CZ layer | **(a) algebra / (c) siting convention** | `(exp(L/4))^4=exp(L)` for the same time-independent project generator; current code compares the full output matrix for one `rho=ket(1)bra(1)` input with shared channel machinery, not an independent full-superoperator oracle; no paper derives this as a physical quarter-CZ channel |
 | `H·X·H = Z` refocusing; H's net to identity per round (even count) | **(a) exact** | operator identity, `‖H·X·H − Z‖ = 2e-16`, `‖H²−I‖ = 2e-16` |
 | H/measurement reconciliation: **KEEP `stab_supp_isx`** (in-stream H's net to a detector-invariant `Z`; they do NOT rotate the measurement basis) | **(a) exact** | verified on the d3 codestate: drop → X-type stabilizers read 0; keep → `⟨S⟩=+1` all 8 |
 | The leakage channel `(θ, g_seep, g_heat)` and WG_L1/WG_L2 regime | **(c) design constant** | registered SWEEP (`qutrit_teachers.py`); evaluator-only; go/no-go siting |
-| The `|2⟩(R)` target numbers (§5) | **(a) exact GIVEN (θ, g_seep)** | exact 3×3 channel algebra at the registered siting; two independent representations agree `1e-15` |
+| The `ket(2;R)` target numbers (§5) | **(a) exact GIVEN (θ, g_seep)** | exact 3×3 channel algebra at the registered siting; two independent representations agree `1e-15` |
 | "Over-statement factor ~N×" (§6) | **(c) heuristic / reportable** | provisional characterization of the lumped-model error; not a premise |
 
 The model itself is **(a) exact** machinery at a **(c) swept** operating point: given the registered
@@ -119,31 +119,40 @@ The per-qubit H-presence at the three pre-M H-layer slots (pre-CZ1, between CZ1�
 
 ---
 
-## 3. Leakage calibration (TASK 3 — pinned)
+## 3. Leakage project normalization (TASK 3 — pinned simulation convention)
 
-**The per-CZ-layer slice is `exp(L · 1/4)` — a FIXED per-CZ rate (the `global_per_cz` convention).**
+> **Literature correction (2026-07-13).** `exp(L/4)` is a project normalization/siting
+> convention, not a measured physical quarter-CZ channel. See
+> [`production_rtn_and_leakage_bridge_split_literature_closure_2026-07-13.md`](../twin_validation/production_rtn_and_leakage_bridge_split_literature_closure_2026-07-13.md).
+
+**The project places the normalized slice `exp(L · 1/4)` at every touched CZ layer
+(`global_per_cz`).**
 
 - `L` is the WG Lindbladian generator: `H = θ(|1⟩⟨2| + |2⟩⟨1|)`, jump `J_seep = √g_seep |1⟩⟨2|`
   (and optional `J_heat = √g_heat |2⟩⟨1|`), as in `forward.channels.leakage_channel_super`.
 - The full-cycle WG channel is `E = exp(L)` (the registered per-round leakage,
   `forward.channels.leakage_kraus(θ, g_seep, g_heat)`). The per-CZ slice is the Kraus of `exp(L/4)`
   (Choi-factorized; `…_calib.py` `leak_frac_kraus(…, 0.25)`).
-- **Composition (a-exact):** four `exp(L/4)` slices compose to the full per-round channel,
-  `‖exp(L) − (exp(L/4))⁴‖ < 1e-12`. So a qubit that touches all 4 CZ layers receives EXACTLY the
-  registered per-round channel; a qubit in only `n_cz_q` CZ layers receives `exp(L · n_cz_q/4)` total
-  (genuinely LESS leakage — physical, since it sees fewer CZ gates).
-- **Why `global_per_cz`, not `per_qubit_uniform`.** Leakage accrues PER CZ GATE (the `DEPOLARIZE2`
-  sits on each CZ in the noisy circuit) at a fixed per-CZ rate. Forcing every qubit to the same
-  per-round total regardless of how many CZ gates it sees (`per_qubit_uniform`) is NOT physical. The
-  spec adopts the fixed per-CZ `exp(L/4)` rate.
+- **Composition algebra (a-exact inside the declared model):** four exponentials of the same
+  time-independent generator satisfy `(exp(L/4))^4=exp(L)`. A qutrit touched in `n_cz_q` layers is
+  assigned `exp(L · n_cz_q/4)` by this convention. This does not prove that a boundary qutrit
+  physically accumulates exactly that fraction. The current implementation comparison uses one
+  `|1><1|` input and compares its full output matrix; both arms share the same channel machinery, so
+  an independent full-superoperator corruption check is still missing.
+- **Why the project uses `global_per_cz`, not `per_qubit_uniform`.** The real circuit supplies a
+  distinct number of CZ-layer touches, so per-touch siting is the sharper hypothesis to test than
+  forcing identical per-round totals. The circuit's `DEPOLARIZE2` placement does not establish that
+  the same leakage generator or rate applies at each CZ; that physical bridge is open.
 - **Calibration anchor (a-exact, gap 0.0).** For the 4-CZ qubit (q10) with the H's turned OFF, this
   model reproduces V's `dist+Y` reference EXACTLY (`…_confirm.py` panel A: `max gap = 0.0e+00`). V's
   `dist+Y` is the special case `n_cz=4, no H`; the H's are the sole remaining difference (§4).
 - **Registered siting (c-class, swept).** First-pass central point `θ = 0.07, g_seep = 0.09,
   g_heat = 0.0` → WG_L1 = `2.339e-3`, WG_L2 = `9.047e-2` (in the Miao/McEwen bands). These are SWEPT
   (`THETA_SWEEP × G_SEEP_SWEEP`), not pinned; use `calibrate_theta_for_wg_l1` for an exact target WG_L1.
-- **Independent oracle (non-circular).** The `exp(L/4)` slice matches a qutip `mesolve(L, 0.25)`
-  Lindblad propagation on `|1⟩⟨1|` to `2.6e-9` (`…_audit.py` panel S4).
+- **External-library, same-model probe.** The `exp(L/4)` implementation matches a qutip
+  `mesolve(L, 0.25)` propagation on `|1⟩⟨1|` to `2.6e-9` (`…_audit.py` panel S4). This catches
+  errors on that input; it is neither a full-superoperator certificate nor external physical
+  validation of the siting convention.
 
 ---
 

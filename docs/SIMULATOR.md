@@ -6,12 +6,14 @@ doc disagrees with this file, this file wins.
 
 ## What it is
 
-`error_coupling_simulator` is a **faithful, GPU-first simulator of QEC error mechanisms**
+`error_coupling_simulator` defines and builds toward a **faithful, GPU-first simulator of QEC error mechanisms**
 — coupling, leakage, and other non-Pauli / memory-ful noise. It takes a QEC circuit (a
 rotated surface code — **XZZX** is the first target) plus a **specified noise process**,
 and produces the **multi-time syndrome RECORD** (per-round detector bits +
-logical-observable flips, emitted as Stim-compatible `.b8` / `.dem` artifacts). It is a
-standalone, independently-releasable package, importable as `import error_coupling_simulator`.
+logical-observable flips, emitted as `.b8` shot data or represented by its joint law). A `.dem`
+is an optional decoder-facing reduction/model artifact, not the record. The package is importable
+as `import error_coupling_simulator`; an independently releasable boundary remains a target while
+active legacy `qec_twin` imports and entry points survive.
 
 The deliverable is the simulator itself. Its product is the **record** (and the LER read
 off it under a frozen decoder); metrics are **instruments** on that record, never the
@@ -23,6 +25,11 @@ object.
   applies declared error mechanisms to the circuit and emits records, carrying its own
   ground truth (evaluator-only). It is the true generative process — richer than, and
   **not** identified with, a **DEM** (a DEM is a decoder-facing reduction of it).
+- **Detector semantics are a target contract with one known live deviation.** The record uses
+  temporal detector events, not raw stabilizer outcomes. The legacy qutrit
+  `ShotSet.to_det_obs()` currently places raw round-major syndrome bits in a field named `det`;
+  those outputs are nonconforming until the declared `R>=2` temporal XOR fold is applied and
+  controlled. See `docs/METRICS.md` and `docs/NUMERICAL_PROVENANCE.md`.
 - **Two noise axes:**
   - **Axis-1 — within-substep joint-Lindbladian coupling.** ZZ crosstalk, T1/T2,
     thermal excitation, fSim residual, readout dephasing, and leakage Hamiltonians are
@@ -30,8 +37,8 @@ object.
     (`carrier/joint_lindbladian.py`); the frontend lowers a compiler schedule into these.
   - **Axis-2 — notion-2 classical multi-time record memory.** A shared classical latent
     trajectory `z_t` / `ξ(t)` (a microscopic 1/f bath or an RTN) conditions per-round
-    error rates `p_r = clip(p₀(1+κ·ξ_r))` across QEC cycles (`source/`), leaving a
-    **beyond-Markov signature in the passive syndrome record**. This is **classical**
+    error rates `p_r = clip(p₀(1+κ·ξ_r))` across QEC cycles (`source/`), designed to leave a
+    **beyond-Markov signature in the declared passive record policy**. This is **classical**
     multi-time memory. The positive-exponential-covariance **Gaussian surrogate** is
     CP-divisible by project algebra (`γ=½∫C≥0`, RHP=BLP=0), but the production
     `OneOverFDriftSource` is an explicit finite sum of eight RTNs, not that Gaussian reduced
@@ -41,8 +48,9 @@ object.
     run preceded the prediction document's Git commit, so it is not audit-pristine preregistration.
     Production instead fans `z_t`
     into several mechanism parameters, so its coupled QEC map and syndrome record still have
-    **no notion-1 verdict without the missing channel/instrument bridge**. Axis-2 is certified here
-    only as notion-2; no notion-1-zero or notion-1-positive claim is made for the production path.
+    **no notion-1 verdict without the missing channel/instrument bridge**. Only the frozen
+    fixed-horizon record policy has current notion-2 evidence; this is not a generic process-wide or
+    causal-family certificate. No notion-1-zero or notion-1-positive claim is made for the production path.
     This statement does not cover every process called Gaussian or 1/f. Here
     **notion-1** groups reduced-map divisibility (RHP) and distinguishability backflow
     (BLP), which are distinct diagnostics; neither is itself a quantum-bath certificate, and
@@ -54,12 +62,21 @@ object.
     `docs/twin_validation/notion123_taxonomy_literature_closure_2026-07-13.md` and
     `docs/twin_validation/finite_rtn_exact_cpdiv_result_2026-07-13.md` for the
     claim-by-claim evidence gate and bounded diagnostic result.
+    **Current implementation boundary (2026-07-13):** the dense production process lowers only
+    source-modulated `zz_zeta_radns` and `gamma_phi_per_ns` into the per-round channel. Its
+    readout/reset probabilities are formed from the whole-horizon trajectory mean, so the current
+    record is a fixed-horizon, path-conditioned policy rather than a demonstrated causal,
+    prefix-consistent notion-1 map family. The static data-qutrit XZZX leakage process is a separate
+    implementation island. Their complete bridge is `open / CODE_BLOCKED`; see
+    `docs/twin_validation/production_rtn_and_leakage_bridge_split_literature_closure_2026-07-13.md`.
 - **Non-Pauli character (spans both axes).** The mechanisms are frequently non-Pauli — not
   just **leakage** (qutrit `|2⟩` / ququart `|3⟩` transport; WG leakage; LRU/DQLR reset),
   but also **drift** (slowly-varying coherent over/under-rotation / axis drift),
   **crosstalk** (coherent ZZ coupling, correlated errors), and **burst** (correlated-in-time
-  error bursts). These carry coherence / structure a Pauli-rate vector cannot, and are
-  **not DEM-reducible** — hence the coherence-capable channel object + the non-Pauli carrier.
+  error bursts). These can carry coherence / structure a fixed nonnegative Pauli-rate vector cannot,
+  and are **not in general exactly/losslessly representable by a fixed nonnegative Pauli DEM** —
+  hence the coherence-capable channel object + the non-Pauli carrier. Special channel-, schedule-,
+  or instrument-specific reductions remain possible and must be proved rather than assumed.
 - **The record is the product; the carrier is an implementation.** Feasibility and
   faithfulness gate on the **record** (multi-time syndrome statistics), **never** on a
   carrier bond dimension, state fidelity, or a 2-point TV. This is binding (ADR 0011).
@@ -96,15 +113,18 @@ object.
 The forward engine scales through a ladder; the object + record contract are
 backend-agnostic across it:
 
-1. **Exact density matrix** (`carrier/exact/{qutrit_dm,circuit_sim}.py`) — feasibility-only
-   (≤ ~15 qutrits; d3 DM ≈ 6.2 GB fits, d5 DM is dead). This is the **certification
+1. **Exact density matrix** (`carrier/exact/{qutrit_dm,circuit_sim}.py`) — feasibility-only.
+   A complex128 qubit DM reaches roughly 16 GiB at 15 qubits; a qutrit DM scales as `9^n`, so the
+   current d3 9-qutrit array is already about 5.77 GiB and 15 qutrits would be about 2.93 PiB.
+   This is the **certification
    ORACLE**, not a scaling path.
 2. **MPS MCWF, thin-strip** (`quimb`; snake/boustrophedon along the short dimension) —
-   χ small and **constant in d** for a `w×d` strip (ADR 0010). Pure-state quantum
+   bounded χ is a conditional target for fixed strip width, evolution depth/noise regime, and
+   accuracy—not a theorem uniform in `d` (ADR 0010). Pure-state quantum
    trajectories; ensemble mean = the exact mixed evolution.
 3. **2D PEPS, full `d×d`** (`carrier/peps/`) — the **active frontier** (ADR 0011). A 1D
-   MPS **cannot** carry the full `d×d` surface code (snaking the square hits a bond wall
-   `χ ~ 2^{2d}` — geometry-incompatible), so the full-code carrier is a single-wire 2D
+   MPS can require `χ=2^{Θ(d)}` across a full-square cut in the worst/project-estimate regime,
+   so the full-code carrier candidate is a single-wire 2D
    PEPS pure-state MCWF trajectory. The doubled-wire DM-PEPO (`carrier/pepo/`) is closed.
 
 **Truncation must be certified on the RECORD, but record faithfulness is not yet
@@ -136,8 +156,9 @@ deterministic WTG replacement or leakage-tail deletion is currently authorized. 
   structure** vs a genuinely-Markov-order-k generative null. Full-history/order tests are
   required for a process-wide claim; lag-local CMI `I(mᵣ;mᵣ₋₂|mᵣ₋₁)`, Anderson–Goodman
   `G²`, and `E(k)` are diagnostics. This is a **memory-specific discriminability
-  instrument, never a parameter-recovery learner** (fitting `θ` from the record is the
-  active-QNS / recovery access class, out of scope), and it cannot replace the full-record
+  instrument, not a parameter-recovery learner**. Fitting `θ` from the same fixed passive record
+  is passive parameter recovery; it is active tester access only if the instrument/intervention
+  family is varied. Neither case can replace the full-record
   carrier-faithfulness ladder.
 - **Every d5/d7 distributional claim is PROVISIONAL** — reportable and usable for
   go/no-go gating, but never a premise for a definition, derivation, or further

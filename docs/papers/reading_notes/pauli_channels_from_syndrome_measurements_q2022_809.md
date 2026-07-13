@@ -4,13 +4,17 @@
 - **Reading method:** FULL-TEXT read via ar5iv (`ar5iv.labs.arxiv.org/abs/2107.14252`) — main theorems, identifiability machinery, scope statements; PLUS the Quantum-journal abstract page. Fetched 2026-07-06.
 - **Status:** full-text-level close-read of the theorem statements + identifiability conditions + scope/limitation discussion. I read the theorem *statements* and the polynomial-system machinery; I did NOT re-derive the full proofs (Boolean-Fourier identifiability appendices).
 - **Provenance level:** FULL-TEXT (ar5iv HTML), not abstract-only.
+- **Scope correction (2026-07-13):** the paper proves an affirmative identifiability result inside
+  a Pauli-channel model. Its failure to model non-Pauli channels is **not** a converse theorem that a
+  physical passive syndrome record cannot contain coherent/non-Pauli signatures. Earlier wording in
+  this note overclaimed that converse and is corrected below.
 
 # Deep review — Wagner, Kampermann, Bruß & Kliesch, "Pauli channels can be estimated from syndrome measurements in quantum error correction"
 
 > Deep reading note (academic-paper-review format). **Relevance to the twin / simulator**
-> is the centerpiece: this is the cleanest published statement of the *protocol boundary* —
-> the passive QEC syndrome record identifies the **Pauli (classical stochastic)** part of the
-> noise (correlations up to ~half the pure distance) and, by construction, only that.
+> is the centerpiece: this is a clean published statement of what is identifiable **when the
+> estimand is a correlated Pauli channel**. It does not establish the physical converse for general
+> channels.
 
 ## Metadata
 - **Authors.** Thomas Wagner, Hermann Kampermann, Dagmar Bruß (Heinrich-Heine-Universität Düsseldorf), Martin Kliesch (then Düsseldorf).
@@ -20,7 +24,7 @@
 ## Executive summary
 The paper proves that a **stabilizer code can estimate a correlated Pauli channel from its own syndrome measurements alone** — no extra experiments, no destruction of the logical information. The headline (**Theorem 1 / Corollary 8**): *a stabilizer code with pure distance `d_p` can estimate Pauli noise with correlations across up to `⌊(d_p−1)/2⌋` qubits.* The machinery is a Boolean-Fourier identifiability argument: syndrome-outcome statistics give stabilizer expectation values `E(s)=Σ_e (−1)^{s·e} P(e)` (symplectic inner product in the quantum case), which factor as products of **transformed moments** `F(b)` capturing correlations of size `|b|`; the error distribution is identifiable (up to sign symmetries) exactly when a coefficient/rank condition holds — **Theorem 7**: identifiable when (i) any union of two channel supports contains only *detectable* errors, and (ii) each individual channel has `P_γ(0) > 0.5` (error less likely than no-error). The pure-distance bound `d_p ≥ 2t+1` is what guarantees all weight-`≤t` correlated errors stay detectable and hence distinguishable. Crucially the result **does not rely on the vanishing-error-rate limit**, tolerates high-weight errors occurring frequently, and extends to **measurement errors** via quantum data-syndrome codes.
 
-The entire framework is **explicitly and structurally Pauli-only**: the object being estimated is a (correlated) Pauli channel `P(e)`, the observables are stabilizer commutation signs, and the identifiability algebra is the Boolean group of Pauli faults. Coherent / non-Pauli / non-unital structure is **outside the model** — the paper positions Pauli noise as the standard QEC model and justifies it via randomized compiling (which *projects* general noise onto a Pauli channel), rather than offering any route to non-Pauli estimation from syndromes. This is precisely the "protocol-boundary" closure: the passive syndrome record reaches the classical-stochastic (Pauli) description, and by the same token nothing beyond it.
+The entire framework is **explicitly and structurally Pauli-only**: the object being estimated is a (correlated) Pauli channel `P(e)`, the observables are stabilizer commutation signs, and the identifiability algebra is the Boolean group of Pauli faults. Coherent / non-Pauli / non-unital structure is **outside the model** — the paper positions Pauli noise as the standard QEC model and invokes randomized compiling as a way to project general noise onto a Pauli channel. This closes the affirmative Pauli-model row only. It does **not** show that an untwirled physical record is insensitive to every non-Pauli mechanism, nor that active probing is always necessary.
 
 ## Contributions (claim → evidence → strength)
 - **C1. Correlated Pauli channels are estimable from passive syndromes (Thm 1, Cor. 8).** A stabilizer code with pure distance `d_p` estimates Pauli noise with correlations across up to `⌊(d_p−1)/2⌋` qubits, using only the syndrome outcomes. *Evidence:* identifiability theory (Thm 7) + the detectability guarantee from `d_p ≥ 2t+1`. *Strength: strong.*
@@ -47,21 +51,35 @@ The entire framework is **explicitly and structurally Pauli-only**: the object b
 | Scalability | **4** | Reach set by `d_p`; correlations up to `⌊(d_p−1)/2⌋` — grows with distance, but higher-weight/individual rates remain hard (standard moment-method wall). |
 
 ## Strengths
-- **S1 — the passive-record closure, made precise.** The result names *exactly* which Pauli parameters the syndrome record identifies (correlations up to `⌊(d_p−1)/2⌋`) under a checkable detectability condition — the honest estimability boundary for passive characterization.
+- **S1 — the Pauli-model passive-record result, made precise.** The result names *exactly* which Pauli parameters the syndrome record identifies (correlations up to `⌊(d_p−1)/2⌋`) under a checkable detectability condition — an estimability boundary **within its declared Pauli model**.
 - **S2 — no vanishing-rate assumption.** Unlike perturbative `p_ij` intuitions, identifiability holds at realistic rates and with frequent high-weight errors — a real robustness win.
 - **S3 — measurement-error extension.** Folding faulty syndrome extraction into the same framework (data-syndrome codes) makes the result applicable to real cycles, not idealized perfect measurement.
 
 ## Weaknesses / limitations (as relevant to the boundary claim)
-- **W1 — Pauli-only by construction.** The estimand is a Pauli channel `P(e)`; observables are stabilizer commutation signs. **Coherent, non-Pauli, and non-unital structure is outside the model.** The paper motivates Pauli noise as standard and invokes *randomized compiling* (which projects general noise onto a Pauli channel) — i.e. it presumes the noise has been Pauli-twirled or is treated as such, rather than estimating any non-Pauli part. There is **no method here for coherent/non-Pauli/non-unital noise from syndromes**; such scenarios fall outside the stated scope. This is the protocol boundary.
+- **W1 — Pauli-only by construction.** The estimand is a Pauli channel `P(e)`; observables are stabilizer commutation signs. **Coherent, non-Pauli, and non-unital structure is outside the model.** The paper motivates Pauli noise as standard and invokes *randomized compiling* (which projects general noise onto a Pauli channel) — i.e. it presumes the noise has been Pauli-twirled or is treated as such, rather than estimating any non-Pauli part. There is **no method here for coherent/non-Pauli/non-unital estimation**, but model omission is not a theorem of physical record-nullity.
 - **W2 — sign symmetries.** Identifiability is only *up to sign symmetries*, resolved by the `P_γ(0)>0.5` (error-less-likely-than-not) assumption — a genuine gauge that must be assumed away.
 - **W3 — reach capped by pure distance.** Correlations beyond `⌊(d_p−1)/2⌋` qubits are not identifiable; distinct high-weight events with the same syndrome remain aliased (the same detector-signature degeneracy other syndrome-estimation papers hit).
 
-## Relevance to the twin / simulator (protocol-boundary closure)
-This is the **cleanest published anchor for the protocol-boundary argument**: the passive QEC syndrome outcome record identifies the **Pauli / classical-stochastic** part of the noise — correlated up to `⌊(d_p−1)/2⌋` qubits — and, by the same token, **only that**. Three project uses:
-1. **It bounds what "passive syndrome legitimacy" can ever recover.** Consistent with the project position that passive-syndrome estimation is a *notion-2 (classical multi-time / stochastic)* object: this paper proves the syndrome record is sufficient for the **Pauli** channel and is silent on (indeed structurally blind to) coherent / non-Pauli memory. Genuine quantum / non-Pauli memory is **not reachable from syndrome data** — it would require observables outside the stabilizer-commutation-sign algebra this theory uses (i.e., active probing / non-syndrome measurements, or an explicitly non-Pauli model). This directly supports the simulator's boundary: the passive record certifies the Pauli/stochastic description; the non-Pauli/coherent contribution must be argued and validated by something other than syndrome statistics.
-2. **It is the estimability *ceiling* companion to Blume-Kohout–Young (2504.14643) and Zheng et al. (2601.22286).** All three live on the Boolean/Walsh–Hadamard algebra of Pauli faults. 2504.14643 gives the *practical* moment estimator (polarizations→attenuations, `≤2-point` in practice); 2601.22286 gives the *learnability iff* (unique-syndrome / gauge-quotient); **this paper gives the correlated-channel identifiability with an explicit `d_p`-set reach and no small-`p` limit**. Together they fence the twin's `recover` capability to the stochastic-Pauli subspace and locate where any non-Pauli contribution must sit (off this algebra, off the syndrome record).
-3. **Randomized compiling is the tell.** The paper's own justification for Pauli-only — *"randomized compiling can be used to project general noise onto a Pauli channel"* — is exactly the operation that **discards** the coherent/non-Pauli part. That the method needs (or assumes) the noise already looks Pauli is the boundary stated from the inside: syndrome estimation reaches the twirled/Pauli image, not the pre-twirl coherent object.
+## Relevance to the twin / simulator [ours]
+This is a strong published anchor for an **affirmative, model-conditional** statement: if the
+estimand is a correlated Pauli channel satisfying the paper's detectability and sign assumptions,
+routine syndrome outcomes identify correlations up to `⌊(d_p−1)/2⌋` qubits. Three bounded uses:
+
+1. **Pauli baseline and ceiling inside the model.** It defines what the project's Pauli/DEM
+   negative-control family should be able to recover without a small-error-rate approximation.
+2. **Comparison point, not a global no-go.** Blume-Kohout–Young and Zheng et al. use related
+   Boolean/Walsh–Hadamard Pauli-fault algebras. Together they fence those estimators, not all possible
+   statistics of an untwirled syndrome record. Non-Pauli reachability remains a separate
+   channel→instrument→record question.
+3. **Randomized compiling changes the object.** Projecting a general channel to its Pauli image can
+   make this formalism applicable, but conclusions about that compiled/twirled image cannot be
+   inverted into claims about the pre-twirl physical channel.
 
 ## How to use / trust + open questions
-- **Trust:** high as the reference for *what a passive syndrome record identifies about a (correlated) Pauli channel* and the `d_p`-based reach. Do NOT read it as a coherent- or channel-level (non-Pauli) method — it is Pauli-by-construction.
-- **Open questions for the project:** (i) cite this as the affirmative half of the protocol boundary (Pauli/stochastic IS reachable, correlated, without small-`p`), paired with the negative half (coherent/non-Pauli is NOT syndrome-reachable) — the simulator's validity chain should not claim to recover from syndromes anything this theory places off-algebra. (ii) The `P_γ(0)>0.5` sign gauge is the in-domain cousin of the twin's sign/alias bands — worth matching against the project's own identifiability bookkeeping. (iii) Use the `⌊(d_p−1)/2⌋` correlation reach as a concrete, code-dependent statement of how much *correlated* Pauli structure a passive record at distance `d` can certify.
+- **Trust:** high as the reference for *what a passive syndrome record identifies about a
+  correlated Pauli channel* and the `d_p`-based reach. It supplies no negative theorem for general
+  non-Pauli channels.
+- **Open questions for the project:** (i) pair this affirmative Pauli result with direct
+  non-Pauli/schedule-specific sources before making any reachability claim; (ii) match the
+  `P_γ(0)>0.5` sign gauge to the project's alias bookkeeping; (iii) use the
+  `⌊(d_p−1)/2⌋` reach only for the declared Pauli estimand.

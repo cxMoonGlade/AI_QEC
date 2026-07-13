@@ -2,6 +2,8 @@
 
 > **Provenance (2026-07-05): FULL-TEXT read (精读).** PDF → txt `outputs/papers/2101.11662.txt`
 > (13 pages). All §/Eq refs from that text.
+> PDF pp. 5–6 were rendered and visually inspected on 2026-07-13 for the quantum-instrument
+> definition, conditional map Eq. (19), joint probability Eq. (20), and stochastic-TT recursion.
 > Adjudication target: does this provide a framework for understanding how different
 > measurement choices (projective vs non-projective, different bases) affect the
 > observed memory structure? **Verdict: YES — the stochastic transfer tensor framework
@@ -10,7 +12,8 @@
 ## Metadata [paper]
 - **Authors:** Stefano Gherardini (Firenze/LENS), Andrea Smirne (Ulm/Milano), Susana Huelga (Ulm),
   Filippo Caruso (Firenze/LENS)
-- **Venue / status:** arXiv:2101.11662 (Jan 2021). Published in Phys. Rev. A.
+- **Venue / status:** *Quantum Science and Technology* **7**, 025005 (2022),
+  DOI `10.1088/2058-9565/ac4422`; arXiv:2101.11662 (Jan 2021).
 - **Type:** theory (stochastic transfer tensors for multi-time statistics)
 
 ## Executive summary [paper]

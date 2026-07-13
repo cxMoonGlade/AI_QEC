@@ -1,20 +1,18 @@
-# Reading Notes — Cached Reference Papers (deep peer-review)
+# Reading Notes — Cached Reference Papers
 
-One **deep, peer-review-grade** note per cached PDF in `docs/papers/`,
-produced with the `academic-paper-review` skill from a **full read** of each paper
-(methods, key equations/theorems, results, assumptions, limitations) — not the
-abstract. Each note has: metadata · executive summary · **contributions
-(claim → evidence → strength)** · method (deep) · results (deep, where empirical) ·
-**6-criterion methodology table** (Soundness / Novelty / Reproducibility /
-Experimental design / Statistical rigor / Scalability, 1–5) · strengths (S1–S3 with
-section refs) · weaknesses/limitations (W1–W3) · **relevance to the twin** (the
-load-bearing, centerpiece section — recover/understand/manipulate/predict, the
-finance framing, the ADRs, the code) · how-to-use/trust + open questions.
+This directory mixes several provenance tiers: pinned-PDF deep reads, focused section/figure
+reads, HTML or abstract-only discovery notes, and historical project interpretations. **The
+provenance/status block inside each note is authoritative; presence in this index is not evidence
+that the full paper was read or that a project bridge is established.** Load-bearing claims must
+name a source locator and separate paper fact from project inference. RAG/KG hits remain discovery
+only.
 
-ADR numbering used (this repo): 0002 build order · 0003 B methodology · 0004
-finance framing · 0005 retire-SCOPE reframe · 0006 channel-field architecture.
-Spec: `docs/TWIN.md`. Companion: `../README.md` (cache index + relevance map),
-`docs/IDENTIFIABILITY_AND_CRL_SURVEY.md`.
+Current binding context: [`../../SIMULATOR.md`](../../SIMULATOR.md),
+[`../../METRICS.md`](../../METRICS.md), and ADRs
+[0008](../../adr/0008-scalable-carrier-feasibility-study.md)–[0011](../../adr/0011-record-faithful-truncation-single-wire-2d-peps.md).
+Companion cache index: [`../README.md`](../README.md). Older notes may still mention retired ADRs,
+paths, or project stages; treat those passages as historical until reconciled with the binding
+documents.
 
 **Cross-cutting finding (the Girsanov split, confirmed three ways).** The twin's
 coherent↔incoherent decomposition (`girsanov_split`) appears independently in three
@@ -62,22 +60,35 @@ effect bands · Gierjatowicz's `(inf,sup) E_Q[Ψ]` — all the alias band on ΔL
 
 | Note | One-line takeaway |
 |---|---|
-| [bayes_tn_qec_posterior_models_overview](bayes_tn_qec_posterior_models_overview.md) | Five-paper map: Bayes-TN means `P(logical/channel | syndrome, noise)` plus `P(noise parameters | syndrome history)`, not pairwise edge fitting. |
+| [bayes_tn_qec_posterior_models_overview](bayes_tn_qec_posterior_models_overview.md) | Five-paper map: Bayes-TN means `P(logical/channel \| syndrome, noise)` plus `P(noise parameters \| syndrome history)`, not pairwise edge fitting. |
 | [ferris_poulin_tensor_networks_qec_1312.4578](ferris_poulin_tensor_networks_qec_1312.4578.md) | Foundational equivalence: QEC decoding is a TN contraction; useful as terminology, not the surface-code baseline. |
-| [bravyi_suchara_vargo_mld_surface_code_1405.4883](bravyi_suchara_vargo_mld_surface_code_1405.4883.md) | Canonical surface-code Bayes-TN decoder: compute logical coset probabilities `P(m | s, theta)` by MPS/TN contraction. |
+| [bravyi_suchara_vargo_mld_surface_code_1405.4883](bravyi_suchara_vargo_mld_surface_code_1405.4883.md) | Canonical surface-code Bayes-TN decoder: compute logical coset probabilities `P(m \| s, theta)` by MPS/TN contraction. |
 | [darmawan_poulin_realistic_noise_1607.06460](darmawan_poulin_realistic_noise_1607.06460.md) | Non-Pauli TN forward/decoder carrier: compute syndrome-conditioned logical channels under arbitrary local CPTP noise. |
 | [darmawan_poulin_linear_time_decoder_1801.01879](darmawan_poulin_linear_time_decoder_1801.01879.md) | Practical non-Pauli/correlated Bayes-TN decoder: approximate logical channel, choose correction, `O(N D^3 chi^3)`. |
-| [kobori_todo_bayesian_noise_parameters_2406.08981](kobori_todo_bayesian_noise_parameters_2406.08981.md) | Closest prior art for our Layer-1 Bayes layer: TN likelihood inside MCMC/SMC gives `P(theta | syndrome history)` and drift tracking. |
+| [kobori_todo_bayesian_noise_parameters_2406.08981](kobori_todo_bayesian_noise_parameters_2406.08981.md) | Closest prior art for our Layer-1 Bayes layer: TN likelihood inside MCMC/SMC gives `P(theta \| syndrome history)` and drift tracking. |
 
 ## Surface-code / coherent-error / harden-frontier
 
 | Note | One-line takeaway |
 |---|---|
-| [correcting_coherent_errors_surface_1710.02270](correcting_coherent_errors_surface_1710.02270.md) | Bravyi **Majorana free-fermion** trick: exact coherent surface-code sim; `P^L` = avg diamond-norm (the standard metric); coherence washes out but **exceeds the Pauli-twirl** sub-threshold. |
+| [correcting_coherent_errors_surface_1710.02270](correcting_coherent_errors_surface_1710.02270.md) | Bravyi et al.: exact FLO algorithms on a restricted product-`Z` surface-code slice; `P^L` is the average conditional diamond distance there; finite-size numerics show physical twirling underestimates sub-threshold `P^L`, while asymptotic coherence washout is explicitly conjectural. |
+| [surface_code_beyond_pauli_2412.21055](surface_code_beyond_pauli_2412.21055.md) | Behrends–Béri: published numerical + phenomenological evidence that X-only syndrome-conditioned logical coherence `γ_L` decays with `d` when incoherence is nonzero; **not** a leakage, full-record, or PEPS-truncation theorem. |
 | [marton_asboth_coherent_readout_surface_2303.04672](marton_asboth_coherent_readout_surface_2303.04672.md) | Coherent + readout (3D syndrome); the **primary metric is maximum infidelity `p_L^i` (Eq. 15)**, diamond `P^L` secondary — closes the "Márton primary not yet computed" gap; threshold ≈ 2.6%. |
 | [coherent_robust_pauli_2307.08741](coherent_robust_pauli_2307.08741.md) | Characterize the **coherent part robustly to Pauli** = the **Girsanov split on hardware** (off-diagonal PTM, no Pauli term, Eq. 4); echo probe; 2-qubit coherent + drift = harden axes. |
 | [fail_fast_rare_events_2511.15177](fail_fast_rare_events_2511.15177.md) | Rare-event toolkit (`P(q)=T{f}(q)` failure-spectrum, min-weight fails, splitting) = the **`predict`** axis + the frozen-decoder ΔLER substrate; **coherent tails unhandled = the twin's wedge**. |
 | [lindbladian_learning_insitu_2603.05492](lindbladian_learning_insitu_2603.05492.md) | **Ansatz-free Lindbladian learning** (H + dissipator in `(h,a)`) = the twin's GKSL `recover` form; **`t` vs `t²` = Girsanov split in time**; "steady states don't identify the generator" = the observational alias as a theorem. |
+
+## Leakage-instrument and XZZX bridge components
+
+These sources close bounded components only; none closes the project's combined RTN → qutrit
+leakage → physical ancilla → complete XZZX record bridge.
+
+| Note | One-line takeaway |
+|---|---|
+| [ghosh_leakage_ancilla_measurement_1306.0925](ghosh_leakage_ancilla_measurement_1306.0925.md) | Explicit repeated two-qutrit reset–CZ–measure instrument; leakage can randomize or paralyze subsequent ancilla outcomes, but the object is one check rather than an XZZX full-record teacher. |
+| [battistel_hardware_efficient_lru_2102.08336](battistel_hardware_efficient_lru_2102.08336.md) | Surface-17 qutrit leakage-reduction components and outcome-conditioned ancilla `π`-LRU; protocol-specific and not an unconditional ground-state reset or project parameter calibration. |
+| [bonilla_ataides_xzzx_surface_code_2009.07851](bonilla_ataides_xzzx_surface_code_2009.07851.md) | Primary XZZX stabilizer/detector geometry under Pauli and phenomenological measurement noise; no transmon-qutrit leakage or physical `exp(L/4)` bridge. |
+| [darmawan_xzzx_kerr_cat_2104.09539](darmawan_xzzx_kerr_cat_2104.09539.md) | Explicit Kerr-cat XZZX ancilla circuit and measurement-conditioned re-preparation; different Hilbert space, and residual leakage is omitted from the reported surface-code simulation. |
 
 ## Simulator source budgets / bath-spectrum anchors
 
@@ -141,14 +152,14 @@ are individually well-characterized and the tools to separate them now exist.**
 | [gangwar_sen_genuine_nonmarkovianity_review_2603.28277](gangwar_sen_genuine_nonmarkovianity_review_2603.28277.md) | **Definitive 2026 review.** Three-tier classification: classical NM (convex mixing) ⊊ non-genuine quantum NM (mixing-induced) ⊊ genuine quantum NM (temporally-entangled process tensor). Information revivals CAN be explained classically. Process-tensor temporal entanglement = the gold standard for genuine quantum NM. |
 | [taranto_hierarchy_multitime_classical_memory_2307.11905](taranto_hierarchy_multitime_classical_memory_2307.11905.md) | **Strict five-rung hierarchy:** Memoryless ⊊ Mixed ⊊ Classical ⊊ Separable ⊊ Quantum Memory. For N ≥ 3, ALL classes strictly distinct. Claim 3's confusion terms map to different rungs: ③↔Classical Memory, ②↔Separable/Quantum, ①↔Quantum Memory. |
 | [zonnios_bounded_coherent_memory_2606.19511](zonnios_bounded_coherent_memory_2606.19511.md) | **MAD framework:** process distinguishability parametrized by coherent memory dimension d_A. Separates generation of new distinguishing info from propagation/decay of prior info. The user's min-TV = d_A=1 (classical records only); the residual = gap to true d_A of JC dynamics. |
-| [artag_complementary_quantum_classical_records_2605.15882](artag_complementary_quantum_classical_records_2605.15882.md) | Decoherence writes TWO records into the environment: a CONCENTRATED quantum record (cat state, one mode >95%) and a REDUNDANT classical which-path record (Darwinism, R≈13 fragments). Exact identity: |σ_x| = environmental branch overlap. Temperature weakens quantum record, strengthens classical. |
+| [artag_complementary_quantum_classical_records_2605.15882](artag_complementary_quantum_classical_records_2605.15882.md) | Decoherence writes TWO records into the environment: a CONCENTRATED quantum record (cat state, one mode >95%) and a REDUNDANT classical which-path record (Darwinism, R≈13 fragments). Exact identity: `\|σ_x\|` = environmental branch overlap. Temperature weakens quantum record, strengthens classical. |
 
 ### Collective vs independent dissipation
 
 | Note | One-line takeaway |
 |---|---|
 | [fanchini_independent_common_nonmarkovianity_1301.3146](fanchini_independent_common_nonmarkovianity_1301.3146.md) | Systematic BLP-vs-LFS comparison across independent vs common baths. Collective dissipation produces super-additive NM; BLP and LFS can DISAGREE. Grounds Control 2: independent-AD null CANNOT reproduce collective-bath signatures. |
-| [wang_collective_dephasing_common_bath_1409.0172](wang_collective_dephasing_common_bath_1409.0172.md) | **Exact analytical cross-term structure:** Γ_common = Γ_indep + 8√(J₁J₂). Constructive interference in non-single-excitation subspace, DFS in single-excitation. Adapts to σ− JC model: K(r) ∝ (1−|r|)², N-scaling saturation test. |
+| [wang_collective_dephasing_common_bath_1409.0172](wang_collective_dephasing_common_bath_1409.0172.md) | **Exact analytical cross-term structure:** Γ_common = Γ_indep + 8√(J₁J₂). Constructive interference in non-single-excitation subspace, DFS in single-excitation. Adapts to σ− JC model: `K(r) ∝ (1−\|r\|)²`, N-scaling saturation test. |
 
 ### Computational & factorization tools
 

@@ -1,5 +1,13 @@
 # Stage-1 design pin (v3) — d3 exact-environment truncation (the FET concept gate + fork)
 
+> **Historical preregistration; its positive synthesis is reopened (2026-07-13).** Single-edge
+> environment collapse and bounded cut entropy do not certify a jointly bounded carrier or a
+> full-record/rare-LER approximation. The implemented ALS/FET route showed non-monotone and
+> sub-unit full-rank fidelity on dressed bonds, so this document must not be read as a passed
+> production gate. Current status and literature boundary:
+> [`HANDOFF_fet_solver_longrange_2026-07-11.md`](HANDOFF_fet_solver_longrange_2026-07-11.md) and
+> [`coherent_leakage_longrange_truncation_literature_closure_2026-07-13.md`](coherent_leakage_longrange_truncation_literature_closure_2026-07-13.md).
+
 > **v2 (2026-07-11)** — rewritten after a 4-lens adversarial red-team (23 findings,
 > 1 blocker + confirmed spec defects). Changes from v1: (1) the collapse/fork decision
 > is now anchored to a **Γ-INDEPENDENT** instrument across the WHOLE χ-sweep (v1's
@@ -366,7 +374,7 @@ interior to A or B — it can vote "preserved" while a bond was locally corrupte
 | id | class | prediction | tolerance |
 |---|---|---|---|
 | G-Γ-CONSTRUCT | (a) | `Γ_TN == Γ_dense` (two independent contractors) | ≤ 1e-9 rel |
-| G-Γ-NORM | (a) | `einsum("iIiI",Γ) == norm_read == ⟨ψ|ψ⟩` | ≤ 1e-9 rel |
+| G-Γ-NORM | (a) | `einsum("iIiI",Γ) == norm_read == ⟨ψ\|ψ⟩` | ≤ 1e-9 rel |
 | G-Γ-HERM | (a) | `Γ` layer-grouping `G_{(ij),(IJ)}` Hermitian PSD | min eig ≥ −1e-9·‖G‖ |
 | G-FET-KAT | (a) | FET solver recovers known optimal rank on hand-built refs | exact / ≤ 1e-9 |
 | G-FID-SWEEP | (a) | `Fid_Γ(χ) == fid_dense(χ)` for ALL χ | ≤ 1e-6 |

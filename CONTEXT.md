@@ -1,6 +1,6 @@
 # AI QEC Domain Context
 
-This repository builds a **faithful, GPU-first simulator of QEC error mechanisms**
+This repository builds toward a **faithful, GPU-first simulator of QEC error mechanisms**
 (`error_coupling_simulator`): it applies a **specified noise process** to a QEC circuit
 (rotated surface code / XZZX) and produces the **multi-time syndrome record**. Binding
 spec: `docs/SIMULATOR.md`.
@@ -10,20 +10,28 @@ spec: `docs/SIMULATOR.md`.
 - **Noise process**: a noise model we SPECIFY (not a fit to hardware). It applies declared
   error mechanisms to the circuit and emits records, carrying its own **evaluator-only**
   ground truth (the channel field + source trajectory + mechanism params). It is the true
-  generative process — richer than, and **not** identified with, a DEM. The controlled d3
-  XZZX leakage/coupling instance is the current one (`mechanisms/`, `teachers/`).
-- **Record**: the product — per-round `{detector bits, observable flips}`, emitted as
-  Stim-compatible `.b8` / `.dem`. Feasibility and faithfulness gate on the record, never on
-  a carrier bond / state fidelity (ADR 0011).
+  generative process — richer than, and **not** identified with, a DEM. The current
+  source-conditioned dense-qubit process (`noise_processes/`) and static data-qutrit XZZX process
+  (`mechanisms/` + legacy scalable carriers) are **separate objects**, not one production instance.
+  Their complete bridges are `open / CODE_BLOCKED`; see
+  `docs/twin_validation/production_rtn_and_leakage_bridge_split_literature_closure_2026-07-13.md`.
+- **Record**: the product — per-round `{detector bits, observable flips}`, emitted as `.b8` shot
+  data or represented by its joint law. A `.dem` is an optional decoder-facing reduction, not the
+  record. Feasibility and faithfulness gate on the record, never on a carrier bond / state fidelity
+  (ADR 0011). A known legacy qutrit accessor currently labels raw syndrome bits as `det`; it must
+  receive the declared temporal XOR fold before detector-level scoring.
 - **Two noise axes**: **Axis-1** = within-substep joint-Lindbladian coupling (ZZ crosstalk,
   T1/T2, thermal, fSim residual, readout dephasing, leakage Hamiltonians, assembled into one
   joint generator per substep); **Axis-2** = **notion-2** classical multi-time record memory
   (a shared classical source `z_t` / `ξ(t)` — 1/f bath or RTN — modulating per-round rates,
-  leaving a beyond-Markov record signature).
+  designed to leave a beyond-Markov record signature; current evidence is limited to the declared
+  frozen record policy, not a generic causal process family).
 - **Non-Pauli mechanisms**: span both axes — **leakage** (qutrit `|2⟩` / ququart `|3⟩`;
   WG leakage; LRU/DQLR reset), **drift** (slow coherent over/under-rotation, axis drift),
   **crosstalk** (coherent ZZ coupling, correlated errors), **burst** (correlated-in-time
-  bursts). They carry coherence/structure a Pauli-rate vector cannot — **not DEM-reducible**.
+  bursts). They can carry coherence/structure a fixed nonnegative Pauli-rate vector cannot;
+  they are **not in general exactly/losslessly representable by a fixed nonnegative Pauli DEM**.
+  Special channel-, schedule-, or instrument-specific reductions may still exist.
 - **notion-1 / -2 / -3** (three non-exclusive object labels, not a strength ladder):
   **notion-1** = reduced-map divisibility/backflow diagnostics (RHP and BLP are distinct; neither
   is by itself evidence of a quantum bath); **notion-2** =
@@ -38,10 +46,11 @@ spec: `docs/SIMULATOR.md`.
   or non-unital mechanisms are absent from a fixed record. Evidence/status:
   `docs/twin_validation/notion123_taxonomy_literature_closure_2026-07-13.md` and
   `docs/twin_validation/finite_rtn_exact_cpdiv_result_2026-07-13.md`.
-- **Carrier**: the forward engine. Ladder: exact density matrix (`carrier/exact`, ≤~15q, the
-  certification ORACLE) → MPS MCWF thin-strip (`quimb`, χ constant in d) → **2D PEPS full
-  `d×d`** (`carrier/peps`, the active frontier — a 1D MPS is geometry-incompatible for the
-  full square, `χ~2^{2d}`).
+- **Carrier**: the forward engine. Ladder: exact density matrix (`carrier/exact`; roughly 15
+  **qubits** by memory, but the current qutrit d3 oracle is 9 sites at about 5.77 GiB) → MPS MCWF
+  thin-strip (`quimb`; bounded χ is conditional on fixed strip width/depth/noise/accuracy) → **2D
+  PEPS full `d×d`** (`carrier/peps`, the active frontier; a 1D MPS can require `χ=2^{Θ(d)}` across
+  a full-square cut in the worst/project-estimate regime).
 - **Record-faithful truncation** (ADR 0011, reopened): an acceptance criterion requiring the
   truncated carrier to preserve the declared joint record law within its registered band. It is
   **not yet established** for coherent leakage or long-range/loopy PEPS truncation; zero added
@@ -69,9 +78,10 @@ spec: `docs/SIMULATOR.md`.
 - **Memory-axis instrument (notion-2)**: the record's absolute multi-time Markov-order
   structure vs a genuinely-Markov-order-k generative null — a full-history/order ladder,
   with lag-local CMI `I(mᵣ;mᵣ₋₂|mᵣ₋₁)`, Anderson–Goodman `G²`, and `E(k)` as diagnostics.
-  A **memory-specific discriminability instrument, never a parameter-recovery learner**
-  (fitting θ from the record is the active access class, out of scope), and never a generic
-  full-record-faithfulness certificate.
+  A **memory-specific discriminability instrument, not a parameter-recovery learner**, and never
+  a generic full-record-faithfulness certificate. Fitting `θ` from the same fixed passive record is
+  passive parameter recovery; it becomes notion-3-style active tester access only when the
+  instrument/intervention family itself is varied.
 - **Numerical floor**: floating floors/thresholds use
   `error_coupling_simulator.numerics.NUMERICAL_ZERO == 1e-12`, never for structural zeros
   (Pauli entries, bit values, integer indices, counts, labels).

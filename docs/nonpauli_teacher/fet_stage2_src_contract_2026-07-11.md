@@ -1,5 +1,12 @@
 # Stage-2 src contract — environment-aware rank selection in the PEPS truncator (2026-07-11)
 
+> **Historical build contract; current gate is not passed (2026-07-13).** The mode exists, but
+> solver pathology and the missing local-score-to-full-record/rare-LER bridge prevent this contract
+> from certifying faithful truncation. Treat every "validated" statement below as the original
+> preregistered/then-local diagnostic scope, not current production evidence. See
+> [`HANDOFF_fet_solver_longrange_2026-07-11.md`](HANDOFF_fet_solver_longrange_2026-07-11.md) and
+> [`coherent_leakage_longrange_truncation_literature_closure_2026-07-13.md`](coherent_leakage_longrange_truncation_literature_closure_2026-07-13.md).
+
 > **The product.** Stage-1 confirmed Γ-independently that the per-edge bond is massively
 > over-counted and the exact environment removes it losslessly (leak-off B4_6 dim16→env_rank1,
 > `S_A==GF(2)` to 1e-15, overlap 1.0). Stage-2 wires that into the carrier truncator as a NEW
@@ -75,7 +82,7 @@ The two-pass `truncate_path_bonds` runs pass-1 `_policy_precut` over ALL bonds, 
 | id | class | prediction | how |
 |---|---|---|---|
 | G-D3-IDENTICAL | (a) | existing 28/28 d3 gates byte-identical | re-run `peps_spike_gates_d3_run.sh`, hash-compare (new mode unused there) |
-| G-FAITHFUL-GOLD | (a) | **the exact cumulative truncation fidelity** `|⟨ψ_ref_R\|ψ_trunc_R⟩|² ≥ 1−1e-6`, from a PAIRED untruncated same-RNG reference trajectory (RT F4 — the product is NOT the true cumulative) | test: run `fet_env` + a same-`base_seed`/`fit_seed` lossless-no-FET reference, overlap via `dense_psi` each round (capped à la Stage-1 GOLD) |
+| G-FAITHFUL-GOLD | (a) | **the exact cumulative truncation fidelity** `\|⟨ψ_ref_R\|ψ_trunc_R⟩\|² ≥ 1−1e-6`, from a PAIRED untruncated same-RNG reference trajectory (RT F4 — the product is NOT the true cumulative) | test: run `fet_env` + a same-`base_seed`/`fit_seed` lossless-no-FET reference, overlap via `dense_psi` each round (capped à la Stage-1 GOLD) |
 | G-FAITHFUL-PRIMARY | (c) | per-round before/after `fid_sweep_r ≥ 1−1e-8` (product = a LOWER-BOUND proxy, not the true cumulative — decision gate only) | per-round `dense_psi` before/after-sweep overlap |
 | G-SA-CORROB | (a) | post-round `S_A == GF(2) baseline` (leak-off; CORROBORATION, not the primary faithfulness read — it is implied by GOLD in the lossless regime) | `dense_psi` S_A vs GF(2) |
 | G-WP1'-BOUNDED | (b) | **the joint max per-edge bond stays BOUNDED (≤8) and SATURATES across R=12 rounds** under `fet_env`, state faithful | the src truncator run (the joint test Stage-1 never reached); leak-off first |

@@ -3,7 +3,8 @@
 > **Provenance (2026-07-01): FULL-TEXT read (精读).** PDF `arxiv.org/pdf/0908.0238` → txt
 > `outputs/papers/0908.0238.txt` (PyMuPDF, 4 pages, arXiv v2 5 Jan 2010). All Eq/Fig refs from that
 > text. **NOTE (theory-first catch):** the id 0907.3968 that was first tried is a DIFFERENT paper
-> (stochastic resonance); the correct BLP id is **0908.0238**. Figures not pixel-extracted.
+> (stochastic resonance); the correct BLP id is **0908.0238**. PDF pp. 2–3 were rendered and visually
+> inspected on 2026-07-13 for Eqs. (5), (9)–(13) and the one-way divisibility implication.
 
 ## Metadata [paper]
 - **Authors.** Heinz-Peter Breuer (Freiburg); Elsi-Mari Laine, Jyrki Piilo (Turku).
@@ -16,10 +17,10 @@ Defines quantum non-Markovianity via **information backflow**, measured by the *
 `D(ρ1,ρ2)=½tr|ρ1−ρ2|` (state distinguishability). Every CPT (indeed every positive-TP) map is a
 **contraction** of `D` (Eq. 2), so any **divisible** dynamics — a dynamical semigroup, OR a
 time-dependent Lindblad generator with **all rates γ_i(t) ≥ 0** — makes `D(ρ1(t),ρ2(t))`
-**monotonically non-increasing** for every initial pair (Eq. 5). Markovian = "information flows
-system→environment, distinguishability only decreases." **Non-Markovian ⇔ `D` increases at some time
-for some pair** = information flows back environment→system. The degree is the total backflow,
-maximized over initial pairs.
+**monotonically non-increasing** for every initial pair (Eq. 5). In the paper's information-backflow
+definition, a process is BLP-non-Markovian when `D` increases at some time for some pair. This is a
+sufficient witness of nondivisibility, but absence of BLP backflow is not equivalent to general
+CP-divisibility. The degree is the total backflow, maximized over initial pairs.
 
 ## Method (deep) — the exact definitions [paper]
 - **Trace distance** [Eq. 1]: `D(ρ1,ρ2)=½ tr|ρ1−ρ2|`, `0≤D≤1`; `½[1+D]` = optimal one-shot
@@ -29,11 +30,12 @@ maximized over initial pairs.
   Time-dependent Lindblad [Eq. 7] `K(t)ρ=−i[H(t),ρ]+Σ_i γ_i(t)(A_i ρ A_i† −½{A_i†A_i,ρ})` with
   `γ_i(t)≥0` ⇒ divisible ⇒ Eq. 5: `D(ρ1(τ+t),ρ2(τ+t)) ≤ D(ρ1(t),ρ2(t))`.
 - **Rate** [Eq. 10]: `σ(t,ρ1,2(0)) = d/dt D(ρ1(t),ρ2(t))`. Divisible ⇒ `σ≤0` ∀t, ∀pair.
-- **Non-Markovian** ⇔ ∃ pair `ρ1,2(0)` and time `t` with `σ>0`.
+- **BLP-non-Markovian** ⇔ ∃ pair `ρ1,2(0)` and time `t` with `σ>0`.
 - **THE MEASURE** [Eq. 11]:
   `N(Φ) = max_{ρ1,2(0)} ∫_{σ>0} dt σ(t,ρ1,2(0))`
   = [Eq. 12] `max_{ρ1,2(0)} Σ_i [ D(ρ1(b_i),ρ2(b_i)) − D(ρ1(a_i),ρ2(a_i)) ]` over the intervals
-  `(a_i,b_i)` where `σ>0`. `N(Φ)=0` ⇔ divisible; `N>0` ⇔ non-Markovian.
+  `(a_i,b_i)` where `σ>0`. Divisible dynamics imply `N(Φ)=0`, and `N>0` witnesses
+  nondivisibility. The reverse implication `N=0 ⇒` CP-divisible does not hold in general.
 
 ## Worked examples — DIRECTLY our regime [paper]
 1. **Damped Jaynes–Cummings, Lorentzian J(ω), weak coupling γ0/λ=0.01, detuning ∆.** Single Lindblad

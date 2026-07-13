@@ -3,7 +3,7 @@
 > **Provenance (2026-07-13): FULL-TEXT read (精读).** arXiv v1 PDF downloaded from
 > `https://arxiv.org/pdf/0904.4597`, SHA-256
 > `522d96cda526b04d036352551026be3b38f51635929ae761e54ecda25e0e495b`, 25 pages; text
-> extracted with `pdftotext -layout` for navigation. PDF pages 6, 9, and 12 were rendered and
+> extracted with `pdftotext -layout` for navigation. PDF pages 7, 10, and 13 were rendered and
 > visually inspected for Eqs. (15), (35), and (39). Formula truth comes from the rendered PDF.
 
 ## Metadata [paper]
@@ -32,12 +32,12 @@ non-Markovianity criteria.
 
 | symbol | meaning and domain | assumptions | source location |
 |---|---|---|---|
-| `chi(t)` | telegraph state in `{+1,-1}` | stationary symmetric process | Sec. 2.3, PDF p. 6 |
-| `gamma_12`, `gamma_21` | directional jump rates | symmetric case sets both to `gamma` | Sec. 2.3, PDF p. 6 |
-| `C(t)` | `E[chi(t)chi(0)]` | symmetric RTN | Eq. (15), PDF p. 6 |
+| `chi(t)` | telegraph state in `{+1,-1}` | stationary symmetric process | Sec. 2.3, PDF p. 7 |
+| `gamma_12`, `gamma_21` | directional jump rates | symmetric case sets both to `gamma` | Sec. 2.3, PDF p. 7 |
+| `C(t)` | `E[chi(t)chi(0)]` | symmetric RTN | Eq. (15), PDF p. 7 |
 | `v` | longitudinal qubit–fluctuator coupling | pure free induction | Sec. 3.4, Eqs. (30)–(35), PDF pp. 9–10 |
-| `mu` | `sqrt(1-v^2/gamma^2)` | imaginary when `v>gamma` | Eq. (35), PDF p. 9 |
-| `<m_+(t)>` | normalized free-induction coherence | unbiased initial fluctuator | Eqs. (34)–(35), PDF p. 9 |
+| `mu` | `sqrt(1-v^2/gamma^2)` | imaginary when `v>gamma` | Eq. (35), PDF p. 10 |
+| `<m_+(t)>` | normalized free-induction coherence | unbiased initial fluctuator | Eqs. (34)–(35), PDF p. 10 |
 
 The paper's `gamma` is **not** the sum of two directional rates. It sets
 `gamma_12=gamma_21=gamma`, so the total population relaxation rate is `2 gamma`.
@@ -136,9 +136,9 @@ convention also invalidates the transfer.
 
 | input | transformation | assumption | output | exact source location | replay status |
 |---|---|---|---|---|---|
-| `gamma_12=gamma_21=gamma` | sum jump parities | stationary symmetric RTN | `C(t)=exp(-2 gamma t)` | Eq. (15), PDF p. 6 | matched |
-| `v, gamma` | solve Eq. (34) | unbiased initial state, longitudinal free induction | exact `L(t)` | Eq. (35), PDF p. 9 | matched |
-| independent phases | factor characteristic function | statistical independence | `product_i L_i` | text before Eq. (39), PDF p. 12 | matched |
+| `gamma_12=gamma_21=gamma` | sum jump parities | stationary symmetric RTN | `C(t)=exp(-2 gamma t)` | Eq. (15), PDF p. 7 | matched |
+| `v, gamma` | solve Eq. (34) | unbiased initial state, longitudinal free induction | exact `L(t)` | Eq. (35), PDF p. 10 | matched |
+| independent phases | factor characteristic function | statistical independence | `product_i L_i` | text before Eq. (39), PDF p. 13 | matched |
 | project `z_radns` | identify it with longitudinal splitting | project diagnostic declaration, not paper | free-induction lift | no paper location | unsupported for production channel |
 
 ## Relevance to QEC Twin [ours]
@@ -151,4 +151,3 @@ reuse the paper as evidence for the source defaults or as a bridge to a complete
 Full text and all load-bearing formula pages were visually checked. The paper closes the RTN
 convention, single-factor, and independent-product rows. The source-to-production-channel and
 channel-to-record rows remain missing.
-

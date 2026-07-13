@@ -6,8 +6,8 @@
 > `outputs/papers/coherent_leakage_longrange_closure/2312.10277v2.txt` (`pdftotext -layout`).
 > Provenance record:
 > `outputs/papers/coherent_leakage_longrange_closure/2312.10277v2.provenance.json`.
-> PDF pages 7, 9–10, and 20–22 were rendered and visually inspected for Eqs. 15–17 and Figs. 2–3,
-> 10–18; extracted text was used only for navigation. Tags: **[paper]** = source statement;
+> PDF pages 5, 7, 9–10, and 20–22 were rendered and visually inspected for Eqs. 11, 15–17 and
+> Figs. 2–3, 10–18; extracted text was used only for navigation. Tags: **[paper]** = source statement;
 > **[ours]** = project inference.
 
 ## Metadata [paper]
@@ -43,13 +43,13 @@ failure despite matched leakage/seepage rates).
 
 | symbol | object / domain | fixed or varied | assumptions | source |
 |---|---|---|---|---|
-| `H = C ⊕ L` | computational plus leakage subspaces | fixed decomposition | qutrit `C=span{|0>,|1>}`, `L=span{|2>}` | Sec. II.C, PDF pp. 4–5 |
+| `H = C ⊕ L` | computational plus leakage subspaces | fixed decomposition | qutrit `C=span{ket(0),ket(1)}`, `L=span{ket(2)}` | Sec. II.C, PDF pp. 4–5 |
 | `P_n` | projector onto subspace `H_n` | fixed | orthogonal resolution of identity | Sec. II.C–D |
 | `E_STA` | subspace-twirled channel | derived from `E` | uniform independent sector phases | Eq. 11, PDF p. 5 |
 | `Delta(K_j)=sum_n P_n K_j P_n` | block-diagonal Kraus part | derived | part of STA Kraus representation | Eq. 13, PDF p. 6 |
 | `phi` | CZ phase applied to a measure qubit conditional on leaked data | varied analytically | CZ creates no new leakage; measure qubit does not leak | Sec. III.A, PDF pp. 6–7 |
 | `m` | number of repeated stabilizer measurements | variable integer | other data qubits do not leak in derivation | Eqs. 15–17, PDF p. 7 |
-| `p` | coherent `|11> <-> |02>` transition probability | varied | data-qubit leakage only in stress test | Sec. III.B.2, Fig. 3 |
+| `p` | coherent `ket(11) <-> ket(02)` transition probability | varied | data-qubit leakage only in stress test | Sec. III.B.2, Fig. 3 |
 | `eta` | qutrit nonlinearity / anharmonicity | varied in exact arm | STA is phase-insensitive by construction | Fig. 12, App. E |
 | added LER | logical error probability above zero-leakage arm | measured by trajectories | same circuit/no-leak baseline subtracted | Figs. 2–3 |
 | DEF | marginal detector-event fraction | measured per detector/round | not the full joint record law | Figs. 10, 14, 17–18 |

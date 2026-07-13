@@ -1,7 +1,7 @@
 {
   "_schema": "qec_twin.code_status.v1 — hand-maintained status overlay for tools/gen_code_map.py. Keys = package paths relative to src/ (fully-qualified, e.g. 'qec_twin/forward', 'error_coupling_simulator/source'), OR dev-tooling package keys (prefixed by their repo-relative root, e.g. 'tools', 'tests/harness'), or a module path for a per-module override. status in {ACTIVE, PLACEHOLDER, ARCHIVED, TOOLING}. gen_code_map.py DRIFT-CHECKS this against the code: add an entry when a new package appears, remove one when a package is deleted (both are flagged in CODE_MAP.md's DRIFT CHECK). '_'-prefixed keys are config, not packages.",
   "_local_index": {
-    "_note": "Curated CLUSTERS of load-bearing LOCAL-ONLY working code under gitignored outputs/ (NOT committed; present on the build workstation). Maintain the GLOBS (stable); gen_code_map auto-discovers the FILES matching them, so new nm_*/cert_*/quantum_bath_* appear without editing this. Globs are relative to the repo root. NOTE: source/ + oracles/ have been re-homed into src/error_coupling_simulator/ (MIGRATION P1); the outputs/teacher_prereg/ copies below are FROZEN LEGACY — the package is canonical.",
+    "_note": "Curated CLUSTERS of load-bearing LOCAL-ONLY working code under gitignored outputs/ (NOT committed; present on the build workstation). Maintain the GLOBS (stable); gen_code_map auto-discovers the FILES matching them, so new nm_*/cert_*/quantum_bath_* appear without editing this. Globs are relative to the repo root. NOTE: source/ has been re-homed into src/error_coupling_simulator/ (MIGRATION P1); the lower-level qutip oracle scripts remain local-only until an active consumer justifies re-homing. The outputs/teacher_prereg/ copies below are FROZEN LEGACY.",
     "P2 quantum-bath / non-Markovian line (THE target — pseudomode embedding, CGF probe, involuntary-W observability)": [
       "outputs/coupled_pseudomode_pilot_v1_*.py",
       "outputs/quantum_bath_*.py",
@@ -54,7 +54,7 @@
   },
   "error_coupling_simulator/carrier": {
     "status": "ACTIVE",
-    "note": "P2-landing: forward propagation. joint_lindbladian (Axis-1 assembler) + cptp_channel + channels moved here; the old qec_twin.forward.{joint_lindbladian,cptp_channel,channels} are re-export SHIMS. accel/kernels (CUDA) still to move."
+    "note": "P2-complete: forward propagation. joint_lindbladian (Axis-1 assembler) + cptp_channel + channels + accel/kernels (CUDA) live here; the old qec_twin.forward paths are compatibility SHIMS."
   },
   "error_coupling_simulator/carrier/exact": {
     "status": "ACTIVE",

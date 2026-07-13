@@ -3,7 +3,9 @@
 > **Provenance (2026-07-01): FULL-TEXT read (精读).** PDF `arxiv.org/pdf/0911.4270` → txt
 > `outputs/papers/0911.4270.txt` (PyMuPDF, 5 pages, arXiv v2 28 Jul 2010). All Eq/Fig refs from that
 > text. The comprehensive review is Rivas–Huelga–Plenio, RPP 77, 094001 (2014), arXiv:1405.0303
-> (cached `outputs/papers/1405.0303.txt`).
+> (cached `outputs/papers/1405.0303.txt`). PRL PDF p. 3 and review PDF p. 21 were rendered and
+> visually inspected on 2026-07-13 for the noninvertible-map caveat and the failure of the reverse
+> BLP implication (review Eq. 55/Fig. 4).
 
 ## Metadata [paper]
 - **Authors.** Ángel Rivas, Susana F. Huelga, Martin B. Plenio (Ulm / Hertfordshire / Imperial).

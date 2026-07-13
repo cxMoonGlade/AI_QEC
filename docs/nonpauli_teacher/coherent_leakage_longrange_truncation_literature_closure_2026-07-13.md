@@ -44,12 +44,17 @@ The literature does **not** support either active strong premise.
 3. **No reviewed source closes the record bridge.** State norm, local/environment fidelity, cycle
    entropy, and bond saturation are internal diagnostics. A record/LER claim requires either a global
    trace/strategy-norm bound on the complete cq record object or a direct exact d3 record comparison.
+4. **Large-`d` logical-coherence suppression is a different observable.** Behrends–Béri report
+   numerical plus phenomenological exponential suppression of a syndrome-conditioned logical
+   coherence for an independent X-only product channel. Their result contains no leakage, noisy
+   repeated extraction, physical 2D PEPS, or truncation-to-record bridge, so it does not change the C1
+   or C2 gate.
 
 ## Coverage ledger — C1 coherent leakage
 
 | load-bearing row | required object | local evidence queried | external search queried | source / note | source location | status | implication |
 |---|---|---|---|---|---|---|---|
-| physical mechanism | coherent transfer between computational and leakage sectors | RAG `computational leakage coherence syndrome record stabilizer measurement`; KG concepts | `coherent leakage`, `qubit-leakage coherence`, `|11> <-> |02>`, transition/conditional phase | Wood–Gambetta 2018; Marshall–Kafri 2025; Varbanov 2020 | Wood definitions; Marshall Secs. II.D/III; Varbanov App. B Eqs. B7–B9 | closed | `L1,L2` do not specify cross-sector coherence; exchange coherence and leaked-neighbour conditional phase are distinct |
+| physical mechanism | coherent transfer between computational and leakage sectors | RAG `computational leakage coherence syndrome record stabilizer measurement`; KG concepts | `coherent leakage`, `qubit-leakage coherence`, `\|11⟩ ↔ \|02⟩`, transition/conditional phase | Wood–Gambetta 2018; Marshall–Kafri 2025; Varbanov 2020 | Wood definitions; Marshall Secs. II.D/III; Varbanov App. B Eqs. B7–B9 | closed | `L1,L2` do not specify cross-sector coherence; exchange coherence and leaked-neighbour conditional phase are distinct |
 | principled incoherent surrogate | channel-level operation, not arbitrary state edit | Wood/Manabe notes | `subspace twirling approximation`, `generalized twirling approximation`, `dephasing`, `pinching` | [Marshall note](../papers/reading_notes/marshall_kafri_incoherent_leakage_sta_2312.10277.md); [Manabe note](../papers/reading_notes/manabe_suzuki_darmawan_leakage_tn_2308.08186.md) | Marshall Eqs. 11–13; Manabe Eqs. 14–20 | closed | STA/GTA are source-defined channel constructions; per-slice project pinching is a different, stronger intervention |
 | measurement-induced decay | schedule/instrument dependence | Varbanov and detector notes | `stabilizer measurement decoherence`, `phase irrelevant`, `ancilla measurement` | Marshall–Kafri; [Varbanov note](../papers/reading_notes/varbanov_leakage_detection_surface_2002.07119.md) | Marshall Eqs. 15–17; Varbanov App. B pp. 13–14 | closed within assumptions | repeated measurement can suppress coherence exponentially; Varbanov's schedule removes it operationally for the tested Z-basis case |
 | contrary operational result | exact vs incoherent QEC output | existing Manabe note | `exact qutrit STA detector event logical error`, citation chain | Marshall Fig. 3; Manabe Fig. 8 | exact/STA d3 added LER; exact/GTA d19 repetition LER | closed | incoherent approximation can change detector marginals and LER even when leakage/seepage rates match |
@@ -130,6 +135,7 @@ faithful physical effect or that the carrier must preserve the same tail on real
 | at `S_cycle != 0`, top-WTG optimality is lost and the paper proposes iterative FET | Evenbly Sec. V, PDF p. 6 | C2 deterministic replacement | WTG alone is not licensed as a global solver; FET is the source's proposal, not a unique-solver theorem | reopen solver design |
 | ZMT always followed by variational optimization | Sokolov examples, Secs. VI–X | C2 solver claim | ZMT is initialization, not global solver | retain/refactor refinement step; do not overclaim |
 | environment/state fidelity has no full-record theorem | Evenbly/Mc Keever vs Werner theorem scope | C2 record bridge | internal metric cannot license record/LER | require d3 record oracle or global cq bound |
+| X-only logical coherence decreases with `d`, but the paper has no leakage/record/PEPS object | [Behrends–Béri note](../papers/reading_notes/surface_code_beyond_pauli_2412.21055.md), Fig. 1(d), Secs. VI/VII.D | C1/C2 large-`d` shortcut | logical-channel scaling cannot be substituted for physical-tail or truncation error | retain as published adjacent evidence; gate unchanged |
 
 ## External acquisition ledger
 

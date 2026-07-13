@@ -1,10 +1,16 @@
 # White-box model — the window-channel field (overview + plan)
 
+> **Historical research-line router (audited 2026-07-13).** This document describes the earlier
+> window-field program and still contains retired paths/stage language. It is not the binding
+> current simulator status and does not establish that a real-hardware coherent field was recovered.
+> Use [`../SIMULATOR.md`](../SIMULATOR.md), [`../METRICS.md`](../METRICS.md),
+> [`../../CONTEXT.md`](../../CONTEXT.md), and ADRs 0008–0011 for current claim boundaries.
+
 > The white-box noise model on the **real Google Willow XZZX surface code**: a calibrated,
 > coherence-preserving **CPTP window-channel field**, recovered from real hardware syndrome data.
 > This folder holds the white-box docs; the CF-WR composition/seam theory and the `ξ̂` investigation
-> stay in [`../cf_wr/`](../cf_wr/). Whole-project live front: [`../plan3.md`](../plan3.md). Binding
-> object contract: [`../TWIN.md`](../TWIN.md).
+> stay in [`../cf_wr/`](../cf_wr/). The historical `plan3.md` / `TWIN.md` links formerly shown
+> here no longer exist; the current binding object contract is [`../SIMULATOR.md`](../SIMULATOR.md).
 >
 > **Scale / execution structure (D1):** the active order is **d3 → d7 → d5**. The white-box is a
 > **2×2 (4 data) faithful window** at every distance; ancilla cannot be eliminated because noise lives

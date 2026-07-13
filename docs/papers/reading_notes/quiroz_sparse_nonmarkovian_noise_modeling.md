@@ -5,13 +5,15 @@
 > All §/Eq/Table/Fig refs from that text; figures not pixel-extracted — figure facts below are from
 > captions and numbers stated in the running text. Tags: **[paper]** = stated in the paper;
 > **[ours]** = application/inference for `qec_twin`, NOT the paper's claim.
+> PDF pp. 17–18 were additionally rendered and visually inspected on 2026-07-13 for Eqs. (28)–(32)
+> and the composite-channel reduction used below.
 
 ## Metadata [paper]
 
 - **Authors.** Yasuo Oda, Kevin Schultz, Leigh Norris, Omar Shehab, Gregory Quiroz (Johns Hopkins
   University / JHU APL / IBM Quantum).
-- **Venue.** PRX Quantum 7, 020327 (published 12 May 2026); arXiv:2412.16092v1 [quant-ph],
-  20 Dec 2024.
+- **Venue.** PRX Quantum 7, 020327 (published 12 May 2026), DOI `10.1103/lx8x-z29x`;
+  arXiv:2412.16092v1 [quant-ph], 20 Dec 2024.
 - **Type.** Hybrid noise **characterization + forward simulation** framework for transmon-based
   superconducting qubits. Builds an effective noise model from real hardware calibrations (7 IBM
   Quantum devices, 39 qubits) and validates it against RB, multi-qubit DD, and VQE experiments.
