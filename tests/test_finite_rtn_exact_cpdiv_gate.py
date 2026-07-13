@@ -83,3 +83,9 @@ def test_adjudication_distinguishes_null_from_implementation_failure() -> None:
     assert GATE.diagnostic_verdict(
         implementation_passed=False, positive_excursion_found=True
     ) == "IMPLEMENTATION_GATE_FAILED"
+
+
+def test_positive_excursion_reports_zero_for_monotone_decrease() -> None:
+    total, maximum = GATE.positive_excursion([1.0, 0.8, 0.3])
+    assert total == 0.0
+    assert maximum == 0.0

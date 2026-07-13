@@ -223,7 +223,7 @@ def positive_excursion(values: Sequence[complex] | np.ndarray) -> tuple[float, f
     increments = np.diff(magnitude)
     positive = increments[increments > 0.0]
     total = float(np.sum(positive)) if positive.size else 0.0
-    maximum = float(np.max(increments)) if increments.size else 0.0
+    maximum = max(0.0, float(np.max(increments))) if increments.size else 0.0
     return total, maximum
 
 
@@ -379,6 +379,8 @@ def build_report() -> dict[str, Any]:
     )
     exact_grid = product_ctmc_coherence(grid, amplitudes, gammas)
     ctmc_blp, ctmc_max_step = positive_excursion(exact_grid)
+    ctmc_increments = np.diff(np.abs(exact_grid))
+    ctmc_argmax = int(np.argmax(ctmc_increments))
 
     gaussian = gaussian_surrogate_coherence(grid, amplitudes, gammas)
     gaussian_blp, gaussian_max_step = positive_excursion(gaussian)
@@ -402,6 +404,32 @@ def build_report() -> dict[str, Any]:
         np.max(np.abs(held_product[held_indexes] - held_oracle[held_indexes]))
     )
     held_blp, held_max_step = positive_excursion(held_product)
+    held_increments = np.diff(np.abs(held_product))
+    held_argmax = int(np.argmax(held_increments))
+
+    ctmc_oracle_rows = [
+        {
+            "time_cycles": float(time),
+            "product_real": float(product.real),
+            "oracle_real": float(oracle.real),
+            "oracle_imag": float(oracle.imag),
+            "abs_error": float(abs(oracle - product)),
+        }
+        for time, product, oracle in zip(
+            CTMC_ORACLE_TIMES, product_values, oracle_values, strict=True
+        )
+    ]
+    held_oracle_rows = [
+        {
+            "cycle": int(cycle),
+            "product_real": float(held_product[cycle].real),
+            "product_imag": float(held_product[cycle].imag),
+            "oracle_real": float(held_oracle[cycle].real),
+            "oracle_imag": float(held_oracle[cycle].imag),
+            "abs_error": float(abs(held_oracle[cycle] - held_product[cycle])),
+        }
+        for cycle in HELD_ORACLE_CYCLES
+    ]
 
     checks = {
         "registered_defaults_unchanged": True,
@@ -497,12 +525,19 @@ def build_report() -> dict[str, Any]:
         "continuous_ctmc_diagnostic": {
             "verdict": ctmc_verdict,
             "product_vs_256_state_max_abs_error": ctmc_oracle_error,
+            "registered_oracle_rows": ctmc_oracle_rows,
             "earliest_zero_mode": int(zero_mode),
             "earliest_zero_time_cycles": mp.nstr(zero_time, 40),
             "abs_product_at_zero": mp.nstr(zero_value, 20),
             "abs_product_one_cycle_after_zero": mp.nstr(recovery_value, 20),
             "grid_blp_positive_excursion_estimate": ctmc_blp,
             "grid_max_positive_step": ctmc_max_step,
+            "grid_max_positive_step_bracket": {
+                "from_time_cycles": float(grid[ctmc_argmax]),
+                "to_time_cycles": float(grid[ctmc_argmax + 1]),
+                "from_abs_coherence": float(abs(exact_grid[ctmc_argmax])),
+                "to_abs_coherence": float(abs(exact_grid[ctmc_argmax + 1])),
+            },
             "gaussian_control_positive_excursion": gaussian_blp,
             "gaussian_control_max_positive_step": gaussian_max_step,
             "all_weak_control_positive_excursion": weak_blp,
@@ -513,8 +548,24 @@ def build_report() -> dict[str, Any]:
         "cycle_held_diagnostic": {
             "verdict": held_verdict,
             "product_vs_256_state_max_abs_error": held_oracle_error,
+            "registered_oracle_rows": held_oracle_rows,
             "integer_blp_positive_excursion": held_blp,
             "integer_max_positive_step": held_max_step,
+            "integer_max_positive_step_bracket": {
+                "from_cycle": held_argmax,
+                "to_cycle": held_argmax + 1,
+                "from_abs_coherence": float(abs(held_product[held_argmax])),
+                "to_abs_coherence": float(abs(held_product[held_argmax + 1])),
+            },
+            "full_sequence": [
+                {
+                    "cycle": cycle,
+                    "real": float(value.real),
+                    "imag": float(value.imag),
+                    "abs": float(abs(value)),
+                }
+                for cycle, value in enumerate(held_product)
+            ],
         },
         "checks": checks,
         "continuous_implementation_gate_passed": continuous_implementation_passed,
