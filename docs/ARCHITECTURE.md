@@ -54,7 +54,9 @@ noise process (mechanisms + Axis-2 source)
 certification oracle). The target is the d5/d7 rotated surface code (49q / 97q), so the
 forward scales through: **MPS MCWF thin-strip** (`quimb`; χ constant in d) → **2D PEPS full
 `d×d`** — a 1D MPS is geometry-incompatible with the full square (`χ~2^{2d}`; ADR 0010/0011).
-Truncation is **record-faithful** (gate on the syndrome record, never on the carrier bond).
+Record faithfulness is the **open truncation acceptance criterion** (gate on the full syndrome
+record, never on the carrier bond alone); coherent-tail deletion and the deterministic WTG solver
+replacement are suspended by the 2026-07-13 closure.
 The channel object (`carrier/cptp_channel`) + the record contract are backend-agnostic, so the
 swap is a backend replacement, not a rewrite. Detail: `docs/SIMULATOR.md` +
 `carrier/peps/README.md`.

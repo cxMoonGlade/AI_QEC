@@ -51,8 +51,9 @@ the NAMING STANDARD (N-1..N-5) and the ratified rename table (``load_xzzx_d3`` /
 
 from __future__ import annotations
 
+import hashlib
+import json
 import os
-from copy import deepcopy
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -67,6 +68,7 @@ from qec_twin.forward.scalable.sv_sampler import (
     SV_READOUT_CONVENTIONS,
     RunSpec,
     SvSampler,
+    _bind_registered_numerical_provenance,
 )
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
@@ -204,9 +206,10 @@ class ExperimentPreset:
     (0, 0.5)); this is not device calibration.
 
     ``provenance_manifest`` is optional for caller-defined presets to preserve the
-    existing constructor API. Every module-registered preset carries a JSON-safe v1
-    manifest with per-field provenance and claim scope. It is excluded from equality
-    and hashing so auditable metadata does not change preset identity semantics.
+    existing constructor API, but caller-supplied metadata is never trusted to upgrade
+    a run's claim scope. Only the exact module-registered preset objects are bound to
+    private canonical manifest snapshots. The field is excluded from equality and
+    hashing so auditable metadata does not change preset identity semantics.
     """
 
     name: str
@@ -331,7 +334,7 @@ def _registered_qutrit_preset(*, name: str, theta_rad: "float | None" = None,
             literature_references=([miao_l1] if wg_l1_target is not None else []),
             whole_project_channel_supported=False),
         "g_seep": entry(
-            "g_seep", provenance_kind="calibrated-to-paper",
+            "g_seep", provenance_kind="project-design",
             source_kind="cross_device_scale_anchor",
             claim_scope="project_channel_coordinate_near_reported_seepage_scale_only",
             literature_references=[mcewen_seep],
@@ -403,6 +406,46 @@ PRESET_LEAK_WG_L1_5E3 = _registered_qutrit_preset(
     b_bias=0.9, arm="A", readout_conv="biased_b")
 
 
+_REGISTERED_PRESET_MANIFEST_SNAPSHOTS = tuple(
+    (preset, json.dumps(preset.provenance_manifest, sort_keys=True))
+    for preset in (PRESET_LEAK_THETA_0P30, PRESET_LEAK_WG_L1_5E3)
+)
+
+
+def _canonical_registered_manifest(
+        preset: ExperimentPreset) -> "dict[str, object] | None":
+    """Return a fresh, validated manifest only for an exact registered object.
+
+    The JSON strings above are immutable snapshots taken at module import. We never
+    trust ``preset.provenance_manifest`` here: a frozen dataclass does not make a nested
+    dict immutable, and a caller-defined preset may contain arbitrary metadata.
+    """
+    manifest_json = next(
+        (snapshot for registered, snapshot in _REGISTERED_PRESET_MANIFEST_SNAPSHOTS
+         if preset is registered),
+        None,
+    )
+    if manifest_json is None:
+        return None
+    manifest = json.loads(manifest_json)
+    if manifest.get("schema") != \
+            "error_coupling_simulator.ExperimentPreset.provenance.v1":
+        raise RuntimeError("registered preset manifest has an invalid schema")
+    fields = manifest.get("fields")
+    expected_fields = (
+        "name", "theta_rad", "wg_l1_target", "g_seep", "g_heat",
+        "b_bias", "arm", "readout_conv",
+    )
+    if not isinstance(fields, dict) or set(fields) != set(expected_fields):
+        raise RuntimeError("registered preset manifest field set is corrupt")
+    for field_name in expected_fields:
+        entry = fields[field_name]
+        if not isinstance(entry, dict) or entry.get("value") != getattr(preset, field_name):
+            raise RuntimeError(
+                f"registered preset manifest value mismatch for {field_name}")
+    return manifest
+
+
 def resolve_theta(preset: ExperimentPreset) -> float:
     """The operative WG exchange angle (radians) for a preset.
 
@@ -438,16 +481,27 @@ def run_spec_from_preset(preset: ExperimentPreset, *, n_shots: int, n_rounds: in
     """
     files = _dataset_files(dataset_root)
     theta = resolve_theta(preset)
-    if preset.provenance_manifest is None:
+    canonical_manifest = _canonical_registered_manifest(preset)
+    if canonical_manifest is None:
         numerical_provenance: "dict[str, object]" = {
             "schema": "error_coupling_simulator.run_numerical_provenance.v1",
             "status": "missing",
             "claim_scope": "implementation_only",
-            "reason": "caller-defined preset supplied no value-level provenance manifest",
+            "reason": (
+                "preset is not an exact module-registered object; caller-supplied "
+                "provenance metadata is not trusted"),
         }
     else:
-        numerical_provenance = deepcopy(preset.provenance_manifest)
-        numerical_provenance["status"] = "complete_for_registered_preset"
+        canonical_json = json.dumps(
+            canonical_manifest, sort_keys=True, separators=(",", ":"))
+        numerical_provenance = {
+            "schema": "error_coupling_simulator.run_numerical_provenance.v1",
+            "status": "complete_for_registered_preset",
+            "claim_scope": "registered_synthetic_cross_source_benchmark_only",
+            "preset_manifest": canonical_manifest,
+            "preset_manifest_sha256": hashlib.sha256(
+                canonical_json.encode("utf-8")).hexdigest(),
+        }
     numerical_provenance["run_binding"] = {
         "resolved_theta_rad": {
             "value": theta,
@@ -474,7 +528,7 @@ def run_spec_from_preset(preset: ExperimentPreset, *, n_shots: int, n_rounds: in
             "provenance_kind": "project-design",
         },
     }
-    return RunSpec(
+    spec = RunSpec(
         circuit_path=files["r01_circ"],
         metadata_path=files["r01_meta"],
         m=int(m),
@@ -488,8 +542,12 @@ def run_spec_from_preset(preset: ExperimentPreset, *, n_shots: int, n_rounds: in
         base_seed=int(seed),
         R=int(n_rounds),
         dtype="c128",
-        numerical_provenance=numerical_provenance,
+        numerical_provenance=(
+            None if canonical_manifest is not None else numerical_provenance),
     )
+    if canonical_manifest is not None:
+        return _bind_registered_numerical_provenance(spec, numerical_provenance)
+    return spec
 
 
 def leak_slice_table(preset_or_params: "ExperimentPreset | RunSpec", *,

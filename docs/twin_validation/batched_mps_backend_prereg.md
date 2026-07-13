@@ -542,7 +542,7 @@ This is G-D2-4 below.
 - **Certified-run cell MUST exercise `b_eff ≠ spec.b`** (a NON-vacuity fence for the d2-vs-b_eff
   split, D2-2/B2): the gates run at least one cell with `spec.b ≠ 0.5` AND `readout_conv='half'`
   (so `b_eff=0.5 ≠ spec.b`) — else a builder threading `b_eff` into `_arm_d2` passes invisibly.
-  The p1c physical cell (`spec.b=0.9`, `readout_conv='biased_b'` ⇒ `b_eff=0.9=spec.b`) does NOT
+  The p1c composite project fixture (`spec.b=0.9`, `readout_conv='biased_b'` ⇒ `b_eff=0.9=spec.b`) does NOT
   exercise the split on its own; add the `half` cell. **This `half` cell MUST be one of the cells
   compared under G-D2-4 (byte-identity vs serial, raw b) OR G-D2-2 (z vs the DM, raw b)** — NOT
   only under G-D2-3/health or G-D2-6/throughput, else the fence is vacuous (red-team v2).

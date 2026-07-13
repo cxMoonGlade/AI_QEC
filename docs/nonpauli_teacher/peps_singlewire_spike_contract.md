@@ -1,5 +1,11 @@
 # RUNG-B feasibility spike — single-wire 2D PEPS trajectory carrier (registration + design contract)
 
+> **THEORY-FIX REOPENED, 2026-07-13.** The single-wire geometry remains live, but every bond-
+> plateau/FET/WTG/ZMT-to-record GO condition in this historical contract is suspended. `b=.9` is a
+> project evidence point, not a device-grounded readout value, and the registered N=8/R=40 run was
+> not completed. Current authorities: ADR 0011,
+> [`../NUMERICAL_PROVENANCE.md`](../NUMERICAL_PROVENANCE.md), and the long-range literature closure.
+
 **Version: v1.0 REGISTERED (2026-07-10). Blockers = 0 after three adversarial rounds;
 this document now governs the spike build. Amendments from here follow the parent
 contracts' convention: findings + adjudications appended, bands never re-fit.**

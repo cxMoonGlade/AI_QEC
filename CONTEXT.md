@@ -24,17 +24,29 @@ spec: `docs/SIMULATOR.md`.
   WG leakage; LRU/DQLR reset), **drift** (slow coherent over/under-rotation, axis drift),
   **crosstalk** (coherent ZZ coupling, correlated errors), **burst** (correlated-in-time
   bursts). They carry coherence/structure a Pauli-rate vector cannot — **not DEM-reducible**.
-- **notion-1 / -2 / -3** (memory taxonomy): **notion-1** = CP-divisibility-breaking quantum
-  non-Markovianity — **twirled out of the passive record** (not a carrier target); **notion-2**
-  = classical multi-time record memory (the mainline; Gaussian 1/f is CP-divisible, so its
-  legitimacy is notion-2); **notion-3** = genuine quantum-bath backaction (out of scope).
+- **notion-1 / -2 / -3** (three non-exclusive object labels, not a strength ladder):
+  **notion-1** = reduced-map divisibility/backflow diagnostics (RHP and BLP are distinct; neither
+  is by itself evidence of a quantum bath); **notion-2** =
+  observed-record memory/order in the fixed passive record law `P(m_1:R)`, without identifying a
+  classical or quantum origin (the current Axis-2 implementation uses a classical latent source;
+  its Gaussian positive-covariance surrogate is CP-divisible; two declared free-induction lifts
+  of the finite-RTN defaults have exact BLP backflow, but the production `z -> Theta` QEC map and
+  record still lack the channel/instrument bridge needed for any notion-1 verdict);
+  **notion-3** = quantum
+  memory/backaction at the environment/process-tensor level. Certifying notion-3 generally needs
+  an instrument family/active access and is out of scope. These labels do not imply that coherent
+  or non-unital mechanisms are absent from a fixed record. Evidence/status:
+  `docs/twin_validation/notion123_taxonomy_literature_closure_2026-07-13.md` and
+  `docs/twin_validation/finite_rtn_exact_cpdiv_result_2026-07-13.md`.
 - **Carrier**: the forward engine. Ladder: exact density matrix (`carrier/exact`, ≤~15q, the
   certification ORACLE) → MPS MCWF thin-strip (`quimb`, χ constant in d) → **2D PEPS full
   `d×d`** (`carrier/peps`, the active frontier — a 1D MPS is geometry-incompatible for the
   full square, `χ~2^{2d}`).
-- **Record-faithful truncation** (ADR 0011): the carrier drops what is absent from the record
-  (e.g. the coherent leakage tail carries zero bipartition entanglement and never enters a
-  syndrome-bit probability); feasibility gates on the record, never on `bond=χ`.
+- **Record-faithful truncation** (ADR 0011, reopened): an acceptance criterion requiring the
+  truncated carrier to preserve the declared joint record law within its registered band. It is
+  **not yet established** for coherent leakage or long-range/loopy PEPS truncation; zero added
+  entropy, WTG/FET/ZMT objectives, and notion-2 memory diagnostics cannot substitute for the full
+  d3 record comparison. Feasibility gates on the record, never on `bond=χ` alone.
 - **DEM parity map** (`A`): a binary matrix `A ∈ F_2^{B×M}` mapping Bernoulli DEM fault bits
   to observed detector/logical bits via `y = A·e (mod 2)`. The DEM is the decoder-facing
   reduction of a noise process, never the object itself.
@@ -55,10 +67,11 @@ spec: `docs/SIMULATOR.md`.
   band, class (a)/(b)/(c), verdict), with first-class, non-optional negative controls.
   Evaluator-only (`certify/`).
 - **Memory-axis instrument (notion-2)**: the record's absolute multi-time Markov-order
-  structure vs a genuinely-Markov-order-k generative null — CMI `I(mᵣ;mᵣ₋₂|mᵣ₋₁)` +
-  Anderson–Goodman `G²` + the `E(k)` residual-energy statistic. A **discriminability
-  instrument, never a parameter-recovery learner** (fitting θ from the record is the active
-  access class, out of scope).
+  structure vs a genuinely-Markov-order-k generative null — a full-history/order ladder,
+  with lag-local CMI `I(mᵣ;mᵣ₋₂|mᵣ₋₁)`, Anderson–Goodman `G²`, and `E(k)` as diagnostics.
+  A **memory-specific discriminability instrument, never a parameter-recovery learner**
+  (fitting θ from the record is the active access class, out of scope), and never a generic
+  full-record-faithfulness certificate.
 - **Numerical floor**: floating floors/thresholds use
   `error_coupling_simulator.numerics.NUMERICAL_ZERO == 1e-12`, never for structural zeros
   (Pauli entries, bit values, integer indices, counts, labels).
@@ -69,6 +82,10 @@ spec: `docs/SIMULATOR.md`.
   channels, closed forms, the exact density-matrix engine) are FORMAL bug-catchers, never
   "validated against reality." No claim of correspondence to a real device is made from a noise
   process.
+- **No provenance laundering.** A claim-bearing number must identify whether it is paper/data
+  measured, paper-derived, calibrated, project-designed, a convenience default, or numerical-only,
+  with an exact source pointer and transformation chain where applicable. Cross-paper/device tuples
+  are composite benchmarks, not physical device cells (`docs/NUMERICAL_PROVENANCE.md`).
 - **Passive record only.** The simulator characterizes the passive syndrome record; the full
   process tensor (active causal breaks / designed control / parameter recovery) is a distinct
   access class and is **out of scope**.

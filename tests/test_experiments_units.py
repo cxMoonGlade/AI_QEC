@@ -638,7 +638,7 @@ def test_wg_preset_sources_are_atomic_not_whole_cell_support():
     assert l1["literature_references"][0]["doi"] == "10.1038/s41567-023-02226-w"
     assert l1["whole_project_channel_supported"] is False
     assert seep["source_kind"] == "cross_device_scale_anchor"
-    assert seep["provenance_kind"] == "calibrated-to-paper"
+    assert seep["provenance_kind"] == "project-design"
     assert seep["claim_scope"] == \
         "project_channel_coordinate_near_reported_seepage_scale_only"
     assert [ref["identifier"] for ref in seep["literature_references"]] == [
@@ -770,8 +770,8 @@ def test_run_spec_from_preset_propagates_bogus_root(tmp_path):
     assert str(bogus) in str(ei.value)
 
 
-def test_custom_preset_without_provenance_fails_closed_to_implementation_only(monkeypatch):
-    """Missing value provenance remains runnable but cannot acquire a physical claim."""
+def test_custom_or_spoofed_preset_fails_closed_to_implementation_only(monkeypatch):
+    """Caller metadata and copied registered values cannot forge complete provenance."""
     monkeypatch.setattr(
         experiments,
         "_dataset_files",
@@ -788,14 +788,54 @@ def test_custom_preset_without_provenance_fails_closed_to_implementation_only(mo
         b_bias=0.5,
         arm="A",
         readout_conv="biased_b",
+        provenance_manifest={
+            "schema": "error_coupling_simulator.ExperimentPreset.provenance.v1",
+            "status": "complete_for_registered_preset",
+            "fields": {},
+        },
     )
-    spec = run_spec_from_preset(custom, n_shots=2, n_rounds=3, seed=4)
-    provenance = spec.numerical_provenance
-    assert provenance is not None
-    assert provenance["status"] == "missing"
-    assert provenance["claim_scope"] == "implementation_only"
-    assert provenance["run_binding"]["dataset_files"]["claim_scope"] == \
-        "geometry_and_schedule_only"
+    spoof = dataclasses.replace(
+        PRESET_LEAK_THETA_0P30,
+        provenance_manifest=PRESET_LEAK_THETA_0P30.provenance_manifest,
+    )
+    for preset in (custom, spoof):
+        spec = run_spec_from_preset(preset, n_shots=2, n_rounds=3, seed=4)
+        provenance = spec.numerical_provenance
+        assert provenance is not None
+        assert provenance["status"] == "missing"
+        assert provenance["claim_scope"] == "implementation_only"
+        assert "not trusted" in provenance["reason"]
+        assert provenance["run_binding"]["dataset_files"]["claim_scope"] == \
+            "geometry_and_schedule_only"
+
+
+def test_registered_facade_binding_survives_public_dict_mutation(monkeypatch):
+    """Only the canonical object binds complete status; header uses its frozen snapshot."""
+    monkeypatch.setattr(
+        experiments,
+        "_dataset_files",
+        lambda _root: {
+            "r01_circ": xp.DEFAULT_DATASET_ROOT / "synthetic_circuit.stim",
+            "r01_meta": xp.DEFAULT_DATASET_ROOT / "synthetic_metadata.json",
+        },
+    )
+    spec = run_spec_from_preset(
+        PRESET_LEAK_THETA_0P30, n_shots=2, n_rounds=3, seed=4)
+    assert spec.numerical_provenance["status"] == \
+        "complete_for_registered_preset"
+    assert len(spec.numerical_provenance["preset_manifest_sha256"]) == 64
+
+    spec.numerical_provenance["status"] = "mutated_spec_dict"
+    marsh = SimpleNamespace(
+        n_data=4,
+        n_stab=2,
+        R=3,
+        log_supp=SimpleNamespace(tolist=lambda: [0, 2]),
+    )
+    header = object.__new__(SvSampler).build_header(
+        spec, marsh, SimpleNamespace(logical_kind="Z"))
+    assert header["numerical_provenance"]["status"] == \
+        "complete_for_registered_preset"
 
 
 def test_run_spec_numerical_provenance_is_json_safe_and_enters_shot_header():
@@ -803,11 +843,41 @@ def test_run_spec_numerical_provenance_is_json_safe_and_enters_shot_header():
     with pytest.raises(ValueError, match="numerical_provenance must be JSON-safe"):
         RunSpec(circuit_path="unused.stim", numerical_provenance={"bad": {1, 2}})
 
+    with pytest.raises(ValueError, match="only from the registered facade"):
+        RunSpec(
+            circuit_path="unused.stim",
+            numerical_provenance={
+                "schema": "error_coupling_simulator.run_numerical_provenance.v1",
+                "status": "complete_for_registered_preset",
+            },
+        )
+
     ledger = {
-        "status": "complete_for_registered_preset",
-        "dataset_source": {"claim_scope": "geometry_and_schedule_only"},
+        "schema": "error_coupling_simulator.run_numerical_provenance.v1",
+        "status": "missing",
+        "claim_scope": "implementation_only",
+        "reason": "direct RunSpec has no trusted registered facade",
+        "run_binding": {
+            "resolved_theta_rad": {
+                "value": 0.0,
+                "claims_device_calibration": False,
+            },
+            "dataset_files": {
+                "circuit": "unused.stim",
+                "metadata": None,
+                "supplies_physical_noise_parameters": False,
+            },
+            "run_shape": {
+                "n_shots": 2,
+                "n_rounds": 3,
+                "seed": 0,
+                "logical_input_m": 0,
+            },
+        },
     }
     spec = RunSpec(circuit_path="unused.stim", N=2, R=3, numerical_provenance=ledger)
+    ledger["status"] = "mutated_after_construction"
+    assert spec.numerical_provenance["status"] == "missing"
     marsh = SimpleNamespace(
         n_data=4,
         n_stab=2,
@@ -816,9 +886,12 @@ def test_run_spec_numerical_provenance_is_json_safe_and_enters_shot_header():
     )
     sched = SimpleNamespace(logical_kind="Z")
     host = object.__new__(SvSampler)
+    spec.numerical_provenance["status"] = "mutated_spec_dict"
     header = host.build_header(spec, marsh, sched)
-    assert header["numerical_provenance"] == ledger
-    assert header["numerical_provenance"] is ledger
+    assert header["numerical_provenance"]["status"] == "missing"
+    assert header["numerical_provenance"] is not spec.numerical_provenance
+    header["numerical_provenance"]["status"] = "mutated_header"
+    assert spec.numerical_provenance["status"] == "mutated_spec_dict"
 
 
 # =========================================================================== #

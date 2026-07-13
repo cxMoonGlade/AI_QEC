@@ -1,4 +1,13 @@
-# STATUS + DECISION — non-Markovian passive-record legitimacy (consolidation, 2026-07-04)
+# STATUS + DECISION — non-Markovian passive-record legitimacy (2026-07-04; taxonomy superseded 2026-07-13)
+
+> **Do not reuse the old notion mapping below.** Reduced-map divisibility/backflow, observed-record
+> memory order, and process-level memory carrier are non-exclusive objects. The universal twirl and
+> `K == quantum memory` interpretations are retracted. The old CP-div row also evaluated a Gaussian
+> surrogate, not the production finite-RTN process. Two later, explicitly declared free-induction
+> lifts show exact BLP backflow, but production uses a different `z -> Theta` QEC mapping; the source
+> alone has no reduced-map status and the production map/record bridge remains open.
+> Current authority:
+> [`notion123_taxonomy_literature_closure_2026-07-13.md`](notion123_taxonomy_literature_closure_2026-07-13.md).
 
 **Consolidation of the 2026-07-04 session.** Everything below is docs/outputs + committed CPU checks;
 **`src/` is untouched.** Purpose: tie the decisive chain + the carrier map + the two contract reviews + the
@@ -10,13 +19,14 @@ fair-test into one roadmap decision. Each committed check carries `python-exit=0
 |---|---|---|
 | Track-1 Step-1 `N_detect` | `step1_shared_vs_off_lag2_Ndetect` (`5c3c92…`) | shared-vs-off absolute lag≥2 is VISIBLE at feasible N (pooled 5.85e4); retracted 1e10–1e15 sub-floor REFUTED (error A: exchangeable-null subtraction was the killer). Common-mode-dominated. |
 | theory-first grounding | `theory_first_grounding_nonmarkovian_legitimacy` (11 papers read) | THREE distinct notions: CP-div breaking (RHP/BLP) / classical multi-time memory (Kolmogorov) / non-classicality (discord). Right observable = multi-time / differentiable syndrome NLL, NEVER 2-point (Kam §IV.C). Slow tail = drift (cross-shot, Bhardwaj). Site Class-1/2 (Kam). |
-| CP-div check | `cpdiv_passive_record_check` (`5bc63d…`) | **our 1/f source is CP-DIVISIBLE (RHP=BLP=0)** — its signal is notion-2 (classical memory), NOT CP-div breaking (needs strong non-Gaussian RTN + is twirled from the passive record). |
+| CP-div check | historical Gaussian `cpdiv_passive_record_check` (`5bc63d…`) plus exact finite-RTN gate (bound execution `e35ff7d89ef6e656b8e0205abae0753630459f7d`) | Gaussian surrogate is CP-divisible; continuous-CTMC and cycle-held free-induction lifts of the finite-RTN defaults show BLP backflow and match 256-state oracles. Neither lift is the production `z -> Theta` QEC channel. The rate-only record carries notion-2 memory but excludes coherence by construction. |
 | quantum C4-analog v2 (both bases) | `quantum_backaction_c4analog` (`b06fc97…`) | twirling condition = **INCOHERENCE, not error type**. Classical/incoherent → notion-2 (twirled all bases). Quantum/coherent bath → survives via its complementary stabilizer (dephasing via X-stab); QEC measures both X,Z. |
 | deepen (K × M_mem) | `quantum_backaction_deepen` (`d6c2df…`) | K certifies COHERENCE not a non-Mkv bath (a coherent Markovian control forges K>0). Headline needs K>0 ∧ M_mem>0. **FALLBACK** — but on an inadequate toy (M_mem=0 by construction; θ=0.01 weak). |
 | **fair-test (pseudomode)** | `quantum_backaction_fairtest` (`6021c1…`) | with a GENUINE memory-bearing pseudomode bath at saturation: **headline STANDS but CORNER-ONLY** (feasible g∈[0.2,0.7]/gτ 0.4–1.4, N_det~4e3–5e4; sub-feasible weak coupling). Converges with G0-quantum GO-CORNER-ONLY. Fallback WAS a toy artifact. |
 
-**Net:** the classical 1/f source's passive-record legitimacy signal is **notion-2 (classical multi-time
-memory)** — broadly achievable, measured multi-time / differentiable syndrome NLL, sited Class-1/2. The
+**Net (corrected):** the finite-RTN source can generate **notion-2 classical multi-time record
+memory** under the declared coupling. The finite-RTN free-induction diagnostics are BLP-positive,
+but that does not settle the different production fan-out/QEC map. The
 **quantum-dephasing headline is a REAL but CORNER-CONFINED result** (near-resonant strong coupling), a bigger
 d3/multi-qubit build to demonstrate; the corner-confinement is a genuine limit (converges with G0-quantum).
 

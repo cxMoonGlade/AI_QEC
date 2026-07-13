@@ -1,5 +1,10 @@
 # HANDOFF — non-Markovian SYNDROME-VISIBILITY on the error-coupling SIMULATOR, 2026-07-04
 
+> **HISTORICAL / SUPERSEDED 2026-07-13.** Do not reuse its notion taxonomy, universal
+> reachability claims, “realistic” numerical brackets, or transfer a Gaussian/motional-narrowing
+> CP-div result to the production finite-RTN source. Current authorities are
+> `notion123_taxonomy_literature_closure_2026-07-13.md` and `../NUMERICAL_PROVENANCE.md`.
+
 **SELF-CONTAINED.** Everything load-bearing (the scope rule §0, the three-error diagnosis §1, the plan §5,
 the resource map §6) is fully contained IN THIS FILE — it does NOT depend on any external note resolving.
 This hands off the ORIGINAL problem of the session — *is the non-Markovian error VISIBLE on the syndrome

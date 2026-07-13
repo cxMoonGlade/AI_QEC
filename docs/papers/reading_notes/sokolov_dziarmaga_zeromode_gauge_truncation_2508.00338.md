@@ -1,4 +1,4 @@
-# Full-text review — I. Sokolov, Y. Zhang, J. Dziarmaga, "Truncating loopy tensor networks by zero-mode gauge fixing" (arXiv:2508.00338)
+# Full-text review — I. Sokolov, Y. Zhang, J. Dziarmaga, "Truncating loopy tensor networks by zero-mode gauge fixing" (arXiv:2508.00338; PRE 2025)
 
 > **Provenance (2026-07-12): FULL-TEXT read (精读).** PDF (arXiv:2508.00338**v2**, dated
 > "4 Nov 2025" on the arXiv line / front matter "Dated: July 28, 2025") downloaded via curl →
@@ -26,8 +26,9 @@
 ## Metadata [paper]
 - **Authors / affiliation:** Ihor Sokolov, Yintai Zhang, Jacek Dziarmaga — Jagiellonian University,
   Kraków, Poland. (Dziarmaga is the NTU author of arXiv:2107.06635, our companion note.)
-- **Venue / status:** arXiv:2508.00338v2 [quant-ph], 4 Nov 2025. Preprint (not yet a journal ref in
-  the PDF). Data openly available on RODBUK (Ref. 59).
+- **Venue / status:** arXiv:2508.00338v2 [quant-ph], 4 Nov 2025. **Physical Review E 112,
+  055307 (2025), DOI `10.1103/4lgp-ld2s`.** The arXiv record now carries the journal reference and
+  related DOI; the v2 PDF predates that metadata. Data openly available on RODBUK (Ref. 59).
 - **Type:** Method paper (a tensor-network bond-truncation *initialization* scheme) + a series of six
   numerical illustrations (iPEPS real-/imaginary-time evolution: quantum Ising, Heisenberg thermal,
   **Z2 gauge field**, t-J; plus TRG for the classical Ising model).
@@ -45,7 +46,8 @@ dependence** of the cut states (Eq. 2), i.e. redundant bond directions. The asso
 state* (Eq. 4). For a small-but-nonzero eigenvalue the incurred error is the closed form
 `f = N_D/|Z_D|²` (Eq. 5), and one greedily eliminates the mode of **lowest f** (not lowest `N`).
 Section IV generalizes this to the full `D²×D²` metric `g_{ij,i'j'} = ⟨ψij|ψi'j'⟩` (Eq. 11) by
-cutting **both** legs of the bond (ket-index `i`, bra-index `j`), giving the more powerful
+retaining the two virtual endpoint labels `i,j` of the cut bond (the primed labels belong to
+the bra in the Gram), giving the more powerful
 loop-cutting truncation (Eq. 12–17), with error `f = N/|E_D|²` (Eq. 19). Section V places ZMT against
 **environment-assisted truncation (EAT)** [Ref. 31]: EAT approximates the metric by its **leading**
 left–right product `g ≈ g_L λ1 g_R` (Eq. 20), which is exact only for a **non-loopy** bond; the
@@ -56,14 +58,15 @@ cannot** (Sec. V, last paragraph). The headline empirical claim: across all six 
 initialization quality determines the *final* error after variational optimization (EAT "obliterates"
 the plaquette gate; SVD is unconverged at D=10 while ZMT3 converges — Figs. 8–10).
 
-**One-line relevance to us:** this is the FORK-A foundation. ZMT is a **deterministic,
+**One-line relevance to us:** this is a candidate FORK-A initializer, not a closed fix. ZMT is a **deterministic,
 pseudoinverse-free, loop-aware** replacement for the *initialization* step our FET-ALS gets wrong
 (Sec. III is a two-line proof that the `pinv` solution keeps the redundant bond while the zero-mode
-gauge choice cuts it). It confirms our independent derivation: **truncating "zero modes of the
-cut-states metric" IS truncating the null space of the Gram** `ker(G)`. **But it is an initializer,
-not a full variational solver, and it is physically blind — it cannot by itself distinguish a gauge
-loop from weak leakage magic; the protection is a threshold `δ` (Sec. X), which must be set below the
-leakage scale.**
+gauge choice cuts it). It confirms the bond-side statement **`ker(g)=ker(Ψ)` for
+`g=Ψ†Ψ`**, where the columns of `Ψ` are cut states. It does not identify this with the generally
+different environment-side kernel of `ΨΨ†`. **ZMT is an initializer, not a full variational solver,
+and it is physically blind — it cannot by itself distinguish a gauge loop from weak leakage magic.
+The threshold `δ` (Sec. X) selects the ZMT1-to-ZMT2/3 construction while compression continues to
+the same target rank; it is not an acceptance, physical-content, or record-faithfulness threshold.**
 
 ## Method (deep) [paper]
 
@@ -140,28 +143,32 @@ of exploiting the null-space gauge freedom to actually cut the bond.
 - **ZMT4** (Z2 example only) = **product ansatz** `Z_ij = R_i L_j`, `R†R=L†L=1`, optimized iteratively
   `→L→R→` to converge Eq. 19 (`N = Z†gZ`, `E_D = Σ_j L_j R_j`) — the one iterative variant.
 
-### Determinism / monotonicity / role in the pipeline (load-bearing)
-- **ZMT is a deterministic INITIALIZATION**, not a full solver: build the metric (one exact local
-  environment contraction) → eigendecompose/SVD → gauge-fix `z=−1/E_D` → truncate the lowest-`f` mode,
-  optionally one-by-one down to target. **No alternating least-squares sweep in the init.** The only
-  iterative variant is the optional ZMT4 product ansatz.
+### Construction / role in the pipeline (load-bearing)
+- **ZMT is an INITIALIZATION**, not a full solver: obtain the metric from a supplied environment →
+  eigendecompose/SVD → gauge-fix `z=−1/E_D` → truncate the selected mode, optionally one-by-one down
+  to target. **No alternating least-squares sweep appears in ZMT1–3 initialization.** ZMT4 optimizes
+  a product ansatz iteratively. Environment approximation, degeneracies, and mode-selection choices
+  are outside any determinism or convergence guarantee in the paper.
 - **Every example follows ZMT init with the usual variational (ALS-like) optimization.** So ZMT does
   **not eliminate** the variational sweep — it de-risks it. In the easy models (Ising Fig. 5, t-J
   Fig. 11) the *final* error is init-independent (any init converges). In the **hard loopy Z2 case**
   the *final* error **depends on the init** — EAT/SVD give a bad basin the ALS cannot escape, ZMT3
-  gives a good one (Figs. 8–10). This is the regime we are in.
-- **Monotone?** Not a global-optimality guarantee, but it is **deterministic and
-  non-divergent**: it never pseudo-inverts a near-singular metric (Sec. III is the whole point); the
-  greedy lowest-`f` elimination is a controlled descent on the initialization error with the exact
-  bound Eq. 5 / Eq. 19 per step. Contrast our FET-ALS: non-monotone fidelity + pinv divergence.
+  gives a good one (Figs. 8–10). Whether the project's measured bonds are in an analogous regime is
+  an open transfer hypothesis.
+- **No monotonicity/global-convergence theorem.** The construction avoids the particular pseudoinverse
+  pathology illustrated in Sec. III, and Eqs. 5/19 quantify the paper's selected-mode objective at the
+  stated order. They do not prove a monotone multi-cut descent, non-divergence under an approximate
+  environment, or convergence to a global optimum.
 
 ## The MECHANISM (for implementation)
 Per bond to truncate (finite d3/d5 patch, single-wire PEPS):
-1. **Cut the bond.** Compact scheme: expose one leg → cut states `|ψj⟩`, `j=1..D`. General scheme:
-   cut both legs → `|ψij⟩`, `i,j=1..D`.
-2. **Build the metric (Gram) by contracting the LOCAL environment.** Compact: `g_ij = ⟨ψi|ψj⟩`
-   (`D×D`, Eq. 1). General: `g_{ij,i'j'} = ⟨ψij|ψi'j'⟩` (`D²×D²`, Eq. 11). For a **finite** code patch
-   this environment is contracted **exactly** (no infinite CTMRG) — cheap.
+1. **Cut the bond.** Compact scheme: retain one bond label → cut states `|ψj⟩`, `j=1..D`.
+   General scheme: expose the two endpoint bond labels → `|ψij⟩`, `i,j=1..D`. These are the
+   two virtual indices at the cut, not independent ket/bra copies.
+2. **Build the metric (Gram) from the relevant environment.** Compact: `g_ij = ⟨ψi|ψj⟩`
+   (`D×D`, Eq. 1). General: `g_{ij,i'j'} = ⟨ψij|ψi'j'⟩` (`D²×D²`, Eq. 11). A finite project patch can
+   be contracted exactly in principle, but the paper does not prove that route cheap or numerically
+   benign; the actual contraction cost and approximation must be measured.
 3. *(Recommended)* **Fix the EAT gauge** (Eq. 22–24) first: diagonalize `g_L,g_R`, SVD the overlap,
    insert Eq. 24. This makes `g_L,g_R` Hermitian/non-negative and puts you in the canonical (Schmidt)
    frame; the loopiness `l = λ2/λ1` (Eq. 21) is your **diagnostic** of how loopy the bond is.
@@ -170,106 +177,84 @@ Per bond to truncate (finite d3/d5 patch, single-wire PEPS):
    `f = N/|E_D|²` (Eq. 19).
 5. **Gauge-fix `z = −1/E_D` (largest-|E|) and truncate the resulting zero singular value** (Eq. 14–17).
    Eliminate the lowest-`f` mode; absorb the gauge factor into the two adjacent tensors.
-6. **Two truncation MODES:**
-   - **Fixed-χ mode:** cut one-by-one down to a target bond `D` regardless of error (Ising/t-J).
-   - **Threshold-δ mode (SAFE for us):** keep cutting only while the incurred error Eq. 5 stays below
-     `δ`; stop at whatever bond `χ' ≥ χ` first exceeds `δ` (TRG ZMT2, lines 1154–1160). **Accept the
-     resulting bond; do not force it down.**
+6. **Target-rank variants:** ZMT1 applies the compact elimination one-by-one to the target `χ`.
+   In the TRG ZMT2/3 variants, compact ZMT1 is used until Eq. 5 first exceeds `δ` at `χ' > χ`;
+   the algorithm then **switches to the general Sec.-IV mode and continues to the same target `χ`**
+   (paper lines 1150–1163). Thus `δ` selects the compact-to-general transition; it is not a stop/
+   accept threshold and does not certify physical content.
 7. **Follow with the ordinary variational optimization** (the ALS sweep) from this initialization.
 8. *(Optional)* App. C: perturb the chosen eigenmode `Z → Z + fε` (Eq. C4–C7) to lower `f` further —
    but the gain is only `O(f²)` and "may not justify the numerical overhead."
 
 **Key correspondence to our independent derivation (asked explicitly):**
-Yes. The paper's cut-states metric `g_ij = ⟨ψi|ψj⟩` **is** the Gram of the columns of `Ψ` (each column
-= one cut state as a vector over the rest of the network). `g = Ψ†Ψ`, so **`ker(g)` = the set of
-linear-dependence relations among cut states = `ker(Ψ†Ψ)`, which has the same rank/support as our
-`ker(G)` with `G = ΨΨ†`** (the ket-bra Gram). Truncating "zero modes of the cut-states metric" =
-projecting onto `range(ΨΨ†)` = removing exactly the redundant bond directions = our null-space
-truncation. **Two precise caveats:**
-- Our `ΨΨ†` lives on the *environment/physical* space; the paper's `g = Ψ†Ψ` lives on the *bond*
-  space. Same nonzero spectrum, same rank; the *bond-space* form (paper's) is the one you truncate.
-- Our `G` matches the paper's **compact Sec-II** metric if we cut **one** leg; it matches the
-  **general Sec-IV** `D²×D²` metric if we cut **both** legs (ket and bra independently). The paper
+Partly. The paper's cut-states metric `g_ij = ⟨ψi|ψj⟩` is the Gram of the columns of `Ψ` (each
+column is one cut state), so `g = Ψ†Ψ` and **`ker(g)=ker(Ψ)`** is exactly the space of bond-label
+linear-dependence relations. The environment-side operator `G=ΨΨ†` has the same nonzero spectrum
+and rank, but it acts in a different space and generally has a different kernel dimension/support.
+Therefore a null-space derivation written for `G` is not literally the paper's bond-space truncation;
+it must be transported through the SVD/range maps before claiming equivalence. **Two precise caveats:**
+- `G=ΨΨ†` lives on the environment/physical space; `g=Ψ†Ψ` lives on the bond-label space. Only
+  nonzero spectra and rank agree automatically; the bond-space form `g` is the object ZMT truncates.
+- Our `G` matches the paper's **compact Sec-II** metric when one bond label is retained; it matches the
+  **general Sec-IV** `D²×D²` metric when both endpoint labels are retained. The paper
   proves Sec. II is the diagonal restriction of Sec. IV — so both are the same object at different
   resolution, and our derivation is the compact one.
 
 ## Relevance to qec_twin [ours]
 
-### FORK A foundation — replacing the FET-ALS initialization
+### FORK A candidate — replacing only the FET-ALS initialization
 Our failure (from the active line): single-edge FET-ALS on the d3/d5 single-wire PEPS grows the bond
-(6→12→15…) with non-monotone fidelity and pinv divergence, while the true bipartition entropy `S_A`
-is bounded (2 ebits d3 / 4 ebits d5). Root cause diagnosed as non-Hermitian/non-PSD metric +
-unregularized pinv + over-parameterization on the **long-range (loop) bonds** (user steer:
-"主要是修复长程关联"). This paper is a direct match:
-- **The excess bond IS loop redundancy.** For the **leak-off** (pure-stabilizer) case, the extra bond
-  above `S_A` is exactly the virtual-loop entanglement of Fig. 1 — decoupled from physical content.
-  ZMT's **exact zero-mode elimination** (Eq. 4, `N_D=0`) removes it **losslessly and
-  deterministically**, no variational sweep needed. This is the clean deterministic replacement the
-  handoff wanted ("use the DETERMINISTIC gauge-fixed canonical-spectrum truncation as PRIMARY").
-- **The loopiness `l = λ2/λ1` (Eq. 21) is the diagnostic spectrum** the handoff asked for ("the WTG
-  spectrum DIAGNOSES solver-failure vs genuine long-range physics"). A bond with `l≈0` is non-loopy →
-  EAT/canonical truncation suffices; a bond with `l>0` is loopy → the ALS *should* be expected to
-  struggle and ZMT is required. This gives a per-bond, computable go/no-go for which bonds need the
-  loop-aware cut.
-- **It closes the Evenbly-2018 gap.** Ref. 32 (Evenbly, closed-loops gauge) is exactly the EAT-gauge
-  Sec. V builds on; ZMT's Sec.-V theorem shows the canonical/Evenbly gauge truncation (EAT) is
-  *insufficient for loops* and ZMT strictly extends it. So this paper is the reference the handoff
-  named as "NOT yet read."
+(6→12→15…) with non-monotone fidelity and pinv divergence, while the measured bipartition entropy
+`S_A` is bounded. This paper is structurally relevant, but the mapping is conditional:
 
-### Reliability vs our ALS (asked)
-More reliable on exactly our failure bonds: (i) **no pinv of a singular metric** — Sec. III proves
-pinv keeps the redundant bond; ZMT's gauge choice cuts it. (ii) **Hermitian/non-negative metric**
-available via the EAT gauge (Eq. 22–24) — our non-Hermitian-metric crash mode is avoided. (iii)
-**Deterministic** eigendecomposition, no alternating sweep in the init → no non-monotone-fidelity
-oscillation. (iv) **Loop-aware** (Sec. V) — cuts loops EAT/SVD/Vidal cannot. **Honest caveat:** it is
-an *initializer* the paper still follows with variational optimization; it de-risks the ALS rather
-than deleting it. For pure loop redundancy the exact-zero-mode step alone suffices; for genuine
-long-range physics it hands the ALS a good basin.
+- **Exact-zero implication.** If the project's cut-state Gram has an **exact** zero mode, ZMT's Eq. 4
+  removes that linear dependence without changing the represented state. Bounded `S_A` alone does
+  not prove that the excess virtual bond is exactly such a zero mode; that remains a project
+  hypothesis.
+- **Loopiness is not a physical classifier.** `l=λ2/λ1` (Eq. 21) measures the failure of EAT's
+  rank-one environment factorization. `l≈0` recovers the non-loopy EAT/Schmidt limit; `l>0` says the
+  bond is loopy, but does not distinguish removable virtual redundancy from genuine long-range
+  physical correlation and does not prove that ALS must fail.
+- **ZMT extends EAT as an initializer.** The paper shows that zero-mode gauge fixing can truncate a
+  loopy metric where EAT cannot, but every numerical example still follows the initialization with
+  variational optimization. It does not license replacing the full solver by a canonical spectrum.
 
-### Cost at d3/d5 on one RTX 5090 (asked)
-Cheap. The dominant cost is the **local environment contraction** to build the metric — for a
-**finite** d3/d5 patch this is an exact finite contraction we already perform (no infinite CTMRG). The
-linear algebra is trivial at our scale: compact metric `D×D`; general metric `D²×D²` with
-eigendecomposition `O(D^6)`. Our bonds are `D≈6–15`, so `D²×D² ≤ 225×225` — a sub-millisecond dense
-eigendecomposition on GPU or even CPU. Contrast the paper's own cost worry (`O(D^8)` NTU-metric build,
-`O(D^{10–12})` CTMRG) which is an **infinite-iPEPS, large-D** concern that **does not bind us**: our
-patch is finite and small-D. Net: ZMT adds negligible cost relative to the trajectory loop.
+### Reliability vs our ALS [ours]
+ZMT can be safer as an initializer because it avoids using a pseudoinverse to choose one arbitrary
+solution in a singular metric and explicitly exploits exact linear dependence. The cut-state Gram is
+Hermitian PSD **by definition**; EAT gauge fixing does not excuse or automatically repair a
+non-Hermitian implementation. ZMT is deterministic before the optional variational refinement, but
+the paper gives no global-optimum guarantee for nonzero modes. Exact-zero removal is lossless;
+approximate-mode removal is an approximation.
 
-### Leakage interaction — could it corrupt the physical `S_A`? (CRITICAL, asked)
-**Yes, it *can*, and here is the precise condition and the safeguard.** ZMT's metric is **physically
-blind**: it truncates directions with small metric eigenvalue `N`, whether that smallness comes from
-(a) a genuine gauge/loop redundancy (an *exact* linear dependence, `N=0`, decoupled from physical
-indices — truncating it changes the state by **exactly zero**, Eq. 4) or (b) a **weak but physical**
-non-Clifford leakage direction (small `N>0`, but it *does* contribute to the physical state).
-- The **discriminator the paper hands us is exactly right**: the per-mode error `f = N/|E_D|²`
-  (Eq. 5/19) is the *actual norm-change* of truncating that mode. A true loop has `f→0`
-  (provably lossless). A leakage magic direction has **strictly `f>0`** proportional to its physical
-  weight. So the `f`-spectrum (equivalently the metric/`N` spectrum, and the loopiness `l`) **does
-  diagnose gauge-artifact vs genuine physics** — which is precisely the leak-off vs leak-on question.
-- **The protection is threshold-δ mode.** Run ZMT in the TRG-ZMT2 style (Sec. X, lines 1154–1160):
-  truncate only while `f < δ`, and **set `δ` strictly below the leakage magnitude** (below the
-  smallest physical Schmidt weight the weak non-Clifford leakage injects). Then ZMT removes only the
-  `f≈0` loop redundancies and **cannot touch the leakage directions** → `S_A` (and the leakage magic
-  above the GF(2) stabilizer entropy) is preserved.
-- **The danger is fixed-χ mode.** If instead you force the bond down to a target `χ` regardless of
-  error (the Ising/t-J "cut one-by-one down to D" mode), ZMT **will** truncate the smallest-`f` modes
-  including weak leakage, corrupting the physical `S_A`. This is the tensor-network analog of the
-  project's standing "Clifford-invariant ≠ leakage-invariant" trap (dropping a physically-applied
-  direction on a gauge argument). **Mandate: for the leaky carrier, ZMT MUST run in threshold-δ mode,
-  never fixed-χ mode.**
-- **Untested for us:** the paper never treats leakage, projective measurement, or a finite patch. The
-  above is an [ours] inference from the method's structure (the metric is built from the state tensors
-  and is gate-agnostic, so weak non-Clifford content simply appears as small-but-nonzero `N`). It
-  should be validated: on a leak-on d3 wire, confirm the `f`-spectrum shows a gap between the `f≈0`
-  loop modes and the leakage modes, and that threshold-δ ZMT reproduces the exact `S_A` (2/4 ebits +
-  leakage) against the independent GF(2) stabilizer-entropy oracle.
+### Cost at d3/d5 [ours]
+The dense linear algebra is `D×D` for the compact scheme and `D²×D²` for the general scheme. The
+dominant cost can instead be the environment contraction that constructs the Gram. A finite patch
+makes the contraction exact in principle, not automatically cheap. The prior “sub-millisecond /
+negligible” estimate was not benchmarked and is retracted; cost must be measured on the actual path.
+
+### Leakage interaction — could it corrupt physical content? [ours]
+**Yes.** ZMT is physically blind: a small metric direction can be an approximate virtual redundancy
+or weak but genuine leakage physics.
+
+- `f = N/|E_D|²` (Eqs. 5/19) measures the state-norm cost assigned by the construction. `f=0`
+  certifies an exact linear dependence and lossless removal. **Small positive `f` does not identify
+  why it is small.** Neither the `f` spectrum nor loopiness `l` is an ontology test.
+- The paper's `δ` switches from compact ZMT1 to general ZMT2/3; it does not stop compression or
+  protect leakage. No published lower bound on the smallest physical leakage direction is supplied.
+- Any fixed-target compression can delete weak physical modes. Neither the selected-mode objective nor
+  the ZMT1→ZMT2/3 switch certifies the complete QEC record.
+- Validation must therefore compare the exact and truncated **joint `(detectors, obs)` record law**
+  at d3 using TV/KL and a frozen-decoder LER, while logging `f`, state overlap, and `S_A` only as
+  internal diagnostics.
 
 ### Does it need a prior gauge fixing? (asked)
 Recommended, not required. ZMT1/ZMT2 in the examples fix the **EAT gauge first**; ZMT3 in the Ising
 case runs **without** it, while ZMT1/3 in the t-J case are EAT-gauge-initialized. The metric — and
 hence the zero modes — **depend on the bond gauge** (Sec. V opening, lines 408–410), so a canonical
-gauge (EAT/Schmidt) improves reliability and gives the loopiness diagnostic for free. For us: fix the
-EAT gauge first (it also Hermitizes the metric, curing our non-Hermitian crash mode).
+gauge (EAT/Schmidt) may improve conditioning and gives the loopiness diagnostic. For us: fix the EAT
+gauge first if its assumptions hold, but reject any non-Hermitian Gram as an implementation bug rather
+than relying on gauge fixing to cure it.
 
 ### The Z2 gauge example (Sec. VIII) = the stabilizer-flavored evidence we care about
 The Z2 lattice gauge Hamiltonian `H = −Σ_p σz_{p1}σz_{p2}σz_{p3}σz_{p4} − g Σ_s σx_s` (Eq. 27) has
@@ -279,8 +264,8 @@ loop index `j` around the plaquette** (Eq. 29–30) — structurally the closest
 effect of the pMPO gate" (lines 923–926), i.e. canonical/Evenbly truncation destroys stabilizer
 content; (ii) plain **SVD is unconverged even at D=10** while **ZMT3 converges quickly with D**
 (Fig. 10, `⟨σx⟩`); (iii) here the **final** error is init-dependent — the loop-aware initialization is
-essential. This is strong support that on stabilizer-loop-carrying bonds (our surface-code case)
-ZMT is the right tool and canonical/ALS-only truncation is not. **Caveat:** this is a *unitary,
+essential. This is useful structural evidence that loop-aware initialization can matter; transferring
+it to a surface-code PEPS is still an [ours] hypothesis. **Caveat:** this is a *unitary,
 translationally-invariant, unmeasured, non-leaky* Z2 model — not our finite/measured/leaky code.
 
 ## Limitations [paper] + [ours]
@@ -298,7 +283,8 @@ translationally-invariant, unmeasured, non-leaky* Z2 model — not our finite/me
 - **[ours] Direct applicability to our setting is PARTIAL** (see structured output). The *method* is
   bond-local and state-agnostic, so it transfers; but nothing in the paper tests finite + projectively
   measured + leaky, so the transfer is an [ours] inference to be validated.
-- **[ours] Leakage corruption is a real risk in fixed-χ mode** — must run threshold-δ.
+- **[ours] Leakage corruption is a real risk in every fixed-target variant.** The `δ` switch changes
+  which ZMT construction is used; it does not identify physical content or certify a multi-time record.
 - **[ours] Companion 2605.09385 (Z2) unread** — the in-paper Sec. VIII already covers the
   stabilizer-flavored behavior, but the companion may add finite-size / measurement detail; flagged.
 
@@ -306,35 +292,32 @@ translationally-invariant, unmeasured, non-leaky* Z2 model — not our finite/me
 - **(a) exact:** The algebraic identities are exact — Eq. 4 (exact-zero-mode elimination is a lossless
   identity when `N_D=0`), Eq. 5 & 19 (`f = N/|Z_D|²`, `f = N/|E_D|²`, the leading-order truncation
   error), the Sec.-III pinv-vs-gauge toy (Eq. 6–9), and the Sec.-V statement that ZMT≡EAT in the
-  non-loopy `g̃=Λ⊗Λ` case. The correspondence "cut-states metric zero modes = `ker` of the Gram = our
-  `ker(G)`" is an **exact** linear-algebra identity (up to the bond-side/environment-side transpose).
-- **(b) prediction band:** That ZMT (threshold-δ) will fix our d3/d5 bond growth to the true `S_A`
-  while preserving weak leakage magic is a **registered falsifiable bet**, not yet run — a miss is a
-  finding, not later citable as fact.
-- **(c) heuristic gate:** The loopiness `l=λ2/λ1` threshold, the truncation threshold `δ` (set below
-  the leakage scale), the greedy lowest-`f` selection rule, and "use threshold-δ not fixed-χ" are
-  design/gating rules only — never a premise or derivation basis.
-- **Provisional:** The whole "ZMT is the FORK-A fix" conclusion is PROVISIONAL until validated on a
-  leak-on d3 wire against the independent GF(2) stabilizer-entropy oracle. Usable for go/no-go
-  gating; nothing may be *built* on it (no further derivation) until that check passes.
+  non-loopy `g̃=Λ⊗Λ` case. The exact correspondence is `ker(Ψ†Ψ)=ker(Ψ)` on the bond-label
+  space. `ΨΨ†` acts in a different space; only its nonzero spectrum and rank agree automatically.
+- **(b) prediction band:** That ZMT initialization will improve the failing d3/d5 optimization while
+  preserving the full record is a **registered falsifiable bet**, not yet run.
+- **(c) heuristic gate:** Loopiness thresholds, positive-`f` cutoffs, the greedy lowest-`f` rule, and
+  threshold-vs-fixed-rank choices are design gates only — never physical classifiers or conclusion
+  premises.
+- **Provisional:** “ZMT is the FORK-A fix” remains unlicensed until an exact d3 **record-law** oracle
+  passes. GF(2) entropy and `S_A` are useful controls but are insufficient acceptance targets.
 
 ## How to use / trust + open questions [ours]
 - **Trust level:** FULL-TEXT 精读 of the 13-page v2. Equations transcribed and cross-checked from the
-  PyMuPDF text. This is a **preprint** (2025) by the NTU author — high method credibility, but not yet
-  peer-reviewed, so the empirical claims (Figs. 5–14) carry the usual preprint caveat.
+  PyMuPDF text. The work is now published as **Physical Review E 112, 055307 (2025)**; the PDF itself
+  predates the journal metadata.
 - **Independent verification potential:** Data are on RODBUK (Ref. 59). The Sec.-III toy and the
   Sec.-V ZMT≡EAT theorem are checkable by hand. The Z2 `⟨σx⟩` convergence (Fig. 10) is the most
   reproducible target if we want to replicate the loop-cutting advantage before adopting it.
 - **Concrete next actions for FORK A:**
-  1. Implement ZMT init (steps 1–7 above) on the single-wire d3 PEPS bond; fix the EAT gauge (Eq.
-     22–24) to Hermitize the metric.
-  2. **Leak-off validation:** confirm exact-zero-mode elimination cuts the grown bond (6→12→15…) back
-     to the true `S_A=2` ebits deterministically, matching the GF(2) stabilizer-entropy oracle, with
-     **no** variational sweep. This is the direct test of "bond growth = gauge artifact."
-  3. **Leak-on validation (the critical one):** run **threshold-δ** ZMT, `δ` below the leakage scale;
-     confirm the `f`/loopiness spectrum shows a gap (loop modes `f≈0` vs leakage modes `f>0`) and that
-     `S_A` (stabilizer + leakage magic) is preserved. Then re-probe WP1'.
-  4. Compare against keeping the ALS as a *follow-up* optimizer from the ZMT init vs ZMT-alone.
+  1. Before implementation, test whether the actual cut-state Gram is Hermitian PSD and has exact
+     zero modes; do not infer this from bounded `S_A`.
+  2. **Leak-off validation:** compare exact-zero removal, ZMT+variational refinement, and the current
+     solver; use state equality and GF(2)/`S_A` only as internal controls.
+  3. **Leak-on validation (critical):** sweep the positive-`f` threshold without labeling small modes
+     “gauge”; compare the full d3 joint record to the exact qutrit instrument using TV/KL and frozen
+     decoder LER.
+  4. Compare ZMT-initialized variational optimization against ZMT-alone; the paper supports the former.
 - **Open questions:**
   1. **Measurement.** After a projective stabilizer measurement (rank-1 projector on a physical index)
      the bond-truncation problem is still a local Gram — does anything break? (Expected: no, the
@@ -349,14 +332,15 @@ translationally-invariant, unmeasured, non-leaky* Z2 model — not our finite/me
   4. **Companion 2605.09385** — read if finite-size/measurement Z2 detail is needed.
 
 ## Key equations / quantities (implementation reference)
-- `|ψj⟩`, `|ψij⟩` — cut states (one leg / both legs open).
-- `g_ij = ⟨ψi|ψj⟩` (Eq. 1) — compact `D×D` Gram; `g = ΨΨ†`/`Ψ†Ψ` in our notation.
+- `|ψj⟩`, `|ψij⟩` — cut states (one retained bond label / two endpoint labels).
+- `g_ij = ⟨ψi|ψj⟩` (Eq. 1) — compact `D×D` bond-label Gram, `g=Ψ†Ψ` when cut states are columns of `Ψ`.
 - `Z_j = U_{jD}` (zero mode, Eq. 1–2); gauge `z=−1/Z_D` (Eq. 4); error `f = N_D/|Z_D|²` (Eq. 5).
 - `g_{ij,i'j'} = ⟨ψij|ψi'j'⟩` (Eq. 11) — general `D²×D²` metric; zero mode `Z`, `Tr Z†Z=1`.
 - `Z_ij = S⁻¹ E_k S` (Eq. 13); gauge `z=−1/E_D`; SVD `δ−Z/E_D = UλV*` with `λ_D=0` (Eq. 14);
   error `f = N/|E_D|²` (Eq. 19).
 - EAT product `g ≈ g_L λ1 g_R` (Eq. 20); **loopiness `l = λ2/λ1`** (Eq. 21); EAT gauge (Eq. 22–24).
-- Threshold `δ` (safe/leakage-preserving truncation mode, Sec. X).
+- Threshold `δ` (ZMT1-to-ZMT2/3 switch during compression to target `χ`, not a stop rule or
+  leakage/record certificate, Sec. X).
 - App. A/B: exact `f_min` beyond leading order. App. C: `O(f²)` eigenmode refinement.
 - Refs: **31** = Sinha/Rams/Czarnik/Dziarmaga PRB 106, 195105 (2022) = EAT; **32** = Evenbly PRB 98,
   085155 (2018) = closed-loops gauge; **40** = Dziarmaga PRB 104, 094411 (2021) = NTU (our companion).

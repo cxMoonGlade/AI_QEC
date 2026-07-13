@@ -1,5 +1,11 @@
 # notion-3 vs coupling geometry (common ↔ differential) — Pre-Registration (theory-first, LITERATURE-GROUNDED)
 
+> **HISTORICAL / INTERPRETATION SUPERSEDED, 2026-07-13.** Preserve the registered geometry sweep,
+> symmetry controls, and run facts; do not reuse `K` as a model-free notion-3/quantum-memory certificate.
+> It is a measure-all-versus-omit protocol comparison, and the paper-to-project bridge for the claimed
+> DFS cause was not a direct theorem about this QEC instrument. Current authority:
+> [`notion123_taxonomy_literature_closure_2026-07-13.md`](notion123_taxonomy_literature_closure_2026-07-13.md).
+
 Status: PRE-REGISTRATION, 2026-07-05. Predictions written BEFORE the run; a miss is a finding, not a re-fit.
 
 > **⚠ CORRECTED 2026-07-05 (BEFORE running) — the central experiment below is a MIRROR TAUTOLOGY; DO NOT run

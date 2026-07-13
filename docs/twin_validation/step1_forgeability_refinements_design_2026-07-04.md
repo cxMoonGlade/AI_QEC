@@ -1,5 +1,12 @@
 # Step 1 refinements — the FORGEABILITY gate + two control fixes (predict-before-measure DESIGN)
 
+> **SOURCE/MAP CORRECTION, 2026-07-13.** The historical motional-narrowing sweep remains a
+> registered control for this record statistic, but it is not “the CP-divisible limit of the same 1/f
+> source”: a stochastic source has no CP-divisibility status until embedded in a reduced dynamical map.
+> The Gaussian surrogate is CP-divisible; two declared exact finite-RTN free-induction lifts are
+> BLP-positive; the production fan-out/QEC map remains open. See
+> [`notion123_taxonomy_literature_closure_2026-07-13.md`](notion123_taxonomy_literature_closure_2026-07-13.md).
+
 **Status: DESIGN for un-led adversarial review, 2026-07-04.** Predictions written BEFORE any run; a miss is a
 FINDING. Builds on `step1_shared_vs_off_lag2_Ndetect_derivation_2026-07-04.md` (round 1: TOTAL shared-vs-off
 visible; common-mode-dominated; memory-alone borderline). This round installs the **anti-toy legitimacy
@@ -71,8 +78,8 @@ common-mode floor + decaying bump.
   (R3), `τ_eff`-dependent. **Borderline at the Class-0 realistic endpoint** ⇒ legitimacy *motivates*
   Class-1/2 (not forced by the numbers).
 - **F3 (c — R2 control).** Motional-narrowing factor sweep `×{1,3,10,30,100,300,1000,3000,10000}`: BOTH the
-  common-mode AND the memory decrease monotonically; `M/M(×1) → 0` (the CP-divisible limit of the SAME 1/f
-  source). Predict `M`-ratio `< 1e-2` by `×~10³–10⁴`.
+  common-mode AND the memory decrease monotonically; `M/M(×1) → 0` (the fast-switching suppression limit of
+  this record statistic; no source-level CP-divisibility claim). Predict `M`-ratio `< 1e-2` by `×~10³–10⁴`.
 - **F4 (honesty — the forgeability HIERARCHY, declared not tested here).** `M` separates shared from
   {static-offset, memoryless} (**Level 1**, this gate). A **single-RTN exponential** Markov process would
   still give `M>0` (**Level 2**); the **1/f power-law / multi-timescale** unforgeability vs any finite-order

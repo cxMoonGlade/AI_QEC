@@ -1,5 +1,11 @@
 # HANDOFF — the quantum-bath record teacher (Option 3), 2026-07-03
 
+> **HISTORICAL CLAIM FRAME SUPERSEDED, 2026-07-13.** The explicit-bath carrier may remain a
+> simulation target, but reduced-map coherence revival/CP-indivisibility is not an unforgeable
+> quantum-origin certificate and does not automatically reach `{det,obs}`. Any quantum-memory claim
+> needs the declared process/instrument access and a separately closed bridge. Current authority:
+> [`notion123_taxonomy_literature_closure_2026-07-13.md`](notion123_taxonomy_literature_closure_2026-07-13.md).
+
 **Self-contained. Read this + `docs/twin_validation/nonmarkovian_memory_carrier_scope.md` (the BINDING
 scope) + `CLAUDE.md` + the memory index.** This hands off the build of the **record-level quantum-bath
 teacher** — the coupling simulator's declared FINAL TARGET — as a first-class package teacher alongside
@@ -21,11 +27,10 @@ channel-level pilots as-is.
   Gates certify (a) the simulator computes the specified enlarged-GKSL model correctly and (b) records
   carry that model's structure — NEVER "records = nature." **LER is the PRODUCT**; `1−F_e`/RHP/BLP/TV
   are internal **instruments**. Decoder/DEM/LER stay OUT of the validity chain.
-- **The contribution is coherence, not correlation.** Round-correlation alone is the classical strawman
-  (the classical teacher already has it). The unforgeable signature is **coherence revival /
-  CP-divisibility breaking** — echo-irremovable where a classical-coherent baseline is DD-removable.
-  No "non-Markovian simulator" claim may ride on the classical teacher alone. See memory
-  [[project-nonmarkovian-wedge-must-be-coherence]], [[project-coupling-nonmarkovian-is-the-contribution]].
+- **Historical target framing, now narrowed.** Round correlation, reduced-map revival, and process-memory
+  origin are different observables. Coherence revival / CP-indivisibility may be a useful declared-map
+  diagnostic, but is not an unforgeable quantum-origin signature and does not transfer to the record without
+  an instrument bridge. No generic “non-Markovian simulator” claim may ride on either carrier alone.
 
 ## 1. THE ENTRY STEP IS A PREREG, NOT CODE (theory-first, hard gate)
 

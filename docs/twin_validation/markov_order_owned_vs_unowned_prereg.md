@@ -27,8 +27,11 @@ single-round + a Markov-k patch suffices)? Classes: **(a) exact**, **(b) band**,
   baseline share all order-≤k statistics and differ only in the beyond-k structure.
 - **Standard metric (forced ladder, rung-2 field-standard).** Testing the ORDER of a stochastic record is
   textbook: the likelihood-ratio / G² test for Markov-chain order (Anderson & Goodman 1957, *Ann. Math.
-  Statist.* 28:89) and its information-theoretic equal, the conditional mutual information
-  `I(mᵣ ; mᵣ₋₂ | mᵣ₋₁)` = 0 iff Markov-1 (Cover & Thomas). `G² = 2N ln2 · CMIbits`, so they are the SAME
+  Statist.* 28:89) and its information-theoretic form, the conditional mutual information
+  `I(mᵣ ; mᵣ₋₂ | mᵣ₋₁)`. Markov-1 implies this lag-local CMI is zero; the converse establishes only
+  that three-time conditional independence, not independence from the entire earlier history.
+  A full Markov-1 claim requires the complete history/time ladder. For the same contingency table,
+  `G² = 2N ln2 · CMIbits`, so they are the SAME
   statistic — one gives a χ² p-value, the other an effect size in bits. Related to the ledgered
   source/channel non-Markovianity (BLP N=0.11, D_Choi=0.20, `docs/METRICS.md`) but at the RECORD layer.
 - **Machinery (reuse §3b):** 1 qubit + 1 certified underdamped relaxation mode (Pilot 3/4), prep|e⟩ →

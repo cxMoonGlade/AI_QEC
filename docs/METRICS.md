@@ -55,9 +55,9 @@ d3 vs the exact-DM oracle; the RECORD is what feasibility gates on (ADR 0011).
 
 | Metric | Formula | Standard name + reference | Class | Convention |
 |---|---|---|---|---|
-| Syndrome-distribution total-variation | `½‖p − q‖₁` over the record support | **total-variation distance** (Nielsen & Chuang 2010 §9; `P_e = ½(1−TV)` Bayes link, Nielsen arXiv:1401.4788) | (a) at exact enumeration; (b) finite-sample | over the joint `(detectors, obs)`; the field-standard distance for comparing two distributions — never element-wise `max` |
-| Record relative entropy | `KL(p_ref ‖ p_carrier) = H(p_ref,p_carrier) − H(p_ref) ≥ 0` | **relative entropy / KL** (Cover & Thomas 2006) | (a) population / (b) finite-sample | nats; `KL→0` ⇔ the record distributions agree |
-| Held-out per-shot syndrome NLL | `−(1/N) Σ_n log p(y_n)` | **held-out negative log-likelihood** — the dMLE model-scoring objective (Cao et al. arXiv:2602.19722; population limit = the cross-entropy, Cover & Thomas 2006) | (b) | per shot, nats; held-out split declared before scoring; bootstrap CI; identical splits across models |
+| Syndrome-distribution total-variation | `½‖p − q‖₁` over the record support | **total-variation distance** (Nielsen & Chuang 2010 §9; `P_e = ½(1−TV)` Bayes link, Nielsen arXiv:1401.4788) | (a) at exact enumeration; (b) finite-sample | over the joint `(detectors, obs)`; a standard probability distance adopted as the **project's d3 certification metric** — the 2026-07-13 literature audit did not find a universal QEC full-record-TV standard; never use element-wise `max` |
+| Record relative entropy | `KL(p_ref ‖ p_carrier) = H(p_ref,p_carrier) − H(p_ref) ≥ 0` | **relative entropy / KL** (Cover & Thomas 2006) | (a) population / (b) finite-sample | nats; `KL→0` iff the population record laws agree; project certification choice, not established universal QEC simulator practice |
+| Held-out per-shot syndrome NLL | `−(1/N) Σ_n log p(y_n)` | **held-out negative log-likelihood** — the dMLE model-scoring objective (Cao et al. arXiv:2602.19722; population limit = cross-entropy, Cover & Thomas 2006) | (b) | only for a normalized generator of `P(record)`; decoder BCE/NLL for `P(logical|record)` is a different object; project certification choice |
 
 **Verification-vs-claim guard (binding).** Comparing two INDEPENDENT computations of the *same*
 `P(record)` (a cross-check) may report `max|A−B|` (L∞) as a machine-agreement diagnostic; comparing
@@ -73,15 +73,18 @@ number here gates resources and internal convergence only; the faithfulness clai
 
 | Metric | Formula | Standard name + reference | Class | Convention |
 |---|---|---|---|---|
-| Per-cut discarded weight | `ε_cut = Σ_{i>χ} σ_i²`, with `‖ψ − ψ_χ‖² = ε_cut` | **Schmidt truncation identity** (standard; ADR 0010 constraint ledger) | (a) exact (bounds the STATE, not the LER) | per bond cut; accumulates `1 − F ≤ Σ_t ε_cut^{(t)}` over the trajectory |
+| Per-cut discarded weight | `ε_cut = Σ_{i>χ} σ_i²`, with `‖ψ − ψ_χ‖² = ε_cut` for the stated normalized Schmidt cut | **Schmidt truncation identity** (standard; ADR 0010 constraint ledger) | (a) exact for that cut (bounds the STATE, not the LER) | per bond cut; no automatic cumulative `Σ ε_cut` record bound for nonlinear renormalized multi-step FET/PEPS updates — use a proven propagation theorem or direct paired reference |
 | Truncation error (SVD) | `2-norm of the truncated singular-value vector` = `√ε_cut` | dynamic-threshold MPS/TN truncation control (Manabe–Suzuki–Darmawan arXiv:2308.08186; `reading_notes/manabe_suzuki_darmawan_leakage_tn_2308.08186.md`) | (c) gate | bond `χ` chosen dynamically to hold it below a declared threshold (their 1e-6 rep / 1e-4 surface) |
-| χ-convergence | record statistic (§1) vs `χ`, anchored to the d3 DM oracle; a `χ*` exists + monotone | **convergence-in-χ self-consistency** (the L2 no-drift test; ADR 0010 Rung 3; Manabe Fig. 6 area-law bond saturation) | (b) at d3 / (c) extrapolated | licenses d5/d7 where no oracle exists; a drift as `χ` grows ⇒ NOT converged ⇒ STOP |
+| χ-convergence | record statistic (§1) vs `χ`, anchored to the d3 DM oracle; a `χ*` exists + monotone | **convergence-in-χ self-consistency** (the L2 no-drift test; ADR 0010 Rung 3; Manabe Fig. 6 area-law bond saturation) | (b) at d3 / (c) extrapolated | at d5/d7 this licenses only provisional engineering/reporting, never correctness or a downstream premise; drift as `χ` grows ⇒ NOT converged ⇒ STOP |
 | Average bond dimension | `mean χ` per round | representation **cost proxy** (Manabe 2308.08186 Figs 5–7) | (c) | resource guard only; saturates over rounds under area law |
 | Leakage / seepage rate | `L1, L2` (leaked-population growth / return) | leakage & seepage rates (Wood–Gambetta; Manabe 2308.08186 Eq. 14–15 diagnostic) | (c) diagnostic | qutrit `\|2⟩` mass; a leakage diagnostic, not a record observable (ADR 0011 Context) |
+| Global cq-state trace distance | `D(ρ_RS,ρ̃_RS)=½‖ρ_RS−ρ̃_RS‖₁`, retaining the complete classical record register `R` | trace distance + data processing (Nielsen & Chuang §9; Werner et al. PRL 116, 237201 gives a global bound only for its 1D local Markov LPTN) | (a) implication when a valid global bound exists | `D≤ε ⇒ TV(P_R,P̃_R)≤ε` and fixed-decoder absolute LER error `≤ε`; rare relative LER error requires `ε≪p_L`; a final state after discarding `R` is insufficient |
 
-**⚠ Do not gate faithfulness on this section.** Truncating on the singular-value/bond (Manabe's
-threshold) bounds the *state*; ADR 0011 gates feasibility on the *record* (§1). The coherent leakage
-tail inflates `χ` but carries zero record content — it is dropped (record-faithful truncation).
+**⚠ Do not gate faithfulness on local entries in this section.** Singular-value, WTG, ZMT, and FET
+objectives bound a state/environment quantity under their own assumptions; they do not prove full
+record or LER fidelity. The earlier statement that the coherent leakage tail has zero record content
+was reopened by the 2026-07-13 literature audit. Only a valid global cq-state/process bound or the
+independent d3 record ladder in §1 may license dropping it.
 
 ---
 
@@ -92,9 +95,9 @@ Channel-level cross-checks of the carrier against the exact-DM / from-scratch or
 | Metric | Formula | Standard name + reference | Class | Convention |
 |---|---|---|---|---|
 | Process (entanglement) infidelity | `1 − F_e`, `F_e` = Uhlmann fidelity of the trace-normalized **Choi states** | **entanglement/process fidelity** (Schumacher PRA 54, 2614 (1996); Nielsen Phys. Lett. A 303, 249 (2002) for `F_avg`) | (a) leading-order (`1−F_e ≈ ‖G‖²_F/d` for coherent `V=e^{−iG}`); (b) finite-χ | Choi built from the superoperator (gauge-invariant); the intrinsic Uhlmann floor ~1e-8; use the commutator/superop-distance control for a machine-exact witness |
-| Choi–Jamiołkowski trace distance | `½‖J − J'‖₁` on a seam-neighborhood reduced block | **Choi trace distance** = optimal channel distinguishability (Choi 1975; Jamiołkowski 1972; Nielsen & Chuang 2010 §9) | (a)/(b) | per-seam reduced block (global `2^{2n}` Choi infeasible); half-trace-norm ∈ [0,1] |
+| Normalized-Choi-state trace distance | `½‖J − J'‖₁` on a seam-neighborhood reduced block | trace distance between outputs for the fixed maximally-entangled Choi input (Choi 1975; Jamiołkowski 1972) | (a)/(b) | project channel diagnostic/lower bound; **not** general optimal channel distinguishability, which is governed by the diamond norm; per-seam block only (global `2^{2n}` Choi infeasible) |
 | Pauli-twirl distance | `½‖J(E) − J(𝒯(E))‖₁`, `𝒯(E)` = PTM off-diagonal zeroed | **the PTA / DEM approximation error** = coherence a Pauli/DEM export discards (trace distance, N&C §9; twirl-underestimate, Bravyi et al. arXiv:1710.02270; Harper) | (a) definition / (b) magnitude | reported with the **unitarity** `u(E)` coherence-of-noise scalar (Wallman et al. arXiv:1503.07865); the MODEL is never twirled — this is the metric's reference channel only |
-| Multi-round comb distance | `D_comb = ½‖J(T_R^A) − J(T_R^B)‖₁` on the outcome-augmented normalized comb Choi | **quantum-comb / process-tensor distance** (Chiribella–D'Ariano–Perinotti PRA 80, 022339 (2009), arXiv:0904.4483; Pollock et al. PRA 97, 012127 (2018), arXiv:1512.00589) | (a)/(b) | `Σ_m Tr J_m = 1`; the single-round marginal-matched Markov comb is the canonical R=1 null (≡ 0 = built-in calibration) |
+| Outcome-augmented comb-Choi trace distance | `½‖J(T_R^A) − J(T_R^B)‖₁` on normalized comb Choi states | fixed-Choi representation diagnostic (Chiribella–D'Ariano–Perinotti PRA 80, 022339 (2009); Pollock et al. PRA 97, 012127 (2018)) | (a)/(b) | `Σ_m Tr J_m=1`; not the general optimal adaptive process-discrimination distance, which requires a strategy/comb norm over admissible testers |
 
 ---
 
@@ -106,11 +109,27 @@ genuinely-Markov null? A **discriminability instrument, never a parameter-recove
 
 | Metric | Formula | Standard name + reference | Class | Convention |
 |---|---|---|---|---|
-| Conditional mutual information | `I(mᵣ ; mᵣ₋₂ \| mᵣ₋₁)` (bits); `CMI = 0 ⟺ Markov-1` | **CMI Markov-order test** (Cover & Thomas 2006; Kolmogorov order, Milz et al. arXiv:1907.05807; `reading_notes/milz_when_nonmarkovian_process_classical_1907.05807.md`) | (a) `CMI=0⟺Markov-1`; measured value (b) | bits; the record's own multi-time structure, no matched-marginal subtraction (the anti-error-A property) |
-| Order test | Anderson–Goodman `G² = 2N ln2 · CMI_bits`, null `~ χ²(df)` | **likelihood-ratio Markov-order test** (Anderson–Goodman; siting Kam et al. arXiv:2410.23779; `reading_notes/kam_nonmarkovian_surface_code_2410.23779.md`) | (a) null law / (c) `p<0.05` gate | Markov-1 vs Markov-2 then the order-2 rung; controls (bias-floor, true-M2 power) non-optional |
-| Residual energy | `E(k) = Σ_{ℓ>k} ρ_res(ℓ)²` at the first uncontrolled lag | 1/f-vs-RTN order-relative separation (the non-forgeable power-law-tail statement is asymptotic-k) | (b) | weak at feasible `k*≈6` — report the bound; never a sharp feasible-k discriminator |
-| Non-Markovianity — backflow | `N(Φ) = max ∫_{σ>0} σ(t)dt`, `σ = d/dt·½‖ρ₁−ρ₂‖₁` | **BLP trace-distance measure** (Breuer–Laine–Piilo PRL 103, 210401 (2009), arXiv:0908.0238; `reading_notes/blp_nonmarkovianity_measure_0908.0238.md`) | (a) definition / (b) value | source-layer witness; a lower bound / sufficient witness of memory |
-| Non-Markovianity — CP-div breaking | `I = ∫ g(t)dt`, `g` from the intermediate-map non-CP; `D_NM = I/(I+1)` | **RHP CP-divisibility measure** (Rivas–Huelga–Plenio PRL 105, 050403 (2010), arXiv:0911.4270; review arXiv:1405.0303; `reading_notes/rhp_nonmarkovianity_measure_0911.4270.md`) | (a) definition / (b) value | **RHP is strictly finer than BLP** — report both, state which is claimed. Gaussian 1/f is CP-divisible ⇒ legitimacy is **notion-2, not notion-1** |
+| Conditional mutual information | local `I(mᵣ;mᵣ₋₂\|mᵣ₋₁)`; process-wide Markov-1 requires `I(mᵣ;M_{<r-1}\|mᵣ₋₁)=0` for all relevant `r` | **conditional-independence / Markov-order test** (Cover & Thomas 2006; Milz et al. arXiv:1907.05807) | (a) for the stated full-history condition / (b) measured | the three-time quantity is only a lag-2 diagnostic and can miss dependence on earlier history; state stationarity/support assumptions and tested history depth |
+| Order test | Anderson–Goodman `G²` likelihood ratio under a declared stationary finite-order chain | **finite-order Markov transition test** (Anderson–Goodman; QEC siting context Kam et al. arXiv:2410.23779) | (a) asymptotic null under regularity / (c) gate | name compared orders, degrees of freedom, sparse-cell treatment, and power controls; no finite ladder excludes every higher-order HMM |
+| Residual energy | `E(k) = Σ_{ℓ>k} ρ_res(ℓ)²` at the first uncontrolled lag | project 1/f-vs-RTN order-relative diagnostic | (b) | weak at feasible `k*≈6`; never a sharp proof against every finite-order generator |
+
+### 4a. notion-1 — distinct reduced-map divisibility and backflow criteria (not record metrics)
+
+| Metric | Formula | Standard name + reference | Class | Convention |
+|---|---|---|---|---|
+| Backflow | `N(Φ)=max ∫_{σ>0}σ(t)dt`, `σ=d/dt·½‖ρ₁−ρ₂‖₁` | **BLP trace-distance measure** (Breuer–Laine–Piilo PRL 103, 210401 (2009), arXiv:0908.0238) | (a) definition / (b) value | property/witness of a reduced dynamical-map family; classical random fields can produce it (Lo Franco et al., PRA 85, 032318; Cialdi et al., PRA 100, 052104), so it is not a quantum-bath certificate |
+| CP-indivisibility | `I=∫g(t)dt`, `g` from the intermediate-map Choi non-CP; `D_NM=I/(I+1)` | **RHP measure** (Rivas–Huelga–Plenio PRL 105, 050403 (2010), arXiv:0911.4270) | (a) definition / (b) value | RHP and BLP are distinct; report which is claimed. The positive-exponential-covariance **Gaussian surrogate** is CP-divisible by project algebra. Two explicitly declared free-induction lifts of the finite-RTN defaults have exact BLP backflow (`finite_rtn_exact_cpdiv_result_2026-07-13.md`), but neither lift is the production `z -> Theta` QEC channel. A stochastic source alone has no reduced-map status, and neither a diagnostic value nor record CMI transfers to the production path without a proved channel/instrument bridge |
+
+### 4b. notion-3 — quantum process memory/backaction (active access boundary)
+
+There is no single fixed-passive-record notion-3 metric in the current scope. Process-tensor temporal
+entanglement or quantum-memory witnesses require a declared family of interventions/testers (Giarmatzi–Costa;
+Taranto et al.). A `measure-all` versus `skip-intermediate-measurement` Kolmogorov/DNI statistic is itself an
+instrument comparison, not one passive record, and fixed-basis violations can be produced by invasive Markovian
+channels. It cannot certify quantum-bath origin. The simulator may still preserve quantum-generated mechanisms
+that affect its fixed record; **physical reachability and certification of quantum origin are different claims.**
+The claim-by-claim source audit is
+`docs/twin_validation/notion123_taxonomy_literature_closure_2026-07-13.md`.
 
 ---
 
@@ -143,7 +162,9 @@ combs / process tensor.
 
 **Truncation / TN simulation.** Manabe–Suzuki–Darmawan (2025) arXiv:2308.08186 — MPS/TN leakage
 simulation: dynamic-threshold SVD truncation, bond-dimension cost, area-law saturation, GTA >3×
-LER-overestimate (精读 note in `reading_notes/`).
+LER-overestimate (精读 note in `reading_notes/`). Evenbly (2018) PRB 98, 085155 — WTG/cycle
+entropy/FET boundaries. Werner et al. (2016) PRL 116, 237201 — 1D local-Markov LPTN global trace-norm
+bound. Cross-source scope audit: `docs/nonpauli_teacher/coherent_leakage_longrange_truncation_literature_closure_2026-07-13.md`.
 
 **Multi-time memory / non-Markovianity.** Milz et al. (2019) arXiv:1907.05807 — classical
 (Kolmogorov) non-Markovianity. Kam et al. (2024) arXiv:2410.23779 — non-Markovian surface code, siting.

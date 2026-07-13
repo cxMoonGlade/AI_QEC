@@ -1,5 +1,12 @@
 # Quantum-back-action C4-analog — derivation + predictions (predict-before-measure, 2026-07-04)
 
+> **HISTORICAL / INTERPRETATION SUPERSEDED, 2026-07-13.** The reported `K=P_all-P_skip`
+> calculations remain reproducible protocol-comparison results. They do not, by themselves, certify a
+> quantum bath, quantum memory, or a property of one passive record law; `K` tests Kolmogorov
+> consistency/non-invasiveness across measure-all and omit-measurement protocols. The single-qubit toy
+> also does not prove a universal QEC twirl/no-twirl theorem. Current authority:
+> [`notion123_taxonomy_literature_closure_2026-07-13.md`](notion123_taxonomy_literature_closure_2026-07-13.md).
+
 **Status: DERIVATION written BEFORE the run.** Committed script:
 `outputs/twin_validation/quantum_backaction_c4analog.py`. The DECISIVE evidence call (user 2026-07-04): does
 genuinely-quantum measurement back-action / non-unitality survive the PASSIVE stabilizer syndrome record, or
@@ -20,9 +27,10 @@ i.e. the measurement is **non-invasive**. The **a-exact Kolmogorov-violation sta
 $$ K \;=\; \sum_{s_1,s_3} \Big| \sum_{s_2} P_{\text{measure-all}}(s_1,s_2,s_3) \;-\; P_{\text{skip-2}}(s_1,s_3) \Big|, $$
 
 where `P_measure-all` measures rounds 1,2,3 and `P_skip-2` measures 1,3 but **evolves through round 2 without
-measuring**. `K=0` ⇔ non-invasive ⇔ **classical / reproducible by a classical stochastic process** (the record
-carries at most notion-2 classical memory). `K>0` ⇔ **measurement-invasive** ⇔ genuinely quantum
-(Leggett-Garg / discord, a signature NO classical process can forge). Second signature: **non-unitality** of
+measuring**. **[HISTORICAL INTERPRETATION—RETRACTED]** This prereg treated `K=0` as classical and `K>0`
+as a genuinely-quantum signature no classical process could forge. Current scope is only that `K` tests
+non-invasiveness/Kolmogorov consistency for the declared protocol family; it does not identify the bath or
+memory carrier. Second historical signature: **non-unitality** of
 the per-round record channel (noise_adapted §V.A) — a classical dephasing record channel is unital.
 
 ## The models (minimal, exactly solvable — system qubit S ⊗ small bath)
@@ -106,7 +114,8 @@ error type — it is `[coupling, measurement-basis]` commutation × **coherence*
 | QC3ad quantum amp-damp / JC | K>0 | K>0 | σ±σ∓ noncommutes with both |
 
 **Corrected headline (predicted):** the twirling condition is **INCOHERENCE, not error type.** CLASSICAL /
-incoherent noise (our stochastic 1/f) is twirled in ALL stabilizer bases ⇒ notion-2 ceiling. A QUANTUM /
+incoherent noise (our stochastic 1/f) was predicted to be twirled in ALL stabilizer bases ⇒ notion-2 ceiling.
+**[UNIVERSAL INFERENCE RETRACTED 2026-07-13.]** A QUANTUM /
 coherent bath of ANY type (dephasing σz OR bit σx OR leakage) **survives** via its complementary
 (noncommuting) stabilizer — and real QEC measures BOTH X and Z stabilizers. ⇒ the quantum headline is
 passive-record-legitimate for a quantum DEPHASING bath too (via the X-stabilizer), NOT only leakage — v1's
@@ -127,7 +136,8 @@ commutation-coherence rule is wrong.
 | QC3ad quantum amp-damp | 0.375 | 0.75 | >0/>0 | **CONFIRMED** |
 
 **CORRECTED headline (supersedes v1):** the twirling condition is **INCOHERENCE, not error type.**
-CLASSICAL/incoherent noise (our 1/f) is twirled in ALL stabilizer bases (K=0) → **notion-2 ceiling**. A
+**[HISTORICAL UNIVERSAL INFERENCE—RETRACTED]** The run found `K=0` for the tested classical/incoherent
+arm and bases; it does not prove that every such noise process is twirled in every QEC instrument. A
 QUANTUM/coherent bath **survives via its complementary (noncommuting) stabilizer** — the quantum DEPHASING
 bath is twirled by the Z-stab but SURVIVES via the X-stab. Real QEC measures BOTH X and Z stabilizers ⇒ a
 quantum bath of ANY type (dephasing / bit / leakage) is passive-record-legitimate, **on the same dense

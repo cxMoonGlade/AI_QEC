@@ -1,4 +1,11 @@
-# HANDOFF — PEPS crux RESOLVED (bond = gauge artifact, carrier FEASIBLE); NEXT = FET/loop truncator (2026-07-11)
+# SUPERSEDED HANDOFF — earlier PEPS crux resolution reopened (2026-07-11; reopened 2026-07-13)
+
+> **DO NOT BUILD ON THE STRONG VERDICT BELOW.** Exact checks established bounded `S_A` in the
+> tested cuts, but they did not establish that all bond growth is gauge, that a small
+> record-faithful bond exists, or that FET preserves the full QEC record/rare LER. Those bridges are
+> open after literature closure. The current boundary is
+> [`coherent_leakage_longrange_truncation_literature_closure_2026-07-13.md`](coherent_leakage_longrange_truncation_literature_closure_2026-07-13.md)
+> and ADR 0011. The text below is retained as historical provenance.
 
 > ## ★ READ THIS FIRST (the 60-second brief)
 > - **The crux is RESOLVED.** The RUNG-B question — *does the single-wire 2D PEPS per-edge

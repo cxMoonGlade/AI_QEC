@@ -24,7 +24,7 @@ per-cycle `theta_wg(t)`, `g_seep(t)` modulated by the shared latent `z_t` (logit
 gamma_phi map). **Epistemic class (c) DECLARED map with a swept sensitivity bracket** — same discipline as the
 existing gamma_phi fan-out (no literature-anchored TLS→leakage-rate transfer function is claimed; theory-first check
 for one is part of P2-i, and absence ⇒ the bracket is the honest object). Θ(0) must collapse to today's static
-physical cell exactly (the off-source identity).
+composite project fixture exactly (the off-source identity).
 
 ## 1. Phases + registered gates
 - **P2-i — Θ fan-out extension (src: `source/coupling.py`).** New fields + manifest + off-source identity.
@@ -74,7 +74,8 @@ physical cell exactly (the off-source identity).
   coupling-visibility boundary for leakage, exactly the G0/S-4-style honest map).
 - P2-3 (b): T1-vs-T0 record gates pass at the P1-c tier (z ≤ 4, sequential null).
 - P2-4 (c): T2 throughput within 2× of today's wc kernel.
-- Constants (c): fixture = real d3 XZZX cell (theta WG_L1=5e-3 calibrated, g_seep=0.09 base, b=0.9, arm A);
+- Constants (c): fixture = d3 XZZX cross-paper composite benchmark (theta calibrated to
+  `WG_L1=5e-3`, `g_seep=0.09`, unsupported project `b=0.9`, arm A);
   modulation bracket ±30% logit/linear (swept, not pinned); N per gate registered in the phase scripts.
 
 ## P2-ii PHASE-1 OUTCOMES (2026-07-06 — the seam + gate (a); gates (b)/(c) are the next phase)

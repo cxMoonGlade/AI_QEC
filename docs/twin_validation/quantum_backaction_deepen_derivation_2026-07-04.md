@@ -1,5 +1,11 @@
 # Quantum-back-action DEEPEN — derivation + predictions (predict-before-measure, 2026-07-04)
 
+> **HISTORICAL INTERPRETATION SUPERSEDED, 2026-07-13.** Preserve the run facts, but `K` is a
+> measure-all/omit non-invasiveness comparison, not a coherence or quantum-memory certificate, and
+> the three-time `M_mem` statistic is a local conditional-dependence diagnostic rather than an `iff`
+> test of the full record's Markov order. Current authority:
+> [`notion123_taxonomy_literature_closure_2026-07-13.md`](notion123_taxonomy_literature_closure_2026-07-13.md).
+
 **Status: DERIVATION written BEFORE the run.** Committed script:
 `outputs/twin_validation/quantum_backaction_deepen.py`. Deepens the C4-analog per the user's correction
 (2026-07-04): **K certifies COHERENCE / non-classicality, NOT a non-Markovian bath** — a coherent Markovian
@@ -12,11 +18,13 @@ bases); the notion-2 best-Markov-k memory machinery; noise_adapted 2411.09637.
 
 ## The two statistics
 
-- **K (coherence / non-classicality), both bases:** `K = Σ_{s1,s3}|Σ_{s2}P_all(s1,s2,s3) − P_skip2(s1,s3)|`
-  (milz Eq 9). K>0 ⇔ measurement-invasive ⇔ coherent (Leggett-Garg). Forged by a Markovian coherent control.
+- **K (protocol non-invasiveness), both bases:** `K = Σ_{s1,s3}|Σ_{s2}P_all(s1,s2,s3) − P_skip2(s1,s3)|`
+  (Milz Eq. 9). `K>0` witnesses inconsistency/invasiveness for this protocol family; it does not
+  identify coherence, the bath, or the memory carrier. A Markovian coherent control can make it positive.
 - **M_mem (memory / non-Markovian, the NEW discriminator):** the record's departure from Markov-order-1 —
-  `M_mem = Σ_{s1,s2,s3}|P_all(s1,s2,s3) − P(s1,s2)·P(s2,s3)/P(s2)|` (tests `s1 ⊥ s3 | s2`). M_mem=0 ⇔ Markov-1
-  ⇔ memoryless record; M_mem>0 ⇔ multi-time memory beyond Markov-1.
+  `M_mem = Σ_{s1,s2,s3}|P_all(s1,s2,s3) − P(s1,s2)·P(s2,s3)/P(s2)|` (tests `s1 ⊥ s3 | s2`).
+  Markov-1 implies `M_mem=0`; the reverse proves only this local three-time conditional independence.
+  `M_mem>0` refutes Markov-1 for the tested marginal, while `M_mem=0` does not certify the full process.
 
 **The 2-D classification (K × M_mem) is the headline:**
 

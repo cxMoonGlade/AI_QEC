@@ -28,7 +28,7 @@ ONE first user/use-case before scaling effort.
 | non-Markov temporal (classical latent) | closed-form autocov / from-scratch MC | analytic (exact) | any d (free) |
 | shared-latent Θ fan-out | closed-form cross-mechanism corr | analytic (exact) | any d (free) |
 | readout/reset SPAM (MA(1)) | MA(1) closed form (`g6_null_model_rederivation`) | exact | any d |
-| coherent (if kept) | QuTiP `mcsolve` / DM | — | d3 (twirled on the record anyway — notion-3) |
+| coherent (if kept) | QuTiP `mcsolve` / DM | missing full-record bridge | d3 only; record visibility is schedule/instrument dependent, not universally twirled |
 - **Rule (`FAITHFULNESS_PROTOCOL.md`): every mechanism DECLARED + BOUNDED vs its oracle before "done"; unbounded = STOP.**
 
 ## Reuse map — this is UNIFY + PACKAGE, not from-scratch

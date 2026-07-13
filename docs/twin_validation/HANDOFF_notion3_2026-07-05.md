@@ -1,5 +1,9 @@
 # HANDOFF — notion-2 / notion-3 arc (2026-07-05)
 
+> **HISTORICAL / SUPERSEDED ON TAXONOMY, 2026-07-13.** Run artifacts remain provenance; the old
+> `K` quantum-memory interpretation does not. Current authority:
+> [`notion123_taxonomy_literature_closure_2026-07-13.md`](notion123_taxonomy_literature_closure_2026-07-13.md).
+
 For a new session taking over. Read this + `notion3_session_findings_2026-07-05.md` FIRST. The goal of this doc
 is to let you continue WITHOUT re-walking the errors we already caught. Run the **`theory-fix` skill** on any
 clean/surprising result before you build on it.

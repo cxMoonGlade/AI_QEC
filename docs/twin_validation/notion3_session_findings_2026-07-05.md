@@ -1,5 +1,10 @@
 # Session findings + literature basis — notion-2 / notion-3 arc (2026-07-05)
 
+> **HISTORICAL / TAXONOMY SUPERSEDED, 2026-07-13.** Retain the run facts, but do not reuse the
+> old `K == notion-3 quantum memory` interpretation or the universal syndrome-twirl conclusion.
+> Current authority:
+> [`notion123_taxonomy_literature_closure_2026-07-13.md`](notion123_taxonomy_literature_closure_2026-07-13.md).
+
 Synthesis of the 2026-07-04/05 arc: the corrected observable, notion-2 (classical multi-time memory), notion-3
 (quantum non-classicality), the faithful-carrier corrections, and the theory-first grounding that reframed it.
 This is the index; per-item detail lives in the prereg `§8`/`§10` post-run sections + the memory files.
@@ -22,7 +27,7 @@ Whether notion-3 is intrinsically fragile or was lens-suppressed is the OPEN que
 | S1 | emit() ~60× (byte-identical) | commit b603a81 | — |
 | S2 | corrected observable = absolute multi-time Markov-order / CMI, error-A-clean | `corrected_multitime_observable_prereg.md` | Kam 2410.23779, Milz 1907.05807 |
 | S3 | **notion-2 PASS** — passive record carries classical 1/f multi-time memory distinguishable from a Markov null, realistic coupling, all controls fire | `corrected_multitime_observable_run.py` (exit 0, sha 2560478e), prereg §8 | Kam, Milz, Zheng, dMLE, noise-spectroscopy |
-| S4 | **notion-3 SEPARATION** — quantum K>0 vs classical K=0; K separates quantum from classical, memory doesn't; corner-confined | `notion3_quantum_vs_classical_run.py` (sha 7bef2895), prereg §8 | Milz + Budini DNI |
+| S4 | **declared-arm `K` separation** — quantum-bath arm `K>0` vs registered incoherent classical arm `K≈0`; corner-confined; no model-free origin claim | `notion3_quantum_vs_classical_run.py` (sha 7bef2895), prereg §8 | Milz/Smirne scope correction + internal run |
 | S5 | faithful ancilla-mediated carrier (v2, both-coupled) — K NON-MONOTONE, collapses ~178× at r=1 (DFS) | `notion3_ancilla_mediated_run.py` (sha 823342df), prereg §10 | wang/hatifi/layden/botzung DFS |
 | S6 | OQuPy PT/TEMPO independently reproduces K to ~5% (independent-GT for K) | `notion3_oqupy_pipeline.py` | — |
 | S7 | K-peak diagnostic: peak REAL + Fock-converged (K↑~1.38× at |r|≈0.3, ↓ at |r|=1) | `notion3_Kpeak_diagnostic_run.py` (sha a55982df), prereg §8 | Budini superclassical |
@@ -47,8 +52,9 @@ Milz 1907.05807 (Kolmogorov consistency = classicality) · Zheng 2601.22286 (syn
 dMLE 2602.19722 (differentiable syndrome NLL — used as computation not learner) · Quiroz 2412.16092 +
 Srivastava 2510.13051 + Dong 2502.05408 (classical dephasing/memory is 2nd-order — retires error C).
 
-**giarmatzi/white/montanalopez** (2308.00750 / 2106.11722 / 2511.16772): full process tensor Υ needs ACTIVE
-causal breaks ⇒ passive record carries only the classical multi-time outcome distribution (twin is OUT).
+**giarmatzi/white/montanalopez** (2308.00750 / 2106.11722 / 2511.16772): full process-tensor identification
+uses an intervention/tester family. A fixed passive record is a classical outcome distribution, but that fact
+does not identify the underlying process as classical or prove that every restricted quantum witness is impossible.
 
 **DFS / coupling-geometry (notion-3 mechanism):** wang 1409.0172 (`J_eff=(1−|r|)²`, DFS at r=1, bright at r=−1) ·
 hatifi 2508.07046 (dark/bright modes, quadratic near DFS node) · layden 1903.01046 (DFS only at |g₀|=|g₁|) ·

@@ -1,5 +1,10 @@
 # d5/d7 2D Density-Matrix PEPO Carrier — Pre-Registration (theory-first, LITERATURE-GROUNDED)
 
+> **CLOSED / HISTORICAL.** The doubled-wire DM-PEPO architecture is not a live carrier. Its p1c
+> tuple combines Miao- and McEwen-scale targets with project choices (`g_heat=0`, `b=.9`, arm A);
+> it is not a paper-validated physical cell. See
+> [`../NUMERICAL_PROVENANCE.md`](../NUMERICAL_PROVENANCE.md).
+
 Status: PRE-REGISTRATION **v2.5**, 2026-07-10. Predictions written BEFORE the engine build and
 BEFORE any rung-1/2 run; a miss is a finding, not a re-fit. v2 = the post-un-led-review revision
 (4 independent reviewers, 2 BLOCKERs + 9 MAJORs folded — REVIEW OUTCOMES appendix; v1 in git
@@ -73,7 +78,7 @@ them and that NTU remains the 2023–2024-validated workhorse.
 
 ## 1. The verified d3 base (facts this prereg builds FROM — per-row epistemic class; v2 fix)
 
-All on the exact d3 qutrit density matrix (3⁹×3⁹), p1c physical cell (WG_L1=5e-3, θ=0.102444,
+All on the exact d3 qutrit density matrix (3⁹×3⁹), p1c cross-paper composite benchmark (WG_L1=5e-3, θ=0.102444,
 g_seep=0.09, b=0.9, arm A; g_heat=0 per the handoff §3 — not recorded in the JSON cell dicts),
 non-selective sequential Lüders measurement on the DATA-REGISTER COMPILED circuit (S10 — all rows
 below carry that scope), straight cut A=[0,1,2] | B=[3..8] (boundary = d = 3). Scripts
@@ -119,8 +124,11 @@ anti-vacuity protocol.
    **per-sample conditioned: the mixture average lives OUTSIDE the TN** — verified BOND-FREE at d3
    (§1 last row). **Registered latent sweep (v2 fix — the fan-out may not be a frozen design point):**
    ≥2 fan-out geometries (uniform-global vs spatially-decaying Θ) × ≥2 coupling strengths. No
-   PEPO+non-Markovian seam is needed: that unsolved seam belongs to the parked quantum-bath
-   (notion-3 / Branch-B) line. notion-1/CP-div is NOT syndrome-reachable — only its notion-2 shadow.
+   PEPO+non-Markovian seam is needed for this registered classical-latent arm. Whether a
+   reduced-map divisibility/backflow feature is visible in a syndrome record is
+   **instrument- and schedule-dependent**; it is not ruled out by a general syndrome-twirling
+   theorem. This carrier registers only the notion-2/classical-record arm and makes no
+   notion-1 or process-level quantum-memory claim.
 3. **Codestate.** |m⟩_L for the rotated XZZX d×d patch built directly as a stabilizer-structure
    PEPS/PEPO (projector formula ∏_g (I+g)/2, each ≤4-site projector a local 2D gate); per-bond state
    dim ≤4 structural (XZZX mixed stabilizers) ⇒ per-bond operator dim d*_bond ≤ 16 hard ceiling;

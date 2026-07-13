@@ -33,6 +33,30 @@ Per CZ (Q_flux = higher-freq qubit; Q_stat = partner). Three pieces, applied as 
 4. The **|11>↔|20> crossing is clean** (2α off-resonant → <0.1% phase/population) — the CZ ITSELF is
    qutrit-faithful (matches Barends 1907.02510). |01>↔|10> (J1) suppressed <0.5%.
 
+## The computational/leakage-coherence null — exact scope (Appendix B, Eqs. B7–B9) [paper]
+
+Appendix B explicitly keeps the coherent exchange
+
+```text
+|11> -> sqrt(1-4L1)|11> + exp(i phi)sqrt(4L1)|02>,
+|02> -> sqrt(1-4L1)|02> - exp(-i phi)sqrt(4L1)|11>,
+```
+
+and writes the density matrix in computational/leakage blocks with off-diagonal `rho_coh`. In this
+paper's **Surface-17 schedule**, varying `phi` did not change leakage dynamics or LER, and setting
+`rho_coh=0` did not change the leakage projection/signatures or LER for the tested Z-basis logical
+state. The authors attribute the null to each ancilla–data pair interacting only once per cycle and
+the ancilla then being measured, which prevents interference between consecutive CZs on the same
+pair. They therefore use the incoherent model for the production simulations.
+
+**Boundary [paper -> ours].** This is a direct published counterexample to “cross-subspace coherence
+must always be retained,” but it is not a universal theorem. Its quantifiers are the frozen schedule,
+measurement boundary, Z-basis logical preparation, and tested model. Marshall–Kafri 2025 finds a
+systematic exact-vs-STA discrepancy under a different coherent-leakage construction. The two results
+are compatible and jointly require a schedule/model-specific record test. Also keep `rho_coh`
+separate from the **leaked-neighbour conditional phase** in §I-A: the latter remains operationally
+important even when the former is removed.
+
 ## The |3> extension + the |2>-vs-|3> GAP (Appendices H, I) [paper → ours] — the decisive result
 - **Superleakage L3 := |<03|S_CZ(|12><12|)|03>|² (Eq H2):** the |12>↔|03> avoided crossing at ω_int+|α|
   (coupling √3 J1) transfers |12>→|03> (a near-diabatic Landau–Zener passage). "L3 can be **high** depending

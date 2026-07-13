@@ -1,5 +1,12 @@
 # notion-3: why does K(|r|) PEAK at intermediate |r|? — Pre-Registration (theory-first)
 
+> **HISTORICAL / INTERPRETATION SUPERSEDED, 2026-07-13.** The `K(|r|)` peak and convergence
+> checks remain experiment facts for the declared measure-all/omit protocol family. Calling `K`
+> “notion-3,” “quantum memory,” or a one-record non-classicality certificate is retracted. Treat
+> memory-times-misalignment language below as a model interpretation, not an identified cause.
+> Current authority:
+> [`notion123_taxonomy_literature_closure_2026-07-13.md`](notion123_taxonomy_literature_closure_2026-07-13.md).
+
 Status: PRE-REGISTRATION, 2026-07-05. Predictions written BEFORE the run; a miss is a finding, not a re-fit.
 
 **The puzzle.** On the faithful joint-parity carrier (2 data + 1 ancilla + shared σz pseudomode, |++> code

@@ -1,5 +1,16 @@
 # Theory-first grounding — the SIMULATOR's non-Markovian legitimacy signal (2026-07-04)
 
+> **TAXONOMY CORRECTED, 2026-07-13.** This historical synthesis conflates reduced-map
+> divisibility/backflow, observed-record Markov order, and process-level quantum memory in several
+> places. In particular, notion-3 is not identical to a fixed `K`/Kolmogorov violation and notion-1
+> is not known to be universally twirled by a QEC instrument. It also treats the production
+> `OneOverFDriftSource` as its Gaussian second-cumulant surrogate; the source is actually an
+> explicit finite-RTN sum. A later exact gate finds BLP backflow for continuous-CTMC and cycle-held
+> free-induction lifts, but production uses a different `z -> Theta` QEC map; the source alone has
+> no reduced-map status and the production bridge remains open. Use
+> [`notion123_taxonomy_literature_closure_2026-07-13.md`](notion123_taxonomy_literature_closure_2026-07-13.md)
+> as the current authority.
+
 **Status: theory-first deliverable (literature-grounded), 2026-07-04.** All 15 named papers already had
 committed 精读 reading notes; this synthesizes the LOAD-BEARING core (read in full this session: milz
 1907.05807, noise_adapted 2411.09637, ziyad 2512.08893, RHP 0911.4270, BLP 0908.0238, Kam 2410.23779,
@@ -11,21 +22,25 @@ a **critical refinement the framing needs.**
 
 ## 0. The one-line correction the reading forces
 
-The user's Problem-1 conflated two *distinct* notions of "non-Markovian." The literature separates them, and
-**our current source has one but NOT the other:**
+The user's Problem-1 conflated distinct objects called "non-Markovian." The literature separates
+them; the production source has record memory, while its exact reduced-map divisibility is not
+settled by the Gaussian surrogate:
 
-| # | notion | operational def | **our OneOverFDriftSource** (8 weak RTNs, Gaussian) | passive-syndrome-visible? | forgeable by | anchor |
+| # | notion | operational def | current source/surrogate status | passive-syndrome-visible? | forgeable by | anchor |
 |---|---|---|---|---|---|---|
-| **1** | **CP-divisibility breaking** | reduced-map rate `γ(t)<0` ⇔ coherence revival ⇔ info backflow | **NO — CP-DIVISIBLE (RHP=BLP=0)** | coherence-twirled ⇒ likely NO (open) | requires the breaking regime | RHP 0911.4270 Eq4; BLP 0908.0238 |
+| **1** | **reduced-map divisibility/backflow tests** | CP-divisibility and trace-distance backflow are distinct criteria; they coincide only in restricted models | **Gaussian surrogate: CP-divisible; two finite-RTN FID lifts: BLP-positive; production QEC map: open** | instrument- and schedule-dependent; open here | a classical random-field model can already show reduced-state backflow | Bergli 0904.4597; Wold 1206.2174; RHP 0911.4270; BLP 0908.0238; Lo Franco *et al.* PRA 85, 032318 |
 | **2** | **classical multi-time record memory** | record's Kolmogorov Markov-order `> 1` | **YES** (1/f memory) | **YES** (streaks; learnable) | higher-order classical Markov/HMM | Kam 2410.23779; Zheng 2601.22286; milz 1907.05807 |
-| **3** | **non-classicality (discord)** | record irreproducible by ANY classical process (Kolmogorov *violation*) | **NO** (classical source ⇒ Kolmogorov-consistent) | — | genuinely quantum only | milz 1907.05807 |
+| **3** | **process-level quantum memory/non-classical temporal correlations** | a property of a multi-time process relative to allowed interventions; a fixed observed record is only one tester projection | **not identified by this classical-source record experiment** | requires an intervention/tester family for a process-level classification | a fixed record can be reproduced by distinct underlying processes | Pollock *et al.* PRL 120, 040405; Milz *et al.* PRX 10, 041049; Giarmatzi & Costa, Quantum 5, 440; Taranto *et al.*, Quantum 8, 1328 |
 
-**(a-exact) The load-bearing physics:** classical Gaussian dephasing gives `ρ_01(t)=ρ_01(0)e^{−χ(t)}`,
+**(a-exact for the Gaussian surrogate only):** classical Gaussian dephasing gives `ρ_01(t)=ρ_01(0)e^{−χ(t)}`,
 `χ(t)=∫₀ᵗ(t−τ)C(τ)dτ`, so the RHP/BLP dephasing rate is `γ(t)=½∫₀ᵗ C(τ)dτ`. Our source has
-`C(τ)=Σ_k v_k² e^{−2γ_k τ} ≥ 0` ⇒ **`γ(t) ≥ 0` monotone ⇒ CP-DIVISIBLE, RHP=BLP=0** (RHP 0911.4270 Eq 4:
+the same two-point covariance `C(τ)=Σ_k v_k² e^{−2γ_k τ} ≥ 0`, so the **Gaussian surrogate** has
+`γ(t) ≥ 0` and is CP-divisible (RHP 0911.4270 Eq 4:
 `g=0` for `γ≥0`; BLP 0908.0238: no trace-distance backflow). The coherence decays **non-exponentially**
-(memory, non-Markovian in sense 2) but **monotonically** (CP-divisible, Markovian in sense 1). ⇒ **anchoring
-legitimacy on RHP/BLP would score our source ZERO** — the wrong signal for a classical Gaussian 1/f bath.
+but monotonically in that surrogate. The production source samples eight finite RTNs; its slowest
+default mode has `v/gamma≈7.07`, so the surrogate result cannot be transferred to it without the
+exact product-coherence gate. That gate now passes for two declared free-induction lifts; it does not
+close the source-to-production-channel bridge.
 
 ## 1. Deliverable (a) — is classical 1/f non-Markovian real / unforgeable / QEC-consequential / syndrome-visible?
 
@@ -33,10 +48,10 @@ legitimacy on RHP/BLP would score our source ZERO** — the wrong signal for a c
   included; a classical dephasing process with `γ(t)<0` breaks CP-divisibility (RHP 0911.4270, BLP 0908.0238
   central-spin example `γ(t)=AN·tan(2At)`). Milz 1907.05807: classicality = Kolmogorov consistency, a
   reduced-map/record property (no quantum substrate needed) — **point D confirmed.**
-- **⚠ BUT our current source does NOT break CP-divisibility** (§0, a-exact). To reach notion-1 we need the
-  **coherence-revival regime** — a strong/slow *single, non-Gaussian* RTN (Anderson–Kubo revival; `v>γ_sw`),
-  reachable via `RTNSource`, NOT the 8-weak-RTN Gaussian `OneOverFDriftSource`. Its non-Markovianity is
-  **notion-2 (classical multi-time memory)** only.
+- **The production source's CP-divisibility is OPEN.** A strong/slow single RTN has the exact
+  Anderson–Kubo revival for `v>γ_sw`, but an eight-RTN product must be evaluated directly; covariance
+  positivity alone settles only the Gaussian surrogate. Its emitted rate record can still carry
+  notion-2 classical multi-time memory independently of this open notion-1 row.
 - **QEC-consequential (user CORRECT):** noise_adapted 2411.09637 — CP-*indivisible* noise makes standard
   stabilizer worst-case fidelity **collapse below 0.5** (`F²_min≈0.375` for [[5,1,3]] on non-Markovian AD;
   P-divisibility `dλ_k/dt≤0` violated on revival). Kam 2410.23779 — **streaky (multi-time) correlations on
@@ -44,13 +59,13 @@ legitimacy on RHP/BLP would score our source ZERO** — the wrong signal for a c
   demo is *quantum* AD (not classical dephasing); Kam's is *classical multi-time* (notion-2, phenomenological,
   not CP-div). So the QEC-consequence is grounded for notion-2-on-the-record (Kam) and for notion-1-in-the-map
   (noise_adapted), by *different* papers.
-- **Syndrome-visible (user CORRECT, for notion-2):** ziyad 2512.08893 (syndrome-as-memory: non-exponential
+- **Syndrome-visible (for notion-2 in the cited models):** ziyad 2512.08893 (syndrome-as-memory: non-exponential
   `⟨Z̄⟩`); Kam (multi-time timelike-string streaks); Zheng 2601.22286 (spatiotemporal Pauli noise **learnable
-  from syndrome ~2×10⁴ shots**). **For notion-1 on the passive record: LIKELY TWIRLED OUT** — Watkins-Quiroz
-  2501.06619: ensemble-averaged classical-noise state is **block-diagonal in the stabilizer representation, no
-  inter-sector coherence** ⇒ the syndrome distribution is classical; White-Pollock 2106.11722: a
-  passive/unitary-only (no causal-break) record can **INFER but not DIRECTLY measure** the memory. ⇒ coherence
-  revival (notion-1) may not survive the passive syndrome record — an open, possibly-negative result.
+  from syndrome ~2×10⁴ shots**). **For reduced-map criteria on the passive record: OPEN AND
+  INSTRUMENT-SPECIFIC.** Watkins-Quiroz 2501.06619 derives block diagonality for its classical-noise/stabilizer
+  setting; White-Pollock 2106.11722 shows that passive data do not identify a full process tensor. These facts
+  do not imply a universal syndrome-twirling theorem. The registered schedule/instrument must be evaluated
+  directly before making a visibility claim.
 
 ## 2. Deliverable (b) — the RIGHT passive-record observable
 
@@ -125,13 +140,15 @@ publishable finding (a passive-record no-go for coherence-revival, or its surviv
 
 ## 5. Epistemic status + provisional flags
 
-- **(a) exact:** §0 CP-divisibility of Gaussian 1/f (`γ=½∫C≥0`); RHP Eq4; BLP contraction; milz Kolmogorov
+- **(a) exact:** §0 CP-divisibility of the declared Gaussian surrogate (`γ=½∫C≥0`), not the
+  production finite-RTN source; RHP Eq4; BLP contraction; milz Kolmogorov
   consistency; Kam 2-point-insufficiency; dMLE exact NLL = partition function.
 - **(b) band:** the notion-2 memory `N_detect` on Class-1/2 (to be sized with the RIGHT observable — the prior
   Step-1 number was Class-0 + 2-point-flavoured, superseded).
 - **(c) gate/design:** siting Class-1/2; the forgeability Level-1/3 ladder; drift vs correlation split.
-- **Provisional (NOT built-upon):** "notion-1 is twirled out of the passive record" is PROVISIONAL (grounded
-  by Watkins-Quiroz block-diagonality + White-Pollock passive-inference, but not yet computed in our setting);
+- **Provisional (NOT built-upon):** visibility of reduced-map divisibility/backflow features in the passive
+  record is OPEN and must be computed for the registered instrument; Watkins-Quiroz block-diagonality and
+  White-Pollock passive-inference limits do not settle it universally.
   the novelty-gap claim (c) is PROVISIONAL pending a deeper-read confirmation of the remaining notes.
   **UPDATE 2026-07-04 (observable-correction session): full-text-read giarmatzi 2308.00750, tn_decoders
   2412.13739, montanalopez 2511.16772, Harper-Flammia 2303.00780** (re-confirming Kam/Milz). Net effect:

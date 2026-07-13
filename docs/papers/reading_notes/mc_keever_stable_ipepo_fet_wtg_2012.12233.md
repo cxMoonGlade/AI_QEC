@@ -24,13 +24,14 @@
 ## Metadata [paper]
 
 - **Authors / affiliation:** C. Mc Keever and M. H. Szymanska, Department of Physics and Astronomy, University College London.
-- **Venue / status:** arXiv:2012.12233v1 [quant-ph], dated December 22, 2020. Preprint (appears to be a method-development paper leading to the later 2512.01781 by J. Dunham & M. H. Szymanska). Not yet journal-tracked in our records.
+- **Venue / status:** Physical Review X **11**, 021035 (2021), DOI
+  `10.1103/PhysRevX.11.021035`; this note reads arXiv:2012.12233v1, dated 22 Dec 2020.
 - **Type:** Method + numerical simulation (tensor-network algorithm for 2D open quantum lattice dynamics; benchmarks against exact solutions of the dissipative transverse Ising model + comparison with Corner Space Renormalization for a driven-dissipative hard core boson model).
 - **Key references for our purposes:** [68] G. Evenbly, "Gauge fixing, canonical forms, and optimal truncations in tensor networks with closed loops," Phys. Rev. B 98, 085155 (2018) — the original FET/WTG paper for iPEPS; [63] Kshetrimayum, Weimer & Orus (2017) — the original iPEPO+SU for 2D steady states; [79] Foss-Feig et al. (2017) — the exact solution family used as benchmark.
 
 ## Executive summary [paper]
 
-The paper develops a **tensor network method for 2D open quantum lattice dynamics directly in the thermodynamic limit**, using an **iPEPO (infinite Projected Entangled Pair Operator)** ansatz for the density matrix. The central innovation is adapting **Full Environment Truncation (FET)** and **Weighted Trace Gauge (WTG)** — previously introduced by Evenbly [68] for closed-system iPEPS — to the **mixed-state (iPEPO) context**, where the truncation objective is a **mixed-state fidelity** (Eq. 9) rather than the pure-state overlap used by Evenbly.
+The paper develops a **tensor network method for 2D open quantum lattice dynamics directly in the thermodynamic limit**, using an **iPEPO (infinite Projected Entangled Pair Operator)** ansatz for the density matrix. The central innovation is adapting **Full Environment Truncation (FET)** and **Weighted Trace Gauge (WTG)** — previously introduced by Evenbly [68] for closed-system iPEPS — to the **mixed-state (iPEPO) context**. Its Eq. 9 objective is the normalized Hilbert-Schmidt overlap (the Wang–Yu–Yi alternative fidelity), not Uhlmann fidelity and not a QEC-record distance.
 
 The method proceeds as a TEBD-like application of Trotterized Lindblad dynamics (Eqs. 1-8). Each timestep: apply the dynamical map (Krylov subspace without explicit `e^{τL}` construction), SVD-decompose the enlarged bond pair, keep singular values above threshold `ε_D' = 10^{-8}`, then **truncate from D' back to D** using FET — which constructs the **Hilbert-Schmidt bond environment tensor Υ_jl** from the effective environment `E_hs` and optimizes a Rayleigh quotient to find the isometries `ũ, ṽ` and bond matrix `σ̃` that maximize the mixed-state fidelity between truncated and untruncated networks (Appendix B, Fig. 8-9). **WTG fixes the gauge** across the truncated bond, enabling efficient reuse of the environment as the CTMRG initial guess for the next timestep.
 
@@ -87,7 +88,7 @@ Define `R ≡ σv` (Fig. 9c). For fixed v, find `R_m` maximizing the Rayleigh qu
 After FET finds the optimal isometries, the gauge across the newly truncated bond is fixed to WTG as described in Evenbly [68]. This is analogous to fixing the "canonical form" for a cyclic TN: the bond matrix σ is absorbed symmetrically such that the environment `E_hs` can be **recycled** as the initial guess for the CTMRG procedure that precedes the next FET step. This significantly reduces the number of CTMRG iterations needed.
 
 **Simple Update (SU) baseline (ln 483-493):**
-SU bypasses FET/WTG entirely: `ũ → ũ_su` and `ṽ → ṽ_su` are D'×D matrices with 1s on the diagonal and 0s elsewhere; `σ̃_su` retains the D largest singular values of σ'. This is equivalent to assuming the environment is **identity** — i.e., the bond being truncated is isolated from the network. The paper proves this is **not optimal** with respect to the mixed-state fidelity objective.
+SU bypasses FET/WTG entirely: `ũ → ũ_su` and `ṽ → ṽ_su` are D'×D matrices with 1s on the diagonal and 0s elsewhere; `σ̃_su` retains the D largest singular values of σ'. This is equivalent to assuming the environment is **identity** — i.e., the bond being truncated is isolated from the network. It is the environment-blind baseline against which the paper benchmarks FET; this comparison is not a theorem about every network or every observable.
 
 **Cycle Entropy S_cycle (Appendix E, ln 1451-1482):**
 Adapted from Evenbly [68] for mixed states. Given the bond environment tensor Υ and bond matrix σ:
@@ -96,10 +97,10 @@ S_cycle = -Σ_α λ̃_α log₂(λ̃_α)                                     (Eq
 ```
 where `λ̃_α = |λ_α| / (Σ_α |λ_α|)` are normalized absolute eigenvalues of `(σ ⊗ σ)Υ`.
 
-- **S_cycle ≈ 0**: no significant internal correlations → WTG truncation alone (discard small WTG coefficients) is near-optimal; FET not needed.
-- **S_cycle ⪆ 10^{-3}** [68]: internal correlations are present → FET is required to prevent accumulation. The paper finds that starting from a product state, S_cycle quickly grows, and FET is needed in almost all cases.
+- **S_cycle = 0**: Evenbly's bridge/cycle-reduction condition licenses direct top-WTG truncation; sufficiently small values motivate a near-optimal heuristic.
+- **S_cycle ⪆ 10^{-3}** is an empirical rule used in this algorithmic setting, not a universal physical threshold. The paper observes growth of `S_cycle` in its examples and uses iterative FET to control it.
 
-**Internal correlations** are defined as correlations in the TN that **do not contribute to any physical observable** of the quantum state but cause computational problems (ill-conditioned environments, breakdown of algorithms) if allowed to accumulate [68].
+**Cycle/internal correlations** here are properties of the cyclic tensor-network representation. `S_cycle` diagnoses loop structure, but a positive value or a small WTG coefficient is not by itself a physical-versus-redundant classifier for an arbitrary state or observable.
 
 ## The MECHANISM (for implementation) [paper -> ours]
 
@@ -109,21 +110,21 @@ where `λ̃_α = |λ_α| / (Σ_α |λ_α|)` are normalized absolute eigenvalues 
     1. After a TEBD step, each pair of tensors is contracted with the dynamical map → one big tensor with an enlarged bond (D' > D).
     2. SVD is applied, yielding left/right isometries and singular values. **The SVD itself is a local, environment-blind decomposition.**
     3. FET then **re-embeds** the truncation decision in the full network context: it constructs `Υ_jl` by contracting the enlarged tensors into the CTMRG-approximated `E_hs` environment. This **4th-rank tensor** `Υ_jl` encodes the Hilbert-Schmidt norm of the remainder of the infinite network hanging off the two sites sharing the bond.
-    4. The optimal isometries `ũ, ṽ` and bond matrix `σ̃` are those that, when inserted into the network, maximize the **global mixed-state fidelity** between the truncated and untruncated states. The optimization is reduced to a **generalized eigenvalue problem** per bond, with alternating sweeps (fix v, optimize uσ; fix u, optimize vσ).
-    5. **Critically**, FET **removes internal correlations** — redundancy in the bond degrees of freedom that carries no physical information. This is why S_cycle is lower for WTG+FET than SU (Fig. 5a).
+    4. The isometries `ũ, ṽ` and bond matrix `σ̃` are optimized against the CTMRG-supplied environment to maximize Eq. 9's **normalized Hilbert-Schmidt overlap** between the represented truncated and untruncated networks. Alternating generalized-eigenvalue sweeps find a stationary candidate; the paper gives no global-optimum theorem for the non-convex joint problem.
+    5. In the reported examples, FET lowers `S_cycle` relative to SU. This is evidence that it controls loop/internal correlations for those networks, not proof that every discarded direction is physically redundant.
 
 - **WTG mechanism — gauge fixing:**
     1. After truncation, the gauge across the bond is ambiguous (any invertible matrix G and its inverse can be inserted on either side without changing the physical state).
-    2. WTG fixes this gauge by absorbing the bond matrix in a **balanced way** that makes the Schmidt weights (`σ̃` diagonal) the natural truncation measure in a translation-invariant network.
+    2. WTG fixes this gauge by absorbing the bond matrix in a balanced way. On a general loop its diagonal coefficients are not physical Schmidt weights; that identification is licensed only under Evenbly's zero-cycle/bridge condition.
     3. Practical benefit: the `E_hs` from the previous timestep can be reused as the CTMRG initial guess, reducing iteration count.
 
 - **FET vs SU — the essential difference:**
     - SU: truncates based on **local** singular values only. Equivalent to minimizing `||A'_j,l - A_j σ A_l||` in Frobenius norm assuming all other bonds are identity. Ignores the rest of the network.
-    - FET: truncates to maximize **global** mixed-state fidelity. Equivalent to minimizing `||ρ - φ||` in Hilbert-Schmidt norm weighted by the actual network environment. Captures that truncating bond (j,l) affects the entire 2D tensor tangle.
+    - FET: truncates to maximize the environment-contracted normalized Hilbert-Schmidt overlap of Eq. 9. The environment is CTMRG-approximated, and this objective is neither trace distance nor a full-record/strategy norm.
 
 - **Cycle entropy as a diagnostic:**
-    - If S_cycle < ~10^{-3}: internal correlations are negligible → the simpler WTG-truncation (discard small WTG coefficients without FET optimization) suffices.
-    - If S_cycle >= ~10^{-3}: FET is required. The paper shows S_cycle quickly exceeds this threshold in all non-trivial dynamics (Fig. 5a: S_cycle saturates at ~10^{-1} for D=4 in moderate damping).
+    - `S_cycle=0` has the source-backed direct-truncation interpretation. A small positive value, including the paper's `~10^{-3}` working scale, is a model-dependent heuristic.
+    - At appreciable nonzero cycle entropy the paper applies iterative FET; it does not prove that one universal threshold decides when FET is necessary or sufficient.
 
 - **FET's failure regime — correlation lengths and hopping dominance (Fig. 3c):**
     In the weak dissipation regime (V/γ = 4.0, hx/γ = 0), where hopping dominates and correlations are longer-ranged:
@@ -147,11 +148,11 @@ where `λ̃_α = |λ_α| / (Σ_α |λ_α|)` are normalized absolute eigenvalues 
 - **Magnetization** `m_x(t) = ½(tr(σ̂_x ρ_j) + tr(σ̂_x ρ_l))` (ln 567), averaged over two-site unit cell.
 - **Purity** `Π₁ = ½(tr(ρ²_j) + tr(ρ²_l))` — single-site reduced density matrix purity.
 - **Spin-spin correlations** `S^{xx}_{12}(t) = tr(σ̂_x_j ⊗ σ̂_x_l ρ_t)` (nearest neighbor) and `S^{xx}_{13}(t)` (next-nearest neighbor, same row/column, distance 2), averaged over 4 equivalent pairs each.
-- **Infidelity of truncation** `I(t) = 1 - F(t)` averaged over the 4 Trotter layers per timestep, where F is the mixed-state fidelity Eq. 9 — measures how much information is lost per truncation step.
+- **Alternative-overlap loss** `I(t) = 1 - F(t)` averaged over the 4 Trotter layers per timestep, where `F` is Eq. 9's normalized Hilbert-Schmidt overlap — an internal truncation objective, not Uhlmann infidelity or lost-record probability.
 - **Trace distance** `T₂(t) = ½ tr(√((ρ_jl - φ_jl)†(ρ_jl - φ_jl)))` (ln 741) — used for **quantitative comparison** between WTG+FET and SU against the exact nearest-neighbor reduced density matrix. Averaged over the 4 nearest-neighbor pairs.
 - **Cycle entropy** `S_cycle(t)` (Eq. E1) — diagnostic for internal correlation accumulation in the cyclic TN.
 - **Convergence criterion** `ε_t = |tr(ô ρ_{t+τ}) - tr(ô ρ_t)| / (|tr(ô ρ_t)| τ) < 10^{-6}` (Eq. 13) for steady state.
-- **Regime where informative:** infidelity I(t) is the most direct measure of truncation quality — it tracks the fidelity between the state with the enlarged bond (no truncation) and the state after truncation. Trace distance T₂ against an exact solution is the gold standard but requires the exact reference. Cycle entropy predicts when FET is needed vs when WTG alone suffices. **Epistemic class:** (b) prediction band for all metrics against exact; (c) heuristic for I(t) and S_cycle when no exact reference exists.
+- **Regime where informative:** `I(t)` tracks the paper's chosen environment-overlap objective between the enlarged-bond and truncated representations. The reported two-site trace distance against an exact solution is a stronger local benchmark but still not a global or historical-record certificate. `S_cycle` is a loop diagnostic. **Epistemic class:** (b) empirical benchmark in the studied models; (c) heuristic when transferred to a new PEPS/QEC record.
 
 ## Findings + numbers [paper]
 
@@ -173,8 +174,8 @@ where `λ̃_α = |λ_α| / (Σ_α |λ_α|)` are normalized absolute eigenvalues 
 **Key comparison with SU (Fig. 4, 5):**
 - SU shows **no systematic improvement** in T₂ as D increases beyond 3 (Fig. 4a inset): T₂ at D=3,4,5,6 are all similar and poor.
 - WTG+FET shows **clear systematic improvement**: each increment of D reduces T₂.
-- This is because SU's local truncation accumulates **internal correlations** (S_cycle grows and stays high) while FET's environment-aware truncation removes them.
-- **Practical consequence:** increasing D under SU is wasteful — the extra bond dimension gets consumed by internal correlations rather than physical entanglement. FET ensures bond dimension is used for physical correlations.
+- In these benchmarks SU has higher `S_cycle`, while FET's environment-aware optimization lowers it and improves the reported local errors.
+- **Bounded consequence:** extra `D` under SU is inefficient in the studied models. The results do not prove that FET retains only physical correlations or that its discarded directions are null for a different observable.
 
 ## Limitations [paper]
 
@@ -190,7 +191,7 @@ where `λ̃_α = |λ_α| / (Σ_α |λ_α|)` are normalized absolute eigenvalues 
 
 - **PEPOs are not inherently positive** (ln 252-261). The iPEPO ansatz does not guarantee positivity of the density matrix. The paper relies on the CPTP nature of the dynamical map to maintain physicality in practice. The problem of deciding if an infinite MPO represents a physical state is provably undecidable [69].
 
-- **S_cycle diagnostic has thresholds from Evenbly [68]** (S_cycle ⪆ 10^{-3} requires FET). These are **heuristic** thresholds, not theorem-backed. The paper does not re-derive or challenge them for the mixed-state case.
+- **S_cycle working scale is heuristic.** The paper uses the Evenbly-inspired `~10^{-3}` scale, but does not establish a universal threshold or show that FET is the unique valid response for every positive `S_cycle`.
 
 - **Limited demonstrated resolution:** d=2 only; D up to 6 (steady state) or 5-6 (dynamics); χ up to 15; tγ up to ~10. Larger systems, larger local Hilbert spaces, and longer times are not demonstrated. The D=1 mean-field solution is physically wrong in most regimes, and the gap between D=1 and D=4 is large — the method needs D≥4 to outperform mean field.
 
@@ -218,7 +219,10 @@ where `λ̃_α = |λ_α| / (Σ_α |λ_α|)` are normalized absolute eigenvalues 
 
 - **The S_cycle diagnostic is directly applicable** to qec_twin's composed carrier. Our `composed.py` DEM+HMM carrier is an acyclic 1D network (no closed loops) and doesn't suffer from internal correlations. But if we build a 2D iPEPO carrier, S_cycle would be the essential diagnostic for whether our truncation is using bond dimension efficiently.
 
-- **The 10× trace distance improvement of FET over SU** (Fig. 4-5) gives a quantitative bound on how much better a full-environment truncation is over simple update. For our decision-making: implementing FET for a 2D carrier would yield at minimum ~1 order of magnitude better accuracy at the same D, or equivalently, reach the same accuracy at D-1 or D-2.
+- **The roughly 10× trace-distance improvement of FET over SU** (Figs. 4–5) is a numerical
+  result for the paper's moderate-damping benchmark and tested `D=4–6`, not a transferable lower
+  bound. It motivates a project comparison but does not predict a minimum gain, an equivalent
+  `D` reduction, long-range-record accuracy, or LER accuracy for the QEC carrier.
 
 - **Concrete reuse candidates** if we build a 2D iPEPO carrier:
     1. The FET alternating optimization (Fig. 9 + Appendix C) as a drop-in replacement for itrSU step 3 (the isometry selection after SVD)

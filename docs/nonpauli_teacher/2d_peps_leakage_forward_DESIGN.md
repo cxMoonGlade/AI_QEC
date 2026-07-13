@@ -2,6 +2,11 @@
 
 Status: DESIGN (design-first, pre-build). 2026-06-23. Mainline code commit-gated.
 
+> **HISTORICAL / ARCHITECTURE SUPERSEDED.** The DM-PEPO conclusions below are not current
+> authority. The `WG_L1=5e-3, g_seep=.09, b=.9` tuple is a cross-paper composite project fixture,
+> not a real leakage cell; the record-faithfulness and long-range truncation bridge is open. See
+> [`../NUMERICAL_PROVENANCE.md`](../NUMERICAL_PROVENANCE.md) and ADR 0011.
+
 ---
 ## ✅ FEASIBILITY OUTCOMES (2026-07-09) — the §2/§correction(4) central question ANSWERED at d3
 
@@ -11,7 +16,7 @@ float32 `1-eps` rounding that had silently corrupted the first run's chi(1e-8) c
 
 1. **R-gate — D_rho(R) SATURATES (`pepo_feasibility_drho_vs_round_d3.py`, VERDICT
    SATURATE_FEASIBLE).** The exact d3 rho evolved through R=1..10 within-cycle rounds
-   (real leakage cell WG_L1=5e-3/g_seep=0.09/b=0.9 + NON-selective sequential Lueders channel)
+   (composite project fixture WG_L1=5e-3/g_seep=0.09/b=0.9 + NON-selective sequential Lueders channel)
    keeps the operator-Schmidt bond across the straight column cut at **chi(1e-6)=16, FLAT over
    10 rounds** (= the codestate's own operator rank: 2 crossing stabilizers → (2²)²); purity
    decays monotonically 0.991→0.915 (mechanism live); corrected chi(1e-8)≈50-53 (16 codestate

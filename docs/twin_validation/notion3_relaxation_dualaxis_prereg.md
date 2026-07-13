@@ -1,5 +1,13 @@
 # notion-3 on the GENUINELY-QUANTUM component: relaxation × dual-axis (X+Z) — Pre-Registration (theory-first)
 
+> **SUPERSEDED INTERPRETATION, 2026-07-13.** The physical shared-mode model and historical run
+> design remain useful, but `K=P_all-P_skip` is not a model-free quantum-memory certificate.
+> Non-unital dynamics can be non-random-unitary while a fixed record still fails to identify the
+> process-level origin; conversely, Markovian coherence-generating/detecting dynamics can yield
+> `K>0`. Use
+> [`notion123_taxonomy_literature_closure_2026-07-13.md`](notion123_taxonomy_literature_closure_2026-07-13.md)
+> for the current taxonomy.
+
 Status: PRE-REGISTRATION, 2026-07-05. Predictions written BEFORE the run; a miss is a finding, not a re-fit.
 
 **DECISION (2026-07-05, user): the σ− relaxation is modelled as EMISSION INTO THE SHARED MODE**
@@ -210,8 +218,8 @@ joint (X,Z,time) record structure), robustly across the RWA-valid band. **SCOPE 
 non-reproducibility w.r.t. the **tested incoherent-AD family**, NOT a proof against all classical/simulable
 processes (NOT tested: coherent single-qubit unitary + AD, general Pauli/depolarizing channels). Because K itself
 is forgeable, this is **anti-toy DISCRIMINABILITY from the incoherent matched null — the simulator's validity
-criterion ([[feedback-simulator-is-goal-twin-is-next]]) — NOT a full model-free notion-3 (Kolmogorov
-non-classicality) certification.** Epistemic: the "every-axis-K-forgeable" facts + the axis-AD CPTP/non-unitality
+criterion ([[feedback-simulator-is-goal-twin-is-next]]) — NOT a full model-free process-level
+quantum-memory certification.** Epistemic: the "every-axis-K-forgeable" facts + the axis-AD CPTP/non-unitality
 are (a)-exact; the min-TV floor + N_detect band are (b); the TV≥1e-3 feasibility threshold is (c). **arc LESSON:
 two false-positives (K robust; K_X survives), BOTH caught by a from-scratch matched-null attack, never by "being
 careful" — the null MUST be adversarially red-teamed before any survival claim.**
@@ -246,7 +254,7 @@ residual MAY be the mode-mediated quantum correlation+memory a coherent CLASSICA
 of the FINITE coherent-null family + the non-convex 13–16-param scipy+DE search. **Established:** distinguishability
 from INCOHERENT nulls (robust, §9), driven by the σ− sector's COHERENCE, amplified by coupling+memory. **Open:** a
 richer coherent-classical family (per-round-varying unitaries, general correlations) + a heavier optimizer could
-reduce the residual further. Still NOT a full model-free notion-3 (Kolmogorov) certification.
+reduce the residual further. Still NOT a full model-free process-level quantum-memory certification.
 
 ## 11. THEORY-FIX literature closure (2026-07-05) — grounding + one correction
 

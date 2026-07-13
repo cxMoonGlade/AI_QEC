@@ -103,7 +103,7 @@ queries are enough to mark the row **missing**, not enough to claim a globally
 | `gamma_per_cycle` | `p=(1-e^-2gamma)/2` | stationary symmetric chain | endpoint transition matrix | Bergli Eq. (15) + source code | matched |
 | `v,gamma` | solve second-order FID ODE | longitudinal pure dephasing | `L_k(t)` | Bergli Eq. (35), Wold Eq. (12) | matched |
 | `K` chains | multiply characteristic functions | statistical independence | `L(t)=product_k L_k(t)` | Bergli before Eq. (39) + source construction | matched |
-| default values | unit conversion `v cycle`, `gamma cycle` | diagnostic Hamiltonian declared | three strong modes | project arithmetic + preregistered gate | matched |
+| default values | unit conversion `v cycle`, `gamma cycle` | diagnostic Hamiltonian declared | three strong modes | project arithmetic + registered gate (imperfect Git preregistration provenance) | matched |
 | `L(t)` | test positive excursions of `|L|` | pure dephasing optimal pair | BLP witness | BLP Eqs. (9)–(12) + exact gate | matched for both named lifts |
 | source endpoints | full production fan-out and instrument | actual schedule/gates/reset | QEC record law | no bridge | unsupported |
 
@@ -130,7 +130,8 @@ queries are enough to mark the row **missing**, not enough to claim a globally
 - `F4: closed for the project-defined held-cycle free-induction diagnostic`
 - `F5: missing/open`
 
-**Post-closure gate:** the preregistered two-formulation diagnostic passed; see
+**Post-closure gate:** the registered two-formulation diagnostic passed and was independently
+reproduced, but its first run preceded the prediction document's Git commit; see
 [`finite_rtn_exact_cpdiv_result_2026-07-13.md`](finite_rtn_exact_cpdiv_result_2026-07-13.md). This
 changes F3/F4 only and does not close F5.
 

@@ -111,6 +111,27 @@ bounded by `delta`, the paper states
 The paper explicitly calls this a worst-case bound and notes that discarded
 weights are determined during runtime.
 
+### What this can and cannot certify for a measurement record [ours]
+
+If the simulated object retains the **entire classical record register** `R`, so the exact and
+approximate outputs are cq states `rho_RS` and `rho_tilde_RS`, then contractivity of trace distance
+under measurement/partial trace gives
+
+```text
+D(rho_RS, rho_tilde_RS) = 1/2 ||rho_RS-rho_tilde_RS||_1 <= epsilon
+    => TV(P_R, P_tilde_R) <= epsilon.
+```
+
+For a fixed decoder and fixed logical-failure event, the absolute LER error is also at most
+`epsilon`. The relative error can be as large as `epsilon/p_L`, so rare-event accuracy requires
+`epsilon << p_L`, not merely a visually small state error.
+
+This implication does **not** apply if the record has already been discarded and only final system
+states `rho_S,rho_tilde_S` are compared: partial trace is one-way contractive and cannot recover a
+bound on historical records. Nor does Theorem 7 directly cover the project's 2D PEPS/FET trajectory:
+its assumptions are a 1D local Markovian LPTN evolution, and its `delta` is the paper's controlled
+purification-compression error rather than an arbitrary environment fidelity.
+
 ## Findings + numbers [paper]
 
 - LPTN keeps positivity by construction through `rho = X X^dag`.

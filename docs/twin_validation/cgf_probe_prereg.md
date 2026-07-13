@@ -1,5 +1,11 @@
 # CGF probe — Pre-Registration (the branch decider; criterion on disk BEFORE the run)
 
+> **HISTORICAL INTERPRETATION NARROWED, 2026-07-13.** Preserve the registered CGF/KCC comparisons,
+> but `K=P_all-P_skip` or KCC excess does not by itself identify a quantum bath or quantum memory.
+> It is an instrument/protocol-family result; fixed-record classical identifiability and the production
+> QEC bridge remain separate. Current authority:
+> [`notion123_taxonomy_literature_closure_2026-07-13.md`](notion123_taxonomy_literature_closure_2026-07-13.md).
+
 Status: PRE-REGISTRATION, 2026-07-02. This document operationalizes the user-ratified probe spec of
 `HANDOFF_coupling_simulator_2026-07-02.md` §5 (direction 1: classical-representability boundary for
 measured-circuit records). The clean/messy CRITERION below is fixed before any probe execution; the

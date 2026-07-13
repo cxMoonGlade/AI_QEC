@@ -1,5 +1,11 @@
 # Theory-first grounding — coupled-teacher RATES + record-level OBSERVABLE
 
+> **NUMERICAL-PROVENANCE CORRECTION, 2026-07-13.** The literature values below are
+> device-specific comparison scales. Neither the `~4 kHz` source point nor the `370 kHz` G2 point is
+> calibrated to the shipped Google patch. The universal “record-DEAD at any distance” inference is
+> withdrawn; the committed calculation is a local model/configuration result. Current authority:
+> [`../NUMERICAL_PROVENANCE.md`](../NUMERICAL_PROVENANCE.md).
+
 **Date 2026-06-30.** Prompted by the 3-agent review that FAILED
 `coupled_cycle_teacher_d3_mcwf_design.md` (ungrounded rates + a retired observable). Theory-first
 step 1 found the grounding ALREADY EXISTS in cached 精读 notes — this note synthesizes them for the
@@ -8,7 +14,8 @@ band / grounded literature value**, **(c) gate/decision rule**.
 
 ## (a) RATES — reconciling the ~90× `zeta` inconsistency against the real device
 
-**The two code constants correspond to two DIFFERENT device regimes, and the small one is the faithful one.**
+**The two code constants correspond to two project regimes; the small one is literature-order, not
+device-calibrated.**
 
 Convert the code's `zeta` to a residual-ZZ frequency (`ζ_rad/ns / 2π` = GHz):
 - **G2** `zeta = 2π·0.37e-3 rad/ns` `[CODE axis1_bridge.py:51]` ⇒ **residual ZZ ≈ 370 kHz**.
@@ -19,34 +26,30 @@ Grounded real residual-ZZ magnitudes (idle, between gates) — **(b)**:
 - **STC-class** (single-transmon coupler, highly detuned) residual ZZ **|J_ZZ| ≈ 60–80 kHz** `[kubo_dtc_residual_zz_2402.05361]`.
 - Residual ZZ only "matters" (dominates over relaxation) **above ~100 kHz**; a CZ gate uses **ζ̄ = 2π·5 MHz** (on) `[pettersson_fors_...2408.15402]`.
 
-⇒ **A Google-class tunable-coupler device has idle residual ZZ of a few kHz — so the source_coupling
-value (~4 kHz) is FAITHFUL; the G2 value (370 kHz) is a strong/demonstration residual** (above the
-"matters" threshold, ~5× the STC 60–80 kHz regime), appropriate for *showing* the channel-level coupling
-(G2) at a visible scale but NOT representative of an idle Google d3 device. **The 90× discrepancy is
-resolved: G2 = demonstration scale, source = realistic-modern; the real device is near the source value.**
+⇒ The source-coupling value (`~4 kHz`) lies in a modern tunable-coupler literature order of magnitude,
+while G2 (`370 kHz`) is a strong demonstration point above the cited idle regimes. Neither is a
+measurement of this Google d3 patch, and the two papers do not establish a transferable Google range.
 
 Coherence times — **(b)**:
 - Illustrative transmon review: **T1=85 µs, T2*=95 µs, T2E=120 µs** `[krantz_superconducting_qubits_guide_1904.06560]`;
   prior 2D-transmon T1 ceiling **114 µs**, tantalum **360 µs** `[place_tantalum_transmon_2003.00024]`.
-- Google Willow d3 device: median **T1 ≈ 68 µs, T2 ≈ 89 µs** (well-known Willow values; the dataset ships
-  the SI1000 circuits that ENCODE the exact per-qubit rates — `[docs/.datasets/google_105Q_surface_code_d3_d5_d7]`
-  — recoverable if an exact value is needed).
+- The earlier `T1≈68 us, T2≈89 us` Willow sentence lacked an exact primary locator and is not used as
+  evidence here. The shipped SI1000 circuit must be parsed directly before asserting its effective rates.
 - Code: **G2 T1=T2=30 µs** `[axis1_bridge.py:52-53]` is PESSIMISTIC; **source T_φ=75 µs** `[source_coupling.py]`
   is realistic-order.
 
-**Reconciled grounding for slice-1 (b, provenance-tagged):** idle residual ZZ **~few kHz** (tunable coupler),
-T1 ~68 µs, T2 ~89 µs, CZ-window ZZ ~5 MHz. **`[c]` build rule:** ground the exact per-cycle rates from the
+**Illustrative literature bracket for slice-1:** idle residual ZZ **~few kHz** in the cited tunable-coupler
+study and CZ-window ZZ ~5 MHz in its stated setting. **`[c]` build rule:** ground exact per-cycle rates from the
 shipped **SI1000 stim circuit** of a real Google d3 patch (not hand-set constants) before any record-level
 claim; sweep ±1 order and report sensitivity.
 
 ## (b) FEASIBILITY — derivation, and the Kam refinement that changes the verdict
 
-**`zeta` is record-DEAD at any distance — (a)-grade.** Residual ZZ is a coherent, **Z-basis-diagonal**
+**Local zeta result only; the universal statement is retracted.** Residual ZZ is a coherent, **Z-basis-diagonal**
 cross-Kerr `∝ σz⊗σz` `[pettersson_fors_...2408.15402]`; it moves records only for qubits in superposition,
 and its per-cycle VARIATION under a realistic 1/f detuning source is ±~1e-9 rad/ns (the detuning shift is
-~1e4× below the base detuning), giving record TV ~1e-11 `[VERIFIED g0_zeta_gammaphi_effectsize.py]`. More
-rounds do not resurrect a coherent basis-diagonal ~1e-11 signal. This matches
-`project-coherence-not-identifiable-syndrome-only`.
+~1e4× below the base detuning), giving record TV ~1e-11 in the frozen local model
+`[VERIFIED g0_zeta_gammaphi_effectsize.py]`. This does not prove an all-distance or all-schedule null.
 
 **`gamma_phi` raw-correlation scaling — (b) prediction band.** Dephasing acts every round; the per-cycle
 detector-flip-rate perturbation accumulates, so the shared-vs-independent record TV grows ~linearly in
@@ -92,9 +95,9 @@ gating.
 
 ## Bottom line for the build decision
 
-1. **Rates:** the faithful idle regime is the SMALL zeta (~few kHz, source-realistic), T1~68/T2~89 µs;
-   the exact rates should come from the shipped SI1000 circuit. G2's 370 kHz is a demonstration scale.
-2. **`zeta` record-dead (a-grade); `gamma_phi` raw signal softens ~25× at d3 but is Kam-BENIGN at the
+1. **Rates:** the `~4 kHz` point is literature-order and G2's `370 kHz` is a demonstration scale;
+   neither is device-calibrated. Exact rates must come from the matched hardware artifact.
+2. **`zeta` was sub-floor in the frozen local calculation only;** `gamma_phi` raw signal softens ~25× at d3 but is Kam-BENIGN at the
    decode level** (data-qubit temporal correlation) — so the decision-relevant ΔLER is expected ~sub-floor,
    confirming H2 from the mechanism, not by assumption.
 3. **Observable = decode-relevant ΔLER + corrqec cross-check**, never the 2-point correlation.

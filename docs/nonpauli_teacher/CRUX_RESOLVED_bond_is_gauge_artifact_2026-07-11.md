@@ -1,25 +1,27 @@
-# CRUX RESOLVED — the single-wire 2D PEPS "No-Go" is a truncation-GAUGE artifact, the carrier is FEASIBLE (2026-07-11)
+# REOPENED CRUX — historical bounded-entropy result, not a record-faithful carrier proof (2026-07-11; reopened 2026-07-13)
 
-> **SUPERSEDES** `HANDOFF_peps_crux_nogo_retracted_2026-07-11.md`'s "PROVISIONAL — build on
-> NEITHER arm". The crux is now **RESOLVED** with (a)-exact + anti-circular evidence across
-> all three regimes. **Build on: the carrier is feasible; the per-edge bond was the wrong
-> instrument; the fix is an environment-optimal truncator.**
+> **CORRECTION:** the exact `S_A` results below remain local artifact facts. The inference
+> `bounded S_A -> all bond growth is gauge -> FET can compress record-faithfully -> carrier feasible`
+> is not supplied by the experiments or by the cited literature. In particular, bounded entropy does
+> not bound the bond needed at a declared error, and no cited source connects FET/WTG/ZMT loss to the
+> full syndrome-record law or rare LER. See
+> [`coherent_leakage_longrange_truncation_literature_closure_2026-07-13.md`](coherent_leakage_longrange_truncation_literature_closure_2026-07-13.md).
+
+> **HISTORICAL CLAIM, INVALIDATED 2026-07-13:** the earlier text said this superseded the
+> provisional stop and resolved feasibility with an environment-optimal truncator. It does not.
+> The geometry survives; solver choice and record-faithful truncation remain open.
 
 ---
 
-## 1. THE VERDICT (60-second brief)
+## 1. HISTORICAL VERDICT (invalidated; retained for audit)
 
 The RUNG-B crux was: *does the single-wire 2D PEPS per-edge bond SATURATE under multi-round
 noisy+leaky d5 syndrome extraction?* The bond grew (codestate 4 → 18 → 48/abort), which read
 as a **No-Go**.
 
-**The No-Go is FALSE. The per-edge bond growth is a REPRESENTATION (truncation-gauge)
-artifact, NOT physical entanglement.** The carrier's *state* is exactly correct; its true
-bipartition entanglement (von Neumann entropy `S_A`) is **BOUNDED** (2–4 ebits) and does NOT
-grow. The single-wire 2D PEPS carrier is **FEASIBLE**. The fix is a **gauge-independent /
-environment-optimal truncator** (FET / loop-corrected / variational) so the *represented*
-bond tracks the *true bounded* entanglement — exactly what the reference implementations
-(Manabe `external/reference_repos/tn_qsim` FET; canonical-form MPS) do.
+The old verdict called all growth a representation artifact and the carrier feasible. The available
+entropy data do not support that conclusion: bounded entropy alone does not bound the finite-error
+bond or the full record, and the leakage-on run did not progress beyond R1.
 
 ---
 
@@ -33,7 +35,7 @@ to an **independent** ground truth — NOT the per-edge bond to itself.
 |---|---|---|---|
 | **d3 leakage-off** (EXACT) | `dense_psi` SVD `S_A = 2.00000` ebits `==` **independent GF(2) stabilizer baseline to 2e-16** | per-edge bond 4→16 | **artifact** |
 | **d5 leakage-off** | codestate PERSISTS every round: `|⟨S_g⟩|-1 = 1.4e-15` (all 24 stabs) + `|⟨Z_L⟩|-1 = 4.4e-16` ⇒ `S_A =` **GF(2) 4.000 ebits** (bounded) | per-edge bond 4→16 | **artifact** |
-| **d3 leakage-on** (WG_L1=5e-3, C_L=0.199) | `dense_psi` SVD `S_A = 2.00000` ebits, **UNCHANGED across 6 trajectories** | Schmidt rank 4→29, bond 4→18, `|2>`-mass 1e-3 | **artifact + truncatable leakage tail** |
+| **d3 leakage-on** (WG_L1=5e-3, C_L=0.199) | six identical R1 values `S_A=2.000000369882518` versus baseline `2.0`; every requested R4 trajectory then `BondAbortError` | R1 Schmidt rank 29, max bond 18, `|2>`-mass ~1.18e-3 | **R1 near-baseline artifact fact only; no multi-round or truncatability verdict** |
 
 Scripts (committed, `outputs/nonpauli_teacher/`, local evidence): `peps_leakoff_d3_entropy_control.py`,
 `peps_leakoff_d5_confirm.py`, `peps_leakon_d3_entropy_confirm.py` (+ `_run.sh`, `_out/summary.json`).

@@ -222,19 +222,18 @@ This section is the paper's answer to "is our growing per-edge bond counting rem
   truncation with a leakage-aware retention rule (never drop a non-stabilizer direction on magnitude
   alone), or it will silently erase the leakage we are trying to simulate.**
 
-## Relevance to qec_twin [ours]
-- **FORK A (deterministic loop-truncation replacing ALS):** this paper is the **root-(a) theorem
-  foundation** and a **reliable canonicalizer + diagnostic**, but it is **not itself the loop
-  truncator**. It rigorously certifies (Thm 4.11 + §4.5) that bond content leaving the state invariant
-  is removable gauge, and it classifies the pure stabilizer surface code as **closed-orbit / genuine
-  bond** (Ex 4.21/4.22) — which *confirms* our crux resolution (S_A bounded/exact; our ALS bond growth
-  is a solver artifact, not intrinsic gauge). Its marginal spectrum `ρ_{k,1}=ρ_{k,2}^T` is the correct,
-  deterministic, monotone-to-compute quantity to *diagnose* solver-failure vs genuine long-range
-  physics — precisely the role our memory earmarks for the Evenbly-2018 WTG gauge-fixed canonical
-  spectrum. **Use it to complement, not replace, Evenbly-2018:** Acuaviva gives the rigorous
-  "removable-gauge iff continuous-symmetry" underpinning + a globally-convergent gauge fixer; Evenbly
-  gives the practical loop/WTG gauge fix. The Acuaviva canonicalizer could serve as the deterministic
-  PRIMARY gauge step, with its balanced marginal spectrum as the truncation diagnostic.
+## Relevance to qec_twin [ours, corrected 2026-07-13]
+- **Gauge canonicalization, not a solver/physics classifier:** the paper supplies a theorem-backed
+  gauge-balancing/canonicalization result, but it is **not itself a finite-2D loop truncator**. It
+  characterizes state-preserving gauge transformations and closed-orbit structure under its stated
+  translation-invariant assumptions. It does **not** prove that the project's observed bond growth is
+  wholly a solver artifact, that bounded `S_A` implies a small record-faithful bond, or that a canonical
+  marginal spectrum separates numerical failure from genuine long-range physics. Those were project
+  inferences and are retracted. The spectrum may be used as a diagnostic only after an independent
+  record/state reference establishes what its directions mean in the frozen model.
+- **Relation to Evenbly:** Acuaviva provides rigorous canonical-form structure; Evenbly provides WTG,
+  cycle entropy, and iterative FET. Neither paper supplies the missing PEPS-truncation-to-QEC-record
+  error bridge or a deterministic replacement for the current variational solver.
 - **FORK B (stabilizer-frame carrier):** consistent with — Ex 4.21/4.22 say the stabilizer PEPS bond is
   genuine and finite-symmetry, i.e. its "extra" bond beyond leakage magic is not removable gauge, which
   is the exact premise a stabilizer-frame carrier exploits (bond tracks only leakage magic on top of a

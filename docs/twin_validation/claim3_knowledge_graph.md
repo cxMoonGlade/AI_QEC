@@ -1,5 +1,11 @@
 # Claim 3 Knowledge Graph — Multi-Time Non-Classicality Decomposition
 
+> **HISTORICAL MAP / TAXONOMY SUPERSEDED, 2026-07-13.** The paper routing remains useful, but
+> “non-classicality,” reduced-map backflow, protocol invasiveness, record memory, and quantum memory
+> must not be merged. Re-evaluate every Claim-3 edge under
+> [`notion123_taxonomy_literature_closure_2026-07-13.md`](notion123_taxonomy_literature_closure_2026-07-13.md)
+> before reuse.
+
 > **Maintained 2026-07-05.** Maps the 15-paper literature spine to Claim 3's three
 > confusion terms: ① coherence, ② collectiveness, ③ finite-γ memory.
 > Cross-references: `docs/papers/reading_notes/README.md` (RAG index),

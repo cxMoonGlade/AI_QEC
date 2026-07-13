@@ -1,5 +1,14 @@
 # HANDOFF — static QEC error-coupling SIMULATOR — GOAL, positioning & next steps, 2026-07-06
 
+> **SUPERSEDED ON NOTION 1/2/3, 2026-07-13.** The simulator may retain notion-3 as out of product
+> scope, but not because a universal physical-twirl/no-passive-witness theorem was proved. `K` is a
+> protocol-family Kolmogorov test, and coherent/non-unital record reachability is mechanism/schedule
+> dependent. See
+> [`notion123_taxonomy_literature_closure_2026-07-13.md`](notion123_taxonomy_literature_closure_2026-07-13.md).
+> The CP-div result belongs to a Gaussian surrogate, not the production finite-RTN source, and the
+> `s<=.3`, `N<=1e6` “realistic” cap is a project threshold only. Value authority:
+> [`../NUMERICAL_PROVENANCE.md`](../NUMERICAL_PROVENANCE.md).
+
 **SELF-CONTAINED.** This hands off the mainline **static (passive-record) QEC error-coupling simulator** after a
 session that (1) CLOSED the notion-3 quantum-memory line as a literature-grounded protocol boundary and (2) ran the
 first corrected effect-size go/no-go (Class-1), which **honestly capped** the mild-1/f route, and (3) **reframed the
@@ -84,17 +93,15 @@ this tool must exist).
 
 ## 1. THIS SESSION'S PROGRESS (2026-07-06)
 
-### 1a. notion-3 (quantum non-classicality of memory) — CLOSED as a PROTOCOL BOUNDARY. (committed `7536633`)
-The whole "does the passive record carry genuinely QUANTUM memory?" line is retired — not as a failure, as a
-principled boundary. Doc: **`notion3_protocol_boundary_closure.md`**. Two literature-nailed premises:
-- **(A)** witnessing quantum memory REQUIRES active/informationally-complete interventions — it "cannot be passively
-  observed" (Giarmatzi–Costa process-tensor witness 1811.03722; Taranto hierarchy 2307.11905; Bäcker applied witness
-  2510.19522 — all active).
-- **(B)** standard QEC syndrome extraction **Pauli-twirls** the noise, erasing coherent + non-unital structure
-  (QMCtwin 2606.19848: "phase … invisible to Pauli twirling", "nonunital drift … Pauli twirling erases"; Kattemolle
-  2602.08464: twirl also INDUCES non-Markovian artifacts; Wagner 2107.14252: syndrome estimates a Pauli channel and,
-  by construction, ONLY the Pauli part; 2412.21055: logical noise Pauli-izes exponentially in d).
-- **⇒ the passive syndrome record carries only classical (Pauli / notion-2) noise structure.** The in-house kill:
+### 1a. notion-3 historical boundary claim — REOPENED / NARROWED 2026-07-13
+The simulator may keep process-level quantum-memory identification out of product scope, but the old proof of
+unreachability was invalid. Current narrow conclusions:
+- **(A)** Full process-level identification generally needs an intervention/tester family. A fixed passive record
+  is one projection and cannot support a model-free origin claim; this does not rule out every restricted witness.
+- **(B)** Pauli-twirled baselines and some schedules suppress coherent structure, but there is no universal theorem
+  that physical syndrome extraction erases all coherent or non-unital record effects. Marshall–Kafri and Manabe
+  *et al.* provide QEC counterexamples; Varbanov *et al.* provide a schedule-specific near-null.
+- **⇒ the passive record's content is mechanism-, schedule-, and instrument-dependent.** The in-house result:
   **Control 0b** (`outputs/twin_validation/notion3_control0b_classical_nm_negcontrol.py`, sha `1590fd59`) — a bare
   negativity/concurrence REVIVAL is RHP non-Markovianity, forged by classical RTN dephasing; only the genuine Bäcker
   `C♯(t1)<C(t2)` (an ACTIVE-channel quantity) survives, and it does not read the record. The `quantum_bath` package
@@ -117,11 +124,11 @@ noise; self-checks green). **RESULT — both guardrails FAIL at realistic drift:
   where detectable.
 - **⇒ do NOT hard-build the Class-1 ancilla-axis architecture on this observable (G4-consistent registered STOP).**
 
-**KEY LEARNING (the load-bearing takeaway for the next step):** obstacle **B** (non-triviality) is the DEEPER,
-INTRINSIC one — a **mild 1/f source (sum-of-RTNs, near-Gaussian, near-Markovian) is almost indistinguishable from a
-single slow-RTN at the record level.** No siting/amplitude tweak fixes that; it needs a genuinely non-Markovian
-(non-slow-RTN-reducible) SOURCE. This matches [[project-cpdiv-notion-hierarchy-passive-record]] ("needs strong
-non-Gaussian RTN; 1/f is CP-divisible/twirled").
+**HISTORICAL KEY LEARNING, NARROWED 2026-07-13:** for this registered lag-2 observable and threshold, obstacle
+**B** (non-triviality relative to the matched slow-RTN null) was deeper than raw detectability: the mild finite-RTN
+mixture was nearly indistinguishable from that null. This is not a source-level CP-divisibility statement and does
+not imply a universal twirl theorem. The Gaussian surrogate is CP-divisible; two explicitly declared exact
+finite-RTN free-induction lifts are BLP-positive; the production fan-out/QEC-channel/record bridge remains open.
 
 ## 2. THE NEXT STEP (how to expand) — reframed 2026-07-06 to the infrastructure goal
 
@@ -191,10 +198,10 @@ or run a declared class-(c) sweep and report the bandwidth (as the Class-1 go/no
 **RETRACTED / VOID / PARKED (do NOT trust or build on):**
 - **G0-v2 FAIL / G6 "sub-floor"** — wrong observable (2-point TV / shared-minus-markovian). `g0_v2_effectsize.json`
   is the retracted metric. Machinery kept; conclusions void. (2026-07-04 handoff §7.)
-- **notion-3 quantum-memory WITNESS line** (Control 3/3b as a RECORD claim) — CLOSED (1a). The `quantum_bath`
-  revival witnesses are non-Markovianity/backflow diagnostics only.
+- **notion-3 quantum-memory WITNESS line** (Control 3/3b as a model-free RECORD claim) — RETRACTED (1a). The
+  `quantum_bath` revival witnesses are reduced-dynamics/backflow or protocol-family diagnostics only.
 - **G0-quantum GO-CORNER-ONLY** (`g0_quantum_effectsize_prereg.md`) — coherent (commutator) sector, PARKED; also
-  moot for the record (coherent structure is Pauli-twirled out per 1a). Not part of the classical-visibility line.
+  not a model-free quantum-memory certificate. Not part of the classical-visibility line.
 - **2026-07-03 "active-observation reconstruction"** — scope error, deleted; its handoff VOID.
 - The **twin** docs (`docs/plan3.md`, `do()`/`recover`) — SEPARATE LATER project.
 - The many **Axis-1 mechanism** preregs (`m6`–`m34`, `axis1_*`) — valid as the FORWARD mechanism library, but the

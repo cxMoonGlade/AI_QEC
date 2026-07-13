@@ -1,5 +1,9 @@
 # Rung-1 PEPO Engine — Build Contract (contract-first; binding for builders A1–A4)
 
+> **CLOSED / HISTORICAL.** The DM-PEPO build is not current authority. Every `b=.9` result below
+> is a project fixture result, not a calibrated readout value; do not propagate it as a physical
+> cell. See [`../NUMERICAL_PROVENANCE.md`](../NUMERICAL_PROVENANCE.md).
+
 Status: CONTRACT **v4.3**, 2026-07-10 — through THREE contract red-team rounds (blocker
 trajectory 3 → 1 → 1 → 0) PLUS the Stage-4 build review (3 lenses + per-finding adversarial
 refuters: 3 BLOCKERs + 5 MAJORs CONFIRMED in the built code, 0 refuted — fixes specified in

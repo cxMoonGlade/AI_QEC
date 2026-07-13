@@ -1,5 +1,12 @@
 # G0-quantum — record-level effect-size PRE-REGISTRATION (theory-first, LITERATURE-GROUNDED)
 
+> **HISTORICAL INTERPRETATION, NARROWED 2026-07-13.** Preserve the preregistered comparison and
+> effect-size arithmetic, but a record difference between the declared quantum model and a bounded
+> classical imitator does not exclude all classical latent-history models or certify quantum memory.
+> Reduced-map CP-indivisibility also does not transfer to `{det,obs}` without the missing bridge.
+> Current authority:
+> [`notion123_taxonomy_literature_closure_2026-07-13.md`](notion123_taxonomy_literature_closure_2026-07-13.md).
+
 Status: PRE-REGISTRATION, 2026-07-03. Predictions written BEFORE any run; a miss is a FINDING, not a
 re-fit. This is the **mandatory pre-build effect-size gate** for the quantum-bath teacher (handoff §1,
 `nonmarkovian_memory_carrier_scope.md` §4 "record-level visibility"). It decides ONE thing:

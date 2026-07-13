@@ -1,5 +1,11 @@
 # SCOPE (theory-first, NO build) — the non-Markovian memory carrier (axis1 status B)
 
+> **HISTORICAL CLAIM FRAME SUPERSEDED, 2026-07-13.** Preserve the explicit-bath implementation scope,
+> but do not use the source/reduced-map/record implications below as current authority. BLP/RHP do not
+> identify a quantum bath; conditioned GKSL steps do not determine the averaged multi-time map; and
+> record reachability needs an instrument-specific bridge. Current authority:
+> [`notion123_taxonomy_literature_closure_2026-07-13.md`](notion123_taxonomy_literature_closure_2026-07-13.md).
+
 **Date 2026-07-03. Status: scope-only.** Ratified this round (user, emphatic): the classical
 `CoupledCycleTeacher` slice (one classical shared source `z_t` modulating ζ×γφ) **IS AND CAN ONLY
 BE SCAFFOLDING**; the **quantum GKSL bath is THE FINAL TARGET** of the coupling simulator. This
@@ -21,15 +27,13 @@ internal instruments, not the deliverable.
 
 ## 1. The boundary this round establishes (declared, binding on claims)
 
-`CoupledCycleTeacher` (this round) carries **classical parameter memory**: one memory-ful classical
-source `z_t` (1/f sum-of-RTNs) modulating per-cycle rates. Its records can show cross-cycle
-correlation, but the underlying per-cycle channels remain a CP-divisible (time-dependent GKSL)
-family conditioned on `z_t` — a **classical-mixture** non-Markovianity. Per the standing verdicts
-(memory `project-nonmarkovian-wedge-must-be-coherence`, `project-coupling-nonmarkovian-is-the-
-contribution`): round-correlation alone is the **classical strawman**; the unforgeable signature is
-**coherence revival / CP-divisibility breaking**, which a classical rate-modulated family cannot
-produce and which is echo-irremovable where classical-coherent baselines are DD-removable. No
-"non-Markovian simulator" claim may ride on the classical teacher alone.
+`CoupledCycleTeacher` (this round) carries **classical parameter memory**: one memoryful classical
+source `z_t` (a finite sum of RTNs) modulating per-cycle rates. Its records can show cross-cycle
+correlation. Conditional per-step GKSL form does not, by itself, determine CP-divisibility of the
+averaged multi-time map; a stochastic source has no reduced-map status before a coupling is declared.
+Likewise, coherence revival/CP-indivisibility can occur in classical-noise reduced-map models and is not
+an unforgeable quantum-origin signature. No generic “non-Markovian simulator” or quantum-memory claim
+may ride on either the classical or explicit-bath teacher without the appropriate map/instrument bridge.
 
 ## 2. The object (what the carrier IS)
 

@@ -2,6 +2,13 @@
 
 Status: PRE-REGISTRATION, 2026-07-04. Predictions written BEFORE the run; a miss is a finding, not a re-fit.
 
+> **SOURCE-OBJECT CORRECTION, 2026-07-13.** The production `OneOverFDriftSource` is an explicit
+> finite-RTN sum, not eight uniformly weak RTNs or the Gaussian surrogate used by the old CP-div
+> calculation. Later exact gates find BLP backflow for two declared free-induction lifts, but those
+> lifts are not the production `z -> Theta` QEC map; the production channel/record bridge and the
+> “realistic” amplitude mapping below remain open.
+> Conditional record-memory calculations remain project-model results.
+
 **Why this doc exists.** The user retracted (2026-07-04, errors A/B/C) the matched-marginal-difference line
 (G0-v2 two-point TV; G6 shared−independent; the G0-quantum `W12 = quantum − classical`). This prereg is the
 **revert-to-correct** spec: it fixes the OBSERVABLE and the SOURCE and points every quantitative claim at the
@@ -19,21 +26,21 @@ non-Markovian memory, distinguishable from a genuinely-Markov null) — NOT twin
 
 | sub-axis / claim | mechanism paper | observable paper | reading note | in-repo code (reuse) |
 |---|---|---|---|---|
-| classical 1/f = notion-2 multi-time memory (NOT CP-div breaking) | RHP 0911.4270 / BLP 0908.0238 (CP-div = reduced-map) | milz 1907.05807 (Kolmogorov Markov-order) | reading_notes/milz_when_nonmarkovian_process_classical_1907.05807.md | `OneOverFDriftSource`; `cpdiv_passive_record_check.py` |
+| finite-RTN source can carry notion-2 record memory; two free-induction diagnostic lifts are BLP-positive, production map open | Bergli 0904.4597 / Wold 1206.2174 + RHP 0911.4270 / BLP 0908.0238 | milz 1907.05807 (Kolmogorov Markov-order) | `finite_rtn_exact_cpdiv_result_2026-07-13.md`; reading_notes/milz_when_nonmarkovian_process_classical_1907.05807.md | `OneOverFDriftSource`; exact gate; Gaussian-surrogate historical control |
 | 2-point is INSUFFICIENT; multi-time streak is the signature | Kam 2410.23779 (Class-0/1/2 siting) | Kam 2410.23779 §IV.C | reading_notes/kam_nonmarkovian_surface_code_2410.23779.md | — |
 | the RIGHT record observable = absolute multi-time ORDER test (record's departure from a genuinely-Markov-order-k GENERATIVE null); a discriminability instrument, NOT a recovery learner | — | Anderson–Goodman G²/CMI (order test); milz Kolmogorov Eq.9 | markov_order_owned_vs_unowned_prereg.md | `outputs/pilotB_markov_order_owned_vs_unowned.py` (CMI/G² ladder, 2e-10 re-impl match, χ² FPR≈0.05) |
-| non-forgeable core = 1/f power-law tail beyond ANY finite Markov-k | h2 §2b (sum-of-RTNs → power-law `C(τ)`) | h2 §caveat (`E(k)` residual-energy) | h2_effectsize_g4_prereg.md | `outputs/teacher_prereg/_h2_diag4.py` (`E(k)` discriminator) |
-| REALISTIC source strength (error B) | Harper-Flammia 2303.00780 (Sycamore ~0.136 avg; leakage/crosstalk; ~2× LER) | — | reading_notes/harper_flammia_learning_correlated_39q_2303.00780.md | — |
+| long-tail diagnostic against a frozen finite-order null; not a no-go against every finite HMM | h2 §2b (sum-of-RTNs covariance) | project `E(k)` residual-energy diagnostic | h2_effectsize_g4_prereg.md | `outputs/teacher_prereg/_h2_diag4.py` |
+| source-amplitude comparison scale, not calibrated mapping | Harper-Flammia 2303.00780 (reported Sycamore aggregate/error effects) | — | reading_notes/harper_flammia_learning_correlated_39q_2303.00780.md | mapping to the project's modulation remains class-(c) |
 | passive record ≠ full process tensor (Υ needs ACTIVE causal breaks ⇒ twin, OUT); memory = literal correlation / distance-to-closest-Markov, NOT a 2nd-order residual (anti-error-A, tomography side) | White-Pollock 2106.11722 §IIC restricted-PT (passive ⇒ INFER not measure) + Eq.11 (necessary+sufficient NM measure) | giarmatzi 2308.00750 (measure-and-prepare causal breaks); montanalopez 2511.16772 (designed W-layer) | reading_notes/{white_pollock_process_tensor_tomography_2106.11722, giarmatzi_multitime_process_tomography_superconducting_2308.00750, montanalopez_nonmarkovian_learning_manybody_2511.16772}.md | — |
 | quantum coherent imprint = 2nd-order (−8κ²), commutator sector only | Prop IW-1 (involuntary_w_check) | tn_decoders 2412.13739 (HS coherence-blind vs CD) | reading_notes/tn_decoders_process_tensor_nonmarkovian_2412.13739.md | `outputs/twin_validation/involuntary_w_check_v2.py` |
 | ORDER of the classical memory = 2nd-order in κ (retires error C's "first-order"); observable must be a DIRECT multi-time witness (RB-blind spots exist) | Quiroz 2412.16092 (filter-function χ=∫SF, linear in PSD=2nd moment); Dong 2502.05408 (non-Gaussian ⇒ ≥3rd-order polyspectra, active-only) | Srivastava 2510.13051 (CCC RB r~O(δ²); Z⊗Z RB-blind Thm5 ⇒ observable-choice is load-bearing) | reading_notes/{quiroz_sparse_nonmarkovian_noise_modeling, srivastava_rb_blindspots_2510.13051, dong_nongaussian_digital_qns_2502.05408}.md | — |
 
 ## 1. The mechanism(s) (anchored; reuse where it exists)
 
-- **Source (error B fix — REALISTIC, not the weak slice).** The classical multi-time memory carrier is the
-  microscopic 1/f bath `OneOverFDriftSource` (8 weak RTNs → Gaussian, sum-of-exponentials → power-law
-  `C(τ)=Σ_k v_k² e^{−2γ_k τ}`, h2 §2b). **Swept, not frozen:** per-qubit error-rate modulation set to the
-  Harper-Flammia regime (avg ≈ 0.10–0.14, arXiv:2303.00780 Fig 3), NOT slice-1's γφ~1e-5 (≈6 orders below the
+- **Source (project amplitude bracket, not device-calibrated).** The classical multi-time memory carrier is the
+  finite-RTN `OneOverFDriftSource` (sum-of-exponentials two-point covariance
+  `C(τ)=Σ_k v_k² e^{−2γ_k τ}`, h2 §2b). **Swept project mapping, not device calibration:** per-qubit error-rate modulation set by
+  comparison to a Harper-Flammia aggregate scale (avg ≈ 0.10–0.14, arXiv:2303.00780 Fig. 3), NOT slice-1's γφ~1e-5 (≈6 orders below the
   readout/reset instrument, error B). Contrast arm: a single slow **RTN** (`RTNSource`) at matched correlation
   length — the h2 §caveat "slow RTN is nearly as long-memory as 1/f at feasible k" arm.
 - **Siting (anchored, Kam 2410.23779).** Sweep the coupled qubit across **Class-0 (data, T2 — BENIGN
@@ -131,8 +138,11 @@ uses) — used ONLY to score the record's departure from the Markov null, never 
 
 ## 5. Epistemic status (METRICS-ladder)
 
-- **(a) exact:** Gaussian 1/f is CP-DIVISIBLE (`γ=½∫C≥0`, RHP=BLP=0) ⇒ legitimacy is notion-2 NOT notion-1;
-  Kam 2-point-insufficiency; `CMI=0 ⟺ Markov-1`; `G² = 2N ln2 · CMIbits`; `G²` null ~ χ²(df); the record's
+- **(a) exact:** the declared positive-covariance Gaussian surrogate is CP-DIVISIBLE
+  (`γ=½∫C≥0`, RHP=BLP=0); this does not settle the production finite-RTN source;
+  Kam 2-point-insufficiency; for the declared three-time marginal, `CMI=0` iff that one local
+  conditional-independence relation holds (full Markov-1 instead requires conditioning against the
+  entire earlier history at every relevant time); `G² = 2N ln2 · CMIbits`; `G²` null ~ χ²(df); the record's
   exact multi-time log-likelihood under a fixed order-k null = a TN/partition-function contraction (the order-
   test scoring kernel — a computation, NOT parameter recovery); Prop IW-1 quadratic (coherent imprint 2nd-order,
   commutator sector only).
@@ -142,9 +152,11 @@ uses) — used ONLY to score the record's departure from the Markov null, never 
   tail, the genuine unforgeable statement, asymptotic-k); `p<0.05` order rejection; `CMI>floor+3σ`; drift
   (cross-shot, Bhardwaj 2511.09491) vs within-shot correlation split; error-A trip-wire (no matched-marginal
   difference as discriminator).
-- **Provisional (NOT built-upon):** "notion-1 CP-div breaking is twirled out of the passive record" (grounded
-  by Watkins-Quiroz block-diagonality + White-Pollock passive-inference + the committed C4 check, not a
-  theorem in our setting); the novelty-gap claim (§below) — now UPGRADED (giarmatzi/tn_decoders/montanalopez
+- **Provisional (NOT built-upon):** whether any particular reduced-map divisibility/backflow feature survives
+  the registered passive syndrome instrument (Watkins-Quiroz gives model-specific block structure;
+  White-Pollock limits what passive data identify; neither is a universal syndrome-twirling theorem); the
+  committed C4 check is conditional on its own coherence-suppressing model class. The novelty-gap claim
+  (§below) — now UPGRADED (giarmatzi/tn_decoders/montanalopez
   full-read this session), remaining provisional only on keeling/dong/spam_robust/vonlüpke/kattemolle/facets/layden.
 
 ## 6. Novelty gap (deliverable c — upgraded, still scoped)

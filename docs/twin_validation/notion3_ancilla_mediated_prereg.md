@@ -1,5 +1,12 @@
 # notion-3 on the FAITHFUL ancilla-mediated carrier — Pre-Registration (theory-first)
 
+> **SUPERSEDED INTERPRETATION, 2026-07-13.** This remains a historical preregistration of a
+> `K=P_all-P_skip` experiment. A nonzero `K` diagnoses Kolmogorov inconsistency/non-invasiveness
+> for that protocol family; it is not, by itself, a process-level quantum-memory or quantum-bath
+> witness. Read all “notion-3” conclusions below in that narrower sense and use
+> [`notion123_taxonomy_literature_closure_2026-07-13.md`](notion123_taxonomy_literature_closure_2026-07-13.md)
+> as the current taxonomy.
+
 Status: PRE-REGISTRATION, 2026-07-05. Predictions written BEFORE the run; a miss is a finding, not a re-fit.
 
 **Purpose.** The notion-3 SEPARATION (quantum K>0 vs classical K=0, corner-confined) was demonstrated on the
@@ -15,7 +22,7 @@ measurement), NOT twin recovery.
 
 | claim | anchor | reuse |
 |---|---|---|
-| notion-3 = K (Milz Kolmogorov violation) on the record; corner-confined | `notion3_quantum_vs_classical_prereg.md` §8 (SEPARATION HOLDS CORNER) | K_stat/M_mem/pseudomode `build_L` verbatim |
+| `K` = Kolmogorov/non-invasiveness test for the measure/skip protocol family; corner-confined in the historical run | `notion3_quantum_vs_classical_prereg.md` §8 (historical result; interpretation superseded) | K_stat/M_mem/pseudomode `build_L` verbatim |
 | ancilla-mediated stabilizer extraction (CX → Born → reset) is the faithful measurement | `corrected_multitime_observable_run.py` (classical notion-2 carrier: `cnot3`, `syndrome_unitary`, Born-measure ancilla, reset) | the carrier structure (adapt Z-parity → X-parity for σz-dephasing) |
 | joint-parity ancilla-mediated is a STRONGER twirl than single-qubit; the deepen joint-parity twirl did NOT kill K (on a toy) | [[project-cpdiv-notion-hierarchy-passive-record]]; deepen DM2 | the prediction |
 | dephasing σz is detected by an X-type stabilizer (anti-commutes) | Kam Class-1; C4-analog v2 (K(X)>0 for σz bath) | X-stabilizer choice |
@@ -93,8 +100,9 @@ this prereg. Then serial CPU run (exact-DM, no GPU, no concurrency).
 **Registered prediction b1 turned out STRUCTURALLY UNTESTABLE in the built configuration — a (b) miss surfaced
 as a finding (not a re-fit), per epistemic-status discipline.** The v1 build
 (`outputs/twin_validation/notion3_ancilla_mediated_run.py`, smoke only) was mechanically CORRECT + honest (all
-5 controls fired: extraction-GT 1e-15, classical-K null genuine on a non-degenerate record, K = genuine Milz
-not error-A, reproducible sha; builder flagged the issue in its own caveat) — but the un-led reviewer (blocker)
+5 controls fired: extraction-GT 1e-15, classical-K null genuine on a non-degenerate record, `K` = the intended
+Milz-style measure/skip statistic rather than error-A, reproducible sha; builder flagged the issue in its own
+caveat) — but the un-led reviewer (blocker)
 proved: **with the bath σz-coupled to d0 ONLY, d1 stays |+> so X_{d0}X_{d1} ≡ X_{d0} EXACTLY** ⇒ the joint-parity
 record is byte-identical (5e-16) to the single-qubit σx proxy, for BOTH arms ⇒ `K_ancilla == K_proxy` is a
 mathematical IDENTITY, not a measured survival. The v1 also just re-derives deepen DM2 (already "K survives the
@@ -145,22 +153,23 @@ non-classicality K **first rises ~1.3× (partial correlation) then COLLAPSES ~17
 the record MEMORY (M_mem/CMI) grows monotonically. At r=1, K SURVIVES (3.3e-4, a real Kolmogorov violation, a
 MEASURED departure) but is **detection-INFEASIBLE at g₀=0.5 (N_detect(K)=8.2e7)** and feasible only in a
 **middle g₀ band [0.1, 0.35]** (non-monotone in g₀ too; corner_only=False — infeasible both below g₀=0.1 and
-above g₀=0.35). ⇒ **the coarse joint-parity syndrome LARGELY TWIRLS OUT the correlated-common-mode quantum
-signature; the single-qubit σx proxy OVERESTIMATED the fully-correlated K by ~178×.**
+above g₀=0.35). ⇒ **in this registered model, the coarse joint-parity syndrome strongly suppresses the
+correlated-common-mode `K` signal; the single-qubit σx proxy OVERESTIMATED it by ~178×.**
 
 **Controls (all fire):** factorization GT 1.3e-17 (reduced (d0,d1,mode) ⊗ I_a == full Liouvillian); extraction
 GT 1.3e-15; 2-qubit collective-dephasing independent-boson GT 6.8e-10 (adapted for the shared bath, NOT
 dropped); no-bath sanity K=8.9e-16 flat; classical shared-bath null K=7.2e-16 with real memory
-(M_mem=0.087/CMI=0.0119, both qubits dephased). K = genuine Milz Kolmogorov violation on the ancilla record
-(reviewer-verified from scratch, not error-A).
+(M_mem=0.087/CMI=0.0119, both qubits dephased). `K` is the measured Milz-style
+measure/skip Kolmogorov-consistency statistic for this protocol family (reviewer-verified from scratch,
+not error-A); it is not a model-free quantum-memory witness.
 
-**Verdict / roadmap (sharpened).** notion-3 (quantum discord on the record) **survives the faithful
+**Historical result, reinterpreted 2026-07-13.** The protocol-family `K` signal **survives the faithful
 ancilla-mediated joint-parity carrier but is FAR more fragile than the σx proxy showed** — for a
 fully-correlated shared bath it is ~178× attenuated and detection-infeasible except a middle g₀ band. This is a
 **Srivastava-type blind-spot**: the coarse joint-parity stabilizer is largely blind to the correlated
-common-mode quantum signature. Combined roadmap: **notion-2 (classical multi-time memory) = broadly achievable
-AND strengthens with correlation; notion-3 (quantum non-classicality) = real but corner/band-confined AND the
-faithful joint-parity measurement twirls most of it out.** The proxy-level notion-3 result stands as an upper
+common-mode signal. Combined roadmap: **notion-2 (classical multi-time record memory) is broadly achievable
+in the tested models; `K` is corner/band-confined and the faithful joint-parity measurement suppresses it.**
+No process-level quantum-memory conclusion follows. The proxy-level `K` result stands as an upper
 bound; the faithful carrier is the honest one. PROVISIONAL; faithful upgrades remaining: the
 amplitude-damping/leakage axis (a non-benign, non-common-mode coupling that the joint parity may NOT twirl
 out — potentially the broader quantum signature); full d=3 surface-code stabilizers. Nothing built on it yet.

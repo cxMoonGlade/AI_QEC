@@ -8,29 +8,32 @@
 > renders of the figure pages (Figs. 1, 3, 5–8, 12 inspected visually). Title:
 > *"Efficient Simulation of Leakage Errors in Quantum Error Correcting Codes Using
 > Tensor Network Methods."* arXiv:2308.08186v2 [quant-ph], 21 Jan 2025.
-> **Role in our program: this paper's qutrit-MPS IS the scalable faithful GENERATOR —
-> the approximation-free, twirl-free forward simulator that emits the leakage record
-> {det,obs} at large d, and whose one bond-truncation approximation we bound against
-> the exact qutrit-DM oracle. Core `forward/scalable` simulator infrastructure.**
+> **Role in our program:** this paper supplies a published qutrit-MPS trajectory
+> architecture that retains coherent leakage instead of replacing it by the paper's
+> GTA surrogate. It is a candidate scalable forward carrier for 1D and thin-strip
+> fixtures, not an approximation-free or already record-certified generator: the MPS
+> uses SVD truncation, and the paper reports LER/bond-dimension results rather than a
+> full joint-record comparison or a bound from discarded weight to record error.
 
-> **[ours] reframed 2026-07-06** — the decoder-oriented framing below ("sim-only
-> teacher / decoding headroom above MWPM") is SUPERSEDED by the
-> simulator-forward-generation framing: validity = faithfulness vs an independent
-> qutrit oracle + anti-toy discriminability of the record from a matched Markov/DEM
-> null; decoder/LER = downstream use, not validity. This paper's qutrit-MPS = the
-> scalable faithful generator/reference. See
-> docs/twin_validation/HANDOFF_static_simulator_notion2_2026-07-06.md.
+> **2026-07-13 scope correction [paper -> ours].** Figure 8 establishes a narrower
+> result: for the reported `d=19` repetition-code comparison, the GTA constructed from
+> the same leakage/seepage rates overestimates LER by more than a factor of three in the
+> MLR condition. It does **not** compare full record laws, fit a Stim/DEM or arbitrary
+> Markov-order null, prove that leakage is non-DEM-reducible, or prove that GTA is
+> universally conservative. Any such record-level/null-class claim remains a project
+> hypothesis requiring an independent exact-record comparison.
 
 ## Metadata
 
 - **Authors.** Hidetaka Manabe (Osaka Univ., Graduate School of Engineering Science);
   Yasunari Suzuki (NTT Computer and Data Science Laboratories; JST PRESTO);
   Andrew S. Darmawan (YITP, Kyoto Univ.; JST PRESTO).
-- **Status.** arXiv:2308.08186v2, 21 Jan 2025 (preprint; v1 Aug 2023). Not a
-  peer-reviewed journal version in this cache.
-- **Domain / type.** QEC / fault tolerance; **simulation methodology** — exact
-  (non-Pauli, non-twirled) leakage simulation on QEC codes via Matrix Product States
-  (MPS). Darmawan is the through-line to the project's existing TN line
+- **Status.** arXiv:2308.08186v2, 21 Jan 2025 (the cached object); published as
+  *New Journal of Physics* **27**, 114512 (2025), DOI
+  `10.1088/1367-2630/ae1529`.
+- **Domain / type.** QEC / fault tolerance; **simulation methodology** —
+  coherence-preserving qutrit leakage trajectories via Matrix Product States (MPS),
+  with controlled SVD bond truncation. Darmawan is the through-line to the project's existing TN line
   (`darmawan_poulin_*`, `darmawan_decoder_adaptation_local_noise_2403.08706`).
 - **Code/tools.** Implemented on Google's `TensorNetwork` Python library [68].
   Hardware used: one Intel Xeon Platinum 9242 node, 96 threads, CPU-only. Each plotted
@@ -38,15 +41,14 @@
 
 ## TL;DR
 
-The paper gives a **scalable, approximation-free (no Pauli/twirl) simulator of
-leakage errors in QEC codes** by treating each physical element as a **qutrit**
+The paper gives a **scalable, coherence-preserving qutrit-MPS simulator of leakage
+errors in QEC codes** by treating each physical element as a **qutrit**
 (levels |0⟩,|1⟩,|2⟩) and representing the full many-qutrit pure state of the QEC
 circuit — data **and** ancilla qubits together — as a **Matrix Product State (MPS)**.
 The decisive physical observation is that **repetitive stabilizer measurement keeps the
-QEC state low-entanglement** (it repeatedly projects the system back toward a product /
-locally-corrected state), so the bipartite entanglement obeys an **area law** and a
-**small, _bounded_ bond dimension χ suffices** even over many rounds and hundreds of
-qutrits. This is exactly the regime where MPS is efficient and exact state-vector
+QEC state low-entanglement** in the reported regimes, and the required bond dimension
+saturates with rounds and becomes approximately constant with `d` in the large-`d`
+repetition-code study. This is the regime where MPS is efficient and exact state-vector
 simulation (≈ petabytes for 30 qutrits, p.3) is impossible.
 
 The method is a **pure-state stochastic-trajectory** simulator: unitaries / CPTP Kraus
@@ -57,16 +59,16 @@ code)**. CPTP (non-unitary) noise — amplitude damping + thermal excitation —
 by **Kraus-operator sampling** with probability `p_i = Tr(K_i|ψ⟩⟨ψ|K_i†)` (Eq. A9), so
 each trajectory stays a pure MPS. The pipeline **does produce syndrome samples**: it
 simulates each round's ancilla measurement, feeds the syndrome history to **MWPM**, and
-records a logical-error event — so the per-shot output is precisely a
-`(syndrome-history, logical-flip)` record, i.e. the faithful `{det, obs}` record our
-simulator must GENERATE (the MWPM decode step is downstream product, not part of that
-record contract).
+records a logical-error event. Thus the method can in principle expose a
+`(syndrome-history, logical outcome)` sample stream, but the paper reports aggregated
+LER rather than the full joint distribution needed to certify our `{det, obs}` contract.
 
 Headline scientific findings: (i) the required χ stays small and **saturates / is
 constant in d** at large round count (area law, Fig. 6) → scalable to a few hundred
 qutrits; (ii) the **stochastic (General-Twirling-Approximation) surrogate of coherent
-leakage can over-predict the logical error rate by >3×** (Fig. 8), so leakage/seepage
-rates alone are **not** sufficient descriptors; (iii) leakage-removal strategy choice
+leakage **over-predicts the logical error rate by >3× in the reported MLR condition**
+(Fig. 8), so matching leakage/seepage rates is insufficient to fix LER in that setting;
+(iii) leakage-removal strategy choice
 matters most at **large code distance** and differs sharply by leakage type, including
 a **threshold-disappearance / reversal** at small bath coupling and large d (Figs.
 10–12).
@@ -225,13 +227,14 @@ MPO — this is why it scales (one pure MPS, not a doubled-wire mixed state).
 - **Fig. 7 (p.8) — bond dimension, 3×7 surface code, 7 rounds, ε = 10⁻⁴.** Same trend;
   avg χ ~9–21; **not yet saturated** (few rounds); surface sim is costlier than the
   repetition code.
-- **Fig. 8 (p.8) — EXACT vs GTA (the accuracy/over-prediction result).** Logical error
-  rate vs γ for d = 19, T = 10, θ = 0.1π, three strategies; **solid = exact MPS, dashed
+- **Fig. 8 (p.8) — coherence-preserving MPS vs GTA.** Logical error
+  rate vs γ for d = 19, T = 10, θ = 0.1π, three strategies; **solid = MPS, dashed
   = General-Twirling-Approximation (incoherent surrogate)**. The GTA channel is built
   (Eqs. 16–20) from leakage rate L1 and seepage rate L2 (Eqs. 13–15) plus a Pauli-twirl
   of the in-subspace unitary. **GTA over-predicts the logical error rate substantially —
   "by more than a factor of three in the MLR case."** ⇒ leakage/seepage rates are
-  **insufficient** summaries; coherence matters.
+  **insufficient to determine LER in this reported condition**; the result is not a
+  full-record comparison or a theorem about all reset strategies/parameter regimes.
 - **Figs. 9–11 (p.9–10) — repetition-code leakage physics.** Fig. 9: LER vs γ across T
   and θ_spread (d = 49, θ = 0.05π) — high-T thermal excitation and leakage spreading both
   worsen LER; **DQLR is nearly insensitive to spreading**. Fig. 10: LER vs γ for many d
@@ -248,30 +251,26 @@ MPO — this is why it scales (one pure MPS, not a doubled-wire mixed state).
   increasing with d** (as predicted for the thin code). They expect the same in full
   d×d surface codes.
 
-**Bottom line of the results:** the entanglement really is small and bounded (Figs.
-5–7) so the method is **accurate _and_ scalable** over many rounds and hundreds of
-qutrits, and the exact-vs-twirl gap (Fig. 8) is the scientific payoff — **non-Pauli
-coherent leakage is decoding-relevant and is mis-estimated by stochastic surrogates.**
+**Bottom line of the results:** the required bond dimensions remain manageable and
+saturate in the studied 1D/thin-strip regimes (Figs. 5–7), and the MPS-vs-GTA gap in
+Fig. 8 shows that a leakage/seepage-rate-matched incoherent surrogate can misestimate
+decoding performance. Neither observation supplies a universal large-geometry bound or
+a full-record equivalence/no-go theorem.
 
 ## **Useful for Our Project** (the load-bearing section)
 
-Our program builds the **error-coupling SIMULATOR** — a faithful FORWARD GENERATOR that
-emits realistic-noise surface-code records **{det,obs}** with **non-Pauli** signal (T1/T2,
-leakage |1⟩→|2⟩ + seepage, soft readout). **Leakage is the strongest genuinely
-non-Markovian, NON-DEM-reducible notion-2 SOURCE**: it persists and hops, imprinting a
-correlated-detection tail / long-range off-diagonal `p_ij` structure on the record that a
-Stim-DEM / Markov-k null cannot forge — so it carries **anti-toy legitimacy** (the modeled
-feature is distinguishable from a matched CP-divisible / best-Pauli-DEM null). But **true
-leakage needs a 3-level sim that does not scale** on a density matrix, so we need a
-**scalable faithful generator whose one approximation (MPS bond truncation) we can BOUND
-vs an exact qutrit reference**. This paper's qutrit-MPS is that generator; it is a direct
-hit on every clause. Validity here = (i) FAITHFULNESS (generated record matches the
-independent qutrit-DM oracle) + (ii) ANTI-TOY LEGITIMACY (record distinguishable from a
-matched Markov/DEM null); the decoder and LER are the simulator's downstream product, **not**
-in the validity chain (memory `feedback-simulator-not-decoder`).
+Our program builds an error-coupling forward simulator that must emit a faithful joint
+`{det,obs}` record under non-Pauli mechanisms. This paper motivates a qutrit-MPS carrier
+because it retains coherent leakage, seepage, and leakage spreading while avoiding a
+full density-matrix representation. It does **not** establish that leakage is inherently
+non-Markovian, non-DEM-reducible, or unforgeable by every finite-order classical null: a
+persistent leakage state can itself be included as a classical hidden state, and the
+paper performs no such null-class comparison. The project must separately test
+full-record faithfulness against an exact qutrit instrument and distinguishability from
+each explicitly frozen null class.
 
-**1. Is this the scalable faithful generator for our simulator? Yes — it is essentially
-the reference design for `forward/scalable`.**
+**1. Is this a candidate scalable generator architecture? Yes, within its demonstrated
+1D/thin-strip scope.**
 - **Qutrit-native, no twirl (Sec. II, C0):** leakage and seepage are physical |2⟩
   transitions, exactly the dominant non-Pauli signal we want. Their five channels (Eqs.
   1–12) are a ready-made, citable, superconducting-tuned leakage model — control leakage,
@@ -283,17 +282,17 @@ the reference design for `forward/scalable`.**
 - **Scalability mechanism (Sec. III, Figs. 5–7):** the MPS + dynamic-χ trajectory method
   scales to **a few hundred qutrits over ~100 rounds on one CPU node** *because* QEC
   states are area-law. This is the concrete route past the density-matrix wall noted in
-  our own README (`forward/exact` explodes past ~15 qubits) — **the qutrit MPS-trajectory
-  is the scalable faithful generator for `forward/scalable`** on the leakage axis
-  specifically. Caveat: demonstrated for **1D / quasi-1D (3×d) codes**; full 2D d×d needs
+  our own README (`forward/exact` explodes past ~15 qubits) — the qutrit MPS trajectory
+  is a published architecture candidate for `forward/scalable` on the leakage axis.
+  Caveat: demonstrated for **1D / quasi-1D (3×d) codes**; full 2D d×d needs
   PEPS/isoTNS (their own Sec. VI / W-list).
 - **Trajectory architecture (Eq. A9):** Kraus sampling keeps each shot a **pure MPS**, so
   dissipative T1/T2 and the readout instrument cost the same as unitaries — this is the
   design pattern our generator adopts (stochastic unraveling, not a doubled-wire MPO), and
   it is what makes the faithful many-round record emission feasible.
 
-**2. How do they bound the approximation error vs exact? Via a per-step truncation-error
-tolerance — but note the bound is _controlled_, not _certified absolute_.**
+**2. How do they control the approximation? Via a per-step truncation-error tolerance,
+not a certified record-error bound.**
 - The only approximation is SVD bond truncation. They control it by the **2-norm of the
   discarded singular values per truncation ≤ ε**, with **ε = 10⁻⁶ (rep) / 10⁻⁴
   (surface)** (Sec. V.A, p.7; Appendix A). The per-cut **discarded weight is the local
@@ -324,33 +323,28 @@ tolerance — but note the bound is _controlled_, not _certified absolute_.**
   gate (class c)**; only the exact qutrit-DM cross-check at small d is **class (a) exact**,
   and it is what earns the record's FAITHFULNESS claim.
 
-**3. Does it emit the faithful record {det,obs}? Yes — directly, and that is the whole
-output contract of the generator.** Each trajectory simulates every round's **ancilla
+**3. Can it expose the ingredients of `{det,obs}`? In principle, but the paper does not
+validate that joint record.** Each trajectory simulates every round's **ancilla
 measurement** (Eqs. 8–9 sampled via A9) and accumulates the **multi-round syndrome
 history**; sampling the leaked-state readout (Eqs. 8–9) is itself a physical part of the
-faithful record. Their pipeline then runs **MWPM** and records a **logical-flip** event
+candidate record generated by the model. Their pipeline then runs **MWPM** and records a **logical-flip** event
 (Sec. IV.A; LER = P(MWPM failure)) — but for us **that decode step is downstream use, not
 the generator's job**: the generator emits the **detector record `det` (syndrome history)
 + observable `obs` (logical label)** shot by shot, an isolation-clean artifact where the
 `obs` label is an **evaluator-side ground-truth label** (isolation contract — never fed to
-any learner). So adopting their engine gives us the faithful record-generation loop
-directly; the LER through **our frozen decoder** is then just one downstream product
-scored off those records.
+any learner). That export and its full-record validation are project additions, not
+results established by Manabe et al.; LER through a frozen decoder is one downstream
+check rather than a substitute for joint-record comparison.
 
-**4. Anti-toy legitimacy of the leakage source, pre-validated (this is a legitimacy
-result, not a decoding-headroom result).** Fig. 8's **>3× GTA over-prediction** and the
-paper's explicit conclusion that **"leakage and seepage rates do not fully capture the
-impact of leakage"** is an independent, citable demonstration that **a Pauli/twirl
-(effectively DEM-reducible) model of leakage cannot reproduce the leakage record** — i.e.
-the leakage feature is genuinely **not forgeable by a matched Markov/best-Pauli-DEM null**,
-which is exactly the ANTI-TOY LEGITIMACY criterion the simulator must clear (a modeled
-feature distinguishable from a matched CP-divisible / DEM null). The record-level analogue
-of Fig. 8 for us is a **correlated-detection tail / long-range off-diagonal `p_ij`** the
-null cannot forge; the >3× LER gap is the paper's coarse (decoder-side) shadow of that
-record-level distinguishability, and its **over**-prediction sign warns the twirl surrogate
-is pessimistic. Darmawan is a co-author and the project already carries his TN line, so
-this slots cleanly into the existing citation web (`darmawan_*`, `ferris_poulin_*`,
-`harper_nonclifford_crosstalk_surface_2605.29514`).
+**4. What Fig. 8 actually validates.** In the reported `d=19`, `T=10`,
+`θ=0.1π` repetition-code comparison, the GTA formed from matched leakage/seepage
+rates overestimates LER by more than a factor of three in the MLR condition. This is
+direct evidence that `L1,L2` plus that incoherent construction do not fix LER there.
+The paper reports no full joint-record TV/KL/NLL, no fitted Stim/DEM or Markov-`k` null,
+and no theorem that every stochastic surrogate must fail. The overprediction sign is
+also condition-specific, not a universal guarantee that GTA is conservative. Therefore
+record-level anti-toy discriminability remains an open project test rather than a result
+pre-validated by this paper.
 
 **5. Concrete adoption checklist (for the scalable leakage GENERATOR build).**
 - Reuse **Eqs. 1–12 + Eq. 10** as the leakage channel set (control / CZ-phase / spreading
@@ -364,9 +358,10 @@ this slots cleanly into the existing citation web (`darmawan_*`, `ferris_poulin_
   converges (their self-consistency check); (iii) **certify the RECORD against the exact
   qutrit-DM oracle `src/error_coupling_simulator/carrier/exact/qutrit_dm.py` at d = 3 /
   ≤ 9–15 qutrits** — the independent exact reference they lack and we have.
-- Emit the faithful `{det, obs}` record shots (isolation-clean, `obs` = evaluator-side
-  label). Establish validity by (a) faithfulness vs the qutrit-DM oracle and (b) anti-toy
-  discriminability of the record from a matched Markov-k / best-Pauli-DEM null. **LER /
+- Emit `{det, obs}` record shots (isolation-clean, `obs` = evaluator-side label).
+  Establish validity by (a) faithfulness vs the qutrit-DM oracle and (b) a separate,
+  project-defined discriminability test against each frozen Markov-`k` / Pauli-DEM null;
+  Manabe et al. do not establish (b). **LER /
   scaling through our frozen decoder is a downstream PRODUCT the record must reproduce
   (`docs/METRICS.md`), NOT part of the validity chain.**
 - **GPU:** they are CPU-bound and call out **SVD as the d ≥ 5 bottleneck** (p.10) → our
@@ -378,8 +373,8 @@ this slots cleanly into the existing citation web (`darmawan_*`, `ferris_poulin_
 - **W1 — 1D / quasi-1D only.** MPS is efficient here *because* the repetition code is 1D
   and the 3×d code is quasi-1D (snake). **Full 2D d×d surface codes are explicitly future
   work needing PEPS / isoTNS** (Sec. VI, Sec. IV.A). Our end target is the real Google d3/d5/d7
-  surface code, which is genuinely 2D — so the **MPS generator is a stepping stone /
-  small-width faithful generator + validator, not the final large-d 2D generator.** (Their
+  surface code, which is genuinely 2D — so the **MPS method is a stepping stone /
+  small-width carrier candidate, not the final large-d 2D generator.** (Their
   χ = 8/16 remarks for 5×d/7×d are about holding the _noiseless_ logical state; noise
   spreading over long MPOs still inflates cost.)
 - **W2 — phenomenological, not device-calibrated, noise.** The authors state the model is
@@ -400,31 +395,34 @@ this slots cleanly into the existing citation web (`darmawan_*`, `ferris_poulin_
 - **W5 — MWPM-only decoding + LER as the sole reported quantity.** They report only logical
   error rate (and bond dimension); no record-level statistics, no `p_ij` / correlated-tail
   observables, no matched-null discriminability check. Since for us the **record** is the
-  deliverable and the decoder/LER is only downstream, we add the {det,obs}-logging plus the
-  faithfulness-vs-oracle and anti-toy-vs-null scoring ourselves (the engine supports it;
-  they just didn't report it).
+  deliverable and the decoder/LER is only downstream, `{det,obs}` logging plus
+  faithfulness-vs-oracle and frozen-null scoring must be implemented and validated as
+  project additions.
 - **W6 — not a learning / inference method.** This is a forward simulator only; it does not
   recover channels or fit parameters. That is exactly right for us: the project scope is the
-  faithful **forward GENERATOR**, and any recover / characterize / `do()` use is a separate,
+  forward carrier, and any recover / characterize / `do()` use is a separate,
   out-of-scope later project (memory `feedback-simulator-is-goal-twin-is-next`). This paper
-  contributes the generator, full stop.
+  contributes the carrier method, not a certified project generator.
 
 ## How to use / trust
 
-- **Cite for:** (a) qutrit-MPS-trajectory as a scalable, twirl-free leakage simulator; (b)
-  the explicit **>3× GTA-over-prediction** evidence that Pauli/leakage-rate models miss
-  decoding-relevant coherent leakage (Fig. 8); (c) the area-law / bounded-χ scalability
+- **Cite for:** (a) qutrit-MPS trajectories as a scalable, coherence-preserving leakage
+  simulator in 1D/thin strips; (b) the explicit **>3× GTA overprediction in the
+  reported MLR condition**, showing that matched `L1,L2` do not determine LER there
+  (Fig. 8); (c) the observed bond-dimension saturation/scalability
   argument (Figs. 5–7); (d) the leakage channel set (Eqs. 1–12) and thermal Kraus map (Eq.
   10) as a ready model; (e) the three leakage-removal strategies (No-reset / MLR / DQLR).
 - **Do not cite as:** a 2D d×d surface-code leakage benchmark (it is 1D/quasi-1D); a
-  device-calibrated noise model; a method with a certified error bound; or any kind of
-  noise-learning / parameter-recovery result.
+  device-calibrated noise model; a method with a certified error bound; a full-record
+  comparison; a no-go against Stim/DEM or arbitrary Markov-order models; a universal
+  claim that GTA is conservative; or any kind of noise-learning / parameter-recovery
+  result.
 - **Open questions for our build.** (i) What is the empirical **discarded-weight →
   record-error** map on our exact qutrit-DM cross-check, and does ε = 10⁻⁴ hold for our
   richer (calibrated) leakage while keeping the generated {det,obs} distribution faithful?
-  (ii) How far does the area-law-bounded-χ regime extend on the **real** Google noise levels
+  (ii) How far does the observed bond-dimension-saturation regime extend on the **real** Google noise levels
   (their model is phenomenological)? (iii) Does the leakage record stay **discriminable from
-  a matched Markov-k / best-Pauli-DEM null** across the parameter range (the record-level
-  analogue of Fig. 8, and the anti-toy-legitimacy gate)? (iv) GPU/batched-SVD trajectory
+  a frozen Markov-`k` / Pauli-DEM null** across the parameter range? This is a new
+  project-level test, not a record-level result implied by Fig. 8. (iv) GPU/batched-SVD trajectory
   throughput at d = 5/7 thin codes — is it enough to emit faithful records at the scale
   downstream studies need?

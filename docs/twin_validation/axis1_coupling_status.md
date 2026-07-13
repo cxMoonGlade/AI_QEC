@@ -1,5 +1,13 @@
 # Axis-1 inter-error coupling (联动) — status
 
+> **TAXONOMY CORRECTION, 2026-07-13.** Section B's old equation
+> `shared bath/TLS/1f = CP-divisibility breaking = unforgeable contribution` is retracted. A shared
+> classical source can generate notion-2 record memory without identifying a reduced map; classical
+> RTN free-induction maps can themselves show BLP backflow, which is not a quantum-origin
+> certificate. Two declared finite-RTN free-induction diagnostics are now BLP-positive, while the
+> production `z -> Theta` QEC map/record bridge is open. Read Section B as historical planning;
+> current authority is `notion123_taxonomy_literature_closure_2026-07-13.md`.
+
 Date: 2026-06-30. Answers "how strong / how correct is the coupling between the rebuilt error
 mechanisms?" Two levels: **(A) within-substep (Markovian joint Lindbladian)** — now comprehensively
 certified; **(B) cross-mechanism correlated / non-Markovian** — partially built (Axis-2), the open
@@ -47,9 +55,10 @@ the coupling effect-size measured per pair and the commutation structure physica
 - **Correlated DISSIPATIVE** (shared bath → collective/correlated relaxation): the **operator** is
   M12 (Dicke), now executable on the scalable carrier via **Phase-B** (the 2-site joint-collapse
   trajectory seam). Multi-qubit correlated collapse is unblocked.
-- **Non-Markovian** (shared bath / TLS / 1/f → CP-divisibility-breaking, echo-irremovable): the
-  unforgeable signature (per the project plan, the actual contribution) — **NOT built**. Needs an
-  explicit source/bath-memory carrier (Axis-2/Axis-3).
+- **Cross-time reduced-map/process behavior** (shared bath / TLS / finite-RTN source): **NOT closed on the
+  production QEC object**. Two declared finite-RTN free-induction diagnostics show BLP backflow, but that
+  neither identifies a quantum origin nor transfers through the current `z -> Theta` fan-out. A production
+  channel/instrument bridge and an explicit process-memory carrier remain separate Axis-2/Axis-3 work.
 
 **Next (#3):** theory-first scope the correlated-coupling teacher (shared source fanning into both
 coherent params AND the M12-type collective collapse) and the non-Markovian wedge, on top of

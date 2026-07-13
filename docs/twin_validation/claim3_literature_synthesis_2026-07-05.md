@@ -1,5 +1,10 @@
 # Claim 3 Literature Sweep — Final Synthesis (2026-07-05)
 
+> **HISTORICAL SYNTHESIS / CLAIM TAXONOMY SUPERSEDED, 2026-07-13.** Retain the source discovery,
+> but do not reuse its decomposition as a closed quantum-memory claim. The relevant objects and
+> intervention boundaries are corrected in
+> [`notion123_taxonomy_literature_closure_2026-07-13.md`](notion123_taxonomy_literature_closure_2026-07-13.md).
+
 > **15 papers, deep-read.** 9 new reading notes + 6 existing modernized.
 > RAG index: `docs/papers/reading_notes/README.md` §"Multi-time non-classicality decomposition".
 > Knowledge graph: `docs/twin_validation/claim3_knowledge_graph.md`.

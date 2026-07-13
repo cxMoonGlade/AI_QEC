@@ -12,8 +12,9 @@ never the object. **Binding spec: `docs/SIMULATOR.md`** (object contract, bounda
 ladder, disciplines — read it first).
 
 Active package: **`src/error_coupling_simulator/`** (importable directly). The live frontier
-is the **full-`d×d` 2D-PEPS trajectory carrier** and its **record-faithful truncation**
-(ADR 0011; the FET/ALS → Evenbly-WTG solver problem). Working line: `docs/nonpauli_teacher/`.
+is the **full-`d×d` 2D-PEPS trajectory carrier** and the still-open certification of its
+record faithfulness (ADR 0011). The deterministic FET/ALS → WTG replacement and coherent-tail
+deletion are suspended by the 2026-07-13 literature closure. Working line: `docs/nonpauli_teacher/`.
 Two noise axes: **Axis-1** within-substep joint-Lindbladian coupling; **Axis-2** notion-2
 classical multi-time record memory. Non-Pauli spans both: **leakage / drift / crosstalk /
 burst**.
@@ -69,8 +70,9 @@ src/error_coupling_simulator/
 
 **Carrier ladder / backend boundary:** exact DM (≤~15q, the oracle) → MPS MCWF thin-strip
 (`quimb`; χ constant in d) → **2D PEPS full `d×d`** (the active carrier — a 1D MPS is
-geometry-incompatible for the full square, `χ~2^{2d}`). Truncation is **record-faithful**
-(ADR 0011): gate on the syndrome record, never on the carrier bond / state fidelity. The
+geometry-incompatible for the full square, `χ~2^{2d}`). **Record faithfulness is the open
+acceptance criterion**, not an established property (ADR 0011): gate on the full syndrome
+record, never on the carrier bond / state fidelity alone. The
 channel object stays backend-agnostic, so swapping the carrier is not a rewrite. Detail:
 `docs/SIMULATOR.md` + `carrier/peps/README.md`.
 
@@ -100,6 +102,11 @@ anchors; nothing downstream of the record may see it.
 - **Theory-first discipline:** the mathematics/physics derivation precedes every code
   experiment — the predicted outcome (direction, scaling, threshold) is written down before
   the run; experiments verify derived predictions, never explore-then-rationalize.
+- **Numerical-provenance discipline:** before a claim-bearing run, classify every value and
+  freeze its exact source locator, units/scope, and transformation chain per
+  `docs/NUMERICAL_PROVENANCE.md`. A paper equation grounds a form, not the chosen amplitude;
+  cross-paper/device tuples are composite benchmarks, and project/numerical gates cannot support
+  a hardware-realism claim.
 - **Metric discipline:** score every quantitative claim with a field-standard metric via
   `docs/METRICS.md`. Its ladder is forced — ledger metric → frontier-literature research →
   explicitly flagged project-defined; never a silent non-standard stand-in.
@@ -121,14 +128,16 @@ anchors; nothing downstream of the record may see it.
   claim follows `docs/FAITHFULNESS_PROTOCOL.md` — (I) verify against ground truth INDEPENDENT
   of the implementation; (II) a constraint ledger of physical theorems + a falsifying test
   each, written BEFORE building; (III) declare + BOUND every simplification (unbounded ⇒
-  STOP). Slow is fast — front-loaded rigor ≪ the 10× debug later.
+  STOP); (IV) freeze value-level numerical provenance before the run. Slow is fast —
+  front-loaded rigor ≪ the 10× debug later.
 
 ## Notation (`docs/SIMULATOR.md` is the full contract)
 
 `A` DEM parity map (never an assignment matrix); `E` the CPTP channel field;
 `lambda_j = logit(p_j)` (never `ell_j`); `m` logical observable (never `o`); `z_t` / `ξ(t)`
-the shared Axis-2 classical source trajectory; **notion-1/-2/-3** the memory taxonomy
-(CP-div-breaking quantum / classical multi-time record / quantum-bath). A **noise process** =
+the shared Axis-2 classical source trajectory; **notion-1/-2/-3** are non-exclusive object labels
+(reduced-map divisibility/backflow / observed-record memory-order / process-tensor memory carrier),
+not a quantum-strength ladder. A **noise process** =
 a specified noise model that emits records (evaluator-only truth); a **DEM** = its
 decoder-facing detector-error-model reduction, never the object.
 
@@ -138,6 +147,8 @@ decoder-facing detector-error-model reduction, never the object.
   disciplines. READ FIRST.**
 - `docs/METRICS.md` — metric ledger + the forced standard-metric ladder (governs every score).
 - `docs/FAITHFULNESS_PROTOCOL.md` — the anti-toy faithfulness protocol.
+- `docs/NUMERICAL_PROVENANCE.md` — value-level source ledger and the one-source/two-source /
+  cross-device compatibility rule.
 - `docs/nonpauli_teacher/` — the live PEPS/FET carrier line + handoffs (current work).
 - `docs/ARCHITECTURE.md` — full module map (+ per-module READMEs); `docs/CODE_MAP.md` —
   generated `src/` inventory.

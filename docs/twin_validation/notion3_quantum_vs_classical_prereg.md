@@ -1,5 +1,11 @@
 # notion-3 (quantum non-classicality on the passive record) — Pre-Registration (theory-first)
 
+> **SUPERSEDED INTERPRETATION, 2026-07-13.** This prereg remains a historical experiment record,
+> but its identification of `K=P_all-P_skip` with quantum-bath/quantum-memory certification is
+> retracted. `K` compares two protocols and tests Kolmogorov consistency/non-invasiveness for that
+> family; Markovian coherence-generating dynamics can also make it nonzero. See
+> [`notion123_taxonomy_literature_closure_2026-07-13.md`](notion123_taxonomy_literature_closure_2026-07-13.md).
+
 Status: PRE-REGISTRATION, 2026-07-05. Predictions written BEFORE the run; a miss is a finding, not a re-fit.
 
 **Purpose.** The classical notion-2 legitimacy run PASSED (`corrected_multitime_observable_prereg.md` §8): the
@@ -16,7 +22,7 @@ passive record, distinguishable from a classical process). NOT twin recovery. Re
 
 | claim | anchor | reuse |
 |---|---|---|
-| notion-3 = Kolmogorov violation of the multi-time record | milz 1907.05807 Eq.9; C4-analog v2 | `quantum_backaction_fairtest.py::K_stat` (measure-all-marginalize vs skip) |
+| historical `K` = Kolmogorov/non-invasiveness test for a measure/skip protocol family; not a process-level quantum-memory classifier | milz 1907.05807 Eq.9; Smirne *et al.* QST 4, 01LT01 | `quantum_backaction_fairtest.py::K_stat` (measure-all-marginalize vs skip) |
 | classical incoherent dephasing ⇒ K=0 in BOTH bases (Kolmogorov-consistent) | C4-analog v2 (committed, a-exact) | re-verify as the classical arm |
 | quantum σz-coupled pseudomode bath ⇒ K(X)>0 (survives via the noncommuting X-stabilizer), corner-confined | FAIR-TEST (HEADLINE_STANDS_CORNER) | `build_L`/`round_superop`/`distributions`/`K_stat`/`M_mem_stat`/`run_point` verbatim |
 | memory beyond Markov-1 = the corrected absolute order test | `corrected_multitime_observable_prereg.md` §8; milz | exact CMI (KL) reconciled with the classical run's CMI/G² |
@@ -36,9 +42,9 @@ in the **X-stabilizer basis** (the basis noncommuting with σz that detects deph
 ## 2. Observable (the RIGHT one — reconciled + the notion-3 discriminator)
 
 Per arm, on the exact multi-round outcome distribution:
-- **K (notion-3 / non-classicality, Milz Eq.9):** `K = Σ_{s1,s3} |Σ_{s2} P(s1,s2,s3) − P_skip(s1,s3)|` — the
-  Kolmogorov-consistency violation (measure-all-then-marginalize the intermediate vs skip-measuring it). This
-  is the operational non-classicality witness; it is NOT a matched-marginal subtraction (error-A-clean).
+- **K (protocol-family Kolmogorov/non-invasiveness statistic, Milz Eq.9):** `K = Σ_{s1,s3} |Σ_{s2}
+  P(s1,s2,s3) − P_skip(s1,s3)|` — measure-all-then-marginalize versus skip-measuring the intermediate.
+  It is not a matched-marginal subtraction, but neither is it by itself a quantum-memory/origin witness.
 - **Memory (beyond-Markov-1):** the exact CMI `I(s1;s3|s2)` (KL) — reconciled with the classical run's
   CMI/G² — AND `M_mem` (L1 to the Markov-1 factorization, FAIR-TEST continuity). Absolute order statistics.
 - **N_detect** for each (`(3/x)²`, single-statistic order-of-magnitude, as FAIR-TEST); binding = max over the
@@ -46,9 +52,9 @@ Per arm, on the exact multi-round outcome distribution:
 
 ## 3. Predicted behavior (falsifiable) + epistemic classes
 
-- **(a) exact — the notion-3 SEPARATION:** CLASSICAL arm ⇒ **K=0** (Kolmogorov-consistent; C4-analog a-exact),
-  QUANTUM arm ⇒ **K>0** (Kolmogorov violation, survives via the noncommuting X-stabilizer). ⇒ K SEPARATES
-  quantum from classical: the quantum bath leaves a non-classicality signature no classical process reproduces.
+- **Historical prediction, interpretation retracted:** CLASSICAL arm ⇒ **K=0** in the declared incoherent
+  model; QUANTUM arm ⇒ **K>0**. This separates those two registered arms only. It does not establish that no
+  classical/invasive or Markovian coherence-generating model can reproduce the statistic.
 - **(a) exact — both have memory:** BOTH arms ⇒ **CMI>0 / M_mem>0** (classical latent memory AND quantum mode
   memory). So memory alone does NOT distinguish them — only K does (this is the whole point of notion-3).
 - **(b) band — corner-confinement (FAIR-TEST):** the QUANTUM K (and the binding N_detect over K, M_mem) is
@@ -92,7 +98,7 @@ CMI. Builder writes `outputs/twin_validation/notion3_quantum_vs_classical_run.py
 Fock convergence, coupling sweep, corner, the classical-K=0 control, the coherent-drive positive control),
 scripted-execution + smoke. Un-led reviewer vs this prereg. Then serial CPU run (exact-DM, no GPU, no concurrency).
 
-## 8. Post-run results (2026-07-05) — NOTION-3 SEPARATION HOLDS (CORNER-ONLY)
+## 8. Post-run results (2026-07-05) — DECLARED-ARM `K` SEPARATION HOLDS (CORNER-ONLY; interpretation superseded)
 
 `outputs/twin_validation/notion3_quantum_vs_classical_run.py` (FULL; `python-exit=0`; evidence
 `notion3_quantum_vs_classical.json` sha256 `7bef2895…` over script+json bytes + sidecar). Built via workflow
@@ -100,17 +106,17 @@ scripted-execution + smoke. Un-led reviewer vs this prereg. Then serial CPU run 
 classical K=0 is genuine non-invasiveness, not rigged); 2 smoke-only minors fixed. **GATE_RESULT:
 NOTION3_SEPARATION_HOLDS_CORNER.**
 
-**Headline (a-exact) — K separates quantum from classical; memory does NOT:**
+**Historical headline — `K` separates the two declared arms; it does not classify all quantum vs classical processes:**
 
 | arm | K (Kolmogorov violation) | CMI (bits) | M_mem |
 |---|---|---|---|
 | **classical** (incoherent σz + time-correlated 2-state latent) | **2.8e-17 (≈0)** — Kolmogorov-CONSISTENT | 0.0117 | 0.077 |
 | **quantum** (memory-bearing pseudomode bath, g=0.5) | **5.9e-2 (>0)** — Kolmogorov VIOLATION | 0.00065 | 0.028 |
 
-So the quantum bath leaves a non-classicality signature (K>0) on the passive record that **no classical
-process reproduces** (classical K=0), while **both** arms carry record memory (CMI/M_mem>0) — memory alone
-cannot tell them apart; **only K can**. This is exactly what makes notion-3 the distinctive contribution over
-the (broadly-achievable) classical notion-2.
+Thus the declared quantum-bath arm has `K>0` while the declared incoherent classical arm has `K≈0`, and both
+carry record memory (CMI/M_mem>0). This is a valid comparison of those two models only. It does not exclude
+invasive classical models or Markovian coherence-generating/detecting dynamics and therefore does not certify
+process-level quantum memory.
 
 **Controls (all fire, hard asserts):** independent-boson GT `|ρ_01(τ)|`=0.13312799 vs closed-form
 0.5·e^{−4Γ}=0.13312799, |diff| 1.76e-10 (non-circular, Rule I); classical-K null 2.8e-17 < 1e-8 (and the
@@ -123,11 +129,10 @@ K+memory conjunction is headline-feasible (both N_detect ≤ 1e6) only for **g�
 the falsifier points present (g=0.05,0.1 sub-feasible — binding = N_det(M_mem) 3.4e9/1.3e7; g=1.0 sub-feasible,
 both N_det > 1e6). Peak g=0.35, N_det≈4.4e3 — identical to the FAIR-TEST.
 
-**Verdict / roadmap.** notion-3 (quantum non-classicality on the passive record) is **REAL and cleanly
-demonstrated** — K separates quantum from classical, a classical process provably cannot fake it — but
-**CORNER-CONFINED** to near-resonant strong coupling. Combined with the classical run: **notion-2 (classical
-multi-time memory) = BROADLY achievable; notion-3 (quantum discord/Kolmogorov-violation) = REAL but reachable
-only in a fragile corner** (converges with G0-quantum, now on the corrected observable). At typical/weak
-coupling the record looks classical (K sub-feasible) and notion-2 is the broadly-visible signal. PROVISIONAL
+**Historical result, interpretation retracted 2026-07-13.** `K` separates the two declared arms and is
+**CORNER-CONFINED** to near-resonant strong coupling. It does not prove quantum origin or process-level
+quantum memory. Combined with the classical run: notion-2 record memory is broadly visible in the tested
+models, while this protocol-family `K` statistic is fragile. At typical/weak coupling `K` is sub-feasible.
+PROVISIONAL
 until the faithful upgrades (ancilla-mediated stabilizer carrier — few-ancilla exact-DM; the amplitude-damping/
 leakage axis, a stronger non-benign coupling); nothing built on it yet.

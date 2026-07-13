@@ -1,5 +1,11 @@
 # Axis-3 Watch — effects provably outside Axis-1 (same-substep joint GKSL) AND Axis-2 (cross-cycle / source / memory)
 
+> **NON-MARKOVIANITY CORRECTION, 2026-07-13.** Historical statements below that a classical
+> mixture cannot produce coherence revival, or that revival identifies quantum memory, are too broad.
+> Classical RTN reduced-map diagnostics can show BLP backflow. Keep the carrier separation as an
+> implementation taxonomy only; quantum-origin claims require process/instrument evidence. Current
+> authority: [`notion123_taxonomy_literature_closure_2026-07-13.md`](notion123_taxonomy_literature_closure_2026-07-13.md).
+
 **Status: NOT STARTED — DOCUMENTED ONLY.** This is the finish-plan Step 9 deliverable
 (`outputs/axis1_review/CONSOLIDATED_FINISH_PLAN.md` §9; codex round-1 §10; opus round-2 VERDICT).
 It records, on the record, each physical effect that **no** Axis-1 construction and **no** Axis-2

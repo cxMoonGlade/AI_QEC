@@ -1,5 +1,11 @@
 # Class-1 notion-2 multi-time imprint — effect-size GO/NO-GO (predict-before-measure, minimal analytic)
 
+> **NUMERICAL-PROVENANCE CORRECTION, 2026-07-13.** `p_ro=.01`, `p_reset=.005`,
+> `s<=.3`, `Z=3`, and `N<=1e6` are project configuration/gate choices, not a calibrated hardware
+> realism band. All `N_detect` values remain valid conditional calculations for that synthetic source
+> and declared threshold. “Realistic” below means the historical project bracket, not a literature-
+> closed device claim. See [`../NUMERICAL_PROVENANCE.md`](../NUMERICAL_PROVENANCE.md).
+
 **Status: PRE-REGISTRATION, 2026-07-06. Predictions written BEFORE the run; a miss is a finding, not a re-fit.**
 Minimal, CPU-analytic go/no-go (Track 1 Step 1 of `HANDOFF_simulator_nonmarkovian_visibility_2026-07-04.md`, re-sited
 to **Class-1**). It does NOT build the full Class-1 ancilla-axis architecture; it lands the **bandwidth** that decides
@@ -7,7 +13,7 @@ whether that build is worth it. If both guardrails land at feasible N → build 
 (G4-consistent), do not hard-build.**
 
 ## The question (binding)
-Is the **Class-1** (ancilla/syndrome SPAM) multi-time imprint of the realistic 1/f source, on the **passive** dual-axis
+Is the **Class-1** (ancilla/syndrome SPAM) multi-time imprint of the declared finite-RTN 1/f-like source, on the **passive** dual-axis
 syndrome record, **both**
 - **(Guardrail A — feasible)** detectable above the sampling floor, `N_detect ≤ FEASIBLE_N = 1e6`; **and**
 - **(Guardrail B — non-Markov-k-trivial)** distinguishable from a matched trivial **slow-RTN** (single-fluctuator,
@@ -35,8 +41,8 @@ syndrome record, **both**
   `p_ij(l)` DIFFERENCE between the 1/f `C_x(l)` and the RTN `C_x(1)^l` at lag≥2; `N_detect_B` sizes that difference.
 - **Sensitivity models (bracket — D1 is a user decision, declared class-(c), NOT truth):** (i) readout-only
   `dμ/dp_ro=1−2p_rs`; (ii) readout+reset-coherent (both SPAM rates track the source) ≈ 2× sensitivity.
-- **Sweep:** `s ∈ {0.02,0.05,0.1,0.2,0.35,0.5}` (fractional 1/f readout drift at 1σ; superconducting readout
-  assignment error is drift-prone O(10–50%), so this brackets realistic→aggressive). Report `N_detect` across it +
+- **Sweep:** `s ∈ {0.02,0.05,0.1,0.2,0.35,0.5}` (fractional source-driven readout drift at 1σ;
+  a project design bracket, not calibrated to a device). Report `N_detect` across it +
   the feasibility crossover `s*`.
 
 ## Epistemic-status declarations (`docs/METRICS.md`)
@@ -50,7 +56,7 @@ syndrome record, **both**
   3. **Guardrail B:** the 1/f-vs-matched-RTN lag≥2 gap is a small fraction (~few %) of the signal ⇒ `N_detect_B ≫
      N_detect_A` ⇒ **NOT separable at 1e6** (Guardrail B NO-GO) even where A is feasible.
   4. **Overall:** likely **honest cap** — the Class-1 SPAM route does not cleanly clear BOTH guardrails at feasible N
-     for realistic drift; the imprint is either sub-floor (A) or Markov-k-trivial (B). (If A+B both land against
+     for the declared `s<=.3` project bracket; the imprint is either sub-floor (A) or not separated from the chosen slow-RTN null (B). (If A+B both land against
      prediction, that is the GO finding → build the full run.)
 - **(c) gates:** `Z=3`; `FEASIBLE_N=1e6`; **honest-cap rule** — if the realistic bracket fails to clear BOTH A and B
   at `N_detect ≤ 1e6`, register the cap (G4-consistent registered STOP), do NOT hard-build the Class-1 architecture;
@@ -80,14 +86,14 @@ OFF-arm lag2 cov = 4.6e-18 (structural zero); small-s (0.05) MC vs first-order a
 | 0.35 | 7.4e6 | 1.5e6 | ~3e9 |
 | 0.50 | 1.8e6 | **3.9e5** | 1.8e8 |
 
-- **Guardrail A:** NEVER feasible (≤1e6) at realistic drift `s≤0.3`. readout-only stays sub-floor across the whole
+- **Guardrail A:** NEVER feasible (≤1e6) under the declared project bracket `s≤0.3`. readout-only stays sub-floor across the whole
   sweep (crossover `s*>0.5`); readout+reset reaches feasibility only at `s≈0.45` (feasible at `s=0.5`) — **beyond the
   realistic ceiling.**
 - **Guardrail B:** `N_det_B ≈ 450–4500× N_det_A` everywhere — the 1/f-vs-matched-slow-RTN lag-2 shape gap is only
   ~6% of the source autocov (`C_x(2)=0.696` vs `C_x(1)²=0.653`) ⇒ **B NEVER lands.**
 
-**VERDICT: HONEST CAP (G4-consistent registered STOP).** The Class-1 SPAM route's passive-record multi-time imprint
-is (A) sub-1e6-floor for realistic readout drift AND (B) Markov-k-trivial (not separable from a slow-RTN) even where
+**VERDICT: CONDITIONAL CAP UNDER THE REGISTERED PROJECT THRESHOLDS.** The Class-1 SPAM route's passive-record multi-time imprint
+is (A) sub-1e6-floor for the declared `s≤0.3` bracket AND (B) not separated from the chosen slow-RTN null even where
 detectable. **Do NOT hard-build the full Class-1 ancilla-axis architecture on this observable.**
 
 **Registered-prediction adjudication (predict-before-measure, honest):** Pred-1 (readout-only NO-GO, `s*≈0.5–0.65`)

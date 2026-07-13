@@ -1,5 +1,10 @@
 # Mainline Handoff — Resume the P0→P4 Simulator Build (2026-07-09)
 
+> **NOTION TAXONOMY UPDATE, 2026-07-13.** Any inherited claim that the passive syndrome
+> instrument universally twirls notion-1/3 structure, or that `K` certifies quantum memory, is
+> superseded by
+> [`notion123_taxonomy_literature_closure_2026-07-13.md`](notion123_taxonomy_literature_closure_2026-07-13.md).
+
 **Scope of this handoff:** how to proceed on the **mainline** (the error-coupling SIMULATOR, the
 P0→P4 plan) after pausing the P4-side unit-test program. It deliberately does **not** cover the
 test-coverage work (that state lives in the full-coverage program notes + `tests/CODEBOOK.md`).
@@ -15,14 +20,17 @@ as possible, ORACLE-BOUNDED**. The value is a faithful/fast/bounded simulator **
 classically-irreproducible expressive power on the syndrome is IMPOSSIBLE (proven protocol boundary)
 and is NOT the goal.
 
-**notion hierarchy (the why):** the passive QEC syndrome record — the simulator's PRODUCT — carries
-only **notion-2** (classical multi-time record memory; Markov-order > 1). **notion-3** (quantum /
-Kolmogorov-violation) is **CLOSED as a protocol boundary** and **parked**. Consequence for scope:
-the **quantum GKSL bath / "Branch B" is PARKED** (trigger-gated, not deleted); the live frontier is
-the **notion-2 faithful correlated simulator** — the classical / CP-divisible source (`source/*`,
-already built) → Θ fan-out → qutrit-leakage carrier → {det,obs}+DEM. `quantum_bath/` stays in the
-tree as (a) the evidence trail for the notion-3 closure and (b) reusable **matched nulls** for the
-record-characterization validity chain; no further quantum-bath science is on the critical path.
+**access boundary (the why):** the simulator's PRODUCT is one fixed passive QEC syndrome-record law.
+The live mainline deliberately targets **notion-2** observed-record memory/order. A fixed record does
+not identify **notion-1** reduced-map divisibility/backflow or **notion-3** process-level quantum
+memory; the latter generally needs an intervention/tester family. This is an out-of-scope boundary,
+not a theorem that quantum/coherent structure is absent from the record. Consequence for scope: the
+**quantum GKSL bath / "Branch B" is PARKED** (trigger-gated, not deleted); the live frontier remains
+the notion-2 correlated simulator — classical source (`source/*`, already built) → Θ fan-out →
+qutrit-leakage carrier → `{det,obs}`+DEM. Do not call that production path CP-divisible: the Gaussian
+surrogate is CP-divisible and two finite-RTN free-induction diagnostics are BLP-positive, while the
+actual `z -> Theta` QEC map has an open channel/instrument bridge. `quantum_bath/` stays as evidence
+and reusable matched nulls; further quantum-bath science is not on the current critical path.
 
 Authoritative framing: `project-simulator-p0p4-plan-framing` (memory) ·
 `docs/twin_validation/notion3_protocol_boundary_closure.md` ·

@@ -21,7 +21,7 @@ closed-form theorem, the literature, a from-scratch tokenizer (→ `1.5e-18`), t
 **theory-first alone has a hole: when the theory is itself the shortcut, "run matches my prediction" passes with
 both wrong.** This protocol closes that hole.
 
-## The three rules (mandatory for every load-bearing faithfulness claim)
+## The four rules (mandatory for every load-bearing faithfulness claim)
 
 ### Rule I — Ground truth INDEPENDENT of the implementation
 Verify each load-bearing quantity against one of: the **raw artifact** (the circuit `.stim`, the dataset bytes,
@@ -64,10 +64,21 @@ pre-registration with its epistemic class (a/b/c per `METRICS.md`), and (b) its 
 faithful version. **An unbounded simplification is a STOP** — derive the bound or build the faithful version
 first. (The lumping ×15, the `0.90` pin, the `C_L=0` channel all failed exactly here.)
 
+### Rule IV — Freeze numerical provenance before the run
+Every claim-bearing value must be classified as `paper-measured`, `paper-derived`,
+`dataset-measured`, `calibrated-to-paper`, `project-design`, `convenience-default`, or
+`numerical-only`, following `docs/NUMERICAL_PROVENANCE.md`. A paper equation grounds a form, not
+silently the amplitude substituted into it. A transformed value carries the complete conversion /
+calibration chain; a paper-backed value carries an exact page/figure/table/equation, units, device,
+and protocol scope. A cross-paper or cross-device tuple is a **literature-scale composite benchmark**,
+not a physical cell. Missing provenance is a STOP for a hardware/realism claim. Numerical tolerances,
+resource caps, and software tripwires may never be laundered into physical evidence.
+
 ## Enforcement (structural, not exhortation)
 1. **Required deliverables.** A model/faithfulness claim is not "done" until it ships: (i) the constraint ledger
    with each test passing (and shown to trip on a broken input), (ii) the independent ground-truth check
-   (Rule I), (iii) the declared+bounded simplification list (Rule III). The **builder** produces these BEFORE
+   (Rule I), (iii) the declared+bounded simplification list (Rule III), and (iv) a value-level provenance
+   manifest satisfying Rule IV. The **builder** produces these BEFORE
    claiming done — front-loaded.
 2. **From-scratch red-team by default.** Every faithfulness-critical model gets an independent adversarial
    reviewer whose job is to BREAK it against the raw artifact (un-led: stage problem + goal + artifact only).
@@ -85,12 +96,16 @@ ANTI-TOY PROTOCOL (binding — docs/FAITHFULNESS_PROTOCOL.md):
 - BEFORE building, write the CONSTRAINT LEDGER: the physical invariants this model must satisfy + a falsifying
   test each (confirm each test trips on a broken input). Apply every physical gate the real circuit contains.
 - DECLARE + BOUND every simplification (epistemic class + error vs the faithful version). Unbounded = STOP.
+- FREEZE every claim-bearing number's provenance kind, exact source locator, units/scope, and transformation
+  chain. Cross-paper/device tuples are composite benchmarks; numerical/software gates are not physical evidence.
 - Your deliverable is NOT "done" without: the ledger (passing) + the independent ground-truth check + the
-  bounded-simplification list.
+  bounded-simplification list + the numerical-provenance manifest.
 ```
 
 ## Living document
 Append every new toy/pit to the standing ledger (Rule II) with the failure that motivated it, so the protocol
 sharpens over time. Pits encoded so far: the leaked-readout `0.90`; the `C_L=0` channel; the `√E_b` instrument;
 the dropped X echo; the dropped Y echo; the within-cycle lumping (×15); the r01→r10 inference; the
-"drop `stab_supp_isx`" slip. See also: `docs/METRICS.md` (epistemic-status declaration), the per-module READMEs.
+"drop `stab_supp_isx`" slip; the Miao/McEwen cross-device preset; the Gaussian-surrogate versus
+finite-RTN CP-divisibility mismatch; the R1-only entropy artifact reported as multi-round. See also:
+`docs/NUMERICAL_PROVENANCE.md`, `docs/METRICS.md` (epistemic-status declaration), and the per-module READMEs.

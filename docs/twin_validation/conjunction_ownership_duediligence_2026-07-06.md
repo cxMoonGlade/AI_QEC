@@ -69,10 +69,11 @@ Modeling of Transmon-Based Multi-Qubit Operations"; note
 
 ## ② Scale-envelope (grounded from carrier limits — the "usable" gate)
 
-The conjunction's cost = the **leakage-qutrit carrier** cost; the non-Markovian temporal part is a **classical latent**
-(`source/process.py`) and the shared-latent fan-out (`source/coupling.py` Θ) are **parameter modulation — free**
-(no state-space cost). notion-3 closure justifies the classical-latent temporal model (the record's temporal structure
-is classical). So the envelope is set entirely by the leakage carrier:
+The conjunction's cost = the **leakage-qutrit carrier** cost; the currently scoped temporal part is a
+**classical latent** (`source/process.py`) and the shared-latent fan-out (`source/coupling.py` Θ) is parameter
+modulation with no added quantum state-space cost. This is a product/model choice, not a consequence of a
+notion-3 no-go theorem: the record's physical classical-versus-quantum origin is not identified by the old `K`
+analysis. Under the current implementation choice, the envelope is set entirely by the leakage carrier:
 
 | scale | leakage carrier | conjunction status |
 |---|---|---|

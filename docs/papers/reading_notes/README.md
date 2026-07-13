@@ -120,8 +120,8 @@ are individually well-characterized and the tools to separate them now exist.**
 
 | Note | One-line takeaway |
 |---|---|
-| [smirne_coherence_nonclassicality_markov_1709.05267](smirne_coherence_nonclassicality_markov_1709.05267.md) | **Theorem 2:** Under Markovianity, multi-time non-classicality ⇔ CGD (Coherence-Generating-and-Detecting) dynamics. The σz sector (pure dephasing, NCGD) is classically simulable; σ− (amplitude damping, CGD) is not. **But this equivalence BREAKS under non-Markovianity — exactly where the finite-γ JC model operates.** |
-| [milz_when_nonmarkovian_process_classical_1907.05807](milz_when_nonmarkovian_process_classical_1907.05807.md) | **The key paper for Claim 3.** Non-Markovian classicality = Kolmogorov consistency; coherence no longer the sole driver — system-environment discord takes over. Genuinely quantum processes exist only in the non-Markovian regime. |
+| [smirne_coherence_nonclassicality_markov_1709.05267](smirne_coherence_nonclassicality_markov_1709.05267.md) | **Theorem 2:** Under the paper's Markovian repeated-measurement assumptions, multi-time non-classicality ⇔ CGD (Coherence-Generating-and-Detecting) dynamics for the chosen observable. This is instrument/basis dependent; it does not make every amplitude-damping record non-classical. The equivalence breaks under non-Markovianity. |
+| [milz_when_nonmarkovian_process_classical_1907.05807](milz_when_nonmarkovian_process_classical_1907.05807.md) | Non-Markovian classicality is tested by Kolmogorov consistency; coherence is no longer the sole driver, and system-environment correlations/discord matter. Milz's stronger class—processes non-classical under every non-trivial fixed measurement scheme—can occur only with memory; Markovian CGD processes can still be non-classical for a chosen scheme. |
 | [sakuldee_commutativity_classicality_multitime_2204.11698](sakuldee_commutativity_classicality_multitime_2204.11698.md) | Multi-time Kolmogorov consistency does NOT reduce to simple operator commutation — structurally richer than the Lüders two-time case. |
 
 ### Operational frameworks for non-classicality / non-Markovianity
@@ -201,6 +201,8 @@ E♯[χ₁] vs E[χ₂] from JC reduced dynamics) or the entropy witness (Bäcke
 
 | Note | One-line takeaway |
 |---|---|
+| [bergli_galperin_altshuler_rtn_0904.4597](bergli_galperin_altshuler_rtn_0904.4597.md) | Symmetric per-direction RTN rate `gamma` gives `C(t)=exp(-2 gamma t)`; exact free-induction coherence is non-Gaussian and independent fluctuators multiply. |
+| [wold_brox_galperin_classical_telegraph_1206.2174](wold_brox_galperin_classical_telegraph_1206.2174.md) | Independent convention check: total relaxation `Gamma=Gamma_-+ + Gamma_+-=2 gamma` in the symmetric case, making its exact coherence formula identical to Bergli's. |
 | [clader_correlations_heavytails_qec_2101.11631](clader_correlations_heavytails_qec_2101.11631.md) | Heavy-tailed coherent rotation noise plus spatial/temporal correlation can reduce effective code distance; correlated Cauchy noise gives no protection. |
 | [harper_flammia_learning_correlated_39q_2303.00780](harper_flammia_learning_correlated_39q_2303.00780.md) | Real Sycamore 39-qubit correlated Pauli-noise learning; richer correlated models are needed for sub-threshold logical-rate prediction. |
 | [layden_common_fluctuator_qec_1903.01046](layden_common_fluctuator_qec_1903.01046.md) | Common-fluctuator dephasing is a shared collective-Z source; the paper designs tailored non-Pauli codes, not surface-code detector statistics. |
@@ -272,7 +274,7 @@ E♯[χ₁] vs E[χ₂] from JC reduced dynamics) or the entropy witness (Bäcke
 | [tn_decoders_process_tensor_nonmarkovian_2412.13739](tn_decoders_process_tensor_nonmarkovian_2412.13739.md) | Process tensor + TN for ML decoding under non-Markovian/crosstalk noise; 5-qubit perfect code + 7-qubit Steane code. |
 | [time_invariant_process_tensors_2603.06840](time_invariant_process_tensors_2603.06840.md) | Time-invariant PT construction for stationary non-Markovian processes; efficient contraction. |
 | [chain_mapping_block_lanczos_shared_bath_2407.10140](chain_mapping_block_lanczos_shared_bath_2407.10140.md) | Block Lanczos chain mapping for shared baths; efficient T-TEDOPA variant. |
-| [leakage_tensor_network_simulation_2308.08186](leakage_tensor_network_simulation_2308.08186.md) | TN simulation of leakage in surface codes; thin-surface TN approach. |
+| [leakage_tensor_network_simulation_2308.08186](leakage_tensor_network_simulation_2308.08186.md) | Qutrit-MPS leakage trajectories for repetition and thin `3×d` surface codes; in the reported `d=19` MLR comparison, an `L1,L2`-matched GTA overestimates LER by >3×. This is not a full-record, DEM/Markov-`k`, or universal-conservativeness theorem. |
 | [jaschke_open_quantum_tensor_networks_1804.09796](jaschke_open_quantum_tensor_networks_1804.09796.md) | Early (2018) open quantum TN methods overview. |
 | [sander_computational_regimes_mps_trajectories_2606.13779](sander_computational_regimes_mps_trajectories_2606.13779.md) | **(α,κ) MPS cost-decision framework:** bond-dimension inflation α + sampling inflation κ. Lower χ does NOT guarantee lower total cost — sampling overhead can dominate. Decision boundaries κ=α³ (thread-limited) and κ=α⁵ (memory-limited). Pilot extraction protocol for choosing optimal MCWF unraveling under our 65GB/GPU-serialized constraints. |
 
@@ -325,8 +327,9 @@ and GPU-compatible contraction. **Synthesized map:** `outputs/papers/pepo_survey
 
 | Note | One-line takeaway |
 |---|---|
-| [kshetri_weimer_orus_origin_ipepo_1612.00656](kshetri_weimer_orus_origin_ipepo_1612.00656.md) | **Origin iPEPO** (Nat. Commun. 2017): parallelism between imaginary-time ground-state evolution and real-time Lindblad steady-state evolution; simple-update truncation, CTM contraction. SU is uncontrolled in 2D — FET/WTG fixes this. |
-| [mc_keever_stable_ipepo_fet_wtg_2012.12233](mc_keever_stable_ipepo_fet_wtg_2012.12233.md) | **FET+WTG (PRX 2021):** the stable iPEPO algorithm. FET constructs bond environment Υ_jl from Hilbert-Schmidt effective environment; WTG cycle entropy S_cycle threshold ~10⁻³ decides SU vs FET. 10× lower trace distance vs SU. Complementary to tePEPO's FSA+Gaussian long-range. |
+| [kshetri_weimer_orus_origin_ipepo_1612.00656](kshetri_weimer_orus_origin_ipepo_1612.00656.md) | **Origin iPEPO** (Nat. Commun. 2017): parallelism between imaginary-time ground-state evolution and real-time Lindblad steady-state evolution; simple-update truncation, CTM contraction. SU is environment-blind in 2D; later FET/WTG methods improve the objective in tested regimes but do not make it certified. |
+| [evenbly_gauge_closed_loops_1801.05390](evenbly_gauge_closed_loops_1801.05390.md) | **WTG/FET foundation (PRB 2018):** top-WTG truncation is optimal at zero cycle entropy and only heuristically near-optimal when small. At nonzero cycle entropy the paper proposes iterative FET; it gives no deterministic global-optimum or QEC-record theorem. |
+| [mc_keever_stable_ipepo_fet_wtg_2012.12233](mc_keever_stable_ipepo_fet_wtg_2012.12233.md) | **FET+WTG (PRX 2021):** mixed-state FET uses an alternative Hilbert-Schmidt fidelity and approximate CTMRG environment. Its ~10× SU improvement is benchmark-specific; it is not a long-range-record guarantee. |
 | [kilda_ipepo_stability_2012.03095](kilda_ipepo_stability_2012.03095.md) | **iPEPO stability (SciPost 2021):** near dissipative critical points (J_y≲1.32 for XYZ), SU-iPEPO becomes UNSTABLE. D does NOT help monotonically (D=12 works, D=14 fails). εΛ diagnostic. Most actionable: upgrade to FET before committing to 2D carrier. |
 
 ### Truncation methods (截断) — from SU to GTU
@@ -349,6 +352,7 @@ and GPU-compatible contraction. **Synthesized map:** `outputs/papers/pepo_survey
 | Note | One-line takeaway |
 |---|---|
 | [manabe_suzuki_darmawan_leakage_tn_2308.08186](manabe_suzuki_darmawan_leakage_tn_2308.08186.md) | **Leakage TN thin strip (NJP 2025):** MPS-based, 3×d strip ONLY — SVD bottleneck at d≥5 even on thin strip. Area-law-in-time saturation = encouraging for 2D-PEPO path. Explicitly calls for PEPS/isoTNS for full d×d. |
+| [marshall_kafri_incoherent_leakage_sta_2312.10277](marshall_kafri_incoherent_leakage_sta_2312.10277.md) | **Exact qutrit vs STA (PRApplied 2025):** measurement can suppress computational/leakage coherence, but pure coherent-CZ d3 detector/LER outputs still differ from channel-level STA; arbitrary per-slice pinching is not the same operation. |
 | [liao_heisenberg_pepo_2308.03082](liao_heisenberg_pepo_2308.03082.md) | **Heisenberg-picture PEPO:** χ=2 matches MPO χ=1024 via operator compression + 2D geometry. 127-qubit exact result in 3s CPU. Near-Clifford (near-identity) noise is similarly compressible. Cannot directly handle CPTP channels but near-unitary coherent errors stay efficient. |
 | [piveteau_tn_decoding_2310.10722](piveteau_tn_decoding_2310.10722.md) | **TN decoding beyond 2D (PRX Quantum 2024):** PEPS sweeping + SU for 3D codes. Snaking procedure compresses circuit-level noise into cubic lattice. Assumes known noise models — incompatible with twin's recovery goal. |
 | [rudolph_tindall_gpu_peps_2507.11424](rudolph_tindall_gpu_peps_2507.11424.md) | **GPU PEPS sampling:** generalized boundary MPS contraction for ANY planar topology. 35×+ GPU speedup. Heavy-hex (IBM) vs Willow (rotated-square) loop correlation divergence. Maps to PEPO contraction but: no mixed-state demo, no mid-circuit measurement, noiseless-only. |

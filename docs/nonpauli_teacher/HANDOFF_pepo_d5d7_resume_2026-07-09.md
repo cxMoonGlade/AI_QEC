@@ -1,5 +1,10 @@
 # Handoff — Resume the d5/d7 PEPO carrier line (2026-07-09)
 
+> **CLOSED / HISTORICAL. DO NOT RESUME.** The doubled-wire DM-PEPO route is closed by the
+> current simulator spec. Its `WG_L1=5e-3, g_seep=.09, b=.9` fixture is a cross-paper composite
+> benchmark with an unsupported project readout bias, not a physical device cell. Current value
+> authority: [`../NUMERICAL_PROVENANCE.md`](../NUMERICAL_PROVENANCE.md).
+
 **Purpose.** A fresh-session resume brief for the 2D density-matrix PEPO carrier work. Covers the
 arc that got here, the settled architecture, the VERIFIED d3 feasibility evidence (three gates),
 the literature grounding, the complete code/test inventory + results, and the d5/d7 next-step
@@ -34,9 +39,10 @@ user course-corrections the scope moved:
    wanted.
 2. **Architecture settled** (theory-fix confirmed): **leakage = non-Pauli FLAVOR** (LRU-const,
    fast SV kernel at d3); **memory = notion-2** (classical multi-time record memory);
-   **notion-1/CP-div is NOT syndrome-reachable** — appears only as its "notion-2 shadow"
-   (protocol boundary). A trip-wire FIRED: "memory from notion-1" as a direct-record premise is
-   FALSE. See `project-leakage-lru-const-memory-notion2shadow`.
+   **notion-1/CP-div is not identified by the current fixed syndrome record without a proved
+   channel-to-instrument bridge.** The old universal “not syndrome-reachable / only a notion-2
+   shadow” wording is retracted; reachability is mechanism- and schedule-dependent. See
+   `docs/twin_validation/notion123_taxonomy_literature_closure_2026-07-13.md`.
 3. **Target pivoted to d5** (user): SV kernel is d3-only (3^25 explodes), so **MPS is the only
    carrier** → MPS optimization back on. Confirmed MPS CAN carry notion-2 memory (per-round data
    Pauli channel via `kraus_sample_`, same seam as per-round leak).
@@ -70,7 +76,7 @@ user course-corrections the scope moved:
 ## 3. The VERIFIED d3 evidence — three exact-DM gates (ALL GREEN)
 
 All on the exact d3 qutrit DM (`carrier/exact/qutrit_dm.py`, 3^9×3^9 ≈ 5.77 GiB), the p1c
-physical cell (WG_L1=5e-3, θ=0.102444, g_seep=0.09, g_heat=0, b=0.9, arm=A), non-selective
+composite project fixture (WG_L1=5e-3, θ=0.102444, g_seep=0.09, g_heat=0, b=0.9, arm=A), non-selective
 sequential Lueders measurement, straight column cut A=[0,1,2]|B=[3..8] (x≤5, boundary=d=3). Every
 script was un-led-reviewed BEFORE its GPU run (5 blockers caught across the three — see §5).
 

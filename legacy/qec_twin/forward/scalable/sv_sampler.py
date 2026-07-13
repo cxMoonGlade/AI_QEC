@@ -29,6 +29,7 @@ from the registered grids (``qutrit_teachers.THETA_SWEEP`` / ``G_SEEP_SWEEP`` / 
 / ``LEAKED_READOUT_BIAS_SWEEP``); no headline point is hard-coded.
 """
 
+import hashlib
 import json
 import math
 import subprocess
@@ -193,6 +194,105 @@ def leak_slice_kraus_torch(
 # --------------------------------------------------------------------------- #
 # Run spec + outputs                                                          #
 # --------------------------------------------------------------------------- #
+_RUN_NUMERICAL_PROVENANCE_SCHEMA = \
+    "error_coupling_simulator.run_numerical_provenance.v1"
+_PRESET_NUMERICAL_PROVENANCE_SCHEMA = \
+    "error_coupling_simulator.ExperimentPreset.provenance.v1"
+
+
+def _validate_run_numerical_provenance(
+        payload: dict[str, Any], spec: Any, *, allow_complete: bool = False) -> None:
+    """Fail closed on malformed, inconsistent, or self-promoting run provenance."""
+    if payload.get("schema") != _RUN_NUMERICAL_PROVENANCE_SCHEMA:
+        raise ValueError("numerical_provenance has an invalid run schema")
+    status = payload.get("status")
+    if status not in {"missing", "complete_for_registered_preset"}:
+        raise ValueError("numerical_provenance has an invalid status")
+    if status == "complete_for_registered_preset" and not allow_complete:
+        raise ValueError(
+            "complete numerical_provenance is accepted only from the registered facade")
+    binding = payload.get("run_binding")
+    if not isinstance(binding, dict):
+        raise ValueError("numerical_provenance.run_binding must be an object")
+    resolved = binding.get("resolved_theta_rad")
+    dataset = binding.get("dataset_files")
+    shape = binding.get("run_shape")
+    if not all(isinstance(x, dict) for x in (resolved, dataset, shape)):
+        raise ValueError("numerical_provenance run-binding sections must be objects")
+
+    expected_binding = {
+        "theta": float(spec.theta),
+        "circuit": str(spec.circuit_path),
+        "metadata": (None if spec.metadata_path is None else str(spec.metadata_path)),
+        "N": int(spec.N),
+        "R": (None if spec.R is None else int(spec.R)),
+        "seed": int(spec.base_seed),
+        "m": int(spec.m),
+    }
+    actual_binding = {
+        "theta": resolved.get("value"),
+        "circuit": dataset.get("circuit"),
+        "metadata": dataset.get("metadata"),
+        "N": shape.get("n_shots"),
+        "R": shape.get("n_rounds"),
+        "seed": shape.get("seed"),
+        "m": shape.get("logical_input_m"),
+    }
+    if actual_binding != expected_binding:
+        raise ValueError("numerical_provenance run binding does not match RunSpec")
+    if resolved.get("claims_device_calibration") is not False or \
+            dataset.get("supplies_physical_noise_parameters") is not False:
+        raise ValueError("numerical_provenance may not claim device calibration")
+
+    if status == "missing":
+        if payload.get("claim_scope") != "implementation_only":
+            raise ValueError("missing provenance must fail closed to implementation_only")
+        if "preset_manifest" in payload or "preset_manifest_sha256" in payload:
+            raise ValueError("missing provenance may not carry a trusted preset manifest")
+        return
+
+    manifest = payload.get("preset_manifest")
+    digest = payload.get("preset_manifest_sha256")
+    if not isinstance(manifest, dict) or manifest.get("schema") != \
+            _PRESET_NUMERICAL_PROVENANCE_SCHEMA:
+        raise ValueError("complete provenance requires a v1 preset manifest")
+    canonical = json.dumps(manifest, sort_keys=True, separators=(",", ":"))
+    if not isinstance(digest, str) or hashlib.sha256(
+            canonical.encode("utf-8")).hexdigest() != digest:
+        raise ValueError("complete provenance preset-manifest digest mismatch")
+    fields = manifest.get("fields")
+    whole = manifest.get("whole_preset")
+    if not isinstance(fields, dict) or not isinstance(whole, dict):
+        raise ValueError("complete provenance manifest sections are missing")
+    expected_values = {
+        "g_seep": float(spec.g_seep),
+        "g_heat": float(spec.g_heat),
+        "b_bias": float(spec.b),
+        "arm": str(spec.arm),
+        "readout_conv": str(spec.readout_conv),
+    }
+    for field_name, expected in expected_values.items():
+        entry = fields.get(field_name)
+        if not isinstance(entry, dict) or entry.get("value") != expected:
+            raise ValueError(
+                f"complete provenance field {field_name} does not match RunSpec")
+    theta_entry = fields.get("theta_rad")
+    target_entry = fields.get("wg_l1_target")
+    if not isinstance(theta_entry, dict) or not isinstance(target_entry, dict):
+        raise ValueError("complete provenance theta convention is missing")
+    if theta_entry.get("value") is not None:
+        if float(theta_entry["value"]) != float(spec.theta):
+            raise ValueError("complete provenance raw theta does not match RunSpec")
+    elif target_entry.get("value") is None:
+        raise ValueError("complete provenance has no theta convention")
+    if whole.get("physical_cell_validated_by_literature") is not False or \
+            whole.get("direct_whole_cell_literature_support_count") != 0:
+        raise ValueError("complete provenance overclaims whole-cell literature support")
+    if payload.get("claim_scope") != \
+            "registered_synthetic_cross_source_benchmark_only":
+        raise ValueError("complete provenance has an invalid claim scope")
+
+
 @dataclass(frozen=True)
 class RunSpec:
     """One P4a sampling run (the ``SvSampler.sample`` input).
@@ -228,9 +328,14 @@ class RunSpec:
     # output (the packed shot buffer + the §6 header are written alongside)
     out_path: str | Path | None = None
     # Optional value-level provenance supplied by a registered experiment facade.
-    # It is copied verbatim into the emitted shot header. Absence means the run is
+    # It is canonicalized on construction and copied into the emitted shot header.
+    # Absence means the run is
     # implementation-only; it must never be inferred to be device-calibrated.
     numerical_provenance: dict[str, Any] | None = None
+    # Immutable canonical snapshot used for emission. The public dict above remains
+    # inspectable, but mutating it after construction cannot change the header.
+    _numerical_provenance_json: str | None = field(
+        default=None, init=False, compare=False, repr=False)
 
     def __post_init__(self) -> None:
         if int(self.m) not in (0, 1):
@@ -247,9 +352,30 @@ class RunSpec:
             raise ValueError("N and W must be >= 1")
         if self.numerical_provenance is not None:
             try:
-                json.dumps(self.numerical_provenance, sort_keys=True)
+                canonical_provenance = json.loads(json.dumps(
+                    self.numerical_provenance, sort_keys=True))
             except (TypeError, ValueError) as exc:
                 raise ValueError("numerical_provenance must be JSON-safe") from exc
+            _validate_run_numerical_provenance(canonical_provenance, self)
+            object.__setattr__(self, "numerical_provenance", canonical_provenance)
+            object.__setattr__(self, "_numerical_provenance_json", json.dumps(
+                canonical_provenance, sort_keys=True, separators=(",", ":")))
+
+
+def _bind_registered_numerical_provenance(
+        spec: RunSpec, payload: dict[str, Any]) -> RunSpec:
+    """Bind a complete canonical manifest through the sole trusted facade seam."""
+    if spec.numerical_provenance is not None or spec._numerical_provenance_json is not None:
+        raise ValueError("RunSpec already carries numerical provenance")
+    try:
+        canonical = json.loads(json.dumps(payload, sort_keys=True))
+    except (TypeError, ValueError) as exc:
+        raise ValueError("numerical_provenance must be JSON-safe") from exc
+    _validate_run_numerical_provenance(canonical, spec, allow_complete=True)
+    object.__setattr__(spec, "numerical_provenance", canonical)
+    object.__setattr__(spec, "_numerical_provenance_json", json.dumps(
+        canonical, sort_keys=True, separators=(",", ":")))
+    return spec
 
 
 #: Arm name → kernel int code (§4; Agent K's loader: 0:A, 1:C, 2:B1, 3:B2).
@@ -1318,8 +1444,9 @@ class SvSampler:
             "source_circuit": str(spec.circuit_path),
             "gate_ids": dict(SV_GATE_IDS),
         }
-        if spec.numerical_provenance is not None:
-            header["numerical_provenance"] = spec.numerical_provenance
+        if spec._numerical_provenance_json is not None:
+            header["numerical_provenance"] = json.loads(
+                spec._numerical_provenance_json)
         return header
 
     @staticmethod

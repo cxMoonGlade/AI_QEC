@@ -17,7 +17,7 @@ FINDING against the envelope, never silently absorbed. GPU serial (live desktop)
 
 **C1 — d3 leakage-carrier generation cost (the "usable" leg).**
 Entry: `SvSampler(device='cuda') + RunSpec → sample()` (`sv_sampler.py:1238`, lumped kernel `sv_traj_d3`), shipped d3
-XZZX r01 geometry, physical cell (theta from `calibrate_theta_for_wg_l1(WG_L1=5e-3)`, g_seep=0.09, b=0.9, arm=A),
+XZZX r01 geometry, composite project fixture (theta from `calibrate_theta_for_wg_l1(WG_L1=5e-3)`, g_seep=0.09, unsupported project b=0.9, arm=A),
 N=1024 shots, R=schedule default, c128. Plus an MPS spot-check (`MpsLeakageForward.sample`, hard2, N=8).
 - **P-C1a (b, wide band DECLARED):** SV-kernel throughput in [10, 10^4] shots/min. No committed cost anchor exists
   for the kernel path (the 0.27 s/manifest figure is the QUBIT dense path — different machinery); the band is wide
@@ -28,7 +28,7 @@ N=1024 shots, R=schedule default, c128. Plus an MPS spot-check (`MpsLeakageForwa
 **C2 — exact qutrit-DM oracle at full d3 register (the "oracle-bounded at d3" leg).**
 Entry: `QutritDM` syndrome/record law at full 9 data qutrits, R=1, DETECTOR_MARG-style statistic (2 live DM copies —
 the declared-feasible cell, `certify/anchors/dm_oracle.py:82-142`), WG leakage Kraus injected
-(`leakage_kraus_torch`), same physical cell as C1.
+(`leakage_kraus_torch`), same composite fixture as C1.
 - **P-C2a (b):** peak device memory in [11.5, 15] GiB (2 × 5.77 GiB + workspace).
 - **P-C2b (b, coarse band DECLARED):** wall-clock in [1, 30] min. Hard timeout 45 min in-script; timeout = FINDING
   ("oracle-bounded at d3" becomes sub-register-only, envelope re-worded).

@@ -1,6 +1,8 @@
 # DESIGN — `CoupledCycleTeacher` through the d3 (q17) MCWF path
 
 > ⛔ **DO NOT BUILD AS WRITTEN — 3-agent review FAILED this design (2026-06-30).** Fatal findings:
+> The line below saying `zeta` is “record-DEAD at any distance” is additionally retracted by the
+> 2026-07-13 literature/numerical-provenance audit; its `~1e-11` result is local to one frozen model.
 > (1) **§4 observable is a RETIRED strawman** — cross-cycle detector correlation was killed by the parent
 > contract (H2/Kam L4: Markov-k-capturable, syndrome-coherence-blind); it also *squares* the real first-order
 > `gamma_phi` signal. Must use the contract's **decode-relevant ΔLER + corrqec cross-check** (§6 named it,
