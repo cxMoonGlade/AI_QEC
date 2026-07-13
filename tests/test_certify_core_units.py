@@ -72,7 +72,7 @@ from error_coupling_simulator.certify.types import (
     CertReport,
     CliffordSliceable,
     Control,
-    ControlledTeacher,
+    ControlledNoiseProcess,
     DMReplayable,
     Exactness,
     Feasibility,
@@ -1396,9 +1396,9 @@ def test_ports_are_runtime_checkable_protocols_with_teeth():
 
     assert isinstance(DuckAnchor(), Anchor)
     assert isinstance(DuckControl(), Control)
-    assert isinstance(DuckTeacher(), ControlledTeacher)
+    assert isinstance(DuckTeacher(), ControlledNoiseProcess)
     assert isinstance(DuckDMReplay(), DMReplayable)
     assert isinstance(DuckClifford(), CliffordSliceable)
     # duck-typing teeth: a bare object conforms to NONE of the ports.
-    for proto in (Anchor, Control, ControlledTeacher, DMReplayable, CliffordSliceable):
+    for proto in (Anchor, Control, ControlledNoiseProcess, DMReplayable, CliffordSliceable):
         assert not isinstance(object(), proto)

@@ -1,18 +1,15 @@
 # Physical Error Mechanisms
 
-This note is the canonical mechanism taxonomy for `qec_twin.mechanisms`
-(`qec_twin.mechanisms.catalog` / `qec_twin.mechanisms.profiles`). It combines the
-implemented PHYS/PHYC mechanism IDs with the larger controlled-gate error library we
-want the twin to grow into.
+This note is the canonical mechanism taxonomy for
+`error_coupling_simulator.mechanisms` (`…mechanisms.catalog`). It catalogs the
+implemented mechanism IDs — the non-Pauli families a noise process applies
+(**leakage / drift / crosstalk / burst**) plus the local Pauli / readout / coherent
+library. Binding framing: `docs/SIMULATOR.md`; claim boundaries: `CONTEXT.md`.
 
-For claim boundaries, use `CONTEXT.md` first. The long-horizon target is the
-twin's four capabilities — recover / understand / manipulate / predict (ADR 0005).
-CPTP/GKSL structure is one constraint mechanism, not the whole claim.
-
-Physicality boundary: the catalog entries below are implemented as unitary
-channels, Kraus channels, or classical readout assignment matrices. Enabling a
-mechanism ID selects that implementation. The current learner does not yet
-learn arbitrary CPTP/GKSL channels by construction.
+Physicality: the catalog entries below are implemented as unitary channels, Kraus
+channels, or classical readout assignment matrices — CPTP by construction (the
+coherence-capable channel object, not a Pauli-rate vector). Enabling a mechanism ID
+selects that implementation.
 
 ## Evidence Sources
 
@@ -80,8 +77,8 @@ They must not be interpreted as the public semantic label namespace.
 
 ## Implemented Catalog
 
-Status: implemented in `src/qec_twin/mechanisms/catalog.py` and
-channelized in `src/qec_twin/forward/channels.py`.
+Status: implemented in `src/error_coupling_simulator/mechanisms/catalog.py` and
+channelized in `src/error_coupling_simulator/carrier/channels.py`.
 
 The IDs are priority ordered by expected practical frequency/importance for
 near-term hardware-style experiments. This order defines the mechanism sets.
@@ -138,7 +135,7 @@ the same semantic kind. Stage 3/S5 should distinguish:
 - public `M*` labels: non-flat family/dimension targets.
 
 The current audit is pinned in
-`qec_twin.mechanisms.catalog.MECHANISM_CONTRACTS`.
+`error_coupling_simulator.mechanisms.catalog.MECHANISM_CONTRACTS`.
 
 | Role | Legacy IDs | Public labels | S3/S5 interpretation |
 | --- | --- | --- | --- |

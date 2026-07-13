@@ -3,9 +3,9 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "qec-twin"
+name = "error-coupling-simulator"
 version = "0.1.0"
-description = "Teacher-learner QEC error-mechanism digital twin — a validated causal model (do() = Pearl intervention); the B-path calibration/intervention substrate (qec_twin is a stable code identifier; see docs/TWIN.md)"
+description = "A faithful, GPU-first simulator of QEC error mechanisms — coupling, leakage, and other non-Pauli / memory-ful noise on the rotated surface code (XZZX); emits the multi-time syndrome record. Binding spec: docs/SIMULATOR.md"
 requires-python = ">=3.10"
 dependencies = [
     "numpy",
@@ -27,7 +27,7 @@ hw = ["pymatching==2.4.0"]
 test = ["qutip", "scipy"]
 
 [project.scripts]
-# Single console entry point, lands with M4 (ADR 0007 Decision 6, ratified R4).
+# Frozen evaluator-side R2 decoder report (routes through the still-used qec_twin.hardware decoder).
 qec-twin-m4 = "qec_twin.hardware.m4_report:main"
 
 [tool.setuptools]
@@ -37,7 +37,7 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.setuptools.package-data]
-"qec_twin.forward" = ["kernels/*.cpp", "kernels/*.cu", "kernels/README.md"]
+"error_coupling_simulator.carrier.kernels" = ["*.cpp", "*.cu", "README.md"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

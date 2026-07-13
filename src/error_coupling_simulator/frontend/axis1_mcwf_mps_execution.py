@@ -1070,7 +1070,7 @@ def _coherent_family_generator(family: str, *, coefficient: float, device: str) 
     r"""Return the Hermitian Pauli-tensor generator H for a coherent family on the
     PURE computational subspace (2x2 for 1-site, 4x4 for 2-site).
 
-    DERIVATION (notation per docs/TWIN.md / docs/METRICS.md):
+    DERIVATION (notation per docs/SIMULATOR.md / docs/METRICS.md):
 
     M6 coherent_rx_overrotation (COH_RX) — the canonical 1-site example:
       H_M6 = (coeff / 2) * X,    X = [[0,1],[1,0]]  (Nielsen & Chuang Eq. 2.1)

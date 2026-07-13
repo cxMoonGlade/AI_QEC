@@ -58,7 +58,7 @@ from error_coupling_simulator.mechanisms.seam_teachers import (
     TB_LAMBDA1,
     TB_P01,
     TB_P10,
-    SeamTeacher,
+    SeamNoiseProcess,
     backdrop_kraus,
     backdrop_teacher,
     bias_injected_coherent_teacher,
@@ -223,7 +223,7 @@ def test_L0_backdrop_kraus_runs():
 
 def test_L0_backdrop_teacher_runs():
     t = backdrop_teacher(TOY)
-    assert isinstance(t, SeamTeacher) and t.edge_field is None
+    assert isinstance(t, SeamNoiseProcess) and t.edge_field is None
 
 
 def test_L0_coherent_seam_teacher_runs():

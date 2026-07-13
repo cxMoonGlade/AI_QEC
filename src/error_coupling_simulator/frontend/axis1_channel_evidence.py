@@ -168,7 +168,7 @@ class Axis1AssembledSelectionChannel:
     order — see `assemble_substep_channel_factored`). The apply loop consumes ``components``
     directly (applying each block's Kraus to its own qubits, which is exact because disjoint-
     support Lindbladians commute). ``kraus`` remains available as the equivalent FULL-WINDOW
-    channel for the diagnostic channel/state-evidence paths and `CoupledCycleTeacher.channels`;
+    channel for the diagnostic channel/state-evidence paths and `CoupledCycleNoiseProcess.channels`;
     it is assembled lazily (on first access) from the stored generators, so the hot record path
     never pays the full-window ``expm`` + Choi ``eigh`` it eliminated. When
     ``QEC_TWIN_NO_FACTORIZE=1`` (or a genuine single full-window component), ``components`` is a

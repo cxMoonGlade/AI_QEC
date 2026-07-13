@@ -1,5 +1,10 @@
 # MIGRATION PLAN — standalone `error_coupling_simulator` package
 
+> **Note (2026-07-13):** this records HOW the package was consolidated (provenance). Its framing of
+> `qec_twin` as a surviving "learner/twin app" is superseded — the twin/learner line is retired and
+> `qec_twin` is being archived out of `src/` (RAG + R2 decoder kept via symlinks). Binding framing:
+> `docs/SIMULATOR.md`.
+
 **Decision (user, 2026-07-03):** consolidate the coupling-error QEC simulator — code currently
 scattered across `src/qec_twin/` (tracked) AND `outputs/` (gitignored scratch) — into a **single
 standalone top-level package** `src/error_coupling_simulator/`, so it can be **released
@@ -50,10 +55,10 @@ scan showed the moved forward substrate is SHARED, not simulator-exclusive:
 `cptp_channel` (audit+calibration+contexts+hardware — it is literally the learner-side CPTP kernel),
 `channels`/`catalog` (contexts=learner probe ladder), `exact.circuit_sim` (contexts+hardware),
 `exact.qutrit_dm` (audit). The user ratified: **keep this shared forward PHYSICS CORE inside
-`error_coupling_simulator`; `qec_twin` (learner/twin app: calibration, contexts, audit, hardware)
-depends on it via the shims.** So the package = **forward physics core + the coupling simulator**;
-`qec_twin` is the downstream learner/application. (Naming caveat: the package now owns the general
-physics core, so `error_coupling_simulator` is a slightly narrow name — rename is cheap, deferred.)
+`error_coupling_simulator`; `qec_twin` (the pre-consolidation package: calibration, contexts, audit,
+hardware) depends on it via the shims.** So the package = **forward physics core + the coupling
+simulator**; `qec_twin` is the downstream pre-consolidation package (now being archived out of `src/`,
+with symlinks kept for the still-used RAG + R2 decoder).
 
 **SCOPE REFINEMENT (what does NOT move — it is NOT the physics core):** the **decoder + R2 real-data
 hardware** stay in `qec_twin`. `hardware/m4_decode` (+ `b8_io`) drag in the whole R2 ingestion

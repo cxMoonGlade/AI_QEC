@@ -1,9 +1,9 @@
-# forward/kernels/ — CUDA/C++ acceleration kernels
+# carrier/kernels/ — CUDA/C++ acceleration kernels
 
 Custom CUDA kernels for the hot paths of the exact forward
-(`src/qec_twin/forward/exact`), per the GPU-first discipline (ADR 0001) and the
+(`carrier/exact`), per the GPU-first discipline (docs/SIMULATOR.md) and the
 2026-06-09 user directive: everything runs on GPU where possible; repeated inner
-computations get fused CUDA kernels. They live beside `forward/accel.py` because
+computations get fused CUDA kernels. They live beside `carrier/accel.py` because
 they are acceleration assets for the forward backend, not a separate model module.
 
 ## Scope (bounding)

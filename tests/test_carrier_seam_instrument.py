@@ -121,7 +121,7 @@ from qec_twin.mechanisms.seam_teachers import (
     TB_LAMBDA1,
     TB_P01,
     TB_P10,
-    SeamTeacher,
+    SeamNoiseProcess,
     backdrop_kraus,
     backdrop_teacher,
     bias_injected_coherent_teacher,
@@ -473,10 +473,10 @@ def test_stochastic_backdrop_phi_blind_any_rounds() -> None:
     flip = bit_flip(BACKDROP_FLIP_RATE)
     edge = zz_coupling_kraus(PHI_TOP)
     seam = TOY.seam_pair
-    stoch_base = SeamTeacher(
+    stoch_base = SeamNoiseProcess(
         name="stoch-backdrop", channel_field=lambda t, i: flip, edge_field=None
     )
-    stoch_coh = SeamTeacher(
+    stoch_coh = SeamNoiseProcess(
         name="stoch-coherent",
         channel_field=lambda t, i: flip,
         edge_field=lambda t, e: edge if tuple(e) == seam else None,

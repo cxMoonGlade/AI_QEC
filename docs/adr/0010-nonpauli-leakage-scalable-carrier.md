@@ -13,7 +13,7 @@ throughout.
 
 - **The pivot.** The exact `3^n` qutrit state-vector / `3^n×3^n` density matrix is **feasibility-only**:
   d3 DM = 6.2 GB (fits); d5 SV = 13.5 TB, d5 DM ≈ 10^23 GB (dead); d7 astronomically beyond. The
-  surface-code twin (d5/d7, the end goal — ADR 0007, `project-teacher-output-is-surface-code`) cannot
+  d5/d7 surface-code simulator (the end goal — docs/SIMULATOR.md) cannot
   run on `forward/exact`. The DM-based Bayes floor (`audit/bayes_floor.py`) made this concrete: correct
   but slow, and a d3 dead-end.
 - **Leakage is NOT DEM-reducible** (synthesis memo; 2603.18457 exclusion). ADR 0008's C2 outcome picked

@@ -25,11 +25,11 @@ mechanism is now ``forward.channels.leakage_kraus(theta, g_seep, g_heat)`` (the 
 channel, not pinned inputs, and ``theta`` is found for a target WG_L1 by
 ``calibrate_theta_for_wg_l1`` (grounded to Miao ~5e-3 / McEwen L2).
 
-Isolation contract (``docs/teacher_learner.md``; registration §0, binding): the
+Isolation contract (``docs/SIMULATOR.md``; registration §0, binding): the
 teacher's channels, its ``(theta, g_seep, g_heat)`` / WG rates, mechanism IDs, AND the
 leaked-readout bias are evaluator-only counterfactual ground truth. The learner
 consumes observations only -- ``(context, syndrome s, logical m)`` -- never the
-teacher's parameters. Scoring is evaluator-side. ``QutritLeakageTeacher.params`` is
+teacher's parameters. Scoring is evaluator-side. ``QutritLeakageNoiseProcess.params`` is
 the audit/evaluator surface; it is never a learner input.
 
 Data format (contract): a Kraus channel is a ``list`` of ``(3,3)`` torch CUDA
@@ -307,7 +307,7 @@ def leakage_kraus_torch(
 # The equal-treatment teacher object (mirrors mechanisms/seam_teachers.py).     #
 # --------------------------------------------------------------------------- #
 @dataclass(frozen=True)
-class QutritLeakageTeacher:
+class QutritLeakageNoiseProcess:
     """One evaluator-only qutrit leakage teacher arm.
 
     ``field`` is ``(t, site) -> list[(3,3) torch CUDA Kraus]`` (the per-data-qutrit
@@ -362,7 +362,7 @@ def qutrit_leakage_teacher(
     g_heat: float = G_HEAT_DEFAULT,
     n_data: int = 9,
     device: str | torch.device = QUTRIT_DEVICE,
-) -> QutritLeakageTeacher:
+) -> QutritLeakageNoiseProcess:
     """Homogeneous per-data-qutrit WG leakage teacher ``(theta, g_seep, g_heat)`` for d3 XZZX (9 data).
 
     Injects the SAME Wood-Gambetta leakage channel
@@ -380,7 +380,7 @@ def qutrit_leakage_teacher(
     """
     kraus = leakage_kraus_torch(theta, g_seep, g_heat, device=device)
     audit = _leakage_audit(theta, g_seep, g_heat)
-    return QutritLeakageTeacher(
+    return QutritLeakageNoiseProcess(
         name=(
             f"qutrit-wg-leakage(theta={float(theta):.3g},g_seep={float(g_seep):.3g},"
             f"g_heat={float(g_heat):.3g},b={float(b):.3g})"
@@ -406,7 +406,7 @@ def qutrit_leakage_teacher_heterogeneous(
     *,
     b: float,
     device: str | torch.device = QUTRIT_DEVICE,
-) -> QutritLeakageTeacher:
+) -> QutritLeakageNoiseProcess:
     """Per-data-qutrit heterogeneous WG leakage teacher: ``rates[site] = (theta, g_seep[, g_heat])``.
 
     Each data qutrit gets its OWN registered WG channel parameters (still time-constant;
@@ -424,7 +424,7 @@ def qutrit_leakage_teacher_heterogeneous(
         leakage_kraus_torch(theta, g_seep, g_heat, device=device)
         for (theta, g_seep, g_heat) in norm_rates
     ]
-    return QutritLeakageTeacher(
+    return QutritLeakageNoiseProcess(
         name=f"qutrit-wg-leakage-heterogeneous(n={len(norm_rates)},b={float(b):.3g})",
         field=_heterogeneous_field(kraus_per_site),
         edge_field=None,
@@ -441,3 +441,6 @@ def qutrit_leakage_teacher_heterogeneous(
             **leaked_map_params(b),
         },
     )
+
+# Backward-compat alias — "Teacher" retired in error_coupling_simulator; qec_twin keeps it (shim re-exports).
+QutritLeakageTeacher = QutritLeakageNoiseProcess

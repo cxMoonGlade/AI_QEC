@@ -226,7 +226,7 @@ class Anchor(Protocol):
         as DATA, not an exception."""
         ...
 
-    def answer(self, teacher: ControlledTeacher, statistic: Statistic, regime: Regime,
+    def answer(self, teacher: ControlledNoiseProcess, statistic: Statistic, regime: Regime,
                *, N: int | None = None, generator: Any | None = None,
                corrupt: dict | None = None) -> AnchorValue:
         """Produce the ground-truth ``statistic`` at ``regime`` for ``teacher``'s known mechanism.
@@ -275,7 +275,7 @@ class Control(Protocol):
 
 
 @runtime_checkable
-class ControlledTeacher(Protocol):
+class ControlledNoiseProcess(Protocol):
     """What ``certify_teacher`` needs from a controlled teacher: a way to EMIT records, the parsed
     geometry, the per-CZ channel field (for the channel-level anchors), and the evaluator-only known
     TRUTH. The ``outputs/teacher_prereg`` teachers satisfy this via a thin adapter (step 6)."""
@@ -302,7 +302,7 @@ class ControlledTeacher(Protocol):
 @runtime_checkable
 class DMReplayable(Protocol):
     """A teacher the DM-oracle anchor can replay on the density matrix: it builds the per-round
-    mechanism callbacks the DM evolves through. A teacher satisfies BOTH ``ControlledTeacher`` (for
+    mechanism callbacks the DM evolves through. A teacher satisfies BOTH ``ControlledNoiseProcess`` (for
     the carrier-emitted records) AND ``DMReplayable`` (for the DM ground truth) — the two
     representations of the SAME mechanism, which is what makes the DM↔carrier comparison a genuine
     cross-construction check (Gate-4), not a check vs the engine's own oracle."""
@@ -329,3 +329,6 @@ class CliffordSliceable(Protocol):
         """Emit ``N`` shots of the Clifford (bit-flip ``X_ERROR(p_x)``) slice -> the seam surface
         ``{"det":..., "obs":...}`` — the SAME geometry + seam fold the full mechanism uses."""
         ...
+
+# Backward-compat alias — "Teacher" retired in error_coupling_simulator; qec_twin keeps it (shim re-exports).
+ControlledTeacher = ControlledNoiseProcess

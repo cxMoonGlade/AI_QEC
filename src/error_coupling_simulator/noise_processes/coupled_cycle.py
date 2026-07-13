@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""CoupledCycleTeacher — evaluator-only source-coupled record teacher (slice 1, dense).
+"""CoupledCycleNoiseProcess — evaluator-only source-coupled record teacher (slice 1, dense).
 
 One shared memory-ful source trajectory ``z_t`` (Axis-2) is fanned out per QEC
 cycle into coupled mechanism parameters (``source_coupling.Theta``), lowered
@@ -8,7 +8,7 @@ into per-round ``Axis1PrimitiveParams``, and emitted as real R-round
 ``{"det","obs"}`` records through the sealed dense Axis-1 record path
 (``axis1_measurement_record_evidence_manifest`` with the injected
 ``params_for_substep`` callable). The teacher implements the
-``audit.certify.types.ControlledTeacher`` protocol surface (``sched`` /
+``audit.certify.types.ControlledNoiseProcess`` protocol surface (``sched`` /
 ``truth`` / ``emit`` / ``channels`` / ``emit_clifford_slice``) so its records
 drop into ``certify_cells`` + the Anchor/Control ports unchanged.
 
@@ -240,7 +240,7 @@ from ..frontend.source_sidecar import (
     build_source_timeline_binding_manifest,
 )
 
-COUPLED_TEACHER_SCHEMA = "qec_twin.mechanisms.CoupledCycleTeacher.v1"
+COUPLED_TEACHER_SCHEMA = "qec_twin.mechanisms.CoupledCycleNoiseProcess.v1"
 #: Representability-ledger class string (declared; mirrored in
 #: ``src/qec_twin/simulator/README.md``): sampled Axis-1 joint-L records under a
 #: shared-source per-round param fan-out, truth evaluator-only.
@@ -579,8 +579,8 @@ def _derived_seed(base_seed: int, trajectory: int, purpose: str) -> int:
 # --------------------------------------------------------------------------- #
 # the teacher                                                                   #
 # --------------------------------------------------------------------------- #
-class CoupledCycleTeacher:
-    """Evaluator-only ``ControlledTeacher`` carrying Axis-1 x Axis-2 coupling.
+class CoupledCycleNoiseProcess:
+    """Evaluator-only ``ControlledNoiseProcess`` carrying Axis-1 x Axis-2 coupling.
 
     Outer Monte-Carlo over memory-ful source trajectories (one per shot by
     default), inner EXACT conditional record distribution
@@ -608,7 +608,7 @@ class CoupledCycleTeacher:
         self._rounds = int(rounds)
         if self._rounds < 2:
             raise ValueError(
-                "CoupledCycleTeacher requires rounds >= 2: cross-cycle source "
+                "CoupledCycleNoiseProcess requires rounds >= 2: cross-cycle source "
                 f"memory needs at least two cycles, got rounds={rounds!r}"
             )
         if coupling_arm not in {"shared", "independent", "off"}:
@@ -618,7 +618,7 @@ class CoupledCycleTeacher:
         self._source = source if source is not None else OneOverFDriftSource()
         if not isinstance(self._source, MEMORYFUL_SHARED_SOURCES):
             raise ValueError(
-                "CoupledCycleTeacher accepts only the declared memory-ful source "
+                "CoupledCycleNoiseProcess accepts only the declared memory-ful source "
                 "classes (OneOverFDriftSource, RTNSource) — an i.i.d./uncertified "
                 f"source as the shared arm is red-team R3; got "
                 f"{type(self._source).__name__}"
@@ -631,7 +631,7 @@ class CoupledCycleTeacher:
         self._device = str(device)
         if not self._device.startswith("cuda"):
             raise ValueError(
-                "CoupledCycleTeacher is GPU-only (repo device policy); pass "
+                "CoupledCycleNoiseProcess is GPU-only (repo device policy); pass "
                 f"device='cuda', got {device!r}"
             )
         self._fixture = str(fixture)
@@ -691,7 +691,7 @@ class CoupledCycleTeacher:
         self._last_emit: dict[str, Any] | None = None
 
     # ------------------------------------------------------------------ #
-    # ControlledTeacher protocol surface                                   #
+    # ControlledNoiseProcess protocol surface                                   #
     # ------------------------------------------------------------------ #
     @property
     def sched(self) -> SubstepSchedule:
@@ -823,7 +823,7 @@ class CoupledCycleTeacher:
         if int(m) != 0:
             # C-12: the compiled fixture prepares |0...0> — logical m=0 only.
             raise NotImplementedError(
-                "CoupledCycleTeacher slice-1 supports logical m=0 only: the "
+                "CoupledCycleNoiseProcess slice-1 supports logical m=0 only: the "
                 "compiled fixture prepares |0...0> with a Z-basis logical "
                 "readout and the compiler emits no logical-X frame; m=1 is a "
                 "later-slice extension"
@@ -924,7 +924,7 @@ class CoupledCycleTeacher:
         selection_partition = axis1_selection_layers_in_schedule_order(
             self._sched,
             selection_plan.selections,
-            consumer_name="CoupledCycleTeacher.channels",
+            consumer_name="CoupledCycleNoiseProcess.channels",
         )
         rows: list[dict[str, Any]] = []
         for layer in selection_partition:
@@ -1053,14 +1053,14 @@ class CoupledCycleTeacher:
         """
 
         raise NotImplementedError(
-            "CoupledCycleTeacher slice-1 has no Clifford/bit-flip emission seam; "
+            "CoupledCycleNoiseProcess slice-1 has no Clifford/bit-flip emission seam; "
             "the stim wiring anchor is a later-slice extension"
         )
 
     # ------------------------------------------------------------------ #
     # ablation arms (C-9)                                                  #
     # ------------------------------------------------------------------ #
-    def markovian_baseline(self) -> "CoupledCycleTeacher":
+    def markovian_baseline(self) -> "CoupledCycleNoiseProcess":
         """The G6 negative control: matched marginals, broken coupling.
 
         Same source / config / schedule fixture; per-cycle params come from
@@ -1070,7 +1070,7 @@ class CoupledCycleTeacher:
         cross-cycle alignment destroyed).
         """
 
-        return CoupledCycleTeacher(
+        return CoupledCycleNoiseProcess(
             self._rounds,
             source=self._source,
             config=self._config,
@@ -1081,7 +1081,7 @@ class CoupledCycleTeacher:
             coupling_arm="independent",
         )
 
-    def off_source(self) -> "CoupledCycleTeacher":
+    def off_source(self) -> "CoupledCycleNoiseProcess":
         """The collapse arm: amplitude-0 source => constant Theta(0) params."""
 
         if not hasattr(self._source, "amplitude_radns"):
@@ -1094,7 +1094,7 @@ class CoupledCycleTeacher:
             amplitude_radns=0.0,
             name=f"{self._source.name}.off",
         )
-        return CoupledCycleTeacher(
+        return CoupledCycleNoiseProcess(
             self._rounds,
             source=off,
             config=self._config,
@@ -1304,7 +1304,7 @@ __all__ = [
     "COUPLED_TEACHER_SCHEMA",
     "DEFAULT_STATIC_ZZ_EDGE",
     "MEMORYFUL_SHARED_SOURCES",
-    "CoupledCycleTeacher",
+    "CoupledCycleNoiseProcess",
     "default_coupled_code_spec",
     "default_coupled_code_spec_4q",
     "default_coupled_code_spec_d3_repz",
@@ -1313,3 +1313,7 @@ __all__ = [
     "per_round_axis1_params",
     "trajectory_mean_instrument",
 ]
+
+# Backward-compat alias — the ambiguous "Teacher" name is retired in error_coupling_simulator;
+# qec_twin keeps it (its shim does globals().update(vars(this_module)), re-exporting both names).
+CoupledCycleTeacher = CoupledCycleNoiseProcess

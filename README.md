@@ -1,89 +1,81 @@
-# QEC Error-Mechanism Digital Twin
+# error_coupling_simulator
 
-`qec_twin` is a QEC noise-learning research package. Its goal is a
-**teacher-learner digital twin of QEC error mechanisms** — a validated causal
-model of the device noise (the twin as a structural causal model; `do()` = Pearl
-intervention) — that can **recover**, **understand**, **manipulate**, and
-**predict** error mechanisms on hardware-realistic noise:
+A **faithful, GPU-first simulator of QEC error mechanisms** — coupling, leakage, and other
+non-Pauli / memory-ful noise. It takes a QEC circuit (a rotated surface code; **XZZX** is the
+first target) plus a **specified noise process**, and produces the **multi-time syndrome
+record** (per-round detector bits + logical-observable flips, emitted as Stim-compatible
+`.b8` / `.dem`). It is a standalone, independently-releasable package.
 
-- **recover** — label-free calibration of mechanisms from observations;
-- **understand** — interpret them, with honest uncertainty / alias bands;
-- **manipulate** — channel-level `do()` knobs that predict ΔLER;
-- **predict** — drift, rare-failure, and decoder-impact forecasting.
+The deliverable is the simulator; its product is the record (and the LER read off it under a
+frozen decoder). Metrics are **instruments** on the record, never the object.
 
-The organizing principle is the **causal model**: the circuit/DEM is the causal
-graph, the mechanisms are its structural equations, and a channel-level `do()` is a
-Pearl intervention whose ΔLER is validated against controlled-teacher ground truth —
-never by calibration fit alone. Calibration is an ill-posed inverse problem, so
-identifiability and honest bands (which mechanisms the data fixes, and where it
-cannot) are central. See `docs/IDENTIFIABILITY_AND_CRL_SURVEY.md`.
+**Binding spec: [`docs/SIMULATOR.md`](docs/SIMULATOR.md)** — object contract, boundary,
+carrier ladder, and disciplines. Read it first.
 
-> The package name `qec_twin` is a stable code identifier only. The earlier
-> orbit-symmetry-compression thesis, and orbit-sharing
-> as an identifiability lever, are retired — see `docs/adr/0005-retire-scope-reframe-twin.md`.
+## What it models
+
+- **Two noise axes.** *Axis-1* — within-substep joint-Lindbladian coupling (ZZ crosstalk,
+  T1/T2, thermal, fSim residual, readout dephasing, leakage Hamiltonians). *Axis-2* —
+  **notion-2** classical multi-time record memory (a shared classical source `z_t`/`ξ(t)`,
+  1/f bath or RTN, modulating per-round rates → a beyond-Markov record signature).
+- **Non-Pauli mechanisms** (span both axes): **leakage, drift, crosstalk, burst** — coherence
+  / structure a Pauli-rate vector cannot carry, and **not DEM-reducible**.
+- **No physical ground truth.** A noise process is a model we specify; the QuTiP / closed-form
+  / exact-DM oracles are FORMAL bug-catchers, never a correspondence-to-reality claim.
 
 ## Current state
 
-**The counterfactual loop (the "B path") is validated at small exact scale.** On a
-repetition-code toy: the twin is label-free calibrated by exact multi-context
-Born-rule observation-NLL, a channel-level `do()` knob is applied, and its
-predicted ΔLER is checked against controlled-teacher ground truth. Demonstrated
-results — calibration recovers the teacher to machine precision; **probe richness
-breaks the observational alias** (out-of-basis exotic prediction error collapses
-~10⁵× once basis-rotated probes enter calibration); the recovered knob matches the
-teacher's true ΔLER; moment-matched and shuffled-channel twins fail as
-pre-registered. See ADR 0002/0003/0004.
+The live frontier is the **full-`d×d` 2D-PEPS trajectory carrier** and its **record-faithful
+truncation** (ADR 0011). A 1D MPS is geometry-incompatible with the full surface code (`χ ~
+2^{2d}`), so the full-code carrier is a single-wire 2D PEPS pure-state MCWF trajectory; the
+open problem is replacing the unreliable FET/ALS truncator with the deterministic
+Evenbly-2018 closed-loop gauge-fix (WTG). Working notes: `docs/nonpauli_teacher/`.
 
-This is a controlled, exact, small-scale capability result — **not** yet a
-validated real-hardware twin. No Google physical-mechanism, drift, transfer, or
-decoder-utility claim is made.
+Every d5/d7 distributional claim is PROVISIONAL (no external oracle exists above the d3
+exact-DM referee).
 
-### Substrate
+## Substrate
 
-- **Exact differentiable forward** (`qec_twin.forward`): a CPTP-by-construction
-  channel (`forward.cptp_channel`) plus an exact density-matrix
-  circuit-to-observation forward model (`forward.exact`),
-  `p(y|c) = Tr[M_y C(c)(rho0)]`. The density-matrix backend is feasibility-only
-  (≤~15 qubits); `forward.scalable` is the placeholder >50-qubit carrier (ADR 0005).
-  Mechanism definitions + controlled teachers live in `qec_twin.mechanisms`; the
-  probe-richness context ladder in `qec_twin.contexts`.
-- **Minimal DEM** (`qec_twin.decoder`): parity map (`DemParityMap`), fault graph
-  (`FaultGraph`), and stim-DEM extraction — the frozen-MWPM-decoder path only.
-
-The B-path is the four capability modules over this substrate —
-`qec_twin.calibration` (recover) and `qec_twin.knobs` (channel-level `do()` → ΔLER),
-with evaluator-side gating / alias bands / validity curve in `qec_twin.audit`
-(`understand` and `prediction` are placeholders). Everything else — the discovery /
-observability / catalog / Google program — was retired and removed (ADR 0005).
+- **Forward carrier ladder** (`error_coupling_simulator.carrier`): exact density matrix
+  (`carrier/exact`, ≤~15q — the certification oracle) → MPS MCWF thin-strip (`quimb`,
+  χ constant in d) → **2D PEPS full `d×d`** (`carrier/peps`). The Axis-1 joint-Lindbladian
+  assembler + CPTP channel object + fused CUDA kernels also live under `carrier/`.
+- **Frontend** (`error_coupling_simulator.frontend`): `CodeSpec → CircuitIR`, imported Stim
+  circuits, and hand-built circuits all feed one `Simulator.run(...)` surface emitting
+  `.stim` / `.dem` / `.b8` / manifest artifacts; every artifact declares a `representability`
+  class and fails closed.
+- **Certification** (`error_coupling_simulator.certify`): scores a noise process's records
+  against INDEPENDENT anchors (anti-circular) → an epistemic ledger with non-optional
+  negative controls.
 
 ## Install
 
-Python `>=3.10`. From the repository root:
+Python `>=3.10`. From the repository root, using the GPU `aiqec` environment:
 
 ```bash
-python -m pip install -e .
+conda run -n aiqec python -m pip install -e .
 ```
 
-On the GPU workstation use the `aiqec` environment
-(`conda run -n aiqec python -m pip install -e .`). Do not set
-`PYTHONPATH="$PWD/src"`; use the editable install.
+Do not set `PYTHONPATH="$PWD/src"`; use the editable install (`pyproject` `pythonpath=["src"]`
+already puts `error_coupling_simulator` on the path).
 
 ## Use
 
 ```bash
-python -m pytest -q tests/        # run the test suite (twin B-path + substrate)
+conda run -n aiqec python -m pytest -q tests/                        # run the suite (ALWAYS scope to tests/)
+python tests/harness/gate.py     tests/_support/<batch>_targets.json # L0+L1 coverage gate
+python tests/harness/mutation.py tests/_support/<batch>_targets.json # L2 mutation gate
 ```
 
-The twin B-path is driven through the library — `qec_twin.calibration` / `knobs` /
-`audit` over `qec_twin.forward` — and its tests under `tests/test_twin_*.py`; there
-are no standing console scripts.
+The simulator is driven through the library (`error_coupling_simulator.frontend.Simulator`
+over the `carrier/` backends) and its `tests/`, which double as the executable spec — see
+`tests/CODEBOOK.md` for the coverage harness.
 
 ## Docs
 
-- `CONTEXT.md` — glossary and claim boundaries.
-- `AGENTS.md` — main line, doc routing, and working rules.
-- `docs/ARCHITECTURE.md` — module map.
-- `docs/teacher_learner.md` — teacher/learner roles and isolation contract.
-- `docs/TWIN.md` — binding twin spec: object contract, four capabilities, notation.
-- `docs/IDENTIFIABILITY_AND_CRL_SURVEY.md` + `docs/papers/` — the CRL / identifiability toolset.
-- `docs/adr/` — durable decisions (current spine 0001 → 0010).
+- [`docs/SIMULATOR.md`](docs/SIMULATOR.md) — **binding spec (read first)**.
+- [`CLAUDE.md`](CLAUDE.md) — main line, commands, architecture, code conventions.
+- [`CONTEXT.md`](CONTEXT.md) — glossary and claim boundaries.
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — module map; `docs/CODE_MAP.md` — generated inventory.
+- [`docs/METRICS.md`](docs/METRICS.md) + [`docs/FAITHFULNESS_PROTOCOL.md`](docs/FAITHFULNESS_PROTOCOL.md) — metric ladder + anti-toy protocol.
+- `docs/adr/` — live decisions (0008 → 0011).

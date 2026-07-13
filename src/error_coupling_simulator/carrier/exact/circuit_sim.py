@@ -2,9 +2,9 @@ from __future__ import annotations
 
 """Differentiable n-qubit density-matrix circuit forward model (small scale).
 
-L2 minimal core for the QEC digital twin (see project memory
-``qec-digital-twin-goal``). It extends the channel kernel
-(:mod:`qec_twin.forward.cptp_channel`) to a multi-qubit register so
+Small-scale exact forward for the QEC error-mechanism simulator. It extends the
+channel kernel (:mod:`error_coupling_simulator.carrier.cptp_channel`) to a
+multi-qubit register so
 local non-Clifford gates and local CPTP channels can be composed through a
 circuit and read out as exact, differentiable measurement / detection-event
 probabilities.
@@ -15,7 +15,7 @@ Exact density-matrix simulation at small ``n`` (<= ~10 qubits), prioritizing
 fidelity over scale. Local operators are embedded into the full register by
 Kronecker product with identity plus an axis permutation -- simple and exact at
 this scale. The optimization for device scale (72-105 qubits) is the *next* step —
-a scalable backend (``forward/scalable``; carrier deferred, ADR 0005) — and is
+the scalable carrier (``carrier/peps`` / MPS; docs/SIMULATOR.md) — and is
 deliberately not done here.
 
 Qubit ordering: qubit 0 is the most-significant tensor factor, so a basis index
@@ -77,7 +77,7 @@ def apply_unitary(rho: torch.Tensor, unitary: torch.Tensor, targets, n: int) -> 
     if unitary.device != rho.device:
         unitary = unitary.to(rho.device)
     if rho.is_cuda and _accel_available():
-        from qec_twin.forward import accel
+        from error_coupling_simulator.carrier import accel
 
         return accel.apply_channel_local_fused(rho, unitary.unsqueeze(0), targets, n)
     u = embed_operator(unitary, targets, n)
@@ -89,7 +89,7 @@ def apply_channel_local(rho: torch.Tensor, kraus: torch.Tensor, targets, n: int)
     if kraus.device != rho.device:
         kraus = kraus.to(rho.device)
     if rho.is_cuda and len(tuple(targets)) <= 4 and _accel_available():
-        from qec_twin.forward import accel
+        from error_coupling_simulator.carrier import accel
 
         return accel.apply_channel_local_fused(rho, kraus, targets, n)
     embedded = torch.stack([embed_operator(k, targets, n) for k in kraus])
@@ -99,7 +99,7 @@ def apply_channel_local(rho: torch.Tensor, kraus: torch.Tensor, targets, n: int)
 def _accel_available() -> bool:
     global _ACCEL_OK
     if _ACCEL_OK is None:
-        from qec_twin.forward import accel
+        from error_coupling_simulator.carrier import accel
 
         _ACCEL_OK = accel.available()
     return _ACCEL_OK

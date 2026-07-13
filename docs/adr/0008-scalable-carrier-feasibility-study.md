@@ -1,5 +1,12 @@
 # ADR 0008 — Scalable-carrier feasibility study (charter)
 
+> **Framing note (2026-07-13):** the current binding spec is [`docs/SIMULATOR.md`](../SIMULATOR.md).
+> This historical charter references ADR 0001–0007, `docs/TWIN.md`,
+> `docs/IDENTIFIABILITY_AND_CRL_SURVEY.md`, and `docs/metric_results.md`, all of which have been
+> removed; their surviving decisions (GPU-first, the channel-field object, the d5/d7 surface-code
+> target) are folded into `docs/SIMULATOR.md`, and pre-registration / results provenance lives in git
+> history. Read the body below as a historical record.
+
 ## Status
 
 **Proposed — charter recorded 2026-06-10; C1+C2 (theory panel + review) COMPLETE 2026-06-10;

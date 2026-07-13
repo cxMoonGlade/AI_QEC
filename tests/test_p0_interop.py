@@ -1,7 +1,7 @@
 """P0 interop tests — emit->Stim/DEM export + records->DEM reduction (CPU-only).
 
 Covers the two new P0 surfaces:
-- ``CoupledCycleTeacher.export_stim_circuit`` — ideal-geometry stim export with
+- ``CoupledCycleNoiseProcess.export_stim_circuit`` — ideal-geometry stim export with
   layout-identity asserts, checked by DETERMINISTIC PAULI INJECTION against
   stim as the independent reference: a known Pauli at a known round boundary
   must fire EXACTLY the detector columns + observable the record layout
@@ -28,8 +28,8 @@ from error_coupling_simulator.frontend.interop import (
     records_to_dem,
 )
 from error_coupling_simulator.frontend.stim_io import sample_detector_records
-from error_coupling_simulator.teachers.coupled_cycle import (
-    CoupledCycleTeacher,
+from error_coupling_simulator.noise_processes.coupled_cycle import (
+    CoupledCycleNoiseProcess,
     default_coupled_code_spec_d3_repz,
 )
 
@@ -61,7 +61,7 @@ def _injection_case(circuit, manifest, *, tick, name, targets, fired, obs):
 # --------------------------------------------------------------------------- #
 @pytest.mark.parametrize("fixture", ["5q", "d3_repz"])
 def test_export_stim_circuit_layout_and_counts(fixture):
-    teacher = CoupledCycleTeacher(ROUNDS, fixture=fixture)
+    teacher = CoupledCycleNoiseProcess(ROUNDS, fixture=fixture)
     circuit, manifest = teacher.export_stim_circuit()
     truth = teacher.truth
     assert manifest["detector_names"] == truth["detector_names"]
@@ -80,7 +80,7 @@ def test_export_stim_circuit_noiseless_smoke(fixture):
     is deterministically 0, so this cannot catch xor/key bugs — the genuine
     wiring falsifier is the injection test below."""
 
-    teacher = CoupledCycleTeacher(ROUNDS, fixture=fixture)
+    teacher = CoupledCycleNoiseProcess(ROUNDS, fixture=fixture)
     circuit, _ = teacher.export_stim_circuit()
     det, obs = sample_detector_records(circuit, shots=256, seed=7)
     assert det.shape == (256, ROUNDS * teacher.n_stab)
@@ -91,7 +91,7 @@ def test_export_stim_circuit_noiseless_smoke(fixture):
 def test_export_wiring_injection_d3_repz():
     """Independent wiring falsifiers (stim reference), d3_repz @ R=3."""
 
-    teacher = CoupledCycleTeacher(ROUNDS, fixture="d3_repz")
+    teacher = CoupledCycleNoiseProcess(ROUNDS, fixture="d3_repz")
     circuit, manifest = teacher.export_stim_circuit()
     # In-round X on q2 after round 0: exactly delta:z12:round1, obs flips
     # (geometric class; probability 0 under slice-1 noise — see the fixture
@@ -122,7 +122,7 @@ def test_export_wiring_injection_d3_repz():
 def test_export_wiring_injection_5q():
     """Independent wiring falsifiers, 5q fixture @ R=3."""
 
-    teacher = CoupledCycleTeacher(ROUNDS, fixture="5q")
+    teacher = CoupledCycleNoiseProcess(ROUNDS, fixture="5q")
     circuit, manifest = teacher.export_stim_circuit()
     # Z on data 0 flips the x0 (X-check) syndrome from round 1 on: exactly
     # delta:x0:round1 (works although the x0 outcomes themselves are random).
@@ -146,7 +146,7 @@ def test_d3_repz_spec_shape():
     assert {c.name for c in spec.checks} == {"z01", "z12"}
     assert all(len(c.terms) == 2 for c in spec.checks)
     assert [o.name for o in spec.logical_observables] == ["logical_z2"]
-    teacher = CoupledCycleTeacher(ROUNDS, fixture="d3_repz")
+    teacher = CoupledCycleNoiseProcess(ROUNDS, fixture="d3_repz")
     assert teacher.n_stab == 2
     # Regime surface still binds (construction-time contract only; no emit).
     with pytest.raises(ValueError, match="regime.R"):

@@ -1,6 +1,6 @@
 """Tests for ``qec_twin.audit.certify`` — the certification seam.
 
-Step 1: the interface (the value types + the ``Anchor`` / ``Control`` / ``ControlledTeacher`` ports)
+Step 1: the interface (the value types + the ``Anchor`` / ``Control`` / ``ControlledNoiseProcess`` ports)
 imports + constructs; the ``CertReport`` verdict / summary / assert_pass logic; the ports are
 duck-typed ``runtime_checkable`` Protocols (the ``audit.floor_backend.PathJointEvaluator`` pattern).
 
@@ -21,7 +21,7 @@ from qec_twin.audit.certify import (
     Capability,
     CertReport,
     Control,
-    ControlledTeacher,
+    ControlledNoiseProcess,
     Exactness,
     Feasibility,
     LedgerRow,
@@ -106,7 +106,7 @@ def test_ports_are_duck_typed_runtime_checkable_protocols():
 
     assert isinstance(_DuckAnchor(), Anchor)
     assert isinstance(_DuckControl(), Control)
-    assert isinstance(_DuckTeacher(), ControlledTeacher)
+    assert isinstance(_DuckTeacher(), ControlledNoiseProcess)
     assert not isinstance(object(), Anchor)  # a non-conforming object is rejected (the port has teeth)
 
 

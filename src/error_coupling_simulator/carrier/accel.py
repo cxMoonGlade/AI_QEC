@@ -1,4 +1,4 @@
-"""CUDA-kernel acceleration for the exact forward's inner loop (forward/kernels/, ADR 0001).
+"""CUDA-kernel acceleration for the exact forward's inner loop (carrier/kernels/; GPU-first, docs/SIMULATOR.md).
 
 JIT-loads the fused subsystem-Kraus kernel from the package-local
 ``src/qec_twin/forward/kernels/`` folder and wraps it in an autograd Function that is
@@ -10,7 +10,7 @@ a drop-in for the reference
 - backward(rho): the adjoint channel via the same kernel with the dagger Kraus stack;
 - backward(kraus): a small subspace-einsum composite (no full-space embedding),
   derived by autograd on the reference subspace contraction — only paid when the
-  Kraus stack requires grad (the twin side).
+  Kraus stack requires grad (the differentiable / optimization path).
 
 Fallback: reference path on CPU tensors, when CUDA/nvcc is unavailable, or when
 ``QEC_TWIN_NO_KERNELS=1``. The reference implementation remains the correctness

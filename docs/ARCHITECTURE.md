@@ -1,60 +1,60 @@
 # Architecture
 
-`qec_twin` is the code for **the twin** — a teacher-learner, finance-structured QEC
-error-mechanism digital twin. Binding spec: `docs/TWIN.md`. **Every module under
-`src/qec_twin/` carries a `README.md`** that bounds its scope; read it before
-adding code there.
+`error_coupling_simulator` is a faithful, GPU-first simulator of QEC error mechanisms.
+Binding spec: `docs/SIMULATOR.md`. **Every module under `src/error_coupling_simulator/`
+carries a `README.md`** that bounds its scope; read it before adding code there. This map is
+documentation, not import structure; the generated inventory is `docs/CODE_MAP.md`.
 
-## Module map (`src/qec_twin/`)
+## Module map (`src/error_coupling_simulator/`)
 
-Three conceptual tiers. The tiering is **documentation, not import paths** — the
-packages are flat (no `model/` / `substrate/` parents); deep nesting only where
-there is real cohesion (`forward/` backends).
-
-### Model — the four capabilities
-
-| module | capability | status |
-|---|---|---|
-| `calibration/` | **RECOVER** — label-free exact Born-NLL calibration of the channel field | has code |
-| `understand/` | **UNDERSTAND** — interpret recovered `E` into mechanism terms | placeholder |
-| `knobs/` | **MANIPULATE** — channel-level `do()` → ΔLER | has code |
-| `prediction/` | **PREDICT** — drift / rare-failure / decoder-impact forecast | placeholder |
-
-### Substrate — what the model is built on
+### Noise specification — what a noise process is built from
 
 | module | role |
 |---|---|
-| `forward/` | exact differentiable forward model (physics engine); backend-swappable; owns package-local CUDA/C++ kernels in `forward/kernels/` |
-| `forward/exact/` | density-matrix backend — **⚠ FEASIBILITY-ONLY** (`2^n×2^n`, ≤~15q), abandoned after |
-| `forward/scalable/` | **>50-qubit** backend; first content = the ADR 0008 C1 composed-carrier seam-test arm (`composed.py` / `marginals.py` / `pins.py`); the d=5/d=7 bulk engine stays gated |
-| `mechanisms/` | noise-mechanism definitions + controlled teachers |
-| `contexts/` | probe-richness ladder `C_cal(r)` + probe definitions |
-| `decoder/` | frozen-MWPM DEM substrate (`parity_map`, `fault_graph`, `stim_dem`) |
-| `hardware/` | R2-lite published-data ingestion (ADR 0007): stim-native `.stim`/`.b8`/`.dem` in → label-free observations out |
+| `source/` | Axis-2 **notion-2** classical multi-time sources (1/f bath, RTN) conditioning per-round rates + the coherence-wedge observable |
+| `oracles/` | independent QuTiP-derived channel primitives — FORMAL bug-catchers, evaluator-only |
+| `mechanisms/` | mechanism primitives + `catalog` + `seam_teachers`; the non-Pauli families **leakage / drift / crosstalk / burst** (see `docs/error_mechanisms.md`) |
+| `teachers/` | the controlled **noise processes** (`coupled_cycle`) — rename to `noise_processes/` pending |
 
-### Non-core
+### Carrier — the forward engine (`carrier/`)
 
 | module | role |
 |---|---|
-| `audit/` | evaluator-side: `gating` (identifiability), `bands` (uncertainty), `validity` (curve) |
-| `util/` | placeholder for future small helpers |
-| `numerics.py` | `NUMERICAL_ZERO` floor (root) |
+| `carrier/` (top) | Axis-1 `joint_lindbladian` assembler + `cptp_channel` (the CPTP Stinespring channel object) + `channels` |
+| `carrier/exact/` | density-matrix backend — **⚠ FEASIBILITY-ONLY** (≤~15q) — the **certification ORACLE** (`qutrit_dm`, `circuit_sim`) |
+| `carrier/kernels/` | fused CUDA/C++ kernels (loader `carrier/accel.py`, auto-routed on CUDA tensors) |
+| `carrier/peps/` | **ACTIVE** — the full-`d×d` 2D-PEPS trajectory carrier + FET truncation frontier (ADR 0011) |
+| `carrier/pepo/` | **CLOSED** — the doubled-wire DM-PEPO carrier |
+
+### Product + certification
+
+| module | role |
+|---|---|
+| `frontend/` | CircuitIR / CodeSpec / compiler / schedule / carriers / emit → `Simulator.run(...)`; emits `.stim` / `.dem` / `.b8` / manifest, each with a fail-closed `representability` class |
+| `certify/` | score a noise process's records vs **INDEPENDENT** anchors (anti-circular) → an epistemic ledger with non-optional negative controls |
+| `numerics.py` | `NUMERICAL_ZERO` floor |
+
+`src/qec_twin/` is the pre-consolidation package: import shims + the still-used RAG
+(`qec_twin.rag`) and R2 decoder (`qec_twin.hardware.m4_decode`), being pulled out of `src/`
+into an archive with symlinks kept at the old import paths.
 
 ## Flow
 
 ```
-context c            (contexts)
-  → forward[/exact]  exact forward  p(s,m | c)
-  → calibration      minimize exact Born-NLL over C_cal(r)  →  recovered field E_hat
-  → knobs            channel-level do(E_i) → ΔLER under a frozen decoder (decoder/)
-  → audit            bands over the calibration-consistent set; validity vs controlled-teacher truth
+noise process (mechanisms + Axis-2 source)
+  → frontend    CircuitIR / CodeSpec → schedule → Simulator.run(...)
+  → carrier     forward evolution: exact DM (oracle) → MPS thin-strip → 2D PEPS (full d×d)
+  → record      per-round {detector bits, observable flips}  (.b8 / .dem)
+  → certify     score vs INDEPENDENT anchors → epistemic ledger (evaluator-only)
 ```
 
-## Backend boundary (critical)
+## Carrier ladder / backend boundary (critical)
 
-`forward/exact` (density matrix) is `2^n × 2^n` → **feasibility-only**, unusable past
-~15 qubits. The target is 50+ qubit noise circuits, so a **scalable backend**
-(`forward/scalable`, whose first content is the ADR 0008 seam-test composed-carrier
-arm) replaces it once the B-path loop is validated. The
-channel object (`forward/cptp_channel`) and the four capabilities are
-backend-agnostic, so the swap is a backend replacement, not a rewrite.
+`carrier/exact` (density matrix) is `2^n×2^n` / `3^n×3^n` → **feasibility-only** (≤~15q; the
+certification oracle). The target is the d5/d7 rotated surface code (49q / 97q), so the
+forward scales through: **MPS MCWF thin-strip** (`quimb`; χ constant in d) → **2D PEPS full
+`d×d`** — a 1D MPS is geometry-incompatible with the full square (`χ~2^{2d}`; ADR 0010/0011).
+Truncation is **record-faithful** (gate on the syndrome record, never on the carrier bond).
+The channel object (`carrier/cptp_channel`) + the record contract are backend-agnostic, so the
+swap is a backend replacement, not a rewrite. Detail: `docs/SIMULATOR.md` +
+`carrier/peps/README.md`.

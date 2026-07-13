@@ -63,7 +63,7 @@ from error_coupling_simulator.frontend.interop import (
     records_to_dem,
 )
 from error_coupling_simulator.frontend.stim_io import sample_detector_records
-from error_coupling_simulator.teachers.coupled_cycle import CoupledCycleTeacher
+from error_coupling_simulator.noise_processes.coupled_cycle import CoupledCycleNoiseProcess
 
 ROUNDS = 3
 
@@ -564,7 +564,7 @@ def test_KILLER_insert_op_after_tick_injection_off_by_one():
     after TICK t fires EXACTLY the round-t z12 detector. Off-by-one in the TICK count fires
     a DIFFERENT detector (round1 vs round2) -> the seen==t / TICK count is load-bearing.
     (A deterministic GATE never fires a detector -- the module's frame-semantics note.)"""
-    teacher = CoupledCycleTeacher(ROUNDS, fixture="d3_repz")
+    teacher = CoupledCycleNoiseProcess(ROUNDS, fixture="d3_repz")
     circ, man = teacher.export_stim_circuit()
     names = man["detector_names"]
 

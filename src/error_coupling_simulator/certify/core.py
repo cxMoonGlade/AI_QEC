@@ -29,7 +29,7 @@ from .types import (
     AnchorValue,
     CertReport,
     Control,
-    ControlledTeacher,
+    ControlledNoiseProcess,
     Exactness,
     LedgerRow,
     Regime,
@@ -207,7 +207,7 @@ class MeasureCtx:
     corruption."""
 
     def __init__(self, anchor: Anchor, statistic: Statistic, regime: Regime, N: int,
-                 emitted, anchor_value: AnchorValue, teacher: ControlledTeacher):
+                 emitted, anchor_value: AnchorValue, teacher: ControlledNoiseProcess):
         self.anchor = anchor
         self.statistic = statistic
         self.regime = regime
@@ -234,7 +234,7 @@ class MeasureCtx:
 # --------------------------------------------------------------------------- #
 # the engine                                                                   #
 # --------------------------------------------------------------------------- #
-def certify_cells(teacher: ControlledTeacher, cells, anchors, controls, *, N: int, seed: int = 0,
+def certify_cells(teacher: ControlledNoiseProcess, cells, anchors, controls, *, N: int, seed: int = 0,
                   m: int = 0) -> CertReport:
     """Route → controls-first → score → ledger over ``cells`` (a list of (Statistic, Regime)).
 

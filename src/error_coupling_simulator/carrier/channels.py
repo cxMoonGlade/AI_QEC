@@ -7,8 +7,8 @@ import math
 import numpy as np
 
 from ..numerics import NUMERICAL_ZERO, positive_floor, probability_floor
-from qec_twin.mechanisms.catalog import READOUT_MECHANISM_IDS
-from qec_twin.mechanisms.catalog import mechanism_label_namespace, mechanism_public_label
+from error_coupling_simulator.mechanisms.catalog import READOUT_MECHANISM_IDS
+from error_coupling_simulator.mechanisms.catalog import mechanism_label_namespace, mechanism_public_label
 
 
 Array = np.ndarray

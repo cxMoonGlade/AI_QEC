@@ -1,4 +1,4 @@
-"""CoupledCycleTeacher — constraint-ledger falsifiers (C-1..C-12).
+"""CoupledCycleNoiseProcess — constraint-ledger falsifiers (C-1..C-12).
 
 Ledger: the module docstring of ``qec_twin.mechanisms.coupled_teachers``.
 CPU-fine tests cover construction/validation/fan-out (pure metadata + numpy);
@@ -19,7 +19,7 @@ import torch
 from qec_twin.audit.certify.types import Regime
 from qec_twin.mechanisms.axis1_primitives import Axis1PrimitiveParams
 from qec_twin.mechanisms.coupled_teachers import (
-    CoupledCycleTeacher,
+    CoupledCycleNoiseProcess,
     default_coupled_code_spec,
     derive_round_map_for_substep_schedule,
     params_for_substep_from_round_map,
@@ -214,7 +214,7 @@ def test_params_differ_across_rounds():
 # --------------------------------------------------------------------------- #
 def test_shared_arm_rejects_non_memoryful_source():
     with pytest.raises(ValueError, match="memory-ful"):
-        CoupledCycleTeacher(2, source=PhaseBurstSource(event_times=(0,)))
+        CoupledCycleNoiseProcess(2, source=PhaseBurstSource(event_times=(0,)))
 
 
 def test_shared_arm_rejects_baseline_timeline():
@@ -222,7 +222,7 @@ def test_shared_arm_rejects_baseline_timeline():
     the arm dispatch seam refuses coupling_mode='independent' and
     baseline-marked timelines. (Reaches the private ``_fan_out`` seam on
     purpose — it is the arm-dispatch unit under test.)"""
-    teacher = CoupledCycleTeacher(2)
+    teacher = CoupledCycleNoiseProcess(2)
     timeline = OneOverFDriftSource().sample(seed=3, n_cycles=2)
     baseline = timeline.independent_baseline(seed=4)
     with pytest.raises(ValueError, match="red-team R3"):
@@ -231,13 +231,13 @@ def test_shared_arm_rejects_baseline_timeline():
 
 def test_constructor_validation():
     with pytest.raises(ValueError, match="rounds >= 2"):
-        CoupledCycleTeacher(1)
+        CoupledCycleNoiseProcess(1)
     with pytest.raises(ValueError, match="shots_per_trajectory"):
-        CoupledCycleTeacher(2, shots_per_trajectory=0)
+        CoupledCycleNoiseProcess(2, shots_per_trajectory=0)
     with pytest.raises(ValueError, match="GPU-only"):
-        CoupledCycleTeacher(2, device="cpu")
+        CoupledCycleNoiseProcess(2, device="cpu")
     with pytest.raises(ValueError, match="coupling_arm"):
-        CoupledCycleTeacher(2, coupling_arm="banana")
+        CoupledCycleNoiseProcess(2, coupling_arm="banana")
 
 
 # --------------------------------------------------------------------------- #
@@ -247,7 +247,7 @@ def test_markovian_baseline_marginals_and_decorrelation():
     """Matched marginals + broken coupling (thresholds reused from
     test_source_process.py: shared > 0.9, independent |corr| < 0.25;
     sorted-marginal equality at atol=1e-15)."""
-    teacher = CoupledCycleTeacher(2)
+    teacher = CoupledCycleNoiseProcess(2)
     baseline = teacher.markovian_baseline()
     assert teacher.coupling_arm == "shared"
     assert baseline.coupling_arm == "independent"
@@ -282,7 +282,7 @@ def test_markovian_baseline_marginals_and_decorrelation():
 
 
 def test_off_source_constant_params():
-    teacher = CoupledCycleTeacher(2)
+    teacher = CoupledCycleNoiseProcess(2)
     off = teacher.off_source()
     assert off.coupling_arm == "off"
     timeline = off._source.sample(seed=5, n_cycles=2)
@@ -309,7 +309,7 @@ def _assert_no_record_keys(node, path=""):
 def test_truth_isolation():
     """Truth is evaluator-only and carries NO det/obs record arrays (C-7);
     the declared slice-1 scope items are present."""
-    teacher = CoupledCycleTeacher(2)
+    teacher = CoupledCycleNoiseProcess(2)
     truth = teacher.truth
     _assert_no_record_keys(truth)
     assert truth["visibility"] == "evaluator_only"
@@ -330,13 +330,13 @@ def test_truth_isolation():
 
 
 def test_m1_raises():
-    teacher = CoupledCycleTeacher(2)
+    teacher = CoupledCycleNoiseProcess(2)
     with pytest.raises(NotImplementedError, match="m=0 only"):
         teacher.emit(Regime(R=2, n_stab=2), m=1, N=4, seed=0)
 
 
 def test_regime_mismatch_raises():
-    teacher = CoupledCycleTeacher(2)
+    teacher = CoupledCycleNoiseProcess(2)
     with pytest.raises(ValueError, match="regime.R"):
         teacher.emit(Regime(R=3, n_stab=2), m=0, N=4, seed=0)
     with pytest.raises(ValueError, match="n_stab"):
@@ -347,7 +347,7 @@ def test_emit_refuses_unsealed_schedule():
     """C-1 / red-team R5: a public-constructor (unsealed) rebuild of the same
     substeps must be refused by emit. The seal check precedes any device
     work, so this runs CPU-fine."""
-    teacher = CoupledCycleTeacher(2)
+    teacher = CoupledCycleNoiseProcess(2)
     sealed = teacher.sched
     unsealed = SubstepSchedule(
         source_kind=sealed.source_kind,
@@ -369,7 +369,7 @@ def test_emit_refuses_unsealed_schedule():
 
 
 def test_emit_clifford_slice_not_implemented():
-    teacher = CoupledCycleTeacher(2)
+    teacher = CoupledCycleNoiseProcess(2)
     with pytest.raises(NotImplementedError):
         teacher.emit_clifford_slice(Regime(R=2, n_stab=2), p_x=1e-3, m=0, N=4, seed=0)
 
@@ -381,7 +381,7 @@ def test_emit_clifford_slice_not_implemented():
 def test_emit_payload_surface():
     """C-3 / red-team R4: keys EXACTLY {det, obs}; uint8; (N, R*n_stab)/(N,);
     values in {0,1}; truth records the emit bookkeeping (evaluator-side)."""
-    teacher = CoupledCycleTeacher(2, shots_per_trajectory=8)
+    teacher = CoupledCycleNoiseProcess(2, shots_per_trajectory=8)
     n = 32
     payload = teacher.emit(Regime(R=2, n_stab=2), m=0, N=n, seed=101)
     assert set(payload) == {"det", "obs"}
@@ -402,7 +402,7 @@ def test_emit_payload_surface():
 def test_emit_reproducible():
     """C-8: same (regime, m, N, seed) => byte-identical arrays; a different
     seed differs (N large enough that chance-equality is ~exp(-65))."""
-    teacher = CoupledCycleTeacher(2, shots_per_trajectory=256)
+    teacher = CoupledCycleNoiseProcess(2, shots_per_trajectory=256)
     regime = Regime(R=2, n_stab=2)
     a = teacher.emit(regime, m=0, N=256, seed=7)
     b = teacher.emit(regime, m=0, N=256, seed=7)
@@ -419,8 +419,8 @@ def test_batched_emit_declares_clusters():
     """C-11 / red-team R6: batching is declared in truth; batched and
     unbatched OFF-source arms share the marginal record law (the off arm has
     no trajectory variation, so batching is exact there — declared)."""
-    base = CoupledCycleTeacher(2)
-    off_batched = CoupledCycleTeacher(2, shots_per_trajectory=64).off_source()
+    base = CoupledCycleNoiseProcess(2)
+    off_batched = CoupledCycleNoiseProcess(2, shots_per_trajectory=64).off_source()
     n = 512
     payload = off_batched.emit(Regime(R=2, n_stab=2), m=0, N=n, seed=3)
     truth = off_batched.truth
@@ -517,7 +517,7 @@ def test_z1_rates_match_closed_form():
     + 1e-4 slack for eps-class corrections (declared class (c))."""
     cfg = default_source_coupling_config()
     n = 1 << 16
-    teacher = CoupledCycleTeacher(2, shots_per_trajectory=n).off_source()
+    teacher = CoupledCycleNoiseProcess(2, shots_per_trajectory=n).off_source()
     payload = teacher.emit(Regime(R=2, n_stab=2), m=0, N=n, seed=11)
     names = teacher.truth["detector_names"]
     p_rs = cfg.reset_flip_base_p
@@ -577,8 +577,8 @@ def test_x0_delta_rate_tracks_gamma_phi():
         cfg_a, gamma_phi_base_per_ns=20.0 * cfg_a.gamma_phi_base_per_ns
     )
     n = 1 << 18
-    teacher_a = CoupledCycleTeacher(2, config=cfg_a, shots_per_trajectory=n).off_source()
-    teacher_b = CoupledCycleTeacher(2, config=cfg_b, shots_per_trajectory=n).off_source()
+    teacher_a = CoupledCycleNoiseProcess(2, config=cfg_a, shots_per_trajectory=n).off_source()
+    teacher_b = CoupledCycleNoiseProcess(2, config=cfg_b, shots_per_trajectory=n).off_source()
     regime = Regime(R=2, n_stab=2)
     det_a = teacher_a.emit(regime, m=0, N=n, seed=21)["det"]
     det_b = teacher_b.emit(regime, m=0, N=n, seed=22)["det"]
@@ -608,7 +608,7 @@ def test_x0_delta_rate_tracks_gamma_phi():
 def test_channels_mean_field_surface():
     """channels() reports the per-substep Kraus field at Theta(0) with the
     validated round labels; kraus stacks are CPTP-shaped tensors."""
-    teacher = CoupledCycleTeacher(2)
+    teacher = CoupledCycleNoiseProcess(2)
     rows = teacher.channels()
     assert rows, "expected at least one assembled substep channel"
     for row in rows:
