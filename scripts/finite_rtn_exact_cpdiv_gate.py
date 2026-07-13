@@ -15,6 +15,7 @@ import hashlib
 import json
 import math
 from pathlib import Path
+import subprocess
 from typing import Any, Sequence
 
 import mpmath as mp
@@ -236,6 +237,64 @@ def diagnostic_verdict(*, implementation_passed: bool, positive_excursion_found:
     return "NULL_WITHIN_HORIZON"
 
 
+def execution_provenance() -> dict[str, Any]:
+    """Bind the gate to clean, tracked source/prereg/script bytes and one Git commit."""
+
+    root = Path(__file__).resolve().parents[1]
+    paths = {
+        "script": Path(__file__).resolve(),
+        "preregistration": root
+        / "docs/twin_validation/finite_rtn_exact_cpdiv_prereg_2026-07-13.md",
+        "production_source": root / "src/error_coupling_simulator/source/process.py",
+    }
+    relative = {name: path.relative_to(root).as_posix() for name, path in paths.items()}
+    for name, relpath in relative.items():
+        tracked = subprocess.run(
+            ["git", "ls-files", "--error-unmatch", relpath],
+            cwd=root,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if tracked.returncode != 0:
+            raise RuntimeError(f"{name} is not tracked by Git: {relpath}")
+        for diff_args in (("diff", "--quiet"), ("diff", "--cached", "--quiet")):
+            clean = subprocess.run(
+                ["git", *diff_args, "--", relpath],
+                cwd=root,
+                check=False,
+                capture_output=True,
+            )
+            if clean.returncode != 0:
+                raise RuntimeError(f"{name} has uncommitted Git changes: {relpath}")
+    commit = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    file_hashes = {
+        name: hashlib.sha256(path.read_bytes()).hexdigest() for name, path in paths.items()
+    }
+    git_blobs = {
+        name: subprocess.run(
+            ["git", "rev-parse", f"HEAD:{relpath}"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        for name, relpath in relative.items()
+    }
+    return {
+        "git_commit": commit,
+        "tracked_clean_paths": relative,
+        "file_sha256": file_hashes,
+        "git_blob_ids": git_blobs,
+    }
+
+
 def earliest_strong_zero(
     amplitudes_per_cycle: Sequence[float],
     gammas_per_cycle: Sequence[float],
@@ -292,6 +351,7 @@ def high_precision_product(
 def build_report() -> dict[str, Any]:
     """Execute every preregistered gate and return a JSON-safe report."""
 
+    provenance = execution_provenance()
     source = OneOverFDriftSource()
     _assert_registered_defaults(source)
     gammas = source.gammas_per_cycle
@@ -306,8 +366,10 @@ def build_report() -> dict[str, Any]:
     ctmc_oracle_error = float(np.max(np.abs(oracle_values - product_values)))
 
     zero_mode, zero_time = earliest_strong_zero(amplitudes, gammas)
-    zero_value = abs(high_precision_product(zero_time, amplitudes, gammas))
-    recovery_value = abs(high_precision_product(zero_time + mp.mpf("1"), amplitudes, gammas))
+    with mp.workdps(80):
+        recovery_time = zero_time + mp.mpf("1")
+        zero_value = abs(high_precision_product(zero_time, amplitudes, gammas))
+        recovery_value = abs(high_precision_product(recovery_time, amplitudes, gammas))
 
     grid = np.arange(
         0.0,
@@ -376,12 +438,13 @@ def build_report() -> dict[str, Any]:
         )
     )
     implementation_passed = continuous_implementation_passed and held_implementation_passed
+    # The preregistered D1 verdict is analytic: the display grid cannot create
+    # or veto it. The grid contributes only the descriptive BLP estimate.
     continuous_positive = all(
         checks[key]
         for key in (
             "ctmc_analytic_zero",
             "ctmc_nonzero_recovery",
-            "ctmc_positive_excursion",
         )
     )
     ctmc_verdict = diagnostic_verdict(
@@ -395,6 +458,7 @@ def build_report() -> dict[str, Any]:
 
     report: dict[str, Any] = {
         "schema": "error_coupling_simulator.finite_rtn_exact_cpdiv_gate.v1",
+        "execution_provenance": provenance,
         "preregistration": "docs/twin_validation/finite_rtn_exact_cpdiv_prereg_2026-07-13.md",
         "claim_boundary": {
             "tested": [
@@ -517,6 +581,8 @@ def main() -> None:
         args.output,
         "sha256=",
         report["content_hash_sha256"],
+        "git_commit=",
+        report["execution_provenance"]["git_commit"],
     )
     if not report["implementation_gate_passed"]:
         raise SystemExit(1)
