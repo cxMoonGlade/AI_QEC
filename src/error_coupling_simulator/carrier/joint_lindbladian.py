@@ -4,7 +4,7 @@ r"""Axis-1 within-substep joint-Lindbladian assembler (the G2 HEADLINE substrate
 
 WHAT THIS IS (the "Axis-1" assembler — ADR-0008-adjacent; build contract §A/§B-5/§E)
 ------------------------------------------------------------------------------------
-The faithful per-cycle teacher evolution is NOT a composition chain of individually-
+The specified per-cycle noise-process evolution is NOT a composition chain of individually-
 derived per-mechanism channels. Within a single time SUB-STEP (1q-gate layer / CZ
 layer / idle / readout), every mechanism active in that sub-step enters ONE
 Lindbladian and is propagated ONCE:
@@ -703,7 +703,7 @@ def assemble_substep_channel_factored(H_list, c_list, dt, *, device="cuda",
     for comp, Hc, cc in zip(components, per_comp_H, per_comp_c):
         if not Hc and not cc:
             # A component with NO non-identity operator (a truly idle qubit with no dephasing/drive)
-            # does not arise for the real teacher's substeps — every window qubit that appears
+            # does not arise for declared process substeps — every window qubit that appears
             # carries >= 1 single-qubit collapse op (measured decomposition e.g. [[0,3],[1],[2],[4]]).
             # If it ever does, the EXACT full-window channel is the identity on that block (expm(0)=I),
             # so we emit the 1-Kraus identity (matching the full-window path bit-for-bit) rather than

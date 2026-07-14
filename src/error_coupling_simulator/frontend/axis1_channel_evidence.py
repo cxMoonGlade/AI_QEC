@@ -992,7 +992,10 @@ def _joint_channel_summary(
         skk = skk + K.conj().transpose(-1, -2) @ K
     tp_residual = float(torch.max(torch.abs(skk - eye)).item())
     return {
-        "assembled_by": "qec_twin.forward.joint_lindbladian.assemble_substep_channel",
+        "assembled_by": (
+            "error_coupling_simulator.carrier.joint_lindbladian."
+            "assemble_substep_channel"
+        ),
         "assembly_semantics": "single_joint_generator_expm",
         "generator_form": "L_substep = -i[sum_i H_i, .] + sum_k D[c_k]",
         "contains_ideal_control_hamiltonian": bool(ideal_controls),

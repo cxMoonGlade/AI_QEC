@@ -151,7 +151,7 @@ This paper is directly relevant because it demonstrates a **generalized boundary
 
 1. **Generalized planar boundary MPS (§II-B) works for PEPO.** The method contracts any planar tensor network by partitioning columns and passing MPS through MPS-MPO fitting. A PEPO is just another planar tensor network — the physical bra and ket indices are contracted (or left open for operators). The same MPS-MPO fitting procedure applies. **No structural change needed** to contract a PEPO norm network `Tr(rho^† rho)` or `Tr(rho * O)`.
 
-2. **GPU acceleration transfers (§III, Fig. 5).** The method's dominance by tensor contractions and QR decompositions means GPU speedups of >35x for our PEPO contractions too. The paper uses RTX A6000 (our RTX 5090 is faster). The 32-bit precision used throughout is sufficient and faster than complex128.
+2. **GPU acceleration is a performance lead, not a precision certificate (§III, Fig. 5).** The method's dominance by tensor contractions and QR decompositions makes GPU acceleration relevant to our implementation.  However, only the Fig. 5 walltime comparison is explicitly 32-bit; the paper does not establish c64-vs-c128 equivalence for our noisy, multi-round carrier, and its >35x CPU/GPU result cannot be transferred as a c64/c128 speedup claim.
 
 3. **Sampling with fidelity metrics (§II-C) maps to our Born-rule sampling.** The p(x)/q(x) ratio and sample KLD are representation-independent metrics. For a PEPO density matrix `rho`, `p(x) = <x|rho|x>` (the Born-rule probability) — the same as their `|<x|psi>|^2` but with `rho` replacing `|psi><psi|`. The sequential partition sampling (Fig. 7d) generalizes: each partition's reduced density matrix is formed by contracting the PEPO projection onto sampled outcomes, then sampled. The same MPS-MPO fitting handles the MPO-to-MPS contraction.
 
@@ -226,7 +226,7 @@ The GPU speedups shown in Fig. 5 directly apply to steps 1-3 (all are tensor con
 - **Fidelity metric approximation.** Eq. (2)'s `f = prod f_i` as an estimate of overall state fidelity is "empirically reliable" but is NOT a certified error bound — it degrades with loop strength.
 - **Julia/ITensor-specific code.** No Python, PyTorch, or JAX implementation for direct integration with machine learning frameworks.
 - **No pathological-state analysis.** The paper notes (Ref. [36]) that some PEPS require exponential R for perfect sampling, but claims local Hamiltonian dynamics avoid this regime.
-- **32-bit precision.** All GPU calculations are in float32 (complex64). The resulting truncation noise at 32-bit may limit ultimate precision for some applications.
+- **32-bit precision evidence is benchmark-scoped.** The Fig. 5 CPU/GPU walltime calculations are in 32-bit floating point.  Other memory estimates explicitly use double-precision complex tensors.  The paper does not certify 32-bit precision for every result or for our carrier; c64 remains a bounded screening simplification that needs a c128 replay.
 - **System sizes moderate.** The largest demonstration is 164 qubits (heavy-hex) — well below QEC-relevant scales (d=7 surface code = 97 qubits, d=11 = 241 qubits). Scaling analysis of the boundary MPS method to 200+ qubits with moderate chi is not characterized.
 - **R <= chi assumption in cost analysis.** The complexity scaling expressions assume R <= chi, which may not hold when strong loop correlations demand R >> chi.
 
@@ -243,7 +243,7 @@ The GPU speedups shown in Fig. 5 directly apply to steps 1-3 (all are tensor con
 - `[paper]` "Loop interference" hypothesis: heavy-hex epsilon < Willow^3 beyond naive loop-size scaling
 - `[paper]` Cost: z=4: O(N_qubits*chi^5*R^3) pre + O(n*N*chi^4*R^3) sample; z=3: O(N*chi^4*R^3) pre + O(n*N*chi^3*R^3) sample
 - `[paper]` Open-source Julia code: TensorNetworkQuantumSimulator.jl (ITensors.jl backend)
-- `[paper]` 32-bit float GPU precision sufficient for all benchmarks
+- `[paper]` Fig. 5 CPU/GPU walltime benchmark uses 32-bit floating point; this is not a general precision-sufficiency claim
 - `[ours]` **YES — the generalized boundary MPS contraction maps directly to PEPO density matrix contraction** on any planar 2D lattice
 - `[ours]` Sampling from `p(x) = <x|rho|x>` for a PEPO generalizes their `|<x|psi>|^2` sampling: same partition structure, same MPS-MPO fitting, same quality metrics
 - `[ours]` **BUT three gaps**: (1) no mixed-state / PEPO demonstration in the paper, (2) no mid-circuit measurement handling (needed for QEC syndrome extraction), (3) no noisy circuit benchmarks

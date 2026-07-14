@@ -88,7 +88,15 @@ _JOINT = {0: 0.4, 1: 0.1, 2: 0.05, 3: 0.45}
 
 def _rk(regime) -> tuple:
     """INDEPENDENT recompute of ``core._rkey`` (NOT the SUT helper): the routing-key coordinates."""
-    return (regime.R, regime.register, regime.n_active, regime.arm, regime.b)
+    return (
+        regime.R,
+        regime.register,
+        regime.n_active,
+        regime.arm,
+        regime.b,
+        regime.n_stab,
+        regime.sites,
+    )
 
 
 def _routekey(statistic, regime) -> tuple:
@@ -1241,6 +1249,7 @@ def test_certify_teacher_auto_builds_anchors_and_raises_when_infeasible():
     # answers FLOOR) -> every cell infeasible -> ValueError. Exercises the auto-build + default-
     # controls + the "not feasible: continue" + "not all_rows: raise" arcs, with NO GPU.
     teacher = FakeTeacher({0: 1.0})
+    teacher.dm_round_callbacks = lambda device: (None, None)
     with pytest.raises(ValueError):
         certify_teacher(teacher, level="smoke", cells=[(Statistic.FLOOR, _REG)])   # dm_safety None -> {}
     with pytest.raises(ValueError):

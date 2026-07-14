@@ -55,7 +55,7 @@ class DenseQutritMcwfExecutor:
     changing workload adapters or artifact schemas.
     """
 
-    name = "qec_twin.simulator.mcwf_executor.DenseQutritMcwfExecutor"
+    name = "error_coupling_simulator.frontend.mcwf_executor.DenseQutritMcwfExecutor"
     schema = "qec_twin.simulator.DenseQutritMcwfExecutor.v1"
 
     def __init__(self, backend: DenseQutritMcwfBackend) -> None:
@@ -99,7 +99,10 @@ class DenseQutritMcwfExecutor:
         return {
             "schema": self.schema,
             "name": self.name,
-            "backend": "qec_twin.simulator.mcwf_backend.DenseQutritMcwfBackend",
+            "backend": (
+                "error_coupling_simulator.frontend.mcwf_backend."
+                "DenseQutritMcwfBackend"
+            ),
             "kernel_backend": "fused_cuda_if_available" if self.backend.use_fused_kernels else "torch_cuda_reference",
         }
 
@@ -107,7 +110,10 @@ class DenseQutritMcwfExecutor:
 class NativeOpStreamMcwfExecutor:
     """Execute cached-subset MCWF programs through the native CUDA op-stream runner."""
 
-    name = "qec_twin.simulator.mcwf_executor.NativeOpStreamMcwfExecutor"
+    name = (
+        "error_coupling_simulator.frontend.mcwf_executor."
+        "NativeOpStreamMcwfExecutor"
+    )
     schema = "qec_twin.simulator.NativeOpStreamMcwfExecutor.v1"
     supported_ops = (
         "McwfCachedQubitGateOp[h,x]",
@@ -161,7 +167,10 @@ class NativeOpStreamMcwfExecutor:
         return {
             "schema": self.schema,
             "name": self.name,
-            "backend": "qec_twin.forward.kernels.qutrit_mcwf_ops.qutrit_run_cached_opstream",
+            "backend": (
+                "error_coupling_simulator.carrier.kernels.qutrit_mcwf_ops_loader."
+                "run_cached_opstream"
+            ),
             "kernel_backend": "native_cached_opstream_cuda",
             "supported_ops": list(self.supported_ops),
         }
@@ -177,7 +186,10 @@ class BlockTrajectoryMcwfExecutor:
     parallelism for fewer host kernel launches.
     """
 
-    name = "qec_twin.simulator.mcwf_executor.BlockTrajectoryMcwfExecutor"
+    name = (
+        "error_coupling_simulator.frontend.mcwf_executor."
+        "BlockTrajectoryMcwfExecutor"
+    )
     schema = "qec_twin.simulator.BlockTrajectoryMcwfExecutor.v1"
     supported_ops = NativeOpStreamMcwfExecutor.supported_ops
 
@@ -226,7 +238,10 @@ class BlockTrajectoryMcwfExecutor:
         return {
             "schema": self.schema,
             "name": self.name,
-            "backend": "qec_twin.forward.kernels.qutrit_mcwf_ops.qutrit_run_block_traj_opstream",
+            "backend": (
+                "error_coupling_simulator.carrier.kernels.qutrit_mcwf_ops_loader."
+                "run_block_traj_opstream"
+            ),
             "kernel_backend": "block_trajectory_opstream_cuda",
             "supported_ops": list(self.supported_ops),
             "mapping": "one_cuda_block_per_trajectory",
@@ -247,7 +262,10 @@ class _CapturedMcwfGraph:
 class GraphCapturedMcwfExecutor:
     """CUDA-graph replay wrapper around the native cached op-stream runner."""
 
-    name = "qec_twin.simulator.mcwf_executor.GraphCapturedMcwfExecutor"
+    name = (
+        "error_coupling_simulator.frontend.mcwf_executor."
+        "GraphCapturedMcwfExecutor"
+    )
     schema = "qec_twin.simulator.GraphCapturedMcwfExecutor.v1"
 
     def __init__(self, backend: DenseQutritMcwfBackend) -> None:
@@ -367,7 +385,10 @@ class GraphCapturedMcwfExecutor:
         return {
             "schema": self.schema,
             "name": self.name,
-            "backend": "qec_twin.forward.kernels.qutrit_mcwf_ops.qutrit_run_cached_opstream",
+            "backend": (
+                "error_coupling_simulator.carrier.kernels.qutrit_mcwf_ops_loader."
+                "run_cached_opstream"
+            ),
             "kernel_backend": "cuda_graph_cached_opstream",
             "capture": "fixed_program_fixed_batch_fixed_kraus_shape_static_buffers",
         }

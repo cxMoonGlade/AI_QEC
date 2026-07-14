@@ -1,8 +1,8 @@
-"""Controlled record teachers (evaluator-only) for the coupling-error simulator.
+"""Controlled generative noise processes for the coupling-error simulator.
 
-Slice-1 dense source-coupled teacher: ``CoupledCycleNoiseProcess`` (a memory-ful 1/f shared source ->
+Slice-1 dense source-coupled process: ``CoupledCycleNoiseProcess`` (a memory-ful 1/f shared source ->
 per-round Axis-1 params -> sealed dense {det,obs} emitter, with markovian_baseline / off_source
-control arms). Evaluator-only ground truth; NOT consumed by the label-free learner path.
+control arms). Source trajectories and channel fields are evaluator-only truth and are not emitted.
 """
 from error_coupling_simulator.noise_processes.coupled_cycle import (
     COUPLED_TEACHER_REPRESENTABILITY,
@@ -18,9 +18,16 @@ from error_coupling_simulator.noise_processes.coupled_cycle import (
     trajectory_mean_instrument,
 )
 
+# Neutral spellings for new callers. The historical constant names and their values
+# remain unchanged because they are part of persisted schemas and seed derivation.
+COUPLED_PROCESS_REPRESENTABILITY = COUPLED_TEACHER_REPRESENTABILITY
+COUPLED_PROCESS_SCHEMA = COUPLED_TEACHER_SCHEMA
+
 __all__ = [
     "COUPLED_TEACHER_REPRESENTABILITY",
     "COUPLED_TEACHER_SCHEMA",
+    "COUPLED_PROCESS_REPRESENTABILITY",
+    "COUPLED_PROCESS_SCHEMA",
     "DEFAULT_STATIC_ZZ_EDGE",
     "MEMORYFUL_SHARED_SOURCES",
     "CoupledCycleNoiseProcess",

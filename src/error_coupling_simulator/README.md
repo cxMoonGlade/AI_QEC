@@ -3,22 +3,30 @@
 The standalone, independently-releasable **specified-noise QEC simulator**. It applies declared
 coupling, leakage, and memoryful noise processes to a QEC circuit and emits the multi-time syndrome
 record. Code previously scattered across `qec_twin` and local experiment scripts has been
-consolidated behind this package boundary. It is auto-discovered by setuptools
-(`packages.find where=["src"]`) and importable as `import error_coupling_simulator`.
+consolidated behind this package boundary. Setuptools uses an exact package allowlist
+(`error_coupling_simulator` plus its subpackages), so built wheel/source archives exclude the
+repo-local `qec_twin` compatibility tree. It is importable as `import error_coupling_simulator`.
+The active package has no inward runtime import of `qec_twin`; the old import paths are outward
+workspace shims only and are not part of the distribution.
 
 ## Why this package exists
 The simulator is the deliverable we intend to **release independently**. Keeping its code in one
 cohesive package (rather than scattered across `qec_twin.forward` / `.mechanisms` / `.simulator` /
-`.audit.certify` + gitignored `outputs/teacher_prereg`) gives it a clean boundary, a stable public
-API, and a releasable unit. Migration plan + phase order: `docs/error_coupling_simulator_MIGRATION.md`.
+`.audit.certify` plus historical experiment outputs) gives it a clean boundary, a cohesive public
+surface, and a releasable unit. Migration plan + phase order: `docs/error_coupling_simulator_MIGRATION.md`.
 
 ## Boundary / disciplines (binding)
 - **No physical ground truth.** A noise process is a model we SPECIFY; oracles (QuTiP / closed forms)
   are FORMAL bug-catchers, never "validated vs reality." Product = the full record; LER and other
   metrics are instruments on it.
-- **Isolation.** This is teacher/evaluator-side. The label-free learner path must NOT import it.
+- **Isolation.** Evaluator-only process truth must never enter emitted records or public artifact
+  metadata. Certification may read it only through the declared evaluator-side seam.
 - **GPU-first** for model compute (no `cuda if available else cpu`); `NUMERICAL_ZERO = 1e-12` only
   for float floors.
+- **Precision-purpose boundary.** Only the fused within-cycle SV-MC carrier uses c64, and only for
+  optimization/screening. Final and certification runs are c128 candidates; PEPS/MPS remain
+  c128-only. Physical WG/codestate construction and CPTP checks stay c128, with only checked
+  execution tables cast afterward. c64 never authorizes tolerance or FET changes.
 
 ## Layout
 
@@ -31,11 +39,31 @@ API, and a releasable unit. Migration plan + phase order: `docs/error_coupling_s
 - `quantum_bath/` — feasibility-only pseudomode-enlarged GKSL research carrier; not the product
   mainline and not a passive-record quantum-memory certificate.
 
+## Runtime and distribution boundary
+
+- Core runtime requires Python 3.11 or newer. SciPy is a core dependency because package runtime
+  modules import it directly; PyMatching remains opt-in through `[hw]`.
+- Google r01/r10 circuit and metadata files are explicit external circuit/geometry/schedule
+  inputs. They are not package assets, their measurement data are not consumed by the preset
+  facade, and they do not supply noise parameters.
+- Ququart transport requires the caller to pass an explicit Kraus `.npz` path. Repository scratch
+  under `outputs/` is neither a default nor package data.
+- The CUDA-Q Grover adapter remains public through the `cudaq-grover` optional extra, but it is an
+  isolated plugin workload. It runs in the retained `aiqec` environment and a separate process,
+  not in canonical `ecs` beside the fused extension.
+- Release acceptance uses the real-checkout sdist → wheel → isolated-install gate in
+  `tests/test_distribution_boundary.py`. That gate removes the checkout from import resolution,
+  exercises package import and core smokes, and rejects leaked `qec_twin`, old entry points, or
+  repository-only assets. Editable-install tests alone do not prove the distribution boundary.
+
 ## Status
-**Core consolidation landed; release boundary still in progress.** Source, carrier, mechanisms,
-noise processes, frontend, certification, and the retained quantum-bath research slice now live in
-this package; old `qec_twin` paths remain compatibility shims where still needed. The public API and
-separate-distribution boundary are not yet frozen.
+**The self-contained code boundary is closed; scientific carrier certification remains open.**
+Source, carrier, mechanisms, noise processes, frontend, certification, and the retained
+quantum-bath research slice live in this package and use package-local runtime ownership. The PEPS
+schedule host and `frontend.experiments` are package-local. Repo-only `qec_twin` re-export shims and
+RAG tooling remain for workspace compatibility, but distribution archives contain neither them nor
+their old console entry point. External circuit/Kraus inputs and isolated optional plugins are
+declared inputs, not hidden package back-edges.
 
 The scientific frontier is the full-`d x d` single-wire 2D-PEPS trajectory carrier. Its d3
 state-level spike is implemented, but finite-truncation fidelity of the complete multi-round record

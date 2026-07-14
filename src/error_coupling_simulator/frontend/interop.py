@@ -5,8 +5,8 @@ from __future__ import annotations
 The DEM is the decoder-facing Stim-compatible SUMMARY of a record cube
 (``docs/twin_validation/conjunction_tool_product_spec_2026-07-06.md``, Interface
 (b)): per-detector marginals + the canonical Spitz Eq. 13 exact pairwise
-``p_ij`` (``qec_twin.hardware.pij.spitz_pij_exact`` — the repo's ledger
-estimator, reused, never re-derived) reduced to a matchable
+``p_ij`` (the package-local :mod:`error_coupling_simulator.frontend.pij`
+estimator) reduced to a matchable
 ``stim.DetectorErrorModel``:
 
 - **pair edges** = detector pairs whose ``p_ij`` clears a DECLARED floor
@@ -23,17 +23,17 @@ Convention caveats carried with the numbers: the reduction is two-point only
 (structurally blind to hyperedges — the same caveat as ``spitz_pij_exact``),
 and it summarizes whatever correlations the records carry into an
 edge-factorized DEM; the faithful non-Pauli/coupled content stays in the
-``{det,obs}`` cube itself. This module is frontend/evaluator-side plumbing —
-no learner import, no teacher truth.
+``{det,obs}`` cube itself. This module is record-facing reduction plumbing and
+does not consume evaluator-only process truth.
 """
 
 from typing import Any, Sequence
 
 import numpy as np
 
-from qec_twin.hardware.pij import spitz_pij_exact, spitz_pij_delta_se
-
 from ..numerics import NUMERICAL_ZERO
+from . import decoder as _decoder
+from .pij import spitz_pij_delta_se, spitz_pij_exact
 
 #: Declared class-(c) edge-selection floors (P0 defaults; carried in the
 #: diagnostics of every reduction so no number travels without them).
@@ -74,12 +74,12 @@ def records_to_dem(
         Class-(c) edge-selection floors: keep pair ``(i, j)`` iff
         ``p_ij > pair_floor_abs`` and ``p_ij > pair_floor_sigma * SE(p_ij)``.
     cluster_size:
-        Declared shot-clustering of the input records (e.g. the teacher's
+        Declared shot-clustering of the input records (e.g. a process's
         ``shots_per_trajectory``). SE CONVENTION (carried with the numbers,
         METRICS discipline): ``spitz_pij_delta_se`` treats shots as iid units;
         for ``cluster_size > 1`` the reported SEs — and hence the sigma
         edge floor — are ANTI-CONSERVATIVE by the cluster design effect
-        (trajectory common-mode covariance, teacher ledger S-1/C-11). The
+        (trajectory common-mode covariance, historical ledger S-1/C-11). The
         deviation is declared in the diagnostics, not silently corrected;
         bounding it is the P1 faithfulness-table job.
 
@@ -223,34 +223,37 @@ def records_to_dem(
 def decode_records(dem: Any, det: np.ndarray, *, logical_index: int = 0) -> np.ndarray:
     """MWPM-decode a ``det`` cube against a DEM; return predicted obs ``(N,)``.
 
-    Thin PyMatching adaptor (baseline discipline: PyMatching at its default
-    settings, version declared by the caller's evidence print).
+    Thin adaptor through the package-local optional decoder port (baseline
+    discipline: external PyMatching at its defaults and frozen provenance).
     ``logical_index`` selects the observable column and must match the index
     the DEM was built with — a mismatched index raises instead of silently
     returning the structurally-empty wrong column.
     """
 
-    import pymatching
-
     x = np.asarray(det)
     if x.ndim != 2:
         raise ValueError(f"det must be (N, D), got shape {x.shape}")
+    if not np.all((x == 0) | (x == 1)):
+        raise ValueError("det must contain only 0/1 values")
     li = int(logical_index)
     if li < 0:
         raise ValueError(f"logical_index must be >= 0, got {logical_index!r}")
-    matching = pymatching.Matching.from_detector_error_model(dem)
-    if int(matching.num_detectors) != int(x.shape[1]):
+    detector_error_model = _decoder._as_dem(dem)
+    if int(detector_error_model.num_detectors) != int(x.shape[1]):
         raise ValueError(
-            f"DEM declares {matching.num_detectors} detectors, det has "
+            f"DEM declares {detector_error_model.num_detectors} detectors, det has "
             f"{x.shape[1]} columns"
         )
-    n_obs = int(matching.num_fault_ids)
+    n_obs = int(detector_error_model.num_observables)
     if li >= n_obs:
         raise ValueError(
             f"logical_index={li} out of range: the DEM carries {n_obs} "
             "observable column(s)"
         )
-    predicted = matching.decode_batch(x.astype(np.uint8))
+    predicted = _decoder.decode_dem(
+        detector_error_model,
+        x.astype(np.bool_, copy=False),
+    )
     predicted = np.asarray(predicted, dtype=np.uint8)
     if predicted.ndim == 1:
         predicted = predicted[:, None]

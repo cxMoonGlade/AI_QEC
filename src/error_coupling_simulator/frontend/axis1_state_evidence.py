@@ -306,7 +306,8 @@ def _apply_selected_joint_channels(
                     ],
                     "channel_assembly": {
                         "assembled_by": (
-                            "qec_twin.forward.joint_lindbladian.assemble_substep_channel"
+                            "error_coupling_simulator.carrier.joint_lindbladian."
+                            "assemble_substep_channel"
                         ),
                         "assembly_semantics": "single_joint_generator_expm",
                         "contains_ideal_control_hamiltonian": bool(

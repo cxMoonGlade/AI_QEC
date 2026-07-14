@@ -1434,6 +1434,9 @@ class SvSampler:
             "base_seed": int(spec.base_seed),
             "wave": int(spec.W),
             "dtype": str(spec.dtype),
+            "run_purpose": str(spec.run_purpose),
+            "evidence_eligibility": str(spec.evidence_eligibility),
+            "precision_policy": PRECISION_POLICY,
             "logical_kind": str(sched.logical_kind).upper(),
             "logical_support": [int(x) for x in marsh.log_supp.tolist()],
             "syndrome_bits_per_shot": bits,
@@ -1615,3 +1618,14 @@ def _git_commit() -> str:
         return out.stdout.strip() if out.returncode == 0 else ""
     except Exception:
         return ""
+
+
+# Outward compatibility: the active simulator owns the run contract and the
+# within-cycle marshalled carrier ABI.  Keep legacy imports class-identical so an
+# explicitly retained old SvSampler can still consume package-local RunSpec objects.
+from error_coupling_simulator.carrier.within_cycle import (  # noqa: E402
+    PRECISION_POLICY as PRECISION_POLICY,
+    RunSpec as RunSpec,
+    WithinCycleMarshalled as WithinCycleMarshalled,
+    _bind_registered_numerical_provenance as _bind_registered_numerical_provenance,
+)

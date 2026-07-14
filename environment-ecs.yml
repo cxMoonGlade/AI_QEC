@@ -1,0 +1,8 @@
+name: ecs
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - python=3.12.13
+  - pip=26.0.1
+  - uv=0.11.21

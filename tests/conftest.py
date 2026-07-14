@@ -58,6 +58,7 @@ PHYS = 3  # qutrit physical dimension
 # The ONE strict d3 dataset probe (all four files) + the AM-2 mask hook.       #
 # --------------------------------------------------------------------------- #
 _D3_MASK_ENV = "QEC_TWIN_D3_MASK"
+_D3_DATA_ENV = "QEC_TWIN_D3_DATA"
 _D3_LOGICAL_NAMES = ("r01_circ", "r01_meta", "r10_circ", "r10_meta")
 
 
@@ -65,11 +66,18 @@ def _d3_paths() -> dict:
     """The four shipped d3_at_q6_7 files keyed by logical name ({} if the parser is
     unimportable -- then the data probe is simply False, never a collection crash)."""
     try:
-        from qec_twin.forward.exact import xzzx_parser as xp
+        from error_coupling_simulator.frontend import xzzx_parser as xp
     except Exception:  # noqa: BLE001
         return {}
-    r01_circ, r01_meta = xp.default_r01_paths()
-    r10_circ, r10_meta = xp.default_r10_paths()
+    configured = os.environ.get(_D3_DATA_ENV)
+    if configured is not None:
+        configured = configured.strip()
+        if not configured:
+            raise ValueError(
+                f"env var {_D3_DATA_ENV} is SET but empty/whitespace; unset it "
+                "to use the portable default dataset root")
+    r01_circ, r01_meta = xp.default_r01_paths(dataset_root=configured)
+    r10_circ, r10_meta = xp.default_r10_paths(dataset_root=configured)
     return {"r01_circ": r01_circ, "r01_meta": r01_meta,
             "r10_circ": r10_circ, "r10_meta": r10_meta}
 

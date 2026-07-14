@@ -4,7 +4,7 @@ from __future__ import annotations
 the distance-3 XZZX surface code.
 
 The multi-level (``q**n``) generalization of the 2-level density-matrix primitives in
-:mod:`qec_twin.forward.exact.circuit_sim` / :mod:`density_sim`. It holds the
+:mod:`error_coupling_simulator.carrier.exact.circuit_sim`. It holds the
 ``q**n_data x q**n_data`` density matrix of the data register (no ancilla
 instantiated — stabilizers are compiled to direct parity projections on the data
 matrix, the existing ``forward/exact`` technique) and evolves it under
@@ -14,7 +14,7 @@ syndrome distribution ``P(s | m)``.
 Two local dimensions are supported by ONE parametrized base, :class:`_QuditDM`:
 
   * ``q = 3`` — :class:`QutritDM`: the ``|2>``-leakage qutrit engine (Phase-1 of the
-    SIM-ONLY non-Pauli teacher; architecture A; pre-registration
+    historical SIM-ONLY specified-noise process; architecture A; registration
     ``docs/nonpauli_teacher/phase1_qutrit_leakage_registration.md`` §1). At d3 the
     data register is 9 qutrits (``3**9 = 19683``, a ``5.77 GiB`` complex128 density
     matrix that fits the RTX 5090 with ~5.5x headroom); density-matrix projection
@@ -322,7 +322,8 @@ class _QuditDM:
         self.dtype = dtype
         self.dim = self.q ** self.n
         # rho lives here (LAZY since 2026-07-06: the constructor no longer eagerly
-        # allocates the q^n x q^n zeros — vector-only uses such as SvSampler.build_codestate
+        # allocates the q^n x q^n zeros — vector-only uses such as
+        # FusedWithinCycleSampler.build_codestate
         # were paying a 5.77 GiB DM at n=9 they never touched; first ACCESS materializes the
         # same all-zero matrix, so every reader sees the historical behavior unchanged).
         self._rho: torch.Tensor | None = None

@@ -150,7 +150,7 @@ def simulate_qutrit_wg_leakage(
     }
     manifest = {
         "schema": "qec_twin.simulator_qutrit_wg_leakage.v1",
-        "backend": "qec_twin.forward.exact.qutrit_dm.QutritDM",
+        "backend": "error_coupling_simulator.carrier.exact.qutrit_dm.QutritDM",
         "representability": "exact_qutrit_density_matrix_leakage",
         "mechanism": "wood_gambetta_qutrit_leakage",
         "qutrit_string_convention": QUTRIT_STRING_CONVENTION,
@@ -171,7 +171,10 @@ def simulate_qutrit_wg_leakage(
         },
         "noise": {
             "type": "qutrit_leakage",
-            "source": "qec_twin.mechanisms.qutrit_teachers.leakage_kraus_torch",
+            "source": (
+                "error_coupling_simulator.mechanisms.qutrit_teachers."
+                "leakage_kraus_torch"
+            ),
         },
         "decoder": None,
         "artifacts": {},

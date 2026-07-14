@@ -18,8 +18,6 @@ from qec_twin.simulator.source_sidecar import load_source_timeline_from_manifest
 
 
 def test_simulator_run_writes_replayable_axis2_source_sidecar(tmp_path):
-    pytest.importorskip("pymatching", reason="source sidecar simulator smoke uses PyMatching")
-
     spec = XZZXCodeSpec(layout_size=3, rounds=2).to_code_spec()
     circuit = compile_code_spec(spec)
     timeline = RTNSource(amplitude_radns=2.0e-4, gamma_per_cycle=0.1).sample(seed=7, n_cycles=2)
@@ -49,8 +47,6 @@ def test_simulator_run_writes_replayable_axis2_source_sidecar(tmp_path):
 
 
 def test_qec_round_source_binding_rejects_mismatched_cycle_count(tmp_path):
-    pytest.importorskip("pymatching", reason="source sidecar simulator smoke uses PyMatching")
-
     spec = XZZXCodeSpec(layout_size=3, rounds=2).to_code_spec()
     circuit = compile_code_spec(spec)
     out_dir = tmp_path / "bad_source_cycles"
@@ -73,8 +69,6 @@ def test_qec_round_source_binding_rejects_mismatched_cycle_count(tmp_path):
 
 
 def test_hand_built_circuit_defaults_source_binding_to_external_cycle(tmp_path):
-    pytest.importorskip("pymatching", reason="source sidecar simulator smoke uses PyMatching")
-
     builder = CircuitBuilder(num_qubits=1)
     builder.measure(0, key="m0")
     builder.detector("d0", xor=("m0",))
@@ -92,8 +86,6 @@ def test_hand_built_circuit_defaults_source_binding_to_external_cycle(tmp_path):
 
 
 def test_run_noiseless_accepts_source_sidecar(tmp_path):
-    pytest.importorskip("pymatching", reason="source sidecar simulator smoke uses PyMatching")
-
     builder = CircuitBuilder(num_qubits=1)
     builder.measure(0, key="m0")
     builder.detector("d0", xor=("m0",))
@@ -121,8 +113,6 @@ def test_source_binding_rejects_unimplemented_semantics():
 
 
 def test_source_sidecar_loader_rejects_path_and_hash_tampering(tmp_path):
-    pytest.importorskip("pymatching", reason="source sidecar simulator smoke uses PyMatching")
-
     builder = CircuitBuilder(num_qubits=1)
     builder.measure(0, key="m0")
     builder.detector("d0", xor=("m0",))
@@ -155,8 +145,6 @@ def test_source_sidecar_loader_rejects_path_and_hash_tampering(tmp_path):
 
 
 def test_source_timeline_sidecar_does_not_change_stim_dem_or_b8_outputs(tmp_path):
-    pytest.importorskip("pymatching", reason="source sidecar simulator smoke uses PyMatching")
-
     spec = XZZXCodeSpec(layout_size=3, rounds=2).to_code_spec()
     circuit = compile_code_spec(spec)
     timeline = RTNSource().sample(seed=14, n_cycles=2)
@@ -174,11 +162,15 @@ def test_source_timeline_sidecar_does_not_change_stim_dem_or_b8_outputs(tmp_path
         "detector_error_model",
         "detection_events",
         "obs_flips_actual",
-        "obs_flips_predicted",
         "ideal_detection_events",
         "ideal_obs_flips_actual",
     ):
         assert file_sha256(getattr(sourced.paths, attr)) == file_sha256(getattr(plain.paths, attr))
+    for result in (plain, sourced):
+        assert result.manifest["artifacts"]["obs_flips_predicted"]["omitted_reason"] == (
+            "decoder_not_requested"
+        )
+        assert not result.paths.obs_flips_predicted.exists()
 
 
 def test_simulator_rejects_non_integral_shots(tmp_path):
@@ -191,8 +183,6 @@ def test_simulator_rejects_non_integral_shots(tmp_path):
 
 
 def test_source_sidecar_files_are_cleared_when_rerunning_without_source(tmp_path):
-    pytest.importorskip("pymatching", reason="source sidecar simulator smoke uses PyMatching")
-
     out_dir = tmp_path / "rerun"
     builder = CircuitBuilder(num_qubits=1)
     builder.measure(0, key="m0")

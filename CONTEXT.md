@@ -18,8 +18,9 @@ spec: `docs/SIMULATOR.md`.
 - **Record**: the product — per-round `{detector bits, observable flips}`, emitted as `.b8` shot
   data or represented by its joint law. A `.dem` is an optional decoder-facing reduction, not the
   record. Feasibility and faithfulness gate on the record, never on a carrier bond / state fidelity
-  (ADR 0011). A known legacy qutrit accessor currently labels raw syndrome bits as `det`; it must
-  receive the declared temporal XOR fold before detector-level scoring.
+  (ADR 0011). The active PEPS `PackedShotBatch` applies the declared temporal XOR fold at
+  `.to_det_obs()` / `.to_record_batch()`; raw syndrome access is explicit, and the legacy
+  nonconforming `ShotSet` is outside the package record boundary.
 - **Two noise axes**: **Axis-1** = within-substep joint-Lindbladian coupling (ZZ crosstalk,
   T1/T2, thermal, fSim residual, readout dephasing, leakage Hamiltonians, assembled into one
   joint generator per substep); **Axis-2** = **notion-2** classical multi-time record memory
@@ -78,10 +79,8 @@ spec: `docs/SIMULATOR.md`.
 - **Memory-axis instrument (notion-2)**: the record's absolute multi-time Markov-order
   structure vs a genuinely-Markov-order-k generative null — a full-history/order ladder,
   with lag-local CMI `I(mᵣ;mᵣ₋₂|mᵣ₋₁)`, Anderson–Goodman `G²`, and `E(k)` as diagnostics.
-  A **memory-specific discriminability instrument, not a parameter-recovery learner**, and never
-  a generic full-record-faithfulness certificate. Fitting `θ` from the same fixed passive record is
-  passive parameter recovery; it becomes notion-3-style active tester access only when the
-  instrument/intervention family itself is varied.
+  It measures record structure; it does not fit or recover source/channel parameters and is never
+  a generic full-record-faithfulness certificate.
 - **Numerical floor**: floating floors/thresholds use
   `error_coupling_simulator.numerics.NUMERICAL_ZERO == 1e-12`, never for structural zeros
   (Pauli entries, bit values, integer indices, counts, labels).
@@ -99,6 +98,9 @@ spec: `docs/SIMULATOR.md`.
 - **Passive record only.** The simulator characterizes the passive syndrome record; the full
   process tensor (active causal breaks / designed control / parameter recovery) is a distinct
   access class and is **out of scope**.
+- **No inference product.** Record-to-parameter calibration, probe-ladder design, model selection,
+  identifiability analysis, and parameter-uncertainty bands are downstream research tasks, not
+  simulator components or simulator acceptance gates.
 - **Every d5/d7 distributional claim is PROVISIONAL** (there is no external oracle above d3):
   reportable and usable for go/no-go gating, but never a premise for a definition, derivation,
   or further conclusion.

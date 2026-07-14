@@ -686,6 +686,10 @@ def test_dm_capability_full_joint_arcs():
     # feasible small register.
     c_ok = dm.capability(Statistic.FULL_JOINT, Regime(R=1, n_active=3, n_stab=1))
     assert c_ok.feasible and c_ok.reason == ""
+    # R>=2 record_oracle exposes moments only, even when a tiny register fits in memory.
+    c_r2 = dm.capability(Statistic.FULL_JOINT, Regime(R=2, n_active=1, n_stab=1))
+    assert not c_r2.feasible and "returns moments only" in c_r2.reason
+    assert c_r2.mem_bytes_estimate is None
     # infeasible full-9q depth-8 enumeration (~50 GB > 16 GB).
     c_big = dm.capability(Statistic.FULL_JOINT, Regime(R=1, register="full", n_active=9, n_stab=8))
     assert not c_big.feasible and "budget" in c_big.reason and c_big.mem_bytes_estimate > 4e10
@@ -719,8 +723,8 @@ def test_dm_capability_need_le_budget_killer():
 @given(n_active=st.integers(2, 8), n_stab=st.integers(1, 8), R=st.integers(1, 3),
        card_gb=st.sampled_from([0, 1, 8, 32, 96]), safety=st.floats(0.1, 0.9))
 def test_dm_capability_feasibility_formula_property(n_active, n_stab, R, card_gb, safety):
-    # L1: DM FULL_JOINT feasibility EQUALS an INDEPENDENT recompute of the OOM-as-data formula
-    # (feasible iff budget > 0 AND depth*copy <= budget) -- not a vacuous >=0 bound.
+    # L1: FULL_JOINT exists only at R=1. There its feasibility equals an INDEPENDENT recompute of
+    # the OOM-as-data formula; at R>=2 record_oracle returns moments only, regardless of memory.
     card = card_gb * 1024 ** 3
     dm = DMOracleAnchor(card_bytes=card, safety=safety)
     cap = dm.capability(Statistic.FULL_JOINT, Regime(R=R, register="subregister",
@@ -728,8 +732,12 @@ def test_dm_capability_feasibility_formula_property(n_active, n_stab, R, card_gb
     copy = (3 ** n_active) ** 2 * 16
     budget = int(safety * card) if card else 0
     need = max(1, n_stab) * R * copy
-    assert cap.feasible == (budget > 0 and need <= budget)
-    if cap.feasible:
+    expected = R == 1 and budget > 0 and need <= budget
+    assert cap.feasible == expected
+    if R >= 2:
+        assert "returns moments only" in cap.reason
+        assert cap.mem_bytes_estimate is None
+    elif cap.feasible:
         assert cap.mem_bytes_estimate == need  # the declared bound is the true copy-stack size
 
 
@@ -819,7 +827,17 @@ def test_dm_capability_full_tuple_pins():
             reason="no GPU budget known (card_bytes=0; the DM oracle needs CUDA)", cls="a",
             mem=max(1, 2) * 2 * _copy_bytes(3))
 
-    # (9) FULL_JOINT / SYNDROME_DIST n_stab is None (DIFFERENT reason than the moments branch).
+    # (9) FULL_JOINT / SYNDROME_DIST fail closed at R>=2 before any memory arithmetic.
+    joint_unavailable = (
+        "R>=2 QutritDM.record_oracle returns moments only; it cannot provide the full joint "
+        "required by FULL_JOINT or SYNDROME_DIST"
+    )
+    for stat in (S.FULL_JOINT, S.SYNDROME_DIST):
+        _cap_eq(dm.capability(stat, Regime(R=2, n_active=1, n_stab=1)),
+                statistic=stat, exactness=EX, feasible=False, reason=joint_unavailable,
+                cls="a", mem=None)
+
+    # (10) FULL_JOINT / SYNDROME_DIST at R=1 with n_stab None.
     for stat in (S.FULL_JOINT, S.SYNDROME_DIST):
         _cap_eq(dm.capability(stat, Regime(R=1, n_active=3, n_stab=None)),
                 statistic=stat, exactness=EX, feasible=False,
@@ -827,7 +845,7 @@ def test_dm_capability_full_tuple_pins():
                        "enumeration stack; refusing (a None n_stab under-counts depth and would "
                        "falsely pass the feasibility gate -> an OOM at answer time)", cls="a", mem=None)
 
-    # (10) FULL_JOINT full-9q R=1 depth-8 OOM (~50GB).
+    # (11) FULL_JOINT full-9q R=1 depth-8 OOM (~50GB).
     depthF = max(1, 8) * 1
     needF = depthF * _copy_bytes(9)
     _cap_eq(dm.capability(S.FULL_JOINT, Regime(R=1, register="full", n_active=9, n_stab=8)),
@@ -835,7 +853,7 @@ def test_dm_capability_full_tuple_pins():
             reason=f"depth-{depthF} x {_copy_bytes(9)/1e9:.1f}GB ~ {needF/1e9:.0f}GB > "
                    f"{budget/1e9:.0f}GB budget (route the scale to the carrier-MCWF)",
             cls="a", mem=needF)
-    # (11) FULL_JOINT budget == 0.
+    # (12) FULL_JOINT budget == 0.
     _cap_eq(dm0.capability(S.FULL_JOINT, Regime(R=1, n_active=3, n_stab=1)),
             statistic=S.FULL_JOINT, exactness=EX, feasible=False,
             reason="no GPU budget known (card_bytes=0; the DM oracle needs CUDA)", cls="a",

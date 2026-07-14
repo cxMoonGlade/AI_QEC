@@ -31,8 +31,9 @@ This module implements the s3 registry rows owned by A3:
   * :func:`terminal_readout_obs_prob` — the EXACT ``P(obs = 1)`` composed through the
     SAME per-site effect construction the sampling path uses (contract §3, v4.2
     EXACT-PROBABILITY SEAM — the engine-side killer seam for the G1.1 b-swap killer).
-  * :func:`s_to_det` / :func:`det_to_s` — the ``seam.py`` detector-fold conventions
-    (``det(0,j) = s(0,j)``; ``det(r,j) = s(r,j) XOR s(r-1,j)``) and the pinned inversion
+  * :func:`s_to_det` / :func:`det_to_s` — compatibility re-exports of the neutral
+    :mod:`carrier.record_fold` implementation of the ``seam.py`` detector conventions
+    (``det(0,j) = s(0,j)``; ``det(r,j) = s(r,j) XOR s(r-1,j)``) and pinned inversion
     ``s(r,j) = XOR_{r'<=r} det(r',j)``.
   * :func:`negativity_witness` / :class:`C3Stats` — the C3 rules (i)/(ii) vs the
     measured G1.9 bar; rule (ii) rides the run-level O(1) :class:`C3Stats` accumulator
@@ -56,6 +57,7 @@ import torch
 import quimb.tensor as qtn
 
 from ...numerics import NUMERICAL_ZERO
+from ..record_fold import det_to_s, s_to_det  # compatibility re-export
 
 CDTYPE = torch.complex128
 
@@ -815,47 +817,3 @@ def terminal_readout_obs_prob(state, logical: dict, isx: dict, b: float, m: int)
         caps = {q: effects[q][(mask >> i) & 1] for i, q in enumerate(support)}
         total += expect_site_caps(state, caps).real
     return float(total / tr)
-
-
-# --------------------------------------------------------------------------- #
-# s <-> det — the seam.py detector conventions (contract §3 G1.1 pin)          #
-# --------------------------------------------------------------------------- #
-def s_to_det(s_bits, R: int, n_stab: int) -> np.ndarray:
-    """RAW per-round syndrome bits -> detector bits, the ``seam.py`` convention
-    (``teacher_shots_to_events`` / ``bayes_floor``, identical fold):
-
-        ``det(0, j) = s(0, j)``;  ``det(r, j) = s(r, j) XOR s(r-1, j)`` for ``r >= 1``.
-
-    ``s_bits`` is array-like with last axis of length ``R * n_stab``, ROUND-MAJOR then
-    stab-order (the kernel packing layout). Returns ``uint8`` with the same shape.
-    """
-    R, n_stab = int(R), int(n_stab)
-    s = np.asarray(s_bits, dtype=np.uint8)
-    if s.shape[-1] != R * n_stab:
-        raise ValueError(
-            f"s_bits last axis {s.shape[-1]} != R*n_stab = {R * n_stab}")
-    shp = s.shape
-    sr = s.reshape(shp[:-1] + (R, n_stab))
-    det = np.empty_like(sr)
-    det[..., 0, :] = sr[..., 0, :]
-    if R > 1:
-        det[..., 1:, :] = sr[..., 1:, :] ^ sr[..., :-1, :]
-    return det.reshape(shp)
-
-
-def det_to_s(det_bits, R: int, n_stab: int) -> np.ndarray:
-    """Detector bits -> RAW per-round syndrome bits — the pinned G1.1 inversion
-    (contract §3: ``s(r, j) = XOR_{r' <= r} det(r', j)``, applied before the
-    ``reevolve_onto_records`` referee call). Exact inverse of :func:`s_to_det`;
-    same layout/shape conventions. Returns ``uint8``.
-    """
-    R, n_stab = int(R), int(n_stab)
-    det = np.asarray(det_bits, dtype=np.uint8)
-    if det.shape[-1] != R * n_stab:
-        raise ValueError(
-            f"det_bits last axis {det.shape[-1]} != R*n_stab = {R * n_stab}")
-    shp = det.shape
-    dr = det.reshape(shp[:-1] + (R, n_stab))
-    # cumulative XOR over the round axis (== parity of the running sum mod 2)
-    s = np.bitwise_xor.accumulate(dr, axis=-2)
-    return s.astype(np.uint8).reshape(shp)

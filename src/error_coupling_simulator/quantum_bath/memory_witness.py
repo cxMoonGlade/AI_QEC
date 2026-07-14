@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 r"""Backer et al. quantum-memory witness (Control 3) -- is the finite-gamma memory QUANTUM or CLASSICAL?
 
 Backer, Beyer, Strunz, PRL 132, 230401 (2024) [arXiv:2310.01205], Theorem 1: for two-time dynamics with Choi
@@ -24,7 +22,7 @@ Choi state of the reduced channel E(t) = Tr_mode[ U_t( . (x) |vac><vac| ) U_t^da
 system qubit coupled to the mode, A = spectator ancilla), tensor the mode in vacuum, evolve S+mode under the JC
 GKSL for time t, trace out the mode -> chi(t) = (E(t) (x) I_A)|phi+><phi+| on (S,A).
 
-Boundary: exact-DM CPU (dim = 4*nmax for S,A,mode); teacher/evaluator-side; SIMULATOR frame (FORMAL oracle).
+Boundary: exact-DM CPU (dim = 4*nmax for S,A,mode); evaluator-side; SIMULATOR frame (FORMAL oracle).
 
 RETIRED sibling (2026-07-07): the entropic / negativity-BACKFLOW witnesses
 (entropic_memory_witness_single/_two_qubit) + their machinery (negativity, von_neumann_entropy,
@@ -33,6 +31,9 @@ RHP non-Markovianity, forgeable by classical RTN dephasing; lit 2601.18822, 1608
 from the reachable package -- record in retired/quantum_bath/memory_witness_entropic_backflow_2026-07-07.py.
 The genuine quantum-memory statement is quantum_memory_witness (the Backer C#(t1)<C(t2) violation) below.
 """
+
+from __future__ import annotations
+
 import math
 
 import numpy as np

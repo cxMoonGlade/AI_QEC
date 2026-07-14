@@ -1,3 +1,17 @@
+"""Legacy M0--M34 local-channel registry and inference compatibility taxonomy.
+
+The current simulator construction path does not select mechanisms through these
+IDs.  It lowers ``Axis1PrimitiveParams`` and explicit frontend noise rules into
+substep channels instead.  The M-ID inventory remains here because the retained
+``qec_twin`` probe/profile stack and its serialized audit records still require
+stable IDs, F/M labels, and Stage 3/5 interpretation fields.
+
+``IMPLEMENTED_MECHANISM_IDS`` therefore means only "dispatchable by the legacy
+``carrier.channels.mechanism_channel`` adapter".  It is not an end-to-end
+simulator coverage claim, a record-faithfulness claim, or an acceptance taxonomy.
+Do not add new simulator construction logic to this module.
+"""
+
 from __future__ import annotations
 
 IMPLEMENTED_MECHANISM_IDS = tuple(f"M{idx}" for idx in range(35))
@@ -422,7 +436,7 @@ def legacy_mechanism_id(public_label: str) -> str:
 
 
 def mechanism_contract(mechanism_id: str) -> dict[str, object]:
-    """Return the Stage 3/5 interpretation contract for a legacy catalog ID."""
+    """Return the retained Stage 3/5 inference contract for a legacy catalog ID."""
 
     key = str(mechanism_id)
     if key not in MECHANISM_CONTRACTS:
@@ -436,7 +450,7 @@ def mechanism_contract(mechanism_id: str) -> dict[str, object]:
 
 
 def mechanism_taxonomy_contract_audit() -> dict[str, object]:
-    """Audit whether the legacy catalog is covered by explicit public labels."""
+    """Audit the retained inference taxonomy; this is not a simulator gate."""
 
     covered = set(MECHANISM_CONTRACTS)
     expected = set(IMPLEMENTED_MECHANISM_IDS)

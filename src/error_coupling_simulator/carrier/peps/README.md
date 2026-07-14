@@ -17,7 +17,9 @@ from `(2·min+1)²` to `2·min+1` (SF3).
 - **S10 compiled/data-register** semantics — NO ancilla qutrits; every artifact
   carries the compiled-semantics label (SW-S1).
 - **Arm A only** (the p1c cell); arm C (leak-flag dephase) raises (SW-S2).
-- **GPU-only**, torch-cuda-complex128 ALWAYS (SW-S8).
+- **GPU-only**, torch-cuda-complex128 ALWAYS (SW-S8). `PepsSampler` rejects c64 run metadata
+  before execution; the optimization-c64 policy belongs only to the active fused within-cycle
+  SV-MC carrier and does not amend the PEPS/FET contract or its tolerances.
 - d3 is fully certifiable (state-level vs the exact QutritDM referee; record-level
   vs the per-record DMPathEvaluator route). d5 has **no exact referee** — d5 claims
   are bond/cost only (SW-S4).
@@ -36,9 +38,15 @@ from `(2·min+1)²` to `2·min+1` (SF3).
 - **Reused from `carrier/pepo` (ARCHIVED, import-only, never modified):** the
   d-generic `PepoLayout` (SF2), the ket-layer chain machinery, the boundary-MPS
   skeleton (`_max_row_bond` / `_row_tag` / fit pattern), the truncators
-  (`svd_precut_bond` / `ntu_truncate`), `s_to_det` / `det_to_s`.
-- **Reused from `qec_twin.forward.scalable.sv_sampler`:** schedule marshalling,
-  the WG leak-slice CPTP build, `ShotSet` pack/header (SF11 record contract).
+  (`svd_precut_bond` / `ntu_truncate`).
+- **Reused from `carrier.record_fold`:** the carrier-neutral `s_to_det` / `det_to_s`
+  temporal detector-record convention.
+- **Schedule-host seam:** `PepsSampler` accepts an injected schedule/marshalling host and defaults
+  to package-local `carrier.within_cycle.WithinCycleScheduleHost`. Schedule marshalling, WG
+  leak-slice construction, headers, and `RunSpec` ownership therefore have no inward `qec_twin`
+  dependency. Packed records use package-local `carrier.records.PackedShotBatch`; its public
+  record accessor applies the required temporal detector fold. Repo-local old-path shims point
+  outward to this implementation and are excluded from distribution archives.
 - **Referee-independent (contract §3):** the engine shares NO code path with
   `carrier/exact/qutrit_dm` — all gates/Hadamard are local formulas mirroring the
   `mps_forward` value contract; the referee is imported only in the gate

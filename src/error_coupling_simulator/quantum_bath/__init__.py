@@ -6,8 +6,8 @@ the multi-time record observables (Milz/Budini K, CMI, TV/record-distance), the 
 classical-field null (the independent-GT dephasing floor), the incoherent-AD null family (the matched
 relaxation nulls + the model-free min-TV discriminator), and the anti-toy ground-truth checks.
 
-Boundary: exact-DM feasibility-only (dim = 16*nmax), CPU; teacher/evaluator-side (NOT consumed by the
-label-free learner). SIMULATOR frame: there is no physical ground truth -- oracles are FORMAL. See
+Boundary: exact-DM feasibility-only (dim = 16*nmax), CPU, evaluator-side research carrier; it is not
+an emitted-record production backend. There is no physical ground truth -- oracles are FORMAL. See
 docs/twin_validation/notion3_relaxation_dualaxis_prereg.md for the science + the two registered
 false-positive corrections (K/K_X/K_Z are all forgeable; the field-null K is NOT 0).
 """

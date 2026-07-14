@@ -108,7 +108,7 @@ def require_matching_schemas(ideal_circuit, noisy_circuit) -> RecordSchema:
 
 
 def validate_evaluator_sidecars(sidecars: tuple[dict[str, Any], ...]) -> tuple[dict[str, Any], ...]:
-    """Validate evaluator-only truth sidecars so they cannot enter learner payload."""
+    """Validate evaluator-only truth sidecars so they cannot enter emitted-record payloads."""
 
     out: list[dict[str, Any]] = []
     for raw in sidecars:
@@ -142,4 +142,3 @@ def b8_manifest_entry(filename: str, *, bits_per_shot: int) -> dict[str, Any]:
         "bits_per_shot": bits,
         "packed_bytes_per_shot": (bits + 7) // 8,
     }
-

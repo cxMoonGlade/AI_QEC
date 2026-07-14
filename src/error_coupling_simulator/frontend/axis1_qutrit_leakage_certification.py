@@ -249,7 +249,10 @@ def axis1_qutrit_leakage_oracle_certification_manifest(
             "epistemic_class": "a/c",
         },
         "oracle_comparison": {
-            "reference": "qec_twin.forward.channels.leakage_channel_super",
+            "reference": (
+                "error_coupling_simulator.carrier.channels."
+                "leakage_channel_super"
+            ),
             "lowered_generator": "carrier_LEAK_terms_to_qutrit_liouvillian_superop",
             "max_abs_superop_diff": diff,
             "max_abs_superop_diff_gate": gate,
@@ -437,7 +440,8 @@ def axis1_two_site_leakage_hamiltonian_certification_manifest(
             "imports_hamiltonian_group_gates": False,
             "imports_carrier_level_dict": False,
             "carrier_object_under_test": (
-                "qec_twin.simulator.axis1_mcwf_mps_execution._hamiltonian_matrix_for_term"
+                "error_coupling_simulator.frontend.axis1_mcwf_mps_execution."
+                "_hamiltonian_matrix_for_term"
             ),
             "lowered_gate_reconstruction": (
                 "in_module_single_same_support_cluster_sum_then_matrix_exp"
@@ -457,7 +461,8 @@ def axis1_two_site_leakage_hamiltonian_certification_manifest(
         "per_family_oracle_certification": {
             "reference": "hand_typed_literature_two_site_ketbra_reference",
             "carrier_operator": (
-                "qec_twin.simulator.axis1_mcwf_mps_execution._hamiltonian_matrix_for_term"
+                "error_coupling_simulator.frontend.axis1_mcwf_mps_execution."
+                "_hamiltonian_matrix_for_term"
             ),
             "independent_reference_diff_gate": float(_INDEPENDENT_REFERENCE_DIFF_GATE),
             "wrong_physics_control_min": float(wrong_physics_control_min),

@@ -1,11 +1,11 @@
-# c64 screening-engine plan for the 2D PEPS carrier (DRAFT, 2026-07-11)
+# HISTORICAL PEPS c64 plan — BLOCKED / NON-AUTHORIZING (2026-07-11)
 
-> **Status: CONTINGENT DRAFT.** Build this ONLY if the c128 round-2 triage says "continue"
-> AND a multi-round (~20–30 round) bond-saturation run is needed and is too slow / OOM-prone in
-> c128. c64 is a **SCREENING accelerator, NOT the evidence engine** — c128 stays the ground-truth
-> oracle (the SW-S8 `complex128 ALWAYS` contract). This is a **bounded simplification** under
-> `docs/FAITHFULNESS_PROTOCOL.md` rule III: the bound is the frozen-replay validation in §5;
-> unbounded = STOP.
+> **Status (2026-07-13): BLOCKED.** This retained proposal does not amend SW-S8 and does not
+> authorize PEPS dtype threading, tolerance/FET changes, a screening run, or a spark probe.
+> PEPS remains c128-only, and c128 PEPS is a reference/evidence candidate rather than ground
+> truth; full-record faithfulness remains open. The active c64 policy belongs only to
+> `FusedWithinCycleSampler` / `sv_traj_d3_wc` optimization (`screening_only`), with a separate
+> c128 final/certification candidate required for any candidate conclusion.
 >
 > Grounded by the `c64-plan-recon` workflow (5 code mappers + 1 adversarial numerical skeptic,
 > 2026-07-11) cross-checked against direct reads of `trajectory.py` / `dynamics.py`. Every
@@ -13,7 +13,7 @@
 
 ---
 
-## 0. The asymmetric trust rule (read this first)
+## 0. Historical asymmetric-trust hypothesis — not an active gate
 
 The skeptic's verdict is **MARGINAL, not turnkey**, and the residual risk is **directional**:
 
@@ -23,19 +23,19 @@ The skeptic's verdict is **MARGINAL, not turnkey**, and the residual risk is **d
 - Numerical-noise-as-weak-decoherence biases the bond **UPWARD** → a **false "grows"** → the
   **SAFE** direction (only wastes c128 time).
 
-**⇒ THE RULE:** a c64 **"grows / No-Go"** flag may stand as a screening trigger. A c64
-**"bounded / saturates / GO"** MUST be confirmed by c128 at the same rounds before it is
-reported. Never invert this.
+**Historical proposed rule:** a c64 **"grows / No-Go"** flag would have been only a screening
+trigger, while a **"bounded / saturates / GO"** reading would have required a separate c128 run.
+Neither artifact would by itself establish PEPS record faithfulness.
 
 ---
 
-## 1. The one structural fact that makes it cheap
+## 1. Historical performance rationale
 
 `torch.linalg.qr/svd/svdvals` **return the dtype of their input**, and the input is always a
 STATE tensor (`t.data`). So **casting the STATE to c64 auto-runs the ~97%-cost boundary-MPS
 reads + insertion SVDs + QR in c64 "for free"** — that IS the 10–30× win.
 
-The work is therefore NOT "rewrite the linalg". It is three things:
+The proposed work would not have been "rewrite the linalg". It would have required three things:
 1. **Thread dtype** so the reconstruction casts inside the cutters don't silently up-cast the
    written-back state back to c128 (which kills the speed AND trips the `__init__` dtype gate).
 2. **Make the 1e-12-class thresholds dtype-aware** (they sit 5–6 orders below the c64 ~1e-7
@@ -44,7 +44,7 @@ The work is therefore NOT "rewrite the linalg". It is three things:
 
 ---
 
-## 2. dtype threading (the plumbing)
+## 2. Historical dtype-threading proposal — do not implement
 
 There are **three independent `CDTYPE=complex128` globals** plus one hard construction gate:
 
@@ -56,8 +56,8 @@ There are **three independent `CDTYPE=complex128` globals** plus one hard constr
 | `peps/state.py:142-143` | `PepsState.__init__` HARD-asserts `dtype==complex128` (SW-S8) | **the first wall** — parametrize to the state's declared dtype |
 | `sv_sampler.py:227,238` | `RunSpec.dtype` exists + validated to {c128,c64} but **IGNORED** by `PepsSampler` (latent bug: header stamps `dtype` while the run is c128, `trajectory.py:746`) | wire it into `PepsSampler.sample` |
 
-**Do NOT mutate the c128 globals in place** — the c128 evidence engine and the c64 screening
-engine must coexist. Thread a per-run `dtype` parameter.
+**Historical proposal:** do not mutate the c128 globals in place; the c128 reference candidate
+and proposed c64 screening path would have had to coexist through a per-run `dtype` parameter.
 
 Concrete threading points (all from the recon):
 - **Codestate:** build once in c128 (cheap), run all sector / `<S>`/`<L>` / **structural
@@ -80,7 +80,7 @@ Concrete threading points (all from the recon):
 
 ---
 
-## 3. Tolerance handling (the correctness core)
+## 3. Historical tolerance hypotheses — BLOCKED
 
 **Split `NUMERICAL_ZERO`'s dual role** (`numerics.py:3`): it is used both as an O(1) positivity
 floor (c64-safe) AND as a *relative* SVD drop threshold `sigma > 1e-12·sigma_1` (c64-broken).
@@ -137,11 +137,11 @@ guessed:
   `exact_rank` ledger values. (If instead run in c64, relax the pinv/stop tols per (B).)
 - The **exact-route boundary reads** (`contraction.py:224-230,295-303`) and the **§6.2 residual
   instruments** (`contraction.py:386-448`) — these ARE the validation baseline; downcasting them
-  destroys the oracle.
+  destroys that numerical reference, not an independent faithfulness oracle.
 
 ---
 
-## 4. The four showstoppers for a naïve swap (fix before first run)
+## 4. Historical showstoppers — no first run is authorized
 
 All four are fixable with dtype-aware ~1e-6 thresholds / the threading above:
 1. `_exact_rank` collapses to full rank → (B).
@@ -151,7 +151,7 @@ All four are fixable with dtype-aware ~1e-6 thresholds / the threading above:
 
 ---
 
-## 5. Validation protocol (the BOUND — mandatory before ANY c64 number is believed)
+## 5. Historical validation proposal — not registered for current execution
 
 The host RNG `u` is a **dtype-independent Python float** (`trajectory.py:728`,
 `default_rng((seed,shot))`), so the c128 reference's branch selections can be **FORCED** in the
@@ -178,25 +178,24 @@ c64 replay → a clean frozen-branch comparison.
 
 ## 6. Epistemic classing
 
-The c64 engine's outputs are **class (c) heuristic SCREENING** — never (a) or (b). The bound is
-the frozen-replay agreement numbers of §5. c128 remains the evidence engine; any load-bearing
-conclusion is certified in c128.
+Had it been built, PEPS c64 outputs would have remained **class (c) heuristic SCREENING** and
+never become evidence. A separate c128 result would still be only an evidence candidate until its
+owning scientific gates passed.
 
 ---
 
-## 7. Effort, sequencing, and the spark corollary
+## 7. Historical effort estimate — no active sequencing
 
 - **Effort:** a focused mini-project — dtype threading across ~4 files (`state.py`,
   `contraction.py`, `dynamics.py`, `trajectory.py` + the SW8 runner) + tolerance parametrization
   + the frozen-replay validation harness. **Not a flag flip; not a rewrite.** Run it under the
   `contract-build` discipline (contract-first, adversarial gates, killer tests on the raised
   thresholds).
-- **Sequencing (gated on the c128 triage):**
-  - triage = "artifact/continue" **AND** a 20–30 round run is needed → **build it**;
-  - triage = "No-Go / bond grows unbounded" → **shelve** (nothing to accelerate);
-  - triage = "saturates at low bond, c128 affordable" → may **not be needed**.
-- **spark corollary:** GB10's *c128* large-matrix linalg is known-garbage (residual 1.0 at
+- **Historical sequencing:** the 2026-07-11 triage branches are superseded. Reactivation would
+  require explicit user authorization plus a fresh theory-first precision/tolerance/FET review.
+- **Historical spark corollary:** GB10's *c128* large-matrix linalg was reported as unusable
+  in this proposal (residual 1.0 at
   1024², memory `reference-ssh-spark-compute`), but its **c64** large linalg was **never tested**
-  and FP32 is GB10's strength. If the c64 build validates on the 5090, it becomes worth a
-  one-shot GB10 c64-reliability probe — c64 could unlock spark's fast FP32 + 119 GB (off the live
-  desktop). Secondary; only after the 5090 c64 build passes §5.
+  and FP32 is GB10's strength. The historical proposal was to consider a one-shot GB10
+  c64-reliability probe only after a 5090 validation. This idea remains blocked; no such probe is
+  authorized.

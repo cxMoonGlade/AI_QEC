@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Axis-2 source processes for cross-cycle coupled-error teachers.
+"""Axis-2 source processes for cross-cycle coupled noise processes.
 
 This module owns source timelines: explicit latent processes that persist across
 QEC cycles and emit payloads consumed by ``source_coupling.Theta``. It is not a

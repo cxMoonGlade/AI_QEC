@@ -20,7 +20,8 @@ Modules (disjoint builder ownership, contract §1):
   stabilizer-channel TT, NTU truncation + the gap rule, `nonselective_round`, ledgers.
 - `sampler.py` [A3] — reverse-pass boundary-MPS norm cache, general single-site fused
   caps for `Tr(ρ·Π)`, the two-term `E_s` expectation, Born sampling + selective update,
-  the pinned obs law, `s↔det` seam conventions, the C3 negativity witness.
+  the pinned obs law, compatibility re-exports of the neutral `carrier.record_fold`
+  `s↔det` seam conventions, and the C3 negativity witness.
 
 Pinned index/tag conventions (set by `layout.py`, consumed by A2/A3): site tensor tag
 `Q{pos}` (engine position), fused physical index `k{pos}` (dim 9), fused virtual bond

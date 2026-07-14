@@ -1,6 +1,13 @@
 # Simulator architecture pre-registration
 
-**Status:** bounded theory-first architecture pre-registration for the standalone
+**Status: SUPERSEDED (historical preregistration; not a current contract).** The binding object
+contract is now [`../SIMULATOR.md`](../SIMULATOR.md), and the current frontend contract is
+[`simulator_frontend_contract.md`](simulator_frontend_contract.md). The historical text below
+retains the former `qec_twin.simulator` ownership and `hardware.m4_decode` decision for audit
+history; neither is current. The active frontend owns package-local `.b8` I/O and an optional
+external-PyMatching decoder port, with `decoder=None` as the record-first default.
+
+This was a bounded theory-first architecture pre-registration for the standalone
 `qec_twin.simulator` frontend. The current untracked frontend has completed the
 Stim/Pauli artifact base plus the first CodeSpec/XZZX compiler smoke and the
 explicit operation/schedule/record-layout layer. This is not a claim

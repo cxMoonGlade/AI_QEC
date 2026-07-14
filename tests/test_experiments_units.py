@@ -873,6 +873,12 @@ def test_run_spec_numerical_provenance_is_json_safe_and_enters_shot_header():
                 "seed": 0,
                 "logical_input_m": 0,
             },
+            "precision": {
+                "policy": "optimization_c64_final_certification_c128_v1",
+                "run_purpose": "final",
+                "dtype": "c128",
+                "evidence_eligibility": "c128_candidate",
+            },
         },
     }
     spec = RunSpec(circuit_path="unused.stim", N=2, R=3, numerical_provenance=ledger)

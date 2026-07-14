@@ -740,7 +740,8 @@ def test_L0_plan_to_manifest_exact_dict():
         {"edge": [0, 1], "zeta_rad_per_ns": 0.25, "epistemic_class": "c"}]
     assert m["representability"] == "schedule_derived_axis1_selection_no_h_or_c_payload"
     assert m["scope"] == (
-        "selection only; primitive lowering happens in qec_twin.mechanisms.axis1_primitives")
+        "selection only; primitive lowering happens in "
+        "error_coupling_simulator.mechanisms.axis1_primitives")
     assert m["selections"] == [s.to_manifest() for s in plan.selections]
     assert "axis1_local_lindblad_context" not in m       # no context declared
 

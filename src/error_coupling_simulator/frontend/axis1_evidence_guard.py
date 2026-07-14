@@ -33,7 +33,7 @@ Two reusable OUTPUT-side validators (distinct from the INPUT guard
    uses instead of a hardcoded ``"pass"`` literal.
 
 This is the OUTPUT mirror of the isolation contract (CLAUDE.md): the input guard keeps
-evaluator truth OUT of learner-visible metadata; this output guard keeps the simulator
+evaluator truth OUT of public artifact metadata; this output guard keeps the simulator
 from EMITTING a manifest that overclaims (asserts an exact channel / PTM / Kraus /
 teacher-ID / source-timeline / DEM / production result it did not produce) or that
 labels a non-executed contract surface as a passing run. Claim-discipline +
@@ -350,7 +350,7 @@ def axis1_contract_verdict(
 # INTEGRATION SKETCH (how the thin pre-write call wires in — Claude integrates;
 # this candidate does NOT edit src/). Shown for the four canonical write_json sites.
 #
-#   from qec_twin.simulator.axis1_evidence_guard import validate_axis1_evidence_manifest
+#   from error_coupling_simulator.frontend.axis1_evidence_guard import validate_axis1_evidence_manifest
 #
 #   # axis1_channel_evidence.write_axis1_substep_channel_evidence (line ~285):
 #   manifest = axis1_substep_channel_evidence_manifest(schedule, device=device)

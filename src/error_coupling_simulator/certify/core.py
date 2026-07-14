@@ -316,7 +316,15 @@ def _assert_anchor_value(av: AnchorValue, anchor: Anchor) -> None:
 
 
 def _rkey(regime: Regime) -> tuple:
-    return (regime.R, regime.register, regime.n_active, regime.arm, regime.b)
+    return (
+        regime.R,
+        regime.register,
+        regime.n_active,
+        regime.arm,
+        regime.b,
+        regime.n_stab,
+        regime.sites,
+    )
 
 
 def _rollup(rows, controls) -> Verdict:

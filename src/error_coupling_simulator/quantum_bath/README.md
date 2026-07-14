@@ -26,8 +26,8 @@ surface-code-cycle instrument. All branches kept → EXACT 3-round distribution.
 - `ground_truth.py` — the anti-toy GTs (factorization, extraction, sigma_z indep-boson,
   sigma_minus emission ODE, no-bath sanity).
 
-**Boundary.** Exact-DM feasibility-only (dim = 16·nmax), CPU. Teacher/evaluator-side — NOT imported
-by the label-free learner. SIMULATOR frame: there is **no physical ground truth**; the oracles here
+**Boundary.** Exact-DM feasibility-only (dim = 16·nmax), CPU, evaluator-side research carrier. It is
+not part of emitted-record production. SIMULATOR frame: there is **no physical ground truth**; the oracles here
 are FORMAL reference computations (implementation-bug catchers), never a claim of correspondence to
 reality. K/K_X/K_Z are all forgeable (basis-symmetric instrument) → the honest discriminator is the
 model-free record-distance, not any single K.

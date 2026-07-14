@@ -12,7 +12,7 @@ Extracted VERBATIM from outputs/twin_validation/notion3_relaxation_dualaxis_run.
 build_L2->build_shared_bath_liouvillian, round_superop2->round_superop, and the ft/n3 indirection
 removed (canonical package functions called directly).
 
-Boundary: exact-DM feasibility-only (dim = 16*nmax); CPU; teacher/evaluator-side (no learner import).
+Boundary: exact-DM feasibility-only (dim = 16*nmax); CPU; evaluator-side research carrier.
 No physical ground truth (oracles are FORMAL).
 """
 

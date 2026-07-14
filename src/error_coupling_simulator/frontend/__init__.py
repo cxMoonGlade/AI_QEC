@@ -1,8 +1,8 @@
 """Simulator frontend package.
 
-This package is intentionally separate from `qec_twin.forward`: it owns the
-user-facing circuit/artifact surface, while `forward` owns carrier/substrate
-evolution.
+It owns the user-facing circuit/artifact surface. Forward evolution belongs to
+``error_coupling_simulator.carrier``. Historical ``qec_twin.*`` strings retained
+in persisted schema identifiers are compatibility vocabulary, not import edges.
 """
 
 from .circuit_ir import (

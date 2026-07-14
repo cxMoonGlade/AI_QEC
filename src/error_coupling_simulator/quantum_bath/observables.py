@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 r"""Multi-time record observables for the shared-bath dual-axis carrier.
 
 Alphabet-agnostic statistics over a 3-round outcome distribution:
@@ -18,8 +16,10 @@ Extracted VERBATIM from:
   - M_mem_stat  <- outputs/twin_validation/quantum_backaction_fairtest.py
   - exact_cmi_bits <- outputs/twin_validation/notion3_quantum_vs_classical_run.py
 
-Teacher/evaluator-side; no physical ground truth (oracles are FORMAL).
+Evaluator-side; no physical ground truth (oracles are FORMAL).
 """
+
+from __future__ import annotations
 
 import math
 

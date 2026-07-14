@@ -37,7 +37,9 @@ def test_qutrit_wg_leakage_default_writes_exact_artifacts(tmp_path):
 
     assert result.artifacts is not None
     assert result.num_qutrits == 3
-    assert result.manifest["backend"] == "qec_twin.forward.exact.qutrit_dm.QutritDM"
+    assert result.manifest["backend"] == (
+        "error_coupling_simulator.carrier.exact.qutrit_dm.QutritDM"
+    )
     assert result.manifest["representability"] == "exact_qutrit_density_matrix_leakage"
     assert result.manifest["mechanism"] == "wood_gambetta_qutrit_leakage"
     assert result.manifest["decoder"] is None

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 r"""crow_joynt classical-field null (the independent-GT) + the phase covariance closed forms.
 
 The sigma_z-only sector is a Gaussian collective pure dephasing (crow_joynt 1309.6383): the reduced
@@ -14,8 +12,10 @@ Extracted VERBATIM from outputs/twin_validation/notion3_relaxation_dualaxis_run.
     of the gamma_unit_closed closed form (the primary source cross-checks them to 1e-9).
   - the ft/n3 indirection is removed (canonical package functions called directly).
 
-Boundary: CPU exact-DM feasibility-only; teacher/evaluator-side. No physical ground truth (FORMAL).
+Boundary: CPU exact-DM feasibility-only; evaluator-side. No physical ground truth (FORMAL).
 """
+
+from __future__ import annotations
 
 import math
 

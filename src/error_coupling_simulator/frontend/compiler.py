@@ -42,7 +42,10 @@ def compile_code_spec(
     builder = CircuitBuilder(
         spec.num_qubits,
         metadata={
-            "compiler": "qec_twin.simulator.compiler.repeated_memory_v1",
+            "compiler": (
+                "error_coupling_simulator.frontend.compiler."
+                "compile_code_spec:repeated_memory_v1"
+            ),
             "schedule": schedule.to_manifest(),
             "record_layout": layout.to_manifest(),
             "code_spec": spec.to_manifest(),

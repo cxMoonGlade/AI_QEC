@@ -131,7 +131,7 @@ Confirmed CPU-pure: imports numpy only (0 `device=`, no torch tensor constructio
 | unit | contract | class | invariants | DA | existing test |
 |---|---|---|---|---|---|
 | `StinespringChannel.parameters` | return [real,imag] generator params | C | identity/determinism | no | — |
-| `hermitianize`,`apply_kraus`,`measurement_probabilities_z`,`tp_residual`,`choi_matrix`,`single_qubit_paulis`,`pauli_transfer_matrix`,`StinespringChannel.random`,`StinespringChannel.kraus` | torch DM/Kraus/Choi/PTM algebra | G | CPTP-by-construction, trace-1, Hermitian, PSD-Choi | yes (device check, clamp) | test_kernels_fused_kraus, test_diff_cptp_channel_recovery (7) |
+| `hermitianize`,`apply_kraus`,`measurement_probabilities_z`,`tp_residual`,`choi_matrix`,`single_qubit_paulis`,`pauli_transfer_matrix`,`StinespringChannel.random`,`StinespringChannel.kraus` | torch DM/Kraus/Choi/PTM algebra | G | CPTP-by-construction, trace-1, Hermitian, PSD-Choi | yes (device check, clamp) | test_kernels_fused_kraus, test_noise_mechanism_primitives |
 
 ### `carrier/joint_lindbladian.py` — cov 6% · 14 units (3 C, 11 G) — torch.linalg matrix_exp/eigh
 | unit | contract | class | invariants | DA | existing test |
@@ -674,7 +674,7 @@ Confirmed CPU-pure: imports numpy only (0 `device=`, no torch tensor constructio
 ### `mechanisms/teachers.py` — cov 22% · 9 units (9 C) — device-agnostic torch (CPU-runnable)
 | unit | contract | class | invariants | DA | existing test |
 |---|---|---|---|---|---|
-| `coherent_overrotation_kraus`,`coherent_overrotation_field`,`amplitude_damped_rotation_kraus`,`mixed_mechanism_field`,`zz_coupling_kraus`,`correlated_dephasing_kraus`,`coupled_mixed_teacher`,`pauli_twirl_kraus`,`pauli_twirl_field` | B5 teacher Kraus/field builders + Pauli twirls | C (small torch, device-agnostic) | CPTP; twirl even-in-phi; PTM-diagonal | VAL (kind) | test_twin_h0/h1/h2 |
+| `coherent_overrotation_kraus`,`coherent_overrotation_field`,`amplitude_damped_rotation_kraus`,`mixed_mechanism_field`,`zz_coupling_kraus`,`correlated_dephasing_kraus`,`coupled_mixed_teacher`,`pauli_twirl_kraus`,`pauli_twirl_field` | simulator Kraus/field builders + Pauli twirls | C (small torch, device-agnostic) | CPTP; twirl even-in-phi; PTM-diagonal; edge routing | VAL (kind) | test_noise_mechanism_primitives |
 
 ### `quantum_bath/carrier.py` — cov **0%** · 9 units (9 C) — exact-DM CPU (16·nmax)
 | unit | contract | class | invariants | DA | existing test |
@@ -821,7 +821,7 @@ These ~89 units keep **structural coverage + a hand KILLER + their existing inde
 equivalence gate**. They are explicitly OUT of the L0/L1 batches. Coverage gate line-ranges must
 exclude them from any CPU-pure unit's target (the §12.4 "GPU-bound → structural+KILLER+equivalence"
 rule; the parent contract's `requires_cuda` exemptions are the template).
-- `carrier/cptp_channel.py` (9 G) → test_kernels_fused_kraus / test_diff_cptp_channel_recovery
+- `carrier/cptp_channel.py` (9 G) → test_kernels_fused_kraus / test_noise_mechanism_primitives
 - `carrier/joint_lindbladian.py` (11 G) → test_joint_lindbladian (already 27-way covered logically)
 - `carrier/exact/circuit_sim.py` (14 G), `carrier/exact/qutrit_dm.py` (~25 G) → test_diff_circuit_forward / test_qutrit_dm_exact / test_qutrit_dm_memlean
 - `carrier/accel.py` (3 G) + `carrier/kernels/*` (6 G) → test_kernels_fused_kraus / test_kernels_vmap

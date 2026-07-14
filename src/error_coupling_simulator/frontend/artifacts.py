@@ -10,7 +10,7 @@ from typing import Any
 
 import numpy as np
 
-from qec_twin.hardware import b8_io
+from . import b8_io
 
 
 @dataclass(frozen=True)

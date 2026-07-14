@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Axis-2 shared-source parameter fan-out for coupled-error teachers.
+"""Axis-2 shared-source parameter fan-out for coupled noise processes.
 
 This module implements ``Theta(z_t)``: one explicit source draw conditions many
 mechanism parameters in the same cycle/substep. It is deliberately a parameter
@@ -29,7 +29,7 @@ _SOURCE_KEYS = (
     "cz",
     # P2-i (2026-07-06): the Theta->leakage seam. Literature-grounded FORM (a TLS defect's
     # slow 1/f modulation of the affected qubit's error rates — Gao 2605.23385: S(w) ~ 1/f^1.05
-    # over ten decades, T1 jumps + low-frequency dephasing; the reading note's "teacher recipe"
+    # over ten decades, T1 jumps + low-frequency dephasing; the reading note's process recipe
     # models the TLS footprint exactly as a slow latent modulating rates). The AMPLITUDES stay
     # class (c) swept brackets — no published TLS->(theta, g_seep) transfer function is claimed.
     "wg_theta",
@@ -127,7 +127,7 @@ class SourceCouplingConfig:
     cz_depol_sensitivity: float = 0.30
     # P2-i Theta->leakage fields (Wood-Gambetta coherent |1><->|2| angle + seep jump rate).
     # DEFAULTS ARE FULLY INERT (base 0 AND sensitivity 0 => the fan-out emits 0 and no
-    # existing consumer's behavior changes); the P2-iv teacher passes its physical cell
+    # existing consumer's behavior changes); the historical P2-iv process passes its physical cell
     # (e.g. theta = calibrate_theta_for_wg_l1(5e-3), g_seep = 0.09 per McEwen 2102.06131)
     # explicitly. Both use the positive-rate exp map (theta > 0 is an angle magnitude; the
     # WG L1 ~ sin^2(theta)/2 rate then inherits ~2x the relative modulation). Class (c).
@@ -426,7 +426,7 @@ def leakage_from_drift(
 
     P2-i (prereg ``p2_conjunction_wiring_prereg.md``). FORM grounded in the TLS
     literature (Gao 2605.23385: a defect's 1/f^1.05 spectrum slowly modulates the
-    affected qubit's error rates — the reading note's teacher recipe), spelled as
+    affected qubit's error rates — the reading note's process recipe), spelled as
     the same positive-rate exp map the gamma_phi fan-out uses; AMPLITUDES are
     class-(c) swept brackets (no published TLS->(theta, g_seep) transfer function
     is claimed). Inert at the default config (base 0, sensitivity 0 -> (0, 0));

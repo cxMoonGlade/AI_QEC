@@ -192,7 +192,7 @@ def axis1_g2_frontend_gate(
     """Run the minimal preregistered Axis-1 G2 frontend gate.
 
     The input must be a compiler-generated schedule seam. The returned rows are
-    evidence diagnostics only; they do not claim full analog teacher execution.
+    evidence diagnostics only; they do not claim full analog process execution.
     """
 
     _validate_schedule_for_g2(schedule)

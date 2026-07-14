@@ -41,8 +41,6 @@ def test_record_layout_matches_compiled_circuit_key_order():
 
 
 def test_persisted_manifest_records_exact_layout_order(tmp_path):
-    pytest.importorskip("pymatching", reason="frontend persisted-manifest smoke uses PyMatching")
-
     spec = _make_mixed_frontend_spec(rounds=2)
     circuit = compile_code_spec(spec)
     result = Simulator(circuit).run(shots=16, noise=None, out_dir=tmp_path / "mixed", seed=2)

@@ -4,13 +4,48 @@ Plain index of how testing works in `error_coupling_simulator`. Read this before
 batch. Knobs live in **`tests/harness_config.json`** (one visible place). The harness lives WITH the
 tests in **`tests/harness/`** (Python — proc/gpu_pool/gate/mutation).
 
+## Scope boundary
+
+`pytest tests/` is the repository-wide engineering regression surface, not a scientific
+simulator-certification gate. It also exercises retained decoder/data and migration seams. A
+simulator claim is accepted only by the owning registered batch plus its declared integration and
+independent-reference checks.
+
+Simulator-owned acceptance batches must not contain record-to-parameter fitting studies,
+factorized-vs-coupled learner comparisons, calibration probe ladders, identifiability bands, or
+HARDEN H0/H1/H2 gates. Retained non-simulator regression files must have separate ownership and
+cannot contribute to a simulator verdict. Channel, Kraus, coupling, carrier, emitted-record, and
+evaluator-side certification invariants remain in scope and should import
+`error_coupling_simulator` directly when a canonical package path exists.
+
+Retained non-simulator ownership:
+
+- R2 dataset/decoder: `test_hardware_m1_ingestion.py`, `test_hardware_m2_window_closure.py`,
+  `test_hardware_m4_*.py`, and `test_fault_graph.py`;
+- record-to-parameter research regressions: `test_hardware_m3_window_nll.py`,
+  `test_hardware_nll_graph_mode.py`, and `test_hypergraph_dem_tn_d3_surface.py`;
+- migration-era mixed physics: `test_carrier_seam_*.py`, `test_physical_channels.py`,
+  `test_window_channel.py`, and `test_steady_state_fusions.py`.
+
+These files may catch repository regressions, but none may be cited as a simulator acceptance gate
+until its simulator-owned invariant is split into a direct `error_coupling_simulator` test.
+
+`test_scope_boundary.py` also pins the package-level simulator/record description and requires new
+neutral process names to remain identity-compatible with historical `teacher` API spellings. This
+permits gradual vocabulary migration without changing schemas, seeds, or existing callers.
+It additionally keeps the M0--M34 `MechanismSpec`/`mechanism_channel` adapter out of active
+simulator construction. That inventory is a retained local-channel/probe compatibility surface,
+not evidence that all 35 IDs are wired into the current Axis-1 record path.
+
 ## The idea (the full-coverage program)
 Every CPU-pure public unit of the release package gets THREE layers of test, each necessary:
 - **L0 structural** — 100% statement + 100% branch per unit (coverage.py). Proves every line ran.
 - **L1 property** — Hypothesis faithfulness invariants (CPTP, unit-trace, C∈[0,1], CMI≥0, …). Proves
   behavior over thousands of generated inputs, not one hand-picked case.
 - **L2 mutation** — mutmut kill-rate ≥ bar. Proves the asserts DISCRIMINATE (a 100%-covered test with
-  a vacuous assert leaves a surviving mutant → red). This is the anti-vacuity layer.
+  a vacuous assert leaves a surviving mutant → red). Mutmut `no tests` results are counted
+  separately and remain non-killed in the total denominator; they never inflate the score. This is
+  the anti-vacuity layer.
 GPU/quimb-bound + expensive-dynamics units get the LIGHTER treatment: structural + a hand KILLER +
 their independent-referee equivalence gate (L2 is impractical there — see the timeout note below).
 
@@ -20,8 +55,8 @@ python tests/harness/gate.py     tests/_support/<batch>_targets.json    # L0+L1 
 python tests/harness/mutation.py tests/_support/<batch>_targets.json    # L2 mutation gate
 ```
 Each is registry-driven. The gate prints per-unit stmt/branch + PASS/FAIL; mutation prints
-`kill_rate` + a survivors JSON. (Legacy `.sh` runners in `outputs/twin_validation/` are being
-retired in favour of these.)
+`killed` / `survived` / `no_tests` / `kill_rate` plus a survivors JSON. (Legacy `.sh` runners in
+`outputs/twin_validation/` are being retired in favour of these.)
 
 ## Knobs — `tests/harness_config.json` (ENV-overridable; registry `harness` block overrides per-batch)
 | knob | default | env | what |
@@ -97,6 +132,13 @@ torch-less module.
 | `stage_d_operation_targets` | frontend/operation | test_operation_units | 9 | 100/100 | 87.0% | committed (0d81d67) — bar 0.86 (20/20 killable killed; 3 canonicalization-equivalent survivors) |
 | `stage_d_schedule_targets` | frontend/schedule | test_schedule_units | 7 | 100/100 | 97.0% | committed (2b34770) — 2 dead-branch coverage exemptions (forward-compat singleton-name guards) |
 | `stage_d_artifacts_targets` | frontend/artifacts | test_artifacts_units | 7 | 100/100 | 98.1% | pending commit — 4 file_sha256 hashing-loop equivalents (chunk-size-invariant + None-sentinel infinite loop) |
+| `stage_d_fused_sv_abi_targets` | carrier/kernels/sv_traj_d3_loader | test_sv_traj_d3_loader_units | 3 | 100/100 | 90.28% | pending commit — honest 780 killed / 23 survived / 61 no-tests over 864; no-tests remain non-killed |
+
+The fused-SV ABI residual review classifies the 23 survivors as 10 guard-implied equivalents,
+8 diagnostic-label-only changes, and 5 substantive residuals. Four substantive residuals are
+empty-RNG device-placement mutations distinguishable only on the GPU path (the real c64/c128 ABI
+smokes launch successfully); one is a multi-round WC arithmetic mutation. The unchanged 0.90 gate
+passes, but these residuals remain explicit rather than being relabeled as killed or equivalent.
 
 **Milestone:** `quantum_bath` (40 units, 7 modules) + `certify` (42 units, 7 modules; `DMOracleAnchor.answer`
 is the sole GPU `out_of_scope`) are covered at L0 100/100 + L2 ≥0.90. The quantum_bath entropic/negativity-

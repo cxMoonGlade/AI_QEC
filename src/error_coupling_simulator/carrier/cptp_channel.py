@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-"""Differentiable, CPTP-by-construction quantum-channel learning kernel.
+"""Differentiable, CPTP-by-construction quantum-channel parameterization.
 
-This is the high-precision non-Clifford / non-Pauli core for the learner-side
-CPTP upgrade (see project memory ``learner-cptp-upgrade``). It is intentionally
-exact and small-scale (1-2 qubit channels now; 6-10 qubit circuits in the
-follow-up forward model), prioritizing fidelity over scale.
+This module supplies high-precision non-Clifford / non-Pauli channel algebra for
+the simulator and its certification checks. It is intentionally exact and
+small-scale, prioritizing channel fidelity over carrier scale.
 
 Design
 ------
@@ -22,17 +21,15 @@ damping, leakage surrogates, etc., not just stochastic Pauli noise).
 
 Claim boundary
 --------------
-This module *learns a CPTP channel*. Whether the channel is *recoverable* from
-a given observation surface is a separate identifiability question: the channel
-is fixed only up to the observational alias class unless the probe/input set is
-informationally complete. It does not (yet) learn an arbitrary GKSL generator;
-the Hamiltonian + PSD-Kossakowski (GKSL) parameterization is a planned variant
-for interpretability, but the Stinespring form here is already
-non-Pauli/non-Clifford capable.
+This module parameterizes and applies a specified CPTP channel. It does not fit
+a channel from emitted records, establish identifiability, or perform model
+selection. Those are downstream inference tasks outside the simulator product.
+The Stinespring form here is already non-Pauli/non-Clifford capable; it is not a
+claim that every physical process has been represented or hardware-validated.
 
 This module intentionally uses ``complex128`` (double precision) for
-high-fidelity recovery, a deliberate departure from the GPU-float32 default
-justified by the precision-first goal at small scale. ``NUMERICAL_ZERO`` floors
+high-fidelity channel calculations, a deliberate departure from the GPU-float32
+default justified by the precision-first goal at small scale. ``NUMERICAL_ZERO`` floors
 still guard divisions.
 """
 
@@ -99,7 +96,7 @@ def choi_matrix(kraus: torch.Tensor) -> torch.Tensor:
 # --------------------------------------------------------------------------- #
 @dataclass
 class StinespringChannel:
-    """Learnable CPTP channel: Hermitian generator -> isometry -> Kraus."""
+    """Differentiable CPTP channel: Hermitian generator -> isometry -> Kraus."""
 
     dim: int
     num_kraus: int

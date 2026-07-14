@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-"""Phase-1 exact-qutrit leakage TEACHER (EVALUATOR-ONLY counterfactual ground truth).
+"""Specified exact-qutrit leakage process with evaluator-only truth.
 
-The controlled-teacher arm of the Phase-1 SIM-ONLY non-Pauli teacher-learner
-program (architecture A; pre-registration
+This is the controlled qutrit-leakage process from the historical Phase-1
+SIM-ONLY registration (architecture A; pre-registration
 ``docs/nonpauli_teacher/phase1_qutrit_leakage_registration.md``, interface
 ``docs/nonpauli_teacher/phase1_build_contract.md``). This module injects a KNOWN
 leakage mechanism ``(theta, g_seep, g_heat)`` into the exact 9-data-qutrit d3 XZZX
 density-matrix engine and supplies the leaked-ancilla readout map. It is the qutrit
-analog of ``mechanisms/teachers.py`` / ``mechanisms/seam_teachers.py``.
+package-local analog of the other controlled mechanism-field fixtures.
 
-Object (registration §0): an exact 3-level teacher for d3 XZZX that injects
+Object (registration §0): an exact 3-level process for d3 XZZX that injects
 per-data-qutrit Wood-Gambetta leakage on the basis ``{|0>,|1>,|2>}`` -- a COHERENT
 ``|1><->|2>`` exchange (strength ``theta``, carrying ``C_L>0``, the non-Pauli signal)
 plus optional dissipative seepage ``|2>->|1>`` (rate ``g_seep``, WG_L2) and incoherent
@@ -26,11 +26,10 @@ channel, not pinned inputs, and ``theta`` is found for a target WG_L1 by
 ``calibrate_theta_for_wg_l1`` (grounded to Miao ~5e-3 / McEwen L2).
 
 Isolation contract (``docs/SIMULATOR.md``; registration §0, binding): the
-teacher's channels, its ``(theta, g_seep, g_heat)`` / WG rates, mechanism IDs, AND the
-leaked-readout bias are evaluator-only counterfactual ground truth. The learner
-consumes observations only -- ``(context, syndrome s, logical m)`` -- never the
-teacher's parameters. Scoring is evaluator-side. ``QutritLeakageNoiseProcess.params`` is
-the audit/evaluator surface; it is never a learner input.
+process channels, ``(theta, g_seep, g_heat)`` / WG rates, mechanism IDs, and
+leaked-readout bias are evaluator-only truth. They are available to certification,
+never to the emitted record. ``QutritLeakageNoiseProcess.params`` is the
+evaluator surface, not a public artifact payload.
 
 Data format (contract): a Kraus channel is a ``list`` of ``(3,3)`` torch CUDA
 complex128 tensors, CPTP ``Σ Kᵢ†Kᵢ = I`` to <=1e-12 -- the d3 engine's native
@@ -125,7 +124,7 @@ G_HEAT_DEFAULT = 0.0
 #: pinned -- any single value (e.g. 0.9) would be an invented toy constant -- so we
 #: SWEEP ``b in [0.5, 1.0]`` and report the R=1 floor as a BRACKET
 #: ``[LER*(b=0.5), LER*(b=1.0)]``, never a point estimate. ``b`` is REQUIRED input
-#: to every teacher/map factory (no silent default). The |2> population on a support
+#: to every process/map factory (no silent default). The |2> population on a support
 #: is ``O(leakage rate) ~ 5e-3`` so the floor is expected weakly sensitive to ``b``
 #: at R=1 (a tight bracket -> leaked-readout immaterial at R=1; a wide bracket is a
 #: finding -> ground ``b`` from the device IQ POVM, Phase-3). It is a gating nuisance,
@@ -158,7 +157,7 @@ def wg_rates(theta: float, g_seep: float, g_heat: float = 0.0) -> tuple[float, f
     ``WG_L1 = (1/d1) Tr[Π2 E(Π1)]`` (d1=2; leakage out of ``{|0>,|1>}``) and
     ``WG_L2 = (1/d2) Tr[Π1 E(Π2)]`` (d2=1; seepage back), evaluated on the channel
     ``E = exp(L t)`` for ``(theta, g_seep, g_heat)``. These are EVALUATOR/audit
-    diagnostics of the channel, not learner inputs. (``Π1`` here is the full
+    diagnostics of the channel, not emitted-record inputs. (``Π1`` here is the full
     computational projector, the unnormalized Eq.2 form; the ``1/d1`` average over
     ``X_1`` input states is supplied by the explicit ``/2``.)
     """
@@ -202,7 +201,7 @@ def calibrate_theta_for_wg_l1(
     a monotone bisection on the EXACT channel rate ``wg_rates(theta, g_seep, g_heat)[0]``
     (no closed-form inversion). The bracket starts at the analytic seed
     ``theta0 = arcsin(sqrt(2 target))`` and widens to ``[0, pi/2]`` (WG_L1 is monotone
-    increasing in ``theta`` on ``[0, pi/2]``). Grounds the teacher's WG_L1 to a registered
+    increasing in ``theta`` on ``[0, pi/2]``). Sets the process's WG_L1 to a registered
     Miao/McEwen target (e.g. 1e-3, 5e-3) with C_L>0 -- the channel parameter ``theta`` is
     NOT a pinned magic constant; it is solved for the registered rate.
     """
@@ -304,22 +303,22 @@ def leakage_kraus_torch(
 
 
 # --------------------------------------------------------------------------- #
-# The equal-treatment teacher object (mirrors mechanisms/seam_teachers.py).     #
+# The controlled process object (mirrors mechanisms/seam_teachers.py).           #
 # --------------------------------------------------------------------------- #
 @dataclass(frozen=True)
 class QutritLeakageNoiseProcess:
-    """One evaluator-only qutrit leakage teacher arm.
+    """One evaluator-only qutrit leakage process arm.
 
     ``field`` is ``(t, site) -> list[(3,3) torch CUDA Kraus]`` (the per-data-qutrit
     leakage channel injected each cycle ``t`` at data site ``site``). ``edge_field``
     is ``None`` in the Phase-1 CP/Markovian core (per-qubit stochastic leakage has
     no 2-qutrit edge; coherent transport is the deferred Phase-1b extension,
     registration §2.4) -- the slot is kept for the contract's
-    ``(t, (i, j)) -> Kraus | None`` shape so the transport teacher drops in later.
+    ``(t, (i, j)) -> Kraus | None`` shape so a transport process can be added later.
     ``leaked_readout`` is the swept-``b`` leaked-readout map (``data-level ->
     P(bit=1)``, with the ``|2>`` row = the swept bias ``b``).
     ``params`` records the declared ground-truth constants -- EVALUATOR/AUDIT-SIDE
-    ONLY (isolation contract): never a learner input.
+    ONLY (isolation contract): never part of the emitted record payload.
     """
 
     name: str
@@ -330,7 +329,7 @@ class QutritLeakageNoiseProcess:
 
 
 def _const_field(kraus: list[torch.Tensor]) -> Callable:
-    """A time/site-constant per-qubit leakage field (homogeneous teacher)."""
+    """A time/site-constant per-qubit leakage field."""
     return lambda t, site: kraus
 
 
@@ -363,7 +362,7 @@ def qutrit_leakage_teacher(
     n_data: int = 9,
     device: str | torch.device = QUTRIT_DEVICE,
 ) -> QutritLeakageNoiseProcess:
-    """Homogeneous per-data-qutrit WG leakage teacher ``(theta, g_seep, g_heat)`` for d3 XZZX (9 data).
+    """Homogeneous per-data-qutrit WG leakage process for d3 XZZX (9 data).
 
     Injects the SAME Wood-Gambetta leakage channel
     ``leakage_kraus_torch(theta, g_seep, g_heat)`` on every data qutrit each cycle
@@ -407,7 +406,7 @@ def qutrit_leakage_teacher_heterogeneous(
     b: float,
     device: str | torch.device = QUTRIT_DEVICE,
 ) -> QutritLeakageNoiseProcess:
-    """Per-data-qutrit heterogeneous WG leakage teacher: ``rates[site] = (theta, g_seep[, g_heat])``.
+    """Heterogeneous qutrit leakage process: ``rates[site] = (theta, g_seep[, g_heat])``.
 
     Each data qutrit gets its OWN registered WG channel parameters (still time-constant;
     no edge). A 2-tuple ``(theta, g_seep)`` is accepted with ``g_heat`` defaulting to 0.
@@ -444,3 +443,9 @@ def qutrit_leakage_teacher_heterogeneous(
 
 # Backward-compat alias — "Teacher" retired in error_coupling_simulator; qec_twin keeps it (shim re-exports).
 QutritLeakageTeacher = QutritLeakageNoiseProcess
+
+# Neutral factory spellings. Historical names remain stable for import and registry
+# compatibility; these aliases intentionally reference the same objects.
+solve_theta_for_wg_l1 = calibrate_theta_for_wg_l1
+qutrit_leakage_process = qutrit_leakage_teacher
+qutrit_leakage_process_heterogeneous = qutrit_leakage_teacher_heterogeneous

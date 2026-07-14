@@ -6,6 +6,12 @@
 > in [`p4_sv_mc_engine_design.md`](p4_sv_mc_engine_design.md); this doc is the *interface*, not the rationale.
 > **All `src/qec_twin/**` here is commit-gated** (kernel, loader, host, the `qutrit_dm.py` arm additions).
 
+> **Precision amendment (2026-07-13, binding).** The active package host derives precision from
+> run purpose: fused within-cycle optimization is c64/`screening_only`; final/certification is
+> c128/`c128_candidate`. PEPS/MPS remain c128-only. Physics construction, codestate checks,
+> composition, and CPTP checks occur in c128; only checked complex execution tables are cast.
+> No tolerance or FET change is authorized by this interface.
+
 ---
 
 ## 0. Ownership map
@@ -28,16 +34,18 @@ internals — it tests through H's public API + the DM oracle. **Disjoint files;
 - **State vector** `ψ ∈ ℂ^{3^9}`, `3^9 = 19683` amplitudes. **Index convention = qutrit-0 most-significant trit**
   (matches Phase-1 `apply_local_op`): `idx = Σ_{q=0..8} t_q · 3^{8−q}`, `t_q ∈ {0,1,2}`. This MUST equal the DM
   engine's basis ordering (Agent V asserts it via a fixed-state round-trip).
-- **dtype:** `complex128` default (315 KB/state, global). `complex64` (157 KB, shared-memory candidate) is gated
-  by Gate-5 / P-D — only after the complex64-vs-complex128 syndrome-distribution equivalence (≲1e-6) clears.
+- **dtype:** the host binds dtype to purpose. `run_purpose="optimization"` uses `complex64`
+  only on `FusedWithinCycleSampler` / `sv_traj_d3_wc` and stamps `screening_only`;
+  final/certification uses `complex128` and stamps `c128_candidate`. A c64 artifact is never
+  promoted by an equivalence threshold; candidate evidence requires a separate frozen c128 replay.
 - **No `|2⟩`-truncation:** all 3 levels per data qutrit are carried (leakage is the whole point).
 
 ---
 
 ## 2. Schedule marshalling (H → kernel) `(a)`
 
-From `parse_xzzx_circuit(circuit_path, sweep_word=…)` → `XZZXSchedule`, H produces FIXED int32/float64 arrays
-(the d3 circuit is static — marshalled once, not per shot):
+From `parse_xzzx_circuit(circuit_path, sweep_word=…)` → `XZZXSchedule`, H produces fixed
+index and execution arrays (the d3 circuit is static — marshalled once, not per shot):
 
 - `n_data = 9`, `n_stab = 8`, `R` (rounds).
 - `round_gates[R]`: per round, a list of `(gate_id, site)`. `gate_id ∈ {H, X, Y, S, …}` enumerated in a header
@@ -47,16 +55,22 @@ From `parse_xzzx_circuit(circuit_path, sweep_word=…)` → `XZZXSchedule`, H pr
   `needs_H` (bool: X-support ⇒ Hadamard-rotate to Z before the diagonal measurement, rotate back after).
 - `logical`: `support[]` + `kind ∈ {X,Z}` (the logical observable for the terminal readout).
 - `gate_unitaries`: the `3×3` complex matrices for each `gate_id` actually used (qutrit H/X/Y/S — `|2⟩` inert for
-  H, per Phase-1 `qutrit_hadamard`). Passed as a `(n_gates,3,3)` array.
+  H, per Phase-1 `qutrit_hadamard`). Build and check them in complex128; only after those
+  checks may the fused host cast the `(n_gates,3,3)` execution table to complex64.
 
 H asserts `XZZXSchedule.verify` passed and that `stab_paulis()` matches `stabs[]` before marshalling.
+All schedule/support/index tensors remain int32. For the c128 ABI, state/operator tensors are
+complex128 and `urandom`/`norm_drift` are float64; for the c64 optimization ABI they are
+complex64 and float32 respectively. Device/dtype/shape/index guards run before JIT launch.
 
 ---
 
 ## 3. Leakage Kraus marshalling (H → kernel) `(a)`
 
-- `kraus = leakage_kraus_torch(θ, g_seep, g_heat, device=cuda)` → `(n_kraus, 3, 3)` complex array (the validated WG
-  Lindbladian channel). H asserts CPTP residual `< 1e-12` before passing.
+- `kraus = leakage_kraus_torch(θ, g_seep, g_heat, device=cuda)` constructs the validated WG
+  Lindbladian channel as a complex128 `(n_kraus, 3, 3)` array. H completes composition and
+  asserts CPTP residual `< 1e-12` in c128. Only then may the fused optimization host cast this
+  execution table to complex64; the physical construction/check artifact remains c128.
 - The kernel **Kraus-samples** one branch per data qutrit per round: `k ~ p_k = ‖K_k ψ_sub‖²` (Born, via curand),
   then `ψ ← K_k ψ / √p_k`. (Single-qutrit subsystem apply on the SV; reuse the Phase-1 index logic.)
 - `(θ, g_seep, g_heat)` are **registered sweeps**, not pinned (per design §0): H takes them per-run from the
@@ -135,7 +149,9 @@ input `m`; **never** an expectation threshold.
   unambiguous access). `norm_drift[i] = |1−⟨ψ|ψ⟩|` pre-terminal (mean = §7 `mean_norm_drift`). H may repack for
   disk if a tighter layout is wanted.
 - Header (H writes alongside): `{n_data, n_stab, R, N, arm, b, readout_conv, θ, g_seep, g_heat, base_seed,
-  shot_id_offset, dtype, logical_kind, git_commit}` — self-describing + reproducible.
+  shot_id_offset, run_purpose, dtype, precision_policy, evidence_eligibility, logical_kind,
+  numerical_provenance, git_commit}` — self-describing + reproducible. The precision fields must
+  agree with `numerical_provenance.run_binding.precision` or the run fails closed.
 - H streams waves to disk (CPU-side I/O allowed; trajectory compute stays on-device — GPU-only rule).
 
 ---
@@ -159,9 +175,13 @@ sv_traj_d3(
   b, readout_conv,                # readout_conv 0:biased_b 1:half
   logical_m, N, base_seed, shot_id_offset, wave,
   urandom=None,                   # real [N, urandom_stride] OR None (→ curand); §5
-  dtype='c128',                   # 'c128' | 'c64' (gated)
+  dtype='c128',                   # low-level ABI selector; host derives it from run_purpose
 ) -> (out_bits uint8 [N, out_stride], norm_drift real [N])   # §6
 ```
+
+The low-level extension exposes the ABI selector, but the active host never treats it as an
+independent scientific knob: only within-cycle optimization may request c64. Final/certification,
+PEPS, and MPS reject a c64 purpose/dtype combination.
 
 **Compile-time bounds (asserted host-side):** `MAX_STAB=16, MAX_SUPP=8, MAX_KRAUS=8, MAX_LOG_SUPP=12` (d3 fits with
 headroom; bump + recompile for a larger code). H wraps this as `SvSampler.sample(run_spec) -> ShotSet`; V calls
@@ -174,10 +194,12 @@ reads peak memory via `torch.cuda.max_memory_allocated` host-side). **New file:*
 
 ## 8. Codestate prep (H) `(a)`
 
-`|m⟩_L` = the `+1` eigenstate of all stabilizers with logical eigenvalue `m`. H builds it ONCE per run as a pure
-SV (small, one-off): start from `|0…0⟩`, project through the stabilizer group (or extract the DM ground state's
-pure factor), set the logical via the logical operator. H asserts `⟨S⟩ = +1` for all stabilizers and `⟨L⟩ =
-(−1)^m` to `< 1e-10` before sampling (reuse the Phase-1 `init_logical` codestate check, SV form).
+`|m⟩_L` = the `+1` eigenstate of all stabilizers with logical eigenvalue `m`. H builds it ONCE per run as a
+complex128 pure SV (small, one-off): start from `|0…0⟩`, project through the stabilizer group (or extract the
+DM ground state's pure factor), set the logical via the logical operator. H asserts `⟨S⟩ = +1` for all
+stabilizers and `⟨L⟩ = (-1)^m` to `< 1e-10` in c128 before sampling (reuse the Phase-1
+`init_logical` codestate check, SV form). Only a fused optimization run casts the already-checked
+codestate to complex64 at the execution boundary.
 
 ---
 
@@ -199,7 +221,8 @@ pure factor), set the logical via the logical operator. H asserts `⟨S⟩ = +1`
 - **Gate 2** (P4a scope) — local, no ancilla/transport. ✅
 - **Gate 3** (logical label) — §4 terminal-readout sampling. ✅ in-contract.
 - **Gate 4** (DM convergence) — §9, arm-matched. Agent V.
-- **Gate 5** (throughput micro-bench) — §7 wave size + dtype; before any `10⁶` run. Agent V.
+- **Gate 5** (throughput micro-bench) — §7 wave size + purpose-bound dtype; before any large
+  optimization run. It may select batching/wave geometry but cannot promote c64 to evidence. Agent V.
 
 Every check is a committed script (asserts + printed evidence + flushed + `__main__` guard). Nothing runs at
 production `N` until Gates 4–5 print green and the reviewer clears the build.

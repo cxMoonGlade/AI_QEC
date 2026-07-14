@@ -20,12 +20,13 @@ The public surface of the spike engine, grouped by submodule:
   * :mod:`.diagnostics` — :func:`bond_profile` (the SW8 instrument), :func:`eps_l`
     (the §6.3 Rudolph-Tindall loop-correlation instrument), :func:`loop_rank_probe`.
 
-``s_to_det`` / ``det_to_s`` are re-exported VERBATIM from the archived
-``carrier.pepo.sampler`` (contract §3 / SF11 — single source; the XOR detector
-fold itself lives downstream in ``seam.teacher_shots_to_events``).
+``s_to_det`` / ``det_to_s`` are re-exported from the carrier-neutral
+``carrier.record_fold`` module (contract §3 / SF11 — single source; the XOR
+detector fold is applied by the package-local packed-record boundary before a
+consumer receives a ``det`` payload).
 """
 
-from ..pepo.sampler import det_to_s, s_to_det
+from ..record_fold import det_to_s, s_to_det
 from .contraction import (
     NormCache,
     born_read_stab,

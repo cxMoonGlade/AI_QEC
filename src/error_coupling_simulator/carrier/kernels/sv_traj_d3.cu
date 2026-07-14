@@ -33,6 +33,7 @@
 
 #include <torch/extension.h>
 #include <ATen/cuda/CUDAContext.h>
+#include <c10/cuda/CUDAGuard.h>
 #include <c10/cuda/CUDAException.h>
 #include <c10/util/complex.h>
 #include <cuda_runtime.h>
@@ -46,6 +47,41 @@
 #endif
 using real_t = SV_REAL;
 using cplx = c10::complex<real_t>;
+
+constexpr c10::ScalarType EXPECTED_COMPLEX =
+    sizeof(real_t) == 8 ? torch::kComplexDouble : torch::kComplexFloat;
+constexpr c10::ScalarType EXPECTED_REAL =
+    sizeof(real_t) == 8 ? torch::kFloat64 : torch::kFloat32;
+constexpr const char* EXPECTED_COMPLEX_NAME =
+    sizeof(real_t) == 8 ? "complex128" : "complex64";
+constexpr const char* EXPECTED_REAL_NAME =
+    sizeof(real_t) == 8 ? "float64" : "float32";
+
+inline void check_cuda_same_device(
+    const torch::Tensor& tensor,
+    const torch::Tensor& reference,
+    const char* name) {
+  TORCH_CHECK(tensor.is_cuda(), name, " must be CUDA");
+  TORCH_CHECK(
+      tensor.device() == reference.device(), name, " must be on ",
+      reference.device(), " (got ", tensor.device(), ")");
+}
+
+inline void check_i32(const torch::Tensor& tensor, const char* name) {
+  TORCH_CHECK(tensor.scalar_type() == torch::kInt32, name, " must be int32");
+}
+
+inline void check_host_copyable_i32(
+    const torch::Tensor& tensor,
+    const torch::Tensor& reference,
+    const char* name) {
+  check_i32(tensor, name);
+  TORCH_CHECK(
+      tensor.is_cpu() || tensor.is_cuda(), name, " must be CPU or CUDA");
+  TORCH_CHECK(
+      !tensor.is_cuda() || tensor.device() == reference.device(), name,
+      " must be CPU or on ", reference.device(), " (got ", tensor.device(), ")");
+}
 
 // ---- fixed d3 dimensions (specialized circuit) ------------------------------
 #ifndef SV_NDATA
@@ -64,6 +100,52 @@ constexpr int MAX_KRAUS = 8;        // WG channel rank 2..5
 constexpr int MAX_GATES_PER_RND = 64;
 constexpr int MAX_LOG_SUPP = 12;    // logical support (3 for d3)
 constexpr int THREADS = 256;        // threads per block (per trajectory)
+
+inline int check_support_shapes(
+    const torch::Tensor& codestate,
+    const torch::Tensor& stab_supp_len,
+    const torch::Tensor& stab_supp,
+    const torch::Tensor& stab_supp_isx,
+    const torch::Tensor& log_supp,
+    const torch::Tensor& log_supp_isx) {
+  check_host_copyable_i32(stab_supp_len, codestate, "stab_supp_len");
+  check_host_copyable_i32(stab_supp, codestate, "stab_supp");
+  check_host_copyable_i32(stab_supp_isx, codestate, "stab_supp_isx");
+  check_host_copyable_i32(log_supp, codestate, "log_supp");
+  check_host_copyable_i32(log_supp_isx, codestate, "log_supp_isx");
+  TORCH_CHECK(stab_supp_len.dim() == 1, "stab_supp_len must be 1D");
+  const int n_stab = (int)stab_supp_len.numel();
+  TORCH_CHECK(n_stab <= MAX_STAB, "too many stabilizers");
+  TORCH_CHECK(
+      stab_supp.dim() == 2 && stab_supp.size(0) == n_stab &&
+          stab_supp.size(1) <= MAX_SUPP,
+      "stab_supp must have shape [n_stab,K] with K<=MAX_SUPP");
+  TORCH_CHECK(
+      stab_supp_isx.sizes() == stab_supp.sizes(),
+      "stab_supp_isx shape must equal stab_supp shape");
+  TORCH_CHECK(log_supp.dim() == 1, "log_supp must be 1D");
+  TORCH_CHECK(
+      log_supp_isx.sizes() == log_supp.sizes(),
+      "log_supp_isx shape must equal log_supp shape");
+  TORCH_CHECK(
+      log_supp.numel() <= MAX_LOG_SUPP, "logical support too large");
+  return n_stab;
+}
+
+inline void check_nonempty_urandom(
+    const torch::Tensor& urandom,
+    const torch::Tensor& codestate,
+    int64_t N,
+    int64_t urandom_stride) {
+  check_cuda_same_device(urandom, codestate, "urandom");
+  TORCH_CHECK(
+      urandom.scalar_type() == EXPECTED_REAL, "urandom must be ",
+      EXPECTED_REAL_NAME);
+  TORCH_CHECK(
+      urandom.dim() == 2 && urandom.size(0) == N && urandom_stride > 0 &&
+          urandom.size(1) == urandom_stride,
+      "urandom must have shape [N, urandom_stride] with urandom_stride > 0");
+}
 
 // 3^k powers (host+device); POW3[k] = 3^k.
 __device__ __constant__ long long POW3[10] =
@@ -815,11 +897,65 @@ std::vector<torch::Tensor> sv_traj_d3_cuda(
     torch::Tensor urandom,          // complex/real [N, stride] or empty
     int64_t urandom_stride) {
   TORCH_CHECK(codestate.is_cuda(), "codestate must be CUDA");
-  TORCH_CHECK(codestate.numel() == DIM, "codestate must have 3^9 amplitudes");
-  const int n_stab = (int)stab_supp_len.numel();
-  TORCH_CHECK(n_stab <= MAX_STAB, "too many stabilizers");
+  const c10::cuda::CUDAGuard device_guard(codestate.device());
+  TORCH_CHECK(
+      codestate.scalar_type() == EXPECTED_COMPLEX, "codestate must be ",
+      EXPECTED_COMPLEX_NAME);
+  TORCH_CHECK(
+      codestate.dim() == 1 && codestate.numel() == DIM,
+      "codestate must have shape [3^9]");
+  TORCH_CHECK(R >= 1, "R must be >= 1");
+  TORCH_CHECK(N >= 1, "N must be >= 1");
+  TORCH_CHECK(0 <= arm && arm <= 3, "arm must be in {0,1,2,3}");
+  TORCH_CHECK(0.0 <= b && b <= 1.0, "b must be in [0,1]");
+  TORCH_CHECK(
+      readout_conv == 0 || readout_conv == 1,
+      "readout_conv must be 0 or 1");
+  TORCH_CHECK(logical_m == 0 || logical_m == 1, "logical_m must be 0 or 1");
+  TORCH_CHECK(shot_id_offset >= 0, "shot_id_offset must be >= 0");
+  TORCH_CHECK(wave >= 1, "wave must be >= 1");
+
+  check_cuda_same_device(round_gptr, codestate, "round_gptr");
+  check_cuda_same_device(gate_uid, codestate, "gate_uid");
+  check_cuda_same_device(gate_site, codestate, "gate_site");
+  check_i32(round_gptr, "round_gptr");
+  check_i32(gate_uid, "gate_uid");
+  check_i32(gate_site, "gate_site");
+  TORCH_CHECK(
+      round_gptr.dim() == 1 && round_gptr.numel() == R + 1,
+      "round_gptr must have shape [R+1]");
+  TORCH_CHECK(
+      gate_uid.dim() == 1 && gate_site.dim() == 1 &&
+          gate_uid.numel() == gate_site.numel(),
+      "gate_uid and gate_site must be equal-length 1D arrays");
+
+  check_cuda_same_device(gate_unitaries, codestate, "gate_unitaries");
+  TORCH_CHECK(
+      gate_unitaries.scalar_type() == EXPECTED_COMPLEX,
+      "gate_unitaries must be ", EXPECTED_COMPLEX_NAME);
+  TORCH_CHECK(
+      gate_unitaries.dim() == 3 && gate_unitaries.size(0) >= 1 &&
+          gate_unitaries.size(1) == 3 && gate_unitaries.size(2) == 3,
+      "gate_unitaries must have shape [G,3,3] with G>=1");
+  check_cuda_same_device(kraus, codestate, "kraus");
+  TORCH_CHECK(
+      kraus.scalar_type() == EXPECTED_COMPLEX, "kraus must be ",
+      EXPECTED_COMPLEX_NAME);
+  TORCH_CHECK(
+      kraus.dim() == 3 && kraus.size(0) >= 1 &&
+          kraus.size(0) <= MAX_KRAUS && kraus.size(1) == 3 &&
+          kraus.size(2) == 3,
+      "kraus must have shape [K,3,3], 1<=K<=MAX_KRAUS");
+
+  const int n_stab = check_support_shapes(
+      codestate, stab_supp_len, stab_supp, stab_supp_isx, log_supp,
+      log_supp_isx);
   const int n_gate = (int)gate_unitaries.size(0);
-  (void)n_gate;
+
+  const bool use_host_stream = urandom.defined() && urandom.numel() > 0;
+  if (use_host_stream) {
+    check_nonempty_urandom(urandom, codestate, N, urandom_stride);
+  }
 
   auto cs = codestate.contiguous();
   auto gp = round_gptr.contiguous();
@@ -832,6 +968,31 @@ std::vector<torch::Tensor> sv_traj_d3_cuda(
   auto kr = kraus.contiguous();
   auto ls = log_supp.contiguous();
   auto lx = log_supp_isx.contiguous();
+
+  // Validate the small CSR payload before any device pointer is dereferenced.
+  {
+    auto gph = gp.cpu();
+    auto guh = gu.cpu();
+    auto gsh = gs.cpu();
+    const auto* gpp = gph.const_data_ptr<int>();
+    const auto* gup = guh.const_data_ptr<int>();
+    const auto* gsp = gsh.const_data_ptr<int>();
+    TORCH_CHECK(gpp[0] == 0, "round_gptr must start at 0");
+    for (int64_t r = 0; r < R; ++r) {
+      TORCH_CHECK(
+          gpp[r] <= gpp[r + 1], "round_gptr must be nondecreasing");
+    }
+    const int64_t n_apply = gate_uid.numel();
+    TORCH_CHECK(
+        gpp[R] == n_apply,
+        "round_gptr terminal entry must equal gate application count");
+    for (int64_t g = 0; g < n_apply; ++g) {
+      TORCH_CHECK(
+          0 <= gup[g] && gup[g] < n_gate, "gate_uid out of range at ", g);
+      TORCH_CHECK(
+          0 <= gsp[g] && gsp[g] < N_DATA, "gate_site out of range at ", g);
+    }
+  }
 
   // build the SchedSpec POD
   SchedSpec sp{};
@@ -847,10 +1008,24 @@ std::vector<torch::Tensor> sv_traj_d3_cuda(
     auto slh = sl.cpu(); auto ssh = ss.cpu(); auto sxh = sx.cpu();
     auto* slp = slh.data_ptr<int>(); auto* ssp = ssh.data_ptr<int>(); auto* sxp = sxh.data_ptr<int>();
     for (int s = 0; s < n_stab; ++s) {
+      TORCH_CHECK(
+          0 <= slp[s] && slp[s] <= ss.size(1),
+          "stab_supp_len out of range at stabilizer ", s);
       sp.stab_supp_len[s] = slp[s];
       for (int j = 0; j < MAX_SUPP; ++j) {
         sp.stab_supp[s * MAX_SUPP + j] = (j < ss.size(1)) ? ssp[s * ss.size(1) + j] : 0;
         sp.stab_supp_isx[s * MAX_SUPP + j] = (j < sx.size(1)) ? sxp[s * sx.size(1) + j] : 0;
+        if (j < slp[s]) {
+          TORCH_CHECK(
+              0 <= sp.stab_supp[s * MAX_SUPP + j] &&
+                  sp.stab_supp[s * MAX_SUPP + j] < N_DATA,
+              "stab_supp site out of range at stabilizer ", s, ", offset ", j);
+          TORCH_CHECK(
+              sp.stab_supp_isx[s * MAX_SUPP + j] == 0 ||
+                  sp.stab_supp_isx[s * MAX_SUPP + j] == 1,
+              "stab_supp_isx must be 0 or 1 at stabilizer ", s,
+              ", offset ", j);
+        }
       }
     }
   }
@@ -862,7 +1037,16 @@ std::vector<torch::Tensor> sv_traj_d3_cuda(
     auto* lsp = lsh.data_ptr<int>(); auto* lxp = lxh.data_ptr<int>();
     sp.log_supp_len = (int)ls.numel();
     TORCH_CHECK(sp.log_supp_len <= MAX_LOG_SUPP, "logical support too large");
-    for (int j = 0; j < sp.log_supp_len; ++j) { sp.log_supp[j] = lsp[j]; sp.log_supp_isx[j] = lxp[j]; }
+    for (int j = 0; j < sp.log_supp_len; ++j) {
+      TORCH_CHECK(
+          0 <= lsp[j] && lsp[j] < N_DATA,
+          "log_supp site out of range at offset ", j);
+      TORCH_CHECK(
+          lxp[j] == 0 || lxp[j] == 1,
+          "log_supp_isx must be 0 or 1 at offset ", j);
+      sp.log_supp[j] = lsp[j];
+      sp.log_supp_isx[j] = lxp[j];
+    }
   }
   sp.arm = (int)arm;
   sp.b = (real_t)b;
@@ -871,7 +1055,6 @@ std::vector<torch::Tensor> sv_traj_d3_cuda(
   sp.base_seed = (unsigned long long)base_seed;
   sp.shot_id_offset = (long long)shot_id_offset;
 
-  const bool use_host_stream = urandom.defined() && urandom.numel() > 0;
   torch::Tensor ur;
   if (use_host_stream) {
     ur = urandom.contiguous();
@@ -903,7 +1086,7 @@ std::vector<torch::Tensor> sv_traj_d3_cuda(
   auto worktmp = torch::empty({W, DIM}, opts_c);
 
   const size_t shmem = (size_t)THREADS * sizeof(real_t);
-  auto stream = at::cuda::getCurrentCUDAStream();
+  auto stream = at::cuda::getCurrentCUDAStream(codestate.get_device());
 
   for (long long start = 0; start < N; start += W) {
     long long nshot = (N - start) < W ? (N - start) : W;
@@ -962,13 +1145,68 @@ std::vector<torch::Tensor> sv_traj_d3_wc_cuda(
     torch::Tensor urandom,          // complex/real [N, stride] or empty
     int64_t urandom_stride) {
   TORCH_CHECK(codestate.is_cuda(), "codestate must be CUDA");
-  TORCH_CHECK(codestate.numel() == DIM, "codestate must have 3^9 amplitudes");
-  TORCH_CHECK(round_op_ptr.numel() == 2 * R + 1,
-              "round_op_ptr must have 2R+1 entries (two op-segments per round)");
-  const int n_stab = (int)stab_supp_len.numel();
-  TORCH_CHECK(n_stab <= MAX_STAB, "too many stabilizers");
+  const c10::cuda::CUDAGuard device_guard(codestate.device());
+  TORCH_CHECK(
+      codestate.scalar_type() == EXPECTED_COMPLEX, "codestate must be ",
+      EXPECTED_COMPLEX_NAME);
+  TORCH_CHECK(
+      codestate.dim() == 1 && codestate.numel() == DIM,
+      "codestate must have shape [3^9]");
+  TORCH_CHECK(R >= 1, "R must be >= 1");
+  TORCH_CHECK(N >= 1, "N must be >= 1");
+  TORCH_CHECK(0 <= arm && arm <= 3, "arm must be in {0,1,2,3}");
+  TORCH_CHECK(0.0 <= b && b <= 1.0, "b must be in [0,1]");
+  TORCH_CHECK(
+      readout_conv == 0 || readout_conv == 1,
+      "readout_conv must be 0 or 1");
+  TORCH_CHECK(logical_m == 0 || logical_m == 1, "logical_m must be 0 or 1");
+  TORCH_CHECK(shot_id_offset >= 0, "shot_id_offset must be >= 0");
+  TORCH_CHECK(wave >= 1, "wave must be >= 1");
+
+  check_cuda_same_device(round_op_ptr, codestate, "round_op_ptr");
+  check_cuda_same_device(op_kind, codestate, "op_kind");
+  check_cuda_same_device(op_uid, codestate, "op_uid");
+  check_cuda_same_device(op_site, codestate, "op_site");
+  check_i32(round_op_ptr, "round_op_ptr");
+  check_i32(op_kind, "op_kind");
+  check_i32(op_uid, "op_uid");
+  check_i32(op_site, "op_site");
+  TORCH_CHECK(
+      round_op_ptr.dim() == 1 && round_op_ptr.numel() == 2 * R + 1,
+      "round_op_ptr must have shape [2R+1]");
+  TORCH_CHECK(
+      op_kind.dim() == 1 && op_uid.dim() == 1 && op_site.dim() == 1 &&
+          op_kind.numel() == op_uid.numel() &&
+          op_kind.numel() == op_site.numel(),
+      "op_kind, op_uid, and op_site must be equal-length 1D arrays");
+
+  check_cuda_same_device(gate_unitaries, codestate, "gate_unitaries");
+  TORCH_CHECK(
+      gate_unitaries.scalar_type() == EXPECTED_COMPLEX,
+      "gate_unitaries must be ", EXPECTED_COMPLEX_NAME);
+  TORCH_CHECK(
+      gate_unitaries.dim() == 3 && gate_unitaries.size(0) >= 1 &&
+          gate_unitaries.size(1) == 3 && gate_unitaries.size(2) == 3,
+      "gate_unitaries must have shape [G,3,3] with G>=1");
+  check_cuda_same_device(leak_kraus, codestate, "leak_kraus");
+  TORCH_CHECK(
+      leak_kraus.scalar_type() == EXPECTED_COMPLEX, "leak_kraus must be ",
+      EXPECTED_COMPLEX_NAME);
+  TORCH_CHECK(
+      leak_kraus.dim() == 3 && leak_kraus.size(0) >= 1 &&
+          leak_kraus.size(0) <= MAX_KRAUS && leak_kraus.size(1) == 3 &&
+          leak_kraus.size(2) == 3,
+      "leak_kraus must have shape [K,3,3], 1<=K<=MAX_KRAUS");
+
+  const int n_stab = check_support_shapes(
+      codestate, stab_supp_len, stab_supp, stab_supp_isx, log_supp,
+      log_supp_isx);
   const int n_gate = (int)gate_unitaries.size(0);
-  (void)n_gate;
+
+  const bool use_host_stream = urandom.defined() && urandom.numel() > 0;
+  if (use_host_stream) {
+    check_nonempty_urandom(urandom, codestate, N, urandom_stride);
+  }
 
   auto cs = codestate.contiguous();
   auto rop = round_op_ptr.contiguous();
@@ -982,6 +1220,41 @@ std::vector<torch::Tensor> sv_traj_d3_wc_cuda(
   auto kr = leak_kraus.contiguous();
   auto ls = log_supp.contiguous();
   auto lx = log_supp_isx.contiguous();
+
+  // Validate the small op-CSR payload before any device pointer is dereferenced.
+  {
+    auto roph = rop.cpu();
+    auto okh = ok.cpu();
+    auto ouh = ou.cpu();
+    auto osh = os.cpu();
+    const auto* ropp = roph.const_data_ptr<int>();
+    const auto* okp = okh.const_data_ptr<int>();
+    const auto* oup = ouh.const_data_ptr<int>();
+    const auto* osp = osh.const_data_ptr<int>();
+    TORCH_CHECK(ropp[0] == 0, "round_op_ptr must start at 0");
+    for (int64_t segment = 0; segment < 2 * R; ++segment) {
+      TORCH_CHECK(
+          ropp[segment] <= ropp[segment + 1],
+          "round_op_ptr must be nondecreasing");
+    }
+    const int64_t n_ops = op_kind.numel();
+    TORCH_CHECK(
+        ropp[2 * R] == n_ops,
+        "round_op_ptr terminal entry must equal op count");
+    for (int64_t op = 0; op < n_ops; ++op) {
+      TORCH_CHECK(
+          okp[op] == WC_OP_GATE || okp[op] == WC_OP_LEAK,
+          "op_kind must be WC_OP_GATE or WC_OP_LEAK at ", op);
+      if (okp[op] == WC_OP_GATE) {
+        TORCH_CHECK(
+            0 <= oup[op] && oup[op] < n_gate,
+            "op_uid out of range for gate op at ", op);
+      }
+      TORCH_CHECK(
+          0 <= osp[op] && osp[op] < N_DATA,
+          "op_site out of range at ", op);
+    }
+  }
 
   // build the SchedSpec POD (within-cycle CSR; the lumped gate CSR is unused)
   SchedSpec sp{};
@@ -1003,10 +1276,24 @@ std::vector<torch::Tensor> sv_traj_d3_wc_cuda(
     auto slh = sl.cpu(); auto ssh = ss.cpu(); auto sxh = sx.cpu();
     auto* slp = slh.data_ptr<int>(); auto* ssp = ssh.data_ptr<int>(); auto* sxp = sxh.data_ptr<int>();
     for (int s = 0; s < n_stab; ++s) {
+      TORCH_CHECK(
+          0 <= slp[s] && slp[s] <= ss.size(1),
+          "stab_supp_len out of range at stabilizer ", s);
       sp.stab_supp_len[s] = slp[s];
       for (int j = 0; j < MAX_SUPP; ++j) {
         sp.stab_supp[s * MAX_SUPP + j] = (j < ss.size(1)) ? ssp[s * ss.size(1) + j] : 0;
         sp.stab_supp_isx[s * MAX_SUPP + j] = (j < sx.size(1)) ? sxp[s * sx.size(1) + j] : 0;
+        if (j < slp[s]) {
+          TORCH_CHECK(
+              0 <= sp.stab_supp[s * MAX_SUPP + j] &&
+                  sp.stab_supp[s * MAX_SUPP + j] < N_DATA,
+              "stab_supp site out of range at stabilizer ", s, ", offset ", j);
+          TORCH_CHECK(
+              sp.stab_supp_isx[s * MAX_SUPP + j] == 0 ||
+                  sp.stab_supp_isx[s * MAX_SUPP + j] == 1,
+              "stab_supp_isx must be 0 or 1 at stabilizer ", s,
+              ", offset ", j);
+        }
       }
     }
   }
@@ -1018,7 +1305,16 @@ std::vector<torch::Tensor> sv_traj_d3_wc_cuda(
     auto* lsp = lsh.data_ptr<int>(); auto* lxp = lxh.data_ptr<int>();
     sp.log_supp_len = (int)ls.numel();
     TORCH_CHECK(sp.log_supp_len <= MAX_LOG_SUPP, "logical support too large");
-    for (int j = 0; j < sp.log_supp_len; ++j) { sp.log_supp[j] = lsp[j]; sp.log_supp_isx[j] = lxp[j]; }
+    for (int j = 0; j < sp.log_supp_len; ++j) {
+      TORCH_CHECK(
+          0 <= lsp[j] && lsp[j] < N_DATA,
+          "log_supp site out of range at offset ", j);
+      TORCH_CHECK(
+          lxp[j] == 0 || lxp[j] == 1,
+          "log_supp_isx must be 0 or 1 at offset ", j);
+      sp.log_supp[j] = lsp[j];
+      sp.log_supp_isx[j] = lxp[j];
+    }
   }
   sp.arm = (int)arm;
   sp.b = (real_t)b;
@@ -1027,7 +1323,6 @@ std::vector<torch::Tensor> sv_traj_d3_wc_cuda(
   sp.base_seed = (unsigned long long)base_seed;
   sp.shot_id_offset = (long long)shot_id_offset;
 
-  const bool use_host_stream = urandom.defined() && urandom.numel() > 0;
   torch::Tensor ur;
   if (use_host_stream) {
     ur = urandom.contiguous();
@@ -1057,7 +1352,7 @@ std::vector<torch::Tensor> sv_traj_d3_wc_cuda(
   auto worktmp = torch::empty({W, DIM}, opts_c);
 
   const size_t shmem = (size_t)THREADS * sizeof(real_t);
-  auto stream = at::cuda::getCurrentCUDAStream();
+  auto stream = at::cuda::getCurrentCUDAStream(codestate.get_device());
 
   for (long long start = 0; start < N; start += W) {
     long long nshot = (N - start) < W ? (N - start) : W;

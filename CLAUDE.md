@@ -28,27 +28,76 @@ published source closes either complete bridge, so neither supports preregistrat
 claim-bearing experiment code. Binding audit:
 `docs/twin_validation/production_rtn_and_leakage_bridge_split_literature_closure_2026-07-13.md`.
 
-**Current live verification (2026-07-13): NOT full-suite green.**
-`conda run -n aiqec python -m pytest -q tests/` produced `2560 passed, 169 skipped,
-9 failed, 56 warnings`, then exited 139 after a segmentation fault. Eight failures are one
-`qutip 5.3.0` / repo-local `qutip-cuquantum` read-only-`_dims` compatibility cluster; the ninth
-is a reproducible H2 crosstalk gate miss (`KL=8.158934e-8 > 1e-8`). Treat the post-summary
-native crash as separately unresolved, not automatically benign. Exact commands, reruns, and
-claim implications are frozen in the binding audit's §5.4.
+**Current live verification (2026-07-13): targeted backend checks pass; no monolithic simulator
+acceptance result is claimed.** The fresh, non-cloned `ecs`
+Conda environment is bootstrapped by `environment-ecs.yml`, exact-synced from `uv.lock`, and
+checked against `core-environment-cu130.lock` by `scripts/verify_core_environment.py`: Python
+3.12.13, Torch 2.12.0+cu130, QuTiP 5.3.0, qutip-cuQuantum 0.3.1, quimb 1.14.0, and
+Hypothesis 6.156.1. CUDA-Q is intentionally
+absent from `ecs`; the independent noiseless-Grover adapter remains in the retained `aiqec`
+environment and must run in its own process. The old
+eight-test qutip-cuQuantum read-only-`_dims` cluster is repaired
+(`test_simulator_qutip_cuquantum_backend.py`: 4 passed; Axis-1 qutip-cuQuantum slice: 14 passed,
+1 skipped). The former `KL=8.158934e-8 > 1e-8` item came from the retired HARDEN-H2
+factorized-learner regression, not from an `error_coupling_simulator` carrier or record gate; those
+learner tests are no longer part of the active test tree. The historical
+CUDA-Q + fused same-process pair remains a known native teardown incompatibility (`2 passed`, then
+`free(): invalid pointer`, exit 134), but it is no longer a canonical `ecs` execution topology.
+After separation, the `ecs` CUDA-Q-file + fused-oracle collection exits 0 (`1 passed, 1 skipped`),
+while the isolated `aiqec` CUDA-Q suite passes (`3 passed`).
+
+The simulator P0 contract batch passes in `ecs` (`156 passed, 6 skipped`; skips are the explicit
+PyMatching `[hw]` paths), and the same batch passes with `[hw]` in `aiqec` (`162 passed`).
+The Stim frontend is record-first in the core environment: `decoder=None` is the default, so actual
+detector/observable records and `RecordBatch` no longer require PyMatching; explicit
+`decoder="pymatching"` preserves the frozen optional reduction. Record-only runs retain
+non-graphlike DEM hyperedges instead of forcing PyMatching-oriented graphlike decomposition.
+The focused Stim/frontend CPU slice passes in canonical `ecs` (`89 passed, 12 skipped`; every
+skip is an explicit `[hw]` decoder test) and with `[hw]` in `aiqec` (`101 passed`).
+The active PEPS packed-record path now folds raw round-major syndromes into temporal detectors;
+Stim results, Axis-1 record samples, and PEPS expose the package-local `RecordBatch`. The exact-DM
+anchor fails closed for unsupported `R>=2` joint-law requests. The active fused within-cycle
+SV-MC path has the fail-closed precision policy
+`optimization -> c64 / screening_only` and
+`final|certification -> c128 / c128_candidate`; c128 remains a candidate until the owning
+scientific gates pass. A c64 artifact never becomes evidence: any candidate conclusion requires a
+separate frozen c128 replay. PEPS and MPS remain c128-only. WG channels, codestates, composition,
+and CPTP checks are built in c128; only the already-checked complex execution tables are cast for a
+c64 optimization run. The fused-SV ABI registry passes 100% statement/branch coverage and an
+honestly-accounted 90.28% mutation gate (780 killed / 23 survived / 61 no-tests over 864); real
+one-shot c64 and c128 CUDA ABI smokes both launch and exit cleanly. No scientific tolerance or FET
+setting was changed.
 
 ## Commands
 
 ```bash
-conda run -n aiqec python -m pip install -e .                # install (editable)
-conda run -n aiqec python -m pytest -q tests/               # full suite (ALWAYS scope to tests/)
-conda run -n aiqec python -m pytest -q tests/test_<name>.py::test_fn  # single test
-conda run -n aiqec python -c "import torch; print(torch.cuda.is_available())"  # CUDA check
+conda env create -f environment-ecs.yml                       # first creation only
+conda run -n ecs python scripts/sync_core_environment.py      # locked deps + editable checkout
+conda run -n ecs python scripts/configure_core_environment.py # bind CUDA/JIT provider
+conda run -n ecs python scripts/verify_core_environment.py
+conda run -n ecs python -m pytest -q tests/                   # repository regression; not scientific certification
+conda run -n ecs python -m pytest -q tests/test_<name>.py::test_fn  # single test
+conda run -n ecs python -c "import torch; print(torch.cuda.is_available())"  # CUDA check
+conda run -n aiqec python -m pytest -q tests/test_simulator_cudaq_grover.py  # isolated CUDA-Q
 python tests/harness/gate.py     tests/_support/<batch>_targets.json  # L0+L1 coverage gate
 python tests/harness/mutation.py tests/_support/<batch>_targets.json  # L2 mutation gate
 ```
 
-Always scope pytest to `tests/` — bare `pytest` from the repo root recurses into `external/`
-(gitignored vendored baselines, not part of the package). The editable install +
+`environment-ecs.yml` locks the Conda bootstrap; `uv.lock` is the consumed transitive repository
+lock; `core-environment-cu130.lock` is the human-auditable direct-pin compatibility contract.
+The core lock includes active PEPS/test dependencies (`quimb`, `hypothesis`) but deliberately omits
+the optional PyMatching `[hw]` extra and CUDA-Q; the default Stim record path needs neither.
+The old `aiqec` environment is retained as the isolated CUDA-Q execution target and as rollback
+evidence; it is not the canonical coupled-simulator environment. The ignored historical
+`requirements.lock.txt` is not a restore input.
+Use the sync wrapper, not bare `uv sync`: Conda does not set `VIRTUAL_ENV`, so a bare command can
+silently target the stale repo-local `.venv` instead of `ecs`.
+
+`pytest tests/` is a repository-wide engineering regression surface. It includes retained
+decoder/data and migration seams, so its aggregate result is **not** a simulator-faithfulness or
+scientific acceptance gate. Simulator claims are gated at the owning subsystem via the registered
+targets in `tests/CODEBOOK.md`. `pyproject.toml` constrains default collection to `tests/` and excludes
+`legacy/`, `external/`, `outputs/`, and local environments. The editable install +
 `pyproject.toml`'s `pythonpath=["src"]` already put `error_coupling_simulator` on the path;
 do not set `PYTHONPATH`. The test suite + **`tests/CODEBOOK.md`** (the L0/L1/L2 coverage
 harness) double as the executable spec — read the matching test first to see a capability
@@ -81,9 +130,16 @@ src/error_coupling_simulator/
   numerics.py   NUMERICAL_ZERO floor
 ```
 
-`src/qec_twin/` holds pre-consolidation code as import shims plus the still-used RAG
-(`qec_twin.rag`) and R2 decoder (`qec_twin.hardware.m4_decode`); it is being pulled out of
-`src/` into an archive, with symlinks kept at the old import paths.
+`src/qec_twin/` points at the repository-local pre-consolidation tree: outward import shims plus
+the still-used RAG (`qec_twin.rag`). The active package has no executable inward import from that
+tree; PEPS scheduling, the experiment facade, and the R2 decoder wrapper are package-local. The
+decoder imports optional
+external PyMatching only when decoding is requested. Setuptools explicitly allowlists only
+`error_coupling_simulator` and its subpackages; built wheel/source archives contain no `qec_twin`
+package or legacy console entry point. The real release gate builds an sdist, rebuilds the wheel
+from it, installs into an isolated target with `qec_twin` imports blocked, and runs the core record
+smoke. Google circuit/schedule files and ququart Kraus data are explicit caller inputs, not package
+code dependencies.
 
 **Carrier ladder / backend boundary:** exact DM (qubits and qutrits have different ceilings; the
 current qutrit d3 oracle is 9 sites) → MPS MCWF thin-strip (`quimb`; bounded χ is only a target at
@@ -95,9 +151,12 @@ record, never on the carrier bond / state fidelity alone. The
 channel object stays backend-agnostic, so swapping the carrier is not a rewrite. Detail:
 `docs/SIMULATOR.md` + `carrier/peps/README.md`.
 
-**CUDA kernels:** `src/error_coupling_simulator/carrier/kernels/` (fused subsystem-Kraus
-apply; loader `carrier/accel.py`, auto-routed on CUDA tensors, CPU fallback,
-`QEC_TWIN_NO_KERNELS=1` disables; correctness oracle `tests/test_kernels_fused_kraus.py`).
+**CUDA kernels:** `src/error_coupling_simulator/carrier/kernels/` contains two distinct families.
+The c128 fused subsystem-Kraus apply is loaded through `carrier/accel.py`, auto-routed on CUDA
+tensors, and retains its CPU/reference fallback. The GPU-only `sv_traj_d3_wc` fused within-cycle
+SV-MC kernel is loaded through `carrier/kernels/sv_traj_d3_loader.py`, has separate c64/c128
+compiled ABIs, and has no CPU compute fallback. `QEC_TWIN_NO_KERNELS=1` disables JIT loading; it
+does not authorize a different scientific execution path.
 
 ### Isolation contract
 
@@ -111,6 +170,11 @@ anchors; nothing downstream of the record may see it.
 - **Numerical floor:** use `error_coupling_simulator.numerics.NUMERICAL_ZERO == 1e-12` for
   floating floors/thresholds. Do not replace structural zeros (Pauli entries, bit values,
   integer indices, counts, exact algebraic identities).
+- **Precision-purpose discipline:** only `FusedWithinCycleSampler` / `sv_traj_d3_wc` may use c64,
+  and only for `run_purpose="optimization"` (`screening_only`). Final/certification uses c128 and
+  remains `c128_candidate` until its owning gates pass. PEPS/MPS are c128-only. Construct and
+  certify WG channels/codestates in c128, then cast only execution tables; never tune a tolerance
+  or FET setting merely to admit c64.
 - **Module placement:** new code → the module that owns it (each README defines its scope).
   Do not add flat modules under `src/error_coupling_simulator/`.
 - **do() discipline:** a knob is a channel-level, parameterization-independent transform,

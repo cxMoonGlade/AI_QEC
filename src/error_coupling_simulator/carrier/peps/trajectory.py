@@ -58,18 +58,17 @@ from dataclasses import dataclass
 import numpy as np
 import torch
 
-from qec_twin.forward.scalable.sv_sampler import (
+from ...numerics import NUMERICAL_ZERO
+from ..within_cycle import (
     CPTP_TOL,
     SV_GATE_IDS,
     SV_GATE_NAMES,
-    ShotSet,
-    SvSampler,
     WC_OP_GATE,
     WC_OP_LEAK,
+    WithinCycleScheduleHost,
 )
-
-from ...numerics import NUMERICAL_ZERO
 from ..pepo.dynamics import _bond_between, _qr_split, ntu_truncate, svd_precut_bond
+from ..records import PackedShotBatch, pack_raw_syndrome_shots
 from .contraction import (
     born_read_stab,
     chib_doubling_delta,
@@ -102,7 +101,6 @@ W_MAX_DEFAULT = 160
 #: §6.1/§7 registered grown-dim abort: fires when any grown dim EXCEEDS 40
 #: (D = 40 itself is processed — RT3-F6), checked pre-metric.
 D_ABORT_DEFAULT = 40
-
 
 class BondAbortError(RuntimeError):
     """The §6.1 D_abort ORDERLY stop: a grown path-bond dim exceeded the
@@ -705,30 +703,42 @@ def run_trajectory(codestate: PepsState, marsh, leak_kraus: list, gate_table: di
 
 
 # --------------------------------------------------------------------------- #
-# The packed-record sampler (D5/D7; ShotSet byte contract via sv_sampler)      #
+# The packed-record sampler (D5/D7; package-local packed-record contract)     #
 # --------------------------------------------------------------------------- #
 class PepsSampler:
-    """Single-wire 2D PEPS trajectory sampler — parse -> marshal (REUSING
-    :class:`SvSampler`: the within-cycle CSR with the X/Y DD echoes, the WG leak
-    slice CPTP-asserted, the ShotSet pack/header — D4/SF11) -> codestate PEPS ->
-    N trajectories -> packed ShotSet.
+    """Single-wire 2D PEPS trajectory sampler — consume an explicit schedule,
+    marshal it through the package-local host, then build the
+    codestate PEPS -> N trajectories -> package-local :class:`PackedShotBatch`.
 
-    Record semantics (SF11 pin, for every consumer): ``ShotSet.to_det_obs()``'s
-    ``"det"`` key carries the RAW per-round ``s`` bits (round-major); the XOR
-    detector fold is applied ONLY via ``seam.teacher_shots_to_events``
-    downstream. Every artifact carries the compiled/data-register label (SW-S1).
+    The packed byte payload retains raw per-round ``s`` bits in round-major
+    order, but the public ``to_det_obs()`` / ``to_record_batch()`` boundary
+    applies the simulator's temporal XOR fold.  Raw syndrome access is explicit
+    through ``to_raw_syndrome_obs()``.  Every artifact carries the
+    compiled/data-register label (SW-S1).
     """
 
-    def __init__(self, device: str | torch.device = "cuda") -> None:
+    def __init__(
+        self,
+        device: str | torch.device = "cuda",
+        *,
+        host=None,
+    ) -> None:
         self.device = torch.device(device)
-        self._host = SvSampler(device=self.device)
+        self._host = (
+            WithinCycleScheduleHost(self.device) if host is None else host)
+
+    @property
+    def host(self):
+        """The injected schedule/marshalling host (read-only)."""
+
+        return self._host
 
     def sample(self, spec, *, sched=None, policy: TruncationPolicy,
                R_n: int | None = None, R_x: int | None = None, fit_seed: int = 0,
                materialize: bool = True, d_abort: int | None = None,
                cross_route_pred=None, chib_pred=None, chi_b: int | None = None,
                round_hook=None) -> tuple:
-        """Run a PEPS trajectory job; returns ``(ShotSet, per-shot ledgers)``.
+        """Run a PEPS trajectory job; returns ``(PackedShotBatch, per-shot ledgers)``.
 
         Mirrors ``MpsLeakageForward.sample``'s host reuse: ``spec`` is an
         ``sv_sampler.RunSpec``; ``sched`` must carry the within-cycle interior
@@ -737,11 +747,23 @@ class PepsSampler:
         (the SW8 bond-profile flush seam). A :class:`BondAbortError` propagates
         (the runner owns the orderly-stop bookkeeping).
         """
+        if sched is None:
+            raise ValueError(
+                "PepsSampler requires an explicit compiled schedule with "
+                "within-cycle streams; circuit parsing belongs to the frontend")
+        if str(spec.dtype) != "c128":
+            raise ValueError(
+                "PepsSampler executes torch complex128 only; RunSpec.dtype must "
+                f"be 'c128' so the emitted header matches the carrier (got "
+                f"{spec.dtype!r})")
+        if self.device.type != "cuda":
+            raise RuntimeError(
+                "GPU-only contract (SW-S8): PepsSampler device must be cuda "
+                f"(got {self.device})")
         if not torch.cuda.is_available():
             raise RuntimeError("GPU-only contract (SW-S8): CUDA must be available")
         if str(spec.arm).upper() == "C":
             raise ValueError("arm C is fenced out of the spike (SW-S2 — arm A only)")
-        sched = self._host.parse(spec) if sched is None else sched
         if not sched.within_cycle_streams:
             raise ValueError(
                 "PepsSampler (within-cycle) requires sched.within_cycle_streams "
@@ -790,9 +812,8 @@ class PepsSampler:
             flips[shot] = np.uint8(obs)
             ledgers.append(final.ledger)
 
-        packed = self._host.pack_shots(syndromes, flips)
-        marsh_lumped = self._host.marshal_schedule(sched, R=spec.R)
-        header = self._host.build_header(spec, marsh_lumped, sched)
+        packed = pack_raw_syndrome_shots(syndromes, flips)
+        header = self._host.build_header(spec, marsh, sched)
         header["backend"] = "peps_singlewire/quimb"
         header["compiled_semantics"] = "compiled/data-register (S10; SW-S1 label)"
         header["peps_policy"] = {
@@ -806,7 +827,7 @@ class PepsSampler:
         header["peps_fit_seed"] = int(fit_seed)
         header["peps_d_abort"] = d_abort
 
-        bits_per_shot = self._host.syndrome_bits_per_shot(n_stab, R)
+        bits_per_shot = n_stab * R
         out_path = None
         header_path = None
         if spec.out_path is not None:
@@ -819,7 +840,7 @@ class PepsSampler:
             with open(out_path, "wb") as fh:
                 fh.write(np.ascontiguousarray(packed).tobytes())
 
-        shotset = ShotSet(
+        shotset = PackedShotBatch(
             header=header,
             path=out_path,
             header_path=header_path,

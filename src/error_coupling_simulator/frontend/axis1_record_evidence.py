@@ -9,8 +9,8 @@ record arrays when the schedule carries public XOR wiring. X/Y boundaries are
 handled by exact basis rotations around the Z enumerator. It can also sample
 `.b8` record carriers, but still does not write DEM or decoder artifacts.
 An optional ``params_for_substep`` callable overrides the schedule-global
-Axis-1 primitive params once per selected substep (the per-round param seam a
-coupled teacher drives); the emitter never derives round indices itself, and
+Axis-1 primitive params once per selected substep (the per-round parameter seam
+used by a coupled noise process); the emitter never derives round indices itself, and
 the default ``None`` path is byte-identical to the schedule-global read.
 """
 
@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from ..carrier.cptp_channel import RDTYPE
+from ..carrier.records import RecordBatch
 from ..carrier.exact.circuit_sim import (
     _accel_available,
     apply_channel_local,
@@ -93,6 +94,7 @@ class Axis1MeasurementRecordSampleResult:
     sample_summary: Path
     exact_manifest: dict[str, Any]
     sample_manifest: dict[str, Any]
+    record_batch: RecordBatch
 
 
 @dataclass(frozen=True)
@@ -352,14 +354,25 @@ def write_axis1_measurement_record_samples(
     obs_table = torch.tensor(record["logical_observable_records"], dtype=torch.uint8, device=dev)
     det_samples = det_table.index_select(0, sample_index).to("cpu").numpy().astype(np.bool_)
     obs_samples = obs_table.index_select(0, sample_index).to("cpu").numpy().astype(np.bool_)
+    record_batch = RecordBatch(
+        det=det_samples,
+        obs=obs_samples,
+        provenance={
+            "backend": "axis1_joint_lindbladian_exact_record_distribution",
+            "representability": "axis1_jointL_record_samples_b8_no_dem_no_decoder",
+            "record_semantics": "temporal_detector_events",
+            "source_kind": schedule.source_kind,
+            "source_hash": schedule.source_hash,
+        },
+    )
 
     exact_path = root / "axis1_measurement_records.json"
-    det_path = write_b8_optional(root / "detection_events.b8", det_samples)
-    obs_path = write_b8_optional(root / "obs_flips_actual.b8", obs_samples)
+    det_path = write_b8_optional(root / "detection_events.b8", record_batch.det)
+    obs_path = write_b8_optional(root / "obs_flips_actual.b8", record_batch.obs)
     summary_path = root / "axis1_sample_summary.json"
 
     write_json(exact_path, exact)
-    summary = record_summary(det_samples, obs_samples)
+    summary = record_summary(record_batch.det, record_batch.obs)
     summary.update(
         {
             "schema": "qec_twin.simulator.axis1_record_sample_summary.v1",
@@ -404,6 +417,7 @@ def write_axis1_measurement_record_samples(
         sample_summary=summary_path,
         exact_manifest=exact,
         sample_manifest=summary,
+        record_batch=record_batch,
     )
 
 
@@ -613,7 +627,8 @@ def _enumerate_measurement_records(
                         "dt_ns": dt,
                         "channel_assembly": {
                             "assembled_by": (
-                                "qec_twin.forward.joint_lindbladian.assemble_substep_channel"
+                                "error_coupling_simulator.carrier.joint_lindbladian."
+                                "assemble_substep_channel"
                             ),
                             "assembly_semantics": "single_joint_generator_expm",
                             "contains_ideal_control_hamiltonian": bool(

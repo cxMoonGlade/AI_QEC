@@ -13,6 +13,13 @@
 > `qutrit_dm.py`, `xzzx_parser.py`) or `external/`. Build agents (K/H/V per `p4a_build_contract.md`)
 > implement it in the kernel + host + DM oracle, commit-gated.
 >
+> **Precision boundary (2026-07-13).** The within-cycle WG generator, `exp(L/4)` slice,
+> four-slice composition check, CPTP checks, gate tables, and codestate are constructed and
+> checked in c128. Only `FusedWithinCycleSampler` / `sv_traj_d3_wc` may cast the already-checked
+> complex execution tables and codestate to c64, and only for an optimization run marked
+> `screening_only`. Final/certification is c128/`c128_candidate`; PEPS/MPS remain c128-only.
+> This boundary does not change a scientific tolerance or FET setting.
+>
 > **Provenance (all from committed scripts, printed evidence):**
 > `outputs/teacher_prereg/p4a_within_cycle_derive_parser.py` (per-qubit gate stream + round-invariance),
 > `…_czmap.py` (per-qubit CZ-layer participation), `…_calib.py` (split-convention calibration),

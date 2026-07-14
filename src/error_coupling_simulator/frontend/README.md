@@ -1,10 +1,23 @@
 Standalone user-facing simulator frontend.
 
 This package owns circuit/code construction, Stim-compatible artifact export,
-`.b8` record output, manifest schemas, and decoder plumbing. It is deliberately
-separate from `qec_twin.forward`, which owns carrier/substrate evolution, and
-from `qec_twin.mechanisms`, which owns evaluator-only mechanism definitions and
-controlled teachers.
+`.b8` record output, manifest schemas, and decoder plumbing. Carrier evolution
+lives in the sibling `error_coupling_simulator.carrier` package; specified
+mechanisms and evaluator-only process truth live in
+`error_coupling_simulator.mechanisms` and `.noise_processes`.
+
+Distribution/runtime boundary:
+
+- Frontend runtime ownership is package-local; it never imports the repo-only `qec_twin`
+  compatibility shims or RAG tooling. Those old paths point outward and are not shipped.
+- Google r01/r10 `.stim` + metadata files are explicit external circuit/geometry/schedule inputs,
+  not bundled assets or sources of noise parameters. Ququart transport likewise requires an
+  explicit caller-supplied Kraus `.npz` path; repository scratch is not a default.
+- CUDA-Q Grover is an optional plugin surface. Install/run its `cudaq-grover` extra only in the
+  retained `aiqec` environment and a separate process; canonical `ecs` deliberately excludes it.
+- Release acceptance builds the real sdist, builds and installs its wheel into an isolated target,
+  removes the checkout from import resolution, and runs import/core smokes. Editable-install tests
+  do not establish this boundary.
 
 Current slice:
 
@@ -19,7 +32,7 @@ Current slice:
   `stim.Circuit -> SubstepSchedule` extractors.
   This is public schedule metadata only: it records substep grouping, duration
   brackets, idle/active qubits, measurement/reset boundaries, and provenance for
-  a later `forward.joint_lindbladian` bridge. It does not contain Hamiltonians,
+  a later `carrier.joint_lindbladian` bridge. It does not contain Hamiltonians,
   collapse operators, channels, Kraus/PTM data, source timelines, or evaluator
   mechanism truth. Extractor-produced schedules carry a builder-owned in-process
   compiler seal; public `SubstepSchedule(...)` construction does not satisfy
@@ -70,20 +83,20 @@ Current slice:
   compiler-generated `SubstepSchedule`, derives the narrow
   `Axis1MechanismSelectionPlan` for the preregistered `ZZ x T2` and contextual
   `DR x ZZ` rows, lowers those selections, and calls
-  `forward.joint_lindbladian` diagnostics to emit G2 evidence rows. The
+  `carrier.joint_lindbladian` diagnostics to emit G2 evidence rows. The
   `DR x ZZ` row uses the build-contract one-qubit substep context
   `DR + ZZ + T2 + T1` while reporting the `DR x ZZ` commutator as the nonzero
   witness. Lowering is routed through the minimal
-  `qec_twin.mechanisms.axis1_primitives` registry for the current local
+  `error_coupling_simulator.mechanisms.axis1_primitives` registry for the current local
   two-qubit-window
   `DR/ZZ/T2/T1/T1_UP/T2_B/T1_B/T1_UP_B/RD/RD_B/FSIM_SWAP/FSIM_PHASE`
   primitives, though this G2
   harness uses only the registered DR/ZZ/T1/T2 subset; manifests record the
   registry id and declare that registry metadata contains no operator payload.
-  It is a gate harness, not record emission or a full coupled teacher.
+  It is a gate harness, not record emission or full coupled-process execution.
   `write_axis1_g2_evidence(...)` writes the same object as `g2_jointL.json`
   with a content hash and PASS/FAIL verdict. The reproducible command
-  `python -m qec_twin.simulator.axis1_g2_runner --out-dir ...` builds the
+  `python -m error_coupling_simulator.frontend.axis1_g2_runner --out-dir ...` builds the
   fixed compiler-generated fixture, writes `g2_jointL.json`, and by default
   writes `g2_jointL.freeze.json` only when no freeze exists. If a freeze exists,
   the runner validates it instead of silently refreshing it. Use
@@ -147,7 +160,7 @@ Current slice:
   pair windows and report leftover measured qubits as coverage gaps.
   `DR` remains a G2 diagnostic primitive and is not used as a generic ideal-gate
   stand-in. The bridge then calls
-  `qec_twin.forward.joint_lindbladian.assemble_substep_channel` to produce
+  `error_coupling_simulator.carrier.joint_lindbladian.assemble_substep_channel` to produce
   carrier evidence rows. The artifact reports joint-generator semantics,
   dimension, Kraus count, TP residual, provenance, ideal controls, and lowered
   mechanism manifests; it deliberately does not serialize Kraus stacks, Choi
@@ -205,7 +218,7 @@ Current slice:
   `.b8`, decoder artifacts, source timelines, or channel payload arrays.
   `freeze_axis1_measurement_record_evidence(...)` writes a drift guard for this
   JSON record evidence, and
-  `python -m qec_twin.simulator.axis1_codespec_runner --out-dir ...` builds the
+  `python -m error_coupling_simulator.frontend.axis1_codespec_runner --out-dir ...` builds the
   fixed mixed-basis `CodeSpec -> SubstepSchedule -> Axis-1 record evidence`
   fixture with `source_kind="code_spec_compiler"` and a matching freeze
   manifest. One-qubit drive substeps with multiple idle spectators are lowered
@@ -414,8 +427,16 @@ Current slice:
   `NoiseBuilder` supports insertion after one gate occurrence, after a gate
   type, after all gates, before measurement types, and during scheduled idles at
   `TICK` boundaries.
-- `.stim`, `.dem`, `.b8`, sample-summary, theory-prediction, decoder-result,
-  and manifest artifacts.
+- The default artifact bundle contains `.stim`, `.dem`, actual
+  detector/observable `.b8`, sample-summary, theory-prediction, and a manifest.
+  Only the actual detector/observable `.b8` (or its `RecordBatch` view) is the
+  product record; the other files are circuit, reduction, summary, or provenance
+  artifacts.
+  `decoder=None` records prediction/decoder artifacts as deliberately omitted;
+  `decoder="pymatching"` additionally writes predicted-observable `.b8` and a
+  decoder-result artifact. The default `.dem` preserves non-graphlike hyperedges;
+  graphlike decomposition is requested only by the explicit PyMatching path and
+  is declared in the manifest.
 - Axis-2 `SourceTimeline` sidecars can be attached to `Simulator.run(...)` as
   evaluator-only truth. The run writes exact replayable `source_timeline.npz`
   plus `source_timeline_binding.json`; the manifest declares whether the source
@@ -432,7 +453,10 @@ Current slice:
   `representability="reduced_pauli_projection_not_analog_truth"`; this is useful
   for record-path plumbing and reduced comparators, not a claim of coherent
   joint-Lindbladian/leakage fidelity.
-- Frozen PyMatching decode through `qec_twin.hardware.m4_decode`.
+- Opt-in frozen evaluator-side decode through package-local `frontend.decoder`,
+  selected with `decoder="pymatching"` and backed by the optional external
+  PyMatching 2.4.0 wheel (`[hw]` extra); no decoder is bundled or required for
+  record emission.
 - CUDA-Q noiseless Grover adapter for non-Clifford algorithm circuits.
 - Exact qutrit/ququart adapters for small multi-level leakage smoke runs:
   `simulate_qutrit_wg_leakage(...)` (`|2>` single-site WG leakage) and
@@ -468,13 +492,14 @@ Current slice:
   is a safety/oracle integration seam for continuous `H + c_ops` MCWF, not the
   production 12-qutrit gate-level Grover carrier.
 - d3 XZZX experiment presets (`experiments.py`): the product facade over the
-  shipped Google `d3_at_q6_7` patch and the within-cycle leakage carriers.
+  external Google `d3_at_q6_7` circuit inputs and the within-cycle leakage carriers.
   `load_xzzx_d3(...)` parses the r01 geometry (`verify=True`) and, by default,
   attaches the r10 interior within-cycle streams (the explicit
   r01-geometry + r10-streams provenance split). The dataset root resolves as
-  `dataset_root` argument > `QEC_TWIN_D3_DATA` env var > the parser default; a
+  `dataset_root` argument > `QEC_TWIN_D3_DATA` env var > the external user-data default; a
   missing root or file raises `FileNotFoundError` naming the path — never a
-  silent fallback to the default root. `ExperimentPreset` is a frozen,
+  silent fallback to the default root. `QEC_TWIN_D3_DATA` is a retained configuration spelling,
+  not a package dependency or import. `ExperimentPreset` is a frozen,
   registered configuration (a *preset*) with NO silent physics defaults; the
   two theta conventions are DISTINCT registered presets:
   `PRESET_LEAK_THETA_0P30` (raw angle, `theta_rad=0.30`) and
@@ -482,7 +507,7 @@ Current slice:
   `calibrate_theta_for_wg_l1`). `run_spec_from_preset(...)` builds the engine
   `RunSpec` with explicit `n_shots`/`n_rounds`/`seed`, and
   `leak_slice_table(...)` returns the per-CZ `exp(L/4)` Kraus table through
-  `SvSampler.build_within_cycle_leak` (its embedded CPTP `< 1e-12` and
+  package-local `WithinCycleScheduleHost.build_within_cycle_leak` (its embedded CPTP `< 1e-12` and
   composition `< 1e-12` preconditions stay asserted inside the facade path).
 
 Representability boundary:
@@ -504,7 +529,7 @@ Representability boundary:
 - The current XZZX constructor is a DEM-compatible compiler/schedule smoke: it
   exercises mixed-basis checks, repeated syndrome deltas, final data closure
   detectors, and one deterministic non-stabilizer-span observable. It is not a
-  certified distance-3 memory, hardware schedule, or analog coupling teacher.
+  certified distance-3 memory, hardware schedule, or analog coupling process.
 - The current compiler schedule requires one compatible final measurement basis
   per data qubit for closure/readout. More general stabilizer-code closure
   strategies are future compiler work.
@@ -526,7 +551,7 @@ Representability boundary:
   schedule metadata, drive gates with idle spectators select contextual DR rows
   only when that static metadata is present, and primitive Hamiltonian/collapse
   payloads are introduced only after selection by
-  `qec_twin.mechanisms.axis1_primitives`. It refuses oracle schedules, requires
+  `error_coupling_simulator.mechanisms.axis1_primitives`. It refuses oracle schedules, requires
   a valid compiler-owned schedule seal plus compiler-generated substeps, and
   never consumes `SourceTimeline` or source-projection sidecars.
 - `g2_jointL.json` is an evidence artifact, not a simulator run artifact. It
@@ -538,7 +563,7 @@ Representability boundary:
 - `representability="axis1_joint_channel_evidence_no_record_emission"` means the
   Axis-1 bridge assembled joint-channel carriers from schedule-derived
   selections. It is not analog record emission, not a decoder artifact, and not
-  a learner-visible channel payload dump. Generic frontend `CTRL_*` controls and
+  a public channel payload dump. Generic frontend `CTRL_*` controls and
   selected local primitive mechanisms enter the same joint generator before
   exponentiation. Its freeze file guards only this evidence artifact identity.
 - `representability="axis1_scalable_carrier_program_metadata_no_channel_payload"`
@@ -668,7 +693,7 @@ Representability boundary:
   record distribution. It is still not a `.dem`, not decoder integration, and
   not a Stim-Pauli model.
 - `representability="axis1_jointL_source_coupled_record_samples_evaluator_truth"`
-  is the `mechanisms.coupled_teachers.CoupledCycleTeacher` emit class: R-round
+  is the `noise_processes.coupled_cycle.CoupledCycleNoiseProcess` emit class: R-round
   `{det,obs}` records sampled from the exact Axis-1 record distribution under a
   shared memory-ful source (`OneOverFDriftSource`/`RTNSource`) fanned out per QEC
   cycle into per-round `Axis1PrimitiveParams` via the injected
@@ -699,8 +724,8 @@ Representability boundary:
   `QuquartDM` carrier on `{|0>,|1>,|2>,|3>}` using the QuTiP-derived two-site
   CZ transport Kraus. It is resource-capped small-register evidence, not a full
   9-data-register production path.
-- Scaling leakage beyond exact density matrices routes to the existing MCWF/MPS
-  carriers in `qec_twin.forward.scalable`. MCWF is a sampling carrier, not the
+- Scaling leakage beyond exact density matrices routes to the package-local MCWF/MPS
+  carrier surfaces. MCWF is a sampling carrier, not the
   non-Markovian claim: Axis-2 non-Markovianity still requires an explicit shared
   source history `z_t` that conditions many mechanism parameters across cycles.
 - `representability="dense_qutrit_statevector_mcwf_leakage"` is a trajectory
@@ -728,7 +753,7 @@ code spec, not a hard-coded simulator core.
 Noiseless quickstart:
 
 ```python
-from qec_twin.simulator import (
+from error_coupling_simulator.frontend import (
     XZZXCodeSpec,
     compile_code_spec,
     simulate_noiseless,
@@ -750,8 +775,10 @@ print(detections.shape, observables.shape)
 ```
 
 This writes the same standard artifact set as noisy runs, with
-`manifest["noise"] is None`. The noisy/ideal Stim artifacts must be identical in
-this mode; `run_noiseless(...)` rejects pre-noised `StimCircuitSource` or
+`manifest["noise"] is None`. The default is record-only (`decoder=None`) and
+does not require PyMatching; pass `decoder="pymatching"` explicitly to add
+prediction and decoder-summary artifacts. The noisy/ideal Stim artifacts must
+be identical in this mode; `run_noiseless(...)` rejects pre-noised `StimCircuitSource` or
 `CompiledCircuit` inputs whose ideal/noisy circuit pair already differs. Use
 `Simulator(source).run(noise=None, ...)` when the source itself intentionally
 carries a pre-noised circuit pair. Future coupled-error backends attach below
@@ -760,7 +787,7 @@ the same product surface.
 Hand-built circuit + targeted noise quickstart:
 
 ```python
-from qec_twin.simulator import CircuitBuilder, Noise, Simulator
+from error_coupling_simulator.frontend import CircuitBuilder, Noise, Simulator
 
 builder = CircuitBuilder(num_qubits=3)
 builder.h(0)
@@ -794,9 +821,10 @@ print(result.manifest["noise"]["matched_counts"])
 print(result.paths.circuit_noisy_pauli)
 ```
 
-This path writes `.stim`, `.dem`, `.b8`, summaries, decoder output, and a
-manifest. `qec_twin.simulator.noise` is intentionally limited to
-Stim-representable Pauli noise.
+This path writes `.stim`, `.dem`, actual `.b8` records, summaries, and a
+manifest. Decoder output is opt-in via `decoder="pymatching"`; the default run
+does not import or call PyMatching. `error_coupling_simulator.frontend.noise` is
+intentionally limited to Stim-representable Pauli noise.
 Gate and measurement `target_filter` arguments are exact instruction-target
 tuple filters; they never override where the inserted noise lands. To address
 one pair/qubit inside a bundled instruction, split that source instruction
@@ -809,28 +837,56 @@ this Pauli insertion layer.
 d3 XZZX experiment-preset quickstart:
 
 ```python
+from pathlib import Path
+
 from error_coupling_simulator.frontend.experiments import (
     PRESET_LEAK_WG_L1_5E3,
     leak_slice_table,
     load_xzzx_d3,
     run_spec_from_preset,
 )
+from error_coupling_simulator.carrier import FusedWithinCycleSampler
 
-# r01 geometry + r10 interior streams; QEC_TWIN_D3_DATA overrides the dataset root.
-sched = load_xzzx_d3()
-spec = run_spec_from_preset(PRESET_LEAK_WG_L1_5E3, n_shots=1024, n_rounds=2, seed=0)
-leak = leak_slice_table(PRESET_LEAK_WG_L1_5E3, device="cuda")  # (n_kraus, 3, 3), CPTP-asserted
+# External input: r01 geometry + r10 interior streams. These files are not in the wheel.
+google_root = Path("/path/to/google_qec_data")
+sched = load_xzzx_d3(dataset_root=google_root)
+screening_spec = run_spec_from_preset(
+    PRESET_LEAK_WG_L1_5E3,
+    n_shots=1024,
+    n_rounds=2,
+    seed=0,
+    run_purpose="optimization",  # c64; fused within-cycle SV-MC only; screening_only
+    dataset_root=google_root,
+)
+final_spec = run_spec_from_preset(
+    PRESET_LEAK_WG_L1_5E3,
+    n_shots=1024,
+    n_rounds=2,
+    seed=0,
+    run_purpose="final",         # c128; c128_candidate, not an automatic pass
+    dataset_root=google_root,
+)
+leak_c128 = leak_slice_table(
+    PRESET_LEAK_WG_L1_5E3, device="cuda")  # c128 construction + CPTP check
+
+sampler = FusedWithinCycleSampler("cuda")
+screening_batch = sampler.sample(screening_spec, schedule=sched)  # executes c64
+# After freezing the chosen point, replay separately; do not promote screening_batch.
+final_batch = sampler.sample(final_spec, schedule=sched)            # executes c128
 ```
 
-The resulting `spec`/`sched` pair drives the within-cycle carriers directly
-(e.g. `MpsLeakageForward(device="cuda").sample(spec, sched=sched)`); presets are
-frozen registered configurations — new knob combinations are new named presets,
-never edits of an existing one.
+Only `FusedWithinCycleSampler` / `sv_traj_d3_wc` may execute `screening_spec` in c64.
+PEPS and MPS remain c128-only and reject c64 run metadata. The physical WG channel, codestate,
+composition checks, and CPTP checks remain c128; the fused sampler casts only the checked complex
+execution tables for optimization. A c64 artifact never becomes evidence: replay the frozen run
+as a separate c128 final/certification candidate and then apply the owning scientific gates.
+Presets are frozen registered configurations — new knob combinations are new named presets,
+never edits of an existing one. This precision policy does not change tolerance or FET settings.
 
 CUDA-Q Grover quickstart:
 
 ```python
-from qec_twin.simulator import simulate_cudaq_grover_noiseless
+from error_coupling_simulator.frontend import simulate_cudaq_grover_noiseless
 
 result = simulate_cudaq_grover_noiseless(
     num_qubits=12,
@@ -846,14 +902,16 @@ print(result.marked_counts, "/", result.shots)
 print(result.top_outcomes(3))
 ```
 
-This uses CUDA-Q's current target (on this workstation: NVIDIA/cuStateVec when
-available). It writes `statevector.npy`, `probabilities.npy`,
+Run this adapter only in the dedicated `aiqec` CUDA-Q plugin environment and a
+separate process; do not install or execute it beside the fused extension in
+canonical `ecs`. It uses CUDA-Q's current target (on this workstation:
+NVIDIA/cuStateVec when available). It writes `statevector.npy`, `probabilities.npy`,
 `measurement_counts.json`, `theory_prediction.json`, and `manifest.json`.
 
 Multi-level leakage quickstarts:
 
 ```python
-from qec_twin.simulator import (
+from error_coupling_simulator.frontend import (
     simulate_qutrit_wg_leakage,
     simulate_ququart_transport_smoke,
 )
@@ -872,20 +930,23 @@ q3 = simulate_ququart_transport_smoke(
     num_ququarts=2,
     initial_levels="12",
     shots=1024,
+    kraus_path="/path/to/qutip_cz_leakage_kraus.npz",
     out_dir="outputs/simulator/ququart_transport2",
 )
 print(q3.outcome_probability("30"))
 print(q3.top_outcomes(4))
 ```
 
-Both paths use project-owned GPU carriers under `forward/exact`; both write
+Both paths use project-owned GPU carriers under `carrier/exact`; both write
 multi-level probability/count artifacts and a manifest, not `.stim`, `.dem`,
-`.b8`, or decoder results.
+`.b8`, or decoder results. The ququart Kraus file is an explicit independently
+generated channel input: it is not bundled, and there is no fallback to
+repository `outputs/`.
 
 MCWF backend + Grover leakage workload quickstart:
 
 ```python
-from qec_twin.simulator import simulate_mcwf_qutrit_grover_leakage
+from error_coupling_simulator.frontend import simulate_mcwf_qutrit_grover_leakage
 
 result = simulate_mcwf_qutrit_grover_leakage(
     num_qubits=12,
@@ -917,8 +978,8 @@ The reusable backend can also be used directly by future circuit/schedule
 adapters, or through the generic compiled-program surface:
 
 ```python
-from qec_twin.simulator import CompiledMcwfProgram
-from qec_twin.simulator.mcwf_program import h, kraus_all_sites
+from error_coupling_simulator.frontend import CompiledMcwfProgram
+from error_coupling_simulator.frontend.mcwf_program import h, kraus_all_sites
 
 program = CompiledMcwfProgram(
     num_qutrits=3,
@@ -937,8 +998,8 @@ The lower-level backend remains available for oracle-style tests:
 ```python
 import torch
 
-from qec_twin.simulator import DenseQutritMcwfBackend
-from qec_twin.simulator.mcwf_backend import CDTYPE
+from error_coupling_simulator.frontend import DenseQutritMcwfBackend
+from error_coupling_simulator.frontend.mcwf_backend import CDTYPE
 
 backend = DenseQutritMcwfBackend(num_qutrits=2, seed=7)
 psi = backend.basis_state(batch_size=32, initial_levels="11")
@@ -954,7 +1015,7 @@ print(measurement.qutrit_counts)
 qutip-cuquantum local-operator safety probe:
 
 ```python
-from qec_twin.simulator import qutip_cuquantum_symbolic_collapse_summary
+from error_coupling_simulator.frontend import qutip_cuquantum_symbolic_collapse_summary
 
 summary = qutip_cuquantum_symbolic_collapse_summary(num_qutrits=12, site=0)
 assert summary.collapse_data_type == "CuOperator"
@@ -964,7 +1025,7 @@ assert summary.cdc_data_type == "CuOperator"
 The corresponding `mcsolve` smoke is deliberately capped to small registers:
 
 ```python
-from qec_twin.simulator import probe_qutip_cuquantum_local_mcwf
+from error_coupling_simulator.frontend import probe_qutip_cuquantum_local_mcwf
 
 probe = probe_qutip_cuquantum_local_mcwf(num_qutrits=2, ntraj=1)
 print(probe.method, probe.end_condition)

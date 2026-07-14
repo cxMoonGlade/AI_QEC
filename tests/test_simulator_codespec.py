@@ -27,8 +27,6 @@ def _num_detectors(spec):
 
 
 def test_xzzx_codespec_compiles_to_normal_circuit_ir_and_runs(tmp_path):
-    pytest.importorskip("pymatching", reason="codespec simulator smoke uses PyMatching")
-
     spec = XZZXCodeSpec(layout_size=3, rounds=2).to_code_spec()
     circuit = compile_code_spec(spec)
     stim_circuit = circuit_to_stim(circuit)
@@ -69,8 +67,6 @@ def test_xzzx_codespec_compiles_to_normal_circuit_ir_and_runs(tmp_path):
 
 
 def test_codespec_can_compile_directly_to_compiled_circuit_source(tmp_path):
-    pytest.importorskip("pymatching", reason="codespec simulator smoke uses PyMatching")
-
     spec = XZZXCodeSpec(layout_size=3, rounds=3).to_code_spec()
     compiled = compile_code_spec_to_compiled(spec, noise=None)
 
@@ -164,8 +160,6 @@ def test_codespec_metadata_rejects_evaluator_truth_keys():
 
 
 def test_xzzx_ideal_detectors_are_deterministic_under_zero_noise(tmp_path):
-    pytest.importorskip("pymatching", reason="codespec simulator smoke uses PyMatching")
-
     spec = XZZXCodeSpec(layout_size=3, rounds=2).to_code_spec()
     result = Simulator(compile_code_spec(spec)).run(
         shots=96,

@@ -1,3 +1,11 @@
+"""Channel primitives plus the retained M0--M34 compatibility adapter.
+
+The Kraus, unitary, readout, and leakage builders in this module are reusable
+simulator mathematics.  ``MechanismSpec``, ``mechanism_channel``, and their
+F/M-labelled audit payload are retained for the old probe/profile stack; the
+current Axis-1 construction path does not use that M-ID dispatch layer.
+"""
+
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -26,7 +34,7 @@ ROTATION_AXIS_ALIASES = {
 
 @dataclass(frozen=True)
 class MechanismSpec:
-    """Oracle physical mechanism attached to a local teacher location."""
+    """Specified physical mechanism attached to a local circuit location."""
 
     mechanism_id: str
     name: str
@@ -34,13 +42,15 @@ class MechanismSpec:
     parameters: Mapping[str, object] = field(default_factory=dict)
     instruction: str | None = None
     qubits: tuple[int, ...] = ()
+    # Legacy probe-record round-trip metadata.  ``mechanism_channel`` ignores
+    # both fields; keep their names/order/defaults for serialized compatibility.
     circuit_id: int = 0
     probe_indices: tuple[int, ...] = ()
 
     def __post_init__(self) -> None:
         """Enforce the construction contract for a mechanism spec.
 
-        A spec is a physical mechanism attached to a teacher location, so it must carry a
+        A spec is a physical mechanism attached to a circuit location, so it must carry a
         non-empty mechanism id, act on at least one qubit, and hold its parameters in a
         Mapping. In addition, the single-qubit axis parameters this module reads off the
         spec (``operation_axis``/``error_axis``/``channel_axis``/``axis``) must, when
@@ -62,6 +72,8 @@ class MechanismSpec:
                 canonical_single_qubit_axis(axis_value)
 
     def audit_dict(self) -> dict[str, object]:
+        """Serialize the frozen legacy probe/audit schema unchanged."""
+
         public_label = mechanism_public_label(self.mechanism_id)
         label_namespace = mechanism_label_namespace(self.mechanism_id)
         record = {

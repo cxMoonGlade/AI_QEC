@@ -325,7 +325,10 @@ def _certify_level_path(
                 "comparison_outcome_is_metric": False,
                 "epistemic_class": "c",
             }
-        oracle_schema = "qec_twin.forward.joint_lindbladian.assemble_substep_channel:level_populations"
+        oracle_schema = (
+            "error_coupling_simulator.carrier.joint_lindbladian."
+            "assemble_substep_channel:level_populations"
+        )
     else:
         oracle_dist = {
             tuple(int(x) for x in k): float(v)
@@ -364,7 +367,10 @@ def _certify_level_path(
         "passed": passed_strict,
         "passed_gross": passed_gross,
         "comparison_object": "level_record_populations",
-        "oracle": "qec_twin.forward.joint_lindbladian.assemble_substep_channel",
+        "oracle": (
+            "error_coupling_simulator.carrier.joint_lindbladian."
+            "assemble_substep_channel"
+        ),
         "oracle_role": "level_basis_diagonal_populations_of_jointL_channel_on_initial_level_state",
         "oracle_independent_of_carrier_grouping": True,
         "readout_model_independent": True,
@@ -504,7 +510,10 @@ def _certify_record_path(
         "passed": passed_strict,
         "passed_gross": passed_gross,
         "comparison_object": "record_probabilities",
-        "oracle": "qec_twin.simulator.axis1_record_evidence.axis1_measurement_record_evidence_manifest",
+        "oracle": (
+            "error_coupling_simulator.frontend.axis1_record_evidence."
+            "axis1_measurement_record_evidence_manifest"
+        ),
         "oracle_independent_of_carrier_grouping": True,
         "metric": "total_variation_distance",
         "metric_convention": "TV = 1/2 * sum_i |p_i - q_i| (Born vs empirical record frequencies)",
@@ -605,7 +614,10 @@ def _certify_channel_path(
         "passed": passed_strict,
         "passed_gross": passed_gross,
         "comparison_object": "within_substep_window_channel",
-        "oracle": "qec_twin.forward.joint_lindbladian.assemble_substep_channel",
+        "oracle": (
+            "error_coupling_simulator.carrier.joint_lindbladian."
+            "assemble_substep_channel"
+        ),
         "oracle_independent_of_carrier_grouping": True,
         "metric": "process_infidelity_one_minus_Fe",
         "metric_convention": "1 - F_pro; F_pro = Uhlmann fidelity of trace-normalised Choi states J/D (composed_vs_joint_infidelity convention)",

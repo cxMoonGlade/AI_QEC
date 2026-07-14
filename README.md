@@ -5,8 +5,11 @@ non-Pauli / memory-ful noise. It takes a QEC circuit (a rotated surface code; **
 first target) plus a **specified noise process**, and produces the **multi-time syndrome
 record** (per-round detector bits + logical-observable flips, emitted as `.b8` shot data or an
 equivalent joint law). A `.dem` is an optional decoder-facing reduction, not a record. The active
-package is directly importable, but its independent-release boundary is not complete while legacy
-`qec_twin` imports and entry points remain.
+package is directly importable, and its wheel/source archive contains only
+`error_coupling_simulator` with no legacy entry point. The active package has no executable
+import back-edge to `qec_twin`; repository-local outward compatibility shims are excluded from
+the distribution. External circuits, optional decoder/Kraus inputs, and the deliberately isolated
+CUDA-Q adapter remain explicit inputs/plugins rather than hidden repository dependencies.
 
 The deliverable is the simulator; its product is the record (and the LER read off it under a
 frozen decoder). Metrics are **instruments** on the record, never the object.
@@ -56,34 +59,61 @@ exact-DM referee).
   assembler + CPTP channel object + fused CUDA kernels also live under `carrier/`.
 - **Frontend** (`error_coupling_simulator.frontend`): `CodeSpec → CircuitIR`, imported Stim
   circuits, and hand-built circuits all feed one `Simulator.run(...)` surface emitting
-  `.stim` / `.b8` / optional `.dem` / manifest artifacts; every artifact declares a `representability`
-  class and fails closed.
+  `.stim` / actual `.b8` / `.dem` / manifest artifacts. Record emission is the decoder-free
+  default; external PyMatching prediction artifacts are opt-in. Every artifact declares a
+  `representability` class and fails closed.
 - **Certification** (`error_coupling_simulator.certify`): scores a noise process's records
   against INDEPENDENT anchors (anti-circular) → an epistemic ledger with non-optional
   negative controls.
 
 ## Install
 
-Python `>=3.10`. From the repository root, using the GPU `aiqec` environment:
+Python `>=3.11`. A released wheel installs the standalone runtime and its declared dependencies;
+select the pinned CUDA runtime/JIT extras on the supported Linux GPU path:
 
 ```bash
-conda run -n aiqec python -m pip install -e .
+python -m pip install "error-coupling-simulator[cuda-extension,gpu-cu130]"
 ```
+
+For development from the repository root, create the canonical GPU `ecs` environment:
+
+```bash
+conda env create -f environment-ecs.yml
+conda run -n ecs python scripts/sync_core_environment.py
+conda run -n ecs python scripts/configure_core_environment.py
+conda run -n ecs python scripts/verify_core_environment.py
+```
+
+The Conda manifest fixes Python/pip/uv, `uv.lock` drives the exact transitive installation, and
+the core compatibility ledger fixes Torch/QuTiP/cuQuantum plus the CUDA-13.0 JIT toolchain.
+CUDA-Q and the optional PyMatching `[hw]` extra are deliberately excluded from `ecs`; default
+record emission is decoder-free. The independent noiseless-Grover adapter stays in the retained
+`aiqec` environment and runs in a separate process. Do not restore from the ignored historical
+`requirements.lock.txt`.
+Use `scripts/sync_core_environment.py`, not bare `uv sync`; the wrapper explicitly targets the
+Conda prefix instead of the repo-local `.venv`.
 
 Do not set `PYTHONPATH="$PWD/src"`; use the editable install (`pyproject` `pythonpath=["src"]`
 already puts `error_coupling_simulator` on the path).
 
+The Google r01/r10 files used by the registered d3 facade are caller-provided circuit/schedule
+inputs, not bundled noise data. Likewise, the optional ququart transport adapter requires an
+explicit caller-supplied Kraus NPZ; it never discovers a repository `outputs/` artifact.
+
 ## Use
 
 ```bash
-conda run -n aiqec python -m pytest -q tests/                        # run the suite (ALWAYS scope to tests/)
+conda run -n ecs python -m pytest -q tests/                          # repository engineering regression
+conda run -n aiqec python -m pytest -q tests/test_simulator_cudaq_grover.py  # isolated CUDA-Q
 python tests/harness/gate.py     tests/_support/<batch>_targets.json # L0+L1 coverage gate
 python tests/harness/mutation.py tests/_support/<batch>_targets.json # L2 mutation gate
 ```
 
-The simulator is driven through the library (`error_coupling_simulator.frontend.Simulator`
-over the `carrier/` backends) and its `tests/`, which double as the executable spec — see
-`tests/CODEBOOK.md` for the coverage harness.
+The aggregate `pytest tests/` result is not a scientific simulator-certification claim: the
+repository suite also contains retained decoder/data and migration seams. Simulator acceptance is
+subsystem-owned and registry-driven; see `tests/CODEBOOK.md`. The current Stim-representable
+product surface is `error_coupling_simulator.frontend.Simulator`. Axis-1 and PEPS use bounded
+runners that expose the same `RecordBatch`; a universal backend execution facade remains open.
 
 ## Docs
 

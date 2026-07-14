@@ -2,7 +2,8 @@ from __future__ import annotations
 
 """The DM-oracle anchor — the exact density-matrix ground-truth route.
 
-A THIN adapter over the validated d3 qutrit DM wheel (``qec_twin.forward.exact.qutrit_dm``): it
+A THIN adapter over the validated d3 qutrit DM wheel
+(``error_coupling_simulator.carrier.exact.qutrit_dm``): it
 DELEGATES to ``record_oracle`` / ``project_stabilizer`` / ``logical_distribution`` and reimplements no
 physics (the do-not-lose-performance guardrail). It is INDEPENDENT of the MCWF / MPS carrier — a dense
 density-matrix enumeration is a DIFFERENT object (the Gate-4 cross-construction), so DM↔carrier is a
@@ -22,17 +23,18 @@ BEFORE ``answer``, so the infeasible density matrix is never allocated):
     DM leg needs an EXPLICIT caller choice). The true lean peak (~3.3 copies ≈ 20 GB) DOES fit
     the card physically — a caller who accepts the headroom may pass
     ``DMOracleAnchor(safety=0.78)`` (or larger) to enable the cell deliberately.
-  * ``FULL_JOINT`` / ``SYNDROME_DIST`` — ``record_oracle``'s depth-(n_stab·R) enumeration that STORES
-    the full joint: feasible at a small register or R=1 small; INFEASIBLE (``feasible=False``) at R=1
-    full-9q (~50 GB) and R≥2 full-9q (~100 GB) — the core then routes the scale to the carrier-MCWF.
+  * ``FULL_JOINT`` / ``SYNDROME_DIST`` — available only at R=1, where ``record_oracle`` stores the
+    enumerated full joint and the capability gate applies its depth-n_stab memory bound. At R≥2 the
+    oracle intentionally returns moments only, so these two statistics are semantically infeasible
+    regardless of register size or memory budget; capability fails closed before allocation.
   * ``RR_CORR`` / ``SPATIAL_CORR`` (the R≥2 MOMENTS) — ``record_oracle``'s MOMENTS path: the EXACT
     detector first/second moments accumulated over the PRUNED depth-(n_stab·R) branch tree (it stores
-    only fixed-size sum1/sum2 + the depth-first live-clone path, NOT the full joint), so it is FEASIBLE
-    at full-9q R≥2 — the WS1 certification route — precisely because realistic noise (det-rate ~0.12)
-    prunes the overwhelming majority of branches. The un-pruned depth bound is DECLARED in the
-    capability's ``mem_bytes_estimate`` and ``dropped_mass`` is reported (the prune simplification is
-    bounded, not silent; WS1 prereg §1.3/§4/§7.2). The (R-1,n_stab) ``rr_corr`` / (R,n_stab,n_stab)
-    ``spatial_corr`` are reduced through the SHARED ``core.reduce_rr_corr`` / ``reduce_spatial_corr`` so
+    only fixed-size sum1/sum2 + the depth-first live-clone path, NOT the full joint). The conservative
+    un-pruned depth bound is DECLARED in the capability's ``mem_bytes_estimate``; infeasible full-register
+    cells stay closed while small valid sub-registers may answer. ``dropped_mass`` is reported (the prune
+    simplification is bounded, not silent; WS1 prereg §1.3/§4/§7.2). The (R-1,n_stab) ``rr_corr`` /
+    (R,n_stab,n_stab) ``spatial_corr`` are reduced through the SHARED ``core.reduce_rr_corr`` /
+    ``reduce_spatial_corr`` so
     the anchor's shape matches ``core.emitted_statistic`` EXACTLY (apples-to-apples). RR_CORR/SPATIAL
     are IDENTICALLY 0 for an independent-bit-flip foil — the statistic keeps its teeth.
 
@@ -56,10 +58,16 @@ _ANSWERS = frozenset({Statistic.DETECTOR_MARG, Statistic.FULL_JOINT, Statistic.S
 #: (breadth + time) but does NOT shrink the depth, so it does not reduce the peak. ``record_oracle``'s
 #: own §7.2 bound confirms ~100 GB at full-9q R>=2 -> INFEASIBLE there; the scale routes to the
 #: carrier-MCWF and the DM moments GT lives on a SMALL VALID sub-code (the DM-for-anchor / MCWF-for-scale
-#: split). So the moments gate on ``depth * copy`` exactly like FULL_JOINT (below) — the OOM-as-data
+#: split). The moments gate uses the same conservative ``depth * copy`` arithmetic as the R=1
+#: full-joint branch — the OOM-as-data
 #: contract, conservative by design (a capability descriptor must never claim feasible for a cell that
 #: might OOM). ``dropped_mass`` is still reported per run so the prune simplification is bounded.
 _MOMENTS = frozenset({Statistic.RR_CORR, Statistic.SPATIAL_CORR})
+_JOINT_DISTRIBUTIONS = frozenset({Statistic.FULL_JOINT, Statistic.SYNDROME_DIST})
+_R2_JOINT_UNAVAILABLE = (
+    "R>=2 QutritDM.record_oracle returns moments only; it cannot provide the full joint "
+    "required by FULL_JOINT or SYNDROME_DIST"
+)
 #: DETECTOR_MARG live-copy multiplier (CORRECTED 2026-07-06). The answer loop holds rho1 +
 #: the working clone + the apply-path output, plus chunk/tile temporaries from the memory-lean
 #: ``apply_channel`` (residual-② measured the PRE-fix path at k=5.05–5.44; the lean path's
@@ -68,7 +76,7 @@ _MOMENTS = frozenset({Statistic.RR_CORR, Statistic.SPATIAL_CORR})
 #: a capability descriptor must never claim feasible for a cell that might OOM (the 2*copy
 #: value this replaces did exactly that: it declared full-9q feasible at ~12 GB while the true
 #: pre-fix peak projected to 31 GB). DECLARED LIMITATION: this bound covers the SINGLE-SITE
-#: apply path (all lowering the shipped d3 schedules use). A ``DMReplayable`` teacher whose
+#: apply path (all lowering the supported external d3 schedules use). A ``DMReplayable`` teacher whose
 #: ``round_pre`` applies TWO-site channels goes through the still-unchunked
 #: ``apply_channel_2site`` (~4.5 copies transient) and is NOT bounded by this descriptor —
 #: budget such teachers separately (follow-up: chunk the 2site path).
@@ -104,6 +112,15 @@ class DMOracleAnchor:
     def capability(self, statistic: Statistic, regime: Regime) -> Capability:
         if statistic not in _ANSWERS:
             return Capability(statistic, Exactness.EXACT, False, "DM anchor does not answer this", "a")
+        if statistic in _JOINT_DISTRIBUTIONS and regime.R >= 2:
+            return Capability(
+                statistic,
+                Exactness.EXACT,
+                False,
+                _R2_JOINT_UNAVAILABLE,
+                "a",
+                None,
+            )
         copy = self._dm_copy_bytes(regime.n_active)
         budget = int(self.safety * self.card_bytes) if self.card_bytes else 0
 
@@ -124,7 +141,7 @@ class DMOracleAnchor:
             # first/second moments accumulated over the pruned branch tree (it does NOT store the full
             # joint — only fixed-size sum1/sum2). EXACT, class (a). The PEAK live memory is the
             # depth-(n_stab*R) clone stack (one clone per recursion level on the active path; pruning
-            # does NOT shrink the depth), so this gates on depth*copy EXACTLY like FULL_JOINT: full-9q
+            # does NOT shrink the depth), so this uses the conservative depth*copy bound: full-9q
             # R>=2 (~100 GB) is INFEASIBLE -> the scale routes to the carrier-MCWF and the DM moments GT
             # lives on a SMALL VALID sub-code (the DM-for-anchor / MCWF-for-scale split, §7.2).
             if regime.R < 2:
@@ -148,7 +165,7 @@ class DMOracleAnchor:
                      f"sub-code)")
             return Capability(statistic, Exactness.EXACT, ok, reason, "a", need)
 
-        # FULL_JOINT / SYNDROME_DIST — the depth-(n_stab*R) enumeration copy stack
+        # FULL_JOINT / SYNDROME_DIST at R=1 — the depth-n_stab enumeration copy stack.
         if regime.n_stab is None:
             return Capability(statistic, Exactness.EXACT, False,
                               "n_stab unknown for this regime — cannot bound the depth-(n_stab*R) "
@@ -168,6 +185,9 @@ class DMOracleAnchor:
     # ----------------------------------------------------------------- #
     def answer(self, teacher, statistic: Statistic, regime: Regime, *, N=None, generator=None,
                corrupt=None) -> AnchorValue:
+        if statistic in _JOINT_DISTRIBUTIONS and regime.R >= 2:
+            raise ValueError(f"DMOracleAnchor contract error: {_R2_JOINT_UNAVAILABLE}")
+
         from ...carrier.exact.qutrit_dm import QutritDM
 
         sched = teacher.sched

@@ -6,8 +6,9 @@ work-list docs/twin_validation/l3_release_package_unit_inventory.md). The module
 frontend/evaluator-side ``{det,obs}`` -> matchable ``stim.DetectorErrorModel`` plumbing:
 the exact Spitz Eq.13 pairwise ``p_ij`` + odd-parity boundary-residual product identity
 reduction, a PyMatching MWPM adaptor, and a deterministic stim fault-injection utility.
-CPU-PURE (stim + pymatching + qec_twin.hardware.pij; imports NEITHER torch NOR quimb)
-=> FULL treatment (L0 100% stmt+branch, L1 property, L2 mutmut).
+CPU-only; the package-local pair estimator and decoder port import neither torch nor quimb.
+The three real-decode assertions require optional PyMatching `[hw]` and skip in canonical `ecs`;
+port/guard coverage stays active there, while the full batch runs in `aiqec`.
 
   UNIT                  L0 branch surface                          L1/KILLER value pin
   ----                  -----------------                          -------------------
@@ -16,10 +17,10 @@ CPU-PURE (stim + pymatching + qec_twin.hardware.pij; imports NEITHER torch NOR q
                         skip vs negative_residual clamp; boundary   scratch Spitz recompute
                         logical True/False ternary; p>_MAX_EDGE_P   + the EXACT odd-parity
                         + p_raw>_MAX_EDGE_P clamps; non-finite mask boundary identity
-  decode_records        ndim/li<0/ndet/li>=n_obs guards; the        output contract + the
+  decode_records        ndim/binary/li<0/ndet/li>=n_obs guards;     output contract + the
                         predicted.ndim==1 reshape arc + the         logical_index column is
                         shape!=n_obs guard via a monkeypatched      load-bearing (2-obs DEM,
-                        pymatching backend seam                     col0 != col1)
+                        package decoder port                        col0 != col1)
   insert_op_after_tick  t out of [0,total]; t==0 vs t>=1; TICK      exact resulting circuit;
                         match vs non-match; seen==t both arcs       injected X_ERROR fires
                                                                     the EXACT detector, off-
@@ -38,12 +39,12 @@ integer-count population cube, so the moments are exact rationals and the Spitz 
 are exact to 1e-12 -- no random seed, no tolerance slack. The planted 4-detector cube
 recovers edge p=0.25 and boundaries p=0.125 EXACTLY (hand-derived + from-scratch pinned).
 
-DEFENSIVE-ASSERT / SEAM (CODEBOOK). PyMatching's ``decode_batch`` always returns a 2-D
+DEFENSIVE-ASSERT / SEAM (CODEBOOK). The decoder port normally returns a 2-D
 ``(N, n_obs)`` array (measured: stim 1.16 / pymatching 2.4), so the ``predicted.ndim==1``
 reshape arc and the ``shape[1]!=n_obs`` guard are unreachable through the real backend.
-They are covered by tripping the guard via a monkeypatched ``pymatching.Matching``
-backend seam -- the sanctioned "extract/trip the seam" route, paired with the legit-path
-property (``test_L1_decode_output_contract`` proves the real 2-D path).
+They are covered by tripping the package decoder port directly -- the sanctioned
+"extract/trip the seam" route, paired with the optional legit-path property
+(``test_L1_decode_output_contract`` proves the real 2-D path when `[hw]` is installed).
 """
 from __future__ import annotations
 
@@ -54,6 +55,7 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from _support.faithfulness import assert_discriminates, assert_pins
+from error_coupling_simulator.frontend import interop as interop_module
 from error_coupling_simulator.frontend.interop import (
     DEFAULT_PAIR_FLOOR_ABS,
     DEFAULT_PAIR_FLOOR_SIGMA,
@@ -180,6 +182,37 @@ def _zero_cube() -> np.ndarray:
     """The null control: all-silent 4-detector cube -> 0 edges AND 0 boundaries (every
     p_raw = 0 <= NUMERICAL_ZERO, not < -floor -> skipped), the empty-loop arcs."""
     return np.zeros((5000, 4), dtype=np.uint8)
+
+
+def test_spitz_estimators_match_hand_calculated_population_moments():
+    """Public estimators recover two exact 25% shared-fault populations.
+
+    Entry 0 is one Bernoulli(1/4) fault copied to both detectors. Entry 1 adds an
+    independent Bernoulli(1/8) boundary fault to the first detector, giving
+    ``(mean_i, mean_j, mean_ij) = (5/16, 1/4, 7/32)``. Direct delta-method
+    propagation gives per-shot variances ``3/16`` and ``43/192`` respectively.
+    """
+
+    from error_coupling_simulator.frontend.pij import (
+        spitz_pij_delta_se,
+        spitz_pij_exact,
+    )
+
+    num_shots = 2560
+    mean_i = np.asarray([1.0 / 4.0, 5.0 / 16.0])
+    mean_j = np.asarray([1.0 / 4.0, 1.0 / 4.0])
+    mean_joint = np.asarray([1.0 / 4.0, 7.0 / 32.0])
+
+    np.testing.assert_array_equal(
+        spitz_pij_exact(mean_i, mean_j, mean_joint),
+        np.asarray([1.0 / 4.0, 1.0 / 4.0]),
+    )
+    np.testing.assert_allclose(
+        spitz_pij_delta_se(mean_i, mean_j, mean_joint, num_shots),
+        np.sqrt(np.asarray([3.0 / 16.0, 43.0 / 192.0]) / num_shots),
+        rtol=0.0,
+        atol=1e-15,
+    )
 
 
 def _two_obs_dem() -> "stim.DetectorErrorModel":
@@ -318,6 +351,8 @@ def test_L0_records_to_dem_input_validation_all_guards():
 def test_L0_decode_records_happy_and_logical_index():
     """Normal 2-D return path (predicted.ndim==1 FALSE arc) + logical_index column select.
     Independent oracle: for _two_obs_dem, D_k fault <-> L_k, so predicted L_k == det[:,k]."""
+    pytest.importorskip("pymatching", reason="decode requires the optional hw extra")
+
     det = np.array([[1, 0], [0, 1], [1, 1], [0, 0]], dtype=np.uint8)
     dem = _two_obs_dem()
     p0 = decode_records(dem, det, logical_index=0)
@@ -335,6 +370,8 @@ def test_L0_decode_records_guards():
     )
     with pytest.raises(ValueError, match=r"must be \(N, D\)"):            # ndim != 2
         decode_records(dem, np.zeros(4, dtype=np.uint8))
+    with pytest.raises(ValueError, match="only 0/1"):                    # non-binary records
+        decode_records(dem, np.full(det.shape, 2, dtype=np.uint8))
     with pytest.raises(ValueError, match="logical_index must be >= 0"):  # li < 0
         decode_records(dem, det, logical_index=-1)
     with pytest.raises(ValueError, match="columns"):                     # num_detectors != cols
@@ -350,39 +387,33 @@ def test_L0_decode_records_guards():
 
 
 def test_L0_decode_records_reshape_arc_via_1d_backend(monkeypatch):
-    """The ``predicted.ndim == 1`` TRUE (reshape) arc -- unreachable through real
-    PyMatching (decode_batch always returns 2-D), so trip it via a backend seam that
-    ravels the prediction to 1-D. The legit 2-D path is proved by the happy test above."""
-    import pymatching
+    """Trip the defensive 1-D reshape arc through the package decoder port."""
 
     det = _planted_cube()
     dem, _ = records_to_dem(
         det, detector_names=("d0", "d1", "d2", "d3"), logical_boundary_detectors=("d2",)
     )
-    orig = pymatching.Matching.decode_batch
 
-    def _ravel_backend(self, shots, *a, **k):
-        return np.asarray(orig(self, shots, *a, **k)).ravel()            # force ndim == 1
+    def _one_dim_port(_dem, shots):
+        return np.zeros(np.asarray(shots).shape[0], dtype=np.uint8)
 
-    monkeypatch.setattr(pymatching.Matching, "decode_batch", _ravel_backend)
+    monkeypatch.setattr(interop_module._decoder, "decode_dem", _one_dim_port)
     out = decode_records(dem, det)                                       # 1-obs DEM -> (N,)
     assert out.shape == (det.shape[0],) and out.dtype == np.uint8
 
 
 def test_L0_decode_records_shape_guard_via_bad_backend(monkeypatch):
-    """The ``predicted.shape[1] != n_obs`` guard (TRUE/raise arc) -- a defensive guard the
-    real backend never trips; trip it with a seam returning the wrong column count."""
-    import pymatching
+    """Trip the wrong-column-count guard through the package decoder port."""
 
     det = _planted_cube()
     dem, _ = records_to_dem(
         det, detector_names=("d0", "d1", "d2", "d3"), logical_boundary_detectors=("d2",)
     )
 
-    def _wide_backend(self, shots, *a, **k):
+    def _wide_port(_dem, shots):
         return np.zeros((np.asarray(shots).shape[0], 2), dtype=np.uint8)  # 2 cols, DEM has 1
 
-    monkeypatch.setattr(pymatching.Matching, "decode_batch", _wide_backend)
+    monkeypatch.setattr(interop_module._decoder, "decode_dem", _wide_port)
     with pytest.raises(ValueError, match="expected"):
         decode_records(dem, det)
 
@@ -546,6 +577,8 @@ def test_KILLER_decode_records_logical_index_selects_column():
     """The 2-observable DEM has col0 != col1, so decoding with the WRONG logical_index
     returns a DIFFERENT array -> shape alone cannot catch a mis-selected column, but this
     does: the 'equals column 0' property holds for li=0 and FAILS for li=1."""
+    pytest.importorskip("pymatching", reason="decode requires the optional hw extra")
+
     det = np.array([[1, 0], [0, 1]], dtype=np.uint8)                     # col0 != col1
     dem = _two_obs_dem()
     expected0 = det[:, 0]
@@ -626,6 +659,8 @@ def test_L1_dem_error_probs_are_matchable_and_roundtrip(cube):
 
 def test_L1_decode_output_contract():
     """decode_records returns (N,) uint8 in {0,1} (the real 2-D PyMatching path)."""
+    pytest.importorskip("pymatching", reason="decode requires the optional hw extra")
+
     det = _planted_cube()
     dem, _ = records_to_dem(
         det, detector_names=("d0", "d1", "d2", "d3"), logical_boundary_detectors=("d2",)

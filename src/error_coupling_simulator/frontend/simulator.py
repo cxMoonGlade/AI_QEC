@@ -3,9 +3,10 @@ from __future__ import annotations
 """User-facing simulator frontend.
 
 This is the first product-surface slice: custom CircuitIR -> Stim-compatible
-artifacts -> `.b8` detector/observable records -> DEM/PyMatching decode summary.
+artifacts -> `.b8` detector/observable records.  PyMatching is an opt-in,
+external reduction of that record, never a prerequisite for emitting it.
 Analog coupling backends will attach below this facade without changing the
-artifact surface.
+record contract.
 """
 
 from dataclasses import dataclass
@@ -13,9 +14,9 @@ from pathlib import Path
 
 import numpy as np
 
-from qec_twin.hardware import b8_io, m4_decode
+from ..carrier.records import RecordBatch
 from ..source.process import SourceTimeline
-from . import stim_io
+from . import b8_io, decoder as m4_decode, stim_io
 from .artifacts import (
     ArtifactPaths,
     artifact_paths,
@@ -51,7 +52,7 @@ class SimulationResult:
     sample_summary_ideal: dict
     sample_summary_noisy: dict
     theory_prediction: dict
-    decoder_results: dict
+    decoder_results: dict | None
     manifest: dict
 
     def load_detection_events(self, *, ideal: bool = False) -> np.ndarray:
@@ -77,12 +78,32 @@ class SimulationResult:
         )
 
     def load_predicted_observable_flips(self) -> np.ndarray:
-        """Read decoder-predicted logical-observable flips."""
+        """Read decoder predictions from a run that explicitly requested decoding.
+
+        A positive-width prediction artifact is absent from record-only runs and
+        raises the manifest's stable ``decoder_not_requested`` contract error.
+        """
 
         return _load_b8_from_manifest(
             self.paths.obs_flips_predicted,
             manifest=self.manifest,
             artifact_key="obs_flips_predicted",
+        )
+
+    def load_record_batch(self, *, ideal: bool = False) -> RecordBatch:
+        """Load this run through the backend-neutral simulator record contract."""
+
+        return RecordBatch(
+            det=self.load_detection_events(ideal=ideal),
+            obs=self.load_observable_flips(ideal=ideal),
+            provenance={
+                "backend": self.manifest["backend"],
+                "representability": (
+                    "stim_ideal" if ideal else self.manifest["representability"]
+                ),
+                "record_semantics": "temporal_detector_events",
+                "source_type": self.manifest["source_type"],
+            },
         )
 
     def load_source_timeline(self) -> SourceTimeline:
@@ -116,13 +137,22 @@ class Simulator:
         source_timeline: SourceTimeline | None = None,
         source_binding: SourceTimelineBinding | None = None,
         seed: int = 0,
-        decoder: str = "pymatching",
+        decoder: str | None = None,
     ) -> SimulationResult:
-        """Run the Stim-compatible frontend and write standard simulator artifacts."""
+        """Run the Stim-compatible frontend and write record-first artifacts.
+
+        ``decoder=None`` is the core default: detector and observable records are
+        emitted without importing PyMatching.  Pass ``decoder="pymatching"`` to
+        request the optional external reduction and its prediction artifacts.
+        """
 
         shot_count = _require_positive_int("shots", shots)
-        if decoder != "pymatching":
-            raise ValueError("only decoder='pymatching' is implemented in the frontend slice")
+        if decoder is not None and (
+            not isinstance(decoder, str) or decoder != "pymatching"
+        ):
+            raise ValueError(
+                "decoder must be None or 'pymatching' in the frontend slice"
+            )
         paths = artifact_paths(out_dir)
         paths.out_dir.mkdir(parents=True, exist_ok=True)
         clear_known_artifacts(paths)
@@ -163,7 +193,11 @@ class Simulator:
             )
             source_binding_stub = source_binding_public_stub(source_binding_manifest)
 
-        dem = stim_io.detector_error_model(noisy_circuit, decompose_errors=True)
+        dem_decompose_errors = decoder == "pymatching"
+        dem = stim_io.detector_error_model(
+            noisy_circuit,
+            decompose_errors=dem_decompose_errors,
+        )
 
         ideal_det, ideal_obs = stim_io.sample_detector_records(
             ideal_circuit, shots=shot_count, seed=int(seed)
@@ -172,8 +206,14 @@ class Simulator:
             noisy_circuit, shots=shot_count, seed=int(seed)
         )
 
-        preds = m4_decode.decode_dem(dem, noisy_det)
-        decoder_results = _decoder_summary(preds, noisy_obs)
+        if decoder is None:
+            preds = None
+            decoder_results = None
+            decoder_provenance = None
+        else:
+            preds = m4_decode.decode_dem(dem, noisy_det)
+            decoder_results = _decoder_summary(preds, noisy_obs)
+            decoder_provenance = m4_decode.pymatching_provenance()
 
         sample_summary_ideal = record_summary(ideal_det, ideal_obs)
         sample_summary_ideal.update(
@@ -202,11 +242,16 @@ class Simulator:
         ideal_obs_path = write_b8_optional(paths.ideal_obs_flips_actual, ideal_obs)
         det_path = write_b8_optional(paths.detection_events, noisy_det)
         obs_path = write_b8_optional(paths.obs_flips_actual, noisy_obs)
-        pred_path = write_b8_optional(paths.obs_flips_predicted, preds)
+        pred_path = (
+            None
+            if preds is None
+            else write_b8_optional(paths.obs_flips_predicted, preds)
+        )
         write_json(paths.sample_summary_ideal, sample_summary_ideal)
         write_json(paths.sample_summary_noisy, sample_summary_noisy)
         write_json(paths.theory_prediction, theory_prediction)
-        write_json(paths.decoder_results, decoder_results)
+        if decoder_results is not None:
+            write_json(paths.decoder_results, decoder_results)
 
         evaluator_sidecars = list(compiled.evaluator_sidecars)
         source_artifacts = None
@@ -226,16 +271,30 @@ class Simulator:
         artifacts = {
             "circuit_ideal": _file_entry(paths.circuit_ideal),
             "circuit_noisy_pauli": _file_entry(paths.circuit_noisy_pauli),
-            "detector_error_model": _file_entry(paths.detector_error_model),
+            "detector_error_model": _dem_entry(
+                paths.detector_error_model,
+                decompose_errors=dem_decompose_errors,
+            ),
             "detection_events": _b8_entry(det_path, schema.detector_bit_width),
             "obs_flips_actual": _b8_entry(obs_path, schema.observable_bit_width),
-            "obs_flips_predicted": _b8_entry(pred_path, schema.observable_bit_width),
+            "obs_flips_predicted": (
+                _omitted_b8_entry(
+                    schema.observable_bit_width,
+                    reason="decoder_not_requested",
+                )
+                if decoder is None
+                else _b8_entry(pred_path, schema.observable_bit_width)
+            ),
             "ideal_detection_events": _b8_entry(ideal_det_path, schema.detector_bit_width),
             "ideal_obs_flips_actual": _b8_entry(ideal_obs_path, schema.observable_bit_width),
             "sample_summary_ideal": _file_entry(paths.sample_summary_ideal),
             "sample_summary_noisy": _file_entry(paths.sample_summary_noisy),
             "theory_prediction": _file_entry(paths.theory_prediction),
-            "decoder_results": _file_entry(paths.decoder_results),
+            "decoder_results": (
+                _omitted_file_entry(reason="decoder_not_requested")
+                if decoder is None
+                else _file_entry(paths.decoder_results)
+            ),
         }
         if source_artifacts is not None:
             artifacts.update(source_artifacts)
@@ -247,7 +306,7 @@ class Simulator:
             "shots": shot_count,
             "seed": int(seed),
             "decoder": decoder,
-            "decoder_provenance": m4_decode.pymatching_provenance(),
+            "decoder_provenance": decoder_provenance,
             "num_qubits": schema.num_qubits,
             "num_measurements": schema.num_measurements,
             "num_detectors": schema.num_detectors,
@@ -278,9 +337,9 @@ class Simulator:
         source_timeline: SourceTimeline | None = None,
         source_binding: SourceTimelineBinding | None = None,
         seed: int = 0,
-        decoder: str = "pymatching",
+        decoder: str | None = None,
     ) -> SimulationResult:
-        """Run the circuit with no simulator-added noise."""
+        """Run without simulator-added noise; decoding remains opt-in."""
 
         compiled = self.source.compile(None)
         if compiled.noise_manifest is not None or str(compiled.ideal_circuit) != str(compiled.noisy_circuit):
@@ -307,9 +366,9 @@ def simulate_noiseless(
     source_timeline: SourceTimeline | None = None,
     source_binding: SourceTimelineBinding | None = None,
     seed: int = 0,
-    decoder: str = "pymatching",
+    decoder: str | None = None,
 ) -> SimulationResult:
-    """Convenience wrapper for a no-noise frontend simulation."""
+    """Convenience wrapper for a record-first no-noise frontend simulation."""
 
     return Simulator(circuit).run_noiseless(
         shots=shots,
@@ -356,7 +415,10 @@ def _load_b8_from_manifest(
     if bits == 0:
         return np.zeros((shots, 0), dtype=np.bool_)
     if entry["file"] is None:
-        raise ValueError(f"manifest artifact {artifact_key!r} has positive width but no file")
+        reason = entry.get("omitted_reason", "unspecified")
+        raise ValueError(
+            f"manifest artifact {artifact_key!r} was omitted: {reason}"
+        )
     if path.name != entry["file"]:
         raise ValueError(
             f"manifest artifact {artifact_key!r} points to {entry['file']!r}, "
@@ -382,6 +444,15 @@ def _file_entry(path) -> dict:
     return {"file": path.name, "sha256": file_sha256(path)}
 
 
+def _dem_entry(path, *, decompose_errors: bool) -> dict:
+    """Manifest entry declaring whether graphlike decomposition was requested."""
+
+    return {
+        **_file_entry(path),
+        "decompose_errors": bool(decompose_errors),
+    }
+
+
 def _b8_entry(path, bits_per_shot: int) -> dict:
     if path is None and int(bits_per_shot) > 0:
         raise ValueError(f"positive-width .b8 artifact was not written: bits={bits_per_shot}")
@@ -390,6 +461,26 @@ def _b8_entry(path, bits_per_shot: int) -> dict:
     if path is not None:
         entry["sha256"] = file_sha256(path)
     return entry
+
+
+def _omitted_b8_entry(bits_per_shot: int, *, reason: str) -> dict:
+    """Manifest entry for a deliberately unrequested positive- or zero-width record."""
+
+    bits = int(bits_per_shot)
+    if bits < 0:
+        raise ValueError(f"bits_per_shot must be non-negative, got {bits}")
+    return {
+        "file": None,
+        "bits_per_shot": bits,
+        "packed_bytes_per_shot": (bits + 7) // 8 if bits else 0,
+        "omitted_reason": str(reason),
+    }
+
+
+def _omitted_file_entry(*, reason: str) -> dict:
+    """Manifest entry for a deliberately unrequested non-record artifact."""
+
+    return {"file": None, "omitted_reason": str(reason)}
 
 
 def _require_positive_int(name: str, value: int) -> int:

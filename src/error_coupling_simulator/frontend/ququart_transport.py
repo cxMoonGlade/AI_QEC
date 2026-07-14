@@ -19,7 +19,8 @@ import torch
 from ..carrier.exact.qutrit_dm import CDTYPE, QuquartDM
 
 QUQUART_STRING_CONVENTION = "ququart_dm_most_significant_q0_left_to_right"
-DEFAULT_TRANSPORT_KRAUS_PATH = Path("outputs/teacher_prereg/qutip_cz_leakage_kraus.npz")
+QUQUART_TRANSPORT_KRAUS_SCHEMA = "error_coupling_simulator.external_ququart_kraus.v1"
+QUQUART_TRANSPORT_KRAUS_KEY = "kraus_ququart"
 
 
 @dataclass(frozen=True)
@@ -80,13 +81,16 @@ def simulate_ququart_transport_smoke(
     pair: tuple[int, int] = (0, 1),
     shots: int = 1024,
     seed: int = 0,
-    kraus_path: str | Path = DEFAULT_TRANSPORT_KRAUS_PATH,
+    kraus_path: str | Path,
     device: str | torch.device = "cuda",
     out_dir: str | Path | None = None,
     write_density_matrix: bool | None = None,
 ) -> QuquartTransportResult:
     """Run the ``|3>``-faithful CZ leakage-transport channel on `QuquartDM`.
 
+    ``kraus_path`` is a required, caller-owned external input. It must name an
+    NPZ containing ``kraus_ququart`` with exact shape ``(rank, 16, 16)``; this
+    package does not bundle or discover a repository-local transport artifact.
     The default initial state ``|12>`` exercises the transport-relevant leaked
     manifold. This exact ququart density-matrix path is for small sub-registers
     only; it is not a full 9-data-register production carrier.
@@ -103,7 +107,8 @@ def simulate_ququart_transport_smoke(
         raise ValueError(f"pair must contain two distinct sites in [0, {n}), got {pair!r}")
 
     dev = torch.device(device)
-    kraus, meta = load_ququart_transport_kraus(kraus_path, device=dev)
+    source_path = _require_external_ququart_kraus_path(kraus_path)
+    kraus, meta = load_ququart_transport_kraus(source_path, device=dev)
     eng = QuquartDM(n, device=dev)
     rho0 = torch.zeros((eng.dim, eng.dim), dtype=CDTYPE, device=dev)
     rho0[index_from_ququart_string(levels), index_from_ququart_string(levels)] = 1.0
@@ -131,8 +136,8 @@ def simulate_ququart_transport_smoke(
         "site_populations": site_populations,
     }
     manifest = {
-        "schema": "qec_twin.simulator_ququart_transport.v1",
-        "backend": "qec_twin.forward.exact.qutrit_dm.QuquartDM",
+        "schema": "error_coupling_simulator.ququart_transport.v1",
+        "backend": "error_coupling_simulator.carrier.exact.qutrit_dm.QuquartDM",
         "representability": "exact_ququart_density_matrix_transport",
         "mechanism": "qutip_cz_ququart_leakage_transport",
         "ququart_string_convention": QUQUART_STRING_CONVENTION,
@@ -144,8 +149,10 @@ def simulate_ququart_transport_smoke(
         "parameters": meta,
         "noise": {
             "type": "ququart_transport",
-            "source": str(Path(kraus_path)),
-            "kraus_key": "kraus_ququart",
+            "source": str(source_path),
+            "source_kind": "external_user_supplied_npz",
+            "source_contract": _ququart_transport_kraus_contract(),
+            "kraus_key": QUQUART_TRANSPORT_KRAUS_KEY,
         },
         "decoder": None,
         "artifacts": {},
@@ -201,35 +208,82 @@ def simulate_ququart_transport_smoke(
 
 
 def load_ququart_transport_kraus(
-    kraus_path: str | Path = DEFAULT_TRANSPORT_KRAUS_PATH,
+    kraus_path: str | Path,
     *,
     device: str | torch.device = "cuda",
     dtype: torch.dtype = CDTYPE,
 ) -> tuple[torch.Tensor, dict[str, Any]]:
-    path = Path(kraus_path)
-    if not path.is_file():
-        raise FileNotFoundError(f"ququart transport Kraus artifact not found: {path}")
-    data = np.load(path, allow_pickle=True)
-    kraus_np = data["kraus_ququart"]
-    if kraus_np.shape[-2:] != (16, 16):
-        raise ValueError(f"kraus_ququart must have shape (rank,16,16), got {kraus_np.shape}")
+    """Load a caller-supplied two-ququart Kraus NPZ under the public contract.
+
+    No default path or repository lookup is permitted: callers must explicitly
+    provide the external artifact that defines the noise process.
+    """
+
+    path = _require_external_ququart_kraus_path(kraus_path)
+    with np.load(path, allow_pickle=False) as data:
+        if QUQUART_TRANSPORT_KRAUS_KEY not in data.files:
+            raise ValueError(
+                f"ququart transport NPZ must contain required array "
+                f"{QUQUART_TRANSPORT_KRAUS_KEY!r}"
+            )
+        kraus_np = np.asarray(data[QUQUART_TRANSPORT_KRAUS_KEY])
+        if kraus_np.ndim != 3 or kraus_np.shape[0] < 1 or kraus_np.shape[1:] != (16, 16):
+            raise ValueError(
+                f"{QUQUART_TRANSPORT_KRAUS_KEY} must have exact shape "
+                f"(rank, 16, 16) with rank >= 1, got {kraus_np.shape}"
+            )
+        if not np.issubdtype(kraus_np.dtype, np.number) or not np.all(np.isfinite(kraus_np)):
+            raise ValueError(f"{QUQUART_TRANSPORT_KRAUS_KEY} must be a finite numeric array")
+        metadata = {
+            key: _npz_scalar(data[key])
+            for key in data.files
+            if key.startswith("meta_")
+            or key
+            in (
+                "leaked_from_comp_ququart",
+                "leaked_from_leaked_max_ququart",
+                "pop_ge4_max_ququart",
+                "cptp_residual_ququart",
+            )
+        }
+
     skk = sum(k.conj().T @ k for k in kraus_np)
     cptp_residual = float(np.max(np.abs(skk - np.eye(16))))
-    if cptp_residual >= 1e-9:
+    if not np.isfinite(cptp_residual) or cptp_residual >= 1e-9:
         raise ValueError(f"kraus_ququart CPTP residual too large: {cptp_residual:.3e}")
     meta = {
         "kraus_rank": int(kraus_np.shape[0]),
         "cptp_residual": cptp_residual,
+        **metadata,
     }
-    for key in data.files:
-        if key.startswith("meta_") or key in (
-            "leaked_from_comp_ququart",
-            "leaked_from_leaked_max_ququart",
-            "pop_ge4_max_ququart",
-            "cptp_residual_ququart",
-        ):
-            meta[key] = _npz_scalar(data[key])
     return torch.as_tensor(kraus_np, dtype=dtype, device=device), meta
+
+
+def _require_external_ququart_kraus_path(kraus_path: str | Path) -> Path:
+    if kraus_path is None:
+        raise TypeError(
+            "kraus_path is required and must identify an explicit external ququart Kraus NPZ"
+        )
+    try:
+        path = Path(kraus_path).expanduser().resolve()
+    except TypeError as exc:
+        raise TypeError("kraus_path must be a string or pathlib.Path") from exc
+    if not path.is_file():
+        raise FileNotFoundError(
+            "explicit external ququart transport Kraus NPZ not found: "
+            f"{path}; contract requires array {QUQUART_TRANSPORT_KRAUS_KEY!r} "
+            "with exact shape (rank, 16, 16)"
+        )
+    return path
+
+
+def _ququart_transport_kraus_contract() -> dict[str, Any]:
+    return {
+        "schema": QUQUART_TRANSPORT_KRAUS_SCHEMA,
+        "format": "npz",
+        "required_key": QUQUART_TRANSPORT_KRAUS_KEY,
+        "required_shape": ["rank", 16, 16],
+    }
 
 
 def write_ququart_transport_artifacts(

@@ -3,7 +3,7 @@ from __future__ import annotations
 """Grover workload adapter for the dense qutrit MCWF backend.
 
 This module describes the Grover schedule. The reusable trajectory carrier lives
-in :mod:`qec_twin.simulator.mcwf_backend`.
+in :mod:`error_coupling_simulator.frontend.mcwf_backend`.
 """
 
 from dataclasses import dataclass
@@ -232,8 +232,11 @@ def simulate_mcwf_qutrit_grover_leakage(
     executor_manifest = executor.manifest()
     manifest = {
         "schema": "qec_twin.simulator_mcwf_qutrit_grover_leakage.v1",
-        "backend": "qec_twin.simulator.mcwf_backend.DenseQutritMcwfBackend",
-        "workload_adapter": "qec_twin.simulator.mcwf_grover",
+        "backend": (
+            "error_coupling_simulator.frontend.mcwf_backend."
+            "DenseQutritMcwfBackend"
+        ),
+        "workload_adapter": "error_coupling_simulator.frontend.mcwf_grover",
         "representability": "dense_qutrit_statevector_mcwf_leakage",
         "kernel_backend": executor_manifest["kernel_backend"],
         "executor": executor_manifest,
@@ -265,7 +268,10 @@ def simulate_mcwf_qutrit_grover_leakage(
         },
         "noise": {
             "type": "qutrit_leakage_mcwf",
-            "source": "qec_twin.mechanisms.qutrit_teachers.leakage_kraus_torch",
+            "source": (
+                "error_coupling_simulator.mechanisms.qutrit_teachers."
+                "leakage_kraus_torch"
+            ),
             "schedule": LEAKAGE_SCHEDULE,
         },
         "decoder": None,

@@ -12,12 +12,21 @@ rotated surface code — **XZZX** is the first target) plus a **specified noise 
 and produces the **multi-time syndrome RECORD** (per-round detector bits +
 logical-observable flips, emitted as `.b8` shot data or represented by its joint law). A `.dem`
 is an optional decoder-facing reduction/model artifact, not the record. The package is importable
-as `import error_coupling_simulator`; an independently releasable boundary remains a target while
-active legacy `qec_twin` imports and entry points survive.
+as `import error_coupling_simulator` and has no inward runtime dependency on `qec_twin`.
+Built wheel/source archives are allowlisted to this package alone and export no legacy entry
+point. The repository still keeps outward `qec_twin` compatibility shims and the local
+`qec_twin.rag` literature tool for existing workspace consumers; neither is shipped or imported
+by the simulator distribution.
 
 The deliverable is the simulator itself. Its product is the **record** (and the LER read
 off it under a frozen decoder); metrics are **instruments** on that record, never the
 object.
+
+**Product non-goals.** The simulator does not fit a channel/noise model from records, choose
+between model classes, define a calibration-probe ladder, recover hidden parameters, or construct
+parameter-uncertainty/identifiability bands. Those are downstream inference tasks and cannot serve
+as simulator acceptance gates. Evaluator-only parameters exist to define and certify the specified
+generative process; they are not targets of an in-package learner.
 
 ## Object contract
 
@@ -25,11 +34,13 @@ object.
   applies declared error mechanisms to the circuit and emits records, carrying its own
   ground truth (evaluator-only). It is the true generative process — richer than, and
   **not** identified with, a **DEM** (a DEM is a decoder-facing reduction of it).
-- **Detector semantics are a target contract with one known live deviation.** The record uses
-  temporal detector events, not raw stabilizer outcomes. The legacy qutrit
-  `ShotSet.to_det_obs()` currently places raw round-major syndrome bits in a field named `det`;
-  those outputs are nonconforming until the declared `R>=2` temporal XOR fold is applied and
-  controlled. See `docs/METRICS.md` and `docs/NUMERICAL_PROVENANCE.md`.
+- **Detector semantics are enforced at the active package boundary.** The record uses temporal
+  detector events, not raw stabilizer outcomes. `carrier.records.RecordBatch.det` is the common
+  emitted-record contract. The PEPS packed carrier keeps raw round-major syndromes only as its
+  internal byte layout; `PackedShotBatch.to_det_obs()` / `.to_record_batch()` apply the pinned
+  `R>=2` temporal XOR fold, while `.to_raw_syndrome_obs()` is the explicit diagnostic accessor.
+  The old `qec_twin` `ShotSet` remains a legacy, nonconforming type and is not the package record
+  boundary. See `docs/METRICS.md` and `docs/NUMERICAL_PROVENANCE.md`.
 - **Two noise axes:**
   - **Axis-1 — within-substep joint-Lindbladian coupling.** ZZ crosstalk, T1/T2,
     thermal excitation, fSim residual, readout dephasing, and leakage Hamiltonians are
@@ -104,6 +115,34 @@ object.
   the record may see it.
 - **GPU-first.** Model compute is GPU-only (no `cuda if available else cpu`); target
   workstation ≥ RTX 5090. CPU-only results are not evidence of a GPU-path failure.
+- **Self-contained code, explicit external inputs.** Self-contained means that every simulator
+  runtime module is owned by this distribution; it does not mean that third-party circuit or
+  independently generated oracle data are bundled. The Google r01/r10 `.stim` + metadata files
+  are caller-supplied circuit/geometry/schedule inputs only, never package data and never noise
+  parameters. Ququart transport similarly requires an explicit caller-supplied Kraus `.npz`
+  path; there is no default path into repository scratch. Missing inputs fail closed with the
+  requested path identified. Historical `qec_twin.*` values may remain only as frozen schema
+  identifiers for artifact compatibility; active manifest owner fields (`backend`, `source`,
+  `oracle`, `assembled_by`, and equivalents) must name the installed
+  `error_coupling_simulator` owner.
+- **Distribution acceptance is an isolated-wheel gate.** A release candidate must build the real
+  checkout as sdist, build the wheel from that sdist, install it into an isolated target, remove
+  the repository root and `src/` from import resolution, and pass package import plus core runtime
+  smokes. The same gate must prove that no `qec_twin` package, old console entry point, or
+  repository-only scratch asset entered either archive. An editable-install smoke is not a
+  substitute for this gate.
+- **CUDA-Q is an isolated optional plugin, not core runtime.** The public noiseless-Grover adapter
+  remains available through the `cudaq-grover` extra, but it runs in the retained `aiqec` plugin
+  environment and a separate process. It is deliberately absent from canonical `ecs` and must not
+  share a process with the fused simulator extension.
+- **Precision is bound to run purpose and carrier.** Only the active
+  `FusedWithinCycleSampler` / `sv_traj_d3_wc` path may execute an optimization run in c64;
+  its artifact is `screening_only`. Final and certification runs use c128 and are only
+  `c128_candidate` until the owning scientific gates pass. A c64 artifact is never promoted to
+  evidence; a candidate conclusion requires a separate frozen c128 replay. PEPS and MPS remain
+  c128-only and must reject c64 metadata. WG channels, codestates, channel composition, and CPTP
+  checks are constructed in c128; only the checked complex execution tables may be cast at the
+  fused-SV boundary. This policy does not authorize tolerance or FET changes.
 - **Numerical floor.** `error_coupling_simulator.numerics` — `1e-12` for float
   floors/thresholds only; never for structural zeros (Pauli entries, bit values, integer
   indices, exact algebraic identities).
@@ -155,10 +194,9 @@ deterministic WTG replacement or leakage-tail deletion is currently authorized. 
   specified multi-time memory is scored by the record's **absolute multi-time Markov-order
   structure** vs a genuinely-Markov-order-k generative null. Full-history/order tests are
   required for a process-wide claim; lag-local CMI `I(mᵣ;mᵣ₋₂|mᵣ₋₁)`, Anderson–Goodman
-  `G²`, and `E(k)` are diagnostics. This is a **memory-specific discriminability
-  instrument, not a parameter-recovery learner**. Fitting `θ` from the same fixed passive record
-  is passive parameter recovery; it is active tester access only if the instrument/intervention
-  family is varied. Neither case can replace the full-record
+  `G²`, and `E(k)` are diagnostics. This instrument measures record structure; it does **not** fit
+  or recover source/channel parameters. Any separate parameter-recovery analysis, passive or
+  instrument-varying, is outside the simulator product and cannot replace the full-record
   carrier-faithfulness ladder.
 - **Every d5/d7 distributional claim is PROVISIONAL** — reportable and usable for
   go/no-go gating, but never a premise for a definition, derivation, or further
@@ -189,17 +227,29 @@ Folded in from the project's decision history (the surviving, still-load-bearing
   **project d3 certification choices** such as joint-record TV/KL and generative NLL.
   Never present a project choice as a universal QEC standard (`docs/METRICS.md`).
 - **Tool I/O contract.** Stim-native in (`.stim` / `.b8`), standard `.dem` out;
-  pip-installable; no bundled decoder, no new formats.
+  pip-installable; no bundled decoder, no new formats. Core record emission must not depend on
+  decoder installation: `Simulator.run(..., decoder=None)` is the default, while the optional
+  external PyMatching reduction runs only when explicitly requested. The default Stim artifact
+  path preserves non-graphlike DEM hyperedges (`decompose_errors=false`); graphlike decomposition
+  is requested only for explicit PyMatching decoding.
 
 ## Frontend / product surface
 
-`CodeSpec → CircuitIR`, imported Stim circuits, and hand-built `CircuitIR` all feed one
-`Simulator.run(...)` surface (`frontend/`), which emits `.stim` / `.dem` / `.b8` /
-manifest artifacts. Every artifact declares a `representability` class and **fails
-closed** — Stim-Pauli noise, source-projection, joint-L channel evidence, and analog
-schedule metadata are distinct, never silently conflated. `.stim`/`.dem` are not analog
-joint-Lindbladian truth, leakage truth, or shared-source non-Markovian truth. XZZX is the
-first target code spec, not a hard-coded simulator core.
+The frontend has one common **emitted-record contract**, not yet one universal executor.
+`CodeSpec → CircuitIR`, imported Stim circuits, and hand-built `CircuitIR` feed the
+Stim-representable `Simulator.run(...)` surface, which emits `.stim` / `.dem` / `.b8` /
+manifest artifacts and exposes the actual detector/observable records as `RecordBatch` without a
+decoder. Passing `decoder="pymatching"` additionally emits prediction and decoder-summary artifacts
+through the optional `[hw]` dependency. Without that request, the corresponding manifest entries
+use `file=null` and `omitted_reason="decoder_not_requested"`; they are never fabricated. Axis-1
+record evidence and PEPS trajectories use their own bounded runners but now also return/wrap
+`RecordBatch`; they do not silently route through Stim. Unifying those execution inputs behind one
+facade remains open frontend work.
+Every artifact declares a `representability` class and **fails closed** — Stim-Pauli noise,
+source-projection, joint-L channel evidence, and analog schedule metadata are distinct, never
+silently conflated. `.stim`/`.dem` are not analog joint-Lindbladian truth, leakage truth, or
+shared-source non-Markovian truth. XZZX is the first target code spec, not a hard-coded simulator
+core.
 
 ## Working disciplines (every change obeys)
 
@@ -237,7 +287,8 @@ classical-versus-quantum origin without an explicit access and identifiability a
 
 ## Local reference tooling
 
-- **RAG (literature search)** — `python -m qec_twin.rag.store --query "<q>"` (rebuild:
+- **RAG (literature search; repository-only, not distributed)** —
+  `python -m qec_twin.rag.store --query "<q>"` (rebuild:
   `--build --force`); ChromaDB over the `docs/papers/reading_notes/` 精读 notes (~2230
   chunks). The query basis of the `theory-first` / `theory-fix` skills.
 - **KG (knowledge graph)** — `python outputs/knowledge_graph/kg_query.py` (concept /

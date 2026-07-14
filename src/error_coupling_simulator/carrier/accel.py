@@ -1,7 +1,7 @@
 """CUDA-kernel acceleration for the exact forward's inner loop (carrier/kernels/; GPU-first, docs/SIMULATOR.md).
 
 JIT-loads the fused subsystem-Kraus kernel from the package-local
-``src/qec_twin/forward/kernels/`` folder and wraps it in an autograd Function that is
+``error_coupling_simulator/carrier/kernels/`` folder and wraps it in an autograd Function that is
 a drop-in for the reference
 ``apply_channel_local`` chain (embed + ``apply_kraus`` + hermitianize):
 

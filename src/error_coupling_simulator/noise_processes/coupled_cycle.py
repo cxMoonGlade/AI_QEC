@@ -1,24 +1,21 @@
-from __future__ import annotations
-
-"""CoupledCycleNoiseProcess — evaluator-only source-coupled record teacher (slice 1, dense).
+"""CoupledCycleNoiseProcess — evaluator-only source-coupled record process (slice 1, dense).
 
 One shared memory-ful source trajectory ``z_t`` (Axis-2) is fanned out per QEC
 cycle into coupled mechanism parameters (``source_coupling.Theta``), lowered
 into per-round ``Axis1PrimitiveParams``, and emitted as real R-round
 ``{"det","obs"}`` records through the sealed dense Axis-1 record path
 (``axis1_measurement_record_evidence_manifest`` with the injected
-``params_for_substep`` callable). The teacher implements the
+``params_for_substep`` callable). The process implements the
 ``audit.certify.types.ControlledNoiseProcess`` protocol surface (``sched`` /
 ``truth`` / ``emit`` / ``channels`` / ``emit_clifford_slice``) so its records
 drop into ``certify_cells`` + the Anchor/Control ports unchanged.
 
-Design spec: ``docs/twin_validation/coupled_cycle_teacher_design.md`` (Path
-A-corrected §2, emit constraints §3, Theta homes §4, surface §5, red-team §6b).
-This module is NOT re-exported from ``qec_twin.mechanisms.__init__``: it
-imports ``qec_twin.simulator`` modules, and the eager package ``__init__``
-re-export would close an import cycle through
-``simulator.* -> mechanisms.axis1_primitives -> mechanisms.__init__``. Import
-it as ``qec_twin.mechanisms.coupled_teachers`` directly.
+Historical design evidence is retained in
+``docs/twin_validation/coupled_cycle_teacher_design.md`` (Path A-corrected §2,
+emit constraints §3, Theta homes §4, surface §5, red-team §6b). Runtime ownership
+is entirely package-local: this module uses relative imports into
+``error_coupling_simulator`` and has no inward dependency on the retained
+repository-only ``qec_twin`` compatibility tree.
 
 CONSTRAINT LEDGER (faithfulness protocol rule II — written BEFORE the
 implementation below; each entry names its falsifying test in
@@ -28,10 +25,10 @@ C-1  Seal (red-team R5). ``emit`` refuses any schedule that does not carry the
      in-process compiler HMAC seal; schedules are constructed ONLY via
      ``compile_code_spec_to_substep_schedule`` (the seal key is
      process-lifetime ``secrets.token_bytes`` — analog_schedule.py:46 — so the
-     teacher compiles its schedule in-process and a persisted/hand-built
+     process compiles its schedule in-process and a persisted/hand-built
      schedule can never claim "real circuit"). The dense record path itself
      also enforces the seal (axis1_channel_evidence.py:989); the emit-side
-     assert is the teacher's own guarantee, not a duplicate dependency.
+     assert is the process's own guarantee, not a duplicate dependency.
      Falsifier: ``test_emit_refuses_unsealed_schedule``.
 C-2  Memory-ful shared source (red-team R3). The shared arm accepts only the
      declared memory-ful source classes (``OneOverFDriftSource`` — sum-of-RTN
@@ -77,8 +74,8 @@ C-6  Distribution gate. ``emit`` refuses to sample when the exact manifest
      broken enumeration. Runtime guard (fail-loud); no committed fixture can
      currently produce a failed manifest, declared as an untested guard.
 C-7  Isolation (G7). ``truth`` is evaluator-only, reachable only via the
-     ``.truth`` property (returned in ``CertReport.truth``, never fed to a
-     learner); it contains no ``det``/``obs`` arrays and the emit payload
+     ``.truth`` property (returned separately in ``CertReport.truth``, never
+     included in emitted records); it contains no ``det``/``obs`` arrays and the emit payload
      contains no truth keys. Falsifier: ``test_truth_isolation``.
 C-8  Reproducibility. Same ``(regime, m, N, seed)`` => byte-identical
      ``{det,obs}``. Per-trajectory seeds are stable sha256 derivations of
@@ -177,6 +174,8 @@ S-6  Small table cache. Identical (per-round params, instrument) keys reuse
      enumeration; exactness unchanged). Bounded to the 4 most recent keys.
 """
 
+from __future__ import annotations
+
 import copy
 import dataclasses
 import hashlib
@@ -253,7 +252,7 @@ COUPLED_TEACHER_REPRESENTABILITY = (
 #: RTNSource = the contrast control (single Lorentzian, autocorr e^{-2 gamma lag}).
 #: PhaseBurstSource / TemporalStormSPPSource / arbitrary SourceProcess impls are
 #: NOT accepted as the shared arm this slice (their payload shapes and memory
-#: classes are not certified for this teacher).
+#: classes are not certified for this process).
 MEMORYFUL_SHARED_SOURCES = (OneOverFDriftSource, RTNSource)
 
 #: The X-check data<->ancilla pair of the 5q fixture — the only
@@ -577,7 +576,7 @@ def _derived_seed(base_seed: int, trajectory: int, purpose: str) -> int:
 
 
 # --------------------------------------------------------------------------- #
-# the teacher                                                                   #
+# the controlled process                                                        #
 # --------------------------------------------------------------------------- #
 class CoupledCycleNoiseProcess:
     """Evaluator-only ``ControlledNoiseProcess`` carrying Axis-1 x Axis-2 coupling.
@@ -588,7 +587,7 @@ class CoupledCycleNoiseProcess:
     per-round ``params_for_substep`` callable. Only ``rounds`` is required —
     the R*/N* design constants belong to the G0-v2 gate (S-5).
 
-    ``coupling_arm``: ``"shared"`` (the teacher), ``"independent"`` (the G6
+    ``coupling_arm``: ``"shared"`` (the source-coupled process), ``"independent"`` (the G6
     matched-marginal negative control, built via :meth:`markovian_baseline`),
     ``"off"`` (the amplitude-0 collapse arm, built via :meth:`off_source`).
     """
@@ -685,7 +684,7 @@ class CoupledCycleNoiseProcess:
                 f"got {list(self._observable_names)}"
             )
         # Baseline params via the SAME resolution the dense emitter uses for its
-        # default path (no drift between teacher baseline and emitter default).
+        # default path (no drift between process baseline and emitter default).
         self._baseline_params = _axis1_primitive_params_for_schedule(self._sched)
         self._table_cache: dict[tuple, tuple] = {}
         self._last_emit: dict[str, Any] | None = None
@@ -802,7 +801,7 @@ class CoupledCycleNoiseProcess:
             },
             # F7: a SNAPSHOT (deep copy), never a live reference to the mutable bookkeeping dict —
             # an evaluator holding truth must not see it mutate on the next emit, nor be able to
-            # mutate the teacher's internal state through it.
+            # mutate the process's internal state through it.
             "last_emit": copy.deepcopy(self._last_emit),
         }
         return truth
@@ -903,7 +902,7 @@ class CoupledCycleNoiseProcess:
         )
         # Evaluator-side bookkeeping only — never in the returned payload (C-7).
         self._last_emit = truth_record
-        # C-3 (red-team R4): the learner payload is exactly {"det","obs"}.
+        # C-3 (red-team R4): the emitted record payload is exactly {"det","obs"}.
         return {"det": det, "obs": obs}
 
     def channels(self) -> tuple[dict[str, Any], ...]:
@@ -969,7 +968,7 @@ class CoupledCycleNoiseProcess:
 
         The export is a separate read-only surface — the ``emit`` payload
         stays exactly ``{"det","obs"}`` (C-3 untouched). Layout identity
-        against the teacher's emitted surface is ASSERTED here (names, order,
+        against the process's emitted surface is ASSERTED here (names, order,
         counts), never assumed.
         """
 
@@ -1049,7 +1048,7 @@ class CoupledCycleNoiseProcess:
         Clifford slice of the SAME geometry; the dense Axis-1 path has no
         Pauli-noise injection seam (Stim noise is rejected by the schedule
         extractor by design), so wiring this slice is a later-slice cert
-        anchor, not a slice-1 teacher capability.
+        anchor, not a slice-1 process capability.
         """
 
         raise NotImplementedError(
@@ -1123,7 +1122,7 @@ class CoupledCycleNoiseProcess:
     def _validate_regime(self, regime: Any) -> None:
         """Regime consumption contract: R and n_stab are binding; the routing
         fields (register / n_active / arm / b) are not consumed by this
-        teacher and are deliberately not validated."""
+        process and are deliberately not validated."""
 
         regime_rounds = int(getattr(regime, "R"))
         if regime_rounds != self._rounds:

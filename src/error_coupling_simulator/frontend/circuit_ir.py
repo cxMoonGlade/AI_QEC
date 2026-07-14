@@ -3,7 +3,7 @@ from __future__ import annotations
 """User-facing circuit IR for simulator frontend artifacts.
 
 This is a small, Stim-compatible intermediate representation, not a full analog
-teacher IR. It captures the parts every QEC simulator frontend must agree on:
+noise-process IR. It captures the parts every QEC simulator frontend must agree on:
 gates, ticks, measurements, detector definitions, and logical observables. Analog
 joint-L / leakage truth is attached later as sidecar truth, not encoded here.
 """

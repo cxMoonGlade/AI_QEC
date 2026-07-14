@@ -1073,6 +1073,11 @@ class MpsLeakageForward:
         argument explicitly). Header provenance: ``leak_slices_mode`` (``static``/``per_round``)
         + ``leak_slices_sha256`` over the stacked tables in the per-round mode.
         """
+        if str(spec.dtype) != "c128":
+            raise ValueError(
+                "MpsLeakageForward executes complex128 only; c64 optimization is "
+                "supported only by FusedWithinCycleSampler/sv_traj_d3_wc "
+                f"(got RunSpec.dtype={spec.dtype!r})")
         mode = str(mode)
         if mode not in ("hard2", "hard3", "soft"):
             raise ValueError(f"sample mode must be hard2/hard3/soft (got {mode!r})")

@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-"""``certify_teacher`` — the one-call facade (the common-caller spine, ③).
+"""One-call certification facade for a controlled noise process.
 
-``certify_teacher(teacher, level=...) -> CertReport`` auto-builds the independent anchors (the exact
+The historical ``certify_teacher`` entry point auto-builds the independent anchors (the exact
 DM + the stim Clifford-slice wiring), routes each over its FEASIBLE cells (OOM-as-data — an anchor
 that would OOM at a regime is simply skipped, never allocated), runs the negative controls (ON by
 default), over the ``level``'s (statistic, R) grid, and merges ONE epistemic ledger. It collapses the
 hand-rolled per-script cross-check (the ~950-line ``twin_xzzx_teacher_fullmix.main()`` / the L1–L6
 ledger of ``twin_dm_record_oracle_check``) to a call.
 
-The DM and stim anchors certify DIFFERENT teacher VIEWS (the full mechanism vs the Clifford slice), so
+The DM and stim anchors certify different process views (the full mechanism vs the Clifford slice), so
 both run — they don't compete; the OOM routing is per-anchor. Statistical (stim) rows give
 PASS_PROVISIONAL, never PASS.
 
@@ -39,7 +39,7 @@ _LEVELS = {
 def certify_teacher(teacher, *, level: str = "standard", anchors=None, controls=None,
                     device: str = "cuda", N: int | None = None, seed: int = 0, cells=None,
                     dm_safety: float | None = None) -> CertReport:
-    """Certify a controlled teacher against the auto-routed independent ground-truth anchors → one
+    """Certify a controlled noise process against independent formal anchors → one
     epistemic ledger + a single verdict.
 
     ``level`` ∈ {smoke, standard, deep} selects the (statistic, R) grid + the shot budget. ``anchors``
@@ -53,6 +53,16 @@ def certify_teacher(teacher, *, level: str = "standard", anchors=None, controls=
     plan = _LEVELS[level]
     n_eff = int(N or plan["N"])
     if anchors is None:
+        required_extensions = ("dm_round_callbacks", "emit_clifford_slice")
+        missing = [
+            name for name in required_extensions
+            if not callable(getattr(teacher, name, None))
+        ]
+        if missing:
+            raise TypeError(
+                "certify_noise_process capability error: default anchors require callable process "
+                f"extensions; missing: {', '.join(missing)}"
+            )
         dm_kwargs = {} if dm_safety is None else {"safety": float(dm_safety)}
         anchors = [DMOracleAnchor(device=device, **dm_kwargs), StimCliffordAnchor()]
     if controls is None:
@@ -80,3 +90,8 @@ def _regime(teacher, R: int) -> Regime:
     sched = teacher.sched
     return Regime(R=R, register="full", n_active=int(sched.n_data),
                   n_stab=len(sched.stabilizers), arm="A", b=1.0)
+
+
+# Neutral public spelling. Keep identity with the historical entry point so behavior,
+# signatures, error messages, and downstream registry assumptions remain unchanged.
+certify_noise_process = certify_teacher

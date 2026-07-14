@@ -6460,7 +6460,7 @@ def test_axis1_substep_channel_evidence_assembles_joint_channels_without_payload
     for row in manifest["rows"]:
         assert row["joint_channel"]["assembly_semantics"] == "single_joint_generator_expm"
         assert row["joint_channel"]["assembled_by"] == (
-            "qec_twin.forward.joint_lindbladian.assemble_substep_channel"
+            "error_coupling_simulator.carrier.joint_lindbladian.assemble_substep_channel"
         )
         assert row["joint_channel"]["contains_serialized_channel_payload"] is False
         assert row["joint_channel"]["dimension"] == 4

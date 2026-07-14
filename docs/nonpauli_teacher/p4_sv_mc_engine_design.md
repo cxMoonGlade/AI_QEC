@@ -20,6 +20,14 @@
 > the **measurement INSTRUMENT** (not just the POVM effect — §1.5, grounded before freeze) and the
 > **physically-sampled logical label** (not the input `m` — §1).
 
+> **Precision amendment (2026-07-13, binding).** Only the active
+> `FusedWithinCycleSampler` / `sv_traj_d3_wc` path uses c64, and only when
+> `run_purpose="optimization"`; its artifacts are permanently `screening_only`.
+> Final/certification runs use c128 and remain `c128_candidate` until their owning gates pass.
+> WG channel/codestate construction, composition, and CPTP checks stay c128; only checked complex
+> execution tables are cast afterward. PEPS/MPS remain c128-only. This amendment authorizes no
+> tolerance or FET changes and supersedes the old precision-promotion wording below.
+
 ---
 
 ## 0. Object & why CUDA
@@ -147,8 +155,9 @@ perfect-artifact failure mode returns).
   the 5090's ≤228 KB shared/SM admits only ~1 block/SM resident (occupancy is shared-memory-bound), so throughput
   is **wave-limited and MEASURED, never assumed a-priori** (Gate 5 micro-bench pins shots/s). complex128 in
   *global* (315 KB, no shared pressure) trades memory bandwidth for occupancy — the micro-bench picks the winner.
-  **Precision is a registered `(c)` decision, defaulting to complex128 until the complex64-vs-complex128
-  equivalence check (≲1e-6 on the syndrome distribution) clears.**
+  **Precision is purpose-bound:** optimization uses complex64 only on the active fused within-cycle
+  path and is screening-only; final/certification uses complex128 and is only an evidence candidate.
+  A comparison with c128 may diagnose a screening run, but cannot promote its c64 artifact.
 - **Throughput target `(b)`:** with no per-op launch overhead, `10⁶` shots × R=10 should be **minutes**, not the
   Python-launch hours. A committed micro-benchmark pins shots/s before the production run (the Phase-1 sampling-
   budget §2.5 applies: `N=10⁶` per `(basis, R, regime)`, CI half-width ≲1% at the GO threshold).
@@ -176,7 +185,9 @@ perfect-artifact failure mode returns).
 
 ## 4. Correctness oracle — the certification ladder `(a)`/`(b)` (no over-claim)
 
-The SV-MC is **not** "exact"; it is an **unbiased sampler** certified by a ladder (mirrors §2.6):
+The SV-MC is **not** "exact"; it is an **unbiased sampler** certified by a ladder (mirrors §2.6).
+Only a c128 final/certification artifact may enter this ladder; a c64 optimization artifact remains
+screening-only even if a separate replay agrees:
 
 1. **`(a)` single-trajectory bit-faithful:** a fixed-seed trajectory == an independent Python MCWF reference
    (same Kraus draws, same projections) to FP round-off — proves the kernel implements the algorithm.
@@ -216,8 +227,9 @@ the **correctness harness** (the §4 ladder: single-trajectory vs Python, distri
   *systematic* offset (beyond `O(1/√N)`) in the §4.2 check ⇒ a kernel bug; halt.
 - **P-B `(b)`:** SV-MC↔DM TV `~ C/√N` (small code); pin `C` from the run. A miss (non-`1/√N` or a floor) ⇒ bias.
 - **P-C `(b)`:** throughput ≫ the Python path; `10⁶ × R=10` in minutes. Pinned by the micro-bench before production.
-- **P-D `(c)` gate:** precision = complex128 unless the complex64 equivalence check (vs complex128) clears ≲1e-6
-  on the syndrome distribution; then complex64 for throughput.
+- **P-D `(c)` gate:** `run_purpose="optimization"` selects complex64 only for the fused
+  within-cycle SV-MC path and stamps `screening_only`; final/certification selects complex128 and
+  stamps `c128_candidate`. A separate frozen c128 replay is required for any candidate conclusion.
 - **P-E `(c)` gate:** RNG reproducibility — same base-seed ⇒ same shots (resumable); a positive control (different
   seed ⇒ different shots, same distribution within CI).
 
@@ -243,8 +255,9 @@ doc; Gates 4–5 are enforced by Agent V + the reviewer before any production ru
 - **Gate 4 — small-scale DM-oracle convergence.** On a toy (3–5 qutrit / the 5-site sub-register, R=1–2) where the
   DM engine is exact, `TV(SV-MC, exact-DM) ~ C/√N` across `N∈{1e3,1e4,1e5}` (decreasing, within the sampling CI).
   Load-bearing certification (§4.2); the DM oracle must implement the **same registered instrument** (§1.5).
-- **Gate 5 — throughput micro-bench before production.** Measure shots/s + peak memory for `R∈{3,5,10}`, complex64
-  vs complex128, **before any `10⁶` run**. Re-architect if it misses the budget — never brute-force to `10⁶`.
+- **Gate 5 — throughput micro-bench before a large screening run.** Measure shots/s + peak memory
+  for `R∈{3,5,10}`, complex64 vs complex128 before any `10⁶` optimization run. The benchmark
+  may choose batching/wave geometry but cannot promote c64 into final/certification evidence.
 
 ---
 

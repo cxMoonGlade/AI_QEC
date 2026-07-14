@@ -16,8 +16,8 @@ THE TWO THETA CONVENTIONS ARE TWO DISTINCT PRESETS (never a merged default):
 * :data:`PRESET_LEAK_WG_L1_5E3` -- the MODEL-RATE-SOLVED convention: ``theta_rad`` is
   SOLVED so the exact project WG channel's per-cycle leak rate ``WG_L1`` hits the
   registered target (5.0e-3, a single-paper magnitude anchor from Miao) via
-  :func:`~error_coupling_simulator.mechanisms.qutrit_teachers.calibrate_theta_for_wg_l1`
-  (a legacy-named monotone model-rate solver, NOT device calibration; also re-exported as
+  :func:`~error_coupling_simulator.mechanisms.qutrit_teachers.solve_theta_for_wg_l1`
+  (a monotone model-rate solver, NOT device calibration; its historical spelling is
   ``qec_twin.mechanisms.qutrit_teachers.calibrate_theta_for_wg_l1``).
 
 Neither preset is a paper-validated physical cell. ``theta_rad=0.30``, ``g_heat=0``,
@@ -32,8 +32,9 @@ Exactly ONE of ``theta_rad`` / ``wg_l1_target`` is set on any preset (validated)
 :func:`resolve_theta` maps either convention to the operative angle.
 
 DATASET RESOLUTION (K-vacuity rule). :func:`load_xzzx_d3` / :func:`run_spec_from_preset`
-resolve the shipped Google ``d3_at_q6_7`` patch as a GEOMETRY/SCHEDULE source only through
-``qec_twin.forward.exact.xzzx_parser.default_r01_paths`` / ``default_r10_paths``
+resolve the caller-supplied Google ``d3_at_q6_7`` patch as a GEOMETRY/SCHEDULE source only through
+``error_coupling_simulator.frontend.xzzx_parser.default_r01_paths`` /
+``default_r10_paths``
 (layout: ``<root>/<patch>/<basis>/<r01|r10>/{circuit_ideal.stim, metadata.json}``).
 Root precedence: the ``dataset_root`` argument > the ``QEC_TWIN_D3_DATA`` env var
 (if the key is SET) > the parser's built-in ``DEFAULT_DATASET_ROOT`` (env key
@@ -60,20 +61,14 @@ from typing import TYPE_CHECKING
 
 from error_coupling_simulator.mechanisms.qutrit_teachers import (
     LEAKED_READOUT_BIAS_SWEEP,
-    calibrate_theta_for_wg_l1,
-)
-from qec_twin.forward.exact import xzzx_parser as _xp
-from qec_twin.forward.scalable.sv_sampler import (
-    SV_ARMS,
-    SV_READOUT_CONVENTIONS,
-    RunSpec,
-    SvSampler,
-    _bind_registered_numerical_provenance,
+    solve_theta_for_wg_l1,
 )
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     import torch
-    from qec_twin.forward.exact.xzzx_parser import XZZXSchedule
+    from error_coupling_simulator.carrier.within_cycle import RunSpec
+
+    from .xzzx_parser import XZZXSchedule
 
 __all__ = [
     "ExperimentPreset",
@@ -89,13 +84,78 @@ __all__ = [
 #: Dataset-root override env var (ratified decision 7 of the ownership contract).
 QEC_TWIN_D3_DATA_ENV = "QEC_TWIN_D3_DATA"
 
-#: The four shipped d3_at_q6_7 files, keyed by logical name (the same logical names
+#: Stable compatibility vocabulary used by the frozen preset contract.  These values
+#: are package-local so importing/validating a preset does not load the GPU carrier.
+#: The lazy runtime adapter verifies exact equality with the active carrier before use.
+SV_ARMS: tuple[str, ...] = ("A", "C", "B1", "B2")
+SV_READOUT_CONVENTIONS: tuple[str, ...] = ("biased_b", "half")
+RUN_PURPOSES: tuple[str, ...] = ("optimization", "final", "certification")
+PRECISION_POLICY = "optimization_c64_final_certification_c128_v1"
+_RUN_PURPOSE_DTYPE = {
+    "optimization": "c64",
+    "final": "c128",
+    "certification": "c128",
+}
+_RUN_PURPOSE_EVIDENCE = {
+    "optimization": "screening_only",
+    "final": "c128_candidate",
+    "certification": "c128_candidate",
+}
+
+#: The four required external d3_at_q6_7 files, keyed by logical name (the same logical names
 #: the tests/conftest.py probe + the AM-2 mask hook use).
 _D3_LOGICAL_NAMES = ("r01_circ", "r01_meta", "r10_circ", "r10_meta")
 
 
+def _xzzx_parser():
+    """Load the package-local dataset parser only for dataset/schedule operations."""
+    from . import xzzx_parser
+
+    return xzzx_parser
+
+
+def _sv_runtime():
+    """Load the package-local carrier host only for run/leak operations."""
+    from error_coupling_simulator.carrier.within_cycle import (
+        SV_ARMS as carrier_arms,
+        SV_READOUT_CONVENTIONS as carrier_readout_conventions,
+        PRECISION_POLICY as carrier_precision_policy,
+        RUN_PURPOSES as carrier_run_purposes,
+        FusedWithinCycleSampler,
+        RunSpec,
+        _bind_registered_numerical_provenance,
+    )
+
+    if tuple(carrier_arms) != SV_ARMS:
+        raise RuntimeError(
+            "carrier arm vocabulary drifted from the experiments contract: "
+            f"expected {SV_ARMS}, got {tuple(carrier_arms)}")
+    if tuple(carrier_readout_conventions) != SV_READOUT_CONVENTIONS:
+        raise RuntimeError(
+            "carrier readout vocabulary drifted from the experiments contract: "
+            f"expected {SV_READOUT_CONVENTIONS}, "
+            f"got {tuple(carrier_readout_conventions)}")
+    if tuple(carrier_run_purposes) != RUN_PURPOSES:
+        raise RuntimeError(
+            "carrier run-purpose vocabulary drifted from the experiments contract: "
+            f"expected {RUN_PURPOSES}, got {tuple(carrier_run_purposes)}")
+    if str(carrier_precision_policy) != PRECISION_POLICY:
+        raise RuntimeError(
+            "carrier precision policy drifted from the experiments contract: "
+            f"expected {PRECISION_POLICY!r}, got {carrier_precision_policy!r}")
+    return RunSpec, FusedWithinCycleSampler, _bind_registered_numerical_provenance
+
+
+def _precision_for_purpose(purpose: str) -> tuple[str, str]:
+    key = str(purpose)
+    if key not in RUN_PURPOSES:
+        raise ValueError(
+            f"run_purpose must be one of {RUN_PURPOSES} (got {purpose!r})")
+    return _RUN_PURPOSE_DTYPE[key], _RUN_PURPOSE_EVIDENCE[key]
+
+
 def _dataset_files(dataset_root: "str | Path | None") -> "dict[str, Path]":
-    """Resolve the four shipped ``d3_at_q6_7`` files (r01/r10 circuit + metadata).
+    """Resolve the four external ``d3_at_q6_7`` files (r01/r10 circuit + metadata).
 
     Root precedence: ``dataset_root`` argument > ``QEC_TWIN_D3_DATA`` env var (if the
     key is SET; SET-but-empty/whitespace raises :class:`ValueError`, fail loud) > the
@@ -112,6 +172,7 @@ def _dataset_files(dataset_root: "str | Path | None") -> "dict[str, Path]":
     NEVER a silent fallback to the default root (K-vacuity: a fallback would let an
     env-override run silently read the wrong data and still "pass").
     """
+    xp = _xzzx_parser()
     root: "Path | None"
     if dataset_root is not None:
         root, source = Path(dataset_root), "dataset_root argument"
@@ -126,14 +187,14 @@ def _dataset_files(dataset_root: "str | Path | None") -> "dict[str, Path]":
                 f"env var {QEC_TWIN_D3_DATA_ENV} is SET but empty/whitespace; "
                 f"empty values are not allowed (a broken shell expansion would "
                 f"be indistinguishable from unset). Unset it to use the default "
-                f"root {_xp.DEFAULT_DATASET_ROOT}, or set it to a real dataset "
+                f"root {xp.DEFAULT_DATASET_ROOT}, or set it to a real dataset "
                 f"root. Never falling back silently.")
         root, source = Path(env_root), f"env {QEC_TWIN_D3_DATA_ENV}"
     else:
-        root, source = None, f"default root {_xp.DEFAULT_DATASET_ROOT}"
+        root, source = None, f"default root {xp.DEFAULT_DATASET_ROOT}"
 
-    r01_circ, r01_meta = _xp.default_r01_paths()
-    r10_circ, r10_meta = _xp.default_r10_paths()
+    r01_circ, r01_meta = xp.default_r01_paths()
+    r10_circ, r10_meta = xp.default_r10_paths()
     files: "dict[str, Path]" = {
         "r01_circ": r01_circ, "r01_meta": r01_meta,
         "r10_circ": r10_circ, "r10_meta": r10_meta,
@@ -143,22 +204,22 @@ def _dataset_files(dataset_root: "str | Path | None") -> "dict[str, Path]":
             raise FileNotFoundError(
                 f"d3 dataset root {root} ({source}) does not exist or is not a "
                 f"directory. Refusing to fall back to the default root "
-                f"{_xp.DEFAULT_DATASET_ROOT} (a silent fallback would make the "
+                f"{xp.DEFAULT_DATASET_ROOT} (a silent fallback would make the "
                 f"override vacuous).")
-        files = {name: root / p.relative_to(_xp.DEFAULT_DATASET_ROOT)
+        files = {name: root / p.relative_to(xp.DEFAULT_DATASET_ROOT)
                  for name, p in files.items()}
     missing = [f"{name}: {files[name]}" for name in _D3_LOGICAL_NAMES
                if not files[name].is_file()]
     if missing:
         raise FileNotFoundError(
-            f"shipped d3_at_q6_7 file(s) missing (root from {source}): "
+            f"external d3_at_q6_7 file(s) missing (root from {source}): "
             f"{missing}. Never falling back to the default root.")
     return files
 
 
 def load_xzzx_d3(dataset_root: "str | Path | None" = None, *,
                  with_interior_streams: bool = True) -> "XZZXSchedule":
-    """Parse the shipped Google d3 XZZX schedule: r01 geometry (+ r10 interior streams).
+    """Parse an external Google d3 XZZX schedule: r01 geometry (+ r10 interior streams).
 
     Provenance is the explicit two-file-role split (model §1): the r01 instance supplies
     the VERIFIED code geometry (``parse_xzzx_circuit(verify=True)``: 17 qubits /
@@ -167,8 +228,8 @@ def load_xzzx_d3(dataset_root: "str | Path | None" = None, *,
     the per-qutrit within-cycle INTERIOR token streams
     (``sched.with_within_cycle_streams(parse_within_cycle_streams(r10))``; r01's single
     round is first+terminal, not a clean interior round, so r01 alone cannot provide
-    them). The within-cycle carriers (``SvSampler.marshal_within_cycle``,
-    ``MpsLeakageForward.sample``) REQUIRE the streams; pass
+    them). The active within-cycle carrier
+    (``FusedWithinCycleSampler.marshal_within_cycle``) REQUIRES the streams; pass
     ``with_interior_streams=False`` only for geometry-only consumers.
 
     These Google assets supply geometry and schedule/token streams only. This facade
@@ -180,11 +241,12 @@ def load_xzzx_d3(dataset_root: "str | Path | None" = None, *,
     :class:`FileNotFoundError` naming it -- never a silent fallback (see
     :func:`_dataset_files`).
     """
+    xp = _xzzx_parser()
     files = _dataset_files(dataset_root)
-    sched = _xp.parse_xzzx_circuit(files["r01_circ"], files["r01_meta"], verify=True)
+    sched = xp.parse_xzzx_circuit(files["r01_circ"], files["r01_meta"], verify=True)
     if with_interior_streams:
         sched = sched.with_within_cycle_streams(
-            _xp.parse_within_cycle_streams(files["r10_circ"], files["r10_meta"]))
+            xp.parse_within_cycle_streams(files["r10_circ"], files["r10_meta"]))
     return sched
 
 
@@ -450,37 +512,42 @@ def resolve_theta(preset: ExperimentPreset) -> float:
     """The operative WG exchange angle (radians) for a preset.
 
     Raw-angle convention: returns the pinned ``theta_rad``. Model-rate-solved
-    convention: returns ``calibrate_theta_for_wg_l1(wg_l1_target, g_seep=...,
+    convention: returns ``solve_theta_for_wg_l1(wg_l1_target, g_seep=...,
     g_heat=...)`` -- the monotone bisection on the EXACT WG channel rate (the same
     import + call shape the L-soft gates use), so the preset's ``g_seep``/``g_heat``
-    participate exactly as registered. Despite the legacy helper name, this solves a
-    project-model coordinate; it does not calibrate a device or validate the composed
+    participate exactly as registered. This solves a project-model coordinate; it
+    does not calibrate a device or validate the composed
     preset as a physical cell.
     """
     if preset.theta_rad is not None:
         return float(preset.theta_rad)
-    return float(calibrate_theta_for_wg_l1(
+    return float(solve_theta_for_wg_l1(
         float(preset.wg_l1_target),
         g_seep=float(preset.g_seep), g_heat=float(preset.g_heat)))
 
 
 def run_spec_from_preset(preset: ExperimentPreset, *, n_shots: int, n_rounds: int,
                          seed: int, m: int = 0,
+                         run_purpose: str = "final",
                          dataset_root: "str | Path | None" = None) -> RunSpec:
-    """Build the :class:`~qec_twin.forward.scalable.sv_sampler.RunSpec` for a preset.
+    """Build the package-local fused-carrier :class:`RunSpec` for a preset.
 
     Every run-shape knob is an EXPLICIT keyword (``n_shots``/``n_rounds``/``seed``;
     ``m`` is the prepared logical); every physics knob comes from the preset (theta
     resolved via :func:`resolve_theta` -- the wg_l1 form is model-rate-solved here); the
-    circuit/metadata paths are the resolved shipped r01 instance (the R>1 engine
+    circuit/metadata paths are the resolved external r01 instance (the R>1 engine
     reuses the r01 geometry -- attach the r10 interior streams via
     :func:`load_xzzx_d3` when driving a within-cycle carrier). No hidden knobs:
-    ``dtype`` is pinned to the engine default ``"c128"``; everything else is
-    validated by ``RunSpec.__post_init__``. The Google r01 paths supply geometry and
-    schedule only; no preset noise coordinate is inferred from those assets.
+    precision is purpose-derived and cannot be selected independently:
+    ``optimization -> c64`` while ``final|certification -> c128``.  Optimization
+    artifacts are screening-only; a frozen c128 replay is required before evidence
+    use. Everything else is validated by ``RunSpec.__post_init__``. The Google r01
+    paths supply geometry and schedule only; no preset noise coordinate is inferred
+    from those assets.
     """
     files = _dataset_files(dataset_root)
     theta = resolve_theta(preset)
+    dtype, evidence_eligibility = _precision_for_purpose(run_purpose)
     canonical_manifest = _canonical_registered_manifest(preset)
     if canonical_manifest is None:
         numerical_provenance: "dict[str, object]" = {
@@ -527,8 +594,15 @@ def run_spec_from_preset(preset: ExperimentPreset, *, n_shots: int, n_rounds: in
             "logical_input_m": int(m),
             "provenance_kind": "project-design",
         },
+        "precision": {
+            "policy": PRECISION_POLICY,
+            "run_purpose": str(run_purpose),
+            "dtype": dtype,
+            "evidence_eligibility": evidence_eligibility,
+        },
     }
-    spec = RunSpec(
+    run_spec_cls, _sampler_cls, bind_registered_provenance = _sv_runtime()
+    spec = run_spec_cls(
         circuit_path=files["r01_circ"],
         metadata_path=files["r01_meta"],
         m=int(m),
@@ -541,12 +615,13 @@ def run_spec_from_preset(preset: ExperimentPreset, *, n_shots: int, n_rounds: in
         N=int(n_shots),
         base_seed=int(seed),
         R=int(n_rounds),
-        dtype="c128",
+        dtype=dtype,
+        run_purpose=str(run_purpose),
         numerical_provenance=(
             None if canonical_manifest is not None else numerical_provenance),
     )
     if canonical_manifest is not None:
-        return _bind_registered_numerical_provenance(spec, numerical_provenance)
+        return bind_registered_provenance(spec, numerical_provenance)
     return spec
 
 
@@ -555,7 +630,7 @@ def leak_slice_table(preset_or_params: "ExperimentPreset | RunSpec", *,
                      as_list: bool = False):
     """The within-cycle per-CZ leak slice ``exp(L/4)`` Kraus table for a preset.
 
-    Routes through :meth:`SvSampler.build_within_cycle_leak` -- the C1-asserted
+    Routes through :meth:`FusedWithinCycleSampler.build_within_cycle_leak` -- the C1-asserted
     builder. The embedded (a)-class PRECONDITIONS stay inside that builder and are
     therefore embedded in this facade path (contract row A1 -- they are never
     bypassed):
@@ -570,10 +645,11 @@ def leak_slice_table(preset_or_params: "ExperimentPreset | RunSpec", *,
     :func:`resolve_theta`; the table depends only on ``(theta, g_seep, g_heat)``) or
     an explicit :class:`RunSpec` (passed straight to the builder). Returns the stacked
     ``(n_kraus, 3, 3)`` device tensor by default, or the list form ``[K_0, ...]`` when
-    ``as_list=True``. GPU-only compute (the SvSampler contract).
+    ``as_list=True``. GPU-only compute (the fused within-cycle host contract).
     """
+    run_spec_cls, sampler_cls, _bind_provenance = _sv_runtime()
     if isinstance(preset_or_params, ExperimentPreset):
-        spec = RunSpec(
+        spec = run_spec_cls(
             # circuit_path is NOT consumed here: build_within_cycle_leak reads only
             # (theta, g_seep, g_heat). The sentinel keeps the C1-asserted builder's
             # RunSpec signature without requiring the dataset on disk for a pure
@@ -588,13 +664,13 @@ def leak_slice_table(preset_or_params: "ExperimentPreset | RunSpec", *,
             N=1,
             base_seed=0,
         )
-    elif isinstance(preset_or_params, RunSpec):
+    elif isinstance(preset_or_params, run_spec_cls):
         spec = preset_or_params
     else:
         raise TypeError(
             f"preset_or_params must be an ExperimentPreset or a RunSpec "
             f"(got {type(preset_or_params).__name__})")
-    host = SvSampler(device=device)
+    host = sampler_cls(device=device)
     leak, _evidence = host.build_within_cycle_leak(spec)  # CPTP + composition asserted
     if as_list:
         return [leak[k] for k in range(leak.shape[0])]

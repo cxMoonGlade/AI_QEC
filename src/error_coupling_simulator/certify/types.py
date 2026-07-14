@@ -2,15 +2,16 @@ from __future__ import annotations
 
 """Certification interface — the value types + the ``Anchor`` port (step 1 of ``audit.certify``).
 
-``qec_twin.audit.certify`` is the evaluator-side seam that scores a CONTROLLED TEACHER's emitted
+This evaluator-side seam scores a controlled noise process's emitted
 records (or the scalable carrier that produces them) against INDEPENDENT GROUND-TRUTH ANCHORS and
 returns an epistemic ledger. It graduates into one deep module the carrier↔DM↔closed-form
 cross-checks that were re-wired ad hoc across ``outputs/teacher_prereg/`` (the de-facto
 ``p7e_carrier_cert_common`` + the stim slice in ``twin_xzzx_teacher`` + the closed-form anchors in
 ``mechanisms``/``hardware``).
 
-DESIGN (locked). A common-caller spine (``certify_teacher(teacher, level=...) -> CertReport``,
-step 6) over an ``Anchor`` capability-descriptor PORT (this file) — the SAME Protocol shape as
+DESIGN (locked). A common-caller spine (neutral spelling ``certify_noise_process``;
+historical spelling ``certify_teacher``) over an ``Anchor`` capability-descriptor PORT
+(this file) — the SAME Protocol shape as
 ``audit.floor_backend.PathJointEvaluator``: the certify core is BLIND to whether a DM oracle, a stim
 Clifford slice, or a closed-form identity answered. The port carries a *capability descriptor* so
 OOM-routing is DATA, not branching — an anchor that would OOM reports ``feasible=False`` and the core
@@ -30,8 +31,8 @@ INVARIANTS this interface encodes (the prevent-toy + epistemic discipline, CLAUD
   * EPISTEMIC LEDGER (``LedgerRow.epistemic_class``): every row is class (a) exact / (b) band /
     (c) gate (the METRICS.md ladder); the ledger is the test surface.
 
-Evaluator-only (the ``audit`` boundary): may read the teacher's KNOWN TRUTH to SCORE validity, never
-feeds a learner. Pure value types + Protocols here — no GPU, no heavy imports; the concrete GPU /
+Evaluator-only: certification may read known process truth to score validity, but that truth never
+enters emitted records. Pure value types + Protocols here — no GPU, no heavy imports; the concrete GPU /
 stim / closed-form adapters arrive in later steps.
 """
 
@@ -53,7 +54,7 @@ class Exactness(Enum):
 class Statistic(Enum):
     """A certifiable quantity of the emitted record surface (seam-folded detectors + logical flip).
 
-    The DM / stim anchors answer the DISTRIBUTIONAL statistics (a teacher and an anchor compute the
+    The DM / stim anchors answer the distributional statistics (a process and an anchor compute the
     SAME statistic and are compared); ``SCALAR_FUNC`` is the closed-form analytic SIDECAR (a named
     identity an anchor asserts, with no distributional competitor)."""
 
@@ -149,14 +150,14 @@ class LedgerRow:
 
 @dataclass(frozen=True)
 class CertReport:
-    """The epistemic ledger + the single headline verdict — the return of ``certify_teacher``.
+    """The epistemic ledger + the single headline certification verdict.
 
     INVARIANTS:
       * ``verdict == PASS`` ⟹ every (a)-exact row passed AND every control fired. A passing report
         with an inert control is impossible — the core's verdict roll-up downgrades it to FAIL.
       * ``routing`` names the anchor actually used per (statistic, regime) + WHY (feasibility), so a
         reader audits the DM-for-anchor / MCWF-for-scale routing without rerunning.
-      * ``truth`` is the evaluator-only known truth — RETURNED, never fed to a learner (isolation)."""
+      * ``truth`` is evaluator-only process truth — returned separately, never emitted (isolation)."""
 
     verdict: Verdict
     rows: tuple[LedgerRow, ...]
@@ -276,9 +277,9 @@ class Control(Protocol):
 
 @runtime_checkable
 class ControlledNoiseProcess(Protocol):
-    """What ``certify_teacher`` needs from a controlled teacher: a way to EMIT records, the parsed
+    """What certification needs from a controlled process: a way to emit records, the parsed
     geometry, the per-CZ channel field (for the channel-level anchors), and the evaluator-only known
-    TRUTH. The ``outputs/teacher_prereg`` teachers satisfy this via a thin adapter (step 6)."""
+    truth. Historical fixtures under ``outputs/teacher_prereg`` satisfy this via a thin adapter."""
 
     @property
     def sched(self) -> Any:
@@ -301,8 +302,8 @@ class ControlledNoiseProcess(Protocol):
 
 @runtime_checkable
 class DMReplayable(Protocol):
-    """A teacher the DM-oracle anchor can replay on the density matrix: it builds the per-round
-    mechanism callbacks the DM evolves through. A teacher satisfies BOTH ``ControlledNoiseProcess`` (for
+    """A process the DM-oracle anchor can replay on the density matrix: it builds the per-round
+    mechanism callbacks the DM evolves through. A process satisfies BOTH ``ControlledNoiseProcess`` (for
     the carrier-emitted records) AND ``DMReplayable`` (for the DM ground truth) — the two
     representations of the SAME mechanism, which is what makes the DM↔carrier comparison a genuine
     cross-construction check (Gate-4), not a check vs the engine's own oracle."""
@@ -318,7 +319,7 @@ class DMReplayable(Protocol):
 
 @runtime_checkable
 class CliffordSliceable(Protocol):
-    """A teacher the stim-Clifford anchor can certify: it can emit a PAULI/CLIFFORD slice of its own
+    """A process the stim-Clifford anchor can certify: it can emit a PAULI/CLIFFORD slice of its own
     geometry (the mechanism set to ``theta=0, gamma=0`` + a per-round bit-flip ``X_ERROR(p_x)``), which
     stim — a SEPARATE Clifford simulator — reproduces exactly. The comparison certifies the
     geometry→record WIRING (the seam fold + the logical) against an implementation-INDEPENDENT

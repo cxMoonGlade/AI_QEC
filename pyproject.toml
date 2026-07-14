@@ -5,42 +5,139 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "error-coupling-simulator"
 version = "0.1.0"
-description = "A faithful, GPU-first simulator of QEC error mechanisms — coupling, leakage, and other non-Pauli / memory-ful noise on the rotated surface code (XZZX); emits the multi-time syndrome record. Binding spec: docs/SIMULATOR.md"
-requires-python = ">=3.10"
+description = "A GPU-first project targeting faithful simulation of QEC error mechanisms — coupling, leakage, and other non-Pauli / memory-ful noise on the rotated surface code (XZZX); emits the multi-time syndrome record. Binding spec: docs/SIMULATOR.md"
+readme = {file = "src/error_coupling_simulator/README.md", content-type = "text/markdown"}
+requires-python = ">=3.11"
 dependencies = [
-    "numpy",
-    "opt_einsum",
-    "PyYAML",
-    "stim",
-    "torch",
+    "numpy==2.4.6",
+    "opt_einsum==3.4.0",
+    "PyYAML==6.0.3",
+    "quimb==1.14.0",
+    "scipy==1.17.1",
+    "stim==1.16.0",
+    "torch==2.12.0",
 ]
 
 [project.optional-dependencies]
-cuda-extension = ["ninja"]
+cuda-extension = ["ninja==1.13.0"]
+# Reproducible Linux/Blackwell GPU runtime for the canonical ecs simulator.
+# Pin the JIT compiler pieces so torch extensions do not silently compile
+# against a different host toolkit.
+gpu-cu130 = [
+    "qutip==5.3.0; python_version >= '3.11' and sys_platform == 'linux'",
+    "qutip-cuquantum[cuda13]==0.3.1; python_version >= '3.11' and sys_platform == 'linux'",
+    "cupy-cuda13x==13.6.0; python_version >= '3.11' and sys_platform == 'linux'",
+    "cuquantum-python-cu13==26.3.2; python_version >= '3.11' and sys_platform == 'linux'",
+    "cudensitymat-cu13==0.5.2; python_version >= '3.11' and sys_platform == 'linux'",
+    "cupauliprop-cu13==0.3.2; python_version >= '3.11' and sys_platform == 'linux'",
+    "custabilizer-cu13==0.3.0; python_version >= '3.11' and sys_platform == 'linux'",
+    "custatevec-cu13==1.13.1; python_version >= '3.11' and sys_platform == 'linux'",
+    "cutensor-cu13==2.6.0; python_version >= '3.11' and sys_platform == 'linux'",
+    "cutensornet-cu13==2.12.2; python_version >= '3.11' and sys_platform == 'linux'",
+    "nvmath-python==0.9.0; python_version >= '3.11' and sys_platform == 'linux'",
+    "cuda-bindings==13.3.0; python_version >= '3.11' and sys_platform == 'linux'",
+    "cuda-core==0.7.0; python_version >= '3.11' and sys_platform == 'linux'",
+    "cuda-pathfinder==1.5.5; python_version >= '3.11' and sys_platform == 'linux'",
+    "cuda-toolkit[cccl,crt,cudart,nvcc,nvrtc,nvjitlink,nvvm]==13.0.2; python_version >= '3.11' and sys_platform == 'linux'",
+    "nvidia-cuda-cccl==13.0.85; python_version >= '3.11' and sys_platform == 'linux'",
+    "nvidia-cuda-runtime==13.0.96; python_version >= '3.11' and sys_platform == 'linux'",
+    "nvidia-cuda-nvcc==13.0.88; python_version >= '3.11' and sys_platform == 'linux'",
+    "nvidia-cuda-crt==13.0.88; python_version >= '3.11' and sys_platform == 'linux'",
+    "nvidia-cuda-nvrtc==13.0.88; python_version >= '3.11' and sys_platform == 'linux'",
+    "nvidia-nvjitlink==13.0.88; python_version >= '3.11' and sys_platform == 'linux'",
+    "nvidia-nvvm==13.0.88; python_version >= '3.11' and sys_platform == 'linux'",
+]
+# Optional noiseless Grover adapter.  Deliberately not selected by the ecs sync
+# wrapper: CUDA-Q remains isolated in the retained aiqec environment because it
+# is not part of the coupled-noise carrier and conflicts with the fused extension
+# during same-process native teardown.
+cudaq-grover = [
+    "cudaq[visualization]==0.14.2; python_version >= '3.11' and sys_platform == 'linux'",
+    "matplotlib==3.10.9; python_version >= '3.11' and sys_platform == 'linux'",
+    "cuda-quantum-cu13==0.14.2; python_version >= '3.11' and sys_platform == 'linux'",
+]
 # M4 decoder pin (registration S1/S11): frozen evaluator-side decoder, CPU,
-# upstream defaults; wheel sha256 recorded in qec_twin/hardware/m4_decode.py.
+# upstream defaults; wheel identity recorded in error_coupling_simulator/frontend/decoder.py.
 hw = ["pymatching==2.4.0"]
 # INDEPENDENT-oracle test deps. tests/test_joint_lindbladian.py validates the joint-Lindbladian
 # assembler against QuTiP + scipy (NOT the module's own code — faithfulness protocol rule I); the
 # qutip_* gtchecks already use them. Declared so a bare `pytest` does not silently SKIP the oracle
 # tests and "pass" with zero coverage (the skip when missing is loud — NOT a release basis).
-test = ["qutip", "scipy"]
-
-[project.scripts]
-# Frozen evaluator-side R2 decoder report (routes through the still-used qec_twin.hardware decoder).
-qec-twin-m4 = "qec_twin.hardware.m4_report:main"
+test = [
+    "coverage==7.15.0",
+    "hypothesis==6.156.1",
+    "mutmut==3.6.0",
+    "pytest==8.4.2",
+    "qutip==5.3.0; python_version >= '3.11'",
+]
 
 [tool.setuptools]
 package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+include = ["error_coupling_simulator", "error_coupling_simulator.*"]
 
 [tool.setuptools.package-data]
 "error_coupling_simulator.carrier.kernels" = ["*.cpp", "*.cu", "README.md"]
 
+[tool.setuptools.data-files]
+"share/doc/error-coupling-simulator" = [
+    "docs/SIMULATOR.md",
+    "docs/METRICS.md",
+    "docs/FAITHFULNESS_PROTOCOL.md",
+    "docs/NUMERICAL_PROVENANCE.md",
+]
+
 [tool.pytest.ini_options]
 pythonpath = ["src"]
+testpaths = ["tests"]
+norecursedirs = ["legacy", "external", "outputs", "retired", ".venv", ".hypothesis"]
 markers = [
     "slow: opt-in heavy runs (e.g. whole-corpus m2d parity; enable with QEC_TWIN_HW_SLOW)",
 ]
+
+[tool.aiqec.core-environment]
+conda_environment = "ecs"
+python = "3.12.13"
+pip = "26.0.1"
+uv = "0.11.21"
+torch_cuda = "13.0"
+cuda_provider = "nvidia/cu13"
+
+[tool.aiqec.core-environment.versions]
+coverage = "7.15.0"
+numpy = "2.4.6"
+opt-einsum = "3.4.0"
+PyYAML = "6.0.3"
+quimb = "1.14.0"
+stim = "1.16.0"
+scipy = "1.17.1"
+torch = "2.12.0"
+triton = "3.7.0"
+ninja = "1.13.0"
+pytest = "8.4.2"
+hypothesis = "6.156.1"
+mutmut = "3.6.0"
+qutip = "5.3.0"
+qutip-cuquantum = "0.3.1"
+cupy-cuda13x = "13.6.0"
+cuquantum-python-cu13 = "26.3.2"
+cudensitymat-cu13 = "0.5.2"
+cupauliprop-cu13 = "0.3.2"
+custabilizer-cu13 = "0.3.0"
+custatevec-cu13 = "1.13.1"
+cutensor-cu13 = "2.6.0"
+cutensornet-cu13 = "2.12.2"
+nvmath-python = "0.9.0"
+cuda-bindings = "13.3.0"
+cuda-core = "0.7.0"
+cuda-pathfinder = "1.5.5"
+cuda-toolkit = "13.0.2"
+nvidia-cuda-cccl = "13.0.85"
+nvidia-cuda-runtime = "13.0.96"
+nvidia-cuda-nvcc = "13.0.88"
+nvidia-cuda-crt = "13.0.88"
+nvidia-cuda-nvrtc = "13.0.88"
+nvidia-nvjitlink = "13.0.88"
+nvidia-nvvm = "13.0.88"

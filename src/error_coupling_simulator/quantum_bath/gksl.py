@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 r"""Bosonic GKSL primitives for the shared-bath (pseudomode) carrier.
 
 Canonical, package-native home for the boson algebra + the SHARED multi-component Liouvillian on
@@ -12,9 +10,11 @@ Extracted VERBATIM from:
   - build_L2 (-> build_shared_bath_liouvillian) / round_superop2 (-> round_superop)
     <- notion3_relaxation_dualaxis_run.py
 
-Boundary: exact-DM feasibility-only (reduced superop is (4*nmax)^2 sq); CPU; teacher/evaluator-side.
+Boundary: exact-DM feasibility-only (reduced superop is (4*nmax)^2 sq); CPU; evaluator-side.
 No physical ground truth (oracles are FORMAL).
 """
+
+from __future__ import annotations
 
 import math
 

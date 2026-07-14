@@ -6,6 +6,8 @@ mutmut 3.6 config lives in setup.cfg (no run-CLI), so: back up setup.cfg -> writ
 [mutmut] (newline-joined lists; comma breaks mutmut's parser) -> run -> ALWAYS restore (finally).
 Serialized by an flock on the shared setup.cfg. GPU pool acquired if the registry is requires_gpu.
 STAGE_D_SKIP_SLOW=1 exported so slow physics pins are skipped under mutation. Gate: kill_rate>=BAR.
+Mutants reported by mutmut as ``no tests`` (worker exit 33) are non-killed and are reported
+separately; they must never inflate the kill rate.
 
 Usage:  python tests/harness/mutation.py <registry.json>  [--jobs N] [--timeout SEC]
 """
@@ -26,6 +28,9 @@ REPO = Path(__file__).resolve().parents[2]          # portable (works on spark t
 LOGDIR = REPO / "outputs/twin_validation/logs"
 ENVBIN = str(Path(sys.executable).parent)           # the running interpreter's bin (portable: aiqec OR spark venv)
 CONFIG_PATH = REPO / "tests" / "harness_config.json"
+_NON_KILLED_RESULT = re.compile(
+    r"^\s*(?P<mutant>.+?):\s*(?P<status>survived|timeout|suspicious|no tests)\s*$"
+)
 
 
 def _knob(reg: dict, section: str, key: str, envname: str, default, cast):
@@ -50,6 +55,45 @@ def _env() -> dict:
     e["PATH"] = ENVBIN + ":" + e.get("PATH", "")
     e["STAGE_D_SKIP_SLOW"] = "1"
     return e
+
+
+def _result_counts(total: int, results_text: str) -> dict:
+    """Parse mutmut's non-killed result rows without crediting ``no tests`` as killed."""
+    survivors: list[str] = []
+    no_test_mutants: list[str] = []
+    for line in results_text.splitlines():
+        match = _NON_KILLED_RESULT.match(line)
+        if match is None:
+            continue
+        mutant = match.group("mutant").strip()
+        if match.group("status") == "no tests":
+            no_test_mutants.append(mutant)
+        else:
+            survivors.append(mutant)
+
+    non_killed = len(survivors) + len(no_test_mutants)
+    if non_killed > total:
+        raise ValueError(
+            f"mutmut reported {non_killed} non-killed mutants for total={total}"
+        )
+    return {
+        "killed": total - non_killed,
+        "survived": len(survivors),
+        "no_tests": len(no_test_mutants),
+        "survivors": survivors,
+        "no_test_mutants": no_test_mutants,
+    }
+
+
+def _score_results(total: int, results_text: str, bar: float) -> dict:
+    """Return compatible mutation fields plus an honest rate/pass decision."""
+    counts = _result_counts(total, results_text)
+    rate = counts["killed"] / total if total else 0.0
+    return {
+        **counts,
+        "kill_rate": round(rate, 4),
+        "pass": rate >= bar,
+    }
 
 
 def run_mutation(registry: str, *, jobs: int | None = None,
@@ -105,14 +149,16 @@ def run_mutation(registry: str, *, jobs: int | None = None,
     logtxt = log.read_text(encoding="utf-8", errors="replace")
     prog = re.findall(r"(\d+)/(\d+)", logtxt)
     total = int(prog[-1][1]) if prog else 0
-    survivors = [ln.split(":")[0].strip()
-                 for ln in res.read_text(encoding="utf-8", errors="replace").splitlines()
-                 if re.search(r":\s*(survived|timeout|suspicious)\s*$", ln)]
-    killed = total - len(survivors)
-    rate = killed / total if total else 0.0
-    doc = {"tag": tag, "total": total, "killed": killed, "survived": len(survivors),
-           "kill_rate": round(rate, 4), "bar": bar, "pass": rate >= bar,
-           "timeout_multiplier": tmult, "survivors": survivors}
+    score = _score_results(
+        total,
+        res.read_text(encoding="utf-8", errors="replace"),
+        bar,
+    )
+    doc = {"tag": tag, "total": total, "killed": score["killed"],
+           "survived": score["survived"], "no_tests": score["no_tests"],
+           "kill_rate": score["kill_rate"], "bar": bar, "pass": score["pass"],
+           "timeout_multiplier": tmult, "survivors": score["survivors"],
+           "no_test_mutants": score["no_test_mutants"]}
     surv_json.write_text(json.dumps(doc, indent=2), encoding="utf-8")
     return doc
 
@@ -129,7 +175,8 @@ def main(argv: list) -> int:
     assert args, "usage: mutation.py <registry.json> [--jobs N] [--timeout SEC]"
     doc = run_mutation(args[0], jobs=jobs, timeout=timeout)
     print(f"MUTATION tag={doc['tag']} total={doc['total']} killed={doc['killed']} "
-          f"survived={doc['survived']} kill_rate={doc['kill_rate']:.4f} bar={doc['bar']} "
+          f"survived={doc['survived']} no_tests={doc['no_tests']} "
+          f"kill_rate={doc['kill_rate']:.4f} bar={doc['bar']} "
           f"timeout_x{doc['timeout_multiplier']} {'PASS' if doc['pass'] else 'FAIL'}")
     return 0 if doc["pass"] else 1
 

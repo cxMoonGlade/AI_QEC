@@ -1,16 +1,18 @@
 # MIGRATION PLAN — standalone `error_coupling_simulator` package
 
-> **Note (2026-07-13):** this records HOW the package was consolidated (provenance). Its framing of
-> `qec_twin` as a surviving "learner/twin app" is superseded — the twin/learner line is retired and
-> `qec_twin` is being archived out of `src/` (RAG + R2 decoder kept via symlinks). Binding framing:
+> **Current closure (2026-07-14):** this file preserves HOW the package was consolidated, but its
+> old inward-dependency and learner/twin framing is superseded. The active distribution imports no
+> `qec_twin` runtime module. Old `qec_twin` import paths remain only as outward repository shims;
+> `qec_twin.rag` remains repository-only literature tooling. Neither is shipped. Binding framing:
 > `docs/SIMULATOR.md`.
 
 **Decision (user, 2026-07-03):** consolidate the coupling-error QEC simulator — code currently
 scattered across `src/qec_twin/` (tracked) AND `outputs/` (gitignored scratch) — into a **single
 standalone top-level package** `src/error_coupling_simulator/`, so it can be **released
-independently**. Full consolidation, done **PHASED with tests green at every step**. The gitignored
-`outputs/` scratch copies are **copied into the package (canonical) and then FROZEN** (left in place,
-unmaintained; the package is the single source of truth going forward).
+independently**. Full consolidation, done **PHASED with tests green at every step**. Selected
+gitignored `outputs/` *code primitives* were copied into the package and made canonical. Scratch
+data/evidence files are not package assets: in particular, ququart transport now takes an explicit
+caller-supplied Kraus `.npz` path.
 
 **Prime directive: 慢就是快 — no bugs.** Every move is verified before the next. The technique that
 makes a big move safe is a **compatibility shim**: move the code to its new home, leave a thin
@@ -36,7 +38,8 @@ qec_twin core modules — this is what the standalone package must ABSORB:
 - **numerics** (the `NUMERICAL_ZERO` floor)
 - **simulator/**: all ~50 modules (193 internal imports — highly cohesive)
 
-Plus the **homeless `outputs/` primitives** (no `src/` home today; only in gitignored scratch):
+Plus the **homeless `outputs/` primitives** (no `src/` home in the 2026-07-03 inventory; only in
+gitignored scratch):
 - `nm_source`, `nm_divisibility`, `nm_wedge` (the memory-ful source + RHP/BLP CP-divisibility +
   coherence-wedge — the P2 wedge observable). **All self-contained (no qec_twin import).**
 - `qutip_single_qubit_channels`, `qutip_twoqubit_channels`, `qutip_cz_leakage_channel`
@@ -57,26 +60,36 @@ scan showed the moved forward substrate is SHARED, not simulator-exclusive:
 `exact.qutrit_dm` (audit). The user ratified: **keep this shared forward PHYSICS CORE inside
 `error_coupling_simulator`; `qec_twin` (the pre-consolidation package: calibration, contexts, audit,
 hardware) depends on it via the shims.** So the package = **forward physics core + the coupling
-simulator**; `qec_twin` is the downstream pre-consolidation package (now being archived out of `src/`,
-with symlinks kept for the still-used RAG + R2 decoder).
+simulator**; the remaining `qec_twin` tree is now a repository-only set of outward compatibility
+shims plus retained RAG/R2 research surfaces, not a simulator runtime dependency or distribution
+member.
 
-**SCOPE REFINEMENT (what does NOT move — it is NOT the physics core):** the **decoder + R2 real-data
-hardware** stay in `qec_twin`. `hardware/m4_decode` (+ `b8_io`) drag in the whole R2 ingestion
-subsystem (`dataset`, `m1_report`, `stim_artifacts`) and are the frozen decoder + real Google data
-path — **evaluator/real-data side, per the standing "SIMULATOR ≠ decoder; DEM/decoder/LER never in
-the validity chain" rule.** The package's gates import the frozen decoder cross-package from
-`qec_twin.hardware.m4_decode` when needed. So the earlier plan's `decode/` folder is DROPPED.
-`audit/certify` (the teacher-certification seam — used only by simulator/teacher + tests, no learner
-consumer) DOES move (P4).
+**CURRENT SCOPE REFINEMENT (2026-07-14):** the R2 real-data ingestion and RAG trees remain
+repo-local compatibility/research surfaces, not simulator runtime. The active frontend owns a
+small package-local decoder adapter; record emission does not require a decoder, and external
+PyMatching is imported only when explicitly requested. Decoder output and LER remain instruments,
+never simulator-validity evidence. The evaluator-side certification seam, schedule/WG host,
+experiment facade, record types, and decoder adapter are package-local. Retained old import paths
+point outward to these owners; the owners never import those shims.
 
-**Packaging:** `pyproject.toml` uses `packages.find where=["src"]`, so `src/error_coupling_simulator/`
-with an `__init__.py` is auto-discovered + importable as `error_coupling_simulator` immediately — no
-pyproject change to be importable. A true separate DISTRIBUTABLE (own `pyproject`, `qec_twin` no
-longer a dep) is the FINAL phase, only after the boundary is clean.
+**Packaging:** `pyproject.toml` now uses an exact setuptools allowlist for
+`error_coupling_simulator` and its subpackages. `MANIFEST.in` applies the same source-archive
+allowlist even when an old `SOURCES.txt` exists. Wheel and sdist therefore publish neither
+`qec_twin` nor its former console entry point. Release acceptance is the real-checkout
+sdist → wheel → isolated-target install gate in `tests/test_distribution_boundary.py`, with
+the repository root and `src/` removed from import resolution for package import and core smokes.
+That gate also rejects leaked repository-only scratch assets; editable installation is not release
+evidence. Core runtime requires Python ≥3.11 and declares SciPy directly.
+
+**External-input / plugin boundary:** Google r01/r10 `.stim` + metadata files are explicit external
+circuit/geometry/schedule inputs, not bundled package data and not a source of noise parameters.
+The ququart adapter requires an explicit Kraus `.npz` input and has no repository-scratch default.
+CUDA-Q remains a public `cudaq-grover` optional plugin, but is deliberately absent from canonical
+`ecs`; it runs in the retained `aiqec` environment and a separate process from fused kernels.
 
 ---
 
-## Target skeleton
+## Historical target skeleton (2026-07-03)
 
 ```
 src/error_coupling_simulator/
@@ -123,13 +136,13 @@ src/error_coupling_simulator/
   REFINEMENT — the decoder + R2 hardware stay in qec_twin; gates import decode_dem cross-package).
   `tests/test_certify` green.
 
-**STATUS: P1 ✅ (6ddfcb5), P2 ✅ (9d6b70c/384ada4/6354a51), P3 ✅ (2cb8cdd), P4 ✅ (03662d2).
+**HISTORICAL STATUS RECORD: P1 ✅ (6ddfcb5), P2 ✅ (9d6b70c/384ada4/6354a51), P3 ✅ (2cb8cdd), P4 ✅ (03662d2).
 SCREENING ✅ — "keep the package lean" pass: removed the 7 unused scratch-origin modules
 (source/nm_* + oracles/*, no tracked importer — re-home at P6) and split cptp_channel (the learner
 recovery loop recover_channel/IC → `qec_twin/calibration/cptp_recovery.py`; shared DM ops +
 StinespringChannel + PTM stay in carrier). P5 ✅ (P5a `1f64a69` teachers.py, P5b `87d1297`
-frontend, P5c `286880b` coupled_cycle). P6 + P7 (de-shim) + rename all DEFERRED (user decision
-2026-07-03: keep the shim layer for now). Handoff: `HANDOFF_refactor_2026-07-03.md`.**
+frontend, P5c `286880b` coupled_cycle). At that checkpoint P6 + P7 were deferred; their current
+disposition is recorded below. Handoff: `HANDOFF_refactor_2026-07-03.md`.**
 - **P5 — frontend + teacher ✅ DONE.** `simulator/*` (45 files) → `frontend/` (pkgutil sys.modules-alias
   shim); `mechanisms/coupled_teachers` → `teachers/coupled_cycle.py`; `mechanisms/teachers.py` (B5 Kraus
   builders, physics-core) → `mechanisms/teachers.py` (fixed the last package→qec_twin back-edge in
@@ -139,24 +152,22 @@ frontend, P5c `286880b` coupled_cycle). P6 + P7 (de-shim) + rename all DEFERRED 
   1019 passed / 49 skipped / 6 failed both before and after, the 6 reds identical (5 pre-existing
   test_simulator_source_projection metadata_guard + 1 test_window_channel GPU-mem-contention flake,
   both unrelated to the refactor). Zero new failures; behaviorally a pure relocation.
-- **P6 — quantum_bath extraction: DEFERRED (not done this pass).** The pseudomode-embedding physics
-  still lives INSIDE the local-only pilot run scripts (`outputs/coupled_pseudomode_pilot_v1_n2.py`,
-  `outputs/quantum_bath_m2_dual_arm.py`), which are the future machine for the not-yet-built quantum-bath
-  teacher. Extracting it now would pull unused code into the package (violates the "keep the package
-  lean" SCREENING DISCIPLINE, rule d). Re-home it — together with the P1-removed nm_*/oracles primitives —
-  WHEN the quantum-bath teacher is actually built and wires them.
-- **P7 — flip + de-shim: DEFERRED (user decision 2026-07-03 — KEEP the shim layer for now; not started).**
-  Migrating all importers to the new package paths + removing the shims is a whole-tree sweep with no urgent
-  payoff (the shims work at exact baseline parity), and the package still imports `qec_twin.hardware` for the
-  decoder, so it is not a standalone distributable regardless. Best done as a dedicated pass when finalizing
-  the boundary for release. **RENAME also DEFERRED** (user decision 2026-07-03 — do it together with P7/P8 to
-  avoid a second import-path churn). Optional P8 — split to a separate distributable with its own `pyproject`.
+- **P6 — quantum_bath extraction: LATER LANDED.** The bounded pseudomode-enlarged GKSL research
+  carrier now lives under `error_coupling_simulator/quantum_bath`; unused scratch oracle/wedge
+  modules remain local-only until an active consumer justifies them.
+- **P7 — package flip / distribution de-shim: COMPLETE; repository shim deletion deferred.**
+  Active simulator modules and public examples use `error_coupling_simulator`; no package runtime
+  module imports `qec_twin`. The old repository paths remain as outward compatibility shims for
+  retained consumers, but exact wheel/sdist allowlists exclude them. Removing every old shim and
+  converting every retained repository test is repository cleanup, not a prerequisite for the
+  independently installable simulator distribution.
 
 **Verification per phase:** `python -m py_compile` → package import smoke → the affected `tests/`
 subset → (at phase end) full `tests/` regression, via committed runners (pipefail + tee +
 python-exit). Isolation held: the learner path (`calibration/`, `hardware/` learner side) must not
 import the teacher/oracle package. GPU serial. Every `src/**` commit is H6-user-confirmed.
 
-**Scratch policy:** `outputs/` copies are COPIED in, then FROZEN (not edited, not deleted this pass;
-they are gitignored/unmaintained). `docs/CODE_MAP.md` + `docs/code_status.json` `_local_index` mark
-them legacy once the package copy is canonical.
+**Scratch policy:** selected reusable *code* copied from `outputs/` is canonical only in the package;
+the old copy stays frozen and unmaintained. Scratch data, generated evidence, Google circuit inputs,
+and ququart Kraus files are not copied into the distribution. `docs/CODE_MAP.md` +
+`docs/code_status.json` `_local_index` mark retained local-only material explicitly.

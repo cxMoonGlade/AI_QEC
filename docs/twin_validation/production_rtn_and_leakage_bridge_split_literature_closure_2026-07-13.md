@@ -55,20 +55,20 @@ non-Markovianity 对象。必须拆成两个 charter：
 
 ### 2.1 Charter A — production dense-qubit source bridge
 
-`decision/consequence:` 是否允许把当前 production dense-qubit teacher 当作 finite-RTN 的
+`decision/consequence:` 是否允许把当前 production dense-qubit noise process 当作 finite-RTN 的
 notion-1 QEC map，并把其 horizon/path-conditioned instrument-policy record 当作该 notion-1 verdict
 的观测证据。
 
 `mechanism:` 每条 shot trajectory 由 `OneOverFDriftSource`（八个有限 RTN 的和）或单 RTN
 产生 cycle-boundary `z_r`；`SourceCouplingConfig` 把同一 draw fan out 到十个参数字段。当前 dense
-teacher 每轮真正下沉的 **source-derived modulation** 只有
+noise process 每轮真正下沉的 **source-derived modulation** 只有
 `zz_zeta_radns -> zeta_rad_per_ns` 和 `gamma_phi_per_ns -> gamma_phi_per_ns`；其他 baseline channel
 字段并非不存在，只是没有随 `Theta(z_r)` 调制。readout/reset 也不是逐轮下沉，而是先对完整
 trajectory 取均值，再把同一 instrument 参数用于全部 rounds。
 
 `observable/record object:` 由 sealed compiler schedule 的小规模 dense density-matrix branch
 enumerator 产生的完整 measurement record，经公开 XOR layout 投影成 `{det,obs}`。当前默认 fixture
-是 3 data + 2 ancilla、mixed-basis 两个 checks、`m=0`，不是 9-data-qutrit d3 XZZX leakage teacher。
+是 3 data + 2 ancilla、mixed-basis 两个 checks、`m=0`，不是 9-data-qutrit d3 XZZX leakage process。
 
 `mechanism -> observable bridge:`
 
@@ -101,7 +101,7 @@ horizon prefix-consistent 的 notion-1 map family。
 
 ### 2.2 Charter B — static qutrit leakage bridge
 
-`decision/consequence:` 是否允许把静态 qutrit teacher 的 `exp(L/4)` siting、data-side POVM 与
+`decision/consequence:` 是否允许把静态 qutrit noise process 的 `exp(L/4)` siting、data-side POVM 与
 raw syndrome/obs 输出描述为“物理 quarter-CZ XZZX leakage instrument”，并据此支持 full-record、
 coherence-null/nonnull 或 truncation claim。
 
@@ -136,7 +136,7 @@ data+ancilla circuit、data-only POVM representative、raw syndrome 与 detector
 data-side compiled POVM 不等于 physical ancilla process；内部 state/channel check 不等于 complete-record
 law；局部 TN truncation score不控制 rare LER。
 
-`implementation target:` 当前静态 B 仅作为一个 project-defined qutrit teacher。把 A 接到 B 是一个
+`implementation target:` 当前静态 B 仅作为一个 project-defined qutrit noise process。把 A 接到 B 是一个
 **尚未定义的 prospective Charter C/integration object**，不属于当前 A 或 B：它需要显式
 `CoupledMechanismParams -> per-round qutrit slice` converter、逐轮 instrument policy、统一 facade、
 正确 detector semantics 和独立 full-joint oracle；当前一项都未形成 one-call production chain。
@@ -267,7 +267,7 @@ project normalization / siting convention。** McEwen、Sung、Varbanov 等论�
 | [`qutrit_teachers.py`](../../src/error_coupling_simulator/mechanisms/qutrit_teachers.py) | 静态 `field` 是 time-constant full-cycle qutrit WG-style channel；WG `L1,L2` 与 `C_L` 是 evaluator diagnostics；参数和 leaked-readout `b` 是 sweep/project choice | 支持一个 declared synthetic channel，不是 source-coupled production physical cell；它与 `RunSpec + build_within_cycle_leak` 的 `exp(L/4)` 表示共享代数但不是同一运行入口；Miao/McEwen tuple 是 cross-paper composite |
 | [`sv_sampler.py`](../../src/qec_twin/forward/scalable/sv_sampler.py), `build_within_cycle_leak` | `WC_LEAK_FRAC=0.25`，构造 `exp(L/4)`，检查 CPTP，再把 slice siting 到每个 touched CZ layer | 0.25 是 project normalization；没有 pulse-time/CZ calibration bridge |
 | 同文件 `_leak_compose_residual` | composition gate 以单一 input state `rho=ket(1)bra(1)` 为 probe，比较 full channel 与四次 slice 后完整 `3x3` output matrix 的最大元素差；两臂共用同一 Lindbladian/Kraus machinery | **single-input, same-model self-consistency check** 不是独立 full-superoperator/Choi/diamond equality test；实现 bug 可藏在未探测 operator basis 或共享 machinery 中。代数恒等式成立不等于实现已被独立全通道验证 |
-| [`mps_forward.py`](../../src/qec_twin/forward/scalable/mps_forward.py), `sample(..., leak_slices=...)` | 默认静态 slice；已有 caller-provided、每轮一个 CPTP Kraus table 的 seam | carrier seam 存在，但“从 `Theta` 生成 tables”明确是 caller job；仓库没有 production converter，也没有 one-call source-coupled leakage teacher |
+| [`mps_forward.py`](../../src/qec_twin/forward/scalable/mps_forward.py), `sample(..., leak_slices=...)` | 默认静态 slice；已有 caller-provided、每轮一个 CPTP Kraus table 的 seam | carrier seam 存在，但“从 `Theta` 生成 tables”明确是 caller job；仓库没有 production converter，也没有 one-call source-coupled leakage process |
 | PEPS 与 CUDA qutrit paths | PEPS 与 within-cycle CUDA marshalling 仍消费单一静态 table；`SvSampler.sample()` 仍是 lumped full-cycle path，within-cycle CUDA 另有 loader/kernel 与 committed output-script callers | 没有 per-round source-coupled qutrit path；MPS seam 不能代表 PEPS/CUDA 已接通，也不能把 output-script caller提升成 unified facade |
 | data-side measurement | 9 data qutrit 上直接应用 compiled stabilizer POVM/backaction arms，terminal 再做 data readout | 没有显式 ancilla/CZ/measurement/reset dynamics；不能称 physical ancilla instrument |
 | exact qutrit oracle / certification router | 当前 `QutritDM.record_oracle` 仅在 `R=1` 返回 `full_joint`；**任意 register 的 `R>=2` 都只返回 moments**。router 却可能把小-register `R>=2 FULL_JOINT/SYNDROME_DIST` 报 feasible，`answer()` 随后读取不存在的 `res["joint"]` | 当前 API 没有任何 `R>=2` full-joint anchor，并存在 capability/answer contract bug；full-9q 还受 clone-stack memory wall。这不是数学上的“不可能”声明 |
@@ -301,7 +301,7 @@ B 结果一概判错。
 回查具体 accessor。允许的准确表述是“raw syndrome + terminal obs”，除非显式经过
 `teacher_shots_to_events()` 或等价、被三方 pin 的 fold。
 
-### 5.4 Current-HEAD live test snapshot（2026-07-13）
+### 5.4 Repository-wide mixed test snapshot（2026-07-13，scope-corrected）
 
 本轮在上述 snapshot 的同一工作树执行：
 
@@ -310,23 +310,26 @@ conda run -n aiqec python -m pytest -q tests/
 ```
 
 约 31 分 20 秒后，pytest 汇总为 **2560 passed、169 skipped、9 failed、56 warnings**；随后进程
-发生 segmentation fault / core dump，最终 exit code 为 139。因此当前 HEAD 的准确状态不是“full
-suite green”，也不能仅依据旧 handoff 把 teardown crash 预先归类为 benign。9 个 test failures 与
-汇总后的 native crash 必须分开记录：
+发生 segmentation fault / core dump，最终 exit code 为 139。该命令收集了 simulator、retained
+decoder/data、迁移 seam 以及当时仍在 `tests/` 的退役 learner tests；因此它是 repository-wide mixed
+regression snapshot，不是 simulator acceptance suite。历史 failures 与 native crash 必须按所有权分开：
 
-1. **8 个 failures 属于同一个 optional/restricted qutip-cuQuantum backend compatibility cluster。**
+1. **8 个 failures 当时属于同一个 optional/restricted qutip-cuQuantum backend compatibility cluster。**
    `qutip 5.3.0` 与 repo-local `qutip-cuquantum 0.3.0.dev6+cedd225` 组合下，
    `external/baselines/qutip-cuquantum/src/qutip_cuquantum/qobjevo.py:24` 尝试写入只读
    `QobjEvo._dims`，抛出 `AttributeError`。代表测试
    `test_qutip_cuquantum_small_local_mcwf_smoke` 已单独稳定复现（1.60 s）。这不推翻 dense/MPS
-   等其他 carrier tests，但它否定“当前 qutip-cuQuantum solver probe 可运行”。
-2. **1 个 failure 是独立的 H2 crosstalk scientific/numerical gate miss。**
+   等其他 carrier tests，但它否定当时该版本组合的 solver probe。当前 canonical `ecs` 已升级到
+   qutip-cuQuantum 0.3.1，targeted backend checks 见 `CLAUDE.md`。
+2. **1 个 failure 属于退役 HARDEN-H2 learner regression，不属于 simulator gate。**
    `test_h2_phi_parity_and_sign_minima` 要求 flipped `KL(r=3) <= 1e-8`，实际为
-   `8.15893408390167e-08`；单测复跑 342.14 s 后得到同一数值。它约为登记 floor 的 8.16 倍，
-   在诊断模型、优化、metric 与 tolerance provenance 前不能降格为 rounding noise。
-3. **summary 后的 exit-139 是第三个 unresolved stability defect。** 可能位于 native/CUDA teardown，
-   但本轮没有最小化、stack trace 或 core analysis；“发生在 summary 后”只说明已收集 pytest
-   assertions，不证明 crash harmless，也不等于可发布过程稳定。
+   `8.15893408390167e-08`；单测复跑 342.14 s 后得到同一数值。该测试拟合
+   `RepCodeTwin`/`CoupledRepCodeTwin` 并检查 learner calibration floor；它既不运行当前 XZZX
+   `Simulator.run(...)` 主线，也不验证 carrier/record faithfulness。准确动作是移出 active simulator
+   tests，而不是调整 tolerance 或 learner optimizer。
+3. **summary 后的 exit-139 属于旧 mixed-process snapshot。** 当时未得到 stack trace；当前 CUDA-Q
+   已与 canonical `ecs`/fused 路径进程隔离。该历史 crash 不能证明新拓扑 green，也不能继续被写成
+   当前 simulator 的独立科学 P0；当前可复现状态以 `CLAUDE.md` 的隔离后 targeted checks 为准。
 
 该结果说明大量局部工程测试当前仍通过，但不关闭任何 literature bridge、full-record gate、有限键
 truncation guarantee 或 d5/d7 production claim。代码可信度必须按 subsystem 报告，不能用单一 passed
@@ -588,7 +591,7 @@ nonexistence theorem。
 7. raw syndrome 与 detector-event semantics 的单一、不可误用 API；
 8. independent full-superoperator composition certification，而非 single-input same-model check；
 9. 任意 `R>=2` independent full-joint record anchor；当前 qutrit API 只给 moments，router另有 capability/answer contract bug；production-sized full-9q 还受 memory wall，但不是已证明数学不可行；
-10. prospective Charter C 到 unified facade/PEPS/CUDA 的 one-call source-coupled leakage teacher；
+10. prospective Charter C 到 unified facade/PEPS/CUDA 的 one-call source-coupled leakage process；
 11. target record 的安全 finite temporal-history cutoff/Markov-order bound；现有 papers 只给
     schedule-dependent multi-cycle tails，不能固定 universal cutoff；
 12. local TN truncation -> full record/rare LER bridge（当前 confirmed-literature-gap）。

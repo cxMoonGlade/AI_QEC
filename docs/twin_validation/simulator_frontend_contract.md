@@ -1,16 +1,16 @@
 # Simulator Frontend Contract
 
 **Status:** Block-2a build contract for the QEC simulator frontend. The current
-untracked implementation includes the Stim/Pauli artifact base, the first
+implementation includes the Stim/Pauli artifact base, the first
 CodeSpec/XZZX compiler smoke, and explicit operation/schedule/record-layout
 frontend structure. It binds to
 `simulator_architecture_prereg.md` for the CodeSpec/CircuitIR/backend/artifact
 separation and the theory-vs-sample artifact split. This lives as
-the standalone `qec_twin.simulator` module, deliberately separate from
-`qec_twin.forward`: `forward` owns carrier/substrate evolution, while
-`simulator` owns user-facing circuit construction, Stim-compatible artifact
+`error_coupling_simulator.frontend`, deliberately separate from the carrier:
+`carrier` owns forward evolution, while `frontend` owns user-facing circuit construction,
+Stim-compatible artifact
 export, Pauli-noise sampling, DEM construction, `.b8` record output, and decoder
-smoke results. It comes before `source_coupling.py`, because analog source
+smoke results. Analog source
 coupling must attach to a stable frontend/artifact surface.
 
 ## Scope
@@ -21,14 +21,15 @@ The frontend owns the simulator product surface:
 CircuitIR / Stim circuit
   or CodeSpec -> CircuitIR
   + NoiseSpec
-  + decoder choice
+  + optional decoder choice (default: none)
   -> circuit_ideal.stim
   -> circuit_noisy_pauli.stim
   -> detector_error_model.dem
   -> detection_events.b8 / obs_flips_actual.b8
-  -> obs_flips_predicted.b8
+  -> [decoder only] obs_flips_predicted.b8
   -> sample_summary_ideal.json / sample_summary_noisy.json
-  -> theory_prediction.json / decoder_results.json
+  -> theory_prediction.json
+  -> [decoder only] decoder_results.json
   -> manifest.json
 
 CUDA-Q algorithm circuit
@@ -45,7 +46,7 @@ and PyMatching decode through the existing frozen decoder path. It does **not**
 claim to represent analog joint-Lindbladian, coherent non-Clifford, qutrit
 leakage, or shared-source truth inside `.stim` or `.dem`.
 
-Separate from that Stim-compatible surface, the untracked frontend also exposes
+Separate from that Stim-compatible surface, the frontend also exposes
 a CUDA-Q **noiseless algorithm** adapter for non-Clifford circuits such as
 12-qubit Grover. That adapter declares
 `representability="cudaq_statevector_noiseless"` and writes state/count artifacts
@@ -53,7 +54,7 @@ instead of `.stim`, `.dem`, detector records, or decoder results.
 
 ## Design Boundary
 
-`qec_twin.simulator.CircuitIR` is the internal source of truth for user-defined
+`error_coupling_simulator.frontend.CircuitIR` is the internal source of truth for user-defined
 circuits. Stim is an interchange and artifact format, not the only simulator IR.
 This prevents two failure modes:
 
@@ -95,16 +96,16 @@ The artifact set is split by representability:
 |---|---|
 | `circuit_ideal.stim` | ideal detector circuit, no simulator-added noise |
 | `circuit_noisy_pauli.stim` | Stim-representable Pauli/depolarizing projection |
-| `detector_error_model.dem` | decoder-facing DEM from the noisy Stim circuit |
+| `detector_error_model.dem` | DEM from the noisy Stim circuit; default record-only runs preserve hyperedges, while explicit PyMatching requests graphlike decomposition |
 | `detection_events.b8` | noisy detector records, packed little-endian; omitted/null when there are zero detectors |
 | `obs_flips_actual.b8` | noisy observable flips, packed little-endian; omitted/null when there are zero observables |
-| `obs_flips_predicted.b8` | frozen decoder predicted observable flips; omitted/null when there are zero observables |
+| `obs_flips_predicted.b8` | frozen decoder predicted observable flips; omitted with `decoder_not_requested` unless decoding is explicit, and omitted/null when there are zero observables |
 | `ideal_detection_events.b8` | ideal detector records for the same shot count; omitted/null when there are zero detectors |
 | `ideal_obs_flips_actual.b8` | ideal observable flips for the same shot count; omitted/null when there are zero observables |
 | `sample_summary_ideal.json` | ideal finite-shot sample summary |
 | `sample_summary_noisy.json` | noisy finite-shot sample summary |
 | `theory_prediction.json` | exact/analytic prediction when declared by the backend; otherwise `{available:false, reason:...}` |
-| `decoder_results.json` | frozen decoder predictions and LER summary |
+| `decoder_results.json` | frozen decoder predictions and LER summary; omitted with `decoder_not_requested` by default |
 | `manifest.json` | schema, counts, backend, seed, noise provenance |
 
 MVP correction note: the first untracked frontend wrote `expected_ideal.json` /
@@ -123,7 +124,9 @@ substitutes.
    Pauli/depolarizing noise without changing detector or observable counts.
    Targeted placement means frontend schedule placement, not analog/hardware
    location truth.
-3. `Simulator.run(...)` writes `.stim`, `.dem`, `.b8`, and JSON artifacts.
+3. `Simulator.run(...)` writes `.stim`, `.dem`, actual `.b8`, and JSON record artifacts without a
+   decoder by default. Prediction and decoder-result artifacts require explicit
+   `decoder="pymatching"`; otherwise their manifest entries are fail-closed omissions.
    `Simulator.run_noiseless(...)` and `simulate_noiseless(...)` are the public
    convenience entrypoints for no-simulator-added-noise runs. They require the
    compiled ideal/noisy circuit pair to be identical and the noise manifest to
@@ -131,14 +134,14 @@ substitutes.
    noiseless convenience path.
    `simulate_cudaq_grover_noiseless(...)` is the CUDA-Q algorithmic no-noise
    path; it is not a DEM/decoder run.
-4. Positive-width `.b8` files use the existing `hardware.b8_io.pack_bits`
-   convention and can be read back by `hardware.b8_io.read_b8` / `unpack_bits`;
+4. Positive-width `.b8` files use the package-local `frontend.b8_io.pack_bits`
+   convention and can be read back by `frontend.b8_io.read_b8` / `unpack_bits`;
    zero-width record classes are omitted/null in the manifest, not written as
    unreadable 0-byte files.
-5. Decoder results use the existing frozen PyMatching path
-   `hardware.m4_decode.decode_dem`, not a second decoder implementation. The
-   current decoder path requires a graphlike DEM acceptable to PyMatching; this
-   block does not claim arbitrary hyperedge DEM decoding.
+5. Decoder results use the package-local optional port
+   `frontend.decoder.decode_dem`, backed by pinned external PyMatching rather than a bundled
+   implementation. The explicit decoder path requires a graphlike DEM acceptable to PyMatching;
+   default record-only runs instead preserve arbitrary Stim DEM hyperedges and do not decode them.
 6. The manifest explicitly declares `representability="stim_pauli"` so this block
    cannot be mistaken for analog joint-L teacher evidence.
 7. The manifest rejects ambiguous representability: evaluator-only sidecars are

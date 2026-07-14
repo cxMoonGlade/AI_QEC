@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-"""Teacher mechanisms and their Pauli twirls for the B5 study.
+"""Specified mechanism fields and their Pauli-twirled controls.
 
-The B5 teacher is a coherent over-rotation plus a stochastic bit-flip per
-location -- ``E_i = BitFlip(p_i) . RX(theta_i)`` -- the canonical control error
-whose coherent part a Z-basis ladder Pauli-shadows. The Pauli twirl of a channel
-(its diagonal Pauli-transfer matrix, rebuilt as a Pauli channel) is the
-observationally-aliased stochastic counterpart used as a reference and as the
-moment-matched negative control.
+The primitives include coherent over-rotation plus stochastic bit flip,
+amplitude damping, coherent ZZ coupling, and correlated dephasing. The Pauli
+twirl of a channel is built from its diagonal Pauli-transfer matrix and serves
+as a controlled stochastic reference. This module constructs channels and
+fields; it does not fit them from records or choose between model classes.
 """
 
 import torch
@@ -32,7 +31,7 @@ def coherent_overrotation_kraus(p: float, theta: float) -> torch.Tensor:
 
 
 def coherent_overrotation_field(rates, thetas):
-    """Per-location coherent-over-rotation teacher field ``(t, i) -> Kraus``."""
+    """Per-location coherent-over-rotation field ``(t, i) -> Kraus``."""
     kraus = [coherent_overrotation_kraus(rates[i], thetas[i]) for i in range(len(rates))]
     return lambda t, i: kraus[i]
 
@@ -45,7 +44,7 @@ def amplitude_damped_rotation_kraus(gamma: float, theta: float) -> torch.Tensor:
     so a strictly richer *matched* mechanism than the Pauli-twirlable
     ``coherent_overrotation``; the ``RX`` populates ``|1>`` so the damping is
     visible already on the ``|0_L>`` ground state. Kraus of the composition:
-    ``{A0 RX, A1 RX}`` (still 2 Kraus -> inside the ``num_kraus=2`` learner class).
+    ``{A0 RX, A1 RX}`` (a rank-2 channel).
     """
     u = rx(torch.tensor(float(theta), dtype=torch.float64))
     a = amplitude_damping(gamma)
@@ -53,10 +52,10 @@ def amplitude_damped_rotation_kraus(gamma: float, theta: float) -> torch.Tensor:
 
 
 def mixed_mechanism_field(specs):
-    """Heterogeneous per-location *matched* teacher -- the H0 richer baseline.
+    """Heterogeneous per-location specified-mechanism field.
 
-    ``specs[i]`` selects data-location ``i``'s mechanism; each is <=2-Kraus so the
-    ``num_kraus=2`` learner class contains it (matched, no misspecification):
+    ``specs[i]`` selects data-location ``i``'s mechanism; each has Kraus rank at
+    most two:
 
       ``("coherent", p, theta)``  -> ``BitFlip(p) . RX(theta)``      (Pauli + coherent)
       ``("damped", gamma, theta)`` -> ``AmpDamp(gamma) . RX(theta)``  (T1 + coherent, non-unital)
@@ -67,10 +66,9 @@ def mixed_mechanism_field(specs):
     represent it); it is invisible on ``|0_L>`` (the AmpDamp fixed point) so its decision
     functional must use a ``|1_L>`` / superposition eval context.
 
-    Spans the *visible* single-qubit mechanism taxonomy of the coherent-error /
-    Lindbladian-learning frontier (coherent Hamiltonian + dissipative Kossakowski,
-    the GKSL ``(h, a)`` split). Z-type mechanisms (phase flip / dephasing) are
-    omitted: on this bit-flip rep code they are blind-sector and inconsequential.
+    The set spans coherent Hamiltonian and dissipative single-qubit examples.
+    Z-type mechanisms are omitted because the original bit-flip repetition-code
+    fixture used by this field is insensitive to them.
     Returns the field callable ``(t, i) -> Kraus``.
     """
     kraus = []
@@ -90,11 +88,11 @@ def mixed_mechanism_field(specs):
 
 
 def zz_coupling_kraus(phi) -> torch.Tensor:
-    """``exp(-i phi Z(x)Z)`` as a ``(1, 4, 4)`` Kraus stack -- the H2 edge mechanism.
+    """``exp(-i phi Z(x)Z)`` as a ``(1, 4, 4)`` Kraus stack.
 
     ``diag(e^{-i phi}, e^{i phi}, e^{i phi}, e^{-i phi})`` -- the frontier-standard
     residual-ZZ crosstalk unitary on a data pair. Accepts a float or a real leaf
-    tensor (differentiable: the non-factorized learner's single edge DOF).
+    tensor so differentiable carrier/certification calculations remain possible.
     """
     p = torch.as_tensor(phi, dtype=RDTYPE)
     phase = torch.stack([-p, p, p, -p]).to(CDTYPE)
@@ -105,7 +103,7 @@ def correlated_dephasing_kraus(phi) -> torch.Tensor:
     """Correlated dephasing ``{cos(phi) I_4, sin(phi) Z(x)Z}`` -- a ``(2, 4, 4)`` stack.
 
     The exact two-qubit Pauli twirl of ``zz_coupling_kraus(phi)`` (rate
-    ``sin^2(phi)``) -- the correlated-STOCHASTIC crosstalk control (H2 fork).
+    ``sin^2(phi)``) -- a correlated stochastic crosstalk control.
     """
     p = torch.as_tensor(float(phi), dtype=RDTYPE)
     eye = torch.eye(4, dtype=CDTYPE)
@@ -114,12 +112,12 @@ def correlated_dephasing_kraus(phi) -> torch.Tensor:
 
 
 def coupled_mixed_teacher(specs, phi, pair=(0, 1)):
-    """H2 non-factorized teacher: the H0 mixed field + coherent ZZ crosstalk on ``pair``.
+    """Mixed local field plus coherent ZZ crosstalk on ``pair``.
 
     Returns ``(field, edge_field)`` with ``field = mixed_mechanism_field(specs)``
     unchanged and ``edge_field`` the ``(t, (i, j)) -> Kraus | None`` callable
-    yielding ``exp(-i phi Z(x)Z)`` on the declared pair. Both are evaluator-owned
-    ground truth; the learner never receives the edge (isolation contract).
+    yielding ``exp(-i phi Z(x)Z)`` on the declared pair. Both are evaluator-side
+    process truth and must not enter emitted record payloads.
     """
     field = mixed_mechanism_field(specs)
     coupling = zz_coupling_kraus(phi)
@@ -147,6 +145,11 @@ def pauli_twirl_kraus(kraus: torch.Tensor) -> torch.Tensor:
 
 
 def pauli_twirl_field(field, n_locations: int):
-    """Pauli-twirl every location of a teacher ``field`` (the aliased reference)."""
+    """Pauli-twirl every location of a mechanism ``field``."""
     twirled = [pauli_twirl_kraus(field(0, i)) for i in range(n_locations)]
     return lambda t, i: twirled[i]
+
+
+# Neutral public spelling. The historical name remains the defining symbol because
+# downstream registries pin its qualname; both names intentionally reference the same object.
+coupled_mixed_noise_fields = coupled_mixed_teacher

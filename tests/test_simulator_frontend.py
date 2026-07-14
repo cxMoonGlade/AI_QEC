@@ -125,8 +125,6 @@ def test_targeted_noise_builder_rejects_unmatched_required_rules():
 
 
 def test_targeted_noise_manifest_records_rule_matches(tmp_path):
-    pytest.importorskip("pymatching", reason="simulator frontend decode smoke uses PyMatching")
-
     noise = NoiseBuilder().before_measurement("X_ERROR", 0.25).build()
     result = Simulator(_single_detector_circuit()).run(
         shots=64,
@@ -250,6 +248,7 @@ def test_simulator_run_writes_stim_dem_b8_and_decoder_artifacts(tmp_path):
         noise=StimPauliNoiseSpec(before_measure_flip=0.25),
         out_dir=tmp_path / "sim_run",
         seed=123,
+        decoder="pymatching",
     )
 
     for path in (
@@ -295,6 +294,7 @@ def test_simulator_run_writes_stim_dem_b8_and_decoder_artifacts(tmp_path):
     assert manifest["artifacts"]["sample_summary_noisy"]["file"] == "sample_summary_noisy.json"
     assert manifest["artifacts"]["theory_prediction"]["file"] == "theory_prediction.json"
     assert manifest["artifacts"]["obs_flips_predicted"]["file"] == "obs_flips_predicted.b8"
+    assert manifest["artifacts"]["detector_error_model"]["decompose_errors"] is True
     assert manifest["artifacts"]["detection_events"]["bits_per_shot"] == 1
     assert manifest["artifacts"]["obs_flips_actual"]["bits_per_shot"] == 1
     assert manifest["artifacts"]["obs_flips_predicted"]["bits_per_shot"] == 1
@@ -338,6 +338,7 @@ def test_decoder_predictions_are_not_copied_from_actual_observables(monkeypatch,
         noise=None,
         out_dir=tmp_path / "sentinel_decoder",
         seed=123,
+        decoder="pymatching",
     )
 
     obs = b8_io.unpack_bits(b8_io.read_b8(result.paths.obs_flips_actual, 1), 1)
@@ -356,6 +357,7 @@ def test_zero_observable_b8_artifacts_are_omitted_with_schema(tmp_path):
         noise=StimPauliNoiseSpec(before_measure_flip=0.25),
         out_dir=tmp_path / "zero_obs",
         seed=4,
+        decoder="pymatching",
     )
 
     manifest = json.loads(result.paths.manifest.read_text())
@@ -379,6 +381,7 @@ def test_zero_detector_and_zero_observable_b8_artifacts_are_omitted(tmp_path):
         noise=None,
         out_dir=tmp_path / "zero_det_zero_obs",
         seed=3,
+        decoder="pymatching",
     )
 
     manifest = json.loads(result.paths.manifest.read_text())
@@ -406,6 +409,7 @@ def test_multibyte_b8_schema_and_decoder_roundtrip(tmp_path):
         noise=StimPauliNoiseSpec(before_measure_flip=0.25),
         out_dir=tmp_path / "many_records",
         seed=9,
+        decoder="pymatching",
     )
     manifest = json.loads(result.paths.manifest.read_text())
     assert manifest["num_detectors"] == 10
@@ -440,6 +444,7 @@ def test_stim_circuit_source_uses_same_artifact_path(tmp_path):
         noise=None,
         out_dir=tmp_path / "stim_source_run",
         seed=321,
+        decoder="pymatching",
     )
 
     manifest = json.loads(result.paths.manifest.read_text())
@@ -457,8 +462,6 @@ def test_stim_circuit_source_uses_same_artifact_path(tmp_path):
 
 
 def test_stim_circuit_source_from_file_records_hashes(tmp_path):
-    pytest.importorskip("pymatching", reason="simulator frontend decode smoke uses PyMatching")
-
     circuit = _single_detector_circuit()
     ideal_path = tmp_path / "ideal.stim"
     noisy_path = tmp_path / "noisy.stim"
@@ -471,7 +474,12 @@ def test_stim_circuit_source_from_file_records_hashes(tmp_path):
     source = StimCircuitSource.from_file(
         ideal_path, noisy_path=noisy_path, metadata={"origin": "file_roundtrip"}
     )
-    result = Simulator(source).run(shots=32, noise=None, out_dir=tmp_path / "from_file", seed=5)
+    result = Simulator(source).run(
+        shots=32,
+        noise=None,
+        out_dir=tmp_path / "from_file",
+        seed=5,
+    )
     manifest = json.loads(result.paths.manifest.read_text())
     assert manifest["source_type"] == "stim_circuit"
     assert manifest["circuit_metadata"]["origin"] == "file_roundtrip"
@@ -486,7 +494,12 @@ def test_same_seed_produces_identical_stable_artifacts(tmp_path):
     pytest.importorskip("pymatching", reason="simulator frontend decode smoke uses PyMatching")
 
     circuit = _many_detector_circuit()
-    kwargs = dict(shots=64, noise=StimPauliNoiseSpec(before_measure_flip=0.25), seed=99)
+    kwargs = dict(
+        shots=64,
+        noise=StimPauliNoiseSpec(before_measure_flip=0.25),
+        seed=99,
+        decoder="pymatching",
+    )
     a = Simulator(circuit).run(out_dir=tmp_path / "run_a", **kwargs)
     b = Simulator(circuit).run(out_dir=tmp_path / "run_b", **kwargs)
 
@@ -509,13 +522,12 @@ def test_same_seed_produces_identical_stable_artifacts(tmp_path):
         noise=StimPauliNoiseSpec(before_measure_flip=0.25),
         out_dir=tmp_path / "run_c",
         seed=100,
+        decoder="pymatching",
     )
     assert a.paths.detection_events.read_bytes() != c.paths.detection_events.read_bytes()
 
 
 def test_compiled_circuit_can_enter_simulator_directly(tmp_path):
-    pytest.importorskip("pymatching", reason="simulator frontend decode smoke uses PyMatching")
-
     circuit = _single_detector_circuit()
     source = StimCircuitSource(
         ideal_circuit=circuit_to_stim(circuit),
@@ -620,6 +632,7 @@ def test_run_clears_stale_optional_b8(tmp_path):
         noise=StimPauliNoiseSpec(before_measure_flip=0.25),
         out_dir=out_dir,
         seed=1,
+        decoder="pymatching",
     )
     assert first.paths.obs_flips_predicted.exists()
 
@@ -628,6 +641,7 @@ def test_run_clears_stale_optional_b8(tmp_path):
         noise=StimPauliNoiseSpec(before_measure_flip=0.25),
         out_dir=out_dir,
         seed=1,
+        decoder="pymatching",
     )
     manifest = json.loads(second.paths.manifest.read_text())
     assert manifest["artifacts"]["obs_flips_predicted"]["file"] is None

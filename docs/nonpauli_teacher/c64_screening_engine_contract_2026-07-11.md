@@ -1,40 +1,46 @@
-# c64 screening-engine BUILD CONTRACT (2026-07-11, DRAFT — pre-red-team)
+# HISTORICAL PEPS c64 build proposal — BLOCKED / NON-AUTHORIZING (2026-07-11)
 
-**Companion to** `peps_singlewire_spike_contract.md` v1.0 (this **amends SW-S8**
-`torch-cuda-complex128 ALWAYS` by introducing a **declared, bounded c64 screening
-variant** that runs alongside — never replaces — the c128 evidence engine).
-**Design detail** lives in `c64_screening_engine_plan_2026-07-11.md`; this contract
-pins only the commitments a gate must certify.
+This is retained design provenance for a proposed PEPS c64 variant. It **does not amend**
+`peps_singlewire_spike_contract.md` SW-S8: PEPS remains `torch-cuda-complex128 ALWAYS`.
+The historical design detail lives in `c64_screening_engine_plan_2026-07-11.md`; neither
+document authorizes implementation or a run.
 
-> Contract-build Stage 1 artifact. Status: **DRAFT — awaiting Stage-2 red-team to
-> zero blockers before any code.**
+> Contract-build Stage 1 artifact. **2026-07-13 theory-fix verdict: REPAIR.**
+> The active policy applies only to `FusedWithinCycleSampler` / `sv_traj_d3_wc`:
+> ``optimization -> c64 / screening_only`` and
+> ``final|certification -> c128 / c128_candidate``. The PEPS c64 build described below
+> remains **BLOCKED**: it requires the
+> dtype-aware tolerance/FET work fenced out of the current P0.  No c64 scientific
+> artifact is ever evidence-eligible; a candidate conclusion requires a separate frozen
+> c128 artifact and its owning scientific gates. The threshold proposals below are retained
+> as unapproved historical hypotheses, not implementation authorization.
 
 ---
 
-## 1. Scope & the two-engine invariant
+## 1. Historical proposed scope — currently blocked
 
-**In scope (Phase-1 = THIS build):** a per-run `dtype ∈ {c128, c64}` threaded through
+**Not in the current build.** The 2026-07-11 proposal would have threaded a per-run
+`dtype ∈ {c128, c64}` through
 the 2D PEPS single-wire carrier (`carrier/peps/{state,contraction,stab_tt,
 trajectory}.py` + the reused cutters `carrier/pepo/dynamics.py`), plus the
-**frozen-branch c128-vs-c64 validation harness** (an `outputs/` runner). Deliverable
-= a c64 engine that PASSES the validation gates G0–G8 below.
+**frozen-branch c128-vs-c64 validation harness** (an `outputs/` runner). That deliverable
+is blocked and has not superseded the c128-only PEPS contract.
 
-**Out of scope (fenced — later, trigger-gated phases):**
+**Historical fences (no phase below is active):**
 - F1. The actual multi-round (~20–30) bond-saturation **screening RUN** and the
   **re-derivation of the SW8 runner §6.2 floors** (`FLOOR_P0_MOVEMENT`,
-  `FLOOR_CROSS_ROUTE_D5`, `FLOOR_CHIB_DOUBLING`) for c64 — that is a run phase, not
-  the engine phase; the engine only exposes the knobs.
+  `FLOOR_CROSS_ROUTE_D5`, `FLOOR_CHIB_DOUBLING`) for c64.
 - F2. Any **GB10/spark c64-reliability** probe.
 - F3. Any change to the **c128 evidence path semantics** — c128 must stay
   byte-identical (G0).
 
-**The two-engine invariant (load-bearing):** `dtype=c128` is the DEFAULT and its
-numerical path is **byte-identical** to the pre-change code. c64 is opt-in. The two
-coexist; the c128 globals are NOT mutated — dtype is threaded.
+**Current invariant:** PEPS has one c128 path. The proposed two-engine invariant below is
+historical only; reactivation requires a new user authorization and a theory-first/tolerance/FET
+review.
 
 ---
 
-## 2. Representation & per-op dtype pre/post conditions
+## 2. Historical representation proposal — do not implement
 
 A `PepsState` carries a declared `dtype` (its site tensors' complex dtype). The
 **real dtype stays float64 in BOTH engines** (`RDTYPE=float64` unchanged — all
@@ -56,32 +62,29 @@ equals `state.dtype` (no silent up-cast). This is the single most-tested post-co
 
 ---
 
-## 3. Referee registry (each c64 unit ↔ its c128 referee) + the non-circularity structure
+## 3. Historical referee proposal and its unresolved limit
 
-Every c64 unit's referee is **the SAME unit at `dtype=c128`**, compared on a **frozen
+The proposal would compare every c64 unit with **the SAME unit at `dtype=c128`** on a **frozen
 branch** (§4 G3–G7). This is a **precision (simplification-bound) referee**, not an
-independence referee — and that is correct here, in a declared **two-level** structure:
+independence referee. It cannot establish carrier faithfulness:
 
-1. **c128 is faithful** — established SEPARATELY and independently by the d3 gate
-   suite (`tests/test_peps_spike.py` vs exact-DM / Stim / closed-form oracles, and the
-   S1 boundary-vs-exact d3 unbiasedness result). The c64 build does NOT re-establish
-   this.
-2. **c64 ≈ c128** — established by this build's frozen-replay (G3–G7). The bound
-   COMPOSES onto (1).
+1. The c128 PEPS carrier is a **reference/evidence candidate**, not ground truth. Its d3
+   checks constrain implementation behavior, while full multi-round record faithfulness remains
+   open under `docs/SIMULATOR.md` and ADR 0011.
+2. A hypothetical c64≈c128 frozen replay would bound only the additional precision
+   simplification. It would not promote either artifact or close the record-faithfulness gap.
 
-**Honest limit (must be stated wherever a c64 number is reported):** at **d5** the
-c128 engine itself is faithful only by **d3→d5 extrapolation** (d5 exact-DM is
-infeasible — the reason the carrier exists). c64 inherits that existing extrapolation
-and ADDS a bounded precision layer; it introduces **no new circularity**, but it is
-**not** independent ground truth at d5. Hence the §5 direction-sign gate.
+**Honest limit:** d5 exact-DM is infeasible, so c128 PEPS is not independent ground truth
+there; a hypothetical c64 comparison would add another approximation layer to an already
+oracle-free regime.
 
-**Independence carry-over:** the c128 engine's own independence (the qutrit gate table
-built by formula, sharing no path with `exact/qutrit_dm`, D4) is preserved — the c64
-build only casts dtypes, never re-routes a referee import.
+**Bounded independence note:** the formula-built qutrit gate table shares no implementation path
+with `exact/qutrit_dm` for that local D4 check. This does not make the c128 PEPS carrier an
+independent full-record ground truth.
 
 ---
 
-## 4. Threshold registry — UNITS pinned (the λ-vs-σ discipline)
+## 4. Historical threshold hypotheses — BLOCKED; no tolerance/FET authorization
 
 | Threshold | value (c128) | value (c64) | UNITS | action |
 |---|---|---|---|---|
@@ -102,7 +105,7 @@ class they already are.
 
 ---
 
-## 5. Registered gates (predict-before-measure — ALL predicted to PASS; a miss is a finding)
+## 5. Historical proposed gates — not registered for current execution
 
 | Gate | Statement | Input | Tolerance | Prediction | Class |
 |---|---|---|---|---|---|
@@ -116,14 +119,13 @@ class they already are.
 | **G7** (eps-band) | eps ∈ {5e-9,1e-8,2e-8}: saturation TREND qualitatively identical c64 & c128 | frozen run | qualitative match | pass | (c) |
 | **G8** (speedup — raison d'être) | c64 per-round wall ≤ 1/5 of c128 on the same round | timed round | ≥ 5× (target 10–30×) | pass | (c) |
 
-**Direction-sign meta-gate (binds the RUN phase F1):** a c64 "grows/No-Go" flag may
-trigger on c64 alone; a c64 "bounded/saturates/GO" REQUIRES a c128 confirmation at the
-same rounds. (The engine phase only needs G0–G8; this meta-gate governs how the later
-run reports.)
+**Historical direction-sign proposal:** a c64 "grows/No-Go" flag would have been only a
+screening trigger; a c64 "bounded/saturates/GO" reading would have required a separate c128
+run. No current PEPS run or gate is authorized by this paragraph.
 
 ---
 
-## 6. Build plan (Stage 3 disjoint ownership)
+## 6. Historical build plan — BLOCKED
 
 - **Module builder A** — dtype threading in `state.py` + `contraction.py` +
   `stab_tt.py` (state construction gate, codestate cast, op-apply dtype match, fit
@@ -162,7 +164,6 @@ after the first non-forced numerical difference)?
 
 ## 8. Epistemic classing (closes the loop, Stage 7)
 
-c64 engine outputs = class **(c) heuristic screening**. The BOUND is the G3–G7
-frozen-replay numbers. c128 remains the evidence engine (its class unchanged).
-Provisional-conclusion corollary: nothing downstream builds on a c64 number without a
-c128 confirmation (the direction-sign meta-gate).
+Had it been built, PEPS c64 outputs would have remained class **(c) heuristic screening**.
+They would never become evidence. A separate c128 final/certification artifact would still be
+only `c128_candidate` until the owning scientific gates passed. This proposal remains blocked.

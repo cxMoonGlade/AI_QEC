@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 r"""Incoherent amplitude-damping (AD) null family + the model-free record-distance discriminator.
 
 The MATCHED classical-relaxation nulls for the sigma_minus (relaxation) sector: incoherent AD (no
@@ -11,8 +9,10 @@ Extracted VERBATIM from outputs/twin_validation/notion3_relaxation_dualaxis_run.
 removing the ft/n3 indirection (canonical package functions called directly). tv_distance lives in
 observables (imported here).
 
-Boundary: CPU exact-DM (16-dim, nmax=1); teacher/evaluator-side. No physical ground truth (FORMAL).
+Boundary: CPU exact-DM (16-dim, nmax=1); evaluator-side. No physical ground truth (FORMAL).
 """
+
+from __future__ import annotations
 
 import math
 

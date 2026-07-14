@@ -30,8 +30,6 @@ def _two_measurement_circuit():
 
 
 def test_source_pauli_projection_changes_records_and_writes_source_sidecar(tmp_path):
-    pytest.importorskip("pymatching", reason="source projection simulator smoke uses PyMatching")
-
     circuit = _two_measurement_circuit()
     timeline = SourceTimeline(
         name="measurement_flip_probability",
@@ -82,8 +80,6 @@ def test_source_pauli_projection_changes_records_and_writes_source_sidecar(tmp_p
 
 
 def test_source_projection_auto_sidecar_rejects_mismatched_run_timeline(tmp_path):
-    pytest.importorskip("pymatching", reason="source projection simulator smoke uses PyMatching")
-
     circuit = _two_measurement_circuit()
     out_dir = tmp_path / "mismatch"
     noise_timeline = RTNSource(amplitude_radns=1.0e-4, gamma_per_cycle=0.0).sample(seed=1, n_cycles=2)
@@ -118,8 +114,6 @@ def test_source_projection_auto_sidecar_rejects_mismatched_run_timeline(tmp_path
 
 
 def test_source_projection_rejects_short_timeline_by_default(tmp_path):
-    pytest.importorskip("pymatching", reason="source projection simulator smoke uses PyMatching")
-
     circuit = _two_measurement_circuit()
     timeline = SourceTimeline(
         name="one_cycle_probability",
@@ -148,8 +142,6 @@ def test_source_projection_rejects_short_timeline_by_default(tmp_path):
 
 
 def test_source_projection_can_optionally_skip_out_of_timeline_matches(tmp_path):
-    pytest.importorskip("pymatching", reason="source projection simulator smoke uses PyMatching")
-
     circuit = _two_measurement_circuit()
     timeline = SourceTimeline(
         name="one_cycle_probability",
@@ -180,8 +172,6 @@ def test_source_projection_can_optionally_skip_out_of_timeline_matches(tmp_path)
 
 
 def test_source_projection_splits_site_payloads_for_bundled_measurements(tmp_path):
-    pytest.importorskip("pymatching", reason="source projection simulator smoke uses PyMatching")
-
     builder = CircuitBuilder(num_qubits=2)
     builder.measure((0, 1), key=("m0", "m1"))
     builder.detector("d0", xor=("m0",))
@@ -221,8 +211,6 @@ def test_source_projection_splits_site_payloads_for_bundled_measurements(tmp_pat
 
 
 def test_source_projection_after_gate_and_idle_branches_are_pinned(tmp_path):
-    pytest.importorskip("pymatching", reason="source projection simulator smoke uses PyMatching")
-
     builder = CircuitBuilder(num_qubits=2)
     builder.x(0)
     builder.tick()
@@ -269,8 +257,6 @@ def test_source_projection_after_gate_and_idle_branches_are_pinned(tmp_path):
 
 
 def test_source_projection_splits_site_payloads_for_depolarize2_pairs(tmp_path):
-    pytest.importorskip("pymatching", reason="source projection simulator smoke uses PyMatching")
-
     builder = CircuitBuilder(num_qubits=4)
     builder.cx((0, 1, 2, 3))
     builder.measure((0, 1, 2, 3), key=("m0", "m1", "m2", "m3"))
@@ -311,8 +297,6 @@ def test_source_projection_splits_site_payloads_for_depolarize2_pairs(tmp_path):
 
 
 def test_source_projection_codespec_final_readout_requires_tick_coverage(tmp_path):
-    pytest.importorskip("pymatching", reason="source projection simulator smoke uses PyMatching")
-
     circuit = compile_code_spec(XZZXCodeSpec(layout_size=3, rounds=2).to_code_spec())
     timeline = SourceTimeline(
         name="rounds_without_final_readout_tick",
@@ -358,8 +342,6 @@ def test_source_projection_rejects_bad_payload_probability():
 
 
 def test_source_projection_bad_payload_run_clears_stale_artifacts(tmp_path):
-    pytest.importorskip("pymatching", reason="source projection simulator smoke uses PyMatching")
-
     circuit = _two_measurement_circuit()
     out_dir = tmp_path / "bad_payload_run"
     Simulator(circuit).run(shots=8, out_dir=out_dir, seed=9)

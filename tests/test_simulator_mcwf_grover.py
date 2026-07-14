@@ -28,8 +28,12 @@ def test_mcwf_qutrit_grover_measurement_backend_writes_artifacts(tmp_path):
     )
 
     assert result.artifacts is not None
-    assert result.manifest["backend"] == "qec_twin.simulator.mcwf_backend.DenseQutritMcwfBackend"
-    assert result.manifest["workload_adapter"] == "qec_twin.simulator.mcwf_grover"
+    assert result.manifest["backend"] == (
+        "error_coupling_simulator.frontend.mcwf_backend.DenseQutritMcwfBackend"
+    )
+    assert result.manifest["workload_adapter"] == (
+        "error_coupling_simulator.frontend.mcwf_grover"
+    )
     assert result.manifest["representability"] == "dense_qutrit_statevector_mcwf_leakage"
     assert result.manifest["algorithm"] == "single_solution_grover_gate_level"
     assert result.manifest["executor"]["schema"] == "qec_twin.simulator.GraphCapturedMcwfExecutor.v1"
@@ -42,7 +46,8 @@ def test_mcwf_qutrit_grover_measurement_backend_writes_artifacts(tmp_path):
     assert result.manifest["noise"]["type"] == "qutrit_leakage_mcwf"
     assert result.manifest["decoder"] is None
     assert result.trajectory_summary["execution"]["executor"] == (
-        "qec_twin.simulator.mcwf_executor.GraphCapturedMcwfExecutor"
+        "error_coupling_simulator.frontend.mcwf_executor."
+        "GraphCapturedMcwfExecutor"
     )
     assert result.trajectory_summary["execution"]["batches"] == 2
     assert result.trajectory_summary["execution"]["physics_program_s"] >= 0.0

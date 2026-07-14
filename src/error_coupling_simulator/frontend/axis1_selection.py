@@ -281,7 +281,10 @@ class Axis1MechanismSelectionPlan:
             ),
             "selections": [selection.to_manifest() for selection in self.selections],
             "representability": "schedule_derived_axis1_selection_no_h_or_c_payload",
-            "scope": "selection only; primitive lowering happens in qec_twin.mechanisms.axis1_primitives",
+            "scope": (
+                "selection only; primitive lowering happens in "
+                "error_coupling_simulator.mechanisms.axis1_primitives"
+            ),
         }
         if self.axis1_local_lindblad_context:
             out["axis1_local_lindblad_context"] = dict(

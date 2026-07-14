@@ -30,23 +30,26 @@ generated complete inventory is `docs/CODE_MAP.md`.
 
 | module | role |
 |---|---|
-| `frontend/` | CircuitIR / CodeSpec / compiler / schedule / carriers / emit → `Simulator.run(...)`; emits `.stim` / `.b8` / optional `.dem` / manifest, each with a fail-closed `representability` class |
+| `frontend/` | CircuitIR / CodeSpec / compiler / schedule / Stim execution → `Simulator.run(...)`; the default artifact bundle contains `.stim`, raw `.dem`, actual `.b8`, summaries, and a manifest, while the product record is the actual detector/observable `.b8` exposed as `RecordBatch`; external PyMatching prediction artifacts are opt-in and every artifact has a fail-closed `representability` class |
 | `certify/` | score a noise process's records vs **INDEPENDENT** formal anchors (anti-circular) → an epistemic ledger with non-optional negative controls |
 | `numerics.py` | `NUMERICAL_ZERO` floor |
 
-`src/qec_twin/` is the pre-consolidation package: import shims + the still-used RAG
-(`qec_twin.rag`) and R2 decoder (`qec_twin.hardware.m4_decode`), being pulled out of `src/`
-into an archive with symlinks kept at the old import paths.
+`src/qec_twin/` is a repository-local pointer to the pre-consolidation tree: outward import shims
+and the still-used RAG (`qec_twin.rag`). The distributed package has no executable inward import
+from it: PEPS scheduling, the experiment facade, and the frontend decoder are package-local.
+PyMatching itself remains an explicit optional external dependency.
 
 ## Flow
 
 Current implementation has two disconnected scientific branches, plus a separate Stim product path:
 
 ```text
-Stim product:  CircuitIR/CodeSpec → Stim-expressible noise → .stim/.b8/(optional .dem)
+Stim product:  CircuitIR/CodeSpec → Stim-expressible noise → .stim/.dem/actual .b8
+               (decoder-free default; optional external prediction artifacts)
 
 Charter A:     RTN/1f source → partial dense-qubit lowering → small-N fixed-horizon record
-Charter B:     static qutrit channel → legacy MPS/PEPS spike paths → raw syndrome/terminal obs
+Charter B:     static qutrit channel → legacy MPS/PEPS paths → internal raw syndrome bytes
+               → package-local temporal-detector RecordBatch
 
 Target only:   shared source → qutrit XZZX carrier → correctly folded full record → certification
                (OPEN / CODE_BLOCKED; not an integrated production flow)

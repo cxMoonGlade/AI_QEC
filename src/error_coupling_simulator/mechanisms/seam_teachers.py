@@ -1,34 +1,33 @@
 from __future__ import annotations
 
-"""ADR 0008 C3 seam-test teachers (registration item 2; EVALUATOR-ONLY).
+"""ADR 0008 C3 controlled seam-process fixtures (registration item 2).
 
 The controlled noise-process arms of the frozen SEAM-TEST pre-registration
 (the ADR 0008 "SEAM-TEST PRE-REGISTRATION", 2026-06-10;
 skeleton: ``docs/.reports/adr0008_panel/R2_c3prep_verdict.md`` item 2; member
 table: ``D_package_derivations.md`` D5). All results are
-controlled-teacher-scoped -- no hardware claim of any kind issues from this
+controlled-process-scoped -- no hardware claim of any kind issues from this
 line.
 
 Geometry (SEAM-TEST PRE-RUN AMENDMENT 1, ruling 1): the instrument is the
 DISJOINT two-window strip -- the windows share the seam DATA pair across the
 seam (one qubit each side) and NO check is measured on that pair. Every edge
-teacher below acts on the unchecked seam data pair through the oracle's
+process arm below acts on the unchecked seam data pair through the oracle's
 declared edge slot (``SeamStrip.oracle_law`` passes
 ``edges=(strip.seam_pair,)``); nothing in this module depends on a seam check
 existing, and the registered constants are unchanged by the amendment.
 
-Isolation contract (``docs/SIMULATOR.md``): every object here is
-evaluator-side counterfactual ground truth. The teacher's channels, parameters
-(``SeamNoiseProcess.params``) and labels are used ONLY to *score* the carrier
-(by S3, against the ``forward/exact`` oracle); they are never fed to the
-learner/carrier, which consumes observations alone.
+Isolation contract (``docs/SIMULATOR.md``): each channel field specifies a
+controlled generative process used to exercise the carrier and exact oracle.
+``SeamNoiseProcess.params`` and process labels are evaluator-only truth used for
+certification and must never enter the emitted record payload.
 
 The arms (registration item 2 + the control variants):
 
 (i)   :func:`coherent_seam_teacher` -- the M3-scale backdrop plus the coherent
       seam edge ``U_phi = exp(-i phi Z(x)Z)`` ON the strip's (unchecked) seam
-      data pair at the H2
-      placement (``[ (prod_i E_i) ; U_phi ]^repeats`` then extraction);
+      data pair once per repeat, after local channels and before record
+      extraction (``[ (prod_i E_i) ; U_phi ]^repeats`` then extraction);
       ``phi_ref = 0.1``, regime ``[0.05, 0.15]``. Control:
       :func:`bias_injected_coherent_teacher` (checklist item 35: inject a known
       delta into phi; the scored functional must move by the predicted amount).
@@ -37,7 +36,7 @@ The arms (registration item 2 + the control variants):
       channel whose Z record under per-round non-selective extraction is the
       two-state Markov flip chain ``(p01, p10) = (6.7039e-3, 1.20296e-1)``,
       ``lambda1 = 1 - p01 - p10 = 0.873``. Valid here per the R-MECH amendment
-      scope: D5's T-B table holds for rep-code instruments and controlled-teacher
+      scope: D5's T-B table holds for rep-code instruments and controlled-process
       seam tests (surface-window instruments need the T-C/asymmetric-q hooks).
 (iii) :func:`backdrop_teacher` -- the M3-scale local backdrop: small iid local
       noise at ~1e-2 rates with declared constants. Declared composition:
@@ -153,19 +152,18 @@ def tb_member_from_rate_and_ratio(r: float, ratio: float) -> tuple[float, float]
 
 
 # ----------------------------------------------------------------------------- #
-# The equal-treatment teacher object (D8)                                         #
+# The equal-treatment process object (D8)                                         #
 # ----------------------------------------------------------------------------- #
 @dataclass(frozen=True)
 class SeamNoiseProcess:
-    """One evaluator-only teacher arm exposing the D8 observation surface.
+    """One controlled seam-process arm exposing the D8 observation surface.
 
     ``channel_field`` is ``(t, i) -> (k, 2, 2) Kraus | None`` (per-data-location
     storage mechanism); ``edge_field`` is ``None`` or
     ``(t, (i, j)) -> (k, 4, 4) Kraus | None`` evaluated on the strip's declared
-    seam pair at the H2 placement. ``params`` records the declared ground-truth
-    constants -- EVALUATOR/AUDIT-SIDE ONLY (isolation contract): they are never
-    a learner/carrier input; an undeclared crossing voids the affected fits
-    (checklist item 28).
+    seam pair after local channels and before record extraction. ``params``
+    records declared evaluator-only constants for certification; it is not part
+    of the emitted record payload.
     """
 
     name: str
@@ -197,7 +195,7 @@ def _backdrop_params() -> dict[str, Any]:
 
 
 # ----------------------------------------------------------------------------- #
-# Teacher factories (registration item 2 arms)                                    #
+# Process factories (registration item 2 arms)                                    #
 # ----------------------------------------------------------------------------- #
 def backdrop_teacher(strip) -> SeamNoiseProcess:
     """(iii) M3-scale local backdrop: iid ``BitFlip(1e-2) . RX(0.2)``, no edge."""
@@ -212,7 +210,7 @@ def backdrop_teacher(strip) -> SeamNoiseProcess:
 def coherent_seam_teacher(strip, phi: float = SEAM_PHI_REF) -> SeamNoiseProcess:
     """(i) Backdrop + coherent seam edge ``exp(-i phi Z(x)Z)`` on the seam pair.
 
-    H2 placement: the edge applies once per repeat AFTER that pass's location
+    Placement: the edge applies once per repeat AFTER that pass's location
     channels (``[ (prod_i E_i) ; U_phi ]^repeats`` then extraction) -- the
     placement is realized by ``forward/exact`` and declared, never commuted.
     """
@@ -231,7 +229,7 @@ def coherent_seam_teacher(strip, phi: float = SEAM_PHI_REF) -> SeamNoiseProcess:
 
 
 def bias_injected_coherent_teacher(strip, *, delta: float, phi: float = SEAM_PHI_REF) -> SeamNoiseProcess:
-    """(i-control) Bias-injection control for the coherent teacher.
+    """(i-control) Bias-injection control for the coherent seam process.
 
     Checklist item 35 pattern: inject a KNOWN declared delta into the coherent
     parameter (``phi -> phi + delta``); the evaluator then checks the scored
@@ -309,7 +307,7 @@ def pauli_ablation_teacher(strip) -> SeamNoiseProcess:
     The R = 1 member of the SAME T-B family at the matched registered record
     flip rate: ``p01 = p10 = r`` makes the per-step flip probability
     state-independent, so the record is exactly iid (``R_k == 1`` for every k,
-    ``P(FF) = r^2`` -- T-A in-family; checklist item 22's teacher side).
+    ``P(FF) = r^2`` -- T-A in-family; checklist item 22's process arm).
     """
     q = TB_FLIP_RATE
     stats = tb_record_chain_stats(q, q)
@@ -346,3 +344,13 @@ def seam_teacher_arms(
 
 # Backward-compat alias — "Teacher" retired in error_coupling_simulator; qec_twin keeps it (shim re-exports).
 SeamTeacher = SeamNoiseProcess
+
+# Neutral factory spellings. Stage-D registries pin the historical qualnames, so
+# the original symbols remain definitions and these names are identity aliases.
+backdrop_noise_process = backdrop_teacher
+coherent_seam_noise_process = coherent_seam_teacher
+bias_injected_coherent_noise_process = bias_injected_coherent_teacher
+twirled_seam_noise_process = twirled_seam_teacher
+tb_bunching_noise_process = tb_bunching_teacher
+pauli_ablation_noise_process = pauli_ablation_teacher
+seam_noise_process_arms = seam_teacher_arms

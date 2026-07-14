@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import json
 
-import pytest
-
 from qec_twin.simulator import CircuitBuilder, Noise, Simulator, depolarizing_noise, targeted_noise
 from qec_twin.simulator.noise import (
     Noise as NoiseModuleFacade,
@@ -61,8 +59,6 @@ def test_noise_module_public_targeted_builder_inserts_and_audits_placements():
 
 
 def test_noise_module_public_facade_runs_through_simulator_manifest(tmp_path):
-    pytest.importorskip("pymatching", reason="noise module run smoke uses PyMatching")
-
     circuit = _deterministic_two_qubit_detector_circuit()
     noise = (
         NoiseModuleFacade.targeted()

@@ -30,6 +30,7 @@ def test_run_noiseless_accepts_user_built_circuit_and_loads_records(tmp_path):
         shots=32,
         out_dir=tmp_path / "manual_noiseless",
         seed=5,
+        decoder="pymatching",
     )
 
     assert result.manifest["noise"] is None
@@ -51,8 +52,6 @@ def test_run_noiseless_accepts_user_built_circuit_and_loads_records(tmp_path):
 
 
 def test_simulate_noiseless_runs_compiled_xzzx_frontend(tmp_path):
-    pytest.importorskip("pymatching", reason="noiseless XZZX smoke uses PyMatching")
-
     spec = XZZXCodeSpec(layout_size=3, rounds=2).to_code_spec()
     result = simulate_noiseless(
         compile_code_spec(spec),
@@ -69,8 +68,6 @@ def test_simulate_noiseless_runs_compiled_xzzx_frontend(tmp_path):
 
 
 def test_run_defaults_to_noiseless_when_noise_is_omitted(tmp_path):
-    pytest.importorskip("pymatching", reason="noiseless default smoke uses PyMatching")
-
     builder = CircuitBuilder(num_qubits=1)
     builder.measure(0, key="m0")
     builder.detector("d0", xor=("m0",))
@@ -82,6 +79,7 @@ def test_run_defaults_to_noiseless_when_noise_is_omitted(tmp_path):
     manifest = json.loads(result.paths.manifest.read_text())
 
     assert manifest["noise"] is None
+    assert manifest["decoder"] is None
     assert result.load_detection_events().shape == (12, 1)
     assert result.load_observable_flips().shape == (12, 0)
     assert result.load_predicted_observable_flips().shape == (12, 0)
@@ -89,8 +87,6 @@ def test_run_defaults_to_noiseless_when_noise_is_omitted(tmp_path):
 
 
 def test_run_noiseless_rejects_pre_noised_source(tmp_path):
-    pytest.importorskip("pymatching", reason="pre-noised source smoke uses PyMatching")
-
     builder = CircuitBuilder(num_qubits=1)
     builder.measure(0, key="m0")
     builder.detector("d0", xor=("m0",))
@@ -121,8 +117,6 @@ def test_run_noiseless_rejects_pre_noised_source(tmp_path):
 
 
 def test_result_loaders_validate_manifest_file_and_sha(tmp_path):
-    pytest.importorskip("pymatching", reason="loader validation smoke uses PyMatching")
-
     builder = CircuitBuilder(num_qubits=1)
     builder.measure(0, key="m0")
     builder.detector("d0", xor=("m0",))

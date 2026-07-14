@@ -4,7 +4,8 @@ from __future__ import annotations
 
 This module owns the small physical primitive dictionary used by the simulator
 Axis-1 bridge. It produces local two-qubit-window Hamiltonian terms and collapse
-operators; `qec_twin.forward.joint_lindbladian` remains the channel assembler.
+operators; :mod:`error_coupling_simulator.carrier.joint_lindbladian` remains
+the channel assembler.
 """
 
 from dataclasses import dataclass

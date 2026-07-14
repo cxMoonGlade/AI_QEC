@@ -38,42 +38,65 @@ nonexistence theorem.
 6. [`docs/NUMERICAL_PROVENANCE.md`](../NUMERICAL_PROVENANCE.md) and
    [`docs/METRICS.md`](../METRICS.md) — value and metric trust ledgers.
 
-## Frozen current-HEAD evidence
+## Frozen audit snapshot and scope correction
 
 - Audited base HEAD: `4a226b7914612766723a874651952b763ef3c925`.
-- Full suite command:
+- The audit ran this repository-wide mixed regression command:
 
   ```text
   conda run -n aiqec python -m pytest -q tests/
   ```
 
-- Live result: `2560 passed, 169 skipped, 9 failed, 56 warnings`; pytest then ended with
-  segmentation fault / exit 139.
-- Eight failures are one `qutip 5.3.0` plus repo-local
-  `qutip-cuquantum 0.3.0.dev6+cedd225` compatibility cluster: the baseline writes the now
-  read-only `QobjEvo._dims`. A representative test reproduced independently.
-- The ninth failure is independently reproducible:
-  `test_h2_phi_parity_and_sign_minima` observed
-  `KL=8.15893408390167e-08 > 1e-08` after 342.14 s.
-- The post-summary native crash is a separate unresolved stability defect. It has not been
-  minimized or proved benign.
+- Historical result: `2560 passed, 169 skipped, 9 failed, 56 warnings`; pytest then ended with
+  segmentation fault / exit 139. This aggregate was never a simulator-only acceptance suite.
+- Eight failures were the `qutip 5.3.0` plus repo-local
+  `qutip-cuquantum 0.3.0.dev6+cedd225` read-only-`QobjEvo._dims` compatibility cluster. The canonical
+  `ecs` environment now uses qutip-cuQuantum 0.3.1 and the targeted backend slices pass; see
+  `CLAUDE.md` for the current commands and counts.
+- The remaining `KL=8.15893408390167e-08 > 1e-08` result came from the retired HARDEN-H2
+  `RepCodeTwin`/`CoupledRepCodeTwin` calibration study. It is a legacy learner regression, not a
+  carrier, noise-process, emitted-record, or simulator-faithfulness gate. The active test tree no
+  longer carries that learner suite; no tolerance change was made.
+- The historical post-summary native crash occurred in the former mixed execution topology.
+  CUDA-Q is now outside canonical `ecs` and runs in its own process; the old aggregate is not
+  evidence that the separated canonical topology still exits 139. No new aggregate scientific
+  claim is inferred from the targeted environment checks.
 - RAG was force-rebuilt over 246 reading notes into 2399 chunks. RAG/KG remain discovery
   surfaces, never evidence.
 - Final consistency checks passed: `git diff --check`, Markdown local links, Markdown table
   columns, `docs/code_status.json` parsing, and `tools/gen_code_map.py --check`.
 
-## Active code-contract findings
+## P0 contract repairs and remaining findings
 
-1. `QutritDM.record_oracle` supplies a full joint only for `R=1`; for `R>=2` it supplies
-   moments, while `DMOracleAnchor` can still advertise a feasible FULL_JOINT request and then
-   read a missing `joint` field.
-2. Legacy `ShotSet.to_det_obs()` labels round-major raw syndrome as `det` without the required
-   temporal XOR fold. Any detector-level result must be traced to its exact accessor.
-3. `coupled_cycle` uses a whole-horizon source mean for every round's readout/reset policy,
+The 2026-07-13 P0 repair closed three active record/certification defects without changing a
+scientific tolerance:
+
+1. `DMOracleAnchor` now fails closed for `R>=2` FULL_JOINT and SYNDROME_DIST requests because
+   `QutritDM.record_oracle` supplies moments, not a joint law, there. Direct unsupported calls
+   raise a stable contract error before process/DM access; capability cache keys now include the
+   requested geometry.
+2. `carrier.records.PackedShotBatch` preserves the PEPS raw packed byte layout but applies the
+   independently pinned temporal XOR fold at `.to_det_obs()` / `.to_record_batch()`.
+   `.to_raw_syndrome_obs()` is explicit. Stim results, Axis-1 sample evidence, and PEPS output now
+   share the package-local `RecordBatch` detector/observable boundary.
+3. The canonical Stim frontend no longer gates record production on optional PyMatching.
+   `Simulator.run(...)`, `run_noiseless(...)`, and `simulate_noiseless(...)` default to
+   `decoder=None`; they emit the actual detector/observable records and mark prediction/decoder
+   artifacts as `decoder_not_requested`. `decoder="pymatching"` preserves the explicit `[hw]`
+   reduction path. Record-only runs retain un-decomposed DEM hyperedges; only that explicit decoder
+   path requests graphlike decomposition. The focused Stim/frontend CPU regression is
+   `89 passed, 12 skipped` in canonical `ecs` (all skips are explicit `[hw]` decoder tests) and
+   `101 passed` in `aiqec` with PyMatching present.
+   The broader P0 record/certification/interop contract batch is `156 passed, 6 skipped` in `ecs`
+   and `162 passed` in `aiqec`; its six core-environment skips are also optional decoder cases.
+
+Remaining findings:
+
+4. `coupled_cycle` uses a whole-horizon source mean for every round's readout/reset policy,
    so it is not yet a demonstrated causal, prefix-consistent map family.
-4. Current source lowering modulates only `zeta` and `gamma_phi`; it does not instantiate the
+5. Current source lowering modulates only `zeta` and `gamma_phi`; it does not instantiate the
    previously narrated ten-field source-to-qutrit leakage chain.
-5. `exp(L/4)` is a project normalization/siting convention, not a literature-derived physical
+6. `exp(L/4)` is a project normalization/siting convention, not a literature-derived physical
    quarter-CZ pulse model.
 
 ## Large-distance statement that must remain bounded
@@ -86,20 +109,21 @@ Neither result is a physical qutrit-leakage-tail, multi-round-record, or PEPS-tr
 
 ## Next-session task boundary
 
-Start with **P0 diagnosis**, not new d5/d7 runs and not FET tuning:
+Continue with the remaining simulator boundary, not new d5/d7 runs and not FET tuning:
 
-1. minimize the qutip-cuQuantum compatibility failure;
-2. diagnose the reproducible H2 KL gate miss without changing its tolerance first;
-3. minimize the post-pytest exit-139;
-4. then specify fixes for the `R>=2` oracle contract, detector fold, and causal per-round
-   instrument policy.
+1. close and ratify a causal, prefix-consistent per-round instrument object contract before changing
+   the source-conditioned implementation; the existing whole-horizon policy remains explicit;
+2. keep the two disconnected production-bridge charters `CODE_BLOCKED` until their literature and
+   object contracts close.
 
-Use the `diagnose` workflow. Diagnosis is read-only by default. Any edit under `src/**` still
-requires the user's explicit confirmation; literature/object gates remain binding before
+The common output contract is now present, but a universal backend execution facade is not:
+`Simulator.run(...)` remains Stim-representable, while Axis-1 and PEPS retain bounded runners.
+
+Use the `diagnose` workflow. Diagnosis is read-only by default. Any future edit under `src/**`
+requires a fresh explicit scope confirmation; literature/object gates remain binding before
 claim-bearing experiment code.
 
 ## Git/worktree preservation
 
-The literature/status audit was staged as a documentation checkpoint but was **not committed**
-by the save step. Preserve all staged changes, including the user's pre-existing staged
-`AGENTS.md` and `.agents/skills/zoom-out/SKILL.md`; do not reset or replace them.
+Preserve all existing environment-lock and setup changes in the worktree. Inspect `git status`
+before every edit; do not reset or replace unrelated changes.
