@@ -5,7 +5,7 @@ import json
 import numpy as np
 import pytest
 
-from qec_twin.simulator.cudaq_grover import (
+from error_coupling_simulator.frontend.cudaq_grover import (
     bitstring_from_index,
     grover_theory_prediction,
     index_from_bitstring,

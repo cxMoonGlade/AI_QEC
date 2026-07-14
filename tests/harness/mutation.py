@@ -130,6 +130,8 @@ def run_mutation(registry: str, *, jobs: int | None = None,
         shutil.rmtree(REPO / "mutants", ignore_errors=True)
         n = jobs or int(os.environ.get("MUTMUT_JOBS", os.cpu_count() or 4))
         env = _env()
+        if gpu is not None:
+            env = gpu.child_env(env)
         with open(log, "w", encoding="utf-8") as f:
             f.write(f"tag={tag}\nsource_paths={modules}\ntest_selection={tests}\n"
                     f"max_children={n}\n")

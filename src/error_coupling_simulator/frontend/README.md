@@ -11,8 +11,9 @@ Distribution/runtime boundary:
 - Frontend runtime ownership is package-local; it never imports the repo-only `qec_twin`
   compatibility shims or RAG tooling. Those old paths point outward and are not shipped.
 - Google r01/r10 `.stim` + metadata files are explicit external circuit/geometry/schedule inputs,
-  not bundled assets or sources of noise parameters. Ququart transport likewise requires an
-  explicit caller-supplied Kraus `.npz` path; repository scratch is not a default.
+  not bundled assets or sources of noise parameters. Ququart transport derives its channel from
+  explicit package-owned `CZParams`, or accepts an in-memory channel / explicit serialized cache;
+  repository scratch is not a default and Kraus is not classified as external data.
 - CUDA-Q Grover is an optional plugin surface. Install/run its `cudaq-grover` extra only in the
   retained `aiqec` environment and a separate process; canonical `ecs` deliberately excludes it.
 - Release acceptance builds the real sdist, builds and installs its wheel into an isolated target,
@@ -915,6 +916,7 @@ from error_coupling_simulator.frontend import (
     simulate_qutrit_wg_leakage,
     simulate_ququart_transport_smoke,
 )
+from error_coupling_simulator.mechanisms import CZParams
 
 q2 = simulate_qutrit_wg_leakage(
     num_qutrits=3,
@@ -930,17 +932,18 @@ q3 = simulate_ququart_transport_smoke(
     num_ququarts=2,
     initial_levels="12",
     shots=1024,
-    kraus_path="/path/to/qutip_cz_leakage_kraus.npz",
+    cz_params=CZParams(),
     out_dir="outputs/simulator/ququart_transport2",
 )
 print(q3.outcome_probability("30"))
 print(q3.top_outcomes(4))
 ```
 
-Both paths use project-owned GPU carriers under `carrier/exact`; both write
+Both paths use project-owned carriers under `carrier/exact`; both write
 multi-level probability/count artifacts and a manifest, not `.stim`, `.dem`,
-`.b8`, or decoder results. The ququart Kraus file is an explicit independently
-generated channel input: it is not bundled, and there is no fallback to
+`.b8`, or decoder results. The CZ constructor is package-owned and QuTiP/CPU;
+the resulting Kraus representation is consumed by `QuquartDM`. A supplied NPZ
+is an optional derived cache or caller injection; there is no fallback to
 repository `outputs/`.
 
 MCWF backend + Grover leakage workload quickstart:

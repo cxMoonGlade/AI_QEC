@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import torch
 
-from qec_twin.forward.exact.circuit_sim import (
+from error_coupling_simulator.carrier.exact.circuit_sim import (
     amplitude_damping,
     apply_channel_local,
     apply_unitary,

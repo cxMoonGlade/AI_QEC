@@ -5,7 +5,7 @@ import math
 import numpy as np
 import pytest
 
-from qec_twin.mechanisms import (
+from error_coupling_simulator.source import (
     OneOverFDriftSource,
     PhaseBurstSource,
     RTNSource,

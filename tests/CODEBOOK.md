@@ -29,6 +29,24 @@ Retained non-simulator ownership:
 
 These files may catch repository regressions, but none may be cited as a simulator acceptance gate
 until its simulator-owned invariant is split into a direct `error_coupling_simulator` test.
+`tools/gen_code_map.py --check` makes this an executable ownership rule: every acceptance file
+declared in `docs/service_status.json` is AST-scanned for static imports, dynamic imports, and
+string-based patch targets that resolve through `qec_twin`. Frozen persisted schema IDs are allowed
+because they do not resolve Python objects.
+
+The canonical aggregate command is `python tests/harness/service_acceptance.py`. It expands every
+unique declared acceptance file and runs each in a fresh exec process (default `ecs`; CUDA-Q
+override `aiqec`). The catalog provides the complete lane assignment: `cpu_light` uses bounded
+subprocess concurrency, `cpu_exclusive` is serial for host-memory/BLAS-heavy work, and `gpu_serial`
+is serial under a GPU lease held only for that phase. The parent imports no Torch/CUDA runtime;
+child exit is the native/CUDA allocator reset. Per-run PID/nonce log directories and a single-writer
+atomic summary prevent concurrent runners from overwriting evidence. Do not replace this with one
+giant `pytest` invocation: that shares unrelated native backend lifetime state and has reproduced
+exit 139 after the same service groups passed independently. The execution topology changes no
+scientific tolerance; it is part of the execution contract. `ECS_ACCEPTANCE_TIMEOUT` overrides the
+per-file timeout and `ECS_ACCEPTANCE_CPU_JOBS` overrides the bounded CPU-light ceiling declared in
+`tests/harness_config.json`. `--stop-on-failure` disables CPU concurrency so no queued admission can
+run beyond the first failure.
 
 `test_scope_boundary.py` also pins the package-level simulator/record description and requires new
 neutral process names to remain identity-compatible with historical `teacher` API spellings. This
@@ -103,7 +121,7 @@ torch-less module.
 ## Batch registry (status)
 | registry | modules | test file | units | L0 | L2 kill | status |
 |---|---|---|---|---|---|---|
-| `wave2_6_coverage_targets` | frontend/experiments, forward/scalable/{sv_sampler,mps_forward}, _support/fixtures | test_experiments/shotset/mps_seams_units + _support selftest | 19 | 100/100 | 95.4% | committed |
+| `wave2_6_coverage_targets` | frontend/experiments + legacy forward/scalable/{sv_sampler,mps_forward} historical batch | test_experiments/shotset/mps_seams_units + _support selftest | 19 | 100/100 | 95.4% | historical; old thin-strip is not an active package service |
 | `stage_d_coverage_targets` | quantum_bath/observables | test_quantum_bath_observables_units | 7 | 100/100 | 90.6% | committed (39caa28) |
 | `stage_d_carrier_targets` | quantum_bath/carrier | test_quantum_bath_carrier_units | 9 | 100/100 | 97.3% | committed |
 | `stage_d_gksl_crowjoynt_targets` | quantum_bath/{gksl,crow_joynt} | test_quantum_bath_gksl_crowjoynt_units | 8 | 100/100 | 95.7% | committed |

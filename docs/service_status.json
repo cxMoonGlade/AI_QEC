@@ -1,0 +1,1072 @@
+{
+  "_schema": "error_coupling_simulator.service_status.v2",
+  "_service_definition": {
+    "included": [
+      "A caller-visible, independently invokable package capability that returns a simulator record, a physical channel/state/trajectory result, a replayable source process, or explicitly bounded certification/research evidence.",
+      "Workload adapters and isolated plugins are counted separately when they have their own public entry point, dependency boundary, and output contract."
+    ],
+    "excluded": [
+      "Types, IRs, guards, layout helpers, native loaders, fixtures, runners, and compatibility adapters that only support another service.",
+      "Downstream inference, decoder-floor/headroom analysis, hardware datasets, unimplemented scientific bridges, and repository-only experiments."
+    ]
+  },
+  "api_surface": "Installed Python API only; the distribution currently installs no console-script entry point. Optional PyMatching and CUDA-Q capabilities require their declared extras, and CUDA-Q runs in the retained aiqec environment as a separate process.",
+  "status_vocabulary": [
+    "CORE",
+    "OPTIONAL",
+    "RESEARCH",
+    "ARCHIVED",
+    "ISOLATED_PLUGIN"
+  ],
+  "service_kind_vocabulary": [
+    "frontend",
+    "adapter",
+    "mechanism",
+    "source_record_chain",
+    "timeline_primitive",
+    "reduced_carrier",
+    "carrier",
+    "workload_adapter",
+    "plugin_probe",
+    "isolated_plugin",
+    "record_contract",
+    "interop",
+    "decoder",
+    "certification",
+    "diagnostic",
+    "research_suite",
+    "archived_findings"
+  ],
+  "acceptance_execution": {
+    "isolation": "one_test_file_per_process",
+    "default_conda_environment": "ecs",
+    "environment_overrides": {
+      "tests/test_simulator_cudaq_grover.py": "aiqec"
+    },
+    "default_lane": "cpu_light",
+    "lane_overrides": {
+      "cpu_exclusive": [
+        "tests/test_quantum_bath.py",
+        "tests/test_quantum_bath_carrier_units.py",
+        "tests/test_quantum_bath_gksl_crowjoynt_units.py",
+        "tests/test_quantum_bath_groundtruth_nulls_units.py",
+        "tests/test_quantum_bath_memwitness_units.py",
+        "tests/test_quantum_bath_observables_units.py"
+      ],
+      "gpu_serial": [
+        "tests/test_analog_schedule_units.py",
+        "tests/test_axis1_convergence.py",
+        "tests/test_axis1_evidence_guard_units.py",
+        "tests/test_axis1_record_params_override.py",
+        "tests/test_axis1_wb_acceptance_gate.py",
+        "tests/test_certify_anchors_units.py",
+        "tests/test_certify_core_units.py",
+        "tests/test_coupled_cycle_units.py",
+        "tests/test_frontend_experiments.py",
+        "tests/test_joint_lindbladian.py",
+        "tests/test_qutrit_dm_memlean.py",
+        "tests/test_simulator_axis1_schedule.py",
+        "tests/test_simulator_cudaq_grover.py",
+        "tests/test_simulator_mcwf_backend.py",
+        "tests/test_simulator_mcwf_grover.py",
+        "tests/test_simulator_ququart_transport.py",
+        "tests/test_simulator_qutip_cuquantum_backend.py",
+        "tests/test_simulator_qutrit_leakage.py",
+        "tests/test_sv_traj_d3_loader_units.py",
+        "tests/test_within_cycle_precision.py"
+      ]
+    },
+    "runner": "tests/harness/service_acceptance.py",
+    "reason": "Service acceptance is process-isolated and lane-scheduled because the catalog spans Torch, QuTiP/cuQuantum/CuPy, fused CUDA extensions, CPU-exclusive quantum-bath work, and an isolated CUDA-Q plugin. A single long-lived pytest process can exit 139 after otherwise passing service groups; fresh processes reset native allocator/lifetime state, while the declared lanes keep GPU/native work serial and allow only bounded independent CPU-light concurrency."
+  },
+  "services": [
+    {
+      "id": "frontend_compile_and_records",
+      "name": "Circuit/CodeSpec compile and Stim-Pauli record frontend",
+      "status": "CORE",
+      "kind": "frontend",
+      "canonical_record_output": true,
+      "layer": "frontend",
+      "owners": [
+        "src/error_coupling_simulator/frontend/circuit_ir.py",
+        "src/error_coupling_simulator/frontend/code_spec.py",
+        "src/error_coupling_simulator/frontend/compiler.py",
+        "src/error_coupling_simulator/frontend/noise.py",
+        "src/error_coupling_simulator/frontend/noise_spec.py",
+        "src/error_coupling_simulator/frontend/operation.py",
+        "src/error_coupling_simulator/frontend/schedule.py",
+        "src/error_coupling_simulator/frontend/simulator.py",
+        "src/error_coupling_simulator/frontend/stim_io.py",
+        "src/error_coupling_simulator/frontend/stim_source.py",
+        "src/error_coupling_simulator/frontend/xzzx_code.py"
+      ],
+      "entrypoints": [
+        "error_coupling_simulator.frontend:Simulator",
+        "error_coupling_simulator.frontend:compile_code_spec",
+        "error_coupling_simulator.frontend:NoiseBuilder",
+        "error_coupling_simulator.frontend:StimCircuitSource"
+      ],
+      "dependencies": {"core": ["stim", "numpy", "PyYAML"], "extras": []},
+      "external_inputs": ["Caller CircuitIR, CodeSpec, CompiledCircuit, or Stim circuit"],
+      "outputs": ["Compiled Stim circuit, canonical detector/observable records, DEM and provenance artifacts"],
+      "acceptance": [
+        "tests/test_simulator_frontend.py",
+        "tests/test_simulator_codespec.py",
+        "tests/test_simulator_noise_module.py",
+        "tests/test_stim_source_units.py"
+      ],
+      "note": "This is the Stim-representable product path. Analog joint-L, leakage, and source-conditioned reduced projection have separate services and claim boundaries."
+    },
+    {
+      "id": "axis1_schedule_adapter",
+      "name": "Axis-1 analog compiler and sealed substep schedule adapter",
+      "status": "CORE",
+      "kind": "adapter",
+      "canonical_record_output": false,
+      "layer": "frontend/schedule",
+      "owners": ["src/error_coupling_simulator/frontend/analog_schedule.py"],
+      "entrypoints": [
+        "error_coupling_simulator.frontend:compile_code_spec_to_substep_schedule",
+        "error_coupling_simulator.frontend:circuit_ir_to_substep_schedule",
+        "error_coupling_simulator.frontend:stim_circuit_to_substep_schedule"
+      ],
+      "dependencies": {"core": ["stim", "numpy"], "extras": []},
+      "external_inputs": ["CodeSpec compiler result, CircuitIR, or Stim circuit with explicit duration policy"],
+      "outputs": ["Compiler-sealed SubstepSchedule with supports, durations and record boundaries"],
+      "acceptance": ["tests/test_analog_schedule_units.py", "tests/test_simulator_axis1_schedule.py"],
+      "note": "This is the Axis-1 schedule seam. It does not select the XZZX within-cycle RunSpec carrier."
+    },
+    {
+      "id": "xzzx_external_schedule",
+      "name": "External XZZX/Google circuit and within-cycle schedule adapter",
+      "status": "CORE",
+      "kind": "adapter",
+      "canonical_record_output": false,
+      "layer": "frontend/schedule",
+      "owners": [
+        "src/error_coupling_simulator/frontend/xzzx_parser.py",
+        "src/error_coupling_simulator/frontend/experiments.py",
+        "src/error_coupling_simulator/frontend/xzzx_code.py"
+      ],
+      "entrypoints": [
+        "error_coupling_simulator.frontend:parse_xzzx_circuit",
+        "error_coupling_simulator.frontend:load_xzzx_d3",
+        "error_coupling_simulator.frontend:run_spec_from_preset"
+      ],
+      "dependencies": {"core": ["stim", "numpy"], "extras": []},
+      "external_inputs": ["Explicit Google/user .stim circuit plus metadata geometry/schedule paths"],
+      "outputs": ["XZZXSchedule and explicit within-cycle RunSpec"],
+      "acceptance": ["tests/test_frontend_experiments.py", "tests/test_xzzx_parser_owner.py"],
+      "note": "Google files are optional caller inputs for this adapter, not hidden package data and not required by other simulator services."
+    },
+    {
+      "id": "axis1_joint_channel",
+      "name": "Axis-1 primitive lowering and same-substep joint channel",
+      "status": "CORE",
+      "kind": "mechanism",
+      "canonical_record_output": false,
+      "layer": "mechanism/carrier",
+      "owners": [
+        "src/error_coupling_simulator/mechanisms/axis1_primitives.py",
+        "src/error_coupling_simulator/carrier/joint_lindbladian.py",
+        "src/error_coupling_simulator/frontend/axis1_channel_evidence.py"
+      ],
+      "entrypoints": [
+        "error_coupling_simulator.mechanisms.axis1_primitives:lower_two_qubit_axis1_primitives",
+        "error_coupling_simulator.carrier.joint_lindbladian:assemble_substep_channel",
+        "error_coupling_simulator.frontend:axis1_substep_channel_evidence_manifest"
+      ],
+      "dependencies": {"core": ["torch", "numpy"], "extras": []},
+      "external_inputs": ["Declared mechanism parameters and compiler-sealed substep duration/support"],
+      "outputs": ["Joint Hamiltonian/collapse lowering, CPTP Kraus channel and channel-evidence ledger"],
+      "acceptance": ["tests/test_axis1_convergence.py", "tests/test_joint_lindbladian.py", "tests/test_simulator_axis1_schedule.py"],
+      "note": "Batched and factored assemblers are execution variants of this one service, not separate services."
+    },
+    {
+      "id": "channel_algebra",
+      "name": "Reusable CPTP and physical channel-construction algebra",
+      "status": "CORE",
+      "kind": "mechanism",
+      "canonical_record_output": false,
+      "layer": "mechanism/carrier",
+      "owners": [
+        "src/error_coupling_simulator/carrier/channels.py",
+        "src/error_coupling_simulator/carrier/cptp_channel.py",
+        "src/error_coupling_simulator/mechanisms/teachers.py"
+      ],
+      "entrypoints": [
+        "error_coupling_simulator.carrier.cptp_channel:StinespringChannel",
+        "error_coupling_simulator.carrier.cptp_channel:apply_kraus",
+        "error_coupling_simulator.carrier.channels:thermal_relaxation_kraus",
+        "error_coupling_simulator.carrier.channels:custom_non_pauli_kraus"
+      ],
+      "dependencies": {"core": ["torch", "numpy", "scipy"], "extras": []},
+      "external_inputs": ["Caller channel parameters, unitary, Kraus stack, or Stinespring parameterization"],
+      "outputs": ["Unitary/Kraus/Stinespring channels, Choi representation and TP residual"],
+      "acceptance": ["tests/test_noise_mechanism_primitives.py", "tests/test_carrier_channels_units.py"],
+      "legacy_sources": ["tests/test_physical_channels.py"],
+      "note": "Only reusable channel algebra is a service. The same file's mechanism_channel M0-M34 compatibility dispatcher is explicitly excluded below."
+    },
+    {
+      "id": "classical_1f_nonmarkov_chain",
+      "name": "Classical finite-RTN 1/f non-Markovian source-to-record chain",
+      "status": "CORE",
+      "kind": "source_record_chain",
+      "canonical_record_output": true,
+      "layer": "source/noise_process/carrier",
+      "owners": [
+        "src/error_coupling_simulator/source/process.py",
+        "src/error_coupling_simulator/source/coupling.py",
+        "src/error_coupling_simulator/noise_processes/coupled_cycle.py"
+      ],
+      "entrypoints": [
+        "error_coupling_simulator.source:SourceTimeline",
+        "error_coupling_simulator.source:RTNSource",
+        "error_coupling_simulator.source:OneOverFDriftSource",
+        "error_coupling_simulator.source:source_to_params",
+        "error_coupling_simulator.noise_processes:CoupledCycleNoiseProcess"
+      ],
+      "controls": [
+        {
+          "id": "matched_marginal_permutation",
+          "entrypoint": "error_coupling_simulator.noise_processes.coupled_cycle:CoupledCycleNoiseProcess.matched_marginal_permutation_control",
+          "semantics": "Preserve one-field marginals via per-field cycle permutations while breaking temporal order and source-to-mechanism alignment. The finite-R arm is exchangeable and retains part of pooled lag covariance; it is not a genuinely Markovian generative null. markovian_baseline remains only a compatibility spelling."
+        },
+        {
+          "id": "source_off",
+          "entrypoint": "error_coupling_simulator.noise_processes.coupled_cycle:CoupledCycleNoiseProcess.off_source",
+          "semantics": "Collapse the source amplitude to zero and emit the constant Theta(0) control arm."
+        }
+      ],
+      "dependencies": {"core": ["numpy", "stim", "torch"], "extras": []},
+      "external_inputs": ["Declared single-RTN or finite log-spaced RTN-sum configuration, or explicit SourceTimeline NPZ"],
+      "outputs": [
+        "Shared-source canonical record arm",
+        "Matched-marginal permutation negative-control record arm",
+        "Source-off Theta(0) negative-control record arm",
+        "Evaluator-only replayable timeline and per-cycle mechanism parameters"
+      ],
+      "acceptance": [
+        "tests/test_source_process_units.py",
+        "tests/test_source_coupling_units.py",
+        "tests/test_coupled_cycle_units.py",
+        "tests/test_axis1_record_params_override.py"
+      ],
+      "note": "The source is a finite sum of log-spaced RTNs whose sum-of-Lorentzians approximates 1/f only over the declared band. This is classical stochastic record memory, not a quantum CP-divisibility claim and not a learner/hardware-data service."
+    },
+    {
+      "id": "classical_burst_storm_sources",
+      "name": "Phase-burst and temporal-storm replayable source primitives",
+      "status": "RESEARCH",
+      "kind": "timeline_primitive",
+      "canonical_record_output": false,
+      "layer": "source",
+      "owners": ["src/error_coupling_simulator/source/process.py"],
+      "entrypoints": [
+        "error_coupling_simulator.source:PhaseBurstSource",
+        "error_coupling_simulator.source:TemporalStormSPPSource"
+      ],
+      "dependencies": {"core": ["numpy"], "extras": []},
+      "external_inputs": ["Explicit burst/recovery or two-state temporal-storm source configuration"],
+      "outputs": ["Replayable SourceTimeline with evaluator-side latent/source arrays"],
+      "acceptance": ["tests/test_source_process.py", "tests/test_source_process_units.py"],
+      "note": "These are public timeline primitives, not turnkey record carriers. CoupledCycleNoiseProcess deliberately accepts only RTNSource/OneOverFDriftSource. PhaseBurst remains unbounded; TemporalStorm is a reduced observed HMM-memory comparator."
+    },
+    {
+      "id": "source_stim_pauli_projection",
+      "name": "Source-conditioned reduced Stim-Pauli record carrier",
+      "status": "CORE",
+      "kind": "reduced_carrier",
+      "canonical_record_output": true,
+      "layer": "source/frontend",
+      "owners": [
+        "src/error_coupling_simulator/frontend/noise_spec.py",
+        "src/error_coupling_simulator/frontend/simulator.py"
+      ],
+      "entrypoints": [
+        "error_coupling_simulator.frontend:SourceStimPauliProjectionSpec",
+        "error_coupling_simulator.frontend:SourceStimPauliRule",
+        "error_coupling_simulator.frontend:Simulator"
+      ],
+      "dependencies": {"core": ["numpy", "stim"], "extras": []},
+      "external_inputs": ["CircuitIR, SourceTimeline and explicit source-to-Pauli projection rules"],
+      "outputs": ["Source-conditioned noisy Stim circuit, DEM, canonical .b8 records and sanitized manifest"],
+      "acceptance": ["tests/test_simulator_source_projection.py", "tests/test_simulator_source_sidecar.py"],
+      "note": "Representability is reduced_pauli_projection_not_analog_truth. It can change records but cannot claim coherent joint-Lindbladian or leakage fidelity."
+    },
+    {
+      "id": "exact_qubit_circuit_dm",
+      "name": "Small-register exact differentiable qubit density-matrix carrier",
+      "status": "CORE",
+      "kind": "carrier",
+      "canonical_record_output": false,
+      "layer": "carrier/exact",
+      "owners": ["src/error_coupling_simulator/carrier/exact/circuit_sim.py"],
+      "entrypoints": [
+        "error_coupling_simulator.carrier.exact.circuit_sim:zero_state",
+        "error_coupling_simulator.carrier.exact.circuit_sim:apply_channel_local",
+        "error_coupling_simulator.carrier.exact.circuit_sim:measure_qubit_enumerate",
+        "error_coupling_simulator.carrier.exact.circuit_sim:parity_marginal_one"
+      ],
+      "dependencies": {"core": ["torch"], "extras": ["cuda-extension", "gpu-cu130"]},
+      "external_inputs": ["Small n-qubit state, local gates/Kraus channels and measurement definitions"],
+      "outputs": ["Exact density matrix, enumerated branch probabilities, differentiable measurement/detector probabilities"],
+      "acceptance": ["tests/test_diff_circuit_forward.py", "tests/test_simulator_axis1_schedule.py", "tests/test_axis1_record_params_override.py"],
+      "note": "The exact fused CUDA path is an acceleration of this service; it does not change the c128 mathematical contract."
+    },
+    {
+      "id": "axis1_dense_jointl_record",
+      "name": "Exact small-N Axis-1 joint-L state and measurement-record carrier",
+      "status": "CORE",
+      "kind": "carrier",
+      "canonical_record_output": true,
+      "layer": "frontend/carrier execution",
+      "owners": [
+        "src/error_coupling_simulator/frontend/axis1_carrier_execution.py",
+        "src/error_coupling_simulator/frontend/axis1_state_evidence.py",
+        "src/error_coupling_simulator/frontend/axis1_record_evidence.py"
+      ],
+      "entrypoints": [
+        "error_coupling_simulator.frontend:axis1_carrier_execution_manifest",
+        "error_coupling_simulator.frontend:axis1_state_evolution_evidence_manifest",
+        "error_coupling_simulator.frontend:axis1_measurement_record_evidence_manifest",
+        "error_coupling_simulator.frontend:write_axis1_measurement_record_samples"
+      ],
+      "dependencies": {"core": ["torch", "numpy", "stim"], "extras": ["gpu-cu130"]},
+      "external_inputs": ["Compiler-sealed Axis-1 SubstepSchedule, optional per-substep parameters, readout/reset instrument and XOR wiring"],
+      "outputs": ["Exact small-N state/branch law, canonical RecordBatch, detection_events.b8 and obs_flips_actual.b8"],
+      "acceptance": ["tests/test_simulator_axis1_schedule.py", "tests/test_axis1_record_params_override.py", "tests/test_axis1_evidence_guard_units.py"],
+      "note": "This is the dense execution dependency of the classical 1/f chain. It intentionally does not fabricate Stim/DEM/decoder semantics for analog joint-L records."
+    },
+    {
+      "id": "fused_within_cycle",
+      "name": "Fused d3 within-cycle state-vector MCWF carrier",
+      "status": "CORE",
+      "kind": "carrier",
+      "canonical_record_output": true,
+      "layer": "carrier",
+      "owners": [
+        "src/error_coupling_simulator/carrier/within_cycle.py",
+        "src/error_coupling_simulator/carrier/kernels/sv_traj_d3_loader.py"
+      ],
+      "entrypoints": ["error_coupling_simulator.carrier:FusedWithinCycleSampler"],
+      "dependencies": {"core": ["torch", "numpy"], "extras": ["cuda-extension", "gpu-cu130"]},
+      "external_inputs": ["XZZXSchedule and explicit RunSpec"],
+      "outputs": ["PackedShotBatch with c64 screening or c128 candidate provenance"],
+      "acceptance": ["tests/test_fused_within_cycle_sampler.py", "tests/test_within_cycle_precision.py", "tests/test_sv_traj_d3_loader_units.py"],
+      "note": "c64 is restricted to optimization screening. Final/certification candidates remain c128."
+    },
+    {
+      "id": "restricted_axis1_1d_mps",
+      "name": "Restricted Axis-1 one-dimensional MCWF/MPS execution",
+      "status": "CORE",
+      "kind": "carrier",
+      "canonical_record_output": false,
+      "layer": "frontend/carrier execution",
+      "owners": [
+        "src/error_coupling_simulator/frontend/axis1_mcwf_mps_contract.py",
+        "src/error_coupling_simulator/frontend/axis1_mcwf_mps_execution.py",
+        "src/error_coupling_simulator/frontend/axis1_qt_mps_contract.py",
+        "src/error_coupling_simulator/frontend/axis1_qt_mps_execution.py"
+      ],
+      "entrypoints": [
+        "error_coupling_simulator.frontend:axis1_mcwf_mps_state_record_execution_manifest",
+        "error_coupling_simulator.frontend:axis1_qt_mps_restricted_execution_manifest"
+      ],
+      "dependencies": {"core": ["torch", "quimb", "numpy"], "extras": ["gpu-cu130"]},
+      "external_inputs": ["Sealed Axis-1 schedule, local dimensions and explicit approximation controls"],
+      "outputs": ["Restricted execution/evidence manifest, sampled record frequencies and fail-closed approximation ledger"],
+      "acceptance": ["tests/test_simulator_axis1_schedule.py", "tests/test_axis1_wb_acceptance_gate.py"],
+      "note": "This is the shipped 1D MPS route: a finite-microstep verification slice, not a production full-dxd/full-record backend. The old XZZX thin-strip driver remains legacy-only."
+    },
+    {
+      "id": "peps_single_wire",
+      "name": "Single-wire 2D qutrit PEPS trajectory carrier",
+      "status": "CORE",
+      "kind": "carrier",
+      "canonical_record_output": true,
+      "layer": "carrier",
+      "owners": [
+        "src/error_coupling_simulator/carrier/peps/__init__.py",
+        "src/error_coupling_simulator/carrier/peps/contraction.py",
+        "src/error_coupling_simulator/carrier/peps/diagnostics.py",
+        "src/error_coupling_simulator/carrier/peps/fet.py",
+        "src/error_coupling_simulator/carrier/peps/sampling_maps.py",
+        "src/error_coupling_simulator/carrier/peps/stab_tt.py",
+        "src/error_coupling_simulator/carrier/peps/state.py",
+        "src/error_coupling_simulator/carrier/peps/trajectory.py"
+      ],
+      "entrypoints": ["error_coupling_simulator.carrier.peps:PepsSampler"],
+      "dependencies": {"core": ["torch", "quimb", "numpy"], "extras": ["gpu-cu130"]},
+      "external_inputs": ["XZZXSchedule and explicit c128 RunSpec"],
+      "outputs": ["PackedShotBatch and truncation/contraction ledgers"],
+      "acceptance": ["tests/test_peps_host_seam.py"],
+      "legacy_sources": ["tests/test_peps_spike.py"],
+      "note": "The active package seam is directly accepted without qec_twin. The retained d3 spike mixes an old SvSampler referee and is historical evidence only; finite-truncation fidelity of the complete multi-round record and d5/d7 claims remain open. No new FET or d5/d7 run was made here."
+    },
+    {
+      "id": "pepo_findings",
+      "name": "Retained 2D density-matrix PEPO findings backend",
+      "status": "ARCHIVED",
+      "kind": "archived_findings",
+      "canonical_record_output": false,
+      "layer": "carrier",
+      "owners": [
+        "src/error_coupling_simulator/carrier/pepo/__init__.py",
+        "src/error_coupling_simulator/carrier/pepo/dynamics.py",
+        "src/error_coupling_simulator/carrier/pepo/layout.py",
+        "src/error_coupling_simulator/carrier/pepo/sampler.py"
+      ],
+      "entrypoints": ["error_coupling_simulator.carrier.pepo.layout:build_codestate_pepo"],
+      "dependencies": {"core": ["torch", "quimb"], "extras": ["gpu-cu130"]},
+      "external_inputs": ["Explicit schedule for findings reproduction only"],
+      "outputs": ["Retained falsification/finding artifacts and shared layout/truncation internals"],
+      "acceptance": ["tests/test_pepo_host_seam.py"],
+      "legacy_sources": ["tests/test_pepo_rung1.py"],
+      "note": "Not a production backend: selective and nonselective record-law routes were falsified. The package seam and retained layout are accepted directly; the mixed SvSampler referee suite is historical evidence only. PEPS still imports retained PEPO layout/truncation internals; that code dependency does not reactivate the archived route."
+    },
+    {
+      "id": "exact_qutrit_dm",
+      "name": "Exact qutrit/ququart density-matrix carrier and sequential oracle",
+      "status": "CORE",
+      "kind": "carrier",
+      "canonical_record_output": false,
+      "layer": "carrier/exact",
+      "owners": ["src/error_coupling_simulator/carrier/exact/qutrit_dm.py"],
+      "entrypoints": [
+        "error_coupling_simulator.carrier.exact.qutrit_dm:QutritDM",
+        "error_coupling_simulator.carrier.exact.qutrit_dm:QuquartDM"
+      ],
+      "dependencies": {"core": ["torch"], "extras": ["gpu-cu130"]},
+      "external_inputs": ["Declared local-dimension gate/Kraus mechanism parameters"],
+      "outputs": ["Exact small-register state, sequential marginals and joint/moment oracle"],
+      "acceptance": ["tests/test_qutrit_dm_memlean.py", "tests/test_qutrit_dm_measurement_semantics.py"],
+      "note": "This service returns exact oracle/state results rather than canonical QEC .b8 records."
+    },
+    {
+      "id": "ququart_cz_transport",
+      "name": "Ququart CZ leakage transport with package-owned channel derivation",
+      "status": "CORE",
+      "kind": "carrier",
+      "canonical_record_output": false,
+      "layer": "mechanism/carrier/frontend",
+      "owners": [
+        "src/error_coupling_simulator/mechanisms/cz_leakage.py",
+        "src/error_coupling_simulator/carrier/exact/qutrit_dm.py",
+        "src/error_coupling_simulator/frontend/ququart_transport.py"
+      ],
+      "entrypoints": [
+        "error_coupling_simulator.mechanisms.cz_leakage:build_cz_channel",
+        "error_coupling_simulator.frontend:simulate_ququart_transport_smoke"
+      ],
+      "dependencies": {"core": ["qutip", "torch", "numpy"], "extras": ["gpu-cu130"]},
+      "external_inputs": ["Explicit CZParams, in-memory channel, or optional serialized derived-channel cache"],
+      "outputs": ["Two-ququart Kraus channel and exact small-register transport artifacts"],
+      "acceptance": ["tests/test_cz_leakage_mechanism_units.py", "tests/test_simulator_ququart_transport.py"],
+      "note": "Kraus is a derived channel representation, never external scientific data. Exactly one channel source must be selected."
+    },
+    {
+      "id": "qutrit_wg_frontend",
+      "name": "Exact qutrit Wood-Gambetta leakage mechanism and smoke carrier",
+      "status": "CORE",
+      "kind": "carrier",
+      "canonical_record_output": false,
+      "layer": "mechanism/frontend",
+      "owners": [
+        "src/error_coupling_simulator/mechanisms/qutrit_teachers.py",
+        "src/error_coupling_simulator/frontend/qutrit_leakage.py"
+      ],
+      "entrypoints": [
+        "error_coupling_simulator.mechanisms.qutrit_teachers:wg_rates",
+        "error_coupling_simulator.frontend:simulate_qutrit_wg_leakage"
+      ],
+      "dependencies": {"core": ["torch", "numpy"], "extras": ["gpu-cu130"]},
+      "external_inputs": ["Explicit theta, seepage/heating and readout-bias parameters"],
+      "outputs": ["WG rates/Kraus representation and exact qutrit leakage state/count artifacts"],
+      "acceptance": ["tests/test_simulator_qutrit_leakage.py", "tests/test_noise_mechanism_primitives.py"]
+    },
+    {
+      "id": "dense_qudit_mcwf_carrier",
+      "name": "Generic dense qudit/qutrit MCWF trajectory carrier",
+      "status": "CORE",
+      "kind": "carrier",
+      "canonical_record_output": false,
+      "layer": "frontend/carrier execution",
+      "owners": [
+        "src/error_coupling_simulator/frontend/mcwf_backend.py",
+        "src/error_coupling_simulator/frontend/mcwf_executor.py",
+        "src/error_coupling_simulator/frontend/mcwf_program.py",
+        "src/error_coupling_simulator/carrier/kernels/qutrit_mcwf_ops_loader.py"
+      ],
+      "entrypoints": [
+        "error_coupling_simulator.frontend:DenseQuditMcwfBackend",
+        "error_coupling_simulator.frontend:DenseQutritMcwfBackend",
+        "error_coupling_simulator.frontend:CompiledMcwfProgram",
+        "error_coupling_simulator.frontend:DenseQutritMcwfExecutor"
+      ],
+      "dependencies": {"core": ["torch", "numpy"], "extras": ["cuda-extension", "gpu-cu130"]},
+      "external_inputs": ["Local Hilbert dimensions, typed MCWF operation stream and caller Kraus families"],
+      "outputs": ["Batched GPU trajectories/final states, measurement counts, timing and provenance"],
+      "acceptance": ["tests/test_simulator_mcwf_backend.py"],
+      "note": "Algorithm-neutral GPU carrier. Native kernels accelerate a supported subset; the Torch-GPU executor remains the reference path."
+    },
+    {
+      "id": "dense_mcwf_grover",
+      "name": "Dense MCWF Grover workload adapter",
+      "status": "OPTIONAL",
+      "kind": "workload_adapter",
+      "canonical_record_output": false,
+      "layer": "workload/frontend",
+      "owners": ["src/error_coupling_simulator/frontend/mcwf_grover.py"],
+      "entrypoints": [
+        "error_coupling_simulator.frontend:compile_mcwf_grover_program",
+        "error_coupling_simulator.frontend:simulate_mcwf_qutrit_grover_leakage"
+      ],
+      "dependencies": {"core": ["torch"], "extras": ["cuda-extension", "gpu-cu130"]},
+      "external_inputs": ["Grover size, shots and declared qutrit leakage parameters"],
+      "outputs": ["CompiledMcwfProgram, noisy Grover counts and execution artifacts"],
+      "acceptance": ["tests/test_simulator_mcwf_grover.py"],
+      "note": "Grover is only a workload adapter on top of dense_qudit_mcwf_carrier."
+    },
+    {
+      "id": "qutip_cuquantum_probe",
+      "name": "QuTiP-cuQuantum local and Axis-1 restricted probes",
+      "status": "OPTIONAL",
+      "kind": "plugin_probe",
+      "canonical_record_output": false,
+      "layer": "frontend/plugin",
+      "owners": [
+        "src/error_coupling_simulator/frontend/qutip_cuquantum_backend.py",
+        "src/error_coupling_simulator/frontend/axis1_qutip_cuquantum_probe.py"
+      ],
+      "entrypoints": [
+        "error_coupling_simulator.frontend:probe_qutip_cuquantum_local_mcwf",
+        "error_coupling_simulator.frontend:axis1_qutip_cuquantum_probe_manifest",
+        "error_coupling_simulator.frontend:axis1_qutip_cuquantum_state_probe_manifest",
+        "error_coupling_simulator.frontend:axis1_qutip_cuquantum_trajectory_probe_manifest",
+        "error_coupling_simulator.frontend:axis1_qutip_cuquantum_record_probe_manifest"
+      ],
+      "dependencies": {"core": ["qutip", "torch"], "extras": ["gpu-cu130"]},
+      "external_inputs": ["Declared local qutrit or sealed Axis-1 Hamiltonian/collapse program"],
+      "outputs": ["Restricted symbolic/state/trajectory/branch-table probe artifacts"],
+      "acceptance": ["tests/test_simulator_qutip_cuquantum_backend.py", "tests/test_simulator_axis1_schedule.py"],
+      "note": "Restricted integration probes only: no canonical .b8/DEM output and no production-scalable claim."
+    },
+    {
+      "id": "cudaq_grover_plugin",
+      "name": "CUDA-Q noiseless Grover adapter",
+      "status": "ISOLATED_PLUGIN",
+      "kind": "isolated_plugin",
+      "canonical_record_output": false,
+      "layer": "workload/plugin",
+      "owners": ["src/error_coupling_simulator/frontend/cudaq_grover.py"],
+      "entrypoints": ["error_coupling_simulator.frontend:simulate_cudaq_grover_noiseless"],
+      "dependencies": {"core": [], "extras": ["cudaq-grover"]},
+      "external_inputs": ["Grover size and shots"],
+      "outputs": ["Noiseless reference counts"],
+      "acceptance": ["tests/test_simulator_cudaq_grover.py"],
+      "note": "Runs only in the retained aiqec environment/separate process; it is intentionally absent from ecs and never co-loaded with the fused native runtime."
+    },
+    {
+      "id": "record_contract_and_packing",
+      "name": "Canonical detector/observable record contract, packing and temporal fold",
+      "status": "CORE",
+      "kind": "record_contract",
+      "canonical_record_output": true,
+      "layer": "carrier/record boundary",
+      "owners": [
+        "src/error_coupling_simulator/carrier/__init__.py",
+        "src/error_coupling_simulator/carrier/records.py",
+        "src/error_coupling_simulator/carrier/record_fold.py"
+      ],
+      "entrypoints": [
+        "error_coupling_simulator.carrier:RecordBatch",
+        "error_coupling_simulator.carrier:PackedShotBatch",
+        "error_coupling_simulator.carrier:pack_raw_syndrome_shots",
+        "error_coupling_simulator.carrier:s_to_det",
+        "error_coupling_simulator.carrier:det_to_s"
+      ],
+      "dependencies": {"core": ["numpy"], "extras": []},
+      "external_inputs": ["Backend raw syndromes/observables or canonical detector/observable arrays"],
+      "outputs": ["Validated RecordBatch/PackedShotBatch and exact temporal XOR fold/unfold"],
+      "acceptance": ["tests/test_record_batch_units.py", "tests/test_carrier_record_fold.py"],
+      "note": "This is the backend-neutral simulator product boundary. It is data structure and exact record semantics, not a decoder or metric."
+    },
+    {
+      "id": "record_io_and_dem_reduction",
+      "name": "Canonical .b8 I/O and record-to-DEM reduction",
+      "status": "CORE",
+      "kind": "interop",
+      "canonical_record_output": false,
+      "layer": "frontend/interop",
+      "owners": [
+        "src/error_coupling_simulator/frontend/b8_io.py",
+        "src/error_coupling_simulator/frontend/interop.py"
+      ],
+      "entrypoints": [
+        "error_coupling_simulator.frontend:read_b8",
+        "error_coupling_simulator.frontend:records_to_dem"
+      ],
+      "dependencies": {"core": ["stim", "numpy"], "extras": []},
+      "external_inputs": ["Canonical records/.b8 plus optional caller circuit context"],
+      "outputs": ["Packed/unpacked bit arrays and explicit reduced detector error model"],
+      "acceptance": ["tests/test_b8_io_units.py", "tests/test_interop_units.py"],
+      "note": "The record-to-DEM route is an explicit reduction; it does not turn an analog channel into exact Stim-Pauli truth."
+    },
+    {
+      "id": "pymatching_decoder",
+      "name": "Optional frozen PyMatching decoder adapter",
+      "status": "OPTIONAL",
+      "kind": "decoder",
+      "canonical_record_output": false,
+      "layer": "frontend/evaluator",
+      "owners": [
+        "src/error_coupling_simulator/frontend/decoder.py",
+        "src/error_coupling_simulator/frontend/interop.py"
+      ],
+      "entrypoints": [
+        "error_coupling_simulator.frontend:decode_dem",
+        "error_coupling_simulator.frontend:decode_records"
+      ],
+      "dependencies": {"core": ["stim", "numpy"], "extras": ["hw"]},
+      "external_inputs": ["Canonical records and caller/frozen DEM"],
+      "outputs": ["Decoded logical predictions and pinned external-wheel provenance"],
+      "acceptance": ["tests/test_decoder_units.py", "tests/test_interop_units.py"],
+      "note": "Evaluator-side optional baseline. It is not needed for record emission and is not bundled into the simulator core environment."
+    },
+    {
+      "id": "formal_certification",
+      "name": "Protocol-based independent formal anchor certification",
+      "status": "CORE",
+      "kind": "certification",
+      "canonical_record_output": false,
+      "layer": "certify",
+      "owners": [
+        "src/error_coupling_simulator/certify/types.py",
+        "src/error_coupling_simulator/certify/core.py",
+        "src/error_coupling_simulator/certify/facade.py",
+        "src/error_coupling_simulator/certify/anchors/__init__.py",
+        "src/error_coupling_simulator/certify/anchors/closed_form.py",
+        "src/error_coupling_simulator/certify/anchors/controls.py",
+        "src/error_coupling_simulator/certify/anchors/dm_oracle.py",
+        "src/error_coupling_simulator/certify/anchors/stim_clifford.py"
+      ],
+      "entrypoints": [
+        "error_coupling_simulator.certify:certify_noise_process",
+        "error_coupling_simulator.certify.anchors:DMOracleAnchor",
+        "error_coupling_simulator.certify.anchors:StimCliffordAnchor",
+        "error_coupling_simulator.certify.anchors:ClosedFormAnchor"
+      ],
+      "controls": [
+        {
+          "id": "corrupt_stabilizer",
+          "entrypoint": "error_coupling_simulator.certify.anchors:CorruptStabControl",
+          "semantics": "Deliberately corrupt stabilizer wiring; certification must detect the injected defect rather than pass inertly."
+        },
+        {
+          "id": "shuffle_records",
+          "entrypoint": "error_coupling_simulator.certify.anchors:ShuffleControl",
+          "semantics": "Deliberately shuffle the relevant record structure; certification must respond to the destroyed relation."
+        }
+      ],
+      "dependencies": {"core": ["torch", "stim", "numpy"], "extras": ["gpu-cu130"]},
+      "external_inputs": ["Caller process implementing the required protocols, regimes, selected anchors and mandatory controls"],
+      "outputs": ["Capability/feasibility ledger, epistemic class and certification verdict"],
+      "acceptance": [
+        "tests/test_certify.py",
+        "tests/test_certify_core_units.py",
+        "tests/test_certify_anchors_units.py",
+        "tests/test_certify_contracts.py",
+        "tests/test_qutrit_dm_measurement_semantics.py"
+      ],
+      "note": "This is a generic certification seam, not an automatic post-processing step for every RecordBatch. CoupledCycleNoiseProcess lacks the default DM replay callback and its Clifford-slice bridge is still open."
+    },
+    {
+      "id": "channel_diagnostics",
+      "name": "Generic multi-qubit Pauli-transfer diagnostics",
+      "status": "CORE",
+      "kind": "diagnostic",
+      "canonical_record_output": false,
+      "layer": "certify",
+      "owners": ["src/error_coupling_simulator/certify/channel_diagnostics.py"],
+      "entrypoints": [
+        "error_coupling_simulator.certify:ptm_from_kraus",
+        "error_coupling_simulator.certify:ptm_from_unitary"
+      ],
+      "dependencies": {"core": ["numpy"], "extras": []},
+      "external_inputs": ["Caller unitary or Kraus channel"],
+      "outputs": ["Ordered multi-qubit Pauli transfer matrix"],
+      "acceptance": ["tests/test_channel_diagnostics.py"],
+      "legacy_sources": ["legacy/qec_twin/forward/ptm.py"]
+    },
+    {
+      "id": "quantum_bath_research",
+      "name": "Pseudomode shared-bath exact-DM research suite",
+      "status": "RESEARCH",
+      "kind": "research_suite",
+      "canonical_record_output": false,
+      "layer": "research carrier",
+      "owners": [
+        "src/error_coupling_simulator/quantum_bath/__init__.py",
+        "src/error_coupling_simulator/quantum_bath/carrier.py",
+        "src/error_coupling_simulator/quantum_bath/crow_joynt.py",
+        "src/error_coupling_simulator/quantum_bath/gksl.py",
+        "src/error_coupling_simulator/quantum_bath/ground_truth.py",
+        "src/error_coupling_simulator/quantum_bath/memory_witness.py",
+        "src/error_coupling_simulator/quantum_bath/nulls.py",
+        "src/error_coupling_simulator/quantum_bath/observables.py"
+      ],
+      "entrypoints": [
+        "error_coupling_simulator.quantum_bath:dual_point",
+        "error_coupling_simulator.quantum_bath:dual_point_qrt",
+        "error_coupling_simulator.quantum_bath:quantum_memory_witness",
+        "error_coupling_simulator.quantum_bath:field_null_point",
+        "error_coupling_simulator.quantum_bath:axis_ad_null_point",
+        "error_coupling_simulator.quantum_bath:coherent_ad_null_point",
+        "error_coupling_simulator.quantum_bath:collective_ad_null_point",
+        "error_coupling_simulator.quantum_bath:min_tv_to_incoherent"
+      ],
+      "dependencies": {"core": ["numpy", "scipy"], "extras": []},
+      "external_inputs": ["Explicit pseudomode/GKSL, QRT/null-family or Choi witness parameters"],
+      "outputs": ["Exact three-round distribution laws, formal null distances, K/CMI diagnostics and concurrence witness verdict"],
+      "acceptance": [
+        "tests/test_quantum_bath.py",
+        "tests/test_quantum_bath_carrier_units.py",
+        "tests/test_quantum_bath_gksl_crowjoynt_units.py",
+        "tests/test_quantum_bath_groundtruth_nulls_units.py",
+        "tests/test_quantum_bath_memwitness_units.py",
+        "tests/test_quantum_bath_observables_units.py"
+      ],
+      "note": "CPU exact-DM feasibility/research evidence only. Outputs are distribution dictionaries and formal witness results, not RecordBatch/.b8 production records and not physical ground truth."
+    }
+  ],
+  "support_modules": [
+    {
+      "role": "namespace_and_public_facades",
+      "paths": [
+        "src/error_coupling_simulator/__init__.py",
+        "src/error_coupling_simulator/carrier/exact/__init__.py",
+        "src/error_coupling_simulator/carrier/kernels/__init__.py",
+        "src/error_coupling_simulator/certify/__init__.py",
+        "src/error_coupling_simulator/frontend/__init__.py",
+        "src/error_coupling_simulator/mechanisms/__init__.py",
+        "src/error_coupling_simulator/noise_processes/__init__.py",
+        "src/error_coupling_simulator/source/__init__.py"
+      ],
+      "used_by": [],
+      "reason": "Installed namespace/version or re-export facades. They expose service entry points but do not implement an independent service."
+    },
+    {
+      "role": "shared_numerical_policy",
+      "paths": ["src/error_coupling_simulator/numerics.py"],
+      "used_by": ["peps_single_wire", "classical_1f_nonmarkov_chain"],
+      "reason": "Shared numerical-zero/probability-floor constants; not a physical mechanism, metric, or decoder-floor service."
+    },
+    {
+      "role": "exact_qubit_native_acceleration",
+      "paths": ["src/error_coupling_simulator/carrier/accel.py"],
+      "used_by": ["exact_qubit_circuit_dm"],
+      "reason": "Optional exact local-Kraus CUDA acceleration behind the same c128 exact-DM contract."
+    },
+    {
+      "role": "frontend_artifact_and_schema_support",
+      "paths": [
+        "src/error_coupling_simulator/frontend/artifacts.py",
+        "src/error_coupling_simulator/frontend/metadata_guard.py",
+        "src/error_coupling_simulator/frontend/record_layout.py",
+        "src/error_coupling_simulator/frontend/record_schema.py"
+      ],
+      "used_by": ["frontend_compile_and_records", "axis1_dense_jointl_record", "source_stim_pauli_projection", "record_io_and_dem_reduction"],
+      "reason": "Artifact writers, metadata guards and record layout/schema contracts shared by record-emitting services."
+    },
+    {
+      "role": "axis1_ir_selection_and_evidence_support",
+      "paths": [
+        "src/error_coupling_simulator/frontend/axis1_bridge.py",
+        "src/error_coupling_simulator/frontend/axis1_carrier_program.py",
+        "src/error_coupling_simulator/frontend/axis1_context.py",
+        "src/error_coupling_simulator/frontend/axis1_evidence_guard.py",
+        "src/error_coupling_simulator/frontend/axis1_ideal_controls.py",
+        "src/error_coupling_simulator/frontend/axis1_selection.py"
+      ],
+      "used_by": ["axis1_joint_channel", "axis1_dense_jointl_record", "restricted_axis1_1d_mps", "qutip_cuquantum_probe", "classical_1f_nonmarkov_chain"],
+      "reason": "Shared carrier IR, selector, context, ideal-control and evidence guards. These orchestrate registered services but do not independently evolve a state or emit records."
+    },
+    {
+      "role": "internal_evidence_runners",
+      "paths": [
+        "src/error_coupling_simulator/frontend/axis1_codespec_runner.py",
+        "src/error_coupling_simulator/frontend/axis1_g2_runner.py"
+      ],
+      "used_by": ["axis1_joint_channel", "axis1_dense_jointl_record"],
+      "reason": "Repository-style python -m evidence/reproduction runners with no installed console entry point; not stable services."
+    },
+    {
+      "role": "axis1_certification_harnesses",
+      "paths": [
+        "src/error_coupling_simulator/frontend/axis1_mcwf_dense_certification.py",
+        "src/error_coupling_simulator/frontend/axis1_qutrit_leakage_certification.py"
+      ],
+      "used_by": ["axis1_dense_jointl_record", "restricted_axis1_1d_mps", "qutrit_wg_frontend"],
+      "reason": "Restricted evidence/corruption-falsifier harnesses around registered carriers, not independent user services."
+    },
+    {
+      "role": "evaluator_source_sidecar",
+      "paths": ["src/error_coupling_simulator/frontend/source_sidecar.py"],
+      "used_by": ["frontend_compile_and_records", "classical_1f_nonmarkov_chain", "classical_burst_storm_sources", "source_stim_pauli_projection"],
+      "reason": "Persists evaluator-only SourceTimeline truth. Attaching this sidecar alone never changes simulator records."
+    },
+    {
+      "role": "probability_table_helper",
+      "paths": ["src/error_coupling_simulator/frontend/pij.py"],
+      "used_by": ["frontend_compile_and_records"],
+      "reason": "Small probability-table utility with no standalone physical carrier or record contract."
+    },
+    {
+      "role": "compatibility_catalog_and_seam_fixtures",
+      "paths": [
+        "src/error_coupling_simulator/mechanisms/catalog.py",
+        "src/error_coupling_simulator/mechanisms/seam_teachers.py"
+      ],
+      "used_by": ["channel_algebra"],
+      "reason": "M0-M34 compatibility metadata/dispatcher and controlled seam fixtures. They do not define 35 active simulator services or a complete seam record carrier."
+    }
+  ],
+  "support_assets": [
+    {
+      "role": "exact_qubit_fused_kraus_extension",
+      "paths": [
+        "src/error_coupling_simulator/carrier/kernels/fused_kraus_local.cpp",
+        "src/error_coupling_simulator/carrier/kernels/fused_kraus_local.cu"
+      ],
+      "used_by": ["exact_qubit_circuit_dm"],
+      "reason": "JIT extension for exact local Kraus application; c128 reference semantics remain in Python/Torch."
+    },
+    {
+      "role": "generic_mcwf_native_extension",
+      "paths": ["src/error_coupling_simulator/carrier/kernels/qutrit_mcwf_ops.cu"],
+      "used_by": ["dense_qudit_mcwf_carrier"],
+      "reason": "Native hot-path acceleration for the supported generic MCWF op-stream subset."
+    },
+    {
+      "role": "fused_d3_trajectory_extension",
+      "paths": ["src/error_coupling_simulator/carrier/kernels/sv_traj_d3.cu"],
+      "used_by": ["fused_within_cycle"],
+      "reason": "c64/c128 d3 trajectory kernel owned only by the fused within-cycle carrier."
+    }
+  ],
+  "excluded_surfaces": [
+    {
+      "id": "bayes_floor_analysis",
+      "paths": [
+        "legacy/qec_twin/audit/bayes_floor.py",
+        "legacy/qec_twin/audit/floor_backend.py",
+        "legacy/qec_twin/audit/floor_backend_tn.py"
+      ],
+      "disposition": "ANALYSIS_NOT_SIMULATOR",
+      "reason": "Bayes decoder-floor and headroom analysis consumes simulator record laws; it is downstream analysis, not a forward-simulator service."
+    },
+    {
+      "id": "legacy_thin_strip_mps",
+      "paths": [
+        "legacy/qec_twin/forward/scalable/mps_forward.py",
+        "legacy/qec_twin/forward/scalable/soft_readout.py",
+        "legacy/qec_twin/forward/scalable/batched_mps.py"
+      ],
+      "disposition": "RETIRED_SPECIALIZED_DRIVER",
+      "reason": "The old snake-ordered XZZX thin-strip driver is not shipped. The active package route is restricted Axis-1 1D MCWF/MPS; batched_mps alone is only an operation core."
+    },
+    {
+      "id": "legacy_symlink_boundary",
+      "paths": ["src/qec_twin", "legacy/qec_twin"],
+      "disposition": "OUTWARD_SHIMS_AND_HISTORICAL_ONLY",
+      "reason": "src/qec_twin is a symlink into legacy and is excluded from the wheel; canonical runtime must never import it."
+    },
+    {
+      "id": "m0_m34_compatibility_catalog",
+      "paths": [
+        "src/error_coupling_simulator/mechanisms/catalog.py",
+        "src/error_coupling_simulator/carrier/channels.py"
+      ],
+      "disposition": "COMPATIBILITY_NOT_ACTIVE_CONSTRUCTION",
+      "reason": "M0-M34 are compatibility identifiers/dispatch cases, not 35 current simulator services. Active mechanism construction uses the explicit Axis-1/channel services above."
+    },
+    {
+      "id": "lru_dqlr_unimplemented",
+      "paths": [
+        "src/error_coupling_simulator/frontend/README.md",
+        "src/error_coupling_simulator/mechanisms/catalog.py"
+      ],
+      "disposition": "SCIENTIFIC_BRIDGE_OPEN",
+      "reason": "No complete LRU/DQLR service exists. Compatibility surrogates and ideal ancilla reset must not be promoted to leakage-removal semantics."
+    },
+    {
+      "id": "inference_and_hardware_products",
+      "paths": [
+        "legacy/qec_twin/calibration",
+        "legacy/qec_twin/contexts",
+        "legacy/qec_twin/decoder",
+        "legacy/qec_twin/hardware",
+        "legacy/qec_twin/prediction",
+        "legacy/qec_twin/rag"
+      ],
+      "disposition": "OUTSIDE_SIMULATOR_PRODUCT",
+      "reason": "Inference, calibration, learner, hardware dataset and hardware-analysis products are not simulator services."
+    },
+    {
+      "id": "local_validation_oracles",
+      "paths": ["outputs/teacher_prereg", "outputs/twin_validation"],
+      "disposition": "VALIDATION_NOT_RUNTIME",
+      "reason": "Committed package owners are migrated only when an active runtime service needs them; ground-truth checks and experiments remain repository scripts/artifacts."
+    },
+    {
+      "id": "new_d5_d7_experiments",
+      "paths": ["docs/nonpauli_teacher", "outputs"],
+      "disposition": "NOT_RUN_IN_THIS_CLOSURE",
+      "reason": "No new d5/d7 or FET experiment was authorized; existing evidence status is preserved."
+    }
+  ],
+  "flow": {
+    "direction": "LR",
+    "nodes": [
+      {"id": "user", "label": "Caller-declared model / circuit / parameters", "group": "Inputs", "services": []},
+      {"id": "external", "label": "Optional explicit external circuit + metadata paths", "group": "Inputs", "services": []},
+      {"id": "stim_frontend", "label": "Stim/CodeSpec frontend\ncompile + Pauli record sampling", "group": "Compilation and adapters", "services": ["frontend_compile_and_records"]},
+      {"id": "axis1_schedule", "label": "Axis-1 adapter\ncompiler-sealed SubstepSchedule", "group": "Compilation and adapters", "services": ["axis1_schedule_adapter"]},
+      {"id": "xzzx_schedule", "label": "XZZX adapter\nXZZXSchedule + RunSpec", "group": "Compilation and adapters", "services": ["xzzx_external_schedule"]},
+      {"id": "source_1f", "label": "Finite RTN / log-spaced RTN sum\nfinite-band 1/f record memory", "group": "Classical sources and controls", "services": ["classical_1f_nonmarkov_chain"]},
+      {"id": "permutation_control", "label": "Matched-marginal permutation\nexchangeable, not a Markov null", "group": "Classical sources and controls", "services": ["classical_1f_nonmarkov_chain"], "control_refs": ["classical_1f_nonmarkov_chain:matched_marginal_permutation"]},
+      {"id": "off_control", "label": "Source-off control\nconstant Theta(0)", "group": "Classical sources and controls", "services": ["classical_1f_nonmarkov_chain"], "control_refs": ["classical_1f_nonmarkov_chain:source_off"]},
+      {"id": "burst_storm", "label": "PhaseBurst / TemporalStorm\nresearch timeline primitives", "group": "Classical sources and controls", "services": ["classical_burst_storm_sources"], "class": "research"},
+      {"id": "timeline", "label": "Replayable SourceTimeline\nevaluator-side latent truth", "group": "Classical sources and controls", "services": []},
+      {"id": "source_sidecar", "label": "Evaluator-only sidecar\ndoes not alter records", "group": "Classical sources and controls", "services": [], "class": "support"},
+      {"id": "source_projection", "label": "Explicit source-to-Stim-Pauli projection\nREDUCED comparator", "group": "Classical sources and controls", "services": ["source_stim_pauli_projection"], "class": "restricted"},
+      {"id": "coupled_process", "label": "CoupledCycleNoiseProcess\nTheta(z_t) + shared/matched/off arms", "group": "Classical sources and controls", "services": ["classical_1f_nonmarkov_chain"]},
+      {"id": "axis1_lower", "label": "Axis-1 primitive lowering\nH + collapse terms", "group": "Mechanisms and channels", "services": ["axis1_joint_channel"]},
+      {"id": "joint_channel", "label": "Same-substep joint-L channel\nCPTP Kraus + evidence", "group": "Mechanisms and channels", "services": ["axis1_joint_channel"]},
+      {"id": "channel_algebra", "label": "Reusable channel algebra\nKraus / Stinespring / Choi", "group": "Mechanisms and channels", "services": ["channel_algebra"]},
+      {"id": "wg", "label": "Wood-Gambetta qutrit leakage", "group": "Mechanisms and channels", "services": ["qutrit_wg_frontend"]},
+      {"id": "cz", "label": "Package-derived / injected ququart CZ channel", "group": "Mechanisms and channels", "services": ["ququart_cz_transport"]},
+      {"id": "exact_qubit", "label": "Exact small-N qubit DM\nstate + branch probabilities", "group": "Carriers", "services": ["exact_qubit_circuit_dm"]},
+      {"id": "axis1_dense", "label": "Dense Axis-1 joint-L carrier\nstate + canonical records", "group": "Carriers", "services": ["axis1_dense_jointl_record"]},
+      {"id": "mps", "label": "Restricted Axis-1 1D MPS\nverification slice", "group": "Carriers", "services": ["restricted_axis1_1d_mps"], "class": "restricted"},
+      {"id": "qutip_probe", "label": "QuTiP-cuQuantum probes\nsymbolic/state/trajectory/branch table", "group": "Carriers", "services": ["qutip_cuquantum_probe"], "class": "restricted"},
+      {"id": "within_cycle_host", "label": "Shared within-cycle schedule host\nSUPPORT", "group": "Carriers", "services": [], "class": "support"},
+      {"id": "fused", "label": "Fused d3 state-vector MCWF\nc64 screen / c128 candidate", "group": "Carriers", "services": ["fused_within_cycle"]},
+      {"id": "peps", "label": "2D single-wire PEPS frontier\nc128; full-record fidelity open", "group": "Carriers", "services": ["peps_single_wire"], "class": "restricted"},
+      {"id": "pepo", "label": "Archived DM-PEPO findings route", "group": "Carriers", "services": ["pepo_findings"], "class": "archived"},
+      {"id": "pepo_internals", "label": "Retained PEPO layout/truncation internals\nSUPPORT only", "group": "Carriers", "services": [], "class": "support"},
+      {"id": "exact_qudit", "label": "Exact qutrit/ququart DM oracle", "group": "Carriers", "services": ["exact_qutrit_dm"]},
+      {"id": "generic_mcwf", "label": "Generic dense qudit MCWF carrier", "group": "Carriers", "services": ["dense_qudit_mcwf_carrier"]},
+      {"id": "grover_adapter", "label": "Grover workload adapter\nCompiledMcwfProgram", "group": "Workloads and isolated plugins", "services": ["dense_mcwf_grover"]},
+      {"id": "cudaq", "label": "CUDA-Q noiseless Grover\nseparate aiqec process", "group": "Workloads and isolated plugins", "services": ["cudaq_grover_plugin"], "class": "plugin"},
+      {"id": "records", "label": "Canonical record contract\nRecordBatch / PackedShotBatch {det, obs}", "group": "Record products and optional evaluation", "services": ["record_contract_and_packing"]},
+      {"id": "interop", "label": ".b8 I/O + explicit record-to-DEM reduction", "group": "Record products and optional evaluation", "services": ["record_io_and_dem_reduction"]},
+      {"id": "decoder", "label": "Optional frozen PyMatching adapter\n[hw] extra", "group": "Record products and optional evaluation", "services": ["pymatching_decoder"], "class": "plugin"},
+      {"id": "restricted_evidence", "label": "Restricted/research evidence\nnot canonical .b8", "group": "Record products and optional evaluation", "services": []},
+      {"id": "standalone_artifacts", "label": "Standalone state/count/channel artifacts", "group": "Record products and optional evaluation", "services": []},
+      {"id": "released_artifacts", "label": "Released records / ledgers / verdicts", "group": "Record products and optional evaluation", "services": []},
+      {"id": "compatible_process", "label": "Caller process implementing required cert protocols\ncurrent CoupledCycle default bridge OPEN", "group": "Certification", "services": [], "class": "open"},
+      {"id": "anchors", "label": "Selected DM / Stim / closed-form anchors", "group": "Certification", "services": ["formal_certification"]},
+      {"id": "corrupt_control", "label": "Corrupt-stabilizer negative control", "group": "Certification", "services": ["formal_certification"], "control_refs": ["formal_certification:corrupt_stabilizer"]},
+      {"id": "shuffle_control", "label": "Record-shuffle negative control", "group": "Certification", "services": ["formal_certification"], "control_refs": ["formal_certification:shuffle_records"]},
+      {"id": "certify", "label": "Formal certification\ncapability + feasibility + verdict", "group": "Certification", "services": ["formal_certification"]},
+      {"id": "channel_diag", "label": "Multi-qubit PTM diagnostics", "group": "Certification", "services": ["channel_diagnostics"]},
+      {"id": "bath_law", "label": "Shared-bath exact-DM / QRT laws", "group": "Quantum-bath research", "services": ["quantum_bath_research"], "class": "research"},
+      {"id": "bath_nulls", "label": "Field + incoherent/coherent AD null families", "group": "Quantum-bath research", "services": ["quantum_bath_research"], "class": "research"},
+      {"id": "bath_witness", "label": "Choi/concurrence quantum-memory witness", "group": "Quantum-bath research", "services": ["quantum_bath_research"], "class": "research"},
+      {"id": "bath_diagnostics", "label": "Record distance + K / CMI diagnostics", "group": "Quantum-bath research", "services": ["quantum_bath_research"], "class": "research"}
+    ],
+    "edges": [
+      {"from": "user", "to": "stim_frontend", "label": "CircuitIR / CodeSpec / Stim + Pauli noise"},
+      {"from": "external", "to": "stim_frontend", "label": "explicit circuit path"},
+      {"from": "user", "to": "axis1_schedule", "label": "CodeSpec / CircuitIR / Stim + durations"},
+      {"from": "external", "to": "xzzx_schedule", "label": "explicit XZZX files"},
+      {"from": "user", "to": "xzzx_schedule", "label": "explicit RunSpec/preset"},
+      {"from": "user", "to": "source_1f", "label": "RTN / finite-band 1/f config"},
+      {"from": "source_1f", "to": "timeline", "label": "sample replayable timeline"},
+      {"from": "source_1f", "to": "permutation_control", "label": "per-field cycle permutations"},
+      {"from": "source_1f", "to": "off_control", "label": "zero amplitude"},
+      {"from": "timeline", "to": "coupled_process", "label": "supported RTN/1f payload"},
+      {"from": "permutation_control", "to": "coupled_process", "label": "matched arm"},
+      {"from": "off_control", "to": "coupled_process", "label": "off arm"},
+      {"from": "user", "to": "burst_storm", "label": "burst/storm config"},
+      {"from": "burst_storm", "to": "timeline", "label": "timeline only"},
+      {"from": "timeline", "to": "source_sidecar", "label": "attach evaluator truth only"},
+      {"from": "timeline", "to": "source_projection", "label": "caller supplies projection rules"},
+      {"from": "source_projection", "to": "stim_frontend", "label": "cycle-indexed Pauli probabilities"},
+      {"from": "axis1_schedule", "to": "axis1_lower", "label": "supports + sealed duration"},
+      {"from": "user", "to": "axis1_lower", "label": "explicit mechanism/context params"},
+      {"from": "axis1_lower", "to": "joint_channel", "label": "sum H + dissipators"},
+      {"from": "user", "to": "channel_algebra", "label": "channel parameters / Kraus / Stinespring"},
+      {"from": "channel_algebra", "to": "exact_qubit", "label": "local channels"},
+      {"from": "joint_channel", "to": "exact_qubit", "label": "small-N exact application"},
+      {"from": "exact_qubit", "to": "axis1_dense", "label": "state/branch engine"},
+      {"from": "axis1_schedule", "to": "axis1_dense", "label": "record boundaries + XOR wiring"},
+      {"from": "coupled_process", "to": "axis1_dense", "label": "per-substep Theta(z_t) callback"},
+      {"from": "joint_channel", "to": "mps", "label": "Axis-1 carrier program"},
+      {"from": "axis1_schedule", "to": "mps", "label": "restricted schedule"},
+      {"from": "joint_channel", "to": "qutip_probe", "label": "Axis-1 H/collapse program"},
+      {"from": "axis1_schedule", "to": "qutip_probe", "label": "restricted schedule"},
+      {"from": "xzzx_schedule", "to": "within_cycle_host", "label": "geometry + RunSpec"},
+      {"from": "user", "to": "wg", "label": "WG parameters"},
+      {"from": "wg", "to": "within_cycle_host", "label": "within-cycle leakage slices"},
+      {"from": "within_cycle_host", "to": "fused", "label": "marshalled d3 stream"},
+      {"from": "within_cycle_host", "to": "peps", "label": "shared schedule semantics"},
+      {"from": "xzzx_schedule", "to": "pepo", "label": "historical reproduction only"},
+      {"from": "pepo", "to": "pepo_internals", "label": "retained code dependency"},
+      {"from": "pepo_internals", "to": "peps", "label": "layout/truncation helpers only"},
+      {"from": "channel_algebra", "to": "exact_qudit", "label": "qutrit/ququart Kraus"},
+      {"from": "wg", "to": "exact_qudit", "label": "exact qutrit smoke"},
+      {"from": "user", "to": "cz", "label": "CZParams / channel / derived cache"},
+      {"from": "cz", "to": "exact_qudit", "label": "exact ququart transport"},
+      {"from": "user", "to": "generic_mcwf", "label": "caller CompiledMcwfProgram"},
+      {"from": "channel_algebra", "to": "generic_mcwf", "label": "Kraus families"},
+      {"from": "user", "to": "grover_adapter", "label": "Grover workload"},
+      {"from": "grover_adapter", "to": "generic_mcwf", "label": "typed op stream"},
+      {"from": "user", "to": "cudaq", "label": "noiseless Grover reference"},
+      {"from": "stim_frontend", "to": "records", "label": "Stim-Pauli canonical records"},
+      {"from": "axis1_dense", "to": "records", "label": "analog joint-L canonical records"},
+      {"from": "fused", "to": "records", "label": "PackedShotBatch"},
+      {"from": "peps", "to": "records", "label": "PackedShotBatch; fidelity boundary retained"},
+      {"from": "records", "to": "interop", "label": "serialize / explicit DEM reduction"},
+      {"from": "interop", "to": "decoder", "label": "optional [hw] baseline"},
+      {"from": "mps", "to": "restricted_evidence", "label": "restricted manifest/frequencies"},
+      {"from": "qutip_probe", "to": "restricted_evidence", "label": "probe artifacts"},
+      {"from": "pepo", "to": "restricted_evidence", "label": "archived findings"},
+      {"from": "exact_qudit", "to": "standalone_artifacts", "label": "exact state/oracle results"},
+      {"from": "generic_mcwf", "to": "standalone_artifacts", "label": "trajectories/counts"},
+      {"from": "cz", "to": "standalone_artifacts", "label": "transport artifacts"},
+      {"from": "wg", "to": "standalone_artifacts", "label": "leakage artifacts"},
+      {"from": "cudaq", "to": "standalone_artifacts", "label": "process-boundary counts"},
+      {"from": "user", "to": "compatible_process", "label": "explicit protocol-compatible process"},
+      {"from": "user", "to": "anchors", "label": "select independent anchors"},
+      {"from": "exact_qudit", "to": "anchors", "label": "DM oracle implementation"},
+      {"from": "stim_frontend", "to": "anchors", "label": "Stim Clifford implementation"},
+      {"from": "user", "to": "corrupt_control", "label": "mandatory negative control"},
+      {"from": "user", "to": "shuffle_control", "label": "mandatory negative control"},
+      {"from": "compatible_process", "to": "certify", "label": "emitted records + capabilities"},
+      {"from": "anchors", "to": "certify", "label": "independent reference values"},
+      {"from": "corrupt_control", "to": "certify", "label": "must fire"},
+      {"from": "shuffle_control", "to": "certify", "label": "must fire"},
+      {"from": "joint_channel", "to": "channel_diag", "label": "assembled channel"},
+      {"from": "channel_algebra", "to": "channel_diag", "label": "unitary/Kraus"},
+      {"from": "cz", "to": "channel_diag", "label": "derived/injected channel"},
+      {"from": "user", "to": "bath_law", "label": "pseudomode/GKSL parameters"},
+      {"from": "user", "to": "bath_nulls", "label": "matched null parameters"},
+      {"from": "user", "to": "bath_witness", "label": "Choi/Jaynes-Cummings parameters"},
+      {"from": "bath_law", "to": "bath_diagnostics", "label": "exact distribution"},
+      {"from": "bath_nulls", "to": "bath_diagnostics", "label": "formal comparator laws"},
+      {"from": "bath_diagnostics", "to": "restricted_evidence", "label": "research evidence"},
+      {"from": "bath_witness", "to": "restricted_evidence", "label": "formal research verdict"},
+      {"from": "records", "to": "released_artifacts"},
+      {"from": "interop", "to": "released_artifacts"},
+      {"from": "decoder", "to": "released_artifacts"},
+      {"from": "certify", "to": "released_artifacts"},
+      {"from": "channel_diag", "to": "released_artifacts"},
+      {"from": "restricted_evidence", "to": "released_artifacts"},
+      {"from": "standalone_artifacts", "to": "released_artifacts"},
+      {"from": "source_sidecar", "to": "released_artifacts", "label": "evaluator-only provenance"}
+    ]
+  }
+}

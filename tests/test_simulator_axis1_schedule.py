@@ -18,7 +18,7 @@ if not torch.cuda.is_available():
         pytrace=False,
     )
 
-from qec_twin.simulator import (  # noqa: E402
+from error_coupling_simulator.frontend import (  # noqa: E402
     ANALOG_SCHEDULE_REPRESENTABILITY,
     AXIS1_FRONTEND_ONE_QUBIT_CONTROL_GATES,
     AXIS1_FRONTEND_TWO_QUBIT_CONTROL_GATES,
@@ -98,38 +98,38 @@ from qec_twin.simulator import (  # noqa: E402
     write_axis1_g2_evidence,
     write_axis1_substep_channel_evidence,
 )
-from qec_twin.hardware import b8_io  # noqa: E402
-from qec_twin.forward.joint_lindbladian import (  # noqa: E402
+from error_coupling_simulator.frontend import b8_io  # noqa: E402
+from error_coupling_simulator.carrier.joint_lindbladian import (  # noqa: E402
     SUPEROP_EXACTZERO_TOL,
     assemble_substep_channel,
     composed_vs_joint_infidelity,
 )
-from qec_twin.mechanisms import (  # noqa: E402
+from error_coupling_simulator.mechanisms.axis1_primitives import (  # noqa: E402
     AXIS1_TWO_QUBIT_LOCAL_REGISTRY_ID,
     Axis1PrimitiveParams,
     default_axis1_primitive_registry,
     lower_two_qubit_axis1_primitives,
 )
-from qec_twin.numerics import NUMERICAL_ZERO  # noqa: E402
-from qec_twin.simulator.axis1_g2_runner import (  # noqa: E402
+from error_coupling_simulator.numerics import NUMERICAL_ZERO  # noqa: E402
+from error_coupling_simulator.frontend.axis1_g2_runner import (  # noqa: E402
     build_axis1_g2_frontend_schedule,
     run_axis1_g2_frontend_fixture,
 )
-from qec_twin.simulator.axis1_codespec_runner import (  # noqa: E402
+from error_coupling_simulator.frontend.axis1_codespec_runner import (  # noqa: E402
     build_axis1_codespec_frontend_schedule,
     build_axis1_codespec_frontend_spec,
     run_axis1_codespec_record_fixture,
 )
-from qec_twin.simulator.axis1_channel_evidence import (  # noqa: E402
+from error_coupling_simulator.frontend.axis1_channel_evidence import (  # noqa: E402
     _assemble_selection_joint_channel,
 )
-from qec_twin.simulator.axis1_ideal_controls import (  # noqa: E402
+from error_coupling_simulator.frontend.axis1_ideal_controls import (  # noqa: E402
     lower_ideal_controls_for_selection,
 )
-from qec_twin.simulator.axis1_mcwf_mps_execution import (  # noqa: E402
+from error_coupling_simulator.frontend.axis1_mcwf_mps_execution import (  # noqa: E402
     _hamiltonian_group_gates,
 )
-from qec_twin.simulator.axis1_selection import Axis1MechanismSelection  # noqa: E402
+from error_coupling_simulator.frontend.axis1_selection import Axis1MechanismSelection  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
@@ -7051,8 +7051,8 @@ def test_axis1_g2_runner_writes_evidence_freeze_and_detects_drift(tmp_path):
 
 
 def test_axis1_evidence_runners_return_nonzero_on_failed_verdict(monkeypatch, tmp_path):
-    import qec_twin.simulator.axis1_codespec_runner as codespec_runner_module
-    import qec_twin.simulator.axis1_g2_runner as g2_runner_module
+    import error_coupling_simulator.frontend.axis1_codespec_runner as codespec_runner_module
+    import error_coupling_simulator.frontend.axis1_g2_runner as g2_runner_module
 
     g2_evidence = SimpleNamespace(
         out_dir=tmp_path / "g2",

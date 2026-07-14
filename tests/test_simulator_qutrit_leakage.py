@@ -5,7 +5,7 @@ import json
 import numpy as np
 import pytest
 
-from qec_twin.simulator.qutrit_leakage import (
+from error_coupling_simulator.frontend.qutrit_leakage import (
     index_from_qutrit_string,
     qutrit_string_from_index,
     simulate_qutrit_wg_leakage,

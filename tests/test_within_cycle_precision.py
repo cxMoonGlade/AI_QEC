@@ -193,20 +193,6 @@ def test_c128_evidence_rejects_missing_installation_build_identity() -> None:
         require_c128_evidence_header(header)
 
 
-def test_retained_mps_backend_rejects_c64_instead_of_mislabeling_header() -> None:
-    from error_coupling_simulator.carrier.within_cycle import RunSpec
-    from qec_twin.forward.scalable.mps_forward import MpsLeakageForward
-
-    spec = RunSpec(
-        circuit_path="unused.stim",
-        run_purpose="optimization",
-        dtype="c64",
-    )
-    backend = MpsLeakageForward("cpu")
-    with pytest.raises(ValueError, match="complex128 only.*FusedWithinCycleSampler"):
-        backend.sample(spec)
-
-
 @pytest.mark.parametrize(
     ("purpose", "dtype", "eligibility"),
     [

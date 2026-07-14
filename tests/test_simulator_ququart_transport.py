@@ -36,19 +36,25 @@ def test_ququart_index_convention_is_engine_msf_order():
     assert ququart_string_from_index(12, 2) == "30"
 
 
-def test_ququart_transport_requires_explicit_external_kraus_path():
-    with pytest.raises(TypeError, match="kraus_path"):
+def test_ququart_transport_requires_exactly_one_explicit_channel_source():
+    with pytest.raises(TypeError, match="exactly one.*cz_params.*channel.*kraus_path"):
         simulate_ququart_transport_smoke(device="cpu")
+
+    identity = np.eye(16, dtype=np.complex128)[None, :, :]
+    with pytest.raises(TypeError, match="exactly one"):
+        simulate_ququart_transport_smoke(
+            device="cpu", channel=identity, kraus_path="also-set.npz"
+        )
 
     with pytest.raises(TypeError, match="kraus_path"):
         load_ququart_transport_kraus(device="cpu")
 
 
-def test_ququart_transport_loader_reports_external_npz_contract(tmp_path):
+def test_ququart_transport_loader_reports_explicit_npz_contract(tmp_path):
     missing = tmp_path / "not-created.npz"
     with pytest.raises(
         FileNotFoundError,
-        match=r"explicit external.*NPZ.*kraus_ququart.*\(rank, 16, 16\)",
+        match=r"explicit.*NPZ.*kraus_ququart.*\(rank, 16, 16\)",
     ):
         load_ququart_transport_kraus(missing, device="cpu")
 
@@ -83,6 +89,57 @@ def test_ququart_transport_loader_rejects_missing_key_and_non_ranked_shape(tmp_p
     np.savez(wrong_shape, kraus_ququart=np.eye(16, dtype=np.complex128))
     with pytest.raises(ValueError, match=r"exact shape \(rank, 16, 16\)"):
         load_ququart_transport_kraus(wrong_shape, device="cpu")
+
+
+def test_ququart_transport_runs_from_in_memory_channel_without_external_data():
+    identity = np.eye(16, dtype=np.complex128)[None, :, :]
+    result = simulate_ququart_transport_smoke(
+        num_ququarts=2,
+        initial_levels="12",
+        shots=8,
+        seed=4,
+        channel=identity,
+        device="cpu",
+    )
+
+    assert result.initial_state_probability == pytest.approx(1.0)
+    assert result.manifest["noise"]["source_kind"] == "in_memory_kraus_injection"
+    assert result.manifest["parameters"]["kraus_rank"] == 1
+
+
+def test_ququart_transport_derives_channel_from_declared_params(monkeypatch):
+    from error_coupling_simulator.mechanisms import cz_leakage
+
+    params = cz_leakage.CZParams()
+    seen = {}
+
+    def fake_build(got, *, track_dim):
+        seen.update(params=got, track_dim=track_dim)
+        return cz_leakage.LeakageChannel(
+            arm="ququart",
+            track_dim=4,
+            kraus=[np.eye(16, dtype=np.complex128)],
+            cptp_residual=0.0,
+            leaked_population=0.0,
+            params=got,
+            note="unit identity",
+            leaked_from_comp=0.0,
+            leaked_from_leaked_max=0.0,
+            pop_ge4_max=0.0,
+        )
+
+    monkeypatch.setattr(cz_leakage, "build_cz_channel", fake_build)
+    result = simulate_ququart_transport_smoke(
+        cz_params=params,
+        device="cpu",
+        shots=0,
+    )
+
+    assert seen == {"params": params, "track_dim": 4}
+    assert result.manifest["noise"]["source_kind"] == (
+        "derived_in_process_from_declared_cz_params"
+    )
+    assert result.manifest["parameters"]["declared_cz_params"]["t_gate"] == 25.0
 
 
 @requires_cuda
@@ -135,11 +192,11 @@ def test_ququart_transport_smoke_writes_exact_artifacts(tmp_path):
     assert manifest["noise"]["type"] == "ququart_transport"
     assert manifest["noise"]["kraus_key"] == "kraus_ququart"
     assert manifest["noise"]["source"] == str(TRANSPORT_KRAUS_FIXTURE.resolve())
-    assert manifest["noise"]["source_kind"] == "external_user_supplied_npz"
+    assert manifest["noise"]["source_kind"] == "serialized_channel_cache_or_user_injection"
     assert manifest["noise"]["source_contract"] == {
         "format": "npz",
         "required_key": "kraus_ququart",
         "required_shape": ["rank", 16, 16],
-        "schema": "error_coupling_simulator.external_ququart_kraus.v1",
+        "schema": "error_coupling_simulator.ququart_kraus.v2",
     }
     assert np.load(result.artifacts.joint_probabilities).shape == (16,)

@@ -5,6 +5,7 @@ See ``README.md``. ``certify_noise_process`` is the neutral public spelling;
 """
 
 from .facade import certify_noise_process, certify_teacher
+from .channel_diagnostics import pauli_basis, ptm_from_kraus, ptm_from_unitary
 from .types import (
     Anchor,
     AnchorValue,
@@ -41,4 +42,7 @@ __all__ = [
     "Verdict",
     "certify_noise_process",
     "certify_teacher",
+    "pauli_basis",
+    "ptm_from_kraus",
+    "ptm_from_unitary",
 ]

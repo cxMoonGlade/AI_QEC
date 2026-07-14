@@ -6,8 +6,8 @@ import math
 import numpy as np
 import pytest
 
-from qec_twin.mechanisms import RTNSource, SourceTimeline
-from qec_twin.simulator import (
+from error_coupling_simulator.source import RTNSource, SourceTimeline
+from error_coupling_simulator.frontend import (
     CircuitBuilder,
     Simulator,
     SourceTimelineBinding,
@@ -16,7 +16,7 @@ from qec_twin.simulator import (
     XZZXCodeSpec,
     compile_code_spec,
 )
-from qec_twin.simulator.artifacts import file_sha256
+from error_coupling_simulator.frontend.artifacts import file_sha256
 
 
 def _two_measurement_circuit():

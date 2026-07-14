@@ -27,7 +27,7 @@ Two local dimensions are supported by ONE parametrized base, :class:`_QuditDM`:
     transport (``|12>↔|03>`` superleakage, the on-resonance ``|03>↔|21>`` exchange,
     Miao's ``|30>↔|12>`` / ``|31>↔|22>`` resonances) is NOT representable on the
     qutrit truncation; the Arm-2 channel is a per-CZ ``(16, 16)`` two-ququart Kraus
-    set (Builder A, ``outputs/teacher_prereg/qutip_cz_leakage_channel.py``). Ququart DM
+    set (canonical owner: ``error_coupling_simulator.mechanisms.cz_leakage``). Ququart DM
     is ``4**n`` — RESOURCE-CAPPED at ``n <= 6`` (``4**6 = 4096`` -> 256 MB DM); the
     full 9-data ququart register (``4**9`` -> ~1 TB) is FORBIDDEN. The gap-test
     sub-codes are ``<= 6`` qudits.
@@ -917,14 +917,18 @@ class _QuditDM:
     # ----------------------------------------------------------------------- #
     # Logical readout                                                         #
     # ----------------------------------------------------------------------- #
-    def logical_distribution(self) -> tuple[float, float]:
-        """Final logical readout ``(p0, p1)``.
+    def logical_distribution(self, readout_bias: float = 0.5) -> tuple[float, float]:
+        """Final logical-parity readout ``(p0, p1)`` under the product POVM.
 
         With a logical-Z operator set: ``p_m = Tr[ (I + (-1)**m Z_L)/2 . rho ]`` read on the
         computational subspace. Without a code geometry: the parity of the logical-X-image
         support (defaults to qudit 0 in the Z basis), so the trivial codestate pair reads out
-        ``(1, 0)`` / ``(0, 1)``. Leaked population (digit ``>= 2`` on the logical support) is
-        split evenly — a neutral default; the harness can override via ``set_code``.
+        ``(1, 0)`` / ``(0, 1)``. ``readout_bias`` is the probability that any leaked
+        level reads as bit 1.  Its default, ``0.5``, preserves the historical neutral
+        split; passing the run's swept ``b`` exactly matches the carrier's terminal
+        ``F0/F1`` product-POVM convention.  For multiple logical-support sites this
+        computes the parity effect directly, including cells with more than one
+        leaked site; it is not a per-cell hard-bit approximation.
         """
         if self._logical_z is not None:
             op = self._logical_z
@@ -956,19 +960,57 @@ class _QuditDM:
         else:
             diag = torch.diagonal(self.rho).real / tr
 
-        idx = torch.arange(self.dim, device=self.device)
-        parity = torch.zeros(self.dim, dtype=torch.long, device=self.device)
-        leaked_weight0 = torch.zeros(self.dim, dtype=RDTYPE, device=self.device)
-        for site in op:
-            t = _site_digit(idx, site, self.n, self.q)
-            # computational bit = t for t in {0,1}; leaked (t>=2) split evenly
-            bit = torch.where(t >= 2, torch.zeros_like(t), t)
-            parity = parity ^ (bit & 1)
-            leaked_weight0 = leaked_weight0 + (t >= 2).to(RDTYPE)
-        leaked = leaked_weight0 > 0
-        p0 = float(diag[(parity == 0) & (~leaked)].sum() + 0.5 * diag[leaked].sum())
-        p1 = float(diag[(parity == 1) & (~leaked)].sum() + 0.5 * diag[leaked].sum())
+        bias = resolve_readout_bias(readout_bias)
+        effect1 = self._povm_diag_weight(op, 1, bias, "A")
+        p1 = float((diag * effect1).sum())
+        p0 = float((diag * (1.0 - effect1)).sum())
         return p0, p1
+
+    def sequential_stabilizer_marginals(
+        self,
+        stabs: list[dict[int, str]],
+        b=None,
+        arm: str = "A",
+        *,
+        diagonal_z: bool = False,
+    ) -> tuple[float, ...]:
+        r"""Apply an ordered non-selective Lüders measurement and return its marginals.
+
+        For stabilizer ``j`` the returned value is
+
+        ``Tr[E1_j Phi_(j-1) ... Phi_0(rho_pre)]``,
+
+        where ``Phi_j(rho)`` is the sum of the two unnormalised outcome
+        branches produced by :meth:`project_stabilizer`.  This is the exact
+        marginal semantics of the sequential carrier measurement.  Computing
+        every projection from the same ``rho_pre`` instead gives *isolated*
+        probe marginals and is generally wrong when the instruments do not
+        commute (notably in the leaked sector).
+
+        The engine is intentionally left in the final non-selective state so a
+        caller can apply the terminal logical readout to the same post-measurement
+        state without enumerating the full joint distribution.
+        """
+
+        rho_nonselective = self.rho
+        marginals: list[float] = []
+        for stab in stabs:
+            self.rho = rho_nonselective.clone()
+            marginal = self.project_stabilizer(
+                stab, 1, b, arm, diagonal_z=diagonal_z
+            )
+            branch1 = self.rho
+            marginals.append(float(marginal))
+
+            # ``rho_nonselective`` has no consumer after the outcome-0 branch.
+            # Pure-Z projection may update that tensor in place; X-support
+            # projection rotates through out-of-place gates.  Both therefore
+            # implement branch0 + branch1 without an extra full-DM snapshot.
+            self.rho = rho_nonselective
+            self.project_stabilizer(stab, 0, b, arm, diagonal_z=diagonal_z)
+            rho_nonselective = self.rho.add_(branch1)
+        self.rho = rho_nonselective
+        return tuple(marginals)
 
     # ----------------------------------------------------------------------- #
     # Multi-round EXACT record oracle (Axis-A independent ground truth; §7.2)  #
@@ -1046,7 +1088,7 @@ class _QuditDM:
         def _emit_leaf(svec: list[int], rho_leaf: torch.Tensor, path_p: float) -> None:
             total_mass[0] += path_p
             self.rho = rho_leaf
-            p0, p1 = self.logical_distribution()
+            p0, p1 = self.logical_distribution(b)
             flip_sum[0] += path_p * p1
             dv = _fold_detectors(svec)
             sum1.add_(path_p * dv)
@@ -1278,7 +1320,7 @@ class QuquartDM(_QuditDM):
     The ``|3>``-faithful ququart engine for Arm 2 of the Path-B leakage-TRANSPORT gap test
     (``docs/twin_validation/leakage_transport_pathB_prereg.md`` §1). It evolves a d3 SUB-CODE
     density matrix under the Arm-2 per-CZ ``(16, 16)`` two-ququart leakage channel (Builder A,
-    ``outputs/teacher_prereg/qutip_cz_leakage_channel.py``: index ``4*t_flux + t_stat``,
+    ``error_coupling_simulator.mechanisms.cz_leakage``: index ``4*t_flux + t_stat``,
     ``site_i = flux = MSF`` — identical to :meth:`apply_channel_2site`'s convention), measures
     stabilizers (the leaked levels ``|2>, |3>`` share the swept-``b`` leaked classifier) and
     computes the logical outcome, MIRRORING :class:`QutritDM` at local dim 3.

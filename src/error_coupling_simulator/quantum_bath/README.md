@@ -15,14 +15,17 @@ surface-code-cycle instrument. All branches kept → EXACT 3-round distribution.
 - `gksl.py` — bosonic GKSL primitives: `boson_ops`, the shared-bath Liouvillian
   `build_shared_bath_liouvillian` + `round_superop` (reduced (d0,d1,mode) superop, 4·nmax).
 - `carrier.py` — the dual-ancilla dual-axis exact-DM carrier: parity extraction unitaries,
-  reduced-idle apply (both ancillas idle spectators), `dual_extract`, and `dual_point`.
+  reduced-idle apply (both ancillas idle spectators), `dual_extract`, `dual_point`, and the
+  per-round-reset reduced-map/QRT comparator `dual_point_qrt`.
 - `observables.py` — multi-time record observables: Milz/Budini `K_stat_joint`/`K_stat_binary`,
   `exact_cmi_bits` (CMI), `M_mem_stat`, `project_axis`, `tv_distance`/`record_distance`, `M_ALPHABET`.
 - `crow_joynt.py` — the crow_joynt classical-field null (Gaussian sigma_z field via 3D Gauss-Hermite
   quadrature) + the closed-form phase covariance (`gamma_unit_closed`, `build_sigma`); the
   independent-GT dephasing floor.
-- `nulls.py` — the incoherent-AD null family (Markovian + non-Markovian, any Bloch axis) + the
+- `nulls.py` — axis-aligned incoherent AD, coherent-unitary and collective-AD null families + the
   model-free `min_tv_to_incoherent` discriminator.
+- `memory_witness.py` — the independent Choi/concurrence `quantum_memory_witness`; this is separate
+  from forgeable record-only K/backflow summaries.
 - `ground_truth.py` — the anti-toy GTs (factorization, extraction, sigma_z indep-boson,
   sigma_minus emission ODE, no-bath sanity).
 

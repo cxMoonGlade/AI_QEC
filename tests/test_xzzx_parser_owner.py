@@ -13,10 +13,9 @@ import sys
 def test_xzzx_parser_is_owned_by_active_frontend() -> None:
     active = importlib.import_module(
         "error_coupling_simulator.frontend.xzzx_parser")
-    legacy = importlib.import_module("qec_twin.forward.exact.xzzx_parser")
 
     assert active.__name__ == "error_coupling_simulator.frontend.xzzx_parser"
-    assert legacy is active
+    assert "error_coupling_simulator/frontend/xzzx_parser.py" in str(active.__file__)
 
 
 def test_xzzx_default_dataset_root_uses_xdg_data_home(tmp_path: Path) -> None:

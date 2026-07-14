@@ -5,7 +5,8 @@
 **Partially accepted (decision 2026-07-12; theory-fix reopened 2026-07-13).** The full `d×d`
 geometry amendment remains accepted. Decisions 3 and 5 and the leakage truncation criterion are
 **suspended**; ADR 0010's MCWF-trajectory forward, frozen per-round-independent (LRU) leakage model,
-and certification ladder otherwise stand.
+and simulator-facing certification constraints otherwise stand, subject to the product-boundary
+amendment below.
 Historical inputs were the zoom-out territory map (2026-07-12, wzb623wrz), the now-reopened crux
 predecessor (`CRUX_RESOLVED_bond_is_gauge_artifact_2026-07-11`), the build-first ZMT f-gap
 diagnostic (2026-07-12), and the mainline framing (`project-simulator-p0p4-plan-framing`,
@@ -19,6 +20,15 @@ registered prediction band, not theorem-grade.
 > deterministic WTG top-spectrum truncation as a general loopy solver. The geometry decision and the
 > rule “validate on the record, not the bond” remain useful; dropping coherence and replacing FET/ALS
 > do **not** proceed until the exact instrument/record bridges close.
+
+> **SIMULATOR-PRODUCT BOUNDARY AMENDMENT (2026-07-14).** The old XZZX thin-strip driver is
+> legacy-only and is not distributed. The installed Axis-1 1D MCWF/MPS and QT/MPS routes are
+> restricted, finite-step verification surfaces, not production/full-record/full-`d×d` carriers.
+> The full-`d×d` frontier remains the single-wire 2D PEPS. ADR 0010's LPDO/Bayes-floor work is
+> downstream decoder/headroom analysis retained under `legacy/`, not a simulator service or
+> certification rung. The core Axis-2 classical stochastic record-memory service—replayable
+> finite-RTN timelines (including the finite-band 1/f approximation), `Theta` fan-out, and
+> matched-marginal controls—is unchanged; this is not a quantum-bath or CP-divisibility claim.
 
 ## Context
 
@@ -71,11 +81,11 @@ registered prediction band, not theorem-grade.
 ## Decision
 
 1. **The full-`d×d` surface-code leakage scaling forward carrier = the single-wire 2D PEPS**
-   (pure-state MCWF trajectory; dim-3 physical leg; per-round leakage Kraus). MPS is retained ONLY for
-   genuine thin strips (ADR 0010's w×d regime, where bounded χ is conditional on fixed width,
-   evolution depth/noise regime, and accuracy); **MPS-on-full-`d×d` and
-   the DM-PEPO are CLOSED** (geometry wall / path-bond concentration). ADR 0010's MCWF-exactness,
-   LRU leakage model, LPDO floor, and certification ladder are UNCHANGED.
+   (pure-state MCWF trajectory; dim-3 physical leg; per-round leakage Kraus). The old thin-strip
+   driver is legacy-only; the installed Axis-1 1D MPS executors are restricted verification paths
+   and do not replace the full-2D carrier. **MPS-on-full-`d×d` and the DM-PEPO are CLOSED**
+   (geometry wall / path-bond concentration). ADR 0010's MCWF model semantics and frozen LRU
+   assumptions remain historical inputs; its LPDO/Bayes-floor work is outside the simulator.
 2. **Leakage stays the per-round-independent local Kraus flavor, applied on the carrier's qutrit legs**
    (ADR 0010 §Decision-2/-3; current reachability boundary in the
    [literature closure](../nonpauli_teacher/coherent_leakage_longrange_truncation_literature_closure_2026-07-13.md)). At d3 this is the fast
@@ -136,8 +146,8 @@ registered prediction band, not theorem-grade.
 ## Alternatives considered (rejected, with reason)
 
 - **MPS on the full `d×d` surface code** — a 1D snake can require `χ=2^{Θ(d)}` across a
-  square-code cut in the worst/project-estimate regime; retained only for thin strips unless a
-  target-regime convergence study proves otherwise.
+  square-code cut in the worst/project-estimate regime. The historical thin-strip driver remains
+  legacy-only; installed 1D MPS execution is restricted verification, not this full-code route.
 - **Doubled-wire DM-PEPO** — compiled weight-4 √Eₛ POVM concentrates onto fresh path bonds via ket⊗bra
   squaring (F-SEL-1/F-REC-1); closed/archived.
 - **Hold or drop the coherent leakage tail** — unresolved until the frozen record bridge closes; neither
@@ -150,7 +160,7 @@ registered prediction band, not theorem-grade.
 - **The record-faithful-truncation premise is an open prediction.** The prior local experiment found a
   difference between two implemented channels, but its data-only compiled instrument, per-slice
   dephasing intervention, and selected-moment statistic do not make the result physically definitive.
-- **d5/d7 remains oracle-free / PROVISIONAL** (ADR 0010 Rung-d5/d7 unchanged). Any future extrapolation
+- **d5/d7 remains oracle-free / PROVISIONAL** (the simulator-facing ADR 0010 constraint remains). Any future extrapolation
   first requires the redesigned d3 full-record gate; internal χ-convergence and `S_A` saturation alone
   cannot authorize it. No d5/d7 distributional claim is a premise.
 - **The leak-OFF Clifford solver (Decision 5) is genuinely unresolved engineering.** The WTG/ZMT/FET
@@ -173,4 +183,5 @@ separate class **(b)** quantity and is currently open.
 Record-faithful truncation remains an **open (b) prediction**.
 Carrier/geometry/truncation-criterion **decisions** and thresholds **(c)** gates. All d5/d7 distributional
 results **PROVISIONAL**. Supersedes ADR 0010 §Decision-4 (geometry/full-2D) and adds Decisions 3–5;
-retains ADR 0010 §Decision-1/-2/-3 + constraint ledger + certification ladder.
+retains only ADR 0010's simulator-facing model/constraint content. Its Bayes-floor/LPDO analysis is
+downstream legacy work under the 2026-07-14 product-boundary amendment.

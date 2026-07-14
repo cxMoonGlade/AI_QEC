@@ -5,18 +5,19 @@ import json
 import numpy as np
 import pytest
 
-from qec_twin.hardware import b8_io, m4_decode
-from qec_twin.simulator.circuit_ir import CircuitBuilder, CircuitIR, DetectorDef, GateOp, MeasureOp
-from qec_twin.simulator.noise_spec import (
+from error_coupling_simulator.frontend import b8_io
+from error_coupling_simulator.frontend import decoder as m4_decode
+from error_coupling_simulator.frontend.circuit_ir import CircuitBuilder, CircuitIR, DetectorDef, GateOp, MeasureOp
+from error_coupling_simulator.frontend.noise_spec import (
     NoiseBuilder,
     StimNoiseRule,
     StimPauliNoiseSpec,
     TargetedStimNoiseSpec,
     apply_stim_pauli_noise,
 )
-from qec_twin.simulator.simulator import Simulator
-from qec_twin.simulator.stim_source import CompiledCircuit, StimCircuitSource
-from qec_twin.simulator.stim_io import circuit_to_stim, write_stim_circuit
+from error_coupling_simulator.frontend.simulator import Simulator
+from error_coupling_simulator.frontend.stim_source import CompiledCircuit, StimCircuitSource
+from error_coupling_simulator.frontend.stim_io import circuit_to_stim, write_stim_circuit
 
 
 def _single_detector_circuit():
@@ -332,7 +333,10 @@ def test_decoder_predictions_are_not_copied_from_actual_observables(monkeypatch,
     def fake_decode_dem(dem, dets):
         return np.ones((np.asarray(dets).shape[0], 1), dtype=np.uint8)
 
-    monkeypatch.setattr("qec_twin.simulator.simulator.m4_decode.decode_dem", fake_decode_dem)
+    monkeypatch.setattr(
+        "error_coupling_simulator.frontend.simulator.m4_decode.decode_dem",
+        fake_decode_dem,
+    )
     result = Simulator(_single_detector_circuit()).run(
         shots=32,
         noise=None,

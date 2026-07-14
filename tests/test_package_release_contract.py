@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import ast
 from importlib import metadata
+import json
 from pathlib import Path
+import subprocess
+import sys
 import tomllib
 
 
@@ -27,6 +30,108 @@ _OWNER_LIKE_FIELDS = frozenset(
         "workload_adapter",
     }
 )
+
+
+def test_generated_code_map_and_reverse_service_coverage_are_current() -> None:
+    """The release must classify every installed module and ship a fresh flow/catalog."""
+
+    probe = subprocess.run(
+        [sys.executable, "tools/gen_code_map.py", "--check"],
+        cwd=REPO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert probe.returncode == 0, probe.stdout + probe.stderr
+
+
+def test_code_map_legacy_edge_scanner_distinguishes_schema_ids_from_resolution(
+    tmp_path: Path,
+) -> None:
+    from tools.gen_code_map import _legacy_qec_twin_edges
+
+    probe = tmp_path / "probe.py"
+    probe.write_text(
+        "\n".join(
+            (
+                "SCHEMA = 'qec_twin.persisted.v1'",
+                "import qec_twin.forward",
+                "pytest.importorskip('qec_twin.simulator')",
+                "monkeypatch.setattr('qec_twin.simulator.fn', replacement)",
+                "legacy_module = 'qec_twin.dynamic'",
+                "importlib.import_module(legacy_module)",
+                "importlib.util.find_spec(name='qec_twin.keyword')",
+            )
+        ),
+        encoding="utf-8",
+    )
+
+    edges = _legacy_qec_twin_edges(probe)
+
+    assert len(edges) == 5
+    assert any("import qec_twin.forward" in edge for edge in edges)
+    assert any("importorskip" in edge for edge in edges)
+    assert any("setattr" in edge for edge in edges)
+    assert any("qec_twin.dynamic" in edge for edge in edges)
+    assert any("qec_twin.keyword" in edge for edge in edges)
+    assert all("persisted" not in edge for edge in edges)
+
+
+def test_service_acceptance_plan_is_unique_process_isolated_and_routes_cudaq() -> None:
+    catalog = json.loads(
+        (REPO_ROOT / "docs" / "service_status.json").read_text(encoding="utf-8")
+    )
+    expected_paths = sorted({
+        path
+        for service in catalog["services"]
+        for path in service["acceptance"]
+    })
+    execution = catalog["acceptance_execution"]
+    expected_lanes = {
+        path: execution["default_lane"]
+        for path in expected_paths
+    }
+    for lane, paths in execution["lane_overrides"].items():
+        for path in paths:
+            expected_lanes[path] = lane
+    expected_environments = {
+        path: execution["environment_overrides"].get(
+            path,
+            execution["default_conda_environment"],
+        )
+        for path in expected_paths
+    }
+    probe = subprocess.run(
+        [sys.executable, "tests/harness/service_acceptance.py", "--list"],
+        cwd=REPO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert probe.returncode == 0, probe.stdout + probe.stderr
+    rows = [line.split("\t") for line in probe.stdout.splitlines() if line]
+    assert all(len(row) == 3 for row in rows)
+    assert [path for _, _, path in rows] == expected_paths
+    assert len(rows) == len({path for _, _, path in rows})
+    assert {
+        path: lane
+        for lane, _, path in rows
+    } == expected_lanes
+    assert {
+        path: environment
+        for _, environment, path in rows
+    } == expected_environments
+    assert {lane for lane, _, _ in rows} == {
+        "cpu_light",
+        "cpu_exclusive",
+        "gpu_serial",
+    }
+    assert {
+        path: environment
+        for _, environment, path in rows
+        if environment != "ecs"
+    } == {"tests/test_simulator_cudaq_grover.py": "aiqec"}
 
 
 def _target_field_names(target: ast.expr) -> set[str]:
@@ -64,6 +169,7 @@ def test_declared_python_and_runtime_dependencies_cover_active_carriers() -> Non
     dependencies = tuple(str(item) for item in project["dependencies"])
 
     assert project["requires-python"] == ">=3.11"
+    assert any(item.startswith("qutip==5.3.0") for item in dependencies)
     assert any(item.startswith("quimb==") and ";" not in item for item in dependencies)
     assert any(item.startswith("scipy==") and ";" not in item for item in dependencies)
 

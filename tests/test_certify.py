@@ -1,8 +1,8 @@
-"""Tests for ``qec_twin.audit.certify`` — the certification seam.
+"""Tests for ``error_coupling_simulator.certify`` — the certification seam.
 
 Step 1: the interface (the value types + the ``Anchor`` / ``Control`` / ``ControlledNoiseProcess`` ports)
 imports + constructs; the ``CertReport`` verdict / summary / assert_pass logic; the ports are
-duck-typed ``runtime_checkable`` Protocols (the ``audit.floor_backend.PathJointEvaluator`` pattern).
+duck-typed ``runtime_checkable`` Protocols through the package-owned certification port.
 
 Step 2: the core (route → controls-first → score → ledger) against an IN-MEMORY anchor with a known
 law (the port IS the test surface — pure, no GPU). The genuine-check invariants are proven here:
@@ -15,7 +15,7 @@ from dataclasses import replace
 
 import numpy as np
 
-from qec_twin.audit.certify import (
+from error_coupling_simulator.certify import (
     Anchor,
     AnchorValue,
     Capability,
@@ -29,7 +29,7 @@ from qec_twin.audit.certify import (
     Statistic,
     Verdict,
 )
-from qec_twin.audit.certify.core import certify_cells, compare, route
+from error_coupling_simulator.certify.core import certify_cells, compare, route
 
 _DIST = (Statistic.FULL_JOINT, Statistic.SYNDROME_DIST)
 
@@ -270,7 +270,7 @@ def test_exact_preferred_routing():
 # exercises the do-not-OOM logic with zero allocation.                       #
 # ======================================================================= #
 def test_dm_anchor_capability_is_oom_safe():
-    from qec_twin.audit.certify.anchors import DMOracleAnchor
+    from error_coupling_simulator.certify.anchors import DMOracleAnchor
 
     dm = DMOracleAnchor(card_bytes=32 * 1024**3)  # mock a 32 GB card -> capability is pure, no GPU
     full9_R1 = Regime(R=1, register="full", n_active=9, n_stab=8)
@@ -313,7 +313,7 @@ def test_dm_anchor_capability_is_oom_safe():
 # + emitted shapes + the shared reduction (PURE; no GPU — card mocked).      #
 # ======================================================================= #
 def test_dm_anchor_moments_capability_is_oom_safe():
-    from qec_twin.audit.certify.anchors import DMOracleAnchor
+    from error_coupling_simulator.certify.anchors import DMOracleAnchor
 
     dm = DMOracleAnchor(card_bytes=32 * 1024**3)  # mock a 32 GB card -> capability is pure, no GPU
     full9_R2 = Regime(R=2, register="full", n_active=9, n_stab=8)
@@ -345,7 +345,7 @@ def test_dm_anchor_moments_capability_is_oom_safe():
 
 
 def test_emitted_spatial_corr_shape_and_foil_zero():
-    from qec_twin.audit.certify.core import emitted_statistic
+    from error_coupling_simulator.certify.core import emitted_statistic
 
     rng = np.random.default_rng(1)
     n, R, n_stab = 4000, 3, 4
@@ -362,7 +362,7 @@ def test_emitted_spatial_corr_shape_and_foil_zero():
 
 
 def test_emitted_spatial_corr_detects_correlation_and_matches_from_scratch():
-    from qec_twin.audit.certify.core import emitted_statistic
+    from error_coupling_simulator.certify.core import emitted_statistic
 
     rng = np.random.default_rng(2)
     n, R, n_stab = 60000, 2, 2
@@ -386,7 +386,7 @@ def test_shared_moment_reductions_match_emitted_and_dm_shapes():
     # spatial_corr through the SAME core helpers the emitted side uses, so the shapes/semantics cannot
     # drift. Here we exercise the helpers directly on a synthetic SIGNED matrix (the DM record_oracle
     # output shape) and confirm the reduced shape + the off-diagonal/abs semantics.
-    from qec_twin.audit.certify.core import reduce_rr_corr, reduce_spatial_corr
+    from error_coupling_simulator.certify.core import reduce_rr_corr, reduce_spatial_corr
 
     R, n_stab = 3, 4
     rng = np.random.default_rng(3)
@@ -411,7 +411,7 @@ def test_shared_moment_reductions_match_emitted_and_dm_shapes():
 
 
 def test_corrupt_stab_control_guards_the_moments():
-    from qec_twin.audit.certify.anchors import CorruptStabControl
+    from error_coupling_simulator.certify.anchors import CorruptStabControl
 
     # WS1: the corrupt-stabilizer control must now GUARD the moments anchors (so an inert control on a
     # moments cell forces FAIL, per the core roll-up). Before WS1 it guarded only the geometry stats.
@@ -424,7 +424,7 @@ def test_corrupt_stab_control_guards_the_moments():
 # Step 4a — the corrupt-stabilizer control (teeth) + the stim anchor        #
 # ======================================================================= #
 def test_corrupt_stab_control_fires_on_corruptible_anchor():
-    from qec_twin.audit.certify.anchors import CorruptStabControl
+    from error_coupling_simulator.certify.anchors import CorruptStabControl
 
     rep = certify_cells(FakeTeacher(_JOINT), [(Statistic.FULL_JOINT, _REG)],
                         [InMemoryAnchor(_JOINT, corruptible=True)], [CorruptStabControl(stab=0)], N=20000)
@@ -433,7 +433,7 @@ def test_corrupt_stab_control_fires_on_corruptible_anchor():
 
 
 def test_corrupt_stab_control_inert_forces_fail():
-    from qec_twin.audit.certify.anchors import CorruptStabControl
+    from error_coupling_simulator.certify.anchors import CorruptStabControl
 
     # an anchor that CANNOT host the corruption returns the same answer -> the control can't fire -> FAIL.
     rep = certify_cells(FakeTeacher(_JOINT), [(Statistic.FULL_JOINT, _REG)],
@@ -443,7 +443,7 @@ def test_corrupt_stab_control_inert_forces_fail():
 
 
 def test_stim_anchor_capability_and_emit_kind():
-    from qec_twin.audit.certify.anchors import StimCliffordAnchor
+    from error_coupling_simulator.certify.anchors import StimCliffordAnchor
 
     st = StimCliffordAnchor(p_x=0.03)
     assert st.emit_kind() == "clifford_slice"  # certifies the teacher's Clifford SLICE (wiring), not the full mechanism
@@ -464,7 +464,7 @@ def test_exact_anchor_with_nonzero_band_is_rejected():
     # this invariant was never exercised by the suite (dormant); this exercises both legs.
     import pytest
 
-    from qec_twin.audit.certify.core import _assert_anchor_value
+    from error_coupling_simulator.certify.core import _assert_anchor_value
 
     class _NamedAnchor:
         name = "bad_exact"
@@ -482,7 +482,7 @@ def test_exact_anchor_with_nonzero_band_is_rejected():
 # Step 5 — the closed-form sidecar (RR_CORR machinery + the T-B prediction) #
 # ======================================================================= #
 def test_rr_corr_machinery_matches_from_scratch():
-    from qec_twin.audit.certify.core import emitted_statistic
+    from error_coupling_simulator.certify.core import emitted_statistic
 
     rng = np.random.default_rng(0)
     n = 50000
@@ -503,7 +503,7 @@ def test_closed_form_anchor_predicts_transient_two_state_markov_rr_corr():
     # caught. None of them assumes stationarity (the shared blind spot that made 5a circular).
     import itertools
 
-    from qec_twin.audit.certify.anchors import ClosedFormAnchor
+    from error_coupling_simulator.certify.anchors import ClosedFormAnchor
 
     a, b = 0.08, 0.20
     R = 6
@@ -553,15 +553,15 @@ def test_closed_form_anchor_predicts_transient_two_state_markov_rr_corr():
 
 
 # ======================================================================= #
-# Step 6 — the certify_teacher facade (orchestration: route + merge + roll) #
+# Step 6 — the neutral certification facade (orchestration: route + merge + roll) #
 # ======================================================================= #
-def test_certify_teacher_facade_merges_and_rolls_up():
-    from qec_twin.audit.certify import certify_teacher
-    from qec_twin.audit.certify.anchors import CorruptStabControl
+def test_certify_noise_process_facade_merges_and_rolls_up():
+    from error_coupling_simulator.certify import certify_noise_process
+    from error_coupling_simulator.certify.anchors import CorruptStabControl
 
-    rep = certify_teacher(FakeTeacher(_JOINT), anchors=[InMemoryAnchor(_JOINT)],
-                          cells=[(Statistic.FULL_JOINT, _REG)],
-                          controls=[CorruptStabControl(stab=0)], N=20000)
+    rep = certify_noise_process(FakeTeacher(_JOINT), anchors=[InMemoryAnchor(_JOINT)],
+                                cells=[(Statistic.FULL_JOINT, _REG)],
+                                controls=[CorruptStabControl(stab=0)], N=20000)
     assert rep.verdict is Verdict.PASS, rep.summary()
     assert rep.row("in_memory", Statistic.FULL_JOINT).verdict is Verdict.PASS
     assert all(c.detail["fired"] for c in rep.controls)
@@ -569,8 +569,8 @@ def test_certify_teacher_facade_merges_and_rolls_up():
 
     raised = False  # an unknown level is rejected
     try:
-        certify_teacher(FakeTeacher(_JOINT), level="bogus", anchors=[InMemoryAnchor(_JOINT)],
-                        cells=[(Statistic.FULL_JOINT, _REG)])
+        certify_noise_process(FakeTeacher(_JOINT), level="bogus", anchors=[InMemoryAnchor(_JOINT)],
+                              cells=[(Statistic.FULL_JOINT, _REG)])
     except ValueError:
         raised = True
     assert raised
@@ -617,7 +617,7 @@ def test_class_a_statistical_value_is_rejected():
     # that is actually STATISTICAL would be rolled up as an EXACT PASS (inflation) — it must RAISE.
     import pytest
 
-    from qec_twin.audit.certify.core import _assert_anchor_value
+    from error_coupling_simulator.certify.core import _assert_anchor_value
 
     class _NamedAnchor:
         name = "mislabeled"
@@ -635,7 +635,7 @@ def test_dm_anchor_nstab_none_is_infeasible():
     # the feasibility gate must REFUSE a regime with n_stab=None: it cannot bound the depth-(n_stab*R)
     # clone stack, and a None under-counts depth to R and would falsely pass the gate -> an OOM at
     # answer time. Pure capability arithmetic (mock card -> no GPU).
-    from qec_twin.audit.certify.anchors import DMOracleAnchor
+    from error_coupling_simulator.certify.anchors import DMOracleAnchor
 
     dm = DMOracleAnchor(card_bytes=32 * 1024**3)
     none_R1 = Regime(R=1, register="subregister", n_active=2, n_stab=None)
@@ -650,7 +650,7 @@ def test_shuffle_control_inapplicable_on_symmetric_value():
     # the real ShuffleControl on a FLAT/symmetric ground truth: np.roll is the identity, so the control
     # cannot perturb. It must mark itself INAPPLICABLE (not a FAILED falsifier -> no spurious FAIL); the
     # cell then has no working control -> FINDING (uncertified), never a PASS or a FAIL.
-    from qec_twin.audit.certify.anchors.controls import ShuffleControl as RealShuffleControl
+    from error_coupling_simulator.certify.anchors.controls import ShuffleControl as RealShuffleControl
 
     flat = {0: 0.25, 1: 0.25, 2: 0.25, 3: 0.25}
     rep = certify_cells(FakeTeacher(flat), [(Statistic.FULL_JOINT, _REG)],

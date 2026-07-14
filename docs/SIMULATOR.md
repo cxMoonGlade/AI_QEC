@@ -25,8 +25,10 @@ object.
 **Product non-goals.** The simulator does not fit a channel/noise model from records, choose
 between model classes, define a calibration-probe ladder, recover hidden parameters, or construct
 parameter-uncertainty/identifiability bands. Those are downstream inference tasks and cannot serve
-as simulator acceptance gates. Evaluator-only parameters exist to define and certify the specified
-generative process; they are not targets of an in-package learner.
+as simulator acceptance gates. The Bayes decoding floor and decoder-headroom analysis are likewise
+downstream analysis: their implementations remain under `legacy/qec_twin/audit/`, are not shipped,
+and are not a simulator certification rung. Evaluator-only parameters exist to define and certify
+the specified generative process; they are not targets of an in-package learner.
 
 ## Object contract
 
@@ -46,14 +48,18 @@ generative process; they are not targets of an in-package learner.
     thermal excitation, fSim residual, readout dephasing, and leakage Hamiltonians are
     assembled into one joint generator per substep and exponentiated
     (`carrier/joint_lindbladian.py`); the frontend lowers a compiler schedule into these.
-  - **Axis-2 — notion-2 classical multi-time record memory.** A shared classical latent
-    trajectory `z_t` / `ξ(t)` (a microscopic 1/f bath or an RTN) conditions per-round
-    error rates `p_r = clip(p₀(1+κ·ξ_r))` across QEC cycles (`source/`), designed to leave a
-    **beyond-Markov signature in the declared passive record policy**. This is **classical**
-    multi-time memory. The positive-exponential-covariance **Gaussian surrogate** is
+  - **Axis-2 — notion-2 classical multi-time record memory (core simulator service).**
+    `source/` owns a replayable classical latent timeline, its `Theta(z_t)` mechanism-parameter
+    fan-out, and matched-marginal controls. `OneOverFDriftSource` is a finite-band construction:
+    a finite sum of log-spaced independent RTNs whose sum-of-Lorentzians PSD approximates 1/f
+    over the declared band. It is a **classical stochastic non-Markovian record-memory model**,
+    not a microscopic or quantum bath. The source conditions per-round error rates
+    `p_r = clip(p₀(1+κ·ξ_r))` across QEC cycles, designed to leave a **beyond-Markov signature
+    in the declared passive record policy**. The positive-exponential-covariance **Gaussian surrogate** is
     CP-divisible by project algebra (`γ=½∫C≥0`, RHP=BLP=0), but the production
     `OneOverFDriftSource` is an explicit finite sum of eight RTNs, not that Gaussian reduced
-    map. A source alone has no CP-divisibility status. Under two separately declared
+    map. Neither the source timeline nor its 1/f label carries a CP-divisibility or
+    quantum-bath claim. Under two separately declared
     free-induction diagnostic lifts (continuous CTMC and cycle-held), an exact registered and
     independently reproduced product/256-state gate finds BLP backflow for the defaults. Its first
     run preceded the prediction document's Git commit, so it is not audit-pristine preregistration.
@@ -119,9 +125,13 @@ generative process; they are not targets of an in-package learner.
   runtime module is owned by this distribution; it does not mean that third-party circuit or
   independently generated oracle data are bundled. The Google r01/r10 `.stim` + metadata files
   are caller-supplied circuit/geometry/schedule inputs only, never package data and never noise
-  parameters. Ququart transport similarly requires an explicit caller-supplied Kraus `.npz`
-  path; there is no default path into repository scratch. Missing inputs fail closed with the
-  requested path identified. Historical `qec_twin.*` values may remain only as frozen schema
+  parameters. Ququart transport requires exactly one explicit channel source: `CZParams` for
+  package-owned in-process Hamiltonian-to-channel derivation, an in-memory channel (including a
+  Kraus stack),
+  or a serialized derived-channel cache. Kraus operators are a derived channel representation,
+  and a serialized Kraus artifact is an optional cache—not external scientific data. There is no
+  default path into repository scratch. Missing or ambiguous inputs fail closed. Historical
+  `qec_twin.*` values may remain only as frozen schema
   identifiers for artifact compatibility; active manifest owner fields (`backend`, `source`,
   `oracle`, `assembled_by`, and equivalents) must name the installed
   `error_coupling_simulator` owner.
@@ -131,6 +141,20 @@ generative process; they are not targets of an in-package learner.
   smokes. The same gate must prove that no `qec_twin` package, old console entry point, or
   repository-only scratch asset entered either archive. An editable-install smoke is not a
   substitute for this gate.
+- **Aggregate service acceptance is process-isolated.** The complete service matrix must run through
+  `python tests/harness/service_acceptance.py`, which expands the unique acceptance files declared in
+  `docs/service_status.json`, and runs every file in a fresh exec process. The catalog assigns each
+  file to exactly one resource lane: independent `cpu_light` files use bounded concurrency subject
+  to CPU and `MemAvailable` caps; host-memory/BLAS-heavy `cpu_exclusive` files run serially; and
+  `gpu_serial` files run serially while one cross-process GPU `flock` is held only for that phase.
+  CUDA-Q remains routed to the retained `aiqec` environment. The supervisor must not import
+  Torch/CUDA or reuse a CUDA-initialized fork worker; each child exit is the allocator/lifetime reset.
+  A single long-lived pytest process is not an equivalent gate: it shares native lifetime state
+  across Torch, QuTiP/cuQuantum/CuPy, fused CUDA extensions, and the isolated CUDA-Q plugin and has
+  reproduced exit 139 even though the same service groups pass in clean processes. GPU ownership
+  cannot be lock-free across independent runners; within the supervisor, the plan is immutable and
+  result aggregation has one owner. This execution policy changes no physical model, numerical
+  tolerance, or evidence bar.
 - **CUDA-Q is an isolated optional plugin, not core runtime.** The public noiseless-Grover adapter
   remains available through the `cudaq-grover` extra, but it runs in the retained `aiqec` plugin
   environment and a separate process. It is deliberately absent from canonical `ecs` and must not
@@ -139,8 +163,9 @@ generative process; they are not targets of an in-package learner.
   `FusedWithinCycleSampler` / `sv_traj_d3_wc` path may execute an optimization run in c64;
   its artifact is `screening_only`. Final and certification runs use c128 and are only
   `c128_candidate` until the owning scientific gates pass. A c64 artifact is never promoted to
-  evidence; a candidate conclusion requires a separate frozen c128 replay. PEPS and MPS remain
-  c128-only and must reject c64 metadata. WG channels, codestates, channel composition, and CPTP
+  evidence; a candidate conclusion requires a separate frozen c128 replay. PEPS and the restricted
+  Axis-1 MPS executors remain c128-only and must reject c64 metadata. WG channels, codestates,
+  channel composition, and CPTP
   checks are constructed in c128; only the checked complex execution tables may be cast at the
   fused-SV boundary. This policy does not authorize tolerance or FET changes.
 - **Numerical floor.** `error_coupling_simulator.numerics` — `1e-12` for float
@@ -157,10 +182,12 @@ backend-agnostic across it:
    current d3 9-qutrit array is already about 5.77 GiB and 15 qutrits would be about 2.93 PiB.
    This is the **certification
    ORACLE**, not a scaling path.
-2. **MPS MCWF, thin-strip** (`quimb`; snake/boustrophedon along the short dimension) —
-   bounded χ is a conditional target for fixed strip width, evolution depth/noise regime, and
-   accuracy—not a theorem uniform in `d` (ADR 0010). Pure-state quantum
-   trajectories; ensemble mean = the exact mixed evolution.
+2. **Restricted Axis-1 one-dimensional MPS execution** (`frontend/axis1_mcwf_mps_execution.py`,
+   `frontend/axis1_qt_mps_execution.py`) — shipped `quimb`/Torch-CUDA verification paths. The
+   MCWF path executes fixed-microstep pure-state trajectories for declared local dimensions; the
+   QT/MPS path is a narrower computational-subspace/product-formula slice. Both fail closed outside
+   their declared support and neither claims production-scalable, full-record, or full-`d×d`
+   completion. The old XZZX thin-strip driver remains under `legacy/` and is not distributed.
 3. **2D PEPS, full `d×d`** (`carrier/peps/`) — the **active frontier** (ADR 0011). A 1D
    MPS can require `χ=2^{Θ(d)}` across a full-square cut in the worst/project-estimate regime,
    so the full-code carrier candidate is a single-wire 2D
@@ -187,9 +214,10 @@ deterministic WTG replacement or leakage-tail deletion is currently authorized. 
   reconstruction, a closed-form theorem, or the GF(2) stabilizer entropy) — never against
   the engine's own oracle.
 - **Rung ladder** (`certify/`): channel-level Choi/PTM/CPTP → d3 record distribution vs
-  the DM oracle (TVD/KL/marginals) → d3 Bayes floor vs DM → χ-convergence curve →
-  **d5/d7 oracle-free internal checks only** (CPTP residual, structural pins,
-  χ-convergence self-consistency).
+  the DM oracle (TVD/KL/marginals) → carrier-appropriate approximation convergence
+  (bond/microstep/trajectory controls, always scored on the record) → **d5/d7 oracle-free
+  internal checks only** (CPTP residual, structural pins, convergence self-consistency). Bayes-floor
+  and decoder-headroom calculations are downstream legacy analysis, not a simulator rung.
 - **Memory-axis faithfulness instrument (notion-2).** That the passive record carries the
   specified multi-time memory is scored by the record's **absolute multi-time Markov-order
   structure** vs a genuinely-Markov-order-k generative null. Full-history/order tests are
@@ -294,18 +322,24 @@ classical-versus-quantum origin without an explicit access and identifiability a
 - **KG (knowledge graph)** — `python outputs/knowledge_graph/kg_query.py` (concept /
   relation traversal; `kg.json` / `kg_full.json`, local-only). The other `theory-first` /
   `theory-fix` grounding source.
-- **Code map** — `docs/CODE_MAP.md` (AST-derived `src/` inventory + `code_status.json`
-  status overlay); regenerate `python tools/gen_code_map.py` (staleness: `--check`).
+- **Service catalog + code map** — `docs/service_status.json` is the machine-readable installed
+  service/support/exclusion contract and complete flow; `docs/CODE_MAP.md` is generated from it plus
+  the AST-derived `src/` inventory and `code_status.json`. The generator reverse-checks every shipped
+  Python module, including namespace facades, so an unclassified module is a hard failure. Regenerate
+  with `python tools/gen_code_map.py` (staleness/contract check: `--check`). Both files ship with the
+  wheel under `share/doc/error-coupling-simulator/`.
 - **Test codebook** — `tests/CODEBOOK.md`: the L0 structural / L1 property (Hypothesis) /
   L2 mutation (mutmut) coverage harness (`tests/harness/`). Read before touching a batch.
 
 ## Key documents
 
 - **Architecture:** `docs/ARCHITECTURE.md`; per-module `src/error_coupling_simulator/**/README.md`;
-  `docs/CODE_MAP.md` (generated inventory).
-- **Decisions (live):** `docs/adr/0008` (scalable-carrier charter) · `0009` (Bayes-TN
-  posterior spine) · `0010` (non-Pauli leakage MCWF-MPS carrier) · `0011` (record-faithful
-  truncation on the 2D PEPS carrier).
+  `docs/service_status.json` (service contract); `docs/CODE_MAP.md` (generated complete inventory and
+  flow).
+- **Simulator decisions:** `docs/adr/0008` (scalable-carrier charter) · `0010` (historical
+  non-Pauli carrier design, amended by the current package boundary) · `0011`
+  (record-faithful truncation on the 2D PEPS carrier). ADR `0009` governs downstream
+  inference/decoder research and is not a simulator-product decision.
 - **Live working notes:** `docs/nonpauli_teacher/` (the PEPS/FET carrier line + handoffs).
 - **Protocols:** `docs/FAITHFULNESS_PROTOCOL.md`, `docs/METRICS.md`.
 - **Migration provenance:** `docs/error_coupling_simulator_MIGRATION.md` (how the package

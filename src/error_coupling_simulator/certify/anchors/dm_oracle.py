@@ -11,8 +11,9 @@ genuine check, not a check vs the engine's own oracle (anti-circular).
 
 The capability descriptor encodes the DM feasibility wall as DATA (do-not-OOM — the core checks it
 BEFORE ``answer``, so the infeasible density matrix is never allocated):
-  * ``DETECTOR_MARG`` at R=1 — per-detector ``P(s_j=1)`` via a SINGLE-stabilizer projection of the
-    one-round-evolved rho (NO enumeration) + the logical-flip rate. MEMORY ACCOUNTING CORRECTED
+  * ``DETECTOR_MARG`` at R=1 — per-detector ``P(s_j=1)`` under the carrier's ordered,
+    non-selective sequential Lüders instrument (NO full-joint enumeration), followed by the
+    same biased-``b`` terminal logical readout. MEMORY ACCOUNTING CORRECTED
     2026-07-06 (residual-② measured the real multiplier): the loop's live set is the held
     ``rho1`` + the working clone + the apply-path output (+ tile temporaries) — ``~3+eps`` DM
     copies AFTER the memory-lean ``apply_channel`` fix (it was ~5 copies before; measured
@@ -212,17 +213,19 @@ class DMOracleAnchor:
         prov = {"anchor": self.name, "independence": self.independence, "m": m}
 
         if statistic is Statistic.DETECTOR_MARG:
-            # the reviewer-validated full-9q R=1 path: single-stab projection of the evolved rho.
+            # Exact carrier semantics at R=1: each reported bit is measured after the
+            # previous stabilizers' non-selective Lüders channels.  Isolated projections
+            # from one shared rho are only probe quantities and disagree in the leaked
+            # sector when adjacent instruments do not commute.
             round_pre(eng, 0)
-            rho1 = eng.rho.clone()
             marg = np.zeros(n_stab + 1, dtype=np.float64)
-            for j, stab in enumerate(stabs):
-                eng.rho = rho1.clone()
-                marg[j] = eng.project_stabilizer(stab, 1, regime.b, regime.arm)
-            eng.rho = rho1.clone()
-            _, p1 = eng.logical_distribution()
-            marg[n_stab] = float(p1)  # the logical-flip rate (last entry; matches emitted DETECTOR_MARG)
-            eng.rho = rho1
+            marg[:n_stab] = eng.sequential_stabilizer_marginals(
+                stabs, regime.b, regime.arm
+            )
+            _, p1 = eng.logical_distribution(regime.b)
+            marg[n_stab] = float(p1)
+            prov["measurement_semantics"] = "sequential_nonselective_lueders"
+            prov["terminal_readout"] = "biased_b_product_povm"
             return AnchorValue(statistic, regime, marg, Exactness.EXACT, 0.0, "a", prov)
 
         if statistic in _MOMENTS:

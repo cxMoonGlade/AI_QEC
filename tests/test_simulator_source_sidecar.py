@@ -5,16 +5,16 @@ import json
 import numpy as np
 import pytest
 
-from qec_twin.mechanisms import RTNSource
-from qec_twin.simulator import (
+from error_coupling_simulator.source import RTNSource
+from error_coupling_simulator.frontend import (
     CircuitBuilder,
     Simulator,
     SourceTimelineBinding,
     XZZXCodeSpec,
     compile_code_spec,
 )
-from qec_twin.simulator.artifacts import file_sha256
-from qec_twin.simulator.source_sidecar import load_source_timeline_from_manifest
+from error_coupling_simulator.frontend.artifacts import file_sha256
+from error_coupling_simulator.frontend.source_sidecar import load_source_timeline_from_manifest
 
 
 def test_simulator_run_writes_replayable_axis2_source_sidecar(tmp_path):

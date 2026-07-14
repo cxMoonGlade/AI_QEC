@@ -550,7 +550,7 @@ def test_emitted_statistic_notimplemented_guard():
     reg2 = Regime(R=1, register="subregister", n_active=2, n_stab=2)
     with pytest.raises(NotImplementedError, match="arrives with its anchor adapter"):
         emitted_statistic({"det": np.zeros((3, 2), np.uint8), "obs": np.zeros(3, np.uint8)},
-                          Statistic.FLOOR, reg2)
+                          Statistic.SCALAR_FUNC, reg2)
 
 
 def test_emitted_full_joint_multicol_weights_killer():
@@ -1246,14 +1246,14 @@ def test_certify_teacher_merges_two_anchors_and_passes():
 
 def test_certify_teacher_auto_builds_anchors_and_raises_when_infeasible():
     # anchors=None -> the auto-built DM + stim anchors (CPU: DM budget 0 -> infeasible; neither
-    # answers FLOOR) -> every cell infeasible -> ValueError. Exercises the auto-build + default-
+    # answers SCALAR_FUNC) -> every cell infeasible -> ValueError. Exercises the auto-build + default-
     # controls + the "not feasible: continue" + "not all_rows: raise" arcs, with NO GPU.
     teacher = FakeTeacher({0: 1.0})
     teacher.dm_round_callbacks = lambda device: (None, None)
     with pytest.raises(ValueError):
-        certify_teacher(teacher, level="smoke", cells=[(Statistic.FLOOR, _REG)])   # dm_safety None -> {}
+        certify_teacher(teacher, level="smoke", cells=[(Statistic.SCALAR_FUNC, _REG)])  # dm_safety None -> {}
     with pytest.raises(ValueError):
-        certify_teacher(teacher, level="smoke", cells=[(Statistic.FLOOR, _REG)],
+        certify_teacher(teacher, level="smoke", cells=[(Statistic.SCALAR_FUNC, _REG)],
                         dm_safety=0.78)                                             # -> the else arc
 
 
@@ -1316,7 +1316,7 @@ def test_certreport_row_found_none_and_statistic_killer():
     r_full = LedgerRow("dm", Statistic.FULL_JOINT, 2e-3, (0.0, 3e-3), "a", Verdict.PASS)
     rep = CertReport(Verdict.PASS, (r_syn, r_full), (), {})
     assert rep.row("dm", Statistic.FULL_JOINT) is r_full     # found (skips r_syn on the statistic)
-    assert rep.row("dm", Statistic.FLOOR) is None            # no match -> None
+    assert rep.row("dm", Statistic.SCALAR_FUNC) is None      # no match -> None
     assert rep.row("other", Statistic.SYNDROME_DIST) is None  # anchor mismatch -> None
 
     # KILLER (drop the "and r.statistic==" test -> an anchor-only match returns r_syn for a FULL query).

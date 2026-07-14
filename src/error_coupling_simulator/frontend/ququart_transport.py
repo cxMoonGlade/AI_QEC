@@ -8,7 +8,7 @@ own :class:`QuquartDM` density-matrix carrier. It is intentionally separate from
 the qutrit single-site WG leakage adapter.
 """
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 import json
 from pathlib import Path
 from typing import Any, Sequence
@@ -19,7 +19,7 @@ import torch
 from ..carrier.exact.qutrit_dm import CDTYPE, QuquartDM
 
 QUQUART_STRING_CONVENTION = "ququart_dm_most_significant_q0_left_to_right"
-QUQUART_TRANSPORT_KRAUS_SCHEMA = "error_coupling_simulator.external_ququart_kraus.v1"
+QUQUART_TRANSPORT_KRAUS_SCHEMA = "error_coupling_simulator.ququart_kraus.v2"
 QUQUART_TRANSPORT_KRAUS_KEY = "kraus_ququart"
 
 
@@ -81,16 +81,25 @@ def simulate_ququart_transport_smoke(
     pair: tuple[int, int] = (0, 1),
     shots: int = 1024,
     seed: int = 0,
-    kraus_path: str | Path,
+    cz_params: Any | None = None,
+    channel: Any | None = None,
+    kraus_path: str | Path | None = None,
     device: str | torch.device = "cuda",
     out_dir: str | Path | None = None,
     write_density_matrix: bool | None = None,
 ) -> QuquartTransportResult:
     """Run the ``|3>``-faithful CZ leakage-transport channel on `QuquartDM`.
 
-    ``kraus_path`` is a required, caller-owned external input. It must name an
-    NPZ containing ``kraus_ququart`` with exact shape ``(rank, 16, 16)``; this
-    package does not bundle or discover a repository-local transport artifact.
+    Exactly one channel source must be explicit:
+
+    - ``cz_params``: a :class:`~error_coupling_simulator.mechanisms.cz_leakage.CZParams`
+      instance, derived in-process by the package-owned Duffing/QuTiP builder;
+    - ``channel``: an in-memory ``LeakageChannel`` or a Kraus stack with shape
+      ``(rank, 16, 16)``;
+    - ``kraus_path``: an NPZ serialisation/cache containing ``kraus_ququart``.
+
+    An NPZ produced by the builder is a derived cache, not external scientific
+    data.  No repository path or hidden parameter default is discovered.
     The default initial state ``|12>`` exercises the transport-relevant leaked
     manifold. This exact ququart density-matrix path is for small sub-registers
     only; it is not a full 9-data-register production carrier.
@@ -107,8 +116,12 @@ def simulate_ququart_transport_smoke(
         raise ValueError(f"pair must contain two distinct sites in [0, {n}), got {pair!r}")
 
     dev = torch.device(device)
-    source_path = _require_external_ququart_kraus_path(kraus_path)
-    kraus, meta = load_ququart_transport_kraus(source_path, device=dev)
+    kraus, meta, channel_source = _resolve_ququart_transport_channel(
+        cz_params=cz_params,
+        channel=channel,
+        kraus_path=kraus_path,
+        device=dev,
+    )
     eng = QuquartDM(n, device=dev)
     rho0 = torch.zeros((eng.dim, eng.dim), dtype=CDTYPE, device=dev)
     rho0[index_from_ququart_string(levels), index_from_ququart_string(levels)] = 1.0
@@ -149,10 +162,8 @@ def simulate_ququart_transport_smoke(
         "parameters": meta,
         "noise": {
             "type": "ququart_transport",
-            "source": str(source_path),
-            "source_kind": "external_user_supplied_npz",
-            "source_contract": _ququart_transport_kraus_contract(),
             "kraus_key": QUQUART_TRANSPORT_KRAUS_KEY,
+            **channel_source,
         },
         "decoder": None,
         "artifacts": {},
@@ -213,13 +224,14 @@ def load_ququart_transport_kraus(
     device: str | torch.device = "cuda",
     dtype: torch.dtype = CDTYPE,
 ) -> tuple[torch.Tensor, dict[str, Any]]:
-    """Load a caller-supplied two-ququart Kraus NPZ under the public contract.
+    """Load a serialised two-ququart Kraus channel under the public contract.
 
-    No default path or repository lookup is permitted: callers must explicitly
-    provide the external artifact that defines the noise process.
+    The file may be a cache created by the package-owned constructor or an
+    independently supplied channel.  No default path or repository lookup is
+    permitted.
     """
 
-    path = _require_external_ququart_kraus_path(kraus_path)
+    path = _require_ququart_kraus_path(kraus_path)
     with np.load(path, allow_pickle=False) as data:
         if QUQUART_TRANSPORT_KRAUS_KEY not in data.files:
             raise ValueError(
@@ -247,22 +259,126 @@ def load_ququart_transport_kraus(
             )
         }
 
+    kraus, base_meta = _validated_ququart_transport_kraus(
+        kraus_np, device=device, dtype=dtype
+    )
+    return kraus, {**base_meta, **metadata}
+
+
+def _resolve_ququart_transport_channel(
+    *,
+    cz_params: Any | None,
+    channel: Any | None,
+    kraus_path: str | Path | None,
+    device: str | torch.device,
+) -> tuple[torch.Tensor, dict[str, Any], dict[str, Any]]:
+    selected = sum(value is not None for value in (cz_params, channel, kraus_path))
+    if selected != 1:
+        raise TypeError(
+            "choose exactly one explicit ququart channel source: cz_params, "
+            "channel, or kraus_path"
+        )
+
+    if kraus_path is not None:
+        source_path = _require_ququart_kraus_path(kraus_path)
+        kraus, meta = load_ququart_transport_kraus(source_path, device=device)
+        return kraus, meta, {
+            "source": str(source_path),
+            "source_kind": "serialized_channel_cache_or_user_injection",
+            "source_contract": _ququart_transport_kraus_contract(),
+        }
+
+    if cz_params is not None:
+        from ..mechanisms.cz_leakage import CZParams, build_cz_channel
+
+        if not isinstance(cz_params, CZParams):
+            raise TypeError("cz_params must be a CZParams instance")
+        derived = build_cz_channel(cz_params, track_dim=4)
+        kraus, validated = _validated_ququart_transport_kraus(
+            derived.kraus, device=device
+        )
+        meta = {
+            **validated,
+            "builder": "error_coupling_simulator.mechanisms.cz_leakage.build_cz_channel",
+            "track_dim": int(derived.track_dim),
+            "arm": str(derived.arm),
+            "declared_cz_params": asdict(cz_params),
+            "builder_cptp_residual": float(derived.cptp_residual),
+            "leaked_population": float(derived.leaked_population),
+            "leaked_from_comp": float(derived.leaked_from_comp),
+            "leaked_from_leaked_max": float(derived.leaked_from_leaked_max),
+            "pop_ge4_max": float(derived.pop_ge4_max),
+            "builder_note": str(derived.note),
+        }
+        return kraus, meta, {
+            "source": meta["builder"],
+            "source_kind": "derived_in_process_from_declared_cz_params",
+        }
+
+    if all(hasattr(channel, name) for name in ("track_dim", "arm", "kraus", "params")):
+        if int(channel.track_dim) != 4 or str(channel.arm) != "ququart":
+            raise ValueError(
+                "LeakageChannel must be the track_dim=4 ququart arm"
+            )
+        raw_kraus = channel.kraus
+        declared_params = asdict(channel.params)
+        builder_meta: dict[str, Any] = {
+            "track_dim": int(channel.track_dim),
+            "arm": str(channel.arm),
+            "declared_cz_params": declared_params,
+            "builder_cptp_residual": float(channel.cptp_residual),
+            "leaked_population": float(channel.leaked_population),
+            "builder_note": str(channel.note),
+        }
+        source_kind = "in_memory_derived_leakage_channel"
+    else:
+        raw_kraus = channel
+        builder_meta = {}
+        source_kind = "in_memory_kraus_injection"
+    kraus, validated = _validated_ququart_transport_kraus(
+        raw_kraus, device=device
+    )
+    return kraus, {**validated, **builder_meta}, {
+        "source": "in_memory",
+        "source_kind": source_kind,
+        "source_contract": {
+            "format": "array",
+            "required_shape": ["rank", 16, 16],
+        },
+    }
+
+
+def _validated_ququart_transport_kraus(
+    kraus: Any,
+    *,
+    device: str | torch.device,
+    dtype: torch.dtype = CDTYPE,
+) -> tuple[torch.Tensor, dict[str, Any]]:
+    if isinstance(kraus, torch.Tensor):
+        kraus_np = kraus.detach().cpu().numpy()
+    else:
+        kraus_np = np.asarray(kraus)
+    if kraus_np.ndim != 3 or kraus_np.shape[0] < 1 or kraus_np.shape[1:] != (16, 16):
+        raise ValueError(
+            "ququart Kraus channel must have exact shape (rank, 16, 16) "
+            f"with rank >= 1, got {kraus_np.shape}"
+        )
+    if not np.issubdtype(kraus_np.dtype, np.number) or not np.all(np.isfinite(kraus_np)):
+        raise ValueError("ququart Kraus channel must be a finite numeric array")
     skk = sum(k.conj().T @ k for k in kraus_np)
     cptp_residual = float(np.max(np.abs(skk - np.eye(16))))
     if not np.isfinite(cptp_residual) or cptp_residual >= 1e-9:
         raise ValueError(f"kraus_ququart CPTP residual too large: {cptp_residual:.3e}")
-    meta = {
+    return torch.as_tensor(kraus_np, dtype=dtype, device=device), {
         "kraus_rank": int(kraus_np.shape[0]),
         "cptp_residual": cptp_residual,
-        **metadata,
     }
-    return torch.as_tensor(kraus_np, dtype=dtype, device=device), meta
 
 
-def _require_external_ququart_kraus_path(kraus_path: str | Path) -> Path:
+def _require_ququart_kraus_path(kraus_path: str | Path) -> Path:
     if kraus_path is None:
         raise TypeError(
-            "kraus_path is required and must identify an explicit external ququart Kraus NPZ"
+            "kraus_path must identify an explicit ququart Kraus NPZ"
         )
     try:
         path = Path(kraus_path).expanduser().resolve()
@@ -270,7 +386,7 @@ def _require_external_ququart_kraus_path(kraus_path: str | Path) -> Path:
         raise TypeError("kraus_path must be a string or pathlib.Path") from exc
     if not path.is_file():
         raise FileNotFoundError(
-            "explicit external ququart transport Kraus NPZ not found: "
+            "explicit ququart transport Kraus NPZ not found: "
             f"{path}; contract requires array {QUQUART_TRANSPORT_KRAUS_KEY!r} "
             "with exact shape (rank, 16, 16)"
         )

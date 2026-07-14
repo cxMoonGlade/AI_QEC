@@ -5,9 +5,9 @@ import inspect
 
 import pytest
 
-import qec_twin.simulator.mcwf_grover as mcwf_grover
-from qec_twin.simulator.cudaq_grover import grover_theory_prediction, optimal_grover_iterations
-from qec_twin.simulator.mcwf_grover import compile_mcwf_grover_program, simulate_mcwf_qutrit_grover_leakage
+import error_coupling_simulator.frontend.mcwf_grover as mcwf_grover
+from error_coupling_simulator.frontend.cudaq_grover import grover_theory_prediction, optimal_grover_iterations
+from error_coupling_simulator.frontend.mcwf_grover import compile_mcwf_grover_program, simulate_mcwf_qutrit_grover_leakage
 
 torch = pytest.importorskip("torch", reason="MCWF Grover backend requires torch")
 requires_cuda = pytest.mark.skipif(

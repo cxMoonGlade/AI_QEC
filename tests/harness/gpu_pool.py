@@ -1,13 +1,21 @@
-"""GPU pool (semaphore) in Python -- the multi-GPU interface. N slots, one per card, with
-CUDA_VISIBLE_DEVICES pinning. Replaces gpu_pool.sh. USER KNOB: ECS_GPUS (pool size; default
+"""GPU pool (semaphore) in Python -- the multi-GPU interface.
+
+N slots, one per card. Replaces gpu_pool.sh. USER KNOB: ECS_GPUS (pool size; default
 auto-detect via nvidia-smi). 1 GPU -> jobs serialize; N GPUs -> N GPU jobs in parallel, each on
 its own card; all busy -> block until one frees. The flock is held via a kept-open fd for the
-acquiring process's lifetime (release() or the GpuSlot context manager drops it)."""
+acquiring process's lifetime (release() or the GpuSlot context manager drops it).
+
+Acquiring a slot never mutates the harness process's environment. Call ``GpuSlot.child_env()``
+to make a private child-process environment with ``CUDA_VISIBLE_DEVICES`` and ``ECS_GPU_SLOT``
+pinned to the leased card. This keeps concurrent launcher threads from racing through shared
+``os.environ`` state.
+"""
 from __future__ import annotations
 
 import fcntl
 import os
 import subprocess
+from collections.abc import Mapping
 
 _LOCK_TMPL = "/tmp/ecs_gpu.{}.lock"
 
@@ -48,11 +56,26 @@ class GpuSlot:
     def __exit__(self, *_a) -> None:
         self.release()
 
+    def child_env(self, base_env: Mapping[str, str] | None = None) -> dict[str, str]:
+        """Return a private environment pinned to this slot.
+
+        ``base_env`` is copied, never mutated. When it is omitted, the current parent
+        environment is copied. The caller must pass the returned mapping explicitly to its
+        subprocess launcher.
+        """
+        env = dict(os.environ if base_env is None else base_env)
+        env["CUDA_VISIBLE_DEVICES"] = str(self.slot)
+        env["ECS_GPU_SLOT"] = str(self.slot)
+        return env
+
 
 def acquire_gpu_slot() -> GpuSlot:
-    """Acquire one of N slots and pin CUDA_VISIBLE_DEVICES to it. Non-blocking first pass over the
-    cards; if all N are busy, BLOCK on slot 0 until it frees. Returns a GpuSlot -- keep it alive
-    (or use `with acquire_gpu_slot():`) to hold the card for the duration of the GPU work."""
+    """Acquire one of N slots without mutating the parent environment.
+
+    The first pass over the cards is non-blocking; if all N are busy, block on slot 0 until it
+    frees. Keep the returned ``GpuSlot`` alive (or use it as a context manager) for the duration
+    of the GPU work, and pass ``slot.child_env(...)`` to the child process.
+    """
     n = detect_gpus()
     for i in range(n):
         fd = os.open(_LOCK_TMPL.format(i), os.O_CREAT | os.O_WRONLY, 0o644)
@@ -61,12 +84,8 @@ def acquire_gpu_slot() -> GpuSlot:
         except OSError:
             os.close(fd)
             continue
-        os.environ["CUDA_VISIBLE_DEVICES"] = str(i)
-        os.environ["ECS_GPU_SLOT"] = str(i)
         return GpuSlot(i, fd)
     # all busy -> block until slot 0 frees
     fd = os.open(_LOCK_TMPL.format(0), os.O_CREAT | os.O_WRONLY, 0o644)
     fcntl.flock(fd, fcntl.LOCK_EX)
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-    os.environ["ECS_GPU_SLOT"] = "0"
     return GpuSlot(0, fd)

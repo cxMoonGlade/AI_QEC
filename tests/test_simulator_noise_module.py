@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import json
 
-from qec_twin.simulator import CircuitBuilder, Noise, Simulator, depolarizing_noise, targeted_noise
-from qec_twin.simulator.noise import (
+from error_coupling_simulator.frontend import CircuitBuilder, Noise, Simulator, depolarizing_noise, targeted_noise
+from error_coupling_simulator.frontend.noise import (
     Noise as NoiseModuleFacade,
     StimPauliNoiseSpec,
     apply_stim_pauli_noise,
 )
-from qec_twin.simulator.stim_io import circuit_to_stim
+from error_coupling_simulator.frontend.stim_io import circuit_to_stim
 
 
 def _deterministic_two_qubit_detector_circuit():

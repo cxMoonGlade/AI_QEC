@@ -8,8 +8,7 @@ de-facto `p7e_carrier_cert_common` + the stim slice in `twin_xzzx_teacher` + the
 in `mechanisms`/`hardware`).
 
 **Design (locked).** A common-caller spine over an
-`Anchor` capability-descriptor **port** — the same Protocol shape as
-`audit.floor_backend.PathJointEvaluator`. The core is BLIND to whether a DM oracle, a stim Clifford
+`Anchor` capability-descriptor **port**. The core is BLIND to whether a DM oracle, a stim Clifford
 slice, or a closed-form identity answered; the port carries a *capability descriptor* so OOM-routing
 is **data**: an anchor that would OOM reports `feasible=False`, the core routes to the carrier-MCWF for
 scale and never allocates the infeasible density matrix. Closed-form identities ride as an analytic
@@ -18,9 +17,12 @@ scale and never allocates the infeasible density matrix. Closed-form identities 
 - `types.py` — the interface: `Regime`, the `Anchor` / `Control` /
   `ControlledNoiseProcess` ports, and the
   epistemic ledger (`CertReport` / `LedgerRow` / `Verdict`). Pure value types; no GPU.
-- *(later steps)* `core.py` — the route → controls-first → score → ledger engine; `anchors/` — the DM
-  / stim / closed-form adapters (each **wraps** an existing wheel, never reimplements physics); the
-  `certify_noise_process` facade. `certify_teacher` remains a compatibility spelling.
+- `core.py` — the implemented route → controls-first → score → ledger engine.
+- `anchors/` — the implemented DM / Stim / closed-form adapters plus corrupt-stabilizer and
+  record-shuffle negative controls (each **wraps** an existing package/wheel route, never
+  reimplements physics).
+- `facade.py` — the implemented neutral `certify_noise_process` entry point;
+  `certify_teacher` remains a compatibility spelling.
 
 **Invariants.** Negative controls are first-class + non-optional (an inert control forces FAIL);
 feasibility is data (cannot OOM); every row carries its epistemic class (a)/(b)/(c) (METRICS.md);
@@ -31,6 +33,10 @@ the self-describing packed batch to a `RecordBatch`. A c64 optimization artifact
 the frozen run in c128 creates a separate candidate artifact and does not promote the c64 artifact.
 
 **Boundary.** Certification may read evaluator-only process truth to score the declared process, but
-that truth never enters emitted records. Anchors
-WRAP the validated wheels (`forward/exact/qutrit_dm`, the stim slice, `mechanisms/seam_teachers` +
-`hardware/dem_compose` closed forms, `audit/bayes_floor`) — no physics is reimplemented here.
+that truth never enters emitted records. Anchors wrap package-owned exact-DM, Stim, and closed-form
+references; no physics is reimplemented here. The Bayes decoding floor and decoder-headroom
+analysis remain in `legacy/qec_twin/audit/`: this package neither implements nor exports a
+Bayes-floor evaluator, and that analysis is not a simulator certification rung.
+The facade requires a caller process that implements its declared capability protocols. It is not
+an automatic `RecordBatch -> certificate` transform: the current `CoupledCycleNoiseProcess` has no
+DM replay callback and its Clifford-slice method is still an explicit open bridge.

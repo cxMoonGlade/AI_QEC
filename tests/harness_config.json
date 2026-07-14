@@ -27,5 +27,17 @@
     "pool_size": null,
     "_env": {"pool_size": "ECS_GPUS"},
     "_note": "pool_size=null -> auto-detect (nvidia-smi -L, fallback 1). N GPUs -> up to N GPU jobs run in parallel, each pinned to its own CUDA_VISIBLE_DEVICES; 1 GPU -> serialize. Only registries with requires_gpu=true acquire a slot (CPU-pure batches stay fully parallel)."
+  },
+
+  "service_acceptance": {
+    "timeout_per_file_s": 900,
+    "cpu_light_jobs": 4,
+    "host_memory_reserve_gib": 4,
+    "cpu_light_memory_gib_per_job": 2,
+    "_env": {
+      "timeout_per_file_s": "ECS_ACCEPTANCE_TIMEOUT",
+      "cpu_light_jobs": "ECS_ACCEPTANCE_CPU_JOBS"
+    },
+    "_note": "Every catalog acceptance file runs in a fresh exec process. cpu_light is bounded by cpu_light_jobs, CPU count, and a MemAvailable admission cap; memory/BLAS-heavy files are cpu_exclusive; native CUDA files are gpu_serial under one cross-process lease. Fresh processes reset unrelated Torch, QuTiP/cuQuantum/CuPy, fused-extension, and CUDA-Q allocator/lifetime state without changing scientific tolerances."
   }
 }

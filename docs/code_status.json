@@ -30,7 +30,7 @@
   },
   "tests/harness": {
     "status": "TOOLING",
-    "note": "Python test/coverage HARNESS (lives WITH the tests; replaces the .sh runners): proc (process-group launcher — no orphaned workers), gpu_pool (multi-GPU semaphore, ECS_GPUS), gate + mutation registry-driven runners, coverage_audit (AST-derived per-unit coverage audit)"
+    "note": "Python test/coverage HARNESS (lives WITH the tests; replaces the .sh runners): fresh-process service_acceptance catalog runner with bounded CPU, CPU-exclusive, and GPU-serial lanes plus unique logs; proc (process-group supervisor — no orphaned workers); gpu_pool (flock lease + race-free child GPU environment, ECS_GPUS); gate + mutation registry-driven runners; coverage_audit (AST-derived per-unit coverage audit)"
   },
   "error_coupling_simulator": {
     "status": "ACTIVE",
@@ -50,11 +50,11 @@
   },
   "error_coupling_simulator/frontend": {
     "status": "ACTIVE",
-    "note": "User-facing package-local frontend: CircuitIR/CodeSpec/XZZX compiler, Stim import, sealed SubstepSchedule, .b8 record sampling, Axis-1 carrier execution/evidence, .b8 I/O, and the optional external-PyMatching adapter. Google r01/r10 files are explicit external circuit/schedule inputs; ququart transport requires an explicit external Kraus path. CUDA-Q Grover is an optional plugin isolated in aiqec, not canonical ecs. Old qec_twin.simulator is an outward repository shim and is not shipped."
+    "note": "User-facing package-local frontend: CircuitIR/CodeSpec/XZZX compiler, Stim import, sealed SubstepSchedule, .b8 record sampling, Axis-1 carrier execution/evidence, .b8 I/O, and the optional external-PyMatching adapter. Google r01/r10 files are explicit external circuit/schedule inputs. Ququart transport accepts package-derived channels from explicit CZ parameters, in-memory channels, or an optional serialized derived-channel cache; Kraus is not external data. CUDA-Q Grover is an optional plugin isolated in aiqec, not canonical ecs. Old qec_twin.simulator is an outward repository shim and is not shipped."
   },
   "error_coupling_simulator/carrier": {
     "status": "ACTIVE",
-    "note": "Forward propagation owner: joint_lindbladian, channels, exact/PEPS carriers, package-local RecordBatch/PackedShotBatch, and the active fused within-cycle host live here. Only fused within-cycle optimization uses c64/screening-only; final/certification and PEPS/MPS are c128. Old qec_twin.forward paths are repo-local compatibility shims and are excluded from distribution archives."
+    "note": "Forward propagation owner: joint_lindbladian, channels, exact/PEPS carriers, package-local RecordBatch/PackedShotBatch, and the active fused within-cycle host live here. The shipped 1D MPS implementations are restricted Axis-1 execution services under frontend, not the retired legacy thin-strip driver and not a production full-dxd carrier. Only fused within-cycle optimization uses c64/screening-only; final/certification and PEPS/MPS are c128. Old qec_twin.forward paths are repo-local compatibility shims and are excluded from distribution archives."
   },
   "error_coupling_simulator/carrier/exact": {
     "status": "ACTIVE",
@@ -82,6 +82,6 @@
   },
   "error_coupling_simulator/noise_processes": {
     "status": "ACTIVE",
-    "note": "Evaluator-only specified record processes. CoupledCycleNoiseProcess maps a memoryful 1/f source to per-round Axis-1 parameters and emits sealed dense {det,obs} records with Markovian-baseline and source-off controls. Record-to-parameter fitting is outside this package boundary."
+    "note": "Evaluator-only specified record processes. CoupledCycleNoiseProcess maps a memoryful 1/f source to per-round Axis-1 parameters and emits sealed dense {det,obs} records with matched_marginal_permutation_control (exchangeable at finite R, not a genuinely Markovian generative null; markovian_baseline is only its compatibility spelling) and a source-off control. Record-to-parameter fitting is outside this package boundary."
   }
 }

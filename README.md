@@ -8,8 +8,9 @@ equivalent joint law). A `.dem` is an optional decoder-facing reduction, not a r
 package is directly importable, and its wheel/source archive contains only
 `error_coupling_simulator` with no legacy entry point. The active package has no executable
 import back-edge to `qec_twin`; repository-local outward compatibility shims are excluded from
-the distribution. External circuits, optional decoder/Kraus inputs, and the deliberately isolated
-CUDA-Q adapter remain explicit inputs/plugins rather than hidden repository dependencies.
+the distribution. External circuits, optional decoder inputs, optional derived-channel caches,
+and the deliberately isolated CUDA-Q adapter remain explicit inputs/plugins rather than hidden
+repository dependencies.
 
 The deliverable is the simulator; its product is the record (and the LER read off it under a
 frozen decoder). Metrics are **instruments** on the record, never the object.
@@ -21,9 +22,11 @@ carrier ladder, and disciplines. Read it first.
 
 - **Two noise axes.** *Axis-1* — within-substep joint-Lindbladian coupling (ZZ crosstalk,
   T1/T2, thermal, fSim residual, readout dephasing, leakage Hamiltonians). *Axis-2* —
-  **notion-2** classical multi-time record memory (a shared classical source `z_t`/`ξ(t)`,
-  1/f bath or RTN, modulating per-round rates; the current evidence is for one frozen
-  fixed-horizon record policy, not a generic causal process family).
+  core **notion-2** classical stochastic multi-time record memory: a replayable finite-RTN
+  timeline (including the finite-band 1/f approximation), `Theta(z_t)` mechanism-parameter
+  fan-out, and matched-marginal controls. It is not a microscopic/quantum bath or a
+  CP-divisibility claim; current evidence is for one frozen fixed-horizon record policy, not a
+  generic causal process family.
 - **Non-Pauli mechanisms** (span both axes): **leakage, drift, crosstalk, burst** — coherence
   / structure a fixed nonnegative Pauli-rate vector cannot carry; **not in general
   exactly/losslessly representable by a fixed nonnegative Pauli DEM**. Special reductions can
@@ -52,11 +55,14 @@ exact-DM referee).
 
 ## Substrate
 
-- **Forward carrier ladder** (`error_coupling_simulator.carrier`): exact density matrix
+- **Forward carrier ladder**: exact density matrix
   (`carrier/exact`; qubit memory ceiling is around 15 sites, while the current qutrit d3 oracle is
-  9 sites at about 5.77 GiB) → MPS MCWF thin-strip (`quimb`; bounded χ is conditional on fixed
-  width/depth/noise/accuracy) → **2D PEPS full `d×d`** (`carrier/peps`). The Axis-1 joint-Lindbladian
-  assembler + CPTP channel object + fused CUDA kernels also live under `carrier/`.
+  9 sites at about 5.77 GiB) → shipped restricted Axis-1 1D MCWF/MPS and QT/MPS verification
+  executors (`frontend/axis1_*_mps_execution.py`) → **2D PEPS full `d×d`** (`carrier/peps`).
+  The 1D paths are finite-step and fail closed outside their declared support; they are not a
+  production-scalable or universal full-record backend. The old XZZX thin-strip driver remains
+  legacy-only and is not shipped. The Axis-1 joint-Lindbladian assembler + CPTP channel object +
+  fused CUDA kernels live under `carrier/`.
 - **Frontend** (`error_coupling_simulator.frontend`): `CodeSpec → CircuitIR`, imported Stim
   circuits, and hand-built circuits all feed one `Simulator.run(...)` surface emitting
   `.stim` / actual `.b8` / `.dem` / manifest artifacts. Record emission is the decoder-free
@@ -64,7 +70,8 @@ exact-DM referee).
   `representability` class and fails closed.
 - **Certification** (`error_coupling_simulator.certify`): scores a noise process's records
   against INDEPENDENT anchors (anti-circular) → an epistemic ledger with non-optional
-  negative controls.
+  negative controls. Bayes-floor/decoder-headroom analysis remains under `legacy/` and is not a
+  simulator service or certification rung.
 
 ## Install
 
@@ -97,8 +104,12 @@ Do not set `PYTHONPATH="$PWD/src"`; use the editable install (`pyproject` `pytho
 already puts `error_coupling_simulator` on the path).
 
 The Google r01/r10 files used by the registered d3 facade are caller-provided circuit/schedule
-inputs, not bundled noise data. Likewise, the optional ququart transport adapter requires an
-explicit caller-supplied Kraus NPZ; it never discovers a repository `outputs/` artifact.
+inputs, not bundled noise data. The optional ququart transport adapter accepts exactly one
+explicit `CZParams`, in-memory channel (including a Kraus stack), or serialized derived-channel
+cache. The
+package owns the Hamiltonian-to-channel derivation; Kraus operators are a derived channel
+representation, and a serialized Kraus artifact is an optional cache rather than external
+scientific data. It never discovers a repository `outputs/` artifact.
 
 ## Use
 
@@ -112,14 +123,20 @@ python tests/harness/mutation.py tests/_support/<batch>_targets.json # L2 mutati
 The aggregate `pytest tests/` result is not a scientific simulator-certification claim: the
 repository suite also contains retained decoder/data and migration seams. Simulator acceptance is
 subsystem-owned and registry-driven; see `tests/CODEBOOK.md`. The current Stim-representable
-product surface is `error_coupling_simulator.frontend.Simulator`. Axis-1 and PEPS use bounded
-runners that expose the same `RecordBatch`; a universal backend execution facade remains open.
+product surface is `error_coupling_simulator.frontend.Simulator`. PEPS and the bounded Axis-1
+surfaces have their own declared record/evidence runners; the restricted 1D MPS paths emit
+verification manifests and do not claim a universal `RecordBatch` executor. A universal backend
+execution facade remains open.
 
 ## Docs
 
 - [`docs/SIMULATOR.md`](docs/SIMULATOR.md) — **binding spec (read first)**.
 - [`CLAUDE.md`](CLAUDE.md) — main line, commands, architecture, code conventions.
 - [`CONTEXT.md`](CONTEXT.md) — glossary and claim boundaries.
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — module map; `docs/CODE_MAP.md` — generated inventory.
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — architecture summary;
+  [`docs/service_status.json`](docs/service_status.json) — machine-readable service/support/exclusion
+  contract; [`docs/CODE_MAP.md`](docs/CODE_MAP.md) — generated complete inventory and flow. The latter
+  two also ship with the wheel under `share/doc/error-coupling-simulator/`.
 - [`docs/METRICS.md`](docs/METRICS.md) + [`docs/FAITHFULNESS_PROTOCOL.md`](docs/FAITHFULNESS_PROTOCOL.md) — metric ladder + anti-toy protocol.
-- `docs/adr/` — live decisions (0008 → 0011).
+- `docs/adr/` — simulator decisions 0008, amended 0010, and 0011; ADR 0009 is downstream
+  inference/decoder research.

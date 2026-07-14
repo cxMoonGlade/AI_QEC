@@ -2,7 +2,16 @@
 
 ## Status
 
-Accepted (2026-06-18). Implementation pending.
+Accepted (2026-06-18) for the downstream inference/decoder program. Implementation pending.
+
+## Simulator-product boundary amendment (2026-07-14)
+
+ADR 0009 is **not** an `error_coupling_simulator` product decision. Bayesian posterior modeling,
+decoder selection, Bayes decoding floors, and decoder-headroom analysis consume simulator records;
+they do not define or certify the forward simulator. Their retained implementations stay under
+`legacy/` or downstream projects and are excluded from the simulator wheel. The historical design
+discussion below remains the decision record for that downstream program and must not be used to
+add inference or Bayes-floor services to the simulator package.
 
 This ADR fixes the model-architecture contract after the Bayes tensor-network
 literature review in `docs/papers/reading_notes/`: the main scientific object is a

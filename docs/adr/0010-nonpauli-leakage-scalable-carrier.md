@@ -9,6 +9,25 @@ archived in the session record. Theory-first: this decision + the constraint led
 certification ladder are fixed BEFORE any carrier code. Epistemic classes per METRICS.md are tagged
 throughout.
 
+## Simulator-product boundary amendment (2026-07-14)
+
+This ADR is retained as historical design provenance and is **partially superseded**:
+
+- The old XZZX thin-strip driver remains in `legacy/qec_twin/forward/scalable/` and is not
+  distributed. The installed 1D replacements are the restricted Axis-1 MCWF/MPS and QT/MPS
+  execution surfaces under `error_coupling_simulator.frontend`; they are finite-step verification
+  paths, not production-scalable, universal full-record, or full-`d×d` completion.
+- The full-`d×d` carrier decision moved to the single-wire 2D PEPS line in ADR 0011.
+- The LPDO/Bayes-floor half of this ADR belongs to downstream decoder/headroom analysis. Its code
+  remains under `legacy/qec_twin/audit/`; it is not shipped and is not a simulator certification
+  rung.
+- The core Axis-2 classical stochastic record-memory service is unaffected by this amendment:
+  replayable finite-RTN timelines (including the finite-band 1/f approximation), `Theta` fan-out,
+  and matched-marginal controls. This is not a quantum-bath or CP-divisibility claim.
+
+The body below records the 2026-06-21 decision as made; current product routing is governed by this
+amendment, ADR 0011, and `docs/SIMULATOR.md`.
+
 ## Context
 
 - **The pivot.** The exact `3^n` qutrit state-vector / `3^n×3^n` density matrix is **feasibility-only**:

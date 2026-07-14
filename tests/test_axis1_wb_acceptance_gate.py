@@ -32,8 +32,8 @@ if not cuda_ok:
         pytrace=False,
     )
 
-import qec_twin.simulator.axis1_mcwf_mps_execution as execmod  # noqa: E402
-from qec_twin.simulator import (  # noqa: E402
+import error_coupling_simulator.frontend.axis1_mcwf_mps_execution as execmod  # noqa: E402
+from error_coupling_simulator.frontend import (  # noqa: E402
     CircuitBuilder,
     Axis1LocalLindbladContextSpec,
     axis1_mcwf_mps_state_record_execution_manifest,

@@ -337,7 +337,6 @@ def test_corrupt_stab_control_guards():
     # guards <=> statistic in the geometry set.
     for s in _GEOM:
         assert ctrl.guards(s)
-    assert not ctrl.guards(Statistic.FLOOR)
     assert not ctrl.guards(Statistic.SCALAR_FUNC)
 
 
@@ -347,10 +346,10 @@ def test_corrupt_stab_control_guards_killer():
         def guards(self, statistic):
             return True  # SABOTAGE
 
-    def _floor_not_guarded(ctrl):
-        assert not ctrl.guards(Statistic.FLOOR)
+    def _scalar_not_guarded(ctrl):
+        assert not ctrl.guards(Statistic.SCALAR_FUNC)
 
-    assert_discriminates(_floor_not_guarded, real=CorruptStabControl(stab=1),
+    assert_discriminates(_scalar_not_guarded, real=CorruptStabControl(stab=1),
                          wrong=_AlwaysGuardCorrupt(stab=1), label="CorruptStabControl guards")
 
 
@@ -397,20 +396,20 @@ def test_corrupt_stab_control_run_inert_forces_fail_killer():
 # =========================================================================== #
 def test_shuffle_control_guards_always():
     ctrl = ShuffleControl()
-    for s in (Statistic.FULL_JOINT, Statistic.FLOOR, Statistic.SCALAR_FUNC, Statistic.RR_CORR):
+    for s in (Statistic.FULL_JOINT, Statistic.SCALAR_FUNC, Statistic.RR_CORR):
         assert ctrl.guards(s)
 
 
 def test_shuffle_control_guards_killer():
-    # KILLER: ShuffleControl guards ANY statistic; a geometry-only guard would drop e.g. FLOOR.
+    # KILLER: ShuffleControl guards ANY statistic; a geometry-only guard drops SCALAR_FUNC.
     class _GeomOnlyShuffle(ShuffleControl):
         def guards(self, statistic):
             return statistic in _GEOM  # SABOTAGE: not always True
 
-    def _floor_guarded(ctrl):
-        assert ctrl.guards(Statistic.FLOOR)
+    def _scalar_guarded(ctrl):
+        assert ctrl.guards(Statistic.SCALAR_FUNC)
 
-    assert_discriminates(_floor_guarded, real=ShuffleControl(), wrong=_GeomOnlyShuffle(),
+    assert_discriminates(_scalar_guarded, real=ShuffleControl(), wrong=_GeomOnlyShuffle(),
                          label="ShuffleControl guards-always")
 
 
@@ -678,7 +677,7 @@ def test_dm_capability_moments_arcs():
 def test_dm_capability_full_joint_arcs():
     dm = DMOracleAnchor(card_bytes=_CARD32)
     # statistic not answered -> "DM anchor does not answer this".
-    c_no = dm.capability(Statistic.FLOOR, Regime(R=1, n_active=3, n_stab=1))
+    c_no = dm.capability(Statistic.SCALAR_FUNC, Regime(R=1, n_active=3, n_stab=1))
     assert not c_no.feasible and "does not answer" in c_no.reason
     # n_stab None -> refused.
     c_none = dm.capability(Statistic.FULL_JOINT, Regime(R=1, n_active=3, n_stab=None))
@@ -776,8 +775,8 @@ def test_dm_capability_full_tuple_pins():
     budget = _budget(_CARD32, 0.5)
 
     # (1) statistic NOT answered.
-    _cap_eq(dm.capability(S.FLOOR, Regime(R=1, n_active=3, n_stab=1)),
-            statistic=S.FLOOR, exactness=EX, feasible=False,
+    _cap_eq(dm.capability(S.SCALAR_FUNC, Regime(R=1, n_active=3, n_stab=1)),
+            statistic=S.SCALAR_FUNC, exactness=EX, feasible=False,
             reason="DM anchor does not answer this", cls="a", mem=None)
 
     # (2) DETECTOR_MARG, R != 1 -> moments-path reason (no mem bound).

@@ -2,7 +2,7 @@
 
 Covers ``axis1_measurement_record_evidence_manifest(..., params_for_substep=...)``,
 ``write_axis1_measurement_record_samples(...)``, and ``_enumerate_measurement_records``
-(src/qec_twin/simulator/axis1_record_evidence.py) — Path A-corrected per
+(``src/error_coupling_simulator/frontend/axis1_record_evidence.py``) — Path A-corrected per
 docs/twin_validation/coupled_cycle_teacher_design.md §2 (reviewer-adjudicated
 2026-06-30).
 
@@ -126,26 +126,26 @@ except Exception as exc:  # pragma: no cover - environment guard
         pytrace=False,
     )
 
-from qec_twin.mechanisms.axis1_primitives import Axis1PrimitiveParams  # noqa: E402
-from qec_twin.simulator.analog_schedule import (  # noqa: E402
+from error_coupling_simulator.mechanisms.axis1_primitives import Axis1PrimitiveParams  # noqa: E402
+from error_coupling_simulator.frontend.analog_schedule import (  # noqa: E402
     compile_code_spec_to_substep_schedule,
 )
-from qec_twin.simulator.axis1_bridge import (  # noqa: E402
+from error_coupling_simulator.frontend.axis1_bridge import (  # noqa: E402
     G2_GAMMA_1_PER_NS,
     G2_GAMMA_PHI_PER_NS,
     G2_ZETA_RAD_PER_NS,
 )
-from qec_twin.simulator.axis1_channel_evidence import (  # noqa: E402
+from error_coupling_simulator.frontend.axis1_channel_evidence import (  # noqa: E402
     _axis1_primitive_params_for_schedule,
 )
-from qec_twin.simulator.axis1_codespec_runner import (  # noqa: E402
+from error_coupling_simulator.frontend.axis1_codespec_runner import (  # noqa: E402
     build_axis1_codespec_frontend_spec,
 )
-from qec_twin.simulator.axis1_record_evidence import (  # noqa: E402
+from error_coupling_simulator.frontend.axis1_record_evidence import (  # noqa: E402
     axis1_measurement_record_evidence_manifest,
     write_axis1_measurement_record_samples,
 )
-from qec_twin.simulator.code_spec import (  # noqa: E402
+from error_coupling_simulator.frontend.code_spec import (  # noqa: E402
     Axis1StaticZZDeviceSpec,
     CodeQubit,
     CodeSpec,

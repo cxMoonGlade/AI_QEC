@@ -19,8 +19,11 @@ were copied here.
   **`docs/FAITHFULNESS_PROTOCOL.md`** — the anti-toy protocol.
 - **`docs/NUMERICAL_PROVENANCE.md`** — value-level paper/data/design provenance and the
   cross-paper-composite boundary; read before a claim-bearing run.
+- **`docs/twin_validation/HANDOFF_simulator_scientific_formula_audit_2026-07-14.md`** — current
+  sequential, read-only audit contract for every simulator formula and exact primary source.
 - **`docs/nonpauli_teacher/`** — the live PEPS/FET carrier line + handoffs (current work).
-- **`docs/adr/`** — live decisions (0008 → 0011).
+- **`docs/adr/`** — simulator decisions 0008, amended 0010, and 0011; ADR 0009 is downstream
+  inference/decoder research, not a simulator-product decision.
 - **`docs/.datasets/`** — reading notes for the local Google QEC datasets (a mandatory derivation
   input before touching any hardware data).
 - **`docs/papers/`** — local PDF cache of load-bearing references (+ the RAG index; check before web-searching).

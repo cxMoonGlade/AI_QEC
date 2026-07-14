@@ -30,7 +30,9 @@ surface, and a releasable unit. Migration plan + phase order: `docs/error_coupli
 
 ## Layout
 
-- `source/` — Axis-2 finite-RTN / 1/f-like sources and source-to-mechanism coupling.
+- `source/` — Axis-2 classical non-Markovian sources, including the finite log-spaced RTN
+  construction of `OneOverFDriftSource`, replayable timelines, and explicit `Theta(z_t)`
+  source-to-mechanism fan-out.
 - `carrier/` — exact DM, joint-Lindbladian channels, CUDA kernels, archived DM-PEPO, and the active
   single-wire 2D-PEPS carrier.
 - `mechanisms/`, `noise_processes/` — mechanism primitives and controlled generative processes.
@@ -46,8 +48,10 @@ surface, and a releasable unit. Migration plan + phase order: `docs/error_coupli
 - Google r01/r10 circuit and metadata files are explicit external circuit/geometry/schedule
   inputs. They are not package assets, their measurement data are not consumed by the preset
   facade, and they do not supply noise parameters.
-- Ququart transport requires the caller to pass an explicit Kraus `.npz` path. Repository scratch
-  under `outputs/` is neither a default nor package data.
+- Ququart transport accepts explicit `CZParams` for package-owned in-process channel derivation,
+  an in-memory Kraus/channel object, or an explicit serialized channel cache. Kraus operators are
+  a derived channel representation, not external scientific data; repository scratch under
+  `outputs/` is neither a default nor package data.
 - The CUDA-Q Grover adapter remains public through the `cudaq-grover` optional extra, but it is an
   isolated plugin workload. It runs in the retained `aiqec` environment and a separate process,
   not in canonical `ecs` beside the fused extension.
@@ -55,6 +59,10 @@ surface, and a releasable unit. Migration plan + phase order: `docs/error_coupli
   `tests/test_distribution_boundary.py`. That gate removes the checkout from import resolution,
   exercises package import and core smokes, and rejects leaked `qec_twin`, old entry points, or
   repository-only assets. Editable-install tests alone do not prove the distribution boundary.
+- The installed service inventory is not implicit: `docs/service_status.json` and its generated
+  `docs/CODE_MAP.md` ship under `share/doc/error-coupling-simulator/`. The generator classifies every
+  shipped Python module as service implementation or explicit support and fails on any future
+  unclassified module; the generated map records the current exact count.
 
 ## Status
 **The self-contained code boundary is closed; scientific carrier certification remains open.**
@@ -62,10 +70,25 @@ Source, carrier, mechanisms, noise processes, frontend, certification, and the r
 quantum-bath research slice live in this package and use package-local runtime ownership. The PEPS
 schedule host and `frontend.experiments` are package-local. Repo-only `qec_twin` re-export shims and
 RAG tooling remain for workspace compatibility, but distribution archives contain neither them nor
-their old console entry point. External circuit/Kraus inputs and isolated optional plugins are
-declared inputs, not hidden package back-edges.
+their old console entry point. External circuit inputs, explicit mechanism parameters/channel
+injections, and isolated optional plugins are declared boundaries, not hidden package back-edges.
 
-The scientific frontier is the full-`d x d` single-wire 2D-PEPS trajectory carrier. Its d3
+The classical `1/f` path is an active core service:
+`OneOverFDriftSource -> SourceTimeline -> Theta(z_t) -> CoupledCycleNoiseProcess -> {det, obs}`.
+It ships with a matched-marginal permutation control (the historical API spelling is
+`markovian_baseline`) and a source-off control. Bayes decoder-floor analysis is
+downstream analysis and remains legacy-only; it is not a simulator service.
+
+`PhaseBurstSource` and `TemporalStormSPPSource` are shipped RESEARCH timeline primitives, not
+turnkey `CoupledCycleNoiseProcess` record arms. A caller can route a timeline through explicit
+`SourceStimPauliProjectionSpec` rules, but that path is a reduced Stim-Pauli comparator and never
+analog truth. The generic dense qudit MCWF carrier is also distinct from its optional Grover
+workload adapter.
+
+The shipped 1D MPS route is the restricted Axis-1 MCWF/QT execution slice; it is executable
+verification, not a production-scalable/full-record carrier. The old specialized XZZX thin-strip
+driver is legacy-only. The scientific frontier is the full-`d x d` single-wire 2D-PEPS trajectory
+carrier. Its d3
 state-level spike is implemented, but finite-truncation fidelity of the complete multi-round record
 is still open. The doubled-wire DM-PEPO is archived, and d5/d7 distributional results remain
 provisional. Binding status and claim boundaries live in `docs/SIMULATOR.md`, `CLAUDE.md`, and ADR

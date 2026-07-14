@@ -12,6 +12,7 @@ dependencies = [
     "numpy==2.4.6",
     "opt_einsum==3.4.0",
     "PyYAML==6.0.3",
+    "qutip==5.3.0; python_version >= '3.11'",
     "quimb==1.14.0",
     "scipy==1.17.1",
     "stim==1.16.0",
@@ -24,7 +25,6 @@ cuda-extension = ["ninja==1.13.0"]
 # Pin the JIT compiler pieces so torch extensions do not silently compile
 # against a different host toolkit.
 gpu-cu130 = [
-    "qutip==5.3.0; python_version >= '3.11' and sys_platform == 'linux'",
     "qutip-cuquantum[cuda13]==0.3.1; python_version >= '3.11' and sys_platform == 'linux'",
     "cupy-cuda13x==13.6.0; python_version >= '3.11' and sys_platform == 'linux'",
     "cuquantum-python-cu13==26.3.2; python_version >= '3.11' and sys_platform == 'linux'",
@@ -68,7 +68,6 @@ test = [
     "hypothesis==6.156.1",
     "mutmut==3.6.0",
     "pytest==8.4.2",
-    "qutip==5.3.0; python_version >= '3.11'",
 ]
 
 [tool.setuptools]
@@ -87,6 +86,8 @@ include = ["error_coupling_simulator", "error_coupling_simulator.*"]
     "docs/METRICS.md",
     "docs/FAITHFULNESS_PROTOCOL.md",
     "docs/NUMERICAL_PROVENANCE.md",
+    "docs/service_status.json",
+    "docs/CODE_MAP.md",
 ]
 
 [tool.pytest.ini_options]

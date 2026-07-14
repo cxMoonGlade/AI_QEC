@@ -42,6 +42,8 @@ def run_gate(registry: str) -> bool:
 
     gpu = gpu_pool.acquire_gpu_slot() if reg.get("requires_gpu") else None
     try:
+        if gpu is not None:
+            env = gpu.child_env(env)
         r = proc.run(["python", "-m", "coverage", "run", "--branch", f"--include={include}",
                       "-m", "pytest", "-q", "--no-header", "-p", "no:cacheprovider",
                       "--hypothesis-seed=0", *tests],

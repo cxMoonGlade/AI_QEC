@@ -4,6 +4,8 @@ include docs/SIMULATOR.md
 include docs/METRICS.md
 include docs/FAITHFULNESS_PROTOCOL.md
 include docs/NUMERICAL_PROVENANCE.md
+include docs/service_status.json
+include docs/CODE_MAP.md
 
 # Repository-local compatibility, research, validation, and build trees are not
 # part of the independently distributed simulator source archive.  These prune

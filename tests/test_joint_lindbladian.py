@@ -1,6 +1,6 @@
 """Independent-oracle unit tests for the Axis-1 joint-Lindbladian assembler.
 
-Validates ``src/qec_twin/forward/joint_lindbladian.py`` against INDEPENDENT references
+Validates ``src/error_coupling_simulator/carrier/joint_lindbladian.py`` against INDEPENDENT references
 (QuTiP ``liouvillian``/``expm`` AND a hand-written from-scratch scipy column-stacking
 Liouvillian) — NEVER the module's own superop/Choi code (anti-circular, the faithfulness
 protocol's rule I). Formalizes the adversarial reviewer's checks as the conventional
@@ -36,8 +36,8 @@ except Exception as exc:  # pragma: no cover - environment guard
         pytrace=False,
     )
 
-from qec_twin.numerics import NUMERICAL_ZERO  # noqa: E402
-from qec_twin.forward.joint_lindbladian import (  # noqa: E402
+from error_coupling_simulator.numerics import NUMERICAL_ZERO  # noqa: E402
+from error_coupling_simulator.carrier.joint_lindbladian import (  # noqa: E402
     assemble_substep_channel,
     composed_substep_channel,
     composed_vs_joint_infidelity,
@@ -49,7 +49,7 @@ from qec_twin.forward.joint_lindbladian import (  # noqa: E402
     SUPEROP_EXACTZERO_TOL,
     _joint_superop,
 )
-from qec_twin.forward.cptp_channel import apply_kraus  # noqa: E402
+from error_coupling_simulator.carrier.cptp_channel import apply_kraus  # noqa: E402
 
 DEVICE = "cuda"
 CDT = torch.complex128

@@ -7,7 +7,7 @@ pytest.importorskip(
     reason="QUTIP-CUQUANTUM-MISSING (NOT A RELEASE BASIS for this optional backend probe)",
 )
 
-from qec_twin.simulator.qutip_cuquantum_backend import (
+from error_coupling_simulator.frontend.qutip_cuquantum_backend import (
     MAX_QUTIP_CUQUANTUM_MCSOLVE_PROBE_QUTRITS,
     probe_qutip_cuquantum_local_mcwf,
     qutip_cuquantum_symbolic_collapse_summary,

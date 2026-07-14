@@ -50,12 +50,12 @@ import math
 import pytest
 import torch
 
-from qec_twin.forward.joint_lindbladian import (
+from error_coupling_simulator.carrier.joint_lindbladian import (
     assemble_substep_channel,
     _choi_state_from_kraus,
     _state_fidelity,
 )
-from qec_twin.simulator.axis1_mcwf_mps_execution import (
+from error_coupling_simulator.frontend.axis1_mcwf_mps_execution import (
     _hamiltonian_matrix_for_term,
     _collapse_operator,
     _nojump_first_order_kraus,

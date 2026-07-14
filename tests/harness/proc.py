@@ -1,4 +1,4 @@
-"""Process-group-aware subprocess launcher -- THE fix for the orphan-process problem.
+"""Process-group-aware subprocess launcher -- the orphan-process safety seam.
 
 Root cause of the orphans (2026-07-07): mutmut spawned a pool of worker processes; when the bash
 wrapper was killed, the workers were NOT in a process group tied to a single kill, so they
@@ -8,8 +8,12 @@ Fix, done properly in Python:
   * every child is started in its OWN session / process group (`start_new_session=True`), so the
     child AND all its descendants (mutmut's workers) share one process-group id (pgid);
   * the whole group is killed ATOMICALLY with `os.killpg(pgid, ...)`, SIGTERM -> grace -> SIGKILL;
-  * a launched group is REGISTERED and cleaned up on harness exit / SIGINT / SIGTERM, so even if
-    the harness itself is interrupted it does not leave orphans;
+  * once ``Popen`` succeeds, the caller owns the child immediately: registration, waiting, log
+    handling, and every exceptional exit are enclosed by one owner ``finally``;
+  * SIGINT/SIGTERM callbacks only record an interrupt.  Cleanup happens during ordinary stack
+    unwinding, never re-entrantly inside the asynchronous callback;
+  * the main-thread spawn/register window defers delivery until the new group is registered, then
+    conventional signal termination is restored after cleanup;
   * commands are LISTS (no shell) -> no quoting/pre-expansion traps.
 
 This module is the substrate the gate/mutation/gpu_pool runners build on.
@@ -28,6 +32,70 @@ from typing import Optional, Sequence
 # pgids of groups we launched that may still be alive -- cleaned up on exit so we never orphan.
 _LIVE_GROUPS: "set[int]" = set()
 _LOCK = threading.Lock()
+
+# Signal callbacks run on the Python main thread between arbitrary bytecodes.  A plain integer is
+# deliberately used as the event: ``threading.Event.set`` would itself acquire a lock in the
+# callback.  The first signal wins; subsequent signals cannot re-enter an in-progress cleanup.
+_PENDING_SIGNAL: int | None = None
+_MAIN_CRITICAL_DEPTH = 0
+_WAIT_POLL_SECONDS = 0.10
+
+# Keep unpatched methods for owner cleanup.  Tests (and instrumentation) may wrap an instance's
+# ``wait`` to inject a failure; reaping must not depend on that wrapper succeeding a second time.
+_POPEN_WAIT = subprocess.Popen.wait
+_POPEN_POLL = subprocess.Popen.poll
+
+
+class _SignalExit(BaseException):
+    """Internal stack-unwind token for a real SIGINT/SIGTERM."""
+
+    def __init__(self, signum: int):
+        super().__init__(signum)
+        self.signum = int(signum)
+
+
+def _begin_main_critical() -> bool:
+    """Defer first-signal delivery across an ownership transition in the main thread."""
+
+    global _MAIN_CRITICAL_DEPTH
+    if threading.current_thread() is not threading.main_thread():
+        return False
+    _MAIN_CRITICAL_DEPTH += 1
+    return True
+
+
+def _raise_pending_signal() -> None:
+    if _PENDING_SIGNAL is not None:
+        raise _SignalExit(_PENDING_SIGNAL)
+
+
+def _end_main_critical(entered: bool, *, deliver: bool) -> None:
+    global _MAIN_CRITICAL_DEPTH
+    if not entered:
+        return
+    if _MAIN_CRITICAL_DEPTH <= 0:
+        raise RuntimeError("unbalanced main-thread signal-critical section")
+    _MAIN_CRITICAL_DEPTH -= 1
+    if deliver and _MAIN_CRITICAL_DEPTH == 0:
+        _raise_pending_signal()
+
+
+def _signal_handler(signum, _frame) -> None:
+    """Record one signal and request normal stack unwinding.
+
+    There is intentionally no lock acquisition, registry traversal, process signalling, waiting,
+    or file I/O here.  During the main-thread Popen/register or cleanup window, delivery is deferred
+    until ownership is stable.  A repeated signal only observes the already-pending event, which
+    prevents re-entrant exceptions from interrupting cleanup.
+    """
+
+    global _PENDING_SIGNAL
+    if _PENDING_SIGNAL is not None:
+        return
+    _PENDING_SIGNAL = int(signum)
+    if _MAIN_CRITICAL_DEPTH > 0:
+        return
+    raise _SignalExit(signum)
 
 
 def _register(pgid: int) -> None:
@@ -78,6 +146,56 @@ def terminate_group(pgid: int, grace: float = 3.0) -> None:
     _unregister(pgid)
 
 
+def _send_group_signal(pgid: int, signum: int) -> bool:
+    """Best-effort signal of an owned process group; False means it is already gone."""
+
+    try:
+        os.killpg(pgid, signum)
+        return True
+    except ProcessLookupError:
+        return False
+
+
+def _terminate_and_reap(proc: subprocess.Popen, pgid: int, *, grace: float = 2.0) -> None:
+    """Terminate an owned group and synchronously reap its Popen leader.
+
+    ``terminate_group`` cannot reap because its public input is only a pgid.  ``run`` has stronger
+    ownership information, so all of its exits use this helper.  Polling the leader while waiting
+    also prevents a leader zombie from making ``killpg(..., 0)`` look alive for the whole grace
+    period.
+    """
+
+    try:
+        _POPEN_POLL(proc)
+        if group_alive(pgid):
+            _send_group_signal(pgid, signal.SIGTERM)
+
+        deadline = time.monotonic() + max(0.0, grace)
+        while time.monotonic() < deadline:
+            _POPEN_POLL(proc)
+            if not group_alive(pgid):
+                break
+            time.sleep(0.02)
+
+        if group_alive(pgid):
+            _send_group_signal(pgid, signal.SIGKILL)
+
+        # SIGKILL makes a blocking reap bounded by kernel scheduling.  Use a short timed wait first
+        # so a pathological platform still gets one final group kill before the definitive reap.
+        if proc.returncode is None:
+            try:
+                _POPEN_WAIT(proc, timeout=2.0)
+            except subprocess.TimeoutExpired:
+                _send_group_signal(pgid, signal.SIGKILL)
+                _POPEN_WAIT(proc)
+
+        reap_deadline = time.monotonic() + 2.0
+        while time.monotonic() < reap_deadline and group_alive(pgid):
+            time.sleep(0.02)
+    finally:
+        _unregister(pgid)
+
+
 class Ran:
     """Result of a run: returncode, timed_out flag, pgid (for post-hoc kill if detached)."""
     def __init__(self, returncode: int, timed_out: bool, pgid: int):
@@ -99,38 +217,64 @@ def run(cmd: Sequence[str], *, cwd: Optional[str] = None, env: Optional[dict] = 
     spawned a worker pool cannot leave strays."""
     if isinstance(cmd, str):
         raise TypeError("cmd must be a list of args (no shell) -- pass ['a','b'], not 'a b'")
-    out = open(log_path, "ab" if append else "wb") if log_path else None
-    try:
-        proc = subprocess.Popen(list(cmd), cwd=cwd, env=env, start_new_session=True,
-                                stdout=out, stderr=subprocess.STDOUT if out else None)
-    except Exception:
-        if out:
-            out.close()
-        raise
-    try:
-        pgid = os.getpgid(proc.pid)
-    except ProcessLookupError:
-        pgid = proc.pid
-    _register(pgid)
+    out = None
+    child: subprocess.Popen | None = None
+    pgid: int | None = None
     timed_out = False
     try:
-        proc.wait(timeout=timeout)
-    except subprocess.TimeoutExpired:
-        timed_out = True
-        terminate_group(pgid)
+        out = open(log_path, "ab" if append else "wb") if log_path else None
+
+        # ``start_new_session=True`` guarantees pgid == child.pid.  Keeping signal delivery
+        # deferred through Popen's return bytecode and registration closes the otherwise-unowned
+        # spawn/register window without making the child inherit a blocked POSIX signal mask.
+        critical = _begin_main_critical()
         try:
-            proc.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            pass
-    except KeyboardInterrupt:
-        terminate_group(pgid)
-        raise
+            child = subprocess.Popen(
+                list(cmd),
+                cwd=cwd,
+                env=env,
+                start_new_session=True,
+                stdout=out,
+                stderr=subprocess.STDOUT if out else None,
+            )
+            pgid = child.pid
+            _register(pgid)
+        finally:
+            _end_main_critical(critical, deliver=True)
+
+        deadline = None if timeout is None else time.monotonic() + timeout
+        while True:
+            # Worker threads do not receive Python signal callbacks, but they observe the same
+            # pending event and tear down their owned group while the main thread unwinds.
+            _raise_pending_signal()
+            wait_for = _WAIT_POLL_SECONDS
+            if deadline is not None:
+                remaining = deadline - time.monotonic()
+                wait_for = max(0.0, min(wait_for, remaining))
+            try:
+                child.wait(timeout=wait_for)
+                break
+            except subprocess.TimeoutExpired:
+                if deadline is not None and time.monotonic() >= deadline:
+                    timed_out = True
+                    break
     finally:
-        # belt: reap any group member that outlived the leader (mutmut worker strays) -> no orphan.
-        terminate_group(pgid, grace=2.0)
-        if out:
-            out.close()
-    rc = proc.returncode if proc.returncode is not None else -signal.SIGKILL
+        # One owner-finally covers registration failures, wait failures, timeout, KeyboardInterrupt,
+        # SystemExit, and the internal signal unwind.  Signal delivery is deferred while cleanup
+        # owns the registry/log transition so cleanup itself cannot be interrupted re-entrantly.
+        critical = _begin_main_critical()
+        try:
+            try:
+                if child is not None:
+                    _terminate_and_reap(child, pgid if pgid is not None else child.pid)
+            finally:
+                if out is not None:
+                    out.close()
+        finally:
+            _end_main_critical(critical, deliver=True)
+
+    assert child is not None and pgid is not None
+    rc = child.returncode if child.returncode is not None else -signal.SIGKILL
     return Ran(rc, timed_out, pgid)
 
 
@@ -144,19 +288,31 @@ def _cleanup_all(*_a) -> None:
 atexit.register(_cleanup_all)
 
 
-def _install_signal_cleanup() -> None:
-    """On SIGINT/SIGTERM to the HARNESS itself, tear down all launched groups before exiting --
-    so interrupting the harness never orphans its children."""
-    def _handler(signum, _frame):
+_PREVIOUS_EXCEPTHOOK = sys.excepthook
+
+
+def _signal_excepthook(exc_type, exc_value, traceback) -> None:
+    """Finish ordinary cleanup, then restore genuine OS-signal exit semantics."""
+
+    if not isinstance(exc_value, _SignalExit):
+        _PREVIOUS_EXCEPTHOOK(exc_type, exc_value, traceback)
+        return
+    try:
         _cleanup_all()
-        # restore default and re-raise so the exit status is conventional.
-        signal.signal(signum, signal.SIG_DFL)
-        os.kill(os.getpid(), signum)
+    finally:
+        signal.signal(exc_value.signum, signal.SIG_DFL)
+        os.kill(os.getpid(), exc_value.signum)
+
+
+def _install_signal_cleanup() -> None:
+    """Install record-only callbacks; cleanup is performed by owner-finally/excepthook."""
+
     for _sig in (signal.SIGINT, signal.SIGTERM):
         try:
-            signal.signal(_sig, _handler)
+            signal.signal(_sig, _signal_handler)
         except (ValueError, OSError):
             pass  # not in main thread / unsupported -> atexit still covers normal exits
+    sys.excepthook = _signal_excepthook
 
 
 _install_signal_cleanup()

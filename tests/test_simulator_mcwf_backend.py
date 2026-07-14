@@ -8,19 +8,19 @@ requires_cuda = pytest.mark.skipif(
     reason="Dense qutrit MCWF backend is GPU-only; CUDA-MISSING is NOT A RELEASE BASIS",
 )
 
-from qec_twin.simulator.mcwf_backend import (  # noqa: E402
+from error_coupling_simulator.frontend.mcwf_backend import (  # noqa: E402
     CDTYPE,
     DenseQuditMcwfBackend,
     DenseQutritMcwfBackend,
     qutrit_index_from_digits,
 )
-from qec_twin.simulator.mcwf_executor import (  # noqa: E402
+from error_coupling_simulator.frontend.mcwf_executor import (  # noqa: E402
     BlockTrajectoryMcwfExecutor,
     DenseQutritMcwfExecutor,
     GraphCapturedMcwfExecutor,
     NativeOpStreamMcwfExecutor,
 )
-from qec_twin.simulator.mcwf_program import CompiledMcwfProgram, all_ones_phase, h, kraus_all_sites, x  # noqa: E402
+from error_coupling_simulator.frontend.mcwf_program import CompiledMcwfProgram, all_ones_phase, h, kraus_all_sites, x  # noqa: E402
 
 
 @requires_cuda

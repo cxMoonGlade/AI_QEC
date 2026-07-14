@@ -58,6 +58,8 @@ def test_wheel_contains_only_the_active_runtime_package(tmp_path: Path) -> None:
         "METRICS.md",
         "FAITHFULNESS_PROTOCOL.md",
         "NUMERICAL_PROVENANCE.md",
+        "service_status.json",
+        "CODE_MAP.md",
     ):
         (fixture_docs / name).write_text(f"fixture {name}\n", encoding="utf-8")
     (near_prefix / "__init__.py").write_text("", encoding="utf-8")
@@ -128,6 +130,8 @@ def test_sdist_prunes_legacy_even_with_a_stale_manifest(tmp_path: Path) -> None:
         "METRICS.md",
         "FAITHFULNESS_PROTOCOL.md",
         "NUMERICAL_PROVENANCE.md",
+        "service_status.json",
+        "CODE_MAP.md",
     ):
         (fixture_docs / name).write_text(f"fixture {name}\n", encoding="utf-8")
     (near_prefix / "__init__.py").write_text("", encoding="utf-8")
@@ -192,6 +196,8 @@ def test_real_sdist_wheel_installs_and_runs_without_the_repository(tmp_path: Pat
         "METRICS.md",
         "FAITHFULNESS_PROTOCOL.md",
         "NUMERICAL_PROVENANCE.md",
+        "service_status.json",
+        "CODE_MAP.md",
     ):
         shutil.copy2(REPO_ROOT / "docs" / name, fixture_docs / name)
     shutil.copytree(
@@ -259,6 +265,20 @@ def test_real_sdist_wheel_installs_and_runs_without_the_repository(tmp_path: Pat
         and name.endswith("/share/doc/error-coupling-simulator/SIMULATOR.md")
     ]
     assert len(simulator_doc_members) == 1
+    service_catalog_members = [
+        name
+        for name in wheel_members
+        if ".data/" in name
+        and name.endswith("/share/doc/error-coupling-simulator/service_status.json")
+    ]
+    code_map_members = [
+        name
+        for name in wheel_members
+        if ".data/" in name
+        and name.endswith("/share/doc/error-coupling-simulator/CODE_MAP.md")
+    ]
+    assert len(service_catalog_members) == 1
+    assert len(code_map_members) == 1
 
     install_probe = subprocess.run(
         [
@@ -376,6 +396,34 @@ def test_real_sdist_wheel_installs_and_runs_without_the_repository(tmp_path: Pat
                     "# SIMULATOR.md"
                 )
 
+                installed_service_catalog = (
+                    install_root
+                    / "share"
+                    / "doc"
+                    / "error-coupling-simulator"
+                    / "service_status.json"
+                )
+                installed_code_map = (
+                    install_root
+                    / "share"
+                    / "doc"
+                    / "error-coupling-simulator"
+                    / "CODE_MAP.md"
+                )
+                assert installed_service_catalog.is_file()
+                assert installed_code_map.is_file()
+                import json
+                service_catalog = json.loads(
+                    installed_service_catalog.read_text(encoding="utf-8")
+                )
+                assert service_catalog["_schema"] == (
+                    "error_coupling_simulator.service_status.v2"
+                )
+                assert len(service_catalog["services"]) == 27
+                assert installed_code_map.read_text(encoding="utf-8").startswith(
+                    "# CODE_MAP"
+                )
+
                 import numpy as np
                 from error_coupling_simulator.carrier import PackedShotBatch
 
@@ -389,6 +437,166 @@ def test_real_sdist_wheel_installs_and_runs_without_the_repository(tmp_path: Pat
                 assert record.det.tolist() == [[0, 1, 1, 0], [1, 0, 0, 0]]
                 assert record.obs.tolist() == [0, 1]
                 assert record.provenance["record_semantics"] == "temporal_detector_events"
+
+                # Public certification algebra: a generic two-qubit identity
+                # channel has the 16-dimensional identity PTM.
+                from error_coupling_simulator.certify import ptm_from_kraus
+
+                two_qubit_identity = np.eye(4, dtype=np.complex128)
+                identity_ptm = ptm_from_kraus(two_qubit_identity)
+                assert identity_ptm.shape == (16, 16)
+                assert np.allclose(identity_ptm, np.eye(16), atol=1e-12)
+
+                # QuTiP is a core dependency because the public CZ deriver is
+                # package-owned.  Exercise the public type without deriving a
+                # channel, then run the ququart service from an explicit
+                # in-memory identity channel on CPU.
+                from error_coupling_simulator.mechanisms import CZParams
+                from error_coupling_simulator import frontend
+
+                assert CZParams().sim_levels == 5
+                ququart_identity = np.eye(16, dtype=np.complex128)[None, :, :]
+                ququart = frontend.simulate_ququart_transport_smoke(
+                    initial_levels="12",
+                    shots=4,
+                    seed=7,
+                    channel=ququart_identity,
+                    device="cpu",
+                )
+                assert ququart.initial_state_probability == 1.0
+                assert sum(ququart.counts.values()) == 4
+                assert ququart.manifest["noise"]["source_kind"] == (
+                    "in_memory_kraus_injection"
+                )
+
+                # Axis-2 sources and restricted 1D-MPS entries must be exposed
+                # by their package facades.  Import only: no GPU execution.
+                from error_coupling_simulator.source import (
+                    OneOverFDriftSource,
+                    PhaseBurstSource,
+                    RTNSource,
+                    TemporalStormSPPSource,
+                    timeline_to_coupled_params,
+                )
+                from error_coupling_simulator.noise_processes import (
+                    CoupledCycleNoiseProcess,
+                )
+                from error_coupling_simulator.frontend import (
+                    CircuitBuilder,
+                    CompiledMcwfProgram,
+                    DenseQuditMcwfBackend,
+                    SourceStimPauliProjectionSpec,
+                    SourceStimPauliRule,
+                    Simulator,
+                    circuit_ir_to_substep_schedule,
+                    compile_code_spec_to_substep_schedule,
+                    stim_circuit_to_substep_schedule,
+                    axis1_mcwf_mps_state_record_execution_manifest,
+                    axis1_qt_mps_restricted_execution_manifest,
+                )
+
+                assert OneOverFDriftSource.__module__.startswith(
+                    "error_coupling_simulator.source."
+                )
+                source = OneOverFDriftSource(n_fluctuators=3)
+                timeline = source.sample(seed=13, n_cycles=8)
+                coupled_params = timeline_to_coupled_params(timeline)
+                permutation = timeline.independent_baseline(seed=17)
+                assert len(coupled_params) == timeline.n_cycles == 8
+                assert permutation.coupling_mode == "independent"
+                assert np.allclose(
+                    np.sort(permutation.payload_series("z_radns")),
+                    np.sort(timeline.payload_series("z_radns")),
+                )
+                assert hasattr(
+                    CoupledCycleNoiseProcess,
+                    "matched_marginal_permutation_control",
+                )
+                assert hasattr(CoupledCycleNoiseProcess, "off_source")
+                assert CircuitBuilder is frontend.CircuitBuilder
+                assert Simulator is frontend.Simulator
+                assert callable(axis1_mcwf_mps_state_record_execution_manifest)
+                assert callable(axis1_qt_mps_restricted_execution_manifest)
+
+                # Every newly catalogued core/research surface must at least be
+                # importable from the isolated wheel.  Timeline primitives get
+                # a deterministic CPU-light sample; GPU-only carriers are not
+                # executed in this distribution-boundary test.
+                assert RTNSource().sample(seed=19, n_cycles=4).n_cycles == 4
+                assert PhaseBurstSource().sample(seed=23, n_cycles=4).n_cycles == 4
+                assert TemporalStormSPPSource().sample(seed=29, n_cycles=4).n_cycles == 4
+                assert callable(compile_code_spec_to_substep_schedule)
+                assert callable(circuit_ir_to_substep_schedule)
+                assert callable(stim_circuit_to_substep_schedule)
+                assert SourceStimPauliProjectionSpec.__module__.startswith(
+                    "error_coupling_simulator.frontend."
+                )
+                assert SourceStimPauliRule.__module__.startswith(
+                    "error_coupling_simulator.frontend."
+                )
+                assert CompiledMcwfProgram.__module__.startswith(
+                    "error_coupling_simulator.frontend."
+                )
+                assert DenseQuditMcwfBackend.__module__.startswith(
+                    "error_coupling_simulator.frontend."
+                )
+
+                import torch
+                from error_coupling_simulator.carrier.exact.circuit_sim import (
+                    qubit_marginal_one,
+                    zero_state,
+                )
+                from error_coupling_simulator.carrier.cptp_channel import (
+                    StinespringChannel,
+                    apply_kraus,
+                )
+                from error_coupling_simulator.carrier.channels import (
+                    custom_non_pauli_kraus,
+                    thermal_relaxation_kraus,
+                )
+
+                rho0 = zero_state(1, device="cpu")
+                assert rho0.shape == (2, 2)
+                assert float(qubit_marginal_one(rho0, 0, 1)) <= 1.1e-12
+                assert StinespringChannel.__module__.startswith(
+                    "error_coupling_simulator.carrier."
+                )
+                assert callable(apply_kraus)
+                assert callable(custom_non_pauli_kraus)
+                assert callable(thermal_relaxation_kraus)
+
+                from error_coupling_simulator.certify import certify_noise_process
+                from error_coupling_simulator.certify.anchors import (
+                    ClosedFormAnchor,
+                    CorruptStabControl,
+                    DMOracleAnchor,
+                    ShuffleControl,
+                    StimCliffordAnchor,
+                )
+                from error_coupling_simulator.quantum_bath import (
+                    axis_ad_null_point,
+                    dual_point,
+                    dual_point_qrt,
+                    field_null_point,
+                    min_tv_to_incoherent,
+                    quantum_memory_witness,
+                )
+
+                for public_symbol in (
+                    certify_noise_process,
+                    ClosedFormAnchor,
+                    CorruptStabControl,
+                    DMOracleAnchor,
+                    ShuffleControl,
+                    StimCliffordAnchor,
+                    axis_ad_null_point,
+                    dual_point,
+                    dual_point_qrt,
+                    field_null_point,
+                    min_tv_to_incoherent,
+                    quantum_memory_witness,
+                ):
+                    assert callable(public_symbol)
                 """
             ),
             str(install_root),

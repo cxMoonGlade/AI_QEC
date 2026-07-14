@@ -81,14 +81,14 @@ C-8  Reproducibility. Same ``(regime, m, N, seed)`` => byte-identical
      ``{det,obs}``. Per-trajectory seeds are stable sha256 derivations of
      ``(seed, trajectory, purpose)`` — never Python ``hash()``. Falsifier:
      ``test_emit_reproducible``.
-C-9  Ablation arms. ``markovian_baseline()`` preserves each one-field
+C-9  Ablation arms. ``matched_marginal_permutation_control()`` preserves each one-field
      marginal (per-field permutations of the SAME trajectory,
      ``independent_baseline_trajectory_to_params``) while destroying the
      temporal ORDER (hence the cross-cycle 1/f autocorrelation) and the
      same-cycle cross-mechanism alignment; ``off_source()`` collapses the
      fan-out to the constant Theta(0) point. NOTE (corrected 2026-07-03 with
      prereg §5 re-registration): the per-field permutation is EXCHANGEABLE,
-     not independent — at finite R the markovian arm RETAINS most of the
+     not independent — at finite R the permutation control RETAINS most of the
      shared arm's shot-pooled lag-1 record covariance (the permutation-
      invariant trajectory-mean-instrument common-mode plus a small
      -Var/(R-1) exchangeable term; ~0.73 of the shared lag-1 covariance at
@@ -135,7 +135,7 @@ S-1  Trajectory-mean readout/reset instrument. ``readout_flip_p`` /
      shot-to-shot (each shot draws its own trajectory), so pooling over shots
      the instrument injects a permutation-INVARIANT common-mode covariance
      (~8.7e-5 per check, at ALL lags) into the record statistics — identical
-     in the shared and markovian arms (it depends only on the trajectory mean),
+     in the shared and permutation-control arms (it depends only on the trajectory mean),
      hence it cancels in the shared-minus-markovian difference but is NOT
      ~0 in either arm's raw statistic. This is why the record-level MA(1) floor
      (off-arm Spitz p_ij(lag1) = p_ro + p_rs - 2 p_ro p_rs ~ 0.0149, not 0) and
@@ -588,7 +588,8 @@ class CoupledCycleNoiseProcess:
     the R*/N* design constants belong to the G0-v2 gate (S-5).
 
     ``coupling_arm``: ``"shared"`` (the source-coupled process), ``"independent"`` (the G6
-    matched-marginal negative control, built via :meth:`markovian_baseline`),
+    matched-marginal permutation control, built via
+    :meth:`matched_marginal_permutation_control`),
     ``"off"`` (the amplitude-0 collapse arm, built via :meth:`off_source`).
     """
 
@@ -1059,14 +1060,16 @@ class CoupledCycleNoiseProcess:
     # ------------------------------------------------------------------ #
     # ablation arms (C-9)                                                  #
     # ------------------------------------------------------------------ #
-    def markovian_baseline(self) -> "CoupledCycleNoiseProcess":
-        """The G6 negative control: matched marginals, broken coupling.
+    def matched_marginal_permutation_control(self) -> "CoupledCycleNoiseProcess":
+        """Return the G6 exchangeable control: matched marginals, permuted order.
 
         Same source / config / schedule fixture; per-cycle params come from
         ``independent_baseline_trajectory_to_params`` (an independent
         permutation of the SAME trajectory per mechanism field — one-field
         marginals preserved exactly, same-cycle cross-mechanism and
-        cross-cycle alignment destroyed).
+        cross-cycle alignment destroyed). This is not claimed to be a genuinely
+        finite-order Markov generative process: finite-length permutation retains
+        exchangeable/global-mean structure.
         """
 
         return CoupledCycleNoiseProcess(
@@ -1079,6 +1082,15 @@ class CoupledCycleNoiseProcess:
             fixture=self._fixture,
             coupling_arm="independent",
         )
+
+    def markovian_baseline(self) -> "CoupledCycleNoiseProcess":
+        """Compatibility spelling for :meth:`matched_marginal_permutation_control`.
+
+        The returned arm is a matched-marginal permutation control, not a
+        theorem-grade Markov null. New code should use the precise method name.
+        """
+
+        return self.matched_marginal_permutation_control()
 
     def off_source(self) -> "CoupledCycleNoiseProcess":
         """The collapse arm: amplitude-0 source => constant Theta(0) params."""

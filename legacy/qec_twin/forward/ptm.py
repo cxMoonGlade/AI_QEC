@@ -1,9 +1,12 @@
 from __future__ import annotations
 
-from itertools import product
-import math
-
 import numpy as np
+
+from error_coupling_simulator.certify.channel_diagnostics import (
+    pauli_basis,
+    ptm_from_kraus,
+    ptm_from_unitary,
+)
 
 from qec_twin.numerics import NUMERICAL_ZERO
 
@@ -12,51 +15,6 @@ from qec_twin.mechanisms.catalog import RZZ_FAMILY_IDS
 
 
 Array = np.ndarray
-
-
-def pauli_basis(num_qubits: int) -> list[tuple[str, Array]]:
-    if int(num_qubits) <= 0:
-        raise ValueError("num_qubits must be positive")
-    one = {
-        "I": np.eye(2, dtype=np.complex128),
-        "X": np.array([[0.0, 1.0], [1.0, 0.0]], dtype=np.complex128),
-        "Y": np.array([[0.0, -1j], [1j, 0.0]], dtype=np.complex128),
-        "Z": np.array([[1.0, 0.0], [0.0, -1.0]], dtype=np.complex128),
-    }
-    basis = []
-    for labels in product(("I", "X", "Y", "Z"), repeat=int(num_qubits)):
-        mat = one[labels[0]]
-        for label in labels[1:]:
-            mat = np.kron(mat, one[label])
-        basis.append(("".join(labels), mat))
-    return basis
-
-
-def ptm_from_unitary(unitary: Array) -> Array:
-    u = np.asarray(unitary, dtype=np.complex128)
-    if u.ndim != 2 or u.shape[0] != u.shape[1]:
-        raise ValueError("unitary must be square")
-    return ptm_from_kraus([u])
-
-
-def ptm_from_kraus(kraus: list[Array] | tuple[Array, ...]) -> Array:
-    if not kraus:
-        raise ValueError("at least one Kraus operator is required")
-    dim = np.asarray(kraus[0]).shape[0]
-    num_qubits = _num_qubits_from_dim(dim)
-    basis = pauli_basis(num_qubits)
-    scale = 1.0 / dim
-    out = np.zeros((len(basis), len(basis)), dtype=np.float64)
-    for col, (_label_in, p_in) in enumerate(basis):
-        evolved = np.zeros_like(p_in, dtype=np.complex128)
-        for op in kraus:
-            k = np.asarray(op, dtype=np.complex128)
-            if k.shape != (dim, dim):
-                raise ValueError("all Kraus operators must have the same square shape")
-            evolved = evolved + k @ p_in @ k.conj().T
-        for row, (_label_out, p_out) in enumerate(basis):
-            out[row, col] = float(np.real(scale * np.trace(p_out @ evolved)))
-    return _finite(out)
 
 
 def channel_fingerprint(spec: MechanismSpec, *, paper_informed: bool = False) -> Array:
@@ -346,13 +304,6 @@ def _fixed_length(values: list[float], length: int) -> Array:
     clipped = np.asarray(values[: int(length)], dtype=np.float64)
     out[: clipped.shape[0]] = clipped
     return _finite(out)
-
-
-def _num_qubits_from_dim(dim: int) -> int:
-    n = math.log2(int(dim))
-    if abs(n - round(n)) > NUMERICAL_ZERO:
-        raise ValueError("channel dimension must be a power of two")
-    return int(round(n))
 
 
 def _finite(values: Array) -> Array:

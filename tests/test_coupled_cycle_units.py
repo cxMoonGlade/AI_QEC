@@ -803,6 +803,17 @@ def test_L0_markovian_baseline_inherits_surface():
     assert mk.truth["config"] == parent.truth["config"]
 
 
+def test_L0_precise_matched_marginal_control_aliases_historical_spelling():
+    parent = CoupledCycleNoiseProcess(2)
+
+    precise = parent.matched_marginal_permutation_control()
+    historical = parent.markovian_baseline()
+
+    assert precise.coupling_arm == historical.coupling_arm == "independent"
+    assert precise.rounds == historical.rounds == parent.rounds
+    assert precise.truth["source"]["class"] == historical.truth["source"]["class"]
+
+
 def test_L0_off_source_arm_and_constant_theta0():
     t = CoupledCycleNoiseProcess(2)
     off = t.off_source()

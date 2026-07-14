@@ -39,7 +39,7 @@ API SHAPES (the LANDED signatures, verified against
     g_heat=..., b_bias=..., arm=..., readout_conv=...)`` -- frozen kw-only dataclass;
     exactly ONE of ``theta_rad`` / ``wg_l1_target`` set (``ValueError`` otherwise).
   * ``run_spec_from_preset(preset, *, n_shots, n_rounds, seed, m=0,
-    dataset_root=None)`` -> a ``qec_twin.forward.scalable.sv_sampler.RunSpec``; the
+    dataset_root=None)`` -> a package-local ``carrier.within_cycle.RunSpec``; the
     WG preset's theta resolves through ``calibrate_theta_for_wg_l1`` (the
     error_coupling_simulator ``mechanisms.qutrit_teachers`` resolver -- same package
     as the facade).
@@ -54,17 +54,13 @@ from __future__ import annotations
 import pytest
 import torch
 
-from qec_twin.forward.exact import xzzx_parser as xp
+from error_coupling_simulator.frontend import experiments
+from error_coupling_simulator.frontend import xzzx_parser as xp
 
 # Wave-1 canon: markers/constants from tests/conftest.py (contract C1), guard helpers
 # from tests/_support/fixtures.py (contract C2).
 from conftest import DEVICE, requires_cuda, requires_data
 from _support.fixtures import require_precondition
-
-# the A1 facade is a parallel Wave-2 src build -- loud module-level skip until it lands.
-experiments = pytest.importorskip(
-    "error_coupling_simulator.frontend.experiments",
-    reason="Wave-2 A1 facade (frontend/experiments.py) not landed yet (parallel src build)")
 
 #: ratified decision 7 -- the ONE dataset-root env var name.
 _ENV = "QEC_TWIN_D3_DATA"
@@ -343,7 +339,7 @@ def test_run_spec_from_preset_raw_and_wg():
         calibrate_theta_for_wg_l1,
         wg_rates,
     )
-    from qec_twin.forward.scalable.sv_sampler import RunSpec
+    from error_coupling_simulator.carrier.within_cycle import RunSpec
 
     # distinct, non-default run-shape values so the passthrough asserts discriminate
     # (all four differ from the RunSpec defaults AND from each other).
@@ -373,7 +369,7 @@ def test_run_spec_from_preset_raw_and_wg():
 
 
 # =========================================================================== #
-# A1 leak_slice_table == SvSampler.build_within_cycle_leak (byte-for-byte)     #
+# A1 leak_slice_table == fused carrier build_within_cycle_leak (byte-for-byte) #
 # =========================================================================== #
 @requires_cuda
 @requires_data
@@ -384,21 +380,21 @@ def test_leak_slice_table_matches_sv_sampler():
     distinct-cell leg).
 
     Gate: ``leak_slice_table`` on the RAW-preset spec equals
-    ``SvSampler.build_within_cycle_leak`` on the SAME spec byte-for-byte
+    ``FusedWithinCycleSampler.build_within_cycle_leak`` on the SAME spec byte-for-byte
     (``torch.equal`` -- exact, no tolerance); the list form stacks back to the same
     table. KILLER: the grossly-different hi cell's table must DIFFER.
     """
-    from qec_twin.forward.scalable.sv_sampler import SvSampler
+    from error_coupling_simulator.carrier.within_cycle import FusedWithinCycleSampler
 
     spec = _run_spec(experiments.PRESET_LEAK_THETA_0P30, N=1, R=1)
     table = _leak_table(spec)
-    ref, _ = SvSampler(device=DEVICE).build_within_cycle_leak(spec)
+    ref, _ = FusedWithinCycleSampler(device=DEVICE).build_within_cycle_leak(spec)
     assert isinstance(table, torch.Tensor)
     assert tuple(table.shape) == tuple(ref.shape) and table.dim() == 3 \
         and table.shape[-2:] == (3, 3), \
         f"leak table shape {tuple(table.shape)} != builder {tuple(ref.shape)}"
     assert torch.equal(table, ref), \
-        "leak_slice_table != SvSampler.build_within_cycle_leak byte-for-byte"
+        "leak_slice_table != fused carrier build_within_cycle_leak byte-for-byte"
 
     # list form (contract A1: stacked [K,3,3] and list forms).
     lst = _leak_table(spec, stacked=False)

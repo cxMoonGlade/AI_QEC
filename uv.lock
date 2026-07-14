@@ -692,6 +692,7 @@ dependencies = [
     { name = "opt-einsum" },
     { name = "pyyaml" },
     { name = "quimb" },
+    { name = "qutip" },
     { name = "scipy" },
     { name = "stim" },
     { name = "torch" },
@@ -727,7 +728,6 @@ gpu-cu130 = [
     { name = "nvidia-nvjitlink", marker = "sys_platform == 'linux'" },
     { name = "nvidia-nvvm", marker = "sys_platform == 'linux'" },
     { name = "nvmath-python", marker = "sys_platform == 'linux'" },
-    { name = "qutip", marker = "sys_platform == 'linux'" },
     { name = "qutip-cuquantum", extra = ["cuda13"], marker = "sys_platform == 'linux'" },
 ]
 hw = [
@@ -738,7 +738,6 @@ test = [
     { name = "hypothesis" },
     { name = "mutmut" },
     { name = "pytest" },
-    { name = "qutip" },
 ]
 
 [package.metadata]
@@ -776,8 +775,7 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'test'", specifier = "==8.4.2" },
     { name = "pyyaml", specifier = "==6.0.3" },
     { name = "quimb", specifier = "==1.14.0" },
-    { name = "qutip", marker = "python_full_version >= '3.11' and extra == 'test'", specifier = "==5.3.0" },
-    { name = "qutip", marker = "python_full_version >= '3.11' and sys_platform == 'linux' and extra == 'gpu-cu130'", specifier = "==5.3.0" },
+    { name = "qutip", marker = "python_full_version >= '3.11'", specifier = "==5.3.0" },
     { name = "qutip-cuquantum", extras = ["cuda13"], marker = "python_full_version >= '3.11' and sys_platform == 'linux' and extra == 'gpu-cu130'", specifier = "==0.3.1" },
     { name = "scipy", specifier = "==1.17.1" },
     { name = "stim", specifier = "==1.16.0" },

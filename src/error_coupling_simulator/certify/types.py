@@ -11,8 +11,7 @@ cross-checks that were re-wired ad hoc across ``outputs/teacher_prereg/`` (the d
 
 DESIGN (locked). A common-caller spine (neutral spelling ``certify_noise_process``;
 historical spelling ``certify_teacher``) over an ``Anchor`` capability-descriptor PORT
-(this file) — the SAME Protocol shape as
-``audit.floor_backend.PathJointEvaluator``: the certify core is BLIND to whether a DM oracle, a stim
+(this file): the certify core is BLIND to whether a DM oracle, a stim
 Clifford slice, or a closed-form identity answered. The port carries a *capability descriptor* so
 OOM-routing is DATA, not branching — an anchor that would OOM reports ``feasible=False`` and the core
 routes to the carrier-MCWF for scale, never allocating the infeasible density matrix. Closed-form
@@ -32,8 +31,9 @@ INVARIANTS this interface encodes (the prevent-toy + epistemic discipline, CLAUD
     (c) gate (the METRICS.md ladder); the ledger is the test surface.
 
 Evaluator-only: certification may read known process truth to score validity, but that truth never
-enters emitted records. Pure value types + Protocols here — no GPU, no heavy imports; the concrete GPU /
-stim / closed-form adapters arrive in later steps.
+enters emitted records. This file remains pure value types + Protocols with no GPU/heavy imports;
+the implemented GPU/Stim/closed-form adapters live in ``certify.anchors`` and are selected by the
+neutral ``certify_noise_process`` facade.
 """
 
 from dataclasses import dataclass, field
@@ -63,7 +63,6 @@ class Statistic(Enum):
     DETECTOR_MARG = "detector_marg"  # per-(round,stab) detector on-rate + flip rate
     RR_CORR = "rr_corr"              # round-to-round detector correlation           (R>=2 moments)
     SPATIAL_CORR = "spatial_corr"    # same-round cross-detector correlation
-    FLOOR = "floor"                  # the Bayes decoding floor F(R)
     SCALAR_FUNC = "scalar_func"      # a named closed-form functional (WG L1/L2/C_L, T-B lambda1, p_ij)
 
 
@@ -190,7 +189,7 @@ class CertReport:
 
 
 # =========================================================================== #
-# The Anchor PORT — the internal seam (mirrors audit.floor_backend.PathJointEvaluator).             #
+# The Anchor PORT — the implementation-independent certification seam.                              #
 # Two real adapters minimum (DM oracle + stim Clifford + closed-form sidecar) justify the port      #
 # (the two-adapters rule). The certify core talks ONLY to this Protocol — blind to the concrete     #
 # ground-truth route.                                                                               #

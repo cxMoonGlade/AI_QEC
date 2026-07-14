@@ -5,8 +5,8 @@ import json
 import numpy as np
 import pytest
 
-from qec_twin.hardware import b8_io
-from qec_twin.simulator import (
+from error_coupling_simulator.frontend import b8_io
+from error_coupling_simulator.frontend import (
     CodeQubit,
     CodeSpec,
     LogicalObservableSpec,
@@ -17,9 +17,9 @@ from qec_twin.simulator import (
     compile_code_spec,
     compile_code_spec_to_compiled,
 )
-from qec_twin.simulator.circuit_ir import CircuitIR, GateOp, Tick
-from qec_twin.simulator.stim_io import sample_detector_records
-from qec_twin.simulator.stim_io import circuit_to_stim
+from error_coupling_simulator.frontend.circuit_ir import CircuitIR, GateOp, Tick
+from error_coupling_simulator.frontend.stim_io import sample_detector_records
+from error_coupling_simulator.frontend.stim_io import circuit_to_stim
 
 
 def _num_detectors(spec):

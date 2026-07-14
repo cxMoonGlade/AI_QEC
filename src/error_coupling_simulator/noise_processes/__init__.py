@@ -1,8 +1,9 @@
 """Controlled generative noise processes for the coupling-error simulator.
 
 Slice-1 dense source-coupled process: ``CoupledCycleNoiseProcess`` (a memory-ful 1/f shared source ->
-per-round Axis-1 params -> sealed dense {det,obs} emitter, with markovian_baseline / off_source
-control arms). Source trajectories and channel fields are evaluator-only truth and are not emitted.
+per-round Axis-1 params -> sealed dense {det,obs} emitter, with a matched-marginal permutation arm
+exposed under the historical ``markovian_baseline`` spelling and a source-off arm). Source
+trajectories and channel fields are evaluator-only truth and are not emitted.
 """
 from error_coupling_simulator.noise_processes.coupled_cycle import (
     COUPLED_TEACHER_REPRESENTABILITY,
@@ -12,6 +13,7 @@ from error_coupling_simulator.noise_processes.coupled_cycle import (
     CoupledCycleNoiseProcess,
     default_coupled_code_spec,
     default_coupled_code_spec_4q,
+    default_coupled_code_spec_d3_repz,
     derive_round_map_for_substep_schedule,
     params_for_substep_from_round_map,
     per_round_axis1_params,
@@ -33,6 +35,7 @@ __all__ = [
     "CoupledCycleNoiseProcess",
     "default_coupled_code_spec",
     "default_coupled_code_spec_4q",
+    "default_coupled_code_spec_d3_repz",
     "derive_round_map_for_substep_schedule",
     "params_for_substep_from_round_map",
     "per_round_axis1_params",

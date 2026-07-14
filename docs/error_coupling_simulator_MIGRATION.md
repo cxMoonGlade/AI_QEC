@@ -4,15 +4,17 @@
 > old inward-dependency and learner/twin framing is superseded. The active distribution imports no
 > `qec_twin` runtime module. Old `qec_twin` import paths remain only as outward repository shims;
 > `qec_twin.rag` remains repository-only literature tooling. Neither is shipped. Binding framing:
-> `docs/SIMULATOR.md`.
+> `docs/SIMULATOR.md`. The old target skeleton and phase notes below mention wedge/oracle/teacher
+> layouts that were considered during migration; they are not a current service inventory. Current
+> ownership and exclusions are generated into `docs/CODE_MAP.md` from `docs/service_status.json`.
 
 **Decision (user, 2026-07-03):** consolidate the coupling-error QEC simulator — code currently
 scattered across `src/qec_twin/` (tracked) AND `outputs/` (gitignored scratch) — into a **single
 standalone top-level package** `src/error_coupling_simulator/`, so it can be **released
 independently**. Full consolidation, done **PHASED with tests green at every step**. Selected
 gitignored `outputs/` *code primitives* were copied into the package and made canonical. Scratch
-data/evidence files are not package assets: in particular, ququart transport now takes an explicit
-caller-supplied Kraus `.npz` path.
+data/evidence files are not package assets. The ququart CZ channel constructor is now package-owned;
+runtime accepts explicit `CZParams`, an in-memory channel, or an explicit serialized channel cache.
 
 **Prime directive: 慢就是快 — no bugs.** Every move is verified before the next. The technique that
 makes a big move safe is a **compatibility shim**: move the code to its new home, leave a thin
@@ -83,7 +85,9 @@ evidence. Core runtime requires Python ≥3.11 and declares SciPy directly.
 
 **External-input / plugin boundary:** Google r01/r10 `.stim` + metadata files are explicit external
 circuit/geometry/schedule inputs, not bundled package data and not a source of noise parameters.
-The ququart adapter requires an explicit Kraus `.npz` input and has no repository-scratch default.
+The ququart adapter requires one explicit channel source (`CZParams`, in-memory channel, or
+serialized cache) and has no repository-scratch default. Kraus is a derived representation, not
+external scientific data.
 CUDA-Q remains a public `cudaq-grover` optional plugin, but is deliberately absent from canonical
 `ecs`; it runs in the retained `aiqec` environment and a separate process from fused kernels.
 
@@ -157,10 +161,20 @@ disposition is recorded below. Handoff: `HANDOFF_refactor_2026-07-03.md`.**
   modules remain local-only until an active consumer justifies them.
 - **P7 — package flip / distribution de-shim: COMPLETE; repository shim deletion deferred.**
   Active simulator modules and public examples use `error_coupling_simulator`; no package runtime
-  module imports `qec_twin`. The old repository paths remain as outward compatibility shims for
-  retained consumers, but exact wheel/sdist allowlists exclude them. Removing every old shim and
-  converting every retained repository test is repository cleanup, not a prerequisite for the
-  independently installable simulator distribution.
+  module imports `qec_twin`. After the complete service inventory, every acceptance file declared
+  by `docs/service_status.json` also resolves the canonical package directly; the code-map generator
+  AST-enforces that invariant across static imports, dynamic imports, and patch targets. Mixed
+  M0--M34/probe tests, the old thin-strip MPS test, and the SvSampler-based PEPS/PEPO referee suites
+  are explicitly legacy/historical evidence rather than simulator acceptance. The old repository
+  paths remain as outward compatibility shims for retained non-simulator consumers and the RAG tool,
+  but exact wheel/sdist allowlists exclude them. Removing every old shim and converting every
+  retained non-simulator repository test is a separate product migration, not a simulator runtime
+  dependency. Aggregate service acceptance is also process-isolated by
+  `tests/harness/service_acceptance.py`: one declared test file per fresh process, with bounded
+  CPU-light concurrency, serial CPU-exclusive/GPU lanes, and CUDA-Q in `aiqec`. The GPU `flock`
+  covers only the GPU phase; unique run directories remove log races. This closes the reproduced
+  exit-139 mode caused by sharing unrelated native allocator lifetimes in one giant pytest process;
+  it does not alter any simulator formula or tolerance.
 
 **Verification per phase:** `python -m py_compile` → package import smoke → the affected `tests/`
 subset → (at phase end) full `tests/` regression, via committed runners (pipefail + tee +
@@ -169,5 +183,5 @@ import the teacher/oracle package. GPU serial. Every `src/**` commit is H6-user-
 
 **Scratch policy:** selected reusable *code* copied from `outputs/` is canonical only in the package;
 the old copy stays frozen and unmaintained. Scratch data, generated evidence, Google circuit inputs,
-and ququart Kraus files are not copied into the distribution. `docs/CODE_MAP.md` +
+and generated ququart channel caches are not copied into the distribution. `docs/CODE_MAP.md` +
 `docs/code_status.json` `_local_index` mark retained local-only material explicitly.

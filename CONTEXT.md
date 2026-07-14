@@ -12,7 +12,7 @@ spec: `docs/SIMULATOR.md`.
   ground truth (the channel field + source trajectory + mechanism params). It is the true
   generative process — richer than, and **not** identified with, a DEM. The current
   source-conditioned dense-qubit process (`noise_processes/`) and static data-qutrit XZZX process
-  (`mechanisms/` + legacy scalable carriers) are **separate objects**, not one production instance.
+  (`mechanisms/` + bounded package carriers) are **separate objects**, not one production instance.
   Their complete bridges are `open / CODE_BLOCKED`; see
   `docs/twin_validation/production_rtn_and_leakage_bridge_split_literature_closure_2026-07-13.md`.
 - **Record**: the product — per-round `{detector bits, observable flips}`, emitted as `.b8` shot
@@ -23,10 +23,11 @@ spec: `docs/SIMULATOR.md`.
   nonconforming `ShotSet` is outside the package record boundary.
 - **Two noise axes**: **Axis-1** = within-substep joint-Lindbladian coupling (ZZ crosstalk,
   T1/T2, thermal, fSim residual, readout dephasing, leakage Hamiltonians, assembled into one
-  joint generator per substep); **Axis-2** = **notion-2** classical multi-time record memory
-  (a shared classical source `z_t` / `ξ(t)` — 1/f bath or RTN — modulating per-round rates,
-  designed to leave a beyond-Markov record signature; current evidence is limited to the declared
-  frozen record policy, not a generic causal process family).
+  joint generator per substep); **Axis-2** = core **notion-2** classical stochastic multi-time
+  record memory (a replayable finite-RTN timeline—including a finite-band sum-of-Lorentzians
+  1/f approximation—plus `Theta(z_t)` fan-out and matched-marginal controls). This is not a
+  microscopic/quantum-bath or CP-divisibility claim; current evidence is limited to the declared
+  frozen record policy, not a generic causal process family.
 - **Non-Pauli mechanisms**: span both axes — **leakage** (qutrit `|2⟩` / ququart `|3⟩`;
   WG leakage; LRU/DQLR reset), **drift** (slow coherent over/under-rotation, axis drift),
   **crosstalk** (coherent ZZ coupling, correlated errors), **burst** (correlated-in-time
@@ -48,10 +49,13 @@ spec: `docs/SIMULATOR.md`.
   `docs/twin_validation/notion123_taxonomy_literature_closure_2026-07-13.md` and
   `docs/twin_validation/finite_rtn_exact_cpdiv_result_2026-07-13.md`.
 - **Carrier**: the forward engine. Ladder: exact density matrix (`carrier/exact`; roughly 15
-  **qubits** by memory, but the current qutrit d3 oracle is 9 sites at about 5.77 GiB) → MPS MCWF
-  thin-strip (`quimb`; bounded χ is conditional on fixed strip width/depth/noise/accuracy) → **2D
-  PEPS full `d×d`** (`carrier/peps`, the active frontier; a 1D MPS can require `χ=2^{Θ(d)}` across
-  a full-square cut in the worst/project-estimate regime).
+  **qubits** by memory, but the current qutrit d3 oracle is 9 sites at about 5.77 GiB) → restricted
+  Axis-1 1D MCWF/MPS and QT/MPS verification executors
+  (`frontend/axis1_*_mps_execution.py`) → **2D PEPS full `d×d`** (`carrier/peps`, the active
+  full-code frontier). The shipped 1D paths are finite-step/fail-closed and do not claim
+  production-scalable or universal full-record completion; the old XZZX thin-strip driver is
+  legacy-only. A 1D MPS can require `χ=2^{Θ(d)}` across a full-square cut in the
+  worst/project-estimate regime.
 - **Record-faithful truncation** (ADR 0011, reopened): an acceptance criterion requiring the
   truncated carrier to preserve the declared joint record law within its registered band. It is
   **not yet established** for coherent leakage or long-range/loopy PEPS truncation; zero added
@@ -75,7 +79,8 @@ spec: `docs/SIMULATOR.md`.
 - **Certification (certify)**: scoring a noise process's (or the carrier's) emitted records
   against the ground-truth anchors → an epistemic ledger (per (anchor, statistic): value,
   band, class (a)/(b)/(c), verdict), with first-class, non-optional negative controls.
-  Evaluator-only (`certify/`).
+  Evaluator-only (`certify/`). A Bayes decoding floor is downstream decoder/headroom analysis,
+  retained only under `legacy/qec_twin/audit/`; it is not a simulator service or certification rung.
 - **Memory-axis instrument (notion-2)**: the record's absolute multi-time Markov-order
   structure vs a genuinely-Markov-order-k generative null — a full-history/order ladder,
   with lag-local CMI `I(mᵣ;mᵣ₋₂|mᵣ₋₁)`, Anderson–Goodman `G²`, and `E(k)` as diagnostics.

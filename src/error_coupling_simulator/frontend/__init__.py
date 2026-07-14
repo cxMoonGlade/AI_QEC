@@ -14,6 +14,39 @@ from .circuit_ir import (
     ObservableDef,
     Tick,
 )
+from .b8_io import (
+    DEFAULT_CHUNK_SHOTS,
+    iter_b8_chunks,
+    num_shots_in_file,
+    pack_bits,
+    packed_bytes_per_shot,
+    read_b8,
+    unpack_bits,
+)
+from .decoder import (
+    PYMATCHING_PIN,
+    PYMATCHING_WHEEL_FILENAME,
+    PYMATCHING_WHEEL_SHA256,
+    decode_dem,
+    pymatching_provenance,
+)
+from .experiments import (
+    ExperimentPreset,
+    LEAKED_READOUT_BIAS_SWEEP,
+    PRESET_LEAK_THETA_0P30,
+    PRESET_LEAK_WG_L1_5E3,
+    leak_slice_table,
+    load_xzzx_d3,
+    resolve_theta,
+    run_spec_from_preset,
+)
+from .interop import (
+    DEFAULT_PAIR_FLOOR_ABS,
+    DEFAULT_PAIR_FLOOR_SIGMA,
+    decode_records,
+    insert_op_after_tick,
+    records_to_dem,
+)
 from .analog_schedule import (
     ANALOG_SCHEDULE_REPRESENTABILITY,
     AXIS1_STATIC_ZZ_CALIBRATIONS_METADATA_KEY,
@@ -264,8 +297,12 @@ from .qutrit_leakage import (
     simulate_qutrit_wg_leakage,
 )
 from .ququart_transport import (
+    QUQUART_TRANSPORT_KRAUS_KEY,
+    QUQUART_TRANSPORT_KRAUS_SCHEMA,
+    QuquartTransportArtifacts,
     QuquartTransportResult,
     index_from_ququart_string,
+    load_ququart_transport_kraus,
     ququart_string_from_index,
     simulate_ququart_transport_smoke,
 )
@@ -297,6 +334,18 @@ from .stim_source import (
     StimCircuitSource,
 )
 from .xzzx_code import XZZXCodeSpec, make_xzzx_3x3_compiler_smoke_spec
+from .xzzx_parser import (
+    DEFAULT_DATASET_ROOT,
+    RoundDataFrame,
+    Stabilizer,
+    WithinCycleStream,
+    XZZXSchedule,
+    default_r01_paths,
+    default_r10_paths,
+    extract_stabilizers,
+    parse_within_cycle_streams,
+    parse_xzzx_circuit,
+)
 
 __all__ = [
     "CircuitBuilder",
@@ -534,4 +583,46 @@ __all__ = [
     "validate_axis1_measurement_record_freeze",
     "validate_axis1_state_evolution_freeze",
     "zero_hamiltonian_qobj",
+    # Stable service facade: experiment loading, external record I/O,
+    # record-to-DEM interop, optional decoding, XZZX parsing, and ququart
+    # channel injection/derivation support.
+    "DEFAULT_CHUNK_SHOTS",
+    "DEFAULT_DATASET_ROOT",
+    "DEFAULT_PAIR_FLOOR_ABS",
+    "DEFAULT_PAIR_FLOOR_SIGMA",
+    "ExperimentPreset",
+    "LEAKED_READOUT_BIAS_SWEEP",
+    "PRESET_LEAK_THETA_0P30",
+    "PRESET_LEAK_WG_L1_5E3",
+    "PYMATCHING_PIN",
+    "PYMATCHING_WHEEL_FILENAME",
+    "PYMATCHING_WHEEL_SHA256",
+    "QUQUART_TRANSPORT_KRAUS_KEY",
+    "QUQUART_TRANSPORT_KRAUS_SCHEMA",
+    "QuquartTransportArtifacts",
+    "RoundDataFrame",
+    "Stabilizer",
+    "WithinCycleStream",
+    "XZZXSchedule",
+    "decode_dem",
+    "decode_records",
+    "default_r01_paths",
+    "default_r10_paths",
+    "extract_stabilizers",
+    "insert_op_after_tick",
+    "iter_b8_chunks",
+    "leak_slice_table",
+    "load_ququart_transport_kraus",
+    "load_xzzx_d3",
+    "num_shots_in_file",
+    "pack_bits",
+    "packed_bytes_per_shot",
+    "parse_within_cycle_streams",
+    "parse_xzzx_circuit",
+    "pymatching_provenance",
+    "read_b8",
+    "records_to_dem",
+    "resolve_theta",
+    "run_spec_from_preset",
+    "unpack_bits",
 ]
