@@ -5,12 +5,12 @@ artifact writers/summaries ``artifact_paths`` / ``write_b8`` / ``write_b8_option
 frozen dataclass ``ArtifactPaths`` has NO methods and NO ``__post_init__`` so it
 contributes no units; ``_jsonable`` is a PRIVATE helper -- not a scored unit, but it is
 mutated by mutmut and is exercised end-to-end + pinned through ``write_json`` (all six of
-its type arms). The module imports numpy + ``qec_twin.hardware.b8_io`` + stdlib json/
+its type arms). The module imports numpy + the package-local ``frontend.b8_io`` + stdlib json/
 hashlib/pathlib -- NEITHER torch NOR quimb -- so every unit is CPU-pure and out_of_scope
 is empty).
 
-Full-coverage program (docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4;
-work-list docs/twin_validation/l3_release_package_unit_inventory.md D27).
+Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
+work-list docs/SIMULATOR.md D27).
 ``frontend/artifacts.py`` owns the frontend's on-disk artifact layer: it builds the fixed
 per-run path set (``artifact_paths`` -> ``ArtifactPaths``), packs unpacked bool records into
 Stim-compatible ``.b8`` (``write_b8`` / ``write_b8_optional``), serializes a numpy-aware

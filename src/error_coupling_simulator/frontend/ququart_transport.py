@@ -19,7 +19,7 @@ import torch
 from ..carrier.exact.qutrit_dm import CDTYPE, QuquartDM
 
 QUQUART_STRING_CONVENTION = "ququart_dm_most_significant_q0_left_to_right"
-QUQUART_TRANSPORT_KRAUS_SCHEMA = "error_coupling_simulator.ququart_kraus.v2"
+QUQUART_TRANSPORT_KRAUS_SCHEMA = "error_coupling_simulator.frontend.ququart_transport_kraus.v2"
 QUQUART_TRANSPORT_KRAUS_KEY = "kraus_ququart"
 
 
@@ -149,7 +149,7 @@ def simulate_ququart_transport_smoke(
         "site_populations": site_populations,
     }
     manifest = {
-        "schema": "error_coupling_simulator.ququart_transport.v1",
+        "schema": "error_coupling_simulator.frontend.ququart_transport.v1",
         "backend": "error_coupling_simulator.carrier.exact.qutrit_dm.QuquartDM",
         "representability": "exact_ququart_density_matrix_transport",
         "mechanism": "qutip_cz_ququart_leakage_transport",

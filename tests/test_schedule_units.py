@@ -7,8 +7,8 @@ module functions ``repeated_memory_schedule`` / ``repeated_memory_schedule_manif
 NOR quimb -- ``dataclasses`` + the sibling ``operation.canonical_operation_name`` -- so
 out_of_scope is empty).
 
-Full-coverage program (docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4;
-work-list docs/twin_validation/l3_release_package_unit_inventory.md D26).
+Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
+work-list docs/SIMULATOR.md D26).
 ``frontend/schedule.py`` is the PUBLIC named-schedule contract a compiler resolves BEFORE it
 lowers a ``CodeSpec`` into a record circuit. It is NOT a noise/mechanism model and declares no
 physical dynamics: a ``ScheduleTemplate`` names its required frontend operations + declares the

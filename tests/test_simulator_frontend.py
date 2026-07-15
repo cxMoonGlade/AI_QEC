@@ -284,7 +284,7 @@ def test_simulator_run_writes_stim_dem_b8_and_decoder_artifacts(tmp_path):
     assert not ideal_obs.any()
 
     manifest = json.loads(result.paths.manifest.read_text())
-    assert manifest["schema"] == "qec_twin.simulator_frontend.v1"
+    assert manifest["schema"] == "error_coupling_simulator.frontend.run_manifest.v1"
     assert manifest["representability"] == "stim_pauli"
     assert manifest["num_detectors"] == 1
     assert manifest["num_observables"] == 1
@@ -581,7 +581,7 @@ def test_compiled_circuit_rejects_schema_mismatch_and_truth_laundering():
             noisy_circuit=ideal,
             metadata={},
             source_type="bad_sidecar",
-            evaluator_sidecars=({"name": "truth", "path": "truth.json", "visibility": "learner"},),
+            evaluator_sidecars=({"name": "truth", "path": "truth.json", "visibility": "public"},),
         )
 
     with pytest.raises(ValueError, match="evaluator truth"):

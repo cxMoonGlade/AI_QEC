@@ -1,18 +1,16 @@
 from __future__ import annotations
 
-"""carrier.pepo — rung-1 2D density-matrix PEPO carrier for the rotated d x d XZZX patch.
+"""Two-dimensional density-matrix PEPO carrier for a rotated XZZX patch.
 
-Binding docs: ``docs/nonpauli_teacher/pepo_engine_rung1_contract.md`` (v4.2) under
-``docs/nonpauli_teacher/pepo_d5d7_carrier_prereg.md`` (v2.4). Modules (disjoint
-ownership, contract s1):
+Modules have disjoint ownership:
 
 - ``layout`` [A1]: diamond -> grid transform, frozen-cut site lists, plaquette paths,
   the codestate PEPO builder (:class:`PepoLayout`, :class:`PepoState`,
   :func:`build_codestate_pepo`, :func:`dense_rho`).
 - ``dynamics`` [A2]: single-site superops, the stabilizer-channel TT, NTU truncation,
   ledgers.
-- ``sampler`` [A3]: boundary-MPS norm cache, Tr(rho.Pi) site caps, Born sampling +
-  selective update, the C3 negativity witness.
+- ``sampler``: boundary-MPS norm cache, ``Tr(rho Pi)`` site caps, terminal
+  observable reads, and the negativity witness.
 
 Re-exports are LAZY (PEP 562) and per-name, so importing the package — or any one
 builder's names — never requires the sibling modules to exist (parallel-build safe).
@@ -45,7 +43,6 @@ _EXPORTS = {
     "norm_cache": "sampler",
     "expect_site_caps": "sampler",
     "stab_expectation": "sampler",
-    "born_sample_round": "sampler",
     "terminal_readout_obs": "sampler",
     "terminal_readout_obs_prob": "sampler",
     "s_to_det": "sampler",

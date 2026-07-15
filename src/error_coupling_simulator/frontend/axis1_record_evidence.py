@@ -67,7 +67,9 @@ from .axis1_state_evidence import (
 )
 
 
-AXIS1_RECORD_EVIDENCE_SCHEMA = "qec_twin.simulator.axis1_measurement_record_evidence.v1"
+AXIS1_RECORD_EVIDENCE_SCHEMA = (
+    "error_coupling_simulator.frontend.measurement_record_evidence.v1"
+)
 AXIS1_RECORD_EVIDENCE_REPRESENTABILITY = (
     "axis1_selected_joint_channel_record_evidence_no_b8_or_decoder"
 )
@@ -157,7 +159,7 @@ class Axis1ReadoutResetInstrumentSpec:
 
     def to_manifest(self) -> dict[str, Any]:
         return {
-            "schema": "qec_twin.simulator.axis1_readout_reset_instrument_spec.v1",
+            "schema": "error_coupling_simulator.frontend.readout_reset_instrument_spec.v1",
             "source": self.source,
             "epistemic_class": self.epistemic_class,
             "active": not self.is_trivial,
@@ -375,7 +377,7 @@ def write_axis1_measurement_record_samples(
     summary = record_summary(record_batch.det, record_batch.obs)
     summary.update(
         {
-            "schema": "qec_twin.simulator.axis1_record_sample_summary.v1",
+            "schema": "error_coupling_simulator.frontend.record_sample_summary.v1",
             "representability": "axis1_jointL_record_samples_b8_no_dem_no_decoder",
             "exact_evidence_file": exact_path.name,
             "exact_evidence_content_hash": exact["content_hash"],
@@ -454,7 +456,7 @@ def freeze_axis1_measurement_record_evidence(
     record = manifest.get("record_evidence", {})
     coverage = manifest.get("coverage", {})
     payload = {
-        "schema": "qec_twin.simulator.axis1_measurement_record_freeze.v1",
+        "schema": "error_coupling_simulator.frontend.measurement_record_freeze.v1",
         "evidence_file": evidence_path.name,
         "evidence_schema": manifest.get("schema"),
         "evidence_sha256": sha,
@@ -532,7 +534,7 @@ def validate_axis1_measurement_record_freeze(freeze_path: str | Path) -> dict[st
     if failed:
         raise ValueError(f"Axis-1 record freeze metadata mismatch: {failed}")
     return {
-        "schema": "qec_twin.simulator.axis1_measurement_record_freeze_validation.v1",
+        "schema": "error_coupling_simulator.frontend.measurement_record_freeze_validation.v1",
         "freeze_file": path.name,
         "evidence_file": evidence_path.name,
         "evidence_sha256": sha,
@@ -592,7 +594,7 @@ def _enumerate_measurement_records(
                 # (tensor-product identity). `selection.participant[q]` maps a window-local
                 # qubit index q (big-endian, the same ordering the operators use) to its global
                 # qubit; `_apply_channel_to_branches` embeds the small block Kraus on those
-                # targets. Under QEC_TWIN_NO_FACTORIZE=1 / a single full-window component,
+                # targets. Under ECS_FORCE_UNFACTORIZED_AXIS1=1 / a single full-window component,
                 # `components` is one full-window entry and this is bit-for-bit the old path.
                 num_kraus_total = 0
                 for local_qubits, comp_kraus in assembled.components:
@@ -1033,7 +1035,7 @@ def _apply_channel_to_branches(rho, kraus, targets, num_qubits: int):
     # ONE call (verified byte-identical to the per-branch loop, 43x faster, in
     # outputs/twin_validation/batched_branch_apply_verify.py) — so a single call replaces the python loop of
     # B tiny custom-op dispatches (the R>=5 hot spot). Fall back to the per-branch loop only when the fused
-    # kernel is NOT the route (CPU / QEC_TWIN_NO_KERNELS / targets>4): the unfused apply_kraus path is not
+    # kernel is NOT the route (CPU / ECS_DISABLE_NATIVE_KERNELS / targets>4): the unfused apply_kraus path is not
     # written for a batched rho.
     if rho.is_cuda and len(tuple(targets)) <= 4 and _accel_available():
         return apply_channel_local(rho, kraus, targets, num_qubits)
@@ -1288,7 +1290,7 @@ def _load_record_freeze_manifest(path: Path) -> dict[str, Any]:
     if not path.exists():
         raise FileNotFoundError(path)
     data = json.loads(path.read_text())
-    if data.get("schema") != "qec_twin.simulator.axis1_measurement_record_freeze.v1":
+    if data.get("schema") != "error_coupling_simulator.frontend.measurement_record_freeze.v1":
         raise ValueError(
             f"{path} is not an Axis-1 record-evidence freeze: schema={data.get('schema')!r}"
         )

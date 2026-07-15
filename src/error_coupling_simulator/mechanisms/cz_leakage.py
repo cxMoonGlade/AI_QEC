@@ -15,8 +15,8 @@ Fig 2b; Varbanov 2002.07119 App H). This module:
      QuTiP ``propagator`` (closed-system unitary) [optionally + ``mesolve`` with T1/Tphi
      Lindblad collapse for the dissipative variant] -> the full CZ propagator U (or
      superoperator S);
-  3. PROJECTS / TRUNCATES the propagator onto the TRACKED subspace (dim 3 = qutrit, |2>-only,
-     Arm 1; dim 4 = ququart, |3>-faithful, Arm 2) -> a CPTP channel as KRAUS operators.
+  3. PROJECTS / TRUNCATES the propagator onto the tracked subspace (dim 3 = qutrit,
+     |2>-only; dim 4 = ququart, |3>-faithful) -> a CPTP channel as KRAUS operators.
      The non-unitarity of the truncated map (population leaking OUT of the tracked space into
      |3>,|4>,...) is what makes it a genuine channel, not a unitary.
 
@@ -30,16 +30,16 @@ The engine ``QutritDM.apply_channel_2site`` (src/error_coupling_simulator/carrie
 (qudit-0 = MSF). We emit Kraus in EXACTLY that basis: two-transmon state ``|t_flux t_stat>``
 mapped to index ``d*t_flux + t_stat`` -- i.e. the FLUX (higher-freq) qubit is the high pair-trit
 (``site_i``). Apply it with ``site_i = flux qubit, site_j = stat (partner) qubit``.
-  - Arm 1: d=3 -> Kraus shape (k, 9, 9).
-  - Arm 2: d=4 -> Kraus shape (k, 16, 16), consumed by ``QuquartDM``.
+  - d=3 -> Kraus shape (k, 9, 9).
+  - d=4 -> Kraus shape (k, 16, 16), consumed by ``QuquartDM``.
 
 PARAMS -- NEVER FROZEN. ``CZParams`` exposes anharmonicity, coupling, frequencies, gate time,
 pulse shape, and the dissipation as ARGUMENTS; the GT-check sweeps them. Defaults are grounded
 in Varbanov Table II (alpha=-300 MHz, J1=15 MHz, omega: Dlow 4.9 / Dmid 6.0 / Dhigh 6.7 GHz),
 declared per-field below.
 
-NON-CIRCULAR GROUND TRUTH (the repository validation script remains in
-``outputs/teacher_prereg/qutip_cz_leakage_channel_gtcheck.py`` and is not runtime input):
+NON-CIRCULAR REFERENCE CHECKS (implemented in the current owner tests, not used as
+runtime inputs):
   - vs the INDEPENDENT analytic two-photon scaling P_t = sin^2(g_eff t),
     g_eff = -(g_{|21-12|})(g_{|30-21|})/eta = -2 sqrt3 g^2/eta  (Miao SI S1);
   - vs Miao's MEASURED transport fractions (|30-12 ~18-19%, |31-22 ~58-61%, Fig 2b);

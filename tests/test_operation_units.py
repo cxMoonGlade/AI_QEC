@@ -7,8 +7,8 @@ property, ``require``, ``to_manifest``), plus the three module functions
 imports NEITHER torch NOR quimb -- ``dataclasses`` + a sibling ``metadata_guard.
 validate_public_metadata`` -- so out_of_scope is empty).
 
-Full-coverage program (docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4;
-work-list docs/twin_validation/l3_release_package_unit_inventory.md D24).
+Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
+work-list docs/SIMULATOR.md D24).
 ``frontend/operation.py`` owns the PUBLIC construction vocabulary a ``CodeSpec`` declares before
 a schedule compiles it. It is NOT a noise/mechanism model, NOT evaluator truth, NOT a serialized
 channel payload -- just a named-operation + validated-metadata carrier and the name
@@ -161,7 +161,7 @@ def test_L0_operation_spec_post_init_rejects_reserved_metadata_key_exact():
     # f-string wrap + proves validate_public_metadata is load-bearing at construction).
     assert_raises_exact(
         ValueError,
-        "learner-visible metadata cannot contain evaluator/error-model semantics; "
+        "public-artifact metadata cannot contain evaluator/error-model semantics; "
         "reserved key OperationSpec(prep0).metadata.error matches exact key 'error'. "
         "Put runnable noise in NoiseSpec and evaluator truth in evaluator_sidecars.",
         lambda: OperationSpec("prep0", {"error": 1}),
@@ -169,7 +169,7 @@ def test_L0_operation_spec_post_init_rejects_reserved_metadata_key_exact():
     # the label interpolates the CANONICAL name (prep0), even for an upper/alias input.
     assert_raises_exact(
         ValueError,
-        "learner-visible metadata cannot contain evaluator/error-model semantics; "
+        "public-artifact metadata cannot contain evaluator/error-model semantics; "
         "reserved key OperationSpec(prep_plus).metadata.error matches exact key 'error'. "
         "Put runnable noise in NoiseSpec and evaluator truth in evaluator_sidecars.",
         lambda: OperationSpec("PREPP", {"error": 1}),

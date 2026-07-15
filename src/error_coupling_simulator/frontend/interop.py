@@ -207,8 +207,8 @@ def records_to_dem(
             "note": (
                 "for cluster_size > 1 the SEs and the sigma edge floor are "
                 "understated by the cluster design effect (trajectory "
-                "common-mode, teacher S-1/C-11); declared, not corrected — "
-                "bound at P1"
+                "common-mode); declared, not corrected in this two-point "
+                "reduction"
             ),
         },
         "reduction_caveat": (

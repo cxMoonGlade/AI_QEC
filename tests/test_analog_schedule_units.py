@@ -7,8 +7,8 @@ compilers ``compile_code_spec_to_substep_schedule`` / ``circuit_ir_to_substep_sc
 ``has_valid_compiler_schedule_seal`` / ``require_compiler_schedule_seal``; no torch, no
 quimb, so out_of_scope is empty).
 
-Full-coverage program (docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4;
-work-list docs/twin_validation/l3_release_package_unit_inventory.md D18).
+Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
+work-list docs/SIMULATOR.md D18).
 ``frontend/analog_schedule.py`` is the compiler/schedule seam: it records which public
 circuit operations occupy the same substep, the duration bracket attached to that
 substep, the record-boundary provenance, and a process-owned HMAC seal that later Axis-1
@@ -35,7 +35,7 @@ used. The ``_find_axis2_source_metadata_path`` arm of ``_reject_projected_or_noi
 is DEAD-DEFENSIVE (probed): ``CircuitIR.__post_init__``'s ``validate_public_metadata``
 rejects every axis-2 source key at the data boundary. The isolation-contract fix makes the
 ``_source_projection_evaluator_audit`` transport FAIL-CLOSED -- the audit key is rejected at
-EVERY position on learner-visible objects (both the TOP-LEVEL guard-bypass and a key hidden
+EVERY position on public-artifact objects (both the TOP-LEVEL guard-bypass and a key hidden
 under a NESTED audit subtree), skipped only under the internal ``_allow_noise_steps`` opt-in
 (see ``test_L0_validate_public_metadata_audit_transport_fail_closed`` and
 ``test_L0_circuit_ir_toplevel_audit_transport_gated_by_allow_noise_steps``) -- so no route
@@ -215,7 +215,7 @@ def _indep_step_manifest(step) -> dict:
 
 def _indep_circuit_ir_source_hash(circuit: CircuitIR) -> str:
     return _indep_hash({
-        "schema": "qec_twin.simulator.CircuitIR.schedule_hash.v1",
+        "schema": "error_coupling_simulator.frontend.circuit_ir_schedule_hash.v1",
         "num_qubits": circuit.num_qubits,
         "metadata": _indep_jsonable(circuit.metadata),
         "steps": [_indep_step_manifest(s) for s in circuit.steps],
@@ -225,7 +225,7 @@ def _indep_circuit_ir_source_hash(circuit: CircuitIR) -> str:
 def _indep_stim_source_hash(circuit_str, *, edges=(), calibrations=None,
                             context_manifest=None) -> str:
     payload = {
-        "schema": "qec_twin.simulator.StimCircuit.schedule_hash.v1",
+        "schema": "error_coupling_simulator.frontend.stim_circuit_schedule_hash.v1",
         "stim_circuit": circuit_str,
         "static_zz_couplings": [list(e) for e in edges],
         "static_zz_calibrations": calibrations or [],
@@ -506,6 +506,9 @@ def test_L0_substep_schedule_direct_and_coercion():
 
 
 def test_L0_substep_schedule_guards():
+    retired_schema = "_".join(("qec", "twin")) + ".simulator.SubstepSchedule.v1"
+    with pytest.raises(ValueError, match="unsupported substep-schedule schema"):
+        _direct_schedule(substeps=(), schema_version=retired_schema)
     _raises_exact(ValueError, "num_qubits must be positive",
                   lambda: _direct_schedule(num_qubits=0, substeps=()))
     _raises_exact(ValueError, "source_hash must be non-empty",
@@ -724,16 +727,16 @@ def test_L0_circuit_ir_reject_projected_or_noisy():
             num_qubits=2, steps=(GateOp("H", (0,)),),
             metadata={"noise_projection": "stim_pauli"})))
     # source-projection evaluator audit: the DATA BOUNDARY now rejects a TOP-LEVEL audit key at
-    # CONSTRUCTION (it is an internal transport, not learner metadata), so this input never
+    # CONSTRUCTION (it is an internal transport, not public metadata), so this input never
     # reaches the compiler's own top-level audit backstop (analog_schedule.py:1065). That
     # backstop is pinned directly on unvalidated metadata in
     # test_L0_find_axis2_source_metadata_path_direct.
     _raises_exact(
         ValueError,
-        "learner-visible metadata cannot carry the evaluator-only audit transport; reserved "
+        "public-artifact metadata cannot carry the evaluator-only audit transport; reserved "
         "key CircuitIR.metadata._source_projection_evaluator_audit is an internal source-"
         "projection transport (permitted only on the transient noisy CircuitIR), not "
-        "learner-visible metadata. Use evaluator_sidecars with visibility='evaluator_only'.",
+        "public-artifact metadata. Use evaluator_sidecars with visibility='evaluator_only'.",
         lambda: CircuitIR(
             num_qubits=2, steps=(GateOp("H", (0,)),),
             metadata={"_source_projection_evaluator_audit": {"x": 1}}))
@@ -746,7 +749,7 @@ def test_L0_circuit_ir_axis2_source_key_is_rejected_by_earlier_guard():
     Proven here: building the circuit raises BEFORE any schedule extraction can run."""
     _raises_exact(
         ValueError,
-        "learner-visible metadata cannot contain evaluator truth; reserved key "
+        "public-artifact metadata cannot contain evaluator truth; reserved key "
         "CircuitIR.metadata.source_process matches 'source_process'. "
         "Use evaluator_sidecars with visibility='evaluator_only'.",
         lambda: CircuitIR(num_qubits=2, steps=(GateOp("H", (0,)),),
@@ -1369,12 +1372,12 @@ def test_L0_compile_coordless_qubits_metadata():
 # adversarial-mutation review found that an Axis-2 source key NESTED under a      #
 # ``_source_projection_evaluator_audit`` subtree slipped the DATA BOUNDARY        #
 # (``validate_public_metadata`` skipped the audit subtree at EVERY depth) and     #
-# survived into the stored learner-visible metadata -- caught only later by the   #
+# survived into the stored public-artifact metadata -- caught only later by the   #
 # schedule compiler, which a non-compiler consumer (simulator run manifest)       #
 # bypasses. A follow-up review found the TOP-LEVEL sibling: any top-level audit   #
 # key smuggled wrapped Axis-2 truth into the run manifest the same way. The       #
 # isolation-contract fix is FAIL-CLOSED: the audit key is rejected at EVERY       #
-# position on learner-visible objects and skipped only under the internal opt-in  #
+# position on public-artifact objects and skipped only under the internal opt-in  #
 # (the transient noisy CircuitIR, gated by _allow_noise_steps). Both routes are   #
 # now closed at CONSTRUCTION (see                                                 #
 # ``test_L0_validate_public_metadata_audit_transport_fail_closed`` and            #
@@ -1394,7 +1397,7 @@ def test_L0_reject_nested_axis2_source_leak():
     # dict-nested audit key -> rejected at the boundary during CircuitIR construction.
     _raises_exact(
         ValueError,
-        "learner-visible metadata cannot nest the evaluator-only audit transport; reserved "
+        "public-artifact metadata cannot nest the evaluator-only audit transport; reserved "
         "key CircuitIR.metadata.foo._source_projection_evaluator_audit is permitted only at "
         "the top level of the transient noisy CircuitIR. Use evaluator_sidecars with "
         "visibility='evaluator_only'.",
@@ -1405,7 +1408,7 @@ def test_L0_reject_nested_axis2_source_leak():
     # list-nested audit key (value is a list) -> also rejected at the audit key itself.
     _raises_exact(
         ValueError,
-        "learner-visible metadata cannot nest the evaluator-only audit transport; reserved "
+        "public-artifact metadata cannot nest the evaluator-only audit transport; reserved "
         "key CircuitIR.metadata.wrap._source_projection_evaluator_audit is permitted only at "
         "the top level of the transient noisy CircuitIR. Use evaluator_sidecars with "
         "visibility='evaluator_only'.",
@@ -1430,10 +1433,10 @@ def test_L0_circuit_ir_toplevel_audit_transport_gated_by_allow_noise_steps():
     # public/user circuit: top-level audit REJECTED at construction.
     _raises_exact(
         ValueError,
-        "learner-visible metadata cannot carry the evaluator-only audit transport; reserved "
+        "public-artifact metadata cannot carry the evaluator-only audit transport; reserved "
         "key CircuitIR.metadata._source_projection_evaluator_audit is an internal source-"
         "projection transport (permitted only on the transient noisy CircuitIR), not "
-        "learner-visible metadata. Use evaluator_sidecars with visibility='evaluator_only'.",
+        "public-artifact metadata. Use evaluator_sidecars with visibility='evaluator_only'.",
         lambda: CircuitIR(num_qubits=1, steps=(GateOp("H", (0,)),),
                           metadata={"_source_projection_evaluator_audit": {"source_process": "x"}}))
     # internal transient noisy circuit (_allow_noise_steps=True): transport carried verbatim.
@@ -1444,7 +1447,7 @@ def test_L0_circuit_ir_toplevel_audit_transport_gated_by_allow_noise_steps():
     # ...but even the internal circuit must not NEST the transport (top-level only).
     _raises_exact(
         ValueError,
-        "learner-visible metadata cannot nest the evaluator-only audit transport; reserved "
+        "public-artifact metadata cannot nest the evaluator-only audit transport; reserved "
         "key CircuitIR.metadata.foo._source_projection_evaluator_audit is permitted only at "
         "the top level of the transient noisy CircuitIR. Use evaluator_sidecars with "
         "visibility='evaluator_only'.",
@@ -1457,27 +1460,27 @@ def test_L0_circuit_ir_toplevel_audit_transport_gated_by_allow_noise_steps():
 def test_L0_validate_public_metadata_audit_transport_fail_closed():
     """ISOLATION-CONTRACT data boundary (the fix). The declared
     ``_source_projection_evaluator_audit`` transport is FAIL-CLOSED: ``validate_public_metadata``
-    rejects it at EVERY position by DEFAULT (learner-visible objects) and skips it ONLY at the
+    rejects it at EVERY position by DEFAULT (public-artifact objects) and skips it ONLY at the
     TOP LEVEL under the internal opt-in ``allow_evaluator_audit_transport=True`` (the transient
     noisy CircuitIR, gated by _allow_noise_steps). This closes the top-level guard-bypass where a
-    top-level audit key would smuggle any wrapped Axis-2 key into the stored learner-visible
+    top-level audit key would smuggle any wrapped Axis-2 key into the stored public-artifact
     metadata (copied into CompiledCircuit.metadata, serialized into the run manifest, outside the
     schedule compiler's reject guard). Exercises the boundary DIRECTLY, not via the compile path."""
-    # --- DEFAULT (learner-visible) rejects the audit key at EVERY position --------------------
+    # --- DEFAULT (public-artifact) rejects the audit key at EVERY position --------------------
     # top level -> the internal-transport rejection.
     _raises_exact(
         ValueError,
-        "learner-visible metadata cannot carry the evaluator-only audit transport; reserved "
+        "public-artifact metadata cannot carry the evaluator-only audit transport; reserved "
         "key CircuitIR.metadata._source_projection_evaluator_audit is an internal source-"
         "projection transport (permitted only on the transient noisy CircuitIR), not "
-        "learner-visible metadata. Use evaluator_sidecars with visibility='evaluator_only'.",
+        "public-artifact metadata. Use evaluator_sidecars with visibility='evaluator_only'.",
         lambda: validate_public_metadata(
             {"_source_projection_evaluator_audit": {"source_process": "LEAK"}},
             label="CircuitIR.metadata"))
     # nested (dict) shielding a reserved key -> the nested rejection.
     _raises_exact(
         ValueError,
-        "learner-visible metadata cannot nest the evaluator-only audit transport; reserved "
+        "public-artifact metadata cannot nest the evaluator-only audit transport; reserved "
         "key CircuitIR.metadata.foo._source_projection_evaluator_audit is permitted only at "
         "the top level of the transient noisy CircuitIR. Use evaluator_sidecars with "
         "visibility='evaluator_only'.",
@@ -1487,7 +1490,7 @@ def test_L0_validate_public_metadata_audit_transport_fail_closed():
     # nested audit with a CLEAN subtree is still rejected (misplaced transport, not content).
     _raises_exact(
         ValueError,
-        "learner-visible metadata cannot nest the evaluator-only audit transport; reserved "
+        "public-artifact metadata cannot nest the evaluator-only audit transport; reserved "
         "key CircuitIR.metadata.wrap._source_projection_evaluator_audit is permitted only at "
         "the top level of the transient noisy CircuitIR. Use evaluator_sidecars with "
         "visibility='evaluator_only'.",
@@ -1497,7 +1500,7 @@ def test_L0_validate_public_metadata_audit_transport_fail_closed():
     # a bare top-level reserved key is still rejected (control; unchanged reserved-key path).
     _raises_exact(
         ValueError,
-        "learner-visible metadata cannot contain evaluator truth; reserved key "
+        "public-artifact metadata cannot contain evaluator truth; reserved key "
         "CircuitIR.metadata.source_process matches 'source_process'. "
         "Use evaluator_sidecars with visibility='evaluator_only'.",
         lambda: validate_public_metadata({"source_process": {"x": 1}},
@@ -1511,7 +1514,7 @@ def test_L0_validate_public_metadata_audit_transport_fail_closed():
     # ...but the opt-in is TOP-LEVEL ONLY: a nested audit key is rejected even under the flag.
     _raises_exact(
         ValueError,
-        "learner-visible metadata cannot nest the evaluator-only audit transport; reserved "
+        "public-artifact metadata cannot nest the evaluator-only audit transport; reserved "
         "key CircuitIR.metadata.foo._source_projection_evaluator_audit is permitted only at "
         "the top level of the transient noisy CircuitIR. Use evaluator_sidecars with "
         "visibility='evaluator_only'.",

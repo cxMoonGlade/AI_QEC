@@ -49,7 +49,7 @@ from .axis1_qt_mps_execution import (
 
 
 AXIS1_MCWF_MPS_EXECUTION_SCHEMA = (
-    "qec_twin.simulator.axis1_mcwf_mps_state_record_execution.v1"
+    "error_coupling_simulator.frontend.mcwf_mps_state_record_execution.v1"
 )
 AXIS1_MCWF_MPS_EXECUTION_REPRESENTABILITY = (
     "axis1_mcwf_mps_fixed_microstep_local_dims_state_record"
@@ -72,7 +72,7 @@ _TWO_SITE_CONDITIONAL_PHASE_FAMILIES = frozenset(
 _LEAKAGE_COLLAPSE_FAMILIES = frozenset({"LEAK_SEEP_21", "LEAK_HEAT_12"})
 
 # --------------------------------------------------------------------------- #
-# Coherent Pauli-tensor families (Step 8): over-rotation + parasitic + crosstalk
+# Coherent Pauli-tensor families: over-rotation, parasitic coupling, and crosstalk
 # --------------------------------------------------------------------------- #
 ONE_SITE_COHERENT_FAMILIES = frozenset({"COH_RX", "COH_RY", "COH_RZ"})
 TWO_SITE_COHERENT_FAMILIES = frozenset(
@@ -88,7 +88,7 @@ COHERENT_PAULI_FAMILIES = (
     ONE_SITE_COHERENT_FAMILIES | TWO_SITE_COHERENT_FAMILIES | CROSSTALK_COHERENT_FAMILIES
 )
 
-# Two-site joint (collective/Dicke) collapse families (M12 Phase-B). Distinguished from the one-site
+# Two-site joint (collective/Dicke) collapse families. Distinguished from the one-site
 # collapse families (T1/T1_UP/T2/RD/LEAK_*) so the support-arity preflight can fail closed on a
 # mis-supported request instead of deferring the error to the operator builder at runtime.
 TWO_SITE_COLLAPSE_FAMILIES = frozenset({"CORR_RELAX"})
@@ -96,8 +96,7 @@ TWO_SITE_COLLAPSE_FAMILIES = frozenset({"CORR_RELAX"})
 # First-order MCWF no-jump truncation (K0 = I - 1/2 c^dag c dt) does not preserve probability: the
 # per-microstep mass residual is 1/4 dt^2 <(sum_k c_k^dag c_k)^2> = O(dt^2). At gamma*dt ~ 1 with too
 # few microsteps the step is grossly non-CPTP (|11> probability mass -> 2.0 for CORR_RELAX at
-# g=0.05, dt=20, microstep_count=1 — M12 Phase-B 5-model review; quantified in
-# outputs/twin_validation/cert_m12_phaseB_convergence.py). This (c)-class heuristic tripwire (a
+# g=0.05, dt=20, microstep_count=1). This (c)-class heuristic tripwire (a
 # go/no-go gate, NOT a premise or error bound) fail-closes when the state-independent worst-case
 # per-microstep bound 1/4 dt_micro^2 (sum_k ||c_k^dag c_k||_op)^2 exceeds the budget; because that
 # bound dominates the runtime residual, passing the preflight guarantees the runtime residual stays
@@ -191,7 +190,7 @@ def axis1_mcwf_mps_state_record_execution_manifest(
             "no new scored quantity"
         ),
         "approximation_book": {
-            "schema": "qec_twin.simulator.axis1_mcwf_mps_execution_approximation_book.v1",
+            "schema": "error_coupling_simulator.frontend.mcwf_mps_execution_approximation_book.v1",
             "unraveling_policy": {
                 "name": "fixed_microstep_first_order_quantum_jump_mcwf",
                 "finite_step_order": step_order,
@@ -1072,13 +1071,13 @@ def _coherent_family_generator(family: str, *, coefficient: float, device: str) 
 
     DERIVATION (notation per docs/SIMULATOR.md / docs/METRICS.md):
 
-    M6 coherent_rx_overrotation (COH_RX) — the canonical 1-site example:
-      H_M6 = (coeff / 2) * X,    X = [[0,1],[1,0]]  (Nielsen & Chuang Eq. 2.1)
+    Coherent X over-rotation (COH_RX) — the canonical 1-site example:
+      H_X = (coeff / 2) * X,    X = [[0,1],[1,0]]  (Nielsen & Chuang Eq. 2.1)
       Convention: R_x(theta) = exp(-i theta X/2) so that eps = coeff * dt_ns is the
       over-rotation angle in radians  (N&C Eq. 4.4-4.7).
       Mechanism ground: Kaufmann-Rojkov-Reiter arXiv:2307.08741 Eq. 2
-        H_theta = sum_k theta_k P_k;  the single-qubit theta_X X term IS M6 (COH_RX).
-      Error gate: U_M6 = exp(-i H_M6 dt) = RX(eps),  eps = coeff * dt_ns.
+        H_theta = sum_k theta_k P_k; the single-qubit theta_X X term gives COH_RX.
+      Error gate: U_X = exp(-i H_X dt) = RX(eps),  eps = coeff * dt_ns.
       Leading 1-F_e: sin^2(eps/2) = eps^2/4 + O(eps^4)  (METRICS.md /d convention, d=2).
 
     For two-site families (COH_XX, COH_YY, ..., COH_XX_YY):
@@ -1086,8 +1085,8 @@ def _coherent_family_generator(family: str, *, coefficient: float, device: str) 
       where (x) is the tensor product of 2x2 Pauli operators; the 1/4 = (1/2)^2
       preserves the R_{PQ}(eps)-convention for two-qubit coherent over-rotations.
 
-    M22 coherent_cxx_parasitic_coupling (COH_XX) — 2-site derivation:
-      H_M22 = (coeff / 4) * (X (x) X),   X = [[0,1],[1,0]]  (Nielsen & Chuang Eq. 2.1)
+    Coherent XX parasitic coupling (COH_XX) — 2-site derivation:
+      H_XX = (coeff / 4) * (X (x) X),   X = [[0,1],[1,0]]  (Nielsen & Chuang Eq. 2.1)
       factor 1/4 = (1/2)^2: two-qubit over-rotation convention
         R_{PQ}(eps_cat) = exp(-i (eps_cat/2)(P (x) Q))
         carrier eps = coeff * dt_ns is the per-tensor angle; catalog eps_cat = eps/2
@@ -1101,9 +1100,9 @@ def _coherent_family_generator(family: str, *, coefficient: float, device: str) 
         - Device-physical transverse interaction: Geller-Martinis arXiv:1405.1915 Eq. 57
           delta_H = g * sigma_x (x) sigma_x  (gmon/Xmon tunable-coupler).
       (X(x)X)^2 = I4,  Tr(X(x)X) = 0,  eigenvalues +/-1 each x2.
-      Error gate: U_M22 = exp(-i H_M22 dt) = cos(eps/4)*I4 - i*sin(eps/4)*(X(x)X),
+      Error gate: U_XX = exp(-i H_XX dt) = cos(eps/4)*I4 - i*sin(eps/4)*(X(x)X),
                   eps = coeff * dt_ns.
-      EXACT 1-F_e (d=4): 1 - |Tr(U_M22)/4|^2 = sin^2(eps/4).
+      EXACT 1-F_e (d=4): 1 - |Tr(U_XX)/4|^2 = sin^2(eps/4).
         (Nielsen arXiv:quant-ph/0205035 Eq. 16; Tr(X(x)X)=0 so Tr(U)=4*cos(eps/4).)
       LEADING 1-F_e: ||(eps/4)(X(x)X)||_F^2 / 4 = eps^2/16 + O(eps^4).
 
@@ -1390,7 +1389,7 @@ def _sample_joint_jump_or_nojump(
                 where=support[0],
                 contract=True,
             )
-        else:  # 2-site joint collapse (M12 Phase-B): apply on the joint support
+        else:  # two-site joint collapse: apply on the joint support
             nojump.gate_(
                 _joint_nojump_first_order_kraus(
                     term, dt_ns, support, local_dims=local_dims, device=device
@@ -1415,7 +1414,7 @@ def _sample_joint_jump_or_nojump(
                 where=support[0],
                 contract=True,
             )
-        else:  # 2-site joint collapse (M12 Phase-B)
+        else:  # two-site joint collapse
             jump.gate_(
                 (float(dt_ns) ** 0.5)
                 * _joint_collapse_operator(term, support, local_dims=local_dims, device=device),
@@ -1497,14 +1496,14 @@ def _joint_collapse_operator(
     local_dims: tuple[int, ...],
     device: str,
 ) -> torch.Tensor:
-    """2-site JOINT (collective/Dicke) collapse operator (M12 Phase-B).
+    """Two-site joint (collective/Dicke) collapse operator.
 
     CORR_RELAX = correlated_two_qubit_relaxation: ``c = coeff * (sigma^- (x) I + I (x) sigma^-)``,
     ``coeff = sqrt(gamma_corr)``, ``sigma^- = |0><1|`` on the computational {0,1} block, ZERO on leaked
     levels >= 2 (same embed discipline as the coherent two-site families). Built on the
     ``(d_i * d_j)`` joint Hilbert space of ``support=(i, j)`` in the carrier's qubit-0-major kron order.
-    Grounded in M12 Phase-A (`cert_m12_correlated_relaxation.py`) — the channel this trajectory seam
-    must reproduce under Monte-Carlo.
+    The hand-typed collective-lowering reference and relative-sign corruption
+    falsifier live in ``tests/test_collective_decay_finite_step_guard.py``.
     """
     family = str(term["operator_family"]).upper()
     coeff = float(term["coefficient"])
@@ -1535,7 +1534,7 @@ def _joint_nojump_first_order_kraus(
     local_dims: tuple[int, ...],
     device: str,
 ) -> torch.Tensor:
-    """2-site first-order no-jump Kraus ``I - 1/2 c^dag c dt`` for a joint collapse (M12 Phase-B)."""
+    """Two-site first-order no-jump Kraus ``I - 1/2 c^dag c dt``."""
     c = _joint_collapse_operator(term, support, local_dims=local_dims, device=device)
     d = int(c.shape[0])
     ident = torch.eye(d, dtype=torch.complex128, device=device)
@@ -2125,7 +2124,7 @@ def _unsupported_substeps(
                 "RD",
                 "LEAK_SEEP_21",
                 "LEAK_HEAT_12",
-                "CORR_RELAX",  # M12 Phase-B: 2-site joint (collective/Dicke) collapse
+                "CORR_RELAX",  # two-site joint (collective/Dicke) collapse
             }:
                 out.append(_unsupported(substep, f"unsupported_mcwf_collapse_family:{family}"))
                 break
@@ -2211,7 +2210,7 @@ def _restricted_acceptance_policy(
         ]
     )
     return {
-        "schema": "qec_twin.simulator.axis1_mcwf_mps_restricted_acceptance_policy.v1",
+        "schema": "error_coupling_simulator.frontend.mcwf_mps_restricted_acceptance_policy.v1",
         "policy_role": "restricted_execution_acceptance_not_metric",
         "accepted_for_restricted_execution": accepted,
         "accepted_for_sampled_execution_evidence": bool(accepted),
@@ -2255,7 +2254,7 @@ def _blocked_acceptance_policy(
     trajectory_count: int,
 ) -> dict[str, Any]:
     return {
-        "schema": "qec_twin.simulator.axis1_mcwf_mps_restricted_acceptance_policy.v1",
+        "schema": "error_coupling_simulator.frontend.mcwf_mps_restricted_acceptance_policy.v1",
         "policy_role": "restricted_execution_acceptance_not_metric",
         "accepted_for_restricted_execution": False,
         "accepted_for_sampled_execution_evidence": False,

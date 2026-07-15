@@ -2,12 +2,13 @@
 
 Slice-1 dense source-coupled process: ``CoupledCycleNoiseProcess`` (a memory-ful 1/f shared source ->
 per-round Axis-1 params -> sealed dense {det,obs} emitter, with a matched-marginal permutation arm
-exposed under the historical ``markovian_baseline`` spelling and a source-off arm). Source
+and a source-off arm). Source
 trajectories and channel fields are evaluator-only truth and are not emitted.
 """
 from error_coupling_simulator.noise_processes.coupled_cycle import (
-    COUPLED_TEACHER_REPRESENTABILITY,
-    COUPLED_TEACHER_SCHEMA,
+    COUPLED_PROCESS_REPRESENTABILITY,
+    COUPLED_PROCESS_SCHEMA,
+    COUPLED_PROCESS_STIM_EXPORT_SCHEMA,
     DEFAULT_STATIC_ZZ_EDGE,
     MEMORYFUL_SHARED_SOURCES,
     CoupledCycleNoiseProcess,
@@ -20,16 +21,10 @@ from error_coupling_simulator.noise_processes.coupled_cycle import (
     trajectory_mean_instrument,
 )
 
-# Neutral spellings for new callers. The historical constant names and their values
-# remain unchanged because they are part of persisted schemas and seed derivation.
-COUPLED_PROCESS_REPRESENTABILITY = COUPLED_TEACHER_REPRESENTABILITY
-COUPLED_PROCESS_SCHEMA = COUPLED_TEACHER_SCHEMA
-
 __all__ = [
-    "COUPLED_TEACHER_REPRESENTABILITY",
-    "COUPLED_TEACHER_SCHEMA",
     "COUPLED_PROCESS_REPRESENTABILITY",
     "COUPLED_PROCESS_SCHEMA",
+    "COUPLED_PROCESS_STIM_EXPORT_SCHEMA",
     "DEFAULT_STATIC_ZZ_EDGE",
     "MEMORYFUL_SHARED_SOURCES",
     "CoupledCycleNoiseProcess",

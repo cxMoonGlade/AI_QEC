@@ -1,40 +1,8 @@
-"""Wave-2.6 per-unit unit tests for the A1 experiments facade units
-(``error_coupling_simulator.frontend.experiments``): the L0 partition-row layer
-(per contract §3) + the L1 Hypothesis property layer (per §12.1).
+"""Partition and property tests for the current experiment-preset facade.
 
-Binding contract: ``docs/twin_validation/wave2_6_unit_test_contract.md`` §2/§3/§8
-(the 7 A1 units + their exact partition rows), §7.1 (file layout), §10/§11 (closed
-open-questions + red-team dispositions), the DEVIOUS-TEST STANDARD + K-catalog, and
-the parent ``docs/twin_validation/api_hardening_ownership_design.md`` (NAMING
-STANDARD, TWO-SIDED PER-UNIT EXTENSION).
-
-WHY THIS MODULE EXISTS (the measured gap, §0). The existing
-``tests/test_frontend_experiments.py`` gates are gate-level EQUIVALENCE (facade ==
-hand ritual) — they only ever pass VALID inputs, so whole exception surfaces stay
-dark (experiments.py at 84%: lines 200/208/211/214/217/220/223 = the 7
-``ExperimentPreset`` validation raises, + 110 empty-env, + 330 leak-table TypeError,
-+ 166->169 with_interior_streams=False). This module is ADDITIVE: it enters each
-raise / branch leg in ISOLATION, one partition per test, so every ``raise`` is
-DEMONSTRATED (the K-1 "validator never fired" surface).
-
-L0 — every §3 partition row (normal / boundary / EXCEPTION) as a DISTINCT test.
-L1 — a Hypothesis property test for ``ExperimentPreset`` validation: @given a config
-with one field pushed OUT of its valid range assert it raises; and an in-range config
-constructs (§12.1's "preset validation" property).
-
-CPU/GPU (§3, per unit):
-  * _dataset_files raise legs, load_xzzx_d3 branch, ExperimentPreset (all fields),
-    preset value-pins, resolve_theta, leak_slice_table TypeError branch, the L1
-    property test — ALL CPU-only (pure validation / dict routing; no CUDA, no dataset
-    for the raise legs).
-  * _dataset_files default-root happy path, load_xzzx_d3 streams-attached,
-    run_spec_from_preset path resolution — requires_data (needs the shipped patch).
-  * leak_slice_table's two builder-invoking arms (stacked / list) — requires_cuda
-    (the C1 ``build_within_cycle_leak`` is GPU-hosted); §11 BL-1: source lines
-    333/334/335/336/337 are ALL after the GPU builder call, hence GPU-only-reachable
-    and registered as NAMED exemptions (covered by the existing requires_cuda gate
-    ``test_leak_slice_table_matches_sv_sampler``). The CPU-reachable TypeError branch
-    (line 330) is NOT exempt and IS covered here.
+The module covers dataset resolution, frozen preset validation, numerical-provenance
+binding, run-spec construction, and qutrit leakage-table construction.  Validation
+and routing cases are CPU-only; carrier construction remains GPU-gated.
 """
 
 from __future__ import annotations
@@ -44,17 +12,17 @@ import json
 from types import SimpleNamespace
 
 import pytest
+import torch
 
-from qec_twin.forward.exact import xzzx_parser as xp
-from qec_twin.forward.scalable.sv_sampler import (
+from error_coupling_simulator.carrier.within_cycle import (
+    FusedWithinCycleSampler,
     SV_ARMS,
     SV_READOUT_CONVENTIONS,
     RunSpec,
-    SvSampler,
 )
+from error_coupling_simulator.frontend import xzzx_parser as xp
 
-# Wave-1 canon: markers/constants from tests/conftest.py (contract C1), guard helpers
-# from tests/_support/fixtures.py (contract C2).
+# Shared device/data markers and adversarial-test helpers.
 from conftest import DEVICE, requires_cuda, requires_data
 from _support.fixtures import assert_control_trips, require_precondition
 
@@ -77,7 +45,7 @@ from error_coupling_simulator.frontend.experiments import (
 )
 
 #: ratified decision 7 -- the ONE dataset-root env var name.
-_ENV = "QEC_TWIN_D3_DATA"
+_ENV = "ECS_D3_DATA_ROOT"
 
 #: the p2 cell knobs (the RAW registered preset's PINNED values; contract A1: presets
 #: are frozen + named, NO silent physics defaults). These are the value-pin regression
@@ -91,7 +59,7 @@ _THETA_HI, _G_SEEP_HI = 1.2, 0.5
 
 @pytest.fixture(autouse=True)
 def _no_d3_env_override(monkeypatch):
-    """Env isolation. The facade honors ``QEC_TWIN_D3_DATA``; the default-root happy
+    """Env isolation. The facade honors ``ECS_D3_DATA_ROOT``; the default-root happy
     paths compared here read the parser DEFAULT paths (env-blind). A legitimately-set
     env var must never make a CORRECT facade fail a default-root comparison, so it is
     deleted per-test (monkeypatch restores on teardown). Raise-leg tests re-``setenv``
@@ -209,7 +177,7 @@ def test_dataset_files_arg_beats_bogus_env(monkeypatch, tmp_path):
 def test_dataset_files_empty_env_raises_value_error(monkeypatch):
     """§3.1 EXCEPTION (a) / LINE 110 (the measured miss): env SET but empty/whitespace
     -> ``ValueError`` naming the env var -- NEVER a silent fallback to the default.
-    Defends K-1 (a broken shell expansion, ``QEC_TWIN_D3_DATA=""``, must NOT be
+    Defends K-1 (a broken shell expansion, ``ECS_D3_DATA_ROOT=""``, must NOT be
     indistinguishable from unset; a fall-through would make every override run vacuous).
 
     Direct call on the private symbol (contract §10 decision 2: the empty-env leg is
@@ -577,7 +545,7 @@ def test_registered_preset_provenance_is_json_safe_and_field_complete():
         assert manifest is not None
         json.dumps(manifest, sort_keys=True)
         assert manifest["schema"] == \
-            "error_coupling_simulator.ExperimentPreset.provenance.v1"
+            "error_coupling_simulator.frontend.experiment_preset_provenance.v1"
         whole = manifest["whole_preset"]
         assert whole["claim_scope"] == \
             "registered_synthetic_cross_source_benchmark_only"
@@ -661,18 +629,18 @@ def test_resolve_theta_raw_angle_passthrough():
 
 def test_resolve_theta_wg_rate_solves_model_coordinate():
     """§3.5 NORMAL (wg branch, K-1): a model-rate-solved preset returns
-    ``calibrate_theta_for_wg_l1(wg_l1_target, g_seep=, g_heat=)`` at the preset's rates
+    ``solve_theta_for_wg_l1(wg_l1_target, g_seep=, g_heat=)`` at the preset's rates
     -- and it must DIFFER from the raw cell / zero (a dead passthrough is killed).
 
     Independent conformance: the resolved theta actually HITS the registered WG_L1 on
     the exact channel rate (checked via the calibrator + ``wg_rates``, both CPU)."""
-    from error_coupling_simulator.mechanisms.qutrit_teachers import (
-        calibrate_theta_for_wg_l1,
+    from error_coupling_simulator.mechanisms.qutrit_leakage import (
+        solve_theta_for_wg_l1,
         wg_rates,
     )
     p = _mk_preset(wg_l1_target=_WG_L1_TARGET)
     theta = resolve_theta(p)
-    expected = calibrate_theta_for_wg_l1(_WG_L1_TARGET, g_seep=_G_SEEP, g_heat=_G_HEAT)
+    expected = solve_theta_for_wg_l1(_WG_L1_TARGET, g_seep=_G_SEEP, g_heat=_G_HEAT)
     assert abs(theta - expected) <= 1e-12, \
         f"resolve_theta wg branch {theta!r} != calibrator {expected!r}"
     # K-1: not a dead passthrough of some raw theta.
@@ -730,11 +698,11 @@ def test_run_spec_from_preset_raw_passthrough():
 def test_run_spec_from_preset_wg_solves_model_coordinate_here():
     """§3.6 NORMAL (wg): the WG preset's theta is model-rate-solved at build time.
     Defends K-1 (the wg resolve is live inside ``run_spec_from_preset``)."""
-    from error_coupling_simulator.mechanisms.qutrit_teachers import (
-        calibrate_theta_for_wg_l1,
+    from error_coupling_simulator.mechanisms.qutrit_leakage import (
+        solve_theta_for_wg_l1,
     )
     rs = run_spec_from_preset(PRESET_LEAK_WG_L1_5E3, n_shots=1, n_rounds=1, seed=0)
-    expected = calibrate_theta_for_wg_l1(_WG_L1_TARGET, g_seep=_G_SEEP, g_heat=_G_HEAT)
+    expected = solve_theta_for_wg_l1(_WG_L1_TARGET, g_seep=_G_SEEP, g_heat=_G_HEAT)
     assert abs(rs.theta - expected) <= 1e-12
     assert rs.theta > 0.0 and abs(rs.theta - _THETA_RAW) > 1e-3, \
         "wg run-spec theta equals the raw cell / zero (dead resolve, K-1)"
@@ -789,7 +757,7 @@ def test_custom_or_spoofed_preset_fails_closed_to_implementation_only(monkeypatc
         arm="A",
         readout_conv="biased_b",
         provenance_manifest={
-            "schema": "error_coupling_simulator.ExperimentPreset.provenance.v1",
+            "schema": "error_coupling_simulator.frontend.experiment_preset_provenance.v1",
             "status": "complete_for_registered_preset",
             "fields": {},
         },
@@ -831,8 +799,10 @@ def test_registered_facade_binding_survives_public_dict_mutation(monkeypatch):
         n_stab=2,
         R=3,
         log_supp=SimpleNamespace(tolist=lambda: [0, 2]),
+        leak_kraus=torch.eye(3, dtype=torch.complex128).unsqueeze(0),
+        gate_unitaries=torch.eye(3, dtype=torch.complex128).unsqueeze(0),
     )
-    header = object.__new__(SvSampler).build_header(
+    header = object.__new__(FusedWithinCycleSampler).build_header(
         spec, marsh, SimpleNamespace(logical_kind="Z"))
     assert header["numerical_provenance"]["status"] == \
         "complete_for_registered_preset"
@@ -847,13 +817,13 @@ def test_run_spec_numerical_provenance_is_json_safe_and_enters_shot_header():
         RunSpec(
             circuit_path="unused.stim",
             numerical_provenance={
-                "schema": "error_coupling_simulator.run_numerical_provenance.v1",
+                "schema": "error_coupling_simulator.frontend.run_numerical_provenance.v1",
                 "status": "complete_for_registered_preset",
             },
         )
 
     ledger = {
-        "schema": "error_coupling_simulator.run_numerical_provenance.v1",
+        "schema": "error_coupling_simulator.frontend.run_numerical_provenance.v1",
         "status": "missing",
         "claim_scope": "implementation_only",
         "reason": "direct RunSpec has no trusted registered facade",
@@ -889,9 +859,11 @@ def test_run_spec_numerical_provenance_is_json_safe_and_enters_shot_header():
         n_stab=2,
         R=3,
         log_supp=SimpleNamespace(tolist=lambda: [0, 2]),
+        leak_kraus=torch.eye(3, dtype=torch.complex128).unsqueeze(0),
+        gate_unitaries=torch.eye(3, dtype=torch.complex128).unsqueeze(0),
     )
     sched = SimpleNamespace(logical_kind="Z")
-    host = object.__new__(SvSampler)
+    host = object.__new__(FusedWithinCycleSampler)
     spec.numerical_provenance["status"] = "mutated_spec_dict"
     header = host.build_header(spec, marsh, sched)
     assert header["numerical_provenance"]["status"] == "missing"
@@ -910,7 +882,7 @@ def test_leak_slice_table_wrong_type_raises_type_error(bad):
     that is NEITHER an ``ExperimentPreset`` NOR a ``RunSpec`` -> ``TypeError`` naming
     the received type. Defends K-1 (the type guard must fire).
 
-    CPU-only: the ``isinstance`` chain runs and raises BEFORE any ``SvSampler(device=)``
+    CPU-only: the ``isinstance`` chain runs before carrier construction
     construction or GPU work (§3.7 (5): the TypeError branch is CPU-reachable; the
     builder arms are the GPU-gated, NAMED-exempt legs -- see the module docstring /
     §11 BL-1). ``device`` is passed but never reached on this path."""
@@ -950,7 +922,7 @@ def test_leak_slice_table_preset_arm_stacked_shape():
     stacked ``(n_kraus, 3, 3)`` device tensor. Defends the ROUTING (K-1: the preset arm
     was previously dead); the builder's interior asserts are the NAMED-exempt GPU legs.
 
-    requires_cuda: ``build_within_cycle_leak`` is GPU-hosted (SvSampler contract)."""
+    requires_cuda: ``build_within_cycle_leak`` is GPU-hosted."""
     import torch
     table = leak_slice_table(PRESET_LEAK_THETA_0P30, device=DEVICE)
     assert isinstance(table, torch.Tensor)

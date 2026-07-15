@@ -2,8 +2,8 @@
 ``error_coupling_simulator.frontend.noise_spec`` (25 CPU-pure public units: 20 methods/funcs
 + 5 frozen-dataclass ``__post_init__`` dunders; no torch, no quimb, so out_of_scope is empty).
 
-Full-coverage program (docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4;
-work-list docs/twin_validation/l3_release_package_unit_inventory.md D14).
+Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
+work-list docs/SIMULATOR.md D14).
 ``frontend/noise_spec.py`` owns the Stim-representable Pauli noise-spec layer: the plain
 depolarizing ``StimPauliNoiseSpec``, the location-aware ``TargetedStimNoiseSpec`` built by the
 ``NoiseBuilder`` fluent API, and the evaluator-only ``SourceStimPauliProjectionSpec`` (a reduced
@@ -18,7 +18,7 @@ payload-probability identity map -- NEVER the module's own call. Every validatio
 its EXACT message via ``str(excinfo.value)==...`` (KeyError via ``.args[0]``) so mutmut's
 string-literal wrap/roundtrip mutants die (a substring ``match=`` lets them survive).
 
-ISOLATION CONTRACT (load-bearing): the learner-visible public manifests must NOT leak the
+ISOLATION CONTRACT (load-bearing): the public-artifact public manifests must NOT leak the
 evaluator-only source-conditioning fields that the evaluator manifest carries; pinned both ways
 with an ``assert_discriminates`` leak variant.
 
@@ -61,7 +61,7 @@ from error_coupling_simulator.frontend.circuit_ir import (
 )
 from error_coupling_simulator.source.process import SourceTimeline
 
-_TL_SCHEMA = "qec_twin.mechanisms.SourceTimeline.v1"
+_TL_SCHEMA = "error_coupling_simulator.source.timeline.v1"
 _EXEC_STATUS = {
     "applied_to_stim_records": True,
     "stim_dem_modified": True,
@@ -389,7 +389,7 @@ def test_L0_targeted_spec_post_init_coerces_rules_to_tuple():
     r = StimNoiseRule(position="after", match_kind="all_gates", noise="X_ERROR", args=(0.01,))
     spec = TargetedStimNoiseSpec([r])                 # a LIST becomes a tuple
     assert isinstance(spec.rules, tuple) and spec.rules == (r,)
-    assert spec.schema == "qec_twin.simulator.TargetedStimNoiseSpec.v1"
+    assert spec.schema == "error_coupling_simulator.frontend.targeted_stim_noise.v1"
 
 
 def test_L0_targeted_spec_is_trivial_both_arcs():
@@ -400,9 +400,14 @@ def test_L0_targeted_spec_is_trivial_both_arcs():
 
 def test_L0_targeted_spec_to_manifest_exact():
     r = StimNoiseRule(position="after", match_kind="all_gates", noise="X_ERROR", args=(0.01,))
-    spec = TargetedStimNoiseSpec((r,), schema="custom.schema.v2")
-    assert spec.to_manifest() == {"type": "targeted_stim_pauli", "schema": "custom.schema.v2",
-                                  "rules": [r.to_manifest()]}
+    spec = TargetedStimNoiseSpec((r,))
+    assert spec.to_manifest() == {
+        "type": "targeted_stim_pauli",
+        "schema": "error_coupling_simulator.frontend.targeted_stim_noise.v1",
+        "rules": [r.to_manifest()],
+    }
+    with pytest.raises(ValueError, match="unsupported targeted Stim noise schema"):
+        TargetedStimNoiseSpec((r,), schema="custom.schema.v2")
 
 
 # =========================================================================== #
@@ -748,6 +753,13 @@ def _proj_timeline(**kw):
 def test_L0_source_proj_post_init_all_arcs():
     tl = _proj_timeline()
     rule = _source_rule(payload_key="zk")
+    retired_schema = "_".join(("qec", "twin")) + ".simulator.SourceStimPauliProjectionSpec.v1"
+    with pytest.raises(ValueError, match="unsupported source Stim projection schema"):
+        SourceStimPauliProjectionSpec(
+            timeline=tl,
+            rules=(rule,),
+            schema=retired_schema,
+        )
     spec = SourceStimPauliProjectionSpec(timeline=tl, rules=(rule,))     # default binding
     assert spec.source_binding is not None and spec.source_binding.cycle_binding == "circuit_tick"
     assert isinstance(spec.rules, tuple)
@@ -806,7 +818,7 @@ def test_L0_source_proj_to_manifest_exact_and_no_leak():
     spec = SourceStimPauliProjectionSpec(timeline=tl, rules=(rule,))
     assert spec.to_manifest() == {
         "type": "stim_pauli_source_projection",
-        "schema": "qec_twin.simulator.SourceStimPauliProjectionSpec.v1",
+        "schema": "error_coupling_simulator.frontend.source_stim_pauli_projection.v1",
         "visibility": "reduced_public_summary",
         "representability": "reduced_pauli_projection_not_analog_truth",
         "source": {"sidecar_required": True, "cycle_binding": "circuit_tick",
@@ -827,7 +839,7 @@ def test_L0_source_proj_to_evaluator_manifest_exact_carries_conditioning():
     spec = SourceStimPauliProjectionSpec(timeline=tl, rules=(rule,))
     assert spec.to_evaluator_manifest() == {
         "type": "stim_pauli_source_projection",
-        "schema": "qec_twin.simulator.SourceStimPauliProjectionSpec.v1",
+        "schema": "error_coupling_simulator.frontend.source_stim_pauli_projection.v1",
         "visibility": "evaluator_only",
         "representability": "reduced_pauli_projection_not_analog_truth",
         "source_cycle_map": "CircuitIR TICK index; cycle 0 is before the first TICK",

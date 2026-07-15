@@ -107,7 +107,7 @@ def test_canonical_data_probe_honors_explicit_dataset_root(
     from conftest import _d3_paths
 
     root = tmp_path / "external-data"
-    monkeypatch.setenv("QEC_TWIN_D3_DATA", str(root))
+    monkeypatch.setenv("ECS_D3_DATA_ROOT", str(root))
 
     paths = _d3_paths()
 

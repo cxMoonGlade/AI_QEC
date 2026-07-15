@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-r"""Axis-1 within-substep joint-Lindbladian assembler (the G2 HEADLINE substrate).
+r"""Axis-1 within-substep joint-Lindbladian assembler.
 
 WHAT THIS IS (the "Axis-1" assembler — ADR-0008-adjacent; build contract §A/§B-5/§E)
 ------------------------------------------------------------------------------------
@@ -16,7 +16,7 @@ Lindbladian and is propagated ONCE:
 `composed_substep_channel` builds the NAIVE alternative — each mechanism's OWN
 single-generator channel applied SEQUENTIALLY (E_1 . E_2 . ...) — the thing a naive
 composition chain does, which DROPS the within-substep cross-terms `[H_i, H_j]`.
-`composed_vs_joint_infidelity` is the G2 metric: the process (entanglement)
+`composed_vs_joint_infidelity` is the joint-vs-composed comparison metric: the process (entanglement)
 infidelity `1 - F_pro` between the composed and joint CPTP channels, via their Choi
 states. Composition WITHIN a substep is the APPROXIMATION under test; the joint
 propagator is the EXACT reference (anti-circular: the reference is derived
@@ -24,10 +24,9 @@ independently of the approximation it scores).
 
 VEC CONVENTION (stated explicitly — MATCHES the in-tree / qt.liouvillian convention)
 ------------------------------------------------------------------------------------
-We use **column-stacking** (Fortran / "super" convention), the SAME convention as
-`qt.liouvillian(...).full()` + the per-dyad `reshape(-1, order="F")` build in
-`outputs/teacher_prereg/qutip_opensystem_channels.py` (`_full_superop_expm_gpu`,
-`superop_to_truncated_kraus_1q`) and the build-contract §B-5 formula. Under
+We use **column-stacking** (Fortran / "super" convention), matching
+`qt.liouvillian(...).full()` and the independent QuTiP/SciPy reference exercised by
+`tests/test_joint_lindbladian.py`. Under
 column-stacking, with `vec(A rho B) = (B^T (x) A) vec(rho)` (kron = `(x)`):
 
     vec(-i[H, rho])      = -i ( I(x)H - H^T(x)I ) vec(rho)
@@ -45,7 +44,7 @@ equivalently `vec(rho)[j*D + i] = rho[i, j]`. We implement vec/unvec consistentl
 with this column-stacking so the superoperator `S = expm(L*dt)` acts as
 `vec(E(rho)) = S @ vec(rho)`.
 
-CHOI CONVENTION (matches `superop_to_truncated_kraus_1q` exactly)
+CHOI CONVENTION
 -----------------------------------------------------------------
 `Choi(E) = Sigma_{p,q} E(|p><q|) (x) |p><q|`  (a (D^2, D^2) PSD matrix). Hermitian-
 symmetrise, eigendecompose; Kraus `K_k = sqrt(w_k) * V[:,k].reshape(D, D)` (C/row-
@@ -57,8 +56,8 @@ exactly as the validated 1q path does. Callers may request positive-eigenvalue
 rank pruning with `tol > 0`, but the public Axis-1 evidence path defaults to
 lossless positive-eigenvalue retention. Process fidelity is the Choi-STATE fidelity
 of the two channels' (trace-normalised) Choi matrices — the SAME Choi/process-
-fidelity convention the project's `qutip_*` gtchecks use, so G2 is consistent with
-the channel-oracle checks.
+fidelity convention used by the independent QuTiP reference tests, so the comparison
+is consistent with the channel-oracle checks.
 
 GPU-ONLY (memory rule). `device="cuda"`, `torch.linalg.matrix_exp`, complex128, NO
 CPU fallback (fix launch-bound paths, never `cuda if available else cpu`). torch is
@@ -206,7 +205,7 @@ def superop_to_kraus(S, *, device="cuda", tol: float = 0.0,
     r"""Choi-eigendecompose the column-stacked superoperator ``S`` (``(D^2, D^2)``)
     into a CPTP Kraus stack ``(k, D, D)``.
 
-    Choi convention (matches `superop_to_truncated_kraus_1q`):
+    Choi convention:
         Choi = Sigma_{p,q} E(|p><q|) (x) |p><q|   (PSD for a CPTP E).
     Eigendecompose the Hermitian-symmetrised Choi; keep eigenpairs with eigenvalue
     ``> tol``. The default ``tol=0`` preserves every positive Choi eigenvalue so the
@@ -631,7 +630,7 @@ def assemble_substep_channel_factored(H_list, c_list, dt, *, device="cuda",
       - ``comp_kraus``: ``(k_m, 2^|B_m|, 2^|B_m|)`` complex128 CPTP Kraus for that block.
 
     FALLBACK (correctness over speed): if the substep is a SINGLE component spanning all
-    ``nq`` qubits, or if ``QEC_TWIN_NO_FACTORIZE=1`` is set in the environment, return
+    ``nq`` qubits, or if ``ECS_FORCE_UNFACTORIZED_AXIS1=1`` is set in the environment, return
     ``[(tuple(range(nq)), assemble_substep_channel(H_list, c_list, dt, ...))]`` — bit-for-bit
     the current full-window path. This is the A/B knob for the byte-identical records gate.
     """
@@ -656,7 +655,7 @@ def assemble_substep_channel_factored(H_list, c_list, dt, *, device="cuda",
         return [(tuple(range(nq)), kraus)]
 
     # Env override: force the exact current full-window path (the A/B fallback).
-    if os.environ.get("QEC_TWIN_NO_FACTORIZE") == "1":
+    if os.environ.get("ECS_FORCE_UNFACTORIZED_AXIS1") == "1":
         return _full_window()
 
     # P1 fail-safe (SPEC ledger item 4): if ANY operator carries a coupling too weak for the absolute
@@ -708,7 +707,7 @@ def assemble_substep_channel_factored(H_list, c_list, dt, *, device="cuda",
             # If it ever does, the EXACT full-window channel is the identity on that block (expm(0)=I),
             # so we emit the 1-Kraus identity (matching the full-window path bit-for-bit) rather than
             # crash emit; a loud warning surfaces the unexpected structure. This preserves the
-            # byte-identical-records gate under the QEC_TWIN_NO_FACTORIZE A/B test.
+            # byte-identical-records gate under the ECS_FORCE_UNFACTORIZED_AXIS1 A/B test.
             import warnings
 
             warnings.warn(
@@ -757,7 +756,7 @@ def assemble_substep_channels_factored_batched(items, *, device="cuda",
     items = list(items)
     if not items:
         return []
-    force_full = os.environ.get("QEC_TWIN_NO_FACTORIZE") == "1"
+    force_full = os.environ.get("ECS_FORCE_UNFACTORIZED_AXIS1") == "1"
 
     # Plan the components for every item; collect the small (H_C, c_C, dt) builds to batch.
     # A "slot" records where each component's kraus goes: (item_index, out_position).
@@ -945,11 +944,11 @@ def composed_substep_channel(H_list, c_list, dt, *, device="cuda",
     generator alone), and they are applied SEQUENTIALLY ``E_1 . E_2 . ...`` — exactly
     what a naive composition chain does. This DROPS the within-substep cross-terms
     ``[H_i, H_j]`` (and the ``[H_i, D[c_j]]`` cross-terms), so it disagrees with the
-    JOINT channel by the BCH commutator the G2 gate measures.
+    JOINT channel by the BCH commutator measured by the joint-vs-composed comparison.
 
     Canonical (fixed) order: all Hamiltonian channels first (in ``H_list`` order),
     then all collapse channels (in ``c_list`` order). The order-DEPENDENCE of the
-    composed chain is itself part of what G2 exposes (a JOINT propagator has no such
+    composed chain is itself part of what the comparison exposes (a JOINT propagator has no such
     ambiguity); the fixed order makes the comparison deterministic. The order is owned by
     the shared `_composed_superop` helper (so this and `composed_vs_joint_superop_distance`
     compose identically).
@@ -1072,14 +1071,14 @@ def _state_fidelity(rho, sigma, *, device="cuda"):
 
 
 def composed_vs_joint_infidelity(H_list, c_list, dt, *, device="cuda"):
-    r"""The G2 metric: the process (entanglement) infidelity ``1 - F_pro`` between the
+    r"""The process (entanglement) infidelity ``1 - F_pro`` between the
     COMPOSED and JOINT CPTP channels of the same ``(H_list, c_list, dt)``, computed via
     their CHOI STATES.
 
     ``F_pro`` is the Choi-STATE fidelity (Uhlmann fidelity of the trace-normalised Choi
     matrices ``J_joint/D`` and ``J_composed/D``) — the SAME Choi/process-fidelity
-    convention the project's `qutip_*_channels` gtchecks use, declared in the H5
-    pre-registration as the G2 metric. Returns ``1 - F_pro`` (a real float, ``>= 0``).
+    convention exercised by the independent QuTiP channel tests. Returns
+    ``1 - F_pro`` (a real float, ``>= 0``).
 
     Anti-circular: the JOINT channel is the exact reference; the COMPOSED channel is the
     approximation under test. For exact-zero pairs (`[H_i,H_j]=0`, all diagonal-in-n)

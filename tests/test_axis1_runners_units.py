@@ -1,14 +1,14 @@
 """Stage-D batch ``axis1_runners`` (D9) -- per-unit L0+L1 coverage of the two frontend CPU
-fixture builders (docs/twin_validation/l3_release_package_unit_inventory.md D9):
+fixture builders (docs/SIMULATOR.md D9):
 
   * ``error_coupling_simulator.frontend.axis1_codespec_runner`` (5 public units)
-  * ``error_coupling_simulator.frontend.axis1_g2_runner``        (3 public units)
+  * ``error_coupling_simulator.frontend.joint_channel_comparison_runner``        (3 public units)
 
 Both modules are pure orchestration: they construct a frontend ``CodeSpec`` / ``SubstepSchedule``
 via the CPU compiler (analog_schedule / code_spec / circuit_ir) and then drive the GPU
 record/evidence emitters + freeze guards. NEITHER imports torch/quimb, so no unit is gpu_bound;
-the GPU work lives in ``axis1_record_evidence`` / ``axis1_bridge`` behind
-``write_axis1_measurement_record_evidence`` / ``write_axis1_g2_evidence`` (both route into
+the GPU work lives in ``axis1_record_evidence`` / ``joint_channel_comparison`` behind
+``write_axis1_measurement_record_evidence`` / ``write_joint_channel_comparison_evidence`` (both route into
 ``_require_cuda_device`` -- device='cpu' raises "GPU-only"). The units' OWN bodies are covered on
 CPU by monkeypatching those GPU-callee writers (and, for ``main``, the ``run_*`` fixture itself) at
 the runner-module boundary; the ``build_*_spec`` / ``build_*_schedule`` compilers run REAL on CPU.
@@ -25,7 +25,7 @@ sealed sequential, compiler seal is valid), and the emitted schedule matches wha
 VALUE-PINS (the standing lesson): every construction is pinned against an INDEPENDENT recompute from
 the fixture inputs -- the CodeSpec fields, the round-by-round measurement_keys / detectors /
 observables, the deterministic record_layout_hash + source_hash (sha256 identity; catches every
-metadata/qubit/gate mutation incl. the g2 static-ZZ edge and H/CZ targets), and main's summary dict
+metadata/qubit/gate mutation incl. the joint-channel static-ZZ edge and H/CZ targets), and main's summary dict
 recomputed field-by-field from a distinct-valued fake manifest. ``assert_discriminates`` shows the
 round-count pin FAILS on a dropped/added round and the layout pin FAILS on the 4q vs 5q spec.
 """
@@ -41,7 +41,7 @@ import pytest
 from _support.faithfulness import assert_discriminates
 
 from error_coupling_simulator.frontend import axis1_codespec_runner as cr
-from error_coupling_simulator.frontend import axis1_g2_runner as gr
+from error_coupling_simulator.frontend import joint_channel_comparison_runner as gr
 from error_coupling_simulator.frontend.analog_schedule import (
     SubstepSchedule,
     has_valid_compiler_schedule_seal,
@@ -91,11 +91,11 @@ def _dump(d: dict) -> str:
 
 # deterministic sha256 identities (class-a exact) of the frozen fixtures -- pinned so ANY
 # metadata / qubit / gate / round mutation that changes the compiled circuit is caught.
-_CODESPEC_R2_SOURCE_HASH = "e82d4f34318c8b0083aeb13035414ad19a0f97d093866abbcb3686530be3fcb2"
+_CODESPEC_R2_SOURCE_HASH = "8c27ac8f1e90050de000523a2e0a87d1ef758b00ba369d804cb0610ceb89e239"
 _CODESPEC_R2_LAYOUT_HASH = "0f23786bec35c459bf06783e7308ea0cdcf64388bd6ccad2a70c9133d30404f4"
-_CODESPEC_R3_SOURCE_HASH = "03c292f616136db0bb4fc8bb4e5e34287ce8fac426ecefb951792a59bcded1e8"
+_CODESPEC_R3_SOURCE_HASH = "697ef8192968ecf3ee8aa4bfc9f2b4efcde55a6968aed839e49ed889810c4d06"
 _CODESPEC_R3_LAYOUT_HASH = "38bd4db893ab6c2690db6406ac592eae3c2a9211c7c599e20f941672c6b69ee1"
-_G2_SOURCE_HASH = "3a1937d173a9c9d9f67c147cc210c5ba16a2aa58eb84950a1e55b57a564e7792"
+_JOINT_CHANNEL_SOURCE_HASH = "f8a47a5cb18d1e257b5ec533f4c4479b348d07b0fb4cc76ba0de29bed885a07c"
 
 
 # --------------------------------------------------------------------------- #
@@ -132,25 +132,25 @@ def _fake_codespec_result(*, passed: bool = True, with_freeze: bool = True) -> S
                            freeze=freeze)
 
 
-def _fake_g2_evidence(*, passed: bool = True) -> SimpleNamespace:
+def _fake_joint_channel_evidence(*, passed: bool = True) -> SimpleNamespace:
     manifest = {
         "rows": [1, 2, 3, 4, 5],  # len 5
         "verdict": "pass" if passed else "fail",
         "passed": passed,
         "source_kind": "circuit_ir",
-        "source_hash": "deadbeefg2",
+        "source_hash": "deadbeef_joint_channel",
     }
     return SimpleNamespace(
-        out_dir=Path("fake/g2/dir"),
-        g2_jointL=Path("fake/g2/dir/g2_jointL.json"),
-        content_hash="g2hash456",
+        out_dir=Path("fake/comparison/dir"),
+        joint_channel_comparison=Path("fake/comparison/dir/joint_channel_comparison.json"),
+        content_hash="jointchannelhash456",
         manifest=manifest,
     )
 
 
-def _fake_g2_result(*, passed: bool = True, with_freeze: bool = True) -> SimpleNamespace:
-    freeze = SimpleNamespace(freeze_path=Path("fake/g2/dir/g2_jointL.freeze.json")) if with_freeze else None
-    return SimpleNamespace(schedule=None, evidence=_fake_g2_evidence(passed=passed), freeze=freeze)
+def _fake_joint_channel_result(*, passed: bool = True, with_freeze: bool = True) -> SimpleNamespace:
+    freeze = SimpleNamespace(freeze_path=Path("fake/comparison/dir/joint_channel_comparison.freeze.json")) if with_freeze else None
+    return SimpleNamespace(schedule=None, evidence=_fake_joint_channel_evidence(passed=passed), freeze=freeze)
 
 
 # =========================================================================== #
@@ -183,7 +183,7 @@ def test_L0_build_5q_spec_default_and_rounds():
 
 
 def test_L0_build_4q_spec_default_and_rounds():
-    """The registered 4q coupled-teacher variant: 3 data + 1 X-check ancilla, drops z1 + ancilla 4."""
+    """The registered 4q coupled-process variant: 3 data + 1 X-check ancilla."""
     assert cr.build_axis1_codespec_4q_frontend_spec().rounds == 2   # default rounds=2
     for rounds in (2, 3):
         s = cr.build_axis1_codespec_4q_frontend_spec(rounds=rounds)
@@ -334,7 +334,7 @@ def _expected_codespec_summary(result: SimpleNamespace) -> dict:
     rec = ev.manifest["record_evidence"]
     cov = ev.manifest["coverage"]
     return {
-        "schema": "qec_twin.simulator.axis1_codespec_record_runner_summary.v1",
+        "schema": "error_coupling_simulator.frontend.codespec_record_runner_summary.v1",
         "out_dir": str(ev.out_dir),
         "record_evidence": str(ev.record_evidence),
         "content_hash": ev.content_hash,
@@ -365,7 +365,7 @@ def test_L0_codespec_main_default_run_returns_zero(monkeypatch, capsys):
     monkeypatch.setattr(cr, "run_axis1_codespec_record_fixture", fake_run)
     rc = cr.main([])
     assert rc == 0
-    assert seen == {"out_dir": "outputs/twin_validation/axis1_codespec_record_evidence",
+    assert seen == {"out_dir": "outputs/simulator_validation/axis1_codespec_record_evidence",
                     "rounds": 2, "device": "cuda", "write_freeze": True, "refresh_freeze": False}
     assert capsys.readouterr().out == _dump(_expected_codespec_summary(result))
 
@@ -421,7 +421,7 @@ def test_L0_codespec_main_argv_none_reads_sys_argv(monkeypatch):
 
     monkeypatch.setattr(cr, "run_axis1_codespec_record_fixture", fake_run)
     assert cr.main() == 0
-    assert seen["out_dir"] == "outputs/twin_validation/axis1_codespec_record_evidence"
+    assert seen["out_dir"] == "outputs/simulator_validation/axis1_codespec_record_evidence"
 
 
 def test_L0_codespec_main_help_exact_strings(monkeypatch, capsys):
@@ -449,10 +449,10 @@ def test_L0_codespec_main_help_exact_strings(monkeypatch, capsys):
 
 
 # =========================================================================== #
-# g2_runner: build_axis1_g2_frontend_schedule                                  #
+# joint_channel_comparison_runner: build_joint_channel_comparison_schedule                                  #
 # =========================================================================== #
-def test_L0_build_g2_schedule():
-    sch = gr.build_axis1_g2_frontend_schedule()
+def test_L0_build_joint_channel_schedule():
+    sch = gr.build_joint_channel_comparison_schedule()
     assert isinstance(sch, SubstepSchedule)
     assert sch.num_qubits == 2
     assert sch.source_kind == "circuit_ir"
@@ -465,25 +465,25 @@ def test_L0_build_g2_schedule():
         [("H", (0,))], [], [("CZ", (0, 1))],
     ]
     # deterministic sha256 identity: catches metadata / num_qubits / edge / gate-target mutations.
-    assert sch.source_hash == _G2_SOURCE_HASH
+    assert sch.source_hash == _JOINT_CHANNEL_SOURCE_HASH
 
 
-def test_L1_g2_schedule_is_valid_and_sealed():
+def test_L1_joint_channel_schedule_is_valid_and_sealed():
     """FAITHFULNESS: sealed compiler schedule with sequential order_index and in-range windows."""
-    sch = gr.build_axis1_g2_frontend_schedule()
+    sch = gr.build_joint_channel_comparison_schedule()
     for i, su in enumerate(sch.substeps):
         assert su.order_index == i
         assert all(0 <= q < sch.num_qubits for q in su.window_support)
 
 
-def test_DISCRIMINATES_g2_hash_pin_bites_wrong_qubit_count():
-    """The g2 source_hash pin has teeth: HOLDS for the fixture, FAILS for any schedule with a
+def test_DISCRIMINATES_joint_channel_hash_pin_bites_wrong_qubit_count():
+    """The joint-channel source_hash pin has teeth: HOLDS for the fixture, FAILS for any schedule with a
     different qubit count (an independent 3q build)."""
     from error_coupling_simulator.frontend.circuit_ir import CircuitBuilder
     from error_coupling_simulator.frontend.analog_schedule import circuit_ir_to_substep_schedule
 
     def other():
-        b = CircuitBuilder(num_qubits=3, metadata={"fixture": "axis1_g2_frontend",
+        b = CircuitBuilder(num_qubits=3, metadata={"fixture": "joint_channel_comparison",
                                                    "encoded_distance_certified": False})
         b.declare_static_zz_couplings(((0, 1),))
         b.h(0)
@@ -492,69 +492,69 @@ def test_DISCRIMINATES_g2_hash_pin_bites_wrong_qubit_count():
         return circuit_ir_to_substep_schedule(b.build())
 
     def prop(sch):
-        assert sch.source_hash == _G2_SOURCE_HASH
-    assert_discriminates(prop, gr.build_axis1_g2_frontend_schedule(), other(), label="g2_hash")
+        assert sch.source_hash == _JOINT_CHANNEL_SOURCE_HASH
+    assert_discriminates(prop, gr.build_joint_channel_comparison_schedule(), other(), label="joint_channel_hash")
 
 
 # =========================================================================== #
-# g2_runner: run_axis1_g2_frontend_fixture (GPU callee monkeypatched)          #
+# joint_channel_comparison_runner: run_joint_channel_comparison_fixture (GPU callee monkeypatched)          #
 # =========================================================================== #
-def _patch_g2_writers(monkeypatch):
+def _patch_joint_channel_writers(monkeypatch):
     calls: dict = {}
-    fake_ev = _fake_g2_evidence()
-    fake_frz = SimpleNamespace(freeze_path=Path("fake/g2/dir/g2_jointL.freeze.json"))
+    fake_ev = _fake_joint_channel_evidence()
+    fake_frz = SimpleNamespace(freeze_path=Path("fake/comparison/dir/joint_channel_comparison.freeze.json"))
 
     def fake_write(schedule, out_dir, *, device="cuda"):
         calls["write"] = {"schedule": schedule, "out_dir": out_dir, "device": device}
         return fake_ev
 
-    def fake_freeze(g2_jointL, *, overwrite=False):
-        calls["freeze"] = {"g2_jointL": g2_jointL, "overwrite": overwrite}
+    def fake_freeze(joint_channel_comparison, *, overwrite=False):
+        calls["freeze"] = {"joint_channel_comparison": joint_channel_comparison, "overwrite": overwrite}
         return fake_frz
 
-    monkeypatch.setattr(gr, "write_axis1_g2_evidence", fake_write)
-    monkeypatch.setattr(gr, "freeze_axis1_g2_evidence", fake_freeze)
+    monkeypatch.setattr(gr, "write_joint_channel_comparison_evidence", fake_write)
+    monkeypatch.setattr(gr, "freeze_joint_channel_comparison_evidence", fake_freeze)
     return calls, fake_ev, fake_frz
 
 
-def test_L0_run_g2_fixture_defaults_freeze_on(monkeypatch):
-    calls, fake_ev, fake_frz = _patch_g2_writers(monkeypatch)
-    res = gr.run_axis1_g2_frontend_fixture("g2/out")
+def test_L0_run_joint_channel_fixture_defaults_freeze_on(monkeypatch):
+    calls, fake_ev, fake_frz = _patch_joint_channel_writers(monkeypatch)
+    res = gr.run_joint_channel_comparison_fixture("comparison/out")
     assert isinstance(res.schedule, SubstepSchedule) and res.schedule.num_qubits == 2
-    assert res.schedule.source_hash == _G2_SOURCE_HASH
+    assert res.schedule.source_hash == _JOINT_CHANNEL_SOURCE_HASH
     assert calls["write"]["schedule"] is res.schedule
-    assert calls["write"]["out_dir"] == "g2/out"
+    assert calls["write"]["out_dir"] == "comparison/out"
     assert calls["write"]["device"] == "cuda"
-    assert calls["freeze"]["g2_jointL"] == fake_ev.g2_jointL
+    assert calls["freeze"]["joint_channel_comparison"] == fake_ev.joint_channel_comparison
     assert calls["freeze"]["overwrite"] is False
     assert res.evidence is fake_ev
     assert res.freeze is fake_frz
 
 
-def test_L0_run_g2_fixture_explicit_args_freeze_off(monkeypatch):
-    calls, _, _ = _patch_g2_writers(monkeypatch)
-    res = gr.run_axis1_g2_frontend_fixture("gg", device="cpu", write_freeze=False, refresh_freeze=True)
+def test_L0_run_joint_channel_fixture_explicit_args_freeze_off(monkeypatch):
+    calls, _, _ = _patch_joint_channel_writers(monkeypatch)
+    res = gr.run_joint_channel_comparison_fixture("gg", device="cpu", write_freeze=False, refresh_freeze=True)
     assert calls["write"]["out_dir"] == "gg"
     assert calls["write"]["device"] == "cpu"
     assert "freeze" not in calls
     assert res.freeze is None
 
 
-def test_L0_run_g2_fixture_threads_refresh_freeze(monkeypatch):
-    calls, _, _ = _patch_g2_writers(monkeypatch)
-    gr.run_axis1_g2_frontend_fixture("gg", refresh_freeze=True)
+def test_L0_run_joint_channel_fixture_threads_refresh_freeze(monkeypatch):
+    calls, _, _ = _patch_joint_channel_writers(monkeypatch)
+    gr.run_joint_channel_comparison_fixture("gg", refresh_freeze=True)
     assert calls["freeze"]["overwrite"] is True
 
 
 # =========================================================================== #
-# g2_runner: main                                                              #
+# joint_channel_comparison_runner: main                                                              #
 # =========================================================================== #
-def _expected_g2_summary(result: SimpleNamespace) -> dict:
+def _expected_joint_channel_summary(result: SimpleNamespace) -> dict:
     ev = result.evidence
     return {
-        "schema": "qec_twin.simulator.axis1_g2_runner_summary.v1",
+        "schema": "error_coupling_simulator.frontend.joint_channel_comparison_runner_summary.v1",
         "out_dir": str(ev.out_dir),
-        "g2_jointL": str(ev.g2_jointL),
+        "joint_channel_comparison": str(ev.joint_channel_comparison),
         "content_hash": ev.content_hash,
         "verdict": ev.manifest["verdict"],
         "passed": bool(ev.manifest["passed"]),
@@ -563,73 +563,73 @@ def _expected_g2_summary(result: SimpleNamespace) -> dict:
     }
 
 
-def test_L0_g2_main_default_run_returns_zero(monkeypatch, capsys):
+def test_L0_joint_channel_main_default_run_returns_zero(monkeypatch, capsys):
     seen: dict = {}
-    result = _fake_g2_result(passed=True, with_freeze=True)
+    result = _fake_joint_channel_result(passed=True, with_freeze=True)
 
     def fake_run(out_dir, *, device, write_freeze, refresh_freeze):
         seen.update(out_dir=out_dir, device=device, write_freeze=write_freeze,
                     refresh_freeze=refresh_freeze)
         return result
 
-    monkeypatch.setattr(gr, "run_axis1_g2_frontend_fixture", fake_run)
+    monkeypatch.setattr(gr, "run_joint_channel_comparison_fixture", fake_run)
     rc = gr.main([])
     assert rc == 0
-    assert seen == {"out_dir": "outputs/twin_validation/axis1_g2_frontend",
+    assert seen == {"out_dir": "outputs/simulator_validation/joint_channel_comparison",
                     "device": "cuda", "write_freeze": True, "refresh_freeze": False}
-    assert capsys.readouterr().out == _dump(_expected_g2_summary(result))
+    assert capsys.readouterr().out == _dump(_expected_joint_channel_summary(result))
 
 
-def test_L0_g2_main_explicit_args_no_freeze_returns_one(monkeypatch, capsys):
+def test_L0_joint_channel_main_explicit_args_no_freeze_returns_one(monkeypatch, capsys):
     seen: dict = {}
-    result = _fake_g2_result(passed=False, with_freeze=False)
+    result = _fake_joint_channel_result(passed=False, with_freeze=False)
 
     def fake_run(out_dir, *, device, write_freeze, refresh_freeze):
         seen.update(out_dir=out_dir, device=device, write_freeze=write_freeze,
                     refresh_freeze=refresh_freeze)
         return result
 
-    monkeypatch.setattr(gr, "run_axis1_g2_frontend_fixture", fake_run)
+    monkeypatch.setattr(gr, "run_joint_channel_comparison_fixture", fake_run)
     rc = gr.main(["--out-dir", "GG", "--device", "cpu", "--no-freeze", "--refresh-freeze"])
     assert rc == 1
     assert seen == {"out_dir": "GG", "device": "cpu", "write_freeze": False, "refresh_freeze": True}
-    expected = _expected_g2_summary(result)
+    expected = _expected_joint_channel_summary(result)
     assert expected["passed"] is False and expected["freeze"] is None   # freeze-None + passed-False arcs
     assert capsys.readouterr().out == _dump(expected)
 
 
-def test_L0_g2_main_validate_freeze_returns_zero(monkeypatch, capsys):
+def test_L0_joint_channel_main_validate_freeze_returns_zero(monkeypatch, capsys):
     seen: dict = {}
 
     def fake_validate(path):
         seen["path"] = path
-        return {"schema": "g2_validation", "pass": True}
+        return {"schema": "joint_channel_validation", "pass": True}
 
     def fail_run(*a, **k):
         raise AssertionError("run_* must not be called on the --validate-freeze path")
 
-    monkeypatch.setattr(gr, "validate_axis1_g2_freeze", fake_validate)
-    monkeypatch.setattr(gr, "run_axis1_g2_frontend_fixture", fail_run)
-    rc = gr.main(["--validate-freeze", "some/g2_jointL.freeze.json"])
+    monkeypatch.setattr(gr, "validate_joint_channel_comparison_freeze", fake_validate)
+    monkeypatch.setattr(gr, "run_joint_channel_comparison_fixture", fail_run)
+    rc = gr.main(["--validate-freeze", "some/joint_channel_comparison.freeze.json"])
     assert rc == 0
-    assert seen["path"] == Path("some/g2_jointL.freeze.json")
-    assert capsys.readouterr().out == _dump({"schema": "g2_validation", "pass": True})
+    assert seen["path"] == Path("some/joint_channel_comparison.freeze.json")
+    assert capsys.readouterr().out == _dump({"schema": "joint_channel_validation", "pass": True})
 
 
-def test_L0_g2_main_argv_none_reads_sys_argv(monkeypatch):
+def test_L0_joint_channel_main_argv_none_reads_sys_argv(monkeypatch):
     monkeypatch.setattr(sys, "argv", ["prog"])
     seen: dict = {}
 
     def fake_run(out_dir, **kw):
         seen.update(out_dir=out_dir, **kw)
-        return _fake_g2_result()
+        return _fake_joint_channel_result()
 
-    monkeypatch.setattr(gr, "run_axis1_g2_frontend_fixture", fake_run)
+    monkeypatch.setattr(gr, "run_joint_channel_comparison_fixture", fake_run)
     assert gr.main() == 0
-    assert seen["out_dir"] == "outputs/twin_validation/axis1_g2_frontend"
+    assert seen["out_dir"] == "outputs/simulator_validation/joint_channel_comparison"
 
 
-def test_L0_g2_main_help_exact_strings(monkeypatch, capsys):
+def test_L0_joint_channel_main_help_exact_strings(monkeypatch, capsys):
     monkeypatch.setenv("COLUMNS", "300")
     with pytest.raises(SystemExit):
         gr.main(["--help"])
@@ -638,10 +638,10 @@ def test_L0_g2_main_help_exact_strings(monkeypatch, capsys):
     for opt in ("--out-dir", "--device", "--no-freeze", "--refresh-freeze", "--validate-freeze"):
         assert opt in text
     for h in (
-        "Directory for g2_jointL.json and optional freeze manifest.",
+        "Directory for joint_channel_comparison.json and optional freeze manifest.",
         "Torch device. The release lane is cuda.",
-        "Write g2_jointL.json without g2_jointL.freeze.json.",
-        "Overwrite g2_jointL.freeze.json after an intentional evidence update.",
+        "Write comparison evidence without its freeze manifest.",
+        "Overwrite the freeze manifest after an intentional evidence update.",
         "Validate an existing freeze manifest instead of generating evidence.",
     ):
         assert h in text
@@ -660,8 +660,8 @@ def test_public_api_all_pinned():
         "run_axis1_codespec_record_fixture",
     }
     assert set(gr.__all__) == {
-        "Axis1G2RunnerResult",
-        "build_axis1_g2_frontend_schedule",
+        "JointChannelComparisonRunnerResult",
+        "build_joint_channel_comparison_schedule",
         "main",
-        "run_axis1_g2_frontend_fixture",
+        "run_joint_channel_comparison_fixture",
     }

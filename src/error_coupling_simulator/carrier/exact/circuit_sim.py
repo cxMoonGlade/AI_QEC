@@ -202,7 +202,7 @@ def dephase_parity(rho: torch.Tensor, qubit_a: int, qubit_b: int, n: int) -> tor
     The record-discarded (unconditional) state after a parity measurement -- the
     coherence between the two parity eigenspaces is destroyed, populations and
     within-sector coherences are untouched, and the trace is preserved. This is
-    the burn-in primitive for steady-state extraction (R2-lite M3): iterating
+    the burn-in primitive for steady-state extraction: iterating
     ``[channel layer; dephase_parity sweep]`` on a single unbranched ``rho``
     converges to the stationary state of the syndrome-extraction round map
     without enumerating measurement branches. Batch-aware over any leading
@@ -268,7 +268,7 @@ def dephase_parity_sweep(rho: torch.Tensor, n: int) -> torch.Tensor:
     constant-mask multiply (no custom autograd), so gradients inherit the
     identical argument. Replaces the ``n - 1`` per-round mask-build + two
     multiplies + add of the sequential sweep with a single cached multiply --
-    the M3 burn-in loop is launch-bound on CUDA (R2-lite M3, pin P1h).
+    the burn-in loop is launch-bound on CUDA.
     Batch-aware over any leading dimensions, like :func:`dephase_parity`.
     """
     if int(n) < 2:

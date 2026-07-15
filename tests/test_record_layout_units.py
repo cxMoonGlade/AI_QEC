@@ -5,8 +5,8 @@ properties + ``RecordLayout.to_manifest`` + the ``build_repeated_memory_record_l
 assembler + ``final_measurements`` + 4 record-KEY/NAME formatting functions; no torch,
 no quimb, so out_of_scope is empty).
 
-Full-coverage program (docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4;
-work-list docs/twin_validation/l3_release_package_unit_inventory.md D16).
+Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
+work-list docs/SIMULATOR.md D16).
 ``frontend/record_layout.py`` owns the structured record layout the frontend compiles a
 ``CodeSpec`` into BEFORE Stim conversion: the four frozen record dataclasses
 (``RoundMeasurementRecord``/``DetectorLayoutRecord``/``FinalDataRecord``/

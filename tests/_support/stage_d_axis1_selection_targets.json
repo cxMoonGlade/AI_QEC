@@ -1,8 +1,8 @@
 {
   "_comment": [
     "STAGE-D per-batch coverage registry -- batch 'axis1_selection' (D19, Tier-2 frontend cluster)",
-    "(docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4; full-coverage program;",
-    "work-list docs/twin_validation/l3_release_package_unit_inventory.md D19).",
+    "(docs/SIMULATOR.md SS12.3/12.4; full-coverage program;",
+    "work-list docs/SIMULATOR.md D19).",
     "Run via tests/harness/gate.py <this file> (L0+L1; calls tests/harness/coverage_audit.py) and",
     "tests/harness/mutation.py <this file> (L2).",
     "",
@@ -11,7 +11,7 @@
     "load-bearing __post_init__ coerces + validates fields and each expose a to_manifest; the plan",
     "adds by_kind + require_kind; the schedule-order partition function",
     "axis1_selection_layers_in_schedule_order (+ flatten_axis1_selection_layers +",
-    "axis1_selection_partition_manifest); and the two selectors build_axis1_g2_selection_plan /",
+    "axis1_selection_partition_manifest); and the two selectors build_axis1_joint_channel_selection_plan /",
     "build_axis1_schedule_selection_plan that dispatch over a private-helper bank",
     "(_cz_exact_zero_selections / _generic_*_selections / _drive_zz_selections / _selection_from_substep",
     "/ _static_zz_* / _normal_pair / ...). The module imports NEITHER torch NOR quimb (dataclasses +",
@@ -40,7 +40,7 @@
     "  * Axis1SelectionLayer.participants / selection_ids (read-only properties).",
     "  * axis1_selection_layers_in_schedule_order / flatten_axis1_selection_layers /",
     "    axis1_selection_partition_manifest.",
-    "  * build_axis1_g2_selection_plan / build_axis1_schedule_selection_plan.",
+    "  * build_axis1_joint_channel_selection_plan / build_axis1_schedule_selection_plan.",
     "",
     "CPU discipline. Every unit runs on plain-Python dataclass construction + CircuitIR compilation",
     "(circuit_ir_to_substep_schedule -- no torch, no simulator dynamics), so the tests are fast +",
@@ -49,7 +49,7 @@
     "L2 DISCIPLINE (100% coverage != discrimination). The two build_* selectors hard-code, per row, the",
     "row_kind / primitive_names / mechanism_pair / context_mechanisms / reason / coupling_edges. The",
     "core discriminator is a per-row_kind BATTERY (test_L0_schedule_plan_rowkind_battery) that compiles",
-    "a curated circuit for each of the 20 supported row_kinds + the 2 G2 rows and pins the resulting",
+    "a curated circuit for each of the 20 supported row_kinds + the 2 joint-channel comparison rows and pins the resulting",
     "selection's EXACT helper-chosen fields (kills the row_kind/primitive/mechanism/context/reason/edge",
     "string+tuple mutants and the branch that selected the row), plus exact to_manifest dicts on the",
     "H / I-with-arg / M-with-basis-keys / CZ / coupling-edge-present operation shapes. Skip/cluster",
@@ -99,7 +99,7 @@
     "normalized nothing) and now coerces with str(x) only. Before the de-dup ~189 (of ~1717) case-swap",
     "mutants of the ALL-CAPS helper literals (e.g. ('ZZ',...) -> ('zz',...)) were MASKED byte-identical",
     "by that re-uppercasing; dropping it un-masks them and the per-row_kind battery's exact-case field",
-    "pins (test_L0_schedule_plan_rowkind_battery + the to_manifest / G2 pins) KILL them. Seven further",
+    "pins (test_L0_schedule_plan_rowkind_battery + the to_manifest / joint-channel comparison pins) KILL them. Seven further",
     "workflow-verified reachable helper-bank gaps were then closed by tests (each with a constructed",
     "reaching input, orig-vs-mutant diffed -- NOT assumed): _unsupported_static_cluster_substep_ids",
     "max_support=None (TypeError on len>None, every kind reached via a from_spec=False canonical",
@@ -117,7 +117,7 @@
     "  * getattr(schedule, 'static_zz_couplings'/'static_zz_calibrations', ()/{}) default mutants are",
     "    dead: a real SubstepSchedule always carries the attribute, so the default is never used.",
     "  * _normal_pair `a < b` -> `a <= b` is preempted by its own a==b raise.",
-    "  * build_axis1_g2_selection_plan _has_two_qubit_gate(schedule, 'CX') -> 'cx' is a no-op because",
+    "  * build_axis1_joint_channel_selection_plan _has_two_qubit_gate(schedule, 'CX') -> 'cx' is a no-op because",
     "    _has_two_qubit_gate uppercases its name argument (str(name).upper()).",
     "  * the four AXIS1_*_CLUSTER_MAX_SUPPORT constants are ALL 5, so _unsupported_static_cluster_",
     "    substep_ids' one_qubit kind-literal string mutants are redundant (the one-qubit selector's",
@@ -132,7 +132,7 @@
     "The 15 reconciled PUBLIC units are covered at L0 100% stmt+branch + L1; the residual survivors",
     "all live in the private helper bank (not reconciled units)."
   ],
-  "contract": "docs/twin_validation/wave2_6_unit_test_contract.md",
+  "contract": "docs/SIMULATOR.md",
   "default_target": {"statement": 1.0, "branch": 1.0},
   "covered_by_test_files": [
     "tests/test_axis1_selection_units.py"
@@ -154,7 +154,7 @@
     "Axis1SelectionLayer.to_manifest",
     "axis1_selection_layers_in_schedule_order",
     "axis1_selection_partition_manifest",
-    "build_axis1_g2_selection_plan",
+    "build_axis1_joint_channel_selection_plan",
     "build_axis1_schedule_selection_plan",
     "flatten_axis1_selection_layers"
   ],
@@ -176,7 +176,7 @@
     {"group": "axis1_selection", "module": "src/error_coupling_simulator/frontend/axis1_selection.py", "unit": "Axis1SelectionLayer.to_manifest", "qualname": "Axis1SelectionLayer.to_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
     {"group": "axis1_selection", "module": "src/error_coupling_simulator/frontend/axis1_selection.py", "unit": "axis1_selection_layers_in_schedule_order", "qualname": "axis1_selection_layers_in_schedule_order", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
     {"group": "axis1_selection", "module": "src/error_coupling_simulator/frontend/axis1_selection.py", "unit": "axis1_selection_partition_manifest", "qualname": "axis1_selection_partition_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
-    {"group": "axis1_selection", "module": "src/error_coupling_simulator/frontend/axis1_selection.py", "unit": "build_axis1_g2_selection_plan", "qualname": "build_axis1_g2_selection_plan", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "axis1_selection", "module": "src/error_coupling_simulator/frontend/axis1_selection.py", "unit": "build_axis1_joint_channel_selection_plan", "qualname": "build_axis1_joint_channel_selection_plan", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
     {"group": "axis1_selection", "module": "src/error_coupling_simulator/frontend/axis1_selection.py", "unit": "build_axis1_schedule_selection_plan", "qualname": "build_axis1_schedule_selection_plan", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
     {"group": "axis1_selection", "module": "src/error_coupling_simulator/frontend/axis1_selection.py", "unit": "flatten_axis1_selection_layers", "qualname": "flatten_axis1_selection_layers", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []}
   ]

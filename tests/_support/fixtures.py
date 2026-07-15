@@ -1,6 +1,6 @@
 """Shared test fixtures + guard helpers (Wave 1, contract row C2).
 
-Binding contract: ``docs/twin_validation/api_hardening_ownership_design.md`` (row C2,
+Binding contract: ``docs/SIMULATOR.md`` (row C2,
 NAMING STANDARD, DEVIOUS-TEST STANDARD). Scope rule (see ``README.md``): shared test
 support ONLY -- never production code, never a home for anything with an independence
 constraint against a specific backend (references that referee a backend stay
@@ -248,7 +248,7 @@ def load_outputs_module(relpath: str):
     """Import a committed script under ``outputs/`` as a module (spec_from_file_location).
 
     ``relpath`` is relative to the REPO ROOT (e.g.
-    ``"outputs/teacher_prereg/exact_floor_run.py"``). The script must be
+    ``"outputs/reference_runs/exact_floor_run.py"``). The script must be
     ``__main__``-guarded (scripted-execution discipline) -- importing it must run no
     side effects. Missing file -> a loud class-(c) precondition failure.
     """

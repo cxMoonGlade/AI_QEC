@@ -1,105 +1,9 @@
-"""Builder-1 seam tests: per-substep Axis-1 params injection into the dense record emitter.
+"""Per-substep noise-parameter injection tests for record emission.
 
-Covers ``axis1_measurement_record_evidence_manifest(..., params_for_substep=...)``,
-``write_axis1_measurement_record_samples(...)``, and ``_enumerate_measurement_records``
-(``src/error_coupling_simulator/frontend/axis1_record_evidence.py``) — Path A-corrected per
-docs/twin_validation/coupled_cycle_teacher_design.md §2 (reviewer-adjudicated
-2026-06-30).
-
-CONSTRAINT LEDGER (faithfulness protocol Rule II — authored BEFORE the implementation;
-each constraint names its falsifying test in THIS file):
-
-C1  None-path invariance (a): with ``params_for_substep=None`` (or omitted) the
-    evidence payload carries NO new key and is identical to the schedule-global path;
-    ``content_hash`` unchanged. Falsified by: ``test_none_path_is_byte_identical``
-    (canonical-JSON equality of omitted-kwarg vs explicit-None manifests). The
-    untouched repo freeze guards (tests/test_simulator_axis1_schedule.py:6696/:6765)
-    stay green on the default path — byte-identity vs the pre-change emitter.
-C2  Constant-callable regression (a): a callable returning exactly the schedule-global
-    params yields evidence identical to the None path in EVERY field except the
-    declared ``params_resolution`` marker. Falsified by:
-    ``test_constant_callable_is_regression_identical_modulo_marker``.
-C3  Per-substep params reach BOTH generator sides of every selection in the substep
-    (a): the H side (static-ZZ zeta -> Hamiltonian edge term) and the c side
-    (gamma_phi -> T2 collapse rate) must both carry the callable's per-round values
-    inside the ONE joint generator of each selected substep. Falsified by:
-    ``test_from_scratch_ground_truth_certifies_injected_per_round_channels`` — an
-    implementation that drops either side, applies uniform params, resolves only
-    once, or swaps rounds mismatches the independent oracle at >> the 1e-10 gate
-    (the in-test dead-callable control shows the discriminating margin > 1e-3), and
-    the per-row ``lowered_mechanisms`` coefficient asserts pin zeta (H side) and
-    sqrt(2*gamma_phi) (c side) per round exactly.
-C4  Enumeration completeness unchanged (a): sum(record_probabilities) = 1 within the
-    registered 1e-8 residual and the branch set stays complete under callable
-    resolution. Falsified by: residual + record-count asserts in
-    ``test_per_round_gamma_phi_variation_changes_records_in_predicted_direction``
-    and the ground-truth test.
-C5  CPTP of every assembled channel unchanged (a): ``assemble_substep_channel``'s
-    loud RuntimeWarning (TP residual > 1e-8) must not fire under per-substep params;
-    the ground-truth agreement at 1e-10 bounds any CPTP defect. Falsified by: the
-    warnings capture in the ground-truth test.
-C6  Resolution happens exactly once per substep that carries selected channels,
-    never per selection, in schedule order (a). Falsified by: the invocation-count
-    assert (== 8 single-selection gate substeps on the 5q rounds=2 fixture) in
-    ``test_constant_callable_is_regression_identical_modulo_marker``; the resolution
-    sits structurally OUTSIDE the per-selection loop in the implementation.
-C7  Round derivation stays outside the emitter (a, structural): the emitter hands
-    the callable the substep object only; ``AnalogSubstepIR.round_index`` is
-    compiler-hardcoded None (analog_schedule.py:871/:899) and must never be keyed
-    on. Falsified by: ``test_tick_derived_round_mapping_includes_terminal_readout``
-    — grounds the tick_index <-> ``round{r}:`` measurement-key mapping
-    (record_layout.py:195) INCLUDING the terminal ``final:q{q}:{basis}`` readout
-    block (record_layout.py:207; tick_index == rounds; never resolved under the
-    default duration policy), and asserts the dead field stays dead.
-C8  Fail-loud type contracts (a): a non-callable ``params_for_substep`` and a
-    callable returning a non-``Axis1PrimitiveParams`` both raise TypeError naming
-    the offense. Falsified by: ``test_fail_loud_type_contracts``.
-C9  Isolation unchanged (a, structural): the change adds no learner-payload surface;
-    ``params_resolution`` is a mode marker in the evaluator-facing evidence manifest
-    (mechanism values were already visible there via ``applied_steps``
-    ``lowered_mechanisms`` coefficients). The teacher-side {det,obs}-only projection
-    (Builder 2's lane, SPEC §3 constraint 2) is unaffected by this seam.
-
-BOUNDED SIMPLIFICATIONS (Rule III):
-
-S1  Resolution granularity is per-SUBSTEP, not per-selection — EXACT (class a) for
-    per-ROUND variation: every selection in a substep shares the substep's tick, and
-    the compiler emits one ``tick()`` per round (compiler.py:66-69), so all
-    selections in one substep share the round. Zero approximation error for
-    round-keyed callables.
-S2  The readout/reset instrument stays per-run (slice-1 holds readout/reset at the
-    trajectory-mean; SPEC §4, user-resolved 2026-06-30) — a declared class-(c)
-    scope recorded in teacher truth (Builder 2's lane), not an approximation
-    introduced by this seam.
-S3  The callable is resolved only for substeps that carry selected joint channels;
-    barrier / reset / no-explicit-duration measurement substeps are never resolved —
-    exact w.r.t. the record law (substeps without channels contribute no
-    params-dependent evolution). Declared consequence: under the default duration
-    policy (analog_schedule.py:464-477 — only gate kinds carry nominal dt) the
-    terminal data-readout block (tick_index == rounds) never reaches the callable.
-S4  The channel-evidence path (axis1_channel_evidence.py:398,
-    ``_channel_row_from_selection`` -> schedule-global params) is NOT extended this
-    slice — declared out of scope: the teacher emit seam is the record path;
-    extending the channel-evidence manifest would thread four more signatures for no
-    slice-1 consumer, failing the brief's "cheap and zero-risk" bar. G2 semantics
-    are untouched (zero diff in that file).
-S5  Ground-truth tolerance 1e-10 (class c heuristic gate): the instrument floor is
-    torch-c128 ``matrix_exp`` scaling-and-squaring + Choi->Kraus identity-sink
-    reconstruction (~1e-12..1e-11; cf. the SUPEROP_EXACTZERO_TOL rationale in
-    forward/joint_lindbladian.py) + scipy ``expm`` (~1e-13). The in-test
-    dead-callable control demonstrates the check discriminates at > 1e-3 — seven
-    orders above the gate, so the check is not vacuous.
-
-INDEPENDENT GROUND TRUTH (Rule I): the from-scratch oracle in this file shares NO
-code with the emitter: numpy column-stacking Liouvillians (pattern:
-tests/test_joint_lindbladian.py:101-115) + ``scipy.linalg.expm`` superoperators +
-hand-built Born projectors + hand XOR of the public record-layout wiring. It never
-calls the module's superop/Choi/Kraus code and is not a parallel model sharing the
-emitter's lowering.
-
-GPU-gated like tests/test_joint_lindbladian.py: collection FAILS without CUDA (a
-skip would be a false-green release signal). Run:
-  conda run -n aiqec python -m pytest -q tests/test_axis1_record_params_override.py
+The tests pin default-path invariance, one-resolution-per-substep semantics,
+Hamiltonian and collapse-operator propagation, probability completeness, type
+validation, and round mapping.  Channel probabilities are compared with an
+independent NumPy/SciPy Liouvillian and hand-built Born-record reference.
 """
 from __future__ import annotations
 
@@ -130,10 +34,10 @@ from error_coupling_simulator.mechanisms.axis1_primitives import Axis1PrimitiveP
 from error_coupling_simulator.frontend.analog_schedule import (  # noqa: E402
     compile_code_spec_to_substep_schedule,
 )
-from error_coupling_simulator.frontend.axis1_bridge import (  # noqa: E402
-    G2_GAMMA_1_PER_NS,
-    G2_GAMMA_PHI_PER_NS,
-    G2_ZETA_RAD_PER_NS,
+from error_coupling_simulator.frontend.joint_channel_comparison import (  # noqa: E402
+    JOINT_CHANNEL_GAMMA_1_PER_NS,
+    JOINT_CHANNEL_GAMMA_PHI_PER_NS,
+    JOINT_CHANNEL_ZETA_RAD_PER_NS,
 )
 from error_coupling_simulator.frontend.axis1_channel_evidence import (  # noqa: E402
     _axis1_primitive_params_for_schedule,
@@ -210,12 +114,12 @@ def test_constant_callable_is_regression_identical_modulo_marker(
     fixture_schedule, baseline_manifest
 ):
     global_params = _axis1_primitive_params_for_schedule(fixture_schedule)
-    # The fixture carries no lindblad context => the global read IS the G2 defaults
+    # The fixture carries no Lindblad context, so the global read uses comparison defaults.
     # (grounds "the SAME params the global read produces" publicly).
     assert global_params == Axis1PrimitiveParams(
-        zeta_rad_per_ns=G2_ZETA_RAD_PER_NS,
-        gamma_phi_per_ns=G2_GAMMA_PHI_PER_NS,
-        gamma_1_per_ns=G2_GAMMA_1_PER_NS,
+        zeta_rad_per_ns=JOINT_CHANNEL_ZETA_RAD_PER_NS,
+        gamma_phi_per_ns=JOINT_CHANNEL_GAMMA_PHI_PER_NS,
+        gamma_1_per_ns=JOINT_CHANNEL_GAMMA_1_PER_NS,
     )
 
     calls: list[tuple[str, int]] = []
@@ -544,13 +448,13 @@ def test_from_scratch_ground_truth_certifies_injected_per_round_channels():
 
     base = Axis1PrimitiveParams(
         zeta_rad_per_ns=0.02,
-        gamma_phi_per_ns=G2_GAMMA_PHI_PER_NS,
-        gamma_1_per_ns=G2_GAMMA_1_PER_NS,
+        gamma_phi_per_ns=JOINT_CHANNEL_GAMMA_PHI_PER_NS,
+        gamma_1_per_ns=JOINT_CHANNEL_GAMMA_1_PER_NS,
     )
     high = dataclasses.replace(
         base,
         zeta_rad_per_ns=0.10,
-        gamma_phi_per_ns=5.0 * G2_GAMMA_PHI_PER_NS,
+        gamma_phi_per_ns=5.0 * JOINT_CHANNEL_GAMMA_PHI_PER_NS,
     )
     by_round = {0: base, 1: high}
 

@@ -10,16 +10,13 @@ into per-round ``Axis1PrimitiveParams``, and emitted as real R-round
 ``truth`` / ``emit`` / ``channels`` / ``emit_clifford_slice``) so its records
 drop into ``certify_cells`` + the Anchor/Control ports unchanged.
 
-Historical design evidence is retained in
-``docs/twin_validation/coupled_cycle_teacher_design.md`` (Path A-corrected §2,
-emit constraints §3, Theta homes §4, surface §5, red-team §6b). Runtime ownership
-is entirely package-local: this module uses relative imports into
-``error_coupling_simulator`` and has no inward dependency on the retained
-repository-only ``qec_twin`` compatibility tree.
+Runtime ownership and the emitted-record boundary are package-local. The process
+emits only the declared record object; its source trajectory and channel field stay
+on the evaluator side.
 
 CONSTRAINT LEDGER (faithfulness protocol rule II — written BEFORE the
 implementation below; each entry names its falsifying test in
-``tests/test_coupled_cycle_teacher.py``):
+``tests/test_coupled_cycle_process.py``):
 
 C-1  Seal (red-team R5). ``emit`` refuses any schedule that does not carry the
      in-process compiler HMAC seal; schedules are constructed ONLY via
@@ -56,7 +53,7 @@ C-4  Round derivation (red-team R1). The substep->round map is derived from
      ``test_round_map_two_round_schedule`` (terminal off-by-one),
      ``test_round_map_tampered_keys_raise``,
      ``test_params_differ_across_rounds`` (positive control).
-C-5  Per-round param fan-out mapping. Per-cycle ``CoupledMechanismParams``
+C-5  Per-round param fan-out mapping. Per-cycle ``CoupledNoiseParameters``
      map 1:1 into ``Axis1PrimitiveParams``: ``zz_zeta_radns ->
      zeta_rad_per_ns`` (both angular rad/ns; the ZZ primitive lowers
      ``H = zeta * n(x)n`` — axis1_primitives.py:271-273; a negative zeta fails
@@ -95,7 +92,7 @@ C-9  Ablation arms. ``matched_marginal_permutation_control()`` preserves each on
      R=12). The two arms differ only in the second-order cross-cycle MEMORY
      residue, which is sub-floor on records at feasible N (see
      ``docs/twin_validation/g6_null_model_rederivation_2026-07-03.md``).
-     Falsifiers: ``test_markovian_baseline_marginals_and_decorrelation``,
+     Falsifiers: current matched-marginal permutation and source-off owner tests,
      ``test_off_source_constant_params``.
 C-10 Independent ground truth (faithfulness rule I). Emitted record
      statistics are checked against closed forms derived OUTSIDE this module
@@ -155,16 +152,10 @@ S-3  gamma_1 (and gamma_up, gamma_readout_phi, drive, fSim) are NOT
      (``detuning_radns``, ``drive_omega_radns``, ``spillover_cx``,
      ``cz_depol_p``) are recorded in truth as DEFERRED and never emitted
      (adjudicated slice-1 scope).
-S-4  Record-dead zeta (faithful property, exact evidence). Under realistic
-     1/f draws the per-cycle static-ZZ variation leaves ~no record imprint
-     (G0-v1 zeta-only record TV ~ 4.3e-11 vs gamma_phi-carried TV ~ 5.8e-4;
-     ``outputs/twin_validation/g0_zeta_gammaphi_effectsize.py``, 2026-06-30,
-     liveness positive control PASSED). zeta is nonetheless carried
-     faithfully per-round into the channel (the schedule declares the
-     superposition-bearing X-check static-ZZ edge (0,3) WITHOUT a per-edge
-     calibration, so the per-round ``params.zeta_rad_per_ns`` is what lowers —
-     axis1_channel_evidence.py:806-814). The record-level Axis-2 carrier is
-     gamma_phi.
+S-4  Static-ZZ modulation is carried per round into the specified channel when
+     the schedule does not provide a per-edge override. No current record-effect
+     magnitude is claimed here: that observable must be regenerated from the
+     renovated source and tests before it can re-enter a claim packet.
 S-5  Exponential inner enumeration. The dense path enumerates
      2^(#measurement keys) branches (x instrument branching), so R is small;
      R* and N* are G0-v2 design constants (Builder 3's lane) — ``rounds`` is
@@ -188,7 +179,7 @@ import numpy as np
 from ..mechanisms.axis1_primitives import Axis1PrimitiveParams
 from ..numerics import NUMERICAL_ZERO
 from ..source.coupling import (
-    CoupledMechanismParams,
+    CoupledNoiseParameters,
     SourceCouplingConfig,
     default_source_coupling_config,
     independent_baseline_trajectory_to_params,
@@ -239,11 +230,15 @@ from ..frontend.source_sidecar import (
     build_source_timeline_binding_manifest,
 )
 
-COUPLED_TEACHER_SCHEMA = "qec_twin.mechanisms.CoupledCycleNoiseProcess.v1"
-#: Representability-ledger class string (declared; mirrored in
-#: ``src/qec_twin/simulator/README.md``): sampled Axis-1 joint-L records under a
+COUPLED_PROCESS_SCHEMA = (
+    "error_coupling_simulator.noise_processes.coupled_cycle.process.v1"
+)
+COUPLED_PROCESS_STIM_EXPORT_SCHEMA = (
+    "error_coupling_simulator.noise_processes.coupled_cycle_stim_export.v1"
+)
+#: Representability-ledger class string: sampled Axis-1 joint-L records under a
 #: shared-source per-round param fan-out, truth evaluator-only.
-COUPLED_TEACHER_REPRESENTABILITY = (
+COUPLED_PROCESS_REPRESENTABILITY = (
     "axis1_jointL_source_coupled_record_samples_evaluator_truth"
 )
 
@@ -390,9 +385,9 @@ def params_for_substep_from_round_map(
 # --------------------------------------------------------------------------- #
 def per_round_axis1_params(
     baseline: Axis1PrimitiveParams,
-    coupled: CoupledMechanismParams,
+    coupled: CoupledNoiseParameters,
 ) -> Axis1PrimitiveParams:
-    """Lower one cycle's ``CoupledMechanismParams`` onto the schedule baseline.
+    """Lower one cycle's ``CoupledNoiseParameters`` onto the schedule baseline.
 
     Unit-exact 1:1 mappings (C-5): ``zz_zeta_radns -> zeta_rad_per_ns`` (both
     angular rad/ns; ``H_ZZ = zeta * n(x)n``) and ``gamma_phi_per_ns ->
@@ -409,7 +404,7 @@ def per_round_axis1_params(
 
 
 def trajectory_mean_instrument(
-    params_cycles: Sequence[CoupledMechanismParams],
+    params_cycles: Sequence[CoupledNoiseParameters],
 ) -> Axis1ReadoutResetInstrumentSpec:
     """Trajectory-mean readout/reset instrument (S-1, class (c), declared).
 
@@ -427,7 +422,7 @@ def trajectory_mean_instrument(
         readout_p1_to_0=readout,
         readout_pair_flip_probability=0.0,
         reset_flip_probability=reset,
-        source="coupled_cycle_teacher_trajectory_mean_v1",
+        source="coupled_cycle_process_trajectory_mean_v1",
         epistemic_class="c",
     )
 
@@ -483,7 +478,7 @@ def default_coupled_code_spec_4q(
 
     3 data + 1 ancilla; check x0 only (same static-ZZ edge (0,3)); logical_z2 (Z on data 2);
     data qubit 1 in no check/observable -> no final measurement; n_stab = 1, measured bits
-    M(R) = R + 2. Reachable by name so a JSON ``teacher_kwargs = {"rounds": R, "fixture": "4q"}``
+    M(R) = R + 2. Reachable by name so a JSON ``process_kwargs = {"rounds": R, "fixture": "4q"}``
     can construct it through the gate config seam (F2). Same Theta(0) baseline wrapping as the 5q.
     """
 
@@ -495,7 +490,7 @@ def default_coupled_code_spec_d3_repz(
     rounds: int,
     config: SourceCouplingConfig | None = None,
 ) -> CodeSpec:
-    """The P0 genuine-decode fixture: a distance-3 bit-flip repetition code.
+    """A genuine-decode fixture: a distance-3 bit-flip repetition code.
 
     3 data (0,1,2) + 2 ancilla (3: z01, 4: z12); weight-2 Z checks Z0Z1 / Z1Z2;
     logical_z2 (Z on data 2, the chain end). M(R) = 2R + 3 measured bits — the
@@ -504,7 +499,7 @@ def default_coupled_code_spec_d3_repz(
     checks), the logical-flipping fault class here fires a detector, so an
     MWPM decode of the emitted record is non-vacuous.
 
-    DECLARED slice-1 fault-class map (P0 interop scope; the C-10a Z-diagonal
+    DECLARED slice-1 fault-class map (interop scope; the C-10a Z-diagonal
     argument applies to every chain — reviewed 2026-07-06):
     - gamma_phi / zeta are record-DEAD in this all-Z geometry; gamma_1 is
       inert on the |0...0> prep; gamma_up is held at the schedule baseline 0.
@@ -522,8 +517,8 @@ def default_coupled_code_spec_d3_repz(
       probability 0 in slice 1 — the L0 rule is a reduction of the RECORD's
       fault mix, not of the code geometry.)
     This fixture exercises the interop/decode path on instrument noise — it is
-    NOT a coupling-visibility arm; the coupling-visible demo geometry is P3's
-    job. Same Theta(0) baseline wrapping as the other fixtures (the static-ZZ
+    NOT a coupling-visibility arm. Same Theta(0) baseline wrapping as the other
+    fixtures (the static-ZZ
     edge (0,3) is inert here — declared).
     """
 
@@ -569,7 +564,7 @@ def _derived_seed(base_seed: int, trajectory: int, purpose: str) -> int:
     """Stable per-(seed, trajectory, purpose) derivation (C-8; never ``hash()``)."""
 
     payload = (
-        f"{COUPLED_TEACHER_SCHEMA}:{int(base_seed)}:{int(trajectory)}:{purpose}"
+        f"{COUPLED_PROCESS_SCHEMA}:{int(base_seed)}:{int(trajectory)}:{purpose}"
     ).encode("utf-8")
     digest = hashlib.sha256(payload).digest()
     return int.from_bytes(digest[:8], "big") % (2**63 - 1)
@@ -648,7 +643,7 @@ class CoupledCycleNoiseProcess:
             self._spec = code_spec_builder(self._rounds)
         if int(self._spec.rounds) != self._rounds:
             raise ValueError(
-                f"code spec declares rounds={self._spec.rounds}, teacher was "
+                f"code spec declares rounds={self._spec.rounds}, process was "
                 f"constructed with rounds={self._rounds}"
             )
         # C-1: in-process compiler path only (the seal key is process-lifetime).
@@ -706,9 +701,9 @@ class CoupledCycleNoiseProcess:
         source_manifest = dataclasses.asdict(self._source)
         source_manifest["class"] = type(self._source).__name__
         truth: dict[str, Any] = {
-            "schema": COUPLED_TEACHER_SCHEMA,
+            "schema": COUPLED_PROCESS_SCHEMA,
             "visibility": "evaluator_only",
-            "representability": COUPLED_TEACHER_REPRESENTABILITY,
+            "representability": COUPLED_PROCESS_REPRESENTABILITY,
             "coupling_arm": self._arm,
             "fixture": self._fixture,
             "source": source_manifest,
@@ -770,21 +765,11 @@ class CoupledCycleNoiseProcess:
                     "fields are regenerable from the seed derivation below (S-2)"
                 ),
             },
-            "record_dead_zeta_note": {
-                "statement": (
-                    "per-cycle static-ZZ variation is record-dead under realistic "
-                    "1/f draws (faithful property, not a bug); the record-level "
-                    "Axis-2 carrier is gamma_phi"
-                ),
-                "evidence": "outputs/twin_validation/g0_zeta_gammaphi_effectsize.py",
-                "g0_v1_zeta_only_record_tv": 4.3e-11,
-                "g0_v1_joint_record_tv": 5.77e-4,
-            },
             "shots_per_trajectory": self._shots_per_trajectory,
             "seed_derivation": {
                 "scheme": (
                     "sha256('"
-                    + COUPLED_TEACHER_SCHEMA
+                    + COUPLED_PROCESS_SCHEMA
                     + ":{seed}:{trajectory}:{purpose}')[:8] as big-endian int "
                     "mod 2**63-1"
                 ),
@@ -955,7 +940,7 @@ class CoupledCycleNoiseProcess:
         return tuple(rows)
 
     def export_stim_circuit(self) -> tuple[Any, dict]:
-        """P0 interop: the SAME compiled fixture as an ideal-geometry stim circuit.
+        """Export the same compiled fixture as an ideal-geometry Stim circuit.
 
         Recompiles ``self._spec`` through the same frontend compiler (a pure,
         deterministic function of the spec) and converts the ``CircuitIR`` via
@@ -986,7 +971,7 @@ class CoupledCycleNoiseProcess:
         if det_names != self._detector_names:
             raise RuntimeError(
                 "export/emit detector layout mismatch: recompiled circuit "
-                f"declares {det_names[:4]}... vs teacher {self._detector_names[:4]}..."
+                f"declares {det_names[:4]}... vs process {self._detector_names[:4]}..."
             )
         if obs_names != self._observable_names:
             raise RuntimeError(
@@ -1016,7 +1001,7 @@ class CoupledCycleNoiseProcess:
                 f"expected {len(self._measurement_keys)}"
             )
         manifest = {
-            "schema": f"{COUPLED_TEACHER_SCHEMA}.stim_export.v1",
+            "schema": COUPLED_PROCESS_STIM_EXPORT_SCHEMA,
             "fixture": self._fixture,
             "code_spec_name": str(self._spec.name),
             "rounds": self._rounds,
@@ -1038,7 +1023,7 @@ class CoupledCycleNoiseProcess:
                 "noise summary = frontend.interop.records_to_dem"
             ),
         }
-        return stim_circuit, manifest
+        return stim_circuit, _validate_coupled_process_stim_export_manifest(manifest)
 
     def emit_clifford_slice(
         self, regime: Any, *, p_x: float, m: int, N: int, seed: int
@@ -1082,15 +1067,6 @@ class CoupledCycleNoiseProcess:
             fixture=self._fixture,
             coupling_arm="independent",
         )
-
-    def markovian_baseline(self) -> "CoupledCycleNoiseProcess":
-        """Compatibility spelling for :meth:`matched_marginal_permutation_control`.
-
-        The returned arm is a matched-marginal permutation control, not a
-        theorem-grade Markov null. New code should use the precise method name.
-        """
-
-        return self.matched_marginal_permutation_control()
 
     def off_source(self) -> "CoupledCycleNoiseProcess":
         """The collapse arm: amplitude-0 source => constant Theta(0) params."""
@@ -1140,7 +1116,7 @@ class CoupledCycleNoiseProcess:
         if regime_rounds != self._rounds:
             raise ValueError(
                 f"regime.R={regime_rounds} does not match the compiled schedule "
-                f"rounds={self._rounds}; this teacher never re-compiles per emit"
+                f"rounds={self._rounds}; this process never re-compiles per emit"
             )
         regime_n_stab = getattr(regime, "n_stab", None)
         if regime_n_stab is not None and int(regime_n_stab) != self._n_stab:
@@ -1151,7 +1127,7 @@ class CoupledCycleNoiseProcess:
 
     def _fan_out(
         self, timeline: SourceTimeline, *, base_seed: int, trajectory: int
-    ) -> tuple[CoupledMechanismParams, ...]:
+    ) -> tuple[CoupledNoiseParameters, ...]:
         """Arm-dispatched Theta fan-out for one trajectory (C-2, C-9)."""
 
         z = timeline.payload_series("z_radns")
@@ -1179,7 +1155,7 @@ class CoupledCycleNoiseProcess:
     def _assert_fan_out_alive(
         self,
         timeline: SourceTimeline,
-        params_cycles: Sequence[CoupledMechanismParams],
+        params_cycles: Sequence[CoupledNoiseParameters],
     ) -> None:
         """Runtime R1 positive control: a non-constant trajectory with a live
         gamma_phi sensitivity MUST yield non-uniform per-cycle params."""
@@ -1310,9 +1286,25 @@ class CoupledCycleNoiseProcess:
         return tables
 
 
+def _validate_coupled_process_stim_export_manifest(
+    manifest: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Require the current hard-cut Stim-export schema; no legacy fallback."""
+
+    if not isinstance(manifest, Mapping):
+        raise TypeError("coupled-process Stim export manifest must be a mapping")
+    if manifest.get("schema") != COUPLED_PROCESS_STIM_EXPORT_SCHEMA:
+        raise ValueError(
+            f"unsupported coupled-process Stim export schema {manifest.get('schema')!r}; "
+            f"expected {COUPLED_PROCESS_STIM_EXPORT_SCHEMA!r}"
+        )
+    return dict(manifest)
+
+
 __all__ = [
-    "COUPLED_TEACHER_REPRESENTABILITY",
-    "COUPLED_TEACHER_SCHEMA",
+    "COUPLED_PROCESS_REPRESENTABILITY",
+    "COUPLED_PROCESS_SCHEMA",
+    "COUPLED_PROCESS_STIM_EXPORT_SCHEMA",
     "DEFAULT_STATIC_ZZ_EDGE",
     "MEMORYFUL_SHARED_SOURCES",
     "CoupledCycleNoiseProcess",
@@ -1324,7 +1316,3 @@ __all__ = [
     "per_round_axis1_params",
     "trajectory_mean_instrument",
 ]
-
-# Backward-compat alias — the ambiguous "Teacher" name is retired in error_coupling_simulator;
-# qec_twin keeps it (its shim does globals().update(vars(this_module)), re-exporting both names).
-CoupledCycleTeacher = CoupledCycleNoiseProcess

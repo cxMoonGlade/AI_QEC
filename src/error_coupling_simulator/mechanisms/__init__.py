@@ -1,17 +1,9 @@
-"""Noise-mechanism primitives and controlled generative processes.
+"""Physical mechanism primitives used by specified simulator processes.
 
-- ``catalog``: retained M0--M34 dispatch/audit taxonomy for the legacy probe/profile stack;
-  it is not the current simulator-construction registry.
-- ``axis1_primitives``: current local 2q-window primitive lowering (H_list/c_list inputs for the
-  carrier's joint Lindbladian).
-- ``qutrit_teachers``: non-Pauli leakage process parameters (WG rates, evaluator-only ``params``).
-- ``seam_teachers``: ADR-0008 controlled seam-process fixtures. The historical module names are
-  retained for import compatibility; active implementations are package-local.
-- ``cz_leakage``: QuTiP-derived two-transmon CZ leakage-channel construction from declared
-  Hamiltonian/Lindblad parameters. QuTiP is loaded only when this derivation API is requested.
-
-The Axis-2 source layer (source_process/source_coupling) lives under ``source/`` (process.py,
-coupling.py). MIGRATION (P3): these are canonical here; the old ``qec_twin.mechanisms.*`` are shims.
+``axis1_primitives`` lowers declared local generators for the joint Lindbladian.
+``qutrit_leakage`` owns Wood--Gambetta qutrit leakage channels, diagnostics, and
+noise-process factories. ``cz_leakage`` derives two-transmon CZ leakage channels
+from declared Hamiltonian/Lindblad parameters and loads QuTiP only on demand.
 """
 
 from __future__ import annotations

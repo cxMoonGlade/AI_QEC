@@ -1,8 +1,8 @@
 """Standalone specified-noise simulator for QEC error mechanisms.
 
 The package applies declared coupling, leakage, and memoryful noise processes to a QEC circuit and
-emits a multi-time syndrome record. It consolidates simulator code that previously lived across
-``qec_twin`` and experiment scripts behind an independently releasable package boundary.
+emits a multi-time syndrome record. It consolidates the simulator implementation behind an
+independently releasable package boundary.
 
 There is no physical ground truth implied by a specified noise process. QuTiP, closed-form, and
 exact-density-matrix references are formal implementation checks, not evidence of correspondence to

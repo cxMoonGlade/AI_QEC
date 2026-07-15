@@ -24,21 +24,21 @@ from .axis1_state_evidence import _require_cuda_device
 
 
 AXIS1_QUTIP_CUQUANTUM_PROBE_SCHEMA = (
-    "qec_twin.simulator.axis1_qutip_cuquantum_probe.v1"
+    "error_coupling_simulator.frontend.qutip_cuquantum_probe.v1"
 )
 AXIS1_QUTIP_CUQUANTUM_PROBE_REPRESENTABILITY = (
     "axis1_qutip_cuquantum_symbolic_lowering_probe_no_state_record_execution"
 )
 AXIS1_QUTIP_CUQUANTUM_PROBE_BACKEND_CONTRACT = "qutip_cuquantum_probe"
 AXIS1_QUTIP_CUQUANTUM_STATE_PROBE_SCHEMA = (
-    "qec_twin.simulator.axis1_qutip_cuquantum_state_probe.v1"
+    "error_coupling_simulator.frontend.qutip_cuquantum_state_probe.v1"
 )
 AXIS1_QUTIP_CUQUANTUM_STATE_PROBE_REPRESENTABILITY = (
     "axis1_qutip_cuquantum_state_probe_restricted_no_record_execution"
 )
 AXIS1_QUTIP_CUQUANTUM_STATE_PROBE_BACKEND_CONTRACT = "qutip_cuquantum_state_probe"
 AXIS1_QUTIP_CUQUANTUM_TRAJECTORY_PROBE_SCHEMA = (
-    "qec_twin.simulator.axis1_qutip_cuquantum_trajectory_probe.v1"
+    "error_coupling_simulator.frontend.qutip_cuquantum_trajectory_probe.v1"
 )
 AXIS1_QUTIP_CUQUANTUM_TRAJECTORY_PROBE_REPRESENTABILITY = (
     "axis1_qutip_cuquantum_trajectory_probe_no_record_execution"
@@ -47,7 +47,7 @@ AXIS1_QUTIP_CUQUANTUM_TRAJECTORY_PROBE_BACKEND_CONTRACT = (
     "qutip_cuquantum_trajectory_probe"
 )
 AXIS1_QUTIP_CUQUANTUM_RECORD_PROBE_SCHEMA = (
-    "qec_twin.simulator.axis1_qutip_cuquantum_record_probe.v1"
+    "error_coupling_simulator.frontend.qutip_cuquantum_record_probe.v1"
 )
 AXIS1_QUTIP_CUQUANTUM_RECORD_PROBE_REPRESENTABILITY = (
     "axis1_qutip_cuquantum_record_probe_restricted_no_b8_no_decoder"

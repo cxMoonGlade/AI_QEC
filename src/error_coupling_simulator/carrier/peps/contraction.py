@@ -393,7 +393,7 @@ def cross_route_q1(state: PepsState, paulis: dict, b: float, arm: str, *,
     ledger-ready entry (the SW8 "ledgers close" condition checks these against
     the §6.2 floor table — d3: <= 1e-10 every read; d5 in-run: <= 1e-6).
 
-    M1 (norm-cache threading): the caps two-term leg reads the SAME unmutated
+    Norm-cache threading: the caps two-term leg reads the SAME unmutated
     snapshot as the caller's ``born_read_stab``, so the caller's ``cache_n`` /
     ``cache_x`` are valid here and are passed straight through. The branch-norm
     leg CANNOT take a cache — :func:`branch_norm_sq` grows a COPY of the state
@@ -420,7 +420,7 @@ def chib_doubling_delta(state: PepsState, paulis: dict, b: float, arm: str,
     CONSISTENCY estimator, not an error bound (RT2: a false plateau is possible;
     the evolved-probe R-sweep leg mitigates). Returns the ledger-ready entry.
 
-    M1 (norm-cache threading): all three reads are on the SAME unmutated
+    Norm-cache threading: all three reads are on the SAME unmutated
     snapshot. The chi_b leg reuses the caller's snapshot ``cache`` ONLY when its
     boundary dim matches chi_b (else it builds its own); the 2*chi_b legs
     legitimately need their OWN boundary dim (RT2 — a different chi_b), and a

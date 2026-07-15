@@ -299,7 +299,7 @@ class Simulator:
         if source_artifacts is not None:
             artifacts.update(source_artifacts)
         manifest = {
-            "schema": "qec_twin.simulator_frontend.v1",
+            "schema": "error_coupling_simulator.frontend.run_manifest.v1",
             "backend": compiled.backend,
             "representability": compiled.representability,
             "source_type": compiled.source_type,

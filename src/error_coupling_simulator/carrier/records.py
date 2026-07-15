@@ -32,6 +32,20 @@ _EVALUATOR_ONLY_PROVENANCE_KEYS = frozenset(
     }
 )
 
+PACKED_SHOT_SCHEMA = "error_coupling_simulator.carrier.packed_shots.v1"
+PACKED_SYNDROME_LAYOUT = "round_major_lsb_syndrome_then_logical_u8"
+PACKED_DETECTOR_INITIAL_PRIOR = "all_zero"
+_PACKED_HEADER_FIELDS = (
+    "format",
+    "n_stab",
+    "R",
+    "N",
+    "syndrome_bits_per_shot",
+    "out_stride_bytes",
+    "syndrome_layout",
+    "detector_initial_prior",
+)
+
 
 def _binary_array(value: Any, *, name: str, ndim: tuple[int, ...]) -> np.ndarray:
     array = np.asarray(value)
@@ -39,11 +53,127 @@ def _binary_array(value: Any, *, name: str, ndim: tuple[int, ...]) -> np.ndarray
         expected = " or ".join(str(item) for item in ndim)
         raise ValueError(f"{name} must have {expected} dimensions, got shape {array.shape}")
     if not np.issubdtype(array.dtype, np.integer) and array.dtype != np.bool_:
-        raise TypeError(f"{name} must contain binary integer values, got dtype {array.dtype}")
-    out = np.ascontiguousarray(array, dtype=np.uint8)
-    if out.size and bool(np.any(out > 1)):
+        raise TypeError(
+            f"{name} must have an integer or bool dtype containing 0/1 values, "
+            f"got {array.dtype}"
+        )
+    if array.size and bool(np.any((array != 0) & (array != 1))):
         raise ValueError(f"{name} must contain only 0/1 values")
+    out = np.array(array, dtype=np.uint8, order="C", copy=True)
+    out.setflags(write=False)
     return out
+
+
+def _packed_byte_array(
+    value: Any,
+    *,
+    name: str,
+    n_shots: int | None,
+    syndrome_bits_per_shot: int,
+) -> np.ndarray:
+    """Validate packed bytes before narrowing and return an immutable snapshot."""
+
+    array = np.asarray(value)
+    if array.ndim != 2:
+        raise ValueError(f"{name} must be a 2D packed byte array, got {array.shape}")
+    if np.issubdtype(array.dtype, np.floating):
+        if array.size and not bool(np.all(np.isfinite(array))):
+            raise ValueError(f"{name} must contain only finite byte values")
+        raise TypeError(f"{name} must contain integer byte values, got dtype {array.dtype}")
+    if not np.issubdtype(array.dtype, np.integer) and array.dtype != np.bool_:
+        raise TypeError(f"{name} must contain integer byte values, got dtype {array.dtype}")
+    if array.size and bool(np.any((array < 0) | (array > 255))):
+        raise ValueError(f"{name} byte values must lie in [0, 255] before uint8 conversion")
+
+    payload = np.array(array, dtype=np.uint8, order="C", copy=True)
+    if n_shots is not None and payload.shape[0] != n_shots:
+        raise ValueError(
+            f"packed shot count {payload.shape[0]} != declared n_shots {n_shots}"
+        )
+
+    syndrome_bytes = (syndrome_bits_per_shot + 7) // 8
+    expected_stride = syndrome_bytes + 1
+    if payload.shape[1] != expected_stride:
+        raise ValueError(
+            f"packed shot stride {payload.shape[1]} != declared stride {expected_stride}"
+        )
+
+    flips = payload[:, syndrome_bytes]
+    if flips.size and bool(np.any(flips > 1)):
+        raise ValueError("packed logical-flip byte must contain only 0/1 values")
+
+    used_bits_in_final_byte = syndrome_bits_per_shot % 8
+    if used_bits_in_final_byte:
+        padding_mask = (~((1 << used_bits_in_final_byte) - 1)) & 0xFF
+        final_syndrome_byte = payload[:, syndrome_bytes - 1]
+        if final_syndrome_byte.size and bool(
+            np.any(final_syndrome_byte & padding_mask)
+        ):
+            raise ValueError("packed syndrome padding bits must be zero")
+
+    payload.setflags(write=False)
+    return payload
+
+
+def _validate_packed_header(
+    header: Mapping[str, Any],
+    *,
+    n_shots: int,
+    syndrome_bits_per_shot: int,
+) -> tuple[int, int]:
+    missing = [name for name in _PACKED_HEADER_FIELDS if name not in header]
+    if missing:
+        raise ValueError(f"PackedShotBatch header lacks required fields {missing}")
+
+    if header["format"] != PACKED_SHOT_SCHEMA:
+        raise ValueError(
+            "PackedShotBatch header format must be "
+            f"{PACKED_SHOT_SCHEMA!r}, got {header['format']!r}"
+        )
+    if header["syndrome_layout"] != PACKED_SYNDROME_LAYOUT:
+        raise ValueError(
+            "PackedShotBatch header syndrome_layout must be "
+            f"{PACKED_SYNDROME_LAYOUT!r}, got {header['syndrome_layout']!r}"
+        )
+    if header["detector_initial_prior"] != PACKED_DETECTOR_INITIAL_PRIOR:
+        raise ValueError(
+            "PackedShotBatch header detector_initial_prior must be "
+            f"{PACKED_DETECTOR_INITIAL_PRIOR!r}, "
+            f"got {header['detector_initial_prior']!r}"
+        )
+
+    header_n_shots = _nonnegative_int("header['N']", header["N"])
+    header_bits = _positive_int(
+        "header['syndrome_bits_per_shot']", header["syndrome_bits_per_shot"]
+    )
+    header_stride = _positive_int(
+        "header['out_stride_bytes']", header["out_stride_bytes"]
+    )
+    n_stab = _positive_int("header['n_stab']", header["n_stab"])
+    rounds = _positive_int("header['R']", header["R"])
+
+    if header_n_shots != n_shots:
+        raise ValueError(
+            f"PackedShotBatch header N={header_n_shots} != n_shots={n_shots}"
+        )
+    if header_bits != syndrome_bits_per_shot:
+        raise ValueError(
+            "PackedShotBatch header syndrome_bits_per_shot="
+            f"{header_bits} != declared {syndrome_bits_per_shot}"
+        )
+    if n_stab * rounds != syndrome_bits_per_shot:
+        raise ValueError(
+            "PackedShotBatch header geometry does not match "
+            "syndrome_bits_per_shot: "
+            f"R*n_stab={rounds * n_stab}, declared={syndrome_bits_per_shot}"
+        )
+    expected_stride = (syndrome_bits_per_shot + 7) // 8 + 1
+    if header_stride != expected_stride:
+        raise ValueError(
+            "PackedShotBatch header out_stride_bytes="
+            f"{header_stride} != expected {expected_stride}"
+        )
+    return n_stab, rounds
 
 
 @dataclass(frozen=True)
@@ -110,23 +240,15 @@ def unpack_raw_syndrome_shots(
 
     rounds = _positive_int("rounds", rounds)
     num_stabilizers = _positive_int("num_stabilizers", num_stabilizers)
-    payload = np.asarray(packed)
-    if payload.ndim != 2:
-        raise ValueError(f"packed shots must be 2D, got shape {payload.shape}")
-    if not np.issubdtype(payload.dtype, np.integer) and payload.dtype != np.bool_:
-        raise TypeError(f"packed shots must be integer bytes, got dtype {payload.dtype}")
-    payload = np.ascontiguousarray(payload, dtype=np.uint8)
     bits = rounds * num_stabilizers
+    payload = _packed_byte_array(
+        packed,
+        name="packed shots",
+        n_shots=None,
+        syndrome_bits_per_shot=bits,
+    )
     syndrome_bytes = (bits + 7) // 8
-    expected_stride = syndrome_bytes + 1
-    if payload.shape[1] != expected_stride:
-        raise ValueError(
-            f"packed shot stride {payload.shape[1]} != expected {expected_stride} "
-            f"for R={rounds}, n_stab={num_stabilizers}"
-        )
     flips = payload[:, syndrome_bytes]
-    if flips.size and bool(np.any(flips > 1)):
-        raise ValueError("packed logical-flip byte must contain only 0/1 values")
     syndromes = np.unpackbits(
         payload[:, :syndrome_bytes], axis=1, bitorder="little"
     )[:, :bits]
@@ -147,21 +269,23 @@ class PackedShotBatch:
     provenance: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        n_shots = int(self.n_shots)
-        syndrome_bits = int(self.syndrome_bits_per_shot)
-        if n_shots < 0:
-            raise ValueError(f"n_shots must be non-negative, got {n_shots}")
-        if syndrome_bits < 1:
-            raise ValueError(
-                f"syndrome_bits_per_shot must be positive, got {syndrome_bits}"
-            )
+        n_shots = _nonnegative_int("n_shots", self.n_shots)
+        syndrome_bits = _positive_int(
+            "syndrome_bits_per_shot", self.syndrome_bits_per_shot
+        )
         if not isinstance(self.header, Mapping):
             raise TypeError("header must be a mapping")
         if not isinstance(self.diag, Mapping):
             raise TypeError("diag must be a mapping")
         if not isinstance(self.provenance, Mapping):
             raise TypeError("provenance must be a mapping")
-        object.__setattr__(self, "header", dict(self.header))
+        header = dict(self.header)
+        _validate_packed_header(
+            header,
+            n_shots=n_shots,
+            syndrome_bits_per_shot=syndrome_bits,
+        )
+        object.__setattr__(self, "header", header)
         object.__setattr__(self, "diag", dict(self.diag))
         object.__setattr__(self, "provenance", dict(self.provenance))
         object.__setattr__(self, "n_shots", n_shots)
@@ -173,20 +297,12 @@ class PackedShotBatch:
             None if self.header_path is None else Path(self.header_path),
         )
         if self.shots is not None:
-            payload = np.asarray(self.shots)
-            if payload.ndim != 2:
-                raise ValueError(f"shots must be a 2D packed byte array, got {payload.shape}")
-            payload = np.ascontiguousarray(payload, dtype=np.uint8)
-            if payload.shape[0] != n_shots:
-                raise ValueError(
-                    f"packed shot count {payload.shape[0]} != declared n_shots {n_shots}"
-                )
-            expected_stride = (syndrome_bits + 7) // 8 + 1
-            if payload.shape[1] != expected_stride:
-                raise ValueError(
-                    f"packed shot stride {payload.shape[1]} != declared stride "
-                    f"{expected_stride}"
-                )
+            payload = _packed_byte_array(
+                self.shots,
+                name="shots",
+                n_shots=n_shots,
+                syndrome_bits_per_shot=syndrome_bits,
+            )
             object.__setattr__(self, "shots", payload)
 
     @classmethod
@@ -211,20 +327,18 @@ class PackedShotBatch:
         flips = _binary_array(logical_flips, name="logical_flips", ndim=(1,))
         packed = pack_raw_syndrome_shots(syn, flips)
         record_header = dict(header or {})
+        record_header.setdefault("format", PACKED_SHOT_SCHEMA)
+        record_header.setdefault("syndrome_layout", PACKED_SYNDROME_LAYOUT)
+        record_header.setdefault(
+            "detector_initial_prior", PACKED_DETECTOR_INITIAL_PRIOR
+        )
         record_header.update(
             {
-                "format": record_header.get(
-                    "format", "error_coupling_simulator.packed_shots/v1"
-                ),
                 "n_stab": num_stabilizers,
                 "R": rounds,
                 "N": int(syn.shape[0]),
                 "syndrome_bits_per_shot": expected_bits,
                 "out_stride_bytes": int(packed.shape[1]),
-                "syndrome_layout": (
-                    "shot_major: shot_id outer, then round, then stabilizer "
-                    "(round-major, LSB-first packbits); logical flip in trailing byte"
-                ),
             }
         )
         return cls(
@@ -243,22 +357,24 @@ class PackedShotBatch:
                 f"PackedShotBatch.{method}: shots is None; materialize the run or "
                 f"load its packed buffer from path={self.path}"
             )
-        return self.shots
+        _validate_packed_header(
+            self.header,
+            n_shots=self.n_shots,
+            syndrome_bits_per_shot=self.syndrome_bits_per_shot,
+        )
+        return _packed_byte_array(
+            self.shots,
+            name=f"PackedShotBatch.{method} shots",
+            n_shots=self.n_shots,
+            syndrome_bits_per_shot=self.syndrome_bits_per_shot,
+        )
 
     def _header_geometry(self) -> tuple[int, int]:
-        missing = [name for name in ("n_stab", "R") if name not in self.header]
-        if missing:
-            raise KeyError(
-                f"PackedShotBatch header lacks {missing}; both 'n_stab' and 'R' are required"
-            )
-        n_stab = _positive_int("header['n_stab']", self.header["n_stab"])
-        rounds = _positive_int("header['R']", self.header["R"])
-        if n_stab * rounds != self.syndrome_bits_per_shot:
-            raise ValueError(
-                "header geometry does not match syndrome_bits_per_shot: "
-                f"R*n_stab={rounds * n_stab}, declared={self.syndrome_bits_per_shot}"
-            )
-        return n_stab, rounds
+        return _validate_packed_header(
+            self.header,
+            n_shots=self.n_shots,
+            syndrome_bits_per_shot=self.syndrome_bits_per_shot,
+        )
 
     def to_raw_syndrome_obs(self) -> dict[str, np.ndarray]:
         """Explicit diagnostic accessor for the packed pre-fold syndrome payload."""
@@ -316,8 +432,8 @@ class PackedShotBatch:
     def syndrome_prefix_bytes(self, n_rounds: int) -> bytes:
         packed = self._require_shots("syndrome_prefix_bytes")
         n_stab, rounds = self._header_geometry()
-        prefix_rounds = int(n_rounds)
-        if not 0 <= prefix_rounds <= rounds:
+        prefix_rounds = _nonnegative_int("n_rounds", n_rounds)
+        if prefix_rounds > rounds:
             raise ValueError(
                 f"n_rounds must be in [0, R={rounds}], got {prefix_rounds}"
             )
@@ -331,13 +447,24 @@ class PackedShotBatch:
         return np.ascontiguousarray(prefix).tobytes()
 
 
-# Transitional type name for callers that previously consumed qec_twin's ShotSet.
-ShotSet = PackedShotBatch
+def _strict_int(name: str, value: Any) -> int:
+    if isinstance(value, (bool, np.bool_)) or not isinstance(
+        value, (int, np.integer)
+    ):
+        raise TypeError(f"{name} must be an integer, got {value!r}")
+    return int(value)
+
+
+def _nonnegative_int(name: str, value: Any) -> int:
+    integer = _strict_int(name, value)
+    if integer < 0:
+        raise ValueError(f"{name} must be a non-negative integer, got {value!r}")
+    return integer
 
 
 def _positive_int(name: str, value: Any) -> int:
-    integer = int(value)
-    if integer < 1 or integer != value:
+    integer = _strict_int(name, value)
+    if integer < 1:
         raise ValueError(f"{name} must be a positive integer, got {value!r}")
     return integer
 
@@ -360,9 +487,11 @@ def _reject_evaluator_only_provenance(value: Any, *, path: str = "provenance") -
 
 
 __all__ = [
+    "PACKED_DETECTOR_INITIAL_PRIOR",
+    "PACKED_SHOT_SCHEMA",
+    "PACKED_SYNDROME_LAYOUT",
     "PackedShotBatch",
     "RecordBatch",
-    "ShotSet",
     "pack_raw_syndrome_shots",
     "unpack_raw_syndrome_shots",
 ]

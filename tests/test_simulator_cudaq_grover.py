@@ -71,7 +71,7 @@ def test_cudaq_grover_12q_noiseless_artifacts(tmp_path):
     assert not (result.artifacts.out_dir / "decoder_results.json").exists()
 
     manifest = json.loads(result.artifacts.manifest.read_text())
-    assert manifest["schema"] == "qec_twin.simulator_cudaq_grover_noiseless.v1"
+    assert manifest["schema"] == "error_coupling_simulator.frontend.cudaq_grover_noiseless.v1"
     assert manifest["backend"] == "cudaq"
     assert manifest["representability"] == "cudaq_statevector_noiseless"
     assert manifest["algorithm"] == "single_solution_grover"

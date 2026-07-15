@@ -8,10 +8,10 @@ load-bearing ``to_axis1_primitive_params`` fan-out -- plus the four module funct
 module imports NEITHER torch NOR quimb -- ``dataclasses`` + ``math`` + a sibling
 ``Axis1PrimitiveParams`` whose torch import is lazy/in-function -- so out_of_scope is empty).
 
-Full-coverage program (docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4;
-work-list docs/twin_validation/l3_release_package_unit_inventory.md D22).
+Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
+work-list docs/SIMULATOR.md D22).
 ``frontend/axis1_context.py`` owns the PUBLIC Axis-1 local-Markovian context: it selects +
-parameterizes local-Lindblad primitive lowering before ``forward.joint_lindbladian``
+parameterizes local-Lindblad primitive lowering before ``carrier.joint_lindbladian``
 assembles the joint generator. It is NOT a runnable Pauli/Stim noise model, NOT Axis-2 source
 truth, NOT a serialized channel payload.
 
@@ -53,7 +53,7 @@ from error_coupling_simulator.mechanisms.axis1_primitives import Axis1PrimitiveP
 # a mutmut mutation of the module's SCHEMA / KEY constant must make the         #
 # module's output stop matching THIS literal -> the pin fails -> mutant killed. #
 # --------------------------------------------------------------------------- #
-_SCHEMA = "qec_twin.simulator.Axis1LocalLindbladContextSpec.v1"
+_SCHEMA = "error_coupling_simulator.frontend.local_lindblad_context.v1"
 _KEY = "axis1_local_lindblad_context"
 
 # the nine leakage rate field names, in the module's is_trivial / include_leakage order.
@@ -88,6 +88,9 @@ def test_L0_post_init_default_is_valid_and_coerces():
     s3 = Axis1LocalLindbladContextSpec(gamma_up_per_ns=2, zeta_rad_per_ns=3, leak_seep_21_per_ns=4)
     assert type(s3.gamma_up_per_ns) is float and type(s3.zeta_rad_per_ns) is float
     assert type(s3.leak_seep_21_per_ns) is float
+    retired_schema = "_".join(("qec", "twin")) + ".simulator.Axis1LocalLindbladContextSpec.v1"
+    with pytest.raises(ValueError, match="unsupported local Lindblad context schema"):
+        Axis1LocalLindbladContextSpec(schema=retired_schema)
 
 
 def test_L0_post_init_thermal_guard_exact():

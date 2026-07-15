@@ -119,19 +119,26 @@ def group_alive(pgid: int) -> bool:
         return True  # exists but not ours to signal (shouldn't happen for our own children)
 
 
-def terminate_group(pgid: int, grace: float = 3.0) -> None:
+def _verify_gone_and_unregister(pgid: int) -> bool:
+    """Forget an owned group only after the OS confirms that it is gone."""
+
+    if group_alive(pgid):
+        return False
+    _unregister(pgid)
+    return True
+
+
+def terminate_group(pgid: int, grace: float = 3.0) -> bool:
     """Kill the WHOLE process group: SIGTERM, wait up to ``grace``, then an UNCONDITIONAL SIGKILL
     belt (a group member can outlive the SIGTERM of its parent while being reparented; relying on
     'the group looked dead' skips the SIGKILL and leaves that stray). SIGKILL is uncatchable, so
     after it + a short reap wait the group is guaranteed gone. Idempotent."""
     if not group_alive(pgid):
-        _unregister(pgid)
-        return
+        return _verify_gone_and_unregister(pgid)
     try:
         os.killpg(pgid, signal.SIGTERM)
     except ProcessLookupError:
-        _unregister(pgid)
-        return
+        return _verify_gone_and_unregister(pgid)
     deadline = time.monotonic() + grace
     while time.monotonic() < deadline and group_alive(pgid):
         time.sleep(0.05)
@@ -143,7 +150,7 @@ def terminate_group(pgid: int, grace: float = 3.0) -> None:
     reap = time.monotonic() + 2.0
     while time.monotonic() < reap and group_alive(pgid):
         time.sleep(0.05)
-    _unregister(pgid)
+    return _verify_gone_and_unregister(pgid)
 
 
 def _send_group_signal(pgid: int, signum: int) -> bool:
@@ -156,7 +163,7 @@ def _send_group_signal(pgid: int, signum: int) -> bool:
         return False
 
 
-def _terminate_and_reap(proc: subprocess.Popen, pgid: int, *, grace: float = 2.0) -> None:
+def _terminate_and_reap(proc: subprocess.Popen, pgid: int, *, grace: float = 2.0) -> bool:
     """Terminate an owned group and synchronously reap its Popen leader.
 
     ``terminate_group`` cannot reap because its public input is only a pgid.  ``run`` has stronger
@@ -193,19 +200,32 @@ def _terminate_and_reap(proc: subprocess.Popen, pgid: int, *, grace: float = 2.0
         while time.monotonic() < reap_deadline and group_alive(pgid):
             time.sleep(0.02)
     finally:
-        _unregister(pgid)
+        cleanup_verified = _verify_gone_and_unregister(pgid)
+    return cleanup_verified
 
 
 class Ran:
-    """Result of a run: returncode, timed_out flag, pgid (for post-hoc kill if detached)."""
-    def __init__(self, returncode: int, timed_out: bool, pgid: int):
+    """Result of a run, including fail-closed process-group cleanup evidence."""
+
+    def __init__(
+        self,
+        returncode: int,
+        timed_out: bool,
+        pgid: int,
+        group_cleanup_verified: bool,
+    ):
         self.returncode = returncode
         self.timed_out = timed_out
         self.pgid = pgid
+        self.group_cleanup_verified = group_cleanup_verified
 
     @property
     def ok(self) -> bool:
-        return (not self.timed_out) and self.returncode == 0
+        return (
+            self.group_cleanup_verified
+            and not self.timed_out
+            and self.returncode == 0
+        )
 
 
 def run(cmd: Sequence[str], *, cwd: Optional[str] = None, env: Optional[dict] = None,
@@ -221,6 +241,7 @@ def run(cmd: Sequence[str], *, cwd: Optional[str] = None, env: Optional[dict] = 
     child: subprocess.Popen | None = None
     pgid: int | None = None
     timed_out = False
+    group_cleanup_verified = False
     try:
         out = open(log_path, "ab" if append else "wb") if log_path else None
 
@@ -266,7 +287,10 @@ def run(cmd: Sequence[str], *, cwd: Optional[str] = None, env: Optional[dict] = 
         try:
             try:
                 if child is not None:
-                    _terminate_and_reap(child, pgid if pgid is not None else child.pid)
+                    group_cleanup_verified = _terminate_and_reap(
+                        child,
+                        pgid if pgid is not None else child.pid,
+                    )
             finally:
                 if out is not None:
                     out.close()
@@ -275,7 +299,7 @@ def run(cmd: Sequence[str], *, cwd: Optional[str] = None, env: Optional[dict] = 
 
     assert child is not None and pgid is not None
     rc = child.returncode if child.returncode is not None else -signal.SIGKILL
-    return Ran(rc, timed_out, pgid)
+    return Ran(rc, timed_out, pgid, group_cleanup_verified)
 
 
 def _cleanup_all(*_a) -> None:

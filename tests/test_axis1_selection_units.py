@@ -5,7 +5,7 @@ to_manifest), ``Axis1MechanismSelectionPlan`` (__post_init__ + by_kind + require
 to_manifest), ``Axis1SelectionLayer`` (__post_init__ + participants + selection_ids +
 to_manifest) -- and the five module functions ``axis1_selection_layers_in_schedule_order`` /
 ``flatten_axis1_selection_layers`` / ``axis1_selection_partition_manifest`` /
-``build_axis1_g2_selection_plan`` / ``build_axis1_schedule_selection_plan``; no torch, no
+``build_axis1_joint_channel_selection_plan`` / ``build_axis1_schedule_selection_plan``; no torch, no
 quimb, so out_of_scope is empty).
 
 The module imports NEITHER torch NOR quimb (dataclasses + sibling frontend imports), so every
@@ -49,7 +49,7 @@ from _support.faithfulness import assert_discriminates, assert_pins, assert_rais
 from _support.fixtures import canonical_sealed_schedule
 
 from error_coupling_simulator.frontend.axis1_selection import (
-    AXIS1_G2_SELECTOR_ID,
+    AXIS1_JOINT_CHANNEL_SELECTOR_ID,
     AXIS1_SCHEDULE_SELECTOR_ID,
     AXIS1_SELECTION_SCHEMA,
     AXIS1_SELECTION_PARTITION_SCHEMA,
@@ -59,7 +59,7 @@ from error_coupling_simulator.frontend.axis1_selection import (
     Axis1SelectionLayer,
     axis1_selection_layers_in_schedule_order,
     axis1_selection_partition_manifest,
-    build_axis1_g2_selection_plan,
+    build_axis1_joint_channel_selection_plan,
     build_axis1_schedule_selection_plan,
     flatten_axis1_selection_layers,
 )
@@ -92,8 +92,8 @@ def _schedule_plan(builder: CircuitBuilder) -> Axis1MechanismSelectionPlan:
     return build_axis1_schedule_selection_plan(_sched(builder))
 
 
-def _g2_plan(builder: CircuitBuilder) -> Axis1MechanismSelectionPlan:
-    return build_axis1_g2_selection_plan(_sched(builder))
+def _joint_channel_plan(builder: CircuitBuilder) -> Axis1MechanismSelectionPlan:
+    return build_axis1_joint_channel_selection_plan(_sched(builder))
 
 
 def _fields(sel: Axis1MechanismSelection) -> tuple:
@@ -483,13 +483,13 @@ def test_L0_schedule_plan_measX_and_reset_produce_nothing():
 
 
 # =========================================================================== #
-# build_axis1_g2_selection_plan                                                 #
+# build_axis1_joint_channel_selection_plan                                      #
 # =========================================================================== #
-def test_L0_g2_plan_cz_and_drive():
-    # the full G2 plan: a CZ (zz_t2_exact_zero) + an H drive on a declared static-ZZ pair
+def test_L0_joint_channel_plan_cz_and_drive():
+    # full comparison plan: CZ exact-zero + H drive on a declared static-ZZ pair
     # (dr_zz_prediction_band). Order: _cz_exact_zero first, then _drive_zz.
-    plan = _g2_plan(_b(2, zz=((0, 1),)).h(0).cz((0, 1)))
-    assert plan.selector_id == AXIS1_G2_SELECTOR_ID
+    plan = _joint_channel_plan(_b(2, zz=((0, 1),)).h(0).cz((0, 1)))
+    assert plan.selector_id == AXIS1_JOINT_CHANNEL_SELECTOR_ID
     assert [_fields(s) for s in plan.selections] == [
         ("s0001:zz_t2_exact_zero:0_1", "zz_t2_exact_zero", (0, 1), ("ZZ", "T2"),
          ("ZZ", "T2"), (), (), R_ZZ_T2_EXACT),
@@ -498,42 +498,42 @@ def test_L0_g2_plan_cz_and_drive():
     ]
 
 
-def test_L0_g2_plan_cz_only_no_static():
+def test_L0_joint_channel_plan_cz_only_no_static():
     # no static + no CX -> the CX-relabel guard is skipped; a lone CZ yields exactly zz_t2.
-    plan = _g2_plan(_b(2).cz((0, 1)))
+    plan = _joint_channel_plan(_b(2).cz((0, 1)))
     assert [_fields(s)[:2] for s in plan.selections] == [
         ("s0000:zz_t2_exact_zero:0_1", "zz_t2_exact_zero")]
     assert plan.static_zz_pairs == ()
 
 
-def test_L0_g2_plan_cx_without_static_raises():
+def test_L0_joint_channel_plan_cx_without_static_raises():
     # not static_pairs AND a CX two-qubit gate -> the anti-relabel guard fires (exact message).
     _raises_exact(
         ValueError,
-        "CX is not silently relabeled as CZ for Axis-1 G2 static-ZZ selection",
-        lambda: _g2_plan(_b(2).cx((0, 1))))
+        "CX is not silently relabeled as CZ for Axis-1 joint-channel static-ZZ selection",
+        lambda: _joint_channel_plan(_b(2).cx((0, 1))))
 
 
-def test_L0_g2_plan_cx_with_static_does_not_raise():
+def test_L0_joint_channel_plan_cx_with_static_does_not_raise():
     # static present -> the `not static_pairs` operand is False -> NO raise (empty plan, no CZ,
     # no one-qubit drive). Kills the and->or mutant on the guard.
-    plan = _g2_plan(_b(3, zz=((0, 1),)).cx((0, 1)))
+    plan = _joint_channel_plan(_b(3, zz=((0, 1),)).cx((0, 1)))
     assert plan.selections == ()
     assert plan.static_zz_pairs == ((0, 1),)
 
 
-def test_L0_g2_drive_zz_selected_and_skipped_pairs():
+def test_L0_joint_channel_drive_zz_selected_and_skipped_pairs():
     # a single H(0) on 3 qubits with static (0,1): active=(0,), idle=(1,2). The (0,1) pair is a
     # declared static pair -> dr_zz selected; the (0,2) pair is NOT static -> `continue` skip.
-    plan = _g2_plan(_b(3, zz=((0, 1),)).h(0))
+    plan = _joint_channel_plan(_b(3, zz=((0, 1),)).h(0))
     assert [_fields(s)[:3] for s in plan.selections] == [
         ("s0000:dr_zz_prediction_band:0_1", "dr_zz_prediction_band", (0, 1))]
 
 
-def test_L0_g2_drive_zz_non_drive_gate_skipped():
-    # a one-qubit control gate NOT in the G2 drive-name set (SQRT_Y) -> `not any(...)` skip; no
+def test_L0_joint_channel_drive_zz_non_drive_gate_skipped():
+    # a one-qubit control gate outside the comparison drive-name set is skipped; no
     # dr_zz row despite a declared static pair + an idle spectator.
-    plan = _g2_plan(_b(2, zz=((0, 1),)).gate("SQRT_Y", 0))
+    plan = _joint_channel_plan(_b(2, zz=((0, 1),)).gate("SQRT_Y", 0))
     assert plan.selections == ()
 
 
@@ -687,7 +687,7 @@ def test_L0_plan_post_init_coercion_and_defaults():
     assert isinstance(plan.selections, tuple) and plan.selections == (s,)
     assert plan.static_zz_pairs == ((0, 1),)         # normalized + sorted + de-duplicated
     assert plan.static_zz_calibrations == {}
-    assert plan.selector_id == AXIS1_G2_SELECTOR_ID  # default
+    assert plan.selector_id == AXIS1_JOINT_CHANNEL_SELECTOR_ID  # default
     assert plan.schema == AXIS1_SELECTION_SCHEMA
     assert plan.axis1_local_lindblad_context is None  # None arc
     # dict-context arc
@@ -704,7 +704,7 @@ def test_L0_plan_post_init_empty_source_hash_raises():
 
 
 def test_L0_plan_by_kind_and_require_kind():
-    plan = _g2_plan(_b(2, zz=((0, 1),)).h(0).cz((0, 1)))
+    plan = _joint_channel_plan(_b(2, zz=((0, 1),)).h(0).cz((0, 1)))
     assert [s.selection_id for s in plan.by_kind("zz_t2_exact_zero")] == [
         "s0001:zz_t2_exact_zero:0_1"]
     assert [s.selection_id for s in plan.by_kind("dr_zz_prediction_band")] == [
@@ -729,10 +729,10 @@ def test_L0_plan_to_manifest_exact_dict():
     b.declare_static_zz_couplings(((0, 1),), zeta_rad_per_ns_by_edge={(0, 1): 0.25})
     b.h(0)
     b.cz((0, 1))
-    plan = build_axis1_g2_selection_plan(_sched(b))
+    plan = build_axis1_joint_channel_selection_plan(_sched(b))
     m = plan.to_manifest()
     assert m["schema"] == AXIS1_SELECTION_SCHEMA
-    assert m["selector_id"] == AXIS1_G2_SELECTOR_ID
+    assert m["selector_id"] == AXIS1_JOINT_CHANNEL_SELECTOR_ID
     assert m["source_kind"] == "circuit_ir"
     assert m["source_hash"] == plan.source_hash and len(m["source_hash"]) == 64
     assert m["static_zz_pairs"] == [[0, 1]]
@@ -1141,14 +1141,14 @@ def test_L0_grand_tour_multisubstep_every_producer_survives():
     }
 
 
-def test_L0_g2_grand_tour_cz_then_drive_order():
-    # G2: a reset first, then a CZ (zz_t2) then an H drive on a static pair (dr_zz). The
+def test_L0_joint_channel_grand_tour_cz_then_drive_order():
+    # Comparison path: reset, CZ (zz_t2), then H drive on a static pair (dr_zz). The
     # _cz_exact_zero and _drive_zz loops must both skip the reset and reach their producers.
     b = _b(2, zz=((0, 1),))
     b.reset(0)
     b.cz((0, 1))
     b.h(0)
-    plan = build_axis1_g2_selection_plan(_sched(b))
+    plan = build_axis1_joint_channel_selection_plan(_sched(b))
     assert {(s.substep_id, s.row_kind) for s in plan.selections} == {
         ("s0001", "zz_t2_exact_zero"), ("s0002", "dr_zz_prediction_band")}
 
@@ -1170,17 +1170,17 @@ def test_L0_schedule_plan_source_fields_pinned():
         (0, 1): {"zeta_rad_per_ns": 0.25, "epistemic_class": "c"}}
 
 
-def test_L0_validate_drive_slots_message_via_g2():
-    # force a one-qubit substep to carry WRONG mechanism slots -> the G2 drive selector's
+def test_L0_validate_drive_slots_message_via_joint_channel():
+    # Force a one-qubit substep to carry wrong slots; the comparison selector's
     # _validate_drive_slots raise fires with the EXACT message (kills the message None/case/XX
     # and the sorted(None) mutants).
     sched = _sched(_b(2).h(0))
     object.__setattr__(sched.substeps[0], "mechanism_slots", ("wrong",))
     _raises_exact(
         ValueError,
-        "Axis-1 G2 drive selection requires one-qubit drive mechanism slots "
+        "Axis-1 joint-channel drive selection requires one-qubit drive mechanism slots "
         "['drive', 'idle', 'spectator'], got ['wrong'] on 's0000'",
-        lambda: build_axis1_g2_selection_plan(sched))
+        lambda: build_axis1_joint_channel_selection_plan(sched))
 
 
 def test_L0_selection_with_context_full_manifest():
@@ -1275,11 +1275,11 @@ def test_L0_multi_producer_branch_doubles():
         "one_qubit_drive_zz_joint_channel"] * 2
 
 
-def test_L0_g2_multi_producer_break():
-    # G2: reset, CZ, H(drive), reset, CZ -> _cz_exact_zero must find BOTH CZs, _drive_zz the H.
+def test_L0_joint_channel_multi_producer_break():
+    # Comparison path: reset, CZ, H(drive), reset, CZ; both CZs and the H are selected.
     b = _b(3, zz=((0, 1),))
     b.reset(0); b.cz((0, 1)); b.h(0); b.reset(1); b.cz((0, 1))
-    plan = build_axis1_g2_selection_plan(_sched(b))
+    plan = build_axis1_joint_channel_selection_plan(_sched(b))
     assert {(s.substep_id, s.row_kind) for s in plan.selections} == {
         ("s0001", "zz_t2_exact_zero"), ("s0002", "dr_zz_prediction_band"),
         ("s0004", "zz_t2_exact_zero")}
@@ -1294,11 +1294,11 @@ def test_L0_operation_pair_participants_odd_target_raises():
     object.__setattr__(sched.substeps[0], "operations", (bad,))
     _raises_exact(ValueError, "CX operation has odd target count: (0, 1, 2)",
                   lambda: build_axis1_schedule_selection_plan(sched))
-    # a CZ odd-target op reaches the SAME helper via _cz_exact_zero on the G2 path.
+    # A CZ odd-target op reaches the same helper via the comparison path.
     sched2 = _sched(_b(2).cz((0, 1)))
     object.__setattr__(sched2.substeps[0], "operations", (SubstepOperation("CZ", (0, 1, 2), 0),))
     _raises_exact(ValueError, "CZ operation has odd target count: (0, 1, 2)",
-                  lambda: build_axis1_g2_selection_plan(sched2))
+                  lambda: build_axis1_joint_channel_selection_plan(sched2))
 
 
 def test_L0_frontend_two_qubit_ordered_overlap_raises():

@@ -2,9 +2,9 @@
 ``error_coupling_simulator.noise_processes.coupled_cycle`` (17 in-scope public units;
 ``CoupledCycleNoiseProcess.emit`` is gpu_bound out_of_scope).
 
-Full-coverage program (docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4;
-work-list docs/twin_validation/l3_release_package_unit_inventory.md). ``CoupledCycleNoiseProcess``
-is the evaluator-only source-coupled record teacher (slice 1, dense): a shared memory-ful
+Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
+work-list docs/SIMULATOR.md). ``CoupledCycleNoiseProcess``
+is the evaluator-only source-coupled record process (slice 1, dense): a shared memory-ful
 source trajectory is fanned out per QEC cycle into per-round Axis-1 params and emitted as
 ``{det,obs}`` records through the sealed dense Axis-1 record path.
 
@@ -16,7 +16,7 @@ CPU DISCIPLINE. Every in-scope unit is exercised WITHOUT a GPU:
     params, calibrations) it is called with so the CPU-logic can be value-pinned;
   * ``emit()`` is gpu_bound out_of_scope (torch multinomial on cuda) and is NOT covered here --
     its seal / regime / m=0 / N>=1 contracts are separately CPU-tested in
-    ``tests/test_coupled_cycle_teacher.py`` (mutmut is coverage-guided: leaving emit uncovered in
+    the process integration tests (mutmut is coverage-guided: leaving emit uncovered in
     THIS selection keeps its GPU body out of the L2 denominator).
 
 L2 DISCIPLINE (the standing lesson: 100% coverage != discrimination). Every load-bearing value is
@@ -82,9 +82,9 @@ from error_coupling_simulator.frontend.axis1_record_evidence import (
 # --------------------------------------------------------------------------- #
 # INDEPENDENT recompute helpers (from-scratch; NOT the module's own derivation) #
 # --------------------------------------------------------------------------- #
-#: the schema string the seed + truth pins check against, hard-coded so a mutation of the
-#: module's COUPLED_TEACHER_SCHEMA diverges from this independent copy.
-_SCHEMA = "qec_twin.mechanisms.CoupledCycleNoiseProcess.v1"
+#: The schema string the seed + truth pins check against, hard-coded so a mutation of the
+#: module's ``COUPLED_PROCESS_SCHEMA`` diverges from this independent copy.
+_SCHEMA = "error_coupling_simulator.noise_processes.coupled_cycle.process.v1"
 _ROUND_RE = re.compile(r"^round(\d+):")
 _FINAL_RE = re.compile(r"^final:q(\d+):[XYZ]$")
 
@@ -388,7 +388,7 @@ def _prop_trajectory_mean(cycles, inst):
     assert inst.reset_flip_probability == pytest.approx(s)
     assert inst.readout_pair_flip_probability == 0.0
     assert inst.epistemic_class == "c"
-    assert inst.source == "coupled_cycle_teacher_trajectory_mean_v1"   # provenance pin
+    assert inst.source == "coupled_cycle_process_trajectory_mean_v1"   # provenance pin
 
 
 def test_L0_trajectory_mean_instrument_value_and_empty_raise():
@@ -556,7 +556,7 @@ def test_L0_ctor_rejects_code_spec_rounds_mismatch():
     """A custom builder whose spec declares a different round count is refused (exact message)."""
     _raises_exact(
         ValueError,
-        "code spec declares rounds=3, teacher was constructed with rounds=2",
+        "code spec declares rounds=3, process was constructed with rounds=2",
         lambda: CoupledCycleNoiseProcess(2, code_spec_builder=lambda r: default_coupled_code_spec(r + 1)))
 
 
@@ -609,10 +609,11 @@ def test_L0_truth_value_pins_and_isolation():
     assert truth["detector_names"] == list(t._detector_names)
     assert truth["observable_names"] == list(t._observable_names)
     assert truth["source"]["class"] == "OneOverFDriftSource"
+    assert "record_dead_zeta_note" not in truth
 
 
 def test_L1_truth_last_emit_is_a_deep_copy():
-    """DEEP-COPY TRUTH (F7): mutating truth['last_emit'] must NOT alias the teacher's internal
+    """DEEP-COPY TRUTH (F7): mutating truth['last_emit'] must NOT share storage with the process's
     _last_emit (a mutant that returns a reference instead of copy.deepcopy is killed)."""
     t = CoupledCycleNoiseProcess(2)
     t._last_emit = {"nested": {"x": [1, 2, 3]}, "N": 5}
@@ -626,7 +627,12 @@ def test_L1_truth_last_emit_is_a_deep_copy():
 
 def test_L1_truth_reflects_arm_and_fixture():
     assert CoupledCycleNoiseProcess(2).off_source().truth["coupling_arm"] == "off"
-    assert CoupledCycleNoiseProcess(2).markovian_baseline().truth["coupling_arm"] == "independent"
+    assert (
+        CoupledCycleNoiseProcess(2)
+        .matched_marginal_permutation_control()
+        .truth["coupling_arm"]
+        == "independent"
+    )
 
 
 # =========================================================================== #
@@ -666,7 +672,7 @@ def test_L0_channels_labels_and_pins(monkeypatch):
         assert row["selection_id"]
         assert row["dt_ns"] == pytest.approx(dt_by_id[row["substep_id"]])
         assert row["kraus"] is not None
-    # the assembler was invoked at the teacher device, with the Theta(0) LOWERED params, and the
+    # the assembler was invoked at the process device, with the Theta(0) LOWERED params, and the
     # REAL static-ZZ calibrations (kills the device / config / calibrations mutations).
     theta0 = per_round_axis1_params(t._baseline_params, source_to_params(0.0, t._config))
     real_calib = cc._axis1_static_zz_calibrations_for_schedule(t._sched)
@@ -696,7 +702,7 @@ def test_KILLER_channels_round_label_discriminates(monkeypatch):
 # CoupledCycleNoiseProcess.export_stim_circuit -- full manifest pin + all guard arcs   #
 # =========================================================================== #
 _EXPECTED_5Q_MANIFEST = {
-    "schema": "qec_twin.mechanisms.CoupledCycleNoiseProcess.v1.stim_export.v1",
+    "schema": "error_coupling_simulator.noise_processes.coupled_cycle_stim_export.v1",
     "fixture": "5q",
     "code_spec_name": "axis1_codespec_mixed_basis_frontend",
     "rounds": 2,
@@ -715,6 +721,20 @@ _EXPECTED_5Q_MANIFEST = {
         "ideal Clifford geometry only; Axis-1 analog noise is not representable in the stim "
         "circuit (declared); decoder-facing noise summary = frontend.interop.records_to_dem"),
 }
+
+
+def test_stim_export_schema_hard_cut_rejects_retired_and_double_version():
+    current = {"schema": cc.COUPLED_PROCESS_STIM_EXPORT_SCHEMA}
+    assert cc._validate_coupled_process_stim_export_manifest(current) == current
+
+    retired = "_".join(("qec", "twin")) + ".simulator.coupled_cycle_stim_export.v1"
+    double_version = f"{cc.COUPLED_PROCESS_SCHEMA}.stim_export.v1"
+    for schema in (retired, double_version):
+        with pytest.raises(
+            ValueError,
+            match="unsupported coupled-process Stim export schema",
+        ):
+            cc._validate_coupled_process_stim_export_manifest({"schema": schema})
 
 
 def test_L0_export_stim_circuit_happy_full_manifest_pin():
@@ -775,7 +795,22 @@ def test_L0_export_stim_count_guards_raise(monkeypatch):
 
 
 # =========================================================================== #
-# CoupledCycleNoiseProcess.emit_clifford_slice -- intentionally NotImplemented        #
+# CoupledCycleNoiseProcess.emit -- CPU validation prefix                       #
+# =========================================================================== #
+def test_emit_rejects_unsupported_logical_state_before_gpu():
+    process = CoupledCycleNoiseProcess(2)
+    with pytest.raises(NotImplementedError, match="supports logical m=0 only"):
+        process.emit(Regime(R=2, n_stab=2), m=1, N=1, seed=0)
+
+
+def test_emit_rejects_nonpositive_shot_count_before_gpu():
+    process = CoupledCycleNoiseProcess(2)
+    with pytest.raises(ValueError, match="N must be >= 1"):
+        process.emit(Regime(R=2, n_stab=2), m=0, N=0, seed=0)
+
+
+# =========================================================================== #
+# CoupledCycleNoiseProcess.emit_clifford_slice -- intentionally NotImplemented #
 # =========================================================================== #
 def test_L0_emit_clifford_slice_not_implemented():
     _raises_exact(
@@ -787,13 +822,13 @@ def test_L0_emit_clifford_slice_not_implemented():
 
 
 # =========================================================================== #
-# CoupledCycleNoiseProcess.markovian_baseline / off_source -- ablation arms           #
+# CoupledCycleNoiseProcess matched-marginal / off-source controls                     #
 # =========================================================================== #
-def test_L0_markovian_baseline_inherits_surface():
+def test_L0_matched_marginal_permutation_control_inherits_surface():
     """The G6 negative control inherits source / config / shots / fixture and flips only the arm
     (kills the source=None / config=None / shots / fixture-inheritance mutations)."""
     parent = CoupledCycleNoiseProcess(2, source=RTNSource(), config=_CUSTOM_CFG, shots_per_trajectory=3)
-    mk = parent.markovian_baseline()
+    mk = parent.matched_marginal_permutation_control()
     assert parent.coupling_arm == "shared"
     assert mk.coupling_arm == "independent"
     assert mk.rounds == parent.rounds and mk.n_stab == parent.n_stab
@@ -801,18 +836,6 @@ def test_L0_markovian_baseline_inherits_surface():
     assert mk.truth["shots_per_trajectory"] == 3
     assert mk.truth["fixture"] == parent.truth["fixture"]
     assert mk.truth["config"] == parent.truth["config"]
-
-
-def test_L0_precise_matched_marginal_control_aliases_historical_spelling():
-    parent = CoupledCycleNoiseProcess(2)
-
-    precise = parent.matched_marginal_permutation_control()
-    historical = parent.markovian_baseline()
-
-    assert precise.coupling_arm == historical.coupling_arm == "independent"
-    assert precise.rounds == historical.rounds == parent.rounds
-    assert precise.truth["source"]["class"] == historical.truth["source"]["class"]
-
 
 def test_L0_off_source_arm_and_constant_theta0():
     t = CoupledCycleNoiseProcess(2)
@@ -844,7 +867,7 @@ def test_L0_off_source_and_markovian_inherit_builder():
     parent = CoupledCycleNoiseProcess(2, code_spec_builder=lambda r: default_coupled_code_spec_4q(r))
     assert parent.n_stab == 1
     assert parent.off_source().n_stab == 1
-    assert parent.markovian_baseline().n_stab == 1
+    assert parent.matched_marginal_permutation_control().n_stab == 1
 
 
 def test_L0_arms_inherit_fixture_selector():
@@ -853,7 +876,7 @@ def test_L0_arms_inherit_fixture_selector():
     parent = CoupledCycleNoiseProcess(2, fixture="4q")
     assert parent.n_stab == 1
     assert parent.off_source().n_stab == 1
-    assert parent.markovian_baseline().n_stab == 1
+    assert parent.matched_marginal_permutation_control().n_stab == 1
 
 
 def test_L0_off_source_requires_amplitude_bearing_source():
@@ -883,7 +906,7 @@ def test_L1_fan_out_shared_off_independent_arms():
     """_fan_out arm dispatch (C-2/C-9). NON-default config so the delegation config arg is pinned
     (a mutant swapping self._config for None/default diverges)."""
     t = CoupledCycleNoiseProcess(2, config=_CUSTOM_CFG)
-    mk = t.markovian_baseline()
+    mk = t.matched_marginal_permutation_control()
     timeline = OneOverFDriftSource().sample(seed=11, n_cycles=400)
     shared = t._fan_out(timeline, base_seed=7, trajectory=0)
     indep = mk._fan_out(timeline, base_seed=7, trajectory=0)

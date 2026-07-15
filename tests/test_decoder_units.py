@@ -68,7 +68,7 @@ def test_simulator_routes_predictions_through_the_package_decoder_port(
     monkeypatch,
     tmp_path,
 ) -> None:
-    """The product facade consumes the package port, not the retained M4 module."""
+    """The product facade consumes the package-local decoder implementation."""
 
     builder = CircuitBuilder(num_qubits=1)
     builder.measure(0, key="m0")

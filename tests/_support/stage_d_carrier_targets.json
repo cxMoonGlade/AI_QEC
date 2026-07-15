@@ -1,7 +1,7 @@
 {
   "_comment": [
     "STAGE-D per-batch coverage registry (carrier batch) for the full-coverage program",
-    "(docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4). Same AST-derived,",
+    "(docs/SIMULATOR.md SS12.3/12.4). Same AST-derived,",
     "anti-stale schema as tests/_support/stage_d_coverage_targets.json (D1). Run via",
     "tests/harness/gate.py <this file> (L0+L1; calls tests/harness/coverage_audit.py) and",
     "tests/harness/mutation.py <this file> (L2).",
@@ -25,7 +25,7 @@
     "no defensive-assert exemption is needed (D1 finding-2 probed: the underflow/invalid",
     "probe is moot because there is no tracked arc to reach)."
   ],
-  "contract": "docs/twin_validation/wave2_6_unit_test_contract.md",
+  "contract": "docs/SIMULATOR.md",
   "default_target": {"statement": 1.0, "branch": 1.0},
   "covered_by_test_files": [
     "tests/test_quantum_bath_carrier_units.py"

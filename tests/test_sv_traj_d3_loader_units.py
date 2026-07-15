@@ -8,7 +8,7 @@ import torch
 from _support.faithfulness import assert_raises_exact
 
 
-def _call_kwargs(entrypoint: str) -> dict[str, object]:
+def _call_kwargs() -> dict[str, object]:
     complex_dtype = torch.complex128
     common: dict[str, object] = {
         "codestate": torch.zeros(3 ** 9, dtype=complex_dtype),
@@ -31,21 +31,13 @@ def _call_kwargs(entrypoint: str) -> dict[str, object]:
         "urandom_stride": 0,
         "dtype": "c128",
     }
-    if entrypoint == "sv_traj_d3":
-        common.update({
-            "round_gptr": torch.tensor([0, 1], dtype=torch.int32),
-            "gate_uid": torch.tensor([0], dtype=torch.int32),
-            "gate_site": torch.tensor([0], dtype=torch.int32),
-            "kraus": torch.eye(3, dtype=complex_dtype).unsqueeze(0),
-        })
-    else:
-        common.update({
-            "round_op_ptr": torch.tensor([0, 1, 1], dtype=torch.int32),
-            "op_kind": torch.tensor([0], dtype=torch.int32),
-            "op_uid": torch.tensor([0], dtype=torch.int32),
-            "op_site": torch.tensor([0], dtype=torch.int32),
-            "leak_kraus": torch.eye(3, dtype=complex_dtype).unsqueeze(0),
-        })
+    common.update({
+        "round_op_ptr": torch.tensor([0, 1, 1], dtype=torch.int32),
+        "op_kind": torch.tensor([0], dtype=torch.int32),
+        "op_uid": torch.tensor([0], dtype=torch.int32),
+        "op_site": torch.tensor([0], dtype=torch.int32),
+        "leak_kraus": torch.eye(3, dtype=complex_dtype).unsqueeze(0),
+    })
     return common
 
 
@@ -73,7 +65,7 @@ def _support_kwargs() -> dict[str, object]:
     }
 
 
-def _shared_kwargs(kraus_name: str = "kraus") -> dict[str, object]:
+def _shared_kwargs(kraus_name: str = "leak_kraus") -> dict[str, object]:
     complex_dtype = torch.complex128
     values: dict[str, object] = {
         "precision": "c128",
@@ -122,105 +114,98 @@ def _assert_keyword_call(
             assert got == want, f"validator field {name} changed value"
 
 
-@pytest.mark.parametrize("entrypoint", ["sv_traj_d3", "sv_traj_d3_wc"])
 def test_cpu_input_is_rejected_before_jit(
-    monkeypatch: pytest.MonkeyPatch, entrypoint: str,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from error_coupling_simulator.carrier.kernels import sv_traj_d3_loader as loader
 
     calls = _forbid_jit(monkeypatch)
     with pytest.raises(RuntimeError, match="codestate must be CUDA"):
-        getattr(loader, entrypoint)(**_call_kwargs(entrypoint))
+        loader.sv_traj_d3_wc(**_call_kwargs())
     assert calls == []
 
 
-@pytest.mark.parametrize("entrypoint", ["sv_traj_d3", "sv_traj_d3_wc"])
 def test_precision_mismatch_is_rejected_before_jit(
-    monkeypatch: pytest.MonkeyPatch, entrypoint: str,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from error_coupling_simulator.carrier.kernels import sv_traj_d3_loader as loader
 
     calls = _forbid_jit(monkeypatch)
-    kwargs = _call_kwargs(entrypoint)
+    kwargs = _call_kwargs()
     kwargs["dtype"] = "c64"
     with pytest.raises(TypeError, match="codestate.*complex64.*complex128"):
-        getattr(loader, entrypoint)(**kwargs)
+        loader.sv_traj_d3_wc(**kwargs)
     assert calls == []
 
 
-@pytest.mark.parametrize(
-    ("entrypoint", "index_name"),
-    [("sv_traj_d3", "round_gptr"), ("sv_traj_d3_wc", "round_op_ptr")],
-)
 def test_index_dtype_is_rejected_before_jit(
-    monkeypatch: pytest.MonkeyPatch, entrypoint: str, index_name: str,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from error_coupling_simulator.carrier.kernels import sv_traj_d3_loader as loader
 
     calls = _forbid_jit(monkeypatch)
-    kwargs = _call_kwargs(entrypoint)
-    kwargs[index_name] = kwargs[index_name].to(torch.int64)  # type: ignore[union-attr]
-    with pytest.raises(TypeError, match=rf"{index_name}.*int32.*int64"):
-        getattr(loader, entrypoint)(**kwargs)
+    kwargs = _call_kwargs()
+    kwargs["round_op_ptr"] = kwargs["round_op_ptr"].to(  # type: ignore[union-attr]
+        torch.int64
+    )
+    with pytest.raises(TypeError, match=r"round_op_ptr.*int32.*int64"):
+        loader.sv_traj_d3_wc(**kwargs)
     assert calls == []
 
 
-@pytest.mark.parametrize("entrypoint", ["sv_traj_d3", "sv_traj_d3_wc"])
 def test_complex_stack_shape_is_rejected_before_jit(
-    monkeypatch: pytest.MonkeyPatch, entrypoint: str,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from error_coupling_simulator.carrier.kernels import sv_traj_d3_loader as loader
 
     calls = _forbid_jit(monkeypatch)
-    kwargs = _call_kwargs(entrypoint)
+    kwargs = _call_kwargs()
     kwargs["gate_unitaries"] = torch.zeros((1, 2, 2), dtype=torch.complex128)
     with pytest.raises(ValueError, match=r"gate_unitaries.*\[K, 3, 3\]"):
-        getattr(loader, entrypoint)(**kwargs)
+        loader.sv_traj_d3_wc(**kwargs)
     assert calls == []
 
 
-@pytest.mark.parametrize("entrypoint", ["sv_traj_d3", "sv_traj_d3_wc"])
 def test_scalar_contract_is_rejected_before_jit(
-    monkeypatch: pytest.MonkeyPatch, entrypoint: str,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from error_coupling_simulator.carrier.kernels import sv_traj_d3_loader as loader
 
     calls = _forbid_jit(monkeypatch)
-    kwargs = _call_kwargs(entrypoint)
+    kwargs = _call_kwargs()
     kwargs["wave"] = 0
     with pytest.raises(ValueError, match="wave must be >= 1"):
-        getattr(loader, entrypoint)(**kwargs)
+        loader.sv_traj_d3_wc(**kwargs)
     assert calls == []
 
 
-@pytest.mark.parametrize("entrypoint", ["sv_traj_d3", "sv_traj_d3_wc"])
 def test_urandom_real_dtype_is_rejected_before_jit(
-    monkeypatch: pytest.MonkeyPatch, entrypoint: str,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from error_coupling_simulator.carrier.kernels import sv_traj_d3_loader as loader
 
     calls = _forbid_jit(monkeypatch)
-    kwargs = _call_kwargs(entrypoint)
+    kwargs = _call_kwargs()
     kwargs["urandom"] = torch.zeros((1, 1), dtype=torch.float32)
     kwargs["urandom_stride"] = 1
     with pytest.raises(TypeError, match="urandom.*float64.*float32"):
-        getattr(loader, entrypoint)(**kwargs)
+        loader.sv_traj_d3_wc(**kwargs)
     assert calls == []
 
 
-@pytest.mark.parametrize("entrypoint", ["sv_traj_d3", "sv_traj_d3_wc"])
 def test_bad_csr_content_is_rejected_before_jit_under_device_mock(
-    monkeypatch: pytest.MonkeyPatch, entrypoint: str,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from error_coupling_simulator.carrier.kernels import sv_traj_d3_loader as loader
 
     calls = _forbid_jit(monkeypatch)
     monkeypatch.setattr(loader, "_require_cuda_same_device", lambda *_args: None)
-    kwargs = _call_kwargs(entrypoint)
-    ptr_name = "round_gptr" if entrypoint == "sv_traj_d3" else "round_op_ptr"
-    kwargs[ptr_name] = torch.zeros_like(kwargs[ptr_name])  # type: ignore[arg-type]
+    kwargs = _call_kwargs()
+    kwargs["round_op_ptr"] = torch.zeros_like(  # type: ignore[arg-type]
+        kwargs["round_op_ptr"]
+    )
     with pytest.raises(ValueError, match="terminal entry must equal item count"):
-        getattr(loader, entrypoint)(**kwargs)
+        loader.sv_traj_d3_wc(**kwargs)
     assert calls == []
 
 
@@ -240,12 +225,15 @@ def test_cuda_launchers_pin_codestate_device_and_stream() -> None:
     from error_coupling_simulator.carrier.kernels import sv_traj_d3_loader as loader
 
     source = (loader._kernels_dir() / "sv_traj_d3.cu").read_text()
-    assert source.count(
+    current_launcher = source.split(
+        "std::vector<torch::Tensor> sv_traj_d3_wc_cuda(", 1
+    )[1]
+    assert current_launcher.count(
         "const c10::cuda::CUDAGuard device_guard(codestate.device());"
-    ) == 2
-    assert source.count(
+    ) == 1
+    assert current_launcher.count(
         "at::cuda::getCurrentCUDAStream(codestate.get_device())"
-    ) == 2
+    ) == 1
 
 
 def test_available_forwards_loader_result(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -257,61 +245,52 @@ def test_available_forwards_loader_result(monkeypatch: pytest.MonkeyPatch) -> No
     assert loader.available("c128") is False
 
 
-@pytest.mark.parametrize("entrypoint", ["sv_traj_d3", "sv_traj_d3_wc"])
 def test_valid_abi_forwards_to_bound_extension_without_hidden_casts(
-    monkeypatch: pytest.MonkeyPatch, entrypoint: str,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from error_coupling_simulator.carrier.kernels import sv_traj_d3_loader as loader
 
     calls: list[tuple[object, ...]] = []
 
     class FakeExtension:
-        def sv_traj_d3(self, *args):
-            calls.append(args)
-            return "lumped-ok"
-
         def sv_traj_d3_wc(self, *args):
             calls.append(args)
             return "within-cycle-ok"
 
     monkeypatch.setattr(loader, "_require_cuda_same_device", lambda *_args: None)
     monkeypatch.setattr(loader, "_load_ext", lambda _precision: FakeExtension())
-    kwargs = _call_kwargs(entrypoint)
+    kwargs = _call_kwargs()
 
-    expected = "lumped-ok" if entrypoint == "sv_traj_d3" else "within-cycle-ok"
-    assert getattr(loader, entrypoint)(**kwargs) == expected
+    assert loader.sv_traj_d3_wc(**kwargs) == "within-cycle-ok"
     assert calls[-1][-2].numel() == 0
     assert calls[-1][-2].dtype == torch.float64
 
     supplied = torch.full((1, 1), 0.25, dtype=torch.float64)
     kwargs["urandom"] = supplied
     kwargs["urandom_stride"] = 1
-    assert getattr(loader, entrypoint)(**kwargs) == expected
+    assert loader.sv_traj_d3_wc(**kwargs) == "within-cycle-ok"
     assert calls[-1][-2] is supplied
 
 
-@pytest.mark.parametrize("entrypoint", ["sv_traj_d3", "sv_traj_d3_wc"])
 def test_valid_abi_reports_intentionally_unavailable_kernel(
-    monkeypatch: pytest.MonkeyPatch, entrypoint: str,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from error_coupling_simulator.carrier.kernels import sv_traj_d3_loader as loader
 
     monkeypatch.setattr(loader, "_require_cuda_same_device", lambda *_args: None)
     monkeypatch.setattr(loader, "_load_ext", lambda _precision: None)
     with pytest.raises(RuntimeError, match="kernel.*unavailable"):
-        getattr(loader, entrypoint)(**_call_kwargs(entrypoint))
+        loader.sv_traj_d3_wc(**_call_kwargs())
 
 
-@pytest.mark.parametrize("entrypoint", ["sv_traj_d3", "sv_traj_d3_wc"])
 def test_public_entrypoint_pins_every_validator_and_extension_abi_argument(
-    monkeypatch: pytest.MonkeyPatch, entrypoint: str,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from error_coupling_simulator.carrier.kernels import sv_traj_d3_loader as loader
 
-    kwargs = _call_kwargs(entrypoint)
-    for name in ("codestate", "gate_unitaries", "kraus", "leak_kraus"):
-        if name in kwargs:
-            kwargs[name] = kwargs[name].to(torch.complex64)  # type: ignore[union-attr]
+    kwargs = _call_kwargs()
+    for name in ("codestate", "gate_unitaries", "leak_kraus"):
+        kwargs[name] = kwargs[name].to(torch.complex64)  # type: ignore[union-attr]
     kwargs.update({
         "arm": 3,
         "b": 0.375,
@@ -351,10 +330,6 @@ def test_public_entrypoint_pins_every_validator_and_extension_abi_argument(
         value_calls.append(values)
 
     class FakeExtension:
-        def sv_traj_d3(self, *args):
-            extension_calls.append(args)
-            return "lumped-exact"
-
         def sv_traj_d3_wc(self, *args):
             extension_calls.append(args)
             return "within-cycle-exact"
@@ -367,24 +342,15 @@ def test_public_entrypoint_pins_every_validator_and_extension_abi_argument(
     monkeypatch.setattr(loader, "_validate_shared_inputs", shared_spy)
     monkeypatch.setattr(loader, "_validate_schedule_devices", device_spy)
     monkeypatch.setattr(loader, "_load_ext", load_spy)
-    if entrypoint == "sv_traj_d3":
-        monkeypatch.setattr(loader, "_validate_lumped_schedule_structure", structure_spy)
-        monkeypatch.setattr(loader, "_validate_lumped_schedule_values", value_spy)
-    else:
-        monkeypatch.setattr(loader, "_validate_wc_schedule_structure", structure_spy)
-        monkeypatch.setattr(loader, "_validate_wc_schedule_values", value_spy)
+    monkeypatch.setattr(loader, "_validate_wc_schedule_structure", structure_spy)
+    monkeypatch.setattr(loader, "_validate_wc_schedule_values", value_spy)
 
-    expected_result = "lumped-exact" if entrypoint == "sv_traj_d3" else "within-cycle-exact"
-    assert getattr(loader, entrypoint)(**kwargs) == expected_result
+    assert loader.sv_traj_d3_wc(**kwargs) == "within-cycle-exact"
     assert precision_calls == ["c64"]
     assert load_calls == ["c64"]
 
-    if entrypoint == "sv_traj_d3":
-        schedule_names = ("round_gptr", "gate_uid", "gate_site")
-        kraus_name = "kraus"
-    else:
-        schedule_names = ("round_op_ptr", "op_kind", "op_uid", "op_site")
-        kraus_name = "leak_kraus"
+    schedule_names = ("round_op_ptr", "op_kind", "op_uid", "op_site")
+    kraus_name = "leak_kraus"
 
     _assert_keyword_call(
         structure_calls[0],
@@ -452,13 +418,12 @@ def test_public_entrypoint_pins_every_validator_and_extension_abi_argument(
     _assert_call_tuple(extension_calls[0], common_extension)
 
 
-@pytest.mark.parametrize("entrypoint", ["sv_traj_d3", "sv_traj_d3_wc"])
 def test_omitted_public_defaults_are_exact_c128_kernel_defaults(
-    monkeypatch: pytest.MonkeyPatch, entrypoint: str,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from error_coupling_simulator.carrier.kernels import sv_traj_d3_loader as loader
 
-    kwargs = _call_kwargs(entrypoint)
+    kwargs = _call_kwargs()
     for name in ("shot_id_offset", "wave", "urandom", "urandom_stride", "dtype"):
         del kwargs[name]
 
@@ -472,7 +437,6 @@ def test_omitted_public_defaults_are_exact_c128_kernel_defaults(
         "_precision_dtypes",
         lambda value: precision_calls.append(value) or (torch.complex128, torch.float64),
     )
-    monkeypatch.setattr(loader, "_validate_lumped_schedule_structure", lambda **_kw: None)
     monkeypatch.setattr(loader, "_validate_wc_schedule_structure", lambda **_kw: None)
     monkeypatch.setattr(
         loader,
@@ -480,14 +444,9 @@ def test_omitted_public_defaults_are_exact_c128_kernel_defaults(
         lambda **values: shared_calls.append(values) or (torch.complex128, torch.float64),
     )
     monkeypatch.setattr(loader, "_validate_schedule_devices", lambda *_args, **_kw: None)
-    monkeypatch.setattr(loader, "_validate_lumped_schedule_values", lambda **_kw: None)
     monkeypatch.setattr(loader, "_validate_wc_schedule_values", lambda **_kw: None)
 
     class FakeExtension:
-        def sv_traj_d3(self, *args):
-            extension_calls.append(args)
-            return "ok"
-
         def sv_traj_d3_wc(self, *args):
             extension_calls.append(args)
             return "ok"
@@ -497,7 +456,7 @@ def test_omitted_public_defaults_are_exact_c128_kernel_defaults(
         return FakeExtension()
 
     monkeypatch.setattr(loader, "_load_ext", load_spy)
-    assert getattr(loader, entrypoint)(**kwargs) == "ok"
+    assert loader.sv_traj_d3_wc(**kwargs) == "ok"
     assert precision_calls == ["c128"]
     assert load_calls == ["c128"]
     assert shared_calls[0]["precision"] == "c128"
@@ -546,9 +505,9 @@ def test_precision_and_primitive_validation_labels_are_exact() -> None:
     )
     assert_raises_exact(
         ValueError,
-        "round_gptr must be 1D (got shape (1, 1))",
+        "round_op_ptr must be 1D (got shape (1, 1))",
         lambda: loader._require_1d(
-            "round_gptr", torch.zeros((1, 1), dtype=torch.int32),
+            "round_op_ptr", torch.zeros((1, 1), dtype=torch.int32),
         ),
     )
     assert_raises_exact(
@@ -608,34 +567,34 @@ def test_csr_validation_pins_empty_start_order_and_terminal_guards() -> None:
 
     assert_raises_exact(
         ValueError,
-        "round_gptr must start at 0",
+        "round_op_ptr must start at 0",
         lambda: loader._validate_csr(
-            "round_gptr", torch.empty(0, dtype=torch.int32), 0,
+            "round_op_ptr", torch.empty(0, dtype=torch.int32), 0,
         ),
     )
     assert_raises_exact(
         ValueError,
-        "round_gptr must start at 0",
+        "round_op_ptr must start at 0",
         lambda: loader._validate_csr(
-            "round_gptr", torch.tensor([1, 1], dtype=torch.int32), 1,
+            "round_op_ptr", torch.tensor([1, 1], dtype=torch.int32), 1,
         ),
     )
     assert_raises_exact(
         ValueError,
-        "round_gptr must be nondecreasing",
+        "round_op_ptr must be nondecreasing",
         lambda: loader._validate_csr(
-            "round_gptr", torch.tensor([0, 2, 1], dtype=torch.int32), 1,
+            "round_op_ptr", torch.tensor([0, 2, 1], dtype=torch.int32), 1,
         ),
     )
     assert_raises_exact(
         ValueError,
-        "round_gptr terminal entry must equal item count 2 (got 1)",
+        "round_op_ptr terminal entry must equal item count 2 (got 1)",
         lambda: loader._validate_csr(
-            "round_gptr", torch.tensor([0, 0, 1], dtype=torch.int32), 2,
+            "round_op_ptr", torch.tensor([0, 0, 1], dtype=torch.int32), 2,
         ),
     )
     loader._validate_csr(
-        "round_gptr", torch.tensor([0, 0, 2], dtype=torch.int32), 2,
+        "round_op_ptr", torch.tensor([0, 0, 2], dtype=torch.int32), 2,
     )
 
 
@@ -959,22 +918,21 @@ def test_shared_codestate_gate_and_kraus_contract_labels_are_exact() -> None:
         lambda: loader._validate_shared_inputs(**kwargs),
     )
 
-    for kraus_name in ("kraus", "leak_kraus"):
-        kwargs = _shared_kwargs(kraus_name)
-        kwargs["kraus"] = object()
-        assert_raises_exact(
-            TypeError,
-            f"{kraus_name} must be a torch.Tensor",
-            lambda kwargs=kwargs: loader._validate_shared_inputs(**kwargs),
-        )
+    kwargs = _shared_kwargs()
+    kwargs["kraus"] = object()
+    assert_raises_exact(
+        TypeError,
+        "leak_kraus must be a torch.Tensor",
+        lambda: loader._validate_shared_inputs(**kwargs),
+    )
 
-        kwargs = _shared_kwargs(kraus_name)
-        kwargs["kraus"] = torch.eye(3, dtype=torch.complex128).repeat(9, 1, 1)
-        assert_raises_exact(
-            ValueError,
-            f"{kraus_name} has 9 operators; maximum is 8",
-            lambda kwargs=kwargs: loader._validate_shared_inputs(**kwargs),
-        )
+    kwargs = _shared_kwargs()
+    kwargs["kraus"] = torch.eye(3, dtype=torch.complex128).repeat(9, 1, 1)
+    assert_raises_exact(
+        ValueError,
+        "leak_kraus has 9 operators; maximum is 8",
+        lambda: loader._validate_shared_inputs(**kwargs),
+    )
 
 
 def test_shared_scalar_and_kraus_capacity_boundaries_are_accepted(
@@ -1064,47 +1022,23 @@ def test_shared_validator_dispatch_pins_every_dependency_argument(
     assert cuda_calls[2][2] is kwargs["codestate"]
 
 
-@pytest.mark.parametrize(
-    ("helper_name", "fields"),
-    [
-        (
-            "_validate_lumped_schedule_structure",
-            ("round_gptr", "gate_uid", "gate_site"),
-        ),
-        (
-            "_validate_wc_schedule_structure",
-            ("round_op_ptr", "op_kind", "op_uid", "op_site"),
-        ),
-    ],
-)
-def test_schedule_structure_field_type_dtype_and_dimension_labels_are_exact(
-    helper_name: str, fields: tuple[str, ...],
-) -> None:
+def test_schedule_structure_field_type_dtype_and_dimension_labels_are_exact() -> None:
     from error_coupling_simulator.carrier.kernels import sv_traj_d3_loader as loader
 
-    if helper_name == "_validate_lumped_schedule_structure":
-        base = {
-            "R": 1,
-            "round_gptr": torch.tensor([0, 1], dtype=torch.int32),
-            "gate_uid": torch.tensor([0], dtype=torch.int32),
-            "gate_site": torch.tensor([0], dtype=torch.int32),
-        }
-    else:
-        base = {
-            "R": 1,
-            "round_op_ptr": torch.tensor([0, 1, 1], dtype=torch.int32),
-            "op_kind": torch.tensor([0], dtype=torch.int32),
-            "op_uid": torch.tensor([0], dtype=torch.int32),
-            "op_site": torch.tensor([0], dtype=torch.int32),
-        }
-    helper = getattr(loader, helper_name)
-    for field in fields:
+    base = {
+        "R": 1,
+        "round_op_ptr": torch.tensor([0, 1, 1], dtype=torch.int32),
+        "op_kind": torch.tensor([0], dtype=torch.int32),
+        "op_uid": torch.tensor([0], dtype=torch.int32),
+        "op_site": torch.tensor([0], dtype=torch.int32),
+    }
+    for field in ("round_op_ptr", "op_kind", "op_uid", "op_site"):
         kwargs = dict(base)
         kwargs[field] = object()
         assert_raises_exact(
             TypeError,
             f"{field} must be a torch.Tensor",
-            lambda kwargs=kwargs: helper(**kwargs),
+            lambda kwargs=kwargs: loader._validate_wc_schedule_structure(**kwargs),
         )
 
         kwargs = dict(base)
@@ -1112,7 +1046,7 @@ def test_schedule_structure_field_type_dtype_and_dimension_labels_are_exact(
         assert_raises_exact(
             TypeError,
             f"{field} must have dtype torch.int32 (got torch.int64)",
-            lambda kwargs=kwargs: helper(**kwargs),
+            lambda kwargs=kwargs: loader._validate_wc_schedule_structure(**kwargs),
         )
 
         kwargs = dict(base)
@@ -1121,33 +1055,13 @@ def test_schedule_structure_field_type_dtype_and_dimension_labels_are_exact(
         assert_raises_exact(
             ValueError,
             f"{field} must be 1D (got shape {shape})",
-            lambda kwargs=kwargs: helper(**kwargs),
+            lambda kwargs=kwargs: loader._validate_wc_schedule_structure(**kwargs),
         )
 
 
 def test_schedule_structure_pointer_and_parallel_length_guards_are_exact() -> None:
     from error_coupling_simulator.carrier.kernels import sv_traj_d3_loader as loader
 
-    assert_raises_exact(
-        ValueError,
-        "round_gptr must have shape [R+1] (got (3,), R=1)",
-        lambda: loader._validate_lumped_schedule_structure(
-            R=1,
-            round_gptr=torch.tensor([0, 0, 1], dtype=torch.int32),
-            gate_uid=torch.tensor([0], dtype=torch.int32),
-            gate_site=torch.tensor([0], dtype=torch.int32),
-        ),
-    )
-    assert_raises_exact(
-        ValueError,
-        "gate_uid and gate_site must have equal length (got 2 and 1)",
-        lambda: loader._validate_lumped_schedule_structure(
-            R=1,
-            round_gptr=torch.tensor([0, 2], dtype=torch.int32),
-            gate_uid=torch.tensor([0, 1], dtype=torch.int32),
-            gate_site=torch.tensor([0], dtype=torch.int32),
-        ),
-    )
     assert_raises_exact(
         ValueError,
         "round_op_ptr must have shape [2R+1] (got (2,), R=1)",
@@ -1170,48 +1084,6 @@ def test_schedule_structure_pointer_and_parallel_length_guards_are_exact() -> No
             op_site=torch.tensor([0], dtype=torch.int32),
         ),
     )
-
-
-@pytest.mark.parametrize(
-    ("field", "value", "message"),
-    [
-        ("gate_uid", -1, "gate_uid[1]=-1 is outside [0,2)"),
-        ("gate_uid", 2, "gate_uid[1]=2 is outside [0,2)"),
-        ("gate_site", -1, "gate_site[1]=-1 is outside [0,9)"),
-        ("gate_site", 9, "gate_site[1]=9 is outside [0,9)"),
-    ],
-)
-def test_lumped_schedule_value_boundaries_and_offsets_are_exact(
-    field: str, value: int, message: str,
-) -> None:
-    from error_coupling_simulator.carrier.kernels import sv_traj_d3_loader as loader
-
-    kwargs = {
-        "round_gptr": torch.tensor([0, 2], dtype=torch.int32),
-        "gate_uid": torch.tensor([0, 1], dtype=torch.int32),
-        "gate_site": torch.tensor([0, 8], dtype=torch.int32),
-        "n_gate": 2,
-    }
-    kwargs[field] = torch.tensor(
-        [int(kwargs[field][0]), value], dtype=torch.int32,  # type: ignore[index]
-    )
-    assert_raises_exact(
-        ValueError,
-        message,
-        lambda: loader._validate_lumped_schedule_values(**kwargs),
-    )
-
-
-def test_lumped_schedule_accepts_exact_uid_and_site_boundaries() -> None:
-    from error_coupling_simulator.carrier.kernels import sv_traj_d3_loader as loader
-
-    loader._validate_lumped_schedule_values(
-        round_gptr=torch.tensor([0, 0, 2], dtype=torch.int32),
-        gate_uid=torch.tensor([0, 1], dtype=torch.int32),
-        gate_site=torch.tensor([0, 8], dtype=torch.int32),
-        n_gate=2,
-    )
-
 
 @pytest.mark.parametrize(
     ("field", "value", "message"),

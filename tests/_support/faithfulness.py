@@ -150,7 +150,7 @@ def assert_raises_exact(exc_type, message: str, call: Callable, *, label: str = 
     which a substring test leaves surviving (the recurring D11-D19 finding; 9 batches re-rolled
     a private ``_raises_exact`` for exactly this). Trip the guard through EVERY input route that
     reaches it -- 100% branch coverage of the guard is NOT the same as every routing INTO it
-    being exercised (the D18 M13 channel_axis-route lesson). A wrong exception type or no raise
+    being exercised (the channel-axis routing lesson). A wrong exception type or no raise
     fails loudly. Returns the caught exception for any further assertion.
     """
     try:

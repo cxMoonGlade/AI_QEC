@@ -4,7 +4,7 @@ from __future__ import annotations
 
 The generic Axis-1 record/state path uses these controls to keep frontend gate
 semantics inside the same substep generator as the local noise primitives. This
-is separate from the G2 diagnostic path, where `DR` remains the registered
+is separate from the joint-channel comparison path, where `DR` remains the registered
 drive-vs-ZZ witness primitive.
 """
 

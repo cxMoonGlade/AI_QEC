@@ -18,6 +18,10 @@ from .circuit_ir import CircuitIR, CircuitStep, GateOp, MeasureOp, Tick
 from .source_sidecar import SourceTimelineBinding
 
 SOURCE_PROJECTION_AUDIT_METADATA_KEY = "_source_projection_evaluator_audit"
+TARGETED_STIM_NOISE_SCHEMA = "error_coupling_simulator.frontend.targeted_stim_noise.v1"
+SOURCE_STIM_PAULI_PROJECTION_SCHEMA = (
+    "error_coupling_simulator.frontend.source_stim_pauli_projection.v1"
+)
 
 
 _ONE_QUBIT_UNITARIES = {
@@ -204,9 +208,14 @@ class TargetedStimNoiseSpec:
     """Ordered, location-aware Stim noise insertion rules."""
 
     rules: tuple[StimNoiseRule, ...]
-    schema: str = "qec_twin.simulator.TargetedStimNoiseSpec.v1"
+    schema: str = TARGETED_STIM_NOISE_SCHEMA
 
     def __post_init__(self) -> None:
+        if self.schema != TARGETED_STIM_NOISE_SCHEMA:
+            raise ValueError(
+                f"unsupported targeted Stim noise schema {self.schema!r}; "
+                f"expected {TARGETED_STIM_NOISE_SCHEMA!r}"
+            )
         object.__setattr__(self, "rules", tuple(self.rules))
 
     @property
@@ -339,9 +348,14 @@ class SourceStimPauliProjectionSpec:
     timeline: SourceTimeline
     rules: tuple[SourceStimPauliRule, ...]
     source_binding: SourceTimelineBinding | None = None
-    schema: str = "qec_twin.simulator.SourceStimPauliProjectionSpec.v1"
+    schema: str = SOURCE_STIM_PAULI_PROJECTION_SCHEMA
 
     def __post_init__(self) -> None:
+        if self.schema != SOURCE_STIM_PAULI_PROJECTION_SCHEMA:
+            raise ValueError(
+                f"unsupported source Stim projection schema {self.schema!r}; "
+                f"expected {SOURCE_STIM_PAULI_PROJECTION_SCHEMA!r}"
+            )
         rules = tuple(self.rules)
         object.__setattr__(self, "rules", rules)
         if not self.rules:

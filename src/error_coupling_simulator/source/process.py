@@ -18,7 +18,7 @@ from typing import Any, Literal, Mapping, Sequence
 import numpy as np
 
 from .coupling import (
-    CoupledMechanismParams,
+    CoupledNoiseParameters,
     SourceCouplingConfig,
     independent_baseline_trajectory_to_params,
     trajectory_to_params,
@@ -27,6 +27,7 @@ from ..numerics import NUMERICAL_ZERO
 
 _TWO_PI = 2.0 * math.pi
 _PAULI_ORDER = ("I", "X", "Y", "Z")
+SOURCE_TIMELINE_SCHEMA = "error_coupling_simulator.source.timeline.v1"
 
 
 @dataclass(frozen=True)
@@ -46,9 +47,14 @@ class SourceTimeline:
     metadata: Mapping[str, Any] = field(default_factory=dict)
     seed: int | None = None
     coupling_mode: Literal["shared", "independent"] = "shared"
-    schema: str = "qec_twin.mechanisms.SourceTimeline.v1"
+    schema: str = SOURCE_TIMELINE_SCHEMA
 
     def __post_init__(self) -> None:
+        if self.schema != SOURCE_TIMELINE_SCHEMA:
+            raise ValueError(
+                f"unsupported source timeline schema {self.schema!r}; "
+                f"expected {SOURCE_TIMELINE_SCHEMA!r}"
+            )
         object.__setattr__(self, "n_cycles", _require_positive_int("n_cycles", self.n_cycles))
         object.__setattr__(self, "cycle_time_ns", _require_positive("cycle_time_ns", self.cycle_time_ns))
         object.__setattr__(self, "payload", _coerce_array_map("payload", self.payload, self.n_cycles))
@@ -200,6 +206,11 @@ class SourceTimeline:
             if "__manifest_json__" not in data:
                 raise ValueError("source timeline NPZ missing __manifest_json__")
             manifest = json.loads(str(data["__manifest_json__"].item()))
+            if manifest.get("schema") != SOURCE_TIMELINE_SCHEMA:
+                raise ValueError(
+                    f"unsupported source timeline schema {manifest.get('schema')!r}; "
+                    f"expected {SOURCE_TIMELINE_SCHEMA!r}"
+                )
             payload = _load_npz_array_map(
                 data,
                 manifest,
@@ -221,7 +232,7 @@ class SourceTimeline:
             metadata=manifest.get("metadata", {}),
             seed=manifest.get("seed"),
             coupling_mode=manifest.get("coupling_mode", "shared"),
-            schema=manifest.get("schema", cls.schema),
+            schema=manifest["schema"],
         )
 
 
@@ -674,7 +685,7 @@ def timeline_to_coupled_params(
     *,
     payload_key: str = "z_radns",
     independent_seed: int | None = None,
-) -> tuple[CoupledMechanismParams, ...]:
+) -> tuple[CoupledNoiseParameters, ...]:
     """Feed a scalar source payload trajectory into the existing ``Theta`` fan-out."""
 
     z = timeline.payload_series(payload_key)
@@ -694,7 +705,7 @@ def timeline_to_site_coupled_params(
     *,
     payload_key: str = "detuning_radns",
     independent_seed: int | None = None,
-) -> tuple[tuple[CoupledMechanismParams, ...], ...]:
+) -> tuple[tuple[CoupledNoiseParameters, ...], ...]:
     """Feed a ``(cycle, site)`` payload into per-site ``Theta`` fan-out.
 
     The return value is cycle-major: ``params[cycle][site]``.
@@ -703,7 +714,7 @@ def timeline_to_site_coupled_params(
     z = timeline.payload_series(payload_key)
     if z.ndim != 2:
         raise ValueError(f"payload {payload_key!r} must be 2-D with shape (cycle, site)")
-    site_series: list[tuple[CoupledMechanismParams, ...]] = []
+    site_series: list[tuple[CoupledNoiseParameters, ...]] = []
     for site in range(z.shape[1]):
         if timeline.coupling_mode == "shared":
             site_series.append(trajectory_to_params(z[:, site], config))

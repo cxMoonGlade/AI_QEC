@@ -44,7 +44,9 @@ from .axis1_selection import (
 )
 
 
-AXIS1_STATE_EVIDENCE_SCHEMA = "qec_twin.simulator.axis1_state_evolution_evidence.v1"
+AXIS1_STATE_EVIDENCE_SCHEMA = (
+    "error_coupling_simulator.frontend.state_evolution_evidence.v1"
+)
 AXIS1_STATE_EVIDENCE_REPRESENTABILITY = (
     "axis1_selected_joint_channel_state_evidence_no_record_emission"
 )
@@ -173,7 +175,7 @@ def freeze_axis1_state_evolution_evidence(
         )
     state = manifest["state_evolution"]
     payload = {
-        "schema": "qec_twin.simulator.axis1_state_evolution_freeze.v1",
+        "schema": "error_coupling_simulator.frontend.state_evolution_freeze.v1",
         "evidence_file": evidence_path.name,
         "evidence_sha256": file_sha256(evidence_path),
         "evidence_schema": manifest["schema"],
@@ -240,7 +242,7 @@ def validate_axis1_state_evolution_freeze(freeze_path: str | Path) -> dict[str, 
     if failed:
         raise ValueError(f"Axis-1 state freeze metadata mismatch: {failed}")
     return {
-        "schema": "qec_twin.simulator.axis1_state_evolution_freeze_validation.v1",
+        "schema": "error_coupling_simulator.frontend.state_evolution_freeze_validation.v1",
         "freeze_file": path.name,
         "evidence_file": evidence_path.name,
         "evidence_sha256": sha,
@@ -464,7 +466,7 @@ def _load_state_freeze_manifest(path: Path) -> dict[str, Any]:
     if not path.exists():
         raise FileNotFoundError(path)
     data = json.loads(path.read_text())
-    if data.get("schema") != "qec_twin.simulator.axis1_state_evolution_freeze.v1":
+    if data.get("schema") != "error_coupling_simulator.frontend.state_evolution_freeze.v1":
         raise ValueError(
             f"{path} is not an Axis-1 state-evidence freeze: schema={data.get('schema')!r}"
         )

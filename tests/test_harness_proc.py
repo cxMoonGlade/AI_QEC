@@ -93,6 +93,31 @@ def test_run_reaps_leader_when_wait_raises(monkeypatch: pytest.MonkeyPatch) -> N
             _force_reap(child)
 
 
+def test_run_reports_verified_group_cleanup() -> None:
+    ran = proc.run([sys.executable, "-c", "pass"])
+
+    assert ran.group_cleanup_verified is True
+    assert ran.ok
+    assert ran.pgid not in proc._LIVE_GROUPS
+
+
+def test_terminate_group_keeps_unverified_survivor_registered(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pgid = 987654321
+    clock = iter(range(0, 100, 3))
+    proc._register(pgid)
+    monkeypatch.setattr(proc, "group_alive", lambda _pgid: True)
+    monkeypatch.setattr(proc.os, "killpg", lambda *_args: None)
+    monkeypatch.setattr(proc.time, "monotonic", lambda: float(next(clock)))
+    monkeypatch.setattr(proc.time, "sleep", lambda _seconds: None)
+    try:
+        assert proc.terminate_group(pgid, grace=0.0) is False
+        assert pgid in proc._LIVE_GROUPS
+    finally:
+        proc._unregister(pgid)
+
+
 def test_signal_handler_only_records_inside_spawn_window(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

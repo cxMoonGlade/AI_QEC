@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import numpy as np
 import pytest
 import torch
 
@@ -69,33 +68,16 @@ def test_within_cycle_physics_builder_rejects_cpu_device() -> None:
         host.build_within_cycle_leak(spec)
 
 
-def test_legacy_run_and_marshaled_types_alias_active_owner() -> None:
-    from error_coupling_simulator.carrier.within_cycle import (
-        RunSpec as ActiveRunSpec,
-        WithinCycleMarshalled as ActiveMarshalled,
-    )
-    from qec_twin.forward.scalable.sv_sampler import (
-        RunSpec as LegacyRunSpec,
-        WithinCycleMarshalled as LegacyMarshalled,
-    )
-
-    assert LegacyRunSpec is ActiveRunSpec
-    assert LegacyMarshalled is ActiveMarshalled
-
-
-def test_within_cycle_marshalling_golden_and_legacy_parity() -> None:
+def test_within_cycle_marshalling_matches_explicit_golden_layout() -> None:
     from error_coupling_simulator.carrier.within_cycle import (
         CDTYPE,
         SV_GATE_IDS,
         WithinCycleScheduleHost,
     )
-    from qec_twin.forward.scalable.sv_sampler import SvSampler
-
     schedule = _two_site_schedule()
     leak = torch.eye(3, dtype=CDTYPE).unsqueeze(0)
     active = WithinCycleScheduleHost(device="cpu").marshal_within_cycle(
         schedule, leak, R=2)
-    legacy = SvSampler(device="cpu").marshal_within_cycle(schedule, leak, R=2)
 
     expected_kind = [
         0, 1, 0, 0, 1,
@@ -134,18 +116,18 @@ def test_within_cycle_marshalling_golden_and_legacy_parity() -> None:
     }
     assert active.n_cz_by_pos == {0: 2, 1: 2}
 
-    tensor_fields = (
+    integer_tensor_fields = (
         "round_op_ptr", "op_kind", "op_uid", "op_site", "stab_supp",
         "stab_supp_isx", "stab_supp_len", "log_supp", "log_supp_isx",
-        "leak_kraus", "gate_unitaries",
     )
-    for field in tensor_fields:
+    for field in integer_tensor_fields:
         actual = getattr(active, field)
-        reference = getattr(legacy, field)
-        assert actual.dtype == reference.dtype
+        assert actual.dtype == torch.int32
         assert actual.is_contiguous()
-        assert torch.equal(actual, reference), field
+    assert active.leak_kraus.dtype == torch.complex128
+    assert active.leak_kraus.is_contiguous()
     assert active.gate_unitaries.dtype == torch.complex128
+    assert active.gate_unitaries.is_contiguous()
 
 
 def test_peps_sampler_requires_frontend_compiled_schedule() -> None:
@@ -198,14 +180,17 @@ def test_peps_sampler_rejects_cpu_device_even_when_gpu_is_visible() -> None:
         )
 
 
-def test_within_cycle_header_matches_retained_legacy_header() -> None:
+def test_within_cycle_header_declares_current_packed_record_contract() -> None:
+    from error_coupling_simulator.carrier.records import (
+        PACKED_DETECTOR_INITIAL_PRIOR,
+        PACKED_SHOT_SCHEMA,
+        PACKED_SYNDROME_LAYOUT,
+    )
     from error_coupling_simulator.carrier.within_cycle import (
         CDTYPE,
         RunSpec,
         WithinCycleScheduleHost,
     )
-    from qec_twin.forward.scalable.sv_sampler import SvSampler
-
     schedule = _two_site_schedule()
     spec = RunSpec(
         circuit_path="synthetic.stim",
@@ -227,29 +212,19 @@ def test_within_cycle_header_matches_retained_legacy_header() -> None:
     marshalled = active_host.marshal_within_cycle(schedule, leak, R=2)
 
     active_header = active_host.build_header(spec, marshalled, schedule)
-    legacy_header = SvSampler(device="cpu").build_header(
-        spec, marshalled, schedule)
     build_identity = active_header["build_identity"]
+    assert active_header["format"] == PACKED_SHOT_SCHEMA
+    assert active_header["syndrome_layout"] == PACKED_SYNDROME_LAYOUT
+    assert active_header["detector_initial_prior"] == PACKED_DETECTOR_INITIAL_PRIOR
     assert active_header["package_version"] == build_identity["version"]
     assert (
         active_header["package_tree_sha256"]
         == build_identity["package_tree_sha256"]
     )
 
-    active_legacy_view = {
-        key: value
-        for key, value in active_header.items()
-        if key not in {
-            "build_identity",
-            "package_version",
-            "package_tree_sha256",
-            "git_commit",
-        }
-    }
-    legacy_view = {
-        key: value for key, value in legacy_header.items() if key != "git_commit"
-    }
-    assert active_legacy_view == legacy_view
-    assert np.prod([
-        active_header["N"], active_header["out_stride_bytes"]
-    ]) == 14
+    assert active_header["N"] == 7
+    assert active_header["R"] == 2
+    assert active_header["n_stab"] == 2
+    assert active_header["syndrome_bits_per_shot"] == 4
+    assert active_header["out_stride_bytes"] == 2
+    assert active_header["N"] * active_header["out_stride_bytes"] == 14

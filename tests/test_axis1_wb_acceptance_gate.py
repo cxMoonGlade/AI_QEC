@@ -3,7 +3,7 @@
 The previous gate was INERT: ``accepted = residual_ok AND seed_explicit`` reduced to "a seed was
 supplied" (``total_probability_residual ≡ 0`` by construction) and never compared the carrier to any
 oracle. The fix (``axis1_mcwf_dense_certification``) gates acceptance on a dense certification of the
-carrier's ACTUAL output vs the INDEPENDENT oracle ``forward.joint_lindbladian.assemble_substep_channel``
+carrier's ACTUAL output vs the INDEPENDENT oracle ``carrier.joint_lindbladian.assemble_substep_channel``
 (channel ``1−F_e`` / record + level-population TV, with a Hoeffding finite-shot CI; gross/strict tiers).
 
 THE CENTRAL, ANTI-CIRCULAR TEST (``test_gate_rejects_noop_carrier``): monkeypatch the carrier's

@@ -7,8 +7,8 @@ plus ``StimCircuitSource.from_file``; the private ``_sha256_file`` helper is not
 but is mutated + exercised through ``from_file``; the module imports NEITHER torch NOR quimb, so
 out_of_scope is empty).
 
-Full-coverage program (docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4;
-work-list docs/twin_validation/l3_release_package_unit_inventory.md D25).
+Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
+work-list docs/SIMULATOR.md D25).
 ``frontend/stim_source.py`` keeps the ORIGIN of a compiled Stim circuit explicit: keyed
 ``CircuitIR``, an already-compiled pair, and imported/on-disk Stim circuits all feed the same
 ``CompiledCircuit`` artifact path.
@@ -83,7 +83,7 @@ def _valid_compiled() -> CompiledCircuit:
 # =========================================================================== #
 def test_L0_compiled_circuit_valid_defaults_and_copies():
     ideal = _ideal()
-    meta_in = {"code": "learner_ok"}
+    meta_in = {"code": "public_ok"}
     cc = CompiledCircuit(
         ideal_circuit=ideal, noisy_circuit=ideal, metadata=meta_in, source_type="circuit_ir")
     # backend / representability default + normalize to the only allowed values.
@@ -97,7 +97,7 @@ def test_L0_compiled_circuit_valid_defaults_and_copies():
             cc.record_schema.num_detectors, cc.record_schema.num_observables) == (
         ref.num_qubits, ref.num_measurements, ref.num_detectors, ref.num_observables)
     # metadata is the validated COPY (is-not the input) -- kills the 'metadata' setattr-key wrap.
-    assert cc.metadata == {"code": "learner_ok"}
+    assert cc.metadata == {"code": "public_ok"}
     assert cc.metadata is not meta_in
     # noise_manifest default None arm (the ternary else); source_projection_audit default None arm.
     assert cc.noise_manifest is None
@@ -175,7 +175,7 @@ def test_L0_compiled_circuit_rejects_reserved_metadata_key_exact():
     ideal = _ideal()
     assert_raises_exact(
         ValueError,
-        "learner-visible metadata cannot contain evaluator truth; "
+        "public-artifact metadata cannot contain evaluator truth; "
         "reserved key CompiledCircuit.metadata.kraus_stack matches 'kraus'. "
         "Use evaluator_sidecars with visibility='evaluator_only'.",
         lambda: CompiledCircuit(ideal_circuit=ideal, noisy_circuit=ideal,
@@ -195,7 +195,7 @@ def test_L0_compiled_circuit_noise_manifest_validated_copied_and_reserved_exact(
     # a reserved key in noise_manifest is rejected with the 'CompiledCircuit.noise_manifest' label.
     assert_raises_exact(
         ValueError,
-        "learner-visible metadata cannot contain evaluator truth; "
+        "public-artifact metadata cannot contain evaluator truth; "
         "reserved key CompiledCircuit.noise_manifest.channel_truth matches 'channel_truth'. "
         "Use evaluator_sidecars with visibility='evaluator_only'.",
         lambda: CompiledCircuit(ideal_circuit=ideal, noisy_circuit=ideal, metadata={},
@@ -225,7 +225,7 @@ def test_L0_compiled_circuit_evaluator_sidecars_validated_to_tuple():
     with pytest.raises(ValueError, match="evaluator_only"):
         CompiledCircuit(ideal_circuit=ideal, noisy_circuit=ideal, metadata={}, source_type="t",
                         evaluator_sidecars=({"name": "t", "path": "t.json",
-                                             "visibility": "learner"},))
+                                             "visibility": "public"},))
 
 
 def test_L0_compiled_circuit_source_projection_audit_valid_copied():
@@ -249,7 +249,7 @@ def test_L0_compiled_circuit_source_projection_audit_bad_visibility_exact():
         ValueError, "source_projection_audit must be visibility='evaluator_only'",
         lambda: CompiledCircuit(ideal_circuit=ideal, noisy_circuit=ideal, metadata={},
                                 source_type="t",
-                                source_projection_audit={"visibility": "learner"}),
+                                source_projection_audit={"visibility": "public"}),
         label="source_projection_audit visibility guard")
 
 
@@ -322,7 +322,7 @@ def test_L0_circuit_ir_source_compile_trivial_noise_uses_manifest_fallback():
 
 
 def test_L0_circuit_ir_source_compile_source_projection_isolation():
-    # the ISOLATION CONTRACT through the compile path: the learner metadata stays the CLEAN
+    # the ISOLATION CONTRACT through the compile path: public metadata stays the CLEAN
     # original circuit's dict while the evaluator-only source-projection audit rides the SEPARATE
     # visibility-gated field.
     ir = _base_ir({"code": "src_proj"})
@@ -335,7 +335,7 @@ def test_L0_circuit_ir_source_compile_source_projection_isolation():
                                    measure_name="M", noise="X_ERROR",
                                    payload_key="p", map_kind="payload_probability"),))
     cc = CircuitIRSource(ir).compile(noise)
-    # learner-visible metadata: clean, no source truth.
+    # public-artifact metadata: clean, no source truth.
     assert cc.metadata == {"code": "src_proj"}
     assert "source_timeline" not in cc.metadata
     # evaluator-only audit: present, visibility-gated, carries the source truth.

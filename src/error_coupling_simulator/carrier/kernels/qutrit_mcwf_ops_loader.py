@@ -29,7 +29,7 @@ def _load_ext():
     if _EXT_TRIED:
         return _EXT
     _EXT_TRIED = True
-    if os.environ.get("QEC_TWIN_NO_KERNELS") == "1" or not torch.cuda.is_available():
+    if os.environ.get("ECS_DISABLE_NATIVE_KERNELS") == "1" or not torch.cuda.is_available():
         return None
     src = _kernels_dir() / "qutrit_mcwf_ops.cu"
     if not src.exists():
@@ -38,7 +38,7 @@ def _load_ext():
         from torch.utils.cpp_extension import load
 
         _EXT = load(
-            name="qec_twin_qutrit_mcwf_ops",
+            name="error_coupling_simulator_qutrit_mcwf_ops",
             sources=[str(src)],
             extra_cuda_cflags=["-O3"],
             verbose=False,
@@ -52,7 +52,7 @@ def _load_ext():
         )
         raise RuntimeError(
             f"qutrit_mcwf_ops failed to compile from {src}. Surface the nvcc/ninja "
-            "error above; set QEC_TWIN_NO_KERNELS=1 only to intentionally disable "
+            "error above; set ECS_DISABLE_NATIVE_KERNELS=1 only to intentionally disable "
             "the fused kernels while retaining the Torch-GPU Kraus-MCWF reference path."
         ) from exc
     return _EXT

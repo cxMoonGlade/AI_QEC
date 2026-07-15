@@ -5,7 +5,7 @@ from __future__ import annotations
 This module implements ``Theta(z_t)``: one explicit source draw conditions many
 mechanism parameters in the same cycle/substep. It is deliberately a parameter
 layer, not a Stim/DEM noise layer and not a channel assembler. Axis-1 consumes
-these parameters later through ``forward.joint_lindbladian`` and backend-specific
+these parameters later through ``carrier.joint_lindbladian`` and backend-specific
 carriers.
 """
 
@@ -18,6 +18,8 @@ import numpy as np
 from ..numerics import NUMERICAL_ZERO
 
 _TWO_PI = 2.0 * math.pi
+SOURCE_COUPLING_CONFIG_SCHEMA = "error_coupling_simulator.source.coupling_config.v1"
+COUPLED_PROCESS_PARAMS_SCHEMA = "error_coupling_simulator.source.coupled_process_params.v1"
 _SOURCE_KEYS = (
     "zz",
     "gamma_phi",
@@ -27,27 +29,24 @@ _SOURCE_KEYS = (
     "readout",
     "reset",
     "cz",
-    # P2-i (2026-07-06): the Theta->leakage seam. Literature-grounded FORM (a TLS defect's
-    # slow 1/f modulation of the affected qubit's error rates — Gao 2605.23385: S(w) ~ 1/f^1.05
-    # over ten decades, T1 jumps + low-frequency dephasing; the reading note's process recipe
-    # models the TLS footprint exactly as a slow latent modulating rates). The AMPLITUDES stay
-    # class (c) swept brackets — no published TLS->(theta, g_seep) transfer function is claimed.
+    # Leakage fan-out driven by the same latent draw. The amplitudes are project-design
+    # sweep parameters; no published latent-to-(theta, g_seep) transfer function is claimed.
     "wg_theta",
     "wg_seep",
 )
 
 
 @dataclass(frozen=True)
-class StaticZZCalibration:
-    """Static-ZZ reference constants for the frequency-drift fan-out.
+class StaticZZParameters:
+    """Static-ZZ parameters for the frequency-drift fan-out.
 
     Units follow the existing qutip-source adaptor convention: frequencies are
     angular rad/ns after conversion, gate time is ns, and ``phi = zeta*t_gate/4``.
     ``base_phi_rad`` is used to infer the fixed exchange ``J`` at the base
     detuning; subsequent source draws shift the detuning and recompute ``zeta``.
 
-    The class name is retained for API compatibility. Its built-in values are
-    project-design defaults, not a device calibration, and this type stores no
+    Its built-in values are project-design defaults, not a device calibration,
+    and this type stores no
     paper/dataset locator that could establish one. Callers may replace the numbers,
     but must record external calibration provenance in the enclosing run manifest.
     """
@@ -111,7 +110,7 @@ class SourceCouplingConfig:
     """
 
     z_scale_radns: float = 1.0e-4
-    zz: StaticZZCalibration = field(default_factory=StaticZZCalibration)
+    zz: StaticZZParameters = field(default_factory=StaticZZParameters)
     gamma_phi_base_per_ns: float = 1.0 / 75_000.0
     gamma_phi_sensitivity: float = 0.35
     detuning_base_radns: float = 0.0
@@ -125,19 +124,23 @@ class SourceCouplingConfig:
     reset_flip_sensitivity: float = 0.35
     cz_depol_base_p: float = 2.0e-3
     cz_depol_sensitivity: float = 0.30
-    # P2-i Theta->leakage fields (Wood-Gambetta coherent |1><->|2| angle + seep jump rate).
+    # Leakage fields: coherent |1><->|2| angle plus seep jump rate.
     # DEFAULTS ARE FULLY INERT (base 0 AND sensitivity 0 => the fan-out emits 0 and no
-    # existing consumer's behavior changes); the historical P2-iv process passes its physical cell
-    # (e.g. theta = calibrate_theta_for_wg_l1(5e-3), g_seep = 0.09 per McEwen 2102.06131)
-    # explicitly. Both use the positive-rate exp map (theta > 0 is an angle magnitude; the
+    # existing consumer's behavior changes). Nonzero cells are supplied explicitly.
+    # Both use the positive-rate exp map (theta > 0 is an angle magnitude; the
     # WG L1 ~ sin^2(theta)/2 rate then inherits ~2x the relative modulation). Class (c).
     wg_theta_base_rad: float = 0.0
     wg_theta_sensitivity: float = 0.0
     wg_g_seep_base: float = 0.0
     wg_g_seep_sensitivity: float = 0.0
-    schema: str = "qec_twin.mechanisms.SourceCouplingConfig.v1"
+    schema: str = SOURCE_COUPLING_CONFIG_SCHEMA
 
     def __post_init__(self) -> None:
+        if self.schema != SOURCE_COUPLING_CONFIG_SCHEMA:
+            raise ValueError(
+                f"unsupported source coupling schema {self.schema!r}; "
+                f"expected {SOURCE_COUPLING_CONFIG_SCHEMA!r}"
+            )
         _require_positive("z_scale_radns", self.z_scale_radns)
         _require_nonnegative("gamma_phi_base_per_ns", self.gamma_phi_base_per_ns)
         _require_finite("gamma_phi_sensitivity", self.gamma_phi_sensitivity)
@@ -194,7 +197,7 @@ class SourceCouplingConfig:
 
 
 @dataclass(frozen=True)
-class CoupledMechanismParams:
+class CoupledNoiseParameters:
     """Parameter bundle emitted by ``Theta(z_t)`` for one cycle/substep."""
 
     source_draws_radns: tuple[tuple[str, float], ...]
@@ -210,12 +213,11 @@ class CoupledMechanismParams:
     readout_flip_p: float
     reset_flip_p: float
     cz_depol_p: float
-    # P2-i Theta->leakage outputs (0.0 = the inert default; defaults keep every
-    # pre-P2 direct constructor valid).
+    # Leakage outputs; zero is the inert default.
     wg_theta_rad: float = 0.0
     wg_g_seep: float = 0.0
     coupling_mode: Literal["shared", "independent"] = "shared"
-    schema: str = "qec_twin.mechanisms.CoupledMechanismParams.v1"
+    schema: str = field(default=COUPLED_PROCESS_PARAMS_SCHEMA, init=False)
 
     def source_draw_for(self, key: str) -> float:
         draws = dict(self.source_draws_radns)
@@ -258,7 +260,7 @@ def default_source_coupling_config() -> SourceCouplingConfig:
 def source_to_params(
     z_t_radns: float,
     config: SourceCouplingConfig | None = None,
-) -> CoupledMechanismParams:
+) -> CoupledNoiseParameters:
     """Map one shared source draw to all coupled mechanism parameters."""
 
     cfg = config or default_source_coupling_config()
@@ -270,7 +272,7 @@ def source_to_params(
 def trajectory_to_params(
     z_trajectory_radns: Iterable[float],
     config: SourceCouplingConfig | None = None,
-) -> tuple[CoupledMechanismParams, ...]:
+) -> tuple[CoupledNoiseParameters, ...]:
     """Apply the shared-source fan-out to every draw in a trajectory."""
 
     cfg = config or default_source_coupling_config()
@@ -283,7 +285,7 @@ def independent_baseline_trajectory_to_params(
     config: SourceCouplingConfig | None = None,
     *,
     seed: int,
-) -> tuple[CoupledMechanismParams, ...]:
+) -> tuple[CoupledNoiseParameters, ...]:
     """Break same-cycle shared-source coupling while preserving one-field marginals.
 
     Each mechanism field receives an independent permutation of the same source
@@ -298,26 +300,26 @@ def independent_baseline_trajectory_to_params(
     permuted = {key: np.array(z_arr, copy=True) for key in _SOURCE_KEYS}
     for key in _SOURCE_KEYS:
         rng.shuffle(permuted[key])
-    out: list[CoupledMechanismParams] = []
+    out: list[CoupledNoiseParameters] = []
     for i in range(z_arr.size):
         draws = {key: float(permuted[key][i]) for key in _SOURCE_KEYS}
         out.append(_params_from_draws(draws, cfg, coupling_mode="independent"))
     return tuple(out)
 
 
-def parameter_series(params: Iterable[CoupledMechanismParams], field: str) -> np.ndarray:
+def parameter_series(params: Iterable[CoupledNoiseParameters], field: str) -> np.ndarray:
     """Extract one parameter field as a float64 trajectory."""
 
     values = []
     for p in params:
         if not hasattr(p, field):
-            raise AttributeError(f"CoupledMechanismParams has no field {field!r}")
+            raise AttributeError(f"CoupledNoiseParameters has no field {field!r}")
         values.append(float(getattr(p, field)))
     return np.asarray(values)
 
 
 def cross_mechanism_correlation(
-    params: Iterable[CoupledMechanismParams],
+    params: Iterable[CoupledNoiseParameters],
     field_a: str,
     field_b: str,
 ) -> float:
@@ -390,9 +392,8 @@ def drift_to_t2(
 ) -> tuple[float, float]:
     """Map a source drift draw to ``(gamma_phi_per_ns, Tphi_ns)``.
 
-    This is the public spelling of the build-contract helper named
-    ``_drift_to_T2``. The map is class-(c): a positive log-rate modulation around
-    the configured pure-dephasing base rate.
+    The map is class-(c): a positive log-rate modulation around the configured
+    pure-dephasing base rate.
     """
 
     cfg = config or default_source_coupling_config()
@@ -408,15 +409,6 @@ def drift_to_t2(
     return gamma_phi, tphi_ns
 
 
-def _drift_to_T2(
-    z_t_radns: float,
-    config: SourceCouplingConfig | None = None,
-) -> tuple[float, float]:
-    """Contract-compatible alias for :func:`drift_to_t2`."""
-
-    return drift_to_t2(z_t_radns, config)
-
-
 def leakage_from_drift(
     theta_z_radns: float,
     seep_z_radns: float,
@@ -424,12 +416,9 @@ def leakage_from_drift(
 ) -> tuple[float, float]:
     """Map source drift draws to the per-cycle WG leakage cell ``(theta_rad, g_seep)``.
 
-    P2-i (prereg ``p2_conjunction_wiring_prereg.md``). FORM grounded in the TLS
-    literature (Gao 2605.23385: a defect's 1/f^1.05 spectrum slowly modulates the
-    affected qubit's error rates — the reading note's process recipe), spelled as
-    the same positive-rate exp map the gamma_phi fan-out uses; AMPLITUDES are
-    class-(c) swept brackets (no published TLS->(theta, g_seep) transfer function
-    is claimed). Inert at the default config (base 0, sensitivity 0 -> (0, 0));
+    This project-design map uses the same positive-rate exponential form as the
+    gamma-phi fan-out. No published latent-to-(theta, g_seep) transfer function
+    is claimed. It is inert at the default config (base 0, sensitivity 0 -> (0, 0));
     ``Theta(0)`` returns the configured bases exactly (the off-source identity).
     """
 
@@ -450,7 +439,7 @@ def _params_from_draws(
     cfg: SourceCouplingConfig,
     *,
     coupling_mode: Literal["shared", "independent"],
-) -> CoupledMechanismParams:
+) -> CoupledNoiseParameters:
     draws = {key: _require_finite(f"draws_radns[{key}]", draws_radns[key]) for key in _SOURCE_KEYS}
     x = {key: draws[key] / float(cfg.z_scale_radns) for key in _SOURCE_KEYS}
     zz_phi, zz_zeta = zz_phi_from_frequency_drift(draws["zz"], cfg)
@@ -462,7 +451,7 @@ def _params_from_draws(
         cfg.drive_omega_sensitivity,
         name="drive_omega_radns",
     )
-    return CoupledMechanismParams(
+    return CoupledNoiseParameters(
         source_draws_radns=tuple((key, draws[key]) for key in _SOURCE_KEYS),
         normalized_draws=tuple((key, float(x[key])) for key in _SOURCE_KEYS),
         zz_phi_rad=zz_phi,
@@ -568,9 +557,9 @@ def _require_nonnegative(name: str, value: float) -> float:
 
 
 __all__ = [
-    "CoupledMechanismParams",
+    "CoupledNoiseParameters",
     "SourceCouplingConfig",
-    "StaticZZCalibration",
+    "StaticZZParameters",
     "cross_mechanism_correlation",
     "default_source_coupling_config",
     "drift_to_t2",

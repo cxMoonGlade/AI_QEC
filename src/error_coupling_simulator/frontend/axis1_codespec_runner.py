@@ -139,7 +139,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--out-dir",
-        default="outputs/twin_validation/axis1_codespec_record_evidence",
+        default="outputs/simulator_validation/axis1_codespec_record_evidence",
         help="Directory for axis1_measurement_records.json and optional freeze manifest.",
     )
     parser.add_argument("--rounds", type=int, default=2, help="CodeSpec measurement rounds.")
@@ -177,7 +177,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     record = result.evidence.manifest["record_evidence"]
     coverage = result.evidence.manifest["coverage"]
     summary = {
-        "schema": "qec_twin.simulator.axis1_codespec_record_runner_summary.v1",
+        "schema": "error_coupling_simulator.frontend.codespec_record_runner_summary.v1",
         "out_dir": str(result.evidence.out_dir),
         "record_evidence": str(result.evidence.record_evidence),
         "content_hash": result.evidence.content_hash,

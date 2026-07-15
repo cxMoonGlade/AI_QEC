@@ -16,7 +16,7 @@ import numpy as np
 import torch
 
 from ..carrier.exact.qutrit_dm import CDTYPE, QutritDM
-from ..mechanisms.qutrit_teachers import (
+from ..mechanisms.qutrit_leakage import (
     G_HEAT_DEFAULT,
     G_SEEP_DEFAULT,
     THETA_DEFAULT,
@@ -149,7 +149,7 @@ def simulate_qutrit_wg_leakage(
         "site_populations": site_populations,
     }
     manifest = {
-        "schema": "qec_twin.simulator_qutrit_wg_leakage.v1",
+        "schema": "error_coupling_simulator.frontend.qutrit_wg_leakage.v1",
         "backend": "error_coupling_simulator.carrier.exact.qutrit_dm.QutritDM",
         "representability": "exact_qutrit_density_matrix_leakage",
         "mechanism": "wood_gambetta_qutrit_leakage",
@@ -172,7 +172,7 @@ def simulate_qutrit_wg_leakage(
         "noise": {
             "type": "qutrit_leakage",
             "source": (
-                "error_coupling_simulator.mechanisms.qutrit_teachers."
+                "error_coupling_simulator.mechanisms.qutrit_leakage."
                 "leakage_kraus_torch"
             ),
         },

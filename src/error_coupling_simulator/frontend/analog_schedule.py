@@ -39,10 +39,10 @@ from .axis1_context import (
 )
 from .schedule import ScheduleTemplate
 
-SCHEDULE_SCHEMA_VERSION = "qec_twin.simulator.SubstepSchedule.v1"
+SCHEDULE_SCHEMA_VERSION = "error_coupling_simulator.frontend.substep_schedule.v1"
 ANALOG_SCHEDULE_REPRESENTABILITY = "analog_schedule_metadata_only"
 H3_H5_DURATION_POLICY_ID = "h3_h5_v1"
-COMPILER_SCHEDULE_SEAL_SCHEMA = "qec_twin.simulator.compiler_schedule_seal.v1"
+COMPILER_SCHEDULE_SEAL_SCHEMA = "error_coupling_simulator.frontend.compiler_schedule_seal.v1"
 _COMPILER_SCHEDULE_SEAL_KEY = secrets.token_bytes(32)
 
 _SOURCE_PROJECTION_AUDIT_METADATA_KEY = "_source_projection_evaluator_audit"
@@ -369,6 +369,11 @@ class SubstepSchedule:
         object.__setattr__(self, "num_qubits", int(self.num_qubits))
         object.__setattr__(self, "substeps", tuple(self.substeps))
         object.__setattr__(self, "schema_version", str(self.schema_version))
+        if self.schema_version != SCHEDULE_SCHEMA_VERSION:
+            raise ValueError(
+                f"unsupported substep-schedule schema {self.schema_version!r}; "
+                f"expected {SCHEDULE_SCHEMA_VERSION!r}"
+            )
         object.__setattr__(
             self,
             "qubit_roles",
@@ -610,7 +615,7 @@ def stim_circuit_to_substep_schedule(
             metadata=metadata,
         )
     stim_hash_payload = {
-        "schema": "qec_twin.simulator.StimCircuit.schedule_hash.v1",
+        "schema": "error_coupling_simulator.frontend.stim_circuit_schedule_hash.v1",
         "stim_circuit": str(stim_circuit),
         "static_zz_couplings": [list(edge) for edge in static_edges],
         "static_zz_calibrations": axis1_static_zz_calibrations_to_manifest(
@@ -1187,7 +1192,7 @@ def _record_layout_ref(circuit: CircuitIR) -> dict:
 
 def _circuit_ir_manifest(circuit: CircuitIR) -> dict:
     return {
-        "schema": "qec_twin.simulator.CircuitIR.schedule_hash.v1",
+        "schema": "error_coupling_simulator.frontend.circuit_ir_schedule_hash.v1",
         "num_qubits": circuit.num_qubits,
         "metadata": _jsonable(circuit.metadata),
         "steps": [_step_manifest(step) for step in circuit.steps],

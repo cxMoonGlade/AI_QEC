@@ -2,9 +2,7 @@ from __future__ import annotations
 
 """Parse an external d3 XZZX ``circuit_ideal.stim`` into the QutritDM Schedule.
 
-Phase-1 HARNESS component (Agent C; interface
-``docs/nonpauli_teacher/phase1_build_contract.md`` "Data formats" /
-``phase1_qutrit_leakage_registration.md`` §1.2). The exact 9-data-qutrit engine
+The exact 9-data-qutrit engine
 (:class:`error_coupling_simulator.carrier.exact.qutrit_dm.QutritDM`) evolves only the DATA register
 and measures each stabilizer by a direct parity projection on the data density
 matrix (no ancilla instantiated). This parser turns the real Google Willow XZZX

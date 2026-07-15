@@ -1,7 +1,7 @@
 {
   "_comment": [
     "STAGE-D per-batch coverage registry for batch 'groundtruth_nulls' of the",
-    "full-coverage program (docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4).",
+    "full-coverage program (docs/SIMULATOR.md SS12.3/12.4).",
     "Run via tests/harness/gate.py <this file> (L0+L1; calls tests/harness/coverage_audit.py)",
     "and tests/harness/mutation.py <this file> (L2).",
     "",
@@ -26,7 +26,7 @@
     "etc.) are NOT public units (leading underscore) and are NOT enumerated by the AST",
     "reconcile -- they are exercised transitively by the public-unit tests."
   ],
-  "contract": "docs/twin_validation/wave2_6_unit_test_contract.md",
+  "contract": "docs/SIMULATOR.md",
   "default_target": {"statement": 1.0, "branch": 1.0},
   "covered_by_test_files": [
     "tests/test_quantum_bath_groundtruth_nulls_units.py"

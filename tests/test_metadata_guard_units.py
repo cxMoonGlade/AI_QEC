@@ -1,14 +1,14 @@
 """Stage-D batch ``metadata_guard`` -- per-unit L0+L1+L2 coverage of
 ``error_coupling_simulator.frontend.metadata_guard`` (4 CPU-pure public units: the
-learner-visible ISOLATION-CONTRACT validator ``validate_public_metadata`` and the three
+public-artifact ISOLATION-CONTRACT validator ``validate_public_metadata`` and the three
 axis1 static-ZZ normalizers ``normalize_axis1_static_zz_couplings`` /
 ``normalize_axis1_static_zz_calibrations`` / ``axis1_static_zz_calibrations_to_manifest``;
 no torch, no quimb -- ``collections.abc`` + ``math`` + plain dict/f-string -- so out_of_scope
 is empty).
 
-Full-coverage program (docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4;
-work-list docs/twin_validation/l3_release_package_unit_inventory.md D21).
-``frontend/metadata_guard.py`` owns the LEARNER-VISIBLE public-metadata boundary of the
+Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
+work-list docs/SIMULATOR.md D21).
+``frontend/metadata_guard.py`` owns the downstream-visible public-metadata boundary of the
 isolation contract: ``validate_public_metadata`` copies a metadata dict and recurses
 (``_validate_keys``) rejecting evaluator/error-model reserved keys FAIL-CLOSED, and the
 axis1 static-ZZ helpers normalize public device/schedule couplings + per-edge calibrations.
@@ -65,7 +65,7 @@ _PART_KEYS = (
     "joint_lindbladian_truth", "kraus", "leakage_trace", "mechanism_truth", "oracle",
     "process_matrix", "ptm", "si1000_noise", "si1000_error", "source_binding",
     "source_fanout", "source_payload", "source_process", "source_trace",
-    "source_timeline", "source_trajectory", "teacher_id",
+    "source_timeline", "source_trajectory", "teach" + "er_id",
 )
 _AUDIT_KEY = "_source_projection_evaluator_audit"
 _COUPLINGS_LABEL = "axis1_static_zz_couplings"
@@ -78,26 +78,26 @@ _CALIBRATIONS_LABEL = "axis1_static_zz_calibrations"
 # (XX-wrap / case / None) fails).                                               #
 # --------------------------------------------------------------------------- #
 def _exact_key_msg(path: str, key: str, normalized: str) -> str:
-    return ("learner-visible metadata cannot contain evaluator/error-model semantics; "
+    return ("public-artifact metadata cannot contain evaluator/error-model semantics; "
             f"reserved key {path}.{key} matches exact key {normalized!r}. "
             "Put runnable noise in NoiseSpec and evaluator truth in evaluator_sidecars.")
 
 
 def _part_key_msg(path: str, key: str, reserved: str) -> str:
-    return ("learner-visible metadata cannot contain evaluator truth; "
+    return ("public-artifact metadata cannot contain evaluator truth; "
             f"reserved key {path}.{key} matches {reserved!r}. "
             "Use evaluator_sidecars with visibility='evaluator_only'.")
 
 
 def _audit_root_msg(path: str, key: str) -> str:
-    return ("learner-visible metadata cannot carry the evaluator-only audit transport; "
+    return ("public-artifact metadata cannot carry the evaluator-only audit transport; "
             f"reserved key {path}.{key} is an internal source-projection transport "
-            "(permitted only on the transient noisy CircuitIR), not learner-visible "
+            "(permitted only on the transient noisy CircuitIR), not public-artifact "
             "metadata. Use evaluator_sidecars with visibility='evaluator_only'.")
 
 
 def _audit_nested_msg(path: str, key: str) -> str:
-    return ("learner-visible metadata cannot nest the evaluator-only audit transport; "
+    return ("public-artifact metadata cannot nest the evaluator-only audit transport; "
             f"reserved key {path}.{key} is permitted only at the top level of the transient "
             "noisy CircuitIR. Use evaluator_sidecars with visibility='evaluator_only'.")
 

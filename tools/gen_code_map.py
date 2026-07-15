@@ -8,7 +8,7 @@ then MISLEAD (a stale "NOT YET EARNED" list said modules were absent when they w
 tool derives the module map FROM THE CODE by ast-parsing every module (NO imports, NO CUDA, no
 project logic) — so "what exists" cannot go stale. A tiny hand-maintained status overlay
 (docs/code_status.json) adds the one thing code can't state mechanically (ACTIVE / PLACEHOLDER /
-ARCHIVED + a one-line "what to know"), and this tool DRIFT-CHECKS that overlay against the code:
+RESEARCH + a one-line "what to know"), and this tool DRIFT-CHECKS that overlay against the code:
 packages present in code but missing a status entry, and status entries whose target no longer
 exists, are both flagged loudly so the overlay stays honest.
 
@@ -19,10 +19,10 @@ the complete Mermaid flow. It also performs the reverse check that EVERY Python 
 ``error_coupling_simulator`` (including namespace ``__init__.py`` files) is assigned either to one
 or more runtime services or to an explicit non-service support role. A new unclassified module is
 therefore a hard failure instead of a silently omitted capability. Finally, it AST-checks both the
-installed package and every declared acceptance test for executable ``qec_twin`` import/resolution
-edges. Historical persisted schema strings may remain, but a current simulator service cannot pass
-through the legacy shim. The content hash covers code, both overlays, ``pyproject.toml``, and the
-legacy-symlink target, so changing service/distribution boundaries also makes the map stale.
+installed package and every declared acceptance test for executable imports, dynamic imports, or
+patch targets that resolve through the retired product namespace. The content hash covers code,
+both overlays, ``pyproject.toml``, and the package manifest, so changing service/distribution
+boundaries also makes the map stale.
 
 USE
 ---
@@ -47,9 +47,9 @@ from collections import defaultdict
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
-# Walk real package directories under src/. Directory symlinks are deliberately not descended;
-# ``src/qec_twin`` is reported separately as the legacy boundary. Package keys are fully-qualified
-# relative to src/ (for example ``error_coupling_simulator/source``).
+# Walk real package directories under src/. Directory symlinks are deliberately not descended.
+# Package keys are fully-qualified relative to src/ (for example
+# ``error_coupling_simulator/source``).
 SRC = REPO / "src"
 RUNTIME_PACKAGE = SRC / "error_coupling_simulator"
 TOOLS = REPO / "tools"          # dev tooling (not shipped): gen_code_map, sync_obsidian, ...
@@ -130,7 +130,8 @@ def _owning_root(py: Path) -> Path:
 
 def _pkg_key(py: Path) -> str:
     """Package key for a module. src keys stay relative to src/ (UNCHANGED, e.g.
-    'qec_twin/forward'); tools keys are prefixed by the root name ('tools', 'tools/harness') so the
+    'error_coupling_simulator/carrier'); tools keys are prefixed by the root name ('tools',
+    'tools/harness') so the
     two roots never collide and existing src keys / code_status.json entries are untouched."""
     root = _owning_root(py)
     rel = py.parent.relative_to(root).as_posix()
@@ -143,7 +144,8 @@ def _pkg_key(py: Path) -> str:
 
 def _mod_relpath(py: Path) -> str:
     """Per-module path key (for module-level status overrides + stale-status checks): src modules
-    are relative to src/ ('qec_twin/forward/foo.py'); tools modules to the repo ('tools/harness/foo.py')."""
+    are relative to src/ ('error_coupling_simulator/carrier/records.py'); tools modules to the repo
+    ('tools/harness/foo.py')."""
     root = _owning_root(py)
     return py.relative_to(SRC if root is SRC else REPO).as_posix()
 
@@ -212,14 +214,6 @@ def _code_map_inputs_hash() -> str:
             h.update(hashlib.sha256(path.read_bytes()).digest())
         else:
             h.update(b"<missing>")
-    legacy_link = SRC / "qec_twin"
-    h.update(b"src/qec_twin-symlink-target")
-    if legacy_link.is_symlink():
-        h.update(legacy_link.readlink().as_posix().encode())
-    elif legacy_link.exists():
-        h.update(b"<not-a-symlink>")
-    else:
-        h.update(b"<missing>")
     return h.hexdigest()
 
 
@@ -463,12 +457,12 @@ def _repo_path_error(value: str) -> str | None:
     return None
 
 
-def _legacy_qec_twin_edges(path: Path) -> list[str]:
-    """Find executable legacy-module resolution edges without importing code.
+def _retired_namespace_edges(path: Path) -> list[str]:
+    """Find executable retired-product resolution edges without importing code.
 
-    Plain string constants are deliberately ignored because historical ``qec_twin.*`` schema IDs
-    are persisted compatibility vocabulary. Imports, dynamic imports, and string-based patch/
-    monkeypatch targets resolve Python objects and therefore remain real legacy dependencies.
+    Imports, dynamic imports, and string-based patch/monkeypatch targets resolve Python objects
+    and therefore remain real dependencies. The namespace spelling is assembled so the current
+    repository scan itself does not reintroduce the retired product token.
     """
 
     try:
@@ -476,9 +470,11 @@ def _legacy_qec_twin_edges(path: Path) -> list[str]:
     except SyntaxError as exc:
         return [f"unparseable at line {exc.lineno}: {exc.msg}"]
 
-    def is_legacy(value: object) -> bool:
+    retired_namespace = "qec" + "_" + "twin"
+
+    def is_retired(value: object) -> bool:
         return isinstance(value, str) and (
-            value == "qec_twin" or value.startswith("qec_twin.")
+            value == retired_namespace or value.startswith(retired_namespace + ".")
         )
 
     constant_bindings: dict[str, set[str]] = defaultdict(set)
@@ -502,9 +498,9 @@ def _legacy_qec_twin_edges(path: Path) -> list[str]:
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             for alias in node.names:
-                if is_legacy(alias.name):
+                if is_retired(alias.name):
                     edges.append(f"line {node.lineno}: import {alias.name}")
-        elif isinstance(node, ast.ImportFrom) and is_legacy(node.module):
+        elif isinstance(node, ast.ImportFrom) and is_retired(node.module):
             edges.append(f"line {node.lineno}: from {node.module} import ...")
         elif isinstance(node, ast.Call):
             if isinstance(node.func, ast.Name):
@@ -527,17 +523,17 @@ def _legacy_qec_twin_edges(path: Path) -> list[str]:
                     candidate
                     for argument in arguments
                     for candidate in string_values(argument)
-                    if is_legacy(candidate)
+                    if is_retired(candidate)
                 }):
                     edges.append(f"line {node.lineno}: {func_name}({value!r}, ...)")
     return sorted(set(edges))
 
 
-def _historical_path_error(value: str) -> str | None:
-    """Validate historical/excluded paths without depending on ignored local outputs.
+def _excluded_path_error(value: str) -> str | None:
+    """Validate excluded paths without depending on ignored local outputs.
 
     ``outputs/`` is intentionally absent from a clean checkout, so catalog entries under that
-    root are locators, not existence requirements. Tracked package/legacy/docs boundaries still
+    root are locators, not existence requirements. Tracked package/docs boundaries still
     have to exist when the map is generated.
     """
 
@@ -650,18 +646,6 @@ def _validate_service_status(catalog: dict) -> dict:
                     ep_error = _entrypoint_error(value)
                     if ep_error:
                         errors.append(f"{owner}.entrypoint {value!r}: {ep_error}")
-        if "legacy_sources" in service:
-            legacy_sources, legacy_errors = _string_list_errors(
-                service,
-                "legacy_sources",
-                owner=owner,
-                nonempty=False,
-            )
-            errors.extend(legacy_errors)
-            for legacy_path in legacy_sources:
-                path_error = _historical_path_error(legacy_path)
-                if path_error:
-                    errors.append(f"{owner}.legacy_sources path {legacy_path!r} {path_error}")
         dependencies = service.get("dependencies")
         if not isinstance(dependencies, dict):
             errors.append(f"{owner}.dependencies must be an object")
@@ -871,9 +855,10 @@ def _validate_service_status(catalog: dict) -> dict:
 
     for value in sorted(runtime_modules | acceptance_paths):
         path = REPO / value
-        for edge in _legacy_qec_twin_edges(path):
+        for edge in _retired_namespace_edges(path):
             errors.append(
-                f"current simulator surface {value!r} resolves through legacy qec_twin ({edge})"
+                f"current simulator surface {value!r} resolves through the retired product "
+                f"namespace ({edge})"
             )
 
     support_assets = catalog.get("support_assets", [])
@@ -931,7 +916,7 @@ def _validate_service_status(catalog: dict) -> dict:
         paths, path_errors = _string_list_errors(item, "paths", owner=owner)
         errors.extend(path_errors)
         for value in paths:
-            path_error = _historical_path_error(value)
+            path_error = _excluded_path_error(value)
             if path_error:
                 errors.append(f"{owner}.paths path {value!r} {path_error}")
         for field in ("disposition", "reason"):
@@ -941,17 +926,6 @@ def _validate_service_status(catalog: dict) -> dict:
         errors.append("excluded_surfaces IDs must be globally unique")
     if service_id_set.intersection(excluded_ids):
         errors.append("service IDs and excluded_surfaces IDs must not overlap")
-    required_exclusions = {
-        "bayes_floor_analysis",
-        "legacy_thin_strip_mps",
-        "legacy_symlink_boundary",
-        "m0_m34_compatibility_catalog",
-        "lru_dqlr_unimplemented",
-    }
-    missing_exclusions = sorted(required_exclusions - set(excluded_ids))
-    if missing_exclusions:
-        errors.append(f"required simulator exclusions/gaps missing: {missing_exclusions}")
-
     by_id = {
         service["id"]: service
         for service in services
@@ -1007,7 +981,6 @@ def _validate_service_status(catalog: dict) -> dict:
             if not isinstance(node.get(field), str) or not node[field].strip():
                 errors.append(f"{owner}.{field} must be a non-empty string")
         if "class" in node and node["class"] not in {
-            "archived",
             "research",
             "plugin",
             "restricted",
@@ -1129,7 +1102,7 @@ def _render_service_catalog(catalog: dict, validation: dict) -> list[str]:
         f"{validation['support_modules']} explicit support modules).",
         f"- ✅ canonical ownership clean — installed modules and all "
         f"{validation['acceptance_files']} declared acceptance files have no executable "
-        "`qec_twin` import, dynamic-import, or patch-target edge.",
+        "retired-namespace import, dynamic-import, or patch-target edge.",
         f"- ✅ native-backend lifetime isolation — {validation['acceptance_isolation']}; "
         f"runner `{catalog['acceptance_execution']['runner']}`, default environment "
         f"`{catalog['acceptance_execution']['default_conda_environment']}` with explicit "
@@ -1252,8 +1225,8 @@ def _render_service_flow(catalog: dict) -> list[str]:
         "## COMPLETE SERVICE FLOW",
         "",
         "> This diagram is generated from the same validated catalog as the matrix. It distinguishes "
-        "canonical record emission from reduced comparators, restricted evidence, research, archived "
-        "findings, and the isolated CUDA-Q process. An arrow denotes an implemented data/dependency "
+        "canonical record emission from reduced comparators, restricted evidence, research carriers, "
+        "and the isolated CUDA-Q process. An arrow denotes an implemented data/dependency "
         "route unless its label explicitly says OPEN.",
         "",
         "```mermaid",
@@ -1273,7 +1246,6 @@ def _render_service_flow(catalog: dict) -> list[str]:
             lines.append(f'  {edge["from"]} --> {edge["to"]}')
     lines.extend(
         [
-            "  classDef archived fill:#eeeeee,stroke:#777777,stroke-dasharray:5 5,color:#333333",
             "  classDef research fill:#fff4cc,stroke:#a37b00,color:#333333",
             "  classDef plugin fill:#e8ddff,stroke:#6941c6,color:#333333",
             "  classDef restricted fill:#e6f0ff,stroke:#3266a8,stroke-dasharray:3 3,color:#333333",
@@ -1289,37 +1261,6 @@ def _render_service_flow(catalog: dict) -> list[str]:
         lines.append(f"  class {','.join(node_ids)} {class_name}")
     lines.extend(["```", ""])
     return lines
-
-
-def _render_legacy_symlink_boundary() -> list[str]:
-    link = SRC / "qec_twin"
-    _, _, includes = _project_dependency_contract()
-    if link.is_symlink():
-        target = link.readlink().as_posix()
-        resolved = link.resolve().relative_to(REPO).as_posix()
-        state = f"symbolic link → `{target}` (resolved: `{resolved}`)"
-    elif link.exists():
-        state = "⚠ exists but is not a symbolic link"
-    else:
-        state = "⚠ missing"
-    scanned_qec_twin = any(
-        _mod_relpath(py).startswith("qec_twin/")
-        for _, py in _iter_modules()
-    )
-    return [
-        "## LEGACY / DISTRIBUTION BOUNDARY",
-        "",
-        f"- `src/qec_twin`: {state}.",
-        "- The AST inventory deliberately does not descend this directory symlink; "
-        + ("⚠ qec_twin modules unexpectedly appeared in the scan." if scanned_qec_twin else "✅ no legacy qec_twin module entered the generated module inventory."),
-        f"- Setuptools package allowlist: {_code_lines(includes)}. The wheel therefore ships only the "
-        "installed `error_coupling_simulator` namespace; `qec_twin` remains an outward compatibility/RAG "
-        "workspace boundary.",
-        "- `docs/service_status.json` records Bayes-floor analysis, the old specialized thin-strip MPS, "
-        "the M0–M34 compatibility adapter, the unimplemented LRU/DQLR bridge, and the symlinked legacy "
-        "tree as explicit non-services or open gaps.",
-        "",
-    ]
 
 
 def build_map() -> tuple[str, dict]:
@@ -1357,8 +1298,8 @@ def build_map() -> tuple[str, dict]:
                  "or packaging change: `python tools/gen_code_map.py`. Staleness: "
                  "`python tools/gen_code_map.py --check` exits 1 when the input hash above no longer "
                  "matches code, `docs/code_status.json`, `docs/service_status.json`, `pyproject.toml`, "
-                 "`MANIFEST.in`, or the `src/qec_twin` symlink target.")
-    lines.append("- **Status** (ACTIVE / PLACEHOLDER / ARCHIVED + one-line note) is the hand-maintained "
+                 "`MANIFEST.in`.")
+    lines.append("- **Status** (ACTIVE / PLACEHOLDER / RESEARCH + one-line note) is the hand-maintained "
                  "module overlay `docs/code_status.json`. Runtime-service inclusion/exclusion, controls, "
                  "dependencies, acceptance paths, and flow live in `docs/service_status.json`.")
     lines.append("")
@@ -1377,8 +1318,6 @@ def build_map() -> tuple[str, dict]:
 
     lines.extend(_render_service_catalog(service_status, service_validation))
     lines.extend(_render_service_flow(service_status))
-    lines.extend(_render_legacy_symlink_boundary())
-
     # group modules by package.
     by_pkg: dict[str, list[Path]] = {}
     for pkg_rel, py in _iter_modules():

@@ -256,7 +256,9 @@ def test_dense_qutrit_mcwf_executor_runs_generic_program_and_reports_timing():
     assert result.psi.shape == (3, 3**2)
     assert result.timing.timing_method == "cuda_event"
     assert result.timing.physics_program_s >= 0.0
-    assert executor.manifest()["schema"] == "qec_twin.simulator.DenseQutritMcwfExecutor.v1"
+    assert executor.manifest()["schema"] == (
+        "error_coupling_simulator.frontend.dense_qutrit_mcwf_executor.v1"
+    )
     for qidx in [qutrit_index_from_digits((0, 0)), qutrit_index_from_digits((0, 1)),
                  qutrit_index_from_digits((1, 0)), qutrit_index_from_digits((1, 1))]:
         assert torch.allclose(
@@ -297,7 +299,9 @@ def test_native_opstream_executor_matches_dense_torch_reference():
     out_native = native.run(program, batch_size=7, kraus_families={"leak": kraus}).psi
     out_ref = dense_ref.run(program, batch_size=7, kraus_families={"leak": kraus}).psi
 
-    assert native.manifest()["schema"] == "qec_twin.simulator.NativeOpStreamMcwfExecutor.v1"
+    assert native.manifest()["schema"] == (
+        "error_coupling_simulator.frontend.native_op_stream_mcwf_executor.v1"
+    )
     assert torch.allclose(out_native, out_ref, atol=1e-12, rtol=1e-12)
 
 
@@ -358,7 +362,9 @@ def test_block_trajectory_executor_matches_native_opstream_reference():
     out_block = block.run(program, batch_size=7, kraus_families={"leak": kraus}).psi
     out_native = native.run(program, batch_size=7, kraus_families={"leak": kraus}).psi
 
-    assert block.manifest()["schema"] == "qec_twin.simulator.BlockTrajectoryMcwfExecutor.v1"
+    assert block.manifest()["schema"] == (
+        "error_coupling_simulator.frontend.block_trajectory_mcwf_executor.v1"
+    )
     assert torch.allclose(out_block, out_native, atol=1e-12, rtol=1e-12)
 
 
@@ -411,7 +417,9 @@ def test_graph_captured_executor_matches_native_opstream_reference():
     out_graph = graph.run(program, batch_size=7, kraus_families={"leak": kraus}).psi
     out_native = native.run(program, batch_size=7, kraus_families={"leak": kraus}).psi
 
-    assert graph.manifest()["schema"] == "qec_twin.simulator.GraphCapturedMcwfExecutor.v1"
+    assert graph.manifest()["schema"] == (
+        "error_coupling_simulator.frontend.graph_captured_mcwf_executor.v1"
+    )
     assert torch.allclose(out_graph, out_native, atol=1e-12, rtol=1e-12)
 
 

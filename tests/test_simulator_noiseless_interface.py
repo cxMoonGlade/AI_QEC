@@ -5,8 +5,11 @@ import json
 import numpy as np
 import pytest
 
-from qec_twin.simulator.noise_spec import StimPauliNoiseSpec, apply_stim_pauli_noise
-from qec_twin.simulator import (
+from error_coupling_simulator.frontend.noise_spec import (
+    StimPauliNoiseSpec,
+    apply_stim_pauli_noise,
+)
+from error_coupling_simulator.frontend import (
     CircuitBuilder,
     StimCircuitSource,
     Simulator,
@@ -14,7 +17,7 @@ from qec_twin.simulator import (
     compile_code_spec,
     simulate_noiseless,
 )
-from qec_twin.simulator.stim_io import circuit_to_stim
+from error_coupling_simulator.frontend.stim_io import circuit_to_stim
 
 
 def test_run_noiseless_accepts_user_built_circuit_and_loads_records(tmp_path):

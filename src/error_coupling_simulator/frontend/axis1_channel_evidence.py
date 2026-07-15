@@ -34,10 +34,10 @@ from .analog_schedule import (
     require_compiler_schedule_seal,
 )
 from .artifacts import file_sha256, write_json
-from .axis1_bridge import (
-    G2_GAMMA_1_PER_NS,
-    G2_GAMMA_PHI_PER_NS,
-    G2_ZETA_RAD_PER_NS,
+from .joint_channel_comparison import (
+    JOINT_CHANNEL_GAMMA_1_PER_NS,
+    JOINT_CHANNEL_GAMMA_PHI_PER_NS,
+    JOINT_CHANNEL_ZETA_RAD_PER_NS,
 )
 from .axis1_context import (
     axis1_local_lindblad_context_from_schedule,
@@ -57,7 +57,9 @@ from .axis1_selection import (
 )
 
 
-AXIS1_CHANNEL_EVIDENCE_SCHEMA = "qec_twin.simulator.axis1_substep_channel_evidence.v1"
+AXIS1_CHANNEL_EVIDENCE_SCHEMA = (
+    "error_coupling_simulator.frontend.substep_channel_evidence.v1"
+)
 AXIS1_CHANNEL_EVIDENCE_REPRESENTABILITY = "axis1_joint_channel_evidence_no_record_emission"
 AXIS1_CHANNEL_ALLOWED_SOURCE_KINDS = frozenset(
     {"circuit_ir", "code_spec_compiler", "stim_circuit"}
@@ -171,7 +173,7 @@ class Axis1AssembledSelectionChannel:
     channel for the diagnostic channel/state-evidence paths and `CoupledCycleNoiseProcess.channels`;
     it is assembled lazily (on first access) from the stored generators, so the hot record path
     never pays the full-window ``expm`` + Choi ``eigh`` it eliminated. When
-    ``QEC_TWIN_NO_FACTORIZE=1`` (or a genuine single full-window component), ``components`` is a
+    ``ECS_FORCE_UNFACTORIZED_AXIS1=1`` (or a genuine single full-window component), ``components`` is a
     single ``(range(nq), full_window_kraus)`` entry and ``kraus`` returns that same tensor.
     """
 
@@ -357,7 +359,7 @@ def freeze_axis1_substep_channel_evidence(
             manifest=existing,
         )
     payload = {
-        "schema": "qec_twin.simulator.axis1_substep_channel_freeze.v1",
+        "schema": "error_coupling_simulator.frontend.substep_channel_freeze.v1",
         "evidence_file": evidence_path.name,
         "evidence_schema": manifest.get("schema"),
         "evidence_sha256": sha,
@@ -413,7 +415,7 @@ def validate_axis1_substep_channel_freeze(freeze_path: str | Path) -> dict[str, 
     if failed:
         raise ValueError(f"Axis-1 channel freeze metadata mismatch: {failed}")
     return {
-        "schema": "qec_twin.simulator.axis1_substep_channel_freeze_validation.v1",
+        "schema": "error_coupling_simulator.frontend.substep_channel_freeze_validation.v1",
         "freeze_file": path.name,
         "evidence_file": evidence_path.name,
         "evidence_sha256": sha,
@@ -545,7 +547,7 @@ def _assemble_selection_joint_channel(
     # EXACT coupling-component factorization (SPEC 2026-07-04): the joint substep channel is
     # the tensor product over the connected components of the 2-qubit coupling graph, built at
     # small per-component dimension instead of one full-window expm + Choi eigh. Honors
-    # QEC_TWIN_NO_FACTORIZE=1 (and the single-full-window case) as the exact current path.
+    # ECS_FORCE_UNFACTORIZED_AXIS1=1 (and the single-full-window case) as the exact current path.
     #
     # THIN BATCH LAYER (measured 2026-07-04): the per-component builds are launch-bound (many tiny
     # sequential matrix_exp/eigh on 4x4/16x16), 88% of the per-manifest cost. Grouping this selection's
@@ -569,9 +571,9 @@ def _assemble_selection_joint_channel(
 
 def _axis1_primitive_params_for_schedule(schedule: SubstepSchedule) -> Axis1PrimitiveParams:
     defaults = Axis1PrimitiveParams(
-        zeta_rad_per_ns=G2_ZETA_RAD_PER_NS,
-        gamma_phi_per_ns=G2_GAMMA_PHI_PER_NS,
-        gamma_1_per_ns=G2_GAMMA_1_PER_NS,
+        zeta_rad_per_ns=JOINT_CHANNEL_ZETA_RAD_PER_NS,
+        gamma_phi_per_ns=JOINT_CHANNEL_GAMMA_PHI_PER_NS,
+        gamma_1_per_ns=JOINT_CHANNEL_GAMMA_1_PER_NS,
     )
     context = axis1_local_lindblad_context_from_schedule(schedule)
     return context.to_axis1_primitive_params(defaults)
@@ -1334,7 +1336,7 @@ def _load_channel_freeze_manifest(path: Path) -> dict[str, Any]:
     if not path.exists():
         raise FileNotFoundError(path)
     data = json.loads(path.read_text())
-    if data.get("schema") != "qec_twin.simulator.axis1_substep_channel_freeze.v1":
+    if data.get("schema") != "error_coupling_simulator.frontend.substep_channel_freeze.v1":
         raise ValueError(
             f"{path} is not an Axis-1 channel-evidence freeze: schema={data.get('schema')!r}"
         )

@@ -3,7 +3,7 @@
 // out[b, x, y] = sum_k sum_{u,v} K[k, tx, u] * rho[b, sub(x,u), sub(y,v)] * conj(K[k, ty, v])
 //
 // where tx/ty are the target-qubit bits of x/y (qubit 0 = most-significant bit,
-// matching qec_twin.forward.exact.circuit_sim), and sub(x, u) replaces the target
+// matching the package exact circuit simulator), and sub(x, u) replaces the target
 // bits of x by the bits of u. Raw sum only — the caller hermitianizes (matching
 // apply_kraus). Replaces embed_operator (kron + permute + contiguous) + einsum.
 

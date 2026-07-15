@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-"""Boundary-MPS contraction, ``Tr(rho * Pi)`` site caps, and Born sampling for the
-rung-1 d3 PEPO engine (builder A3; contract
-``docs/nonpauli_teacher/pepo_engine_rung1_contract.md`` v4.2 §3, sampler rows).
+"""Boundary-MPS contraction and ``Tr(rho * Pi)`` reads for the PEPO carrier.
 
 The state object is :class:`~.layout.PepoState`: a quimb ``TensorNetwork`` of rank<=5
 site tensors on the (u, v) grid, one per data qutrit, physical leg = the FUSED d^2 = 9
@@ -22,9 +20,6 @@ This module implements the s3 registry rows owned by A3:
     docstring; a cap is an EXPECTATION functional, never ``M (x) M.conj()``).
   * :func:`stab_expectation` — the pinned two-term ``E_s`` decomposition
     ``Tr(E_s rho) = 1/2 Tr(rho) + 1/2 (-1)^s Tr(rho * (x)_q M_q)`` (contract §3).
-  * :func:`born_sample_round` — sequential conditional Born sampling of one round's
-    stabilizers, SELECTIVE ``sqrt(E_s)`` update via ``dynamics.apply_stab_branch`` +
-    ``dynamics.ntu_truncate``, renormalize + ledger, negativity witness on every draw.
   * :func:`terminal_readout_obs` — the pinned obs law VERBATIM (logical support only,
     ``isx`` sites H-conjugated, ``F1 = |1><1| + b|2><2|``, ``F0 = |0><0| + (1-b)|2><2|``,
     parity XOR ``m``).
@@ -48,7 +43,7 @@ contraction value is axis-independent; this one is fixed here for determinism.
 
 GPU + complex128 (S8): every cap/effect tensor is created ``torch.complex128`` on
 ``state.device`` (devices passed in, never chosen here). No pytest/GPU execution happens
-at import; ``dynamics`` is imported lazily inside :func:`born_sample_round`.
+at import.
 """
 
 import numpy as np
@@ -297,7 +292,7 @@ class NormCache:
     Rudolph–Tindall reverse pass (their §II-C norm-network pre-computation), adapted to
     the SINGLE-layer PEPO trace network. Built once per state snapshot; the cache does
     NOT track state mutation (a stale cache is the caller's bug — rebuild after any
-    selective update / truncation; :func:`born_sample_round` does).
+    state update or truncation).
     """
 
     def __init__(self, layout, R_n: int, right_envs: dict) -> None:
@@ -561,129 +556,6 @@ def negativity_witness(q_raw: float, tr: float, ledger: list, g19_bar: float,
 
 
 # --------------------------------------------------------------------------- #
-# born_sample_round — sequential conditional sampling + selective update       #
-# --------------------------------------------------------------------------- #
-def _stab_paulis(stab) -> dict:
-    """Accept a parsed stabilizer object (``.paulis``) or a plain paulis dict."""
-    if hasattr(stab, "paulis"):
-        return dict(stab.paulis)
-    return dict(stab)
-
-
-def _path_bonds(state, paulis: dict) -> list[str]:
-    """The bond index names along the layout's plaquette path through the support —
-    the bonds :func:`dynamics.apply_stab_branch` grows and the ones NTU truncates."""
-    path = state.layout.plaquette_path({int(k): str(v) for k, v in paulis.items()})
-    bonds: list[str] = []
-    for a, b in zip(path[:-1], path[1:]):
-        ta = _site_tensor(state, a)
-        tb = _site_tensor(state, b)
-        shared = set(ta.inds) & set(tb.inds)
-        if not shared:
-            raise RuntimeError(f"no bond between path-adjacent sites Q{a} and Q{b}")
-        bonds.extend(sorted(shared))
-    return bonds
-
-
-def born_sample_round(state, stabs: list, b: float, arm: str, rng, R_n: int, R_x: int,
-                      D_cap: int, *, g19_bar: float | None = None,
-                      stats: C3Stats | None = None,
-                      log_only: bool = False) -> list[int]:
-    """One round of sequential conditional Born sampling over ``stabs`` (contract §3):
-    per stabilizer, ``q = Tr(E_s rho) / Tr(rho)`` through the PRODUCTION site-cap path,
-    sample the bit, apply the SELECTIVE ``sqrt(E_s)`` branch via
-    ``dynamics.apply_stab_branch`` (+ ``dynamics.ntu_truncate`` on the grown support-path
-    bonds), renormalize with a ledger entry, and run the negativity witness on EVERY
-    Born draw. Emits the RAW ``s`` bits (detector folding is :func:`s_to_det`,
-    downstream — the ``seam.py`` convention).
-
-    Boundary dims: ``R_n`` = the norm-pass dim (``Tr(rho)``), ``R_x`` = the sample-pass
-    dim (the ``E_s`` expectation) — the G1.1 chi_b sub-gate arms set them equal per arm.
-    The cache is REBUILT per stabilizer (the state mutates after every selective
-    update; a stale cache is a correctness bug, not an optimization).
-
-    Witness call convention (documented design decision): the two branch weights obey
-    ``q_0 + q_1 = Tr(rho)``, so with a positive trace at most ONE of them can be
-    negative; the witness is called once per draw on ``min(q_0, q_1)``, which carries
-    the draw's entire negative mass and dominates rule (i) for both branches.
-    ``g19_bar`` defaults to the registered Weyl floor ``4.8e-4`` until the measured
-    G1.9-pre bar is wired in by the run scripts. ``stats`` is the run-level
-    :class:`C3Stats` accumulator (C3 rule ii; the run driver owns it) and ``log_only``
-    the v4.2 C3 arm-scoping flag (R=4 exerciser arm: would-trips logged as
-    ``c3_would_trip``, never raised) — both passed through to
-    :func:`negativity_witness` on every draw.
-    """
-    from . import dynamics  # lazy: parallel-build + import-order safety
-
-    bar = float(g19_bar) if g19_bar is not None else G19_BAR_WEYL_FLOOR
-    if stats is None:
-        # C3 rule (ii) is RUN-level (contract §4, non-optional): with no run
-        # accumulator passed it is NOT enforced in this call — mark that fact so a
-        # stats-less run is ledger-detectable (per-draw born_negativity entries
-        # still carry the audit data for an offline mean).
-        state.ledger.append({
-            "kind": "c3_rule_ii_inactive",
-            "where": "born_sample_round",
-            "g19_bar": bar,
-        })
-    bits: list[int] = []
-    for j, stab in enumerate(stabs):
-        paulis = _stab_paulis(stab)
-
-        cache_n = norm_cache(state, int(R_n))
-        tr = expect_site_caps(state, {}, cache=cache_n, R_n=int(R_n)).real
-        cache_x = cache_n if int(R_x) == int(R_n) else norm_cache(state, int(R_x))
-        q1_raw = stab_expectation(state, paulis, 1, b, arm, cache=cache_x, R_n=int(R_x))
-        q0_raw = tr - q1_raw
-
-        negativity_witness(min(q0_raw, q1_raw), tr, state.ledger, bar,
-                           stats=stats, log_only=log_only)
-        if tr <= NUMERICAL_ZERO:
-            raise RuntimeError(
-                f"C3_STOP: nonpositive parent trace {tr:.6e} at stab {j} (state collapsed)")
-
-        p1 = min(1.0, max(0.0, q1_raw / tr))
-        outcome = 1 if float(rng.random()) < p1 else 0
-        bits.append(outcome)
-
-        # SELECTIVE sqrt(E_s) branch (dynamics owns the TT + NTU internals)
-        stab_tt = dynamics.stab_channel_tt(paulis, outcome, float(b), str(arm),
-                                           state.layout, state.device)
-        dynamics.apply_stab_branch(state, stab_tt)
-        # v4.3 TWO-PASS truncation (2026-07-10 first-execution fix): pass 1 bounds
-        # every grown path bond to 4*D_cap by a local SVD gauge cut so the NTU
-        # metric cluster (pass 2) never doubles a raw 25*D neighbor bond — a
-        # (25D)^4 transfer object is byte-infeasible at D=16 (dynamics.svd_precut_bond).
-        path_bonds = _path_bonds(state, paulis)
-        for bond in path_bonds:
-            if state.tn.ind_size(bond) > 4 * int(D_cap):
-                dynamics.svd_precut_bond(state, bond, 4 * int(D_cap))
-        for bond in path_bonds:
-            if state.tn.ind_size(bond) > int(D_cap):
-                dynamics.ntu_truncate(state, bond, int(D_cap))
-
-        # renormalize + ledger (engine convention; the pre-renorm trace is the record)
-        tr_new = pepo_trace(state).real
-        if tr_new <= NUMERICAL_ZERO:
-            raise RuntimeError(
-                f"C3_STOP: nonpositive post-branch trace {tr_new:.6e} at stab {j} "
-                f"(outcome {outcome})")
-        state.tn.multiply_(1.0 / tr_new)
-        state.ledger.append({
-            "kind": "renorm",
-            "stab": j,
-            "outcome": int(outcome),
-            "trace_raw": float(tr_new),
-            "p1": float(p1),
-            "q1_raw": float(q1_raw),
-            "q0_raw": float(q0_raw),
-            # contract §3: measured TT ranks logged (re-review 2026-07-10)
-            "tt_ranks": tuple(int(r) for r in stab_tt.ranks),
-        })
-    return bits
-
-
-# --------------------------------------------------------------------------- #
 # terminal_readout_obs — the pinned obs law VERBATIM (contract §3, v4 pin)     #
 # --------------------------------------------------------------------------- #
 def _terminal_site_effects(logical: dict, isx: dict, b: float, device) -> dict:
@@ -746,9 +618,7 @@ def terminal_readout_obs(state, logical: dict, isx: dict, b: float, m: int, rng,
     The state is NOT mutated (terminal round: no post-measurement state is consumed —
     the referee's biased-b obs composition is the A4-side mirror of exactly this law).
     Each per-site draw runs the negativity witness (a terminal draw is a Born draw of
-    the run; C3 rule ii is per-draw): ``g19_bar`` is resolved ONCE like
-    :func:`born_sample_round` does (the measured G1.9 bar when wired by the run
-    scripts, else the registered Weyl floor) and passed to every witness call, along
+    the run; C3 rule ii is per-draw): ``g19_bar`` is resolved once and passed to every witness call, along
     with the run-level ``stats`` accumulator and the v4.2 ``log_only`` arm-scoping
     flag.
     """
@@ -756,7 +626,7 @@ def terminal_readout_obs(state, logical: dict, isx: dict, b: float, m: int, rng,
     bar = float(g19_bar) if g19_bar is not None else G19_BAR_WEYL_FLOOR
     if stats is None:
         # C3 rule (ii) unenforced without the run accumulator — ledger-mark it
-        # (same convention as born_sample_round; re-review 2026-07-10).
+        # Mark that the run-level rule is inactive without an accumulator.
         state.ledger.append({
             "kind": "c3_rule_ii_inactive",
             "where": "terminal_readout_obs",
@@ -775,11 +645,32 @@ def terminal_readout_obs(state, logical: dict, isx: dict, b: float, m: int, rng,
             raise RuntimeError(
                 f"C3_STOP: nonpositive conditional trace {den:.6e} in terminal readout "
                 f"at site {q}")
-        p1 = min(1.0, max(0.0, num1 / den))
+        p1 = _validated_conditional_probability(
+            num1,
+            den,
+            where=f"terminal readout at site {q}",
+        )
         bit = 1 if float(rng.random()) < p1 else 0
         caps_acc[q] = e1 if bit else e0
         parity ^= bit
     return int(parity ^ (int(m) & 1))
+
+
+def _validated_conditional_probability(weight: float, total: float, *, where: str) -> float:
+    """Return ``weight / total`` without manufacturing probability mass.
+
+    Structural zero and one are preserved exactly.  Non-finite, negative, or
+    above-total weights are invalid carrier states and stop sampling instead of
+    being clipped into the probability simplex.
+    """
+
+    probability = float(weight) / float(total)
+    if not np.isfinite(probability) or probability < 0.0 or probability > 1.0:
+        raise RuntimeError(
+            f"C3_STOP: illegal conditional probability {probability!r} in {where} "
+            f"(weight={float(weight)!r}, total={float(total)!r})"
+        )
+    return probability
 
 
 def terminal_readout_obs_prob(state, logical: dict, isx: dict, b: float, m: int) -> float:

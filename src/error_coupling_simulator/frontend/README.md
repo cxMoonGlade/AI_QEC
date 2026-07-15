@@ -8,8 +8,7 @@ mechanisms and evaluator-only process truth live in
 
 Distribution/runtime boundary:
 
-- Frontend runtime ownership is package-local; it never imports the repo-only `qec_twin`
-  compatibility shims or RAG tooling. Those old paths point outward and are not shipped.
+- Frontend runtime ownership is package-local and independent of repository-only tooling.
 - Google r01/r10 `.stim` + metadata files are explicit external circuit/geometry/schedule inputs,
   not bundled assets or sources of noise parameters. Ququart transport derives its channel from
   explicit package-owned `CZParams`, or accepts an in-memory channel / explicit serialized cache;
@@ -80,26 +79,28 @@ Current slice:
   Classical assignment flips, correlated assignment crosstalk, and reset
   infidelity are separate record/preparation instruments, not joint-L
   primitives. MIST/leakage remains out of scope.
-- Minimal Axis-1 G2 frontend bridge: `axis1_g2_frontend_gate(...)` consumes a
+- Minimal Axis-1 joint-channel comparison: `joint_channel_comparison_gate(...)` consumes a
   compiler-generated `SubstepSchedule`, derives the narrow
-  `Axis1MechanismSelectionPlan` for the preregistered `ZZ x T2` and contextual
+  `Axis1MechanismSelectionPlan` for the registered `ZZ x T2` and contextual
   `DR x ZZ` rows, lowers those selections, and calls
-  `carrier.joint_lindbladian` diagnostics to emit G2 evidence rows. The
+  `carrier.joint_lindbladian` diagnostics to emit comparison evidence rows. The
   `DR x ZZ` row uses the build-contract one-qubit substep context
   `DR + ZZ + T2 + T1` while reporting the `DR x ZZ` commutator as the nonzero
   witness. Lowering is routed through the minimal
   `error_coupling_simulator.mechanisms.axis1_primitives` registry for the current local
   two-qubit-window
   `DR/ZZ/T2/T1/T1_UP/T2_B/T1_B/T1_UP_B/RD/RD_B/FSIM_SWAP/FSIM_PHASE`
-  primitives, though this G2
+  primitives, though this comparison
   harness uses only the registered DR/ZZ/T1/T2 subset; manifests record the
   registry id and declare that registry metadata contains no operator payload.
   It is a gate harness, not record emission or full coupled-process execution.
-  `write_axis1_g2_evidence(...)` writes the same object as `g2_jointL.json`
+  `write_joint_channel_comparison_evidence(...)` writes
+  `joint_channel_comparison.json`
   with a content hash and PASS/FAIL verdict. The reproducible command
-  `python -m error_coupling_simulator.frontend.axis1_g2_runner --out-dir ...` builds the
-  fixed compiler-generated fixture, writes `g2_jointL.json`, and by default
-  writes `g2_jointL.freeze.json` only when no freeze exists. If a freeze exists,
+  `python -m error_coupling_simulator.frontend.joint_channel_comparison_runner --out-dir ...`
+  builds the fixed compiler-generated fixture, writes
+  `joint_channel_comparison.json`, and by default writes
+  `joint_channel_comparison.freeze.json` only when no freeze exists. If a freeze exists,
   the runner validates it instead of silently refreshing it. Use
   `--refresh-freeze` only for an intentional evidence-schema or value update;
   `--validate-freeze` recomputes the evidence file sha256 and manifest content
@@ -159,7 +160,7 @@ Current slice:
   measured qubits; idle spectators receive background `T1/T2` context.
   Readout supports above the dense gate still fall back to selected disjoint
   pair windows and report leftover measured qubits as coverage gaps.
-  `DR` remains a G2 diagnostic primitive and is not used as a generic ideal-gate
+  `DR` remains a joint-vs-composed diagnostic primitive and is not used as a generic ideal-gate
   stand-in. The bridge then calls
   `error_coupling_simulator.carrier.joint_lindbladian.assemble_substep_channel` to produce
   carrier evidence rows. The artifact reports joint-generator semantics,
@@ -167,7 +168,7 @@ Current slice:
   mechanism manifests; it deliberately does not serialize Kraus stacks, Choi
   matrices, or superoperator matrices.
   `freeze_axis1_substep_channel_evidence(...)` writes a
-  drift guard for that evidence file, mirroring the G2 freeze behavior. The
+  drift guard for that evidence file, mirroring the joint-channel comparison freeze behavior. The
   manifest carries a coverage ledger listing selected and omitted substeps so
   unsupported barriers/readout/reset/operation kinds are never silently claimed;
   `full_positive_duration_coverage=false` means the rows passed only for the
@@ -197,7 +198,7 @@ Current slice:
   semantics, no analog record emission, no Axis-2 source projection, and no
   leakage/qutrit integration. `freeze_axis1_state_evolution_evidence(...)`
   guards this JSON evidence identity with the same file-hash/content-hash style
-  used by the G2, channel, and record evidence artifacts.
+  used by the joint-channel comparison, channel, and record evidence artifacts.
 - Axis-1 measurement-record evidence:
   `axis1_measurement_record_evidence_manifest(...)` and
   `write_axis1_measurement_record_evidence(...)` extend the exact small-N
@@ -497,15 +498,14 @@ Current slice:
   `load_xzzx_d3(...)` parses the r01 geometry (`verify=True`) and, by default,
   attaches the r10 interior within-cycle streams (the explicit
   r01-geometry + r10-streams provenance split). The dataset root resolves as
-  `dataset_root` argument > `QEC_TWIN_D3_DATA` env var > the external user-data default; a
+  `dataset_root` argument > `ECS_D3_DATA_ROOT` env var > the external user-data default; a
   missing root or file raises `FileNotFoundError` naming the path — never a
-  silent fallback to the default root. `QEC_TWIN_D3_DATA` is a retained configuration spelling,
-  not a package dependency or import. `ExperimentPreset` is a frozen,
+  silent fallback to the default root. `ExperimentPreset` is a frozen,
   registered configuration (a *preset*) with NO silent physics defaults; the
   two theta conventions are DISTINCT registered presets:
   `PRESET_LEAK_THETA_0P30` (raw angle, `theta_rad=0.30`) and
-  `PRESET_LEAK_WG_L1_5E3` (`theta` calibrated to `WG_L1 = 5e-3` via
-  `calibrate_theta_for_wg_l1`). `run_spec_from_preset(...)` builds the engine
+  `PRESET_LEAK_WG_L1_5E3` (`theta` solved to `WG_L1 = 5e-3` via
+  `solve_theta_for_wg_l1`). `run_spec_from_preset(...)` builds the engine
   `RunSpec` with explicit `n_shots`/`n_rounds`/`seed`, and
   `leak_slice_table(...)` returns the per-CZ `exp(L/4)` Kraus table through
   package-local `WithinCycleScheduleHost.build_within_cycle_leak` (its embedded CPTP `< 1e-12` and
@@ -545,7 +545,8 @@ Representability boundary:
   Stim noise is rejected. Public `noise_projection` metadata is a manifest fact,
   not an authorization token for raw source-embedded noise gates; simulator noise
   passes attach noise instructions through the internal noise-projection path.
-- `axis1_g2_frontend_gate(...)` remains limited to the registered two-row G2
+- `joint_channel_comparison_gate(...)` remains limited to the registered two-row
+  joint-vs-composed comparison
   slice. Its `Axis1MechanismSelectionPlan` is schedule-derived metadata only:
   active CZ operations supply the exact-zero diagnostic row, persistent
   static-ZZ couplings come only from public `axis1_static_zz_couplings`
@@ -555,11 +556,11 @@ Representability boundary:
   `error_coupling_simulator.mechanisms.axis1_primitives`. It refuses oracle schedules, requires
   a valid compiler-owned schedule seal plus compiler-generated substeps, and
   never consumes `SourceTimeline` or source-projection sidecars.
-- `g2_jointL.json` is an evidence artifact, not a simulator run artifact. It
+- `joint_channel_comparison.json` is an evidence artifact, not a simulator run artifact. It
   must not create `.stim`, `.dem`, `.b8`, decoder, source, or leakage files.
-- `g2_jointL.freeze.json` is a hash guard for that evidence artifact. It does
+- `joint_channel_comparison.freeze.json` is a hash guard for that evidence artifact. It does
   not certify a full analog simulator run; it only detects drift in the frozen
-  frontend G2 evidence file. A normal runner invocation does not bless drift by
+  frontend joint-channel comparison file. A normal runner invocation does not bless drift by
   overwriting an existing freeze.
 - `representability="axis1_joint_channel_evidence_no_record_emission"` means the
   Axis-1 bridge assembled joint-channel carriers from schedule-derived

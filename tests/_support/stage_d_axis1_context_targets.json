@@ -1,8 +1,8 @@
 {
   "_comment": [
     "STAGE-D per-batch coverage registry -- batch 'axis1_context' (D22, Tier-2 frontend cluster)",
-    "(docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4; full-coverage program;",
-    "work-list docs/twin_validation/l3_release_package_unit_inventory.md D22).",
+    "(docs/SIMULATOR.md SS12.3/12.4; full-coverage program;",
+    "work-list docs/SIMULATOR.md D22).",
     "Run via tests/harness/gate.py <this file> (L0+L1; calls tests/harness/coverage_audit.py) and",
     "tests/harness/mutation.py <this file> (L2).",
     "",
@@ -88,7 +88,7 @@
     "out_of_scope: every unit is CPU-pure and every branch is REACHABLE through a public entry point",
     "(checked, not assumed)."
   ],
-  "contract": "docs/twin_validation/wave2_6_unit_test_contract.md",
+  "contract": "docs/SIMULATOR.md",
   "default_target": {"statement": 1.0, "branch": 1.0},
   "covered_by_test_files": [
     "tests/test_axis1_context_units.py"

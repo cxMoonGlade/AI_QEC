@@ -1,0 +1,40 @@
+{
+  "_comment": [
+    "Stage-D physical-value gate for the production Wood--Gambetta qutrit leakage primitive.",
+    "Kraus operators are checked for CPTP structure and, independently, by reconstructing the",
+    "superoperator and pinning it to a hand-typed GKSL matrix exponential. The registry contains",
+    "physical API names only; the retired mechanism-ID dispatcher is deliberately absent."
+  ],
+  "default_target": {"statement": 1.0, "branch": 1.0},
+  "covered_by_test_files": [
+    "tests/test_qutrit_leakage_units.py"
+  ],
+  "reconcile_modules": [
+    "src/error_coupling_simulator/mechanisms/qutrit_leakage.py"
+  ],
+  "out_of_scope": {},
+  "canonical_units": [
+    "leakage_channel_super",
+    "leakage_kraus",
+    "wg_rates",
+    "coherence_of_leakage",
+    "solve_theta_for_wg_l1",
+    "leaked_readout_probabilities",
+    "leaked_readout_manifest",
+    "leakage_kraus_torch",
+    "qutrit_leakage_process",
+    "qutrit_leakage_process_heterogeneous"
+  ],
+  "units": [
+    {"group": "qutrit_leakage", "module": "src/error_coupling_simulator/mechanisms/qutrit_leakage.py", "unit": "leakage_channel_super", "qualname": "leakage_channel_super", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "qutrit_leakage", "module": "src/error_coupling_simulator/mechanisms/qutrit_leakage.py", "unit": "leakage_kraus", "qualname": "leakage_kraus", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "qutrit_leakage", "module": "src/error_coupling_simulator/mechanisms/qutrit_leakage.py", "unit": "wg_rates", "qualname": "wg_rates", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "qutrit_leakage", "module": "src/error_coupling_simulator/mechanisms/qutrit_leakage.py", "unit": "coherence_of_leakage", "qualname": "coherence_of_leakage", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "qutrit_leakage", "module": "src/error_coupling_simulator/mechanisms/qutrit_leakage.py", "unit": "solve_theta_for_wg_l1", "qualname": "solve_theta_for_wg_l1", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "qutrit_leakage", "module": "src/error_coupling_simulator/mechanisms/qutrit_leakage.py", "unit": "leaked_readout_probabilities", "qualname": "leaked_readout_probabilities", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "qutrit_leakage", "module": "src/error_coupling_simulator/mechanisms/qutrit_leakage.py", "unit": "leaked_readout_manifest", "qualname": "leaked_readout_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "qutrit_leakage", "module": "src/error_coupling_simulator/mechanisms/qutrit_leakage.py", "unit": "leakage_kraus_torch", "qualname": "leakage_kraus_torch", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "qutrit_leakage", "module": "src/error_coupling_simulator/mechanisms/qutrit_leakage.py", "unit": "qutrit_leakage_process", "qualname": "qutrit_leakage_process", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "qutrit_leakage", "module": "src/error_coupling_simulator/mechanisms/qutrit_leakage.py", "unit": "qutrit_leakage_process_heterogeneous", "qualname": "qutrit_leakage_process_heterogeneous", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []}
+  ]
+}

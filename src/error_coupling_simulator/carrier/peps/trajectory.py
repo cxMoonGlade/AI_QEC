@@ -437,7 +437,7 @@ def leak_sample(state: PepsState, kraus: list, pos: int, u: float, *,
     assert resid <= CPTP_TOL, (
         f"prereg-C4: Kraus completeness violated (max|sum K^dag K - I| = {resid:.3e})")
 
-    # M1 (norm-cache threading): the RDM read is the SINGLE read on this
+    # Norm-cache threading: the RDM read is the SINGLE read on this
     # (unmutated) snapshot; own its cache here so ``apply_site_op`` below leaves
     # it stale (a stale NormCache is the caller's bug — the local var is dropped
     # on return). Boundary route only: R_n is None is the d3 exact route — cache
@@ -478,7 +478,7 @@ def sample_stab(state: PepsState, paulis: dict, u: float, b: float, arm: str,
       7. renormalize to unit norm + the renorm ledger entry.
     """
     paulis = {int(k): str(v).upper() for k, v in paulis.items()}
-    # M1 (norm-cache threading): ONE reverse-pass NormCache per PRE-branch
+    # Norm-cache threading: ONE reverse-pass NormCache per PRE-branch
     # snapshot, shared by the N and M legs of the single ``born_read_stab`` AND
     # the §6.2 instruments (cross_route / chib) — all read the SAME unmutated
     # state. The norm right-environments are op-agnostic (identity columns beyond
@@ -603,7 +603,7 @@ def terminal_readout(state: PepsState, log_sites: list, log_isx: list, n_data: i
     _f0, f1 = terminal_effect_pair(b_eff, dev)
     bits: list[int] = []
     for q in range(int(n_data)):
-        # M1 (norm-cache threading): ``den`` (the norm) and ``num1`` (the site-q
+        # Norm-cache threading: ``den`` (the norm) and ``num1`` (the site-q
         # F1 caps read) are BOTH on the current PRE-collapse snapshot — one
         # reverse-pass cache serves both. The ``apply_site_op`` collapse below
         # mutates the state, so the cache is dropped (a stale NormCache is the

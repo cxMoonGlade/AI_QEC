@@ -17,15 +17,19 @@ from .metadata_guard import (
 )
 
 
-AXIS1_SELECTION_SCHEMA = "qec_twin.simulator.Axis1MechanismSelectionPlan.v1"
-AXIS1_SELECTION_PARTITION_SCHEMA = "qec_twin.simulator.Axis1SelectionPartition.v1"
-AXIS1_G2_SELECTOR_ID = "axis1_g2_registered_rows_v1"
+AXIS1_SELECTION_SCHEMA = "error_coupling_simulator.frontend.noise_process_selection.v1"
+AXIS1_SELECTION_PARTITION_SCHEMA = (
+    "error_coupling_simulator.frontend.noise_process_selection_partition.v1"
+)
+AXIS1_JOINT_CHANNEL_SELECTOR_ID = "axis1_joint_channel_comparison_rows_v1"
 AXIS1_SCHEDULE_SELECTOR_ID = "axis1_schedule_joint_channel_selector_v1"
 AXIS1_IDLE_CLUSTER_MAX_SUPPORT = 5
 AXIS1_ONE_QUBIT_CLUSTER_MAX_SUPPORT = 5
 AXIS1_READOUT_CLUSTER_MAX_SUPPORT = 5
 AXIS1_TWO_QUBIT_CLUSTER_MAX_SUPPORT = 5
-AXIS1_G2_DRIVE_GATE_NAMES = frozenset({"H", "X", "SQRT_X", "SQRT_X_DAG", "H_XY", "H_XZ"})
+AXIS1_JOINT_CHANNEL_DRIVE_GATE_NAMES = frozenset(
+    {"H", "X", "SQRT_X", "SQRT_X_DAG", "H_XY", "H_XZ"}
+)
 AXIS1_FRONTEND_ONE_QUBIT_CONTROL_GATES = frozenset(
     {
         "C_XYZ",
@@ -68,7 +72,7 @@ AXIS1_FRONTEND_TWO_QUBIT_CONTROL_GATES = frozenset(
         "YCZ",
     }
 )
-AXIS1_G2_DRIVE_SLOTS = frozenset({"drive", "idle", "spectator"})
+AXIS1_JOINT_CHANNEL_DRIVE_SLOTS = frozenset({"drive", "idle", "spectator"})
 AXIS1_SUPPORTED_SELECTION_ROW_KINDS = frozenset(
     {
         "zz_t2_exact_zero",
@@ -233,7 +237,7 @@ class Axis1MechanismSelectionPlan:
     selections: tuple[Axis1MechanismSelection, ...]
     static_zz_pairs: tuple[tuple[int, int], ...]
     static_zz_calibrations: dict[tuple[int, int], dict[str, Any]] | None = None
-    selector_id: str = AXIS1_G2_SELECTOR_ID
+    selector_id: str = AXIS1_JOINT_CHANNEL_SELECTOR_ID
     schema: str = AXIS1_SELECTION_SCHEMA
     axis1_local_lindblad_context: dict[str, Any] | None = None
 
@@ -251,6 +255,11 @@ class Axis1MechanismSelectionPlan:
         object.__setattr__(self, "static_zz_calibrations", calibrations)
         object.__setattr__(self, "selector_id", str(self.selector_id))
         object.__setattr__(self, "schema", str(self.schema))
+        if self.schema != AXIS1_SELECTION_SCHEMA:
+            raise ValueError(
+                f"unsupported noise-process selection schema {self.schema!r}; "
+                f"expected {AXIS1_SELECTION_SCHEMA!r}"
+            )
         context = (
             None
             if self.axis1_local_lindblad_context is None
@@ -408,12 +417,17 @@ def axis1_selection_partition_manifest(
     }
 
 
-def build_axis1_g2_selection_plan(schedule: SubstepSchedule) -> Axis1MechanismSelectionPlan:
-    """Build the registered G2 primitive-selection plan from schedule metadata."""
+def build_axis1_joint_channel_selection_plan(
+    schedule: SubstepSchedule,
+) -> Axis1MechanismSelectionPlan:
+    """Build the comparison primitive-selection plan from schedule metadata."""
 
     static_pairs = _static_zz_pairs(schedule)
     if not static_pairs and _has_two_qubit_gate(schedule, "CX"):
-        raise ValueError("CX is not silently relabeled as CZ for Axis-1 G2 static-ZZ selection")
+        raise ValueError(
+            "CX is not silently relabeled as CZ for Axis-1 joint-channel "
+            "static-ZZ selection"
+        )
     selections: list[Axis1MechanismSelection] = []
     selections.extend(_cz_exact_zero_selections(schedule))
     selections.extend(_drive_zz_selections(schedule, static_pairs=static_pairs))
@@ -429,11 +443,11 @@ def build_axis1_g2_selection_plan(schedule: SubstepSchedule) -> Axis1MechanismSe
 def build_axis1_schedule_selection_plan(schedule: SubstepSchedule) -> Axis1MechanismSelectionPlan:
     """Build generic schedule-derived selections for joint-channel evidence.
 
-    This selector is broader than the G2 gate selector. It selects supported
+    This selector is broader than the joint-channel comparison selector. It selects supported
     positive-duration one-qubit control, explicit-duration idle, supported
     two-qubit frontend controls, and explicit-duration readout substeps for
     local joint-channel carrier evidence.
-    DR remains a G2 diagnostic primitive; generic frontend gates are lowered by
+    DR remains a comparison diagnostic primitive; generic frontend gates are lowered by
     the Axis-1 bridge as ideal control Hamiltonians.
     """
 
@@ -1070,7 +1084,10 @@ def _drive_zz_selections(
         if substep.kind != "one_qubit_gate" or not substep.active_qubits or not substep.idle_qubits:
             continue
         _validate_drive_slots(substep)
-        if not any(op.name in AXIS1_G2_DRIVE_GATE_NAMES for op in substep.operations):
+        if not any(
+            op.name in AXIS1_JOINT_CHANNEL_DRIVE_GATE_NAMES
+            for op in substep.operations
+        ):
             continue
         for active in substep.active_qubits:
             for idle in substep.idle_qubits:
@@ -1210,10 +1227,12 @@ def _append_unique(base: tuple[str, ...], extra: tuple[str, ...]) -> tuple[str, 
 
 def _validate_drive_slots(substep: AnalogSubstepIR) -> None:
     actual = set(substep.mechanism_slots)
-    if actual != AXIS1_G2_DRIVE_SLOTS:
+    if actual != AXIS1_JOINT_CHANNEL_DRIVE_SLOTS:
         raise ValueError(
-            "Axis-1 G2 drive selection requires one-qubit drive mechanism slots "
-            f"{sorted(AXIS1_G2_DRIVE_SLOTS)}, got {sorted(actual)} on {substep.substep_id!r}"
+            "Axis-1 joint-channel drive selection requires one-qubit drive "
+            "mechanism slots "
+            f"{sorted(AXIS1_JOINT_CHANNEL_DRIVE_SLOTS)}, got {sorted(actual)} "
+            f"on {substep.substep_id!r}"
         )
 
 
@@ -1314,11 +1333,11 @@ def _normal_pair(a: int, b: int) -> tuple[int, int]:
 
 
 __all__ = [
-    "AXIS1_G2_DRIVE_GATE_NAMES",
-    "AXIS1_G2_DRIVE_SLOTS",
+    "AXIS1_JOINT_CHANNEL_DRIVE_GATE_NAMES",
+    "AXIS1_JOINT_CHANNEL_DRIVE_SLOTS",
     "AXIS1_FRONTEND_ONE_QUBIT_CONTROL_GATES",
     "AXIS1_FRONTEND_TWO_QUBIT_CONTROL_GATES",
-    "AXIS1_G2_SELECTOR_ID",
+    "AXIS1_JOINT_CHANNEL_SELECTOR_ID",
     "AXIS1_IDLE_CLUSTER_MAX_SUPPORT",
     "AXIS1_ONE_QUBIT_CLUSTER_MAX_SUPPORT",
     "AXIS1_READOUT_CLUSTER_MAX_SUPPORT",
@@ -1332,7 +1351,7 @@ __all__ = [
     "Axis1SelectionLayer",
     "axis1_selection_layers_in_schedule_order",
     "axis1_selection_partition_manifest",
-    "build_axis1_g2_selection_plan",
+    "build_axis1_joint_channel_selection_plan",
     "build_axis1_schedule_selection_plan",
     "flatten_axis1_selection_layers",
 ]

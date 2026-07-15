@@ -13,7 +13,7 @@ a drop-in for the reference
   Kraus stack requires grad (the differentiable / optimization path).
 
 Fallback: reference path on CPU tensors, when CUDA/nvcc is unavailable, or when
-``QEC_TWIN_NO_KERNELS=1``. The reference implementation remains the correctness
+``ECS_DISABLE_NATIVE_KERNELS=1``. The reference implementation remains the correctness
 oracle (``tests/test_kernels_fused_kraus.py``).
 """
 from __future__ import annotations
@@ -38,7 +38,7 @@ def _load_ext():
     if _EXT_TRIED:
         return _EXT
     _EXT_TRIED = True
-    if os.environ.get("QEC_TWIN_NO_KERNELS") == "1" or not torch.cuda.is_available():
+    if os.environ.get("ECS_DISABLE_NATIVE_KERNELS") == "1" or not torch.cuda.is_available():
         return None
     src = _kernels_dir()
     cu, cpp = src / "fused_kraus_local.cu", src / "fused_kraus_local.cpp"
@@ -48,7 +48,7 @@ def _load_ext():
         from torch.utils.cpp_extension import load
 
         _EXT = load(
-            name="qec_twin_kernels",
+            name="error_coupling_simulator_kernels",
             sources=[str(cpp), str(cu)],
             extra_cuda_cflags=["-O3"],
             verbose=False,
@@ -129,7 +129,9 @@ def _kernel_call(rho: torch.Tensor, kraus: torch.Tensor, targets, n: int) -> tor
 # `is_grads_batched` vmap materializes through it (and so functorch can vmap it via register_vmap). It is
 # defined ONCE on import; if the extension is unavailable the op body raises on call (the CPU path never
 # reaches here — see apply_channel_local_fused's docstring).
-@torch.library.custom_op("qec_twin::fused_local_kraus_raw", mutates_args=())
+@torch.library.custom_op(
+    "error_coupling_simulator::fused_local_kraus_raw", mutates_args=()
+)
 def _fused_local_kraus_raw(rho: torch.Tensor, kraus: torch.Tensor, targets: list[int], n: int) -> torch.Tensor:
     return _kernel_call(rho, kraus, targets, n)
 
@@ -171,7 +173,8 @@ class _FusedLocalKraus(torch.autograd.Function):
     kernel; ``grad_kraus`` via ``_subspace_raw`` autograd) are IDENTICAL to the prior wrapper — verified
     bit-/grad-identical by ``tests/test_kernels_fused_kraus.py``.
 
-    The kernel call goes through the ``qec_twin::fused_local_kraus_raw`` custom op (NOT the raw ext op
+    The kernel call goes through the
+    ``error_coupling_simulator::fused_local_kraus_raw`` custom op (NOT the raw ext op
     directly) in BOTH forward and backward, so:
       * ``torch.autograd.grad(is_grads_batched=True)`` (legacy ``_vmap``) works — the custom-op boundary
         materializes the otherwise storage-less legacy BatchedTensor cotangent in ``backward``;
@@ -253,7 +256,7 @@ def apply_channel_local_fused(
 
     functorch/vmap-compatible: ``torch.autograd.grad(..., is_grads_batched=True)`` and
     ``torch.func.jacrev`` / ``torch.func.vmap`` compose through it (the kernel's batch dim absorbs the vmap
-    dim). The CPU / ``QEC_TWIN_NO_KERNELS`` fallback is unchanged — callers route there via
+    dim). The CPU / ``ECS_DISABLE_NATIVE_KERNELS`` fallback is unchanged — callers route there via
     ``circuit_sim.apply_channel_local`` when ``accel.available()`` is False; this function is only invoked
     on the CUDA kernel path."""
     return _FusedLocalKraus.apply(rho, kraus, tuple(int(q) for q in targets), int(n))

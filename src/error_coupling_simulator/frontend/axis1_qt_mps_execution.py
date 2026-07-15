@@ -34,17 +34,17 @@ from .axis1_state_evidence import _require_cuda_device
 
 
 AXIS1_QT_MPS_RESTRICTED_EXECUTION_SCHEMA = (
-    "qec_twin.simulator.axis1_qt_mps_restricted_execution.v1"
+    "error_coupling_simulator.frontend.qt_mps_restricted_execution.v1"
 )
-AXIS1_QT_MPS_BOND_SWEEP_SCHEMA = "qec_twin.simulator.axis1_qt_mps_bond_sweep.v1"
+AXIS1_QT_MPS_BOND_SWEEP_SCHEMA = "error_coupling_simulator.frontend.qt_mps_bond_sweep.v1"
 AXIS1_QT_MPS_TRAJECTORY_SWEEP_SCHEMA = (
-    "qec_twin.simulator.axis1_qt_mps_trajectory_seed_sweep.v1"
+    "error_coupling_simulator.frontend.qt_mps_trajectory_seed_sweep.v1"
 )
 AXIS1_QT_MPS_RESTRICTED_EVIDENCE_BUNDLE_SCHEMA = (
-    "qec_twin.simulator.axis1_qt_mps_restricted_evidence_bundle.v1"
+    "error_coupling_simulator.frontend.qt_mps_restricted_evidence_bundle.v1"
 )
 AXIS1_QT_MPS_RESOURCE_PROBE_SCHEMA = (
-    "qec_twin.simulator.axis1_qt_mps_resource_probe.v1"
+    "error_coupling_simulator.frontend.qt_mps_resource_probe.v1"
 )
 AXIS1_QT_MPS_RESTRICTED_EXECUTION_REPRESENTABILITY = (
     "axis1_qt_mps_restricted_control_hamiltonian_z_record_product_channel"
@@ -157,7 +157,7 @@ def axis1_qt_mps_restricted_execution_manifest(
             "scored quantity"
         ),
         "approximation_book": {
-            "schema": "qec_twin.simulator.axis1_qt_mps_restricted_approximation_book.v1",
+            "schema": "error_coupling_simulator.frontend.qt_mps_restricted_approximation_book.v1",
             "hamiltonian_product_formula": {
                 "status": "operator_family_order_product_formula",
                 "finite_step_policy": finite_step_policy,
@@ -1219,7 +1219,7 @@ def _blocked_restricted_acceptance_policy(
         total_discarded_weight_gate=total_discarded_weight_gate,
     )
     return {
-        "schema": "qec_twin.simulator.axis1_qt_mps_restricted_acceptance_policy.v1",
+        "schema": "error_coupling_simulator.frontend.qt_mps_restricted_acceptance_policy.v1",
         "policy_role": "restricted_execution_acceptance_not_metric",
         "accepted_for_restricted_execution": False,
         "accepted_for_exact_dense_probability_evidence": False,
@@ -1352,7 +1352,7 @@ def _restricted_acceptance_policy(
     if truncation_gate_failed:
         production_blockers.append("finite_bond_candidate_gate_failed")
     return {
-        "schema": "qec_twin.simulator.axis1_qt_mps_restricted_acceptance_policy.v1",
+        "schema": "error_coupling_simulator.frontend.qt_mps_restricted_acceptance_policy.v1",
         "policy_role": "restricted_execution_acceptance_not_metric",
         "accepted_for_restricted_execution": accepted_restricted,
         "accepted_for_exact_dense_probability_evidence": exact_dense_probability_evidence,

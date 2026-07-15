@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+
 """Exact local-dim ``q`` (qutrit ``q=3`` / ququart ``q=4``) density-matrix engine for
 the distance-3 XZZX surface code.
 
@@ -13,20 +15,17 @@ syndrome distribution ``P(s | m)``.
 
 Two local dimensions are supported by ONE parametrized base, :class:`_QuditDM`:
 
-  * ``q = 3`` — :class:`QutritDM`: the ``|2>``-leakage qutrit engine (Phase-1 of the
-    historical SIM-ONLY specified-noise process; architecture A; registration
-    ``docs/nonpauli_teacher/phase1_qutrit_leakage_registration.md`` §1). At d3 the
+  * ``q = 3`` — :class:`QutritDM`: the ``|2>``-leakage qutrit engine. At d3 the
     data register is 9 qutrits (``3**9 = 19683``, a ``5.77 GiB`` complex128 density
     matrix that fits the RTX 5090 with ~5.5x headroom); density-matrix projection
     ``Tr[Pi_s rho]`` equals the full Kraus-branch sum exactly
     (``exact_floor_feasibility.py``: agrees to ~1e-16), so the emitted distribution is
     exact, not estimated.
   * ``q = 4`` — :class:`QuquartDM`: the ``|3>``-faithful ququart engine for the
-    Path-B leakage-TRANSPORT gap test (Arm 2; pre-registration
-    ``docs/twin_validation/leakage_transport_pathB_prereg.md`` §1). The ``|3>``-mediated
+    higher-level leakage-transport reference route. The ``|3>``-mediated
     transport (``|12>↔|03>`` superleakage, the on-resonance ``|03>↔|21>`` exchange,
     Miao's ``|30>↔|12>`` / ``|31>↔|22>`` resonances) is NOT representable on the
-    qutrit truncation; the Arm-2 channel is a per-CZ ``(16, 16)`` two-ququart Kraus
+    qutrit truncation; the ququart channel is a per-CZ ``(16, 16)`` two-ququart Kraus
     set (canonical owner: ``error_coupling_simulator.mechanisms.cz_leakage``). Ququart DM
     is ``4**n`` — RESOURCE-CAPPED at ``n <= 6`` (``4**6 = 4096`` -> 256 MB DM); the
     full 9-data ququart register (``4**9`` -> ~1 TB) is FORBIDDEN. The gap-test
@@ -40,7 +39,7 @@ and ``logical_distribution`` use it when present and fall back to a trivial-but-
 codestate pair otherwise (so the engine is unit-testable on small ``n`` without any
 code definition).
 
-Leaked readout — swept-``b`` POVM (registration §2.2). A data qudit found in the
+Leaked readout — swept-``b`` POVM. A data qudit found in the
 leaked level ``|2>`` during a stabilizer measurement is read by a 2-outcome POVM:
 ``F1 = |1><1| + b|2><2|``, ``F0 = |0><0| + (1-b)|2><2|`` (so ``F0 + F1 = I`` on the
 ``{|0>,|1>,|2>}`` block), where ``b = P(|2> reads "1"-like) in [0, 1]`` is a SWEPT
@@ -48,12 +47,10 @@ nuisance parameter — NOT a pinned magic constant. For ``q = 4`` the additional
 non-computational level ``|3>`` is read with the SAME leaked classifier as ``|2>`` (the
 device IQ readout discriminates computational ``{0,1}`` vs "anything higher" — a leaked
 qudit is leaked regardless of WHICH high level it sits in); this is the engine's
-declared, bounded readout simplification for the higher leakage level (Arm-2; the
-``|3>`` population during measurement is small and reported by Builder A's channel).
-``project_stabilizer`` / ``syndrome_distribution`` take ``b`` directly (a ``float``);
-for backward compatibility a legacy hard-bit ``leaked_map`` callable is also accepted
-and resolved to the boundary ``b in {0,1}`` (:func:`resolve_readout_bias`), so ``b = 1``
-reproduces the engine's original hard-bit ``|leaked> -> "1"`` behavior BIT-FOR-BIT.
+declared, bounded readout simplification for the higher leakage level.
+``project_stabilizer`` / ``syndrome_distribution`` take ``b`` directly as a float.
+The bias is always supplied explicitly as a probability; callable hard-bit adapters are
+not part of the current API.
 
 Conventions
 -----------
@@ -78,12 +75,10 @@ from ...numerics import NUMERICAL_ZERO
 
 CDTYPE = torch.complex128
 RDTYPE = torch.float64
-QUDIT = 3  # qutrit local dimension (the module's HISTORICAL default; QutritDM uses it,
-#            and downstream code imports this constant expecting the value 3 — preserved).
 
 
 # --------------------------------------------------------------------------- #
-# Single-qudit constant operators (dim-parametrized core + qutrit-named shims) #
+# Single-qudit constant operators                                                #
 # --------------------------------------------------------------------------- #
 def qudit_eye(q: int, device) -> torch.Tensor:
     return torch.eye(int(q), dtype=CDTYPE, device=device)
@@ -107,21 +102,6 @@ def qudit_hadamard(q: int, device) -> torch.Tensor:
     for k in range(2, q):
         h[k, k] = 1.0
     return h
-
-
-def qutrit_eye(device) -> torch.Tensor:
-    return qudit_eye(QUDIT, device)
-
-
-def qutrit_hadamard(device) -> torch.Tensor:
-    """Hadamard on the computational subspace ``{|0>, |1>}``, identity on ``|2>``.
-
-    Diagonalizes the X-type stabilizer parity into the Z basis: ``H X H = Z`` on the
-    ``{0, 1}`` block, while ``|2>`` (leaked) is left untouched (its syndrome bit is set
-    by ``leaked_map``, not by an eigenvalue). (The qutrit-specific shim over
-    :func:`qudit_hadamard`; downstream code imports this name.)
-    """
-    return qudit_hadamard(QUDIT, device)
 
 
 # --------------------------------------------------------------------------- #
@@ -156,14 +136,6 @@ def embed_operator_q(op: torch.Tensor, site: int, n: int, q: int, *, device=None
     return full
 
 
-def embed_operator(op: torch.Tensor, site: int, n: int, *, device=None) -> torch.Tensor:
-    """Embed a single-qutrit ``(3, 3)`` operator on ``site`` into the ``n``-qutrit
-    register (the qutrit-specific shim over :func:`embed_operator_q`; downstream code
-    imports this name). Differentiable in ``op``.
-    """
-    return embed_operator_q(op, site, n, QUDIT, device=device)
-
-
 def apply_local_op_q(rho: torch.Tensor, op: torch.Tensor, site: int, n: int, q: int) -> torch.Tensor:
     """``rho -> op_site @ rho @ op_site^dag`` by contracting the ``(q, q)`` ``op`` on the
     site's ket/bra factors ONLY -- without ever materializing the full ``q^n x q^n``
@@ -184,17 +156,6 @@ def apply_local_op_q(rho: torch.Tensor, op: torch.Tensor, site: int, n: int, q: 
     return t
 
 
-def apply_local_op(rho: torch.Tensor, op: torch.Tensor, site: int, n: int) -> torch.Tensor:
-    """``rho -> op_site @ rho @ op_site^dag`` for a single-qutrit ``(3, 3)`` ``op`` (the
-    qutrit-specific shim over :func:`apply_local_op_q`; downstream code imports this name).
-
-    Proven scientifically equivalent (<=1e-12) to the dense embed in
-    ``outputs/teacher_prereg/check_subsystem_apply_equiv.py``. ~10^4x fewer FLOPs (no
-    ``D^3`` matmul) and no dense operator at n=9. Differentiable in ``op``.
-    """
-    return apply_local_op_q(rho, op, site, n, QUDIT)
-
-
 # --------------------------------------------------------------------------- #
 # Digit-index helpers (qudit analog of the (i >> shift) & 1 bit reads)        #
 # --------------------------------------------------------------------------- #
@@ -205,37 +166,18 @@ def _site_digit(idx: torch.Tensor, site: int, n: int, q: int) -> torch.Tensor:
     return (idx // place) % int(q)
 
 
-def _site_trit(idx: torch.Tensor, site: int, n: int) -> torch.Tensor:
-    """Trit value in ``{0, 1, 2}`` of qutrit ``site`` for each basis index in ``idx``
-    (qutrit 0 = most-significant factor). The qutrit-specific shim over
-    :func:`_site_digit`; downstream code imports this name."""
-    return _site_digit(idx, site, n, QUDIT)
+def _validate_readout_bias(b: float) -> float:
+    """Validate the leaked-readout bias ``b = P(|2> reads "1"-like) in [0, 1]``.
 
-
-def resolve_readout_bias(b) -> float:
-    """Resolve the leaked-readout bias ``b = P(|2> reads "1"-like) in [0, 1]``.
-
-    The engine's readout model is the swept-``b`` 2-outcome POVM (registration
-    ``phase1_qutrit_leakage_registration.md`` §2.2): on a stabilizer support the
+    The engine's readout model is the swept-``b`` two-outcome POVM: on a stabilizer support the
     per-data-qudit measurement is ``F1 = |1><1| + b|2><2|``, ``F0 = |0><0| +
     (1-b)|2><2|`` (``F0 + F1 = I``); ``b`` is a SWEPT nuisance, NOT a magic constant.
 
-    This helper accepts the swept ``b`` directly as a ``float`` and ALSO accepts the
-    legacy hard-bit ``leaked_map`` CALLABLE (``leaked_map(2) -> int``) as a
-    backward-compatibility shim: a callable is evaluated at level ``2`` and its hard
-    bit is taken as the boundary ``b in {0.0, 1.0}`` (``leaked reads bit 1`` ->
-    ``b = 1.0``, the engine's original hard-bit behavior, reproduced BIT-FOR-BIT;
-    ``bit 0`` -> ``b = 0.0``). ``None`` defaults to the device-grounded ``b = 1.0``
-    (``|2>`` sits above ``|1>`` in the IQ plane, reads ``|1>``-like). The previous
-    integer-returning ``leaked_map`` interface is thereby subsumed: every old call
-    site (which passed ``lambda: 1``) maps to ``b = 1.0`` and is unchanged.
+    The current API accepts only a finite real probability.  A caller that wants a
+    hard classifier must pass the explicit boundary value ``0.0`` or ``1.0``.
     """
-    if b is None:
-        return 1.0
-    if callable(b):
-        return float(int(b(2)) & 1)  # hard-bit limit: leaked reads bit -> b in {0,1}
     bval = float(b)
-    if not 0.0 <= bval <= 1.0:
+    if not math.isfinite(bval) or not 0.0 <= bval <= 1.0:
         raise ValueError(f"readout bias b must be a probability in [0, 1] (got {bval})")
     return bval
 
@@ -302,8 +244,7 @@ class _QuditDM:
     stabilizers and the leaked-readout map; the code geometry is injected via
     :meth:`set_code`. Subclassed by :class:`QutritDM` (``q=3``) and :class:`QuquartDM`
     (``q=4``); the two share EVERY method here (only the local dim ``self.q`` differs),
-    so the ``q=3`` path is bit-identical to the historical hand-written qutrit engine
-    (regression-checked in ``tests/test_qutrit_dm_exact.py`` + the dense-embed oracle).
+    and the ``q=3`` path is checked against an independent dense embedding.
     """
 
     QDIM: int = 3  # subclasses override (3 for qutrit, 4 for ququart)
@@ -325,7 +266,7 @@ class _QuditDM:
         # allocates the q^n x q^n zeros — vector-only uses such as
         # FusedWithinCycleSampler.build_codestate
         # were paying a 5.77 GiB DM at n=9 they never touched; first ACCESS materializes the
-        # same all-zero matrix, so every reader sees the historical behavior unchanged).
+        # same all-zero matrix on first access).
         self._rho: torch.Tensor | None = None
         # optional code geometry (set by the harness)
         self._stabilizers: list[dict[int, str]] | None = None
@@ -519,10 +460,8 @@ class _QuditDM:
         as the high pair-digit; when ``site_i > site_j`` the pair axes are swapped into the
         ``(lo, hi)`` register layout so the SAME ``(q^2, q^2)`` operator is applied to the
         intended (i, j) sites regardless of their numeric order. Hermitianizes the result.
-        Identical math to ``apply_kraus(rho, stack(embed_2site(K, i, j)))`` (proven
-        equivalent in ``outputs/teacher_prereg/ws2_two_site_apply_check.py`` for q=3 and in
-        ``outputs/teacher_prereg/pathB_ququart_engine_check.py`` for q=4 — vs a from-scratch
-        dense Kron-embed, both to ~1e-15).
+        Identical math to ``apply_kraus(rho, stack(embed_2site(K, i, j)))``; owner tests
+        compare both q=3 and q=4 against a from-scratch dense Kronecker embedding.
         """
         q = self.q
         i, j = int(site_i), int(site_j)
@@ -569,7 +508,7 @@ class _QuditDM:
         (leaked levels inert), by stim name: ``X``/``Y``/``Z``/``S``/``S_DAG``/``H``/``I``.
 
         These are the per-round transversal DATA frame gates the shipped XZZX circuit applies
-        (the mid-cycle ``X`` echo + the post-M ``Y``; the P4a interface contract's
+        (the mid-cycle ``X`` echo + the post-measurement ``Y``; the current schedule's
         ``SV_GATE_IDS`` alphabet). The leaked levels ``|2>..|q-1>`` are left untouched (the
         leaked level is inert under the computational frame), matching the SV-MC kernel's gate
         convention bit-for-bit so the DM oracle and the SV-MC apply the IDENTICAL per-round gate.
@@ -598,11 +537,6 @@ class _QuditDM:
             m[k, k] = 1.0
         return m
 
-    # Backward-compatible alias (the qutrit engine's public name; downstream callers use it).
-    def single_qutrit_gate(self, name: str) -> torch.Tensor:
-        """Qutrit-named alias of :meth:`single_qudit_gate` (preserves the historical API)."""
-        return self.single_qudit_gate(name)
-
     def apply_round_data_gates(self, gates: list[tuple[str, "list[int] | tuple[int, ...]"]]) -> None:
         """Apply a per-round transversal single-qudit DATA FRAME to ``rho``, IN ORDER.
 
@@ -623,7 +557,7 @@ class _QuditDM:
                 self.apply_gate(U, int(site))
 
     # ----------------------------------------------------------------------- #
-    # P4a within-cycle leakage (the circuit-faithful per-cycle model §2/§3)    #
+    # Circuit-faithful within-cycle leakage                                   #
     # ----------------------------------------------------------------------- #
     def apply_within_cycle_premeasure(
         self, streams: dict[int, "list[str] | tuple[str, ...]"], leak_kraus
@@ -698,7 +632,7 @@ class _QuditDM:
     ) -> float:
         """The single-isolated-qudit leaked population after ``R`` within-cycle rounds (model §5).
 
-        Reproduces the P4a model §5 deliverable target: an isolated data qudit (``site``) starting
+        Evaluates an isolated data qudit (``site``) starting
         in ``|init_level>`` evolved through ``R`` interior within-cycle rounds (per-CZ ``exp(L/4)``
         slices at its CZ layers, the per-qubit H's at their slots, the mid-cycle X, and — when
         ``with_Y`` — the post-M Y on every round). No stabilizer measurement. Returns ``rho[2,2]``
@@ -740,16 +674,16 @@ class _QuditDM:
 
         The syndrome-bit POVM is ``E_s = sum_{c: XOR_q c_q = s} prod_q F_{c_q}^{(q)}``,
         the sum over per-qubit bit assignments whose XOR equals the syndrome ``s``, of
-        the tensor product of single-qudit effects ``F_{c}`` (registration §2.2). Each
+        the tensor product of single-qudit effects ``F_{c}``. Each
         single-qudit effect is DIAGONAL in the (already Z-rotated, so all-Z) basis. With
         the per-qudit **parity weight** ``d_q(0) = +1``, ``d_q(1) = -1`` in EVERY arm, the
         XOR-coefficient extraction collapses to
 
           ``E_s[i,i] = 1/2 * (1 + (-1)^s * prod_q d_q)`` ,   ``d_q = w0(t_q) - w1(t_q)``
 
-        where the **arm** (P4a interface contract §4) sets the LEAKED weight ``d_q(leaked)``:
+        where the instrument **arm** sets the leaked weight ``d_q(leaked)``:
 
-          arm A / C : ``d_q(leaked) = 1 - 2b``  (the swept-``b`` leaked classifier; Phase-1)
+          arm A / C : ``d_q(leaked) = 1 - 2b``  (the swept-``b`` leaked classifier)
           arm B1    : ``d_q(leaked) = +1``      (leaked ≡ ``|0>``: leaked-DECOUPLED model)
           arm B2    : ``d_q(leaked) = -1``      (leaked ≡ ``|1>``: coherence UPPER bound)
 
@@ -815,7 +749,7 @@ class _QuditDM:
         mask_off = flag[:, None] != flag[None, :]
         self.rho = self.rho.masked_fill(mask_off, 0)
 
-    def project_stabilizer(self, paulis: dict[int, str], outcome: int, b=None, arm: str = "A",
+    def project_stabilizer(self, paulis: dict[int, str], outcome: int, b: float, arm: str = "A",
                            *, diagonal_z: bool = False) -> float:
         """Apply the ``outcome``-effect of the stabilizer syndrome-bit POVM to ``rho``
         and return the branch probability ``Tr[E_outcome rho]``; leaves ``rho``
@@ -831,13 +765,13 @@ class _QuditDM:
         PURE DIAGONAL-Z mode (``diagonal_z=True``). Read every support as a pure Z-parity with
         NO X-support Hadamard (for a state ALREADY in the Z measurement basis).
 
-        Leaked readout — the swept-``b`` POVM (registration §2.2). ``b = P(leaked reads
+        Leaked readout — the swept-``b`` POVM. ``b = P(leaked reads
         "1"-like) in [0, 1]`` is the biased-coin readout of the leaked level(s); the per-
         qudit effects are ``F1 = |1><1| + b|leaked><leaked|``, ``F0 = |0><0| +
         (1-b)|leaked><leaked|`` with ``F0 + F1 = I``, handled correctly against the FULL
-        correlated ``rho``. ``b`` may also be the legacy hard-bit callable.
+        correlated ``rho``.
 
-        Measurement INSTRUMENT ARM (P4a interface contract §4). ``arm`` selects the
+        Measurement-instrument arm. ``arm`` selects the
         registered measurement-instrument arm:
 
           ``"A"`` (DEFAULT) — Lüders ``sqrt(E_s)`` with ``d_q(leaked) = 1-2b``;
@@ -853,7 +787,7 @@ class _QuditDM:
         parent trace. For arm A at ``b = 1`` (and arm B2) ``E_s`` is a 0/1 projector and
         the update is the exact masked outer product the engine used before — BIT-FOR-BIT.
         """
-        bias = resolve_readout_bias(b)
+        bias = _validate_readout_bias(b)
         # PURE diagonal-Z mode: the explicit circuit H's already rotated the X-supports to Z.
         x_sites = [] if diagonal_z else [s for s, p in paulis.items() if str(p).upper() == "X"]
         # rotate X-type supports into the Z basis
@@ -876,7 +810,7 @@ class _QuditDM:
             self.apply_gate(self._hadamard(), s)
         return float(prob)
 
-    def syndrome_distribution(self, stabs: list[dict[int, str]], b=None, arm: str = "A",
+    def syndrome_distribution(self, stabs: list[dict[int, str]], b: float, arm: str = "A",
                               *, diagonal_z: bool = False) -> dict[tuple, float]:
         """EXACT ``P(s)`` over all ``2**len(stabs)`` joint syndromes by depth-first
         projection enumeration (NO Monte-Carlo).
@@ -885,8 +819,8 @@ class _QuditDM:
         pure diagonal Z-parity, for a state already in the Z measurement basis).
 
         ``stabs`` is the ordered list of stabilizer ``paulis`` dicts; ``b`` is the swept
-        leaked-readout bias ``P(leaked reads "1"-like) in [0,1]`` (the legacy hard-bit callable
-        is also accepted). ``arm in {A, C, B1, B2}`` selects the measurement-instrument arm
+        leaked-readout bias ``P(leaked reads "1"-like) in [0,1]``. ``arm in {A, C, B1, B2}``
+        selects the measurement-instrument arm
         (default ``"A"`` keeps every existing caller bit-identical).
 
         Returns a dict keyed by the syndrome tuple ``s in {0,1}**len(stabs)`` with the exact
@@ -924,7 +858,7 @@ class _QuditDM:
         computational subspace. Without a code geometry: the parity of the logical-X-image
         support (defaults to qudit 0 in the Z basis), so the trivial codestate pair reads out
         ``(1, 0)`` / ``(0, 1)``. ``readout_bias`` is the probability that any leaked
-        level reads as bit 1.  Its default, ``0.5``, preserves the historical neutral
+        level reads as bit 1. Its default, ``0.5``, is the explicitly neutral
         split; passing the run's swept ``b`` exactly matches the carrier's terminal
         ``F0/F1`` product-POVM convention.  For multiple logical-support sites this
         computes the parity effect directly, including cells with more than one
@@ -960,7 +894,7 @@ class _QuditDM:
         else:
             diag = torch.diagonal(self.rho).real / tr
 
-        bias = resolve_readout_bias(readout_bias)
+        bias = _validate_readout_bias(readout_bias)
         effect1 = self._povm_diag_weight(op, 1, bias, "A")
         p1 = float((diag * effect1).sum())
         p0 = float((diag * (1.0 - effect1)).sum())
@@ -969,7 +903,7 @@ class _QuditDM:
     def sequential_stabilizer_marginals(
         self,
         stabs: list[dict[int, str]],
-        b=None,
+        b: float,
         arm: str = "A",
         *,
         diagonal_z: bool = False,
@@ -1013,7 +947,7 @@ class _QuditDM:
         return tuple(marginals)
 
     # ----------------------------------------------------------------------- #
-    # Multi-round EXACT record oracle (Axis-A independent ground truth; §7.2)  #
+    # Multi-round exact record reference oracle                               #
     # ----------------------------------------------------------------------- #
     def record_oracle(
         self,
@@ -1022,7 +956,7 @@ class _QuditDM:
         round_post=None,
         *,
         R: int = 1,
-        b=None,
+        b: float,
         arm: str = "A",
         diagonal_z: bool = False,
         prune: float = NUMERICAL_ZERO,
@@ -1285,10 +1219,6 @@ class _QuditDM:
             m[k, k] = 1.0
         return m
 
-    # Backward-compatible alias (the qutrit engine's private name; used by self-checks).
-    def _single_qutrit_pauli(self, kind: str) -> torch.Tensor:
-        return self._single_qudit_pauli(kind)
-
     def _apply_logical_vector(self, psi: torch.Tensor, op: dict[int, str]) -> torch.Tensor:
         for site, kind in op.items():
             psi = self._apply_op_vector(psi, self._single_qudit_pauli(kind), site)
@@ -1304,11 +1234,8 @@ class _QuditDM:
 class QutritDM(_QuditDM):
     """Exact ``3**n_data x 3**n_data`` data-register density matrix for d3 XZZX (local dim 3).
 
-    The ``|2>``-leakage qutrit engine — the R2-validated Phase-1 / Axis-A oracle. A thin
-    ``QDIM = 3`` specialization of :class:`_QuditDM` (every method is shared; the ``q = 3``
-    path is bit-identical to the historical hand-written qutrit engine, regression-checked
-    in ``tests/test_qutrit_dm_exact.py`` + the dense-embed oracle). Arm 1 of the Path-B
-    leakage-transport gap test stays on THIS class (local dim 3).
+    The ``|2>``-leakage qutrit engine is a thin ``QDIM = 3`` specialization of
+    :class:`_QuditDM`; every method is shared and checked against independent dense embeddings.
     """
 
     QDIM = 3
@@ -1317,23 +1244,23 @@ class QutritDM(_QuditDM):
 class QuquartDM(_QuditDM):
     """Exact ``4**n_data x 4**n_data`` data-register density matrix (local dim 4, ``|3>``-faithful).
 
-    The ``|3>``-faithful ququart engine for Arm 2 of the Path-B leakage-TRANSPORT gap test
-    (``docs/twin_validation/leakage_transport_pathB_prereg.md`` §1). It evolves a d3 SUB-CODE
-    density matrix under the Arm-2 per-CZ ``(16, 16)`` two-ququart leakage channel (Builder A,
-    ``error_coupling_simulator.mechanisms.cz_leakage``: index ``4*t_flux + t_stat``,
+    The ``|3>``-faithful ququart engine for the higher-level leakage-transport reference route.
+    It evolves a bounded sub-code density matrix under the per-CZ ``(16, 16)`` two-ququart
+    leakage channel from ``error_coupling_simulator.mechanisms.cz_leakage`` (index
+    ``4*t_flux + t_stat``,
     ``site_i = flux = MSF`` — identical to :meth:`apply_channel_2site`'s convention), measures
     stabilizers (the leaked levels ``|2>, |3>`` share the swept-``b`` leaked classifier) and
     computes the logical outcome, MIRRORING :class:`QutritDM` at local dim 3.
 
-    RESOURCE CAP (the 2026-06-25 OOM). Ququart DM is ``4**n`` complex128:
+    RESOURCE CAP. Ququart DM is ``4**n`` complex128:
       n=5 -> 1024-dim DM (16 MB);  n=6 -> 4096-dim DM (256 MB);  n=7 -> 16384-dim (4.3 GB).
-    The constructor REJECTS ``n_data > 7`` (and the gap-test sub-codes are ``<= 6``); the full
+    The constructor REJECTS ``n_data > 7`` (and current reference sub-codes are ``<= 6``); the full
     9-data ququart register (``4**9`` -> ~1 TB) is structurally forbidden. ``n = 7`` is allowed
     only with care (one process, serial GPU).
     """
 
     QDIM = 4
-    # The hard resource cap (the 2026-06-25 OOM): 4**n complex128 DM. n>7 forbidden outright
+    # Hard resource cap: 4**n complex128 DM. n>7 forbidden outright
     # (4**8 = 65536 -> 68 GB; 4**9 -> ~1 TB). n==7 (4.3 GB) is allowed but heavy — serial GPU only.
     MAX_N: int = 7
 
@@ -1342,6 +1269,6 @@ class QuquartDM(_QuditDM):
         if n > self.MAX_N:
             raise ValueError(
                 f"QuquartDM is resource-capped at n_data <= {self.MAX_N} (4**{n} complex128 DM "
-                f"= {4 ** n} dim ≈ {(4 ** n) ** 2 * 16 / 1e9:.1f} GB / copy; the gap-test sub-codes "
+                f"= {4 ** n} dim ≈ {(4 ** n) ** 2 * 16 / 1e9:.1f} GB / copy; current reference sub-codes "
                 f"are <= 6 qudits — the full 9-data ququart register 4**9 ≈ 1 TB is forbidden)")
         super().__init__(n, device=device, dtype=dtype)

@@ -1,7 +1,7 @@
 """Stage-D batch (carrier) -- per-unit L0+L1 coverage of
 ``error_coupling_simulator.quantum_bath.carrier`` (9 CPU-pure public units).
 
-Full-coverage program (docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4).
+Full-coverage program (docs/SIMULATOR.md SS12.3/12.4).
 This module is the dual-ancilla dual-axis EXACT-DM carrier for the shared-bath
 (pseudomode) simulator: 4-qubit parity gates + an exact reduced-idle GKSL apply +
 ancilla-mediated instruments + the exact 3-round dual-axis record points (and their

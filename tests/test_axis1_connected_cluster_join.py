@@ -6,7 +6,7 @@ exponentiated ONCE (retaining the within-substep cross-term ``[H_i,H_j]``), NOT 
 separate exact-support ``expm`` gates (Lie-Trotter, which drops the commutator — the W-A BLOCKER).
 
 ANTI-CIRCULAR (faithfulness rule I): the reference is the INDEPENDENT oracle
-``forward.joint_lindbladian.assemble_substep_channel`` (sum-all-H → one ``expm(L dt)``,
+``carrier.joint_lindbladian.assemble_substep_channel`` (sum-all-H → one ``expm(L dt)``,
 QuTiP+scipy-validated) AND a from-scratch mixed-radix explicit lift built HERE — NEVER the
 carrier's own grouping. The OLD exact-support grouping is reimplemented inline so the RED bracket
 (old FAILS, new PASSES) does not depend on the (now-replaced) carrier code.
@@ -32,8 +32,10 @@ if not cuda_ok:
         pytrace=False,
     )
 
-from qec_twin.forward.joint_lindbladian import assemble_substep_channel  # noqa: E402
-from qec_twin.simulator.axis1_mcwf_mps_execution import (  # noqa: E402
+from error_coupling_simulator.carrier.joint_lindbladian import (  # noqa: E402
+    assemble_substep_channel,
+)
+from error_coupling_simulator.frontend.axis1_mcwf_mps_execution import (  # noqa: E402
     _hamiltonian_group_gates,
     _hamiltonian_matrix_for_term,
     _lift_hamiltonian_to_cluster,

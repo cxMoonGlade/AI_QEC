@@ -14,7 +14,7 @@ Covers the two new P0 surfaces:
   boundary residual is DISTINGUISHED from its first-order approximation
   (2*p01*p0 = 1.44e-2 >> the 4e-3 tolerance), plus a null control.
 
-No GPU: teacher construction and stim sampling are CPU; ``emit`` is never
+No GPU: process construction and Stim sampling are CPU; ``emit`` is never
 called here (the GPU emit path is exercised by the committed P0 spike script).
 """
 
@@ -61,14 +61,14 @@ def _injection_case(circuit, manifest, *, tick, name, targets, fired, obs):
 # --------------------------------------------------------------------------- #
 @pytest.mark.parametrize("fixture", ["5q", "d3_repz"])
 def test_export_stim_circuit_layout_and_counts(fixture):
-    teacher = CoupledCycleNoiseProcess(ROUNDS, fixture=fixture)
-    circuit, manifest = teacher.export_stim_circuit()
-    truth = teacher.truth
+    process = CoupledCycleNoiseProcess(ROUNDS, fixture=fixture)
+    circuit, manifest = process.export_stim_circuit()
+    truth = process.truth
     assert manifest["detector_names"] == truth["detector_names"]
     assert manifest["observable_names"] == truth["observable_names"]
-    assert manifest["num_detectors"] == ROUNDS * teacher.n_stab
+    assert manifest["num_detectors"] == ROUNDS * process.n_stab
     assert manifest["num_observables"] == 1
-    assert int(circuit.num_detectors) == ROUNDS * teacher.n_stab
+    assert int(circuit.num_detectors) == ROUNDS * process.n_stab
     assert int(circuit.num_observables) == 1
     # M(R) = 2R + 3 for both the 5q and the d3_repz fixtures (S-5 cost parity).
     assert manifest["num_measurements"] == 2 * ROUNDS + 3
@@ -80,10 +80,10 @@ def test_export_stim_circuit_noiseless_smoke(fixture):
     is deterministically 0, so this cannot catch xor/key bugs — the genuine
     wiring falsifier is the injection test below."""
 
-    teacher = CoupledCycleNoiseProcess(ROUNDS, fixture=fixture)
-    circuit, _ = teacher.export_stim_circuit()
+    process = CoupledCycleNoiseProcess(ROUNDS, fixture=fixture)
+    circuit, _ = process.export_stim_circuit()
     det, obs = sample_detector_records(circuit, shots=256, seed=7)
-    assert det.shape == (256, ROUNDS * teacher.n_stab)
+    assert det.shape == (256, ROUNDS * process.n_stab)
     assert int(det.sum()) == 0
     assert int(obs.sum()) == 0
 
@@ -91,8 +91,8 @@ def test_export_stim_circuit_noiseless_smoke(fixture):
 def test_export_wiring_injection_d3_repz():
     """Independent wiring falsifiers (stim reference), d3_repz @ R=3."""
 
-    teacher = CoupledCycleNoiseProcess(ROUNDS, fixture="d3_repz")
-    circuit, manifest = teacher.export_stim_circuit()
+    process = CoupledCycleNoiseProcess(ROUNDS, fixture="d3_repz")
+    circuit, manifest = process.export_stim_circuit()
     # In-round X on q2 after round 0: exactly delta:z12:round1, obs flips
     # (geometric class; probability 0 under slice-1 noise — see the fixture
     # docstring — but stim must still map it to exactly this column).
@@ -122,8 +122,8 @@ def test_export_wiring_injection_d3_repz():
 def test_export_wiring_injection_5q():
     """Independent wiring falsifiers, 5q fixture @ R=3."""
 
-    teacher = CoupledCycleNoiseProcess(ROUNDS, fixture="5q")
-    circuit, manifest = teacher.export_stim_circuit()
+    process = CoupledCycleNoiseProcess(ROUNDS, fixture="5q")
+    circuit, manifest = process.export_stim_circuit()
     # Z on data 0 flips the x0 (X-check) syndrome from round 1 on: exactly
     # delta:x0:round1 (works although the x0 outcomes themselves are random).
     _injection_case(
@@ -146,11 +146,11 @@ def test_d3_repz_spec_shape():
     assert {c.name for c in spec.checks} == {"z01", "z12"}
     assert all(len(c.terms) == 2 for c in spec.checks)
     assert [o.name for o in spec.logical_observables] == ["logical_z2"]
-    teacher = CoupledCycleNoiseProcess(ROUNDS, fixture="d3_repz")
-    assert teacher.n_stab == 2
+    process = CoupledCycleNoiseProcess(ROUNDS, fixture="d3_repz")
+    assert process.n_stab == 2
     # Regime surface still binds (construction-time contract only; no emit).
     with pytest.raises(ValueError, match="regime.R"):
-        teacher.emit(Regime(R=ROUNDS + 1, n_stab=2), m=0, N=1, seed=0)
+        process.emit(Regime(R=ROUNDS + 1, n_stab=2), m=0, N=1, seed=0)
 
 
 # --------------------------------------------------------------------------- #

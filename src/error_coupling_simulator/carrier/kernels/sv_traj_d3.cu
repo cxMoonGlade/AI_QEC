@@ -1,18 +1,18 @@
-// P4a state-vector Monte-Carlo (MCWF) leakage-teacher kernel  (Agent K).
+// Fused within-cycle state-vector Monte-Carlo (MCWF) leakage kernel.
 //
-// Block-per-trajectory quantum-trajectory sampler for the d3 XZZX qutrit teacher
+// Block-per-trajectory quantum-trajectory sampler for the d3 XZZX qutrit process
 // (9 data qutrits, 3^9 = 19683 amplitudes; LOCAL Wood-Gambetta leakage, no
 // persistent ancilla).  One CUDA block evolves ONE shot's pure state vector; the
 // block's threads cooperate over the 19683 amplitudes.  Per shot:
 //
 //   psi = |m>_L                                         (received, §8)
 //   for r in 1..R:
-//     (a) single-qutrit gate applies      (§2 gate_unitaries, strided subsystem)
-//     (b) per-data-qutrit leakage Kraus-SAMPLING (§3, Born draw via curand)
-//     (c) per-stabilizer measurement via the §4 ARM   (diagonal in the trit basis)
+//     (a) walk the PRE-measure gate/leak operation segment in schedule order
+//     (b) measure every stabilizer via the declared diagonal instrument
+//     (c) walk the POST-measure operation segment in schedule order
 //   sampled terminal readout -> logical_flip = parity(data) XOR m   (§4 / Gate 3)
 //
-// Conventions (binding, see docs/nonpauli_teacher/p4a_build_contract.md):
+// Conventions:
 //   * §1 index: qutrit 0 = MOST-significant trit, idx = sum_q t_q * 3^(8-q).  This
 //     matches forward.exact.qutrit_dm._site_trit (place = 3^(n-1-site)).
 //   * §4 arms are ALL DIAGONAL in the (Z-rotated) trit basis: X-supports are
@@ -20,16 +20,14 @@
 //     elementwise sqrt(E_s) on psi.  Arms A/B1/B2 differ only by the per-qutrit
 //     |2>-parity weight d(|2>) (A=1-2b, B1=+1, B2=-1).  Arm C = a leak-flag
 //     projection onto a sampled leakage pattern, then Arm-A's sqrt(E_s).
-//   * §5 draw order is NORMATIVE: per round, (i) gates (no draws); (ii) q=0..8 one
-//     leakage draw each; (iii) stab=0..7 the measurement draw(s) (C: leak-flag
-//     draw(s) in supp order, THEN the outcome draw).  After round R: terminal-
-//     readout draws (data-qutrit order).  The kernel consumes uniforms in EXACTLY
-//     this order so a host-pre-generated stream reproduces it bit-for-bit (§9).
+//   * §5 draw order is NORMATIVE: leakage draws occur where LEAK operations appear
+//     in the PRE segment; stabilizer draws follow; POST gate operations draw
+//     nothing.  After round R, terminal readout draws occur in data-qutrit order.
 //
 // dtype: complex128 default (this .cu is compiled per-precision via -DSV_REAL=...;
 // the loader builds a c128 module and, gated, a c64 module).  No CPU fallback in
 // the compute path (GPU-only rule).  Matches the JIT compile/load style of
-// forward/accel.py + fused_kraus_local.cu.
+// carrier/accel.py + fused_kraus_local.cu.
 
 #include <torch/extension.h>
 #include <ATen/cuda/CUDAContext.h>
@@ -97,7 +95,6 @@ constexpr long long DIM = SV_DIM;
 constexpr int MAX_STAB = 16;        // 8 used
 constexpr int MAX_SUPP = 8;         // stabilizer support fan (<=4 for d3)
 constexpr int MAX_KRAUS = 8;        // WG channel rank 2..5
-constexpr int MAX_GATES_PER_RND = 64;
 constexpr int MAX_LOG_SUPP = 12;    // logical support (3 for d3)
 constexpr int THREADS = 256;        // threads per block (per trajectory)
 
@@ -177,12 +174,6 @@ struct SchedSpec {
   int n_data;          // = 9
   int n_stab;          // = 8
 
-  // gates: round_gates_flat is a concatenation; round_gptr[r] .. round_gptr[r+1]
-  // index into (gate_uid[], gate_site[]).  gate_uid indexes gate_unitaries.
-  // (LUMPED per-round model: gates -> ONE full-cycle leak -> measure.)
-  const int* round_gptr;     // [R+1]
-  const int* gate_uid;       // [n_gate_apply]
-  const int* gate_site;      // [n_gate_apply]
   const cplx* gate_unitaries;// [n_gate, 3, 3]
 
   // P4a WITHIN-CYCLE per-qutrit gate+leak CSR (Agent H's WithinCycleMarshalled).
@@ -190,7 +181,6 @@ struct SchedSpec {
   // PRE-measure ops = [round_op_ptr[2r], round_op_ptr[2r+1]); its POST-measure
   // ops = [round_op_ptr[2r+1], round_op_ptr[2r+2]).  Each op t is the triple
   // (op_kind[t], op_uid[t], op_site[t]) with op_kind in {WC_OP_GATE, WC_OP_LEAK}.
-  // Used by sv_traj_wc_kernel; null on the lumped path.
   const int* round_op_ptr;   // [2R+1]
   const int* op_kind;        // [T]  WC_OP_GATE | WC_OP_LEAK
   const int* op_uid;         // [T]  gate-unitary index (GATE; 0 for LEAK)
@@ -640,107 +630,9 @@ __device__ int terminal_readout_block(cplx* psi, const SchedSpec* sp,
 }
 
 // ----------------------------------------------------------------------------- //
-//  The trajectory kernel: one block per shot.                                   //
-//  codestate is the SHARED |m>_L pure SV (same for every shot in the launch);    //
-//  each block copies it into a per-block working buffer in global scratch.       //
-//  Output: packed bits per shot (§6) — R*n_stab syndrome bits + 1 logical_flip,  //
-//  written by thread 0 into out_bits[shot * out_stride + .].  norm_drift[shot]    //
-//  records |1 - <psi|psi>| just before the terminal readout (diag).              //
-// ----------------------------------------------------------------------------- //
-__global__ void sv_traj_kernel(
-    const cplx* __restrict__ codestate,   // [DIM]
-    cplx* __restrict__ work,              // [num_blocks * DIM] scratch state
-    cplx* __restrict__ worktmp,           // [num_blocks * DIM] scratch tmp
-    const SchedSpec sp,                   // by value (POD; arrays are device ptrs)
-    unsigned char* __restrict__ out_bits, // [num_shots * out_stride]
-    long long out_stride,
-    real_t* __restrict__ norm_drift,      // [num_shots] diag
-    long long num_shots) {
-  const long long shot = blockIdx.x;      // wave maps block -> local shot
-  if (shot >= num_shots) return;
-  const long long shot_id = sp.shot_id_offset + shot;
-  const int tid = threadIdx.x;
-  const int nth = blockDim.x;
-
-  extern __shared__ real_t scratch[];     // [THREADS] reduction scratch
-
-  cplx* psi = work + shot * DIM;
-  cplx* psi_tmp = worktmp + shot * DIM;
-
-  // load |m>_L
-  for (long long i = tid; i < DIM; i += nth) psi[i] = codestate[i];
-  __syncthreads();
-
-  // RNG: one stream per block, keyed by hash(base_seed, shot_id) — independent of
-  // launch/wave layout (§5).  Philox is counter-based: seed=base_seed, subsequence
-  // = shot_id gives a per-shot-deterministic stream.
-  DrawStream rng;
-  rng.buf = sp.urandom;
-  rng.cap = sp.urandom_stride;
-  rng.pos = 0;
-  if (sp.urandom != nullptr) {
-    rng.buf = sp.urandom + shot * sp.urandom_stride;
-  } else {
-    // hash(base_seed, shot_id): fold shot_id into both seed and subsequence so the
-    // stream depends on the GLOBAL shot index, not the block index.
-    curand_init(sp.base_seed ^ (unsigned long long)(shot_id * 0x9E3779B97F4A7C15ULL),
-                (unsigned long long)shot_id, 0ULL, &rng.st);
-  }
-
-  long long bitpos = 0;  // running index into this shot's syndrome bit-array
-
-  for (int r = 0; r < sp.R; ++r) {
-    // (a) gate applies for round r
-    const int g0 = sp.round_gptr[r];
-    const int g1 = sp.round_gptr[r + 1];
-    for (int g = g0; g < g1; ++g) {
-      const int uid = sp.gate_uid[g];
-      const int site = sp.gate_site[g];
-      const cplx* U = sp.gate_unitaries + (long long)uid * 9;
-      apply_gate_block(psi, U, site, sp.n_data, psi_tmp);
-    }
-    // (b) per-data-qutrit leakage Kraus-sampling (q = 0..n_data-1)
-    for (int q = 0; q < sp.n_data; ++q)
-      leakage_sample_block(psi, &sp, q, &rng, psi_tmp, scratch);
-    // (c) per-stabilizer measurement (schedule order)
-    for (int s = 0; s < sp.n_stab; ++s) {
-      int bit = measure_stab_block(psi, &sp, s, &rng, psi_tmp, scratch);
-      if (tid == 0) {
-        long long byte = bitpos >> 3;
-        int off = (int)(bitpos & 7);
-        // set/clear the bit (out_bits pre-zeroed host-side; we OR in 1s)
-        if (bit) out_bits[shot * out_stride + byte] |= (unsigned char)(1u << off);
-      }
-      bitpos++;
-    }
-  }
-
-  // norm drift diagnostic (squared-norm just before terminal readout)
-  real_t sq = (real_t)0.0;
-  for (long long i = tid; i < DIM; i += nth) {
-    cplx a = psi[i];
-    sq += a.real() * a.real() + a.imag() * a.imag();
-  }
-  real_t sqf = block_reduce_sum(sq, scratch);
-  if (tid == 0) norm_drift[shot] = fabs((real_t)1.0 - sqf);
-
-  // terminal readout -> logical flip (Gate 3)
-  int flip = terminal_readout_block(psi, &sp, &rng, psi_tmp, scratch);
-  if (tid == 0) {
-    // logical_flip stored in the trailing bit-plane: one bit per shot, at the byte
-    // right after the syndrome bits.  out_stride is sized host-side to include it.
-    long long sbits = (long long)sp.R * sp.n_stab;
-    long long flip_byte = (sbits + 7) >> 3;  // first byte past the syndrome bits
-    out_bits[shot * out_stride + flip_byte] = (unsigned char)(flip & 1);
-  }
-}
-
-// ----------------------------------------------------------------------------- //
 //  P4a WITHIN-CYCLE trajectory kernel: one block per shot.                       //
 //                                                                                //
-//  Replaces sv_traj_kernel's LUMPED per-round body                               //
-//      [all single-qutrit gates] -> [ONE full-cycle leak per qutrit] -> [measure]//
-//  with the circuit-faithful WITHIN-CYCLE op-schedule (Agent H's CSR):           //
+//  Executes the circuit-faithful WITHIN-CYCLE op schedule:                       //
 //      for r in 0..R-1:                                                          //
 //        for op in PRE-ops[r] (round_op_ptr[2r]..[2r+1], in order):              //
 //          GATE: apply gate_unitaries[op_uid] on op_site  (reuse apply_gate_block)//
@@ -788,8 +680,8 @@ __global__ void sv_traj_wc_kernel(
   for (long long i = tid; i < DIM; i += nth) psi[i] = codestate[i];
   __syncthreads();
 
-  // RNG: identical keying to the lumped kernel (§5; per-shot stream keyed by the
-  // GLOBAL shot index, wave-layout-independent).  The host-pre-generated stream
+  // RNG: per-shot stream keyed by the GLOBAL shot index, wave-layout-independent.
+  // The host-pre-generated stream
   // path is bit-faithful given the op-schedule draw order documented above.
   DrawStream rng;
   rng.buf = sp.urandom;
@@ -867,258 +759,12 @@ __global__ void sv_traj_wc_kernel(
 }
 
 // ----------------------------------------------------------------------------- //
-//  Host launcher.  Marshals the SchedSpec from torch tensors (device pointers    //
-//  kept alive by the caller — the loader holds references), loops waves of <= W   //
-//  blocks, returns the packed shot buffer + diagnostics.                         //
-//                                                                                //
-//  This matches the §7 signature (the loader exposes the Python `sv_traj_d3`).    //
-// ----------------------------------------------------------------------------- //
-std::vector<torch::Tensor> sv_traj_d3_cuda(
-    torch::Tensor codestate,        // [DIM] complex (device)
-    int64_t R,
-    torch::Tensor round_gptr,       // int32 [R+1]
-    torch::Tensor gate_uid,         // int32 [G]
-    torch::Tensor gate_site,        // int32 [G]
-    torch::Tensor gate_unitaries,   // complex [n_gate,3,3]
-    torch::Tensor stab_supp_len,    // int32 [n_stab]
-    torch::Tensor stab_supp,        // int32 [n_stab, MAX_SUPP]
-    torch::Tensor stab_supp_isx,    // int32 [n_stab, MAX_SUPP]
-    torch::Tensor kraus,            // complex [n_kraus,3,3]
-    torch::Tensor log_supp,         // int32 [L]
-    torch::Tensor log_supp_isx,     // int32 [L]
-    int64_t arm,
-    double b,
-    int64_t readout_conv,
-    int64_t logical_m,
-    int64_t N,                      // total shots
-    int64_t base_seed,
-    int64_t shot_id_offset,
-    int64_t wave,                   // blocks per wave (W)
-    torch::Tensor urandom,          // complex/real [N, stride] or empty
-    int64_t urandom_stride) {
-  TORCH_CHECK(codestate.is_cuda(), "codestate must be CUDA");
-  const c10::cuda::CUDAGuard device_guard(codestate.device());
-  TORCH_CHECK(
-      codestate.scalar_type() == EXPECTED_COMPLEX, "codestate must be ",
-      EXPECTED_COMPLEX_NAME);
-  TORCH_CHECK(
-      codestate.dim() == 1 && codestate.numel() == DIM,
-      "codestate must have shape [3^9]");
-  TORCH_CHECK(R >= 1, "R must be >= 1");
-  TORCH_CHECK(N >= 1, "N must be >= 1");
-  TORCH_CHECK(0 <= arm && arm <= 3, "arm must be in {0,1,2,3}");
-  TORCH_CHECK(0.0 <= b && b <= 1.0, "b must be in [0,1]");
-  TORCH_CHECK(
-      readout_conv == 0 || readout_conv == 1,
-      "readout_conv must be 0 or 1");
-  TORCH_CHECK(logical_m == 0 || logical_m == 1, "logical_m must be 0 or 1");
-  TORCH_CHECK(shot_id_offset >= 0, "shot_id_offset must be >= 0");
-  TORCH_CHECK(wave >= 1, "wave must be >= 1");
-
-  check_cuda_same_device(round_gptr, codestate, "round_gptr");
-  check_cuda_same_device(gate_uid, codestate, "gate_uid");
-  check_cuda_same_device(gate_site, codestate, "gate_site");
-  check_i32(round_gptr, "round_gptr");
-  check_i32(gate_uid, "gate_uid");
-  check_i32(gate_site, "gate_site");
-  TORCH_CHECK(
-      round_gptr.dim() == 1 && round_gptr.numel() == R + 1,
-      "round_gptr must have shape [R+1]");
-  TORCH_CHECK(
-      gate_uid.dim() == 1 && gate_site.dim() == 1 &&
-          gate_uid.numel() == gate_site.numel(),
-      "gate_uid and gate_site must be equal-length 1D arrays");
-
-  check_cuda_same_device(gate_unitaries, codestate, "gate_unitaries");
-  TORCH_CHECK(
-      gate_unitaries.scalar_type() == EXPECTED_COMPLEX,
-      "gate_unitaries must be ", EXPECTED_COMPLEX_NAME);
-  TORCH_CHECK(
-      gate_unitaries.dim() == 3 && gate_unitaries.size(0) >= 1 &&
-          gate_unitaries.size(1) == 3 && gate_unitaries.size(2) == 3,
-      "gate_unitaries must have shape [G,3,3] with G>=1");
-  check_cuda_same_device(kraus, codestate, "kraus");
-  TORCH_CHECK(
-      kraus.scalar_type() == EXPECTED_COMPLEX, "kraus must be ",
-      EXPECTED_COMPLEX_NAME);
-  TORCH_CHECK(
-      kraus.dim() == 3 && kraus.size(0) >= 1 &&
-          kraus.size(0) <= MAX_KRAUS && kraus.size(1) == 3 &&
-          kraus.size(2) == 3,
-      "kraus must have shape [K,3,3], 1<=K<=MAX_KRAUS");
-
-  const int n_stab = check_support_shapes(
-      codestate, stab_supp_len, stab_supp, stab_supp_isx, log_supp,
-      log_supp_isx);
-  const int n_gate = (int)gate_unitaries.size(0);
-
-  const bool use_host_stream = urandom.defined() && urandom.numel() > 0;
-  if (use_host_stream) {
-    check_nonempty_urandom(urandom, codestate, N, urandom_stride);
-  }
-
-  auto cs = codestate.contiguous();
-  auto gp = round_gptr.contiguous();
-  auto gu = gate_uid.contiguous();
-  auto gs = gate_site.contiguous();
-  auto gmat = gate_unitaries.contiguous();
-  auto sl = stab_supp_len.contiguous();
-  auto ss = stab_supp.contiguous();
-  auto sx = stab_supp_isx.contiguous();
-  auto kr = kraus.contiguous();
-  auto ls = log_supp.contiguous();
-  auto lx = log_supp_isx.contiguous();
-
-  // Validate the small CSR payload before any device pointer is dereferenced.
-  {
-    auto gph = gp.cpu();
-    auto guh = gu.cpu();
-    auto gsh = gs.cpu();
-    const auto* gpp = gph.const_data_ptr<int>();
-    const auto* gup = guh.const_data_ptr<int>();
-    const auto* gsp = gsh.const_data_ptr<int>();
-    TORCH_CHECK(gpp[0] == 0, "round_gptr must start at 0");
-    for (int64_t r = 0; r < R; ++r) {
-      TORCH_CHECK(
-          gpp[r] <= gpp[r + 1], "round_gptr must be nondecreasing");
-    }
-    const int64_t n_apply = gate_uid.numel();
-    TORCH_CHECK(
-        gpp[R] == n_apply,
-        "round_gptr terminal entry must equal gate application count");
-    for (int64_t g = 0; g < n_apply; ++g) {
-      TORCH_CHECK(
-          0 <= gup[g] && gup[g] < n_gate, "gate_uid out of range at ", g);
-      TORCH_CHECK(
-          0 <= gsp[g] && gsp[g] < N_DATA, "gate_site out of range at ", g);
-    }
-  }
-
-  // build the SchedSpec POD
-  SchedSpec sp{};
-  sp.R = (int)R;
-  sp.n_data = N_DATA;
-  sp.n_stab = n_stab;
-  sp.round_gptr = gp.data_ptr<int>();
-  sp.gate_uid = gu.data_ptr<int>();
-  sp.gate_site = gs.data_ptr<int>();
-  sp.gate_unitaries = reinterpret_cast<const cplx*>(gmat.const_data_ptr<cplx>());
-  // copy small fixed arrays into the POD
-  {
-    auto slh = sl.cpu(); auto ssh = ss.cpu(); auto sxh = sx.cpu();
-    auto* slp = slh.data_ptr<int>(); auto* ssp = ssh.data_ptr<int>(); auto* sxp = sxh.data_ptr<int>();
-    for (int s = 0; s < n_stab; ++s) {
-      TORCH_CHECK(
-          0 <= slp[s] && slp[s] <= ss.size(1),
-          "stab_supp_len out of range at stabilizer ", s);
-      sp.stab_supp_len[s] = slp[s];
-      for (int j = 0; j < MAX_SUPP; ++j) {
-        sp.stab_supp[s * MAX_SUPP + j] = (j < ss.size(1)) ? ssp[s * ss.size(1) + j] : 0;
-        sp.stab_supp_isx[s * MAX_SUPP + j] = (j < sx.size(1)) ? sxp[s * sx.size(1) + j] : 0;
-        if (j < slp[s]) {
-          TORCH_CHECK(
-              0 <= sp.stab_supp[s * MAX_SUPP + j] &&
-                  sp.stab_supp[s * MAX_SUPP + j] < N_DATA,
-              "stab_supp site out of range at stabilizer ", s, ", offset ", j);
-          TORCH_CHECK(
-              sp.stab_supp_isx[s * MAX_SUPP + j] == 0 ||
-                  sp.stab_supp_isx[s * MAX_SUPP + j] == 1,
-              "stab_supp_isx must be 0 or 1 at stabilizer ", s,
-              ", offset ", j);
-        }
-      }
-    }
-  }
-  sp.n_kraus = (int)kr.size(0);
-  TORCH_CHECK(sp.n_kraus <= MAX_KRAUS, "too many Kraus operators");
-  sp.kraus = reinterpret_cast<const cplx*>(kr.const_data_ptr<cplx>());
-  {
-    auto lsh = ls.cpu(); auto lxh = lx.cpu();
-    auto* lsp = lsh.data_ptr<int>(); auto* lxp = lxh.data_ptr<int>();
-    sp.log_supp_len = (int)ls.numel();
-    TORCH_CHECK(sp.log_supp_len <= MAX_LOG_SUPP, "logical support too large");
-    for (int j = 0; j < sp.log_supp_len; ++j) {
-      TORCH_CHECK(
-          0 <= lsp[j] && lsp[j] < N_DATA,
-          "log_supp site out of range at offset ", j);
-      TORCH_CHECK(
-          lxp[j] == 0 || lxp[j] == 1,
-          "log_supp_isx must be 0 or 1 at offset ", j);
-      sp.log_supp[j] = lsp[j];
-      sp.log_supp_isx[j] = lxp[j];
-    }
-  }
-  sp.arm = (int)arm;
-  sp.b = (real_t)b;
-  sp.readout_conv = (int)readout_conv;
-  sp.logical_m = (int)logical_m;
-  sp.base_seed = (unsigned long long)base_seed;
-  sp.shot_id_offset = (long long)shot_id_offset;
-
-  torch::Tensor ur;
-  if (use_host_stream) {
-    ur = urandom.contiguous();
-    sp.urandom = reinterpret_cast<const real_t*>(ur.const_data_ptr<real_t>());
-    sp.urandom_stride = (long long)urandom_stride;
-  } else {
-    sp.urandom = nullptr;
-    sp.urandom_stride = 0;
-  }
-
-  // output sizing (§6): R*n_stab syndrome bits + 1 logical_flip byte.
-  const long long sbits = (long long)sp.R * sp.n_stab;
-  const long long flip_byte = (sbits + 7) >> 3;
-  const long long out_stride = flip_byte + 1;  // syndrome bytes + 1 flip byte
-
-  auto opts_u8 = torch::TensorOptions().dtype(torch::kUInt8).device(codestate.device());
-  auto out_bits = torch::zeros({N, out_stride}, opts_u8);
-
-  auto opts_r = torch::TensorOptions()
-                    .dtype(sizeof(real_t) == 8 ? torch::kFloat64 : torch::kFloat32)
-                    .device(codestate.device());
-  auto norm_drift = torch::zeros({N}, opts_r);
-
-  // per-wave global scratch state (work + worktmp), sized to the wave width.
-  long long W = wave > 0 ? wave : 256;
-  if (W > N) W = N;
-  auto opts_c = torch::TensorOptions().dtype(codestate.scalar_type()).device(codestate.device());
-  auto work = torch::empty({W, DIM}, opts_c);
-  auto worktmp = torch::empty({W, DIM}, opts_c);
-
-  const size_t shmem = (size_t)THREADS * sizeof(real_t);
-  auto stream = at::cuda::getCurrentCUDAStream(codestate.get_device());
-
-  for (long long start = 0; start < N; start += W) {
-    long long nshot = (N - start) < W ? (N - start) : W;
-    SchedSpec sp_wave = sp;
-    sp_wave.shot_id_offset = sp.shot_id_offset + start;
-    if (use_host_stream) {
-      sp_wave.urandom = reinterpret_cast<const real_t*>(ur.const_data_ptr<real_t>())
-                        + start * sp.urandom_stride;
-    }
-    unsigned char* out_ptr = out_bits.data_ptr<unsigned char>() + start * out_stride;
-    real_t* nd_ptr = norm_drift.data_ptr<real_t>() + start;
-    sv_traj_kernel<<<(unsigned int)nshot, THREADS, shmem, stream>>>(
-        reinterpret_cast<const cplx*>(cs.const_data_ptr<cplx>()),
-        reinterpret_cast<cplx*>(work.mutable_data_ptr<cplx>()),
-        reinterpret_cast<cplx*>(worktmp.mutable_data_ptr<cplx>()),
-        sp_wave, out_ptr, out_stride, nd_ptr, nshot);
-    C10_CUDA_KERNEL_LAUNCH_CHECK();
-  }
-
-  return {out_bits, norm_drift};
-}
-
-// ----------------------------------------------------------------------------- //
 //  P4a WITHIN-CYCLE host launcher.                                               //
 //                                                                                //
 //  Consumes Agent H's WithinCycleMarshalled CSR (round_op_ptr / op_kind /        //
 //  op_uid / op_site) + the per-CZ leak slice exp(L/4) (`leak_kraus`), and drives //
-//  sv_traj_wc_kernel.  Everything else (stabilizers, logical, instrument arms,   //
-//  RNG keying, shot I/O, the §6 buffer layout) is IDENTICAL to sv_traj_d3_cuda — //
-//  the MEASUREMENT IS UNCHANGED.  Same keyword-only call shape as §7 except the  //
-//  gate CSR (round_gptr/gate_uid/gate_site) is replaced by the op-schedule CSR    //
-//  and `kraus` carries the exp(L/4) slice.                                        //
+//  sv_traj_wc_kernel with the shared stabilizer, logical, instrument, RNG, and    //
+//  packed-shot contracts.                                                         //
 // ----------------------------------------------------------------------------- //
 std::vector<torch::Tensor> sv_traj_d3_wc_cuda(
     torch::Tensor codestate,        // [DIM] complex (device)
@@ -1256,15 +902,11 @@ std::vector<torch::Tensor> sv_traj_d3_wc_cuda(
     }
   }
 
-  // build the SchedSpec POD (within-cycle CSR; the lumped gate CSR is unused)
+  // build the SchedSpec POD
   SchedSpec sp{};
   sp.R = (int)R;
   sp.n_data = N_DATA;
   sp.n_stab = n_stab;
-  // lumped gate CSR: NOT used by the within-cycle kernel.
-  sp.round_gptr = nullptr;
-  sp.gate_uid = nullptr;
-  sp.gate_site = nullptr;
   sp.gate_unitaries = reinterpret_cast<const cplx*>(gmat.const_data_ptr<cplx>());
   // within-cycle op-schedule CSR
   sp.round_op_ptr = rop.data_ptr<int>();
@@ -1376,8 +1018,6 @@ std::vector<torch::Tensor> sv_traj_d3_wc_cuda(
 }
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
-  m.def("sv_traj_d3", &sv_traj_d3_cuda,
-        "P4a state-vector MCWF leakage-teacher trajectory sampler (CUDA, LUMPED per-round)");
   m.def("sv_traj_d3_wc", &sv_traj_d3_wc_cuda,
-        "P4a state-vector MCWF leakage-teacher trajectory sampler (CUDA, WITHIN-CYCLE op-schedule)");
+        "Fused state-vector MCWF trajectory sampler (CUDA, within-cycle op schedule)");
 }

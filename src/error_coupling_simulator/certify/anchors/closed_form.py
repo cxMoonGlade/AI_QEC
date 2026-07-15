@@ -18,8 +18,8 @@ member like ``(0.08, 0.20)`` ``|corr|`` relaxes monotonically toward — and sta
 value, but for other ``(p01, p10)`` the SIGNED correlation can change sign and ``|corr|`` is
 non-monotone / can dip below stationary; do not read the monotone case as general.)
 
-Two independent computations live here, and their agreement (in ``tests/test_certify.py`` and
-``outputs/teacher_prereg/certify_closed_form_5b.py``) is a non-circular cross-check:
+Two independent computations live here, and their agreement in the owner tests is a
+non-circular cross-check:
   * ``answer`` / ``_exact_rr_corr`` — the GROUND TRUTH: EXACT classical propagation of the two-state
     chain (the (u, v, w) triple-joint, enumerated; NO sampling, NO stationarity, NO flip-flip algebra).
     Handles the raw first detector ``d_0 = s_0`` uniformly via ``s_{-1} ≡ 0``;
@@ -33,7 +33,8 @@ classical channel keeps the density matrix diagonal, so the quantum engine repro
 chain to machine precision), and an honest class (b) PREDICTION for the d3 detector correlation — the
 XZZX geometry + the seam fold perturb the per-qubit form. The class is DECLARED, never inflated.
 
-It is ``emit_kind() == "nonunital_slice"`` (the teacher emits the amp-damp/non-unital-isolated slice
+It is ``emit_kind() == "nonunital_slice"`` (the controlled process emits the
+amplitude-damping/non-unital-isolated slice
 at R≥2). Pure / host-side (a 3×3 stochastic propagation).
 """
 
@@ -144,7 +145,7 @@ class ClosedFormAnchor:
                 out.append(0.0)
         return np.array(out, dtype=np.float64)
 
-    def answer(self, teacher, statistic: Statistic, regime: Regime,
+    def answer(self, process, statistic: Statistic, regime: Regime,
                *, N=None, generator=None, corrupt=None) -> AnchorValue:
         seq = self._exact_rr_corr(regime.R)  # per-round, r=0..R-2 (EXACT, transient)
         exness = Exactness.EXACT if self._exact else Exactness.STATISTICAL

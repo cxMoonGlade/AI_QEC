@@ -4,7 +4,7 @@ Validates ``src/error_coupling_simulator/carrier/joint_lindbladian.py`` against 
 (QuTiP ``liouvillian``/``expm`` AND a hand-written from-scratch scipy column-stacking
 Liouvillian) — NEVER the module's own superop/Choi code (anti-circular, the faithfulness
 protocol's rule I). Formalizes the adversarial reviewer's checks as the conventional
-``tests/`` home (the ``docs/twin_validation/gates/g2_jointL.py`` gate is the integration
+``tests/`` home (the ``docs/SIMULATOR.md`` gate is the integration
 harness; this is the unit oracle).
 
 The module is GPU-only (``_require_cuda`` refuses CPU, no fallback — the memory rule), so
@@ -74,7 +74,7 @@ def _ops_numpy():
     }
 
 
-# physically-motivated scales (rad/ns; 1 us = 1000 ns) — same as the G2 gate.
+# physically-motivated scales (rad/ns; 1 us = 1000 ns) used by the comparison gate.
 ZETA = 2.0 * np.pi * 0.37e-3   # ZZ
 GAMMA_PHI = 1.0 / 30000.0                           # T2
 GAMMA_1 = 1.0 / 30000.0                             # T1

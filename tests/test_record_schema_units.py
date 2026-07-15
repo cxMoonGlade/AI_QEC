@@ -7,8 +7,8 @@ module-level guards ``require_frontend_representability``/``require_stim_circuit
 torch, no quimb -- ``stim`` is a lazy import inside ``require_stim_circuit`` -- so
 out_of_scope is empty).
 
-Full-coverage program (docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4;
-work-list docs/twin_validation/l3_release_package_unit_inventory.md D20).
+Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
+work-list docs/SIMULATOR.md D20).
 ``frontend/record_schema.py`` owns the detector/observable RECORD-SCHEMA + manifest guards
 carried alongside each compiled Stim circuit: ``RecordSchema`` (a frozen carrier built
 either from a stim.Circuit's counts or from a CircuitIR blended with a stim circuit) and

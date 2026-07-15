@@ -1,8 +1,8 @@
 """Stage-D batch ``interop`` -- per-unit L0+L1+L2 coverage of
 ``error_coupling_simulator.frontend.interop`` (3 LIVE public units, CPU-pure).
 
-Full-coverage program (docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4;
-work-list docs/twin_validation/l3_release_package_unit_inventory.md). The module is the
+Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
+work-list docs/SIMULATOR.md). The module is the
 frontend/evaluator-side ``{det,obs}`` -> matchable ``stim.DetectorErrorModel`` plumbing:
 the exact Spitz Eq.13 pairwise ``p_ij`` + odd-parity boundary-residual product identity
 reduction, a PyMatching MWPM adaptor, and a deterministic stim fault-injection utility.
@@ -597,8 +597,8 @@ def test_KILLER_insert_op_after_tick_injection_off_by_one():
     after TICK t fires EXACTLY the round-t z12 detector. Off-by-one in the TICK count fires
     a DIFFERENT detector (round1 vs round2) -> the seen==t / TICK count is load-bearing.
     (A deterministic GATE never fires a detector -- the module's frame-semantics note.)"""
-    teacher = CoupledCycleNoiseProcess(ROUNDS, fixture="d3_repz")
-    circ, man = teacher.export_stim_circuit()
+    process = CoupledCycleNoiseProcess(ROUNDS, fixture="d3_repz")
+    circ, man = process.export_stim_circuit()
     names = man["detector_names"]
 
     def _fired(tick):
@@ -683,8 +683,8 @@ _EXPECTED_DIAG_KEYS = {
 _EXPECTED_NOTE = (
     "for cluster_size > 1 the SEs and the sigma edge floor are "
     "understated by the cluster design effect (trajectory "
-    "common-mode, teacher S-1/C-11); declared, not corrected — "
-    "bound at P1"
+    "common-mode); declared, not corrected in this two-point "
+    "reduction"
 )
 _EXPECTED_CAVEAT = (
     "two-point edge-factorized reduction (Spitz Eq. 13 exact pairs); "

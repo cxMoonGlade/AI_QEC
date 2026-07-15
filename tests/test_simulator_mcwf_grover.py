@@ -36,8 +36,12 @@ def test_mcwf_qutrit_grover_measurement_backend_writes_artifacts(tmp_path):
     )
     assert result.manifest["representability"] == "dense_qutrit_statevector_mcwf_leakage"
     assert result.manifest["algorithm"] == "single_solution_grover_gate_level"
-    assert result.manifest["executor"]["schema"] == "qec_twin.simulator.GraphCapturedMcwfExecutor.v1"
-    assert result.manifest["program"]["schema"] == "qec_twin.simulator.CompiledMcwfProgram.v1"
+    assert result.manifest["executor"]["schema"] == (
+        "error_coupling_simulator.frontend.graph_captured_mcwf_executor.v1"
+    )
+    assert result.manifest["program"]["schema"] == (
+        "error_coupling_simulator.frontend.compiled_mcwf_program.v1"
+    )
     assert result.manifest["program"]["description"] == "single_solution_grover_gate_level_with_qutrit_wg_leakage_slots"
     assert result.manifest["program"]["operation_counts"]["McwfKrausAllSitesOp"] == result.iterations + 1
     assert result.manifest["grover_realization"]["oracle"] == (
@@ -120,7 +124,9 @@ def test_mcwf_grover_block_trajectory_executor_matches_closed_form_zero_leakage(
         iterations=optimal_grover_iterations(3),
     )
 
-    assert result.manifest["executor"]["schema"] == "qec_twin.simulator.BlockTrajectoryMcwfExecutor.v1"
+    assert result.manifest["executor"]["schema"] == (
+        "error_coupling_simulator.frontend.block_trajectory_mcwf_executor.v1"
+    )
     assert result.manifest["kernel_backend"] == "block_trajectory_opstream_cuda"
     assert result.mean_pre_readout_marked_probability == pytest.approx(
         theory["success_probability"],
@@ -133,7 +139,7 @@ def test_compile_mcwf_grover_program_is_gate_level_and_algorithm_neutral():
     program = compile_mcwf_grover_program(num_qutrits=3, marked_state="101", iterations=2)
     summary = program.summary()
 
-    assert summary["schema"] == "qec_twin.simulator.CompiledMcwfProgram.v1"
+    assert summary["schema"] == "error_coupling_simulator.frontend.compiled_mcwf_program.v1"
     assert summary["num_qutrits"] == 3
     assert summary["num_operations"] == 38
     assert summary["operation_counts"] == {

@@ -40,7 +40,7 @@ from .axis1_qutip_cuquantum_probe import (
 )
 
 
-AXIS1_CARRIER_EXECUTION_SCHEMA = "qec_twin.simulator.axis1_carrier_execution.v1"
+AXIS1_CARRIER_EXECUTION_SCHEMA = "error_coupling_simulator.frontend.carrier_execution.v1"
 AXIS1_CARRIER_EXECUTION_REPRESENTABILITY = (
     "axis1_carrier_execution_dense_jointL_probe_no_scalable_overcap"
 )
@@ -70,7 +70,9 @@ AXIS1_CARRIER_MCWF_MPS_CONTRACT_ONLY_BACKEND_CONTRACT = (
     AXIS1_CARRIER_MCWF_MPS_EXECUTION_BACKEND_CONTRACT
 )
 AXIS1_CARRIER_AUTO_BACKEND_CONTRACT = "auto"
-AXIS1_CARRIER_AUTO_EXECUTION_SCHEMA = "qec_twin.simulator.axis1_carrier_auto_routed_execution.v1"
+AXIS1_CARRIER_AUTO_EXECUTION_SCHEMA = (
+    "error_coupling_simulator.frontend.carrier_auto_routed_execution.v1"
+)
 # Conservative fraction of FREE VRAM the dense record probe's PROJECTED PEAK is allowed to occupy
 # before the auto-router routes to the memory-bounded MCWF/MPS backend instead. 0.25 matches the
 # window_channel register guard (_RHO_MEM_FRACTION) and leaves headroom for allocator fragmentation
@@ -329,7 +331,7 @@ def _select_dense_or_mcwf(
     if over_vram:
         reasons.append("projected_dense_vram_exceeds_safety_budget")
     decision = {
-        "schema": "qec_twin.simulator.axis1_carrier_auto_routing_decision.v2",
+        "schema": "error_coupling_simulator.frontend.carrier_auto_routing_decision.v2",
         "num_qubits": n,
         "measured_qubits": measured_qubits,
         "branch_factor_log2": measured_qubits,

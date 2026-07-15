@@ -39,8 +39,9 @@ BEFORE ``answer``, so the infeasible density matrix is never allocated):
     the anchor's shape matches ``core.emitted_statistic`` EXACTLY (apples-to-apples). RR_CORR/SPATIAL
     are IDENTICALLY 0 for an independent-bit-flip foil — the statistic keeps its teeth.
 
-Requires the teacher to be ``DMReplayable`` (``teacher.dm_round_callbacks(device)``) so the DM replays
-the teacher's EXACT mechanism. GPU-only model-compute (CLAUDE.md): the DM lives on cuda.
+Requires the controlled process to be ``DMReplayable``
+(``process.dm_round_callbacks(device)``) so the DM replays the specified noise process.
+GPU-only model-compute (CLAUDE.md): the DM lives on cuda.
 """
 
 import numpy as np
@@ -77,10 +78,10 @@ _R2_JOINT_UNAVAILABLE = (
 #: a capability descriptor must never claim feasible for a cell that might OOM (the 2*copy
 #: value this replaces did exactly that: it declared full-9q feasible at ~12 GB while the true
 #: pre-fix peak projected to 31 GB). DECLARED LIMITATION: this bound covers the SINGLE-SITE
-#: apply path (all lowering the supported external d3 schedules use). A ``DMReplayable`` teacher whose
+#: apply path (all lowering the supported external d3 schedules use). A ``DMReplayable`` process whose
 #: ``round_pre`` applies TWO-site channels goes through the still-unchunked
 #: ``apply_channel_2site`` (~4.5 copies transient) and is NOT bounded by this descriptor —
-#: budget such teachers separately (follow-up: chunk the 2site path).
+#: budget such processes separately (follow-up: chunk the two-site path).
 _DETECTOR_MARG_COPIES = 4
 
 
@@ -184,14 +185,14 @@ class DMOracleAnchor:
     # ----------------------------------------------------------------- #
     # answer — delegate to the wheel (GPU model-compute)                #
     # ----------------------------------------------------------------- #
-    def answer(self, teacher, statistic: Statistic, regime: Regime, *, N=None, generator=None,
+    def answer(self, process, statistic: Statistic, regime: Regime, *, N=None, generator=None,
                corrupt=None) -> AnchorValue:
         if statistic in _JOINT_DISTRIBUTIONS and regime.R >= 2:
             raise ValueError(f"DMOracleAnchor contract error: {_R2_JOINT_UNAVAILABLE}")
 
         from ...carrier.exact.qutrit_dm import QutritDM
 
-        sched = teacher.sched
+        sched = process.sched
         stabs = sched.stab_paulis()
         if corrupt and "stab" in corrupt:
             # the corrupt-stabilizer control: flip stab j's X<->Z. The codestate is no longer its +1
@@ -202,7 +203,7 @@ class DMOracleAnchor:
             stabs[j] = {s: _fl[str(p).upper()] for s, p in stabs[j].items()}
         n_stab = len(stabs)
         m = 0  # the GT is computed at prep m=0 (the batch-1 GT); the facade threads m in step 6
-        round_pre, round_post = teacher.dm_round_callbacks(self.device)
+        round_pre, round_post = process.dm_round_callbacks(self.device)
 
         eng = QutritDM(int(sched.n_data), device=self.device)
         lk = str(sched.logical_kind).upper()

@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from qec_twin.simulator import (
+from error_coupling_simulator.frontend import (
     CodeQubit,
     CodeSpec,
     LogicalObservableSpec,
@@ -18,9 +18,9 @@ from qec_twin.simulator import (
     compile_code_spec,
     repeated_memory_schedule,
 )
-from qec_twin.simulator.operation import canonical_operation_name
-from qec_twin.simulator.record_layout import final_measurements
-from qec_twin.simulator.stim_io import circuit_to_stim
+from error_coupling_simulator.frontend.operation import canonical_operation_name
+from error_coupling_simulator.frontend.record_layout import final_measurements
+from error_coupling_simulator.frontend.stim_io import circuit_to_stim
 
 def test_record_layout_matches_compiled_circuit_key_order():
     spec = XZZXCodeSpec(layout_size=3, rounds=3).to_code_spec()

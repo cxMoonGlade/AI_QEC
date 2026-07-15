@@ -22,7 +22,7 @@ def _assert_success(probe: subprocess.CompletedProcess[str]) -> None:
 def _assert_no_repository_scratch_assets(members: list[str]) -> None:
     """External inputs and repository scratch trees must never be distributed."""
 
-    forbidden_tree_names = {"outputs", "external", "legacy", "qec_twin", ".datasets"}
+    forbidden_tree_names = {"outputs", "external", ".datasets"}
     offenders = []
     for member in members:
         path = Path(member)
@@ -35,18 +35,16 @@ def _assert_no_repository_scratch_assets(members: list[str]) -> None:
 
 
 def test_wheel_contains_only_the_active_runtime_package(tmp_path: Path) -> None:
-    """The wheel must not publish the repo-local ``qec_twin`` compatibility tree."""
+    """The wheel must publish only the declared runtime package."""
 
     fixture = tmp_path / "fixture"
     package_root = fixture / "src"
     active = package_root / "error_coupling_simulator"
-    near_prefix = package_root / "error_coupling_simulator_legacy"
-    legacy = package_root / "qec_twin"
+    unrelated = package_root / "unrelated_package"
     fixture_docs = fixture / "docs"
     wheelhouse = tmp_path / "wheelhouse"
     active.mkdir(parents=True)
-    near_prefix.mkdir(parents=True)
-    legacy.mkdir(parents=True)
+    unrelated.mkdir(parents=True)
     fixture_docs.mkdir()
     wheelhouse.mkdir()
     shutil.copy2(REPO_ROOT / "pyproject.toml", fixture / "pyproject.toml")
@@ -62,8 +60,7 @@ def test_wheel_contains_only_the_active_runtime_package(tmp_path: Path) -> None:
         "CODE_MAP.md",
     ):
         (fixture_docs / name).write_text(f"fixture {name}\n", encoding="utf-8")
-    (near_prefix / "__init__.py").write_text("", encoding="utf-8")
-    (legacy / "__init__.py").write_text("", encoding="utf-8")
+    (unrelated / "__init__.py").write_text("", encoding="utf-8")
 
     probe = subprocess.run(
         [
@@ -99,25 +96,22 @@ def test_wheel_contains_only_the_active_runtime_package(tmp_path: Path) -> None:
         )
 
     assert top_levels == ["error_coupling_simulator"]
-    assert not any(name.startswith("qec_twin/") for name in members)
-    assert "qec-twin-m4" not in entry_points
-    assert "qec_twin" not in entry_points
+    assert not any(name.startswith("unrelated_package/") for name in members)
+    assert "unrelated_package" not in entry_points
 
 
-def test_sdist_prunes_legacy_even_with_a_stale_manifest(tmp_path: Path) -> None:
-    """An old broad ``SOURCES.txt`` must not leak ``qec_twin`` into the sdist."""
+def test_sdist_ignores_unrelated_package_even_with_a_stale_manifest(tmp_path: Path) -> None:
+    """A broad stale ``SOURCES.txt`` must not expand the declared package set."""
 
     fixture = tmp_path / "fixture"
     package_root = fixture / "src"
     active = package_root / "error_coupling_simulator"
-    near_prefix = package_root / "error_coupling_simulator_legacy"
-    legacy = package_root / "qec_twin"
+    unrelated = package_root / "unrelated_package"
     egg_info = package_root / "error_coupling_simulator.egg-info"
     fixture_docs = fixture / "docs"
     dist_dir = tmp_path / "sdist"
     active.mkdir(parents=True)
-    near_prefix.mkdir(parents=True)
-    legacy.mkdir(parents=True)
+    unrelated.mkdir(parents=True)
     egg_info.mkdir(parents=True)
     fixture_docs.mkdir()
     dist_dir.mkdir()
@@ -134,13 +128,11 @@ def test_sdist_prunes_legacy_even_with_a_stale_manifest(tmp_path: Path) -> None:
         "CODE_MAP.md",
     ):
         (fixture_docs / name).write_text(f"fixture {name}\n", encoding="utf-8")
-    (near_prefix / "__init__.py").write_text("", encoding="utf-8")
-    (legacy / "__init__.py").write_text("", encoding="utf-8")
+    (unrelated / "__init__.py").write_text("", encoding="utf-8")
     (egg_info / "SOURCES.txt").write_text(
         "pyproject.toml\n"
         "src/error_coupling_simulator/__init__.py\n"
-        "src/error_coupling_simulator_legacy/__init__.py\n"
-        "src/qec_twin/__init__.py\n",
+        "src/unrelated_package/__init__.py\n",
         encoding="utf-8",
     )
 
@@ -166,8 +158,7 @@ def test_sdist_prunes_legacy_even_with_a_stale_manifest(tmp_path: Path) -> None:
         members = archive.getnames()
 
     assert any("/src/error_coupling_simulator/__init__.py" in name for name in members)
-    assert not any("/src/error_coupling_simulator_legacy/" in name for name in members)
-    assert not any("/src/qec_twin/" in name for name in members)
+    assert not any("/src/unrelated_package/" in name for name in members)
 
 
 def test_real_sdist_wheel_installs_and_runs_without_the_repository(tmp_path: Path) -> None:
@@ -309,7 +300,6 @@ def test_real_sdist_wheel_installs_and_runs_without_the_repository(tmp_path: Pat
             textwrap.dedent(
                 """
                 import importlib
-                import importlib.abc
                 import importlib.metadata
                 import importlib.resources
                 import sys
@@ -326,16 +316,6 @@ def test_real_sdist_wheel_installs_and_runs_without_the_repository(tmp_path: Pat
                     resolved = Path(entry).resolve()
                     assert resolved != repository_src
                     assert repository_src not in resolved.parents
-
-                class RejectLegacyImports(importlib.abc.MetaPathFinder):
-                    def find_spec(self, fullname, path=None, target=None):
-                        if fullname == "qec_twin" or fullname.startswith("qec_twin."):
-                            raise AssertionError(
-                                f"standalone package imported forbidden legacy module {fullname}"
-                            )
-                        return None
-
-                sys.meta_path.insert(0, RejectLegacyImports())
 
                 package = importlib.import_module("error_coupling_simulator")
                 distribution = importlib.metadata.distribution("error-coupling-simulator")
@@ -550,9 +530,9 @@ def test_real_sdist_wheel_installs_and_runs_without_the_repository(tmp_path: Pat
                     StinespringChannel,
                     apply_kraus,
                 )
-                from error_coupling_simulator.carrier.channels import (
-                    custom_non_pauli_kraus,
-                    thermal_relaxation_kraus,
+                from error_coupling_simulator.mechanisms.qutrit_leakage import (
+                    leakage_channel_super,
+                    leakage_kraus,
                 )
 
                 rho0 = zero_state(1, device="cpu")
@@ -562,8 +542,8 @@ def test_real_sdist_wheel_installs_and_runs_without_the_repository(tmp_path: Pat
                     "error_coupling_simulator.carrier."
                 )
                 assert callable(apply_kraus)
-                assert callable(custom_non_pauli_kraus)
-                assert callable(thermal_relaxation_kraus)
+                assert leakage_channel_super(0.0, 0.0).shape == (9, 9)
+                assert len(leakage_kraus(0.0, 0.0)) == 1
 
                 from error_coupling_simulator.certify import certify_noise_process
                 from error_coupling_simulator.certify.anchors import (

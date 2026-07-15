@@ -5,7 +5,7 @@ from __future__ import annotations
 This module builds a JSON-safe program IR from the public compiler schedule and
 Axis-1 selection metadata. It does not execute a scalable MPS/trajectory backend,
 does not materialize Hamiltonian/collapse matrices, and does not replace the
-dense G2/channel-evidence backend. Its job is to make over-cap schedule rows
+dense joint-channel evidence backend. Its job is to make over-cap schedule rows
 explicitly routable instead of silently dropped by the dense local-window cap.
 """
 
@@ -17,10 +17,10 @@ from typing import Any
 
 from ..mechanisms.axis1_primitives import Axis1PrimitiveParams
 from .analog_schedule import SubstepSchedule
-from .axis1_bridge import (
-    G2_GAMMA_1_PER_NS,
-    G2_GAMMA_PHI_PER_NS,
-    G2_ZETA_RAD_PER_NS,
+from .joint_channel_comparison import (
+    JOINT_CHANNEL_GAMMA_1_PER_NS,
+    JOINT_CHANNEL_GAMMA_PHI_PER_NS,
+    JOINT_CHANNEL_ZETA_RAD_PER_NS,
 )
 from .axis1_channel_evidence import _coverage_manifest
 from .axis1_context import (
@@ -40,7 +40,7 @@ from .axis1_selection import (
 )
 
 
-AXIS1_CARRIER_PROGRAM_SCHEMA = "qec_twin.simulator.axis1_carrier_program.v1"
+AXIS1_CARRIER_PROGRAM_SCHEMA = "error_coupling_simulator.frontend.carrier_program.v1"
 AXIS1_CARRIER_PROGRAM_REPRESENTABILITY = (
     "axis1_scalable_carrier_program_metadata_no_channel_payload"
 )
@@ -165,6 +165,11 @@ class Axis1CarrierProgram:
         object.__setattr__(self, "site_order", tuple(int(q) for q in self.site_order))
         object.__setattr__(self, "substeps", tuple(self.substeps))
         object.__setattr__(self, "gpu_required", bool(self.gpu_required))
+        if self.schema != AXIS1_CARRIER_PROGRAM_SCHEMA:
+            raise ValueError(
+                f"unsupported carrier-program schema {self.schema!r}; "
+                f"expected {AXIS1_CARRIER_PROGRAM_SCHEMA!r}"
+            )
 
     @property
     def requires_scalable_backend(self) -> bool:
@@ -199,7 +204,7 @@ def _axis1_carrier_approximation_book(
     site_order_policy: str,
 ) -> dict[str, Any]:
     return {
-        "schema": "qec_twin.simulator.axis1_carrier_approximation_book.v1",
+        "schema": "error_coupling_simulator.frontend.carrier_approximation_book.v1",
         "backend_contract": str(backend_contract),
         "same_substep_generator_policy": (
             "backend must consume the summed substep H_list and c_list semantics; "
@@ -995,9 +1000,9 @@ def _reset_basis(name: str) -> str | None:
 
 def _axis1_primitive_params_for_schedule(schedule: SubstepSchedule) -> Axis1PrimitiveParams:
     defaults = Axis1PrimitiveParams(
-        zeta_rad_per_ns=G2_ZETA_RAD_PER_NS,
-        gamma_phi_per_ns=G2_GAMMA_PHI_PER_NS,
-        gamma_1_per_ns=G2_GAMMA_1_PER_NS,
+        zeta_rad_per_ns=JOINT_CHANNEL_ZETA_RAD_PER_NS,
+        gamma_phi_per_ns=JOINT_CHANNEL_GAMMA_PHI_PER_NS,
+        gamma_1_per_ns=JOINT_CHANNEL_GAMMA_1_PER_NS,
     )
     context = axis1_local_lindblad_context_from_schedule(schedule)
     return context.to_axis1_primitive_params(defaults)

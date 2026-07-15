@@ -1,13 +1,13 @@
 {
   "_comment": [
     "STAGE-D per-unit coverage registry for the full-coverage program",
-    "(docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4; work-list",
-    "docs/twin_validation/l3_release_package_unit_inventory.md). This is the GENERAL,",
+    "(docs/SIMULATOR.md SS12.3/12.4; work-list",
+    "docs/SIMULATOR.md). This is the GENERAL,",
     "registry-DRIVEN successor to the Wave-2.6 pilot registry: the audit reads its",
     "canonical set, its covered_by test-file set, and its reconcile-module list FROM this",
     "file (the Wave-2.6 script's hard-coded 19-unit tuple is the pilot-only fallback).",
-    "Audited by outputs/twin_validation/wave2_6_coverage_audit.py --registry <this file>",
-    "(runner outputs/twin_validation/stage_d_coverage_run.sh). Batches accumulate here",
+    "Audited by outputs/simulator_validation/wave2_6_coverage_audit.py --registry <this file>",
+    "(runner outputs/simulator_validation/stage_d_coverage_run.sh). Batches accumulate here",
     "D1..D20; each adds its module's CPU-pure units + reconcile entry.",
     "",
     "SCHEMA (superset of the pilot registry -- same AST-derived, anti-stale core):",
@@ -31,7 +31,7 @@
     "dead log2-guard, not a trippable assert. Registered as a line/branch exemption whose",
     "covered_by is the invariant proof test_cmi_guard_invariant_den_num_positive_when_p_positive."
   ],
-  "contract": "docs/twin_validation/wave2_6_unit_test_contract.md",
+  "contract": "docs/SIMULATOR.md",
   "default_target": {"statement": 1.0, "branch": 1.0},
   "covered_by_test_files": [
     "tests/test_quantum_bath_observables_units.py"

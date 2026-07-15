@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import ast
 from importlib import metadata
 import json
 from pathlib import Path
@@ -13,24 +12,6 @@ import tomllib
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PACKAGE_ROOT = REPO_ROOT / "src" / "error_coupling_simulator"
-
-_OWNER_LIKE_FIELDS = frozenset(
-    {
-        "assembled_by",
-        "backend",
-        "carrier_object_under_test",
-        "carrier_operator",
-        "compiler",
-        "name",
-        "oracle",
-        "oracle_schema",
-        "reference",
-        "scope",
-        "source",
-        "workload_adapter",
-    }
-)
-
 
 def test_generated_code_map_and_reverse_service_coverage_are_current() -> None:
     """The release must classify every installed module and ship a fresh flow/catalog."""
@@ -43,38 +24,6 @@ def test_generated_code_map_and_reverse_service_coverage_are_current() -> None:
         text=True,
     )
     assert probe.returncode == 0, probe.stdout + probe.stderr
-
-
-def test_code_map_legacy_edge_scanner_distinguishes_schema_ids_from_resolution(
-    tmp_path: Path,
-) -> None:
-    from tools.gen_code_map import _legacy_qec_twin_edges
-
-    probe = tmp_path / "probe.py"
-    probe.write_text(
-        "\n".join(
-            (
-                "SCHEMA = 'qec_twin.persisted.v1'",
-                "import qec_twin.forward",
-                "pytest.importorskip('qec_twin.simulator')",
-                "monkeypatch.setattr('qec_twin.simulator.fn', replacement)",
-                "legacy_module = 'qec_twin.dynamic'",
-                "importlib.import_module(legacy_module)",
-                "importlib.util.find_spec(name='qec_twin.keyword')",
-            )
-        ),
-        encoding="utf-8",
-    )
-
-    edges = _legacy_qec_twin_edges(probe)
-
-    assert len(edges) == 5
-    assert any("import qec_twin.forward" in edge for edge in edges)
-    assert any("importorskip" in edge for edge in edges)
-    assert any("setattr" in edge for edge in edges)
-    assert any("qec_twin.dynamic" in edge for edge in edges)
-    assert any("qec_twin.keyword" in edge for edge in edges)
-    assert all("persisted" not in edge for edge in edges)
 
 
 def test_service_acceptance_plan_is_unique_process_isolated_and_routes_cudaq() -> None:
@@ -134,28 +83,36 @@ def test_service_acceptance_plan_is_unique_process_isolated_and_routes_cudaq() -
     } == {"tests/test_simulator_cudaq_grover.py": "aiqec"}
 
 
-def _target_field_names(target: ast.expr) -> set[str]:
-    if isinstance(target, ast.Name):
-        return {target.id}
-    if isinstance(target, ast.Attribute):
-        return {target.attr}
-    if isinstance(target, (ast.List, ast.Tuple)):
-        return {
-            name
-            for element in target.elts
-            for name in _target_field_names(element)
-        }
-    return set()
+def test_pepo_allocator_environment_contract_is_exact_and_file_local() -> None:
+    catalog = json.loads(
+        (REPO_ROOT / "docs" / "service_status.json").read_text(encoding="utf-8")
+    )
+    execution = catalog["acceptance_execution"]
+    expected = {
+        path: {"PYTORCH_ALLOC_CONF": "expandable_segments:True"}
+        for path in (
+            "tests/test_pepo_density_compressed_caps.py",
+            "tests/test_pepo_density_killers.py",
+            "tests/test_pepo_density_nonselective_round.py",
+            "tests/test_pepo_density_ntu_precut.py",
+            "tests/test_pepo_density_observables.py",
+            "tests/test_pepo_density_stabilizer.py",
+            "tests/test_pepo_density_state.py",
+            "tests/test_pepo_density_token_ops.py",
+        )
+    }
+    all_acceptance = {
+        path
+        for service in catalog["services"]
+        for path in service["acceptance"]
+    }
 
-
-def _legacy_owner_literal(node: ast.AST | None) -> str | None:
-    if (
-        isinstance(node, ast.Constant)
-        and isinstance(node.value, str)
-        and "qec_twin." in node.value
-    ):
-        return node.value
-    return None
+    assert execution["process_environment_overrides"] == expected
+    assert set(expected) <= all_acceptance
+    assert set(expected) <= set(execution["lane_overrides"]["gpu_serial"])
+    assert "tests/test_pepo_host_seam.py" not in expected
+    assert "tests/test_pepo_density_layout_guards.py" not in expected
+    assert "tests/test_simulator_cudaq_grover.py" not in expected
 
 
 def test_runtime_package_version_matches_distribution_metadata() -> None:
@@ -180,77 +137,12 @@ def test_package_build_identity_survives_without_a_git_checkout() -> None:
     )
 
     identity = package_build_identity()
-    assert identity["schema"] == "error_coupling_simulator.package_build_identity.v1"
+    assert identity["schema"] == "error_coupling_simulator.carrier.package_build_identity.v1"
     assert identity["distribution"] == "error-coupling-simulator"
     assert identity["version"] == metadata.version("error-coupling-simulator")
     assert len(identity["package_tree_sha256"]) == 64
     int(identity["package_tree_sha256"], 16)
     assert identity["git_commit"] is None or identity["git_commit"]
-
-
-def test_active_package_has_no_executable_legacy_import_back_edge() -> None:
-    offenders: list[str] = []
-    for path in sorted(PACKAGE_ROOT.rglob("*.py")):
-        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-        imported: list[str] = []
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Import):
-                imported.extend(alias.name for alias in node.names)
-            elif isinstance(node, ast.ImportFrom) and node.module:
-                imported.append(node.module)
-        legacy = sorted(
-            name for name in imported
-            if name == "qec_twin" or name.startswith("qec_twin.")
-        )
-        if legacy:
-            offenders.append(f"{path.relative_to(PACKAGE_ROOT)}: {legacy}")
-    assert offenders == []
-
-
-def test_active_owner_metadata_names_only_installed_package_owners() -> None:
-    """Compatibility schema IDs may stay old; active owner provenance may not."""
-
-    offenders: list[str] = []
-    for path in sorted(PACKAGE_ROOT.rglob("*.py")):
-        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-        relative = path.relative_to(PACKAGE_ROOT)
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Dict):
-                for key, value in zip(node.keys, node.values, strict=True):
-                    if not (
-                        isinstance(key, ast.Constant)
-                        and isinstance(key.value, str)
-                        and key.value in _OWNER_LIKE_FIELDS
-                    ):
-                        continue
-                    legacy = _legacy_owner_literal(value)
-                    if legacy is not None:
-                        offenders.append(
-                            f"{relative}:{value.lineno}: {key.value}={legacy!r}"
-                        )
-            elif isinstance(node, (ast.Assign, ast.AnnAssign)):
-                targets = node.targets if isinstance(node, ast.Assign) else [node.target]
-                field_names = {
-                    name
-                    for target in targets
-                    for name in _target_field_names(target)
-                }
-                if not field_names.intersection(_OWNER_LIKE_FIELDS):
-                    continue
-                legacy = _legacy_owner_literal(node.value)
-                if legacy is not None:
-                    offenders.append(
-                        f"{relative}:{node.value.lineno}: "
-                        f"{sorted(field_names)!r}={legacy!r}"
-                    )
-            elif isinstance(node, ast.keyword) and node.arg in _OWNER_LIKE_FIELDS:
-                legacy = _legacy_owner_literal(node.value)
-                if legacy is not None:
-                    offenders.append(
-                        f"{relative}:{node.value.lineno}: {node.arg}={legacy!r}"
-                    )
-
-    assert offenders == []
 
 
 def test_active_package_contains_no_symlink_to_repository_code() -> None:

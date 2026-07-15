@@ -16,9 +16,8 @@ THE TWO THETA CONVENTIONS ARE TWO DISTINCT PRESETS (never a merged default):
 * :data:`PRESET_LEAK_WG_L1_5E3` -- the MODEL-RATE-SOLVED convention: ``theta_rad`` is
   SOLVED so the exact project WG channel's per-cycle leak rate ``WG_L1`` hits the
   registered target (5.0e-3, a single-paper magnitude anchor from Miao) via
-  :func:`~error_coupling_simulator.mechanisms.qutrit_teachers.solve_theta_for_wg_l1`
-  (a monotone model-rate solver, NOT device calibration; its historical spelling is
-  ``qec_twin.mechanisms.qutrit_teachers.calibrate_theta_for_wg_l1``).
+  :func:`~error_coupling_simulator.mechanisms.qutrit_leakage.solve_theta_for_wg_l1`
+  (a monotone model-rate solver, not device calibration).
 
 Neither preset is a paper-validated physical cell. ``theta_rad=0.30``, ``g_heat=0``,
 ``b_bias=0.9``, arm A, and ``biased_b`` are registered project choices;
@@ -36,9 +35,9 @@ resolve the caller-supplied Google ``d3_at_q6_7`` patch as a GEOMETRY/SCHEDULE s
 ``error_coupling_simulator.frontend.xzzx_parser.default_r01_paths`` /
 ``default_r10_paths``
 (layout: ``<root>/<patch>/<basis>/<r01|r10>/{circuit_ideal.stim, metadata.json}``).
-Root precedence: the ``dataset_root`` argument > the ``QEC_TWIN_D3_DATA`` env var
+Root precedence: the ``dataset_root`` argument > the ``ECS_D3_DATA_ROOT`` env var
 (if the key is SET) > the parser's built-in ``DEFAULT_DATASET_ROOT`` (env key
-ABSENT only). A SET-but-empty/whitespace ``QEC_TWIN_D3_DATA`` raises
+ABSENT only). A SET-but-empty/whitespace ``ECS_D3_DATA_ROOT`` raises
 :class:`ValueError` (fail loud: a broken shell expansion must never be
 indistinguishable from unset). A nonexistent override root or a missing file
 raises :class:`FileNotFoundError` NAMING the missing path -- NEVER a silent
@@ -59,7 +58,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from error_coupling_simulator.mechanisms.qutrit_teachers import (
+from error_coupling_simulator.mechanisms.qutrit_leakage import (
     LEAKED_READOUT_BIAS_SWEEP,
     solve_theta_for_wg_l1,
 )
@@ -82,7 +81,7 @@ __all__ = [
 ]
 
 #: Dataset-root override env var (ratified decision 7 of the ownership contract).
-QEC_TWIN_D3_DATA_ENV = "QEC_TWIN_D3_DATA"
+ECS_D3_DATA_ENV = "ECS_D3_DATA_ROOT"
 
 #: Stable compatibility vocabulary used by the frozen preset contract.  These values
 #: are package-local so importing/validating a preset does not load the GPU carrier.
@@ -157,7 +156,7 @@ def _precision_for_purpose(purpose: str) -> tuple[str, str]:
 def _dataset_files(dataset_root: "str | Path | None") -> "dict[str, Path]":
     """Resolve the four external ``d3_at_q6_7`` files (r01/r10 circuit + metadata).
 
-    Root precedence: ``dataset_root`` argument > ``QEC_TWIN_D3_DATA`` env var (if the
+    Root precedence: ``dataset_root`` argument > ``ECS_D3_DATA_ROOT`` env var (if the
     key is SET; SET-but-empty/whitespace raises :class:`ValueError`, fail loud) > the
     parser's built-in ``DEFAULT_DATASET_ROOT`` (env key absent only). The default
     paths are BUILT by
@@ -176,20 +175,20 @@ def _dataset_files(dataset_root: "str | Path | None") -> "dict[str, Path]":
     root: "Path | None"
     if dataset_root is not None:
         root, source = Path(dataset_root), "dataset_root argument"
-    elif QEC_TWIN_D3_DATA_ENV in os.environ:
+    elif ECS_D3_DATA_ENV in os.environ:
         # SET-but-empty/whitespace is a distinct, LOUD error: a broken shell
-        # expansion (e.g. QEC_TWIN_D3_DATA="$UNSET_VAR") would otherwise be
+        # expansion (e.g. ECS_D3_DATA_ROOT="$UNSET_VAR") would otherwise be
         # indistinguishable from unset and silently fall back to the default
         # root -- exactly the silent-fallback class this module forbids.
-        env_root = os.environ[QEC_TWIN_D3_DATA_ENV].strip()
+        env_root = os.environ[ECS_D3_DATA_ENV].strip()
         if not env_root:
             raise ValueError(
-                f"env var {QEC_TWIN_D3_DATA_ENV} is SET but empty/whitespace; "
+                f"env var {ECS_D3_DATA_ENV} is SET but empty/whitespace; "
                 f"empty values are not allowed (a broken shell expansion would "
                 f"be indistinguishable from unset). Unset it to use the default "
                 f"root {xp.DEFAULT_DATASET_ROOT}, or set it to a real dataset "
                 f"root. Never falling back silently.")
-        root, source = Path(env_root), f"env {QEC_TWIN_D3_DATA_ENV}"
+        root, source = Path(env_root), f"env {ECS_D3_DATA_ENV}"
     else:
         root, source = None, f"default root {xp.DEFAULT_DATASET_ROOT}"
 
@@ -236,7 +235,7 @@ def load_xzzx_d3(dataset_root: "str | Path | None" = None, *,
     does not consume their measurement records or SI1000 noisy circuit and does not
     infer, fit, or validate any preset noise coordinate from them.
 
-    ``dataset_root`` overrides the dataset location (argument > ``QEC_TWIN_D3_DATA``
+    ``dataset_root`` overrides the dataset location (argument > ``ECS_D3_DATA_ROOT``
     env var > the parser default); a missing root/file raises
     :class:`FileNotFoundError` naming it -- never a silent fallback (see
     :func:`_dataset_files`).
@@ -422,7 +421,7 @@ def _registered_qutrit_preset(*, name: str, theta_rad: "float | None" = None,
             claim_scope="synthetic_terminal_readout_convention_only"),
     }
     manifest: "dict[str, object]" = {
-        "schema": "error_coupling_simulator.ExperimentPreset.provenance.v1",
+        "schema": "error_coupling_simulator.frontend.experiment_preset_provenance.v1",
         "preset_name": name,
         "whole_preset": {
             "provenance_kind": "project-design",
@@ -491,7 +490,7 @@ def _canonical_registered_manifest(
         return None
     manifest = json.loads(manifest_json)
     if manifest.get("schema") != \
-            "error_coupling_simulator.ExperimentPreset.provenance.v1":
+            "error_coupling_simulator.frontend.experiment_preset_provenance.v1":
         raise RuntimeError("registered preset manifest has an invalid schema")
     fields = manifest.get("fields")
     expected_fields = (
@@ -551,7 +550,7 @@ def run_spec_from_preset(preset: ExperimentPreset, *, n_shots: int, n_rounds: in
     canonical_manifest = _canonical_registered_manifest(preset)
     if canonical_manifest is None:
         numerical_provenance: "dict[str, object]" = {
-            "schema": "error_coupling_simulator.run_numerical_provenance.v1",
+            "schema": "error_coupling_simulator.frontend.run_numerical_provenance.v1",
             "status": "missing",
             "claim_scope": "implementation_only",
             "reason": (
@@ -562,7 +561,7 @@ def run_spec_from_preset(preset: ExperimentPreset, *, n_shots: int, n_rounds: in
         canonical_json = json.dumps(
             canonical_manifest, sort_keys=True, separators=(",", ":"))
         numerical_provenance = {
-            "schema": "error_coupling_simulator.run_numerical_provenance.v1",
+            "schema": "error_coupling_simulator.frontend.run_numerical_provenance.v1",
             "status": "complete_for_registered_preset",
             "claim_scope": "registered_synthetic_cross_source_benchmark_only",
             "preset_manifest": canonical_manifest,

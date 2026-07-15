@@ -1,87 +1,64 @@
 {
-  "_schema": "qec_twin.code_status.v1 — hand-maintained status overlay for tools/gen_code_map.py. Keys = package paths relative to src/ (fully-qualified, e.g. 'qec_twin/forward', 'error_coupling_simulator/source'), OR dev-tooling package keys (prefixed by their repo-relative root, e.g. 'tools', 'tests/harness'), or a module path for a per-module override. status in {ACTIVE, PLACEHOLDER, ARCHIVED, TOOLING}. gen_code_map.py DRIFT-CHECKS this against the code: add an entry when a new package appears, remove one when a package is deleted (both are flagged in CODE_MAP.md's DRIFT CHECK). '_'-prefixed keys are config, not packages.",
-  "_local_index": {
-    "_note": "Curated CLUSTERS of load-bearing LOCAL-ONLY working code under gitignored outputs/ (NOT committed; present on the build workstation). Maintain the GLOBS (stable); gen_code_map auto-discovers the FILES matching them, so new nm_*/cert_*/quantum_bath_* appear without editing this. Globs are relative to the repo root. NOTE: source/ has been re-homed into src/error_coupling_simulator/ (MIGRATION P1); the lower-level qutip oracle scripts remain local-only until an active consumer justifies re-homing. The outputs/teacher_prereg/ copies below are FROZEN LEGACY and are neither package data nor distribution defaults.",
-    "P2 quantum-bath / non-Markovian line (THE target — pseudomode embedding, CGF probe, involuntary-W observability)": [
-      "outputs/coupled_pseudomode_pilot_v1_*.py",
-      "outputs/quantum_bath_*.py",
-      "outputs/cgf_probe_*.py",
-      "outputs/involuntary_w_*.py"
-    ],
-    "FUTURE (P6) — wedge + source machinery, LOCAL-ONLY (removed from the package in the 2026-07-03 screening; re-home only when an active noise process wires them)": [
-      "outputs/teacher_prereg/nm_source*.py",
-      "outputs/teacher_prereg/nm_divisibility*.py",
-      "outputs/teacher_prereg/nm_wedge*.py"
-    ],
-    "FUTURE (P6) — oracle channels, LOCAL-ONLY (removed from the package in the 2026-07-03 screening; re-home only for an active independent-oracle consumer)": [
-      "outputs/teacher_prereg/qutip_*channel*.py",
-      "outputs/teacher_prereg/qutip_teacher_source*.py"
-    ],
-    "Axis-1 + carrier certs (independent-GT certification scripts; local-only, re-run to confirm)": [
-      "outputs/twin_validation/cert_*.py"
-    ],
-    "pre-build effect-size + record-bridge gates (G0 line)": [
-      "outputs/twin_validation/g0_*.py"
-    ]
-  },
+  "_schema": "error_coupling_simulator.code_status.v2",
+  "_local_index": {},
   "tools": {
     "status": "TOOLING",
-    "note": "dev tooling (NOT shipped): gen_code_map (this map generator, AST-only), sync_obsidian"
+    "note": "Repository development utilities; not installed as simulator runtime modules."
   },
   "tests/harness": {
     "status": "TOOLING",
-    "note": "Python test/coverage HARNESS (lives WITH the tests; replaces the .sh runners): fresh-process service_acceptance catalog runner with bounded CPU, CPU-exclusive, and GPU-serial lanes plus unique logs; proc (process-group supervisor — no orphaned workers); gpu_pool (flock lease + race-free child GPU environment, ECS_GPUS); gate + mutation registry-driven runners; coverage_audit (AST-derived per-unit coverage audit)"
+    "note": "Process-isolated service acceptance, coverage, mutation, GPU-lease, and subprocess supervision utilities."
   },
   "error_coupling_simulator": {
     "status": "ACTIVE",
-    "note": "Self-contained simulator distribution: runtime ownership is package-local and has no inward qec_twin import. Exact wheel/sdist allowlists exclude outward repository shims, RAG tooling, and scratch assets; release acceptance uses a real sdist-to-wheel isolated-install core-smoke gate. It consumes a specified noise process and emits a syndrome record. There is no physical ground truth; evaluator-side parameters define the process and independent oracles are formal bug-catchers."
+    "note": "Installed simulator distribution. It consumes caller-declared circuits and specified noise processes and emits canonical detector/observable records or explicitly bounded carrier evidence."
   },
   "error_coupling_simulator/source": {
     "status": "ACTIVE",
-    "note": "Axis-2 source layer (P3): process (productionized SourceTimeline) + coupling (Theta fan-out) consumed by specified noise processes. The lower-level wedge machinery (nm_*) + the qutip oracles were removed in the 2026-07-03 screening because no active process wires them."
+    "note": "Replayable finite-RTN, finite-band 1/f, phase-burst, and temporal-storm source processes plus declared source-to-parameter maps."
   },
   "error_coupling_simulator/mechanisms": {
     "status": "ACTIVE",
-    "note": "Mechanism primitives and evaluator-side process fixtures: catalog, axis1_primitives, qutrit_teachers, seam_teachers, and Kraus/field builders. Old qec_twin.mechanisms.* paths are outward repository compatibility shims, excluded from distribution and never imported by this package. Record-to-parameter fitting and learner model comparisons are outside the simulator product."
+    "note": "Explicit Axis-1 generator lowering, Wood-Gambetta qutrit leakage channels/processes, and two-transmon CZ leakage channel derivation."
   },
   "error_coupling_simulator/quantum_bath": {
-    "status": "ACTIVE",
-    "note": "Pseudomode-enlarged shared-bath GKSL feasibility carrier: 2 data + 2 ancilla + one shared mode, exact-DM CPU, dual-axis syndrome record, and evaluator-side ground-truth controls. K/K_X/K_Z are forgeable by an incoherent AD, so the honest discriminator is model-free record distance."
+    "status": "RESEARCH",
+    "note": "Pseudomode-enlarged shared-bath GKSL research carriers, formal controls, record diagnostics, and quantum-memory witnesses."
   },
   "error_coupling_simulator/frontend": {
     "status": "ACTIVE",
-    "note": "User-facing package-local frontend: CircuitIR/CodeSpec/XZZX compiler, Stim import, sealed SubstepSchedule, .b8 record sampling, Axis-1 carrier execution/evidence, .b8 I/O, and the optional external-PyMatching adapter. Google r01/r10 files are explicit external circuit/schedule inputs. Ququart transport accepts package-derived channels from explicit CZ parameters, in-memory channels, or an optional serialized derived-channel cache; Kraus is not external data. CUDA-Q Grover is an optional plugin isolated in aiqec, not canonical ecs. Old qec_twin.simulator is an outward repository shim and is not shipped."
+    "note": "Circuit and code compilation, sealed schedules, Stim record generation, Axis-1 execution/evidence, record I/O, optional decoding, and isolated workload adapters."
   },
   "error_coupling_simulator/carrier": {
     "status": "ACTIVE",
-    "note": "Forward propagation owner: joint_lindbladian, channels, exact/PEPS carriers, package-local RecordBatch/PackedShotBatch, and the active fused within-cycle host live here. The shipped 1D MPS implementations are restricted Axis-1 execution services under frontend, not the retired legacy thin-strip driver and not a production full-dxd carrier. Only fused within-cycle optimization uses c64/screening-only; final/certification and PEPS/MPS are c128. Old qec_twin.forward paths are repo-local compatibility shims and are excluded from distribution archives."
+    "note": "Joint-Lindbladian, exact density-matrix, MCWF, tensor-network, canonical record, and within-cycle propagation owners."
   },
   "error_coupling_simulator/carrier/exact": {
     "status": "ACTIVE",
-    "note": "Exact qubit/qutrit/ququart density-matrix backend (feasibility-only; local dimension controls the ceiling). qutrit_dm and circuit_sim are canonical here; old qec_twin.forward.exact paths are outward repository shims excluded from the distribution. XZZX parsing is package-local under frontend."
+    "note": "Exact small-register qubit, qutrit, and ququart density-matrix carriers and sequential measurement reference calculations."
   },
   "error_coupling_simulator/carrier/kernels": {
     "status": "ACTIVE",
-    "note": "Fused CUDA/C++ kernels and loaders. Exact-forward fused Kraus remains c128 with its Torch reference; sv_traj_d3_wc has separate c64/c128 ABIs, with c64 restricted to optimization screening. Python/C++ guards pin dtype, device, shape, CSR bounds, CUDAGuard, and the current codestate stream. The canonical ecs environment supplies CUDA 13 and ninja."
+    "note": "Optional fused CUDA and C++ kernels with package-owned loaders and reference-path contracts."
   },
   "error_coupling_simulator/carrier/pepo": {
-    "status": "ARCHIVED",
-    "note": "rung-1 2D DM-PEPO carrier for the rotated dxd XZZX patch (contract v4.3 / prereg v2.5). Engine E1-CERTIFIED FAITHFUL vs exact QutritDM (1e-15) + 50/51 pytest green. But the COMPILED-GEOMETRY carrier is CLOSED (2026-07-10): F-SEL-1 (selective sampling arm) + F-REC-1 (nonselective record law misses G1.2 by 25-40x at D=16) both falsified by first execution — the compiled weight-4 POVM concentrates circuit-distributed correlations onto fresh path bonds carrying flat rank-64 spectra (loop-closed rank probe: no lossless regauge exists). RETAINED as a findings package + the record-law/oracle substrate; the sampling arm moves to an ANCILLA-EXPLICIT rebuild (next architecture). Do NOT build new work on the selective born_sample_round path."
+    "status": "RESEARCH",
+    "note": "Retained two-dimensional qutrit density-matrix PEPO carrier. Executable d3 reference checks remain; production record faithfulness and d5/d7 scientific claims remain open."
   },
   "error_coupling_simulator/carrier/peps": {
-    "status": "ACTIVE",
-    "note": "RUNG-B single-wire pure-state 2D PEPS carrier for rotated dxd XZZX. The compiled sqrt(E_s) POVM avoids doubled-wire rank squaring; state, contraction, trajectory, sampling-map, and loop diagnostics remain referee-independent from exact QutritDM. It uses package-local WithinCycleScheduleHost, temporal folding, and PackedShotBatch, while still accepting an injected host. PEPS is GPU c128-only; fused-SV c64 policy does not amend PEPS/FET. The registered d3 state-level spike is green, while finite-truncation faithfulness of the complete multi-round record remains open under ADR 0011; d5/d7 distributional claims remain provisional."
+    "status": "RESEARCH",
+    "note": "Current single-wire two-dimensional qutrit PEPS feasibility carrier. The d3 state/record test surface remains executable; finite-truncation full-record faithfulness and d5/d7 scientific claims remain open."
   },
   "error_coupling_simulator/certify": {
     "status": "ACTIVE",
-    "note": "Evaluator-side noise-process certification seam: record schema, compatibility protocol, certify_cells scoring, and independent Anchor/Control ports. c128 metadata makes an artifact only a certification candidate, never an automatic pass. Decoder reduction is an optional frontend instrument; retained R2 ingestion stays outside simulator runtime."
+    "note": "Protocol-based certification facade, capability/feasibility checks, channel diagnostics, independent reference anchors, and corruption controls."
   },
   "error_coupling_simulator/certify/anchors": {
     "status": "ACTIVE",
-    "note": "P4: independent-ground-truth anchor ports (DM-oracle / stim-clifford / closed-form / controls) — anti-circular referees."
+    "note": "Independent density-matrix, Stim-Clifford, closed-form, and corruption-control reference implementations."
   },
   "error_coupling_simulator/noise_processes": {
     "status": "ACTIVE",
-    "note": "Evaluator-only specified record processes. CoupledCycleNoiseProcess maps a memoryful 1/f source to per-round Axis-1 parameters and emits sealed dense {det,obs} records with matched_marginal_permutation_control (exchangeable at finite R, not a genuinely Markovian generative null; markovian_baseline is only its compatibility spelling) and a source-off control. Record-to-parameter fitting is outside this package boundary."
+    "note": "Specified record-generating processes with evaluator-only truth, a matched-marginal permutation control, and a source-off control."
   }
 }

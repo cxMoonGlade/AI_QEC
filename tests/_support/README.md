@@ -1,96 +1,20 @@
-# tests/_support — shared test support
+# Shared test support
 
-Shared test support for the suite: fixtures and guards (`fixtures.py`) plus their
-meta-tests (`test_support_selftest.py`). **NEVER production code** (nothing under
-`src/` may import this package) and **NEVER a home for anything with an independence
-constraint against a specific backend** — a reference implementation that referees a
-backend stays deliberately local to its test file or its own dedicated reference
-module (see the contract's "Explicitly NOT centralized" list; e.g. the dense
-window/site apply reference family, soft_readout's `_arm_d2`, and
-`test_mps_terminal_degenerate_guard.py`'s loaders per AM-4).
+This directory contains test-only fixtures, adversarial assertions, per-owner
+coverage registries, and their self-tests. Production modules must not import it.
 
-Binding contract: `docs/twin_validation/api_hardening_ownership_design.md`
-(rows C1/C2, NAMING STANDARD N-1..N-5, v2 REVIEW DISPOSITIONS, DEVIOUS-TEST STANDARD).
-The directory keeps its leading underscore per N-5 (pytest collection convention);
-names inside are clean.
+Reference implementations with an independence requirement stay local to the test
+that uses them. Centralizing such a reference with the implementation under test
+would make a shared defect capable of passing both sides of a comparison.
 
-## GLOSSARY (N-1 — the one public vocabulary, aligned with the certify seam,
-`src/error_coupling_simulator/certify/types.py`)
+The reusable helpers are:
 
-- **reference** — a from-scratch or INDEPENDENT implementation used for comparison
-  against the backend under test (replaces the internal "referee"/"GT"); it must not
-  share the tested code's implementation route (FAITHFULNESS_PROTOCOL Rule I).
-- **anchor** — the certify port (`certify.types.Anchor`): an independent ground-truth
-  capability (DM oracle / stim Clifford slice / closed-form identity) that answers a
-  (statistic, regime) cell with declared exactness + epistemic class; feasibility
-  (OOM) is data, not branching.
-- **control** — the certify port (`certify.types.Control`) for FIRST-CLASS negative
-  controls: a deliberately broken input/perturbation that MUST fire (fail/separate);
-  an inert control forces the verdict to FAIL — a certification with no falsifier is
-  rejected by construction.
-- **preset** — a named, REGISTERED experiment configuration with frozen, explicit
-  knobs (replaces the internal "cell"); no silent physics defaults.
-- **gate** — a registered pass/fail check with a pre-declared threshold/tolerance
-  (predict-before-measure); a miss is a FINDING to adjudicate, never a silent
-  tolerance bump.
-- **backend under test** — the implementation a test certifies (replaces the internal
-  "arm"); its own oracles and helpers never referee it (anti-circular).
+- `require_precondition`: fails loudly when a falsifier would be vacuous.
+- `assert_control_trips`: proves a deliberately corrupted input is rejected.
+- `assert_with_margin`: rejects threshold checks that pass only at numerical noise.
+- `random_cptp_kraus` and `random_density_matrix`: validated random fixtures.
+- `load_outputs_module`: loads a committed current-run script for a focused test.
 
-## K-CATALOG (DEVIOUS-TEST STANDARD — binding for every NEW test in this pass and after)
-
-Design question every test must answer BEFORE it is done: **"what is the most devious
-implementation that still passes me?"** — then add the discriminator that kills it.
-
-**KILLER requirement.** Every load-bearing assert ships at least one KILLER: a
-deliberately sabotaged input/implementation variant DEMONSTRATED to trip that assert
-(the `assert_control_trips` shape). A check that has never been shown to fail is
-unproven (scrutinize-vacuous-checks discipline, mandatory per-assert).
-
-Every entry is a REAL bug class caught in the 2026-07-06/07 arc; new tests check
-themselves against it and name which classes they defend:
-
-- **K-1** inert seam / dead parameter (the P2-ii caller-table-ignored trap)
-- **K-2** misindexing (off-by-one, Python negative-index wraparound, reversed order)
-- **K-3** tie-break/comparison drift (`<=` vs `<`, first-vs-last, argmax-on-bool)
-- **K-4** evil-marginal thresholds (engineered violation landing a hair above the
-  gate: the measured 1.181e-12 vs CPTP_TOL=1e-12)
-- **K-5** self-comparison vacuity (identical cap tuples; engine-vs-own-oracle)
-- **K-6** symmetry blindness (permutation-symmetric operators hiding leg-order bugs;
-  sign-blind observables)
-- **K-7** degenerate-input shadowing (NaN-swallowed guards; zero-norm batch poisoning)
-- **K-8** convention/gauge drift (MSB/site-order/lambda-vs-sigma units)
-- **K-9** cross-shot/batch contamination (gather misalignment)
-- **K-10** measurement-isolation contamination (absolute peaks counting other tests'
-  standing allocations)
-
-Discriminator patterns (the reusable answers): byte-level positive controls
-(injection == equivalent static run), prefix-identity checks (round-0 block EXACT
-equality), sabotage variants (swapped enumeration, reversed tables), unit tags in
-names, masked-environment probes, heterogeneous-batch vs B=1 replays.
-
-## Two-sided verification (contract: "TWO-SIDED PER-UNIT EXTENSION")
-
-- **Side A (should-fail-must-fail)**: `tests/test_gate_soundness_matrix.py` — the
-  per-unit MUTANT × GATE soundness matrix; every hardened unit's registered gate is
-  DEMONSTRATED to fail under a surgical sabotage of that unit.
-- **Side B (should-pass-must-pass-robustly)**: `fixtures.assert_with_margin` (a pass
-  within `min_margin`, default 10x, of its threshold raises with the greppable
-  `EVIL-MARGINAL (class c): ` prefix — the 1.181e-12-vs-1e-12 lesson) +
-  `skip_allowlist.json` (the REGISTERED full-suite skip set; audited per wave against
-  the run's junitxml by `outputs/twin_validation/skip_audit.py` via
-  `outputs/twin_validation/skip_audit_run.sh`: any unregistered skip or any suite
-  failure carrying `PRECONDITION (class c` = audit FAILURE, exit 1).
-
-## What lives here
-
-- `fixtures.py` — `require_precondition` (the greppable class-(c) prefix),
-  `assert_control_trips` (the anti-vacuous control shape; bespoke broken inputs stay
-  local), `assert_with_margin` (Side-B margin discipline, `EVIL-MARGINAL (class c): `
-  prefix), `random_cptp_kraus` / `random_density_matrix` (one builder each, backend +
-  return-shape flags, internal 1e-12 asserts), `load_outputs_module` (importlib shim
-  for committed `outputs/` scripts).
-- `skip_allowlist.json` — the registered full-suite skip set (Side B (iii)); new
-  skips are added ONLY by editing it in the same reviewed commit that introduces them.
-- `test_support_selftest.py` — the meta-tests: the infrastructure defends itself
-  (prefix verbatim, double-negative killer, margin-discipline three-outcome
-  demonstration, sabotaged-CPTP demonstration, mask-hook unknown-name fail-loud).
+Each `stage_d_*_targets.json` file is a current-owner unit/branch-coverage registry
+consumed by `tests/harness/gate.py`. A registry must enumerate every public unit in
+its declared modules or state an explicit, test-backed reason for exclusion.

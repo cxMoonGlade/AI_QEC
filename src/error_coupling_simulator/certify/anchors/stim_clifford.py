@@ -3,7 +3,8 @@ from __future__ import annotations
 """The stim-Clifford anchor — the implementation-INDEPENDENT wiring check.
 
 stim is a SEPARATE Clifford simulator (not our DM, not our carrier), so comparing a Pauli/Clifford
-SLICE of the teacher (mechanism off, a per-round bit-flip ``X_ERROR(p_x)``) against stim certifies the
+SLICE of the controlled process (non-Clifford noise off, a per-round bit-flip
+``X_ERROR(p_x)``) against stim certifies the
 geometry→record WIRING — the stabilizer supports, the seam fold (first-round-raw + interior
 round-to-round XOR), and the logical — against a reference that shares NONE of our code. It catches a
 bug in our own geometry/seam that the DM and the carrier would otherwise share.
@@ -19,9 +20,9 @@ energy-relaxation error (McEwen 2102.06131 §3.2/§3.4; Wood–Gambetta 1704.030
 is applied and certified: the physical DM/carrier path (``RoundDataFrame`` / ``dm_round_callbacks``),
 NOT this Clifford referee, which is structurally blind to it.
 
-It graduates ``_stim_mpp_oracle`` / ``_pauli_targets`` (previously copied across ~11
-``outputs/teacher_prereg`` scripts) into ONE mainline home. It is ``emit_kind() == "clifford_slice"``
-(the teacher emits the matching bit-flip slice) and STATISTICAL (stim samples ``N`` shots → an
+It keeps ``_stim_mpp_oracle`` / ``_pauli_targets`` in one current owner. It is
+``emit_kind() == "clifford_slice"``
+(the controlled process emits the matching bit-flip slice) and STATISTICAL (stim samples ``N`` shots → an
 empirical dist; band ~ C/sqrt(N), class (b)). stim is Clifford-cheap (host-side), feasible at any R.
 """
 
@@ -56,13 +57,13 @@ class StimCliffordAnchor:
         # Clifford-cheap; feasible at any R. STATISTICAL (sampled) -> the band is C/sqrt(N), class (b).
         return Capability(statistic, Exactness.STATISTICAL, True, "", "b", 0)
 
-    def answer(self, teacher, statistic: Statistic, regime: Regime,
+    def answer(self, process, statistic: Statistic, regime: Regime,
                *, N=None, generator=None, corrupt=None) -> AnchorValue:
         from ..core import emitted_statistic
 
         n = int(N or 200_000)
         corrupt_stab = corrupt.get("stab") if corrupt else None
-        det, obs = _stim_slice_records(teacher.sched, self.p_x, regime, m=0, N=n, seed=self._seed,
+        det, obs = _stim_slice_records(process.sched, self.p_x, regime, m=0, N=n, seed=self._seed,
                                        corrupt_stab=corrupt_stab)
         val = emitted_statistic({"det": det, "obs": obs}, statistic, regime)
         band = 6.0 / np.sqrt(n)  # the stim MC band (the GT side's sampling error)
@@ -88,7 +89,8 @@ def _stim_slice_records(sched, p_x: float, regime: Regime, *, m: int, N: int, se
     prepare ``|m>_L``, per round [``X_ERROR(p_x)`` → ``MPP`` all stabilizers], then the logical
     ``MPP``; detectors = first-round-raw + interior round-to-round XOR (the seam). ``corrupt_stab``
     flips that stabilizer's X<->Z (the corrupt-stabilizer control). The emitted surface (R*n_stab
-    detectors, 1 observable) matches the teacher's emit bit-for-bit (S4). The transversal X/Y DD echoes
+    detectors, 1 observable) matches the controlled process's emitted record bit-for-bit. The
+    transversal X/Y DD echoes
     are omitted — a deterministic Pauli frame is provably inert on a Clifford slice (module docstring)."""
     import stim
 

@@ -20,8 +20,18 @@ from typing import Any
 import numpy as np
 import torch
 
-from .channels import _super_to_kraus, leakage_channel_super, leakage_kraus
-from .records import PackedShotBatch, RecordBatch
+from ..mechanisms.qutrit_leakage import (
+    _super_to_kraus,
+    leakage_channel_super,
+    leakage_kraus,
+)
+from .records import (
+    PACKED_DETECTOR_INITIAL_PRIOR,
+    PACKED_SHOT_SCHEMA,
+    PACKED_SYNDROME_LAYOUT,
+    PackedShotBatch,
+    RecordBatch,
+)
 
 CDTYPE = torch.complex128
 CPTP_TOL = 1e-12
@@ -61,13 +71,13 @@ _RUN_PURPOSE_EVIDENCE: dict[str, str] = {
 }
 
 _RUN_NUMERICAL_PROVENANCE_SCHEMA = (
-    "error_coupling_simulator.run_numerical_provenance.v1"
+    "error_coupling_simulator.frontend.run_numerical_provenance.v1"
 )
 _PRESET_NUMERICAL_PROVENANCE_SCHEMA = (
-    "error_coupling_simulator.ExperimentPreset.provenance.v1"
+    "error_coupling_simulator.frontend.experiment_preset_provenance.v1"
 )
 _PACKAGE_BUILD_IDENTITY_SCHEMA = (
-    "error_coupling_simulator.package_build_identity.v1"
+    "error_coupling_simulator.carrier.package_build_identity.v1"
 )
 
 __all__ = [
@@ -732,7 +742,7 @@ class WithinCycleScheduleHost:
             marshalled.n_stab, marshalled.R)
         build_identity = package_build_identity()
         header: dict[str, Any] = {
-            "format": "p4a_sv_mc_shots/v1",
+            "format": PACKED_SHOT_SCHEMA,
             "n_data": marshalled.n_data,
             "n_stab": marshalled.n_stab,
             "R": marshalled.R,
@@ -758,10 +768,8 @@ class WithinCycleScheduleHost:
             ],
             "syndrome_bits_per_shot": bits,
             "out_stride_bytes": (bits + 7) // 8 + 1,
-            "syndrome_layout": (
-                "shot_major: shot_id outer, then round, then stab "
-                "(round-major, LSB-first packbits); logical_flip in the "
-                "trailing byte (value 0/1)"),
+            "syndrome_layout": PACKED_SYNDROME_LAYOUT,
+            "detector_initial_prior": PACKED_DETECTOR_INITIAL_PRIOR,
             "build_identity": dict(build_identity),
             "package_version": build_identity["version"],
             "package_tree_sha256": build_identity["package_tree_sha256"],
@@ -807,7 +815,7 @@ class FusedWithinCycleSampler(WithinCycleScheduleHost):
                 "GPU-only fused-SV codestate build requires CUDA")
         if int(schedule.n_data) != self._N_DATA:
             raise ValueError(
-                "the fused sv_traj_d3 kernel is specialized to 9 data qutrits "
+                "the fused sv_traj_d3_wc kernel is specialized to 9 data qutrits "
                 f"(got {schedule.n_data})")
         m = int(logical_m)
         if m not in (0, 1):

@@ -2,12 +2,10 @@ from __future__ import annotations
 
 """One-call certification facade for a controlled noise process.
 
-The historical ``certify_teacher`` entry point auto-builds the independent anchors (the exact
+``certify_noise_process`` auto-builds the independent anchors (the exact
 DM + the stim Clifford-slice wiring), routes each over its FEASIBLE cells (OOM-as-data — an anchor
 that would OOM at a regime is simply skipped, never allocated), runs the negative controls (ON by
-default), over the ``level``'s (statistic, R) grid, and merges ONE epistemic ledger. It collapses the
-hand-rolled per-script cross-check (the ~950-line ``twin_xzzx_teacher_fullmix.main()`` / the L1–L6
-ledger of ``twin_dm_record_oracle_check``) to a call.
+default), over the ``level``'s (statistic, R) grid, and merges ONE epistemic ledger.
 
 The DM and stim anchors certify different process views (the full mechanism vs the Clifford slice), so
 both run — they don't compete; the OOM routing is per-anchor. Statistical (stim) rows give
@@ -36,9 +34,9 @@ _LEVELS = {
 }
 
 
-def certify_teacher(teacher, *, level: str = "standard", anchors=None, controls=None,
-                    device: str = "cuda", N: int | None = None, seed: int = 0, cells=None,
-                    dm_safety: float | None = None) -> CertReport:
+def certify_noise_process(process, *, level: str = "standard", anchors=None, controls=None,
+                          device: str = "cuda", N: int | None = None, seed: int = 0,
+                          cells=None, dm_safety: float | None = None) -> CertReport:
     """Certify a controlled noise process against independent formal anchors → one
     epistemic ledger + a single verdict.
 
@@ -56,7 +54,7 @@ def certify_teacher(teacher, *, level: str = "standard", anchors=None, controls=
         required_extensions = ("dm_round_callbacks", "emit_clifford_slice")
         missing = [
             name for name in required_extensions
-            if not callable(getattr(teacher, name, None))
+            if not callable(getattr(process, name, None))
         ]
         if missing:
             raise TypeError(
@@ -67,7 +65,9 @@ def certify_teacher(teacher, *, level: str = "standard", anchors=None, controls=
         anchors = [DMOracleAnchor(device=device, **dm_kwargs), StimCliffordAnchor()]
     if controls is None:
         controls = [CorruptStabControl(stab=1)]
-    check_list = cells if cells is not None else [(s, _regime(teacher, R)) for (s, R) in plan["checks"]]
+    check_list = cells if cells is not None else [
+        (s, _regime(process, R)) for (s, R) in plan["checks"]
+    ]
 
     all_rows, all_controls, routing = [], [], {}
     for anchor in anchors:
@@ -75,23 +75,20 @@ def certify_teacher(teacher, *, level: str = "standard", anchors=None, controls=
                     if s in anchor.answers() and anchor.capability(s, r).feasible]
         if not feasible:
             continue
-        rep = certify_cells(teacher, feasible, [anchor], controls, N=n_eff, seed=seed)
+        rep = certify_cells(process, feasible, [anchor], controls, N=n_eff, seed=seed)
         all_rows.extend(rep.rows)
         all_controls.extend(rep.controls)
         routing.update({f"{anchor.name}:{k}": v for k, v in rep.routing.items()})
     if not all_rows:
-        raise ValueError("certify_teacher: no anchor could feasibly answer any cell (check the level / "
-                         "the teacher geometry)")
+        raise ValueError(
+            "certify_noise_process: no anchor could feasibly answer any cell "
+            "(check the level / process geometry)"
+        )
     return CertReport(_rollup(all_rows, all_controls), tuple(all_rows), tuple(all_controls),
-                      routing, dict(teacher.truth), {"level": level, "N": n_eff, "seed": seed})
+                      routing, dict(process.truth), {"level": level, "N": n_eff, "seed": seed})
 
 
-def _regime(teacher, R: int) -> Regime:
-    sched = teacher.sched
+def _regime(process, R: int) -> Regime:
+    sched = process.sched
     return Regime(R=R, register="full", n_active=int(sched.n_data),
                   n_stab=len(sched.stabilizers), arm="A", b=1.0)
-
-
-# Neutral public spelling. Keep identity with the historical entry point so behavior,
-# signatures, error messages, and downstream registry assumptions remain unchanged.
-certify_noise_process = certify_teacher

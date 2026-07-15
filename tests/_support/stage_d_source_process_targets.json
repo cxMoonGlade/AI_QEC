@@ -1,8 +1,8 @@
 {
   "_comment": [
     "STAGE-D per-batch coverage registry -- batch 'source_process' (D11, first of the Tier-2 source/frontend/mechanisms tier)",
-    "(docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4; full-coverage program;",
-    "work-list docs/twin_validation/l3_release_package_unit_inventory.md D11).",
+    "(docs/SIMULATOR.md SS12.3/12.4; full-coverage program;",
+    "work-list docs/SIMULATOR.md D11).",
     "Run via tests/harness/gate.py <this file> (L0+L1; calls tests/harness/coverage_audit.py) and",
     "tests/harness/mutation.py <this file> (L2).",
     "",
@@ -50,7 +50,7 @@
     "scored, but ARE exercised + mutation-covered here via direct value-pins + exact-message raises (mutmut 3.6",
     "is coverage-guided: every covered helper line yields counted mutants, so each is given teeth)."
   ],
-  "contract": "docs/twin_validation/wave2_6_unit_test_contract.md",
+  "contract": "docs/SIMULATOR.md",
   "default_target": {"statement": 1.0, "branch": 1.0},
   "covered_by_test_files": [
     "tests/test_source_process_units.py"

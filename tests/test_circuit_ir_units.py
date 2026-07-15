@@ -3,8 +3,8 @@
 ``__post_init__`` dunders + 3 ``CircuitIR`` record-schema properties + 15 ``CircuitBuilder``
 fluent methods; no torch, no quimb, so out_of_scope is empty).
 
-Full-coverage program (docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4;
-work-list docs/twin_validation/l3_release_package_unit_inventory.md D15).
+Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
+work-list docs/SIMULATOR.md D15).
 ``frontend/circuit_ir.py`` owns the user-facing, Stim-compatible circuit IR: the frozen
 dataclasses (``GateOp``/``Tick``/``MeasureOp``/``DetectorDef``/``ObservableDef``) whose
 ``__post_init__`` normalizes names/targets/keys/args/coords/index, the validating ``CircuitIR``
@@ -231,7 +231,7 @@ def test_L0_circuit_ir_metadata_reserved_key_raises_with_label():
     # the reserved-key guard message carries the CircuitIR.metadata label -> pin it exactly
     _raises_exact(
         ValueError,
-        "learner-visible metadata cannot contain evaluator truth; "
+        "public-artifact metadata cannot contain evaluator truth; "
         "reserved key CircuitIR.metadata.ground_truth matches 'ground_truth'. "
         "Use evaluator_sidecars with visibility='evaluator_only'.",
         lambda: CircuitIR(num_qubits=1, steps=(), metadata={"ground_truth": 1}))

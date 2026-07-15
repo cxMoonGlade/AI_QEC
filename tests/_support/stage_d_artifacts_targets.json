@@ -1,13 +1,13 @@
 {
   "_comment": [
     "STAGE-D per-batch coverage registry -- batch 'artifacts' (D27, Tier-2 frontend cluster)",
-    "(docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4; full-coverage program;",
-    "work-list docs/twin_validation/l3_release_package_unit_inventory.md D27).",
+    "(docs/SIMULATOR.md SS12.3/12.4; full-coverage program;",
+    "work-list docs/SIMULATOR.md D27).",
     "Run via tests/harness/gate.py <this file> (L0+L1; calls tests/harness/coverage_audit.py) and",
     "tests/harness/mutation.py <this file> (L2).",
     "",
     "MODULE: frontend/artifacts.py -- the frontend's on-disk artifact layer. It imports numpy +",
-    "qec_twin.hardware.b8_io + stdlib json/hashlib/pathlib, and imports NEITHER torch NOR quimb, so",
+    "the package-local b8 reader + stdlib json/hashlib/pathlib, and imports NEITHER torch NOR quimb, so",
     "EVERY public unit is CPU-PURE and IN-SCOPE for full L0+L1+L2 -- out_of_scope is therefore {} (the",
     "AST reconcile refuses any gpu_bound claim on a torch-less module -> expect ZERO out_of_scope).",
     "",
@@ -78,7 +78,7 @@
     "NO exemptions + NO out_of_scope: every SCORED unit is CPU-pure and every branch of its OWN AST",
     "body is REACHABLE through a public entry point."
   ],
-  "contract": "docs/twin_validation/wave2_6_unit_test_contract.md",
+  "contract": "docs/SIMULATOR.md",
   "default_target": {"statement": 1.0, "branch": 1.0},
   "covered_by_test_files": [
     "tests/test_artifacts_units.py"

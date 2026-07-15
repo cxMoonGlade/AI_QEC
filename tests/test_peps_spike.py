@@ -2,8 +2,7 @@ from __future__ import annotations
 
 r"""RUNG-B single-wire 2D PEPS spike — registered d3 pytest gates + KILLER variants.
 
-Written AGAINST the binding contract
-``docs/nonpauli_teacher/peps_singlewire_spike_contract.md`` (v1.0 REGISTERED) —
+Written against the registered single-wire 2D PEPS feasibility contract —
 NEVER against the implementation: the module package
 ``src/error_coupling_simulator/carrier/peps/`` is built in parallel and is imported
 at TEST RUNTIME ONLY (inside :func:`_peps_namespaces`); it was not read while this
@@ -27,8 +26,7 @@ Coverage (the test-builder's contract rows, §4 + §6.3):
   * SW2  — the pytest-level STRUCTURAL LOSSLESS-POLICY unit (no cut below the
            exact local rank — the sigma > 1e-12*sigma_1 count, the pinned
            zero-drop convention).  The >= 4-stab chain probe itself is a GATE
-           SCRIPT under ``outputs/nonpauli_teacher/peps_spike_*`` (contract §4
-           SW2), not pytest.
+           SCRIPT (contract §4 SW2), not pytest.
   * SW3  — single-wire TT ranks: <= (3,5,3) w=4 / (3,) w=2 ((a) bound, asserted
            ALWAYS); measured == expected at (arm A, b = 0.9) asserted as the WP3
            expectation (below-bound = porting bug via the Kronecker-square
@@ -47,8 +45,8 @@ Coverage (the test-builder's contract rows, §4 + §6.3):
            the sampling-direction parity killer at the pinned point u = 0.1,
            p1 = 0.2 (kills RT1-B1 regressions, K-8); the conj-layer sabotage
            (UNconjugated bra copy in the double-layer read; Im-carrying
-           precondition, K-6/K-8); det<->s fold triple-agreement vs
-           ``seam.teacher_shots_to_events`` + a wrong-orientation fold sabotage;
+           precondition, K-6/K-8); det<->s fold triple-agreement vs an independent
+           hand-typed reference + a wrong-orientation fold sabotage;
            the ledger-image killer (a no-precut cut must report
            ``precut_discarded == 0.0`` EXACTLY — the image a deleted/silent
            precut emits everywhere); the window-binding forced-flag killer (§6.1:
@@ -64,20 +62,18 @@ Coverage (the test-builder's contract rows, §4 + §6.3):
 NOT here (script-owned, contract §4/§8): SW2 chain probe, SW4 record law
 (DMPathEvaluator route), SW5 cross-carrier byte-identity, SW7/SW8/SW9 (d5).
 
-GPU convention: per-test ``skipif`` on ``torch.cuda.is_available()`` (the
-``tests/test_pepo_rung1.py`` pattern); the engine is GPU-only (SW-S8), so every
-test constructing a PepsState requires CUDA.  Tests needing the REAL Google d3
-circuit skip with an explicit justification when the local dataset is absent
-(real patch only — no textbook fallback).  No other skips: none of this file's
-skips fire on the full-dataset GPU box, so no ``skip_allowlist.json`` additions
-are required.
+GPU convention: per-test ``skipif`` on ``torch.cuda.is_available()``; the carrier
+is GPU-only, so every test constructing a PepsState requires CUDA.  Tests needing
+the real Google d3 circuit skip with an explicit justification when the local
+dataset is absent (real patch only — no textbook fallback).  No scientific or
+implementation failure is converted into a registered skip.
 
 Referee seams used READ-ONLY (contract §3 independence rule — the ENGINE must not
 import qutrit_dm; the TEST may): ``error_coupling_simulator.carrier.exact
-.qutrit_dm`` via ``SvSampler.within_cycle_dm_engine``, ``qec_twin.forward.scalable
-.sv_sampler`` (leak build + pack_shots), ``qec_twin.forward.scalable.seam`` (the
-canonical detector fold), ``qec_twin.forward.exact.xzzx_parser`` (the real patch),
-and ``error_coupling_simulator.carrier.pepo.layout`` (ARCHIVED, import-only — the
+.qutrit_dm``, ``error_coupling_simulator.carrier.within_cycle`` (leak build),
+``error_coupling_simulator.carrier.record_fold`` (the canonical detector fold),
+``error_coupling_simulator.frontend.xzzx_parser`` (the real patch),
+and ``error_coupling_simulator.carrier.pepo.layout`` (retained research carrier — the
 representation-agnostic layout the spike itself reuses VERBATIM per contract D4).
 """
 
@@ -90,7 +86,7 @@ import pytest
 import torch
 
 from _support.fixtures import require_precondition
-from qec_twin.numerics import NUMERICAL_ZERO
+from error_coupling_simulator.numerics import NUMERICAL_ZERO
 
 # --------------------------------------------------------------------------- #
 # Constants (contract §1 D2 p1c cell + §4 pinned bars)                         #
@@ -111,7 +107,7 @@ requires_cuda = pytest.mark.skipif(
 
 _N9 = 3 ** 9
 
-# The FORBIDDEN archived-pepo stab-sampling direction (RT1-B1) — kept here only as
+# The rejected PEPO stabilizer-sampling direction (RT1-B1) — kept here only as
 # the SW6 parity-killer's sabotage reference, never as an engine convention.
 _FORBIDDEN_PEPO_DIRECTION = "outcome = 1 iff u < p1"
 
@@ -211,7 +207,7 @@ def _apply_kraus_forced(state, K: torch.Tensor, pos: int) -> None:
     seam, non-unitary-tolerant) is the fallback.  ``apply_site_op`` is DELIBERATELY
     EXCLUDED: its ``(state, pos, op)`` order is incompatible with the
     ``f(state, K, pos)`` call shape (it binds ``op`` to an int and raises
-    AttributeError, not a clean TypeError — the Stage-4 blocker).  AttributeError/
+    AttributeError, not a clean TypeError — the integration blocker). AttributeError/
     ValueError from a wrong-order guess advances the candidate list."""
     names = ("apply_kraus_1site", "apply_kraus_forced", "apply_op_1site",
              "apply_gate_1site")
@@ -235,8 +231,7 @@ def _apply_kraus_forced(state, K: torch.Tensor, pos: int) -> None:
 
 
 def _pepo_layout(sched):
-    """The VERBATIM layout import the spike itself reuses (contract D4; the pepo
-    package is ARCHIVED, import-only)."""
+    """The exact layout import the PEPS carrier reuses from the retained PEPO package."""
     from error_coupling_simulator.carrier.pepo.layout import PepoLayout
     return PepoLayout.from_sched(sched)
 
@@ -387,8 +382,8 @@ def _entry_from(result, state) -> dict:
 def _truncate_dcap(state, bond, d_cap: int) -> dict:
     """The D_cap truncation arm on one named bond — the MODULE's own
     ``truncate_bond_dcap`` production seam is the PRIMARY candidate (so the
-    ledger-image killer certifies the spike's ``_policy_cut`` summary, not the
-    ARCHIVED parent's — the A3 production-path-is-the-source rule); the pepo
+    ledger-image killer certifies the PEPS ``_policy_cut`` summary, not the
+    shared PEPO implementation); the PEPO
     ``ntu_truncate`` spelling is only the last-resort fallback (SF10)."""
     errs = []
     for nm, calls in (
@@ -502,14 +497,10 @@ def _map_leak_branch():
 
 
 def _fold_fns():
-    """``s_to_det``/``det_to_s`` — §3 VERBATIM imports (single source); resolved
-    from the peps namespace first, then the archived pepo sampler (import-only)."""
-    s2d, d2s = _resolve("s_to_det"), _resolve("det_to_s")
-    if s2d is None or d2s is None:
-        from error_coupling_simulator.carrier.pepo import sampler as pepo_sampler
-        s2d = s2d or pepo_sampler.s_to_det
-        d2s = d2s or pepo_sampler.det_to_s
-    return s2d, d2s
+    """Import the carrier-neutral canonical temporal fold directly (§3)."""
+    from error_coupling_simulator.carrier.record_fold import det_to_s, s_to_det
+
+    return s_to_det, det_to_s
 
 
 def _fold_call(fn, rec_flat: np.ndarray, R: int, n_stab: int) -> np.ndarray:
@@ -801,11 +792,11 @@ def _pick_stabs(sched):
 def sched():
     """The REAL d3_at_q6_7 XZZX schedule + r10 within-cycle streams (§4 patches).
 
-    Skip justification: the contract pins the 2b-i stage to the real Google patch
+    Skip justification: the contract pins this case to the real Google patch
     parsed by ``xzzx_parser`` — a textbook stand-in would silently change every
     registered number (paths, multiplicities, TT supports), so absence of the
     local dataset is a SKIP, never a fallback."""
-    xp = pytest.importorskip("qec_twin.forward.exact.xzzx_parser")
+    xp = pytest.importorskip("error_coupling_simulator.frontend.xzzx_parser")
     r01c, r01m = xp.default_r01_paths()
     r10c, r10m = xp.default_r10_paths()
     if not (r01c.is_file() and r01m.is_file() and r10c.is_file() and r10m.is_file()):
@@ -822,13 +813,18 @@ def wc(sched):
     """The p1c within-cycle cell: calibrated theta + the CPTP leak Kraus set."""
     if not _CUDA:
         pytest.skip("CUDA unavailable — the within-cycle cell is built on the GPU host")
-    from qec_twin.forward.exact import xzzx_parser as xp
-    from qec_twin.forward.scalable.sv_sampler import RunSpec, SvSampler
-    from qec_twin.mechanisms.qutrit_teachers import calibrate_theta_for_wg_l1
+    from error_coupling_simulator.carrier.within_cycle import (
+        FusedWithinCycleSampler,
+        RunSpec,
+    )
+    from error_coupling_simulator.frontend import xzzx_parser as xp
+    from error_coupling_simulator.mechanisms.qutrit_leakage import (
+        solve_theta_for_wg_l1,
+    )
 
     r01c, r01m = xp.default_r01_paths()
-    theta = float(calibrate_theta_for_wg_l1(WG_L1_TARGET, g_seep=G_SEEP, g_heat=G_HEAT))
-    host = SvSampler(device="cuda")
+    theta = float(solve_theta_for_wg_l1(WG_L1_TARGET, g_seep=G_SEEP, g_heat=G_HEAT))
+    host = FusedWithinCycleSampler(device="cuda")
     spec = RunSpec(circuit_path=r01c, metadata_path=r01m, m=0, theta=theta,
                    g_seep=G_SEEP, g_heat=G_HEAT, arm=ARM, b=B_BIAS,
                    readout_conv="biased_b", N=1, base_seed=0, R=1, dtype="c128")
@@ -847,8 +843,17 @@ def wc(sched):
 def _fresh_referee(sched):
     """A bare exact-DM referee with the real code geometry (SF5: the E1-tf
     referee construction — 9 data qutrits, compiled POVM, no ancilla)."""
-    from qec_twin.forward.scalable.sv_sampler import SvSampler
-    return SvSampler(device="cuda").within_cycle_dm_engine(sched)
+    from error_coupling_simulator.carrier.exact.qutrit_dm import QutritDM
+
+    logical = dict(sched.logical)
+    logical_kind = str(sched.logical_kind).upper()
+    engine = QutritDM(int(sched.n_data), device="cuda")
+    engine.set_code(
+        stabilizers=sched.stab_paulis(),
+        logical_z=logical if logical_kind == "Z" else None,
+        logical_x=logical if logical_kind == "X" else None,
+    )
+    return engine
 
 
 def _pick_jump_k(rdm: torch.Tensor, kraus: list) -> tuple[int, int]:
@@ -1234,8 +1239,8 @@ class TestSW6KillersMaps:
 
     def test_k_sampling_direction_parity_killer(self):
         """The RT1-B1 regression killer (K-8), at the contract-pinned point
-        u = 0.1, p1 = 0.2: the mps_forward map gives s = 0; the FORBIDDEN
-        archived-pepo direction gives s = 1.  Non-vacuity precondition: u outside
+        u = 0.1, p1 = 0.2: the current map gives s = 0; the rejected
+        PEPO direction gives s = 1. Non-vacuity precondition: u outside
         [min(p1,1-p1), max(p1,1-p1)) — the two maps AGREE on that middle band
         (RT2)."""
         u, p1 = 0.1, 0.2
@@ -1245,31 +1250,30 @@ class TestSW6KillersMaps:
                              f"the parity killer would be vacuous (RT2)")
         smap = _map_sbit()
         got = int(smap(u, 1.0 - p1))                     # engine map on p0 = 1 - p1
-        forbidden = 1 if u < p1 else 0                   # the archived-pepo direction
+        forbidden = 1 if u < p1 else 0                   # rejected PEPO direction
         assert got == 0, (
             f"engine stab map at (u={u}, p0={1.0 - p1}) returned {got} != 0 — "
-            f"the mps_forward direction (sbit = 0 iff u < p0) is broken (RT1-B1)")
+            f"the current direction (sbit = 0 iff u < p0) is broken (RT1-B1)")
         assert forbidden == 1 and abs(got - forbidden) > KILLER_FLOOR, (
             f"direction-parity sabotage image did not separate (got {got}, "
-            f"forbidden {forbidden} via the archived-pepo "
+            f"forbidden {forbidden} via the rejected PEPO "
             f"'{_FORBIDDEN_PEPO_DIRECTION}') — the killer has no teeth")
 
     def test_k_det_s_fold_triple_agreement_and_orientation_sabotage(self):
-        """det<->s fold: engine fold == ``seam.teacher_shots_to_events`` byte-for-
-        byte, det_to_s(s_to_det) == id, s_to_det(det_to_s) == id (the triple
-        agreement); the WRONG-ORIENTATION fold (suffix XOR — a real K-2/K-8
-        class) is DEMONSTRATED to differ from the canonical fold."""
-        from qec_twin.forward.scalable import seam
-        from qec_twin.forward.scalable.sv_sampler import SvSampler
+        """det<->s fold agrees with an independent hand-typed reference,
+        det_to_s(s_to_det) == id, and s_to_det(det_to_s) == id; the
+        WRONG-ORIENTATION fold (suffix XOR — a real K-2/K-8 class) is
+        DEMONSTRATED to differ from the canonical fold."""
 
         s2d, d2s = _fold_fns()
         R, n_stab, N = 4, 8, 32
         rng = np.random.default_rng(2026)
         s = rng.integers(0, 2, size=(N, R * n_stab)).astype(np.uint8)
-        flips = rng.integers(0, 2, size=N).astype(np.uint8)
-        det_ref, obs = seam.teacher_shots_to_events(
-            SvSampler.pack_shots(s, flips), n_stab, R)
-        assert np.array_equal(obs, flips), "obs passthrough != flips"
+        shaped = s.reshape(N, R, n_stab)
+        det_ref = np.empty_like(shaped)
+        det_ref[:, 0, :] = shaped[:, 0, :]
+        det_ref[:, 1:, :] = shaped[:, 1:, :] ^ shaped[:, :-1, :]
+        det_ref = det_ref.reshape(N, R * n_stab)
         for i in range(N):
             det_i = _fold_call(s2d, s[i], R, n_stab)
             assert np.array_equal(det_i, det_ref[i]), (
@@ -1527,12 +1531,17 @@ def _loop_eps_dense_reference(site_arrays: dict) -> float:
         d1, d2 = T.shape[1], T.shape[2]
         return G.reshape(d1 * d1, d2 * d2)
 
-    m0 = grouped(site_arrays[0])          # rows e01-pair, cols e02-pair
-    m1 = grouped(site_arrays[1])          # rows e01-pair, cols e13-pair
-    m2 = grouped(site_arrays[2])          # rows e02-pair, cols e23-pair
-    m3 = grouped(site_arrays[3])          # rows e13-pair, cols e23-pair
+    transfer_site_0 = grouped(site_arrays[0])  # rows e01-pair, cols e02-pair
+    transfer_site_1 = grouped(site_arrays[1])  # rows e01-pair, cols e13-pair
+    transfer_site_2 = grouped(site_arrays[2])  # rows e02-pair, cols e23-pair
+    transfer_site_3 = grouped(site_arrays[3])  # rows e13-pair, cols e23-pair
     # cut B0_2; walk e02 -> node0 -> e01 -> node1 -> e13 -> node3 -> e23 -> node2
-    tm = m2 @ m3.T @ m1.T @ m0
+    tm = (
+        transfer_site_2
+        @ transfer_site_3.T
+        @ transfer_site_1.T
+        @ transfer_site_0
+    )
     ev = np.linalg.eigvals(tm)
     tot = float(np.sum(np.abs(ev)))
     if tot <= 0.0:

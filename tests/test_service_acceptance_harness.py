@@ -4,6 +4,10 @@ from __future__ import annotations
 
 import ast
 from pathlib import Path
+import signal
+from types import MappingProxyType, SimpleNamespace
+
+import pytest
 
 from harness import service_acceptance as acceptance
 
@@ -13,6 +17,7 @@ def _ok(task: acceptance.AcceptanceTask, log_dir: Path) -> acceptance.TaskResult
         task=task,
         returncode=0,
         timed_out=False,
+        group_cleanup_verified=True,
         log_path=log_dir / f"{Path(task.test_file).stem}.log",
         elapsed_s=0.01,
     )
@@ -129,3 +134,220 @@ def test_gpu_lease_wraps_only_gpu_lane(monkeypatch, tmp_path: Path) -> None:
     ]
     assert acceptance.os.environ["CUDA_VISIBLE_DEVICES"] == "parent-visible"
 
+
+def _minimal_catalog(*test_files: str) -> dict:
+    return {
+        "acceptance_execution": {
+            "isolation": "one_test_file_per_process",
+            "default_conda_environment": "ecs",
+            "environment_overrides": {},
+            "process_environment_overrides": {},
+            "default_lane": "cpu_light",
+            "lane_overrides": {},
+        },
+        "services": [{"acceptance": list(test_files)}],
+    }
+
+
+def test_acceptance_plan_freezes_per_file_process_environment() -> None:
+    catalog = _minimal_catalog("tests/plain.py", "tests/pepo.py")
+    configured = {"PYTORCH_ALLOC_CONF": "expandable_segments:True"}
+    catalog["acceptance_execution"]["process_environment_overrides"] = {
+        "tests/pepo.py": configured,
+    }
+
+    plan = acceptance.acceptance_plan(catalog)
+    configured["PYTORCH_ALLOC_CONF"] = "mutated-after-plan"
+
+    assert plan == (
+        acceptance.AcceptanceTask("cpu_light", "ecs", "tests/pepo.py", (
+            ("PYTORCH_ALLOC_CONF", "expandable_segments:True"),
+        )),
+        acceptance.AcceptanceTask("cpu_light", "ecs", "tests/plain.py"),
+    )
+
+
+def test_acceptance_plan_rejects_non_acceptance_process_environment_path() -> None:
+    catalog = _minimal_catalog("tests/current.py")
+    catalog["acceptance_execution"]["process_environment_overrides"] = {
+        "tests/stale.py": {"PYTORCH_ALLOC_CONF": "expandable_segments:True"},
+    }
+
+    with pytest.raises(ValueError, match="non-acceptance files"):
+        acceptance.acceptance_plan(catalog)
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["CUDA_VISIBLE_DEVICES", "ECS_GPU_SLOT", "UNDECLARED_RUNTIME_SWITCH"],
+)
+def test_acceptance_plan_rejects_unsafe_process_environment(name: str) -> None:
+    catalog = _minimal_catalog("tests/current.py")
+    catalog["acceptance_execution"]["process_environment_overrides"] = {
+        "tests/current.py": {name: "unsafe"},
+    }
+
+    with pytest.raises(ValueError, match="GPU routing|unsupported"):
+        acceptance.acceptance_plan(catalog)
+
+
+def test_run_one_uses_a_private_task_environment(monkeypatch, tmp_path: Path) -> None:
+    task = acceptance.AcceptanceTask(
+        "gpu_serial",
+        "ecs",
+        "tests/pepo.py",
+        (("PYTORCH_ALLOC_CONF", "expandable_segments:True"),),
+    )
+    base = MappingProxyType({
+        "CUDA_VISIBLE_DEVICES": "7",
+        "ECS_GPU_SLOT": "7",
+        "PYTORCH_CUDA_ALLOC_CONF": "legacy-parent-value",
+        "PARENT_ONLY": "unchanged",
+    })
+    captured: dict[str, object] = {}
+
+    def fake_run(argv, **kwargs):
+        captured["argv"] = argv
+        captured["env"] = kwargs["env"]
+        return SimpleNamespace(
+            returncode=0,
+            timed_out=False,
+            group_cleanup_verified=True,
+        )
+
+    monkeypatch.setattr(acceptance.proc, "run", fake_run)
+
+    result = acceptance._run_one(
+        task,
+        index=1,
+        conda="/conda",
+        timeout=1.0,
+        log_dir=tmp_path,
+        child_env=base,
+    )
+
+    assert result.ok
+    assert captured["env"] == {
+        "CUDA_VISIBLE_DEVICES": "7",
+        "ECS_GPU_SLOT": "7",
+        "PYTORCH_ALLOC_CONF": "expandable_segments:True",
+        "PARENT_ONLY": "unchanged",
+    }
+    assert dict(base)["PYTORCH_CUDA_ALLOC_CONF"] == "legacy-parent-value"
+    assert task.process_environment == ((
+        "PYTORCH_ALLOC_CONF",
+        "expandable_segments:True",
+    ),)
+
+
+def test_run_one_fails_closed_when_cleanup_evidence_is_missing(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    task = acceptance.AcceptanceTask("gpu_serial", "ecs", "tests/gpu.py")
+    monkeypatch.setattr(
+        acceptance.proc,
+        "run",
+        lambda *_args, **_kwargs: SimpleNamespace(returncode=0, timed_out=False),
+    )
+
+    result = acceptance._run_one(
+        task,
+        index=1,
+        conda="/conda",
+        timeout=1.0,
+        log_dir=tmp_path,
+        child_env={},
+    )
+
+    assert not result.ok
+    assert result.group_cleanup_verified is False
+
+
+@pytest.mark.parametrize(
+    ("returncode", "timed_out", "cleanup_verified"),
+    [
+        (128 + signal.SIGABRT, False, True),
+        (128 + signal.SIGSEGV, False, True),
+        (-signal.SIGABRT, False, True),
+        (-signal.SIGSEGV, False, True),
+        (0, True, True),
+        (0, False, False),
+    ],
+)
+def test_gpu_native_failure_stops_further_admission(
+    monkeypatch,
+    tmp_path: Path,
+    returncode: int,
+    timed_out: bool,
+    cleanup_verified: bool,
+) -> None:
+    tasks = tuple(
+        acceptance.AcceptanceTask("gpu_serial", "ecs", f"tests/gpu_{index}.py")
+        for index in range(2)
+    )
+    called: list[str] = []
+
+    def fake_run_one(task, **_kwargs):
+        called.append(task.test_file)
+        return acceptance.TaskResult(
+            task=task,
+            returncode=returncode,
+            timed_out=timed_out,
+            group_cleanup_verified=cleanup_verified,
+            log_path=tmp_path / "gpu.log",
+            elapsed_s=0.01,
+        )
+
+    monkeypatch.setattr(acceptance, "_run_one", fake_run_one)
+    monkeypatch.setattr(acceptance, "_report_result", lambda *_args, **_kwargs: None)
+
+    results = acceptance._run_serial(
+        tasks,
+        indices={task.test_file: index for index, task in enumerate(tasks)},
+        conda="/conda",
+        timeout=1.0,
+        log_dir=tmp_path,
+        child_env={},
+        completed_offset=0,
+        total=2,
+        stop_on_failure=False,
+    )
+
+    assert len(results) == 1
+    assert called == ["tests/gpu_0.py"]
+
+
+def test_ordinary_gpu_test_failure_continues_unless_stop_requested(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    tasks = tuple(
+        acceptance.AcceptanceTask("gpu_serial", "ecs", f"tests/gpu_{index}.py")
+        for index in range(2)
+    )
+
+    def fake_run_one(task, **_kwargs):
+        return acceptance.TaskResult(
+            task=task,
+            returncode=1,
+            timed_out=False,
+            group_cleanup_verified=True,
+            log_path=tmp_path / "gpu.log",
+            elapsed_s=0.01,
+        )
+
+    monkeypatch.setattr(acceptance, "_run_one", fake_run_one)
+    monkeypatch.setattr(acceptance, "_report_result", lambda *_args, **_kwargs: None)
+    kwargs = dict(
+        indices={task.test_file: index for index, task in enumerate(tasks)},
+        conda="/conda",
+        timeout=1.0,
+        log_dir=tmp_path,
+        child_env={},
+        completed_offset=0,
+        total=2,
+    )
+
+    assert len(acceptance._run_serial(tasks, stop_on_failure=False, **kwargs)) == 2
+    assert len(acceptance._run_serial(tasks, stop_on_failure=True, **kwargs)) == 1

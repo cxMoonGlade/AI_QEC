@@ -7,12 +7,13 @@ import json
 from pathlib import Path
 from typing import Any, Literal, Mapping
 
-from ..source.process import SourceTimeline
+from ..source.process import SOURCE_TIMELINE_SCHEMA, SourceTimeline
 from .artifacts import ArtifactPaths, file_sha256, write_json
 
 
 CycleBinding = Literal["qec_round", "circuit_tick", "external_cycle"]
 ShotBinding = Literal["shared_across_shots", "continuous_acquisition"]
+SOURCE_TIMELINE_BINDING_SCHEMA = "error_coupling_simulator.frontend.source_timeline_binding.v1"
 
 
 @dataclass(frozen=True)
@@ -29,9 +30,14 @@ class SourceTimelineBinding:
     shot_binding: ShotBinding = "shared_across_shots"
     payload_keys: tuple[str, ...] = ()
     schedule_windows: tuple[dict[str, Any], ...] = ()
-    schema: str = "qec_twin.simulator.SourceTimelineBinding.v1"
+    schema: str = SOURCE_TIMELINE_BINDING_SCHEMA
 
     def __post_init__(self) -> None:
+        if self.schema != SOURCE_TIMELINE_BINDING_SCHEMA:
+            raise ValueError(
+                f"unsupported source timeline binding schema {self.schema!r}; "
+                f"expected {SOURCE_TIMELINE_BINDING_SCHEMA!r}"
+            )
         if self.cycle_binding not in {"qec_round", "circuit_tick", "external_cycle"}:
             raise ValueError(
                 "cycle_binding must be 'qec_round', 'circuit_tick', or 'external_cycle'"
@@ -223,6 +229,11 @@ def load_source_timeline_from_manifest(
     entry = artifacts.get("source_timeline")
     if not isinstance(entry, Mapping) or not entry.get("file"):
         raise ValueError("manifest does not contain a source_timeline artifact")
+    if entry.get("schema") != SOURCE_TIMELINE_SCHEMA:
+        raise ValueError(
+            f"unsupported source timeline artifact schema {entry.get('schema')!r}; "
+            f"expected {SOURCE_TIMELINE_SCHEMA!r}"
+        )
     path = _artifact_path(out_dir, entry["file"], artifact_key="source_timeline")
     expected = entry.get("sha256")
     _require_sha("source_timeline.sha256", expected)
@@ -232,6 +243,11 @@ def load_source_timeline_from_manifest(
     binding_entry = artifacts.get("source_timeline_binding")
     if not isinstance(binding_entry, Mapping) or not binding_entry.get("file"):
         raise ValueError("manifest does not contain a source_timeline_binding artifact")
+    if binding_entry.get("schema") != SOURCE_TIMELINE_BINDING_SCHEMA:
+        raise ValueError(
+            f"unsupported source timeline binding artifact schema "
+            f"{binding_entry.get('schema')!r}; expected {SOURCE_TIMELINE_BINDING_SCHEMA!r}"
+        )
     binding_path = _artifact_path(
         out_dir,
         binding_entry["file"],
@@ -245,6 +261,11 @@ def load_source_timeline_from_manifest(
             f"source_timeline_binding sha256 mismatch: manifest={binding_expected}, actual={binding_actual}"
         )
     binding_manifest = json.loads(binding_path.read_text())
+    if binding_manifest.get("schema") != SOURCE_TIMELINE_BINDING_SCHEMA:
+        raise ValueError(
+            f"unsupported source timeline binding schema {binding_manifest.get('schema')!r}; "
+            f"expected {SOURCE_TIMELINE_BINDING_SCHEMA!r}"
+        )
     if binding_manifest.get("source_timeline_sha256") != actual:
         raise ValueError(
             "source_timeline_binding does not match source_timeline artifact: "

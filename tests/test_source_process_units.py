@@ -2,8 +2,8 @@
 ``error_coupling_simulator.source.process`` (33 CPU-pure public units; no GPU, no quimb,
 so out_of_scope is empty).
 
-Full-coverage program (docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4;
-work-list docs/twin_validation/l3_release_package_unit_inventory.md D11).
+Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
+work-list docs/SIMULATOR.md D11).
 ``source/process.py`` owns the Axis-2 explicit cross-cycle SOURCE processes -- evaluator-side
 latent timelines (RTN telegraph, log-spaced 1/f RTN sum, gap-engineered phase-burst, two-state
 temporal-storm HMM) that persist across QEC cycles and emit payloads consumed downstream by
@@ -21,6 +21,7 @@ sampled-autocovariance falsifiers live in tests/test_source_closed_forms.py, not
 """
 from __future__ import annotations
 
+import json
 import math
 import os
 
@@ -448,7 +449,7 @@ def test_L0_to_manifest_structure_and_seed_branches():
     tl = _mk_timeline({"z": np.array([1.0, 2.0, 4.0])}, latent={"s": np.array([1, 0, 1])},
                       seed=7, metadata={"k": "v"})
     m = tl.to_manifest()
-    assert m["schema"] == "qec_twin.mechanisms.SourceTimeline.v1"
+    assert m["schema"] == "error_coupling_simulator.source.timeline.v1"
     assert m["name"] == "t" and m["n_cycles"] == 3 and m["cycle_time_ns"] == 1000.0
     assert m["seed"] == 7 and m["coupling_mode"] == "shared" and m["metadata"] == {"k": "v"}
     # payload summary carries independently recomputed stats + sha256
@@ -459,6 +460,18 @@ def test_L0_to_manifest_structure_and_seed_branches():
     assert m["latent"]["s"]["shape"] == [3]
     # seed None branch
     assert _mk_timeline({"z": np.array([1.0])}, seed=None).to_manifest()["seed"] is None
+
+
+def test_source_timeline_rejects_retired_schema():
+    retired_schema = "_".join(("qec", "twin")) + ".mechanisms.SourceTimeline.v1"
+    with pytest.raises(ValueError, match="unsupported source timeline schema"):
+        SourceTimeline(
+            name="retired",
+            n_cycles=1,
+            cycle_time_ns=1.0,
+            payload={"z": np.array([0.0])},
+            schema=retired_schema,
+        )
 
 
 # =========================================================================== #
@@ -492,6 +505,19 @@ def test_L0_load_npz_detects_tampered_array_hash(tmp_path):
     np.savez_compressed(bad, **arrays)
     with pytest.raises(ValueError, match="hash mismatch"):
         SourceTimeline.load_npz(bad)
+
+
+def test_L0_load_npz_rejects_retired_schema(tmp_path):
+    path = RTNSource().sample(seed=1, n_cycles=2).save_npz(tmp_path / "current.npz")
+    with np.load(path, allow_pickle=False) as data:
+        arrays = {key: np.array(data[key], copy=True) for key in data.files}
+    manifest = json.loads(str(arrays["__manifest_json__"].item()))
+    manifest["schema"] = "_".join(("qec", "twin")) + ".mechanisms.SourceTimeline.v1"
+    arrays["__manifest_json__"] = np.asarray(json.dumps(manifest, sort_keys=True))
+    retired = tmp_path / "retired.npz"
+    np.savez_compressed(retired, **arrays)
+    with pytest.raises(ValueError, match="unsupported source timeline schema"):
+        SourceTimeline.load_npz(retired)
 
 
 # =========================================================================== #

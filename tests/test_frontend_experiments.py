@@ -1,11 +1,11 @@
 """Wave-2 gates for the A1 experiments facade
 (``error_coupling_simulator.frontend.experiments``).
 
-Binding contract: ``docs/twin_validation/api_hardening_ownership_design.md`` row A1,
+Binding contract: ``docs/SIMULATOR.md`` row A1,
 the NAMING STANDARD rename table (``load_xzzx_d3`` / ``ExperimentPreset`` /
 ``PRESET_LEAK_THETA_0P30`` / ``PRESET_LEAK_WG_L1_5E3`` / ``run_spec_from_preset`` /
 ``leak_slice_table``), ratified decision 7 (dataset-root env var =
-``QEC_TWIN_D3_DATA``), and the DEVIOUS-TEST STANDARD (KILLER requirement + K-catalog).
+``ECS_D3_DATA_ROOT``), and the DEVIOUS-TEST STANDARD (KILLER requirement + K-catalog).
 
 Gate -> test map (K-classes each test defends are declared in its docstring):
 
@@ -29,7 +29,7 @@ API SHAPES (the LANDED signatures, verified against
 ``src/error_coupling_simulator/frontend/experiments.py``):
   * ``load_xzzx_d3(dataset_root=None, *, with_interior_streams=True)`` -> the parsed
     r01 ``XZZXSchedule`` with the r10 interior streams attached. Root resolution:
-    ``dataset_root`` argument > ``QEC_TWIN_D3_DATA`` env (when the key is SET; a
+    ``dataset_root`` argument > ``ECS_D3_DATA_ROOT`` env (when the key is SET; a
     SET-but-empty/whitespace value raises ``ValueError`` -- fail loud, never
     indistinguishable from unset) > the parser default. Override roots REBASE the
     ``default_*_paths()`` layout (``relative_to(DEFAULT_DATASET_ROOT)``); a missing
@@ -40,8 +40,8 @@ API SHAPES (the LANDED signatures, verified against
     exactly ONE of ``theta_rad`` / ``wg_l1_target`` set (``ValueError`` otherwise).
   * ``run_spec_from_preset(preset, *, n_shots, n_rounds, seed, m=0,
     dataset_root=None)`` -> a package-local ``carrier.within_cycle.RunSpec``; the
-    WG preset's theta resolves through ``calibrate_theta_for_wg_l1`` (the
-    error_coupling_simulator ``mechanisms.qutrit_teachers`` resolver -- same package
+    WG preset's theta resolves through ``solve_theta_for_wg_l1`` (the
+    error_coupling_simulator ``mechanisms.qutrit_leakage`` resolver -- same package
     as the facade).
   * ``leak_slice_table(preset_or_params, *, device, as_list=False)`` -> the stacked
     ``(n_kraus, 3, 3)`` table (``as_list=True`` -> the list form); accepts an
@@ -63,7 +63,7 @@ from conftest import DEVICE, requires_cuda, requires_data
 from _support.fixtures import require_precondition
 
 #: ratified decision 7 -- the ONE dataset-root env var name.
-_ENV = "QEC_TWIN_D3_DATA"
+_ENV = "ECS_D3_DATA_ROOT"
 
 # the p2 cell knobs (the RAW registered preset's pinned values, contract A1: presets
 # are frozen + named, NO silent physics defaults).
@@ -78,7 +78,7 @@ _THETA_HI, _G_SEEP_HI = 1.2, 0.5
 def _no_d3_env_override(monkeypatch):
     """Env isolation (review finding: env-honoring facade vs env-blind reference).
 
-    The facade honors ``QEC_TWIN_D3_DATA``; the hand rituals it is compared against
+    The facade honors ``ECS_D3_DATA_ROOT``; the hand rituals it is compared against
     read the parser DEFAULT paths (env-blind). A legitimately-set env var must never
     make a CORRECT facade fail a default-root comparison, so it is deleted per-test
     (monkeypatch restores it on teardown). Override tests re-``setenv`` explicitly
@@ -177,7 +177,7 @@ def test_load_xzzx_d3_equals_hand_ritual():
 # A1 env override killers                                                      #
 # =========================================================================== #
 def test_env_override_missing_root_fails_loud(monkeypatch, tmp_path):
-    """A1 env-override KILLER. Defends: K-1 (a dead ``QEC_TWIN_D3_DATA`` env
+    """A1 env-override KILLER. Defends: K-1 (a dead ``ECS_D3_DATA_ROOT`` env
     parameter -- an implementation that silently falls back to the shipped default
     would SUCCEED here and fail the raises), K-5 (the error must NAME the bogus path,
     so the raise is provably about OUR root, not an unrelated failure).
@@ -330,13 +330,13 @@ def test_run_spec_from_preset_raw_and_wg():
     convention munging of ``theta_rad``).
 
     RAW preset: ``RunSpec.theta == theta_rad`` EXACTLY (float identity, contract).
-    WG preset: theta resolves through ``calibrate_theta_for_wg_l1`` at the preset's
+    WG preset: theta resolves through ``solve_theta_for_wg_l1`` at the preset's
     g_seep/g_heat; conformance is ALSO checked independently on the exact channel
     rate ``wg_rates(theta)[0] == 5e-3`` (the resolver's own registered tolerance is
     1e-10; 1e-8 leaves slack for the bisection terminal bracket).
     """
-    from error_coupling_simulator.mechanisms.qutrit_teachers import (
-        calibrate_theta_for_wg_l1,
+    from error_coupling_simulator.mechanisms.qutrit_leakage import (
+        solve_theta_for_wg_l1,
         wg_rates,
     )
     from error_coupling_simulator.carrier.within_cycle import RunSpec
@@ -356,9 +356,9 @@ def test_run_spec_from_preset_raw_and_wg():
 
     rs_wg = _run_spec(experiments.PRESET_LEAK_WG_L1_5E3, N=1, R=1)
     assert rs_wg.g_seep == _G_SEEP and rs_wg.b == _B_BIAS and rs_wg.arm == _ARM
-    expected = calibrate_theta_for_wg_l1(_WG_L1_TARGET, g_seep=_G_SEEP, g_heat=0.0)
+    expected = solve_theta_for_wg_l1(_WG_L1_TARGET, g_seep=_G_SEEP, g_heat=0.0)
     assert abs(rs_wg.theta - expected) <= 1e-12, \
-        f"WG preset theta {rs_wg.theta!r} != calibrate_theta_for_wg_l1 " \
+        f"WG preset theta {rs_wg.theta!r} != solve_theta_for_wg_l1 " \
         f"resolve {expected!r} (contract A1 resolver)"
     # independent conformance: the resolved theta actually HITS the registered rate.
     assert abs(wg_rates(rs_wg.theta, _G_SEEP, 0.0)[0] - _WG_L1_TARGET) <= 1e-8, \

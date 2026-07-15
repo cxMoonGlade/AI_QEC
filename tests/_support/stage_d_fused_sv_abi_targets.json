@@ -17,7 +17,6 @@
   "out_of_scope": {},
   "canonical_units": [
     "available",
-    "sv_traj_d3",
     "sv_traj_d3_wc"
   ],
   "units": [
@@ -26,14 +25,6 @@
       "module": "src/error_coupling_simulator/carrier/kernels/sv_traj_d3_loader.py",
       "unit": "available",
       "qualname": "available",
-      "target": {"statement": 1.0, "branch": 1.0},
-      "exemptions": []
-    },
-    {
-      "group": "fused_sv_abi",
-      "module": "src/error_coupling_simulator/carrier/kernels/sv_traj_d3_loader.py",
-      "unit": "sv_traj_d3",
-      "qualname": "sv_traj_d3",
       "target": {"statement": 1.0, "branch": 1.0},
       "exemptions": []
     },

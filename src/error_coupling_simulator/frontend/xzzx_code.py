@@ -94,7 +94,7 @@ def make_xzzx_3x3_compiler_smoke_spec(*, rounds: int = 2) -> CodeSpec:
             "encoded_distance_certified": False,
             "claim_boundary": (
                 "frontend compiler/schedule smoke; not a certified distance-3 memory, "
-                "hardware schedule, or analog coupling teacher"
+                "hardware schedule, or calibrated analog noise process"
             ),
         },
     )

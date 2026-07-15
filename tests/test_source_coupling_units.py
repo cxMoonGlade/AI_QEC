@@ -2,11 +2,11 @@
 ``error_coupling_simulator.source.coupling`` (20 CPU-pure public units; no GPU, no quimb,
 so out_of_scope is empty).
 
-Full-coverage program (docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4;
-work-list docs/twin_validation/l3_release_package_unit_inventory.md D12).
+Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
+work-list docs/SIMULATOR.md D12).
 ``source/coupling.py`` owns the Axis-2 shared-source parameter fan-out ``Theta(z_t)``: one
 explicit source draw conditions many mechanism parameters in the SAME cycle -- the static-ZZ
-frequency-drift closed form, the positive-rate exp maps (gamma_phi, drive_omega, the P2-i
+frequency-drift closed form, the positive-rate exp maps (gamma_phi, drive_omega, the
 Theta->leakage cell), and the logit maps (spillover, readout, reset, cz). It is a parameter
 LAYER, not a Stim/DEM noise layer nor a channel assembler.
 
@@ -33,10 +33,11 @@ from hypothesis import strategies as st
 from _support.faithfulness import assert_discriminates, assert_pins
 
 import error_coupling_simulator.source.coupling as coupling
+import error_coupling_simulator.source as source_api
 from error_coupling_simulator.source.coupling import (
-    CoupledMechanismParams,
+    CoupledNoiseParameters,
     SourceCouplingConfig,
-    StaticZZCalibration,
+    StaticZZParameters,
     cross_mechanism_correlation,
     default_source_coupling_config,
     drift_to_t2,
@@ -54,7 +55,7 @@ _TWO_PI = 2.0 * math.pi
 _SOURCE_KEYS = ("zz", "gamma_phi", "detuning", "drive", "spillover", "readout", "reset",
                 "cz", "wg_theta", "wg_seep")
 
-# default StaticZZCalibration constants (used by the default config's zz)
+# default StaticZZParameters constants (used by the default config's zz)
 _BASE_DELTA = _TWO_PI * (6.0 - 6.1)          # 2*pi*(omega_a - omega_b)
 _ALPHA = _TWO_PI * (-300.0) * 1e-3           # 2*pi*alpha_mhz*1e-3
 
@@ -109,6 +110,24 @@ def _indep_pearson(a, b) -> float:
 
 #: default zz exchange J, recomputed independently (matches cfg.zz.exchange_j_radns).
 _J_DEFAULT = _indep_exchange_j(1.6e-4, _BASE_DELTA, _ALPHA, 25.0)
+
+
+def test_public_parameter_type_names_are_hard_cut():
+    """Current exports work and the two superseded spellings cannot be imported."""
+
+    assert source_api.StaticZZParameters is StaticZZParameters
+    assert source_api.CoupledNoiseParameters is CoupledNoiseParameters
+    assert isinstance(SourceCouplingConfig().zz, StaticZZParameters)
+    assert isinstance(source_to_params(0.0), CoupledNoiseParameters)
+
+    retired_names = ("StaticZZ" + "Calibration", "Coupled" + "MechanismParams")
+    for name in retired_names:
+        assert name not in coupling.__all__
+        assert name not in source_api.__all__
+        assert not hasattr(coupling, name)
+        assert not hasattr(source_api, name)
+        with pytest.raises(ImportError):
+            exec(f"from error_coupling_simulator.source.coupling import {name}", {})
 
 
 # =========================================================================== #
@@ -232,7 +251,7 @@ def test_KILLER_zz_phi_from_frequency_drift_discriminates():
 
 
 # =========================================================================== #
-# drift_to_t2 (+ the _drift_to_T2 alias)                                       #
+# drift_to_t2                                                                  #
 # =========================================================================== #
 def test_L0_drift_to_t2_value_config_branch_and_tphi():
     base, sens, zscale = 1.0 / 50_000.0, 0.5, 2e-4
@@ -255,13 +274,6 @@ def test_L0_drift_to_t2_value_config_branch_and_tphi():
     assert g0 == 0.0 and tphi0 == math.inf
     # guard
     _raises_exact(ValueError, "z_t_radns must be finite, got nan", lambda: drift_to_t2(float("nan"), cfg))
-
-
-def test_L0_drift_to_t2_alias_matches_and_config_load_bearing():
-    cfg = SourceCouplingConfig(z_scale_radns=2e-4, gamma_phi_sensitivity=0.5)
-    assert coupling._drift_to_T2(1e-4, cfg) == drift_to_t2(1e-4, cfg)
-    # the alias forwards its config: dropping it (mutant) would use the default -> divergence
-    assert coupling._drift_to_T2(1e-4, cfg) != drift_to_t2(1e-4, None)
 
 
 def test_L0_modulate_positive_rate_exponent_clamp_via_drift():
@@ -344,10 +356,16 @@ def test_L0_default_source_coupling_config_pins_documented_defaults():
     assert_pins(cfg.gamma_phi_base_per_ns, 1.0 / 75_000.0, rtol=1e-12, atol=0.0, label="gamma base")
     assert_pins(cfg.gamma_phi_sensitivity, 0.35, rtol=1e-12, atol=0.0, label="gamma sens")
     assert_pins(cfg.drive_omega_base_radns, math.pi / 25.0, rtol=1e-12, atol=0.0, label="drive base")
-    assert cfg.schema == "qec_twin.mechanisms.SourceCouplingConfig.v1"
+    assert cfg.schema == "error_coupling_simulator.source.coupling_config.v1"
     # wg leakage fields are inert by default
     assert cfg.wg_theta_base_rad == 0.0 and cfg.wg_g_seep_base == 0.0
     assert cfg.wg_theta_sensitivity == 0.0 and cfg.wg_g_seep_sensitivity == 0.0
+
+
+def test_source_coupling_config_rejects_retired_schema():
+    retired_schema = "_".join(("qec", "twin")) + ".mechanisms.SourceCouplingConfig.v1"
+    with pytest.raises(ValueError, match="unsupported source coupling schema"):
+        SourceCouplingConfig(schema=retired_schema)
 
 
 # =========================================================================== #
@@ -438,8 +456,13 @@ def test_L0_trajectory_to_params_maps_each_draw_and_config_branch():
 def test_L0_independent_baseline_marginals_preserved_and_permutation_exact():
     zscale = 1e-4
     cfg = SourceCouplingConfig(z_scale_radns=zscale, gamma_phi_sensitivity=0.4,
-                               drive_omega_sensitivity=0.4)
+                               drive_omega_sensitivity=0.4,
+                               wg_theta_base_rad=5.0e-3,
+                               wg_theta_sensitivity=0.3,
+                               wg_g_seep_base=0.09,
+                               wg_g_seep_sensitivity=0.2)
     z = np.linspace(-2e-4, 2e-4, 50)
+    shared = trajectory_to_params(z, cfg)
     out = independent_baseline_trajectory_to_params(z, cfg, seed=123)
     assert {p.coupling_mode for p in out} == {"independent"}
     # marginal preserved: sorted detuning == sorted(base + z)
@@ -454,6 +477,15 @@ def test_L0_independent_baseline_marginals_preserved_and_permutation_exact():
     gam = parameter_series(out, "gamma_phi_per_ns")
     np.testing.assert_allclose(
         gam, [_indep_pos_rate(1.0 / 75_000.0, gp / zscale, 0.4) for gp in permuted["gamma_phi"]])
+    # The independent baseline shuffles every coupling independently but must
+    # preserve the full nonzero leakage marginals exactly.
+    for field in ("wg_theta_rad", "wg_g_seep"):
+        np.testing.assert_allclose(
+            np.sort(parameter_series(out, field)),
+            np.sort(parameter_series(shared, field)),
+            rtol=0.0,
+            atol=1.0e-15,
+        )
     # config None -> default (differs from given cfg at same seed) -> kills `config or default`->`and`
     outd = independent_baseline_trajectory_to_params(z, None, seed=123)
     assert not np.allclose(parameter_series(outd, "gamma_phi_per_ns"), gam)
@@ -486,7 +518,7 @@ def test_L0_parameter_series_value_dtype_and_attribute_error():
     assert s.dtype == np.float64
     np.testing.assert_allclose(s, [p.detuning_radns for p in params])
     assert_pins(s, [0.0, 1e-5, 2e-5], rtol=1e-12, atol=1e-18, label="detuning series")  # detuning == z
-    _raises_exact(AttributeError, "CoupledMechanismParams has no field 'nope'",
+    _raises_exact(AttributeError, "CoupledNoiseParameters has no field 'nope'",
                   lambda: parameter_series(params, "nope"))
 
 
@@ -536,16 +568,16 @@ def test_KILLER_cross_mechanism_correlation_discriminates():
 
 
 # =========================================================================== #
-# StaticZZCalibration -- __post_init__ + properties + to_manifest              #
+# StaticZZParameters -- __post_init__ + properties + to_manifest               #
 # =========================================================================== #
-def test_L0_static_zz_calibration_properties_and_post_init():
-    zz = StaticZZCalibration()
+def test_L0_static_zz_parameters_properties_and_post_init():
+    zz = StaticZZParameters()
     assert_pins(zz.base_delta_radns, _TWO_PI * (6.0 - 6.1), rtol=1e-12, atol=0.0, label="base_delta")
     assert_pins(zz.alpha_radns, _TWO_PI * (-300.0) * 1e-3, rtol=1e-12, atol=0.0, label="alpha")
     assert_pins(zz.exchange_j_radns, _J_DEFAULT, rtol=1e-9, atol=0.0, label="exchange_j")
     # a NON-default instance -> the properties genuinely depend on inputs (kill return-constant).
     # constants chosen so Delta != +/- alpha (no singular) AND coeff sign matches base_phi>0.
-    zz2 = StaticZZCalibration(omega_a_ghz=6.2, omega_b_ghz=6.1, alpha_mhz=-250.0, t_gate_ns=30.0,
+    zz2 = StaticZZParameters(omega_a_ghz=6.2, omega_b_ghz=6.1, alpha_mhz=-250.0, t_gate_ns=30.0,
                               base_phi_rad=1.7e-4)
     bd2, al2 = _TWO_PI * (6.2 - 6.1), _TWO_PI * (-250.0) * 1e-3
     assert_pins(zz2.base_delta_radns, bd2, rtol=1e-12, atol=0.0, label="base_delta2")
@@ -554,20 +586,20 @@ def test_L0_static_zz_calibration_properties_and_post_init():
                 label="exchange_j2")
     # __post_init__ guards
     _raises_exact(ValueError, "omega_a_ghz must be finite, got inf",
-                  lambda: StaticZZCalibration(omega_a_ghz=float("inf")))
+                  lambda: StaticZZParameters(omega_a_ghz=float("inf")))
     _raises_exact(ValueError, "omega_b_ghz must be finite, got nan",
-                  lambda: StaticZZCalibration(omega_b_ghz=float("nan")))
+                  lambda: StaticZZParameters(omega_b_ghz=float("nan")))
     _raises_exact(ValueError, "alpha_mhz must be finite, got inf",
-                  lambda: StaticZZCalibration(alpha_mhz=float("inf")))
+                  lambda: StaticZZParameters(alpha_mhz=float("inf")))
     _raises_exact(ValueError, "t_gate_ns must be > 0, got 0.0",
-                  lambda: StaticZZCalibration(t_gate_ns=0.0))
+                  lambda: StaticZZParameters(t_gate_ns=0.0))
     _raises_exact(ValueError, "base_phi_rad must be finite",
-                  lambda: StaticZZCalibration(base_phi_rad=float("inf")))
+                  lambda: StaticZZParameters(base_phi_rad=float("inf")))
 
 
-def test_L0_static_zz_calibration_to_manifest_all_keys_distinct():
+def test_L0_static_zz_parameters_to_manifest_all_keys_distinct():
     # all-distinct inputs so a key->wrong-attr routing mutation in to_manifest diverges
-    zz = StaticZZCalibration(omega_a_ghz=6.2, omega_b_ghz=6.1, alpha_mhz=-250.0, t_gate_ns=30.0,
+    zz = StaticZZParameters(omega_a_ghz=6.2, omega_b_ghz=6.1, alpha_mhz=-250.0, t_gate_ns=30.0,
                              base_phi_rad=1.7e-4)
     m = zz.to_manifest()
     assert set(m) == {"value_provenance", "omega_a_ghz", "omega_b_ghz", "alpha_mhz", "t_gate_ns", "base_phi_rad",
@@ -585,7 +617,7 @@ def test_L0_static_zz_calibration_to_manifest_all_keys_distinct():
 
 
 def test_KILLER_static_zz_base_delta_discriminates():
-    zz = StaticZZCalibration(omega_a_ghz=6.3, omega_b_ghz=6.05)
+    zz = StaticZZParameters(omega_a_ghz=6.3, omega_b_ghz=6.05)
 
     def prop(v):
         assert_pins(v, _TWO_PI * (6.3 - 6.05), rtol=1e-12, atol=0.0, label="base_delta")
@@ -662,7 +694,7 @@ def test_L0_source_coupling_config_to_manifest_all_keys_distinct():
                       "reset_flip_sensitivity", "cz_depol_base_p", "cz_depol_sensitivity",
                       "wg_theta_base_rad", "wg_theta_sensitivity", "wg_g_seep_base",
                       "wg_g_seep_sensitivity"}
-    assert m["schema"] == "qec_twin.mechanisms.SourceCouplingConfig.v1"
+    assert m["schema"] == "error_coupling_simulator.source.coupling_config.v1"
     assert m["epistemic_class"] == {"static_zz_formula": "a",
                                     "constants_and_sensitivities": "c",
                                     "log_rate_and_logit_maps": "c"}
@@ -683,7 +715,7 @@ def test_L0_source_coupling_config_to_manifest_all_keys_distinct():
 
 
 # =========================================================================== #
-# CoupledMechanismParams -- source_draw_for + to_manifest                      #
+# CoupledNoiseParameters -- source_draw_for + to_manifest                     #
 # =========================================================================== #
 def test_L0_coupled_params_source_draw_for_value_and_keyerror():
     p = source_to_params(3e-5, SourceCouplingConfig())
@@ -704,7 +736,7 @@ def test_L0_coupled_params_to_manifest_routes_each_field():
                       "zz_phi_rad", "zz_zeta_radns", "zz_exchange_j_radns", "gamma_phi_per_ns",
                       "tphi_ns", "detuning_radns", "drive_omega_radns", "spillover_cx",
                       "readout_flip_p", "reset_flip_p", "cz_depol_p", "wg_theta_rad", "wg_g_seep"}
-    assert m["schema"] == "qec_twin.mechanisms.CoupledMechanismParams.v1"
+    assert m["schema"] == "error_coupling_simulator.source.coupled_process_params.v1"
     assert m["coupling_mode"] == "shared"
     assert m["source_draws_radns"] == {k: 2e-5 for k in _SOURCE_KEYS}
     assert m["normalized_draws"] == {k: 2e-5 / 1e-4 for k in _SOURCE_KEYS}

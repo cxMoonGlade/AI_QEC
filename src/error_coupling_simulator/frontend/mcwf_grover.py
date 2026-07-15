@@ -15,7 +15,7 @@ from typing import Any
 import numpy as np
 import torch
 
-from ..mechanisms.qutrit_teachers import (
+from ..mechanisms.qutrit_leakage import (
     G_HEAT_DEFAULT,
     G_SEEP_DEFAULT,
     THETA_DEFAULT,
@@ -231,7 +231,7 @@ def simulate_mcwf_qutrit_grover_leakage(
     }
     executor_manifest = executor.manifest()
     manifest = {
-        "schema": "qec_twin.simulator_mcwf_qutrit_grover_leakage.v1",
+        "schema": "error_coupling_simulator.frontend.mcwf_qutrit_grover_leakage.v1",
         "backend": (
             "error_coupling_simulator.frontend.mcwf_backend."
             "DenseQutritMcwfBackend"
@@ -269,7 +269,7 @@ def simulate_mcwf_qutrit_grover_leakage(
         "noise": {
             "type": "qutrit_leakage_mcwf",
             "source": (
-                "error_coupling_simulator.mechanisms.qutrit_teachers."
+                "error_coupling_simulator.mechanisms.qutrit_leakage."
                 "leakage_kraus_torch"
             ),
             "schedule": LEAKAGE_SCHEDULE,

@@ -50,6 +50,7 @@ class McwfKrausAllSitesOp:
 
 
 McwfOp = McwfQubitGateOp | McwfCachedQubitGateOp | McwfAllOnesPhaseOp | McwfKrausAllSitesOp
+COMPILED_MCWF_PROGRAM_SCHEMA = "error_coupling_simulator.frontend.compiled_mcwf_program.v1"
 
 
 @dataclass(frozen=True)
@@ -64,10 +65,15 @@ class CompiledMcwfProgram:
     num_qutrits: int
     operations: tuple[McwfOp, ...]
     initial_levels: tuple[int, ...] | None = None
-    schema: str = "qec_twin.simulator.CompiledMcwfProgram.v1"
+    schema: str = COMPILED_MCWF_PROGRAM_SCHEMA
     description: str = ""
 
     def __post_init__(self) -> None:
+        if self.schema != COMPILED_MCWF_PROGRAM_SCHEMA:
+            raise ValueError(
+                f"unsupported compiled MCWF program schema {self.schema!r}; "
+                f"expected {COMPILED_MCWF_PROGRAM_SCHEMA!r}"
+            )
         n = int(self.num_qutrits)
         if n <= 0:
             raise ValueError("num_qutrits must be positive")

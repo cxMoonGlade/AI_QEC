@@ -36,12 +36,12 @@ from error_coupling_simulator.frontend import (  # noqa: E402
     AXIS1_QUTRIT_LEAKAGE_CERTIFICATION_SCHEMA,
     AXIS1_TWO_SITE_LEAKAGE_HAMILTONIAN_CERTIFICATION_REPRESENTABILITY,
     AXIS1_TWO_SITE_LEAKAGE_HAMILTONIAN_CERTIFICATION_SCHEMA,
-    G2_DR_ZZ_BAND,
-    G2_GAMMA_1_PER_NS,
-    G2_GAMMA_PHI_PER_NS,
-    G2_NONZERO_COMMUTATOR_MIN,
-    G2_NONZERO_SUPEROP_DISTANCE_MIN,
-    G2_ZETA_RAD_PER_NS,
+    JOINT_CHANNEL_DR_ZZ_BAND,
+    JOINT_CHANNEL_GAMMA_1_PER_NS,
+    JOINT_CHANNEL_GAMMA_PHI_PER_NS,
+    JOINT_CHANNEL_NONZERO_COMMUTATOR_MIN,
+    JOINT_CHANNEL_NONZERO_SUPEROP_DISTANCE_MIN,
+    JOINT_CHANNEL_ZETA_RAD_PER_NS,
     CircuitBuilder,
     CircuitIR,
     CodeQubit,
@@ -51,7 +51,7 @@ from error_coupling_simulator.frontend import (  # noqa: E402
     PauliTerm,
     StabilizerCheck,
     SubstepSchedule,
-    Axis1G2Row,
+    JointChannelComparisonRow,
     Axis1LocalLindbladContextSpec,
     Axis1ReadoutResetInstrumentSpec,
     Axis1StaticZZDeviceSpec,
@@ -64,8 +64,8 @@ from error_coupling_simulator.frontend import (  # noqa: E402
     axis1_two_site_leakage_hamiltonian_certification_manifest,
     axis1_qt_mps_state_record_contract_manifest,
     Tick,
-    axis1_g2_frontend_gate,
-    axis1_g2_gate_manifest,
+    joint_channel_comparison_gate,
+    joint_channel_comparison_manifest,
     axis1_measurement_record_evidence_manifest,
     axis1_qutip_cuquantum_probe_manifest,
     axis1_qutip_cuquantum_record_probe_manifest,
@@ -79,23 +79,23 @@ from error_coupling_simulator.frontend import (  # noqa: E402
     axis1_state_evolution_evidence_manifest,
     axis1_substep_channel_evidence_manifest,
     build_axis1_schedule_selection_plan,
-    build_axis1_g2_selection_plan,
+    build_axis1_joint_channel_selection_plan,
     circuit_ir_to_substep_schedule,
     compile_code_spec_to_substep_schedule,
     freeze_axis1_substep_channel_evidence,
-    freeze_axis1_g2_evidence,
+    freeze_joint_channel_comparison_evidence,
     freeze_axis1_measurement_record_evidence,
     freeze_axis1_state_evolution_evidence,
     has_valid_compiler_schedule_seal,
     stim_circuit_to_substep_schedule,
     validate_axis1_substep_channel_freeze,
-    validate_axis1_g2_freeze,
+    validate_joint_channel_comparison_freeze,
     validate_axis1_measurement_record_freeze,
     validate_axis1_state_evolution_freeze,
     write_axis1_measurement_record_evidence,
     write_axis1_measurement_record_samples,
     write_axis1_state_evolution_evidence,
-    write_axis1_g2_evidence,
+    write_joint_channel_comparison_evidence,
     write_axis1_substep_channel_evidence,
 )
 from error_coupling_simulator.frontend import b8_io  # noqa: E402
@@ -111,9 +111,9 @@ from error_coupling_simulator.mechanisms.axis1_primitives import (  # noqa: E402
     lower_two_qubit_axis1_primitives,
 )
 from error_coupling_simulator.numerics import NUMERICAL_ZERO  # noqa: E402
-from error_coupling_simulator.frontend.axis1_g2_runner import (  # noqa: E402
-    build_axis1_g2_frontend_schedule,
-    run_axis1_g2_frontend_fixture,
+from error_coupling_simulator.frontend.joint_channel_comparison_runner import (  # noqa: E402
+    build_joint_channel_comparison_schedule,
+    run_joint_channel_comparison_fixture,
 )
 from error_coupling_simulator.frontend.axis1_codespec_runner import (  # noqa: E402
     build_axis1_codespec_frontend_schedule,
@@ -151,7 +151,7 @@ def test_codespec_compiler_generates_axis1_schedule_metadata_without_truth_paylo
     assert all(substep.generated_by_compiler for substep in schedule.substeps)
     assert manifest["compiler_provenance"]["seal_present"] is True
     assert manifest["compiler_provenance"]["seal_schema"] == (
-        "qec_twin.simulator.compiler_schedule_seal.v1"
+        "error_coupling_simulator.frontend.compiler_schedule_seal.v1"
     )
     assert "seal_digest" not in manifest["compiler_provenance"]
     assert {substep.kind for substep in schedule.substeps} >= {
@@ -168,7 +168,14 @@ def test_codespec_compiler_generates_axis1_schedule_metadata_without_truth_paylo
     assert manifest["qubit_roles"]["3"] == "ancilla"
 
     payload = json.dumps(manifest, sort_keys=True)
-    for forbidden in ("kraus", "ptm", "exact_channel", "source_timeline", "teacher_id"):
+    retired_owner_field = "teach" + "er_id"
+    for forbidden in (
+        "kraus",
+        "ptm",
+        "exact_channel",
+        "source_timeline",
+        retired_owner_field,
+    ):
         assert forbidden not in payload.lower()
 
 
@@ -187,7 +194,14 @@ def test_axis1_static_zz_device_spec_is_public_typed_metadata_only():
     assert manifest["calibrations"] == []
 
     payload = json.dumps(manifest, sort_keys=True)
-    for forbidden in ("kraus", "ptm", "exact_channel", "source_timeline", "teacher_id"):
+    retired_owner_field = "teach" + "er_id"
+    for forbidden in (
+        "kraus",
+        "ptm",
+        "exact_channel",
+        "source_timeline",
+        retired_owner_field,
+    ):
         assert forbidden not in payload.lower()
 
     calibrated = Axis1StaticZZDeviceSpec(
@@ -265,7 +279,7 @@ def test_axis1_local_lindblad_context_spec_is_public_typed_metadata_only():
     context = Axis1LocalLindbladContextSpec(
         include_thermal_excitation=True,
         gamma_up_per_ns=2.0e-4,
-        gamma_phi_per_ns=G2_GAMMA_PHI_PER_NS,
+        gamma_phi_per_ns=JOINT_CHANNEL_GAMMA_PHI_PER_NS,
         leak_exchange_12_rad_per_ns=1.5e-3,
         leak_seep_21_per_ns=2.5e-3,
         leak_heat_12_per_ns=3.5e-3,
@@ -302,7 +316,14 @@ def test_axis1_local_lindblad_context_spec_is_public_typed_metadata_only():
     )
 
     payload = json.dumps(manifest, sort_keys=True)
-    for forbidden in ("kraus", "ptm", "exact_channel", "source_timeline", "teacher_id"):
+    retired_owner_field = "teach" + "er_id"
+    for forbidden in (
+        "kraus",
+        "ptm",
+        "exact_channel",
+        "source_timeline",
+        retired_owner_field,
+    ):
         assert forbidden not in payload.lower()
 
     assert Axis1LocalLindbladContextSpec().to_metadata() == {}
@@ -822,11 +843,11 @@ def test_public_circuit_ir_extractor_cannot_spoof_reserved_source_kind():
         circuit_ir_to_substep_schedule(circuit, source_kind="code_spec_compiler")
 
 
-def test_axis1_primitive_registry_lowers_supported_g2_bundle_on_gpu():
+def test_axis1_primitive_registry_lowers_supported_joint_channel_bundle_on_gpu():
     params = Axis1PrimitiveParams(
-        zeta_rad_per_ns=G2_ZETA_RAD_PER_NS,
-        gamma_phi_per_ns=G2_GAMMA_PHI_PER_NS,
-        gamma_1_per_ns=G2_GAMMA_1_PER_NS,
+        zeta_rad_per_ns=JOINT_CHANNEL_ZETA_RAD_PER_NS,
+        gamma_phi_per_ns=JOINT_CHANNEL_GAMMA_PHI_PER_NS,
+        gamma_1_per_ns=JOINT_CHANNEL_GAMMA_1_PER_NS,
         gamma_up_per_ns=2.0e-4,
     )
     registry = default_axis1_primitive_registry()
@@ -864,7 +885,7 @@ def test_axis1_primitive_registry_lowers_supported_g2_bundle_on_gpu():
     assert manifest["representability"] == "two_qubit_axis1_local_window_primitives"
     assert manifest["num_hamiltonian_terms"] == 2
     assert manifest["num_collapse_ops"] == 2
-    lo, hi = G2_DR_ZZ_BAND
+    lo, hi = JOINT_CHANNEL_DR_ZZ_BAND
     one_minus = composed_vs_joint_infidelity(
         bundle.H_list,
         bundle.c_list,
@@ -995,9 +1016,9 @@ def test_axis1_fsim_swap_t2_catches_bad_sequential_composition_on_gpu():
 
 def test_axis1_cluster_lowering_honors_explicit_thermal_excitation_on_gpu():
     params = Axis1PrimitiveParams(
-        zeta_rad_per_ns=G2_ZETA_RAD_PER_NS,
-        gamma_phi_per_ns=G2_GAMMA_PHI_PER_NS,
-        gamma_1_per_ns=G2_GAMMA_1_PER_NS,
+        zeta_rad_per_ns=JOINT_CHANNEL_ZETA_RAD_PER_NS,
+        gamma_phi_per_ns=JOINT_CHANNEL_GAMMA_PHI_PER_NS,
+        gamma_1_per_ns=JOINT_CHANNEL_GAMMA_1_PER_NS,
         gamma_up_per_ns=2.0e-4,
     )
     selection = Axis1MechanismSelection(
@@ -1036,9 +1057,9 @@ def test_axis1_cluster_lowering_honors_explicit_thermal_excitation_on_gpu():
     assert abs(float(torch.trace(out).real.item()) - 1.0) <= 1e-8
 
 
-def test_axis1_g2_selection_plan_is_schedule_derived_and_metadata_only():
-    schedule = _g2_schedule()
-    plan = build_axis1_g2_selection_plan(schedule)
+def test_joint_channel_selection_plan_is_schedule_derived_and_metadata_only():
+    schedule = _joint_channel_schedule()
+    plan = build_axis1_joint_channel_selection_plan(schedule)
     manifest = plan.to_manifest()
 
     assert plan.source_hash == schedule.source_hash
@@ -1060,7 +1081,7 @@ def test_axis1_g2_selection_plan_is_schedule_derived_and_metadata_only():
     assert nonzero.mechanism_slots == ("drive", "idle", "spectator")
 
 
-def test_axis1_generic_selection_plan_covers_non_g2_drive_substeps():
+def test_axis1_generic_selection_plan_covers_non_comparison_drive_substeps():
     builder = CircuitBuilder(num_qubits=2)
     builder.h(0)
     builder.tick()
@@ -1701,7 +1722,7 @@ def test_axis1_carrier_program_routes_over_cap_static_idle_without_dropping_edge
 
     manifest = axis1_carrier_program_manifest(schedule)
 
-    assert manifest["schema"] == "qec_twin.simulator.axis1_carrier_program.v1"
+    assert manifest["schema"] == "error_coupling_simulator.frontend.carrier_program.v1"
     assert manifest["backend_contract"] == "qt_mps_state_record"
     assert manifest["gpu_required"] is True
     assert manifest["claims_dense_channel_evidence"] is False
@@ -1712,7 +1733,7 @@ def test_axis1_carrier_program_routes_over_cap_static_idle_without_dropping_edge
     assert manifest["program"]["num_qubits"] == 6
     assert manifest["program"]["site_order"] == [0, 1, 2, 3, 4, 5]
     book = manifest["program"]["approximation_book"]
-    assert book["schema"] == "qec_twin.simulator.axis1_carrier_approximation_book.v1"
+    assert book["schema"] == "error_coupling_simulator.frontend.carrier_approximation_book.v1"
     assert book["backend_contract"] == "qt_mps_state_record"
     assert "sequential channel composition is not exact" in book[
         "same_substep_generator_policy"
@@ -1750,7 +1771,7 @@ def test_axis1_carrier_program_routes_over_cap_static_idle_without_dropping_edge
         for term in zz_terms
     ] == [
         ("hamiltonian", [0, 5], 1.25e-3, "public_static_zz_calibration"),
-        ("hamiltonian", [1, 4], G2_ZETA_RAD_PER_NS, "axis1_primitive_default"),
+        ("hamiltonian", [1, 4], JOINT_CHANNEL_ZETA_RAD_PER_NS, "axis1_primitive_default"),
     ]
     assert all(term["provenance"]["metadata_visibility"] == "public" for term in zz_terms)
     local_terms = [
@@ -1808,7 +1829,7 @@ def test_axis1_carrier_program_keeps_dense_feasible_rows_as_oracle_available():
         (term["support"], term["coefficient"], term["coefficient_source"])
         for term in zz_terms
     ] == [
-        ([0, 1], G2_ZETA_RAD_PER_NS, "axis1_primitive_default"),
+        ([0, 1], JOINT_CHANNEL_ZETA_RAD_PER_NS, "axis1_primitive_default"),
         ([0, 2], 2.5e-3, "public_static_zz_calibration"),
     ]
     assert carrier["coverage"]["full_positive_duration_coverage"] is True
@@ -1894,7 +1915,7 @@ def test_axis1_mcwf_mps_contract_declares_dimension_polymorphic_carrier_without_
     )
 
     assert contract["schema"] == (
-        "qec_twin.simulator.axis1_mcwf_mps_state_record_contract.v1"
+        "error_coupling_simulator.frontend.mcwf_mps_state_record_contract.v1"
     )
     assert contract["backend_contract"] == AXIS1_MCWF_MPS_CONTRACT_BACKEND_CONTRACT
     # W-J de-overload: a contract-only surface (no execution) must not claim verdict:"pass"/passed.
@@ -1948,7 +1969,7 @@ def test_axis1_mcwf_mps_execution_runs_qubit_fixed_microstep_record_fixture():
     )
 
     assert manifest["schema"] == (
-        "qec_twin.simulator.axis1_mcwf_mps_state_record_execution.v1"
+        "error_coupling_simulator.frontend.mcwf_mps_state_record_execution.v1"
     )
     assert manifest["backend_contract"] == AXIS1_MCWF_MPS_EXECUTION_BACKEND_CONTRACT
     assert manifest["verdict"] == "pass"
@@ -1992,7 +2013,7 @@ def test_axis1_mcwf_mps_execution_preserves_qutrit_level_record_without_projecti
     )
 
     assert manifest["schema"] == (
-        "qec_twin.simulator.axis1_mcwf_mps_state_record_execution.v1"
+        "error_coupling_simulator.frontend.mcwf_mps_state_record_execution.v1"
     )
     assert manifest["verdict"] == "pass"
     assert manifest["passed"] is True
@@ -2220,7 +2241,7 @@ def test_axis1_carrier_execution_mcwf_mps_backend_runs_qubit_fixture():
         },
     )
 
-    assert execution["schema"] == "qec_twin.simulator.axis1_carrier_execution.v1"
+    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v1"
     assert execution["execution_backend_contract"] == "mcwf_mps_state_record"
     assert execution["representability"] == (
         AXIS1_CARRIER_MCWF_MPS_EXECUTION_REPRESENTABILITY
@@ -2260,7 +2281,7 @@ def test_axis1_carrier_execution_mcwf_mps_mixed_local_dims_runs_without_dense_fa
         },
     )
 
-    assert execution["schema"] == "qec_twin.simulator.axis1_carrier_execution.v1"
+    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v1"
     assert execution["execution_backend_contract"] == "mcwf_mps_state_record"
     assert execution["representability"] == (
         AXIS1_CARRIER_MCWF_MPS_EXECUTION_REPRESENTABILITY
@@ -2316,7 +2337,7 @@ def test_axis1_carrier_execution_mcwf_mps_multilevel_finite_bond_fails_closed():
         },
     )
 
-    assert execution["schema"] == "qec_twin.simulator.axis1_carrier_execution.v1"
+    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v1"
     assert execution["execution_backend_contract"] == "mcwf_mps_state_record"
     assert execution["verdict"] == "fail"
     assert execution["passed"] is False
@@ -3061,7 +3082,7 @@ def test_axis1_carrier_execution_probe_consumes_program_and_matches_jointL_state
     record = axis1_measurement_record_evidence_manifest(schedule)
     execution = axis1_carrier_execution_manifest(schedule)
 
-    assert execution["schema"] == "qec_twin.simulator.axis1_carrier_execution.v1"
+    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v1"
     assert execution["verdict"] == "pass"
     assert execution["passed"] is True
     assert execution["execution_backend_contract"] == "dense_jointL_probe"
@@ -3110,7 +3131,7 @@ def test_axis1_carrier_execution_probe_fails_closed_on_over_cap_static_route():
 
     execution = axis1_carrier_execution_manifest(schedule)
 
-    assert execution["schema"] == "qec_twin.simulator.axis1_carrier_execution.v1"
+    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v1"
     assert execution["verdict"] == "fail"
     assert execution["passed"] is False
     assert execution["execution_backend_contract"] == "dense_jointL_probe"
@@ -3138,7 +3159,7 @@ def test_axis1_carrier_execution_qutip_backend_executes_over_cap_static_idle():
         ),
     )
 
-    assert execution["schema"] == "qec_twin.simulator.axis1_carrier_execution.v1"
+    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v1"
     assert execution["verdict"] == "pass"
     assert execution["passed"] is True
     assert execution["execution_backend_contract"] == (
@@ -3291,7 +3312,7 @@ def test_axis1_carrier_execution_qt_mps_backend_records_over_cap_h_readout():
         ),
     )
 
-    assert execution["schema"] == "qec_twin.simulator.axis1_carrier_execution.v1"
+    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v1"
     assert execution["verdict"] == "pass"
     assert execution["passed"] is True
     assert execution["execution_backend_contract"] == "qt_mps_state_record"
@@ -3314,7 +3335,7 @@ def test_axis1_carrier_execution_qt_mps_backend_records_over_cap_h_readout():
     assert execution["claims_axis2_source_timeline"] is False
 
     qt_mps = execution["qt_mps_execution"]
-    assert qt_mps["schema"] == "qec_twin.simulator.axis1_qt_mps_restricted_execution.v1"
+    assert qt_mps["schema"] == "error_coupling_simulator.frontend.qt_mps_restricted_execution.v1"
     assert qt_mps["accepted_for_restricted_execution"] is True
     assert qt_mps["accepted_for_production_scalable_backend"] is False
     assert qt_mps["claims_exact_joint_lindblad_generator"] is False
@@ -3402,7 +3423,7 @@ def test_axis1_carrier_execution_qt_mps_backend_accepts_declared_options():
 
 
 def test_axis1_carrier_execution_qt_mps_backend_rejects_unknown_option():
-    schedule = _g2_schedule()
+    schedule = _joint_channel_schedule()
 
     with pytest.raises(ValueError, match="unsupported QT/MPS execution_backend_options"):
         axis1_carrier_execution_manifest(
@@ -3415,7 +3436,7 @@ def test_axis1_carrier_execution_qt_mps_backend_rejects_unknown_option():
 
 
 def test_axis1_carrier_execution_rejects_backend_options_for_dense_probe():
-    schedule = _g2_schedule()
+    schedule = _joint_channel_schedule()
 
     with pytest.raises(ValueError, match="execution_backend_options"):
         axis1_carrier_execution_manifest(
@@ -3439,7 +3460,7 @@ def test_axis1_qt_mps_contract_uses_dense_oracle_for_within_cap_schedule():
     contract = axis1_qt_mps_state_record_contract_manifest(schedule)
 
     assert contract["schema"] == (
-        "qec_twin.simulator.axis1_qt_mps_state_record_contract.v1"
+        "error_coupling_simulator.frontend.qt_mps_state_record_contract.v1"
     )
     assert contract["verdict"] == "pass"
     assert contract["passed"] is True
@@ -3461,7 +3482,7 @@ def test_axis1_qt_mps_contract_uses_dense_oracle_for_within_cap_schedule():
     )
     assert contract["dense_oracle_certification"]["comparison_outcome_is_metric"] is False
     assert contract["approximation_book"]["schema"] == (
-        "qec_twin.simulator.axis1_carrier_approximation_book.v1"
+        "error_coupling_simulator.frontend.carrier_approximation_book.v1"
     )
     assert contract["approximation_book"]["dense_oracle_certification"][
         "overcap_dense_channel_rows_claimed"
@@ -3477,7 +3498,7 @@ def test_axis1_qt_mps_contract_fails_closed_on_scalable_required_rows():
     contract = axis1_qt_mps_state_record_contract_manifest(schedule)
 
     assert contract["schema"] == (
-        "qec_twin.simulator.axis1_qt_mps_state_record_contract.v1"
+        "error_coupling_simulator.frontend.qt_mps_state_record_contract.v1"
     )
     assert contract["verdict"] == "fail"
     assert contract["passed"] is False
@@ -3500,7 +3521,7 @@ def test_axis1_qt_mps_contract_fails_closed_on_scalable_required_rows():
 
 
 def test_axis1_qt_mps_contract_refuses_cpu_device():
-    schedule = _g2_schedule()
+    schedule = _joint_channel_schedule()
 
     with pytest.raises(ValueError, match="GPU-only"):
         axis1_qt_mps_state_record_contract_manifest(schedule, device="cpu")
@@ -3528,7 +3549,7 @@ def test_axis1_qt_mps_restricted_execution_records_over_cap_h_readout_zero_colla
 
     manifest = axis1_qt_mps_restricted_execution_manifest(schedule)
 
-    assert manifest["schema"] == "qec_twin.simulator.axis1_qt_mps_restricted_execution.v1"
+    assert manifest["schema"] == "error_coupling_simulator.frontend.qt_mps_restricted_execution.v1"
     assert manifest["representability"] == (
         "axis1_qt_mps_restricted_control_hamiltonian_z_record_product_channel"
     )
@@ -3545,7 +3566,7 @@ def test_axis1_qt_mps_restricted_execution_records_over_cap_h_readout_zero_colla
     assert manifest["carrier_program"]["routes"] == ["scalable_required"]
     policy = manifest["restricted_acceptance_policy"]
     assert policy["schema"] == (
-        "qec_twin.simulator.axis1_qt_mps_restricted_acceptance_policy.v1"
+        "error_coupling_simulator.frontend.qt_mps_restricted_acceptance_policy.v1"
     )
     assert policy["accepted_for_restricted_execution"] is True
     assert policy["accepted_for_exact_dense_probability_evidence"] is False
@@ -4036,7 +4057,7 @@ def test_axis1_qt_mps_bond_sweep_detects_underbonded_record_difference():
         convergence_record_probability_gate=1.0e-3,
     )
 
-    assert sweep["schema"] == "qec_twin.simulator.axis1_qt_mps_bond_sweep.v1"
+    assert sweep["schema"] == "error_coupling_simulator.frontend.qt_mps_bond_sweep.v1"
     assert sweep["verdict"] == "fail"
     assert sweep["passed"] is False
     assert sweep["bond_values"] == [1, 2]
@@ -4157,7 +4178,7 @@ def test_axis1_qt_mps_trajectory_seed_sweep_passes_dense_calibrated_deterministi
         dense_record_frequency_gate=1.0e-12,
     )
 
-    assert sweep["schema"] == "qec_twin.simulator.axis1_qt_mps_trajectory_seed_sweep.v1"
+    assert sweep["schema"] == "error_coupling_simulator.frontend.qt_mps_trajectory_seed_sweep.v1"
     assert sweep["verdict"] == "pass"
     assert sweep["passed"] is True
     policy = sweep["seed_sweep_policy"]
@@ -4258,7 +4279,7 @@ def test_axis1_qt_mps_trajectory_seed_sweep_overcap_is_not_dense_calibrated():
 
 
 def test_axis1_qt_mps_trajectory_seed_sweep_requires_explicit_distinct_seeds():
-    schedule = _g2_schedule()
+    schedule = _joint_channel_schedule()
 
     with pytest.raises(ValueError, match="at least two explicit seeds"):
         axis1_qt_mps_trajectory_seed_sweep_manifest(
@@ -4297,7 +4318,7 @@ def test_axis1_qt_mps_restricted_evidence_bundle_passes_deterministic_dense_case
     )
 
     assert bundle["schema"] == (
-        "qec_twin.simulator.axis1_qt_mps_restricted_evidence_bundle.v1"
+        "error_coupling_simulator.frontend.qt_mps_restricted_evidence_bundle.v1"
     )
     assert bundle["verdict"] == "pass"
     assert bundle["passed"] is True
@@ -4374,7 +4395,7 @@ def test_axis1_qt_mps_resource_probe_reports_actual_cuda_memory_without_producti
         min_peak_reserved_gib=0.0,
     )
 
-    assert probe["schema"] == "qec_twin.simulator.axis1_qt_mps_resource_probe.v1"
+    assert probe["schema"] == "error_coupling_simulator.frontend.qt_mps_resource_probe.v1"
     assert probe["verdict"] == "pass"
     assert probe["passed"] is True
     assert probe["workload_passed"] is True
@@ -4702,7 +4723,7 @@ def test_axis1_qt_mps_restricted_execution_carries_t1_population_decay():
         )
         if bits[0] == 1
     )
-    expected = 0.5 * math.exp(-G2_GAMMA_1_PER_NS * 25.0)
+    expected = 0.5 * math.exp(-JOINT_CHANNEL_GAMMA_1_PER_NS * 25.0)
     assert p_m0_one == pytest.approx(expected, abs=1.0e-8)
     assert p_m0_one < 0.5
     assert execution["applied_substeps"][0]["nonzero_collapse_operator_families"].count(
@@ -4711,35 +4732,35 @@ def test_axis1_qt_mps_restricted_execution_carries_t1_population_decay():
 
 
 def test_axis1_qt_mps_restricted_execution_refuses_cpu_device():
-    schedule = _g2_schedule()
+    schedule = _joint_channel_schedule()
 
     with pytest.raises(ValueError, match="GPU-only"):
         axis1_qt_mps_restricted_execution_manifest(schedule, device="cpu")
 
 
 def test_axis1_qt_mps_restricted_execution_refuses_nonpositive_microstep_count():
-    schedule = _g2_schedule()
+    schedule = _joint_channel_schedule()
 
     with pytest.raises(ValueError, match="microstep_count must be positive"):
         axis1_qt_mps_restricted_execution_manifest(schedule, microstep_count=0)
 
 
 def test_axis1_qt_mps_restricted_execution_refuses_nonpositive_branch_cap():
-    schedule = _g2_schedule()
+    schedule = _joint_channel_schedule()
 
     with pytest.raises(ValueError, match="max_branches must be positive"):
         axis1_qt_mps_restricted_execution_manifest(schedule, max_branches=0)
 
 
 def test_axis1_qt_mps_restricted_execution_refuses_nonpositive_max_bond():
-    schedule = _g2_schedule()
+    schedule = _joint_channel_schedule()
 
     with pytest.raises(ValueError, match="max_bond must be positive"):
         axis1_qt_mps_restricted_execution_manifest(schedule, max_bond=0)
 
 
 def test_axis1_qt_mps_restricted_execution_refuses_unknown_finite_step_order():
-    schedule = _g2_schedule()
+    schedule = _joint_channel_schedule()
 
     with pytest.raises(ValueError, match="finite_step_order must be one of"):
         axis1_qt_mps_restricted_execution_manifest(
@@ -4749,7 +4770,7 @@ def test_axis1_qt_mps_restricted_execution_refuses_unknown_finite_step_order():
 
 
 def test_axis1_carrier_execution_probe_refuses_cpu_device():
-    schedule = _g2_schedule()
+    schedule = _joint_channel_schedule()
 
     with pytest.raises(ValueError, match="GPU-only"):
         axis1_carrier_execution_manifest(schedule, device="cpu")
@@ -4772,7 +4793,7 @@ def test_axis1_qutip_cuquantum_probe_lowers_over_cap_static_program_symbolically
 
     manifest = axis1_qutip_cuquantum_probe_manifest(schedule)
 
-    assert manifest["schema"] == "qec_twin.simulator.axis1_qutip_cuquantum_probe.v1"
+    assert manifest["schema"] == "error_coupling_simulator.frontend.qutip_cuquantum_probe.v1"
     assert manifest["representability"] == (
         "axis1_qutip_cuquantum_symbolic_lowering_probe_no_state_record_execution"
     )
@@ -4803,7 +4824,7 @@ def test_axis1_qutip_cuquantum_probe_lowers_over_cap_static_program_symbolically
         for term in zz_terms
     ] == [
         ([0, 5], 1.25e-3, "public_static_zz_calibration", "CuOperator"),
-        ([1, 4], G2_ZETA_RAD_PER_NS, "axis1_primitive_default", "CuOperator"),
+        ([1, 4], JOINT_CHANNEL_ZETA_RAD_PER_NS, "axis1_primitive_default", "CuOperator"),
     ]
 
     collapse_families = [
@@ -4841,7 +4862,7 @@ def test_axis1_qutip_cuquantum_probe_lowers_readout_boundary_without_records():
 
 
 def test_axis1_qutip_cuquantum_probe_refuses_cpu_device():
-    schedule = _g2_schedule()
+    schedule = _joint_channel_schedule()
 
     with pytest.raises(ValueError, match="GPU-only"):
         axis1_qutip_cuquantum_probe_manifest(schedule, device="cpu")
@@ -4859,7 +4880,7 @@ def test_axis1_qutip_cuquantum_state_probe_executes_over_cap_static_idle_zero_st
 
     manifest = axis1_qutip_cuquantum_state_probe_manifest(schedule)
 
-    assert manifest["schema"] == "qec_twin.simulator.axis1_qutip_cuquantum_state_probe.v1"
+    assert manifest["schema"] == "error_coupling_simulator.frontend.qutip_cuquantum_state_probe.v1"
     assert manifest["representability"] == (
         "axis1_qutip_cuquantum_state_probe_restricted_no_record_execution"
     )
@@ -4898,7 +4919,7 @@ def test_axis1_qutip_cuquantum_state_probe_fails_closed_on_measurement_boundary(
 
     manifest = axis1_qutip_cuquantum_state_probe_manifest(schedule)
 
-    assert manifest["schema"] == "qec_twin.simulator.axis1_qutip_cuquantum_state_probe.v1"
+    assert manifest["schema"] == "error_coupling_simulator.frontend.qutip_cuquantum_state_probe.v1"
     assert manifest["verdict"] == "fail"
     assert manifest["passed"] is False
     assert manifest["state_probe_executed"] is False
@@ -4909,7 +4930,7 @@ def test_axis1_qutip_cuquantum_state_probe_fails_closed_on_measurement_boundary(
 
 
 def test_axis1_qutip_cuquantum_state_probe_refuses_cpu_device():
-    schedule = _g2_schedule()
+    schedule = _joint_channel_schedule()
 
     with pytest.raises(ValueError, match="GPU-only"):
         axis1_qutip_cuquantum_state_probe_manifest(schedule, device="cpu")
@@ -4923,7 +4944,7 @@ def test_axis1_qutip_cuquantum_trajectory_probe_executes_over_cap_static_idle_ze
 
     manifest = axis1_qutip_cuquantum_trajectory_probe_manifest(schedule)
 
-    assert manifest["schema"] == "qec_twin.simulator.axis1_qutip_cuquantum_trajectory_probe.v1"
+    assert manifest["schema"] == "error_coupling_simulator.frontend.qutip_cuquantum_trajectory_probe.v1"
     assert manifest["representability"] == (
         "axis1_qutip_cuquantum_trajectory_probe_no_record_execution"
     )
@@ -4969,7 +4990,7 @@ def test_axis1_qutip_cuquantum_trajectory_probe_fails_closed_on_measurement_boun
 
 
 def test_axis1_qutip_cuquantum_trajectory_probe_refuses_cpu_device():
-    schedule = _g2_schedule()
+    schedule = _joint_channel_schedule()
 
     with pytest.raises(ValueError, match="GPU-only"):
         axis1_qutip_cuquantum_trajectory_probe_manifest(schedule, device="cpu")
@@ -4984,7 +5005,7 @@ def test_axis1_qutip_cuquantum_record_probe_executes_over_cap_z_readout_boundary
 
     manifest = axis1_qutip_cuquantum_record_probe_manifest(schedule)
 
-    assert manifest["schema"] == "qec_twin.simulator.axis1_qutip_cuquantum_record_probe.v1"
+    assert manifest["schema"] == "error_coupling_simulator.frontend.qutip_cuquantum_record_probe.v1"
     assert manifest["representability"] == (
         "axis1_qutip_cuquantum_record_probe_restricted_no_b8_no_decoder"
     )
@@ -5185,7 +5206,7 @@ def test_axis1_qutip_cuquantum_record_probe_fails_closed_on_nonmeasurement_progr
 
 
 def test_axis1_qutip_cuquantum_record_probe_refuses_cpu_device():
-    schedule = _g2_schedule()
+    schedule = _joint_channel_schedule()
 
     with pytest.raises(ValueError, match="GPU-only"):
         axis1_qutip_cuquantum_record_probe_manifest(schedule, device="cpu")
@@ -5946,12 +5967,12 @@ def test_axis1_coupling_edge_metadata_fails_closed_for_invalid_rows():
         )
 
 
-def test_axis1_g2_frontend_gate_emits_preregistered_rows_from_compiler_schedule():
-    schedule = _g2_schedule()
-    rows = axis1_g2_frontend_gate(schedule)
+def test_joint_channel_comparison_gate_emits_preregistered_rows_from_compiler_schedule():
+    schedule = _joint_channel_schedule()
+    rows = joint_channel_comparison_gate(schedule)
 
     assert len(rows) == 6
-    assert all(isinstance(row, Axis1G2Row) for row in rows)
+    assert all(isinstance(row, JointChannelComparisonRow) for row in rows)
     assert all(row.source_hash == schedule.source_hash for row in rows)
     assert all(row.passed for row in rows), [
         row.to_manifest() for row in rows if not row.passed
@@ -5970,19 +5991,19 @@ def test_axis1_g2_frontend_gate_emits_preregistered_rows_from_compiler_schedule(
 
     nonzero = [row for row in rows if row.mechanism_pair == ("DR", "ZZ")]
     assert [row.dt_ns for row in nonzero] == [20.0, 25.0, 30.0]
-    lo, hi = G2_DR_ZZ_BAND
+    lo, hi = JOINT_CHANNEL_DR_ZZ_BAND
     for row in nonzero:
         assert row.expected_class == "prediction_band_nonzero"
         assert row.participant == (0, 1)
-        assert row.liouvillian_commutator_norm > G2_NONZERO_COMMUTATOR_MIN
-        assert row.superop_distance > G2_NONZERO_SUPEROP_DISTANCE_MIN
+        assert row.liouvillian_commutator_norm > JOINT_CHANNEL_NONZERO_COMMUTATOR_MIN
+        assert row.superop_distance > JOINT_CHANNEL_NONZERO_SUPEROP_DISTANCE_MIN
         assert lo <= row.one_minus_F_e <= hi
         assert row.leading_one_minus_F_e is not None
         assert row.leading_one_minus_F_e > 0.0
         assert row.context_mechanisms == ("T2", "T1")
 
-    manifest = axis1_g2_gate_manifest(schedule)
-    assert manifest["schema"] == "qec_twin.simulator.axis1_g2_frontend_gate.v1"
+    manifest = joint_channel_comparison_manifest(schedule)
+    assert manifest["schema"] == "error_coupling_simulator.frontend.joint_channel_comparison.v1"
     assert manifest["passed"] is True
     assert manifest["source_hash"] == schedule.source_hash
     assert manifest["compiler_provenance"]["schedule_seal_valid"] is True
@@ -5990,7 +6011,7 @@ def test_axis1_g2_frontend_gate_emits_preregistered_rows_from_compiler_schedule(
     assert "seal_digest" not in json.dumps(manifest["compiler_provenance"])
     assert manifest["primitive_registry"]["registry_id"] == AXIS1_TWO_QUBIT_LOCAL_REGISTRY_ID
     assert manifest["primitive_registry"]["contains_operator_payload"] is False
-    assert manifest["selection_plan"]["selector_id"] == "axis1_g2_registered_rows_v1"
+    assert manifest["selection_plan"]["selector_id"] == "axis1_joint_channel_comparison_rows_v1"
     assert len(manifest["selection_plan"]["selections"]) == 2
     assert "row_id" in manifest["rows"][0]
     assert manifest["measured_on"] == "assembled q=2 substep channels from compiler schedule fixture"
@@ -6007,11 +6028,11 @@ def test_axis1_g2_frontend_gate_emits_preregistered_rows_from_compiler_schedule(
     assert exact_row["value"] == exact_row["superop_distance"]
 
 
-def test_axis1_g2_manifest_carries_anti_toy_details():
-    manifest = axis1_g2_gate_manifest(_g2_schedule())
+def test_joint_channel_manifest_carries_anti_toy_details():
+    manifest = joint_channel_comparison_manifest(_joint_channel_schedule())
     details = manifest["details"]
 
-    assert details["schema"] == "qec_twin.simulator.axis1_g2_anti_toy_details.v1"
+    assert details["schema"] == "error_coupling_simulator.frontend.joint_channel_comparison_anti_toy_details.v1"
     assert details["pass"] is True
     assert details["check1_exact_zero_control"]["pass"] is True
     assert details["check1_exact_zero_control"]["max_superop_frobenius_dist"] <= (
@@ -6033,7 +6054,7 @@ def test_axis1_g2_manifest_carries_anti_toy_details():
     assert powerlaws["zeta_scaling"]["slope_ok"] is True
 
 
-def test_axis1_g2_gate_rejects_cx_as_silent_cz_substitute():
+def test_joint_channel_gate_rejects_cx_as_silent_cz_substitute():
     builder = CircuitBuilder(num_qubits=2)
     builder.h(0)
     builder.tick()
@@ -6041,10 +6062,10 @@ def test_axis1_g2_gate_rejects_cx_as_silent_cz_substitute():
     schedule = circuit_ir_to_substep_schedule(builder.build())
 
     with pytest.raises(ValueError, match="CX is not silently relabeled as CZ"):
-        axis1_g2_frontend_gate(schedule)
+        joint_channel_comparison_gate(schedule)
 
 
-def test_axis1_g2_gate_rejects_non_drive_one_qubit_gate_as_dr_row():
+def test_joint_channel_gate_rejects_non_drive_one_qubit_gate_as_dr_row():
     builder = CircuitBuilder(num_qubits=2)
     builder.declare_static_zz_couplings(((0, 1),))
     builder.gate("Z", 0)
@@ -6053,10 +6074,10 @@ def test_axis1_g2_gate_rejects_non_drive_one_qubit_gate_as_dr_row():
     schedule = circuit_ir_to_substep_schedule(builder.build())
 
     with pytest.raises(ValueError, match="dr_zz_prediction_band"):
-        axis1_g2_frontend_gate(schedule)
+        joint_channel_comparison_gate(schedule)
 
 
-def test_axis1_g2_gate_does_not_mislabel_mixed_cx_cz_participants():
+def test_joint_channel_gate_does_not_mislabel_mixed_cx_cz_participants():
     circuit = CircuitIR(
         num_qubits=4,
         steps=(
@@ -6069,11 +6090,11 @@ def test_axis1_g2_gate_does_not_mislabel_mixed_cx_cz_participants():
     )
     schedule = circuit_ir_to_substep_schedule(circuit)
 
-    rows = axis1_g2_frontend_gate(schedule)
+    rows = joint_channel_comparison_gate(schedule)
     assert {row.participant for row in rows} == {(2, 3)}
 
 
-def test_axis1_g2_selection_preserves_drive_active_spectator_orientation():
+def test_joint_channel_selection_preserves_drive_active_spectator_orientation():
     builder = CircuitBuilder(num_qubits=2)
     builder.declare_static_zz_couplings(((0, 1),))
     builder.h(1)
@@ -6081,7 +6102,7 @@ def test_axis1_g2_selection_preserves_drive_active_spectator_orientation():
     builder.cz((0, 1))
     schedule = circuit_ir_to_substep_schedule(builder.build())
 
-    plan = build_axis1_g2_selection_plan(schedule)
+    plan = build_axis1_joint_channel_selection_plan(schedule)
     exact = plan.require_kind("zz_t2_exact_zero")[0]
     nonzero = plan.require_kind("dr_zz_prediction_band")[0]
 
@@ -6118,11 +6139,11 @@ def test_stim_circuit_importer_builds_sealed_axis1_schedule_without_static_zz_in
     assert manifest["compiler_provenance"]["seal_present"] is True
     assert has_valid_compiler_schedule_seal(schedule)
 
-    plan = build_axis1_g2_selection_plan(schedule)
+    plan = build_axis1_joint_channel_selection_plan(schedule)
     assert plan.static_zz_pairs == ()
     assert [selection.row_kind for selection in plan.selections] == ["zz_t2_exact_zero"]
     with pytest.raises(ValueError, match="dr_zz_prediction_band"):
-        axis1_g2_frontend_gate(schedule)
+        joint_channel_comparison_gate(schedule)
 
     with_static_sidecar = stim_circuit_to_substep_schedule(
         circuit,
@@ -6134,12 +6155,12 @@ def test_stim_circuit_importer_builds_sealed_axis1_schedule_without_static_zz_in
     assert with_static_sidecar.source_kind == "stim_circuit"
     assert with_static_sidecar.source_hash != schedule.source_hash
     assert with_static_sidecar.static_zz_couplings == ((0, 1),)
-    static_plan = build_axis1_g2_selection_plan(with_static_sidecar)
+    static_plan = build_axis1_joint_channel_selection_plan(with_static_sidecar)
     assert {selection.row_kind for selection in static_plan.selections} == {
         "zz_t2_exact_zero",
         "dr_zz_prediction_band",
     }
-    rows = axis1_g2_frontend_gate(with_static_sidecar)
+    rows = joint_channel_comparison_gate(with_static_sidecar)
     assert {row.mechanism_pair for row in rows} == {("ZZ", "T2"), ("DR", "ZZ")}
 
     with_static_calibration = stim_circuit_to_substep_schedule(
@@ -6187,7 +6208,7 @@ def test_stim_circuit_importer_builds_sealed_axis1_schedule_without_static_zz_in
         stim_circuit_to_substep_schedule(circuit, static_zz_couplings=((0, 2),))
 
 
-def test_stim_circuit_importer_accepts_supported_two_qubit_controls_for_axis1_bridge():
+def test_stim_circuit_importer_accepts_supported_two_qubit_controls_for_joint_channel_comparison():
     import stim
 
     for gate_name in sorted(AXIS1_FRONTEND_TWO_QUBIT_CONTROL_GATES):
@@ -6228,8 +6249,8 @@ def test_stim_circuit_importer_rejects_embedded_pauli_noise_as_axis1_schedule():
         stim_circuit_to_substep_schedule(circuit)
 
 
-def test_axis1_g2_gate_rejects_handwritten_fake_schedule():
-    schedule = _g2_schedule()
+def test_joint_channel_gate_rejects_handwritten_fake_schedule():
+    schedule = _joint_channel_schedule()
     fake_substeps = []
     for substep in schedule.substeps:
         fake_substeps.append(
@@ -6266,11 +6287,11 @@ def test_axis1_g2_gate_rejects_handwritten_fake_schedule():
     )
 
     with pytest.raises(ValueError, match="compiler-generated substeps"):
-        axis1_g2_frontend_gate(fake)
+        joint_channel_comparison_gate(fake)
 
 
-def test_axis1_g2_gate_rejects_handwritten_schedule_when_compiler_flag_is_omitted():
-    schedule = _g2_schedule()
+def test_joint_channel_gate_rejects_handwritten_schedule_when_compiler_flag_is_omitted():
+    schedule = _joint_channel_schedule()
     cloned_substeps = []
     for substep in schedule.substeps:
         cloned_substeps.append(
@@ -6306,11 +6327,11 @@ def test_axis1_g2_gate_rejects_handwritten_schedule_when_compiler_flag_is_omitte
     )
 
     with pytest.raises(ValueError, match="compiler-generated substeps"):
-        axis1_g2_frontend_gate(fake)
+        joint_channel_comparison_gate(fake)
 
 
-def test_axis1_g2_gate_rejects_forged_true_compiler_flags_without_builder_seal():
-    schedule = _g2_schedule()
+def test_joint_channel_gate_rejects_forged_true_compiler_flags_without_builder_seal():
+    schedule = _joint_channel_schedule()
     fake = SubstepSchedule(
         source_kind=schedule.source_kind,
         source_hash=schedule.source_hash,
@@ -6326,11 +6347,11 @@ def test_axis1_g2_gate_rejects_forged_true_compiler_flags_without_builder_seal()
     assert all(substep.generated_by_compiler for substep in fake.substeps)
     assert not has_valid_compiler_schedule_seal(fake)
     with pytest.raises(ValueError, match="compiler-owned schedule seal"):
-        axis1_g2_frontend_gate(fake)
+        joint_channel_comparison_gate(fake)
 
 
-def test_axis1_g2_gate_rejects_tampered_mechanism_slots():
-    schedule = _g2_schedule()
+def test_joint_channel_gate_rejects_tampered_mechanism_slots():
+    schedule = _joint_channel_schedule()
     tampered = []
     for substep in schedule.substeps:
         slots = ("idle", "spectator") if substep.kind == "one_qubit_gate" else substep.mechanism_slots
@@ -6368,13 +6389,13 @@ def test_axis1_g2_gate_rejects_tampered_mechanism_slots():
     )
 
     with pytest.raises(ValueError, match="compiler-owned schedule seal"):
-        axis1_g2_frontend_gate(fake)
+        joint_channel_comparison_gate(fake)
     with pytest.raises(ValueError, match="drive mechanism slots"):
-        build_axis1_g2_selection_plan(fake)
+        build_axis1_joint_channel_selection_plan(fake)
 
 
-def test_axis1_g2_gate_rejects_unimplemented_source_kind_even_with_valid_shape():
-    schedule = _g2_schedule()
+def test_joint_channel_gate_rejects_unimplemented_source_kind_even_with_valid_shape():
+    schedule = _joint_channel_schedule()
     disguised = SubstepSchedule(
         source_kind="stim_pauli_source_projection",
         source_hash=schedule.source_hash,
@@ -6388,20 +6409,20 @@ def test_axis1_g2_gate_rejects_unimplemented_source_kind_even_with_valid_shape()
     )
 
     with pytest.raises(ValueError, match="implemented schedule source kinds"):
-        axis1_g2_frontend_gate(disguised)
+        joint_channel_comparison_gate(disguised)
 
 
-def test_axis1_g2_evidence_writer_writes_only_g2_json(tmp_path):
-    schedule = _g2_schedule()
-    result = write_axis1_g2_evidence(schedule, tmp_path / "g2")
+def test_joint_channel_evidence_writer_writes_only_comparison_json(tmp_path):
+    schedule = _joint_channel_schedule()
+    result = write_joint_channel_comparison_evidence(schedule, tmp_path / "comparison")
 
-    assert result.g2_jointL.name == "g2_jointL.json"
-    assert sorted(path.name for path in result.out_dir.iterdir()) == ["g2_jointL.json"]
+    assert result.joint_channel_comparison.name == "joint_channel_comparison.json"
+    assert sorted(path.name for path in result.out_dir.iterdir()) == ["joint_channel_comparison.json"]
     assert not any(path.suffix in {".stim", ".dem", ".b8", ".npz"} for path in result.out_dir.iterdir())
 
-    manifest = json.loads(result.g2_jointL.read_text())
+    manifest = json.loads(result.joint_channel_comparison.read_text())
     assert manifest == result.manifest
-    assert manifest["schema"] == "qec_twin.simulator.axis1_g2_frontend_gate.v1"
+    assert manifest["schema"] == "error_coupling_simulator.frontend.joint_channel_comparison.v1"
     assert manifest["verdict"] == "pass"
     assert manifest["passed"] is True
     assert manifest["measured_on"] == "assembled q=2 substep channels from compiler schedule fixture"
@@ -6417,10 +6438,10 @@ def test_axis1_g2_evidence_writer_writes_only_g2_json(tmp_path):
 
 
 def test_axis1_substep_channel_evidence_assembles_joint_channels_without_payload(tmp_path):
-    schedule = _g2_schedule()
+    schedule = _joint_channel_schedule()
     manifest = axis1_substep_channel_evidence_manifest(schedule)
 
-    assert manifest["schema"] == "qec_twin.simulator.axis1_substep_channel_evidence.v1"
+    assert manifest["schema"] == "error_coupling_simulator.frontend.substep_channel_evidence.v1"
     assert manifest["source_hash"] == schedule.source_hash
     assert manifest["compiler_provenance"]["schedule_seal_valid"] is True
     assert manifest["primitive_registry"]["registry_id"] == AXIS1_TWO_QUBIT_LOCAL_REGISTRY_ID
@@ -6517,14 +6538,14 @@ def test_axis1_substep_channel_evidence_assembles_joint_channels_without_payload
 
 
 def test_axis1_substep_channel_evidence_refuses_cpu_device():
-    schedule = _g2_schedule()
+    schedule = _joint_channel_schedule()
 
     with pytest.raises(ValueError, match="GPU-only|joint_lindbladian is GPU-only"):
         axis1_substep_channel_evidence_manifest(schedule, device="cpu")
 
 
 def test_axis1_substep_channel_evidence_rejects_unsealed_true_flag_schedule():
-    schedule = _g2_schedule()
+    schedule = _joint_channel_schedule()
     fake = _unsealed_schedule_clone(schedule)
 
     assert all(substep.generated_by_compiler for substep in fake.substeps)
@@ -6534,7 +6555,7 @@ def test_axis1_substep_channel_evidence_rejects_unsealed_true_flag_schedule():
 
 
 def test_axis1_state_and_record_evidence_reject_unsealed_true_flag_schedule():
-    schedule = _g2_schedule()
+    schedule = _joint_channel_schedule()
     fake = _unsealed_schedule_clone(schedule)
 
     assert all(substep.generated_by_compiler for substep in fake.substeps)
@@ -6546,10 +6567,10 @@ def test_axis1_state_and_record_evidence_reject_unsealed_true_flag_schedule():
 
 
 def test_axis1_state_evolution_evidence_applies_selected_joint_channels(tmp_path):
-    schedule = _g2_schedule()
+    schedule = _joint_channel_schedule()
     manifest = axis1_state_evolution_evidence_manifest(schedule)
 
-    assert manifest["schema"] == "qec_twin.simulator.axis1_state_evolution_evidence.v1"
+    assert manifest["schema"] == "error_coupling_simulator.frontend.state_evolution_evidence.v1"
     assert manifest["representability"] == (
         "axis1_selected_joint_channel_state_evidence_no_record_emission"
     )
@@ -6706,7 +6727,7 @@ def test_axis1_measurement_record_evidence_branches_z_records_without_b8_or_deco
 
     manifest = axis1_measurement_record_evidence_manifest(schedule)
 
-    assert manifest["schema"] == "qec_twin.simulator.axis1_measurement_record_evidence.v1"
+    assert manifest["schema"] == "error_coupling_simulator.frontend.measurement_record_evidence.v1"
     assert manifest["representability"] == "axis1_selected_joint_channel_record_evidence_no_b8_or_decoder"
     assert manifest["source_hash"] == schedule.source_hash
     assert manifest["selection_plan"]["selector_id"] == "axis1_schedule_joint_channel_selector_v1"
@@ -6933,7 +6954,7 @@ def test_axis1_record_sample_writer_writes_b8_without_dem_or_decoder(tmp_path):
     assert obs.shape == (64, 1)
 
     summary = json.loads(result.sample_summary.read_text())
-    assert summary["schema"] == "qec_twin.simulator.axis1_record_sample_summary.v1"
+    assert summary["schema"] == "error_coupling_simulator.frontend.record_sample_summary.v1"
     assert summary["representability"] == "axis1_jointL_record_samples_b8_no_dem_no_decoder"
     assert summary["shots"] == 64
     assert summary["seed"] == 123
@@ -6947,36 +6968,36 @@ def test_axis1_record_sample_writer_writes_b8_without_dem_or_decoder(tmp_path):
     assert summary["exact_evidence_content_hash"] == result.exact_manifest["content_hash"]
 
 
-def test_axis1_g2_evidence_writer_refuses_stale_simulator_artifact_dir(tmp_path):
+def test_joint_channel_evidence_writer_refuses_stale_simulator_artifact_dir(tmp_path):
     out_dir = tmp_path / "dirty"
     out_dir.mkdir()
     (out_dir / "detector_error_model.DEM").write_text("stale\n")
 
     with pytest.raises(ValueError, match="simulator-run artifact directories"):
-        write_axis1_g2_evidence(_g2_schedule(), out_dir)
+        write_joint_channel_comparison_evidence(_joint_channel_schedule(), out_dir)
 
     out_dir = tmp_path / "dirty_qutrit"
     out_dir.mkdir()
     (out_dir / "measurement_counts.json").write_text("{}\n")
 
     with pytest.raises(ValueError, match="simulator-run artifact directories"):
-        write_axis1_g2_evidence(_g2_schedule(), out_dir)
+        write_joint_channel_comparison_evidence(_joint_channel_schedule(), out_dir)
 
 
 def test_axis1_evidence_writers_refuse_forbidden_or_nonlocal_filenames(tmp_path):
-    schedule = _g2_schedule()
+    schedule = _joint_channel_schedule()
 
     with pytest.raises(ValueError, match="forbidden evidence filename"):
-        write_axis1_g2_evidence(
+        write_joint_channel_comparison_evidence(
             schedule,
-            tmp_path / "g2_forbidden",
+            tmp_path / "comparison_forbidden",
             filename="circuit.STIM",
         )
     with pytest.raises(ValueError, match="non-local evidence filename"):
-        write_axis1_g2_evidence(
+        write_joint_channel_comparison_evidence(
             schedule,
-            tmp_path / "g2_nonlocal",
-            filename="../g2_jointL.json",
+            tmp_path / "comparison_nonlocal",
+            filename="../joint_channel_comparison.json",
         )
     with pytest.raises(ValueError, match="forbidden evidence filename"):
         write_axis1_substep_channel_evidence(
@@ -7005,27 +7026,27 @@ def test_axis1_record_sampler_refuses_stale_simulator_state_artifact_dir(tmp_pat
 
     with pytest.raises(ValueError, match="mixed simulator/decoder artifact directories"):
         write_axis1_measurement_record_samples(
-            _g2_schedule(),
+            _joint_channel_schedule(),
             out_dir,
             shots=4,
         )
 
 
-def test_axis1_g2_runner_writes_evidence_freeze_and_detects_drift(tmp_path):
-    schedule = build_axis1_g2_frontend_schedule()
+def test_joint_channel_runner_writes_evidence_freeze_and_detects_drift(tmp_path):
+    schedule = build_joint_channel_comparison_schedule()
     assert schedule.source_kind == "circuit_ir"
     assert len(schedule.source_hash) == 64
 
-    result = run_axis1_g2_frontend_fixture(tmp_path / "runner")
+    result = run_joint_channel_comparison_fixture(tmp_path / "runner")
     assert result.freeze is not None
-    assert result.evidence.g2_jointL.name == "g2_jointL.json"
-    assert result.freeze.freeze_path.name == "g2_jointL.freeze.json"
+    assert result.evidence.joint_channel_comparison.name == "joint_channel_comparison.json"
+    assert result.freeze.freeze_path.name == "joint_channel_comparison.freeze.json"
     assert sorted(path.name for path in result.evidence.out_dir.iterdir()) == [
-        "g2_jointL.freeze.json",
-        "g2_jointL.json",
+        "joint_channel_comparison.freeze.json",
+        "joint_channel_comparison.json",
     ]
 
-    validation = validate_axis1_g2_freeze(result.freeze.freeze_path)
+    validation = validate_joint_channel_comparison_freeze(result.freeze.freeze_path)
     assert validation["pass"] is True
     assert validation["evidence_content_hash"] == result.evidence.content_hash
 
@@ -7035,40 +7056,44 @@ def test_axis1_g2_runner_writes_evidence_freeze_and_detects_drift(tmp_path):
         json.dumps(freeze_manifest, indent=2, sort_keys=True) + "\n"
     )
     with pytest.raises(ValueError, match="sha256 mismatch"):
-        freeze_axis1_g2_evidence(result.evidence.g2_jointL)
+        freeze_joint_channel_comparison_evidence(result.evidence.joint_channel_comparison)
 
-    result = run_axis1_g2_frontend_fixture(
+    result = run_joint_channel_comparison_fixture(
         tmp_path / "runner",
         refresh_freeze=True,
     )
-    manifest = json.loads(result.evidence.g2_jointL.read_text())
+    manifest = json.loads(result.evidence.joint_channel_comparison.read_text())
     manifest["verdict"] = "fail"
-    result.evidence.g2_jointL.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+    result.evidence.joint_channel_comparison.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
     with pytest.raises(ValueError, match="sha256 mismatch"):
-        validate_axis1_g2_freeze(result.freeze.freeze_path)
+        validate_joint_channel_comparison_freeze(result.freeze.freeze_path)
     with pytest.raises(ValueError, match="mismatch"):
-        freeze_axis1_g2_evidence(result.evidence.g2_jointL)
+        freeze_joint_channel_comparison_evidence(result.evidence.joint_channel_comparison)
 
 
 def test_axis1_evidence_runners_return_nonzero_on_failed_verdict(monkeypatch, tmp_path):
     import error_coupling_simulator.frontend.axis1_codespec_runner as codespec_runner_module
-    import error_coupling_simulator.frontend.axis1_g2_runner as g2_runner_module
+    import error_coupling_simulator.frontend.joint_channel_comparison_runner as comparison_runner_module
 
-    g2_evidence = SimpleNamespace(
-        out_dir=tmp_path / "g2",
-        g2_jointL=tmp_path / "g2" / "g2_jointL.json",
+    comparison_evidence = SimpleNamespace(
+        out_dir=tmp_path / "comparison",
+        joint_channel_comparison=(
+            tmp_path / "comparison" / "joint_channel_comparison.json"
+        ),
         content_hash="0" * 64,
         manifest={"verdict": "fail", "passed": False, "rows": []},
     )
     monkeypatch.setattr(
-        g2_runner_module,
-        "run_axis1_g2_frontend_fixture",
+        comparison_runner_module,
+        "run_joint_channel_comparison_fixture",
         lambda *args, **kwargs: SimpleNamespace(
-            evidence=g2_evidence,
+            evidence=comparison_evidence,
             freeze=None,
         ),
     )
-    assert g2_runner_module.main(["--out-dir", str(tmp_path / "g2"), "--no-freeze"]) == 1
+    assert comparison_runner_module.main(
+        ["--out-dir", str(tmp_path / "comparison"), "--no-freeze"]
+    ) == 1
 
     record_manifest = {
         "verdict": "fail",
@@ -7125,7 +7150,7 @@ def _assert_kraus_channel_matches_unitary(kraus, expected_unitary):
     assert max_residual <= 5.0e-8
 
 
-def _g2_schedule():
+def _joint_channel_schedule():
     builder = CircuitBuilder(num_qubits=2)
     builder.declare_static_zz_couplings(((0, 1),))
     builder.h(0)

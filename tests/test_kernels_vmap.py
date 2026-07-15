@@ -1,6 +1,6 @@
 """functorch/vmap-correctness regression guard for the fused subsystem-Kraus kernel.
 
-The fused kernel's autograd Function (``src/qec_twin/forward/accel.py``::
+The fused kernel's autograd Function (``src/error_coupling_simulator/carrier/accel.py``::
 ``_FusedLocalKraus``) was upgraded to be functorch/vmap-composable so the batched
 Fisher score can drive the FAST fused CUDA kernel instead of the slow pure-torch
 reference. This file is the PERMANENT guard that the capability never silently
@@ -46,7 +46,7 @@ import torch
 
 cuda_ok = torch.cuda.is_available()
 if cuda_ok:
-    from qec_twin.forward import accel
+    from error_coupling_simulator.carrier import accel
 
     cuda_ok = accel.available()
 
@@ -54,9 +54,9 @@ pytestmark = pytest.mark.skipif(not cuda_ok, reason="CUDA / kernel extension una
 
 import torch as _torch  # noqa: E402
 
-from qec_twin.forward.accel import apply_channel_local_fused  # noqa: E402
-from qec_twin.forward.cptp_channel import apply_kraus  # noqa: E402
-from qec_twin.forward.exact.circuit_sim import embed_operator  # noqa: E402
+from error_coupling_simulator.carrier.accel import apply_channel_local_fused  # noqa: E402
+from error_coupling_simulator.carrier.cptp_channel import apply_kraus  # noqa: E402
+from error_coupling_simulator.carrier.exact.circuit_sim import embed_operator  # noqa: E402
 
 TOL_GRAD = 1e-10   # grad agreement (is_grads_batched / jacrev) vs the plain-autograd loop
 TOL_FWD = 1e-12    # forward agreement (vmap) vs the per-sample loop

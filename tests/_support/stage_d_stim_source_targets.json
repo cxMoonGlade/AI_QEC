@@ -1,8 +1,8 @@
 {
   "_comment": [
     "STAGE-D per-batch coverage registry -- batch 'stim_source' (D25, Tier-2 frontend cluster)",
-    "(docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4; full-coverage program;",
-    "work-list docs/twin_validation/l3_release_package_unit_inventory.md D25).",
+    "(docs/SIMULATOR.md SS12.3/12.4; full-coverage program;",
+    "work-list docs/SIMULATOR.md D25).",
     "Run via tests/harness/gate.py <this file> (L0+L1; calls tests/harness/coverage_audit.py) and",
     "tests/harness/mutation.py <this file> (L2).",
     "",
@@ -10,7 +10,7 @@
     "the ORIGIN of a compiled Stim circuit explicit: keyed in-repo CircuitIR, an already-compiled pair,",
     "and imported/on-disk Stim circuits all feed the same CompiledCircuit artifact path. It is NOT a",
     "noise/mechanism model and NOT evaluator truth: CompiledCircuit carries the ideal/noisy Stim pair +",
-    "a validated learner-visible metadata record + a separate evaluator-only source-projection audit",
+    "a validated public-artifact metadata record + a separate evaluator-only source-projection audit",
     "field. It imports NEITHER torch NOR quimb (dataclasses + hashlib + pathlib + the sibling",
     "frontend.stim_io/metadata_guard/noise_spec/record_schema helpers), so EVERY public unit is CPU-PURE",
     "and IN-SCOPE for full L0+L1+L2 -- out_of_scope is therefore {} (the AST reconcile refuses any",
@@ -72,7 +72,7 @@
     "    NON-TRIVIAL TargetedStimNoiseSpec makes the STORED noise_projection carry 'matched_counts' that the",
     "    noise's own to_manifest() lacks -> pins the 'noise_projection' .get key (a key wrap falls back to the",
     "    bare manifest -> no matched_counts -> killed); a TRIVIAL StimPauliNoiseSpec exercises the .get DEFAULT",
-    "    fallback arm. A source-projection spec drives the ISOLATION-CONTRACT faithfulness pin: learner",
+    "    fallback arm. A source-projection spec drives the ISOLATION-CONTRACT faithfulness pin: public",
     "    cc.metadata stays clean (no 'source_timeline') while cc.source_projection_audit rides evaluator-only",
     "    (visibility=='evaluator_only', carries 'source_timeline'), and cc.noise_manifest declares the reduced",
     "    projection + matched_counts.",
@@ -125,7 +125,7 @@
     "NO exemptions + NO out_of_scope: every SCORED unit is CPU-pure and every branch of its OWN AST body is",
     "REACHABLE through a public entry point."
   ],
-  "contract": "docs/twin_validation/wave2_6_unit_test_contract.md",
+  "contract": "docs/SIMULATOR.md",
   "default_target": {"statement": 1.0, "branch": 1.0},
   "covered_by_test_files": [
     "tests/test_stim_source_units.py"

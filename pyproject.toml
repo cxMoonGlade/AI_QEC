@@ -93,9 +93,9 @@ include = ["error_coupling_simulator", "error_coupling_simulator.*"]
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
-norecursedirs = ["legacy", "external", "outputs", "retired", ".venv", ".hypothesis"]
+norecursedirs = ["external", "outputs", ".venv", ".hypothesis"]
 markers = [
-    "slow: opt-in heavy runs (e.g. whole-corpus m2d parity; enable with QEC_TWIN_HW_SLOW)",
+    "slow: opt-in heavy runs",
 ]
 
 [tool.aiqec.core-environment]

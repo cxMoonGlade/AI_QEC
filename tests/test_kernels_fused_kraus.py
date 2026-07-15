@@ -2,7 +2,7 @@
 
 The kernel must be a <= 1e-12 drop-in for the reference
 ``apply_channel_local`` chain — forward values AND autograd (rho and Kraus
-gradients). The source lives in ``src/qec_twin/forward/kernels/``. Skips without
+gradients). The source lives in ``src/error_coupling_simulator/carrier/kernels/``. Skips without
 CUDA / when the extension cannot build.
 """
 from __future__ import annotations
@@ -12,7 +12,7 @@ import torch
 
 cuda_ok = torch.cuda.is_available()
 if cuda_ok:
-    from qec_twin.forward import accel
+    from error_coupling_simulator.carrier import accel
 
     cuda_ok = accel.available()
 
@@ -20,8 +20,8 @@ pytestmark = pytest.mark.skipif(not cuda_ok, reason="CUDA / kernel extension una
 
 import torch as _torch  # noqa: E402
 
-from qec_twin.forward.cptp_channel import apply_kraus  # noqa: E402
-from qec_twin.forward.exact.circuit_sim import embed_operator  # noqa: E402
+from error_coupling_simulator.carrier.cptp_channel import apply_kraus  # noqa: E402
+from error_coupling_simulator.carrier.exact.circuit_sim import embed_operator  # noqa: E402
 
 
 def apply_channel_local(rho, kraus, targets, n):
@@ -45,7 +45,7 @@ def _rand_kraus(k: int, dt: int, *, seed: int = 1) -> torch.Tensor:
 
 @pytest.mark.parametrize("n,targets", [(3, [0]), (3, [2]), (3, [0, 1]), (4, [1, 3]), (5, [0, 4]), (5, [4, 0])])
 def test_forward_equivalence(n, targets) -> None:
-    from qec_twin.forward.accel import apply_channel_local_fused
+    from error_coupling_simulator.carrier.accel import apply_channel_local_fused
 
     rho = _rand_rho(7, n)
     kraus = _rand_kraus(3, 2 ** len(targets)).cuda()
@@ -55,7 +55,7 @@ def test_forward_equivalence(n, targets) -> None:
 
 
 def test_forward_equivalence_unbatched_and_k1() -> None:
-    from qec_twin.forward.accel import apply_channel_local_fused
+    from error_coupling_simulator.carrier.accel import apply_channel_local_fused
 
     rho = _rand_rho(1, 3)[0]
     kraus = _rand_kraus(1, 4).cuda()  # unitary-like K=1 stack
@@ -65,7 +65,7 @@ def test_forward_equivalence_unbatched_and_k1() -> None:
 
 
 def test_gradients_match_reference() -> None:
-    from qec_twin.forward.accel import apply_channel_local_fused
+    from error_coupling_simulator.carrier.accel import apply_channel_local_fused
 
     n, targets = 3, [0, 1]
     rho0 = _rand_rho(4, n)
@@ -88,7 +88,7 @@ def test_gradients_match_reference() -> None:
 def test_benchmark_report() -> None:
     import time
 
-    from qec_twin.forward.accel import apply_channel_local_fused
+    from error_coupling_simulator.carrier.accel import apply_channel_local_fused
 
     n, targets, B = 3, [0, 1], 4096
     rho = _rand_rho(B, n, seed=3)

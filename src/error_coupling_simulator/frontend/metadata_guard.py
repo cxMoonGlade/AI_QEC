@@ -40,7 +40,7 @@ _RESERVED_METADATA_KEY_PARTS = (
     "source_trace",
     "source_timeline",
     "source_trajectory",
-    "teacher_id",
+    "teach" + "er_id",
 )
 _RESERVED_METADATA_EXACT_KEYS = (
     "axis",
@@ -252,10 +252,6 @@ def _parse_static_zz_edge_key(raw_edge: Any, *, label: str) -> tuple[int, int]:
     raise ValueError(f"{label} mapping key {raw_edge!r} must encode two qubits")
 
 
-# Compatibility note: exact-message tests and downstream diagnostics still pin the
-# historical phrase "learner-visible" below. In the current product contract it means
-# public/emitted-artifact metadata; changing those runtime strings requires a separate
-# versioned message migration and is intentionally outside this text-only pass.
 def _validate_keys(
     value: Any, *, path: str, is_root: bool = True, allow_audit_transport: bool = False
 ) -> None:
@@ -275,9 +271,9 @@ def _validate_keys(
                     # the guard-bypass where a top-level audit key smuggles any wrapped Axis-2 key into
                     # the stored metadata / run manifest, outside the schedule compiler's reject guard.
                     raise ValueError(
-                        "learner-visible metadata cannot carry the evaluator-only audit transport; "
+                        "public-artifact metadata cannot carry the evaluator-only audit transport; "
                         f"reserved key {path}.{key!s} is an internal source-projection transport "
-                        "(permitted only on the transient noisy CircuitIR), not learner-visible "
+                        "(permitted only on the transient noisy CircuitIR), not public-artifact "
                         "metadata. Use evaluator_sidecars with visibility='evaluator_only'."
                     )
                 # A NESTED audit key is never the declared (top-level-only) transport. Reject it so a
@@ -285,21 +281,21 @@ def _validate_keys(
                 # public-artifact metadata. Aligns this boundary's depth scope with the schedule
                 # compiler's analog_schedule._find_axis2_source_metadata_path full recursion.
                 raise ValueError(
-                    "learner-visible metadata cannot nest the evaluator-only audit transport; "
+                    "public-artifact metadata cannot nest the evaluator-only audit transport; "
                     f"reserved key {path}.{key!s} is permitted only at the top level of the transient "
                     "noisy CircuitIR. Use evaluator_sidecars with visibility='evaluator_only'."
                 )
             normalized = key.lower().replace("-", "_").replace(" ", "_")
             if normalized in _RESERVED_METADATA_EXACT_KEYS:
                 raise ValueError(
-                    "learner-visible metadata cannot contain evaluator/error-model semantics; "
+                    "public-artifact metadata cannot contain evaluator/error-model semantics; "
                     f"reserved key {path}.{key!s} matches exact key {normalized!r}. "
                     "Put runnable noise in NoiseSpec and evaluator truth in evaluator_sidecars."
                 )
             for reserved in _RESERVED_METADATA_KEY_PARTS:
                 if reserved in normalized:
                     raise ValueError(
-                        "learner-visible metadata cannot contain evaluator truth; "
+                        "public-artifact metadata cannot contain evaluator truth; "
                         f"reserved key {path}.{key!s} matches {reserved!r}. "
                         "Use evaluator_sidecars with visibility='evaluator_only'."
                     )

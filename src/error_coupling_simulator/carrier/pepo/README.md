@@ -1,34 +1,49 @@
-# carrier/pepo — 2D density-matrix PEPO carrier (rung 1: d3-certified, d-generic code)
+# carrier/pepo — current 2D density-matrix PEPO research carrier
 
-The qutrit (fused d²=9 physical leg, `k = 3·t_ket + t_bra` row-major) density-matrix
-PEPO forward carrier for the rotated d×d XZZX patch, per the binding rung-1 contract
-(`docs/nonpauli_teacher/pepo_engine_rung1_contract.md` v4.2) under the governing
-pre-registration (`docs/nonpauli_teacher/pepo_d5d7_carrier_prereg.md` v2.4). GPU-only,
-torch-cuda-complex128 always (S8); devices passed in. Scope: the S10 compiled
-(data-register) record law; rung-1 EVIDENCE is d3-only vs the exact-DM oracle
-(`carrier/exact/qutrit_dm.py`), the code is d-generic.
+This package implements a qutrit density-matrix PEPO carrier for a rotated
+`d×d` XZZX data patch.  A site uses the fused physical leg
+`k = 3·t_ket + t_bra` of dimension nine.  Execution is GPU-only and
+`torch.complex128`; the implementation is dimension-generic, while the current
+independent dense-reference checks are bounded to the real d3 patch.
 
-Modules (disjoint builder ownership, contract §1):
+This is a retained research carrier, not the simulator's canonical record output
+and not evidence of physical-device validity.  Exact density-matrix comparisons
+are implementation bug catchers.  Record-level finite-truncation faithfulness
+remains open.
 
-- `layout.py` [A1] — diamond→`(u',v')` integer-grid transform (asserted), frozen
-  max-balanced x-threshold cut site lists (`frozen_cut_a == (0,1,2)` at d3_at_q6_7),
-  grid-adjacent plaquette paths (min inter-column crossings, D-P convention), the
-  codestate PEPO builder (H-spread seed + bond-2 W chains, fused site-locally into
-  `|m⟩⟨m|`; nonzero-norm asserted for BOTH m), and `dense_rho` (the ≤9-qutrit dense
-  referee bridge for G1.0/G1.3/G1.9).
-- `dynamics.py` [A2] — within-cycle single-site superops (F1 semantics), the exact
-  stabilizer-channel TT, NTU truncation + the gap rule, `nonselective_round`, ledgers.
-- `sampler.py` [A3] — reverse-pass boundary-MPS norm cache, general single-site fused
-  caps for `Tr(ρ·Π)`, the two-term `E_s` expectation, Born sampling + selective update,
-  the pinned obs law, compatibility re-exports of the neutral `carrier.record_fold`
-  `s↔det` seam conventions, and the C3 negativity witness.
+Modules:
 
-Pinned index/tag conventions (set by `layout.py`, consumed by A2/A3): site tensor tag
-`Q{pos}` (engine position), fused physical index `k{pos}` (dim 9), fused virtual bond
-`B{p}_{q}` (`p<q`) present on EVERY grid edge (dim 1 when structurally empty), site
-tensors rank ≤ 5. No global gauge/canonical form is tracked; the only bond metadata is
-the per-bond dimension + the truncation ledger (`PepoState.ledger`: discarded weight on
-the squared-σ scale + per-round trace shift). Positivity is never assumed (C3/S9).
+- `layout.py` owns the integer-grid transform, frozen cut, plaquette paths,
+  codestate construction, `PepoState`, and the bounded dense bridge.
+- `dynamics.py` owns within-cycle site superoperators, stabilizer-channel tensor
+  trains, NTU truncation, nonselective rounds, and truncation ledgers.
+- `sampler.py` owns boundary-MPS norm caches, cap contractions,
+  stabilizer expectations, terminal-observable probabilities,
+  record folding exports, and negativity diagnostics.
 
-Gates + evidence scripts live under `outputs/nonpauli_teacher/pepo_rung1_*` [A4];
-registered tests in `tests/test_pepo_rung1.py`.
+Selective per-stabilizer sampling is not a current PEPO entry point. The old
+implementation had no executable acceptance and silently clipped invalid raw
+weights; it was removed rather than retained behind a compatibility surface.
+
+The shared index contract is fixed by `layout.py`: site tag `Q{pos}`, physical
+index `k{pos}`, and virtual bond `B{p}_{q}` for `p < q`.  There is no global
+canonical gauge; per-bond dimensions and `PepoState.ledger` are the explicit
+truncation state.  Positivity is not assumed.
+
+Current tests:
+
+- `tests/test_pepo_density_layout_guards.py` — host-only layout, rank, fold, and
+  negativity guards.
+- `tests/test_pepo_density_state.py`, `tests/test_pepo_density_token_ops.py`,
+  `tests/test_pepo_density_stabilizer.py`, `tests/test_pepo_density_killers.py`,
+  and `tests/test_pepo_density_observables.py` — process-isolated state,
+  dense-reference algebra, local dynamics, corruption, and contraction gates.
+- `tests/test_pepo_density_nonselective_round.py` — two-round truncation check.
+- `tests/test_pepo_density_ntu_precut.py` — in-regime/out-of-regime NTU pre-cut.
+- `tests/test_pepo_density_compressed_caps.py` — compressed cap contraction.
+- `tests/test_pepo_host_seam.py` — package ownership and host seam.
+
+Every repeated exact-density group and each high-memory integration check is a
+separate service-acceptance file. The canonical supervisor starts them in fresh
+processes so no file accumulates the complete native/CUDA lifetime of the old
+monolith.

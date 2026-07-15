@@ -342,7 +342,7 @@ def _manifest(
 ) -> dict[str, Any]:
     marked_counts = int(counts.get(marked_state, 0))
     return {
-        "schema": "qec_twin.simulator_cudaq_grover_noiseless.v1",
+        "schema": "error_coupling_simulator.frontend.cudaq_grover_noiseless.v1",
         "backend": "cudaq",
         "cudaq_target": str(cudaq.get_target()),
         "representability": "cudaq_statevector_noiseless",

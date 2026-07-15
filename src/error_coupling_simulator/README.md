@@ -2,18 +2,13 @@
 
 The standalone, independently-releasable **specified-noise QEC simulator**. It applies declared
 coupling, leakage, and memoryful noise processes to a QEC circuit and emits the multi-time syndrome
-record. Code previously scattered across `qec_twin` and local experiment scripts has been
-consolidated behind this package boundary. Setuptools uses an exact package allowlist
-(`error_coupling_simulator` plus its subpackages), so built wheel/source archives exclude the
-repo-local `qec_twin` compatibility tree. It is importable as `import error_coupling_simulator`.
-The active package has no inward runtime import of `qec_twin`; the old import paths are outward
-workspace shims only and are not part of the distribution.
+record. The implementation is consolidated behind this package boundary. Setuptools uses an
+exact package allowlist (`error_coupling_simulator` plus its subpackages). It is importable as
+`import error_coupling_simulator`.
 
 ## Why this package exists
 The simulator is the deliverable we intend to **release independently**. Keeping its code in one
-cohesive package (rather than scattered across `qec_twin.forward` / `.mechanisms` / `.simulator` /
-`.audit.certify` plus historical experiment outputs) gives it a clean boundary, a cohesive public
-surface, and a releasable unit. Migration plan + phase order: `docs/error_coupling_simulator_MIGRATION.md`.
+cohesive package gives it a clean boundary, a cohesive public surface, and a releasable unit.
 
 ## Boundary / disciplines (binding)
 - **No physical ground truth.** A noise process is a model we SPECIFY; oracles (QuTiP / closed forms)
@@ -33,8 +28,8 @@ surface, and a releasable unit. Migration plan + phase order: `docs/error_coupli
 - `source/` — Axis-2 classical non-Markovian sources, including the finite log-spaced RTN
   construction of `OneOverFDriftSource`, replayable timelines, and explicit `Theta(z_t)`
   source-to-mechanism fan-out.
-- `carrier/` — exact DM, joint-Lindbladian channels, CUDA kernels, archived DM-PEPO, and the active
-  single-wire 2D-PEPS carrier.
+- `carrier/` — exact DM, joint-Lindbladian channels, CUDA kernels, the retained DM-PEPO research
+  carrier, and the single-wire 2D-PEPS research carrier.
 - `mechanisms/`, `noise_processes/` — mechanism primitives and controlled generative processes.
 - `frontend/` — CircuitIR / CodeSpec / compiler / schedule / carrier execution / artifact emission.
 - `certify/` — evaluator-only anchor and certification seam.
@@ -57,7 +52,7 @@ surface, and a releasable unit. Migration plan + phase order: `docs/error_coupli
   not in canonical `ecs` beside the fused extension.
 - Release acceptance uses the real-checkout sdist → wheel → isolated-install gate in
   `tests/test_distribution_boundary.py`. That gate removes the checkout from import resolution,
-  exercises package import and core smokes, and rejects leaked `qec_twin`, old entry points, or
+  exercises package import and core smokes, and rejects unowned modules, old entry points, or
   repository-only assets. Editable-install tests alone do not prove the distribution boundary.
 - The installed service inventory is not implicit: `docs/service_status.json` and its generated
   `docs/CODE_MAP.md` ship under `share/doc/error-coupling-simulator/`. The generator classifies every
@@ -68,16 +63,14 @@ surface, and a releasable unit. Migration plan + phase order: `docs/error_coupli
 **The self-contained code boundary is closed; scientific carrier certification remains open.**
 Source, carrier, mechanisms, noise processes, frontend, certification, and the retained
 quantum-bath research slice live in this package and use package-local runtime ownership. The PEPS
-schedule host and `frontend.experiments` are package-local. Repo-only `qec_twin` re-export shims and
-RAG tooling remain for workspace compatibility, but distribution archives contain neither them nor
-their old console entry point. External circuit inputs, explicit mechanism parameters/channel
+schedule host and `frontend.experiments` are package-local. External circuit inputs, explicit
+mechanism parameters/channel
 injections, and isolated optional plugins are declared boundaries, not hidden package back-edges.
 
 The classical `1/f` path is an active core service:
 `OneOverFDriftSource -> SourceTimeline -> Theta(z_t) -> CoupledCycleNoiseProcess -> {det, obs}`.
-It ships with a matched-marginal permutation control (the historical API spelling is
-`markovian_baseline`) and a source-off control. Bayes decoder-floor analysis is
-downstream analysis and remains legacy-only; it is not a simulator service.
+It ships with a matched-marginal permutation control and a source-off control. Bayes decoder-floor
+analysis is downstream analysis and is not a simulator service.
 
 `PhaseBurstSource` and `TemporalStormSPPSource` are shipped RESEARCH timeline primitives, not
 turnkey `CoupledCycleNoiseProcess` record arms. A caller can route a timeline through explicit
@@ -86,10 +79,10 @@ analog truth. The generic dense qudit MCWF carrier is also distinct from its opt
 workload adapter.
 
 The shipped 1D MPS route is the restricted Axis-1 MCWF/QT execution slice; it is executable
-verification, not a production-scalable/full-record carrier. The old specialized XZZX thin-strip
-driver is legacy-only. The scientific frontier is the full-`d x d` single-wire 2D-PEPS trajectory
-carrier. Its d3
+verification, not a production-scalable/full-record carrier. The scientific frontier is the
+full-`d x d` single-wire 2D-PEPS trajectory carrier. Its d3
 state-level spike is implemented, but finite-truncation fidelity of the complete multi-round record
-is still open. The doubled-wire DM-PEPO is archived, and d5/d7 distributional results remain
-provisional. Binding status and claim boundaries live in `docs/SIMULATOR.md`, `CLAUDE.md`, and ADR
+is still open. The doubled-wire DM-PEPO remains a research carrier with known record-law failures,
+and d5/d7 distributional results remain provisional. Binding status and claim boundaries live in
+`docs/SIMULATOR.md`, `CLAUDE.md`, and ADR
 0011; this README must not be used to promote a carrier or a synthetic parameter set beyond them.

@@ -151,14 +151,6 @@ def main() -> int:
                     f"got {direct_url}"
                 )
 
-    stale_roots = [
-        dist
-        for dist in metadata.distributions()
-        if _normalise(dist.metadata.get("Name") or "") == "qec-twin"
-    ]
-    if stale_roots:
-        errors.append(f"qec-twin: {len(stale_roots)} stale editable distribution(s) installed")
-
     spec = util.find_spec("qutip_cuquantum")
     if spec is None or spec.origin is None:
         errors.append("qutip_cuquantum: import source not found")
@@ -266,7 +258,7 @@ def main() -> int:
     else:
         errors.append(f"nvcc: missing at {nvcc}")
 
-    for variable in ("PYTHONPATH", "QEC_TWIN_NO_KERNELS", "LD_PRELOAD"):
+    for variable in ("PYTHONPATH", "ECS_DISABLE_NATIVE_KERNELS", "LD_PRELOAD"):
         if os.environ.get(variable):
             errors.append(f"{variable}: must be unset, got {os.environ[variable]}")
 

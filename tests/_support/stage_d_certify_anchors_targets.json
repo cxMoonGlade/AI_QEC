@@ -1,7 +1,7 @@
 {
   "_comment": [
     "STAGE-D per-batch coverage registry -- batch 'certify_anchors' (D5)",
-    "(docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4; full-coverage program).",
+    "(docs/SIMULATOR.md SS12.3/12.4; full-coverage program).",
     "Run via tests/harness/gate.py <this file> (L0+L1; calls tests/harness/coverage_audit.py) and",
     "tests/harness/mutation.py <this file> (L2).",
     "",
@@ -18,7 +18,7 @@
     "",
     "controls.py (CorruptStabControl / ShuffleControl): guards<=>geometry-set / always-guards;",
     "expect=='must_fail' (constant, no caller -> direct assert); run drives the core's MeasureCtx",
-    "(reused FakeTeacher/InMemoryAnchor stub from tests/test_certify.py -- CPU, NO GPU): the corrupt",
+    "(reused controlled-process/InMemoryAnchor stub from tests/test_certify.py -- CPU, NO GPU): the corrupt",
     "control FIREs on a corruptible anchor + goes inert (verdict FAIL) on one that cannot host the",
     "corruption; the shuffle control marks itself INAPPLICABLE on a flat/symmetric value and FIREs on",
     "a non-symmetric one (dict + ndarray branches).",
@@ -44,7 +44,7 @@
     "_stim_slice_records, _joint_to_keyed, DMOracleAnchor._dm_copy_bytes) are not public units and are",
     "NOT reconciled/scored; they are exercised + mutation-covered via the public units."
   ],
-  "contract": "docs/twin_validation/wave2_6_unit_test_contract.md",
+  "contract": "docs/SIMULATOR.md",
   "default_target": {"statement": 1.0, "branch": 1.0},
   "covered_by_test_files": [
     "tests/test_certify_anchors_units.py",
@@ -59,7 +59,7 @@
   "out_of_scope": {
     "DMOracleAnchor.answer": {
       "class": "gpu_bound",
-      "reason": "real cuda QutritDM compute + DMReplayable teacher; no CPU path, no L2",
+      "reason": "real cuda QutritDM compute + DMReplayable process; no CPU path, no L2",
       "covered_by": [
         "tests/test_certify.py::test_dm_anchor_capability_is_oom_safe",
         "tests/test_certify.py::test_dm_anchor_moments_capability_is_oom_safe"

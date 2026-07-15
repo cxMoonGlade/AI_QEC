@@ -1,6 +1,6 @@
 """Canonical skip-gate probes + constants for the test suite (Wave 1, contract row C1).
 
-Binding contract: ``docs/twin_validation/api_hardening_ownership_design.md`` (row C1, the
+Binding contract: ``docs/SIMULATOR.md`` (row C1, the
 NAMING STANDARD, and review dispositions AM-2/AM-4). This module is the ONE home for:
 
   * ``_HAS_CUDA`` / ``requires_cuda`` -- the GPU probe. House rule: GPU-only model
@@ -15,17 +15,14 @@ NAMING STANDARD, and review dispositions AM-2/AM-4). This module is the ONE home
     C1 risk note).
   * the canonical device/dtype constants ``DEVICE`` / ``CDTYPE`` / ``RDTYPE`` / ``PHYS``.
 
-TEST-ONLY probe hook (NOT a user feature): the env var ``QEC_TWIN_D3_MASK`` is the
+TEST-ONLY probe hook (NOT a user feature): the env var ``ECS_D3_MASK`` is the
 Rule-II falsifying probe for the ``_HAS_DATA`` predicate itself (contract AM-2 --
 "the predicate is SHOWN to trip"). It holds a comma list of logical names in
 ``{r01_circ, r01_meta, r10_circ, r10_meta}``; masked names are treated as ABSENT by
 ``_HAS_DATA``. An UNKNOWN name raises ``ValueError`` loudly -- a typo silently masking
 nothing would make the probe vacuous (DEVIOUS-TEST STANDARD). Exercised by
-``outputs/twin_validation/wave1_skipgate_probe.py`` and
+``outputs/simulator_validation/wave1_skipgate_probe.py`` and
 ``tests/_support/test_support_selftest.py``.
-
-The separate, documented ``QEC_TWIN_HW_DATA`` hardware-test convention
-(``test_hardware_m*``) is deliberately NOT touched here (C1 risk note).
 
 Torch is imported guarded so collection works on a box without torch (the GPU-gated
 tests then skip via ``requires_cuda``).
@@ -57,8 +54,8 @@ PHYS = 3  # qutrit physical dimension
 # --------------------------------------------------------------------------- #
 # The ONE strict d3 dataset probe (all four files) + the AM-2 mask hook.       #
 # --------------------------------------------------------------------------- #
-_D3_MASK_ENV = "QEC_TWIN_D3_MASK"
-_D3_DATA_ENV = "QEC_TWIN_D3_DATA"
+_D3_MASK_ENV = "ECS_D3_MASK"
+_D3_DATA_ENV = "ECS_D3_DATA_ROOT"
 _D3_LOGICAL_NAMES = ("r01_circ", "r01_meta", "r10_circ", "r10_meta")
 
 
@@ -84,7 +81,7 @@ def _d3_paths() -> dict:
 
 def _parse_d3_mask(mask) -> frozenset:
     """Parse + VALIDATE a mask (comma string or iterable of logical names; None reads
-    the ``QEC_TWIN_D3_MASK`` env var). Unknown names raise ValueError -- fail loud."""
+    the ``ECS_D3_MASK`` env var). Unknown names raise ValueError -- fail loud."""
     if mask is None:
         mask = os.environ.get(_D3_MASK_ENV, "")
     if isinstance(mask, str):

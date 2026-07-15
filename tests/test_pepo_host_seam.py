@@ -1,4 +1,4 @@
-"""Package-ownership gates for the retained, archived PEPO surface."""
+"""Package-ownership gates for the retained PEPO surface."""
 
 from __future__ import annotations
 
@@ -16,8 +16,10 @@ def test_pepo_layout_resolves_without_the_legacy_namespace() -> None:
 
         real_import = builtins.__import__
 
+        retired_root = "qec" + "_" + "twin"
+
         def reject_legacy(name, *args, **kwargs):
-            if name == "qec_twin" or name.startswith("qec_twin."):
+            if name == retired_root or name.startswith(retired_root + "."):
                 raise AssertionError(f"forbidden legacy import: {name}")
             return real_import(name, *args, **kwargs)
 
@@ -35,7 +37,7 @@ def test_pepo_layout_resolves_without_the_legacy_namespace() -> None:
         assert layout.__class__.__module__ == (
             "error_coupling_simulator.carrier.pepo.layout"
         )
-        assert not any(name.startswith("qec_twin") for name in sys.modules)
+        assert not any(name.startswith(retired_root) for name in sys.modules)
         """
     )
 

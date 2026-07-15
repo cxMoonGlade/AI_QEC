@@ -8,8 +8,8 @@ independent-ground-truth anchor adapters + the negative controls under
   * ``dm_oracle.DMOracleAnchor``       -- the exact density-matrix route (capability is CPU-pure;
     ``answer`` is TRUE GPU and is out_of_scope=gpu_bound in the registry -- NOT tested here).
 
-Full-coverage program (docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4; work-list
-docs/twin_validation/l3_release_package_unit_inventory.md). Registry:
+Full-coverage program (docs/SIMULATOR.md SS12.3/12.4; work-list
+docs/SIMULATOR.md). Registry:
 ``tests/_support/stage_d_certify_anchors_targets.json`` (17 registered public units; the 18th public
 unit ``DMOracleAnchor.answer`` is out_of_scope gpu_bound). CPU-ONLY: the DM capability is exercised
 with a MOCKED ``card_bytes`` (pure arithmetic, no CUDA); stim is a lazy CPU Clifford import; the
@@ -66,7 +66,7 @@ from error_coupling_simulator.certify.types import (
 
 # =========================================================================== #
 # TEST FIXTURES (TEST-ONLY: in tests/, never production anchors) -- the        #
-# FakeTeacher / InMemoryAnchor stub pattern reused from tests/test_certify.py  #
+# ControlledProcessFixture / InMemoryAnchor stub pattern reused from tests/test_certify.py  #
 # so the "Mixed" control-run units run on CPU with NO GPU.                      #
 # =========================================================================== #
 _JOINT = {0: 0.4, 1: 0.1, 2: 0.05, 3: 0.45}
@@ -84,8 +84,8 @@ def _make_records(joint: dict, N: int) -> dict:
     return {"det": det, "obs": obs}
 
 
-class FakeTeacher:
-    """A controlled teacher emitting a KNOWN law (test fixture)."""
+class ControlledProcessFixture:
+    """A controlled process emitting a KNOWN law (test fixture)."""
 
     sched = object()
     truth = {"theta": 0.15, "gamma": 0.04}
@@ -121,7 +121,7 @@ class InMemoryAnchor:
         return Capability(statistic, self._exactness, feasible=self._feasible,
                           epistemic_class="a" if self._exactness is Exactness.EXACT else "b")
 
-    def answer(self, teacher, statistic, regime, *, N=None, generator=None, corrupt=None):
+    def answer(self, process, statistic, regime, *, N=None, generator=None, corrupt=None):
         if statistic is Statistic.SYNDROME_DIST:
             val: dict = {}
             for k, p in self._joint.items():
@@ -362,13 +362,13 @@ def test_corrupt_stab_control_run_both_fired_arcs():
     # run drives ctx.corrupt_answer -> compare -> fired <=> verdict FAIL. Cover BOTH arcs of the
     # `1.0 if fired else 0.0` outcome via a corruptible anchor (fires) and a non-corruptible one
     # (cannot host the corruption -> same answer -> does not fire).
-    rep_fire = certify_cells(FakeTeacher(_JOINT), [(Statistic.FULL_JOINT, _REG)],
+    rep_fire = certify_cells(ControlledProcessFixture(_JOINT), [(Statistic.FULL_JOINT, _REG)],
                              [InMemoryAnchor(_JOINT, corruptible=True)], [CorruptStabControl(stab=0)],
                              N=20000)
     assert rep_fire.controls[0].detail["fired"] is True
     assert rep_fire.controls[0].detail["applicable"] is True
 
-    rep_inert = certify_cells(FakeTeacher(_JOINT), [(Statistic.FULL_JOINT, _REG)],
+    rep_inert = certify_cells(ControlledProcessFixture(_JOINT), [(Statistic.FULL_JOINT, _REG)],
                               [InMemoryAnchor(_JOINT, corruptible=False)], [CorruptStabControl(stab=0)],
                               N=20000)
     assert rep_inert.controls[0].detail["fired"] is False
@@ -383,7 +383,7 @@ def test_corrupt_stab_control_run_inert_forces_fail_killer():
                              {"fired": True, "applicable": True, "name": self.name, "stab": self._stab})
 
     def _inert_control_forces_fail(control):
-        rep = certify_cells(FakeTeacher(_JOINT), [(Statistic.FULL_JOINT, _REG)],
+        rep = certify_cells(ControlledProcessFixture(_JOINT), [(Statistic.FULL_JOINT, _REG)],
                             [InMemoryAnchor(_JOINT, corruptible=False)], [control], N=20000)
         assert rep.verdict is Verdict.FAIL
 
@@ -418,11 +418,11 @@ def test_shuffle_control_expect():
 
 
 def _shuffle_ctx(value, emitted, statistic):
-    """A MeasureCtx wrapping a hand-built anchor value + emitted statistic (no GPU, no teacher)."""
+    """A MeasureCtx wrapping a hand-built anchor value + emitted statistic (no GPU, no process)."""
     class _Stub:
         name = "stub"
     av = AnchorValue(statistic, _REG, value, Exactness.EXACT, 0.0, "a", {})
-    return MeasureCtx(_Stub(), statistic, _REG, 20000, emitted, av, teacher=None)
+    return MeasureCtx(_Stub(), statistic, _REG, 20000, emitted, av, process=None)
 
 
 def test_shuffle_control_run_applicable_dict_fires():
@@ -499,7 +499,7 @@ class _Sched:
         self.logical = {0: "Z"}
 
 
-class _StimTeacher:
+class _StimProcessFixture:
     def __init__(self):
         self.sched = _Sched()
         self.truth = {}
@@ -564,7 +564,7 @@ def test_stim_answer_syndrome_dist_pins_closed_form():
     p, N = 0.1, 50000
     reg = Regime(R=2, n_stab=1, n_active=2)
     st_anchor = StimCliffordAnchor(p_x=p, seed=4242)
-    av = st_anchor.answer(_StimTeacher(), Statistic.SYNDROME_DIST, reg, N=N)
+    av = st_anchor.answer(_StimProcessFixture(), Statistic.SYNDROME_DIST, reg, N=N)
 
     assert av.exactness is Exactness.STATISTICAL and av.epistemic_class == "b"
     assert av.band == pytest.approx(6.0 / math.sqrt(N))
@@ -580,7 +580,7 @@ def test_stim_answer_seam_xor_killer():
     # catches it (keys 1 and 3 differ by >0.1). The anchor matches WITH-seam and NOT without-seam.
     p, N = 0.1, 50000
     reg = Regime(R=2, n_stab=1, n_active=2)
-    av = StimCliffordAnchor(p_x=p, seed=4242).answer(_StimTeacher(), Statistic.SYNDROME_DIST, reg, N=N)
+    av = StimCliffordAnchor(p_x=p, seed=4242).answer(_StimProcessFixture(), Statistic.SYNDROME_DIST, reg, N=N)
     emp = _dense(av.value)
     with_seam = _dense(_syndrome_with_seam_R2(p))
     without_seam = _dense(_syndrome_without_seam_R2(p))
@@ -598,10 +598,10 @@ def test_stim_answer_corrupt_and_marg_and_m1_paths():
     # X/Y DD echoes are intentionally absent from the Clifford slice (frame-invariant; see the anchor
     # module docstring) -> there is no echo branch to cover here.
     reg = Regime(R=2, n_stab=1, n_active=2)
-    av_corrupt = StimCliffordAnchor(p_x=0.1).answer(_StimTeacher(), Statistic.SYNDROME_DIST, reg,
+    av_corrupt = StimCliffordAnchor(p_x=0.1).answer(_StimProcessFixture(), Statistic.SYNDROME_DIST, reg,
                                                     N=4000, corrupt={"stab": 0})
     assert av_corrupt.provenance["corrupt_stab"] == 0
-    av_marg = StimCliffordAnchor(p_x=0.1).answer(_StimTeacher(), Statistic.DETECTOR_MARG, reg, N=4000)
+    av_marg = StimCliffordAnchor(p_x=0.1).answer(_StimProcessFixture(), Statistic.DETECTOR_MARG, reg, N=4000)
     assert np.asarray(av_marg.value).shape == (reg.R * reg.n_stab + 1,)  # per-detector + flip rate
     # directly cover the private slice builder's m==1 logical-|1> prep branch.
     det, obs = _stim_slice_records(_Sched(), 0.1, reg, m=1, N=2000, seed=1, corrupt_stab=None)
@@ -614,7 +614,7 @@ def test_stim_answer_property_sweep(p):
     # closed-form independent-round product distribution across a sweep of bit-flip rates.
     N = 60000
     reg = Regime(R=2, n_stab=1, n_active=2)
-    av = StimCliffordAnchor(p_x=p, seed=4242).answer(_StimTeacher(), Statistic.SYNDROME_DIST, reg, N=N)
+    av = StimCliffordAnchor(p_x=p, seed=4242).answer(_StimProcessFixture(), Statistic.SYNDROME_DIST, reg, N=N)
     assert_pins(_dense(av.value), _dense(_syndrome_with_seam_R2(p)), atol=0.02,
                 label=f"stim sweep p={p}")
 
@@ -970,21 +970,21 @@ def test_stim_answer_field_provenance_band_and_corrupt():
     reg = Regime(R=2, n_stab=1, n_active=2)
     st = StimCliffordAnchor(p_x=p, seed=4242)
 
-    av = st.answer(_StimTeacher(), S.SYNDROME_DIST, reg, N=N)
+    av = st.answer(_StimProcessFixture(), S.SYNDROME_DIST, reg, N=N)
     assert av.statistic is S.SYNDROME_DIST
     assert av.regime is reg
     assert av.provenance == {"anchor": "stim_clifford", "p_x": p, "corrupt_stab": None}
     # the DEFAULT-N band (N=200_000 in `int(N or 200_000)`) pins the 200_000 constant.
-    assert st.answer(_StimTeacher(), S.SYNDROME_DIST, reg).band == pytest.approx(6.0 / math.sqrt(200_000))
+    assert st.answer(_StimProcessFixture(), S.SYNDROME_DIST, reg).band == pytest.approx(6.0 / math.sqrt(200_000))
 
     # DETECTOR_MARG at m=0 pinned against the closed form [q, q, flip]; then the CORRUPT answer
     # (stab0 Z<->X) is DISCRIMINATED: it drives the detectors deterministic (0) and the logical
     # anti-commuting (~0.5), a distribution the m=0 pin CANNOT satisfy -> the corrupt path fires.
     q = 2 * p * (1 - p)
     flip = (1 - (1 - 2 * p) ** reg.R) / 2
-    dm = np.asarray(st.answer(_StimTeacher(), S.DETECTOR_MARG, reg, N=N).value)
+    dm = np.asarray(st.answer(_StimProcessFixture(), S.DETECTOR_MARG, reg, N=N).value)
     assert_pins(dm, np.array([q, q, flip]), atol=0.02, label="stim DETECTOR_MARG m0 vs closed form")
-    dmc = np.asarray(st.answer(_StimTeacher(), S.DETECTOR_MARG, reg, N=N, corrupt={"stab": 0}).value)
+    dmc = np.asarray(st.answer(_StimProcessFixture(), S.DETECTOR_MARG, reg, N=N, corrupt={"stab": 0}).value)
     assert_pins(dmc, np.array([0.0, 0.0, 0.5]), atol=0.03, label="stim DETECTOR_MARG corrupt (XX)")
 
 
@@ -993,7 +993,7 @@ def test_stim_answer_field_provenance_band_and_corrupt():
 # --------------------------------------------------------------------------- #
 def test_corrupt_run_full_row_pins():
     S = Statistic
-    rep_fire = certify_cells(FakeTeacher(_JOINT), [(S.FULL_JOINT, _REG)],
+    rep_fire = certify_cells(ControlledProcessFixture(_JOINT), [(S.FULL_JOINT, _REG)],
                              [InMemoryAnchor(_JOINT, corruptible=True)], [CorruptStabControl(stab=0)],
                              N=20000)
     row = rep_fire.controls[0]
@@ -1005,7 +1005,7 @@ def test_corrupt_run_full_row_pins():
     assert row.verdict is Verdict.CONTROL
     assert row.detail == {"fired": True, "applicable": True, "name": "corrupt_stabilizer", "stab": 0}
 
-    rep_inert = certify_cells(FakeTeacher(_JOINT), [(S.FULL_JOINT, _REG)],
+    rep_inert = certify_cells(ControlledProcessFixture(_JOINT), [(S.FULL_JOINT, _REG)],
                               [InMemoryAnchor(_JOINT, corruptible=False)], [CorruptStabControl(stab=0)],
                               N=20000)
     r2 = rep_inert.controls[0]
@@ -1013,7 +1013,7 @@ def test_corrupt_run_full_row_pins():
     assert r2.detail["fired"] is False and r2.detail["applicable"] is True
 
     # DEFAULT stab (the __init__ default is 1) -> detail carries stab == 1 (a None / default mutant dies).
-    rep_def = certify_cells(FakeTeacher(_JOINT), [(S.FULL_JOINT, _REG)],
+    rep_def = certify_cells(ControlledProcessFixture(_JOINT), [(S.FULL_JOINT, _REG)],
                             [InMemoryAnchor(_JOINT, corruptible=True)], [CorruptStabControl()], N=20000)
     assert rep_def.controls[0].detail["stab"] == 1
 
@@ -1051,7 +1051,7 @@ def test_shuffle_run_full_row_pins():
 
 def test_corrupt_init_stab_stored():
     # __init__ stores int(stab); a `self._stab = None` mutant is caught via the run detail.
-    rep = certify_cells(FakeTeacher(_JOINT), [(Statistic.FULL_JOINT, _REG)],
+    rep = certify_cells(ControlledProcessFixture(_JOINT), [(Statistic.FULL_JOINT, _REG)],
                         [InMemoryAnchor(_JOINT, corruptible=True)], [CorruptStabControl(stab=0)], N=20000)
     assert rep.controls[0].detail["stab"] == 0
 

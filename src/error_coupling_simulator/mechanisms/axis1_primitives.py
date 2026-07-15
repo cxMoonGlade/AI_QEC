@@ -13,8 +13,13 @@ import math
 from typing import Any, Sequence
 
 
-AXIS1_PRIMITIVE_SCHEMA = "qec_twin.mechanisms.Axis1PrimitiveBundle.v1"
-AXIS1_PRIMITIVE_REGISTRY_SCHEMA = "qec_twin.mechanisms.Axis1PrimitiveRegistry.v1"
+AXIS1_PRIMITIVE_SCHEMA = "error_coupling_simulator.mechanisms.local_primitive_bundle.v1"
+AXIS1_PRIMITIVE_REGISTRY_SCHEMA = (
+    "error_coupling_simulator.mechanisms.local_primitive_registry.v1"
+)
+AXIS1_PRIMITIVE_PARAMS_SCHEMA = (
+    "error_coupling_simulator.mechanisms.local_primitive_params.v1"
+)
 AXIS1_TWO_QUBIT_LOCAL_REGISTRY_ID = "axis1_two_qubit_local_primitives_v1"
 
 # NOTE: COH_* / COHERENT_PAULI_FAMILIES are intentionally NOT declared here.
@@ -22,7 +27,7 @@ AXIS1_TWO_QUBIT_LOCAL_REGISTRY_ID = "axis1_two_qubit_local_primitives_v1"
 # simulator/axis1_mcwf_mps_execution._hamiltonian_matrix_for_term (via
 # _embed_coherent_generator / _coherent_family_generator). This registry
 # does not perform COH_* lowering; advertising it here was a
-# declaration-without-lowering faithfulness trap (M6 pre-registration §1a).
+# declaration-without-lowering faithfulness trap for coherent X rotations.
 
 SUPPORTED_AXIS1_PRIMITIVES = frozenset(
     {
@@ -55,9 +60,14 @@ class Axis1PrimitiveParams:
     drive_omega_rad_per_ns: float | None = None
     fsim_delta_theta_rad: float = 0.0
     fsim_delta_phi_rad: float = 0.0
-    schema: str = "qec_twin.mechanisms.Axis1PrimitiveParams.v1"
+    schema: str = AXIS1_PRIMITIVE_PARAMS_SCHEMA
 
     def __post_init__(self) -> None:
+        if self.schema != AXIS1_PRIMITIVE_PARAMS_SCHEMA:
+            raise ValueError(
+                f"unsupported local-primitive parameter schema {self.schema!r}; "
+                f"expected {AXIS1_PRIMITIVE_PARAMS_SCHEMA!r}"
+            )
         object.__setattr__(self, "zeta_rad_per_ns", float(self.zeta_rad_per_ns))
         object.__setattr__(self, "gamma_phi_per_ns", float(self.gamma_phi_per_ns))
         object.__setattr__(self, "gamma_1_per_ns", float(self.gamma_1_per_ns))
@@ -170,6 +180,13 @@ class Axis1PrimitiveBundle:
     dt_ns: float
     schema: str = AXIS1_PRIMITIVE_SCHEMA
 
+    def __post_init__(self) -> None:
+        if self.schema != AXIS1_PRIMITIVE_SCHEMA:
+            raise ValueError(
+                f"unsupported local-primitive bundle schema {self.schema!r}; "
+                f"expected {AXIS1_PRIMITIVE_SCHEMA!r}"
+            )
+
     def to_manifest(self) -> dict[str, Any]:
         return {
             "schema": self.schema,
@@ -180,7 +197,10 @@ class Axis1PrimitiveBundle:
             "params": self.params.to_manifest(),
             "dt_ns": self.dt_ns,
             "representability": "two_qubit_axis1_local_window_primitives",
-            "scope": "local primitive lowering only; channel assembly lives in forward.joint_lindbladian",
+            "scope": (
+                "local primitive lowering only; channel assembly lives in "
+                "error_coupling_simulator.carrier.joint_lindbladian"
+            ),
         }
 
 
@@ -197,6 +217,11 @@ class Axis1PrimitiveRegistry:
         names = tuple(str(name).upper() for name in self.supported_primitives)
         object.__setattr__(self, "supported_primitives", tuple(sorted(set(names))))
         object.__setattr__(self, "schema", str(self.schema))
+        if self.schema != AXIS1_PRIMITIVE_REGISTRY_SCHEMA:
+            raise ValueError(
+                f"unsupported local-primitive registry schema {self.schema!r}; "
+                f"expected {AXIS1_PRIMITIVE_REGISTRY_SCHEMA!r}"
+            )
         if not self.supported_primitives:
             raise ValueError("Axis1PrimitiveRegistry requires supported primitives")
 

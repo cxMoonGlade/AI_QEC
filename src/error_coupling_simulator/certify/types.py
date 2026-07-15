@@ -2,19 +2,16 @@ from __future__ import annotations
 
 """Certification interface — the value types + the ``Anchor`` port (step 1 of ``audit.certify``).
 
-This evaluator-side seam scores a controlled noise process's emitted
-records (or the scalable carrier that produces them) against INDEPENDENT GROUND-TRUTH ANCHORS and
-returns an epistemic ledger. It graduates into one deep module the carrier↔DM↔closed-form
-cross-checks that were re-wired ad hoc across ``outputs/teacher_prereg/`` (the de-facto
-``p7e_carrier_cert_common`` + the stim slice in ``twin_xzzx_teacher`` + the closed-form anchors in
-``mechanisms``/``hardware``).
+This evaluator-side seam scores a controlled noise process's emitted records (or the scalable
+carrier that produces them) against INDEPENDENT GROUND-TRUTH ANCHORS and returns an epistemic
+ledger.
 
-DESIGN (locked). A common-caller spine (neutral spelling ``certify_noise_process``;
-historical spelling ``certify_teacher``) over an ``Anchor`` capability-descriptor PORT
-(this file): the certify core is BLIND to whether a DM oracle, a stim
-Clifford slice, or a closed-form identity answered. The port carries a *capability descriptor* so
-OOM-routing is DATA, not branching — an anchor that would OOM reports ``feasible=False`` and the core
-routes to the carrier-MCWF for scale, never allocating the infeasible density matrix. Closed-form
+DESIGN (locked). The public ``certify_noise_process`` facade is a common-caller spine over an
+``Anchor`` capability-descriptor PORT (this file): the certify core is BLIND to whether a DM
+oracle, a stim Clifford slice, or a closed-form identity answered. The port carries a
+*capability descriptor*, so OOM-routing is DATA, not branching — an anchor that would OOM reports
+``feasible=False`` and the core routes to the carrier-MCWF for scale, never allocating the
+infeasible density matrix. Closed-form
 identities ride as an analytic SIDECAR (the ``SCALAR_FUNC`` statistic), not as peers in the
 distributional comparison — they answer cells the DM/stim anchors cannot, and never compete for the
 same cell.
@@ -226,12 +223,12 @@ class Anchor(Protocol):
         as DATA, not an exception."""
         ...
 
-    def answer(self, teacher: ControlledNoiseProcess, statistic: Statistic, regime: Regime,
+    def answer(self, process: ControlledNoiseProcess, statistic: Statistic, regime: Regime,
                *, N: int | None = None, generator: Any | None = None,
                corrupt: dict | None = None) -> AnchorValue:
-        """Produce the ground-truth ``statistic`` at ``regime`` for ``teacher``'s known mechanism.
+        """Produce the ground-truth ``statistic`` at ``regime`` for ``process``'s known mechanism.
         PRECONDITION: the caller checked ``capability(statistic, regime).feasible`` (the core
-        enforces this). Reads ``teacher.sched`` / ``teacher.channels()`` / ``teacher.truth``.
+        enforces this). Reads ``process.sched`` / ``process.channels()`` / ``process.truth``.
 
         ``corrupt`` (optional) is a NEGATIVE-CONTROL perturbation a ``Control`` injects so the
         comparison's teeth can be verified — e.g. ``{"stab": j}`` flips stabilizer ``j``'s X<->Z
@@ -239,7 +236,7 @@ class Anchor(Protocol):
         control). An anchor that cannot host a given corruption ignores it (the control then records
         itself inert -> the verdict FAILs, per the genuine-check rule).
 
-        An anchor MAY ALSO expose an OPTIONAL ``emit_kind() -> str`` method declaring which teacher
+        An anchor MAY ALSO expose an OPTIONAL ``emit_kind() -> str`` method declaring which process
         VIEW it compares against: ``"full"`` (the real mechanism — the DM anchor) or
         ``"clifford_slice"`` (a Pauli/Clifford slice of the geometry — the stim anchor's
         implementation-independent wiring check). The core reads it via ``hasattr`` and defaults to
@@ -254,7 +251,7 @@ class Control(Protocol):
     runs every control that ``guards`` a statistic BEFORE the positive row, and an ``expect`` that
     does NOT happen forces the verdict to FAIL — the anti-vacuous-check rule, made structural.
 
-    A control is not optional: ``certify_teacher`` with no attachable control for a statistic is a
+    A control is not optional: ``certify_noise_process`` with no attachable control for a statistic is a
     configuration error (a certification with no falsifier is rejected by construction)."""
 
     name: str
@@ -278,7 +275,7 @@ class Control(Protocol):
 class ControlledNoiseProcess(Protocol):
     """What certification needs from a controlled process: a way to emit records, the parsed
     geometry, the per-CZ channel field (for the channel-level anchors), and the evaluator-only known
-    truth. Historical fixtures under ``outputs/teacher_prereg`` satisfy this via a thin adapter."""
+    truth."""
 
     @property
     def sched(self) -> Any:
@@ -329,6 +326,3 @@ class CliffordSliceable(Protocol):
         """Emit ``N`` shots of the Clifford (bit-flip ``X_ERROR(p_x)``) slice -> the seam surface
         ``{"det":..., "obs":...}`` — the SAME geometry + seam fold the full mechanism uses."""
         ...
-
-# Backward-compat alias — "Teacher" retired in error_coupling_simulator; qec_twin keeps it (shim re-exports).
-ControlledTeacher = ControlledNoiseProcess

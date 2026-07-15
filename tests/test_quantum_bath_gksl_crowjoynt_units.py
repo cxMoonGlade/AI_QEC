@@ -4,8 +4,8 @@ carrier primitive modules
   * ``error_coupling_simulator.quantum_bath.gksl``       (3 CPU-pure units)
   * ``error_coupling_simulator.quantum_bath.crow_joynt`` (5 CPU-pure units).
 
-Full-coverage program (docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4;
-work-list docs/twin_validation/l3_release_package_unit_inventory.md). Both modules are
+Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
+work-list docs/SIMULATOR.md). Both modules are
 CPU-pure numpy/scipy (gksl: boson algebra + the SHARED (d0,d1,mode) GKSL Liouvillian +
 ``scipy.linalg.expm``; crow_joynt: closed-form phase covariance + a 3D Gauss-Hermite average
 of the classical sigma_z field through the dual-axis instrument). No torch, no quimb, no cuda

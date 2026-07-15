@@ -1,7 +1,7 @@
 """Package-level verification of error_coupling_simulator.quantum_bath (the P6 pseudomode/shared-bath carrier).
 
 Independently reproduces the CERTIFIED ground-truth numbers of the notion-3 relaxation x dual-axis study
-(prereg docs/twin_validation/notion3_relaxation_dualaxis_prereg.md) THROUGH the migrated package -- so a
+(prereg docs/SIMULATOR.md) THROUGH the migrated package -- so a
 migration bug (wrong index/reshape, dropped ft/n3 substitution) fails here. Exact-DM CPU, small nmax; fast.
 
 The load-bearing anti-toy facts this locks in:

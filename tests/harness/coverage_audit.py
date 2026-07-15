@@ -1,84 +1,9 @@
 #!/usr/bin/env python
-"""Wave-2.6 COVERAGE GATE: per-unit statement + branch coverage over the 19 in-scope
-units (docs/twin_validation/wave2_6_unit_test_contract.md SS7.2 + SS11 AM-3).
+"""Registry-driven statement and branch coverage audit.
 
-Contract. Every Wave-2/2.5 public unit (SS8: A1 7 + A2 3 + A3 3 + infra 6 = 19) must
-reach its registered target (default 100% statement + 100% branch) over its OWN source
-body, AFTER removing its NAMED exemptions. Exemptions are DATA in the registered
-``tests/_support/wave2_6_coverage_targets.json`` -- never inline ``# pragma: no cover``
-in src (the parent registration discipline: an exemption is a reviewed diff to the JSON,
-never an auto-refresh), and each names the gate/test that DOES cover the exempted line.
-
-WHY THIS AUDIT IS AST-DRIVEN (the anti-stale re-architecture, findings 1/3/5).
-Hand-written per-unit line ranges go STALE the instant a source file is edited: an
-extraction (e.g. the ``_assert_density`` seam pulled out of ``random_density_matrix``)
-shifts every downstream line number, and a registry pinning old ranges then scores the
-WRONG lines -- it can PASS while a unit's real body was never examined (finding 5). This
-audit therefore DOES NOT read line ranges from the registry. Each in-scope unit is
-identified by its ``(module, qualname)``; the audit parses the source with the ``ast``
-module, finds the ``FunctionDef``/``AsyncFunctionDef`` by qualname, takes its body
-``lineno..end_lineno`` MINUS the ranges of any NESTED defs, and intersects that derived
-statement/branch line set with coverage.py's per-file executed/missing sets. A source
-edit that moves a unit's body moves its scored lines WITH it -- a stale range can no
-longer cause a false PASS (a moved unit is re-derived; a renamed/deleted unit fails the
-qualname lookup loudly).
-
-Exemptions are selected by STABLE selectors, not hard line numbers:
-  * ``torch_missing`` -- ``selector={"type": "raise_in_torch_none_guard"}``: the audit
-    locates, inside the unit's AST body, an ``if torch is None:`` guard whose body
-    raises, and exempts that raise's line + the branch-arc into it. Unreachable with
-    torch installed (the target box always has it); reached only by a
-    ``fixtures.torch = None`` monkeypatch meta-test (SS10 decision 6) -- kept exempt as
-    the structural torch-less-box fallback, ``covered_by`` naming the monkeypatch test.
-  * ``defensive_assert`` -- ``selector={"type": "raise_in_callee", "callee": "<name>"}``:
-    the raise lives inside a module-private ``_assert_*`` seam the unit CALLS; its
-    raise-side branch is structurally unreachable for any legitimate input. After the
-    BL-2 extraction the seam is a SEPARATE function (out of the unit's AST body), so this
-    selector is provided for the general case + to re-validate that the seam exists and
-    raises. Covered by the PAIR (sabotaged-input trip meta-test + legitimate-path
-    property test), both named in ``covered_by``.
-  * ``line`` (fallback, re-validated) -- ``selector={"type": "line", "line": N,
-    "stmt_kind": "raise"|"branch"}``: allowed ONLY when a fully AST-driven selector is
-    too complex. The audit re-validates that line ``N`` is (a) inside the unit's CURRENT
-    AST body and (b) an actual ``raise`` (stmt_kind "raise") or a real decision point
-    (stmt_kind "branch") -- NOT a docstring/no-op. A line-exemption that no longer
-    points at a raise/branch fails LOUDLY (this kills the finding-3 "exemption degraded
-    to a no-op" class -- a stale line-exemption cannot silently relax the gate).
-
-Two HARD invariants (SS11 AM-3 -- close the under-population game):
-  * every canonical in-scope unit MUST be enumerated in the registry (a missing one is a
-    HARD AUDIT ERROR, loud exit 1 -- a builder cannot omit a unit to dodge its target);
-  * every enumerated unit's name MUST be in the canonical 19-unit set (a stray/renamed
-    unit is a HARD AUDIT ERROR).
-
-Exemption integrity (findings 2 + 6):
-  * every exemption MUST carry a NON-EMPTY ``covered_by`` list (finding 2: an exemption
-    with no gate that covers the exempted line is a HARD AUDIT ERROR); AND
-  * every ``covered_by`` test name MUST ACTUALLY EXIST in the test suite -- the audit
-    greps the named test file(s) for ``def <name>`` (finding 6: a dangling ``covered_by``
-    is a HARD AUDIT ERROR). ``covered_by`` entries are ``"path::test_name"`` (or a bare
-    ``test_name``, searched across the registered test-file set).
-
-Scope discipline (SS10 decision 5). "Unit coverage" is computed ONLY over statements +
-branch-arcs whose SOURCE line lies in the unit's AST-derived body (minus nested defs);
-out-of-scope lines (the mps_forward batched core, sv_sampler GPU sample() path, historical
-big-file surface) are NEVER counted against any target. A branch arc is coverage.py's
-``[from_line, to_line]``; it is attributed to the unit whose body contains ``from_line``
-(the decision point), and dropped if ``from_line`` is an exempt line.
-
-Usage (scripted-execution discipline -- normal route is the committed Python harness
-``tests/harness/gate.py``, which runs coverage then calls ``audit()`` below):
-
-  python tests/harness/coverage_audit.py <coverage-json>
-      audit <coverage-json> against the registry; exit 1 on ANY unit under target
-      (after exemptions), ANY missing canonical unit, ANY stray enumerated unit, ANY
-      exemption without a valid+existing ``covered_by``, ANY selector that no longer
-      resolves to a real raise/branch, or a malformed registry / coverage json; exit 0
-      otherwise.
-
-Modeled on ``outputs/twin_validation/skip_audit.py`` (printed evidence header with own
-sha256 + every input sha256 FIRST; registered JSON as source of truth; loud exit 1 on
-violation).
+Each current owner registry supplies its canonical units, source modules, covering
+tests, and explicit exemptions.  Source ranges are derived from the live AST so a
+renamed, removed, or moved unit fails closed instead of inheriting stale line ranges.
 """
 
 from __future__ import annotations
@@ -92,50 +17,10 @@ from pathlib import Path
 
 #: repo root (tests/harness/coverage_audit.py -> harness -> tests -> root)
 REPO_ROOT = Path(__file__).resolve().parents[2]
-REGISTRY_PATH = REPO_ROOT / "tests" / "_support" / "wave2_6_coverage_targets.json"
 
-#: The canonical 19-unit set (SS8), keyed by the registry's ``unit`` label. The audit
-#: cross-checks the registry against THIS hard-coded list so an under-populated OR
-#: over-populated registry fails loudly (SS11 AM-3). Order groups A1(7)/A2(3)/A3(3)/
-#: infra(6). The ``unit`` label is the human name; the audit derives coverage from the
-#: registry's ``(module, qualname)`` pair (NOT from this label).
-CANONICAL_UNITS = (
-    # A1 -- frontend/experiments.py (7)
-    "_dataset_files",
-    "load_xzzx_d3",
-    "ExperimentPreset.__post_init__",
-    "PRESET_LEAK_registered_pins",
-    "resolve_theta",
-    "run_spec_from_preset",
-    "leak_slice_table",
-    # A2 -- forward/scalable/sv_sampler.py ShotSet accessors (3)
-    "ShotSet.to_det_obs",
-    "ShotSet.packed_bytes",
-    "ShotSet.syndrome_prefix_bytes",
-    # A3 -- forward/scalable/mps_forward.py seams (3)
-    "MpsLeakageForward._leak_sample",
-    "MpsLeakageForward.attach_layout",
-    "mps_from_statevector",
-    # infra -- tests/_support/fixtures.py (6)
-    "require_precondition",
-    "assert_control_trips",
-    "assert_with_margin",
-    "random_cptp_kraus",
-    "random_density_matrix",
-    "load_outputs_module",
-)
-
-#: The registered test-file set a bare ``covered_by`` name may live in (finding 6). A
-#: ``"path::test"`` entry pins its own file; a bare ``test`` name is searched here.
-COVERED_BY_TEST_FILES = (
-    "tests/test_experiments_units.py",
-    "tests/test_shotset_units.py",
-    "tests/test_mps_seams_units.py",
-    "tests/_support/test_support_selftest.py",
-    "tests/test_frontend_experiments.py",
-    "tests/test_shotset_records.py",
-    "tests/test_gate_soundness_matrix.py",
-)
+# Populated for each registry invocation so bare covered_by names resolve only
+# against that registry's declared test files.
+COVERED_BY_TEST_FILES: tuple[str, ...] = ()
 
 
 def _sha256(path: Path) -> str:
@@ -176,7 +61,7 @@ def _coverage_file_record(cov_doc: dict, module: str) -> dict:
     hits = [k for k in files if _rel_to_repo(k).endswith(want)]
     assert hits, (
         f"PRECONDITION: module {want!r} has NO file record in the coverage json "
-        f"(the Wave-2.6 unit-test files never imported/exercised it -- coverage keys: "
+        f"(the registered unit-test files never imported/exercised it -- coverage keys: "
         f"{sorted(files)[:8]}{'...' if len(files) > 8 else ''})")
     assert len(hits) == 1, (
         f"PRECONDITION: module {want!r} matches MULTIPLE coverage keys {hits} -- "
@@ -512,7 +397,7 @@ def _module_imports(module: str, libs) -> bool:
     return False
 
 
-def _load_registry(registry_path: Path = REGISTRY_PATH) -> dict:
+def _load_registry(registry_path: Path) -> dict:
     assert registry_path.is_file(), (
         f"PRECONDITION: registered coverage-target registry missing: {registry_path} "
         f"(author it per the contract SS7.2 in a reviewed commit)")
@@ -522,16 +407,15 @@ def _load_registry(registry_path: Path = REGISTRY_PATH) -> dict:
     return doc
 
 
-def audit(cov_json: Path, *, registry_path: Path = REGISTRY_PATH,
-          canonical=CANONICAL_UNITS, covered_by_files=COVERED_BY_TEST_FILES,
+def audit(cov_json: Path, *, registry_path: Path,
+          canonical=(), covered_by_files=(),
           reconcile_modules=(), out_of_scope=None) -> int:
     """Audit ``cov_json`` against the registry. Exit 1 on any under-target unit, any
     missing canonical unit, any stray enumerated unit, any UNRECONCILED public unit, any
     broken exemption, or a malformed input.
 
-    Registry-driven (``--registry``) mode threads ``canonical`` / ``covered_by_files`` /
-    ``reconcile_modules`` / ``out_of_scope`` from the registry doc; the default args
-    reproduce the Wave-2.6 pilot behavior (hard-coded 19-unit set, no AST reconcile)."""
+    The caller threads ``canonical`` / ``covered_by_files`` / ``reconcile_modules`` /
+    ``out_of_scope`` from the selected current-owner registry."""
     # helpers read the covered-by test-file set from this module global; set it for the
     # active registry so a bare covered_by name resolves against the right file set.
     global COVERED_BY_TEST_FILES
@@ -714,7 +598,7 @@ def audit(cov_json: Path, *, registry_path: Path = REGISTRY_PATH,
         hard_error = True
 
     ok = (not hard_error) and (not under_target)
-    print(f"WAVE2.6-COVERAGE-AUDIT: {'PASS' if ok else 'FAIL'} "
+    print(f"COVERAGE-AUDIT: {'PASS' if ok else 'FAIL'} "
           f"(units={len(enumerated)}, under_target={len(under_target)}, "
           f"missing_canonical={len(missing_from_registry)}, "
           f"stray_registered={len(stray_in_registry)}, "
@@ -724,37 +608,25 @@ def audit(cov_json: Path, *, registry_path: Path = REGISTRY_PATH,
 
 
 def main(argv: list) -> int:
-    # Optional registry-driven mode: `--registry <path> <coverage-json>`. Without it, the
-    # Wave-2.6 pilot defaults apply (hard-coded 19-unit set, its own registry, no reconcile).
-    registry_path = REGISTRY_PATH
-    canonical = CANONICAL_UNITS
-    covered_by_files = COVERED_BY_TEST_FILES
-    reconcile_modules: tuple = ()
-    out_of_scope: dict = {}
     args = list(argv)
-    if args and args[0] == "--registry":
-        assert len(args) >= 2, ("usage: wave2_6_coverage_audit.py --registry <registry-json> "
-                                "<coverage-json>")
-        registry_path = Path(args[1]).resolve()
-        assert registry_path.is_file(), (
-            f"PRECONDITION: registry not found: {registry_path}")
-        rdoc = json.loads(registry_path.read_text(encoding="utf-8"))
-        canonical = tuple(rdoc.get("canonical_units", ()))
-        assert canonical, (
-            f"PRECONDITION: --registry doc {registry_path} lacks a non-empty "
-            f"'canonical_units' (the registry-driven canonical set)")
-        covered_by_files = tuple(rdoc.get("covered_by_test_files", COVERED_BY_TEST_FILES))
-        reconcile_modules = tuple(rdoc.get("reconcile_modules", ()))
-        out_of_scope = dict(rdoc.get("out_of_scope", {}))
-        args = args[2:]
-
-    assert args and args[0] not in ("-h", "--help"), (
-        "usage: wave2_6_coverage_audit.py [--registry <registry-json>] <coverage-json>\n"
-        + (__doc__ or ""))
-    cov_json = Path(args[0]).resolve()
+    assert len(args) == 3 and args[0] == "--registry", (
+        "usage: coverage_audit.py --registry <registry-json> <coverage-json>\n"
+        + (__doc__ or "")
+    )
+    registry_path = Path(args[1]).resolve()
+    assert registry_path.is_file(), (
+        f"PRECONDITION: registry not found: {registry_path}")
+    rdoc = json.loads(registry_path.read_text(encoding="utf-8"))
+    canonical = tuple(rdoc.get("canonical_units", ()))
+    assert canonical, (
+        f"PRECONDITION: registry {registry_path} lacks a non-empty "
+        "'canonical_units' set"
+    )
+    covered_by_files = tuple(rdoc.get("covered_by_test_files", ()))
+    reconcile_modules = tuple(rdoc.get("reconcile_modules", ()))
+    out_of_scope = dict(rdoc.get("out_of_scope", {}))
+    cov_json = Path(args[2]).resolve()
     assert cov_json.is_file(), f"PRECONDITION: coverage json not found: {cov_json}"
-    extra = [a for a in args[1:]]
-    assert not extra, f"PRECONDITION: unknown argument(s) {extra}"
     _print_evidence(cov_json, registry_path, out=sys.stdout)
     return audit(cov_json, registry_path=registry_path, canonical=canonical,
                  covered_by_files=covered_by_files, reconcile_modules=reconcile_modules,

@@ -6,7 +6,7 @@
       "Workload adapters and isolated plugins are counted separately when they have their own public entry point, dependency boundary, and output contract."
     ],
     "excluded": [
-      "Types, IRs, guards, layout helpers, native loaders, fixtures, runners, and compatibility adapters that only support another service.",
+      "Types, IRs, guards, layout helpers, native loaders, controlled fixtures, and runners that only support another service.",
       "Downstream inference, decoder-floor/headroom analysis, hardware datasets, unimplemented scientific bridges, and repository-only experiments."
     ]
   },
@@ -15,7 +15,6 @@
     "CORE",
     "OPTIONAL",
     "RESEARCH",
-    "ARCHIVED",
     "ISOLATED_PLUGIN"
   ],
   "service_kind_vocabulary": [
@@ -34,14 +33,39 @@
     "decoder",
     "certification",
     "diagnostic",
-    "research_suite",
-    "archived_findings"
+    "research_suite"
   ],
   "acceptance_execution": {
     "isolation": "one_test_file_per_process",
     "default_conda_environment": "ecs",
     "environment_overrides": {
       "tests/test_simulator_cudaq_grover.py": "aiqec"
+    },
+    "process_environment_overrides": {
+      "tests/test_pepo_density_compressed_caps.py": {
+        "PYTORCH_ALLOC_CONF": "expandable_segments:True"
+      },
+      "tests/test_pepo_density_killers.py": {
+        "PYTORCH_ALLOC_CONF": "expandable_segments:True"
+      },
+      "tests/test_pepo_density_nonselective_round.py": {
+        "PYTORCH_ALLOC_CONF": "expandable_segments:True"
+      },
+      "tests/test_pepo_density_ntu_precut.py": {
+        "PYTORCH_ALLOC_CONF": "expandable_segments:True"
+      },
+      "tests/test_pepo_density_observables.py": {
+        "PYTORCH_ALLOC_CONF": "expandable_segments:True"
+      },
+      "tests/test_pepo_density_stabilizer.py": {
+        "PYTORCH_ALLOC_CONF": "expandable_segments:True"
+      },
+      "tests/test_pepo_density_state.py": {
+        "PYTORCH_ALLOC_CONF": "expandable_segments:True"
+      },
+      "tests/test_pepo_density_token_ops.py": {
+        "PYTORCH_ALLOC_CONF": "expandable_segments:True"
+      }
     },
     "default_lane": "cpu_light",
     "lane_overrides": {
@@ -56,15 +80,29 @@
       "gpu_serial": [
         "tests/test_analog_schedule_units.py",
         "tests/test_axis1_convergence.py",
-        "tests/test_axis1_evidence_guard_units.py",
         "tests/test_axis1_record_params_override.py",
         "tests/test_axis1_wb_acceptance_gate.py",
         "tests/test_certify_anchors_units.py",
         "tests/test_certify_core_units.py",
+        "tests/test_collective_decay_finite_step_guard.py",
+        "tests/test_coupled_cycle_noise_process_records.py",
         "tests/test_coupled_cycle_units.py",
         "tests/test_frontend_experiments.py",
         "tests/test_joint_lindbladian.py",
+        "tests/test_pepo_density_compressed_caps.py",
+        "tests/test_pepo_density_killers.py",
+        "tests/test_pepo_density_nonselective_round.py",
+        "tests/test_pepo_density_ntu_precut.py",
+        "tests/test_pepo_density_observables.py",
+        "tests/test_pepo_density_stabilizer.py",
+        "tests/test_pepo_density_state.py",
+        "tests/test_pepo_density_token_ops.py",
+        "tests/test_peps_fet.py",
+        "tests/test_peps_spike.py",
         "tests/test_qutrit_dm_memlean.py",
+        "tests/test_qutrit_dm_no_leak_reference.py",
+        "tests/test_qutrit_dm_two_site_channel.py",
+        "tests/test_qutrit_leakage_certification_independence.py",
         "tests/test_simulator_axis1_schedule.py",
         "tests/test_simulator_cudaq_grover.py",
         "tests/test_simulator_mcwf_backend.py",
@@ -77,7 +115,7 @@
       ]
     },
     "runner": "tests/harness/service_acceptance.py",
-    "reason": "Service acceptance is process-isolated and lane-scheduled because the catalog spans Torch, QuTiP/cuQuantum/CuPy, fused CUDA extensions, CPU-exclusive quantum-bath work, and an isolated CUDA-Q plugin. A single long-lived pytest process can exit 139 after otherwise passing service groups; fresh processes reset native allocator/lifetime state, while the declared lanes keep GPU/native work serial and allow only bounded independent CPU-light concurrency."
+    "reason": "Service acceptance is process-isolated and lane-scheduled because the catalog spans Torch, QuTiP/cuQuantum/CuPy, fused CUDA extensions, CPU-exclusive quantum-bath work, and an isolated CUDA-Q plugin. A single long-lived pytest process can exit 139 after otherwise passing service groups; fresh processes reset native allocator/lifetime state, while the declared lanes keep GPU/native work serial and allow only bounded independent CPU-light concurrency. The eight GPU PEPO owner files additionally declare PyTorch expandable segments in their private fresh-exec environments; the supervisor and unrelated services do not inherit that allocator setting."
   },
   "services": [
     {
@@ -179,7 +217,13 @@
       "dependencies": {"core": ["torch", "numpy"], "extras": []},
       "external_inputs": ["Declared mechanism parameters and compiler-sealed substep duration/support"],
       "outputs": ["Joint Hamiltonian/collapse lowering, CPTP Kraus channel and channel-evidence ledger"],
-      "acceptance": ["tests/test_axis1_convergence.py", "tests/test_joint_lindbladian.py", "tests/test_simulator_axis1_schedule.py"],
+      "acceptance": [
+        "tests/test_axis1_convergence.py",
+        "tests/test_joint_lindbladian.py",
+        "tests/test_coherent_pauli_generators.py",
+        "tests/test_collective_decay_finite_step_guard.py",
+        "tests/test_simulator_axis1_schedule.py"
+      ],
       "note": "Batched and factored assemblers are execution variants of this one service, not separate services."
     },
     {
@@ -189,23 +233,18 @@
       "kind": "mechanism",
       "canonical_record_output": false,
       "layer": "mechanism/carrier",
-      "owners": [
-        "src/error_coupling_simulator/carrier/channels.py",
-        "src/error_coupling_simulator/carrier/cptp_channel.py",
-        "src/error_coupling_simulator/mechanisms/teachers.py"
-      ],
+      "owners": ["src/error_coupling_simulator/carrier/cptp_channel.py"],
       "entrypoints": [
         "error_coupling_simulator.carrier.cptp_channel:StinespringChannel",
         "error_coupling_simulator.carrier.cptp_channel:apply_kraus",
-        "error_coupling_simulator.carrier.channels:thermal_relaxation_kraus",
-        "error_coupling_simulator.carrier.channels:custom_non_pauli_kraus"
+        "error_coupling_simulator.carrier.cptp_channel:choi_matrix",
+        "error_coupling_simulator.carrier.cptp_channel:tp_residual"
       ],
-      "dependencies": {"core": ["torch", "numpy", "scipy"], "extras": []},
+      "dependencies": {"core": ["torch", "numpy"], "extras": []},
       "external_inputs": ["Caller channel parameters, unitary, Kraus stack, or Stinespring parameterization"],
       "outputs": ["Unitary/Kraus/Stinespring channels, Choi representation and TP residual"],
-      "acceptance": ["tests/test_noise_mechanism_primitives.py", "tests/test_carrier_channels_units.py"],
-      "legacy_sources": ["tests/test_physical_channels.py"],
-      "note": "Only reusable channel algebra is a service. The same file's mechanism_channel M0-M34 compatibility dispatcher is explicitly excluded below."
+      "acceptance": ["tests/test_noise_mechanism_primitives.py"],
+      "note": "This service is limited to the package-owned Kraus, Stinespring, Choi, probability, and trace-preservation algebra in the declared owner."
     },
     {
       "id": "classical_1f_nonmarkov_chain",
@@ -230,7 +269,7 @@
         {
           "id": "matched_marginal_permutation",
           "entrypoint": "error_coupling_simulator.noise_processes.coupled_cycle:CoupledCycleNoiseProcess.matched_marginal_permutation_control",
-          "semantics": "Preserve one-field marginals via per-field cycle permutations while breaking temporal order and source-to-mechanism alignment. The finite-R arm is exchangeable and retains part of pooled lag covariance; it is not a genuinely Markovian generative null. markovian_baseline remains only a compatibility spelling."
+          "semantics": "Preserve one-field marginals via per-field cycle permutations while breaking temporal order and source-to-mechanism alignment. The finite-R arm is exchangeable and retains part of pooled lag covariance; it is not a genuinely Markovian generative null."
         },
         {
           "id": "source_off",
@@ -249,10 +288,12 @@
       "acceptance": [
         "tests/test_source_process_units.py",
         "tests/test_source_coupling_units.py",
+        "tests/test_coupled_cycle_interop.py",
+        "tests/test_coupled_cycle_noise_process_records.py",
         "tests/test_coupled_cycle_units.py",
         "tests/test_axis1_record_params_override.py"
       ],
-      "note": "The source is a finite sum of log-spaced RTNs whose sum-of-Lorentzians approximates 1/f only over the declared band. This is classical stochastic record memory, not a quantum CP-divisibility claim and not a learner/hardware-data service."
+      "note": "The source is a finite sum of log-spaced RTNs whose sum-of-Lorentzians approximates 1/f only over the declared band. This is classical stochastic record memory, not a quantum CP-divisibility claim or a hardware-data service."
     },
     {
       "id": "classical_burst_storm_sources",
@@ -335,7 +376,7 @@
       "dependencies": {"core": ["torch", "numpy", "stim"], "extras": ["gpu-cu130"]},
       "external_inputs": ["Compiler-sealed Axis-1 SubstepSchedule, optional per-substep parameters, readout/reset instrument and XOR wiring"],
       "outputs": ["Exact small-N state/branch law, canonical RecordBatch, detection_events.b8 and obs_flips_actual.b8"],
-      "acceptance": ["tests/test_simulator_axis1_schedule.py", "tests/test_axis1_record_params_override.py", "tests/test_axis1_evidence_guard_units.py"],
+      "acceptance": ["tests/test_simulator_axis1_schedule.py", "tests/test_axis1_record_params_override.py"],
       "note": "This is the dense execution dependency of the classical 1/f chain. It intentionally does not fabricate Stim/DEM/decoder semantics for analog joint-L records."
     },
     {
@@ -377,12 +418,12 @@
       "external_inputs": ["Sealed Axis-1 schedule, local dimensions and explicit approximation controls"],
       "outputs": ["Restricted execution/evidence manifest, sampled record frequencies and fail-closed approximation ledger"],
       "acceptance": ["tests/test_simulator_axis1_schedule.py", "tests/test_axis1_wb_acceptance_gate.py"],
-      "note": "This is the shipped 1D MPS route: a finite-microstep verification slice, not a production full-dxd/full-record backend. The old XZZX thin-strip driver remains legacy-only."
+      "note": "This is a finite-microstep verification slice, not a production full-dxd/full-record backend."
     },
     {
       "id": "peps_single_wire",
       "name": "Single-wire 2D qutrit PEPS trajectory carrier",
-      "status": "CORE",
+      "status": "RESEARCH",
       "kind": "carrier",
       "canonical_record_output": true,
       "layer": "carrier",
@@ -400,15 +441,18 @@
       "dependencies": {"core": ["torch", "quimb", "numpy"], "extras": ["gpu-cu130"]},
       "external_inputs": ["XZZXSchedule and explicit c128 RunSpec"],
       "outputs": ["PackedShotBatch and truncation/contraction ledgers"],
-      "acceptance": ["tests/test_peps_host_seam.py"],
-      "legacy_sources": ["tests/test_peps_spike.py"],
-      "note": "The active package seam is directly accepted without qec_twin. The retained d3 spike mixes an old SvSampler referee and is historical evidence only; finite-truncation fidelity of the complete multi-round record and d5/d7 claims remain open. No new FET or d5/d7 run was made here."
+      "acceptance": [
+        "tests/test_peps_host_seam.py",
+        "tests/test_peps_spike.py",
+        "tests/test_peps_fet.py"
+      ],
+      "note": "Current feasibility carrier. The d3 state and record checks, host seam, and FET implementation remain executable; finite-truncation fidelity of the complete multi-round record and d5/d7 scientific claims remain open."
     },
     {
-      "id": "pepo_findings",
-      "name": "Retained 2D density-matrix PEPO findings backend",
-      "status": "ARCHIVED",
-      "kind": "archived_findings",
+      "id": "pepo_density_matrix_carrier",
+      "name": "Two-dimensional qutrit density-matrix PEPO carrier",
+      "status": "RESEARCH",
+      "kind": "carrier",
       "canonical_record_output": false,
       "layer": "carrier",
       "owners": [
@@ -417,13 +461,26 @@
         "src/error_coupling_simulator/carrier/pepo/layout.py",
         "src/error_coupling_simulator/carrier/pepo/sampler.py"
       ],
-      "entrypoints": ["error_coupling_simulator.carrier.pepo.layout:build_codestate_pepo"],
+      "entrypoints": [
+        "error_coupling_simulator.carrier.pepo.layout:build_codestate_pepo",
+        "error_coupling_simulator.carrier.pepo.sampler:terminal_readout_obs_prob"
+      ],
       "dependencies": {"core": ["torch", "quimb"], "extras": ["gpu-cu130"]},
-      "external_inputs": ["Explicit schedule for findings reproduction only"],
-      "outputs": ["Retained falsification/finding artifacts and shared layout/truncation internals"],
-      "acceptance": ["tests/test_pepo_host_seam.py"],
-      "legacy_sources": ["tests/test_pepo_rung1.py"],
-      "note": "Not a production backend: selective and nonselective record-law routes were falsified. The package seam and retained layout are accepted directly; the mixed SvSampler referee suite is historical evidence only. PEPS still imports retained PEPO layout/truncation internals; that code dependency does not reactivate the archived route."
+      "external_inputs": ["Rotated-XZZX layout, qutrit channel stream, and truncation controls"],
+      "outputs": ["Density-matrix PEPO state, terminal-observable probability, and truncation/negativity ledgers"],
+      "acceptance": [
+        "tests/test_pepo_host_seam.py",
+        "tests/test_pepo_density_layout_guards.py",
+        "tests/test_pepo_density_state.py",
+        "tests/test_pepo_density_token_ops.py",
+        "tests/test_pepo_density_stabilizer.py",
+        "tests/test_pepo_density_killers.py",
+        "tests/test_pepo_density_observables.py",
+        "tests/test_pepo_density_nonselective_round.py",
+        "tests/test_pepo_density_ntu_precut.py",
+        "tests/test_pepo_density_compressed_caps.py"
+      ],
+      "note": "Retained research carrier with executable d3 reference checks and d-generic implementation. It is not a production record backend; selective stabilizer sampling is not a current entry point, and record-level finite-truncation faithfulness plus d5/d7 scientific claims remain open. Exact-density reference groups and the three high-memory integration checks are separate gpu_serial files so service acceptance gives each a bounded fresh native/CUDA process lifetime. All eight GPU PEPO owner files explicitly use the current PyTorch expandable-segments allocator contract in their private child processes; layout/diagnostic guards and the host seam remain CPU-only."
     },
     {
       "id": "exact_qutrit_dm",
@@ -440,7 +497,12 @@
       "dependencies": {"core": ["torch"], "extras": ["gpu-cu130"]},
       "external_inputs": ["Declared local-dimension gate/Kraus mechanism parameters"],
       "outputs": ["Exact small-register state, sequential marginals and joint/moment oracle"],
-      "acceptance": ["tests/test_qutrit_dm_memlean.py", "tests/test_qutrit_dm_measurement_semantics.py"],
+      "acceptance": [
+        "tests/test_qutrit_dm_memlean.py",
+        "tests/test_qutrit_dm_measurement_semantics.py",
+        "tests/test_qutrit_dm_no_leak_reference.py",
+        "tests/test_qutrit_dm_two_site_channel.py"
+      ],
       "note": "This service returns exact oracle/state results rather than canonical QEC .b8 records."
     },
     {
@@ -466,24 +528,29 @@
       "note": "Kraus is a derived channel representation, never external scientific data. Exactly one channel source must be selected."
     },
     {
-      "id": "qutrit_wg_frontend",
-      "name": "Exact qutrit Wood-Gambetta leakage mechanism and smoke carrier",
+      "id": "qutrit_leakage_channel_and_process",
+      "name": "Wood-Gambetta qutrit leakage channel and specified noise process",
       "status": "CORE",
-      "kind": "carrier",
+      "kind": "mechanism",
       "canonical_record_output": false,
       "layer": "mechanism/frontend",
       "owners": [
-        "src/error_coupling_simulator/mechanisms/qutrit_teachers.py",
+        "src/error_coupling_simulator/mechanisms/qutrit_leakage.py",
         "src/error_coupling_simulator/frontend/qutrit_leakage.py"
       ],
       "entrypoints": [
-        "error_coupling_simulator.mechanisms.qutrit_teachers:wg_rates",
+        "error_coupling_simulator.mechanisms.qutrit_leakage:wg_rates",
+        "error_coupling_simulator.mechanisms.qutrit_leakage:qutrit_leakage_process",
         "error_coupling_simulator.frontend:simulate_qutrit_wg_leakage"
       ],
       "dependencies": {"core": ["torch", "numpy"], "extras": ["gpu-cu130"]},
       "external_inputs": ["Explicit theta, seepage/heating and readout-bias parameters"],
-      "outputs": ["WG rates/Kraus representation and exact qutrit leakage state/count artifacts"],
-      "acceptance": ["tests/test_simulator_qutrit_leakage.py", "tests/test_noise_mechanism_primitives.py"]
+      "outputs": ["WG rates/Kraus representation, specified process, and exact qutrit leakage state/count artifacts"],
+      "acceptance": [
+        "tests/test_qutrit_leakage_units.py",
+        "tests/test_qutrit_leakage_certification_independence.py",
+        "tests/test_simulator_qutrit_leakage.py"
+      ]
     },
     {
       "id": "dense_qudit_mcwf_carrier",
@@ -677,6 +744,7 @@
         "tests/test_certify_core_units.py",
         "tests/test_certify_anchors_units.py",
         "tests/test_certify_contracts.py",
+        "tests/test_qutrit_leakage_certification_independence.py",
         "tests/test_qutrit_dm_measurement_semantics.py"
       ],
       "note": "This is a generic certification seam, not an automatic post-processing step for every RecordBatch. CoupledCycleNoiseProcess lacks the default DM replay callback and its Clifford-slice bridge is still open."
@@ -696,8 +764,7 @@
       "dependencies": {"core": ["numpy"], "extras": []},
       "external_inputs": ["Caller unitary or Kraus channel"],
       "outputs": ["Ordered multi-qubit Pauli transfer matrix"],
-      "acceptance": ["tests/test_channel_diagnostics.py"],
-      "legacy_sources": ["legacy/qec_twin/forward/ptm.py"]
+      "acceptance": ["tests/test_channel_diagnostics.py"]
     },
     {
       "id": "quantum_bath_research",
@@ -782,21 +849,20 @@
     {
       "role": "axis1_ir_selection_and_evidence_support",
       "paths": [
-        "src/error_coupling_simulator/frontend/axis1_bridge.py",
         "src/error_coupling_simulator/frontend/axis1_carrier_program.py",
         "src/error_coupling_simulator/frontend/axis1_context.py",
-        "src/error_coupling_simulator/frontend/axis1_evidence_guard.py",
         "src/error_coupling_simulator/frontend/axis1_ideal_controls.py",
-        "src/error_coupling_simulator/frontend/axis1_selection.py"
+        "src/error_coupling_simulator/frontend/axis1_selection.py",
+        "src/error_coupling_simulator/frontend/joint_channel_comparison.py"
       ],
       "used_by": ["axis1_joint_channel", "axis1_dense_jointl_record", "restricted_axis1_1d_mps", "qutip_cuquantum_probe", "classical_1f_nonmarkov_chain"],
-      "reason": "Shared carrier IR, selector, context, ideal-control and evidence guards. These orchestrate registered services but do not independently evolve a state or emit records."
+      "reason": "Shared carrier IR, selector, context, ideal-control and joint-vs-composed comparison support. These orchestrate registered services but do not independently evolve a state or emit canonical records."
     },
     {
       "role": "internal_evidence_runners",
       "paths": [
         "src/error_coupling_simulator/frontend/axis1_codespec_runner.py",
-        "src/error_coupling_simulator/frontend/axis1_g2_runner.py"
+        "src/error_coupling_simulator/frontend/joint_channel_comparison_runner.py"
       ],
       "used_by": ["axis1_joint_channel", "axis1_dense_jointl_record"],
       "reason": "Repository-style python -m evidence/reproduction runners with no installed console entry point; not stable services."
@@ -807,7 +873,7 @@
         "src/error_coupling_simulator/frontend/axis1_mcwf_dense_certification.py",
         "src/error_coupling_simulator/frontend/axis1_qutrit_leakage_certification.py"
       ],
-      "used_by": ["axis1_dense_jointl_record", "restricted_axis1_1d_mps", "qutrit_wg_frontend"],
+      "used_by": ["axis1_dense_jointl_record", "restricted_axis1_1d_mps", "qutrit_leakage_channel_and_process"],
       "reason": "Restricted evidence/corruption-falsifier harnesses around registered carriers, not independent user services."
     },
     {
@@ -821,15 +887,6 @@
       "paths": ["src/error_coupling_simulator/frontend/pij.py"],
       "used_by": ["frontend_compile_and_records"],
       "reason": "Small probability-table utility with no standalone physical carrier or record contract."
-    },
-    {
-      "role": "compatibility_catalog_and_seam_fixtures",
-      "paths": [
-        "src/error_coupling_simulator/mechanisms/catalog.py",
-        "src/error_coupling_simulator/mechanisms/seam_teachers.py"
-      ],
-      "used_by": ["channel_algebra"],
-      "reason": "M0-M34 compatibility metadata/dispatcher and controlled seam fixtures. They do not define 35 active simulator services or a complete seam record carrier."
     }
   ],
   "support_assets": [
@@ -857,73 +914,41 @@
   ],
   "excluded_surfaces": [
     {
-      "id": "bayes_floor_analysis",
-      "paths": [
-        "legacy/qec_twin/audit/bayes_floor.py",
-        "legacy/qec_twin/audit/floor_backend.py",
-        "legacy/qec_twin/audit/floor_backend_tn.py"
-      ],
-      "disposition": "ANALYSIS_NOT_SIMULATOR",
-      "reason": "Bayes decoder-floor and headroom analysis consumes simulator record laws; it is downstream analysis, not a forward-simulator service."
-    },
-    {
-      "id": "legacy_thin_strip_mps",
-      "paths": [
-        "legacy/qec_twin/forward/scalable/mps_forward.py",
-        "legacy/qec_twin/forward/scalable/soft_readout.py",
-        "legacy/qec_twin/forward/scalable/batched_mps.py"
-      ],
-      "disposition": "RETIRED_SPECIALIZED_DRIVER",
-      "reason": "The old snake-ordered XZZX thin-strip driver is not shipped. The active package route is restricted Axis-1 1D MCWF/MPS; batched_mps alone is only an operation core."
-    },
-    {
-      "id": "legacy_symlink_boundary",
-      "paths": ["src/qec_twin", "legacy/qec_twin"],
-      "disposition": "OUTWARD_SHIMS_AND_HISTORICAL_ONLY",
-      "reason": "src/qec_twin is a symlink into legacy and is excluded from the wheel; canonical runtime must never import it."
-    },
-    {
-      "id": "m0_m34_compatibility_catalog",
-      "paths": [
-        "src/error_coupling_simulator/mechanisms/catalog.py",
-        "src/error_coupling_simulator/carrier/channels.py"
-      ],
-      "disposition": "COMPATIBILITY_NOT_ACTIVE_CONSTRUCTION",
-      "reason": "M0-M34 are compatibility identifiers/dispatch cases, not 35 current simulator services. Active mechanism construction uses the explicit Axis-1/channel services above."
-    },
-    {
-      "id": "lru_dqlr_unimplemented",
-      "paths": [
-        "src/error_coupling_simulator/frontend/README.md",
-        "src/error_coupling_simulator/mechanisms/catalog.py"
-      ],
-      "disposition": "SCIENTIFIC_BRIDGE_OPEN",
-      "reason": "No complete LRU/DQLR service exists. Compatibility surrogates and ideal ancilla reset must not be promoted to leakage-removal semantics."
-    },
-    {
-      "id": "inference_and_hardware_products",
-      "paths": [
-        "legacy/qec_twin/calibration",
-        "legacy/qec_twin/contexts",
-        "legacy/qec_twin/decoder",
-        "legacy/qec_twin/hardware",
-        "legacy/qec_twin/prediction",
-        "legacy/qec_twin/rag"
-      ],
+      "id": "downstream_parameter_inference",
+      "paths": ["docs/SIMULATOR.md"],
       "disposition": "OUTSIDE_SIMULATOR_PRODUCT",
-      "reason": "Inference, calibration, learner, hardware dataset and hardware-analysis products are not simulator services."
+      "reason": "Parameter fitting, model selection, identifiability analysis, and decoder-floor analysis consume simulator products but are not forward-simulator services."
     },
     {
-      "id": "local_validation_oracles",
-      "paths": ["outputs/teacher_prereg", "outputs/twin_validation"],
-      "disposition": "VALIDATION_NOT_RUNTIME",
-      "reason": "Committed package owners are migrated only when an active runtime service needs them; ground-truth checks and experiments remain repository scripts/artifacts."
+      "id": "complete_source_to_leakage_bridge",
+      "paths": ["src/error_coupling_simulator/README.md"],
+      "disposition": "SCIENTIFIC_BRIDGE_OPEN",
+      "reason": "The finite-RTN source-conditioned qubit process and the qutrit leakage process are separate implemented services; no complete source-to-leakage record carrier is declared."
     },
     {
-      "id": "new_d5_d7_experiments",
-      "paths": ["docs/nonpauli_teacher", "outputs"],
-      "disposition": "NOT_RUN_IN_THIS_CLOSURE",
-      "reason": "No new d5/d7 or FET experiment was authorized; existing evidence status is preserved."
+      "id": "full_record_peps_certification",
+      "paths": [
+        "src/error_coupling_simulator/carrier/peps/README.md",
+        "tests/test_peps_spike.py",
+        "tests/test_peps_fet.py"
+      ],
+      "disposition": "CERTIFICATION_OPEN",
+      "reason": "PEPS is a current research carrier, but finite-truncation faithfulness of the complete multi-round record has not closed."
+    },
+    {
+      "id": "large_distance_tensor_network_certification",
+      "paths": [
+        "src/error_coupling_simulator/carrier/pepo/README.md",
+        "src/error_coupling_simulator/carrier/peps/README.md"
+      ],
+      "disposition": "CERTIFICATION_OPEN",
+      "reason": "The installed tensor-network implementations are dimension-generic, while current executable reference evidence is bounded to d3; d5/d7 scientific claims remain open."
+    },
+    {
+      "id": "leakage_removal_process",
+      "paths": ["src/error_coupling_simulator/frontend/README.md"],
+      "disposition": "SCIENTIFIC_BRIDGE_OPEN",
+      "reason": "No complete leakage-reduction-unit or data-qubit leakage-removal record service is implemented; reset operations must not be promoted to that semantics."
     }
   ],
   "flow": {
@@ -945,7 +970,7 @@
       {"id": "axis1_lower", "label": "Axis-1 primitive lowering\nH + collapse terms", "group": "Mechanisms and channels", "services": ["axis1_joint_channel"]},
       {"id": "joint_channel", "label": "Same-substep joint-L channel\nCPTP Kraus + evidence", "group": "Mechanisms and channels", "services": ["axis1_joint_channel"]},
       {"id": "channel_algebra", "label": "Reusable channel algebra\nKraus / Stinespring / Choi", "group": "Mechanisms and channels", "services": ["channel_algebra"]},
-      {"id": "wg", "label": "Wood-Gambetta qutrit leakage", "group": "Mechanisms and channels", "services": ["qutrit_wg_frontend"]},
+      {"id": "wg", "label": "Wood-Gambetta qutrit leakage", "group": "Mechanisms and channels", "services": ["qutrit_leakage_channel_and_process"]},
       {"id": "cz", "label": "Package-derived / injected ququart CZ channel", "group": "Mechanisms and channels", "services": ["ququart_cz_transport"]},
       {"id": "exact_qubit", "label": "Exact small-N qubit DM\nstate + branch probabilities", "group": "Carriers", "services": ["exact_qubit_circuit_dm"]},
       {"id": "axis1_dense", "label": "Dense Axis-1 joint-L carrier\nstate + canonical records", "group": "Carriers", "services": ["axis1_dense_jointl_record"]},
@@ -954,8 +979,8 @@
       {"id": "within_cycle_host", "label": "Shared within-cycle schedule host\nSUPPORT", "group": "Carriers", "services": [], "class": "support"},
       {"id": "fused", "label": "Fused d3 state-vector MCWF\nc64 screen / c128 candidate", "group": "Carriers", "services": ["fused_within_cycle"]},
       {"id": "peps", "label": "2D single-wire PEPS frontier\nc128; full-record fidelity open", "group": "Carriers", "services": ["peps_single_wire"], "class": "restricted"},
-      {"id": "pepo", "label": "Archived DM-PEPO findings route", "group": "Carriers", "services": ["pepo_findings"], "class": "archived"},
-      {"id": "pepo_internals", "label": "Retained PEPO layout/truncation internals\nSUPPORT only", "group": "Carriers", "services": [], "class": "support"},
+      {"id": "pepo", "label": "2D density-matrix PEPO\nd3 reference-tested research carrier", "group": "Carriers", "services": ["pepo_density_matrix_carrier"], "class": "research"},
+      {"id": "pepo_internals", "label": "Shared PEPO layout/truncation modules", "group": "Carriers", "services": [], "class": "support"},
       {"id": "exact_qudit", "label": "Exact qutrit/ququart DM oracle", "group": "Carriers", "services": ["exact_qutrit_dm"]},
       {"id": "generic_mcwf", "label": "Generic dense qudit MCWF carrier", "group": "Carriers", "services": ["dense_qudit_mcwf_carrier"]},
       {"id": "grover_adapter", "label": "Grover workload adapter\nCompiledMcwfProgram", "group": "Workloads and isolated plugins", "services": ["dense_mcwf_grover"]},
@@ -966,7 +991,7 @@
       {"id": "restricted_evidence", "label": "Restricted/research evidence\nnot canonical .b8", "group": "Record products and optional evaluation", "services": []},
       {"id": "standalone_artifacts", "label": "Standalone state/count/channel artifacts", "group": "Record products and optional evaluation", "services": []},
       {"id": "released_artifacts", "label": "Released records / ledgers / verdicts", "group": "Record products and optional evaluation", "services": []},
-      {"id": "compatible_process", "label": "Caller process implementing required cert protocols\ncurrent CoupledCycle default bridge OPEN", "group": "Certification", "services": [], "class": "open"},
+      {"id": "protocol_process", "label": "Caller process implementing required certification protocols\ncurrent CoupledCycle default bridge OPEN", "group": "Certification", "services": [], "class": "open"},
       {"id": "anchors", "label": "Selected DM / Stim / closed-form anchors", "group": "Certification", "services": ["formal_certification"]},
       {"id": "corrupt_control", "label": "Corrupt-stabilizer negative control", "group": "Certification", "services": ["formal_certification"], "control_refs": ["formal_certification:corrupt_stabilizer"]},
       {"id": "shuffle_control", "label": "Record-shuffle negative control", "group": "Certification", "services": ["formal_certification"], "control_refs": ["formal_certification:shuffle_records"]},
@@ -1013,8 +1038,8 @@
       {"from": "wg", "to": "within_cycle_host", "label": "within-cycle leakage slices"},
       {"from": "within_cycle_host", "to": "fused", "label": "marshalled d3 stream"},
       {"from": "within_cycle_host", "to": "peps", "label": "shared schedule semantics"},
-      {"from": "xzzx_schedule", "to": "pepo", "label": "historical reproduction only"},
-      {"from": "pepo", "to": "pepo_internals", "label": "retained code dependency"},
+      {"from": "xzzx_schedule", "to": "pepo", "label": "layout and operation schedule"},
+      {"from": "pepo", "to": "pepo_internals", "label": "layout and truncation implementation"},
       {"from": "pepo_internals", "to": "peps", "label": "layout/truncation helpers only"},
       {"from": "channel_algebra", "to": "exact_qudit", "label": "qutrit/ququart Kraus"},
       {"from": "wg", "to": "exact_qudit", "label": "exact qutrit smoke"},
@@ -1033,19 +1058,19 @@
       {"from": "interop", "to": "decoder", "label": "optional [hw] baseline"},
       {"from": "mps", "to": "restricted_evidence", "label": "restricted manifest/frequencies"},
       {"from": "qutip_probe", "to": "restricted_evidence", "label": "probe artifacts"},
-      {"from": "pepo", "to": "restricted_evidence", "label": "archived findings"},
+      {"from": "pepo", "to": "restricted_evidence", "label": "bounded research evidence"},
       {"from": "exact_qudit", "to": "standalone_artifacts", "label": "exact state/oracle results"},
       {"from": "generic_mcwf", "to": "standalone_artifacts", "label": "trajectories/counts"},
       {"from": "cz", "to": "standalone_artifacts", "label": "transport artifacts"},
       {"from": "wg", "to": "standalone_artifacts", "label": "leakage artifacts"},
       {"from": "cudaq", "to": "standalone_artifacts", "label": "process-boundary counts"},
-      {"from": "user", "to": "compatible_process", "label": "explicit protocol-compatible process"},
+      {"from": "user", "to": "protocol_process", "label": "explicit protocol implementation"},
       {"from": "user", "to": "anchors", "label": "select independent anchors"},
       {"from": "exact_qudit", "to": "anchors", "label": "DM oracle implementation"},
       {"from": "stim_frontend", "to": "anchors", "label": "Stim Clifford implementation"},
       {"from": "user", "to": "corrupt_control", "label": "mandatory negative control"},
       {"from": "user", "to": "shuffle_control", "label": "mandatory negative control"},
-      {"from": "compatible_process", "to": "certify", "label": "emitted records + capabilities"},
+      {"from": "protocol_process", "to": "certify", "label": "emitted records + capabilities"},
       {"from": "anchors", "to": "certify", "label": "independent reference values"},
       {"from": "corrupt_control", "to": "certify", "label": "must fire"},
       {"from": "shuffle_control", "to": "certify", "label": "must fire"},

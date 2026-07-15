@@ -5,8 +5,8 @@ frozen syndrome-code dataclasses' ``__post_init__`` + ``to_manifest``,
 properties ``data_indices``/``ancilla_indices``/``operation_set``, and the Pauli-algebra
 function ``commute``; no torch, no quimb, so out_of_scope is empty).
 
-Full-coverage program (docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4;
-work-list docs/twin_validation/l3_release_package_unit_inventory.md D17).
+Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
+work-list docs/SIMULATOR.md D17).
 ``frontend/code_spec.py`` owns the syndrome-code construction contract the frontend
 compiler consumes: ``CodeQubit``/``PauliTerm``/``StabilizerCheck``/
 ``LogicalObservableSpec``/``Axis1StaticZZDeviceSpec`` (each with a load-bearing
@@ -490,7 +490,7 @@ def test_L0_code_spec_name_num_rounds_coercion():
 def test_L0_code_spec_metadata_reserved_key_raises_exact():
     _raises_exact(
         ValueError,
-        "learner-visible metadata cannot contain evaluator truth; reserved key "
+        "public-artifact metadata cannot contain evaluator truth; reserved key "
         "CodeSpec.metadata.channel_truth matches 'channel_truth'. "
         "Use evaluator_sidecars with visibility='evaluator_only'.",
         lambda: _rep_spec_with(metadata={"channel_truth": {"x": 1}}))

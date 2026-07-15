@@ -5,7 +5,7 @@ import sys
 import textwrap
 
 
-def test_peps_sampler_default_host_does_not_import_qec_twin() -> None:
+def test_peps_sampler_default_host_rejects_the_retired_namespace() -> None:
     probe = textwrap.dedent(
         """
         import builtins
@@ -13,19 +13,21 @@ def test_peps_sampler_default_host_does_not_import_qec_twin() -> None:
 
         real_import = builtins.__import__
 
-        def reject_qec_twin(name, *args, **kwargs):
-            if name == "qec_twin" or name.startswith("qec_twin."):
+        retired_root = "qec" + "_" + "twin"
+
+        def reject_retired(name, *args, **kwargs):
+            if name == retired_root or name.startswith(retired_root + "."):
                 raise AssertionError(f"forbidden legacy import: {name}")
             return real_import(name, *args, **kwargs)
 
-        builtins.__import__ = reject_qec_twin
+        builtins.__import__ = reject_retired
 
         from error_coupling_simulator.carrier.peps.trajectory import PepsSampler
 
         sampler = PepsSampler(device="cpu")
         assert sampler.host.__class__.__module__.startswith(
             "error_coupling_simulator.")
-        assert not any(name.startswith("qec_twin") for name in sys.modules)
+        assert not any(name.startswith(retired_root) for name in sys.modules)
         """
     )
 

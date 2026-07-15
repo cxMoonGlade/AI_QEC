@@ -25,7 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # tests/ on path (
 from harness import gpu_pool, proc  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[2]          # portable (works on spark too), not hardcoded
-LOGDIR = REPO / "outputs/twin_validation/logs"
+LOGDIR = REPO / "outputs/simulator_validation/logs"
 ENVBIN = str(Path(sys.executable).parent)           # the running interpreter's bin (portable: aiqec OR spark venv)
 CONFIG_PATH = REPO / "tests" / "harness_config.json"
 _NON_KILLED_RESULT = re.compile(

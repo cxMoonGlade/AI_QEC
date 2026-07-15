@@ -26,6 +26,7 @@ import json
 import math
 import os
 from pathlib import Path
+import signal
 import shutil
 import sys
 import time
@@ -43,8 +44,10 @@ from harness import gpu_pool, proc  # noqa: E402
 
 CATALOG_PATH = REPO / "docs" / "service_status.json"
 CONFIG_PATH = TESTS_ROOT / "harness_config.json"
-DEFAULT_LOG_ROOT = REPO / "outputs" / "twin_validation" / "logs" / "service_acceptance"
+DEFAULT_LOG_ROOT = REPO / "outputs" / "simulator_validation" / "logs" / "service_acceptance"
 LANE_ORDER = ("cpu_light", "cpu_exclusive", "gpu_serial")
+_ALLOWED_PROCESS_ENVIRONMENT = frozenset({"PYTORCH_ALLOC_CONF"})
+_PROTECTED_GPU_ENVIRONMENT = frozenset({"CUDA_VISIBLE_DEVICES", "ECS_GPU_SLOT"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -54,6 +57,7 @@ class AcceptanceTask:
     lane: str
     environment: str
     test_file: str
+    process_environment: tuple[tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -63,13 +67,19 @@ class TaskResult:
     task: AcceptanceTask
     returncode: int
     timed_out: bool
+    group_cleanup_verified: bool
     log_path: Path
     elapsed_s: float
     error: str | None = None
 
     @property
     def ok(self) -> bool:
-        return self.error is None and not self.timed_out and self.returncode == 0
+        return (
+            self.error is None
+            and self.group_cleanup_verified
+            and not self.timed_out
+            and self.returncode == 0
+        )
 
 
 def load_catalog() -> dict:
@@ -87,6 +97,32 @@ def acceptance_plan(catalog: dict) -> tuple[AcceptanceTask, ...]:
         str(path): str(environment)
         for path, environment in execution["environment_overrides"].items()
     }
+    raw_process_environment = execution["process_environment_overrides"]
+    if not isinstance(raw_process_environment, Mapping):
+        raise ValueError("process_environment_overrides must be a mapping")
+    process_environment_by_file: dict[str, tuple[tuple[str, str], ...]] = {}
+    for raw_path, raw_environment in raw_process_environment.items():
+        path = str(raw_path)
+        if not isinstance(raw_environment, Mapping):
+            raise ValueError(
+                f"process environment for {path!r} must be a key/value mapping"
+            )
+        entries: list[tuple[str, str]] = []
+        for raw_name, raw_value in raw_environment.items():
+            if not isinstance(raw_name, str) or not raw_name or "=" in raw_name or "\0" in raw_name:
+                raise ValueError(f"invalid process-environment name for {path!r}: {raw_name!r}")
+            if raw_name in _PROTECTED_GPU_ENVIRONMENT:
+                raise ValueError(
+                    f"process environment may not override GPU routing variable {raw_name!r}"
+                )
+            if raw_name not in _ALLOWED_PROCESS_ENVIRONMENT:
+                raise ValueError(f"unsupported process-environment variable: {raw_name!r}")
+            if not isinstance(raw_value, str) or "\0" in raw_value:
+                raise ValueError(
+                    f"process-environment value for {raw_name!r} must be a NUL-free string"
+                )
+            entries.append((raw_name, raw_value))
+        process_environment_by_file[path] = tuple(sorted(entries))
     default_lane = str(execution["default_lane"])
     lane_by_file: dict[str, str] = {}
     for lane, paths in execution["lane_overrides"].items():
@@ -102,17 +138,55 @@ def acceptance_plan(catalog: dict) -> tuple[AcceptanceTask, ...]:
         for service in catalog["services"]
         for path in service["acceptance"]
     })
-    unknown = sorted(set(lane_by_file) - set(files))
-    if unknown:
-        raise ValueError(f"lane overrides reference non-acceptance files: {unknown}")
+    acceptance_files = set(files)
+    unknown_lanes = sorted(set(lane_by_file) - acceptance_files)
+    if unknown_lanes:
+        raise ValueError(f"lane overrides reference non-acceptance files: {unknown_lanes}")
+    unknown_environments = sorted(set(environment_overrides) - acceptance_files)
+    if unknown_environments:
+        raise ValueError(
+            "environment overrides reference non-acceptance files: "
+            f"{unknown_environments}"
+        )
+    unknown_process_environments = sorted(
+        set(process_environment_by_file) - acceptance_files
+    )
+    if unknown_process_environments:
+        raise ValueError(
+            "process-environment overrides reference non-acceptance files: "
+            f"{unknown_process_environments}"
+        )
     return tuple(
         AcceptanceTask(
             lane=lane_by_file.get(path, default_lane),
             environment=environment_overrides.get(path, default_environment),
             test_file=path,
+            process_environment=process_environment_by_file.get(path, ()),
         )
         for path in files
     )
+
+
+def _task_child_environment(
+    task: AcceptanceTask,
+    base_environment: Mapping[str, str],
+) -> dict[str, str]:
+    """Build one private fresh-exec environment without mutating the supervisor."""
+
+    child = dict(base_environment)
+    overrides = dict(task.process_environment)
+    protected = sorted(set(overrides) & _PROTECTED_GPU_ENVIRONMENT)
+    if protected:
+        raise ValueError(f"task may not override GPU routing variables: {protected}")
+    unsupported = sorted(set(overrides) - _ALLOWED_PROCESS_ENVIRONMENT)
+    if unsupported:
+        raise ValueError(f"task has unsupported process-environment variables: {unsupported}")
+    if "PYTORCH_ALLOC_CONF" in overrides:
+        # Do not let PyTorch's backwards-compatible alias compete with the
+        # catalog's current, explicitly recorded allocator contract.
+        child.pop("PYTORCH_CUDA_ALLOC_CONF", None)
+    child.update(overrides)
+    return child
 
 
 def _config() -> dict:
@@ -203,7 +277,7 @@ def _run_one(
                 task.test_file,
             ],
             cwd=str(REPO),
-            env=dict(child_env),
+            env=_task_child_environment(task, child_env),
             timeout=timeout,
             log_path=str(log_path),
         )
@@ -211,6 +285,7 @@ def _run_one(
             task=task,
             returncode=result.returncode,
             timed_out=result.timed_out,
+            group_cleanup_verified=getattr(result, "group_cleanup_verified", False),
             log_path=log_path,
             elapsed_s=time.monotonic() - started,
         )
@@ -219,6 +294,7 @@ def _run_one(
             task=task,
             returncode=-1,
             timed_out=False,
+            group_cleanup_verified=False,
             log_path=log_path,
             elapsed_s=time.monotonic() - started,
             error=f"{type(exc).__name__}: {exc}",
@@ -260,9 +336,27 @@ def _run_serial(
         )
         results.append(result)
         _report_result(result, completed=completed_offset + len(results), total=total)
-        if stop_on_failure and not result.ok:
+        if (stop_on_failure and not result.ok) or (
+            task.lane == "gpu_serial" and _must_halt_gpu_admission(result)
+        ):
             break
     return results
+
+
+def _must_halt_gpu_admission(result: TaskResult) -> bool:
+    """Fail closed after native-fatal or unverifiably cleaned GPU work."""
+
+    native_fatal_codes = {
+        128 + signal.SIGABRT,
+        128 + signal.SIGSEGV,
+        -signal.SIGABRT,
+        -signal.SIGSEGV,
+    }
+    return (
+        result.timed_out
+        or not result.group_cleanup_verified
+        or result.returncode in native_fatal_codes
+    )
 
 
 def _run_cpu_light_parallel(
@@ -310,7 +404,7 @@ def _write_summary(
     """Single-writer, atomic publication prevents partial/racing summaries."""
 
     payload = {
-        "schema": "error_coupling_simulator.service_acceptance_run.v1",
+        "schema": "error_coupling_simulator.service_acceptance_run.v2",
         "status": status,
         "cpu_light_jobs": cpu_jobs,
         "planned": [asdict(task) for task in plan],
@@ -319,6 +413,7 @@ def _write_summary(
                 **asdict(result.task),
                 "returncode": result.returncode,
                 "timed_out": result.timed_out,
+                "group_cleanup_verified": result.group_cleanup_verified,
                 "elapsed_s": result.elapsed_s,
                 "error": result.error,
                 "log": result.log_path.name,
@@ -473,7 +568,9 @@ def run_plan(
         for result in failures:
             print(
                 f"- {result.task.test_file}: returncode={result.returncode}, "
-                f"timed_out={result.timed_out}, error={result.error}, "
+                f"timed_out={result.timed_out}, "
+                f"group_cleanup_verified={result.group_cleanup_verified}, "
+                f"error={result.error}, "
                 f"log={_display_path(result.log_path)}",
                 flush=True,
             )

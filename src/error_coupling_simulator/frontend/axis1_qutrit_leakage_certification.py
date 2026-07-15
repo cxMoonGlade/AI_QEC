@@ -2,9 +2,7 @@ from __future__ import annotations
 
 """De-circularized dense certification for Axis-1 two-site leakage Hamiltonians (W-C fix).
 
-DROP-IN REPLACEMENT for the two-site half of
-``src/qec_twin/simulator/axis1_qutrit_leakage_certification.py``. Author-only candidate;
-Claude integrates. CPU self-tests are fine; the production gate stays GPU-only.
+The CPU self-tests are fine; the production gate stays GPU-only.
 
 -------------------------------------------------------------------------------
 THE BUG (W-C, round-1, all four models flagged; GLM both-wrong falsifier)
@@ -86,8 +84,8 @@ from typing import Any
 import numpy as np
 import torch
 
-from ..carrier.channels import leakage_channel_super
 from ..carrier.joint_lindbladian import liouvillian_superop
+from ..mechanisms.qutrit_leakage import leakage_channel_super
 from .analog_schedule import SubstepSchedule
 from .axis1_carrier_program import (
     AXIS1_CARRIER_MCWF_MPS_BACKEND_CONTRACT,
@@ -107,13 +105,13 @@ from .axis1_state_evidence import _require_cuda_device
 
 
 AXIS1_QUTRIT_LEAKAGE_CERTIFICATION_SCHEMA = (
-    "qec_twin.simulator.axis1_qutrit_leakage_oracle_certification.v1"
+    "error_coupling_simulator.frontend.qutrit_leakage_reference_certification.v1"
 )
 AXIS1_QUTRIT_LEAKAGE_CERTIFICATION_REPRESENTABILITY = (
     "axis1_one_site_qutrit_leakage_dense_oracle_certification_no_payload"
 )
 AXIS1_TWO_SITE_LEAKAGE_HAMILTONIAN_CERTIFICATION_SCHEMA = (
-    "qec_twin.simulator.axis1_two_site_leakage_hamiltonian_certification.v1"
+    "error_coupling_simulator.frontend.two_site_leakage_hamiltonian_certification.v1"
 )
 AXIS1_TWO_SITE_LEAKAGE_HAMILTONIAN_CERTIFICATION_REPRESENTABILITY = (
     "axis1_two_site_leakage_hamiltonian_dense_oracle_certification_no_payload"
@@ -250,7 +248,7 @@ def axis1_qutrit_leakage_oracle_certification_manifest(
         },
         "oracle_comparison": {
             "reference": (
-                "error_coupling_simulator.carrier.channels."
+                "error_coupling_simulator.mechanisms.qutrit_leakage."
                 "leakage_channel_super"
             ),
             "lowered_generator": "carrier_LEAK_terms_to_qutrit_liouvillian_superop",

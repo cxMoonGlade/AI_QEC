@@ -6,7 +6,7 @@ Replaces the previously-INERT ``_restricted_acceptance_policy`` (``accepted = re
 AND seed_explicit``, which reduced to "a seed was supplied" because
 ``total_probability_residual`` is 0 BY CONSTRUCTION) with a gate that certifies the
 carrier's ACTUAL output against the INDEPENDENT joint-L oracle
-``forward.joint_lindbladian.assemble_substep_channel`` (sum-all -> one ``expm(L dt)``,
+``carrier.joint_lindbladian.assemble_substep_channel`` (sum-all -> one ``expm(L dt)``,
 built from the per-term physics ``_hamiltonian_matrix_for_term`` -- NEVER the carrier's own
 ``_hamiltonian_group_gates``, so a wrong/no-op grouping is CAUGHT, not mirrored). Three
 certification paths + a gross/strict multi-tier gate:
@@ -729,7 +729,7 @@ def restricted_acceptance_policy(
     )
 
     return {
-        "schema": "qec_twin.simulator.axis1_mcwf_mps_restricted_acceptance_policy.v2",
+        "schema": "error_coupling_simulator.frontend.mcwf_mps_restricted_acceptance_policy.v2",
         "policy_role": "restricted_execution_acceptance_not_metric",
         "accepted_for_restricted_execution": accepted,
         "accepted_for_sampled_execution_evidence": bool(
@@ -800,12 +800,11 @@ def restricted_acceptance_policy(
             "epistemic_class": "c",
         },
         "probability": {
-            # RENAMED ROLE: a normalization sanity invariant (sum record frequencies == 1),
-            # NOT a distinguishability metric. Kept for transparency; never gates correctness.
+            # A normalization sanity invariant (sum record frequencies == 1),
+            # not a distinguishability metric and never a correctness proxy.
             "normalization_invariant": normalization_invariant,
             "normalization_invariant_gate": _NORMALIZATION_INVARIANT_GATE,
             "role": "normalization_sanity_invariant_not_distinguishability_metric",
-            "legacy_field_name": "total_probability_residual",
             "comparison_outcome_is_metric": False,
             "epistemic_class": "c",
         },

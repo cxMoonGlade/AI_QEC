@@ -7,8 +7,8 @@ duck-typed ``runtime_checkable`` Protocols through the package-owned certificati
 Step 2: the core (route → controls-first → score → ledger) against an IN-MEMORY anchor with a known
 law (the port IS the test surface — pure, no GPU). The genuine-check invariants are proven here:
 a broken carrier FAILs; an inert control forces FAIL; an infeasible cell is UNANCHORED, never PASS;
-exact anchors are preferred. The in-memory anchor + fake teacher live HERE (in ``tests/``) — they are
-structurally never production anchors.
+exact anchors are preferred. The in-memory anchor + controlled process fixture live HERE (in
+``tests/``) — they are structurally never production anchors.
 """
 
 from dataclasses import replace
@@ -57,7 +57,7 @@ def test_report_summary_and_assert_pass():
     ok.assert_pass()  # must NOT raise
     assert ok.row("dm", Statistic.SYNDROME_DIST) is rows[0]
     assert ok.row("dm", Statistic.FULL_JOINT) is None
-    assert ok.truth == {"theta": 0.15}  # the known truth is RETURNED (isolation: never to a learner)
+    assert ok.truth == {"theta": 0.15}  # returned only to the certification caller
 
     bad = CertReport(verdict=Verdict.FAIL, rows=rows, controls=(), routing={}, truth={})
     raised = False
@@ -79,7 +79,7 @@ def test_ports_are_duck_typed_runtime_checkable_protocols():
         def capability(self, statistic, regime):
             return Capability(statistic, Exactness.EXACT, feasible=True)
 
-        def answer(self, teacher, statistic, regime, *, N=None, generator=None):
+        def answer(self, process, statistic, regime, *, N=None, generator=None):
             return None
 
     class _DuckControl:
@@ -94,7 +94,7 @@ def test_ports_are_duck_typed_runtime_checkable_protocols():
         def run(self, ctx, statistic, regime, *, N=None):
             return None
 
-    class _DuckTeacher:
+    class _DuckProcess:
         sched = object()
         truth = {"theta": 0.15}
 
@@ -106,7 +106,7 @@ def test_ports_are_duck_typed_runtime_checkable_protocols():
 
     assert isinstance(_DuckAnchor(), Anchor)
     assert isinstance(_DuckControl(), Control)
-    assert isinstance(_DuckTeacher(), ControlledNoiseProcess)
+    assert isinstance(_DuckProcess(), ControlledNoiseProcess)
     assert not isinstance(object(), Anchor)  # a non-conforming object is rejected (the port has teeth)
 
 
@@ -124,8 +124,8 @@ def _make_records(joint: dict, N: int) -> dict:
     return {"det": det, "obs": obs}
 
 
-class FakeTeacher:
-    """A controlled teacher emitting a KNOWN law (test fixture)."""
+class ControlledProcessFixture:
+    """A controlled process emitting a KNOWN law (test fixture)."""
 
     sched = object()
     truth = {"theta": 0.15, "gamma": 0.04}
@@ -161,7 +161,7 @@ class InMemoryAnchor:
         return Capability(statistic, self._exactness, feasible=self._feasible,
                           epistemic_class="a" if self._exactness is Exactness.EXACT else "b")
 
-    def answer(self, teacher, statistic, regime, *, N=None, generator=None, corrupt=None):
+    def answer(self, process, statistic, regime, *, N=None, generator=None, corrupt=None):
         if statistic is Statistic.SYNDROME_DIST:
             val: dict = {}
             for k, p in self._joint.items():
@@ -224,7 +224,7 @@ _REG = Regime(R=1, register="subregister", n_active=1, n_stab=1)
 # Step 2 — the genuine-check invariants                                    #
 # ======================================================================= #
 def test_core_routes_scores_and_passes():
-    rep = certify_cells(FakeTeacher(_JOINT), [(Statistic.FULL_JOINT, _REG)],
+    rep = certify_cells(ControlledProcessFixture(_JOINT), [(Statistic.FULL_JOINT, _REG)],
                         [InMemoryAnchor(_JOINT)], [ShuffleControl()], N=20000)
     assert rep.verdict is Verdict.PASS, rep.summary()
     assert rep.row("in_memory", Statistic.FULL_JOINT).verdict is Verdict.PASS
@@ -232,7 +232,7 @@ def test_core_routes_scores_and_passes():
 
 
 def test_broken_carrier_fails():
-    broken = FakeTeacher({0: 0.1, 1: 0.4, 2: 0.45, 3: 0.05})  # a DIFFERENT law
+    broken = ControlledProcessFixture({0: 0.1, 1: 0.4, 2: 0.45, 3: 0.05})  # a DIFFERENT law
     rep = certify_cells(broken, [(Statistic.FULL_JOINT, _REG)],
                         [InMemoryAnchor(_JOINT)], [ShuffleControl()], N=20000)
     assert rep.verdict is Verdict.FAIL, rep.summary()  # the comparison has teeth
@@ -240,7 +240,7 @@ def test_broken_carrier_fails():
 
 def test_inert_control_forces_fail():
     # the carrier MATCHES the anchor -> the positive row PASSES -> but an inert control forces FAIL.
-    rep = certify_cells(FakeTeacher(_JOINT), [(Statistic.FULL_JOINT, _REG)],
+    rep = certify_cells(ControlledProcessFixture(_JOINT), [(Statistic.FULL_JOINT, _REG)],
                         [InMemoryAnchor(_JOINT)], [InertControl()], N=20000)
     assert rep.row("in_memory", Statistic.FULL_JOINT).verdict is Verdict.PASS
     assert not any(c.detail["fired"] for c in rep.controls)
@@ -249,7 +249,7 @@ def test_inert_control_forces_fail():
 
 def test_infeasible_anchor_is_unanchored_not_pass():
     reg = Regime(R=2, register="full", n_active=9, n_stab=1)  # the OOM regime
-    rep = certify_cells(FakeTeacher(_JOINT), [(Statistic.FULL_JOINT, reg)],
+    rep = certify_cells(ControlledProcessFixture(_JOINT), [(Statistic.FULL_JOINT, reg)],
                         [InMemoryAnchor(_JOINT, feasible=False)], [], N=20000)
     assert rep.row("in_memory", Statistic.FULL_JOINT) is None  # no anchor row
     assert rep.rows[0].anchor is None and rep.rows[0].verdict is Verdict.UNANCHORED
@@ -426,7 +426,7 @@ def test_corrupt_stab_control_guards_the_moments():
 def test_corrupt_stab_control_fires_on_corruptible_anchor():
     from error_coupling_simulator.certify.anchors import CorruptStabControl
 
-    rep = certify_cells(FakeTeacher(_JOINT), [(Statistic.FULL_JOINT, _REG)],
+    rep = certify_cells(ControlledProcessFixture(_JOINT), [(Statistic.FULL_JOINT, _REG)],
                         [InMemoryAnchor(_JOINT, corruptible=True)], [CorruptStabControl(stab=0)], N=20000)
     assert rep.verdict is Verdict.PASS, rep.summary()
     assert all(c.detail["fired"] for c in rep.controls)  # the corruption was caught (geometric teeth)
@@ -436,7 +436,7 @@ def test_corrupt_stab_control_inert_forces_fail():
     from error_coupling_simulator.certify.anchors import CorruptStabControl
 
     # an anchor that CANNOT host the corruption returns the same answer -> the control can't fire -> FAIL.
-    rep = certify_cells(FakeTeacher(_JOINT), [(Statistic.FULL_JOINT, _REG)],
+    rep = certify_cells(ControlledProcessFixture(_JOINT), [(Statistic.FULL_JOINT, _REG)],
                         [InMemoryAnchor(_JOINT, corruptible=False)], [CorruptStabControl(stab=0)], N=20000)
     assert not any(c.detail["fired"] for c in rep.controls)
     assert rep.verdict is Verdict.FAIL, rep.summary()  # a control that can't fail is vacuous -> FAIL
@@ -446,7 +446,7 @@ def test_stim_anchor_capability_and_emit_kind():
     from error_coupling_simulator.certify.anchors import StimCliffordAnchor
 
     st = StimCliffordAnchor(p_x=0.03)
-    assert st.emit_kind() == "clifford_slice"  # certifies the teacher's Clifford SLICE (wiring), not the full mechanism
+    assert st.emit_kind() == "clifford_slice"  # certifies the process's Clifford SLICE (wiring), not the full mechanism
     for R in (1, 2, 3):
         cap = st.capability(Statistic.SYNDROME_DIST, Regime(R=R, n_stab=8))
         assert cap.feasible and cap.exactness is Exactness.STATISTICAL and cap.epistemic_class == "b"
@@ -559,7 +559,7 @@ def test_certify_noise_process_facade_merges_and_rolls_up():
     from error_coupling_simulator.certify import certify_noise_process
     from error_coupling_simulator.certify.anchors import CorruptStabControl
 
-    rep = certify_noise_process(FakeTeacher(_JOINT), anchors=[InMemoryAnchor(_JOINT)],
+    rep = certify_noise_process(ControlledProcessFixture(_JOINT), anchors=[InMemoryAnchor(_JOINT)],
                                 cells=[(Statistic.FULL_JOINT, _REG)],
                                 controls=[CorruptStabControl(stab=0)], N=20000)
     assert rep.verdict is Verdict.PASS, rep.summary()
@@ -569,7 +569,7 @@ def test_certify_noise_process_facade_merges_and_rolls_up():
 
     raised = False  # an unknown level is rejected
     try:
-        certify_noise_process(FakeTeacher(_JOINT), level="bogus", anchors=[InMemoryAnchor(_JOINT)],
+        certify_noise_process(ControlledProcessFixture(_JOINT), level="bogus", anchors=[InMemoryAnchor(_JOINT)],
                               cells=[(Statistic.FULL_JOINT, _REG)])
     except ValueError:
         raised = True
@@ -586,7 +586,7 @@ def test_empty_controls_does_not_pass():
     # the anti-vacuity invariant made STRUCTURAL: a matching, feasible, EXACT cell with NO control
     # (controls=[]) is NOT a PASS — it has no falsifier that could fail, so it is UNCERTIFIED ->
     # FINDING. (Before the fix, `any([]) == False` let this through as a teeth-less PASS — the bug.)
-    rep = certify_cells(FakeTeacher(_JOINT), [(Statistic.FULL_JOINT, _REG)],
+    rep = certify_cells(ControlledProcessFixture(_JOINT), [(Statistic.FULL_JOINT, _REG)],
                         [InMemoryAnchor(_JOINT)], [], N=20000)
     assert rep.row("in_memory", Statistic.FULL_JOINT).verdict is Verdict.PASS  # the data matches...
     assert rep.verdict is Verdict.FINDING, rep.summary()  # ...but with no falsifier it is uncertified
@@ -607,7 +607,7 @@ def test_nonguarding_control_does_not_pass():
         def run(self, ctx, statistic, regime, *, N=None):  # never called (guards is False)
             raise AssertionError("a non-guarding control must not be run")
 
-    rep = certify_cells(FakeTeacher(_JOINT), [(Statistic.FULL_JOINT, _REG)],
+    rep = certify_cells(ControlledProcessFixture(_JOINT), [(Statistic.FULL_JOINT, _REG)],
                         [InMemoryAnchor(_JOINT)], [_NonGuarding()], N=20000)
     assert rep.verdict is Verdict.FINDING, rep.summary()
 
@@ -653,7 +653,7 @@ def test_shuffle_control_inapplicable_on_symmetric_value():
     from error_coupling_simulator.certify.anchors.controls import ShuffleControl as RealShuffleControl
 
     flat = {0: 0.25, 1: 0.25, 2: 0.25, 3: 0.25}
-    rep = certify_cells(FakeTeacher(flat), [(Statistic.FULL_JOINT, _REG)],
+    rep = certify_cells(ControlledProcessFixture(flat), [(Statistic.FULL_JOINT, _REG)],
                         [InMemoryAnchor(flat)], [RealShuffleControl()], N=20000)
     assert rep.row("in_memory", Statistic.FULL_JOINT).verdict is Verdict.PASS  # data matches
     shuf = rep.controls[0]

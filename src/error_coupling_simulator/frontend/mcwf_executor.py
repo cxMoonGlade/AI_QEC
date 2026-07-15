@@ -56,7 +56,7 @@ class DenseQutritMcwfExecutor:
     """
 
     name = "error_coupling_simulator.frontend.mcwf_executor.DenseQutritMcwfExecutor"
-    schema = "qec_twin.simulator.DenseQutritMcwfExecutor.v1"
+    schema = "error_coupling_simulator.frontend.dense_qutrit_mcwf_executor.v1"
 
     def __init__(self, backend: DenseQutritMcwfBackend) -> None:
         self.backend = backend
@@ -114,7 +114,7 @@ class NativeOpStreamMcwfExecutor:
         "error_coupling_simulator.frontend.mcwf_executor."
         "NativeOpStreamMcwfExecutor"
     )
-    schema = "qec_twin.simulator.NativeOpStreamMcwfExecutor.v1"
+    schema = "error_coupling_simulator.frontend.native_op_stream_mcwf_executor.v1"
     supported_ops = (
         "McwfCachedQubitGateOp[h,x]",
         "McwfAllOnesPhaseOp[phase=-1]",
@@ -190,7 +190,7 @@ class BlockTrajectoryMcwfExecutor:
         "error_coupling_simulator.frontend.mcwf_executor."
         "BlockTrajectoryMcwfExecutor"
     )
-    schema = "qec_twin.simulator.BlockTrajectoryMcwfExecutor.v1"
+    schema = "error_coupling_simulator.frontend.block_trajectory_mcwf_executor.v1"
     supported_ops = NativeOpStreamMcwfExecutor.supported_ops
 
     def __init__(self, backend: DenseQutritMcwfBackend) -> None:
@@ -266,7 +266,7 @@ class GraphCapturedMcwfExecutor:
         "error_coupling_simulator.frontend.mcwf_executor."
         "GraphCapturedMcwfExecutor"
     )
-    schema = "qec_twin.simulator.GraphCapturedMcwfExecutor.v1"
+    schema = "error_coupling_simulator.frontend.graph_captured_mcwf_executor.v1"
 
     def __init__(self, backend: DenseQutritMcwfBackend) -> None:
         self.backend = backend

@@ -24,7 +24,9 @@ from .axis1_record_evidence import Axis1ReadoutResetInstrumentSpec
 from .axis1_state_evidence import _require_cuda_device
 
 
-AXIS1_QT_MPS_CONTRACT_SCHEMA = "qec_twin.simulator.axis1_qt_mps_state_record_contract.v1"
+AXIS1_QT_MPS_CONTRACT_SCHEMA = (
+    "error_coupling_simulator.frontend.qt_mps_state_record_contract.v1"
+)
 AXIS1_QT_MPS_CONTRACT_REPRESENTABILITY = (
     "axis1_qt_mps_state_record_contract_no_backend_execution"
 )
@@ -133,7 +135,7 @@ def axis1_qt_mps_state_record_contract_manifest(
 
 
 def _validate_approximation_book(book: dict[str, Any]) -> None:
-    if book.get("schema") != "qec_twin.simulator.axis1_carrier_approximation_book.v1":
+    if book.get("schema") != "error_coupling_simulator.frontend.carrier_approximation_book.v1":
         raise ValueError(
             "Axis-1 QT/MPS contract requires axis1_carrier_approximation_book.v1"
         )

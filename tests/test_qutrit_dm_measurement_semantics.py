@@ -3,6 +3,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import numpy as np
+import pytest
 import torch
 
 from error_coupling_simulator.carrier.exact.qutrit_dm import QutritDM
@@ -65,6 +66,19 @@ def test_multisite_logical_readout_uses_product_povm_parity() -> None:
     np.testing.assert_allclose(eng.logical_distribution(0.9), (0.82, 0.18), atol=1e-14)
 
 
+def test_readout_bias_rejects_retired_callable_and_invalid_probabilities() -> None:
+    eng = QutritDM(1, device="cpu")
+    eng.rho = _basis_state(0)
+
+    with pytest.raises(TypeError):
+        eng.project_stabilizer({0: "Z"}, 0, lambda _level: 1)
+    with pytest.raises(TypeError):
+        eng.project_stabilizer({0: "Z"}, 0, None)
+    for invalid in (float("nan"), float("inf"), -0.01, 1.01):
+        with pytest.raises(ValueError):
+            eng.project_stabilizer({0: "Z"}, 0, invalid)
+
+
 def test_dm_anchor_routes_detector_marginals_through_sequential_primitive(monkeypatch) -> None:
     import error_coupling_simulator.carrier.exact.qutrit_dm as qdm_module
 
@@ -96,7 +110,7 @@ def test_dm_anchor_routes_detector_marginals_through_sequential_primitive(monkey
         stab_paulis=lambda: [{0: "X"}, {0: "Z"}],
     )
 
-    class Teacher:
+    class ControlledProcess:
         def __init__(self):
             self.sched = sched
 
@@ -105,7 +119,7 @@ def test_dm_anchor_routes_detector_marginals_through_sequential_primitive(monkey
 
     regime = Regime(R=1, n_active=1, n_stab=2, b=0.9, arm="A")
     answer = DMOracleAnchor(device="cpu", card_bytes=1).answer(
-        Teacher(), Statistic.DETECTOR_MARG, regime
+        ControlledProcess(), Statistic.DETECTOR_MARG, regime
     )
 
     np.testing.assert_allclose(answer.value, [0.2, 0.3, 0.4])

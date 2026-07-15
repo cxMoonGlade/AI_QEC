@@ -285,7 +285,7 @@ def test_d3_mask_unknown_name_raises_listing_valid_names():
 def test_d3_mask_env_var_unknown_name_raises(monkeypatch):
     """The env-var route (mask=None) validates too -- _has_data is a callable so this
     needs no module reimport (conftest design requirement)."""
-    monkeypatch.setenv("QEC_TWIN_D3_MASK", "typo_name")
+    monkeypatch.setenv("ECS_D3_MASK", "typo_name")
     with pytest.raises(ValueError, match="typo_name"):
         conftest._has_data()
 
@@ -294,7 +294,7 @@ def test_d3_mask_flips_predicate_per_name(monkeypatch):
     """Rule-II shape at the unit level: each masked name must flip the predicate to
     False (informative only where the full patch is present; otherwise the baseline is
     already False and the flip is unobservable -> precondition skip, not a failure)."""
-    monkeypatch.delenv("QEC_TWIN_D3_MASK", raising=False)
+    monkeypatch.delenv("ECS_D3_MASK", raising=False)
     if not conftest._has_data(mask=()):
         pytest.skip("d3 patch absent here -- the mask flip is unobservable "
                     "(the committed probe runs this on the data box)")

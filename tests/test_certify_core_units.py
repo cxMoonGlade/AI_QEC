@@ -1,20 +1,20 @@
 """Stage-D batch D4 -- per-unit L0 + L1 + KILLER coverage of the ``certify`` engine trio
 ``error_coupling_simulator.certify.{core, facade, types}`` (25 CPU-coverable public units).
 
-Full-coverage program (docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4; work-list
-docs/twin_validation/l3_release_package_unit_inventory.md). The three modules are the certify
-STATISTICAL BACKBONE + the value types + the ``certify_teacher`` facade. ``core``/``types`` are
+Full-coverage program (docs/SIMULATOR.md SS12.3/12.4; work-list
+docs/SIMULATOR.md). The three modules are the certify
+STATISTICAL BACKBONE + the value types + the ``certify_noise_process`` facade. ``core``/``types`` are
 torch-free; ``facade`` imports torch TRANSITIVELY (via ``.anchors`` -> ``dm_oracle``) but never
 touches a GPU on the paths exercised here (``DMOracleAnchor(device="cuda")`` only builds a
 ``torch.device`` object and reads ``torch.cuda.is_available()`` -> False on a CPU box -> card
 budget 0 -> the DM leg is infeasible-as-data, so ``answer`` -- the only GPU path -- is never
 reached). So all 25 units are covered CPU-ONLY.
 
-The three "Mixed" units that normally drive a GPU teacher/anchor (``certify_cells``,
-``certify_teacher``, ``MeasureCtx.corrupt_answer`` -- and ``MeasureCtx.score``) are covered with the
-same TEST-ONLY in-memory stub pattern the existing ``tests/test_certify.py`` uses (``FakeTeacher`` /
-``InMemoryAnchor``): a hand-written known law that shares no code with any engine, so the port IS the
-test surface, on CPU, with NO GPU.
+The three "Mixed" units that normally drive a GPU process/reference oracle (``certify_cells``,
+``certify_noise_process``, ``MeasureCtx.corrupt_answer`` -- and ``MeasureCtx.score``) are covered
+with the same TEST-ONLY in-memory controlled-fixture pattern used in ``tests/test_certify.py``: a
+hand-written known law that shares no code with any engine, so the port IS the test surface, on CPU,
+with NO GPU.
 
 BRANCH SURFACE (coverage.py --branch facts confirmed by probe before authoring):
   * single-line ternaries (``a if c else b`` on ONE source line) emit NO tracked branch arc -- so
@@ -23,11 +23,11 @@ BRANCH SURFACE (coverage.py --branch facts confirmed by probe before authoring):
     KILLER, not a branch count. ``compare``'s ONLY tracked branches are the two multi-line ``if``s
     (``in _DIST_STATS`` / ``is SCALAR_FUNC``);
   * generator/comprehension bodies emit NO tracked branch arc (the observables-batch fact) -- so the
-    ``certify_cells`` ``n_fired`` genexp, the ``certify_teacher`` ``feasible``/``check_list`` list-
+    ``certify_cells`` ``n_fired`` genexp, the ``certify_noise_process`` ``feasible``/``check_list`` list-
     comps + ``routing`` dict-comp, and ``route``'s ``cands`` listcomp are branch-0 surface;
   * real multi-line ``if``/``for`` DO create arcs -- so ``emitted_statistic``'s stat dispatch chain +
     the RR/SPATIAL ``for`` loops, ``reduce_*``'s guards, ``certify_cells``'s cell/control loops +
-    ``anchor is None`` + ``ctrl.guards``, and ``certify_teacher``'s policy ``if``s are each exercised
+    ``anchor is None`` + ``ctrl.guards``, and ``certify_noise_process`` policy ``if``s are each exercised
     on BOTH arcs;
   * the 15 ``types`` Protocol/CertReport methods: the Protocol ``...``-stub bodies + the enum/
     dataclass shells are covered by IMPORT (coverage.py does not count a ``...``/docstring stub as a
@@ -64,7 +64,7 @@ from error_coupling_simulator.certify.core import (
     route,
     total_variation,
 )
-from error_coupling_simulator.certify.facade import certify_teacher
+from error_coupling_simulator.certify.facade import certify_noise_process
 from error_coupling_simulator.certify.types import (
     Anchor,
     AnchorValue,
@@ -119,8 +119,8 @@ def _make_records(joint: dict, N: int) -> dict:
     return {"det": det, "obs": obs}
 
 
-class FakeTeacher:
-    """A controlled teacher emitting a KNOWN law (test fixture). ``sched`` is a namespace so the
+class ControlledProcessFixture:
+    """A controlled process emitting a KNOWN law (test fixture). ``sched`` is a namespace so the
     facade's ``_regime`` can read ``n_data`` / ``stabilizers``; the core never touches it."""
 
     truth = {"theta": 0.15, "gamma": 0.04}
@@ -174,7 +174,7 @@ class MemAnchor:
         return Capability(statistic, self._exactness, feasible=self._feasible,
                           epistemic_class=cls, mem_bytes_estimate=self._mem)
 
-    def answer(self, teacher, statistic, regime, *, N=None, generator=None, corrupt=None):
+    def answer(self, process, statistic, regime, *, N=None, generator=None, corrupt=None):
         if statistic is Statistic.SYNDROME_DIST:
             val: dict = {}
             for k, p in self._joint.items():
@@ -207,7 +207,7 @@ class RRStub:
     def capability(self, statistic, regime):
         return Capability(statistic, Exactness.EXACT, True, "", "a", 0)
 
-    def answer(self, teacher, statistic, regime, *, N=None, generator=None, corrupt=None):
+    def answer(self, process, statistic, regime, *, N=None, generator=None, corrupt=None):
         return AnchorValue(statistic, regime, np.array([0.0]), Exactness.EXACT, 0.0, "a",
                            {"anchor": self.name})
 
@@ -295,7 +295,7 @@ class RouteStub:
 
 class RecordingMemAnchor(MemAnchor):
     """A MemAnchor that RECORDS every ``capability`` / ``answer`` call so a test can pin the EXACT
-    argument tuple the core forwarded (kills the drop-an-arg-to-None mutants: teacher/statistic/
+    argument tuple the core forwarded (kills the drop-an-arg-to-None mutants: process/statistic/
     regime/N/corrupt on ``answer``; statistic/regime on ``capability``)."""
 
     def __init__(self, *a, **k):
@@ -307,14 +307,13 @@ class RecordingMemAnchor(MemAnchor):
         self.capability_calls.append((statistic, regime))
         return super().capability(statistic, regime)
 
-    def answer(self, teacher, statistic, regime, *, N=None, generator=None, corrupt=None):
-        self.answer_calls.append((teacher, statistic, regime, N, corrupt))
-        return super().answer(teacher, statistic, regime, N=N, corrupt=corrupt)
+    def answer(self, process, statistic, regime, *, N=None, generator=None, corrupt=None):
+        self.answer_calls.append((process, statistic, regime, N, corrupt))
+        return super().answer(process, statistic, regime, N=N, corrupt=corrupt)
 
 
-class RecordingTeacher(FakeTeacher):
-    """A FakeTeacher that records the args of ``emit`` / ``emit_clifford_slice`` (kills the
-    certify_cells mutants that drop regime/p_x/m/N/seed to None on the two emit legs)."""
+class RecordingProcessFixture(ControlledProcessFixture):
+    """Record ``emit`` / ``emit_clifford_slice`` args for forwarding-contract tests."""
 
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
@@ -330,7 +329,7 @@ class RecordingTeacher(FakeTeacher):
         return super().emit_clifford_slice(regime, p_x=p_x, m=m, N=N, seed=seed)
 
 
-class CountingTeacher2(FakeTeacher):
+class DistinctRegimeCountingProcessFixture(ControlledProcessFixture):
     """Counts ``emit`` calls (for the cache-key perf invariant across DISTINCT regimes)."""
 
     def __init__(self, *a, **k):
@@ -345,7 +344,7 @@ class CountingTeacher2(FakeTeacher):
 class ScoringCtrl:
     """A teeth control that exercises the FULL ``MeasureCtx`` surface a real corrupt-stab control
     uses: ``ctx.score()`` (reads ctx.statistic/emitted/anchor_value), ``ctx.corrupt_answer`` (reads
-    ctx.anchor/teacher/statistic/regime/N), and ``ctx.N`` (a sqrt threshold). It also records its
+    ctx.anchor/process/statistic/regime/N), and ``ctx.N`` (a sqrt threshold). It also records its
     OWN run(...) params so a mutant that drops regime/N on ``ctrl.run(...)`` is caught."""
 
     name = "scoring"
@@ -360,7 +359,7 @@ class ScoringCtrl:
     def run(self, ctx, statistic, regime, *, N=None):
         ScoringCtrl.seen_run = (statistic, regime, N)
         base = ctx.score()                                  # ctx.statistic/emitted/anchor_value/N
-        corrupted = ctx.corrupt_answer({"stab": 1})         # ctx.anchor/teacher/statistic/regime/N
+        corrupted = ctx.corrupt_answer({"stab": 1})         # ctx.anchor/process/statistic/regime/N
         pert = ctx.score(anchor_value=corrupted)
         thr = 6.0 / np.sqrt(ctx.N)                          # reads ctx.N (kills ctx.N=None)
         fired = bool(pert > thr and pert > base)
@@ -386,7 +385,7 @@ class NoEmitKindAnchor:
         assert statistic is not None and regime is not None
         return Capability(statistic, Exactness.EXACT, True, "", "a", 0)
 
-    def answer(self, teacher, statistic, regime, *, N=None, generator=None, corrupt=None):
+    def answer(self, process, statistic, regime, *, N=None, generator=None, corrupt=None):
         val = dict(self._joint)
         if corrupt and "stab" in corrupt:
             u = 1.0 / len(val)
@@ -443,7 +442,7 @@ class RegimeRecAnchor:
         RegimeRecAnchor.seen = regime
         return Capability(statistic, Exactness.EXACT, True, "", "a", 0)
 
-    def answer(self, teacher, statistic, regime, *, N=None, generator=None, corrupt=None):
+    def answer(self, process, statistic, regime, *, N=None, generator=None, corrupt=None):
         return AnchorValue(statistic, regime, np.array([0.0, 0.0]), Exactness.EXACT, 0.0, "a",
                            {"anchor": self.name})
 
@@ -898,7 +897,7 @@ def _score_ctx():
     emitted = emitted_statistic(records, Statistic.FULL_JOINT, _REG)
     av = _av(dict(_JOINT), Statistic.FULL_JOINT, Exactness.EXACT, 0.0)
     return MeasureCtx(MemAnchor(_JOINT), Statistic.FULL_JOINT, _REG, 20000, emitted, av,
-                      teacher=FakeTeacher(_JOINT)), emitted, av
+                      process=ControlledProcessFixture(_JOINT)), emitted, av
 
 
 def test_measurectx_score_pins_and_zero_killer():
@@ -931,9 +930,9 @@ def test_measurectx_score_pins_and_zero_killer():
 def test_measurectx_init_stores_every_attr():
     anc = MemAnchor(_JOINT)
     av = _av(dict(_JOINT), Statistic.FULL_JOINT, Exactness.EXACT, 0.0)
-    t = FakeTeacher(_JOINT)
+    t = ControlledProcessFixture(_JOINT)
     em = {0: 1.0}
-    ctx = MeasureCtx(anc, Statistic.SYNDROME_DIST, _REG, 12345, em, av, teacher=t)
+    ctx = MeasureCtx(anc, Statistic.SYNDROME_DIST, _REG, 12345, em, av, process=t)
     # every constructor arg is stored VERBATIM (kills self.<attr> = None sabotages).
     assert ctx.anchor is anc
     assert ctx.statistic is Statistic.SYNDROME_DIST
@@ -941,19 +940,19 @@ def test_measurectx_init_stores_every_attr():
     assert ctx.N == 12345
     assert ctx.emitted is em
     assert ctx.anchor_value is av
-    assert ctx.teacher is t
+    assert ctx.process is t
 
 
 def test_measurectx_corrupt_answer_forwards_args_and_reanswers_killer():
     stub = RecordingMemAnchor(_JOINT, name="mem")
-    t = FakeTeacher(_JOINT)
+    t = ControlledProcessFixture(_JOINT)
     av = stub.answer(t, Statistic.FULL_JOINT, _REG)          # the uncorrupted ground truth
     ctx = MeasureCtx(stub, Statistic.FULL_JOINT, _REG, 20000, emitted=None, anchor_value=av,
-                     teacher=t)
+                     process=t)
     corrupted = ctx.corrupt_answer({"stab": 1})
     assert isinstance(corrupted, AnchorValue) and corrupted.value != av.value
 
-    # the re-answer forwards ctx.teacher/statistic/regime/N + the corruption VERBATIM (kills each
+    # the re-answer forwards ctx.process/statistic/regime/N + the corruption VERBATIM (kills each
     # arg-dropped-to-None mutant on ``anchor.answer(...)``).
     assert stub.answer_calls[-1] == (t, Statistic.FULL_JOINT, _REG, 20000, {"stab": 1})
 
@@ -968,7 +967,7 @@ def test_measurectx_corrupt_answer_forwards_args_and_reanswers_killer():
 # core.certify_cells -- route -> controls-first -> score -> ledger             #
 # =========================================================================== #
 def test_certify_cells_full_path_passes_with_firing_control():
-    rep = certify_cells(FakeTeacher(_JOINT), [(Statistic.FULL_JOINT, _REG)],
+    rep = certify_cells(ControlledProcessFixture(_JOINT), [(Statistic.FULL_JOINT, _REG)],
                         [MemAnchor(_JOINT)], [ShuffleCtrl(), NonGuardingCtrl()], N=20000)
     row = rep.row("mem", Statistic.FULL_JOINT)
     assert row is not None and row.verdict is Verdict.PASS
@@ -990,21 +989,21 @@ def test_certify_cells_full_path_passes_with_firing_control():
 
 
 def test_certify_cells_records_positive_and_control_answer_and_emit_args():
-    teacher = RecordingTeacher(_JOINT)
+    process = RecordingProcessFixture(_JOINT)
     anchor = RecordingMemAnchor(_JOINT)
     ScoringCtrl.seen_run = None
-    rep = certify_cells(teacher, [(Statistic.FULL_JOINT, _REG)], [anchor], [ScoringCtrl()],
+    rep = certify_cells(process, [(Statistic.FULL_JOINT, _REG)], [anchor], [ScoringCtrl()],
                         N=20000, seed=7, m=3)
     assert rep.verdict is Verdict.PASS, rep.summary()
 
-    # the POSITIVE answer forwards (teacher, statistic, regime, N, corrupt=None) verbatim ...
-    assert anchor.answer_calls[0] == (teacher, Statistic.FULL_JOINT, _REG, 20000, None)
+    # the POSITIVE answer forwards (process, statistic, regime, N, corrupt=None) verbatim ...
+    assert anchor.answer_calls[0] == (process, Statistic.FULL_JOINT, _REG, 20000, None)
     # ... and the control's corrupt re-answer forwards the SAME cell coords + the corruption.
-    assert anchor.answer_calls[-1] == (teacher, Statistic.FULL_JOINT, _REG, 20000, {"stab": 1})
+    assert anchor.answer_calls[-1] == (process, Statistic.FULL_JOINT, _REG, 20000, {"stab": 1})
     # the ``cap =`` probe used the real (statistic, regime) (kills capability(None, .)/(., None)).
     assert anchor.capability_calls[-1] == (Statistic.FULL_JOINT, _REG)
     # the full-mix emit leg forwarded (regime, m, N, seed) verbatim.
-    assert teacher.emit_args[-1] == (_REG, 3, 20000, 7)
+    assert process.emit_args[-1] == (_REG, 3, 20000, 7)
     # the control's run(...) received the real (statistic, regime, N) (kills run(., None, .)/(., ., None)).
     assert ScoringCtrl.seen_run == (Statistic.FULL_JOINT, _REG, 20000)
     # provenance reflects the non-default seed/m (kills the signature-default seed/m mutants).
@@ -1012,18 +1011,18 @@ def test_certify_cells_records_positive_and_control_answer_and_emit_args():
 
 
 def test_certify_cells_clifford_emit_forwards_args():
-    teacher = RecordingTeacher(_JOINT)
-    certify_cells(teacher, [(Statistic.FULL_JOINT, _REG)],
+    process = RecordingProcessFixture(_JOINT)
+    certify_cells(process, [(Statistic.FULL_JOINT, _REG)],
                   [MemAnchor(_JOINT, emit_kind_val="clifford_slice")], [ShuffleCtrl()],
                   N=20000, seed=5, m=2)
     # the Clifford-slice leg forwarded (regime, p_x, m, N, seed) verbatim (p_x from anchor.p_x).
-    assert teacher.clifford_args[-1] == (_REG, 0.03, 2, 20000, 5)
+    assert process.clifford_args[-1] == (_REG, 0.03, 2, 20000, 5)
 
 
 def test_certify_cells_no_emit_kind_anchor_uses_full_default():
-    # an anchor WITHOUT emit_kind -> the core defaults kind="full" -> teacher.emit -> PASS.
+    # an anchor WITHOUT emit_kind -> the core defaults kind="full" -> process.emit -> PASS.
     # A mutated default literal ("XXfullXX"/"FULL") would take the raise-loud else -> error.
-    rep = certify_cells(FakeTeacher(_JOINT), [(Statistic.FULL_JOINT, _REG)],
+    rep = certify_cells(ControlledProcessFixture(_JOINT), [(Statistic.FULL_JOINT, _REG)],
                         [NoEmitKindAnchor(_JOINT)], [ShuffleCtrl()], N=20000)
     row = rep.row("noek", Statistic.FULL_JOINT)
     assert row is not None and row.verdict is Verdict.PASS
@@ -1032,16 +1031,16 @@ def test_certify_cells_no_emit_kind_anchor_uses_full_default():
 def test_certify_cells_caches_one_emit_per_DISTINCT_regime():
     # the cache key is (regime, kind, m): TWO DISTINCT regimes -> TWO emits (a key=None mutant would
     # collide them to ONE and silently reuse the wrong records).
-    teacher = CountingTeacher2(_JOINT)
+    process = DistinctRegimeCountingProcessFixture(_JOINT)
     reg2 = Regime(R=2, register="subregister", n_active=1, n_stab=1)
-    certify_cells(teacher, [(Statistic.FULL_JOINT, _REG), (Statistic.FULL_JOINT, reg2)],
+    certify_cells(process, [(Statistic.FULL_JOINT, _REG), (Statistic.FULL_JOINT, reg2)],
                   [MemAnchor(_JOINT)], [ShuffleCtrl()], N=20000)
-    assert teacher.emit_calls == 2
+    assert process.emit_calls == 2
 
 
 def test_certify_cells_infeasible_is_unanchored_not_pass():
     oom = Regime(R=2, register="full", n_active=9, n_stab=1)
-    rep = certify_cells(FakeTeacher(_JOINT), [(Statistic.FULL_JOINT, oom)],
+    rep = certify_cells(ControlledProcessFixture(_JOINT), [(Statistic.FULL_JOINT, oom)],
                         [MemAnchor(_JOINT, feasible=False)], [], N=20000)
     assert rep.row("mem", Statistic.FULL_JOINT) is None      # no anchor row
     assert rep.verdict is not Verdict.PASS                   # an honest gap, never a silent pass
@@ -1062,7 +1061,7 @@ def test_certify_cells_infeasible_is_unanchored_not_pass():
 def test_certify_cells_unanchored_continues_to_next_cell():
     # an UNANCHORED cell must CONTINUE (not break) so a later feasible cell is still certified.
     oom = Regime(R=2, register="full", n_active=9, n_stab=1)
-    rep = certify_cells(FakeTeacher(_JOINT),
+    rep = certify_cells(ControlledProcessFixture(_JOINT),
                         [(Statistic.FULL_JOINT, oom), (Statistic.FULL_JOINT, _REG)],
                         [RegimeGatedAnchor(_JOINT)], [ShuffleCtrl()], N=20000)
     assert len(rep.rows) == 2                                # a ``break`` would drop the 2nd cell
@@ -1072,8 +1071,8 @@ def test_certify_cells_unanchored_continues_to_next_cell():
 
 def test_certify_cells_inert_control_forces_fail_killer():
     cells = [(Statistic.FULL_JOINT, _REG)]
-    real = certify_cells(FakeTeacher(_JOINT), cells, [MemAnchor(_JOINT)], [InertCtrl()], N=20000)
-    wrong = certify_cells(FakeTeacher(_JOINT), cells, [MemAnchor(_JOINT)], [], N=20000)
+    real = certify_cells(ControlledProcessFixture(_JOINT), cells, [MemAnchor(_JOINT)], [InertCtrl()], N=20000)
+    wrong = certify_cells(ControlledProcessFixture(_JOINT), cells, [MemAnchor(_JOINT)], [], N=20000)
     assert real.row("mem", Statistic.FULL_JOINT).verdict is Verdict.PASS   # the data matches...
     assert not any(c.detail["fired"] for c in real.controls)              # ...but the control is inert
     assert real.verdict is Verdict.FAIL and wrong.verdict is Verdict.FINDING
@@ -1086,21 +1085,21 @@ def test_certify_cells_inert_control_forces_fail_killer():
 
 
 def test_certify_cells_clifford_slice_emit_leg():
-    rep = certify_cells(FakeTeacher(_JOINT), [(Statistic.FULL_JOINT, _REG)],
+    rep = certify_cells(ControlledProcessFixture(_JOINT), [(Statistic.FULL_JOINT, _REG)],
                         [MemAnchor(_JOINT, emit_kind_val="clifford_slice")], [ShuffleCtrl()], N=20000)
     row = rep.row("mem", Statistic.FULL_JOINT)               # the clifford-slice emit leg ran
     assert row is not None and row.verdict is Verdict.PASS
 
 
 def test_certify_cells_unknown_emit_kind_raises():
-    with pytest.raises(NotImplementedError, match="has no teacher emit path in"):
-        certify_cells(FakeTeacher(_JOINT), [(Statistic.FULL_JOINT, _REG)],
+    with pytest.raises(NotImplementedError, match="has no process emit path in"):
+        certify_cells(ControlledProcessFixture(_JOINT), [(Statistic.FULL_JOINT, _REG)],
                       [MemAnchor(_JOINT, emit_kind_val="nonunital_slice")], [ShuffleCtrl()], N=20000)
 
 
 def test_certify_cells_rr_corr_r1_cell():
     reg1 = Regime(R=1, register="subregister", n_active=1, n_stab=1)
-    rep = certify_cells(FakeTeacher(_JOINT), [(Statistic.RR_CORR, reg1)], [RRStub()], [], N=20000)
+    rep = certify_cells(ControlledProcessFixture(_JOINT), [(Statistic.RR_CORR, reg1)], [RRStub()], [], N=20000)
     row = rep.row("rr", Statistic.RR_CORR)
     assert row is not None and row.statistic is Statistic.RR_CORR and row.verdict is Verdict.PASS
     F.assert_pins(row.value, 0.0, label="RR_CORR R=1 emitted [0.0] matches the anchor")
@@ -1108,18 +1107,18 @@ def test_certify_cells_rr_corr_r1_cell():
 
 
 def test_certify_cells_caches_one_emit_per_regime():
-    # the perf invariant: ONE teacher.emit per (regime, kind, m) feeds EVERY statistic at that regime.
-    class CountingTeacher(FakeTeacher):
+    # the perf invariant: ONE process.emit per (regime, kind, m) feeds EVERY statistic at that regime.
+    class SharedRegimeCountingProcessFixture(ControlledProcessFixture):
         emit_calls = 0
 
         def emit(self, regime, *, m, N, seed):
             self.emit_calls += 1
             return _make_records(self._joint, N)
 
-    teacher = CountingTeacher(_JOINT)
-    rep = certify_cells(teacher, [(Statistic.FULL_JOINT, _REG), (Statistic.SYNDROME_DIST, _REG)],
+    process = SharedRegimeCountingProcessFixture(_JOINT)
+    rep = certify_cells(process, [(Statistic.FULL_JOINT, _REG), (Statistic.SYNDROME_DIST, _REG)],
                         [MemAnchor(_JOINT)], [ShuffleCtrl()], N=20000)
-    assert teacher.emit_calls == 1                           # cache hit: the 2nd cell reused the emit
+    assert process.emit_calls == 1                           # cache hit: the 2nd cell reused the emit
     assert rep.verdict is Verdict.PASS, rep.summary()
 
 
@@ -1127,7 +1126,7 @@ def test_certify_cells_broken_carrier_fails():
     # a broken carrier (a DIFFERENT emitted law) FAILs against the true-law anchor -> the comparison
     # has teeth; the FAILing scored row drives the verdict to FAIL (distinct from the control-inert
     # FAIL path).
-    broken = FakeTeacher({0: 0.1, 1: 0.4, 2: 0.45, 3: 0.05})
+    broken = ControlledProcessFixture({0: 0.1, 1: 0.4, 2: 0.45, 3: 0.05})
     rep = certify_cells(broken, [(Statistic.FULL_JOINT, _REG)], [MemAnchor(_JOINT)],
                         [ShuffleCtrl()], N=20000)
     assert rep.row("mem", Statistic.FULL_JOINT).verdict is Verdict.FAIL
@@ -1136,7 +1135,7 @@ def test_certify_cells_broken_carrier_fails():
 
 
 def test_certify_cells_empty_cells_is_finding():
-    rep = certify_cells(FakeTeacher(_JOINT), [], [MemAnchor(_JOINT)], [ShuffleCtrl()], N=20000)
+    rep = certify_cells(ControlledProcessFixture(_JOINT), [], [MemAnchor(_JOINT)], [ShuffleCtrl()], N=20000)
     assert rep.rows == () and rep.verdict is Verdict.FINDING  # no cell -> nothing certified
 
 
@@ -1144,11 +1143,11 @@ def test_certify_cells_rejects_exact_anchor_with_nonzero_band():
     # the EXACT => band==0 ingest contract has teeth: an anchor declaring EXACT yet returning a
     # nonzero band is rejected loudly at answer time.
     class BadExactAnchor(MemAnchor):
-        def answer(self, teacher, statistic, regime, *, N=None, generator=None, corrupt=None):
+        def answer(self, process, statistic, regime, *, N=None, generator=None, corrupt=None):
             return AnchorValue(statistic, regime, dict(self._joint), Exactness.EXACT, 0.5, "a", {})
 
     with pytest.raises(ValueError, match="undeclared band"):
-        certify_cells(FakeTeacher(_JOINT), [(Statistic.FULL_JOINT, _REG)], [BadExactAnchor(_JOINT)],
+        certify_cells(ControlledProcessFixture(_JOINT), [(Statistic.FULL_JOINT, _REG)], [BadExactAnchor(_JOINT)],
                       [], N=20000)
 
 
@@ -1156,12 +1155,12 @@ def test_certify_cells_rejects_class_a_statistical_value():
     # class<->exactness consistency: a class-'a' (exact-grade) value that is actually STATISTICAL
     # would be rolled up as an EXACT PASS (inflation) -- it must be rejected on ingest.
     class BadClassAnchor(MemAnchor):
-        def answer(self, teacher, statistic, regime, *, N=None, generator=None, corrupt=None):
+        def answer(self, process, statistic, regime, *, N=None, generator=None, corrupt=None):
             return AnchorValue(statistic, regime, dict(self._joint), Exactness.STATISTICAL, 0.01,
                                "a", {})
 
     with pytest.raises(ValueError, match="mislabeled 'a'"):
-        certify_cells(FakeTeacher(_JOINT), [(Statistic.FULL_JOINT, _REG)], [BadClassAnchor(_JOINT)],
+        certify_cells(ControlledProcessFixture(_JOINT), [(Statistic.FULL_JOINT, _REG)], [BadClassAnchor(_JOINT)],
                       [], N=20000)
 
 
@@ -1171,7 +1170,7 @@ def test_certify_cells_rejects_class_a_statistical_value():
 def test_certify_cells_nfired_counts_only_applicable_and_fired():
     # a control that is INAPPLICABLE yet claims fired=True must NOT count toward the cell's falsifier
     # coverage: n_controls_fired needs (applicable AND fired). Miscounting it -> a teeth-less PASS.
-    rep = certify_cells(FakeTeacher(_JOINT), [(Statistic.FULL_JOINT, _REG)], [MemAnchor(_JOINT)],
+    rep = certify_cells(ControlledProcessFixture(_JOINT), [(Statistic.FULL_JOINT, _REG)], [MemAnchor(_JOINT)],
                         [FixedCtrl("inapp_fired", {"applicable": False, "fired": True})], N=20000)
     assert rep.row("mem", Statistic.FULL_JOINT).detail["n_controls_fired"] == 0
     assert rep.verdict is Verdict.FINDING           # no APPLICABLE firing control -> uncertified
@@ -1180,7 +1179,7 @@ def test_certify_cells_nfired_counts_only_applicable_and_fired():
 def test_certify_cells_nfired_counts_missing_applicable_as_present():
     # a firing control with NO "applicable" key defaults to applicable -> it DOES count (the default
     # is True, not None/False), so the passing row is certified.
-    rep = certify_cells(FakeTeacher(_JOINT), [(Statistic.FULL_JOINT, _REG)], [MemAnchor(_JOINT)],
+    rep = certify_cells(ControlledProcessFixture(_JOINT), [(Statistic.FULL_JOINT, _REG)], [MemAnchor(_JOINT)],
                         [FixedCtrl("missapp_fired", {"fired": True})], N=20000)
     assert rep.row("mem", Statistic.FULL_JOINT).detail["n_controls_fired"] == 1
     assert rep.verdict is Verdict.PASS              # counted -> a real falsifier -> PASS
@@ -1222,13 +1221,13 @@ def test_rollup_pass_row_needs_a_fired_control_default_zero():
 
 
 # =========================================================================== #
-# facade.certify_teacher -- route + merge + roll (stubbed anchors, CPU-only)   #
+# facade.certify_noise_process -- route + merge + roll (stubbed anchors, CPU-only)
 # =========================================================================== #
-def test_certify_teacher_merges_two_anchors_and_passes():
-    teacher = FakeTeacher(_JOINT)
+def test_certify_noise_process_merges_two_anchors_and_passes():
+    process = ControlledProcessFixture(_JOINT)
     a_fj = MemAnchor(_JOINT, name="anchor_fj", answers_set={Statistic.FULL_JOINT})
     a_sd = MemAnchor(_JOINT, name="anchor_sd", answers_set={Statistic.SYNDROME_DIST})
-    rep = certify_teacher(teacher, anchors=[a_fj, a_sd],
+    rep = certify_noise_process(process, anchors=[a_fj, a_sd],
                           cells=[(Statistic.FULL_JOINT, _REG), (Statistic.SYNDROME_DIST, _REG)],
                           controls=[ShuffleCtrl()], N=20000, level="standard")
     assert rep.verdict in (Verdict.PASS, Verdict.PASS_PROVISIONAL), rep.summary()
@@ -1241,45 +1240,52 @@ def test_certify_teacher_merges_two_anchors_and_passes():
         assert "anchor_sd" in {x.anchor for x in r.rows}, "the merge must keep BOTH anchors' rows"
 
     wrong = replace(rep, rows=tuple(x for x in rep.rows if x.anchor == "anchor_fj"))
-    F.assert_discriminates(prop_both, rep, wrong, label="certify_teacher merges all anchors")
+    F.assert_discriminates(prop_both, rep, wrong, label="certify_noise_process merges all anchors")
 
 
-def test_certify_teacher_auto_builds_anchors_and_raises_when_infeasible():
+def test_certify_noise_process_auto_builds_anchors_and_raises_when_infeasible():
     # anchors=None -> the auto-built DM + stim anchors (CPU: DM budget 0 -> infeasible; neither
     # answers SCALAR_FUNC) -> every cell infeasible -> ValueError. Exercises the auto-build + default-
     # controls + the "not feasible: continue" + "not all_rows: raise" arcs, with NO GPU.
-    teacher = FakeTeacher({0: 1.0})
-    teacher.dm_round_callbacks = lambda device: (None, None)
+    process = ControlledProcessFixture({0: 1.0})
+    process.dm_round_callbacks = lambda device: (None, None)
     with pytest.raises(ValueError):
-        certify_teacher(teacher, level="smoke", cells=[(Statistic.SCALAR_FUNC, _REG)])  # dm_safety None -> {}
+        certify_noise_process(process, level="smoke", cells=[(Statistic.SCALAR_FUNC, _REG)])
     with pytest.raises(ValueError):
-        certify_teacher(teacher, level="smoke", cells=[(Statistic.SCALAR_FUNC, _REG)],
-                        dm_safety=0.78)                                             # -> the else arc
+        certify_noise_process(process, level="smoke", cells=[(Statistic.SCALAR_FUNC, _REG)],
+                              dm_safety=0.78)
 
 
-def test_certify_teacher_cells_none_uses_the_level_plan():
+def test_certify_noise_process_default_anchors_require_process_extensions():
+    process = ControlledProcessFixture({0: 1.0})
+
+    with pytest.raises(TypeError, match="missing: dm_round_callbacks"):
+        certify_noise_process(process, level="smoke")
+
+
+def test_certify_noise_process_cells_none_uses_the_level_plan():
     # cells=None -> the ``_regime``-from-plan branch of the ternary (needs sched.n_data/stabilizers).
-    teacher = FakeTeacher({0: 1.0}, sched=SimpleNamespace(n_data=1, stabilizers=[object()]))
+    process = ControlledProcessFixture({0: 1.0}, sched=SimpleNamespace(n_data=1, stabilizers=[object()]))
     infeasible = MemAnchor({0: 1.0}, name="infeas", feasible=False,
                            answers_set={Statistic.DETECTOR_MARG})
     with pytest.raises(ValueError):
-        certify_teacher(teacher, anchors=[infeasible], controls=[ShuffleCtrl()], level="smoke")
+        certify_noise_process(process, anchors=[infeasible], controls=[ShuffleCtrl()], level="smoke")
 
 
-def test_certify_teacher_unknown_level_rejected():
+def test_certify_noise_process_unknown_level_rejected():
     with pytest.raises(ValueError, match="unknown level"):
-        certify_teacher(FakeTeacher({0: 1.0}), level="bogus", anchors=[MemAnchor({0: 1.0})],
-                        cells=[(Statistic.FULL_JOINT, _REG)])
+        certify_noise_process(ControlledProcessFixture({0: 1.0}), level="bogus", anchors=[MemAnchor({0: 1.0})],
+                              cells=[(Statistic.FULL_JOINT, _REG)])
 
 
 def test_regime_from_plan_pins_every_field():
-    # cells=None -> the facade builds each cell's Regime from the teacher's schedule via ``_regime``.
+    # cells=None -> the facade builds each cell's Regime from the process's schedule via ``_regime``.
     # Pin EVERY field of that Regime (R from the plan; register/arm/b constants; n_active/n_stab from
     # the schedule) so a mutated field literal is caught.
-    teacher = FakeTeacher(_JOINT, sched=SimpleNamespace(n_data=5,
+    process = ControlledProcessFixture(_JOINT, sched=SimpleNamespace(n_data=5,
                                                         stabilizers=[object(), object(), object()]))
     RegimeRecAnchor.seen = None
-    certify_teacher(teacher, anchors=[RegimeRecAnchor()], controls=[], level="smoke", cells=None)
+    certify_noise_process(process, anchors=[RegimeRecAnchor()], controls=[], level="smoke", cells=None)
     assert RegimeRecAnchor.seen == Regime(R=1, register="full", n_active=5, n_stab=3, arm="A", b=1.0)
 
 
@@ -1365,7 +1371,7 @@ def test_ports_are_runtime_checkable_protocols_with_teeth():
         def capability(self, statistic, regime):
             return None
 
-        def answer(self, teacher, statistic, regime, *, N=None, generator=None, corrupt=None):
+        def answer(self, process, statistic, regime, *, N=None, generator=None, corrupt=None):
             return None
 
     class DuckControl:
@@ -1380,7 +1386,7 @@ def test_ports_are_runtime_checkable_protocols_with_teeth():
         def run(self, ctx, statistic, regime, *, N=None):
             return None
 
-    class DuckTeacher:
+    class DuckProcess:
         @property
         def sched(self):
             return None
@@ -1405,7 +1411,7 @@ def test_ports_are_runtime_checkable_protocols_with_teeth():
 
     assert isinstance(DuckAnchor(), Anchor)
     assert isinstance(DuckControl(), Control)
-    assert isinstance(DuckTeacher(), ControlledNoiseProcess)
+    assert isinstance(DuckProcess(), ControlledNoiseProcess)
     assert isinstance(DuckDMReplay(), DMReplayable)
     assert isinstance(DuckClifford(), CliffordSliceable)
     # duck-typing teeth: a bare object conforms to NONE of the ports.

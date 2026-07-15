@@ -1,18 +1,16 @@
-"""carrier — forward propagation substrate for the coupling-error simulator.
+"""Forward-propagation substrate for the specified-noise simulator.
 
-- ``joint_lindbladian`` (<- qec_twin.forward.joint_lindbladian): the Axis-1 within-substep
-  joint-Lindbladian assembler (ONE ``expm`` over ΣH + ΣD[c]; Choi→Kraus; the G2 HEADLINE substrate).
-
-MIGRATION (P2): the canonical home is here; ``qec_twin.forward.joint_lindbladian`` is now a thin
-re-export SHIM so all existing importers keep working unchanged until they are migrated to the
-package path. GPU-only (cuda, complex128).
+The Axis-1 assembler exponentiates one same-substep joint Lindbladian. Carrier
+implementations expose the common immutable record boundary from this package.
 """
 
 from .record_fold import det_to_s, s_to_det
 from .records import (
+    PACKED_DETECTOR_INITIAL_PRIOR,
+    PACKED_SHOT_SCHEMA,
+    PACKED_SYNDROME_LAYOUT,
     PackedShotBatch,
     RecordBatch,
-    ShotSet,
     pack_raw_syndrome_shots,
     unpack_raw_syndrome_shots,
 )
@@ -30,12 +28,14 @@ from .within_cycle import (
 
 __all__ = [
     "PackedShotBatch",
+    "PACKED_DETECTOR_INITIAL_PRIOR",
+    "PACKED_SHOT_SCHEMA",
+    "PACKED_SYNDROME_LAYOUT",
     "FusedWithinCycleSampler",
     "PRECISION_POLICY",
     "RecordBatch",
     "RUN_PURPOSES",
     "RunSpec",
-    "ShotSet",
     "WithinCycleMarshalled",
     "c128_evidence_record_batch",
     "cast_within_cycle_precision",

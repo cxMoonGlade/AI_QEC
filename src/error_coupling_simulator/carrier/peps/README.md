@@ -1,14 +1,13 @@
-# carrier/peps — single-wire 2D PEPS trajectory carrier (RUNG-B spike)
+# carrier/peps — single-wire 2D PEPS trajectory carrier
 
-**Status: SPIKE (in build).** Governing doc:
-[`docs/nonpauli_teacher/peps_singlewire_spike_contract.md`](../../../../docs/nonpauli_teacher/peps_singlewire_spike_contract.md)
-(v1.0 REGISTERED). This package is the **single-wire (pure-state trajectory)**
-answer to the crux the compiled-geometry **doubled-wire** DM-PEPO
-(`carrier/pepo`, ARCHIVED) could not close: does the per-edge bond of a 2D PEPS
+**Status: research carrier; full-record faithfulness remains open.** This package is the
+**single-wire (pure-state trajectory)** answer to the crux the compiled-geometry
+**doubled-wire** DM-PEPO (`carrier/pepo`, retained research carrier) could not close:
+does the per-edge bond of a 2D PEPS
 stay bounded under multi-round noisy+leaky syndrome extraction (WP1)?
 
-The primary axis is **single-wire vs doubled-wire**, not ancilla (HANDOFF
-2026-07-10 §0). The same compiled `√E_s` POVM the archived engine used is applied
+The primary axis is **single-wire vs doubled-wire**, not ancilla. The same compiled
+`√E_s` POVM used by the density-matrix carrier is applied
 here, but on a **pure-state** carrier — so the ket⊗bra squaring that concentrated
 rank onto fresh path bonds (F-SEL-1/F-REC-1) never forms: the TT rank bound drops
 from `(2·min+1)²` to `2·min+1` (SF3).
@@ -31,11 +30,11 @@ from `(2·min+1)²` to `2·min+1` (SF3).
 | `stab_tt.py` | `SingleWireStabTT` + `stab_tt_singlewire` (the UNSQUARED `√e` diagonal TT, rank bound `(3,5,3)`/`(3,)` — SF3); `apply_stab_branch` |
 | `contraction.py` | double-layer `⟨ψ\|Π\|ψ⟩` boundary-MPS reads (SF9 — the pepo column-sweep skeleton reused, only the caps become ket+conj double layer); two-term Born read; §6.2 accuracy instruments (`cross_route_q1`, `chib_doubling_delta`); terminal POVM + exact-P(obs) seam |
 | `trajectory.py` | per-shot loop (D7 — the `mps_forward` value contracts on 2D); §6.1 dynamic-ε policy (`TruncationPolicy`, `truncate_*`, `W_max=160`, `D_abort=40`, window-binding invariant); `PepsSampler` packed-record driver |
-| `sampling_maps.py` | the three pinned uniform→outcome maps (single source; `sbit_from_uniform`, `terminal_bit_from_uniform`, `leak_branch_from_uniform`) — the mps_forward directions VERBATIM; the archived pepo directions are FORBIDDEN (RT1-B1/B2) |
+| `sampling_maps.py` | the three pinned uniform→outcome maps (single source; `sbit_from_uniform`, `terminal_bit_from_uniform`, `leak_branch_from_uniform`); rejected alternative directions are exercised by corruption falsifiers (RT1-B1/B2) |
 | `diagnostics.py` | `bond_profile` (SW8 instrument); `eps_l` (§6.3 Rudolph-Tindall loop-correlation BP error — hand-rolled on explicit tensors, no shared code with the known-answer reference); `loop_rank_probe` (WP1 adjudication path A') |
 
 ## Reuse / independence
-- **Reused from `carrier/pepo` (ARCHIVED, import-only, never modified):** the
+- **Reused from the retained `carrier/pepo` research carrier:** the
   d-generic `PepoLayout` (SF2), the ket-layer chain machinery, the boundary-MPS
   skeleton (`_max_row_bond` / `_row_tag` / fit pattern), the truncators
   (`svd_precut_bond` / `ntu_truncate`).
@@ -43,10 +42,9 @@ from `(2·min+1)²` to `2·min+1` (SF3).
   temporal detector-record convention.
 - **Schedule-host seam:** `PepsSampler` accepts an injected schedule/marshalling host and defaults
   to package-local `carrier.within_cycle.WithinCycleScheduleHost`. Schedule marshalling, WG
-  leak-slice construction, headers, and `RunSpec` ownership therefore have no inward `qec_twin`
-  dependency. Packed records use package-local `carrier.records.PackedShotBatch`; its public
-  record accessor applies the required temporal detector fold. Repo-local old-path shims point
-  outward to this implementation and are excluded from distribution archives.
+  leak-slice construction, headers, and `RunSpec` ownership are package-local. Packed records use
+  package-local `carrier.records.PackedShotBatch`; its public record accessor applies the required
+  temporal detector fold.
 - **Referee-independent (contract §3):** the engine shares NO code path with
   `carrier/exact/qutrit_dm` — all gates/Hadamard are local formulas mirroring the
   `mps_forward` value contract; the referee is imported only in the gate
@@ -55,6 +53,6 @@ from `(2·min+1)²` to `2·min+1` (SF3).
 
 ## Tests / gates
 Registered d3 pytest gates: [`tests/test_peps_spike.py`](../../../../tests/test_peps_spike.py)
-(SW0-SW6 + §6.3 `eps_l` known-answers). The GPU evidence runs (SW2 chain probe,
-SW4 record law, SW5 cross-carrier byte-identity, SW7-SW9 d5) live under
-`outputs/nonpauli_teacher/peps_spike_*` (scripted-execution discipline).
+(SW0-SW6 + §6.3 `eps_l` known-answers). GPU evidence runs for the chain probe,
+record law, cross-carrier byte identity, and d5 resource probes remain separate
+scripted executions.

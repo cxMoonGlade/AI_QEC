@@ -1,8 +1,8 @@
 """Stage-D batch ``memwitness`` -- per-unit L0+L1 coverage of
 ``error_coupling_simulator.quantum_bath.memory_witness`` (4 LIVE public units).
 
-Full-coverage program (docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4;
-work-list docs/twin_validation/l3_release_package_unit_inventory.md). The module is the
+Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
+work-list docs/SIMULATOR.md). The module is the
 Backer-et-al GENUINE quantum-memory witness (Control 3): the C#(t1) < C(t2) classical-bound
 violation (2310.01205 Thm 1) computed from single-time tomography of the JC sigma_minus
 zero-T amplitude-damping reduced dynamics. Four LIVE public units:

@@ -1,7 +1,7 @@
 """Step-3 regression test: MCWF-vs-oracle finite-step CONVERGENCE pinning.
 
 Pin that the carrier's realized first-order-MCWF channel converges to the INDEPENDENT
-oracle ``forward.joint_lindbladian.assemble_substep_channel`` (term-based, never the
+oracle ``carrier.joint_lindbladian.assemble_substep_channel`` (term-based, never the
 carrier grouping) as microsteps refine, with the correct convergence orders:
 
   first_order:        process infidelity 1-F_e  ∝ 1/m^2  (ratio ~4 per doubling)
@@ -16,7 +16,7 @@ SUBSTEP SELECTION (S3 — non-commuting H vs collapse, measurement-free):
 COMMUTING POSITIVE CONTROL:
   ZZ + T2 (both diagonal) => exact commuting, no Trotter split => 1-F_e ~ 0 at all m.
 
-ORACLE: forward.joint_lindbladian.assemble_substep_channel builds H + c into ONE
+ORACLE: carrier.joint_lindbladian.assemble_substep_channel builds H + c into ONE
 expm(L*dt) — term-based, NEVER the carrier's _hamiltonian_group_gates. Anti-circular.
 
 CHANNEL RECONSTRUCTION: the carrier's realized CPTP map is reconstructed exactly

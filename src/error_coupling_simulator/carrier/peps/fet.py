@@ -26,8 +26,9 @@ PUBLIC SURFACE
     on both layers). d3 exact; d5 (boundary-MPS Γ) is Stage-2b, out of scope here.
   * :func:`gamma_fidelity` — the Γ-fidelity of a rank-χ bond map ``M[i,j]`` vs the
     identity insertion (with the tn_qsim instability sentinel).
-  * the multi-restart FET M1 solver: :func:`_als_inner`, :func:`_fix_gauge`,
-    :func:`fet_m2`, :func:`_carrier_svd_seed`, :func:`build_seeds`, :func:`fet_m1`.
+  * the multi-restart ALS solver: :func:`_als_inner`, :func:`_fix_gauge`,
+    :func:`_gauge_fix_truncation`, :func:`_carrier_svd_seed`,
+    :func:`build_seeds`, :func:`_multistart_als_truncation`.
   * :func:`apply_fet_truncation` — the in-place write-back (mirrors ``ntu_truncate``'s
     absorb layout: ``U`` into site A's bond leg, ``V†`` into site B's).
   * :func:`env_optimal_rank` — **the NEW wrapper**: sweep ``χ = 1..bare_rank`` and
@@ -64,8 +65,8 @@ from .trajectory import _exact_rank, _insertion_spectrum
 # --------------------------------------------------------------------------- #
 # Solver constants (LIFTED from the Stage-1 diagnostic; validated)             #
 # --------------------------------------------------------------------------- #
-ALS_TRIALS = 20            #: ALS sweeps per restart seed (fet_m1 inner loop)
-FET_OPT_FLOOR = 1e-9       #: fork input: M1 must satisfy Fid_M1 >= Fid_M2 - this
+ALS_TRIALS = 20            #: ALS sweeps per restart seed
+FET_OPT_FLOOR = 1e-9       #: multistart fidelity may trail gauge-fix by at most this
 FID_INSTAB_EPS = 1e-12     #: reject gamma_fidelity when normM <= this * |N0| (degenerate M)
 FID_INSTAB_TOL = 1e-6      #: reject gamma_fidelity when F > 1 + this (tn_qsim instability)
 
@@ -156,8 +157,8 @@ def gamma_fidelity(Gamma: torch.Tensor, M: torch.Tensor) -> float:
 
 
 # =========================================================================== #
-# FET M1 solver (mirrors tn_qsim find_optimal_truncation_by_Gamma, sigma=I),     #
-# wrapped as a MULTI-RESTART best-of; M2 = the gauge-fix closed form.            #
+# FET multistart ALS solver (mirrors tn_qsim's sigma=identity branch),           #
+# compared with the closed-form gauge-fix truncation.                           #
 # =========================================================================== #
 def _als_inner(Gamma: torch.Tensor, chi: int, U0: torch.Tensor, *,
                trials: int = ALS_TRIALS, fluct: bool = False) -> tuple:
@@ -199,8 +200,8 @@ def _als_inner(Gamma: torch.Tensor, chi: int, U0: torch.Tensor, *,
         U = Um
         S = torch.diag(st2).to(CDTYPE) @ Vht                               # (chi, chi)
         Vh_eff = S @ Vh                                                     # (chi, D)
-        M2 = U @ Vh_eff
-        fid2 = gamma_fidelity(Gamma, M2)
+        candidate_map = U @ Vh_eff
+        fid2 = gamma_fidelity(Gamma, candidate_map)
         if fid2 > best_fid:
             best_fid, best_U, best_Vh = fid2, U.clone(), Vh_eff.clone()
     return best_U, best_Vh, best_fid
@@ -232,8 +233,8 @@ def _fix_gauge(Gamma: torch.Tensor):
     return sigma, xinv, yinv
 
 
-def fet_m2(Gamma: torch.Tensor, chi: int, prep=None) -> tuple:
-    """M2 = the closed-form gauge-fix + top-chi (a (c) heuristic; loop-free optimum)."""
+def _gauge_fix_truncation(Gamma: torch.Tensor, chi: int, prep=None) -> tuple:
+    """Closed-form gauge-fix plus top-chi truncation heuristic."""
     if prep is None:
         prep = _fix_gauge(Gamma)
     sigma, xinv, yinv = prep
@@ -274,17 +275,20 @@ def build_seeds(Gamma: torch.Tensor, state, bond: str, chi: int, prep) -> list:
         # The carrier_svd seed expects carrier-bond structure (it QR-splits + reshapes the
         # pair-insertion to a square). On a standalone (non-carrier) KAT tensor that reshape is
         # INAPPLICABLE => a benign RuntimeError. This is EXPECTED, not an alarm — skip silently;
-        # the identity/m2/rand/perm_id seeds carry the best-of. (On a REAL carrier bond this
+        # the identity/gauge-fix/random/permuted-identity seeds carry the best-of.
+        # (On a REAL carrier bond this
         # seed builds fine, so this quiet skip only fires for standalone tensors.)
         _p("      [seed carrier_svd n/a for standalone tensor]")
     except Exception as exc:  # noqa: BLE001  # any OTHER failure stays visible
         _p(f"      [seed carrier_svd skipped] {type(exc).__name__}: {exc}")
     try:
-        Um2, _Vhm2, _f = fet_m2(Gamma, chi, prep=prep)
-        q, _r = torch.linalg.qr(Um2)
-        seeds.append(("m2", q[:, :chi].contiguous().to(CDTYPE)))
+        gauge_u, _gauge_vh, _gauge_fid = _gauge_fix_truncation(
+            Gamma, chi, prep=prep
+        )
+        q, _r = torch.linalg.qr(gauge_u)
+        seeds.append(("gauge_fix", q[:, :chi].contiguous().to(CDTYPE)))
     except Exception as exc:  # noqa: BLE001
-        _p(f"      [seed m2 skipped] {type(exc).__name__}: {exc}")
+        _p(f"      [seed gauge_fix skipped] {type(exc).__name__}: {exc}")
     g = torch.Generator(device="cpu")
     g.manual_seed(1_000_003 * int(chi) + 31 * int(a) + int(b))
     re = torch.randn(D, chi, generator=g, dtype=RDTYPE)
@@ -298,9 +302,14 @@ def build_seeds(Gamma: torch.Tensor, state, bond: str, chi: int, prep) -> list:
     return seeds
 
 
-def fet_m1(Gamma: torch.Tensor, state, bond: str, chi: int, prep) -> dict:
-    """Multi-restart best-of M1. Returns best ``(U, Vh, fid)``, per-seed fids,
-    cross-seed spread (informational), M2 fid + dFid (fork input)."""
+def _multistart_als_truncation(
+    Gamma: torch.Tensor,
+    state,
+    bond: str,
+    chi: int,
+    prep,
+) -> dict:
+    """Return the best multistart ALS map and its gauge-fix comparison."""
     seeds = build_seeds(Gamma, state, bond, chi, prep)
     per_seed = []
     best = None
@@ -323,18 +332,22 @@ def fet_m1(Gamma: torch.Tensor, state, bond: str, chi: int, prep) -> dict:
     fids = [f for _n, f in per_seed if np.isfinite(f)]
     spread = (max(fids) - min(fids)) if len(fids) >= 2 else 0.0
     try:
-        _U2, _V2, fid_m2 = fet_m2(Gamma, chi, prep=prep)
-        fid_m2 = float(fid_m2)
-        dfid = best["fid"] - fid_m2
-        floor_ok = best["fid"] >= fid_m2 - FET_OPT_FLOOR
+        _gauge_u, _gauge_vh, fid_gauge_fix = _gauge_fix_truncation(
+            Gamma, chi, prep=prep
+        )
+        fid_gauge_fix = float(fid_gauge_fix)
+        dfid = best["fid"] - fid_gauge_fix
+        floor_ok = best["fid"] >= fid_gauge_fix - FET_OPT_FLOOR
     except Exception as exc:  # noqa: BLE001
-        _p(f"      [M2 gauge-fix skipped] {type(exc).__name__}: {exc}")
-        fid_m2 = None
+        _p(f"      [gauge_fix comparison skipped] {type(exc).__name__}: {exc}")
+        fid_gauge_fix = None
         dfid = None
         floor_ok = True
     return {
         "chi": int(chi), "best_seed": best["seed"], "U": best["U"], "Vh": best["Vh"],
-        "fid_m1": best["fid"], "fid_m2": fid_m2, "dfid": dfid,
+        "fid_multistart_als": best["fid"],
+        "fid_gauge_fix": fid_gauge_fix,
+        "dfid": dfid,
         "per_seed": per_seed, "cross_seed_spread": float(spread),
         "opt_floor_ok": bool(floor_ok),
     }
@@ -366,7 +379,8 @@ def env_optimal_rank(state, bond: str,
     """Sweep ``χ = 1..bare_rank`` on the bond's exact double-layer environment
     ``Γ`` and return ``(env_rank, U, V†, fid_env)`` for the SMALLEST ``χ`` whose
     achieved environment fidelity ``Fid_Γ(χ) ≥ 1 − eps_fid`` (via the multi-restart
-    M1 solver); ``fid_env`` is that achieved ``Fid_Γ`` (contract §3's Fid_Γ).
+    multistart ALS solver); ``fid_env`` is that achieved ``Fid_Γ``
+    (contract §3's Fid_Γ).
     ``bare_rank`` = the exact local rank ``_exact_rank(_insertion_spectrum(bond))``
     (the carrier's own rank read — the FET never keeps MORE than the local rank;
     contract §4), capped at the stored bond dim.
@@ -389,7 +403,7 @@ def env_optimal_rank(state, bond: str,
     prep = None
     try:
         prep = _fix_gauge(Gamma)
-    except Exception as exc:  # noqa: BLE001  # M2 seed unavailable; M1 still runs
+    except Exception as exc:  # noqa: BLE001  # gauge seed unavailable; ALS still runs
         _p(f"      [env_optimal_rank {bond}] fix_gauge failed: {type(exc).__name__}: {exc}")
     if os.environ.get("FET_FIDCURVE_DEBUG") == "1":
         # DIAGNOSTIC (env-gated, BEHAVIOR-IDENTICAL): log the FULL fid(chi) curve to
@@ -400,14 +414,19 @@ def env_optimal_rank(state, bond: str,
         accepted = None
         best = None
         for chi in range(1, bare + 1):
-            m1 = fet_m1(Gamma, state, bond, chi, prep)
-            fid = gamma_fidelity(Gamma, m1["U"] @ m1["Vh"])
+            als_result = _multistart_als_truncation(Gamma, state, bond, chi, prep)
+            fid = gamma_fidelity(Gamma, als_result["U"] @ als_result["Vh"])
             ffid = float(fid) if np.isfinite(fid) else float("-inf")
             curve.append((chi, ffid))
             if best is None or ffid > best[3]:
-                best = (chi, m1["U"], m1["Vh"], ffid)
+                best = (chi, als_result["U"], als_result["Vh"], ffid)
             if accepted is None and np.isfinite(fid) and fid >= fid_target:
-                accepted = (int(chi), m1["U"], m1["Vh"], float(fid))
+                accepted = (
+                    int(chi),
+                    als_result["U"],
+                    als_result["Vh"],
+                    float(fid),
+                )
         n_sent = sum(1 for _, f in curve if f == float("-inf"))
         _p(f"      [FIDCURVE {bond}] D={D} bare={bare} target={fid_target:.12f} "
            f"accept_chi(<=1e-8)={accepted[0] if accepted else None} "
@@ -421,13 +440,13 @@ def env_optimal_rank(state, bond: str,
         return int(D), eye, eye, 1.0
     best = None
     for chi in range(1, bare + 1):
-        m1 = fet_m1(Gamma, state, bond, chi, prep)
-        fid = gamma_fidelity(Gamma, m1["U"] @ m1["Vh"])
+        als_result = _multistart_als_truncation(Gamma, state, bond, chi, prep)
+        fid = gamma_fidelity(Gamma, als_result["U"] @ als_result["Vh"])
         ffid = float(fid) if np.isfinite(fid) else -1.0
         if best is None or ffid > best[3]:
-            best = (int(chi), m1["U"], m1["Vh"], ffid)
+            best = (int(chi), als_result["U"], als_result["Vh"], ffid)
         if np.isfinite(fid) and fid >= fid_target:
-            return int(chi), m1["U"], m1["Vh"], float(fid)
+            return int(chi), als_result["U"], als_result["Vh"], float(fid)
     # No χ<=bare cleared the bar. theory-fix (2026-07-11): with the Hermitian-PSD Γ +
     # regularized solve this is UNREACHABLE (χ=bare is a lossless identity insertion => fid=1),
     # but if it ever fires, accept the BEST χ<=bare (highest Fid_Γ) — NEVER keep the

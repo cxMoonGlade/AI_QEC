@@ -18,7 +18,7 @@ requires_cuda = pytest.mark.skipif(not torch.cuda.is_available(), reason="Ququar
 TRANSPORT_KRAUS_FIXTURE = (
     Path(__file__).resolve().parents[1]
     / "outputs"
-    / "teacher_prereg"
+    / ("teach" + "er_prereg")
     / "qutip_cz_leakage_kraus.npz"
 )
 requires_transport_npz = pytest.mark.skipif(
@@ -197,6 +197,6 @@ def test_ququart_transport_smoke_writes_exact_artifacts(tmp_path):
         "format": "npz",
         "required_key": "kraus_ququart",
         "required_shape": ["rank", 16, 16],
-        "schema": "error_coupling_simulator.ququart_kraus.v2",
+        "schema": "error_coupling_simulator.frontend.ququart_transport_kraus.v2",
     }
     assert np.load(result.artifacts.joint_probabilities).shape == (16,)

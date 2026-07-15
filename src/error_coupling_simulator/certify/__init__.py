@@ -1,10 +1,6 @@
-"""Certify controlled noise-process records against independent formal anchors.
+"""Certify specified noise-process records against independent formal anchors."""
 
-See ``README.md``. ``certify_noise_process`` is the neutral public spelling;
-``certify_teacher`` remains available for compatibility with historical callers.
-"""
-
-from .facade import certify_noise_process, certify_teacher
+from .facade import certify_noise_process
 from .channel_diagnostics import pauli_basis, ptm_from_kraus, ptm_from_unitary
 from .types import (
     Anchor,
@@ -41,7 +37,6 @@ __all__ = [
     "Statistic",
     "Verdict",
     "certify_noise_process",
-    "certify_teacher",
     "pauli_basis",
     "ptm_from_kraus",
     "ptm_from_unitary",

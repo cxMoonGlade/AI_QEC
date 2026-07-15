@@ -10,10 +10,10 @@ or claim module.
 - **Exact-forward family:** fused dense subsystem Kraus/unitary operations, loaded by
   `carrier/accel.py`. Its c128 result must agree numerically with the retained Torch reference
   within the declared `<=1e-12` gate; the reference remains the CPU/no-kernel fallback.
-- **Fused-SV family:** the GPU-only `sv_traj_d3` module, loaded by
-  `carrier/kernels/sv_traj_d3_loader.py`; there is no CPU compute fallback. Although the compiled
-  module contains lumped and within-cycle entry points, c64 is authorized only through the active
-  `FusedWithinCycleSampler` / `sv_traj_d3_wc` optimization path.
+- **Fused-SV family:** the GPU-only `sv_traj_d3_wc` kernel, loaded by
+  `carrier/kernels/sv_traj_d3_loader.py`; there is no CPU compute fallback. The sole compiled
+  entry point consumes the within-cycle operation schedule. c64 is authorized only through the
+  active `FusedWithinCycleSampler` optimization path.
 - **Out of scope:** physics construction, tolerance selection, FET, and claim promotion. WG
   channels, codestates, composition, and CPTP checks are completed in c128 before the checked
   complex execution tables are cast at the fused-SV boundary.
@@ -31,7 +31,7 @@ workload benefits from GPU execution.
 |---|---|---|
 | `fused_local_kraus` | `embed_operator` + `apply_kraus` chain in `apply_channel_local` / `apply_unitary` (K=1) | one thread per output element; gathers the target-qubit subspace by bit arithmetic (qubit 0 = most significant, matching `circuit_sim`); raw (unhermitianized) sum — the torch side hermitianizes, matching `apply_kraus` exactly. Backward: `grad_rho` via the same kernel with the adjoint Kraus stack; `grad_kraus` via a small subspace-einsum composite (v2: fuse). |
 | `qutrit_mcwf_ops` | repeated dense qutrit MCWF operations | c128-only reference/compatibility path. It is not the c64 optimization engine. |
-| `sv_traj_d3` / `sv_traj_d3_wc` | per-operation Python/Torch launches for the d3 qutrit trajectory loop | separately compiled c128 (`complex128`/`float64`) and c64 (`complex64`/`float32`) ABIs. Only `sv_traj_d3_wc` under `run_purpose="optimization"` may use c64, and its artifact is `screening_only`; final/certification uses c128 and remains `c128_candidate`. Integer schedule tensors stay int32. Python and C++ guards validate dtype, device, shape, and index bounds before launch. |
+| `sv_traj_d3_wc` | per-operation Python/Torch launches for the d3 qutrit trajectory loop | separately compiled c128 (`complex128`/`float64`) and c64 (`complex64`/`float32`) ABIs. Only `run_purpose="optimization"` may use c64, and its artifact is `screening_only`; final/certification uses c128 and remains `c128_candidate`. Integer schedule tensors stay int32. Python and C++ guards validate dtype, device, shape, and index bounds before launch. |
 
 ## Verification boundary
 
@@ -45,4 +45,4 @@ historical fitting-workload timings are intentionally not part of this kernel co
 ## Build
 
 JIT via `torch.utils.cpp_extension.load` on first use (ninja; nvcc from
-`/usr/local/cuda`); no install step. `QEC_TWIN_NO_KERNELS=1` disables loading.
+`/usr/local/cuda`); no install step. `ECS_DISABLE_NATIVE_KERNELS=1` disables loading.

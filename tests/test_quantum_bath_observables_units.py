@@ -1,8 +1,8 @@
 """Stage-D batch D1 -- per-unit L0+L1 coverage of
 ``error_coupling_simulator.quantum_bath.observables`` (7 CPU-pure units).
 
-Full-coverage program (docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4;
-work-list docs/twin_validation/l3_release_package_unit_inventory.md batch D1). The module
+Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
+work-list docs/SIMULATOR.md batch D1). The module
 is alphabet-agnostic multi-time record statistics over a 3-round outcome distribution --
 pure math (numpy/math only, no torch), so it gets the FULL treatment: L0 (100% statement +
 branch per unit) + L1 (Hypothesis faithfulness properties). L2 (mutmut) runs in Stage E.

@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-r"""FET STAGE-2a — registered pytest gates for the ``carrier/peps/fet.py``
+r"""Registered pytest gates for the ``carrier/peps/fet.py``
 environment-aware rank-selection truncator + its ``fet_env`` policy wiring.
 
-Written AGAINST the binding contract
-``docs/nonpauli_teacher/fet_stage2_src_contract_2026-07-11.md`` (§5 GATES) —
+Written against the registered FET source contract (§5 gates) —
 NEVER against the implementation: the parallel-built module
 ``src/error_coupling_simulator/carrier/peps/fet.py`` (and the ``fet_env`` branches
 in ``trajectory.py``) is imported at TEST RUNTIME ONLY (inside
@@ -28,8 +27,7 @@ Coverage (the contract §5 gate rows this file owns; the d3-scale exact-Γ arm):
 
   * G-SA-CORROB (a) — after a ``fet_env`` truncation of one leak-off round, the
       carrier's ``dense_psi`` S_A across cut A equals the INLINE GF(2) stabilizer
-      entropy baseline (``stabilizer_entropy_SA`` + helpers copied VERBATIM from
-      ``outputs/nonpauli_teacher/fet_stage1_env_truncation.py`` — they import
+      entropy baseline (``stabilizer_entropy_SA`` + independent helpers — they import
       NOTHING from the carrier). Control: a shifted reference at 10·tol trips.
 
   * fet_env WIRING SMOKE:
@@ -66,7 +64,7 @@ import torch
 from _support.fixtures import assert_control_trips, require_precondition
 
 # --------------------------------------------------------------------------- #
-# Constants (contract §5 bars + the Stage-1 d3 leak-off run constants)         #
+# Constants (contract §5 bars + the independent d3 leak-off run constants)    #
 # --------------------------------------------------------------------------- #
 PATCH = "d3_at_q6_7"
 G_SEEP = 0.09
@@ -79,7 +77,7 @@ FIT_SEED = 0
 BASE_SEED_OFF = 2026
 WG_L1_OFF = 0.0
 
-EPS_SPIKE = 1e-8          # dynamic_eps control knob (matches the Stage-1 d3 gates)
+EPS_SPIKE = 1e-8          # dynamic_eps control knob used by the d3 gates
 W_MAX = 160
 CUT_A = (0, 1, 2, 3)
 GROWN_MIN = 5             # a grid bond dim >= this counts as "grown" (over-count present)
@@ -90,7 +88,7 @@ GAMMA_REL_TOL = 1e-9     # G-ANTICIRC two-route Γ bar
 FID_ANTICIRC_TOL = 1e-6  # G-ANTICIRC Fid_Γ == fid_dense bar
 SA_BASELINE_LEAKOFF = 2.0   # d3 leak-off GF(2) stabilizer entropy across cut (0,1,2,3)
 SA_OFF_TOL = 1e-4        # leak-off post-trunc S_A deviation bar
-NORM_GUARD = 1e-12       # fid_dense NORM GUARD (Stage-1 F8): degenerate trunc => fid 0
+NORM_GUARD = 1e-12       # fid_dense norm guard: degenerate truncation gives fidelity 0
 
 _CUDA = torch.cuda.is_available()
 requires_cuda = pytest.mark.skipif(
@@ -266,10 +264,10 @@ def _exact_rank(S: torch.Tensor) -> int:
 
 # =========================================================================== #
 # INDEPENDENT REFEREES (share NO code with fet.py — contract §7).             #
-#   * GF(2) stabilizer entropy: COPIED VERBATIM from the Stage-1 diagnostic    #
+#   * GF(2) stabilizer entropy: independent inline diagnostic                 #
 #     (import NOTHING from the carrier).                                       #
 #   * carrier_SA: the carrier's OWN dense S_A read (routed through the adapter #
-#     dense_psi — the only minimal adaptation vs the Stage-1 verbatim copy).   #
+#     dense_psi — the only adapter used by that independent calculation).      #
 #   * Γ_dense / fid_dense / write-back: the anti-circular two-route referees.  #
 # =========================================================================== #
 def _gf2_rank(rows: list) -> int:
@@ -321,7 +319,7 @@ def stabilizer_entropy_SA(generators: list, n: int, region_A) -> float:
 
 def carrier_SA(state, region_A, n: int):
     """(S_A, leak_mass, schmidt_rank) of the carrier's EXACT pure state across cut
-    A (leakage-OFF read: restrict to {0,1}^n). Copied from the Stage-1 reuse script;
+    A (leakage-OFF read: restrict to {0,1}^n). Retained independent calculation;
     the ONLY adaptation is the adapter-routed ``dense_psi`` (runtime-import
     discipline). Shares NO code with fet.py."""
     psi = _dense_psi(state).detach().to(torch.complex128).cpu()
@@ -357,7 +355,7 @@ def _gamma_dense_ref(state, bond: str) -> torch.Tensor:
     """INDEPENDENT referee route for Γ[i,I,j,J] (shares NO code with the src's
     boundary machinery): an explicit opt_einsum contraction of the SAME site
     tensors — all physical legs traced ket·bra, all bonds summed except the target
-    bond left open on BOTH layers. Copied from the Stage-1 diagnostic."""
+    bond left open on BOTH layers."""
     import opt_einsum as oe
 
     layout = state.layout
@@ -408,7 +406,7 @@ def _gamma_dense_ref(state, bond: str) -> torch.Tensor:
 def _apply_fet_trunc_ref(state, bond: str, U: torch.Tensor, Vh: torch.Tensor) -> None:
     """The referee's OWN write-back (independent of the src): absorb ``U`` (D×χ)
     into site A's bond leg and ``Vh`` (χ×D) into site B's, keeping the ORIGINAL
-    bond name. Mutates ``state`` in place. Copied from the Stage-1 diagnostic."""
+    bond name. Mutates ``state`` in place."""
     a, b = _parse_bond(bond)
     ta, tb = _site_tensor(state, a), _site_tensor(state, b)
     axa = ta.inds.index(bond)
@@ -420,7 +418,7 @@ def _apply_fet_trunc_ref(state, bond: str, U: torch.Tensor, Vh: torch.Tensor) ->
 
 
 def _overlap_sq(psi_ref: torch.Tensor, psi_trunc: torch.Tensor) -> float:
-    """|<ref|trunc>|^2 / (||ref||^2 ||trunc||^2) with the Stage-1 NORM GUARD."""
+    """|<ref|trunc>|^2 / (||ref||^2 ||trunc||^2) with the explicit norm guard."""
     nr = float(torch.vdot(psi_ref, psi_ref).real)
     nt = float(torch.vdot(psi_trunc, psi_trunc).real)
     if not np.isfinite(nr) or not np.isfinite(nt) or nr <= 0.0:
@@ -436,7 +434,7 @@ def _fid_dense_ref(state, bond: str, U: torch.Tensor, Vh: torch.Tensor,
                    psi_before: torch.Tensor) -> float:
     """The Γ-INDEPENDENT global fidelity of the rank-χ truncation: apply it to a
     COPY (referee write-back), recompute ``dense_psi``, measure |<before|after>|^2.
-    Copied from the Stage-1 diagnostic."""
+    This calculation is independent of the environment-metric implementation."""
     cp = state.copy()
     _apply_fet_trunc_ref(cp, bond, U, Vh)
     psi_after = _dense_psi(cp)
@@ -464,7 +462,8 @@ def _basis_col(D: int, k: int, device) -> torch.Tensor:
 # Drive helpers + fixtures (the REAL Google d3 leak-off carrier, EXACT route)  #
 # =========================================================================== #
 def _parse_d3_sched():
-    import qec_twin.forward.exact.xzzx_parser as xp
+    from error_coupling_simulator.frontend import xzzx_parser as xp
+
     c01, m01 = xp.default_r01_paths(patch=PATCH, basis="X")
     c10, m10 = xp.default_r10_paths(patch=PATCH, basis="X")
     for p in (c01, m01, c10, m10):
@@ -479,9 +478,12 @@ def _parse_d3_sched():
 
 
 def _build_spec(c01, m01, *, R: int, base_seed: int):
-    from qec_twin.forward.scalable.sv_sampler import RunSpec
-    from error_coupling_simulator.mechanisms.qutrit_teachers import calibrate_theta_for_wg_l1
-    theta = calibrate_theta_for_wg_l1(WG_L1_OFF, g_seep=G_SEEP, g_heat=G_HEAT)
+    from error_coupling_simulator.carrier.within_cycle import RunSpec
+    from error_coupling_simulator.mechanisms.qutrit_leakage import (
+        solve_theta_for_wg_l1,
+    )
+
+    theta = solve_theta_for_wg_l1(WG_L1_OFF, g_seep=G_SEEP, g_heat=G_HEAT)
     return RunSpec(circuit_path=c01, metadata_path=m01, m=LOGICAL_M, theta=float(theta),
                    g_seep=G_SEEP, g_heat=G_HEAT, arm=ARM, b=B_BIAS, readout_conv=READOUT_CONV,
                    N=1, base_seed=int(base_seed), R=int(R), dtype="c128")

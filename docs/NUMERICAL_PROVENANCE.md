@@ -224,7 +224,7 @@ The authorized source-change phase completed the following active registered-pre
    direct-paper support count is zero.
 2. `b=0.9` is an explicit synthetic nuisance point and the required registered sweep
    `(0.5,0.75,1.0)` is carried in the manifest; it is not a physical headline value.
-3. `StaticZZCalibration` and Axis-2 source defaults emit `project-design` value provenance and deny
+3. `StaticZZParameters` and Axis-2 source defaults emit `project-design` value provenance and deny
    hardware-calibration status.
 4. The Gaussian-surrogate historical gate is separated from the exact finite-RTN diagnostic gate;
    both diagnostic lifts and the still-open production bridge are named explicitly.

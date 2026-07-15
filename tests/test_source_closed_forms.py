@@ -1,7 +1,7 @@
 """P1-b sampled-trajectory closed-form falsifiers for Axis-2 source processes.
 
 Promotes faithfulness-table rows 7 (RTNSource) and 8 (OneOverFDriftSource)
-(``docs/twin_validation/p1_faithfulness_table.md``) from "partially" toward
+(``docs/SIMULATOR.md``) from "partially" toward
 "bounded". ``tests/test_source_process.py`` already pins the PARAMETER-level
 closed forms (flip probability, autocorr base) and structural PSD properties;
 this file closes the remaining gap: SAMPLED trajectories must realize the

@@ -3,11 +3,11 @@ from __future__ import annotations
 """The certify CORE — route → controls-first → score → ledger; blind to concrete anchors.
 
 The core orchestrates the ``Anchor`` / ``Control`` ports: it owns the statistical backbone (total
-variation / band / null-subtraction) and the verdict roll-up, and is PURE PYTHON over the anchor /
-teacher results. All GPU model-compute lives in the wheels the adapters wrap.
+variation / band / null-subtraction) and the verdict roll-up, and is PURE PYTHON over the process /
+reference-oracle results. All GPU model-compute lives in the wheels the adapters wrap.
 
 PERFORMANCE (zero-overhead abstraction — do-not-lose-performance):
-  * ONE ``teacher.emit`` per (regime, m) — cached — feeds EVERY distributional statistic at that
+  * ONE ``process.emit`` per (regime, m) — cached — feeds EVERY distributional statistic at that
     regime (the emitted records are computed once, not once per statistic);
   * each anchor is called once per cell; ``capability`` is cheap feasibility arithmetic (no compute);
   * the adapters DELEGATE to the validated wheels (``record_oracle``, the stim oracle, the closed
@@ -44,7 +44,7 @@ _DIST_STATS = (Statistic.FULL_JOINT, Statistic.SYNDROME_DIST)
 # emitted statistics from records (graduates outputs/.../_dist_from_records)   #
 # --------------------------------------------------------------------------- #
 def emitted_statistic(records: dict, statistic: Statistic, regime: Regime):
-    """One statistic from a teacher's emitted records ``{"det": (N, R*n_stab) uint8, "obs": (N,)
+    """One statistic from a process's emitted records ``{"det": (N, R*n_stab) uint8, "obs": (N,)
     uint8}`` (the seam-folded surface). Pure host-side; ONE records draw feeds every statistic."""
     det = np.asarray(records["det"])
     obs = np.asarray(records["obs"])
@@ -65,7 +65,7 @@ def emitted_statistic(records: dict, statistic: Statistic, regime: Regime):
         # global mean) is what distinguishes a TRANSIENT chain from its stationary limit — the step-5b
         # correction; collapsing to one scalar hid the stationary-vs-transient bug. Still IDENTICALLY 0
         # (every round) for any independent-bit-flip foil (it factorizes across (round, stab)). At R=2
-        # the sequence is length 1. Graduates ``twin_xzzx_teacher._mean_rr_corr``.
+        # the sequence is length 1.
         # The full SIGNED (R-1, n_stab) Pearson matrix is built here (0 for a zero-variance entry — the
         # SAME convention the DM ``_conn_corr`` uses) and reduced by the SHARED ``reduce_rr_corr`` so
         # the emitted side and the DM anchor cannot drift (apples-to-apples; WS1 prereg §6).
@@ -207,14 +207,14 @@ class MeasureCtx:
     corruption."""
 
     def __init__(self, anchor: Anchor, statistic: Statistic, regime: Regime, N: int,
-                 emitted, anchor_value: AnchorValue, teacher: ControlledNoiseProcess):
+                 emitted, anchor_value: AnchorValue, process: ControlledNoiseProcess):
         self.anchor = anchor
         self.statistic = statistic
         self.regime = regime
         self.N = N
         self.emitted = emitted
         self.anchor_value = anchor_value
-        self.teacher = teacher
+        self.process = process
 
     def score(self, emitted=None, anchor_value=None) -> float:
         """The carrier-vs-anchor distance, optionally on a perturbed emitted / anchor value."""
@@ -228,18 +228,20 @@ class MeasureCtx:
         """Re-answer the anchor with a negative-control corruption (e.g. ``{"stab": j}``) — the
         corrupted ground truth the (correct) emitted surface must FAIL to match (the control's teeth).
         Costs one extra ``answer`` (inherent to the control, not overhead on the positive path)."""
-        return self.anchor.answer(self.teacher, self.statistic, self.regime, N=self.N, corrupt=corruption)
+        return self.anchor.answer(
+            self.process, self.statistic, self.regime, N=self.N, corrupt=corruption
+        )
 
 
 # --------------------------------------------------------------------------- #
 # the engine                                                                   #
 # --------------------------------------------------------------------------- #
-def certify_cells(teacher: ControlledNoiseProcess, cells, anchors, controls, *, N: int, seed: int = 0,
+def certify_cells(process: ControlledNoiseProcess, cells, anchors, controls, *, N: int, seed: int = 0,
                   m: int = 0) -> CertReport:
     """Route → controls-first → score → ledger over ``cells`` (a list of (Statistic, Regime)).
 
     ONE ``emit`` per (regime, m) is cached (perf). Controls run BEFORE the positive row and an inert
-    one forces FAIL (``_rollup``). The ``certify_teacher`` facade (step 6) layers the full policy on
+    one forces FAIL (``_rollup``). The ``certify_noise_process`` facade layers the full policy on
     top (auto-routing, the controls-non-optional gate, the level grid)."""
     rows: list[LedgerRow] = []
     control_rows: list[LedgerRow] = []
@@ -251,20 +253,22 @@ def certify_cells(teacher: ControlledNoiseProcess, cells, anchors, controls, *, 
         key = (_rkey(regime), kind, m)
         if key not in emit_cache:  # ONE emit per (regime, kind) — perf: shared across statistics
             if kind == "clifford_slice":
-                # the stim anchor's WIRING check: the teacher's bit-flip Clifford slice
+                # the stim anchor's WIRING check: the process's bit-flip Clifford slice
                 # (theta=0, gamma=0, X_ERROR(p_x)) — the SAME geometry + seam fold the full mix uses.
-                emit_cache[key] = teacher.emit_clifford_slice(regime, p_x=anchor.p_x, m=m, N=N, seed=seed)
+                emit_cache[key] = process.emit_clifford_slice(
+                    regime, p_x=anchor.p_x, m=m, N=N, seed=seed
+                )
             elif kind == "full":
-                emit_cache[key] = teacher.emit(regime, m=m, N=N, seed=seed)
+                emit_cache[key] = process.emit(regime, m=m, N=N, seed=seed)
             else:
-                # an anchor declares an emit_kind the teacher has no source for (e.g. the closed-form
-                # anchor's "nonunital_slice"): FAIL LOUD. Silently falling back to teacher.emit() would
+                # an anchor declares an emit_kind the process has no source for (e.g. the closed-form
+                # anchor's "nonunital_slice"): FAIL LOUD. Silently falling back to process.emit() would
                 # compare the anchor's isolated-slice prediction against the FULL-mix records (the
                 # degenerate-amp-damp footgun the review caught) — a silent toy. Wire the slice or use
                 # a standalone check (the closed-form anchor is validated by certify_closed_form_5b.py).
                 raise NotImplementedError(
-                    f"emit_kind {kind!r} (anchor {anchor.name!r}) has no teacher emit path in "
-                    f"certify_cells; wire teacher.emit_{kind}() or run the anchor's standalone check")
+                    f"emit_kind {kind!r} (anchor {anchor.name!r}) has no process emit path in "
+                    f"certify_cells; wire process.emit_{kind}() or run the anchor's standalone check")
         return emitted_statistic(emit_cache[key], statistic, regime)
 
     for statistic, regime in cells:
@@ -277,11 +281,11 @@ def certify_cells(teacher: ControlledNoiseProcess, cells, anchors, controls, *, 
             continue
         cap = anchor.capability(statistic, regime)
         routing[rk] = f"{anchor.name} [{cap.exactness.value}]"
-        av = anchor.answer(teacher, statistic, regime, N=N)
+        av = anchor.answer(process, statistic, regime, N=N)
         _assert_anchor_value(av, anchor)
         emitted = _emitted(anchor, statistic, regime)
         # controls FIRST (the invariant): perturb → re-measure → must fire
-        ctx = MeasureCtx(anchor, statistic, regime, N, emitted, av, teacher=teacher)
+        ctx = MeasureCtx(anchor, statistic, regime, N, emitted, av, process=process)
         cell_controls: list[LedgerRow] = []
         for ctrl in controls:
             if ctrl.guards(statistic):
@@ -298,7 +302,7 @@ def certify_cells(teacher: ControlledNoiseProcess, cells, anchors, controls, *, 
         rows.append(LedgerRow(anchor.name, statistic, value, band, av.epistemic_class, verdict, detail))
 
     return CertReport(_rollup(rows, control_rows), tuple(rows), tuple(control_rows), routing,
-                      dict(teacher.truth), {"N": N, "seed": seed, "m": m})
+                      dict(process.truth), {"N": N, "seed": seed, "m": m})
 
 
 def _assert_anchor_value(av: AnchorValue, anchor: Anchor) -> None:

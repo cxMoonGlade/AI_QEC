@@ -6,8 +6,8 @@ module-level functions ``circuit_to_stim`` / ``load_stim_circuit`` / ``write_sti
 contributes no units; the module imports NEITHER torch NOR quimb -- ``stim`` is a lazy import
 inside ``circuit_to_stim`` / ``load_stim_circuit`` -- so out_of_scope is empty).
 
-Full-coverage program (docs/twin_validation/wave2_6_unit_test_contract.md SS12.3/12.4;
-work-list docs/twin_validation/l3_release_package_unit_inventory.md D23).
+Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
+work-list docs/SIMULATOR.md D23).
 ``frontend/stim_io.py`` owns the Stim adapters that move between the key-based ``CircuitIR``
 and concrete ``stim.Circuit`` / ``stim.DetectorErrorModel`` artifacts (build / load / write /
 DEM / counts / sample).

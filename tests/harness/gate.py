@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))          # tests/  
 from harness import gpu_pool, proc  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[2]           # tests/harness/gate.py -> repo (portable)
-LOGDIR = REPO / "outputs/twin_validation/logs"
+LOGDIR = REPO / "outputs/simulator_validation/logs"
 ENVBIN = str(Path(sys.executable).parent)            # the running interpreter's bin (portable)
 # the AST-derived per-unit audit now lives WITH the harness; import it as a sibling module.
 from harness import coverage_audit as audit_mod  # noqa: E402

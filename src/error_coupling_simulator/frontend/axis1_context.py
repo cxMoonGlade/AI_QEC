@@ -5,7 +5,7 @@ from __future__ import annotations
 This module carries public, typed configuration for the simulator Axis-1 bridge.
 It is not a Pauli/Stim noise model, not Axis-2 source truth, and not a serialized
 channel payload. The values here only select/parameterize local Markovian
-primitive lowering before `forward.joint_lindbladian` assembles the joint
+primitive lowering before `carrier.joint_lindbladian` assembles the joint
 generator.
 """
 
@@ -18,7 +18,7 @@ from ..mechanisms.axis1_primitives import Axis1PrimitiveParams
 
 AXIS1_LOCAL_LINDBLAD_CONTEXT_METADATA_KEY = "axis1_local_lindblad_context"
 AXIS1_LOCAL_LINDBLAD_CONTEXT_SCHEMA = (
-    "qec_twin.simulator.Axis1LocalLindbladContextSpec.v1"
+    "error_coupling_simulator.frontend.local_lindblad_context.v1"
 )
 
 
@@ -114,6 +114,11 @@ class Axis1LocalLindbladContextSpec:
             )
         object.__setattr__(self, "epistemic_class", epistemic_class)
         object.__setattr__(self, "schema", str(self.schema))
+        if self.schema != AXIS1_LOCAL_LINDBLAD_CONTEXT_SCHEMA:
+            raise ValueError(
+                f"unsupported local Lindblad context schema {self.schema!r}; "
+                f"expected {AXIS1_LOCAL_LINDBLAD_CONTEXT_SCHEMA!r}"
+            )
 
     @property
     def is_trivial(self) -> bool:
