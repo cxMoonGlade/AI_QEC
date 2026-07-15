@@ -30,6 +30,12 @@ current finite-RTN source owner. Its post-result contract is in
 `docs/simulator_validation/finite_rtn_free_induction_diagnostic_contract_2026-07-15.md`; a pass does
 not assign CP-divisibility or BLP status to the production QEC channel or record.
 
+`test_literature_tools.py` protects developer-tooling trust boundaries rather than a simulator
+service. Its falsifiers cover explicit-manifest admission, source-PDF and audit-packet hashes,
+one-fact locators and checked pages, empty-corpus refusal, project-inference injection, stale live
+corpora, and corrupted RAG/KG text, claims, counts, hashes, IDs, relationships, statistics, and
+endpoints. Trusted build/query paths have no artifact-verification bypass.
+
 ## Coverage and mutation registries
 
 Current registries are the JSON files matching `tests/_support/*_targets.json`. A registry names:

@@ -341,7 +341,7 @@ claim that those later phases are complete.
 | 2 — P0 repair | complete | retired dispatcher deleted; retained record, packed bridge, Born probability, PTM, certification, coupled-process, and qutrit-leakage owners pass independent falsifiers |
 | 3 — Twin-only implementation hard cut | complete | retired implementation removed; all 128 intake tests reconciled; retained tests use current owners; static/subprocess/schema/package gates prove no retired runtime dependency |
 | 4 — authority reset | complete | current-only tracked authority; unsupported scientific claims withdrawn or explicitly pending |
-| 5 — literature reset | pending | paper-fact-only notes/RAG/KG with no dangling evidence |
+| 5 — literature reset | in progress | Phase 5A fail-closed corpus cut and neutral tools complete; load-bearing clean-room notes remain |
 | 6 — output cleanup | pending | dry-run manifest, targeted purge, current artifact regeneration |
 | 7 — inventory and acceptance | pending | zero-reference scans, rebuilt catalogs, full engineering gates |
 | 8 — formula audit restart | pending | current manifest frozen and sequential audit resumed |
@@ -397,6 +397,12 @@ Append one dated row per completed gate. A failed gate remains visible until rep
 | 2026-07-15 | 4 | regenerated code/service inventory | PASS | 104 installed Python modules, 4 native sources, 98 top-level test modules, 27 services, 71 unique acceptance files (29 cpu_light, 7 cpu_exclusive, 35 gpu_serial), 28 valid coverage registries; CODE_MAP check clean |
 | 2026-07-15 | 4 | retained PEPS/FET scientific blocker | OPEN/UNCHANGED | entropy gate remains 0.10860941571062639 versus GF(2) 2.0 at tolerance 1e-4; not converted to a skip or weakened |
 | 2026-07-15 | 4 | ignored local old-product tooling/retrieval surfaces | QUARANTINED | excluded from current authority; exact dry-run deletion/rebuild belongs to Phases 5–6 and remains pending |
+| 2026-07-15 | 5A | literature corpus inventory and current-corpus cut | PASS | 248 candidate content-note artifacts inspected; 0 current-schema notes; every legacy candidate excluded from current retrieval; original source objects preserved |
+| 2026-07-15 | 5A | neutral RAG/KG tools and corruption tests | PASS | 64 passed; manifest-only paper-fact retrieval, source/note/section/chunk hashes, exact-locator edges, unsupported-schema rejection, generated-index freshness, and dangling-edge falsifiers |
+| 2026-07-15 | 5A | current retrieval publication | ISOLATED/BOOTSTRAP EMPTY | 0 admitted notes, 0 RAG chunks, 0 KG edges, 0 dangling; no quarantined cache was read or migrated; empty publication is not literature completion |
+| 2026-07-15 | 5A | quantum-bath public-contract correction | PASS | result key hard-cut to `inequality_violated` with no alias; `False` is inconclusive; citation corrected to Bäcker et al., PRL 132, 060402 (2024), arXiv:2310.01205; formula/numerical/tolerance path unchanged; owner suites 12 + 14 passed and scope suite 8 passed |
+| 2026-07-15 | 5A | literature skill command/schema reset | PASS | `.agents` and `.claude` copies use neutral tools and source-only notes; paired skill/template copies are byte-identical |
+| 2026-07-15 | 5A | regenerated developer-tool inventory and collection | PASS | CODE_MAP check clean; 104 installed modules and 27 services unchanged; 2,204 tests collected including the 64 literature-tool gates |
 
 ## Phase-4 close boundary
 

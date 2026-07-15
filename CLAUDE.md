@@ -39,6 +39,11 @@ conda run -n aiqec python -m pytest -q tests/test_simulator_cudaq_grover.py
 python tests/harness/gate.py tests/_support/<batch>_targets.json
 python tests/harness/mutation.py tests/_support/<batch>_targets.json
 python tools/gen_code_map.py --check
+
+python tools/literature_rag.py audit
+python tools/literature_rag.py query "<mechanism or observable>" --top-k 12
+python tools/literature_kg.py stats
+python tools/literature_kg.py concept "<concept>"
 ```
 
 `environment-ecs.yml` is the Conda bootstrap, `uv.lock` is the transitive repository lock, and
@@ -48,6 +53,11 @@ bare `uv sync`; the wrapper explicitly targets the Conda environment. Do not set
 
 CUDA-Q is intentionally outside the canonical `ecs` process and runs in the retained `aiqec`
 environment. PyMatching is optional; the default record path is decoder-free.
+
+The literature tools build from live `error_coupling_simulator.literature.note.v1` records. RAG
+returns only `paper_fact`; KG relationships require exact source locators and zero dangling
+endpoints. Neither tool reads quarantined vector/graph caches. Retrieval is discovery only; reopen
+the primary source before using a load-bearing claim.
 
 ## Acceptance execution
 

@@ -51,7 +51,7 @@ def test_sigma_minus_emission_matches_amplitude_ode_and_is_non_unital():
     gt = qb.sigma_minus_emission_gt(nmax=16, zeta=ZETA, gamma=GAMMA, g=0.35, tau=TAU)
     assert gt["worst_err"] < 1e-7                              # GKSL p_e(t) == exact 1-excitation ODE
     assert gt["pe_final_gksl"] == pytest.approx(0.7241, abs=1e-3)
-    assert gt["pe_final_gksl"] < 0.999                         # non-unital: population genuinely decays
+    assert gt["pe_final_gksl"] < 0.999                         # non-unital: population decays
 
 
 def test_no_bath_record_is_trivial():
@@ -88,17 +88,16 @@ def test_record_distance_relaxation_is_distinguishable_from_incoherent():
     assert mintv >= 1e-3                                       # feasibly distinguishable (not incoherent-reproducible)
 
 
-def test_backer_witness_finite_gamma_memory_is_genuinely_quantum():
-    # Control 3 (Backer PRL 132, 230401, Theorem 1) -- the GENUINE quantum-memory witness: fires on C#(t1)<C(t2),
-    # the E#<E CLASSICAL-BOUND violation (keeps the '#'), silent on classical processes (Control 0b). Zero-T AD
-    # (our vacuum-mode JC, Choi rank-2 => C#=C) with UNDERDAMPED coupling (g > gamma/2) violates the bound; the
-    # OVERDAMPED (Markovian) limit does not. CAVEAT: sufficient-not-necessary; single-time-channel-TOMOGRAPHY
-    # (ACTIVE) quantity, NOT the passive record (Flag #1 open); the C#<C margin (~3e-3) convergence is unverified.
-    w_phys = qb.quantum_memory_witness(0.35, 0.15, ZETA, TAU, 12)         # underdamped (g=0.35 > gamma/2=0.075)
-    w_mark = qb.quantum_memory_witness(0.35, 50.0, ZETA, TAU, 12)         # overdamped / Markovian
-    assert w_phys["quantum_memory_required"] is True                      # C#<C fires (genuine, provisional margin)
-    assert w_phys["concurrence_revival"] > 1e-3
-    assert w_mark["quantum_memory_required"] is False                     # no revival => no quantum memory
+def test_baecker_inequality_flags_violation_and_inconclusive_grid():
+    # Bäcker et al., Phys. Rev. Lett. 132, 060402 (2024), arXiv:2310.01205,
+    # Theorem 1. This test pins the sampled C#(t1)<C(t2) diagnostic only. A
+    # positive flag still requires the theorem-hypothesis audit, while a false
+    # flag is inconclusive and does not establish the absence of quantum memory.
+    violating = qb.quantum_memory_witness(0.35, 0.15, ZETA, TAU, 12)
+    inconclusive = qb.quantum_memory_witness(0.35, 50.0, ZETA, TAU, 12)
+    assert violating["inequality_violated"] is True
+    assert violating["concurrence_revival"] > 1e-3
+    assert inconclusive["inequality_violated"] is False
     # sanity on the 2-qubit concurrence helpers: a Bell state has C = C# = 1, a product state 0
     bell = 0.5 * np.array([[1, 0, 0, 1], [0, 0, 0, 0], [0, 0, 0, 0], [1, 0, 0, 1]], dtype=complex)
     assert qb.concurrence(bell) == pytest.approx(1.0, abs=1e-9)
@@ -120,7 +119,7 @@ def test_qrt_null_memory_vanishes_in_markovian_limit():
 
 
 def test_collective_ad_null_absorbs_the_r1_markovian_residual():
-    # Control 2 (Fanchini 1301.3146: collective NM is super-additive). At r=1, gamma=50 (Markovian, memory~0)
+    # Fanchini 1301.3146 studies collective non-Markovian structure. At r=1, gamma=50 (Markovian, memory~0)
     # the residual to PER-QUBIT incoherent AD is the COLLECTIVE structure; the Dicke collective-AD null
     # (L=sqrt(Gamma)(sm0+sm1)) should absorb it (per-qubit AD cannot).
     ex = qb.dual_point(12, ZETA, 50.0, 0.0, 0.0, 0.35, 0.35, TAU)        # r=1, Markovian
@@ -132,7 +131,7 @@ def test_collective_ad_null_absorbs_the_r1_markovian_residual():
 
 
 def test_coherent_null_reduces_to_incoherent_and_carries_coherence():
-    # (#1) the broader coherent-null family: at U=I, zz=0 it MUST equal the incoherent axis-AD (legitimacy);
+    # The broader coherent-null family: at U=I, zz=0 it MUST equal the incoherent axis-AD (legitimacy);
     # with a coherent rotation it produces coherence-derived K (unlike the incoherent AD -> ~0 on the Z axis).
     ad = qb.axis_ad_null_point(p0=0.5, theta0=0.0, phi0=0.0)
     coh_id = qb.coherent_ad_null_point(u0=(0, 0, 0), u1=(0, 0, 0), ad0=(0.5, 0.0, 0.0), ad1=(0.5, 0.0, 0.0), zz=0.0)
@@ -140,4 +139,4 @@ def test_coherent_null_reduces_to_incoherent_and_carries_coherence():
     coh = qb.coherent_ad_null_point(u0=(0.0, math.pi / 2, 0.0), u1=(0, 0, 0), ad0=(0.3, 0.0, 0.0),
                                     ad1=(0.3, 0.0, 0.0), zz=0.3)
     assert coh["norm"] == pytest.approx(1.0, abs=1e-6)                  # CPTP (normalized)
-    assert coh["K_X"] > 0.05                                            # the coherent rotation genuinely imprints
+    assert coh["K_X"] > 0.05                                            # the coherent rotation imprints

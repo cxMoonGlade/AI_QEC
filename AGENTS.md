@@ -14,12 +14,19 @@ the current repository workflow and command guide.
 - `docs/METRICS.md` — metric definitions and epistemic classes.
 - `docs/FAITHFULNESS_PROTOCOL.md` — independent-reference and falsifier requirements.
 - `docs/NUMERICAL_PROVENANCE.md` — value-level evidence rules.
+- `docs/papers/README.md` + `docs/papers/CONCEPT_INDEX.md` — source-cache boundary and generated
+  source-located discovery index.
 - `docs/simulator_validation/` — current cleanup and retained-carrier status.
 
 Do not treat the pre-cleanup formula ledger, old output verdicts, old project documents, or current
 literature retrieval caches as authority. Until the literature reset closes, inspect primary papers
 directly and record exact equation/figure/table locators. Project inference belongs in a separate
 claim or audit packet.
+
+Local literature discovery uses `python tools/literature_rag.py query "<query>"` and
+`python tools/literature_kg.py concept "<concept>"`. These tools accept only current-schema
+`paper_fact` records. A hit routes the reader back to a source and exact locator; it is not evidence
+by itself.
 
 ## Operating rules
 

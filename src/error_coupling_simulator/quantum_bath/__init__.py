@@ -58,21 +58,18 @@ __all__ = [
     "exact_cmi_bits",
     # gksl
     "build_shared_bath_liouvillian",
-    # Backer GENUINE quantum-memory witness (Control 3): concurrence C#(t1)<C(t2) = E#<E classical-bound
-    # violation (2310.01205 Thm 1; single-qubit zero-T AD, C#=C rank-2). This one is a real quantum-memory witness.
+    # Bäcker et al., Phys. Rev. Lett. 132, 060402 (2024), arXiv:2310.01205:
+    # assisted-entanglement inequality diagnostic. ``inequality_violated=False`` is inconclusive;
+    # a positive numerical flag still requires the theorem-hypothesis audit.
     "quantum_memory_witness",
     "concurrence",
     "concurrence_of_assistance",
     "jc_reduced_choi",
-    # NB (2026-07-07): the BACKFLOW / NON-MARKOVIANITY witnesses (entropic_memory_witness_single/_two_qubit)
-    # + their machinery (negativity, von_neumann_entropy) were RETRACTED as quantum-memory witnesses
-    # (2026-07-06, Control 0b: a bare revival drops Backer's classical bound '#', forgeable by classical RTN
-    # dephasing -- 2601.18822, 1608.05970) and RETIRED from the package (record: retired/quantum_bath/).
     # crow_joynt classical-field null
     "field_null_point",
     "gamma_unit_closed",
     "build_sigma",
-    # incoherent-AD nulls + the broader coherent-unitary null (#1)
+    # incoherent-AD nulls + the broader coherent-unitary null
     "axis_ad_null_point",
     "coherent_ad_null_point",
     "collective_ad_null_point",

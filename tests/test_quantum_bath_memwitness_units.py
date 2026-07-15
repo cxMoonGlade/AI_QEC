@@ -1,28 +1,19 @@
 """Per-unit L0+L1 coverage of
-``error_coupling_simulator.quantum_bath.memory_witness`` (4 LIVE public units).
+``error_coupling_simulator.quantum_bath.memory_witness`` (4 public units).
 
-Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
-work-list docs/SIMULATOR.md). The module is the
-Backer-et-al GENUINE quantum-memory witness (Control 3): the C#(t1) < C(t2) classical-bound
-violation (2310.01205 Thm 1) computed from single-time tomography of the JC sigma_minus
-zero-T amplitude-damping reduced dynamics. Four LIVE public units:
+The module evaluates the assisted-entanglement inequality from Bäcker, Beyer,
+and Strunz, Phys. Rev. Lett. 132, 060402 (2024), arXiv:2310.01205, Theorem 1,
+for the declared JC vacuum-mode reduced dynamics. ``inequality_violated`` records
+only whether the sampled grid contains ``C#(t1) < C(t2)``; ``False`` is
+inconclusive. Four public units are covered:
 
   UNIT                       L0 branch surface                         L1 faithfulness property
   ----                       -----------------                         ------------------------
   jc_reduced_choi            none tracked (straight line; 0/0)         valid Choi: trace-1, Hermitian, PSD
   concurrence                none tracked (straight line; 0/0)         in [0,1]; == indep Wootters formula
   concurrence_of_assistance  none tracked (straight line; 0/0)         in [0,1]; >= concurrence; Bell=1
-  quantum_memory_witness     for/if k>0; Csharp<C fire + fired-break    C#(t1)<C(t2) fires underdamped,
-                             + revival min/max loop (both arcs)         silent Markovian (crafted, not HYP)
-
-RETIRED (2026-07-07). The entropic / negativity-BACKFLOW witnesses
-(``entropic_memory_witness_single`` / ``entropic_memory_witness_two_qubit``) + their machinery
-(``negativity``, ``von_neumann_entropy``, ``_revival_fire``, ``_two_qubit_*``) were RETRACTED
-as quantum-memory witnesses (2026-07-06, Control 0b: a bare entanglement-monotone revival =
-RHP non-Markovianity / entanglement BACKFLOW, which drops Backer's classical bound '#' and is
-forgeable by classical RTN dephasing -- lit 2601.18822, 1608.05970) and REMOVED from the
-reachable package (record: retired/quantum_bath/memory_witness_entropic_backflow_2026-07-07.py).
-They are therefore no longer public units and are neither registered nor scored here.
+  quantum_memory_witness     for/if k>0; Csharp<C fire + fired-break    sampled violation and non-violation,
+                             + revival min/max loop (both arcs)         with the latter treated as inconclusive
 
 NB on the "branch surface" (coverage.py --branch convention, honest 0/0). The three cheap units
 are STRAIGHT-LINE bodies with NO Python decision point, so coverage.py emits NO tracked branch
@@ -86,7 +77,7 @@ def _dm_from_ginibre(re: list, im: list, d: int) -> np.ndarray:
 def _wootters_lambdas_ref(rho4: np.ndarray) -> np.ndarray:
     """INDEPENDENT re-implementation of the Wootters lambdas (spin-flipped square-root eigenvalues,
     sorted DESC) -- used by the KILLER teeth + the concurrence value-pin, NOT importing the module's
-    private ``_wootters_lambdas``, so the check is a genuine from-scratch variant (faithfulness
+    private ``_wootters_lambdas``, so the check is an independent from-scratch variant (faithfulness
     protocol: independent GT)."""
     rho_t = _SYY @ rho4.conj() @ _SYY
     ev = np.linalg.eigvals(rho4 @ rho_t).real
@@ -146,19 +137,19 @@ def test_L0_concurrence_of_assistance_runs_bell_and_product():
     assert mw.concurrence_of_assistance(_product_rho()) == pytest.approx(0.0, abs=1e-12)
 
 
-def test_L0_quantum_memory_witness_covers_fire_and_silent_arcs():
+def test_L0_quantum_memory_witness_covers_violating_and_inconclusive_arcs():
     # UNDERDAMPED (g=1, gamma=0.15): non-Markovian revival -> C#(t1)<C(t2) FIRES. This takes the
     # ``if k>0`` True arc (k>=1), the ``Csharp[i] < C[j]`` True arc, the inner ``break`` and the
     # ``if fired: break`` True arc, and the revival min/max loop.
     ud = mw.quantum_memory_witness(g=1.0, gamma=0.15, zeta=0.0, tau=6.0, nmax=6, n_t=24)
-    assert ud["quantum_memory_required"] is True
+    assert ud["inequality_violated"] is True
     assert ud["fired_t1_t2"] is not None
     assert ud["concurrence_revival"] > 1e-6
     # MARKOVIAN (gamma=50): monotone decay, NEVER fires -> the ``Csharp[i] < C[j]`` False arc for
     # every (i,j), the inner loop FALLS THROUGH (no break), and ``if fired`` stays False (fired is
     # None): the complementary branch arcs.
     mk = mw.quantum_memory_witness(g=1.0, gamma=50.0, zeta=0.0, tau=6.0, nmax=6, n_t=24)
-    assert mk["quantum_memory_required"] is False
+    assert mk["inequality_violated"] is False
     assert mk["fired_t1_t2"] is None
     assert mk["concurrence_revival"] == pytest.approx(0.0, abs=1e-9)
 
@@ -280,6 +271,7 @@ def test_L1_quantum_memory_witness_curves_match_independent_oracle():
                 fired = (float(ts[i]), float(ts[j])); break
         if fired:
             break
+    assert w["inequality_violated"] is (fired is not None)
     assert (w["fired_t1_t2"] is None) == (fired is None)
     if fired is not None:
         assert w["fired_t1_t2"][0] == pytest.approx(fired[0], abs=1e-9)

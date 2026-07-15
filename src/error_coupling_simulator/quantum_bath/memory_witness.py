@@ -1,6 +1,6 @@
-r"""Backer et al. quantum-memory witness (Control 3) -- is the finite-gamma memory QUANTUM or CLASSICAL?
+r"""Bäcker et al. entanglement-based quantum-memory witness diagnostic.
 
-Backer, Beyer, Strunz, PRL 132, 230401 (2024) [arXiv:2310.01205], Theorem 1: for two-time dynamics with Choi
+Bäcker, Beyer, Strunz, Phys. Rev. Lett. 132, 060402 (2024) [arXiv:2310.01205], Theorem 1: for two-time dynamics with Choi
 states chi_1 (over [0,t1]) and chi_2 (over [0,t2]),
 
     E#[chi(t1)] < E[chi(t2)]   =>   QUANTUM memory is REQUIRED (no classical-memory realization exists).
@@ -12,24 +12,19 @@ Wootters lambda_i: with lambda_i = sqrt(eig(rho rho~)) sorted DESC (rho~ = (sy(x
     C(rho)  = max(0, lambda_1 - lambda_2 - lambda_3 - lambda_4)   [Wootters concurrence]
     C#(rho) = lambda_1 + lambda_2 + lambda_3 + lambda_4           [concurrence of assistance]
 
-Backer's key result: for ZERO-TEMPERATURE amplitude damping the reduced-channel Choi is rank-2 with C# = C, and
-C(t) is NON-monotonous in the non-Markovian regime (a concurrence revival) => there ALWAYS exist t2>t1 with
-C(t1) < C(t2) => quantum memory REQUIRED. Our JC sigma_minus emission into a VACUUM mode IS zero-T amplitude
-damping on the reduced qubit, so the criterion applies directly and is computed from single-time tomography of
-the reduced dynamics -- NO process-tensor reconstruction.
+For the paper's zero-temperature amplitude-damping example the reduced-channel Choi state is rank two and
+C# = C, so a concurrence revival can satisfy the inequality. This module evaluates the same quantities for the
+declared Jaynes--Cummings vacuum-mode model. Interpreting a numerical violation as a quantum-memory conclusion
+still requires checking every hypothesis of the cited theorem for that reduced-map family; the implementation is
+a bounded formal diagnostic, not a production-record verdict.
 
 Choi state of the reduced channel E(t) = Tr_mode[ U_t( . (x) |vac><vac| ) U_t^dag ]: prepare |phi+>_{S,A} (S =
 system qubit coupled to the mode, A = spectator ancilla), tensor the mode in vacuum, evolve S+mode under the JC
 GKSL for time t, trace out the mode -> chi(t) = (E(t) (x) I_A)|phi+><phi+| on (S,A).
 
-Boundary: exact-DM CPU (dim = 4*nmax for S,A,mode); evaluator-side; SIMULATOR frame (FORMAL oracle).
-
-RETIRED sibling (2026-07-07): the entropic / negativity-BACKFLOW witnesses
-(entropic_memory_witness_single/_two_qubit) + their machinery (negativity, von_neumann_entropy,
-_revival_fire, _two_qubit_*) were RETRACTED as quantum-memory witnesses (a bare monotone revival =
-RHP non-Markovianity, forgeable by classical RTN dephasing; lit 2601.18822, 1608.05970) and REMOVED
-from the reachable package -- record in retired/quantum_bath/memory_witness_entropic_backflow_2026-07-07.py.
-The genuine quantum-memory statement is quantum_memory_witness (the Backer C#(t1)<C(t2) violation) below.
+Boundary: exact-density-matrix CPU execution (dimension = 4*nmax for system, ancilla, and mode),
+evaluator-side, formal-oracle status. A bare monotone revival without the theorem's assisted-entanglement
+bound is not accepted as a quantum-memory witness.
 """
 
 from __future__ import annotations
@@ -93,11 +88,15 @@ def concurrence_of_assistance(rho4):
 
 
 def quantum_memory_witness(g, gamma, zeta, tau, nmax, n_t=40):
-    """Backer Theorem 1 over a time grid t in (0, 2*tau]: QUANTUM memory REQUIRED if exists t1<t2 with
-    C#[chi(t1)] < C[chi(t2)]. Returns the verdict + the concurrence curves + the firing (t1,t2) if any.
+    """Evaluate the Bäcker inequality over a grid ``t in (0, 2*tau]``.
 
-    Also reports whether C(t) is non-monotonous (the zero-T AD signature, where C#=C so the criterion reduces to
-    a concurrence revival) and the max Choi rank (rank-2 => C#=C exactly, Backer's zero-T case).
+    ``inequality_violated`` records whether a sampled pair satisfies
+    ``C#[chi(t1)] < C[chi(t2)]``. ``False`` is inconclusive: it does not establish
+    classical memory or the absence of quantum memory. Scientific interpretation of a
+    positive flag requires the theorem-hypothesis audit described in the module boundary.
+
+    The result also reports the sampled concurrence curves, their extrema, the first
+    violating pair, and the concurrence-revival magnitude.
     """
     ts = np.linspace(2.0 * tau / n_t, 2.0 * tau, n_t)
     # propagate the SAME Choi state on a fixed dt step (one expm), not a fresh expm(L*t) per point.
@@ -131,6 +130,6 @@ def quantum_memory_witness(g, gamma, zeta, tau, nmax, n_t=40):
     for k in range(1, n_t):
         running_min = min(running_min, C[k])
         revival = max(revival, C[k] - running_min)
-    return {"quantum_memory_required": fired is not None, "fired_t1_t2": fired,
+    return {"inequality_violated": fired is not None, "fired_t1_t2": fired,
             "concurrence_revival": float(revival), "C_max": float(C.max()), "C_min": float(C.min()),
             "Csharp_max": float(Csharp.max()), "ts": ts.tolist(), "C": C.tolist(), "Csharp": Csharp.tolist()}

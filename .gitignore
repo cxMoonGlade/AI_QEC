@@ -19,6 +19,8 @@ docs/papers/*
 # (previously required `git add -f`; this negation lets them commit cleanly).
 !docs/papers/reading_notes/
 !docs/papers/reading_notes/**
+!docs/papers/CONCEPT_INDEX.md
+!docs/papers/CURRENT_CORPUS.toml
 *.txt
 
 # Packaging/build artifacts
