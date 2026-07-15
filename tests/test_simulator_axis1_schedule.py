@@ -161,20 +161,37 @@ def test_codespec_compiler_generates_axis1_schedule_metadata_without_truth_paylo
         "measurement",
         "barrier",
     }
-    assert manifest["duration_policy"]["table_id"] == "h3_h5_v1"
+    assert manifest["duration_policy"]["table_id"] == (
+        "error_coupling_simulator.frontend.duration_policy.v1"
+    )
     assert manifest["record_layout_ref"]["measurement_keys"][0] == "round0:x0"
     assert manifest["record_layout_ref"]["detector_names"][0] == "delta:x0:round1"
     assert manifest["qubit_roles"]["0"] == "data"
     assert manifest["qubit_roles"]["3"] == "ancilla"
 
+    assert set(manifest) == {
+        "schema_version",
+        "source_kind",
+        "source_hash",
+        "schedule_template",
+        "num_qubits",
+        "qubit_roles",
+        "qubit_coords",
+        "static_zz_couplings",
+        "static_zz_calibrations",
+        "record_layout_ref",
+        "duration_policy",
+        "representability",
+        "visibility",
+        "compiler_provenance",
+        "substeps",
+    }
     payload = json.dumps(manifest, sort_keys=True)
-    retired_owner_field = "teach" + "er_id"
     for forbidden in (
         "kraus",
         "ptm",
         "exact_channel",
         "source_timeline",
-        retired_owner_field,
     ):
         assert forbidden not in payload.lower()
 
@@ -193,14 +210,20 @@ def test_axis1_static_zz_device_spec_is_public_typed_metadata_only():
     )
     assert manifest["calibrations"] == []
 
+    assert set(manifest) == {
+        "metadata_key",
+        "edges",
+        "calibrations",
+        "num_qubits",
+        "visibility",
+        "representability",
+    }
     payload = json.dumps(manifest, sort_keys=True)
-    retired_owner_field = "teach" + "er_id"
     for forbidden in (
         "kraus",
         "ptm",
         "exact_channel",
         "source_timeline",
-        retired_owner_field,
     ):
         assert forbidden not in payload.lower()
 
@@ -315,14 +338,58 @@ def test_axis1_local_lindblad_context_spec_is_public_typed_metadata_only():
         "public_axis1_lindblad_parameter_metadata_no_operator_matrices_no_source"
     )
 
+    assert set(manifest) == {
+        "schema",
+        "metadata_key",
+        "include_thermal_excitation",
+        "gamma_up_per_ns",
+        "zeta_rad_per_ns",
+        "gamma_phi_per_ns",
+        "gamma_1_per_ns",
+        "gamma_readout_phi_per_ns",
+        "include_fsim_residual",
+        "fsim_delta_theta_rad",
+        "fsim_delta_phi_rad",
+        "include_leakage",
+        "leak_exchange_12_rad_per_ns",
+        "leak_seep_21_per_ns",
+        "leak_heat_12_per_ns",
+        "leak_exchange_11_02_rad_per_ns",
+        "leak_mobility_12_21_rad_per_ns",
+        "leak_transport_30_12_rad_per_ns",
+        "leak_transport_31_22_rad_per_ns",
+        "leak_cond_phase_left2_right_z_rad_per_ns",
+        "leak_cond_phase_left_z_right2_rad_per_ns",
+        "contains_operator_payload",
+        "contains_serialized_channel_payload",
+        "visibility",
+        "representability",
+        "epistemic_class",
+        "epistemic_classes",
+    }
+    assert set(manifest["epistemic_classes"]) == {
+        "sigma_plus_collapse_form",
+        "fsim_residual_hamiltonian_form",
+        "rate_values",
+        "thermal_excitation_selection",
+        "fsim_residual_angles",
+        "leak_exchange_12_rad_per_ns",
+        "leak_seep_21_per_ns",
+        "leak_heat_12_per_ns",
+        "leak_exchange_11_02_rad_per_ns",
+        "leak_mobility_12_21_rad_per_ns",
+        "leak_transport_30_12_rad_per_ns",
+        "leak_transport_31_22_rad_per_ns",
+        "leak_cond_phase_left2_right_z_rad_per_ns",
+        "leak_cond_phase_left_z_right2_rad_per_ns",
+        "leakage_selection",
+    }
     payload = json.dumps(manifest, sort_keys=True)
-    retired_owner_field = "teach" + "er_id"
     for forbidden in (
         "kraus",
         "ptm",
         "exact_channel",
         "source_timeline",
-        retired_owner_field,
     ):
         assert forbidden not in payload.lower()
 
@@ -902,13 +969,13 @@ def test_axis1_primitive_registry_lowers_supported_joint_channel_bundle_on_gpu()
             device="cuda",
         )
 
-    legacy_bundle = lower_two_qubit_axis1_primitives(
+    wrapper_bundle = lower_two_qubit_axis1_primitives(
         ("ZZ", "T2"),
         dt_ns=30.0,
         params=params,
         device="cuda",
     )
-    assert legacy_bundle.primitive_names == ("ZZ", "T2")
+    assert wrapper_bundle.primitive_names == ("ZZ", "T2")
 
     spectator_bundle = registry.lower(
         ("T2_B", "T1_B", "T1_UP_B"),
@@ -1918,7 +1985,7 @@ def test_axis1_mcwf_mps_contract_declares_dimension_polymorphic_carrier_without_
         "error_coupling_simulator.frontend.mcwf_mps_state_record_contract.v1"
     )
     assert contract["backend_contract"] == AXIS1_MCWF_MPS_CONTRACT_BACKEND_CONTRACT
-    # W-J de-overload: a contract-only surface (no execution) must not claim verdict:"pass"/passed.
+    # A contract-only surface (no execution) must not claim verdict:"pass"/passed.
     assert contract["verdict"] == "contract_only"
     assert contract["passed"] is False
     assert contract["contract_valid"] is True
@@ -5967,7 +6034,7 @@ def test_axis1_coupling_edge_metadata_fails_closed_for_invalid_rows():
         )
 
 
-def test_joint_channel_comparison_gate_emits_preregistered_rows_from_compiler_schedule():
+def test_joint_channel_comparison_emits_declared_rows_from_compiler_schedule():
     schedule = _joint_channel_schedule()
     rows = joint_channel_comparison_gate(schedule)
 

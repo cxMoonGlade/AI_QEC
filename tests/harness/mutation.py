@@ -1,11 +1,11 @@
-"""Registry-driven L2 MUTATION runner in Python (replaces stage_d_mutation.sh).
+"""Registry-driven L2 mutation runner.
 
 Runs mutmut via harness.proc so mutmut AND its worker pool live in one process group -> killed
 ATOMICALLY (no orphaned workers -- the exact failure the .sh runner had) with a real timeout.
 mutmut 3.6 config lives in setup.cfg (no run-CLI), so: back up setup.cfg -> write a per-batch
 [mutmut] (newline-joined lists; comma breaks mutmut's parser) -> run -> ALWAYS restore (finally).
 Serialized by an flock on the shared setup.cfg. GPU pool acquired if the registry is requires_gpu.
-STAGE_D_SKIP_SLOW=1 exported so slow physics pins are skipped under mutation. Gate: kill_rate>=BAR.
+ECS_MUTATION_SKIP_SLOW=1 skips slow physics pins under mutation. Gate: kill_rate>=BAR.
 Mutants reported by mutmut as ``no tests`` (worker exit 33) are non-killed and are reported
 separately; they must never inflate the kill rate.
 
@@ -53,7 +53,7 @@ def _knob(reg: dict, section: str, key: str, envname: str, default, cast):
 def _env() -> dict:
     e = dict(os.environ)
     e["PATH"] = ENVBIN + ":" + e.get("PATH", "")
-    e["STAGE_D_SKIP_SLOW"] = "1"
+    e["ECS_MUTATION_SKIP_SLOW"] = "1"
     return e
 
 

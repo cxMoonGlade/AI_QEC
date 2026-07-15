@@ -1,4 +1,4 @@
-"""Stage-D batch ``metadata_guard`` -- per-unit L0+L1+L2 coverage of
+"""Per-unit L0+L1+L2 coverage of
 ``error_coupling_simulator.frontend.metadata_guard`` (4 CPU-pure public units: the
 public-artifact ISOLATION-CONTRACT validator ``validate_public_metadata`` and the three
 axis1 static-ZZ normalizers ``normalize_axis1_static_zz_couplings`` /
@@ -6,17 +6,16 @@ axis1 static-ZZ normalizers ``normalize_axis1_static_zz_couplings`` /
 no torch, no quimb -- ``collections.abc`` + ``math`` + plain dict/f-string -- so out_of_scope
 is empty).
 
-Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
-work-list docs/SIMULATOR.md D21).
+Current coverage contract: docs/SIMULATOR.md SS12.3/12.4.
 ``frontend/metadata_guard.py`` owns the downstream-visible public-metadata boundary of the
 isolation contract: ``validate_public_metadata`` copies a metadata dict and recurses
 (``_validate_keys``) rejecting evaluator/error-model reserved keys FAIL-CLOSED, and the
 axis1 static-ZZ helpers normalize public device/schedule couplings + per-edge calibrations.
 
-THE HARDENED STATE (commit 9db34a7). ``_validate_keys`` now recurses fail-closed: a NESTED
+CURRENT FAIL-CLOSED BEHAVIOR. ``_validate_keys`` recurses fail-closed: a NESTED
 ``_source_projection_evaluator_audit`` key (inside a sub-dict OR a list element) is REJECTED
-(the D18 finding), while the DECLARED TOP-LEVEL audit transport is allowed ONLY under
-``allow_evaluator_audit_transport=True``. This suite tests it at that NEW state.
+while the DECLARED TOP-LEVEL audit transport is allowed ONLY under
+``allow_evaluator_audit_transport=True``.
 
 L2 DISCIPLINE (100% coverage != discrimination). Reserved-key rejection is the load-bearing
 isolation-contract behavior, so EVERY reserved key (all 8 exact + all 31 parts) is tripped
@@ -220,7 +219,7 @@ def test_L0_validate_audit_transport_allowed_only_under_optin_at_root():
 
 
 def test_L0_validate_nested_audit_key_in_subdict_rejected_KILLER():
-    # THE D18 KILLER: a NESTED audit key inside a SUB-DICT is rejected fail-closed at
+    # A NESTED audit key inside a SUB-DICT is rejected fail-closed at
     # is_root=False (line 283, 'cannot nest'), reached AT the audit boundary -- the exact
     # message references metadata.foo._source... proving it fired there (not on the inner key).
     wrong = {"foo": {_AUDIT_KEY: {"axis2_error": {"p": 0.1}}}}

@@ -1,9 +1,8 @@
-"""Stage-D batch ``noise_spec`` -- per-unit L0+L1+L2 coverage of
+"""Per-unit L0+L1+L2 coverage of
 ``error_coupling_simulator.frontend.noise_spec`` (25 CPU-pure public units: 20 methods/funcs
 + 5 frozen-dataclass ``__post_init__`` dunders; no torch, no quimb, so out_of_scope is empty).
 
-Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
-work-list docs/SIMULATOR.md D14).
+Current coverage contract: docs/SIMULATOR.md SS12.3/12.4.
 ``frontend/noise_spec.py`` owns the Stim-representable Pauli noise-spec layer: the plain
 depolarizing ``StimPauliNoiseSpec``, the location-aware ``TargetedStimNoiseSpec`` built by the
 ``NoiseBuilder`` fluent API, and the evaluator-only ``SourceStimPauliProjectionSpec`` (a reduced
@@ -753,12 +752,12 @@ def _proj_timeline(**kw):
 def test_L0_source_proj_post_init_all_arcs():
     tl = _proj_timeline()
     rule = _source_rule(payload_key="zk")
-    retired_schema = "_".join(("qec", "twin")) + ".simulator.SourceStimPauliProjectionSpec.v1"
+    unsupported_schema = "error_coupling_simulator.frontend.source_stim_pauli_projection.v0"
     with pytest.raises(ValueError, match="unsupported source Stim projection schema"):
         SourceStimPauliProjectionSpec(
             timeline=tl,
             rules=(rule,),
-            schema=retired_schema,
+            schema=unsupported_schema,
         )
     spec = SourceStimPauliProjectionSpec(timeline=tl, rules=(rule,))     # default binding
     assert spec.source_binding is not None and spec.source_binding.cycle_binding == "circuit_tick"

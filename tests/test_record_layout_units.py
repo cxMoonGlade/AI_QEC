@@ -1,12 +1,11 @@
-"""Stage-D batch ``record_layout`` -- per-unit L0+L1+L2 coverage of
+"""Per-unit L0+L1+L2 coverage of
 ``error_coupling_simulator.frontend.record_layout`` (14 CPU-pure public units: 4
 frozen-record-dataclass ``to_manifest`` methods + 3 ``RecordLayout`` record-schema
 properties + ``RecordLayout.to_manifest`` + the ``build_repeated_memory_record_layout``
 assembler + ``final_measurements`` + 4 record-KEY/NAME formatting functions; no torch,
 no quimb, so out_of_scope is empty).
 
-Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
-work-list docs/SIMULATOR.md D16).
+Current coverage contract: docs/SIMULATOR.md SS12.3/12.4.
 ``frontend/record_layout.py`` owns the structured record layout the frontend compiles a
 ``CodeSpec`` into BEFORE Stim conversion: the four frozen record dataclasses
 (``RoundMeasurementRecord``/``DetectorLayoutRecord``/``FinalDataRecord``/
@@ -94,7 +93,7 @@ def _obs_view(o):
 
 
 # --------------------------------------------------------------------------- #
-# CodeSpec fixtures (validated at runtime -- see the D16 scratch de-risk).      #
+# CodeSpec fixtures (validated at runtime).                                    #
 # --------------------------------------------------------------------------- #
 def _rep_spec(rounds: int = 3) -> CodeSpec:
     """A valid d=3 Z-memory repetition-code spec: two Z-checks (z0=Z0Z1 anc 3, z1=Z1Z2

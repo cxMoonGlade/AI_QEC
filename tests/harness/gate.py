@@ -1,4 +1,4 @@
-"""Registry-driven per-unit COVERAGE GATE in Python (replaces stage_d_gate.sh).
+"""Registry-driven per-unit coverage gate.
 
 Runs `coverage run --branch` over the registry's test files restricted to its reconcile_modules,
 with DETERMINISTIC Hypothesis (-p no:cacheprovider --hypothesis-seed=0), emits a coverage json,

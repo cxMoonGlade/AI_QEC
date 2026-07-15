@@ -41,7 +41,7 @@ from .schedule import ScheduleTemplate
 
 SCHEDULE_SCHEMA_VERSION = "error_coupling_simulator.frontend.substep_schedule.v1"
 ANALOG_SCHEDULE_REPRESENTABILITY = "analog_schedule_metadata_only"
-H3_H5_DURATION_POLICY_ID = "h3_h5_v1"
+DEFAULT_DURATION_POLICY_ID = "error_coupling_simulator.frontend.duration_policy.v1"
 COMPILER_SCHEDULE_SEAL_SCHEMA = "error_coupling_simulator.frontend.compiler_schedule_seal.v1"
 _COMPILER_SCHEDULE_SEAL_KEY = secrets.token_bytes(32)
 
@@ -137,7 +137,7 @@ class DurationBracket:
     low_ns: float
     high_ns: float
     nominal_ns: float | None
-    source: str = H3_H5_DURATION_POLICY_ID
+    source: str = DEFAULT_DURATION_POLICY_ID
     epistemic_class: str = "c"
 
     def __post_init__(self) -> None:
@@ -466,11 +466,11 @@ class SubstepSchedule:
         return out
 
 
-def h3_h5_duration_policy() -> DurationPolicy:
-    """Return the preregistered H3/H5 heuristic duration-bracket table."""
+def default_duration_policy() -> DurationPolicy:
+    """Return the default duration-bracket table."""
 
     return DurationPolicy(
-        table_id=H3_H5_DURATION_POLICY_ID,
+        table_id=DEFAULT_DURATION_POLICY_ID,
         brackets=(
             DurationBracket("one_qubit_gate", 20.0, 30.0, 25.0),
             DurationBracket("two_qubit_gate", 25.0, 45.0, 30.0),
@@ -523,7 +523,7 @@ def circuit_ir_to_substep_schedule(
             "public CircuitIR extraction must use source_kind='circuit_ir'"
         )
     _reject_projected_or_noisy_circuit(circuit)
-    policy = duration_policy or h3_h5_duration_policy()
+    policy = duration_policy or default_duration_policy()
     source_manifest = _circuit_ir_manifest(circuit)
     schedule_name = _schedule_template_name(circuit)
     qubit_roles, qubit_coords = _qubit_metadata(circuit)
@@ -1263,7 +1263,7 @@ __all__ = [
     "AXIS1_STATIC_ZZ_CALIBRATIONS_METADATA_KEY",
     "AXIS1_STATIC_ZZ_COUPLINGS_METADATA_KEY",
     "COMPILER_SCHEDULE_SEAL_SCHEMA",
-    "H3_H5_DURATION_POLICY_ID",
+    "DEFAULT_DURATION_POLICY_ID",
     "SCHEDULE_SCHEMA_VERSION",
     "AnalogSubstepIR",
     "DurationBracket",
@@ -1272,7 +1272,7 @@ __all__ = [
     "SubstepSchedule",
     "circuit_ir_to_substep_schedule",
     "compile_code_spec_to_substep_schedule",
-    "h3_h5_duration_policy",
+    "default_duration_policy",
     "has_valid_compiler_schedule_seal",
     "require_compiler_schedule_seal",
     "stim_circuit_to_substep_schedule",

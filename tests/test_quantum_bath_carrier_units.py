@@ -1,4 +1,4 @@
-"""Stage-D batch (carrier) -- per-unit L0+L1 coverage of
+"""Per-unit L0+L1 coverage of
 ``error_coupling_simulator.quantum_bath.carrier`` (9 CPU-pure public units).
 
 Full-coverage program (docs/SIMULATOR.md SS12.3/12.4).
@@ -7,7 +7,7 @@ This module is the dual-ancilla dual-axis EXACT-DM carrier for the shared-bath
 ancilla-mediated instruments + the exact 3-round dual-axis record points (and their
 QRT/reduced-map null). Pure numpy/math/scipy (device-agnostic, no torch, no cuda) -- so
 it gets the FULL treatment: L0 (100% statement + branch per unit) + L1 (Hypothesis
-faithfulness properties). L2 (mutmut) runs in Stage E.
+faithfulness properties). L2 runs through the current mutation harness.
 
 COST NOTE. ``dual_point`` / ``dual_point_qrt`` run an EXACT density-matrix 3-round branch
 tree on a (16*nmax)-dim DM (idle = expm of a (4*nmax)^2 Liouvillian, then a 4^3 = 64-leaf
@@ -48,8 +48,8 @@ NOT model as a branch here -- so there is no unreachable-arc exemption to make; 
   dual_point_qrt           `assert` = plain stmt (0/0 branch)     P_all norm ~1, non-negative;
                                                                   K's >= 0
 
-DEFENSIVE ASSERT (D1 finding-2 discipline). ``dual_point``/``dual_point_qrt`` carry
-``assert abs(norm - 1.0) < 1e-8``. Per the D1 lesson (never exempt a "structurally
+DEFENSIVE ASSERT. ``dual_point``/``dual_point_qrt`` carry
+``assert abs(norm - 1.0) < 1e-8``. Following the rule to never exempt a "structurally
 unreachable" arc without probing) I PROBED it: (a) coverage.py emits NO branch arc for a
 bare assert (so there is nothing to exempt -- the assert line is covered as a plain
 statement on every passing call); (b) the assert's guarantee (norm==1) is a TRACE-PRESERVATION
@@ -63,7 +63,7 @@ generator that drops one leaf makes norm != 1, which the assert would catch.
 Two-sided teeth (KILLER). The load-bearing L1 asserts (cnot4 unitarity, dual_extract parity
 read, dual_point normalization) are each shown DISCRIMINATING: an inlined sabotaged variant
 VIOLATES the property in the CLAIMED DIRECTION on a crafted input, so the property is not
-vacuous (feedback-devious-tests-killer-standard; D1 finding-6: a KILLER's sabotage must
+vacuous (feedback-devious-tests-killer-standard: a KILLER's sabotage must
 actually violate the property, direction verified).
 """
 from __future__ import annotations
@@ -572,7 +572,7 @@ def _buggy_quantum_dual_drop_leaf(nmax, zeta, gamma, g0z, g1z, g0m, g1m, tau):
     mass, so the recorded distribution then sums to well under 1, and dual_point's
     ``assert abs(norm-1)<1e-8`` would fire. Violates the normalization property downward.
     (The dropped leaf is chosen to be a MASSIVE one -- dropping a near-zero leaf would not
-    bite; D1 finding-6: the sabotage must actually move the property, verified below.)"""
+    bite; the sabotage must actually move the property, verified below.)"""
     from error_coupling_simulator.quantum_bath.gksl import round_superop
     E_red, _ = round_superop(nmax, zeta, gamma, g0z, g1z, g0m, g1m, tau)
     UX, UZ = C._extract_x_full(nmax), C._extract_z_full(nmax)

@@ -1,153 +1,141 @@
-# Full-text review — Bergli, Galperin, Altshuler, “Decoherence in qubits due to low-frequency noise” (arXiv:0904.4597)
+# Full-text review — Bergli, Galperin, Altshuler, “Decoherence in qubits due to low-frequency noise” (arXiv:0904.4597v1)
 
-> **Provenance (2026-07-13): FULL-TEXT read (精读).** arXiv v1 PDF downloaded from
-> `https://arxiv.org/pdf/0904.4597`, SHA-256
-> `522d96cda526b04d036352551026be3b38f51635929ae761e54ecda25e0e495b`, 25 pages; text
-> extracted with `pdftotext -layout` for navigation. PDF pages 7, 10, and 13 were rendered and
-> visually inspected for Eqs. (15), (35), and (39). Formula truth comes from the rendered PDF.
+> **Provenance (2026-07-15): FULL-TEXT clean-room read.** Local PDF
+> `outputs/reading_packages/simulator_background_top10_2026-07-14/sources/0904.4597v1.pdf`,
+> SHA-256 `522d96cda526b04d036352551026be3b38f51635929ae761e54ecda25e0e495b`,
+> 25 pages. The full extracted text was traversed; PDF pages 7, 10, and 13 were rendered and
+> visually inspected for Eqs. (15), (34)–(35), and the independent-product statement before
+> Eq. (39). This note contains paper facts and source-local gaps only. Application-specific
+> inference is kept in a separate simulator claim packet.
 
 ## Metadata [paper]
 
 - J. Bergli, Y. M. Galperin, and B. L. Altshuler.
-- *New Journal of Physics* **11**, 025002 (2009), DOI `10.1088/1367-2630/11/2/025002`;
-  arXiv:0904.4597v1.
-- Review/theory paper with exact single-fluctuator calculations.
+- *New Journal of Physics* **11**, 025002 (2009), DOI
+  `10.1088/1367-2630/11/2/025002`; arXiv:0904.4597v1, 29 April 2009.
+- Review/theory article with exact classical two-state-fluctuator calculations.
 
 ## Executive summary [paper]
 
-The paper models low-frequency noise using classical two-state fluctuators. For a symmetric random
-telegraph process it fixes the rate convention, derives the exact non-Gaussian free-induction
-coherence of one fluctuator, and shows how independent fluctuators combine multiplicatively. It
-also explains why a Gaussian second-cumulant treatment fails when a fluctuator is strongly coupled.
+The paper treats qubit pure dephasing by classical two-state fluctuators. It fixes the symmetric
+directional switching-rate convention, derives the exact single-fluctuator free-induction
+coherence, and states that statistically independent fluctuator contributions multiply. It also
+shows why a Gaussian approximation can fail for a strongly coupled fluctuator even at times longer
+than its correlation time.
 
-## Selection + coverage [ours]
+## Selection and coverage [ours]
 
-This is load-bearing for three rows in the finite-RTN audit: the per-direction switching-rate
-convention, the exact one-RTN free-induction factor, and the product rule for independent RTNs. Wold
-et al. (arXiv:1206.2174) independently restate the same formula using the total relaxation rate and
-therefore serve as the convention cross-check. BLP and RHP, not this paper, ground the
-non-Markovianity criteria.
+Assigned rows: symmetric-RTN rate convention, exact free-induction characteristic function,
+independent-product rule, and Gaussian failure regime. The paper does not supply a bridge from an
+arbitrary endpoint sampler to a different driven, measured, or reset quantum process.
 
-## Notation + source-location ledger [paper]
+## Notation and source-location ledger [paper]
 
-| symbol | meaning and domain | assumptions | source location |
+| symbol | domain and meaning | assumptions | source location |
 |---|---|---|---|
-| `chi(t)` | telegraph state in `{+1,-1}` | stationary symmetric process | Sec. 2.3, PDF p. 7 |
-| `gamma_12`, `gamma_21` | directional jump rates | symmetric case sets both to `gamma` | Sec. 2.3, PDF p. 7 |
-| `C(t)` | `E[chi(t)chi(0)]` | symmetric RTN | Eq. (15), PDF p. 7 |
-| `v` | longitudinal qubit–fluctuator coupling | pure free induction | Sec. 3.4, Eqs. (30)–(35), PDF pp. 9–10 |
-| `mu` | `sqrt(1-v^2/gamma^2)` | imaginary when `v>gamma` | Eq. (35), PDF p. 10 |
-| `<m_+(t)>` | normalized free-induction coherence | unbiased initial fluctuator | Eqs. (34)–(35), PDF p. 10 |
+| `chi(t)` | telegraph state in `{+1,-1}` | stationary symmetric process | Sec. 3.1, PDF p. 7 |
+| `gamma_12`, `gamma_21` | directional transition rates | symmetric case sets both to `gamma` | Sec. 3.1, PDF pp. 6–7 |
+| `C(t)` | `E[chi(t) chi(0)]` | symmetric RTN | Eq. (15), PDF p. 7 |
+| `v` | magnitude of the longitudinal fluctuating field | pure dephasing/free induction | Secs. 2 and 3.2, PDF pp. 4, 9–10 |
+| `phi` | phase accumulated from the longitudinal field | fixed initial phase, ensemble average | Eqs. (4), (29)–(34) |
+| `m_+` | normalized transverse complex Bloch component | unbiased initial fluctuator for Eq. (35) | Eqs. (34)–(35), PDF p. 10 |
+| `mu` | `sqrt(1-v^2/gamma^2)` | imaginary for `v>gamma` | Eq. (35), PDF p. 10 |
 
-The paper's `gamma` is **not** the sum of two directional rates. It sets
-`gamma_12=gamma_21=gamma`, so the total population relaxation rate is `2 gamma`.
+The paper's `gamma` is one directional jump rate. In the symmetric case the correlation decay rate
+is `2 gamma`; silently treating `gamma` as the sum of both directional rates is a factor-of-two
+error.
 
-## Method (deep) [paper]
+## Method and mechanism [paper]
 
-For the symmetric process, the probability of `k` jumps in time `t` is Poisson with mean
-`gamma t`. Alternating signs and summing the parity sectors gives
-
-```text
-C(t) = E[chi(t) chi(0)] = exp(-2 gamma t).                 (15)
-```
-
-For longitudinal free induction, the accumulated phase obeys `phi_dot=v chi(t)`. The probability
-density for `phi` gives the exact ODE
+For equal transition rates, the number of switches in time `t` is Poisson with mean `gamma t`.
+Summing even and odd switch parities gives
 
 ```text
-d^2<m_+>/dt^2 + 2 gamma d<m_+>/dt = -v^2 <m_+>,           (34)
-<m_+>(0)=1,  d<m_+>/dt(0)=0.
+C(t) = E[chi(t) chi(0)] = exp(-2 gamma t).                    Eq. (15)
 ```
 
-Writing `delta=sqrt(gamma^2-v^2)`, Eq. (35) is equivalently
+For a longitudinal field `v chi(t)`, the partial phase densities yield the telegraph equation.
+After multiplying by `exp(i phi)` and integrating, the free-induction coherence satisfies
 
 ```text
-L(t) = exp(-gamma t) [cosh(delta t) + (gamma/delta) sinh(delta t)].
+L''(t) + 2 gamma L'(t) = -v^2 L(t),
+L(0)=1, L'(0)=0.                                             Eq. (34)
 ```
 
-For `v>gamma`, let `omega=sqrt(v^2-gamma^2)`; analytic continuation gives
+Equation (35) is equivalently
 
 ```text
-L(t) = exp(-gamma t) [cos(omega t) + (gamma/omega) sin(omega t)].
+delta = sqrt(gamma^2-v^2)
+L(t) = exp(-gamma t)
+       [cosh(delta t) + (gamma/delta) sinh(delta t)].
 ```
 
-For statistically independent fluctuators, the accumulated phases add and their characteristic
-functions factor:
+For `v>gamma`, `delta=i omega` with `omega=sqrt(v^2-gamma^2)`, so
 
 ```text
-L_total(t) = product_i L_i(t),                            (39, preceding line)
-K_m(t) = -sum_i log L_i(t).                              (39)
+L(t) = exp(-gamma t)
+       [cos(omega t) + (gamma/omega) sin(omega t)].
 ```
 
-## The MECHANISM [paper]
+At `v=gamma`, the continuous limit is `exp(-gamma t)(1+gamma t)`.
 
-Each fluctuator is a stationary symmetric continuous-time Markov chain. A jump in either direction
-occurs with rate `gamma`; the qubit sees a longitudinal shift `+v` or `-v`. Strong coupling means
-`v>gamma`, where the exact coherence is a damped oscillatory function rather than a Gaussian
-monotone exponential.
+## Observable [paper]
 
-## Mechanism mapping to QEC Twin [ours]
+The observable is the ensemble free-induction coherence `E[exp(i phi(t))]`, equivalently the
+averaged normalized transverse Bloch component. PDF p. 13 explicitly says a single-qubit
+decoherence experiment exposes this average, not the complete phase distribution of one noise
+realization.
 
-`RTNSource` uses the exact cycle-end transition probability
-`p=(1-exp(-2 gamma_per_cycle))/2`, matching Eq. (15) at integer cycle boundaries. The
-`OneOverFDriftSource` states are independent, so its declared latent process matches the product
-premise. However, production code routes `z_radns` through `SourceCouplingConfig` into several
-mechanism parameters; it does **not** directly declare the longitudinal Hamiltonian used above.
-Treating `z_radns` as `v chi(t)` is therefore a separately named free-induction diagnostic lift, not
-the production coupled QEC channel.
+For statistically independent fluctuators, PDF p. 13 states
 
-## The OBSERVABLE / metric [paper]
+```text
+L_total(t) = product_i L_i(t),
+```
 
-The paper's observable is the ensemble free-induction coherence `<m_+(t)>=E[exp(i phi(t))]` and,
-for many independent fluctuators, its product. It is not syndrome-record TV/KL/NLL, a logical error
-rate, or a process-tensor witness.
+before introducing the logarithmic ensemble quantity in Eq. (39). The exact product applies to a
+specified finite independent set; later Holtsmark and parameter-ensemble replacements are further
+approximations and are not needed for that identity.
 
-## Findings + numbers [paper]
+## Findings and failure regimes [paper]
 
-- Weak `v << gamma`: Eq. (35) approaches the Gaussian motional-narrowing result.
-- Strong `v > gamma`: the exact signal oscillates with angular frequency
-  `sqrt(v^2-gamma^2)` under the envelope `exp(-gamma t)`.
-- The Gaussian rate agrees only in the weak-coupling limit; the paper explicitly treats
-  non-Gaussian effects as essential outside it.
+- `v<gamma` is the weak-fluctuator regime; `v>gamma` is the strong regime.
+- In the weak limit, the exact long-time decay approaches the Gaussian motional-narrowing rate.
+- In the strong regime, the exact coherence is a damped oscillatory function. The Gaussian
+  approximation misses the endpoint delta-function contribution to the phase distribution and can
+  remain qualitatively wrong even for `t>1/gamma`.
+- The same two-point correlation or power spectrum is therefore insufficient to determine
+  non-Gaussian strong-fluctuator dephasing.
 
-No numerical parameter in `OneOverFDriftSource` is measured or recommended by this paper.
+No numerical parameter used by a downstream implementation is measured or recommended by this
+paper.
 
-## Limitations [paper]
+## Limitations and contrary evidence [paper]
 
-The derivation is free induction under longitudinal classical noise. It does not include QEC gates,
-ancilla measurement/reset, leakage, source-to-mechanism fan-out, a decoder, or tensor-network
-truncation. Independence is an assumption. Eq. (39) does not license replacing a production
-instrument with the free-induction diagnostic.
-
-## Contrary evidence and failure regimes [paper]
-
-The Gaussian approximation is reliable only for weak individual couplings; matching the same
-two-point covariance or PSD does not determine strong-RTN coherence. At `v=gamma` the displayed
-`gamma/delta` form is evaluated by its limit `exp(-gamma t)(1+gamma t)`.
+The derivation assumes classical, stationary, symmetric, independent telegraph processes and
+longitudinal pure dephasing. The paper separately treats echo protocols, parameter ensembles, and
+microscopic fluctuator models, but does not derive an arbitrary control schedule, measurement/reset
+instrument, leakage process, decoder, or record law. Its experimental review also says available
+experiments were not conclusive about non-Gaussian behavior.
 
 ## Project kill conditions [ours]
 
-Any claim that the Gaussian surrogate settles the finite-RTN diagnostic is killed if a default mode
-has `v_i>gamma_i`. Any claim about the production QEC channel is killed unless the actual
-source-to-channel mapping and ancilla instrument are included. A factor-of-two mismatch in the rate
-convention also invalidates the transfer.
+Application is invalid if the implemented rate is not a directional rate, if fluctuators are not
+independent, or if the observable is not the declared longitudinal free-induction coherence. A
+matching endpoint autocorrelation alone does not establish an intra-step Hamiltonian or a bridge to
+a different measured process.
 
 ## Operation replay ledger [ours; source-checked]
 
 | input | transformation | assumption | output | exact source location | replay status |
 |---|---|---|---|---|---|
-| `gamma_12=gamma_21=gamma` | sum jump parities | stationary symmetric RTN | `C(t)=exp(-2 gamma t)` | Eq. (15), PDF p. 7 | matched |
-| `v, gamma` | solve Eq. (34) | unbiased initial state, longitudinal free induction | exact `L(t)` | Eq. (35), PDF p. 10 | matched |
-| independent phases | factor characteristic function | statistical independence | `product_i L_i` | text before Eq. (39), PDF p. 13 | matched |
-| project `z_radns` | identify it with longitudinal splitting | project diagnostic declaration, not paper | free-induction lift | no paper location | unsupported for production channel |
+| `gamma_12=gamma_21=gamma` | sum Poisson switch parity | symmetric stationary RTN | `C(t)=exp(-2 gamma t)` | Eq. (15), PDF p. 7 | matched |
+| `v`, `gamma` | derive and solve the telegraph ODE | longitudinal free induction, unbiased initial state | exact `L(t)` | Eqs. (32)–(35), PDF pp. 9–10 | matched |
+| independent phases | factor the joint characteristic function | statistical independence | `product_i L_i(t)` | text before Eq. (39), PDF p. 13 | matched |
+| endpoint transition samples | infer an arbitrary intra-step quantum process | not supplied | process-specific dynamical map | no source location | missing |
 
-## Relevance to QEC Twin [ours]
+## Relevance and trust [ours]
 
-Reuse the exact factor and product as a falsifier for the old Gaussian-surrogate conclusion. Do not
-reuse the paper as evidence for the source defaults or as a bridge to a complete QEC record.
-
-## How to use / trust + open questions [ours]
-
-Full text and all load-bearing formula pages were visually checked. The paper closes the RTN
-convention, single-factor, and independent-product rows. The source-to-production-channel and
-channel-to-record rows remain missing.
+Use this paper only for the rate convention, exact single-RTN free-induction factor, finite
+independent product, and their stated validity limits. Assigned rows have source-local status
+`closed`; any bridge to a different production channel or record has source-local status `missing`.
+No project-specific claim is stored in this literature note.

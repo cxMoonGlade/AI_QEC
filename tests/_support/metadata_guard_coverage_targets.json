@@ -1,0 +1,26 @@
+{
+  "_comment": [
+    "Per-owner coverage registry for metadata guard."
+  ],
+  "contract": "docs/SIMULATOR.md",
+  "default_target": {"statement": 1.0, "branch": 1.0},
+  "covered_by_test_files": [
+    "tests/test_metadata_guard_units.py"
+  ],
+  "reconcile_modules": [
+    "src/error_coupling_simulator/frontend/metadata_guard.py"
+  ],
+  "out_of_scope": {},
+  "canonical_units": [
+    "validate_public_metadata",
+    "normalize_axis1_static_zz_couplings",
+    "normalize_axis1_static_zz_calibrations",
+    "axis1_static_zz_calibrations_to_manifest"
+  ],
+  "units": [
+    {"group": "metadata_guard", "module": "src/error_coupling_simulator/frontend/metadata_guard.py", "unit": "validate_public_metadata", "qualname": "validate_public_metadata", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "metadata_guard", "module": "src/error_coupling_simulator/frontend/metadata_guard.py", "unit": "normalize_axis1_static_zz_couplings", "qualname": "normalize_axis1_static_zz_couplings", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "metadata_guard", "module": "src/error_coupling_simulator/frontend/metadata_guard.py", "unit": "normalize_axis1_static_zz_calibrations", "qualname": "normalize_axis1_static_zz_calibrations", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "metadata_guard", "module": "src/error_coupling_simulator/frontend/metadata_guard.py", "unit": "axis1_static_zz_calibrations_to_manifest", "qualname": "axis1_static_zz_calibrations_to_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []}
+  ]
+}

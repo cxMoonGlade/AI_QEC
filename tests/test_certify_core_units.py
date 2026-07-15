@@ -1,4 +1,4 @@
-"""Stage-D batch D4 -- per-unit L0 + L1 + KILLER coverage of the ``certify`` engine trio
+"""Per-unit L0 + L1 + KILLER coverage of the ``certify`` engine trio
 ``error_coupling_simulator.certify.{core, facade, types}`` (25 CPU-coverable public units).
 
 Full-coverage program (docs/SIMULATOR.md SS12.3/12.4; work-list

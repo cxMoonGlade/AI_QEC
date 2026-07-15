@@ -1,0 +1,30 @@
+{
+  "_comment": [
+    "Per-owner coverage registry for stim source."
+  ],
+  "contract": "docs/SIMULATOR.md",
+  "default_target": {"statement": 1.0, "branch": 1.0},
+  "covered_by_test_files": [
+    "tests/test_stim_source_units.py"
+  ],
+  "reconcile_modules": [
+    "src/error_coupling_simulator/frontend/stim_source.py"
+  ],
+  "out_of_scope": {},
+  "canonical_units": [
+    "CompiledCircuit.__post_init__",
+    "CircuitSource.compile",
+    "CircuitIRSource.compile",
+    "CompiledCircuitSource.compile",
+    "StimCircuitSource.from_file",
+    "StimCircuitSource.compile"
+  ],
+  "units": [
+    {"group": "stim_source", "module": "src/error_coupling_simulator/frontend/stim_source.py", "unit": "CompiledCircuit.__post_init__", "qualname": "CompiledCircuit.__post_init__", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "stim_source", "module": "src/error_coupling_simulator/frontend/stim_source.py", "unit": "CircuitSource.compile", "qualname": "CircuitSource.compile", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "stim_source", "module": "src/error_coupling_simulator/frontend/stim_source.py", "unit": "CircuitIRSource.compile", "qualname": "CircuitIRSource.compile", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "stim_source", "module": "src/error_coupling_simulator/frontend/stim_source.py", "unit": "CompiledCircuitSource.compile", "qualname": "CompiledCircuitSource.compile", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "stim_source", "module": "src/error_coupling_simulator/frontend/stim_source.py", "unit": "StimCircuitSource.from_file", "qualname": "StimCircuitSource.from_file", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "stim_source", "module": "src/error_coupling_simulator/frontend/stim_source.py", "unit": "StimCircuitSource.compile", "qualname": "StimCircuitSource.compile", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []}
+  ]
+}

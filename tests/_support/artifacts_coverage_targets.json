@@ -1,0 +1,32 @@
+{
+  "_comment": [
+    "Per-owner coverage registry for artifacts."
+  ],
+  "contract": "docs/SIMULATOR.md",
+  "default_target": {"statement": 1.0, "branch": 1.0},
+  "covered_by_test_files": [
+    "tests/test_artifacts_units.py"
+  ],
+  "reconcile_modules": [
+    "src/error_coupling_simulator/frontend/artifacts.py"
+  ],
+  "out_of_scope": {},
+  "canonical_units": [
+    "artifact_paths",
+    "write_b8",
+    "write_b8_optional",
+    "write_json",
+    "clear_known_artifacts",
+    "file_sha256",
+    "record_summary"
+  ],
+  "units": [
+    {"group": "artifacts", "module": "src/error_coupling_simulator/frontend/artifacts.py", "unit": "artifact_paths", "qualname": "artifact_paths", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "artifacts", "module": "src/error_coupling_simulator/frontend/artifacts.py", "unit": "write_b8", "qualname": "write_b8", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "artifacts", "module": "src/error_coupling_simulator/frontend/artifacts.py", "unit": "write_b8_optional", "qualname": "write_b8_optional", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "artifacts", "module": "src/error_coupling_simulator/frontend/artifacts.py", "unit": "write_json", "qualname": "write_json", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "artifacts", "module": "src/error_coupling_simulator/frontend/artifacts.py", "unit": "clear_known_artifacts", "qualname": "clear_known_artifacts", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "artifacts", "module": "src/error_coupling_simulator/frontend/artifacts.py", "unit": "file_sha256", "qualname": "file_sha256", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "artifacts", "module": "src/error_coupling_simulator/frontend/artifacts.py", "unit": "record_summary", "qualname": "record_summary", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []}
+  ]
+}

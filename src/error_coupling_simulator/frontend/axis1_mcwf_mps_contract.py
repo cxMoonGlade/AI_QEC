@@ -69,7 +69,7 @@ def axis1_mcwf_mps_state_record_contract_manifest(
         "gpu_required": True,
         "device": dev,
         "contract_valid": True,
-        # W-J de-overload: this is a CONTRACT-ONLY surface (backend NOT executed), so it must
+        # This is a contract-only surface (backend not executed), so it must
         # NOT claim verdict:"pass"/passed:True (which read as "executed + passed as evidence").
         # verdict:"contract_only" + contract_valid:True conveys "the contract is valid but no
         # execution evidence was produced"; verdict:"pass" is reserved for executed evidence.

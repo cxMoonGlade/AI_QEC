@@ -9,8 +9,8 @@ exact-density-matrix references are formal implementation checks, not evidence o
 hardware. The emitted record is the product; LER and channel/record metrics are instruments on that
 record. Evaluator-only process truth is isolated from emitted artifacts.
 
-The public API and separate-distribution boundary are not yet frozen. The binding object and claim
-contract is ``docs/SIMULATOR.md``; current migration status is recorded in ``CLAUDE.md``.
+The binding object and claim contract is ``docs/SIMULATOR.md``; the current
+workflow and public surface are recorded in ``CLAUDE.md``.
 """
 
 from importlib.metadata import PackageNotFoundError, version

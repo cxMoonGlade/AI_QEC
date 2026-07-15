@@ -1,10 +1,9 @@
-"""Stage-D batch ``circuit_ir`` -- per-unit L0+L1+L2 coverage of
+"""Per-unit L0+L1+L2 coverage of
 ``error_coupling_simulator.frontend.circuit_ir`` (23 CPU-pure public units: 5 frozen-dataclass
 ``__post_init__`` dunders + 3 ``CircuitIR`` record-schema properties + 15 ``CircuitBuilder``
 fluent methods; no torch, no quimb, so out_of_scope is empty).
 
-Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
-work-list docs/SIMULATOR.md D15).
+Current coverage contract: docs/SIMULATOR.md SS12.3/12.4.
 ``frontend/circuit_ir.py`` owns the user-facing, Stim-compatible circuit IR: the frozen
 dataclasses (``GateOp``/``Tick``/``MeasureOp``/``DetectorDef``/``ObservableDef``) whose
 ``__post_init__`` normalizes names/targets/keys/args/coords/index, the validating ``CircuitIR``
@@ -460,7 +459,7 @@ def test_L0_builder_observable_unknown_key_raises():
 
 
 def test_L0_builder_observable_default_index_is_zero():
-    # exercise the DEFAULT index arg (the D13 reachable-default lesson): omitting index -> 0
+    # Exercise the DEFAULT index arg: omitting index -> 0.
     b = CircuitBuilder(1)
     b.measure(0, key="a")
     b.observable("L", xor=["a"])                    # no index -> default 0

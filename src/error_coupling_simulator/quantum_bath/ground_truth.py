@@ -10,12 +10,9 @@ carrier construction:
   * sigma_minus_emission_gt  -- reduced p_e(t) (GKSL) vs the exact single-excitation amplitude ODE.
   * no_bath_sanity           -- bath off => flat Markov-0 record on both axes, K=0.
 
-Extracted VERBATIM from outputs/twin_validation/notion3_relaxation_dualaxis_run.py, EXCEPT:
-  - round_superop2 -> round_superop, build_L2 body inlined uses the package apply_idle_reduced,
-  - n3._gamma_of_t(tau,zeta,gamma,1.0) -> gamma_unit_closed(tau,zeta,gamma) (the canonical closed form),
-  - ft.boson_ops -> boson_ops, and the ft/n3 indirection removed.
-
 These are FORMAL oracles (implementation-bug catchers); there is no physical ground truth.
+Current corruption and independence checks are in
+``tests/test_quantum_bath_groundtruth_nulls_units.py`` and ``tests/test_quantum_bath.py``.
 """
 
 import math

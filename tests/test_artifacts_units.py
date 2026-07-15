@@ -1,4 +1,4 @@
-"""Stage-D batch ``artifacts`` -- per-unit L0+L1+L2 coverage of
+"""Per-unit L0+L1+L2 coverage of
 ``error_coupling_simulator.frontend.artifacts`` (7 CPU-pure public units: the on-disk
 artifact writers/summaries ``artifact_paths`` / ``write_b8`` / ``write_b8_optional`` /
 ``write_json`` / ``clear_known_artifacts`` / ``file_sha256`` / ``record_summary``; the
@@ -9,8 +9,7 @@ its type arms). The module imports numpy + the package-local ``frontend.b8_io`` 
 hashlib/pathlib -- NEITHER torch NOR quimb -- so every unit is CPU-pure and out_of_scope
 is empty).
 
-Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
-work-list docs/SIMULATOR.md D27).
+Current coverage contract: docs/SIMULATOR.md SS12.3/12.4.
 ``frontend/artifacts.py`` owns the frontend's on-disk artifact layer: it builds the fixed
 per-run path set (``artifact_paths`` -> ``ArtifactPaths``), packs unpacked bool records into
 Stim-compatible ``.b8`` (``write_b8`` / ``write_b8_optional``), serializes a numpy-aware

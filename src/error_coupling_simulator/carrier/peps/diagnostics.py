@@ -1,26 +1,22 @@
 from __future__ import annotations
 
-r"""Bond-profile + loop-correlation (eps_l) + loop-rank diagnostics for the
-single-wire PEPS (RUNG-B spike).
+r"""Bond-profile, loop-correlation, and loop-rank diagnostics for the single-wire PEPS.
 
-Binding doc: ``docs/nonpauli_teacher/peps_singlewire_spike_contract.md`` — §6.1
-(``bond_profile`` — the SW8 bond-saturation instrument), §6.3 (the ``eps_l``
-loop-correlation instrument, Rudolph-Tindall 2507.11424 Eq. 3-4 conventions +
-the known-answer discipline), §3 (the loop-rank probe, ported with dim-3 caps —
-the WP1 adjudication path (A') diagnostic).
+``eps_l`` follows the declared Rudolph-Tindall loop-correlation convention; the
+current exact locator remains pending the clean literature reset.
 
-INDEPENDENCE (§6.3 known-answer discipline): the ``eps_l`` belief-propagation +
+For independence, the ``eps_l`` belief-propagation +
 loop-transfer-matrix computation here shares NO code with any reference — the
-SW6/§6.3 known-answer tests recompute the loop spectrum by an INDEPENDENT dense
+current known-answer tests recompute the loop spectrum by an independent dense
 eigendecomposition written from scratch in the test file and match to 1e-10.
 This module is deliberately hand-rolled on explicit ``torch`` tensors (extracted
 straight off the quimb ``TensorNetwork`` index maps — no quimb contraction of the
 loop) so that independence is real.
 
-The instruments read the state; they NEVER mutate it and consume NO host uniforms
-(§6.1/SF11). ``eps_l`` accepts either a :class:`~.state.PepsState` (production)
+The instruments read the state; they never mutate it and consume no host uniforms.
+``eps_l`` accepts either a :class:`~.state.PepsState` (production)
 or a bare quimb ``TensorNetwork`` carrying a ``.layout`` duck (the synthetic
-§6.3 known-answer networks) — it reads ``tn.layout`` when ``state.layout`` is
+known-answer networks) — it reads ``tn.layout`` when ``state.layout`` is
 absent.
 """
 
@@ -29,7 +25,7 @@ import torch
 from ...numerics import NUMERICAL_ZERO
 from .state import CDTYPE, QUTRIT, fused_bond_name, phys_name
 
-#: eps_l bound/roundoff tolerances (contract §6.3 self-check ``eps_l in
+#: ``eps_l`` bound/roundoff tolerances for the self-check ``eps_l in
 #: [0, 1 - 1/D_e^2]`` on the CUT EDGE's own bond dim).
 _EPS_L_BOUND_TOL = 1e-9
 _LETTERS = "abcdefghijklmnopqrstuvwxyz"
@@ -40,7 +36,7 @@ _LETTERS = "abcdefghijklmnopqrstuvwxyz"
 # --------------------------------------------------------------------------- #
 def _tn_layout(state):
     """The (tn, layout) pair from a :class:`PepsState` or a bare TN carrying a
-    ``.layout`` duck (the §6.3 synthetic known-answer carrier)."""
+    ``.layout`` duck used by synthetic known-answer networks."""
     tn = getattr(state, "tn", state)
     layout = getattr(state, "layout", None)
     if layout is None:
@@ -87,12 +83,11 @@ def _extract_sites(tn, layout) -> dict:
 
 
 # --------------------------------------------------------------------------- #
-# bond_profile — the SW8 per-round instrument (§6.1)                           #
+# Bond-profile instrument                                                     #
 # --------------------------------------------------------------------------- #
 def bond_profile(state) -> dict:
-    """The grid bond profile ``{(p, q): dim}`` (``p < q``) over ALL grid edges —
-    the SW8 bond-saturation instrument (§6.1) + the :class:`BondAbortError`
-    evidence table. Untouched (structurally-empty) edges read dim 1."""
+    """The grid bond profile ``{(p, q): dim}`` (``p < q``) over all grid edges.
+    Untouched structurally empty edges read dimension 1."""
     tn, layout = _tn_layout(state)
     prof = {}
     for p, q in layout.grid_edges():
@@ -103,14 +98,13 @@ def bond_profile(state) -> dict:
 
 
 def max_bond(state) -> int:
-    """Max over grid edges of the current bond dim (the WP1 per-round
-    ``max-over-edges`` statistic — §5)."""
+    """Maximum current bond dimension over all grid edges."""
     prof = bond_profile(state)
     return int(max(prof.values())) if prof else 1
 
 
 # --------------------------------------------------------------------------- #
-# eps_l — Rudolph-Tindall loop-correlation BP error (§6.3)                     #
+# ``eps_l`` Rudolph-Tindall loop-correlation BP error                         #
 # --------------------------------------------------------------------------- #
 def _fresh_letters():
     return iter(_LETTERS)
@@ -175,7 +169,7 @@ def _directed_edges(sites: dict) -> list:
 
 
 def _bp_fixed_point(sites: dict, tn, tol: float, max_sweeps: int) -> tuple:
-    """Belief-propagation message fixed point on the NORM network (§6.3): one
+    """Belief-propagation message fixed point on the norm network: one
     matrix message per directed edge over its (ket, bra) bond pair, updated
     ``m_{v->w} = (T_v contracted with all incoming m_{u->v}, u != w, leaving
     (v,w) open)`` and NORMALIZED to unit Frobenius norm each sweep. Returns
@@ -230,7 +224,7 @@ def _loop_eps(P: torch.Tensor) -> float:
 
 
 def _primitive_loops(layout) -> list:
-    """The ``(d-1)^2`` elementary 4-site grid squares (contract §6.3), each a
+    """The ``(d-1)^2`` elementary four-site grid squares, each a
     cyclic ``[v0, v1, v2, v3]`` around a unit cell of the ``{0..d-1}^2`` grid."""
     d = int(layout.d)
     loops = []
@@ -246,8 +240,8 @@ def _primitive_loops(layout) -> list:
 
 
 def eps_l(state, *, bp_tol: float = 1e-10, bp_max_sweeps: int = 500) -> dict:
-    """The per-loop Rudolph-Tindall BP-error ``eps_l`` on the current state's
-    NORM network (contract §6.3 / WP2).
+    """The per-loop Rudolph-Tindall BP error ``eps_l`` on the current state's
+    norm network.
 
     Conventions (ours where 2507.11424 is silent — declared class (c)): grouped
     ``(T, T*)`` nodes; primitive loops = the ``(d-1)^2`` unit squares; BP
@@ -335,13 +329,12 @@ def eps_l(state, *, bp_tol: float = 1e-10, bp_max_sweeps: int = 500) -> dict:
 
 
 # --------------------------------------------------------------------------- #
-# loop_rank_probe — the gauge-independent bond-rank probe (§3, ported dim-3)   #
+# Gauge-independent loop-closed bond-rank probe                               #
 # --------------------------------------------------------------------------- #
 def loop_rank_probe(state, bond: str, *, n_probe: int = 80, seed: int = 0,
                     d_ref: int = 16) -> dict:
-    """The loop-closed bond-rank probe (contract §3 registry; the parent
-    ``pepo_rung1_probe_loop_rank`` method, ported to the single-wire dim-3 KET
-    network — the WP1 adjudication-path (A') diagnostic). Cuts ``bond`` open
+    """A loop-closed bond-rank probe adapted to the single-wire dim-3 ket
+    network. It cuts ``bond`` open
     into two legs, caps every physical leg with a random dim-3 vector, contracts
     to a ``(D, D)`` matrix, stacks ``n_probe`` draws and reads the numerical
     rank of the stacked map: ``rank < D`` (flat) ⇒ a lossless regauge to that

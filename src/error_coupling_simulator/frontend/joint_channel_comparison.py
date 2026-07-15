@@ -4,7 +4,7 @@ from __future__ import annotations
 
 This module compares composed and joint same-substep channels from compiler-produced
 `SubstepSchedule` metadata. It is intentionally
-narrow: only the preregistered `ZZ x T2` exact-zero row and `DR x ZZ` nonzero
+narrow: only the declared `ZZ x T2` exact-zero row and `DR x ZZ` nonzero
 row are supported. It does not emit QEC records, does not consume Axis-2 source
 timelines, and does not define a general mechanism library.
 """
@@ -197,7 +197,7 @@ def joint_channel_comparison_gate(
     *,
     device: str = "cuda",
 ) -> tuple[JointChannelComparisonRow, ...]:
-    """Run the minimal preregistered joint-channel comparison gate.
+    """Run the minimal declared joint-channel comparison gate.
 
     The input must be a compiler-generated schedule seam. The returned rows are
     evidence diagnostics only; they do not claim full analog process execution.
@@ -268,7 +268,7 @@ def write_joint_channel_comparison_evidence(
     device: str = "cuda",
     filename: str = "joint_channel_comparison.json",
 ) -> JointChannelEvidenceResult:
-    """Write the build-contract evidence object to `joint_channel_comparison.json`.
+    """Write the comparison evidence object to `joint_channel_comparison.json`.
 
     This writer intentionally produces only the comparison evidence artifact. It does
     not run `Simulator`, does not write `.stim/.dem/.b8`, and does not attach

@@ -397,19 +397,6 @@ def _schedule_order_selection_layers(
     )
 
 
-def _schedule_order_unique_selections(
-    schedule: SubstepSchedule,
-    selections: tuple[Axis1MechanismSelection, ...],
-) -> tuple[Axis1MechanismSelection, ...]:
-    """Compatibility helper returning the flattened schedule-order selection list."""
-
-    return tuple(
-        selection
-        for layer in _schedule_order_selection_layers(schedule, selections)
-        for selection in layer
-    )
-
-
 def _require_cuda_device(device: str) -> str:
     import torch
 

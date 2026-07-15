@@ -1,9 +1,7 @@
-"""Stage-D batch ``source_coupling`` -- per-unit L0+L1+L2 coverage of
+"""Per-unit L0+L1+L2 coverage of
 ``error_coupling_simulator.source.coupling`` (20 CPU-pure public units; no GPU, no quimb,
 so out_of_scope is empty).
 
-Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
-work-list docs/SIMULATOR.md D12).
 ``source/coupling.py`` owns the Axis-2 shared-source parameter fan-out ``Theta(z_t)``: one
 explicit source draw conditions many mechanism parameters in the SAME cycle -- the static-ZZ
 frequency-drift closed form, the positive-rate exp maps (gamma_phi, drive_omega, the
@@ -112,22 +110,32 @@ def _indep_pearson(a, b) -> float:
 _J_DEFAULT = _indep_exchange_j(1.6e-4, _BASE_DELTA, _ALPHA, 25.0)
 
 
-def test_public_parameter_type_names_are_hard_cut():
-    """Current exports work and the two superseded spellings cannot be imported."""
+def test_public_parameter_type_names_and_exports():
+    """Current types resolve through the complete coupling public surface."""
+
+    expected_exports = {
+        "CoupledNoiseParameters",
+        "SourceCouplingConfig",
+        "StaticZZParameters",
+        "cross_mechanism_correlation",
+        "default_source_coupling_config",
+        "drift_to_t2",
+        "exchange_j_from_phi",
+        "independent_baseline_trajectory_to_params",
+        "leakage_from_drift",
+        "parameter_series",
+        "source_to_params",
+        "static_zz_zeta",
+        "trajectory_to_params",
+        "zz_phi_from_frequency_drift",
+    }
 
     assert source_api.StaticZZParameters is StaticZZParameters
     assert source_api.CoupledNoiseParameters is CoupledNoiseParameters
     assert isinstance(SourceCouplingConfig().zz, StaticZZParameters)
     assert isinstance(source_to_params(0.0), CoupledNoiseParameters)
-
-    retired_names = ("StaticZZ" + "Calibration", "Coupled" + "MechanismParams")
-    for name in retired_names:
-        assert name not in coupling.__all__
-        assert name not in source_api.__all__
-        assert not hasattr(coupling, name)
-        assert not hasattr(source_api, name)
-        with pytest.raises(ImportError):
-            exec(f"from error_coupling_simulator.source.coupling import {name}", {})
+    assert set(coupling.__all__) == expected_exports
+    assert expected_exports <= set(source_api.__all__)
 
 
 # =========================================================================== #
@@ -362,10 +370,10 @@ def test_L0_default_source_coupling_config_pins_documented_defaults():
     assert cfg.wg_theta_sensitivity == 0.0 and cfg.wg_g_seep_sensitivity == 0.0
 
 
-def test_source_coupling_config_rejects_retired_schema():
-    retired_schema = "_".join(("qec", "twin")) + ".mechanisms.SourceCouplingConfig.v1"
+def test_source_coupling_config_rejects_unsupported_schema():
+    unsupported_schema = "error_coupling_simulator.source.coupling_config.v0"
     with pytest.raises(ValueError, match="unsupported source coupling schema"):
-        SourceCouplingConfig(schema=retired_schema)
+        SourceCouplingConfig(schema=unsupported_schema)
 
 
 # =========================================================================== #

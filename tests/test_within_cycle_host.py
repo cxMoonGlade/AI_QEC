@@ -152,7 +152,12 @@ def test_peps_sampler_rejects_c64_metadata_mismatch_before_execution() -> None:
     from error_coupling_simulator.carrier.within_cycle import RunSpec
 
     sampler = PepsSampler(device="cpu")
-    spec = RunSpec(circuit_path="unused.stim", N=1, dtype="c64")
+    spec = RunSpec(
+        circuit_path="unused.stim",
+        N=1,
+        run_purpose="optimization",
+        dtype="c64",
+    )
 
     with pytest.raises(ValueError, match="complex128.*c128"):
         sampler.sample(
@@ -172,7 +177,7 @@ def test_peps_sampler_rejects_cpu_device_even_when_gpu_is_visible() -> None:
     sampler = PepsSampler(device="cpu")
     spec = RunSpec(circuit_path="unused.stim", N=1, dtype="c128")
 
-    with pytest.raises(RuntimeError, match="GPU-only.*device.*cuda"):
+    with pytest.raises(RuntimeError, match="PepsSampler device must be CUDA"):
         sampler.sample(
             spec,
             sched=_two_site_schedule(),

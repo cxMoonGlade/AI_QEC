@@ -1,4 +1,4 @@
-"""Stage-D batch ``stim_io`` -- per-unit L0+L1+L2 coverage of
+"""Per-unit L0+L1+L2 coverage of
 ``error_coupling_simulator.frontend.stim_io`` (7 CPU-pure public units: the seven
 module-level functions ``circuit_to_stim`` / ``load_stim_circuit`` / ``write_stim_circuit`` /
 ``write_detector_error_model`` / ``detector_error_model`` / ``counts`` /
@@ -6,8 +6,7 @@ module-level functions ``circuit_to_stim`` / ``load_stim_circuit`` / ``write_sti
 contributes no units; the module imports NEITHER torch NOR quimb -- ``stim`` is a lazy import
 inside ``circuit_to_stim`` / ``load_stim_circuit`` -- so out_of_scope is empty).
 
-Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
-work-list docs/SIMULATOR.md D23).
+Current coverage contract: docs/SIMULATOR.md SS12.3/12.4.
 ``frontend/stim_io.py`` owns the Stim adapters that move between the key-based ``CircuitIR``
 and concrete ``stim.Circuit`` / ``stim.DetectorErrorModel`` artifacts (build / load / write /
 DEM / counts / sample).
@@ -70,7 +69,7 @@ def _ir_main() -> CircuitIR:
     qubit_coords for qubits 0,1 but NOT 2, so the QUBIT_COORDS default arc (2 -> [2.0]) fires.
 
     (NB: canonical_circuit_ir() is NOT usable here -- its idle(duration_ns=50) emits a stim
-    `I` gate with a parens argument stim rejects; D20 caveat.)"""
+    `I` gate with a parens argument stim rejects.)"""
     b = CircuitBuilder(num_qubits=3,
                        metadata={"qubit_coords": {0: [0.0, 1.0], 1: [1.0, 2.0]}})
     b.h(0)

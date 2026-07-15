@@ -15,16 +15,43 @@ from error_coupling_simulator.frontend.ququart_transport import (
 
 torch = pytest.importorskip("torch", reason="ququart transport backend requires torch")
 requires_cuda = pytest.mark.skipif(not torch.cuda.is_available(), reason="QuquartDM transport backend is GPU-only")
-TRANSPORT_KRAUS_FIXTURE = (
-    Path(__file__).resolve().parents[1]
-    / "outputs"
-    / ("teach" + "er_prereg")
-    / "qutip_cz_leakage_kraus.npz"
-)
-requires_transport_npz = pytest.mark.skipif(
-    not TRANSPORT_KRAUS_FIXTURE.is_file(),
-    reason="QuTiP-derived ququart transport Kraus artifact is missing",
-)
+_CURRENT_KRAUS_SCHEMA = "error_coupling_simulator.frontend.ququart_transport_kraus.v2"
+_TRANSPORT_PROBABILITY = 0.25
+
+
+def _handwritten_transport_kraus() -> np.ndarray:
+    """Two-Kraus random-unitary channel with explicit ``|12> <-> |30>`` transport.
+
+    The two-ququart basis uses ``4*q0 + q1``. Hence ``|12>`` and ``|30>``
+    have indices 6 and 12. The construction is independent of the package's
+    channel builders and satisfies ``sum_k K_k^dag K_k = I`` by inspection.
+    """
+
+    identity = np.eye(16, dtype=np.complex128)
+    transport = identity.copy()
+    transport[6, 6] = 0.0
+    transport[12, 12] = 0.0
+    transport[12, 6] = 1.0
+    transport[6, 12] = 1.0
+    return np.stack(
+        (
+            np.sqrt(1.0 - _TRANSPORT_PROBABILITY) * identity,
+            np.sqrt(_TRANSPORT_PROBABILITY) * transport,
+        )
+    )
+
+
+@pytest.fixture
+def handwritten_transport_npz(tmp_path) -> Path:
+    path = tmp_path / "ququart_transport_kraus_v2.npz"
+    np.savez(
+        path,
+        kraus_ququart=_handwritten_transport_kraus(),
+        meta_schema=np.asarray(_CURRENT_KRAUS_SCHEMA),
+        meta_fixture=np.asarray("handwritten_random_unitary_12_to_30"),
+        meta_transport_probability=np.asarray(_TRANSPORT_PROBABILITY),
+    )
+    return path
 
 
 def test_ququart_index_convention_is_engine_msf_order():
@@ -59,24 +86,20 @@ def test_ququart_transport_loader_reports_explicit_npz_contract(tmp_path):
         load_ququart_transport_kraus(missing, device="cpu")
 
 
-def test_ququart_transport_loader_accepts_contract_fixture_on_cpu(tmp_path):
-    path = tmp_path / "kraus.npz"
-    np.savez(
-        path,
-        kraus_ququart=np.eye(16, dtype=np.complex128)[None, :, :],
-        meta_note=np.asarray("unit fixture"),
-    )
+def test_ququart_transport_loader_accepts_current_schema_fixture_on_cpu(
+    handwritten_transport_npz,
+):
+    kraus, meta = load_ququart_transport_kraus(
+        handwritten_transport_npz, device="cpu")
 
-    kraus, meta = load_ququart_transport_kraus(path, device="cpu")
-
-    assert tuple(kraus.shape) == (1, 16, 16)
+    assert tuple(kraus.shape) == (2, 16, 16)
     assert kraus.dtype == torch.complex128
     assert kraus.device.type == "cpu"
-    assert meta == {
-        "kraus_rank": 1,
-        "cptp_residual": 0.0,
-        "meta_note": "unit fixture",
-    }
+    assert meta["kraus_rank"] == 2
+    assert meta["cptp_residual"] < 1e-15
+    assert meta["meta_schema"] == _CURRENT_KRAUS_SCHEMA
+    assert meta["meta_fixture"] == "handwritten_random_unitary_12_to_30"
+    assert meta["meta_transport_probability"] == _TRANSPORT_PROBABILITY
 
 
 def test_ququart_transport_loader_rejects_missing_key_and_non_ranked_shape(tmp_path):
@@ -143,14 +166,16 @@ def test_ququart_transport_derives_channel_from_declared_params(monkeypatch):
 
 
 @requires_cuda
-@requires_transport_npz
-def test_ququart_transport_smoke_writes_exact_artifacts(tmp_path):
+def test_ququart_transport_smoke_writes_exact_artifacts(
+    tmp_path, handwritten_transport_npz,
+):
     result = simulate_ququart_transport_smoke(
         num_ququarts=2,
         initial_levels="12",
         shots=256,
         seed=11,
-        kraus_path=TRANSPORT_KRAUS_FIXTURE,
+        kraus_path=handwritten_transport_npz,
+        device="cuda",
         out_dir=tmp_path / "transport2",
     )
 
@@ -163,10 +188,13 @@ def test_ququart_transport_smoke_writes_exact_artifacts(tmp_path):
     assert result.manifest["representability"] == "exact_ququart_density_matrix_transport"
     assert result.manifest["mechanism"] == "qutip_cz_ququart_leakage_transport"
     assert result.manifest["decoder"] is None
-    assert result.manifest["parameters"]["kraus_rank"] >= 2
+    assert result.manifest["parameters"]["kraus_rank"] == 2
     assert result.manifest["parameters"]["cptp_residual"] < 1e-9
-    assert result.outcome_probability("30") > 0.05
-    assert result.initial_state_probability < 0.95
+    assert result.manifest["parameters"]["meta_schema"] == _CURRENT_KRAUS_SCHEMA
+    assert result.outcome_probability("30") == pytest.approx(
+        _TRANSPORT_PROBABILITY, abs=1e-12)
+    assert result.initial_state_probability == pytest.approx(
+        1.0 - _TRANSPORT_PROBABILITY, abs=1e-12)
     assert sum(result.counts.values()) == 256
     assert np.isclose(result.joint_probabilities.sum(), 1.0, atol=1e-12)
     assert result.density_matrix is not None
@@ -191,12 +219,12 @@ def test_ququart_transport_smoke_writes_exact_artifacts(tmp_path):
     assert manifest["artifacts"]["density_matrix"] == "density_matrix.npy"
     assert manifest["noise"]["type"] == "ququart_transport"
     assert manifest["noise"]["kraus_key"] == "kraus_ququart"
-    assert manifest["noise"]["source"] == str(TRANSPORT_KRAUS_FIXTURE.resolve())
+    assert manifest["noise"]["source"] == str(handwritten_transport_npz.resolve())
     assert manifest["noise"]["source_kind"] == "serialized_channel_cache_or_user_injection"
     assert manifest["noise"]["source_contract"] == {
         "format": "npz",
         "required_key": "kraus_ququart",
         "required_shape": ["rank", 16, 16],
-        "schema": "error_coupling_simulator.frontend.ququart_transport_kraus.v2",
+        "schema": _CURRENT_KRAUS_SCHEMA,
     }
     assert np.load(result.artifacts.joint_probabilities).shape == (16,)

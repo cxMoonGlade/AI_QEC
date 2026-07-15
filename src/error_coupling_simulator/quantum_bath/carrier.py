@@ -8,12 +8,9 @@ spectators), then extract X_{d0}X_{d1} via a_X (H-conjugation) AND Z_{d0}Z_{d1} 
 SEQUENTIALLY. X0X1 and Z0Z1 commute => the joint per-round outcome m=(sX,sZ) is a valid instrument.
 All branches kept => EXACT 3-round distribution (no Monte-Carlo).
 
-Extracted VERBATIM from outputs/twin_validation/notion3_relaxation_dualaxis_run.py; the only changes:
-build_L2->build_shared_bath_liouvillian, round_superop2->round_superop, and the ft/n3 indirection
-removed (canonical package functions called directly).
-
 Boundary: exact-DM feasibility-only (dim = 16*nmax); CPU; evaluator-side research carrier.
-No physical ground truth (oracles are FORMAL).
+No physical ground truth (oracles are formal). Current carrier checks are registered in
+``tests/test_quantum_bath_carrier_units.py`` and ``tests/test_quantum_bath.py``.
 """
 
 import math

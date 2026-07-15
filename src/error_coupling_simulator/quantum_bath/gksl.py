@@ -4,14 +4,10 @@ Canonical, package-native home for the boson algebra + the SHARED multi-componen
 the REDUCED (d0,d1,mode) space (dim 4*nmax): sigma_z dephasing + sigma_minus EMISSION into one
 shared mode, mode-loss collapse. Column-stacking (vec(B)=B.T.reshape(-1)) convention throughout.
 
-Extracted VERBATIM from:
-  - constants I2/SZ2/SM2/SX2/H1 <- outputs/twin_validation/notion3_relaxation_dualaxis_run.py
-  - boson_ops <- outputs/twin_validation/quantum_backaction_fairtest.py
-  - build_L2 (-> build_shared_bath_liouvillian) / round_superop2 (-> round_superop)
-    <- notion3_relaxation_dualaxis_run.py
-
 Boundary: exact-DM feasibility-only (reduced superop is (4*nmax)^2 sq); CPU; evaluator-side.
-No physical ground truth (oracles are FORMAL).
+No physical ground truth (oracles are formal). Current formula ownership is this module; current
+independent checks are registered in ``tests/test_quantum_bath_gksl_crowjoynt_units.py`` and
+``tests/test_quantum_bath.py``.
 """
 
 from __future__ import annotations
@@ -22,7 +18,7 @@ import numpy as np
 from scipy.linalg import expm
 
 # --------------------------------------------------------------------------- #
-# 1-qubit constants (from the primary source).                                 #
+# 1-qubit operator constants.                                                   #
 # --------------------------------------------------------------------------- #
 I2 = np.eye(2, dtype=complex)
 SZ2 = np.array([[1.0, 0.0], [0.0, -1.0]], dtype=complex)

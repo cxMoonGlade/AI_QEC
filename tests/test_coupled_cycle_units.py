@@ -1,10 +1,9 @@
-"""Stage-D batch ``coupled_cycle`` -- per-unit L0+L1+L2 coverage of
+"""Per-unit L0+L1+L2 coverage of
 ``error_coupling_simulator.noise_processes.coupled_cycle`` (17 in-scope public units;
 ``CoupledCycleNoiseProcess.emit`` is gpu_bound out_of_scope).
 
-Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
-work-list docs/SIMULATOR.md). ``CoupledCycleNoiseProcess``
-is the evaluator-only source-coupled record process (slice 1, dense): a shared memory-ful
+``CoupledCycleNoiseProcess`` is the evaluator-only source-coupled dense record
+process: a shared memory-bearing
 source trajectory is fanned out per QEC cycle into per-round Axis-1 params and emitted as
 ``{det,obs}`` records through the sealed dense Axis-1 record path.
 
@@ -73,7 +72,7 @@ from error_coupling_simulator.frontend.analog_schedule import (
     SubstepOperation,
     SubstepSchedule,
     compile_code_spec_to_substep_schedule,
-    h3_h5_duration_policy,
+    default_duration_policy,
 )
 from error_coupling_simulator.frontend.axis1_record_evidence import (
     Axis1ReadoutResetInstrumentSpec,
@@ -153,7 +152,7 @@ def _mk_substep(kind: str, tick: int, keys=(), i: int = 0) -> AnalogSubstepIR:
 def _hand_schedule(subs) -> SubstepSchedule:
     return SubstepSchedule(
         source_kind="circuit_ir", source_hash="hand-fixture", schedule_template=None,
-        num_qubits=1, substeps=tuple(subs), duration_policy=h3_h5_duration_policy(),
+        num_qubits=1, substeps=tuple(subs), duration_policy=default_duration_policy(),
     )
 
 
@@ -217,7 +216,7 @@ def test_L0_round_map_tampered_key_tick_mismatch_raises():
     _raises_exact(
         ValueError,
         "round derivation mismatch on substep 's0000': key 'round1:x0' names round 1 but "
-        "tick_index=0 (red-team R1: refusing, never falling back to uniform params)",
+        "tick_index=0; refusing to fall back to uniform params",
         lambda: derive_round_map_for_substep_schedule(sched, rounds=2))
 
 
@@ -309,8 +308,7 @@ def test_L0_params_for_substep_resolves_and_refuses_unknown():
 
     _raises_exact(
         ValueError,
-        "substep 'not-a-substep' is not in the validated round map; refusing to guess its round "
-        "(red-team R1)",
+        "substep 'not-a-substep' is not in the validated round map; refusing to guess its round",
         lambda: resolver(_Stub(substep_id="not-a-substep")))
 
 
@@ -514,9 +512,8 @@ def test_L0_ctor_validation_raises():
                   lambda: CoupledCycleNoiseProcess(2, coupling_arm="banana"))
     _raises_exact(
         ValueError,
-        "CoupledCycleNoiseProcess accepts only the declared memory-ful source classes "
-        "(OneOverFDriftSource, RTNSource) — an i.i.d./uncertified source as the shared arm is "
-        "red-team R3; got PhaseBurstSource",
+        "CoupledCycleNoiseProcess shared arm accepts only OneOverFDriftSource or RTNSource; "
+        "got PhaseBurstSource",
         lambda: CoupledCycleNoiseProcess(2, source=PhaseBurstSource(event_times=(0,))))
     _raises_exact(
         ValueError,
@@ -613,7 +610,7 @@ def test_L0_truth_value_pins_and_isolation():
 
 
 def test_L1_truth_last_emit_is_a_deep_copy():
-    """DEEP-COPY TRUTH (F7): mutating truth['last_emit'] must NOT share storage with the process's
+    """Mutating truth['last_emit'] must not share storage with the process's
     _last_emit (a mutant that returns a reference instead of copy.deepcopy is killed)."""
     t = CoupledCycleNoiseProcess(2)
     t._last_emit = {"nested": {"x": [1, 2, 3]}, "N": 5}
@@ -723,13 +720,15 @@ _EXPECTED_5Q_MANIFEST = {
 }
 
 
-def test_stim_export_schema_hard_cut_rejects_retired_and_double_version():
+def test_stim_export_schema_rejects_unsupported_versions():
     current = {"schema": cc.COUPLED_PROCESS_STIM_EXPORT_SCHEMA}
     assert cc._validate_coupled_process_stim_export_manifest(current) == current
 
-    retired = "_".join(("qec", "twin")) + ".simulator.coupled_cycle_stim_export.v1"
+    unsupported_version = (
+        "error_coupling_simulator.noise_processes.coupled_cycle_stim_export.v0"
+    )
     double_version = f"{cc.COUPLED_PROCESS_SCHEMA}.stim_export.v1"
-    for schema in (retired, double_version):
+    for schema in (unsupported_version, double_version):
         with pytest.raises(
             ValueError,
             match="unsupported coupled-process Stim export schema",
@@ -738,7 +737,7 @@ def test_stim_export_schema_hard_cut_rejects_retired_and_double_version():
 
 
 def test_L0_export_stim_circuit_happy_full_manifest_pin():
-    """P0 interop: the ideal-geometry stim circuit + manifest. FULL-MANIFEST VALUE-PIN against the
+    """Pin the ideal-geometry Stim circuit and manifest against the
     known 5q-fixture facts (M(R)=2R+3 measurements; rounds*n_stab detectors; 1 observable) --
     kills every manifest key-rename / value-string / count mutation."""
     _circuit, manifest = CoupledCycleNoiseProcess(2).export_stim_circuit()
@@ -815,8 +814,7 @@ def test_emit_rejects_nonpositive_shot_count_before_gpu():
 def test_L0_emit_clifford_slice_not_implemented():
     _raises_exact(
         NotImplementedError,
-        "CoupledCycleNoiseProcess slice-1 has no Clifford/bit-flip emission seam; the stim wiring "
-        "anchor is a later-slice extension",
+        "CoupledCycleNoiseProcess has no Clifford/bit-flip emission seam",
         lambda: CoupledCycleNoiseProcess(2).emit_clifford_slice(
             Regime(R=2, n_stab=2), p_x=1e-3, m=0, N=4, seed=0))
 
@@ -825,7 +823,7 @@ def test_L0_emit_clifford_slice_not_implemented():
 # CoupledCycleNoiseProcess matched-marginal / off-source controls                     #
 # =========================================================================== #
 def test_L0_matched_marginal_permutation_control_inherits_surface():
-    """The G6 negative control inherits source / config / shots / fixture and flips only the arm
+    """The matched-marginal control inherits source/config/shots/fixture and flips only the arm
     (kills the source=None / config=None / shots / fixture-inheritance mutations)."""
     parent = CoupledCycleNoiseProcess(2, source=RTNSource(), config=_CUSTOM_CFG, shots_per_trajectory=3)
     mk = parent.matched_marginal_permutation_control()
@@ -862,7 +860,7 @@ def test_L0_off_source_inherits_source_config_shots():
     assert off.truth["config"] == parent.truth["config"]
 
 
-def test_L0_off_source_and_markovian_inherit_builder():
+def test_L0_off_source_and_permutation_control_inherit_builder():
     """A custom code_spec_builder is inherited by both arms (kills code_spec_builder=None)."""
     parent = CoupledCycleNoiseProcess(2, code_spec_builder=lambda r: default_coupled_code_spec_4q(r))
     assert parent.n_stab == 1
@@ -903,7 +901,7 @@ def test_L1_derived_seed_matches_independent_sha256():
 
 
 def test_L1_fan_out_shared_off_independent_arms():
-    """_fan_out arm dispatch (C-2/C-9). NON-default config so the delegation config arg is pinned
+    """Pin _fan_out arm dispatch with a non-default config so the delegation config arg is pinned
     (a mutant swapping self._config for None/default diverges)."""
     t = CoupledCycleNoiseProcess(2, config=_CUSTOM_CFG)
     mk = t.matched_marginal_permutation_control()
@@ -930,8 +928,7 @@ def test_L0_fan_out_rejects_wrong_coupling_mode():
         OneOverFDriftSource().sample(seed=3, n_cycles=2), coupling_mode="independent")
     _raises_exact(
         ValueError,
-        "the shared/off arm requires a coupling_mode='shared' timeline, got 'independent' "
-        "(red-team R3)",
+        "the shared/off arm requires a coupling_mode='shared' timeline, got 'independent'",
         lambda: t._fan_out(timeline, base_seed=0, trajectory=0))
 
 
@@ -945,7 +942,7 @@ def test_L0_fan_out_rejects_each_baseline_marker(marker):
     _raises_exact(
         ValueError,
         f"timeline carries the {marker!r} marker; a permuted/baseline timeline is not a valid "
-        "shared arm (red-team R3)",
+        "shared arm",
         lambda: t._fan_out(timeline, base_seed=0, trajectory=0))
 
 

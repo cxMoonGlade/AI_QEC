@@ -1,4 +1,4 @@
-"""Stage-D batch ``memwitness`` -- per-unit L0+L1 coverage of
+"""Per-unit L0+L1 coverage of
 ``error_coupling_simulator.quantum_bath.memory_witness`` (4 LIVE public units).
 
 Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;

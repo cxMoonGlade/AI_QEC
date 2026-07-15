@@ -1,9 +1,7 @@
-"""Stage-D batch ``source_process`` -- per-unit L0+L1+L2 coverage of
+"""Per-unit L0+L1+L2 coverage of
 ``error_coupling_simulator.source.process`` (33 CPU-pure public units; no GPU, no quimb,
 so out_of_scope is empty).
 
-Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
-work-list docs/SIMULATOR.md D11).
 ``source/process.py`` owns the Axis-2 explicit cross-cycle SOURCE processes -- evaluator-side
 latent timelines (RTN telegraph, log-spaced 1/f RTN sum, gap-engineered phase-burst, two-state
 temporal-storm HMM) that persist across QEC cycles and emit payloads consumed downstream by
@@ -462,15 +460,15 @@ def test_L0_to_manifest_structure_and_seed_branches():
     assert _mk_timeline({"z": np.array([1.0])}, seed=None).to_manifest()["seed"] is None
 
 
-def test_source_timeline_rejects_retired_schema():
-    retired_schema = "_".join(("qec", "twin")) + ".mechanisms.SourceTimeline.v1"
+def test_source_timeline_rejects_unsupported_schema():
+    unsupported_schema = "error_coupling_simulator.source.timeline.v0"
     with pytest.raises(ValueError, match="unsupported source timeline schema"):
         SourceTimeline(
-            name="retired",
+            name="unsupported",
             n_cycles=1,
             cycle_time_ns=1.0,
             payload={"z": np.array([0.0])},
-            schema=retired_schema,
+            schema=unsupported_schema,
         )
 
 
@@ -507,17 +505,17 @@ def test_L0_load_npz_detects_tampered_array_hash(tmp_path):
         SourceTimeline.load_npz(bad)
 
 
-def test_L0_load_npz_rejects_retired_schema(tmp_path):
+def test_L0_load_npz_rejects_unsupported_schema(tmp_path):
     path = RTNSource().sample(seed=1, n_cycles=2).save_npz(tmp_path / "current.npz")
     with np.load(path, allow_pickle=False) as data:
         arrays = {key: np.array(data[key], copy=True) for key in data.files}
     manifest = json.loads(str(arrays["__manifest_json__"].item()))
-    manifest["schema"] = "_".join(("qec", "twin")) + ".mechanisms.SourceTimeline.v1"
+    manifest["schema"] = "error_coupling_simulator.source.timeline.v0"
     arrays["__manifest_json__"] = np.asarray(json.dumps(manifest, sort_keys=True))
-    retired = tmp_path / "retired.npz"
-    np.savez_compressed(retired, **arrays)
+    unsupported = tmp_path / "unsupported.npz"
+    np.savez_compressed(unsupported, **arrays)
     with pytest.raises(ValueError, match="unsupported source timeline schema"):
-        SourceTimeline.load_npz(retired)
+        SourceTimeline.load_npz(unsupported)
 
 
 # =========================================================================== #
@@ -1211,14 +1209,14 @@ def test_helper_layout_cluster_center_all_branches():
     class _M:
         metadata = {"cluster_center": 4}
 
-    class _M2:
+    class _PhaseBurstMetadata:
         metadata = {"phase_burst_center": 5}
 
     class _NoMeta:
         metadata = None
 
     assert sp._layout_cluster_center(_M()) == 4
-    assert sp._layout_cluster_center(_M2()) == 5
+    assert sp._layout_cluster_center(_PhaseBurstMetadata()) == 5
     assert sp._layout_cluster_center(_NoMeta()) is None
     # a negative center trips the nonneg-int guard with the path-specific name (kills name mutants)
     _raises_exact(ValueError, "layout['cluster_center'] must be a non-negative integer, got -1",

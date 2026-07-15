@@ -1,4 +1,4 @@
-"""Stage-D batch ``certify_anchors`` (D5) -- per-unit L0+L1+KILLER coverage of the four
+"""Per-unit L0+L1+KILLER coverage of the four
 independent-ground-truth anchor adapters + the negative controls under
 ``error_coupling_simulator.certify.anchors``:
 
@@ -10,7 +10,7 @@ independent-ground-truth anchor adapters + the negative controls under
 
 Full-coverage program (docs/SIMULATOR.md SS12.3/12.4; work-list
 docs/SIMULATOR.md). Registry:
-``tests/_support/stage_d_certify_anchors_targets.json`` (17 registered public units; the 18th public
+``tests/_support/certify_anchors_coverage_targets.json`` (17 registered public units; the 18th public
 unit ``DMOracleAnchor.answer`` is out_of_scope gpu_bound). CPU-ONLY: the DM capability is exercised
 with a MOCKED ``card_bytes`` (pure arithmetic, no CUDA); stim is a lazy CPU Clifford import; the
 closed form is numpy-only. Nothing here touches a GPU.
@@ -931,7 +931,7 @@ def test_closed_answer_field_and_provenance_pins():
     assert av.statistic is S.RR_CORR
     assert av.regime is reg
     # the FULL provenance dict pinned (kills every key/value string mutant + the dropped-dict mutant).
-    assert av.provenance == {"anchor": "closed_form_tb", "p01": 0.08, "p10": 0.20, "a0": 0.08,
+    assert av.provenance == {"anchor": "closed_form_transient_markov", "p01": 0.08, "p10": 0.20, "a0": 0.08,
                              "exact_single_qubit": True, "transient": True}
     # the DEFAULT band_d3 (the __init__ default 0.02) -- a d3 anchor built without band_d3.
     assert ClosedFormAnchor(p01=0.08, p10=0.20).answer(None, S.RR_CORR, reg).band == pytest.approx(0.02)

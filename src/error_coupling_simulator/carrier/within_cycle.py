@@ -2,8 +2,7 @@
 
 This module consumes an already compiled schedule.  Parsing a hardware dataset is a
 frontend responsibility; the carrier never discovers or substitutes a circuit on its
-own.  The implementation is the active owner of the former ``sv_sampler`` host seam
-used by the PEPS carrier.
+own. The implementation owns the within-cycle host interface used by the PEPS carrier.
 """
 
 from __future__ import annotations
@@ -276,7 +275,7 @@ class RunSpec:
     W: int = 1024
     R: int | None = None
     dtype: str | None = None
-    run_purpose: str | None = None
+    run_purpose: str = "final"
     out_path: str | Path | None = None
     numerical_provenance: dict[str, Any] | None = None
     _numerical_provenance_json: str | None = field(
@@ -295,13 +294,8 @@ class RunSpec:
         if dtype not in (None, "c128", "c64"):
             raise ValueError(
                 f"dtype must be 'c128' or 'c64' (got {self.dtype!r})")
-        purpose = self.run_purpose
-        if purpose is None:
-            # Compatibility for retained scripts: a bare c64 selector can only
-            # become screening, never an unlabeled final/certification artifact.
-            purpose = "optimization" if dtype == "c64" else "final"
-            object.__setattr__(self, "run_purpose", purpose)
-        expected_dtype = run_dtype_for_purpose(str(purpose))
+        purpose = str(self.run_purpose)
+        expected_dtype = run_dtype_for_purpose(purpose)
         if dtype is None:
             dtype = expected_dtype
             object.__setattr__(self, "dtype", dtype)
@@ -802,8 +796,8 @@ class FusedWithinCycleSampler(WithinCycleScheduleHost):
     ) -> tuple[torch.Tensor, dict[str, Any]]:
         """Build and verify ``|logical_m>_L`` in complex128 before execution.
 
-        This is the package-local port of the retained P4a host check.  It uses the
-        exact qutrit engine only as a state-vector constructor/operator reference;
+        This package-local check uses the exact qutrit engine only as a state-vector
+        constructor/operator reference;
         no full density matrix is materialized.
         """
         if self.device.type != "cuda":

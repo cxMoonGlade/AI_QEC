@@ -1,4 +1,4 @@
-# carrier/pepo — current 2D density-matrix PEPO research carrier
+# carrier/pepo
 
 This package implements a qutrit density-matrix PEPO carrier for a rotated
 `d×d` XZZX data patch.  A site uses the fused physical leg
@@ -11,6 +11,8 @@ and not evidence of physical-device validity.  Exact density-matrix comparisons
 are implementation bug catchers.  Record-level finite-truncation faithfulness
 remains open.
 
+Binding status: `docs/simulator_validation/PEPO_VALIDATION.md`.
+
 Modules:
 
 - `layout.py` owns the integer-grid transform, frozen cut, plaquette paths,
@@ -21,9 +23,8 @@ Modules:
   stabilizer expectations, terminal-observable probabilities,
   record folding exports, and negativity diagnostics.
 
-Selective per-stabilizer sampling is not a current PEPO entry point. The old
-implementation had no executable acceptance and silently clipped invalid raw
-weights; it was removed rather than retained behind a compatibility surface.
+Selective per-stabilizer sampling is not a PEPO entry point. Terminal-observable
+sampling rejects invalid raw weights instead of clipping them.
 
 The shared index contract is fixed by `layout.py`: site tag `Q{pos}`, physical
 index `k{pos}`, and virtual bond `B{p}_{q}` for `p < q`.  There is no global
@@ -45,5 +46,4 @@ Current tests:
 
 Every repeated exact-density group and each high-memory integration check is a
 separate service-acceptance file. The canonical supervisor starts them in fresh
-processes so no file accumulates the complete native/CUDA lifetime of the old
-monolith.
+processes so each file owns one bounded native/CUDA lifetime.

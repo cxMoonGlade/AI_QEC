@@ -1,0 +1,91 @@
+{
+  "_comment": [
+    "Per-owner coverage registry for gksl crowjoynt."
+  ],
+  "contract": "docs/SIMULATOR.md",
+  "default_target": {"statement": 1.0, "branch": 1.0},
+  "covered_by_test_files": [
+    "tests/test_quantum_bath_gksl_crowjoynt_units.py"
+  ],
+  "reconcile_modules": [
+    "src/error_coupling_simulator/quantum_bath/gksl.py",
+    "src/error_coupling_simulator/quantum_bath/crow_joynt.py"
+  ],
+  "out_of_scope": {},
+  "canonical_units": [
+    "boson_ops",
+    "build_shared_bath_liouvillian",
+    "round_superop",
+    "gamma_unit_closed",
+    "sigma_offdiag_closed",
+    "build_sigma",
+    "field_null_dual_P_all",
+    "field_null_point"
+  ],
+  "units": [
+    {
+      "group": "gksl_crowjoynt",
+      "module": "src/error_coupling_simulator/quantum_bath/gksl.py",
+      "unit": "boson_ops",
+      "qualname": "boson_ops",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "gksl_crowjoynt",
+      "module": "src/error_coupling_simulator/quantum_bath/gksl.py",
+      "unit": "build_shared_bath_liouvillian",
+      "qualname": "build_shared_bath_liouvillian",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "gksl_crowjoynt",
+      "module": "src/error_coupling_simulator/quantum_bath/gksl.py",
+      "unit": "round_superop",
+      "qualname": "round_superop",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "gksl_crowjoynt",
+      "module": "src/error_coupling_simulator/quantum_bath/crow_joynt.py",
+      "unit": "gamma_unit_closed",
+      "qualname": "gamma_unit_closed",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "gksl_crowjoynt",
+      "module": "src/error_coupling_simulator/quantum_bath/crow_joynt.py",
+      "unit": "sigma_offdiag_closed",
+      "qualname": "sigma_offdiag_closed",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "gksl_crowjoynt",
+      "module": "src/error_coupling_simulator/quantum_bath/crow_joynt.py",
+      "unit": "build_sigma",
+      "qualname": "build_sigma",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "gksl_crowjoynt",
+      "module": "src/error_coupling_simulator/quantum_bath/crow_joynt.py",
+      "unit": "field_null_dual_P_all",
+      "qualname": "field_null_dual_P_all",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "gksl_crowjoynt",
+      "module": "src/error_coupling_simulator/quantum_bath/crow_joynt.py",
+      "unit": "field_null_point",
+      "qualname": "field_null_point",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    }
+  ]
+}

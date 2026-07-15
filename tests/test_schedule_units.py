@@ -1,4 +1,4 @@
-"""Stage-D batch ``schedule`` -- per-unit L0+L1+L2 coverage of
+"""Per-unit L0+L1+L2 coverage of
 ``error_coupling_simulator.frontend.schedule`` (7 CPU-pure public units: the frozen
 dataclass ``ScheduleTemplate`` (``__post_init__`` name + operation canonicalization plus the
 non-empty and manifest-consistency guards, ``validate_for``, ``to_manifest``), and the four
@@ -7,8 +7,7 @@ module functions ``repeated_memory_schedule`` / ``repeated_memory_schedule_manif
 NOR quimb -- ``dataclasses`` + the sibling ``operation.canonical_operation_name`` -- so
 out_of_scope is empty).
 
-Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
-work-list docs/SIMULATOR.md D26).
+Current coverage contract: docs/SIMULATOR.md SS12.3/12.4.
 ``frontend/schedule.py`` is the PUBLIC named-schedule contract a compiler resolves BEFORE it
 lowers a ``CodeSpec`` into a record circuit. It is NOT a noise/mechanism model and declares no
 physical dynamics: a ``ScheduleTemplate`` names its required frontend operations + declares the
@@ -22,7 +21,7 @@ fails -> the mutant is killed. Every raising guard is tripped through a real con
 route with the EXACT message via ``assert_raises_exact`` (kills the ``XX<s>XX``-wrap / UPPERCASE
 case-swap / ``None`` message mutants a substring ``match=`` leaves surviving).
 
-CASE-SWAP note (the twin of the D24 ``operation`` batch, but DIFFERENT outcome). mutmut 3.6.0
+CASE-SWAP note (different from the ``operation`` registry outcome). mutmut 3.6.0
 emits BOTH an ``XX<s>XX`` wrap AND an UPPERCASE case-swap per string literal. UNLIKE
 ``canonical_operation_name`` (which does ``.strip().lower()`` so an already-canonical caller
 literal's case-swap is byte-identical after ``.lower()`` -> a genuine equivalent),

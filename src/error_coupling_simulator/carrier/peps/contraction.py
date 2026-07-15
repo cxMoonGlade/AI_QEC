@@ -1,38 +1,30 @@
 from __future__ import annotations
 
-r"""Double-layer ``<psi| Pi |psi>`` boundary-MPS contraction for the single-wire
-PEPS (RUNG-B spike).
+r"""Double-layer ``<psi| Pi |psi>`` boundary-MPS contraction for the single-wire PEPS.
 
-Binding doc: ``docs/nonpauli_teacher/peps_singlewire_spike_contract.md`` §2 (rows
-``born_read_stab`` / ``terminal_readout``), §3 (row "double-layer caps"), §6.2
-(the per-read accuracy instruments), grounded on SF9: the parent boundary-MPS
-skeleton (column sweep / absorb / one-site variational fit / reverse-pass cache)
-is layer-count-agnostic — ONLY the per-column tensor construction encoded the
-doubled-wire ``Tr(rho * Pi)`` semantics, and that construction is what this
-module replaces with the ket + conj-bra DOUBLE layer.
+The boundary-MPS skeleton is shared with the PEPO contraction code, while this
+module constructs a ket plus conjugate-bra layer for pure-state expectations.
 
 Two-layer columns are kept as ket/bra TENSOR PAIRS (one ket + one conj-bra
 tensor per row, sharing the dim-3 physical index; bra bond inds renamed
 ``nm -> nm~``): materializing a per-site doubled tensor would cost
-``prod_bonds D^2`` bytes (D^8 on an interior site — byte-infeasible at the WP1
+``prod_bonds D^2`` bytes (D^8 on an interior site — byte-infeasible at the target
 scale), while the one-site variational fit contracts the pair lazily against the
 bounded boundary MPS. The reused pieces (``_max_row_bond`` row-bond product,
 ``ROW{u}`` tags, the fit-call pattern) are imported from the parent sampler; the
-fit initial guess is SEEDED here (SW-S7: the parent's unseeded ``torch.randn``
-is a declared nondeterminism source — the spike seeds it per read so gate runs
-are replayable).
+fit initial guess is seeded per read so gate runs are replayable.
 
-Two-term stab read (SF9, transfers verbatim as an operator identity):
+The two-term stabilizer read is the operator identity:
 
     ``<E_s> = 1/2 <psi|psi> + 1/2 (-1)^s <psi| (x)_q M_q |psi>``  (N and M)
 
-with the RT1 corollary that q0 + q1 == N IDENTICALLY (both derive from the same
+with the corollary that q0 + q1 == N identically (both derive from the same
 two contractions) — a q0+q1 "closure" is structurally vacuous and is NOT an
-instrument here; the genuine per-read accuracy instruments are §6.2's
+instrument here; the independent per-read accuracy instruments are
 (:func:`cross_route_q1` — the branch-norm route through a DIFFERENT network —
 and :func:`chib_doubling_delta`).
 
-GPU-only, complex128 (SW-S8); referee-independent (local gate formulas, D4).
+GPU-only, complex128, with local gate formulas independent of the exact reference.
 """
 
 import torch
@@ -49,7 +41,7 @@ RDM_BRA_IND = "_rdmB"
 
 
 # --------------------------------------------------------------------------- #
-# Double-layer column construction (the SF9 replacement piece)                 #
+# Double-layer column construction                                             #
 # --------------------------------------------------------------------------- #
 def _bra_ind(nm: str) -> str:
     """The bra-layer name of a ket bond ind (global deterministic rename)."""
@@ -92,7 +84,7 @@ def _double_column_tn(state: PepsState, c: int, ops: dict,
                       open_pos: int | None = None) -> "qtn.TensorNetwork":
     """Column ``c`` (sites with grid ``v == c``) of the double-layer network:
     per row ``u`` the (ket, bra) pair tagged ``ROW{u}`` (the parent column
-    convention — v = c columns, ROW{u} tags — contract §3 row)."""
+    convention: v = c columns and ``ROW{u}`` tags)."""
     layout = state.layout
     d = int(layout.d)
     tensors = []
@@ -119,7 +111,7 @@ def _fit_compress_rows(tn: "qtn.TensorNetwork", d: int, max_bond: int,
                        gen: torch.Generator, device) -> "qtn.TensorNetwork":
     """One-site variational MPS fit of a row-group TN to bond ``max_bond`` — the
     parent fit-call pattern (``tensor_network_1d_compress(method='fit', bsz=1)``
-    with the c128 initial-guess fix), SEEDED (SW-S7): the guess is drawn from
+    with the c128 initial-guess fix). The guess is drawn from
     ``gen`` so every read is replayable. EXACTNESS GUARD (parent convention):
     when every inter-row bond product is already ``<= max_bond`` the TN is
     returned unchanged (compression to a dim >= the exact rank is the identity;
@@ -151,7 +143,7 @@ def _fit_compress_rows(tn: "qtn.TensorNetwork", d: int, max_bond: int,
 
 def _read_generator(fit_seed: int) -> torch.Generator:
     """One CPU generator per read, seeded — sequential fills within the read are
-    then deterministic (the SW-S7 replayability convention)."""
+    then deterministic."""
     gen = torch.Generator()
     gen.manual_seed(int(fit_seed))
     return gen
@@ -202,17 +194,17 @@ def norm_cache(state: PepsState, R_n: int, fit_seed: int = 0) -> NormCache:
 # --------------------------------------------------------------------------- #
 def expect_double_layer(state: PepsState, ops: dict, cache: NormCache | None = None,
                         R_n: int | None = None, fit_seed: int = 0) -> complex:
-    """RAW ``<psi| (x)_q M_q |psi>`` with per-site ``(3, 3)`` operators (contract
-    §3 row "double-layer caps"); sites absent from ``ops`` carry the identity
+    """RAW ``<psi| (x)_q M_q |psi>`` with per-site ``(3, 3)`` operators;
+    sites absent from ``ops`` carry the identity
     (the norm closure). UNNORMALIZED — callers divide by the norm read for a
     probability.
 
     Contraction routes (the parent convention):
       * ``cache is None and R_n is None`` -> EXACT contraction of the full
-        two-layer network (the d3 near-exact instrument; §4 (a)-identity floors);
+        two-layer network (the d3 near-exact instrument);
       * otherwise -> the boundary-MPS route: right environments from ``cache``
         (built at ``R_n`` if absent), forward pass sweeping columns ``0..c_max``
-        with the SEEDED one-site fit at the pass dim (SW-S7).
+        with the seeded one-site fit at the pass dimension.
     """
     layout = state.layout
     d = int(layout.d)
@@ -255,18 +247,17 @@ def expect_double_layer(state: PepsState, ops: dict, cache: NormCache | None = N
 
 def norm_read(state: PepsState, cache: NormCache | None = None,
               R_n: int | None = None, fit_seed: int = 0) -> float:
-    """``<psi|psi>`` through the same route machinery (the norm leg of every
-    §2 read; real part — the imaginary part of a norm read is fp noise)."""
+    """``<psi|psi>`` through the same route machinery; only its real part is
+    returned because the imaginary part of a norm read is floating-point noise."""
     return expect_double_layer(state, {}, cache=cache, R_n=R_n, fit_seed=fit_seed).real
 
 
 def expect_site_caps(state: PepsState, caps: dict, cache: NormCache | None = None,
                      R_n: int | None = None, fit_seed: int = 0) -> complex:
-    """The PRODUCTION double-layer caps read ``<psi| (x)_q M_q |psi>`` (RAW,
-    unnormalized) — the named public seam the SW0 structural cert + the SW6
-    b-swap killer read (``caps = {pos: (3,3)}``; absent sites carry the identity;
+    """The production double-layer caps read ``<psi| (x)_q M_q |psi>`` (raw,
+    unnormalized). ``caps = {pos: (3,3)}``; absent sites carry the identity;
     ``caps = {}`` reads ``<psi|psi>``). A thin alias of
-    :func:`expect_double_layer` (the contract §3 "double-layer caps" name)."""
+    :func:`expect_double_layer`."""
     return expect_double_layer(state, caps, cache=cache, R_n=R_n, fit_seed=fit_seed)
 
 
@@ -277,7 +268,7 @@ def site_rdm(state: PepsState, pos: int, cache: NormCache | None = None,
              R_n: int | None = None, fit_seed: int = 0) -> torch.Tensor:
     """The UNNORMALIZED 1-site reduced density matrix ``rho_pos[a, b] =
     sum_rest psi[a, rest] conj(psi[b, rest])`` (``Tr(rho_pos) = <psi|psi>``) —
-    the contract §3 ``leak_sample`` row pin: ``p_k`` comes from ONE double-layer
+    ``p_k`` comes from one double-layer
     RDM read + trivial 3x3 traces, never n_kraus full contractions (the
     ``mps_forward._leak_sample`` RDM convention transplanted).
 
@@ -323,13 +314,13 @@ def site_rdm(state: PepsState, pos: int, cache: NormCache | None = None,
 
 
 # --------------------------------------------------------------------------- #
-# Two-term stab read (N and M) + the Born p0 (contract §2 born_read_stab row)  #
+# Two-term stabilizer read (N and M) plus the Born p0                          #
 # --------------------------------------------------------------------------- #
 def stab_site_ops(paulis: dict, b: float, arm: str, device) -> dict:
     """The per-site parity operators ``M_q`` of the two-term decomposition:
     ``M_q = diag(1, -1, d2)`` on Z sites, ``H . diag(1, -1, d2) . H`` on X sites
-    (the F2 rotate-measure-rotate identity; leaked levels H-inert; ``d2`` the
-    arm's leaked weight — SF4). LOCAL formulas (D4)."""
+    (the rotate-measure-rotate identity; leaked levels are H-inert; ``d2`` is
+    the arm's leaked weight)."""
     d2 = leaked_weight(b, arm)
     diag = torch.zeros((QUTRIT, QUTRIT), dtype=CDTYPE, device=device)
     diag[0, 0] = 1.0
@@ -353,12 +344,13 @@ def born_read_stab(state: PepsState, paulis: dict, b: float, arm: str, *,
                    cache_n: NormCache | None = None, cache_x: NormCache | None = None,
                    R_n: int | None = None, R_x: int | None = None,
                    fit_seed: int = 0) -> tuple[float, float, float]:
-    """The two-term read ``(N, M, p0)`` (contract §2 ``born_read_stab`` row):
+    """The two-term read ``(N, M, p0)``:
     ``N = <psi|psi>`` (norm pass, dim ``R_n``), ``M = <psi| (x)_q M_q |psi>``
     (sample pass, dim ``R_x``), ``p0 = clamp((1/2 N + 1/2 M) / N)`` — p0 from
     ``e`` with ``s = 0`` (the s-sign is +1 on outcome 0). Exact route when the
     corresponding cache/R args are both None. q0 + q1 = N holds IDENTICALLY
-    (SF9) — no closure is read here; §6.2 instruments are separate functions."""
+    by construction; no closure is read here, and the independent accuracy
+    instruments are separate functions."""
     ops = stab_site_ops(paulis, b, arm, torch.device(state.device))
     N = expect_double_layer(state, {}, cache=cache_n, R_n=R_n, fit_seed=fit_seed).real
     M = expect_double_layer(state, ops, cache=cache_x, R_n=R_x, fit_seed=fit_seed).real
@@ -369,11 +361,11 @@ def born_read_stab(state: PepsState, paulis: dict, b: float, arm: str, *,
 
 
 # --------------------------------------------------------------------------- #
-# §6.2 per-read accuracy instruments (cross-route + chi_b doubling)            #
+# Per-read accuracy instruments (cross-route and chi_b doubling)               #
 # --------------------------------------------------------------------------- #
 def branch_norm_sq(state: PepsState, stab_tt: SingleWireStabTT, *,
                    R_n: int | None = None, fit_seed: int = 0) -> float:
-    """``||sqrt(E_s) psi||^2`` by the BRANCH-NORM route (§6.2): apply the TT to a
+    """``||sqrt(E_s) psi||^2`` by the branch-norm route: apply the TT to a
     COPY of the state, contract the double-layer norm — an INDEPENDENT
     contraction path through a DIFFERENT network (the caps route never touches
     the TT; independence is the instrument's design). Exact route at
@@ -387,11 +379,11 @@ def cross_route_q1(state: PepsState, paulis: dict, b: float, arm: str, *,
                    cache_n: NormCache | None = None, cache_x: NormCache | None = None,
                    R_n: int | None = None, R_x: int | None = None,
                    fit_seed: int = 0) -> dict:
-    """The §6.2 cross-route residual on one Born read: ``q1`` by (i) the caps
+    """The cross-route residual on one Born read: ``q1`` by (i) the caps
     two-term route ``1/2 N - 1/2 M`` and (ii) the branch-norm route
     ``||sqrt(E_1) psi||^2``; residual ``|q1_caps - q1_norm| / N``. Returns the
-    ledger-ready entry (the SW8 "ledgers close" condition checks these against
-    the §6.2 floor table — d3: <= 1e-10 every read; d5 in-run: <= 1e-6).
+    ledger-ready entry; current callers compare it with the applicable
+    per-read tolerance.
 
     Norm-cache threading: the caps two-term leg reads the SAME unmutated
     snapshot as the caller's ``born_read_stab``, so the caller's ``cache_n`` /
@@ -416,14 +408,14 @@ def cross_route_q1(state: PepsState, paulis: dict, b: float, arm: str, *,
 def chib_doubling_delta(state: PepsState, paulis: dict, b: float, arm: str,
                         chi_b: int, *, cache: NormCache | None = None,
                         fit_seed: int = 0) -> dict:
-    """The §6.2 chi_b-doubling delta ``|M(chi_b) - M(2 chi_b)| / N`` — a
-    CONSISTENCY estimator, not an error bound (RT2: a false plateau is possible;
+    """The chi_b-doubling delta ``|M(chi_b) - M(2 chi_b)| / N`` — a
+    consistency estimator, not an error bound (a false plateau is possible;
     the evolved-probe R-sweep leg mitigates). Returns the ledger-ready entry.
 
     Norm-cache threading: all three reads are on the SAME unmutated
     snapshot. The chi_b leg reuses the caller's snapshot ``cache`` ONLY when its
     boundary dim matches chi_b (else it builds its own); the 2*chi_b legs
-    legitimately need their OWN boundary dim (RT2 — a different chi_b), and a
+    legitimately need their own boundary dimension, and a
     SINGLE fresh cache at 2*chi_b serves BOTH the M and N reads there (the norm
     right-environments are op-agnostic — identity columns beyond the op support).
     Byte-identical to the un-cached form (same seed/state ⇒ same reverse sweep),
@@ -452,9 +444,9 @@ def chib_doubling_delta(state: PepsState, paulis: dict, b: float, arm: str,
 # Terminal-readout effects + the support-only exact-P(obs) seam                #
 # --------------------------------------------------------------------------- #
 def terminal_effect_pair(b: float, device) -> tuple[torch.Tensor, torch.Tensor]:
-    """The pinned per-site terminal POVM pair (contract §3 ``terminal_readout``
-    row): ``F1 = |1><1| + b |2><2|``, ``F0 = |0><0| + (1-b) |2><2|``
-    (``F0 + F1 = I``; ``F0 - F1 = diag(1, -1, 1-2b)``, consistent with F2)."""
+    """The per-site terminal POVM pair:
+    ``F1 = |1><1| + b |2><2|``, ``F0 = |0><0| + (1-b) |2><2|``.
+    Thus ``F0 + F1 = I`` and ``F0 - F1 = diag(1, -1, 1-2b)``."""
     bval = float(b)
     if not 0.0 <= bval <= 1.0:
         raise ValueError(f"readout bias b must be in [0, 1] (got {bval})")
@@ -468,8 +460,8 @@ def terminal_effect_pair(b: float, device) -> tuple[torch.Tensor, torch.Tensor]:
 
 
 def terminal_collapse_diag(bit: int, b: float, device) -> torch.Tensor:
-    """The ``sqrt(F_bit)`` collapse operator (the ``mps_forward`` hard2 value
-    contract): bit 1 -> ``diag(0, 1, sqrt(b))``; bit 0 ->
+    """The ``sqrt(F_bit)`` collapse operator, matching ``mps_forward`` values:
+    bit 1 -> ``diag(0, 1, sqrt(b))``; bit 0 ->
     ``diag(1, 0, sqrt(1-b))``. Applied as a 1-site op; the caller renormalizes."""
     bval = float(b)
     if int(bit) == 1:
@@ -501,11 +493,11 @@ def _terminal_site_effects(logical: dict, isx: dict, b: float, device) -> dict:
 
 def terminal_obs_prob(state: PepsState, logical: dict, isx: dict, b: float,
                       m: int) -> float:
-    """EXACT ``P(obs = 1)`` — the SUPPORT-ONLY enumeration seam, retained
-    DISTRIBUTION-LEVEL ONLY (contract §3: valid because product-POVM outcome
+    """Exact ``P(obs = 1)`` from support-only enumeration. This is retained at
+    distribution level only: product-POVM outcome
     marginals on disjoint sites are unchanged by measuring the complement — an
-    (a) one-line theorem; **NEVER a byte-level referee** — the per-shot sampling
-    law reads ALL n_data sites, RT1-B2).
+    one-line identity; never a byte-level reference — the per-shot sampling
+    law reads all ``n_data`` sites).
 
     Enumerates the ``2^w`` outcome tuples over the sorted logical support, sums
     the exact double-layer joint weights ``<psi| (x)_q E_{c_q} |psi>`` over the

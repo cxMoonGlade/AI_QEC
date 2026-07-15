@@ -56,8 +56,8 @@ cudaq-grover = [
     "matplotlib==3.10.9; python_version >= '3.11' and sys_platform == 'linux'",
     "cuda-quantum-cu13==0.14.2; python_version >= '3.11' and sys_platform == 'linux'",
 ]
-# M4 decoder pin (registration S1/S11): frozen evaluator-side decoder, CPU,
-# upstream defaults; wheel identity recorded in error_coupling_simulator/frontend/decoder.py.
+# Optional evaluator-side decoder pin: CPU execution with upstream defaults; wheel identity is
+# recorded in error_coupling_simulator/frontend/decoder.py.
 hw = ["pymatching==2.4.0"]
 # INDEPENDENT-oracle test deps. tests/test_joint_lindbladian.py validates the joint-Lindbladian
 # assembler against QuTiP + scipy (NOT the module's own code — faithfulness protocol rule I); the
@@ -66,6 +66,7 @@ hw = ["pymatching==2.4.0"]
 test = [
     "coverage==7.15.0",
     "hypothesis==6.156.1",
+    "mpmath==1.3.0",
     "mutmut==3.6.0",
     "pytest==8.4.2",
 ]

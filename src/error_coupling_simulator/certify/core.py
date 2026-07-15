@@ -62,13 +62,13 @@ def emitted_statistic(records: dict, statistic: Statistic, regime: Regime):
     if statistic is Statistic.RR_CORR:
         # the PER-ROUND |connected round-to-round Pearson correlation| corr(det_{r,j}, det_{r+1,j}),
         # averaged over stabs j, as a sequence over r = 0..R-2. The per-round shape (not a single
-        # global mean) is what distinguishes a TRANSIENT chain from its stationary limit — the step-5b
-        # correction; collapsing to one scalar hid the stationary-vs-transient bug. Still IDENTICALLY 0
+        # global mean) is what distinguishes a TRANSIENT chain from its stationary limit; collapsing
+        # to one scalar would hide a stationary-vs-transient mismatch. Still IDENTICALLY 0
         # (every round) for any independent-bit-flip foil (it factorizes across (round, stab)). At R=2
         # the sequence is length 1.
         # The full SIGNED (R-1, n_stab) Pearson matrix is built here (0 for a zero-variance entry — the
         # SAME convention the DM ``_conn_corr`` uses) and reduced by the SHARED ``reduce_rr_corr`` so
-        # the emitted side and the DM anchor cannot drift (apples-to-apples; WS1 prereg §6).
+        # the emitted side and the DM anchor cannot drift.
         R = int(regime.R)
         n_stab = int(regime.n_stab or (det.shape[1] // max(R, 1)))
         d = det.reshape(n, R, n_stab).astype(np.float64)
@@ -97,7 +97,7 @@ def emitted_statistic(records: dict, statistic: Statistic, regime: Regime):
 
 # --------------------------------------------------------------------------- #
 # the SHARED moment reductions (one home — emitted side AND the DM anchor call #
-# these, so the apples-to-apples shapes/semantics cannot drift; WS1 §6)        #
+# these, so the compared shapes and semantics cannot drift)                    #
 # --------------------------------------------------------------------------- #
 def _pearson_bits(a: np.ndarray, b: np.ndarray) -> float:
     """The connected (Pearson) correlation of two {0,1} sample columns; 0 for a zero-variance column

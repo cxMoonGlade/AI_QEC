@@ -1,4 +1,4 @@
-"""Stage-D batch ``operation`` -- per-unit L0+L1+L2 coverage of
+"""Per-unit L0+L1+L2 coverage of
 ``error_coupling_simulator.frontend.operation`` (9 CPU-pure public units: the two frozen
 dataclasses ``OperationSpec`` (``__post_init__`` name-canonicalization + metadata validation,
 ``to_manifest``) and ``OperationSet`` (``__post_init__`` empty/duplicate guards, the ``names``
@@ -7,8 +7,7 @@ property, ``require``, ``to_manifest``), plus the three module functions
 imports NEITHER torch NOR quimb -- ``dataclasses`` + a sibling ``metadata_guard.
 validate_public_metadata`` -- so out_of_scope is empty).
 
-Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
-work-list docs/SIMULATOR.md D24).
+Current coverage contract: docs/SIMULATOR.md SS12.3/12.4.
 ``frontend/operation.py`` owns the PUBLIC construction vocabulary a ``CodeSpec`` declares before
 a schedule compiles it. It is NOT a noise/mechanism model, NOT evaluator truth, NOT a serialized
 channel payload -- just a named-operation + validated-metadata carrier and the name
@@ -20,7 +19,7 @@ HARDCODED here (deliberately NOT imported from src): a mutmut mutation of a modu
 must make the module's output stop matching THIS hardcoded literal -> the pin fails -> the mutant is
 killed. Every raising guard is tripped through EVERY public route reaching it with the EXACT message
 via ``assert_raises_exact`` (kills the string-wrap/case/None-message mutants a substring ``match=``
-leaves surviving). The D19 ``.lower()`` note: mutmut wraps a literal as ``XX<s>XX`` (NOT a
+leaves surviving). The ``.lower()`` note: mutmut wraps a literal as ``XX<s>XX`` (NOT a
 case-swap), and ``XXprep0XX`` survives ``.lower()`` yet FAILS the ALLOWED-membership guard -> raise
 -> killed; the already-canonical caller literals are therefore fully discriminated (no masked
 fraction).

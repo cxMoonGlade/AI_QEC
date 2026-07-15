@@ -1,4 +1,4 @@
-"""Stage-D batch ``stim_source`` -- per-unit L0+L1+L2 coverage of
+"""Per-unit L0+L1+L2 coverage of
 ``error_coupling_simulator.frontend.stim_source`` (6 CPU-pure public units: the frozen
 ``CompiledCircuit.__post_init__`` record validator, the ``CircuitSource`` Protocol
 ``compile`` stub, and the three source-adapter ``compile`` surfaces
@@ -7,8 +7,7 @@ plus ``StimCircuitSource.from_file``; the private ``_sha256_file`` helper is not
 but is mutated + exercised through ``from_file``; the module imports NEITHER torch NOR quimb, so
 out_of_scope is empty).
 
-Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
-work-list docs/SIMULATOR.md D25).
+Current coverage contract: docs/SIMULATOR.md SS12.3/12.4.
 ``frontend/stim_source.py`` keeps the ORIGIN of a compiled Stim circuit explicit: keyed
 ``CircuitIR``, an already-compiled pair, and imported/on-disk Stim circuits all feed the same
 ``CompiledCircuit`` artifact path.

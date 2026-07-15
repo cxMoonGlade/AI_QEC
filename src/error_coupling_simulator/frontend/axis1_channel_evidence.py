@@ -552,8 +552,8 @@ def _assemble_selection_joint_channel(
     # THIN BATCH LAYER (measured 2026-07-04): the per-component builds are launch-bound (many tiny
     # sequential matrix_exp/eigh on 4x4/16x16), 88% of the per-manifest cost. Grouping this selection's
     # components BY DIMENSION into one batched matrix_exp+eigh per D-group (`assemble_substep_channels_
-    # factored_batched` on a single item) is EXACT (verified gauge-invariant equal to the per-item loop,
-    # <=2.1e-15; outputs/twin_validation/factored_batch_options_probe.py) and byte-identical on records
+    # factored_batched` on a single item) is exact for the declared factorization; current owner tests
+    # compare it gauge-invariantly with the per-item loop and byte-identically on records
     # (G-records). It is a 1-line swap with NO apply-loop restructure — the low-risk half of the batching
     # win (~11% of the channel-build cost); the whole-manifest cross-substep batch (~20%) was declined to
     # keep the correctness-critical apply loop untouched (coordinator: correct+simple > slightly faster).

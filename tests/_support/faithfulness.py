@@ -147,7 +147,7 @@ def assert_raises_exact(exc_type, message: str, call: Callable, *, label: str = 
     is not enough): mutmut's string mutations (``"foo"`` -> ``"XXfooXX"`` / ``"FOO"``) and a
     ``raise ValueError(None)`` mutant all PASS a substring ``match=`` yet FAIL exact equality
     -- so a raising validation guard tested with this helper KILLS its message-content mutants,
-    which a substring test leaves surviving (the recurring D11-D19 finding; 9 batches re-rolled
+    which a substring test leaves surviving (a recurring finding; nine test groups re-rolled
     a private ``_raises_exact`` for exactly this). Trip the guard through EVERY input route that
     reaches it -- 100% branch coverage of the guard is NOT the same as every routing INTO it
     being exercised (the channel-axis routing lesson). A wrong exception type or no raise

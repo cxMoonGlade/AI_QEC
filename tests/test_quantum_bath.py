@@ -1,10 +1,8 @@
-"""Package-level verification of error_coupling_simulator.quantum_bath (the P6 pseudomode/shared-bath carrier).
+"""Bounded reference checks for ``error_coupling_simulator.quantum_bath``.
 
-Independently reproduces the CERTIFIED ground-truth numbers of the notion-3 relaxation x dual-axis study
-(prereg docs/SIMULATOR.md) THROUGH the migrated package -- so a
-migration bug (wrong index/reshape, dropped ft/n3 substitution) fails here. Exact-DM CPU, small nmax; fast.
+The tests independently reproduce the declared shared-bath equations and
+reference values using exact small-register density matrices on CPU. They check:
 
-The load-bearing anti-toy facts this locks in:
   - the dual-ancilla reduced-superop factorization is exact (E_red (x) I_aX (x) I_aZ == full 16*nmax Liouvillian);
   - the sigma_minus EMISSION Liouvillian matches the exact single-excitation amplitude ODE (+ is non-unital);
   - the sigma_z-sector collective-dephasing matches the independent-boson closed form;

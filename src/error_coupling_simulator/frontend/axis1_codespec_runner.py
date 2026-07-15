@@ -66,7 +66,7 @@ def build_axis1_codespec_frontend_spec(*, rounds: int = 2) -> CodeSpec:
 
 
 def build_axis1_codespec_4q_frontend_spec(*, rounds: int = 2) -> CodeSpec:
-    """Build the registered 4q coupled-process variant (prereg §1.1): 3 data + 1 X-check ancilla.
+    """Build the registered 4q coupled-process variant: 3 data + 1 X-check ancilla.
 
     Drops the ``z1`` Z-check (and ancilla 4) of the 5q fixture; keeps the ``x0`` X-check (X on
     data 0 via ancilla 3, the same superposition-bearing static-ZZ edge (0,3)) and the

@@ -1,4 +1,4 @@
-"""Stage-D batch ``groundtruth_nulls`` -- per-unit L0+L1 coverage of the two
+"""Per-unit L0+L1 coverage of the two
 anti-toy oracle modules of ``error_coupling_simulator.quantum_bath``:
 
   * ``ground_truth.py`` (6 units): the Rule-I INDEPENDENT reference computations --
@@ -9,8 +9,8 @@ anti-toy oracle modules of ``error_coupling_simulator.quantum_bath``:
 
 Both modules are CPU-pure (numpy / scipy.linalg.expm / math; NO torch, NO quimb), so
 they get the FULL treatment: L0 (100% statement + BOTH arcs of every tracked branch per
-unit) + L1 (Hypothesis faithfulness properties for the batch invariants). L2 (mutmut)
-runs in Stage E. Everything is in scope -- there is no out_of_scope park.
+unit) + L1 (Hypothesis faithfulness properties for the batch invariants). L2 runs through
+the current mutation harness. Everything is in scope -- there is no out_of_scope park.
 
 NB on the "branch surface" (coverage.py --branch). coverage.py emits NO tracked branch
 arc for a pure generator/comprehension body, so a unit whose ONLY compound statement is
@@ -551,7 +551,7 @@ def _gt_params(draw):
     )
 
 
-@pytest.mark.skipif(os.environ.get("STAGE_D_SKIP_SLOW") == "1",
+@pytest.mark.skipif(os.environ.get("ECS_MUTATION_SKIP_SLOW") == "1",
                     reason="slow Hypothesis(12) x nmax=16 convergence sweep; runs in the coverage "
                            "gate, skipped under MUTATION only -- the deterministic single-call "
                            "nmax=16 corner test (test_L1_indep_boson_nmax6_is_UNCONVERGED) kills the "

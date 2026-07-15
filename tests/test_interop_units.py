@@ -1,4 +1,4 @@
-"""Stage-D batch ``interop`` -- per-unit L0+L1+L2 coverage of
+"""Per-unit L0+L1+L2 coverage of
 ``error_coupling_simulator.frontend.interop`` (3 LIVE public units, CPU-pure).
 
 Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;

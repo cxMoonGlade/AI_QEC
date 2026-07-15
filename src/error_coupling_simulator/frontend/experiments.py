@@ -21,7 +21,7 @@ THE TWO THETA CONVENTIONS ARE TWO DISTINCT PRESETS (never a merged default):
 
 Neither preset is a paper-validated physical cell. ``theta_rad=0.30``, ``g_heat=0``,
 ``b_bias=0.9``, arm A, and ``biased_b`` are registered project choices;
-``WG_L1=5e-3`` and ``g_seep=0.09`` are separate Miao/McEwen scale anchors from
+``WG_L1=5e-3`` and ``g_seep=0.09`` have separate Miao/McEwen scale context from
 different devices/protocols. Their composition is a synthetic benchmark. In
 particular, ``b_bias=0.9`` is one registered synthetic nuisance point, not a measured
 readout magnitude; physical conclusions must bracket the exported
@@ -30,7 +30,7 @@ readout magnitude; physical conclusions must bracket the exported
 Exactly ONE of ``theta_rad`` / ``wg_l1_target`` is set on any preset (validated);
 :func:`resolve_theta` maps either convention to the operative angle.
 
-DATASET RESOLUTION (K-vacuity rule). :func:`load_xzzx_d3` / :func:`run_spec_from_preset`
+DATASET RESOLUTION (fail closed). :func:`load_xzzx_d3` / :func:`run_spec_from_preset`
 resolve the caller-supplied Google ``d3_at_q6_7`` patch as a GEOMETRY/SCHEDULE source only through
 ``error_coupling_simulator.frontend.xzzx_parser.default_r01_paths`` /
 ``default_r10_paths``
@@ -44,9 +44,8 @@ raises :class:`FileNotFoundError` NAMING the missing path -- NEVER a silent
 fallback to the default root (a fallback would make every env-override probe
 vacuous: the run would "pass" on the wrong data).
 
-Binding contract: ``docs/twin_validation/api_hardening_ownership_design.md`` row A1,
-the NAMING STANDARD (N-1..N-5) and the ratified rename table (``load_xzzx_d3`` /
-``ExperimentPreset`` / ``leak_slice_table``).
+Current ownership and external-input rules are binding in ``docs/SIMULATOR.md``,
+this module's README, and the registered frontend tests.
 """
 
 from __future__ import annotations
@@ -102,7 +101,7 @@ _RUN_PURPOSE_EVIDENCE = {
 }
 
 #: The four required external d3_at_q6_7 files, keyed by logical name (the same logical names
-#: the tests/conftest.py probe + the AM-2 mask hook use).
+#: used by the test dataset probe and test-only mask hook).
 _D3_LOGICAL_NAMES = ("r01_circ", "r01_meta", "r10_circ", "r10_meta")
 
 
@@ -168,8 +167,8 @@ def _dataset_files(dataset_root: "str | Path | None") -> "dict[str, Path]":
 
     Every resolved file is existence-checked. A nonexistent override root, or any
     missing file, raises :class:`FileNotFoundError` naming the offending path --
-    NEVER a silent fallback to the default root (K-vacuity: a fallback would let an
-    env-override run silently read the wrong data and still "pass").
+    NEVER a silent fallback to the default root: a fallback would make the check vacuous
+    by allowing an environment-override run to read the wrong data and still "pass".
     """
     xp = _xzzx_parser()
     root: "Path | None"
@@ -220,7 +219,7 @@ def load_xzzx_d3(dataset_root: "str | Path | None" = None, *,
                  with_interior_streams: bool = True) -> "XZZXSchedule":
     """Parse an external Google d3 XZZX schedule: r01 geometry (+ r10 interior streams).
 
-    Provenance is the explicit two-file-role split (model §1): the r01 instance supplies
+    The two inputs have explicit roles: the r01 instance supplies
     the VERIFIED code geometry (``parse_xzzx_circuit(verify=True)``: 17 qubits /
     8 detectors, two-method stabilizer self-check), and -- when
     ``with_interior_streams=True`` (default) -- the MULTI-ROUND r10 instance supplies
@@ -351,7 +350,8 @@ def _registered_qutrit_preset(*, name: str, theta_rad: "float | None" = None,
         "exact_locator": "Fig. 3c",
         "reported_value": "approximately 5e-3 leakage generated per cycle",
         "device_protocol_scope": "reported DQLR surface-code experiment only",
-        "transformation_to_field": "identity magnitude anchor for wg_l1_target",
+        "transformation_to_field": (
+            "no identity transform: approximate cross-observable scale context only"),
         "supports_only": (
             "approximately 5e-3 leakage generated per cycle in the reported "
             "device/protocol"),
@@ -386,14 +386,16 @@ def _registered_qutrit_preset(*, name: str, theta_rad: "float | None" = None,
             magnitude_supported_by_literature=False),
         "wg_l1_target": entry(
             "wg_l1_target",
-            provenance_kind=("paper-measured" if wg_l1_target is not None
-                             else "project-design"),
-            source_kind=("single_paper_magnitude_anchor" if wg_l1_target is not None
+            provenance_kind="project-design",
+            source_kind=("project_target_with_literature_scale_context"
+                         if wg_l1_target is not None
                          else "not_applicable_raw_angle_coordinate"),
-            claim_scope=("reported_device_protocol_scale_only"
+            claim_scope=("project_channel_target_only"
                          if wg_l1_target is not None else "not_applicable"),
             literature_references=([miao_l1] if wg_l1_target is not None else []),
-            whole_project_channel_supported=False),
+            whole_project_channel_supported=False,
+            direct_observable_match=False,
+            transformation_supported=False),
         "g_seep": entry(
             "g_seep", provenance_kind="project-design",
             source_kind="cross_device_scale_anchor",
@@ -572,8 +574,7 @@ def run_spec_from_preset(preset: ExperimentPreset, *, n_shots: int, n_rounds: in
         "resolved_theta_rad": {
             "value": theta,
             "provenance_kind": (
-                "project-design" if preset.theta_rad is not None
-                else "calibrated-to-paper"),
+                "project-design"),
             "transformation": (
                 "identity_from_registered_theta_rad"
                 if preset.theta_rad is not None
@@ -629,10 +630,9 @@ def leak_slice_table(preset_or_params: "ExperimentPreset | RunSpec", *,
                      as_list: bool = False):
     """The within-cycle per-CZ leak slice ``exp(L/4)`` Kraus table for a preset.
 
-    Routes through :meth:`FusedWithinCycleSampler.build_within_cycle_leak` -- the C1-asserted
-    builder. The embedded (a)-class PRECONDITIONS stay inside that builder and are
-    therefore embedded in this facade path (contract row A1 -- they are never
-    bypassed):
+    Routes through :meth:`FusedWithinCycleSampler.build_within_cycle_leak`. Its
+    channel-validity preconditions remain inside the builder and cannot be bypassed
+    through this facade:
 
     * CPTP residual ``max|sum_k K_k^dag K_k - I| < 1e-12`` (``CPTP_TOL``) on the slice;
     * the composition identity ``||exp(L) - (exp(L/4))^4|| < 1e-12``
@@ -650,7 +650,7 @@ def leak_slice_table(preset_or_params: "ExperimentPreset | RunSpec", *,
     if isinstance(preset_or_params, ExperimentPreset):
         spec = run_spec_cls(
             # circuit_path is NOT consumed here: build_within_cycle_leak reads only
-            # (theta, g_seep, g_heat). The sentinel keeps the C1-asserted builder's
+            # (theta, g_seep, g_heat). The sentinel keeps the checked builder's
             # RunSpec signature without requiring the dataset on disk for a pure
             # channel-table build.
             circuit_path="__leak_slice_table_only__",

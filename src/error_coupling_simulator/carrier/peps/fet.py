@@ -1,29 +1,27 @@
 from __future__ import annotations
 
-r"""Environment-optimal (FET) single-bond rank selection for the single-wire PEPS
-carrier — the Stage-2a src home of the machinery validated in Stage-1.
+r"""Environment-aware single-bond rank selection for the single-wire PEPS carrier.
 
-Binding doc: ``docs/nonpauli_teacher/fet_stage2_src_contract_2026-07-11.md`` (§2
-"what is LIFTED", §3 the two-pass seam, §4 invariants incl. the RT-F5
-no-qualifying-χ fallback). The FET solver here is **LIFTED verbatim-then-adapted**
-from the Stage-1 diagnostic ``outputs/nonpauli_teacher/fet_stage1_env_truncation.py``
-(validated Γ-independently: leak-off B4_6 dim16→env_rank1, ``S_A == GF(2)`` to
-1e-15, overlap 1.0) — it is NOT re-derived here.
+This implementation remains a research path. Local environment and dense-reference
+invariants have current tests, but the end-to-end entropy invariant fails:
+the carrier returns ``S_A=0.10860941571062639`` against the independent GF(2)
+reference ``2.0`` at tolerance ``1e-4``. This module is therefore not certified as
+state-faithful or record-faithful. See ``docs/simulator_validation/PEPS_FET_VALIDATION.md``.
 
 WHAT THIS MODULE IS
 -------------------
-The over-count the Stage-1 spike diagnosed enters the carrier at RANK SELECTION:
+The suspected over-count enters the carrier at rank selection:
 the local pair-insertion spectrum reports a much larger rank than the bond's true
 (environment-aware) entanglement across a loopy PEPS. This module computes the
 **environment-optimal rank** of a single bond from its exact double-layer
 environment ``Γ[i,I,j,J]`` and returns the corresponding truncation map ``(U, V†)``.
-:func:`trajectory._policy_cut` wires it in as the new ``"fet_env"`` truncation mode.
+:func:`trajectory._policy_cut` wires it in as the ``"fet_env"`` truncation mode.
 
 PUBLIC SURFACE
 --------------
   * :func:`gamma_TN` — the exact double-layer single-bond environment ``Γ[i,I,j,J]``
     (mirrors ``contraction.expect_double_layer``'s exact branch, target bond opened
-    on both layers). d3 exact; d5 (boundary-MPS Γ) is Stage-2b, out of scope here.
+    on both layers). The exact route is bounded to d3.
   * :func:`gamma_fidelity` — the Γ-fidelity of a rank-χ bond map ``M[i,j]`` vs the
     identity insertion (with the tn_qsim instability sentinel).
   * the multi-restart ALS solver: :func:`_als_inner`, :func:`_fix_gauge`,
@@ -31,23 +29,23 @@ PUBLIC SURFACE
     :func:`build_seeds`, :func:`_multistart_als_truncation`.
   * :func:`apply_fet_truncation` — the in-place write-back (mirrors ``ntu_truncate``'s
     absorb layout: ``U`` into site A's bond leg, ``V†`` into site B's).
-  * :func:`env_optimal_rank` — **the NEW wrapper**: sweep ``χ = 1..bare_rank`` and
+  * :func:`env_optimal_rank` — sweep ``χ = 1..bare_rank`` and
     return the smallest ``χ`` with ``Fid_Γ(χ) ≥ 1 − eps_fid`` as ``(env_rank, U,
     V†, fid_env)`` (``fid_env`` = the achieved ``Fid_Γ``, so the caller reuses it for
-    the ledger instead of rebuilding ``Γ``). **RT-F5 fallback:** if NO ``χ``
+    the ledger instead of rebuilding ``Γ``). If no ``χ``
     qualifies, KEEP the full bond (``env_rank = current dim``, ``U = V† = identity``,
     ``fid_env = 1.0``, no truncation) — never a lossy ceiling cut.
 
-NOT HERE (test-only referee, contract §2/§4/DISCIPLINE): the independent-route
+The independent-route
 ``gamma_dense`` and the ``gamma_gates`` / ``dense_psi`` anti-circular checks live
-ONLY in the test. This src hot path shares no code with its referee.
+live only in the test. This source path shares no code with its reference.
 
-COST REGIME (contract §5 F8): ``gamma_TN`` recomputes a full ``auto-hq``
+COST REGIME: ``gamma_TN`` recomputes a full ``auto-hq``
 double-layer contraction per call, so ``fet_env`` is orders slower than
-``dynamic_eps``/``lossless`` — a FEASIBILITY/diagnostic mode for the 1-shot
-WP1'/faithfulness gates, NOT an N-shot production sampler path.
+``dynamic_eps``/``lossless`` — a feasibility/diagnostic mode, not an N-shot
+production sampler path.
 
-GPU-only, torch-cuda-complex128 (SW-S8); referee-independent.
+GPU-only, torch-cuda-complex128, with an independently implemented test reference.
 """
 
 import os
@@ -63,7 +61,7 @@ from .state import CDTYPE, RDTYPE, site_tensor
 from .trajectory import _exact_rank, _insertion_spectrum
 
 # --------------------------------------------------------------------------- #
-# Solver constants (LIFTED from the Stage-1 diagnostic; validated)             #
+# Solver constants (project numerical choices; local tests only)                #
 # --------------------------------------------------------------------------- #
 ALS_TRIALS = 20            #: ALS sweeps per restart seed
 FET_OPT_FLOOR = 1e-9       #: multistart fidelity may trail gauge-fix by at most this
@@ -91,7 +89,7 @@ def _parse_bond(bond: str) -> tuple[int, int]:
 
 def _hermitize_psd(Gamma: torch.Tensor) -> torch.Tensor:
     """Restore the Hermitian-PSD property the EXACT double-layer environment has BY
-    CONSTRUCTION (theory-fix 2026-07-11, Dziarmaga NTU 2107.06635 + McKeever/Evenbly FET):
+    CONSTRUCTION (Dziarmaga NTU 2107.06635 and McKeever/Evenbly FET):
     the exact cluster metric is "Hermitian and non-negative down to machine precision", and
     that exactness is the central stability advantage — an approximate NON-Hermitian metric
     is the documented FTU/FU crash mode (ill-conditioned B -> pinv blows up -> non-monotone
@@ -112,8 +110,8 @@ def _hermitize_psd(Gamma: torch.Tensor) -> torch.Tensor:
 # =========================================================================== #
 def gamma_TN(state, bond: str) -> torch.Tensor:
     """Mirror ``expect_double_layer``'s exact branch, then split the target bond
-    open on both layers. Returns ``Γ[i,I,j,J]`` (D,D,D,D), torch c128. d3 exact
-    (Stage-2a); the d5 boundary-MPS single-bond Γ is Stage-2b (out of scope)."""
+    open on both layers. Returns ``Γ[i,I,j,J]`` (D,D,D,D), torch c128. The
+    exact route is bounded to d3."""
     layout = state.layout
     a, b = _parse_bond(bond)
     bra_bond = _bra_ind(bond)
@@ -130,7 +128,7 @@ def gamma_TN(state, bond: str) -> torch.Tensor:
         tensors.extend((ket, bra))
     res = qtn.TensorNetwork(tensors).contract(
         output_inds=(_GI, _GBI, _GJ, _GBJ), optimize="auto-hq")
-    return _hermitize_psd(res.data.to(CDTYPE))   # theory-fix: the exact env metric IS PSD
+    return _hermitize_psd(res.data.to(CDTYPE))   # the exact environment metric is PSD
 
 
 # =========================================================================== #
@@ -153,7 +151,7 @@ def gamma_fidelity(Gamma: torch.Tensor, M: torch.Tensor) -> float:
     fid = float((overlap.conj() * overlap).real) / (n0 * nm)
     if not np.isfinite(fid) or fid > 1.0 + FID_INSTAB_TOL:
         return float("-inf")
-    return min(fid, 1.0)   # a fidelity is <= 1 (theory-fix: PSD Γ; clamp fp overshoot)
+    return min(fid, 1.0)   # a fidelity is <= 1 for PSD Γ; clamp fp overshoot
 
 
 # =========================================================================== #
@@ -359,7 +357,7 @@ def _multistart_als_truncation(
 def apply_fet_truncation(state, bond: str, U: torch.Tensor, Vh: torch.Tensor) -> None:
     """Absorb ``U`` (D x chi) into site A's bond leg and ``Vh`` (chi x D) into site
     B's, reconnecting the new chi-bond (the ORIGINAL bond name kept). Mutates
-    ``state`` in place. With ``U = Vh = I_D`` (the RT-F5 fallback) this is a
+    ``state`` in place. With ``U = Vh = I_D`` this is a
     genuine no-op (the bond stays at its full dim)."""
     a, b = _parse_bond(bond)
     ta, tb = site_tensor(state, a), site_tensor(state, b)
@@ -372,34 +370,33 @@ def apply_fet_truncation(state, bond: str, U: torch.Tensor, Vh: torch.Tensor) ->
 
 
 # =========================================================================== #
-# env_optimal_rank — the NEW Stage-2 wrapper (contract §3 / §4 RT-F5).           #
+# Environment-aware rank-selection wrapper.                                    #
 # =========================================================================== #
 def env_optimal_rank(state, bond: str,
                      eps_fid: float) -> tuple[int, torch.Tensor, torch.Tensor, float]:
     """Sweep ``χ = 1..bare_rank`` on the bond's exact double-layer environment
     ``Γ`` and return ``(env_rank, U, V†, fid_env)`` for the SMALLEST ``χ`` whose
     achieved environment fidelity ``Fid_Γ(χ) ≥ 1 − eps_fid`` (via the multi-restart
-    multistart ALS solver); ``fid_env`` is that achieved ``Fid_Γ``
-    (contract §3's Fid_Γ).
+    multistart ALS solver); ``fid_env`` is that achieved ``Fid_Γ``.
     ``bare_rank`` = the exact local rank ``_exact_rank(_insertion_spectrum(bond))``
-    (the carrier's own rank read — the FET never keeps MORE than the local rank;
-    contract §4), capped at the stored bond dim.
+    (the carrier's own rank read; the FET never keeps more than the local rank),
+    capped at the stored bond dimension.
 
     ``fid_env`` is returned so the caller (:func:`trajectory._policy_cut`) uses it
     for the ledger DIRECTLY instead of rebuilding ``Γ`` + recomputing the fidelity —
-    ``gamma_TN`` is the expensive per-bond double-layer contraction (contract §5 F8),
+    ``gamma_TN`` is the expensive per-bond double-layer contraction,
     so returning the already-computed ``Fid_Γ`` halves the per-bond ``gamma_TN`` cost.
 
-    **RT-F5 fallback (contract §4):** if NO ``χ ∈ [1, bare_rank]`` reaches the
+    If no ``χ ∈ [1, bare_rank]`` reaches the
     target, KEEP the full bond — ``env_rank = current stored dim``, ``U = V† =
     identity`` (a genuine no-op via :func:`apply_fet_truncation`), ``fid_env = 1.0``
     (the identity insertion IS the original state). It must NOT fall back to a lossy
-    ceiling cut; WP1' then HONESTLY reports the bond as non-collapsing."""
+    ceiling cut; diagnostics then report the bond as non-collapsing."""
     Gamma = gamma_TN(state, bond)
     D = int(Gamma.shape[0])
     fid_target = 1.0 - float(eps_fid)
     S = _insertion_spectrum(state, bond)
-    bare = min(int(_exact_rank(S)), D)   # env_rank <= bare_rank (contract §4 invariant)
+    bare = min(int(_exact_rank(S)), D)   # env_rank <= bare_rank
     prep = None
     try:
         prep = _fix_gauge(Gamma)
@@ -409,7 +406,8 @@ def env_optimal_rank(state, bond: str,
         # DIAGNOSTIC (env-gated, BEHAVIOR-IDENTICAL): log the FULL fid(chi) curve to
         # confirm WHY a dressed bond over-keeps (threshold-too-tight vs the >1 sentinel
         # vs a solver plateau). Same return as the fast path below (first qualifying chi,
-        # else RT-F5). Slower (computes all chi); only fires when the env var is set.
+        # otherwise use the no-op fallback). This computes all chi values and only
+        # runs when the environment variable is set.
         curve = []
         accepted = None
         best = None
@@ -447,10 +445,10 @@ def env_optimal_rank(state, bond: str,
             best = (int(chi), als_result["U"], als_result["Vh"], ffid)
         if np.isfinite(fid) and fid >= fid_target:
             return int(chi), als_result["U"], als_result["Vh"], float(fid)
-    # No χ<=bare cleared the bar. theory-fix (2026-07-11): with the Hermitian-PSD Γ +
+    # No χ<=bare cleared the bar. With the Hermitian-PSD Γ and the
     # regularized solve this is UNREACHABLE (χ=bare is a lossless identity insertion => fid=1),
     # but if it ever fires, accept the BEST χ<=bare (highest Fid_Γ) — NEVER keep the
-    # over-counted full bond D>bare (the old RT-F5 that grew the joint bond).
+    # over-counted full bond D>bare.
     if best is not None:
         return best
     eye = torch.eye(D, dtype=CDTYPE, device=Gamma.device)

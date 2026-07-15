@@ -1,4 +1,4 @@
-"""Stage-D batch ``record_schema`` -- per-unit L0+L1+L2 coverage of
+"""Per-unit L0+L1+L2 coverage of
 ``error_coupling_simulator.frontend.record_schema`` (10 CPU-pure public units: the two
 ``RecordSchema`` classmethods ``from_stim``/``from_circuit_ir``, the two width properties
 ``detector_bit_width``/``observable_bit_width``, ``RecordSchema.to_manifest``, and the five
@@ -7,8 +7,7 @@ module-level guards ``require_frontend_representability``/``require_stim_circuit
 torch, no quimb -- ``stim`` is a lazy import inside ``require_stim_circuit`` -- so
 out_of_scope is empty).
 
-Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
-work-list docs/SIMULATOR.md D20).
+Current coverage contract: docs/SIMULATOR.md SS12.3/12.4.
 ``frontend/record_schema.py`` owns the detector/observable RECORD-SCHEMA + manifest guards
 carried alongside each compiled Stim circuit: ``RecordSchema`` (a frozen carrier built
 either from a stim.Circuit's counts or from a CircuitIR blended with a stim circuit) and

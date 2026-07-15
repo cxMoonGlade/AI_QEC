@@ -1,27 +1,19 @@
-"""Canonical skip-gate probes + constants for the test suite (Wave 1, contract row C1).
+"""Canonical skip probes and constants for the current test suite.
 
-Binding contract: ``docs/SIMULATOR.md`` (row C1, the
-NAMING STANDARD, and review dispositions AM-2/AM-4). This module is the ONE home for:
+The binding contract is ``docs/SIMULATOR.md``. This module is the single home for:
 
   * ``_HAS_CUDA`` / ``requires_cuda`` -- the GPU probe. House rule: GPU-only model
-    compute is a HARD SKIP without CUDA, never a CPU fallback (the memlean
-    cuda-else-cpu fallback was a divergence eliminated on migration -- a DECLARED
-    behavior change, contract AM-2).
-  * ``_HAS_DATA`` / ``requires_data`` -- the ONE strict d3 dataset probe: ALL FOUR
+    compute is a hard skip without CUDA, never a CPU fallback.
+  * ``_HAS_DATA`` / ``requires_data`` -- the strict d3 dataset probe: all four
     shipped ``d3_at_q6_7`` files must be present (r01 circuit+metadata AND r10
-    circuit+metadata -- the strict p2 variant). Files that previously probed only
-    3 of the 4 (soft_readout, seam) or r01-only (qutrit_dm_exact) are DELIBERATELY
-    strictened by this migration: a partial patch now skips them (correct behavior,
-    C1 risk note).
+    circuit+metadata). A partial dataset is unavailable by definition.
   * the canonical device/dtype constants ``DEVICE`` / ``CDTYPE`` / ``RDTYPE`` / ``PHYS``.
 
-TEST-ONLY probe hook (NOT a user feature): the env var ``ECS_D3_MASK`` is the
-Rule-II falsifying probe for the ``_HAS_DATA`` predicate itself (contract AM-2 --
-"the predicate is SHOWN to trip"). It holds a comma list of logical names in
+Test-only probe hook (not a user feature): the env var ``ECS_D3_MASK`` falsifies the
+``_HAS_DATA`` predicate itself. It holds a comma list of logical names in
 ``{r01_circ, r01_meta, r10_circ, r10_meta}``; masked names are treated as ABSENT by
 ``_HAS_DATA``. An UNKNOWN name raises ``ValueError`` loudly -- a typo silently masking
 nothing would make the probe vacuous (DEVIOUS-TEST STANDARD). Exercised by
-``outputs/simulator_validation/wave1_skipgate_probe.py`` and
 ``tests/_support/test_support_selftest.py``.
 
 Torch is imported guarded so collection works on a box without torch (the GPU-gated
@@ -42,7 +34,7 @@ except Exception:  # noqa: BLE001 -- collection must survive a torch-less box
 _HAS_CUDA = bool(torch is not None and torch.cuda.is_available())
 
 # --------------------------------------------------------------------------- #
-# Canonical constants (contract C1). Model compute is GPU-only (house rule);   #
+# Canonical constants. Model compute is GPU-only (house rule);                 #
 # CDTYPE/RDTYPE are None on a torch-less box (collection-safe -- any test that  #
 # uses them is requires_cuda-gated and skips there).                           #
 # --------------------------------------------------------------------------- #
@@ -52,7 +44,7 @@ RDTYPE = torch.float64 if torch is not None else None
 PHYS = 3  # qutrit physical dimension
 
 # --------------------------------------------------------------------------- #
-# The ONE strict d3 dataset probe (all four files) + the AM-2 mask hook.       #
+# The strict d3 dataset probe (all four files) + its test-only mask hook.      #
 # --------------------------------------------------------------------------- #
 _D3_MASK_ENV = "ECS_D3_MASK"
 _D3_DATA_ENV = "ECS_D3_DATA_ROOT"
@@ -93,7 +85,7 @@ def _parse_d3_mask(mask) -> frozenset:
         raise ValueError(
             f"{_D3_MASK_ENV}: unknown logical name(s) {unknown}; valid names are "
             f"{list(_D3_LOGICAL_NAMES)}. (A typo silently masking nothing would make "
-            f"the AM-2 probe vacuous -- fail loud.)")
+            f"the mask probe vacuous -- fail loud.)")
     return frozenset(names)
 
 
@@ -113,8 +105,7 @@ def _has_data(mask=None) -> bool:
 _HAS_DATA = _has_data()
 
 # --------------------------------------------------------------------------- #
-# Canonical markers (contract C1: these reason strings ARE the canon; a local  #
-# variant in a test file is a migration target, the canonical wins).           #
+# Canonical markers. These reason strings are the current shared definitions. #
 # --------------------------------------------------------------------------- #
 requires_cuda = pytest.mark.skipif(
     not _HAS_CUDA,

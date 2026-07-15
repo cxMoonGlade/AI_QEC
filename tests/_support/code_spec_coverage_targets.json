@@ -1,0 +1,52 @@
+{
+  "_comment": [
+    "Per-owner coverage registry for code spec."
+  ],
+  "contract": "docs/SIMULATOR.md",
+  "default_target": {"statement": 1.0, "branch": 1.0},
+  "covered_by_test_files": [
+    "tests/test_code_spec_units.py"
+  ],
+  "reconcile_modules": [
+    "src/error_coupling_simulator/frontend/code_spec.py"
+  ],
+  "out_of_scope": {},
+  "canonical_units": [
+    "CodeQubit.__post_init__",
+    "CodeQubit.to_manifest",
+    "PauliTerm.__post_init__",
+    "PauliTerm.to_manifest",
+    "StabilizerCheck.__post_init__",
+    "StabilizerCheck.to_manifest",
+    "LogicalObservableSpec.__post_init__",
+    "LogicalObservableSpec.to_manifest",
+    "Axis1StaticZZDeviceSpec.__post_init__",
+    "Axis1StaticZZDeviceSpec.to_metadata",
+    "Axis1StaticZZDeviceSpec.to_manifest",
+    "CodeSpec.__post_init__",
+    "CodeSpec.to_manifest",
+    "CodeSpec.data_indices",
+    "CodeSpec.ancilla_indices",
+    "CodeSpec.operation_set",
+    "commute"
+  ],
+  "units": [
+    {"group": "code_spec", "module": "src/error_coupling_simulator/frontend/code_spec.py", "unit": "CodeQubit.__post_init__", "qualname": "CodeQubit.__post_init__", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "code_spec", "module": "src/error_coupling_simulator/frontend/code_spec.py", "unit": "CodeQubit.to_manifest", "qualname": "CodeQubit.to_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "code_spec", "module": "src/error_coupling_simulator/frontend/code_spec.py", "unit": "PauliTerm.__post_init__", "qualname": "PauliTerm.__post_init__", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "code_spec", "module": "src/error_coupling_simulator/frontend/code_spec.py", "unit": "PauliTerm.to_manifest", "qualname": "PauliTerm.to_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "code_spec", "module": "src/error_coupling_simulator/frontend/code_spec.py", "unit": "StabilizerCheck.__post_init__", "qualname": "StabilizerCheck.__post_init__", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "code_spec", "module": "src/error_coupling_simulator/frontend/code_spec.py", "unit": "StabilizerCheck.to_manifest", "qualname": "StabilizerCheck.to_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "code_spec", "module": "src/error_coupling_simulator/frontend/code_spec.py", "unit": "LogicalObservableSpec.__post_init__", "qualname": "LogicalObservableSpec.__post_init__", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "code_spec", "module": "src/error_coupling_simulator/frontend/code_spec.py", "unit": "LogicalObservableSpec.to_manifest", "qualname": "LogicalObservableSpec.to_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "code_spec", "module": "src/error_coupling_simulator/frontend/code_spec.py", "unit": "Axis1StaticZZDeviceSpec.__post_init__", "qualname": "Axis1StaticZZDeviceSpec.__post_init__", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "code_spec", "module": "src/error_coupling_simulator/frontend/code_spec.py", "unit": "Axis1StaticZZDeviceSpec.to_metadata", "qualname": "Axis1StaticZZDeviceSpec.to_metadata", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "code_spec", "module": "src/error_coupling_simulator/frontend/code_spec.py", "unit": "Axis1StaticZZDeviceSpec.to_manifest", "qualname": "Axis1StaticZZDeviceSpec.to_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "code_spec", "module": "src/error_coupling_simulator/frontend/code_spec.py", "unit": "CodeSpec.__post_init__", "qualname": "CodeSpec.__post_init__", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "code_spec", "module": "src/error_coupling_simulator/frontend/code_spec.py", "unit": "CodeSpec.to_manifest", "qualname": "CodeSpec.to_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "code_spec", "module": "src/error_coupling_simulator/frontend/code_spec.py", "unit": "CodeSpec.data_indices", "qualname": "CodeSpec.data_indices", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "code_spec", "module": "src/error_coupling_simulator/frontend/code_spec.py", "unit": "CodeSpec.ancilla_indices", "qualname": "CodeSpec.ancilla_indices", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "code_spec", "module": "src/error_coupling_simulator/frontend/code_spec.py", "unit": "CodeSpec.operation_set", "qualname": "CodeSpec.operation_set", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "code_spec", "module": "src/error_coupling_simulator/frontend/code_spec.py", "unit": "commute", "qualname": "commute", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []}
+  ]
+}

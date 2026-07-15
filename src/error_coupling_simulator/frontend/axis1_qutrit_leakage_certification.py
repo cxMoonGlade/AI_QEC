@@ -1,79 +1,19 @@
 from __future__ import annotations
 
-"""De-circularized dense certification for Axis-1 two-site leakage Hamiltonians (W-C fix).
+"""Independent dense checks for Axis-1 two-site leakage Hamiltonians.
 
-The CPU self-tests are fine; the production gate stays GPU-only.
+The reference level maps are hand-typed in this module and the reference Hamiltonian
+uses a fresh ket-bra constructor. Neither the carrier's private level dictionary nor
+its grouping/lifting helpers are imported. The carrier side exposes only the per-term
+operator being tested; the grouped gate is reconstructed locally for the declared
+single-support cluster.
 
--------------------------------------------------------------------------------
-THE BUG (W-C, round-1, all four models flagged; GLM both-wrong falsifier)
--------------------------------------------------------------------------------
-The shipped ``axis1_two_site_leakage_hamiltonian_certification_manifest``:
-  (1) imports ``_hamiltonian_group_gates`` FROM the carrier module under test and certifies
-      the carrier's OWN lowered group gate -- the verifier and the verified are the same
-      lowering path; and
-  (2) builds its "independent" oracle (``_independent_two_site_hamiltonian_term``) from the
-      BYTE-EQUAL level dict ``_TWO_SITE_TRANSPORT_LEVELS``, the same ``level0*d1+level1``
-      index convention, the same symmetric-H structure, and the same ``expm(-iHdt)`` kernel.
-Its ONLY negative control is ``wrong_unit`` (a scalar rescale), which never probes the
-level pairing. Therefore a SHARED wrong physics map (e.g. a transposed/wrong level pair) is
-mirrored on both sides and passes with diff = 0 -- the certificate certifies nothing about
-the physics map. (FAITHFULNESS_PROTOCOL.md root cause: circular verification.)
-
--------------------------------------------------------------------------------
-THE FIX (proven in outputs/axis1_review/agentic_v2/opus/r2_two_site_leakage_decircularized.py,
-GPU run RTX 5090: all families 0.00 vs hand-typed ref, wrong-level/sign-flip controls 2.79/2.05)
--------------------------------------------------------------------------------
-FAITHFULNESS_PROTOCOL Rule I -- verify against ground truth INDEPENDENT of the implementation:
-
-  * The reference level maps are HAND-TYPED HERE from the literature-grounded prereg, NOT
-    imported from the carrier. Anchors (read into committed reading notes):
-      - Wood-Gambetta 1704.03081 (leakage operator / channel definitions),
-        docs/papers/reading_notes/wood_gambetta_leakage_characterization_1704.03081.md
-      - Varbanov 2002.07119 (|11><02| seepage, |12><21| mobility, conditional leaked-neighbor
-        phase), docs/papers/reading_notes/varbanov_leakage_detection_surface_2002.07119.md
-      - Miao 2211.04728 (|30><12|, |31><22| two-/single-photon transport, phi~0.65pi),
-        docs/papers/reading_notes/miao_overcoming_leakage_scalable_2211.04728.md
-  * The reference Hamiltonian is built by a FROM-SCRATCH ket-bra constructor
-    (``_ref_two_site_ketbra``) on a fresh index map -- it shares NO helper, NO level dict, and
-    NO lift/cluster code with the carrier.
-  * The carrier side calls ONLY ``_hamiltonian_matrix_for_term`` (the per-term operator builder
-    that IS the W-C bug surface). The lowered group gate is reconstructed IN THIS MODULE by a
-    fresh single-support cluster sum (the certified slice is by construction a single same-support
-    two-site cluster, so the sum is a plain operator add -- no ``_hamiltonian_group_gates`` import,
-    no ``_lift_hamiltonian_to_cluster`` import). The W-A connected-cluster lowering is a SEPARATE,
-    independently-tested concern (finish-plan Step 1/3); this cert isolates the W-C physics map.
-  * NEGATIVE CONTROLS the round-1 cert lacked (level-discriminating, per family):
-      - transport families: a WRONG-LEVEL reference (perturb the left ordered-pair level) must
-        DISAGREE with the carrier (>= 1e-3). The exchange families are SYMMETRIC under
-        (left<->right) swap, so a transposed-ordered-pair control would be inert -- the wrong
-        control is therefore a wrong LEVEL, not a transpose.
-      - conditional-phase families: a SIGN-FLIP reference (negate the Z imprint) must DISAGREE
-        (>= 1e-3); these are not symmetric in the +/- sign assignment.
-    The legacy ``wrong_unit`` (scalar-rescale) control is RETAINED as a second, weaker control.
-
--------------------------------------------------------------------------------
-METRIC (standard, structural witness; docs/METRICS.md)
--------------------------------------------------------------------------------
-Max-abs / Frobenius operator distance of the two-site unitary ``exp(-i H dt)`` and of the
-generator ``H`` over the declared local dims. (a)-class EXACT operator identities
-(zero-tolerance, ~1e-12); the numeric gate is the (c)-class go/no-go threshold.
-
--------------------------------------------------------------------------------
-PRE-REGISTERED PREDICTIONS (before integration; epistemic class in brackets)
--------------------------------------------------------------------------------
-  Q1 [a exact]: for EVERY two-site leakage family the carrier per-term operator EQUALS the
-     hand-typed literature reference: ||H_carrier - H_ref||_F <= 1e-12 and
-     ||U_carrier - U_ref||_F <= 1e-10. A miss is a CARRIER PHYSICS BUG (the finding the circular
-     cert could never surface).
-  Q2 [a exact, the level-discriminating control round-1 lacked]: every wrong-physics reference
-     (wrong-level for transport, sign-flip for conditional-phase) DISAGREES with the carrier:
-     ||U_carrier - U_wrong||_F >= 1e-3.
-  Q3 [a exact]: every carrier generator is Hermitian: ||H - H^dag||_F <= 1e-12.
-  Q4 [a exact]: the carrier lowered group gate (reconstructed in-cert from the per-term builder)
-     EQUALS the independent hand-typed cluster gate: ||U_lowered - U_ref_cluster||_F <= 1e-10.
-     (Cluster sum = CTRL/ZZ + leakage on the single shared support; the CTRL/ZZ block is itself
-     hand-typed, so the cluster reference imports no carrier physics.)
-  PASS [c gate]: Q1 and Q2 and Q3 and Q4 for all certified families.
+Wrong-level controls probe transport families, sign-flip controls probe conditional
+phase families, and a scalar-rescale control provides a weaker additional check. The
+gate compares generators and ``exp(-i H dt)`` with max-absolute and Frobenius distances,
+and checks Hermiticity. It is GPU-only implementation evidence. The cited papers are
+candidate physical context for the level maps; exact source-to-row literature closure
+must be completed before this result supports a physical mechanism claim.
 """
 
 import hashlib
@@ -96,7 +36,7 @@ from .axis1_channel_evidence import (
 )
 from .axis1_context import axis1_local_lindblad_context_from_schedule
 
-# IMPORTANT (W-C de-circularization): we import ONLY the carrier's PER-TERM operator builder
+# Import only the carrier's per-term operator builder
 # (the object under test). We do NOT import ``_hamiltonian_group_gates`` (the lowering path that
 # was both verifier and verified) and we do NOT import any level dict / lift helper. A grep for
 # ``_hamiltonian_group_gates`` in this module returns nothing -- that is the acceptance gate.
@@ -118,11 +58,10 @@ AXIS1_TWO_SITE_LEAKAGE_HAMILTONIAN_CERTIFICATION_REPRESENTABILITY = (
 )
 _SUPEROP_DIFF_GATE = 2.0e-12
 _UNITARY_DIFF_GATE = 2.0e-12
-# Independent-reference operator-identity gate (a-class exact, witnessed numerically): the carrier
-# per-term operator and the hand-typed literature reference are the SAME matrix up to fp roundoff.
+# Independent-reference operator-identity gate, witnessed numerically.
 _INDEPENDENT_REFERENCE_DIFF_GATE = 1.0e-10
 _WRONG_UNIT_CONTROL_MIN = 1.0e-6
-# Level-discriminating control gate (the control round-1 W-C lacked): a wrong-level / sign-flip
+# Level-discriminating control gate: a wrong-level / sign-flip
 # reference must produce a genuinely different gate.
 _WRONG_PHYSICS_CONTROL_MIN = 1.0e-3
 
@@ -132,8 +71,7 @@ _TWO_SITE_CONDITIONAL_PHASE_FAMILIES = frozenset(
 )
 
 # -----------------------------------------------------------------------------------------------
-# HAND-TYPED, LITERATURE-GROUNDED reference level maps. These are typed HERE from the prereg --
-# they are NOT imported from the carrier (that import is exactly the W-C circularity). A divergence
+# Hand-typed reference level maps. They are not imported from the carrier. A divergence
 # between this table and the carrier's private ``_TWO_SITE_LEAKAGE_HAMILTONIAN_LEVELS`` is a finding,
 # not a bug in this module.
 # -----------------------------------------------------------------------------------------------
@@ -304,9 +242,9 @@ def axis1_two_site_leakage_hamiltonian_certification_manifest(
 ) -> dict[str, Any]:
     """Certify two-site leakage Hamiltonian lowering against an INDEPENDENT hand-typed oracle.
 
-    De-circularized (W-C fix): the certified objects are the carrier PER-TERM operators (built by
+    The checked objects are the carrier per-term operators (built by
     ``_hamiltonian_matrix_for_term``) AND the in-cert reconstruction of the lowered group gate. The
-    reference is HAND-TYPED from the leakage literature here, not imported from the carrier; and the
+    reference is hand-typed here rather than imported from the carrier; and the
     lowered group gate is rebuilt in this module (single same-support cluster sum), so NO
     ``_hamiltonian_group_gates`` import is involved. Code-correctness gate only -- not channel
     evidence, not a DEM/decoder artifact, not a metric.
@@ -338,7 +276,7 @@ def axis1_two_site_leakage_hamiltonian_certification_manifest(
         raise ValueError("two-site leakage certification found no LEAK_ Hamiltonian terms")
 
     # ---- (1) PER-FAMILY operator certification: carrier op vs hand-typed reference. ----
-    # This is the W-C bug surface. The carrier op comes from `_hamiltonian_matrix_for_term`
+    # The carrier op comes from `_hamiltonian_matrix_for_term`
     # (under test); the reference comes from the hand-typed table + fresh ket-bra constructor.
     family_reports: list[dict[str, Any]] = []
     family_pass = True
@@ -429,7 +367,8 @@ def axis1_two_site_leakage_hamiltonian_certification_manifest(
             "lowered_group_family": lowered_group_family,
         },
         "independence": {
-            "reference_origin": "hand_typed_literature_grounded_in_module",
+            "reference_origin": "hand_typed_independent_level_map",
+            "literature_closure_status": "pending_exact_source_to_row_audit",
             "reference_anchors": [
                 "Wood-Gambetta 1704.03081",
                 "Varbanov 2002.07119",
@@ -445,8 +384,8 @@ def axis1_two_site_leakage_hamiltonian_certification_manifest(
                 "in_module_single_same_support_cluster_sum_then_matrix_exp"
             ),
             "decircularization_note": (
-                "reference level maps + cluster sum are independent of the carrier; a shared "
-                "wrong level map can no longer pass (round-1 W-C blind spot closed)"
+                "reference level maps and cluster sum are independent of the carrier; "
+                "a shared wrong level map cannot pass"
             ),
         },
         "parameter_conversion": {
@@ -457,7 +396,7 @@ def axis1_two_site_leakage_hamiltonian_certification_manifest(
             "epistemic_class": "a/c",
         },
         "per_family_oracle_certification": {
-            "reference": "hand_typed_literature_two_site_ketbra_reference",
+            "reference": "hand_typed_independent_two_site_ketbra_reference",
             "carrier_operator": (
                 "error_coupling_simulator.frontend.axis1_mcwf_mps_execution."
                 "_hamiltonian_matrix_for_term"
@@ -686,7 +625,7 @@ def _certify_leakage_family_operator(
     ref_u = _matrix_exp_gate(ref_h, dt_ns)
     unitary_diff = float(torch.linalg.matrix_norm(carrier_u - ref_u).item())
 
-    # Level-discriminating control (the control round-1 W-C lacked).
+    # Level-discriminating control.
     if family in _REF_TRANSPORT_PAIRS:
         control_kind = "wrong_level"
         wrong_h = _ref_transport_hamiltonian(

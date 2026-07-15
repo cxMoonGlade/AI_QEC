@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-"""P0 interop: correlated-Pauli DEM reduction of emitted ``{det,obs}`` records.
+"""Correlated-Pauli DEM reduction of emitted ``{det,obs}`` records.
 
-The DEM is the decoder-facing Stim-compatible SUMMARY of a record cube
-(``docs/twin_validation/conjunction_tool_product_spec_2026-07-06.md``, Interface
-(b)): per-detector marginals + the canonical Spitz Eq. 13 exact pairwise
+The DEM is the decoder-facing Stim-compatible summary of a record cube:
+per-detector marginals + the canonical Spitz Eq. 13 exact pairwise
 ``p_ij`` (the package-local :mod:`error_coupling_simulator.frontend.pij`
 estimator) reduced to a matchable
 ``stim.DetectorErrorModel``:
@@ -17,7 +16,7 @@ estimator) reduced to a matchable
   reduction);
 - **logical attachment** = a DECLARED geometry rule (the caller names the
   detectors whose boundary fault class flips the logical observable), class
-  (c) — bounded against the exact record law at P1, not estimated here.
+  (c) — declared rather than estimated here.
 
 Convention caveats carried with the numbers: the reduction is two-point only
 (structurally blind to hyperedges — the same caveat as ``spitz_pij_exact``),
@@ -35,7 +34,7 @@ from ..numerics import NUMERICAL_ZERO
 from . import decoder as _decoder
 from .pij import spitz_pij_delta_se, spitz_pij_exact
 
-#: Declared class-(c) edge-selection floors (P0 defaults; carried in the
+#: Declared class-(c) edge-selection floors, carried in the
 #: diagnostics of every reduction so no number travels without them).
 DEFAULT_PAIR_FLOOR_ABS = 1e-5
 DEFAULT_PAIR_FLOOR_SIGMA = 4.0
@@ -79,9 +78,9 @@ def records_to_dem(
         METRICS discipline): ``spitz_pij_delta_se`` treats shots as iid units;
         for ``cluster_size > 1`` the reported SEs — and hence the sigma
         edge floor — are ANTI-CONSERVATIVE by the cluster design effect
-        (trajectory common-mode covariance, historical ledger S-1/C-11). The
+        (trajectory common-mode covariance). The
         deviation is declared in the diagnostics, not silently corrected;
-        bounding it is the P1 faithfulness-table job.
+        a claim-bearing run must bound it explicitly.
 
     Returns
     -------

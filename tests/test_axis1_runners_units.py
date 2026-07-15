@@ -1,5 +1,4 @@
-"""Stage-D batch ``axis1_runners`` (D9) -- per-unit L0+L1 coverage of the two frontend CPU
-fixture builders (docs/SIMULATOR.md D9):
+"""Per-unit L0+L1 coverage of the two frontend CPU fixture builders:
 
   * ``error_coupling_simulator.frontend.axis1_codespec_runner`` (5 public units)
   * ``error_coupling_simulator.frontend.joint_channel_comparison_runner``        (3 public units)

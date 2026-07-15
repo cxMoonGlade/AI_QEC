@@ -1,79 +1,79 @@
 # Architecture
 
-`error_coupling_simulator` is a GPU-first project targeting faithful simulation of QEC error mechanisms.
-Binding spec: `docs/SIMULATOR.md`. Read an owning module's `README.md` when present; several
-top-level packages do not yet have one. This map is documentation, not import structure. The
-machine-readable service boundary is `docs/service_status.json`; the generated `docs/CODE_MAP.md`
-reverse-classifies every installed Python module as a service owner or explicit support module and
-renders the complete service flow.
+The binding product boundary is `docs/SIMULATOR.md`. This file is a human-readable map; the exact
+machine-readable inventory is `docs/service_status.json`, and `docs/CODE_MAP.md` is generated from
+that inventory plus the installed source tree.
 
-## Module map (`src/error_coupling_simulator/`)
+## Package map
 
-### Noise specification — what a noise process is built from
+| owner | role | current boundary |
+|---|---|---|
+| `source/` | finite-RTN sources, replayable timelines, source-to-parameter mapping, matched controls | classical latent-source models; no reduced-map verdict |
+| `mechanisms/axis1_primitives.py` | local drive, coupling, relaxation, excitation, dephasing, readout-dephasing, and fSim residual lowering | two-qubit local windows; channel assembly belongs to `carrier/` |
+| `mechanisms/qutrit_leakage.py` | qutrit leakage channel, Kraus conversion, diagnostics, and process factories | bounded synthetic parameters unless complete provenance is supplied |
+| `mechanisms/cz_leakage.py` | explicit multi-level CZ Hamiltonian/channel derivation and tracked-subspace transport | explicit parameter or channel input; no repository scratch discovery |
+| `noise_processes/` | controlled generative processes with evaluator-only truth | emits declared records; no hidden-truth leakage |
+| `carrier/joint_lindbladian.py` | one-generator-per-substep channel assembly and exact connected-component factorization | GPU complex128 |
+| `carrier/cptp_channel.py` | backend-neutral CPTP channel object | channel representation, not a record backend |
+| `carrier/records.py`, `record_fold.py` | common record types, packed layout, raw-syndrome/detector conversion | binary, versioned, immutable, temporal-detector semantics |
+| `carrier/exact/` | bounded qubit/qutrit density-matrix routes | implementation references; not scaling paths |
+| `carrier/kernels/` | scoped native CUDA acceleration | optional loading; scientific fallback rules remain explicit |
+| `carrier/pepo/` | two-dimensional density-matrix PEPO | retained `RESEARCH`; not canonical record output |
+| `carrier/peps/` | single-wire two-dimensional PEPS trajectories | `RESEARCH`; full-record truncation faithfulness open |
+| `frontend/` | circuit IR, code specs, compiler, schedules, bounded executors, artifact emission, optional DEM/decoder reduction | one record contract, multiple explicit execution routes |
+| `certify/` | evaluator-only scoring against independent references | formal implementation evidence, not hardware truth |
+| `quantum_bath/` | bounded pseudomode-enlarged GKSL comparisons | feasibility-only `RESEARCH`; not production |
+| `numerics.py` | shared floating numerical threshold | never used to replace structural zeros |
 
-| module | role |
-|---|---|
-| `source/` | **CORE** Axis-2 **notion-2** classical stochastic record-memory: replayable finite-RTN timelines (including the finite-band 1/f approximation), `Theta(z_t)` mechanism-parameter fan-out, and matched-marginal controls. `PhaseBurstSource` and `TemporalStormSPPSource` are separately catalogued RESEARCH timeline primitives; they are not accepted by the turnkey `CoupledCycleNoiseProcess`. This is not the separate `quantum_bath/` research surface and carries no CP-divisibility claim. |
-| `mechanisms/` | mechanism primitives + `catalog` + `seam_teachers`; the non-Pauli families **leakage / drift / crosstalk / burst** (see `docs/error_mechanisms.md`) |
-| `noise_processes/` | controlled **generative noise processes** (`coupled_cycle`), with evaluator-only truth |
-| `quantum_bath/` | feasibility-only pseudomode-enlarged GKSL research carrier; formal bug-catcher, not the product mainline |
-
-### Carrier — the forward engine (`carrier/`)
-
-| module | role |
-|---|---|
-| `carrier/` (top) | Axis-1 `joint_lindbladian` assembler + `cptp_channel` (the CPTP Stinespring channel object) + `channels` |
-| `carrier/exact/` | density-matrix backend — **⚠ FEASIBILITY-ONLY** (roughly 15 qubits by memory; current qutrit d3 oracle is 9 sites at ~5.77 GiB) — the **certification ORACLE** (`qutrit_dm`, `circuit_sim`) |
-| `carrier/kernels/` | three scoped native families: exact-qubit fused Kraus support (`accel.py`), generic dense-qudit MCWF ops, and fused-d3 within-cycle trajectory ops. A directory-level “fused owns all kernels” claim is incorrect. |
-| `carrier/peps/` | **ACTIVE** — the full-`d×d` 2D-PEPS trajectory carrier + FET truncation frontier (ADR 0011) |
-| `carrier/pepo/` | **CLOSED** — the doubled-wire DM-PEPO carrier |
-
-### Product + certification
-
-| module | role |
-|---|---|
-| `frontend/` | CircuitIR / CodeSpec / compiler / Axis-1 schedule / Stim execution → `Simulator.run(...)`; exact small-N Axis-1 joint-L state/record execution; generic dense-qudit MCWF plus workload adapters; and shipped restricted Axis-1 1D MCWF/MPS and QT/MPS verification executors. Those MPS paths are finite-step/fail-closed, not production-scalable or universal full-record backends. The default Stim artifact bundle contains `.stim`, raw `.dem`, actual `.b8`, summaries, and a manifest; external PyMatching prediction artifacts are opt-in and every artifact has a fail-closed `representability` class. |
-| `certify/` | score a noise process's records vs **INDEPENDENT** formal anchors (anti-circular) → an epistemic ledger with non-optional negative controls. Bayes-floor/headroom analysis is downstream legacy analysis, not a service here. |
-| `numerics.py` | `NUMERICAL_ZERO` floor |
-
-`src/qec_twin/` is a repository-local pointer to the pre-consolidation tree: outward import shims
-and the still-used RAG (`qec_twin.rag`). The distributed package has no executable inward import
-from it: PEPS scheduling, the experiment facade, and the frontend decoder are package-local.
-PyMatching itself remains an explicit optional external dependency.
-
-## Flow
-
-The generated, entrypoint-checked complete diagram is in `docs/CODE_MAP.md`. At scientific level the
-implemented routes remain distinct:
+## Implemented flow
 
 ```text
-Stim product:  CircuitIR/CodeSpec → Stim-expressible noise → canonical records + .stim/.dem/.b8
-               (decoder-free default; optional external prediction artifacts)
+Stim route
+  CodeSpec / CircuitIR / imported Stim circuit
+    -> compile and explicit Stim-representable noise
+    -> detector/observable RecordBatch + .stim/.dem/.b8/manifest
+    -> optional external decoder output
 
-Axis-1/2:      finite RTN / finite-band 1/f timeline → Theta(z_t) → CoupledCycleNoiseProcess
-               → exact small-N Axis-1 joint-L carrier → canonical fixed-horizon record + controls
-Reduced path:  caller SourceTimeline + explicit projection rules → reduced Stim-Pauli records
-XZZX path:     external XZZX schedule + RunSpec → within-cycle host → fused d3 / 2D PEPS
-Other paths:   reusable channel algebra → exact qubit/qutrit/ququart or generic qudit MCWF;
-               quantum-bath suite → research distributions/nulls/witnesses (not RecordBatch)
+Dense coupled route
+  replayable finite-RTN timeline
+    -> explicit source-to-parameter mapping
+    -> per-round local primitive parameters
+    -> sealed substep schedule
+    -> dense joint-Lindbladian record execution
+    -> RecordBatch + evaluator-only truth held separately
 
-Target only:   shared source → qutrit XZZX carrier → correctly folded full record → certification
-               (OPEN / CODE_BLOCKED; not an integrated production flow)
+Leakage research routes
+  external XZZX schedule + explicit qutrit channel/run specification
+    -> exact bounded reference, PEPO, fused within-cycle, or PEPS owner
+    -> owner-specific output and current record adapter where supported
 ```
 
-## Carrier ladder / backend boundary (critical)
+There is no current arrow from the finite-RTN process into the qutrit XZZX leakage carrier. A diagram
+or document must not draw that missing edge as implemented.
 
-`carrier/exact` (density matrix) is `2^n×2^n` / `3^n×3^n` → **feasibility-only**; qubit and
-qutrit ceilings differ sharply (current qutrit d3 is 9 sites at ~5.77 GiB). The target is the d5/d7
-rotated surface code (49q / 97q). The installed intermediate route is the restricted Axis-1 1D
-MCWF/MPS and QT/MPS execution under `frontend/`; it is useful verification execution but explicitly
-does not claim production scaling or universal full-record completion. The old XZZX thin-strip
-driver remains under `legacy/` and is not distributed. The full-code route is **2D PEPS full
-`d×d`**. A 1D MPS can require `χ=2^{Θ(d)}` across a full-square cut in the
-worst/project-estimate regime (amended ADR 0010/0011).
-Record faithfulness is the **open truncation acceptance criterion** (gate on the full syndrome
-record, never on the carrier bond alone); coherent-tail deletion and the deterministic WTG solver
-replacement are suspended by the 2026-07-13 closure.
-The channel object (`carrier/cptp_channel`) + the record contract are backend-agnostic, so the
-swap is a backend replacement, not a rewrite. Detail: `docs/SIMULATOR.md` +
-`carrier/peps/README.md`.
+## Carrier boundary
+
+- Exact density matrices provide bounded references and hit exponential memory limits.
+- Restricted Axis-1 MCWF/MPS and QT/MPS executors are current verification routes, not universal
+  full-record backends.
+- PEPO is retained for current density-matrix research and exact bounded comparisons.
+- PEPS is the full-geometry trajectory frontier; its current FET entropy invariant fails and its
+  finite-truncation record faithfulness is unclosed.
+
+Carrier swaps preserve the channel and record contracts only where the owner explicitly implements
+those contracts. No local state or truncation metric alone establishes record equivalence.
+
+## External boundaries
+
+- Google d3 circuit/geometry/schedule files are caller inputs, not package data or noise calibration.
+- PyMatching is an optional downstream decoder dependency.
+- CUDA-Q is an isolated plugin workload executed in a separate environment and process.
+- Explicit serialized channel files are derived caches, not automatically scientific data.
+- Distribution artifacts include only the current package and shipped documentation inventory.
+
+## Execution topology
+
+The service supervisor owns a three-lane fresh-process plan: bounded CPU concurrency, serial
+host-heavy CPU execution, and serial GPU execution under a cross-process lock. The parent does not
+import CUDA runtimes. Process-group cleanup, fail-closed GPU admission, single-writer aggregation,
+and atomic summaries are architectural requirements, not test-runner conveniences.

@@ -17,7 +17,7 @@ matrix (no ancilla instantiated). This parser turns the real Google Willow XZZX
   * the logical observable (``OBSERVABLE_INCLUDE``), as a ``{data_position -> 'X'|'Z'}``
     dict ready for :meth:`QutritDM.set_code`.
 
-Two contract-mandated normalizations are applied AT PARSE TIME (§1.1/§1.2):
+Two input normalizations are applied at parse time:
 
   * **surplus qubits dropped.** The supported external *multi-round* circuit declares 20 qubit
     indices; 3 (idx 0/7/19 at r10/r13) are inert (reset-but-never-measured /
@@ -38,8 +38,7 @@ Heisenberg pullback ``U^dag Z_anc U`` of the ancilla's measured ``Z`` operator
 through the round's Clifford ``U`` (H / CZ / X), restricted to the data qutrits -- an
 exact operator identity (Method 1). :func:`extract_stabilizers` independently
 cross-checks it against a deterministic single-Pauli-error -> ancilla-flip response
-(Method 3b) and refuses to return a schedule if the two disagree (a built-in
-``(a)``-class self-check; the project's adversarial-self-verification rule). On the
+and refuses to return a schedule if the two disagree. On the
 real ``d3_at_q6_7`` X-basis r01 patch the result is the textbook rotated d3 surface
 code in the XZZX gauge: 4 X-type + 4 Z-type stabilizers (weight 2 on the boundary,
 weight 4 in the bulk) and a weight-3 logical Z.
@@ -111,11 +110,10 @@ class RoundDataFrame:
     They are a Pauli FRAME for the Clifford stabilizer/logical structure (the detectors and
     the observable are frame-invariant -- verified: removing them leaves every ideal-circuit
     detector deterministic), so they have **no effect on a Pauli/Clifford circuit's syndromes
-    or logical outcome**. But the P4a leakage channel is **non-Pauli** (Wood-Gambetta leakage
-    is ``|0>``/``|1>`` ASYMMETRIC -- heating acts on ``|1>``, ``|0>`` is leakage-inert), so
-    the ``X`` echo MATERIALLY changes the multi-round LEAKAGE dynamics (the ``|2>`` population
-    differs ~2x with vs. without the echo). The frame is therefore load-bearing for P4a and
-    MUST be carried into the leakage trajectory (it was previously silently dropped).
+    or logical outcome**. The within-cycle qutrit leakage channel is **non-Pauli**:
+    Wood-Gambetta heating acts on ``|1>`` while ``|0>`` is leakage-inert. The ``X`` echo
+    therefore changes the subsequent ``|1>``/``|2>`` leakage evolution and must be applied
+    at its physical circuit position in the leakage trajectory.
 
     Attributes
     ----------
@@ -137,8 +135,8 @@ class RoundDataFrame:
     post_measure: tuple[tuple[str, tuple[int, ...]], ...]
 
 
-#: Within-cycle stream tokens (P4a faithful within-cycle model, ``RoundDataFrame``'s
-#: per-qutrit refinement). ``LEAK`` is a leak sub-step = ONE CZ-layer the qutrit touches
+#: Within-cycle stream tokens, refining ``RoundDataFrame`` at each data qutrit's physical
+#: gate and leakage-channel insertion points. ``LEAK`` is a leak sub-step = ONE CZ-layer the qutrit touches
 #: (where ``DEPOLARIZE2`` sits in the noisy circuit); the host applies ``exp(L/4)`` there.
 #: ``H``/``X``/``Y`` are the literal single-qutrit gates (``|2>`` inert); ``M`` is the
 #: stabilizer-measurement boundary (a marker, not a gate). The interior round 9-slot shape
@@ -149,22 +147,21 @@ _WITHIN_CYCLE_TOKENS: frozenset[str] = frozenset({"H", "X", "Y", "LEAK", "M"})
 
 @dataclass(frozen=True)
 class WithinCycleStream:
-    """One data qutrit's ORDERED interior within-round gate+leak stream (P4a §2 authority).
+    """One data qutrit's ordered interior within-round gate-and-leak stream.
 
     The circuit-faithful per-cycle structure for a SINGLE data qutrit at engine register
     position :attr:`pos`: the ordered list of within-round steps
     (:attr:`tokens`), each one of ``H`` / ``X`` / ``Y`` (literal single-qutrit gate,
     ``|2>`` inert), ``LEAK`` (a leak sub-step at one CZ layer the qutrit touches — the host
     applies the ``exp(L/4)`` slice), or ``M`` (the stabilizer-measurement boundary marker).
-    Sourced from a MULTI-ROUND circuit's INTERIOR rounds (NOT r01's first+terminal single
-    round; P4a model §1 caveat) — the per-qutrit H-slot distribution of an interior round
-    differs from r01's (which folds the data-init H and drops the post-M Y).
+    It is sourced from a multi-round circuit's interior rounds, not r01's single round,
+    because r01 combines initialization and terminal-readout structure. Its per-qutrit
+    H-slot distribution therefore differs from a clean interior round.
 
-    The within-cycle model interleaves the leakage with the H/X gates at their real circuit
-    positions, so the mid-cycle ``X`` echo (between the qutrit's pre-X and post-X CZ layers)
-    and the per-qutrit ``H`` pattern (``H X H = Z``) REFOCUS the coherent ``|1><->|2>``
-    exchange — replacing the LUMPED per-round model that over-states the leaked ``|2>``
-    population (~15x at R=3 matched-Y; up to ~149x for the no-Y engine; model §6).
+    Leakage-channel insertions are interleaved with the H/X gates at their circuit
+    positions. The mid-cycle ``X`` echo lies between the qutrit's pre-X and post-X CZ
+    layers, so the computational level entering each subsequent ``|1><->|2>`` exchange
+    slice is represented explicitly rather than lumped into one per-round channel.
 
     The pre-M part (everything up to and including ``M``) is applied PER QUTRIT before the
     stabilizer measurement; the post-M ``Y`` is applied to all data AFTER it (dropped on the
@@ -187,7 +184,7 @@ class WithinCycleStream:
         The 1-indexed CZ-layer ordinals (subset of ``{1,2,3,4}``) the qutrit touches.
     h_pattern
         ``(H@preCZ1, H@CZ1-2, H@CZ3-4)`` — the per-qutrit H presence at the three pre-M
-        H-layer slots (the XZZX H pattern; model §2). Each qutrit has exactly 2 H's per
+        H-layer slots in the parsed XZZX schedule. Each qutrit has exactly 2 H's per
         interior round (even → net identity on ``{0,1}``).
     """
 
@@ -253,17 +250,16 @@ class XZZXSchedule:
     per_round_data_frame
         Per round (length == ``rounds``), the transversal single-qutrit DATA Pauli FRAME
         (:class:`RoundDataFrame`: the mid-cycle ``X`` echo + the post-M ``Y``) the circuit
-        applies OUTSIDE the stabilizer-extraction basis rotations. Load-bearing for the P4a
-        leakage trajectory (see :class:`RoundDataFrame`). Empty per-round entries at r01
+        applies outside the stabilizer-extraction basis rotations. Empty per-round entries at r01
         (one round, no inter-round echo dynamics) are still recorded so the field is uniform.
     within_cycle_streams
         Per data qutrit (length ``n_data``, engine-position order), the ORDERED interior
-        within-round gate+leak stream (:class:`WithinCycleStream`) — the P4a circuit-faithful
-        within-cycle model authority (model §2). Populated ONLY for a MULTI-ROUND source
+        within-round gate+leak stream (:class:`WithinCycleStream`). Populated only for a multi-round source
         circuit (the interior round is well-defined there); EMPTY for r01 (a single
-        first+terminal round, which is not a clean interior round — model §1 caveat). The
-        per-qutrit interleaving of the leakage with the H/X gates is the fix the host + DM
-        oracle marshal; ``per_round_data_frame`` is the coarser (lumped-X/Y) view.
+        first+terminal round, which is not a clean interior round). The
+        host and dense reference both marshal the per-qutrit interleaving of
+        leakage with H/X gates; ``per_round_data_frame`` is the coarser
+        lumped-X/Y view.
     source
         The parsed ``circuit_ideal.stim`` path (provenance).
     """
@@ -299,18 +295,17 @@ class XZZXSchedule:
         """Per round, the ordered PRE-measurement transversal DATA frame gates (the ``X`` echo).
 
         ``out[r]`` is the list of ``(gate_name, data_positions)`` applied to the data qubits
-        BEFORE round ``r``'s stabilizer measurement, outside the basis rotations -- the gates
-        the leakage trajectory must carry (interface contract / P4a FIX-1). For d3 XZZX this is
+        BEFORE round ``r``'s stabilizer measurement, outside the basis rotations. For d3 XZZX this is
         the single transversal ``X`` (all 9 data) per round. Empty list per round if the
-        per-round frame was not parsed (e.g. r01) -- callers treat that as "no echo".
+        per-round frame was not parsed (e.g. r01); callers treat that as "no echo".
         """
         return [[(g, tuple(pos)) for g, pos in rf.pre_measure] for rf in self.per_round_data_frame]
 
     def within_cycle_by_pos(self) -> dict[int, WithinCycleStream]:
-        """The within-cycle interior streams keyed by engine register position (model §2).
+        """The within-cycle interior streams keyed by engine register position.
 
         ``{pos -> WithinCycleStream}`` for each data qutrit; empty dict if the source was a
-        single-round circuit (the interior stream is undefined at r01 — model §1 caveat).
+        single-round circuit because no clean interior round exists at r01.
         Used by the host marshalling + the DM oracle to apply each qutrit's own interleaved
         ``[H?] LEAK [H?] LEAK X LEAK [H?] LEAK M Y`` stream.
         """
@@ -319,15 +314,13 @@ class XZZXSchedule:
     def with_within_cycle_streams(
         self, streams: "tuple[WithinCycleStream, ...] | list[WithinCycleStream]"
     ) -> "XZZXSchedule":
-        """Return a copy of this schedule with ``within_cycle_streams`` attached (model §1).
+        """Return a copy of this schedule with ``within_cycle_streams`` attached.
 
-        The faithful within-cycle source split (model §1): the stabilizer geometry / logical /
-        codestate come from the r01 schedule (the reuse-stable, extraction-validated geometry),
-        while the per-qutrit INTERIOR streams come from a MULTI-ROUND circuit (r10, via
+        The stabilizer geometry, logical observable, and codestate come from the
+        extraction-validated r01 schedule, while the per-qutrit interior streams come from r10 via
         :func:`parse_within_cycle_streams`). This combiner attaches the r10 streams to an r01
-        schedule. ASSERTS the streams cover engine positions ``0..n_data-1`` exactly (the
-        per-coordinate CZ-leak geometry is reuse-stable r01<->r10 — model §1 — so the r10
-        interior streams key onto the SAME engine positions the r01 schedule uses).
+        schedule. It asserts that the streams cover engine positions ``0..n_data-1`` exactly,
+        so every r10 interior stream keys onto the same data coordinate used by r01.
         """
         from dataclasses import replace
 
@@ -337,7 +330,7 @@ class XZZXSchedule:
             raise AssertionError(
                 f"within-cycle streams cover positions {positions}, expected 0..{self.n_data - 1} "
                 f"(the r10 interior streams must key onto the r01 schedule's {self.n_data} data "
-                f"positions — the reuse-stable geometry, model §1)")
+                f"positions in the shared data-coordinate geometry)")
         return replace(self, within_cycle_streams=streams)
 
 
@@ -363,8 +356,8 @@ def _classify_qubits(circuit, meta) -> tuple[list[int], list[int], list[int]]:
 
     data / measure are the indices whose coordinate matches a metadata
     ``data_qubit_coords`` / ``meas_qubit_coords`` entry (the abstract code); surplus
-    = every declared index that is neither (the inert boundary slots dropped per
-    §1.1). Each list is sorted by data-coordinate order for data (so positions are
+    = every declared index that is neither (the inert boundary slots are dropped).
+    Each list is sorted by data-coordinate order for data (so positions are
     deterministic), by index for the rest.
     """
     idx2c = _index_to_coord(circuit)
@@ -678,15 +671,14 @@ def _per_round_data_frame(
 
 
 # --------------------------------------------------------------------------- #
-# Per-qutrit within-cycle interior stream (the P4a circuit-faithful model §2)  #
+# Per-qutrit within-cycle interior gate-and-leak stream                          #
 # --------------------------------------------------------------------------- #
 def _tick_layers(circuit) -> list[list]:
     """Segment the flattened instruction stream into TICK-delimited LAYERS.
 
     ``out[k]`` is the list of stim ``CircuitInstruction``s between TICK ``k-1`` and ``k``
     (TICKs themselves dropped; empty layers dropped). The qutrit gates of one round's CZ
-    network sit in distinct TICK-layers, so layer indices order the within-round stream
-    (the same segmentation the model-§2 derivation `…_within_cycle_derive_parser.py` uses).
+    network sit in distinct TICK-layers, so layer indices order the within-round stream.
     """
     import stim
 
@@ -706,8 +698,8 @@ def _interior_round_layers(circuit, data_set: set[int], anc_set: set[int]) -> li
 
     Round boundaries open at a reset ``R`` layer; round index 1 is the SECOND round — the
     first round (index 0) folds the extra data-init H layer (the logical-state prep) and the
-    LAST round drops the post-M Y (terminal readout), so neither is a clean interior round
-    (model §1 caveat). Round 1 is the canonical interior cycle the engine reuses for R>1.
+    LAST round drops the post-M Y (terminal readout), so neither is a clean interior round.
+    Round 1 supplies the interior gate/leak ordering reused for R>1.
     Returns ``[]`` if the circuit has fewer than 2 reset-delimited rounds (e.g. r01).
     """
     layers = _tick_layers(circuit)
@@ -725,22 +717,23 @@ def _interior_round_layers(circuit, data_set: set[int], anc_set: set[int]) -> li
 def _within_cycle_streams(
     circuit, data_idx: list[int], meas_idx: list[int]
 ) -> list[WithinCycleStream]:
-    """Extract the per-data-qutrit ORDERED interior within-round gate+leak stream (model §2).
+    """Extract each data qutrit's ordered interior within-round gate-and-leak stream.
 
     For one clean INTERIOR round (:func:`_interior_round_layers`), emit per data qutrit (by
     engine register position = index into ``data_idx``) the ordered token stream
     ``[H?] LEAK [H?] LEAK X LEAK [H?] LEAK M Y``, where each ``LEAK`` is one CZ layer the
     qutrit participates in (a leak sub-step), ``H``/``X``/``Y`` are its literal single-qutrit
-    gates, and ``M`` is the stabilizer-measurement boundary. The CZ gate itself is dropped as
-    transport (P4b) but its leak point is KEPT (where ``DEPOLARIZE2`` sits in the noisy
-    circuit) — the host applies the ``exp(L/4)`` slice at every ``LEAK``.
+    gates, and ``M`` is the stabilizer-measurement boundary. This one-site stream does not
+    encode the two-site CZ leakage-transport operation itself; it retains the corresponding
+    leakage-channel insertion point (where ``DEPOLARIZE2`` sits in the noisy circuit), and
+    the host applies the ``exp(L/4)`` slice at every ``LEAK``.
 
     Rigorous, not pattern-matched: it walks the literal stim gate names per TICK-layer and
     keys off the data/measure partition (the same partition the stabilizer extraction uses).
-    Returns ``[]`` for a single-round circuit (no clean interior round — model §1 caveat;
-    source the interior stream from a multi-round circuit). The 4-CZ global layer count, the
+    Returns ``[]`` for a single-round circuit because it has no clean interior round;
+    source the interior stream from a multi-round circuit. The 4-CZ global layer count, the
     mid-cycle X between CZ-layer 2 and 3, the per-qutrit 2-H even count, and the 4 distinct
-    H-patterns are ASSERTED ((a)-class self-check — the §2 authority must reproduce exactly).
+    H-patterns are asserted as structural checks on the extracted physical schedule.
     """
     data_set, meas_set = set(data_idx), set(meas_idx)
     pos_of = {cid: p for p, cid in enumerate(data_idx)}
@@ -753,7 +746,7 @@ def _within_cycle_streams(
     if len(cz_layer_indices) != 4:
         raise AssertionError(
             f"within-cycle: expected 4 CZ layers per interior round, got {len(cz_layer_indices)} "
-            f"(the 4 leak sub-step layers; model §1)")
+            f"(the four physical leak-substep insertion layers)")
 
     # Per qutrit, walk the layers in order, emitting tokens. A CZ-layer the qutrit touches
     # -> 'LEAK'; an H/X/Y on it -> the gate; the stabilizer M -> 'M' (once, for all data).
@@ -782,8 +775,8 @@ def _within_cycle_streams(
                     for p in range(len(data_idx)):
                         streams_tok[p].append("M")
 
-    # the global mid-cycle X layer + the 1-indexed CZ ordinals before/after it (for the
-    # h_pattern derivation and the §2 cross-checks).
+    # The global mid-cycle X layer and the 1-indexed CZ ordinals before/after it determine
+    # the per-qutrit H-slot pattern.
     x_layers = [li for li, ly in enumerate(layers)
                 if any(i.name == "X" and {int(t.qubit_value) for t in i.targets_copy()
                                           if t.is_qubit_target} & data_set for i in ly)]
@@ -795,7 +788,7 @@ def _within_cycle_streams(
     if cz_before_x != [1, 2] or cz_after_x != [3, 4]:
         raise AssertionError(
             f"within-cycle: mid-cycle X is not between CZ-layer 2 and 3 "
-            f"(before={cz_before_x}, after={cz_after_x}; model §1)")
+            f"(before={cz_before_x}, after={cz_after_x})")
 
     streams: list[WithinCycleStream] = []
     for p in range(len(data_idx)):
@@ -817,27 +810,26 @@ def _within_cycle_streams(
             cz_layers=czs, h_pattern=h_pat,
         ))
 
-    # (a)-class self-check: exactly 4 distinct H-patterns across the 9 qubits (model §2 table).
+    # Structural cross-check: the nine data qutrits have four distinct H-slot patterns.
     patterns = {s.h_pattern for s in streams}
     if len(streams) == 9 and len(patterns) != 4:
         raise AssertionError(
             f"within-cycle: expected 4 distinct H-patterns across the 9 data qutrits "
-            f"(model §2), got {len(patterns)}: {sorted(patterns)}")
+            f"got {len(patterns)}: {sorted(patterns)}")
     return streams
 
 
 def _within_cycle_h_pattern(tokens: tuple[str, ...], cz_layers: tuple[int, ...]) -> tuple[int, int, int]:
-    """``(H@preCZ1, H@CZ1-2, H@CZ3-4)`` from one qutrit's interior token stream (model §2).
+    """Return ``(H@preCZ1, H@CZ1-2, H@CZ3-4)`` for one interior stream.
 
-    Matches the model-§2 derivation's slot assignment EXACTLY (`…_within_cycle_derive_parser.py`
-    ``_canonical_template``): an ``H`` is assigned to a slot by how many of the qutrit's OWN
+    An ``H`` is assigned to a slot by how many of the qutrit's own
     ``LEAK`` (CZ) tokens precede it in the stream (NOT the global CZ-layer ordinal) —
     ``0`` preceding ⇒ pre-CZ1, ``1`` ⇒ the CZ1-2 slot, ``2`` ⇒ the (unreported) CZ2-3 gap,
-    ``3`` ⇒ the CZ3-4 slot. The three reported slots are the §2 table's
+    ``3`` ⇒ the CZ3-4 slot. The three reported slots are
     (H@preCZ1, H@CZ1-2, H@CZ3-4); an H with 2 preceding leaks (e.g. q1's post-X H, which sits
     after its 2 leaks but before the global CZ3) falls in the CZ2-3 gap and is correctly NOT
     counted in any of the three (so q1 = (0,1,0), not (0,1,1)). ``cz_layers`` is accepted for
-    signature symmetry but the count is by stream position (the faithful §2 convention).
+    signature symmetry but the count is determined by stream position.
     """
     h_pre = h_12 = h_34 = 0
     n_leak_before = 0  # the qutrit's OWN leak (CZ) tokens seen so far
@@ -939,18 +931,18 @@ def parse_xzzx_circuit(
 
     rounds = int(meta.get("rounds", 1))
 
-    # Per-round transversal DATA Pauli frame (the mid-cycle X echo + post-M Y) -- load-bearing
-    # for the P4a leakage trajectory; previously not surfaced (see RoundDataFrame). Parsed from
-    # the real circuit's intra-round structure; the count is reconciled against ``rounds``.
+    # Per-round transversal DATA Pauli frame (the mid-cycle X echo + post-M Y), which changes
+    # the level entering later non-Pauli leakage slices. Parsed from the circuit's intra-round
+    # structure; the count is reconciled against ``rounds``.
     per_round_frame = tuple(_per_round_data_frame(circuit, data_idx, meas_idx))
     if per_round_frame and len(per_round_frame) != rounds:
         raise AssertionError(
             f"per-round data-frame count {len(per_round_frame)} != declared rounds {rounds} "
             f"(circuit {circuit_path}); the round segmentation disagrees with metadata")
 
-    # Per-qutrit within-cycle interior streams (the P4a circuit-faithful model §2 authority).
-    # Defined ONLY for a multi-round source circuit (a clean interior round exists); EMPTY for
-    # r01 (single first+terminal round — model §1 caveat). The interior round geometry is the
+    # Per-qutrit within-cycle interior gate-and-leak streams.
+    # Defined only for a multi-round source circuit (a clean interior round exists); empty for
+    # r01, whose single round combines first-round and terminal structure. The interior geometry is the
     # one the engine reuses for R>1; the host + DM oracle marshal each qutrit's interleaved
     # H/X/leak stream from this. (CZ-leak geometry is reuse-stable r01<->r10, but the per-qutrit
     # H-slot distribution is interior-round-specific, so this is sourced ONLY from the
@@ -976,17 +968,17 @@ def parse_xzzx_circuit(
 def parse_within_cycle_streams(
     circuit_path: str | Path, metadata_path: str | Path | None = None
 ) -> tuple[WithinCycleStream, ...]:
-    """Extract ONLY the per-qutrit within-cycle INTERIOR streams from a MULTI-ROUND circuit (§2).
+    """Extract the per-qutrit interior streams from a multi-round circuit.
 
     The stabilizer-geometry-free companion to :func:`parse_xzzx_circuit` for the within-cycle
-    model: it needs only the data/measure partition (from the metadata code coordinates) and the
+    leakage trajectory: it needs only the data/measure partition (from the metadata code coordinates) and the
     interior-round gate/CZ/M structure — NOT the stabilizer pullback (which is validated on r01,
-    not r10 — model §1). So a MULTI-ROUND instance (r10) whose surplus/reset structure the full
+    not r10). So a multi-round instance (r10) whose surplus/reset structure the full
     stabilizer extraction does not normalize can still yield its interior streams here.
 
     Use this to source the per-qutrit interior streams from a multi-round circuit (r10) while the
-    stabilizers / logical / codestate come from the r01 schedule (the reuse-stable geometry —
-    model §1). Returns the streams keyed by engine register position (the metadata
+    stabilizers / logical / codestate come from the r01 schedule's reuse-stable geometry.
+    Returns the streams keyed by engine register position (the metadata
     ``data_qubit_coords`` order; the SAME positions :func:`parse_xzzx_circuit` assigns), or ``()``
     for a single-round circuit (no clean interior round).
     """
@@ -1040,10 +1032,9 @@ def default_r10_paths(
 ) -> tuple[Path, Path]:
     """The (circuit_ideal.stim, metadata.json) paths for an external r10 d3 patch.
 
-    r10 is the MULTI-ROUND instance the engine reuses for R>1 — and the source of the
-    per-qutrit within-cycle INTERIOR streams (model §1/§2): r01's single round is
-    first+terminal and is NOT a clean interior round. Use this circuit to populate
-    :attr:`XZZXSchedule.within_cycle_streams` (the §2 per-qutrit gate+leak authority).
+    r10 supplies the multi-round interior gate/leak ordering used for R>1; r01's single
+    round combines first-round and terminal structure and is not a clean interior round.
+    Use r10 to populate :attr:`XZZXSchedule.within_cycle_streams`.
     """
     root = DEFAULT_DATASET_ROOT if dataset_root is None else Path(dataset_root)
     base = root / patch / basis / "r10"

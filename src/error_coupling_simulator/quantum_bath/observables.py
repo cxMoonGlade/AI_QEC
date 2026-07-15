@@ -10,13 +10,8 @@ Alphabet-agnostic statistics over a 3-round outcome distribution:
 
 M_ALPHABET (the (sX,sZ) per-round alphabet) is CANONICALLY defined here; carrier imports it.
 
-Extracted VERBATIM from:
-  - K_stat_joint / K_stat_binary / project_axis / tv_distance / record_distance / M_ALPHABET
-    <- outputs/twin_validation/notion3_relaxation_dualaxis_run.py
-  - M_mem_stat  <- outputs/twin_validation/quantum_backaction_fairtest.py
-  - exact_cmi_bits <- outputs/twin_validation/notion3_quantum_vs_classical_run.py
-
 Evaluator-side; no physical ground truth (oracles are FORMAL).
+Current formula and corruption checks are in ``tests/test_quantum_bath_observables_units.py``.
 """
 
 from __future__ import annotations

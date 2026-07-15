@@ -5,7 +5,7 @@ conftest mask hook is DEMONSTRATED to fail when it must -- an internal assert or
 that has never fired is unproven. K-classes defended here: K-5 (self-comparison /
 vacuity -- the double-negative killer on ``assert_control_trips`` and the sabotaged
 CPTP stack), K-4 (the sabotage lands cleanly past the tolerance, not a hair above),
-plus the AM-2 mask-hook vacuity killer (an unknown mask name must raise loudly).
+plus the mask-hook vacuity check (an unknown mask name must raise loudly).
 """
 
 from __future__ import annotations
@@ -36,7 +36,7 @@ def test_require_precondition_raises_with_verbatim_prefix():
     with pytest.raises(AssertionError) as ei:
         require_precondition(False, "probe message", remedy="probe remedy")
     msg = str(ei.value)
-    # the machine-greppable prefix, VERBATIM (contract C2)
+    # The machine-greppable prefix is checked verbatim.
     assert msg.startswith("PRECONDITION (class c, not a gate miss): "), msg
     assert PRECONDITION_PREFIX == "PRECONDITION (class c, not a gate miss): "
     assert "probe message" in msg and "remedy: probe remedy" in msg
@@ -88,9 +88,8 @@ def test_assert_control_trips_propagates_harness_crash():
 # --------------------------------------------------------------------------- #
 def test_assert_with_margin_passes_with_wide_margin():
     """Wide pass (both directions): returns the measured margin factor. Operands are
-    binary-exact powers of two so the pinned ratios are EXACT (1e-12/1e-15 is
-    999.9999999999999 in doubles -- measured 2026-07-07 -- exactly the K-4 float
-    knife-edge this helper exists to police; never pin decimal ratios)."""
+    binary-exact powers of two so the pinned ratios are exact; decimal ratios are
+    deliberately not pinned because their floating representation is not exact."""
     assert assert_with_margin(2.0**-40, 2.0**-30, mode="le",
                               what="probe residual") == 2.0**10
     assert assert_with_margin(1024.0, 1.0, mode="ge", what="probe score") == 1024.0
@@ -197,16 +196,15 @@ def test_random_density_matrix_numpy_properties():
 
 
 def test_random_density_matrix_internal_assert_trips_on_sabotaged_rho():
-    """KILLER (K-5, the NEW meta-test): the builder's extracted internal density check
-    (_assert_density) is fed sabotaged matrices -- one violating unit trace (scaled by
+    """KILLER (K-5): the builder's internal density check (``_assert_density``) is
+    fed sabotaged matrices -- one violating unit trace (scaled by
     1.5 -> tr=1.5, decisively past 1e-12, K-4), one violating hermiticity (a single
     off-diagonal perturbed by 0.5) -- and DEMONSTRATED to trip on each. The clean rho
-    passes the same internal check (the positive leg). Extracting the inline asserts
-    into _assert_density is behaviour-identical: the meta-test proves the seam still
-    fires, guarding the structurally-unreachable defensive branch."""
+    passes the same internal check. The meta-test proves that the private defensive
+    branch can fire even though valid builder output cannot reach it."""
     rng = np.random.default_rng(29)
     rho = random_density_matrix(5, rng, backend="numpy")
-    # the clean rho passes the extracted internal check (positive leg)
+    # The clean rho passes the same internal check.
     fixtures._assert_density(rho, 1.0e-12)
     # sabotage 1: trace violated (raw scaling breaks unit trace) -> trace check trips
     bad_trace = 1.5 * rho
@@ -271,10 +269,10 @@ def test_builders_torch_none_leg_raises_runtimeerror(monkeypatch):
 
 
 # --------------------------------------------------------------------------- #
-# (d) the conftest mask hook defends itself (AM-2 vacuity killer)              #
+# (d) the conftest mask hook rejects unknown logical names                    #
 # --------------------------------------------------------------------------- #
 def test_d3_mask_unknown_name_raises_listing_valid_names():
-    """A typo silently masking nothing would make the AM-2 probe vacuous -- an unknown
+    """A typo silently masking nothing would make the probe vacuous -- an unknown
     logical name must raise ValueError listing the valid names."""
     with pytest.raises(ValueError, match="r01_circ"):
         conftest._has_data(mask="r10_meta,bogus_name")
@@ -306,7 +304,7 @@ def test_d3_mask_flips_predicate_per_name(monkeypatch):
 
 def test_canonical_markers_reflect_probes():
     """The skipif conditions carry the probes verbatim, and the canonical reason
-    strings are EXACT (they ARE the migration target -- contract C1)."""
+    strings are exact so collection behavior cannot drift silently."""
     assert conftest.requires_data.args[0] == (not conftest._HAS_DATA)
     assert conftest.requires_cuda.args[0] == (not conftest._HAS_CUDA)
     assert conftest.requires_cuda.kwargs["reason"] == \

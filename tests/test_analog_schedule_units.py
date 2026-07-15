@@ -1,14 +1,13 @@
-"""Stage-D batch ``analog_schedule`` -- per-unit L0+L1+L2 coverage of
+"""Per-unit L0+L1+L2 coverage of
 ``error_coupling_simulator.frontend.analog_schedule`` (17 CPU-pure public units: the
 five frozen Axis-1 schedule dataclasses' ``__post_init__`` + ``to_manifest``,
-``DurationPolicy.bracket_for``, the ``h3_h5_duration_policy`` table, the three
+``DurationPolicy.bracket_for``, the ``default_duration_policy`` table, the three
 compilers ``compile_code_spec_to_substep_schedule`` / ``circuit_ir_to_substep_schedule``
 / ``stim_circuit_to_substep_schedule``, and the process-lifetime seal pair
 ``has_valid_compiler_schedule_seal`` / ``require_compiler_schedule_seal``; no torch, no
 quimb, so out_of_scope is empty).
 
-Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
-work-list docs/SIMULATOR.md D18).
+Current coverage contract: docs/SIMULATOR.md SS12.3/12.4.
 ``frontend/analog_schedule.py`` is the compiler/schedule seam: it records which public
 circuit operations occupy the same substep, the duration bracket attached to that
 substep, the record-boundary provenance, and a process-owned HMAC seal that later Axis-1
@@ -20,7 +19,7 @@ L2 DISCIPLINE (100% coverage != discrimination). THE LOAD-BEARING PART is that a
 (the ordered substep kinds, per-substep operations, active/idle qubits, duration bracket,
 mechanism slots, participants, window support, record layout) -- NOT read back from the
 module -- and every dataclass ``to_manifest`` is pinned to its EXACT dict. The
-``h3_h5_duration_policy`` is pinned to its EXACT six-bracket table reconstructed by hand.
+``default_duration_policy`` is pinned to its exact six-bracket table reconstructed by hand.
 Every coercion is made observable by feeding NON-canonical typed inputs and pinning the
 coerced value+type (kills the ``object.__setattr__(self, "<field>", ...)`` attribute-name
 string mutants). Every validation raise is tripped through EVERY route reaching it with
@@ -30,7 +29,7 @@ The seal is a process-lifetime HMAC over the schedule manifest; ``require_...`` 
 through the genuine UNSEALED route (a schedule built by hand, not via a compiler) AND a
 TAMPERED route (a wrong non-empty signature drives the ``hmac.compare_digest`` arc). The
 ``or``->default fallbacks (``source_hash or _stable_hash``, ``duration_policy or
-h3_h5_duration_policy()``) are each exercised BOTH ways with the explicit value PINNED as
+default_duration_policy()``) are each exercised both ways with the explicit value pinned as
 used. The ``_find_axis2_source_metadata_path`` arm of ``_reject_projected_or_noisy_circuit``
 is DEAD-DEFENSIVE (probed): ``CircuitIR.__post_init__``'s ``validate_public_metadata``
 rejects every axis-2 source key at the data boundary. The isolation-contract fix makes the
@@ -56,7 +55,7 @@ from hypothesis import strategies as st
 from _support.faithfulness import assert_discriminates, assert_pins
 
 from error_coupling_simulator.frontend.analog_schedule import (
-    H3_H5_DURATION_POLICY_ID,
+    DEFAULT_DURATION_POLICY_ID,
     ANALOG_SCHEDULE_REPRESENTABILITY,
     SCHEDULE_SCHEMA_VERSION,
     COMPILER_SCHEDULE_SEAL_SCHEMA,
@@ -67,7 +66,7 @@ from error_coupling_simulator.frontend.analog_schedule import (
     SubstepSchedule,
     circuit_ir_to_substep_schedule,
     compile_code_spec_to_substep_schedule,
-    h3_h5_duration_policy,
+    default_duration_policy,
     has_valid_compiler_schedule_seal,
     require_compiler_schedule_seal,
     stim_circuit_to_substep_schedule,
@@ -119,7 +118,8 @@ def _ir_substep(**over):
     base = dict(
         substep_id="s0000", round_index=None, tick_index=0, order_index=0, kind="idle",
         operations=(), active_qubits=(), idle_qubits=(0, 1), participants=((0,), (1,)),
-        dt_ns_nominal=None, dt_ns_bracket=(0.0, 300.0), dt_source="h3_h5_v1",
+        dt_ns_nominal=None, dt_ns_bracket=(0.0, 300.0),
+        dt_source="error_coupling_simulator.frontend.duration_policy.v1",
         mechanism_slots=("idle",), measurement_keys=(), window_support=(0, 1),
     )
     base.update(over)
@@ -130,7 +130,7 @@ def _direct_schedule(**over):
     """A hand-built (UNSEALED) SubstepSchedule -- never routed through a compiler."""
     base = dict(
         source_kind="circuit_ir", source_hash="h", schedule_template=None,
-        num_qubits=3, substeps=(_ir_substep(),), duration_policy=h3_h5_duration_policy(),
+        num_qubits=3, substeps=(_ir_substep(),), duration_policy=default_duration_policy(),
     )
     base.update(over)
     return SubstepSchedule(**base)
@@ -253,7 +253,7 @@ def test_L0_duration_bracket_valid_and_coercion():
     # defaults live: source -> policy id, epistemic -> 'c' (kills the "c" default mutant,
     # since a mutated default would fail the {'a','b','c'} membership guard).
     d = DurationBracket("k", 1.0, 2.0, None)
-    assert d.source == H3_H5_DURATION_POLICY_ID and d.epistemic_class == "c"
+    assert d.source == DEFAULT_DURATION_POLICY_ID and d.epistemic_class == "c"
     # low==0.0 valid (kills `< 0.0` -> `<= 0.0`); high==low valid (kills `high < low` -> `<=`)
     assert DurationBracket("barrier", 0.0, 0.0, None).high_ns == 0.0
     # nominal exactly at a bracket endpoint is valid (kills `<=` boundary mutants)
@@ -281,7 +281,9 @@ def test_L0_duration_bracket_guards():
 def test_L0_duration_bracket_to_manifest_exact_dict():
     b = DurationBracket("one_qubit_gate", 20.0, 30.0, 25.0)
     expected = {"kind": "one_qubit_gate", "low_ns": 20.0, "high_ns": 30.0,
-                "nominal_ns": 25.0, "source": "h3_h5_v1", "epistemic_class": "c"}
+                "nominal_ns": 25.0,
+                "source": "error_coupling_simulator.frontend.duration_policy.v1",
+                "epistemic_class": "c"}
     got = b.to_manifest()
     assert got == expected
     # None-nominal shows through as None (not dropped)
@@ -312,11 +314,12 @@ def test_L0_duration_policy_guards():
 
 
 def test_L0_duration_policy_bracket_for():
-    pol = h3_h5_duration_policy()
+    pol = default_duration_policy()
     # a MID-table kind so the loop runs past non-matching brackets (the no-match arc).
     reset = pol.bracket_for("reset")
     assert reset.to_manifest() == {"kind": "reset", "low_ns": 100.0, "high_ns": 500.0,
-                                   "nominal_ns": None, "source": "h3_h5_v1",
+                                   "nominal_ns": None,
+                                   "source": "error_coupling_simulator.frontend.duration_policy.v1",
                                    "epistemic_class": "c"}
     one = pol.bracket_for("one_qubit_gate")
     assert one.nominal_ns == 25.0
@@ -325,7 +328,10 @@ def test_L0_duration_policy_bracket_for():
         assert b.kind == "reset"
 
     assert_discriminates(prop, reset, one, label="bracket_for(reset)")
-    _raises_exact(ValueError, "duration policy 'h3_h5_v1' has no bracket for 'nope'",
+    _raises_exact(
+        ValueError,
+        "duration policy 'error_coupling_simulator.frontend.duration_policy.v1' "
+        "has no bracket for 'nope'",
                   lambda: pol.bracket_for("nope"))
 
 
@@ -336,9 +342,11 @@ def test_L0_duration_policy_to_manifest_exact_dict():
         "table_id": "mini",
         "brackets": [
             {"kind": "idle", "low_ns": 0.0, "high_ns": 5.0, "nominal_ns": None,
-             "source": "h3_h5_v1", "epistemic_class": "c"},
+             "source": "error_coupling_simulator.frontend.duration_policy.v1",
+             "epistemic_class": "c"},
             {"kind": "reset", "low_ns": 1.0, "high_ns": 2.0, "nominal_ns": 1.5,
-             "source": "h3_h5_v1", "epistemic_class": "c"},
+             "source": "error_coupling_simulator.frontend.duration_policy.v1",
+             "epistemic_class": "c"},
         ],
     }
     got = p.to_manifest()
@@ -452,7 +460,8 @@ def test_L0_analog_substep_to_manifest_exact_dict():
         substep_id="s0007", round_index=2, tick_index=1, order_index=3,
         kind="one_qubit_gate", operations=(SubstepOperation("h", (0,), 5),),
         active_qubits=(0,), idle_qubits=(1,), participants=((0,),),
-        dt_ns_nominal=25.0, dt_ns_bracket=(20.0, 30.0), dt_source="h3_h5_v1",
+        dt_ns_nominal=25.0, dt_ns_bracket=(20.0, 30.0),
+        dt_source="error_coupling_simulator.frontend.duration_policy.v1",
         mechanism_slots=("drive", "idle", "spectator"), measurement_keys=(),
         window_support=(0, 1), generated_by_compiler=True, epistemic_class="b")
     expected = {
@@ -460,7 +469,8 @@ def test_L0_analog_substep_to_manifest_exact_dict():
         "kind": "one_qubit_gate",
         "operations": [{"name": "H", "targets": [0], "source_step_index": 5, "args": []}],
         "active_qubits": [0], "idle_qubits": [1], "participants": [[0]],
-        "dt_ns_nominal": 25.0, "dt_ns_bracket": [20.0, 30.0], "dt_source": "h3_h5_v1",
+        "dt_ns_nominal": 25.0, "dt_ns_bracket": [20.0, 30.0],
+        "dt_source": "error_coupling_simulator.frontend.duration_policy.v1",
         "mechanism_slots": ["drive", "idle", "spectator"], "measurement_keys": [],
         "window_support": [0, 1], "generated_by_compiler": True, "epistemic_class": "b",
     }
@@ -481,7 +491,7 @@ def test_L0_substep_schedule_direct_and_coercion():
     ctx = {"include_thermal_excitation": True, "gamma_up_per_ns": 2.0e-4}
     s = SubstepSchedule(
         source_kind="circuit_ir", source_hash="abc", schedule_template="tmpl",
-        num_qubits=3, substeps=(_ir_substep(),), duration_policy=h3_h5_duration_policy(),
+        num_qubits=3, substeps=(_ir_substep(),), duration_policy=default_duration_policy(),
         qubit_roles={0: "data", 1: "ancilla"}, qubit_coords={0: (0.0, 1.0)},
         static_zz_couplings=((1, 0),),
         static_zz_calibrations={(0, 1): {"zeta_rad_per_ns": 0.25}},
@@ -559,37 +569,43 @@ def test_L0_substep_schedule_to_manifest_sealed_vs_unsealed():
 
 
 # =========================================================================== #
-# h3_h5_duration_policy -- the preregistered table (INDEPENDENT reconstruction) #
+# default_duration_policy -- independent table reconstruction                   #
 # =========================================================================== #
-def test_L0_h3_h5_duration_policy_exact_table():
+def test_L0_default_duration_policy_exact_table():
     expected = {
-        "table_id": "h3_h5_v1",
+        "table_id": "error_coupling_simulator.frontend.duration_policy.v1",
         "brackets": [
             {"kind": "one_qubit_gate", "low_ns": 20.0, "high_ns": 30.0, "nominal_ns": 25.0,
-             "source": "h3_h5_v1", "epistemic_class": "c"},
+             "source": "error_coupling_simulator.frontend.duration_policy.v1",
+             "epistemic_class": "c"},
             {"kind": "two_qubit_gate", "low_ns": 25.0, "high_ns": 45.0, "nominal_ns": 30.0,
-             "source": "h3_h5_v1", "epistemic_class": "c"},
+             "source": "error_coupling_simulator.frontend.duration_policy.v1",
+             "epistemic_class": "c"},
             {"kind": "idle", "low_ns": 0.0, "high_ns": 300.0, "nominal_ns": None,
-             "source": "h3_h5_v1", "epistemic_class": "c"},
+             "source": "error_coupling_simulator.frontend.duration_policy.v1",
+             "epistemic_class": "c"},
             {"kind": "measurement", "low_ns": 100.0, "high_ns": 1000.0, "nominal_ns": None,
-             "source": "h3_h5_v1", "epistemic_class": "c"},
+             "source": "error_coupling_simulator.frontend.duration_policy.v1",
+             "epistemic_class": "c"},
             {"kind": "reset", "low_ns": 100.0, "high_ns": 500.0, "nominal_ns": None,
-             "source": "h3_h5_v1", "epistemic_class": "c"},
+             "source": "error_coupling_simulator.frontend.duration_policy.v1",
+             "epistemic_class": "c"},
             {"kind": "barrier", "low_ns": 0.0, "high_ns": 0.0, "nominal_ns": None,
-             "source": "h3_h5_v1", "epistemic_class": "c"},
+             "source": "error_coupling_simulator.frontend.duration_policy.v1",
+             "epistemic_class": "c"},
         ],
     }
-    got = h3_h5_duration_policy().to_manifest()
+    got = default_duration_policy().to_manifest()
     assert got == expected
 
     def prop(m):
         assert m == expected
 
-    # a single wrong bracket value must fail (teeth on the whole preregistered table)
-    wrong = {"table_id": "h3_h5_v1",
+    # A single wrong bracket value must fail.
+    wrong = {"table_id": "error_coupling_simulator.frontend.duration_policy.v1",
              "brackets": [dict(expected["brackets"][0], nominal_ns=99.0)]
              + expected["brackets"][1:]}
-    assert_discriminates(prop, got, wrong, label="h3_h5_duration_policy")
+    assert_discriminates(prop, got, wrong, label="default_duration_policy")
 
 
 # =========================================================================== #
@@ -625,16 +641,21 @@ def _independent_schedule_recompute():
     slots, participants, window) tuple I derive BY HAND from _rich_circuit() -- NOT read
     from the module. num_qubits=3; H0/CX12/TICK/R2/I(0,1)@50/MR0."""
     return [
-        ("one_qubit_gate", ["H"], (0,), (1, 2), 25.0, (20.0, 30.0), "h3_h5_v1",
+        ("one_qubit_gate", ["H"], (0,), (1, 2), 25.0, (20.0, 30.0),
+         "error_coupling_simulator.frontend.duration_policy.v1",
          ("drive", "idle", "spectator"), ((0,),), (0, 1, 2)),
-        ("two_qubit_gate", ["CX"], (1, 2), (0,), 30.0, (25.0, 45.0), "h3_h5_v1",
+        ("two_qubit_gate", ["CX"], (1, 2), (0,), 30.0, (25.0, 45.0),
+         "error_coupling_simulator.frontend.duration_policy.v1",
          ("two_qubit_drive", "zz_spectator", "idle"), ((1, 2),), (0, 1, 2)),
-        ("barrier", [], (), (), None, (0.0, 0.0), "h3_h5_v1", (), (), ()),
-        ("reset", ["R"], (2,), (), None, (100.0, 500.0), "h3_h5_v1",
+        ("barrier", [], (), (), None, (0.0, 0.0),
+         "error_coupling_simulator.frontend.duration_policy.v1", (), (), ()),
+        ("reset", ["R"], (2,), (), None, (100.0, 500.0),
+         "error_coupling_simulator.frontend.duration_policy.v1",
          ("reset_boundary",), ((2,),), (2,)),
         ("idle", ["I"], (), (0, 1), 50.0, (50.0, 50.0), "explicit_circuit_idle_duration",
          ("idle",), ((0,), (1,)), (0, 1)),
-        ("measurement", ["MR"], (0,), (), None, (100.0, 1000.0), "h3_h5_v1",
+        ("measurement", ["MR"], (0,), (), None, (100.0, 1000.0),
+         "error_coupling_simulator.frontend.duration_policy.v1",
          ("readout_boundary", "reset_boundary"), ((0,),), (0,)),
     ]
 
@@ -702,7 +723,7 @@ def test_L0_circuit_ir_explicit_hash_and_policy_pinned_as_used():
                                        source_hash="deadbeefhash", duration_policy=custom)
     assert s.source_hash == "deadbeefhash"
     assert s.duration_policy.table_id == "custom_v9"
-    # the custom one_qubit bracket flows into the substep (not the h3_h5 default 25.0)
+    # The custom one_qubit bracket flows into the substep, not the default 25.0.
     assert s.substeps[0].dt_ns_nominal == 11.5
     assert s.substeps[0].dt_ns_bracket == (11.0, 12.0)
 
@@ -969,7 +990,7 @@ def test_L1_duration_bracket_manifest_roundtrip(low, width, frac, has_nominal, k
     b = DurationBracket(kind, low, high, nominal, epistemic_class=ec)
     m = b.to_manifest()
     assert m == {"kind": kind, "low_ns": low, "high_ns": high, "nominal_ns": nominal,
-                 "source": H3_H5_DURATION_POLICY_ID, "epistemic_class": ec}
+                 "source": DEFAULT_DURATION_POLICY_ID, "epistemic_class": ec}
     # the invariant the guard enforces holds for every accepted bracket
     assert m["low_ns"] >= 0.0 and m["high_ns"] >= m["low_ns"]
     if nominal is not None:
@@ -1368,7 +1389,7 @@ def test_L0_compile_coordless_qubits_metadata():
 
 # =========================================================================== #
 # L2 REINFORCEMENT (round 2) -- the PUBLIC entry points circuit_ir_to_* and     #
-# stim_circuit_to_* accept ARBITRARY CircuitIR / stim.Circuit input. The D18     #
+# stim_circuit_to_* accept ARBITRARY CircuitIR / stim.Circuit input. An         #
 # adversarial-mutation review found that an Axis-2 source key NESTED under a      #
 # ``_source_projection_evaluator_audit`` subtree slipped the DATA BOUNDARY        #
 # (``validate_public_metadata`` skipped the audit subtree at EVERY depth) and     #

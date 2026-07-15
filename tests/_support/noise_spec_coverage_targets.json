@@ -1,0 +1,68 @@
+{
+  "_comment": [
+    "Per-owner coverage registry for noise spec."
+  ],
+  "contract": "docs/SIMULATOR.md",
+  "default_target": {"statement": 1.0, "branch": 1.0},
+  "covered_by_test_files": [
+    "tests/test_noise_spec_units.py"
+  ],
+  "reconcile_modules": [
+    "src/error_coupling_simulator/frontend/noise_spec.py"
+  ],
+  "out_of_scope": {},
+  "canonical_units": [
+    "apply_stim_pauli_noise",
+    "StimPauliNoiseSpec.__post_init__",
+    "StimPauliNoiseSpec.is_trivial",
+    "StimPauliNoiseSpec.to_manifest",
+    "StimNoiseRule.__post_init__",
+    "StimNoiseRule.to_manifest",
+    "TargetedStimNoiseSpec.__post_init__",
+    "TargetedStimNoiseSpec.is_trivial",
+    "TargetedStimNoiseSpec.to_manifest",
+    "SourceStimPauliRule.__post_init__",
+    "SourceStimPauliRule.probability_for",
+    "SourceStimPauliRule.to_public_manifest",
+    "SourceStimPauliRule.to_manifest",
+    "SourceStimPauliProjectionSpec.__post_init__",
+    "SourceStimPauliProjectionSpec.is_trivial",
+    "SourceStimPauliProjectionSpec.source_timeline",
+    "SourceStimPauliProjectionSpec.to_manifest",
+    "SourceStimPauliProjectionSpec.to_evaluator_manifest",
+    "NoiseBuilder.after_gate",
+    "NoiseBuilder.after_gate_type",
+    "NoiseBuilder.after_all_gates",
+    "NoiseBuilder.before_measurement",
+    "NoiseBuilder.before_measurement_type",
+    "NoiseBuilder.during_idle",
+    "NoiseBuilder.build"
+  ],
+  "units": [
+    {"group": "noise_spec", "module": "src/error_coupling_simulator/frontend/noise_spec.py", "unit": "apply_stim_pauli_noise", "qualname": "apply_stim_pauli_noise", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "noise_spec", "module": "src/error_coupling_simulator/frontend/noise_spec.py", "unit": "StimPauliNoiseSpec.__post_init__", "qualname": "StimPauliNoiseSpec.__post_init__", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "noise_spec", "module": "src/error_coupling_simulator/frontend/noise_spec.py", "unit": "StimPauliNoiseSpec.is_trivial", "qualname": "StimPauliNoiseSpec.is_trivial", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "noise_spec", "module": "src/error_coupling_simulator/frontend/noise_spec.py", "unit": "StimPauliNoiseSpec.to_manifest", "qualname": "StimPauliNoiseSpec.to_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "noise_spec", "module": "src/error_coupling_simulator/frontend/noise_spec.py", "unit": "StimNoiseRule.__post_init__", "qualname": "StimNoiseRule.__post_init__", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "noise_spec", "module": "src/error_coupling_simulator/frontend/noise_spec.py", "unit": "StimNoiseRule.to_manifest", "qualname": "StimNoiseRule.to_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "noise_spec", "module": "src/error_coupling_simulator/frontend/noise_spec.py", "unit": "TargetedStimNoiseSpec.__post_init__", "qualname": "TargetedStimNoiseSpec.__post_init__", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "noise_spec", "module": "src/error_coupling_simulator/frontend/noise_spec.py", "unit": "TargetedStimNoiseSpec.is_trivial", "qualname": "TargetedStimNoiseSpec.is_trivial", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "noise_spec", "module": "src/error_coupling_simulator/frontend/noise_spec.py", "unit": "TargetedStimNoiseSpec.to_manifest", "qualname": "TargetedStimNoiseSpec.to_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "noise_spec", "module": "src/error_coupling_simulator/frontend/noise_spec.py", "unit": "SourceStimPauliRule.__post_init__", "qualname": "SourceStimPauliRule.__post_init__", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "noise_spec", "module": "src/error_coupling_simulator/frontend/noise_spec.py", "unit": "SourceStimPauliRule.probability_for", "qualname": "SourceStimPauliRule.probability_for", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "noise_spec", "module": "src/error_coupling_simulator/frontend/noise_spec.py", "unit": "SourceStimPauliRule.to_public_manifest", "qualname": "SourceStimPauliRule.to_public_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "noise_spec", "module": "src/error_coupling_simulator/frontend/noise_spec.py", "unit": "SourceStimPauliRule.to_manifest", "qualname": "SourceStimPauliRule.to_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "noise_spec", "module": "src/error_coupling_simulator/frontend/noise_spec.py", "unit": "SourceStimPauliProjectionSpec.__post_init__", "qualname": "SourceStimPauliProjectionSpec.__post_init__", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "noise_spec", "module": "src/error_coupling_simulator/frontend/noise_spec.py", "unit": "SourceStimPauliProjectionSpec.is_trivial", "qualname": "SourceStimPauliProjectionSpec.is_trivial", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "noise_spec", "module": "src/error_coupling_simulator/frontend/noise_spec.py", "unit": "SourceStimPauliProjectionSpec.source_timeline", "qualname": "SourceStimPauliProjectionSpec.source_timeline", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "noise_spec", "module": "src/error_coupling_simulator/frontend/noise_spec.py", "unit": "SourceStimPauliProjectionSpec.to_manifest", "qualname": "SourceStimPauliProjectionSpec.to_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "noise_spec", "module": "src/error_coupling_simulator/frontend/noise_spec.py", "unit": "SourceStimPauliProjectionSpec.to_evaluator_manifest", "qualname": "SourceStimPauliProjectionSpec.to_evaluator_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "noise_spec", "module": "src/error_coupling_simulator/frontend/noise_spec.py", "unit": "NoiseBuilder.after_gate", "qualname": "NoiseBuilder.after_gate", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "noise_spec", "module": "src/error_coupling_simulator/frontend/noise_spec.py", "unit": "NoiseBuilder.after_gate_type", "qualname": "NoiseBuilder.after_gate_type", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "noise_spec", "module": "src/error_coupling_simulator/frontend/noise_spec.py", "unit": "NoiseBuilder.after_all_gates", "qualname": "NoiseBuilder.after_all_gates", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "noise_spec", "module": "src/error_coupling_simulator/frontend/noise_spec.py", "unit": "NoiseBuilder.before_measurement", "qualname": "NoiseBuilder.before_measurement", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "noise_spec", "module": "src/error_coupling_simulator/frontend/noise_spec.py", "unit": "NoiseBuilder.before_measurement_type", "qualname": "NoiseBuilder.before_measurement_type", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "noise_spec", "module": "src/error_coupling_simulator/frontend/noise_spec.py", "unit": "NoiseBuilder.during_idle", "qualname": "NoiseBuilder.during_idle", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "noise_spec", "module": "src/error_coupling_simulator/frontend/noise_spec.py", "unit": "NoiseBuilder.build", "qualname": "NoiseBuilder.build", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []}
+  ]
+}

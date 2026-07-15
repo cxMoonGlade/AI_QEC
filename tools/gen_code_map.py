@@ -52,7 +52,7 @@ REPO = Path(__file__).resolve().parents[1]
 # ``error_coupling_simulator/source``).
 SRC = REPO / "src"
 RUNTIME_PACKAGE = SRC / "error_coupling_simulator"
-TOOLS = REPO / "tools"          # dev tooling (not shipped): gen_code_map, sync_obsidian, ...
+TOOLS = REPO / "tools"          # repository development tooling (not shipped)
 TESTS_HARNESS = REPO / "tests" / "harness"   # the test/coverage harness lives WITH the tests (proc/gpu_pool/gate/mutation)
 _ROOTS = (SRC, TOOLS, TESTS_HARNESS)
 STATUS_PATH = REPO / "docs" / "code_status.json"
@@ -60,7 +60,6 @@ SERVICE_STATUS_PATH = REPO / "docs" / "service_status.json"
 PROJECT_PATH = REPO / "pyproject.toml"
 MANIFEST_PATH = REPO / "MANIFEST.in"
 MAP_PATH = REPO / "docs" / "CODE_MAP.md"
-GATES_DIR = REPO / "docs" / "twin_validation" / "gates"
 
 _HASH_MARKER = "<!-- code-map-inputs-sha256:"
 _ID_RE = re.compile(r"^[a-z][a-z0-9_]*$")
@@ -281,8 +280,8 @@ def _render_local_index(local_index: dict) -> list[str]:
     lines.append("## LOCAL-ONLY working code — gitignored `outputs/` (NOT committed; on the build "
                  "workstation only; re-run certs to confirm — they are not assumed)")
     lines.append("> Curated clusters (globs in `docs/code_status.json` `_local_index`); files "
-                 "auto-discovered. This is where the P2 quantum-bath infrastructure lives — READ HERE "
-                 "before assuming it is unbuilt.")
+                 "auto-discovered. Entries are working artifacts, not installed source or "
+                 "acceptance evidence.")
     lines.append("")
     for heading, globs in local_index.items():
         if heading.startswith("_"):
@@ -931,9 +930,9 @@ def _validate_service_status(catalog: dict) -> dict:
         for service in services
         if isinstance(service, dict) and isinstance(service.get("id"), str)
     }
-    source_service = by_id.get("classical_1f_nonmarkov_chain")
+    source_service = by_id.get("classical_finite_rtn_source_chain")
     if source_service is None or source_service.get("status") != "CORE":
-        errors.append("classical_1f_nonmarkov_chain must exist as an independent CORE service")
+        errors.append("classical_finite_rtn_source_chain must exist as an independent CORE service")
     else:
         required_controls = {"matched_marginal_permutation", "source_off"}
         actual_controls = {
@@ -944,7 +943,7 @@ def _validate_service_status(catalog: dict) -> dict:
         missing_controls = sorted(required_controls - actual_controls)
         if missing_controls:
             errors.append(
-                "classical_1f_nonmarkov_chain is missing required controls: "
+                "classical_finite_rtn_source_chain is missing required controls: "
                 f"{missing_controls}"
             )
 
@@ -1361,16 +1360,6 @@ def build_map() -> tuple[str, dict]:
             if facts["funcs"]:
                 lines.append(f"    - def: {', '.join('`'+f+'`' for f in facts['funcs'])}")
         lines.append("")
-
-    # tracked gate scripts (the record-level evidence suite).
-    if GATES_DIR.exists():
-        gate_py = sorted(GATES_DIR.glob("*.py"))
-        if gate_py:
-            lines.append("## tracked gates — `docs/twin_validation/gates/`")
-            for g in gate_py:
-                lines.append(f"- **`{g.name}`** ({_module_facts(g)['loc']} LOC) — "
-                             f"{_module_facts(g)['doc'] or '(no docstring)'}")
-            lines.append("")
 
     lines.extend(_render_local_index(local_index))
 

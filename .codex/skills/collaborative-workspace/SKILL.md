@@ -86,7 +86,7 @@ Use these checks selectively; do not turn every task into ceremony.
 
 ## Research Integrity For This Repository
 
-For the QEC digital twin project, preserve these defaults unless the user explicitly changes the experiment design:
+For simulator and adjacent QEC research, preserve these defaults unless the user explicitly changes the experiment design:
 
 - Detector-event-level claims are not measurement-level or decoder-distillation claims.
 - Clean generated priors, optimized-provided priors, fixtures, diagnostics, and claim-eligible branches must be labeled distinctly.

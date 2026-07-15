@@ -25,6 +25,11 @@ Service acceptance uses three non-overlapping resource lanes:
 The default environment is `ecs`. Tests for an explicitly isolated optional runtime use the
 per-file environment override declared in the service catalog.
 
+`test_finite_rtn_free_induction_diagnostic.py` is a CPU-exclusive research diagnostic for the
+current finite-RTN source owner. Its post-result contract is in
+`docs/simulator_validation/finite_rtn_free_induction_diagnostic_contract_2026-07-15.md`; a pass does
+not assign CP-divisibility or BLP status to the production QEC channel or record.
+
 ## Coverage and mutation registries
 
 Current registries are the JSON files matching `tests/_support/*_targets.json`. A registry names:

@@ -1,58 +1,49 @@
 from __future__ import annotations
 
-r"""Per-shot single-wire PEPS trajectory loop (RUNG-B spike).
+r"""Per-shot single-wire PEPS trajectory loop.
 
-Binding doc: ``docs/nonpauli_teacher/peps_singlewire_spike_contract.md`` — D7
-(trajectory semantics = ``mps_forward``'s, transplanted to 2D and pinned
-VERBATIM), §2 (op table), §6.1 (the dynamic-eps truncation policy + its window
-invariant — NEW code, this module), SF11 (records + RNG discipline).
-
-PINNED SAMPLING MAPS (SF11 — the ``mps_forward`` value contracts; the archived
-pepo directions are FORBIDDEN, RT1-B1/B2):
+Sampling maps are owned by ``sampling_maps.py``:
 
   * stabilizer: ``sbit = 0 iff u < p0`` (STRICT ``<``), ``p0 = 1/2 (1 + <P>)``
-    read through the production double-layer caps path
-    (``mps_forward._measure_stabilizer``);
+    read through the double-layer caps path;
   * LEAK Kraus selection: branch ``k`` = the FIRST ``k`` with
-    ``u * tot <= cumsum_k`` (NON-STRICT ``<=``), fallback ``K - 1`` — the
-    ``batched_mps_backend_prereg`` TIE-BREAK REGISTRY, VERBATIM
-    (``mps_forward._leak_sample``); ``p_k`` from the double-layer 1-site RDM;
+    ``u * tot <= cumsum_k`` (non-strict ``<=``), fallback ``K - 1``;
+    ``p_k`` comes from the double-layer 1-site RDM;
   * terminal: ALL ``n_data`` qutrits in ENGINE order, one uniform each,
     ``bit = 1 iff u < p1``, ``sqrt(F_bit)`` collapse per site, ALL X-logical
     sites H-rotated UP-FRONT, obs = parity(logical-support bits) XOR ``m``
-    (``mps_forward._terminal_readout`` hard2).
+    under the declared terminal instrument.
 
-RNG (SF11): per-shot ``np.random.default_rng((base_seed, shot))``; Section-5
-normative draw order — gates draw nothing; ONE uniform per LEAK site-op; ONE per
-stabilizer; ``n_data`` at the terminal. Instrument reads (§6.2) consume NO host
-uniforms (their fit seeds are separate torch Generators — SW-S7).
+RNG: per-shot ``np.random.default_rng((base_seed, shot))``; gates draw nothing;
+one uniform is used per leakage site operation, one per
+stabilizer; ``n_data`` at the terminal. Instrument reads consume no host
+uniforms (their fit seeds are separate torch generators).
 
-ARM FENCE (SW-S2): arm A only is registered; arm C (leak-flag draws) raises.
+Only arm A is supported; arm C (leak-flag draws) raises.
 
-§6.1 DYNAMIC-EPS POLICY (NEW code; the reused cutters ``svd_precut_bond`` /
-``ntu_truncate`` are imported from the parent UNCHANGED — neither has a dynamic
-mode, SF10). Call order per truncation event: apply the TT branch, then over the
+Dynamic-epsilon policy: the reused cutters ``svd_precut_bond`` and
+``ntu_truncate`` have no dynamic mode. Call order per truncation event is: apply
+the TT branch, then over the
 path bonds pass 1 (``svd_precut_bond``) — ALL bonds — then pass 2
 (``ntu_truncate``) — ALL bonds (all precuts land before any NTU metric build, so
 no metric leg exceeds ``W_max``). BOTH passes compute the full SVD of their
 CURRENT pair insertion before cutting; the running target ``r_dyn`` = the
 smallest rank whose squared-sigma tail (RELATIVE, local insertion spectrum) is
 ``<= eps_spike``. Precut window = ``min(4 * r_dyn, W_max)``, ``W_max = 160 =
-4 * D_abort`` (RT3-F3). INVARIANT: TOTAL per-cut discarded (precut + policy cut,
+4 * D_abort``. The total per-cut discarded mass (precut plus policy cut,
 both squared-sigma relative tails, summed) ``<= eps_spike``; a W_max-capped
 precut that WOULD exceed it ledgers a ``window_binding`` flag entry and retries
 ONCE with the kept rank escalated (the uncapped ``4 * r_dyn`` window); still
 exceeding => the PRECONDITION tripwire (orderly stop), never data. The widening
-machinery is DEFENSIVE (unreachable while code matches spec below W_max; the
-SW6 killer forces it). Pass 2's kept rank consumes the REMAINING eps budget
+machinery is defensive and normally unreachable below ``W_max``. Pass 2's kept
+rank consumes the remaining epsilon budget
 (``eps_spike - precut_discarded``) — the invariant-enforcing form of the
 running-target rule (identical to the plain rule whenever the precut tail is
 negligible, i.e. everywhere below the window boundary).
 
-GPU-only, complex128 (SW-S8); referee-independent (local gate table, D4).
+GPU-only, complex128, with a local gate table independent of the exact reference.
 """
 
-import os
 from dataclasses import dataclass
 
 import numpy as np
@@ -95,17 +86,18 @@ from .state import (
 )
 from .stab_tt import stab_tt_singlewire, apply_stab_branch
 
-#: §6.1 metric-feasibility precut cap: W_max = 4 * D_abort (RT3-F3) — pass 1
+#: Metric-feasibility precut cap: W_max = 4 * D_abort. Pass 1
 #: bounds every path bond to <= W_max BEFORE any pass-2 NTU metric is built.
 W_MAX_DEFAULT = 160
-#: §6.1/§7 registered grown-dim abort: fires when any grown dim EXCEEDS 40
-#: (D = 40 itself is processed — RT3-F6), checked pre-metric.
+#: Grown-dimension abort: fires when any grown dimension exceeds 40.
+#: D = 40 itself is processed; the check occurs before metric construction.
 D_ABORT_DEFAULT = 40
 
 class BondAbortError(RuntimeError):
-    """The §6.1 D_abort ORDERLY stop: a grown path-bond dim exceeded the
-    registered abort. Carries the offending bond + the full bond profile so the
-    partial table survives as finding evidence (the F-REC-1 precedent)."""
+    """Orderly stop when a grown path-bond dimension exceeds ``D_abort``.
+
+    Carries the offending bond and full bond profile for diagnostic recovery.
+    """
 
     def __init__(self, message: str, bond: str, dim: int, profile: dict) -> None:
         super().__init__(message)
@@ -115,22 +107,21 @@ class BondAbortError(RuntimeError):
 
 
 # --------------------------------------------------------------------------- #
-# Truncation policy (§2 op-table row ``truncate_bond_policy``; §6.1)           #
+# Truncation policy                                                            #
 # --------------------------------------------------------------------------- #
 @dataclass(frozen=True)
 class TruncationPolicy:
-    """The declared-per-run truncation arm (contract §2: dynamic-eps or D_cap;
-    plus the SW2 LOSSLESS arm; plus the Stage-2a environment-aware ``fet_env``
-    arm).
+    """The declared per-run truncation mode: dynamic epsilon, fixed cap,
+    lossless gauge compression, or environment-aware ``fet_env``.
 
-    ``mode``: ``"dynamic_eps"`` (§6.1 — requires ``eps_spike``), ``"d_cap"``
+    ``mode``: ``"dynamic_eps"`` (requires ``eps_spike``), ``"d_cap"``
     (the parent two-pass at a fixed integer target — requires ``D_cap``),
-    ``"lossless"`` (SW2: no cut below the exact local rank — the
+    ``"lossless"`` (no cut below the exact local rank — the
     ``sigma > 1e-12 sigma_1`` count; a zero-drop gauge compression only), or
-    ``"fet_env"`` (the environment-optimal truncator — requires ``eps_fid``;
-    ``fet_stage2_src_contract`` §3: a strict pass-1 NO-OP + the whole
-    per-bond-sequential FET truncation in pass 2, via :mod:`.fet`). ``W_max``
-    is the §6.1 precut cap (dynamic arm only).
+    ``"fet_env"`` (the environment-aware truncator — requires ``eps_fid``;
+    a strict pass-1 no-op followed by per-bond-sequential truncation in pass 2,
+    via :mod:`.fet`). ``W_max``
+    is the precut cap for the dynamic arm only.
     """
 
     mode: str
@@ -150,14 +141,14 @@ class TruncationPolicy:
         if self.mode == "d_cap" and (self.D_cap is None or int(self.D_cap) < 1):
             raise ValueError(f"d_cap requires D_cap >= 1 (got {self.D_cap})")
         if self.mode == "fet_env" and (self.eps_fid is None or not float(self.eps_fid) > 0.0):
-            # fet_env does NOT require eps_spike (contract §3): its pass-1 is a
+            # fet_env does not require eps_spike: its pass 1 is a
             # strict NO-OP, so it never reads the dynamic-eps window budget.
             raise ValueError(f"fet_env requires eps_fid > 0 (got {self.eps_fid})")
 
 
 def _insertion_spectrum(state: PepsState, bond: str) -> torch.Tensor:
     """The descending singular-value spectrum of the CURRENT pair insertion
-    ``X0 = R_A R_B^T`` of ``bond`` (the §6.1 pre-cut spectrum probe; the same
+    ``X0 = R_A R_B^T`` of ``bond`` (the pre-cut spectrum probe; the same
     QR-split object the reused cutters recompute internally)."""
     tids = tuple(state.tn.ind_map[bond])
     assert len(tids) == 2, f"bond {bond!r} must join exactly 2 tensors (got {len(tids)})"
@@ -168,7 +159,7 @@ def _insertion_spectrum(state: PepsState, bond: str) -> torch.Tensor:
 
 
 def _sq_tail(S: torch.Tensor, r: int) -> float:
-    """RELATIVE squared-sigma tail beyond kept rank ``r`` (the §2 units table:
+    """Relative squared-sigma tail beyond kept rank ``r``:
     normalized by the local insertion spectrum's sum of sigma^2)."""
     s_sq = (S * S).real
     tot = float(s_sq.sum())
@@ -179,7 +170,7 @@ def _sq_tail(S: torch.Tensor, r: int) -> float:
 
 
 def _rank_for_tail(S: torch.Tensor, eps: float) -> int:
-    """The running target ``r_dyn`` (§6.1): the SMALLEST kept rank whose relative
+    """The running target ``r_dyn``: the smallest kept rank whose relative
     squared-sigma tail is ``<= eps`` on the given spectrum (always exists — the
     full-rank tail is 0)."""
     n = int(S.numel())
@@ -199,8 +190,8 @@ def _rank_for_tail(S: torch.Tensor, eps: float) -> int:
 
 
 def _exact_rank(S: torch.Tensor) -> int:
-    """The exact local rank: the ``sigma > 1e-12 sigma_1`` count (the pinned
-    zero-drop convention — SW2's structural lossless definition)."""
+    """The exact local rank under the ``sigma > 1e-12 sigma_1`` zero-drop
+    convention."""
     if S.numel() == 0 or float(S[0]) <= 0.0:
         return 1
     return max(1, int((S > NUMERICAL_ZERO * float(S[0])).sum()))
@@ -208,13 +199,12 @@ def _exact_rank(S: torch.Tensor) -> int:
 
 def _policy_precut(state: PepsState, bond: str, policy: TruncationPolicy) -> dict:
     """Pass 1 of :func:`truncate_bond_policy` on one bond (see the module
-    docstring for the §6.1 window/invariant machinery). Returns the per-bond
+    docstring for the window and invariant machinery). Returns the per-bond
     pass-1 record consumed by pass 2; ``precut_discarded`` is 0.0 EXACTLY when
-    no precut ran (the SW6 ledger-image killer's expectation)."""
+    no precut ran."""
     dim_in = int(state.tn.ind_size(bond))
     # the pre-cut insertion spectrum is computed ONCE for all modes: it gives
-    # the exact local rank (the ledger's `exact_rank` — the SW6 ledger-image
-    # killer's regime read + a d5 SW8 losslessness diagnostic) and, for the
+    # the exact local rank reported in the ledger and, for the
     # dynamic arm, the running target r_dyn.
     S = _insertion_spectrum(state, bond)
     exact_rank = _exact_rank(S)
@@ -235,7 +225,7 @@ def _policy_precut(state: PepsState, bond: str, policy: TruncationPolicy) -> dic
             rec["precut_discarded"] = float(entry["discarded"])
         return rec
     if policy.mode == "fet_env":
-        # RT-F1 (fet_stage2_src_contract §3): pass-1 is a STRICT NO-OP for
+        # Pass 1 is a strict no-op for
         # fet_env — leave the bond at FULL dim so pass-2's `gamma_TN` reads the
         # UN-pre-truncated environment. `rec` already carries EXACTLY the keys
         # `_policy_cut`'s summary reads (precut_discarded=0.0, r_dyn=None,
@@ -244,7 +234,7 @@ def _policy_precut(state: PepsState, bond: str, policy: TruncationPolicy) -> dic
         # `float(policy.eps_spike)` (= `float(None)` -> TypeError).
         return rec
 
-    # dynamic_eps (§6.1)
+    # dynamic-epsilon policy
     eps = float(policy.eps_spike)
     r_dyn = _rank_for_tail(S, eps)
     width = min(4 * r_dyn, int(policy.W_max))
@@ -258,7 +248,7 @@ def _policy_precut(state: PepsState, bond: str, policy: TruncationPolicy) -> dic
         r2 = _rank_for_tail(S[:width], max(eps - pre_tail, 0.0))
         total_pred = pre_tail + (1.0 - pre_tail) * _sq_tail(S[:width], r2)
         if total_pred > eps:
-            # §6.1: the W_max-capped precut WOULD exceed the invariant — flag +
+            # The W_max-capped precut would exceed the invariant: flag and
             # ONE retry with the kept rank escalated (the uncapped window).
             state.ledger.append({
                 "op": "window_binding",
@@ -280,9 +270,9 @@ def _policy_precut(state: PepsState, bond: str, policy: TruncationPolicy) -> dic
                 total_pred = pre_tail + (1.0 - pre_tail) * _sq_tail(S[:width], r2)
                 if total_pred > eps:
                     raise RuntimeError(
-                        f"PRECONDITION (class c, not a gate miss): §6.1 total-discard "
+                        f"precondition: total-discard "
                         f"invariant unsatisfiable at bond {bond!r} after the ONE "
-                        f"registered retry (total_pred={total_pred:.3e} > "
+                        f"retry (total_pred={total_pred:.3e} > "
                         f"eps_spike={eps:.3e})")
         if dim_in > width:
             entry = svd_precut_bond(state, bond, int(width))
@@ -294,20 +284,20 @@ def _policy_cut(state: PepsState, bond: str, policy: TruncationPolicy,
                 rec: dict) -> dict:
     """Pass 2 of :func:`truncate_bond_policy` on one bond + the per-bond summary
     ledger entry (``op='policy_truncate'``; ``total_discarded`` = precut +
-    policy-cut squared-sigma relative tails — the §6.1 invariant read).
+    policy-cut squared-sigma relative tails).
 
-    For the ``fet_env`` mode (fet_stage2_src_contract §3, RT-F2) this does the
+    For the ``fet_env`` mode this does the
     WHOLE truncation, PER-BOND SEQUENTIAL on the CURRENT (post-prior-write)
     state, and ledgers ``op='fet_truncate'`` — see the early-return branch."""
     if policy.mode == "fet_env":
-        # RT-F2: build Γ on the state left by the PRIOR bond's write-back (the
+        # Build Γ on the state left by the prior bond's write-back. The
         # sweep order is fixed + load-bearing — each Γ reflects already-truncated
         # neighbours). `fet` is imported LAZILY here to avoid the fet<->trajectory
         # import cycle (fet imports `_exact_rank`/`_insertion_spectrum` from this
-        # module at load time). fet_env is a slow diagnostic mode (contract §5 F8):
+        # module at load time). fet_env is a slow diagnostic mode:
         # `gamma_TN` recomputes a full double-layer contraction per bond — it runs
         # ONCE inside `env_optimal_rank`, which returns the achieved env-fidelity
-        # so we DON'T rebuild `Gamma` here just to re-score the ledger (F1: no
+        # so we do not rebuild `Gamma` here just to re-score the ledger (no
         # double `gamma_TN` per bond).
         from .fet import apply_fet_truncation, env_optimal_rank
         dim_in = int(state.tn.ind_size(bond))
@@ -321,7 +311,7 @@ def _policy_cut(state: PepsState, bond: str, policy: TruncationPolicy,
             "dim_out": int(state.tn.ind_size(bond)),
             "exact_rank": rec.get("exact_rank"),
             "env_rank": int(env_rank),
-            "Fid_gamma": float(fid_g),  # contract §3's Fid_Γ (ASCII ledger key)
+            "Fid_gamma": float(fid_g),  # ASCII ledger key for Fid_Γ
             "eps_fid": float(policy.eps_fid),
         }
         state.ledger.append(summary)
@@ -335,13 +325,13 @@ def _policy_cut(state: PepsState, bond: str, policy: TruncationPolicy,
             ntu_disc = float(entry["discarded"])
     elif policy.mode == "dynamic_eps":
         eps = float(policy.eps_spike)
-        S2 = _insertion_spectrum(state, bond)  # pass 2 recomputes BEFORE cutting (§6.1)
+        S2 = _insertion_spectrum(state, bond)  # pass 2 recomputes before cutting
         eps_rem = max(eps - float(rec["precut_discarded"]), 0.0)
         kept_target = _rank_for_tail(S2, eps_rem)
         if int(state.tn.ind_size(bond)) > kept_target:
             entry = ntu_truncate(state, bond, kept_target)
             ntu_disc = float(entry["discarded"])
-    # lossless: no pass-2 cut by definition (SW2 structural rule).
+    # lossless: no pass-2 cut by definition.
     total = float(rec["precut_discarded"]) + ntu_disc
     summary = {
         "op": "policy_truncate",
@@ -365,10 +355,10 @@ def _policy_cut(state: PepsState, bond: str, policy: TruncationPolicy,
 
 
 def truncate_bond_policy(state: PepsState, bond: str, policy: TruncationPolicy) -> dict:
-    """Both truncation passes on ONE bond under the declared policy arm (contract
-    §2 op-table row). For a grown PATH use :func:`truncate_path_bonds` — the
+    """Both truncation passes on one bond under the declared policy arm.
+    For a grown path use :func:`truncate_path_bonds`; the
     all-precuts-before-any-metric ordering is what bounds every NTU metric leg
-    to ``W_max`` (§6.1). ``policy`` MUST be a :class:`TruncationPolicy` (a
+    to ``W_max``. ``policy`` must be a :class:`TruncationPolicy` (a
     ``TypeError`` on anything else — so a caller passing a bare int/eps falls
     through cleanly to the dedicated helpers below)."""
     if not isinstance(policy, TruncationPolicy):
@@ -386,44 +376,41 @@ def truncate_bond_dcap(state: PepsState, bond: str, d_cap: int) -> dict:
 
 
 def truncate_bond_lossless(state: PepsState, bond: str) -> dict:
-    """The SW2 structural LOSSLESS arm on one bond (convenience wrapper — no cut
+    """The structural lossless arm on one bond (convenience wrapper; no cut
     below the exact local rank, the ``sigma > 1e-12 sigma_1`` count)."""
     return truncate_bond_policy(state, bond, TruncationPolicy("lossless"))
 
 
 def dynamic_truncate(state: PepsState, bond: str, *, eps_spike: float,
                      w_max: int = W_MAX_DEFAULT) -> dict:
-    """The §6.1 dynamic-eps arm on one bond (convenience wrapper exposing the
-    window cap ``w_max`` — the SW6 window-binding killer forces the defensive
-    branch through this knob). Propagates the §6.1 orderly-stop ``RuntimeError``
-    (a legitimate outcome, not a gate miss)."""
+    """The dynamic-epsilon arm on one bond, exposing the ``w_max`` window cap.
+    Propagates an orderly-stop ``RuntimeError`` if the discard invariant cannot
+    be satisfied."""
     return truncate_bond_policy(
         state, bond,
         TruncationPolicy("dynamic_eps", eps_spike=float(eps_spike), W_max=int(w_max)))
 
 
 def truncate_path_bonds(state: PepsState, bonds: list, policy: TruncationPolicy) -> list:
-    """The §6.1 two-pass truncation over a grown support path: pass 1
+    """Two-pass truncation over a grown support path: pass 1
     (``svd_precut_bond`` under the policy window) over ALL bonds, THEN pass 2
     (``ntu_truncate`` at the running target) over ALL bonds — so no pass-2
-    metric cluster ever doubles an un-precut fat neighbor bond (the parent v4.3
-    lesson, kept)."""
+    metric cluster ever doubles an un-precut fat neighbor bond."""
     recs = [(_policy_precut(state, bond, policy), bond) for bond in bonds]
     return [_policy_cut(state, bond, policy, rec) for rec, bond in recs]
 
 
 # --------------------------------------------------------------------------- #
-# Trajectory ops (D7 — the mps_forward value contracts, transplanted)          #
+# Trajectory operations                                                       #
 # --------------------------------------------------------------------------- #
 def leak_sample(state: PepsState, kraus: list, pos: int, u: float, *,
                 cache=None, R_n: int | None = None, fit_seed: int = 0) -> int:
-    """MCWF Kraus-sample one LEAK site-op (contract §2 op-table row): branch
+    """MCWF Kraus-sample one leakage site operation: branch
     ``k`` w.p. ``p_k = <psi| K_k^dag K_k |psi>`` read from the double-layer
-    1-site RDM (ONE contraction + 3x3 traces — the §3 pin), selection by the
-    TIE-BREAK REGISTRY VERBATIM (``docs/twin_validation/batched_mps_backend_
-    prereg.md`` / the ``_leak_sample`` docstring): the FIRST ``k`` with
+    one-site RDM (one contraction plus 3x3 traces), selection by the
+    declared tie break: the first ``k`` with
     ``u * tot <= cumsum_k`` (NON-STRICT ``<=``), fallback ``K - 1``. ONE uniform
-    ``u`` consumed. Kraus completeness asserted to 1e-12 (prereg-C4). A 1-site
+    ``u`` consumed. Kraus completeness is asserted to 1e-12. A one-site
     Kraus is bond-inert; ``psi <- K_k psi / sqrt(p_k)``.
     """
     from .contraction import site_rdm  # local: keep the import graph flat
@@ -435,7 +422,7 @@ def leak_sample(state: PepsState, kraus: list, pos: int, u: float, *,
         comp = comp + K.conj().mT @ K
     resid = float((comp - torch.eye(3, dtype=CDTYPE, device=dev)).abs().max())
     assert resid <= CPTP_TOL, (
-        f"prereg-C4: Kraus completeness violated (max|sum K^dag K - I| = {resid:.3e})")
+        f"Kraus completeness violated (max|sum K^dag K - I| = {resid:.3e})")
 
     # Norm-cache threading: the RDM read is the SINGLE read on this
     # (unmutated) snapshot; own its cache here so ``apply_site_op`` below leaves
@@ -451,7 +438,7 @@ def leak_sample(state: PepsState, kraus: list, pos: int, u: float, *,
     tot = float(sum(pk))
     if not tot > NUMERICAL_ZERO:
         raise RuntimeError(f"leak_sample: nonpositive total branch mass {tot:.6e} at pos {pos}")
-    sel = leak_branch_from_uniform(u, pk)  # tie-break registry (single source: sampling_maps)
+    sel = leak_branch_from_uniform(u, pk)  # tie-break rule is owned by sampling_maps
     apply_site_op(state, int(pos), ks[sel])
     renormalize(state, pk[sel])
     return int(sel)
@@ -462,28 +449,26 @@ def sample_stab(state: PepsState, paulis: dict, u: float, b: float, arm: str,
                 R_n: int | None = None, R_x: int | None = None, fit_seed: int = 0,
                 d_abort: int | None = None, cross_route: bool = False,
                 chib_chi_b: int | None = None) -> int:
-    """One stabilizer Born-measurement + selective update (contract §2 op-table
-    rows ``born_read_stab`` / ``sample_stab``):
+    """One stabilizer Born measurement plus selective update:
 
       1. ``(N, M, p0)`` through the PRODUCTION caps path (two-term identity);
-      2. optional §6.2 instrument reads (cross-route / chi_b-doubling), ledgered
+      2. optional cross-route and chi_b-doubling instrument reads, ledgered
          — NO host uniforms consumed;
-      3. **``sbit = 0 iff u < p0`` (STRICT ``<`` — the mps_forward convention,
-         SF11; the archived pepo direction is FORBIDDEN, RT1-B1)**;
+      3. ``sbit = 0 iff u < p0`` using strict ``<``;
       4. selective ``sqrt(E_s)`` TT branch (measured ranks ledgered);
       5. the D_abort pre-metric check on the GROWN dims (fires on dim
-         ``> d_abort``; D_abort itself is processed — RT3-F6), raising
+         ``> d_abort``; ``D_abort`` itself is processed), raising
          :class:`BondAbortError` (orderly stop);
-      6. two-pass truncation under the §6.1 invariant;
+      6. two-pass truncation under the discard invariant;
       7. renormalize to unit norm + the renorm ledger entry.
     """
     paulis = {int(k): str(v).upper() for k, v in paulis.items()}
     # Norm-cache threading: ONE reverse-pass NormCache per PRE-branch
     # snapshot, shared by the N and M legs of the single ``born_read_stab`` AND
-    # the §6.2 instruments (cross_route / chib) — all read the SAME unmutated
+    # the cross-route and chi_b instruments; all read the same unmutated
     # state. The norm right-environments are op-agnostic (identity columns beyond
     # the op support), so a norm cache at R_n serves BOTH the N read and the M
-    # read whenever R_x == R_n (the SW8 cell: R_n == R_x == chi_b); otherwise the
+    # read whenever R_x == R_n; otherwise the
     # M leg gets its own cache at R_x. INVARIANT: R_n is None is the d3 exact
     # route — cache_n/cache_x stay None, every read takes the exact
     # full-double-layer path, so the d3 gates are byte-identical.
@@ -505,7 +490,7 @@ def sample_stab(state: PepsState, paulis: dict, u: float, b: float, arm: str,
                                                 int(chib_chi_b), cache=cache_n,
                                                 fit_seed=fit_seed))
 
-    sbit = sbit_from_uniform(u, p0)  # STRICT < (SF11; single source: sampling_maps)
+    sbit = sbit_from_uniform(u, p0)  # strict <; single source: sampling_maps
 
     tt = stab_tt_singlewire(paulis, sbit, b, arm, state.layout, state.device)
     state.ledger.append({
@@ -522,44 +507,11 @@ def sample_stab(state: PepsState, paulis: dict, u: float, b: float, arm: str,
     if d_abort is not None:
         for bond in path_bonds:
             dim = int(state.tn.ind_size(bond))
-            if dim > int(d_abort):  # EXCEEDS: D_abort itself is processed (RT3-F6)
-                # TRIAGE (2026-07-11, UNCOMMITTED diagnostic — inert unless
-                # PEPS_SW8_TRIAGE_SPECTRUM=1, so the d3 gates stay byte-identical):
-                # the abort fires on the PRE-truncation grown dim (S0 product rank),
-                # so the physical (post-eps-truncation) bond is never observed. Read
-                # it here directly and OOM-SAFELY — the dynamic-policy KEPT RANK IS
-                # exactly ``_rank_for_tail(_insertion_spectrum(bond), eps)`` (the NTU
-                # metric only refines VALUES within that rank, never the rank), a
-                # PLAIN local SVD of each grown path bond's pair insertion with NO
-                # cluster metric. Attach to the exception; the runner harvests it.
-                triage = None
-                if (os.environ.get("PEPS_SW8_TRIAGE_SPECTRUM") == "1"
-                        and policy.mode == "dynamic_eps"):
-                    eps_s = float(policy.eps_spike)
-                    triage = []
-                    for pb in path_bonds:
-                        S = _insertion_spectrum(state, pb)
-                        ssq = (S * S).real
-                        tot = float(ssq.sum())
-                        epr = int(_rank_for_tail(S, eps_s))
-                        ntop = min(64, int(ssq.numel()))
-                        triage.append({
-                            "bond": str(pb),
-                            "dim_in": int(state.tn.ind_size(pb)),
-                            "exact_rank": int(_exact_rank(S)),
-                            "eps_spike": eps_s,
-                            "eps_rank": epr,
-                            "discarded_at_eps_rank": (
-                                float(ssq[epr:].sum()) / tot if tot > 0.0 else None),
-                            "sigma_sq_rel_top": (
-                                [float(x) for x in (ssq[:ntop] / tot).tolist()]
-                                if tot > 0.0 else []),
-                        })
+            if dim > int(d_abort):  # D_abort itself is processed
                 err = BondAbortError(
                     f"D_abort={int(d_abort)}: grown bond {bond!r} dim {dim} exceeds "
-                    f"the registered abort (pre-metric check, §6.1)",
+                    f"the pre-metric abort threshold",
                     bond=bond, dim=dim, profile=bond_profile(state))
-                err.triage_spectrum = triage
                 raise err
 
     truncate_path_bonds(state, path_bonds, policy)
@@ -581,8 +533,8 @@ def sample_stab(state: PepsState, paulis: dict, u: float, b: float, arm: str,
 def terminal_readout(state: PepsState, log_sites: list, log_isx: list, n_data: int,
                      b_eff: float, m: int, u_draws: list, *,
                      R_n: int | None = None, fit_seed: int = 0) -> tuple[int, list]:
-    """The terminal transversal data readout (contract §2 op-table row — the
-    ``mps_forward._terminal_readout`` hard2 value contract, transplanted):
+    """The terminal transversal data readout, matching
+    ``mps_forward._terminal_readout`` values:
 
       * ALL X-logical sites H-rotated UP-FRONT before the first read
         (value-identical to per-site conjugation: disjoint sites);
@@ -638,21 +590,21 @@ def run_trajectory(codestate: PepsState, marsh, leak_kraus: list, gate_table: di
                    d_abort: int | None = None,
                    cross_route_pred=None, chib_pred=None, chi_b: int | None = None,
                    round_hook=None) -> tuple:
-    """Evolve ONE single-wire PEPS trajectory (D7 — the ``mps_forward``
-    ``_run_trajectory`` semantics transplanted to 2D; engine positions ARE the
+    """Evolve one single-wire PEPS trajectory using ``mps_forward``
+    value semantics on the two-dimensional grid; engine positions are the
     grid positions, no snake map). Returns ``(syndrome_bits round-major, obs,
     terminal bits, final PepsState)`` — the final state carries the ledger.
 
-    Section-5 draw order (SF11, byte-compare-relevant for SW5): per round, the
+    Draw order: per round, the
     PRE-measure CSR segment (GATE: no draw; LEAK: one uniform), the ``n_stab``
     stabilizers in schedule order (one uniform each), the POST-measure segment
     (the transversal Y; a LEAK op there would draw — mirrored), then ``n_data``
-    terminal uniforms in engine order. ``round_hook(state, r)`` (§6.1 SW8
-    instrument seam) runs after each round's LAST op; instrument predicates
-    ``cross_route_pred(r, j)`` / ``chib_pred(r, j)`` gate the §6.2 reads.
+    terminal uniforms in engine order. ``round_hook(state, r)`` runs after each
+    round's last operation; ``cross_route_pred(r, j)`` and ``chib_pred(r, j)``
+    gate the optional diagnostic reads.
     """
     if str(arm).upper() == "C":
-        raise ValueError("arm C is fenced out of the spike (SW-S2 — arm A only)")
+        raise ValueError("arm C is unsupported by this trajectory; arm A is required")
     state = codestate.copy()
     round_op_ptr = marsh.round_op_ptr.detach().cpu().numpy()
     op_kind = marsh.op_kind.detach().cpu().numpy()
@@ -703,7 +655,7 @@ def run_trajectory(codestate: PepsState, marsh, leak_kraus: list, gate_table: di
 
 
 # --------------------------------------------------------------------------- #
-# The packed-record sampler (D5/D7; package-local packed-record contract)     #
+# Packed-record sampler                                                       #
 # --------------------------------------------------------------------------- #
 class PepsSampler:
     """Single-wire 2D PEPS trajectory sampler — consume an explicit schedule,
@@ -714,7 +666,7 @@ class PepsSampler:
     order, but the public ``to_det_obs()`` / ``to_record_batch()`` boundary
     applies the simulator's temporal XOR fold.  Raw syndrome access is explicit
     through ``to_raw_syndrome_obs()``.  Every artifact carries the
-    compiled/data-register label (SW-S1).
+    compiled/data-register label.
     """
 
     def __init__(
@@ -744,7 +696,7 @@ class PepsSampler:
         ``sv_sampler.RunSpec``; ``sched`` must carry the within-cycle interior
         streams (the r01-geometry + r10-interior split). ``round_hook`` (if any)
         is called as ``round_hook(state, r, shot)`` after each round's last op
-        (the SW8 bond-profile flush seam). A :class:`BondAbortError` propagates
+        for bond-profile diagnostics. A :class:`BondAbortError` propagates
         (the runner owns the orderly-stop bookkeeping).
         """
         if sched is None:
@@ -758,19 +710,19 @@ class PepsSampler:
                 f"{spec.dtype!r})")
         if self.device.type != "cuda":
             raise RuntimeError(
-                "GPU-only contract (SW-S8): PepsSampler device must be cuda "
+                "PepsSampler device must be CUDA "
                 f"(got {self.device})")
         if not torch.cuda.is_available():
-            raise RuntimeError("GPU-only contract (SW-S8): CUDA must be available")
+            raise RuntimeError("PepsSampler requires CUDA")
         if str(spec.arm).upper() == "C":
-            raise ValueError("arm C is fenced out of the spike (SW-S2 — arm A only)")
+            raise ValueError("arm C is unsupported by this trajectory; arm A is required")
         if not sched.within_cycle_streams:
             raise ValueError(
                 "PepsSampler (within-cycle) requires sched.within_cycle_streams "
                 "(a MULTI-ROUND source circuit's interior streams). Attach them via "
                 "sched.with_within_cycle_streams(parse_within_cycle_streams(r10)).")
 
-        leak_t, _leak_ev = self._host.build_within_cycle_leak(spec)  # CPTP asserted (C1)
+        leak_t, _leak_ev = self._host.build_within_cycle_leak(spec)  # builder enforces CPTP
         marsh = self._host.marshal_within_cycle(sched, leak_t, R=spec.R)
         n_data = int(marsh.n_data)
         R = int(marsh.R)
@@ -794,8 +746,7 @@ class PepsSampler:
         ledgers: list[list] = []
 
         for shot in range(N):
-            # per-shot RNG keyed (base_seed, shot) — SF11, byte-matched to the
-            # SW5 anchor's stream.
+            # Per-shot RNG keyed by (base_seed, shot), matching the reference stream.
             rng = np.random.default_rng((int(spec.base_seed), shot))
             hook = None
             if round_hook is not None:
@@ -815,7 +766,7 @@ class PepsSampler:
         packed = pack_raw_syndrome_shots(syndromes, flips)
         header = self._host.build_header(spec, marsh, sched)
         header["backend"] = "peps_singlewire/quimb"
-        header["compiled_semantics"] = "compiled/data-register (S10; SW-S1 label)"
+        header["compiled_semantics"] = "compiled/data-register"
         header["peps_policy"] = {
             "mode": policy.mode,
             "eps_spike": policy.eps_spike,

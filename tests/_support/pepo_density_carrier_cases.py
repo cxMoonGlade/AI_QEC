@@ -13,7 +13,7 @@ High-memory integration checks remain separate files as well.
 
 All implementation imports use ``error_coupling_simulator``. The dense
 reference, within-cycle marshalling, record fold, and real-patch parser are
-read-only reference seams; no retired product API is involved.
+read-only reference components; no retired product API is involved.
 """
 
 import copy
@@ -44,21 +44,15 @@ from error_coupling_simulator.numerics import NUMERICAL_ZERO
 # --------------------------------------------------------------------------- #
 # Test-local gates not shared with process-isolated integration files.         #
 # --------------------------------------------------------------------------- #
-KILLER_FLOOR = 1e-6     # a sabotage image must differ by MORE than this (>> TOL_EXACT)
-G19_BAR = 4.8e-4        # the Weyl-scale floor of the G1.9 bar (contract §4 G1.9);
-#                         the C3 witness unit tests use it as a REPRESENTATIVE bar —
-#                         the witness API takes the bar as an argument, so the tests
-#                         pin the RULE, not the measured bar (set by G1.9-pre).
+KILLER_FLOOR = 1e-6      # a corruption image must differ by MORE than this
+NEGATIVITY_BAR = 4.8e-4  # representative absolute diagnostic threshold
 OBS_N = int(os.environ.get("QEC_PEPO_TEST_OBS_N", "4096"))  # obs-law MC draws (z=4 band)
 
 
 # --------------------------------------------------------------------------- #
-# ADAPTERS (the ONE place to fix if an ambiguous signature detail differs;     #
-# contract §1: "ambiguous signatures get ONE adapter at the top")              #
+# Small test helpers                                                            #
 # --------------------------------------------------------------------------- #
-#: exception class(es) the pinned raise-set uses — the referee
-#: (QutritDM.apply_within_cycle_*) raises ValueError; contract §3 says the raise set
-#: "matches the referee EXACTLY", so ValueError is pinned here.
+#: Exception class used by both the carrier and independent dense reference.
 TOKEN_RAISES = (ValueError,)
 
 
@@ -98,55 +92,28 @@ def _isx_map(logical: dict) -> dict:
     return {int(s): int(str(p).upper() == "X") for s, p in logical.items()}
 
 
-def _c3_stats(sampler_m):
-    """Construct the v4.2 C3 stats accumulator (attr-name adapter — the accumulator
-    object the amended witness/born APIs thread; contract §4 G1.1 C3 arm-scoping)."""
-    for name in ("C3Stats", "C3StatsAccumulator", "NegativityStats",
-                 "BornNegativityStats"):
-        cls = getattr(sampler_m, name, None)
-        if cls is not None:
-            return cls()
-    for name in ("new_c3_stats", "make_c3_stats", "c3_stats"):
-        factory = getattr(sampler_m, name, None)
-        if callable(factory):
-            return factory()
-    pytest.fail(
-        "sampler exposes no recognizable C3 stats accumulator (tried C3Stats/"
-        "C3StatsAccumulator/NegativityStats/BornNegativityStats/new_c3_stats/"
-        "make_c3_stats/c3_stats) — fix the _c3_stats adapter")
+def _negativity_stats(sampler_m):
+    """Construct the current Born-negativity accumulator."""
+    return sampler_m.NegativityStats()
 
 
-def _c3_ndraws(stats) -> int:
-    """Read the Born-draw count off the C3 stats accumulator (attr-name adapter)."""
-    for name in ("n_draws", "n", "count", "draws", "n_total"):
-        v = getattr(stats, name, None)
-        if v is not None:
-            return int(v() if callable(v) else v)
-    pytest.fail(
-        "C3 stats accumulator exposes no recognizable draw count (tried "
-        "n_draws/n/count/draws/n_total) — fix the _c3_ndraws adapter")
+def _negativity_ndraws(stats) -> int:
+    """Read the current Born-draw count."""
+    return int(stats.count)
 
 
-def _witness(sampler_m, q_raw: float, tr: float, ledger: list, g19_bar: float,
+def _witness(sampler_m, q_raw: float, tr: float, ledger: list, negativity_bar: float,
              stats, log_only: bool = False):
-    """Call the v4.2 ``negativity_witness`` (stats accumulator + ``log_only``) —
-    the ONE place to fix if the amended signature's parameter names differ."""
-    fn = sampler_m.negativity_witness
-    try:
-        return fn(q_raw, tr, ledger, g19_bar, stats=stats, log_only=log_only)
-    except TypeError as e:
-        if "stats" in str(e) or "log_only" in str(e):
-            return fn(q_raw, tr, ledger, g19_bar, stats, log_only)
-        raise
+    """Call the current Born-negativity diagnostic."""
+    return sampler_m.negativity_witness(
+        q_raw, tr, ledger, negativity_bar, stats=stats, log_only=log_only)
 
 
 
 def _has_would_trip(ledger: list) -> bool:
-    """True iff the ledger carries a v4.2 ``log_only`` would-trip marker entry
-    (``kind == 'c3_would_trip'`` or a truthy ``c3_would_trip`` field)."""
+    """True iff the ledger carries a ``log_only`` would-trip marker."""
     for e in ledger:
-        if isinstance(e, dict) and (e.get("kind") == "c3_would_trip"
-                                    or e.get("c3_would_trip")):
+        if isinstance(e, dict) and e.get("kind") == "negativity_would_trip":
             return True
     return False
 
@@ -170,12 +137,12 @@ def _left_mul_site(rho: torch.Tensor, op: torch.Tensor, site: int, n: int) -> to
 
 def _obs_prob_dense(rho: torch.Tensor, logical: dict, b: float, m: int, *,
                     swap_b: bool = False) -> float:
-    """The §3-pinned obs-law composition, hand-built on the DENSE terminal rho.
+    """Hand-build the observable-law composition on the dense terminal rho.
 
     H-rotate the X-flagged LOGICAL sites, then the per-site diagonal F0/F1 with the
-    PINNED formulas F1 = |1><1| + b|2><2|, F0 = |0><0| + (1-b)|2><2|; parity over the
-    LOGICAL support ONLY; XOR m.  ``swap_b=True`` builds the FORBIDDEN
-    coherent-double-swap variant (b <-> 1-b in the leaked rows) for the KILLER.
+    formulas F1 = |1><1| + b|2><2|, F0 = |0><0| + (1-b)|2><2|; parity over the
+    logical support only; XOR m. ``swap_b=True`` builds the bias-swapped
+    corruption image, with b <-> 1-b in the leaked rows.
     Returns P(obs = 1).
     """
     from error_coupling_simulator.carrier.exact.qutrit_dm import qudit_hadamard
@@ -192,7 +159,7 @@ def _obs_prob_dense(rho: torch.Tensor, logical: dict, b: float, m: int, *,
     diag = torch.diagonal(work).real
     del work
     b1 = (1.0 - float(b)) if swap_b else float(b)
-    # f1(t) = P(site reads "1"): t=0 -> 0, t=1 -> 1, t=2 -> b   (pinned formulas)
+    # f1(t) = P(site reads "1"): t=0 -> 0, t=1 -> 1, t=2 -> b.
     f1_by_trit = torch.tensor([0.0, 1.0, b1], dtype=torch.float64, device=rho.device)
     idx = torch.arange(rho.shape[0], device=rho.device)
     factor = torch.ones_like(diag)
@@ -215,8 +182,8 @@ def _leaked_logical_mass(rho: torch.Tensor, logical: dict) -> float:
 
 def _cross_leak_coherence_max(rho: torch.Tensor, sites, block: int = 2048) -> float:
     """Max ``|rho[i,j]|`` over elements whose per-site leak flag ``(t >= 2)`` DIFFERS
-    ket vs bra on at least one of ``sites`` — exactly the entries the v4.2 arm-C
-    dephase mask zeroes (contract §3, entry 1 iff ``(t>=2) == (t'>=2)``). The arm-C
+    ket vs bra on at least one of ``sites`` — exactly the entries the arm-C
+    dephase mask zeroes (entry 1 iff ``(t>=2) == (t'>=2)``). The arm-C
     dense-equality case's NON-VACUITY precondition: without such coherence the mask
     is inert and arm C degenerates to arm A. Chunked over row blocks (never a full
     3^9 x 3^9 float temp)."""
@@ -255,7 +222,7 @@ class TestLayout:
         assert len(seen) == 9, "grid (u,v) not unique / not the full 3x3"
 
     def test_frozen_cut_site_lists(self, sched):
-        # §2: every frozen number is defined at the EXPLICIT site list A=[0,1,2]|B=[3..8]
+        # Every frozen number uses the explicit site list A=[0,1,2]|B=[3..8].
         layout_m, _, _ = _pepo()
         lay = layout_m.PepoLayout.from_sched(sched)
         assert tuple(lay.frozen_cut_a) == (0, 1, 2)
@@ -278,8 +245,8 @@ class TestLayout:
 @requires_cuda
 class TestPepoStateStructure:
     def test_fused_leg_tags_dtype_device(self, wc):
-        # §2 representation: site tag Q{pos}; fused phys index k{pos} of dim 9;
-        # tensors torch-cuda-complex128 ALWAYS (S8).
+        # Site tag Q{pos}; fused physical index k{pos} of dimension 9;
+        # tensors are torch-cuda-complex128.
         layout_m, _, _ = _pepo()
         state = layout_m.build_codestate_pepo(wc["sched"], 0, device="cuda")
         for pos in range(9):
@@ -288,14 +255,14 @@ class TestPepoStateStructure:
         for t in state.tn:
             assert torch.is_tensor(t.data), "site tensor is not a torch tensor"
             assert t.data.dtype == torch.complex128, t.data.dtype
-            assert t.data.is_cuda, "site tensor not on CUDA (S8)"
+            assert t.data.is_cuda, "site tensor not on CUDA"
         assert isinstance(state.ledger, list)
         del state
         _free()
 
 
 # =========================================================================== #
-# G1.0 — codestate == oracle (m = 0 AND m = 1), 1e-12 max-abs                  #
+# Codestate equals the independent oracle for both logical sectors             #
 # =========================================================================== #
 @requires_cuda
 class TestG10Codestate:
@@ -310,13 +277,13 @@ class TestG10Codestate:
         tr = float(torch.diagonal(dense).real.sum().item())
         assert abs(tr - 1.0) <= 1e-9, f"codestate trace {tr} != 1"
         worst = _max_abs_diff(dense, eng.rho)
-        assert worst <= TOL_EXACT, f"G1.0 m={m}: max-abs {worst:.3e} > 1e-12"
+        assert worst <= TOL_EXACT, f"codestate m={m}: max-abs {worst:.3e} > 1e-12"
         del dense, eng, state
         _free()
 
 
 # =========================================================================== #
-# token ops — H/X/LEAK/Y == the QutritDM dense update; the pinned raise-set    #
+# Token ops — H/X/LEAK/Y equal the QutritDM dense update and raise set        #
 # =========================================================================== #
 @requires_cuda
 class TestTokenOps:
@@ -336,7 +303,7 @@ class TestTokenOps:
         layout_m, dynamics_m, _ = _pepo()
         state, eng = _prep_pair(wc, seed=102, n_ops=4, leak_pump=(2,))
         streams = {site: ("M", "Y") for site in range(9)}
-        # terminal=True must be a NO-OP (F1: the terminal round drops the post-M Y)
+        # terminal=True is a no-op because the terminal round drops post-M Y.
         before = layout_m.dense_rho(state)
         dynamics_m.apply_postmeasure(state, streams, terminal=True)
         after = layout_m.dense_rho(state)
@@ -370,8 +337,8 @@ class TestTokenOps:
         _free()
 
     def test_raise_set_post_m_other_unknown_silently_ignored(self, wc):
-        # §3 row 3 (v2 fix): the referee does NOT raise on arbitrary post-M tokens —
-        # a raises-on-unknown engine would split engine vs referee.  Must be a no-op.
+        # The dense reference does not raise on arbitrary post-M tokens, so this
+        # must be a no-op.
         layout_m, dynamics_m, _ = _pepo()
         state, _eng = _prep_pair(wc, seed=105, n_ops=3)
         before = layout_m.dense_rho(state)
@@ -408,8 +375,8 @@ class TestStabChannel:
         _free()
 
     def test_tt_ranks_at_p1c_cell(self, wc):
-        # §3: exact fused-leg TT ranks == (2*min(w_L, w_R) + 1)^2 per bond for
-        # arm A, b = 0.9 (the registered evidence point): (9, 25, 9) at w=4, (9,) at w=2.
+        # Exact fused-leg TT ranks equal (2*min(w_L, w_R) + 1)^2 per bond for
+        # arm A, b = 0.9: (9, 25, 9) at w=4 and (9,) at w=2.
         layout_m, dynamics_m, _ = _pepo()
         w4, w2 = _pick_stabs(wc["sched"])
         lay = layout_m.PepoLayout.from_sched(wc["sched"])
@@ -419,7 +386,7 @@ class TestStabChannel:
         assert _tt_ranks(tt2) == (9,), _tt_ranks(tt2)
 
     def test_arm_c_dense_equality_certifies_dephase_mask(self, wc):
-        """v4.2 ARM-C DEPHASE row (contract §3): the engine's arm='C' weight-4
+        """The engine's arm='C' weight-4
         branch — the per-site fused-leg leak-flag dephase mask (entry 1 iff
         ``(t>=2) == (t'>=2)``) applied on the support before the TT — must equal the
         referee's dephase-then-E_s update (``QutritDM.project_stabilizer`` arm='C')
@@ -448,9 +415,9 @@ class TestStabChannel:
 
     @pytest.mark.parametrize("b_dom, mid_bound", [(0.5, 9), (1.0, 4), (0.0, 4)])
     def test_tt_rank_domain_behavior(self, wc, b_dom, mid_bound):
-        # §3 v3 domain pin: at b = 0.5 the product classes collapse (w=4 mid-bond <= 9);
-        # at b in {0, 1} the bound is 4.  Outside the domain the assert is rank <= the
-        # domain bound, NEVER == — and the build must not raise.
+        # At b = 0.5 the product classes collapse (w=4 mid-bond <= 9); at b in
+        # {0, 1} the bound is 4. Outside the domain the assertion is rank <= the
+        # domain bound and the build must not raise.
         layout_m, dynamics_m, _ = _pepo()
         w4, _ = _pick_stabs(wc["sched"])
         lay = layout_m.PepoLayout.from_sched(wc["sched"])
@@ -462,17 +429,16 @@ class TestStabChannel:
 
 
 # =========================================================================== #
-# KILLERs — sabotage variants DEMONSTRATED to break the dense equality (G1.5)  #
+# Corruption images that must break dense equality                              #
 # =========================================================================== #
 @requires_cuda
 class TestKillers:
     def test_k_corrupt_stab_letter_swap_breaks_dense_equality(self, wc):
         """CorruptStab: flip ONE support site's X/Z letter (wrong support content,
         path-preserving so the TT still builds) — the branch must DIVERGE from the
-        true-referee update by >> the 1e-12 gate bar.  (First-run finding 2026-07-10:
-        the original two-site X<->Z swap assumed BOTH letters present in the w4 stab
-        and StopIteration'd on the real patch's single-letter stab; a one-site letter
-        flip is the same sabotage class without the both-letters assumption.)"""
+        dense-reference update by more than the ``1e-12`` tolerance. A one-site
+        letter flip works for both mixed-letter and single-letter stabilizers.
+        """
         layout_m, dynamics_m, _ = _pepo()
         w4, _ = _pick_stabs(wc["sched"])
         sites = sorted(w4)
@@ -511,15 +477,11 @@ class TestKillers:
     def test_k_transposed_fused_leg_breaks_dense_equality(self, wc):
         """The transposed fused-leg convention k = 3*t_bra + t_ket reconstructs
         rho^T (per-site ket/bra swap at EVERY site == the global transpose).
-        FIRST-RUN FINDING (2026-07-10): every compiled-circuit primitive is a REAL
-        superoperator in this basis (H/X real; Y (x) conj(Y) real; sqrt(E_s) real;
-        the within-cycle leak Kraus measured real — evolved max|Im| ~ 3e-23), so
-        circuit-reachable rho is real-symmetric and the transpose sabotage is
-        INVISIBLE on any in-circuit prep.  The killer therefore injects a SYNTHETIC
-        complex-phase unitary Kraus diag(1, e^{i pi/4}, 1) (single-element, exactly
-        CPTP) through the PUBLIC LEAK seam on BOTH engine and referee — a valid
-        instrument check: the discriminator must fire on some valid CPTP input, not
-        necessarily a circuit-reachable one."""
+        The compiled-circuit primitives are real superoperators in this basis, so
+        the test injects the valid complex-phase unitary Kraus
+        ``diag(1, e^{i pi/4}, 1)`` through the leakage operation in both the carrier
+        and dense reference. This makes the transposed convention observable.
+        """
         layout_m, dynamics_m, _ = _pepo()
         state, eng = _prep_pair(wc, seed=122, n_ops=4, leak_pump=(0, 1, 4))
         streams = {site: ("M", "Y") for site in range(9)}
@@ -553,7 +515,7 @@ class TestKillers:
 
 
 # =========================================================================== #
-# gap_rank — the §3 v4.1 window-bound rule, case by case                       #
+# gap_rank — window-bound rule, case by case                                   #
 # =========================================================================== #
 class TestGapRank:
     """Pure spectrum-rule units (CPU float64 tensors; no CUDA needed)."""
@@ -587,7 +549,7 @@ class TestGapRank:
         assert rank == 16 and cap, (rank, cap)
 
     def test_rank_deficient_window_floor_guard_wins_via_inf_ratio(self):
-        # v4.1 sigma_k guard on a rank-deficient window: the floor filter excludes
+        # sigma_k guard on a rank-deficient window: the floor filter excludes
         # every sub-floor k from candidacy, so the largest ABOVE-floor k (= 3 here)
         # qualifies via ratio := inf (sigma_4 <= 1e-12*sigma_1) and wins on the MAIN
         # route — structurally equal to the count of sigma > floor.  What this
@@ -595,8 +557,7 @@ class TestGapRank:
         # would qualify via inf and win -> rank 16 != 3).  What it does NOT exercise:
         # the literal `if not candidates` count-fallback clause is DEAD in-domain —
         # after the s[0] <= 0 early return, k = 1 always passes the sigma_k floor, so
-        # candidates is never empty (refuter-proven; re-review 2026-07-10 F2 —
-        # contract §3 wording corrected the same day).
+        # candidates is never empty.
         sigma = np.array([1.0, 0.5, 0.25] + [1e-15] * 30)
         rank, _ratio, cap = self._gr(sigma, 16)
         assert rank == 3 and not cap, (rank, cap)
@@ -609,7 +570,7 @@ class TestGapRank:
         assert math.isinf(ratio) or ratio >= 10.0, ratio
 
     def test_gap_beyond_window_never_wins(self):
-        # the v4 fix itself: a HUGE gap at k = 20 > D_cap = 16 must NOT win; the
+        # A huge gap at k = 20 > D_cap = 16 must not win; the
         # qualifying k = 8 gap inside the window does.
         head = np.linspace(1.0, 0.8, 8)                    # k = 1..8
         mid = np.linspace(0.05, 0.02, 12)                  # k = 9..20 (mild decay)
@@ -645,14 +606,14 @@ class TestObsLaw:
         isx = _isx_map(logical)
         p_ref = {m: _obs_prob_dense(eng.rho, logical, B_BIAS, m) for m in (0, 1)}
         assert abs(p_ref[0] + p_ref[1] - 1.0) <= 1e-10  # XOR-m consistency of the ref
-        # PRIMARY (v4.2 EXACT-PROBABILITY SEAM, contract §3): the engine-side exact
+        # The engine-side exact
         # P(obs=1) composition — through the SAME effect-construction code the
         # sampling path uses — held to the 1e-10 bar vs the dense composition.
         for m in (0, 1):
             p_eng = float(sampler_m.terminal_readout_obs_prob(
                 copy.deepcopy(state), logical, isx, B_BIAS, m))
             assert abs(p_eng - p_ref[m]) <= TOL_TRACE, (
-                f"exact obs seam m={m}: engine {p_eng:.12e} vs dense {p_ref[m]:.12e} "
+                f"exact obs route m={m}: engine {p_eng:.12e} vs dense {p_ref[m]:.12e} "
                 f"differ beyond 1e-10")
         # SECONDARY read: the sampling-only API cannot be checked at 1e-10 on
         # probabilities; the sampled leg runs at the z=4 MC band.
@@ -666,12 +627,10 @@ class TestObsLaw:
         _free()
 
     def test_k_swapped_b_variant_differs(self, wc):
-        """KILLER (kills the coherent-double-swap), ENGINE-invoking per the v4.2
-        EXACT-PROBABILITY SEAM: the ENGINE's exact obs probability must MATCH the
+        """Corruption image for the coherent-double-swap. The engine's exact
+        observable probability must match the
         pinned dense composition (1e-10) AND DIFFER from the b <-> (1-b) swapped
-        composition (> 1e-6) on a leaked state.  (The pre-v4.2 variant compared the
-        test's own dense referee to itself and never invoked the engine — the
-        Stage-4 vacuity catch.)"""
+        composition (> 1e-6) on a leaked state."""
         _, _, sampler_m = _pepo()
         state, eng = self._pumped_pair(wc)
         logical = dict(wc["sched"].logical)
@@ -720,7 +679,7 @@ class TestDetectorFold:
         for i in range(N):
             det_i = _fold_call(sampler_m.s_to_det, s[i], R, n_stab)
             assert np.array_equal(det_i, det_ref[i]), (
-                f"shot {i}: s_to_det != seam fold\n got {det_i}\n exp {det_ref[i]}")
+                f"shot {i}: s_to_det != independent fold\n got {det_i}\n exp {det_ref[i]}")
             s_back = _fold_call(sampler_m.det_to_s, det_i, R, n_stab)
             assert np.array_equal(s_back, s[i]), f"shot {i}: det_to_s(s_to_det) != id"
             det_back = _fold_call(
@@ -730,7 +689,7 @@ class TestDetectorFold:
                 f"shot {i}: s_to_det(det_to_s) != id")
 
     def test_det_to_s_is_prefix_xor(self):
-        # §3 pinned inversion: s(r, j) = XOR_{r' <= r} det(r', j)
+        # s(r, j) = XOR_{r' <= r} det(r', j)
         _, _, sampler_m = _pepo()
         R, n_stab = 5, 8
         rng = np.random.default_rng(7)
@@ -741,83 +700,83 @@ class TestDetectorFold:
 
 
 # =========================================================================== #
-# negativity_witness — C3 rules (i)/(ii); healthy pass; sign-flip sabotage     #
+# negativity_witness — stop rules, healthy pass, and sign-flip corruption      #
 # =========================================================================== #
 class TestNegativityWitness:
-    """C3 (contract §4 G1.9, v4.1 rules + the v4.2 stats/log_only signature): (i) any
+    """The diagnostic stops if (i) any
     SINGLE raw Born weight q_raw < -(10x bar) => STOP; (ii) the MEAN over all Born
-    draws — accumulated on the C3 STATS OBJECT threaded through the calls, never a
+    draws — accumulated on the stats object threaded through the calls, never a
     ledger rescan — of max(0, -q_raw)/Tr(rho) > bar => STOP; STOP ==
-    RuntimeError('C3_STOP: ...').  ``log_only=True`` (the v4.2 G1.1 C3 arm-scoping:
-    the R=4 exerciser arm) NEVER raises — a would-trip is recorded as a
-    ``c3_would_trip`` ledger entry (an S9 finding), the draw still counted.
-    The bar is passed in (set by G1.9-pre at run time); units use the Weyl floor."""
+    RuntimeError('NEGATIVITY_STOP: ...'). ``log_only=True`` never raises; a
+    ``negativity_would_trip`` ledger entry records the event and the draw is counted."""
 
     def test_healthy_inputs_pass(self):
         _, _, sampler_m = _pepo()
         ledger: list = []
-        stats = _c3_stats(sampler_m)
+        stats = _negativity_stats(sampler_m)
         rng = np.random.default_rng(11)
         for _ in range(50):
             q = float(rng.uniform(0.01, 1.0))
-            _witness(sampler_m, q, 1.0, ledger, G19_BAR, stats)
+            _witness(sampler_m, q, 1.0, ledger, NEGATIVITY_BAR, stats)
         # tiny negative round-off well under both bars must also pass
         for _ in range(10):
-            _witness(sampler_m, -1e-9, 1.0, ledger, G19_BAR, stats)
-        assert _c3_ndraws(stats) == 60, (
-            f"C3 stats accumulator counted {_c3_ndraws(stats)} draws != 60")
+            _witness(sampler_m, -1e-9, 1.0, ledger, NEGATIVITY_BAR, stats)
+        assert _negativity_ndraws(stats) == 60, (
+            f"negativity stats counted {_negativity_ndraws(stats)} draws != 60")
 
     def test_rule_i_single_weight_trips(self):
         _, _, sampler_m = _pepo()
-        with pytest.raises(RuntimeError, match="C3_STOP"):
-            _witness(sampler_m, -10.5 * G19_BAR, 1.0, [], G19_BAR,
-                     _c3_stats(sampler_m))
+        with pytest.raises(RuntimeError, match="NEGATIVITY_STOP"):
+            _witness(sampler_m, -10.5 * NEGATIVITY_BAR, 1.0, [], NEGATIVITY_BAR,
+                     _negativity_stats(sampler_m))
 
     def test_rule_ii_mean_negative_mass_trips(self):
         # each draw is ABOVE the rule-(i) bar (-2x bar > -10x bar) but the per-draw
         # mean negative mass 2x bar > bar => rule (ii) must fire — evaluated off the
-        # SAME stats accumulator threaded through every call (v4.2 signature).
+        # The same stats accumulator is threaded through every call.
         _, _, sampler_m = _pepo()
         ledger: list = []
-        stats = _c3_stats(sampler_m)
+        stats = _negativity_stats(sampler_m)
         tripped = False
         try:
             for _ in range(50):
-                _witness(sampler_m, -2.0 * G19_BAR, 1.0, ledger, G19_BAR, stats)
+                _witness(
+                    sampler_m, -2.0 * NEGATIVITY_BAR, 1.0, ledger,
+                    NEGATIVITY_BAR, stats)
         except RuntimeError as e:
-            assert "C3_STOP" in str(e), str(e)
+            assert "NEGATIVITY_STOP" in str(e), str(e)
             tripped = True
         assert tripped, "rule (ii) never fired on mean negative mass 2x the bar"
 
     def test_log_only_would_trip_logged_never_raises(self):
-        """v4.2 C3 arm-scoping (G1.1 R=4 exerciser arm): a rule-(i)-grade weight
-        under ``log_only=True`` must NOT raise; the would-trip is REPORTED as a
-        ``c3_would_trip`` ledger entry and the draw still counts on the stats
+        """A rule-(i)-grade weight under ``log_only=True`` must not raise; the
+        ``negativity_would_trip`` ledger entry records it and the draw still counts on the stats
         accumulator."""
         _, _, sampler_m = _pepo()
         ledger: list = []
-        stats = _c3_stats(sampler_m)
-        _witness(sampler_m, -20.0 * G19_BAR, 1.0, ledger, G19_BAR, stats,
+        stats = _negativity_stats(sampler_m)
+        _witness(sampler_m, -20.0 * NEGATIVITY_BAR, 1.0, ledger,
+                 NEGATIVITY_BAR, stats,
                  log_only=True)  # a rule-(i) trip magnitude — must NOT raise
         assert _has_would_trip(ledger), (
-            "log_only would-trip left no c3_would_trip ledger entry (the S9 finding "
-            "record is mandatory — contract §4 G1.1 C3 arm-scoping)")
-        assert _c3_ndraws(stats) == 1, (
+            "log_only would-trip left no negativity_would_trip ledger entry")
+        assert _negativity_ndraws(stats) == 1, (
             f"log_only draw not counted on the stats accumulator "
-            f"({_c3_ndraws(stats)} != 1)")
+            f"({_negativity_ndraws(stats)} != 1)")
 
     def test_k_sign_flip_sabotage_trips(self):
-        # the registered G1.9 sabotage: a healthy Born weight with its sign flipped
+        # Corruption image: a healthy Born weight with its sign flipped.
         _, _, sampler_m = _pepo()
         healthy = 0.31
-        _witness(sampler_m, healthy, 1.0, [], G19_BAR,
-                 _c3_stats(sampler_m))  # passes as-is
-        with pytest.raises(RuntimeError, match="C3_STOP"):
-            _witness(sampler_m, -healthy, 1.0, [], G19_BAR, _c3_stats(sampler_m))
+        _witness(sampler_m, healthy, 1.0, [], NEGATIVITY_BAR,
+                 _negativity_stats(sampler_m))  # passes as-is
+        with pytest.raises(RuntimeError, match="NEGATIVITY_STOP"):
+            _witness(sampler_m, -healthy, 1.0, [], NEGATIVITY_BAR,
+                     _negativity_stats(sampler_m))
 
 
 # =========================================================================== #
-# expect_site_caps / stab_expectation / pepo_trace — Tr(rho * Pi) seams        #
+# expect_site_caps / stab_expectation / pepo_trace — Tr(rho * Pi) checks       #
 # =========================================================================== #
 @requires_cuda
 class TestExpectation:
@@ -831,9 +790,9 @@ class TestExpectation:
         _free()
 
     def test_expect_site_caps_matches_dense(self, wc):
-        # §3: caps = GENERAL single-site (3,3) operators; absent sites get the
+        # Caps are general single-site (3,3) operators; absent sites get the
         # trace-cap.  Dense reference: Tr((x)M rho) via row-side contraction on the
-        # referee's mirrored rho (independent of the engine's contraction path).
+        # dense reference rho, independent of the carrier contraction path.
         _, _, sampler_m = _pepo()
         state, eng = _prep_pair(wc, seed=141, n_ops=4, leak_pump=(1, 5))
         g = torch.Generator(device="cpu").manual_seed(5)
@@ -858,7 +817,7 @@ class TestExpectation:
 
     @pytest.mark.parametrize("which", ["w4", "w2"])
     def test_stab_expectation_two_term_matches_referee(self, wc, which):
-        # §3: Tr(E_s rho) = 1/2 Tr(rho) + 1/2 (-1)^s Tr(rho (x)M_q) — checked against
+        # Tr(E_s rho) = 1/2 Tr(rho) + 1/2 (-1)^s Tr(rho (x)M_q), checked against
         # the referee's project_stabilizer branch probability on the mirrored rho.
         _, _, sampler_m = _pepo()
         w4, w2 = _pick_stabs(wc["sched"])

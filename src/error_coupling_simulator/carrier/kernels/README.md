@@ -30,7 +30,7 @@ workload benefits from GPU execution.
 | Kernel | Replaces | Notes |
 |---|---|---|
 | `fused_local_kraus` | `embed_operator` + `apply_kraus` chain in `apply_channel_local` / `apply_unitary` (K=1) | one thread per output element; gathers the target-qubit subspace by bit arithmetic (qubit 0 = most significant, matching `circuit_sim`); raw (unhermitianized) sum — the torch side hermitianizes, matching `apply_kraus` exactly. Backward: `grad_rho` via the same kernel with the adjoint Kraus stack; `grad_kraus` via a small subspace-einsum composite (v2: fuse). |
-| `qutrit_mcwf_ops` | repeated dense qutrit MCWF operations | c128-only reference/compatibility path. It is not the c64 optimization engine. |
+| `qutrit_mcwf_ops` | repeated dense qutrit MCWF operations | c128-only reference path. It is not the c64 optimization engine. |
 | `sv_traj_d3_wc` | per-operation Python/Torch launches for the d3 qutrit trajectory loop | separately compiled c128 (`complex128`/`float64`) and c64 (`complex64`/`float32`) ABIs. Only `run_purpose="optimization"` may use c64, and its artifact is `screening_only`; final/certification uses c128 and remains `c128_candidate`. Integer schedule tensors stay int32. Python and C++ guards validate dtype, device, shape, and index bounds before launch. |
 
 ## Verification boundary

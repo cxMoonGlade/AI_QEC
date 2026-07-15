@@ -1,14 +1,9 @@
-"""Tests for ``error_coupling_simulator.certify`` — the certification seam.
+"""Tests for the ``error_coupling_simulator.certify`` interface and core.
 
-Step 1: the interface (the value types + the ``Anchor`` / ``Control`` / ``ControlledNoiseProcess`` ports)
-imports + constructs; the ``CertReport`` verdict / summary / assert_pass logic; the ports are
-duck-typed ``runtime_checkable`` Protocols through the package-owned certification port.
-
-Step 2: the core (route → controls-first → score → ledger) against an IN-MEMORY anchor with a known
-law (the port IS the test surface — pure, no GPU). The genuine-check invariants are proven here:
-a broken carrier FAILs; an inert control forces FAIL; an infeasible cell is UNANCHORED, never PASS;
-exact anchors are preferred. The in-memory anchor + controlled process fixture live HERE (in
-``tests/``) — they are structurally never production anchors.
+The suite covers the value types, package-owned certification ports, report behavior, routing,
+controls-first execution, scoring, and ledger roll-up.  A pure in-memory controlled fixture with a
+known law establishes the failure invariants without using a production reference: broken carriers
+fail, inert controls fail, infeasible cells remain unanchored, and exact references are preferred.
 """
 
 from dataclasses import replace
@@ -35,7 +30,7 @@ _DIST = (Statistic.FULL_JOINT, Statistic.SYNDROME_DIST)
 
 
 # ======================================================================= #
-# Step 1 — the interface                                                   #
+# Certification types and report surface                                  #
 # ======================================================================= #
 def test_types_import_and_construct():
     reg = Regime(R=2, register="subregister", n_active=3, n_stab=8, sites=(0, 1, 2))
@@ -111,7 +106,7 @@ def test_ports_are_duck_typed_runtime_checkable_protocols():
 
 
 # ======================================================================= #
-# Step 2 — test fixtures (TEST-ONLY: in tests/, never production anchors)   #
+# Controlled fixtures (test-only; never production references)             #
 # ======================================================================= #
 def _make_records(joint: dict, N: int) -> dict:
     """Deterministic (det, obs) realizing ``joint`` ({FULL_JOINT key -> prob}; key = det + (flip<<1)
@@ -221,7 +216,7 @@ _REG = Regime(R=1, register="subregister", n_active=1, n_stab=1)
 
 
 # ======================================================================= #
-# Step 2 — the genuine-check invariants                                    #
+# Certification invariants                                                 #
 # ======================================================================= #
 def test_core_routes_scores_and_passes():
     rep = certify_cells(ControlledProcessFixture(_JOINT), [(Statistic.FULL_JOINT, _REG)],
@@ -265,7 +260,7 @@ def test_exact_preferred_routing():
 
 
 # ======================================================================= #
-# Step 3a — the DM-oracle anchor's feasibility descriptor (PURE; no GPU)    #
+# Dense-reference capability (pure; no GPU)                                #
 # the OOM-as-data routing: a 32 GB card is mocked via card_bytes, so this    #
 # exercises the do-not-OOM logic with zero allocation.                       #
 # ======================================================================= #
@@ -301,15 +296,14 @@ def test_dm_anchor_capability_is_oom_safe():
     # FULL_JOINT on a small sub-register: feasible (tiny DM).
     assert dm.capability(Statistic.FULL_JOINT, sub_R1).feasible
 
-    # documented independence (anti-circular) + answers the right statistics. WS1 wired the R>=2
-    # MOMENTS (RR_CORR / SPATIAL_CORR) into the DM anchor, so they ARE now in answers().
+    # The reference declares its independence and the moment statistics it currently answers.
     assert "DIFFERENT object" in dm.independence
     assert Statistic.DETECTOR_MARG in dm.answers()
     assert Statistic.RR_CORR in dm.answers() and Statistic.SPATIAL_CORR in dm.answers()
 
 
 # ======================================================================= #
-# Step 3b — WS1: the DM MOMENTS anchor (RR_CORR / SPATIAL_CORR) capability   #
+# Dense-reference moment statistics (RR_CORR / SPATIAL_CORR)                #
 # + emitted shapes + the shared reduction (PURE; no GPU — card mocked).      #
 # ======================================================================= #
 def test_dm_anchor_moments_capability_is_oom_safe():
@@ -413,15 +407,14 @@ def test_shared_moment_reductions_match_emitted_and_dm_shapes():
 def test_corrupt_stab_control_guards_the_moments():
     from error_coupling_simulator.certify.anchors import CorruptStabControl
 
-    # WS1: the corrupt-stabilizer control must now GUARD the moments anchors (so an inert control on a
-    # moments cell forces FAIL, per the core roll-up). Before WS1 it guarded only the geometry stats.
+    # The corruption control guards moment statistics, so an inert control on a moments cell fails.
     ctrl = CorruptStabControl(stab=1)
     assert ctrl.guards(Statistic.RR_CORR) and ctrl.guards(Statistic.SPATIAL_CORR)
     assert ctrl.guards(Statistic.DETECTOR_MARG)  # the existing geometry guards still hold
 
 
 # ======================================================================= #
-# Step 4a — the corrupt-stabilizer control (teeth) + the stim anchor        #
+# Corruption controls and the Stim reference                               #
 # ======================================================================= #
 def test_corrupt_stab_control_fires_on_corruptible_anchor():
     from error_coupling_simulator.certify.anchors import CorruptStabControl
@@ -460,8 +453,8 @@ def test_stim_anchor_capability_and_emit_kind():
 
 def test_exact_anchor_with_nonzero_band_is_rejected():
     # the EXACT => band==0 contract (_assert_anchor_value) must have TEETH — an anchor declaring EXACT
-    # yet returning a nonzero band is a violation and must RAISE, never silently pass. The review found
-    # this invariant was never exercised by the suite (dormant); this exercises both legs.
+    # yet returning a nonzero band is a violation and must RAISE, never silently pass. This exercises
+    # both the legal and illegal cases.
     import pytest
 
     from error_coupling_simulator.certify.core import _assert_anchor_value
@@ -479,7 +472,7 @@ def test_exact_anchor_with_nonzero_band_is_rejected():
 
 
 # ======================================================================= #
-# Step 5 — the closed-form sidecar (RR_CORR machinery + the T-B prediction) #
+# Closed-form round-correlation reference                                  #
 # ======================================================================= #
 def test_rr_corr_machinery_matches_from_scratch():
     from error_coupling_simulator.certify.core import emitted_statistic
@@ -500,7 +493,7 @@ def test_closed_form_anchor_predicts_transient_two_state_markov_rr_corr():
     # The record chain is PREPARED in |0>, so the measured two-state chain is TRANSIENT — the earlier
     # anchor predicted the STATIONARY limit (markov_flip_cov) and disagreed with the engine (5b). This
     # pins the corrected anchor with THREE non-circular checks + a positive control that the bug is now
-    # caught. None of them assumes stationarity (the shared blind spot that made 5a circular).
+    # caught. None of them assumes stationarity, so the reference does not share that blind spot.
     import itertools
 
     from error_coupling_simulator.certify.anchors import ClosedFormAnchor
@@ -553,7 +546,7 @@ def test_closed_form_anchor_predicts_transient_two_state_markov_rr_corr():
 
 
 # ======================================================================= #
-# Step 6 — the neutral certification facade (orchestration: route + merge + roll) #
+# Certification facade (route + merge + roll-up)                           #
 # ======================================================================= #
 def test_certify_noise_process_facade_merges_and_rolls_up():
     from error_coupling_simulator.certify import certify_noise_process
@@ -577,7 +570,7 @@ def test_certify_noise_process_facade_merges_and_rolls_up():
 
 
 # ======================================================================= #
-# Anti-vacuity + feasibility-gate regressions (the R3 commit-gate review)  #
+# Anti-vacuity and feasibility regressions                                #
 # A scored cell with no FIRED falsifier is FINDING, never a teeth-less     #
 # PASS; a class-'a' STATISTICAL value and an n_stab=None feasibility gate  #
 # are rejected; a degenerate shuffle is INAPPLICABLE, not a spurious FAIL. #

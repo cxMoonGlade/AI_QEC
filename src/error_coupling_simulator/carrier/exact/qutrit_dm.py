@@ -723,7 +723,7 @@ class _QuditDM:
 
     def _leak_flag_dephase(self, paulis: dict[int, str]) -> None:
         """Arm-C leak-flag projection (DM-faithful): dephase the leaked levels vs ``{0,1}`` on
-        the support, preserving the ``{0,1}`` computational coherence (interface contract §4).
+        the support, preserving the ``{0,1}`` computational coherence.
 
         Averaged over leakage-pattern trajectories the SV-MC's Arm-C sampling IS the dephasing
         channel that kills coherence between basis states with DIFFERENT leak flags on the

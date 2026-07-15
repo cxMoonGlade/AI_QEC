@@ -7,7 +7,7 @@ Covers two current public surfaces:
   must fire EXACTLY the detector columns + observable the record layout
   predicts. (The bare noiseless all-zero sample is kept as smoke only — for an
   all-Z fixture every measurement is deterministically 0, so it cannot catch
-  xor/key bugs; review finding 2026-07-06.)
+  xor/key bugs.)
 - ``frontend.interop.records_to_dem`` — validated against a PLANTED-parameter
   synthetic record law (independent ground truth: the planted edge/boundary
   probabilities), with the planted values sized so the exact odd-parity
@@ -70,7 +70,7 @@ def test_export_stim_circuit_layout_and_counts(fixture):
     assert manifest["num_observables"] == 1
     assert int(circuit.num_detectors) == ROUNDS * process.n_stab
     assert int(circuit.num_observables) == 1
-    # M(R) = 2R + 3 for both the 5q and the d3_repz fixtures (S-5 cost parity).
+    # M(R) = 2R + 3 for both the 5q and the d3_repz fixtures.
     assert manifest["num_measurements"] == 2 * ROUNDS + 3
 
 
@@ -94,14 +94,14 @@ def test_export_wiring_injection_d3_repz():
     process = CoupledCycleNoiseProcess(ROUNDS, fixture="d3_repz")
     circuit, manifest = process.export_stim_circuit()
     # In-round X on q2 after round 0: exactly delta:z12:round1, obs flips
-    # (geometric class; probability 0 under slice-1 noise — see the fixture
+    # (geometric class; probability 0 under the implemented noise — see the fixture
     # docstring — but stim must still map it to exactly this column).
     _injection_case(
         circuit, manifest, tick=1, name="X_ERROR", targets=(2,),
         fired=("delta:z12:round1",), obs=1,
     )
     # X on q2 after the LAST tick (before final readout): exactly final:z12,
-    # obs flips — the fault class the armB L0 rule attaches to.
+    # obs flips; this is the fixture's observable-attached closure class.
     _injection_case(
         circuit, manifest, tick=ROUNDS, name="X_ERROR", targets=(2,),
         fired=("final:z12",), obs=1,
@@ -131,8 +131,7 @@ def test_export_wiring_injection_5q():
         fired=("delta:x0:round1",), obs=0,
     )
     # X on data 2 before final readout: obs flips, NO detector fires — the
-    # EMPIRICAL witness of the 5q observable's structural disconnection
-    # (the declared vacuous-decode property of armA).
+    # empirical witness of the 5q observable's structural disconnection.
     _injection_case(
         circuit, manifest, tick=ROUNDS, name="X_ERROR", targets=(2,),
         fired=(), obs=1,

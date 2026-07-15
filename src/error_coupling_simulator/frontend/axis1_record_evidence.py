@@ -595,7 +595,8 @@ def _enumerate_measurement_records(
                 # qubit index q (big-endian, the same ordering the operators use) to its global
                 # qubit; `_apply_channel_to_branches` embeds the small block Kraus on those
                 # targets. Under ECS_FORCE_UNFACTORIZED_AXIS1=1 / a single full-window component,
-                # `components` is one full-window entry and this is bit-for-bit the old path.
+                # `components` is one full-window entry and this is bit-for-bit the
+                # direct full-window path.
                 num_kraus_total = 0
                 for local_qubits, comp_kraus in assembled.components:
                     targets = tuple(selection.participant[q] for q in local_qubits)
@@ -1032,8 +1033,7 @@ def _apply_channel_to_branches(rho, kraus, targets, num_qubits: int):
     if rho.dim() == 2:
         return apply_channel_local(rho, kraus, targets, num_qubits)
     # rho is (B, D, D) — a batch of record branches. The fused CUDA kernel ABSORBS the leading batch dim in
-    # ONE call (verified byte-identical to the per-branch loop, 43x faster, in
-    # outputs/twin_validation/batched_branch_apply_verify.py) — so a single call replaces the python loop of
+    # one call; current owner tests verify byte identity with the per-branch loop. A single call replaces the python loop of
     # B tiny custom-op dispatches (the R>=5 hot spot). Fall back to the per-branch loop only when the fused
     # kernel is NOT the route (CPU / ECS_DISABLE_NATIVE_KERNELS / targets>4): the unfused apply_kraus path is not
     # written for a batched rho.

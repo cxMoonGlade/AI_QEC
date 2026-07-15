@@ -157,8 +157,8 @@ constexpr int ARM_C = 1;
 constexpr int ARM_B1 = 2;
 constexpr int ARM_B2 = 3;
 
-// P4a WITHIN-CYCLE op kinds (the per-qutrit gate+leak CSR; Agent H's
-// WithinCycleMarshalled format, sv_sampler.WC_OP_GATE / WC_OP_LEAK).  An op is
+// WITHIN-CYCLE op kinds for the per-qutrit gate+leak CSR
+// (WithinCycleMarshalled, sv_sampler.WC_OP_GATE / WC_OP_LEAK).  An op is
 // either a single-qutrit GATE (apply gate_unitaries[op_uid] on op_site) or a
 // LEAK sub-step (Kraus-sample the exp(L/4) leak_kraus on op_site; op_uid unused).
 constexpr int WC_OP_GATE = 0;
@@ -176,7 +176,7 @@ struct SchedSpec {
 
   const cplx* gate_unitaries;// [n_gate, 3, 3]
 
-  // P4a WITHIN-CYCLE per-qutrit gate+leak CSR (Agent H's WithinCycleMarshalled).
+  // WITHIN-CYCLE per-qutrit gate+leak CSR (WithinCycleMarshalled).
   // TWO op-segments per round split by the stabilizer measurement: round r's
   // PRE-measure ops = [round_op_ptr[2r], round_op_ptr[2r+1]); its POST-measure
   // ops = [round_op_ptr[2r+1], round_op_ptr[2r+2]).  Each op t is the triple
@@ -630,7 +630,7 @@ __device__ int terminal_readout_block(cplx* psi, const SchedSpec* sp,
 }
 
 // ----------------------------------------------------------------------------- //
-//  P4a WITHIN-CYCLE trajectory kernel: one block per shot.                       //
+//  WITHIN-CYCLE qutrit leakage trajectory kernel: one block per shot.            //
 //                                                                                //
 //  Executes the circuit-faithful WITHIN-CYCLE op schedule:                       //
 //      for r in 0..R-1:                                                          //
@@ -759,9 +759,9 @@ __global__ void sv_traj_wc_kernel(
 }
 
 // ----------------------------------------------------------------------------- //
-//  P4a WITHIN-CYCLE host launcher.                                               //
+//  WITHIN-CYCLE host launcher.                                                   //
 //                                                                                //
-//  Consumes Agent H's WithinCycleMarshalled CSR (round_op_ptr / op_kind /        //
+//  Consumes the WithinCycleMarshalled CSR (round_op_ptr / op_kind /              //
 //  op_uid / op_site) + the per-CZ leak slice exp(L/4) (`leak_kraus`), and drives //
 //  sv_traj_wc_kernel with the shared stabilizer, logical, instrument, RNG, and    //
 //  packed-shot contracts.                                                         //

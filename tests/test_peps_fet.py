@@ -1,58 +1,18 @@
 from __future__ import annotations
 
-r"""Registered pytest gates for the ``carrier/peps/fet.py``
-environment-aware rank-selection truncator + its ``fet_env`` policy wiring.
+r"""PEPS environment-aware truncation tests.
 
-Written against the registered FET source contract (§5 gates) —
-NEVER against the implementation: the parallel-built module
-``src/error_coupling_simulator/carrier/peps/fet.py`` (and the ``fet_env`` branches
-in ``trajectory.py``) is imported at TEST RUNTIME ONLY (inside
-:func:`_peps_namespaces`); it was not read while this file was authored. Ambiguous
-signature details are concentrated in the ADAPTER block below (ONE place to fix at
-integration — contract §7 discipline).
+The suite checks the exact single-bond environment against an independent dense
+contraction, compares ``Fid_Γ`` with an independently written state-overlap
+calculation at lossless and lossy points, and verifies the ``fet_env`` policy
+wiring. The end-to-end entropy check compares a one-round carrier state with an
+inline GF(2) stabilizer reference and intentionally remains a visible failing
+test until the carrier reproduces that invariant.
 
-Coverage (the contract §5 gate rows this file owns; the d3-scale exact-Γ arm):
-
-  * G-ANTICIRC (a) — on a REAL round-1 grown bond:
-      (i) two-route ``Γ_TN == Γ_dense`` to 1e-9, where ``Γ_dense`` is the
-          INDEPENDENT referee written HERE (``_gamma_dense_ref`` — an explicit
-          opt_einsum contraction of the SAME site tensors, sharing NO code with
-          ``fet.gamma_TN``'s boundary machinery);
-      (ii) ``Fid_Γ(χ) == fid_dense(χ)`` to 1e-6, where ``Fid_Γ`` is the src's
-          ``fet.gamma_fidelity`` (the Γ-metric) and ``fid_dense`` is the referee's
-          ``dense_psi``-overlap after the referee's OWN write-back (Γ-independent).
-      Certified at BOTH a lossless point (env_optimal_rank χ, Fid ≈ 1) AND a
-      genuinely-lossy rank-1 projector point (Fid < 1 — non-vacuous), each with a
-      should-fail control (a perturbed Γ / a cross-paired fidelity) proven to trip.
-
-  * G-SA-CORROB (a) — after a ``fet_env`` truncation of one leak-off round, the
-      carrier's ``dense_psi`` S_A across cut A equals the INLINE GF(2) stabilizer
-      entropy baseline (``stabilizer_entropy_SA`` + independent helpers — they import
-      NOTHING from the carrier). Control: a shifted reference at 10·tol trips.
-
-  * fet_env WIRING SMOKE:
-      - RT-F1: ``TruncationPolicy("fet_env", eps_fid=1e-8)`` drives one round via
-        ``PepsSampler.sample`` without crashing, AND ``_policy_precut`` is a strict
-        NO-OP for ``fet_env`` (precut_discarded == 0.0 EXACTLY, r_dyn/width None,
-        window_binding False, exact_rank == _exact_rank(_insertion_spectrum), the
-        bond dim UNCHANGED). Control: the same rec fields are NON-None for
-        ``dynamic_eps`` (the None-signature is fet_env-specific, not vacuous).
-      - RT-F5 (full-rank losslessness): keeping the full bond is LOSSLESS — the
-        full-rank identity insertion has ``Fid_Γ == 1.0`` — so the no-qualifying-χ
-        keep-full-bond fallback is safe (never a lossy ceiling cut). The fallback branch
-        is itself defensively-unreachable at ``eps_fid > 0`` (χ = bare_rank IS this
-        lossless insertion), so the test asserts the losslessness directly.
-
-GPU convention (SW-S8): every test that constructs a PepsState requires CUDA
-(``requires_cuda``); tests needing the REAL Google d3 circuit skip with an explicit
-justification when the local dataset is absent (real patch only — no fallback).
-EXACT route throughout (``R_n=None`` / ``R_x=None`` — byte-identical to the d3
-gates; the contract's exact-Γ arm).
-
-Referee independence (contract §7): the Γ two-route referee (``_gamma_dense_ref``),
-the dense-fidelity referee (``_fid_dense_ref`` + its OWN write-back
-``_apply_fet_trunc_ref``) and the GF(2) S_A baseline share NO code with the
-``fet.py`` hot path they referee.
+Tests that construct :class:`PepsState` require CUDA. Tests needing the local d3
+Google circuit skip when those files are absent; no synthetic circuit is used as
+a fallback. Reference calculations in this file share no implementation path
+with ``carrier/peps/fet.py``.
 """
 
 import math
@@ -64,7 +24,7 @@ import torch
 from _support.fixtures import assert_control_trips, require_precondition
 
 # --------------------------------------------------------------------------- #
-# Constants (contract §5 bars + the independent d3 leak-off run constants)    #
+# Numerical bars and independent d3 leak-off run constants                    #
 # --------------------------------------------------------------------------- #
 PATCH = "d3_at_q6_7"
 G_SEEP = 0.09
@@ -77,34 +37,32 @@ FIT_SEED = 0
 BASE_SEED_OFF = 2026
 WG_L1_OFF = 0.0
 
-EPS_SPIKE = 1e-8          # dynamic_eps control knob used by the d3 gates
+EPS_SPIKE = 1e-8          # dynamic-epsilon control knob used by the d3 tests
 W_MAX = 160
 CUT_A = (0, 1, 2, 3)
 GROWN_MIN = 5             # a grid bond dim >= this counts as "grown" (over-count present)
 
 EPS_FID = 1e-8            # env-optimal acceptance: smallest χ with Fid_Γ >= 1 - EPS_FID
 
-GAMMA_REL_TOL = 1e-9     # G-ANTICIRC two-route Γ bar
-FID_ANTICIRC_TOL = 1e-6  # G-ANTICIRC Fid_Γ == fid_dense bar
+GAMMA_REL_TOL = 1e-9     # two-route Γ comparison bar
+FID_ANTICIRC_TOL = 1e-6  # Fid_Γ == fid_dense comparison bar
 SA_BASELINE_LEAKOFF = 2.0   # d3 leak-off GF(2) stabilizer entropy across cut (0,1,2,3)
 SA_OFF_TOL = 1e-4        # leak-off post-trunc S_A deviation bar
 NORM_GUARD = 1e-12       # fid_dense norm guard: degenerate truncation gives fidelity 0
 
 _CUDA = torch.cuda.is_available()
 requires_cuda = pytest.mark.skipif(
-    not _CUDA, reason="CUDA unavailable — the PEPS/FET engine is GPU-only (SW-S8)")
+    not _CUDA, reason="CUDA unavailable; the PEPS/FET engine is GPU-only")
 
 
 # =========================================================================== #
-# ADAPTERS — the ONE place to fix if a signature detail differs at            #
-# integration (contract §7: the module is built in parallel; §2/§3 pin the    #
-# SEMANTICS + most NAMES, not every argument spelling).                       #
+# Runtime adapters for the current PEPS public surface                        #
 # =========================================================================== #
 _PEPS_PKG = "error_coupling_simulator.carrier.peps"
 
 
 def _peps_namespaces() -> list:
-    """Runtime-only import of the parallel-built package + ALL its submodules
+    """Runtime-only import of the package and all its submodules
     (pkgutil walk — no submodule-name guessing). Resolution order: package
     namespace (re-exports) first, then submodules sorted by name."""
     import importlib
@@ -132,7 +90,7 @@ def _resolve_any(names, what: str):
             return obj
     pytest.fail(
         f"carrier/peps exposes none of {tuple(names)} for {what} — fix this adapter "
-        f"(ONE place; the contract pins the semantics, not this spelling)")
+        f"(update the runtime adapter for the current spelling)")
 
 
 def _try_calls(calls, what: str):
@@ -149,23 +107,23 @@ def _try_calls(calls, what: str):
                 f"TypeErrors seen: {errs}")
 
 
-# ---- src object handles (resolved lazily; §2/§3 pinned surface) ------------ #
+# ---- Source object handles resolved lazily -------------------------------- #
 def _TruncationPolicy():
-    return _resolve_any(("TruncationPolicy",), "the truncation policy dataclass (§2)")
+    return _resolve_any(("TruncationPolicy",), "the truncation policy dataclass")
 
 
 def _trunc_policy(mode: str, **kw):
-    """§2/§3 ``TruncationPolicy`` — ``fet_env`` requires ``eps_fid``."""
+    """Construct ``TruncationPolicy``; ``fet_env`` requires ``eps_fid``."""
     TP = _TruncationPolicy()
     return TP(str(mode), **kw)
 
 
 def _PepsSampler():
-    return _resolve_any(("PepsSampler",), "the PEPS trajectory sampler (D5/D7)")
+    return _resolve_any(("PepsSampler",), "the PEPS trajectory sampler")
 
 
 def _build_codestate(sched, m: int):
-    fn = _resolve_any(("build_codestate_peps",), "the codestate builder (§2)")
+    fn = _resolve_any(("build_codestate_peps",), "the codestate builder")
     return _try_calls(
         [lambda: fn(sched, int(m), device="cuda"),
          lambda: fn(sched, int(m), "cuda"),
@@ -174,18 +132,18 @@ def _build_codestate(sched, m: int):
 
 
 def _dense_psi(state) -> torch.Tensor:
-    """§3 ``dense_psi(state)`` — the d3 referee bridge (engine pos 0 = MSB)."""
+    """Bounded d3 ``dense_psi(state)`` bridge; engine position 0 is the MSB."""
     fn = _resolve("dense_psi")
     if fn is not None:
         return torch.as_tensor(fn(state)).reshape(-1)
     meth = getattr(state, "dense_psi", None)
     if callable(meth):
         return torch.as_tensor(meth()).reshape(-1)
-    pytest.fail("carrier/peps exposes no dense_psi (§3 pins it) — fix this adapter")
+    pytest.fail("carrier/peps exposes no dense_psi; fix this adapter")
 
 
 def _bond_profile(state) -> dict:
-    fn = _resolve_any(("bond_profile",), "the SW8 bond profile (§6.1)")
+    fn = _resolve_any(("bond_profile",), "the bond profile")
     prof = fn(state)
     out = {}
     for k, v in dict(prof).items():
@@ -199,37 +157,37 @@ def _bond_profile(state) -> dict:
 
 
 def _site_tensor(state, pos: int):
-    fn = _resolve_any(("site_tensor",), "the Q{pos} site accessor (§2)")
+    fn = _resolve_any(("site_tensor",), "the Q{pos} site accessor")
     return fn(state, int(pos))
 
 
 def _phys_name(pos: int) -> str:
-    fn = _resolve_any(("phys_name",), "the physical index name (§2)")
+    fn = _resolve_any(("phys_name",), "the physical index name")
     return str(fn(int(pos)))
 
 
-# ---- fet.py surface (contract §2/§3) --------------------------------------- #
+# ---- FET surface ----------------------------------------------------------- #
 def _fet_gamma_TN(state, bond: str) -> torch.Tensor:
-    """§2 ``fet.gamma_TN(state, bond)`` — exact double-layer single-bond Γ[i,I,j,J]."""
-    fn = _resolve_any(("gamma_TN",), "the exact single-bond environment Γ (§2)")
+    """Exact double-layer single-bond ``Γ[i,I,j,J]``."""
+    fn = _resolve_any(("gamma_TN",), "the exact single-bond environment Γ")
     out = _try_calls([lambda: fn(state, str(bond))], "gamma_TN")
     return torch.as_tensor(out)
 
 
 def _fet_gamma_fidelity(Gamma: torch.Tensor, M: torch.Tensor) -> float:
-    """§2 ``fet.gamma_fidelity(Gamma, M)`` — the Γ-metric fidelity of bond map M."""
-    fn = _resolve_any(("gamma_fidelity",), "the Γ-fidelity (§2)")
+    """The Γ-metric fidelity of bond map ``M``."""
+    fn = _resolve_any(("gamma_fidelity",), "the Γ-fidelity")
     return float(_try_calls([lambda: fn(Gamma, M)], "gamma_fidelity"))
 
 
 def _fet_env_optimal_rank(state, bond: str, eps_fid: float):
-    """§3 ``env_optimal_rank(state, bond, eps_fid)`` -> (env_rank, U, Vh).
+    """``env_optimal_rank(state, bond, eps_fid)`` -> (env_rank, U, Vh).
 
     Normalizes the return to ``(env_rank:int, U, Vh)`` (dropping any trailing
     achieved-fidelity element); accepts a 4-tuple ``(env_rank, U, Vh, fid_env)``, a
-    3-tuple, a ``(env_rank, (U, Vh))`` pair, or a dict. The fallback (RT-F5) may
+    3-tuple, a ``(env_rank, (U, Vh))`` pair, or a dict. The fallback may
     carry ``U``/``Vh`` = None — the caller only asserts on ``env_rank`` there."""
-    fn = _resolve_any(("env_optimal_rank",), "the env-optimal rank selector (§3)")
+    fn = _resolve_any(("env_optimal_rank",), "the env-optimal rank selector")
     res = _try_calls(
         [lambda: fn(state, str(bond), float(eps_fid)),
          lambda: fn(state, str(bond), eps_fid=float(eps_fid))],
@@ -246,32 +204,31 @@ def _fet_env_optimal_rank(state, bond: str, eps_fid: float):
 
 
 def _policy_precut(state, bond: str, policy):
-    """Pass-1 ``_policy_precut(state, bond, policy)`` — the seam whose fet_env
-    branch must be a strict NO-OP (contract §3 RT-F1)."""
-    fn = _resolve_any(("_policy_precut",), "the pass-1 precut seam (§3)")
+    """Pass-1 seam whose ``fet_env`` branch must be a strict no-op."""
+    fn = _resolve_any(("_policy_precut",), "the pass-1 precut seam")
     return fn(state, str(bond), policy)
 
 
 def _insertion_spectrum(state, bond: str) -> torch.Tensor:
-    fn = _resolve_any(("_insertion_spectrum",), "the pair-insertion spectrum (§6.1)")
+    fn = _resolve_any(("_insertion_spectrum",), "the pair-insertion spectrum")
     return torch.as_tensor(fn(state, str(bond)))
 
 
 def _exact_rank(S: torch.Tensor) -> int:
-    fn = _resolve_any(("_exact_rank",), "the exact-local-rank helper (§6.1)")
+    fn = _resolve_any(("_exact_rank",), "the exact-local-rank helper")
     return int(fn(torch.as_tensor(S)))
 
 
 # =========================================================================== #
-# INDEPENDENT REFEREES (share NO code with fet.py — contract §7).             #
+# Independent references sharing no implementation path with fet.py           #
 #   * GF(2) stabilizer entropy: independent inline diagnostic                 #
 #     (import NOTHING from the carrier).                                       #
 #   * carrier_SA: the carrier's OWN dense S_A read (routed through the adapter #
 #     dense_psi — the only adapter used by that independent calculation).      #
-#   * Γ_dense / fid_dense / write-back: the anti-circular two-route referees.  #
+#   * Γ_dense / fid_dense / write-back: independent two-route references.     #
 # =========================================================================== #
 def _gf2_rank(rows: list) -> int:
-    """Rank over GF(2) of a set of bit-vectors packed as Python ints. VERBATIM."""
+    """Rank over GF(2) of bit-vectors packed as Python integers."""
     basis: list = []
     for r in rows:
         cur = int(r)
@@ -284,7 +241,7 @@ def _gf2_rank(rows: list) -> int:
 
 
 def _pauli_to_symplectic(paulis: dict, n: int):
-    """A stabilizer/logical ``{site: 'X'|'Z'}`` -> (x_bits, z_bits). VERBATIM."""
+    """A stabilizer/logical ``{site: 'X'|'Z'}`` -> (x_bits, z_bits)."""
     x_bits = z_bits = 0
     for site, p in paulis.items():
         s = int(site)
@@ -298,8 +255,8 @@ def _pauli_to_symplectic(paulis: dict, n: int):
 
 
 def stabilizer_entropy_SA(generators: list, n: int, region_A) -> float:
-    """S_A (ebits) of the pure stabilizer state — Fattal/Hamma. VERBATIM
-    (INDEPENDENT of the carrier and stim; pure GF(2) algebra on the generators)."""
+    """S_A (ebits) of the pure stabilizer state by Fattal/Hamma, computed with
+    pure GF(2) algebra independent of the carrier and Stim."""
     setA = set(int(a) for a in region_A)
     B = [i for i in range(n) if i not in setA]
     nB = len(B)
@@ -344,7 +301,7 @@ def carrier_SA(state, region_A, n: int):
 
 
 def _parse_bond(bond: str):
-    """``B{a}_{b}`` -> (a, b) with a < b. VERBATIM."""
+    """``B{a}_{b}`` -> (a, b) with a < b."""
     body = str(bond)[1:]
     a_str, b_str = body.split("_")
     a, b = int(a_str), int(b_str)
@@ -352,7 +309,7 @@ def _parse_bond(bond: str):
 
 
 def _gamma_dense_ref(state, bond: str) -> torch.Tensor:
-    """INDEPENDENT referee route for Γ[i,I,j,J] (shares NO code with the src's
+    """Independent reference route for Γ[i,I,j,J] (shares no code with the source
     boundary machinery): an explicit opt_einsum contraction of the SAME site
     tensors — all physical legs traced ket·bra, all bonds summed except the target
     bond left open on BOTH layers."""
@@ -404,7 +361,7 @@ def _gamma_dense_ref(state, bond: str) -> torch.Tensor:
 
 
 def _apply_fet_trunc_ref(state, bond: str, U: torch.Tensor, Vh: torch.Tensor) -> None:
-    """The referee's OWN write-back (independent of the src): absorb ``U`` (D×χ)
+    """Independent reference write-back: absorb ``U`` (D×χ)
     into site A's bond leg and ``Vh`` (χ×D) into site B's, keeping the ORIGINAL
     bond name. Mutates ``state`` in place."""
     a, b = _parse_bond(bond)
@@ -433,7 +390,8 @@ def _overlap_sq(psi_ref: torch.Tensor, psi_trunc: torch.Tensor) -> float:
 def _fid_dense_ref(state, bond: str, U: torch.Tensor, Vh: torch.Tensor,
                    psi_before: torch.Tensor) -> float:
     """The Γ-INDEPENDENT global fidelity of the rank-χ truncation: apply it to a
-    COPY (referee write-back), recompute ``dense_psi``, measure |<before|after>|^2.
+    copy using the independent write-back, recompute ``dense_psi``, and measure
+    |<before|after>|^2.
     This calculation is independent of the environment-metric implementation."""
     cp = state.copy()
     _apply_fet_trunc_ref(cp, bond, U, Vh)
@@ -510,14 +468,14 @@ def _drive_capture(sched, c01, m01, policy, *, d_abort, capture_round: int = 0):
 def d3():
     """The REAL d3_at_q6_7 leak-off schedule + r10 within-cycle streams."""
     if not _CUDA:
-        pytest.skip("CUDA unavailable — the PEPS engine is GPU-only (SW-S8)")
+        pytest.skip("CUDA unavailable; the PEPS engine is GPU-only")
     return _parse_d3_sched()
 
 
 @pytest.fixture(scope="module")
 def gf2_baseline(d3):
     """The INDEPENDENT GF(2) stabilizer-entropy baseline across cut A (== 2.0 ebits
-    at d3 leak-off) computed from the schedule's generators — the S_A referee."""
+    at d3 leak-off) computed from the schedule's generators."""
     sched, _c01, _m01 = d3
     n = int(sched.n_data)
     stabs = [dict(s.paulis) for s in sched.stabilizers]
@@ -537,15 +495,14 @@ def grown_state(d3):
     st = _drive_capture(sched, c01, m01, _trunc_policy("lossless"), d_abort=None)
     require_precondition(st is not None, "no round-1 state captured (lossless drive)")
     require_precondition(bool(_grown_bonds(st)),
-                         f"no grown bond (dim >= {GROWN_MIN}) after round 1 — nothing to referee")
+                         f"no grown bond (dim >= {GROWN_MIN}) after round 1")
     return st
 
 
 @pytest.fixture(scope="module")
 def fet_env_state(d3):
-    """A leak-off round-1 state driven under the NEW ``fet_env`` policy — the src
-    truncator does the WHOLE per-round truncation (RT-F1/RT-F2 exercised end-to-end).
-    A crash here surfaces as an ERROR on the requesting gate (the RT-F1 regression)."""
+    """A leak-off round-1 state driven under the ``fet_env`` policy, with the
+    source truncator performing the complete per-round truncation."""
     sched, c01, m01 = d3
     st = _drive_capture(sched, c01, m01, _trunc_policy("fet_env", eps_fid=EPS_FID),
                         d_abort=None)
@@ -561,14 +518,14 @@ def _biggest_grown_bond(state):
 
 
 # =========================================================================== #
-# G-ANTICIRC (a) — two-route Γ + Fid_Γ == fid_dense on a REAL round-1 bond.    #
+# Two-route Γ and fidelity checks on a real round-1 bond                      #
 # =========================================================================== #
 @requires_cuda
-class TestGAntiCirc:
+class TestEnvironmentCrossChecks:
 
     def test_gamma_two_route_identity(self, grown_state):
-        """Γ_TN (src) == Γ_dense (independent referee) on the biggest grown bond,
-        to 1e-9. Control: a 1e-6-perturbed referee Γ trips the same check."""
+        """Γ_TN (source) equals the independent dense reference on the biggest
+        grown bond to 1e-9. A 1e-6 perturbation must trip the same check."""
         state = grown_state.copy()                 # isolate the shared module fixture
         bond, dim = _biggest_grown_bond(state)
         g_tn = _fet_gamma_TN(state, bond).to(torch.complex128)
@@ -585,11 +542,11 @@ class TestGAntiCirc:
 
         # positive: the two independent routes agree to the (a)-exact bar.
         _two_route(g_ref, GAMMA_REL_TOL)
-        # control: a 1e-6-perturbed referee Γ MUST trip the 1e-9 check (non-vacuous).
+        # A 1e-6-perturbed reference Γ must trip the 1e-9 check.
         assert_control_trips(_two_route, g_ref * (1.0 + 1e-6), GAMMA_REL_TOL)
 
     def test_fid_gamma_equals_fid_dense(self, grown_state):
-        """Fid_Γ (src Γ-metric) == fid_dense (referee dense overlap) on the SAME
+        """Fid_Γ (source Γ-metric) equals the independent dense overlap on the same
         truncation — the anti-circular fidelity check — at a lossless env_optimal
         point AND a genuinely-lossy rank-1 projector point (non-vacuous). Control:
         cross-pairing the env Fid_Γ with the lossy fid_dense trips the check."""
@@ -645,10 +602,10 @@ class TestGAntiCirc:
 
 
 # =========================================================================== #
-# G-SA-CORROB (a) — post-fet_env S_A == the inline GF(2) baseline.            #
+# Post-fet_env S_A against the inline GF(2) baseline                          #
 # =========================================================================== #
 @requires_cuda
-class TestGSaCorrob:
+class TestStabilizerEntropy:
 
     def test_fet_env_round_preserves_stabilizer_entropy(self, fet_env_state, gf2_baseline):
         """After one leak-off round under ``fet_env``, the carrier's dense S_A across
@@ -669,26 +626,26 @@ class TestGSaCorrob:
 
 
 # =========================================================================== #
-# fet_env WIRING SMOKE — RT-F1 (precut no-op + end-to-end drive) + RT-F5.      #
+# fet_env wiring: precut no-op, end-to-end drive, and full-rank losslessness  #
 # =========================================================================== #
 @requires_cuda
 class TestFetEnvWiring:
 
     def test_fet_env_drives_one_round_without_crashing(self, fet_env_state):
-        """RT-F1 end-to-end: ``TruncationPolicy("fet_env", eps_fid=1e-8)`` drove one
+        """``TruncationPolicy("fet_env", eps_fid=1e-8)`` drove one
         round via ``PepsSampler.sample`` and returned a live PepsState with a readable
         grid bond profile (a fall-through to the dynamic_eps tail would have raised
-        ``float(None)`` — the RT-F1 regression this guards)."""
+        ``float(None)``)."""
         prof = _bond_profile(fet_env_state)
         assert prof, "fet_env round produced no grid bond profile"
         assert all(int(d) >= 1 for d in prof.values()), prof
-        # the fet_env round yields a finite, materialized state (the crash-free contract).
+        # The fet_env round yields a finite, materialized state.
         psi = _dense_psi(fet_env_state)
         assert torch.isfinite(psi).all(), "fet_env round produced a non-finite state"
         assert float(torch.vdot(psi, psi).real) > 1e-12, "fet_env round collapsed the norm"
 
     def test_policy_precut_is_a_strict_noop_for_fet_env(self, grown_state):
-        """RT-F1 unit: ``_policy_precut`` for ``fet_env`` returns the exact summary
+        """``_policy_precut`` for ``fet_env`` returns the exact summary
         keys ``_policy_cut`` reads (precut_discarded == 0.0, r_dyn/width None,
         window_binding False, exact_rank == _exact_rank(_insertion_spectrum)) and does
         NO svd (bond dim UNCHANGED). Control: ``dynamic_eps`` populates r_dyn/width
@@ -696,10 +653,10 @@ class TestFetEnvWiring:
         bond, dim = _biggest_grown_bond(grown_state)
 
         pol = _trunc_policy("fet_env", eps_fid=EPS_FID)
-        # the hazard RT-F1 averts: fet_env carries NO eps_spike, so a fall-through to
+        # fet_env carries no eps_spike, so a fall-through to
         # the dynamic tail would evaluate float(policy.eps_spike) == float(None).
         assert getattr(pol, "eps_spike", None) is None, (
-            "fet_env policy unexpectedly carries eps_spike — the RT-F1 hazard/premise changed")
+            "fet_env policy unexpectedly carries eps_spike")
 
         cp = grown_state.copy()
         dim_in = int(cp.tn.ind_size(bond))
@@ -723,7 +680,7 @@ class TestFetEnvWiring:
             "fet_env None-assertions above would be vacuous")
 
     def test_full_rank_insertion_is_lossless(self, grown_state):
-        """RT-F5 (simplified — full-rank losslessness): the no-qualifying-χ fallback
+        """The no-qualifying-χ fallback
         KEEPS the full bond, which is SAFE precisely because keeping the full bond is
         LOSSLESS. Assert that directly: the full-rank identity insertion on a grown bond
         has ``Fid_Γ == 1.0`` (no fidelity lost by NOT truncating), and ``env_optimal_rank``
@@ -746,7 +703,7 @@ class TestFetEnvWiring:
         # (i) keeping the full bond (no truncation) is LOSSLESS.
         assert abs(fid_full - 1.0) <= 1e-9, (
             f"full-rank identity insertion not lossless: Fid_Γ={fid_full!r} (expected 1.0) "
-            "— the RT-F5 keep-full-bond fallback would then NOT be safe")
+            "— the keep-full-bond fallback would then not be safe")
         # (ii) env_optimal_rank returns a rank <= D meeting the fidelity target (so it
         #      never needs a lossy ceiling cut; χ=bare_rank always qualifies losslessly).
         env_rank, _U, _Vh, fid_env = fet.env_optimal_rank(state, bond, eps_fid=EPS_FID)

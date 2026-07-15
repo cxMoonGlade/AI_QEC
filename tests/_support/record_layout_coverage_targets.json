@@ -1,0 +1,46 @@
+{
+  "_comment": [
+    "Per-owner coverage registry for record layout."
+  ],
+  "contract": "docs/SIMULATOR.md",
+  "default_target": {"statement": 1.0, "branch": 1.0},
+  "covered_by_test_files": [
+    "tests/test_record_layout_units.py"
+  ],
+  "reconcile_modules": [
+    "src/error_coupling_simulator/frontend/record_layout.py"
+  ],
+  "out_of_scope": {},
+  "canonical_units": [
+    "RoundMeasurementRecord.to_manifest",
+    "DetectorLayoutRecord.to_manifest",
+    "FinalDataRecord.to_manifest",
+    "ObservableLayoutRecord.to_manifest",
+    "RecordLayout.detector_names",
+    "RecordLayout.measurement_keys",
+    "RecordLayout.observable_names",
+    "RecordLayout.to_manifest",
+    "build_repeated_memory_record_layout",
+    "final_measurements",
+    "check_key",
+    "delta_detector_name",
+    "final_detector_name",
+    "final_key"
+  ],
+  "units": [
+    {"group": "record_layout", "module": "src/error_coupling_simulator/frontend/record_layout.py", "unit": "RoundMeasurementRecord.to_manifest", "qualname": "RoundMeasurementRecord.to_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "record_layout", "module": "src/error_coupling_simulator/frontend/record_layout.py", "unit": "DetectorLayoutRecord.to_manifest", "qualname": "DetectorLayoutRecord.to_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "record_layout", "module": "src/error_coupling_simulator/frontend/record_layout.py", "unit": "FinalDataRecord.to_manifest", "qualname": "FinalDataRecord.to_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "record_layout", "module": "src/error_coupling_simulator/frontend/record_layout.py", "unit": "ObservableLayoutRecord.to_manifest", "qualname": "ObservableLayoutRecord.to_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "record_layout", "module": "src/error_coupling_simulator/frontend/record_layout.py", "unit": "RecordLayout.detector_names", "qualname": "RecordLayout.detector_names", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "record_layout", "module": "src/error_coupling_simulator/frontend/record_layout.py", "unit": "RecordLayout.measurement_keys", "qualname": "RecordLayout.measurement_keys", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "record_layout", "module": "src/error_coupling_simulator/frontend/record_layout.py", "unit": "RecordLayout.observable_names", "qualname": "RecordLayout.observable_names", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "record_layout", "module": "src/error_coupling_simulator/frontend/record_layout.py", "unit": "RecordLayout.to_manifest", "qualname": "RecordLayout.to_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "record_layout", "module": "src/error_coupling_simulator/frontend/record_layout.py", "unit": "build_repeated_memory_record_layout", "qualname": "build_repeated_memory_record_layout", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "record_layout", "module": "src/error_coupling_simulator/frontend/record_layout.py", "unit": "final_measurements", "qualname": "final_measurements", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "record_layout", "module": "src/error_coupling_simulator/frontend/record_layout.py", "unit": "check_key", "qualname": "check_key", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "record_layout", "module": "src/error_coupling_simulator/frontend/record_layout.py", "unit": "delta_detector_name", "qualname": "delta_detector_name", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "record_layout", "module": "src/error_coupling_simulator/frontend/record_layout.py", "unit": "final_detector_name", "qualname": "final_detector_name", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "record_layout", "module": "src/error_coupling_simulator/frontend/record_layout.py", "unit": "final_key", "qualname": "final_key", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []}
+  ]
+}

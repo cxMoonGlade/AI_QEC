@@ -2,8 +2,8 @@ from __future__ import annotations
 
 r"""Axis-1 within-substep joint-Lindbladian assembler.
 
-WHAT THIS IS (the "Axis-1" assembler — ADR-0008-adjacent; build contract §A/§B-5/§E)
-------------------------------------------------------------------------------------
+Within-substep joint assembler
+------------------------------
 The specified per-cycle noise-process evolution is NOT a composition chain of individually-
 derived per-mechanism channels. Within a single time SUB-STEP (1q-gate layer / CZ
 layer / idle / readout), every mechanism active in that sub-step enters ONE
@@ -33,7 +33,7 @@ column-stacking, with `vec(A rho B) = (B^T (x) A) vec(rho)` (kron = `(x)`):
     vec(c rho c^dag)     = ( conj(c) (x) c ) vec(rho)           [since (c^dag)^T = conj(c)]
     vec(-1/2 {c^dag c, rho}) = -1/2 ( I(x)(c^dag c) + (c^dag c)^T(x)I ) vec(rho)
 
-so the Liouvillian is exactly the build-contract §B-5 form:
+so the Liouvillian is:
 
     L = -i ( I(x)H - H^T(x)I )
         + Sigma_k [ conj(c_k)(x)c_k - 1/2 ( I(x)(c_k^dag c_k) + (c_k^dag c_k)^T(x)I ) ]
@@ -114,7 +114,7 @@ def liouvillian_superop(H_list, c_list, *, device="cuda"):
     Column-stacking convention (see module docstring): with kron ``(x)``,
       L = -i ( I(x)H - H^T(x)I )
           + Sigma_k [ conj(c)(x)c - 1/2 ( I(x)(c^dag c) + (c^dag c)^T(x)I ) ].
-    This is the qt.liouvillian / build-contract §B-5 convention EXACTLY.
+    This is exactly the ``qt.liouvillian`` convention used by the independent tests.
     """
     import torch
 
@@ -234,15 +234,14 @@ def superop_to_kraus(S, *, device="cuda", tol: float = 0.0,
     # Build the Choi matrix Sigma_{p,q} E(|p><q|) (x) |p><q|. The Choi-Jamiolkowski map is a pure
     # REINDEXING of the column-stacking superop, NOT a D^2 python loop of krons:
     #   Choi[a*D+p, b*D+q] = S[b*D+a, q*D+p]  <=>  S.reshape(D,D,D,D)[b,a,q,p] permuted to [a,p,b,q].
-    # Verified bit-exact vs the former p,q loop for D=2..8 (outputs/twin_validation/choi_vectorize_verify.py).
+    # Algebraically equivalent to the former p,q loop; current channel tests cover D=2..8.
     choi = S.reshape(D, D, D, D).permute(1, 3, 0, 2).reshape(D * D, D * D).contiguous()
     choi = 0.5 * (choi + choi.conj().transpose(-1, -2))
     w, V = _robust_eigh(choi)
 
     # Kraus_k = sqrt(w_k) * V[:,k].reshape(D, D), for eigenvalues w_k > tol. Vectorized (no python loop
     # over the D^2 eigenpairs): scale each eigen-column by sqrt(w_k), fold columns->rows->(D, D). Same
-    # ascending-eigenvalue order as the former loop; verified bit-equivalent in
-    # outputs/twin_validation/superop_kraus_vectorize_verify.py.
+    # ascending-eigenvalue order as the former loop; current channel tests guard equivalence.
     wr = w.real
     tolf = float(tol)
     keep = wr > tolf
@@ -353,7 +352,7 @@ def assemble_substep_channels_batched(items, *, device="cuda", completion: str =
                                       choi_eigenvalue_tol: float = 0.0):
     r"""BATCHED ``assemble_substep_channel`` — one batched ``matrix_exp`` + one batched Choi ``eigh``
     over ALL substeps, instead of a per-substep sequential build. Same math per item as
-    ``assemble_substep_channel`` (verified in outputs/twin_validation/batched_substep_channel_verify.py).
+    ``assemble_substep_channel``; current channel tests guard the batched equivalence.
 
     ``items`` is a sequence of ``(H_list, c_list, dt)`` with a UNIFORM window dimension ``D`` (the dense
     Axis-1 manifest builds all substeps on the same window). Returns a list of Kraus stacks ``(k_b, D, D)``,
@@ -433,7 +432,7 @@ def assemble_substep_channels_batched(items, *, device="cuda", completion: str =
 
 # --------------------------------------------------------------------------- #
 # EXACT coupling-component factorization of the substep channel                #
-# (SPEC docs/twin_validation/SPEC_substep_coupling_factorization_2026-07-04.md)#
+# Current factorization contract is stated here and exercised by owner tests.   #
 # --------------------------------------------------------------------------- #
 # WHY THIS IS EXACT (not an approximation). For a substep,
 #   L = -i[Sigma_i H_i, .] + Sigma_k D[c_k].
@@ -444,8 +443,8 @@ def assemble_substep_channels_batched(items, *, device="cuda", completion: str =
 # (x)_m E_{B_m}. Applying it to rho = applying each block channel to its own
 # qubits (they commute). No full-window Kraus is ever formed. The blocks are the
 # CONNECTED COMPONENTS of the graph with an edge (a,b) whenever some single H_i
-# or c_k acts non-trivially on both a and b. This mirrors the union-find /
-# support diagnostic in outputs/twin_validation/step2_substep_support_diag.py.
+# or c_k acts non-trivially on both a and b. The current union-find and support
+# diagnostics are exercised by the connected-cluster owner tests.
 
 _SUPPORT_TOL = 1e-9  # absolute; dephasing c ~ sqrt(gamma) can be ~0.03, so no relative tol (SPEC 4.3).
 
@@ -468,8 +467,7 @@ def operator_support(A, nq, *, tol: float = _SUPPORT_TOL):
     off-diagonal blocks ``(iq=0,jq=1)`` and ``(iq=1,jq=0)`` are ~0 AND the diagonal
     blocks ``(0,0)`` and ``(1,1)`` are equal — all to ABSOLUTE tolerance ``tol`` (a
     relative tol would miss weak dephasing couplings ``c ~ sqrt(gamma) ~ 0.03``).
-    Returns a sorted tuple of non-trivial qubit indices. Same test as
-    `step2_substep_support_diag.acts_nontrivially_on`.
+    Returns a sorted tuple of non-trivial qubit indices.
     """
     import torch
 
@@ -491,7 +489,7 @@ def operator_support(A, nq, *, tol: float = _SUPPORT_TOL):
 # Below this a per-qubit non-triviality MEASURE is a genuine machine/structural zero (these operators are
 # built from exact algebra, so an identity factor reads ~1e-16); a measure in [floor, _SUPPORT_TOL) is a
 # real-but-weak coupling the absolute support tolerance cannot classify -> factorization is NOT certifiably
-# exact and must fall back to the full-window channel (P1 fail-safe, SPEC ledger item 4).
+# exact and must fall back to the full-window channel.
 _FACTORIZE_SAFE_FLOOR = NUMERICAL_ZERO  # 1e-12
 
 
@@ -521,8 +519,7 @@ def _has_ambiguous_support(A, nq, *, tol: float = _SUPPORT_TOL, floor: float = _
 def _connected_components(nq, edges):
     """Connected components (union-find) over qubits ``0..nq-1`` given coupling ``edges``;
     isolated qubits become singletons. Returns a list of sorted qubit tuples in
-    ascending-first-qubit order (deterministic). Same logic as
-    `step2_substep_support_diag._components`.
+    ascending-first-qubit order (deterministic).
     """
     parent = list(range(nq))
 
@@ -549,7 +546,7 @@ def restrict_operator_to_component(A, comp, nq, *, tol: float = _SUPPORT_TOL):
     order), reshape to ``(2^|C|, 2^|rest|, 2^|C|, 2^|rest|)``, and take
     ``A_C = A_perm[:, 0, :, 0]``.
 
-    GUARD (mandatory, SPEC 4.4): reconstruct ``A_C (x) I_{2^|rest|}`` (un-permuted back
+    Guard: reconstruct ``A_C (x) I_{2^|rest|}`` (un-permuted back
     to the original layout) and assert ``max|reconstruct - A| < tol``. A failure means a
     mis-assigned operator whose support crosses the component — raise, never silently
     proceed.
@@ -658,7 +655,7 @@ def assemble_substep_channel_factored(H_list, c_list, dt, *, device="cuda",
     if os.environ.get("ECS_FORCE_UNFACTORIZED_AXIS1") == "1":
         return _full_window()
 
-    # P1 fail-safe (SPEC ledger item 4): if ANY operator carries a coupling too weak for the absolute
+    # If any operator carries a coupling too weak for the absolute
     # support tolerance to classify (a measure in [_FACTORIZE_SAFE_FLOOR, _SUPPORT_TOL)), the coupling
     # graph cannot be certified exact -- a genuine weak coupling could be silently dropped, breaking the
     # tensor-product identity. Fall back to the EXACT full-window channel (correctness over the speed win).

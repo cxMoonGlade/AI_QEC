@@ -52,15 +52,14 @@ def test_run_purpose_has_one_precision_and_evidence_role(
     assert spec.evidence_eligibility == eligibility
 
 
-def test_run_purpose_defaults_fail_safe_and_legacy_c64_is_screening() -> None:
+def test_run_purpose_defaults_to_final_and_c64_requires_optimization() -> None:
     from error_coupling_simulator.carrier.within_cycle import RunSpec
 
     default = RunSpec(circuit_path="unused.stim")
     assert (default.run_purpose, default.dtype) == ("final", "c128")
 
-    legacy_c64 = RunSpec(circuit_path="unused.stim", dtype="c64")
-    assert legacy_c64.run_purpose == "optimization"
-    assert legacy_c64.evidence_eligibility == "screening_only"
+    with pytest.raises(ValueError, match="run_purpose|precision policy"):
+        RunSpec(circuit_path="unused.stim", dtype="c64")
 
 
 @pytest.mark.parametrize(

@@ -1,31 +1,26 @@
 from __future__ import annotations
 
-r"""Single-wire qutrit PEPS state + codestate builder (RUNG-B spike, module builder).
+r"""Single-wire qutrit PEPS state and codestate builder.
 
-Binding doc: ``docs/nonpauli_teacher/peps_singlewire_spike_contract.md`` (v1.0
-REGISTERED) — §2 (representation + op table), §3 (op registry), D3/D4 (naming +
-reuse-over-rewrite). Parent geometry/chain machinery is IMPORTED from the ARCHIVED
-``carrier/pepo`` package (single source; the pepo package itself is never modified):
-``PepoLayout`` (SF2 — d-generic, VERBATIM), the ket-layer chain machinery
-``_apply_chain_operator`` / ``_ket_norm_sq`` / ``_fuse_pair`` (SF1 — the codestate
-ket layer is already single-wire; pepo steps 1–3), and ``_site_tensors_by_pos``.
+Geometry and ket-layer chain machinery are reused from the retained PEPO carrier:
+``PepoLayout``, ``_apply_chain_operator``, ``_ket_norm_sq``, ``_fuse_pair``, and
+``_site_tensors_by_pos``.
 
-SINGLE-WIRE finalization (SF1, NEW vs the parent): steps 1–3 only — the ket⊗bra
+Single-wire finalization keeps the ket layer only — the ket⊗bra
 fuse (parent step 4) never happens. The physical leg stays dim **3** (named
-``k{pos}``), ket bonds are renamed to the grid-edge names ``B{p}_{q}`` (D3: the
-pepo naming carried over so reused machinery works unchanged), untouched grid
+``k{pos}``), ket bonds are renamed to the grid-edge names ``B{p}_{q}``, untouched grid
 edges are materialized as dim-1 bonds, and the unit-NORM constant is
 ``tr_m**(-1/(2n))`` per site (the parent's ``tr_m**(-1/n)`` is
-density-matrix-specific — SF1).
+density-matrix-specific).
 
-REFEREE INDEPENDENCE (D4 / §3 independence rule): this package shares NO code path
+For reference independence, this package shares no code path
 with ``carrier/exact/qutrit_dm`` — the qutrit gate table below (H/X/Y/Z/S/S_DAG on
 the computational ``{|0>,|1>}`` block, leaked ``|2>`` inert) is built locally BY
-FORMULA, mirroring the ``mps_forward._qutrit_gate`` value contract; the parent
-layout's one referee import (``qudit_hadamard`` for the seed) is replaced by the
-local formula here (D4).
+FORMULA, mirroring the ``mps_forward._qutrit_gate`` values; the parent
+layout's one reference import (``qudit_hadamard`` for the seed) is replaced by the
+local formula here.
 
-GPU-only, torch-cuda-complex128 ALWAYS (SW-S8); devices passed in, never guessed.
+GPU-only, torch-cuda-complex128; devices are passed in, never guessed.
 """
 
 import torch
@@ -45,17 +40,17 @@ from ..pepo.layout import (
 CDTYPE = torch.complex128
 RDTYPE = torch.float64
 
-#: qutrit local dimension — the SINGLE-WIRE physical leg (contract §2: dim 3, not 9).
+#: Qutrit local dimension: the single-wire physical leg is dim 3, not 9.
 QUTRIT = 3
 
 
 # --------------------------------------------------------------------------- #
-# Local single-qutrit gate table (referee-independent — D4)                    #
+# Local single-qutrit gate table                                               #
 # --------------------------------------------------------------------------- #
 def qutrit_gate(name: str, device, dtype=CDTYPE) -> torch.Tensor:
     """A single-qutrit FRAME gate ``(3,3)`` on the computational ``{0,1}`` block,
-    ``|2>`` inert — the ``mps_forward._qutrit_gate`` value contract, built locally
-    BY FORMULA (the engine shares no code path with the referee, contract §3)."""
+    ``|2>`` inert. The table mirrors ``mps_forward._qutrit_gate`` but is built
+    locally by formula, so the engine shares no code path with the reference."""
     nm = str(name).upper()
     m = torch.zeros((QUTRIT, QUTRIT), dtype=dtype, device=device)
     if nm == "I":
@@ -97,8 +92,7 @@ def qutrit_gate(name: str, device, dtype=CDTYPE) -> torch.Tensor:
 
 
 def phys_name(pos: int) -> str:
-    """The dim-3 physical index name at engine position ``pos`` (contract §2:
-    ``k{pos}`` — the pepo NAME carried over, now dim 3 single-wire)."""
+    """The dim-3 physical index name ``k{pos}`` at engine position ``pos``."""
     return f"k{int(pos)}"
 
 
@@ -106,19 +100,19 @@ def phys_name(pos: int) -> str:
 # State object                                                                 #
 # --------------------------------------------------------------------------- #
 class PepsState:
-    """The single-wire (pure-state) qutrit PEPS (contract §2).
+    """The single-wire pure-state qutrit PEPS.
 
     Attributes: ``tn`` (quimb ``TensorNetwork``; one rank<=5 site tensor per data
     qutrit, tagged ``Q{pos}``, physical index ``k{pos}`` of dim **3**, virtual
-    bonds ``B{p}_{q}`` on the grid edges), ``layout`` (:class:`PepoLayout` —
-    VERBATIM import, SF2), ``device`` (str), ``ledger`` (list of dicts in the
+    bonds ``B{p}_{q}`` on the grid edges), ``layout`` (:class:`PepoLayout`),
+    ``device`` (str), ``ledger`` (list of dicts in the
     pepo convention: discarded weight on the SQUARED-sigma RELATIVE scale, norm
     shifts logged). NO global gauge/canonical form is tracked. Positivity is
-    STRUCTURAL (a pure state) — the parent's C3 negativity machinery is
-    intentionally absent (contract §2); its audit role is the §6.2 per-read
-    accuracy instruments + the norm ledger.
+    structural for a pure state, so density-matrix negativity machinery is
+    intentionally absent; per-read accuracy instruments and the norm ledger
+    provide the applicable numerical diagnostics.
 
-    Construction asserts (§2 / SW-S8): torch complex128 tensors on a cuda device,
+    Construction asserts torch complex128 tensors on a CUDA device,
     rank <= 5, one tensor per position with the dim-3 physical leg.
     """
 
@@ -131,7 +125,7 @@ class PepsState:
         dev = torch.device(self.device)
         if dev.type != "cuda":
             raise ValueError(
-                f"PepsState tensors are torch-cuda-complex128 ALWAYS (SW-S8); "
+                f"PepsState tensors must be torch CUDA complex128; "
                 f"got device {self.device!r}")
         sites = _site_tensors_by_pos(tn, layout.n_data)
         for pos in range(layout.n_data):
@@ -140,12 +134,12 @@ class PepsState:
             if not torch.is_tensor(data):
                 raise TypeError(f"site {pos}: tensor data is not a torch tensor")
             if data.dtype != CDTYPE:
-                raise TypeError(f"site {pos}: dtype {data.dtype} != complex128 (SW-S8)")
+                raise TypeError(f"site {pos}: dtype {data.dtype} != complex128")
             if data.device.type != dev.type:
                 raise ValueError(
                     f"site {pos}: tensor device {data.device} != state device {self.device}")
             if len(t.inds) > 5:
-                raise ValueError(f"site {pos}: rank {len(t.inds)} > 5 (contract §2)")
+                raise ValueError(f"site {pos}: rank {len(t.inds)} > 5")
             k = phys_name(pos)
             if k not in t.inds:
                 raise ValueError(f"site {pos}: physical index {k!r} missing")
@@ -161,7 +155,7 @@ class PepsState:
 
 
 def site_tensor(state: PepsState, pos: int):
-    """The unique site tensor tagged ``Q{pos}`` (contract §2 tag convention)."""
+    """The unique site tensor tagged ``Q{pos}``."""
     ts = state.tn.select_tensors(f"Q{int(pos)}", which="all")
     if len(ts) != 1:
         raise RuntimeError(f"expected exactly one tensor tagged Q{pos}, found {len(ts)}")
@@ -171,8 +165,8 @@ def site_tensor(state: PepsState, pos: int):
 def apply_site_op(state: PepsState, pos: int, op: torch.Tensor) -> None:
     """Contract a ``(3,3)`` operator onto the physical leg ``k{pos}``.
 
-    Single-site by construction — bond dims ASSERTED unchanged (contract §2 op
-    table: 1-site gates and Kraus branches are bond-inert on a PEPS). The op is
+    Single-site by construction: bond dimensions are asserted unchanged because
+    one-site gates and Kraus branches are bond-inert on a PEPS. The op is
     NOT required to be unitary (sqrt-effect collapses and forced Kraus branches
     ride this same path, unnormalized).
     """
@@ -189,15 +183,6 @@ def apply_site_op(state: PepsState, pos: int, op: torch.Tensor) -> None:
     t.modify(data=data.contiguous())
 
 
-def apply_gate_1site(state: PepsState, U: torch.Tensor, pos: int) -> None:
-    """Apply a ``(3, 3)`` operator at engine position ``pos`` (contract §2 op-table
-    row ``apply_gate_1site``) — the ``(state, U, pos)`` argument order. A thin
-    alias of :func:`apply_site_op` (which takes ``(state, pos, op)``); NOT required
-    to be unitary, so it also carries the SW1 forced-Kraus branch ``K_k psi``
-    (unnormalized). Bond-inert (a 1-site op grows no bond)."""
-    apply_site_op(state, int(pos), U)
-
-
 def renormalize(state: PepsState, norm_sq: float) -> None:
     """Scale the state to unit norm given a measured ``<psi|psi>`` (the caller's
     read — exact or boundary route; the pre-scale value is the caller's ledger
@@ -209,27 +194,27 @@ def renormalize(state: PepsState, norm_sq: float) -> None:
 
 
 # --------------------------------------------------------------------------- #
-# Codestate builder — pepo steps 1–3, single-wire finalization (SF1)           #
+# Codestate builder and single-wire finalization                              #
 # --------------------------------------------------------------------------- #
 def build_codestate_peps(sched, m: int, device: str = "cuda") -> PepsState:
     """Build the codestate ``|m>_L`` as a single-wire :class:`PepsState`.
 
-    Contract §3 registry row "codestate steps 1–3 (ported)": the parent's ket
-    layer VERBATIM (H-spread seed ``(1,1,0)/sqrt(2)``; per check ONE bond-2
+    The builder reuses the parent's ket layer: H-spread seed
+    ``(1,1,0)/sqrt(2)``; per check one bond-2
     W-tensor chain ``(I + c.g)/2`` along ``plaquette_path`` in ``sched.stabilizers``
     order, then the logical-sector projector — the oracle's order; nonzero-norm
     ASSERTED for BOTH m sectors), with two single-wire changes:
 
       * the seed ``H|0>`` comes from the LOCAL gate formula (:func:`qutrit_gate`),
-        never the referee's ``qudit_hadamard`` (D4 — the one parent referee import
+        never the reference's ``qudit_hadamard`` (the one parent reference import
         is replaced here);
       * NO ket⊗bra fuse (parent step 4): the physical leg stays dim 3, and the
-        unit-NORM constant is ``tr_m**(-1/(2n))`` per site (SF1).
+        unit-NORM constant is ``tr_m**(-1/(2n))`` per site.
 
-    Structural guarantees carried on the result (§2 op table): the ``k=2`` slice
+    Structural guarantees carried on the result: the ``k=2`` slice
     of every site tensor is exactly 0.0 ((a) zero-tolerance on tensors); per-edge
     raw bond dim == 2^(chain multiplicity through that edge) ((a) construction
-    identity, SF1 — chain legs fuse MULTIPLICATIVELY, no compression).
+    identity; chain legs fuse multiplicatively without compression).
     """
     import quimb.tensor as qtn  # lazy: keep the module importable without quimb
 
@@ -240,7 +225,7 @@ def build_codestate_peps(sched, m: int, device: str = "cuda") -> PepsState:
         raise ValueError(f"logical index m must be 0 or 1 (got {m})")
     n = layout.n_data
 
-    # 1. H-spread seed: per-site H|0> = (1, 1, 0)/sqrt(2) — LOCAL formula (D4).
+    # 1. H-spread seed: per-site H|0> = (1, 1, 0)/sqrt(2), from the local formula.
     seed = qutrit_gate("H", dev)[:, 0].clone().contiguous()
     ket: dict[int, tuple] = {pos: (seed.clone(), [f"p{pos}"]) for pos in range(n)}
 
@@ -255,7 +240,7 @@ def build_codestate_peps(sched, m: int, device: str = "cuda") -> PepsState:
             f"stabilizer projection collapsed the H-spread seed to zero norm ({tr_stab})")
 
     # 3. Logical-sector projector (I + (-1)^m Z_L)/2 — the parent's oracle wiring
-    # VERBATIM (logical_z only for a Z-kind logical, else the {0:'Z'} fallback).
+    # (logical_z only for a Z-kind logical, else the {0:'Z'} fallback).
     lkind = str(getattr(sched, "logical_kind", "Z")).upper()
     logical = dict(sched.logical) if (lkind == "Z" and sched.logical) else {0: "Z"}
     _apply_chain_operator(ket, layout, logical, float((-1.0) ** mm), tag, dev)
@@ -269,7 +254,7 @@ def build_codestate_peps(sched, m: int, device: str = "cuda") -> PepsState:
             f"stab-projected mass {tr_stab:.3e}")
 
     # structural |2>-mass zero on every site tensor (exact by construction; the
-    # (a) zero-tolerance guarantee of the §2 op table — cheap guard here).
+    # zero-tolerance construction guarantee; keep a cheap guard here.
     for pos in range(n):
         data, _inds = ket[pos]
         if float(data[2].abs().max()) > NUMERICAL_ZERO:
@@ -277,7 +262,7 @@ def build_codestate_peps(sched, m: int, device: str = "cuda") -> PepsState:
 
     # SINGLE-WIRE finalize (no step 4): rename p{pos} -> k{pos} and the ket bonds
     # e{p}_{q} -> B{p}_{q}; materialize untouched grid edges at dim 1; scale each
-    # site by the unit-NORM constant tr_m**(-1/(2n)) (SF1).
+    # site by the unit-NORM constant tr_m**(-1/(2n)).
     norm_scale = tr_m ** (-1.0 / (2.0 * n))
     tensors = []
     for pos in range(n):
@@ -300,17 +285,17 @@ def build_codestate_peps(sched, m: int, device: str = "cuda") -> PepsState:
 
 
 def dense_psi(state: PepsState) -> torch.Tensor:
-    """Dense ``(3^n,)`` reconstruction of the PEPS — the d3 referee bridge
-    (contract §3: the ``layout.dense_rho`` convention — engine position 0 is the
+    """Dense ``(3^n,)`` reconstruction of the PEPS for bounded d3 comparison.
+    Engine position 0 is the
     MOST-significant qutrit factor; ``n_data <= 9`` assert kept; a d5 patch has NO
-    dense bridge). The SW0 dense compare (``|psi><psi|`` vs the referee's rho) is
-    the gate script's, chunked — this returns the vector only.
+    dense bridge). The comparison against ``|psi><psi|`` is owned by tests;
+    this function returns the vector only.
     """
     import quimb.tensor as qtn  # lazy: keep the module importable without quimb
 
     layout = state.layout
     n = layout.n_data
-    assert n <= 9, f"dense_psi is the d3 referee bridge only (n_data = {n} > 9)"
+    assert n <= 9, f"dense_psi is the bounded d3 reference bridge only (n_data = {n} > 9)"
 
     sites = _site_tensors_by_pos(state.tn, n)
     tensors = [qtn.Tensor(data=sites[pos].data, inds=sites[pos].inds)
@@ -327,7 +312,6 @@ __all__ = [
     "QUTRIT",
     "PepoLayout",
     "PepsState",
-    "apply_gate_1site",
     "apply_site_op",
     "build_codestate_peps",
     "dense_psi",

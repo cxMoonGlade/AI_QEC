@@ -1,57 +1,23 @@
 from __future__ import annotations
 
-"""Axis-1 W-B dense-oracle acceptance certification for the MCWF/MPS carrier.
+"""Dense-reference certification for the restricted MCWF/MPS carrier.
 
-Replaces the previously-INERT ``_restricted_acceptance_policy`` (``accepted = residual_ok
-AND seed_explicit``, which reduced to "a seed was supplied" because
-``total_probability_residual`` is 0 BY CONSTRUCTION) with a gate that certifies the
-carrier's ACTUAL output against the INDEPENDENT joint-L oracle
-``carrier.joint_lindbladian.assemble_substep_channel`` (sum-all -> one ``expm(L dt)``,
-built from the per-term physics ``_hamiltonian_matrix_for_term`` -- NEVER the carrier's own
-``_hamiltonian_group_gates``, so a wrong/no-op grouping is CAUGHT, not mirrored). Three
-certification paths + a gross/strict multi-tier gate:
+The reference route assembles each substep from its Hamiltonian and collapse
+terms with :func:`carrier.joint_lindbladian.assemble_substep_channel`; it does
+not reuse the carrier's Hamiltonian grouping. Depending on the available
+output, the comparison uses process infidelity, Choi trace distance, record
+total variation, or level-population total variation.
 
-  ADD 1 -- a readout-INDEPENDENT LEVEL-record cert. Oracle = the level POPULATIONS of the
-    dense joint-L channel: evolve ``rho0`` (the initial level product state) through the
-    program with the DESIGNATED INDEPENDENT ORACLE ``assemble_substep_channel(H, c, dt)``
-    (sum-all -> one ``expm(L dt)`` -- NEVER the carrier's grouping) for each dynamics
-    substep, apply resets as projective-reset channels, and read the level-basis DIAGONAL
-    (populations) at each measurement substep's targets, accumulating the joint distribution
-    over the recorded level-tuples exactly as the carrier records them. Carrier level
-    distribution = ``level_record_counts / sum``. Metric TV = 1/2 ||p-q||_1 + the same
-    Hoeffding finite-shot CI. Compares LEVEL POPULATIONS, so no leakage-readout model is
-    needed; a no-op leaves ``rho0`` => populations sit at the initial level => caught.
-    Routed when ``execution.get("level_records")`` is present (BEFORE the qubit-record path).
+The restricted and exact-evidence verdicts use separate project gates because
+a one-microstep quantum-jump execution has a declared finite-step error. A
+dense-checkable run that exceeds the restricted gate is rejected. A run may be
+marked unverified only when its Hilbert-space dimension exceeds the declared
+dense-reference cap or it explicitly requires a scalable backend. Sampling
+allowances and every threshold are reported with the result; they are software
+decision rules rather than physical error bounds.
 
-  ADD 2 -- a GROSS/STRICT gate split. At the carrier's default ``microstep_count=1`` the
-    first-order MCWF has a REAL finite-step error (channel ``1-F_e ~ 1e-2``) -- that is
-    CORRECT, not a bug, and must NOT be rejected as broken, while a no-op is ``O(1)``. So
-    ``accepted_for_restricted_execution`` gates on a GROSS disagreement only
-    (channel ``1-F_e <= tau_gross = 1e-1``; record/level ``TV <= tau_gross + sampling CI``),
-    so a correct ``m=1`` run PASSES and a no-op/wrong-branch FAILS;
-    ``accepted_for_exact_dense_probability_evidence`` keeps the STRICT gate
-    (``1-F_e <= 1e-6`` / exact-branch ``TV ~ 0``). Both the strict value AND the gross
-    pass/fail are reported.
-
-  ADD 3 -- an HONEST "uncertified" fallback for TRUE OVERCAP ONLY. A run the cert CAN check
-    MUST be certified (so no-ops are caught). Only a genuinely-uncheckable run (window
-    Hilbert dim > cap, or ``requires_scalable_backend``) falls back to
-    ``accepted_for_restricted_execution=True`` with ``dense_certification_status:
-    skipped_overcap_*`` and ``accepted_for_exact_dense_probability_evidence=False``. A cert
-    that EXECUTED and FAILED its GROSS gate => REJECT (never fall back). Never inert-accept a
-    checkable run.
-
-Field-standard metrics ONLY (``1-F_e`` process infidelity, Choi trace distance, TV
-distance), conventions carried with the numbers. The independent oracle is NEVER the
-carrier's own grouping.
-
-GPU note: ``joint_lindbladian`` is HARD CUDA-only (``_require_cuda`` rejects CPU), so the
-real GPU cert (Claude runs) uses it directly via ``dense_jointL_record_certification(...,
-device="cuda")``. The committed CPU red-test (``red_test.py``) exercises the SAME gate
-DECISION LOGIC against an INDEPENDENT numpy/scipy reimplementation of the identical
-column-stacking Liouvillian + level-population oracle (NOT the carrier's grouping), to prove
-the gate is now LIVE -- and that correct LEVEL runs PASS while no-ops/wrong-branches FAIL --
-without a GPU run.
+The dense joint-Lindbladian reference is CUDA-only, so claim-bearing
+certification executes on CUDA.
 """
 
 from typing import Any
@@ -68,8 +34,9 @@ from typing import Any
 # channel is the object under test.
 _PROCESS_INFIDELITY_GATE = 1.0e-6
 # CHANNEL GROSS gate tau_gross (restricted-acceptance gate, process infidelity 1-F_e).
-# Epistemic class (c) -- justified: post-W-A the realized first-order CHANNEL finite-step
-# error at microstep_count=1 is at most a few * 1e-2 (1-F_e; S2/S3 cert baseline), which is
+# Epistemic class (c): the realized first-order channel finite-step
+# error at ``microstep_count=1`` is at most a few times ``1e-2`` in the current
+# non-commuting certification fixture, which is
 # << a no-op's O(1) channel disagreement (1-F_e ~ 0.42 for an identity-vs-real-dynamics
 # channel). tau_gross sits one order ABOVE the worst correct channel finite-step error and
 # well BELOW the no-op floor, so a correct m=1 channel run PASSES while a no-op /
@@ -104,9 +71,8 @@ _RECORD_TV_GATE = 1.0e-6
 # added to the TV gate so a CORRECT sampled carrier is not rejected for shot noise alone,
 # while a wrong-branch carrier (TV >> shot noise) is still rejected.
 _RECORD_SAMPLING_CONFIDENCE = 0.999
-# Normalization invariant gate (the RENAMED total_probability_residual role): a sanity
-# invariant sum(record-frequencies) == 1, NOT a distinguishability metric. Matches the
-# carrier's _TOTAL_PROBABILITY_RESIDUAL_GATE == 1e-12.
+# Normalization invariant gate: a software sanity rule for
+# sum(record-frequencies) == 1, not a distinguishability metric.
 _NORMALIZATION_INVARIANT_GATE = 1.0e-12
 # Window Hilbert dimension above which the dense check is forbidden (true over-cap). A few
 # hundred (the brief's "<= a few hundred"); 3^5 = 243 fits, 3^6 = 729 does not. The leakage
@@ -134,8 +100,6 @@ def dense_jointL_record_certification(
     gross_gate: float = _GROSS_GATE,
     record_sampling_confidence: float = _RECORD_SAMPLING_CONFIDENCE,
     dense_channel_max_dim: int = _DENSE_CHANNEL_MAX_DIM,
-    _oracle_record_probabilities=None,
-    _oracle_level_distribution=None,
 ) -> dict[str, Any]:
     """Certify the MCWF carrier's within-substep output vs the INDEPENDENT joint-L oracle.
 
@@ -146,7 +110,7 @@ def dense_jointL_record_certification(
 
       1. over-cap (``requires_scalable_backend``)        -> executed: False (honest).
       2. LEVEL records present (leakage qudit outcomes)  -> ``_certify_level_path``
-         (readout-INDEPENDENT level-population oracle). ADD 1.
+         (readout-independent level-population reference).
       3. qubit measurement records present               -> ``_certify_record_path``.
       4. no records (Hamiltonian + collapse substep)     -> ``_certify_channel_path``.
 
@@ -158,8 +122,7 @@ def dense_jointL_record_certification(
                   ``measurement_keys``, ``trajectory_sampling``, ``local_dims``,
                   ``initial_levels`` ...).
       program   : the carrier program manifest (``requires_scalable_backend`` over-cap flag).
-      device    : cuda (the joint-L oracle stack is GPU-only); the CPU red-test injects
-                  numpy oracles via the explicit ``_oracle_*`` branches.
+      device    : CUDA device for the joint-L reference stack.
 
     Returns the certification dict consumed by ``restricted_acceptance_policy``.
     """
@@ -182,7 +145,7 @@ def dense_jointL_record_certification(
     has_level_records = bool(execution.get("level_records"))
     has_records = bool(execution.get("measurement_keys"))
 
-    # --- (2) LEVEL-record path (leakage qudit outcomes) -- ADD 1. ------------------ #
+    # --- (2) level-record path (leakage qudit outcomes). -------------------------- #
     # Routed BEFORE the qubit-record path: leakage schedules carry BOTH measurement_keys
     # and level_records, but the readout-INDEPENDENT level-population comparison is the
     # faithful (and the only oracle-backed) check for a qudit run.
@@ -206,7 +169,6 @@ def dense_jointL_record_certification(
             dense_channel_max_dim=int(dense_channel_max_dim),
             sampled=sampled,
             trajectory_count=trajectory_count,
-            _oracle_level_distribution=_oracle_level_distribution,
         )
 
     # --- (3) qubit measurement-record path. ---------------------------------------- #
@@ -231,7 +193,6 @@ def dense_jointL_record_certification(
             record_sampling_confidence=float(record_sampling_confidence),
             sampled=sampled,
             trajectory_count=trajectory_count,
-            _oracle_record_probabilities=_oracle_record_probabilities,
         )
 
     # --- (4) no measurement records => channel-checkable substep. ------------------ #
@@ -246,7 +207,7 @@ def dense_jointL_record_certification(
 
 
 # --------------------------------------------------------------------------- #
-# ADD 1: the LEVEL-record certification path.                                   #
+# LEVEL-record certification path.                                             #
 # --------------------------------------------------------------------------- #
 def _certify_level_path(
     schedule: Any,
@@ -259,7 +220,6 @@ def _certify_level_path(
     dense_channel_max_dim: int,
     sampled: bool,
     trajectory_count: int,
-    _oracle_level_distribution=None,
 ) -> dict[str, Any]:
     """Readout-INDEPENDENT LEVEL-record cert: carrier level-record frequencies vs the
     INDEPENDENT dense joint-L LEVEL-POPULATION oracle, scored by TV = 1/2 ||p-q||_1
@@ -275,10 +235,8 @@ def _certify_level_path(
     EXACTLY as the carrier records them. Comparing LEVEL POPULATIONS needs no readout model;
     a no-op leaves ``rho0`` => populations stay at the initial level => caught.
 
-    ``_oracle_level_distribution`` is an injection seam used ONLY by the CPU red-test to
-    supply a numpy level-population oracle (a ``{tuple(levels): prob}`` dict) independent of
-    the carrier; in production it is ``None`` and the real GPU oracle is built via
-    ``_dense_jointL_level_distribution`` (joint-L ``expm`` per substep).
+    The level-population reference is always built through
+    ``_dense_jointL_level_distribution``.
     """
     carrier_level_records = [tuple(int(x) for x in r) for r in execution.get("level_records", ())]
     carrier_counts = [int(c) for c in execution.get("level_record_counts", ())]
@@ -297,44 +255,37 @@ def _certify_level_path(
         for rec, cnt in zip(carrier_level_records, carrier_counts)
     }
 
-    if _oracle_level_distribution is None:
-        try:
-            oracle_dist = _dense_jointL_level_distribution(
-                schedule,
-                execution,
-                device=device,
-                dense_channel_max_dim=int(dense_channel_max_dim),
-            )
-        except _ChannelNotDenseCheckable as exc:
-            return {
-                "executed": False,
-                "passed": False,
-                "passed_gross": False,
-                "reason": str(exc),
-                "comparison_outcome_is_metric": False,
-                "epistemic_class": "c",
-            }
-        except Exception as exc:  # pragma: no cover - defensive.
-            return {
-                "executed": False,
-                "passed": False,
-                "passed_gross": False,
-                "reason": "dense_jointL_level_oracle_unavailable",
-                "error_type": type(exc).__name__,
-                "error": str(exc),
-                "comparison_outcome_is_metric": False,
-                "epistemic_class": "c",
-            }
-        oracle_schema = (
-            "error_coupling_simulator.carrier.joint_lindbladian."
-            "assemble_substep_channel:level_populations"
+    try:
+        oracle_dist = _dense_jointL_level_distribution(
+            schedule,
+            execution,
+            device=device,
+            dense_channel_max_dim=int(dense_channel_max_dim),
         )
-    else:
-        oracle_dist = {
-            tuple(int(x) for x in k): float(v)
-            for k, v in dict(_oracle_level_distribution).items()
+    except _ChannelNotDenseCheckable as exc:
+        return {
+            "executed": False,
+            "passed": False,
+            "passed_gross": False,
+            "reason": str(exc),
+            "comparison_outcome_is_metric": False,
+            "epistemic_class": "c",
         }
-        oracle_schema = "cpu_red_test_independent_numpy_level_population_oracle"
+    except Exception as exc:  # pragma: no cover - defensive.
+        return {
+            "executed": False,
+            "passed": False,
+            "passed_gross": False,
+            "reason": "dense_jointL_level_oracle_unavailable",
+            "error_type": type(exc).__name__,
+            "error": str(exc),
+            "comparison_outcome_is_metric": False,
+            "epistemic_class": "c",
+        }
+    oracle_schema = (
+        "error_coupling_simulator.carrier.joint_lindbladian."
+        "assemble_substep_channel:level_populations"
+    )
 
     tv = _total_variation_distance_dict(carrier_dist, oracle_dist)
 
@@ -404,15 +355,13 @@ def _certify_record_path(
     record_sampling_confidence: float,
     sampled: bool,
     trajectory_count: int,
-    _oracle_record_probabilities=None,
 ) -> dict[str, Any]:
     """Qubit measurement-record cert: carrier record_probabilities vs the INDEPENDENT
     dense Born record oracle, scored by TV = 1/2 ||p-q||_1 (+ Hoeffding finite-shot CI).
 
-    ``_oracle_record_probabilities`` is an injection seam used ONLY by the CPU red-test to
-    supply a numpy/scipy Born oracle independent of the carrier; in production it is ``None``
-    and the real GPU oracle ``axis1_measurement_record_evidence_manifest`` is called (the
-    SAME oracle qt_mps uses, NEVER the carrier's own grouping).
+    The reference is always built by
+    ``axis1_measurement_record_evidence_manifest`` and does not reuse the
+    carrier's Hamiltonian grouping.
     """
     carrier_records = [list(r) for r in execution.get("measurement_records", ())]
     carrier_probs = [float(x) for x in execution.get("record_probabilities", ())]
@@ -430,7 +379,7 @@ def _certify_record_path(
     # what actually caps q17 (before rho0 is allocated). This record-path guard is the
     # backstop for the (currently unreachable) no-level-records case, not the q17 hot path.
     num_sites = len(execution.get("local_dims", ()))
-    if _oracle_record_probabilities is None and num_sites > _RECORD_EVIDENCE_QUBIT_CAP:
+    if num_sites > _RECORD_EVIDENCE_QUBIT_CAP:
         return {
             "executed": False,
             "passed": False,
@@ -442,34 +391,28 @@ def _certify_record_path(
             "epistemic_class": "c",
         }
 
-    if _oracle_record_probabilities is None:
-        try:
-            from .axis1_record_evidence import (
-                axis1_measurement_record_evidence_manifest,
-            )
+    try:
+        from .axis1_record_evidence import (
+            axis1_measurement_record_evidence_manifest,
+        )
 
-            dense = axis1_measurement_record_evidence_manifest(schedule, device=device)
-        except Exception as exc:  # pragma: no cover - defensive (mirrors qt_mps).
-            return {
-                "executed": False,
-                "passed": False,
-                "passed_gross": False,
-                "reason": "dense_jointL_record_evidence_unavailable",
-                "error_type": type(exc).__name__,
-                "error": str(exc),
-                "comparison_outcome_is_metric": False,
-                "epistemic_class": "c",
-            }
-        dense_record = dense["record_evidence"]
-        oracle_records = [list(r) for r in dense_record["measurement_records"]]
-        oracle_probs = [float(x) for x in dense_record["record_probabilities"]]
-        dense_schema = dense.get("schema")
-        dense_hash = dense.get("content_hash")
-    else:
-        oracle_records = carrier_records
-        oracle_probs = [float(x) for x in _oracle_record_probabilities]
-        dense_schema = "cpu_red_test_independent_numpy_born_oracle"
-        dense_hash = None
+        dense = axis1_measurement_record_evidence_manifest(schedule, device=device)
+    except Exception as exc:  # pragma: no cover - defensive (mirrors qt_mps).
+        return {
+            "executed": False,
+            "passed": False,
+            "passed_gross": False,
+            "reason": "dense_jointL_record_evidence_unavailable",
+            "error_type": type(exc).__name__,
+            "error": str(exc),
+            "comparison_outcome_is_metric": False,
+            "epistemic_class": "c",
+        }
+    dense_record = dense["record_evidence"]
+    oracle_records = [list(r) for r in dense_record["measurement_records"]]
+    oracle_probs = [float(x) for x in dense_record["record_probabilities"]]
+    dense_schema = dense.get("schema")
+    dense_hash = dense.get("content_hash")
 
     if oracle_records != carrier_records:
         return {
@@ -544,9 +487,6 @@ def _certify_channel_path(
     process_infidelity_gate: float,
     gross_gate: float,
     dense_channel_max_dim: int = _DENSE_CHANNEL_MAX_DIM,
-    _carrier_superop=None,
-    _oracle_kraus=None,
-    _oracle_superop=None,
 ) -> dict[str, Any]:
     """Channel-checkable substep cert: carrier realized within-substep window superop vs
     the INDEPENDENT joint-L oracle ``assemble_substep_channel``, scored by process
@@ -558,54 +498,38 @@ def _certify_channel_path(
     a real finite-step error passes restricted acceptance while a no-op/wrong-generator
     fails.
 
-    ``_carrier_superop`` / (``_oracle_kraus`` OR ``_oracle_superop``) are injection seams
-    used ONLY by the CPU red-test; in production they are ``None`` and the real GPU path
-    builds them via ``_build_carrier_channel_window`` + ``assemble_substep_channel``.
+    Both channels are built from the current schedule and execution manifest.
     """
-    if _carrier_superop is None or (_oracle_kraus is None and _oracle_superop is None):
-        try:
-            window = _build_carrier_channel_window(
-                schedule, execution, device=device, dense_channel_max_dim=int(dense_channel_max_dim)
-            )
-        except _ChannelNotDenseCheckable as exc:
-            return {
-                "executed": False,
-                "passed": False,
-                "passed_gross": False,
-                "reason": str(exc),
-                "comparison_outcome_is_metric": False,
-                "epistemic_class": "c",
-            }
-        except Exception as exc:  # pragma: no cover - defensive.
-            return {
-                "executed": False,
-                "passed": False,
-                "passed_gross": False,
-                "reason": "dense_jointL_channel_oracle_unavailable",
-                "error_type": type(exc).__name__,
-                "error": str(exc),
-                "comparison_outcome_is_metric": False,
-                "epistemic_class": "c",
-            }
-        carrier_superop = window["carrier_superop"]
-        oracle_kraus = window["oracle_kraus"]
-        oracle_superop = None
-        oracle_dim = int(window["dim"])
-    else:
-        import numpy as np
-
-        carrier_superop = np.asarray(_carrier_superop, dtype=np.complex128)
-        if _oracle_superop is not None:
-            oracle_superop = np.asarray(_oracle_superop, dtype=np.complex128)
-            oracle_kraus = None
-            oracle_dim = int(round(oracle_superop.shape[-1] ** 0.5))
-        else:
-            oracle_kraus = [np.asarray(k, dtype=np.complex128) for k in _oracle_kraus]
-            oracle_superop = None
-            oracle_dim = int(oracle_kraus[0].shape[-1])
+    try:
+        window = _build_carrier_channel_window(
+            schedule, execution, device=device, dense_channel_max_dim=int(dense_channel_max_dim)
+        )
+    except _ChannelNotDenseCheckable as exc:
+        return {
+            "executed": False,
+            "passed": False,
+            "passed_gross": False,
+            "reason": str(exc),
+            "comparison_outcome_is_metric": False,
+            "epistemic_class": "c",
+        }
+    except Exception as exc:  # pragma: no cover - defensive.
+        return {
+            "executed": False,
+            "passed": False,
+            "passed_gross": False,
+            "reason": "dense_jointL_channel_oracle_unavailable",
+            "error_type": type(exc).__name__,
+            "error": str(exc),
+            "comparison_outcome_is_metric": False,
+            "epistemic_class": "c",
+        }
+    carrier_superop = window["carrier_superop"]
+    oracle_kraus = window["oracle_kraus"]
+    oracle_dim = int(window["dim"])
 
     one_minus_fe, choi_tv = _process_infidelity_and_choi_distance(
-        carrier_superop, oracle_kraus, dim=oracle_dim, oracle_superop=oracle_superop
+        carrier_superop, oracle_kraus, dim=oracle_dim
     )
     passed_strict = bool(one_minus_fe <= float(process_infidelity_gate))
     passed_gross = bool(one_minus_fe <= float(gross_gate))
@@ -634,7 +558,7 @@ def _certify_channel_path(
 
 
 # --------------------------------------------------------------------------- #
-# Piece 2: the PATCHED restricted-acceptance gate (gross/strict split).         #
+# Restricted-acceptance policy (gross/strict split).                            #
 # --------------------------------------------------------------------------- #
 def restricted_acceptance_policy(
     *,
@@ -644,11 +568,9 @@ def restricted_acceptance_policy(
     rng_seed: int | None,
     trajectory_count: int,
 ) -> dict[str, Any]:
-    """The PATCHED ``_restricted_acceptance_policy``.
+    """Apply the gross/strict dense-reference acceptance policy.
 
-    Replaces the INERT
-        accepted = residual_ok AND seed_explicit          # <=> seed supplied (INERT)
-    with the gross/strict dense-cert form
+    The policy is
         accepted_for_restricted_execution =
             normalization_invariant_ok
             AND ( (dense_executed AND dense_passed_gross)   # GROSS gate
@@ -678,9 +600,7 @@ def restricted_acceptance_policy(
 
     dense_executed = bool(certification.get("executed", False))
     dense_passed_strict = bool(certification.get("passed", False))
-    # Default passed_gross to the strict decision when a cert omits it (channel/record/level
-    # certs in this module always set it; the fallback keeps older cert dicts safe).
-    dense_passed_gross = bool(certification.get("passed_gross", dense_passed_strict))
+    dense_passed_gross = bool(certification["passed_gross"])
     cert_metric_real = bool(certification.get("comparison_outcome_is_metric", False))
     dense_status = _dense_certification_status(certification)
 
@@ -691,7 +611,7 @@ def restricted_acceptance_policy(
     # The STRICT exact-dense evidence path: the same comparison passed the STRICT gate.
     dense_evidence_strict = bool(dense_executed and dense_passed_strict)
 
-    # ADD 3 -- honest TRUE-OVERCAP fallback: ONLY a genuinely-uncheckable run (the window is
+    # Only a genuinely uncheckable run (the window is
     # too large to densely check, or the schedule requires the scalable backend) stays a
     # RESTRICTED over-cap execution -- NEVER a falsely-"passed" certification, and NEVER an
     # inert-accept of a checkable run. A cert that EXECUTED and FAILED its gross gate does
@@ -827,7 +747,7 @@ def _dense_certification_status(certification: dict[str, Any]) -> str:
         # Executed: report the STRICT verdict for the ledger. The gate's restricted-
         # acceptance path keys off ``executed AND passed_gross`` directly (not this string);
         # the exact-dense-evidence path keys off ``executed AND passed`` (strict).
-        if bool(certification.get("passed_gross", certification.get("passed", False))):
+        if bool(certification["passed_gross"]):
             return "passed_gross" if not bool(certification.get("passed", False)) else "passed"
         return "failed"
     reason = str(certification.get("reason", "not_executed"))
@@ -877,19 +797,17 @@ def _total_variation_distance_dict(p: dict, q: dict) -> float:
     return float(0.5 * sum(abs(float(p.get(k, 0.0)) - float(q.get(k, 0.0))) for k in keys))
 
 
-def _process_infidelity_and_choi_distance(
-    carrier_superop, oracle_kraus, *, dim: int, oracle_superop=None
-):
+def _process_infidelity_and_choi_distance(carrier_superop, oracle_kraus, *, dim: int):
     """Process infidelity ``1 - F_e`` (Choi-state Uhlmann fidelity) + Choi trace distance
-    between the CARRIER window superop and the ORACLE channel (Kraus stack OR superop; both
-    column-stacking).
+    between the carrier window superoperator and the reference Kraus channel.
 
     numpy implementation that REPRODUCES the project's GPU convention EXACTLY
     (``joint_lindbladian._choi_state_from_kraus`` / ``_state_fidelity`` /
     ``composed_vs_joint_infidelity``, lines 494-573): column-stacking superop -> channel
     action; trace-normalised Choi states ``J/D``; Uhlmann fidelity via eigendecomposition;
     return ``max(0, 1 - F_pro)`` and ``1/2 ||J_c - J_o||_1`` (trace norm = sum|eigvals| of a
-    Hermitian difference). Works on CPU (no CUDA dependency) so the red-test can run it.
+    Hermitian difference). The calculation is performed in NumPy after channel
+    construction.
     """
     import numpy as np
 
@@ -928,11 +846,7 @@ def _process_infidelity_and_choi_distance(
         return J / tr
 
     J_carrier = _choi_state(lambda rho: _channel_action_superop(carrier_superop, rho))
-    if oracle_superop is not None:
-        oS = np.asarray(oracle_superop, dtype=np.complex128)
-        J_oracle = _choi_state(lambda rho: _channel_action_superop(oS, rho))
-    else:
-        J_oracle = _choi_state(lambda rho: _channel_action_kraus(oracle_kraus, rho))
+    J_oracle = _choi_state(lambda rho: _channel_action_kraus(oracle_kraus, rho))
 
     # Uhlmann fidelity of the two trace-normalised Choi states.
     F_pro = _uhlmann_fidelity(J_carrier, J_oracle)
@@ -992,8 +906,8 @@ def _build_carrier_channel_window(
     grouping. Raises ``_ChannelNotDenseCheckable`` when the schedule is not a single small
     Hamiltonian+collapse substep.
 
-    GPU-only (calls ``assemble_substep_channel`` + carrier torch helpers). The CPU red-test
-    does NOT call this -- it injects ``_carrier_superop`` / ``_oracle_kraus`` directly.
+    This path requires CUDA because it calls ``assemble_substep_channel`` and
+    the carrier's torch helpers.
     """
     import torch
 
@@ -1191,7 +1105,7 @@ def _carrier_first_order_window_superop(
 
 
 # --------------------------------------------------------------------------- #
-# ADD 1: the dense joint-L LEVEL-POPULATION oracle (GPU production path).        #
+# Dense joint-L level-population reference.                                    #
 # --------------------------------------------------------------------------- #
 def _dense_jointL_level_distribution(
     schedule: Any,
@@ -1222,8 +1136,7 @@ def _dense_jointL_level_distribution(
         prefix, weighting by the conditional population.
     Accumulate the final branches into the level-record distribution.
 
-    GPU-only (calls ``assemble_substep_channel``); the CPU red-test injects the oracle dict
-    directly via ``_oracle_level_distribution``.
+    This path requires CUDA because it calls ``assemble_substep_channel``.
     """
     import numpy as np
     import torch

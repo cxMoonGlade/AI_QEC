@@ -4,10 +4,10 @@ from __future__ import annotations
 
 Modules have disjoint ownership:
 
-- ``layout`` [A1]: diamond -> grid transform, frozen-cut site lists, plaquette paths,
+- ``layout``: diamond -> grid transform, frozen-cut site lists, plaquette paths,
   the codestate PEPO builder (:class:`PepoLayout`, :class:`PepoState`,
   :func:`build_codestate_pepo`, :func:`dense_rho`).
-- ``dynamics`` [A2]: single-site superops, the stabilizer-channel TT, NTU truncation,
+- ``dynamics``: single-site superops, the stabilizer-channel TT, NTU truncation,
   ledgers.
 - ``sampler``: boundary-MPS norm cache, ``Tr(rho Pi)`` site caps, terminal
   observable reads, and the negativity witness.
@@ -19,7 +19,7 @@ builder's names — never requires the sibling modules to exist (parallel-build 
 from importlib import import_module
 
 _EXPORTS = {
-    # layout [A1]
+    # layout
     "PepoLayout": "layout",
     "PepoState": "layout",
     "build_codestate_pepo": "layout",
@@ -27,7 +27,7 @@ _EXPORTS = {
     "fused_bond_name": "layout",
     "fused_phys_name": "layout",
     "site_tag": "layout",
-    # dynamics [A2]
+    # dynamics
     "apply_token_stream": "dynamics",
     "apply_postmeasure": "dynamics",
     "stab_channel_tt": "dynamics",
@@ -37,7 +37,7 @@ _EXPORTS = {
     "svd_precut_bond": "dynamics",
     "nonselective_round": "dynamics",
     "gap_rank": "dynamics",
-    # sampler [A3]
+    # sampler
     "pepo_trace": "sampler",
     "NormCache": "sampler",
     "norm_cache": "sampler",
@@ -48,7 +48,7 @@ _EXPORTS = {
     "s_to_det": "sampler",
     "det_to_s": "sampler",
     "negativity_witness": "sampler",
-    "C3Stats": "sampler",
+    "NegativityStats": "sampler",
 }
 
 __all__ = sorted(_EXPORTS)

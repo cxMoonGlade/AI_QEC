@@ -13,17 +13,14 @@ Overview and method
 ----------------
 Exact density-matrix simulation at small ``n`` (<= ~10 qubits), prioritizing
 fidelity over scale. Local operators are embedded into the full register by
-Kronecker product with identity plus an axis permutation -- simple and exact at
-this scale. The optimization for device scale (72-105 qubits) is the *next* step —
-the scalable carrier (``carrier/peps`` / MPS; docs/SIMULATOR.md) — and is
-deliberately not done here.
+Kronecker product with identity plus an axis permutation. This owner is a bounded
+reference route; the PEPS and MPS owners have separate support boundaries.
 
 Qubit ordering: qubit 0 is the most-significant tensor factor, so a basis index
 ``i`` encodes bit ``(i >> (n - 1 - q)) & 1`` for qubit ``q`` (matches
 ``diff_cptp_channel.measurement_probabilities_z``). Everything is ``complex128``
 and differentiable (gates and channels may depend on leaf parameters), so
-``d P(detector) / d theta`` -- the gradient that powers the L4 priority-list and
-bottleneck knobs -- is available by autograd.
+``d P(detector) / d theta`` is available by autograd.
 """
 
 import torch

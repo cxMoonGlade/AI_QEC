@@ -94,7 +94,7 @@ def _record_distribution(manifest) -> dict[tuple[int, ...], float]:
 
 
 # --------------------------------------------------------------------------- #
-# C1 — identity of the None path                                               #
+# Identity of the None path                                                    #
 # --------------------------------------------------------------------------- #
 def test_none_path_is_byte_identical(fixture_schedule, baseline_manifest):
     explicit = axis1_measurement_record_evidence_manifest(
@@ -108,7 +108,7 @@ def test_none_path_is_byte_identical(fixture_schedule, baseline_manifest):
 
 
 # --------------------------------------------------------------------------- #
-# C2 + C6 — constant callable == None path modulo the declared marker          #
+# Constant callable equals the None path modulo the declared marker            #
 # --------------------------------------------------------------------------- #
 def test_constant_callable_is_regression_identical_modulo_marker(
     fixture_schedule, baseline_manifest
@@ -143,14 +143,14 @@ def test_constant_callable_is_regression_identical_modulo_marker(
     right.pop("content_hash")
     assert left == right
 
-    # C6: exactly once per substep carrying selected channels, never per selection.
+    # Resolve exactly once per substep carrying selected channels, never per selection.
     assert len(calls) == FIXTURE_SELECTED_SUBSTEPS
     assert len({sid for sid, _ in calls}) == FIXTURE_SELECTED_SUBSTEPS
     assert {tick for _, tick in calls} == {0, 1}
 
 
 # --------------------------------------------------------------------------- #
-# red-team R1 positive control + physical direction (+ C4)                     #
+# Per-round positive control and physical direction                            #
 # --------------------------------------------------------------------------- #
 def test_per_round_gamma_phi_variation_changes_records_in_predicted_direction(
     fixture_schedule, baseline_manifest
@@ -158,7 +158,7 @@ def test_per_round_gamma_phi_variation_changes_records_in_predicted_direction(
     base = _axis1_primitive_params_for_schedule(fixture_schedule)
     high = dataclasses.replace(base, gamma_phi_per_ns=100.0 * base.gamma_phi_per_ns)
     by_round = {0: base, 1: high}
-    # R1 positive control: params MUST differ across rounds for this trajectory.
+    # Positive-control precondition: parameters differ across rounds.
     assert by_round[0] != by_round[1]
 
     seen: list[tuple[str, int]] = []
@@ -190,7 +190,7 @@ def test_per_round_gamma_phi_variation_changes_records_in_predicted_direction(
     # after round 0 projects q0 into an X eigenstate, pure dephasing (T2, n-collapse,
     # Z-basis) during round 1 decoheres that eigenstate MONOTONICALLY, so the
     # round-0-vs-round-1 disagreement detector delta:x0:round1 can only gain
-    # marginal weight when round-1 gamma_phi rises (class-a direction).
+    # marginal weight when round-1 gamma_phi rises.
     names = varied["record_evidence"]["detector_names"]
     assert names == baseline_manifest["record_evidence"]["detector_names"]
     idx = names.index("delta:x0:round1")
@@ -198,14 +198,14 @@ def test_per_round_gamma_phi_variation_changes_records_in_predicted_direction(
     m_high = float(varied["record_evidence"]["detector_marginals"][idx])
     assert m_high > m_base + 1.0e-3
 
-    # C4: enumeration completeness unchanged under callable resolution.
+    # Enumeration completeness is unchanged under callable resolution.
     ev = varied["record_evidence"]
     assert ev["total_probability_residual"] <= 1.0e-8
     assert ev["record_count"] == baseline_manifest["record_evidence"]["record_count"]
 
 
 # --------------------------------------------------------------------------- #
-# C7 — tick-derived round mapping incl. the terminal data readout              #
+# Tick-derived round mapping, including the terminal data readout              #
 # --------------------------------------------------------------------------- #
 def test_tick_derived_round_mapping_includes_terminal_readout(fixture_schedule):
     schedule = fixture_schedule
@@ -239,7 +239,7 @@ def test_tick_derived_round_mapping_includes_terminal_readout(fixture_schedule):
     # Under the default duration policy only gate substeps carry nominal dt, so the
     # terminal readout block carries NO selected channel: the callable sees exactly
     # ticks {0, .., ROUNDS-1} and is never asked for a "round == ROUNDS" (declared
-    # in ledger S3; a future explicit-duration readout window would change this and
+    # an explicit-duration readout window would change this and
     # the callable owner must handle tick_index == rounds explicitly).
     global_params = _axis1_primitive_params_for_schedule(schedule)
     seen_ticks: list[int] = []
@@ -253,7 +253,7 @@ def test_tick_derived_round_mapping_includes_terminal_readout(fixture_schedule):
 
 
 # --------------------------------------------------------------------------- #
-# C8 — fail-loud type contracts                                                #
+# Fail-loud type validation                                                     #
 # --------------------------------------------------------------------------- #
 def test_fail_loud_type_contracts(fixture_schedule):
     with pytest.raises(TypeError, match="callable"):
@@ -279,7 +279,7 @@ def test_fail_loud_type_contracts(fixture_schedule):
 
 
 # --------------------------------------------------------------------------- #
-# sampler seam — the kwarg must actually reach the internal manifest call      #
+# Sample writer — the kwarg must reach the internal manifest call              #
 # --------------------------------------------------------------------------- #
 def test_sample_writer_threads_callable_through_manifest(fixture_schedule, tmp_path):
     global_params = _axis1_primitive_params_for_schedule(fixture_schedule)
@@ -301,7 +301,7 @@ def test_sample_writer_threads_callable_through_manifest(fixture_schedule, tmp_p
 
 
 # --------------------------------------------------------------------------- #
-# C3/C4/C5 — INDEPENDENT from-scratch ground truth (Rule I)                    #
+# Independent from-scratch reference distribution                              #
 # --------------------------------------------------------------------------- #
 # Smallest sealed multi-round coherence-bearing fixture: 3 qubits, one X check
 # (data q0, ancilla q1) + one untouched logical data qubit (q2), rounds=2, ONE
@@ -327,8 +327,8 @@ _HD = (1.0 / np.sqrt(2.0)) * np.array([[1.0, 1.0], [1.0, -1.0]], dtype=complex)
 _P0 = np.array([[1.0, 0.0], [0.0, 0.0]], dtype=complex)
 _P1 = np.array([[0.0, 0.0], [0.0, 1.0]], dtype=complex)
 
-_DT_1Q = 25.0  # h3_h5 policy nominal one_qubit_gate dt (analog_schedule.py:470)
-_DT_2Q = 30.0  # h3_h5 policy nominal two_qubit_gate dt (analog_schedule.py:471)
+_DT_1Q = 25.0  # default policy nominal one_qubit_gate duration
+_DT_2Q = 30.0  # default policy nominal two_qubit_gate duration
 
 
 def _kron3(a, b, c):
@@ -463,7 +463,7 @@ def test_from_scratch_ground_truth_certifies_injected_per_round_channels():
         assert tick in by_round, f"callable saw unexpected tick_index {tick}"
         return by_round[tick]
 
-    # C5: the assembler's loud non-CPTP warning must not fire under injection.
+    # The assembler's non-CPTP warning must not fire under injection.
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
         manifest = axis1_measurement_record_evidence_manifest(
@@ -484,9 +484,9 @@ def test_from_scratch_ground_truth_certifies_injected_per_round_channels():
         "final:q2:Z",
     ]
     assert ev["applied_channel_count"] == 6  # 3 gate substeps x 2 rounds
-    assert ev["total_probability_residual"] <= 1.0e-8  # C4
+    assert ev["total_probability_residual"] <= 1.0e-8
 
-    # C3 evidence surface: each applied row's lowered coefficients carry THAT
+    # Each applied row's lowered coefficients carry that
     # round's zeta (H side) and sqrt(2*gamma_phi) (c side) exactly.
     tick_by_substep = {s.substep_id: int(s.tick_index) for s in schedule.substeps}
     row_kinds = set()
@@ -506,8 +506,8 @@ def test_from_scratch_ground_truth_certifies_injected_per_round_channels():
         "two_qubit_control_zz_cluster_joint_channel",
     }
 
-    # C3 channel truth: the emitter's exact record distribution must match the
-    # INDEPENDENT from-scratch reconstruction at the declared 1e-10 gate (S5).
+    # The emitted exact record distribution must match the independent
+    # from-scratch reconstruction at the declared 1e-10 tolerance.
     got = _record_distribution(manifest)
     want = _from_scratch_record_distribution(by_round)
     assert abs(sum(want.values()) - 1.0) <= 1.0e-10
@@ -515,13 +515,13 @@ def test_from_scratch_ground_truth_certifies_injected_per_round_channels():
     worst = max(abs(got[k] - want[k]) for k in want)
     assert worst <= 1.0e-10, f"from-scratch GT mismatch: worst |dp| = {worst:.3e}"
 
-    # non-vacuous (Rule II falsifying-test discipline): a DEAD callable (uniform
-    # round-0 params, red-team R1) moves the GT distribution >> the gate.
+    # Non-vacuity control: a dead callable using uniform round-0 parameters
+    # moves the reference distribution by much more than the tolerance.
     dead = _from_scratch_record_distribution({0: base, 1: base})
     dead_margin = max(abs(dead[k] - want[k]) for k in want)
     assert dead_margin > 1.0e-3
 
-    # hand-XOR of the public record-layout wiring (class a, structural).
+    # Hand-XOR of the public record-layout wiring.
     layout = ev["record_layout_ref"]
     assert [d["name"] for d in layout["detectors"]] == ["delta:x0:round1", "final:x0"]
     assert [o["name"] for o in layout["observables"]] == ["logical_z2"]

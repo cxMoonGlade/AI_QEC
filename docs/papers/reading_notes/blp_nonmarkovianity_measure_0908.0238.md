@@ -1,84 +1,138 @@
-# Full-text review — Breuer, Laine, Piilo, "Measure for the degree of non-Markovian behavior of quantum processes in open systems" (arXiv:0908.0238, PRL 103, 210401 (2009))
+# Full-text review — Breuer, Laine, Piilo, “Measure for the degree of non-Markovian behavior of quantum processes in open systems” (arXiv:0908.0238v2)
 
-> **Provenance (2026-07-01): FULL-TEXT read (精读).** PDF `arxiv.org/pdf/0908.0238` → txt
-> `outputs/papers/0908.0238.txt` (PyMuPDF, 4 pages, arXiv v2 5 Jan 2010). All Eq/Fig refs from that
-> text. **NOTE (theory-first catch):** the id 0907.3968 that was first tried is a DIFFERENT paper
-> (stochastic resonance); the correct BLP id is **0908.0238**. PDF pp. 2–3 were rendered and visually
-> inspected on 2026-07-13 for Eqs. (5), (9)–(13) and the one-way divisibility implication.
+> **Provenance (2026-07-15): FULL-TEXT clean-room read.** Local PDF
+> `outputs/papers/0908.0238.pdf`, SHA-256
+> `9e05b98a5b6a902be4fa8d4d2662b7e9b7592d150ddef6bf74a8d6e9f9bf4553`, four
+> pages; full extracted text `outputs/papers/0908.0238.txt` traversed. PDF pages 2 and 3 were
+> rendered and visually inspected for Eqs. (5), (9)–(13) and their quantifiers. This note contains
+> paper facts and source-local gaps only. Application-specific inference is kept in a separate
+> simulator claim packet.
 
 ## Metadata [paper]
-- **Authors.** Heinz-Peter Breuer (Freiburg); Elsi-Mari Laine, Jyrki Piilo (Turku).
-- **Venue.** arXiv:0908.0238v2 [quant-ph]; **Phys. Rev. Lett. 103, 210401 (2009)**. The canonical
-  "BLP measure" reference.
-- **Type.** Theory: constructs THE trace-distance / information-backflow non-Markovianity measure.
+
+- Heinz-Peter Breuer, Elsi-Mari Laine, and Jyrki Piilo.
+- *Physical Review Letters* **103**, 210401 (2009), DOI
+  `10.1103/PhysRevLett.103.210401`; arXiv:0908.0238v2, 5 January 2010.
+- Theory paper defining a trace-distance information-backflow measure.
 
 ## Executive summary [paper]
-Defines quantum non-Markovianity via **information backflow**, measured by the **trace distance**
-`D(ρ1,ρ2)=½tr|ρ1−ρ2|` (state distinguishability). Every CPT (indeed every positive-TP) map is a
-**contraction** of `D` (Eq. 2), so any **divisible** dynamics — a dynamical semigroup, OR a
-time-dependent Lindblad generator with **all rates γ_i(t) ≥ 0** — makes `D(ρ1(t),ρ2(t))`
-**monotonically non-increasing** for every initial pair (Eq. 5). In the paper's information-backflow
-definition, a process is BLP-non-Markovian when `D` increases at some time for some pair. This is a
-sufficient witness of nondivisibility, but absence of BLP backflow is not equivalent to general
-CP-divisibility. The degree is the total backflow, maximized over initial pairs.
 
-## Method (deep) — the exact definitions [paper]
-- **Trace distance** [Eq. 1]: `D(ρ1,ρ2)=½ tr|ρ1−ρ2|`, `0≤D≤1`; `½[1+D]` = optimal one-shot
-  distinguishing probability (Helstrom).
-- **Contraction** [Eq. 2]: `D(Φρ1,Φρ2) ≤ D(ρ1,ρ2)` for all CPT (and positive-TP) `Φ`.
-- **Divisibility** [Eq. 9]: `Φ(τ+t,0)=Φ(τ+t,t)Φ(t,0)` with the intermediate `Φ(τ+t,t)` also CPT.
-  Time-dependent Lindblad [Eq. 7] `K(t)ρ=−i[H(t),ρ]+Σ_i γ_i(t)(A_i ρ A_i† −½{A_i†A_i,ρ})` with
-  `γ_i(t)≥0` ⇒ divisible ⇒ Eq. 5: `D(ρ1(τ+t),ρ2(τ+t)) ≤ D(ρ1(t),ρ2(t))`.
-- **Rate** [Eq. 10]: `σ(t,ρ1,2(0)) = d/dt D(ρ1(t),ρ2(t))`. Divisible ⇒ `σ≤0` ∀t, ∀pair.
-- **BLP-non-Markovian** ⇔ ∃ pair `ρ1,2(0)` and time `t` with `σ>0`.
-- **THE MEASURE** [Eq. 11]:
-  `N(Φ) = max_{ρ1,2(0)} ∫_{σ>0} dt σ(t,ρ1,2(0))`
-  = [Eq. 12] `max_{ρ1,2(0)} Σ_i [ D(ρ1(b_i),ρ2(b_i)) − D(ρ1(a_i),ρ2(a_i)) ]` over the intervals
-  `(a_i,b_i)` where `σ>0`. Divisible dynamics imply `N(Φ)=0`, and `N>0` witnesses
-  nondivisibility. The reverse implication `N=0 ⇒` CP-divisible does not hold in general.
+The paper defines non-Markovian behavior through temporary growth of the trace distance between a
+pair of evolving system states. A divisible family with positive trace-preserving intermediate maps
+cannot increase trace distance; therefore any observed increase witnesses non-divisibility. The BLP
+measure sums all positive trace-distance excursions and maximizes over initial-state pairs.
 
-## Worked examples — DIRECTLY our regime [paper]
-1. **Damped Jaynes–Cummings, Lorentzian J(ω), weak coupling γ0/λ=0.01, detuning ∆.** Single Lindblad
-   `A=σ−`, time-dependent rate `γ(t)`. For the optimal pair `ρ1(0)=|+⟩⟨+|`, `ρ2(0)=|−⟩⟨−|`
-   [Eq. 13]: `σ(t)=−γ(t) exp[−Γ(t)]`, `Γ(t)=∫₀ᵗ γ(t')dt' ≥0` (CP of Φ(t) preserved). **γ(t)<0
-   (negative rate) ⇔ σ>0 ⇔ trace-distance increase = "revival of the coherence."** This links
-   negative rates, divisibility violation, and coherence revival in one line.
-2. **Central spin + N-spin bath, PURE DEPHASING** `H=A Σ_k σ_z σ_z^{(k)}`: coherences ×`f(t)=cos^N(2At)`;
-   trace distance [Eq. 14] `D=√(a²+f²|b|²)`, `a`=population diff, `b`=coherence diff.
-   **Optimal pair = σx eigenstates (a=0, |b|=1)** → `D=f(t)=|cos^N(2At)|` oscillates 0↔1 → the sum
-   Eq. 12 diverges → `N(Φ)=+∞`; formal master eq `H=0, A=σz, γ(t)=AN tan(2At)` (negative-rate
-   dephasing). **This is exactly the pilot's pure-dephasing coherence-revival wedge.**
+## Selection and coverage [ours]
 
-## Limitations [paper]
-- Exact `N` requires the full reduced dynamics + a maximization over initial pairs (hard in high dim);
-  BUT **any observed growth of `D` is already a lower bound + a sufficient witness** of
-  non-Markovianity (Eq. 5 is only-if for divisible). No environment model needed → experiment-friendly.
-- `N` is a trace-distance functional; it does not by itself decompose *which* coherence revives.
+Assigned rows: observable definition, divisibility-to-contraction implication, positive-excursion
+witness, and pure-dephasing maximizing-pair example. The paper does not identify a classical noise
+source alone with a quantum dynamical-map family and does not bridge a reduced-state witness to a
+multi-time measurement record.
 
-## Relevance to qec_twin [ours]
-**BLP `N(Φ)` is the field-standard scalar for the coupled-teacher SOURCE/WEDGE layer** (the
-coherence-revival / information-backflow signature; `project-nonmarkovian-wedge-must-be-coherence`).
-Mapping to the pilot (`outputs/coupled_pseudomode_pilot_v1_n2.py`, pure dephasing):
-- The pilot's coherence factor is `exp(−Γ_R(t))`, `Γ_R(t)=∫₀ᵗ(t−τ)Re C(τ)dτ`. For the σx-eigenstate
-  pair on a dephased qubit, `D(t)=exp(−Γ_R(t))` (a=0,|b|=1), so `σ(t)=−Γ_R'(t)exp(−Γ_R)` and
-  `Γ_R'(t)=∫₀ᵗ Re C(τ)dτ` is the TCL dephasing rate. `Γ_R'<0` ⇔ revival ⇔ `σ>0`.
-- **`N(Φ)` = the total upward excursion of `D(t)` = the SUM of the pilot's `|ρ|`-revival amplitudes**
-  — the "true trough→peak amplitude" my robustness sweep already prints (0.024 @γ=0.15,
-  0.106 @γ=0.05). So the pilot's wedge amplitude IS (a lower bound to) the BLP measure.
-- **Operate it:** evolve the reduced ρ(t) for the maximizing pair (σx eigenstates for dephasing; a
-  random-pair search otherwise), form `D(t)=½tr|ρ1(t)−ρ2(t)|`, sum the positive-`σ` excursions
-  (Eq. 12). No optimization needed beyond the pair search; for dephasing the optimum is known.
+## Notation and source-location ledger [paper]
 
-## How to trust + open questions [ours]
-- **Trust:** FULL-text 精读; all equations verbatim. Peer-reviewed (PRL 103, 210401), THE canonical
-  non-Markovianity measure (>thousands of citations); reviewed comprehensively in Rivas–Huelga–Plenio
-  RPP 77, 094001 (2014) (arXiv:1405.0303, cached `outputs/papers/1405.0303.txt`).
-- **Open (ours):** (1) BLP is a NECESSARY signature but does not by itself establish decode-relevance —
-  that is the decoder layer (%ΔLER). (2) BLP and RHP can disagree in general (RHP CP-divisibility is
-  strictly finer than BLP P-divisibility/backflow); for the pilot's single-Lorentzian pure dephasing
-  they coincide up to the convention factor. (3) Maximization over pairs is trivial for dephasing;
-  for the matrix-BCF multi-qubit case the pair search must be redone.
+| symbol | domain and meaning | quantifier/assumption | source location |
+|---|---|---|---|
+| `D(rho_1,rho_2)` | half trace norm of the state difference | density operators on the same system | Eq. (1), PDF p. 1 |
+| `Phi(t,0)` | dynamical map from time zero to `t` | physical state map | Eqs. (6)–(9), PDF p. 2 |
+| `Phi(tau+t,t)` | intermediate map | CPT for the paper's divisible class | Eq. (9), PDF p. 2 |
+| `sigma(t,rho_1,2(0))` | time derivative of trace distance | fixed initial pair | Eq. (10), PDF p. 2 |
+| `N(Phi)` | total positive trace-distance growth | maximum over all initial pairs | Eqs. (11)–(12), PDF pp. 2–3 |
 
-## Provenance line
-Downloaded 2026-07-01 from arXiv (0908.0238 → PyMuPDF txt, 4 pp). PRL 103, 210401 (2009). Full-text
-精读; figures = captions + in-text numbers.
+## Method and observable [paper]
+
+Trace distance is
+
+```text
+D(rho_1,rho_2) = (1/2) tr |rho_1-rho_2|.                    Eq. (1)
+```
+
+A completely positive trace-preserving map is contractive for this metric, Eq. (2). For a divisible
+family,
+
+```text
+Phi(tau+t,0) = Phi(tau+t,t) Phi(t,0),                       Eq. (9)
+```
+
+where the intermediate map is also CPT. Contractivity therefore gives
+
+```text
+D(rho_1(tau+t),rho_2(tau+t)) <= D(rho_1(t),rho_2(t)).       Eq. (5)
+```
+
+The paper notes that the contraction also holds for positive trace-preserving maps. Thus a positive
+rate
+
+```text
+sigma(t) = d D(rho_1(t),rho_2(t)) / dt > 0                 Eq. (10)
+```
+
+for at least one initial pair is a sufficient witness that the corresponding dynamics lacks that
+divisibility property.
+
+The measure is
+
+```text
+N(Phi) = max over initial pairs integral_{sigma>0} sigma(t) dt,  Eq. (11)
+```
+
+equivalently the maximum of the sum of trough-to-peak trace-distance increases, Eq. (12).
+
+## Mechanism examples [paper]
+
+The first example is a damped Jaynes–Cummings model with a time-local decay rate. Negative-rate
+intervals produce positive trace-distance rate for the chosen excited/ground pair, Eq. (13). The
+paper explicitly distinguishes a negative instantaneous rate from failure of complete positivity of
+the full map: the integrated rate remains nonnegative in that example.
+
+The second example is exact pure dephasing of a central spin. Its coherences are multiplied by
+`f(t)=cos^N(2At)` and
+
+```text
+D(t) = sqrt(a^2 + f(t)^2 |b|^2),                            Eq. (14)
+```
+
+where `a` is the population difference and `b` the coherence difference of the initial pair. For
+antipodal equatorial states, `a=0` and `|b|=1`, so `D(t)=|f(t)|`; repeated revivals make the example's
+infinite-time BLP sum diverge.
+
+## Findings and limits [paper]
+
+- Any observed trace-distance growth is already a sufficient witness and a lower bound on the
+  optimized measure.
+- Exact `N(Phi)` generally requires the complete reduced dynamics and maximization over initial
+  pairs.
+- `N(Phi)=0` for the paper's divisible class. The paper does not establish the converse that absence
+  of trace-distance backflow proves complete-positive divisibility for every dynamics.
+- A temporary backflow does not imply absence of long-time thermalization.
+
+## Contrary evidence and failure regimes [paper]
+
+The witness is a property of a specified family of system maps acting on specified initial states.
+A stochastic source distribution, a single trajectory, or a different multi-time record is not the
+object in Eqs. (1), (9), or (11). The examples do not establish which initial pair is optimal for an
+arbitrary multi-qubit channel.
+
+## Project kill conditions [ours]
+
+An application fails if it has not defined a common system state space and a dynamical-map family,
+if its plotted quantity is not trace distance for a fixed initial pair, or if a discrete grid is used
+to claim absence of all possible backflow. Propagation from reduced-state backflow to a measurement
+record or downstream estimator requires a separate bridge.
+
+## Operation replay ledger [ours; source-checked]
+
+| input | transformation | assumption | output | exact source location | replay status |
+|---|---|---|---|---|---|
+| two density operators | half trace norm | common system state space | distinguishability `D` | Eq. (1), PDF p. 1 | matched |
+| divisible map family | compose with positive/CPT intermediate map | same fixed initial pair | non-increasing `D` | Eqs. (2), (5), (9), PDF pp. 1–2 | matched |
+| one interval with increasing `D` | integrate or take endpoint difference | `sigma>0` on the interval | positive BLP contribution | Eqs. (10)–(12), PDF pp. 2–3 | matched |
+| pure-dephasing coherence factor `f(t)` | choose antipodal equatorial pair | populations equal, coherence difference one | `D(t)=|f(t)|` | Eq. (14) and following text, PDF p. 4 | matched |
+| classical endpoint source alone | infer a quantum dynamical-map family | not supplied | BLP or divisibility verdict | no source location | missing |
+
+## Relevance and trust [ours]
+
+Use this paper for the trace-distance observable, the one-way divisibility implication, and the
+positive-excursion measure. Assigned rows have source-local status `closed`; a bridge from a source
+alone or a reduced-state diagnostic to a different record has source-local status `missing`. No
+project-specific claim is stored in this literature note.

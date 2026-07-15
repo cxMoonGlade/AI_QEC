@@ -1,88 +1,35 @@
 # error_coupling_simulator
 
-A **GPU-first project targeting faithful simulation of QEC error mechanisms** — coupling, leakage, and other
-non-Pauli / memory-ful noise. It takes a QEC circuit (a rotated surface code; **XZZX** is the
-first target) plus a **specified noise process**, and produces the **multi-time syndrome
-record** (per-round detector bits + logical-observable flips, emitted as `.b8` shot data or an
-equivalent joint law). A `.dem` is an optional decoder-facing reduction, not a record. The active
-package is directly importable, and its wheel/source archive contains only
-`error_coupling_simulator` with no legacy entry point. The active package has no executable
-import back-edge to `qec_twin`; repository-local outward compatibility shims are excluded from
-the distribution. External circuits, optional decoder inputs, optional derived-channel caches,
-and the deliberately isolated CUDA-Q adapter remain explicit inputs/plugins rather than hidden
-repository dependencies.
+A GPU-first specified-noise simulator for quantum error-correction circuits. It applies a declared
+noise process to a circuit or schedule and produces the multi-time temporal detector/observable
+record. A `.dem` is an optional decoder-facing reduction, not the simulated object.
 
-The deliverable is the simulator; its product is the record (and the LER read off it under a
-frozen decoder). Metrics are **instruments** on the record, never the object.
+The runtime and distribution namespace is `error_coupling_simulator`. External circuits, optional
+decoder inputs, explicit derived-channel caches, and the isolated CUDA-Q adapter are declared
+boundaries.
 
-**Binding spec: [`docs/SIMULATOR.md`](docs/SIMULATOR.md)** — object contract, boundary,
-carrier ladder, and disciplines. Read it first.
+Read [`docs/SIMULATOR.md`](docs/SIMULATOR.md) first; it is the binding product and scientific
+contract.
 
-## What it models
+## Current surface
 
-- **Two noise axes.** *Axis-1* — within-substep joint-Lindbladian coupling (ZZ crosstalk,
-  T1/T2, thermal, fSim residual, readout dephasing, leakage Hamiltonians). *Axis-2* —
-  core **notion-2** classical stochastic multi-time record memory: a replayable finite-RTN
-  timeline (including the finite-band 1/f approximation), `Theta(z_t)` mechanism-parameter
-  fan-out, and matched-marginal controls. It is not a microscopic/quantum bath or a
-  CP-divisibility claim; current evidence is for one frozen fixed-horizon record policy, not a
-  generic causal process family.
-- **Non-Pauli mechanisms** (span both axes): **leakage, drift, crosstalk, burst** — coherence
-  / structure a fixed nonnegative Pauli-rate vector cannot carry; **not in general
-  exactly/losslessly representable by a fixed nonnegative Pauli DEM**. Special reductions can
-  exist for a declared channel/schedule/instrument.
-- **No physical ground truth.** A noise process is a model we specify; the QuTiP / closed-form
-  / exact-DM oracles are FORMAL bug-catchers, never a correspondence-to-reality claim.
+- Stim-representable circuit compilation and decoder-free record emission.
+- Within-substep joint-Lindbladian channels on bounded dense routes.
+- Replayable finite-RTN source timelines with explicit parameter mapping and matched controls.
+- Restricted one-dimensional MPS verification executors.
+- Qutrit leakage and explicit multi-level CZ transport channels.
+- Bounded exact-density references.
+- Retained density-matrix PEPO and single-wire PEPS research carriers.
+- Evaluator-only formal certification and bounded quantum-bath research models.
 
-## Current state
+The source-conditioned dense-qubit process and the static qutrit XZZX leakage process are separate
+routes; there is no current integrated source-driven qutrit XZZX product.
 
-The live frontier is the **full-`d×d` 2D-PEPS trajectory carrier** and its **record-faithful
-truncation** (ADR 0011). A 1D MPS can require `χ=2^{Θ(d)}` across a full-square cut in the
-worst/project-estimate regime, so the full-code candidate is a single-wire 2D PEPS pure-state
-MCWF trajectory; the
-open problems are separate: diagnose the current FET/ALS implementation, and establish a
-quantitative bridge from finite PEPS truncation to the complete multi-round record. A deterministic
-WTG replacement and coherent-tail deletion are **not authorized** by the current literature closure.
-Working notes: `docs/nonpauli_teacher/`.
+PEPO is retained as a tested research carrier but is not the canonical record backend. PEPS
+full-record finite-truncation faithfulness is open. Its current FET end-to-end entropy gate fails at
+`0.10860941571062639` versus an independent GF(2) reference of `2.0` with tolerance `1e-4`.
 
-The production bridge is also **open / `CODE_BLOCKED`**: the source-conditioned dense-qubit process
-and the static data-qutrit XZZX process are disconnected implementation islands, not one validated
-`RTN → leakage → record` object. See
-`docs/twin_validation/production_rtn_and_leakage_bridge_split_literature_closure_2026-07-13.md`.
-
-Every d5/d7 distributional claim is PROVISIONAL (no external oracle exists above the d3
-exact-DM referee).
-
-## Substrate
-
-- **Forward carrier ladder**: exact density matrix
-  (`carrier/exact`; qubit memory ceiling is around 15 sites, while the current qutrit d3 oracle is
-  9 sites at about 5.77 GiB) → shipped restricted Axis-1 1D MCWF/MPS and QT/MPS verification
-  executors (`frontend/axis1_*_mps_execution.py`) → **2D PEPS full `d×d`** (`carrier/peps`).
-  The 1D paths are finite-step and fail closed outside their declared support; they are not a
-  production-scalable or universal full-record backend. The old XZZX thin-strip driver remains
-  legacy-only and is not shipped. The Axis-1 joint-Lindbladian assembler + CPTP channel object +
-  fused CUDA kernels live under `carrier/`.
-- **Frontend** (`error_coupling_simulator.frontend`): `CodeSpec → CircuitIR`, imported Stim
-  circuits, and hand-built circuits all feed one `Simulator.run(...)` surface emitting
-  `.stim` / actual `.b8` / `.dem` / manifest artifacts. Record emission is the decoder-free
-  default; external PyMatching prediction artifacts are opt-in. Every artifact declares a
-  `representability` class and fails closed.
-- **Certification** (`error_coupling_simulator.certify`): scores a noise process's records
-  against INDEPENDENT anchors (anti-circular) → an epistemic ledger with non-optional
-  negative controls. Bayes-floor/decoder-headroom analysis remains under `legacy/` and is not a
-  simulator service or certification rung.
-
-## Install
-
-Python `>=3.11`. A released wheel installs the standalone runtime and its declared dependencies;
-select the pinned CUDA runtime/JIT extras on the supported Linux GPU path:
-
-```bash
-python -m pip install "error-coupling-simulator[cuda-extension,gpu-cu130]"
-```
-
-For development from the repository root, create the canonical GPU `ecs` environment:
+## Install for development
 
 ```bash
 conda env create -f environment-ecs.yml
@@ -91,52 +38,35 @@ conda run -n ecs python scripts/configure_core_environment.py
 conda run -n ecs python scripts/verify_core_environment.py
 ```
 
-The Conda manifest fixes Python/pip/uv, `uv.lock` drives the exact transitive installation, and
-the core compatibility ledger fixes Torch/QuTiP/cuQuantum plus the CUDA-13.0 JIT toolchain.
-CUDA-Q and the optional PyMatching `[hw]` extra are deliberately excluded from `ecs`; default
-record emission is decoder-free. The independent noiseless-Grover adapter stays in the retained
-`aiqec` environment and runs in a separate process. Do not restore from the ignored historical
-`requirements.lock.txt`.
-Use `scripts/sync_core_environment.py`, not bare `uv sync`; the wrapper explicitly targets the
-Conda prefix instead of the repo-local `.venv`.
+Python 3.11 or newer is required. `uv.lock` supplies the transitive repository lock and
+`core-environment-cu130.lock` records the direct GPU compatibility contract. PyMatching is optional;
+the default record path is decoder-free. CUDA-Q runs separately in the `aiqec` environment.
 
-Do not set `PYTHONPATH="$PWD/src"`; use the editable install (`pyproject` `pythonpath=["src"]`
-already puts `error_coupling_simulator` on the path).
+Do not set `PYTHONPATH="$PWD/src"`; use the editable install configured by the environment scripts.
 
-The Google r01/r10 files used by the registered d3 facade are caller-provided circuit/schedule
-inputs, not bundled noise data. The optional ququart transport adapter accepts exactly one
-explicit `CZParams`, in-memory channel (including a Kraus stack), or serialized derived-channel
-cache. The
-package owns the Hamiltonian-to-channel derivation; Kraus operators are a derived channel
-representation, and a serialized Kraus artifact is an optional cache rather than external
-scientific data. It never discovers a repository `outputs/` artifact.
-
-## Use
+## Verify
 
 ```bash
-conda run -n ecs python -m pytest -q tests/                          # repository engineering regression
-conda run -n aiqec python -m pytest -q tests/test_simulator_cudaq_grover.py  # isolated CUDA-Q
-python tests/harness/gate.py     tests/_support/<batch>_targets.json # L0+L1 coverage gate
-python tests/harness/mutation.py tests/_support/<batch>_targets.json # L2 mutation gate
+python tests/harness/service_acceptance.py
+conda run -n ecs python -m pytest -q tests/
+conda run -n aiqec python -m pytest -q tests/test_simulator_cudaq_grover.py
+python tools/gen_code_map.py --check
 ```
 
-The aggregate `pytest tests/` result is not a scientific simulator-certification claim: the
-repository suite also contains retained decoder/data and migration seams. Simulator acceptance is
-subsystem-owned and registry-driven; see `tests/CODEBOOK.md`. The current Stim-representable
-product surface is `error_coupling_simulator.frontend.Simulator`. PEPS and the bounded Axis-1
-surfaces have their own declared record/evidence runners; the restricted 1D MPS paths emit
-verification manifests and do not claim a universal `RecordBatch` executor. A universal backend
-execution facade remains open.
+The service gate runs each acceptance file in a fresh process across bounded CPU, serial host-heavy,
+and serial GPU lanes. The parent imports no CUDA runtime, and only the GPU lane holds the
+cross-process GPU lock. Repository-wide pytest is an engineering regression surface, not a
+scientific certification claim.
 
-## Docs
+## Documentation
 
-- [`docs/SIMULATOR.md`](docs/SIMULATOR.md) — **binding spec (read first)**.
-- [`CLAUDE.md`](CLAUDE.md) — main line, commands, architecture, code conventions.
-- [`CONTEXT.md`](CONTEXT.md) — glossary and claim boundaries.
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — architecture summary;
-  [`docs/service_status.json`](docs/service_status.json) — machine-readable service/support/exclusion
-  contract; [`docs/CODE_MAP.md`](docs/CODE_MAP.md) — generated complete inventory and flow. The latter
-  two also ship with the wheel under `share/doc/error-coupling-simulator/`.
-- [`docs/METRICS.md`](docs/METRICS.md) + [`docs/FAITHFULNESS_PROTOCOL.md`](docs/FAITHFULNESS_PROTOCOL.md) — metric ladder + anti-toy protocol.
-- `docs/adr/` — simulator decisions 0008, amended 0010, and 0011; ADR 0009 is downstream
-  inference/decoder research.
+- [`docs/SIMULATOR.md`](docs/SIMULATOR.md) — binding contract.
+- [`CONTEXT.md`](CONTEXT.md) — glossary and claim boundary.
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — architecture summary.
+- [`docs/service_status.json`](docs/service_status.json) and
+  [`docs/CODE_MAP.md`](docs/CODE_MAP.md) — exact service and source inventory.
+- [`tests/CODEBOOK.md`](tests/CODEBOOK.md) — executable test/coverage map.
+- [`docs/METRICS.md`](docs/METRICS.md),
+  [`docs/FAITHFULNESS_PROTOCOL.md`](docs/FAITHFULNESS_PROTOCOL.md), and
+  [`docs/NUMERICAL_PROVENANCE.md`](docs/NUMERICAL_PROVENANCE.md) — scientific disciplines.
+- [`docs/simulator_validation/`](docs/simulator_validation/) — current cleanup and carrier status.

@@ -25,6 +25,23 @@ listed gate passes. Git history is the archive.
 
 The module/native/acceptance counts are an intake snapshot, not preservation targets.
 
+## Current Phase-4 implementation snapshot
+
+- cleanup checkpoint: `4e04435` (`clean up`), based on intake commit `844d211`;
+- current installed Python modules: 104;
+- current native sources: 4;
+- current worktree top-level test modules: 98;
+- current service catalog: 27 services and 71 unique acceptance files;
+- acceptance lanes: 29 `cpu_light`, 7 `cpu_exclusive`, and 35 `gpu_serial` files;
+- current coverage/mutation configuration: 28 neutral `*_coverage_targets.json`
+  registries; no stage-numbered registry remains.
+
+These are an authority-reset checkpoint, not the final Phase-7 inventory. The service catalog now
+uses `classical_finite_rtn_source_chain`; the retained finite-RTN research diagnostic is a separate
+free-induction object and does not assign CP-divisibility to the production source, channel, or
+record. The temporary file-level test-disposition document has been removed after its count and
+decision summary were folded into this ledger; Git remains the only old-script archive.
+
 ## Authority and trust boundary during cleanup
 
 - Runtime truth is established from the directly reachable
@@ -60,16 +77,20 @@ records:
 - old PASS records do not prove the renovated source. The renovated source and renovated tests
   must be rerun, and their new records must bind the complete source/test/data/environment state.
 
-The first script classification found 27 tests with no current source owner, 17 tests whose
-invariants require a current-owner coverage reconciliation, three PEPO/PEPS mixed tests that must
-be migrated off the retired host API, two clean PEPO/PEPS ownership tests, and 81 tests already on
-the current import graph. The 27 ownerless scripts and four retired test registries are now deleted;
-the 17-file reconciliation and PEPO/PEPS migration remain gated work.
+The first `27 / 17 / 3 / 2` script classification was an intake estimate without a member list and
+could not close against the actual diff. It is superseded by a complete file-level manifest:
 
-Before more deletion, every outstanding worktree change must be classified as Twin-only or
-out-of-scope. Out-of-scope changes are reverted; the broader current-core cleanup interpretation is
-withdrawn. Retained source and tests must additionally pass a static and subprocess-enforced
-retired-API dependency gate.
+```text
+128 intake tests = 19 byte-identical + 62 same-path/current-owner edits
+                 + 27 deleted ownerless + 20 deleted/replaced
+98 current tests = 19 + 62 + 17 newly named current-owner tests
+```
+
+Five retired support JSON registries were deleted, not four. PEPO remains retained: its monolithic
+test was split into current owner groups and fresh-process helpers. The two host-seam files remain as
+negative retired-namespace gates. PEPS/FET tests were migrated off the retired API without accepting
+or masking the known entropy failure. Static, AST, subprocess-import, old-schema-rejection, package,
+and service-plan gates now prove that the renovated source and tests do not depend on a retired API.
 
 ## Phase 3 working findings — execution isolation and retained carriers
 
@@ -209,7 +230,10 @@ Two post-reboot observations are recorded but do not block this gate. Versioned 
 firmware directories and NVIDIA's unversioned 610-series utility packages remain installed, but
 neither appears in the active kernel/`libcuda`/GSP execution chain. The RTX 5090 currently negotiates
 PCIe 16.0 GT/s x4 although the device can support 32.0 GT/s x16; with all AER counters at zero this
-is a separate performance/platform follow-up, not evidence for the exit-139 cause.
+was a separate performance/platform observation, not evidence for the exit-139 cause. After the user
+corrected the physical slot on 2026-07-15, sysfs reports current width x16, maximum width x16, and a
+maximum 32.0 GT/s link. The idle link downshifts to 2.5 GT/s (Gen1) while retaining x16 width. The x4
+performance follow-up is resolved and remains unrelated to the native crash.
 
 The predeclared driver-candidate gate then passed without changing a scientific tolerance or source
 formula:
@@ -258,14 +282,65 @@ Current evidence records:
 - `outputs/simulator_validation/diagnostics/r580_173_02_pepo_service_gate/`
   `run-20260715T145925.497231Z-p14250-8ff67cd0/summary.json`
 
+## Phase 4 authority reset
+
+The tracked current authority has been rebuilt from current owners rather than renamed from the
+retired documentation. The binding surface is now `docs/SIMULATOR.md`, `CLAUDE.md`, `CONTEXT.md`,
+`docs/ARCHITECTURE.md`, `docs/METRICS.md`, `docs/FAITHFULNESS_PROTOCOL.md`,
+`docs/NUMERICAL_PROVENANCE.md`, `docs/service_status.json`, generated `docs/CODE_MAP.md`,
+`tests/CODEBOOK.md`, and the current module/validation READMEs named by the scope gate.
+
+The retired documentation surface was removed rather than archived in the repository:
+
+- 159 files under the old product-validation tree;
+- 30 files under the old role-named carrier tree;
+- 9 white-box files, 8 CF-WR files, and 8 repository archive files;
+- four historical ADRs, the old migration guide, and one tracked build skill whose only contract
+  target was the deleted validation tree.
+
+The retained source/test surface was then made current-only:
+
+- certification no longer exposes injectable private reference probabilities, level
+  distributions, Kraus stacks, or superoperators; it always constructs the current independent
+  reference and requires the explicit `passed_gross` field;
+- `RunSpec` defaults to final/c128, while c64 requires explicit
+  `run_purpose="optimization"`; no implicit precision compatibility remains;
+- the duration policy is `DEFAULT_DURATION_POLICY_ID` /
+  `default_duration_policy()` with schema
+  `error_coupling_simulator.frontend.duration_policy.v1`; the old names do not resolve;
+- 28 coverage registries use physical/current owner names and the mutation-only environment key is
+  `ECS_MUTATION_SKIP_SLOW`;
+- the PEPO negativity diagnostics, PEPS carrier tests, Axis-1 dense-reference tests, and transient
+  Markov closed-form reference use descriptive names; retired numbered/stage labels are absent;
+- the zero-consumer PEPS one-site alias, the zero-consumer schedule helper, the unowned PEPS
+  diagnostic environment branch, and an exact duplicate interop test were deleted without a
+  compatibility fallback;
+- qutrit WG targets and leaked-readout bias are recorded as project-design coordinates with
+  cross-protocol scale context only. The two-site leakage level-map source-to-row audit remains
+  explicitly pending; its implementation test is not promoted into a physical-mechanism claim.
+
+The source semantic-diff audit found no added numeric literal in any changed Python source. Removed
+numeric literals occur only inside the deleted unowned PEPS diagnostic branch, deleted private
+certification injection paths, and a deleted no-consumer acceptance helper. The native CUDA diff is
+comment-only. No physical formula, threshold, tolerance, or retained PEPO/PEPS execution operation
+was changed by the authority reset. The existing PEPS/FET entropy failure remains visible at
+`0.10860941571062639` versus `2.0` with tolerance `1e-4`.
+
+Phase 4 closes only the tracked current authority and current source/test vocabulary. Existing
+reading notes, local RAG/KG material, and ignored local old-product skills/workflows remain
+quarantined and untrusted. In particular, the ignored local project-engine skill/workflow and old
+retrieval commands are not current authority and must appear in the Phase-6 dry-run deletion
+manifest; literature commands are rebuilt in Phase 5 before use. This explicit quarantine is not a
+claim that those later phases are complete.
+
 ## Phase ledger
 
 | phase | status | required outcome |
 |---|---|---|
 | 1 — boundary freeze | complete | intake inventory and trust boundary recorded |
 | 2 — P0 repair | complete | retired dispatcher deleted; retained record, packed bridge, Born probability, PTM, certification, coupled-process, and qutrit-leakage owners pass independent falsifiers |
-| 3 — Twin-only implementation hard cut | in progress | remove retired implementation and ownerless scripts; migrate retained tests to current APIs; prove no retired dependency |
-| 4 — authority reset | pending | current-only binding docs and source-closed retained claims |
+| 3 — Twin-only implementation hard cut | complete | retired implementation removed; all 128 intake tests reconciled; retained tests use current owners; static/subprocess/schema/package gates prove no retired runtime dependency |
+| 4 — authority reset | complete | current-only tracked authority; unsupported scientific claims withdrawn or explicitly pending |
 | 5 — literature reset | pending | paper-fact-only notes/RAG/KG with no dangling evidence |
 | 6 — output cleanup | pending | dry-run manifest, targeted purge, current artifact regeneration |
 | 7 — inventory and acceptance | pending | zero-reference scans, rebuilt catalogs, full engineering gates |
@@ -297,9 +372,9 @@ Append one dated row per completed gate. A failed gate remains visible until rep
 | 2026-07-14 | 3 | legacy implementation and symlink removal | PASS | 101 tracked legacy files and the tracked compatibility symlink deleted; no repository archive retained |
 | 2026-07-14 | 3 | attempted historical-test retirement | REVOKED | all deleted historical tests and support registries restored; tracked top-level test inventory is again 128 |
 | 2026-07-14 | 3 | attempted PEPO retirement | REVOKED | PEPO source, PEPS integration, and PEPO/PEPS tests restored exactly from intake HEAD |
-| 2026-07-14 | 3 | out-of-scope PEPS/FET diagnosis | STOPPED | temporary instrumentation and attempted FET change removed; no PEPS/FET source or test diff remains |
+| 2026-07-14 | 3 | out-of-scope PEPS/FET diagnosis | STOPPED | temporary instrumentation and attempted FET algorithm/tolerance change removed; later PEPS/FET diffs are terminology/API migrations only |
 | 2026-07-14 | 3 | historical test/record classification | PASS | all tracked tests are scripts; old source+script snapshot is recoverable from `844d211`; support JSON files are registries, not results |
-| 2026-07-14 | 3 | ownerless legacy test removal | PASS | 27 scripts without a current implementation owner and four retired registries deleted; PEPO/PEPS tests excluded |
+| 2026-07-14 | 3 | initial ownerless-test removal | PARTIAL/SUPERSEDED | initial estimate removed 27 ownerless scripts; the final manifest records 46 removed tests, 18 current additions relative to intake, and five removed registries |
 | 2026-07-14 | 3 | native-crash runtime matrix | FAIL | exact-reference-only SIGSEGV reproduced under CUDA 12.8, 13.0, and 13.2; dependency mixing, PEPO NTU/SVD, custom kernels, and allocator choice rejected as sufficient explanations |
 | 2026-07-14 | 3 | R580.173.02 package dry run | PENDING AUTHORIZATION | compatible CUDA 13.x driver candidate identified; no package or running driver changed; reboot plus post-change stress gate required |
 | 2026-07-15 | 3 | R580.173.02 post-reboot stack audit | PASS | active kernel modules, `libcuda`, NVML, and GSP all 580.173.02; Secure Boot signature valid; canonical PyTorch 2.12.0+cu130 map and core-environment contract clean |
@@ -307,3 +382,30 @@ Append one dated row per completed gate. A failed gate remains visible until rep
 | 2026-07-15 | 3 | R580 full reference-to-PEPO A/B gate | PASS | 3/3 fresh two-child comparisons; identical max-absolute difference 0.0029731254318278552 <= 0.01; 22 binding NTU entries |
 | 2026-07-15 | 3 | current PEPO service acceptance | PASS | 10/10 fresh files, including 8/8 gpu_serial owners; all process groups verified cleaned; no SIGSEGV/native CUDA/kernel fault |
 | 2026-07-15 | 3 | R580.173.02 driver-candidate stress gate | PASS | all predeclared stages passed; strong A/B evidence against the 595.71.05 execution stack, without claiming an exact driver defect |
+| 2026-07-15 | 3 | PCIe slot correction | PASS | RTX 5090 now negotiates x16 width with 32.0 GT/s maximum; idle 2.5 GT/s is link power management, not a width loss |
+| 2026-07-15 | 3 | complete intake-test disposition | PASS | 128 = 19 byte-identical + 62 same-path migrations + 27 ownerless deletions + 20 replacements; current 99 = 19 + 62 + 18; five support registries deleted |
+| 2026-07-15 | 3 | renamed-owner CPU batch | PASS | 127 passed: coherent Pauli, source coupling, coupled-process units, and qutrit parser corruption |
+| 2026-07-15 | 3 | finite-RTN neutral diagnostic migration | PASS | old over-broad script/test/path removed; 14 current contract/schema/oracle/corruption/hash/atomic-output tests passed; registered as CPU-exclusive source-owner acceptance |
+| 2026-07-15 | 3 | retired API static and subprocess gate | PASS | direct source/test/config/tool token and tree scans empty; current-module import blocker plus PEPO/PEPS host gates: 8 passed; seven old-schema rejection falsifiers passed |
+| 2026-07-15 | 3 | package and generated inventory gates | PASS | scope boundary 5 passed; package release 7 passed; code map current at 104 installed modules, 27 services, and 70 unique acceptance files |
+| 2026-07-15 | 4 | retired documentation and tracked-tool removal | PASS | 214 files removed from five retired documentation trees, plus four historical ADRs, the migration guide, and the obsolete tracked build skill; no repository archive created |
+| 2026-07-15 | 4 | retained source/test API hard cuts | PASS | private certification injection seams, implicit c64 purpose, retired duration policy, zero-consumer helpers/aliases, duplicate interop test, and unowned PEPS diagnostic branch removed with no shims |
+| 2026-07-15 | 4 | current vocabulary and authority gate | PASS | 8 passed; tracked/unignored source, tests, native code, scripts, tools, configs, current authority links, runtime imports, retired exports, and package trees checked |
+| 2026-07-15 | 4 | current source/test focused CPU gates | PASS | duration/registry batch 417 passed, 1 optional skip; certification/current schedule batch 255 passed, 1 optional skip; narrative/support batches 123 passed, 3 deselected |
+| 2026-07-15 | 4 | Axis-1 fresh GPU owner gates | PASS | connected-cluster 6 passed, convergence 5 passed, dense certification 5 passed; each file ran fresh under the cross-process GPU lock |
+| 2026-07-15 | 4 | full test collection | PASS | 2,140 tests collected from the renovated current checkout in canonical `ecs`; no deleted test path is required |
+| 2026-07-15 | 4 | regenerated code/service inventory | PASS | 104 installed Python modules, 4 native sources, 98 top-level test modules, 27 services, 71 unique acceptance files (29 cpu_light, 7 cpu_exclusive, 35 gpu_serial), 28 valid coverage registries; CODE_MAP check clean |
+| 2026-07-15 | 4 | retained PEPS/FET scientific blocker | OPEN/UNCHANGED | entropy gate remains 0.10860941571062639 versus GF(2) 2.0 at tolerance 1e-4; not converted to a skip or weakened |
+| 2026-07-15 | 4 | ignored local old-product tooling/retrieval surfaces | QUARANTINED | excluded from current authority; exact dry-run deletion/rebuild belongs to Phases 5–6 and remains pending |
+
+## Phase-4 close boundary
+
+Phase 4 closes the tracked authority and vocabulary reset. It does not claim that Phase 5 or Phase 6
+is complete. Existing paper notes, RAG/KG outputs, ignored local workflows, and old generated
+artifacts remain quarantined discovery material until their explicit reset/purge phases close.
+
+The finite-RTN diagnostic is the first targeted clean-room exception: its two load-bearing primary
+papers were reread in full, formula pages visually checked, project inference removed from their
+reading notes, and a post-result (not preregistered) current contract created. Its new implementation
+tests pass, but a signed JSON artifact must wait for a clean tracked checkpoint and belongs to the
+Phase-6/7 regeneration gate.

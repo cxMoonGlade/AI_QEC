@@ -70,6 +70,7 @@
     "default_lane": "cpu_light",
     "lane_overrides": {
       "cpu_exclusive": [
+        "tests/test_finite_rtn_free_induction_diagnostic.py",
         "tests/test_quantum_bath.py",
         "tests/test_quantum_bath_carrier_units.py",
         "tests/test_quantum_bath_gksl_crowjoynt_units.py",
@@ -79,9 +80,10 @@
       ],
       "gpu_serial": [
         "tests/test_analog_schedule_units.py",
-        "tests/test_axis1_convergence.py",
+        "tests/test_axis1_connected_cluster_channels.py",
+        "tests/test_axis1_mcwf_convergence.py",
         "tests/test_axis1_record_params_override.py",
-        "tests/test_axis1_wb_acceptance_gate.py",
+        "tests/test_axis1_mcwf_dense_certification.py",
         "tests/test_certify_anchors_units.py",
         "tests/test_certify_core_units.py",
         "tests/test_collective_decay_finite_step_guard.py",
@@ -98,7 +100,7 @@
         "tests/test_pepo_density_state.py",
         "tests/test_pepo_density_token_ops.py",
         "tests/test_peps_fet.py",
-        "tests/test_peps_spike.py",
+        "tests/test_peps_trajectory_carrier.py",
         "tests/test_qutrit_dm_memlean.py",
         "tests/test_qutrit_dm_no_leak_reference.py",
         "tests/test_qutrit_dm_two_site_channel.py",
@@ -218,7 +220,8 @@
       "external_inputs": ["Declared mechanism parameters and compiler-sealed substep duration/support"],
       "outputs": ["Joint Hamiltonian/collapse lowering, CPTP Kraus channel and channel-evidence ledger"],
       "acceptance": [
-        "tests/test_axis1_convergence.py",
+        "tests/test_axis1_connected_cluster_channels.py",
+        "tests/test_axis1_mcwf_convergence.py",
         "tests/test_joint_lindbladian.py",
         "tests/test_coherent_pauli_generators.py",
         "tests/test_collective_decay_finite_step_guard.py",
@@ -247,8 +250,8 @@
       "note": "This service is limited to the package-owned Kraus, Stinespring, Choi, probability, and trace-preservation algebra in the declared owner."
     },
     {
-      "id": "classical_1f_nonmarkov_chain",
-      "name": "Classical finite-RTN 1/f non-Markovian source-to-record chain",
+      "id": "classical_finite_rtn_source_chain",
+      "name": "Classical finite-RTN source-to-record chain",
       "status": "CORE",
       "kind": "source_record_chain",
       "canonical_record_output": true,
@@ -277,7 +280,7 @@
           "semantics": "Collapse the source amplitude to zero and emit the constant Theta(0) control arm."
         }
       ],
-      "dependencies": {"core": ["numpy", "stim", "torch"], "extras": []},
+      "dependencies": {"core": ["numpy", "scipy", "stim", "torch"], "extras": ["test"]},
       "external_inputs": ["Declared single-RTN or finite log-spaced RTN-sum configuration, or explicit SourceTimeline NPZ"],
       "outputs": [
         "Shared-source canonical record arm",
@@ -287,13 +290,14 @@
       ],
       "acceptance": [
         "tests/test_source_process_units.py",
+        "tests/test_finite_rtn_free_induction_diagnostic.py",
         "tests/test_source_coupling_units.py",
         "tests/test_coupled_cycle_interop.py",
         "tests/test_coupled_cycle_noise_process_records.py",
         "tests/test_coupled_cycle_units.py",
         "tests/test_axis1_record_params_override.py"
       ],
-      "note": "The source is a finite sum of log-spaced RTNs whose sum-of-Lorentzians approximates 1/f only over the declared band. This is classical stochastic record memory, not a quantum CP-divisibility claim or a hardware-data service."
+      "note": "The source is a finite sum of log-spaced RTNs whose sum-of-Lorentzians approximates 1/f only over the declared band. The registered free-induction research diagnostic tests separately declared one-qubit lifts and does not upgrade the source, production channel, or record to a CP-divisibility claim. This is not a hardware-data service."
     },
     {
       "id": "classical_burst_storm_sources",
@@ -417,7 +421,7 @@
       "dependencies": {"core": ["torch", "quimb", "numpy"], "extras": ["gpu-cu130"]},
       "external_inputs": ["Sealed Axis-1 schedule, local dimensions and explicit approximation controls"],
       "outputs": ["Restricted execution/evidence manifest, sampled record frequencies and fail-closed approximation ledger"],
-      "acceptance": ["tests/test_simulator_axis1_schedule.py", "tests/test_axis1_wb_acceptance_gate.py"],
+      "acceptance": ["tests/test_simulator_axis1_schedule.py", "tests/test_axis1_mcwf_dense_certification.py"],
       "note": "This is a finite-microstep verification slice, not a production full-dxd/full-record backend."
     },
     {
@@ -443,7 +447,7 @@
       "outputs": ["PackedShotBatch and truncation/contraction ledgers"],
       "acceptance": [
         "tests/test_peps_host_seam.py",
-        "tests/test_peps_spike.py",
+        "tests/test_peps_trajectory_carrier.py",
         "tests/test_peps_fet.py"
       ],
       "note": "Current feasibility carrier. The d3 state and record checks, host seam, and FET implementation remain executable; finite-truncation fidelity of the complete multi-round record and d5/d7 scientific claims remain open."
@@ -826,7 +830,7 @@
     {
       "role": "shared_numerical_policy",
       "paths": ["src/error_coupling_simulator/numerics.py"],
-      "used_by": ["peps_single_wire", "classical_1f_nonmarkov_chain"],
+      "used_by": ["peps_single_wire", "classical_finite_rtn_source_chain"],
       "reason": "Shared numerical-zero/probability-floor constants; not a physical mechanism, metric, or decoder-floor service."
     },
     {
@@ -855,7 +859,7 @@
         "src/error_coupling_simulator/frontend/axis1_selection.py",
         "src/error_coupling_simulator/frontend/joint_channel_comparison.py"
       ],
-      "used_by": ["axis1_joint_channel", "axis1_dense_jointl_record", "restricted_axis1_1d_mps", "qutip_cuquantum_probe", "classical_1f_nonmarkov_chain"],
+      "used_by": ["axis1_joint_channel", "axis1_dense_jointl_record", "restricted_axis1_1d_mps", "qutip_cuquantum_probe", "classical_finite_rtn_source_chain"],
       "reason": "Shared carrier IR, selector, context, ideal-control and joint-vs-composed comparison support. These orchestrate registered services but do not independently evolve a state or emit canonical records."
     },
     {
@@ -879,7 +883,7 @@
     {
       "role": "evaluator_source_sidecar",
       "paths": ["src/error_coupling_simulator/frontend/source_sidecar.py"],
-      "used_by": ["frontend_compile_and_records", "classical_1f_nonmarkov_chain", "classical_burst_storm_sources", "source_stim_pauli_projection"],
+      "used_by": ["frontend_compile_and_records", "classical_finite_rtn_source_chain", "classical_burst_storm_sources", "source_stim_pauli_projection"],
       "reason": "Persists evaluator-only SourceTimeline truth. Attaching this sidecar alone never changes simulator records."
     },
     {
@@ -929,7 +933,7 @@
       "id": "full_record_peps_certification",
       "paths": [
         "src/error_coupling_simulator/carrier/peps/README.md",
-        "tests/test_peps_spike.py",
+        "tests/test_peps_trajectory_carrier.py",
         "tests/test_peps_fet.py"
       ],
       "disposition": "CERTIFICATION_OPEN",
@@ -959,14 +963,14 @@
       {"id": "stim_frontend", "label": "Stim/CodeSpec frontend\ncompile + Pauli record sampling", "group": "Compilation and adapters", "services": ["frontend_compile_and_records"]},
       {"id": "axis1_schedule", "label": "Axis-1 adapter\ncompiler-sealed SubstepSchedule", "group": "Compilation and adapters", "services": ["axis1_schedule_adapter"]},
       {"id": "xzzx_schedule", "label": "XZZX adapter\nXZZXSchedule + RunSpec", "group": "Compilation and adapters", "services": ["xzzx_external_schedule"]},
-      {"id": "source_1f", "label": "Finite RTN / log-spaced RTN sum\nfinite-band 1/f record memory", "group": "Classical sources and controls", "services": ["classical_1f_nonmarkov_chain"]},
-      {"id": "permutation_control", "label": "Matched-marginal permutation\nexchangeable, not a Markov null", "group": "Classical sources and controls", "services": ["classical_1f_nonmarkov_chain"], "control_refs": ["classical_1f_nonmarkov_chain:matched_marginal_permutation"]},
-      {"id": "off_control", "label": "Source-off control\nconstant Theta(0)", "group": "Classical sources and controls", "services": ["classical_1f_nonmarkov_chain"], "control_refs": ["classical_1f_nonmarkov_chain:source_off"]},
+      {"id": "source_1f", "label": "Finite RTN / log-spaced RTN sum\nfinite-band 1/f record memory", "group": "Classical sources and controls", "services": ["classical_finite_rtn_source_chain"]},
+      {"id": "permutation_control", "label": "Matched-marginal permutation\nexchangeable, not a Markov null", "group": "Classical sources and controls", "services": ["classical_finite_rtn_source_chain"], "control_refs": ["classical_finite_rtn_source_chain:matched_marginal_permutation"]},
+      {"id": "off_control", "label": "Source-off control\nconstant Theta(0)", "group": "Classical sources and controls", "services": ["classical_finite_rtn_source_chain"], "control_refs": ["classical_finite_rtn_source_chain:source_off"]},
       {"id": "burst_storm", "label": "PhaseBurst / TemporalStorm\nresearch timeline primitives", "group": "Classical sources and controls", "services": ["classical_burst_storm_sources"], "class": "research"},
       {"id": "timeline", "label": "Replayable SourceTimeline\nevaluator-side latent truth", "group": "Classical sources and controls", "services": []},
       {"id": "source_sidecar", "label": "Evaluator-only sidecar\ndoes not alter records", "group": "Classical sources and controls", "services": [], "class": "support"},
       {"id": "source_projection", "label": "Explicit source-to-Stim-Pauli projection\nREDUCED comparator", "group": "Classical sources and controls", "services": ["source_stim_pauli_projection"], "class": "restricted"},
-      {"id": "coupled_process", "label": "CoupledCycleNoiseProcess\nTheta(z_t) + shared/matched/off arms", "group": "Classical sources and controls", "services": ["classical_1f_nonmarkov_chain"]},
+      {"id": "coupled_process", "label": "CoupledCycleNoiseProcess\nTheta(z_t) + shared/matched/off arms", "group": "Classical sources and controls", "services": ["classical_finite_rtn_source_chain"]},
       {"id": "axis1_lower", "label": "Axis-1 primitive lowering\nH + collapse terms", "group": "Mechanisms and channels", "services": ["axis1_joint_channel"]},
       {"id": "joint_channel", "label": "Same-substep joint-L channel\nCPTP Kraus + evidence", "group": "Mechanisms and channels", "services": ["axis1_joint_channel"]},
       {"id": "channel_algebra", "label": "Reusable channel algebra\nKraus / Stinespring / Choi", "group": "Mechanisms and channels", "services": ["channel_algebra"]},

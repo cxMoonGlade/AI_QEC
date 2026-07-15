@@ -310,7 +310,8 @@ def _covered_by_exists(entry: str) -> bool:
     unrelated existing test still passes. For the load-bearing case (a gpu_bound/quimb_bound
     out_of_scope claim) the discriminating guard is instead the STRUCTURAL module-import check
     (``_module_imports``), which a false claim cannot satisfy. Full arc-attribution of a
-    covered_by test (run it under coverage, confirm it hits the arc) is deferred to Stage E."""
+    covered_by test (run it under coverage and confirm it hits the arc) belongs to the
+    runtime coverage audit rather than this structural parser."""
     entry = str(entry).strip()
     if "::" in entry:
         relpath, _, tname = entry.partition("::")
@@ -434,16 +435,16 @@ def audit(cov_json: Path, *, registry_path: Path,
     registered_set = set(enumerated)
     canonical_set = set(canonical)
 
-    # ---- AM-3: registry MUST enumerate exactly the canonical set ----
+    # ---- Registry must enumerate exactly the canonical set. ----
     missing_from_registry = sorted(canonical_set - registered_set)
     stray_in_registry = sorted(registered_set - canonical_set)
     hard_error = False
     for name in missing_from_registry:
-        print(f"MISSING-CANONICAL-UNIT (HARD ERROR, AM-3): {name!r} is an in-scope unit "
+        print(f"MISSING-CANONICAL-UNIT (HARD ERROR): {name!r} is an in-scope unit "
               f"but is NOT enumerated in the registry -- under-population is forbidden")
         hard_error = True
     for name in stray_in_registry:
-        print(f"STRAY-REGISTERED-UNIT (HARD ERROR, AM-3): {name!r} is enumerated in the "
+        print(f"STRAY-REGISTERED-UNIT (HARD ERROR): {name!r} is enumerated in the "
               f"registry but is NOT in the canonical set -- a renamed/typo unit")
         hard_error = True
     print(f"n_units_canonical={len(canonical_set)}")

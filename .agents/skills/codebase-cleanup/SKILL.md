@@ -104,7 +104,7 @@ Run this before editing:
    - Check callers, tests, configs, docs, console scripts, and fixture paths.
    - For docs, read enough content to classify the document. Low reference
      count is not proof of obsolescence.
-   - Treat current implementation maps, teacher/learner contracts, artifact
+   - Treat current implementation maps, role contracts, artifact
      schemas, claim boundaries, glossary material, and active runbook commands
      as load-bearing documentation even when only one doc links to them.
    - If required behavior still exists only in the old path, migrate that

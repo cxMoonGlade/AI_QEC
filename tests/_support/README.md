@@ -15,6 +15,6 @@ The reusable helpers are:
 - `random_cptp_kraus` and `random_density_matrix`: validated random fixtures.
 - `load_outputs_module`: loads a committed current-run script for a focused test.
 
-Each `stage_d_*_targets.json` file is a current-owner unit/branch-coverage registry
+Each `*_coverage_targets.json` file is a current-owner unit/branch-coverage registry
 consumed by `tests/harness/gate.py`. A registry must enumerate every public unit in
 its declared modules or state an explicit, test-backed reason for exclusion.

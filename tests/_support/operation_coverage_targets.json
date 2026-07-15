@@ -1,0 +1,42 @@
+{
+  "_comment": [
+    "Per-owner coverage registry for operation."
+  ],
+  "harness": {
+    "mutation_gate": {
+      "kill_rate_bar": 0.86,
+      "_note": "The 20/23=0.8696 ceiling represents 20/20 killable mutants killed (100%). The 3 survivors (default_memory_operations x_..._mutmut_3/6/9) are mutmut 3.6.0 uppercase case-swaps of canonical input literals: 'prep0'->'PREP0', 'stabilizer_round'->'STABILIZER_ROUND', and 'final_readout'->'FINAL_READOUT'. OperationSpec.__post_init__ -> canonical_operation_name -> .strip().lower() makes each survivor byte-identical to the original, so no test input can distinguish them: they are genuine equivalents. Case-insensitive operation names, the prepp/prepm aliases, and OperationSet.require argument canonicalization make this normalization a public contract. The documented bar therefore preserves the contract instead of deleting normalization to game the metric."
+    }
+  },
+  "contract": "docs/SIMULATOR.md",
+  "default_target": {"statement": 1.0, "branch": 1.0},
+  "covered_by_test_files": [
+    "tests/test_operation_units.py"
+  ],
+  "reconcile_modules": [
+    "src/error_coupling_simulator/frontend/operation.py"
+  ],
+  "out_of_scope": {},
+  "canonical_units": [
+    "OperationSpec.__post_init__",
+    "OperationSpec.to_manifest",
+    "OperationSet.__post_init__",
+    "OperationSet.names",
+    "OperationSet.require",
+    "OperationSet.to_manifest",
+    "canonical_operation_name",
+    "default_memory_operations",
+    "as_operation_set"
+  ],
+  "units": [
+    {"group": "operation", "module": "src/error_coupling_simulator/frontend/operation.py", "unit": "OperationSpec.__post_init__", "qualname": "OperationSpec.__post_init__", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "operation", "module": "src/error_coupling_simulator/frontend/operation.py", "unit": "OperationSpec.to_manifest", "qualname": "OperationSpec.to_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "operation", "module": "src/error_coupling_simulator/frontend/operation.py", "unit": "OperationSet.__post_init__", "qualname": "OperationSet.__post_init__", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "operation", "module": "src/error_coupling_simulator/frontend/operation.py", "unit": "OperationSet.names", "qualname": "OperationSet.names", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "operation", "module": "src/error_coupling_simulator/frontend/operation.py", "unit": "OperationSet.require", "qualname": "OperationSet.require", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "operation", "module": "src/error_coupling_simulator/frontend/operation.py", "unit": "OperationSet.to_manifest", "qualname": "OperationSet.to_manifest", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "operation", "module": "src/error_coupling_simulator/frontend/operation.py", "unit": "canonical_operation_name", "qualname": "canonical_operation_name", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "operation", "module": "src/error_coupling_simulator/frontend/operation.py", "unit": "default_memory_operations", "qualname": "default_memory_operations", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []},
+    {"group": "operation", "module": "src/error_coupling_simulator/frontend/operation.py", "unit": "as_operation_set", "qualname": "as_operation_set", "target": {"statement": 1.0, "branch": 1.0}, "exemptions": []}
+  ]
+}

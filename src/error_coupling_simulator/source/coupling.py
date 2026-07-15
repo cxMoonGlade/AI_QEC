@@ -248,7 +248,7 @@ class CoupledNoiseParameters:
 
 
 def default_source_coupling_config() -> SourceCouplingConfig:
-    """Return the documented slice-1 reference config.
+    """Return the default source-coupling config.
 
     The returned constants are class-(c) design defaults; callers may override
     them for device-specific calibration.
@@ -289,9 +289,8 @@ def independent_baseline_trajectory_to_params(
     """Break same-cycle shared-source coupling while preserving one-field marginals.
 
     Each mechanism field receives an independent permutation of the same source
-    trajectory. This is the Axis-2 negative control for G6-style ablations: the
-    marginal distribution of each field is unchanged, but cross-mechanism
-    same-cycle correlations from the common latent are destroyed.
+    trajectory. This leaves each field's marginal distribution unchanged while
+    destroying common-latent same-cycle alignment between fields.
     """
 
     cfg = config or default_source_coupling_config()

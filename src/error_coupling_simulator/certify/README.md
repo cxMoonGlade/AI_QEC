@@ -31,7 +31,7 @@ the frozen run in c128 creates a separate candidate artifact and does not promot
 **Boundary.** Certification may read evaluator-only process truth to score the declared process, but
 that truth never enters emitted records. Anchors wrap package-owned exact-DM, Stim, and closed-form
 references; no physics is reimplemented here. Downstream decoder-headroom analysis is not a
-simulator certification rung.
+simulator certification layer.
 The facade requires a caller process that implements its declared capability protocols. It is not
 an automatic `RecordBatch -> certificate` transform: the current `CoupledCycleNoiseProcess` has no
 DM replay callback and its Clifford-slice method is still an explicit open bridge.

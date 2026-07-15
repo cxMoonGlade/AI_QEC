@@ -1,39 +1,24 @@
-"""Memory-lean QutritDM apply-path falsifiers (residual-② fix, 2026-07-06).
+"""Memory-bounded QutritDM apply-path falsifiers.
 
-Constraint ledger for the memory-lean rewrite of ``carrier/exact/qutrit_dm.py``
-(chunked ``apply_channel`` + blockwise in-place hermitianize + local-contraction
-``_apply_op_vector`` + lazy ``rho`` + lean ``logical_distribution``). Every
-entry checks against a reference INDEPENDENT of the code under test:
+Every check uses a reference independent of the code under test:
 
-  L-1  chunked apply_channel == (a) per-Kraus sum of ``apply_local_op_q`` (the
-       pre-existing INDEPENDENT contraction path, itself proven vs the dense
-       embed — the algebra-independence leg) and (b) an UNCHUNKED transcription
-       of the same superoperator contraction (falsifies the CHUNKING only — it
-       deliberately shares the contraction algebra with the code under test).
-       Random CPTP Kraus, random mixed rho, q in {3,4}, every site.
-  L-2  hermitianize_inplace_blocked == cptp_channel.hermitianize elementwise
-       (incl. non-divisible block edges).
-  L-3  _apply_op_vector == the dense ``embed_operator_q @ psi`` it replaced
-       (VALUES); the MEMORY regression of the dense embed is guarded by L-7.
-  L-4  behavioral regression: covered by the untouched tests/test_qutrit_dm_exact.py
-       suite (runs on the new code automatically); the X-kind logical readout
-       branch (clone-free rotation + restore) is covered here by
-       test_logical_distribution_x_branch (values) + the L-5 X variant (memory).
-  L-5  memory falsifier (cuda): a DETECTOR_MARG-style projection loop at n=7
-       peaks BELOW 3.5 DM copies above a fixed 128 MiB workspace allowance
-       (pre-fix measured 5.44; both Z-kind and X-kind logical variants).
-  L-6  lazy rho: construction allocates no DM; first access materializes the
-       historical all-zero matrix; set/get round-trips.
-  L-7  codestate-vector memory falsifier (cuda): ``_codestate_vector`` at n=7
-       allocates < 0.5 DM copies above baseline (a regression to the dense
-       ``embed_operator_q`` path would allocate >= 2 copies — the 17.35 GiB
-       build_codestate gap this rewrite closed).
+* Chunked ``apply_channel`` matches both a per-Kraus ``apply_local_op_q`` sum and an
+  unchunked transcription of the superoperator contraction for random CPTP channels,
+  random mixed states, q in {3, 4}, and every site.
+* ``hermitianize_inplace_blocked`` matches ``cptp_channel.hermitianize`` elementwise,
+  including non-divisible block edges.
+* ``_apply_op_vector`` matches the dense ``embed_operator_q @ psi`` reference.
+* ``logical_distribution`` is checked on Z- and X-kind logical reads, including exact
+  state restoration after the X-basis rotation.
+* A CUDA projection loop at n=7 must peak below 3.5 density-matrix copies above a fixed
+  128 MiB workspace allowance for both Z- and X-kind logical reads.
+* Lazy ``rho`` construction materializes a zero matrix only on first access and supports
+  pointer-preserving set/get round trips.
+* ``_codestate_vector`` at n=7 must allocate less than 0.5 density-matrix copies above
+  baseline, excluding a dense-embedding implementation.
 
-GPU-marked tests skip without CUDA. DECLARED behavior change (Wave 1, contract C1 +
-AM-2, GPU-only house rule): the engine-device equivalence tests (L-1 + the unitary
-round-trip) were previously cuda-else-cpu; the CPU fallback is REMOVED -- they are now
-``requires_cuda`` hard skips. The explicit ``device="cpu"`` reference/bookkeeping tests
-(L-2/L-3/L-6 + the logical_distribution value checks) are unchanged and run everywhere.
+GPU engine-device equivalence and memory tests use ``requires_cuda`` hard skips when CUDA
+is unavailable. Explicit ``device="cpu"`` reference and bookkeeping tests run everywhere.
 """
 
 import numpy as np
@@ -50,7 +35,7 @@ from error_coupling_simulator.carrier.exact.qutrit_dm import (
     hermitianize_inplace_blocked,
 )
 
-# Skip gate + canonical constants from tests/conftest.py (Wave 1, contract C1).
+# Skip gate + canonical constants from tests/conftest.py.
 from conftest import CDTYPE, DEVICE, requires_cuda
 
 
@@ -69,16 +54,14 @@ def _random_mixed_rho(dim: int, rng: np.random.Generator) -> torch.Tensor:
 
 
 def _engine(cls, n: int, rho: torch.Tensor):
-    # DECLARED behavior change (contract C1/AM-2): was `_DEV = "cuda" if cuda else
-    # "cpu"` -- the CPU fallback is removed (GPU-only house rule: hard skip via
-    # requires_cuda on every consumer, never CPU fallback).
+    # Engine-device checks are GPU-only and every consumer is requires_cuda-gated.
     eng = cls(n, device=DEVICE)
     eng.rho = rho.clone().to(DEVICE)
     return eng
 
 
 # --------------------------------------------------------------------------- #
-# L-2 — blockwise hermitianize                                                 #
+# Blockwise hermitianization                                                   #
 # --------------------------------------------------------------------------- #
 @pytest.mark.parametrize("dim,block", [(7, 3), (16, 4), (81, 16), (81, 100)])
 def test_hermitianize_blocked(dim, block):
@@ -97,9 +80,9 @@ def test_hermitianize_blocked(dim, block):
 
 
 # --------------------------------------------------------------------------- #
-# L-1 — chunked apply_channel equivalence (two independent references)         #
+# Chunked apply_channel equivalence (two independent references)               #
 # --------------------------------------------------------------------------- #
-@requires_cuda  # declared behavior change: engine-device test, CPU fallback removed
+@requires_cuda  # GPU-only engine-device test
 @pytest.mark.parametrize("force_chunked", [False, True])
 @pytest.mark.parametrize("cls,n", [(QutritDM, 2), (QutritDM, 3), (QutritDM, 4), (QuquartDM, 3)])
 def test_apply_channel_matches_independent_paths(cls, n, force_chunked, monkeypatch):
@@ -136,7 +119,7 @@ def test_apply_channel_matches_independent_paths(cls, n, force_chunked, monkeypa
         assert float((got - ref_b).abs().max()) < 1e-13, f"site {site} vs from-scratch einsum"
 
 
-@requires_cuda  # declared behavior change: engine-device test, CPU fallback removed
+@requires_cuda  # GPU-only engine-device test
 def test_apply_gate_unitary_roundtrip():
     """H then H on any site is the identity (chunked path, unitary special case)."""
     n, cls = 3, QutritDM
@@ -151,7 +134,7 @@ def test_apply_gate_unitary_roundtrip():
 
 
 # --------------------------------------------------------------------------- #
-# L-3 — vector op vs the dense embed it replaced                               #
+# Vector operation versus the dense embedding reference                        #
 # --------------------------------------------------------------------------- #
 @pytest.mark.parametrize("cls,n", [(QutritDM, 3), (QutritDM, 5), (QuquartDM, 3)])
 def test_apply_op_vector_matches_dense_embed(cls, n):
@@ -173,12 +156,12 @@ def test_apply_op_vector_matches_dense_embed(cls, n):
 
 
 # --------------------------------------------------------------------------- #
-# L-6 — lazy rho                                                               #
+# Lazy rho                                                                      #
 # --------------------------------------------------------------------------- #
 def test_lazy_rho_semantics():
     eng = QutritDM(3, device="cpu")
     assert eng._rho is None  # construction allocates no DM
-    z = eng.rho  # first access materializes the historical all-zero matrix
+    z = eng.rho  # first access materializes the zero-initialized matrix
     assert z.shape == (27, 27)
     assert float(z.abs().max()) == 0.0
     rho = _random_mixed_rho(27, np.random.default_rng(3))
@@ -207,8 +190,8 @@ def test_logical_distribution_regression():
 
 
 def test_logical_distribution_x_branch():
-    """The X-kind logical readout (clone-free rotation + restore, the 2026-07-06
-    review's unguarded branch): |+>|00> reads logical_x={0:'X'} as p0=1; a Z on
+    """The X-kind logical readout uses clone-free rotation and exact restoration:
+    |+>|00> reads logical_x={0:'X'} as p0=1; a Z on
     qudit 0 flips it to p1=1; rho is restored bit-identically after the call."""
 
     eng = QutritDM(3, device="cpu")
@@ -228,7 +211,7 @@ def test_logical_distribution_x_branch():
 
 
 # --------------------------------------------------------------------------- #
-# L-5 — GPU memory regression falsifier                                        #
+# GPU projection-loop memory falsifier                                         #
 # --------------------------------------------------------------------------- #
 _WORKSPACE_ALLOWANCE = 128 * 2**20  # fixed cuBLAS/cuSOLVER workspace allowance (bytes)
 
@@ -236,11 +219,9 @@ _WORKSPACE_ALLOWANCE = 128 * 2**20  # fixed cuBLAS/cuSOLVER workspace allowance 
 @requires_cuda
 @pytest.mark.parametrize("logical_kind", ["Z", "X"])
 def test_detector_marg_loop_peak_below_3p5_copies(logical_kind):
-    """The residual-② probe loop shape at n=7: the peak above a fixed workspace
-    allowance must stay below 3.5 DM copies (pre-fix measured 5.44 — falsifies a
-    memory regression). Both logical kinds run so the X-rotation readout branch
-    of logical_distribution (the 2026-07-06 review's unguarded path) is bounded
-    by the same threshold."""
+    """At n=7 the peak above a fixed workspace allowance must stay below 3.5
+    density-matrix copies. Both logical kinds run so the X-rotation readout branch
+    of ``logical_distribution`` is bounded by the same threshold."""
     n = 7
     q = 3
     dim = q ** n
@@ -256,11 +237,8 @@ def test_detector_marg_loop_peak_below_3p5_copies(logical_kind):
     kraus = [torch.eye(q, dtype=CDTYPE) * (0.99 ** 0.5),
              torch.eye(q, dtype=CDTYPE) * (0.01 ** 0.5)]
     torch.cuda.empty_cache()
-    # DELTA measurement (the L-7 pattern below), NOT the absolute peak: in a full-suite
-    # run the ~600 earlier CUDA tests leave standing allocations (module globals, sticky
-    # cuBLAS workspaces) that an absolute peak silently charges to THIS test — measured
-    # 2026-07-06: [Z]/[X] false-failed in the full suite while green solo/paired (the
-    # 3.5 - ~3.3 margin is only ~15 MB). ``base`` isolates the test's own footprint.
+    # Measure the delta rather than the absolute peak so persistent module and cuBLAS
+    # allocations from other CUDA tests are not charged to this test.
     base = torch.cuda.memory_allocated()
     torch.cuda.reset_peak_memory_stats()
     for s in range(n):
@@ -274,16 +252,15 @@ def test_detector_marg_loop_peak_below_3p5_copies(logical_kind):
     peak = torch.cuda.max_memory_allocated() - base
     k = (peak - _WORKSPACE_ALLOWANCE) / copy_bytes
     # Structural live set: rho1 + working + apply output (+ chunk/tile temporaries)
-    # ~3.3 copies. Pre-fix measured 5.44 — 3.5 above the allowance falsifies both
-    # the old behavior and a redundant-clone regression in either readout branch.
+    # The 3.5-copy cap above the allowance rejects redundant clones in either branch.
     assert k < 3.5, f"peak multiplier {k:.2f} >= 3.5 (memory-lean regression)"
 
 
 @requires_cuda
 def test_codestate_vector_allocates_no_dm():
-    """L-7: the codestate-vector path must stay vector-scale — a regression to
-    the dense embed_operator_q path allocates >= 2 DM copies at n=7 (this is
-    the 17.35 GiB build_codestate gap, measured residual-② pre-fix)."""
+    """The codestate-vector path must stay vector-scale; a dense
+    ``embed_operator_q`` implementation allocates at least two density-matrix copies
+    at n=7."""
     n = 7
     dim = 3 ** n
     copy_bytes = dim * dim * 16

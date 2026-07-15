@@ -30,27 +30,23 @@ QUTRIT_DEVICE = "cuda"
 # Declared design constants and swept ranges.                                  #
 # --------------------------------------------------------------------------- #
 # The leakage CHANNEL is the WG ``exp(Lindbladian)`` map parameterized by the
-# physical ``(theta, g_seep, g_heat)``; the FIELD-STANDARD Wood-Gambetta rates
-# ``(WG_L1, WG_L2)`` (1704.03081 Eq.2) are DIAGNOSTICS of that channel, not pinned
-# inputs. The bands below are the registered §2.2 target regimes the channel siting
-# must land in (the channel parameters are SWEPT, not a single magic default).
+# declared ``(theta, g_seep, g_heat)``; the Wood-Gambetta rates
+# ``(WG_L1, WG_L2)`` (1704.03081 Eq. 2) are diagnostics of that channel, not measured
+# inputs. The ranges below are project targets for sensitivity studies.
 
-#: Per-cycle WG leakage rate ``WG_L1`` band (Miao 2211.04728 ~5e-3/cycle). The GO
-#: Current certification targets WG_L1 = 1e-3 and 5e-3;
-#: ``solve_theta_for_wg_l1`` finds the
-#: coherent-exchange ``theta`` that hits a target WG_L1 (with C_L>0).
+#: Project WG leakage-rate targets. The upper value has approximate cross-observable
+#: scale context from Miao 2211.04728, but is not a measurement of this project channel.
 WG_L1_REGIME = (1.0e-3, 5.0e-3)
-#: Per-cycle WG seepage rate ``WG_L2`` band (thermal-like ``L2/L1 ~ 20-50``; McEwen
-#: 2102.06131 gamma_up ~0.1% / gamma_down ~8-9%/round, no-reset). Set by ``g_seep``.
+#: Project WG seepage-rate targets. McEwen 2102.06131 provides cross-protocol scale
+#: context, not a fitted ``WG_L2`` interval for this channel.
 WG_L2_REGIME = (5.0e-2, 1.0e-1)
 
-#: Coherent ``|1><->|2>`` exchange strengths ``theta`` SWEPT across the registered
-#: regime (documented sweep set, NOT a single pinned magic constant). These land WG_L1
+#: Coherent ``|1><->|2>`` exchange strengths swept across the project range. These land WG_L1
 #: at ~1e-3..5e-3 (``WG_L1 ~ (1/2) sin^2(theta)``): theta=0 is the incoherent-ablation
 #: anchor (C_L=0), theta>0 carries C_L>0 (the non-Pauli signal). Use
 #: ``solve_theta_for_wg_l1`` to hit an exact target WG_L1.
 THETA_SWEEP = (0.0, 0.045, 0.07, 0.10)
-#: Dissipative seepage rates ``g_seep`` SWEPT across the WG_L2 regime (jump ``|1><2|``,
+#: Dissipative seepage rates ``g_seep`` swept across the project WG_L2 range (jump ``|1><2|``,
 #: |2>->|1>). g_seep ~ 0.05..0.10 lands WG_L2 in ``WG_L2_REGIME``.
 G_SEEP_SWEEP = (0.05, 0.09, 0.10)
 #: Incoherent heating rates ``g_heat`` SWEPT for the matched-WG_L1 ablation (jump
@@ -58,30 +54,19 @@ G_SEEP_SWEEP = (0.05, 0.09, 0.10)
 #: theta=0 is the incoherent-leakage limit used to isolate the coherent contribution.
 G_HEAT_SWEEP = (0.0, 0.005)
 
-#: First-pass central siting (a documented mid-band point, NOT pinned magic constants;
-#: the GO gate sweeps THETA_SWEEP x G_SEEP_SWEEP). theta=0.07 -> WG_L1 ~ 2.4e-3 (in the
-#: Miao band, C_L>0); g_seep=0.09 -> WG_L2 ~ 9e-2 (in the McEwen band).
+#: Convenience center for the project sweep. ``theta=0.07`` gives WG_L1 about
+#: 2.4e-3 and ``g_seep=0.09`` gives WG_L2 about 9e-2 in the declared channel.
 THETA_DEFAULT = 0.07
 G_SEEP_DEFAULT = 0.09
 G_HEAT_DEFAULT = 0.0
 
-#: Leaked-ancilla READOUT-MAP bias ``b = P(|2> reads "1"-like)`` -- ``(c)``-class
-#: SWEPT NUISANCE, NOT a pinned magic constant (current process contract:
-#: "Leaked-ancilla readout map"). A data qutrit found in |2> during a stabilizer
+#: Leaked-ancilla readout-map bias ``b = P(|2> reads "1"-like)`` is a swept project
+#: nuisance, not a measured device parameter. A data qutrit found in |2> during a stabilizer
 #: measurement is read by the 2-outcome POVM ``F1 = |1><1| + b|2><2|``,
-#: ``F0 = |0><0| + (1-b)|2><2|`` (``F0 + F1 = I``). Only the DIRECTION is grounded:
-#: the |2> level sits ENERGETICALLY ABOVE |1>, so the dispersive IQ discriminator
-#: places it predominantly in the EXCITED (|1>-like, bit=1) region -- a leaked
-#: measure qubit "reads predominantly |1>-like", i.e. ``b > 0.5`` (Miao 2211.04728;
-#: McEwen 2102.06131, leaked states discriminate as excited). The MAGNITUDE is NOT
-#: pinned -- any single value (e.g. 0.9) would be an invented toy constant -- so we
-#: SWEEP ``b in [0.5, 1.0]`` and report the R=1 floor as a BRACKET
-#: ``[LER*(b=0.5), LER*(b=1.0)]``, never a point estimate. ``b`` is REQUIRED input
-#: to every process/map factory (no silent default). The |2> population on a support
-#: is ``O(leakage rate) ~ 5e-3`` so the floor is expected weakly sensitive to ``b``
-#: at R=1 (a tight bracket -> leaked-readout immaterial at R=1; a wide bracket is a
-#: finding -> ground ``b`` from the device IQ POVM). It is a gating nuisance,
-#: never a premise.
+#: ``F0 = |0><0| + (1-b)|2><2|`` (``F0 + F1 = I``). The chosen interval
+#: ``b in [0.5, 1.0]`` is a project-design sensitivity range. Neither its direction
+#: nor any point value is inferred from the cited leakage experiments. ``b`` is a
+#: required factory input so the assumption cannot be hidden.
 #: The registered sweep interval and the discrete grid the harness brackets over.
 LEAKED_READOUT_BIAS_INTERVAL = (0.5, 1.0)
 LEAKED_READOUT_BIAS_SWEEP = (0.5, 0.75, 1.0)
@@ -201,7 +186,7 @@ def leakage_kraus(
 
 
 # --------------------------------------------------------------------------- #
-# Wood-Gambetta rate diagnostics + theta calibration ((c)-class; evaluator).    #
+# Wood-Gambetta rate diagnostics and project-target solver                       #
 # --------------------------------------------------------------------------- #
 #: Projectors for the WG rates (1704.03081 Eq.2). Computational subspace {|0>,|1>}
 #: (d1=2); leaked subspace {|2>} (d2=1).
@@ -235,8 +220,7 @@ def coherence_of_leakage(theta: float, g_seep: float, g_heat: float = 0.0) -> fl
     coherence signal. For the unitary model this equals ``|sin(2*theta)|`` (WG Eq.59 is
     ``|sin t|`` with ``t = 2*theta`` here, since ``H = theta(|1><2|+|2><1|)`` vs WG's
     ``(1/2)(...)``), i.e. **2x the bare ``|rho[1,2]|``** -- the proper metric, NOT the
-    off-diagonal magnitude (a 2x slip caught + fixed 2026-06-20, validated against Eq.59 in
-    an independent closed-form check). ``> 0`` iff the channel
+    off-diagonal magnitude, as independently checked against Eq.59. ``> 0`` iff the channel
     carries coherent leakage: ``theta>0`` -> ``C_L>0``; the incoherent limit
     (``theta=0``, any ``g_seep``/``g_heat``) -> ``C_L=0``.
     """
@@ -261,9 +245,9 @@ def solve_theta_for_wg_l1(
     a monotone bisection on the EXACT channel rate ``wg_rates(theta, g_seep, g_heat)[0]``
     (no closed-form inversion). The bracket starts at the analytic seed
     ``theta0 = arcsin(sqrt(2 target))`` and widens to ``[0, pi/2]`` (WG_L1 is monotone
-    increasing in ``theta`` on ``[0, pi/2]``). Sets the process's WG_L1 to a registered
-    Miao/McEwen target (e.g. 1e-3, 5e-3) with C_L>0 -- the channel parameter ``theta`` is
-    NOT a pinned magic constant; it is solved for the registered rate.
+    increasing in ``theta`` on ``[0, pi/2]``). This solves a project-channel coordinate
+    for a declared target such as 1e-3 or 5e-3. It is not a fit to a paper observable or
+    a device calibration.
     """
     target = float(target_wg_l1)
     if target <= NUMERICAL_ZERO:
@@ -302,7 +286,8 @@ def leaked_readout_probabilities(b: float) -> dict[int, float]:
 
       level |0> -> bit 1 with prob 0.0   (ground reads |0>-like; structural)
       level |1> -> bit 1 with prob 1.0   (excited reads |1>-like; structural)
-      level |2> -> bit 1 with prob ``b`` (LEAKED: biased |1>-like for ``b > 0.5``, §2.2)
+      level |2> -> bit 1 with prob ``b`` (by definition, ``b > 0.5`` is more
+                                      |1>-like than |0>-like)
 
     The |0>/|1> entries are the exact computational-subspace readout (structural 0/1);
     only the leaked |2> row carries the ``(c)``-class swept bias. The engine
@@ -329,8 +314,9 @@ def leaked_readout_manifest(b: float) -> dict[str, Any]:
         "swept": True,
         "sweep_interval": LEAKED_READOUT_BIAS_INTERVAL,
         "sweep_grid": LEAKED_READOUT_BIAS_SWEEP,
-        "direction_grounded": "b>0.5 (|2> reads |1>-like)",
-        "source": "Miao 2211.04728 / McEwen 2102.06131 (leaked reads predominantly |1>-like)",
+        "direction_provenance": "project-design",
+        "literature_supports_binary_map": False,
+        "source": None,
         "magnitude_pinned": False,
         "is_coin_flip": False,
     }

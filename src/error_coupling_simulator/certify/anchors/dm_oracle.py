@@ -33,7 +33,7 @@ BEFORE ``answer``, so the infeasible density matrix is never allocated):
     only fixed-size sum1/sum2 + the depth-first live-clone path, NOT the full joint). The conservative
     un-pruned depth bound is DECLARED in the capability's ``mem_bytes_estimate``; infeasible full-register
     cells stay closed while small valid sub-registers may answer. ``dropped_mass`` is reported (the prune
-    simplification is bounded, not silent; WS1 prereg §1.3/§4/§7.2). The (R-1,n_stab) ``rr_corr`` /
+    simplification is bounded and reported, not silent). The (R-1,n_stab) ``rr_corr`` /
     (R,n_stab,n_stab) ``spatial_corr`` are reduced through the SHARED ``core.reduce_rr_corr`` /
     ``reduce_spatial_corr`` so
     the anchor's shape matches ``core.emitted_statistic`` EXACTLY (apples-to-apples). RR_CORR/SPATIAL
@@ -234,7 +234,7 @@ class DMOracleAnchor:
             # first/second moments over the pruned branch tree. Reduce the (R-1, n_stab) rr_corr /
             # (R, n_stab, n_stab) spatial_corr through the SHARED core reductions so the anchor's shape
             # matches emitted_statistic EXACTLY (apples-to-apples). The prune simplification is bounded:
-            # dropped_mass is recorded in provenance (WS1 §4 — unbounded => STOP, but it is reported).
+            # dropped_mass is recorded in provenance so pruning remains explicit.
             res = eng.record_oracle(stabs, round_pre, round_post, R=regime.R, b=regime.b, arm=regime.arm)
             if res.get("kind") != "moments":
                 raise RuntimeError(

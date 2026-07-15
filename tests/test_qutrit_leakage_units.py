@@ -193,6 +193,10 @@ def test_leaked_readout_map_and_audit_record_are_explicit() -> None:
     assert record["leaked_bit1_prob"] == 0.75
     assert record["readout_role"] == "swept_nuisance"
     assert record["swept"] is True
+    assert record["direction_provenance"] == "project-design"
+    assert record["literature_supports_binary_map"] is False
+    assert record["source"] is None
+    assert "direction_grounded" not in record
     assert record["magnitude_pinned"] is False
     assert record["is_coin_flip"] is False
     for invalid in (-0.01, 1.01, float("nan"), float("inf")):

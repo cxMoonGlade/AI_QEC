@@ -5,11 +5,8 @@ coherence GENERATION), Markovian and non-Markovian (a 2-state classical latent),
 axis (the dual-axis instrument is basis-symmetric => K/K_X/K_Z are all forgeable). The honest
 discriminator is min record-distance (TV) from the quantum shared-mode record to this whole family.
 
-Extracted VERBATIM from outputs/twin_validation/notion3_relaxation_dualaxis_run.py; the only change is
-removing the ft/n3 indirection (canonical package functions called directly). tv_distance lives in
-observables (imported here).
-
 Boundary: CPU exact-DM (16-dim, nmax=1); evaluator-side. No physical ground truth (FORMAL).
+Current owner checks are in ``tests/test_quantum_bath_groundtruth_nulls_units.py``.
 """
 
 from __future__ import annotations

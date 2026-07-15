@@ -58,7 +58,6 @@ AXIS1_MCWF_MPS_EXECUTION_BACKEND_CONTRACT = AXIS1_CARRIER_MCWF_MPS_BACKEND_CONTR
 _FINITE_STEP_ORDER_FIRST = "first_order"
 _FINITE_STEP_ORDER_STRANG = "strang_second_order"
 _FINITE_STEP_ORDERS = (_FINITE_STEP_ORDER_FIRST, _FINITE_STEP_ORDER_STRANG)
-_TOTAL_PROBABILITY_RESIDUAL_GATE = 1.0e-12
 _ONE_SITE_LEAKAGE_HAMILTONIAN_FAMILIES = frozenset({"LEAK_EXCHANGE_12"})
 _TWO_SITE_LEAKAGE_HAMILTONIAN_LEVELS = {
     "LEAK_EXCHANGE_11_02": ((1, 1), (0, 2)),
@@ -721,8 +720,8 @@ def _connected_support_clusters(
     adjacent iff their supports share >=1 qubit; the returned clusters are the
     TRANSITIVE closure (so ``(0,1)`` and ``(1,2)`` land in one cluster, even though
     ``(0,)`` and ``(2,)`` do not directly overlap). Each cluster is a list of term
-    indices, and the clusters are returned in order of FIRST appearance so the gate
-    sequence is deterministic and stable w.r.t. term order. (W-A fix, ADR Axis-1.)
+    indices, and the clusters are returned in order of first appearance so the gate
+    sequence is deterministic and stable with respect to term order.
     """
     n = len(supports)
     parent = list(range(n))
@@ -836,8 +835,9 @@ def _hamiltonian_group_gates(
     local_dims: tuple[int, ...],
     device: str,
 ) -> tuple[dict[str, Any], ...]:
-    """Connected-cluster joint exponentiation (the W-A fix). Same signature + return
-    shape as before (one ``{"support", "gate", "term_index", "term"}`` dict per gate).
+    """Connected-cluster joint exponentiation.
+
+    Returns one ``{"support", "gate", "term_index", "term"}`` dictionary per gate.
 
     Hamiltonian terms are partitioned into connected components of the support-overlap
     graph (transitive closure). For each cluster the member Hamiltonians (each built on
@@ -2185,66 +2185,6 @@ def _substep_has_mcwf_terms(substep: dict[str, Any]) -> bool:
         if kind == "collapse" and abs(float(term.get("coefficient", 0.0))) > 0.0:
             return True
     return False
-
-
-def _restricted_acceptance_policy(
-    *,
-    execution: dict[str, Any],
-    rng_seed: int | None,
-    trajectory_count: int,
-) -> dict[str, Any]:
-    residual = float(execution["total_probability_residual"])
-    residual_ok = residual <= _TOTAL_PROBABILITY_RESIDUAL_GATE
-    seed_explicit = rng_seed is not None
-    accepted = bool(residual_ok and seed_explicit)
-    blockers: list[str] = []
-    if not seed_explicit:
-        blockers.append("sampled_trajectory_rng_seed_not_explicit")
-    if not residual_ok:
-        blockers.append("total_probability_residual_exceeds_gate")
-    blockers.extend(
-        [
-            "production_error_control_policy_not_established",
-            "multilevel_leakage_error_control_not_established",
-            "finite_step_error_bound_not_established",
-        ]
-    )
-    return {
-        "schema": "error_coupling_simulator.frontend.mcwf_mps_restricted_acceptance_policy.v1",
-        "policy_role": "restricted_execution_acceptance_not_metric",
-        "accepted_for_restricted_execution": accepted,
-        "accepted_for_sampled_execution_evidence": bool(accepted),
-        "accepted_for_exact_dense_probability_evidence": False,
-        "accepted_for_production_scalable_backend": False,
-        "blocked_reason": None if accepted else blockers[0],
-        "trajectory": {
-            "mode": "sampled_fixed_microstep_mcwf_trajectories",
-            "trajectory_count": int(trajectory_count),
-            "rng_seed": None if rng_seed is None else int(rng_seed),
-            "rng_seed_required_for_acceptance": True,
-            "rng_seed_was_explicit": seed_explicit,
-            "single_trajectory_density_claim": False,
-            "comparison_outcome_is_metric": False,
-            "epistemic_class": "a/c",
-        },
-        "finite_step": {
-            "exact_summed_lindbladian_claim": False,
-            "accepted_as_error_bound": False,
-            "comparison_outcome_is_metric": False,
-            "epistemic_class": "c",
-        },
-        "probability": {
-            "total_probability_residual": residual,
-            "total_probability_residual_gate": _TOTAL_PROBABILITY_RESIDUAL_GATE,
-            "gate_role": "heuristic_execution_sanity_gate_not_metric",
-            "comparison_outcome_is_metric": False,
-            "epistemic_class": "c",
-        },
-        "production_blockers": blockers,
-        "scored_quantity_policy": "policy ledger only; no new scored quantity",
-        "comparison_outcome_is_metric": False,
-        "epistemic_class": "a/c",
-    }
 
 
 def _blocked_acceptance_policy(

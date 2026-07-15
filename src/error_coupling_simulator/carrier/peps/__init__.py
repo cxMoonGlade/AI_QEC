@@ -1,27 +1,24 @@
-r"""Single-wire (pure-state) 2D qutrit PEPS trajectory carrier — the RUNG-B
-feasibility spike (``docs/nonpauli_teacher/peps_singlewire_spike_contract.md``
-v1.0 REGISTERED).
+r"""Single-wire pure-state two-dimensional qutrit PEPS trajectory carrier.
 
-The public surface of the spike engine, grouped by submodule:
+The public surface is grouped by submodule:
 
   * :mod:`.state` — :class:`PepsState`, :func:`build_codestate_peps` (single-wire
-    codestate, pepo steps 1-3 + norm-normalize), :func:`dense_psi` (d3 referee
-    bridge), the 1-site apply + local gate table (referee-independent, D4);
-  * :mod:`.stab_tt` — the UNSQUARED ``sqrt(E_s)`` diagonal TT (SF3 rank bound
+    codestate, PEPO ket-layer construction + norm-normalize), :func:`dense_psi`
+    (d3 reference bridge), the 1-site apply + local gate table;
+  * :mod:`.stab_tt` — the unsquared ``sqrt(E_s)`` diagonal TT (rank bound
     ``(3,5,3)``/``(3,)``) + :func:`apply_stab_branch`;
   * :mod:`.contraction` — the double-layer ``<psi| Pi |psi>`` boundary-MPS reads
-    (SF9), the two-term Born read, the §6.2 per-read accuracy instruments, the
+    the two-term Born read, per-read accuracy instruments, the
     terminal POVM + exact-P(obs) seam;
-  * :mod:`.trajectory` — the per-shot loop (D7 — the ``mps_forward`` value
-    contracts transplanted to 2D), the §6.1 dynamic-eps truncation policy, the
+  * :mod:`.trajectory` — the per-shot loop, the dynamic-epsilon truncation policy, the
     :class:`PepsSampler` packed-record driver;
   * :mod:`.sampling_maps` — the three pinned uniform->outcome decision maps
-    (single source; SW5/SW6-testable);
-  * :mod:`.diagnostics` — :func:`bond_profile` (the SW8 instrument), :func:`eps_l`
-    (the §6.3 Rudolph-Tindall loop-correlation instrument), :func:`loop_rank_probe`.
+    (single source with independent value and corruption tests);
+  * :mod:`.diagnostics` — :func:`bond_profile`, :func:`eps_l`, and
+    :func:`loop_rank_probe`.
 
 ``s_to_det`` / ``det_to_s`` are re-exported from the carrier-neutral
-``carrier.record_fold`` module (contract §3 / SF11 — single source; the XOR
+``carrier.record_fold`` module; the XOR
 detector fold is applied by the package-local packed-record boundary before a
 consumer receives a ``det`` payload).
 """
@@ -62,7 +59,6 @@ from .state import (
     RDTYPE,
     PepoLayout,
     PepsState,
-    apply_gate_1site,
     apply_site_op,
     build_codestate_peps,
     dense_psi,
@@ -93,7 +89,7 @@ from .trajectory import (
 __all__ = [
     # state
     "CDTYPE", "RDTYPE", "QUTRIT", "PepoLayout", "PepsState",
-    "apply_gate_1site", "apply_site_op", "build_codestate_peps", "dense_psi",
+    "apply_site_op", "build_codestate_peps", "dense_psi",
     "fused_bond_name", "phys_name", "qutrit_gate", "renormalize", "site_tag",
     "site_tensor",
     # stab_tt
@@ -113,6 +109,6 @@ __all__ = [
     "sbit_from_uniform", "terminal_bit_from_uniform", "leak_branch_from_uniform",
     # diagnostics
     "bond_profile", "max_bond", "eps_l", "loop_rank_probe",
-    # record fold (verbatim re-export, single source)
+    # Carrier-neutral record fold, re-exported from its single source.
     "s_to_det", "det_to_s",
 ]

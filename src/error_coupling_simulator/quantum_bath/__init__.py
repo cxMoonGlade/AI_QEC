@@ -7,9 +7,9 @@ classical-field null (the independent-GT dephasing floor), the incoherent-AD nul
 relaxation nulls + the model-free min-TV discriminator), and the anti-toy ground-truth checks.
 
 Boundary: exact-DM feasibility-only (dim = 16*nmax), CPU, evaluator-side research carrier; it is not
-an emitted-record production backend. There is no physical ground truth -- oracles are FORMAL. See
-docs/twin_validation/notion3_relaxation_dualaxis_prereg.md for the science + the two registered
-false-positive corrections (K/K_X/K_Z are all forgeable; the field-null K is NOT 0).
+an emitted-record production backend. There is no physical ground truth -- oracles are formal
+implementation references. Current ownership and tests are documented in this package's README and
+``docs/service_status.json``. Wider scientific interpretation remains pending a clean literature audit.
 """
 
 from .carrier import dual_point, dual_point_qrt

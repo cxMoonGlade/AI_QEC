@@ -7,12 +7,9 @@ We push this classical field through the SAME dual-axis instrument (NO mode, 16-
 Gaussian average by EXACT 3D Gauss-Hermite quadrature. This is the constructive (not K=0-by-fiat)
 independent reproduction of the dephasing-sector record.
 
-Extracted VERBATIM from outputs/twin_validation/notion3_relaxation_dualaxis_run.py, EXCEPT:
-  - _gamma_of_t is copied from notion3_quantum_vs_classical_run.py as an OPTIONAL numerical cross-check
-    of the gamma_unit_closed closed form (the primary source cross-checks them to 1e-9).
-  - the ft/n3 indirection is removed (canonical package functions called directly).
-
 Boundary: CPU exact-DM feasibility-only; evaluator-side. No physical ground truth (FORMAL).
+Current closed-form and corruption checks are in
+``tests/test_quantum_bath_gksl_crowjoynt_units.py``.
 """
 
 from __future__ import annotations

@@ -1,4 +1,4 @@
-"""Stage-D batch ``gksl_crowjoynt`` -- per-unit L0+L1 coverage of the two shared-bath
+"""Per-unit L0+L1 coverage of the two shared-bath
 carrier primitive modules
 
   * ``error_coupling_simulator.quantum_bath.gksl``       (3 CPU-pure units)
@@ -10,8 +10,8 @@ CPU-pure numpy/scipy (gksl: boson algebra + the SHARED (d0,d1,mode) GKSL Liouvil
 ``scipy.linalg.expm``; crow_joynt: closed-form phase covariance + a 3D Gauss-Hermite average
 of the classical sigma_z field through the dual-axis instrument). No torch, no quimb, no cuda
 -- so each unit gets the FULL treatment: L0 (100% statement + BOTH arcs of every tracked
-branch per unit) + L1 (Hypothesis faithfulness properties) + KILLER teeth. L2 (mutmut) runs
-in Stage E.
+branch per unit) + L1 (Hypothesis faithfulness properties) + KILLER teeth. L2 runs through
+the current mutation harness.
 
 The 8 units + their L0 branch surface and L1 invariant. NB on the "branch surface":
 coverage.py --branch emits NO tracked branch arc for a pure generator/comprehension body, so a
@@ -426,7 +426,7 @@ def test_L0_field_null_point_runs_and_returns_record():
     assert out["K_Z"] < 1e-6
 
 
-@pytest.mark.skipif(os.environ.get("STAGE_D_SKIP_SLOW") == "1",
+@pytest.mark.skipif(os.environ.get("ECS_MUTATION_SKIP_SLOW") == "1",
                     reason="slow converged n_gh=24 physics pin (~20s); runs in the coverage "
                            "gate, skipped under mutation for speed (the functions it exercises "
                            "are already killed by the fast n_gh=2 recon-match + closed-form pins)")
@@ -434,8 +434,8 @@ def test_field_null_KX_converges_to_the_PHYSICAL_value():
     # What SHOULD field_null_point produce? The cheap n_gh=2 tests above verify the
     # IMPLEMENTATION (module == independent recon) but NOT physical convergence -- n_gh=2 gives
     # K_X~0.11, a Gauss-Hermite TRUNCATION artifact. This ONE converged call pins the CORRECT
-    # PHYSICS: K_X -> 3.3195e-4 at n_gh=24 (converged: Δ to n_gh=28 is 5e-9; matches
-    # crow_joynt.py's ~3e-4 docstring). Evidence: outputs/twin_validation/stage_d_gksl_converged_probe.py.
+    # NUMERICAL REGRESSION: K_X -> 3.3195e-4 at n_gh=24 (Δ to n_gh=28 is 5e-9).
+    # The inherited scientific interpretation remains pending the current formula audit.
     out = cj.field_null_point(zeta=ZETA, gamma=GAMMA, g0z=0.5, g1z=0.5, tau=TAU, n_gh=24)
     kx = out["K_X"]
     assert kx == pytest.approx(3.3195e-4, abs=1e-6)   # the CONVERGED physical value (not 0.11)

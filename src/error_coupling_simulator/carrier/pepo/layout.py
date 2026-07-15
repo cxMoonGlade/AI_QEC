@@ -1,42 +1,35 @@
 from __future__ import annotations
 
-r"""PEPO layout + codestate builder for the rotated d x d XZZX patch (rung-1, builder A1).
+r"""PEPO layout and codestate builder for a rotated ``d x d`` XZZX patch.
 
-Binding docs: ``docs/nonpauli_teacher/pepo_engine_rung1_contract.md`` (v4.2, ss2 + the s3
-``build_codestate`` registry row) under ``docs/nonpauli_teacher/pepo_d5d7_carrier_prereg.md``
-(v2.4). This module owns the GEOMETRY (diamond -> integer grid transform, frozen-cut site
-lists, plaquette paths) and the CODESTATE PEPO builder; dynamics/truncation live in
-``dynamics.py`` [A2], contraction/sampling in ``sampler.py`` [A3].
+This module owns the diamond-to-integer-grid transform, frozen-cut site lists,
+plaquette paths, and codestate construction. Dynamics and truncation are owned by
+``dynamics.py``; contraction and terminal reads are owned by ``sampler.py``.
 
-Grid transform (contract s2). Engine position ``pos`` (the streams/stab key space) with
+Engine position ``pos`` with
 raw diamond coordinate ``(x, y) = sched.data_coords[pos]`` maps to
 
     ``u' = (x + y)/2 - min,   v' = (x - y)/2 - min``
 
-and ``(u', v')`` is ASSERTED integral, unique, and exactly the ``{0..d-1}^2`` grid (the raw
-transform gives half-integers on the real patch — the v2 fix). ``u`` indexes the D-P
+and ``(u', v')`` is asserted integral, unique, and exactly the ``{0..d-1}^2`` grid.
+``u`` indexes the D-P
 inter-column direction used by :meth:`PepoLayout.plaquette_path` (a path "column crossing"
 = a step changing ``u``); the boundary-MPS contraction axis is the SAMPLER's own
 algorithm-internal convention (``sampler.py``: a boundary-MPS "column" = fixed ``v``, the
-MPS running over ``u``) — the contraction value is axis-independent (re-review 2026-07-10:
-this sentence previously tied the D-P path sense to "boundary-MPS", contradicting the
-sampler).
+MPS running over ``u``). The contraction value is axis-independent.
 
-Frozen cut (contract s2 / F8). ``frozen_cut_a`` / ``frozen_cut_b`` replicate the R-gate
-script's max-balanced x-threshold rule VERBATIM (``outputs/nonpauli_teacher/
-pepo_feasibility_drho_vs_round_d3.py``: scan unique x thresholds, ``A = {pos: x <= t + 1e-9}``,
-maximize ``min(|A|, |B|)``, first maximum wins). At the d3_at_q6_7 patch this yields
+``frozen_cut_a`` / ``frozen_cut_b`` use a deterministic max-balanced x-threshold rule:
+scan unique x thresholds, define ``A = {pos: x <= t + 1e-9}``, maximize
+``min(|A|, |B|)``, and take the first maximum. At the d3_at_q6_7 patch this yields
 ``A = (0, 1, 2) | B = (3..8)`` — a STAIRCASE in ``(u', v')``, not a grid column; every frozen
 number is defined at THAT site list.
 
-Codestate PEPO construction (documented here per the build brief; the contract's registry
-row allows any internally-consistent TN construction producing the fused-leg PEPO of
-``|m><m|``):
+Codestate PEPO construction produces the fused-leg representation of ``|m><m|``:
 
   1. PURE-STATE seed: the oracle's ``_codestate_vector`` convention — the H^(x)n-SPREAD seed
      ``H^(x)n |0...0>`` as a bond-free product PEPS of per-site qutrit vectors
-     ``(1, 1, 0)/sqrt(2)`` (a literal ``|0...0>`` seed can be EXACTLY annihilated in the
-     ``m = 1`` sector — the v2 fix).
+     ``(1, 1, 0)/sqrt(2)``; a literal ``|0...0>`` seed can be exactly annihilated in the
+     ``m = 1`` sector.
   2. Per check ONE bond-2 W-tensor chain (the D-P construction): each projector
      ``(I + c.g)/2`` (``c = +1`` for stabilizers, ``c = (-1)^m`` for the logical-sector
      projector, applied in ``sched.stabilizers`` order then the logical — the oracle's
@@ -45,34 +38,35 @@ row allows any internally-consistent TN construction producing the fused-leg PEP
      one inter-column crossing where possible); chain legs are FUSED into the single
      per-grid-edge bond. Paulis are the oracle's qutrit embedding (X/Z on the ``{0,1}``
      block, identity on ``|2>``), so the ``|2>`` rows stay exactly zero.
-  3. Nonzero-norm ASSERT for BOTH m (contract v2 fix): with ``tr_stab`` the squared norm
+  3. Nonzero-norm assertion for both logical sectors: with ``tr_stab`` the squared norm
      after the stabilizer projectors and ``tr_m`` after the logical-sector projector,
      both sectors ``tr_m`` and ``tr_stab - tr_m`` must exceed ``NUMERICAL_ZERO * tr_stab``
      (scale-relative so the check stays d-generic; annihilation gives ~0).
   4. Site-local ket(x)bra fuse into the FUSED-leg PEPO of ``rho = |m><m|``: per site the
      rank<=5 tensor ``T (x) conj(T)`` with the physical pair fused ROW-MAJOR ket-major into
-     ``k{pos}`` of dim 9 (``k = 3*t_ket + t_bra`` — pinned; every superoperator uses this)
+     ``k{pos}`` of dim 9 (``k = 3*t_ket + t_bra``; every superoperator uses this)
      and each virtual pair fused ket-major into the grid-edge bond ``B{p}_{q}`` (``p < q``).
      Untouched grid edges are materialized as dim-1 bonds so EVERY grid edge carries a bond
      index. Tensors are trace-normalized (``tr_m^(-1/n)`` per site), so
      ``pepo_trace(state) == 1`` and the dense reconstruction equals the oracle's normalized
      ``rho`` (global phase cancels in ``|m><m|``).
 
-Referee (G1.0): dense d3 reconstruction == ``QutritDM.init_logical(m)``'s ``rho`` for
+Current dense-reference tests require the d3 reconstruction to equal
+``QutritDM.init_logical(m)``'s ``rho`` for
 ``m = 0`` AND ``m = 1``, max-abs <= 1e-12 (``carrier/exact/qutrit_dm.py``; the logical
 projector mirrors the oracle's ``self._logical_z or {0: "Z"}`` wiring through
 ``sv_sampler``'s ``set_code`` — logical_z is set only for a Z-kind logical).
 
-Index/tag conventions pinned for the sibling modules (A2/A3):
+Index/tag conventions shared by the sibling modules:
 
   * site tensor tag ``Q{pos}`` (ENGINE position, the streams/stab key space);
   * fused physical index ``k{pos}``, dim 9, ``k = 3*t_ket + t_bra`` (row-major vec);
   * fused virtual bond between grid-adjacent positions ``p < q``: ``B{p}_{q}``
     (:func:`fused_bond_name`); present on EVERY grid edge (dim 1 when structurally empty);
-  * tensors torch complex128 on the passed-in device, cuda ALWAYS (S8; asserted at
-    :class:`PepoState` construction), rank <= 5.
+  * tensors torch complex128 on the passed-in CUDA device, asserted at
+    :class:`PepoState` construction, rank <= 5.
 
-GPU-only, complex128 (S8); devices passed in, never "cuda if available else cpu".
+GPU-only, complex128; devices are passed in, never selected implicitly.
 """
 
 import math
@@ -85,13 +79,13 @@ from ..exact.qutrit_dm import CDTYPE, qudit_hadamard
 #: qutrit local dimension of the carrier (fused physical leg = _QUTRIT**2 = 9).
 _QUTRIT = 3
 _FUSED_DIM = _QUTRIT * _QUTRIT
-#: coordinate comparison tolerance — replicated VERBATIM from the R-gate script's
-#: x-threshold scan (``xs[p] <= t + 1e-9``); NOT a numerical floor (see NUMERICAL_ZERO).
+#: Coordinate comparison tolerance for the x-threshold scan
+#: (``xs[p] <= t + 1e-9``); not a numerical floor (see NUMERICAL_ZERO).
 _COORD_TOL = 1e-9
 
 
 # --------------------------------------------------------------------------- #
-# Naming conventions (A1-pinned; shared with dynamics.py / sampler.py)        #
+# Naming conventions shared with dynamics.py and sampler.py                   #
 # --------------------------------------------------------------------------- #
 def site_tag(pos: int) -> str:
     """The quimb tag of the site tensor at engine position ``pos``."""
@@ -121,7 +115,7 @@ def _ket_bond_name(p: int, q: int) -> str:
 class PepoLayout:
     """Diamond -> integer-grid layout of a rotated d x d XZZX patch.
 
-    Attributes (contract-pinned): ``sched`` (the parsed XZZX schedule), ``n_data``,
+    Attributes: ``sched`` (the parsed XZZX schedule), ``n_data``,
     ``d``, ``grid`` (``pos -> (u, v)`` with ``u, v in {0..d-1}``), ``pos_at``
     (``(u, v) -> pos``), ``frozen_cut_a`` / ``frozen_cut_b`` (the max-balanced
     x-threshold cut site lists; ``A == (0, 1, 2)`` at the d3_at_q6_7 patch).
@@ -140,8 +134,8 @@ class PepoLayout:
     # ------------------------------------------------------------------ #
     @classmethod
     def from_sched(cls, sched) -> "PepoLayout":
-        """Build the layout from a parsed XZZX schedule; asserts integrality,
-        uniqueness and d x d-ness of the transformed ``(u', v')`` grid (contract s2)."""
+        """Build the layout from a parsed XZZX schedule; assert integrality,
+        uniqueness, and d x d coverage of the transformed ``(u', v')`` grid."""
         coords = [tuple(float(x) for x in c) for c in sched.data_coords]
         n_data = len(coords)
         if n_data < 1:
@@ -180,10 +174,12 @@ class PepoLayout:
 
     @staticmethod
     def _frozen_cut(coords: list, n_data: int) -> tuple[tuple, tuple]:
-        """The max-balanced x-threshold cut, replicated VERBATIM from the R-gate script
-        (``pepo_feasibility_drho_vs_round_d3.py``): scan unique x thresholds (all but the
-        largest), ``A = {pos: x <= t + 1e-9}``, score ``min(|A|, |B|)``, STRICT-> update so
-        the FIRST (smallest-threshold) maximum wins."""
+        """Return the deterministic max-balanced x-threshold cut.
+
+        Scan unique x thresholds except the largest, set
+        ``A = {pos: x <= t + 1e-9}``, score ``min(|A|, |B|)``, and retain the
+        first (smallest-threshold) maximum.
+        """
         xs = [float(c[0]) for c in coords]
         uniq_x = sorted(set(xs))
         if len(uniq_x) < 2:
@@ -271,7 +267,7 @@ class PepoLayout:
 # State object                                                                #
 # --------------------------------------------------------------------------- #
 class PepoState:
-    """The fused-leg density-matrix PEPO state (contract s2).
+    """The fused-leg density-matrix PEPO state.
 
     Attributes: ``tn`` (quimb ``TensorNetwork``; one rank<=5 site tensor per data
     qutrit, tagged ``Q{pos}``, fused physical index ``k{pos}`` of dim 9 with
@@ -280,10 +276,10 @@ class PepoState:
     the ONLY tracked bond metadata: per-truncation discarded weight (squared-sigma
     scale) + per-round trace shift; appended by ``dynamics.ntu_truncate``).
 
-    Construction asserts (contract s2 / S8): torch complex128 tensors on a cuda
+    Construction asserts torch complex128 tensors on a CUDA
     device, rank <= 5, one tensor per position with the dim-9 fused physical leg.
     Hermiticity of the represented ``rho`` is deliberately NOT asserted per-tensor
-    (the fused-leg PEPO does not expose it locally — pinned in the contract).
+    because the fused-leg PEPO does not expose it locally.
     """
 
     def __init__(self, tn, layout: PepoLayout, device: str, ledger: list | None = None) -> None:
@@ -295,7 +291,7 @@ class PepoState:
         dev = torch.device(self.device)
         if dev.type != "cuda":
             raise ValueError(
-                f"PepoState tensors are torch-cuda-complex128 ALWAYS (S8); got device {self.device!r}")
+                f"PepoState tensors require a CUDA device; got {self.device!r}")
         sites = _site_tensors_by_pos(tn, layout.n_data)
         for pos in range(layout.n_data):
             t = sites[pos]
@@ -303,12 +299,12 @@ class PepoState:
             if not torch.is_tensor(data):
                 raise TypeError(f"site {pos}: tensor data is not a torch tensor")
             if data.dtype != CDTYPE:
-                raise TypeError(f"site {pos}: dtype {data.dtype} != complex128 (S8)")
+                raise TypeError(f"site {pos}: dtype {data.dtype} != complex128")
             if data.device.type != dev.type:
                 raise ValueError(
                     f"site {pos}: tensor device {data.device} != state device {self.device}")
             if len(t.inds) > 5:
-                raise ValueError(f"site {pos}: rank {len(t.inds)} > 5 (contract s2)")
+                raise ValueError(f"site {pos}: rank {len(t.inds)} > 5")
             k = fused_phys_name(pos)
             if k not in t.inds:
                 raise ValueError(f"site {pos}: fused physical index {k!r} missing")
@@ -455,18 +451,19 @@ def _ket_norm_sq(ket: dict, layout: PepoLayout) -> float:
 def build_codestate_pepo(sched, m: int, device: str = "cuda") -> PepoState:
     """Build the codestate ``rho = |m><m|`` as a fused-leg PEPO :class:`PepoState`.
 
-    Contract s3 ``build_codestate`` row: ``prod_g (I + g)/2`` + the logical-sector
-    projector applied to the H^(x)n-SPREAD seed (the oracle's ``_codestate_vector``
+    The construction applies ``prod_g (I + g)/2`` and the logical-sector
+    projector to the H^(x)n-spread seed (the independent dense reference's
+    ``_codestate_vector``
     convention) as bond-2 W-tensor chains, qutrit-embedded (``|2>`` rows exactly zero),
     then fused site-locally into the PEPO of ``|m><m|`` (see the module docstring for
     the full construction + conventions). Nonzero norm is asserted for BOTH ``m``
     sectors. The result is trace-normalized (``Tr(rho) == 1``).
 
-    The logical projector mirrors the oracle wiring exactly: ``sv_sampler``'s
+    The logical projector mirrors the independent dense reference wiring:
+    ``sv_sampler``'s
     ``set_code`` passes ``logical_z = sched.logical`` only when ``sched.logical_kind``
     is ``'Z'``; ``QutritDM._codestate_vector`` then uses ``self._logical_z or
-    {0: "Z"}`` — the same (degenerate for non-Z-kind patches, replicated for G1.0
-    referee equality) fallback applies here.
+    {0: "Z"}``; the same fallback applies here.
     """
     layout = PepoLayout.from_sched(sched)
     dev = torch.device(device)
@@ -499,7 +496,7 @@ def build_codestate_pepo(sched, m: int, device: str = "cuda") -> PepoState:
     floor = NUMERICAL_ZERO * tr_stab
     if not (tr_m > floor and tr_other > floor):
         raise RuntimeError(
-            f"codestate sector norm assert failed (contract v2 — BOTH m must be nonzero): "
+            f"codestate sector norm assert failed (both logical sectors must be nonzero): "
             f"m={mm} sector {tr_m:.3e}, other sector {tr_other:.3e}, "
             f"stab-projected mass {tr_stab:.3e}")
 
@@ -518,7 +515,7 @@ def build_codestate_pepo(sched, m: int, device: str = "cuda") -> PepoState:
         data, inds = ket[pos]
         pep = torch.tensordot(data, data.conj(), dims=0) * trace_scale
         pinds = list(inds) + [nm + "~" for nm in inds]
-        # physical pair -> k{pos} = 3*t_ket + t_bra (ket MAJOR, row-major — pinned).
+        # physical pair -> k{pos} = 3*t_ket + t_bra (ket major, row-major).
         pep, pinds = _fuse_pair(pep, pinds, f"p{pos}", f"p{pos}~")
         pinds = [fused_phys_name(pos) if nm == f"p{pos}" else nm for nm in pinds]
         # each virtual pair -> the fused grid-edge bond B{p}_{q} (ket MAJOR).
@@ -540,16 +537,17 @@ def build_codestate_pepo(sched, m: int, device: str = "cuda") -> PepoState:
 
 
 def dense_rho(state: PepoState) -> torch.Tensor:
-    """Dense ``(3^n, 3^n)`` reconstruction of the PEPO — the d3 referee bridge (G1.0/
-    G1.3/G1.9 instrument). Asserts ``n_data <= 9`` (the qutrit-DM ceiling; a d5 patch
-    has NO dense bridge). Row/column index convention matches the exact oracle: engine
+    """Dense ``(3^n, 3^n)`` reconstruction of the PEPO for bounded comparisons.
+
+    Asserts ``n_data <= 9`` (the qutrit-DM ceiling; a d5 patch has no dense bridge).
+    Row/column index convention matches the independent dense reference: engine
     position 0 is the MOST-significant qutrit factor.
     """
     import quimb.tensor as qtn  # lazy: keep the module importable without quimb
 
     layout = state.layout
     n = layout.n_data
-    assert n <= 9, f"dense_rho is the d3 referee bridge only (n_data = {n} > 9)"
+    assert n <= 9, f"dense_rho supports the d3 bounded reference only (n_data = {n} > 9)"
 
     sites = _site_tensors_by_pos(state.tn, n)
     tensors = []

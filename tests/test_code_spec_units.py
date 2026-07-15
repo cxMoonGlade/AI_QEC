@@ -1,12 +1,11 @@
-"""Stage-D batch ``code_spec`` -- per-unit L0+L1+L2 coverage of
+"""Per-unit L0+L1+L2 coverage of
 ``error_coupling_simulator.frontend.code_spec`` (17 CPU-pure public units: the five
 frozen syndrome-code dataclasses' ``__post_init__`` + ``to_manifest``,
 ``Axis1StaticZZDeviceSpec.to_metadata``, ``CodeSpec.to_manifest`` + the three
 properties ``data_indices``/``ancilla_indices``/``operation_set``, and the Pauli-algebra
 function ``commute``; no torch, no quimb, so out_of_scope is empty).
 
-Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
-work-list docs/SIMULATOR.md D17).
+Current coverage contract: docs/SIMULATOR.md SS12.3/12.4.
 ``frontend/code_spec.py`` owns the syndrome-code construction contract the frontend
 compiler consumes: ``CodeQubit``/``PauliTerm``/``StabilizerCheck``/
 ``LogicalObservableSpec``/``Axis1StaticZZDeviceSpec`` (each with a load-bearing

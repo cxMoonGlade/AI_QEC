@@ -1,12 +1,10 @@
-"""L2 minimal forward-model test: an exact, differentiable circuit -> detection
-event probability, with a coherent (non-Clifford) error and a non-Pauli channel.
+"""Exact differentiable circuit-to-detection-probability tests.
 
-Demonstrates the pieces the digital twin's device forward model needs:
+The tests cover:
   * compose local non-Clifford gates + local CPTP channels on an n-qubit
     register exactly;
   * read out an exact detection-event probability;
-  * differentiate it w.r.t. a mechanism parameter -- the gradient that powers
-    the L4 priority-list / bottleneck knobs.
+  * differentiate it with respect to an explicit channel parameter.
 """
 
 from __future__ import annotations

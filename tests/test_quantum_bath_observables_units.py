@@ -1,13 +1,13 @@
-"""Stage-D batch D1 -- per-unit L0+L1 coverage of
+"""Per-unit L0+L1 coverage of
 ``error_coupling_simulator.quantum_bath.observables`` (7 CPU-pure units).
 
-Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
-work-list docs/SIMULATOR.md batch D1). The module
+Current coverage contract: docs/SIMULATOR.md SS12.3/12.4. The module
 is alphabet-agnostic multi-time record statistics over a 3-round outcome distribution --
 pure math (numpy/math only, no torch), so it gets the FULL treatment: L0 (100% statement +
-branch per unit) + L1 (Hypothesis faithfulness properties). L2 (mutmut) runs in Stage E.
+branch per unit) + L1 (Hypothesis faithfulness properties). L2 runs through the current
+mutation harness.
 
-The 7 units + their L0 partition and L1 invariant (inventory (b) / batch D1 row). NB on the
+The 7 units + their L0 partition and L1 invariant. NB on the
 "branch surface": coverage.py --branch emits NO tracked branch arc for a generator/comprehension
 body, so K_stat_joint / K_stat_binary / tv_distance / record_distance score branch 0/0 (nothing
 to miss) -- their faithfulness rests on the L1 PROPERTY, not on a branch count.

@@ -1,4 +1,4 @@
-"""Stage-D batch ``axis1_context`` -- per-unit L0+L1+L2 coverage of
+"""Per-unit L0+L1+L2 coverage of
 ``error_coupling_simulator.frontend.axis1_context`` (10 CPU-pure public units: the frozen
 dataclass ``Axis1LocalLindbladContextSpec`` -- its load-bearing ``__post_init__``, the
 ``is_trivial`` / ``include_leakage`` properties, ``to_manifest`` / ``to_metadata``, and the
@@ -8,8 +8,7 @@ load-bearing ``to_axis1_primitive_params`` fan-out -- plus the four module funct
 module imports NEITHER torch NOR quimb -- ``dataclasses`` + ``math`` + a sibling
 ``Axis1PrimitiveParams`` whose torch import is lazy/in-function -- so out_of_scope is empty).
 
-Full-coverage program (docs/SIMULATOR.md SS12.3/12.4;
-work-list docs/SIMULATOR.md D22).
+Current coverage contract: docs/SIMULATOR.md SS12.3/12.4.
 ``frontend/axis1_context.py`` owns the PUBLIC Axis-1 local-Markovian context: it selects +
 parameterizes local-Lindblad primitive lowering before ``carrier.joint_lindbladian``
 assembles the joint generator. It is NOT a runnable Pauli/Stim noise model, NOT Axis-2 source
@@ -88,9 +87,9 @@ def test_L0_post_init_default_is_valid_and_coerces():
     s3 = Axis1LocalLindbladContextSpec(gamma_up_per_ns=2, zeta_rad_per_ns=3, leak_seep_21_per_ns=4)
     assert type(s3.gamma_up_per_ns) is float and type(s3.zeta_rad_per_ns) is float
     assert type(s3.leak_seep_21_per_ns) is float
-    retired_schema = "_".join(("qec", "twin")) + ".simulator.Axis1LocalLindbladContextSpec.v1"
+    unsupported_schema = "error_coupling_simulator.frontend.local_lindblad_context.v0"
     with pytest.raises(ValueError, match="unsupported local Lindblad context schema"):
-        Axis1LocalLindbladContextSpec(schema=retired_schema)
+        Axis1LocalLindbladContextSpec(schema=unsupported_schema)
 
 
 def test_L0_post_init_thermal_guard_exact():

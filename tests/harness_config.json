@@ -1,5 +1,5 @@
 {
-  "_doc": "ECS test-harness KNOBS -- the SINGLE VISIBLE place for every tunable (so no important knob is buried in mutmut internals or scattered across shell scripts). Read by tests/harness/{gate,mutation}.py and the spark runner. Every knob is ENV-OVERRIDABLE (the env var is in '_env'); a per-batch registry (tests/_support/stage_d_*_targets.json) may override any mutation_gate / gpu_pool knob via its own top-level 'harness' block (e.g. an expensive-dynamics batch raising the mutation timeout). Precedence: env > registry 'harness' > this file.",
+  "_doc": "ECS test-harness KNOBS -- the SINGLE VISIBLE place for every tunable (so no important knob is buried in mutmut internals or scattered across shell scripts). Read by tests/harness/{gate,mutation}.py and the spark runner. Every knob is ENV-OVERRIDABLE (the env var is in '_env'); a per-owner registry (tests/_support/*_coverage_targets.json) may override any mutation_gate / gpu_pool knob via its own top-level 'harness' block (e.g. an expensive-dynamics batch raising the mutation timeout). Precedence: env > registry 'harness' > this file.",
 
   "coverage_gate": {
     "default_target": {"statement": 1.0, "branch": 1.0},
@@ -18,9 +18,9 @@
       "kill_rate_bar": "ECS_MUT_BAR",
       "timeout_multiplier": "ECS_MUT_TIMEOUT_MULT",
       "timeout_constant": "ECS_MUT_TIMEOUT_CONST",
-      "skip_slow": "STAGE_D_SKIP_SLOW"
+      "skip_slow": "ECS_MUTATION_SKIP_SLOW"
     },
-    "_note": "L2 gate: kill_rate = killed/total >= kill_rate_bar. jobs=null -> all cores (nproc). mutmut's per-mutant WALL timeout = (estimated_test_time + timeout_constant) * timeout_multiplier (mutmut default 15x). RAISE timeout_multiplier for EXPENSIVE-DYNAMICS batches so slow-but-FINITE mutants run to completion and get KILLED by the wrong-value assert instead of being cut off as a timeout (a timeout counts as not-killed). Truly-hanging mutants still time out (correct). skip_slow -> tests marked @pytest.mark.skipif(os.environ.get('STAGE_D_SKIP_SLOW')=='1') are skipped UNDER MUTATION ONLY (they are slow physics-convergence pins that do not discriminate mutants; the fast pins kill them). The gate runs them for physics correctness. Do NOT skip-slow a test that IS the discriminator (e.g. memwitness witness tests -- raise the timeout instead)."
+    "_note": "L2 gate: kill_rate = killed/total >= kill_rate_bar. jobs=null -> all cores (nproc). mutmut's per-mutant WALL timeout = (estimated_test_time + timeout_constant) * timeout_multiplier (mutmut default 15x). RAISE timeout_multiplier for EXPENSIVE-DYNAMICS batches so slow-but-FINITE mutants run to completion and get KILLED by the wrong-value assert instead of being cut off as a timeout (a timeout counts as not-killed). Truly-hanging mutants still time out (correct). skip_slow -> tests marked @pytest.mark.skipif(os.environ.get('ECS_MUTATION_SKIP_SLOW')=='1') are skipped UNDER MUTATION ONLY (they are slow physics-convergence pins that do not discriminate mutants; the fast pins kill them). The gate runs them for physics correctness. Do NOT skip-slow a test that IS the discriminator (e.g. memwitness witness tests -- raise the timeout instead)."
   },
 
   "gpu_pool": {

@@ -1,4 +1,4 @@
-"""Stage-D batch ``axis1_selection`` -- per-unit L0+L1+L2 coverage of
+"""Per-unit L0+L1+L2 coverage of
 ``error_coupling_simulator.frontend.axis1_selection`` (15 CPU-pure public units: the three
 frozen Axis-1 selection dataclasses -- ``Axis1MechanismSelection`` (__post_init__ +
 to_manifest), ``Axis1MechanismSelectionPlan`` (__post_init__ + by_kind + require_kind +
@@ -22,7 +22,7 @@ resulting selection's exact fields (kills the row_kind/primitive/mechanism/reaso
 mutants and the branch that chose the row) plus exact ``to_manifest`` dicts on representative
 operation shapes (H / I-with-arg / M-with-basis-keys / CZ / coupling-edge-present).
 
-RAISING-GUARD ROUTE COVERAGE + REACHABILITY PROBES (the D13/D18 lesson). Every validation raise
+RAISING-GUARD ROUTE COVERAGE + REACHABILITY PROBES. Every validation raise
 in ``Axis1MechanismSelection.__post_init__`` is tripped by DIRECT construction with the exact
 message; the ``axis1_selection_layers_in_schedule_order`` guards are tripped through BOTH the
 build_* path (partition of a real plan) and a hand-built-selection path, with the EXACT message
@@ -359,7 +359,8 @@ def test_L0_selection_to_manifest_one_qubit_drive_local():
         "context_mechanisms": ["T2", "T1"], "operation_names": ["H"],
         "source_step_indices": [0], "source_operation_ids": ["step:0"],
         "operations": [{"name": "H", "targets": [0], "source_step_index": 0, "args": []}],
-        "dt_ns_nominal": 25.0, "dt_ns_bracket": [20.0, 30.0], "dt_source": "h3_h5_v1",
+        "dt_ns_nominal": 25.0, "dt_ns_bracket": [20.0, 30.0],
+        "dt_source": "error_coupling_simulator.frontend.duration_policy.v1",
         "mechanism_slots": ["drive", "idle", "spectator"], "reason": R_1Q_LOCAL,
         "epistemic_class": "c",
     }
@@ -1202,7 +1203,8 @@ def test_L0_selection_with_context_full_manifest():
         "operation_names": ["CZ"], "source_step_indices": [0],
         "source_operation_ids": ["step:0"],
         "operations": [{"name": "CZ", "targets": [0, 1], "source_step_index": 0, "args": []}],
-        "dt_ns_nominal": 30.0, "dt_ns_bracket": [25.0, 45.0], "dt_source": "h3_h5_v1",
+        "dt_ns_nominal": 30.0, "dt_ns_bracket": [25.0, 45.0],
+        "dt_source": "error_coupling_simulator.frontend.duration_policy.v1",
         "mechanism_slots": ["two_qubit_drive", "zz_spectator", "idle"],
         "reason": R_2Q_ZZ_NOEDGE + "; public Axis1LocalLindbladContextSpec selects " + FEAT_THERMAL,
         "epistemic_class": "c",

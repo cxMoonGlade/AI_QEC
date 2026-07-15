@@ -84,7 +84,7 @@ Current slice:
   `Axis1MechanismSelectionPlan` for the registered `ZZ x T2` and contextual
   `DR x ZZ` rows, lowers those selections, and calls
   `carrier.joint_lindbladian` diagnostics to emit comparison evidence rows. The
-  `DR x ZZ` row uses the build-contract one-qubit substep context
+  `DR x ZZ` row uses the declared one-qubit substep context
   `DR + ZZ + T2 + T1` while reporting the `DR x ZZ` commutator as the nonzero
   witness. Lowering is routed through the minimal
   `error_coupling_simulator.mechanisms.axis1_primitives` registry for the current local
@@ -424,8 +424,8 @@ Current slice:
 - `RecordSchema` and manifest guards for detector/observable bit widths,
   ideal/noisy schema equality, and evaluator-only sidecar visibility.
 - Stim export/import helpers.
-- Stim-compatible Pauli/depolarizing noise insertion through both the legacy
-  global gate-class `StimPauliNoiseSpec` and the user-facing `NoiseBuilder`.
+- Stim-compatible Pauli/depolarizing noise insertion through both the global
+  gate-class `StimPauliNoiseSpec` and the location-aware `NoiseBuilder`.
   `NoiseBuilder` supports insertion after one gate occurrence, after a gate
   type, after all gates, before measurement types, and during scheduled idles at
   `TICK` boundaries.

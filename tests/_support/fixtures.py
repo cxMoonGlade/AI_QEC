@@ -1,7 +1,6 @@
-"""Shared test fixtures + guard helpers (Wave 1, contract row C2).
+"""Shared test fixtures + guard helpers.
 
-Binding contract: ``docs/SIMULATOR.md`` (row C2,
-NAMING STANDARD, DEVIOUS-TEST STANDARD). Scope rule (see ``README.md``): shared test
+Binding contract: ``docs/SIMULATOR.md``. Scope rule (see ``README.md``): shared test
 support ONLY -- never production code, never a home for anything with an independence
 constraint against a specific backend (references that referee a backend stay
 deliberately local per the contract's "Explicitly NOT centralized" list).
@@ -21,8 +20,8 @@ Contents:
   * ``load_outputs_module`` -- importlib shim for committed scripts under ``outputs/``.
   * ``canonical_rep_code_spec`` / ``canonical_mixed_code_spec`` / ``canonical_circuit_ir`` /
     ``canonical_sealed_schedule`` / ``canonical_stim_circuit`` -- deterministic VALID INPUT
-    fixtures (INPUTS, not references) the schema/compiler batches previously re-derived per
-    file; import these instead of re-rolling a rep-code CodeSpec / CircuitIR / schedule.
+    fixtures (INPUTS, not references) shared by schema/compiler tests; import these instead
+    of re-rolling a rep-code CodeSpec / CircuitIR / schedule.
 
 Self-tested by ``tests/_support/test_support_selftest.py`` (meta-tests: the DEVIOUS-TEST
 STANDARD's "test infrastructure defends itself" requirement).
@@ -44,7 +43,7 @@ except Exception:  # noqa: BLE001 -- the numpy backend must work on a torch-less
 #: repo root (tests/_support/fixtures.py -> tests/_support -> tests -> root)
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 
-#: The ONE machine-greppable precondition prefix (contract C2). A message with this
+#: The ONE machine-greppable precondition prefix. A message with this
 #: prefix marks a class-(c) harness precondition failure, NEVER a gate miss.
 PRECONDITION_PREFIX = "PRECONDITION (class c, not a gate miss): "
 
@@ -79,7 +78,7 @@ def assert_control_trips(check_fn, broken_input, gate_tol) -> None:
     is INERT and this helper itself raises (a check that has never been shown to fail
     is unproven -- scrutinize-vacuous-checks discipline). Non-AssertionError exceptions
     PROPAGATE: a crashing harness is a bug, never a fired control. The bespoke broken
-    inputs stay local to each test (contract C2 -- that bespokeness IS the discipline).
+    inputs stay local to each test; that bespokeness IS the discipline.
     ``gate_tol`` defaults to nothing here on purpose: pass the real check's registered
     gate tolerance, never an ad-hoc value.
     """
@@ -146,7 +145,7 @@ def assert_with_margin(value: float, threshold: float, *, mode: str,
 
 
 # --------------------------------------------------------------------------- #
-# Random-input builders (one each; backend + return-shape flags -- contract C2)#
+# Random-input builders (one each; backend + return-shape flags)               #
 # --------------------------------------------------------------------------- #
 def _assert_cptp(stack, tol: float = BUILDER_TOL) -> None:
     """Internal completeness check on a stacked ``[K, d, d]`` Kraus set:
@@ -189,7 +188,7 @@ def random_cptp_kraus(n_kraus: int, dim: int, rng: np.random.Generator, *,
     """A random CPTP Kraus set via QR of a stacked Gaussian block (exactly complete:
     ``Q^H Q = I_dim`` => ``sum_k K_k^H K_k = I``), CPTP-asserted internally at 1e-12.
 
-    Returns (contract C2 return-shape flags):
+    Return shapes:
       * ``backend="torch"``  -> stacked ``[n_kraus, dim, dim]`` complex tensor
         (``stacked=True``) or a list of ``[dim, dim]`` tensors (``stacked=False``);
         ``device``/``dtype`` forwarded (default: torch.complex128 on the default device).
@@ -267,9 +266,9 @@ def load_outputs_module(relpath: str):
 # Deterministic VALID inputs to FEED the units under test. These are INPUTS, not
 # references -- like ``random_cptp_kraus`` they carry no independence constraint, so they
 # are safe to centralize (an independent RECOMPUTE that referees a specific module's
-# OUTPUT stays LOCAL per contract C2). Every schema/compiler batch (D15-D19) re-derived a
-# near-identical ``_valid_rep_spec`` / ``_rep_spec`` / ``_mixed_spec`` / ``_rich_circuit``;
-# these are the shared canonical versions so later batches ``import`` instead of re-rolling.
+# OUTPUT stays LOCAL). Schema/compiler tests import these shared canonical inputs instead of
+# re-rolling near-identical ``_valid_rep_spec`` / ``_rep_spec`` / ``_mixed_spec`` /
+# ``_rich_circuit`` builders.
 # Lazy imports keep this module's import-time deps minimal (numpy + optional torch) for the
 # many tests that use only the helpers above. Frozen dataclasses => each call is fresh+safe.
 

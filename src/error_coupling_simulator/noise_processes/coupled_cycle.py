@@ -1,168 +1,24 @@
-"""CoupledCycleNoiseProcess — evaluator-only source-coupled record process (slice 1, dense).
+"""Source-conditioned dense record process.
 
-One shared memory-ful source trajectory ``z_t`` (Axis-2) is fanned out per QEC
-cycle into coupled mechanism parameters (``source_coupling.Theta``), lowered
-into per-round ``Axis1PrimitiveParams``, and emitted as real R-round
-``{"det","obs"}`` records through the sealed dense Axis-1 record path
-(``axis1_measurement_record_evidence_manifest`` with the injected
-``params_for_substep`` callable). The process implements the
-``audit.certify.types.ControlledNoiseProcess`` protocol surface (``sched`` /
-``truth`` / ``emit`` / ``channels`` / ``emit_clifford_slice``) so its records
-drop into ``certify_cells`` + the Anchor/Control ports unchanged.
+A replayable finite-RTN source timeline is mapped into per-round coupling and
+dephasing parameters, lowered into ``Axis1PrimitiveParams``, and executed by the
+sealed dense Axis-1 record path. The emitted payload contains only detector and
+observable records; the source trajectory and channel field remain evaluator-only.
 
-Runtime ownership and the emitted-record boundary are package-local. The process
-emits only the declared record object; its source trajectory and channel field stay
-on the evaluator side.
+Current owner tests cover schedule sealing, source-class rejection, round mapping,
+parameter fan-out, payload isolation, deterministic seeds, matched-marginal and
+source-off controls, closed-form record responses, batching declarations, and the
+supported logical preparation. The process deliberately retains these bounds:
 
-CONSTRAINT LEDGER (faithfulness protocol rule II — written BEFORE the
-implementation below; each entry names its falsifying test in
-``tests/test_coupled_cycle_process.py``):
+- readout/reset probabilities use the whole-trajectory mean;
+- only the declared coupling and dephasing coordinates are source-modulated;
+- ``channels()`` reports the zero-source channel, not an average over trajectories;
+- dense record enumeration is exponential in the number of measurement keys;
+- table caching is bounded memoization and does not change the enumerated law.
 
-C-1  Seal (red-team R5). ``emit`` refuses any schedule that does not carry the
-     in-process compiler HMAC seal; schedules are constructed ONLY via
-     ``compile_code_spec_to_substep_schedule`` (the seal key is
-     process-lifetime ``secrets.token_bytes`` — analog_schedule.py:46 — so the
-     process compiles its schedule in-process and a persisted/hand-built
-     schedule can never claim "real circuit"). The dense record path itself
-     also enforces the seal (axis1_channel_evidence.py:989); the emit-side
-     assert is the process's own guarantee, not a duplicate dependency.
-     Falsifier: ``test_emit_refuses_unsealed_schedule``.
-C-2  Memory-ful shared source (red-team R3). The shared arm accepts only the
-     declared memory-ful source classes (``OneOverFDriftSource`` — sum-of-RTN
-     1/f with exact Lorentzian PSD — and ``RTNSource`` — autocorrelation
-     ``exp(-2*gamma*lag)``); i.i.d.-like or permuted/baseline timelines are
-     rejected as the shared arm. Falsifiers:
-     ``test_shared_arm_rejects_non_memoryful_source``,
-     ``test_shared_arm_rejects_baseline_timeline``.
-C-3  Payload projection (red-team R4). ``emit`` returns EXACTLY
-     ``{"det": (N, R*n_stab) uint8, "obs": (N,) uint8}`` — no manifest keys,
-     no ``applied_steps`` (which leak num_kraus / ideal-control names / dt —
-     axis1_record_evidence.py:535-571), no truth. Falsifier:
-     ``test_emit_payload_surface``.
-C-4  Round derivation (red-team R1). The substep->round map is derived from
-     ``tick_index`` (the compiler emits ONE ``builder.tick()`` per round —
-     compiler.py:66-69) and CROSS-VALIDATED at construction against three
-     independent witnesses: (i) measurement-key prefixes ``round{r}:`` must
-     equal the tick-derived round (record_layout.py:195-196), (ii) terminal
-     data keys ``final:q{i}:{basis}`` (record_layout.py:207-208) must sit at
-     ``tick_index == rounds`` (terminal substeps take the LAST round's params —
-     declared clamp policy), (iii) barrier count must equal ``rounds``. Any
-     disagreement raises; there is NO uniform-params fallback; the dead
-     ``AnalogSubstepIR.round_index`` field (hardcoded ``None``,
-     analog_schedule.py:871/899) is never read. Falsifiers:
-     ``test_round_map_two_round_schedule`` (terminal off-by-one),
-     ``test_round_map_tampered_keys_raise``,
-     ``test_params_differ_across_rounds`` (positive control).
-C-5  Per-round param fan-out mapping. Per-cycle ``CoupledNoiseParameters``
-     map 1:1 into ``Axis1PrimitiveParams``: ``zz_zeta_radns ->
-     zeta_rad_per_ns`` (both angular rad/ns; the ZZ primitive lowers
-     ``H = zeta * n(x)n`` — axis1_primitives.py:271-273; a negative zeta fails
-     loud at ``Axis1PrimitiveParams`` construction, never silently abs()-ed)
-     and ``gamma_phi_per_ns -> gamma_phi_per_ns`` (both 1/ns; the T2 collapse
-     lowers ``c = sqrt(2*gamma_phi) * n`` so the qubit coherence decays as
-     ``exp(-gamma_phi * t)``). Every other field (``gamma_1_per_ns``,
-     ``gamma_up``, ``gamma_readout_phi``, drive, fSim) is held at the schedule
-     baseline (slice-1 scope, class (c), see S-3). Falsifier: the independent
-     ground-truth response test ``test_x0_delta_rate_tracks_gamma_phi`` (a
-     wrong field mapping breaks its direction/magnitude band).
-C-6  Distribution gate. ``emit`` refuses to sample when the exact manifest
-     reports ``passed != True`` (total-probability residual > 1e-8 or
-     incomplete positive-duration coverage) — never a silent sample from a
-     broken enumeration. Runtime guard (fail-loud); no committed fixture can
-     currently produce a failed manifest, declared as an untested guard.
-C-7  Isolation (G7). ``truth`` is evaluator-only, reachable only via the
-     ``.truth`` property (returned separately in ``CertReport.truth``, never
-     included in emitted records); it contains no ``det``/``obs`` arrays and the emit payload
-     contains no truth keys. Falsifier: ``test_truth_isolation``.
-C-8  Reproducibility. Same ``(regime, m, N, seed)`` => byte-identical
-     ``{det,obs}``. Per-trajectory seeds are stable sha256 derivations of
-     ``(seed, trajectory, purpose)`` — never Python ``hash()``. Falsifier:
-     ``test_emit_reproducible``.
-C-9  Ablation arms. ``matched_marginal_permutation_control()`` preserves each one-field
-     marginal (per-field permutations of the SAME trajectory,
-     ``independent_baseline_trajectory_to_params``) while destroying the
-     temporal ORDER (hence the cross-cycle 1/f autocorrelation) and the
-     same-cycle cross-mechanism alignment; ``off_source()`` collapses the
-     fan-out to the constant Theta(0) point. NOTE (corrected 2026-07-03 with
-     prereg §5 re-registration): the per-field permutation is EXCHANGEABLE,
-     not independent — at finite R the permutation control RETAINS most of the
-     shared arm's shot-pooled lag-1 record covariance (the permutation-
-     invariant trajectory-mean-instrument common-mode plus a small
-     -Var/(R-1) exchangeable term; ~0.73 of the shared lag-1 covariance at
-     R=12). The two arms differ only in the second-order cross-cycle MEMORY
-     residue, which is sub-floor on records at feasible N (see
-     ``docs/twin_validation/g6_null_model_rederivation_2026-07-03.md``).
-     Falsifiers: current matched-marginal permutation and source-off owner tests,
-     ``test_off_source_constant_params``.
-C-10 Independent ground truth (faithfulness rule I). Emitted record
-     statistics are checked against closed forms derived OUTSIDE this module
-     and outside the dense emitter's probability tables: (a) the Z-check
-     chain of the compiled fixture is Z-diagonal end-to-end, so its per-round
-     record rate is pure instrument algebra
-     ``p = p_rs + p_ro - 2*p_rs*p_ro`` (+ a bounded gamma_1 correction) and
-     the ``delta:z1`` detector fires at ``2p(1-p)``; (b) the X-check
-     round-delta rate must rise with gamma_phi with magnitude
-     ``0.5*(exp(-gph_A*tau) - exp(-gph_B*tau))`` inside the declared
-     ``tau_eff`` bracket. Falsifiers: ``test_z1_rates_match_closed_form``,
-     ``test_x0_delta_rate_tracks_gamma_phi`` (derivations in their
-     docstrings).
-C-11 Batching (red-team R6). ``shots_per_trajectory > 1`` is a declared perf
-     knob (default 1 = one trajectory per shot); the value and the cluster
-     structure (rows within one cluster share one trajectory's exact
-     conditional distribution; clusters are independent) are recorded in
-     ``truth``. Falsifier: ``test_batched_emit_declares_clusters``.
-C-12 Logical prep grounding. The compiled fixture prepares ``|0...0>`` with a
-     Z-basis logical readout of data qubit 2 (``logical_z2``) — logical
-     ``m=0`` ONLY; ``emit(m=1)`` raises ``NotImplementedError`` (the compiler
-     emits no logical-X frame), never silently emits wrong-prep records.
-     Falsifier: ``test_m1_raises``.
-
-BOUNDED SIMPLIFICATIONS (faithfulness protocol rule III — all class (c)
-unless noted, all recorded in ``truth``):
-
-S-1  Trajectory-mean readout/reset instrument. ``readout_flip_p`` /
-     ``reset_flip_p`` enter as the per-trajectory MEAN
-     (``Axis1ReadoutResetInstrumentSpec``), suppressing their per-round
-     variation (single-slot instrument limitation; design §4 per-round
-     caveat, user-resolved 2026-06-30). Bound: the suppressed per-round
-     logit-modulation at |x|<=3 is |dp| <= p*(exp(0.40*3)-1) ~ 2.3*p per
-     round about a p ~ 1e-2 base; the per-trajectory MEAN is preserved
-     exactly, so NO within-shot cross-cycle memory is added or removed by this
-     simplification. CORRECTION (2026-07-03): the trajectory mean itself VARIES
-     shot-to-shot (each shot draws its own trajectory), so pooling over shots
-     the instrument injects a permutation-INVARIANT common-mode covariance
-     (~8.7e-5 per check, at ALL lags) into the record statistics — identical
-     in the shared and permutation-control arms (it depends only on the trajectory mean),
-     hence it cancels in the shared-minus-markovian difference but is NOT
-     ~0 in either arm's raw statistic. This is why the record-level MA(1) floor
-     (off-arm Spitz p_ij(lag1) = p_ro + p_rs - 2 p_ro p_rs ~ 0.0149, not 0) and
-     the common-mode dominate the raw lag-1/lag-2 z-scores; see
-     ``docs/twin_validation/g6_null_model_rederivation_2026-07-03.md`` and the
-     re-registered prereg §5. Per-round instruments are a later slice.
-S-2  ``channels()`` at the mean-source point. The reported per-substep CPTP
-     field is assembled at Theta(0) (z = E[z] = 0 for the symmetric RTN-sum
-     sources), NOT the mean of per-shot channels. Jensen gap: for +/-1
-     fluctuator sums, E[exp(s*x)] = cosh(s) per fluctuator, e.g. ~6.2%
-     understatement of the trajectory-mean gamma_phi at the default
-     sensitivity 0.35 and 1-sigma normalization. ``channels()`` is NOT in the
-     emit path; per-shot fields are regenerable from truth seeds.
-S-3  gamma_1 (and gamma_up, gamma_readout_phi, drive, fSim) are NOT
-     source-modulated in slice 1 — held at the schedule baseline
-     (``_axis1_primitive_params_for_schedule``); the deferred Theta fields
-     (``detuning_radns``, ``drive_omega_radns``, ``spillover_cx``,
-     ``cz_depol_p``) are recorded in truth as DEFERRED and never emitted
-     (adjudicated slice-1 scope).
-S-4  Static-ZZ modulation is carried per round into the specified channel when
-     the schedule does not provide a per-edge override. No current record-effect
-     magnitude is claimed here: that observable must be regenerated from the
-     renovated source and tests before it can re-enter a claim packet.
-S-5  Exponential inner enumeration. The dense path enumerates
-     2^(#measurement keys) branches (x instrument branching), so R is small;
-     R* and N* are G0-v2 design constants (Builder 3's lane) — ``rounds`` is
-     a constructor argument, never hardcoded here.
-S-6  Small table cache. Identical (per-round params, instrument) keys reuse
-     the exact record tables (pure memoization of a deterministic
-     enumeration; exactness unchanged). Bounded to the 4 most recent keys.
+These implementation facts do not establish a reduced-map divisibility verdict or
+an integrated source-driven qutrit XZZX product. Binding product and evidence
+boundaries are in ``docs/SIMULATOR.md`` and the current owner tests.
 """
 
 from __future__ import annotations
@@ -242,33 +98,30 @@ COUPLED_PROCESS_REPRESENTABILITY = (
     "axis1_jointL_source_coupled_record_samples_evaluator_truth"
 )
 
-#: The declared memory-ful shared-arm source classes (C-2 / red-team R3).
-#: OneOverFDriftSource = slice-1 source (sum-of-RTN 1/f, exact Lorentzian PSD);
+#: Accepted memory-bearing shared-arm source classes.
+#: OneOverFDriftSource is a finite-RTN sum with an exact Lorentzian PSD;
 #: RTNSource = the contrast control (single Lorentzian, autocorr e^{-2 gamma lag}).
 #: PhaseBurstSource / TemporalStormSPPSource / arbitrary SourceProcess impls are
-#: NOT accepted as the shared arm this slice (their payload shapes and memory
+#: not accepted as the shared arm (their payload shapes and memory
 #: classes are not certified for this process).
 MEMORYFUL_SHARED_SOURCES = (OneOverFDriftSource, RTNSource)
 
 #: The X-check data<->ancilla pair of the 5q fixture — the only
-#: superposition-bearing edge, where static-ZZ is observable (grounded by the
-#: G0-v1 empirical wiring section; see S-4). Declared WITHOUT a per-edge
-#: calibration so the per-round ``params.zeta_rad_per_ns`` lowers on it.
+#: superposition-bearing edge, where static-ZZ is observable. It has no
+#: per-edge calibration, so the per-round ``params.zeta_rad_per_ns`` lowers on it.
 DEFAULT_STATIC_ZZ_EDGE = (0, 3)
 
 _ROUND_KEY_RE = re.compile(r"^round(\d+):")
 _FINAL_KEY_RE = re.compile(r"^final:q(\d+):[XYZ]$")
 _TABLE_CACHE_MAX = 4
-#: F4 (2026-07-03): widened from 1 to 32 so C1's per-round-spread fraction has real power (a single
-#: frozen 1/f trajectory, P~2e-4, no longer forces frac_spread=0 -> false FAIL). Records 32
-#: trajectories' per-cycle params in truth (evaluator-only); the instrument/source-binding sample
-#: stays at the first trajectory only.
+#: Record up to 32 trajectories' per-cycle parameters in evaluator-only truth;
+#: the instrument/source-binding sample remains the first trajectory only.
 _TRUTH_PARAMS_SAMPLE_TRAJECTORIES = 32
 _TRUTH_SEED_SAMPLE = 8
 
 
 # --------------------------------------------------------------------------- #
-# round derivation (C-4)                                                       #
+# round derivation                                                             #
 # --------------------------------------------------------------------------- #
 def derive_round_map_for_substep_schedule(
     schedule: SubstepSchedule,
@@ -281,11 +134,10 @@ def derive_round_map_for_substep_schedule(
     and cross-validated against the measurement-key prefixes and the barrier
     count; the dead ``AnalogSubstepIR.round_index`` field is never read.
     Terminal substeps (``tick_index == rounds``: the final data readout and
-    anything after the last tick) are clamped to the LAST round's params —
-    the declared class-(c) terminal policy: the source ``z_t`` is
+    anything after the last tick) are clamped to the LAST round's params: the
+    source ``z_t`` is
     piecewise-constant per cycle and the last value extends through terminal
-    readout. Any key/tick disagreement raises (no uniform-params fallback —
-    red-team R1).
+    readout. Any key/tick disagreement raises without a uniform-params fallback.
     """
 
     n_rounds = int(rounds)
@@ -321,8 +173,8 @@ def derive_round_map_for_substep_schedule(
                 if parsed != tick:
                     raise ValueError(
                         f"round derivation mismatch on substep {substep.substep_id!r}: "
-                        f"key {key!r} names round {parsed} but tick_index={tick} "
-                        "(red-team R1: refusing, never falling back to uniform params)"
+                        f"key {key!r} names round {parsed} but tick_index={tick}; "
+                        "refusing to fall back to uniform params"
                     )
                 seen_rounds.add(parsed)
             elif _FINAL_KEY_RE.match(key) is not None:
@@ -361,7 +213,7 @@ def params_for_substep_from_round_map(
 
     The callable receives the full ``AnalogSubstepIR`` and resolves that
     substep's round through the construction-validated map; an unknown
-    substep id raises (no fallback — red-team R1).
+    substep id raises without a fallback.
     """
 
     resolved = {str(k): (int(v[0]), bool(v[1])) for k, v in round_map.items()}
@@ -372,7 +224,7 @@ def params_for_substep_from_round_map(
         if substep_id not in resolved:
             raise ValueError(
                 f"substep {substep_id!r} is not in the validated round map; "
-                "refusing to guess its round (red-team R1)"
+                "refusing to guess its round"
             )
         round_index, _terminal = resolved[substep_id]
         return per_round[round_index]
@@ -381,7 +233,7 @@ def params_for_substep_from_round_map(
 
 
 # --------------------------------------------------------------------------- #
-# fan-out lowering helpers (C-5, S-1)                                           #
+# fan-out lowering helpers                                                     #
 # --------------------------------------------------------------------------- #
 def per_round_axis1_params(
     baseline: Axis1PrimitiveParams,
@@ -389,11 +241,11 @@ def per_round_axis1_params(
 ) -> Axis1PrimitiveParams:
     """Lower one cycle's ``CoupledNoiseParameters`` onto the schedule baseline.
 
-    Unit-exact 1:1 mappings (C-5): ``zz_zeta_radns -> zeta_rad_per_ns`` (both
+    Unit-exact 1:1 mappings: ``zz_zeta_radns -> zeta_rad_per_ns`` (both
     angular rad/ns; ``H_ZZ = zeta * n(x)n``) and ``gamma_phi_per_ns ->
     gamma_phi_per_ns`` (both 1/ns; ``c_T2 = sqrt(2*gamma_phi) * n``, coherence
-    decay ``exp(-gamma_phi t)``). All other fields stay at the baseline
-    (S-3). A negative zeta fails loud in ``Axis1PrimitiveParams.__post_init__``.
+    decay ``exp(-gamma_phi t)``). All other fields stay at the baseline. A
+    negative zeta fails loud in ``Axis1PrimitiveParams.__post_init__``.
     """
 
     return dataclasses.replace(
@@ -406,11 +258,11 @@ def per_round_axis1_params(
 def trajectory_mean_instrument(
     params_cycles: Sequence[CoupledNoiseParameters],
 ) -> Axis1ReadoutResetInstrumentSpec:
-    """Trajectory-mean readout/reset instrument (S-1, class (c), declared).
+    """Trajectory-mean readout/reset instrument.
 
     ``readout_flip_p`` enters symmetrically (``p0->1 == p1->0`` — the Theta
     fan-out carries one symmetric flip probability); pair-flip crosstalk is
-    not a Theta field this slice and stays 0.
+    not a Theta field and stays 0.
     """
 
     if not params_cycles:
@@ -431,7 +283,7 @@ def _wrap_coupled_code_spec(base: CodeSpec, cfg: SourceCouplingConfig) -> CodeSp
     """Add the coupled-fixture metadata to a frontend CodeSpec (shared by the 5q + 4q variants).
 
     (a) the superposition-bearing static-ZZ edge (0,3) WITHOUT a per-edge calibration (so the
-    per-round ``zeta_rad_per_ns`` from the injected callable is what lowers on it — S-4) and (b) an
+    per-round ``zeta_rad_per_ns`` from the injected callable is what lowers on it) and (b) an
     ``Axis1LocalLindbladContextSpec`` baseline pinned to the Theta(0) fan-out point (zeta and
     gamma_phi at z=0). The context pin makes the no-callable schedule-global path physically
     identical to the off-source arm — the construction-independence control
@@ -459,7 +311,7 @@ def default_coupled_code_spec(
     rounds: int,
     config: SourceCouplingConfig | None = None,
 ) -> CodeSpec:
-    """The slice-1 coupled fixture: the 5q mixed-basis CodeSpec (x0 + z1) + Theta(0) baseline.
+    """The 5q mixed-basis CodeSpec (x0 + z1) with a Theta(0) baseline.
 
     3 data + 2 ancilla; checks x0 (X on data 0) + z1 (Z on data 1); logical_z2 (Z on data 2);
     n_stab = 2, measured bits M(R) = 2R + 3. See :func:`_wrap_coupled_code_spec` for the added
@@ -474,12 +326,12 @@ def default_coupled_code_spec_4q(
     rounds: int,
     config: SourceCouplingConfig | None = None,
 ) -> CodeSpec:
-    """The registered 4q coupled fixture (prereg §1.1): drop z1 -> single X-check x0.
+    """The 4q coupled fixture: drop z1 to retain the single X-check x0.
 
     3 data + 1 ancilla; check x0 only (same static-ZZ edge (0,3)); logical_z2 (Z on data 2);
     data qubit 1 in no check/observable -> no final measurement; n_stab = 1, measured bits
     M(R) = R + 2. Reachable by name so a JSON ``process_kwargs = {"rounds": R, "fixture": "4q"}``
-    can construct it through the gate config seam (F2). Same Theta(0) baseline wrapping as the 5q.
+    can select it. It uses the same Theta(0) baseline wrapping as the 5q fixture.
     """
 
     cfg = config or default_source_coupling_config()
@@ -493,33 +345,32 @@ def default_coupled_code_spec_d3_repz(
     """A genuine-decode fixture: a distance-3 bit-flip repetition code.
 
     3 data (0,1,2) + 2 ancilla (3: z01, 4: z12); weight-2 Z checks Z0Z1 / Z1Z2;
-    logical_z2 (Z on data 2, the chain end). M(R) = 2R + 3 measured bits — the
-    SAME enumeration cost as the 5q fixture (S-5 unchanged). Unlike the 5q
+    logical_z2 (Z on data 2, the chain end). M(R) = 2R + 3 measured bits, the
+    same enumeration cost as the 5q fixture. Unlike the 5q
     fixture (whose logical_z2 is structurally disconnected from both weight-1
     checks), the logical-flipping fault class here fires a detector, so an
     MWPM decode of the emitted record is non-vacuous.
 
-    DECLARED slice-1 fault-class map (interop scope; the C-10a Z-diagonal
-    argument applies to every chain — reviewed 2026-07-06):
+    Current fault-class map for this implemented noise process:
     - gamma_phi / zeta are record-DEAD in this all-Z geometry; gamma_1 is
       inert on the |0...0> prep; gamma_up is held at the schedule baseline 0.
-      There is NO data-X fault class in slice 1 — the record's error content
+      There is no data-X fault class; the record's error content
       is entirely the readout/reset instrument.
     - Per-round ancilla flip p = p_rs + p_ro - 2 p_rs p_ro; interior deltas
       fire at ~2p(1-p). A ROUND-0 ancilla flip fires ONLY delta:<check>:round1
       (the layout has no round-0 anchor detector) and does NOT flip the
       observable — so delta-column boundary classes carry NO logical
-      attachment under slice-1 noise.
+      attachment under the implemented noise.
     - The ONLY observable-flipping fault class is the final:q2:Z data-readout
       flip, which fires the final:z12 closure -> the declared L0 rule for this
       fixture+noise is exactly {final:z12}. (Geometrically an in-round X on q2
       WOULD populate delta:z12 boundaries with L0, but that class has
-      probability 0 in slice 1 — the L0 rule is a reduction of the RECORD's
-      fault mix, not of the code geometry.)
+      probability 0 under the implemented noise; the L0 rule is a reduction of
+      the record's fault mix, not of the code geometry.)
     This fixture exercises the interop/decode path on instrument noise — it is
     NOT a coupling-visibility arm. Same Theta(0) baseline wrapping as the other
     fixtures (the static-ZZ
-    edge (0,3) is inert here — declared).
+    edge (0,3) is inert here).
     """
 
     cfg = config or default_source_coupling_config()
@@ -551,7 +402,7 @@ def default_coupled_code_spec_d3_repz(
     return _wrap_coupled_code_spec(spec, cfg)
 
 
-#: JSON-reachable fixture selector -> default coupled CodeSpec builder (F2). ``code_spec_builder``
+#: JSON-reachable fixture selector -> default coupled CodeSpec builder. ``code_spec_builder``
 #: (a callable) still overrides this when provided; ``fixture`` picks the default when it is None.
 _COUPLED_FIXTURE_BUILDERS: dict[str, Callable[[int, SourceCouplingConfig | None], CodeSpec]] = {
     "5q": default_coupled_code_spec,
@@ -561,7 +412,7 @@ _COUPLED_FIXTURE_BUILDERS: dict[str, Callable[[int, SourceCouplingConfig | None]
 
 
 def _derived_seed(base_seed: int, trajectory: int, purpose: str) -> int:
-    """Stable per-(seed, trajectory, purpose) derivation (C-8; never ``hash()``)."""
+    """Stable per-(seed, trajectory, purpose) derivation; never ``hash()``."""
 
     payload = (
         f"{COUPLED_PROCESS_SCHEMA}:{int(base_seed)}:{int(trajectory)}:{purpose}"
@@ -579,10 +430,10 @@ class CoupledCycleNoiseProcess:
     Outer Monte-Carlo over memory-ful source trajectories (one per shot by
     default), inner EXACT conditional record distribution
     ``P(det, obs | z_traj)`` from the dense sealed Axis-1 record path with the
-    per-round ``params_for_substep`` callable. Only ``rounds`` is required —
-    the R*/N* design constants belong to the G0-v2 gate (S-5).
+    per-round ``params_for_substep`` callable. Only ``rounds`` is required;
+    sample and trajectory counts are supplied by each call.
 
-    ``coupling_arm``: ``"shared"`` (the source-coupled process), ``"independent"`` (the G6
+    ``coupling_arm``: ``"shared"`` (the source-coupled process), ``"independent"`` (the
     matched-marginal permutation control, built via
     :meth:`matched_marginal_permutation_control`),
     ``"off"`` (the amplitude-0 collapse arm, built via :meth:`off_source`).
@@ -613,9 +464,8 @@ class CoupledCycleNoiseProcess:
         self._source = source if source is not None else OneOverFDriftSource()
         if not isinstance(self._source, MEMORYFUL_SHARED_SOURCES):
             raise ValueError(
-                "CoupledCycleNoiseProcess accepts only the declared memory-ful source "
-                "classes (OneOverFDriftSource, RTNSource) — an i.i.d./uncertified "
-                f"source as the shared arm is red-team R3; got "
+                "CoupledCycleNoiseProcess shared arm accepts only "
+                "OneOverFDriftSource or RTNSource; got "
                 f"{type(self._source).__name__}"
             )
         self._shots_per_trajectory = int(shots_per_trajectory)
@@ -637,7 +487,7 @@ class CoupledCycleNoiseProcess:
             )
         self._code_spec_builder = code_spec_builder
         if code_spec_builder is None:
-            # F2: JSON-reachable fixture selector -> default coupled CodeSpec builder.
+            # JSON-reachable fixture selector -> default coupled CodeSpec builder.
             self._spec = _COUPLED_FIXTURE_BUILDERS[self._fixture](self._rounds, self._config)
         else:
             self._spec = code_spec_builder(self._rounds)
@@ -646,14 +496,14 @@ class CoupledCycleNoiseProcess:
                 f"code spec declares rounds={self._spec.rounds}, process was "
                 f"constructed with rounds={self._rounds}"
             )
-        # C-1: in-process compiler path only (the seal key is process-lifetime).
+        # In-process compiler path only; the seal key is process-lifetime.
         self._sched = compile_code_spec_to_substep_schedule(self._spec)
         require_compiler_schedule_seal(self._sched)
         if self._sched.source_kind != "code_spec_compiler":
             raise ValueError(
                 f"expected a compiler schedule, got source_kind={self._sched.source_kind!r}"
             )
-        # C-4: derived + three-witness-validated round map.
+        # Derived and three-witness-validated round map.
         self._round_map = derive_round_map_for_substep_schedule(
             self._sched, rounds=self._rounds
         )
@@ -696,7 +546,7 @@ class CoupledCycleNoiseProcess:
 
     @property
     def truth(self) -> dict:
-        """Evaluator-only ground truth (C-7). Never part of the emit payload."""
+        """Evaluator-only ground truth, never part of the emit payload."""
 
         source_manifest = dataclasses.asdict(self._source)
         source_manifest["class"] = type(self._source).__name__
@@ -753,8 +603,8 @@ class CoupledCycleNoiseProcess:
                 "pair_flip_probability": 0.0,
                 "note": (
                     "readout/reset held at the per-trajectory mean of the Theta "
-                    "fan-out (single-slot instrument; S-1); per-round instruments "
-                    "are a later slice"
+                    "fan-out because the instrument has one slot; per-round "
+                    "instruments are unsupported"
                 ),
             },
             "channels_policy": {
@@ -762,7 +612,7 @@ class CoupledCycleNoiseProcess:
                 "epistemic_class": "c",
                 "note": (
                     "channels() is assembled at the Theta(0) point; per-shot "
-                    "fields are regenerable from the seed derivation below (S-2)"
+                    "fields are regenerable from the seed derivation below"
                 ),
             },
             "shots_per_trajectory": self._shots_per_trajectory,
@@ -785,7 +635,7 @@ class CoupledCycleNoiseProcess:
                 "terminal_round_clamp_policy": "c",
                 "table_cache_memoization": "a",
             },
-            # F7: a SNAPSHOT (deep copy), never a live reference to the mutable bookkeeping dict —
+            # A snapshot, never a live reference to the mutable bookkeeping dict:
             # an evaluator holding truth must not see it mutate on the next emit, nor be able to
             # mutate the process's internal state through it.
             "last_emit": copy.deepcopy(self._last_emit),
@@ -802,16 +652,15 @@ class CoupledCycleNoiseProcess:
         before any device work.
         """
 
-        # C-1 (emit-side seal assert, red-team R5).
+        # Validate the compiler seal before any device work.
         require_compiler_schedule_seal(self._sched)
         self._validate_regime(regime)
         if int(m) != 0:
-            # C-12: the compiled fixture prepares |0...0> — logical m=0 only.
+            # The compiled fixture prepares |0...0>; only logical m=0 is supported.
             raise NotImplementedError(
-                "CoupledCycleNoiseProcess slice-1 supports logical m=0 only: the "
+                "CoupledCycleNoiseProcess supports logical m=0 only: the "
                 "compiled fixture prepares |0...0> with a Z-basis logical "
-                "readout and the compiler emits no logical-X frame; m=1 is a "
-                "later-slice extension"
+                "readout and the compiler emits no logical-X frame"
             )
         n_shots = int(N)
         if n_shots < 1:
@@ -886,13 +735,13 @@ class CoupledCycleNoiseProcess:
             .numpy()
             .astype(np.uint8)
         )
-        # Evaluator-side bookkeeping only — never in the returned payload (C-7).
+        # Evaluator-side bookkeeping only, never in the returned payload.
         self._last_emit = truth_record
-        # C-3 (red-team R4): the emitted record payload is exactly {"det","obs"}.
+        # The emitted record payload is exactly {"det","obs"}.
         return {"det": det, "obs": obs}
 
     def channels(self) -> tuple[dict[str, Any], ...]:
-        """Per-substep CPTP Kraus field at the mean-source Theta(0) point (S-2).
+        """Per-substep CPTP Kraus field at the mean-source Theta(0) point.
 
         Reuses the dense path's own selection plan + assembler so the reported
         field matches what the emitter applies, with per-round params replaced
@@ -952,8 +801,8 @@ class CoupledCycleNoiseProcess:
         decoder-facing noise summary is the separate
         ``frontend.interop.records_to_dem`` reduction of the emitted records.
 
-        The export is a separate read-only surface — the ``emit`` payload
-        stays exactly ``{"det","obs"}`` (C-3 untouched). Layout identity
+        The export is a separate read-only surface; the ``emit`` payload
+        stays exactly ``{"det","obs"}``. Layout identity
         against the process's emitted surface is ASSERTED here (names, order,
         counts), never assumed.
         """
@@ -1028,25 +877,23 @@ class CoupledCycleNoiseProcess:
     def emit_clifford_slice(
         self, regime: Any, *, p_x: float, m: int, N: int, seed: int
     ) -> dict:
-        """Not implemented in slice 1 (declared).
+        """Not implemented by this process.
 
         The stim-anchor wiring check needs a theta=0 / bit-flip ``X_ERROR(p_x)``
-        Clifford slice of the SAME geometry; the dense Axis-1 path has no
+        Clifford surface of the same geometry; the dense Axis-1 path has no
         Pauli-noise injection seam (Stim noise is rejected by the schedule
-        extractor by design), so wiring this slice is a later-slice cert
-        anchor, not a slice-1 process capability.
+        extractor by design).
         """
 
         raise NotImplementedError(
-            "CoupledCycleNoiseProcess slice-1 has no Clifford/bit-flip emission seam; "
-            "the stim wiring anchor is a later-slice extension"
+            "CoupledCycleNoiseProcess has no Clifford/bit-flip emission seam"
         )
 
     # ------------------------------------------------------------------ #
-    # ablation arms (C-9)                                                  #
+    # control arms                                                         #
     # ------------------------------------------------------------------ #
     def matched_marginal_permutation_control(self) -> "CoupledCycleNoiseProcess":
-        """Return the G6 exchangeable control: matched marginals, permuted order.
+        """Return the exchangeable control: matched marginals, permuted order.
 
         Same source / config / schedule fixture; per-cycle params come from
         ``independent_baseline_trajectory_to_params`` (an independent
@@ -1128,20 +975,20 @@ class CoupledCycleNoiseProcess:
     def _fan_out(
         self, timeline: SourceTimeline, *, base_seed: int, trajectory: int
     ) -> tuple[CoupledNoiseParameters, ...]:
-        """Arm-dispatched Theta fan-out for one trajectory (C-2, C-9)."""
+        """Arm-dispatched Theta fan-out for one trajectory."""
 
         z = timeline.payload_series("z_radns")
         if self._arm in {"shared", "off"}:
             if timeline.coupling_mode != "shared":
                 raise ValueError(
                     "the shared/off arm requires a coupling_mode='shared' "
-                    f"timeline, got {timeline.coupling_mode!r} (red-team R3)"
+                    f"timeline, got {timeline.coupling_mode!r}"
                 )
             for marker in ("baseline", "baseline_of", "ablation", "ablation_of"):
                 if marker in timeline.metadata:
                     raise ValueError(
                         f"timeline carries the {marker!r} marker; a permuted/"
-                        "baseline timeline is not a valid shared arm (red-team R3)"
+                        "baseline timeline is not a valid shared arm"
                     )
             return trajectory_to_params(z, self._config)
         # independent arm: per-field permutations of the SAME trajectory
@@ -1157,7 +1004,7 @@ class CoupledCycleNoiseProcess:
         timeline: SourceTimeline,
         params_cycles: Sequence[CoupledNoiseParameters],
     ) -> None:
-        """Runtime R1 positive control: a non-constant trajectory with a live
+        """Runtime positive control: a non-constant trajectory with a live
         gamma_phi sensitivity MUST yield non-uniform per-cycle params."""
 
         if len(params_cycles) != self._rounds:
@@ -1171,7 +1018,7 @@ class CoupledCycleNoiseProcess:
         # "Non-constant" must mean z varies by MORE than the gamma_phi fan-out can resolve into distinct
         # float64 values: a z whose range is only ~ULP-scale legitimately fans out to a single gamma_phi
         # float (a DEGENERATE trajectory — arises once in ~1000s of realizations — not dead plumbing). The
-        # bare np.unique(z).size >= 2 false-trips on such trajectories (red-team R1 false positive). Gate on
+        # bare np.unique(z).size >= 2 false-trips on such trajectories. Check
         # the map's own scale: two z values give distinct gamma_phi only when |dz| exceeds
         # ~(z_scale/sensitivity) * NUMERICAL_ZERO; below that the guard would demand a resolution the float
         # gamma_phi cannot carry. Genuine dead plumbing (z varies meaningfully, gamma_phi still uniform)
@@ -1185,7 +1032,7 @@ class CoupledCycleNoiseProcess:
             if len(gammas) < 2:
                 raise RuntimeError(
                     "fan-out returned uniform gamma_phi for a non-constant "
-                    "trajectory — dead per-round plumbing (red-team R1)"
+                    "trajectory — dead per-round plumbing"
                 )
 
     def _tables_for(
@@ -1195,9 +1042,9 @@ class CoupledCycleNoiseProcess:
     ) -> tuple[Any, Any, Any]:
         """ONE exact manifest call -> (det_table, obs_table, probabilities).
 
-        Memoized on the exact (per-round params, instrument) key (S-6) —
-        deterministic enumeration, so reuse is exact. The manifest's
-        ``passed`` verdict gates sampling (C-6) and the record layout is
+        Memoized on the exact (per-round params, instrument) key; deterministic
+        enumeration makes reuse exact. The manifest's ``passed`` verdict controls
+        sampling and the record layout is
         asserted against the construction-derived layout every call.
         """
 
@@ -1238,9 +1085,9 @@ class CoupledCycleNoiseProcess:
         )
         if manifest.get("passed") is not True:
             raise RuntimeError(
-                "dense record manifest failed its own gate "
+                "dense record manifest failed validation "
                 f"(verdict={manifest.get('verdict')!r}); refusing to sample from "
-                "a broken enumeration (C-6)"
+                "a broken enumeration"
             )
         record = manifest["record_evidence"]
         if tuple(str(k) for k in record["measurement_keys"]) != self._measurement_keys:
@@ -1289,7 +1136,7 @@ class CoupledCycleNoiseProcess:
 def _validate_coupled_process_stim_export_manifest(
     manifest: Mapping[str, Any],
 ) -> dict[str, Any]:
-    """Require the current hard-cut Stim-export schema; no legacy fallback."""
+    """Require the current Stim-export schema without a fallback."""
 
     if not isinstance(manifest, Mapping):
         raise TypeError("coupled-process Stim export manifest must be a mapping")

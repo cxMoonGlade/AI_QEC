@@ -8,12 +8,12 @@ simulator at all), answering the cell the others can't — the R≥2 round-to-ro
 (``RR_CORR``) of the non-unital channel, which the DM cannot reach at full-9q R≥2 (OOM) and stim
 cannot reach (Clifford-only, no leakage/non-Markovian memory).
 
-TRANSIENT, NOT STATIONARY (the step-5b correction). The record chain is PREPARED in ``|0>`` and the
+TRANSIENT, NOT STATIONARY. The record chain is PREPARED in ``|0>`` and the
 channel acts each round, so the measured two-state chain ``s_0, s_1, …`` is TRANSIENT — its occupation
-relaxes ``a_r → a_∞`` only as ``r → ∞``, which the finite-R engine never reaches. The earlier anchor
-wrapped ``markov_flip_cov`` — documented as the *stationary* flip autocovariance — so it predicted the
-``r → ∞`` limit and DISAGREED with the engine's transient. This anchor instead propagates the chain
-EXACTLY from the prepared state. (The transient's per-round SHAPE is regime-dependent: for a low-rate
+relaxes ``a_r → a_∞`` only as ``r → ∞``, which the finite-R engine never reaches. A stationary
+flip-autocovariance expression would predict only the ``r → ∞`` limit and is therefore not the
+reference for this finite prepared-state process. This anchor propagates the chain EXACTLY from the
+prepared state. (The transient's per-round SHAPE is regime-dependent: for a low-rate
 member like ``(0.08, 0.20)`` ``|corr|`` relaxes monotonically toward — and stays above — the stationary
 value, but for other ``(p01, p10)`` the SIGNED correlation can change sign and ``|corr|`` is
 non-monotone / can dip below stationary; do not read the monotone case as general.)
@@ -26,7 +26,7 @@ non-circular cross-check:
   * ``predict_sequence`` — the analytic THEOREM (the flip-flip identity ``E[d_r d_{r+1}] = p01 p10``
     EXACTLY, the transient cancelling; ``E[d_r] = p01 + a_{r-1}(p10 - p01)``), for ``r ≥ 1``.
 The two are computed DIFFERENTLY (brute-force joint vs the analytic identity); their match validates
-the identity, and BOTH are independent of the quantum engine the 5b check validates.
+the identity, and BOTH are independent of the quantum engine being validated.
 
 The prediction is class (a) EXACT for a single-qubit two-state Markov record chain (the embedded
 classical channel keeps the density matrix diagonal, so the quantum engine reproduces the classical
@@ -47,12 +47,12 @@ class ClosedFormAnchor:
     """Predicts the non-unital round-to-round detector correlation by EXACT classical propagation of
     the two-state Markov chain (TRANSIENT, prepared in ``|0>``). Configured with the non-unital Markov
     pair ``(p01, p10)`` (for amp-damp(γ): ``(0, γ)`` — the degenerate absorbing member, predicting ~0;
-    for the T-B member: the registered pair). ``a0`` is the occupation ``P(s_0 = 1)`` AFTER the first
+    otherwise use the specified transition pair). ``a0`` is the occupation ``P(s_0 = 1)`` AFTER the first
     channel on the prepared ``|0>`` — ``p01`` by the engine's channel-before-first-measurement
     convention. ``exact_single_qubit=True`` marks the single-qubit chain (class (a) exact); the default
     is the d3 PREDICTION (class (b))."""
 
-    name = "closed_form_tb"
+    name = "closed_form_transient_markov"
     independence = (
         "EXACT classical propagation of the two-state Markov chain (the transient prepared-state "
         "occupation + the detector triple-joint); no simulator at all — it shares no code path with "
