@@ -65,6 +65,8 @@ FID_REPLAY_TOL = 1.0e-10
 ENTROPY_REPLAY_TOL = 1.0e-10
 ARRAY_REPLAY_TOL = 1.0e-10
 SCALAR_REPLAY_TOL = 1.0e-10
+NORM_AUTH_ABS_TOL = 1.0e-10
+NORM_AUTH_REL_TOL = 1.0e-12
 FET_IDENTITY_RELATIVE_TOL = 1.0e-12
 REQUIRED_COMPARISON_KINDS = frozenset(
     {
@@ -168,6 +170,48 @@ def _finite_float(value: Any, *, name: str) -> float:
     if not math.isfinite(out):
         raise RuntimeError(f"{name} is non-finite: {out!r}")
     return out
+
+
+def evaluate_cross_backend_norm(
+    *,
+    torch_recorded: float,
+    numpy_recomputed: float,
+    absolute_tolerance: float = NORM_AUTH_ABS_TOL,
+    relative_tolerance: float = NORM_AUTH_REL_TOL,
+) -> dict[str, Any]:
+    """Compare reductions while keeping the underlying arrays strictly bound."""
+
+    torch_recorded = _finite_float(
+        torch_recorded, name="Torch-recorded norm"
+    )
+    numpy_recomputed = _finite_float(
+        numpy_recomputed, name="NumPy-recomputed norm"
+    )
+    absolute_tolerance = _finite_float(
+        absolute_tolerance, name="norm absolute tolerance"
+    )
+    relative_tolerance = _finite_float(
+        relative_tolerance, name="norm relative tolerance"
+    )
+    if absolute_tolerance < 0.0 or relative_tolerance < 0.0:
+        raise ValueError("norm authentication tolerances must be nonnegative")
+    abs_delta = abs(torch_recorded - numpy_recomputed)
+    scale = max(abs(torch_recorded), abs(numpy_recomputed))
+    relative_delta = 0.0 if scale == 0.0 else abs_delta / scale
+    return {
+        "torch_recorded": torch_recorded,
+        "numpy_recomputed": numpy_recomputed,
+        "abs_delta": abs_delta,
+        "relative_delta": relative_delta,
+        "absolute_tolerance": absolute_tolerance,
+        "relative_tolerance": relative_tolerance,
+        "passed": math.isclose(
+            torch_recorded,
+            numpy_recomputed,
+            rel_tol=relative_tolerance,
+            abs_tol=absolute_tolerance,
+        ),
+    }
 
 
 def classify_fid_gamma(value: Any) -> dict[str, Any]:
@@ -1266,7 +1310,8 @@ def validate_worker_arrays(
             )
         if not np.isfinite(array.real).all() or not np.isfinite(array.imag).all():
             raise RuntimeError(f"worker NPZ {key} contains non-finite values")
-        if float(np.linalg.norm(array)) <= 0.0:
+        map_norm = float(np.linalg.norm(array))
+        if map_norm <= 0.0:
             raise RuntimeError(f"worker NPZ {key} has zero norm")
         raw_hash = array_sha256_c128le(array)
         projective_hash = projective_array_sha256(array)
@@ -1274,9 +1319,15 @@ def validate_worker_arrays(
             raise RuntimeError(f"worker NPZ {key} raw hash mismatch")
         if projective_hash != cut["map_projective_sha256_c128le"]:
             raise RuntimeError(f"worker NPZ {key} projective hash mismatch")
-        map_norm = float(np.linalg.norm(array))
-        if abs(map_norm - float(cut["map_frobenius_norm"])) > SCALAR_REPLAY_TOL:
-            raise RuntimeError(f"worker NPZ {key} Frobenius norm mismatch")
+        norm_authentication = evaluate_cross_backend_norm(
+            torch_recorded=float(cut["map_frobenius_norm"]),
+            numpy_recomputed=map_norm,
+        )
+        if not norm_authentication["passed"]:
+            raise RuntimeError(
+                f"worker NPZ {key} Frobenius norm mismatch: "
+                f"{norm_authentication!r}"
+            )
         try:
             fid_evidence = validate_fid_gamma_evidence(cut["Fid_gamma"])
         except ValueError as exc:
@@ -1308,6 +1359,7 @@ def validate_worker_arrays(
             "dtype": str(array.dtype),
             "sha256_c128le": raw_hash,
             "projective_sha256_c128le": projective_hash,
+            "frobenius_norm_authentication": norm_authentication,
         }
 
     state = arrays["round_state"]
@@ -1337,16 +1389,21 @@ def validate_worker_arrays(
     ):
         raise RuntimeError("worker NPZ round_state projective hash mismatch")
     state_norm2 = float(np.vdot(state.reshape(-1), state.reshape(-1)).real)
-    if (
-        abs(state_norm2 - float(result["entropy_gate"]["full_norm2"]))
-        > SCALAR_REPLAY_TOL
-    ):
-        raise RuntimeError("worker NPZ round_state full norm mismatch")
+    state_norm_authentication = evaluate_cross_backend_norm(
+        torch_recorded=float(result["entropy_gate"]["full_norm2"]),
+        numpy_recomputed=state_norm2,
+    )
+    if not state_norm_authentication["passed"]:
+        raise RuntimeError(
+            "worker NPZ round_state full norm mismatch: "
+            f"{state_norm_authentication!r}"
+        )
     authenticated["round_state"] = {
         "shape": list(state.shape),
         "dtype": str(state.dtype),
         "sha256_c128le": raw_state_hash,
         "projective_sha256_c128le": projective_state_hash,
+        "full_norm_squared_authentication": state_norm_authentication,
     }
     return {
         "status": "AUTHENTICATED",

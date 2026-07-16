@@ -282,6 +282,34 @@ def test_worker_array_authentication_accepts_exact_evidence() -> None:
     authenticated = AUDIT.validate_worker_arrays(_worker("case"), _arrays())
     assert authenticated["status"] == "AUTHENTICATED"
     assert authenticated["exact_keys"] == ["map_0000", "round_state"]
+    map_norm = authenticated["arrays"]["map_0000"][
+        "frobenius_norm_authentication"
+    ]
+    assert map_norm["passed"] is True
+    assert map_norm["torch_recorded"] == map_norm["numpy_recomputed"]
+    assert map_norm["abs_delta"] == 0.0
+    assert map_norm["absolute_tolerance"] == AUDIT.NORM_AUTH_ABS_TOL
+    assert map_norm["relative_tolerance"] == AUDIT.NORM_AUTH_REL_TOL
+
+
+def test_cross_backend_norm_gate_is_scale_aware_and_rejects_corruption() -> None:
+    large = 1.0e8
+    close = AUDIT.evaluate_cross_backend_norm(
+        torch_recorded=large,
+        numpy_recomputed=large + 5.0e-5,
+    )
+    assert close["passed"] is True
+    assert close["abs_delta"] == (large + 5.0e-5) - large
+    assert close["relative_delta"] < AUDIT.NORM_AUTH_REL_TOL
+    assert close["absolute_tolerance"] == AUDIT.NORM_AUTH_ABS_TOL
+    assert close["relative_tolerance"] == AUDIT.NORM_AUTH_REL_TOL
+
+    corrupted = AUDIT.evaluate_cross_backend_norm(
+        torch_recorded=1.0,
+        numpy_recomputed=1.0 + 1.0e-6,
+    )
+    assert corrupted["passed"] is False
+    assert corrupted["relative_delta"] > AUDIT.NORM_AUTH_REL_TOL
 
 
 def test_worker_array_authentication_rejects_payload_corruptions() -> None:
@@ -311,6 +339,10 @@ def test_worker_array_authentication_rejects_payload_corruptions() -> None:
     wrong_hash_report = _worker("hash")
     wrong_hash_report["per_cut"][0]["map_sha256_c128le"] = "0" * 64
     corruptions.append((wrong_hash_report, _arrays()))
+
+    wrong_norm_report = _worker("norm")
+    wrong_norm_report["per_cut"][0]["map_frobenius_norm"] *= 1.01
+    corruptions.append((wrong_norm_report, _arrays()))
 
     wrong_contract_report = _worker("contract")
     wrong_contract_report["per_cut"][0]["target_met"] = False
