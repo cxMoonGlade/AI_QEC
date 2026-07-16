@@ -5,7 +5,7 @@ relationships appear here. This is routing metadata; the cited PDF and locator r
 the evidence.
 
 - corpus status: active
-- sources: 1
+- sources: 9
 - concept nodes: 13
 - source-located relationships: 13
 - dangling relationships: 0

@@ -32,9 +32,10 @@ notes and syntheses remain discovery-only quarantine material and may not be cop
 record. A retrieval hit is routing information: reopen the named source object and verify the exact
 locator before using the claim.
 
-The current manifest is intentionally empty while clean-room reading is bootstrapped. Empty RAG,
-KG, and concept-index outputs prove safe isolation only; they do not prove literature coverage,
-source closure, or Phase-5 completion.
+The current manifest is active and deliberately small. It contains only records that completed the
+current source-only schema and review gate. The many other notes in `reading_notes/` remain excluded
+legacy or candidate material. A non-empty RAG, KG, or concept index proves publication integrity for
+the admitted records only; it does not prove literature coverage or closure for a new claim.
 
 To add an evidence record, acquire a versioned source, record its SHA-256, read the full text,
 visually inspect every load-bearing formula page, complete an operation replay, and write a note
@@ -43,3 +44,32 @@ required field remains excluded by normal validation. Structural validation can 
 hashes, and evidence-record boundaries are present; it cannot prove that a human reconstruction is
 semantically faithful to the paper. Source-only review is therefore required before adding the note
 to `CURRENT_CORPUS.toml`.
+
+## Rehydrate the current source cache
+
+The PDFs are intentionally ignored by git. The active corpus can be rehydrated with these pinned
+source URLs:
+
+```bash
+curl -L --fail https://arxiv.org/pdf/1804.09796v2 -o docs/papers/1804.09796v2.pdf
+curl -L --fail https://arxiv.org/pdf/2501.17913v2 -o docs/papers/2501.17913v2.pdf
+curl -L --fail https://arxiv.org/pdf/1901.05824v3 -o docs/papers/1901.05824v3.pdf
+curl -L --fail https://arxiv.org/pdf/1405.3259v2 -o docs/papers/1405.3259v2.pdf
+curl -L --fail https://arxiv.org/pdf/1801.05390v2 -o docs/papers/1801.05390v2.pdf
+curl -L --fail https://arxiv.org/pdf/2107.06635v1 -o docs/papers/2107.06635v1.pdf
+curl -L --fail https://scipost.org/SciPostPhysLectNotes.86/pdf \
+  -o docs/papers/naumann_ipeps_variational_lecture_notes_2024.pdf
+curl -L --fail https://scipost.org/SciPostPhysCodeb.52/pdf \
+  -o docs/papers/rams_yastn_scipost_codebases_52.pdf
+curl -L --fail https://harvest.aps.org/v2/journals/articles/10.1103/PhysRevA.97.032306/fulltext \
+  -o docs/papers/wood_gambetta_leakage_characterization_pra_97_032306.pdf
+```
+
+Then run the artifact-verified builders; SHA mismatches fail closed:
+
+```bash
+conda run -n ecs python tools/literature_rag.py build
+conda run -n ecs python tools/literature_kg.py build
+conda run -n ecs python tools/literature_kg.py render-index
+conda run -n ecs python -m pytest -q tests/test_literature_tools.py
+```

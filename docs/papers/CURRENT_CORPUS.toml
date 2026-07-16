@@ -1,8 +1,64 @@
 schema = "error_coupling_simulator.literature.corpus_manifest.v1"
 status = "active"
-corpus_sha256 = "4483158b9a724e5b2390f046cba6a456b1efdf013efa24007fceb5439405da62"
-note_count = 1
-paper_fact_count = 38
+corpus_sha256 = "71c1c86de6fc9405b4432031b492f932d35e9e70756b9a78af796ca0ccfb80a0"
+note_count = 9
+paper_fact_count = 69
+
+[[notes]]
+path = "docs/papers/reading_notes/dziarmaga_ntu_2107.06635_source_review.md"
+note_sha256 = "c2d8cd96745659d98e2f933054bdd322b5152a113208e8cd4b517bfc32b728d4"
+source_id = "arxiv:2107.06635"
+source_version = "v1"
+source_sha256 = "219ef54a195b5d43903fe3c6546f4f2195868c6291ff95b5b6c4b428ab0d906f"
+
+[[notes]]
+path = "docs/papers/reading_notes/evenbly_closed_loop_truncation_1801.05390_source_review.md"
+note_sha256 = "d709150d24568f042c7e1dd7106462dba594187d5519b52d17f24c4b2508353f"
+source_id = "arxiv:1801.05390"
+source_version = "v2"
+source_sha256 = "a5578205d15a7c44a11e0508e400109393c555be243d8478c20f668f75997f40"
+
+[[notes]]
+path = "docs/papers/reading_notes/jaschke_open_system_tn_1804.09796_source_review.md"
+note_sha256 = "d5837b5538c6462e7f13884ff637645d08e417519cf2696c27d9bec4a9afc016"
+source_id = "arxiv:1804.09796"
+source_version = "v2"
+source_sha256 = "62e6b0ceb9fbce3da5f938968a728873b50953d87e1506f43e1358828714919f"
+
+[[notes]]
+path = "docs/papers/reading_notes/lubasch_finite_peps_1405.3259_source_review.md"
+note_sha256 = "bd9c6305b77f8fd59a5283cbd54c3d29d652806789958719b8941c036b3b2465"
+source_id = "arxiv:1405.3259"
+source_version = "v2"
+source_sha256 = "5d7e010293770b0c97ac9c0b88075710ceda3a68988da7933dd2130621d8269a"
+
+[[notes]]
+path = "docs/papers/reading_notes/naumann_varipeps_lectures_source_review.md"
+note_sha256 = "755c072e9cf35c87ac4a603d9ecbb3896b43d82360d279abb97861dfa81eb689"
+source_id = "doi:10.21468/SciPostPhysLectNotes.86"
+source_version = "version-of-record"
+source_sha256 = "9e34cadaa235c94efc03cf1b9bf795764b55a3c7a42e0168ee3949b283c66c45"
+
+[[notes]]
+path = "docs/papers/reading_notes/paeckel_mps_time_evolution_1901.05824_source_review.md"
+note_sha256 = "789803df86a870145cb0a0af1110427a291b6859f874b8d23cacad2f0d2c8694"
+source_id = "arxiv:1901.05824"
+source_version = "v3"
+source_sha256 = "1ce466ed9ec3091ee1a8548cf42a84551584cd5d6f13b0d32a418fcdc981fbb9"
+
+[[notes]]
+path = "docs/papers/reading_notes/rams_yastn_codebase_source_review.md"
+note_sha256 = "504930e086eb634ff9df4802ada7ae3b7fbc3cfdad70479e48c17f70447ac49d"
+source_id = "doi:10.21468/SciPostPhysCodeb.52"
+source_version = "version-of-record"
+source_sha256 = "44a7a77c86ec8f1f1298c12a6984717a6e5ed17ce66da2f9fa071270813a6c73"
+
+[[notes]]
+path = "docs/papers/reading_notes/sander_tensor_jump_2501.17913_source_review.md"
+note_sha256 = "46628de0aac58cfbb6aa514b80abd4b516f6ef9c95a3fd58cd6a9dcc05df0475"
+source_id = "arxiv:2501.17913"
+source_version = "v2"
+source_sha256 = "9c2b2f2584da0270ef740c5e9ef0b5bc5d2f0fa88326bd0b8b7f04d634dcd2b5"
 
 [[notes]]
 path = "docs/papers/reading_notes/wood_gambetta_leakage_diagnostics_pra_97_032306.md"
