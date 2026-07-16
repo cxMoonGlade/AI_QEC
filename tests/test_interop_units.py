@@ -12,7 +12,7 @@ port/guard coverage stays active there, while the full batch runs in `aiqec`.
 
   UNIT                  L0 branch surface                          L1/KILLER value pin
   ----                  -----------------                          -------------------
-  records_to_dem        6 ValueError guards; kept-edge loop body   edges/boundaries pinned
+  records_to_dem        8 ValueError guards; kept-edge loop body   edges/boundaries pinned
                         vs 0-edge; edge_factor<=0 clamp; p_raw<=0   to an INDEPENDENT from-
                         skip vs negative_residual clamp; boundary   scratch Spitz recompute
                         logical True/False ternary; p>_MAX_EDGE_P   + the EXACT odd-parity
@@ -180,7 +180,7 @@ def _indep_half_cube() -> np.ndarray:
 
 def _zero_cube() -> np.ndarray:
     """The null control: all-silent 4-detector cube -> 0 edges AND 0 boundaries (every
-    p_raw = 0 <= NUMERICAL_ZERO, not < -floor -> skipped), the empty-loop arcs."""
+    p_raw = 0 is an exact structural zero and is skipped), the empty-loop arcs."""
     return np.zeros((5000, 4), dtype=np.uint8)
 
 
@@ -290,18 +290,19 @@ def test_L0_records_to_dem_corr_half_edge_factor_nonpositive_clamp():
     _, diag = records_to_dem(det, detector_names=("a", "b", "c"))
     assert {(e["i"], e["j"]) for e in diag["edges"]} == {(0, 1), (0, 2), (1, 2)}
     reasons = {c["i"]: c["reason"] for c in diag["clamped_boundaries"]}
-    assert reasons == {0: "edge_factor_nonpositive",
-                       1: "edge_factor_nonpositive",
-                       2: "edge_factor_nonpositive"}
+    assert reasons == {0: "edge_factor_below_numerical_resolution",
+                       1: "edge_factor_below_numerical_resolution",
+                       2: "edge_factor_below_numerical_resolution"}
     # exact record schema (kills the 'p_raw' key rename in the edge_factor clamp dict)
     for c in diag["clamped_boundaries"]:
-        assert set(c.keys()) == {"i", "reason", "p_raw"}
+        assert set(c.keys()) == {"i", "reason", "p_raw", "edge_factor", "threshold"}
         assert c["p_raw"] is None
+        assert 0.0 < c["edge_factor"] <= c["threshold"] == 1.0e-12
     assert diag["boundaries"] == []                                      # empty boundary loop
 
 
 def test_L0_records_to_dem_negative_residual_clamp():
-    """The p_raw<=NUMERICAL_ZERO (True) arc AND its p_raw<-pair_floor_abs (True) inner arc
+    """The p_raw<=0 (True) arc AND its p_raw<-pair_floor_abs (True) inner arc
     -> 'negative_residual'; plus a positive boundary on the other detector."""
     det = _neg_resid_cube()
     _, diag = records_to_dem(det, detector_names=("d0", "d1"))
@@ -311,8 +312,8 @@ def test_L0_records_to_dem_negative_residual_clamp():
 
 
 def test_L0_records_to_dem_indep_half_nonfinite_and_boundary_clamp():
-    """The non-finite finite-mask path (0/0 p_ij) -> 0 kept edges (empty edge loop) + the
-    p_raw>_MAX_EDGE_P boundary clamp (residual 0.5 -> _MAX_EDGE_P)."""
+    """The non-identifiable 0/0 p_ij remains flagged/NaN, gives no kept edge, and leaves
+    the p_raw>_MAX_EDGE_P boundary clamp (residual 0.5 -> _MAX_EDGE_P)."""
     det = _indep_half_cube()
     _, diag = records_to_dem(det, detector_names=("d0", "d1"))
     assert diag["edges"] == []                                           # empty edge loop
@@ -326,6 +327,76 @@ def test_L0_records_to_dem_zero_null_control():
     assert diag["edges"] == [] and diag["boundaries"] == []
     assert diag["clamped_boundaries"] == []
     assert dem.num_detectors == 4
+
+
+def test_L0_records_to_dem_preserves_tiny_positive_boundary(monkeypatch):
+    """A controlled p_ij leaves 0 < p_raw < NUMERICAL_ZERO; it must still be emitted."""
+
+    det = _cube([((1, 1), 1), ((0, 0), 3)])
+    marginal = 0.25
+    target_raw = 5.0e-13
+    edge_factor = (1.0 - 2.0 * marginal) / (1.0 - 2.0 * target_raw)
+    p_edge = 0.5 * (1.0 - edge_factor)
+    monkeypatch.setattr(
+        interop_module,
+        "spitz_pij_exact",
+        lambda *_args: np.asarray([p_edge], dtype=np.float64),
+    )
+    monkeypatch.setattr(
+        interop_module,
+        "spitz_pij_delta_se",
+        lambda *_args: np.asarray([0.0], dtype=np.float64),
+    )
+
+    dem, diag = records_to_dem(
+        det,
+        detector_names=("d0", "d1"),
+        pair_floor_abs=0.0,
+        pair_floor_sigma=0.0,
+    )
+    assert diag["clamped_boundaries"] == []
+    assert {boundary["i"] for boundary in diag["boundaries"]} == {0, 1}
+    assert all(0.0 < boundary["p_raw"] <= 1.0e-12 for boundary in diag["boundaries"])
+    dem_lines = [line for line in str(dem).splitlines() if line.startswith("error(")]
+    assert len(dem_lines) == 3
+    assert sum("D0" in line and "D1" in line for line in dem_lines) == 1
+    assert sum("D0" in line and "D1" not in line for line in dem_lines) == 1
+    assert sum("D1" in line and "D0" not in line for line in dem_lines) == 1
+
+
+def test_L0_records_to_dem_records_tiny_negative_residual_inside_edge_floor(monkeypatch):
+    """A declared edge floor cannot erase a tiny negative model residual."""
+
+    det = _cube([((1, 1), 1), ((0, 0), 3)])
+    marginal = 0.25
+    target_raw = -5.0e-13
+    edge_factor = (1.0 - 2.0 * marginal) / (1.0 - 2.0 * target_raw)
+    p_edge = 0.5 * (1.0 - edge_factor)
+    monkeypatch.setattr(
+        interop_module,
+        "spitz_pij_exact",
+        lambda *_args: np.asarray([p_edge], dtype=np.float64),
+    )
+    monkeypatch.setattr(
+        interop_module,
+        "spitz_pij_delta_se",
+        lambda *_args: np.asarray([0.0], dtype=np.float64),
+    )
+
+    dem, diag = records_to_dem(
+        det,
+        detector_names=("d0", "d1"),
+        pair_floor_abs=1.0e-12,
+        pair_floor_sigma=0.0,
+    )
+    assert len(diag["edges"]) == 1
+    assert diag["boundaries"] == []
+    clamps = {item["i"]: item for item in diag["clamped_boundaries"]}
+    assert set(clamps) == {0, 1}
+    assert all(item["reason"] == "negative_residual" for item in clamps.values())
+    assert all(-1.0e-12 < item["p_raw"] < 0.0 for item in clamps.values())
+    dem_lines = [line for line in str(dem).splitlines() if line.startswith("error(")]
+    assert len(dem_lines) == 1 and "D0" in dem_lines[0] and "D1" in dem_lines[0]
 
 
 def test_L0_records_to_dem_input_validation_all_guards():
@@ -495,11 +566,13 @@ def test_PIN_planted_edges_boundaries_vs_independent_spitz():
     # 0.0625) -> the exactness claim is falsifiable, not a coincidence.
     assert abs(bounds[0]["p"] - (m_ref[0] - edges[(0, 1)])) > 1e-2
 
-    # pin the FULL pij matrix (not just the kept edge) to the independent recompute -- a mutant
-    # that collapses the matrix (e.g. np.where(None, ...) -> all-zero) is caught here even
-    # though it leaves the edge LIST (built from pij_flat) intact.
-    P_mod = np.where(np.isfinite(P_ref), P_ref, 0.0)                     # module stores 0 for non-finite
-    assert_pins(np.asarray(diag["pij"]), P_mod, atol=1e-12, label="pij matrix")
+    # Pin both finite values and non-identifiability; a non-finite entry must
+    # never be silently rewritten as structural zero.
+    P_mod = np.asarray(diag["pij"])
+    finite_ref = np.isfinite(P_ref)
+    assert_pins(P_mod[finite_ref], P_ref[finite_ref], atol=1e-12, label="pij matrix")
+    assert np.array_equal(np.isnan(P_mod), np.isnan(P_ref))
+    assert np.array_equal(np.asarray(diag["pij_identifiable"]), finite_ref)
     assert diag["pij"][0, 1] != 0.0                                      # the load-bearing entry is nonzero
 
 
@@ -562,11 +635,14 @@ def test_PIN_negative_residual_value_vs_independent_recompute():
 
 def test_PIN_indep_half_nonfinite_pij():
     """The independent marginal-0.5 pair: the from-scratch Spitz oracle is NON-FINITE (0/0),
-    matching the module dropping it -> 0 kept edges, both residuals clamped to _MAX_EDGE_P."""
+    and diagnostics must preserve that non-identifiability rather than manufacture zero."""
     det = _indep_half_cube()
     _, P_ref = _spitz_ref(det)
     _, diag = records_to_dem(det, detector_names=("d0", "d1"))
     assert not np.isfinite(P_ref[0, 1])
+    assert not bool(diag["pij_identifiable"][0, 1])
+    assert np.isnan(float(diag["pij"][0, 1]))
+    assert np.isnan(float(diag["pij_se"][0, 1]))
     assert diag["edges"] == []
     for b in diag["boundaries"]:
         assert_pins(b["p_raw"], 0.5, atol=1e-12, label=f"D{b['i']} p_raw")
@@ -637,7 +713,7 @@ def test_L1_pij_matrix_symmetry_and_upper_bound(cube):
     names = tuple(f"d{i}" for i in range(cube.shape[1]))
     _, diag = records_to_dem(cube, detector_names=names)
     P = np.asarray(diag["pij"])
-    assert np.allclose(P, P.T, atol=1e-12)
+    assert np.allclose(P, P.T, atol=1e-12, equal_nan=True)
     assert np.allclose(np.diag(P), 0.0, atol=1e-12)
     fin = P[np.isfinite(P)]
     assert np.all(fin <= 0.5 + 1e-12)
@@ -677,8 +753,8 @@ def test_L1_decode_output_contract():
 # =========================================================================== #
 _EXPECTED_DIAG_KEYS = {
     "num_shots", "num_detectors", "detector_names", "marginals", "pij", "pij_se",
-    "edges", "boundaries", "clamped_boundaries", "logical_boundary_detectors",
-    "logical_index", "floors", "pij_se_convention", "reduction_caveat",
+    "pij_identifiable", "edges", "boundaries", "clamped_boundaries", "logical_boundary_detectors",
+    "logical_index", "floors", "numerical_resolution", "pij_se_convention", "reduction_caveat",
 }
 _EXPECTED_NOTE = (
     "for cluster_size > 1 the SEs and the sigma edge floor are "
@@ -689,7 +765,8 @@ _EXPECTED_NOTE = (
 _EXPECTED_CAVEAT = (
     "two-point edge-factorized reduction (Spitz Eq. 13 exact pairs); "
     "structurally blind to hyperedges; logical attachment is a "
-    "declared geometry rule, not estimated from records"
+    "declared geometry rule, not estimated from records; "
+    "non-identifiable pairs are excluded and flagged, never zero-filled"
 )
 
 
@@ -717,6 +794,10 @@ def test_PIN_diagnostics_structure_labels_and_floors():
         "pair_floor_sigma": DEFAULT_PAIR_FLOOR_SIGMA,
         "epistemic_class": "c",
     }
+    assert diag["numerical_resolution"] == {
+        "edge_factor_threshold": 1.0e-12,
+        "epistemic_class": "numerical-only",
+    }
     # SE-convention block: EXACT keys + estimator/note strings + default cluster_size == 1
     conv = diag["pij_se_convention"]
     assert set(conv.keys()) == {
@@ -741,23 +822,23 @@ def test_PIN_cluster_size_convention_flags():
 
 
 def test_PIN_pij_se_matrix_vs_independent_recompute():
-    """Pin diagnostics['pij_se'] (symmetric, non-negative, zero diagonal) to the INDEPENDENT
-    from-scratch delta-method SE. Kills the where-condition / where-fill / matrix-sign
-    mutations that a shapes-only assert leaves alive."""
+    """Pin finite diagnostics['pij_se'] entries and preserve non-identifiability as NaN."""
     det = _planted_cube()
     SE_ref = _spitz_se_ref(det)
     _, diag = records_to_dem(det, detector_names=("d0", "d1", "d2", "d3"))
     S = diag["pij_se"]
     assert isinstance(S, np.ndarray) and S.shape == (4, 4)              # kills pij_se = None
     assert np.allclose(S, S.T, atol=1e-12)                             # symmetric (kills - .T)
-    assert np.all(S >= -1e-12)                                          # non-negative
+    assert np.all(S[np.isfinite(S)] >= -1e-12)                          # finite values non-negative
     assert np.allclose(np.diag(S), 0.0, atol=1e-12)
-    assert_pins(S, SE_ref, atol=1e-9, label="pij_se matrix")           # kills the value/fill muts
+    finite_ref = np.isfinite(SE_ref)
+    assert_pins(S[finite_ref], SE_ref[finite_ref], atol=1e-9, label="pij_se matrix")
+    assert np.array_equal(np.isnan(S), np.isnan(SE_ref))
     assert S[0, 1] > 1e-4                                               # the load-bearing entry is nonzero
-    # non-finite SE (independent-0.5 pair) is filled with 0.0, NOT nan/1.0
+    # Non-finite SE remains non-finite and is paired with a false identifiability bit.
     _, dgi = records_to_dem(_indep_half_cube(), detector_names=("d0", "d1"))
     Si = np.asarray(dgi["pij_se"])
-    assert np.all(np.isfinite(Si)) and np.allclose(Si, 0.0, atol=1e-12)
+    assert np.isnan(Si[0, 1]) and not bool(dgi["pij_identifiable"][0, 1])
 
 
 def test_KILLER_floor_comparisons_are_strict_at_the_boundary():
@@ -784,17 +865,42 @@ def test_KILLER_floor_comparisons_are_strict_at_the_boundary():
     assert (0, 1) in _kept(d_lo)
 
 
-def test_KILLER_negative_residual_boundary_is_strict():
-    """The negative-residual clamp uses STRICT '<' against -pair_floor_abs: a residual exactly
-    at -pair_floor_abs is NOT recorded (a '<' -> '<=' mutation would record it)."""
+@pytest.mark.parametrize(
+    ("parameter", "value"),
+    (
+        ("pair_floor_abs", -1.0),
+        ("pair_floor_abs", float("nan")),
+        ("pair_floor_abs", float("inf")),
+        ("pair_floor_sigma", -1.0),
+        ("pair_floor_sigma", float("nan")),
+        ("pair_floor_sigma", float("inf")),
+    ),
+)
+def test_records_to_dem_rejects_invalid_decoder_reduction_floors(parameter, value):
+    """Declared reduction parameters must not silently alter topology via NaN/inf."""
+
+    kwargs = {parameter: value}
+    with pytest.raises(ValueError) as excinfo:
+        records_to_dem(
+            _planted_cube(),
+            detector_names=("d0", "d1", "d2", "d3"),
+            **kwargs,
+        )
+    assert str(excinfo.value) == f"{parameter} must be finite and >= 0, got {value!r}"
+
+
+def test_KILLER_negative_residual_is_recorded_independently_of_edge_floor():
+    """A decoder edge-selection floor cannot hide a negative model residual."""
     neg = _neg_resid_cube()
     _, d0 = records_to_dem(neg, detector_names=("d0", "d1"))
     p_raw = d0["clamped_boundaries"][0]["p_raw"]                        # the negative residual
     assert p_raw < 0
-    # set pair_floor_abs so that -pair_floor_abs == p_raw EXACTLY (float negation is exact)
-    _, d1 = records_to_dem(neg, detector_names=("d0", "d1"), pair_floor_abs=-p_raw)
-    assert all(c["reason"] != "negative_residual" for c in d1["clamped_boundaries"])
-    assert 0 not in {c["i"] for c in d1["clamped_boundaries"]}          # D0 silently skipped, not clamped
+    # The edge remains selected with this larger floor, while |p_raw| lies
+    # inside it. The residual must nevertheless remain visible.
+    _, d1 = records_to_dem(neg, detector_names=("d0", "d1"), pair_floor_abs=0.15)
+    clamp = {c["i"]: c for c in d1["clamped_boundaries"]}
+    assert clamp[0]["reason"] == "negative_residual"
+    assert clamp[0]["p_raw"] == p_raw
 
 
 def test_KILLER_insert_op_carries_args_exact_circuit():

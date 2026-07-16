@@ -9,7 +9,11 @@ estimator) reduced to a matchable
 ``stim.DetectorErrorModel``:
 
 - **pair edges** = detector pairs whose ``p_ij`` clears a DECLARED floor
-  (absolute + sigma, class (c) selection rule);
+  (absolute + sigma, class (c) selection rule). These decoder-facing reduction
+  parameters are emitted in the diagnostics; they are not numerical floors and
+  do not redefine a structural probability zero. Non-identifiable ``p_ij`` or
+  standard errors remain non-finite in diagnostics with an explicit mask; they
+  are never rewritten as zero;
 - **boundary edges** = per-detector residuals from the exact odd-parity product
   identity ``1 - 2<x_i> = (1 - 2 p_bnd_i) * prod_j (1 - 2 p_ij)`` over the kept
   edges (exact given the two-point-edge model; the model itself is the declared
@@ -26,6 +30,7 @@ edge-factorized DEM; the faithful non-Pauli/coupled content stays in the
 does not consume evaluator-only process truth.
 """
 
+import math
 from typing import Any, Sequence
 
 import numpy as np
@@ -42,6 +47,7 @@ DEFAULT_PAIR_FLOOR_SIGMA = 4.0
 #: Probability half-open cap for emitted DEM error lines (an error(p>=0.5)
 #: line is not a matchable edge weight).
 _MAX_EDGE_P = 0.5 - 1e-9
+_EDGE_FACTOR_NUMERICAL_RESOLUTION = NUMERICAL_ZERO
 
 
 def records_to_dem(
@@ -72,6 +78,8 @@ def records_to_dem(
     pair_floor_abs / pair_floor_sigma:
         Class-(c) edge-selection floors: keep pair ``(i, j)`` iff
         ``p_ij > pair_floor_abs`` and ``p_ij > pair_floor_sigma * SE(p_ij)``.
+        Both declared reduction parameters must be finite and nonnegative;
+        they are not numerical probability floors.
     cluster_size:
         Declared shot-clustering of the input records (e.g. a process's
         ``shots_per_trajectory``). SE CONVENTION (carried with the numbers,
@@ -93,6 +101,16 @@ def records_to_dem(
 
     import stim
 
+    pair_floor_abs = float(pair_floor_abs)
+    pair_floor_sigma = float(pair_floor_sigma)
+    if not math.isfinite(pair_floor_abs) or pair_floor_abs < 0.0:
+        raise ValueError(
+            f"pair_floor_abs must be finite and >= 0, got {pair_floor_abs!r}"
+        )
+    if not math.isfinite(pair_floor_sigma) or pair_floor_sigma < 0.0:
+        raise ValueError(
+            f"pair_floor_sigma must be finite and >= 0, got {pair_floor_sigma!r}"
+        )
     x = np.asarray(det)
     if x.ndim != 2:
         raise ValueError(f"det must be (N, D), got shape {x.shape}")
@@ -127,16 +145,21 @@ def records_to_dem(
     finite = np.isfinite(pij_flat) & np.isfinite(se_flat)
     kept_flat = (
         finite
-        & (pij_flat > float(pair_floor_abs))
-        & (pij_flat > float(pair_floor_sigma) * se_flat)
+        & (pij_flat > pair_floor_abs)
+        & (pij_flat > pair_floor_sigma * se_flat)
     )
 
-    pij = np.zeros((d, d), dtype=np.float64)
-    pij[iu_i, iu_j] = np.where(np.isfinite(pij_flat), pij_flat, 0.0)
-    pij = pij + pij.T
-    pij_se = np.zeros((d, d), dtype=np.float64)
-    pij_se[iu_i, iu_j] = np.where(np.isfinite(se_flat), se_flat, 0.0)
-    pij_se = pij_se + pij_se.T
+    pij = np.full((d, d), np.nan, dtype=np.float64)
+    np.fill_diagonal(pij, 0.0)
+    pij[iu_i, iu_j] = pij_flat
+    pij[iu_j, iu_i] = pij_flat
+    pij_se = np.full((d, d), np.nan, dtype=np.float64)
+    np.fill_diagonal(pij_se, 0.0)
+    pij_se[iu_i, iu_j] = se_flat
+    pij_se[iu_j, iu_i] = se_flat
+    pij_identifiable = np.eye(d, dtype=bool)
+    pij_identifiable[iu_i, iu_j] = finite
+    pij_identifiable[iu_j, iu_i] = finite
 
     edges: list[dict] = []
     edge_factor = np.ones(d, dtype=np.float64)
@@ -150,18 +173,25 @@ def records_to_dem(
     clamped_boundaries: list[dict] = []
     l0_names = set(str(s) for s in logical_boundary_detectors)
     for i in range(d):
-        if edge_factor[i] <= NUMERICAL_ZERO:
+        if edge_factor[i] <= _EDGE_FACTOR_NUMERICAL_RESOLUTION:
             # Kept edges already saturate this detector's marginal capacity;
             # a residual boundary is numerically unidentifiable here.
             clamped_boundaries.append(
-                {"i": i, "reason": "edge_factor_nonpositive", "p_raw": None}
+                {
+                    "i": i,
+                    "reason": "edge_factor_below_numerical_resolution",
+                    "p_raw": None,
+                    "edge_factor": float(edge_factor[i]),
+                    "threshold": _EDGE_FACTOR_NUMERICAL_RESOLUTION,
+                }
             )
             continue
         p_raw = 0.5 - 0.5 * (1.0 - 2.0 * float(marginals[i])) / float(edge_factor[i])
-        if p_raw <= NUMERICAL_ZERO:
-            if p_raw < -float(pair_floor_abs):
-                # Pair edges over-account the marginal beyond noise: recorded,
-                # never silently zeroed.
+        if p_raw <= 0.0:
+            if p_raw < 0.0:
+                # Any negative residual means the kept pair model over-accounts
+                # the marginal. The declared edge-selection floor must not hide
+                # that model inconsistency.
                 clamped_boundaries.append(
                     {"i": i, "reason": "negative_residual", "p_raw": float(p_raw)}
                 )
@@ -189,15 +219,20 @@ def records_to_dem(
         "marginals": marginals,
         "pij": pij,
         "pij_se": pij_se,
+        "pij_identifiable": pij_identifiable,
         "edges": edges,
         "boundaries": boundaries,
         "clamped_boundaries": clamped_boundaries,
         "logical_boundary_detectors": sorted(l0_names),
         "logical_index": int(logical_index),
         "floors": {
-            "pair_floor_abs": float(pair_floor_abs),
-            "pair_floor_sigma": float(pair_floor_sigma),
+            "pair_floor_abs": pair_floor_abs,
+            "pair_floor_sigma": pair_floor_sigma,
             "epistemic_class": "c",
+        },
+        "numerical_resolution": {
+            "edge_factor_threshold": _EDGE_FACTOR_NUMERICAL_RESOLUTION,
+            "epistemic_class": "numerical-only",
         },
         "pij_se_convention": {
             "estimator": "spitz_pij_delta_se (shots as iid units)",
@@ -213,7 +248,8 @@ def records_to_dem(
         "reduction_caveat": (
             "two-point edge-factorized reduction (Spitz Eq. 13 exact pairs); "
             "structurally blind to hyperedges; logical attachment is a "
-            "declared geometry rule, not estimated from records"
+            "declared geometry rule, not estimated from records; "
+            "non-identifiable pairs are excluded and flagged, never zero-filled"
         ),
     }
     return dem, diagnostics

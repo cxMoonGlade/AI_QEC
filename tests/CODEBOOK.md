@@ -90,7 +90,7 @@ results must be regenerated from the current checkout.
 
 ## Before changing a test batch
 
-1. Read the owning source module and its module README when present.
+1. Read the owning source module and its required owner README.
 2. Read the matching registry and every listed test file.
 3. Confirm the service catalog still assigns the module and test to the intended current service.
 4. Add or update the smallest independent counterexample before weakening a tolerance or guard.

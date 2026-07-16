@@ -74,6 +74,94 @@ the cited literature does not determine that map.
 | `SourceCouplingConfig` | `z_scale=1e-4 rad/ns`, `Tphi=75 us`, drive `pi/25 rad/ns`, spillover `.001`, readout `.01`, reset `.005`, CZ depolarization `.002`, and declared qubit-process sensitivities | `convenience-default` whose values are `project-design` | Parameter map for controlled source experiments; it has no source-to-qutrit-leakage fan-out, and the class name and formulas do not supply calibration |
 | Source-to-Stim Pauli projection | base probability `1e-3`, sensitivity `1`, source scale `1e-4` | `project-design` | Explicit reduced Pauli projection only |
 
+The float64 `RTNSource` sampling domain is the structural point `gamma_per_cycle=0` plus the
+discrete interval from `2.775557561562892e-17` through `18.71497387511852` per cycle, where both
+`flip_probability` and `autocorr_base` remain representable away from their endpoints. A positive
+transition sum for `TemporalStormSPPSource` must likewise yield a finite correlation length; the
+first accepted positive binary64 sum is `5.56268464626801e-309`. For
+`from_fixed_marginal`, a requested correlation length at or below approximately
+`1/(54 ln 2) = 0.0267165748312771` cycles can make the transition sum round to one and is rejected.
+These are binary64 representability bounds, not physical cutoffs. Values immediately above the
+fixed-marginal lower boundary remain quantized and are not promised to round-trip to the requested
+correlation length exactly.
+
+`OneOverFDriftSource` rejects a nonzero total amplitude when division by `sqrt(n_fluctuators)`
+would manufacture zero per-mode amplitudes. Its analytic finite-Lorentzian PSD is evaluated as an
+exact rational sum over the actual binary64 mode amplitudes and rates and rounded only once at the
+public result. A mathematically positive PSD that would underflow to structural zero, or overflow to
+a non-finite value, is rejected.
+
+Positive-rate and logit fan-out preserve an exact zero shift by returning the input value directly.
+For nonzero shifts, shared scaled-product arithmetic forms `sensitivity * draw / scale` directly
+from the three raw binary64 inputs instead of first rounding `draw / scale`. It keeps the ordinary
+operation order only when its ratio and final result are safely normal; otherwise an exact rational
+`Fraction` fallback rounds the final product/ratio, including half-minimum-subnormal ties-to-even. A
+nonzero exact-float product that cannot be represented as a nonzero binary64 shift is rejected rather
+than treated as a structural zero.
+
+The positive-rate value path keeps ordinary `base * exp(shift)` only when both the exponential and
+final product are safely normal and away from the upper endpoint. Otherwise a 200-digit
+exact-binary64-input `Decimal` product/exponential recovers the representable result without a
+log-domain sum; subnormal output rounding is classified explicitly on the binary64 lattice. A zero,
+subnormal, or overflowing exponential intermediate is never trusted merely because its product
+happens to be finite.
+
+Probability fan-out uses the odds-domain value map
+`odds * exp(shift) / (1 + odds * exp(shift))`, backed by the same scaled-exponential primitive. It
+does not form a rounded `logit(p) + shift` value path and does not cap a logit. Whenever the rounded
+odds-domain result reaches an open-interval endpoint, an exact-input `Decimal` log-odds comparison
+at 1200-digit precision classifies whether the mathematical result belongs to the binary64
+open-probability domain. The precision is required because a minimum-subnormal shift can move an
+endpoint probability outside the domain only beyond the 323rd decimal place. This also catches an
+outside value whose scaled odds rounded to the adjacent interior ULP. A result outside the domain is
+rejected; saturation is never replaced with endpoint probability zero or one.
+
+When a two-dimensional source payload is projected onto several sites, the site mean is formed from
+the exact rational values of the binary64 inputs and rounded once. Exact signed cancellation remains
+a structural zero shift; a nonzero exact mean that would round to zero is rejected rather than routed
+through the zero-shift identity branch.
+
+Static-ZZ evaluation uses the algebraically equivalent stable identity
+`zeta = 4 J^2 alpha / ((Delta-alpha)(Delta+alpha))`; exact zero requires `J=0` or `alpha=0`.
+Unsafe intermediate products and the top sixteen finite binary64 values use exact rational recovery,
+while an unrepresentable nonzero final value is rejected. Inverting `phi=zeta*t/4` rejects every
+strictly sign-inconsistent `phi` without a numerical dead zone and uses the raw
+`Delta, alpha, phi, t` inputs end-to-end; it never first materializes a possibly subnormal rounded
+unit-`J` coefficient. Its fallback forms exact rational `J^2` and takes a 300-digit square root before
+binary64 conversion, so a nonrepresentable intermediate `J^2` may still yield a representable
+nonzero `J`. The ordinary all-normal inversion path has a fixed independent regression at its
+observed 2-ULP worst case; it is not documented as a 1-ULP path. The forward `phi=zeta*t/4` map uses
+the shared scaled product/ratio primitive.
+
+`CoupledNoiseParameters` is the public coupling emission boundary: source and normalized draw keys
+must each occur exactly once in canonical order; coupling mode must be `shared` or `independent`;
+emitted scalar fields must be finite; rates/exchange must be nonnegative; and emitted probabilities
+must lie in `[0,1)`. The sole non-finite structural representation is `tphi_ns=+inf` when
+`gamma_phi_per_ns` is exactly zero; a positive dephasing rate requires a finite positive reciprocal
+lifetime exactly equal to `1/gamma_phi_per_ns`. Config and emitted-bundle numeric scalars are copied
+to primitive floats, named draws are copied to canonical tuples, and schema/mode strings are copied
+before validation, so mutating a caller-owned list or zero-dimensional array cannot change a later
+manifest.
+
+Cross-mechanism Pearson diagnostics reject non-finite selected fields, recognize only exact constant
+series as degenerate, and center values after per-field scale normalization. The shared numerical
+threshold is not used to turn a small but nonconstant trajectory into zero correlation, and finite
+`+/-DBL_MAX` inputs cannot overflow the variance calculation into `NaN`.
+
+The optional record-to-DEM reduction exposes `pair_floor_abs=1e-5` and `pair_floor_sigma=4` as
+declared class-(c) edge-selection parameters. Both must be finite and nonnegative and are emitted in
+the diagnostics. They select a decoder-facing reduced topology; they do not floor, add, or redefine
+physical probability mass. A non-identifiable Spitz pair or standard error remains `NaN` with a
+false `pij_identifiable` entry and is excluded from the optional edge reduction; it is never emitted
+in diagnostics as structural zero. Every strictly negative boundary residual is recorded as a
+`negative_residual` model inconsistency even when its magnitude lies below `pair_floor_abs`; the
+decoder edge-selection floor cannot hide it. Exact residual zero alone remains structurally absent.
+
+Validated parameters of `RTNSource`, `OneOverFDriftSource`, `PhaseBurstSource`, and
+`TemporalStormSPPSource` are copied to primitive floats/integers/strings or immutable tuples during
+construction. A caller-owned zero-dimensional array, event list, or probability list therefore
+cannot mutate a validated process into a different or invalid emission domain.
+
 `SourceTimeline` preserves exact payload and evaluator-only latent arrays. A matched-marginal control
 preserves each selected row while permuting cycle order; the per-field independent ablation is
 explicitly unphysical and must not be called the matched source.
@@ -124,6 +212,16 @@ The diagnostic schema is
 evidence only when the script, contract, source owner, environment locks, and Git state are tracked,
 clean, and hash-bound. Otherwise a rerun is implementation evidence only.
 
+The mechanism-level RTN transition calculation uses cancellation-safe `expm1`; for example,
+`_rtn_flip_probability(1e-20)` is positive instead of a false structural zero. Public
+`RTNSource(gamma_per_cycle=1e-20)` is not a positive-probability sampling example: it is rejected at
+construction because its one-cycle autocorrelation rounds to the endpoint one. Within the public
+sampling domain, ULP-level probability changes can still change an individual seeded RNG comparison,
+so trajectories are not promised to remain bit-identical to pre-correction runs. The temporal-storm
+correlation and fixed-marginal maps likewise use cancellation-safe `log1p`/`expm1`. Any hash-bound
+finite-RTN oracle or diagnostic evidence must be regenerated under the current schema in Phase 6/7;
+old artifacts are not compatibility references.
+
 ## Numerical gates
 
 All values in this section are software gates, not physical error bars.
@@ -145,9 +243,10 @@ All values in this section are software gates, not physical error bars.
 | PEPS stabilizer entropy | reference `2.0`, tolerance `1e-4` | Current observed value `0.10860941571062639` fails; local FET checks cannot override it |
 | Finite-RTN formulation invariance | oracle agreement `1e-10`; monotonic controls `1e-12`; corruptions must differ by `>1e-8` | Diagnostic implementation gates only |
 
-`positive_floor()` and `probability_floor()` do not authorize changing a physical probability law.
-Structural zeros stay zero. A denominator guard or log-domain computation must be reported as a
-numerical operation, never as added probability mass.
+A numerical threshold, denominator guard, clipping operation, or expression equivalent to
+`max(NUMERICAL_ZERO, probability)` does not authorize changing a physical probability law.
+Structural zeros stay zero. A stable `expm1`, `log1p`, or log-domain computation must be reported as
+a numerical operation, never as added probability mass.
 
 ## Manifest requirements
 

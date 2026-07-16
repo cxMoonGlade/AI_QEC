@@ -21,10 +21,10 @@ diagnostic to a production-channel claim.
 
 | load-bearing row | required object | local evidence queried | external search queried | source/reading note | source location | status | implication |
 |---|---|---|---|---|---|---|---|
-| mechanism/rate convention | symmetric directional switching rate and endpoint autocorrelation | concept index, source implementation, primary PDF | not needed after primary closure | `bergli_galperin_altshuler_rtn_0904.4597.md` | Bergli Sec. 3.1, Eq. (15), PDF p. 7 | closed | use `exp(-2 gamma t)` and `p_flip=(1-exp(-2 gamma))/2` |
+| mechanism/rate convention | symmetric directional switching rate and endpoint autocorrelation | concept index, source implementation, primary PDF | not needed after primary closure | [Bergli–Galperin–Altshuler RTN reading note](../papers/reading_notes/bergli_galperin_altshuler_rtn_0904.4597.md) | Bergli Sec. 3.1, Eq. (15), PDF p. 7 | closed | use `exp(-2 gamma t)` and `p_flip=(1-exp(-2 gamma))/2` |
 | exact single-mode coherence | non-Gaussian longitudinal free-induction factor | primary PDF and clean note | not needed after primary closure | same note | Bergli Eqs. (32)–(35), PDF pp. 9–10 | closed | exact weak/strong/equality branches are implementable |
 | independent product | characteristic-function factorization | primary PDF and clean note | not needed after primary closure | same note | Bergli text before Eq. (39), PDF p. 13 | closed | multiply only for an explicitly independent finite set |
-| observable and witness | trace-distance growth and positive-excursion sum | primary PDF and clean note | not needed after primary closure | `blp_nonmarkovianity_measure_0908.0238.md` | BLP Eqs. (1), (5), (9)–(12), PDF pp. 1–3 | closed | any positive excursion for one pair witnesses non-divisibility of that named map family |
+| observable and witness | trace-distance growth and positive-excursion sum | primary PDF and clean note | not needed after primary closure | [Breuer–Laine–Piilo non-Markovianity reading note](../papers/reading_notes/blp_nonmarkovianity_measure_0908.0238.md) | BLP Eqs. (1), (5), (9)–(12), PDF pp. 1–3 | closed | any positive excursion for one pair witnesses non-divisibility of that named map family |
 | pure-dephasing bridge | equatorial-pair distance equals coherence magnitude | primary PDF plus transparent qubit algebra | not needed after primary closure | BLP clean note | BLP Eq. (14) and following text, PDF p. 4 | closed | `D(t)=|L(t)|` for the declared equatorial pair |
 | repository default magnitude | numerical substitution into current design defaults | current source plus independent numerical oracles | not a literature premise | current diagnostic contract | project calculation | closed as project calculation | must be rerun against current source; not hardware calibration |
 | production source-to-channel/record bridge | actual multi-parameter fan-out, schedule, measurement/reset, and record law | old local retrieval and current source boundary | no claim authorized | none | none | missing and excluded | no production CP-divisibility, record-memory, or estimator conclusion |
@@ -70,10 +70,9 @@ fact or a confirmed field-wide gap.
 - Remaining gap: production source-to-channel-to-record bridge; it is outside the retained claim and
   remains explicitly `missing`.
 - Load-bearing notes:
-  - `docs/papers/reading_notes/bergli_galperin_altshuler_rtn_0904.4597.md`
-  - `docs/papers/reading_notes/blp_nonmarkovianity_measure_0908.0238.md`
+  - [Bergli–Galperin–Altshuler RTN reading note](../papers/reading_notes/bergli_galperin_altshuler_rtn_0904.4597.md)
+  - [Breuer–Laine–Piilo non-Markovianity reading note](../papers/reading_notes/blp_nonmarkovianity_measure_0908.0238.md)
 - Supported implementation path: neutral research diagnostic, independent full-state oracles,
   corruption controls, current source-owner acceptance, and no compatibility reader.
 - Allowed downstream action: migrate and rerun the diagnostic under the current source owner. Do not
   claim a production QEC or record-memory result.
-

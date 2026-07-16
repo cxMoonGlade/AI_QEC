@@ -23,7 +23,7 @@ that inventory plus the installed source tree.
 | `frontend/` | circuit IR, code specs, compiler, schedules, bounded executors, artifact emission, optional DEM/decoder reduction | one record contract, multiple explicit execution routes |
 | `certify/` | evaluator-only scoring against independent references | formal implementation evidence, not hardware truth |
 | `quantum_bath/` | bounded pseudomode-enlarged GKSL comparisons | feasibility-only `RESEARCH`; not production |
-| `numerics.py` | shared floating numerical threshold | never used to replace structural zeros |
+| `numerics.py` | shared float64 scaled arithmetic and comparison threshold | recovers representable final values; rejects nonrepresentable nonzero values instead of replacing structural endpoints |
 
 ## Implemented flow
 

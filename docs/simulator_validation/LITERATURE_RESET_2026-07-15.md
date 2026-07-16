@@ -50,12 +50,12 @@ file-level inspection found:
 | `[ours]` | 168 |
 | retired runtime namespace | 92 |
 | retired numbered mechanism tokens | 44 |
-| `teacher` / `learner` lexical quarantine hits | 93 |
+| retired role-vocabulary lexical quarantine hits | 93 |
 | retired ADR 0002–0007 references | 16 |
 
 The conservative union of `[ours]` and lexical internal-product quarantine markers covers 241/248
 files. This is a fail-safe isolation count, not a claim that all 241 files contain a contextually
-confirmed retired-product assertion: in particular, `teacher` / `learner` can be paper-local terms.
+confirmed retired-product assertion: in particular, the counted role words can be paper-local terms.
 One further file is an untagged project overview, and the remaining six also contain untyped project
 analysis. Even the single note with paper tags but none of those direct markers contains an untyped
 implementation-adoption section. Clean-room reconstruction is therefore safer than extracting

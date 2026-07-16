@@ -8,7 +8,9 @@ channel assembler, not a Stim/DEM generator, and not an Axis-1 replacement.
 """
 
 from abc import ABC, abstractmethod
+import copy
 from dataclasses import dataclass, field
+from fractions import Fraction
 import hashlib
 import json
 import math
@@ -20,10 +22,11 @@ import numpy as np
 from .coupling import (
     CoupledNoiseParameters,
     SourceCouplingConfig,
+    _mhz_to_radns_float64,
     independent_baseline_trajectory_to_params,
     trajectory_to_params,
 )
-from ..numerics import NUMERICAL_ZERO
+from ..numerics import NUMERICAL_ZERO, _exact_float64_mean, scaled_product_ratio
 
 _TWO_PI = 2.0 * math.pi
 _PAULI_ORDER = ("I", "X", "Y", "Z")
@@ -50,18 +53,36 @@ class SourceTimeline:
     schema: str = SOURCE_TIMELINE_SCHEMA
 
     def __post_init__(self) -> None:
-        if self.schema != SOURCE_TIMELINE_SCHEMA:
+        name = str(self.name)
+        schema = str(self.schema)
+        if schema != SOURCE_TIMELINE_SCHEMA:
             raise ValueError(
-                f"unsupported source timeline schema {self.schema!r}; "
+                f"unsupported source timeline schema {schema!r}; "
                 f"expected {SOURCE_TIMELINE_SCHEMA!r}"
             )
-        object.__setattr__(self, "n_cycles", _require_positive_int("n_cycles", self.n_cycles))
-        object.__setattr__(self, "cycle_time_ns", _require_positive("cycle_time_ns", self.cycle_time_ns))
-        object.__setattr__(self, "payload", _coerce_array_map("payload", self.payload, self.n_cycles))
-        object.__setattr__(self, "latent", _coerce_array_map("latent", self.latent, self.n_cycles))
-        object.__setattr__(self, "metadata", dict(self.metadata))
-        if self.coupling_mode not in {"shared", "independent"}:
-            raise ValueError(f"coupling_mode must be 'shared' or 'independent', got {self.coupling_mode!r}")
+        coupling_mode = str(self.coupling_mode)
+        if coupling_mode not in {"shared", "independent"}:
+            raise ValueError(
+                "coupling_mode must be 'shared' or 'independent', "
+                f"got {coupling_mode!r}"
+            )
+        seed_input = self.seed
+        if isinstance(seed_input, np.ndarray) and seed_input.ndim == 0:
+            seed_input = seed_input.item()
+        seed = None if seed_input is None else _require_nonnegative_int("seed", seed_input)
+        n_cycles = _require_positive_int("n_cycles", self.n_cycles)
+        cycle_time = _require_positive("cycle_time_ns", self.cycle_time_ns)
+        object.__setattr__(self, "name", name)
+        object.__setattr__(self, "schema", schema)
+        object.__setattr__(self, "coupling_mode", coupling_mode)
+        object.__setattr__(self, "seed", seed)
+        object.__setattr__(self, "n_cycles", n_cycles)
+        object.__setattr__(self, "cycle_time_ns", cycle_time)
+        object.__setattr__(self, "payload", _coerce_array_map("payload", self.payload, n_cycles))
+        object.__setattr__(self, "latent", _coerce_array_map("latent", self.latent, n_cycles))
+        metadata = copy.deepcopy(dict(self.metadata))
+        _validate_json_metadata(metadata, path="metadata")
+        object.__setattr__(self, "metadata", metadata)
 
     def payload_series(self, key: str) -> np.ndarray:
         if key not in self.payload:
@@ -86,7 +107,8 @@ class SourceTimeline:
         relations such as ``phase_rad = detuning_radns * window``.
         """
 
-        rng = np.random.default_rng(int(seed))
+        seed_value = _require_nonnegative_int("seed", seed)
+        rng = np.random.default_rng(seed_value)
         keys = tuple(payload_keys) if payload_keys is not None else tuple(self.payload)
         unknown = set(keys) - set(self.payload)
         if unknown:
@@ -98,12 +120,12 @@ class SourceTimeline:
             if key in keys:
                 arr = arr[perm]
             payload[key] = arr
-        metadata = dict(self.metadata)
+        metadata = copy.deepcopy(dict(self.metadata))
         metadata.update(
             {
                 "baseline_of": self.name,
                 "baseline": "matched_marginal_row_preserving_cycle_permutation",
-                "baseline_seed": int(seed),
+                "baseline_seed": seed_value,
                 "permuted_payload_keys": list(keys),
             }
         )
@@ -114,7 +136,7 @@ class SourceTimeline:
             payload=payload,
             latent={},
             metadata=metadata,
-            seed=int(seed),
+            seed=seed_value,
             coupling_mode="independent",
         )
 
@@ -131,7 +153,8 @@ class SourceTimeline:
         same latent event row.
         """
 
-        rng = np.random.default_rng(int(seed))
+        seed_value = _require_nonnegative_int("seed", seed)
+        rng = np.random.default_rng(seed_value)
         keys = tuple(payload_keys) if payload_keys is not None else tuple(self.payload)
         unknown = set(keys) - set(self.payload)
         if unknown:
@@ -142,12 +165,12 @@ class SourceTimeline:
             if key in keys:
                 arr = arr[rng.permutation(self.n_cycles)]
             payload[key] = arr
-        metadata = dict(self.metadata)
+        metadata = copy.deepcopy(dict(self.metadata))
         metadata.update(
             {
                 "ablation_of": self.name,
                 "ablation": "per_field_independent_cycle_permutation_unphysical",
-                "ablation_seed": int(seed),
+                "ablation_seed": seed_value,
                 "permuted_payload_keys": list(keys),
             }
         )
@@ -158,7 +181,7 @@ class SourceTimeline:
             payload=payload,
             latent={},
             metadata=metadata,
-            seed=int(seed),
+            seed=seed_value,
             coupling_mode="independent",
         )
 
@@ -172,7 +195,7 @@ class SourceTimeline:
             "coupling_mode": self.coupling_mode,
             "payload": {key: _array_summary(value) for key, value in self.payload.items()},
             "latent": {key: _array_summary(value) for key, value in self.latent.items()},
-            "metadata": dict(self.metadata),
+            "metadata": _json_safe(copy.deepcopy(dict(self.metadata))),
         }
 
     def save_npz(self, path: str | Path) -> Path:
@@ -252,6 +275,11 @@ class RTNSource(SourceProcess):
     QEC-cycle duration. The exact discrete flip probability is
     ``0.5 * (1 - exp(-2 gamma_per_cycle))``, giving latent autocorrelation
     ``exp(-2 gamma_per_cycle * lag)``.
+
+    Public float64 sampling accepts the structural limit ``gamma_per_cycle=0``
+    or positive rates whose flip probability and one-cycle autocorrelation are
+    both strictly inside their representable endpoint intervals. On binary64
+    this is approximately ``2.78e-17 < gamma_per_cycle < 18.71``.
     """
 
     amplitude_radns: float = 1.0e-4
@@ -260,9 +288,19 @@ class RTNSource(SourceProcess):
     name: str = "rtn"
 
     def __post_init__(self) -> None:
-        _require_nonnegative("amplitude_radns", self.amplitude_radns)
-        _require_nonnegative("gamma_per_cycle", self.gamma_per_cycle)
-        _require_positive("cycle_time_ns", self.cycle_time_ns)
+        amplitude = _require_nonnegative("amplitude_radns", self.amplitude_radns)
+        gamma = _require_nonnegative("gamma_per_cycle", self.gamma_per_cycle)
+        cycle_time = _require_positive("cycle_time_ns", self.cycle_time_ns)
+        object.__setattr__(self, "amplitude_radns", amplitude)
+        object.__setattr__(self, "gamma_per_cycle", gamma)
+        object.__setattr__(self, "cycle_time_ns", cycle_time)
+        object.__setattr__(self, "name", str(self.name))
+        if gamma != 0.0:
+            try:
+                _ = self.flip_probability
+                _ = self.autocorr_base
+            except ValueError as exc:
+                raise ValueError(_rtn_source_sampling_domain_message(gamma)) from exc
 
     @property
     def flip_probability(self) -> float:
@@ -270,7 +308,15 @@ class RTNSource(SourceProcess):
 
     @property
     def autocorr_base(self) -> float:
-        return float(math.exp(-2.0 * float(self.gamma_per_cycle)))
+        gamma = float(self.gamma_per_cycle)
+        if gamma == 0.0:
+            return 1.0
+        value = float(math.exp(-2.0 * gamma))
+        if not 0.0 < value < 1.0:
+            raise ValueError(
+                f"gamma_per_cycle={gamma!r} produced an unrepresentable autocorrelation endpoint"
+            )
+        return value
 
     def sample(self, *, seed: int, n_cycles: int, layout: Any = None) -> SourceTimeline:
         n = _require_positive_int("n_cycles", n_cycles)
@@ -301,7 +347,12 @@ class RTNSource(SourceProcess):
 
 @dataclass(frozen=True)
 class OneOverFDriftSource(SourceProcess):
-    """Finite log-spaced sum of RTNs with analytic sum-of-Lorentzians PSD."""
+    """Finite log-spaced sum of RTNs with analytic sum-of-Lorentzians PSD.
+
+    Each finite mode must retain a representable amplitude and flip probability
+    strictly below the memoryless endpoint ``0.5``. A nonzero analytic PSD must
+    also remain representable as a finite binary64 value.
+    """
 
     amplitude_radns: float = 1.0e-4
     n_fluctuators: int = 8
@@ -311,13 +362,45 @@ class OneOverFDriftSource(SourceProcess):
     name: str = "one_over_f_drift"
 
     def __post_init__(self) -> None:
-        _require_nonnegative("amplitude_radns", self.amplitude_radns)
-        _require_positive_int("n_fluctuators", self.n_fluctuators)
-        _require_positive("gamma_min_per_cycle", self.gamma_min_per_cycle)
-        _require_positive("gamma_max_per_cycle", self.gamma_max_per_cycle)
-        if float(self.gamma_max_per_cycle) < float(self.gamma_min_per_cycle):
+        amplitude = _require_nonnegative("amplitude_radns", self.amplitude_radns)
+        n_fluctuators = _require_positive_int("n_fluctuators", self.n_fluctuators)
+        per_mode_amplitude = amplitude / math.sqrt(float(n_fluctuators))
+        if amplitude != 0.0 and (
+            not math.isfinite(per_mode_amplitude) or per_mode_amplitude == 0.0
+        ):
+            raise ValueError(
+                f"amplitude_radns={amplitude!r} is nonzero but its per-mode amplitude "
+                f"is not representable for n_fluctuators={n_fluctuators}"
+            )
+        aligned_exact = Fraction.from_float(per_mode_amplitude) * n_fluctuators
+        try:
+            aligned_emission = float(aligned_exact)
+        except OverflowError:
+            aligned_emission = math.inf
+        if not math.isfinite(aligned_emission):
+            raise ValueError(
+                f"amplitude_radns={amplitude!r} and n_fluctuators={n_fluctuators} "
+                "produce an unrepresentable maximum aligned emission"
+            )
+        gamma_min = _require_positive("gamma_min_per_cycle", self.gamma_min_per_cycle)
+        gamma_max = _require_positive("gamma_max_per_cycle", self.gamma_max_per_cycle)
+        if gamma_max < gamma_min:
             raise ValueError("gamma_max_per_cycle must be >= gamma_min_per_cycle")
-        _require_positive("cycle_time_ns", self.cycle_time_ns)
+        try:
+            _rtn_flip_probability(gamma_max)
+        except ValueError as exc:
+            raise ValueError(
+                f"gamma_max_per_cycle={gamma_max!r} is outside the "
+                "finite-RTN sampling domain: expected a representable flip_probability "
+                "in (0, 0.5)"
+            ) from exc
+        cycle_time = _require_positive("cycle_time_ns", self.cycle_time_ns)
+        object.__setattr__(self, "amplitude_radns", amplitude)
+        object.__setattr__(self, "n_fluctuators", n_fluctuators)
+        object.__setattr__(self, "gamma_min_per_cycle", gamma_min)
+        object.__setattr__(self, "gamma_max_per_cycle", gamma_max)
+        object.__setattr__(self, "cycle_time_ns", cycle_time)
+        object.__setattr__(self, "name", str(self.name))
 
     @property
     def gammas_per_cycle(self) -> np.ndarray:
@@ -336,14 +419,46 @@ class OneOverFDriftSource(SourceProcess):
         )
 
     def analytic_psd(self, omega_per_cycle: np.ndarray | Sequence[float]) -> np.ndarray:
-        """Closed-form finite RTN sum ``sum v_k^2 4g_k / ((2g_k)^2 + omega^2)``."""
+        """Return ``sum v_k^2 4g_k / ((2g_k)^2 + omega^2)`` with one final rounding.
+
+        Non-finite frequencies and nonzero results outside finite binary64 are
+        rejected instead of being emitted as ``NaN``, infinity, or false zero.
+        """
 
         omega = np.asarray(omega_per_cycle, dtype=np.float64)
         if not np.all(np.isfinite(omega)):
             raise ValueError("omega_per_cycle contains non-finite values")
-        out = np.zeros_like(omega, dtype=np.float64)
-        for gamma, amp in zip(self.gammas_per_cycle, self.amplitudes_radns, strict=True):
-            out += amp * amp * (4.0 * gamma) / ((2.0 * gamma) ** 2 + omega * omega)
+        modes = tuple(
+            (
+                Fraction.from_float(float(amp)) ** 2
+                * 4
+                * Fraction.from_float(float(gamma)),
+                (2 * Fraction.from_float(float(gamma))) ** 2,
+            )
+            for gamma, amp in zip(
+                self.gammas_per_cycle,
+                self.amplitudes_radns,
+                strict=True,
+            )
+        )
+        out = np.empty_like(omega, dtype=np.float64)
+        for index, omega_value in np.ndenumerate(omega):
+            omega_exact = Fraction.from_float(float(omega_value))
+            omega_squared = omega_exact**2
+            exact = sum(
+                (numerator / (gamma_squared + omega_squared) for numerator, gamma_squared in modes),
+                Fraction(),
+            )
+            try:
+                recovered = float(exact)
+            except OverflowError:
+                recovered = math.inf
+            if not math.isfinite(recovered) or (exact > 0 and recovered == 0.0):
+                raise ValueError(
+                    "analytic PSD is not representable as a finite nonzero float64 "
+                    f"at omega_per_cycle{index}={float(omega_value)!r}"
+                )
+            out[index] = recovered
         return out
 
     def sample(self, *, seed: int, n_cycles: int, layout: Any = None) -> SourceTimeline:
@@ -400,20 +515,48 @@ class PhaseBurstSource(SourceProcess):
     name: str = "phase_burst"
 
     def __post_init__(self) -> None:
-        _require_positive_int("site_count", self.site_count)
-        _validate_probability("event_probability_per_cycle", self.event_probability_per_cycle, allow_zero=True)
-        _require_finite("peak_shift_mhz", self.peak_shift_mhz)
-        _require_nonnegative("peak_jitter_mhz", self.peak_jitter_mhz)
-        _require_positive("recovery_time_ns", self.recovery_time_ns)
-        _require_nonnegative("t1_duration_ns", self.t1_duration_ns)
-        _require_positive("cycle_time_ns", self.cycle_time_ns)
-        _require_nonnegative("phase_window_ns", self.phase_window_ns)
-        if not 0.0 <= float(self.echo_suppression) <= 1.0:
+        site_count = _require_positive_int("site_count", self.site_count)
+        event_probability = _validate_probability(
+            "event_probability_per_cycle",
+            self.event_probability_per_cycle,
+            allow_zero=True,
+        )
+        peak_shift = _require_finite("peak_shift_mhz", self.peak_shift_mhz)
+        peak_jitter = _require_nonnegative("peak_jitter_mhz", self.peak_jitter_mhz)
+        recovery_time = _require_positive("recovery_time_ns", self.recovery_time_ns)
+        t1_duration = _require_nonnegative("t1_duration_ns", self.t1_duration_ns)
+        cycle_time = _require_positive("cycle_time_ns", self.cycle_time_ns)
+        phase_window = _require_nonnegative("phase_window_ns", self.phase_window_ns)
+        echo_suppression = _require_finite("echo_suppression", self.echo_suppression)
+        if not 0.0 <= echo_suppression <= 1.0:
             raise ValueError("echo_suppression must be in [0, 1]")
-        if self.footprint not in {"uniform", "cluster"}:
+        footprint = str(self.footprint)
+        if footprint not in {"uniform", "cluster"}:
             raise ValueError("footprint must be 'uniform' or 'cluster'")
+        event_times = (
+            None
+            if self.event_times is None
+            else tuple(
+                _require_nonnegative_int(f"event_times[{i}]", event_time)
+                for i, event_time in enumerate(self.event_times)
+            )
+        )
+        affected_sites = None
         if self.affected_sites is not None:
-            _require_positive_int("affected_sites", self.affected_sites)
+            affected_sites = _require_positive_int("affected_sites", self.affected_sites)
+        object.__setattr__(self, "site_count", site_count)
+        object.__setattr__(self, "event_probability_per_cycle", event_probability)
+        object.__setattr__(self, "event_times", event_times)
+        object.__setattr__(self, "peak_shift_mhz", peak_shift)
+        object.__setattr__(self, "peak_jitter_mhz", peak_jitter)
+        object.__setattr__(self, "recovery_time_ns", recovery_time)
+        object.__setattr__(self, "t1_duration_ns", t1_duration)
+        object.__setattr__(self, "cycle_time_ns", cycle_time)
+        object.__setattr__(self, "phase_window_ns", phase_window)
+        object.__setattr__(self, "echo_suppression", echo_suppression)
+        object.__setattr__(self, "footprint", footprint)
+        object.__setattr__(self, "affected_sites", affected_sites)
+        object.__setattr__(self, "name", str(self.name))
 
     def sample(self, *, seed: int, n_cycles: int, layout: Any = None) -> SourceTimeline:
         n = _require_positive_int("n_cycles", n_cycles)
@@ -421,10 +564,17 @@ class PhaseBurstSource(SourceProcess):
         rng = np.random.default_rng(int(seed))
         event_times = self._event_times(rng, n)
         delta_mhz = np.zeros((n, site_count), dtype=np.float64)
+        delta_mhz_exact: dict[tuple[int, int], Fraction] = {}
         event_start = np.zeros(n, dtype=np.int8)
         t1_burst = np.zeros((n, site_count), dtype=np.float64)
         event_site_mask = np.zeros((n, site_count), dtype=np.int8)
-        t1_cycles = int(math.ceil(float(self.t1_duration_ns) / float(self.cycle_time_ns)))
+        t1_cycles = min(
+            n,
+            math.ceil(
+                Fraction.from_float(float(self.t1_duration_ns))
+                / Fraction.from_float(float(self.cycle_time_ns))
+            ),
+        )
         for t0 in event_times:
             if t0 < 0 or t0 >= n:
                 raise ValueError(f"event time {t0} outside n_cycles={n}")
@@ -432,23 +582,57 @@ class PhaseBurstSource(SourceProcess):
             amp = self._footprint_amplitudes(rng, site_count, layout)
             affected = amp != 0.0
             event_site_mask[t0, affected] = 1
-            elapsed = (np.arange(t0, n, dtype=np.float64) - float(t0)) * float(self.cycle_time_ns)
-            decay = 1.0 / (1.0 + elapsed / float(self.recovery_time_ns))
-            delta_mhz[t0:n, :] += decay[:, None] * amp[None, :]
+            for cycle in range(t0, n):
+                lag = cycle - t0
+                for site, amplitude in enumerate(amp):
+                    contribution = _phase_burst_recovered_amplitude_exact(
+                        float(amplitude),
+                        lag=lag,
+                        cycle_time_ns=float(self.cycle_time_ns),
+                        recovery_time_ns=float(self.recovery_time_ns),
+                    )
+                    key = (cycle, site)
+                    delta_mhz_exact[key] = delta_mhz_exact.get(key, Fraction()) + contribution
             if t1_cycles > 0 and np.any(affected):
                 t1_burst[t0 : min(n, t0 + t1_cycles), affected] = 1.0
+        for index, exact in delta_mhz_exact.items():
+            try:
+                recovered = float(exact)
+            except OverflowError:
+                recovered = math.copysign(math.inf, 1.0 if exact > 0 else -1.0)
+            if not math.isfinite(recovered) or (exact != 0 and recovered == 0.0):
+                raise ValueError(
+                    f"delta_fq_mhz{index} is not representable as a finite float64"
+                )
+            delta_mhz[index] = recovered
         detuning_radns = _mhz_to_radns(delta_mhz)
-        phase_rad = detuning_radns * float(self.phase_window_ns)
+        phase_rad = _scaled_array_by_scalar(
+            detuning_radns,
+            self.phase_window_ns,
+            name="phase_rad",
+        )
+        echoed_phase_rad = _scaled_array_by_scalar(
+            phase_rad,
+            self.echo_suppression,
+            name="echoed_phase_rad",
+        )
+        z_radns = np.asarray(
+            [
+                _exact_float64_mean(row, name=f"z_radns[{cycle}]")
+                for cycle, row in enumerate(detuning_radns)
+            ],
+            dtype=np.float64,
+        )
         return SourceTimeline(
             name=self.name,
             n_cycles=n,
             cycle_time_ns=float(self.cycle_time_ns),
             payload={
-                "z_radns": np.mean(detuning_radns, axis=1),
+                "z_radns": z_radns,
                 "delta_fq_mhz": delta_mhz,
                 "detuning_radns": detuning_radns,
                 "phase_rad": phase_rad,
-                "echoed_phase_rad": phase_rad * float(self.echo_suppression),
+                "echoed_phase_rad": echoed_phase_rad,
                 "t1_burst": t1_burst,
             },
             latent={"event_start": event_start, "event_site_mask": event_site_mask},
@@ -489,9 +673,35 @@ class PhaseBurstSource(SourceProcess):
         return out
 
 
+def _phase_burst_recovered_amplitude_exact(
+    amplitude: float,
+    *,
+    lag: int,
+    cycle_time_ns: float,
+    recovery_time_ns: float,
+) -> Fraction:
+    """Evaluate ``amplitude * recovery / (recovery + lag * cycle)`` exactly.
+
+    Exact binary64 input ratios keep an overflowing elapsed time or elapsed /
+    recovery intermediate from fabricating a zero recovered amplitude. Event
+    contributions remain exact until their site/cycle total is rounded once.
+    """
+
+    amplitude_value = float(amplitude)
+    if amplitude_value == 0.0:
+        return Fraction()
+    recovery = Fraction.from_float(float(recovery_time_ns))
+    elapsed = int(lag) * Fraction.from_float(float(cycle_time_ns))
+    return Fraction.from_float(amplitude_value) * recovery / (recovery + elapsed)
+
+
 @dataclass(frozen=True)
 class TemporalStormSPPSource(SourceProcess):
-    """Two-state temporal-storm SPP/HMM reduced Pauli comparator."""
+    """Two-state temporal-storm SPP/HMM reduced Pauli comparator.
+
+    A positive transition sum must have a representable finite float64
+    correlation length; the exact zero-transition structural limit is allowed.
+    """
 
     a: float = 0.01
     b: float = 0.10
@@ -504,18 +714,32 @@ class TemporalStormSPPSource(SourceProcess):
     name: str = "temporal_storm_spp"
 
     def __post_init__(self) -> None:
-        _validate_probability("a", self.a, allow_zero=True)
-        _validate_probability("b", self.b, allow_zero=True)
-        if float(self.a) + float(self.b) >= 1.0:
+        a = _validate_probability("a", self.a, allow_zero=True)
+        b = _validate_probability("b", self.b, allow_zero=True)
+        transition_rate = a + b
+        if transition_rate >= 1.0:
             raise ValueError("a + b must be < 1 for positive correlation length")
-        _validate_distribution("q_calm", self.q_calm)
-        _validate_distribution("q_storm", self.q_storm)
-        _require_positive_int("site_count", self.site_count)
-        if self.scope not in {"global", "cluster", "per_site"}:
+        object.__setattr__(self, "a", a)
+        object.__setattr__(self, "b", b)
+        if transition_rate > 0.0:
+            _ = self.correlation_length_cycles
+        q_calm = _validate_distribution("q_calm", self.q_calm)
+        q_storm = _validate_distribution("q_storm", self.q_storm)
+        site_count = _require_positive_int("site_count", self.site_count)
+        scope = str(self.scope)
+        if scope not in {"global", "cluster", "per_site"}:
             raise ValueError("scope must be 'global', 'cluster', or 'per_site'")
+        affected_sites = None
         if self.affected_sites is not None:
-            _require_positive_int("affected_sites", self.affected_sites)
-        _require_positive("cycle_time_ns", self.cycle_time_ns)
+            affected_sites = _require_positive_int("affected_sites", self.affected_sites)
+        cycle_time = _require_positive("cycle_time_ns", self.cycle_time_ns)
+        object.__setattr__(self, "q_calm", q_calm)
+        object.__setattr__(self, "q_storm", q_storm)
+        object.__setattr__(self, "site_count", site_count)
+        object.__setattr__(self, "scope", scope)
+        object.__setattr__(self, "affected_sites", affected_sites)
+        object.__setattr__(self, "cycle_time_ns", cycle_time)
+        object.__setattr__(self, "name", str(self.name))
 
     @classmethod
     def from_fixed_marginal(
@@ -530,7 +754,9 @@ class TemporalStormSPPSource(SourceProcess):
         """Build a family member with fixed one-cycle Pauli marginal.
 
         Varying ``correlation_length_cycles`` changes the HMM memory while
-        holding the emitted one-cycle marginal fixed.
+        holding the emitted one-cycle marginal fixed. Float64 inputs whose
+        implied transition sum rounds to an endpoint are rejected; the lower
+        correlation-length boundary is approximately ``1/37.43`` cycles.
         """
 
         p = _validate_distribution("marginal", marginal)
@@ -540,29 +766,56 @@ class TemporalStormSPPSource(SourceProcess):
         # pi1 in (0, 1) is guaranteed by _validate_probability(allow_zero=False) above, so 1 - pi1 > 0.
         q0 = tuple((p_i - pi1 * q_i) / (1.0 - pi1) for p_i, q_i in zip(p, q1, strict=True))
         _validate_distribution("implied q_calm", q0)
-        s = 1.0 - math.exp(-1.0 / xi)
-        return cls(a=pi1 * s, b=(1.0 - pi1) * s, q_calm=q0, q_storm=tuple(q1), **kwargs)
+        s = -math.expm1(-1.0 / xi)
+        if s == 1.0:
+            raise ValueError(
+                f"correlation_length_cycles={xi!r} produced an unrepresentable "
+                "transition-mass endpoint 1.0"
+            )
+        a = pi1 * s
+        b = (1.0 - pi1) * s
+        if a == 0.0 or b == 0.0:
+            raise ValueError(
+                f"storm_probability={pi1!r} and correlation_length_cycles={xi!r} "
+                "produced an unrepresentable zero transition rate"
+            )
+        return cls(a=a, b=b, q_calm=q0, q_storm=tuple(q1), **kwargs)
 
     @property
     def transition_matrix(self) -> np.ndarray:
+        stay_calm = 1.0 - float(self.a)
+        stay_storm = 1.0 - float(self.b)
+        if (self.a > 0.0 and stay_calm == 1.0) or (
+            self.b > 0.0 and stay_storm == 1.0
+        ):
+            raise ValueError(
+                "transition_matrix is not representable without endpoint rounding for "
+                f"a={self.a!r}, b={self.b!r}; use a and b as authoritative transition rates"
+            )
         return np.asarray(
-            [[1.0 - float(self.a), float(self.a)], [float(self.b), 1.0 - float(self.b)]],
+            [[stay_calm, float(self.a)], [float(self.b), stay_storm]],
             dtype=np.float64,
         )
 
     @property
     def stationary_distribution(self) -> np.ndarray:
         denom = float(self.a) + float(self.b)
-        if denom <= NUMERICAL_ZERO:
+        if denom == 0.0:
             return np.asarray([1.0, 0.0], dtype=np.float64)
         return np.asarray([float(self.b) / denom, float(self.a) / denom], dtype=np.float64)
 
     @property
     def correlation_length_cycles(self) -> float:
-        lam2 = 1.0 - float(self.a) - float(self.b)
-        if lam2 >= 1.0:
+        transition_rate = float(self.a) + float(self.b)
+        if transition_rate == 0.0:
             return math.inf
-        return float(-1.0 / math.log(lam2))
+        value = float(-1.0 / math.log1p(-transition_rate))
+        if not math.isfinite(value):
+            raise ValueError(
+                f"a={float(self.a)!r} and b={float(self.b)!r} produce an "
+                "unrepresentable finite correlation_length_cycles"
+            )
+        return value
 
     @property
     def marginal_distribution(self) -> np.ndarray:
@@ -603,6 +856,19 @@ class TemporalStormSPPSource(SourceProcess):
         for t in range(n):
             for i in range(site_count):
                 emissions[t, i] = int(rng.choice(4, p=q[int(hidden_sites[t, i])]))
+        try:
+            transition_matrix = self.transition_matrix.tolist()
+            transition_matrix_representable = True
+        except ValueError:
+            transition_matrix = None
+            transition_matrix_representable = False
+        correlation_length = self.correlation_length_cycles
+        if math.isfinite(correlation_length):
+            correlation_length_metadata: float | None = correlation_length
+            correlation_length_status = "finite"
+        else:
+            correlation_length_metadata = None
+            correlation_length_status = "structural_infinite_limit"
         return SourceTimeline(
             name=self.name,
             n_cycles=n,
@@ -617,9 +883,11 @@ class TemporalStormSPPSource(SourceProcess):
                 "source": "TemporalStormSPPSource",
                 "a": float(self.a),
                 "b": float(self.b),
-                "transition_matrix": self.transition_matrix.tolist(),
+                "transition_matrix": transition_matrix,
+                "transition_matrix_representable": transition_matrix_representable,
                 "stationary_distribution": self.stationary_distribution.tolist(),
-                "correlation_length_cycles": self.correlation_length_cycles,
+                "correlation_length_cycles": correlation_length_metadata,
+                "correlation_length_cycles_status": correlation_length_status,
                 "pauli_order": _PAULI_ORDER,
                 "marginal_distribution": self.marginal_distribution.tolist(),
                 "scope": self.scope,
@@ -693,10 +961,8 @@ def timeline_to_coupled_params(
         raise ValueError(f"payload {payload_key!r} must be 1-D to feed SourceCouplingConfig")
     if timeline.coupling_mode == "shared":
         return trajectory_to_params(z, config)
-    seed = independent_seed
-    if seed is None:
-        seed = int(timeline.metadata.get("baseline_seed", timeline.seed if timeline.seed is not None else 0))
-    return independent_baseline_trajectory_to_params(z, config, seed=int(seed))
+    seed = _resolve_independent_seed(timeline, independent_seed)
+    return independent_baseline_trajectory_to_params(z, config, seed=seed)
 
 
 def timeline_to_site_coupled_params(
@@ -714,16 +980,39 @@ def timeline_to_site_coupled_params(
     z = timeline.payload_series(payload_key)
     if z.ndim != 2:
         raise ValueError(f"payload {payload_key!r} must be 2-D with shape (cycle, site)")
+    seed = (
+        None
+        if timeline.coupling_mode == "shared"
+        else _resolve_independent_seed(timeline, independent_seed)
+    )
     site_series: list[tuple[CoupledNoiseParameters, ...]] = []
     for site in range(z.shape[1]):
         if timeline.coupling_mode == "shared":
             site_series.append(trajectory_to_params(z[:, site], config))
         else:
-            seed = independent_seed
-            if seed is None:
-                seed = int(timeline.metadata.get("baseline_seed", timeline.seed if timeline.seed is not None else 0))
-            site_series.append(independent_baseline_trajectory_to_params(z[:, site], config, seed=int(seed) + site))
+            assert seed is not None
+            site_series.append(
+                independent_baseline_trajectory_to_params(
+                    z[:, site],
+                    config,
+                    seed=seed + site,
+                )
+            )
     return tuple(tuple(site_series[site][cycle] for site in range(z.shape[1])) for cycle in range(z.shape[0]))
+
+
+def _resolve_independent_seed(
+    timeline: SourceTimeline,
+    independent_seed: int | None,
+) -> int:
+    if independent_seed is not None:
+        return _require_nonnegative_int("independent_seed", independent_seed)
+    if "baseline_seed" in timeline.metadata:
+        return _require_nonnegative_int(
+            "baseline_seed",
+            timeline.metadata["baseline_seed"],
+        )
+    return 0 if timeline.seed is None else timeline.seed
 
 
 def lag_autocorrelation(values: np.ndarray | Sequence[float], lag: int = 1) -> float:
@@ -753,11 +1042,45 @@ def _sample_rtn_states(rng: np.random.Generator, n_cycles: int, gamma_per_cycle:
 
 def _rtn_flip_probability(gamma_per_cycle: float) -> float:
     gamma = _require_nonnegative("gamma_per_cycle", gamma_per_cycle)
-    return float(0.5 * (1.0 - math.exp(-2.0 * gamma)))
+    if gamma == 0.0:
+        return 0.0
+    probability = float(-0.5 * math.expm1(-2.0 * gamma))
+    if not 0.0 < probability < 0.5:
+        raise ValueError(
+            f"gamma_per_cycle={gamma!r} produced an unrepresentable flip-probability endpoint"
+        )
+    return probability
+
+
+def _rtn_source_sampling_domain_message(gamma_per_cycle: float) -> str:
+    return (
+        f"gamma_per_cycle={float(gamma_per_cycle)!r} is outside the RTNSource sampling domain: "
+        "expected 0 or representable non-endpoint flip_probability and autocorr_base"
+    )
 
 
 def _mhz_to_radns(delta_mhz: np.ndarray) -> np.ndarray:
-    return _TWO_PI * np.asarray(delta_mhz, dtype=np.float64) * 1.0e-3
+    values = np.asarray(delta_mhz, dtype=np.float64)
+    out = np.empty_like(values, dtype=np.float64)
+    for index, value in np.ndenumerate(values):
+        out[index] = _mhz_to_radns_float64(
+            float(value),
+            name=f"detuning_radns{index}",
+        )
+    return out
+
+
+def _scaled_array_by_scalar(values: np.ndarray, factor: float, *, name: str) -> np.ndarray:
+    numeric = np.asarray(values, dtype=np.float64)
+    out = np.empty_like(numeric, dtype=np.float64)
+    for index, value in np.ndenumerate(numeric):
+        out[index] = scaled_product_ratio(
+            float(value),
+            float(factor),
+            1.0,
+            name=f"{name}{index}",
+        )
+    return out
 
 
 def _layout_site_count(layout: Any, *, default: int) -> int:
@@ -887,12 +1210,25 @@ def _require_site_index(name: str, value: int, site_count: int) -> int:
 def _coerce_array_map(name: str, values: Mapping[str, Any], n_cycles: int) -> dict[str, np.ndarray]:
     out: dict[str, np.ndarray] = {}
     for key, value in dict(values).items():
+        canonical_key = str(key)
+        if canonical_key in out:
+            raise ValueError(f"{name} contains duplicate canonical key {canonical_key!r}")
         arr = np.asarray(value)
         if arr.ndim == 0 or arr.shape[0] != n_cycles:
             raise ValueError(f"{name}[{key!r}] must have cycle axis length {n_cycles}")
-        if np.issubdtype(arr.dtype, np.number) and not np.all(np.isfinite(arr.astype(np.float64))):
+        if arr.size == 0:
+            raise ValueError(f"{name}[{key!r}] must not be empty")
+        is_real_numeric = np.issubdtype(arr.dtype, np.integer) or np.issubdtype(
+            arr.dtype,
+            np.floating,
+        )
+        if not is_real_numeric:
+            raise ValueError(
+                f"{name}[{key!r}] dtype {arr.dtype} is not a supported real numeric array"
+            )
+        if not np.all(np.isfinite(arr.astype(np.float64))):
             raise ValueError(f"{name}[{key!r}] contains non-finite values")
-        out[str(key)] = np.array(arr, copy=True)
+        out[canonical_key] = np.array(arr, copy=True)
     return out
 
 
@@ -902,14 +1238,14 @@ def _array_summary(arr: np.ndarray) -> dict[str, Any]:
         "shape": list(value.shape),
         "dtype": str(value.dtype),
     }
-    if np.issubdtype(value.dtype, np.number):
-        numeric = value.astype(np.float64)
+    if np.issubdtype(value.dtype, np.integer) or np.issubdtype(
+        value.dtype,
+        np.floating,
+    ):
         summary.update(
             {
-                "min": float(np.min(numeric)),
-                "max": float(np.max(numeric)),
-                "mean": float(np.mean(numeric)),
-                "std": float(np.std(numeric)),
+                "min": np.min(value).item(),
+                "max": np.max(value).item(),
                 "sha256": _array_sha256(value),
             }
         )
@@ -941,6 +1277,34 @@ def _json_safe(value: Any) -> Any:
     if isinstance(value, np.bool_):
         return bool(value)
     return value
+
+
+def _validate_json_metadata(value: Any, *, path: str) -> None:
+    if isinstance(value, Mapping):
+        for key, item in value.items():
+            if not isinstance(key, str):
+                raise ValueError(f"{path} key {key!r} must be a string")
+            _validate_json_metadata(item, path=f"{path}[{key!r}]")
+        return
+    if isinstance(value, (tuple, list)):
+        for index, item in enumerate(value):
+            _validate_json_metadata(item, path=f"{path}[{index}]")
+        return
+    if isinstance(value, np.ndarray):
+        _validate_json_metadata(value.tolist(), path=path)
+        return
+    if isinstance(value, (float, np.floating)):
+        numeric = float(value)
+        if not math.isfinite(numeric):
+            raise ValueError(f"{path} must be finite, got {numeric!r}")
+        return
+    if value is None or isinstance(value, (str, bool, int)):
+        return
+    if isinstance(value, (np.bool_, np.integer)):
+        return
+    raise ValueError(
+        f"{path} has unsupported JSON metadata type {type(value).__name__}"
+    )
 
 
 def _validate_distribution(name: str, probs: Sequence[float]) -> tuple[float, ...]:

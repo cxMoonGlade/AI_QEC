@@ -12,7 +12,7 @@ L2 DISCIPLINE (the standing lesson: 100% coverage != discrimination). This is cl
 physics, so value-pins are the workhorse: every load-bearing number is PINNED against an
 INDEPENDENT from-scratch recompute of the analytic formula (the dispersive static-ZZ cross-Kerr
 ``zeta = 2 J^2 [1/(D-a) - 1/(D+a)]``, the ``phi = zeta(J)*t_gate/4`` inversion + its EXACT
-round-trip, the positive-rate ``base*exp(clamp(sens*x))`` map, the logit map, and a from-scratch
+round-trip, the fail-closed positive-rate exponential map, the open-interval logit map, and a from-scratch
 Pearson recompute for ``cross_mechanism_correlation``) -- NEVER the module's own helper. No
 numerical-convergence parameter is load-bearing (every map is analytic), so no pin is slow.
 Every validation RAISE asserts its EXACT message via ``str(excinfo.value) == ...`` (mutmut wraps/
@@ -23,7 +23,9 @@ from __future__ import annotations
 
 import dataclasses
 import math
+import sys
 
+import mpmath
 import numpy as np
 import pytest
 from hypothesis import given, settings
@@ -90,17 +92,21 @@ def _indep_exchange_j(phi: float, delta: float, alpha: float, t_gate: float) -> 
 
 
 def _indep_pos_rate(base: float, x: float, sens: float) -> float:
-    """base*exp(clamp(sens*x, -60, 60)) for base>0 (the module's positive-rate exp map)."""
-    expo = max(-60.0, min(60.0, sens * x))
-    return base * math.exp(expo)
+    """Direct interior ``base*exp(sens*x)`` reference for a positive rate."""
+    return base * math.exp(sens * x)
 
 
 def _indep_prob_logit(p: float, x: float, sens: float) -> float:
     """The logit-domain probability map, recomputed from scratch (p>0 assumed)."""
-    p = min(max(p, 1e-12), 1.0 - 1e-12)
-    logit = math.log(p / (1.0 - p))
-    y = max(-60.0, min(60.0, logit + sens * x))
-    return 1.0 / (1.0 + math.exp(-y))
+    shift = sens * x
+    if shift == 0.0:
+        return p
+    y = math.log(p) - math.log1p(-p) + shift
+    if y < 0.0:
+        exp_y = math.exp(y)
+        return exp_y / (1.0 + exp_y)
+    exp_neg_y = math.exp(-y)
+    return 1.0 - exp_neg_y / (1.0 + exp_neg_y)
 
 
 def _indep_pearson(a, b) -> float:
@@ -112,6 +118,17 @@ def _indep_pearson(a, b) -> float:
     if denom == 0.0:
         return 0.0
     return float((am * bm).sum() / denom)
+
+
+def _mp_float(value: float):
+    numerator, denominator = float(value).as_integer_ratio()
+    return mpmath.mpf(numerator) / denominator
+
+
+def _ulp_distance(left: float, right: float) -> int:
+    left_bits = int(np.asarray(float(left), dtype=np.float64).view(np.uint64))
+    right_bits = int(np.asarray(float(right), dtype=np.float64).view(np.uint64))
+    return abs(left_bits - right_bits)
 
 
 #: default zz exchange J, recomputed independently (matches cfg.zz.exchange_j_radns).
@@ -182,6 +199,106 @@ def test_KILLER_static_zz_zeta_discriminates():
     assert_discriminates(prop, static_zz_zeta(d, a, j), wrong, label="static zz zeta")
 
 
+def test_static_zz_zeta_preserves_a_representable_cancellation_sensitive_value():
+    delta = 1.0e16
+    alpha = 1.0
+    exchange = 1.0e8
+    with mpmath.workdps(200):
+        oracle = float(
+            4
+            * _mp_float(exchange) ** 2
+            * _mp_float(alpha)
+            / (_mp_float(delta) ** 2 - _mp_float(alpha) ** 2)
+        )
+    assert oracle > 0.0
+    got = static_zz_zeta(delta, alpha, exchange)
+    assert _ulp_distance(got, oracle) <= 1
+    assert static_zz_zeta(3.0, 1.0, 0.0) == 0.0
+    assert static_zz_zeta(3.0, 0.0, 1.0) == 0.0
+
+    recovered = static_zz_zeta(1.0e200, 1.0e100, 1.0e150)
+    with mpmath.workdps(200):
+        recovered_oracle = float(
+            4
+            * _mp_float(1.0e150) ** 2
+            * _mp_float(1.0e100)
+            / (_mp_float(1.0e200) ** 2 - _mp_float(1.0e100) ** 2)
+        )
+    assert _ulp_distance(recovered, recovered_oracle) <= 1
+
+    _raises_exact(
+        ValueError,
+        "static_zz_zeta nonzero result is not representable as a finite float64",
+        lambda: static_zz_zeta(0.0, 1.0e-10, 5.0e153),
+    )
+
+
+def test_static_zz_zeta_does_not_trust_a_subnormal_product_intermediate():
+    cases = (
+        (
+            float.fromhex("-0x1.625acf6b5dcaap-975"),
+            float.fromhex("-0x1.bcd54cf7bba2cp-28"),
+            float.fromhex("0x1.df8793bfec1d4p-524"),
+        ),
+        (math.nextafter(1.0e12, math.inf), 1.0e12, 1.0e-160),
+    )
+    with mpmath.workdps(200):
+        for delta, alpha, exchange in cases:
+            assert 0.0 < abs(exchange * exchange) < sys.float_info.min
+            oracle = float(
+                4
+                * _mp_float(exchange) ** 2
+                * _mp_float(alpha)
+                / (_mp_float(delta) ** 2 - _mp_float(alpha) ** 2)
+            )
+            got = static_zz_zeta(delta, alpha, exchange)
+            assert _ulp_distance(got, oracle) <= 1
+
+
+def test_static_zz_zeta_rejects_exact_overflow_that_rounds_to_dbl_max_midway():
+    cases = (
+        (
+            float.fromhex("0x1.4091ace2669adp-32"),
+            float.fromhex("0x1.ac7d61cbeb350p-35"),
+            float.fromhex("0x1.597dfc7a6101ap+496"),
+        ),
+        (
+            float.fromhex("0x1.1d3315a6d94d2p-33"),
+            float.fromhex("0x1.c2ad43f8eb7bdp-36"),
+            float.fromhex("0x1.a56dbd4f195f8p+495"),
+        ),
+    )
+    with mpmath.workdps(200):
+        for delta, alpha, exchange in cases:
+            exact = (
+                4
+                * _mp_float(exchange) ** 2
+                * _mp_float(alpha)
+                / ((_mp_float(delta) - _mp_float(alpha)) * (_mp_float(delta) + _mp_float(alpha)))
+            )
+            assert math.isinf(float(exact))
+            _raises_exact(
+                ValueError,
+                "static_zz_zeta nonzero result is not representable as a finite float64",
+                lambda: static_zz_zeta(delta, alpha, exchange),
+            )
+
+
+def test_static_zz_zeta_upper_finite_boundary_stays_within_two_ulps():
+    delta = float.fromhex("0x1.1be17864afa97p-13")
+    alpha = float.fromhex("0x1.c1b301ec3222dp-16")
+    exchange = float.fromhex("0x1.a3e4bcc646b0dp+505")
+    with mpmath.workdps(200):
+        oracle = float(
+            4
+            * _mp_float(exchange) ** 2
+            * _mp_float(alpha)
+            / ((_mp_float(delta) - _mp_float(alpha)) * (_mp_float(delta) + _mp_float(alpha)))
+        )
+    assert math.isfinite(oracle)
+    assert _ulp_distance(static_zz_zeta(delta, alpha, exchange), oracle) <= 2
+
+
 @settings(max_examples=200, deadline=None)
 @given(d=st.floats(-6.0, 6.0, allow_nan=False, allow_infinity=False),
        a=st.floats(-3.0, 3.0, allow_nan=False, allow_infinity=False),
@@ -189,8 +306,25 @@ def test_KILLER_static_zz_zeta_discriminates():
 def test_L1_static_zz_zeta_matches_independent(d, a, j):
     if abs(d - a) < 1e-3 or abs(d + a) < 1e-3:      # avoid the singular guard
         return
-    assert_pins(static_zz_zeta(d, a, j), _indep_zeta(d, a, j), rtol=1e-9, atol=1e-18,
-                label="zeta")
+    if j == 0.0 or a == 0.0:
+        assert static_zz_zeta(d, a, j) == 0.0
+        return
+    with mpmath.workdps(200):
+        exact = (
+            4
+            * _mp_float(j) ** 2
+            * _mp_float(a)
+            / (_mp_float(d) ** 2 - _mp_float(a) ** 2)
+        )
+        oracle = float(exact)
+    if oracle == 0.0 or not math.isfinite(oracle):
+        _raises_exact(
+            ValueError,
+            "static_zz_zeta nonzero result is not representable as a finite float64",
+            lambda: static_zz_zeta(d, a, j),
+        )
+    else:
+        assert _ulp_distance(static_zz_zeta(d, a, j), oracle) <= 2
 
 
 # =========================================================================== #
@@ -209,14 +343,112 @@ def test_L0_exchange_j_from_phi_value_roundtrip_and_guards():
                                               t_gate_ns=10.0))
     _raises_exact(ValueError, "t_gate_ns must be > 0, got 0.0",
                   lambda: exchange_j_from_phi(1e-4, delta_radns=3.0, alpha_radns=1.0, t_gate_ns=0.0))
+    _raises_exact(
+        ValueError,
+        "static_zz_zeta singular: Delta too close to +/- alpha (Delta=1.0, alpha=1.0)",
+        lambda: exchange_j_from_phi(
+            1e-4,
+            delta_radns=1.0,
+            alpha_radns=1.0,
+            t_gate_ns=10.0,
+        ),
+    )
+    assert exchange_j_from_phi(
+        0.0,
+        delta_radns=3.0,
+        alpha_radns=1.0,
+        t_gate_ns=10.0,
+    ) == 0.0
     # zero coefficient: alpha=0 -> zeta(1) == 2*(1/D - 1/D) == 0
     _raises_exact(ValueError, "cannot infer exchange J because zeta coefficient is zero",
                   lambda: exchange_j_from_phi(1e-4, delta_radns=1.0, alpha_radns=0.0, t_gate_ns=10.0))
+    small_coeff = static_zz_zeta(1.0e8, 1.0, 1.0)
+    assert 0.0 < small_coeff < coupling.NUMERICAL_ZERO
+    small_phi = small_coeff * 25.0 / 4.0
+    assert _ulp_distance(
+        exchange_j_from_phi(
+            small_phi,
+            delta_radns=1.0e8,
+            alpha_radns=1.0,
+            t_gate_ns=25.0,
+        ),
+        1.0,
+    ) <= 1
     # sign inconsistency: coeff = zeta(1) = 0.5 > 0, phi < 0 -> J2 < 0
     _raises_exact(ValueError,
                   "phi sign is inconsistent with the static-ZZ coefficient; "
                   "phi=-1.0, coeff=0.5, t_gate=1.0",
                   lambda: exchange_j_from_phi(-1.0, delta_radns=3.0, alpha_radns=1.0, t_gate_ns=1.0))
+    coeff = static_zz_zeta(_BASE_DELTA, _ALPHA, 1.0)
+    tiny_negative_phi = (-5.0e-13) * coeff * 25.0 / 4.0
+    _raises_exact(
+        ValueError,
+        "phi sign is inconsistent with the static-ZZ coefficient; "
+        f"phi={tiny_negative_phi}, coeff={coeff}, t_gate=25.0",
+        lambda: exchange_j_from_phi(
+            tiny_negative_phi,
+            delta_radns=_BASE_DELTA,
+            alpha_radns=_ALPHA,
+            t_gate_ns=25.0,
+        ),
+    )
+    zz = StaticZZParameters()
+    largest = sys.float_info.max
+    coeff = static_zz_zeta(zz.base_delta_radns, zz.alpha_radns, 1.0)
+    with mpmath.workdps(200):
+        for small_phi, small_t_gate in ((1.0e-320, 1.0e-320), (1.0e-320, 25.0)):
+            small_oracle = float(
+                mpmath.sqrt(
+                    4
+                    * _mp_float(small_phi)
+                    / (_mp_float(coeff) * _mp_float(small_t_gate))
+                )
+            )
+            small_result = exchange_j_from_phi(
+                small_phi,
+                delta_radns=zz.base_delta_radns,
+                alpha_radns=zz.alpha_radns,
+                t_gate_ns=small_t_gate,
+            )
+            assert _ulp_distance(small_result, small_oracle) <= 1
+    with mpmath.workdps(200):
+        oracle = float(
+            mpmath.sqrt(
+                4 * _mp_float(largest) / (_mp_float(coeff) * _mp_float(largest))
+            )
+        )
+    recovered = exchange_j_from_phi(
+        largest,
+        delta_radns=zz.base_delta_radns,
+        alpha_radns=zz.alpha_radns,
+        t_gate_ns=largest,
+    )
+    assert _ulp_distance(recovered, oracle) <= 1
+    min_subnormal = math.nextafter(0.0, 1.0)
+    with mpmath.workdps(200):
+        tiny_oracle = float(
+            mpmath.sqrt(
+                4 * _mp_float(min_subnormal) / (_mp_float(coeff) * _mp_float(25.0))
+            )
+        )
+    tiny_recovered = exchange_j_from_phi(
+        min_subnormal,
+        delta_radns=zz.base_delta_radns,
+        alpha_radns=zz.alpha_radns,
+        t_gate_ns=25.0,
+    )
+    assert tiny_oracle > 0.0
+    assert _ulp_distance(tiny_recovered, tiny_oracle) <= 1
+    _raises_exact(
+        ValueError,
+        "exchange_j_radns is not representable as a finite positive float64",
+        lambda: exchange_j_from_phi(
+            sys.float_info.max,
+            delta_radns=zz.base_delta_radns,
+            alpha_radns=zz.alpha_radns,
+            t_gate_ns=math.nextafter(0.0, 1.0),
+        ),
+    )
 
 
 def test_KILLER_exchange_j_from_phi_discriminates():
@@ -230,6 +462,69 @@ def test_KILLER_exchange_j_from_phi_discriminates():
     wrong = math.sqrt(max(0.0, phi / (coeff * tg)))
     assert_discriminates(prop, exchange_j_from_phi(phi, delta_radns=d, alpha_radns=a, t_gate_ns=tg),
                          wrong, label="exchange J")
+
+
+@pytest.mark.parametrize(
+    "alpha",
+    (
+        float.fromhex("0x1.2p+195"),
+        float.fromhex("0x1.cp+194"),
+    ),
+)
+def test_exchange_j_uses_end_to_end_inputs_when_coefficient_is_subnormal(alpha):
+    delta = float.fromhex("0x1p+636")
+    phi = float.fromhex("0x1p-65")
+    t_gate = float.fromhex("0x1p+440")
+    with mpmath.workdps(200):
+        exact_j = mpmath.sqrt(
+            _mp_float(phi)
+            * (_mp_float(delta) - _mp_float(alpha))
+            * (_mp_float(delta) + _mp_float(alpha))
+            / (_mp_float(alpha) * _mp_float(t_gate))
+        )
+        oracle = float(exact_j)
+    got = exchange_j_from_phi(
+        phi,
+        delta_radns=delta,
+        alpha_radns=alpha,
+        t_gate_ns=t_gate,
+    )
+    assert _ulp_distance(got, oracle) <= 1
+
+
+def test_exchange_j_direct_path_declares_its_two_ulp_bound():
+    delta = float.fromhex("-0x1.a837c88962923p+191")
+    alpha = float.fromhex("-0x1.2b0db576e809ep+185")
+    phi = float.fromhex("-0x1.82cdc8fe2d8c7p-243")
+    t_gate = float.fromhex("0x1.c9eada0d47998p+783")
+    oracle = float.fromhex("0x1.fe1f81ed61c17p-415")
+
+    got = exchange_j_from_phi(
+        phi,
+        delta_radns=delta,
+        alpha_radns=alpha,
+        t_gate_ns=t_gate,
+    )
+    assert got.hex() == "0x1.fe1f81ed61c15p-415"
+    assert _ulp_distance(got, oracle) == 2
+
+
+def test_exchange_j_sign_error_survives_an_unrepresentable_coefficient():
+    delta = float.fromhex("0x1p+636")
+    alpha = float.fromhex("0x1.cp+194")
+    phi = -float.fromhex("0x1p-65")
+    t_gate = float.fromhex("0x1p+440")
+    _raises_exact(
+        ValueError,
+        "phi sign is inconsistent with the static-ZZ coefficient; "
+        f"phi={phi}, coeff=positive, t_gate={t_gate}",
+        lambda: exchange_j_from_phi(
+            phi,
+            delta_radns=delta,
+            alpha_radns=alpha,
+            t_gate_ns=t_gate,
+        ),
+    )
 
 
 # =========================================================================== #
@@ -249,6 +544,13 @@ def test_L0_zz_phi_from_frequency_drift_value_and_base_identity():
     # guard
     _raises_exact(ValueError, "z_t_radns must be finite, got nan",
                   lambda: zz_phi_from_frequency_drift(float("nan"), cfg))
+    extreme_phi = sys.float_info.max / 2.0
+    extreme_cfg = SourceCouplingConfig(
+        zz=StaticZZParameters(t_gate_ns=4.0, base_phi_rad=extreme_phi)
+    )
+    recovered_phi, recovered_zeta = zz_phi_from_frequency_drift(0.0, extreme_cfg)
+    assert math.isfinite(recovered_zeta)
+    assert recovered_phi == extreme_phi
 
 
 def test_KILLER_zz_phi_from_frequency_drift_discriminates():
@@ -287,18 +589,59 @@ def test_L0_drift_to_t2_value_config_branch_and_tphi():
     cfg0 = SourceCouplingConfig(gamma_phi_base_per_ns=0.0, gamma_phi_sensitivity=0.0)
     g0, tphi0 = drift_to_t2(1e-4, cfg0)
     assert g0 == 0.0 and tphi0 == math.inf
+    cfg_tiny = SourceCouplingConfig(
+        gamma_phi_base_per_ns=math.nextafter(0.0, 1.0),
+        gamma_phi_sensitivity=0.0,
+    )
+    _raises_exact(
+        ValueError,
+        "gamma_phi_per_ns is positive but its reciprocal is not representable as a finite float64 Tphi",
+        lambda: drift_to_t2(0.0, cfg_tiny),
+    )
     # guard
     _raises_exact(ValueError, "z_t_radns must be finite, got nan", lambda: drift_to_t2(float("nan"), cfg))
 
 
-def test_L0_modulate_positive_rate_exponent_clamp_via_drift():
-    # sens*x = 0.5 * (1.0/1e-6) = 5e5 >> 60 -> clamp to +/-60
+def test_source_fanout_forms_shift_from_raw_three_factor_inputs():
+    source_draw = math.nextafter(0.0, 1.0)
+    scale = 1.15
+    sensitivity = sys.float_info.max
+    rate_cfg = SourceCouplingConfig(
+        z_scale_radns=scale,
+        gamma_phi_base_per_ns=1.0,
+        gamma_phi_sensitivity=sensitivity,
+    )
+    with mpmath.workdps(200):
+        shift = _mp_float(sensitivity) * _mp_float(source_draw) / _mp_float(scale)
+        gamma_oracle = float(mpmath.exp(shift))
+    gamma, _ = drift_to_t2(source_draw, rate_cfg)
+    assert gamma == gamma_oracle
+
+    probability_cfg = SourceCouplingConfig(
+        z_scale_radns=scale,
+        gamma_phi_sensitivity=0.0,
+        drive_omega_sensitivity=0.0,
+        spillover_sensitivity=0.0,
+        readout_flip_base_p=0.01,
+        readout_flip_sensitivity=sensitivity,
+        reset_flip_sensitivity=0.0,
+        cz_depol_sensitivity=0.0,
+    )
+    with mpmath.workdps(200):
+        base_probability = _mp_float(probability_cfg.readout_flip_base_p)
+        odds = base_probability / (1 - base_probability)
+        probability_oracle = float(odds * mpmath.exp(shift) / (1 + odds * mpmath.exp(shift)))
+    emitted = source_to_params(source_draw, probability_cfg)
+    assert emitted.readout_flip_p == probability_oracle
+
+
+def test_L0_modulate_positive_rate_rejects_unrepresentable_drift():
+    # sens*x = +/-5e5 cannot produce a finite positive float64 rate.
     cfg = SourceCouplingConfig(z_scale_radns=1e-6, gamma_phi_base_per_ns=1e-4,
                                gamma_phi_sensitivity=0.5)
-    g_hi, _ = drift_to_t2(1.0, cfg)
-    assert_pins(g_hi, 1e-4 * math.exp(60.0), rtol=1e-12, atol=0.0, label="clamp hi")
-    g_lo, _ = drift_to_t2(-1.0, cfg)
-    assert_pins(g_lo, 1e-4 * math.exp(-60.0), rtol=1e-12, atol=0.0, label="clamp lo")
+    message = "gamma_phi_per_ns: modulated positive rate is not representable"
+    _raises_exact(ValueError, message, lambda: drift_to_t2(1.0, cfg))
+    _raises_exact(ValueError, message, lambda: drift_to_t2(-1.0, cfg))
 
 
 def test_KILLER_drift_to_t2_discriminates():
@@ -503,6 +846,70 @@ def test_L0_cross_mechanism_correlation_value_zero_std_and_guards():
                   lambda: cross_mechanism_correlation(one, "detuning_radns", "drive_omega_radns"))
 
 
+def test_cross_mechanism_correlation_preserves_scale_and_fails_closed_nonfinite(monkeypatch):
+    base = source_to_params(0.0)
+    tiny = (
+        dataclasses.replace(base, detuning_radns=0.0, zz_phi_rad=0.0),
+        dataclasses.replace(base, detuning_radns=5e-13, zz_phi_rad=5e-13),
+    )
+    assert cross_mechanism_correlation(tiny, "detuning_radns", "zz_phi_rad") == 1.0
+
+    largest = sys.float_info.max
+    huge = (
+        dataclasses.replace(base, detuning_radns=-largest, zz_phi_rad=-largest),
+        dataclasses.replace(base, detuning_radns=largest, zz_phi_rad=largest),
+    )
+    assert cross_mechanism_correlation(huge, "detuning_radns", "zz_phi_rad") == 1.0
+
+    zero_rate = source_to_params(
+        0.0,
+        SourceCouplingConfig(
+            gamma_phi_base_per_ns=0.0,
+            gamma_phi_sensitivity=0.0,
+        ),
+    )
+    _raises_exact(
+        ValueError,
+        "tphi_ns must contain only finite emitted values for correlation",
+        lambda: cross_mechanism_correlation(
+            (zero_rate, zero_rate),
+            "tphi_ns",
+            "detuning_radns",
+        ),
+    )
+    _raises_exact(
+        ValueError,
+        "tphi_ns must contain only finite emitted values for correlation",
+        lambda: cross_mechanism_correlation(
+            (zero_rate, zero_rate),
+            "detuning_radns",
+            "tphi_ns",
+        ),
+    )
+
+    monkeypatch.setattr(coupling.np, "dot", lambda *_: math.inf)
+    _raises_exact(
+        ValueError,
+        "Pearson correlation is not representable as a finite float64",
+        lambda: cross_mechanism_correlation(tiny, "detuning_radns", "zz_phi_rad"),
+    )
+
+
+def test_cross_mechanism_correlation_rejects_corrupted_finite_ratio(monkeypatch):
+    base = source_to_params(0.0)
+    values = (
+        dataclasses.replace(base, detuning_radns=0.0, zz_phi_rad=0.0),
+        dataclasses.replace(base, detuning_radns=1.0, zz_phi_rad=1.0),
+    )
+    dot_values = iter((sys.float_info.max, sys.float_info.min, 1.0))
+    monkeypatch.setattr(coupling.np, "dot", lambda *_: next(dot_values))
+    _raises_exact(
+        ValueError,
+        "Pearson correlation is not representable as a finite float64",
+        lambda: cross_mechanism_correlation(values, "detuning_radns", "zz_phi_rad"),
+    )
+
+
 def test_KILLER_cross_mechanism_correlation_discriminates():
     cfg = SourceCouplingConfig(z_scale_radns=1e-4, drive_omega_sensitivity=0.4)
     z = np.linspace(-1e-4, 1e-4, 30)
@@ -547,6 +954,31 @@ def test_L0_static_zz_parameters_properties_and_post_init():
                   lambda: StaticZZParameters(t_gate_ns=0.0))
     _raises_exact(ValueError, "base_phi_rad must be finite",
                   lambda: StaticZZParameters(base_phi_rad=float("inf")))
+    extreme = StaticZZParameters(base_phi_rad=sys.float_info.max)
+    with mpmath.workdps(200):
+        coeff = (
+            4
+            * _mp_float(extreme.alpha_radns)
+            / (
+                _mp_float(extreme.base_delta_radns) ** 2
+                - _mp_float(extreme.alpha_radns) ** 2
+            )
+        )
+        extreme_oracle = float(
+            mpmath.sqrt(
+                4
+                * _mp_float(sys.float_info.max)
+                / (coeff * _mp_float(extreme.t_gate_ns))
+            )
+        )
+    assert _ulp_distance(extreme.exchange_j_radns, extreme_oracle) <= 1
+    assert math.isfinite(extreme.to_manifest()["exchange_j_radns"])
+    assert math.isfinite(SourceCouplingConfig(zz=extreme).to_manifest()["zz"]["exchange_j_radns"])
+
+    extreme_alpha = StaticZZParameters(alpha_mhz=1.0e308, base_phi_rad=0.0)
+    with mpmath.workdps(300):
+        alpha_oracle = float(_mp_float(1.0e308) * (2 * mpmath.pi) / 1000)
+    assert _ulp_distance(extreme_alpha.alpha_radns, alpha_oracle) <= 1
 
 
 def test_L0_static_zz_parameters_to_manifest_all_keys_distinct():
@@ -566,6 +998,14 @@ def test_L0_static_zz_parameters_to_manifest_all_keys_distinct():
     assert_pins(m["base_delta_radns"], zz.base_delta_radns, rtol=1e-12, atol=0.0, label="m base_delta")
     assert_pins(m["alpha_radns"], zz.alpha_radns, rtol=1e-12, atol=0.0, label="m alpha")
     assert_pins(m["exchange_j_radns"], zz.exchange_j_radns, rtol=1e-12, atol=0.0, label="m exchange_j")
+
+
+def test_static_zz_parameters_snapshot_mutable_numeric_inputs():
+    omega = np.asarray(6.0)
+    zz = StaticZZParameters(omega_a_ghz=omega)
+    omega[...] = math.inf
+    assert zz.omega_a_ghz == 6.0
+    assert math.isfinite(zz.to_manifest()["omega_a_ghz"])
 
 
 def test_KILLER_static_zz_base_delta_discriminates():
@@ -593,6 +1033,11 @@ _DISTINCT_CFG = SourceCouplingConfig(
 
 def test_L0_source_coupling_config_post_init_happy_path_and_guards():
     SourceCouplingConfig()          # default valid construction covers both for-loops + all guards
+    _raises_exact(
+        TypeError,
+        "zz must be a StaticZZParameters instance",
+        lambda: SourceCouplingConfig(zz=object()),
+    )
     # scalar guards
     _raises_exact(ValueError, "z_scale_radns must be > 0, got 0.0",
                   lambda: SourceCouplingConfig(z_scale_radns=0.0))
@@ -651,6 +1096,20 @@ def test_L0_source_coupling_config_to_manifest_all_keys_distinct():
         assert_pins(m[key], val, rtol=1e-12, atol=0.0, label=f"m[{key}]")
 
 
+def test_source_coupling_config_snapshots_mutable_numeric_inputs():
+    sensitivity = np.asarray(0.35)
+    schema = np.asarray("error_coupling_simulator.source.coupling_config.v2")
+    cfg = SourceCouplingConfig(
+        gamma_phi_sensitivity=sensitivity,
+        schema=schema,
+    )
+    sensitivity[...] = math.inf
+    schema[...] = "invalid"
+    assert cfg.gamma_phi_sensitivity == 0.35
+    assert cfg.schema == "error_coupling_simulator.source.coupling_config.v2"
+    assert math.isfinite(cfg.to_manifest()["gamma_phi_sensitivity"])
+
+
 # =========================================================================== #
 # CoupledNoiseParameters -- source_draw_for + to_manifest                     #
 # =========================================================================== #
@@ -679,6 +1138,125 @@ def test_L0_coupled_params_to_manifest_routes_each_field():
                 "tphi_ns", "detuning_radns", "drive_omega_radns", "spillover_cx",
                 "readout_flip_p", "reset_flip_p", "cz_depol_p"):
         assert_pins(m[key], getattr(p, key), rtol=1e-12, atol=0.0, label=f"m[{key}]")
+
+
+def test_L0_coupled_params_emission_boundary_rejects_nonfinite_and_bad_tphi_relation():
+    positive = source_to_params(0.0)
+    _raises_exact(
+        ValueError,
+        "detuning_radns must be finite at the coupling emission boundary, got inf",
+        lambda: dataclasses.replace(positive, detuning_radns=math.inf),
+    )
+    _raises_exact(
+        ValueError,
+        "zz must be finite at the coupling emission boundary, got nan",
+        lambda: dataclasses.replace(
+            positive,
+            source_draws_radns=(("zz", math.nan),) + positive.source_draws_radns[1:],
+        ),
+    )
+    zero = source_to_params(
+        0.0,
+        SourceCouplingConfig(
+            gamma_phi_base_per_ns=0.0,
+            gamma_phi_sensitivity=0.0,
+        ),
+    )
+    assert zero.gamma_phi_per_ns == 0.0 and zero.tphi_ns == math.inf
+    _raises_exact(
+        ValueError,
+        "tphi_ns must be +inf when gamma_phi_per_ns is structural zero",
+        lambda: dataclasses.replace(zero, tphi_ns=1.0),
+    )
+    _raises_exact(
+        ValueError,
+        "tphi_ns must be finite and > 0 when gamma_phi_per_ns is positive",
+        lambda: dataclasses.replace(positive, tphi_ns=math.inf),
+    )
+    _raises_exact(
+        ValueError,
+        "gamma_phi_per_ns must be >= 0 at the coupling emission boundary",
+        lambda: dataclasses.replace(positive, gamma_phi_per_ns=-1.0),
+    )
+    _raises_exact(
+        ValueError,
+        "tphi_ns must equal 1 / gamma_phi_per_ns at the coupling emission boundary",
+        lambda: dataclasses.replace(positive, gamma_phi_per_ns=2.0, tphi_ns=1.0),
+    )
+
+
+def test_coupled_params_snapshot_mutable_draws_and_numeric_scalars():
+    positive = source_to_params(0.0)
+    draws = list(positive.source_draws_radns)
+    detuning = np.asarray(0.0)
+    coupling_mode = np.asarray("shared")
+    snapshotted = dataclasses.replace(
+        positive,
+        source_draws_radns=draws,
+        normalized_draws=list(positive.normalized_draws),
+        detuning_radns=detuning,
+        coupling_mode=coupling_mode,
+    )
+    draws[0] = ("zz", math.inf)
+    detuning[...] = math.inf
+    coupling_mode[...] = "invalid"
+    manifest = snapshotted.to_manifest()
+    assert isinstance(snapshotted.source_draws_radns, tuple)
+    assert isinstance(snapshotted.normalized_draws, tuple)
+    assert snapshotted.coupling_mode == "shared"
+    assert manifest["source_draws_radns"]["zz"] == 0.0
+    assert manifest["detuning_radns"] == 0.0
+
+
+@pytest.mark.parametrize(
+    ("field_name", "value"),
+    (
+        ("zz_exchange_j_radns", -1.0),
+        ("drive_omega_radns", -1.0),
+        ("spillover_cx", -1.0),
+        ("readout_flip_p", 1.0),
+        ("reset_flip_p", -1.0),
+        ("cz_depol_p", 1.0),
+    ),
+)
+def test_coupled_params_emission_boundary_rejects_invalid_physical_domains(field_name, value):
+    positive = source_to_params(0.0)
+    suffix = (
+        "must be >= 0 at the coupling emission boundary"
+        if field_name in {"zz_exchange_j_radns", "drive_omega_radns"}
+        else "must be in [0, 1) at the coupling emission boundary"
+    )
+    _raises_exact(
+        ValueError,
+        f"{field_name} {suffix}, got {value!r}",
+        lambda: dataclasses.replace(positive, **{field_name: value}),
+    )
+
+
+def test_coupled_params_emission_boundary_rejects_invalid_mode_and_draw_keys():
+    positive = source_to_params(0.0)
+    _raises_exact(
+        ValueError,
+        "coupling_mode must be 'shared' or 'independent', got 'invalid'",
+        lambda: dataclasses.replace(positive, coupling_mode="invalid"),
+    )
+    _raises_exact(
+        ValueError,
+        "source_draws_radns must contain each source key exactly once in canonical order",
+        lambda: dataclasses.replace(
+            positive,
+            source_draws_radns=positive.source_draws_radns[:-1],
+        ),
+    )
+    _raises_exact(
+        ValueError,
+        "normalized_draws must contain each source key exactly once in canonical order",
+        lambda: dataclasses.replace(
+            positive,
+            normalized_draws=positive.normalized_draws[:-1]
+            + (positive.normalized_draws[0],),
+        ),
+    )
 
 
 # =========================================================================== #
@@ -733,9 +1311,10 @@ def test_private_params_from_draws_rejects_nonfinite_draw():
 def test_private_modulate_positive_rate_paths():
     assert_pins(coupling._modulate_positive_rate(1e-4, 3.0, 0.5, name="r"),
                 _indep_pos_rate(1e-4, 3.0, 0.5), rtol=1e-12, atol=0.0, label="posrate normal")
-    # base 0 AND sens 0 -> 0.0 (the inert branch)
+    # Exact zero shift is the structural identity, independent of which factor made it zero.
     assert coupling._modulate_positive_rate(0.0, 5.0, 0.0, name="r") == 0.0
-    # base 0 AND sens != 0 -> raise
+    assert coupling._modulate_positive_rate(0.0, 0.0, 0.5, name="r") == 0.0
+    # A zero base with a genuinely nonzero shift cannot be modulated.
     _raises_exact(ValueError, "r: nonzero sensitivity cannot modulate a zero base rate",
                   lambda: coupling._modulate_positive_rate(0.0, 1.0, 0.5, name="r"))
     # base guard
@@ -746,24 +1325,32 @@ def test_private_modulate_positive_rate_paths():
                   lambda: coupling._modulate_positive_rate(1e-4, 0.0, float("inf"), name="r"))
     _raises_exact(ValueError, "r.x must be finite, got inf",
                   lambda: coupling._modulate_positive_rate(1e-4, float("inf"), 0.5, name="r"))
-    # EXACT-1e-12 boundaries (NUMERICAL_ZERO passed as the literal argument):
-    #   base == NZ must take the zero-base branch (kills `base <= NZ` -> `base < NZ`)
-    assert coupling._modulate_positive_rate(1e-12, 5.0, 0.0, name="r") == 0.0
-    #   abs(sens) == NZ must NOT trip the raise (kills `abs(sens) > NZ` -> `>= NZ`)
-    assert coupling._modulate_positive_rate(0.0, 5.0, 1e-12, name="r") == 0.0
-    # [-60, 60] exponent clamp
-    assert_pins(coupling._modulate_positive_rate(1e-4, 1e6, 1.0, name="r"), 1e-4 * math.exp(60.0),
-                rtol=1e-12, atol=0.0, label="posrate clamp hi")
-    assert_pins(coupling._modulate_positive_rate(1e-4, -1e6, 1.0, name="r"), 1e-4 * math.exp(-60.0),
-                rtol=1e-12, atol=0.0, label="posrate clamp lo")
+    # A comparison threshold cannot define a structural zero.
+    assert coupling._modulate_positive_rate(1e-12, 5.0, 0.0, name="r") == 1e-12
+    _raises_exact(ValueError, "r: nonzero sensitivity cannot modulate a zero base rate",
+                  lambda: coupling._modulate_positive_rate(0.0, 5.0, 1e-12, name="r"))
+    _raises_exact(ValueError, "r: sensitivity*x is not representable as a finite float64",
+                  lambda: coupling._modulate_positive_rate(1.0, 1e308, 2.0, name="r"))
+    _raises_exact(ValueError, "r: sensitivity*x is not representable as a finite float64",
+                  lambda: coupling._modulate_positive_rate(1.0, 0.5,
+                                                            math.nextafter(0.0, 1.0), name="r"))
+    message = "r: modulated positive rate is not representable"
+    _raises_exact(ValueError, message,
+                  lambda: coupling._modulate_positive_rate(1e-4, 1e6, 1.0, name="r"))
+    _raises_exact(ValueError, message,
+                  lambda: coupling._modulate_positive_rate(1e-4, -1e6, 1.0, name="r"))
+    # exp(shift) reaches an endpoint, but the final product is representable in both directions.
+    assert coupling._modulate_positive_rate(1e-300, 710.0, 1.0, name="r") > 0.0
+    assert coupling._modulate_positive_rate(1e300, -1000.0, 1.0, name="r") > 0.0
 
 
 def test_private_modulate_probability_logit_paths():
     assert_pins(coupling._modulate_probability_logit(0.01, 3.0, 0.4, name="p"),
                 _indep_prob_logit(0.01, 3.0, 0.4), rtol=1e-12, atol=0.0, label="logit normal")
-    # p 0 AND sens 0 -> 0.0
+    # Exact zero shift is the structural identity, independent of which factor made it zero.
     assert coupling._modulate_probability_logit(0.0, 5.0, 0.0, name="p") == 0.0
-    # p 0 AND sens != 0 -> raise
+    assert coupling._modulate_probability_logit(0.0, 0.0, 0.5, name="p") == 0.0
+    # A zero base with a genuinely nonzero shift cannot be logit-modulated.
     _raises_exact(ValueError, "p: nonzero sensitivity cannot logit-modulate p=0",
                   lambda: coupling._modulate_probability_logit(0.0, 1.0, 0.5, name="p"))
     # base_p out of range -> _validate_probability raises (carrying the '.base_p' name)
@@ -774,19 +1361,176 @@ def test_private_modulate_probability_logit_paths():
                   lambda: coupling._modulate_probability_logit(0.5, 0.0, float("inf"), name="p"))
     _raises_exact(ValueError, "p.x must be finite, got inf",
                   lambda: coupling._modulate_probability_logit(0.5, float("inf"), 0.5, name="p"))
-    # EXACT-1e-12 boundaries (kill `p <= NZ` -> `<` and `abs(sens) > NZ` -> `>=`)
-    assert coupling._modulate_probability_logit(1e-12, 5.0, 0.0, name="p") == 0.0
-    assert coupling._modulate_probability_logit(0.0, 5.0, 1e-12, name="p") == 0.0
-    # the upper clamp 1.0 - NZ is load-bearing: a base_p in (1 - NZ, 1) must be clamped to 1 - NZ
-    # BEFORE the logit (matching the independent recompute, which clamps identically); the un-clamped
-    # mutants (1.0 + NZ / 2.0 - NZ) diverge by ~5e-13. atol 1e-14 catches it, orig matches exactly.
+    assert coupling._modulate_probability_logit(1e-12, 5.0, 0.0, name="p") == 1e-12
+    _raises_exact(ValueError, "p: nonzero sensitivity cannot logit-modulate p=0",
+                  lambda: coupling._modulate_probability_logit(0.0, 5.0, 1e-12, name="p"))
+    _raises_exact(ValueError, "p: sensitivity*x is not representable as a finite float64",
+                  lambda: coupling._modulate_probability_logit(0.5, 1e308, 2.0, name="p"))
+    _raises_exact(ValueError, "p: sensitivity*x is not representable as a finite float64",
+                  lambda: coupling._modulate_probability_logit(
+                      0.5, 0.5, math.nextafter(0.0, 1.0), name="p"
+                  ))
+    # A near-one input is mapped from its real value; it is never pre-clamped.
     assert_pins(coupling._modulate_probability_logit(1.0 - 1e-13, 2.0, 0.3, name="p"),
-                _indep_prob_logit(1.0 - 1e-13, 2.0, 0.3), rtol=0.0, atol=1e-14, label="upper clamp")
-    # the logit-argument clamp [-60, 60]
-    assert_pins(coupling._modulate_probability_logit(0.5, 1e6, 1.0, name="p"),
-                1.0 / (1.0 + math.exp(-60.0)), rtol=1e-12, atol=0.0, label="logit clamp hi")
-    assert_pins(coupling._modulate_probability_logit(0.5, -1e6, 1.0, name="p"),
-                1.0 / (1.0 + math.exp(60.0)), rtol=1e-12, atol=0.0, label="logit clamp lo")
+                _indep_prob_logit(1.0 - 1e-13, 2.0, 0.3), rtol=0.0, atol=1e-14,
+                label="near-one logit")
+    message = "p: modulated probability is outside the representable float64 open interval"
+    _raises_exact(ValueError, message,
+                  lambda: coupling._modulate_probability_logit(0.5, 1e6, 1.0, name="p"))
+    _raises_exact(ValueError, message,
+                  lambda: coupling._modulate_probability_logit(0.5, -1e6, 1.0, name="p"))
+
+
+def test_probability_logit_large_opposite_terms_match_exact_float_oracle():
+    """A rounded ``logit + shift`` intermediate must not erase a representable result."""
+
+    base_p = float.fromhex("0x0.0000000000001p-1022")
+    shift = float.fromhex("0x1.74385446d71c3p+9")
+    with mpmath.workdps(200):
+        exact_logit = mpmath.log(_mp_float(base_p) / (1 - _mp_float(base_p)))
+        oracle = float(1 / (1 + mpmath.exp(-(exact_logit + _mp_float(shift)))))
+    got = coupling._modulate_probability_logit(base_p, shift, 1.0, name="p")
+    assert _ulp_distance(got, oracle) <= 1
+
+
+def test_probability_logit_classifies_cancellation_at_exact_open_domain_boundaries():
+    """Boundary classification follows the exact-float formula, not rounded ``logit + shift``."""
+
+    min_open = float.fromhex("0x0.0000000000001p-1022")
+    max_open = float.fromhex("0x1.fffffffffffffp-1")
+    cancelling_shift = float.fromhex("0x1.8696a3c1fe543p+9")
+
+    assert (
+        coupling._modulate_probability_logit(
+            min_open, cancelling_shift, 1.0, name="p"
+        )
+        == max_open
+    )
+    assert (
+        coupling._modulate_probability_logit(
+            max_open, -cancelling_shift, 1.0, name="p"
+        )
+        == min_open
+    )
+    outside_shift = math.nextafter(cancelling_shift, math.inf)
+    with pytest.raises(ValueError, match="outside the representable float64 open interval"):
+        coupling._modulate_probability_logit(
+            min_open, outside_shift, 1.0, name="p"
+        )
+    with pytest.raises(ValueError, match="outside the representable float64 open interval"):
+        coupling._modulate_probability_logit(
+            max_open, -outside_shift, 1.0, name="p"
+        )
+
+
+def test_coupled_parameter_bundle_rejects_finite_inputs_that_emit_infinity():
+    """Every finite input bundle must fail closed before a non-finite manifest is emitted."""
+
+    largest = sys.float_info.max
+    cfg = SourceCouplingConfig(
+        z_scale_radns=largest,
+        detuning_base_radns=largest,
+    )
+    draws = {key: 0.0 for key in _SOURCE_KEYS}
+    draws["detuning"] = largest
+    _raises_exact(
+        ValueError,
+        "detuning_radns must be finite at the coupling emission boundary, got inf",
+        lambda: coupling._params_from_draws(draws, cfg, coupling_mode="shared"),
+    )
+
+
+def test_modulation_maps_match_mpmath_on_interior_and_float64_boundaries():
+    """Old/new agree in the interior; mpmath owns endpoints and recovery accuracy."""
+
+    p_min = math.nextafter(0.0, 1.0)
+    p_max = math.nextafter(1.0, 0.0)
+    y_min = math.log(p_min) - math.log1p(-p_min)
+    y_max = math.log(p_max) - math.log1p(-p_max)
+
+    with mpmath.workdps(200):
+        for boundary, direction, expected in (
+            (y_min, math.inf, p_min),
+            (y_max, -math.inf, p_max),
+        ):
+            inside = math.nextafter(boundary, direction)
+            for y in (boundary, inside):
+                got = coupling._modulate_probability_logit(0.5, y, 1.0, name="p")
+                oracle = float(1 / (1 + mpmath.exp(-_mp_float(y))))
+                assert got == expected
+                assert _ulp_distance(got, oracle) <= 1
+
+        lower_outside = math.nextafter(y_min, -math.inf)
+        upper_outside = math.nextafter(y_max, math.inf)
+        message = "p: modulated probability is outside the representable float64 open interval"
+        _raises_exact(ValueError, message,
+                      lambda: coupling._modulate_probability_logit(0.5, lower_outside, 1.0, name="p"))
+        _raises_exact(ValueError, message,
+                      lambda: coupling._modulate_probability_logit(0.5, upper_outside, 1.0, name="p"))
+
+        interior_shifts = np.concatenate(
+            (-np.geomspace(1e-12, 30.0, 25), np.asarray([0.0]), np.geomspace(1e-12, 30.0, 25))
+        )
+        for y in interior_shifts:
+            y = float(y)
+            got = coupling._modulate_probability_logit(0.5, y, 1.0, name="p")
+            oracle = float(1 / (1 + mpmath.exp(-_mp_float(y))))
+            legacy = 1.0 / (1.0 + math.exp(-y))
+            assert _ulp_distance(got, oracle) <= 1
+            assert _ulp_distance(got, legacy) <= 2
+
+        for base in np.geomspace(1e-200, 1e200, 17):
+            for shift in interior_shifts:
+                base = float(base)
+                shift = float(shift)
+                legacy = base * math.exp(shift)
+                if not math.isfinite(legacy) or legacy <= 0.0:
+                    continue
+                got = coupling._modulate_positive_rate(base, shift, 1.0, name="r")
+                oracle = float(_mp_float(base) * mpmath.exp(_mp_float(shift)))
+                assert got == legacy
+                assert _ulp_distance(got, oracle) <= 2
+
+        fallback_domains = (
+            ((float(base), 710.0) for base in np.geomspace(1e-308, 1e-260, 17)),
+            ((float(base), -1000.0) for base in np.geomspace(1e250, 1e308, 17)),
+        )
+        for domain in fallback_domains:
+            for base, shift in domain:
+                got = coupling._modulate_positive_rate(base, shift, 1.0, name="r")
+                oracle = float(_mp_float(base) * mpmath.exp(_mp_float(shift)))
+                legacy_capped = base * math.exp(max(-60.0, min(60.0, shift)))
+                assert _ulp_distance(got, oracle) <= 1
+                assert got != legacy_capped
+
+
+def test_positive_rate_rejects_subnormal_exp_intermediate_as_a_direct_result():
+    """A low-precision subnormal exp intermediate must route through accurate range reduction."""
+
+    base = 1.67e260
+    poisoned_shift = -744.86
+    poisoned_direct = base * math.exp(poisoned_shift)
+    assert 0.0 < math.exp(poisoned_shift) < sys.float_info.min
+    with mpmath.workdps(200):
+        oracle = float(_mp_float(base) * mpmath.exp(_mp_float(poisoned_shift)))
+        assert abs(poisoned_direct - oracle) / oracle > 0.5
+        got = coupling._modulate_positive_rate(base, poisoned_shift, 1.0, name="r")
+        assert got != poisoned_direct
+        assert _ulp_distance(got, oracle) <= 1
+
+        first_positive_shift = math.nextafter(
+            math.log(math.nextafter(0.0, 1.0)) - math.log(2.0),
+            math.inf,
+        )
+        last_subnormal_shift = math.nextafter(math.log(sys.float_info.min), -math.inf)
+        for shift in np.linspace(first_positive_shift, last_subnormal_shift, 311):
+            shift = float(shift)
+            exp_shift = math.exp(shift)
+            assert 0.0 < exp_shift < sys.float_info.min
+            oracle = float(_mp_float(base) * mpmath.exp(_mp_float(shift)))
+            assert math.isfinite(oracle) and oracle >= sys.float_info.min
+            got = coupling._modulate_positive_rate(base, shift, 1.0, name="r")
+            assert _ulp_distance(got, oracle) <= 1
 
 
 def test_private_as_1d_finite_valid_and_guards():

@@ -16,13 +16,18 @@ chain are pinned by a DETERMINISTIC from-scratch reimplementation of the same se
 the flip/emission logic is discriminated without any statistical-convergence tolerance (the heavy
 sampled-autocovariance falsifiers live in tests/test_source_closed_forms.py, not duplicated here).
 ``assert_discriminates`` gives each closed-form invariant a demonstrated sabotage variant it rejects.
+The independent RTN/HMM references use cancellation-safe ``expm1``/``log1p`` forms, preserve exact
+structural-zero limits, and expect fail-closed rejection when a positive input rounds to an endpoint.
 """
 from __future__ import annotations
 
 import json
 import math
 import os
+import sys
+from fractions import Fraction
 
+import mpmath
 import numpy as np
 import pytest
 from hypothesis import given, settings
@@ -70,11 +75,53 @@ def _raises_exact(exc, msg, fn):
 
 
 def _indep_flip_prob(gamma: float) -> float:
-    return 0.5 * (1.0 - math.exp(-2.0 * gamma))
+    return -0.5 * math.expm1(-2.0 * gamma)
 
 
 def _indep_autocorr_base(gamma: float) -> float:
     return math.exp(-2.0 * gamma)
+
+
+def _rtn_source_domain_message(gamma: float) -> str:
+    return (
+        f"gamma_per_cycle={float(gamma)!r} is outside the RTNSource sampling domain: "
+        "expected 0 or representable non-endpoint flip_probability and autocorr_base"
+    )
+
+
+def _mp_float(value: float):
+    numerator, denominator = float(value).as_integer_ratio()
+    return mpmath.mpf(numerator) / denominator
+
+
+def _ulp_distance(left: float, right: float) -> int:
+    left_bits = int(np.asarray(float(left), dtype=np.float64).view(np.uint64))
+    right_bits = int(np.asarray(float(right), dtype=np.float64).view(np.uint64))
+    return abs(left_bits - right_bits)
+
+
+def _classify_legacy_map(
+    current: float,
+    legacy: float,
+    oracle: float,
+    *,
+    legacy_endpoint: bool,
+    max_current_ulps: int,
+) -> str:
+    """Classify every old/new difference against an exact-float high-precision oracle."""
+
+    current_error = _ulp_distance(current, oracle)
+    assert current_error <= max_current_ulps
+    if legacy_endpoint:
+        assert not math.isfinite(legacy) or legacy == 0.0
+        assert math.isfinite(current) and current > 0.0
+        return "false_structural_endpoint"
+    legacy_error = _ulp_distance(legacy, oracle)
+    if legacy_error > 4:
+        assert current_error < legacy_error
+        return "cancellation_degraded"
+    assert _ulp_distance(current, legacy) <= max_current_ulps + 4
+    return "interior_ulp_equivalent"
 
 
 def _indep_geomspace(lo: float, hi: float, n: int) -> np.ndarray:
@@ -320,6 +367,51 @@ def test_L0_timeline_to_site_coupled_params_rejects_non_2d_payload():
                   lambda: timeline_to_site_coupled_params(t1d))
 
 
+@pytest.mark.parametrize(
+    ("converter", "payload_key", "values"),
+    (
+        (timeline_to_coupled_params, "z_radns", np.zeros(2)),
+        (timeline_to_site_coupled_params, "detuning_radns", np.zeros((2, 1))),
+    ),
+)
+def test_timeline_converters_reject_negative_explicit_independent_seed(
+    converter,
+    payload_key,
+    values,
+):
+    timeline = _mk_timeline({payload_key: values}, mode="independent", seed=0)
+    _raises_exact(
+        ValueError,
+        "independent_seed must be a non-negative integer, got -1",
+        lambda: converter(timeline, independent_seed=-1),
+    )
+
+
+@pytest.mark.parametrize(
+    ("converter", "payload_key", "values"),
+    (
+        (timeline_to_coupled_params, "z_radns", np.zeros(2)),
+        (timeline_to_site_coupled_params, "detuning_radns", np.zeros((2, 1))),
+    ),
+)
+def test_timeline_converters_reject_negative_metadata_baseline_seed(
+    converter,
+    payload_key,
+    values,
+):
+    timeline = _mk_timeline(
+        {payload_key: values},
+        mode="independent",
+        seed=0,
+        metadata={"baseline_seed": -1},
+    )
+    _raises_exact(
+        ValueError,
+        "baseline_seed must be a non-negative integer, got -1",
+        lambda: converter(timeline),
+    )
+
+
 # =========================================================================== #
 # SourceTimeline.__post_init__ + payload_series/latent_series                  #
 # =========================================================================== #
@@ -342,6 +434,129 @@ def test_L0_source_timeline_post_init_validation():
     _raises_exact(ValueError, "payload['z'] must have cycle axis length 2",
                   lambda: SourceTimeline(name="t", n_cycles=2, cycle_time_ns=1.0,
                                          payload={"z": np.array([1.0])}))
+
+    _raises_exact(
+        ValueError,
+        "seed must be a non-negative integer, got -1",
+        lambda: SourceTimeline(
+            name="t",
+            n_cycles=1,
+            cycle_time_ns=1.0,
+            payload={"z": np.asarray([0.0])},
+            seed=-1,
+        ),
+    )
+
+
+def test_source_timeline_snapshots_scalar_and_nested_metadata_inputs():
+    name = np.asarray("timeline")
+    schema = np.asarray(sp.SOURCE_TIMELINE_SCHEMA)
+    seed = np.asarray(3)
+    baseline_seed = np.asarray(7)
+    inner_values = [1]
+    metadata = {"baseline_seed": baseline_seed, "inner": {"x": inner_values}}
+    timeline = SourceTimeline(
+        name=name,
+        n_cycles=1,
+        cycle_time_ns=1.0,
+        payload={"z": np.asarray([0.0])},
+        metadata=metadata,
+        seed=seed,
+        coupling_mode=np.asarray("shared"),
+        schema=schema,
+    )
+
+    name[...] = "mutated"
+    schema[...] = "bad"
+    seed[...] = 4
+    baseline_seed[...] = 11
+    inner_values[0] = 99
+    assert timeline.name == "timeline"
+    assert timeline.schema == sp.SOURCE_TIMELINE_SCHEMA
+    assert timeline.seed == 3
+    assert timeline.coupling_mode == "shared"
+    assert timeline.metadata == {"baseline_seed": np.asarray(7), "inner": {"x": [1]}}
+
+    manifest = timeline.to_manifest()
+    manifest["metadata"]["inner"]["x"][0] = 101
+    assert timeline.metadata["inner"]["x"] == [1]
+
+
+def test_source_timeline_public_manifest_is_json_safe_for_numpy_metadata():
+    timeline = _mk_timeline(
+        {"z": np.asarray([0.0])},
+        metadata={
+            "baseline_seed": np.asarray(7),
+            "nested": {"values": np.asarray([1, 2]), "flag": np.bool_(True)},
+        },
+    )
+
+    round_tripped = json.loads(json.dumps(timeline.to_manifest()))
+    assert round_tripped["metadata"] == {
+        "baseline_seed": 7,
+        "nested": {"values": [1, 2], "flag": True},
+    }
+
+
+def test_source_timeline_rejects_unsupported_metadata_type_at_construction():
+    _raises_exact(
+        ValueError,
+        "metadata['bad'] has unsupported JSON metadata type object",
+        lambda: _mk_timeline({"z": np.asarray([0.0])}, metadata={"bad": object()}),
+    )
+
+
+@pytest.mark.parametrize("value", (math.inf, -math.inf, math.nan, np.float64(math.inf)))
+def test_source_timeline_rejects_nonfinite_metadata_at_construction(value):
+    _raises_exact(
+        ValueError,
+        f"metadata['bad'] must be finite, got {float(value)!r}",
+        lambda: _mk_timeline({"z": np.asarray([0.0])}, metadata={"bad": value}),
+    )
+
+
+@pytest.mark.parametrize(
+    "payload",
+    (
+        np.asarray([True], dtype=np.bool_),
+        np.asarray(["x"]),
+        np.asarray([object()], dtype=object),
+    ),
+)
+def test_source_timeline_rejects_non_real_numeric_array_dtypes(payload):
+    _raises_exact(
+        ValueError,
+        f"payload['z'] dtype {payload.dtype} is not a supported real numeric array",
+        lambda: SourceTimeline(
+            name="dtype",
+            n_cycles=1,
+            cycle_time_ns=1.0,
+            payload={"z": payload},
+        ),
+    )
+
+
+def test_source_timeline_rejects_empty_arrays_and_canonical_key_collisions():
+    _raises_exact(
+        ValueError,
+        "payload['z'] must not be empty",
+        lambda: SourceTimeline(
+            name="empty",
+            n_cycles=1,
+            cycle_time_ns=1.0,
+            payload={"z": np.empty((1, 0), dtype=np.float64)},
+        ),
+    )
+    _raises_exact(
+        ValueError,
+        "payload contains duplicate canonical key '1'",
+        lambda: SourceTimeline(
+            name="keys",
+            n_cycles=1,
+            cycle_time_ns=1.0,
+            payload={1: np.asarray([1.0]), "1": np.asarray([2.0])},
+        ),
+    )
 
 
 def test_L0_payload_and_latent_series_copy_and_missing():
@@ -404,6 +619,20 @@ def test_L0_independent_baseline_row_preserving_and_metadata():
                   lambda: base.independent_baseline(seed=3, payload_keys=("zz",)))
 
 
+@pytest.mark.parametrize(
+    "method_name",
+    ("independent_baseline", "per_field_independent_ablation"),
+)
+def test_source_timeline_derived_runs_reject_negative_seed_at_public_boundary(method_name):
+    timeline = _mk_timeline({"z": np.asarray([0.0, 1.0])})
+    method = getattr(timeline, method_name)
+    _raises_exact(
+        ValueError,
+        "seed must be a non-negative integer, got -1",
+        lambda: method(seed=-1),
+    )
+
+
 def test_L0_per_field_independent_ablation_breaks_cross_field_alignment():
     base = _mk_timeline({"a": np.arange(8.0), "b": np.arange(8.0) * 10.0}, seed=1)
     out = base.per_field_independent_ablation(seed=4)
@@ -450,14 +679,27 @@ def test_L0_to_manifest_structure_and_seed_branches():
     assert m["schema"] == "error_coupling_simulator.source.timeline.v1"
     assert m["name"] == "t" and m["n_cycles"] == 3 and m["cycle_time_ns"] == 1000.0
     assert m["seed"] == 7 and m["coupling_mode"] == "shared" and m["metadata"] == {"k": "v"}
-    # payload summary carries independently recomputed stats + sha256
+    # Payload summary retains exact/native extrema and content identity without
+    # lossy aggregate statistics.
     zs = m["payload"]["z"]
     assert zs["shape"] == [3] and zs["dtype"] == "float64"
     assert zs["min"] == 1.0 and zs["max"] == 4.0
-    assert zs["mean"] == pytest.approx(7.0 / 3.0) and zs["sha256"] == sp._array_sha256(np.array([1.0, 2.0, 4.0]))
+    assert "mean" not in zs and "std" not in zs
+    assert zs["sha256"] == sp._array_sha256(np.array([1.0, 2.0, 4.0]))
     assert m["latent"]["s"]["shape"] == [3]
     # seed None branch
     assert _mk_timeline({"z": np.array([1.0])}, seed=None).to_manifest()["seed"] is None
+
+
+def test_source_timeline_manifest_does_not_fabricate_subnormal_summary_zeros():
+    minimum_subnormal = math.nextafter(0.0, 1.0)
+    manifest = _mk_timeline(
+        {"z": np.asarray([minimum_subnormal, 0.0], dtype=np.float64)}
+    ).to_manifest()
+    summary = manifest["payload"]["z"]
+
+    assert "mean" not in summary
+    assert "std" not in summary
 
 
 def test_source_timeline_rejects_unsupported_schema():
@@ -544,32 +786,146 @@ def test_L0_rtn_post_init_validation():
                   lambda: RTNSource(gamma_per_cycle=-0.5))
     _raises_exact(ValueError, "cycle_time_ns must be > 0, got 0.0",
                   lambda: RTNSource(cycle_time_ns=0.0))
+    _raises_exact(ValueError, _rtn_source_domain_message(1.0e-20),
+                  lambda: RTNSource(gamma_per_cycle=1.0e-20))
+    _raises_exact(ValueError, _rtn_source_domain_message(20.0),
+                  lambda: RTNSource(gamma_per_cycle=20.0))
+    last_low_invalid = float.fromhex("0x1.0000000000000p-55")
+    first_low_valid = float.fromhex("0x1.0000000000001p-55")
+    last_high_valid = float.fromhex("0x1.2b708872320e1p+4")
+    first_high_invalid = float.fromhex("0x1.2b708872320e2p+4")
+    _raises_exact(ValueError, _rtn_source_domain_message(last_low_invalid),
+                  lambda: RTNSource(gamma_per_cycle=last_low_invalid))
+    _raises_exact(ValueError, _rtn_source_domain_message(first_high_invalid),
+                  lambda: RTNSource(gamma_per_cycle=first_high_invalid))
+    RTNSource(gamma_per_cycle=first_low_valid).sample(seed=0, n_cycles=2)
+    RTNSource(gamma_per_cycle=last_high_valid).sample(seed=0, n_cycles=2)
 
 
 def test_L0_rtn_flip_probability_and_autocorr_base_pins():
     for g in (0.0, 0.05, 0.25, 1.0):
         src = RTNSource(gamma_per_cycle=g)
-        assert_pins(src.flip_probability, _indep_flip_prob(g), label=f"flip@{g}")
+        assert_pins(src.flip_probability, _indep_flip_prob(g), rtol=1.0e-12, atol=0.0,
+                    label=f"flip@{g}")
         assert_pins(src.autocorr_base, _indep_autocorr_base(g), label=f"ac@{g}")
+
+    # The mechanism-level expm1 correction remains positive below the public source domain.
+    assert_pins(sp._rtn_flip_probability(1.0e-20), _indep_flip_prob(1.0e-20),
+                rtol=1.0e-12, atol=0.0, label="tiny mechanism flip")
 
 
 def test_KILLER_rtn_flip_probability_discriminates():
     src = RTNSource(gamma_per_cycle=0.25)
 
     def prop(value):
-        assert_pins(value, _indep_flip_prob(0.25), label="flip")
+        assert_pins(value, _indep_flip_prob(0.25), rtol=1.0e-12, atol=0.0,
+                    label="flip")
 
-    # a wrong-factor variant (the classic exp(-gamma) vs exp(-2 gamma) sabotage)
-    assert_discriminates(prop, src.flip_probability, 0.5 * (1.0 - math.exp(-0.25)),
+    # a wrong-factor variant (the classic exp(-gamma) vs exp(-2 gamma) sabotage),
+    # kept cancellation-safe so only the physical factor is corrupted.
+    assert_discriminates(prop, src.flip_probability, -0.5 * math.expm1(-0.25),
                          label="rtn flip probability")
 
 
 @settings(max_examples=200, deadline=None)
 @given(g=st.floats(0.0, 5.0, allow_nan=False, allow_infinity=False))
 def test_L1_rtn_closed_forms(g):
+    expected_autocorr = _indep_autocorr_base(g)
+    if g > 0.0 and expected_autocorr in {0.0, 1.0}:
+        _raises_exact(ValueError, _rtn_source_domain_message(g),
+                      lambda: RTNSource(gamma_per_cycle=g))
+        return
     src = RTNSource(gamma_per_cycle=g)
-    assert_pins(src.flip_probability, _indep_flip_prob(g), label="flip")
-    assert_pins(src.autocorr_base, _indep_autocorr_base(g), label="ac")
+    assert_pins(src.flip_probability, _indep_flip_prob(g), rtol=1.0e-12, atol=0.0,
+                label="flip")
+    assert_pins(src.autocorr_base, expected_autocorr, rtol=1.0e-12, atol=0.0,
+                label="ac")
+
+
+def test_process_cancellation_maps_match_mpmath_on_logarithmic_domains():
+    """New maps track exact-float oracles; legacy differences stay in declared cancellation zones."""
+
+    rtn_classes: set[str] = set()
+    correlation_classes: set[str] = set()
+    fixed_marginal_classes: set[str] = set()
+    with mpmath.workdps(200):
+        for gamma in np.geomspace(1.0e-20, 10.0, 97):
+            gamma = float(gamma)
+            got = sp._rtn_flip_probability(gamma)
+            oracle = float(-mpmath.mpf("0.5") * mpmath.expm1(-2 * _mp_float(gamma)))
+            legacy = 0.5 * (1.0 - math.exp(-2.0 * gamma))
+            rtn_classes.add(
+                _classify_legacy_map(
+                    got,
+                    legacy,
+                    oracle,
+                    legacy_endpoint=legacy == 0.0,
+                    max_current_ulps=1,
+                )
+            )
+
+        for transition_rate in np.geomspace(1.0e-20, 0.9, 97):
+            transition_rate = float(transition_rate)
+            source = TemporalStormSPPSource(
+                a=transition_rate / 3.0,
+                b=2.0 * transition_rate / 3.0,
+            )
+            actual_rate = float(source.a) + float(source.b)
+            got = source.correlation_length_cycles
+            oracle = float(-1 / mpmath.log1p(-_mp_float(actual_rate)))
+            rounded_complement = 1.0 - actual_rate
+            legacy = (
+                math.inf
+                if rounded_complement == 1.0
+                else -1.0 / math.log(rounded_complement)
+            )
+            correlation_classes.add(
+                _classify_legacy_map(
+                    got,
+                    legacy,
+                    oracle,
+                    legacy_endpoint=not math.isfinite(legacy),
+                    max_current_ulps=1,
+                )
+            )
+
+        marginal = (0.9, 0.04, 0.03, 0.03)
+        q_storm = (0.7, 0.1, 0.1, 0.1)
+        storm_probability = 0.2
+        for xi in np.geomspace(1.0, 1.0e17, 97):
+            xi = float(xi)
+            source = TemporalStormSPPSource.from_fixed_marginal(
+                marginal=marginal,
+                q_storm=q_storm,
+                storm_probability=storm_probability,
+                correlation_length_cycles=xi,
+            )
+            exact_s = -mpmath.expm1(-1 / _mp_float(xi))
+            oracle_a = float(_mp_float(storm_probability) * exact_s)
+            oracle_b = float((1 - _mp_float(storm_probability)) * exact_s)
+            legacy_s = 1.0 - math.exp(-1.0 / xi)
+            for current, legacy, oracle in (
+                (source.a, storm_probability * legacy_s, oracle_a),
+                (source.b, (1.0 - storm_probability) * legacy_s, oracle_b),
+            ):
+                fixed_marginal_classes.add(
+                    _classify_legacy_map(
+                        current,
+                        legacy,
+                        oracle,
+                        legacy_endpoint=legacy_s == 0.0,
+                        max_current_ulps=2,
+                    )
+                )
+
+    expected_classes = {
+        "false_structural_endpoint",
+        "cancellation_degraded",
+        "interior_ulp_equivalent",
+    }
+    assert rtn_classes == expected_classes
+    assert correlation_classes == expected_classes
+    assert fixed_marginal_classes == expected_classes
 
 
 def test_L0_rtn_sample_replayable_and_amplitude_pin():
@@ -632,6 +988,36 @@ def test_L0_one_over_f_post_init_validation():
                   lambda: OneOverFDriftSource(gamma_min_per_cycle=0.5, gamma_max_per_cycle=0.1))
     _raises_exact(ValueError, "cycle_time_ns must be > 0, got 0.0",
                   lambda: OneOverFDriftSource(cycle_time_ns=0.0))
+    _raises_exact(
+        ValueError,
+        "gamma_max_per_cycle=20.0 is outside the finite-RTN sampling domain: "
+        "expected a representable flip_probability in (0, 0.5)",
+        lambda: OneOverFDriftSource(gamma_max_per_cycle=20.0),
+    )
+    minimum_subnormal = math.nextafter(0.0, 1.0)
+    _raises_exact(
+        ValueError,
+        "amplitude_radns=5e-324 is nonzero but its per-mode amplitude is not "
+        "representable for n_fluctuators=4",
+        lambda: OneOverFDriftSource(
+            amplitude_radns=minimum_subnormal,
+            n_fluctuators=4,
+        ),
+    )
+    _raises_exact(
+        ValueError,
+        f"amplitude_radns={sys.float_info.max!r} and n_fluctuators=4 produce an "
+        "unrepresentable maximum aligned emission",
+        lambda: OneOverFDriftSource(
+            amplitude_radns=sys.float_info.max,
+            n_fluctuators=4,
+        ),
+    )
+    boundary = OneOverFDriftSource(
+        amplitude_radns=sys.float_info.max / 2.0,
+        n_fluctuators=4,
+    )
+    assert boundary.sample(seed=25, n_cycles=1).payload_series("z_radns")[0] == sys.float_info.max
 
 
 def test_L0_one_over_f_gammas_and_amplitudes_pins():
@@ -645,6 +1031,47 @@ def test_L0_one_over_f_gammas_and_amplitudes_pins():
     assert_pins(one.gammas_per_cycle, np.array([0.02]), label="gammas n=1")
 
 
+def test_source_process_constructors_snapshot_mutable_inputs():
+    rtn_amplitude = np.asarray(1.0e-4)
+    rtn_gamma = np.asarray(0.05)
+    rtn_cycle = np.asarray(1_000.0)
+    rtn = RTNSource(
+        amplitude_radns=rtn_amplitude,
+        gamma_per_cycle=rtn_gamma,
+        cycle_time_ns=rtn_cycle,
+    )
+    rtn_amplitude[...] = 9.0
+    rtn_gamma[...] = 20.0
+    rtn_cycle[...] = 2_000.0
+    assert rtn.amplitude_radns == 1.0e-4
+    assert rtn.gamma_per_cycle == 0.05
+    assert rtn.cycle_time_ns == 1_000.0
+    rtn.sample(seed=1, n_cycles=2)
+
+    drift_amplitude = np.asarray(1.0)
+    drift = OneOverFDriftSource(amplitude_radns=drift_amplitude, n_fluctuators=4)
+    drift_amplitude[...] = math.nextafter(0.0, 1.0)
+    np.testing.assert_array_equal(drift.amplitudes_radns, np.full(4, 0.5))
+
+    event_times = [0]
+    peak_shift = np.asarray(-2.0)
+    burst = PhaseBurstSource(event_times=event_times, peak_shift_mhz=peak_shift)
+    event_times[0] = 9
+    peak_shift[...] = -7.0
+    assert burst.event_times == (0,)
+    assert burst.peak_shift_mhz == -2.0
+    assert burst.sample(seed=1, n_cycles=2).metadata["event_times"] == (0,)
+
+    storm_a = np.asarray(0.01)
+    calm = [0.999, 1.0 / 3000.0, 1.0 / 3000.0, 1.0 / 3000.0]
+    storm = TemporalStormSPPSource(a=storm_a, q_calm=calm)
+    storm_a[...] = 0.95
+    calm[:] = [1.0, 0.0, 0.0, 0.0]
+    assert storm.a == 0.01
+    assert storm.q_calm == (0.999, 1.0 / 3000.0, 1.0 / 3000.0, 1.0 / 3000.0)
+    assert math.isfinite(storm.correlation_length_cycles)
+
+
 def test_L0_one_over_f_analytic_psd_value_and_nonfinite_guard():
     src = OneOverFDriftSource(amplitude_radns=3.0e-4, n_fluctuators=6,
                              gamma_min_per_cycle=0.005, gamma_max_per_cycle=0.5)
@@ -655,6 +1082,45 @@ def test_L0_one_over_f_analytic_psd_value_and_nonfinite_guard():
     assert psd[0] > psd[-1] and np.all(psd > 0.0)
     _raises_exact(ValueError, "omega_per_cycle contains non-finite values",
                   lambda: src.analytic_psd(np.array([0.1, np.inf])))
+
+    minimum_subnormal = math.nextafter(0.0, 1.0)
+    endpoint = OneOverFDriftSource(
+        amplitude_radns=math.sqrt(minimum_subnormal),
+        n_fluctuators=1,
+        gamma_min_per_cycle=minimum_subnormal,
+        gamma_max_per_cycle=minimum_subnormal,
+    )
+    with mpmath.workdps(2000):
+        amplitude = _mp_float(endpoint.amplitudes_radns[0])
+        gamma = _mp_float(endpoint.gammas_per_cycle[0])
+        oracle = float(amplitude * amplitude / gamma)
+    assert endpoint.analytic_psd(np.asarray([0.0]))[0] == oracle == 1.0
+
+    overflow = OneOverFDriftSource(
+        amplitude_radns=sys.float_info.max,
+        n_fluctuators=1,
+        gamma_min_per_cycle=minimum_subnormal,
+        gamma_max_per_cycle=minimum_subnormal,
+    )
+    _raises_exact(
+        ValueError,
+        "analytic PSD is not representable as a finite nonzero float64 "
+        "at omega_per_cycle(0,)=0.0",
+        lambda: overflow.analytic_psd(np.asarray([0.0])),
+    )
+
+    underflow = OneOverFDriftSource(
+        amplitude_radns=minimum_subnormal,
+        n_fluctuators=1,
+        gamma_min_per_cycle=1.0,
+        gamma_max_per_cycle=1.0,
+    )
+    _raises_exact(
+        ValueError,
+        "analytic PSD is not representable as a finite nonzero float64 "
+        "at omega_per_cycle(0,)=0.0",
+        lambda: underflow.analytic_psd(np.asarray([0.0])),
+    )
 
 
 def test_KILLER_one_over_f_analytic_psd_discriminates():
@@ -766,6 +1232,143 @@ def test_L0_phase_burst_sample_closed_form_recovery_and_conversions():
     assert md["site_count"] == 2 and md["footprint"] == "uniform"
 
 
+def test_phase_burst_mhz_conversion_recovers_a_finite_extreme_value():
+    source = PhaseBurstSource(
+        event_times=(0,),
+        peak_shift_mhz=1.0e308,
+        peak_jitter_mhz=0.0,
+        recovery_time_ns=1.0,
+        cycle_time_ns=1.0,
+        phase_window_ns=1.0,
+        t1_duration_ns=0.0,
+    )
+    got = source.sample(seed=0, n_cycles=1).payload_series("detuning_radns")[0, 0]
+    with mpmath.workdps(300):
+        oracle = float(_mp_float(1.0e308) * (2 * mpmath.pi) / 1000)
+    assert _ulp_distance(got, oracle) <= 1
+
+
+def test_phase_burst_recovery_preserves_finite_tail_when_elapsed_ratio_overflows():
+    source = PhaseBurstSource(
+        event_times=(0,),
+        peak_shift_mhz=sys.float_info.max,
+        peak_jitter_mhz=0.0,
+        recovery_time_ns=0.5,
+        cycle_time_ns=sys.float_info.max,
+        phase_window_ns=0.0,
+        t1_duration_ns=0.0,
+    )
+
+    got = source.sample(seed=0, n_cycles=3).payload_series("delta_fq_mhz")[:, 0]
+    amplitude = Fraction.from_float(sys.float_info.max)
+    recovery = Fraction.from_float(0.5)
+    cycle = Fraction.from_float(sys.float_info.max)
+    expected = np.asarray(
+        [
+            float(amplitude * recovery / (recovery + lag * cycle))
+            for lag in range(3)
+        ],
+        dtype=np.float64,
+    )
+    np.testing.assert_array_equal(got, expected)
+
+
+def test_phase_burst_accumulates_simultaneous_events_before_float64_rounding():
+    maximum = sys.float_info.max
+    peak = -0.475 * maximum
+    jitter = 0.575 * maximum
+    source = PhaseBurstSource(
+        event_times=(0, 0, 0),
+        peak_shift_mhz=peak,
+        peak_jitter_mhz=jitter,
+        recovery_time_ns=1.0,
+        cycle_time_ns=1.0,
+        phase_window_ns=0.0,
+        t1_duration_ns=0.0,
+    )
+
+    rng = np.random.default_rng(4)
+    amplitudes = tuple(peak + float(rng.normal(0.0, jitter)) for _ in range(3))
+    expected = float(sum((Fraction.from_float(value) for value in amplitudes), Fraction()))
+    got = source.sample(seed=4, n_cycles=1).payload_series("delta_fq_mhz")[0, 0]
+
+    assert got == expected
+
+
+def test_phase_burst_rejects_unrepresentable_exact_event_accumulation():
+    source = PhaseBurstSource(
+        event_times=(0, 0),
+        peak_shift_mhz=sys.float_info.max,
+        peak_jitter_mhz=0.0,
+        recovery_time_ns=1.0,
+        cycle_time_ns=1.0,
+        phase_window_ns=0.0,
+        t1_duration_ns=0.0,
+    )
+
+    _raises_exact(
+        ValueError,
+        "delta_fq_mhz(0, 0) is not representable as a finite float64",
+        lambda: source.sample(seed=0, n_cycles=1),
+    )
+
+
+def test_phase_burst_extreme_duration_and_phase_products_fail_closed():
+    no_event = PhaseBurstSource(
+        event_times=(),
+        t1_duration_ns=sys.float_info.max,
+        cycle_time_ns=math.nextafter(0.0, 1.0),
+    ).sample(seed=0, n_cycles=1)
+    np.testing.assert_array_equal(no_event.payload_series("t1_burst"), np.zeros((1, 1)))
+
+    _raises_exact(
+        ValueError,
+        "echoed_phase_rad(0, 0) is not representable as a finite float64",
+        lambda: PhaseBurstSource(
+            event_times=(0,),
+            peak_shift_mhz=1.0e-300,
+            recovery_time_ns=1.0,
+            cycle_time_ns=1.0,
+            phase_window_ns=1.0,
+            echo_suppression=math.nextafter(0.0, 1.0),
+            t1_duration_ns=0.0,
+        ).sample(seed=0, n_cycles=1),
+    )
+    _raises_exact(
+        ValueError,
+        "phase_rad(0, 0) is not representable as a finite float64",
+        lambda: PhaseBurstSource(
+            event_times=(0,),
+            peak_shift_mhz=1.0e308,
+            recovery_time_ns=1.0,
+            cycle_time_ns=1.0,
+            phase_window_ns=1_000.0,
+            echo_suppression=0.0,
+            t1_duration_ns=0.0,
+        ).sample(seed=0, n_cycles=1),
+    )
+
+    _raises_exact(
+        ValueError,
+        "z_radns[0] is not representable as a nonzero float64",
+        lambda: PhaseBurstSource(
+            site_count=2,
+            footprint="cluster",
+            affected_sites=1,
+            event_times=(0,),
+            peak_shift_mhz=float.fromhex("0x0.000000000009fp-1022"),
+            recovery_time_ns=1.0,
+            cycle_time_ns=1.0,
+            phase_window_ns=0.0,
+            t1_duration_ns=0.0,
+        ).sample(
+            seed=0,
+            n_cycles=1,
+            layout={"site_count": 2, "cluster_center": 0},
+        ),
+    )
+
+
 def test_L0_phase_burst_sample_branch_arcs():
     # (a) event time outside the horizon -> raise
     _raises_exact(ValueError, "event time 5 outside n_cycles=3",
@@ -839,6 +1442,20 @@ def test_L0_temporal_storm_post_init_validation():
                   lambda: TemporalStormSPPSource(affected_sites=0))
     _raises_exact(ValueError, "cycle_time_ns must be > 0, got 0.0",
                   lambda: TemporalStormSPPSource(cycle_time_ns=0.0))
+    _raises_exact(
+        ValueError,
+        "a=1e-309 and b=1e-309 produce an unrepresentable finite correlation_length_cycles",
+        lambda: TemporalStormSPPSource(a=1.0e-309, b=1.0e-309),
+    )
+    last_invalid = float.fromhex("0x0.4000000000000p-1022")
+    first_valid = float.fromhex("0x0.4000000000001p-1022")
+    _raises_exact(
+        ValueError,
+        f"a={last_invalid!r} and b=0.0 produce an unrepresentable finite "
+        "correlation_length_cycles",
+        lambda: TemporalStormSPPSource(a=last_invalid, b=0.0),
+    )
+    TemporalStormSPPSource(a=first_valid, b=0.0).sample(seed=0, n_cycles=2)
 
 
 def test_L0_temporal_storm_transition_and_stationary_and_correlation():
@@ -850,12 +1467,37 @@ def test_L0_temporal_storm_transition_and_stationary_and_correlation():
     assert_pins(pi, np.array([0.7, 0.3]), label="stationary")
     # pi is the LEFT eigenvector: pi @ P == pi (independently checked)
     np.testing.assert_allclose(pi @ P, pi)
-    assert_pins(src.correlation_length_cycles, -1.0 / math.log(1.0 - 0.03 - 0.07),
+    assert_pins(src.correlation_length_cycles, -1.0 / math.log1p(-0.03 - 0.07),
                 label="corr length")
-    # degenerate a=b=0: denom<=0 -> [1,0]; lam2=1 -> inf correlation length
+    # Tiny positive transitions remain distinct from the exact structural-zero limit.
+    tiny = TemporalStormSPPSource(a=1.0e-20, b=2.0e-20)
+    assert_pins(tiny.stationary_distribution, np.array([2.0 / 3.0, 1.0 / 3.0]),
+                rtol=1.0e-12, atol=0.0, label="tiny stationary")
+    assert_pins(tiny.correlation_length_cycles, -1.0 / math.log1p(-3.0e-20),
+                rtol=1.0e-12, atol=0.0, label="tiny corr length")
+    _raises_exact(
+        ValueError,
+        "transition_matrix is not representable without endpoint rounding for "
+        "a=1e-20, b=2e-20; use a and b as authoritative transition rates",
+        lambda: tiny.transition_matrix,
+    )
+    tiny_metadata = tiny.sample(seed=0, n_cycles=2).metadata
+    assert tiny_metadata["transition_matrix"] is None
+    assert tiny_metadata["transition_matrix_representable"] is False
+    # Degenerate a=b=0 is the exact structural-zero limit: [1,0] and infinite correlation.
     deg = TemporalStormSPPSource(a=0.0, b=0.0)
     assert_pins(deg.stationary_distribution, np.array([1.0, 0.0]), label="deg stationary")
     assert deg.correlation_length_cycles == math.inf
+
+
+def test_degenerate_storm_manifest_uses_explicit_structural_infinite_status():
+    timeline = TemporalStormSPPSource(a=0.0, b=0.0).sample(seed=0, n_cycles=2)
+    manifest = timeline.to_manifest()
+    metadata = manifest["metadata"]
+
+    assert metadata["correlation_length_cycles"] is None
+    assert metadata["correlation_length_cycles_status"] == "structural_infinite_limit"
+    json.dumps(manifest, allow_nan=False)
 
 
 def test_L0_temporal_storm_marginal_distribution():
@@ -883,10 +1525,33 @@ def test_KILLER_temporal_storm_stationary_discriminates():
 def test_L1_temporal_storm_transition_and_marginal_properties(a, b):
     if a + b >= 1.0:
         return
+    transition_rate = float(a) + float(b)
+    if transition_rate > 0.0 and not math.isfinite(
+        -1.0 / math.log1p(-transition_rate)
+    ):
+        _raises_exact(
+            ValueError,
+            f"a={float(a)!r} and b={float(b)!r} produce an unrepresentable finite "
+            "correlation_length_cycles",
+            lambda: TemporalStormSPPSource(a=a, b=b),
+        )
+        return
     src = TemporalStormSPPSource(a=a, b=b)
-    assert_row_stochastic(src.transition_matrix, label="P")
     pi = src.stationary_distribution
-    np.testing.assert_allclose(pi @ src.transition_matrix, pi, atol=1e-9)
+    matrix_representable = not (
+        (src.a > 0.0 and 1.0 - src.a == 1.0)
+        or (src.b > 0.0 and 1.0 - src.b == 1.0)
+    )
+    if matrix_representable:
+        assert_row_stochastic(src.transition_matrix, label="P")
+        np.testing.assert_allclose(pi @ src.transition_matrix, pi, atol=1e-9)
+    else:
+        _raises_exact(
+            ValueError,
+            "transition_matrix is not representable without endpoint rounding for "
+            f"a={src.a!r}, b={src.b!r}; use a and b as authoritative transition rates",
+            lambda: src.transition_matrix,
+        )
     assert_prob_dist(src.marginal_distribution, label="marginal")
 
 
@@ -899,7 +1564,7 @@ def test_L0_from_fixed_marginal_holds_marginal_and_reconstructs():
     # the emitted one-cycle marginal equals the requested marginal
     np.testing.assert_allclose(src.marginal_distribution, marginal)
     # INDEPENDENT reconstruction of the member parameters
-    s = 1.0 - math.exp(-1.0 / xi)
+    s = -math.expm1(-1.0 / xi)
     q0 = tuple((p_i - pi1 * q_i) / (1.0 - pi1) for p_i, q_i in zip(marginal, q_storm))
     assert_pins(src.a, pi1 * s, label="a")
     assert_pins(src.b, (1.0 - pi1) * s, label="b")
@@ -909,7 +1574,47 @@ def test_L0_from_fixed_marginal_holds_marginal_and_reconstructs():
     slow = TemporalStormSPPSource.from_fixed_marginal(
         marginal=marginal, q_storm=q_storm, storm_probability=pi1, correlation_length_cycles=20.0)
     np.testing.assert_allclose(slow.marginal_distribution, marginal)
+    assert_pins(src.correlation_length_cycles, -1.0 / math.log1p(-(src.a + src.b)),
+                label="fixed corr length")
+    assert_pins(slow.correlation_length_cycles, -1.0 / math.log1p(-(slow.a + slow.b)),
+                label="slow fixed corr length")
     assert slow.correlation_length_cycles > src.correlation_length_cycles
+
+    last_saturated_xi = float.fromhex("0x1.b5b96fca558e1p-6")
+    first_unsaturated_xi = float.fromhex("0x1.b5b96fca558e2p-6")
+    _raises_exact(
+        ValueError,
+        f"correlation_length_cycles={last_saturated_xi!r} produced an "
+        "unrepresentable transition-mass endpoint 1.0",
+        lambda: TemporalStormSPPSource.from_fixed_marginal(
+            marginal=marginal,
+            q_storm=q_storm,
+            storm_probability=pi1,
+            correlation_length_cycles=last_saturated_xi,
+        ),
+    )
+    boundary_valid = TemporalStormSPPSource.from_fixed_marginal(
+        marginal=marginal,
+        q_storm=q_storm,
+        storm_probability=pi1,
+        correlation_length_cycles=first_unsaturated_xi,
+    )
+    assert boundary_valid.a + boundary_valid.b < 1.0
+
+    # All declared inputs are finite and strictly positive, but the product pi1*s is
+    # below binary64's representable range.  The constructor must reject rather than
+    # manufacture an exact-zero calm->storm transition.
+    _raises_exact(
+        ValueError,
+        "storm_probability=5e-324 and correlation_length_cycles=1e+308 produced an "
+        "unrepresentable zero transition rate",
+        lambda: TemporalStormSPPSource.from_fixed_marginal(
+            marginal=marginal,
+            q_storm=q_storm,
+            storm_probability=float.fromhex("0x0.0000000000001p-1022"),
+            correlation_length_cycles=1.0e308,
+        ),
+    )
 
 
 def test_L0_from_fixed_marginal_storm_probability_ge_one_rejected():
@@ -954,6 +1659,7 @@ def test_L0_temporal_storm_sample_global_deterministic_chain():
     assert md["a"] == pytest.approx(0.3) and md["b"] == pytest.approx(0.3)
     assert md["pauli_order"] == _PAULI_ORDER
     assert md["boundary"] == "reduced_pauli_comparator_not_analog_truth"
+    assert md["transition_matrix_representable"] is True
     np.testing.assert_allclose(md["transition_matrix"], src.transition_matrix.tolist())
     np.testing.assert_allclose(md["stationary_distribution"], src.stationary_distribution.tolist())
 
@@ -1065,12 +1771,24 @@ def test_L0_empirical_pauli_distribution_value_and_branches():
                        latent={"storm_state": np.zeros((2, 1), np.int8)})
     _raises_exact(ValueError, "pauli_error payload contains labels outside I=0, X=1, Y=2, Z=3",
                   lambda: src.empirical_pauli_distribution(bad))
-    # empty (n, 0) payload -> total <= 0
-    empty = _mk_timeline({"pauli_error": np.zeros((3, 0), dtype=np.int8),
-                          "storm_indicator": np.zeros((3, 0))},
-                         latent={"storm_state": np.zeros((3, 0), np.int8)})
-    _raises_exact(ValueError, "empty pauli_error payload",
-                  lambda: src.empirical_pauli_distribution(empty))
+
+
+def test_empirical_pauli_distribution_rejects_corrupted_empty_payload():
+    source = TemporalStormSPPSource()
+    timeline = _mk_timeline(
+        {
+            "pauli_error": np.zeros((3, 1), dtype=np.int8),
+            "storm_indicator": np.zeros((3, 1)),
+        },
+        latent={"storm_state": np.zeros((3, 1), dtype=np.int8)},
+    )
+    timeline.payload["pauli_error"] = np.empty((3, 0), dtype=np.int8)
+
+    _raises_exact(
+        ValueError,
+        "empty pauli_error payload",
+        lambda: source.empirical_pauli_distribution(timeline),
+    )
 
 
 def test_L0_observed_pauli_indicator_autocorrelation_value_and_guard():
@@ -1303,9 +2021,12 @@ def test_helper_cluster_affected_count_and_indices_and_site_index():
 def test_helper_coerce_array_map_branches():
     out = sp._coerce_array_map("payload", {"a": np.array([1.0, 2.0])}, 2)
     np.testing.assert_array_equal(out["a"], [1.0, 2.0])
-    # non-numeric arrays skip the finite check
-    out2 = sp._coerce_array_map("payload", {"s": np.array(["a", "b"])}, 2)
-    assert out2["s"].tolist() == ["a", "b"]
+    # Timeline persistence is closed over real numeric arrays only.
+    _raises_exact(
+        ValueError,
+        "payload['s'] dtype <U1 is not a supported real numeric array",
+        lambda: sp._coerce_array_map("payload", {"s": np.array(["a", "b"])}, 2),
+    )
     _raises_exact(ValueError, "payload['x'] must have cycle axis length 2",
                   lambda: sp._coerce_array_map("payload", {"x": 5}, 2))       # ndim 0
     _raises_exact(ValueError, "payload['x'] must have cycle axis length 2",
@@ -1327,8 +2048,8 @@ def test_helper_coerce_array_map_branches():
 def test_helper_array_summary_numeric_and_non_numeric():
     num = sp._array_summary(np.array([1.0, 2.0, 3.0]))
     assert num["shape"] == [3] and num["dtype"] == "float64"
-    assert num["min"] == 1.0 and num["max"] == 3.0 and num["mean"] == 2.0
-    assert num["std"] == pytest.approx(np.std([1.0, 2.0, 3.0]))
+    assert num["min"] == 1.0 and num["max"] == 3.0
+    assert "mean" not in num and "std" not in num
     assert num["sha256"] == sp._array_sha256(np.array([1.0, 2.0, 3.0]))
     s = sp._array_summary(np.array(["a", "b"]))
     assert s["shape"] == [2] and "sha256" not in s and "min" not in s

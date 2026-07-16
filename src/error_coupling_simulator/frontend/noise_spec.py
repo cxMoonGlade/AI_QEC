@@ -13,6 +13,11 @@ from typing import Literal
 
 import numpy as np
 
+from ..numerics import (
+    _exact_float64_mean,
+    scaled_product_ratio,
+    shifted_probability_from_odds,
+)
 from ..source.process import SourceTimeline
 from .circuit_ir import CircuitIR, CircuitStep, GateOp, MeasureOp, Tick
 from .source_sidecar import SourceTimelineBinding
@@ -22,8 +27,6 @@ TARGETED_STIM_NOISE_SCHEMA = "error_coupling_simulator.frontend.targeted_stim_no
 SOURCE_STIM_PAULI_PROJECTION_SCHEMA = (
     "error_coupling_simulator.frontend.source_stim_pauli_projection.v1"
 )
-
-
 _ONE_QUBIT_UNITARIES = {
     "H",
     "I",
@@ -301,10 +304,21 @@ class SourceStimPauliRule:
         value = _payload_value_for_targets(payload, cycle_index=cycle_index, targets=targets)
         if self.map_kind == "payload_probability":
             return _validate_probability(f"{self.payload_key}[{cycle_index}]", value)
-        x = float(value) / float(self.z_scale)
-        logit = math.log(float(self.base_p) / (1.0 - float(self.base_p)))
-        y = max(-60.0, min(60.0, logit + float(self.sensitivity) * x))
-        return _validate_probability("source-projected probability", 1.0 / (1.0 + math.exp(-y)))
+        if not math.isfinite(value):
+            raise ValueError(f"{self.payload_key}[{cycle_index}] must be finite, got {value!r}")
+        shift = scaled_product_ratio(
+            float(self.sensitivity),
+            float(value),
+            float(self.z_scale),
+            name="source-projection sensitivity*value/z_scale",
+        )
+        if shift == 0.0:
+            return float(self.base_p)
+        return shifted_probability_from_odds(
+            float(self.base_p),
+            shift,
+            name="source-projected",
+        )
 
     def to_public_manifest(self) -> dict:
         return {
@@ -990,8 +1004,11 @@ def _payload_value_for_targets(
                 raise ValueError(
                     f"source payload has {arr.shape[1]} sites but matched targets were {targets}"
                 )
-            return float(np.mean(arr[cycle_index, list(targets)]))
-        return float(np.mean(arr[cycle_index]))
+            return _exact_float64_mean(
+                arr[cycle_index, list(targets)],
+                name="source payload mean",
+            )
+        return _exact_float64_mean(arr[cycle_index], name="source payload mean")
     raise ValueError(f"source payload must be 1-D or 2-D, got shape {arr.shape}")
 
 

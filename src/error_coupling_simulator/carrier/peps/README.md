@@ -27,6 +27,18 @@ The current owner tests are `tests/test_peps_host_seam.py`,
 state and contraction invariants, sampling
 maps, bounded exact comparisons, and local FET properties.
 
+## Truncation contract
+
+This is a single-wire two-dimensional qutrit PEPS research carrier. Bond dimensions, retained
+ranks, FET objectives, local environments, local fidelities, entropies, and other truncation
+diagnostics are numerical evidence about a declared approximation; none is a certificate for the
+complete multi-round record law.
+
+A full-record faithfulness claim requires comparison with an independent reference and an explicit
+convergence study over the relevant approximation controls. The current FET entropy gate remains
+red. Results beyond the bounded d3 implementation surface, including d5/d7 distributions, remain
+provisional until those requirements pass.
+
 The FET surface is not scientifically passed. Its current end-to-end entropy test reports
 `0.10860941571062639` against an independent GF(2) reference of `2.0` at tolerance `1e-4`. Passing
 local environment or dense-reference checks do not override that failure. No d5/d7 distributional

@@ -32,7 +32,9 @@ from __future__ import annotations
 import copy
 import dataclasses
 import hashlib
+import math
 import re
+import sys
 
 import numpy as np
 import pytest
@@ -86,6 +88,7 @@ from error_coupling_simulator.frontend.axis1_record_evidence import (
 _SCHEMA = "error_coupling_simulator.noise_processes.coupled_cycle.process.v1"
 _ROUND_RE = re.compile(r"^round(\d+):")
 _FINAL_RE = re.compile(r"^final:q(\d+):[XYZ]$")
+_MIN_GAMMA_WITH_FINITE_TPHI = math.nextafter(1.0 / sys.float_info.max, math.inf)
 
 #: a NON-default coupling config: source_to_params(0.0, .) then differs from the default in
 #: gamma_phi (base x3), so a mutant that swaps ``self._config`` for None/default is caught.
@@ -128,10 +131,12 @@ def _baseline_params() -> Axis1PrimitiveParams:
 
 
 def _coupled_with(zeta: float, gamma_phi: float):
+    gamma = float(gamma_phi)
     return dataclasses.replace(
         source_to_params(0.0, default_source_coupling_config()),
         zz_zeta_radns=float(zeta),
-        gamma_phi_per_ns=float(gamma_phi),
+        gamma_phi_per_ns=gamma,
+        tphi_ns=math.inf if gamma == 0.0 else 1.0 / gamma,
     )
 
 
@@ -367,7 +372,15 @@ def test_KILLER_per_round_field_map_discriminates():
 @settings(max_examples=200, deadline=None)
 @given(
     zeta=st.floats(0.0, 1.0e-2, allow_nan=False, allow_infinity=False),
-    gamma=st.floats(0.0, 1.0e-3, allow_nan=False, allow_infinity=False),
+    gamma=st.one_of(
+        st.just(0.0),
+        st.floats(
+            _MIN_GAMMA_WITH_FINITE_TPHI,
+            1.0e-3,
+            allow_nan=False,
+            allow_infinity=False,
+        ),
+    ),
 )
 def test_L1_per_round_axis1_params_field_map(zeta, gamma):
     baseline = _baseline_params()

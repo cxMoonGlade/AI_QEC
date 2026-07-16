@@ -16,8 +16,11 @@ cohesive package gives it a clean boundary, a cohesive public surface, and a rel
   metrics are instruments on it.
 - **Isolation.** Evaluator-only process truth must never enter emitted records or public artifact
   metadata. Certification may read it only through the declared evaluator-side seam.
-- **GPU-first** for model compute (no `cuda if available else cpu`); `NUMERICAL_ZERO = 1e-12` only
-  for float floors.
+- **GPU-first** for model compute (no `cuda if available else cpu`); `NUMERICAL_ZERO = 1e-12` is
+  only a floating comparison threshold and never probability mass.
+- **Representability is fail-closed.** Shared scaled product/exponential and odds-domain helpers
+  recover a finite binary64 result when only an intermediate is unsafe, and reject a nonzero result
+  that cannot be represented without becoming a structural endpoint.
 - **Precision-purpose boundary.** Only the fused within-cycle SV-MC carrier uses c64, and only for
   optimization/screening. Final and certification runs are c128 candidates; PEPS/MPS remain
   c128-only. Declared leakage-channel/codestate construction and CPTP checks stay c128, with only checked
@@ -35,6 +38,8 @@ cohesive package gives it a clean boundary, a cohesive public surface, and a rel
 - `certify/` — evaluator-only anchor and certification seam.
 - `quantum_bath/` — feasibility-only pseudomode-enlarged GKSL research carrier; not the product
   mainline and not a passive-record quantum-memory certificate.
+- `numerics.py` — shared float64 representability arithmetic and comparison-threshold policy; not a
+  physical mechanism or probability-mass source.
 
 ## Runtime and distribution boundary
 
@@ -84,5 +89,6 @@ full-`d x d` single-wire 2D-PEPS trajectory carrier. Its d3
 state-level spike is implemented, but finite-truncation fidelity of the complete multi-round record
 is still open. The doubled-wire DM-PEPO remains a research carrier with known record-law failures,
 and d5/d7 distributional results remain provisional. Binding status and claim boundaries live in
-`docs/SIMULATOR.md`, `CLAUDE.md`, and ADR
-0011; this README must not be used to promote a carrier or a synthetic parameter set beyond them.
+[`docs/SIMULATOR.md`](../../docs/SIMULATOR.md), [`CLAUDE.md`](../../CLAUDE.md), and the current
+[PEPS truncation contract](carrier/peps/README.md#truncation-contract); this README must not be used
+to promote a carrier or a synthetic parameter set beyond them.

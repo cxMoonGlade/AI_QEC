@@ -86,11 +86,17 @@ themselves, identify coherent error or its physical cause.
 | Quantity | Current formula and claim boundary | Owner and executable gate |
 |---|---|---|
 | Logical error rate | Mean XOR between decoder predictions and actual observable bits, reported per observable and for any-observable failure | `frontend.simulator._decoder_summary`; `tests/test_simulator_frontend.py` |
-| Detector-pair estimate | Spitz Eq. 13 `p_ij = 1/2-sqrt(1/4-cov/(1-2*mean(x_i XOR x_j)))` plus its delta-method standard error | `frontend.pij`; independent recomputation and corruption checks in `tests/test_interop_units.py` |
+| Detector-pair estimate | Spitz Eq. 13 `p_ij = 1/2-sqrt(1/4-cov/(1-2*mean(x_i XOR x_j)))` plus its delta-method standard error; undefined `0/0` pairs remain `NaN` with an explicit identifiability mask | `frontend.pij`; independent recomputation and corruption checks in `tests/test_interop_units.py` |
+| Optional DEM pair-edge selection | Keep a detector pair only when `p_ij > pair_floor_abs` and `p_ij > pair_floor_sigma * SE(p_ij)`; both caller-visible parameters are finite, nonnegative class-(c) reduction rules | `frontend.interop.records_to_dem`; endpoint and corruption checks in `tests/test_interop_units.py` |
 
-The pair estimate is a two-point reduction and is blind to hyperedges. Logical error rate requires
-one named, fixed decoder and the actual observable bits; it is not evidence that the underlying
-analog channel is exactly represented by a detector error model.
+The pair estimate is a two-point reduction and is blind to hyperedges. An unidentifiable pair is
+excluded from the optional edge set but remains explicitly non-finite and masked in diagnostics; it
+is not reclassified as zero. DEM selection floors change only the optional decoder-facing reduction
+and travel in its diagnostics; they are not numerical probability floors. A strictly negative
+boundary residual is always reported as a model-inconsistency clamp even when its magnitude is
+smaller than `pair_floor_abs`; exact residual zero alone is structurally absent. Logical error rate
+requires one named, fixed decoder and the actual observable bits; it is not evidence that the
+underlying analog channel is exactly represented by a detector error model.
 
 ## Tensor-network implementation diagnostics
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import math
 
+import mpmath
 import numpy as np
 import pytest
 
@@ -111,6 +112,148 @@ def test_source_projection_auto_sidecar_rejects_mismatched_run_timeline(tmp_path
             seed=2,
         )
     assert not (out_dir / "manifest.json").exists()
+
+
+def test_source_projection_logit_rule_executes_in_registered_acceptance(tmp_path):
+    circuit = _two_measurement_circuit()
+    timeline = SourceTimeline(
+        name="finite_logit_projection",
+        n_cycles=2,
+        cycle_time_ns=1_000.0,
+        payload={"z_radns": np.asarray([1.0e-4, -1.0e-4], dtype=np.float64)},
+    )
+    rule = SourceStimPauliRule(
+        position="before",
+        match_kind="measurement_type",
+        measure_name="M",
+        noise="X_ERROR",
+        payload_key="z_radns",
+        base_p=0.05,
+        sensitivity=0.1,
+        z_scale=1.0e-4,
+    )
+    result = Simulator(circuit).run(
+        shots=32,
+        out_dir=tmp_path / "logit_projection",
+        noise=SourceStimPauliProjectionSpec(timeline=timeline, rules=(rule,)),
+        seed=23,
+    )
+
+    expected = []
+    base_logit = math.log(0.05) - math.log1p(-0.05)
+    for shift in (0.1, -0.1):
+        y = base_logit + shift
+        if y < 0.0:
+            exp_y = math.exp(y)
+            expected.append(exp_y / (1.0 + exp_y))
+        else:
+            exp_neg_y = math.exp(-y)
+            expected.append(1.0 - exp_neg_y / (1.0 + exp_neg_y))
+
+    binding = json.loads((result.paths.out_dir / "source_timeline_binding.json").read_text())
+    events = binding["projection_audit"]["matched_events"][0]
+    assert [event["projected_probability"] for event in events] == pytest.approx(expected)
+    noisy_text = result.paths.circuit_noisy_pauli.read_text()
+    assert noisy_text.count("X_ERROR(") == 2
+
+
+def test_source_projection_logit_large_opposite_terms_match_exact_float_oracle():
+    """The frontend map must not round a cancellation-sensitive logit to 0.5."""
+
+    base_p = float.fromhex("0x0.0000000000001p-1022")
+    shift = float.fromhex("0x1.74385446d71c3p+9")
+    timeline = SourceTimeline(
+        name="cancellation_sensitive_logit",
+        n_cycles=1,
+        cycle_time_ns=1_000.0,
+        payload={"z": np.asarray([1.0], dtype=np.float64)},
+    )
+    rule = SourceStimPauliRule(
+        position="before",
+        match_kind="measurement_type",
+        measure_name="M",
+        noise="X_ERROR",
+        payload_key="z",
+        base_p=base_p,
+        sensitivity=shift,
+        z_scale=1.0,
+    )
+    with mpmath.workdps(200):
+        p_num, p_den = base_p.as_integer_ratio()
+        s_num, s_den = shift.as_integer_ratio()
+        p_exact = mpmath.mpf(p_num) / p_den
+        shift_exact = mpmath.mpf(s_num) / s_den
+        oracle = float(
+            1
+            / (
+                1
+                + mpmath.exp(
+                    -(mpmath.log(p_exact / (1 - p_exact)) + shift_exact)
+                )
+            )
+        )
+    got = rule.probability_for(timeline, cycle_index=0, targets=(0,))
+    assert abs(got - oracle) <= math.ulp(oracle)
+
+
+def test_source_projection_logit_uses_exact_float_domain_at_cancellation_boundary():
+    """The frontend must neither reject an exact inside point nor accept an exact outside point."""
+
+    min_open = float.fromhex("0x0.0000000000001p-1022")
+    max_open = float.fromhex("0x1.fffffffffffffp-1")
+    cancelling_shift = float.fromhex("0x1.8696a3c1fe543p+9")
+    timeline = SourceTimeline(
+        name="endpoint_cancellation",
+        n_cycles=1,
+        cycle_time_ns=1_000.0,
+        payload={"z": np.asarray([1.0], dtype=np.float64)},
+    )
+
+    def probability(base_p: float, shift: float) -> float:
+        rule = SourceStimPauliRule(
+            position="before",
+            match_kind="measurement_type",
+            measure_name="M",
+            noise="X_ERROR",
+            payload_key="z",
+            base_p=base_p,
+            sensitivity=shift,
+            z_scale=1.0,
+        )
+        return rule.probability_for(timeline, cycle_index=0, targets=(0,))
+
+    assert probability(min_open, cancelling_shift) == max_open
+    assert probability(max_open, -cancelling_shift) == min_open
+    outside_shift = math.nextafter(cancelling_shift, math.inf)
+    with pytest.raises(ValueError, match="outside the representable float64 open interval"):
+        probability(min_open, outside_shift)
+    with pytest.raises(ValueError, match="outside the representable float64 open interval"):
+        probability(max_open, -outside_shift)
+
+
+def test_source_projection_recovers_representable_shift_from_overflowing_ratio():
+    """Finite factors whose naive division overflows may still define a finite shift."""
+
+    min_subnormal = math.nextafter(0.0, 1.0)
+    timeline = SourceTimeline(
+        name="recoverable_product_ratio",
+        n_cycles=1,
+        cycle_time_ns=1_000.0,
+        payload={"z": np.asarray([1.0], dtype=np.float64)},
+    )
+    rule = SourceStimPauliRule(
+        position="before",
+        match_kind="measurement_type",
+        measure_name="M",
+        noise="X_ERROR",
+        payload_key="z",
+        base_p=0.2,
+        sensitivity=min_subnormal,
+        z_scale=min_subnormal,
+    )
+    expected = 1.0 / (1.0 + math.exp(-(math.log(0.2 / 0.8) + 1.0)))
+    got = rule.probability_for(timeline, cycle_index=0, targets=(0,))
+    assert abs(got - expected) <= math.ulp(expected)
 
 
 def test_source_projection_rejects_short_timeline_by_default(tmp_path):

@@ -153,6 +153,7 @@
         "tests/test_simulator_frontend.py",
         "tests/test_simulator_codespec.py",
         "tests/test_simulator_noise_module.py",
+        "tests/test_numerics_units.py",
         "tests/test_stim_source_units.py"
       ],
       "note": "This is the Stim-representable product path. Analog joint-L, leakage, and source-conditioned reduced projection have separate services and claim boundaries."
@@ -290,6 +291,7 @@
       ],
       "acceptance": [
         "tests/test_source_process_units.py",
+        "tests/test_numerics_units.py",
         "tests/test_finite_rtn_free_induction_diagnostic.py",
         "tests/test_source_coupling_units.py",
         "tests/test_coupled_cycle_interop.py",
@@ -336,7 +338,7 @@
       "dependencies": {"core": ["numpy", "stim"], "extras": []},
       "external_inputs": ["CircuitIR, SourceTimeline and explicit source-to-Pauli projection rules"],
       "outputs": ["Source-conditioned noisy Stim circuit, DEM, canonical .b8 records and sanitized manifest"],
-      "acceptance": ["tests/test_simulator_source_projection.py", "tests/test_simulator_source_sidecar.py"],
+      "acceptance": ["tests/test_simulator_source_projection.py", "tests/test_simulator_source_sidecar.py", "tests/test_numerics_units.py"],
       "note": "Representability is reduced_pauli_projection_not_analog_truth. It can change records but cannot claim coherent joint-Lindbladian or leakage fidelity."
     },
     {
@@ -835,8 +837,24 @@
     {
       "role": "shared_numerical_policy",
       "paths": ["src/error_coupling_simulator/numerics.py"],
-      "used_by": ["peps_single_wire", "classical_finite_rtn_source_chain"],
-      "reason": "Shared numerical-zero/probability-floor constants; not a physical mechanism, metric, or decoder-floor service."
+      "used_by": [
+        "frontend_compile_and_records",
+        "axis1_joint_channel",
+        "axis1_dense_jointl_record",
+        "classical_finite_rtn_source_chain",
+        "classical_burst_storm_sources",
+        "source_stim_pauli_projection",
+        "peps_single_wire",
+        "pepo_density_matrix_carrier",
+        "exact_qutrit_dm",
+        "ququart_cz_transport",
+        "qutrit_leakage_channel_and_process",
+        "record_io_and_dem_reduction",
+        "pymatching_decoder",
+        "qutip_cuquantum_probe",
+        "restricted_axis1_1d_mps"
+      ],
+      "reason": "Shared float64 scaled-product, scaled-exponential, odds-domain open-probability, and floating-comparison policy. It recovers representable final values and rejects nonrepresentable nonzero values; it is not physical probability mass, a mechanism, metric, or decoder-floor service."
     },
     {
       "role": "exact_qubit_native_acceleration",
@@ -894,7 +912,7 @@
     {
       "role": "probability_table_helper",
       "paths": ["src/error_coupling_simulator/frontend/pij.py"],
-      "used_by": ["frontend_compile_and_records"],
+      "used_by": ["record_io_and_dem_reduction", "pymatching_decoder"],
       "reason": "Small probability-table utility with no standalone physical carrier or record contract."
     }
   ],

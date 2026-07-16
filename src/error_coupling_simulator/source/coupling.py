@@ -10,12 +10,21 @@ carriers.
 """
 
 from dataclasses import dataclass, field
+from decimal import Decimal, localcontext
+from fractions import Fraction
 import math
+import sys
 from typing import Iterable, Literal
 
 import numpy as np
 
-from ..numerics import NUMERICAL_ZERO
+from ..numerics import (
+    NUMERICAL_ZERO,
+    _decimal_to_float64,
+    scaled_exp_multiply,
+    scaled_product_ratio,
+    shifted_probability_from_odds,
+)
 
 _TWO_PI = 2.0 * math.pi
 SOURCE_COUPLING_CONFIG_SCHEMA = "error_coupling_simulator.source.coupling_config.v2"
@@ -30,6 +39,12 @@ _SOURCE_KEYS = (
     "reset",
     "cz",
 )
+_STATIC_ZZ_DIRECT_UPPER_GUARD = sys.float_info.max
+for _ in range(16):
+    _STATIC_ZZ_DIRECT_UPPER_GUARD = math.nextafter(
+        _STATIC_ZZ_DIRECT_UPPER_GUARD,
+        0.0,
+    )
 
 
 @dataclass(frozen=True)
@@ -54,12 +69,21 @@ class StaticZZParameters:
     base_phi_rad: float = 1.6e-4
 
     def __post_init__(self) -> None:
-        _require_finite("omega_a_ghz", self.omega_a_ghz)
-        _require_finite("omega_b_ghz", self.omega_b_ghz)
-        _require_finite("alpha_mhz", self.alpha_mhz)
-        _require_positive("t_gate_ns", self.t_gate_ns)
-        if not math.isfinite(float(self.base_phi_rad)):
+        for name in ("omega_a_ghz", "omega_b_ghz", "alpha_mhz"):
+            object.__setattr__(self, name, _require_finite(name, getattr(self, name)))
+        object.__setattr__(
+            self,
+            "t_gate_ns",
+            _require_positive("t_gate_ns", self.t_gate_ns),
+        )
+        base_phi = float(self.base_phi_rad)
+        if not math.isfinite(base_phi):
             raise ValueError("base_phi_rad must be finite")
+        object.__setattr__(self, "base_phi_rad", base_phi)
+        # Every value emitted by to_manifest must already be derivable here.
+        # In particular, finite inputs may not defer an infinite exchange J to
+        # property access or manifest emission.
+        _ = self.exchange_j_radns
 
     @property
     def base_delta_radns(self) -> float:
@@ -67,7 +91,7 @@ class StaticZZParameters:
 
     @property
     def alpha_radns(self) -> float:
-        return _TWO_PI * float(self.alpha_mhz) * 1e-3
+        return _mhz_to_radns_float64(self.alpha_mhz, name="alpha_radns")
 
     @property
     def exchange_j_radns(self) -> float:
@@ -123,31 +147,60 @@ class SourceCouplingConfig:
     schema: str = SOURCE_COUPLING_CONFIG_SCHEMA
 
     def __post_init__(self) -> None:
-        if self.schema != SOURCE_COUPLING_CONFIG_SCHEMA:
+        schema = str(self.schema)
+        object.__setattr__(self, "schema", schema)
+        if schema != SOURCE_COUPLING_CONFIG_SCHEMA:
             raise ValueError(
-                f"unsupported source coupling schema {self.schema!r}; "
+                f"unsupported source coupling schema {schema!r}; "
                 f"expected {SOURCE_COUPLING_CONFIG_SCHEMA!r}"
             )
-        _require_positive("z_scale_radns", self.z_scale_radns)
-        _require_nonnegative("gamma_phi_base_per_ns", self.gamma_phi_base_per_ns)
-        _require_finite("gamma_phi_sensitivity", self.gamma_phi_sensitivity)
-        _require_finite("detuning_base_radns", self.detuning_base_radns)
-        _require_nonnegative("drive_omega_base_radns", self.drive_omega_base_radns)
-        _require_finite("drive_omega_sensitivity", self.drive_omega_sensitivity)
+        if not isinstance(self.zz, StaticZZParameters):
+            raise TypeError("zz must be a StaticZZParameters instance")
+        object.__setattr__(
+            self,
+            "z_scale_radns",
+            _require_positive("z_scale_radns", self.z_scale_radns),
+        )
+        object.__setattr__(
+            self,
+            "gamma_phi_base_per_ns",
+            _require_nonnegative(
+                "gamma_phi_base_per_ns",
+                self.gamma_phi_base_per_ns,
+            ),
+        )
+        for name in (
+            "gamma_phi_sensitivity",
+            "detuning_base_radns",
+            "drive_omega_sensitivity",
+        ):
+            object.__setattr__(self, name, _require_finite(name, getattr(self, name)))
+        object.__setattr__(
+            self,
+            "drive_omega_base_radns",
+            _require_nonnegative(
+                "drive_omega_base_radns",
+                self.drive_omega_base_radns,
+            ),
+        )
         for name in (
             "spillover_base_p",
             "readout_flip_base_p",
             "reset_flip_base_p",
             "cz_depol_base_p",
         ):
-            _validate_probability(name, getattr(self, name), allow_zero=True)
+            object.__setattr__(
+                self,
+                name,
+                _validate_probability(name, getattr(self, name), allow_zero=True),
+            )
         for name in (
             "spillover_sensitivity",
             "readout_flip_sensitivity",
             "reset_flip_sensitivity",
             "cz_depol_sensitivity",
         ):
-            _require_finite(name, getattr(self, name))
+            object.__setattr__(self, name, _require_finite(name, getattr(self, name)))
 
     def to_manifest(self) -> dict:
         return {
@@ -194,6 +247,95 @@ class CoupledNoiseParameters:
     cz_depol_p: float
     coupling_mode: Literal["shared", "independent"] = "shared"
     schema: str = field(default=COUPLED_PROCESS_PARAMS_SCHEMA, init=False)
+
+    def __post_init__(self) -> None:
+        coupling_mode = str(self.coupling_mode)
+        object.__setattr__(self, "coupling_mode", coupling_mode)
+        if coupling_mode not in ("shared", "independent"):
+            raise ValueError(
+                "coupling_mode must be 'shared' or 'independent', "
+                f"got {coupling_mode!r}"
+            )
+        source_draws = _snapshot_named_draws(self.source_draws_radns)
+        normalized_draws = _snapshot_named_draws(self.normalized_draws)
+        object.__setattr__(self, "source_draws_radns", source_draws)
+        object.__setattr__(self, "normalized_draws", normalized_draws)
+        if tuple(key for key, _ in source_draws) != _SOURCE_KEYS:
+            raise ValueError(
+                "source_draws_radns must contain each source key exactly once "
+                "in canonical order"
+            )
+        if tuple(key for key, _ in normalized_draws) != _SOURCE_KEYS:
+            raise ValueError(
+                "normalized_draws must contain each source key exactly once "
+                "in canonical order"
+            )
+        scalar_fields = (
+            "zz_phi_rad",
+            "zz_zeta_radns",
+            "zz_exchange_j_radns",
+            "gamma_phi_per_ns",
+            "tphi_ns",
+            "detuning_radns",
+            "drive_omega_radns",
+            "spillover_cx",
+            "readout_flip_p",
+            "reset_flip_p",
+            "cz_depol_p",
+        )
+        for field_name in scalar_fields:
+            object.__setattr__(self, field_name, float(getattr(self, field_name)))
+        values = {
+            **dict(source_draws),
+            **{f"normalized_{key}": value for key, value in normalized_draws},
+            "zz_phi_rad": self.zz_phi_rad,
+            "zz_zeta_radns": self.zz_zeta_radns,
+            "zz_exchange_j_radns": self.zz_exchange_j_radns,
+            "gamma_phi_per_ns": self.gamma_phi_per_ns,
+            "detuning_radns": self.detuning_radns,
+            "drive_omega_radns": self.drive_omega_radns,
+            "spillover_cx": self.spillover_cx,
+            "readout_flip_p": self.readout_flip_p,
+            "reset_flip_p": self.reset_flip_p,
+            "cz_depol_p": self.cz_depol_p,
+        }
+        for field_name, value in values.items():
+            if not math.isfinite(float(value)):
+                raise ValueError(
+                    f"{field_name} must be finite at the coupling emission boundary, got {value!r}"
+                )
+        if self.gamma_phi_per_ns < 0.0:
+            raise ValueError("gamma_phi_per_ns must be >= 0 at the coupling emission boundary")
+        for field_name in ("zz_exchange_j_radns", "drive_omega_radns"):
+            value = float(getattr(self, field_name))
+            if value < 0.0:
+                raise ValueError(
+                    f"{field_name} must be >= 0 at the coupling emission boundary, "
+                    f"got {value!r}"
+                )
+        for field_name in (
+            "spillover_cx",
+            "readout_flip_p",
+            "reset_flip_p",
+            "cz_depol_p",
+        ):
+            value = float(getattr(self, field_name))
+            if not 0.0 <= value < 1.0:
+                raise ValueError(
+                    f"{field_name} must be in [0, 1) at the coupling emission boundary, "
+                    f"got {value!r}"
+                )
+        if self.gamma_phi_per_ns == 0.0:
+            if self.tphi_ns != math.inf:
+                raise ValueError("tphi_ns must be +inf when gamma_phi_per_ns is structural zero")
+        elif not math.isfinite(self.tphi_ns) or self.tphi_ns <= 0.0:
+            raise ValueError(
+                "tphi_ns must be finite and > 0 when gamma_phi_per_ns is positive"
+            )
+        elif self.tphi_ns != 1.0 / self.gamma_phi_per_ns:
+            raise ValueError(
+                "tphi_ns must equal 1 / gamma_phi_per_ns at the coupling emission boundary"
+            )
 
     def source_draw_for(self, key: str) -> float:
         draws = dict(self.source_draws_radns)
@@ -302,9 +444,27 @@ def cross_mechanism_correlation(
     b = parameter_series(params, field_b)
     if a.size != b.size or a.size < 2:
         raise ValueError("need at least two paired samples")
-    if float(np.std(a)) <= NUMERICAL_ZERO or float(np.std(b)) <= NUMERICAL_ZERO:
+    if not np.all(np.isfinite(a)):
+        raise ValueError(f"{field_a} must contain only finite emitted values for correlation")
+    if not np.all(np.isfinite(b)):
+        raise ValueError(f"{field_b} must contain only finite emitted values for correlation")
+    if np.all(a == a[0]) or np.all(b == b[0]):
         return 0.0
-    return float(np.corrcoef(a, b)[0, 1])
+    a_scaled = a / float(np.max(np.abs(a)))
+    b_scaled = b / float(np.max(np.abs(b)))
+    a_centered = a_scaled - float(np.mean(a_scaled))
+    b_centered = b_scaled - float(np.mean(b_scaled))
+    numerator = float(np.dot(a_centered, b_centered))
+    denominator = math.sqrt(
+        float(np.dot(a_centered, a_centered))
+        * float(np.dot(b_centered, b_centered))
+    )
+    if not math.isfinite(numerator) or not math.isfinite(denominator) or denominator == 0.0:
+        raise ValueError("Pearson correlation is not representable as a finite float64")
+    result = numerator / denominator
+    if not math.isfinite(result):
+        raise ValueError("Pearson correlation is not representable as a finite float64")
+    return float(min(1.0, max(-1.0, result)))
 
 
 def static_zz_zeta(delta_radns: float, alpha_radns: float, exchange_j_radns: float) -> float:
@@ -323,7 +483,76 @@ def static_zz_zeta(delta_radns: float, alpha_radns: float, exchange_j_radns: flo
             "static_zz_zeta singular: Delta too close to +/- alpha "
             f"(Delta={delta}, alpha={alpha})"
         )
-    return float(2.0 * J * J * (1.0 / denom1 - 1.0 / denom2))
+    if J == 0.0 or alpha == 0.0:
+        return 0.0
+
+    j_squared = J * J
+    scaled_j_squared = 4.0 * j_squared
+    numerator = scaled_j_squared * alpha
+    denominator = denom1 * denom2
+    if all(
+        math.isfinite(value) and abs(value) >= sys.float_info.min
+        for value in (
+            J,
+            alpha,
+            denom1,
+            denom2,
+            j_squared,
+            scaled_j_squared,
+            numerator,
+            denominator,
+        )
+    ):
+        result = float(numerator / denominator)
+        if (
+            math.isfinite(result)
+            and abs(result) >= sys.float_info.min
+            and abs(result) < _STATIC_ZZ_DIRECT_UPPER_GUARD
+        ):
+            return result
+
+    delta_exact = Fraction.from_float(delta)
+    alpha_exact = Fraction.from_float(alpha)
+    exchange_exact = Fraction.from_float(J)
+    exact = (
+        4
+        * exchange_exact
+        * exchange_exact
+        * alpha_exact
+        / ((delta_exact - alpha_exact) * (delta_exact + alpha_exact))
+    )
+    try:
+        recovered = float(exact)
+    except OverflowError:
+        recovered = math.copysign(math.inf, -1.0 if exact < 0 else 1.0)
+    if not math.isfinite(recovered) or recovered == 0.0:
+        raise ValueError(
+            "static_zz_zeta nonzero result is not representable as a finite float64"
+        )
+    return recovered
+
+
+def _mhz_to_radns_float64(value_mhz: float, *, name: str) -> float:
+    """Convert a finite MHz scalar to rad/ns without an overflowing product."""
+
+    value = _require_finite(f"{name}.value_mhz", value_mhz)
+    if value == 0.0:
+        return value
+    product = _TWO_PI * value
+    direct = product * 1.0e-3
+    if (
+        math.isfinite(product)
+        and abs(product) >= sys.float_info.min
+        and math.isfinite(direct)
+        and abs(direct) >= sys.float_info.min
+    ):
+        return float(direct)
+    return scaled_product_ratio(
+        value,
+        _TWO_PI,
+        1_000.0,
+        name=name,
+    )
 
 
 def exchange_j_from_phi(
@@ -336,17 +565,71 @@ def exchange_j_from_phi(
     """Invert ``phi = zeta(J)*t_gate/4`` for ``|J|`` at the base detuning."""
 
     phi = _require_finite("phi_rad", phi_rad)
+    delta = _require_finite("delta_radns", delta_radns)
+    alpha = _require_finite("alpha_radns", alpha_radns)
     t_gate = _require_positive("t_gate_ns", t_gate_ns)
-    coeff = static_zz_zeta(delta_radns, alpha_radns, 1.0)
-    if abs(coeff) <= NUMERICAL_ZERO:
+    denom1 = delta - alpha
+    denom2 = delta + alpha
+    if abs(denom1) <= NUMERICAL_ZERO or abs(denom2) <= NUMERICAL_ZERO:
+        raise ValueError(
+            "static_zz_zeta singular: Delta too close to +/- alpha "
+            f"(Delta={delta}, alpha={alpha})"
+        )
+    if alpha == 0.0:
         raise ValueError("cannot infer exchange J because zeta coefficient is zero")
-    J2 = 4.0 * phi / (coeff * t_gate)
-    if J2 < -NUMERICAL_ZERO:
+    if phi == 0.0:
+        return 0.0
+    coeff_is_negative = (alpha < 0.0) != ((denom1 < 0.0) != (denom2 < 0.0))
+    if (phi < 0.0) != coeff_is_negative:
+        try:
+            coefficient_description: float | str = static_zz_zeta(delta, alpha, 1.0)
+        except ValueError:
+            coefficient_description = "negative" if coeff_is_negative else "positive"
         raise ValueError(
             "phi sign is inconsistent with the static-ZZ coefficient; "
-            f"phi={phi}, coeff={coeff}, t_gate={t_gate}"
+            f"phi={phi}, coeff={coefficient_description}, t_gate={t_gate}"
         )
-    return float(math.sqrt(max(0.0, J2)))
+
+    numerator = phi * denom1
+    scaled_numerator = numerator * denom2
+    denominator = alpha * t_gate
+    j_squared = scaled_numerator / denominator if denominator != 0.0 else math.nan
+    if all(
+        math.isfinite(value) and abs(value) >= sys.float_info.min
+        for value in (
+            phi,
+            alpha,
+            t_gate,
+            denom1,
+            denom2,
+            numerator,
+            scaled_numerator,
+            denominator,
+            j_squared,
+        )
+    ) and j_squared < sys.float_info.max:
+        return float(math.sqrt(j_squared))
+
+    delta_exact = Fraction.from_float(delta)
+    alpha_exact = Fraction.from_float(alpha)
+    exact_j_squared = (
+        Fraction.from_float(abs(phi))
+        * abs(delta_exact - alpha_exact)
+        * abs(delta_exact + alpha_exact)
+        / (abs(alpha_exact) * Fraction.from_float(t_gate))
+    )
+    with localcontext() as context:
+        context.prec = 300
+        exact_j_squared_decimal = (
+            Decimal(exact_j_squared.numerator)
+            / Decimal(exact_j_squared.denominator)
+        )
+        recovered = _decimal_to_float64(exact_j_squared_decimal.sqrt())
+    if not math.isfinite(recovered) or recovered <= 0.0:
+        raise ValueError(
+            "exchange_j_radns is not representable as a finite positive float64"
+        )
+    return recovered
 
 
 def zz_phi_from_frequency_drift(z_t_radns: float, config: SourceCouplingConfig) -> tuple[float, float]:
@@ -356,7 +639,13 @@ def zz_phi_from_frequency_drift(z_t_radns: float, config: SourceCouplingConfig) 
     zz = config.zz
     delta = zz.base_delta_radns + z
     zeta = static_zz_zeta(delta, zz.alpha_radns, zz.exchange_j_radns)
-    return float(zeta * float(zz.t_gate_ns) / 4.0), float(zeta)
+    phi = scaled_product_ratio(
+        zeta,
+        zz.t_gate_ns,
+        4.0,
+        name="zz_phi_rad",
+    )
+    return phi, float(zeta)
 
 
 def drift_to_t2(
@@ -371,14 +660,22 @@ def drift_to_t2(
 
     cfg = config or default_source_coupling_config()
     z = _require_finite("z_t_radns", z_t_radns)
-    x = z / float(cfg.z_scale_radns)
     gamma_phi = _modulate_positive_rate(
         cfg.gamma_phi_base_per_ns,
-        x,
+        z,
         cfg.gamma_phi_sensitivity,
         name="gamma_phi_per_ns",
+        x_scale=cfg.z_scale_radns,
     )
-    tphi_ns = math.inf if gamma_phi <= NUMERICAL_ZERO else float(1.0 / gamma_phi)
+    if gamma_phi == 0.0:
+        tphi_ns = math.inf
+    else:
+        tphi_ns = float(1.0 / gamma_phi)
+        if not math.isfinite(tphi_ns):
+            raise ValueError(
+                "gamma_phi_per_ns is positive but its reciprocal is not "
+                "representable as a finite float64 Tphi"
+            )
     return gamma_phi, tphi_ns
 
 
@@ -389,14 +686,25 @@ def _params_from_draws(
     coupling_mode: Literal["shared", "independent"],
 ) -> CoupledNoiseParameters:
     draws = {key: _require_finite(f"draws_radns[{key}]", draws_radns[key]) for key in _SOURCE_KEYS}
-    x = {key: draws[key] / float(cfg.z_scale_radns) for key in _SOURCE_KEYS}
+    x = {
+        key: scaled_product_ratio(
+            1.0,
+            draws[key],
+            cfg.z_scale_radns,
+            name=f"normalized_draws[{key}]",
+        )
+        if draws[key] != 0.0
+        else draws[key]
+        for key in _SOURCE_KEYS
+    }
     zz_phi, zz_zeta = zz_phi_from_frequency_drift(draws["zz"], cfg)
     gamma_phi, tphi_ns = drift_to_t2(draws["gamma_phi"], cfg)
     drive_omega = _modulate_positive_rate(
         cfg.drive_omega_base_radns,
-        x["drive"],
+        draws["drive"],
         cfg.drive_omega_sensitivity,
         name="drive_omega_radns",
+        x_scale=cfg.z_scale_radns,
     )
     return CoupledNoiseParameters(
         source_draws_radns=tuple((key, draws[key]) for key in _SOURCE_KEYS),
@@ -410,56 +718,107 @@ def _params_from_draws(
         drive_omega_radns=drive_omega,
         spillover_cx=_modulate_probability_logit(
             cfg.spillover_base_p,
-            x["spillover"],
+            draws["spillover"],
             cfg.spillover_sensitivity,
             name="spillover_cx",
+            x_scale=cfg.z_scale_radns,
         ),
         readout_flip_p=_modulate_probability_logit(
             cfg.readout_flip_base_p,
-            x["readout"],
+            draws["readout"],
             cfg.readout_flip_sensitivity,
             name="readout_flip_p",
+            x_scale=cfg.z_scale_radns,
         ),
         reset_flip_p=_modulate_probability_logit(
             cfg.reset_flip_base_p,
-            x["reset"],
+            draws["reset"],
             cfg.reset_flip_sensitivity,
             name="reset_flip_p",
+            x_scale=cfg.z_scale_radns,
         ),
         cz_depol_p=_modulate_probability_logit(
             cfg.cz_depol_base_p,
-            x["cz"],
+            draws["cz"],
             cfg.cz_depol_sensitivity,
             name="cz_depol_p",
+            x_scale=cfg.z_scale_radns,
         ),
         coupling_mode=coupling_mode,
     )
 
 
-def _modulate_positive_rate(base: float, x: float, sensitivity: float, *, name: str) -> float:
+def _modulate_positive_rate(
+    base: float,
+    x: float,
+    sensitivity: float,
+    *,
+    name: str,
+    x_scale: float = 1.0,
+) -> float:
     base = _require_nonnegative(name + ".base", base)
     sens = _require_finite(name + ".sensitivity", sensitivity)
     xv = _require_finite(name + ".x", x)
-    if base <= NUMERICAL_ZERO:
-        if abs(sens) > NUMERICAL_ZERO:
-            raise ValueError(f"{name}: nonzero sensitivity cannot modulate a zero base rate")
-        return 0.0
-    expo = max(-60.0, min(60.0, sens * xv))
-    return float(base * math.exp(expo))
+    scale = _require_positive(name + ".x_scale", x_scale)
+    try:
+        shift = scaled_product_ratio(
+            sens,
+            xv,
+            scale,
+            name=f"{name}: sensitivity*x/x_scale",
+        )
+    except ValueError as exc:
+        raise ValueError(
+            f"{name}: sensitivity*x is not representable as a finite float64"
+        ) from exc
+    if shift == 0.0:
+        return base
+    if base == 0.0:
+        raise ValueError(f"{name}: nonzero sensitivity cannot modulate a zero base rate")
+
+    try:
+        return scaled_exp_multiply(
+            base,
+            shift,
+            name=f"{name}: modulated positive rate",
+        )
+    except ValueError as exc:
+        raise ValueError(f"{name}: modulated positive rate is not representable") from exc
 
 
-def _modulate_probability_logit(base_p: float, x: float, sensitivity: float, *, name: str) -> float:
+def _modulate_probability_logit(
+    base_p: float,
+    x: float,
+    sensitivity: float,
+    *,
+    name: str,
+    x_scale: float = 1.0,
+) -> float:
     p = _validate_probability(name + ".base_p", base_p, allow_zero=True)
     sens = _require_finite(name + ".sensitivity", sensitivity)
     xv = _require_finite(name + ".x", x)
-    if p <= NUMERICAL_ZERO:
-        if abs(sens) > NUMERICAL_ZERO:
-            raise ValueError(f"{name}: nonzero sensitivity cannot logit-modulate p=0")
-        return 0.0
-    p = min(max(p, NUMERICAL_ZERO), 1.0 - NUMERICAL_ZERO)
-    logit = math.log(p / (1.0 - p))
-    y = max(-60.0, min(60.0, logit + sens * xv))
-    return float(1.0 / (1.0 + math.exp(-y)))
+    scale = _require_positive(name + ".x_scale", x_scale)
+    try:
+        shift = scaled_product_ratio(
+            sens,
+            xv,
+            scale,
+            name=f"{name}: sensitivity*x/x_scale",
+        )
+    except ValueError as exc:
+        raise ValueError(
+            f"{name}: sensitivity*x is not representable as a finite float64"
+        ) from exc
+    if shift == 0.0:
+        return p
+    if p == 0.0:
+        raise ValueError(f"{name}: nonzero sensitivity cannot logit-modulate p=0")
+
+    return shifted_probability_from_odds(
+        p,
+        shift,
+        name=f"{name}: modulated",
+    )
 
 
 def _as_1d_finite(name: str, values: Iterable[float]) -> np.ndarray:
@@ -469,6 +828,13 @@ def _as_1d_finite(name: str, values: Iterable[float]) -> np.ndarray:
     if not np.all(np.isfinite(arr)):
         raise ValueError(f"{name} contains non-finite values")
     return arr
+
+
+def _snapshot_named_draws(values: Iterable[tuple[str, float]]) -> tuple[tuple[str, float], ...]:
+    try:
+        return tuple((str(key), float(value)) for key, value in values)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("draw entries must be (name, numeric value) pairs") from exc
 
 
 def _validate_probability(name: str, value: float, *, allow_zero: bool) -> float:

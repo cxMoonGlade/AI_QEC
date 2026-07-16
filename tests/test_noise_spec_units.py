@@ -32,6 +32,7 @@ from __future__ import annotations
 import json
 import math
 
+import mpmath
 import numpy as np
 import pytest
 from hypothesis import given, settings
@@ -113,9 +114,26 @@ def _steps(circuit):
 def _indep_logit_prob(value, base_p, z_scale, sensitivity):
     """From-scratch recompute of the SourceStimPauliRule logit sigmoid map."""
     x = float(value) / float(z_scale)
-    logit = math.log(float(base_p) / (1.0 - float(base_p)))
-    y = max(-60.0, min(60.0, logit + float(sensitivity) * x))
-    return 1.0 / (1.0 + math.exp(-y))
+    shift = float(sensitivity) * x
+    if shift == 0.0:
+        return float(base_p)
+    y = math.log(float(base_p)) - math.log1p(-float(base_p)) + shift
+    if y < 0.0:
+        exp_y = math.exp(y)
+        return exp_y / (1.0 + exp_y)
+    exp_neg_y = math.exp(-y)
+    return 1.0 - exp_neg_y / (1.0 + exp_neg_y)
+
+
+def _mp_float(value: float):
+    numerator, denominator = float(value).as_integer_ratio()
+    return mpmath.mpf(numerator) / denominator
+
+
+def _ulp_distance(left: float, right: float) -> int:
+    left_bits = int(np.asarray(float(left), dtype=np.float64).view(np.uint64))
+    right_bits = int(np.asarray(float(right), dtype=np.float64).view(np.uint64))
+    return abs(left_bits - right_bits)
 
 
 def _one_gate_circuit(name, targets, num_qubits):
@@ -669,6 +687,9 @@ def test_L0_source_rule_probability_for_logit_and_payload():
                          payload={"z": np.asarray([0.42])})
     rp = _source_rule(map_kind="payload_probability")
     assert rp.probability_for(tlp, cycle_index=0, targets=(0,)) == 0.42
+    tlzero = SourceTimeline(name="p0", n_cycles=1, cycle_time_ns=1000.0,
+                            payload={"z": np.asarray([0.0])})
+    assert rp.probability_for(tlzero, cycle_index=0, targets=(0,)) == 0.0
     # payload out of [0,1) raises with the payload-keyed name
     tlbad = SourceTimeline(name="b", n_cycles=1, cycle_time_ns=1000.0,
                            payload={"z": np.asarray([1.0])})
@@ -679,6 +700,37 @@ def test_L0_source_rule_probability_for_logit_and_payload():
                   lambda: r.probability_for(tl, cycle_index=-1, targets=(0,)))
     _raises_exact(IndexError, "cycle_index=3 outside source timeline length 3",
                   lambda: r.probability_for(tl, cycle_index=3, targets=(0,)))
+    tlnan = SourceTimeline(name="nan", n_cycles=1, cycle_time_ns=1.0,
+                           payload={"z": np.asarray([0.0])})
+    # Corrupt the copied internal carrier after construction: the public
+    # emission boundary must still reject a non-finite value.
+    tlnan.payload["z"][0] = math.nan
+    _raises_exact(ValueError, "z[0] must be finite, got nan",
+                  lambda: r.probability_for(tlnan, cycle_index=0, targets=(0,)))
+
+
+def test_source_rule_rejects_a_nonzero_site_mean_that_rounds_to_zero():
+    minimum_subnormal = math.nextafter(0.0, 1.0)
+    timeline = SourceTimeline(
+        name="site_mean",
+        n_cycles=1,
+        cycle_time_ns=1.0,
+        payload={"z": np.asarray([[minimum_subnormal, 0.0]])},
+    )
+    rule = _source_rule(base_p=0.5, sensitivity=1.0, z_scale=1.0)
+    _raises_exact(
+        ValueError,
+        "source payload mean is not representable as a nonzero float64",
+        lambda: rule.probability_for(timeline, cycle_index=0, targets=(0, 1)),
+    )
+
+    cancellation = SourceTimeline(
+        name="site_mean_zero",
+        n_cycles=1,
+        cycle_time_ns=1.0,
+        payload={"z": np.asarray([[minimum_subnormal, -minimum_subnormal]])},
+    )
+    assert rule.probability_for(cancellation, cycle_index=0, targets=(0, 1)) == 0.5
 
 
 def test_KILLER_source_rule_probability_for_logit_discriminates():
@@ -701,9 +753,63 @@ def test_L1_source_rule_logit_matches_independent(v, base, sens):
     tl = SourceTimeline(name="tl", n_cycles=1, cycle_time_ns=1000.0,
                         payload={"z": np.asarray([v])})
     r = _source_rule(base_p=base, sensitivity=sens, z_scale=1e-4)
+    with mpmath.workdps(100):
+        exact_shift = _mp_float(sens) * _mp_float(v) / _mp_float(1e-4)
+        half_min_subnormal = _mp_float(math.nextafter(0.0, 1.0)) / 2
+    if exact_shift != 0 and abs(exact_shift) <= half_min_subnormal:
+        with pytest.raises(ValueError, match="not representable as a finite float64"):
+            r.probability_for(tl, cycle_index=0, targets=(0,))
+        return
     got = r.probability_for(tl, cycle_index=0, targets=(0,))
     assert 0.0 <= got < 1.0
     assert_pins(got, _indep_logit_prob(v, base, 1e-4, sens), rtol=1e-9, atol=1e-15, label="logit")
+
+
+def test_source_rule_logit_matches_mpmath_at_asymmetric_float64_boundaries():
+    p_min = math.nextafter(0.0, 1.0)
+    p_max = math.nextafter(1.0, 0.0)
+    y_min = math.log(p_min) - math.log1p(-p_min)
+    y_max = math.log(p_max) - math.log1p(-p_max)
+    rule = _source_rule(base_p=0.5, sensitivity=1.0, z_scale=1.0)
+
+    def projected(y: float) -> float:
+        timeline = SourceTimeline(name="boundary", n_cycles=1, cycle_time_ns=1.0,
+                                  payload={"z": np.asarray([y])})
+        return rule.probability_for(timeline, cycle_index=0, targets=(0,))
+
+    with mpmath.workdps(200):
+        for boundary, direction, expected in (
+            (y_min, math.inf, p_min),
+            (y_max, -math.inf, p_max),
+        ):
+            for y in (boundary, math.nextafter(boundary, direction)):
+                got = projected(y)
+                oracle = float(1 / (1 + mpmath.exp(-_mp_float(y))))
+                assert got == expected
+                assert _ulp_distance(got, oracle) <= 1
+
+        for y in np.concatenate(
+            (-np.geomspace(1e-12, 30.0, 25), np.asarray([0.0]), np.geomspace(1e-12, 30.0, 25))
+        ):
+            y = float(y)
+            got = projected(y)
+            oracle = float(1 / (1 + mpmath.exp(-_mp_float(y))))
+            legacy = 1.0 / (1.0 + math.exp(-y))
+            assert _ulp_distance(got, oracle) <= 1
+            assert _ulp_distance(got, legacy) <= 2
+
+    message = "source-projected probability is outside the representable float64 open interval"
+    _raises_exact(ValueError, message, lambda: projected(math.nextafter(y_min, -math.inf)))
+    _raises_exact(ValueError, message, lambda: projected(math.nextafter(y_max, math.inf)))
+
+    # Zero shift is a structural identity, including the nearest float below one.
+    identity = _source_rule(base_p=p_max, sensitivity=0.0, z_scale=1.0)
+    assert identity.probability_for(
+        SourceTimeline(name="identity", n_cycles=1, cycle_time_ns=1.0,
+                       payload={"z": np.asarray([123.0])}),
+        cycle_index=0,
+        targets=(0,),
+    ) == p_max
 
 
 def test_L0_source_rule_to_public_manifest_exact_no_leak():

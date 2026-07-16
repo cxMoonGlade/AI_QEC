@@ -93,7 +93,7 @@ src/error_coupling_simulator/
   frontend/         circuit IR, compiler, schedules, bounded executors, artifact emission
   certify/          evaluator-only reference-oracle scoring
   quantum_bath/     feasibility-only research models
-  numerics.py       floating numerical threshold
+  numerics.py       shared float64 representability and comparison policy
 ```
 
 Read the owning module README before changing a module. Do not add flat modules at the package root.
@@ -102,7 +102,9 @@ Read the owning module README before changing a module. Do not add flat modules 
 
 - Validate original values before narrowing dtypes. Copy externally owned arrays when required and
   make immutable record payloads read-only.
-- Preserve structural zeros. `NUMERICAL_ZERO == 1e-12` is for floating thresholds only.
+- Preserve structural zeros. `NUMERICAL_ZERO == 1e-12` is for floating thresholds only; the
+  shared scaled-arithmetic helpers reject nonrepresentable nonzero results instead of manufacturing
+  structural endpoints.
 - A PTM off-diagonal entry means basis-specific non-Pauli structure; it does not identify a coherent
   cause without another argument.
 - Qutrit leakage channels, codestates, channel composition, and CPTP checks are complex128. PEPO,
@@ -122,8 +124,19 @@ Read the owning module README before changing a module. Do not add flat modules 
   read-only inspection only.
 
 Current artifact schemas use `error_coupling_simulator.<owner>.<artifact>.vN` and reject unsupported
-versions without fallback. Current environment variables are `ECS_DISABLE_NATIVE_KERNELS`,
+versions without fallback.
+
+## Runtime and test-surface environment
+
+The package and direct test surface use `ECS_DISABLE_NATIVE_KERNELS`,
 `ECS_FORCE_UNFACTORIZED_AXIS1`, `ECS_D3_DATA_ROOT`, and test-only `ECS_D3_MASK`.
+
+## Harness-only environment
+
+Fresh-process acceptance and mutation orchestration use `ECS_GPU_SLOT`,
+`ECS_MUTATION_SKIP_SLOW`, `ECS_ACCEPTANCE_CPU_JOBS`, `ECS_ACCEPTANCE_TIMEOUT`,
+`ECS_MUT_TIMEOUT_CONST`, `ECS_MUT_TIMEOUT_MULT`, `ECS_GPUS`, and `ECS_MUT_BAR`. These keys configure
+the harness; they are not simulator runtime inputs.
 
 ## Current authority
 

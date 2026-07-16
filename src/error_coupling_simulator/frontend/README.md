@@ -703,8 +703,9 @@ Representability boundary:
   per-substep channel field are evaluator-only truth (reachable via `.truth` /
   `CertReport.truth`, never in the emitted payload). It is still not a `.dem`,
   not decoder integration, and not a Stim-Pauli model; the non-Markovian content
-  is classical parameter memory (see `nonmarkovian_memory_carrier_scope.md`), not
-  a CP-divisibility-breaking quantum-memory claim.
+  is classical parameter memory under the
+  [current memory claim classes](../../../CONTEXT.md#memory-claim-classes), not a
+  CP-divisibility-breaking quantum-memory claim.
 - Future analog/source/leakage backends must attach evaluator-only truth
   sidecars and declare a distinct representability class in the manifest.
 - `source_binding` in the frontend manifest is an evaluator-side alignment
