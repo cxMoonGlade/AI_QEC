@@ -36,8 +36,8 @@ from typing import Any, Iterable, Sequence
 
 
 ROOT = Path(__file__).resolve().parents[2]
-SCHEMA = "error_coupling_simulator.peps.fet_replay_audit.v1"
-WORKER_SCHEMA = "error_coupling_simulator.peps.fet_replay_audit.worker.v1"
+SCHEMA = "error_coupling_simulator.peps.fet_replay_audit.v2"
+WORKER_SCHEMA = "error_coupling_simulator.peps.fet_replay_audit.worker.v2"
 DEFAULT_OUTPUT = Path(
     "outputs/simulator_validation/diagnostics/peps_fet_replay_audit/report.json"
 )
@@ -168,6 +168,73 @@ def _finite_float(value: Any, *, name: str) -> float:
     if not math.isfinite(out):
         raise RuntimeError(f"{name} is non-finite: {out!r}")
     return out
+
+
+def classify_fid_gamma(value: Any) -> dict[str, Any]:
+    """Encode a possibly non-finite fidelity without emitting invalid JSON."""
+
+    numeric = float(value)
+    raw_repr = repr(numeric)
+    if math.isfinite(numeric):
+        classification = "finite"
+        json_value: float | None = numeric
+    elif math.isnan(numeric):
+        classification = "nan"
+        json_value = None
+    elif numeric > 0.0:
+        classification = "positive_infinity"
+        json_value = None
+    else:
+        classification = "negative_infinity"
+        json_value = None
+    return {
+        "classification": classification,
+        "value": json_value,
+        "raw_repr": raw_repr,
+    }
+
+
+def validate_fid_gamma_evidence(value: Any) -> dict[str, Any]:
+    """Validate the exact JSON-safe fidelity evidence schema."""
+
+    if not isinstance(value, dict) or set(value) != {
+        "classification",
+        "value",
+        "raw_repr",
+    }:
+        raise ValueError("Fid_gamma evidence must have classification/value/raw_repr")
+    classification = value["classification"]
+    raw_repr = value["raw_repr"]
+    if not isinstance(classification, str) or not isinstance(raw_repr, str):
+        raise ValueError("Fid_gamma classification and raw_repr must be strings")
+    if classification == "finite":
+        numeric = value["value"]
+        if isinstance(numeric, bool) or not isinstance(numeric, (int, float)):
+            raise ValueError("finite Fid_gamma evidence must contain a numeric value")
+        numeric = float(numeric)
+        if not math.isfinite(numeric) or raw_repr != repr(numeric):
+            raise ValueError("finite Fid_gamma evidence is internally inconsistent")
+    else:
+        expected_raw = {
+            "nan": "nan",
+            "positive_infinity": "inf",
+            "negative_infinity": "-inf",
+        }.get(classification)
+        if expected_raw is None or value["value"] is not None:
+            raise ValueError("non-finite Fid_gamma evidence has invalid classification/value")
+        if raw_repr != expected_raw:
+            raise ValueError("non-finite Fid_gamma evidence raw_repr is inconsistent")
+    return {
+        "classification": classification,
+        "value": None if value["value"] is None else float(value["value"]),
+        "raw_repr": raw_repr,
+    }
+
+
+def _coerce_fid_gamma_evidence(value: Any) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return validate_fid_gamma_evidence(value)
+    return classify_fid_gamma(value)
 
 
 def _complex128_array(value: Any):
@@ -375,7 +442,7 @@ def evaluate_fet_cut_contract(
     dim_in: int,
     dim_out: int,
     env_rank: int,
-    fid_gamma: float,
+    fid_gamma: Any,
     eps_fid: float,
 ) -> dict[str, Any]:
     """Check that a failed FET target can only write back a genuine no-op."""
@@ -387,7 +454,9 @@ def evaluate_fet_cut_contract(
     env_rank = int(env_rank)
     if dim_in <= 0 or dim_out <= 0 or env_rank <= 0:
         raise ValueError("FET dimensions and rank must be positive")
-    fid_gamma = _finite_float(fid_gamma, name="FET contract Fid_gamma")
+    fid_evidence = _coerce_fid_gamma_evidence(fid_gamma)
+    fid_gamma_value = fid_evidence["value"]
+    fid_gamma_finite = fid_evidence["classification"] == "finite"
     eps_fid = _finite_float(eps_fid, name="FET contract eps_fid")
     if not 0.0 <= eps_fid < 1.0:
         raise ValueError(f"FET eps_fid must lie in [0, 1), got {eps_fid!r}")
@@ -403,12 +472,18 @@ def evaluate_fet_cut_contract(
         np.linalg.norm(array - identity) / np.linalg.norm(identity)
     )
     fidelity_target = 1.0 - eps_fid
-    target_met = fid_gamma >= fidelity_target
+    target_met = bool(
+        fid_gamma_finite and float(fid_gamma_value) >= fidelity_target
+    )
     map_is_identity = identity_relative_error <= FET_IDENTITY_RELATIVE_TOL
     rank_reducing = dim_out < dim_in or env_rank < dim_in
     changed_writeback = rank_reducing or not map_is_identity
-    violation = not target_met and changed_writeback
-    if violation:
+    fallback_violation = not target_met and changed_writeback
+    nonfinite_violation = not fid_gamma_finite
+    contract_violation = fallback_violation or nonfinite_violation
+    if nonfinite_violation:
+        verdict = "NONFINITE_FID_GAMMA"
+    elif fallback_violation:
         verdict = "FALLBACK_CONTRACT_VIOLATION"
     elif target_met:
         verdict = "TARGET_MET"
@@ -417,12 +492,15 @@ def evaluate_fet_cut_contract(
     return {
         "fidelity_target": float(fidelity_target),
         "target_met": bool(target_met),
+        "fid_gamma_finite": bool(fid_gamma_finite),
+        "nonfinite_fid_gamma_violation": bool(nonfinite_violation),
         "map_vs_identity_relative_error": identity_relative_error,
         "identity_relative_tolerance": FET_IDENTITY_RELATIVE_TOL,
         "map_is_identity": bool(map_is_identity),
         "rank_reducing_writeback": bool(rank_reducing),
         "nonidentity_or_lossy_writeback": bool(changed_writeback),
-        "fallback_contract_violation": bool(violation),
+        "fallback_contract_violation": bool(fallback_violation),
+        "fet_contract_violation": bool(contract_violation),
         "fet_cut_contract_verdict": verdict,
     }
 
@@ -434,6 +512,7 @@ def aggregate_fet_fallback_contract(
 
     violations: list[dict[str, Any]] = []
     below_target: list[dict[str, Any]] = []
+    nonfinite: list[dict[str, Any]] = []
     for result in results:
         identifier = str(result["case_id"])
         for cut in result["per_cut"]:
@@ -442,9 +521,17 @@ def aggregate_fet_fallback_contract(
                 "ordinal": int(cut["ordinal"]),
                 "bond": str(cut["bond"]),
             }
-            if not bool(cut["target_met"]):
+            if bool(cut["fid_gamma_finite"]) and not bool(cut["target_met"]):
                 below_target.append(row)
-            if bool(cut["fallback_contract_violation"]):
+            if bool(cut["nonfinite_fid_gamma_violation"]):
+                nonfinite.append(
+                    {
+                        **row,
+                        "classification": cut["Fid_gamma"]["classification"],
+                        "raw_repr": cut["Fid_gamma"]["raw_repr"],
+                    }
+                )
+            if bool(cut["fet_contract_violation"]):
                 violations.append(row)
     return {
         "verdict": "RED" if violations else "PASS",
@@ -452,8 +539,11 @@ def aggregate_fet_fallback_contract(
         "violations": violations,
         "below_target_count": len(below_target),
         "below_target_cuts": below_target,
+        "nonfinite_fid_gamma_count": len(nonfinite),
+        "nonfinite_fid_gamma_cuts": nonfinite,
         "rule": (
-            "a cut below 1-eps_fid may only write back a full-rank identity no-op"
+            "Fid_gamma must be finite; a finite cut below 1-eps_fid may only "
+            "write back a full-rank identity no-op"
         ),
     }
 
@@ -558,9 +648,15 @@ def _max_fid_delta(
 ) -> float | None:
     if len(left_cuts) != len(right_cuts):
         return None
+    pairs: list[tuple[float, float]] = []
+    for left, right in zip(left_cuts, right_cuts, strict=True):
+        left_fid = validate_fid_gamma_evidence(left["Fid_gamma"])
+        right_fid = validate_fid_gamma_evidence(right["Fid_gamma"])
+        if left_fid["value"] is None or right_fid["value"] is None:
+            return None
+        pairs.append((float(left_fid["value"]), float(right_fid["value"])))
     return max(
-        (abs(float(a["Fid_gamma"]) - float(b["Fid_gamma"]))
-         for a, b in zip(left_cuts, right_cuts, strict=True)),
+        (abs(left - right) for left, right in pairs),
         default=0.0,
     )
 
@@ -582,6 +678,10 @@ def _scoped_scalar_capture(result: dict[str, Any]) -> dict[str, Any]:
                 "Fid_gamma": cut["Fid_gamma"],
                 "fidelity_target": cut["fidelity_target"],
                 "target_met": cut["target_met"],
+                "fid_gamma_finite": cut["fid_gamma_finite"],
+                "nonfinite_fid_gamma_violation": cut[
+                    "nonfinite_fid_gamma_violation"
+                ],
                 "map_frobenius_norm": cut["map_frobenius_norm"],
                 "map_vs_identity_relative_error": cut[
                     "map_vs_identity_relative_error"
@@ -594,6 +694,7 @@ def _scoped_scalar_capture(result: dict[str, Any]) -> dict[str, Any]:
                 "fallback_contract_violation": cut[
                     "fallback_contract_violation"
                 ],
+                "fet_contract_violation": cut["fet_contract_violation"],
                 "fet_cut_contract_verdict": cut["fet_cut_contract_verdict"],
                 "eps_fid": cut["eps_fid"],
             }
@@ -632,9 +733,13 @@ def _max_scoped_scalar_delta(
         return None
     pairs: list[tuple[float, float]] = []
     for left, right in zip(left_cuts, right_cuts, strict=True):
+        left_fid = validate_fid_gamma_evidence(left["Fid_gamma"])
+        right_fid = validate_fid_gamma_evidence(right["Fid_gamma"])
+        if left_fid["value"] is None or right_fid["value"] is None:
+            return None
         pairs.extend(
             (
-                (float(left["Fid_gamma"]), float(right["Fid_gamma"])),
+                (float(left_fid["value"]), float(right_fid["value"])),
                 (
                     float(left["fidelity_target"]),
                     float(right["fidelity_target"]),
@@ -678,6 +783,19 @@ def compare_worker_results(
     same_raw_map_hashes = [cut["map_sha256_c128le"] for cut in left_cuts] == [
         cut["map_sha256_c128le"] for cut in right_cuts
     ]
+    left_fid_evidence = [
+        validate_fid_gamma_evidence(cut["Fid_gamma"]) for cut in left_cuts
+    ]
+    right_fid_evidence = [
+        validate_fid_gamma_evidence(cut["Fid_gamma"]) for cut in right_cuts
+    ]
+    same_fid_classifications = [
+        item["classification"] for item in left_fid_evidence
+    ] == [item["classification"] for item in right_fid_evidence]
+    all_fid_gamma_finite = all(
+        item["classification"] == "finite"
+        for item in (*left_fid_evidence, *right_fid_evidence)
+    )
 
     map_distances: list[dict[str, Any]] = []
     max_map_l2 = 0.0
@@ -732,6 +850,8 @@ def compare_worker_results(
             same_ranks,
             same_record_payload,
             same_entropy_rank,
+            all_fid_gamma_finite,
+            same_fid_classifications,
             fid_delta is not None and fid_delta <= FID_REPLAY_TOL,
             scalar_delta is not None and scalar_delta <= SCALAR_REPLAY_TOL,
             entropy_delta <= ENTROPY_REPLAY_TOL,
@@ -751,7 +871,9 @@ def compare_worker_results(
             == candidate["round_state"]["sha256_c128le"],
         )
     )
-    if bitwise_pass:
+    if not all_fid_gamma_finite:
+        verdict = "FAIL_NONFINITE_FID_GAMMA"
+    elif bitwise_pass:
         verdict = "PASS_SCOPED_BITWISE"
     elif numeric_pass:
         verdict = "PASS_SCOPED_NUMERIC_NOT_BITWISE"
@@ -765,6 +887,10 @@ def compare_worker_results(
         "same_bond_sequence": bool(same_bonds),
         "same_rank_sequence": bool(same_ranks),
         "same_raw_map_hash_sequence": bool(same_raw_map_hashes),
+        "same_Fid_gamma_classification_sequence": bool(
+            same_fid_classifications
+        ),
+        "all_Fid_gamma_finite": bool(all_fid_gamma_finite),
         "same_record_payload": bool(same_record_payload),
         "same_entropy_schmidt_rank": bool(same_entropy_rank),
         "same_scoped_scalar_capture": bool(same_scoped_scalars),
@@ -795,7 +921,12 @@ def compare_worker_results(
 
 
 def summarize_replay(comparisons: Sequence[dict[str, Any]]) -> str:
-    failed = [item for item in comparisons if item["verdict"] == "FAIL_DIVERGED"]
+    if any(
+        item["verdict"] == "FAIL_NONFINITE_FID_GAMMA"
+        for item in comparisons
+    ):
+        return "FAIL_NONFINITE_FID_GAMMA"
+    failed = [item for item in comparisons if not item["verdict"].startswith("PASS_")]
     if failed:
         kinds = {item["kind"] for item in failed}
         if "fresh_process_repeat" in kinds:
@@ -1146,12 +1277,18 @@ def validate_worker_arrays(
         map_norm = float(np.linalg.norm(array))
         if abs(map_norm - float(cut["map_frobenius_norm"])) > SCALAR_REPLAY_TOL:
             raise RuntimeError(f"worker NPZ {key} Frobenius norm mismatch")
+        try:
+            fid_evidence = validate_fid_gamma_evidence(cut["Fid_gamma"])
+        except ValueError as exc:
+            raise RuntimeError(
+                f"worker NPZ {key} Fid_gamma evidence schema is invalid"
+            ) from exc
         recomputed_contract = evaluate_fet_cut_contract(
             map_array=array,
             dim_in=int(cut["dim_in"]),
             dim_out=int(cut["dim_out"]),
             env_rank=int(cut["env_rank"]),
-            fid_gamma=float(cut["Fid_gamma"]),
+            fid_gamma=fid_evidence,
             eps_fid=float(cut["eps_fid"]),
         )
         for name, expected in recomputed_contract.items():
@@ -1325,7 +1462,7 @@ def _worker_run(
                 "dim_in": int(u.shape[0]),
                 "env_rank": int(env_rank),
                 "map_rank_axis": int(u.shape[1]),
-                "Fid_gamma": _finite_float(fid_gamma, name=f"Fid_gamma[{ordinal}]"),
+                "Fid_gamma": classify_fid_gamma(fid_gamma),
                 "map_frobenius_norm": _finite_float(
                     torch.linalg.vector_norm(map_tensor),
                     name=f"map_frobenius_norm[{ordinal}]",
@@ -1381,9 +1518,14 @@ def _worker_run(
             raise RuntimeError(f"bond ledger mismatch: audit={audit!r}, ledger={ledger!r}")
         if audit["env_rank"] != int(ledger["env_rank"]):
             raise RuntimeError(f"rank ledger mismatch: audit={audit!r}, ledger={ledger!r}")
-        fid_delta = abs(audit["Fid_gamma"] - float(ledger["Fid_gamma"]))
-        if fid_delta > 0.0:
-            raise RuntimeError(f"Fid_gamma ledger mismatch by {fid_delta!r}")
+        ledger_fid = classify_fid_gamma(ledger["Fid_gamma"])
+        if canonical_json_bytes(audit["Fid_gamma"]) != canonical_json_bytes(
+            ledger_fid
+        ):
+            raise RuntimeError(
+                "Fid_gamma ledger evidence mismatch: "
+                f"audit={audit['Fid_gamma']!r}, ledger={ledger_fid!r}"
+            )
         audit["dim_out"] = int(ledger["dim_out"])
         audit["exact_rank"] = (
             None if ledger.get("exact_rank") is None else int(ledger["exact_rank"])
@@ -1395,7 +1537,7 @@ def _worker_run(
                 dim_in=int(audit["dim_in"]),
                 dim_out=int(audit["dim_out"]),
                 env_rank=int(audit["env_rank"]),
-                fid_gamma=float(audit["Fid_gamma"]),
+                fid_gamma=audit["Fid_gamma"],
                 eps_fid=float(audit["eps_fid"]),
             )
         )

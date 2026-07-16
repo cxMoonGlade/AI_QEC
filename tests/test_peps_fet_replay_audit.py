@@ -41,7 +41,7 @@ def _worker(
         "exact_rank": 2,
         "env_rank": 2,
         "map_rank_axis": 2,
-        "Fid_gamma": 0.999999999,
+        "Fid_gamma": AUDIT.classify_fid_gamma(0.999999999),
         "map_frobenius_norm": float(np.linalg.norm(map_array)),
         "eps_fid": AUDIT.EPS_FID,
         "map_sha256_c128le": AUDIT.array_sha256_c128le(map_array),
@@ -221,6 +221,63 @@ def test_below_target_lossy_fet_writeback_is_a_contract_violation() -> None:
     )
 
 
+def test_nonfinite_fid_gamma_is_json_safe_and_forces_every_gate_red() -> None:
+    def with_fid(report: dict, value: float) -> dict:
+        report = copy.deepcopy(report)
+        cut = report["per_cut"][0]
+        cut["Fid_gamma"] = AUDIT.classify_fid_gamma(value)
+        cut.update(
+            AUDIT.evaluate_fet_cut_contract(
+                map_array=_arrays()["map_0000"],
+                dim_in=cut["dim_in"],
+                dim_out=cut["dim_out"],
+                env_rank=cut["env_rank"],
+                fid_gamma=cut["Fid_gamma"],
+                eps_fid=cut["eps_fid"],
+            )
+        )
+        return report
+
+    nonfinite = with_fid(_worker("nonfinite"), float("-inf"))
+    evidence = nonfinite["per_cut"][0]["Fid_gamma"]
+    assert evidence == {
+        "classification": "negative_infinity",
+        "value": None,
+        "raw_repr": "-inf",
+    }
+    assert nonfinite["per_cut"][0]["nonfinite_fid_gamma_violation"] is True
+    assert nonfinite["per_cut"][0]["fet_contract_violation"] is True
+    AUDIT.canonical_json_bytes(nonfinite)
+    AUDIT.validate_worker_arrays(nonfinite, _arrays())
+
+    aggregate = AUDIT.aggregate_fet_fallback_contract([nonfinite])
+    assert aggregate["verdict"] == "RED"
+    assert aggregate["nonfinite_fid_gamma_count"] == 1
+    assert (
+        AUDIT.evaluate_overall_verdict(
+            replay_verdict="PASS_SCOPED_BITWISE",
+            entropy_red_case_ids=[],
+            fet_verdict=aggregate["verdict"],
+        )
+        == "RED"
+    )
+
+    finite = _worker("finite")
+    mismatch = AUDIT.compare_worker_results(
+        finite, nonfinite, _arrays(), _arrays()
+    )
+    assert mismatch["same_Fid_gamma_classification_sequence"] is False
+    assert mismatch["verdict"] == "FAIL_NONFINITE_FID_GAMMA"
+
+    repeat_nonfinite = with_fid(_worker("repeat-nonfinite"), float("-inf"))
+    deterministic = AUDIT.compare_worker_results(
+        nonfinite, repeat_nonfinite, _arrays(), _arrays()
+    )
+    assert deterministic["same_Fid_gamma_classification_sequence"] is True
+    assert deterministic["verdict"] == "FAIL_NONFINITE_FID_GAMMA"
+    assert AUDIT.summarize_replay([deterministic]) == "FAIL_NONFINITE_FID_GAMMA"
+
+
 def test_worker_array_authentication_accepts_exact_evidence() -> None:
     authenticated = AUDIT.validate_worker_arrays(_worker("case"), _arrays())
     assert authenticated["status"] == "AUTHENTICATED"
@@ -258,6 +315,14 @@ def test_worker_array_authentication_rejects_payload_corruptions() -> None:
     wrong_contract_report = _worker("contract")
     wrong_contract_report["per_cut"][0]["target_met"] = False
     corruptions.append((wrong_contract_report, _arrays()))
+
+    malformed_fid_report = _worker("fid-schema")
+    malformed_fid_report["per_cut"][0]["Fid_gamma"] = {
+        "classification": "negative_infinity",
+        "value": 0.0,
+        "raw_repr": "-inf",
+    }
+    corruptions.append((malformed_fid_report, _arrays()))
 
     for report, arrays in corruptions:
         with pytest.raises(RuntimeError):
