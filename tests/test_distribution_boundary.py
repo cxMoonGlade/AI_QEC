@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import shutil
 import subprocess
 import sys
@@ -191,6 +192,9 @@ def test_real_sdist_wheel_installs_and_runs_without_the_repository(tmp_path: Pat
         "CODE_MAP.md",
     ):
         shutil.copy2(REPO_ROOT / "docs" / name, fixture_docs / name)
+    binding_spec_sha256 = hashlib.sha256(
+        (REPO_ROOT / "docs" / "SIMULATOR.md").read_bytes()
+    ).hexdigest()
     shutil.copytree(
         REPO_ROOT / "src" / "error_coupling_simulator",
         package_parent / "error_coupling_simulator",
@@ -299,6 +303,7 @@ def test_real_sdist_wheel_installs_and_runs_without_the_repository(tmp_path: Pat
             "-c",
             textwrap.dedent(
                 """
+                import hashlib
                 import importlib
                 import importlib.metadata
                 import importlib.resources
@@ -308,6 +313,7 @@ def test_real_sdist_wheel_installs_and_runs_without_the_repository(tmp_path: Pat
                 install_root = Path(sys.argv[1]).resolve()
                 repository_src = Path(sys.argv[2]).resolve()
                 dependency_root = Path(sys.argv[3]).resolve()
+                expected_binding_spec_sha256 = sys.argv[4]
                 sys.path[:0] = [str(install_root), str(dependency_root)]
 
                 for entry in sys.path:
@@ -372,8 +378,8 @@ def test_real_sdist_wheel_installs_and_runs_without_the_repository(tmp_path: Pat
                     / "SIMULATOR.md"
                 )
                 assert installed_binding_spec.is_file()
-                assert installed_binding_spec.read_text(encoding="utf-8").startswith(
-                    "# SIMULATOR.md"
+                assert hashlib.sha256(installed_binding_spec.read_bytes()).hexdigest() == (
+                    expected_binding_spec_sha256
                 )
 
                 installed_service_catalog = (
@@ -533,6 +539,9 @@ def test_real_sdist_wheel_installs_and_runs_without_the_repository(tmp_path: Pat
                 from error_coupling_simulator.mechanisms.qutrit_leakage import (
                     leakage_channel_super,
                     leakage_kraus,
+                    leakage_seepage_rates,
+                    level1_output_leakage_coherence,
+                    solve_exchange_angle_for_leakage_rate,
                 )
 
                 rho0 = zero_state(1, device="cpu")
@@ -544,6 +553,44 @@ def test_real_sdist_wheel_installs_and_runs_without_the_repository(tmp_path: Pat
                 assert callable(apply_kraus)
                 assert leakage_channel_super(0.0, 0.0).shape == (9, 9)
                 assert len(leakage_kraus(0.0, 0.0)) == 1
+                assert leakage_seepage_rates(0.0, 0.0) == (0.0, 0.0)
+                assert level1_output_leakage_coherence(0.0, 0.0) == 0.0
+                assert solve_exchange_angle_for_leakage_rate(0.0) == 0.0
+
+                qutrit_module = importlib.import_module(
+                    "error_coupling_simulator.mechanisms.qutrit_leakage"
+                )
+                retired_qutrit_names = (
+                    "".join(("w", "g", "_rates")),
+                    "".join(("coherence", "_of", "_leakage")),
+                    "".join(("solve_theta_for_", "w", "g", "_l1")),
+                )
+                assert not any(
+                    hasattr(qutrit_module, name) for name in retired_qutrit_names
+                )
+                assert callable(frontend.simulate_qutrit_leakage)
+                assert callable(frontend.seepage_collapse_matrix)
+                assert frontend.PRESET_LEAKAGE_RATE_5E3.leakage_rate_target == 5.0e-3
+                retired_frontend_names = (
+                    "".join(("simulate_qutrit_", "w", "g", "_leakage")),
+                    "".join(("w", "g", "_seep_collapse_matrix")),
+                    "".join(("PRESET_LEAK_", "W", "G", "_L1_5E3")),
+                )
+                assert not any(
+                    hasattr(frontend, name) for name in retired_frontend_names
+                )
+
+                coupling_module = importlib.import_module(
+                    "error_coupling_simulator.source.coupling"
+                )
+                assert coupling_module.SOURCE_COUPLING_CONFIG_SCHEMA.endswith(".v2")
+                assert coupling_module.COUPLED_PROCESS_PARAMS_SCHEMA.endswith(".v2")
+                source_fields = coupling_module.SourceCouplingConfig.__dataclass_fields__
+                assert not any(
+                    fragment in field_name
+                    for field_name in source_fields
+                    for fragment in ("".join(("w", "g")), "leak", "seep")
+                )
 
                 from error_coupling_simulator.certify import certify_noise_process
                 from error_coupling_simulator.certify.anchors import (
@@ -582,6 +629,7 @@ def test_real_sdist_wheel_installs_and_runs_without_the_repository(tmp_path: Pat
             str(install_root),
             str(REPO_ROOT / "src"),
             sysconfig.get_paths()["purelib"],
+            binding_spec_sha256,
         ],
         cwd=isolated_cwd,
         check=False,

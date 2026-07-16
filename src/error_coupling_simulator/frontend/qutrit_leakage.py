@@ -4,7 +4,7 @@ from __future__ import annotations
 
 This is deliberately not a Stim/DEM path: leakage lives outside the qubit
 computational subspace, so the carrier is the project's own QutritDM exact
-density-matrix backend and the Wood-Gambetta qutrit Kraus family.
+density-matrix backend and the declared qutrit leakage Kraus family.
 """
 
 from dataclasses import dataclass
@@ -20,9 +20,9 @@ from ..mechanisms.qutrit_leakage import (
     G_HEAT_DEFAULT,
     G_SEEP_DEFAULT,
     THETA_DEFAULT,
-    coherence_of_leakage,
+    leakage_seepage_rates,
     leakage_kraus_torch,
-    wg_rates,
+    level1_output_leakage_coherence,
 )
 
 QUTRIT_STRING_CONVENTION = "qutrit_dm_most_significant_q0_left_to_right"
@@ -81,7 +81,7 @@ class QutritLeakageResult:
         ]
 
 
-def simulate_qutrit_wg_leakage(
+def simulate_qutrit_leakage(
     *,
     num_qutrits: int = 3,
     initial_levels: str | Sequence[int] | None = None,
@@ -96,7 +96,7 @@ def simulate_qutrit_wg_leakage(
     out_dir: str | Path | None = None,
     write_density_matrix: bool | None = None,
 ) -> QutritLeakageResult:
-    """Run Wood-Gambetta qutrit leakage on the project's exact density backend.
+    """Run the declared qutrit leakage channel on the exact density backend.
 
     The default initial state is ``|111...>`` so coherent ``|1><->|2>`` leakage is
     visible in a one-cycle smoke run. This exact density-matrix backend is meant for
@@ -136,7 +136,7 @@ def simulate_qutrit_wg_leakage(
 
     site_populations = _site_populations(diag, n)
     counts = _sample_qutrit_counts(diag, n=n, shots=int(shots), seed=int(seed))
-    wg_l1, wg_l2 = wg_rates(theta, g_seep, g_heat)
+    leakage_rate, seepage_rate = leakage_seepage_rates(theta, g_seep, g_heat)
     theory = {
         "available": True,
         "estimator": "exact_density_matrix",
@@ -149,10 +149,10 @@ def simulate_qutrit_wg_leakage(
         "site_populations": site_populations,
     }
     manifest = {
-        "schema": "error_coupling_simulator.frontend.qutrit_wg_leakage.v1",
+        "schema": "error_coupling_simulator.frontend.qutrit_leakage.v2",
         "backend": "error_coupling_simulator.carrier.exact.qutrit_dm.QutritDM",
         "representability": "exact_qutrit_density_matrix_leakage",
-        "mechanism": "wood_gambetta_qutrit_leakage",
+        "mechanism": "qutrit_exchange_seepage_heating",
         "qutrit_string_convention": QUTRIT_STRING_CONVENTION,
         "num_qutrits": n,
         "initial_levels": qutrit_string_from_levels(levels),
@@ -164,9 +164,11 @@ def simulate_qutrit_wg_leakage(
             "theta": float(theta),
             "g_seep": float(g_seep),
             "g_heat": float(g_heat),
-            "WG_L1": float(wg_l1),
-            "WG_L2": float(wg_l2),
-            "C_L": float(coherence_of_leakage(theta, g_seep, g_heat)),
+            "leakage_rate": float(leakage_rate),
+            "seepage_rate": float(seepage_rate),
+            "level1_output_leakage_coherence": float(
+                level1_output_leakage_coherence(theta, g_seep, g_heat)
+            ),
             "kraus_rank": len(kraus),
         },
         "noise": {

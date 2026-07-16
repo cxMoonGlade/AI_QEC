@@ -114,7 +114,8 @@ See `docs/simulator_validation/finite_rtn_free_induction_literature_closure_2026
 
 - `error_coupling_simulator.numerics.NUMERICAL_ZERO == 1e-12` is for floating thresholds only, never
   structural zeros, bit values, indices, counts, or exact identities.
-- WG channels, codestates, channel composition, and CPTP checks are constructed in complex128.
+- Qutrit leakage channels, codestates, channel composition, and CPTP checks are constructed in
+  complex128.
 - PEPO, PEPS, and the restricted MPS verification routes are complex128-only.
 - Only `FusedWithinCycleSampler` may use complex64, and only for an optimization run labeled
   `screening_only`. Final or certification candidates require an independent complex128 replay.

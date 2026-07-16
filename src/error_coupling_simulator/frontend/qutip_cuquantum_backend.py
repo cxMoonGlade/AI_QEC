@@ -69,7 +69,7 @@ def zero_hamiltonian_qobj(*, num_qutrits: int):
     return qt.Qobj(CuOperator(hilbert_dims=tuple(dims)), dims=[dims, dims])
 
 
-def wg_seep_collapse_matrix() -> np.ndarray:
+def seepage_collapse_matrix() -> np.ndarray:
     """Return the local seep collapse ``|1><2|`` for qutrit leakage probes."""
 
     out = np.zeros((3, 3), dtype=np.complex128)
@@ -94,7 +94,7 @@ def qutip_cuquantum_symbolic_collapse_summary(
     if gamma < 0.0 or not np.isfinite(gamma):
         raise ValueError("rate must be finite and non-negative")
     c_op = local_qutrit_operator_qobj(
-        np.sqrt(gamma) * wg_seep_collapse_matrix(),
+        np.sqrt(gamma) * seepage_collapse_matrix(),
         site=site,
         num_qutrits=num_qutrits,
     )
@@ -151,7 +151,7 @@ def probe_qutip_cuquantum_local_mcwf(
     with qutip_cuquantum.CuQuantumBackend(cudm.WorkStream()):
         H = zero_hamiltonian_qobj(num_qutrits=n)
         c0 = local_qutrit_operator_qobj(
-            np.sqrt(gamma) * wg_seep_collapse_matrix(),
+            np.sqrt(gamma) * seepage_collapse_matrix(),
             site=0,
             num_qutrits=n,
         )

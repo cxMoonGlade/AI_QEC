@@ -105,9 +105,9 @@ Read the owning module README before changing a module. Do not add flat modules 
 - Preserve structural zeros. `NUMERICAL_ZERO == 1e-12` is for floating thresholds only.
 - A PTM off-diagonal entry means basis-specific non-Pauli structure; it does not identify a coherent
   cause without another argument.
-- WG channels, codestates, channel composition, and CPTP checks are complex128. PEPO, PEPS, and the
-  restricted MPS routes are complex128-only. Only the fused within-cycle sampler may use complex64,
-  and only for optimization labeled `screening_only`.
+- Qutrit leakage channels, codestates, channel composition, and CPTP checks are complex128. PEPO,
+  PEPS, and the restricted MPS routes are complex128-only. Only the fused within-cycle sampler may use
+  complex64, and only for optimization labeled `screening_only`.
 - Evaluator-only source trajectories, channel fields, and mechanism parameters never enter the
   emitted record or downstream estimator input.
 - Every claim-bearing value follows `docs/NUMERICAL_PROVENANCE.md`; every score follows

@@ -35,7 +35,7 @@ READOUT_CONV = "biased_b"
 LOGICAL_M = 0
 FIT_SEED = 0
 BASE_SEED_OFF = 2026
-WG_L1_OFF = 0.0
+LEAKAGE_RATE_OFF = 0.0
 
 EPS_SPIKE = 1e-8          # dynamic-epsilon control knob used by the d3 tests
 W_MAX = 160
@@ -438,10 +438,10 @@ def _parse_d3_sched():
 def _build_spec(c01, m01, *, R: int, base_seed: int):
     from error_coupling_simulator.carrier.within_cycle import RunSpec
     from error_coupling_simulator.mechanisms.qutrit_leakage import (
-        solve_theta_for_wg_l1,
+        solve_exchange_angle_for_leakage_rate,
     )
 
-    theta = solve_theta_for_wg_l1(WG_L1_OFF, g_seep=G_SEEP, g_heat=G_HEAT)
+    theta = solve_exchange_angle_for_leakage_rate(LEAKAGE_RATE_OFF, g_seep=G_SEEP, g_heat=G_HEAT)
     return RunSpec(circuit_path=c01, metadata_path=m01, m=LOGICAL_M, theta=float(theta),
                    g_seep=G_SEEP, g_heat=G_HEAT, arm=ARM, b=B_BIAS, readout_conv=READOUT_CONV,
                    N=1, base_seed=int(base_seed), R=int(R), dtype="c128")

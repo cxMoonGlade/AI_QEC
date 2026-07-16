@@ -2916,7 +2916,7 @@ def test_dense_axis1_evidence_refuses_to_ignore_public_qutrit_leakage_context():
         axis1_carrier_execution_manifest(schedule)
 
 
-def test_axis1_qutrit_leakage_oracle_certification_matches_wg_superop():
+def test_axis1_qutrit_leakage_oracle_certification_matches_declared_superop():
     builder = CircuitBuilder(num_qubits=1)
     builder.declare_axis1_local_lindblad_context(
         Axis1LocalLindbladContextSpec(

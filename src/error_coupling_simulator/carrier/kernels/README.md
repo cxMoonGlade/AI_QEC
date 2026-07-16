@@ -14,8 +14,8 @@ or claim module.
   `carrier/kernels/sv_traj_d3_loader.py`; there is no CPU compute fallback. The sole compiled
   entry point consumes the within-cycle operation schedule. c64 is authorized only through the
   active `FusedWithinCycleSampler` optimization path.
-- **Out of scope:** physics construction, tolerance selection, FET, and claim promotion. WG
-  channels, codestates, composition, and CPTP checks are completed in c128 before the checked
+- **Out of scope:** physics construction, tolerance selection, FET, and claim promotion. Qutrit
+  leakage channels, codestates, composition, and CPTP checks are completed in c128 before the checked
   complex execution tables are cast at the fused-SV boundary.
 
 ## Engineering rationale

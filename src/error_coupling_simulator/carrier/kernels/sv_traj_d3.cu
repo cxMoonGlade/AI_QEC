@@ -1,7 +1,7 @@
 // Fused within-cycle state-vector Monte-Carlo (MCWF) leakage kernel.
 //
 // Block-per-trajectory quantum-trajectory sampler for the d3 XZZX qutrit process
-// (9 data qutrits, 3^9 = 19683 amplitudes; LOCAL Wood-Gambetta leakage, no
+// (9 data qutrits, 3^9 = 19683 amplitudes; local qutrit leakage, no
 // persistent ancilla).  One CUDA block evolves ONE shot's pure state vector; the
 // block's threads cooperate over the 19683 amplitudes.  Per shot:
 //
@@ -94,7 +94,7 @@ constexpr long long DIM = SV_DIM;
 // Max marshalling bounds (d3 fits well inside these; checked host-side).
 constexpr int MAX_STAB = 16;        // 8 used
 constexpr int MAX_SUPP = 8;         // stabilizer support fan (<=4 for d3)
-constexpr int MAX_KRAUS = 8;        // WG channel rank 2..5
+constexpr int MAX_KRAUS = 8;        // qutrit leakage-channel rank 2..5
 constexpr int MAX_LOG_SUPP = 12;    // logical support (3 for d3)
 constexpr int THREADS = 256;        // threads per block (per trajectory)
 

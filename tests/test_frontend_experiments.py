@@ -19,12 +19,12 @@ Current API shapes, verified against
     ``default_*_paths()`` layout (``relative_to(DEFAULT_DATASET_ROOT)``); a missing
     root/file raises ``FileNotFoundError`` NAMING the missing path UNDER THE
     RESOLVED ROOT (never a silent fallback to the default).
-  * ``ExperimentPreset(name=..., theta_rad=..., wg_l1_target=..., g_seep=...,
+  * ``ExperimentPreset(name=..., theta_rad=..., leakage_rate_target=..., g_seep=...,
     g_heat=..., b_bias=..., arm=..., readout_conv=...)`` -- frozen kw-only dataclass;
-    exactly ONE of ``theta_rad`` / ``wg_l1_target`` set (``ValueError`` otherwise).
+    exactly one of ``theta_rad`` / ``leakage_rate_target`` set (``ValueError`` otherwise).
   * ``run_spec_from_preset(preset, *, n_shots, n_rounds, seed, m=0,
     dataset_root=None)`` -> a package-local ``carrier.within_cycle.RunSpec``; the
-    WG preset's theta resolves through ``solve_theta_for_wg_l1`` (the
+    rate-target preset's theta resolves through ``solve_exchange_angle_for_leakage_rate`` (the
     error_coupling_simulator ``mechanisms.qutrit_leakage`` resolver -- same package
     as the facade).
   * ``leak_slice_table(preset_or_params, *, device, as_list=False)`` -> the stacked
@@ -52,7 +52,7 @@ _ENV = "ECS_D3_DATA_ROOT"
 # with no silent physics defaults.
 _THETA_RAW, _G_SEEP, _B_BIAS, _ARM = 0.30, 0.09, 0.9, "A"
 _G_HEAT, _READOUT_CONV = 0.0, "biased_b"
-_WG_L1_TARGET = 5.0e-3
+_LEAKAGE_RATE_TARGET = 5.0e-3
 # A deliberately different cell used to reject constant-table implementations.
 _THETA_HI, _G_SEEP_HI = 1.2, 0.5
 
@@ -91,7 +91,7 @@ def _as_schedule(ret):
 def _mk_preset(**kw):
     """Build an ExperimentPreset with the RAW-cell knobs as explicit (never silent)
     test-side fill-ins (the preset class itself has NO physics defaults)."""
-    base = dict(name="adapter_test_preset", theta_rad=None, wg_l1_target=None,
+    base = dict(name="adapter_test_preset", theta_rad=None, leakage_rate_target=None,
                 g_seep=_G_SEEP, g_heat=_G_HEAT, b_bias=_B_BIAS, arm=_ARM,
                 readout_conv=_READOUT_CONV)
     base.update(kw)
@@ -261,14 +261,14 @@ def test_experiment_preset_validation_killers():
     Both invalid combinations are exercised so validation cannot pass vacuously.
     The two theta conventions remain distinct registered presets with pinned knob
     values and the explicit unit tag ``theta_rad``. Exactly one of
-    ``theta_rad`` / ``wg_l1_target`` is set; the preset is frozen (assignment
+    ``theta_rad`` / ``leakage_rate_target`` is set; the preset is frozen (assignment
     raises); and both registered presets carry their knobs explicitly.
     """
     import dataclasses
 
     # both conventions set -> raises.
     with pytest.raises(ValueError):
-        _mk_preset(theta_rad=_THETA_RAW, wg_l1_target=_WG_L1_TARGET)
+        _mk_preset(theta_rad=_THETA_RAW, leakage_rate_target=_LEAKAGE_RATE_TARGET)
     # neither set -> raises (no silent physics default).
     with pytest.raises(ValueError):
         _mk_preset()
@@ -279,14 +279,14 @@ def test_experiment_preset_validation_killers():
 
     # the two REGISTERED presets exist as distinct named cells with pinned knobs.
     raw = experiments.PRESET_LEAK_THETA_0P30
-    wg = experiments.PRESET_LEAK_WG_L1_5E3
-    assert raw.theta_rad == _THETA_RAW and raw.wg_l1_target is None, \
+    rate_target = experiments.PRESET_LEAKAGE_RATE_5E3
+    assert raw.theta_rad == _THETA_RAW and raw.leakage_rate_target is None, \
         f"RAW preset knobs drifted: theta_rad={raw.theta_rad!r}, " \
-        f"wg_l1_target={raw.wg_l1_target!r}"
-    assert wg.wg_l1_target == _WG_L1_TARGET and wg.theta_rad is None, \
-        f"WG preset knobs drifted: wg_l1_target={wg.wg_l1_target!r}, " \
-        f"theta_rad={wg.theta_rad!r}"
-    for p, tag in ((raw, "RAW"), (wg, "WG")):
+        f"leakage_rate_target={raw.leakage_rate_target!r}"
+    assert rate_target.leakage_rate_target == _LEAKAGE_RATE_TARGET and rate_target.theta_rad is None, \
+        f"rate-target preset knobs drifted: leakage_rate_target=" \
+        f"{rate_target.leakage_rate_target!r}, theta_rad={rate_target.theta_rad!r}"
+    for p, tag in ((raw, "RAW"), (rate_target, "RATE_TARGET")):
         assert p.g_seep == _G_SEEP, f"{tag} preset g_seep {p.g_seep} != {_G_SEEP}"
         assert p.g_heat == _G_HEAT, f"{tag} preset g_heat {p.g_heat} != {_G_HEAT}"
         assert p.b_bias == _B_BIAS, f"{tag} preset b_bias {p.b_bias} != {_B_BIAS}"
@@ -299,22 +299,22 @@ def test_experiment_preset_validation_killers():
 # RunSpec construction from registered presets                                 #
 # =========================================================================== #
 @requires_data
-def test_run_spec_from_preset_raw_and_wg():
+def test_run_spec_from_preset_raw_and_rate_target():
     """Require preset values to produce the declared ``RunSpec`` exactly.
 
-    The RAW theta passes through unchanged. The WG theta is checked both against the
+    The raw theta passes through unchanged. The rate-target theta is checked against the
     independent resolver and against the resulting channel rate, rejecting a dead
     passthrough without conflating theta conventions.
 
     RAW preset: ``RunSpec.theta == theta_rad`` EXACTLY (float identity, contract).
-    WG preset: theta resolves through ``solve_theta_for_wg_l1`` at the preset's
+    Rate-target preset: theta resolves through ``solve_exchange_angle_for_leakage_rate`` at the preset's
     g_seep/g_heat; conformance is ALSO checked independently on the exact channel
-    rate ``wg_rates(theta)[0] == 5e-3`` (the resolver's own registered tolerance is
+    rate ``leakage_seepage_rates(theta)[0] == 5e-3`` (the resolver's own registered tolerance is
     1e-10; 1e-8 leaves slack for the bisection terminal bracket).
     """
     from error_coupling_simulator.mechanisms.qutrit_leakage import (
-        solve_theta_for_wg_l1,
-        wg_rates,
+        solve_exchange_angle_for_leakage_rate,
+        leakage_seepage_rates,
     )
     from error_coupling_simulator.carrier.within_cycle import RunSpec
 
@@ -331,18 +331,18 @@ def test_run_spec_from_preset_raw_and_wg():
     assert rs_raw.g_seep == _G_SEEP and rs_raw.b == _B_BIAS and rs_raw.arm == _ARM, \
         "RAW preset knobs did not carry into the RunSpec"
 
-    rs_wg = _run_spec(experiments.PRESET_LEAK_WG_L1_5E3, N=1, R=1)
-    assert rs_wg.g_seep == _G_SEEP and rs_wg.b == _B_BIAS and rs_wg.arm == _ARM
-    expected = solve_theta_for_wg_l1(_WG_L1_TARGET, g_seep=_G_SEEP, g_heat=0.0)
-    assert abs(rs_wg.theta - expected) <= 1e-12, \
-        f"WG preset theta {rs_wg.theta!r} != solve_theta_for_wg_l1 " \
+    rs_rate = _run_spec(experiments.PRESET_LEAKAGE_RATE_5E3, N=1, R=1)
+    assert rs_rate.g_seep == _G_SEEP and rs_rate.b == _B_BIAS and rs_rate.arm == _ARM
+    expected = solve_exchange_angle_for_leakage_rate(_LEAKAGE_RATE_TARGET, g_seep=_G_SEEP, g_heat=0.0)
+    assert abs(rs_rate.theta - expected) <= 1e-12, \
+        f"rate-target preset theta {rs_rate.theta!r} != solve_exchange_angle_for_leakage_rate " \
         f"resolve {expected!r}"
     # independent conformance: the resolved theta actually HITS the registered rate.
-    assert abs(wg_rates(rs_wg.theta, _G_SEEP, 0.0)[0] - _WG_L1_TARGET) <= 1e-8, \
-        "resolved theta does not hit WG_L1 = 5e-3 on the exact channel rate"
-    # The resolved WG value must not be a dead passthrough of a raw theta.
-    assert rs_wg.theta > 0.0 and abs(rs_wg.theta - _THETA_RAW) > 1e-3, \
-        "WG preset theta suspiciously equals the RAW cell or zero"
+    assert abs(leakage_seepage_rates(rs_rate.theta, _G_SEEP, 0.0)[0] - _LEAKAGE_RATE_TARGET) <= 1e-8, \
+        "resolved theta does not hit 5e-3 on the exact channel rate"
+    # The rate-resolved value must not be a dead passthrough of a raw theta.
+    assert rs_rate.theta > 0.0 and abs(rs_rate.theta - _THETA_RAW) > 1e-3, \
+        "rate-target preset theta suspiciously equals the raw cell or zero"
 
 
 # =========================================================================== #

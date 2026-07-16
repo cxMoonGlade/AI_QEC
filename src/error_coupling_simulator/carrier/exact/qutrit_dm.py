@@ -546,7 +546,7 @@ class _QuditDM:
         ``rho -> (prod_site U_site) rho (prod_site U_site)^dag`` (commuting single-qudit gates,
         leaked levels inert), so passing ``X`` before ``Y`` realizes the physical
         mid-cycle-then-post-M order. The pair ``X;Y = diag(i,-i,1,...)`` on the comp block is the
-        DD echo that refocuses the WG ``|1><->|2>`` leakage exchange.
+        DD echo that refocuses the coherent ``|1><->|2>`` leakage exchange.
 
         No-op for an empty ``gates`` list (a frameless / R=1-floor schedule), so existing callers
         are unaffected.

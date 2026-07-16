@@ -5,9 +5,9 @@ pending**.
 
 ## Current owners
 
-- `mechanisms/qutrit_leakage.py` owns the physically named qutrit leakage channel, Kraus conversion,
-  Wood-Gambetta diagnostics, leaked-readout instrument, and homogeneous/heterogeneous process
-  factories.
+- `mechanisms/qutrit_leakage.py` owns the declared qutrit exchange/seepage/heating channel, Kraus
+  conversion, subspace-transition and fixed-input output diagnostics, leaked-readout instrument,
+  and homogeneous/heterogeneous process factories.
 - `mechanisms/cz_leakage.py` owns explicit transmon/CZ parameters, Hamiltonian and channel
   construction, tracked-subspace Kraus conversion, and transport diagnostics.
 - `carrier/exact/qutrit_dm.py` provides the bounded exact-density reference route.

@@ -36,7 +36,7 @@ from error_coupling_simulator.frontend.experiments import (
     ExperimentPreset,
     LEAKED_READOUT_BIAS_SWEEP,
     PRESET_LEAK_THETA_0P30,
-    PRESET_LEAK_WG_L1_5E3,
+    PRESET_LEAKAGE_RATE_5E3,
     _dataset_files,
     leak_slice_table,
     load_xzzx_d3,
@@ -50,7 +50,7 @@ _ENV = "ECS_D3_DATA_ROOT"
 #: Explicit registered-preset values used by the regression checks.
 _THETA_RAW, _G_SEEP, _B_BIAS, _ARM = 0.30, 0.09, 0.9, "A"
 _G_HEAT, _READOUT_CONV = 0.0, "biased_b"
-_WG_L1_TARGET = 5.0e-3
+_LEAKAGE_RATE_TARGET = 5.0e-3
 #: a grossly-different discriminator cell (distinct seep so leak tables differ).
 _THETA_HI, _G_SEEP_HI = 1.2, 0.5
 
@@ -69,7 +69,7 @@ def _mk_preset(**kw) -> ExperimentPreset:
     """Build an ``ExperimentPreset`` with the RAW-cell knobs as EXPLICIT (never
     silent) test-side fill-ins (the preset class itself has NO physics defaults).
     Callers override exactly the field(s) under test."""
-    base = dict(name="unit_test_preset", theta_rad=None, wg_l1_target=None,
+    base = dict(name="unit_test_preset", theta_rad=None, leakage_rate_target=None,
                 g_seep=_G_SEEP, g_heat=_G_HEAT, b_bias=_B_BIAS, arm=_ARM,
                 readout_conv=_READOUT_CONV)
     base.update(kw)
@@ -303,13 +303,13 @@ def test_load_xzzx_d3_dataset_root_arg_is_used(tmp_path):
 def test_experiment_preset_valid_raw_angle_constructs():
     """A raw-angle preset constructs with no model-rate target."""
     p = _mk_preset(theta_rad=_THETA_RAW)
-    assert p.theta_rad == _THETA_RAW and p.wg_l1_target is None
+    assert p.theta_rad == _THETA_RAW and p.leakage_rate_target is None
 
 
-def test_experiment_preset_valid_wg_rate_constructs():
+def test_experiment_preset_valid_leakage_rate_constructs():
     """A model-rate-target preset constructs with no raw angle."""
-    p = _mk_preset(wg_l1_target=_WG_L1_TARGET)
-    assert p.wg_l1_target == _WG_L1_TARGET and p.theta_rad is None
+    p = _mk_preset(leakage_rate_target=_LEAKAGE_RATE_TARGET)
+    assert p.leakage_rate_target == _LEAKAGE_RATE_TARGET and p.theta_rad is None
 
 
 # --- empty name --------------------------------------------------------------
@@ -322,13 +322,13 @@ def test_experiment_preset_empty_name_raises():
 # --- exactly-one coordinate convention --------------------------------------
 def test_experiment_preset_both_conventions_raises():
     """Raw angle and model-rate target cannot be set together."""
-    with pytest.raises(ValueError, match="exactly ONE"):
-        _mk_preset(theta_rad=_THETA_RAW, wg_l1_target=_WG_L1_TARGET)
+    with pytest.raises(ValueError, match="exactly one"):
+        _mk_preset(theta_rad=_THETA_RAW, leakage_rate_target=_LEAKAGE_RATE_TARGET)
 
 
 def test_experiment_preset_neither_convention_raises():
     """A preset must declare either a raw angle or model-rate target."""
-    with pytest.raises(ValueError, match="exactly ONE"):
+    with pytest.raises(ValueError, match="exactly one"):
         _mk_preset()
 
 
@@ -345,19 +345,19 @@ def test_experiment_preset_theta_rad_zero_passes():
     assert p.theta_rad == 0.0
 
 
-# --- model-rate-target open interval -----------------------------------------
-@pytest.mark.parametrize("bad", [0.0, 0.5, 0.6, -0.01])
-def test_experiment_preset_wg_l1_target_out_of_open_interval_raises(bad):
-    """``wg_l1_target`` uses the open interval ``(0, 0.5)``."""
-    with pytest.raises(ValueError, match=r"\(0, 0\.5\)"):
-        _mk_preset(wg_l1_target=bad)
+# --- model-rate-target physical interval -------------------------------------
+@pytest.mark.parametrize("bad", [0.5001, 0.6, -0.01, float("nan"), float("inf")])
+def test_experiment_preset_leakage_rate_target_out_of_interval_raises(bad):
+    """``leakage_rate_target`` uses the finite closed interval ``[0, 0.5]``."""
+    with pytest.raises(ValueError, match=r"\[0, 0\.5\]"):
+        _mk_preset(leakage_rate_target=bad)
 
 
-@pytest.mark.parametrize("ok", [1e-9, 0.4999])
-def test_experiment_preset_wg_l1_target_interior_passes(ok):
-    """Values strictly inside ``(0, 0.5)`` pass."""
-    p = _mk_preset(wg_l1_target=ok)
-    assert p.wg_l1_target == ok
+@pytest.mark.parametrize("ok", [0.0, 1e-9, 0.4999, 0.5])
+def test_experiment_preset_leakage_rate_target_in_interval_passes(ok):
+    """Values in ``[0, 0.5]`` pass preset validation."""
+    p = _mk_preset(leakage_rate_target=ok)
+    assert p.leakage_rate_target == ok
 
 
 # --- nonnegative seepage and heating rates ----------------------------------
@@ -448,7 +448,7 @@ def test_preset_leak_theta_0p30_value_pins():
     p = PRESET_LEAK_THETA_0P30
     assert p.name == "leak_theta_0p30"
     assert p.theta_rad == 0.30
-    assert p.wg_l1_target is None
+    assert p.leakage_rate_target is None
     assert p.g_seep == 0.09
     assert p.g_heat == 0.0
     assert p.b_bias == 0.9
@@ -456,11 +456,11 @@ def test_preset_leak_theta_0p30_value_pins():
     assert p.readout_conv == "biased_b"
 
 
-def test_preset_leak_wg_l1_5e3_value_pins():
-    """``PRESET_LEAK_WG_L1_5E3`` exposes its declared model-rate target."""
-    p = PRESET_LEAK_WG_L1_5E3
-    assert p.name == "leak_wg_l1_5e3"
-    assert p.wg_l1_target == 5.0e-3
+def test_preset_leakage_rate_5e3_value_pins():
+    """``PRESET_LEAKAGE_RATE_5E3`` exposes its declared model-rate target."""
+    p = PRESET_LEAKAGE_RATE_5E3
+    assert p.name == "leakage_rate_5e3"
+    assert p.leakage_rate_target == 5.0e-3
     assert p.theta_rad is None
     assert p.g_seep == 0.09
     assert p.g_heat == 0.0
@@ -472,15 +472,15 @@ def test_preset_leak_wg_l1_5e3_value_pins():
 def test_registered_preset_provenance_is_json_safe_and_field_complete():
     """Per-field provenance is machine-readable without promoting a physical cell."""
     expected_fields = {
-        "name", "theta_rad", "wg_l1_target", "g_seep", "g_heat", "b_bias",
+        "name", "theta_rad", "leakage_rate_target", "g_seep", "g_heat", "b_bias",
         "arm", "readout_conv",
     }
-    for preset in (PRESET_LEAK_THETA_0P30, PRESET_LEAK_WG_L1_5E3):
+    for preset in (PRESET_LEAK_THETA_0P30, PRESET_LEAKAGE_RATE_5E3):
         manifest = preset.provenance_manifest
         assert manifest is not None
         json.dumps(manifest, sort_keys=True)
         assert manifest["schema"] == \
-            "error_coupling_simulator.frontend.experiment_preset_provenance.v1"
+            "error_coupling_simulator.frontend.experiment_preset_provenance.v2"
         whole = manifest["whole_preset"]
         assert whole["claim_scope"] == \
             "registered_synthetic_cross_source_benchmark_only"
@@ -512,7 +512,7 @@ def test_registered_preset_provenance_is_json_safe_and_field_complete():
 def test_registered_b_0p9_is_synthetic_point_and_sweep_is_exposed():
     """b=.9 has no magnitude support and cannot replace the registered bracket."""
     assert LEAKED_READOUT_BIAS_SWEEP == (0.5, 0.75, 1.0)
-    for preset in (PRESET_LEAK_THETA_0P30, PRESET_LEAK_WG_L1_5E3):
+    for preset in (PRESET_LEAK_THETA_0P30, PRESET_LEAKAGE_RATE_5E3):
         manifest = preset.provenance_manifest
         assert manifest is not None
         b_field = manifest["fields"]["b_bias"]
@@ -525,23 +525,23 @@ def test_registered_b_0p9_is_synthetic_point_and_sweep_is_exposed():
         assert manifest["required_leaked_readout_bias_sweep"] == [0.5, 0.75, 1.0]
 
 
-def test_wg_preset_sources_are_atomic_not_whole_cell_support():
+def test_leakage_rate_preset_sources_are_atomic_not_whole_cell_support():
     """Miao and McEwen anchor separate fields; neither validates the composition."""
-    manifest = PRESET_LEAK_WG_L1_5E3.provenance_manifest
+    manifest = PRESET_LEAKAGE_RATE_5E3.provenance_manifest
     assert manifest is not None
     fields = manifest["fields"]
-    l1 = fields["wg_l1_target"]
+    target = fields["leakage_rate_target"]
     seep = fields["g_seep"]
-    assert l1["source_kind"] == "project_target_with_literature_scale_context"
-    assert l1["provenance_kind"] == "project-design"
-    assert l1["claim_scope"] == "project_channel_target_only"
-    assert [ref["identifier"] for ref in l1["literature_references"]] == [
+    assert target["source_kind"] == "project_target_with_literature_scale_context"
+    assert target["provenance_kind"] == "project-design"
+    assert target["claim_scope"] == "project_channel_target_only"
+    assert [ref["identifier"] for ref in target["literature_references"]] == [
         "arXiv:2211.04728"]
-    assert l1["literature_references"][0]["exact_locator"] == "Fig. 3c"
-    assert l1["literature_references"][0]["doi"] == "10.1038/s41567-023-02226-w"
-    assert l1["whole_project_channel_supported"] is False
-    assert l1["direct_observable_match"] is False
-    assert l1["transformation_supported"] is False
+    assert target["literature_references"][0]["exact_locator"] == "Fig. 3c"
+    assert target["literature_references"][0]["doi"] == "10.1038/s41567-023-02226-w"
+    assert target["whole_project_channel_supported"] is False
+    assert target["direct_observable_match"] is False
+    assert target["transformation_supported"] is False
     assert seep["source_kind"] == "cross_device_scale_anchor"
     assert seep["provenance_kind"] == "project-design"
     assert seep["claim_scope"] == \
@@ -563,37 +563,37 @@ def test_resolve_theta_raw_angle_passthrough():
     assert resolve_theta(p) == _THETA_RAW
 
 
-def test_resolve_theta_wg_rate_solves_model_coordinate():
+def test_resolve_theta_leakage_rate_solves_model_coordinate():
     """A model-rate-target preset solves the project channel coordinate.
 
-    It returns ``solve_theta_for_wg_l1(wg_l1_target, g_seep=, g_heat=)`` at the
+    It returns ``solve_exchange_angle_for_leakage_rate(leakage_rate_target, g_seep=, g_heat=)`` at the
     preset's rates and differs from both the raw-angle cell and zero.
 
-    Independent conformance: the resolved theta actually HITS the registered WG_L1 on
-    the exact channel rate (checked via the calibrator + ``wg_rates``, both CPU)."""
+    Independent conformance: the resolved theta hits the registered leakage rate on
+    the exact channel diagnostic."""
     from error_coupling_simulator.mechanisms.qutrit_leakage import (
-        solve_theta_for_wg_l1,
-        wg_rates,
+        solve_exchange_angle_for_leakage_rate,
+        leakage_seepage_rates,
     )
-    p = _mk_preset(wg_l1_target=_WG_L1_TARGET)
+    p = _mk_preset(leakage_rate_target=_LEAKAGE_RATE_TARGET)
     theta = resolve_theta(p)
-    expected = solve_theta_for_wg_l1(_WG_L1_TARGET, g_seep=_G_SEEP, g_heat=_G_HEAT)
+    expected = solve_exchange_angle_for_leakage_rate(_LEAKAGE_RATE_TARGET, g_seep=_G_SEEP, g_heat=_G_HEAT)
     assert abs(theta - expected) <= 1e-12, \
-        f"resolve_theta wg branch {theta!r} != calibrator {expected!r}"
+        f"resolve_theta rate branch {theta!r} != calibrator {expected!r}"
     # The resolved value is not a dead passthrough of the raw-angle preset.
     assert theta > 0.0 and abs(theta - _THETA_RAW) > 1e-3, \
-        "wg-resolved theta suspiciously equals the raw cell or zero"
+        "rate-resolved theta suspiciously equals the raw cell or zero"
     # independent: it HITS the registered rate on the exact channel.
-    assert abs(wg_rates(theta, _G_SEEP, _G_HEAT)[0] - _WG_L1_TARGET) <= 1e-8, \
-        "resolved theta does not hit WG_L1 = 5e-3 on the exact channel rate"
+    assert abs(leakage_seepage_rates(theta, _G_SEEP, _G_HEAT)[0] - _LEAKAGE_RATE_TARGET) <= 1e-8, \
+        "resolved theta does not hit 5e-3 on the exact channel rate"
 
 
 def test_resolve_theta_both_branches_distinct():
     """Raw-angle and model-rate-target branches produce distinct values."""
     raw = resolve_theta(PRESET_LEAK_THETA_0P30)
-    wg = resolve_theta(PRESET_LEAK_WG_L1_5E3)
+    rate_solved = resolve_theta(PRESET_LEAKAGE_RATE_5E3)
     assert raw == 0.30
-    assert wg != raw, "raw and wg conventions resolved to the same theta (dead branch)"
+    assert rate_solved != raw, "raw and rate-solved conventions resolved to the same theta"
 
 
 # =========================================================================== #
@@ -632,16 +632,16 @@ def test_run_spec_from_preset_raw_passthrough():
 
 
 @requires_data
-def test_run_spec_from_preset_wg_solves_model_coordinate_here():
-    """The WG preset's theta is model-rate-solved while building the run spec."""
+def test_run_spec_from_preset_leakage_rate_solves_model_coordinate_here():
+    """The leakage-rate preset resolves theta while building the run spec."""
     from error_coupling_simulator.mechanisms.qutrit_leakage import (
-        solve_theta_for_wg_l1,
+        solve_exchange_angle_for_leakage_rate,
     )
-    rs = run_spec_from_preset(PRESET_LEAK_WG_L1_5E3, n_shots=1, n_rounds=1, seed=0)
-    expected = solve_theta_for_wg_l1(_WG_L1_TARGET, g_seep=_G_SEEP, g_heat=_G_HEAT)
+    rs = run_spec_from_preset(PRESET_LEAKAGE_RATE_5E3, n_shots=1, n_rounds=1, seed=0)
+    expected = solve_exchange_angle_for_leakage_rate(_LEAKAGE_RATE_TARGET, g_seep=_G_SEEP, g_heat=_G_HEAT)
     assert abs(rs.theta - expected) <= 1e-12
     assert rs.theta > 0.0 and abs(rs.theta - _THETA_RAW) > 1e-3, \
-        "wg run-spec theta equals the raw cell or zero"
+        "rate-solved run-spec theta equals the raw cell or zero"
     provenance = rs.numerical_provenance
     assert provenance is not None
     resolved = provenance["run_binding"]["resolved_theta_rad"]
@@ -690,7 +690,7 @@ def test_custom_or_spoofed_preset_fails_closed_to_implementation_only(monkeypatc
         arm="A",
         readout_conv="biased_b",
         provenance_manifest={
-            "schema": "error_coupling_simulator.frontend.experiment_preset_provenance.v1",
+            "schema": "error_coupling_simulator.frontend.experiment_preset_provenance.v2",
             "status": "complete_for_registered_preset",
             "fields": {},
         },
@@ -750,13 +750,13 @@ def test_run_spec_numerical_provenance_is_json_safe_and_enters_shot_header():
         RunSpec(
             circuit_path="unused.stim",
             numerical_provenance={
-                "schema": "error_coupling_simulator.frontend.run_numerical_provenance.v1",
+                "schema": "error_coupling_simulator.frontend.run_numerical_provenance.v2",
                 "status": "complete_for_registered_preset",
             },
         )
 
     ledger = {
-        "schema": "error_coupling_simulator.frontend.run_numerical_provenance.v1",
+        "schema": "error_coupling_simulator.frontend.run_numerical_provenance.v2",
         "status": "missing",
         "claim_scope": "implementation_only",
         "reason": "direct RunSpec has no trusted registered facade",
@@ -922,11 +922,11 @@ _st_name = st.text(min_size=1, max_size=8).filter(lambda s: bool(str(s)))
 def test_property_in_range_raw_preset_constructs(theta, g_seep, g_heat, b_bias,
                                                  arm, conv, name):
     """Any raw-angle configuration with every field in range constructs."""
-    p = ExperimentPreset(name=name, theta_rad=theta, wg_l1_target=None,
+    p = ExperimentPreset(name=name, theta_rad=theta, leakage_rate_target=None,
                          g_seep=g_seep, g_heat=g_heat, b_bias=b_bias,
                          arm=arm, readout_conv=conv)
     # the invariant HOLDS: exactly one convention, ranges respected.
-    assert (p.theta_rad is None) != (p.wg_l1_target is None)
+    assert (p.theta_rad is None) != (p.leakage_rate_target is None)
     assert p.theta_rad >= 0.0 and p.g_seep >= 0.0 and p.g_heat >= 0.0
     assert 0.0 <= p.b_bias <= 1.0
     assert str(p.arm).upper() in SV_ARMS and str(p.readout_conv) in SV_READOUT_CONVENTIONS
@@ -945,14 +945,12 @@ def test_property_negative_theta_always_raises(bad_theta):
 
 @settings(max_examples=200)
 @given(bad_rate=st.one_of(
-    st.floats(max_value=0.0, allow_nan=False, allow_infinity=False),
-    st.floats(min_value=0.5, max_value=1e6, allow_nan=False, allow_infinity=False)))
-def test_property_wg_l1_target_out_of_open_interval_always_raises(bad_rate):
-    """Any model-rate target less than or equal to zero or at least 0.5
-    raises. Covers the STRICT open-interval convention over a generated range (the
-    edges 0.0 and 0.5 included, being non-strict-min/max of the two sub-strategies)."""
+    st.floats(max_value=-1e-12, allow_nan=False, allow_infinity=False),
+    st.floats(min_value=0.500000000001, max_value=1e6, allow_nan=False, allow_infinity=False)))
+def test_property_leakage_rate_target_out_of_interval_always_raises(bad_rate):
+    """Any finite model-rate target outside ``[0, 0.5]`` raises."""
     with pytest.raises(ValueError):
-        _mk_preset(wg_l1_target=bad_rate)
+        _mk_preset(leakage_rate_target=bad_rate)
 
 
 @settings(max_examples=200)

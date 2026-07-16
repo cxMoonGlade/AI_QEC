@@ -8,7 +8,7 @@ import pytest
 from error_coupling_simulator.frontend.qutrit_leakage import (
     index_from_qutrit_string,
     qutrit_string_from_index,
-    simulate_qutrit_wg_leakage,
+    simulate_qutrit_leakage,
 )
 
 torch = pytest.importorskip("torch", reason="qutrit leakage backend requires torch")
@@ -25,8 +25,8 @@ def test_qutrit_index_convention_is_engine_msf_order():
 
 
 @requires_cuda
-def test_qutrit_wg_leakage_default_writes_exact_artifacts(tmp_path):
-    result = simulate_qutrit_wg_leakage(
+def test_qutrit_leakage_default_writes_exact_artifacts(tmp_path):
+    result = simulate_qutrit_leakage(
         num_qutrits=3,
         initial_levels="111",
         cycles=1,
@@ -41,10 +41,21 @@ def test_qutrit_wg_leakage_default_writes_exact_artifacts(tmp_path):
         "error_coupling_simulator.carrier.exact.qutrit_dm.QutritDM"
     )
     assert result.manifest["representability"] == "exact_qutrit_density_matrix_leakage"
-    assert result.manifest["mechanism"] == "wood_gambetta_qutrit_leakage"
+    assert result.manifest["schema"] == \
+        "error_coupling_simulator.frontend.qutrit_leakage.v2"
+    assert result.manifest["mechanism"] == "qutrit_exchange_seepage_heating"
     assert result.manifest["decoder"] is None
-    assert result.manifest["parameters"]["WG_L1"] > 0.0
-    assert result.manifest["parameters"]["C_L"] > 0.0
+    assert result.manifest["parameters"]["leakage_rate"] > 0.0
+    assert result.manifest["parameters"]["level1_output_leakage_coherence"] > 0.0
+    retired_parameter_fragments = (
+        ("W", "G", "_L1"),
+        ("W", "G", "_L2"),
+        ("C", "_L"),
+    )
+    retired_parameters = {
+        "".join(fragments) for fragments in retired_parameter_fragments
+    }
+    assert not retired_parameters & set(result.manifest["parameters"])
     assert result.total_leaked_population > 0.005
     assert result.initial_state_probability < 1.0
     assert sum(result.counts.values()) == 256
@@ -72,7 +83,7 @@ def test_qutrit_wg_leakage_default_writes_exact_artifacts(tmp_path):
 
 @requires_cuda
 def test_qutrit_zero_channel_control_has_no_leakage():
-    result = simulate_qutrit_wg_leakage(
+    result = simulate_qutrit_leakage(
         num_qutrits=2,
         initial_levels="11",
         cycles=3,
@@ -85,4 +96,5 @@ def test_qutrit_zero_channel_control_has_no_leakage():
     assert result.counts == {}
     assert result.total_leaked_population == pytest.approx(0.0, abs=1e-12)
     assert result.joint_probabilities[index_from_qutrit_string("11")] == pytest.approx(1.0, abs=1e-12)
-    assert result.manifest["parameters"]["C_L"] == pytest.approx(0.0, abs=1e-12)
+    assert result.manifest["parameters"]["level1_output_leakage_coherence"] == \
+        pytest.approx(0.0, abs=1e-12)

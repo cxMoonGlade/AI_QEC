@@ -315,8 +315,8 @@ The retained source/test surface was then made current-only:
 - the zero-consumer PEPS one-site alias, the zero-consumer schedule helper, the unowned PEPS
   diagnostic environment branch, and an exact duplicate interop test were deleted without a
   compatibility fallback;
-- qutrit WG targets and leaked-readout bias are recorded as project-design coordinates with
-  cross-protocol scale context only. The two-site leakage level-map source-to-row audit remains
+- qutrit subspace-rate targets and leaked-readout bias are recorded as project-design coordinates
+  with cross-protocol scale context only. The two-site leakage level-map source-to-row audit remains
   explicitly pending; its implementation test is not promoted into a physical-mechanism claim.
 
 The source semantic-diff audit found no added numeric literal in any changed Python source. Removed
@@ -333,15 +333,65 @@ retrieval commands are not current authority and must appear in the Phase-6 dry-
 manifest; literature commands are rebuilt in Phase 5 before use. This explicit quarantine is not a
 claim that those later phases are complete.
 
+## Phase 5B1 feedback into P0 — qutrit leakage hard cut
+
+The first clean-room DOI/VOR read reopened one supposedly closed P0 item. The implementation had
+attached an author name and channel-level coherence interpretation to a project-declared
+exchange/seepage/heating channel. Its `coherence_of_leakage` value was actually the trace norm of the
+cross-subspace block of `E(|1><1|)` for one fixed input, not the paper's Haar-averaged channel
+coherent-leakage rate. A pure exchange at `theta=pi/2` is the decisive counterexample: this fixed-input
+quantity is zero even though the exchange generator remains nonzero. The old if-and-only-if causal
+wording and `C_L` manifest field were therefore withdrawn.
+
+The correction is a hard cut, with no aliases or readers for the old surface:
+
+- the retained operations are `leakage_seepage_rates`,
+  `level1_output_leakage_coherence`, and
+  `solve_exchange_angle_for_leakage_rate`;
+- qutrit frontend, MCWF, preset, and run-provenance schemas moved to their current neutral `v2`
+  families;
+- the solver now scans for a bracket before direction-independent bisection, preserves an exact zero
+  target, rejects invalid controls and unreachable targets, and never returns an unverified midpoint;
+- the source-coupling `v2` contract deletes the zero-consumer source-to-qutrit fan-out rather than
+  renaming it. Source processes and qutrit leakage remain separate current owners;
+- service metadata, package exports, current authority documents, native comments, retained
+  PEPO/PEPS fixtures, and generated `CODE_MAP.md` use descriptive physical-operation names.
+
+The scoped hard-cut evidence is green: 192 focused CPU tests passed; the qutrit owner registry covers
+all 10 canonical units at 100% statement and branch coverage; 2,228 tests collect; the scope/import,
+old-schema, old-symbol, M0--M34, package, service, and code-map checks pass. A targeted nine-file
+fresh-GPU run passed eight current owners and reproduced only the pre-existing PEPS/FET entropy
+failure.
+
+The complete 71-file service surface was then exercised in two disjoint parts. The first supervisor
+run completed 49 files, including the 527.85-second compressed-cap PEPO owner, before interactive
+steering terminated the supervisor as it admitted file 50; it produced no aggregate summary and is
+not represented as a complete canonical run. A new supervisor run covered the remaining 22 files and
+atomically recorded 21 passes plus the same PEPS/FET failure, with every process group verified
+clean. Across the two parts, 70 files passed, no process exited 139, and no Xid/native fault or orphan
+was observed. The global service gate remains red solely because the retained out-of-scope PEPS/FET
+entropy check remains red; no skip, allowlist, tolerance change, or compatibility layer was added.
+
+Current execution records:
+
+- `outputs/simulator_validation/logs/service_acceptance/qutrit_hardcut_targeted/`
+  `run-20260715T225920.098557Z-p201968-51210bc4/summary.json`;
+- interrupted, no-summary prefix:
+  `outputs/simulator_validation/logs/service_acceptance/qutrit_hardcut_full/`
+  `run-20260715T230135.672845Z-p203678-fa3800a3/`;
+- atomic remainder:
+  `outputs/simulator_validation/logs/service_acceptance/qutrit_hardcut_full_remainder/`
+  `run-20260715T233556.319047Z-p6697-43c86417/summary.json`.
+
 ## Phase ledger
 
 | phase | status | required outcome |
 |---|---|---|
 | 1 — boundary freeze | complete | intake inventory and trust boundary recorded |
-| 2 — P0 repair | complete | retired dispatcher deleted; retained record, packed bridge, Born probability, PTM, certification, coupled-process, and qutrit-leakage owners pass independent falsifiers |
+| 2 — P0 repair | complete; 5B1 reopening closed | retired dispatcher deleted; retained record, packed bridge, Born probability, PTM, certification, coupled-process, and corrected qutrit-leakage owners pass independent falsifiers |
 | 3 — Twin-only implementation hard cut | complete | retired implementation removed; all 128 intake tests reconciled; retained tests use current owners; static/subprocess/schema/package gates prove no retired runtime dependency |
 | 4 — authority reset | complete | current-only tracked authority; unsupported scientific claims withdrawn or explicitly pending |
-| 5 — literature reset | in progress | Phase 5A fail-closed corpus cut and neutral tools complete; load-bearing clean-room notes remain |
+| 5 — literature reset | in progress | Phase 5A fail-closed cut complete; Phase 5B1 admits the first DOI/VOR clean-room note; remaining load-bearing sources remain |
 | 6 — output cleanup | pending | dry-run manifest, targeted purge, current artifact regeneration |
 | 7 — inventory and acceptance | pending | zero-reference scans, rebuilt catalogs, full engineering gates |
 | 8 — formula audit restart | pending | current manifest frozen and sequential audit resumed |
@@ -355,7 +405,7 @@ claim that those later phases are complete.
 | Z-basis Born probabilities used a per-outcome numerical floor | preserve structural zeros; reject non-finite, non-Hermitian, non-PSD, and non-positive-trace inputs | PASS: exact-zero and invalid-state falsifiers |
 | PTM off-diagonal structure was described as a general coherent-error certificate | restrict interpretation to basis-specific non-Pauli structure | PASS: hand-typed amplitude-damping counterexample |
 | Retired numbered mechanism dispatcher was certified by the channel-algebra gate | delete dispatcher/catalog, compatibility adapters, fixtures, registries, and their tests | PASS: active-source retired-symbol scan is empty; physical primitives retain named owner tests |
-| Retired scientific names remained attached to certification, coupled-process, and qutrit-leakage owners | expose only neutral process/fixture APIs and physically named qutrit leakage operations | PASS: defining APIs plus 100% statement/branch owner gates |
+| Retired scientific names remained attached to certification, coupled-process, and qutrit-leakage owners | expose only neutral process/fixture APIs and descriptively named qutrit leakage operations | PASS: defining APIs plus 100% statement/branch owner gates |
 
 ## Phase-gate log
 
@@ -395,7 +445,7 @@ Append one dated row per completed gate. A failed gate remains visible until rep
 | 2026-07-15 | 4 | Axis-1 fresh GPU owner gates | PASS | connected-cluster 6 passed, convergence 5 passed, dense certification 5 passed; each file ran fresh under the cross-process GPU lock |
 | 2026-07-15 | 4 | full test collection | PASS | 2,140 tests collected from the renovated current checkout in canonical `ecs`; no deleted test path is required |
 | 2026-07-15 | 4 | regenerated code/service inventory | PASS | 104 installed Python modules, 4 native sources, 98 top-level test modules, 27 services, 71 unique acceptance files (29 cpu_light, 7 cpu_exclusive, 35 gpu_serial), 28 valid coverage registries; CODE_MAP check clean |
-| 2026-07-15 | 4 | retained PEPS/FET scientific blocker | OPEN/UNCHANGED | entropy gate remains 0.10860941571062639 versus GF(2) 2.0 at tolerance 1e-4; not converted to a skip or weakened |
+| 2026-07-15 | 4 | retained PEPS/FET scientific blocker | OPEN/UNCHANGED SCOPE | the original run was 0.10860941571062639 versus GF(2) 2.0; current fresh repeats were 0.12493899691635187 and 0.047288649590463, all at the unchanged 1e-4 tolerance; the value variation is not diagnosed in this Twin-only phase and the gate is neither skipped nor weakened |
 | 2026-07-15 | 4 | ignored local old-product tooling/retrieval surfaces | QUARANTINED | excluded from current authority; exact dry-run deletion/rebuild belongs to Phases 5–6 and remains pending |
 | 2026-07-15 | 5A | literature corpus inventory and current-corpus cut | PASS | 248 candidate content-note artifacts inspected; 0 current-schema notes; every legacy candidate excluded from current retrieval; original source objects preserved |
 | 2026-07-15 | 5A | neutral RAG/KG tools and corruption tests | PASS | 64 passed; manifest-only paper-fact retrieval, source/note/section/chunk hashes, exact-locator edges, unsupported-schema rejection, generated-index freshness, and dangling-edge falsifiers |
@@ -403,6 +453,14 @@ Append one dated row per completed gate. A failed gate remains visible until rep
 | 2026-07-15 | 5A | quantum-bath public-contract correction | PASS | result key hard-cut to `inequality_violated` with no alias; `False` is inconclusive; citation corrected to Bäcker et al., PRL 132, 060402 (2024), arXiv:2310.01205; formula/numerical/tolerance path unchanged; owner suites 12 + 14 passed and scope suite 8 passed |
 | 2026-07-15 | 5A | literature skill command/schema reset | PASS | `.agents` and `.claude` copies use neutral tools and source-only notes; paired skill/template copies are byte-identical |
 | 2026-07-15 | 5A | regenerated developer-tool inventory and collection | PASS | CODE_MAP check clean; 104 installed modules and 27 services unchanged; 2,204 tests collected including the 64 literature-tool gates |
+| 2026-07-15 | 5B1 | Wood--Gambetta DOI/VOR clean-room closure | PASS | APS VOR read in full and visually checked; four review rounds ended in dual independent PASS; 38 paper facts, 2 source-local gaps, 13 relations; 12 load-bearing source conflicts isolated; no project inference admitted |
+| 2026-07-15 | 5B1 | current-corpus admission and retrieval rebuild | PASS | artifact-verified manifest contains 1 VOR note; RAG has 38 paper-fact-only chunks; KG has 13 source-located edges and 0 dangling; concept index regenerated |
+| 2026-07-15 | 5B1 | literature and scope gates | PASS | canonical `python -m pytest` launcher: 72 passed; direct `conda run pytest` collection attempt was invalid because that entrypoint omitted the repository import root |
+| 2026-07-15 | 5B1/P0 | qutrit scientific/API hard cut | PASS | fixed-input coherence is no longer a channel-cause label; nonmonotone solver is bracketed and fail-closed; fake source fan-out deleted; neutral v2 schemas and exports only; no compatibility aliases |
+| 2026-07-15 | 5B1/P0 | qutrit owner and current-boundary gates | PASS | 192 focused CPU tests; 10/10 owner units at 100% statement/branch; scope suite 8 passed; 2,228 tests collected; old API/schema/M0--M34 scans empty; CODE_MAP current at 104 installed modules and 27 services |
+| 2026-07-15 | 5B1/P0 | isolated sdist-to-wheel hard cut | PASS | 10 distribution/package tests; installed binding-spec bytes are hash-bound; neutral qutrit APIs and v2 source schemas resolve; retired qutrit/frontend aliases are absent from the isolated wheel |
+| 2026-07-15 | 5B1/P0 | affected fresh-GPU owners | PASS WITH EXTERNAL BLOCKER | qutrit hard-cut owners, Axis-1, MCWF, QuTiP/cuQuantum, PEPO, and PEPS trajectory passed; only the unchanged-scope PEPS/FET entropy gate failed |
+| 2026-07-15 | 7 pre-gate | 71-file service acceptance surface | GLOBAL BLOCKED | 70 files passed across a 49-file interrupted run and an atomic 22-file remainder; no 139/Xid/orphan; sole failure `tests/test_peps_fet.py`; the interrupted first run has no aggregate summary and is not promoted to a complete canonical gate |
 
 ## Phase-4 close boundary
 

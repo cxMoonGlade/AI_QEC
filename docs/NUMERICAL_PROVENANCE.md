@@ -39,10 +39,10 @@ implementation-only.
 | Owner/object | Current values | Kind | Claim boundary |
 |---|---|---|---|
 | Registered raw-angle preset | `theta=0.30 rad`, `g_seep=0.09`, `g_heat=0`, `b=0.9`, arm `A`, readout `biased_b` | `project-design` | Synthetic strong-angle benchmark; no component tuple is a measured device cell |
-| Registered model-rate preset | target `WG_L1=5e-3`, resolved `theta=0.10244435242990924 rad`, `g_seep=0.09`, `g_heat=0`, `b=0.9`, arm `A`, readout `biased_b` | `project-design` | `theta` is solved in the project channel. Miao Fig. 3c is only an approximate leakage-source scale anchor, not the same Wood-Gambetta observable or a device calibration |
+| Registered model-rate preset | target `leakage_rate=5e-3`, resolved `theta=0.10244435242990924 rad`, `g_seep=0.09`, `g_heat=0`, `b=0.9`, arm `A`, readout `biased_b` | `project-design` | `theta` is solved in the declared channel. Miao Fig. 3c is only an approximate leakage-population scale anchor, not a direct measurement of this subspace diagnostic or a device calibration |
 | Leakage process defaults | `theta=0.07`, `g_seep=0.09`, `g_heat=0` | `project-design` | Convenience center for the declared channel family; not a headline physical point |
 | Leakage sweeps | `theta=(0,.045,.07,.10)`, `g_seep=(.05,.09,.10)`, `g_heat=(0,.005)` | `project-design` | Synthetic sensitivity grid |
-| WG diagnostic target ranges | `WG_L1=(1e-3,5e-3)`, `WG_L2=(.05,.10)` | `project-design` with literature-scale context | Target regimes for the project channel; the endpoints are not jointly measured WG-rate bands |
+| Subspace diagnostic target ranges | `leakage_rate=(1e-3,5e-3)`, `seepage_rate=(.05,.10)` | `project-design` with literature-scale context | Target regimes for the declared channel; the endpoints are not jointly measured rate bands |
 | Leaked-readout bias | interval `[.5,1]`, grid `(.5,.75,1)`, registered preset point `.9`; bare `RunSpec` default `1` | `project-design` for the sweep; `convenience-default` for bare `RunSpec` | A required nuisance sensitivity. No point value or direction is a calibrated binary readout law |
 | Within-cycle channel siting | `WC_LEAK_FRAC=.25`, four applications of `exp(L/4)` | `project-design` | Project normalization and schedule siting; no source establishes it as a physical quarter-CZ law |
 | Within-cycle run defaults | logical input `0`, arm `A`, `N=1000`, seed `0`, work chunk `1024`, rounds from schedule, `final -> complex128` | `convenience-default` | A direct `RunSpec` is not a registered scientific run unless a trusted manifest is bound |
@@ -50,9 +50,11 @@ implementation-only.
 | Exact qutrit frontend defaults | `num_qutrits=3`, `cycles=1`, `shots=1024`, seed `0`, process defaults above | `convenience-default` | Bounded implementation surface, not distributional evidence by default |
 | Multi-level CZ parameters | `alpha_flux=alpha_stat=-300 MHz`, `J1=15 MHz`, `omega_flux_max=6.7 GHz`, `omega_stat=6.0 GHz`, `t_gate=25 ns`, net-zero pulse, `t_ramp=3 ns`, dissipation off, `T1=Tphi=75 us`, five simulated levels | `project-design` literature-scale composite | Formula/channel fixture. Individual literature scales do not validate the complete tuple or a target device |
 
-Wood-Gambetta `L1`, `L2`, and `C_L` are diagnostics computed from the declared channel. They do not
-become emitted-record parameters or prove that two channels with matching rates have the same record
-law.
+`leakage_rate` and `seepage_rate` are evaluator-only subspace-transition diagnostics computed from the
+declared channel. `level1_output_leakage_coherence` is the trace norm of the cross-subspace block of
+`E(|1><1|)` for that fixed input; it is neither a channel-averaged coherence rate nor an if-and-only-if
+classifier of physical cause. None of these values enters the emitted record or proves that two
+channels with matching diagnostics have the same record law.
 
 Current preset/runtime metadata classifies the `5e-3` project-channel target and its resolved angle
 as `project-design`. The Miao value is retained only as cross-observable scale context; the manifest
@@ -69,7 +71,7 @@ the cited literature does not determine that map.
 | `PhaseBurstSource` | event probability `0`, peak `-2 MHz`, recovery `1 ms`, `T1` duration `10 us`, phase window/cycle `1000 ns`, echo factor `.05` | `project-design` | Explicit burst comparator; zero probability is the inert default |
 | `TemporalStormSPPSource` | `a=.01`, `b=.10`, calm `(0.999,1/3000,1/3000,1/3000)`, storm `(.97,.01,.01,.01)`, global scope | `project-design` | Reduced Pauli HMM comparator, not analog truth |
 | Static-ZZ fan-out | `6.0/6.1 GHz`, `alpha=-300 MHz`, gate `25 ns`, base phase `1.6e-4 rad`, with `phi=zeta*t/4` | `project-design` | Declared project Hamiltonian convention; do not compare `phi` directly to a conditional phase using a different coefficient |
-| `SourceCouplingConfig` | `z_scale=1e-4 rad/ns`, `Tphi=75 us`, drive `pi/25 rad/ns`, spillover `.001`, readout `.01`, reset `.005`, CZ depolarization `.002`, declared sensitivities; leakage fan-out inert | `convenience-default` whose values are `project-design` | Parameter map for controlled source experiments; the class name and formulas do not supply calibration |
+| `SourceCouplingConfig` | `z_scale=1e-4 rad/ns`, `Tphi=75 us`, drive `pi/25 rad/ns`, spillover `.001`, readout `.01`, reset `.005`, CZ depolarization `.002`, and declared qubit-process sensitivities | `convenience-default` whose values are `project-design` | Parameter map for controlled source experiments; it has no source-to-qutrit-leakage fan-out, and the class name and formulas do not supply calibration |
 | Source-to-Stim Pauli projection | base probability `1e-3`, sensitivity `1`, source scale `1e-4` | `project-design` | Explicit reduced Pauli projection only |
 
 `SourceTimeline` preserves exact payload and evaluator-only latent arrays. A matched-marginal control
@@ -170,10 +172,13 @@ The artifact must additionally bind:
 
 Current schema families include:
 
-- `error_coupling_simulator.frontend.experiment_preset_provenance.v1`;
-- `error_coupling_simulator.frontend.run_numerical_provenance.v1`;
+- `error_coupling_simulator.frontend.qutrit_leakage.v2`;
+- `error_coupling_simulator.frontend.mcwf_qutrit_grover_leakage.v2`;
+- `error_coupling_simulator.frontend.experiment_preset_provenance.v2`;
+- `error_coupling_simulator.frontend.run_numerical_provenance.v2`;
 - `error_coupling_simulator.source.timeline.v1`;
-- `error_coupling_simulator.source.coupling_config.v1`;
+- `error_coupling_simulator.source.coupling_config.v2`;
+- `error_coupling_simulator.source.coupled_process_params.v2`;
 - `error_coupling_simulator.carrier.package_build_identity.v1`;
 - `error_coupling_simulator.source.finite_rtn_free_induction_diagnostic.v1`.
 
@@ -188,10 +193,11 @@ there is no compatibility fallback.
 
 - Miao et al., “Overcoming leakage in quantum error correction,” *Nature Physics* 19 (2023),
   DOI `10.1038/s41567-023-02226-w`, Fig. 3c: approximate leakage-population source scale for that
-  experiment, not project `WG_L1`.
+  experiment, not a direct measurement of the declared channel's `leakage_rate`.
 - McEwen et al., “Removing leakage-induced correlated errors in superconducting quantum error
   correction,” *Nature Communications* 12 (2021), DOI `10.1038/s41467-021-21982-y`, Supplementary
   Table S1: no-reset seepage scale for that protocol, not a fitted project `g_seep`.
 - Wood and Gambetta, “Quantification and characterization of leakage errors,” *Physical Review A*
-  97, 032306 (2018), DOI `10.1103/PhysRevA.97.032306`: definitions of `L1`, `L2`, and leakage
-  coherence; it supplies no current preset tuple.
+  97, 032306 (2018), DOI `10.1103/PhysRevA.97.032306`: Eq. (2) supplies the subspace transition-rate
+  definitions; Eqs. (30)-(34), (57)-(58), and (61) locate the state/block coherence construction. The
+  paper supplies neither the declared exchange/seepage/heating channel nor a current preset tuple.

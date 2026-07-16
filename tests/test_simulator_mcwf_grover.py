@@ -42,7 +42,8 @@ def test_mcwf_qutrit_grover_measurement_backend_writes_artifacts(tmp_path):
     assert result.manifest["program"]["schema"] == (
         "error_coupling_simulator.frontend.compiled_mcwf_program.v1"
     )
-    assert result.manifest["program"]["description"] == "single_solution_grover_gate_level_with_qutrit_wg_leakage_slots"
+    assert result.manifest["program"]["description"] == \
+        "single_solution_grover_gate_level_with_qutrit_leakage_slots"
     assert result.manifest["program"]["operation_counts"]["McwfKrausAllSitesOp"] == result.iterations + 1
     assert result.manifest["grover_realization"]["oracle"] == (
         "x_mask_to_all_ones_then_multi_controlled_phase_then_unmask"

@@ -111,7 +111,7 @@ class RoundDataFrame:
     the observable are frame-invariant -- verified: removing them leaves every ideal-circuit
     detector deterministic), so they have **no effect on a Pauli/Clifford circuit's syndromes
     or logical outcome**. The within-cycle qutrit leakage channel is **non-Pauli**:
-    Wood-Gambetta heating acts on ``|1>`` while ``|0>`` is leakage-inert. The ``X`` echo
+    The declared heating jump acts on ``|1>`` while ``|0>`` is leakage-inert. The ``X`` echo
     therefore changes the subsequent ``|1>``/``|2>`` leakage evolution and must be applied
     at its physical circuit position in the leakage trajectory.
 

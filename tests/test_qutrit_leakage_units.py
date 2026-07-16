@@ -1,4 +1,4 @@
-"""Physical value-pins for the production Wood--Gambetta qutrit channel.
+"""Value-pins for the declared qutrit exchange/seepage/heating channel.
 
 The operator-sum representation is not unique, so the Kraus tests reconstruct the
 channel and compare it with an independently hand-typed GKSL matrix exponential.
@@ -19,16 +19,16 @@ from _support.faithfulness import assert_cptp, assert_discriminates
 import error_coupling_simulator.mechanisms.qutrit_leakage as leakage
 from error_coupling_simulator.mechanisms.qutrit_leakage import (
     QutritLeakageNoiseProcess,
-    coherence_of_leakage,
+    leakage_seepage_rates,
     leaked_readout_manifest,
     leaked_readout_probabilities,
     leakage_channel_super,
     leakage_kraus,
     leakage_kraus_torch,
+    level1_output_leakage_coherence,
     qutrit_leakage_process,
     qutrit_leakage_process_heterogeneous,
-    solve_theta_for_wg_l1,
-    wg_rates,
+    solve_exchange_angle_for_leakage_rate,
 )
 
 
@@ -124,6 +124,25 @@ def test_leakage_superoperator_duration_and_validation() -> None:
 
 
 @pytest.mark.parametrize(
+    ("theta", "g_seep", "g_heat", "duration"),
+    [
+        (float("nan"), 0.05, 0.03, 1.0),
+        (0.2, float("inf"), 0.03, 1.0),
+        (0.2, 0.05, float("-inf"), 1.0),
+        (0.2, 0.05, 0.03, float("nan")),
+    ],
+)
+def test_leakage_superoperator_rejects_nonfinite_declared_parameters(
+    theta: float,
+    g_seep: float,
+    g_heat: float,
+    duration: float,
+) -> None:
+    with pytest.raises(ValueError, match="parameters and duration must be finite"):
+        leakage_channel_super(theta, g_seep, g_heat, t=duration)
+
+
+@pytest.mark.parametrize(
     ("theta", "g_seep", "g_heat"),
     [(0.2, 0.05, 0.0), (0.2, 0.05, 0.03), (0.15, 0.0, 0.0)],
 )
@@ -133,7 +152,7 @@ def test_leakage_kraus_is_cptp_and_matches_independent_channel(
     g_heat: float,
 ) -> None:
     operators = leakage_kraus(theta, g_seep, g_heat)
-    assert_cptp(operators, label="Wood--Gambetta qutrit leakage")
+    assert_cptp(operators, label="qutrit exchange/seepage/heating channel")
     np.testing.assert_allclose(
         _superoperator_from_kraus(operators),
         _independent_superoperator(theta, g_seep, g_heat),
@@ -149,41 +168,158 @@ def test_superoperator_factorization_rejects_invalid_inputs() -> None:
         leakage._super_to_kraus(-np.eye(9, dtype=np.complex128))
 
 
-def test_wg_rates_match_closed_form_limits() -> None:
+def test_leakage_seepage_rates_match_closed_form_limits() -> None:
     theta = 0.23
-    l1, l2 = wg_rates(theta, 0.0, 0.0)
+    leakage_rate, seepage_rate = leakage_seepage_rates(theta, 0.0, 0.0)
     expected_transfer = math.sin(theta) ** 2
-    assert l1 == pytest.approx(0.5 * expected_transfer, abs=1e-12)
-    assert l2 == pytest.approx(expected_transfer, abs=1e-12)
+    assert leakage_rate == pytest.approx(0.5 * expected_transfer, abs=1e-12)
+    assert seepage_rate == pytest.approx(expected_transfer, abs=1e-12)
 
-    l1_seep, l2_seep = wg_rates(0.0, 0.17, 0.0)
-    assert l1_seep == pytest.approx(0.0, abs=1e-12)
-    assert l2_seep == pytest.approx(1.0 - math.exp(-0.17), abs=1e-12)
+    leakage_seep, seepage_seep = leakage_seepage_rates(0.0, 0.17, 0.0)
+    assert leakage_seep == pytest.approx(0.0, abs=1e-12)
+    assert seepage_seep == pytest.approx(1.0 - math.exp(-0.17), abs=1e-12)
 
-    l1_heat, l2_heat = wg_rates(0.0, 0.0, 0.11)
-    assert l1_heat == pytest.approx(0.5 * (1.0 - math.exp(-0.11)), abs=1e-12)
-    assert l2_heat == pytest.approx(0.0, abs=1e-12)
+    leakage_heat, seepage_heat = leakage_seepage_rates(0.0, 0.0, 0.11)
+    assert leakage_heat == pytest.approx(0.5 * (1.0 - math.exp(-0.11)), abs=1e-12)
+    assert seepage_heat == pytest.approx(0.0, abs=1e-12)
 
 
-def test_coherence_of_leakage_matches_unitary_limit_and_incoherent_null() -> None:
+def test_level1_output_coherence_matches_unitary_limit_and_incoherent_null() -> None:
     for theta in (0.0, 0.07, 0.31):
-        assert coherence_of_leakage(theta, 0.0, 0.0) == pytest.approx(
+        assert level1_output_leakage_coherence(theta, 0.0, 0.0) == pytest.approx(
             abs(math.sin(2.0 * theta)), abs=1e-12
         )
-    assert coherence_of_leakage(0.0, 0.09, 0.005) == pytest.approx(0.0, abs=1e-12)
+    assert level1_output_leakage_coherence(
+        0.0, 0.09, 0.005
+    ) == pytest.approx(0.0, abs=1e-12)
 
 
-def test_solve_theta_hits_requested_wg_rate_and_validates_domain() -> None:
-    assert solve_theta_for_wg_l1(0.0) == 0.0
+@pytest.mark.parametrize(
+    "invalid_target",
+    [-1.0e-3, 0.51, float("nan"), float("inf")],
+)
+def test_exchange_angle_solver_rejects_invalid_target(
+    invalid_target: float,
+) -> None:
+    with pytest.raises(ValueError, match=r"must be finite and lie in \[0, 0.5\]"):
+        solve_exchange_angle_for_leakage_rate(invalid_target)
+
+
+def test_exchange_angle_solver_hits_requested_rate_and_endpoints() -> None:
+    assert solve_exchange_angle_for_leakage_rate(0.0) == 0.0
     for target in (1.0e-3, 5.0e-3):
-        theta = solve_theta_for_wg_l1(target, g_seep=0.09, g_heat=0.0)
-        assert wg_rates(theta, 0.09, 0.0)[0] == pytest.approx(target, abs=1e-10)
+        theta = solve_exchange_angle_for_leakage_rate(
+            target, g_seep=0.09, g_heat=0.0
+        )
+        assert leakage_seepage_rates(theta, 0.09, 0.0)[0] == pytest.approx(
+            target, abs=1e-10
+        )
 
-    with pytest.raises(ValueError, match=r"target WG_L1 must lie in \(0, 0.5\)"):
-        solve_theta_for_wg_l1(0.5)
-    with pytest.raises(ValueError, match="target WG_L1=0.1 unreachable"):
-        solve_theta_for_wg_l1(0.1, g_seep=10.0)
-    assert solve_theta_for_wg_l1(0.1, max_iter=0) == pytest.approx(math.pi / 4.0)
+    upper_endpoint = solve_exchange_angle_for_leakage_rate(
+        0.5, g_seep=0.0, g_heat=0.0
+    )
+    assert upper_endpoint == pytest.approx(0.5 * math.pi, abs=1e-15)
+    assert leakage_seepage_rates(upper_endpoint, 0.0, 0.0)[0] == pytest.approx(
+        0.5,
+        abs=1e-15,
+    )
+
+    with pytest.raises(ValueError, match="max_iter must be a positive integer"):
+        solve_exchange_angle_for_leakage_rate(0.1, max_iter=0)
+    with pytest.raises(ValueError, match="bracket_samples must be an integer >= 2"):
+        solve_exchange_angle_for_leakage_rate(0.1, bracket_samples=1)
+
+
+def test_exchange_angle_solver_does_not_floor_a_positive_target_to_zero() -> None:
+    target = 1.0e-14
+    theta = solve_exchange_angle_for_leakage_rate(
+        target,
+        g_seep=0.0,
+        g_heat=0.0,
+    )
+
+    assert theta > 0.0
+    assert leakage_seepage_rates(theta, 0.0, 0.0)[0] == pytest.approx(
+        target,
+        abs=0.5 * target,
+    )
+
+
+@pytest.mark.parametrize(
+    "invalid_tolerance",
+    [0.0, -1.0e-10, float("nan"), float("inf")],
+)
+def test_exchange_angle_solver_rejects_invalid_tolerance(
+    invalid_tolerance: float,
+) -> None:
+    with pytest.raises(ValueError, match="tol must be finite and positive"):
+        solve_exchange_angle_for_leakage_rate(0.1, tol=invalid_tolerance)
+
+
+@pytest.mark.parametrize("invalid_count", [None, "not-an-integer", float("inf")])
+def test_exchange_angle_solver_rejects_unconvertible_iteration_controls(
+    invalid_count: object,
+) -> None:
+    with pytest.raises(ValueError, match="max_iter must be a positive integer"):
+        solve_exchange_angle_for_leakage_rate(
+            0.1, max_iter=invalid_count  # type: ignore[arg-type]
+        )
+    with pytest.raises(ValueError, match="bracket_samples must be an integer >= 2"):
+        solve_exchange_angle_for_leakage_rate(
+            0.1, bracket_samples=invalid_count  # type: ignore[arg-type]
+        )
+
+
+def test_exchange_angle_solver_accepts_an_exact_scan_node() -> None:
+    theta_on_grid = math.pi / 16.0
+    target = leakage_seepage_rates(theta_on_grid, 0.0, 0.0)[0]
+
+    solved = solve_exchange_angle_for_leakage_rate(
+        target,
+        g_seep=0.0,
+        g_heat=0.0,
+        bracket_samples=8,
+    )
+
+    assert solved == pytest.approx(theta_on_grid, abs=1e-15)
+    assert leakage_seepage_rates(solved, 0.0, 0.0)[0] == pytest.approx(
+        target,
+        abs=1e-15,
+    )
+
+
+def test_exchange_angle_solver_accepts_a_verified_terminal_midpoint() -> None:
+    theta_after_one_step = 3.0 * math.pi / 16.0
+    target = leakage_seepage_rates(theta_after_one_step, 0.0, 0.0)[0]
+
+    solved = solve_exchange_angle_for_leakage_rate(
+        target,
+        g_seep=0.0,
+        g_heat=0.0,
+        tol=1e-14,
+        max_iter=1,
+        bracket_samples=2,
+    )
+
+    assert solved == pytest.approx(theta_after_one_step, abs=1e-15)
+    assert leakage_seepage_rates(solved, 0.0, 0.0)[0] == pytest.approx(
+        target,
+        abs=1e-14,
+    )
+
+
+def test_exchange_angle_solver_fails_closed_after_insufficient_iterations() -> None:
+    target = leakage_seepage_rates(0.6, 0.0, 0.0)[0]
+
+    with pytest.raises(RuntimeError, match="did not reach tolerance"):
+        solve_exchange_angle_for_leakage_rate(
+            target,
+            g_seep=0.0,
+            g_heat=0.0,
+            tol=1e-14,
+            max_iter=1,
+            bracket_samples=2,
+        )
 
 
 def test_leaked_readout_map_and_audit_record_are_explicit() -> None:
@@ -219,7 +355,7 @@ def test_torch_kraus_is_only_a_carrier_conversion() -> None:
         np.testing.assert_allclose(actual.numpy(), expected, atol=1e-12, rtol=0.0)
 
 
-def test_homogeneous_noise_process_uses_physical_channel_and_neutral_type() -> None:
+def test_homogeneous_noise_process_uses_declared_channel_and_neutral_type() -> None:
     process = qutrit_leakage_process(
         b=0.75,
         theta=0.10,
@@ -232,7 +368,7 @@ def test_homogeneous_noise_process_uses_physical_channel_and_neutral_type() -> N
     assert process.leaked_readout == {0: 0.0, 1: 1.0, 2: 0.75}
     assert process.params["n_data"] == 3
     assert process.params["homogeneous"] is True
-    assert process.params["C_L"] > 0.0
+    assert process.params["level1_output_leakage_coherence"] > 0.0
     assert process.field(0, 0) is process.field(7, 2)
     np.testing.assert_allclose(
         _superoperator_from_kraus([item.numpy() for item in process.field(0, 0)]),
@@ -247,7 +383,9 @@ def test_homogeneous_noise_process_uses_physical_channel_and_neutral_type() -> N
         g_seep=0.09,
         device="cpu",
     )
-    assert null_process.params["WG_L2_over_L1"] == float("inf")
+    assert null_process.params["leakage_rate"] == 0.0
+    assert null_process.params["seepage_rate"] > 0.0
+    assert "seepage_to_leakage_ratio" not in null_process.params
 
 
 def test_heterogeneous_noise_process_preserves_per_site_rates() -> None:
@@ -267,3 +405,59 @@ def test_heterogeneous_noise_process_preserves_per_site_rates() -> None:
             atol=1e-10,
             rtol=0.0,
         )
+
+
+def test_current_qutrit_leakage_api_has_descriptive_names_only() -> None:
+    """The hard-cut public surface names declared operations, never an author alias."""
+
+    for current_name in (
+        "leakage_seepage_rates",
+        "level1_output_leakage_coherence",
+        "solve_exchange_angle_for_leakage_rate",
+    ):
+        assert callable(getattr(leakage, current_name))
+    retired_name_fragments = (
+        ("w", "g", "_rates"),
+        ("coherence", "_of", "_leakage"),
+        ("solve", "_theta", "_for", "_w", "g", "_l1"),
+    )
+    for fragments in retired_name_fragments:
+        retired_name = "".join(fragments)
+        assert not hasattr(leakage, retired_name)
+
+
+def test_level1_output_coherence_records_the_fixed_input_not_channel_cause() -> None:
+    """A coherent exchange has state-dependent nodes, so the metric cannot label cause."""
+
+    metric = getattr(leakage, "level1_output_leakage_coherence")
+    assert metric(math.pi / 4.0, 0.0, 0.0) == pytest.approx(1.0, abs=1e-12)
+    assert metric(math.pi / 2.0, 0.0, 0.0) == pytest.approx(0.0, abs=1e-12)
+
+
+def test_exchange_angle_solver_rejects_zero_below_heating_baseline() -> None:
+    """Structural target zero is unreachable when heating leaks at theta=0."""
+
+    rates = getattr(leakage, "leakage_seepage_rates")
+    solve = getattr(leakage, "solve_exchange_angle_for_leakage_rate")
+    baseline = rates(0.0, 0.0, 0.1)[0]
+    assert baseline > 0.0
+    assert solve(baseline, g_seep=0.0, g_heat=0.1) == 0.0
+    with pytest.raises(ValueError, match="was not bracketed by the 256-sample scan"):
+        solve(0.0, g_seep=0.0, g_heat=0.1)
+    with pytest.raises(ValueError, match="max_iter must be a positive integer"):
+        solve(0.1, max_iter=0)
+
+
+def test_exchange_angle_solver_brackets_a_nonmonotone_rate_curve() -> None:
+    """A reachable interior target must not be rejected from endpoint ordering alone."""
+
+    g_seep = 0.022252004698710224
+    g_heat = 0.12602047020945872
+    target = 0.4741798745099791
+    theta = solve_exchange_angle_for_leakage_rate(
+        target,
+        g_seep=g_seep,
+        g_heat=g_heat,
+    )
+    actual = leakage_seepage_rates(theta, g_seep, g_heat)[0]
+    assert actual == pytest.approx(target, abs=1e-10)

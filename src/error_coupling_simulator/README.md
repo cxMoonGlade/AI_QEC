@@ -20,7 +20,7 @@ cohesive package gives it a clean boundary, a cohesive public surface, and a rel
   for float floors.
 - **Precision-purpose boundary.** Only the fused within-cycle SV-MC carrier uses c64, and only for
   optimization/screening. Final and certification runs are c128 candidates; PEPS/MPS remain
-  c128-only. Physical WG/codestate construction and CPTP checks stay c128, with only checked
+  c128-only. Declared leakage-channel/codestate construction and CPTP checks stay c128, with only checked
   execution tables cast afterward. c64 never authorizes tolerance or FET changes.
 
 ## Layout

@@ -533,7 +533,7 @@
     },
     {
       "id": "qutrit_leakage_channel_and_process",
-      "name": "Wood-Gambetta qutrit leakage channel and specified noise process",
+      "name": "Qutrit exchange, seepage, and heating channel with specified noise process",
       "status": "CORE",
       "kind": "mechanism",
       "canonical_record_output": false,
@@ -543,13 +543,18 @@
         "src/error_coupling_simulator/frontend/qutrit_leakage.py"
       ],
       "entrypoints": [
-        "error_coupling_simulator.mechanisms.qutrit_leakage:wg_rates",
+        "error_coupling_simulator.mechanisms.qutrit_leakage:leakage_seepage_rates",
+        "error_coupling_simulator.mechanisms.qutrit_leakage:level1_output_leakage_coherence",
+        "error_coupling_simulator.mechanisms.qutrit_leakage:solve_exchange_angle_for_leakage_rate",
         "error_coupling_simulator.mechanisms.qutrit_leakage:qutrit_leakage_process",
-        "error_coupling_simulator.frontend:simulate_qutrit_wg_leakage"
+        "error_coupling_simulator.frontend:simulate_qutrit_leakage"
       ],
       "dependencies": {"core": ["torch", "numpy"], "extras": ["gpu-cu130"]},
       "external_inputs": ["Explicit theta, seepage/heating and readout-bias parameters"],
-      "outputs": ["WG rates/Kraus representation, specified process, and exact qutrit leakage state/count artifacts"],
+      "outputs": [
+        "Evaluator-only leakage_rate, seepage_rate, and level1_output_leakage_coherence diagnostics plus Kraus representation and specified process",
+        "Exact qutrit leakage state/count artifacts with error_coupling_simulator.frontend.qutrit_leakage.v2 manifests"
+      ],
       "acceptance": [
         "tests/test_qutrit_leakage_units.py",
         "tests/test_qutrit_leakage_certification_independence.py",
@@ -974,7 +979,7 @@
       {"id": "axis1_lower", "label": "Axis-1 primitive lowering\nH + collapse terms", "group": "Mechanisms and channels", "services": ["axis1_joint_channel"]},
       {"id": "joint_channel", "label": "Same-substep joint-L channel\nCPTP Kraus + evidence", "group": "Mechanisms and channels", "services": ["axis1_joint_channel"]},
       {"id": "channel_algebra", "label": "Reusable channel algebra\nKraus / Stinespring / Choi", "group": "Mechanisms and channels", "services": ["channel_algebra"]},
-      {"id": "wg", "label": "Wood-Gambetta qutrit leakage", "group": "Mechanisms and channels", "services": ["qutrit_leakage_channel_and_process"]},
+      {"id": "qutrit_leakage", "label": "Qutrit exchange / seepage / heating", "group": "Mechanisms and channels", "services": ["qutrit_leakage_channel_and_process"]},
       {"id": "cz", "label": "Package-derived / injected ququart CZ channel", "group": "Mechanisms and channels", "services": ["ququart_cz_transport"]},
       {"id": "exact_qubit", "label": "Exact small-N qubit DM\nstate + branch probabilities", "group": "Carriers", "services": ["exact_qubit_circuit_dm"]},
       {"id": "axis1_dense", "label": "Dense Axis-1 joint-L carrier\nstate + canonical records", "group": "Carriers", "services": ["axis1_dense_jointl_record"]},
@@ -1038,15 +1043,15 @@
       {"from": "joint_channel", "to": "qutip_probe", "label": "Axis-1 H/collapse program"},
       {"from": "axis1_schedule", "to": "qutip_probe", "label": "restricted schedule"},
       {"from": "xzzx_schedule", "to": "within_cycle_host", "label": "geometry + RunSpec"},
-      {"from": "user", "to": "wg", "label": "WG parameters"},
-      {"from": "wg", "to": "within_cycle_host", "label": "within-cycle leakage slices"},
+      {"from": "user", "to": "qutrit_leakage", "label": "declared theta / seepage / heating parameters"},
+      {"from": "qutrit_leakage", "to": "within_cycle_host", "label": "within-cycle leakage slices"},
       {"from": "within_cycle_host", "to": "fused", "label": "marshalled d3 stream"},
       {"from": "within_cycle_host", "to": "peps", "label": "shared schedule semantics"},
       {"from": "xzzx_schedule", "to": "pepo", "label": "layout and operation schedule"},
       {"from": "pepo", "to": "pepo_internals", "label": "layout and truncation implementation"},
       {"from": "pepo_internals", "to": "peps", "label": "layout/truncation helpers only"},
       {"from": "channel_algebra", "to": "exact_qudit", "label": "qutrit/ququart Kraus"},
-      {"from": "wg", "to": "exact_qudit", "label": "exact qutrit smoke"},
+      {"from": "qutrit_leakage", "to": "exact_qudit", "label": "exact qutrit smoke"},
       {"from": "user", "to": "cz", "label": "CZParams / channel / derived cache"},
       {"from": "cz", "to": "exact_qudit", "label": "exact ququart transport"},
       {"from": "user", "to": "generic_mcwf", "label": "caller CompiledMcwfProgram"},
@@ -1066,7 +1071,7 @@
       {"from": "exact_qudit", "to": "standalone_artifacts", "label": "exact state/oracle results"},
       {"from": "generic_mcwf", "to": "standalone_artifacts", "label": "trajectories/counts"},
       {"from": "cz", "to": "standalone_artifacts", "label": "transport artifacts"},
-      {"from": "wg", "to": "standalone_artifacts", "label": "leakage artifacts"},
+      {"from": "qutrit_leakage", "to": "standalone_artifacts", "label": "leakage artifacts"},
       {"from": "cudaq", "to": "standalone_artifacts", "label": "process-boundary counts"},
       {"from": "user", "to": "protocol_process", "label": "explicit protocol implementation"},
       {"from": "user", "to": "anchors", "label": "select independent anchors"},

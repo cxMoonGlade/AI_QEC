@@ -1,11 +1,11 @@
 """Per-unit L0+L1+L2 coverage of
-``error_coupling_simulator.source.coupling`` (20 CPU-pure public units; no GPU, no quimb,
+``error_coupling_simulator.source.coupling`` (CPU-pure public units; no GPU, no quimb,
 so out_of_scope is empty).
 
 ``source/coupling.py`` owns the Axis-2 shared-source parameter fan-out ``Theta(z_t)``: one
 explicit source draw conditions many mechanism parameters in the SAME cycle -- the static-ZZ
-frequency-drift closed form, the positive-rate exp maps (gamma_phi, drive_omega, the
-Theta->leakage cell), and the logit maps (spillover, readout, reset, cz). It is a parameter
+frequency-drift closed form, the positive-rate exp maps (gamma_phi and drive_omega),
+and the logit maps (spillover, readout, reset, cz). It is a parameter
 LAYER, not a Stim/DEM noise layer nor a channel assembler.
 
 L2 DISCIPLINE (the standing lesson: 100% coverage != discrimination). This is closed-form
@@ -21,6 +21,7 @@ roundtrips string literals -- a substring ``match=`` still passes them, exact-eq
 """
 from __future__ import annotations
 
+import dataclasses
 import math
 
 import numpy as np
@@ -41,7 +42,6 @@ from error_coupling_simulator.source.coupling import (
     drift_to_t2,
     exchange_j_from_phi,
     independent_baseline_trajectory_to_params,
-    leakage_from_drift,
     parameter_series,
     source_to_params,
     static_zz_zeta,
@@ -50,8 +50,16 @@ from error_coupling_simulator.source.coupling import (
 )
 
 _TWO_PI = 2.0 * math.pi
-_SOURCE_KEYS = ("zz", "gamma_phi", "detuning", "drive", "spillover", "readout", "reset",
-                "cz", "wg_theta", "wg_seep")
+_SOURCE_KEYS = (
+    "zz",
+    "gamma_phi",
+    "detuning",
+    "drive",
+    "spillover",
+    "readout",
+    "reset",
+    "cz",
+)
 
 # default StaticZZParameters constants (used by the default config's zz)
 _BASE_DELTA = _TWO_PI * (6.0 - 6.1)          # 2*pi*(omega_a - omega_b)
@@ -122,7 +130,6 @@ def test_public_parameter_type_names_and_exports():
         "drift_to_t2",
         "exchange_j_from_phi",
         "independent_baseline_trajectory_to_params",
-        "leakage_from_drift",
         "parameter_series",
         "source_to_params",
         "static_zz_zeta",
@@ -308,53 +315,6 @@ def test_KILLER_drift_to_t2_discriminates():
 
 
 # =========================================================================== #
-# leakage_from_drift                                                          #
-# =========================================================================== #
-def test_L0_leakage_from_drift_value_config_branch_and_inert_default():
-    zscale, tb, ts, sb, ss = 1e-4, 5e-3, 0.2, 0.09, 0.3
-    cfg = SourceCouplingConfig(z_scale_radns=zscale, wg_theta_base_rad=tb, wg_theta_sensitivity=ts,
-                               wg_g_seep_base=sb, wg_g_seep_sensitivity=ss)
-    for tz, sz in [(0.0, 0.0), (1e-4, 2e-4), (-1e-4, 3e-4)]:
-        theta, gseep = leakage_from_drift(tz, sz, cfg)
-        assert_pins(theta, _indep_pos_rate(tb, tz / zscale, ts), rtol=1e-12, atol=0.0, label="theta")
-        assert_pins(gseep, _indep_pos_rate(sb, sz / zscale, ss), rtol=1e-12, atol=0.0, label="gseep")
-    # off-source identity: Theta(0) returns the configured bases exactly
-    theta0, gseep0 = leakage_from_drift(0.0, 0.0, cfg)
-    assert_pins(theta0, tb, rtol=1e-12, atol=0.0, label="theta base")
-    assert_pins(gseep0, sb, rtol=1e-12, atol=0.0, label="gseep base")
-    # default config is fully INERT (base 0 + sens 0) -> (0, 0); also covers config None branch
-    assert leakage_from_drift(1e-4, 2e-4, None) == (0.0, 0.0)
-    # guards
-    _raises_exact(ValueError, "theta_z_radns must be finite, got nan",
-                  lambda: leakage_from_drift(float("nan"), 0.0, cfg))
-    _raises_exact(ValueError, "seep_z_radns must be finite, got inf",
-                  lambda: leakage_from_drift(0.0, float("inf"), cfg))
-
-
-def test_L0_leakage_from_drift_zero_base_nonzero_sens_raises():
-    # base 0 with a nonzero sensitivity is a modelling error -> the positive-rate map raises
-    cfg_t = SourceCouplingConfig(wg_theta_base_rad=0.0, wg_theta_sensitivity=0.5)
-    _raises_exact(ValueError, "wg_theta_rad: nonzero sensitivity cannot modulate a zero base rate",
-                  lambda: leakage_from_drift(1e-4, 0.0, cfg_t))
-    cfg_s = SourceCouplingConfig(wg_g_seep_base=0.0, wg_g_seep_sensitivity=0.5)
-    _raises_exact(ValueError, "wg_g_seep: nonzero sensitivity cannot modulate a zero base rate",
-                  lambda: leakage_from_drift(0.0, 1e-4, cfg_s))
-
-
-def test_KILLER_leakage_from_drift_discriminates():
-    zscale, tb, ts = 1e-4, 5e-3, 0.4
-    cfg = SourceCouplingConfig(z_scale_radns=zscale, wg_theta_base_rad=tb, wg_theta_sensitivity=ts,
-                               wg_g_seep_base=0.09, wg_g_seep_sensitivity=0.3)
-    tz = 2e-4
-
-    def prop(theta):
-        assert_pins(theta, _indep_pos_rate(tb, tz / zscale, ts), rtol=1e-12, atol=0.0, label="theta")
-
-    wrong = tb * math.exp(-ts * tz / zscale)          # wrong-sign exponent
-    assert_discriminates(prop, leakage_from_drift(tz, 0.0, cfg)[0], wrong, label="leakage theta")
-
-
-# =========================================================================== #
 # default_source_coupling_config                                             #
 # =========================================================================== #
 def test_L0_default_source_coupling_config_pins_documented_defaults():
@@ -364,10 +324,7 @@ def test_L0_default_source_coupling_config_pins_documented_defaults():
     assert_pins(cfg.gamma_phi_base_per_ns, 1.0 / 75_000.0, rtol=1e-12, atol=0.0, label="gamma base")
     assert_pins(cfg.gamma_phi_sensitivity, 0.35, rtol=1e-12, atol=0.0, label="gamma sens")
     assert_pins(cfg.drive_omega_base_radns, math.pi / 25.0, rtol=1e-12, atol=0.0, label="drive base")
-    assert cfg.schema == "error_coupling_simulator.source.coupling_config.v1"
-    # wg leakage fields are inert by default
-    assert cfg.wg_theta_base_rad == 0.0 and cfg.wg_g_seep_base == 0.0
-    assert cfg.wg_theta_sensitivity == 0.0 and cfg.wg_g_seep_sensitivity == 0.0
+    assert cfg.schema == "error_coupling_simulator.source.coupling_config.v2"
 
 
 def test_source_coupling_config_rejects_unsupported_schema():
@@ -412,8 +369,6 @@ def test_L0_source_to_params_fanout_value_pins_and_config_branch():
                 label="reset")
     assert_pins(p.cz_depol_p, _indep_prob_logit(2e-3, z / zscale, 0.3), rtol=1e-12, atol=0.0,
                 label="cz")
-    # wg leakage inert at default wg fields
-    assert p.wg_theta_rad == 0.0 and p.wg_g_seep == 0.0
     # config None -> default (sens 0.35); differs from the given cfg (sens 0.4) at z != 0
     pd = source_to_params(z, None)
     assert_pins(pd.gamma_phi_per_ns, _indep_pos_rate(1.0 / 75_000.0, z / zscale, 0.35), rtol=1e-12,
@@ -463,14 +418,12 @@ def test_L0_trajectory_to_params_maps_each_draw_and_config_branch():
 # =========================================================================== #
 def test_L0_independent_baseline_marginals_preserved_and_permutation_exact():
     zscale = 1e-4
-    cfg = SourceCouplingConfig(z_scale_radns=zscale, gamma_phi_sensitivity=0.4,
-                               drive_omega_sensitivity=0.4,
-                               wg_theta_base_rad=5.0e-3,
-                               wg_theta_sensitivity=0.3,
-                               wg_g_seep_base=0.09,
-                               wg_g_seep_sensitivity=0.2)
+    cfg = SourceCouplingConfig(
+        z_scale_radns=zscale,
+        gamma_phi_sensitivity=0.4,
+        drive_omega_sensitivity=0.4,
+    )
     z = np.linspace(-2e-4, 2e-4, 50)
-    shared = trajectory_to_params(z, cfg)
     out = independent_baseline_trajectory_to_params(z, cfg, seed=123)
     assert {p.coupling_mode for p in out} == {"independent"}
     # marginal preserved: sorted detuning == sorted(base + z)
@@ -485,15 +438,6 @@ def test_L0_independent_baseline_marginals_preserved_and_permutation_exact():
     gam = parameter_series(out, "gamma_phi_per_ns")
     np.testing.assert_allclose(
         gam, [_indep_pos_rate(1.0 / 75_000.0, gp / zscale, 0.4) for gp in permuted["gamma_phi"]])
-    # The independent baseline shuffles every coupling independently but must
-    # preserve the full nonzero leakage marginals exactly.
-    for field in ("wg_theta_rad", "wg_g_seep"):
-        np.testing.assert_allclose(
-            np.sort(parameter_series(out, field)),
-            np.sort(parameter_series(shared, field)),
-            rtol=0.0,
-            atol=1.0e-15,
-        )
     # config None -> default (differs from given cfg at same seed) -> kills `config or default`->`and`
     outd = independent_baseline_trajectory_to_params(z, None, seed=123)
     assert not np.allclose(parameter_series(outd, "gamma_phi_per_ns"), gam)
@@ -644,9 +588,7 @@ _DISTINCT_CFG = SourceCouplingConfig(
     spillover_base_p=1.1e-3, spillover_sensitivity=0.23,
     readout_flip_base_p=1.2e-2, readout_flip_sensitivity=0.29,
     reset_flip_base_p=5.3e-3, reset_flip_sensitivity=0.37,
-    cz_depol_base_p=2.4e-3, cz_depol_sensitivity=0.41,
-    wg_theta_base_rad=6.0e-3, wg_theta_sensitivity=0.43,
-    wg_g_seep_base=0.07, wg_g_seep_sensitivity=0.47)
+    cz_depol_base_p=2.4e-3, cz_depol_sensitivity=0.41)
 
 
 def test_L0_source_coupling_config_post_init_happy_path_and_guards():
@@ -673,7 +615,7 @@ def test_L0_source_coupling_config_post_init_happy_path_and_guards():
                   lambda: SourceCouplingConfig(reset_flip_base_p=-0.1))
     _raises_exact(ValueError, "cz_depol_base_p must be in [0, 1), got 1.0",
                   lambda: SourceCouplingConfig(cz_depol_base_p=1.0))
-    # sensitivity loop: trip EACH of the six tuple entries
+    # sensitivity loop: trip each tuple entry
     _raises_exact(ValueError, "spillover_sensitivity must be finite, got inf",
                   lambda: SourceCouplingConfig(spillover_sensitivity=float("inf")))
     _raises_exact(ValueError, "readout_flip_sensitivity must be finite, got nan",
@@ -682,15 +624,6 @@ def test_L0_source_coupling_config_post_init_happy_path_and_guards():
                   lambda: SourceCouplingConfig(reset_flip_sensitivity=float("inf")))
     _raises_exact(ValueError, "cz_depol_sensitivity must be finite, got inf",
                   lambda: SourceCouplingConfig(cz_depol_sensitivity=float("inf")))
-    _raises_exact(ValueError, "wg_theta_sensitivity must be finite, got inf",
-                  lambda: SourceCouplingConfig(wg_theta_sensitivity=float("inf")))
-    _raises_exact(ValueError, "wg_g_seep_sensitivity must be finite, got nan",
-                  lambda: SourceCouplingConfig(wg_g_seep_sensitivity=float("nan")))
-    # trailing nonneg guards
-    _raises_exact(ValueError, "wg_theta_base_rad must be >= 0, got -0.1",
-                  lambda: SourceCouplingConfig(wg_theta_base_rad=-0.1))
-    _raises_exact(ValueError, "wg_g_seep_base must be >= 0, got -0.1",
-                  lambda: SourceCouplingConfig(wg_g_seep_base=-0.1))
 
 
 def test_L0_source_coupling_config_to_manifest_all_keys_distinct():
@@ -699,10 +632,8 @@ def test_L0_source_coupling_config_to_manifest_all_keys_distinct():
                       "gamma_phi_sensitivity", "detuning_base_radns", "drive_omega_base_radns",
                       "drive_omega_sensitivity", "spillover_base_p", "spillover_sensitivity",
                       "readout_flip_base_p", "readout_flip_sensitivity", "reset_flip_base_p",
-                      "reset_flip_sensitivity", "cz_depol_base_p", "cz_depol_sensitivity",
-                      "wg_theta_base_rad", "wg_theta_sensitivity", "wg_g_seep_base",
-                      "wg_g_seep_sensitivity"}
-    assert m["schema"] == "error_coupling_simulator.source.coupling_config.v1"
+                      "reset_flip_sensitivity", "cz_depol_base_p", "cz_depol_sensitivity"}
+    assert m["schema"] == "error_coupling_simulator.source.coupling_config.v2"
     assert m["epistemic_class"] == {"static_zz_formula": "a",
                                     "constants_and_sensitivities": "c",
                                     "log_rate_and_logit_maps": "c"}
@@ -715,8 +646,6 @@ def test_L0_source_coupling_config_to_manifest_all_keys_distinct():
         "readout_flip_base_p": 1.2e-2, "readout_flip_sensitivity": 0.29,
         "reset_flip_base_p": 5.3e-3, "reset_flip_sensitivity": 0.37,
         "cz_depol_base_p": 2.4e-3, "cz_depol_sensitivity": 0.41,
-        "wg_theta_base_rad": 6.0e-3, "wg_theta_sensitivity": 0.43,
-        "wg_g_seep_base": 0.07, "wg_g_seep_sensitivity": 0.47,
     }
     for key, val in expected.items():
         assert_pins(m[key], val, rtol=1e-12, atol=0.0, label=f"m[{key}]")
@@ -733,28 +662,23 @@ def test_L0_coupled_params_source_draw_for_value_and_keyerror():
 
 
 def test_L0_coupled_params_to_manifest_routes_each_field():
-    # nonzero wg fields + z != 0 so wg_theta_rad != wg_g_seep and every attr is distinct
     cfg = SourceCouplingConfig(z_scale_radns=1e-4, gamma_phi_sensitivity=0.4,
-                               drive_omega_sensitivity=0.3, wg_theta_base_rad=5e-3,
-                               wg_theta_sensitivity=0.2, wg_g_seep_base=0.09,
-                               wg_g_seep_sensitivity=0.3)
+                               drive_omega_sensitivity=0.3)
     p = source_to_params(2e-5, cfg)
     m = p.to_manifest()
     assert set(m) == {"schema", "coupling_mode", "source_draws_radns", "normalized_draws",
                       "zz_phi_rad", "zz_zeta_radns", "zz_exchange_j_radns", "gamma_phi_per_ns",
                       "tphi_ns", "detuning_radns", "drive_omega_radns", "spillover_cx",
-                      "readout_flip_p", "reset_flip_p", "cz_depol_p", "wg_theta_rad", "wg_g_seep"}
-    assert m["schema"] == "error_coupling_simulator.source.coupled_process_params.v1"
+                      "readout_flip_p", "reset_flip_p", "cz_depol_p"}
+    assert m["schema"] == "error_coupling_simulator.source.coupled_process_params.v2"
     assert m["coupling_mode"] == "shared"
     assert m["source_draws_radns"] == {k: 2e-5 for k in _SOURCE_KEYS}
     assert m["normalized_draws"] == {k: 2e-5 / 1e-4 for k in _SOURCE_KEYS}
     # every scalar key routed to its (distinct-valued) attr -> a swap diverges
     for key in ("zz_phi_rad", "zz_zeta_radns", "zz_exchange_j_radns", "gamma_phi_per_ns",
                 "tphi_ns", "detuning_radns", "drive_omega_radns", "spillover_cx",
-                "readout_flip_p", "reset_flip_p", "cz_depol_p", "wg_theta_rad", "wg_g_seep"):
+                "readout_flip_p", "reset_flip_p", "cz_depol_p"):
         assert_pins(m[key], getattr(p, key), rtol=1e-12, atol=0.0, label=f"m[{key}]")
-    # wg_theta_rad and wg_g_seep are genuinely distinct here (guards their manifest swap)
-    assert p.wg_theta_rad != p.wg_g_seep
 
 
 # =========================================================================== #
@@ -768,12 +692,10 @@ def test_private_params_from_draws_routes_each_key_to_its_field():
         spillover_base_p=1e-3, spillover_sensitivity=0.2,
         readout_flip_base_p=1e-2, readout_flip_sensitivity=0.4,
         reset_flip_base_p=5e-3, reset_flip_sensitivity=0.35,
-        cz_depol_base_p=2e-3, cz_depol_sensitivity=0.3,
-        wg_theta_base_rad=5e-3, wg_theta_sensitivity=0.25,
-        wg_g_seep_base=0.09, wg_g_seep_sensitivity=0.33)
+        cz_depol_base_p=2e-3, cz_depol_sensitivity=0.3)
     # DISTINCT draw per key -> a wrong-key route (draws["readout"]->draws["reset"], ...) diverges
     draws = {"zz": 1e-5, "gamma_phi": 2e-5, "detuning": 3e-5, "drive": 4e-5, "spillover": 5e-5,
-             "readout": 6e-5, "reset": 7e-5, "cz": 8e-5, "wg_theta": 9e-5, "wg_seep": 1e-4}
+             "readout": 6e-5, "reset": 7e-5, "cz": 8e-5}
     p = coupling._params_from_draws(draws, cfg, coupling_mode="shared")
     assert p.coupling_mode == "shared"
     assert dict(p.source_draws_radns) == draws
@@ -798,10 +720,6 @@ def test_private_params_from_draws_routes_each_key_to_its_field():
                 label="reset<-reset")
     assert_pins(p.cz_depol_p, _indep_prob_logit(2e-3, 8e-5 / zscale, 0.3), rtol=1e-12, atol=0.0,
                 label="cz<-cz")
-    assert_pins(p.wg_theta_rad, _indep_pos_rate(5e-3, 9e-5 / zscale, 0.25), rtol=1e-12, atol=0.0,
-                label="wg_theta<-wg_theta")
-    assert_pins(p.wg_g_seep, _indep_pos_rate(0.09, 1e-4 / zscale, 0.33), rtol=1e-12, atol=0.0,
-                label="wg_seep<-wg_seep")
 
 
 def test_private_params_from_draws_rejects_nonfinite_draw():
@@ -940,3 +858,26 @@ def test_L0_drift_to_t2_zeroed_base_name_surfaces_in_message():
                   "gamma_phi_per_ns: nonzero sensitivity cannot modulate a zero base rate",
                   lambda: drift_to_t2(1e-4, SourceCouplingConfig(gamma_phi_base_per_ns=0.0,
                                                                  gamma_phi_sensitivity=0.5)))
+
+
+def test_axis2_source_contract_has_no_unimplemented_qutrit_leakage_bridge():
+    """The source owner must not emit parameters for the separately owned qutrit route."""
+
+    forbidden_fragments = ("wg", "leak", "seep")
+    config_fields = {item.name for item in dataclasses.fields(SourceCouplingConfig)}
+    parameter_fields = {item.name for item in dataclasses.fields(CoupledNoiseParameters)}
+    assert not any(
+        fragment in field_name
+        for field_name in config_fields | parameter_fields
+        for fragment in forbidden_fragments
+    )
+    params = source_to_params(0.0)
+    manifest_keys = set(params.to_manifest())
+    draw_keys = {name for name, _value in params.source_draws_radns}
+    assert not any(
+        fragment in field_name
+        for field_name in manifest_keys | draw_keys
+        for fragment in forbidden_fragments
+    )
+    assert not hasattr(coupling, "leakage_from_drift")
+    assert not hasattr(source_api, "leakage_from_drift")

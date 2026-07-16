@@ -5,7 +5,7 @@ from __future__ import annotations
 This path is for the ``|3>``-faithful small-register transport smoke: a
 QuTiP-derived two-transmon CZ leakage channel is applied through the project's
 own :class:`QuquartDM` density-matrix carrier. It is intentionally separate from
-the qutrit single-site WG leakage adapter.
+the qutrit single-site leakage adapter.
 """
 
 from dataclasses import asdict, dataclass

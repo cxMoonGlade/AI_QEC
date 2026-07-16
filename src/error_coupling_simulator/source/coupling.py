@@ -18,8 +18,8 @@ import numpy as np
 from ..numerics import NUMERICAL_ZERO
 
 _TWO_PI = 2.0 * math.pi
-SOURCE_COUPLING_CONFIG_SCHEMA = "error_coupling_simulator.source.coupling_config.v1"
-COUPLED_PROCESS_PARAMS_SCHEMA = "error_coupling_simulator.source.coupled_process_params.v1"
+SOURCE_COUPLING_CONFIG_SCHEMA = "error_coupling_simulator.source.coupling_config.v2"
+COUPLED_PROCESS_PARAMS_SCHEMA = "error_coupling_simulator.source.coupled_process_params.v2"
 _SOURCE_KEYS = (
     "zz",
     "gamma_phi",
@@ -29,10 +29,6 @@ _SOURCE_KEYS = (
     "readout",
     "reset",
     "cz",
-    # Leakage fan-out driven by the same latent draw. The amplitudes are project-design
-    # sweep parameters; no published latent-to-(theta, g_seep) transfer function is claimed.
-    "wg_theta",
-    "wg_seep",
 )
 
 
@@ -124,15 +120,6 @@ class SourceCouplingConfig:
     reset_flip_sensitivity: float = 0.35
     cz_depol_base_p: float = 2.0e-3
     cz_depol_sensitivity: float = 0.30
-    # Leakage fields: coherent |1><->|2| angle plus seep jump rate.
-    # DEFAULTS ARE FULLY INERT (base 0 AND sensitivity 0 => the fan-out emits 0 and no
-    # existing consumer's behavior changes). Nonzero cells are supplied explicitly.
-    # Both use the positive-rate exp map (theta > 0 is an angle magnitude; the
-    # WG L1 ~ sin^2(theta)/2 rate then inherits ~2x the relative modulation). Class (c).
-    wg_theta_base_rad: float = 0.0
-    wg_theta_sensitivity: float = 0.0
-    wg_g_seep_base: float = 0.0
-    wg_g_seep_sensitivity: float = 0.0
     schema: str = SOURCE_COUPLING_CONFIG_SCHEMA
 
     def __post_init__(self) -> None:
@@ -159,12 +146,8 @@ class SourceCouplingConfig:
             "readout_flip_sensitivity",
             "reset_flip_sensitivity",
             "cz_depol_sensitivity",
-            "wg_theta_sensitivity",
-            "wg_g_seep_sensitivity",
         ):
             _require_finite(name, getattr(self, name))
-        _require_nonnegative("wg_theta_base_rad", self.wg_theta_base_rad)
-        _require_nonnegative("wg_g_seep_base", self.wg_g_seep_base)
 
     def to_manifest(self) -> dict:
         return {
@@ -189,10 +172,6 @@ class SourceCouplingConfig:
             "reset_flip_sensitivity": float(self.reset_flip_sensitivity),
             "cz_depol_base_p": float(self.cz_depol_base_p),
             "cz_depol_sensitivity": float(self.cz_depol_sensitivity),
-            "wg_theta_base_rad": float(self.wg_theta_base_rad),
-            "wg_theta_sensitivity": float(self.wg_theta_sensitivity),
-            "wg_g_seep_base": float(self.wg_g_seep_base),
-            "wg_g_seep_sensitivity": float(self.wg_g_seep_sensitivity),
         }
 
 
@@ -213,9 +192,6 @@ class CoupledNoiseParameters:
     readout_flip_p: float
     reset_flip_p: float
     cz_depol_p: float
-    # Leakage outputs; zero is the inert default.
-    wg_theta_rad: float = 0.0
-    wg_g_seep: float = 0.0
     coupling_mode: Literal["shared", "independent"] = "shared"
     schema: str = field(default=COUPLED_PROCESS_PARAMS_SCHEMA, init=False)
 
@@ -242,8 +218,6 @@ class CoupledNoiseParameters:
             "readout_flip_p": float(self.readout_flip_p),
             "reset_flip_p": float(self.reset_flip_p),
             "cz_depol_p": float(self.cz_depol_p),
-            "wg_theta_rad": float(self.wg_theta_rad),
-            "wg_g_seep": float(self.wg_g_seep),
         }
 
 
@@ -408,31 +382,6 @@ def drift_to_t2(
     return gamma_phi, tphi_ns
 
 
-def leakage_from_drift(
-    theta_z_radns: float,
-    seep_z_radns: float,
-    config: SourceCouplingConfig | None = None,
-) -> tuple[float, float]:
-    """Map source drift draws to the per-cycle WG leakage cell ``(theta_rad, g_seep)``.
-
-    This project-design map uses the same positive-rate exponential form as the
-    gamma-phi fan-out. No published latent-to-(theta, g_seep) transfer function
-    is claimed. It is inert at the default config (base 0, sensitivity 0 -> (0, 0));
-    ``Theta(0)`` returns the configured bases exactly (the off-source identity).
-    """
-
-    cfg = config or default_source_coupling_config()
-    x_theta = _require_finite("theta_z_radns", theta_z_radns) / float(cfg.z_scale_radns)
-    x_seep = _require_finite("seep_z_radns", seep_z_radns) / float(cfg.z_scale_radns)
-    theta = _modulate_positive_rate(
-        cfg.wg_theta_base_rad, x_theta, cfg.wg_theta_sensitivity, name="wg_theta_rad"
-    )
-    g_seep = _modulate_positive_rate(
-        cfg.wg_g_seep_base, x_seep, cfg.wg_g_seep_sensitivity, name="wg_g_seep"
-    )
-    return theta, g_seep
-
-
 def _params_from_draws(
     draws_radns: dict[str, float],
     cfg: SourceCouplingConfig,
@@ -443,7 +392,6 @@ def _params_from_draws(
     x = {key: draws[key] / float(cfg.z_scale_radns) for key in _SOURCE_KEYS}
     zz_phi, zz_zeta = zz_phi_from_frequency_drift(draws["zz"], cfg)
     gamma_phi, tphi_ns = drift_to_t2(draws["gamma_phi"], cfg)
-    wg_theta, wg_g_seep = leakage_from_drift(draws["wg_theta"], draws["wg_seep"], cfg)
     drive_omega = _modulate_positive_rate(
         cfg.drive_omega_base_radns,
         x["drive"],
@@ -484,8 +432,6 @@ def _params_from_draws(
             cfg.cz_depol_sensitivity,
             name="cz_depol_p",
         ),
-        wg_theta_rad=wg_theta,
-        wg_g_seep=wg_g_seep,
         coupling_mode=coupling_mode,
     )
 
@@ -564,7 +510,6 @@ __all__ = [
     "drift_to_t2",
     "exchange_j_from_phi",
     "independent_baseline_trajectory_to_params",
-    "leakage_from_drift",
     "parameter_series",
     "source_to_params",
     "static_zz_zeta",

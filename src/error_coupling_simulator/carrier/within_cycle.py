@@ -1,4 +1,4 @@
-"""Package-local within-cycle qutrit schedule and WG leakage host.
+"""Package-local within-cycle qutrit schedule and leakage-channel host.
 
 This module consumes an already compiled schedule.  Parsing a hardware dataset is a
 frontend responsibility; the carrier never discovers or substitutes a circuit on its
@@ -70,10 +70,10 @@ _RUN_PURPOSE_EVIDENCE: dict[str, str] = {
 }
 
 _RUN_NUMERICAL_PROVENANCE_SCHEMA = (
-    "error_coupling_simulator.frontend.run_numerical_provenance.v1"
+    "error_coupling_simulator.frontend.run_numerical_provenance.v2"
 )
 _PRESET_NUMERICAL_PROVENANCE_SCHEMA = (
-    "error_coupling_simulator.frontend.experiment_preset_provenance.v1"
+    "error_coupling_simulator.frontend.experiment_preset_provenance.v2"
 )
 _PACKAGE_BUILD_IDENTITY_SCHEMA = (
     "error_coupling_simulator.carrier.package_build_identity.v1"
@@ -209,7 +209,7 @@ def _validate_run_numerical_provenance(
         not isinstance(manifest, dict)
         or manifest.get("schema") != _PRESET_NUMERICAL_PROVENANCE_SCHEMA
     ):
-        raise ValueError("complete provenance requires a v1 preset manifest")
+        raise ValueError("complete provenance requires a v2 preset manifest")
     canonical = json.dumps(manifest, sort_keys=True, separators=(",", ":"))
     if (
         not isinstance(digest, str)
@@ -233,7 +233,7 @@ def _validate_run_numerical_provenance(
             raise ValueError(
                 f"complete provenance field {field_name} does not match RunSpec")
     theta_entry = fields.get("theta_rad")
-    target_entry = fields.get("wg_l1_target")
+    target_entry = fields.get("leakage_rate_target")
     if not isinstance(theta_entry, dict) or not isinstance(target_entry, dict):
         raise ValueError("complete provenance theta convention is missing")
     if theta_entry.get("value") is not None:
@@ -385,7 +385,7 @@ def cast_within_cycle_precision(
 ) -> WithinCycleMarshalled:
     """Cast only the complex kernel tables after c128 physics certification.
 
-    Schedule/index arrays remain the exact same int32 tensor objects.  The WG
+    Schedule/index arrays remain the exact same int32 tensor objects. The leakage
     channel is always constructed and checked in c128 by
     :meth:`WithinCycleScheduleHost.build_within_cycle_leak`; this is only the
     execution-ABI cast for the fused optimization kernel.
@@ -518,7 +518,7 @@ def _torch_kraus(
 
 
 class WithinCycleScheduleHost:
-    """WG leak builder plus structural within-cycle schedule marshaller."""
+    """Leakage-channel builder plus structural within-cycle schedule marshaller."""
 
     def __init__(self, device: str | torch.device = "cuda") -> None:
         self.device = torch.device(device)

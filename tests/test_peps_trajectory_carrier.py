@@ -26,9 +26,9 @@ from _support.fixtures import require_precondition
 from error_coupling_simulator.numerics import NUMERICAL_ZERO
 
 # --------------------------------------------------------------------------- #
-# Physical parameters and numerical bars                                      #
+# Declared parameters and numerical bars                                      #
 # --------------------------------------------------------------------------- #
-WG_L1_TARGET = 5.0e-3   # p1c physical test point
+LEAKAGE_RATE_TARGET = 5.0e-3   # registered project target
 G_SEEP = 0.09
 G_HEAT = 0.0
 B_BIAS = 0.9            # evidence point for the TT rank assertions
@@ -717,11 +717,11 @@ def wc(sched):
     )
     from error_coupling_simulator.frontend import xzzx_parser as xp
     from error_coupling_simulator.mechanisms.qutrit_leakage import (
-        solve_theta_for_wg_l1,
+        solve_exchange_angle_for_leakage_rate,
     )
 
     r01c, r01m = xp.default_r01_paths()
-    theta = float(solve_theta_for_wg_l1(WG_L1_TARGET, g_seep=G_SEEP, g_heat=G_HEAT))
+    theta = float(solve_exchange_angle_for_leakage_rate(LEAKAGE_RATE_TARGET, g_seep=G_SEEP, g_heat=G_HEAT))
     host = FusedWithinCycleSampler(device="cuda")
     spec = RunSpec(circuit_path=r01c, metadata_path=r01m, m=0, theta=theta,
                    g_seep=G_SEEP, g_heat=G_HEAT, arm=ARM, b=B_BIAS,

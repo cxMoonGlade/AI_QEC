@@ -60,7 +60,7 @@ class Statistic(Enum):
     DETECTOR_MARG = "detector_marg"  # per-(round,stab) detector on-rate + flip rate
     RR_CORR = "rr_corr"              # round-to-round detector correlation           (R>=2 moments)
     SPATIAL_CORR = "spatial_corr"    # same-round cross-detector correlation
-    SCALAR_FUNC = "scalar_func"      # a named closed-form functional (for example L1/L2/C_L or p_ij)
+    SCALAR_FUNC = "scalar_func"      # a named functional (for example a subspace rate or p_ij)
 
 
 class Verdict(Enum):

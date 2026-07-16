@@ -1,7 +1,7 @@
-"""Physical mechanism primitives used by specified simulator processes.
+"""Specified mechanism primitives used by current simulator processes.
 
 ``axis1_primitives`` lowers declared local generators for the joint Lindbladian.
-``qutrit_leakage`` owns Wood--Gambetta qutrit leakage channels, diagnostics, and
+``qutrit_leakage`` owns qutrit exchange/seepage/heating channels, diagnostics, and
 noise-process factories. ``cz_leakage`` derives two-transmon CZ leakage channels
 from declared Hamiltonian/Lindblad parameters and loads QuTiP only on demand.
 """

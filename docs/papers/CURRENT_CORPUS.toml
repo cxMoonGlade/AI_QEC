@@ -1,6 +1,12 @@
 schema = "error_coupling_simulator.literature.corpus_manifest.v1"
-status = "bootstrap_empty"
-corpus_sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-note_count = 0
-paper_fact_count = 0
-notes = []
+status = "active"
+corpus_sha256 = "4483158b9a724e5b2390f046cba6a456b1efdf013efa24007fceb5439405da62"
+note_count = 1
+paper_fact_count = 38
+
+[[notes]]
+path = "docs/papers/reading_notes/wood_gambetta_leakage_diagnostics_pra_97_032306.md"
+note_sha256 = "9d1569e697fd914726e49b41b39717b0ff696835b74a7c5ca19f66c1e6a613b1"
+source_id = "doi:10.1103/PhysRevA.97.032306"
+source_version = "version-of-record"
+source_sha256 = "66a9d749cdb5841b3cc565debc33bd17fcb46946c13d374ccd274fc87234169b"

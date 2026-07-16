@@ -11,23 +11,23 @@ REGISTRATION event (name it, pin every knob, commit it), never an ad-hoc mutatio
 
 THE TWO THETA CONVENTIONS ARE TWO DISTINCT PRESETS (never a merged default):
 
-* :data:`PRESET_LEAK_THETA_0P30` -- the RAW-ANGLE convention: the Wood-Gambetta
-  coherent |1><->|2> exchange angle ``theta_rad`` is pinned directly (0.30 rad).
-* :data:`PRESET_LEAK_WG_L1_5E3` -- the MODEL-RATE-SOLVED convention: ``theta_rad`` is
-  SOLVED so the exact project WG channel's per-cycle leak rate ``WG_L1`` hits the
+* :data:`PRESET_LEAK_THETA_0P30` -- the RAW-ANGLE convention: the coherent
+  |1><->|2> exchange angle ``theta_rad`` is pinned directly (0.30 rad).
+* :data:`PRESET_LEAKAGE_RATE_5E3` -- the MODEL-RATE-SOLVED convention: ``theta_rad`` is
+  solved so the declared channel's per-cycle leakage rate hits the
   registered target (5.0e-3, a single-paper magnitude anchor from Miao) via
-  :func:`~error_coupling_simulator.mechanisms.qutrit_leakage.solve_theta_for_wg_l1`
-  (a monotone model-rate solver, not device calibration).
+  :func:`~error_coupling_simulator.mechanisms.qutrit_leakage.solve_exchange_angle_for_leakage_rate`
+  (a scanned, bracketed model-rate solver, not device calibration).
 
 Neither preset is a paper-validated physical cell. ``theta_rad=0.30``, ``g_heat=0``,
 ``b_bias=0.9``, arm A, and ``biased_b`` are registered project choices;
-``WG_L1=5e-3`` and ``g_seep=0.09`` have separate Miao/McEwen scale context from
+the leakage-rate target 5e-3 and ``g_seep=0.09`` have separate Miao/McEwen scale context from
 different devices/protocols. Their composition is a synthetic benchmark. In
 particular, ``b_bias=0.9`` is one registered synthetic nuisance point, not a measured
 readout magnitude; physical conclusions must bracket the exported
 ``LEAKED_READOUT_BIAS_SWEEP = (0.5, 0.75, 1.0)``.
 
-Exactly ONE of ``theta_rad`` / ``wg_l1_target`` is set on any preset (validated);
+Exactly one of ``theta_rad`` / ``leakage_rate_target`` is set on any preset (validated);
 :func:`resolve_theta` maps either convention to the operative angle.
 
 DATASET RESOLUTION (fail closed). :func:`load_xzzx_d3` / :func:`run_spec_from_preset`
@@ -59,7 +59,7 @@ from typing import TYPE_CHECKING
 
 from error_coupling_simulator.mechanisms.qutrit_leakage import (
     LEAKED_READOUT_BIAS_SWEEP,
-    solve_theta_for_wg_l1,
+    solve_exchange_angle_for_leakage_rate,
 )
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
@@ -72,7 +72,7 @@ __all__ = [
     "ExperimentPreset",
     "LEAKED_READOUT_BIAS_SWEEP",
     "PRESET_LEAK_THETA_0P30",
-    "PRESET_LEAK_WG_L1_5E3",
+    "PRESET_LEAKAGE_RATE_5E3",
     "leak_slice_table",
     "load_xzzx_d3",
     "resolve_theta",
@@ -82,7 +82,7 @@ __all__ = [
 #: Dataset-root override env var (ratified decision 7 of the ownership contract).
 ECS_D3_DATA_ENV = "ECS_D3_DATA_ROOT"
 
-#: Stable compatibility vocabulary used by the frozen preset contract.  These values
+#: Stable carrier vocabulary used by the frozen preset contract. These values
 #: are package-local so importing/validating a preset does not load the GPU carrier.
 #: The lazy runtime adapter verifies exact equality with the active carrier before use.
 SV_ARMS: tuple[str, ...] = ("A", "C", "B1", "B2")
@@ -252,18 +252,18 @@ def load_xzzx_d3(dataset_root: "str | Path | None" = None, *,
 class ExperimentPreset:
     """A named, frozen, REGISTERED experiment configuration (GLOSSARY: *preset*).
 
-    Exactly ONE of ``theta_rad`` / ``wg_l1_target`` is set (validated): the two theta
+    Exactly one of ``theta_rad`` / ``leakage_rate_target`` is set (validated): the two theta
     conventions -- raw-angle vs model-rate-solved -- are DISTINCT presets, never merged
     into one default. All physics knobs are REQUIRED (no silent physics defaults, the
-    registered-sweep rule): ``g_seep`` / ``g_heat`` (WG dissipative seep/heat rates),
+    registered-sweep rule): ``g_seep`` / ``g_heat`` (dissipative seep/heat rates),
     ``b_bias`` (leaked-readout bias ``b`` in [0, 1]), ``arm`` (measurement-instrument
     arm, one of ``SV_ARMS``), ``readout_conv`` (terminal-readout convention, one of
     ``SV_READOUT_CONVENTIONS``).
 
-    Units / conventions (N-4): ``theta_rad`` is the WG coherent |1><->|2> exchange
-    angle in RADIANS; ``wg_l1_target`` is the per-cycle WG_L1 leak probability the
+    Units / conventions (N-4): ``theta_rad`` is the coherent |1><->|2> exchange
+    angle in radians; ``leakage_rate_target`` is the per-cycle leakage probability the
     angle is numerically solved to hit inside the project channel (dimensionless, in
-    (0, 0.5)); this is not device calibration.
+    [0, 0.5]); this is not device calibration.
 
     ``provenance_manifest`` is optional for caller-defined presets to preserve the
     existing constructor API, but caller-supplied metadata is never trusted to upgrade
@@ -274,7 +274,7 @@ class ExperimentPreset:
 
     name: str
     theta_rad: "float | None" = None
-    wg_l1_target: "float | None" = None
+    leakage_rate_target: "float | None" = None
     g_seep: float
     g_heat: float
     b_bias: float
@@ -286,18 +286,20 @@ class ExperimentPreset:
     def __post_init__(self) -> None:
         if not str(self.name):
             raise ValueError("preset name must be a non-empty string")
-        if (self.theta_rad is None) == (self.wg_l1_target is None):
+        if (self.theta_rad is None) == (self.leakage_rate_target is None):
             raise ValueError(
-                f"preset {self.name!r}: exactly ONE of theta_rad / wg_l1_target must "
+                f"preset {self.name!r}: exactly one of theta_rad / leakage_rate_target must "
                 f"be set (got theta_rad={self.theta_rad}, "
-                f"wg_l1_target={self.wg_l1_target}); the two theta conventions are "
+                f"leakage_rate_target={self.leakage_rate_target}); the two theta conventions are "
                 f"distinct presets, never merged")
         if self.theta_rad is not None and float(self.theta_rad) < 0.0:
             raise ValueError(f"preset {self.name!r}: theta_rad must be >= 0 "
                              f"(got {self.theta_rad})")
-        if self.wg_l1_target is not None and not 0.0 < float(self.wg_l1_target) < 0.5:
-            raise ValueError(f"preset {self.name!r}: wg_l1_target must lie in (0, 0.5) "
-                             f"(got {self.wg_l1_target})")
+        if self.leakage_rate_target is not None and not 0.0 <= float(self.leakage_rate_target) <= 0.5:
+            raise ValueError(
+                f"preset {self.name!r}: leakage_rate_target must lie in [0, 0.5] "
+                f"(got {self.leakage_rate_target})"
+            )
         if float(self.g_seep) < 0.0 or float(self.g_heat) < 0.0:
             raise ValueError(f"preset {self.name!r}: g_seep/g_heat must be >= 0 "
                              f"(got {self.g_seep}, {self.g_heat})")
@@ -314,14 +316,14 @@ class ExperimentPreset:
 
 
 def _registered_qutrit_preset(*, name: str, theta_rad: "float | None" = None,
-                              wg_l1_target: "float | None" = None,
+                              leakage_rate_target: "float | None" = None,
                               g_seep: float, g_heat: float, b_bias: float,
                               arm: str, readout_conv: str) -> ExperimentPreset:
     """Build one registered synthetic preset and its JSON-safe provenance manifest."""
     values: "dict[str, object]" = {
         "name": name,
         "theta_rad": theta_rad,
-        "wg_l1_target": wg_l1_target,
+        "leakage_rate_target": leakage_rate_target,
         "g_seep": g_seep,
         "g_heat": g_heat,
         "b_bias": b_bias,
@@ -384,15 +386,15 @@ def _registered_qutrit_preset(*, name: str, theta_rad: "float | None" = None,
             claim_scope=("synthetic_raw_angle_only" if theta_rad is not None
                          else "not_applicable"),
             magnitude_supported_by_literature=False),
-        "wg_l1_target": entry(
-            "wg_l1_target",
+        "leakage_rate_target": entry(
+            "leakage_rate_target",
             provenance_kind="project-design",
             source_kind=("project_target_with_literature_scale_context"
-                         if wg_l1_target is not None
+                         if leakage_rate_target is not None
                          else "not_applicable_raw_angle_coordinate"),
             claim_scope=("project_channel_target_only"
-                         if wg_l1_target is not None else "not_applicable"),
-            literature_references=([miao_l1] if wg_l1_target is not None else []),
+                         if leakage_rate_target is not None else "not_applicable"),
+            literature_references=([miao_l1] if leakage_rate_target is not None else []),
             whole_project_channel_supported=False,
             direct_observable_match=False,
             transformation_supported=False),
@@ -423,7 +425,7 @@ def _registered_qutrit_preset(*, name: str, theta_rad: "float | None" = None,
             claim_scope="synthetic_terminal_readout_convention_only"),
     }
     manifest: "dict[str, object]" = {
-        "schema": "error_coupling_simulator.frontend.experiment_preset_provenance.v1",
+        "schema": "error_coupling_simulator.frontend.experiment_preset_provenance.v2",
         "preset_name": name,
         "whole_preset": {
             "provenance_kind": "project-design",
@@ -448,7 +450,7 @@ def _registered_qutrit_preset(*, name: str, theta_rad: "float | None" = None,
         },
     }
     return ExperimentPreset(
-        name=name, theta_rad=theta_rad, wg_l1_target=wg_l1_target,
+        name=name, theta_rad=theta_rad, leakage_rate_target=leakage_rate_target,
         g_seep=g_seep, g_heat=g_heat, b_bias=b_bias, arm=arm,
         readout_conv=readout_conv, provenance_manifest=manifest)
 
@@ -464,14 +466,14 @@ PRESET_LEAK_THETA_0P30 = _registered_qutrit_preset(
 #: separately uses a McEwen seepage-scale anchor. The other coordinates, including
 #: b=0.9, are project choices. This cross-source composition is a synthetic benchmark,
 #: not a device-calibrated or literature-validated physical cell.
-PRESET_LEAK_WG_L1_5E3 = _registered_qutrit_preset(
-    name="leak_wg_l1_5e3", wg_l1_target=5.0e-3, g_seep=0.09, g_heat=0.0,
+PRESET_LEAKAGE_RATE_5E3 = _registered_qutrit_preset(
+    name="leakage_rate_5e3", leakage_rate_target=5.0e-3, g_seep=0.09, g_heat=0.0,
     b_bias=0.9, arm="A", readout_conv="biased_b")
 
 
 _REGISTERED_PRESET_MANIFEST_SNAPSHOTS = tuple(
     (preset, json.dumps(preset.provenance_manifest, sort_keys=True))
-    for preset in (PRESET_LEAK_THETA_0P30, PRESET_LEAK_WG_L1_5E3)
+    for preset in (PRESET_LEAK_THETA_0P30, PRESET_LEAKAGE_RATE_5E3)
 )
 
 
@@ -492,11 +494,11 @@ def _canonical_registered_manifest(
         return None
     manifest = json.loads(manifest_json)
     if manifest.get("schema") != \
-            "error_coupling_simulator.frontend.experiment_preset_provenance.v1":
+            "error_coupling_simulator.frontend.experiment_preset_provenance.v2":
         raise RuntimeError("registered preset manifest has an invalid schema")
     fields = manifest.get("fields")
     expected_fields = (
-        "name", "theta_rad", "wg_l1_target", "g_seep", "g_heat",
+        "name", "theta_rad", "leakage_rate_target", "g_seep", "g_heat",
         "b_bias", "arm", "readout_conv",
     )
     if not isinstance(fields, dict) or set(fields) != set(expected_fields):
@@ -510,20 +512,19 @@ def _canonical_registered_manifest(
 
 
 def resolve_theta(preset: ExperimentPreset) -> float:
-    """The operative WG exchange angle (radians) for a preset.
+    """The operative exchange angle in radians for a preset.
 
     Raw-angle convention: returns the pinned ``theta_rad``. Model-rate-solved
-    convention: returns ``solve_theta_for_wg_l1(wg_l1_target, g_seep=...,
-    g_heat=...)`` -- the monotone bisection on the EXACT WG channel rate (the same
-    import + call shape the L-soft gates use), so the preset's ``g_seep``/``g_heat``
-    participate exactly as registered. This solves a project-model coordinate; it
-    does not calibrate a device or validate the composed
-    preset as a physical cell.
+    convention: returns ``solve_exchange_angle_for_leakage_rate`` for the declared
+    target and dissipative coordinates. The scan and bracketed bisection evaluate
+    the exact channel rate, so the preset's ``g_seep`` and ``g_heat`` participate
+    exactly as registered. This solves a project-model coordinate; it does not
+    calibrate a device or validate the composed preset as a physical cell.
     """
     if preset.theta_rad is not None:
         return float(preset.theta_rad)
-    return float(solve_theta_for_wg_l1(
-        float(preset.wg_l1_target),
+    return float(solve_exchange_angle_for_leakage_rate(
+        float(preset.leakage_rate_target),
         g_seep=float(preset.g_seep), g_heat=float(preset.g_heat)))
 
 
@@ -535,7 +536,7 @@ def run_spec_from_preset(preset: ExperimentPreset, *, n_shots: int, n_rounds: in
 
     Every run-shape knob is an EXPLICIT keyword (``n_shots``/``n_rounds``/``seed``;
     ``m`` is the prepared logical); every physics knob comes from the preset (theta
-    resolved via :func:`resolve_theta` -- the wg_l1 form is model-rate-solved here); the
+    resolved via :func:`resolve_theta` -- the leakage-rate form is model-rate-solved here); the
     circuit/metadata paths are the resolved external r01 instance (the R>1 engine
     reuses the r01 geometry -- attach the r10 interior streams via
     :func:`load_xzzx_d3` when driving a within-cycle carrier). No hidden knobs:
@@ -552,7 +553,7 @@ def run_spec_from_preset(preset: ExperimentPreset, *, n_shots: int, n_rounds: in
     canonical_manifest = _canonical_registered_manifest(preset)
     if canonical_manifest is None:
         numerical_provenance: "dict[str, object]" = {
-            "schema": "error_coupling_simulator.frontend.run_numerical_provenance.v1",
+            "schema": "error_coupling_simulator.frontend.run_numerical_provenance.v2",
             "status": "missing",
             "claim_scope": "implementation_only",
             "reason": (
@@ -563,7 +564,7 @@ def run_spec_from_preset(preset: ExperimentPreset, *, n_shots: int, n_rounds: in
         canonical_json = json.dumps(
             canonical_manifest, sort_keys=True, separators=(",", ":"))
         numerical_provenance = {
-            "schema": "error_coupling_simulator.frontend.run_numerical_provenance.v1",
+            "schema": "error_coupling_simulator.frontend.run_numerical_provenance.v2",
             "status": "complete_for_registered_preset",
             "claim_scope": "registered_synthetic_cross_source_benchmark_only",
             "preset_manifest": canonical_manifest,
@@ -578,7 +579,7 @@ def run_spec_from_preset(preset: ExperimentPreset, *, n_shots: int, n_rounds: in
             "transformation": (
                 "identity_from_registered_theta_rad"
                 if preset.theta_rad is not None
-                else "project_WG_channel_bisection_to_registered_wg_l1_target"),
+                else "project_channel_bisection_to_registered_leakage_rate_target"),
             "claims_device_calibration": False,
         },
         "dataset_files": {

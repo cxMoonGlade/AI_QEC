@@ -33,7 +33,7 @@ from .experiments import (
     ExperimentPreset,
     LEAKED_READOUT_BIAS_SWEEP,
     PRESET_LEAK_THETA_0P30,
-    PRESET_LEAK_WG_L1_5E3,
+    PRESET_LEAKAGE_RATE_5E3,
     leak_slice_table,
     load_xzzx_d3,
     resolve_theta,
@@ -293,7 +293,7 @@ from .qutrit_leakage import (
     QutritLeakageResult,
     index_from_qutrit_string,
     qutrit_string_from_index,
-    simulate_qutrit_wg_leakage,
+    simulate_qutrit_leakage,
 )
 from .ququart_transport import (
     QUQUART_TRANSPORT_KRAUS_KEY,
@@ -311,7 +311,7 @@ from .qutip_cuquantum_backend import (
     local_qutrit_operator_qobj,
     probe_qutip_cuquantum_local_mcwf,
     qutip_cuquantum_symbolic_collapse_summary,
-    wg_seep_collapse_matrix,
+    seepage_collapse_matrix,
     zero_hamiltonian_qobj,
 )
 from .record_layout import (
@@ -568,10 +568,10 @@ __all__ = [
     "simulate_noiseless",
     "simulate_cudaq_grover_noiseless",
     "simulate_mcwf_qutrit_grover_leakage",
-    "simulate_qutrit_wg_leakage",
+    "simulate_qutrit_leakage",
     "simulate_ququart_transport_smoke",
     "stim_circuit_to_substep_schedule",
-    "wg_seep_collapse_matrix",
+    "seepage_collapse_matrix",
     "write_joint_channel_comparison_evidence",
     "write_axis1_measurement_record_evidence",
     "write_axis1_measurement_record_samples",
@@ -592,7 +592,7 @@ __all__ = [
     "ExperimentPreset",
     "LEAKED_READOUT_BIAS_SWEEP",
     "PRESET_LEAK_THETA_0P30",
-    "PRESET_LEAK_WG_L1_5E3",
+    "PRESET_LEAKAGE_RATE_5E3",
     "PYMATCHING_PIN",
     "PYMATCHING_WHEEL_FILENAME",
     "PYMATCHING_WHEEL_SHA256",

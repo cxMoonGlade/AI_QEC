@@ -103,6 +103,16 @@ def _retired_symbol_names() -> frozenset[str]:
         f"run_axis1_{stage.lower()}_frontend_fixture",
         f"build_axis1_{stage.lower()}_selection_plan",
         f"AXIS1_{stage}_SELECTOR_ID",
+        "wg_" + "rates",
+        "coherence_of_" + "leakage",
+        "solve_theta_for_" + "wg_l1",
+        "simulate_qutrit_" + "wg_leakage",
+        "wg_" + "seep_collapse_matrix",
+        "WG_L1_" + "REGIME",
+        "WG_L2_" + "REGIME",
+        "PRESET_LEAK_" + "WG_L1_5E3",
+        "WG_LEAKAGE_" + "KRAUS_KEY",
+        "wg_l1_" + "target",
     }
     symbols.update(
         f"{stage}_{suffix}"
@@ -597,7 +607,7 @@ def test_current_noise_process_apis_are_exported_by_their_owners() -> None:
         QutritLeakageNoiseProcess,
         qutrit_leakage_process,
         qutrit_leakage_process_heterogeneous,
-        solve_theta_for_wg_l1,
+        solve_exchange_angle_for_leakage_rate,
     )
     from error_coupling_simulator.noise_processes import (
         COUPLED_PROCESS_REPRESENTABILITY,
@@ -606,7 +616,7 @@ def test_current_noise_process_apis_are_exported_by_their_owners() -> None:
     )
 
     assert callable(certify_noise_process)
-    assert callable(solve_theta_for_wg_l1)
+    assert callable(solve_exchange_angle_for_leakage_rate)
     assert callable(qutrit_leakage_process)
     assert callable(qutrit_leakage_process_heterogeneous)
     assert QutritLeakageNoiseProcess.__module__.endswith("mechanisms.qutrit_leakage")

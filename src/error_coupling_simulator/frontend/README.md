@@ -461,7 +461,7 @@ Current slice:
   record emission.
 - CUDA-Q noiseless Grover adapter for non-Clifford algorithm circuits.
 - Exact qutrit/ququart adapters for small multi-level leakage smoke runs:
-  `simulate_qutrit_wg_leakage(...)` (`|2>` single-site WG leakage) and
+  `simulate_qutrit_leakage(...)` (`|2>` single-site qutrit leakage) and
   `simulate_ququart_transport_smoke(...)` (`|3>`-faithful two-site CZ transport).
 - Generic dense qutrit MCWF backend: `DenseQutritMcwfBackend` owns batched
   qutrit state trajectories, site matrices, multi-controlled computational
@@ -504,8 +504,8 @@ Current slice:
   registered configuration (a *preset*) with NO silent physics defaults; the
   two theta conventions are DISTINCT registered presets:
   `PRESET_LEAK_THETA_0P30` (raw angle, `theta_rad=0.30`) and
-  `PRESET_LEAK_WG_L1_5E3` (`theta` solved to `WG_L1 = 5e-3` via
-  `solve_theta_for_wg_l1`). `run_spec_from_preset(...)` builds the engine
+  `PRESET_LEAKAGE_RATE_5E3` (`theta` solved to `leakage_rate = 5e-3` via
+  `solve_exchange_angle_for_leakage_rate`). `run_spec_from_preset(...)` builds the engine
   `RunSpec` with explicit `n_shots`/`n_rounds`/`seed`, and
   `leak_slice_table(...)` returns the per-CZ `exp(L/4)` Kraus table through
   package-local `WithinCycleScheduleHost.build_within_cycle_leak` (its embedded CPTP `< 1e-12` and
@@ -842,7 +842,7 @@ d3 XZZX experiment-preset quickstart:
 from pathlib import Path
 
 from error_coupling_simulator.frontend.experiments import (
-    PRESET_LEAK_WG_L1_5E3,
+    PRESET_LEAKAGE_RATE_5E3,
     leak_slice_table,
     load_xzzx_d3,
     run_spec_from_preset,
@@ -853,7 +853,7 @@ from error_coupling_simulator.carrier import FusedWithinCycleSampler
 google_root = Path("/path/to/google_qec_data")
 sched = load_xzzx_d3(dataset_root=google_root)
 screening_spec = run_spec_from_preset(
-    PRESET_LEAK_WG_L1_5E3,
+    PRESET_LEAKAGE_RATE_5E3,
     n_shots=1024,
     n_rounds=2,
     seed=0,
@@ -861,7 +861,7 @@ screening_spec = run_spec_from_preset(
     dataset_root=google_root,
 )
 final_spec = run_spec_from_preset(
-    PRESET_LEAK_WG_L1_5E3,
+    PRESET_LEAKAGE_RATE_5E3,
     n_shots=1024,
     n_rounds=2,
     seed=0,
@@ -869,7 +869,7 @@ final_spec = run_spec_from_preset(
     dataset_root=google_root,
 )
 leak_c128 = leak_slice_table(
-    PRESET_LEAK_WG_L1_5E3, device="cuda")  # c128 construction + CPTP check
+    PRESET_LEAKAGE_RATE_5E3, device="cuda")  # c128 construction + CPTP check
 
 sampler = FusedWithinCycleSampler("cuda")
 screening_batch = sampler.sample(screening_spec, schedule=sched)  # executes c64
@@ -878,7 +878,7 @@ final_batch = sampler.sample(final_spec, schedule=sched)            # executes c
 ```
 
 Only `FusedWithinCycleSampler` / `sv_traj_d3_wc` may execute `screening_spec` in c64.
-PEPS and MPS remain c128-only and reject c64 run metadata. The physical WG channel, codestate,
+PEPS and MPS remain c128-only and reject c64 run metadata. The declared qutrit leakage channel, codestate,
 composition checks, and CPTP checks remain c128; the fused sampler casts only the checked complex
 execution tables for optimization. A c64 artifact never becomes evidence: replay the frozen run
 as a separate c128 final/certification candidate and then apply the owning scientific gates.
@@ -914,17 +914,17 @@ Multi-level leakage quickstarts:
 
 ```python
 from error_coupling_simulator.frontend import (
-    simulate_qutrit_wg_leakage,
+    simulate_qutrit_leakage,
     simulate_ququart_transport_smoke,
 )
 from error_coupling_simulator.mechanisms import CZParams
 
-q2 = simulate_qutrit_wg_leakage(
+q2 = simulate_qutrit_leakage(
     num_qutrits=3,
     initial_levels="111",
     cycles=1,
     shots=1024,
-    out_dir="outputs/simulator/qutrit_wg_leakage3",
+    out_dir="outputs/simulator/qutrit_leakage3",
 )
 print(q2.total_leaked_population)
 print(q2.top_outcomes(4))
@@ -991,7 +991,7 @@ program = CompiledMcwfProgram(
         h(0),
         h(1),
         h(2),
-        kraus_all_sites("wg_leakage", range(3)),
+        kraus_all_sites("qutrit_leakage", range(3)),
     ),
 )
 print(program.summary())

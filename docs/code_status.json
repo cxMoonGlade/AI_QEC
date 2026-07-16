@@ -19,7 +19,7 @@
   },
   "error_coupling_simulator/mechanisms": {
     "status": "ACTIVE",
-    "note": "Explicit Axis-1 generator lowering, Wood-Gambetta qutrit leakage channels/processes, and two-transmon CZ leakage channel derivation."
+    "note": "Explicit Axis-1 generator lowering, qutrit exchange/seepage/heating channels and specified processes, and two-transmon CZ leakage channel derivation."
   },
   "error_coupling_simulator/quantum_bath": {
     "status": "RESEARCH",

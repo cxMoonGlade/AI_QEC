@@ -19,9 +19,9 @@ from ..mechanisms.qutrit_leakage import (
     G_HEAT_DEFAULT,
     G_SEEP_DEFAULT,
     THETA_DEFAULT,
-    coherence_of_leakage,
+    leakage_seepage_rates,
     leakage_kraus_torch,
-    wg_rates,
+    level1_output_leakage_coherence,
 )
 from .cudaq_grover import (
     bitstring_from_index,
@@ -50,7 +50,7 @@ from .mcwf_program import (
 )
 
 LEAKAGE_SCHEDULE = "after_initial_h_and_after_each_grover_iteration_all_sites"
-WG_LEAKAGE_KRAUS_KEY = "wg_leakage"
+LEAKAGE_KRAUS_KEY = "qutrit_leakage"
 
 
 @dataclass(frozen=True)
@@ -130,7 +130,7 @@ def simulate_mcwf_qutrit_grover_leakage(
     Grover's oracle/diffuser are algorithmic gates extended to qutrits by leaving
     ``|2>`` inert on one-site qubit gates and by not firing multi-controlled
     phases on leaked controls. The MCWF carrier itself is generic; this function
-    only supplies the Grover workload, WG leakage channel, and artifact schema.
+    only supplies the Grover workload, qutrit leakage channel, and artifact schema.
     """
 
     n = int(num_qubits)
@@ -181,7 +181,7 @@ def simulate_mcwf_qutrit_grover_leakage(
         B = min(int(batch_size), remaining)
         remaining -= B
         batches += 1
-        exec_result = executor.run(program, batch_size=B, kraus_families={WG_LEAKAGE_KRAUS_KEY: kraus})
+        exec_result = executor.run(program, batch_size=B, kraus_families={LEAKAGE_KRAUS_KEY: kraus})
         physics_program_s += float(exec_result.timing.physics_program_s)
 
         t0 = time.perf_counter()
@@ -201,7 +201,7 @@ def simulate_mcwf_qutrit_grover_leakage(
         _merge_counts(bit_counts, measurement.bit_counts)
         _merge_counts(qutrit_counts, measurement.qutrit_counts)
 
-    wg_l1, wg_l2 = wg_rates(theta, g_seep, g_heat)
+    leakage_rate, seepage_rate = leakage_seepage_rates(theta, g_seep, g_heat)
     leakage_by_site = [
         {"site": int(site), "p_leaked_at_final_measurement": float(leaked_by_site_acc[site] / int(shots))}
         for site in range(n)
@@ -231,7 +231,7 @@ def simulate_mcwf_qutrit_grover_leakage(
     }
     executor_manifest = executor.manifest()
     manifest = {
-        "schema": "error_coupling_simulator.frontend.mcwf_qutrit_grover_leakage.v1",
+        "schema": "error_coupling_simulator.frontend.mcwf_qutrit_grover_leakage.v2",
         "backend": (
             "error_coupling_simulator.frontend.mcwf_backend."
             "DenseQutritMcwfBackend"
@@ -260,9 +260,11 @@ def simulate_mcwf_qutrit_grover_leakage(
             "theta": float(theta),
             "g_seep": float(g_seep),
             "g_heat": float(g_heat),
-            "WG_L1": float(wg_l1),
-            "WG_L2": float(wg_l2),
-            "C_L": float(coherence_of_leakage(theta, g_seep, g_heat)),
+            "leakage_rate": float(leakage_rate),
+            "seepage_rate": float(seepage_rate),
+            "level1_output_leakage_coherence": float(
+                level1_output_leakage_coherence(theta, g_seep, g_heat)
+            ),
             "kraus_rank": int(kraus.shape[0]),
             "leaked_readout_b": b,
         },
@@ -347,15 +349,15 @@ def compile_mcwf_grover_program(
     ops = []
     for site in range(n):
         ops.append(h(site))
-    ops.append(kraus_all_sites(WG_LEAKAGE_KRAUS_KEY, range(n)))
+    ops.append(kraus_all_sites(LEAKAGE_KRAUS_KEY, range(n)))
     for _ in range(r):
         ops.extend(_marked_oracle_ops(n, marked))
         ops.extend(_diffuser_ops(n))
-        ops.append(kraus_all_sites(WG_LEAKAGE_KRAUS_KEY, range(n)))
+        ops.append(kraus_all_sites(LEAKAGE_KRAUS_KEY, range(n)))
     return CompiledMcwfProgram(
         num_qutrits=n,
         operations=tuple(ops),
-        description="single_solution_grover_gate_level_with_qutrit_wg_leakage_slots",
+        description="single_solution_grover_gate_level_with_qutrit_leakage_slots",
     )
 
 

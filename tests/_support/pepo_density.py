@@ -13,7 +13,7 @@ import pytest
 import torch
 
 
-WG_L1_TARGET = 5.0e-3
+LEAKAGE_RATE_TARGET = 5.0e-3
 G_SEEP = 0.09
 G_HEAT = 0.0
 B_BIAS = 0.9
@@ -96,12 +96,12 @@ def build_within_cycle_cell(schedule):
     )
     from error_coupling_simulator.frontend import xzzx_parser as xp
     from error_coupling_simulator.mechanisms.qutrit_leakage import (
-        solve_theta_for_wg_l1,
+        solve_exchange_angle_for_leakage_rate,
     )
 
     r01c, r01m = xp.default_r01_paths()
     theta = float(
-        solve_theta_for_wg_l1(WG_L1_TARGET, g_seep=G_SEEP, g_heat=G_HEAT)
+        solve_exchange_angle_for_leakage_rate(LEAKAGE_RATE_TARGET, g_seep=G_SEEP, g_heat=G_HEAT)
     )
     host = FusedWithinCycleSampler(device="cuda")
     spec = RunSpec(

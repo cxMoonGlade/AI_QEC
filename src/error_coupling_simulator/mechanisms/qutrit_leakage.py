@@ -1,9 +1,9 @@
-"""Wood--Gambetta qutrit leakage channels and specified noise processes.
+"""Qutrit exchange, seepage, and heating channels and specified processes.
 
-The physical channel acts on ``{|0>, |1>, |2>}`` through coherent
+The declared model channel acts on ``{|0>, |1>, |2>}`` through coherent
 ``|1><->|2>`` exchange, dissipative seepage ``|2>->|1>``, and optional heating
 ``|1>->|2>``.  This module owns the NumPy superoperator/Kraus algebra, its Torch
-carrier conversion, Wood--Gambetta diagnostics, leaked-readout map, and neutral
+carrier conversion, subspace-transition diagnostics, leaked-readout map, and
 ``QutritLeakageNoiseProcess`` factories.  Declared parameters and diagnostics are
 evaluator-only truth; emitted records do not expose them.
 """
@@ -29,33 +29,32 @@ QUTRIT_DEVICE = "cuda"
 # --------------------------------------------------------------------------- #
 # Declared design constants and swept ranges.                                  #
 # --------------------------------------------------------------------------- #
-# The leakage CHANNEL is the WG ``exp(Lindbladian)`` map parameterized by the
-# declared ``(theta, g_seep, g_heat)``; the Wood-Gambetta rates
-# ``(WG_L1, WG_L2)`` (1704.03081 Eq. 2) are diagnostics of that channel, not measured
-# inputs. The ranges below are project targets for sensitivity studies.
+# The leakage channel is the declared ``exp(Lindbladian)`` map parameterized by
+# ``(theta, g_seep, g_heat)``. Computational-to-leaked and
+# leaked-to-computational subspace rates are diagnostics, not measured inputs.
+# The ranges below are project targets for sensitivity studies.
 
-#: Project WG leakage-rate targets. The upper value has approximate cross-observable
+#: Project computational-to-leaked subspace-rate targets. The upper value has
+#: approximate cross-observable
 #: scale context from Miao 2211.04728, but is not a measurement of this project channel.
-WG_L1_REGIME = (1.0e-3, 5.0e-3)
-#: Project WG seepage-rate targets. McEwen 2102.06131 provides cross-protocol scale
-#: context, not a fitted ``WG_L2`` interval for this channel.
-WG_L2_REGIME = (5.0e-2, 1.0e-1)
+LEAKAGE_RATE_TARGETS = (1.0e-3, 5.0e-3)
+#: Project leaked-to-computational subspace-rate targets. McEwen 2102.06131
+#: provides cross-protocol scale context, not a fitted interval for this channel.
+SEEPAGE_RATE_TARGETS = (5.0e-2, 1.0e-1)
 
-#: Coherent ``|1><->|2>`` exchange strengths swept across the project range. These land WG_L1
-#: at ~1e-3..5e-3 (``WG_L1 ~ (1/2) sin^2(theta)``): theta=0 is the incoherent-ablation
-#: anchor (C_L=0), theta>0 carries C_L>0 (the non-Pauli signal). Use
-#: ``solve_theta_for_wg_l1`` to hit an exact target WG_L1.
+#: Coherent ``|1><->|2>`` exchange strengths swept across the project range.
+#: These land the leakage-rate diagnostic near 1e-3..5e-3 for the declared
+#: default dissipative coordinates. ``theta=0`` is the exchange-off anchor. Use
+#: ``solve_exchange_angle_for_leakage_rate`` to hit an exact reachable target.
 THETA_SWEEP = (0.0, 0.045, 0.07, 0.10)
-#: Dissipative seepage rates ``g_seep`` swept across the project WG_L2 range (jump ``|1><2|``,
-#: |2>->|1>). g_seep ~ 0.05..0.10 lands WG_L2 in ``WG_L2_REGIME``.
+#: Dissipative seepage rates ``g_seep`` swept across the project target range
+#: (jump ``|1><2|``, |2>->|1>).
 G_SEEP_SWEEP = (0.05, 0.09, 0.10)
-#: Incoherent heating rates ``g_heat`` SWEPT for the matched-WG_L1 ablation (jump
-#: ``|2><1|``, |1>->|2>, C_L=0). g_heat=0 is the default (no heating); g_heat>0 with
-#: theta=0 is the incoherent-leakage limit used to isolate the coherent contribution.
+#: Incoherent heating rates ``g_heat`` swept for a matched-leakage-rate ablation
+#: (jump ``|2><1|``, |1>->|2>). ``g_heat=0`` is the no-heating anchor.
 G_HEAT_SWEEP = (0.0, 0.005)
 
-#: Convenience center for the project sweep. ``theta=0.07`` gives WG_L1 about
-#: 2.4e-3 and ``g_seep=0.09`` gives WG_L2 about 9e-2 in the declared channel.
+#: Convenience center for the project sweep.
 THETA_DEFAULT = 0.07
 G_SEEP_DEFAULT = 0.09
 G_HEAT_DEFAULT = 0.0
@@ -73,7 +72,7 @@ LEAKED_READOUT_BIAS_SWEEP = (0.5, 0.75, 1.0)
 
 
 # --------------------------------------------------------------------------- #
-# Wood--Gambetta qutrit channel algebra.                                      #
+# Qutrit exchange/seepage/heating channel algebra.                            #
 # --------------------------------------------------------------------------- #
 _QUTRIT_KETS = {level: np.eye(3, dtype=np.complex128)[level] for level in range(3)}
 
@@ -121,7 +120,7 @@ def leakage_channel_super(
     *,
     t: float = 1.0,
 ) -> np.ndarray:
-    """Wood--Gambetta qutrit leakage channel ``exp(L t)``.
+    """Declared qutrit exchange/seepage/heating channel ``exp(L t)``.
 
     ``theta`` drives coherent ``|1><->|2>`` exchange. ``g_seep`` and ``g_heat``
     are the non-negative rates of the jumps ``|1><2|`` and ``|2><1|``.
@@ -133,6 +132,8 @@ def leakage_channel_super(
     seepage_rate = float(g_seep)
     heating_rate = float(g_heat)
     duration = float(t)
+    if not all(math.isfinite(value) for value in (theta_value, seepage_rate, heating_rate, duration)):
+        raise ValueError("qutrit leakage parameters and duration must be finite")
     if seepage_rate < 0.0 or heating_rate < 0.0:
         raise ValueError("qutrit seepage and heating rates must be non-negative")
     if duration < 0.0:
@@ -186,25 +187,27 @@ def leakage_kraus(
 
 
 # --------------------------------------------------------------------------- #
-# Wood-Gambetta rate diagnostics and project-target solver                       #
+# Subspace-transition diagnostics and project-target solver.                  #
 # --------------------------------------------------------------------------- #
-#: Projectors for the WG rates (1704.03081 Eq.2). Computational subspace {|0>,|1>}
-#: (d1=2); leaked subspace {|2>} (d2=1).
+#: Computational subspace ``{|0>,|1>}`` and leaked subspace ``{|2>}``
+#: projectors used by the source-backed transition-rate definitions.
 _PI1 = np.diag([1.0, 1.0, 0.0]).astype(np.complex128)
 _PI2 = np.diag([0.0, 0.0, 1.0]).astype(np.complex128)
-#: ``|1>`` ket reused by ``coherence_of_leakage`` (basis ``{|0>,|1>,|2>}``).
+#: Explicit fixed input for ``level1_output_leakage_coherence``.
 _QUTRIT_KETS1 = np.eye(3, dtype=np.complex128)[1]
 
 
-def wg_rates(theta: float, g_seep: float, g_heat: float = 0.0) -> tuple[float, float]:
-    """Field-standard Wood-Gambetta leakage/seepage rates of the leakage channel (Eq.2).
+def leakage_seepage_rates(
+    theta: float,
+    g_seep: float,
+    g_heat: float = 0.0,
+) -> tuple[float, float]:
+    """Return computational-to-leaked and leaked-to-computational rates.
 
-    ``WG_L1 = (1/d1) Tr[Π2 E(Π1)]`` (d1=2; leakage out of ``{|0>,|1>}``) and
-    ``WG_L2 = (1/d2) Tr[Π1 E(Π2)]`` (d2=1; seepage back), evaluated on the channel
-    ``E = exp(L t)`` for ``(theta, g_seep, g_heat)``. These are EVALUATOR/audit
-    diagnostics of the channel, not emitted-record inputs. (``Π1`` here is the full
-    computational projector, the unnormalized Eq.2 form; the ``1/d1`` average over
-    ``X_1`` input states is supplied by the explicit ``/2``.)
+    The definitions are ``Tr[Π_leak E(Π_comp)] / d_comp`` and
+    ``Tr[Π_comp E(Π_leak)] / d_leak`` with dimensions two and one. They are
+    evaluator diagnostics of the declared channel, not emitted-record inputs.
+    Source: Phys. Rev. A 97, 032306 (2018), Eq. (2).
     """
     superop = leakage_channel_super(float(theta), float(g_seep), float(g_heat))
     l1 = float(np.real(np.trace(_PI2 @ _apply_super(superop, _PI1))) / 2.0)
@@ -212,62 +215,134 @@ def wg_rates(theta: float, g_seep: float, g_heat: float = 0.0) -> tuple[float, f
     return l1, l2
 
 
-def coherence_of_leakage(theta: float, g_seep: float, g_heat: float = 0.0) -> float:
-    """Wood-Gambetta coherence-of-leakage ``C_L = ||P_C(rho)||_1`` (WG 1704.03081 Eq.31).
+def level1_output_leakage_coherence(
+    theta: float,
+    g_seep: float,
+    g_heat: float = 0.0,
+) -> float:
+    """Trace norm of the cross-subspace block of ``E(|1><1|)``.
 
-    The trace-norm of the off-diagonal ``X_1``/``X_2`` block of ``E(|1><1|)``,
-    ``P_C(rho) = Pi1 rho Pi2 + Pi2 rho Pi1`` (Eq.30) -- the field-standard non-Pauli
-    coherence signal. For the unitary model this equals ``|sin(2*theta)|`` (WG Eq.59 is
-    ``|sin t|`` with ``t = 2*theta`` here, since ``H = theta(|1><2|+|2><1|)`` vs WG's
-    ``(1/2)(...)``), i.e. **2x the bare ``|rho[1,2]|``** -- the proper metric, NOT the
-    off-diagonal magnitude, as independently checked against Eq.59. ``> 0`` iff the channel
-    carries coherent leakage: ``theta>0`` -> ``C_L>0``; the incoherent limit
-    (``theta=0``, any ``g_seep``/``g_heat``) -> ``C_L=0``.
+    This is the state functional ``||Π_comp rho Π_leak + Π_leak rho Π_comp||_1``
+    evaluated only after the explicit fixed input ``|1><1|``. It is not a Haar
+    channel average and must not be interpreted as an iff test for a coherent
+    physical cause. In the exchange-only model it is ``|sin(2 theta)|`` and
+    therefore has a node at ``theta=pi/2`` despite the nonzero exchange generator.
+    Source: Phys. Rev. A 97, 032306 (2018), Eqs. (30)-(34), (57)-(58), and (61).
     """
     superop = leakage_channel_super(float(theta), float(g_seep), float(g_heat))
     out = _apply_super(superop, np.outer(_QUTRIT_KETS1, _QUTRIT_KETS1.conj()))
-    pc = _PI1 @ out @ _PI2 + _PI2 @ out @ _PI1  # off-diagonal block P_C(rho), WG Eq.30
-    return float(np.sum(np.linalg.svd(pc, compute_uv=False)))  # ||P_C||_1 = sum of singular values
+    pc = _PI1 @ out @ _PI2 + _PI2 @ out @ _PI1
+    return float(np.sum(np.linalg.svd(pc, compute_uv=False)))
 
 
-def solve_theta_for_wg_l1(
-    target_wg_l1: float,
+def solve_exchange_angle_for_leakage_rate(
+    target_leakage_rate: float,
     *,
     g_seep: float = G_SEEP_DEFAULT,
     g_heat: float = 0.0,
     tol: float = 1e-10,
     max_iter: int = 100,
+    bracket_samples: int = 256,
 ) -> float:
-    """Find the coherent-exchange ``theta`` whose WG channel has ``WG_L1 == target``.
+    """Find ``theta`` whose declared channel has the requested leakage rate.
 
-    The coherent ``|1><->|2>`` exchange gives ``WG_L1 ~ (1/2) sin^2(theta)`` to leading
-    order (WG Eq.58); the dissipative ``g_seep``/``g_heat`` perturb it, so this refines
-    a monotone bisection on the EXACT channel rate ``wg_rates(theta, g_seep, g_heat)[0]``
-    (no closed-form inversion). The bracket starts at the analytic seed
-    ``theta0 = arcsin(sqrt(2 target))`` and widens to ``[0, pi/2]`` (WG_L1 is monotone
-    increasing in ``theta`` on ``[0, pi/2]``). This solves a project-channel coordinate
-    for a declared target such as 1e-3 or 5e-3. It is not a fit to a paper observable or
-    a device calibration.
+    The rate need not be monotone once dissipation is present. The solver scans
+    ``[0, pi/2]`` for the first residual sign change and then performs a
+    direction-independent bisection inside that explicit bracket. Returning
+    zero is allowed only for exact equality with the computed ``theta=0`` rate.
+    A zero target never uses numerical tolerance to turn positive probability
+    into a structural zero. Failure to bracket or meet ``tol`` raises instead
+    of returning an unverified midpoint. This is a project-channel coordinate,
+    not calibration.
     """
-    target = float(target_wg_l1)
-    if target <= NUMERICAL_ZERO:
-        return 0.0
-    if not 0.0 < target < 0.5:
-        raise ValueError(f"target WG_L1 must lie in (0, 0.5) for a |1><->|2> exchange (got {target})")
-    lo, hi = 0.0, 0.5 * math.pi
-    f_hi = wg_rates(hi, g_seep, g_heat)[0]
-    if f_hi < target:
-        raise ValueError(f"target WG_L1={target} unreachable for g_seep={g_seep}, g_heat={g_heat} (max {f_hi})")
-    for _ in range(int(max_iter)):
+    target = float(target_leakage_rate)
+    tolerance = float(tol)
+    if not math.isfinite(target) or not 0.0 <= target <= 0.5:
+        raise ValueError(
+            "target leakage rate must be finite and lie in [0, 0.5] "
+            f"(got {target_leakage_rate!r})"
+        )
+    if not math.isfinite(tolerance) or tolerance <= 0.0:
+        raise ValueError(f"tol must be finite and positive (got {tol!r})")
+    try:
+        iterations = int(max_iter)
+    except (TypeError, ValueError, OverflowError):
+        raise ValueError(
+            f"max_iter must be a positive integer (got {max_iter!r})"
+        ) from None
+    if isinstance(max_iter, bool) or iterations <= 0 or iterations != max_iter:
+        raise ValueError(f"max_iter must be a positive integer (got {max_iter!r})")
+    try:
+        samples = int(bracket_samples)
+    except (TypeError, ValueError, OverflowError):
+        raise ValueError(
+            f"bracket_samples must be an integer >= 2 (got {bracket_samples!r})"
+        ) from None
+    if (
+        isinstance(bracket_samples, bool)
+        or samples < 2
+        or samples != bracket_samples
+    ):
+        raise ValueError(
+            f"bracket_samples must be an integer >= 2 (got {bracket_samples!r})"
+        )
+
+    def rate(angle: float) -> float:
+        return leakage_seepage_rates(angle, g_seep, g_heat)[0]
+
+    def converged(value: float) -> bool:
+        if target == 0.0:
+            return value == 0.0
+        return abs(value - target) <= min(tolerance, 0.5 * target)
+
+    grid = np.linspace(0.0, 0.5 * math.pi, samples + 1, dtype=np.float64)
+    lo = float(grid[0])
+    f_lo = rate(lo)
+    if target == f_lo:
+        return lo
+    residual_lo = f_lo - target
+    sampled_min = f_lo
+    sampled_max = f_lo
+    bracket: tuple[float, float, float] | None = None
+    for raw_hi in grid[1:]:
+        hi = float(raw_hi)
+        f_hi = rate(hi)
+        sampled_min = min(sampled_min, f_hi)
+        sampled_max = max(sampled_max, f_hi)
+        if converged(f_hi):
+            return hi
+        residual_hi = f_hi - target
+        if residual_lo * residual_hi < 0.0:
+            bracket = (lo, hi, residual_lo)
+            break
+        lo, residual_lo = hi, residual_hi
+    if bracket is None:
+        raise ValueError(
+            f"target leakage rate {target} was not bracketed by the {samples}-sample "
+            f"scan on theta in [0, pi/2] for g_seep={g_seep}, g_heat={g_heat}; "
+            f"sampled range was "
+            f"[{sampled_min}, {sampled_max}]"
+        )
+    lo, hi, residual_lo = bracket
+    for _ in range(iterations):
         mid = 0.5 * (lo + hi)
-        f_mid = wg_rates(mid, g_seep, g_heat)[0]
-        if abs(f_mid - target) <= tol:
+        f_mid = rate(mid)
+        if converged(f_mid):
             return float(mid)
-        if f_mid < target:
-            lo = mid
-        else:
+        residual_mid = f_mid - target
+        if residual_lo * residual_mid < 0.0:
             hi = mid
-    return float(0.5 * (lo + hi))
+        else:
+            lo, residual_lo = mid, residual_mid
+    candidate = float(0.5 * (lo + hi))
+    candidate_rate = rate(candidate)
+    residual = abs(candidate_rate - target)
+    if converged(candidate_rate):
+        return candidate
+    raise RuntimeError(
+        f"exchange-angle solver did not reach tolerance {tolerance} after "
+        f"{iterations} iterations (residual {residual})"
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -336,9 +411,8 @@ def leakage_kraus_torch(
     """The :func:`leakage_kraus` channel as engine-
     native torch CUDA complex128 tensors (the contract's channel data format).
 
-    Single source of truth for the algebra: it wraps the numpy WG ``leakage_kraus``
-    (the same CPTP family the ``check_wg_leakage_channel.py`` channel-level qutip oracle
-    validates) and only changes the carrier (numpy -> torch CUDA). No re-derivation. The
+    Single source of truth for the algebra: it wraps NumPy ``leakage_kraus`` and
+    only changes the carrier (NumPy -> Torch CUDA). No re-derivation. The
     Kraus count is the channel rank (2..5), which the engine's ``apply_channel`` consumes
     as an arbitrary-length Kraus list.
     """
@@ -380,17 +454,19 @@ def _heterogeneous_field(kraus_per_site: list[list[torch.Tensor]]) -> Callable:
 
 
 def _leakage_audit(theta: float, g_seep: float, g_heat: float) -> dict[str, Any]:
-    """Evaluator-side WG diagnostics for one ``(theta, g_seep, g_heat)`` channel."""
-    wg_l1, wg_l2 = wg_rates(float(theta), float(g_seep), float(g_heat))
+    """Evaluator-side diagnostics for one ``(theta, g_seep, g_heat)`` channel."""
+    leakage_rate, seepage_rate = leakage_seepage_rates(
+        float(theta), float(g_seep), float(g_heat)
+    )
     return {
         "theta": float(theta),
         "g_seep": float(g_seep),
         "g_heat": float(g_heat),
-        "WG_L1": wg_l1,
-        "WG_L2": wg_l2,
-        "WG_L2_over_L1": wg_l2 / wg_l1 if wg_l1 > 0.0 else float("inf"),
-        "C_L": coherence_of_leakage(float(theta), float(g_seep), float(g_heat)),
-        "coherent": bool(float(theta) > 0.0),
+        "leakage_rate": leakage_rate,
+        "seepage_rate": seepage_rate,
+        "level1_output_leakage_coherence": level1_output_leakage_coherence(
+            float(theta), float(g_seep), float(g_heat)
+        ),
     }
 
 
@@ -403,25 +479,20 @@ def qutrit_leakage_process(
     n_data: int = 9,
     device: str | torch.device = QUTRIT_DEVICE,
 ) -> QutritLeakageNoiseProcess:
-    """Homogeneous per-data-qutrit WG leakage process for d3 XZZX (9 data).
+    """Homogeneous per-data-qutrit leakage process for d3 XZZX (9 data).
 
-    Injects the SAME Wood-Gambetta leakage channel
-    ``leakage_kraus_torch(theta, g_seep, g_heat)`` on every data qutrit each cycle
-    as a coherent ``|1><->|2>`` exchange (``theta``, carrying ``C_L>0``) plus
-    dissipative seepage (``g_seep``,
-    WG_L2) and optional incoherent heating (``g_heat``, ``C_L=0``). ``b`` is
+    Injects the same declared channel on every data qutrit each cycle: coherent
+    ``|1><->|2>`` exchange, dissipative seepage, and optional heating. ``b`` is
     REQUIRED -- no magic-constant default; pick it from ``LEAKED_READOUT_BIAS_SWEEP``
     and bracket the floor over it. The ``(theta, g_seep, g_heat)`` are SWEPT design
-    constants (``THETA_SWEEP`` x ``G_SEEP_SWEEP`` x ``G_HEAT_SWEEP``); the channel's WG
-    rates land in ``WG_L1_REGIME`` / ``WG_L2_REGIME`` (use ``solve_theta_for_wg_l1``
-    to hit an exact target WG_L1, for example 1e-3 or 5e-3). The WG rates + ``C_L``
-    are recorded in ``params`` (evaluator-side).
+    constants. Subspace rates and the explicitly fixed-input coherence diagnostic
+    are recorded in evaluator-only ``params``.
     """
     kraus = leakage_kraus_torch(theta, g_seep, g_heat, device=device)
     audit = _leakage_audit(theta, g_seep, g_heat)
     return QutritLeakageNoiseProcess(
         name=(
-            f"qutrit-wg-leakage(theta={float(theta):.3g},g_seep={float(g_seep):.3g},"
+            f"qutrit-leakage(theta={float(theta):.3g},g_seep={float(g_seep):.3g},"
             f"g_heat={float(g_heat):.3g},b={float(b):.3g})"
         ),
         field=_const_field(kraus),
@@ -430,8 +501,8 @@ def qutrit_leakage_process(
             **audit,
             "n_data": int(n_data),
             "homogeneous": True,
-            "WG_L1_regime": WG_L1_REGIME,
-            "WG_L2_regime": WG_L2_REGIME,
+            "leakage_rate_targets": LEAKAGE_RATE_TARGETS,
+            "seepage_rate_targets": SEEPAGE_RATE_TARGETS,
             **leaked_readout_manifest(b),
         },
     )
@@ -445,13 +516,11 @@ def qutrit_leakage_process_heterogeneous(
 ) -> QutritLeakageNoiseProcess:
     """Heterogeneous qutrit leakage process: ``rates[site] = (theta, g_seep[, g_heat])``.
 
-    Each data qutrit gets its OWN registered WG channel parameters (still time-constant;
+    Each data qutrit gets its own registered channel parameters (still time-constant;
     no edge). A 2-tuple ``(theta, g_seep)`` is accepted with ``g_heat`` defaulting to 0.
     This is the heterogeneous arm for site-varying device leakage. ``b`` (the
     swept leaked-readout bias is REQUIRED
-    -- no magic-constant default. Every per-site parameter must land its WG rate in / near
-    the declared bands (not enforced here; an evaluator run manifest declares
-    the chosen values). The per-site WG rates + ``C_L`` are recorded in ``params``.
+    -- no magic-constant default. Per-site diagnostics are recorded in ``params``.
     """
     norm_rates: list[tuple[float, float, float]] = [
         (float(r[0]), float(r[1]), float(r[2]) if len(r) > 2 else 0.0) for r in rates
@@ -461,7 +530,7 @@ def qutrit_leakage_process_heterogeneous(
         for (theta, g_seep, g_heat) in norm_rates
     ]
     return QutritLeakageNoiseProcess(
-        name=f"qutrit-wg-leakage-heterogeneous(n={len(norm_rates)},b={float(b):.3g})",
+        name=f"qutrit-leakage-heterogeneous(n={len(norm_rates)},b={float(b):.3g})",
         field=_heterogeneous_field(kraus_per_site),
         leaked_readout=leaked_readout_probabilities(b),
         params={
@@ -469,8 +538,8 @@ def qutrit_leakage_process_heterogeneous(
             "per_site_audit": [_leakage_audit(theta, g_seep, g_heat) for (theta, g_seep, g_heat) in norm_rates],
             "n_data": len(norm_rates),
             "homogeneous": False,
-            "WG_L1_regime": WG_L1_REGIME,
-            "WG_L2_regime": WG_L2_REGIME,
+            "leakage_rate_targets": LEAKAGE_RATE_TARGETS,
+            "seepage_rate_targets": SEEPAGE_RATE_TARGETS,
             **leaked_readout_manifest(b),
         },
     )
