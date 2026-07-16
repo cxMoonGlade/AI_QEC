@@ -1808,8 +1808,10 @@ def test_current_research_carrier_blockers_remain_visible() -> None:
         REPO_ROOT / "docs/simulator_validation/PEPS_FET_VALIDATION.md"
     ).read_text(encoding="utf-8")
     required_fet_evidence = (
-        "tests/test_peps_fet.py::test_fet_env_round_preserves_stabilizer_entropy",
-        "0.10860941571062639",
+        "tests/test_peps_fet.py::TestFetEnvWiring::test_fet_env_exercises_an_accepted_rank_reducing_writeback",
+        "RED_ALL_NOOP",
+        "16",
+        "zero rank-reducing write-backs",
         "2.0",
         "1e-4",
     )

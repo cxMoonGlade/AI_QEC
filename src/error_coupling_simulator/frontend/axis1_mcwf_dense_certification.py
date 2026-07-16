@@ -567,6 +567,8 @@ def restricted_acceptance_policy(
     program: dict[str, Any],
     rng_seed: int | None,
     trajectory_count: int,
+    worst_cut_discarded_weight_gate: float | None = None,
+    total_discarded_weight_gate: float | None = None,
 ) -> dict[str, Any]:
     """Apply the gross/strict dense-reference acceptance policy.
 
@@ -631,6 +633,45 @@ def restricted_acceptance_policy(
         and sampled_evidence_seed_ok
     )
 
+    from .axis1_qt_mps_execution import _truncation_gate_result
+
+    ledger = execution["mps_truncation_ledger"]
+    explicit_truncation = bool(ledger["explicit_truncation_requested"])
+    truncation_ledger_complete = bool(ledger["discarded_weight_ledger_complete"])
+    discarded_sum = float(ledger["discarded_weight_sum"])
+    truncation_detected = bool(discarded_sum > 0.0)
+    observed_lossless_finite_bond = bool(
+        explicit_truncation
+        and truncation_ledger_complete
+        and int(ledger.get("n_truncating_ops", 0)) == 0
+    )
+    truncation_gate = _truncation_gate_result(
+        ledger,
+        worst_cut_discarded_weight_gate=worst_cut_discarded_weight_gate,
+        total_discarded_weight_gate=total_discarded_weight_gate,
+    )
+    truncation_gate_failed = bool(
+        truncation_gate["evaluated"] and not truncation_gate["passed"]
+    )
+    truncation_gate_complete = bool(
+        truncation_gate["worst_cut_discarded_weight_gate"] is not None
+        and truncation_gate["total_discarded_weight_gate"] is not None
+    )
+    finite_bond_candidate = bool(
+        explicit_truncation
+        and truncation_ledger_complete
+        and truncation_gate_complete
+        and truncation_gate["evaluated"]
+        and truncation_gate["passed"]
+    )
+    finite_bond_policy_ok = bool(
+        not explicit_truncation
+        or observed_lossless_finite_bond
+        or finite_bond_candidate
+    )
+    if truncation_gate_failed or not finite_bond_policy_ok:
+        accepted = False
+
     blockers: list[str] = []
     if not normalization_invariant_ok:
         blockers.append("normalization_invariant_exceeds_gate")
@@ -638,6 +679,24 @@ def restricted_acceptance_policy(
         blockers.append(f"dense_jointL_certification:{dense_status}")
     if sampled and not seed_explicit:
         blockers.append("sampled_trajectory_rng_seed_not_explicit")
+    if not truncation_ledger_complete:
+        blockers.append("incomplete_mps_truncation_aggregation_context")
+    if truncation_gate_failed:
+        blockers.append("finite_bond_candidate_gate_failed")
+    if (
+        explicit_truncation
+        and not observed_lossless_finite_bond
+        and not truncation_gate["evaluated"]
+    ):
+        blockers.append("finite_bond_candidate_gate_not_evaluated")
+    elif (
+        explicit_truncation
+        and not observed_lossless_finite_bond
+        and not truncation_gate_complete
+    ):
+        blockers.append("finite_bond_candidate_gate_incomplete")
+    if truncation_detected:
+        blockers.append("nonzero_mps_truncation_discarded_weight")
     if requires_scalable:
         blockers.append("overcap_large_code_policy_not_established")
     blockers.extend(
@@ -649,7 +708,7 @@ def restricted_acceptance_policy(
     )
 
     return {
-        "schema": "error_coupling_simulator.frontend.mcwf_mps_restricted_acceptance_policy.v2",
+        "schema": "error_coupling_simulator.frontend.mcwf_mps_restricted_acceptance_policy.v3",
         "policy_role": "restricted_execution_acceptance_not_metric",
         "accepted_for_restricted_execution": accepted,
         "accepted_for_sampled_execution_evidence": bool(
@@ -660,7 +719,9 @@ def restricted_acceptance_policy(
             accepted and not sampled and dense_evidence_strict
         ),
         "accepted_for_production_scalable_backend": False,
-        "accepted_as_restricted_overcap_execution": overcap_restricted,
+        "accepted_as_restricted_overcap_execution": bool(
+            accepted and overcap_restricted
+        ),
         "blocked_reason": None if accepted else (blockers[0] if blockers else None),
         "gross_strict_gate_split": {
             "gross_gate_role": "restricted_acceptance_gate_catches_gross_disagreement_no_op_wrong_branch",
@@ -718,6 +779,31 @@ def restricted_acceptance_policy(
             "accepted_as_error_bound": False,
             "comparison_outcome_is_metric": False,
             "epistemic_class": "c",
+        },
+        "mps_truncation": {
+            "explicit_truncation_requested": explicit_truncation,
+            "exact_bond_dimension_sufficient": int(
+                ledger["exact_bond_dimension_sufficient"]
+            ),
+            "exact_bond_policy": str(ledger["exact_bond_policy"]),
+            "accepted_as_exact_bond_representation": bool(
+                ledger["accepted_as_exact_bond_representation"]
+            ),
+            "discarded_weight_ledger_complete": truncation_ledger_complete,
+            "discarded_weight_sum": discarded_sum,
+            "worst_cut_discarded_weight": float(
+                ledger["worst_cut_discarded_weight"]
+            ),
+            "truncation_detected": truncation_detected,
+            "observed_lossless_finite_bond_execution": (
+                observed_lossless_finite_bond
+            ),
+            "gate": truncation_gate,
+            "candidate_gate_complete": truncation_gate_complete,
+            "accepted_as_finite_bond_candidate": finite_bond_candidate,
+            "accepted_as_production_error_bound": False,
+            "comparison_outcome_is_metric": False,
+            "epistemic_class": str(ledger["epistemic_class"]),
         },
         "probability": {
             # A normalization sanity invariant (sum record frequencies == 1),

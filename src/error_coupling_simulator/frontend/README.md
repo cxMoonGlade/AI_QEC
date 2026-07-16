@@ -246,8 +246,11 @@ Current slice:
   `dense_oracle_certification`). Unknown keys fail closed. The
   `mcwf_mps_state_record` path accepts `local_dims`, `initial_levels`,
   `leaked_readout_b`, `max_bond`, `microstep_count`, `finite_step_order`,
-  `trajectory_count`, and `rng_seed`; other execution contracts reject backend
-  options.
+  finite-bond gates, `trajectory_count`, and `rng_seed`; other execution
+  contracts reject backend options. On both MPS paths, `max_bond` is either
+  `None` or a strictly positive
+  integral value. Booleans, floats, strings, zero, and negative values are
+  rejected rather than narrowed with `int(...)`.
   Passing
   `execution_backend_contract="qutip_cuquantum_restricted_state_record_probe"`
   runs the restricted qutip-cuquantum trajectory/record probes for supported
@@ -366,16 +369,32 @@ Current slice:
   separate caller-declared gate. These are verification gates, not metrics,
   confidence intervals, or production error bounds. When
   `max_bond=None`, the MPS manifest carries a complete no-explicit-truncation
-  ledger with zero discarded weight. Finite `max_bond` carries a CUDA
-  shadow-state Schmidt-tail ledger for supported two-site Hamiltonian/control
-  gates; this is an approximation risk ledger, not a metric and not a
-  production error bound. The ledger reports a conservative
+  ledger with zero discarded weight. Finite `max_bond` routes supported
+  two-site Hamiltonian/control unitaries through a Quimb-1.14-pinned auto-swap
+  adapter and records every actual SVD split (forward swaps, operator split,
+  and reverse swaps). Each discarded fraction is relative to that split's
+  pre-split weight. Exact-branch aggregation weights each path-local sum by its
+  incoming branch probability. Sampled aggregation sums per trajectory and
+  divides by the declared `trajectory_count`, so trajectories with no
+  truncation event contribute zero. Every gate occurrence separately authenticates
+  complete sampled-trajectory coverage or contiguous exact branches with unit
+  incoming mass; incomplete occurrence coverage makes both the ledger and restricted
+  acceptance fail closed. These aggregates are local heuristic risk ledgers, not
+  metrics or global state/record error bounds. Deterministic unitary
+  evolution restores the pre-gate norm after recording raw loss; Kraus/jump
+  branch operators remain uncapped because their raw norm is a physical branch
+  probability, which is kept separate from truncation evidence. Capped
+  multi-site MCWF clusters fail closed until they gain the same ledger. The
+  ledger reports a conservative
   `exact_bond_dimension_sufficient=2**ceil(n_sites/2)` for qubit-MPS
   representability; being at/above that cap is exact-bond bookkeeping, not a
   production logical-error bound. Optional caller-declared
   `worst_cut_discarded_weight_gate` / `total_discarded_weight_gate` values are
-  finite-bond candidate gates only: they can accept or reject restricted
-  execution evidence, but never become a production trace-norm bound. The
+  finite-bond candidate gates only. Once a capped run records actual loss, at
+  both gates must be explicit and pass before restricted acceptance; a
+  complete capped run with zero truncating operations is recorded as observed
+  lossless and needs no loss gate. Passing these gates can accept restricted
+  execution evidence, but never becomes a production trace-norm bound. The
   manifest centralizes these decisions in
   `restricted_acceptance_policy`: dense-window certification, sampled empirical
   trajectory status, over-cap dense-fallback refusal, and finite-bond risk-ledger
@@ -626,9 +645,12 @@ Representability boundary:
   It is MPS execution, but not the full production QT/MPS carrier: exact
   summed-generator Lindblad evolution, dense channel evidence, DEM/decoder
   integration, and Axis-2 source timelines are not claimed. Its finite-bond
-  ledger is a CUDA shadow-state Schmidt-tail risk ledger, not a metric or a
-  production error bound; its sampled trajectory mode emits empirical record
-  frequencies, not dense-certified exact probabilities.
+  ledger records per-operation actual Quimb SVD splits. Exact branches use
+  incoming-branch-probability weighting, while sampled runs average over the
+  explicit trajectory count including zero-event paths. The result remains a
+  local heuristic risk ledger, not a metric, a global error bound, or a branch
+  probability; sampled trajectory mode emits empirical record frequencies, not
+  dense-certified exact probabilities.
 - `representability="axis1_qt_mps_restricted_seeded_trajectory_sweep"` means a
   restricted QT/MPS sampled-trajectory seed sweep ran the same compiler-generated
   schedule with explicit distinct seeds. It may accept restricted empirical

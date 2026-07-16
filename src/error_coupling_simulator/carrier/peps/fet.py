@@ -2,11 +2,12 @@ from __future__ import annotations
 
 r"""Environment-aware single-bond rank selection for the single-wire PEPS carrier.
 
-This implementation remains a research path. Local environment and dense-reference
-invariants have current tests, but the end-to-end entropy invariant fails:
-the carrier returns ``S_A=0.10860941571062639`` against the independent GF(2)
-reference ``2.0`` at tolerance ``1e-4``. This module is therefore not certified as
-state-faithful or record-faithful. See ``docs/simulator_validation/PEPS_FET_VALIDATION.md``.
+This implementation remains a research path. The mutation boundary is fail-closed,
+but the current strict-``eps_fid`` d3 run reaches the independent entropy reference
+only through an all-identity fallback: no rank-reducing FET write-back is accepted.
+The non-degeneracy gate is therefore RED, and this module is not certified as a
+state-faithful or record-faithful truncation path. See
+``docs/simulator_validation/PEPS_FET_VALIDATION.md``.
 
 WHAT THIS MODULE IS
 -------------------
@@ -48,8 +49,6 @@ production sampler path.
 GPU-only, torch-cuda-complex128, with an independently implemented test reference.
 """
 
-import os
-
 import numpy as np
 import torch
 import quimb.tensor as qtn
@@ -58,7 +57,11 @@ from ..pepo.dynamics import _qr_split
 from ..pepo.sampler import _row_tag
 from .contraction import _bra_ind, _site_pair
 from .state import CDTYPE, RDTYPE, site_tensor
-from .trajectory import _exact_rank, _insertion_spectrum
+from .trajectory import (
+    FET_SOLVER_SEED_DEFAULT,
+    _exact_rank,
+    _insertion_spectrum,
+)
 
 # --------------------------------------------------------------------------- #
 # Solver constants (project numerical choices; local tests only)                #
@@ -67,6 +70,56 @@ ALS_TRIALS = 20            #: ALS sweeps per restart seed
 FET_OPT_FLOOR = 1e-9       #: multistart fidelity may trail gauge-fix by at most this
 FID_INSTAB_EPS = 1e-12     #: reject gamma_fidelity when normM <= this * |N0| (degenerate M)
 FID_INSTAB_TOL = 1e-6      #: reject gamma_fidelity when F > 1 + this (tn_qsim instability)
+class FetSelection(tuple):
+    """Backward-compatible four-tuple with explicit selector semantics.
+
+    Iteration/unpacking yields ``(env_rank, U, Vh, fid_env)`` as before.  The
+    attributes separate the applied selection from the best rejected candidate,
+    so callers never need to encode solver failure as a fake finite fidelity.
+    """
+
+    def __new__(
+        cls,
+        env_rank: int,
+        U: torch.Tensor,
+        Vh: torch.Tensor,
+        fid_env: float,
+        *,
+        outcome: str,
+        candidate_rank: int | None,
+        candidate_fid: float | None,
+        solver_seed: int,
+        attempted_ranks: int,
+        solver_failure_count: int,
+    ):
+        obj = super().__new__(cls, (int(env_rank), U, Vh, float(fid_env)))
+        obj.outcome = str(outcome)
+        obj.candidate_rank = (
+            None if candidate_rank is None else int(candidate_rank)
+        )
+        obj.candidate_fid = (
+            None if candidate_fid is None else float(candidate_fid)
+        )
+        obj.solver_seed = int(solver_seed)
+        obj.attempted_ranks = int(attempted_ranks)
+        obj.solver_failure_count = int(solver_failure_count)
+        return obj
+
+    @property
+    def env_rank(self) -> int:
+        return int(self[0])
+
+    @property
+    def U(self) -> torch.Tensor:
+        return self[1]
+
+    @property
+    def Vh(self) -> torch.Tensor:
+        return self[2]
+
+    @property
+    def fid_env(self) -> float:
+        return float(self[3])
 
 #: Open-leg names of the single-bond environment ``Γ`` (ket i/j, bra I/J).
 _GI, _GBI, _GJ, _GBJ = "_g_i", "_g_bi", "_g_j", "_g_bj"
@@ -158,15 +211,37 @@ def gamma_fidelity(Gamma: torch.Tensor, M: torch.Tensor) -> float:
 # FET multistart ALS solver (mirrors tn_qsim's sigma=identity branch),           #
 # compared with the closed-form gauge-fix truncation.                           #
 # =========================================================================== #
-def _als_inner(Gamma: torch.Tensor, chi: int, U0: torch.Tensor, *,
-               trials: int = ALS_TRIALS, fluct: bool = False) -> tuple:
+def _als_inner(
+    Gamma: torch.Tensor,
+    chi: int,
+    U0: torch.Tensor,
+    *,
+    trials: int = ALS_TRIALS,
+    fluct: bool = False,
+    generator: torch.Generator | None = None,
+) -> tuple:
     """The alternating-pinv ALS from tn_qsim (sigma=identity branch), torch-mirrored."""
     D = int(Gamma.shape[0])
     dev = Gamma.device
+    if fluct:
+        if generator is None:
+            raise ValueError("fluctuating ALS requires a private generator")
+        generator_device = torch.device(generator.device)
+        gamma_device = torch.device(dev)
+        device_mismatch = generator_device.type != gamma_device.type or (
+            generator_device.index is not None
+            and gamma_device.index is not None
+            and generator_device.index != gamma_device.index
+        )
+        if device_mismatch:
+            raise ValueError(
+                "private generator device must match Gamma device "
+                f"({generator.device!s} != {dev!s})"
+            )
     eye_D = torch.eye(D, dtype=CDTYPE, device=dev)
     U = U0.clone()
     Vh = torch.eye(chi, D, dtype=CDTYPE, device=dev)
-    best_fid = -1.0
+    best_fid = None
     best_U = U0.clone()
     best_Vh = Vh.clone()
     for t in range(int(trials)):
@@ -174,14 +249,21 @@ def _als_inner(Gamma: torch.Tensor, chi: int, U0: torch.Tensor, *,
         P = torch.einsum("iIjJ,ij,IP->PJ", Gamma, eye_D, U.conj())          # (chi, D)
         B = torch.einsum("iIjJ,ip,IP->PJpj", Gamma, U, U.conj()).reshape(chi * D, chi * D)
         if fluct and t < 10:
-            kick = (10.0 ** -2) * torch.rand(chi * D, device=dev, dtype=RDTYPE)
+            kick = (10.0 ** -2) * torch.rand(
+                chi * D,
+                device=dev,
+                dtype=RDTYPE,
+                generator=generator,
+            )
             B = B + torch.diag(kick).to(CDTYPE)
         B = 0.5 * (B + B.conj().mT)                              # Hermitize the env metric
         Rmax = torch.linalg.pinv(B, hermitian=True) @ P.reshape(-1)  # truncated-SVD-stable solve
         R2 = Rmax.reshape(chi, D)                                           # = S @ Vh
         M = U @ R2
         fid = gamma_fidelity(Gamma, M)
-        if fid > best_fid:
+        if np.isfinite(fid) and 0.0 <= fid <= 1.0 and (
+            best_fid is None or fid > best_fid
+        ):
             best_fid, best_U, best_Vh = fid, U.clone(), R2.clone()
         Ut, st, Vh = torch.linalg.svd(R2, full_matrices=False)             # update Vh
         S = Ut @ torch.diag(st).to(CDTYPE)
@@ -189,7 +271,12 @@ def _als_inner(Gamma: torch.Tensor, chi: int, U0: torch.Tensor, *,
         P2 = torch.einsum("iIjJ,ij,QJ->QI", Gamma, eye_D, Vh.conj())        # (chi, D)
         B2 = torch.einsum("iIjJ,qj,QJ->QIqi", Gamma, Vh, Vh.conj()).reshape(chi * D, chi * D)
         if fluct and t < 10:
-            kick = (10.0 ** -2) * torch.rand(chi * D, device=dev, dtype=RDTYPE)
+            kick = (10.0 ** -2) * torch.rand(
+                chi * D,
+                device=dev,
+                dtype=RDTYPE,
+                generator=generator,
+            )
             B2 = B2 + torch.diag(kick).to(CDTYPE)
         B2 = 0.5 * (B2 + B2.conj().mT)                          # Hermitize the env metric
         Rmax2 = torch.linalg.pinv(B2, hermitian=True) @ P2.reshape(-1)  # truncated-SVD-stable
@@ -200,9 +287,13 @@ def _als_inner(Gamma: torch.Tensor, chi: int, U0: torch.Tensor, *,
         Vh_eff = S @ Vh                                                     # (chi, D)
         candidate_map = U @ Vh_eff
         fid2 = gamma_fidelity(Gamma, candidate_map)
-        if fid2 > best_fid:
+        if np.isfinite(fid2) and 0.0 <= fid2 <= 1.0 and (
+            best_fid is None or fid2 > best_fid
+        ):
             best_fid, best_U, best_Vh = fid2, U.clone(), Vh_eff.clone()
-    return best_U, best_Vh, best_fid
+    if best_fid is None:
+        return best_U, best_Vh, float("-inf")
+    return best_U, best_Vh, float(best_fid)
 
 
 def _fix_gauge(Gamma: torch.Tensor):
@@ -260,11 +351,71 @@ def _carrier_svd_seed(state, bond: str, chi: int, device) -> torch.Tensor:
     return q[:, :chi].contiguous().to(CDTYPE)
 
 
-def build_seeds(Gamma: torch.Tensor, state, bond: str, chi: int, prep) -> list:
+_RESTART_SEED_CODES = {
+    "identity": 101,
+    "carrier_svd": 211,
+    "gauge_fix": 307,
+    "rand": 401,
+    "perm_id": 503,
+}
+_SEED_MODULUS = (1 << 63) - 1
+
+
+def _stable_solver_seed(
+    *, solver_seed: int, bond: str, chi: int, restart_name: str
+) -> int:
+    """Mix explicit, source-stable integer coordinates without Python ``hash``."""
+    if int(solver_seed) < 0:
+        raise ValueError(f"solver_seed must be nonnegative (got {solver_seed})")
+    try:
+        restart_code = _RESTART_SEED_CODES[str(restart_name)]
+    except KeyError as exc:
+        raise ValueError(f"unknown FET restart name {restart_name!r}") from exc
+    a, b = _parse_bond(bond)
+    return int(
+        (
+            int(solver_seed)
+            + 1_000_003 * int(chi)
+            + 10_000_019 * int(a)
+            + 100_000_007 * int(b)
+            + int(restart_code)
+        )
+        % _SEED_MODULUS
+    )
+
+
+def _private_solver_generator(
+    device: torch.device,
+    *,
+    solver_seed: int,
+    bond: str,
+    chi: int,
+    restart_name: str,
+) -> torch.Generator:
+    generator = torch.Generator(device=device)
+    generator.manual_seed(
+        _stable_solver_seed(
+            solver_seed=solver_seed,
+            bond=bond,
+            chi=chi,
+            restart_name=restart_name,
+        )
+    )
+    return generator
+
+
+def build_seeds(
+    Gamma: torch.Tensor,
+    state,
+    bond: str,
+    chi: int,
+    prep,
+    *,
+    solver_seed: int = FET_SOLVER_SEED_DEFAULT,
+) -> list:
     """The >=4 restart seeds (each a D x chi isometry U0) — tn_qsim's restart discipline."""
     D = int(Gamma.shape[0])
     dev = Gamma.device
-    a, b = _parse_bond(bond)
     seeds = []
     seeds.append(("identity", torch.eye(D, dtype=CDTYPE, device=dev)[:, :chi].contiguous()))
     try:
@@ -287,14 +438,30 @@ def build_seeds(Gamma: torch.Tensor, state, bond: str, chi: int, prep) -> list:
         seeds.append(("gauge_fix", q[:, :chi].contiguous().to(CDTYPE)))
     except Exception as exc:  # noqa: BLE001
         _p(f"      [seed gauge_fix skipped] {type(exc).__name__}: {exc}")
-    g = torch.Generator(device="cpu")
-    g.manual_seed(1_000_003 * int(chi) + 31 * int(a) + int(b))
-    re = torch.randn(D, chi, generator=g, dtype=RDTYPE)
-    im = torch.randn(D, chi, generator=g, dtype=RDTYPE)
+    random_generator = torch.Generator(device="cpu")
+    random_generator.manual_seed(
+        _stable_solver_seed(
+            solver_seed=solver_seed,
+            bond=bond,
+            chi=chi,
+            restart_name="rand",
+        )
+    )
+    re = torch.randn(D, chi, generator=random_generator, dtype=RDTYPE)
+    im = torch.randn(D, chi, generator=random_generator, dtype=RDTYPE)
     W = (re + 1j * im).to(CDTYPE).to(dev)
     qr_q, _ = torch.linalg.qr(W)
     seeds.append(("rand", qr_q[:, :chi].contiguous()))
-    perm = torch.randperm(D, generator=g).to(dev)
+    permutation_generator = torch.Generator(device="cpu")
+    permutation_generator.manual_seed(
+        _stable_solver_seed(
+            solver_seed=solver_seed,
+            bond=bond,
+            chi=chi,
+            restart_name="perm_id",
+        )
+    )
+    perm = torch.randperm(D, generator=permutation_generator).to(dev)
     eye_perm = torch.eye(D, dtype=CDTYPE, device=dev)[perm]
     seeds.append(("perm_id", eye_perm[:, :chi].contiguous()))
     return seeds
@@ -306,27 +473,57 @@ def _multistart_als_truncation(
     bond: str,
     chi: int,
     prep,
+    *,
+    solver_seed: int = FET_SOLVER_SEED_DEFAULT,
 ) -> dict:
     """Return the best multistart ALS map and its gauge-fix comparison."""
-    seeds = build_seeds(Gamma, state, bond, chi, prep)
+    seeds = build_seeds(
+        Gamma,
+        state,
+        bond,
+        chi,
+        prep,
+        solver_seed=solver_seed,
+    )
     per_seed = []
     best = None
     for name, U0 in seeds:
         fluct = name in ("rand", "perm_id")
         try:
-            U, Vh, fid = _als_inner(Gamma, chi, U0, fluct=fluct)
+            generator = None
+            if fluct:
+                generator = _private_solver_generator(
+                    Gamma.device,
+                    solver_seed=solver_seed,
+                    bond=bond,
+                    chi=chi,
+                    restart_name=name,
+                )
+            U, Vh, fid = _als_inner(
+                Gamma,
+                chi,
+                U0,
+                fluct=fluct,
+                generator=generator,
+            )
         except Exception as exc:  # noqa: BLE001
             _p(f"      [ALS seed {name} failed] {type(exc).__name__}: {exc}")
             continue
         per_seed.append((name, float(fid)))
-        if best is None or fid > best["fid"]:
+        if np.isfinite(fid) and 0.0 <= fid <= 1.0 and (
+            best is None or fid > best["fid"]
+        ):
             best = {"seed": name, "U": U, "Vh": Vh, "fid": float(fid)}
+    solver_status = "ok"
     if best is None:
-        # every seed failed — return a degenerate identity insertion (caller sees -inf fid)
+        # Every seed failed.  A rank-chi placeholder is returned only so the
+        # diagnostic shape remains inspectable; the explicit non-finite score and
+        # solver_status prevent it from becoming an applicable candidate.
         D = int(Gamma.shape[0])
         Ueye = torch.eye(D, dtype=CDTYPE, device=Gamma.device)[:, :chi].contiguous()
         Vheye = torch.eye(chi, D, dtype=CDTYPE, device=Gamma.device)
         best = {"seed": "none", "U": Ueye, "Vh": Vheye, "fid": float("-inf")}
+        solver_status = "solver_failed"
     fids = [f for _n, f in per_seed if np.isfinite(f)]
     spread = (max(fids) - min(fids)) if len(fids) >= 2 else 0.0
     try:
@@ -335,7 +532,10 @@ def _multistart_als_truncation(
         )
         fid_gauge_fix = float(fid_gauge_fix)
         dfid = best["fid"] - fid_gauge_fix
-        floor_ok = best["fid"] >= fid_gauge_fix - FET_OPT_FLOOR
+        floor_ok = (
+            solver_status == "ok"
+            and best["fid"] >= fid_gauge_fix - FET_OPT_FLOOR
+        )
     except Exception as exc:  # noqa: BLE001
         _p(f"      [gauge_fix comparison skipped] {type(exc).__name__}: {exc}")
         fid_gauge_fix = None
@@ -348,6 +548,8 @@ def _multistart_als_truncation(
         "dfid": dfid,
         "per_seed": per_seed, "cross_seed_spread": float(spread),
         "opt_floor_ok": bool(floor_ok),
+        "solver_status": str(solver_status),
+        "solver_seed": int(solver_seed),
     }
 
 
@@ -362,18 +564,110 @@ def apply_fet_truncation(state, bond: str, U: torch.Tensor, Vh: torch.Tensor) ->
     a, b = _parse_bond(bond)
     ta, tb = site_tensor(state, a), site_tensor(state, b)
     axa = ta.inds.index(bond)
-    new_a = torch.movedim(torch.tensordot(ta.data, U, dims=([axa], [0])), -1, axa)
-    ta.modify(data=new_a.contiguous())
     axb = tb.inds.index(bond)
+    if not isinstance(U, torch.Tensor) or not isinstance(Vh, torch.Tensor):
+        raise TypeError("FET absorption factors must be torch tensors")
+    if U.ndim != 2 or Vh.ndim != 2:
+        raise ValueError(
+            f"FET absorption factors must be matrices (got {U.ndim}D and {Vh.ndim}D)"
+        )
+    old_dim_a = int(ta.data.shape[axa])
+    old_dim_b = int(tb.data.shape[axb])
+    kept_dim_u = int(U.shape[1])
+    kept_dim_vh = int(Vh.shape[0])
+    if old_dim_a <= 0 or old_dim_b <= 0 or old_dim_a != old_dim_b:
+        raise RuntimeError(
+            "FET endpoint bond dimensions must be equal and positive before absorption "
+            f"({old_dim_a} != {old_dim_b})"
+        )
+    if int(U.shape[0]) != old_dim_a or int(Vh.shape[1]) != old_dim_b:
+        raise ValueError(
+            "FET factors are incompatible with the original endpoint dimensions: "
+            f"U={tuple(U.shape)}, Vh={tuple(Vh.shape)}, "
+            f"endpoint_dims=({old_dim_a}, {old_dim_b})"
+        )
+    if kept_dim_u <= 0 or kept_dim_u != kept_dim_vh:
+        raise ValueError(
+            "FET factors must declare one shared positive kept rank: "
+            f"U={tuple(U.shape)}, Vh={tuple(Vh.shape)}"
+        )
+    if (
+        U.dtype != ta.data.dtype
+        or Vh.dtype != tb.data.dtype
+        or U.device != ta.data.device
+        or Vh.device != tb.data.device
+    ):
+        raise ValueError("FET factors must match their endpoint dtype and device")
+    if not bool(torch.isfinite(U).all().item()) or not bool(
+        torch.isfinite(Vh).all().item()
+    ):
+        raise ValueError("FET absorption factors must be finite")
+
+    # All cross-endpoint invariants are authenticated before either potentially
+    # expensive absorption is formed, let alone written back.
+    new_a = torch.movedim(torch.tensordot(ta.data, U, dims=([axa], [0])), -1, axa)
     new_b = torch.movedim(torch.tensordot(tb.data, Vh, dims=([axb], [1])), -1, axb)
-    tb.modify(data=new_b.contiguous())
+    new_a = new_a.contiguous()
+    new_b = new_b.contiguous()
+    expected_a_shape = list(ta.data.shape)
+    expected_b_shape = list(tb.data.shape)
+    expected_a_shape[axa] = int(U.shape[1])
+    expected_b_shape[axb] = int(Vh.shape[0])
+    for label, new_data, old_data, expected_shape in (
+        ("left", new_a, ta.data, tuple(expected_a_shape)),
+        ("right", new_b, tb.data, tuple(expected_b_shape)),
+    ):
+        if tuple(new_data.shape) != expected_shape:
+            raise RuntimeError(
+                f"FET {label} absorption shape {tuple(new_data.shape)} "
+                f"!= expected {expected_shape}"
+            )
+        if new_data.dtype != old_data.dtype or new_data.device != old_data.device:
+            raise RuntimeError(
+                f"FET {label} absorption dtype/device drifted from carrier tensor"
+            )
+        if not bool(torch.isfinite(new_data).all().item()):
+            raise RuntimeError(f"FET {label} produced a non-finite absorption")
+
+    # Authenticate both derived tensors before touching state, then make the two
+    # endpoint updates transactional.  Snapshot references remain valid because
+    # quimb ``modify(data=...)`` replaces, rather than edits, tensor storage.
+    old_a = ta.data
+    old_b = tb.data
+    try:
+        ta.modify(data=new_a)
+        tb.modify(data=new_b)
+    except Exception as write_error:
+        rollback_errors = []
+        for label, tensor, snapshot in (
+            ("left", ta, old_a),
+            ("right", tb, old_b),
+        ):
+            try:
+                tensor.modify(data=snapshot)
+            except Exception as rollback_error:  # noqa: BLE001
+                rollback_errors.append((label, rollback_error))
+        if rollback_errors:
+            details = ", ".join(
+                f"{label}:{type(error).__name__}" for label, error in rollback_errors
+            )
+            raise RuntimeError(
+                f"FET write-back failed and rollback was incomplete ({details})"
+            ) from write_error
+        raise
 
 
 # =========================================================================== #
 # Environment-aware rank-selection wrapper.                                    #
 # =========================================================================== #
-def env_optimal_rank(state, bond: str,
-                     eps_fid: float) -> tuple[int, torch.Tensor, torch.Tensor, float]:
+def env_optimal_rank(
+    state,
+    bond: str,
+    eps_fid: float,
+    *,
+    solver_seed: int = FET_SOLVER_SEED_DEFAULT,
+    fidelity_curve: list[dict] | None = None,
+) -> FetSelection:
     """Sweep ``χ = 1..bare_rank`` on the bond's exact double-layer environment
     ``Γ`` and return ``(env_rank, U, V†, fid_env)`` for the SMALLEST ``χ`` whose
     achieved environment fidelity ``Fid_Γ(χ) ≥ 1 − eps_fid`` (via the multi-restart
@@ -387,14 +681,25 @@ def env_optimal_rank(state, bond: str,
     ``gamma_TN`` is the expensive per-bond double-layer contraction,
     so returning the already-computed ``Fid_Γ`` halves the per-bond ``gamma_TN`` cost.
 
-    If no ``χ ∈ [1, bare_rank]`` reaches the
-    target, KEEP the full bond — ``env_rank = current stored dim``, ``U = V† =
-    identity`` (a genuine no-op via :func:`apply_fet_truncation`), ``fid_env = 1.0``
-    (the identity insertion IS the original state). It must NOT fall back to a lossy
-    ceiling cut; diagnostics then report the bond as non-collapsing."""
+    If no ``χ ∈ [1, bare_rank]`` reaches the target, KEEP the full bond —
+    ``env_rank = current stored dim``, ``U = V† = identity``, ``fid_env = 1.0``.
+    The returned :class:`FetSelection` remains unpackable as the historical
+    four-tuple while exposing ``outcome`` (``accepted``, ``noop``, or
+    ``solver_failed``) and the best rejected candidate separately.
+
+    ``fidelity_curve`` is an explicit diagnostic sink. Supplying it evaluates all
+    ranks but freezes the first accepted result; every rank/restart uses a private
+    deterministic stream, so observing the curve cannot change the selection or
+    ambient CUDA RNG state."""
+    eps_fid = float(eps_fid)
+    if not 0.0 < eps_fid < 1.0:
+        raise ValueError(f"eps_fid must lie in (0, 1), got {eps_fid!r}")
+    solver_seed = int(solver_seed)
+    if solver_seed < 0:
+        raise ValueError(f"solver_seed must be nonnegative (got {solver_seed})")
     Gamma = gamma_TN(state, bond)
     D = int(Gamma.shape[0])
-    fid_target = 1.0 - float(eps_fid)
+    fid_target = 1.0 - eps_fid
     S = _insertion_spectrum(state, bond)
     bare = min(int(_exact_rank(S)), D)   # env_rank <= bare_rank
     prep = None
@@ -402,54 +707,91 @@ def env_optimal_rank(state, bond: str,
         prep = _fix_gauge(Gamma)
     except Exception as exc:  # noqa: BLE001  # gauge seed unavailable; ALS still runs
         _p(f"      [env_optimal_rank {bond}] fix_gauge failed: {type(exc).__name__}: {exc}")
-    if os.environ.get("FET_FIDCURVE_DEBUG") == "1":
-        # DIAGNOSTIC (env-gated, BEHAVIOR-IDENTICAL): log the FULL fid(chi) curve to
-        # confirm WHY a dressed bond over-keeps (threshold-too-tight vs the >1 sentinel
-        # vs a solver plateau). Same return as the fast path below (first qualifying chi,
-        # otherwise use the no-op fallback). This computes all chi values and only
-        # runs when the environment variable is set.
-        curve = []
-        accepted = None
-        best = None
-        for chi in range(1, bare + 1):
-            als_result = _multistart_als_truncation(Gamma, state, bond, chi, prep)
-            fid = gamma_fidelity(Gamma, als_result["U"] @ als_result["Vh"])
-            ffid = float(fid) if np.isfinite(fid) else float("-inf")
-            curve.append((chi, ffid))
-            if best is None or ffid > best[3]:
-                best = (chi, als_result["U"], als_result["Vh"], ffid)
-            if accepted is None and np.isfinite(fid) and fid >= fid_target:
-                accepted = (
-                    int(chi),
-                    als_result["U"],
-                    als_result["Vh"],
-                    float(fid),
-                )
-        n_sent = sum(1 for _, f in curve if f == float("-inf"))
-        _p(f"      [FIDCURVE {bond}] D={D} bare={bare} target={fid_target:.12f} "
-           f"accept_chi(<=1e-8)={accepted[0] if accepted else None} "
-           f"best_chi={best[0]} best_fid={best[3]:.12f} sentinel_fired={n_sent} "
-           f"curve={['%d:%.10f' % (c, f) for c, f in curve]}")
-        if accepted is not None:
-            return accepted
-        if best is not None:   # accept best χ<=bare (never keep the full over-counted bond)
-            return int(best[0]), best[1], best[2], float(best[3])
-        eye = torch.eye(D, dtype=CDTYPE, device=Gamma.device)
-        return int(D), eye, eye, 1.0
-    best = None
+
+    accepted = None
+    best_finite = None
+    solver_failure_count = 0
+    attempted_ranks = 0
     for chi in range(1, bare + 1):
-        als_result = _multistart_als_truncation(Gamma, state, bond, chi, prep)
+        attempted_ranks += 1
+        als_result = _multistart_als_truncation(
+            Gamma,
+            state,
+            bond,
+            chi,
+            prep,
+            solver_seed=solver_seed,
+        )
         fid = gamma_fidelity(Gamma, als_result["U"] @ als_result["Vh"])
-        ffid = float(fid) if np.isfinite(fid) else -1.0
-        if best is None or ffid > best[3]:
-            best = (int(chi), als_result["U"], als_result["Vh"], ffid)
-        if np.isfinite(fid) and fid >= fid_target:
-            return int(chi), als_result["U"], als_result["Vh"], float(fid)
-    # No χ<=bare cleared the bar. With the Hermitian-PSD Γ and the
-    # regularized solve this is UNREACHABLE (χ=bare is a lossless identity insertion => fid=1),
-    # but if it ever fires, accept the BEST χ<=bare (highest Fid_Γ) — NEVER keep the
-    # over-counted full bond D>bare.
-    if best is not None:
-        return best
+        solver_reported_ok = als_result.get("solver_status", "ok") == "ok"
+        fid_valid = bool(
+            solver_reported_ok
+            and np.isfinite(fid)
+            and 0.0 <= float(fid) <= 1.0
+        )
+        solver_status = "ok" if fid_valid else "solver_failed"
+        if not fid_valid:
+            solver_failure_count += 1
+        if fidelity_curve is not None:
+            fidelity_curve.append(
+                {
+                    "chi": int(chi),
+                    "fid": float(fid) if fid_valid else None,
+                    "solver_status": str(solver_status),
+                }
+            )
+        if fid_valid and (
+            best_finite is None or float(fid) > best_finite[3]
+        ):
+            best_finite = (
+                int(chi),
+                als_result["U"],
+                als_result["Vh"],
+                float(fid),
+            )
+        if accepted is None and fid_valid and float(fid) >= fid_target:
+            accepted = (
+                int(chi),
+                als_result["U"],
+                als_result["Vh"],
+                float(fid),
+                int(attempted_ranks),
+                int(solver_failure_count),
+            )
+            if fidelity_curve is None:
+                break
+
+    if accepted is not None:
+        chi, U, Vh, fid, selected_attempts, selected_failures = accepted
+        return FetSelection(
+            chi,
+            U,
+            Vh,
+            fid,
+            outcome="accepted",
+            candidate_rank=chi,
+            candidate_fid=fid,
+            solver_seed=solver_seed,
+            attempted_ranks=selected_attempts,
+            solver_failure_count=selected_failures,
+        )
+
+    # Mutation firewall at the selector boundary: no qualifying candidate ever
+    # becomes a lossy ceiling cut.  The direct caller receives the exact identity;
+    # rejected candidate evidence remains in explicit attributes only.
     eye = torch.eye(D, dtype=CDTYPE, device=Gamma.device)
-    return int(D), eye, eye, 1.0
+    all_attempts_failed = attempted_ranks > 0 and (
+        solver_failure_count == attempted_ranks
+    )
+    return FetSelection(
+        D,
+        eye,
+        eye,
+        1.0,
+        outcome="solver_failed" if all_attempts_failed else "noop",
+        candidate_rank=None if best_finite is None else int(best_finite[0]),
+        candidate_fid=None if best_finite is None else float(best_finite[3]),
+        solver_seed=solver_seed,
+        attempted_ranks=attempted_ranks,
+        solver_failure_count=solver_failure_count,
+    )

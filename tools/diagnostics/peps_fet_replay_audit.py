@@ -8,7 +8,7 @@ and compares:
 
 * a same-seed fresh-process repetition;
 * a different CUDA global seed; and
-* the behavior-identical ``FET_FIDCURVE_DEBUG=1`` path.
+* the behavior-identical explicit full-fidelity-curve observer path.
 
 The independent GF(2) entropy reference and the dense-state entropy read are
 diagnostic state-level checks.  Neither a replay pass nor a local ``Fid_gamma``
@@ -36,10 +36,10 @@ from typing import Any, Iterable, Sequence
 
 
 ROOT = Path(__file__).resolve().parents[2]
-SCHEMA = "error_coupling_simulator.peps.fet_replay_audit.v2"
-WORKER_SCHEMA = "error_coupling_simulator.peps.fet_replay_audit.worker.v2"
+SCHEMA = "error_coupling_simulator.peps.fet_replay_audit.v5"
+WORKER_SCHEMA = "error_coupling_simulator.peps.fet_replay_audit.worker.v5"
 DEFAULT_OUTPUT = Path(
-    "outputs/simulator_validation/diagnostics/peps_fet_replay_audit/report.json"
+    "outputs/simulator_validation/diagnostics/peps_fet_replay_audit_postfix/report.json"
 )
 DEFAULT_CASES = ((0, 0, 0), (0, 0, 1), (1, 0, 0), (0, 1, 0))
 
@@ -488,8 +488,9 @@ def evaluate_fet_cut_contract(
     env_rank: int,
     fid_gamma: Any,
     eps_fid: float,
+    writeback_applied: bool | None = None,
 ) -> dict[str, Any]:
-    """Check that a failed FET target can only write back a genuine no-op."""
+    """Check candidate validity separately from actual trajectory mutation."""
 
     import numpy as np
 
@@ -516,33 +517,57 @@ def evaluate_fet_cut_contract(
         np.linalg.norm(array - identity) / np.linalg.norm(identity)
     )
     fidelity_target = 1.0 - eps_fid
+    fid_gamma_valid = bool(
+        fid_gamma_finite
+        and 0.0 <= float(fid_gamma_value) <= 1.0
+    )
     target_met = bool(
-        fid_gamma_finite and float(fid_gamma_value) >= fidelity_target
+        fid_gamma_valid and float(fid_gamma_value) >= fidelity_target
     )
     map_is_identity = identity_relative_error <= FET_IDENTITY_RELATIVE_TOL
+    candidate_map_nonidentity = not map_is_identity
     rank_reducing = dim_out < dim_in or env_rank < dim_in
-    changed_writeback = rank_reducing or not map_is_identity
-    fallback_violation = not target_met and changed_writeback
-    nonfinite_violation = not fid_gamma_finite
+    if writeback_applied is None:
+        # Legacy callers without an observed write-back signal can only infer
+        # mutation from the supplied dimensions/map.
+        writeback_applied = bool(rank_reducing or candidate_map_nonidentity)
+    else:
+        writeback_applied = bool(writeback_applied)
+    changed_writeback = bool(rank_reducing or writeback_applied)
+    fallback_violation = bool(
+        not target_met and (changed_writeback or writeback_applied)
+    )
+    solver_failure = not fid_gamma_valid
+    nonfinite_violation = bool(
+        not fid_gamma_finite and (changed_writeback or writeback_applied)
+    )
     contract_violation = fallback_violation or nonfinite_violation
-    if nonfinite_violation:
-        verdict = "NONFINITE_FID_GAMMA"
+    if solver_failure and contract_violation:
+        verdict = "SOLVER_FAILED_WRITEBACK"
+    elif solver_failure:
+        verdict = "SOLVER_FAILED_SAFE_NOOP"
     elif fallback_violation:
         verdict = "FALLBACK_CONTRACT_VIOLATION"
-    elif target_met:
+    elif target_met and writeback_applied:
         verdict = "TARGET_MET"
+    elif target_met:
+        verdict = "TARGET_MET_SAFE_NOOP"
     else:
         verdict = "SAFE_NOOP_FALLBACK"
     return {
         "fidelity_target": float(fidelity_target),
         "target_met": bool(target_met),
         "fid_gamma_finite": bool(fid_gamma_finite),
+        "fid_gamma_valid": bool(fid_gamma_valid),
+        "solver_failure": bool(solver_failure),
         "nonfinite_fid_gamma_violation": bool(nonfinite_violation),
         "map_vs_identity_relative_error": identity_relative_error,
         "identity_relative_tolerance": FET_IDENTITY_RELATIVE_TOL,
         "map_is_identity": bool(map_is_identity),
+        "candidate_map_nonidentity": bool(candidate_map_nonidentity),
         "rank_reducing_writeback": bool(rank_reducing),
         "nonidentity_or_lossy_writeback": bool(changed_writeback),
+        "writeback_applied": bool(writeback_applied),
         "fallback_contract_violation": bool(fallback_violation),
         "fet_contract_violation": bool(contract_violation),
         "fet_cut_contract_verdict": verdict,
@@ -586,14 +611,666 @@ def aggregate_fet_fallback_contract(
         "nonfinite_fid_gamma_count": len(nonfinite),
         "nonfinite_fid_gamma_cuts": nonfinite,
         "rule": (
-            "Fid_gamma must be finite; a finite cut below 1-eps_fid may only "
-            "write back a full-rank identity no-op"
+            "Only a finite candidate in [0,1] at or above 1-eps_fid may mutate; "
+            "all rejected or failed candidates must be strict no-ops"
+        ),
+    }
+
+
+def aggregate_fet_solver_health(
+    results: Sequence[dict[str, Any]],
+) -> dict[str, Any]:
+    """Report solver failures independently of mutation-firewall safety.
+
+    A failed candidate that is quarantined as a strict no-op is safe to replay,
+    but it is not evidence of a healthy FET solve.  Keep those two questions in
+    separate gates so deterministic failure can never be promoted to PASS.
+    """
+
+    unhealthy: list[dict[str, Any]] = []
+    for result in results:
+        identifier = str(result["case_id"])
+        for cut in result["per_cut"]:
+            failure_count = int(cut.get("solver_failure_count", 0))
+            selector_failed = cut.get("selector_outcome") == "solver_failed"
+            candidate_failed = bool(cut.get("solver_failure", False))
+            if failure_count > 0 or selector_failed or candidate_failed:
+                unhealthy.append(
+                    {
+                        "case_id": identifier,
+                        "ordinal": int(cut["ordinal"]),
+                        "bond": str(cut["bond"]),
+                        "candidate_classification": cut["Fid_gamma"][
+                            "classification"
+                        ],
+                        "selector_outcome": cut.get("selector_outcome"),
+                        "solver_failure_count": failure_count,
+                        "attempted_ranks": int(cut.get("attempted_ranks", 0)),
+                        "writeback_applied": bool(
+                            cut.get("writeback_applied", False)
+                        ),
+                    }
+                )
+    return {
+        "verdict": "RED" if unhealthy else "PASS",
+        "unhealthy_cut_count": len(unhealthy),
+        "unhealthy_cuts": unhealthy,
+        "rule": (
+            "Every attempted rank through the selected decision must produce a "
+            "valid finite fidelity; safely quarantined failures remain solver-health RED"
+        ),
+    }
+
+
+def aggregate_fet_nondegeneracy(
+    results: Sequence[dict[str, Any]],
+) -> dict[str, Any]:
+    """Reject a scientifically vacuous all-noop FET trajectory.
+
+    Scope is deliberately every fresh-process case in this fixed-input audit.
+    Each case must contain at least one independently authenticated, accepted,
+    rank-reducing write-back.  An entropy match produced entirely by identity
+    fallbacks therefore remains RED even if replay and solver-health pass.
+    """
+
+    per_case: list[dict[str, Any]] = []
+    red_case_ids: list[str] = []
+    for result in results:
+        identifier = str(result["case_id"])
+        qualifying: list[dict[str, Any]] = []
+        for cut in result["per_cut"]:
+            try:
+                authenticate_persisted_fet_cut(cut)
+                parent_authenticated = True
+            except (KeyError, TypeError, ValueError, RuntimeError):
+                parent_authenticated = False
+            ledger_authentication = cut.get("trajectory_ledger_authentication", {})
+            causal_binding = cut.get("causal_selector_writeback_binding", {})
+            accepted_rank_reduction = bool(
+                parent_authenticated
+                and isinstance(ledger_authentication, dict)
+                and ledger_authentication.get("status") == "AUTHENTICATED"
+                and isinstance(causal_binding, dict)
+                and causal_binding.get("status")
+                == "AUTHENTICATED_SELECTOR_TO_WRITEBACK"
+                and causal_binding.get("exact_match") is True
+                and causal_binding.get("endpoint_absorption_exact_match") is True
+                and causal_binding.get("selected_map_sha256_c128le")
+                == causal_binding.get("applied_map_sha256_c128le")
+                and cut.get("writeback_applied") is True
+                and int(cut["writeback_call_count"]) == 1
+                and str(cut.get("selector_outcome")) == "accepted"
+                and str(cut.get("outcome")) == "accepted"
+                and str(cut.get("reason")) == "fidelity_target_met"
+                and int(cut["dim_out"]) < int(cut["dim_in"])
+                and int(cut["env_rank"]) == int(cut["dim_out"])
+                and int(cut["selected_env_rank"]) == int(cut["dim_out"])
+                and bool(cut.get("target_met"))
+                and bool(cut.get("fid_gamma_valid"))
+                and bool(cut.get("selected_target_met"))
+                and bool(cut.get("selected_fidelity_valid"))
+                and bool(cut.get("selector_consistent"))
+                and not bool(cut.get("fet_contract_violation"))
+            )
+            if accepted_rank_reduction:
+                qualifying.append(
+                    {
+                        "ordinal": int(cut["ordinal"]),
+                        "bond": str(cut["bond"]),
+                        "dim_in": int(cut["dim_in"]),
+                        "dim_out": int(cut["dim_out"]),
+                    }
+                )
+        case_passed = bool(qualifying)
+        if not case_passed:
+            red_case_ids.append(identifier)
+        per_case.append(
+            {
+                "case_id": identifier,
+                "cut_count": len(result["per_cut"]),
+                "authenticated_rank_reducing_writeback_count": len(qualifying),
+                "authenticated_rank_reducing_writebacks": qualifying,
+                "verdict": "PASS" if case_passed else "RED_ALL_NOOP",
+            }
+        )
+    return {
+        "verdict": "RED" if red_case_ids else "PASS",
+        "scope": "every_fresh_process_case_in_fixed_d3_audit",
+        "required_minimum_authenticated_rank_reducing_writebacks_per_case": 1,
+        "red_case_ids": red_case_ids,
+        "per_case": per_case,
+        "rule": (
+            "At least one accepted, authenticated, rank-reducing FET write-back "
+            "must occur in every case; an all-noop trajectory is scientifically degenerate"
+        ),
+    }
+
+
+def _same_optional_int(left: Any, right: Any) -> bool:
+    if left is None or right is None:
+        return left is None and right is None
+    return int(left) == int(right)
+
+
+def authenticate_fet_ledger_row(
+    audit: dict[str, Any],
+    ledger: dict[str, Any],
+) -> dict[str, Any]:
+    """Authenticate trajectory decisions against independent wrapper evidence."""
+
+    if str(audit["bond"]) != str(ledger["bond"]):
+        raise RuntimeError(f"bond ledger mismatch: audit={audit!r}, ledger={ledger!r}")
+    if int(audit["dim_in"]) != int(ledger["dim_in"]):
+        raise RuntimeError(
+            f"input-dimension ledger mismatch: audit={audit!r}, ledger={ledger!r}"
+        )
+    if int(audit["selected_env_rank"]) != int(ledger["selected_env_rank"]):
+        raise RuntimeError(
+            f"selected-rank ledger mismatch: audit={audit!r}, ledger={ledger!r}"
+        )
+    if int(audit["map_rank_axis"]) != int(audit["selected_env_rank"]):
+        raise RuntimeError("selector map rank axis disagrees with selected rank")
+    if not _same_optional_int(
+        audit.get("proposed_env_rank"), ledger.get("proposed_env_rank")
+    ):
+        raise RuntimeError(
+            f"candidate-rank ledger mismatch: audit={audit!r}, ledger={ledger!r}"
+        )
+    if canonical_json_bytes(audit["Fid_gamma"]) != canonical_json_bytes(
+        _coerce_fid_gamma_evidence(ledger["Fid_gamma"])
+    ):
+        raise RuntimeError("candidate Fid_gamma ledger evidence mismatch")
+    if canonical_json_bytes(classify_fid_gamma(audit["selected_Fid_gamma"])) != (
+        canonical_json_bytes(classify_fid_gamma(ledger["selected_Fid_gamma"]))
+    ):
+        raise RuntimeError("selected Fid_gamma ledger evidence mismatch")
+
+    selector_outcome = audit.get("selector_outcome")
+    if selector_outcome not in (None, "accepted", "noop", "solver_failed"):
+        raise RuntimeError(f"invalid wrapper selector outcome {selector_outcome!r}")
+    if selector_outcome != ledger.get("selector_outcome"):
+        raise RuntimeError("selector-outcome ledger evidence mismatch")
+
+    requested_solver_seed = int(audit["requested_solver_seed"])
+    solver_seed = int(audit["solver_seed"])
+    attempted_ranks = int(audit["attempted_ranks"])
+    solver_failure_count = int(audit["solver_failure_count"])
+    if requested_solver_seed < 0 or solver_seed < 0:
+        raise RuntimeError("wrapper solver seed must be nonnegative")
+    if attempted_ranks <= 0:
+        raise RuntimeError("wrapper attempted-rank count must be positive")
+    if not 0 <= solver_failure_count <= attempted_ranks:
+        raise RuntimeError("wrapper solver-failure count is inconsistent")
+    for name, expected in (
+        ("requested_fet_solver_seed", requested_solver_seed),
+        ("fet_solver_seed", solver_seed),
+        ("attempted_ranks", attempted_ranks),
+        ("solver_failure_count", solver_failure_count),
+    ):
+        if int(ledger[name]) != expected:
+            raise RuntimeError(
+                f"{name} ledger mismatch: expected={expected}, ledger={ledger!r}"
+            )
+    solver_seed_consistent = solver_seed == requested_solver_seed
+
+    eps_fid = _finite_float(
+        audit.get("eps_fid_requested", ledger["eps_fid"]),
+        name="wrapper eps_fid",
+    )
+    if not 0.0 < eps_fid < 1.0:
+        raise RuntimeError(f"wrapper eps_fid is invalid: {eps_fid!r}")
+    if not math.isclose(
+        float(ledger["eps_fid"]), eps_fid, rel_tol=0.0, abs_tol=0.0
+    ):
+        raise RuntimeError("eps_fid ledger evidence mismatch")
+    fidelity_target = 1.0 - eps_fid
+    if not math.isclose(
+        float(ledger["fidelity_target"]),
+        fidelity_target,
+        rel_tol=1.0e-14,
+        abs_tol=1.0e-15,
+    ):
+        raise RuntimeError("fidelity-target ledger evidence mismatch")
+
+    candidate_evidence = validate_fid_gamma_evidence(audit["Fid_gamma"])
+    candidate_fid = candidate_evidence["value"]
+    candidate_fidelity_valid = bool(
+        candidate_evidence["classification"] == "finite"
+        and candidate_fid is not None
+        and 0.0 <= float(candidate_fid) <= 1.0
+    )
+    selected_fid = float(audit["selected_Fid_gamma"])
+    selected_fidelity_valid = bool(
+        math.isfinite(selected_fid) and 0.0 <= selected_fid <= 1.0
+    )
+    target_met = bool(
+        candidate_fidelity_valid
+        and float(candidate_fid) >= fidelity_target
+    )
+    selected_target_met = bool(
+        selected_fidelity_valid and selected_fid >= fidelity_target
+    )
+    selector_allows_writeback = selector_outcome == "accepted"
+    fallback_identity_factors = bool(audit["fallback_identity_factors"])
+    integer_metadata_valid = bool(
+        attempted_ranks > 0 and 0 <= solver_failure_count <= attempted_ranks
+    )
+    if selector_outcome == "accepted":
+        outcome_evidence_consistent = bool(
+            audit.get("proposed_env_rank") is not None
+            and int(audit["proposed_env_rank"])
+            == int(audit["selected_env_rank"])
+            and candidate_fidelity_valid
+            and selected_fidelity_valid
+            and target_met
+            and math.isclose(
+                float(candidate_fid),
+                selected_fid,
+                rel_tol=1.0e-14,
+                abs_tol=1.0e-15,
+            )
+            and attempted_ranks == int(audit["selected_env_rank"])
+        )
+    elif selector_outcome == "noop":
+        outcome_evidence_consistent = bool(
+            int(audit["selected_env_rank"]) == int(audit["dim_in"])
+            and audit.get("proposed_env_rank") is not None
+            and 0 < int(audit["proposed_env_rank"]) <= int(audit["dim_in"])
+            and selected_fidelity_valid
+            and selected_fid == 1.0
+            and candidate_fidelity_valid
+            and not target_met
+            and fallback_identity_factors
+        )
+    elif selector_outcome == "solver_failed":
+        outcome_evidence_consistent = bool(
+            int(audit["selected_env_rank"]) == int(audit["dim_in"])
+            and audit.get("proposed_env_rank") is None
+            and selected_fidelity_valid
+            and selected_fid == 1.0
+            and not candidate_fidelity_valid
+            and fallback_identity_factors
+            and solver_failure_count == attempted_ranks
+        )
+    else:
+        outcome_evidence_consistent = False
+    selector_consistent = bool(
+        solver_seed_consistent
+        and integer_metadata_valid
+        and outcome_evidence_consistent
+    )
+    for name, expected in (
+        ("candidate_fidelity_valid", candidate_fidelity_valid),
+        ("target_met", target_met),
+        ("selected_fidelity_valid", selected_fidelity_valid),
+        ("selected_target_met", selected_target_met),
+        ("selector_consistent", selector_consistent),
+        ("selector_metadata_valid", integer_metadata_valid),
+        ("solver_seed_consistent", solver_seed_consistent),
+        ("fallback_identity_factors", fallback_identity_factors),
+    ):
+        if bool(ledger[name]) != expected:
+            raise RuntimeError(
+                f"{name} ledger mismatch: expected={expected}, ledger={ledger!r}"
+            )
+
+    map_evidence = {
+        name: bool(audit[name])
+        for name in (
+            "map_shapes_ok",
+            "map_dtype_ok",
+            "map_device_ok",
+            "map_finite",
+        )
+    }
+    map_valid = all(map_evidence.values())
+    for name, expected in (*map_evidence.items(), ("map_valid", map_valid)):
+        if bool(ledger[name]) != expected:
+            raise RuntimeError(
+                f"{name} ledger mismatch: expected={expected}, ledger={ledger!r}"
+            )
+
+    writeback_observed = int(audit["writeback_call_count"]) == 1
+    if int(audit["writeback_call_count"]) not in (0, 1):
+        raise RuntimeError("FET wrapper observed an invalid write-back call count")
+    rank_reducing = 0 < int(audit["selected_env_rank"]) < int(audit["dim_in"])
+    expected_writeback = bool(
+        selector_allows_writeback
+        and selector_consistent
+        and selected_target_met
+        and rank_reducing
+        and map_valid
+    )
+    if writeback_observed != expected_writeback:
+        raise RuntimeError(
+            "observed FET write-back disagrees with authenticated selector evidence"
+        )
+    if bool(ledger["writeback_applied"]) != writeback_observed:
+        raise RuntimeError(
+            f"write-back ledger mismatch: audit={audit!r}, ledger={ledger!r}"
+        )
+
+    selected_map_hash = str(audit["selected_map_sha256_c128le"])
+    selected_map_projective_hash = str(
+        audit["selected_map_projective_sha256_c128le"]
+    )
+    if (
+        selected_map_hash != str(audit["map_sha256_c128le"])
+        or selected_map_projective_hash
+        != str(audit["map_projective_sha256_c128le"])
+    ):
+        raise RuntimeError("selector map hashes disagree within wrapper evidence")
+    for name, value in (
+        ("selected map", selected_map_hash),
+        ("selected projective map", selected_map_projective_hash),
+    ):
+        if len(value) != 64 or any(char not in "0123456789abcdef" for char in value):
+            raise RuntimeError(f"{name} hash is not a lowercase SHA-256 digest")
+    applied_map_hash = audit.get("applied_map_sha256_c128le")
+    applied_map_projective_hash = audit.get(
+        "applied_map_projective_sha256_c128le"
+    )
+    if writeback_observed:
+        exact_map_match = bool(
+            audit.get("selected_applied_map_exact_match") is True
+            and applied_map_hash == selected_map_hash
+            and applied_map_projective_hash == selected_map_projective_hash
+        )
+        if not exact_map_match:
+            raise RuntimeError(
+                "applied FET map is not exactly bound to the selector map"
+            )
+        endpoint_exact = bool(
+            audit.get("endpoint_absorption_exact_match") is True
+            and audit.get("expected_left_endpoint_sha256_c128le")
+            == audit.get("observed_left_endpoint_sha256_c128le")
+            and audit.get("expected_right_endpoint_sha256_c128le")
+            == audit.get("observed_right_endpoint_sha256_c128le")
+        )
+        if not endpoint_exact:
+            raise RuntimeError(
+                "written FET endpoints are not bound to the selected-map absorption"
+            )
+        for name in (
+            "expected_left_endpoint_sha256_c128le",
+            "observed_left_endpoint_sha256_c128le",
+            "expected_right_endpoint_sha256_c128le",
+            "observed_right_endpoint_sha256_c128le",
+        ):
+            digest = str(audit[name])
+            if len(digest) != 64 or any(
+                char not in "0123456789abcdef" for char in digest
+            ):
+                raise RuntimeError(f"{name} is not a lowercase SHA-256 digest")
+        causal_binding = {
+            "status": "AUTHENTICATED_SELECTOR_TO_WRITEBACK",
+            "selected_map_sha256_c128le": selected_map_hash,
+            "applied_map_sha256_c128le": str(applied_map_hash),
+            "exact_match": True,
+            "endpoint_absorption_exact_match": True,
+        }
+    else:
+        if (
+            applied_map_hash is not None
+            or applied_map_projective_hash is not None
+            or audit.get("selected_applied_map_exact_match") is not None
+            or audit.get("endpoint_absorption_exact_match") is not None
+            or audit.get("expected_left_endpoint_sha256_c128le") is not None
+            or audit.get("observed_left_endpoint_sha256_c128le") is not None
+            or audit.get("expected_right_endpoint_sha256_c128le") is not None
+            or audit.get("observed_right_endpoint_sha256_c128le") is not None
+        ):
+            raise RuntimeError("no-op FET row contains fabricated applied-map evidence")
+        causal_binding = {
+            "status": "AUTHENTICATED_NO_WRITEBACK",
+            "selected_map_sha256_c128le": selected_map_hash,
+            "applied_map_sha256_c128le": None,
+            "exact_match": None,
+            "endpoint_absorption_exact_match": None,
+        }
+
+    if writeback_observed:
+        expected_outcome = "accepted"
+        expected_reason = "fidelity_target_met"
+    elif (
+        selector_outcome == "solver_failed"
+        or not selected_fidelity_valid
+        or not candidate_fidelity_valid
+        or not selector_consistent
+        or not map_valid
+    ):
+        expected_outcome = "solver_failed"
+        if not selector_consistent:
+            expected_reason = "selector_evidence_inconsistent"
+        elif not selected_fidelity_valid:
+            expected_reason = "invalid_or_nonfinite_selected_fidelity"
+        elif not candidate_fidelity_valid:
+            expected_reason = "invalid_or_nonfinite_candidate_fidelity"
+        elif not map_valid:
+            expected_reason = "invalid_candidate_map"
+        else:
+            expected_reason = "selector_solver_failed"
+    else:
+        expected_outcome = "noop"
+        expected_reason = (
+            "full_rank_identity"
+            if int(audit["selected_env_rank"]) == int(audit["dim_in"])
+            and target_met
+            else "fidelity_target_not_met"
+        )
+    if str(ledger["outcome"]) != expected_outcome:
+        raise RuntimeError(
+            f"outcome ledger mismatch: expected={expected_outcome!r}"
+        )
+    if str(ledger["reason"]) != expected_reason:
+        raise RuntimeError(
+            f"reason ledger mismatch: expected={expected_reason!r}"
+        )
+
+    expected_rank = (
+        int(audit["selected_env_rank"])
+        if writeback_observed
+        else int(audit["dim_in"])
+    )
+    if int(ledger["env_rank"]) != expected_rank or int(ledger["dim_out"]) != expected_rank:
+        raise RuntimeError(
+            "applied-rank ledger mismatch: "
+            f"expected={expected_rank}, ledger={ledger!r}"
+        )
+    expected_applied_fid = (
+        float(audit["selected_Fid_gamma"]) if writeback_observed else 1.0
+    )
+    if not math.isclose(
+        float(ledger["applied_Fid_gamma"]),
+        expected_applied_fid,
+        rel_tol=1.0e-14,
+        abs_tol=1.0e-15,
+    ):
+        raise RuntimeError(
+            "applied Fid_gamma ledger mismatch: "
+            f"expected={expected_applied_fid!r}, ledger={ledger!r}"
+        )
+    return {
+        "dim_out": expected_rank,
+        "env_rank": expected_rank,
+        "outcome": expected_outcome,
+        "reason": expected_reason,
+        "writeback_applied": writeback_observed,
+        "applied_Fid_gamma": expected_applied_fid,
+        "candidate_fidelity_valid": candidate_fidelity_valid,
+        "selected_target_met": selected_target_met,
+        "selected_fidelity_valid": selected_fidelity_valid,
+        "selector_consistent": selector_consistent,
+        "selector_metadata_valid": integer_metadata_valid,
+        "solver_seed_consistent": solver_seed_consistent,
+        "fallback_identity_factors": fallback_identity_factors,
+        "causal_selector_writeback_binding": causal_binding,
+        "trajectory_ledger_authentication": {
+            "status": "AUTHENTICATED",
+            "method": "selector_wrapper_vs_trajectory_ledger",
+        },
+        "exact_rank": (
+            None if ledger.get("exact_rank") is None else int(ledger["exact_rank"])
+        ),
+        "eps_fid": eps_fid,
+    }
+
+
+def validate_fidelity_curve_observation(cut: dict[str, Any]) -> dict[str, Any]:
+    """Authenticate that the explicit observer ran the full rank sweep.
+
+    The observer is allowed to expose additional rows, but it may not be empty,
+    partial, reordered, or disagree with the frozen selector decision.
+    """
+
+    requested = bool(cut.get("observer_requested", False))
+    curve = cut.get("fidelity_curve")
+    if not requested:
+        if curve is not None:
+            raise RuntimeError(
+                "fidelity curve was populated when the observer was not requested"
+            )
+        return {
+            "status": "AUTHENTICATED_NOT_REQUESTED",
+            "observer_requested": False,
+            "curve_row_count": 0,
+            "expected_full_rank_count": None,
+            "first_qualifying_rank": None,
+        }
+
+    if not isinstance(curve, list) or not curve:
+        raise RuntimeError("requested fidelity-curve observer produced no rows")
+    exact_rank = cut.get("exact_rank")
+    if exact_rank is None:
+        raise RuntimeError("fidelity-curve observer lacks exact-rank evidence")
+    expected_count = min(int(exact_rank), int(cut["dim_in"]))
+    if expected_count <= 0 or len(curve) != expected_count:
+        raise RuntimeError(
+            "fidelity-curve observer did not cover the full attempted rank sequence: "
+            f"expected={expected_count}, observed={len(curve)}"
+        )
+
+    target = 1.0 - float(cut["eps_fid"])
+    normalized: list[dict[str, Any]] = []
+    for expected_chi, row in enumerate(curve, start=1):
+        if not isinstance(row, dict):
+            raise RuntimeError("fidelity-curve row is not an object")
+        if set(row) != {"chi", "fid", "solver_status"}:
+            raise RuntimeError("fidelity-curve row schema is invalid")
+        if int(row["chi"]) != expected_chi:
+            raise RuntimeError("fidelity-curve ranks are not contiguous and ordered")
+        status = str(row["solver_status"])
+        if status not in ("ok", "solver_failed"):
+            raise RuntimeError(f"invalid fidelity-curve solver status {status!r}")
+        if status == "ok":
+            if row["fid"] is None:
+                raise RuntimeError("successful fidelity-curve row lacks fidelity")
+            fid = float(row["fid"])
+            if not math.isfinite(fid) or not 0.0 <= fid <= 1.0:
+                raise RuntimeError("successful fidelity-curve row has invalid fidelity")
+        else:
+            if row["fid"] is not None:
+                raise RuntimeError("failed fidelity-curve row must quarantine fidelity")
+            fid = None
+        normalized.append({"chi": expected_chi, "fid": fid, "status": status})
+
+    qualifying = [
+        row
+        for row in normalized
+        if row["status"] == "ok" and float(row["fid"]) >= target
+    ]
+    first_qualifying = qualifying[0] if qualifying else None
+    selector_outcome = cut.get("selector_outcome")
+    attempted_ranks = int(cut["attempted_ranks"])
+    solver_failure_count = int(cut["solver_failure_count"])
+    if selector_outcome == "accepted":
+        if first_qualifying is None:
+            raise RuntimeError("accepted selector has no qualifying observer row")
+        prefix_count = int(first_qualifying["chi"])
+        prefix_failures = sum(
+            row["status"] == "solver_failed"
+            for row in normalized[:prefix_count]
+        )
+        if attempted_ranks != prefix_count or solver_failure_count != prefix_failures:
+            raise RuntimeError("frozen accepted-attempt metadata disagrees with curve")
+        if int(cut["selected_env_rank"]) != prefix_count:
+            raise RuntimeError("selected rank is not the first qualifying curve rank")
+        for name in ("selected_Fid_gamma",):
+            if not math.isclose(
+                float(cut[name]),
+                float(first_qualifying["fid"]),
+                rel_tol=1.0e-14,
+                abs_tol=1.0e-15,
+            ):
+                raise RuntimeError(f"{name} disagrees with the first qualifying row")
+        candidate = validate_fid_gamma_evidence(cut["Fid_gamma"])["value"]
+        if (
+            cut.get("proposed_env_rank") != prefix_count
+            or candidate is None
+            or not math.isclose(
+                float(candidate),
+                float(first_qualifying["fid"]),
+                rel_tol=1.0e-14,
+                abs_tol=1.0e-15,
+            )
+        ):
+            raise RuntimeError("candidate evidence disagrees with accepted curve row")
+    elif selector_outcome in ("noop", "solver_failed"):
+        if first_qualifying is not None:
+            raise RuntimeError("non-accepted selector has a qualifying observer row")
+        if int(cut["selected_env_rank"]) != int(cut["dim_in"]) or not math.isclose(
+            float(cut["selected_Fid_gamma"]),
+            1.0,
+            rel_tol=0.0,
+            abs_tol=0.0,
+        ):
+            raise RuntimeError(
+                "non-accepted selector did not preserve the full-rank identity decision"
+            )
+        total_failures = sum(
+            row["status"] == "solver_failed" for row in normalized
+        )
+        if attempted_ranks != expected_count or solver_failure_count != total_failures:
+            raise RuntimeError("non-accepted attempt metadata disagrees with curve")
+        finite_rows = [row for row in normalized if row["status"] == "ok"]
+        if finite_rows:
+            best = max(finite_rows, key=lambda row: float(row["fid"]))
+            candidate = validate_fid_gamma_evidence(cut["Fid_gamma"])["value"]
+            if (
+                cut.get("proposed_env_rank") != int(best["chi"])
+                or candidate is None
+                or not math.isclose(
+                    float(candidate),
+                    float(best["fid"]),
+                    rel_tol=1.0e-14,
+                    abs_tol=1.0e-15,
+                )
+            ):
+                raise RuntimeError("best rejected candidate disagrees with curve")
+        elif cut.get("proposed_env_rank") is not None:
+            raise RuntimeError("all-failed curve unexpectedly has a candidate rank")
+    else:
+        raise RuntimeError(
+            f"observer requires an explicit selector outcome, got {selector_outcome!r}"
+        )
+    return {
+        "status": "AUTHENTICATED_FULL_SWEEP",
+        "observer_requested": True,
+        "curve_row_count": len(curve),
+        "expected_full_rank_count": expected_count,
+        "first_qualifying_rank": (
+            None if first_qualifying is None else int(first_qualifying["chi"])
         ),
     }
 
 
 def evaluate_overall_verdict(
-    *, replay_verdict: str, entropy_red_case_ids: Sequence[str], fet_verdict: str
+    *,
+    replay_verdict: str,
+    entropy_red_case_ids: Sequence[str],
+    fet_verdict: str,
+    solver_health_verdict: str,
+    nondegeneracy_verdict: str,
 ) -> str:
     """Keep a deterministic but scientifically invalid audit visibly RED."""
 
@@ -601,6 +1278,8 @@ def evaluate_overall_verdict(
         str(replay_verdict).startswith("PASS_")
         and not entropy_red_case_ids
         and str(fet_verdict) == "PASS"
+        and str(solver_health_verdict) == "PASS"
+        and str(nondegeneracy_verdict) == "PASS"
     )
     return "PASS" if passed else "RED"
 
@@ -650,7 +1329,7 @@ def validate_case_matrix(cases: Sequence[tuple[int, int, int]]) -> set[str]:
         raise ValueError("case triples must be unique; use repetition to distinguish repeats")
     baseline = cases[0]
     if baseline[1] != 0:
-        raise ValueError("the first/baseline case must have FET_FIDCURVE_DEBUG=0")
+        raise ValueError("the first/baseline case must disable the fidelity-curve observer")
     baseline_payload = {
         "cuda_seed": int(baseline[0]),
         "fidcurve_debug": int(baseline[1]),
@@ -696,6 +1375,10 @@ def _max_fid_delta(
     for left, right in zip(left_cuts, right_cuts, strict=True):
         left_fid = validate_fid_gamma_evidence(left["Fid_gamma"])
         right_fid = validate_fid_gamma_evidence(right["Fid_gamma"])
+        if left_fid["classification"] != right_fid["classification"]:
+            return None
+        if left_fid["value"] is None and right_fid["value"] is None:
+            continue
         if left_fid["value"] is None or right_fid["value"] is None:
             return None
         pairs.append((float(left_fid["value"]), float(right_fid["value"])))
@@ -718,11 +1401,39 @@ def _scoped_scalar_capture(result: dict[str, Any]) -> dict[str, Any]:
                 "dim_out": cut["dim_out"],
                 "exact_rank": cut["exact_rank"],
                 "env_rank": cut["env_rank"],
+                "selected_env_rank": cut.get("selected_env_rank"),
+                "proposed_env_rank": cut.get("proposed_env_rank"),
                 "map_rank_axis": cut["map_rank_axis"],
                 "Fid_gamma": cut["Fid_gamma"],
+                "selected_Fid_gamma": cut.get("selected_Fid_gamma"),
+                "applied_Fid_gamma": cut.get("applied_Fid_gamma"),
+                "selector_outcome": cut.get("selector_outcome"),
+                "outcome": cut.get("outcome"),
+                "reason": cut.get("reason"),
+                "writeback_applied": cut.get("writeback_applied"),
+                "writeback_call_count": cut.get("writeback_call_count"),
+                "solver_seed": cut.get("solver_seed"),
+                "attempted_ranks": cut.get("attempted_ranks"),
+                "solver_failure_count": cut.get("solver_failure_count"),
                 "fidelity_target": cut["fidelity_target"],
                 "target_met": cut["target_met"],
+                "selected_target_met": cut.get("selected_target_met"),
+                "selected_fidelity_valid": cut.get("selected_fidelity_valid"),
+                "selector_consistent": cut.get("selector_consistent"),
+                "selector_metadata_valid": cut.get("selector_metadata_valid"),
+                "solver_seed_consistent": cut.get("solver_seed_consistent"),
+                "fallback_identity_factors": cut.get(
+                    "fallback_identity_factors"
+                ),
+                "causal_selector_writeback_binding": cut.get(
+                    "causal_selector_writeback_binding"
+                ),
+                "trajectory_ledger_authentication": cut.get(
+                    "trajectory_ledger_authentication"
+                ),
                 "fid_gamma_finite": cut["fid_gamma_finite"],
+                "fid_gamma_valid": cut.get("fid_gamma_valid"),
+                "solver_failure": cut.get("solver_failure"),
                 "nonfinite_fid_gamma_violation": cut[
                     "nonfinite_fid_gamma_violation"
                 ],
@@ -731,6 +1442,9 @@ def _scoped_scalar_capture(result: dict[str, Any]) -> dict[str, Any]:
                     "map_vs_identity_relative_error"
                 ],
                 "map_is_identity": cut["map_is_identity"],
+                "candidate_map_nonidentity": cut.get(
+                    "candidate_map_nonidentity"
+                ),
                 "rank_reducing_writeback": cut["rank_reducing_writeback"],
                 "nonidentity_or_lossy_writeback": cut[
                     "nonidentity_or_lossy_writeback"
@@ -766,6 +1480,85 @@ def _scoped_scalar_capture(result: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _scoped_categorical_capture(result: dict[str, Any]) -> dict[str, Any]:
+    """Decision fields that must agree exactly even for a numerical replay pass."""
+
+    entropy = result["entropy_gate"]
+    return {
+        "per_cut": [
+            {
+                "ordinal": cut["ordinal"],
+                "bond": cut["bond"],
+                "dim_in": cut["dim_in"],
+                "dim_out": cut["dim_out"],
+                "exact_rank": cut["exact_rank"],
+                "env_rank": cut["env_rank"],
+                "selected_env_rank": cut.get("selected_env_rank"),
+                "proposed_env_rank": cut.get("proposed_env_rank"),
+                "map_rank_axis": cut["map_rank_axis"],
+                "Fid_gamma_classification": cut["Fid_gamma"]["classification"],
+                "selector_outcome": cut.get("selector_outcome"),
+                "outcome": cut.get("outcome"),
+                "reason": cut.get("reason"),
+                "writeback_applied": cut.get("writeback_applied"),
+                "writeback_call_count": cut.get("writeback_call_count"),
+                "solver_seed": cut.get("solver_seed"),
+                "attempted_ranks": cut.get("attempted_ranks"),
+                "solver_failure_count": cut.get("solver_failure_count"),
+                "target_met": cut["target_met"],
+                "selected_target_met": cut.get("selected_target_met"),
+                "selected_fidelity_valid": cut.get("selected_fidelity_valid"),
+                "selector_consistent": cut.get("selector_consistent"),
+                "selector_metadata_valid": cut.get("selector_metadata_valid"),
+                "solver_seed_consistent": cut.get("solver_seed_consistent"),
+                "fallback_identity_factors": cut.get(
+                    "fallback_identity_factors"
+                ),
+                "causal_binding_status": cut.get(
+                    "causal_selector_writeback_binding", {}
+                ).get("status"),
+                "causal_binding_exact": cut.get(
+                    "causal_selector_writeback_binding", {}
+                ).get("exact_match"),
+                "causal_endpoint_absorption_exact": cut.get(
+                    "causal_selector_writeback_binding", {}
+                ).get("endpoint_absorption_exact_match"),
+                "fid_gamma_finite": cut["fid_gamma_finite"],
+                "fid_gamma_valid": cut.get("fid_gamma_valid"),
+                "solver_failure": cut.get("solver_failure"),
+                "nonfinite_fid_gamma_violation": cut[
+                    "nonfinite_fid_gamma_violation"
+                ],
+                "map_is_identity": cut["map_is_identity"],
+                "candidate_map_nonidentity": cut.get(
+                    "candidate_map_nonidentity"
+                ),
+                "rank_reducing_writeback": cut["rank_reducing_writeback"],
+                "nonidentity_or_lossy_writeback": cut[
+                    "nonidentity_or_lossy_writeback"
+                ],
+                "fallback_contract_violation": cut[
+                    "fallback_contract_violation"
+                ],
+                "fet_contract_violation": cut["fet_contract_violation"],
+                "fet_cut_contract_verdict": cut["fet_cut_contract_verdict"],
+            }
+            for cut in result["per_cut"]
+        ],
+        "round_state_amplitude_count": result["round_state"]["amplitude_count"],
+        "entropy_gate": {
+            key: entropy[key]
+            for key in (
+                "entropy_matches",
+                "leakage_off_precondition_passed",
+                "schmidt_rank",
+                "verdict",
+            )
+        },
+        "record_payload_sha256": result["record_payload_sha256"],
+    }
+
+
 def _max_scoped_scalar_delta(
     baseline: dict[str, Any], candidate: dict[str, Any]
 ) -> float | None:
@@ -779,11 +1572,26 @@ def _max_scoped_scalar_delta(
     for left, right in zip(left_cuts, right_cuts, strict=True):
         left_fid = validate_fid_gamma_evidence(left["Fid_gamma"])
         right_fid = validate_fid_gamma_evidence(right["Fid_gamma"])
-        if left_fid["value"] is None or right_fid["value"] is None:
+        if left_fid["classification"] != right_fid["classification"]:
             return None
+        if left_fid["value"] is None and right_fid["value"] is None:
+            pass
+        elif left_fid["value"] is None or right_fid["value"] is None:
+            return None
+        else:
+            pairs.append(
+                (float(left_fid["value"]), float(right_fid["value"])),
+            )
         pairs.extend(
             (
-                (float(left_fid["value"]), float(right_fid["value"])),
+                (
+                    float(left["selected_Fid_gamma"]),
+                    float(right["selected_Fid_gamma"]),
+                ),
+                (
+                    float(left["applied_Fid_gamma"]),
+                    float(right["applied_Fid_gamma"]),
+                ),
                 (
                     float(left["fidelity_target"]),
                     float(right["fidelity_target"]),
@@ -796,6 +1604,7 @@ def _max_scoped_scalar_delta(
                     float(left["map_vs_identity_relative_error"]),
                     float(right["map_vs_identity_relative_error"]),
                 ),
+                (float(left["eps_fid"]), float(right["eps_fid"])),
             )
         )
     for key in ("S_A", "leak_mass", "full_norm2", "qubit_norm2"):
@@ -887,6 +1696,10 @@ def compare_worker_results(
         canonical_json_bytes(_scoped_scalar_capture(baseline))
         == canonical_json_bytes(_scoped_scalar_capture(candidate))
     )
+    same_scoped_categorical = (
+        canonical_json_bytes(_scoped_categorical_capture(baseline))
+        == canonical_json_bytes(_scoped_categorical_capture(candidate))
+    )
     numeric_pass = all(
         (
             input_match,
@@ -894,7 +1707,7 @@ def compare_worker_results(
             same_ranks,
             same_record_payload,
             same_entropy_rank,
-            all_fid_gamma_finite,
+            same_scoped_categorical,
             same_fid_classifications,
             fid_delta is not None and fid_delta <= FID_REPLAY_TOL,
             scalar_delta is not None and scalar_delta <= SCALAR_REPLAY_TOL,
@@ -915,8 +1728,8 @@ def compare_worker_results(
             == candidate["round_state"]["sha256_c128le"],
         )
     )
-    if not all_fid_gamma_finite:
-        verdict = "FAIL_NONFINITE_FID_GAMMA"
+    if not same_fid_classifications:
+        verdict = "FAIL_FID_GAMMA_CLASSIFICATION_MISMATCH"
     elif bitwise_pass:
         verdict = "PASS_SCOPED_BITWISE"
     elif numeric_pass:
@@ -938,6 +1751,7 @@ def compare_worker_results(
         "same_record_payload": bool(same_record_payload),
         "same_entropy_schmidt_rank": bool(same_entropy_rank),
         "same_scoped_scalar_capture": bool(same_scoped_scalars),
+        "same_scoped_categorical_capture": bool(same_scoped_categorical),
         "max_Fid_gamma_delta": None if fid_delta is None else float(fid_delta),
         "max_scoped_scalar_delta": (
             None if scalar_delta is None else float(scalar_delta)
@@ -965,11 +1779,6 @@ def compare_worker_results(
 
 
 def summarize_replay(comparisons: Sequence[dict[str, Any]]) -> str:
-    if any(
-        item["verdict"] == "FAIL_NONFINITE_FID_GAMMA"
-        for item in comparisons
-    ):
-        return "FAIL_NONFINITE_FID_GAMMA"
     failed = [item for item in comparisons if not item["verdict"].startswith("PASS_")]
     if failed:
         kinds = {item["kind"] for item in failed}
@@ -1259,6 +2068,36 @@ def _input_manifest(schedule: Any, source_paths: Sequence[Path]) -> dict[str, An
     }
 
 
+def authenticate_persisted_fet_cut(cut: dict[str, Any]) -> dict[str, Any]:
+    """Re-run wrapper/ledger authentication in the parent process.
+
+    The child keeps the two raw evidence namespaces separate.  A merged verdict
+    marker is never authority: every wrapper field and every derived decision is
+    compared again before replay or non-degeneracy aggregation.
+    """
+
+    wrapper = cut.get("selector_wrapper_evidence")
+    ledger = cut.get("trajectory_ledger_evidence")
+    if not isinstance(wrapper, dict) or not isinstance(ledger, dict):
+        raise RuntimeError("persisted FET cut lacks raw wrapper/ledger evidence")
+    for name, expected in wrapper.items():
+        if name not in cut or canonical_json_bytes(cut[name]) != canonical_json_bytes(
+            expected
+        ):
+            raise RuntimeError(
+                f"persisted FET wrapper field {name!r} was altered after authentication"
+            )
+    recomputed = authenticate_fet_ledger_row(wrapper, ledger)
+    for name, expected in recomputed.items():
+        if name not in cut or canonical_json_bytes(cut[name]) != canonical_json_bytes(
+            expected
+        ):
+            raise RuntimeError(
+                f"persisted FET derived field {name!r} mismatches parent authentication"
+            )
+    return recomputed
+
+
 def validate_worker_arrays(
     result: dict[str, Any], arrays: dict[str, Any]
 ) -> dict[str, Any]:
@@ -1295,6 +2134,14 @@ def validate_worker_arrays(
 
     authenticated: dict[str, dict[str, Any]] = {}
     for index, cut in enumerate(cuts):
+        parent_decision_authentication = authenticate_persisted_fet_cut(cut)
+        curve_authentication = validate_fidelity_curve_observation(cut)
+        if canonical_json_bytes(cut["fidelity_curve_observation"]) != (
+            canonical_json_bytes(curve_authentication)
+        ):
+            raise RuntimeError(
+                f"worker cut {index} fidelity-curve authentication mismatch"
+            )
         key = f"map_{index:04d}"
         array = arrays[key]
         if not isinstance(array, np.ndarray):
@@ -1319,6 +2166,10 @@ def validate_worker_arrays(
             raise RuntimeError(f"worker NPZ {key} raw hash mismatch")
         if projective_hash != cut["map_projective_sha256_c128le"]:
             raise RuntimeError(f"worker NPZ {key} projective hash mismatch")
+        if raw_hash != cut["selected_map_sha256_c128le"]:
+            raise RuntimeError(
+                f"worker NPZ {key} is not the authenticated selector map"
+            )
         norm_authentication = evaluate_cross_backend_norm(
             torch_recorded=float(cut["map_frobenius_norm"]),
             numpy_recomputed=map_norm,
@@ -1341,6 +2192,7 @@ def validate_worker_arrays(
             env_rank=int(cut["env_rank"]),
             fid_gamma=fid_evidence,
             eps_fid=float(cut["eps_fid"]),
+            writeback_applied=cut.get("writeback_applied"),
         )
         for name, expected in recomputed_contract.items():
             observed = cut[name]
@@ -1360,6 +2212,8 @@ def validate_worker_arrays(
             "sha256_c128le": raw_hash,
             "projective_sha256_c128le": projective_hash,
             "frobenius_norm_authentication": norm_authentication,
+            "fidelity_curve_observation": curve_authentication,
+            "parent_decision_authentication": parent_decision_authentication,
         }
 
     state = arrays["round_state"]
@@ -1435,7 +2289,6 @@ def _worker_run(
         raise RuntimeError("CUDA unavailable; the PEPS/FET audit is GPU-only")
     if fidcurve_debug not in (0, 1):
         raise ValueError("fidcurve_debug must be 0 or 1")
-    os.environ["FET_FIDCURVE_DEBUG"] = str(int(fidcurve_debug))
     random.seed(int(cuda_seed))
     np.random.seed(int(cuda_seed))
     torch.manual_seed(int(cuda_seed))
@@ -1504,22 +2357,116 @@ def _worker_run(
     per_cut: list[dict[str, Any]] = []
     map_arrays: dict[str, Any] = {}
     original_env_optimal_rank = fet.env_optimal_rank
+    original_apply_fet_truncation = fet.apply_fet_truncation
 
-    def audited_env_optimal_rank(state: Any, bond: str, eps_fid: float):
-        result = original_env_optimal_rank(state, bond, eps_fid)
-        env_rank, u, vh, fid_gamma = result
+    def audited_env_optimal_rank(
+        state: Any,
+        bond: str,
+        eps_fid: float,
+        *,
+        solver_seed: int = 0,
+        **_kwargs: Any,
+    ):
+        curve = [] if fidcurve_debug else None
+        result = original_env_optimal_rank(
+            state,
+            bond,
+            eps_fid,
+            solver_seed=solver_seed,
+            fidelity_curve=curve,
+        )
+        selected_env_rank, u, vh, selected_fid = result
+        candidate_rank = getattr(result, "candidate_rank", selected_env_rank)
+        candidate_fid = getattr(result, "candidate_fid", selected_fid)
+        if candidate_fid is None:
+            candidate_fid = float("-inf")
+        maps_are_tensors = isinstance(u, torch.Tensor) and isinstance(
+            vh, torch.Tensor
+        )
+        dim_in = int(state.tn.ind_size(bond))
+        map_shapes_ok = bool(
+            maps_are_tensors
+            and tuple(u.shape) == (dim_in, int(selected_env_rank))
+            and tuple(vh.shape) == (int(selected_env_rank), dim_in)
+        )
+        map_dtype_ok = bool(
+            maps_are_tensors
+            and u.dtype == torch.complex128
+            and vh.dtype == torch.complex128
+        )
+        endpoint_a, endpoint_b = fet._parse_bond(bond)
+        endpoint_devices = (
+            trajectory.site_tensor(state, endpoint_a).data.device,
+            trajectory.site_tensor(state, endpoint_b).data.device,
+        )
+        map_device_ok = bool(
+            maps_are_tensors
+            and u.device == vh.device
+            and u.device == endpoint_devices[0] == endpoint_devices[1]
+        )
+        map_finite = bool(
+            maps_are_tensors
+            and torch.isfinite(u).all().item()
+            and torch.isfinite(vh).all().item()
+        )
+        fallback_identity_factors = bool(
+            maps_are_tensors
+            and int(selected_env_rank) == dim_in
+            and tuple(u.shape) == (dim_in, dim_in)
+            and tuple(vh.shape) == (dim_in, dim_in)
+            and torch.equal(
+                u, torch.eye(dim_in, dtype=torch.complex128, device=u.device)
+            )
+            and torch.equal(
+                vh, torch.eye(dim_in, dtype=torch.complex128, device=vh.device)
+            )
+        )
         map_tensor = (u @ vh).detach().to(torch.complex128).cpu().contiguous()
         map_array = map_tensor.numpy()
+        selected_map_sha256 = array_sha256_c128le(map_array)
+        selected_map_projective_sha256 = projective_array_sha256(map_array)
         ordinal = len(per_cut)
         map_arrays[f"map_{ordinal:04d}"] = map_array
         per_cut.append(
             {
                 "ordinal": ordinal,
                 "bond": str(bond),
-                "dim_in": int(u.shape[0]),
-                "env_rank": int(env_rank),
+                "dim_in": dim_in,
+                "selected_env_rank": int(selected_env_rank),
+                "proposed_env_rank": (
+                    None if candidate_rank is None else int(candidate_rank)
+                ),
                 "map_rank_axis": int(u.shape[1]),
-                "Fid_gamma": classify_fid_gamma(fid_gamma),
+                "Fid_gamma": classify_fid_gamma(candidate_fid),
+                "selected_Fid_gamma": float(selected_fid),
+                "selector_outcome": getattr(result, "outcome", None),
+                "eps_fid_requested": float(eps_fid),
+                "requested_solver_seed": int(solver_seed),
+                "solver_seed": int(getattr(result, "solver_seed", solver_seed)),
+                "solver_failure_count": int(
+                    getattr(result, "solver_failure_count", 0)
+                ),
+                "attempted_ranks": int(getattr(result, "attempted_ranks", 0)),
+                "observer_requested": bool(fidcurve_debug),
+                "fidelity_curve": curve,
+                "writeback_call_count": 0,
+                "map_shapes_ok": map_shapes_ok,
+                "map_dtype_ok": map_dtype_ok,
+                "map_device_ok": map_device_ok,
+                "map_finite": map_finite,
+                "fallback_identity_factors": fallback_identity_factors,
+                "selected_map_sha256_c128le": selected_map_sha256,
+                "selected_map_projective_sha256_c128le": (
+                    selected_map_projective_sha256
+                ),
+                "applied_map_sha256_c128le": None,
+                "applied_map_projective_sha256_c128le": None,
+                "selected_applied_map_exact_match": None,
+                "endpoint_absorption_exact_match": None,
+                "expected_left_endpoint_sha256_c128le": None,
+                "observed_left_endpoint_sha256_c128le": None,
+                "expected_right_endpoint_sha256_c128le": None,
+                "observed_right_endpoint_sha256_c128le": None,
                 "map_frobenius_norm": _finite_float(
                     torch.linalg.vector_norm(map_tensor),
                     name=f"map_frobenius_norm[{ordinal}]",
@@ -1530,7 +2477,89 @@ def _worker_run(
         )
         return result
 
+    def audited_apply_fet_truncation(
+        state: Any, bond: str, u: Any, vh: Any
+    ) -> None:
+        if not per_cut:
+            raise RuntimeError("FET write-back occurred before selector audit")
+        audit = per_cut[-1]
+        if str(bond) != audit["bond"]:
+            raise RuntimeError(
+                f"FET write-back bond mismatch: {bond!r} != {audit['bond']!r}"
+            )
+        audit["writeback_call_count"] += 1
+        if audit["writeback_call_count"] != 1:
+            raise RuntimeError(f"duplicate FET write-back for {bond!r}")
+        endpoint_a, endpoint_b = fet._parse_bond(bond)
+        left_tensor = trajectory.site_tensor(state, endpoint_a)
+        right_tensor = trajectory.site_tensor(state, endpoint_b)
+        left_axis = left_tensor.inds.index(bond)
+        right_axis = right_tensor.inds.index(bond)
+        expected_left = torch.movedim(
+            torch.tensordot(left_tensor.data, u, dims=([left_axis], [0])),
+            -1,
+            left_axis,
+        ).contiguous()
+        expected_right = torch.movedim(
+            torch.tensordot(right_tensor.data, vh, dims=([right_axis], [1])),
+            -1,
+            right_axis,
+        ).contiguous()
+        applied_tensor = (
+            (u @ vh).detach().to(torch.complex128).cpu().contiguous()
+        )
+        applied_array = applied_tensor.numpy()
+        applied_sha256 = array_sha256_c128le(applied_array)
+        applied_projective_sha256 = projective_array_sha256(applied_array)
+        exact_match = bool(
+            applied_sha256 == audit["selected_map_sha256_c128le"]
+            and applied_projective_sha256
+            == audit["selected_map_projective_sha256_c128le"]
+        )
+        audit["applied_map_sha256_c128le"] = applied_sha256
+        audit["applied_map_projective_sha256_c128le"] = (
+            applied_projective_sha256
+        )
+        audit["selected_applied_map_exact_match"] = exact_match
+        if not exact_match:
+            raise RuntimeError(
+                "FET applied map does not match the authenticated selector map"
+            )
+        map_arrays[f"map_{audit['ordinal']:04d}"] = applied_array
+        result = original_apply_fet_truncation(state, bond, u, vh)
+        observed_left = trajectory.site_tensor(state, endpoint_a).data
+        observed_right = trajectory.site_tensor(state, endpoint_b).data
+        endpoint_exact = bool(
+            torch.equal(expected_left, observed_left)
+            and torch.equal(expected_right, observed_right)
+        )
+
+        def _tensor_hash(value: Any) -> str:
+            return array_sha256_c128le(
+                value.detach().to(torch.complex128).cpu().contiguous().numpy()
+            )
+
+        audit["endpoint_absorption_exact_match"] = endpoint_exact
+        audit["expected_left_endpoint_sha256_c128le"] = _tensor_hash(
+            expected_left
+        )
+        audit["observed_left_endpoint_sha256_c128le"] = _tensor_hash(
+            observed_left
+        )
+        audit["expected_right_endpoint_sha256_c128le"] = _tensor_hash(
+            expected_right
+        )
+        audit["observed_right_endpoint_sha256_c128le"] = _tensor_hash(
+            observed_right
+        )
+        if not endpoint_exact:
+            raise RuntimeError(
+                "FET endpoint write-back does not match the selected-map absorption"
+            )
+        return result
+
     fet.env_optimal_rank = audited_env_optimal_rank
+    fet.apply_fet_truncation = audited_apply_fet_truncation
     captured: dict[str, Any] = {}
 
     def round_hook(state: Any, round_index: int, shot_index: int) -> None:
@@ -1543,6 +2572,10 @@ def _worker_run(
         captured["state"] = state.copy()
 
     stream = io.StringIO()
+    ambient_cpu_rng_before = torch.random.get_rng_state().clone()
+    ambient_cuda_rng_before = [
+        state.clone() for state in torch.cuda.get_rng_state_all()
+    ]
     try:
         with contextlib.redirect_stdout(stream), contextlib.redirect_stderr(stream):
             shotset, ledgers = PepsSampler(device="cuda").sample(
@@ -1558,6 +2591,23 @@ def _worker_run(
             )
     finally:
         fet.env_optimal_rank = original_env_optimal_rank
+        fet.apply_fet_truncation = original_apply_fet_truncation
+    ambient_cpu_rng_after = torch.random.get_rng_state()
+    ambient_cuda_rng_after = torch.cuda.get_rng_state_all()
+    ambient_rng_unchanged = bool(
+        torch.equal(ambient_cpu_rng_before, ambient_cpu_rng_after)
+        and len(ambient_cuda_rng_before) == len(ambient_cuda_rng_after)
+        and all(
+            torch.equal(before, after)
+            for before, after in zip(
+                ambient_cuda_rng_before,
+                ambient_cuda_rng_after,
+                strict=True,
+            )
+        )
+    )
+    if not ambient_rng_unchanged:
+        raise RuntimeError("PEPS replay advanced an ambient Torch RNG stream")
     torch.cuda.synchronize()
     if "state" not in captured:
         raise RuntimeError("fixed one-round trajectory did not produce a round snapshot")
@@ -1571,23 +2621,20 @@ def _worker_run(
             f"ledger={len(fet_ledger)}"
         )
     for audit, ledger in zip(per_cut, fet_ledger, strict=True):
-        if audit["bond"] != str(ledger["bond"]):
-            raise RuntimeError(f"bond ledger mismatch: audit={audit!r}, ledger={ledger!r}")
-        if audit["env_rank"] != int(ledger["env_rank"]):
-            raise RuntimeError(f"rank ledger mismatch: audit={audit!r}, ledger={ledger!r}")
-        ledger_fid = classify_fid_gamma(ledger["Fid_gamma"])
-        if canonical_json_bytes(audit["Fid_gamma"]) != canonical_json_bytes(
-            ledger_fid
-        ):
-            raise RuntimeError(
-                "Fid_gamma ledger evidence mismatch: "
-                f"audit={audit['Fid_gamma']!r}, ledger={ledger_fid!r}"
-            )
-        audit["dim_out"] = int(ledger["dim_out"])
-        audit["exact_rank"] = (
-            None if ledger.get("exact_rank") is None else int(ledger["exact_rank"])
+        wrapper_evidence = copy.deepcopy(audit)
+        trajectory_ledger_evidence = copy.deepcopy(ledger)
+        trajectory_ledger_evidence["Fid_gamma"] = classify_fid_gamma(
+            ledger["Fid_gamma"]
         )
-        audit["eps_fid"] = float(ledger["eps_fid"])
+        authenticated_decision = authenticate_fet_ledger_row(
+            wrapper_evidence, trajectory_ledger_evidence
+        )
+        audit["selector_wrapper_evidence"] = wrapper_evidence
+        audit["trajectory_ledger_evidence"] = trajectory_ledger_evidence
+        audit.update(authenticated_decision)
+        audit["fidelity_curve_observation"] = (
+            validate_fidelity_curve_observation(audit)
+        )
         audit.update(
             evaluate_fet_cut_contract(
                 map_array=map_arrays[f"map_{audit['ordinal']:04d}"],
@@ -1596,6 +2643,7 @@ def _worker_run(
                 env_rank=int(audit["env_rank"]),
                 fid_gamma=audit["Fid_gamma"],
                 eps_fid=float(audit["eps_fid"]),
+                writeback_applied=bool(audit["writeback_applied"]),
             )
         )
 
@@ -1629,6 +2677,22 @@ def _worker_run(
     fet_contract_gate = aggregate_fet_fallback_contract(
         [{"case_id": case_id((cuda_seed, fidcurve_debug, repetition)), "per_cut": per_cut}]
     )
+    solver_health_gate = aggregate_fet_solver_health(
+        [{"case_id": case_id((cuda_seed, fidcurve_debug, repetition)), "per_cut": per_cut}]
+    )
+    nondegeneracy_gate = aggregate_fet_nondegeneracy(
+        [{"case_id": case_id((cuda_seed, fidcurve_debug, repetition)), "per_cut": per_cut}]
+    )
+    observer_rows = sum(
+        int(cut["fidelity_curve_observation"]["curve_row_count"])
+        for cut in per_cut
+    )
+    observer_nonvacuous = bool(
+        not fidcurve_debug
+        or (len(per_cut) > 0 and observer_rows >= len(per_cut))
+    )
+    if not observer_nonvacuous:
+        raise RuntimeError("requested fidelity-curve control was vacuous")
     result = {
         "schema": WORKER_SCHEMA,
         "case_id": case_id((cuda_seed, fidcurve_debug, repetition)),
@@ -1652,6 +2716,16 @@ def _worker_run(
         },
         "entropy_gate": entropy_gate,
         "fet_fallback_contract_gate": fet_contract_gate,
+        "fet_solver_health_gate": solver_health_gate,
+        "fet_nondegeneracy_gate": nondegeneracy_gate,
+        "fidelity_curve_observer_gate": {
+            "verdict": "PASS",
+            "observer_requested": bool(fidcurve_debug),
+            "cut_count": len(per_cut),
+            "observed_curve_row_count": observer_rows,
+            "nonvacuous_when_requested": observer_nonvacuous,
+        },
+        "ambient_torch_rng_unchanged": ambient_rng_unchanged,
         "record_payload_sha256": sha256_bytes(record_payload),
         "solver_log": debug_lines,
         "solver_log_sha256": sha256_bytes("\n".join(debug_lines).encode("utf-8")),
@@ -1803,6 +2877,8 @@ def build_report(
         if result["entropy_gate"]["verdict"] != "PASS"
     ]
     fet_contract_gate = aggregate_fet_fallback_contract(results)
+    solver_health_gate = aggregate_fet_solver_health(results)
+    nondegeneracy_gate = aggregate_fet_nondegeneracy(results)
     replay_verdict = summarize_replay(comparisons)
     report = {
         "schema": SCHEMA,
@@ -1831,18 +2907,26 @@ def build_report(
             "leakage_off_is_precondition": True,
         },
         "fet_fallback_contract_gate": fet_contract_gate,
+        "fet_solver_health_gate": solver_health_gate,
+        "fet_nondegeneracy_gate": nondegeneracy_gate,
         "overall_verdict": evaluate_overall_verdict(
             replay_verdict=replay_verdict,
             entropy_red_case_ids=entropy_red,
             fet_verdict=fet_contract_gate["verdict"],
+            solver_health_verdict=solver_health_gate["verdict"],
+            nondegeneracy_verdict=nondegeneracy_gate["verdict"],
         ),
         "claim_boundary": {
             "diagnostic_execution_success_is_not_scientific_pass": True,
             "local_Fid_gamma_is_not_record_faithfulness": True,
             "state_entropy_gate_must_remain_visible": True,
             "deterministic_contract_violation_remains_red": True,
+            "deterministic_solver_failure_remains_red": True,
+            "all_noop_fet_trajectory_remains_red": True,
+            "entropy_match_requires_active_fet_falsifier": True,
             "complete_record_law_certified": False,
-            "production_behavior_changed": False,
+            "production_mutation_behavior_hardened": True,
+            "scientific_claim_upgraded": False,
         },
     }
     report["content_hash_sha256"] = report_content_hash(report)
@@ -1908,6 +2992,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         f"replay={report['replay_verdict']}",
         f"entropy={report['entropy_gate']['verdict']}",
         f"fet_contract={report['fet_fallback_contract_gate']['verdict']}",
+        f"solver_health={report['fet_solver_health_gate']['verdict']}",
+        f"nondegeneracy={report['fet_nondegeneracy_gate']['verdict']}",
         f"overall={report['overall_verdict']}",
         f"artifact={args.output}",
         f"content_sha256={report['content_hash_sha256']}",

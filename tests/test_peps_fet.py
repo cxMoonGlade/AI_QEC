@@ -6,8 +6,9 @@ The suite checks the exact single-bond environment against an independent dense
 contraction, compares ``Fid_Γ`` with an independently written state-overlap
 calculation at lossless and lossy points, and verifies the ``fet_env`` policy
 wiring. The end-to-end entropy check compares a one-round carrier state with an
-inline GF(2) stabilizer reference and intentionally remains a visible failing
-test until the carrier reproduces that invariant.
+inline GF(2) stabilizer reference.  A separate non-degeneracy check requires the
+same run to exercise at least one accepted, rank-reducing FET write-back, so an
+all-identity/no-op selector cannot make the entropy check pass vacuously.
 
 Tests that construct :class:`PepsState` require CUDA. Tests needing the local d3
 Google circuit skip when those files are absent; no synthetic circuit is used as
@@ -447,7 +448,16 @@ def _build_spec(c01, m01, *, R: int, base_seed: int):
                    N=1, base_seed=int(base_seed), R=int(R), dtype="c128")
 
 
-def _drive_capture(sched, c01, m01, policy, *, d_abort, capture_round: int = 0):
+def _drive_capture(
+    sched,
+    c01,
+    m01,
+    policy,
+    *,
+    d_abort,
+    capture_round: int = 0,
+    return_ledgers: bool = False,
+):
     """Drive ONE leak-off trajectory (EXACT route) under ``policy`` and return the
     live PepsState snapshot captured after round ``capture_round`` (a ``.copy()``)."""
     spec = _build_spec(c01, m01, R=capture_round + 1, base_seed=BASE_SEED_OFF)
@@ -458,10 +468,13 @@ def _drive_capture(sched, c01, m01, policy, *, d_abort, capture_round: int = 0):
         if int(r) == int(capture_round):
             captured["state"] = st.copy()
 
-    Sampler(device="cuda").sample(
+    _shotset, ledgers = Sampler(device="cuda").sample(
         spec, sched=sched, policy=policy, R_n=None, R_x=None, fit_seed=FIT_SEED,
         materialize=True, d_abort=d_abort, round_hook=hook)
-    return captured.get("state")
+    state = captured.get("state")
+    if return_ledgers:
+        return state, ledgers
+    return state
 
 
 @pytest.fixture(scope="module")
@@ -500,14 +513,27 @@ def grown_state(d3):
 
 
 @pytest.fixture(scope="module")
-def fet_env_state(d3):
-    """A leak-off round-1 state driven under the ``fet_env`` policy, with the
-    source truncator performing the complete per-round truncation."""
+def fet_env_run(d3):
+    """One shared ``fet_env`` drive, including its state and mutation ledger."""
     sched, c01, m01 = d3
-    st = _drive_capture(sched, c01, m01, _trunc_policy("fet_env", eps_fid=EPS_FID),
-                        d_abort=None)
+    st, ledgers = _drive_capture(
+        sched,
+        c01,
+        m01,
+        _trunc_policy("fet_env", eps_fid=EPS_FID),
+        d_abort=None,
+        return_ledgers=True,
+    )
     require_precondition(st is not None, "no round-1 state captured (fet_env drive)")
-    return st
+    require_precondition(len(ledgers) == 1, f"expected one FET ledger, got {len(ledgers)}")
+    return st, ledgers[0]
+
+
+@pytest.fixture(scope="module")
+def fet_env_state(fet_env_run):
+    """State component of the shared strict-``eps_fid`` ``fet_env`` drive."""
+
+    return fet_env_run[0]
 
 
 def _biggest_grown_bond(state):
@@ -619,7 +645,8 @@ class TestStabilizerEntropy:
         def _sa_matches(ref, tol):
             assert abs(S_A - ref) <= tol, f"|S_A − ref| = {abs(S_A - ref):.3e} > {tol:.1e}"
 
-        # positive: the fet_env-truncated round is state-faithful => S_A == GF(2).
+        # Positive for the entropy observable only.  The separate non-degeneracy
+        # gate must still prove that this run actually applied a FET truncation.
         _sa_matches(gf2_baseline, SA_OFF_TOL)
         # control: a reference offset by 10·tol MUST trip (the tolerance is discriminating).
         assert_control_trips(_sa_matches, gf2_baseline + 10.0 * SA_OFF_TOL, SA_OFF_TOL)
@@ -630,6 +657,49 @@ class TestStabilizerEntropy:
 # =========================================================================== #
 @requires_cuda
 class TestFetEnvWiring:
+
+    def test_fet_env_exercises_an_accepted_rank_reducing_writeback(self, fet_env_run):
+        """The entropy fixture must not pass through an all-identity/no-op path."""
+        _state, ledger = fet_env_run
+        cuts = [entry for entry in ledger if entry.get("op") == "fet_truncate"]
+        require_precondition(cuts, "fet_env drive emitted no FET cut ledger rows")
+        applied = [entry for entry in cuts if bool(entry.get("writeback_applied"))]
+        cut_diagnostics = [
+            {
+                key: entry.get(key)
+                for key in (
+                    "bond",
+                    "dim_in",
+                    "dim_out",
+                    "selected_env_rank",
+                    "proposed_env_rank",
+                    "Fid_gamma",
+                    "selected_Fid_gamma",
+                    "outcome",
+                    "reason",
+                    "map_valid",
+                    "selector_outcome",
+                    "solver_failure_count",
+                    "attempted_ranks",
+                )
+            }
+            for entry in cuts
+        ]
+        assert applied, (
+            "fet_env entropy fixture applied no rank-reducing FET map; "
+            "an all-identity/no-op run cannot certify truncation fidelity; "
+            f"cuts={cut_diagnostics!r}"
+        )
+        for entry in applied:
+            assert entry["outcome"] == "accepted", entry
+            assert entry["reason"] == "fidelity_target_met", entry
+            assert bool(entry["selected_fidelity_valid"]), entry
+            assert bool(entry["selected_target_met"]), entry
+            assert bool(entry["selector_consistent"]), entry
+            assert bool(entry["map_valid"]), entry
+            assert 0 < int(entry["dim_out"]) < int(entry["dim_in"]), entry
+            assert int(entry["env_rank"]) == int(entry["dim_out"]), entry
+            assert int(entry["selected_env_rank"]) == int(entry["dim_out"]), entry
 
     def test_fet_env_drives_one_round_without_crashing(self, fet_env_state):
         """``TruncationPolicy("fet_env", eps_fid=1e-8)`` drove one
@@ -711,3 +781,792 @@ class TestFetEnvWiring:
         assert float(fid_env) >= 1.0 - EPS_FID - 1e-9, (
             f"env_optimal_rank chose a rank with fid_env={fid_env!r} < 1-eps_fid — "
             "the selected rank is not fidelity-faithful")
+
+
+# =========================================================================== #
+# FET mutation-boundary firewall                                               #
+# =========================================================================== #
+class _FakeBondNetwork:
+    def __init__(self, bond: str, dim: int) -> None:
+        self._dims = {str(bond): int(dim)}
+
+    def ind_size(self, bond: str) -> int:
+        return int(self._dims[str(bond)])
+
+
+class _FakeFetState:
+    def __init__(self, bond: str, dim: int) -> None:
+        self.tn = _FakeBondNetwork(bond, dim)
+        self.device = "cpu"
+        self.ledger: list[dict] = []
+
+
+@pytest.mark.parametrize(
+    ("candidate_fid", "expected_outcome"),
+    [
+        (0.98, "solver_failed"),
+        (-1.0, "solver_failed"),
+        (2.0, "solver_failed"),
+        (float("-inf"), "solver_failed"),
+        (float("nan"), "solver_failed"),
+    ],
+)
+def test_policy_cut_rejected_fet_candidate_is_a_strict_noop(
+    monkeypatch: pytest.MonkeyPatch,
+    candidate_fid: float,
+    expected_outcome: str,
+) -> None:
+    """A bare legacy tuple has no authenticated selector outcome or solver
+    metadata and must never reach the in-place write-back helper."""
+    import importlib
+
+    fet = importlib.import_module(f"{_PEPS_PKG}.fet")
+    trajectory = importlib.import_module(f"{_PEPS_PKG}.trajectory")
+    bond = "B0_1"
+    state = _FakeFetState(bond, dim=2)
+    U = torch.ones((2, 1), dtype=torch.complex128)
+    Vh = torch.ones((1, 2), dtype=torch.complex128)
+    writes: list[tuple[str, tuple[int, ...], tuple[int, ...]]] = []
+
+    monkeypatch.setattr(
+        fet,
+        "env_optimal_rank",
+        lambda _state, _bond, _eps, **_kwargs: (1, U, Vh, candidate_fid),
+    )
+
+    def _writeback(_state, _bond, map_u, map_vh) -> None:
+        writes.append((str(_bond), tuple(map_u.shape), tuple(map_vh.shape)))
+        _state.tn._dims[str(_bond)] = int(map_u.shape[1])
+
+    monkeypatch.setattr(fet, "apply_fet_truncation", _writeback)
+
+    summary = trajectory._policy_cut(
+        state,
+        bond,
+        trajectory.TruncationPolicy("fet_env", eps_fid=0.01),
+        {"exact_rank": 1},
+    )
+
+    assert writes == []
+    assert state.tn.ind_size(bond) == 2
+    assert summary["outcome"] == expected_outcome
+    assert summary["writeback_applied"] is False
+    assert summary["proposed_env_rank"] == 1
+    assert summary["env_rank"] == 2
+    assert summary["dim_out"] == 2
+    assert state.ledger == [summary]
+
+
+def test_policy_cut_qualifying_fet_candidate_still_reduces_rank(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A qualifying finite control must still reach the write-back seam, proving
+    the mutation firewall is selective rather than an unconditional no-op."""
+    import importlib
+
+    fet = importlib.import_module(f"{_PEPS_PKG}.fet")
+    trajectory = importlib.import_module(f"{_PEPS_PKG}.trajectory")
+    bond = "B0_1"
+    state = _FakeFetState(bond, dim=2)
+    U = torch.ones((2, 1), dtype=torch.complex128)
+    Vh = torch.ones((1, 2), dtype=torch.complex128)
+    writes: list[str] = []
+
+    accepted = fet.FetSelection(
+        1,
+        U,
+        Vh,
+        0.995,
+        outcome="accepted",
+        candidate_rank=1,
+        candidate_fid=0.995,
+        solver_seed=0,
+        attempted_ranks=1,
+        solver_failure_count=0,
+    )
+    monkeypatch.setattr(
+        fet,
+        "env_optimal_rank",
+        lambda _state, _bond, _eps, **_kwargs: accepted,
+    )
+
+    def _writeback(_state, _bond, map_u, _map_vh) -> None:
+        writes.append(str(_bond))
+        _state.tn._dims[str(_bond)] = int(map_u.shape[1])
+
+    monkeypatch.setattr(fet, "apply_fet_truncation", _writeback)
+
+    summary = trajectory._policy_cut(
+        state,
+        bond,
+        trajectory.TruncationPolicy("fet_env", eps_fid=0.01),
+        {"exact_rank": 1},
+    )
+
+    assert writes == [bond]
+    assert state.tn.ind_size(bond) == 1
+    assert summary["outcome"] == "accepted"
+    assert summary["writeback_applied"] is True
+    assert summary["proposed_env_rank"] == 1
+    assert summary["env_rank"] == 1
+    assert summary["dim_out"] == 1
+
+
+def test_policy_cut_rejects_selection_bound_to_wrong_solver_seed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The returned numerical solve must be bound to the policy's requested seed."""
+    import importlib
+
+    fet = importlib.import_module(f"{_PEPS_PKG}.fet")
+    trajectory = importlib.import_module(f"{_PEPS_PKG}.trajectory")
+    bond = "B0_1"
+    state = _FakeFetState(bond, dim=2)
+    U = torch.ones((2, 1), dtype=torch.complex128)
+    Vh = torch.ones((1, 2), dtype=torch.complex128)
+    selection = fet.FetSelection(
+        1,
+        U,
+        Vh,
+        0.995,
+        outcome="accepted",
+        candidate_rank=1,
+        candidate_fid=0.995,
+        solver_seed=8,
+        attempted_ranks=1,
+        solver_failure_count=0,
+    )
+    writes: list[str] = []
+    monkeypatch.setattr(fet, "env_optimal_rank", lambda *_args, **_kwargs: selection)
+    monkeypatch.setattr(
+        fet,
+        "apply_fet_truncation",
+        lambda *_args, **_kwargs: writes.append("called"),
+    )
+
+    summary = trajectory._policy_cut(
+        state,
+        bond,
+        trajectory.TruncationPolicy(
+            "fet_env", eps_fid=0.01, fet_solver_seed=7
+        ),
+        {"exact_rank": 1},
+    )
+
+    assert writes == []
+    assert summary["requested_fet_solver_seed"] == 7
+    assert summary["fet_solver_seed"] == 8
+    assert summary["solver_seed_consistent"] is False
+    assert summary["selector_consistent"] is False
+    assert summary["writeback_applied"] is False
+    assert summary["outcome"] == "solver_failed"
+
+
+@pytest.mark.parametrize("collect_curve", [False, True])
+def test_env_optimal_rank_no_qualifier_returns_full_identity(
+    monkeypatch: pytest.MonkeyPatch,
+    collect_curve: bool,
+) -> None:
+    """Both selector paths must implement their documented full-rank identity
+    fallback instead of returning the best rejected low-rank proposal."""
+    import importlib
+
+    fet = importlib.import_module(f"{_PEPS_PKG}.fet")
+    Gamma = torch.zeros((2, 2, 2, 2), dtype=torch.complex128)
+    U = torch.ones((2, 1), dtype=torch.complex128)
+    Vh = torch.ones((1, 2), dtype=torch.complex128)
+
+    monkeypatch.setattr(fet, "gamma_TN", lambda _state, _bond: Gamma)
+    monkeypatch.setattr(
+        fet,
+        "_insertion_spectrum",
+        lambda _state, _bond: torch.tensor([1.0, 0.0], dtype=torch.float64),
+    )
+    monkeypatch.setattr(fet, "_exact_rank", lambda _spectrum: 1)
+    monkeypatch.setattr(fet, "_fix_gauge", lambda _gamma: None)
+    monkeypatch.setattr(
+        fet,
+        "_multistart_als_truncation",
+        lambda _gamma, _state, _bond, _chi, _prep, **_kwargs: {
+            "U": U,
+            "Vh": Vh,
+        },
+    )
+    monkeypatch.setattr(fet, "gamma_fidelity", lambda _gamma, _map: 0.5)
+    curve = [] if collect_curve else None
+
+    selection = fet.env_optimal_rank(
+        object(), "B0_1", eps_fid=0.01, fidelity_curve=curve
+    )
+    rank, map_u, map_vh, fid = selection
+
+    identity = torch.eye(2, dtype=torch.complex128)
+    assert rank == 2
+    assert torch.equal(map_u, identity)
+    assert torch.equal(map_vh, identity)
+    assert fid == 1.0
+    assert selection.outcome == "noop"
+    assert selection.candidate_rank == 1
+    assert selection.candidate_fid == 0.5
+    if curve is not None:
+        assert curve == [{"chi": 1, "fid": 0.5, "solver_status": "ok"}]
+
+
+def test_env_optimal_rank_all_nonfinite_is_explicit_solver_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """All-nonfinite optimization is not a finite ``-1`` candidate."""
+    import importlib
+
+    fet = importlib.import_module(f"{_PEPS_PKG}.fet")
+    Gamma = torch.zeros((2, 2, 2, 2), dtype=torch.complex128)
+    U = torch.ones((2, 1), dtype=torch.complex128)
+    Vh = torch.ones((1, 2), dtype=torch.complex128)
+    monkeypatch.setattr(fet, "gamma_TN", lambda _state, _bond: Gamma)
+    monkeypatch.setattr(
+        fet,
+        "_insertion_spectrum",
+        lambda _state, _bond: torch.tensor([1.0, 0.0], dtype=torch.float64),
+    )
+    monkeypatch.setattr(fet, "_exact_rank", lambda _spectrum: 1)
+    monkeypatch.setattr(fet, "_fix_gauge", lambda _gamma: None)
+    monkeypatch.setattr(
+        fet,
+        "_multistart_als_truncation",
+        lambda _gamma, _state, _bond, _chi, _prep, **_kwargs: {
+            "U": U,
+            "Vh": Vh,
+        },
+    )
+    monkeypatch.setattr(
+        fet, "gamma_fidelity", lambda _gamma, _map: float("-inf")
+    )
+    curve: list[dict] = []
+
+    selection = fet.env_optimal_rank(
+        object(), "B0_1", eps_fid=0.01, fidelity_curve=curve
+    )
+    rank, map_u, map_vh, applied_fid = selection
+
+    identity = torch.eye(2, dtype=torch.complex128)
+    assert rank == 2
+    assert torch.equal(map_u, identity)
+    assert torch.equal(map_vh, identity)
+    assert applied_fid == 1.0
+    assert selection.outcome == "solver_failed"
+    assert selection.candidate_rank is None
+    assert selection.candidate_fid is None
+    assert curve == [{"chi": 1, "fid": None, "solver_status": "solver_failed"}]
+
+
+def test_env_optimal_rank_never_rescores_solver_failed_placeholder_as_candidate(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A finite score for a failure placeholder cannot authorize write-back."""
+    import importlib
+
+    fet = importlib.import_module(f"{_PEPS_PKG}.fet")
+    Gamma = torch.zeros((2, 2, 2, 2), dtype=torch.complex128)
+    U = torch.tensor([[1.0], [0.0]], dtype=torch.complex128)
+    Vh = torch.tensor([[1.0, 0.0]], dtype=torch.complex128)
+    monkeypatch.setattr(fet, "gamma_TN", lambda _state, _bond: Gamma)
+    monkeypatch.setattr(
+        fet,
+        "_insertion_spectrum",
+        lambda _state, _bond: torch.tensor([1.0, 0.0], dtype=torch.float64),
+    )
+    monkeypatch.setattr(fet, "_exact_rank", lambda _spectrum: 1)
+    monkeypatch.setattr(fet, "_fix_gauge", lambda _gamma: None)
+    monkeypatch.setattr(
+        fet,
+        "_multistart_als_truncation",
+        lambda _gamma, _state, _bond, _chi, _prep, **_kwargs: {
+            "U": U,
+            "Vh": Vh,
+            "fid": float("-inf"),
+            "solver_status": "solver_failed",
+        },
+    )
+    # The placeholder itself happens to score perfectly.  Its solver status is
+    # still authoritative and must prevent it from becoming a candidate.
+    monkeypatch.setattr(fet, "gamma_fidelity", lambda _gamma, _map: 1.0)
+
+    selection = fet.env_optimal_rank(object(), "B0_1", eps_fid=0.01)
+
+    identity = torch.eye(2, dtype=torch.complex128)
+    assert selection.outcome == "solver_failed"
+    assert selection.env_rank == 2
+    assert torch.equal(selection.U, identity)
+    assert torch.equal(selection.Vh, identity)
+    assert selection.candidate_rank is None
+    assert selection.candidate_fid is None
+
+
+def test_apply_fet_truncation_rolls_back_first_tensor_if_second_modify_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The two-site write-back is transactional across both bond endpoints."""
+    import importlib
+
+    fet = importlib.import_module(f"{_PEPS_PKG}.fet")
+
+    class _FakeTensor:
+        def __init__(self, data: torch.Tensor, *, fail_modify: bool = False) -> None:
+            self.data = data
+            self.inds = ("B0_1",)
+            self.fail_modify = fail_modify
+
+        def modify(self, *, data: torch.Tensor) -> None:
+            if self.fail_modify:
+                self.fail_modify = False
+                raise RuntimeError("injected second-site modify failure")
+            self.data = data
+
+    original_a = torch.tensor([1.0, 2.0], dtype=torch.complex128)
+    original_b = torch.tensor([3.0, 4.0], dtype=torch.complex128)
+    tensor_a = _FakeTensor(original_a.clone())
+    tensor_b = _FakeTensor(original_b.clone(), fail_modify=True)
+    monkeypatch.setattr(
+        fet,
+        "site_tensor",
+        lambda _state, site: tensor_a if int(site) == 0 else tensor_b,
+    )
+    U = torch.tensor([[1.0], [0.0]], dtype=torch.complex128)
+    Vh = torch.tensor([[1.0, 0.0]], dtype=torch.complex128)
+
+    with pytest.raises(RuntimeError, match="injected second-site"):
+        fet.apply_fet_truncation(object(), "B0_1", U, Vh)
+
+    assert torch.equal(tensor_a.data, original_a)
+    assert torch.equal(tensor_b.data, original_b)
+
+
+@pytest.mark.parametrize("failing_site", [0, 1])
+def test_apply_fet_truncation_rolls_back_mutate_then_raise_on_either_endpoint(
+    monkeypatch: pytest.MonkeyPatch,
+    failing_site: int,
+) -> None:
+    """Rollback restores both snapshots even if modify mutates before raising."""
+    import importlib
+
+    fet = importlib.import_module(f"{_PEPS_PKG}.fet")
+
+    class _FakeTensor:
+        def __init__(self, data: torch.Tensor, *, fail_once: bool = False) -> None:
+            self.data = data
+            self.inds = ("B0_1",)
+            self.fail_once = fail_once
+
+        def modify(self, *, data: torch.Tensor) -> None:
+            self.data = data
+            if self.fail_once:
+                self.fail_once = False
+                raise RuntimeError("injected mutate-then-raise")
+
+    originals = [
+        torch.tensor([1.0, 2.0], dtype=torch.complex128),
+        torch.tensor([3.0, 4.0], dtype=torch.complex128),
+    ]
+    tensors = [
+        _FakeTensor(original.clone(), fail_once=index == failing_site)
+        for index, original in enumerate(originals)
+    ]
+    monkeypatch.setattr(fet, "site_tensor", lambda _state, site: tensors[int(site)])
+    U = torch.tensor([[1.0], [0.0]], dtype=torch.complex128)
+    Vh = torch.tensor([[1.0, 0.0]], dtype=torch.complex128)
+
+    with pytest.raises(RuntimeError, match="mutate-then-raise"):
+        fet.apply_fet_truncation(object(), "B0_1", U, Vh)
+
+    assert all(
+        torch.equal(tensor.data, original)
+        for tensor, original in zip(tensors, originals, strict=True)
+    )
+
+
+def test_apply_fet_truncation_rejects_nonfinite_absorption_before_writeback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Finite factors may still overflow; derived tensors must be authenticated."""
+    import importlib
+
+    fet = importlib.import_module(f"{_PEPS_PKG}.fet")
+
+    class _FakeTensor:
+        def __init__(self, data: torch.Tensor) -> None:
+            self.data = data
+            self.inds = ("B0_1",)
+            self.modify_calls = 0
+
+        def modify(self, *, data: torch.Tensor) -> None:
+            self.modify_calls += 1
+            self.data = data
+
+    tensors = [
+        _FakeTensor(torch.tensor([1.0e308, 1.0e308], dtype=torch.complex128)),
+        _FakeTensor(torch.tensor([1.0, 1.0], dtype=torch.complex128)),
+    ]
+    monkeypatch.setattr(fet, "site_tensor", lambda _state, site: tensors[int(site)])
+    U = torch.tensor([[1.0e308], [1.0e308]], dtype=torch.complex128)
+    Vh = torch.tensor([[1.0e-308, 1.0e-308]], dtype=torch.complex128)
+
+    with pytest.raises(RuntimeError, match="non-finite absorption"):
+        fet.apply_fet_truncation(object(), "B0_1", U, Vh)
+
+    assert [tensor.modify_calls for tensor in tensors] == [0, 0]
+
+
+@pytest.mark.parametrize(
+    ("left_dim", "right_dim", "u_shape", "vh_shape", "message"),
+    [
+        (2, 2, (2, 1), (2, 2), "shared positive kept rank"),
+        (2, 2, (3, 1), (1, 2), "original endpoint dimensions"),
+        (2, 3, (2, 1), (1, 3), "endpoint bond dimensions"),
+    ],
+)
+def test_apply_fet_truncation_rejects_cross_endpoint_shape_corruption_before_writeback(
+    monkeypatch: pytest.MonkeyPatch,
+    left_dim: int,
+    right_dim: int,
+    u_shape: tuple[int, int],
+    vh_shape: tuple[int, int],
+    message: str,
+) -> None:
+    import importlib
+
+    fet = importlib.import_module(f"{_PEPS_PKG}.fet")
+
+    class _FakeTensor:
+        def __init__(self, dim: int) -> None:
+            self.data = torch.ones(dim, dtype=torch.complex128)
+            self.inds = ("B0_1",)
+            self.modify_calls = 0
+
+        def modify(self, *, data: torch.Tensor) -> None:
+            self.modify_calls += 1
+            self.data = data
+
+    tensors = [_FakeTensor(left_dim), _FakeTensor(right_dim)]
+    originals = [tensor.data.clone() for tensor in tensors]
+    monkeypatch.setattr(fet, "site_tensor", lambda _state, site: tensors[int(site)])
+    U = torch.ones(u_shape, dtype=torch.complex128)
+    Vh = torch.ones(vh_shape, dtype=torch.complex128)
+
+    with pytest.raises((ValueError, RuntimeError), match=message):
+        fet.apply_fet_truncation(object(), "B0_1", U, Vh)
+
+    assert [tensor.modify_calls for tensor in tensors] == [0, 0]
+    assert all(
+        torch.equal(tensor.data, original)
+        for tensor, original in zip(tensors, originals, strict=True)
+    )
+
+
+def test_policy_cut_rejects_inconsistent_accepted_selector_evidence(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Rejected-candidate attributes cannot override the selected tuple score."""
+    import importlib
+
+    fet = importlib.import_module(f"{_PEPS_PKG}.fet")
+    trajectory = importlib.import_module(f"{_PEPS_PKG}.trajectory")
+    bond = "B0_1"
+    state = _FakeFetState(bond, dim=2)
+    U = torch.ones((2, 1), dtype=torch.complex128)
+    Vh = torch.ones((1, 2), dtype=torch.complex128)
+    inconsistent = fet.FetSelection(
+        1,
+        U,
+        Vh,
+        float("-inf"),
+        outcome="accepted",
+        candidate_rank=1,
+        candidate_fid=0.995,
+        solver_seed=0,
+        attempted_ranks=1,
+        solver_failure_count=0,
+    )
+    writes: list[str] = []
+    monkeypatch.setattr(
+        fet, "env_optimal_rank", lambda *_args, **_kwargs: inconsistent
+    )
+    monkeypatch.setattr(
+        fet,
+        "apply_fet_truncation",
+        lambda *_args, **_kwargs: writes.append("called"),
+    )
+
+    summary = trajectory._policy_cut(
+        state,
+        bond,
+        trajectory.TruncationPolicy("fet_env", eps_fid=0.01),
+        {"exact_rank": 1},
+    )
+
+    assert writes == []
+    assert summary["selector_consistent"] is False
+    assert summary["selected_fidelity_valid"] is False
+    assert summary["writeback_applied"] is False
+    assert summary["outcome"] == "solver_failed"
+
+
+def test_policy_cut_rejects_map_on_wrong_state_device(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Map health includes the carrier device, not only U/Vh agreement."""
+    import importlib
+
+    fet = importlib.import_module(f"{_PEPS_PKG}.fet")
+    trajectory = importlib.import_module(f"{_PEPS_PKG}.trajectory")
+    bond = "B0_1"
+    state = _FakeFetState(bond, dim=2)
+    state.device = "cuda"
+    U = torch.ones((2, 1), dtype=torch.complex128, device="cpu")
+    Vh = torch.ones((1, 2), dtype=torch.complex128, device="cpu")
+    writes: list[str] = []
+    monkeypatch.setattr(
+        fet,
+        "env_optimal_rank",
+        lambda _state, _bond, _eps, **_kwargs: (1, U, Vh, 0.995),
+    )
+    monkeypatch.setattr(
+        fet,
+        "apply_fet_truncation",
+        lambda *_args, **_kwargs: writes.append("called"),
+    )
+
+    summary = trajectory._policy_cut(
+        state,
+        bond,
+        trajectory.TruncationPolicy("fet_env", eps_fid=0.01),
+        {"exact_rank": 1},
+    )
+
+    assert writes == []
+    assert summary["map_device_ok"] is False
+    assert summary["map_valid"] is False
+    assert summary["writeback_applied"] is False
+
+
+def test_fidelity_curve_observation_cannot_change_first_accepted_selection(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Full-curve diagnostics may do extra work but must freeze the fast result."""
+    import importlib
+
+    fet = importlib.import_module(f"{_PEPS_PKG}.fet")
+    Gamma = torch.zeros((2, 2, 2, 2), dtype=torch.complex128)
+    maps = {
+        1: (
+            torch.tensor([[1.0], [0.0]], dtype=torch.complex128),
+            torch.tensor([[0.995, 0.0]], dtype=torch.complex128),
+        ),
+        2: (
+            torch.eye(2, dtype=torch.complex128),
+            torch.eye(2, dtype=torch.complex128),
+        ),
+    }
+    monkeypatch.setattr(fet, "gamma_TN", lambda _state, _bond: Gamma)
+    monkeypatch.setattr(
+        fet,
+        "_insertion_spectrum",
+        lambda _state, _bond: torch.tensor([1.0, 1.0], dtype=torch.float64),
+    )
+    monkeypatch.setattr(fet, "_exact_rank", lambda _spectrum: 2)
+    monkeypatch.setattr(fet, "_fix_gauge", lambda _gamma: None)
+    monkeypatch.setattr(
+        fet,
+        "_multistart_als_truncation",
+        lambda _gamma, _state, _bond, chi, _prep, **_kwargs: {
+            "U": maps[int(chi)][0],
+            "Vh": maps[int(chi)][1],
+            "solver_status": "ok" if int(chi) == 1 else "solver_failed",
+        },
+    )
+    monkeypatch.setattr(
+        fet,
+        "gamma_fidelity",
+        lambda _gamma, map_tensor: 0.995
+        if torch.count_nonzero(map_tensor).item() == 1
+        else 1.0,
+    )
+
+    fast = fet.env_optimal_rank(object(), "B0_1", eps_fid=0.01)
+    curve: list[dict] = []
+    observed = fet.env_optimal_rank(
+        object(), "B0_1", eps_fid=0.01, fidelity_curve=curve
+    )
+
+    assert fast.outcome == observed.outcome == "accepted"
+    assert fast.env_rank == observed.env_rank == 1
+    assert torch.equal(fast.U @ fast.Vh, observed.U @ observed.Vh)
+    assert fast.fid_env == observed.fid_env == 0.995
+    assert fast.attempted_ranks == observed.attempted_ranks == 1
+    assert fast.solver_failure_count == observed.solver_failure_count == 0
+    assert [entry["chi"] for entry in curve] == [1, 2]
+    assert curve[1]["solver_status"] == "solver_failed"
+
+
+def test_policy_cut_nonfinite_map_with_qualifying_fidelity_is_noop(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A stale scalar score cannot authorize a non-finite map write-back."""
+    import importlib
+
+    fet = importlib.import_module(f"{_PEPS_PKG}.fet")
+    trajectory = importlib.import_module(f"{_PEPS_PKG}.trajectory")
+    bond = "B0_1"
+    state = _FakeFetState(bond, dim=2)
+    U = torch.tensor([[complex(float("nan"), 0.0)], [1.0]], dtype=torch.complex128)
+    Vh = torch.ones((1, 2), dtype=torch.complex128)
+    writes: list[str] = []
+
+    monkeypatch.setattr(
+        fet,
+        "env_optimal_rank",
+        lambda _state, _bond, _eps, **_kwargs: (1, U, Vh, 0.995),
+    )
+    monkeypatch.setattr(
+        fet,
+        "apply_fet_truncation",
+        lambda *_args, **_kwargs: writes.append("called"),
+    )
+
+    summary = trajectory._policy_cut(
+        state,
+        bond,
+        trajectory.TruncationPolicy("fet_env", eps_fid=0.01),
+        {"exact_rank": 1},
+    )
+
+    assert writes == []
+    assert summary["outcome"] == "solver_failed"
+    assert summary["map_finite"] is False
+    assert summary["writeback_applied"] is False
+
+
+def test_als_fluctuation_requires_private_generator() -> None:
+    """The fluctuation path must never silently fall back to ambient Torch RNG."""
+    import importlib
+
+    fet = importlib.import_module(f"{_PEPS_PKG}.fet")
+    Gamma = torch.eye(4, dtype=torch.complex128).reshape(2, 2, 2, 2)
+    U0 = torch.eye(2, dtype=torch.complex128)[:, :1]
+
+    with pytest.raises(ValueError, match="private generator"):
+        fet._als_inner(Gamma, 1, U0, trials=1, fluct=True)
+
+
+def test_als_private_generator_does_not_advance_ambient_cpu_rng() -> None:
+    """A solver kick consumes only its private stream."""
+    import importlib
+
+    fet = importlib.import_module(f"{_PEPS_PKG}.fet")
+    Gamma = torch.eye(4, dtype=torch.complex128).reshape(2, 2, 2, 2)
+    U0 = torch.eye(2, dtype=torch.complex128)[:, :1]
+    private = torch.Generator(device="cpu")
+    private.manual_seed(17)
+    torch.manual_seed(1234)
+    before = torch.random.get_rng_state().clone()
+
+    fet._als_inner(
+        Gamma, 1, U0, trials=1, fluct=True, generator=private
+    )
+
+    assert torch.equal(torch.random.get_rng_state(), before)
+
+
+@requires_cuda
+def test_als_private_generator_does_not_advance_ambient_cuda_rng() -> None:
+    """The production-device fluctuation path leaves default CUDA RNG untouched."""
+    import importlib
+
+    fet = importlib.import_module(f"{_PEPS_PKG}.fet")
+    device = torch.device("cuda")
+    Gamma = torch.eye(4, dtype=torch.complex128, device=device).reshape(2, 2, 2, 2)
+    U0 = torch.eye(2, dtype=torch.complex128, device=device)[:, :1]
+    private = fet._private_solver_generator(
+        device,
+        solver_seed=7,
+        bond="B0_1",
+        chi=1,
+        restart_name="rand",
+    )
+    torch.cuda.manual_seed_all(4321)
+    before = torch.cuda.get_rng_state(device).clone()
+
+    fet._als_inner(
+        Gamma, 1, U0, trials=1, fluct=True, generator=private
+    )
+    torch.cuda.synchronize(device)
+
+    assert torch.equal(torch.cuda.get_rng_state(device), before)
+
+
+@requires_cuda
+def test_als_result_is_independent_of_ambient_cuda_seed() -> None:
+    """Fixed solver coordinates give the same map under another ambient seed."""
+    import importlib
+
+    fet = importlib.import_module(f"{_PEPS_PKG}.fet")
+    device = torch.device("cuda")
+    Gamma = torch.eye(4, dtype=torch.complex128, device=device).reshape(2, 2, 2, 2)
+    U0 = torch.eye(2, dtype=torch.complex128, device=device)[:, :1]
+
+    outputs = []
+    for ambient_seed in (11, 987654):
+        torch.cuda.manual_seed_all(ambient_seed)
+        private = fet._private_solver_generator(
+            device,
+            solver_seed=7,
+            bond="B0_1",
+            chi=1,
+            restart_name="rand",
+        )
+        U, Vh, fid = fet._als_inner(
+            Gamma, 1, U0, trials=1, fluct=True, generator=private
+        )
+        torch.cuda.synchronize(device)
+        outputs.append((U @ Vh, fid))
+
+    assert torch.equal(outputs[0][0], outputs[1][0])
+    assert outputs[0][1] == outputs[1][1]
+
+
+@pytest.mark.parametrize("device", ["cpu", "cuda"])
+def test_full_env_selector_does_not_advance_ambient_torch_rng(
+    monkeypatch: pytest.MonkeyPatch,
+    device: str,
+) -> None:
+    """Cover generator construction, seed building, and the complete selector."""
+    if device == "cuda" and not torch.cuda.is_available():
+        pytest.skip("CUDA unavailable")
+    import importlib
+
+    fet = importlib.import_module(f"{_PEPS_PKG}.fet")
+    Gamma = torch.eye(4, dtype=torch.complex128, device=device).reshape(2, 2, 2, 2)
+    spectrum = torch.tensor([1.0, 0.0], dtype=torch.float64, device=device)
+    monkeypatch.setattr(fet, "gamma_TN", lambda _state, _bond: Gamma)
+    monkeypatch.setattr(fet, "_insertion_spectrum", lambda _state, _bond: spectrum)
+    monkeypatch.setattr(fet, "_exact_rank", lambda _spectrum: 1)
+    monkeypatch.setattr(
+        fet,
+        "_carrier_svd_seed",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("unavailable")),
+    )
+    if device == "cuda":
+        torch.cuda.synchronize()
+    cpu_before = torch.random.get_rng_state().clone()
+    cuda_before = [state.clone() for state in torch.cuda.get_rng_state_all()]
+
+    fet.env_optimal_rank(object(), "B0_1", eps_fid=0.01, solver_seed=7)
+
+    if device == "cuda":
+        torch.cuda.synchronize()
+    assert torch.equal(cpu_before, torch.random.get_rng_state())
+    cuda_after = torch.cuda.get_rng_state_all()
+    assert len(cuda_before) == len(cuda_after)
+    assert all(
+        torch.equal(before, after)
+        for before, after in zip(cuda_before, cuda_after, strict=True)
+    )

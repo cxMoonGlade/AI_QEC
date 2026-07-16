@@ -9,7 +9,8 @@ narrative and does not promote an old local output into evidence.
 
 - The simulator has coherence-capable qutrit leakage channels and current PEPO/PEPS research
   carriers.
-- The current PEPS/FET end-to-end stabilizer-entropy gate fails; see `PEPS_FET_VALIDATION.md`.
+- The current strict-target PEPS/FET entropy equality is all-noop: no rank-reducing write-back is
+  accepted, so the non-degeneracy gate remains RED; see `PEPS_FET_VALIDATION.md`.
 - No current test establishes that deleting a coherent leakage contribution preserves the complete
   multi-round detector/observable record.
 - No current theorem or signed artifact supplies a global error bound tight enough to transfer a
@@ -29,4 +30,5 @@ narrative and does not promote an old local output into evidence.
   provenance.
 
 The current disposition is therefore to retain PEPO and PEPS implementations and their valid local
-tests, expose the FET failure, and treat full-record truncation faithfulness as unclosed.
+tests, expose the all-noop FET non-degeneracy failure, and treat full-record truncation faithfulness
+as unclosed.

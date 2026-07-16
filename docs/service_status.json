@@ -411,6 +411,7 @@
       "canonical_record_output": false,
       "layer": "frontend/carrier execution",
       "owners": [
+        "src/error_coupling_simulator/frontend/_mps_actual_split.py",
         "src/error_coupling_simulator/frontend/axis1_mcwf_mps_contract.py",
         "src/error_coupling_simulator/frontend/axis1_mcwf_mps_execution.py",
         "src/error_coupling_simulator/frontend/axis1_qt_mps_contract.py",
@@ -421,10 +422,14 @@
         "error_coupling_simulator.frontend:axis1_qt_mps_restricted_execution_manifest"
       ],
       "dependencies": {"core": ["torch", "quimb", "numpy"], "extras": ["gpu-cu130"]},
-      "external_inputs": ["Sealed Axis-1 schedule, local dimensions and explicit approximation controls"],
-      "outputs": ["Restricted execution/evidence manifest, sampled record frequencies and fail-closed approximation ledger"],
-      "acceptance": ["tests/test_simulator_axis1_schedule.py", "tests/test_axis1_mcwf_dense_certification.py"],
-      "note": "This is a finite-microstep verification slice, not a production full-dxd/full-record backend."
+      "external_inputs": ["Sealed Axis-1 schedule, local dimensions and explicit approximation controls including max_bond=None or a strict positive integer"],
+      "outputs": ["Restricted execution/evidence manifest, sampled record frequencies and actual-Quimb-split approximation ledger with explicit path aggregation"],
+      "acceptance": [
+        "tests/test_simulator_axis1_schedule.py",
+        "tests/test_axis1_mcwf_dense_certification.py",
+        "tests/test_mps_actual_split_helper.py"
+      ],
+      "note": "This is a finite-microstep verification slice, not a production full-dxd/full-record backend. Finite qubit two-site unitary caps ledger every actual Quimb forward-swap/operator/reverse-swap split. Exact branches use incoming-probability weighting; sampled paths average over the declared trajectory count, including zero-event paths. Each gate occurrence authenticates complete trajectory coverage or unit branch mass and fails closed when incomplete. Actual finite-bond loss requires both explicit heuristic worst-cut and path-total discarded-weight gates for restricted acceptance; an observed lossless capped run does not. Local discarded fractions are not a global error bound; uncapped Kraus/jump norms retain separate physical branch-probability semantics."
     },
     {
       "id": "peps_single_wire",
@@ -446,13 +451,13 @@
       "entrypoints": ["error_coupling_simulator.carrier.peps:PepsSampler"],
       "dependencies": {"core": ["torch", "quimb", "numpy"], "extras": ["gpu-cu130"]},
       "external_inputs": ["XZZXSchedule and explicit c128 RunSpec"],
-      "outputs": ["PackedShotBatch and truncation/contraction ledgers"],
+      "outputs": ["PackedShotBatch and truncation/contraction ledgers separating candidate, selected, and transactionally applied FET evidence"],
       "acceptance": [
         "tests/test_peps_host_seam.py",
         "tests/test_peps_trajectory_carrier.py",
         "tests/test_peps_fet.py"
       ],
-      "note": "Current feasibility carrier. The d3 state and record checks, host seam, and FET implementation remain executable; finite-truncation fidelity of the complete multi-round record and d5/d7 scientific claims remain open."
+      "note": "Current feasibility carrier. The FET writeback boundary now fails closed, rolls back both endpoints transactionally, and uses a declared private solver RNG without advancing ambient CPU/CUDA streams. Those are engineering guarantees only: at the registered strict eps_fid the d3 entropy equality is all-noop, with zero authenticated rank-reducing writebacks, so the FET non-degeneracy gate is RED and pruning remains scientifically unvalidated. Fresh-process replay and the literature bridge from local FET fidelity to entropy/full-record faithfulness remain open; d5/d7 scientific claims remain provisional."
     },
     {
       "id": "pepo_density_matrix_carrier",

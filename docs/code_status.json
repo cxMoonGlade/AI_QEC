@@ -5,6 +5,10 @@
     "status": "TOOLING",
     "note": "Repository development utilities; not installed as simulator runtime modules."
   },
+  "tools/diagnostics": {
+    "status": "TOOLING",
+    "note": "Committed numerical diagnostics and differential-audit harnesses; not installed as simulator runtime modules."
+  },
   "tests/harness": {
     "status": "TOOLING",
     "note": "Process-isolated service acceptance, coverage, mutation, GPU-lease, and subprocess supervision utilities."

@@ -33,6 +33,7 @@ from .axis1_state_evidence import (
     _require_cuda_device,
     axis1_state_evolution_evidence_manifest,
 )
+from ._mps_actual_split import normalize_mps_max_bond
 from .axis1_qutip_cuquantum_probe import (
     AXIS1_QUTIP_CUQUANTUM_PROBE_BACKEND_CONTRACT,
     axis1_qutip_cuquantum_record_probe_manifest,
@@ -678,7 +679,9 @@ def _validate_mcwf_mps_contract_options(options: dict[str, Any]) -> dict[str, An
         "max_bond",
         "microstep_count",
         "rng_seed",
+        "total_discarded_weight_gate",
         "trajectory_count",
+        "worst_cut_discarded_weight_gate",
     }
     unknown = sorted(set(options) - allowed)
     if unknown:
@@ -692,7 +695,9 @@ def _validate_mcwf_mps_contract_options(options: dict[str, Any]) -> dict[str, An
     if "leaked_readout_b" in out:
         out["leaked_readout_b"] = float(out["leaked_readout_b"])
     if "max_bond" in out and out["max_bond"] is not None:
-        out["max_bond"] = int(out["max_bond"])
+        out["max_bond"] = normalize_mps_max_bond(
+            out["max_bond"], allow_none=False
+        )
     if "microstep_count" in out:
         out["microstep_count"] = int(out["microstep_count"])
     if "trajectory_count" in out:

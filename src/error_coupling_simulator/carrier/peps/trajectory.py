@@ -83,6 +83,7 @@ from .state import (
     build_codestate_peps,
     qutrit_gate,
     renormalize,
+    site_tensor,
 )
 from .stab_tt import stab_tt_singlewire, apply_stab_branch
 
@@ -92,6 +93,9 @@ W_MAX_DEFAULT = 160
 #: Grown-dimension abort: fires when any grown dimension exceeds 40.
 #: D = 40 itself is processed; the check occurs before metric construction.
 D_ABORT_DEFAULT = 40
+#: Explicit deterministic seed for FET's private optimization RNG.  This is a
+#: numerical-algorithm coordinate, never a physical trajectory random stream.
+FET_SOLVER_SEED_DEFAULT = 0
 
 class BondAbortError(RuntimeError):
     """Orderly stop when a grown path-bond dimension exceeds ``D_abort``.
@@ -129,6 +133,7 @@ class TruncationPolicy:
     D_cap: int | None = None
     W_max: int = W_MAX_DEFAULT
     eps_fid: float | None = None
+    fet_solver_seed: int = FET_SOLVER_SEED_DEFAULT
 
     def __post_init__(self) -> None:
         if self.mode not in ("dynamic_eps", "d_cap", "lossless", "fet_env"):
@@ -140,10 +145,20 @@ class TruncationPolicy:
                 raise ValueError(f"W_max must be >= 1 (got {self.W_max})")
         if self.mode == "d_cap" and (self.D_cap is None or int(self.D_cap) < 1):
             raise ValueError(f"d_cap requires D_cap >= 1 (got {self.D_cap})")
-        if self.mode == "fet_env" and (self.eps_fid is None or not float(self.eps_fid) > 0.0):
+        if self.mode == "fet_env" and (
+            self.eps_fid is None or not 0.0 < float(self.eps_fid) < 1.0
+        ):
             # fet_env does not require eps_spike: its pass 1 is a
             # strict NO-OP, so it never reads the dynamic-eps window budget.
-            raise ValueError(f"fet_env requires eps_fid > 0 (got {self.eps_fid})")
+            raise ValueError(
+                "fet_env requires 0 < eps_fid < 1 "
+                f"(got {self.eps_fid})"
+            )
+        if self.mode == "fet_env" and int(self.fet_solver_seed) < 0:
+            raise ValueError(
+                "fet_env requires fet_solver_seed >= 0 "
+                f"(got {self.fet_solver_seed})"
+            )
 
 
 def _insertion_spectrum(state: PepsState, bond: str) -> torch.Tensor:
@@ -299,19 +314,236 @@ def _policy_cut(state: PepsState, bond: str, policy: TruncationPolicy,
         # ONCE inside `env_optimal_rank`, which returns the achieved env-fidelity
         # so we do not rebuild `Gamma` here just to re-score the ledger (no
         # double `gamma_TN` per bond).
-        from .fet import apply_fet_truncation, env_optimal_rank
+        from .fet import _parse_bond, apply_fet_truncation, env_optimal_rank
         dim_in = int(state.tn.ind_size(bond))
-        env_rank, U, Vh, fid_g = env_optimal_rank(state, bond, float(policy.eps_fid))
-        apply_fet_truncation(state, bond, U, Vh)
+        requested_solver_seed = int(policy.fet_solver_seed)
+        selection = env_optimal_rank(
+            state,
+            bond,
+            float(policy.eps_fid),
+            solver_seed=requested_solver_seed,
+        )
+        selected_env_rank, U, Vh, selected_fid = selection
+        selected_env_rank = int(selected_env_rank)
+        selected_fid = float(selected_fid)
+        selector_outcome = getattr(selection, "outcome", None)
+        returned_solver_seed = getattr(selection, "solver_seed", None)
+        attempted_ranks = getattr(selection, "attempted_ranks", None)
+        solver_failure_count = getattr(selection, "solver_failure_count", None)
+        integer_metadata_valid = bool(
+            type(returned_solver_seed) is int
+            and type(attempted_ranks) is int
+            and type(solver_failure_count) is int
+            and attempted_ranks > 0
+            and 0 <= solver_failure_count <= attempted_ranks
+        )
+        solver_seed_consistent = bool(
+            integer_metadata_valid
+            and returned_solver_seed == requested_solver_seed
+        )
+        proposed_env_rank = getattr(selection, "candidate_rank", selected_env_rank)
+        candidate_fid = getattr(selection, "candidate_fid", selected_fid)
+        if proposed_env_rank is not None:
+            proposed_env_rank = int(proposed_env_rank)
+        if candidate_fid is not None:
+            candidate_fid = float(candidate_fid)
+        fid_target = 1.0 - float(policy.eps_fid)
+        maps_are_tensors = isinstance(U, torch.Tensor) and isinstance(Vh, torch.Tensor)
+        map_shapes_ok = bool(
+            maps_are_tensors
+            and tuple(U.shape) == (dim_in, selected_env_rank)
+            and tuple(Vh.shape) == (selected_env_rank, dim_in)
+        )
+        map_dtype_ok = bool(
+            maps_are_tensors and U.dtype == CDTYPE and Vh.dtype == CDTYPE
+        )
+        if isinstance(state, PepsState):
+            endpoint_a, endpoint_b = _parse_bond(bond)
+            endpoint_devices = (
+                site_tensor(state, endpoint_a).data.device,
+                site_tensor(state, endpoint_b).data.device,
+            )
+            map_device_ok = bool(
+                maps_are_tensors
+                and U.device == Vh.device
+                and U.device == endpoint_devices[0] == endpoint_devices[1]
+            )
+        else:
+            # Lightweight mutation-firewall fixtures do not construct a full
+            # PepsState.  Match an unindexed declaration such as ``cuda`` by
+            # device type; production PepsState always takes the endpoint path.
+            try:
+                declared_device = torch.device(state.device)
+            except (AttributeError, TypeError, RuntimeError, ValueError):
+                declared_device = None
+            map_device_ok = bool(
+                maps_are_tensors
+                and declared_device is not None
+                and U.device == Vh.device
+                and U.device.type == declared_device.type
+                and (
+                    declared_device.index is None
+                    or U.device.index == declared_device.index
+                )
+            )
+        map_finite = bool(
+            maps_are_tensors
+            and map_dtype_ok
+            and torch.isfinite(U).all().item()
+            and torch.isfinite(Vh).all().item()
+        )
+        map_valid = bool(
+            map_shapes_ok and map_dtype_ok and map_device_ok and map_finite
+        )
+        fallback_identity_factors = bool(
+            maps_are_tensors
+            and selected_env_rank == dim_in
+            and tuple(U.shape) == (dim_in, dim_in)
+            and tuple(Vh.shape) == (dim_in, dim_in)
+            and torch.equal(
+                U, torch.eye(dim_in, dtype=CDTYPE, device=U.device)
+            )
+            and torch.equal(
+                Vh, torch.eye(dim_in, dtype=CDTYPE, device=Vh.device)
+            )
+        )
+        candidate_fid_valid = bool(
+            candidate_fid is not None
+            and np.isfinite(candidate_fid)
+            and 0.0 <= candidate_fid <= 1.0
+        )
+        selected_fid_valid = bool(
+            np.isfinite(selected_fid) and 0.0 <= selected_fid <= 1.0
+        )
+        target_met = bool(
+            candidate_fid_valid and candidate_fid >= fid_target
+        )
+        selected_target_met = bool(
+            selected_fid_valid and selected_fid >= fid_target
+        )
+        selector_allows_writeback = selector_outcome == "accepted"
+        if selector_outcome == "accepted":
+            outcome_evidence_consistent = bool(
+                proposed_env_rank == selected_env_rank
+                and candidate_fid_valid
+                and selected_fid_valid
+                and target_met
+                and np.isclose(
+                    candidate_fid,
+                    selected_fid,
+                    rtol=1.0e-14,
+                    atol=1.0e-15,
+                )
+                and integer_metadata_valid
+                and attempted_ranks == selected_env_rank
+            )
+        elif selector_outcome == "noop":
+            outcome_evidence_consistent = bool(
+                selected_env_rank == dim_in
+                and proposed_env_rank is not None
+                and 0 < proposed_env_rank <= dim_in
+                and selected_fid_valid
+                and selected_fid == 1.0
+                and candidate_fid_valid
+                and not target_met
+                and fallback_identity_factors
+                and integer_metadata_valid
+            )
+        elif selector_outcome == "solver_failed":
+            outcome_evidence_consistent = bool(
+                selected_env_rank == dim_in
+                and proposed_env_rank is None
+                and selected_fid_valid
+                and selected_fid == 1.0
+                and not candidate_fid_valid
+                and fallback_identity_factors
+                and integer_metadata_valid
+                and solver_failure_count == attempted_ranks
+            )
+        else:
+            outcome_evidence_consistent = False
+        selector_consistent = bool(
+            solver_seed_consistent and outcome_evidence_consistent
+        )
+        rank_reducing = 0 < selected_env_rank < dim_in
+        writeback_applied = bool(
+            selector_allows_writeback
+            and selector_consistent
+            and selected_target_met
+            and rank_reducing
+            and map_valid
+        )
+        if writeback_applied:
+            apply_fet_truncation(state, bond, U, Vh)
+            outcome = "accepted"
+            reason = "fidelity_target_met"
+        elif (
+            selector_outcome == "solver_failed"
+            or not selected_fid_valid
+            or not candidate_fid_valid
+            or not selector_consistent
+            or not map_valid
+        ):
+            outcome = "solver_failed"
+            if not selector_consistent:
+                reason = "selector_evidence_inconsistent"
+            elif not selected_fid_valid:
+                reason = "invalid_or_nonfinite_selected_fidelity"
+            elif not candidate_fid_valid:
+                reason = "invalid_or_nonfinite_candidate_fidelity"
+            elif not map_valid:
+                reason = "invalid_candidate_map"
+            else:
+                reason = "selector_solver_failed"
+        else:
+            outcome = "noop"
+            reason = (
+                "full_rank_identity"
+                if selected_env_rank == dim_in and target_met
+                else "fidelity_target_not_met"
+            )
+        applied_env_rank = int(state.tn.ind_size(bond))
+        applied_fid = float(selected_fid) if writeback_applied else 1.0
+        fid_evidence = (
+            float(candidate_fid)
+            if candidate_fid is not None
+            else float("-inf")
+        )
         summary = {
             "op": "fet_truncate",
             "mode": policy.mode,
             "bond": str(bond),
             "dim_in": int(dim_in),
-            "dim_out": int(state.tn.ind_size(bond)),
+            "dim_out": int(applied_env_rank),
             "exact_rank": rec.get("exact_rank"),
-            "env_rank": int(env_rank),
-            "Fid_gamma": float(fid_g),  # ASCII ledger key for Fid_Γ
+            "env_rank": int(applied_env_rank),
+            "selected_env_rank": int(selected_env_rank),
+            "proposed_env_rank": proposed_env_rank,
+            "Fid_gamma": fid_evidence,  # candidate Fid_Γ; may be non-finite evidence
+            "selected_Fid_gamma": float(selected_fid),
+            "applied_Fid_gamma": float(applied_fid),
+            "fidelity_target": float(fid_target),
+            "target_met": bool(target_met),
+            "candidate_fidelity_valid": bool(candidate_fid_valid),
+            "selected_target_met": bool(selected_target_met),
+            "selected_fidelity_valid": bool(selected_fid_valid),
+            "selector_consistent": bool(selector_consistent),
+            "selector_metadata_valid": bool(integer_metadata_valid),
+            "solver_seed_consistent": bool(solver_seed_consistent),
+            "fallback_identity_factors": bool(fallback_identity_factors),
+            "map_shapes_ok": bool(map_shapes_ok),
+            "map_dtype_ok": bool(map_dtype_ok),
+            "map_device_ok": bool(map_device_ok),
+            "map_finite": bool(map_finite),
+            "map_valid": bool(map_valid),
+            "outcome": str(outcome),
+            "reason": str(reason),
+            "writeback_applied": bool(writeback_applied),
+            "selector_outcome": selector_outcome,
+            "solver_failure_count": solver_failure_count,
+            "attempted_ranks": attempted_ranks,
+            "fet_solver_seed": returned_solver_seed,
+            "requested_fet_solver_seed": requested_solver_seed,
             "eps_fid": float(policy.eps_fid),
         }
         state.ledger.append(summary)
@@ -772,6 +1004,8 @@ class PepsSampler:
             "eps_spike": policy.eps_spike,
             "D_cap": policy.D_cap,
             "W_max": policy.W_max,
+            "eps_fid": policy.eps_fid,
+            "fet_solver_seed": int(policy.fet_solver_seed),
         }
         header["peps_R_n"] = R_n
         header["peps_R_x"] = R_x

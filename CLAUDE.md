@@ -15,9 +15,10 @@ status, entry points, acceptance files, and the complete flow are defined by
 
 The current carrier frontier is the single-wire two-dimensional PEPS research route. The
 density-matrix PEPO is also retained as a tested research carrier. Neither has established
-finite-truncation full-record or d5/d7 faithfulness. The current PEPS/FET entropy gate fails at
-`0.10860941571062639` versus the independent GF(2) reference `2.0` with tolerance `1e-4`; do not
-weaken or hide this failure.
+finite-truncation full-record or d5/d7 faithfulness. The current PEPS/FET scientific gate fails at
+non-degeneracy: at strict `eps_fid=1e-8`, the entropy equality passes only because all FET
+cuts take the identity fallback and zero rank-reducing write-backs occur. Do not weaken the target or
+hide this all-noop RED.
 
 The classical finite-RTN source process and the static qutrit XZZX leakage process are separate
 implemented routes. Do not describe an integrated source-driven qutrit XZZX record product as

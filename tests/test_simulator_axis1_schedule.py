@@ -4036,6 +4036,10 @@ def test_axis1_qt_mps_restricted_execution_finite_bond_ledger_catches_truncation
     assert certification["passed"] is False
     assert certification["comparison_outcome_is_metric"] is False
     assert certification["max_abs_probability_difference"] > 1.0e-3
+    assert manifest["mps_execution"]["total_probability"] == pytest.approx(
+        1.0, abs=1.0e-8
+    )
+    assert manifest["mps_execution"]["total_probability_residual"] <= 1.0e-8
 
     ledger = manifest["mps_execution"]["mps_truncation_ledger"]
     assert ledger["explicit_truncation_requested"] is True
@@ -4046,7 +4050,13 @@ def test_axis1_qt_mps_restricted_execution_finite_bond_ledger_catches_truncation
     assert ledger["accepted_as_exact_bond_representation"] is False
     assert ledger["discarded_weight_ledger_complete"] is True
     assert ledger["ledger_method"] == (
-        "cuda_shadow_state_schmidt_tail_per_two_site_hamiltonian_gate"
+        "quimb_actual_svd_split_per_two_site_unitary_gate"
+    )
+    assert ledger["discarded_weight_units"] == "fraction_of_pre_split_weight"
+    assert ledger["not_a_global_error_bound"] is True
+    assert ledger["actual_split_count"] == 1
+    assert ledger["actual_discarded_weight_raw_sum"] == pytest.approx(
+        0.5, abs=1.0e-8
     )
     assert ledger["discarded_weight_sum"] == pytest.approx(0.5, abs=1.0e-8)
     assert ledger["worst_cut_discarded_weight"] == pytest.approx(0.5, abs=1.0e-8)
@@ -4055,10 +4065,19 @@ def test_axis1_qt_mps_restricted_execution_finite_bond_ledger_catches_truncation
     event = ledger["truncation_events"][0]
     assert event["operator_family"] == "CTRL_CZ"
     assert event["support"] == [0, 1]
-    assert event["ledger_method"] == "cuda_shadow_state_schmidt_tail"
+    assert event["ledger_method"] == (
+        "quimb_actual_svd_split_per_two_site_unitary_gate"
+    )
     assert event["discarded_weight_sum"] == pytest.approx(0.5, abs=1.0e-8)
-    assert event["cut_records"][0]["pre_truncation_rank"] == 2
-    assert event["cut_records"][0]["kept_rank"] == 1
+    assert event["split_count"] == 1
+    assert event["physical_branch_probability"] is None
+    assert event["raw_output_norm_sq"] == pytest.approx(0.5, abs=1.0e-8)
+    assert event["restored_output_norm_sq"] == pytest.approx(1.0, abs=1.0e-8)
+    assert event["split_records"][0]["path_role"] == "two_site_operator_split"
+    assert event["split_records"][0]["actual_kept_rank"] == 1
+    assert event["split_records"][0][
+        "actual_discarded_weight_fraction_of_pre_split"
+    ] == pytest.approx(0.5, abs=1.0e-8)
     policy = manifest["restricted_acceptance_policy"]
     assert policy["mps_truncation"]["truncation_detected"] is True
     assert policy["mps_truncation"]["accepted_as_restricted_risk_ledger"] is True

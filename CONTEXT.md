@@ -38,7 +38,8 @@ quantum-bath research surface are separate registered services.
 
 The density-matrix PEPO and single-wire PEPS are retained research carriers. PEPO is not the canonical
 record backend. PEPS full-record finite-truncation faithfulness is open, and its current FET
-end-to-end entropy gate fails. See `docs/simulator_validation/PEPO_VALIDATION.md` and
+entropy equality is all-noop at the registered strict target: zero rank-reducing writes make the
+non-degeneracy gate RED. See `docs/simulator_validation/PEPO_VALIDATION.md` and
 `docs/simulator_validation/PEPS_FET_VALIDATION.md`.
 
 The source-conditioned dense-qubit process and static data-qutrit XZZX leakage process are not one

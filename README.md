@@ -26,8 +26,9 @@ The source-conditioned dense-qubit process and the static qutrit XZZX leakage pr
 routes; there is no current integrated source-driven qutrit XZZX product.
 
 PEPO is retained as a tested research carrier but is not the canonical record backend. PEPS
-full-record finite-truncation faithfulness is open. Its current FET end-to-end entropy gate fails at
-`0.10860941571062639` versus an independent GF(2) reference of `2.0` with tolerance `1e-4`.
+full-record finite-truncation faithfulness is open. At strict `eps_fid=1e-8`, its entropy equality to
+the independent GF(2) reference is currently all-noop: zero rank-reducing FET write-backs make the
+non-degeneracy gate RED.
 
 ## Install for development
 

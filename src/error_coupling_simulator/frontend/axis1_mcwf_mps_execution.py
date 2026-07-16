@@ -34,11 +34,17 @@ from .axis1_ideal_controls import (
     _one_qubit_generator_and_coefficient,
     _two_qubit_generator_and_coefficient,
 )
+from ._mps_actual_split import (
+    apply_capped_two_site_unitary,
+    commit_mps_candidate_,
+    normalize_mps_max_bond,
+)
 from .axis1_qt_mps_execution import (
     _is_supported_hamiltonian_term,
     _max_branch_bond,
     _measurement_boundary,
     _measurement_records,
+    _normalize_optional_nonnegative_gate,
     _norm_sq,
     _reset_basis,
     _sample_index,
@@ -112,6 +118,8 @@ def axis1_mcwf_mps_state_record_execution_manifest(
     local_dims: Sequence[int] | None = None,
     device: str = "cuda",
     max_bond: int | None = None,
+    worst_cut_discarded_weight_gate: float | None = None,
+    total_discarded_weight_gate: float | None = None,
     microstep_count: int = 1,
     finite_step_order: str = _FINITE_STEP_ORDER_FIRST,
     trajectory_count: int = 1,
@@ -132,9 +140,16 @@ def axis1_mcwf_mps_state_record_execution_manifest(
     required ``microstep_count``. Pass ``None`` to disable for a deliberate convergence study.
     """
 
+    max_bond = normalize_mps_max_bond(max_bond)
+    worst_cut_discarded_weight_gate = _normalize_optional_nonnegative_gate(
+        worst_cut_discarded_weight_gate,
+        name="worst_cut_discarded_weight_gate",
+    )
+    total_discarded_weight_gate = _normalize_optional_nonnegative_gate(
+        total_discarded_weight_gate,
+        name="total_discarded_weight_gate",
+    )
     dev = _require_cuda_device(device)
-    if max_bond is not None and int(max_bond) <= 0:
-        raise ValueError("max_bond must be positive when provided")
     if int(microstep_count) <= 0:
         raise ValueError("microstep_count must be positive")
     if int(trajectory_count) <= 0:
@@ -169,6 +184,8 @@ def axis1_mcwf_mps_state_record_execution_manifest(
         "mcwf_mps_contract": _contract_summary(contract),
         "local_hilbert_space": dict(contract["local_hilbert_space"]),
         "max_bond": None if max_bond is None else int(max_bond),
+        "worst_cut_discarded_weight_gate": worst_cut_discarded_weight_gate,
+        "total_discarded_weight_gate": total_discarded_weight_gate,
         "microstep_count": int(microstep_count),
         "mass_residual_budget": (
             None if mass_residual_budget is None else float(mass_residual_budget)
@@ -205,6 +222,11 @@ def axis1_mcwf_mps_state_record_execution_manifest(
             },
             "mps_truncation": {
                 "max_bond": None if max_bond is None else int(max_bond),
+                "worst_cut_discarded_weight_gate": (
+                    worst_cut_discarded_weight_gate
+                ),
+                "total_discarded_weight_gate": total_discarded_weight_gate,
+                "gate_role": "heuristic_policy_gate_not_metric",
                 "accepted_as_production_error_bound": False,
                 "epistemic_class": "c",
             },
@@ -321,6 +343,8 @@ def axis1_mcwf_mps_state_record_execution_manifest(
         program=program,
         rng_seed=rng_seed,
         trajectory_count=int(trajectory_count),
+        worst_cut_discarded_weight_gate=worst_cut_discarded_weight_gate,
+        total_discarded_weight_gate=total_discarded_weight_gate,
     )
     passed = bool(acceptance["accepted_for_restricted_execution"])
     payload = {
@@ -361,6 +385,15 @@ def _execute_sampled_mcwf_program(
     import quimb.tensor as qtn
 
     step_order = _normalize_finite_step_order(finite_step_order)
+    expected_gate_occurrences = (
+        _mcwf_expected_actual_split_occurrences(
+            program,
+            microstep_count=int(microstep_count),
+            finite_step_order=step_order,
+        )
+        if max_bond is not None
+        else ()
+    )
     ntraj = int(trajectory_count)
     seed = 0 if rng_seed is None else int(rng_seed)
     generator = torch.Generator(device=device)
@@ -419,6 +452,7 @@ def _execute_sampled_mcwf_program(
                         microstep_count=int(microstep_count),
                         branch_bits=bits,
                         local_dims=local_dims,
+                        trajectory_index=trajectory_index,
                     )
                     microstep_mass_residuals.append(
                         float(record["probability_mass_residual"])
@@ -584,6 +618,8 @@ def _execute_sampled_mcwf_program(
             local_dims=local_dims,
             max_observed_bond=max_observed_bond,
             truncation_events=truncation_events,
+            trajectory_count=ntraj,
+            expected_gate_occurrences=expected_gate_occurrences,
         ),
         "applied_substeps": applied,
         "detector_records_emitted": bool(detector_names),
@@ -614,6 +650,7 @@ def _mcwf_microstep(
     microstep_count: int,
     branch_bits: tuple[int, ...],
     local_dims: tuple[int, ...],
+    trajectory_index: int | None = None,
 ) -> tuple[Any, dict[str, Any]]:
     state = mps.copy()
     if finite_step_order == _FINITE_STEP_ORDER_STRANG:
@@ -628,6 +665,8 @@ def _mcwf_microstep(
             microstep_index=microstep_index,
             microstep_count=microstep_count,
             local_dims=local_dims,
+            hamiltonian_pass_index=0,
+            trajectory_index=trajectory_index,
         )
         state, record = _sample_joint_jump_or_nojump(
             state,
@@ -648,6 +687,8 @@ def _mcwf_microstep(
             microstep_index=microstep_index,
             microstep_count=microstep_count,
             local_dims=local_dims,
+            hamiltonian_pass_index=1,
+            trajectory_index=trajectory_index,
         )
         return state, record
     _apply_hamiltonian_terms_multilevel(
@@ -661,6 +702,8 @@ def _mcwf_microstep(
         microstep_index=microstep_index,
         microstep_count=microstep_count,
         local_dims=local_dims,
+        hamiltonian_pass_index=0,
+        trajectory_index=trajectory_index,
     )
     return _sample_joint_jump_or_nojump(
         state,
@@ -684,15 +727,49 @@ def _apply_hamiltonian_terms_multilevel(
     microstep_index: int,
     microstep_count: int,
     local_dims: tuple[int, ...],
+    hamiltonian_pass_index: int = 0,
+    trajectory_index: int | None = None,
 ) -> None:
     dt = float(dt_ns)
     all_qubit_dims = all(dim == 2 for dim in local_dims)
-    for group in _hamiltonian_group_gates(
-        substep,
-        dt_ns=dt,
-        local_dims=local_dims,
-        device=device,
-    ):
+    if max_bond is not None:
+        if not all_qubit_dims:
+            raise ValueError(
+                "finite-bond actual-split ledger is not implemented for multilevel sites"
+            )
+        hamiltonian_supports = [
+            tuple(int(q) for q in term["support"])
+            for term in substep.get("terms", ())
+            if str(term["kind"]) == "hamiltonian"
+        ]
+        support_clusters = _connected_support_clusters(hamiltonian_supports)
+        multisite = []
+        for member_indices in support_clusters:
+            cluster_support = tuple(
+                sorted(
+                    {
+                        site
+                        for member_index in member_indices
+                        for site in hamiltonian_supports[member_index]
+                    }
+                )
+            )
+            if len(cluster_support) > 2:
+                multisite.append(cluster_support)
+        if multisite:
+            raise ValueError(
+                "actual_split_ledger_not_implemented_for_multisite_cluster: "
+                f"supports={multisite!r}"
+            )
+    groups = list(
+        _hamiltonian_group_gates(
+            substep,
+            dt_ns=dt,
+            local_dims=local_dims,
+            device=device,
+        )
+    )
+    for group in groups:
         _apply_mps_gate(
             mps,
             group["gate"],
@@ -707,7 +784,9 @@ def _apply_hamiltonian_terms_multilevel(
             microstep_index=microstep_index,
             microstep_count=microstep_count,
             truncation_events=truncation_events,
-            track_shadow=all_qubit_dims,
+            track_actual_splits=all_qubit_dims,
+            hamiltonian_pass_index=hamiltonian_pass_index,
+            trajectory_index=trajectory_index,
         )
 
 
@@ -757,6 +836,93 @@ def _connected_support_clusters(
             order.append(r)
         clusters[r].append(i)
     return [clusters[r] for r in order]
+
+
+def _mcwf_expected_actual_split_occurrences(
+    program: dict[str, Any],
+    *,
+    microstep_count: int,
+    finite_step_order: str,
+) -> tuple[dict[str, Any], ...]:
+    """Precompute every capped two-site grouped-Hamiltonian occurrence."""
+
+    count = int(microstep_count)
+    if count < 1:
+        raise ValueError("microstep_count must be positive")
+    step_order = _normalize_finite_step_order(finite_step_order)
+    pass_indices = (0, 1) if step_order == _FINITE_STEP_ORDER_STRANG else (0,)
+    occurrences: list[dict[str, Any]] = []
+    for substep in program["program"]["substeps"]:
+        if str(substep["substep_kind"]) == "reset":
+            continue
+        term_records = [
+            {
+                "term_index": int(term_index),
+                "support": tuple(int(q) for q in term["support"]),
+                "family": str(term["operator_family"]).upper(),
+            }
+            for term_index, term in enumerate(substep.get("terms", ()))
+            if str(term["kind"]) == "hamiltonian"
+        ]
+        if not term_records:
+            continue
+        supports = [record["support"] for record in term_records]
+        grouped_identities: list[dict[str, Any]] = []
+        for member_indices in _connected_support_clusters(supports):
+            members = [term_records[index] for index in member_indices]
+            cluster_support = tuple(
+                sorted(
+                    {
+                        site
+                        for member in members
+                        for site in member["support"]
+                    }
+                )
+            )
+            if len(cluster_support) > 2:
+                raise ValueError(
+                    "actual_split_ledger_not_implemented_for_multisite_cluster: "
+                    f"supports={[cluster_support]!r}"
+                )
+            if len(cluster_support) != 2:
+                continue
+            grouped_identities.append(
+                {
+                    "term_index": min(
+                        int(member["term_index"]) for member in members
+                    ),
+                    "operator_family": (
+                        "H_CLUSTER["
+                        + "+".join(str(member["family"]) for member in members)
+                        + "]"
+                    ),
+                    "support": [
+                        int(cluster_support[0]), int(cluster_support[1])
+                    ],
+                }
+            )
+        if not grouped_identities:
+            continue
+        dt_micro = float(substep["dt_ns"]) / float(count)
+        dt_effective = (
+            0.5 * dt_micro
+            if step_order == _FINITE_STEP_ORDER_STRANG
+            else dt_micro
+        )
+        for microstep_index in range(count):
+            for pass_index in pass_indices:
+                for identity in grouped_identities:
+                    occurrences.append(
+                        {
+                            "substep_id": str(substep["substep_id"]),
+                            **identity,
+                            "microstep_index": int(microstep_index),
+                            "microstep_count": int(count),
+                            "hamiltonian_pass_index": int(pass_index),
+                            "dt_ns_effective": float(dt_effective),
+                        }
+                    )
+    return tuple(occurrences)
 
 
 def _lift_hamiltonian_to_cluster(
@@ -1317,27 +1483,66 @@ def _apply_mps_gate(
     microstep_index: int,
     microstep_count: int,
     truncation_events: list[dict[str, Any]],
-    track_shadow: bool,
+    track_actual_splits: bool,
+    hamiltonian_pass_index: int = 0,
+    trajectory_index: int | None = None,
 ) -> None:
-    if max_bond is not None and track_shadow:
-        from .axis1_qt_mps_execution import _shadow_truncation_event
-
-        truncation_events.append(
-            _shadow_truncation_event(
+    if max_bond is not None:
+        if not track_actual_splits:
+            raise ValueError(
+                "finite-bond actual-split ledger requires an all-qubit MPS"
+            )
+        if len(support) > 2:
+            raise ValueError(
+                "actual_split_ledger_not_implemented_for_multisite_cluster: "
+                f"support={support!r}"
+            )
+        if len(support) == 2:
+            candidate, event = apply_capped_two_site_unitary(
                 mps,
                 gate,
-                support=support,
-                substep=substep,
-                term=term,
-                term_index=term_index,
-                branch_bits=branch_bits,
-                device=device,
-                max_bond=int(max_bond),
-                dt_ns=dt_ns,
-                microstep_index=microstep_index,
-                microstep_count=microstep_count,
+                support=(int(support[0]), int(support[1])),
+                max_bond=max_bond,
+                context={
+                    "substep_id": str(substep["substep_id"]),
+                    "substep_kind": str(substep["substep_kind"]),
+                    "term_index": int(term_index),
+                    "operator_family": str(term["operator_family"]),
+                    "branch_record_prefix": list(branch_bits),
+                    "trajectory_index": (
+                        None if trajectory_index is None else int(trajectory_index)
+                    ),
+                    "incoming_branch_weight": None,
+                    "array_backend": f"torch_{device}_complex128",
+                    "dt_ns_effective": float(dt_ns),
+                    "microstep_index": int(microstep_index),
+                    "microstep_count": int(microstep_count),
+                    "hamiltonian_pass_index": int(hamiltonian_pass_index),
+                    "epistemic_class": "c",
+                },
             )
-        )
+            event["ledger_method"] = (
+                "quimb_actual_svd_split_per_two_site_unitary_gate"
+            )
+            event["discarded_weight_sum"] = float(
+                event["actual_discarded_weight_fraction_sum"]
+            )
+            event["worst_cut_discarded_weight"] = float(
+                event["worst_actual_discarded_weight_fraction"]
+            )
+            event["discarded_weight_units"] = "fraction_of_pre_split_weight"
+            event["compatibility_aliases"] = {
+                "discarded_weight_sum": "actual_discarded_weight_fraction_sum",
+                "worst_cut_discarded_weight": "worst_actual_discarded_weight_fraction",
+            }
+            event["n_truncated_cuts"] = sum(
+                1
+                for record in event["split_records"]
+                if float(record["actual_discarded_weight_raw"]) > 0.0
+            )
+            commit_mps_candidate_(mps, candidate)
+            truncation_events.append(event)
+            return
     mps.gate_(
         gate,
         where=support if len(support) > 1 else support[0],
@@ -1397,6 +1602,7 @@ def _sample_joint_jump_or_nojump(
                 where=support,
                 contract="auto-mps",
                 max_bond=None,
+                cutoff=0.0,
             )
     p0 = _norm_sq(nojump)
     if p0 > 1.0e-15:
@@ -1421,6 +1627,7 @@ def _sample_joint_jump_or_nojump(
                 where=support,
                 contract="auto-mps",
                 max_bond=None,
+                cutoff=0.0,
             )
         p = _norm_sq(jump)
         if p <= 1.0e-15:
@@ -1967,6 +2174,8 @@ def _mcwf_mps_truncation_ledger(
     local_dims: tuple[int, ...],
     max_observed_bond: int,
     truncation_events: list[dict[str, Any]],
+    trajectory_count: int,
+    expected_gate_occurrences: tuple[dict[str, Any], ...] | list[dict[str, Any]],
 ) -> dict[str, Any]:
     if all(dim == 2 for dim in local_dims):
         return _truncation_ledger(
@@ -1974,6 +2183,9 @@ def _mcwf_mps_truncation_ledger(
             num_sites=len(local_dims),
             max_observed_bond=max_observed_bond,
             truncation_events=truncation_events,
+            aggregation_mode="sampled_trajectory_mean",
+            trajectory_count=trajectory_count,
+            expected_gate_occurrences=expected_gate_occurrences,
         )
     exact_bond = _exact_mixed_dim_bond_sufficient(local_dims)
     if max_bond is not None:
@@ -1987,6 +2199,18 @@ def _mcwf_mps_truncation_ledger(
         "discarded_weight_ledger_complete": True,
         "discarded_weight_sum": 0.0,
         "worst_cut_discarded_weight": 0.0,
+        "path_aggregated_local_discarded_fraction_sum": 0.0,
+        "path_aggregated_actual_discarded_weight_raw_sum": 0.0,
+        "path_aggregated_unitary_truncation_mass_loss_sum": 0.0,
+        "aggregation": {
+            "mode": "sampled_trajectory_mean",
+            "weight_source": "uniform_over_explicit_trajectory_count",
+            "trajectory_count": int(trajectory_count),
+            "observed_context_count": 0,
+            "max_observed_sampled_path_fraction_sum": 0.0,
+            "context_complete": True,
+            "not_a_global_error_bound": True,
+        },
         "n_truncating_ops": 0,
         "max_observed_bond": int(max_observed_bond),
         "ledger_scope": "no_explicit_mps_truncation_requested_mixed_local_dims",

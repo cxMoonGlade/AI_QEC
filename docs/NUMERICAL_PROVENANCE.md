@@ -173,11 +173,11 @@ explicitly unphysical and must not be called the matched source.
 | Analog duration fallback | 1q `20-30 ns` (nominal `25`), 2q `25-45 ns` (nominal `30`), idle `0-300 ns`, measurement `100-1000 ns`, reset `100-500 ns` | `project-design` | Used only when an explicit duration is absent; all derived channel strengths inherit the bracket |
 | Axis-1 joint-channel fixture | `zeta/2pi=370 kHz`, `T1=Tphi=30 us`, drive `pi/25 rad/ns`, declared duration grids and prediction bands | `project-design` | BCH/channel-comparison fixture, not hardware calibration |
 | MCWF/MPS execution | one microstep, first-order finite step, one trajectory, leaked-readout `b=1`, no bond cap, probability-mass budget `.1` | `convenience-default` plus `numerical-only` budget | Restricted verification path; one trajectory is not distribution evidence |
-| QT/MPS execution | `max_branches=4096`, one microstep, first-order product formula, no bond/discarded-weight gate unless supplied, dense reference requested | `convenience-default` | Restricted verification path, not universal joint-generator evidence |
+| QT/MPS execution | `max_branches=4096`, one microstep, first-order product formula, no bond/discarded-weight gate unless supplied, dense reference requested | `convenience-default` | Restricted verification path, not universal joint-generator evidence. A complete capped run with actual loss is rejected unless both local worst-cut and path-total gates are explicit and pass |
 | PEPO solver | complex128; NTU at most 20 sweeps, relative stop and pseudoinverse tolerance `1e-12`; one-site fit at most 64 iterations | `numerical-only` | Solver controls only; they do not certify positivity or record faithfulness |
 | PEPO negativity witness default floor | `4.8e-4` | `project-design` numerical witness | Default witness scale, not a physical negativity bound or record certificate |
 | PEPS resource guards | pre-cut cap `W_max=160`, abort when a grown bond exceeds `D_abort=40` | `numerical-only` | Orderly resource limits, never a claim that the retained state or record is accurate |
-| PEPS environment truncation | current test uses `eps_fid=1e-8`; 20 ALS sweeps; optimization floor `1e-9`; instability guards `1e-12` and `1e-6` | `numerical-only` | Local environment objective only. The current end-to-end entropy gate fails and blocks scientific acceptance |
+| PEPS environment truncation | current test uses `eps_fid=1e-8`; 20 ALS sweeps; optimization floor `1e-9`; instability guards `1e-12` and `1e-6` | `numerical-only` | Local environment objective only. The current entropy equality is all-noop, so the non-degeneracy gate is RED and blocks scientific acceptance |
 
 ## Finite-RTN free-induction diagnostic boundary
 
@@ -240,7 +240,7 @@ All values in this section are software gates, not physical error bars.
 | QT/MPS probability residual | `1e-8` | Restricted product-formula execution normalization gate |
 | Qutrit leakage independent references | superoperator/unitary `2e-12`; independent route `1e-10` | Implementation comparison only |
 | PEPS environment fidelity target | current test `1-1e-8` | Local rank-selection objective, not record accuracy |
-| PEPS stabilizer entropy | reference `2.0`, tolerance `1e-4` | Current observed value `0.10860941571062639` fails; local FET checks cannot override it |
+| PEPS stabilizer entropy | reference `2.0`, tolerance `1e-4` | Entropy equality alone is insufficient: the strict-target run currently has zero rank-reducing writes, so the independent non-degeneracy gate remains RED |
 | Finite-RTN formulation invariance | oracle agreement `1e-10`; monotonic controls `1e-12`; corruptions must differ by `>1e-8` | Diagnostic implementation gates only |
 
 A numerical threshold, denominator guard, clipping operation, or expression equivalent to

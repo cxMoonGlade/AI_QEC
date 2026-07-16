@@ -11,11 +11,14 @@ substep generator, not dense joint-L channel evidence.
 
 import hashlib
 import json
+import math
+import operator
 from typing import Any
 
 import numpy as np
 import torch
 
+from ..numerics import NUMERICAL_ZERO
 from .analog_schedule import SubstepSchedule
 from .axis1_carrier_program import axis1_carrier_program_manifest
 from .axis1_channel_evidence import (
@@ -31,6 +34,11 @@ from .axis1_selection import (
     AXIS1_FRONTEND_TWO_QUBIT_CONTROL_GATES,
 )
 from .axis1_state_evidence import _require_cuda_device
+from ._mps_actual_split import (
+    apply_capped_two_site_unitary,
+    commit_mps_candidate_,
+    normalize_mps_max_bond,
+)
 
 
 AXIS1_QT_MPS_RESTRICTED_EXECUTION_SCHEMA = (
@@ -93,27 +101,24 @@ def axis1_qt_mps_restricted_execution_manifest(
 ) -> dict[str, Any]:
     """Execute the currently supported QT/MPS slice for an Axis-1 schedule."""
 
+    max_bond = normalize_mps_max_bond(max_bond)
     dev = _require_cuda_device(device)
     if int(microstep_count) <= 0:
         raise ValueError("microstep_count must be positive")
     if int(max_branches) <= 0:
         raise ValueError("max_branches must be positive")
-    if max_bond is not None and int(max_bond) <= 0:
-        raise ValueError("max_bond must be positive when provided")
     step_order = _normalize_finite_step_order(finite_step_order)
     finite_step_policy = _finite_step_policy_name(step_order)
     if trajectory_count is not None and int(trajectory_count) <= 0:
         raise ValueError("trajectory_count must be positive when provided")
-    if (
-        worst_cut_discarded_weight_gate is not None
-        and float(worst_cut_discarded_weight_gate) < 0.0
-    ):
-        raise ValueError("worst_cut_discarded_weight_gate must be nonnegative")
-    if (
-        total_discarded_weight_gate is not None
-        and float(total_discarded_weight_gate) < 0.0
-    ):
-        raise ValueError("total_discarded_weight_gate must be nonnegative")
+    worst_cut_discarded_weight_gate = _normalize_optional_nonnegative_gate(
+        worst_cut_discarded_weight_gate,
+        name="worst_cut_discarded_weight_gate",
+    )
+    total_discarded_weight_gate = _normalize_optional_nonnegative_gate(
+        total_discarded_weight_gate,
+        name="total_discarded_weight_gate",
+    )
     _validate_schedule_for_axis1_channel_evidence(schedule)
     program = axis1_carrier_program_manifest(
         schedule,
@@ -176,11 +181,11 @@ def axis1_qt_mps_restricted_execution_manifest(
             },
             "mps_truncation": {
                 "max_bond": None if max_bond is None else int(max_bond),
-                "discarded_weight_ledger_complete": True,
+                "discarded_weight_ledger_complete": bool(max_bond is None),
                 "ledger_policy": (
                     "complete_zero_ledger_when_no_explicit_truncation_requested"
                     if max_bond is None
-                    else "cuda_shadow_state_schmidt_tail_per_two_site_gate"
+                    else "quimb_actual_svd_split_per_two_site_unitary_gate"
                 ),
                 "worst_cut_discarded_weight_gate": (
                     None
@@ -282,6 +287,16 @@ def axis1_qt_mps_restricted_execution_manifest(
             microstep_count=int(microstep_count),
             finite_step_order=step_order,
         )
+    )
+    base["approximation_book"]["mps_truncation"][
+        "discarded_weight_ledger_complete"
+    ] = bool(execution["mps_truncation_ledger"]["discarded_weight_ledger_complete"])
+    base["approximation_book"]["mps_truncation"][
+        "aggregation_context_complete"
+    ] = bool(
+        execution["mps_truncation_ledger"]
+        .get("aggregation", {})
+        .get("context_complete", False)
     )
     certification = (
         _dense_record_certification(
@@ -724,6 +739,15 @@ def _execute_program(
 
     step_order = _normalize_finite_step_order(finite_step_order)
     finite_step_policy = _finite_step_policy_name(step_order)
+    expected_gate_occurrences = (
+        _qt_expected_actual_split_occurrences(
+            program,
+            microstep_count=int(microstep_count),
+            finite_step_order=step_order,
+        )
+        if max_bond is not None
+        else ()
+    )
     num_qubits = int(program["program"]["num_qubits"])
     z0 = np.array([1.0, 0.0], dtype=np.complex128)
     initial = qtn.MPS_product_state([z0] * num_qubits)
@@ -893,6 +917,9 @@ def _execute_program(
             num_sites=num_qubits,
             max_observed_bond=max_observed_bond,
             truncation_events=truncation_events,
+            aggregation_mode="exact_branch_probability_weighted",
+            trajectory_count=None,
+            expected_gate_occurrences=expected_gate_occurrences,
         ),
         "applied_substeps": applied,
         "detector_records_emitted": bool(detector_names),
@@ -924,6 +951,15 @@ def _execute_sampled_program(
 
     step_order = _normalize_finite_step_order(finite_step_order)
     finite_step_policy = _finite_step_policy_name(step_order)
+    expected_gate_occurrences = (
+        _qt_expected_actual_split_occurrences(
+            program,
+            microstep_count=int(microstep_count),
+            finite_step_order=step_order,
+        )
+        if max_bond is not None
+        else ()
+    )
     ntraj = int(trajectory_count)
     if ntraj <= 0:
         raise ValueError("trajectory_count must be positive")
@@ -971,6 +1007,8 @@ def _execute_sampled_program(
                             dt_ns=0.5 * dt_micro,
                             microstep_index=microstep_index,
                             microstep_count=int(microstep_count),
+                            hamiltonian_pass_index=0,
+                            trajectory_index=trajectory_index,
                         )
                         state, sampled = _sample_collapse_terms(
                             state,
@@ -989,6 +1027,8 @@ def _execute_sampled_program(
                             dt_ns=0.5 * dt_micro,
                             microstep_index=microstep_index,
                             microstep_count=int(microstep_count),
+                            hamiltonian_pass_index=1,
+                            trajectory_index=trajectory_index,
                         )
                     else:
                         _apply_hamiltonian_terms(
@@ -1001,6 +1041,8 @@ def _execute_sampled_program(
                             dt_ns=dt_micro,
                             microstep_index=microstep_index,
                             microstep_count=int(microstep_count),
+                            hamiltonian_pass_index=0,
+                            trajectory_index=trajectory_index,
                         )
                         state, sampled = _sample_collapse_terms(
                             state,
@@ -1115,6 +1157,9 @@ def _execute_sampled_program(
             num_sites=num_qubits,
             max_observed_bond=max_observed_bond,
             truncation_events=truncation_events,
+            aggregation_mode="sampled_trajectory_mean",
+            trajectory_count=ntraj,
+            expected_gate_occurrences=expected_gate_occurrences,
         ),
         "applied_substeps": applied,
         "detector_records_emitted": bool(detector_names),
@@ -1318,8 +1363,14 @@ def _restricted_acceptance_policy(
     )
     ledger = execution["mps_truncation_ledger"]
     explicit_truncation = bool(ledger["explicit_truncation_requested"])
+    truncation_ledger_complete = bool(ledger["discarded_weight_ledger_complete"])
     discarded_sum = float(ledger["discarded_weight_sum"])
     truncation_detected = bool(discarded_sum > 0.0)
+    observed_lossless_finite_bond = bool(
+        explicit_truncation
+        and truncation_ledger_complete
+        and int(ledger.get("n_truncating_ops", 0)) == 0
+    )
     truncation_gate = _truncation_gate_result(
         ledger,
         worst_cut_discarded_weight_gate=worst_cut_discarded_weight_gate,
@@ -1328,10 +1379,23 @@ def _restricted_acceptance_policy(
     truncation_gate_failed = bool(
         truncation_gate["evaluated"] and not truncation_gate["passed"]
     )
-    finite_bond_candidate = bool(
-        explicit_truncation and truncation_gate["evaluated"] and truncation_gate["passed"]
+    truncation_gate_complete = bool(
+        truncation_gate["worst_cut_discarded_weight_gate"] is not None
+        and truncation_gate["total_discarded_weight_gate"] is not None
     )
-    if truncation_gate_failed:
+    finite_bond_candidate = bool(
+        explicit_truncation
+        and truncation_ledger_complete
+        and truncation_gate_complete
+        and truncation_gate["evaluated"]
+        and truncation_gate["passed"]
+    )
+    finite_bond_policy_ok = bool(
+        not explicit_truncation
+        or observed_lossless_finite_bond
+        or finite_bond_candidate
+    )
+    if truncation_gate_failed or not finite_bond_policy_ok:
         accepted_restricted = False
     production_blockers = [
         "production_error_control_policy_not_established",
@@ -1351,6 +1415,20 @@ def _restricted_acceptance_policy(
         production_blockers.append("nonzero_mps_truncation_discarded_weight")
     if truncation_gate_failed:
         production_blockers.append("finite_bond_candidate_gate_failed")
+    if (
+        explicit_truncation
+        and not observed_lossless_finite_bond
+        and not truncation_gate["evaluated"]
+    ):
+        production_blockers.append("finite_bond_candidate_gate_not_evaluated")
+    elif (
+        explicit_truncation
+        and not observed_lossless_finite_bond
+        and not truncation_gate_complete
+    ):
+        production_blockers.append("finite_bond_candidate_gate_incomplete")
+    if not truncation_ledger_complete:
+        production_blockers.append("incomplete_mps_truncation_aggregation_context")
     return {
         "schema": "error_coupling_simulator.frontend.qt_mps_restricted_acceptance_policy.v1",
         "policy_role": "restricted_execution_acceptance_not_metric",
@@ -1405,7 +1483,11 @@ def _restricted_acceptance_policy(
             "discarded_weight_sum": discarded_sum,
             "worst_cut_discarded_weight": float(ledger["worst_cut_discarded_weight"]),
             "truncation_detected": truncation_detected,
+            "observed_lossless_finite_bond_execution": (
+                observed_lossless_finite_bond
+            ),
             "gate": truncation_gate,
+            "candidate_gate_complete": truncation_gate_complete,
             "accepted_as_finite_bond_candidate": finite_bond_candidate,
             "accepted_as_restricted_risk_ledger": bool(
                 ledger["discarded_weight_ledger_complete"]
@@ -1445,7 +1527,8 @@ def _dense_certification_status(certification: dict[str, Any]) -> str:
 
 
 def _normalize_bond_sweep_values(values: tuple[int, ...] | list[int]) -> tuple[int, ...]:
-    bonds = tuple(sorted({int(value) for value in values}))
+    normalized = [normalize_mps_max_bond(value, allow_none=False) for value in values]
+    bonds = tuple(sorted({int(value) for value in normalized}))
     if len(bonds) < 2:
         raise ValueError("bond_values must contain at least two distinct positive integers")
     if any(value <= 0 for value in bonds):
@@ -1859,22 +1942,36 @@ def _truncation_gate_result(
     worst_cut_discarded_weight_gate: float | None,
     total_discarded_weight_gate: float | None,
 ) -> dict[str, Any]:
+    worst_gate = _normalize_optional_nonnegative_gate(
+        worst_cut_discarded_weight_gate,
+        name="worst_cut_discarded_weight_gate",
+    )
+    total_gate = _normalize_optional_nonnegative_gate(
+        total_discarded_weight_gate,
+        name="total_discarded_weight_gate",
+    )
     gate_values = {
-        "worst_cut_discarded_weight_gate": (
-            None
-            if worst_cut_discarded_weight_gate is None
-            else float(worst_cut_discarded_weight_gate)
-        ),
-        "total_discarded_weight_gate": (
-            None
-            if total_discarded_weight_gate is None
-            else float(total_discarded_weight_gate)
-        ),
+        "worst_cut_discarded_weight_gate": worst_gate,
+        "total_discarded_weight_gate": total_gate,
     }
-    evaluated = any(value is not None for value in gate_values.values())
+    ledger_complete = ledger.get("discarded_weight_ledger_complete") is not False
+    evaluated = bool(
+        any(value is not None for value in gate_values.values())
+        or not ledger_complete
+    )
     worst = float(ledger.get("worst_cut_discarded_weight", 0.0))
     total = float(ledger.get("discarded_weight_sum", 0.0))
     violations: list[str] = []
+    if not ledger_complete:
+        violations.append("incomplete_truncation_aggregation_context")
+    if not math.isfinite(worst):
+        violations.append("nonfinite_observed_worst_cut_discarded_weight")
+    elif worst < 0.0:
+        violations.append("negative_observed_worst_cut_discarded_weight")
+    if not math.isfinite(total):
+        violations.append("nonfinite_observed_total_discarded_weight")
+    elif total < 0.0:
+        violations.append("negative_observed_total_discarded_weight")
     if (
         gate_values["worst_cut_discarded_weight_gate"] is not None
         and worst > float(gate_values["worst_cut_discarded_weight_gate"])
@@ -1899,6 +1996,23 @@ def _truncation_gate_result(
     }
 
 
+def _normalize_optional_nonnegative_gate(
+    value: float | None,
+    *,
+    name: str,
+) -> float | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        raise TypeError(f"{name} must be a real threshold, not bool")
+    normalized = float(value)
+    if not math.isfinite(normalized):
+        raise ValueError(f"{name} must be finite")
+    if normalized < 0.0:
+        raise ValueError(f"{name} must be nonnegative")
+    return normalized
+
+
 def _max_branch_bond(branches: list[tuple[tuple[int, ...], float, Any]]) -> int:
     out = 1
     for _bits, _weight, mps in branches:
@@ -1908,15 +2022,90 @@ def _max_branch_bond(branches: list[tuple[tuple[int, ...], float, Any]]) -> int:
     return int(out)
 
 
+def _qt_expected_actual_split_occurrences(
+    program: dict[str, Any],
+    *,
+    microstep_count: int,
+    finite_step_order: str,
+) -> tuple[dict[str, Any], ...]:
+    """Build the complete capped two-site occurrence inventory before execution."""
+
+    count = int(microstep_count)
+    if count < 1:
+        raise ValueError("microstep_count must be positive")
+    step_order = _normalize_finite_step_order(finite_step_order)
+    pass_indices = (0, 1) if step_order == _FINITE_STEP_ORDER_STRANG else (0,)
+    occurrences: list[dict[str, Any]] = []
+    for substep in program["program"]["substeps"]:
+        if str(substep["substep_kind"]) == "reset":
+            continue
+        two_site_terms: list[tuple[int, dict[str, Any], tuple[int, int]]] = []
+        for term_index, term in enumerate(substep.get("terms", ())):
+            if str(term["kind"]) != "hamiltonian":
+                continue
+            support = tuple(int(q) for q in term["support"])
+            family = str(term["operator_family"]).upper()
+            if len(support) != 2:
+                continue
+            if family not in {"ZZ", "FSIM_PHASE"} and not family.startswith("CTRL_"):
+                continue
+            two_site_terms.append((int(term_index), term, support))
+        if not two_site_terms:
+            continue
+        dt_micro = float(substep["dt_ns"]) / float(count)
+        dt_effective = (
+            0.5 * dt_micro
+            if step_order == _FINITE_STEP_ORDER_STRANG
+            else dt_micro
+        )
+        for microstep_index in range(count):
+            for pass_index in pass_indices:
+                for term_index, term, support in two_site_terms:
+                    occurrences.append(
+                        {
+                            "substep_id": str(substep["substep_id"]),
+                            "term_index": int(term_index),
+                            "operator_family": str(term["operator_family"]),
+                            "support": [int(support[0]), int(support[1])],
+                            "microstep_index": int(microstep_index),
+                            "microstep_count": int(count),
+                            "hamiltonian_pass_index": int(pass_index),
+                            "dt_ns_effective": float(dt_effective),
+                        }
+                    )
+    return tuple(occurrences)
+
+
 def _truncation_ledger(
     *,
     max_bond: int | None,
     num_sites: int,
     max_observed_bond: int,
     truncation_events: list[dict[str, Any]],
+    aggregation_mode: str,
+    trajectory_count: int | None,
+    expected_gate_occurrences: tuple[dict[str, Any], ...] | list[dict[str, Any]],
 ) -> dict[str, Any]:
     exact_bond = _exact_bond_dimension_sufficient(num_sites)
+    aggregation = _aggregate_truncation_events(
+        truncation_events,
+        mode=aggregation_mode,
+        trajectory_count=trajectory_count,
+        expected_gate_occurrences=(
+            expected_gate_occurrences if max_bond is not None else ()
+        ),
+    )
     if max_bond is None:
+        if truncation_events:
+            raise RuntimeError(
+                "unbounded MPS execution unexpectedly emitted truncation events"
+            )
+        unbounded_aggregation = {
+            **aggregation["metadata"],
+            "context_complete": True,
+            "coverage_policy": "not_applicable_no_explicit_truncation",
+            "coverage_failures": [],
+        }
         return {
             "explicit_truncation_requested": False,
             "exact_bond_dimension_sufficient": exact_bond,
@@ -1925,16 +2114,32 @@ def _truncation_ledger(
             "discarded_weight_ledger_complete": True,
             "discarded_weight_sum": 0.0,
             "worst_cut_discarded_weight": 0.0,
+            "path_aggregated_local_discarded_fraction_sum": 0.0,
+            "path_aggregated_actual_discarded_weight_raw_sum": 0.0,
+            "path_aggregated_unitary_truncation_mass_loss_sum": 0.0,
+            "aggregation": unbounded_aggregation,
             "n_truncating_ops": 0,
             "max_observed_bond": int(max_observed_bond),
             "ledger_scope": "no_explicit_mps_truncation_requested",
             "epistemic_class": "a",
         }
-    discarded = [float(event["discarded_weight_sum"]) for event in truncation_events]
-    worst = [
-        float(record["discarded_weight"])
+    discarded_fraction = [
+        float(event["actual_discarded_weight_fraction_sum"])
         for event in truncation_events
-        for record in event.get("cut_records", ())
+    ]
+    discarded_raw = [
+        float(record["actual_discarded_weight_raw"])
+        for event in truncation_events
+        for record in event.get("split_records", ())
+    ]
+    split_fraction = [
+        float(record["actual_discarded_weight_fraction_of_pre_split"])
+        for event in truncation_events
+        for record in event.get("split_records", ())
+    ]
+    norm_loss = [
+        float(event["unitary_truncation_mass_loss"])
+        for event in truncation_events
     ]
     return {
         "explicit_truncation_requested": True,
@@ -1946,19 +2151,405 @@ def _truncation_ledger(
             else "finite_cap_below_conservative_exact_sufficient_bond"
         ),
         "accepted_as_exact_bond_representation": bool(int(max_bond) >= exact_bond),
-        "discarded_weight_ledger_complete": True,
-        "ledger_method": "cuda_shadow_state_schmidt_tail_per_two_site_hamiltonian_gate",
-        "discarded_weight_sum": float(sum(discarded)),
-        "worst_cut_discarded_weight": float(max(worst, default=0.0)),
-        "n_truncating_ops": sum(1 for value in discarded if value > 0.0),
+        "discarded_weight_ledger_complete": bool(
+            aggregation["metadata"]["context_complete"]
+        ),
+        "ledger_method": "quimb_actual_svd_split_per_two_site_unitary_gate",
+        "actual_discarded_weight_raw_sum": float(math.fsum(discarded_raw)),
+        "actual_discarded_weight_fraction_sum": float(
+            math.fsum(discarded_fraction)
+        ),
+        "worst_actual_discarded_weight_fraction": float(
+            max(split_fraction, default=0.0)
+        ),
+        "actual_split_count": int(
+            sum(int(event["split_count"]) for event in truncation_events)
+        ),
+        "unitary_truncation_mass_loss_sum": float(math.fsum(norm_loss)),
+        "worst_unitary_truncation_mass_loss": float(max(norm_loss, default=0.0)),
+        "path_aggregated_local_discarded_fraction_sum": aggregation[
+            "fraction"
+        ],
+        "path_aggregated_actual_discarded_weight_raw_sum": aggregation["raw"],
+        "path_aggregated_unitary_truncation_mass_loss_sum": aggregation[
+            "norm_loss"
+        ],
+        "discarded_weight_sum": aggregation["fraction"],
+        "worst_cut_discarded_weight": float(max(split_fraction, default=0.0)),
+        "discarded_weight_units": "fraction_of_pre_split_weight",
+        "compatibility_aliases": {
+            "discarded_weight_sum": (
+                "path_aggregated_local_discarded_fraction_sum"
+            ),
+            "worst_cut_discarded_weight": "worst_actual_discarded_weight_fraction",
+        },
+        "not_a_global_error_bound": True,
+        "aggregation": aggregation["metadata"],
+        "n_truncating_ops": sum(
+            1 for value in discarded_fraction if value > 0.0
+        ),
         "n_tracked_two_site_ops": len(truncation_events),
         "max_observed_bond": int(max_observed_bond),
         "truncation_events": truncation_events,
         "ledger_scope": (
-            "finite_max_bond_cuda_shadow_state_tail_ledger; records Schmidt-tail "
-            "weight before each supported two-site Hamiltonian/control gate"
+            "finite_max_bond_actual_quimb_svd_split_ledger; each local fraction "
+            "is relative to that split's pre-split weight and is not a global "
+            "state or record error bound"
         ),
         "epistemic_class": "c",
+    }
+
+
+def _aggregate_truncation_events(
+    events: list[dict[str, Any]],
+    *,
+    mode: str,
+    trajectory_count: int | None,
+    expected_gate_occurrences: tuple[dict[str, Any], ...] | list[dict[str, Any]],
+) -> dict[str, Any]:
+    allowed = {
+        "sampled_trajectory_mean",
+        "exact_branch_probability_weighted",
+    }
+    if mode not in allowed:
+        raise ValueError(f"unknown truncation aggregation mode {mode!r}")
+
+    def metric(event: dict[str, Any], key: str) -> float:
+        value = float(event[key])
+        if not math.isfinite(value) or value < 0.0:
+            raise ValueError(
+                f"truncation aggregation event {key} must be finite and nonnegative"
+            )
+        return value
+
+    def context_integer(
+        event: dict[str, Any],
+        key: str,
+        *,
+        minimum: int = 0,
+    ) -> int:
+        value = event.get(key)
+        if isinstance(value, bool):
+            raise TypeError(f"truncation aggregation {key} must be integer")
+        try:
+            normalized = operator.index(value)
+        except TypeError as exc:
+            raise TypeError(
+                f"truncation aggregation requires integer {key}"
+            ) from exc
+        if normalized < minimum:
+            raise ValueError(
+                f"truncation aggregation {key} must be >= {minimum}"
+            )
+        return int(normalized)
+
+    def occurrence_key(event: dict[str, Any]) -> tuple[Any, ...]:
+        substep_id = event.get("substep_id")
+        operator_family = event.get("operator_family")
+        support_value = event.get("support")
+        if not isinstance(substep_id, str) or not substep_id:
+            raise ValueError(
+                "truncation aggregation requires nonempty substep_id"
+            )
+        if not isinstance(operator_family, str) or not operator_family:
+            raise ValueError(
+                "truncation aggregation requires nonempty operator_family"
+            )
+        if not isinstance(support_value, (list, tuple)) or len(support_value) != 2:
+            raise ValueError(
+                "truncation aggregation requires two-site support identity"
+            )
+        support = tuple(
+            context_integer({"site": site}, "site") for site in support_value
+        )
+        if support[0] == support[1]:
+            raise ValueError(
+                "truncation aggregation support identity requires distinct sites"
+            )
+        term_index = context_integer(event, "term_index")
+        microstep_count = context_integer(event, "microstep_count", minimum=1)
+        microstep_index = context_integer(event, "microstep_index")
+        if microstep_index >= microstep_count:
+            raise ValueError(
+                "truncation aggregation microstep_index lies outside "
+                "microstep_count"
+            )
+        pass_value = event.get("hamiltonian_pass_index")
+        pass_index = (
+            None
+            if pass_value is None
+            else context_integer(event, "hamiltonian_pass_index")
+        )
+        dt_ns_effective = float(event.get("dt_ns_effective"))
+        if not math.isfinite(dt_ns_effective) or dt_ns_effective < 0.0:
+            raise ValueError(
+                "truncation aggregation dt_ns_effective must be finite and "
+                "nonnegative"
+            )
+        return (
+            substep_id,
+            term_index,
+            operator_family,
+            support,
+            microstep_index,
+            microstep_count,
+            pass_index,
+            dt_ns_effective,
+        )
+
+    def occurrence_identity(key: tuple[Any, ...]) -> dict[str, Any]:
+        return {
+            "substep_id": key[0],
+            "term_index": key[1],
+            "operator_family": key[2],
+            "support": list(key[3]),
+            "microstep_index": key[4],
+            "microstep_count": key[5],
+            "hamiltonian_pass_index": key[6],
+            "dt_ns_effective": key[7],
+        }
+
+    expected_keys_in_order = [
+        occurrence_key(dict(occurrence))
+        for occurrence in expected_gate_occurrences
+    ]
+    if any(key[6] is None for key in expected_keys_in_order):
+        raise ValueError(
+            "expected truncation gate-occurrence inventory requires pass identity"
+        )
+    expected_keys = set(expected_keys_in_order)
+    if len(expected_keys) != len(expected_keys_in_order):
+        raise ValueError(
+            "expected truncation gate-occurrence inventory contains duplicates"
+        )
+
+    values = [
+        (
+            metric(event, "actual_discarded_weight_fraction_sum"),
+            metric(event, "actual_discarded_weight_raw_sum"),
+            metric(event, "unitary_truncation_mass_loss"),
+        )
+        for event in events
+    ]
+    if mode == "sampled_trajectory_mean":
+        if isinstance(trajectory_count, bool):
+            raise TypeError("truncation aggregation trajectory_count must be an integer")
+        try:
+            count = operator.index(trajectory_count)
+        except TypeError as exc:
+            raise TypeError(
+                "sampled truncation aggregation requires trajectory_count"
+            ) from exc
+        if count < 1:
+            raise ValueError(
+                "sampled truncation aggregation trajectory_count must be positive"
+            )
+        per_trajectory: dict[int, list[float]] = {}
+        occurrence_trajectories: dict[tuple[Any, ...], list[int]] = {}
+        for event, triple in zip(events, values, strict=True):
+            index_value = event.get("trajectory_index")
+            if isinstance(index_value, bool):
+                raise TypeError("truncation aggregation trajectory_index must be integer")
+            try:
+                index = operator.index(index_value)
+            except TypeError as exc:
+                raise TypeError(
+                    "sampled truncation aggregation requires trajectory_index"
+                ) from exc
+            if not 0 <= index < count:
+                raise ValueError(
+                    "sampled truncation aggregation trajectory_index lies outside "
+                    f"[0, {count})"
+                )
+            if event.get("incoming_branch_weight") is not None:
+                raise ValueError(
+                    "sampled truncation aggregation cannot carry branch weight"
+                )
+            key = occurrence_key(event)
+            occurrence_trajectories.setdefault(key, []).append(index)
+            totals = per_trajectory.setdefault(index, [0.0, 0.0, 0.0])
+            for offset, value in enumerate(triple):
+                totals[offset] += value
+        aggregate = tuple(
+            float(math.fsum(triple[offset] for triple in values) / count)
+            for offset in range(3)
+        )
+        max_path_fraction = float(
+            max((totals[0] for totals in per_trajectory.values()), default=0.0)
+        )
+        weight_source = "uniform_over_explicit_trajectory_count"
+        observed_contexts = len(per_trajectory)
+        coverage_failures: list[dict[str, Any]] = []
+        complete_occurrence_keys: set[tuple[Any, ...]] = set()
+        expected_trajectories = set(range(count))
+        for key, trajectory_indices in occurrence_trajectories.items():
+            observed_trajectories = set(trajectory_indices)
+            missing_count = len(expected_trajectories - observed_trajectories)
+            duplicate_count = len(trajectory_indices) - len(observed_trajectories)
+            identity_complete = key[6] is not None
+            if missing_count == 0 and duplicate_count == 0 and identity_complete:
+                complete_occurrence_keys.add(key)
+                continue
+            reasons = []
+            if not identity_complete:
+                reasons.append("gate_occurrence_identity_incomplete")
+            if missing_count or duplicate_count:
+                reasons.append("sampled_trajectory_coverage_incomplete")
+            coverage_failures.append(
+                {
+                    **occurrence_identity(key),
+                    "reason": "+".join(reasons),
+                    "observed_trajectory_count": len(observed_trajectories),
+                    "missing_trajectory_count": missing_count,
+                    "duplicate_event_count": duplicate_count,
+                }
+            )
+        observed_occurrence_keys = set(occurrence_trajectories)
+        per_occurrence_coverage_policy = (
+            "every_gate_occurrence_has_exactly_one_event_per_declared_trajectory"
+        )
+    else:
+        if trajectory_count is not None:
+            raise ValueError(
+                "exact branch truncation aggregation requires trajectory_count=None"
+            )
+        weighted: list[tuple[float, float, float]] = []
+        occurrence_branches: dict[
+            tuple[Any, ...], list[tuple[int, float]]
+        ] = {}
+        for event, triple in zip(events, values, strict=True):
+            if event.get("trajectory_index") is not None:
+                raise ValueError(
+                    "exact branch truncation aggregation cannot carry trajectory_index"
+                )
+            weight = float(event.get("incoming_branch_weight"))
+            if (
+                not math.isfinite(weight)
+                or weight < -NUMERICAL_ZERO
+                or weight > 1.0 + NUMERICAL_ZERO
+            ):
+                raise ValueError(
+                    "exact branch truncation aggregation branch weight must be "
+                    f"finite and lie in [0, 1], got {weight!r}"
+                )
+            weight = min(1.0, max(0.0, weight))
+            branch_ordinal = event.get("branch_ordinal")
+            if isinstance(branch_ordinal, bool):
+                raise TypeError("exact branch aggregation branch_ordinal must be integer")
+            try:
+                ordinal = operator.index(branch_ordinal)
+            except TypeError as exc:
+                raise TypeError(
+                    "exact branch truncation aggregation requires branch_ordinal"
+                ) from exc
+            if ordinal < 0 or not isinstance(event.get("branch_record_prefix"), list):
+                raise ValueError("exact branch truncation aggregation context is incomplete")
+            key = occurrence_key(event)
+            occurrence_branches.setdefault(key, []).append(
+                (int(ordinal), weight)
+            )
+            weighted.append(tuple(weight * value for value in triple))
+        aggregate = tuple(
+            float(math.fsum(triple[offset] for triple in weighted))
+            for offset in range(3)
+        )
+        max_path_fraction = None
+        weight_source = "incoming_branch_weight"
+        observed_contexts = len(events)
+        coverage_failures = []
+        complete_occurrence_keys = set()
+        for key, branch_entries in occurrence_branches.items():
+            ordinals = [ordinal for ordinal, _weight in branch_entries]
+            unique_ordinals = set(ordinals)
+            branch_mass = float(
+                math.fsum(weight for _ordinal, weight in branch_entries)
+            )
+            ordinal_complete = sorted(unique_ordinals) == list(
+                range(len(branch_entries))
+            ) and len(unique_ordinals) == len(branch_entries)
+            mass_complete = abs(branch_mass - 1.0) <= NUMERICAL_ZERO
+            identity_complete = key[6] is not None
+            if ordinal_complete and mass_complete and identity_complete:
+                complete_occurrence_keys.add(key)
+                continue
+            reasons = []
+            if not identity_complete:
+                reasons.append("gate_occurrence_identity_incomplete")
+            if not ordinal_complete:
+                reasons.append("exact_branch_ordinal_coverage_incomplete")
+            if not mass_complete:
+                reasons.append("exact_branch_mass_not_unity")
+            coverage_failures.append(
+                {
+                    **occurrence_identity(key),
+                    "reason": "+".join(reasons),
+                    "observed_branch_count": len(branch_entries),
+                    "unique_branch_ordinal_count": len(unique_ordinals),
+                    "incoming_branch_weight_sum": branch_mass,
+                    "unit_mass_tolerance": NUMERICAL_ZERO,
+                }
+            )
+        observed_occurrence_keys = set(occurrence_branches)
+        per_occurrence_coverage_policy = (
+            "every_gate_occurrence_has_unique_contiguous_branch_ordinals_and_"
+            "unit_incoming_branch_mass"
+        )
+
+    missing_occurrences = expected_keys - observed_occurrence_keys
+    unexpected_occurrences = observed_occurrence_keys - expected_keys
+    coverage_failures.extend(
+        {
+            **occurrence_identity(key),
+            "reason": "expected_gate_occurrence_missing",
+        }
+        for key in sorted(missing_occurrences, key=repr)
+    )
+    coverage_failures.extend(
+        {
+            **occurrence_identity(key),
+            "reason": "unexpected_gate_occurrence_observed",
+        }
+        for key in sorted(unexpected_occurrences, key=repr)
+    )
+    occurrence_count = len(observed_occurrence_keys)
+    complete_occurrence_count = len(complete_occurrence_keys & expected_keys)
+    context_complete = not coverage_failures
+    coverage_policy = (
+        "observed_gate_occurrence_identities_exactly_match_precomputed_inventory_and_"
+        + per_occurrence_coverage_policy
+    )
+
+    return {
+        "fraction": aggregate[0],
+        "raw": aggregate[1],
+        "norm_loss": aggregate[2],
+        "metadata": {
+            "mode": mode,
+            "weight_source": weight_source,
+            "trajectory_count": trajectory_count,
+            "observed_context_count": int(observed_contexts),
+            "expected_gate_occurrence_count": int(len(expected_keys_in_order)),
+            "expected_gate_occurrences": [
+                occurrence_identity(key) for key in expected_keys_in_order
+            ],
+            "observed_gate_occurrence_count": int(occurrence_count),
+            "complete_gate_occurrence_count": int(complete_occurrence_count),
+            "max_observed_sampled_path_fraction_sum": max_path_fraction,
+            "gate_occurrence_identity_fields": [
+                "substep_id",
+                "term_index",
+                "operator_family",
+                "support",
+                "microstep_index",
+                "microstep_count",
+                "hamiltonian_pass_index",
+                "dt_ns_effective",
+            ],
+            "coverage_policy": coverage_policy,
+            "coverage_failures": coverage_failures,
+            "context_complete": bool(context_complete),
+            "not_a_global_error_bound": True,
+        },
     }
 
 
@@ -2050,6 +2641,10 @@ def _apply_hamiltonian_terms(
     dt_ns: float | None = None,
     microstep_index: int = 0,
     microstep_count: int = 1,
+    hamiltonian_pass_index: int = 0,
+    trajectory_index: int | None = None,
+    branch_ordinal: int | None = None,
+    incoming_branch_weight: float | None = None,
 ) -> None:
     dt = float(substep["dt_ns"] if dt_ns is None else dt_ns)
     for term_index, term in enumerate(substep.get("terms", ())):
@@ -2085,7 +2680,11 @@ def _apply_hamiltonian_terms(
                 dt_ns=dt,
                 microstep_index=microstep_index,
                 microstep_count=microstep_count,
+                hamiltonian_pass_index=hamiltonian_pass_index,
                 truncation_events=truncation_events,
+                trajectory_index=trajectory_index,
+                branch_ordinal=branch_ordinal,
+                incoming_branch_weight=incoming_branch_weight,
             )
             continue
         if family.startswith("CTRL_"):
@@ -2118,7 +2717,11 @@ def _apply_hamiltonian_terms(
                 dt_ns=dt,
                 microstep_index=microstep_index,
                 microstep_count=microstep_count,
+                hamiltonian_pass_index=hamiltonian_pass_index,
                 truncation_events=truncation_events,
+                trajectory_index=trajectory_index,
+                branch_ordinal=branch_ordinal,
+                incoming_branch_weight=incoming_branch_weight,
             )
 
 
@@ -2137,125 +2740,71 @@ def _apply_two_site_gate(
     microstep_index: int,
     microstep_count: int,
     truncation_events: list[dict[str, Any]],
+    hamiltonian_pass_index: int = 0,
+    trajectory_index: int | None = None,
+    branch_ordinal: int | None = None,
+    incoming_branch_weight: float | None = None,
 ) -> None:
     if len(support) != 2:
         raise ValueError(f"restricted QT/MPS expected a two-site support, got {support!r}")
     if max_bond is not None:
-        truncation_events.append(
-            _shadow_truncation_event(
-                mps,
-                gate,
-                support=support,
-                substep=substep,
-                term=term,
-                term_index=term_index,
-                branch_bits=branch_bits,
-                device=device,
-                max_bond=int(max_bond),
-                dt_ns=dt_ns,
-                microstep_index=microstep_index,
-                microstep_count=microstep_count,
-            )
+        candidate, event = apply_capped_two_site_unitary(
+            mps,
+            gate,
+            support=(int(support[0]), int(support[1])),
+            max_bond=max_bond,
+            context={
+                "substep_id": str(substep["substep_id"]),
+                "substep_kind": str(substep["substep_kind"]),
+                "term_index": int(term_index),
+                "operator_family": str(term["operator_family"]),
+                "branch_record_prefix": list(branch_bits),
+                "trajectory_index": (
+                    None if trajectory_index is None else int(trajectory_index)
+                ),
+                "branch_ordinal": (
+                    None if branch_ordinal is None else int(branch_ordinal)
+                ),
+                "incoming_branch_weight": (
+                    None
+                    if incoming_branch_weight is None
+                    else float(incoming_branch_weight)
+                ),
+                "array_backend": f"torch_{device}_complex128",
+                "dt_ns_effective": float(dt_ns),
+                "microstep_index": int(microstep_index),
+                "microstep_count": int(microstep_count),
+                "hamiltonian_pass_index": int(hamiltonian_pass_index),
+                "epistemic_class": "c",
+            },
         )
+        event["ledger_method"] = "quimb_actual_svd_split_per_two_site_unitary_gate"
+        event["discarded_weight_sum"] = float(
+            event["actual_discarded_weight_fraction_sum"]
+        )
+        event["worst_cut_discarded_weight"] = float(
+            event["worst_actual_discarded_weight_fraction"]
+        )
+        event["discarded_weight_units"] = "fraction_of_pre_split_weight"
+        event["compatibility_aliases"] = {
+            "discarded_weight_sum": "actual_discarded_weight_fraction_sum",
+            "worst_cut_discarded_weight": "worst_actual_discarded_weight_fraction",
+        }
+        event["n_truncated_cuts"] = sum(
+            1
+            for record in event["split_records"]
+            if float(record["actual_discarded_weight_raw"]) > 0.0
+        )
+        commit_mps_candidate_(mps, candidate)
+        truncation_events.append(event)
+        return
     mps.gate_(
-        gate,
-        where=support,
-        contract="auto-mps",
-        max_bond=max_bond,
-        cutoff=0.0,
-    )
-
-
-def _shadow_truncation_event(
-    mps,
-    gate: torch.Tensor,
-    *,
-    support: tuple[int, ...],
-    substep: dict[str, Any],
-    term: dict[str, Any],
-    term_index: int,
-    branch_bits: tuple[int, ...],
-    device: str,
-    max_bond: int,
-    dt_ns: float,
-    microstep_index: int,
-    microstep_count: int,
-) -> dict[str, Any]:
-    shadow = mps.copy()
-    shadow.gate_(
         gate,
         where=support,
         contract="auto-mps",
         max_bond=None,
         cutoff=0.0,
     )
-    cut_records = _shadow_schmidt_tail_records(
-        shadow,
-        support=support,
-        max_bond=max_bond,
-        device=device,
-    )
-    discarded = [float(record["discarded_weight"]) for record in cut_records]
-    return {
-        "substep_id": str(substep["substep_id"]),
-        "substep_kind": str(substep["substep_kind"]),
-        "term_index": int(term_index),
-        "operator_family": str(term["operator_family"]),
-        "support": list(support),
-        "branch_record_prefix": list(branch_bits),
-        "max_bond": int(max_bond),
-        "dt_ns_effective": float(dt_ns),
-        "microstep_index": int(microstep_index),
-        "microstep_count": int(microstep_count),
-        "ledger_method": "cuda_shadow_state_schmidt_tail",
-        "cut_records": cut_records,
-        "discarded_weight_sum": float(sum(discarded)),
-        "worst_cut_discarded_weight": float(max(discarded, default=0.0)),
-        "n_truncated_cuts": sum(1 for value in discarded if value > 0.0),
-        "epistemic_class": "c",
-    }
-
-
-def _shadow_schmidt_tail_records(
-    mps,
-    *,
-    support: tuple[int, ...],
-    max_bond: int,
-    device: str,
-) -> list[dict[str, Any]]:
-    dense = mps.to_dense()
-    if not isinstance(dense, torch.Tensor):
-        dense = torch.as_tensor(dense, dtype=torch.complex128, device=device)
-    dense = dense.to(device=device, dtype=torch.complex128).reshape(-1)
-    norm = torch.linalg.vector_norm(dense)
-    if float(norm.detach().cpu().item()) > 0.0:
-        dense = dense / norm
-    n = int(mps.L)
-    state = dense.reshape((2,) * n)
-    left = min(int(q) for q in support)
-    right = max(int(q) for q in support)
-    records: list[dict[str, Any]] = []
-    for cut in range(left + 1, right + 1):
-        matrix = state.reshape(2**cut, 2 ** (n - cut))
-        svals = torch.linalg.svdvals(matrix)
-        total = torch.sum(torch.abs(svals) ** 2)
-        discarded = (
-            torch.sum(torch.abs(svals[int(max_bond) :]) ** 2)
-            if int(max_bond) < int(svals.numel())
-            else torch.zeros((), dtype=torch.float64, device=device)
-        )
-        records.append(
-            {
-                "cut_index": int(cut),
-                "left_sites": list(range(cut)),
-                "right_sites": list(range(cut, n)),
-                "pre_truncation_rank": int(svals.numel()),
-                "kept_rank": min(int(max_bond), int(svals.numel())),
-                "discarded_weight": float(discarded.real.detach().cpu().item()),
-                "total_schmidt_weight": float(total.real.detach().cpu().item()),
-            }
-        )
-    return records
 
 
 def _evolve_branches(
@@ -2282,6 +2831,7 @@ def _evolve_branches(
                 dt_ns=0.5 * dt_micro,
                 microstep_index=microstep_index,
                 microstep_count=int(microstep_count),
+                hamiltonian_pass_index=0,
                 truncation_events=truncation_events,
             )
             evolved = _apply_collapse_terms_to_branches(
@@ -2299,6 +2849,7 @@ def _evolve_branches(
                 dt_ns=0.5 * dt_micro,
                 microstep_index=microstep_index,
                 microstep_count=int(microstep_count),
+                hamiltonian_pass_index=1,
                 truncation_events=truncation_events,
             )
             continue
@@ -2310,6 +2861,7 @@ def _evolve_branches(
             dt_ns=dt_micro,
             microstep_index=microstep_index,
             microstep_count=int(microstep_count),
+            hamiltonian_pass_index=0,
             truncation_events=truncation_events,
         )
         evolved = _apply_collapse_terms_to_branches(
@@ -2486,10 +3038,11 @@ def _apply_hamiltonian_to_branches(
     dt_ns: float,
     microstep_index: int,
     microstep_count: int,
+    hamiltonian_pass_index: int,
     truncation_events: list[dict[str, Any]],
 ) -> list[tuple[tuple[int, ...], float, Any]]:
     evolved: list[tuple[tuple[int, ...], float, Any]] = []
-    for bits, weight, mps in branches:
+    for branch_ordinal, (bits, weight, mps) in enumerate(branches):
         out = mps.copy()
         _apply_hamiltonian_terms(
             out,
@@ -2501,6 +3054,9 @@ def _apply_hamiltonian_to_branches(
             dt_ns=dt_ns,
             microstep_index=microstep_index,
             microstep_count=int(microstep_count),
+            hamiltonian_pass_index=int(hamiltonian_pass_index),
+            branch_ordinal=branch_ordinal,
+            incoming_branch_weight=float(weight),
         )
         evolved.append((bits, weight, out))
     return evolved

@@ -57,8 +57,9 @@ or document must not draw that missing edge as implemented.
 - Restricted Axis-1 MCWF/MPS and QT/MPS executors are current verification routes, not universal
   full-record backends.
 - PEPO is retained for current density-matrix research and exact bounded comparisons.
-- PEPS is the full-geometry trajectory frontier; its current FET entropy invariant fails and its
-  finite-truncation record faithfulness is unclosed.
+- PEPS is the full-geometry trajectory frontier; its strict-target FET entropy equality currently
+  follows an all-identity fallback, so the non-degeneracy gate is RED and finite-truncation record
+  faithfulness is unclosed.
 
 Carrier swaps preserve the channel and record contracts only where the owner explicitly implements
 those contracts. No local state or truncation metric alone establishes record equivalence.

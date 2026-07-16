@@ -49,7 +49,21 @@ The current routes are deliberately not one universal executor:
    bath or a reduced-map divisibility claim.
 4. **Restricted one-dimensional MPS routes (CORE verification surfaces).** The MCWF/MPS and QT/MPS
    executors are finite-step, fail-closed verification paths. They are not universal full-record or
-   production-scaling backends.
+   production-scaling backends. `max_bond` is either `None` or a strictly positive integral value;
+   booleans, floats, strings, zero, and negative values are rejected rather than coerced. A finite cap
+   on a supported two-site unitary is applied through the pinned Quimb actual-split adapter: every
+   forward-swap, operator, and reverse-swap SVD is ledgered, the conditional-state norm is restored
+   only after its raw loss is recorded, and the resulting local discarded fractions are explicitly
+   not a global state/record bound. Exact-branch ledgers weight path-local evidence by the incoming
+   branch probability; sampled ledgers average path totals over the declared trajectory count, with
+   trajectories that had no truncation event contributing zero. Each gate occurrence authenticates
+   full sampled-trajectory coverage or unit exact-branch mass; incomplete coverage makes the ledger
+   and acceptance fail closed. Once actual loss occurs, restricted finite-bond acceptance requires
+   both explicit worst-cut and path-total discarded-weight gates; an observed lossless capped run
+   needs no such gates. These
+   gates remain heuristics, never production error bounds. Kraus/no-jump/jump operators remain
+   uncapped because their raw norm carries physical branch probability; that probability is not a
+   truncation score. Capped multi-site MCWF Hamiltonian clusters fail closed.
 5. **Qutrit leakage and ququart transport (CORE bounded channels).** Current owners expose physically
    named leakage/channel operations and explicit parameter objects. Synthetic defaults and sweeps do
    not become device calibration through naming or citation.
@@ -77,11 +91,17 @@ Carrier validity is judged on the declared record law, never on bond dimension, 
 entropy, or a truncation objective alone. A state-level or local-environment check can validate a
 local invariant without certifying the complete multi-round record.
 
-The current PEPS environment-aware truncation path has a visible scientific blocker. In the current
-registered test, the post-round carrier entropy is `0.10860941571062639` while the independent GF(2)
-reference is `2.0`, with tolerance `1e-4`. Local environment and dense-reference checks that pass do
-not override this failed end-to-end invariant. No tolerance, target, or algorithm substitution may be
-changed merely to convert that failure into a pass.
+The PEPS environment-aware truncation mutation boundary is now engineering-hardened: only an
+authenticated, finite, target-meeting rank reduction may write both endpoints; rejected candidates
+are no-ops; a partial or failed absorption rolls both tensors back; and solver perturbations use a
+declared private RNG rather than advancing ambient CPU/CUDA streams. This closes the known mutation,
+transactionality, and RNG-control defects, not the scientific claim. At the strict registered
+``eps_fid``, the d3 entropy equality currently occurs with zero accepted rank-reducing write-backs;
+the explicit FET non-degeneracy gate is therefore RED and the pruning path is not scientifically
+validated. A fresh-process replay must authenticate that result, and a primary-literature bridge must
+still connect the local FET objective to the QEC entropy and complete record-law observables. Local
+environment, entropy, or dense-reference checks cannot individually certify full-record faithfulness,
+and no tolerance, target, or algorithm substitution may be chosen merely to manufacture a pass.
 
 Current carrier status and exact evidence paths are recorded in:
 
