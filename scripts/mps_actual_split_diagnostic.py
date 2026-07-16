@@ -657,6 +657,94 @@ def _shared_bond_dimension(split_output: Any) -> int | None:
     return int(left.ind_size(common[0]))
 
 
+def _backend_values_to_numpy(values: Any) -> np.ndarray:
+    """Transfer a backend result explicitly, never via implicit CUDA coercion."""
+
+    if hasattr(values, "detach"):
+        values = values.detach()
+    if hasattr(values, "cpu"):
+        values = values.cpu()
+    if hasattr(values, "numpy"):
+        values = values.numpy()
+    elif hasattr(values, "get"):
+        values = values.get()
+    return np.asarray(values, dtype=np.float64).reshape(-1)
+
+
+def _probe_pre_split_singular_values(
+    original: Any,
+    tensor: Any,
+    left_inds: Any,
+    *,
+    right_inds: Any,
+) -> np.ndarray:
+    """Compute full singular values through Quimb's backend-aware SVD path."""
+
+    arrays = original(
+        tensor,
+        left_inds,
+        right_inds=right_inds,
+        method="svd",
+        absorb=None,
+        max_bond=None,
+        cutoff=0.0,
+        renorm=False,
+        get="arrays",
+    )
+    if not isinstance(arrays, tuple) or len(arrays) != 3:
+        raise RuntimeError("backend singular-value probe returned an invalid split")
+    return _backend_values_to_numpy(arrays[1])
+
+
+def _make_observed_split(original: Any, records: list[dict[str, Any]]):
+    """Wrap one real split while keeping its positional and keyword arguments intact."""
+
+    def observed(tensor, left_inds, *args, **kwargs):
+        max_bond = kwargs.get("max_bond")
+        output = original(tensor, left_inds, *args, **kwargs)
+        if max_bond is None:
+            return output
+
+        singular_values = _probe_pre_split_singular_values(
+            original,
+            tensor,
+            left_inds,
+            right_inds=kwargs.get("right_inds"),
+        )
+        kept_rank = _shared_bond_dimension(output)
+        if kept_rank is None:
+            kept_rank = min(int(max_bond), int(singular_values.size))
+        weights = np.square(np.abs(singular_values))
+        discarded = float(np.sum(weights[kept_rank:]))
+        total = float(np.sum(weights))
+        records.append(
+            {
+                "sequence_index": len(records),
+                "requested_method": str(kwargs.get("method", "auto")),
+                "requested_absorb": str(kwargs.get("absorb", "auto")),
+                "requested_max_bond": int(max_bond),
+                "requested_cutoff": float(kwargs.get("cutoff", 1.0e-10)),
+                "requested_cutoff_mode": str(kwargs.get("cutoff_mode", "rel")),
+                "requested_renorm": kwargs.get("renorm"),
+                "singular_value_probe": (
+                    "quimb_backend_svd_get_arrays_without_truncation"
+                ),
+                "pre_split_singular_values": [
+                    float(value) for value in singular_values
+                ],
+                "pre_split_total_weight": total,
+                "actual_kept_rank": int(kept_rank),
+                "actual_discarded_weight_raw": discarded,
+                "actual_discarded_weight_fraction_of_pre_split": (
+                    discarded / total if total > 0.0 else 0.0
+                ),
+            }
+        )
+        return output
+
+    return observed
+
+
 @contextmanager
 def _observe_actual_quimb_splits() -> Iterator[list[dict[str, Any]]]:
     """Observe actual ``Tensor.split`` calls while preserving their semantics."""
@@ -665,51 +753,7 @@ def _observe_actual_quimb_splits() -> Iterator[list[dict[str, Any]]]:
 
     records: list[dict[str, Any]] = []
     original = qtn.Tensor.split
-
-    def observed(tensor, left_inds, *args, **kwargs):
-        max_bond = kwargs.get("max_bond")
-        singular_values: np.ndarray | None = None
-        if max_bond is not None:
-            right_inds = kwargs.get("right_inds")
-            values = original(
-                tensor,
-                left_inds,
-                right_inds=right_inds,
-                method="svd",
-                get="values",
-            )
-            singular_values = np.asarray(
-                values.detach().cpu().numpy() if hasattr(values, "detach") else values,
-                dtype=np.float64,
-            ).reshape(-1)
-
-        output = original(tensor, left_inds, *args, **kwargs)
-        if singular_values is not None:
-            kept_rank = _shared_bond_dimension(output)
-            if kept_rank is None:
-                kept_rank = min(int(max_bond), int(singular_values.size))
-            weights = np.square(np.abs(singular_values))
-            discarded = float(np.sum(weights[kept_rank:]))
-            total = float(np.sum(weights))
-            records.append(
-                {
-                    "sequence_index": len(records),
-                    "requested_method": str(kwargs.get("method", "auto")),
-                    "requested_absorb": str(kwargs.get("absorb", "auto")),
-                    "requested_max_bond": int(max_bond),
-                    "requested_cutoff": float(kwargs.get("cutoff", 1.0e-10)),
-                    "requested_cutoff_mode": str(kwargs.get("cutoff_mode", "rel")),
-                    "requested_renorm": kwargs.get("renorm"),
-                    "pre_split_singular_values": [float(value) for value in singular_values],
-                    "pre_split_total_weight": total,
-                    "actual_kept_rank": int(kept_rank),
-                    "actual_discarded_weight_raw": discarded,
-                    "actual_discarded_weight_fraction_of_pre_split": (
-                        discarded / total if total > 0.0 else 0.0
-                    ),
-                }
-            )
-        return output
+    observed = _make_observed_split(original, records)
 
     qtn.Tensor.split = observed
     try:
@@ -810,6 +854,12 @@ def _case_runtime_acceptance(
         "expected_split_count": len(split_records) == int(expected["actual_split_count"]),
         "explicit_rsum2_cutoff_mode": bool(split_records)
         and all(record["requested_cutoff_mode"] == "rsum2" for record in split_records),
+        "backend_aware_singular_value_probe": bool(split_records)
+        and all(
+            record.get("singular_value_probe")
+            == "quimb_backend_svd_get_arrays_without_truncation"
+            for record in split_records
+        ),
         "torch_complex128_requested_device": bool(tensor_runtime_ok),
         "expected_normalized_state_fidelity": abs(
             fidelity - float(expected["normalized_state_fidelity"])

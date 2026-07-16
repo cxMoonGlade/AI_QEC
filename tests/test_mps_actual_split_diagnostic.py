@@ -81,9 +81,35 @@ def _neutral_result(fixtures: dict, fixture: dict, *, accepted: bool = True) -> 
 def _split_record(*, discarded_fraction: float, discarded_raw: float) -> dict:
     return {
         "requested_cutoff_mode": "rsum2",
+        "singular_value_probe": "quimb_backend_svd_get_arrays_without_truncation",
         "actual_discarded_weight_raw": discarded_raw,
         "actual_discarded_weight_fraction_of_pre_split": discarded_fraction,
     }
+
+
+class _FakeCpuSingularValues:
+    def numpy(self) -> np.ndarray:
+        return np.asarray([2.0**-0.5, 2.0**-0.5], dtype=np.float64)
+
+
+class _FakeCudaSingularValues:
+    def __array__(self, *_args, **_kwargs):
+        raise TypeError("can't convert cuda tensor to numpy")
+
+    def detach(self):
+        return self
+
+    def cpu(self) -> _FakeCpuSingularValues:
+        return _FakeCpuSingularValues()
+
+
+class _FakeSplitTensor:
+    def __init__(self, inds: tuple[str, ...], sizes: dict[str, int]):
+        self.inds = inds
+        self._sizes = sizes
+
+    def ind_size(self, index: str) -> int:
+        return self._sizes[index]
 
 
 def test_default_fixture_manifest_freezes_requested_4_to_6_qubit_surface() -> None:
@@ -398,6 +424,63 @@ def test_cross_library_join_rejects_unaccepted_result() -> None:
     DIAGNOSTIC.validate_result_manifest(result, fixture_manifest=fixtures)
     with pytest.raises(ValueError, match="not accepted for a cross-library claim"):
         DIAGNOSTIC.join_result_to_fixtures(fixtures, result)
+
+
+def test_split_observer_uses_backend_svd_without_mutating_production_call() -> None:
+    tensor = object()
+    actual_output = (
+        _FakeSplitTensor(("left", "bond"), {"left": 2, "bond": 1}),
+        _FakeSplitTensor(("bond", "right"), {"bond": 1, "right": 2}),
+    )
+    calls: list[dict] = []
+
+    def original(observed_tensor, left_inds, *args, **kwargs):
+        assert observed_tensor is tensor
+        calls.append({"left_inds": left_inds, "args": args, "kwargs": kwargs})
+        if kwargs.get("get") == "arrays":
+            assert kwargs == {
+                "right_inds": ("right",),
+                "method": "svd",
+                "absorb": None,
+                "max_bond": None,
+                "cutoff": 0.0,
+                "renorm": False,
+                "get": "arrays",
+            }
+            return object(), _FakeCudaSingularValues(), object()
+        return actual_output
+
+    records: list[dict] = []
+    observed = DIAGNOSTIC._make_observed_split(original, records)
+    production_kwargs = {
+        "right_inds": ("right",),
+        "method": "svd",
+        "max_bond": 1,
+        "cutoff": 0.0,
+        "cutoff_mode": "rsum2",
+    }
+    returned = observed(tensor, ("left",), "production-positional", **production_kwargs)
+
+    assert returned is actual_output
+    assert len(calls) == 2
+    assert calls[0] == {
+        "left_inds": ("left",),
+        "args": ("production-positional",),
+        "kwargs": production_kwargs,
+    }
+    assert calls[1]["kwargs"]["get"] == "arrays"
+    assert "get" not in calls[0]["kwargs"]
+    assert records[0]["pre_split_singular_values"] == pytest.approx(
+        [2.0**-0.5, 2.0**-0.5]
+    )
+    assert records[0]["singular_value_probe"] == (
+        "quimb_backend_svd_get_arrays_without_truncation"
+    )
+    assert records[0]["actual_kept_rank"] == 1
+    assert records[0]["actual_discarded_weight_raw"] == pytest.approx(0.5)
+    assert records[0][
+        "actual_discarded_weight_fraction_of_pre_split"
+    ] == pytest.approx(0.5)
 
 
 def test_split_path_role_labels_do_not_claim_an_unexpected_runtime_path() -> None:
