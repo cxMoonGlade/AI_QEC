@@ -48,9 +48,11 @@ has begun changing restores both original tensors.
 A full-record faithfulness claim requires comparison with an independent reference and an explicit
 convergence study over the relevant approximation controls. At the registered strict ``eps_fid``,
 the post-fix d3 entropy equality is currently an all-noop result: no authenticated rank-reducing FET
-write-back occurs, so the non-degeneracy gate is RED and the pruning path remains unvalidated. This
-must be authenticated by a fresh-process replay, and the primary-literature bridge from the local FET
-objective to the QEC entropy and complete record-law observables remains open.
+write-back occurs, so the non-degeneracy gate is RED and the pruning path remains unvalidated. The
+fresh-process replay bound to repair commit `c8c553e` authenticates this split result: scoped replay,
+fallback contract, RNG neutrality, and entropy pass, while solver health and non-degeneracy remain
+RED. The primary-literature bridge from the local FET objective to the QEC entropy and complete
+record-law observables remains open.
 Passing an entropy, local-environment, or dense-reference check does not by itself establish
 full-record faithfulness. Results beyond the bounded d3 implementation surface, including d5/d7
 distributions, therefore remain provisional. No d5/d7 distributional result, local bond statistic,

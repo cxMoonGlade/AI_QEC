@@ -98,8 +98,10 @@ declared private RNG rather than advancing ambient CPU/CUDA streams. This closes
 transactionality, and RNG-control defects, not the scientific claim. At the strict registered
 ``eps_fid``, the d3 entropy equality currently occurs with zero accepted rank-reducing write-backs;
 the explicit FET non-degeneracy gate is therefore RED and the pruning path is not scientifically
-validated. A fresh-process replay must authenticate that result, and a primary-literature bridge must
-still connect the local FET objective to the QEC entropy and complete record-law observables. Local
+validated. The committed fresh-process replay bound to `c8c553e` authenticates the all-noop split
+verdict: scoped replay, fallback contract, RNG neutrality, and entropy pass, while solver health and
+non-degeneracy remain RED. A primary-literature bridge must still connect the local FET objective to
+the QEC entropy and complete record-law observables. Local
 environment, entropy, or dense-reference checks cannot individually certify full-record faithfulness,
 and no tolerance, target, or algorithm substitution may be chosen merely to manufacture a pass.
 

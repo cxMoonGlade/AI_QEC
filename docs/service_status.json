@@ -457,7 +457,7 @@
         "tests/test_peps_trajectory_carrier.py",
         "tests/test_peps_fet.py"
       ],
-      "note": "Current feasibility carrier. The FET writeback boundary now fails closed, rolls back both endpoints transactionally, and uses a declared private solver RNG without advancing ambient CPU/CUDA streams. Those are engineering guarantees only: at the registered strict eps_fid the d3 entropy equality is all-noop, with zero authenticated rank-reducing writebacks, so the FET non-degeneracy gate is RED and pruning remains scientifically unvalidated. Fresh-process replay and the literature bridge from local FET fidelity to entropy/full-record faithfulness remain open; d5/d7 scientific claims remain provisional."
+      "note": "Current feasibility carrier. The FET writeback boundary now fails closed, rolls back both endpoints transactionally, and uses a declared private solver RNG without advancing ambient CPU/CUDA streams. Those are engineering guarantees only: the fresh-process replay bound to repair commit c8c553e passes scoped replay, fallback, RNG-neutrality, and strict-target d3 entropy checks, but all four cases are all-noop, all 64 cuts are solver-health RED, and zero authenticated rank-reducing writebacks leave the non-degeneracy gate RED. The literature bridge from local FET fidelity to entropy/full-record faithfulness remains open; d5/d7 scientific claims remain provisional."
     },
     {
       "id": "pepo_density_matrix_carrier",
