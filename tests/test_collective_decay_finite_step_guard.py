@@ -203,6 +203,19 @@ def _high_decay_schedule():
     return circuit_ir_to_substep_schedule(builder.build())
 
 
+def _overcap_high_decay_schedule():
+    builder = CircuitBuilder(num_qubits=6)
+    builder.declare_static_zz_couplings(((0, 5),))
+    builder.declare_axis1_local_lindblad_context(
+        Axis1LocalLindbladContextSpec(
+            gamma_phi_per_ns=0.0,
+            gamma_1_per_ns=0.05,
+        )
+    )
+    builder.idle(tuple(range(6)), duration_ns=20.0)
+    return circuit_ir_to_substep_schedule(builder.build())
+
+
 def test_execution_manifest_exposes_mass_residual_block():
     manifest = axis1_mcwf_mps_state_record_execution_manifest(
         _high_decay_schedule(),
@@ -232,3 +245,88 @@ def test_manifest_budget_override_is_explicit():
     assert not str(manifest.get("blocked_reason", "")).startswith(
         "mcwf_first_order_mass_residual_exceeds_budget"
     )
+    assert manifest["execution_status"] == "completed"
+    assert manifest["certification_status"] == "not_evaluated"
+    assert manifest["diagnostic_only"] is True
+    assert manifest["verdict"] == "fail"
+    assert manifest["passed"] is False
+
+
+def test_mcwf_overcap_none_budget_cannot_pass_restricted_acceptance():
+    """MPS-002: record-count normalization cannot hide invalid MCWF branch mass."""
+
+    manifest = axis1_mcwf_mps_state_record_execution_manifest(
+        _overcap_high_decay_schedule(),
+        local_dims=[2] * 6,
+        initial_levels=[1] * 6,
+        trajectory_count=1,
+        rng_seed=11,
+        microstep_count=1,
+        mass_residual_budget=None,
+    )
+
+    runtime_residual = manifest["mps_execution"]["jump_sampling"][
+        "probability_mass_residual_max"
+    ]
+    # Six T1 jumps each carry unit raw mass. The no-jump candidate has norm
+    # squared (1 - gamma*dt/2)^(2*6) = (1/2)^12, so total mass is
+    # 6 + 2^-12 and the independently expected residual is 5 + 2^-12.
+    assert runtime_residual == pytest.approx(5.0 + 0.5**12, abs=1.0e-9)
+    assert manifest["mps_execution"]["total_probability_residual"] == 0.0
+
+    assert manifest["verdict"] == "fail"
+    assert manifest["passed"] is False
+    assert manifest["execution_status"] == "completed"
+    assert manifest["certification_status"] == "not_evaluated"
+    assert manifest["diagnostic_only"] is True
+    policy = manifest["restricted_acceptance_policy"]
+    assert policy["accepted_for_restricted_execution"] is False
+    assert policy["certification_status"] == "not_evaluated"
+    assert policy["diagnostic_only"] is True
+    assert policy["probability"]["runtime_candidate_mass_residual"] == pytest.approx(
+        5.0 + 0.5**12,
+        abs=1.0e-9,
+    )
+    assert policy["probability"]["runtime_candidate_mass_residual_budget"] is None
+    assert policy["probability"]["runtime_candidate_mass_residual_within_budget"] is None
+
+
+@pytest.mark.parametrize(
+    "budget",
+    [math.nan, math.inf, -math.inf],
+    ids=["nan", "positive_inf", "negative_inf"],
+)
+def test_mcwf_rejects_nonfinite_mass_residual_budget_before_execution(budget):
+    with pytest.raises(ValueError, match="mass_residual_budget must be finite"):
+        axis1_mcwf_mps_state_record_execution_manifest(
+            _overcap_high_decay_schedule(),
+            local_dims=[2] * 6,
+            initial_levels=[1] * 6,
+            trajectory_count=1,
+            rng_seed=11,
+            microstep_count=1,
+            mass_residual_budget=budget,
+        )
+
+
+def test_mcwf_overcap_finite_mass_budget_without_oracle_is_diagnostic_only():
+    manifest = axis1_mcwf_mps_state_record_execution_manifest(
+        _overcap_high_decay_schedule(),
+        local_dims=[2] * 6,
+        initial_levels=[1] * 6,
+        trajectory_count=1,
+        rng_seed=11,
+        microstep_count=1,
+        mass_residual_budget=10.0,
+    )
+
+    policy = manifest["restricted_acceptance_policy"]
+    assert manifest["execution_status"] == "completed"
+    assert manifest["certification_status"] == "unavailable"
+    assert manifest["diagnostic_only"] is True
+    assert manifest["verdict"] == "fail"
+    assert manifest["passed"] is False
+    assert policy["accepted_for_restricted_execution"] is False
+    assert policy["accepted_as_restricted_overcap_execution"] is False
+    assert policy["probability"]["runtime_candidate_mass_residual_within_budget"] is True
+    assert policy["blocked_reason"].startswith("dense_jointL_certification:")

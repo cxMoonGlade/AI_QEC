@@ -139,6 +139,7 @@ def test_restricted_policy_requires_explicit_gross_verdict():
                 "trajectory_sampling": {
                     "mode": "sampled_fixed_microstep_mcwf_trajectories"
                 },
+                "jump_sampling": {"probability_mass_residual_max": 0.0},
             },
             certification={
                 "executed": True,
@@ -148,4 +149,27 @@ def test_restricted_policy_requires_explicit_gross_verdict():
             program={"requires_scalable_backend": False},
             rng_seed=904,
             trajectory_count=4,
+            mass_residual_budget=0.1,
+        )
+
+
+def test_restricted_policy_requires_runtime_mass_residual_evidence():
+    with pytest.raises(KeyError, match="jump_sampling"):
+        restricted_acceptance_policy(
+            execution={
+                "total_probability_residual": 0.0,
+                "trajectory_sampling": {
+                    "mode": "sampled_fixed_microstep_mcwf_trajectories"
+                },
+            },
+            certification={
+                "executed": True,
+                "passed": True,
+                "passed_gross": True,
+                "comparison_outcome_is_metric": True,
+            },
+            program={"requires_scalable_backend": False},
+            rng_seed=904,
+            trajectory_count=4,
+            mass_residual_budget=0.1,
         )

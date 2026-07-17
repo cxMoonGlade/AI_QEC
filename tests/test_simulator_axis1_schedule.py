@@ -2036,7 +2036,7 @@ def test_axis1_mcwf_mps_execution_runs_qubit_fixed_microstep_record_fixture():
     )
 
     assert manifest["schema"] == (
-        "error_coupling_simulator.frontend.mcwf_mps_state_record_execution.v1"
+        "error_coupling_simulator.frontend.mcwf_mps_state_record_execution.v2"
     )
     assert manifest["backend_contract"] == AXIS1_MCWF_MPS_EXECUTION_BACKEND_CONTRACT
     assert manifest["verdict"] == "pass"
@@ -2080,7 +2080,7 @@ def test_axis1_mcwf_mps_execution_preserves_qutrit_level_record_without_projecti
     )
 
     assert manifest["schema"] == (
-        "error_coupling_simulator.frontend.mcwf_mps_state_record_execution.v1"
+        "error_coupling_simulator.frontend.mcwf_mps_state_record_execution.v2"
     )
     assert manifest["verdict"] == "pass"
     assert manifest["passed"] is True
@@ -2194,8 +2194,11 @@ def test_axis1_mcwf_mps_execution_runs_qutrit_seepage_jump_from_public_context()
         mass_residual_budget=None,
     )
 
-    assert manifest["verdict"] == "pass"
-    assert manifest["passed"] is True
+    assert manifest["verdict"] == "fail"
+    assert manifest["passed"] is False
+    assert manifest["execution_status"] == "completed"
+    assert manifest["certification_status"] == "not_evaluated"
+    assert manifest["diagnostic_only"] is True
     execution = manifest["mps_execution"]
     assert execution["level_records"] == [[1]]
     assert execution["level_record_counts"] == [4]
@@ -2267,7 +2270,11 @@ def test_axis1_mcwf_mps_same_substep_leakage_static_zz_and_local_collapse_joint_
         mass_residual_budget=None,
     )
 
-    assert manifest["verdict"] == "pass"
+    assert manifest["verdict"] == "fail"
+    assert manifest["passed"] is False
+    assert manifest["execution_status"] == "completed"
+    assert manifest["certification_status"] == "not_evaluated"
+    assert manifest["diagnostic_only"] is True
     execution = manifest["mps_execution"]
     first = execution["applied_substeps"][0]
     assert "ZZ" in first["hamiltonian_operator_families"]
@@ -2353,10 +2360,15 @@ def test_axis1_carrier_execution_mcwf_mps_mixed_local_dims_runs_without_dense_fa
     assert execution["representability"] == (
         AXIS1_CARRIER_MCWF_MPS_EXECUTION_REPRESENTABILITY
     )
-    assert execution["verdict"] == "pass"
-    assert execution["passed"] is True
-    assert execution["blocked_reason"] is None
+    assert execution["verdict"] == "fail"
+    assert execution["passed"] is False
+    assert execution["blocked_reason"].startswith("dense_jointL_certification:")
     assert execution["contract_surface_valid"] is True
+    policy = execution["restricted_acceptance_policy"]
+    assert policy["certification_status"] == "unavailable"
+    assert policy["diagnostic_only"] is True
+    assert policy["accepted_for_restricted_execution"] is False
+    assert policy["accepted_as_restricted_overcap_execution"] is False
     assert execution["dense_probe_executed"] is False
     assert execution["qt_mps_backend_executed"] is False
     assert execution["mcwf_mps_backend_executed"] is True

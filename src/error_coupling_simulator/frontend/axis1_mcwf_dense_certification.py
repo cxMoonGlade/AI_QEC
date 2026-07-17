@@ -20,6 +20,7 @@ The dense joint-Lindbladian reference is CUDA-only, so claim-bearing
 certification executes on CUDA.
 """
 
+import math
 from typing import Any
 
 # Module-default tolerances. Epistemic class (c): heuristic certification gates /
@@ -567,6 +568,7 @@ def restricted_acceptance_policy(
     program: dict[str, Any],
     rng_seed: int | None,
     trajectory_count: int,
+    mass_residual_budget: float | None,
     worst_cut_discarded_weight_gate: float | None = None,
     total_discarded_weight_gate: float | None = None,
 ) -> dict[str, Any]:
@@ -575,8 +577,8 @@ def restricted_acceptance_policy(
     The policy is
         accepted_for_restricted_execution =
             normalization_invariant_ok
-            AND ( (dense_executed AND dense_passed_gross)   # GROSS gate
-                  OR honest-true-overcap fallback )
+            AND runtime_mass_residual_within_budget
+            AND dense_executed AND dense_passed_gross
             AND (seed_explicit if the sampled path is being accepted as evidence)
         accepted_for_exact_dense_probability_evidence =
             accepted AND not sampled AND dense_executed AND dense_passed (STRICT gate).
@@ -584,16 +586,36 @@ def restricted_acceptance_policy(
     A correct ``microstep_count=1`` run (real finite-step error, channel ``1-F_e ~ 1e-2`` /
     sampled-level ``TV`` small) PASSES the GROSS gate => restricted-accepted. A no-op /
     wrong-branch / wrong-generator FAILS the gross gate => rejected. A genuinely-uncheckable
-    TRUE-OVERCAP run falls back to restricted (never exact-dense). A cert that EXECUTED and
-    FAILED the gross gate => REJECT (no fallback).
+    TRUE-OVERCAP run remains useful diagnostic evidence but cannot pass restricted acceptance.
+    A cert that EXECUTED and FAILED the gross gate => REJECT (no fallback).
 
     Keeps ``total_probability_residual`` but RENAMES its ROLE to ``normalization_invariant``
     (a sum-frequencies sanity invariant, NOT a distinguishability metric). Sets
     ``comparison_outcome_is_metric: True`` ONLY where a real TV / 1-F_e / Choi metric was
     computed.
     """
+    if mass_residual_budget is not None:
+        if isinstance(mass_residual_budget, bool):
+            raise TypeError("mass_residual_budget must be a real threshold, not bool")
+        mass_residual_budget = float(mass_residual_budget)
+        if not math.isfinite(mass_residual_budget):
+            raise ValueError("mass_residual_budget must be finite")
+        if mass_residual_budget < 0.0:
+            raise ValueError("mass_residual_budget must be nonnegative")
+
     normalization_invariant = float(execution["total_probability_residual"])
     normalization_invariant_ok = normalization_invariant <= _NORMALIZATION_INVARIANT_GATE
+    runtime_mass_residual = float(
+        execution["jump_sampling"]["probability_mass_residual_max"]
+    )
+    runtime_mass_residual_valid = bool(
+        math.isfinite(runtime_mass_residual) and runtime_mass_residual >= 0.0
+    )
+    runtime_mass_residual_within_budget = bool(
+        mass_residual_budget is not None
+        and runtime_mass_residual_valid
+        and runtime_mass_residual <= mass_residual_budget
+    )
     seed_explicit = rng_seed is not None
 
     sampling = execution.get("trajectory_sampling", {})
@@ -613,12 +635,10 @@ def restricted_acceptance_policy(
     # The STRICT exact-dense evidence path: the same comparison passed the STRICT gate.
     dense_evidence_strict = bool(dense_executed and dense_passed_strict)
 
-    # Only a genuinely uncheckable run (the window is
-    # too large to densely check, or the schedule requires the scalable backend) stays a
-    # RESTRICTED over-cap execution -- NEVER a falsely-"passed" certification, and NEVER an
-    # inert-accept of a checkable run. A cert that EXECUTED and FAILED its gross gate does
-    # NOT reach here (dense_status == "failed").
-    overcap_restricted = bool(
+    # A genuinely uncheckable run may retain diagnostic evidence, but it is not a
+    # positive restricted-certification path. A cert that executed and failed its gross gate
+    # is likewise rejected rather than routed through an unavailable-oracle fallback.
+    overcap_unverified = bool(
         normalization_invariant_ok
         and dense_status == "skipped_overcap_dense_fallback_forbidden"
     )
@@ -629,7 +649,8 @@ def restricted_acceptance_policy(
     sampled_evidence_seed_ok = bool(seed_explicit or not sampled)
     accepted = bool(
         normalization_invariant_ok
-        and (dense_evidence_gross or overcap_restricted)
+        and runtime_mass_residual_within_budget
+        and dense_evidence_gross
         and sampled_evidence_seed_ok
     )
 
@@ -673,9 +694,15 @@ def restricted_acceptance_policy(
         accepted = False
 
     blockers: list[str] = []
+    if mass_residual_budget is None:
+        blockers.append("mass_residual_budget_not_declared_diagnostic_only")
+    elif not runtime_mass_residual_valid:
+        blockers.append("runtime_probability_mass_residual_invalid")
+    elif not runtime_mass_residual_within_budget:
+        blockers.append("runtime_probability_mass_residual_exceeds_budget")
     if not normalization_invariant_ok:
         blockers.append("normalization_invariant_exceeds_gate")
-    if not dense_evidence_gross and not overcap_restricted:
+    if not dense_evidence_gross:
         blockers.append(f"dense_jointL_certification:{dense_status}")
     if sampled and not seed_explicit:
         blockers.append("sampled_trajectory_rng_seed_not_explicit")
@@ -707,9 +734,28 @@ def restricted_acceptance_policy(
         ]
     )
 
+    if mass_residual_budget is None:
+        certification_status = "not_evaluated"
+        diagnostic_only = True
+    elif not runtime_mass_residual_valid or not runtime_mass_residual_within_budget:
+        certification_status = "rejected"
+        diagnostic_only = False
+    elif overcap_unverified or not dense_executed:
+        certification_status = "unavailable"
+        diagnostic_only = True
+    elif accepted:
+        certification_status = "accepted"
+        diagnostic_only = False
+    else:
+        certification_status = "rejected"
+        diagnostic_only = False
+
     return {
-        "schema": "error_coupling_simulator.frontend.mcwf_mps_restricted_acceptance_policy.v3",
+        "schema": "error_coupling_simulator.frontend.mcwf_mps_restricted_acceptance_policy.v4",
         "policy_role": "restricted_execution_acceptance_not_metric",
+        "execution_status": "completed",
+        "certification_status": certification_status,
+        "diagnostic_only": diagnostic_only,
         "accepted_for_restricted_execution": accepted,
         "accepted_for_sampled_execution_evidence": bool(
             accepted and sampled and dense_evidence_gross
@@ -719,9 +765,7 @@ def restricted_acceptance_policy(
             accepted and not sampled and dense_evidence_strict
         ),
         "accepted_for_production_scalable_backend": False,
-        "accepted_as_restricted_overcap_execution": bool(
-            accepted and overcap_restricted
-        ),
+        "accepted_as_restricted_overcap_execution": False,
         "blocked_reason": None if accepted else (blockers[0] if blockers else None),
         "gross_strict_gate_split": {
             "gross_gate_role": "restricted_acceptance_gate_catches_gross_disagreement_no_op_wrong_branch",
@@ -811,6 +855,17 @@ def restricted_acceptance_policy(
             "normalization_invariant": normalization_invariant,
             "normalization_invariant_gate": _NORMALIZATION_INVARIANT_GATE,
             "role": "normalization_sanity_invariant_not_distinguishability_metric",
+            "runtime_candidate_mass_residual": runtime_mass_residual,
+            "runtime_candidate_mass_residual_budget": mass_residual_budget,
+            "runtime_candidate_mass_residual_is_finite_nonnegative": (
+                runtime_mass_residual_valid
+            ),
+            "runtime_candidate_mass_residual_within_budget": (
+                None
+                if mass_residual_budget is None
+                else runtime_mass_residual_within_budget
+            ),
+            "runtime_candidate_mass_residual_required_for_restricted_acceptance": True,
             "comparison_outcome_is_metric": False,
             "epistemic_class": "c",
         },

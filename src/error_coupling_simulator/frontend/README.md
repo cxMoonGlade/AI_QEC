@@ -322,7 +322,15 @@ Current slice:
   the measured local level back to the requested computational reset state. The
   manifest requires explicit CUDA RNG provenance for accepted sampled evidence,
   records jump/no-jump diagnostics, multilevel readout policy, and MPS
-  truncation ledgers, and keeps
+  truncation ledgers. Restricted acceptance also requires a finite declared
+  `mass_residual_budget`, a finite nonnegative runtime candidate-mass residual
+  within that budget, and an executed independent dense certification that
+  passes its gross gate. Passing `mass_residual_budget=None` executes only a
+  convergence diagnostic, skips dense certification, and returns
+  `execution_status="completed"`, `certification_status="not_evaluated"`,
+  `diagnostic_only=true`, and verdict `fail`. An over-cap run whose independent
+  oracle is unavailable similarly cannot use Record-frequency normalization as
+  positive evidence. The manifest keeps
   `claims_exact_joint_lindblad_generator=false`,
   `claims_dense_channel_evidence=false`,
   `claims_axis2_source_timeline=false`, and
@@ -620,8 +628,12 @@ Representability boundary:
   surface. It performs no dense, qutip-cuquantum, or restricted QT/MPS fallback.
 - `representability="axis1_mcwf_mps_fixed_microstep_local_dims_state_record"` means
   `axis1_mcwf_mps_state_record_execution_manifest(...)` executed sampled
-  fixed-microstep MCWF trajectories on a local-dimension MPS carrier. It is
-  state/record execution evidence only: not exact joint-L channel evidence, not
+  fixed-microstep MCWF trajectories on a local-dimension MPS carrier. Execution
+  completion is distinct from certification: diagnostic-only and oracle-unavailable
+  runs retain their state/Record payload but have verdict `fail`. Runtime MCWF
+  candidate-mass residual and empirical Record-frequency normalization are separate
+  fields and neither substitutes for the other. It is state/record execution evidence
+  only: not exact joint-L channel evidence, not
   exact continuous-time leakage-channel evidence, not `.dem`, not decoder
   integration, and not production scalable completion.
 - `representability="axis1_one_site_qutrit_leakage_dense_oracle_certification_no_payload"`

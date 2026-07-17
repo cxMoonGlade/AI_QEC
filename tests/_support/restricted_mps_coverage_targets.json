@@ -1,0 +1,146 @@
+{
+  "_comment": [
+    "Strict Phase 0 coverage and mutation registry for the restricted MPS verification surface.",
+    "A RED gate is expected until every public unit reaches 100% statement and branch coverage; do not lower targets or add exemptions to manufacture green.",
+    "axis1_mcwf_dense_certification.py is currently a registered support path, not a service owner."
+  ],
+  "contract": "docs/SIMULATOR.md",
+  "default_target": {"statement": 1.0, "branch": 1.0},
+  "requires_gpu": true,
+  "covered_by_test_files": [
+    "tests/test_mps_actual_split_helper.py",
+    "tests/test_axis1_mcwf_dense_certification.py",
+    "tests/test_simulator_axis1_schedule.py",
+    "tests/test_collective_decay_finite_step_guard.py"
+  ],
+  "reconcile_modules": [
+    "src/error_coupling_simulator/frontend/_mps_actual_split.py",
+    "src/error_coupling_simulator/frontend/axis1_mcwf_mps_contract.py",
+    "src/error_coupling_simulator/frontend/axis1_mcwf_mps_execution.py",
+    "src/error_coupling_simulator/frontend/axis1_qt_mps_contract.py",
+    "src/error_coupling_simulator/frontend/axis1_qt_mps_execution.py",
+    "src/error_coupling_simulator/frontend/axis1_mcwf_dense_certification.py"
+  ],
+  "out_of_scope": {},
+  "canonical_units": [
+    "normalize_mps_max_bond",
+    "apply_capped_two_site_unitary",
+    "commit_mps_candidate_",
+    "axis1_mcwf_mps_state_record_contract_manifest",
+    "axis1_mcwf_mps_state_record_execution_manifest",
+    "axis1_qt_mps_state_record_contract_manifest",
+    "axis1_qt_mps_restricted_execution_manifest",
+    "axis1_qt_mps_bond_sweep_manifest",
+    "axis1_qt_mps_trajectory_seed_sweep_manifest",
+    "axis1_qt_mps_restricted_evidence_bundle_manifest",
+    "axis1_qt_mps_resource_probe_manifest",
+    "dense_jointL_record_certification",
+    "restricted_acceptance_policy"
+  ],
+  "units": [
+    {
+      "group": "mps_actual_split",
+      "module": "src/error_coupling_simulator/frontend/_mps_actual_split.py",
+      "unit": "normalize_mps_max_bond",
+      "qualname": "normalize_mps_max_bond",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "mps_actual_split",
+      "module": "src/error_coupling_simulator/frontend/_mps_actual_split.py",
+      "unit": "apply_capped_two_site_unitary",
+      "qualname": "apply_capped_two_site_unitary",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "mps_actual_split",
+      "module": "src/error_coupling_simulator/frontend/_mps_actual_split.py",
+      "unit": "commit_mps_candidate_",
+      "qualname": "commit_mps_candidate_",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "mcwf_mps_contract",
+      "module": "src/error_coupling_simulator/frontend/axis1_mcwf_mps_contract.py",
+      "unit": "axis1_mcwf_mps_state_record_contract_manifest",
+      "qualname": "axis1_mcwf_mps_state_record_contract_manifest",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "mcwf_mps_execution",
+      "module": "src/error_coupling_simulator/frontend/axis1_mcwf_mps_execution.py",
+      "unit": "axis1_mcwf_mps_state_record_execution_manifest",
+      "qualname": "axis1_mcwf_mps_state_record_execution_manifest",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "qt_mps_contract",
+      "module": "src/error_coupling_simulator/frontend/axis1_qt_mps_contract.py",
+      "unit": "axis1_qt_mps_state_record_contract_manifest",
+      "qualname": "axis1_qt_mps_state_record_contract_manifest",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "qt_mps_execution",
+      "module": "src/error_coupling_simulator/frontend/axis1_qt_mps_execution.py",
+      "unit": "axis1_qt_mps_restricted_execution_manifest",
+      "qualname": "axis1_qt_mps_restricted_execution_manifest",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "qt_mps_execution",
+      "module": "src/error_coupling_simulator/frontend/axis1_qt_mps_execution.py",
+      "unit": "axis1_qt_mps_bond_sweep_manifest",
+      "qualname": "axis1_qt_mps_bond_sweep_manifest",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "qt_mps_execution",
+      "module": "src/error_coupling_simulator/frontend/axis1_qt_mps_execution.py",
+      "unit": "axis1_qt_mps_trajectory_seed_sweep_manifest",
+      "qualname": "axis1_qt_mps_trajectory_seed_sweep_manifest",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "qt_mps_execution",
+      "module": "src/error_coupling_simulator/frontend/axis1_qt_mps_execution.py",
+      "unit": "axis1_qt_mps_restricted_evidence_bundle_manifest",
+      "qualname": "axis1_qt_mps_restricted_evidence_bundle_manifest",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "qt_mps_execution",
+      "module": "src/error_coupling_simulator/frontend/axis1_qt_mps_execution.py",
+      "unit": "axis1_qt_mps_resource_probe_manifest",
+      "qualname": "axis1_qt_mps_resource_probe_manifest",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "mcwf_mps_certification",
+      "module": "src/error_coupling_simulator/frontend/axis1_mcwf_dense_certification.py",
+      "unit": "dense_jointL_record_certification",
+      "qualname": "dense_jointL_record_certification",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    },
+    {
+      "group": "mcwf_mps_certification",
+      "module": "src/error_coupling_simulator/frontend/axis1_mcwf_dense_certification.py",
+      "unit": "restricted_acceptance_policy",
+      "qualname": "restricted_acceptance_policy",
+      "target": {"statement": 1.0, "branch": 1.0},
+      "exemptions": []
+    }
+  ]
+}

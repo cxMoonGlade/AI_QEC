@@ -815,6 +815,7 @@ def test_mcwf_finite_bond_acceptance_consumes_the_authenticated_ledger() -> None
             "trajectory_sampling": {
                 "mode": "sampled_fixed_microstep_mcwf_trajectories"
             },
+            "jump_sampling": {"probability_mass_residual_max": 0.0},
             "mps_truncation_ledger": ledger,
         },
         "certification": {
@@ -826,6 +827,7 @@ def test_mcwf_finite_bond_acceptance_consumes_the_authenticated_ledger() -> None
         "program": {"requires_scalable_backend": False},
         "rng_seed": 17,
         "trajectory_count": 2,
+        "mass_residual_budget": 0.1,
     }
     ungated = restricted_acceptance_policy(**common)
     gated = restricted_acceptance_policy(
@@ -841,6 +843,42 @@ def test_mcwf_finite_bond_acceptance_consumes_the_authenticated_ledger() -> None
     assert gated["accepted_for_restricted_execution"] is True
     assert gated["mps_truncation"]["accepted_as_finite_bond_candidate"] is True
     assert gated["accepted_for_production_scalable_backend"] is False
+
+
+def test_mcwf_runtime_mass_residual_blocks_restricted_acceptance() -> None:
+    from error_coupling_simulator.frontend.axis1_mcwf_dense_certification import (
+        restricted_acceptance_policy,
+    )
+
+    policy = restricted_acceptance_policy(
+        execution={
+            "total_probability_residual": 0.0,
+            "trajectory_sampling": {
+                "mode": "sampled_fixed_microstep_mcwf_trajectories"
+            },
+            "jump_sampling": {"probability_mass_residual_max": 0.2},
+            "mps_truncation_ledger": _synthetic_complete_finite_bond_ledger(
+                discarded=0.0
+            ),
+        },
+        certification={
+            "executed": True,
+            "passed": True,
+            "passed_gross": True,
+            "comparison_outcome_is_metric": True,
+        },
+        program={"requires_scalable_backend": False},
+        rng_seed=17,
+        trajectory_count=2,
+        mass_residual_budget=0.1,
+    )
+
+    assert policy["accepted_for_restricted_execution"] is False
+    assert policy["certification_status"] == "rejected"
+    assert policy["diagnostic_only"] is False
+    assert policy["blocked_reason"] == "runtime_probability_mass_residual_exceeds_budget"
+    assert policy["probability"]["normalization_invariant"] == 0.0
+    assert policy["probability"]["runtime_candidate_mass_residual_within_budget"] is False
 
 
 def test_sampled_truncation_aggregation_authenticates_strang_passes_separately() -> None:
@@ -1064,6 +1102,7 @@ def test_zero_two_site_occurrence_inventory_is_vacuously_complete(
                 "trajectory_sampling": {
                     "mode": "sampled_fixed_microstep_mcwf_trajectories"
                 },
+                "jump_sampling": {"probability_mass_residual_max": 0.0},
                 "mps_truncation_ledger": ledger,
             },
             certification={
@@ -1075,6 +1114,7 @@ def test_zero_two_site_occurrence_inventory_is_vacuously_complete(
             program={"requires_scalable_backend": False},
             rng_seed=17,
             trajectory_count=3,
+            mass_residual_budget=0.1,
         )
     assert acceptance["accepted_for_restricted_execution"] is True
     assert acceptance["mps_truncation"][
@@ -1168,6 +1208,7 @@ def test_truncation_aggregation_fails_closed_when_whole_strang_pass_is_missing(
                 "trajectory_sampling": {
                     "mode": "sampled_fixed_microstep_mcwf_trajectories"
                 },
+                "jump_sampling": {"probability_mass_residual_max": 0.0},
                 "mps_truncation_ledger": ledger,
             },
             certification={
@@ -1179,6 +1220,7 @@ def test_truncation_aggregation_fails_closed_when_whole_strang_pass_is_missing(
             program={"requires_scalable_backend": False},
             rng_seed=17,
             trajectory_count=2,
+            mass_residual_budget=0.1,
             worst_cut_discarded_weight_gate=1.0,
             total_discarded_weight_gate=1.0,
         )

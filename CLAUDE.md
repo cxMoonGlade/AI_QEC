@@ -153,3 +153,18 @@ the harness; they are not simulator runtime inputs.
 The pre-cleanup formula ledger, old project narratives, old outputs, and current local retrieval
 caches are not scientific authority. Until the literature reset closes, return load-bearing claims
 to primary papers and exact equation/figure/table locators.
+
+## Agent skills
+
+### Issue tracker
+
+Issues and PRDs live as local Markdown under `.scratch/<feature-slug>/`. See
+`docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The tracker uses the five default workflow states. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+This is a single-context repository rooted at `CONTEXT.md`. See `docs/agents/domain.md`.

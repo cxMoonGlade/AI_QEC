@@ -36,6 +36,12 @@ one-fact locators and checked pages, empty-corpus refusal, project-inference inj
 corpora, and corrupted RAG/KG text, claims, counts, hashes, IDs, relationships, statistics, and
 endpoints. Trusted build/query paths have no artifact-verification bypass.
 
+`test_external_aer_mps_comparison.py` and
+`test_external_yastn_mcwf_mass_comparison.py` protect repository-owned neutral adapters for isolated,
+pristine external baselines. Aer checks independent dense/unitary state evolution and finite-bond
+damage; YASTN checks the frozen product-MPS MCWF candidate-mass arithmetic and an omitted-jump
+falsifier. Neither external library is a QEC Record-law or restricted-acceptance oracle.
+
 ## Coverage and mutation registries
 
 Current registries are the JSON files matching `tests/_support/*_targets.json`. A registry names:
@@ -58,6 +64,14 @@ The coverage audit derives line and branch sets from the current AST. It fails o
 missing test files, duplicate units, stale qualified names, unclassified public units, or an
 unsupported exemption. JSON registries are configuration, not measured test records; measured
 results must be regenerated from the current checkout.
+
+`restricted_mps_coverage_targets.json` reconciles the five registered restricted-MPS execution
+owners plus the current MCWF certification support module. Its 100% statement/branch targets and
+empty exemption set are intentional: the Phase 0 baseline remains RED until missing public-unit
+paths are covered. It is not a passing certification artifact. Because this GPU registry mutates
+large modules and the current harness does not force one worker per leased GPU, run mutation only as
+`python tests/harness/mutation.py tests/_support/restricted_mps_coverage_targets.json --jobs 1`;
+default multi-worker mutation is not an authorized MPS evidence run.
 
 ## Test disciplines
 

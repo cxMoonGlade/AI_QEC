@@ -55,7 +55,7 @@ from .axis1_qt_mps_execution import (
 
 
 AXIS1_MCWF_MPS_EXECUTION_SCHEMA = (
-    "error_coupling_simulator.frontend.mcwf_mps_state_record_execution.v1"
+    "error_coupling_simulator.frontend.mcwf_mps_state_record_execution.v2"
 )
 AXIS1_MCWF_MPS_EXECUTION_REPRESENTABILITY = (
     "axis1_mcwf_mps_fixed_microstep_local_dims_state_record"
@@ -137,7 +137,8 @@ def axis1_mcwf_mps_state_record_execution_manifest(
     ``mass_residual_budget`` fail-closes (verdict ``"fail"``) before execution when the first-order
     no-jump truncation is grossly non-CPTP at the requested ``microstep_count`` (the worst-case
     per-microstep probability-mass residual bound exceeds the budget); the fail payload reports the
-    required ``microstep_count``. Pass ``None`` to disable for a deliberate convergence study.
+    required ``microstep_count``. Pass ``None`` only for a deliberate convergence study; such a
+    run may execute and emit diagnostics but cannot pass restricted acceptance.
     """
 
     max_bond = normalize_mps_max_bond(max_bond)
@@ -148,6 +149,10 @@ def axis1_mcwf_mps_state_record_execution_manifest(
     total_discarded_weight_gate = _normalize_optional_nonnegative_gate(
         total_discarded_weight_gate,
         name="total_discarded_weight_gate",
+    )
+    mass_residual_budget = _normalize_optional_nonnegative_gate(
+        mass_residual_budget,
+        name="mass_residual_budget",
     )
     dev = _require_cuda_device(device)
     if int(microstep_count) <= 0:
@@ -187,14 +192,15 @@ def axis1_mcwf_mps_state_record_execution_manifest(
         "worst_cut_discarded_weight_gate": worst_cut_discarded_weight_gate,
         "total_discarded_weight_gate": total_discarded_weight_gate,
         "microstep_count": int(microstep_count),
-        "mass_residual_budget": (
-            None if mass_residual_budget is None else float(mass_residual_budget)
-        ),
+        "mass_residual_budget": mass_residual_budget,
         "finite_step_order": step_order,
         "trajectory_count": int(trajectory_count),
         "rng_seed": None if rng_seed is None else int(rng_seed),
         "initial_levels": list(levels),
         "leaked_readout_b": readout_b,
+        "execution_status": "not_started",
+        "certification_status": "not_evaluated",
+        "diagnostic_only": False,
         "claims_mcwf_mps_backend_execution": False,
         "claims_production_scalable_backend": False,
         "claims_exact_joint_lindblad_generator": False,
@@ -243,6 +249,7 @@ def axis1_mcwf_mps_state_record_execution_manifest(
             **base,
             "verdict": "fail",
             "passed": False,
+            "execution_status": "blocked",
             "mcwf_mps_backend_executed": False,
             "blocked_reason": "mcwf_mps_multilevel_finite_bond_ledger_not_implemented",
             "blocked_substeps": [],
@@ -267,6 +274,7 @@ def axis1_mcwf_mps_state_record_execution_manifest(
             **base,
             "verdict": "fail",
             "passed": False,
+            "execution_status": "blocked",
             "mcwf_mps_backend_executed": False,
             "blocked_reason": unsupported[0]["reason"],
             "blocked_substeps": unsupported,
@@ -297,6 +305,7 @@ def axis1_mcwf_mps_state_record_execution_manifest(
                 **base,
                 "verdict": "fail",
                 "passed": False,
+                "execution_status": "blocked",
                 "mcwf_mps_backend_executed": False,
                 "blocked_reason": residual_blocks[0]["reason"],
                 "blocked_substeps": residual_blocks,
@@ -334,15 +343,26 @@ def axis1_mcwf_mps_state_record_execution_manifest(
         restricted_acceptance_policy,
     )
 
-    certification = dense_jointL_record_certification(
-        schedule, execution, program, device=dev
-    )
+    if mass_residual_budget is None:
+        certification = {
+            "executed": False,
+            "passed": False,
+            "passed_gross": False,
+            "reason": "mass_residual_budget_not_declared_diagnostic_only",
+            "comparison_outcome_is_metric": False,
+            "epistemic_class": "c",
+        }
+    else:
+        certification = dense_jointL_record_certification(
+            schedule, execution, program, device=dev
+        )
     acceptance = restricted_acceptance_policy(
         execution=execution,
         certification=certification,
         program=program,
         rng_seed=rng_seed,
         trajectory_count=int(trajectory_count),
+        mass_residual_budget=mass_residual_budget,
         worst_cut_discarded_weight_gate=worst_cut_discarded_weight_gate,
         total_discarded_weight_gate=total_discarded_weight_gate,
     )
@@ -351,6 +371,9 @@ def axis1_mcwf_mps_state_record_execution_manifest(
         **base,
         "verdict": "pass" if passed else "fail",
         "passed": passed,
+        "execution_status": "completed",
+        "certification_status": acceptance["certification_status"],
+        "diagnostic_only": bool(acceptance["diagnostic_only"]),
         "mcwf_mps_backend_executed": True,
         "claims_mcwf_mps_backend_execution": True,
         "blocked_reason": None if passed else acceptance["blocked_reason"],
@@ -2418,8 +2441,11 @@ def _blocked_acceptance_policy(
     trajectory_count: int,
 ) -> dict[str, Any]:
     return {
-        "schema": "error_coupling_simulator.frontend.mcwf_mps_restricted_acceptance_policy.v1",
+        "schema": "error_coupling_simulator.frontend.mcwf_mps_restricted_acceptance_policy.v4",
         "policy_role": "restricted_execution_acceptance_not_metric",
+        "execution_status": "blocked",
+        "certification_status": "not_evaluated",
+        "diagnostic_only": False,
         "accepted_for_restricted_execution": False,
         "accepted_for_sampled_execution_evidence": False,
         "accepted_for_exact_dense_probability_evidence": False,
