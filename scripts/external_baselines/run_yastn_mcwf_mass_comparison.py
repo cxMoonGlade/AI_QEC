@@ -12,9 +12,11 @@ trajectory-law oracle.
 from __future__ import annotations
 
 import argparse
+import base64
 from collections.abc import Mapping, Sequence
+import csv
 import hashlib
-from importlib import metadata
+from importlib import import_module, metadata
 import json
 import math
 import os
@@ -37,6 +39,7 @@ EXPECTED_INITIAL_NORM_SQUARED = 1.0
 EXPECTED_NO_JUMP_NORM_SQUARED = LOCAL_NO_JUMP_AMPLITUDE ** (2 * NUM_SITES)
 EXPECTED_JUMP_NORMS_SQUARED = (GAMMA_1_PER_NS * DT_NS,) * NUM_SITES
 ABS_TOLERANCE = 1.0e-15
+GENERATED_YASTN_PYTHON_FILES = frozenset({"yastn/_version.py"})
 
 REPO = Path(__file__).resolve().parents[2]
 BASELINE_REPO = REPO / "external" / "baselines" / "yastn"
@@ -145,6 +148,190 @@ def _sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def decode_record_sha256(value: str) -> str:
+    """Decode one PEP 376 RECORD sha256 value to lowercase hex."""
+
+    algorithm, separator, encoded = value.partition("=")
+    if algorithm != "sha256" or separator != "=" or not encoded:
+        raise RuntimeError(
+            f"unsupported installed-distribution RECORD hash: {value!r}"
+        )
+    padded = encoded + "=" * (-len(encoded) % 4)
+    try:
+        digest = base64.b64decode(
+            padded.encode("ascii"),
+            altchars=b"-_",
+            validate=True,
+        )
+    except (UnicodeEncodeError, ValueError) as exc:
+        raise RuntimeError(
+            f"malformed installed-distribution RECORD hash: {value!r}"
+        ) from exc
+    if len(digest) != hashlib.sha256().digest_size:
+        raise RuntimeError(
+            f"malformed installed-distribution RECORD hash: {value!r}"
+        )
+    return digest.hex()
+
+
+def _source_tree_manifest_sha256(file_sha256: Mapping[str, str]) -> str:
+    digest = hashlib.sha256()
+    for relative_path in sorted(file_sha256):
+        digest.update(relative_path.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(file_sha256[relative_path].encode("ascii"))
+        digest.update(b"\n")
+    return digest.hexdigest()
+
+
+def validate_yastn_source_tree_hashes(
+    *,
+    installed_sha256: Mapping[str, str],
+    clone_sha256: Mapping[str, str],
+) -> dict[str, Any]:
+    """Require a bidirectional exact match to the frozen clone source tree."""
+
+    installed_paths = set(installed_sha256)
+    clone_paths = set(clone_sha256)
+    generated_paths = installed_paths - clone_paths
+    missing_installed_paths = clone_paths - installed_paths
+    unexpected_generated_paths = generated_paths - GENERATED_YASTN_PYTHON_FILES
+    missing_generated_paths = GENERATED_YASTN_PYTHON_FILES - generated_paths
+    if (
+        missing_installed_paths
+        or unexpected_generated_paths
+        or missing_generated_paths
+    ):
+        raise RuntimeError(
+            "installed YASTN source-tree path mismatch: "
+            f"missing={sorted(missing_installed_paths)!r}, "
+            f"unexpected_generated={sorted(unexpected_generated_paths)!r}, "
+            f"missing_generated={sorted(missing_generated_paths)!r}"
+        )
+    mismatches = sorted(
+        relative_path
+        for relative_path in clone_paths
+        if installed_sha256[relative_path] != clone_sha256[relative_path]
+    )
+    if mismatches:
+        raise RuntimeError(
+            f"installed YASTN source-tree hash mismatch: {mismatches!r}"
+        )
+    installed_comparable_sha256 = {
+        relative_path: installed_sha256[relative_path]
+        for relative_path in clone_paths
+    }
+    clone_comparable_sha256 = {
+        relative_path: clone_sha256[relative_path]
+        for relative_path in clone_paths
+    }
+    installed_manifest_sha256 = _source_tree_manifest_sha256(
+        installed_comparable_sha256
+    )
+    clone_manifest_sha256 = _source_tree_manifest_sha256(clone_comparable_sha256)
+    if installed_manifest_sha256 != clone_manifest_sha256:
+        raise RuntimeError("installed YASTN source-tree manifest mismatch")
+    return {
+        "all_comparable_files_match": True,
+        "installed_python_file_count": len(installed_paths),
+        "clone_python_file_count": len(clone_paths),
+        "comparable_python_file_count": len(clone_comparable_sha256),
+        "generated_python_files": sorted(generated_paths),
+        "comparable_source_tree_manifest_algorithm": (
+            "sha256(sorted(path + NUL + file_sha256 + LF))"
+        ),
+        "installed_comparable_source_tree_sha256": installed_manifest_sha256,
+        "clone_comparable_source_tree_sha256": clone_manifest_sha256,
+    }
+
+
+def _verify_distribution_record(
+    distribution: metadata.Distribution,
+    record_path: Path,
+    *,
+    expected_prefix: Path,
+) -> dict[str, int | bool]:
+    verified = 0
+    unhashed = 0
+    with record_path.open("r", encoding="utf-8", newline="") as handle:
+        for row in csv.reader(handle):
+            if len(row) != 3:
+                raise RuntimeError(f"malformed installed YASTN RECORD row: {row!r}")
+            relative_path, hash_value, size_value = row
+            if not hash_value:
+                unhashed += 1
+                continue
+            expected_sha256 = decode_record_sha256(hash_value)
+            installed_path = Path(distribution.locate_file(relative_path)).resolve()
+            if not installed_path.is_relative_to(expected_prefix):
+                raise RuntimeError(
+                    "installed YASTN RECORD path escaped isolated prefix: "
+                    f"{relative_path}"
+                )
+            if not installed_path.is_file():
+                raise RuntimeError(
+                    f"installed YASTN RECORD path is missing: {relative_path}"
+                )
+            observed_sha256 = _sha256_file(installed_path)
+            if observed_sha256 != expected_sha256:
+                raise RuntimeError(
+                    f"installed YASTN RECORD hash mismatch for {relative_path}"
+                )
+            if size_value and installed_path.stat().st_size != int(size_value):
+                raise RuntimeError(
+                    f"installed YASTN RECORD size mismatch for {relative_path}"
+                )
+            verified += 1
+    if verified == 0:
+        raise RuntimeError("installed YASTN RECORD verified zero hashed files")
+    return {
+        "all_hashed_entries_verified": True,
+        "hashed_entry_count": verified,
+        "unhashed_entry_count": unhashed,
+    }
+
+
+def _installed_yastn_python_files(
+    distribution: metadata.Distribution,
+    distribution_files: Sequence[Any],
+    *,
+    expected_prefix: Path,
+) -> dict[str, Path]:
+    files: dict[str, Path] = {}
+    for entry in distribution_files:
+        relative_path = Path(str(entry))
+        if (
+            not relative_path.parts
+            or relative_path.parts[0] != "yastn"
+            or relative_path.suffix != ".py"
+        ):
+            continue
+        key = relative_path.as_posix()
+        installed_path = Path(distribution.locate_file(entry)).resolve()
+        if (
+            not installed_path.is_file()
+            or not installed_path.is_relative_to(expected_prefix)
+        ):
+            raise RuntimeError(
+                f"installed YASTN Python source escaped isolated prefix: {key}"
+            )
+        files[key] = installed_path
+    if not files:
+        raise RuntimeError("installed YASTN distribution has no Python source files")
+    return files
+
+
+def _clone_yastn_python_files() -> dict[str, Path]:
+    files = {
+        path.relative_to(BASELINE_REPO).as_posix(): path
+        for path in (BASELINE_REPO / "yastn").rglob("*.py")
+        if path.is_file()
+    }
+    if not files:
+        raise RuntimeError("frozen YASTN clone has no Python source files")
+    return files
+
+
 def _git_at(repository: Path, *arguments: str) -> str:
     completed = subprocess.run(
         ["git", "-C", str(repository), *arguments],
@@ -240,20 +427,52 @@ def _assert_runtime_provenance(yastn_module: Any) -> dict[str, Any]:
     if record_entry is None:
         raise RuntimeError("installed YASTN distribution has no RECORD file")
     record_path = Path(distribution.locate_file(record_entry)).resolve()
-    selected_package_files = {
-        "yastn/__init__.py": module_file,
-        "yastn/tn/mps/_initialize.py": (
-            module_file.parent / "tn" / "mps" / "_initialize.py"
-        ),
-        "yastn/tn/mps/_mps_obc.py": (
-            module_file.parent / "tn" / "mps" / "_mps_obc.py"
-        ),
+    record_verification = _verify_distribution_record(
+        distribution,
+        record_path,
+        expected_prefix=prefix,
+    )
+    installed_source_files = _installed_yastn_python_files(
+        distribution,
+        distribution_files,
+        expected_prefix=prefix,
+    )
+    clone_source_files = _clone_yastn_python_files()
+    installed_source_sha256 = {
+        name: _sha256_file(path) for name, path in installed_source_files.items()
     }
-    if not all(
-        path.is_file() and path.is_relative_to(prefix)
-        for path in selected_package_files.values()
+    clone_source_sha256 = {
+        name: _sha256_file(path) for name, path in clone_source_files.items()
+    }
+    source_tree_verification = validate_yastn_source_tree_hashes(
+        installed_sha256=installed_source_sha256,
+        clone_sha256=clone_source_sha256,
+    )
+    generated_version_module = import_module("yastn._version")
+    generated_version_path = Path(generated_version_module.__file__).resolve()
+    expected_generated_commit = f"g{EXPECTED_YASTN_COMMIT[:9]}"
+    if generated_version_path != installed_source_files["yastn/_version.py"]:
+        raise RuntimeError("generated YASTN version module path drifted")
+    if (
+        generated_version_module.__version__ != EXPECTED_YASTN_VERSION
+        or generated_version_module.__commit_id__ != expected_generated_commit
     ):
-        raise RuntimeError("installed YASTN selected files escaped isolated prefix")
+        raise RuntimeError(
+            "generated YASTN version metadata drifted: "
+            f"version={generated_version_module.__version__!r}, "
+            f"commit={generated_version_module.__commit_id__!r}"
+        )
+    selected_names = (
+        "yastn/__init__.py",
+        "yastn/tn/mps/_initialize.py",
+        "yastn/tn/mps/_mps_obc.py",
+    )
+    selected_package_sha256 = {
+        name: installed_source_sha256[name] for name in selected_names
+    }
+    selected_clone_sha256 = {
+        name: clone_source_sha256[name] for name in selected_names
+    }
     return {
         "environment": EXPECTED_ENVIRONMENT,
         "python_prefix": str(prefix),
@@ -273,10 +492,17 @@ def _assert_runtime_provenance(yastn_module: Any) -> dict[str, Any]:
             "direct_url": direct_url,
             "record_path": str(record_path),
             "record_sha256": _sha256_file(record_path),
-            "selected_package_sha256": {
-                name: _sha256_file(path)
-                for name, path in selected_package_files.items()
+            "record_verification": record_verification,
+            "source_tree_verification": source_tree_verification,
+            "generated_version_module": {
+                "path": "yastn/_version.py",
+                "sha256": installed_source_sha256["yastn/_version.py"],
+                "version": generated_version_module.__version__,
+                "commit_id": generated_version_module.__commit_id__,
             },
+            "selected_package_sha256": selected_package_sha256,
+            "selected_clone_sha256": selected_clone_sha256,
+            "selected_installed_files_match_clone": True,
         },
     }
 
