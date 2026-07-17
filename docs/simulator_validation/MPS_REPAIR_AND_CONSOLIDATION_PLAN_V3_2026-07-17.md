@@ -122,7 +122,7 @@ versioned test or committed diagnostic before its source fix is accepted.
 
 | ID | Owner/route | Severity | Confirmed defect or missing gate | Required durable gate | Planned phase |
 |---|---|---:|---|---|---:|
-| `MPS-001` | MCWF connected >=3-site cluster application | blocker | the reachable MCWF `auto-mps` nonlocal decomposition can inherit an internal nonzero cutoff and silently delete a weak term while the route reports no requested truncation | hand-constructed dense operator/state reference; weak 3-site MCWF cluster; resource-cap falsifier; support/order corruption test | 0, 2 |
+| `MPS-001` | MCWF connected >=3-site cluster application | blocker | the reachable MCWF `auto-mps` nonlocal decomposition can inherit an internal nonzero cutoff and silently delete a weak term while the route reports no requested truncation | hand-constructed dense operator/state reference; weak 3-site MCWF cluster; resource-cap falsifier; support/order corruption test; package-wide static negative gate requiring every Quimb decomposition call to carry an explicit named `cutoff=` argument | 0, 2 |
 | `MPS-002` | MCWF certification | blocker | `mass_residual_budget=None` or NaN can bypass preflight, and over-cap acceptance can ignore runtime mass residual | 9-qubit over-cap `None`/NaN fixtures; runtime residual must prevent `pass`; state-machine assertions | 0, 1 |
 | `MPS-003` | shared numerical gates/certification | blocker | bond/seed/dense/resource gates accept NaN/Inf; missing truncation-ledger keys can default to a passing zero | NaN, Inf, bool, missing-key, negative, and equality-edge falsifiers for every gate family | 0, 1 |
 | `MPS-004` | QT sampled Record path | blocker | only the first measurement boundary is registered while later outcome bits are appended | schedule-derived two-boundary layout with hand-written keys/targets/XOR; independent dense Record comparison | 0, 3 |
@@ -182,13 +182,22 @@ no historical file count is a target.
    contract Modules, actual-split implementation, and certification owner.
 2. Commit the confirmed counterexamples for `MPS-001` through `MPS-014`. A RED checkpoint is explicitly
    non-merge-ready and records the exact violated invariant.
-3. Add the currently missing green gates in `MPS-016` before moving their implementation:
+3. Add an AST-based package-wide negative gate for `MPS-001` over
+   `src/error_coupling_simulator/**/*.py`. Every Quimb operation that can decompose or compress a
+   tensor network must carry a named `cutoff=...` argument at the call site. Positional cutoff values,
+   `**kwargs`-only propagation, wrapper defaults, global configuration, and inheritance of Quimb's
+   internal default all fail the scan. The scanner maintains an explicit registry of decomposition
+   APIs and decomposition-triggering `gate`/`gate_` contract modes, and fails closed on an unresolved
+   dynamic mode rather than silently excluding it. Non-decomposing one-site `contract=True` calls are
+   outside this gate. A scanner self-test must prove that removing `cutoff=` from a representative call
+   turns the gate RED.
+4. Add the currently missing green gates in `MPS-016` before moving their implementation:
    MCWF finite-bond manifest wiring, independent bounded dense/SVD actual-split reconstruction,
    swapped-topology and fine-grained norm corruption falsifiers, and an adapter-versus-Quimb wiring
    comparison that is explicitly not an independent scientific oracle.
-4. Freeze healthy semantic projections across QT exact, QT sampled, and MCWF sampled fixtures. Do not
+5. Freeze healthy semantic projections across QT exact, QT sampled, and MCWF sampled fixtures. Do not
    freeze known-broken outputs.
-5. Record measured per-Module coverage, branch coverage, killed/surviving critical mutations, current
+6. Record measured per-Module coverage, branch coverage, killed/surviving critical mutations, current
    source hash, environment lock, and the dynamically expanded fresh-process acceptance plan.
 
 Exit: every registry owner is reconciled; every confirmed defect has a durable falsifier; all existing
@@ -203,9 +212,26 @@ Scope: `MPS-002`, `MPS-003`, and the fail-closed guard half of `MPS-014`.
 3. Make runtime MCWF raw mass/residual mandatory input to restricted acceptance.
 4. Reject NaN/Inf budgets and make `None` diagnostic-only.
 5. Add a declared QT measurement/record materialization budget checked before exponential allocation.
+6. Retire true-over-cap restricted acceptance. Execution evidence may still be emitted, but when no
+   independent Record oracle is available it must end in `certification_status="unavailable"`,
+   `verdict="fail"`, `diagnostic_only=true`, and both restricted-acceptance flags false. The QT child
+   manifest and the enclosing Carrier manifest must agree.
+
+This is an intentional public behavior tightening, not an incidental test fallout:
+
+| Surface | Before Phase 1 | Required Phase 1 behavior | Deliberately affected assertions/consumers |
+|---|---|---|---|
+| QT true-over-cap execution with no independent Record oracle | a completed backend run could set `accepted_as_restricted_overcap_execution=true`, `accepted_for_restricted_execution=true`, and `verdict="pass"` | retain execution and diagnostic evidence, but set both acceptance flags false, certification `unavailable`, diagnostic-only true, and verdict `fail` | `test_axis1_qt_mps_restricted_execution_records_over_cap_h_readout_zero_collapse` must change from pass/true to fail/false |
+| Carrier wrapping that QT result | the child pass propagated to a top-level Carrier pass | the top-level Carrier verdict must remain fail; completion must not be promoted into certification | `test_axis1_carrier_execution_qt_mps_backend_records_over_cap_h_readout` and consumers of the top-level `passed` field must change deliberately |
+| MCWF true-over-cap execution with no independent Record oracle | already diagnostic-only/fail in the retained fixtures | remain diagnostic-only/fail and use the same state-machine meaning; no new acceptance alias | existing MCWF over-cap diagnostic fixtures remain negative controls |
+
+Any schema version or content hash affected by this semantic change must be bumped or regenerated in
+the same phase. Consumers must use `accepted_for_restricted_execution`; backend completion and empirical
+normalization are not substitute acceptance signals.
 
 Exit: no NaN/Inf/missing-key/override path can produce `pass`; over-budget QT sampled work fails before
-allocation; affected schemas and provenance are updated deliberately.
+allocation; the enumerated over-cap tests and consumers have changed deliberately rather than being
+silently accommodated; affected schemas and provenance are updated deliberately.
 
 ### Phase 2 — MCWF uncapped nonlocal reference integrity
 
@@ -217,9 +243,12 @@ Scope: `MPS-001`.
    two-site fixture as a shared-mechanics regression, not as a second reproduction of `MPS-001`.
 3. Use explicit no-requested-truncation decompositions, candidate mutation, finite/norm checks, and
    transactional commit.
-4. Freeze a pre-allocation support/Hilbert/tensor resource cap. Above the cap, fail closed rather than
+4. Make every package Quimb decomposition call satisfy the Phase 0 named `cutoff=` static gate. The
+   route-specific numerical tests separately prove whether that explicit cutoff means requested
+   no-truncation or a declared truncation policy; the static gate alone is not a correctness oracle.
+5. Freeze a pre-allocation support/Hilbert/tensor resource cap. Above the cap, fail closed rather than
    constructing an exponential dense blob.
-5. Validate against the independent dense fixtures and corruption falsifiers from Phase 0.
+6. Validate against the independent dense fixtures and corruption falsifiers from Phase 0.
 
 Exit: the weak-term counterexample agrees with the independent complex128 reference within the frozen
 band; microstep refinement no longer deletes the term; over-cap work fails before allocation; no result
@@ -270,9 +299,20 @@ Scope: ownership consolidation plus the implementation part of `MPS-017`.
 4. Delete the old private implementations in the same phase; add no aliases or forwarding shims.
 5. Retain QT and MCWF substep loops, occurrence definitions, RNG order, support policy, and manifests in
    their respective Adapters.
+6. Add the following explicit disclaimer, with equivalent unambiguous wording, to
+   `carrier/mps/README.md`, `docs/ARCHITECTURE.md`, and `docs/SIMULATOR.md`:
+
+   > `carrier/mps` is an execution-mechanics library for restricted verification routes. It makes no
+   > state-, Record-, or LER-faithfulness claim and is not a registered scientific Carrier. PEPS
+   > remains the trajectory-carrier frontier, and PEPO remains the retained research Carrier.
+
+   A documentation assertion must require all three declarations, and `docs/service_status.json` must
+   not register `carrier/mps` as a third scientific Carrier merely because the implementation receives
+   a dedicated directory.
 
 Exit: dependency-direction checks pass; no cross-route private imports remain; no defect-ID or route-mode
-switch exists; public behavior is verified at the Adapter Interfaces.
+switch exists; public behavior is verified at the Adapter Interfaces; all three non-scientific-carrier
+declarations are present and the service registry introduces no third scientific Carrier.
 
 ### Phase 6 — certification ownership and public Interface cleanup
 
@@ -344,5 +384,15 @@ to the complete adaptive multi-round Record law.
 
 ## 8. Next authorized action
 
-The next action after review of this document is **Phase 0 only**: test/registry/evidence work with
-`src/**` unchanged. Phase 1 and every later source phase require a new, file-scoped confirmation.
+Phase 0 evidence work remains incomplete until the package-wide cutoff scanner and the full `MPS-016`
+three-leg gate are committed. Separately, the user confirmed the Phase 1B source scope on 2026-07-17;
+implementation may proceed only in the following five files while that slice is active:
+
+- `src/error_coupling_simulator/frontend/axis1_qt_mps_execution.py`;
+- `src/error_coupling_simulator/frontend/axis1_mcwf_dense_certification.py`;
+- `src/error_coupling_simulator/frontend/axis1_carrier_execution.py`;
+- `src/error_coupling_simulator/frontend/axis1_mcwf_mps_execution.py`, limited to blocked-policy schema
+  synchronization and no algorithm change; and
+- `src/error_coupling_simulator/frontend/README.md`.
+
+Every later phase and any expansion beyond these files still requires a new file-scoped confirmation.
