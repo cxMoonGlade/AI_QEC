@@ -8,6 +8,7 @@
   "default_target": {"statement": 1.0, "branch": 1.0},
   "requires_gpu": true,
   "covered_by_test_files": [
+    "tests/test_mps_phase1b_fail_closed.py",
     "tests/test_mps_actual_split_helper.py",
     "tests/test_axis1_mcwf_dense_certification.py",
     "tests/test_simulator_axis1_schedule.py",

@@ -73,6 +73,12 @@ large modules and the current harness does not force one worker per leased GPU, 
 `python tests/harness/mutation.py tests/_support/restricted_mps_coverage_targets.json --jobs 1`;
 default multi-worker mutation is not an authorized MPS evidence run.
 
+`test_mps_phase1b_fail_closed.py` is the CPU-only RED contract for the Phase 1 false-green
+firewall. It corrupts numerical evidence, mandatory truncation fields, resource probes, and the QT
+Record-materialization budget while replacing CUDA, Record enumeration, and MPS execution with
+must-not-run sentinels. Until the Phase 1 source slice is implemented, its failures are intentional
+and must not be hidden with skips or exclusions.
+
 ## Test disciplines
 
 - Structural coverage executes every reachable statement and branch; it does not prove that an

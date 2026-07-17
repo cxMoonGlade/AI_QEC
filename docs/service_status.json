@@ -425,6 +425,7 @@
       "external_inputs": ["Sealed Axis-1 schedule, local dimensions and explicit approximation controls including max_bond=None or a strict positive integer"],
       "outputs": ["Restricted execution/evidence manifest, sampled record frequencies and actual-Quimb-split approximation ledger with explicit path aggregation"],
       "acceptance": [
+        "tests/test_mps_phase1b_fail_closed.py",
         "tests/test_simulator_axis1_schedule.py",
         "tests/test_axis1_mcwf_dense_certification.py",
         "tests/test_mps_actual_split_helper.py"
