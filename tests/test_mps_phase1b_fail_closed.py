@@ -71,6 +71,7 @@ def _qt_policy(
     certification: dict[str, Any] | None = None,
     sampling: dict[str, Any] | None = None,
     ledger: dict[str, Any] | None = None,
+    requires_scalable_backend: bool = False,
 ) -> dict[str, Any]:
     from error_coupling_simulator.frontend.axis1_qt_mps_execution import (
         _restricted_acceptance_policy,
@@ -78,7 +79,7 @@ def _qt_policy(
 
     selected_ledger = _ledger() if ledger is None else ledger
     return _restricted_acceptance_policy(
-        program={"requires_scalable_backend": False},
+        program={"requires_scalable_backend": requires_scalable_backend},
         execution={
             "total_probability_residual": residual,
             "trajectory_sampling": sampling
@@ -150,6 +151,27 @@ def test_qt_probability_residual_must_be_finite_nonnegative_real(
 
     assert policy["accepted_for_restricted_execution"] is False
     assert "invalid_total_probability_residual" in policy["production_blockers"]
+
+
+def test_qt_true_overcap_without_independent_oracle_is_diagnostic_only() -> None:
+    policy = _qt_policy(
+        requires_scalable_backend=True,
+        certification={
+            "executed": False,
+            "reason": "schedule_contains_scalable_required_rows",
+            "comparison_outcome_is_metric": False,
+        },
+    )
+
+    assert policy["accepted_for_restricted_execution"] is False
+    assert policy["certification_status"] == "unavailable"
+    assert policy["diagnostic_only"] is True
+    assert policy["blocked_reason"] == (
+        "overcap_independent_record_oracle_unavailable"
+    )
+    assert policy["overcap"][
+        "accepted_as_restricted_overcap_execution"
+    ] is False
 
 
 @pytest.mark.parametrize(

@@ -2315,7 +2315,7 @@ def test_axis1_carrier_execution_mcwf_mps_backend_runs_qubit_fixture():
         },
     )
 
-    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v1"
+    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v2"
     assert execution["execution_backend_contract"] == "mcwf_mps_state_record"
     assert execution["representability"] == (
         AXIS1_CARRIER_MCWF_MPS_EXECUTION_REPRESENTABILITY
@@ -2355,7 +2355,7 @@ def test_axis1_carrier_execution_mcwf_mps_mixed_local_dims_runs_without_dense_fa
         },
     )
 
-    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v1"
+    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v2"
     assert execution["execution_backend_contract"] == "mcwf_mps_state_record"
     assert execution["representability"] == (
         AXIS1_CARRIER_MCWF_MPS_EXECUTION_REPRESENTABILITY
@@ -2416,7 +2416,7 @@ def test_axis1_carrier_execution_mcwf_mps_multilevel_finite_bond_fails_closed():
         },
     )
 
-    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v1"
+    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v2"
     assert execution["execution_backend_contract"] == "mcwf_mps_state_record"
     assert execution["verdict"] == "fail"
     assert execution["passed"] is False
@@ -3161,7 +3161,7 @@ def test_axis1_carrier_execution_probe_consumes_program_and_matches_jointL_state
     record = axis1_measurement_record_evidence_manifest(schedule)
     execution = axis1_carrier_execution_manifest(schedule)
 
-    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v1"
+    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v2"
     assert execution["verdict"] == "pass"
     assert execution["passed"] is True
     assert execution["execution_backend_contract"] == "dense_jointL_probe"
@@ -3210,7 +3210,7 @@ def test_axis1_carrier_execution_probe_fails_closed_on_over_cap_static_route():
 
     execution = axis1_carrier_execution_manifest(schedule)
 
-    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v1"
+    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v2"
     assert execution["verdict"] == "fail"
     assert execution["passed"] is False
     assert execution["execution_backend_contract"] == "dense_jointL_probe"
@@ -3238,7 +3238,7 @@ def test_axis1_carrier_execution_qutip_backend_executes_over_cap_static_idle():
         ),
     )
 
-    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v1"
+    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v2"
     assert execution["verdict"] == "pass"
     assert execution["passed"] is True
     assert execution["execution_backend_contract"] == (
@@ -3391,9 +3391,15 @@ def test_axis1_carrier_execution_qt_mps_backend_records_over_cap_h_readout():
         ),
     )
 
-    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v1"
-    assert execution["verdict"] == "pass"
-    assert execution["passed"] is True
+    assert execution["schema"] == "error_coupling_simulator.frontend.carrier_execution.v2"
+    assert execution["execution_status"] == "completed"
+    assert execution["certification_status"] == "unavailable"
+    assert execution["diagnostic_only"] is True
+    assert execution["blocked_reason"] == (
+        "overcap_independent_record_oracle_unavailable"
+    )
+    assert execution["verdict"] == "fail"
+    assert execution["passed"] is False
     assert execution["execution_backend_contract"] == "qt_mps_state_record"
     assert execution["representability"] == (
         "axis1_carrier_execution_qt_mps_restricted_no_production_scalable"
@@ -3414,8 +3420,11 @@ def test_axis1_carrier_execution_qt_mps_backend_records_over_cap_h_readout():
     assert execution["claims_axis2_source_timeline"] is False
 
     qt_mps = execution["qt_mps_execution"]
-    assert qt_mps["schema"] == "error_coupling_simulator.frontend.qt_mps_restricted_execution.v1"
-    assert qt_mps["accepted_for_restricted_execution"] is True
+    assert qt_mps["schema"] == "error_coupling_simulator.frontend.qt_mps_restricted_execution.v2"
+    assert qt_mps["execution_status"] == "completed"
+    assert qt_mps["certification_status"] == "unavailable"
+    assert qt_mps["diagnostic_only"] is True
+    assert qt_mps["accepted_for_restricted_execution"] is False
     assert qt_mps["accepted_for_production_scalable_backend"] is False
     assert qt_mps["claims_exact_joint_lindblad_generator"] is False
     assert execution["restricted_acceptance_policy"][
@@ -3423,7 +3432,7 @@ def test_axis1_carrier_execution_qt_mps_backend_records_over_cap_h_readout():
     ] is False
     assert execution["restricted_acceptance_policy"]["overcap"][
         "accepted_as_restricted_overcap_execution"
-    ] is True
+    ] is False
 
     record = execution["record_execution"]
     assert record["executed"] is True
@@ -3628,12 +3637,18 @@ def test_axis1_qt_mps_restricted_execution_records_over_cap_h_readout_zero_colla
 
     manifest = axis1_qt_mps_restricted_execution_manifest(schedule)
 
-    assert manifest["schema"] == "error_coupling_simulator.frontend.qt_mps_restricted_execution.v1"
+    assert manifest["schema"] == "error_coupling_simulator.frontend.qt_mps_restricted_execution.v2"
     assert manifest["representability"] == (
         "axis1_qt_mps_restricted_control_hamiltonian_z_record_product_channel"
     )
-    assert manifest["verdict"] == "pass"
-    assert manifest["passed"] is True
+    assert manifest["execution_status"] == "completed"
+    assert manifest["certification_status"] == "unavailable"
+    assert manifest["diagnostic_only"] is True
+    assert manifest["blocked_reason"] == (
+        "overcap_independent_record_oracle_unavailable"
+    )
+    assert manifest["verdict"] == "fail"
+    assert manifest["passed"] is False
     assert manifest["qt_mps_backend_executed"] is True
     assert manifest["claims_qt_mps_backend_execution"] is True
     assert manifest["claims_production_scalable_backend"] is False
@@ -3645,9 +3660,14 @@ def test_axis1_qt_mps_restricted_execution_records_over_cap_h_readout_zero_colla
     assert manifest["carrier_program"]["routes"] == ["scalable_required"]
     policy = manifest["restricted_acceptance_policy"]
     assert policy["schema"] == (
-        "error_coupling_simulator.frontend.qt_mps_restricted_acceptance_policy.v1"
+        "error_coupling_simulator.frontend.qt_mps_restricted_acceptance_policy.v2"
     )
-    assert policy["accepted_for_restricted_execution"] is True
+    assert policy["certification_status"] == "unavailable"
+    assert policy["diagnostic_only"] is True
+    assert policy["blocked_reason"] == (
+        "overcap_independent_record_oracle_unavailable"
+    )
+    assert policy["accepted_for_restricted_execution"] is False
     assert policy["accepted_for_exact_dense_probability_evidence"] is False
     assert policy["accepted_for_sampled_execution_evidence"] is False
     assert policy["accepted_for_production_scalable_backend"] is False
@@ -3657,7 +3677,7 @@ def test_axis1_qt_mps_restricted_execution_records_over_cap_h_readout_zero_colla
     assert policy["finite_step"]["comparison_outcome_is_metric"] is False
     assert policy["overcap"]["requires_scalable_backend"] is True
     assert policy["overcap"]["dense_fallback_forbidden"] is True
-    assert policy["overcap"]["accepted_as_restricted_overcap_execution"] is True
+    assert policy["overcap"]["accepted_as_restricted_overcap_execution"] is False
     assert policy["overcap"]["accepted_as_production_scalable_backend"] is False
     assert policy["mps_truncation"]["accepted_as_production_error_bound"] is False
     assert policy["comparison_outcome_is_metric"] is False
@@ -4155,7 +4175,7 @@ def test_axis1_qt_mps_bond_sweep_detects_underbonded_record_difference():
         convergence_record_probability_gate=1.0e-3,
     )
 
-    assert sweep["schema"] == "error_coupling_simulator.frontend.qt_mps_bond_sweep.v1"
+    assert sweep["schema"] == "error_coupling_simulator.frontend.qt_mps_bond_sweep.v2"
     assert sweep["verdict"] == "fail"
     assert sweep["passed"] is False
     assert sweep["bond_values"] == [1, 2]
@@ -4276,7 +4296,7 @@ def test_axis1_qt_mps_trajectory_seed_sweep_passes_dense_calibrated_deterministi
         dense_record_frequency_gate=1.0e-12,
     )
 
-    assert sweep["schema"] == "error_coupling_simulator.frontend.qt_mps_trajectory_seed_sweep.v1"
+    assert sweep["schema"] == "error_coupling_simulator.frontend.qt_mps_trajectory_seed_sweep.v2"
     assert sweep["verdict"] == "pass"
     assert sweep["passed"] is True
     policy = sweep["seed_sweep_policy"]
@@ -4416,7 +4436,7 @@ def test_axis1_qt_mps_restricted_evidence_bundle_passes_deterministic_dense_case
     )
 
     assert bundle["schema"] == (
-        "error_coupling_simulator.frontend.qt_mps_restricted_evidence_bundle.v1"
+        "error_coupling_simulator.frontend.qt_mps_restricted_evidence_bundle.v2"
     )
     assert bundle["verdict"] == "pass"
     assert bundle["passed"] is True
@@ -4493,7 +4513,7 @@ def test_axis1_qt_mps_resource_probe_reports_actual_cuda_memory_without_producti
         min_peak_reserved_gib=0.0,
     )
 
-    assert probe["schema"] == "error_coupling_simulator.frontend.qt_mps_resource_probe.v1"
+    assert probe["schema"] == "error_coupling_simulator.frontend.qt_mps_resource_probe.v2"
     assert probe["verdict"] == "pass"
     assert probe["passed"] is True
     assert probe["workload_passed"] is True
