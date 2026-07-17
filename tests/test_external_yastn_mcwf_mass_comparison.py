@@ -5,6 +5,8 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 
+import pytest
+
 
 REPO = Path(__file__).resolve().parents[1]
 SCRIPT = REPO / "scripts" / "external_baselines" / "run_yastn_mcwf_mass_comparison.py"
@@ -36,3 +38,25 @@ def test_yastn_mcwf_mass_analysis_rejects_corrupted_candidate_mass():
     assert healthy["matches_frozen_reference"] is True
     assert corrupted["matches_frozen_reference"] is False
     assert corrupted["corruption_falsifier_detected"] is True
+
+
+def test_yastn_direct_url_must_bind_installed_distribution_to_frozen_clone():
+    adapter = _load_adapter()
+    healthy = {
+        "url": adapter.BASELINE_REPO.resolve().as_uri(),
+        "vcs_info": {
+            "vcs": "git",
+            "commit_id": adapter.EXPECTED_YASTN_COMMIT,
+            "requested_revision": adapter.EXPECTED_YASTN_COMMIT,
+        },
+    }
+
+    assert adapter.validate_yastn_direct_url(healthy)["commit_id"] == (
+        adapter.EXPECTED_YASTN_COMMIT
+    )
+    corrupted = {
+        **healthy,
+        "vcs_info": {**healthy["vcs_info"], "commit_id": "0" * 40},
+    }
+    with pytest.raises(RuntimeError, match="installed YASTN commit drifted"):
+        adapter.validate_yastn_direct_url(corrupted)
