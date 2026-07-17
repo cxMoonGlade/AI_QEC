@@ -16,7 +16,7 @@ import base64
 from collections.abc import Mapping, Sequence
 import csv
 import hashlib
-from importlib import import_module, metadata
+from importlib import import_module, metadata, util
 import json
 import math
 import os
@@ -409,6 +409,11 @@ def _assert_runtime_provenance(yastn_module: Any) -> dict[str, Any]:
     ]
     if project_modules:
         raise RuntimeError("project implementation leaked into YASTN comparator process")
+    project_package_spec = util.find_spec("error_coupling_simulator")
+    if project_package_spec is not None:
+        raise RuntimeError(
+            "project implementation is importable inside YASTN comparator environment"
+        )
 
     distribution = metadata.distribution("yastn")
     direct_url_text = distribution.read_text("direct_url.json")
@@ -486,6 +491,7 @@ def _assert_runtime_provenance(yastn_module: Any) -> dict[str, Any]:
         "pythonpath_env": None,
         "resolved_sys_path": resolved_sys_path,
         "project_modules_imported": [],
+        "project_package_find_spec": None,
         "installed_distribution": {
             "name": distribution.metadata["Name"],
             "version": distribution.version,
