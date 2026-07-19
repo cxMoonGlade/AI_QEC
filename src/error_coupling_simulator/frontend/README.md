@@ -370,10 +370,21 @@ Current slice:
   source/schedule compiler lowering currently emits it. The literature source-closure reset remains OPEN,
   so the operator and frozen-artifact checks remain software gates rather than physical-source closure,
   hardware calibration, full-Record faithfulness, or production/scalability evidence.
-  Restricted acceptance also requires a finite declared
+  Restricted acceptance also requires a declared finite positive
   `mass_residual_budget`, a finite nonnegative runtime candidate-mass residual
   within that budget, and an executed independent dense certification that
-  passes its gross gate. Passing `mass_residual_budget=None` executes only a
+  passes its gross gate. The deterministic preflight bounds the realized
+  sequential no-jump product `product_i(I - dt c_i^dag c_i / 2)`, including
+  multi-collapse cross terms. For a positive budget its signed-64-bit diagnostic
+  recommendation search reports the smallest `required_microstep_count` that
+  clears the bound. A request needing a larger recommendation is rejected
+  without emitting a type-changed v7 blocked payload. That reporting cap is not
+  an input maximum. Zero is rejected at the public seam before
+  CUDA because no active finite step can make the bound exactly zero. This is a
+  raw-candidate-mass analytic bound evaluated in floating point as a deterministic
+  preflight; the observed runtime residual is still the final acceptance gate. It
+  is not a global convergence-order claim.
+  Passing `mass_residual_budget=None` executes only a
   convergence diagnostic, skips dense certification, and returns
   `execution_status="completed"`, `certification_status="not_evaluated"`,
   `diagnostic_only=true`, and verdict `fail`. Normalization residual, runtime raw

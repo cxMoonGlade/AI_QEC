@@ -2978,6 +2978,8 @@ def _validate_mcwf_mps_execution_options(options: dict[str, Any]) -> dict[str, A
                 name=name,
                 minimum=0.0,
             )
+    if out.get("mass_residual_budget") == 0.0:
+        raise ValueError("mass_residual_budget must be positive when provided")
     return out
 
 

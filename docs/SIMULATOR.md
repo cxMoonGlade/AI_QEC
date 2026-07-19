@@ -109,7 +109,18 @@ The current routes are deliberately not one universal executor:
     mass-residual evaluation or trajectories, and constructs every connected Hamiltonian group gate from
     those same frozen term tensors. The first-order mass preflight, no-jump/jump competition, and both
     Strang Hamiltonian passes consume that immutable artifact set; no later production-builder call may
-    redefine the executed dynamics. Before execution, the certifier independently reconstructs every
+    redefine the executed dynamics. The preflight bounds the sampler's actual sequential no-jump
+    product, including multi-collapse cross terms, rather than replacing it by one factor built from
+    the summed collapse rate. Its diagnostic recommendation search is capped at signed 64-bit for
+    artifact interoperability and reports the smallest count within that search that clears a
+    positive budget. Requests that need a larger recommendation are rejected without emitting a
+    type-changed blocked artifact; this reporting cap is not an input maximum. The public
+    MCWF seam accepts only a positive finite budget (or `None` for a diagnostic
+    run); zero is rejected before CUDA because no active finite step can satisfy it exactly. This is
+    an exact-arithmetic raw-candidate-mass bound evaluated in floating point as a deterministic
+    preflight; the separately observed runtime residual remains the final acceptance gate. It is not
+    a global convergence-order or production error bound.
+    Before execution, the certifier independently reconstructs every
     frozen term, connected-component partition, group support/order, and group gate using its hand-typed
     NumPy definitions plus SciPy `expm`. Declared structural-zero entries must remain exactly zero;
     per-term floating differences use `NUMERICAL_ZERO`, while cross-backend group-gate comparison uses

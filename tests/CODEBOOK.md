@@ -257,6 +257,11 @@ Stim imports in the reference module, and exercises the joint `CORR_RELAX` oracl
 route. That family is covered only after it is already present in an internal sealed Carrier program;
 no public source/schedule compiler lowering currently emits it. The literature source-closure reset
 remains OPEN, so this is implementation-definition evidence only.
+`test_collective_decay_finite_step_guard.py` separately binds the MCWF mass preflight to the
+sampler's sequential no-jump product. Its two-independent-T1 counterexample kills the obsolete
+single-sum bound, checks the corrected operator-norm bound dominates the directly computed raw-mass
+residual, requires the defensive preflight to report no finite count at zero budget, and requires the
+public MCWF seam to reject zero before CUDA.
 `test_axis1_mcwf_dense_certification.py` additionally requires production term builders to be called
 once, group gates to be derived from those exact frozen tensors, and the mass preflight and trajectory
 to consume the same artifact inventory. It independently reconstructs connected grouping and group

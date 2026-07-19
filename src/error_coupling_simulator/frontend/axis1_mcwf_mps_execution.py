@@ -197,17 +197,17 @@ def _is_supported_mcwf_hamiltonian_term(term: dict[str, Any]) -> bool:
 # mis-supported request instead of deferring the error to the operator builder at runtime.
 TWO_SITE_COLLAPSE_FAMILIES = frozenset({"CORR_RELAX"})
 
-# First-order MCWF no-jump truncation (K0 = I - 1/2 c^dag c dt) does not preserve probability: the
-# per-microstep mass residual is 1/4 dt^2 <(sum_k c_k^dag c_k)^2> = O(dt^2). At gamma*dt ~ 1 with too
-# few microsteps the step is grossly non-CPTP (|11> probability mass -> 2.0 for CORR_RELAX at
-# g=0.05, dt=20, microstep_count=1). This (c)-class heuristic tripwire (a
-# go/no-go gate, NOT a premise or error bound) fail-closes when the state-independent worst-case
-# per-microstep bound 1/4 dt_micro^2 (sum_k ||c_k^dag c_k||_op)^2 exceeds the budget; because that
-# bound dominates the runtime residual, passing the preflight guarantees the runtime residual stays
-# within budget. The measured convergence law (1-F_e ~ 4x per microstep doubling) makes the required
-# microstep_count computable and it is reported in the fail-closed payload. Pass
-# mass_residual_budget=None to disable for a deliberate convergence study (the only sanctioned use of
-# the grossly-truncated single-microstep regime).
+# The sampler applies one first-order no-jump factor per active collapse term,
+# ``K = product_i(I - dt * c_i^dag c_i / 2)``, then competes that branch with
+# ``sqrt(dt) * c_i`` jumps.  This raw candidate set is not exactly trace
+# preserving.  The preflight below uses a state-independent operator-norm bound
+# for that realized sequential product, including its multi-collapse cross
+# terms. In exact arithmetic the analytic bound dominates the absolute raw-mass
+# residual; its floating evaluation is a deterministic preflight, while the
+# observed runtime residual remains a separate final acceptance gate. This is a
+# finite-step safety gate, not a global convergence-order or exact-channel
+# claim. ``mass_residual_budget=None`` is reserved for deliberate diagnostic
+# convergence studies.
 _MCWF_FIRST_ORDER_MASS_RESIDUAL_BUDGET = 0.1
 
 
@@ -233,10 +233,15 @@ def axis1_mcwf_mps_state_record_execution_manifest(
     substep's collapse list. It is a finite-step quantum-jump approximation to
     the summed same-substep generator, not dense joint-L channel evidence.
 
-    ``mass_residual_budget`` fail-closes (verdict ``"fail"``) before execution when the first-order
+    ``mass_residual_budget`` is either positive and finite or ``None``.
+    A declared budget fail-closes (verdict ``"fail"``) before execution when the first-order
     no-jump truncation is grossly non-CPTP at the requested ``microstep_count`` (the worst-case
     per-microstep probability-mass residual bound exceeds the budget); the fail payload reports the
-    required ``microstep_count``. Pass ``None`` only for a deliberate convergence study; such a
+    smallest required ``microstep_count`` within the preflight's signed-64-bit recommendation
+    search. A request whose positive budget needs a larger count is rejected rather than changing
+    the v7 blocked-payload integer field. This is a reporting cap, not an input maximum. Pass
+    ``None`` as the budget only for a deliberate
+    convergence study; such a
     run may execute and emit diagnostics but cannot pass restricted acceptance.
     """
 
@@ -254,6 +259,8 @@ def axis1_mcwf_mps_state_record_execution_manifest(
         mass_residual_budget,
         name="mass_residual_budget",
     )
+    if mass_residual_budget is not None and mass_residual_budget == 0.0:
+        raise ValueError("mass_residual_budget must be positive when provided")
     microstep_count = normalize_mps_index(
         microstep_count,
         name="microstep_count",
@@ -554,9 +561,10 @@ def axis1_mcwf_mps_state_record_execution_manifest(
                 ),
                 "scope": (
                     "fixed-microstep MCWF/MPS execution failed closed: the first-order no-jump "
-                    "truncation is grossly non-CPTP at this microstep_count (raise microstep_count "
-                    "to required_microstep_count, or pass mass_residual_budget=None to override for "
-                    "a deliberate convergence study)"
+                    "truncation is grossly non-CPTP at this microstep_count (for a positive budget, "
+                    "raise microstep_count to required_microstep_count when one is reported; otherwise "
+                    "use a looser positive budget, or pass "
+                    "mass_residual_budget=None only for a deliberate diagnostic convergence study)"
                 ),
             }
             payload["content_hash"] = _stable_payload_hash(payload)
@@ -2841,6 +2849,103 @@ def _apply_measurement_reset_if_requested_multilevel(
     return state
 
 
+def _sequential_nojump_mass_residual_bound(
+    *,
+    dt_micro: float,
+    operator_norms: Sequence[float],
+) -> float:
+    """Bound raw-mass residual for the sampler's sequential no-jump product.
+
+    Let ``h = dt_micro / 2``, ``A_i = c_i^dag c_i``, and
+    ``a_i = ||A_i||``.  For the realized
+    ``K = product_i(I - h A_i)``, write
+    ``K = I - h sum_i(A_i) + E``.  Submultiplicativity gives
+
+    ``||E|| <= e = product_i(1 + h a_i) - 1 - h sum_i(a_i)``.
+
+    With ``u = h sum_i(a_i)``, the raw candidate-mass operator obeys
+
+    ``||K^dag K + 2 h sum_i(A_i) - I|| <= u^2 + 2(1 + u)e + e^2``.
+
+    ``e`` is accumulated without subtracting nearly equal products.  A
+    nonfinite input or intermediate result returns ``inf`` so the caller fails
+    closed.
+    """
+
+    half_dt = 0.5 * float(dt_micro)
+    if not math.isfinite(half_dt) or half_dt < 0.0:
+        return math.inf
+    u = 0.0
+    e = 0.0
+    for raw_norm in operator_norms:
+        norm = float(raw_norm)
+        if not math.isfinite(norm) or norm < 0.0:
+            return math.inf
+        b = half_dt * norm
+        if not math.isfinite(b):
+            return math.inf
+        e = e * (1.0 + b) + u * b
+        u += b
+        if not math.isfinite(e) or not math.isfinite(u):
+            return math.inf
+    total = u + e
+    bound = total * total + 2.0 * e
+    if not math.isfinite(bound):
+        return math.inf
+    return max(0.0, float(bound))
+
+
+def _minimum_microstep_count_for_mass_budget(
+    *,
+    dt_substep: float,
+    operator_norms: Sequence[float],
+    budget: float,
+    failing_microstep_count: int,
+) -> int | None:
+    """Return the smallest larger count satisfying the monotone bound.
+
+    A zero budget cannot be reached at finite step size when an active collapse
+    norm is present, so ``None`` is the explicit fail-closed result. Positive
+    budgets use doubling followed by integer bisection; no empirical convergence
+    rate is assumed. ``None`` also reports that no satisfying count exists within
+    the preflight's signed-64-bit recommendation-search cap; the public index
+    normalizer does not otherwise impose that maximum.
+    """
+
+    if float(budget) <= 0.0:
+        return None
+    if any(not math.isfinite(float(value)) for value in operator_norms):
+        return None
+
+    low = int(failing_microstep_count)
+    high = low + 1
+    # Keep recommendations interoperable with signed-64-bit artifact consumers.
+    # This caps only the diagnostic search/report; it is not an input-validation
+    # maximum. Probe the limit before returning ``None`` so a valid count in the
+    # final half-open interval is not missed.
+    max_count = (1 << 63) - 1
+
+    def bound_at(count: int) -> float:
+        return _sequential_nojump_mass_residual_bound(
+            dt_micro=float(dt_substep) / float(count),
+            operator_norms=operator_norms,
+        )
+
+    while bound_at(high) > float(budget):
+        low = high
+        if high == max_count:
+            return None
+        high = min(max_count, high * 2)
+
+    while low + 1 < high:
+        middle = (low + high) // 2
+        if bound_at(middle) <= float(budget):
+            high = middle
+        else:
+            low = middle
+    return int(high)
+
+
 def _first_order_mass_residual_blocks(
     program: dict[str, Any],
     *,
@@ -2852,15 +2957,16 @@ def _first_order_mass_residual_blocks(
 ) -> list[dict[str, Any]]:
     """Deterministic preflight against a grossly non-CPTP first-order MCWF step.
 
-    The no-jump Kraus ``K0 = I - 1/2 c^dag c dt`` leaks probability mass; the per-microstep residual
-    is ``1/4 dt^2 <(sum_k c_k^dag c_k)^2>``. Its state-independent worst case is bounded by
-    ``1/4 dt_micro^2 (sum_k ||c_k^dag c_k||_op)^2`` (operator norm; embedding preserves it, so the
-    per-operator norms can be summed on each operator's own small support). When that bound exceeds
-    ``budget`` the requested ``microstep_count`` is too coarse; return a blocked-substep entry that
-    reports the minimum ``microstep_count`` that resolves it. Empty when every MCWF substep is within
-    budget. The canonical route consumes the same precomputed collapse tensors
-    as the sampler, so this bound and the trajectories cannot diverge through a
-    second builder call.
+    The sampler realizes a sequential no-jump product, not one factor formed
+    from the sum of all ``c_i^dag c_i``.  The bound therefore includes the
+    product cross terms through ``_sequential_nojump_mass_residual_bound``.
+    When it exceeds ``budget``, return a blocked-substep entry with the smallest
+    larger microstep count that satisfies a positive budget.  A zero budget with
+    an active collapse has no finite required count and reports ``None``.
+
+    The canonical route consumes the same precomputed collapse tensors as the
+    sampler, so the bound and trajectories cannot diverge through a second
+    builder call.
     """
     out: list[dict[str, Any]] = []
     m = int(microstep_count)
@@ -2883,28 +2989,49 @@ def _first_order_mass_residual_blocks(
             continue
         dt_sub = float(substep["dt_ns"])
         dt_micro = dt_sub / float(m)
-        norm_sum = 0.0
+        operator_norms: list[float] = []
         for record in active_records:
             c = record["operator"]
             cdc = c.conj().transpose(-1, -2) @ c
-            norm_sum += float(torch.linalg.eigvalsh(cdc).max().real)
-        if norm_sum <= 0.0:
+            raw_norm = float(torch.linalg.eigvalsh(cdc).max().real)
+            operator_norms.append(
+                max(0.0, raw_norm) if math.isfinite(raw_norm) else math.inf
+            )
+        if not any(value > 0.0 for value in operator_norms):
             continue
-        bound = 0.25 * (dt_micro ** 2) * (norm_sum ** 2)
-        if bound > float(budget):
-            required = int(math.ceil(dt_sub * norm_sum / (2.0 * float(budget) ** 0.5)))
+        bound = _sequential_nojump_mass_residual_bound(
+            dt_micro=dt_micro,
+            operator_norms=operator_norms,
+        )
+        zero_budget_with_active_collapse = float(budget) == 0.0
+        if zero_budget_with_active_collapse or bound > float(budget):
+            required = _minimum_microstep_count_for_mass_budget(
+                dt_substep=dt_sub,
+                operator_norms=operator_norms,
+                budget=float(budget),
+                failing_microstep_count=m,
+            )
+            if required is None and not zero_budget_with_active_collapse:
+                raise ValueError(
+                    "mass_residual_budget requires required_microstep_count beyond "
+                    "the signed-64-bit preflight recommendation search"
+                )
             out.append(
                 {
                     "substep_index": int(substep_index),
                     "substep_kind": str(substep.get("substep_kind", "")),
                     "reason": (
-                        "mcwf_first_order_mass_residual_exceeds_budget:"
-                        f"{bound:.3e}>{float(budget):.3e}"
+                        "mcwf_first_order_mass_residual_zero_budget_with_active_collapse"
+                        if zero_budget_with_active_collapse
+                        else (
+                            "mcwf_first_order_mass_residual_exceeds_budget:"
+                            f"{bound:.3e}>{float(budget):.3e}"
+                        )
                     ),
                     "first_order_mass_residual_bound": float(bound),
                     "mass_residual_budget": float(budget),
                     "microstep_count": m,
-                    "required_microstep_count": int(max(required, m + 1)),
+                    "required_microstep_count": required,
                 }
             )
     return out
