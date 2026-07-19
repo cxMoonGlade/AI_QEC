@@ -1,5 +1,9 @@
 # Restricted MPS Phase 3 — Record layout and reset policy — GREEN — 2026-07-17
 
+> Historical phase snapshot. Schema identities, owner paths, registry counts, and remaining-work
+> statements below describe this phase at review time; current identities and phase status live in
+> `docs/SIMULATOR.md`, the frontend owning README, and the consolidation plan.
+
 ## Disposition
 
 Disposition: **MPS-004, MPS-005, MPS-012, and MPS-013 are GREEN inside the restricted

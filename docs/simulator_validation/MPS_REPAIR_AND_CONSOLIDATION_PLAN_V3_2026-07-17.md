@@ -495,9 +495,12 @@ unrelated Carrier mechanisms, and any production-pruning or Record-faithfulness 
 ## 9. Historical evidence and current terminal-gate authority
 
 The artifacts below predate the current acceptance/mutation supervisor hardening. They remain useful
-historical provenance, but none is silently promoted to a current terminal result. Repository `HEAD`
-remains `f0d52b3f153d3f4dd9e9a9cb30f65ed3b3f3ae54`; the reviewed working tree is intentionally
-uncommitted and dirty.
+historical provenance, but none is silently promoted to a current terminal result. At the time these
+artifacts were captured, repository `HEAD` was
+`f0d52b3f153d3f4dd9e9a9cb30f65ed3b3f3ae54` and the reviewed working tree was intentionally
+uncommitted and dirty. Those facts describe the historical snapshot, not the current repository
+state; current terminal authority comes only from same-commit artifacts produced by the closing
+sequence in Section 8.
 
 Historical pre-hardening evidence is:
 
